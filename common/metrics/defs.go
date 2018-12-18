@@ -909,6 +909,8 @@ const (
 	DomainCacheCallbacksLatency
 
 	HistorySize
+	HistoryCount
+	EventBlobSize
 
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
@@ -983,7 +985,6 @@ const (
 	HistoryEventNotificationFanoutLatency
 	HistoryEventNotificationInFlightMessageGauge
 	HistoryEventNotificationFailDeliveryCount
-	SignalSizeTimer
 	EmptyReplicationEventsCounter
 	DuplicateReplicationEventsCounter
 	StaleReplicationEventsCounter
@@ -1085,6 +1086,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		DomainCachePrepareCallbacksLatency:                  {metricName: "domain-cache.prepare-callbacks.latency", metricType: Timer},
 		DomainCacheCallbacksLatency:                         {metricName: "domain-cache.callbacks.latency", metricType: Timer},
 		HistorySize:                                         {metricName: "history-size", metricType: Timer},
+		HistoryCount:                                        {metricName: "history-count", metricType: Timer},
+		EventBlobSize:                                       {metricName: "event-blob-size", metricType: Timer},
 	},
 	Frontend: {},
 	History: {
@@ -1155,7 +1158,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistoryEventNotificationFanoutLatency:        {metricName: "history-event-notification-fanout-latency", metricType: Timer},
 		HistoryEventNotificationInFlightMessageGauge: {metricName: "history-event-notification-inflight-message-gauge", metricType: Gauge},
 		HistoryEventNotificationFailDeliveryCount:    {metricName: "history-event-notification-fail-delivery-count", metricType: Counter},
-		SignalSizeTimer:                              {metricName: "signal-size", metricType: Timer},
 		EmptyReplicationEventsCounter:                {metricName: "empty-replication-events", metricType: Counter},
 		DuplicateReplicationEventsCounter:            {metricName: "duplicate-replication-events", metricType: Counter},
 		StaleReplicationEventsCounter:                {metricName: "stale-replication-events", metricType: Counter},

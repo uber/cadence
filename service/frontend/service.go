@@ -47,6 +47,10 @@ type Config struct {
 	EnableAdminProtection         dynamicconfig.BoolPropertyFn
 	AdminOperationToken           dynamicconfig.StringPropertyFn
 	DisableListVisibilityByFilter dynamicconfig.BoolPropertyFnWithDomainFilter
+
+	// size limit system protection
+	BlobSizeLimitError dynamicconfig.IntPropertyFnWithDomainFilter
+	BlobSizeLimitWarn  dynamicconfig.IntPropertyFnWithDomainFilter
 }
 
 // NewConfig returns new service config with default values
@@ -56,13 +60,15 @@ func NewConfig(dc *dynamicconfig.Collection) *Config {
 		VisibilityMaxPageSize:          dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendVisibilityMaxPageSize, 1000),
 		EnableVisibilitySampling:       dc.GetBoolProperty(dynamicconfig.EnableVisibilitySampling, true),
 		VisibilityListMaxQPS:           dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendVisibilityListMaxQPS, 1),
-		HistoryMaxPageSize:             dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendHistoryMaxPageSize, 1000),
+		HistoryMaxPageSize:             dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendHistoryMaxPageSize, common.GetHistoryMaxPageSize),
 		RPS:                            dc.GetIntProperty(dynamicconfig.FrontendRPS, 1200),
 		HistoryMgrNumConns:             dc.GetIntProperty(dynamicconfig.FrontendHistoryMgrNumConns, 10),
 		MaxDecisionStartToCloseTimeout: dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxDecisionStartToCloseTimeout, 600),
 		EnableAdminProtection:          dc.GetBoolProperty(dynamicconfig.EnableAdminProtection, false),
 		AdminOperationToken:            dc.GetStringProperty(dynamicconfig.AdminOperationToken, "CadenceTeamONLY"),
 		DisableListVisibilityByFilter:  dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.DisableListVisibilityByFilter, false),
+		BlobSizeLimitError:             dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitError, 2*1024*1024),
+		BlobSizeLimitWarn:              dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitWarn, 256*1204),
 	}
 }
 
@@ -129,7 +135,7 @@ func (s *Service) Start() {
 		kafkaProducer = &mocks.KafkaProducer{}
 	}
 
-	wfHandler := NewWorkflowHandler(base, s.config, metadata, history, historyV2, visibility, kafkaProducer)
+	wfHandler := NewWorkflowHandler(base, s.config, metadata, history, historyV2, visibility, kafkaProducer, params.BlobstoreClient)
 	wfHandler.Start()
 
 	adminHandler := NewAdminHandler(base, pConfig.NumHistoryShards, metadata, history, historyV2)

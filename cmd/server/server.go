@@ -24,10 +24,10 @@ import (
 	"log"
 	"time"
 
-	"github.com/uber/cadence/common/archival"
-
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/archival"
+	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
@@ -113,6 +113,7 @@ func (s *server) startService() common.Daemon {
 	dc := dynamicconfig.NewCollection(params.DynamicConfig, params.Logger)
 
 	params.ArchivalClient = archival.NewNopClient()
+	params.BlobstoreClient = blobstore.NewNopClient()
 
 	svcCfg := s.cfg.Services[s.name]
 	params.MetricScope = svcCfg.Metrics.NewScope()

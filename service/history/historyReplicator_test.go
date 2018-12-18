@@ -36,6 +36,7 @@ import (
 	"github.com/uber-go/tally"
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/shared"
+	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -62,6 +63,8 @@ type (
 		mockService         service.Service
 		mockShard           *shardContextImpl
 		mockMutableState    *mockMutableState
+		mockTxProcessor     *MockTransferQueueProcessor
+		mockTimerProcessor  *MockTimerQueueProcessor
 
 		historyReplicator *historyReplicator
 	}
@@ -114,6 +117,9 @@ func (s *historyReplicatorSuite) SetupTest() {
 		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
 		standbyClusterCurrentTime: make(map[string]time.Time),
 	}
+	s.mockTxProcessor = &MockTransferQueueProcessor{}
+	s.mockTimerProcessor = &MockTimerQueueProcessor{}
+
 	s.mockMutableState = &mockMutableState{}
 	historyCache := newHistoryCache(s.mockShard)
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
@@ -127,6 +133,8 @@ func (s *historyReplicatorSuite) SetupTest() {
 		logger:             s.logger,
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
 		metricsClient:      s.mockShard.GetMetricsClient(),
+		txProcessor:        s.mockTxProcessor,
+		timerProcessor:     s.mockTimerProcessor,
 	}
 	s.historyReplicator = newHistoryReplicator(s.mockShard, h, historyCache, s.mockShard.domainCache, s.mockHistoryMgr, s.mockHistoryV2Mgr, s.logger)
 }
@@ -138,6 +146,8 @@ func (s *historyReplicatorSuite) TearDownTest() {
 	s.mockShardManager.AssertExpectations(s.T())
 	s.mockProducer.AssertExpectations(s.T())
 	s.mockMetadataMgr.AssertExpectations(s.T())
+	s.mockTxProcessor.AssertExpectations(s.T())
+	s.mockTimerProcessor.AssertExpectations(s.T())
 }
 
 func (s *historyReplicatorSuite) TestSyncActivity_WorkflowNotFound() {
@@ -175,7 +185,8 @@ func (s *historyReplicatorSuite) TestSyncActivity_WorkflowClosed() {
 		},
 	)
 	msBuilder := &mockMutableState{}
-	context.msBuilder = msBuilder
+	defer msBuilder.AssertExpectations(s.T())
+	context.(*workflowExecutionContextImpl).msBuilder = msBuilder
 	release(nil)
 	request := &h.SyncActivityRequest{
 		DomainId:   common.StringPtr(domainID),
@@ -208,7 +219,8 @@ func (s *historyReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Incom
 		},
 	)
 	msBuilder := &mockMutableState{}
-	context.msBuilder = msBuilder
+	defer msBuilder.AssertExpectations(s.T())
+	context.(*workflowExecutionContextImpl).msBuilder = msBuilder
 	release(nil)
 	request := &h.SyncActivityRequest{
 		DomainId:    common.StringPtr(domainID),
@@ -219,7 +231,6 @@ func (s *historyReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Incom
 	}
 	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
-	msBuilder.On("GetEventStoreVersion").Return(int32(0))
 	msBuilder.On("GetReplicationState").Return(&persistence.ReplicationState{
 		CurrentVersion:   lastWriteVersion,
 		StartVersion:     lastWriteVersion,
@@ -267,7 +278,8 @@ func (s *historyReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Incom
 		},
 	)
 	msBuilder := &mockMutableState{}
-	context.msBuilder = msBuilder
+	defer msBuilder.AssertExpectations(s.T())
+	context.(*workflowExecutionContextImpl).msBuilder = msBuilder
 	release(nil)
 	request := &h.SyncActivityRequest{
 		DomainId:    common.StringPtr(domainID),
@@ -278,7 +290,6 @@ func (s *historyReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Incom
 	}
 	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
-	msBuilder.On("GetEventStoreVersion").Return(int32(0))
 	msBuilder.On("GetReplicationState").Return(&persistence.ReplicationState{
 		CurrentVersion:   lastWriteVersion,
 		StartVersion:     lastWriteVersion,
@@ -326,7 +337,8 @@ func (s *historyReplicatorSuite) TestSyncActivity_ActivityCompleted() {
 		},
 	)
 	msBuilder := &mockMutableState{}
-	context.msBuilder = msBuilder
+	defer msBuilder.AssertExpectations(s.T())
+	context.(*workflowExecutionContextImpl).msBuilder = msBuilder
 	release(nil)
 	request := &h.SyncActivityRequest{
 		DomainId:    common.StringPtr(domainID),
@@ -337,14 +349,12 @@ func (s *historyReplicatorSuite) TestSyncActivity_ActivityCompleted() {
 	}
 	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
-	msBuilder.On("GetEventStoreVersion").Return(int32(0))
 	msBuilder.On("GetReplicationState").Return(&persistence.ReplicationState{
 		CurrentVersion:   lastWriteVersion,
 		StartVersion:     lastWriteVersion,
 		LastWriteVersion: lastWriteVersion,
 		LastWriteEventID: nextEventID - 1,
 	})
-	msBuilder.On("GetLastWriteVersion").Return(lastWriteVersion)
 	msBuilder.On("UpdateReplicationStateVersion", lastWriteVersion, false).Once()
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: domainID}).Return(
 		&persistence.GetDomainResponse{
@@ -386,7 +396,8 @@ func (s *historyReplicatorSuite) TestSyncActivity_ActivityRunning_LocalActivityV
 		},
 	)
 	msBuilder := &mockMutableState{}
-	context.msBuilder = msBuilder
+	defer msBuilder.AssertExpectations(s.T())
+	context.(*workflowExecutionContextImpl).msBuilder = msBuilder
 	release(nil)
 	request := &h.SyncActivityRequest{
 		DomainId:    common.StringPtr(domainID),
@@ -397,14 +408,12 @@ func (s *historyReplicatorSuite) TestSyncActivity_ActivityRunning_LocalActivityV
 	}
 	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
-	msBuilder.On("GetEventStoreVersion").Return(int32(0))
 	msBuilder.On("GetReplicationState").Return(&persistence.ReplicationState{
 		CurrentVersion:   lastWriteVersion,
 		StartVersion:     lastWriteVersion,
 		LastWriteVersion: lastWriteVersion,
 		LastWriteEventID: nextEventID - 1,
 	})
-	msBuilder.On("GetLastWriteVersion").Return(lastWriteVersion)
 	msBuilder.On("UpdateReplicationStateVersion", lastWriteVersion, false).Once()
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: domainID}).Return(
 		&persistence.GetDomainResponse{
@@ -453,7 +462,8 @@ func (s *historyReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVer
 		},
 	)
 	msBuilder := &mockMutableState{}
-	context.msBuilder = msBuilder
+	defer msBuilder.AssertExpectations(s.T())
+	context.(*workflowExecutionContextImpl).msBuilder = msBuilder
 	release(nil)
 	request := &h.SyncActivityRequest{
 		DomainId:          common.StringPtr(domainID),
@@ -470,14 +480,12 @@ func (s *historyReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVer
 	}
 	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
-	msBuilder.On("GetEventStoreVersion").Return(int32(0))
 	msBuilder.On("GetReplicationState").Return(&persistence.ReplicationState{
 		CurrentVersion:   version,
 		StartVersion:     version,
 		LastWriteVersion: version,
 		LastWriteEventID: nextEventID - 1,
 	})
-	msBuilder.On("GetLastWriteVersion").Return(version)
 	msBuilder.On("UpdateReplicationStateVersion", version, false).Once()
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: domainID}).Return(
 		&persistence.GetDomainResponse{
@@ -533,7 +541,8 @@ func (s *historyReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVer
 		},
 	)
 	msBuilder := &mockMutableState{}
-	context.msBuilder = msBuilder
+	defer msBuilder.AssertExpectations(s.T())
+	context.(*workflowExecutionContextImpl).msBuilder = msBuilder
 	release(nil)
 	request := &h.SyncActivityRequest{
 		DomainId:          common.StringPtr(domainID),
@@ -550,14 +559,12 @@ func (s *historyReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVer
 	}
 	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
-	msBuilder.On("GetEventStoreVersion").Return(int32(0))
 	msBuilder.On("GetReplicationState").Return(&persistence.ReplicationState{
 		CurrentVersion:   version,
 		StartVersion:     version,
 		LastWriteVersion: version,
 		LastWriteEventID: nextEventID - 1,
 	})
-	msBuilder.On("GetLastWriteVersion").Return(version)
 	msBuilder.On("UpdateReplicationStateVersion", version, false).Once()
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: domainID}).Return(
 		&persistence.GetDomainResponse{
@@ -613,7 +620,8 @@ func (s *historyReplicatorSuite) TestSyncActivity_ActivityRunning_Update_LargerV
 		},
 	)
 	msBuilder := &mockMutableState{}
-	context.msBuilder = msBuilder
+	defer msBuilder.AssertExpectations(s.T())
+	context.(*workflowExecutionContextImpl).msBuilder = msBuilder
 	release(nil)
 	request := &h.SyncActivityRequest{
 		DomainId:          common.StringPtr(domainID),
@@ -630,14 +638,12 @@ func (s *historyReplicatorSuite) TestSyncActivity_ActivityRunning_Update_LargerV
 	}
 	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
-	msBuilder.On("GetEventStoreVersion").Return(int32(0))
 	msBuilder.On("GetReplicationState").Return(&persistence.ReplicationState{
 		CurrentVersion:   version,
 		StartVersion:     version,
 		LastWriteVersion: version,
 		LastWriteEventID: nextEventID - 1,
 	})
-	msBuilder.On("GetLastWriteVersion").Return(version)
 	msBuilder.On("UpdateReplicationStateVersion", version, false).Once()
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: domainID}).Return(
 		&persistence.GetDomainResponse{
@@ -806,26 +812,30 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 	s.Nil(err)
 }
 
-func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLessThanCurrent() {
-	domainID := validDomainID
-	workflowID := "some random workflow ID"
-	runID := uuid.New()
+func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLessThanCurrent_NoGarbageCollection() {
 	incomingVersion := int64(110)
 	currentLastWriteVersion := int64(123)
 
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilderIn := &mockMutableState{}
-	context.msBuilder = msBuilderIn
+	defer msBuilderIn.AssertExpectations(s.T())
 	request := &h.ReplicateEventsRequest{
 		Version: common.Int64Ptr(incomingVersion),
 		History: &shared.History{Events: []*shared.HistoryEvent{
-			&shared.HistoryEvent{Timestamp: common.Int64Ptr(time.Now().UnixNano())},
+			&shared.HistoryEvent{
+				EventType: shared.EventTypeWorkflowExecutionCanceled.Ptr(),
+				Timestamp: common.Int64Ptr(time.Now().UnixNano()),
+			},
 		}},
 	}
 	msBuilderIn.On("GetReplicationState").Return(&persistence.ReplicationState{LastWriteVersion: currentLastWriteVersion})
+	msBuilderIn.On("GetLastWriteVersion").Return(currentLastWriteVersion)
+	msBuilderIn.On("UpdateReplicationStateVersion", currentLastWriteVersion, true).Once()
+	msBuilderIn.On("IsWorkflowExecutionRunning").Return(true)
+
+	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(cluster.TestCurrentClusterName)
+	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 
 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn,
 		request, s.logger)
@@ -833,19 +843,64 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLes
 	s.Nil(err)
 }
 
+func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLessThanCurrent_CanGarbageCollection() {
+	incomingVersion := int64(110)
+	currentLastWriteVersion := int64(123)
+
+	signalName := "some random signal name"
+	signalInput := []byte("some random signal input")
+	signalIdentity := "some random signal identity"
+
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
+	msBuilderIn := &mockMutableState{}
+	defer msBuilderIn.AssertExpectations(s.T())
+	request := &h.ReplicateEventsRequest{
+		Version: common.Int64Ptr(incomingVersion),
+		History: &shared.History{Events: []*shared.HistoryEvent{
+			&shared.HistoryEvent{
+				EventType: shared.EventTypeWorkflowExecutionSignaled.Ptr(),
+				Timestamp: common.Int64Ptr(time.Now().UnixNano()),
+				WorkflowExecutionSignaledEventAttributes: &shared.WorkflowExecutionSignaledEventAttributes{
+					SignalName: common.StringPtr(signalName),
+					Input:      signalInput,
+					Identity:   common.StringPtr(signalIdentity),
+				},
+			},
+		}},
+	}
+	msBuilderIn.On("GetReplicationState").Return(&persistence.ReplicationState{LastWriteVersion: currentLastWriteVersion})
+	msBuilderIn.On("GetLastWriteVersion").Return(currentLastWriteVersion)
+	msBuilderIn.On("IsWorkflowExecutionRunning").Return(true)
+	msBuilderIn.On("UpdateReplicationStateVersion", currentLastWriteVersion, true).Once()
+	msBuilderIn.On("AddWorkflowExecutionSignaled", signalName, signalInput, signalIdentity).Return(&shared.HistoryEvent{
+		EventType: shared.EventTypeWorkflowExecutionSignaled.Ptr(),
+		Timestamp: common.Int64Ptr(time.Now().UnixNano()),
+		WorkflowExecutionSignaledEventAttributes: &shared.WorkflowExecutionSignaledEventAttributes{
+			SignalName: common.StringPtr(signalName),
+			Input:      signalInput,
+			Identity:   common.StringPtr(signalIdentity),
+		},
+	}).Once()
+
+	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(cluster.TestCurrentClusterName)
+	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+
+	context.On("updateWorkflowExecution", ([]persistence.Task)(nil), ([]persistence.Task)(nil), mock.Anything).Return(nil).Once()
+	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn,
+		request, s.logger)
+	s.Nil(msBuilderOut)
+	s.Nil(err)
+}
+
 func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingEqualToCurrent() {
-	domainID := validDomainID
-	workflowID := "some random workflow ID"
-	runID := uuid.New()
 	incomingVersion := int64(110)
 	currentLastWriteVersion := incomingVersion
 
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilderIn := &mockMutableState{}
-	context.msBuilder = msBuilderIn
+	defer msBuilderIn.AssertExpectations(s.T())
 	request := &h.ReplicateEventsRequest{
 		Version: common.Int64Ptr(incomingVersion),
 		History: &shared.History{Events: []*shared.HistoryEvent{
@@ -860,20 +915,14 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingEqu
 }
 
 func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGreaterThanCurrent_CurrentWasNotActive_SameCluster() {
-	domainID := validDomainID
-	workflowID := "some random workflow ID"
-	runID := uuid.New()
-
 	currentLastWriteVersion := int64(10)
 	incomingVersion := currentLastWriteVersion + 10
 
 	prevActiveCluster := cluster.TestAlternativeClusterName
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilderIn := &mockMutableState{}
-	context.msBuilder = msBuilderIn
+	defer msBuilderIn.AssertExpectations(s.T())
 
 	request := &h.ReplicateEventsRequest{
 		Version: common.Int64Ptr(incomingVersion),
@@ -894,20 +943,14 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 }
 
 func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGreaterThanCurrent_CurrentWasNotActive_DiffCluster() {
-	domainID := validDomainID
-	workflowID := "some random workflow ID"
-	runID := uuid.New()
-
 	currentLastWriteVersion := int64(10)
 	incomingVersion := currentLastWriteVersion + 10
 
 	prevActiveCluster := cluster.TestAlternativeClusterName
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilderIn := &mockMutableState{}
-	context.msBuilder = msBuilderIn
+	defer msBuilderIn.AssertExpectations(s.T())
 
 	request := &h.ReplicateEventsRequest{
 		Version: common.Int64Ptr(incomingVersion),
@@ -928,8 +971,6 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 }
 
 func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGreaterThanCurrent_CurrentWasActive_MissingReplicationInfo() {
-	domainID := validDomainID
-	workflowID := "some random workflow ID"
 	runID := uuid.New()
 
 	currentLastWriteVersion := int64(10)
@@ -940,12 +981,10 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 
 	incomingActiveCluster := cluster.TestAlternativeClusterName
 	prevActiveCluster := cluster.TestCurrentClusterName
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilderIn := &mockMutableState{}
-	context.msBuilder = msBuilderIn
+	defer msBuilderIn.AssertExpectations(s.T())
 
 	request := &h.ReplicateEventsRequest{
 		Version:         common.Int64Ptr(incomingVersion),
@@ -974,7 +1013,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
 
 	mockConflictResolver := &mockConflictResolver{}
-	s.historyReplicator.getNewConflictResolver = func(context *workflowExecutionContext, logger bark.Logger) conflictResolver {
+	s.historyReplicator.getNewConflictResolver = func(context workflowExecutionContext, logger bark.Logger) conflictResolver {
 		return mockConflictResolver
 	}
 	msBuilderMid := &mockMutableState{}
@@ -986,8 +1025,6 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 }
 
 func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGreaterThanCurrent_CurrentWasActive_ReplicationInfoVersionLocalLarger() {
-	domainID := validDomainID
-	workflowID := "some random workflow ID"
 	runID := uuid.New()
 
 	currentLastWriteVersion := int64(120)
@@ -1000,12 +1037,10 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 
 	incomingActiveCluster := cluster.TestAlternativeClusterName
 	prevActiveCluster := cluster.TestCurrentClusterName
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilderIn := &mockMutableState{}
-	context.msBuilder = msBuilderIn
+	defer msBuilderIn.AssertExpectations(s.T())
 
 	request := &h.ReplicateEventsRequest{
 		Version: common.Int64Ptr(incomingVersion),
@@ -1039,7 +1074,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
 
 	mockConflictResolver := &mockConflictResolver{}
-	s.historyReplicator.getNewConflictResolver = func(context *workflowExecutionContext, logger bark.Logger) conflictResolver {
+	s.historyReplicator.getNewConflictResolver = func(context workflowExecutionContext, logger bark.Logger) conflictResolver {
 		return mockConflictResolver
 	}
 	msBuilderMid := &mockMutableState{}
@@ -1051,10 +1086,6 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 }
 
 func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGreaterThanCurrent_CurrentWasActive_ReplicationInfoVersionLocalSmaller() {
-	domainID := validDomainID
-	workflowID := "some random workflow ID"
-	runID := uuid.New()
-
 	currentLastWriteVersion := int64(10)
 	currentLastEventID := int64(98)
 	incomingVersion := currentLastWriteVersion + 10
@@ -1062,12 +1093,10 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	incomingReplicationInfoLastEventID := currentLastEventID
 
 	prevActiveCluster := cluster.TestCurrentClusterName
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilderIn := &mockMutableState{}
-	context.msBuilder = msBuilderIn
+	defer msBuilderIn.AssertExpectations(s.T())
 
 	request := &h.ReplicateEventsRequest{
 		Version: common.Int64Ptr(incomingVersion),
@@ -1081,13 +1110,10 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 			&shared.HistoryEvent{Timestamp: common.Int64Ptr(time.Now().UnixNano())},
 		}},
 	}
-	startTimeStamp := time.Now()
 	msBuilderIn.On("GetReplicationState").Return(&persistence.ReplicationState{
 		LastWriteVersion: currentLastWriteVersion,
 		LastWriteEventID: currentLastEventID,
 	})
-	msBuilderIn.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{StartTimestamp: startTimeStamp})
-	msBuilderIn.On("IsWorkflowExecutionRunning").Return(true)
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
 
 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn, request, s.logger)
@@ -1096,8 +1122,6 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 }
 
 func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGreaterThanCurrent_CurrentWasActive_ReplicationInfoVersionEqual_ResolveConflict() {
-	domainID := validDomainID
-	workflowID := "some random workflow ID"
 	runID := uuid.New()
 
 	currentLastWriteVersion := int64(10)
@@ -1107,12 +1131,10 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	incomingReplicationInfoLastEventID := currentLastEventID - 10
 
 	prevActiveCluster := cluster.TestCurrentClusterName
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilderIn := &mockMutableState{}
-	context.msBuilder = msBuilderIn
+	defer msBuilderIn.AssertExpectations(s.T())
 
 	request := &h.ReplicateEventsRequest{
 		Version: common.Int64Ptr(incomingVersion),
@@ -1131,6 +1153,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 		LastWriteVersion: currentLastWriteVersion,
 		LastWriteEventID: currentLastEventID,
 	})
+	msBuilderIn.On("HasBufferedEvents").Return(false)
 	exeInfo := &persistence.WorkflowExecutionInfo{
 		StartTimestamp: startTimeStamp,
 		RunID:          runID,
@@ -1140,7 +1163,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
 
 	mockConflictResolver := &mockConflictResolver{}
-	s.historyReplicator.getNewConflictResolver = func(context *workflowExecutionContext, logger bark.Logger) conflictResolver {
+	s.historyReplicator.getNewConflictResolver = func(context workflowExecutionContext, logger bark.Logger) conflictResolver {
 		return mockConflictResolver
 	}
 	msBuilderMid := &mockMutableState{}
@@ -1152,10 +1175,6 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 }
 
 func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGreaterThanCurrent_CurrentWasActive_ReplicationInfoVersionEqual_Corrputed() {
-	domainID := validDomainID
-	workflowID := "some random workflow ID"
-	runID := uuid.New()
-
 	currentLastWriteVersion := int64(10)
 	currentLastEventID := int64(98)
 	incomingVersion := currentLastWriteVersion + 10
@@ -1163,12 +1182,10 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	incomingReplicationInfoLastEventID := currentLastEventID + 10
 
 	prevActiveCluster := cluster.TestCurrentClusterName
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilderIn := &mockMutableState{}
-	context.msBuilder = msBuilderIn
+	defer msBuilderIn.AssertExpectations(s.T())
 
 	request := &h.ReplicateEventsRequest{
 		Version: common.Int64Ptr(incomingVersion),
@@ -1182,13 +1199,10 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 			&shared.HistoryEvent{Timestamp: common.Int64Ptr(time.Now().UnixNano())},
 		}},
 	}
-	startTimeStamp := time.Now()
 	msBuilderIn.On("GetReplicationState").Return(&persistence.ReplicationState{
 		LastWriteVersion: currentLastWriteVersion,
 		LastWriteEventID: currentLastEventID,
 	})
-	msBuilderIn.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{StartTimestamp: startTimeStamp})
-	msBuilderIn.On("IsWorkflowExecutionRunning").Return(true)
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
 
 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn, request, s.logger)
@@ -1201,10 +1215,6 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 }
 
 func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGreaterThanCurrent_CurrentWasActive_ReplicationInfoVersionEqual_NoBufferedEvent_NoOp() {
-	domainID := validDomainID
-	workflowID := "some random workflow ID"
-	runID := uuid.New()
-
 	currentLastWriteVersion := int64(10)
 	currentLastEventID := int64(98)
 	incomingVersion := currentLastWriteVersion + 10
@@ -1212,12 +1222,10 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	incomingReplicationInfoLastEventID := currentLastEventID
 
 	prevActiveCluster := cluster.TestCurrentClusterName
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilderIn := &mockMutableState{}
-	context.msBuilder = msBuilderIn
+	defer msBuilderIn.AssertExpectations(s.T())
 
 	request := &h.ReplicateEventsRequest{
 		Version: common.Int64Ptr(incomingVersion),
@@ -1231,13 +1239,13 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 			&shared.HistoryEvent{Timestamp: common.Int64Ptr(time.Now().UnixNano())},
 		}},
 	}
-	startTimeStamp := time.Now()
+
 	msBuilderIn.On("HasBufferedEvents").Return(false)
 	msBuilderIn.On("GetReplicationState").Return(&persistence.ReplicationState{
 		LastWriteVersion: currentLastWriteVersion,
 		LastWriteEventID: currentLastEventID,
 	})
-	msBuilderIn.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{StartTimestamp: startTimeStamp})
+	msBuilderIn.On("IsWorkflowExecutionRunning").Return(true)
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
 
 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn,
@@ -1247,8 +1255,6 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 }
 
 func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGreaterThanCurrent_CurrentWasActive_ReplicationInfoVersionEqual_HasBufferedEvent_ResolveConflict() {
-	domainID := validDomainID
-	workflowID := "some random workflow ID"
 	runID := uuid.New()
 
 	currentLastWriteVersion := int64(10)
@@ -1258,12 +1264,10 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	incomingReplicationInfoLastEventID := currentLastEventID
 
 	prevActiveCluster := cluster.TestCurrentClusterName
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilderIn := &mockMutableState{}
-	context.msBuilder = msBuilderIn
+	defer msBuilderIn.AssertExpectations(s.T())
 
 	request := &h.ReplicateEventsRequest{
 		Version: common.Int64Ptr(incomingVersion),
@@ -1278,11 +1282,29 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 		}},
 	}
 	startTimeStamp := time.Now()
-	msBuilderIn.On("HasBufferedEvents").Return(true)
+	pendingDecisionInfo := &decisionInfo{
+		Version:    currentLastWriteVersion,
+		ScheduleID: 56,
+		StartedID:  57,
+	}
+	msBuilderIn.On("GetLastWriteVersion").Return(currentLastWriteVersion)
 	msBuilderIn.On("GetReplicationState").Return(&persistence.ReplicationState{
 		LastWriteVersion: currentLastWriteVersion,
 		LastWriteEventID: currentLastEventID,
-	})
+	}).Once()
+	msBuilderIn.On("HasBufferedEvents").Return(true).Once()
+	msBuilderIn.On("GetInFlightDecisionTask").Return(pendingDecisionInfo, true)
+	msBuilderIn.On("UpdateReplicationStateVersion", currentLastWriteVersion, true).Once()
+	msBuilderIn.On("AddDecisionTaskFailedEvent", pendingDecisionInfo.ScheduleID, pendingDecisionInfo.StartedID,
+		workflow.DecisionTaskFailedCauseFailoverCloseDecision, ([]byte)(nil), identityHistoryService).Return(&shared.HistoryEvent{}).Once()
+	context.On("updateWorkflowExecution", ([]persistence.Task)(nil), ([]persistence.Task)(nil), mock.Anything).Return(nil).Once()
+
+	// after the flush, the pending buffered events are gone, however, the last event ID should increase
+	msBuilderIn.On("GetReplicationState").Return(&persistence.ReplicationState{
+		LastWriteVersion: currentLastWriteVersion,
+		LastWriteEventID: currentLastEventID + 2,
+	}).Once()
+
 	exeInfo := &persistence.WorkflowExecutionInfo{
 		StartTimestamp: startTimeStamp,
 		RunID:          runID,
@@ -1292,7 +1314,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
 
 	mockConflictResolver := &mockConflictResolver{}
-	s.historyReplicator.getNewConflictResolver = func(context *workflowExecutionContext, logger bark.Logger) conflictResolver {
+	s.historyReplicator.getNewConflictResolver = func(context workflowExecutionContext, logger bark.Logger) conflictResolver {
 		return mockConflictResolver
 	}
 	msBuilderMid := &mockMutableState{}
@@ -1304,19 +1326,13 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 }
 
 func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingLessThanCurrent() {
-	domainID := validDomainID
-	workflowID := "some random workflow ID"
-	runID := uuid.New()
-
 	currentNextEventID := int64(10)
 	incomingFirstEventID := currentNextEventID - 4
 
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilder := &mockMutableState{}
-	context.msBuilder = msBuilder
+	defer msBuilder.AssertExpectations(s.T())
 
 	request := &h.ReplicateEventsRequest{
 		FirstEventId: common.Int64Ptr(incomingFirstEventID),
@@ -1324,7 +1340,6 @@ func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingLessThanCurrent() 
 	}
 	msBuilder.On("GetNextEventID").Return(currentNextEventID)
 	msBuilder.On("GetReplicationState").Return(&persistence.ReplicationState{}) // logger will use this
-	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
 
 	err := s.historyReplicator.ApplyOtherEvents(ctx.Background(), context, msBuilder, request, s.logger)
 	s.Nil(err)
@@ -1338,7 +1353,6 @@ func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent
 	domainID := validDomainID
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
-
 	currentVersion := int64(4096)
 	currentNextEventID := int64(10)
 
@@ -1347,13 +1361,16 @@ func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent
 	incomingFirstEventID := currentNextEventID + 4
 	incomingNextEventID := incomingFirstEventID + 4
 
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
+	context.On("getDomainID").Return(domainID)
+	context.On("getExecution").Return(&workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(workflowID),
 		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
-	context.updateCondition = currentNextEventID
+	})
+
 	msBuilder := &mockMutableState{}
-	context.msBuilder = msBuilder
+	defer msBuilder.AssertExpectations(s.T())
 
 	request := &h.ReplicateEventsRequest{
 		SourceCluster: common.StringPtr(incomingSourceCluster),
@@ -1370,11 +1387,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent
 	s.Equal(newRetryTaskErrorWithHint(ErrRetryBufferEventsMsg, domainID, workflowID, runID, currentNextEventID), err)
 }
 
-func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent_ForceBuffer_NoExistingBuffer() {
-	domainID := validDomainID
-	workflowID := "some random workflow ID"
-	runID := uuid.New()
-
+func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent_ForceBuffer_NoExistingBuffer_WorkflowRunning() {
 	currentSourceCluster := "some random current source cluster"
 	currentVersion := int64(4096)
 	currentNextEventID := int64(10)
@@ -1384,114 +1397,38 @@ func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent
 	incomingFirstEventID := currentNextEventID + 4
 	incomingNextEventID := incomingFirstEventID + 4
 
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
-	context.updateCondition = currentNextEventID
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilder := &mockMutableState{}
-	context.msBuilder = msBuilder
+	defer msBuilder.AssertExpectations(s.T())
 
 	request := &h.ReplicateEventsRequest{
-		SourceCluster:     common.StringPtr(incomingSourceCluster),
-		Version:           common.Int64Ptr(incomingVersion),
-		FirstEventId:      common.Int64Ptr(incomingFirstEventID),
-		NextEventId:       common.Int64Ptr(incomingNextEventID),
-		ForceBufferEvents: common.BoolPtr(true),
-		History:           &shared.History{Events: []*shared.HistoryEvent{&shared.HistoryEvent{}}},
-	}
-
-	history := []*shared.HistoryEvent{&shared.HistoryEvent{EventId: common.Int64Ptr(144)}}
-	bufferedReplicationTask := &persistence.BufferedReplicationTask{
-		FirstEventID: request.GetFirstEventId(),
-		NextEventID:  request.GetNextEventId(),
-		Version:      request.GetVersion(),
-		History:      history,
-	}
-
-	executionInfo := &persistence.WorkflowExecutionInfo{
-		DomainID: domainID,
-		State:    persistence.WorkflowStateRunning,
-	}
-	replicationState := &persistence.ReplicationState{
-		CurrentVersion:   currentVersion,
-		StartVersion:     currentVersion,
-		LastWriteVersion: currentVersion,
-		LastWriteEventID: currentNextEventID - 1,
+		SourceCluster:           common.StringPtr(incomingSourceCluster),
+		Version:                 common.Int64Ptr(incomingVersion),
+		FirstEventId:            common.Int64Ptr(incomingFirstEventID),
+		NextEventId:             common.Int64Ptr(incomingNextEventID),
+		ForceBufferEvents:       common.BoolPtr(true),
+		History:                 &shared.History{Events: []*shared.HistoryEvent{&shared.HistoryEvent{}}},
+		NewRunHistory:           &shared.History{Events: []*shared.HistoryEvent{&shared.HistoryEvent{}}},
+		EventStoreVersion:       common.Int32Ptr(233),
+		NewRunEventStoreVersion: common.Int32Ptr(2333),
 	}
 
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentVersion).Return(currentSourceCluster)
-	msBuilder.On("GetBufferedReplicationTask", incomingFirstEventID).Return(nil, false).Once()
-	msBuilder.On("GetCurrentVersion").Return(currentVersion)
+	msBuilder.On("GetAllBufferedReplicationTasks").Return(map[int64]*persistence.BufferedReplicationTask{}).Once()
 	msBuilder.On("GetLastWriteVersion").Return(currentVersion)
 	msBuilder.On("GetNextEventID").Return(currentNextEventID)
-	msBuilder.On("GetEventStoreVersion").Return(int32(0))
-	msBuilder.On("GetReplicationState").Return(replicationState)
 	msBuilder.On("BufferReplicationTask", request).Return(nil).Once()
-	msBuilder.On("IncrementHistorySize", mock.Anything).Return().Once()
-	msBuilder.On("CloseUpdateSession").Return(&mutableStateSessionUpdates{
-		executionInfo:                    executionInfo,
-		newEventsBuilder:                 newHistoryBuilder(msBuilder, s.logger),
-		newBufferedReplicationEventsInfo: bufferedReplicationTask,
-		deleteBufferedReplicationEvent:   nil,
-	}, nil).Once()
-	msBuilder.On("GetExecutionInfo").Return(executionInfo)
-	msBuilder.On("UpdateReplicationStateLastEventID", currentSourceCluster, currentVersion, currentNextEventID-1).Once()
-
-	// these does not matter, but will be used by ms builder change notification
-	msBuilder.On("GetLastFirstEventID").Return(currentNextEventID - 4)
 	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
 
-	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.MatchedBy(func(input *persistence.UpdateWorkflowExecutionRequest) bool {
-		input.RangeID = 0
-		s.Equal(&persistence.UpdateWorkflowExecutionRequest{
-			ExecutionInfo:                 executionInfo,
-			ReplicationState:              replicationState,
-			TransferTasks:                 nil,
-			ReplicationTasks:              nil,
-			TimerTasks:                    nil,
-			Condition:                     currentNextEventID,
-			DeleteTimerTask:               nil,
-			UpsertActivityInfos:           nil,
-			DeleteActivityInfos:           nil,
-			UpserTimerInfos:               nil,
-			DeleteTimerInfos:              nil,
-			UpsertChildExecutionInfos:     nil,
-			DeleteChildExecutionInfo:      nil,
-			UpsertRequestCancelInfos:      nil,
-			DeleteRequestCancelInfo:       nil,
-			UpsertSignalInfos:             nil,
-			DeleteSignalInfo:              nil,
-			UpsertSignalRequestedIDs:      nil,
-			DeleteSignalRequestedID:       "",
-			NewBufferedEvents:             nil,
-			ClearBufferedEvents:           false,
-			NewBufferedReplicationTask:    bufferedReplicationTask,
-			DeleteBufferedReplicationTask: nil,
-			ContinueAsNew:                 nil,
-			FinishExecution:               false,
-			FinishedExecutionTTL:          0,
-			Encoding:                      common.EncodingType("json"),
-		}, input)
-		return true
-	})).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
-	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(&persistence.GetDomainResponse{
-		Info:              &persistence.DomainInfo{ID: domainID, Name: "domain name"},
-		TableVersion:      p.DomainTableVersionV1,
-		Config:            &p.DomainConfig{},
-		ReplicationConfig: &p.DomainReplicationConfig{},
-	}, nil)
+	context.On("updateHelper", ([]persistence.Task)(nil), ([]persistence.Task)(nil),
+		mock.Anything, mock.Anything, false, (*historyBuilder)(nil), currentSourceCluster).Return(nil).Once()
 
 	err := s.historyReplicator.ApplyOtherEvents(ctx.Background(), context, msBuilder, request, s.logger)
 	s.Nil(err)
 }
 
 func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent_ForceBuffer_NoExistingBuffer_WorkflowClosed() {
-	domainID := validDomainID
-	workflowID := "some random workflow ID"
-	runID := uuid.New()
-
-	currentSourceCluster := "some random current source cluster"
 	currentVersion := int64(4096)
 	currentNextEventID := int64(10)
 
@@ -1500,13 +1437,10 @@ func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent
 	incomingFirstEventID := currentNextEventID + 4
 	incomingNextEventID := incomingFirstEventID + 4
 
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
-	context.updateCondition = currentNextEventID
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilder := &mockMutableState{}
-	context.msBuilder = msBuilder
+	defer msBuilder.AssertExpectations(s.T())
 
 	request := &h.ReplicateEventsRequest{
 		SourceCluster:     common.StringPtr(incomingSourceCluster),
@@ -1517,44 +1451,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent
 		History:           &shared.History{Events: []*shared.HistoryEvent{&shared.HistoryEvent{}}},
 	}
 
-	history := []*shared.HistoryEvent{&shared.HistoryEvent{EventId: common.Int64Ptr(144)}}
-	bufferedReplicationTask := &persistence.BufferedReplicationTask{
-		FirstEventID: request.GetFirstEventId(),
-		NextEventID:  request.GetNextEventId(),
-		Version:      request.GetVersion(),
-		History:      history,
-	}
-
-	executionInfo := &persistence.WorkflowExecutionInfo{
-		State: persistence.WorkflowStateRunning,
-	}
-	replicationState := &persistence.ReplicationState{
-		CurrentVersion:   currentVersion,
-		StartVersion:     currentVersion,
-		LastWriteVersion: currentVersion,
-		LastWriteEventID: currentNextEventID - 1,
-	}
-
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentVersion).Return(currentSourceCluster)
-	msBuilder.On("GetBufferedReplicationTask", incomingFirstEventID).Return(nil, false).Once()
-	msBuilder.On("GetCurrentVersion").Return(currentVersion)
-	msBuilder.On("GetLastWriteVersion").Return(currentVersion)
 	msBuilder.On("GetNextEventID").Return(currentNextEventID)
-	msBuilder.On("GetEventStoreVersion").Return(int32(0))
-	msBuilder.On("GetReplicationState").Return(replicationState)
-	msBuilder.On("BufferReplicationTask", request).Return(nil).Once()
-	msBuilder.On("IncrementHistorySize", mock.Anything).Return().Once()
-	msBuilder.On("CloseUpdateSession").Return(&mutableStateSessionUpdates{
-		executionInfo:                    executionInfo,
-		newEventsBuilder:                 newHistoryBuilder(msBuilder, s.logger),
-		newBufferedReplicationEventsInfo: bufferedReplicationTask,
-		deleteBufferedReplicationEvent:   nil,
-	}, nil).Once()
-	msBuilder.On("GetExecutionInfo").Return(executionInfo)
-	msBuilder.On("UpdateReplicationStateLastEventID", currentSourceCluster, currentVersion, currentNextEventID-1).Once()
-
-	// these does not matter, but will be used by ms builder change notification
-	msBuilder.On("GetLastFirstEventID").Return(currentNextEventID - 4)
 	msBuilder.On("IsWorkflowExecutionRunning").Return(false)
 
 	err := s.historyReplicator.ApplyOtherEvents(ctx.Background(), context, msBuilder, request, s.logger)
@@ -1562,10 +1459,6 @@ func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent
 }
 
 func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent_ForceBuffer_StaleExistingBuffer() {
-	domainID := validDomainID
-	workflowID := "some random workflow ID"
-	runID := uuid.New()
-
 	currentSourceCluster := "some random current source cluster"
 	currentVersion := int64(4096)
 	currentNextEventID := int64(10)
@@ -1575,13 +1468,10 @@ func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent
 	incomingFirstEventID := currentNextEventID + 4
 	incomingNextEventID := incomingFirstEventID + 4
 
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
-	context.updateCondition = currentNextEventID
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilder := &mockMutableState{}
-	context.msBuilder = msBuilder
+	defer msBuilder.AssertExpectations(s.T())
 
 	request := &h.ReplicateEventsRequest{
 		SourceCluster:     common.StringPtr(incomingSourceCluster),
@@ -1592,24 +1482,6 @@ func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent
 		History:           &shared.History{Events: []*shared.HistoryEvent{&shared.HistoryEvent{}}},
 	}
 
-	history := []*shared.HistoryEvent{&shared.HistoryEvent{EventId: common.Int64Ptr(144)}}
-	bufferedReplicationTask := &persistence.BufferedReplicationTask{
-		FirstEventID: request.GetFirstEventId(),
-		NextEventID:  request.GetNextEventId(),
-		Version:      request.GetVersion(),
-		History:      history,
-	}
-
-	executionInfo := &persistence.WorkflowExecutionInfo{
-		DomainID: domainID,
-		State:    persistence.WorkflowStateRunning,
-	}
-	replicationState := &persistence.ReplicationState{
-		CurrentVersion:   currentVersion,
-		StartVersion:     currentVersion,
-		LastWriteVersion: currentVersion,
-		LastWriteEventID: currentNextEventID - 1,
-	}
 	staleBufferReplicationTask := &persistence.BufferedReplicationTask{
 		FirstEventID: request.GetFirstEventId(),
 		NextEventID:  request.GetNextEventId(),
@@ -1617,76 +1489,22 @@ func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent
 	}
 
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentVersion).Return(currentSourceCluster)
-	msBuilder.On("GetBufferedReplicationTask", incomingFirstEventID).Return(staleBufferReplicationTask, true).Once()
-	msBuilder.On("GetCurrentVersion").Return(currentVersion)
+	msBuilder.On("GetAllBufferedReplicationTasks").Return(map[int64]*persistence.BufferedReplicationTask{
+		incomingFirstEventID: staleBufferReplicationTask,
+	}).Once()
 	msBuilder.On("GetLastWriteVersion").Return(currentVersion)
 	msBuilder.On("GetNextEventID").Return(currentNextEventID)
-	msBuilder.On("GetEventStoreVersion").Return(int32(0))
-	msBuilder.On("GetReplicationState").Return(replicationState)
 	msBuilder.On("BufferReplicationTask", request).Return(nil).Once()
-	msBuilder.On("IncrementHistorySize", mock.Anything).Return().Once()
-	msBuilder.On("CloseUpdateSession").Return(&mutableStateSessionUpdates{
-		executionInfo:                    executionInfo,
-		newEventsBuilder:                 newHistoryBuilder(msBuilder, s.logger),
-		newBufferedReplicationEventsInfo: bufferedReplicationTask,
-		deleteBufferedReplicationEvent:   nil,
-	}, nil).Once()
-	msBuilder.On("GetExecutionInfo").Return(executionInfo)
-	msBuilder.On("UpdateReplicationStateLastEventID", currentSourceCluster, currentVersion, currentNextEventID-1).Once()
-
-	// these does not matter, but will be used by ms builder change notification
-	msBuilder.On("GetLastFirstEventID").Return(currentNextEventID - 4)
 	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
 
-	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.MatchedBy(func(input *persistence.UpdateWorkflowExecutionRequest) bool {
-		input.RangeID = 0
-		s.Equal(&persistence.UpdateWorkflowExecutionRequest{
-			ExecutionInfo:                 executionInfo,
-			ReplicationState:              replicationState,
-			TransferTasks:                 nil,
-			ReplicationTasks:              nil,
-			TimerTasks:                    nil,
-			Condition:                     currentNextEventID,
-			DeleteTimerTask:               nil,
-			UpsertActivityInfos:           nil,
-			DeleteActivityInfos:           nil,
-			UpserTimerInfos:               nil,
-			DeleteTimerInfos:              nil,
-			UpsertChildExecutionInfos:     nil,
-			DeleteChildExecutionInfo:      nil,
-			UpsertRequestCancelInfos:      nil,
-			DeleteRequestCancelInfo:       nil,
-			UpsertSignalInfos:             nil,
-			DeleteSignalInfo:              nil,
-			UpsertSignalRequestedIDs:      nil,
-			DeleteSignalRequestedID:       "",
-			NewBufferedEvents:             nil,
-			ClearBufferedEvents:           false,
-			NewBufferedReplicationTask:    bufferedReplicationTask,
-			DeleteBufferedReplicationTask: nil,
-			ContinueAsNew:                 nil,
-			FinishExecution:               false,
-			FinishedExecutionTTL:          0,
-			Encoding:                      common.EncodingType("json"),
-		}, input)
-		return true
-	})).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
-	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(&persistence.GetDomainResponse{
-		Info:              &persistence.DomainInfo{ID: domainID, Name: "domain name"},
-		TableVersion:      p.DomainTableVersionV1,
-		Config:            &p.DomainConfig{},
-		ReplicationConfig: &p.DomainReplicationConfig{},
-	}, nil)
+	context.On("updateHelper", ([]persistence.Task)(nil), ([]persistence.Task)(nil),
+		mock.Anything, mock.Anything, false, (*historyBuilder)(nil), currentSourceCluster).Return(nil).Once()
 
 	err := s.historyReplicator.ApplyOtherEvents(ctx.Background(), context, msBuilder, request, s.logger)
 	s.Nil(err)
 }
 
 func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent_ForceBuffer_StaleIncoming() {
-	domainID := validDomainID
-	workflowID := "some random workflow ID"
-	runID := uuid.New()
-
 	currentVersion := int64(4096)
 	currentNextEventID := int64(10)
 
@@ -1695,13 +1513,10 @@ func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent
 	incomingFirstEventID := currentNextEventID + 4
 	incomingNextEventID := incomingFirstEventID + 4
 
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
-	context.updateCondition = currentNextEventID
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilder := &mockMutableState{}
-	context.msBuilder = msBuilder
+	defer msBuilder.AssertExpectations(s.T())
 
 	request := &h.ReplicateEventsRequest{
 		SourceCluster:     common.StringPtr(incomingSourceCluster),
@@ -1718,22 +1533,20 @@ func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent
 		Version:      request.GetVersion() + 1,
 	}
 	msBuilder.On("GetNextEventID").Return(currentNextEventID)
-	msBuilder.On("GetBufferedReplicationTask", incomingFirstEventID).Return(bufferReplicationTask, true).Once()
+	msBuilder.On("GetAllBufferedReplicationTasks").Return(map[int64]*persistence.BufferedReplicationTask{
+		incomingFirstEventID: bufferReplicationTask,
+	}).Once()
 	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
 
 	err := s.historyReplicator.ApplyOtherEvents(ctx.Background(), context, msBuilder, request, s.logger)
 	s.Nil(err)
 }
 
-func (s *historyReplicatorSuite) ApplyReplicationTask() {
+func (s *historyReplicatorSuite) TestApplyReplicationTask() {
 	// TODO
 }
 
 func (s *historyReplicatorSuite) TestApplyReplicationTask_WorkflowClosed() {
-	domainID := validDomainID
-	workflowID := "some random workflow ID"
-	runID := uuid.New()
-
 	currentVersion := int64(4096)
 	currentNextEventID := int64(10)
 
@@ -1742,13 +1555,10 @@ func (s *historyReplicatorSuite) TestApplyReplicationTask_WorkflowClosed() {
 	incomingFirstEventID := currentNextEventID + 4
 	incomingNextEventID := incomingFirstEventID + 4
 
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
-	context.updateCondition = currentNextEventID
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilder := &mockMutableState{}
-	context.msBuilder = msBuilder
+	defer msBuilder.AssertExpectations(s.T())
 
 	request := &h.ReplicateEventsRequest{
 		SourceCluster:     common.StringPtr(incomingSourceCluster),
@@ -1765,24 +1575,19 @@ func (s *historyReplicatorSuite) TestApplyReplicationTask_WorkflowClosed() {
 	s.Nil(err)
 }
 
-func (s *historyReplicatorSuite) TestFlushBuffer() {
+func (s *historyReplicatorSuite) TestFlushReplicationBuffer() {
 	// TODO
 }
 
-func (s *historyReplicatorSuite) TestFlushBuffer_AlreadyFinished() {
-	domainID := validDomainID
-	workflowID := "some random workflow ID"
-	runID := uuid.New()
-
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
+func (s *historyReplicatorSuite) TestFlushReplicationBuffer_AlreadyFinished() {
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilder := &mockMutableState{}
-	context.msBuilder = msBuilder
+	defer msBuilder.AssertExpectations(s.T())
+
 	msBuilder.On("IsWorkflowExecutionRunning").Return(false).Once()
 
-	err := s.historyReplicator.FlushBuffer(ctx.Background(), context, msBuilder, s.logger)
+	err := s.historyReplicator.flushReplicationBuffer(ctx.Background(), context, msBuilder, s.logger)
 	s.Nil(err)
 }
 
@@ -1802,12 +1607,11 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_BrandNew() {
 	parentRunID := uuid.New()
 	sourceCluster := "some random source cluster"
 
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilder := &mockMutableState{}
-	context.msBuilder = msBuilder
+	defer msBuilder.AssertExpectations(s.T())
+
 	di := &decisionInfo{
 		Version:         version,
 		ScheduleID:      common.FirstEventID + 1,
@@ -1852,9 +1656,9 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_BrandNew() {
 	msBuilder.On("GetReplicationState").Return(replicationState)
 	msBuilder.On("GetCurrentVersion").Return(version)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
-	msBuilder.On("GetEventStoreVersion").Return(int32(0))
 	msBuilder.On("GetCurrentBranch").Return(nil)
 	historySize := 111
+	msBuilder.On("GetEventStoreVersion").Return(int32(0))
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: historySize}, nil).Once()
 	sBuilder.On("getTransferTasks").Return(transferTasks)
 	sBuilder.On("getTimerTasks").Return(timerTasks)
@@ -1926,12 +1730,11 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_ISE() {
 	parentRunID := uuid.New()
 	sourceCluster := "some random source cluster"
 
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilder := &mockMutableState{}
-	context.msBuilder = msBuilder
+	defer msBuilder.AssertExpectations(s.T())
+
 	di := &decisionInfo{
 		Version:         version,
 		ScheduleID:      common.FirstEventID + 1,
@@ -1975,9 +1778,10 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_ISE() {
 	msBuilder.On("GetReplicationState").Return(replicationState)
 	msBuilder.On("GetCurrentVersion").Return(version)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
-	msBuilder.On("GetEventStoreVersion").Return(int32(0))
 	msBuilder.On("GetCurrentBranch").Return(nil)
-	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: 0}, nil).Once()
+	historySize := 111
+	msBuilder.On("GetEventStoreVersion").Return(int32(0))
+	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: historySize}, nil).Once()
 	sBuilder.On("getTransferTasks").Return(transferTasks)
 	sBuilder.On("getTimerTasks").Return(timerTasks)
 	s.mockShardManager.On("UpdateShard", mock.Anything).Return(nil).Once() // this is called when err is returned, and shard will try to update
@@ -2018,12 +1822,11 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_SameRunID() {
 	parentRunID := uuid.New()
 	sourceCluster := "some random source cluster"
 
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilder := &mockMutableState{}
-	context.msBuilder = msBuilder
+	defer msBuilder.AssertExpectations(s.T())
+
 	di := &decisionInfo{
 		Version:         version,
 		ScheduleID:      common.FirstEventID + 1,
@@ -2067,9 +1870,10 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_SameRunID() {
 	msBuilder.On("GetReplicationState").Return(replicationState)
 	msBuilder.On("GetCurrentVersion").Return(version)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
-	msBuilder.On("GetEventStoreVersion").Return(int32(0))
 	msBuilder.On("GetCurrentBranch").Return(nil)
-	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: 0}, nil).Once()
+	historySize := 111
+	msBuilder.On("GetEventStoreVersion").Return(int32(0))
+	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: historySize}, nil).Once()
 	sBuilder.On("getTransferTasks").Return(transferTasks)
 	sBuilder.On("getTimerTasks").Return(timerTasks)
 
@@ -2116,12 +1920,11 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	parentRunID := uuid.New()
 	sourceCluster := "some random source cluster"
 
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilder := &mockMutableState{}
-	context.msBuilder = msBuilder
+	defer msBuilder.AssertExpectations(s.T())
+
 	di := &decisionInfo{
 		Version:         version,
 		ScheduleID:      common.FirstEventID + 1,
@@ -2165,9 +1968,11 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	msBuilder.On("GetReplicationState").Return(replicationState)
 	msBuilder.On("GetCurrentVersion").Return(version)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
-	msBuilder.On("GetEventStoreVersion").Return(int32(0))
 	msBuilder.On("GetCurrentBranch").Return(nil)
-	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: 0}, nil).Once()
+	msBuilder.On("GetEventStoreVersion").Return(int32(0))
+	historySize := 111
+	msBuilder.On("GetEventStoreVersion").Return(int32(0))
+	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: historySize}, nil).Once()
 	sBuilder.On("getTransferTasks").Return(transferTasks)
 	sBuilder.On("getTimerTasks").Return(timerTasks)
 
@@ -2215,12 +2020,11 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	parentRunID := uuid.New()
 	sourceCluster := "some random source cluster"
 
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilder := &mockMutableState{}
-	context.msBuilder = msBuilder
+	defer msBuilder.AssertExpectations(s.T())
+
 	di := &decisionInfo{
 		Version:         version,
 		ScheduleID:      common.FirstEventID + 1,
@@ -2265,9 +2069,9 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	msBuilder.On("GetReplicationState").Return(replicationState)
 	msBuilder.On("GetCurrentVersion").Return(version)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
-	msBuilder.On("GetEventStoreVersion").Return(int32(0))
 	msBuilder.On("GetCurrentBranch").Return(nil)
 	historySize := 111
+	msBuilder.On("GetEventStoreVersion").Return(int32(0))
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: historySize}, nil).Once()
 	sBuilder.On("getTransferTasks").Return(transferTasks)
 	sBuilder.On("getTimerTasks").Return(timerTasks)
@@ -2382,12 +2186,11 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	parentRunID := uuid.New()
 	sourceCluster := "some random source cluster"
 
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilder := &mockMutableState{}
-	context.msBuilder = msBuilder
+	defer msBuilder.AssertExpectations(s.T())
+
 	di := &decisionInfo{
 		Version:         version,
 		ScheduleID:      common.FirstEventID + 1,
@@ -2432,10 +2235,9 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	msBuilder.On("GetReplicationState").Return(replicationState)
 	msBuilder.On("GetCurrentVersion").Return(version)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
-	msBuilder.On("GetEventStoreVersion").Return(int32(0))
 	msBuilder.On("GetCurrentBranch").Return(nil)
-
 	historySize := 111
+	msBuilder.On("GetEventStoreVersion").Return(int32(0))
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: historySize}, nil).Once()
 	sBuilder.On("getTransferTasks").Return(transferTasks)
 	sBuilder.On("getTimerTasks").Return(timerTasks)
@@ -2550,12 +2352,11 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	parentRunID := uuid.New()
 	sourceCluster := "some random source cluster"
 
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilder := &mockMutableState{}
-	context.msBuilder = msBuilder
+	defer msBuilder.AssertExpectations(s.T())
+
 	di := &decisionInfo{
 		Version:         version,
 		ScheduleID:      common.FirstEventID + 1,
@@ -2599,9 +2400,10 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	msBuilder.On("GetReplicationState").Return(replicationState)
 	msBuilder.On("GetCurrentVersion").Return(version)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
-	msBuilder.On("GetEventStoreVersion").Return(int32(0))
 	msBuilder.On("GetCurrentBranch").Return(nil)
-	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: 0}, nil).Once()
+	historySize := 111
+	msBuilder.On("GetEventStoreVersion").Return(int32(0))
+	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: historySize}, nil).Once()
 	sBuilder.On("getTransferTasks").Return(transferTasks)
 	sBuilder.On("getTimerTasks").Return(timerTasks)
 
@@ -2649,12 +2451,11 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	parentRunID := uuid.New()
 	sourceCluster := "some random source cluster"
 
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilder := &mockMutableState{}
-	context.msBuilder = msBuilder
+	defer msBuilder.AssertExpectations(s.T())
+
 	di := &decisionInfo{
 		Version:         version,
 		ScheduleID:      common.FirstEventID + 1,
@@ -2698,14 +2499,16 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	msBuilder.On("GetReplicationState").Return(replicationState)
 	msBuilder.On("GetCurrentVersion").Return(version)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
-	msBuilder.On("GetEventStoreVersion").Return(int32(0))
 	msBuilder.On("GetCurrentBranch").Return(nil)
-	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: 0}, nil).Once()
+	historySize := 111
+	msBuilder.On("GetEventStoreVersion").Return(int32(0))
+	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: historySize}, nil).Once()
 	sBuilder.On("getTransferTasks").Return(transferTasks)
 	sBuilder.On("getTimerTasks").Return(timerTasks)
 
 	currentVersion := version
 	currentRunID := uuid.New()
+	currentNextEventID := int64(3456)
 	currentState := persistence.WorkflowStateRunning
 	errRet := &persistence.WorkflowExecutionAlreadyStartedError{
 		RunID:            currentRunID,
@@ -2715,22 +2518,36 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	// the test above already assert the create workflow request, so here just use anyting
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
 
-	currentExecution := shared.WorkflowExecution{
+	contextCurrent := &mockWorkflowExecutionContext{}
+	defer contextCurrent.AssertExpectations(s.T())
+	contextCurrent.On("lock", mock.Anything).Return(nil)
+	contextCurrent.On("unlock")
+	contextCurrent.On("getExecution").Return(&workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(workflowID),
+		RunId:      common.StringPtr(currentRunID),
+	})
+
+	msBuilderCurrent := &mockMutableState{}
+	defer msBuilderCurrent.AssertExpectations(s.T())
+
+	contextCurrent.On("loadWorkflowExecution").Return(msBuilderCurrent, nil).Once()
+	currentExecution := &shared.WorkflowExecution{
 		WorkflowId: common.StringPtr(workflowID),
 		RunId:      common.StringPtr(currentRunID),
 	}
-	currentNextEventID := int64(2333)
-	currentContext := newWorkflowExecutionContext(domainID, currentExecution, s.mockShard, s.mockExecutionMgr, s.logger)
-	currentMsBuilder := &mockMutableState{}
-	currentMsBuilder.On("IsWorkflowExecutionRunning").Return(true)
-	currentMsBuilder.On("GetNextEventID").Return(currentNextEventID)
-	currentMsBuilder.On("HasBufferedReplicationTasks").Return(false)
-	// return empty since not actually used
-	currentMsBuilder.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
-	// return nil to bypass updating the version, since this test does not test that
-	currentMsBuilder.On("GetReplicationState").Return(nil)
-	currentContext.msBuilder = currentMsBuilder
-	s.historyReplicator.historyCache.PutIfNotExist(newWorkflowIdentifier(domainID, &currentExecution), currentContext)
+	contextCurrentCacheKey := newWorkflowIdentifier(domainID, currentExecution)
+	s.historyReplicator.historyCache.PutIfNotExist(contextCurrentCacheKey, contextCurrent)
+
+	msBuilderCurrent.On("GetAllBufferedReplicationTasks").Return(map[int64]*persistence.BufferedReplicationTask{})
+	msBuilderCurrent.On("IsWorkflowExecutionRunning").Return(true)
+	msBuilderCurrent.On("HasBufferedReplicationTasks").Return(false)
+	msBuilderCurrent.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{
+		DomainID:   domainID,
+		WorkflowID: workflowID,
+		RunID:      currentRunID,
+	})
+	msBuilderCurrent.On("GetNextEventID").Return(currentNextEventID)
+
 	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
@@ -2771,12 +2588,11 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	parentRunID := uuid.New()
 	sourceCluster := "some random source cluster"
 
-	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}, s.mockShard, s.mockExecutionMgr, s.logger)
+	context := &mockWorkflowExecutionContext{}
+	defer context.AssertExpectations(s.T())
 	msBuilder := &mockMutableState{}
-	context.msBuilder = msBuilder
+	defer msBuilder.AssertExpectations(s.T())
+
 	di := &decisionInfo{
 		Version:         version,
 		ScheduleID:      common.FirstEventID + 1,
@@ -2821,9 +2637,9 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	msBuilder.On("GetReplicationState").Return(replicationState)
 	msBuilder.On("GetCurrentVersion").Return(version)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
-	msBuilder.On("GetEventStoreVersion").Return(int32(0))
 	msBuilder.On("GetCurrentBranch").Return(nil)
 	historySize := 111
+	msBuilder.On("GetEventStoreVersion").Return(int32(0))
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: historySize}, nil).Once()
 	sBuilder.On("getTransferTasks").Return(transferTasks)
 	sBuilder.On("getTimerTasks").Return(timerTasks)
@@ -2905,18 +2721,21 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		}, input)
 	})).Return(&persistence.CreateWorkflowExecutionResponse{}, nil).Once()
 
-	currentContext, currentRelease, err := s.historyReplicator.historyCache.getOrCreateWorkflowExecution(domainID, shared.WorkflowExecution{
+	contextCurrent := &mockWorkflowExecutionContext{}
+	defer contextCurrent.AssertExpectations(s.T())
+	contextCurrent.On("lock", mock.Anything).Return(nil)
+	contextCurrent.On("unlock")
+	msBuilderCurrent := &mockMutableState{}
+	defer msBuilderCurrent.AssertExpectations(s.T())
+
+	contextCurrent.On("loadWorkflowExecution").Return(msBuilderCurrent, nil).Once()
+	currentExecution := &shared.WorkflowExecution{
 		WorkflowId: common.StringPtr(workflowID),
 		RunId:      common.StringPtr(currentRunID),
-	})
-	s.Nil(err)
-	currentMsBuilder := &mockMutableState{}
-	// 2 mocks below are just to by pass unnecessary mocks
-	currentMsBuilder.On("GetReplicationState").Return(nil)
-	currentMsBuilder.On("IsWorkflowExecutionRunning").Return(false)
-	currentMsBuilder.On("GetEventStoreVersion").Return(int32(0))
-	currentContext.msBuilder = currentMsBuilder
-	currentRelease(nil)
+	}
+	contextCurrentCacheKey := newWorkflowIdentifier(domainID, currentExecution)
+	s.historyReplicator.historyCache.PutIfNotExist(contextCurrentCacheKey, contextCurrent)
+	msBuilderCurrent.On("IsWorkflowExecutionRunning").Return(false)
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(&persistence.GetDomainResponse{
 		Info:              &persistence.DomainInfo{ID: domainID, Name: "domain name"},
 		TableVersion:      p.DomainTableVersionV1,
@@ -2925,7 +2744,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	}, nil)
 
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", version).Return(cluster.TestCurrentClusterName)
-	err = s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, di, sourceCluster, history,
+	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, di, sourceCluster, history,
 		sBuilder, s.logger)
 	s.Nil(err)
 	s.Equal(1, len(transferTasks))
@@ -2941,6 +2760,8 @@ func (s *historyReplicatorSuite) TestConflictResolutionTerminateCurrentRunningIf
 	incomingTimestamp := int64(11238)
 
 	msBuilderTarget := &mockMutableState{}
+	defer msBuilderTarget.AssertExpectations(s.T())
+
 	msBuilderTarget.On("IsWorkflowExecutionRunning").Return(true)
 	msBuilderTarget.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{RunID: runID})
 	prevRunID, err := s.historyReplicator.conflictResolutionTerminateCurrentRunningIfNotSelf(ctx.Background(), msBuilderTarget, incomingVersion, incomingTimestamp, s.logger)
@@ -2957,6 +2778,8 @@ func (s *historyReplicatorSuite) TestConflictResolutionTerminateCurrentRunningIf
 	targetRunID := uuid.New()
 
 	msBuilderTarget := &mockMutableState{}
+	defer msBuilderTarget.AssertExpectations(s.T())
+
 	msBuilderTarget.On("IsWorkflowExecutionRunning").Return(false)
 	msBuilderTarget.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{
 		DomainID:    domainID,
@@ -2992,6 +2815,7 @@ func (s *historyReplicatorSuite) TestConflictResolutionTerminateCurrentRunningIf
 	targetRunID := uuid.New()
 
 	msBuilderTarget := &mockMutableState{}
+	defer msBuilderTarget.AssertExpectations(s.T())
 	msBuilderTarget.On("IsWorkflowExecutionRunning").Return(false)
 	msBuilderTarget.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{
 		DomainID:    domainID,
@@ -3018,22 +2842,25 @@ func (s *historyReplicatorSuite) TestConflictResolutionTerminateCurrentRunningIf
 	).Once()
 
 	currentRunID := uuid.New()
-	contextCurrent, release, err := s.historyReplicator.historyCache.getOrCreateWorkflowExecution(domainID, shared.WorkflowExecution{
+	contextCurrent := &mockWorkflowExecutionContext{}
+	defer contextCurrent.AssertExpectations(s.T())
+	contextCurrent.On("lock", mock.Anything).Return(nil)
+	contextCurrent.On("unlock")
+	msBuilderCurrent := &mockMutableState{}
+	defer msBuilderCurrent.AssertExpectations(s.T())
+
+	contextCurrent.On("loadWorkflowExecution").Return(msBuilderCurrent, nil).Once()
+	currentExecution := &shared.WorkflowExecution{
 		WorkflowId: common.StringPtr(workflowID),
 		RunId:      common.StringPtr(currentRunID),
-	})
-	s.Nil(err)
-	msBuilderCurrent := &mockMutableState{}
+	}
+	contextCurrentCacheKey := newWorkflowIdentifier(domainID, currentExecution)
+	s.historyReplicator.historyCache.PutIfNotExist(contextCurrentCacheKey, contextCurrent)
+
 	currentNextEventID := int64(999)
 	msBuilderCurrent.On("GetNextEventID").Return(currentNextEventID)
-	msBuilderCurrent.On("GetLastWriteVersion").Return(incomingVersion - 1)             // this is not actually used, but will be called
-	msBuilderCurrent.On("GetReplicationState").Return(&persistence.ReplicationState{}) // this is used to update the version on mutable state
-	msBuilderCurrent.On("IsWorkflowExecutionRunning").Return(true)                     // this is used to update the version on mutable state
-	msBuilderCurrent.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{RunID: currentRunID, CloseStatus: persistence.WorkflowCloseStatusNone})
-	msBuilderCurrent.On("UpdateReplicationStateVersion", domainVersion, false).Twice()
+	msBuilderCurrent.On("IsWorkflowExecutionRunning").Return(true) // this is used to update the version on mutable state
 	msBuilderCurrent.On("UpdateReplicationStateVersion", incomingVersion, true).Once()
-	contextCurrent.msBuilder = msBuilderCurrent
-	release(nil)
 
 	s.mockExecutionMgr.On("GetCurrentExecution", &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
@@ -3043,26 +2870,36 @@ func (s *historyReplicatorSuite) TestConflictResolutionTerminateCurrentRunningIf
 		CloseStatus: persistence.WorkflowCloseStatusNone,
 	}, nil)
 
-	// return nil, to trigger the history engine to return err, so we can assert on it
-	// this is to save a lot of meaningless mock, since we are not testing functionality of history engine
-	msBuilderCurrent.On("ReplicateWorkflowExecutionTerminatedEvent", mock.MatchedBy(func(input *shared.HistoryEvent) bool {
-		return reflect.DeepEqual(&shared.HistoryEvent{
-			EventId:   common.Int64Ptr(currentNextEventID),
-			Timestamp: common.Int64Ptr(incomingTimestamp),
-			Version:   common.Int64Ptr(incomingVersion),
-			EventType: shared.EventTypeWorkflowExecutionTerminated.Ptr(),
-			WorkflowExecutionTerminatedEventAttributes: &shared.WorkflowExecutionTerminatedEventAttributes{
-				Reason:   common.StringPtr(workflowTerminationReason),
-				Identity: common.StringPtr(workflowTerminationIdentity),
-				Details:  nil,
-			},
-		}, input)
-	})).Return(nil)
+	terminationEvent := &shared.HistoryEvent{
+		EventId:   common.Int64Ptr(currentNextEventID),
+		Timestamp: common.Int64Ptr(incomingTimestamp),
+		Version:   common.Int64Ptr(incomingVersion),
+		EventType: shared.EventTypeWorkflowExecutionTerminated.Ptr(),
+		WorkflowExecutionTerminatedEventAttributes: &shared.WorkflowExecutionTerminatedEventAttributes{
+			Reason:   common.StringPtr(workflowTerminationReason),
+			Identity: common.StringPtr(workflowTerminationIdentity),
+			Details:  nil,
+		},
+	}
+	terminateRequest := &h.ReplicateEventsRequest{
+		SourceCluster:     common.StringPtr(incomingCluster),
+		DomainUUID:        common.StringPtr(domainID),
+		WorkflowExecution: currentExecution,
+		FirstEventId:      common.Int64Ptr(currentNextEventID),
+		NextEventId:       common.Int64Ptr(currentNextEventID + 1),
+		Version:           common.Int64Ptr(incomingVersion),
+		History:           &shared.History{Events: []*shared.HistoryEvent{terminationEvent}},
+		NewRunHistory:     nil,
+	}
 
-	expectedError := &shared.ServiceBusyError{} // return an error to by pass unnecessary mocks
-	msBuilderCurrent.On("CloseUpdateSession").Return(nil, expectedError).Once()
+	msBuilderCurrent.On("ReplicateWorkflowExecutionTerminatedEvent", mock.MatchedBy(func(input *shared.HistoryEvent) bool {
+		return reflect.DeepEqual(terminationEvent, input)
+	})).Return(nil)
+	contextCurrent.On("replicateWorkflowExecution", terminateRequest, mock.Anything, mock.Anything, currentNextEventID, mock.Anything, mock.Anything).Return(nil).Once()
+	s.mockTxProcessor.On("NotifyNewTask", incomingCluster, mock.Anything)
+	s.mockTimerProcessor.On("NotifyNewTimers", incomingCluster, mock.Anything, mock.Anything)
 
 	prevRunID, err := s.historyReplicator.conflictResolutionTerminateCurrentRunningIfNotSelf(ctx.Background(), msBuilderTarget, incomingVersion, incomingTimestamp, s.logger)
-	s.Equal(expectedError, err)
+	s.Nil(err)
 	s.Equal(currentRunID, prevRunID)
 }

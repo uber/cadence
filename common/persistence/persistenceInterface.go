@@ -218,7 +218,7 @@ type (
 		MaximumAttempts    int32
 		NonRetriableErrors []string
 		// Not written to database - This is used only for deduping heartbeat timer creation
-		LastTimeoutVisibility int64
+		LastHeartbeatTimeoutVisibility int64
 	}
 
 	// InternalChildExecutionInfo has details for pending child executions  for Persistence Interface
@@ -233,11 +233,13 @@ type (
 
 	// InternalBufferedReplicationTask has details to handle out of order receive of history events  for Persistence Interface
 	InternalBufferedReplicationTask struct {
-		FirstEventID  int64
-		NextEventID   int64
-		Version       int64
-		History       *DataBlob
-		NewRunHistory *DataBlob
+		FirstEventID            int64
+		NextEventID             int64
+		Version                 int64
+		History                 *DataBlob
+		NewRunHistory           *DataBlob
+		EventStoreVersion       int32
+		NewRunEventStoreVersion int32
 	}
 
 	// InternalUpdateWorkflowExecutionRequest is used to update a workflow execution  for Persistence Interface

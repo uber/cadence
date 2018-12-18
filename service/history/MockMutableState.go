@@ -753,12 +753,12 @@ func (_m *mockMutableState) AddWorkflowExecutionCanceledEvent(_a0 int64, _a1 *sh
 }
 
 // AddWorkflowExecutionSignaled provides a mock function with given fields: _a0
-func (_m *mockMutableState) AddWorkflowExecutionSignaled(_a0 *shared.SignalWorkflowExecutionRequest) *shared.HistoryEvent {
-	ret := _m.Called(_a0)
+func (_m *mockMutableState) AddWorkflowExecutionSignaled(_a0 string, _a1 []byte, _a2 string) *shared.HistoryEvent {
+	ret := _m.Called(_a0, _a1, _a2)
 
 	var r0 *shared.HistoryEvent
-	if rf, ok := ret.Get(0).(func(*shared.SignalWorkflowExecutionRequest) *shared.HistoryEvent); ok {
-		r0 = rf(_a0)
+	if rf, ok := ret.Get(0).(func(string, []byte, string) *shared.HistoryEvent); ok {
+		r0 = rf(_a0, _a1, _a2)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*shared.HistoryEvent)
@@ -1131,27 +1131,20 @@ func (_m *mockMutableState) GetActivityStartedEvent(_a0 int64) (*shared.HistoryE
 	return r0, r1
 }
 
-// GetBufferedReplicationTask provides a mock function with given fields: _a0
-func (_m *mockMutableState) GetBufferedReplicationTask(_a0 int64) (*persistence.BufferedReplicationTask, bool) {
-	ret := _m.Called(_a0)
+// GetAllBufferedReplicationTasks provides a mock function with given fields:
+func (_m *mockMutableState) GetAllBufferedReplicationTasks() map[int64]*persistence.BufferedReplicationTask {
+	ret := _m.Called()
 
-	var r0 *persistence.BufferedReplicationTask
-	if rf, ok := ret.Get(0).(func(int64) *persistence.BufferedReplicationTask); ok {
-		r0 = rf(_a0)
+	var r0 map[int64]*persistence.BufferedReplicationTask
+	if rf, ok := ret.Get(0).(func() map[int64]*persistence.BufferedReplicationTask); ok {
+		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*persistence.BufferedReplicationTask)
+			r0 = ret.Get(0).(map[int64]*persistence.BufferedReplicationTask)
 		}
 	}
 
-	var r1 bool
-	if rf, ok := ret.Get(1).(func(int64) bool); ok {
-		r1 = rf(_a0)
-	} else {
-		r1 = ret.Get(1).(bool)
-	}
-
-	return r0, r1
+	return r0
 }
 
 // GetChildExecutionInfo provides a mock function with given fields: _a0
@@ -1404,6 +1397,20 @@ func (_m *mockMutableState) GetLastWriteVersion() int64 {
 
 // GetNextEventID provides a mock function with given fields:
 func (_m *mockMutableState) GetNextEventID() int64 {
+	ret := _m.Called()
+
+	var r0 int64
+	if rf, ok := ret.Get(0).(func() int64); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	return r0
+}
+
+// GetPreviousStartedEventID returns last started decision task event ID
+func (_m *mockMutableState) GetPreviousStartedEventID() int64 {
 	ret := _m.Called()
 
 	var r0 int64

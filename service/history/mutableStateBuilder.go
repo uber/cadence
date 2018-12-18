@@ -458,9 +458,11 @@ func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates,
 func (e *mutableStateBuilder) BufferReplicationTask(
 	request *h.ReplicateEventsRequest) error {
 	bt := &persistence.BufferedReplicationTask{
-		FirstEventID: request.GetFirstEventId(),
-		NextEventID:  request.GetNextEventId(),
-		Version:      request.GetVersion(),
+		FirstEventID:            request.GetFirstEventId(),
+		NextEventID:             request.GetNextEventId(),
+		Version:                 request.GetVersion(),
+		EventStoreVersion:       request.GetEventStoreVersion(),
+		NewRunEventStoreVersion: request.GetNewRunEventStoreVersion(),
 	}
 
 	if request.History != nil {
@@ -476,10 +478,8 @@ func (e *mutableStateBuilder) BufferReplicationTask(
 	return nil
 }
 
-func (e *mutableStateBuilder) GetBufferedReplicationTask(firstEventID int64) (*persistence.BufferedReplicationTask,
-	bool) {
-	bt, ok := e.bufferedReplicationTasks[firstEventID]
-	return bt, ok
+func (e *mutableStateBuilder) GetAllBufferedReplicationTasks() map[int64]*persistence.BufferedReplicationTask {
+	return e.bufferedReplicationTasks
 }
 
 func (e *mutableStateBuilder) DeleteBufferedReplicationTask(firstEventID int64) {
@@ -1100,6 +1100,11 @@ func (e *mutableStateBuilder) GetLastFirstEventID() int64 {
 // GetNextEventID returns next event ID
 func (e *mutableStateBuilder) GetNextEventID() int64 {
 	return e.executionInfo.NextEventID
+}
+
+// GetPreviousStartedEventID returns last started decision task event ID
+func (e *mutableStateBuilder) GetPreviousStartedEventID() int64 {
+	return e.executionInfo.LastProcessedEvent
 }
 
 func (e *mutableStateBuilder) IsWorkflowExecutionRunning() bool {
@@ -2142,14 +2147,14 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionTerminatedEvent(event *w
 }
 
 func (e *mutableStateBuilder) AddWorkflowExecutionSignaled(
-	request *workflow.SignalWorkflowExecutionRequest) *workflow.HistoryEvent {
+	signalName string, input []byte, identity string) *workflow.HistoryEvent {
 	if e.executionInfo.State == persistence.WorkflowStateCompleted {
 		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowSignaled, e.GetNextEventID(), fmt.Sprintf(
 			"{State: %v}", e.executionInfo.State))
 		return nil
 	}
 
-	event := e.hBuilder.AddWorkflowExecutionSignaledEvent(request)
+	event := e.hBuilder.AddWorkflowExecutionSignaledEvent(signalName, input, identity)
 	e.ReplicateWorkflowExecutionSignaled(event)
 	return event
 }

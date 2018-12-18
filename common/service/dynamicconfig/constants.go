@@ -53,6 +53,14 @@ var keys = map[Key]string{
 	EnableVisibilitySampling: "system.enableVisibilitySampling",
 	EnableVisibilityToKafka:  "system.enableVisibilityToKafka",
 
+	// size limit
+	BlobSizeLimitError:     "limit.blobSize.error",
+	BlobSizeLimitWarn:      "limit.blobSize.warn",
+	HistorySizeLimitError:  "limit.historySize.error",
+	HistorySizeLimitWarn:   "limit.historySize.warn",
+	HistoryCountLimitError: "limit.historyCount.error",
+	HistoryCountLimitWarn:  "limit.historyCount.warn",
+
 	// frontend settings
 	FrontendPersistenceMaxQPS:      "frontend.persistenceMaxQPS",
 	FrontendVisibilityMaxPageSize:  "frontend.visibilityMaxPageSize",
@@ -171,6 +179,19 @@ const (
 	EnableVisibilityToKafka
 	// DisableListVisibilityByFilter is config to disable list open/close workflow using filter
 	DisableListVisibilityByFilter
+
+	// BlobSizeLimitError is the per event blob size limit
+	BlobSizeLimitError
+	// BlobSizeLimitWarn is the per event blob size limit for warning
+	BlobSizeLimitWarn
+	// HistorySizeLimitError is the per workflow execution history size limit
+	HistorySizeLimitError
+	// HistorySizeLimitWarn is the per workflow execution history size limit for warning
+	HistorySizeLimitWarn
+	// HistoryCountLimitError is the per workflow execution history event count limit
+	HistoryCountLimitError
+	// HistoryCountLimitWarn is the per workflow execution history event count limit for warning
+	HistoryCountLimitWarn
 
 	// key for frontend
 

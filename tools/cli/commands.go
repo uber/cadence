@@ -29,6 +29,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -39,7 +40,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/urfave/cli"
 
-	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	s "go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/client"
 )
@@ -75,6 +75,8 @@ const (
 	FlagTaskListWithAlias          = FlagTaskList + ", tl"
 	FlagTaskListType               = "tasklisttype"
 	FlagTaskListTypeWithAlias      = FlagTaskListType + ", tlt"
+	FlagWorkflowIDReusePolicy      = "workflowidreusepolicy"
+	FlagWorkflowIDReusePolicyAlias = FlagWorkflowIDReusePolicy + ", wrp"
 	FlagWorkflowType               = "workflow_type"
 	FlagWorkflowTypeWithAlias      = FlagWorkflowType + ", wt"
 	FlagWorkflowStatus             = "status"
@@ -165,62 +167,52 @@ const (
 	defaultContextTimeoutForLongPoll = 2 * time.Minute
 	defaultDecisionTimeoutInSeconds  = 10
 	defaultPageSizeForList           = 500
+	defaultWorkflowIDReusePolicy     = s.WorkflowIdReusePolicyAllowDuplicateFailedOnly
 
 	workflowStatusNotSet = -1
 	showErrorStackEnv    = `CADENCE_CLI_SHOW_STACKS`
 )
 
-// For color output to terminal
 var (
+	cFactory ClientFactory
+
 	colorRed     = color.New(color.FgRed).SprintFunc()
 	colorMagenta = color.New(color.FgMagenta).SprintFunc()
 	colorGreen   = color.New(color.FgGreen).SprintFunc()
 
-	tableHeaderBlue = tablewriter.Colors{tablewriter.FgHiBlueColor}
+	tableHeaderBlue         = tablewriter.Colors{tablewriter.FgHiBlueColor}
+	optionErr               = "there is something wrong with your command options"
+	osExit                  = os.Exit
+	workflowClosedStatusMap = map[string]s.WorkflowExecutionCloseStatus{
+		"completed":      s.WorkflowExecutionCloseStatusCompleted,
+		"failed":         s.WorkflowExecutionCloseStatusFailed,
+		"canceled":       s.WorkflowExecutionCloseStatusCanceled,
+		"terminated":     s.WorkflowExecutionCloseStatusTerminated,
+		"continuedasnew": s.WorkflowExecutionCloseStatusContinuedAsNew,
+		"timedout":       s.WorkflowExecutionCloseStatusTimedOut,
+		// below are some alias
+		"c":         s.WorkflowExecutionCloseStatusCompleted,
+		"complete":  s.WorkflowExecutionCloseStatusCompleted,
+		"f":         s.WorkflowExecutionCloseStatusFailed,
+		"fail":      s.WorkflowExecutionCloseStatusFailed,
+		"cancel":    s.WorkflowExecutionCloseStatusCanceled,
+		"terminate": s.WorkflowExecutionCloseStatusTerminated,
+		"term":      s.WorkflowExecutionCloseStatusTerminated,
+		"continue":  s.WorkflowExecutionCloseStatusContinuedAsNew,
+		"cont":      s.WorkflowExecutionCloseStatusContinuedAsNew,
+		"timeout":   s.WorkflowExecutionCloseStatusTimedOut,
+	}
 )
-
-var optionErr = "there is something wrong with your command options"
-
-var workflowClosedStatusMap = map[string]s.WorkflowExecutionCloseStatus{
-	"completed":      s.WorkflowExecutionCloseStatusCompleted,
-	"failed":         s.WorkflowExecutionCloseStatusFailed,
-	"canceled":       s.WorkflowExecutionCloseStatusCanceled,
-	"terminated":     s.WorkflowExecutionCloseStatusTerminated,
-	"continuedasnew": s.WorkflowExecutionCloseStatusContinuedAsNew,
-	"timedout":       s.WorkflowExecutionCloseStatusTimedOut,
-	// below are some alias
-	"c":         s.WorkflowExecutionCloseStatusCompleted,
-	"complete":  s.WorkflowExecutionCloseStatusCompleted,
-	"f":         s.WorkflowExecutionCloseStatusFailed,
-	"fail":      s.WorkflowExecutionCloseStatusFailed,
-	"cancel":    s.WorkflowExecutionCloseStatusCanceled,
-	"terminate": s.WorkflowExecutionCloseStatusTerminated,
-	"term":      s.WorkflowExecutionCloseStatusTerminated,
-	"continue":  s.WorkflowExecutionCloseStatusContinuedAsNew,
-	"cont":      s.WorkflowExecutionCloseStatusContinuedAsNew,
-	"timeout":   s.WorkflowExecutionCloseStatusTimedOut,
-}
-
-// cBuilder is used to create cadence clients
-// To provide customized builder, call SetBuilder() before call NewCliApp()
-var cBuilder WorkflowClientBuilderInterface
-
-// osExit is used when CLI hits an error and exit
-// The purpose of this is to test CLI exit scenario
-var osExit = os.Exit
-
-// SetBuilder can be used to inject customized builder of cadence clients
-func SetBuilder(builder WorkflowClientBuilderInterface) {
-	cBuilder = builder
-}
 
 // ErrorAndExit print easy to understand error msg first then error detail in a new line
 func ErrorAndExit(msg string, err error) {
 	if err != nil {
+		fmt.Printf("%s %s\n%s %+v\n", colorRed("Error:"), msg, colorMagenta("Error Details:"), err)
 		if os.Getenv(showErrorStackEnv) != `` {
-			fmt.Printf("%s %s\n%s %+v\n", colorRed("Error:"), msg, colorMagenta("Error Details:"), err)
+			fmt.Printf("Stack trace:\n")
+			debug.PrintStack()
 		} else {
-			fmt.Printf("%s %s\n('export %s=1' to see stack traces)\n", colorRed("Error:"), msg, showErrorStackEnv)
+			fmt.Printf("('export %s=1' to see stack traces)\n", showErrorStackEnv)
 		}
 	} else {
 		fmt.Printf("%s %s\n", colorRed("Error:"), msg)
@@ -246,7 +238,7 @@ func RegisterDomain(c *cli.Context) {
 	if c.IsSet(FlagEmitMetric) {
 		emitMetric, err = strconv.ParseBool(c.String(FlagEmitMetric))
 		if err != nil {
-			ErrorAndExit(FlagEmitMetric+" format is invalid.", err)
+			ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagEmitMetric), err)
 		}
 	}
 
@@ -255,7 +247,7 @@ func RegisterDomain(c *cli.Context) {
 		domainDataStr := getRequiredOption(c, FlagDomainData)
 		domainData, err = parseDomainDataKVs(domainDataStr)
 		if err != nil {
-			ErrorAndExit(FlagDomainData+" format is invalid.", err)
+			ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagDomainData), err)
 		}
 	}
 	if len(requiredDomainDataKeys) > 0 {
@@ -301,7 +293,7 @@ func RegisterDomain(c *cli.Context) {
 		if _, ok := err.(*s.DomainAlreadyExistsError); !ok {
 			ErrorAndExit("Register Domain operation failed.", err)
 		} else {
-			ErrorAndExit(fmt.Sprintf("Domain %s already registered.\n", domain), err)
+			ErrorAndExit(fmt.Sprintf("Domain %s already registered.", domain), err)
 		}
 	} else {
 		fmt.Printf("Domain %s successfully registered.\n", domain)
@@ -333,7 +325,7 @@ func UpdateDomain(c *cli.Context) {
 			if _, ok := err.(*s.EntityNotExistsError); !ok {
 				ErrorAndExit("Operation UpdateDomain failed.", err)
 			} else {
-				ErrorAndExit(fmt.Sprintf("Domain %s does not exist.\n", domain), err)
+				ErrorAndExit(fmt.Sprintf("Domain %s does not exist.", domain), err)
 			}
 			return
 		}
@@ -364,7 +356,7 @@ func UpdateDomain(c *cli.Context) {
 		if c.IsSet(FlagEmitMetric) {
 			emitMetric, err = strconv.ParseBool(c.String(FlagEmitMetric))
 			if err != nil {
-				ErrorAndExit(FlagEmitMetric+"format is invalid.", err)
+				ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagEmitMetric), err)
 			}
 		}
 		if c.IsSet(FlagClusters) {
@@ -406,7 +398,7 @@ func UpdateDomain(c *cli.Context) {
 		if _, ok := err.(*s.EntityNotExistsError); !ok {
 			ErrorAndExit("Operation UpdateDomain failed.", err)
 		} else {
-			ErrorAndExit(fmt.Sprintf("Domain %s does not exist.\n", domain), err)
+			ErrorAndExit(fmt.Sprintf("Domain %s does not exist.", domain), err)
 		}
 	} else {
 		fmt.Printf("Domain %s successfully updated.\n", domain)
@@ -425,7 +417,7 @@ func DescribeDomain(c *cli.Context) {
 		if _, ok := err.(*s.EntityNotExistsError); !ok {
 			ErrorAndExit("Operation DescribeDomain failed.", err)
 		} else {
-			ErrorAndExit(fmt.Sprintf("Domain %s does not exist.\n", domain), err)
+			ErrorAndExit(fmt.Sprintf("Domain %s does not exist.", domain), err)
 		}
 	} else {
 		fmt.Printf("Name: %v\nDescription: %v\nOwnerEmail: %v\nDomainData: %v\nStatus: %v\nRetentionInDays: %v\n"+
@@ -530,20 +522,23 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 
 // StartWorkflow starts a new workflow execution
 func StartWorkflow(c *cli.Context) {
-	// using service client instead of cadence.Client because we need to directly pass the json blob as input.
-	serviceClient := getWorkflowServiceClient(c)
+	serviceClient := cFactory.ClientFrontendClient(c)
 
 	domain := getRequiredGlobalOption(c, FlagDomain)
-	tasklist := getRequiredOption(c, FlagTaskList)
+	taskList := getRequiredOption(c, FlagTaskList)
 	workflowType := getRequiredOption(c, FlagWorkflowType)
 	et := c.Int(FlagExecutionTimeout)
 	if et == 0 {
-		ErrorAndExit(FlagExecutionTimeout+"is required", nil)
+		ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagExecutionTimeout), nil)
 	}
 	dt := c.Int(FlagDecisionTimeout)
 	wid := c.String(FlagWorkflowID)
 	if len(wid) == 0 {
 		wid = uuid.New()
+	}
+	reusePolicy := defaultWorkflowIDReusePolicy.Ptr()
+	if c.IsSet(FlagWorkflowIDReusePolicy) {
+		reusePolicy = getWorkflowIDReusePolicy(c.Int(FlagWorkflowIDReusePolicy))
 	}
 
 	input := processJSONInput(c)
@@ -559,12 +554,13 @@ func StartWorkflow(c *cli.Context) {
 			Name: common.StringPtr(workflowType),
 		},
 		TaskList: &s.TaskList{
-			Name: common.StringPtr(tasklist),
+			Name: common.StringPtr(taskList),
 		},
 		Input:                               []byte(input),
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(int32(et)),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(int32(dt)),
 		Identity:                            common.StringPtr(getCliIdentity()),
+		WorkflowIdReusePolicy:               reusePolicy,
 	})
 
 	if err != nil {
@@ -576,20 +572,23 @@ func StartWorkflow(c *cli.Context) {
 
 // RunWorkflow starts a new workflow execution and print workflow progress and result
 func RunWorkflow(c *cli.Context) {
-	// using service client instead of cadence.Client because we need to directly pass the json blob as input.
-	serviceClient := getWorkflowServiceClient(c)
+	serviceClient := cFactory.ClientFrontendClient(c)
 
 	domain := getRequiredGlobalOption(c, FlagDomain)
-	tasklist := getRequiredOption(c, FlagTaskList)
+	taskList := getRequiredOption(c, FlagTaskList)
 	workflowType := getRequiredOption(c, FlagWorkflowType)
 	et := c.Int(FlagExecutionTimeout)
 	if et == 0 {
-		ErrorAndExit(FlagExecutionTimeout+" is required", nil)
+		ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagExecutionTimeout), nil)
 	}
 	dt := c.Int(FlagDecisionTimeout)
 	wid := c.String(FlagWorkflowID)
 	if len(wid) == 0 {
 		wid = uuid.New()
+	}
+	reusePolicy := defaultWorkflowIDReusePolicy.Ptr()
+	if c.IsSet(FlagWorkflowIDReusePolicy) {
+		reusePolicy = getWorkflowIDReusePolicy(c.Int(FlagWorkflowIDReusePolicy))
 	}
 
 	input := processJSONInput(c)
@@ -609,12 +608,13 @@ func RunWorkflow(c *cli.Context) {
 			Name: common.StringPtr(workflowType),
 		},
 		TaskList: &s.TaskList{
-			Name: common.StringPtr(tasklist),
+			Name: common.StringPtr(taskList),
 		},
 		Input:                               []byte(input),
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(int32(et)),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(int32(dt)),
 		Identity:                            common.StringPtr(getCliIdentity()),
+		WorkflowIdReusePolicy:               reusePolicy,
 	})
 
 	if err != nil {
@@ -629,7 +629,7 @@ func RunWorkflow(c *cli.Context) {
 		{"Run Id", resp.GetRunId()},
 		{"Type", workflowType},
 		{"Domain", domain},
-		{"Task List", tasklist},
+		{"Task List", taskList},
 		{"Args", truncate(input)}, // in case of large input
 	}
 	table.SetBorder(false)
@@ -742,8 +742,7 @@ func CancelWorkflow(c *cli.Context) {
 
 // SignalWorkflow signals a workflow execution
 func SignalWorkflow(c *cli.Context) {
-	// using service client instead of cadence.Client because we need to directly pass the json blob as input.
-	serviceClient := getWorkflowServiceClient(c)
+	serviceClient := cFactory.ClientFrontendClient(c)
 
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)
@@ -786,8 +785,7 @@ func QueryWorkflowUsingStackTrace(c *cli.Context) {
 }
 
 func queryWorkflowHelper(c *cli.Context, queryType string) {
-	// using service client instead of cadence.Client because we need to directly pass the json blob as input.
-	serviceClient := getWorkflowServiceClient(c)
+	serviceClient := cFactory.ClientFrontendClient(c)
 
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)
@@ -881,7 +879,7 @@ func DescribeWorkflow(c *cli.Context) {
 // DescribeWorkflowWithID show information about the specified workflow execution
 func DescribeWorkflowWithID(c *cli.Context) {
 	if !c.Args().Present() {
-		ErrorAndExit("Parameter workflow_id is required.", nil)
+		ErrorAndExit("Argument workflow_id is required.", nil)
 	}
 	wid := c.Args().First()
 	rid := ""
@@ -1149,7 +1147,7 @@ func ObserveHistory(c *cli.Context) {
 // ObserveHistoryWithID show the process of running workflow
 func ObserveHistoryWithID(c *cli.Context) {
 	if !c.Args().Present() {
-		ErrorAndExit("workflow_id is required.", nil)
+		ErrorAndExit("Argument workflow_id is required.", nil)
 	}
 	wid := c.Args().First()
 	rid := ""
@@ -1161,47 +1159,18 @@ func ObserveHistoryWithID(c *cli.Context) {
 }
 
 func getDomainClient(c *cli.Context) client.DomainClient {
-	service, err := cBuilder.BuildServiceClient(c)
-	if err != nil {
-		ErrorAndExit("Failed to initialize service client.", err)
-	}
-
-	domainClient, err := client.NewDomainClient(service, &client.Options{}), nil
-	if err != nil {
-		ErrorAndExit("Failed to initialize domain client.", err)
-	}
-	return domainClient
+	return client.NewDomainClient(cFactory.ClientFrontendClient(c), &client.Options{})
 }
 
 func getWorkflowClient(c *cli.Context) client.Client {
 	domain := getRequiredGlobalOption(c, FlagDomain)
-
-	service, err := cBuilder.BuildServiceClient(c)
-	if err != nil {
-		ErrorAndExit("Failed to initialize service client.", err)
-	}
-
-	wfClient, err := client.NewClient(service, domain, &client.Options{}), nil
-	if err != nil {
-		ErrorAndExit("Failed to initialize workflow client.", err)
-	}
-
-	return wfClient
-}
-
-func getWorkflowServiceClient(c *cli.Context) workflowserviceclient.Interface {
-	client, err := cBuilder.BuildServiceClient(c)
-	if err != nil {
-		ErrorAndExit("Failed to initialize service client.", err)
-	}
-
-	return client
+	return client.NewClient(cFactory.ClientFrontendClient(c), domain, &client.Options{})
 }
 
 func getRequiredOption(c *cli.Context, optionName string) string {
 	value := c.String(optionName)
 	if len(value) == 0 {
-		ErrorAndExit(fmt.Sprintf("%s is required", optionName), nil)
+		ErrorAndExit(fmt.Sprintf("Option %s is required", optionName), nil)
 	}
 	return value
 }
@@ -1209,7 +1178,7 @@ func getRequiredOption(c *cli.Context, optionName string) string {
 func getRequiredGlobalOption(c *cli.Context, optionName string) string {
 	value := c.GlobalString(optionName)
 	if len(value) == 0 {
-		ErrorAndExit(fmt.Sprintf("%s is required", optionName), nil)
+		ErrorAndExit(fmt.Sprintf("Global option %s is required", optionName), nil)
 	}
 	return value
 }
@@ -1379,4 +1348,13 @@ func getWorkflowStatus(statusStr string) s.WorkflowExecutionCloseStatus {
 	ErrorAndExit(optionErr, errors.New("option status is not one of allowed values "+
 		"[completed, failed, canceled, terminated, continueasnew, timedout]"))
 	return 0
+}
+
+func getWorkflowIDReusePolicy(value int) *s.WorkflowIdReusePolicy {
+	if value >= 0 && value <= len(s.WorkflowIdReusePolicy_Values()) {
+		return s.WorkflowIdReusePolicy(value).Ptr()
+	}
+	// At this point, the policy should return if the value is valid
+	ErrorAndExit(fmt.Sprintf("Option %v value is not in supported range.", FlagWorkflowIDReusePolicy), nil)
+	return nil
 }

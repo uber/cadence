@@ -372,6 +372,10 @@ struct ContinueAsNewWorkflowExecutionDecisionAttributes {
   50: optional i32 taskStartToCloseTimeoutSeconds
   60: optional i32 backoffStartIntervalInSeconds
   70: optional RetryPolicy retryPolicy
+  80: optional ContinueAsNewInitiator initiator
+  90: optional string failureReason
+  100: optional binary failureDetails
+  110: optional binary lastCompletionResult
 }
 
 struct StartChildWorkflowExecutionDecisionAttributes {
@@ -436,6 +440,12 @@ struct WorkflowExecutionTimedOutEventAttributes {
   10: optional TimeoutType timeoutType
 }
 
+enum ContinueAsNewInitiator {
+  Decider,
+  RetryPolicy,
+  CronSchedule,
+}
+
 struct WorkflowExecutionContinuedAsNewEventAttributes {
   10: optional string newExecutionRunId
   20: optional WorkflowType workflowType
@@ -445,6 +455,10 @@ struct WorkflowExecutionContinuedAsNewEventAttributes {
   60: optional i32 taskStartToCloseTimeoutSeconds
   70: optional i64 (js.type = "Long") decisionTaskCompletedEventId
   80: optional i32 backoffStartIntervalInSeconds
+  90: optional ContinueAsNewInitiator initiator
+  100: optional string failureReason
+  110: optional binary failureDetails
+  120: optional binary lastCompletionResult
 }
 
 struct DecisionTaskScheduledEventAttributes {

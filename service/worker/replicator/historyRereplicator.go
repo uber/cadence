@@ -117,12 +117,7 @@ func (h *HistoryRereplicatorImpl) SendMultiWorkflowHistory(domainID string, work
 	for len(runID) != 0 {
 		runID, err = h.getPrevRunID(domainID, workflowID, runID)
 		if err != nil {
-			if _, ok := err.(*shared.EntityNotExistsError); !ok {
-				return err
-			}
-
-			// EntityNotExistsError error, set the run ID to "" indicating no prev run
-			runID = ""
+			return err
 		}
 		runIDs = append(runIDs, runID)
 	}
@@ -321,7 +316,11 @@ func (h *HistoryRereplicatorImpl) getPrevRunID(domainID string, workflowID strin
 	pageSize := int32(1)
 	response, err := h.getHistory(domainID, workflowID, runID, common.FirstEventID, common.EndEventID, token, pageSize)
 	if err != nil {
-		return "", err
+		if _, ok := err.(*shared.EntityNotExistsError); !ok {
+			return "", err
+		}
+		// EntityNotExistsError error, set the run ID to "" indicating no prev run
+		return "", nil
 	}
 
 	blob := response.HistoryBatches[0]

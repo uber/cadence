@@ -252,7 +252,7 @@ Update_History_Loop:
 		} else if msBuilder == nil || !msBuilder.IsWorkflowExecutionRunning() {
 			return nil
 		}
-		tBuilder := t.historyService.getTimerBuilder(&context.workflowExecution)
+		tBuilder := t.historyService.getTimerBuilder(context.getExecution())
 
 		var timerTasks []persistence.Task
 		scheduleNewDecision := false
@@ -319,7 +319,7 @@ Update_History_Loop:
 		} else if msBuilder == nil || !msBuilder.IsWorkflowExecutionRunning() {
 			return nil
 		}
-		tBuilder := t.historyService.getTimerBuilder(&context.workflowExecution)
+		tBuilder := t.historyService.getTimerBuilder(context.getExecution())
 
 		var timerTasks []persistence.Task
 		updateHistory := false
@@ -331,7 +331,7 @@ Update_History_Loop:
 			// NOTE: When record activity HB comes in we only update last heartbeat timestamp, this is the place
 			// where we create next timer task based on that new updated timestamp.
 			isHeartBeatTask := timerTask.TimeoutType == int(workflow.TimeoutTypeHeartbeat)
-			if isHeartBeatTask && ai.LastTimeoutVisibility <= timerTask.VisibilityTimestamp.Unix() {
+			if isHeartBeatTask && ai.LastHeartbeatTimeoutVisibility <= timerTask.VisibilityTimestamp.Unix() {
 				ai.TimerTaskStatus = ai.TimerTaskStatus &^ TimerTaskStatusCreatedHeartbeat
 				msBuilder.UpdateActivity(ai)
 				updateState = true
@@ -350,13 +350,37 @@ Update_History_Loop:
 				continue ExpireActivityTimers
 			}
 
-			if isExpired := tBuilder.IsTimerExpired(td, referenceTime); isExpired {
-				timeoutType := td.TimeoutType
-				t.logger.Debugf("Activity TimeoutType: %v, scheduledID: %v, startedId: %v. \n",
-					timeoutType, ai.ScheduleID, ai.StartedID)
+			if isExpired := tBuilder.IsTimerExpired(td, referenceTime); !isExpired {
+				break ExpireActivityTimers
+			}
 
-				if td.Attempt < ai.Attempt {
-					// retry could update ai.Attempt, and we should ignore further timeouts for previous attempt
+			timeoutType := td.TimeoutType
+			t.logger.Debugf("Activity TimeoutType: %v, scheduledID: %v, startedId: %v. \n",
+				timeoutType, ai.ScheduleID, ai.StartedID)
+
+			if td.Attempt < ai.Attempt {
+				// retry could update ai.Attempt, and we should ignore further timeouts for previous attempt
+				t.logger.WithFields(bark.Fields{
+					logging.TagDomainID:            msBuilder.GetExecutionInfo().DomainID,
+					logging.TagWorkflowExecutionID: msBuilder.GetExecutionInfo().WorkflowID,
+					logging.TagWorkflowRunID:       msBuilder.GetExecutionInfo().RunID,
+					logging.TagScheduleID:          ai.ScheduleID,
+					logging.TagAttempt:             ai.Attempt,
+					logging.TagVersion:             ai.Version,
+					logging.TagTimerTaskStatus:     ai.TimerTaskStatus,
+					logging.TagTimeoutType:         timeoutType,
+				}).Info("Retry attempt mismatch, skip activity timeout processing")
+				continue
+			}
+
+			if timeoutType != workflow.TimeoutTypeScheduleToStart {
+				// ScheduleToStart (queue timeout) is not retriable. Instead of retry, customer should set larger
+				// ScheduleToStart timeout.
+				retryTask := msBuilder.CreateActivityRetryTimer(ai, getTimeoutErrorReason(timeoutType))
+				if retryTask != nil {
+					timerTasks = append(timerTasks, retryTask)
+					updateState = true
+
 					t.logger.WithFields(bark.Fields{
 						logging.TagDomainID:            msBuilder.GetExecutionInfo().DomainID,
 						logging.TagWorkflowExecutionID: msBuilder.GetExecutionInfo().WorkflowID,
@@ -366,106 +390,59 @@ Update_History_Loop:
 						logging.TagVersion:             ai.Version,
 						logging.TagTimerTaskStatus:     ai.TimerTaskStatus,
 						logging.TagTimeoutType:         timeoutType,
-					}).Info("Retry attempt mismatch, skip activity timeout processing")
+					}).Info("Ignore activity timeout due to retry")
+
 					continue
 				}
+			}
 
-				if timeoutType != workflow.TimeoutTypeScheduleToStart {
-					// ScheduleToStart (queue timeout) is not retriable. Instead of retry, customer should set larger
-					// ScheduleToStart timeout.
-					retryTask := msBuilder.CreateActivityRetryTimer(ai, getTimeoutErrorReason(timeoutType))
-					if retryTask != nil {
-						timerTasks = append(timerTasks, retryTask)
-						updateState = true
-
-						t.logger.WithFields(bark.Fields{
-							logging.TagDomainID:            msBuilder.GetExecutionInfo().DomainID,
-							logging.TagWorkflowExecutionID: msBuilder.GetExecutionInfo().WorkflowID,
-							logging.TagWorkflowRunID:       msBuilder.GetExecutionInfo().RunID,
-							logging.TagScheduleID:          ai.ScheduleID,
-							logging.TagAttempt:             ai.Attempt,
-							logging.TagVersion:             ai.Version,
-							logging.TagTimerTaskStatus:     ai.TimerTaskStatus,
-							logging.TagTimeoutType:         timeoutType,
-						}).Info("Ignore activity timeout due to retry")
-
-						continue
+			switch timeoutType {
+			case workflow.TimeoutTypeScheduleToClose:
+				{
+					t.metricsClient.IncCounter(metrics.TimerActiveTaskActivityTimeoutScope, metrics.ScheduleToCloseTimeoutCounter)
+					if msBuilder.AddActivityTaskTimedOutEvent(ai.ScheduleID, ai.StartedID, timeoutType, nil) == nil {
+						return errFailedToAddTimeoutEvent
 					}
+					updateHistory = true
 				}
 
-				switch timeoutType {
-				case workflow.TimeoutTypeScheduleToClose:
-					{
-						t.metricsClient.IncCounter(metrics.TimerActiveTaskActivityTimeoutScope, metrics.ScheduleToCloseTimeoutCounter)
+			case workflow.TimeoutTypeStartToClose:
+				{
+					t.metricsClient.IncCounter(metrics.TimerActiveTaskActivityTimeoutScope, metrics.StartToCloseTimeoutCounter)
+					if ai.StartedID != common.EmptyEventID {
 						if msBuilder.AddActivityTaskTimedOutEvent(ai.ScheduleID, ai.StartedID, timeoutType, nil) == nil {
 							return errFailedToAddTimeoutEvent
 						}
 						updateHistory = true
 					}
+				}
 
-				case workflow.TimeoutTypeStartToClose:
-					{
-						t.metricsClient.IncCounter(metrics.TimerActiveTaskActivityTimeoutScope, metrics.StartToCloseTimeoutCounter)
-						if ai.StartedID != common.EmptyEventID {
-							if msBuilder.AddActivityTaskTimedOutEvent(ai.ScheduleID, ai.StartedID, timeoutType, nil) == nil {
-								return errFailedToAddTimeoutEvent
-							}
-							updateHistory = true
-						}
+			case workflow.TimeoutTypeHeartbeat:
+				{
+					t.metricsClient.IncCounter(metrics.TimerActiveTaskActivityTimeoutScope, metrics.HeartbeatTimeoutCounter)
+					if msBuilder.AddActivityTaskTimedOutEvent(ai.ScheduleID, ai.StartedID, timeoutType, ai.Details) == nil {
+						return errFailedToAddTimeoutEvent
 					}
+					updateHistory = true
+				}
 
-				case workflow.TimeoutTypeHeartbeat:
-					{
-						t.metricsClient.IncCounter(metrics.TimerActiveTaskActivityTimeoutScope, metrics.HeartbeatTimeoutCounter)
-						if msBuilder.AddActivityTaskTimedOutEvent(ai.ScheduleID, ai.StartedID, timeoutType, ai.Details) == nil {
+			case workflow.TimeoutTypeScheduleToStart:
+				{
+					t.metricsClient.IncCounter(metrics.TimerActiveTaskActivityTimeoutScope, metrics.ScheduleToStartTimeoutCounter)
+					if ai.StartedID == common.EmptyEventID {
+						if msBuilder.AddActivityTaskTimedOutEvent(ai.ScheduleID, ai.StartedID, timeoutType, nil) == nil {
 							return errFailedToAddTimeoutEvent
 						}
 						updateHistory = true
 					}
-
-				case workflow.TimeoutTypeScheduleToStart:
-					{
-						t.metricsClient.IncCounter(metrics.TimerActiveTaskActivityTimeoutScope, metrics.ScheduleToStartTimeoutCounter)
-						if ai.StartedID == common.EmptyEventID {
-							if msBuilder.AddActivityTaskTimedOutEvent(ai.ScheduleID, ai.StartedID, timeoutType, nil) == nil {
-								return errFailedToAddTimeoutEvent
-							}
-							updateHistory = true
-						}
-					}
 				}
-			} else {
-				// See if we have next timer in list to be created.
-				// Create next timer task if we don't have one
-				if !td.TaskCreated {
-					nextTask := tBuilder.createNewTask(td)
-					timerTasks = append(timerTasks, nextTask)
-					at := nextTask.(*persistence.ActivityTimeoutTask)
-
-					ai.TimerTaskStatus = ai.TimerTaskStatus | getActivityTimerStatus(workflow.TimeoutType(at.TimeoutType))
-					// Use second resolution for setting LastTimeoutVisibility, which is used for deduping heartbeat timer creation
-					ai.LastTimeoutVisibility = td.TimerSequenceID.VisibilityTimestamp.Unix()
-					msBuilder.UpdateActivity(ai)
-					updateState = true
-
-					// Emit log if timer is created within a second
-					if t.now().Add(time.Second).After(td.TimerSequenceID.VisibilityTimestamp) {
-						t.logger.WithFields(bark.Fields{
-							logging.TagDomainID:            msBuilder.GetExecutionInfo().DomainID,
-							logging.TagWorkflowExecutionID: msBuilder.GetExecutionInfo().WorkflowID,
-							logging.TagWorkflowRunID:       msBuilder.GetExecutionInfo().RunID,
-							logging.TagScheduleID:          ai.ScheduleID,
-							logging.TagAttempt:             ai.Attempt,
-							logging.TagVersion:             ai.Version,
-							logging.TagTimerTaskStatus:     ai.TimerTaskStatus,
-							logging.TagTimeoutType:         td.TimeoutType,
-						}).Info("Next timer is created to fire within one second")
-					}
-				}
-
-				// Done!
-				break ExpireActivityTimers
 			}
+		}
+
+		// use a new timer builder, since during the above for loop, the some timer definitions can be invalid
+		if tt := t.historyService.getTimerBuilder(context.getExecution()).GetActivityTimerTaskIfNeeded(msBuilder); tt != nil {
+			updateState = true
+			timerTasks = append(timerTasks, tt)
 		}
 
 		if updateHistory || updateState {
@@ -709,7 +686,8 @@ Update_History_Loop:
 			}
 		}
 
-		retryBackoffInterval := msBuilder.GetRetryBackoffDuration(getTimeoutErrorReason(workflow.TimeoutTypeStartToClose))
+		timeoutReason := getTimeoutErrorReason(workflow.TimeoutTypeStartToClose)
+		retryBackoffInterval := msBuilder.GetRetryBackoffDuration(timeoutReason)
 		if retryBackoffInterval == common.NoRetryBackoff {
 			if e := msBuilder.AddTimeoutWorkflowEvent(); e == nil {
 				// If we failed to add the event that means the workflow is already completed.
@@ -743,6 +721,8 @@ Update_History_Loop:
 			ExecutionStartToCloseTimeoutSeconds: startAttributes.ExecutionStartToCloseTimeoutSeconds,
 			TaskStartToCloseTimeoutSeconds:      startAttributes.TaskStartToCloseTimeoutSeconds,
 			BackoffStartIntervalInSeconds:       common.Int32Ptr(int32(retryBackoffInterval.Seconds())),
+			Initiator:                           workflow.ContinueAsNewInitiatorRetryPolicy.Ptr(),
+			FailureReason:                       common.StringPtr(timeoutReason),
 		}
 		domainEntry, err := getActiveDomainEntryFromShard(t.shard, &domainID)
 		if err != nil {
@@ -757,7 +737,7 @@ Update_History_Loop:
 			return err
 		}
 
-		tBuilder := t.historyService.getTimerBuilder(&context.workflowExecution)
+		tBuilder := t.historyService.getTimerBuilder(context.getExecution())
 		var transferTasks, timerTasks []persistence.Task
 		tranT, timerT, err := getDeleteWorkflowTasksFromShard(t.shard, domainID, workflowExecution.GetWorkflowId(), tBuilder)
 		if err != nil {
@@ -787,7 +767,7 @@ Update_History_Loop:
 }
 
 func (t *timerQueueActiveProcessorImpl) updateWorkflowExecution(
-	context *workflowExecutionContext,
+	context workflowExecutionContext,
 	msBuilder mutableState,
 	scheduleNewDecision bool,
 	createDeletionTask bool,
@@ -806,7 +786,7 @@ func (t *timerQueueActiveProcessorImpl) updateWorkflowExecution(
 	}
 
 	if createDeletionTask {
-		tBuilder := t.historyService.getTimerBuilder(&context.workflowExecution)
+		tBuilder := t.historyService.getTimerBuilder(context.getExecution())
 		tranT, timerT, err := t.historyService.getDeleteWorkflowTasks(executionInfo.DomainID, executionInfo.WorkflowID, tBuilder)
 		if err != nil {
 			return nil
@@ -828,42 +808,7 @@ func (t *timerQueueActiveProcessorImpl) updateWorkflowExecution(
 			t.timerQueueProcessorBase.Stop()
 			return err
 		}
-
-		// Check if the processing is blocked due to limit exceeded error and fail any outstanding decision to
-		// unblock processing
-		if err == ErrBufferedEventsLimitExceeded {
-			context.clear()
-
-			var err1 error
-			// Reload workflow execution so we can apply the decision task failure event
-			msBuilder, err1 = context.loadWorkflowExecution()
-			if err1 != nil {
-				return err1
-			}
-
-			if di, ok := msBuilder.GetInFlightDecisionTask(); ok {
-				msBuilder.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID,
-					workflow.DecisionTaskFailedCauseForceCloseDecision, nil, identityHistoryService)
-
-				var transT, timerT []persistence.Task
-				transT, timerT, err1 = context.scheduleNewDecision(transT, timerT)
-				if err1 != nil {
-					return err1
-				}
-
-				// Generate a transaction ID for appending events to history
-				transactionID, err1 := t.historyService.shard.GetNextTransferTaskID()
-				if err1 != nil {
-					return err1
-				}
-				err1 = context.updateWorkflowExecution(transT, timerT, transactionID)
-				if err1 != nil {
-					return err1
-				}
-			}
-
-			return err
-		}
+		return err
 	}
 
 	t.notifyNewTimers(timerTasks)

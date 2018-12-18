@@ -45,7 +45,6 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
-	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
 )
 
@@ -73,7 +72,7 @@ func (s *IntegrationBase) setupShards() {
 	}
 }
 
-func TestIntegrationSuite(t *testing.T) {
+func TestRateLimitBufferedEventsTestIntegrationSuite(t *testing.T) {
 	flag.Parse()
 	if *integration && !*testEventsV2 {
 		s := new(integrationSuite)
@@ -2059,16 +2058,12 @@ func (s *integrationSuite) TestRateLimitBufferedEvents() {
 				s.Nil(s.sendSignal(s.domainName, workflowExecution, "SignalName", buf.Bytes(), identity))
 			}
 
-			// Rate limitted signals
-			for i := 0; i < 10; i++ {
-				buf := new(bytes.Buffer)
-				binary.Write(buf, binary.LittleEndian, i)
-				signalErr := s.sendSignal(s.domainName, workflowExecution, "SignalName", buf.Bytes(), identity)
-				s.NotNil(signalErr)
-				s.Equal(history.ErrBufferedEventsLimitExceeded, signalErr)
-			}
+			buf := new(bytes.Buffer)
+			binary.Write(buf, binary.LittleEndian, 101)
+			signalErr := s.sendSignal(s.domainName, workflowExecution, "SignalName", buf.Bytes(), identity)
+			s.Nil(signalErr)
 
-			// First decision is empty
+			// this decision will be ignored as he decision task is already failed
 			return nil, []*workflow.Decision{}, nil
 		}
 
@@ -2092,10 +2087,10 @@ func (s *integrationSuite) TestRateLimitBufferedEvents() {
 		T:               s.T(),
 	}
 
-	// Make first decision to schedule activity
+	// first decision to send 101 signals, the last signal will force fail decision and flush buffered events.
 	_, err := poller.PollAndProcessDecisionTask(false, false)
 	s.logger.Infof("PollAndProcessDecisionTask: %v", err)
-	s.Nil(err)
+	s.EqualError(err, "EntityNotExistsError{Message: Decision task not found.}")
 
 	// Process signal in decider
 	_, err = poller.PollAndProcessDecisionTask(true, false)
@@ -2105,7 +2100,7 @@ func (s *integrationSuite) TestRateLimitBufferedEvents() {
 	s.printWorkflowHistory(s.domainName, workflowExecution)
 
 	s.True(workflowComplete)
-	s.Equal(100, signalCount)
+	s.Equal(101, signalCount) // check that all 101 signals are received.
 }
 
 func (s *integrationSuite) TestSignalWorkflow_DuplicateRequest() {
@@ -2837,6 +2832,139 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 	queryFailError, ok := queryResult.Err.(*workflow.QueryFailedError)
 	s.True(ok)
 	s.Equal("unknown-query-type", queryFailError.Message)
+}
+
+func (s *integrationSuite) TestQueryWorkflow_BeforeFirstDecision() {
+	id := "interation-test-query-workflow-before-first-decision"
+	wt := "interation-test-query-workflow-before-first-decision-type"
+	tl := "interation-test-query-workflow-before-first-decision-tasklist"
+	identity := "worker1"
+	activityName := "activity_type1"
+	queryType := "test-query"
+
+	workflowType := &workflow.WorkflowType{}
+	workflowType.Name = common.StringPtr(wt)
+
+	taskList := &workflow.TaskList{}
+	taskList.Name = common.StringPtr(tl)
+
+	// Start workflow execution
+	request := &workflow.StartWorkflowExecutionRequest{
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		Identity:                            common.StringPtr(identity),
+	}
+
+	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err0)
+
+	//decider logic
+	activityScheduled := false
+	activityData := int32(1)
+	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+
+		if !activityScheduled {
+			activityScheduled = true
+			buf := new(bytes.Buffer)
+			s.Nil(binary.Write(buf, binary.LittleEndian, activityData))
+
+			return nil, []*workflow.Decision{{
+				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
+				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
+					ActivityId:                    common.StringPtr(strconv.Itoa(int(1))),
+					ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityName)},
+					TaskList:                      &workflow.TaskList{Name: &tl},
+					Input:                         buf.Bytes(),
+					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
+					ScheduleToStartTimeoutSeconds: common.Int32Ptr(2),
+					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
+					HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
+				},
+			}}, nil
+		}
+
+		return nil, []*workflow.Decision{{
+			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
+			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+				Result: []byte("Done."),
+			},
+		}}, nil
+	}
+
+	queryTaskHandled := false
+	queryHandler := func(task *workflow.PollForDecisionTaskResponse) ([]byte, error) {
+		s.NotNil(task.Query)
+		s.NotNil(task.Query.QueryType)
+		s.True(task.GetPreviousStartedEventId() > 0)
+		queryTaskHandled = true
+		if *task.Query.QueryType == queryType {
+			return []byte("query-result"), nil
+		}
+
+		return nil, errors.New("unknown-query-type")
+	}
+
+	poller := &TaskPoller{
+		Engine:          s.engine,
+		Domain:          s.domainName,
+		TaskList:        taskList,
+		Identity:        identity,
+		DecisionHandler: dtHandler,
+		QueryHandler:    queryHandler,
+		Logger:          s.logger,
+		T:               s.T(),
+	}
+
+	workflowExecution := &workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(id),
+		RunId:      common.StringPtr(*we.RunId),
+	}
+
+	type QueryResult struct {
+		Resp *workflow.QueryWorkflowResponse
+		Err  error
+	}
+	queryResultCh := make(chan QueryResult)
+	queryWorkflowFn := func(queryType string) {
+		queryResp, err := s.engine.QueryWorkflow(createContext(), &workflow.QueryWorkflowRequest{
+			Domain:    common.StringPtr(s.domainName),
+			Execution: workflowExecution,
+			Query: &workflow.WorkflowQuery{
+				QueryType: common.StringPtr(queryType),
+			},
+		})
+		queryResultCh <- QueryResult{Resp: queryResp, Err: err}
+	}
+
+	// drop first decision task
+	poller.PollAndProcessDecisionTask(false, true /* drop first decision task */)
+
+	// call QueryWorkflow before first decision task completed
+	go queryWorkflowFn(queryType)
+
+	for {
+		// loop until process the query task
+		isQueryTask, errInner := poller.PollAndProcessDecisionTask(false, false)
+		s.Nil(errInner)
+		if isQueryTask {
+			break
+		}
+	} // wait until query result is ready
+	s.True(queryTaskHandled)
+
+	queryResult := <-queryResultCh
+	s.NoError(queryResult.Err)
+	s.NotNil(queryResult.Resp)
+	s.NotNil(queryResult.Resp.QueryResult)
+	queryResultString := string(queryResult.Resp.QueryResult)
+	s.Equal("query-result", queryResultString)
 }
 
 func (s *integrationSuite) TestDescribeWorkflowExecution() {
@@ -6578,32 +6706,27 @@ func (s *integrationSuite) TestTaskProcessingProtectionForRateLimitError() {
 	s.Nil(err)
 
 	// Send one signal to create a new decision
-	for i := 0; i < 1; i++ {
-		buf := new(bytes.Buffer)
-		binary.Write(buf, binary.LittleEndian, i)
-		s.Nil(s.sendSignal(s.domainName, workflowExecution, "SignalName", buf.Bytes(), identity))
-	}
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.LittleEndian, 0)
+	s.Nil(s.sendSignal(s.domainName, workflowExecution, "SignalName", buf.Bytes(), identity))
 
 	// Drop decision to cause all events to be buffered from now on
 	_, err = poller.PollAndProcessDecisionTask(false, true)
 	s.logger.Infof("PollAndProcessDecisionTask: %v", err)
 	s.Nil(err)
 
-	// Buffered Signals
+	// Buffered 100 Signals
 	for i := 1; i < 101; i++ {
 		buf := new(bytes.Buffer)
 		binary.Write(buf, binary.LittleEndian, i)
 		s.Nil(s.sendSignal(s.domainName, workflowExecution, "SignalName", buf.Bytes(), identity))
 	}
 
-	// Rate limitted signals
-	for i := 0; i < 10; i++ {
-		buf := new(bytes.Buffer)
-		binary.Write(buf, binary.LittleEndian, i)
-		signalErr := s.sendSignal(s.domainName, workflowExecution, "SignalName", buf.Bytes(), identity)
-		s.NotNil(signalErr)
-		s.Equal(history.ErrBufferedEventsLimitExceeded, signalErr)
-	}
+	// 101 signal, which will fail the decision
+	buf = new(bytes.Buffer)
+	binary.Write(buf, binary.LittleEndian, 101)
+	signalErr := s.sendSignal(s.domainName, workflowExecution, "SignalName", buf.Bytes(), identity)
+	s.Nil(signalErr)
 
 	// Process signal in decider
 	_, err = poller.PollAndProcessDecisionTaskWithAttempt(true, false, false, false, 0)
@@ -6613,7 +6736,7 @@ func (s *integrationSuite) TestTaskProcessingProtectionForRateLimitError() {
 	s.printWorkflowHistory(s.domainName, workflowExecution)
 
 	s.True(workflowComplete)
-	s.Equal(101, signalCount)
+	s.Equal(102, signalCount)
 }
 
 func (s *integrationSuite) TestStickyTimeout_NonTransientDecision() {

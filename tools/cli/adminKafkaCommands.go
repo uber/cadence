@@ -40,7 +40,7 @@ import (
 	"runtime"
 
 	"github.com/Shopify/sarama"
-	"github.com/bsm/sarama-cluster"
+	cluster "github.com/bsm/sarama-cluster"
 	"github.com/gocql/gocql"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/replicator"
@@ -53,7 +53,7 @@ import (
 	"github.com/urfave/cli"
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 )
 
 type filterFn func(*replicator.ReplicationTask) bool
@@ -100,6 +100,11 @@ func AdminKafkaParse(c *cli.Context) {
 
 func buildFilterFn(workflowID, runID string) filterFn {
 	return func(task *replicator.ReplicationTask) bool {
+		if len(workflowID) != 0 || len(runID) != 0 {
+			if task.GetHistoryTaskAttributes() == nil {
+				return false
+			}
+		}
 		if len(workflowID) != 0 && *task.HistoryTaskAttributes.WorkflowId != workflowID {
 			return false
 		}
@@ -511,7 +516,7 @@ func newKafkaProducer(c *cli.Context) messaging.Producer {
 	return producer
 }
 
-// AdminPurgeTopic will purge a topic
+// AdminPurgeTopic is used to purge kafka topic
 func AdminPurgeTopic(c *cli.Context) {
 	hostFile := getRequiredOption(c, FlagHostFile)
 	topic := getRequiredOption(c, FlagTopic)
