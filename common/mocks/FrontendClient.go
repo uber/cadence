@@ -142,29 +142,6 @@ func (_m *FrontendClient) GetWorkflowExecutionHistory(ctx context.Context, reque
 	return r0, r1
 }
 
-// GetWorkflowExecutionRawHistory provides a mock function with given fields: ctx, request
-func (_m *FrontendClient) GetWorkflowExecutionRawHistory(ctx context.Context, request *shared.GetWorkflowExecutionRawHistoryRequest, opts ...yarpc.CallOption) (*shared.GetWorkflowExecutionRawHistoryResponse, error) {
-	ret := _m.Called(ctx, request)
-
-	var r0 *shared.GetWorkflowExecutionRawHistoryResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *shared.GetWorkflowExecutionRawHistoryRequest) *shared.GetWorkflowExecutionRawHistoryResponse); ok {
-		r0 = rf(ctx, request)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*shared.GetWorkflowExecutionRawHistoryResponse)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *shared.GetWorkflowExecutionRawHistoryRequest) error); ok {
-		r1 = rf(ctx, request)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // ListClosedWorkflowExecutions provides a mock function with given fields: ctx, request
 func (_m *FrontendClient) ListClosedWorkflowExecutions(ctx context.Context, request *shared.ListClosedWorkflowExecutionsRequest, opts ...yarpc.CallOption) (*shared.ListClosedWorkflowExecutionsResponse, error) {
 	ret := _m.Called(ctx, request)

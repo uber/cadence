@@ -31,6 +31,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
+	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
@@ -73,6 +74,7 @@ const (
 type Cadence interface {
 	Start() error
 	Stop()
+	GetAdminClient() adminserviceclient.Interface
 	GetFrontendClient() workflowserviceclient.Interface
 	FrontendAddress() string
 	GetFrontendService() service.Service
@@ -80,6 +82,7 @@ type Cadence interface {
 
 type (
 	cadenceImpl struct {
+		adminHandler          *frontend.AdminHandler
 		frontendHandler       *frontend.WorkflowHandler
 		matchingHandler       *matching.Handler
 		historyHandlers       []*history.Handler
@@ -261,8 +264,12 @@ func (c *cadenceImpl) WorkerPProfPort() int {
 	return 7109
 }
 
+func (c *cadenceImpl) GetAdminClient() adminserviceclient.Interface {
+	return NewAdminClient(c.frontEndService.GetDispatcher())
+}
+
 func (c *cadenceImpl) GetFrontendClient() workflowserviceclient.Interface {
-	return New(c.frontEndService.GetDispatcher())
+	return NewFrontendClient(c.frontEndService.GetDispatcher())
 }
 
 // For integration tests to get hold of FE instance.
@@ -305,11 +312,17 @@ func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup) {
 	}
 
 	c.frontEndService = service.New(params)
+	c.adminHandler = frontend.NewAdminHandler(
+		c.frontEndService, c.numberOfHistoryShards, c.metadataMgr, c.historyMgr, c.historyV2Mgr)
 	c.frontendHandler = frontend.NewWorkflowHandler(
 		c.frontEndService, frontend.NewConfig(dynamicconfig.NewNopCollection()), c.metadataMgr, c.historyMgr, c.historyV2Mgr, c.visibilityMgr, kafkaProducer)
 	err = c.frontendHandler.Start()
 	if err != nil {
 		c.logger.WithField("error", err).Fatal("Failed to start frontend")
+	}
+	err = c.adminHandler.Start()
+	if err != nil {
+		c.logger.WithField("error", err).Fatal("Failed to start admin")
 	}
 	startWG.Done()
 	<-c.shutdownCh

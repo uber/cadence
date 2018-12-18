@@ -38,12 +38,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
+	"github.com/uber/cadence/.gen/go/admin"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/persistence-tests"
+	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
 )
@@ -4833,12 +4834,11 @@ func (s *integrationSuite) TestGetWorkflowExecutionRawHistory_All() {
 	// this function poll events from history side
 	pageSize := 1
 	getHistory := func(domain string, execution *workflow.WorkflowExecution, firstEventID int64, nextEventID int64,
-		branchToken []byte, token []byte) (*workflow.GetWorkflowExecutionRawHistoryResponse, error) {
+		token []byte) (*admin.GetWorkflowExecutionRawHistoryResponse, error) {
 
-		return s.engine.GetWorkflowExecutionRawHistory(createContext(), &workflow.GetWorkflowExecutionRawHistoryRequest{
+		return s.host.GetAdminClient().GetWorkflowExecutionRawHistory(createContext(), &admin.GetWorkflowExecutionRawHistoryRequest{
 			Domain:          common.StringPtr(domain),
 			Execution:       execution,
-			BranchToken:     branchToken,
 			FirstEventId:    common.Int64Ptr(firstEventID),
 			NextEventId:     common.Int64Ptr(nextEventID),
 			MaximumPageSize: common.Int32Ptr(int32(pageSize)),
@@ -4862,20 +4862,16 @@ func (s *integrationSuite) TestGetWorkflowExecutionRawHistory_All() {
 	}
 
 	var blobs []*workflow.DataBlob
-	var branchToken []byte
 	var token []byte
 
-	resp, err := getHistory(s.domainName, execution, common.FirstEventID, common.EndEventID, branchToken, token)
+	resp, err := getHistory(s.domainName, execution, common.FirstEventID, common.EndEventID, token)
 	s.Nil(err)
 	s.True(len(resp.HistoryBatches) == pageSize)
 	blobs = append(blobs, resp.HistoryBatches...)
-	branchToken = resp.BranchToken
 	token = resp.NextPageToken
 	if s.enableEventsV2 {
-		s.NotNil(branchToken)
 		s.Equal(int32(2), resp.GetEventStoreVersion())
 	} else {
-		s.Nil(branchToken)
 		s.Equal(int32(0), resp.GetEventStoreVersion())
 	}
 	s.Nil(token)
@@ -4886,20 +4882,16 @@ func (s *integrationSuite) TestGetWorkflowExecutionRawHistory_All() {
 	// poll so workflow will make progress, and get history from the very begining
 	poller.PollAndProcessDecisionTask(false, false)
 	blobs = nil
-	branchToken = nil
 	token = nil
 	for continuePaging := true; continuePaging; continuePaging = len(token) != 0 {
-		resp, err = getHistory(s.domainName, execution, common.FirstEventID, common.EndEventID, branchToken, token)
+		resp, err = getHistory(s.domainName, execution, common.FirstEventID, common.EndEventID, token)
 		s.Nil(err)
 		s.True(len(resp.HistoryBatches) == pageSize)
 		blobs = append(blobs, resp.HistoryBatches...)
-		branchToken = resp.BranchToken
 		token = resp.NextPageToken
 		if s.enableEventsV2 {
-			s.NotNil(branchToken)
 			s.Equal(int32(2), resp.GetEventStoreVersion())
 		} else {
-			s.Nil(branchToken)
 			s.Equal(int32(0), resp.GetEventStoreVersion())
 		}
 	}
@@ -4917,17 +4909,14 @@ func (s *integrationSuite) TestGetWorkflowExecutionRawHistory_All() {
 	token = nil
 	beginingEventID := events[len(events)-1].GetEventId() + 1
 	for continuePaging := true; continuePaging; continuePaging = len(token) != 0 {
-		resp, err = getHistory(s.domainName, execution, beginingEventID, common.EndEventID, branchToken, token)
+		resp, err = getHistory(s.domainName, execution, beginingEventID, common.EndEventID, token)
 		s.Nil(err)
 		s.True(len(resp.HistoryBatches) == pageSize)
 		blobs = append(blobs, resp.HistoryBatches...)
-		branchToken = resp.BranchToken
 		token = resp.NextPageToken
 		if s.enableEventsV2 {
-			s.NotNil(branchToken)
 			s.Equal(int32(2), resp.GetEventStoreVersion())
 		} else {
-			s.Nil(branchToken)
 			s.Equal(int32(0), resp.GetEventStoreVersion())
 		}
 	}
@@ -4947,17 +4936,14 @@ func (s *integrationSuite) TestGetWorkflowExecutionRawHistory_All() {
 	token = nil
 	beginingEventID = events[len(events)-1].GetEventId() + 1
 	for continuePaging := true; continuePaging; continuePaging = len(token) != 0 {
-		resp, err = getHistory(s.domainName, execution, beginingEventID, common.EndEventID, branchToken, token)
+		resp, err = getHistory(s.domainName, execution, beginingEventID, common.EndEventID, token)
 		s.Nil(err)
 		s.True(len(resp.HistoryBatches) == pageSize)
 		blobs = append(blobs, resp.HistoryBatches...)
-		branchToken = resp.BranchToken
 		token = resp.NextPageToken
 		if s.enableEventsV2 {
-			s.NotNil(branchToken)
 			s.Equal(int32(2), resp.GetEventStoreVersion())
 		} else {
-			s.Nil(branchToken)
 			s.Equal(int32(0), resp.GetEventStoreVersion())
 		}
 	}
@@ -4977,17 +4963,14 @@ func (s *integrationSuite) TestGetWorkflowExecutionRawHistory_All() {
 	blobs = nil // clear existing blobs
 	token = nil
 	for continuePaging := true; continuePaging; continuePaging = len(token) != 0 {
-		resp, err = getHistory(s.domainName, execution, 4, 7, branchToken, token)
+		resp, err = getHistory(s.domainName, execution, 4, 7, token)
 		s.Nil(err)
 		s.True(len(resp.HistoryBatches) == pageSize)
 		blobs = append(blobs, resp.HistoryBatches...)
-		branchToken = resp.BranchToken
 		token = resp.NextPageToken
 		if s.enableEventsV2 {
-			s.NotNil(branchToken)
 			s.Equal(int32(2), resp.GetEventStoreVersion())
 		} else {
-			s.Nil(branchToken)
 			s.Equal(int32(0), resp.GetEventStoreVersion())
 		}
 	}

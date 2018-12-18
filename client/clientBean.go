@@ -28,6 +28,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/tchannel"
 
+	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
@@ -44,6 +45,7 @@ type (
 		GetHistoryClient() history.Client
 		GetMatchingClient() matching.Client
 		GetFrontendClient() frontend.Client
+		GetRemoteAdminClient(cluster string) admin.Client
 		GetRemoteFrontendClient(cluster string) frontend.Client
 	}
 
@@ -56,6 +58,7 @@ type (
 		historyClient         history.Client
 		matchingClient        matching.Client
 		frontendClient        frontend.Client
+		remoteAdminClients    map[string]admin.Client
 		remoteFrontendClients map[string]frontend.Client
 	}
 
@@ -81,6 +84,7 @@ func NewClientBean(factory Factory, dispatcherProvider DispatcherProvider, clust
 		return nil, err
 	}
 
+	remoteAdminClients := map[string]admin.Client{}
 	remoteFrontendClients := map[string]frontend.Client{}
 	for cluster, address := range clusterMetadata.GetAllClientAddress() {
 		dispatcher, err := dispatcherProvider.Get(address.RPCName, address.RPCAddress)
@@ -88,7 +92,16 @@ func NewClientBean(factory Factory, dispatcherProvider DispatcherProvider, clust
 			return nil, err
 		}
 
-		client, err := factory.NewFrontendClientWithTimeoutAndDispatcher(
+		adminClient, err := factory.NewAdminClientWithTimeoutAndDispatcher(
+			address.RPCName,
+			admin.DefaultTimeout,
+			dispatcher,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		frontendclient, err := factory.NewFrontendClientWithTimeoutAndDispatcher(
 			address.RPCName,
 			frontend.DefaultTimeout,
 			frontend.DefaultLongPollTimeout,
@@ -98,13 +111,15 @@ func NewClientBean(factory Factory, dispatcherProvider DispatcherProvider, clust
 			return nil, err
 		}
 
-		remoteFrontendClients[cluster] = client
+		remoteAdminClients[cluster] = adminClient
+		remoteFrontendClients[cluster] = frontendclient
 	}
 
 	return &clientBeanImpl{
 		historyClient:         historyClient,
 		matchingClient:        matchingClient,
 		frontendClient:        frontendClient,
+		remoteAdminClients:    remoteAdminClients,
 		remoteFrontendClients: remoteFrontendClients,
 	}, nil
 }
@@ -119,6 +134,18 @@ func (h *clientBeanImpl) GetMatchingClient() matching.Client {
 
 func (h *clientBeanImpl) GetFrontendClient() frontend.Client {
 	return h.frontendClient
+}
+
+func (h *clientBeanImpl) GetRemoteAdminClient(cluster string) admin.Client {
+	client, ok := h.remoteAdminClients[cluster]
+	if !ok {
+		panic(fmt.Sprintf(
+			"Unknown cluster name: %v with given cluster client map: %v.",
+			cluster,
+			h.remoteAdminClients,
+		))
+	}
+	return client
 }
 
 func (h *clientBeanImpl) GetRemoteFrontendClient(cluster string) frontend.Client {

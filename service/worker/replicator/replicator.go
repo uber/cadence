@@ -96,13 +96,13 @@ func (r *Replicator) Start() error {
 	for cluster := range r.clusterMetadata.GetAllClusterFailoverVersions() {
 		if cluster != currentClusterName {
 			consumerName := getConsumerName(currentClusterName, cluster)
-			frontendClient := r.clientBean.GetRemoteFrontendClient(cluster)
+			adminClient := r.clientBean.GetRemoteAdminClient(cluster)
 			logger := r.logger.WithFields(bark.Fields{
 				logging.TagWorkflowComponent: logging.TagValueReplicationTaskProcessorComponent,
 				logging.TagSourceCluster:     cluster,
 				logging.TagConsumerName:      consumerName,
 			})
-			historyRereplicator := NewHistoryRereplicator(r.domainCache, frontendClient, r.historyClient, r.historySerializer, logger)
+			historyRereplicator := NewHistoryRereplicator(r.domainCache, adminClient, r.historyClient, r.historySerializer, logger)
 			r.processors = append(r.processors, newReplicationTaskProcessor(currentClusterName, cluster, consumerName, r.client,
 				r.config, logger, r.metricsClient, r.domainReplicator, historyRereplicator, r.historyClient))
 		}

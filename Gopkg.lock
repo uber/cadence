@@ -485,8 +485,7 @@
   version = "v1.3.2"
 
 [[projects]]
-  branch = "idl-update"
-  digest = "1:c1d3bd8c8f29f656e6cae7db52fda04c92e99675f847c73085ea732121fd4c4b"
+  digest = "1:5e70aa639271a54e9ed87875b9f7e495255df54b1a64c7d4a338e33b44ee33b7"
   name = "go.uber.org/cadence"
   packages = [
     ".",
@@ -510,7 +509,8 @@
     "workflow",
   ]
   pruneopts = ""
-  revision = "28b926c92e2d78664cbe7c9e922763f1ebd6b69a"
+  revision = "28753167e2ac4be2087c07044d2af9cd4382d58f"
+  version = "v0.7.6"
 
 [[projects]]
   digest = "1:22c7effcb4da0eacb2bb1940ee173fac010e9ef3c691f5de4b524d538bd980f5"

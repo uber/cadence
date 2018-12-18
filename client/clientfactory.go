@@ -25,8 +25,10 @@ import (
 
 	"go.uber.org/yarpc"
 
+	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	"github.com/uber/cadence/.gen/go/history/historyserviceclient"
 	"github.com/uber/cadence/.gen/go/matching/matchingserviceclient"
+	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
@@ -57,6 +59,7 @@ type Factory interface {
 	NewMatchingClientWithTimeout(timeout time.Duration, longPollTimeout time.Duration) (matching.Client, error)
 	NewFrontendClientWithTimeout(timeout time.Duration, longPollTimeout time.Duration) (frontend.Client, error)
 
+	NewAdminClientWithTimeoutAndDispatcher(rpcName string, timeout time.Duration, dispatcher *yarpc.Dispatcher) (admin.Client, error)
 	NewFrontendClientWithTimeoutAndDispatcher(rpcName string, timeout time.Duration, longPollTimeout time.Duration, dispatcher *yarpc.Dispatcher) (frontend.Client, error)
 }
 
@@ -172,6 +175,26 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeout(
 	client := frontend.NewClient(timeout, longPollTimeout, common.NewClientCache(keyResolver, clientProvider))
 	if cf.metricsClient != nil {
 		client = frontend.NewMetricClient(client, cf.metricsClient)
+	}
+	return client, nil
+}
+
+func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndDispatcher(
+	rpcName string,
+	timeout time.Duration,
+	dispatcher *yarpc.Dispatcher,
+) (admin.Client, error) {
+	keyResolver := func(key string) (string, error) {
+		return clientKeyDispatcher, nil
+	}
+
+	clientProvider := func(clientKey string) (interface{}, error) {
+		return adminserviceclient.New(dispatcher.ClientConfig(rpcName)), nil
+	}
+
+	client := admin.NewClient(timeout, common.NewClientCache(keyResolver, clientProvider))
+	if cf.metricsClient != nil {
+		client = admin.NewMetricClient(client, cf.metricsClient)
 	}
 	return client, nil
 }

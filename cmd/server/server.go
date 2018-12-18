@@ -21,9 +21,10 @@
 package main
 
 import (
-	"github.com/uber/cadence/common/archival"
 	"log"
 	"time"
+
+	"github.com/uber/cadence/common/archival"
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"

@@ -24,16 +24,16 @@ import (
 	"context"
 
 	"github.com/uber-common/bark"
+	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/history"
-	internal "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/client/frontend"
+	"github.com/uber/cadence/.gen/go/shared"
+	a "github.com/uber/cadence/client/admin"
 	h "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/persistence"
-	external "go.uber.org/cadence/.gen/go/shared"
 )
 
 var (
@@ -60,24 +60,24 @@ type (
 
 	// HistoryRereplicatorImpl is the implementation of HistoryRereplicator
 	HistoryRereplicatorImpl struct {
-		domainCache    cache.DomainCache
-		frontendClient frontend.Client
-		historyClient  h.Client
-		serializer     persistence.HistorySerializer
-		logger         bark.Logger
+		domainCache   cache.DomainCache
+		adminClient   a.Client
+		historyClient h.Client
+		serializer    persistence.HistorySerializer
+		logger        bark.Logger
 	}
 )
 
 // NewHistoryRereplicator create a new HistoryRereplicatorImpl
-func NewHistoryRereplicator(domainCache cache.DomainCache, frontendClient frontend.Client, historyClient h.Client,
+func NewHistoryRereplicator(domainCache cache.DomainCache, adminClient a.Client, historyClient h.Client,
 	serializer persistence.HistorySerializer, logger bark.Logger) *HistoryRereplicatorImpl {
 
 	return &HistoryRereplicatorImpl{
-		domainCache:    domainCache,
-		frontendClient: frontendClient,
-		historyClient:  historyClient,
-		serializer:     serializer,
-		logger:         logger,
+		domainCache:   domainCache,
+		adminClient:   adminClient,
+		historyClient: historyClient,
+		serializer:    serializer,
+		logger:        logger,
 	}
 }
 
@@ -88,7 +88,7 @@ func (h *HistoryRereplicatorImpl) SendMultiWorkflowHistory(domainID string, work
 	// the logic will try to grab events from begining run ID, first event ID to ending run ID, ending next event ID
 
 	// beginingRunID can be empty, if there is no workflow in DB
-	// endingRunID must not be empty, since this function is trigger messing events of endingRunID
+	// endingRunID must not be empty, since this function is trigger missing events of endingRunID
 
 	runID := beginingRunID
 	for len(runID) != 0 && runID != endingRunID {
@@ -117,7 +117,12 @@ func (h *HistoryRereplicatorImpl) SendMultiWorkflowHistory(domainID string, work
 	for len(runID) != 0 {
 		runID, err = h.getPrevRunID(domainID, workflowID, runID)
 		if err != nil {
-			return err
+			if _, ok := err.(*shared.EntityNotExistsError); !ok {
+				return err
+			}
+
+			// EntityNotExistsError error, set the run ID to "" indicating no prev run
+			runID = ""
 		}
 		runIDs = append(runIDs, runID)
 	}
@@ -143,42 +148,39 @@ func (h *HistoryRereplicatorImpl) sendSingleWorkflowHistory(domainID string, wor
 		return "", nil
 	}
 
-	var request *history.ReplicateRawEventsRequest // pending replication request to history, initialized to nil
+	var pendingRequest *history.ReplicateRawEventsRequest // pending replication request to history, initialized to nil
 
-	// branch token, event store version, replication
-	// for each request to history
-	var branchToken []byte
+	// event store version, replication
+	// for each pendingRequest to history
 	var eventStoreVersion int32
-	var replicationInfo map[string]*internal.ReplicationInfo
+	var replicationInfo map[string]*shared.ReplicationInfo
 
 	pageSize := int32(100)
 	var token []byte
 	for doPaging := true; doPaging; doPaging = len(token) > 0 {
-		response, err := h.getHistory(domainID, workflowID, runID, branchToken, firstEventID, nextEventID, token, pageSize)
+		response, err := h.getHistory(domainID, workflowID, runID, firstEventID, nextEventID, token, pageSize)
 		if err != nil {
 			return "", err
 		}
 
-		branchToken = response.BranchToken
 		eventStoreVersion = response.GetEventStoreVersion()
-		replicationInfo = h.replicationInfoFromPublic(response.ReplicationInfo)
+		replicationInfo = response.ReplicationInfo
 		token = response.NextPageToken
 
-		for _, externalBatch := range response.HistoryBatches {
-			err := h.sendReplicationRawRequest(request)
+		for _, batch := range response.HistoryBatches {
+			// it is intentional that the first request is nil
+			// the reason is, we need to check the last request, if that request contains
+			// continue as new, then new run history shall be included
+			err := h.sendReplicationRawRequest(pendingRequest)
 			if err != nil {
 				return "", err
 			}
-			internalBatch, err := h.dataBlobFromPublic(externalBatch)
-			if err != nil {
-				return "", err
-			}
-			request = h.createReplicationRawRequest(domainID, workflowID, runID, internalBatch, eventStoreVersion, replicationInfo)
+			pendingRequest = h.createReplicationRawRequest(domainID, workflowID, runID, batch, eventStoreVersion, replicationInfo)
 		}
 	}
 	// after this for loop, there shall be one request not sent yet
 	// this request contains the last event, possible continue as new event
-	lastBatch := request.History
+	lastBatch := pendingRequest.History
 	nextRunID, err := h.getNextRunID(lastBatch)
 	if err != nil {
 		return "", err
@@ -188,23 +190,18 @@ func (h *HistoryRereplicatorImpl) sendSingleWorkflowHistory(domainID string, wor
 		// we need to do something special for that
 		var token []byte
 		pageSize := int32(1)
-		var branckToken []byte
-		response, err := h.getHistory(domainID, workflowID, nextRunID, branckToken, common.FirstEventID, common.EndEventID, token, pageSize)
+		response, err := h.getHistory(domainID, workflowID, nextRunID, common.FirstEventID, common.EndEventID, token, pageSize)
 		if err != nil {
 			return "", err
 		}
 
-		externalBatch := response.HistoryBatches[0]
-		internalBatch, err := h.dataBlobFromPublic(externalBatch)
-		if err != nil {
-			return "", err
-		}
+		batch := response.HistoryBatches[0]
 
-		request.NewRunHistory = internalBatch
-		request.NewRunEventStoreVersion = response.EventStoreVersion
+		pendingRequest.NewRunHistory = batch
+		pendingRequest.NewRunEventStoreVersion = response.EventStoreVersion
 	}
 
-	return nextRunID, h.sendReplicationRawRequest(request)
+	return nextRunID, h.sendReplicationRawRequest(pendingRequest)
 }
 
 func (h *HistoryRereplicatorImpl) eventIDRange(currentRunID string,
@@ -233,14 +230,14 @@ func (h *HistoryRereplicatorImpl) eventIDRange(currentRunID string,
 
 func (h *HistoryRereplicatorImpl) createReplicationRawRequest(
 	domainID string, workflowID string, runID string,
-	historyBlob *internal.DataBlob,
+	historyBlob *shared.DataBlob,
 	eventStoreVersion int32,
-	replicationInfo map[string]*internal.ReplicationInfo,
+	replicationInfo map[string]*shared.ReplicationInfo,
 ) *history.ReplicateRawEventsRequest {
 
 	request := &history.ReplicateRawEventsRequest{
 		DomainUUID: common.StringPtr(domainID),
-		WorkflowExecution: &internal.WorkflowExecution{
+		WorkflowExecution: &shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(workflowID),
 			RunId:      common.StringPtr(runID),
 		},
@@ -274,8 +271,8 @@ func (h *HistoryRereplicatorImpl) sendReplicationRawRequest(request *history.Rep
 	return err
 }
 
-func (h *HistoryRereplicatorImpl) getHistory(domainID string, workflowID string, runID string, branchToken []byte,
-	firstEventID int64, nextEventID int64, token []byte, pageSize int32) (*external.GetWorkflowExecutionRawHistoryResponse, error) {
+func (h *HistoryRereplicatorImpl) getHistory(domainID string, workflowID string, runID string,
+	firstEventID int64, nextEventID int64, token []byte, pageSize int32) (*admin.GetWorkflowExecutionRawHistoryResponse, error) {
 
 	logger := h.logger.WithFields(bark.Fields{
 		logging.TagDomainID:            domainID,
@@ -294,13 +291,12 @@ func (h *HistoryRereplicatorImpl) getHistory(domainID string, workflowID string,
 
 	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
 	defer cancel()
-	response, err := h.frontendClient.GetWorkflowExecutionRawHistory(ctx, &external.GetWorkflowExecutionRawHistoryRequest{
+	response, err := h.adminClient.GetWorkflowExecutionRawHistory(ctx, &admin.GetWorkflowExecutionRawHistoryRequest{
 		Domain: common.StringPtr(domainName),
-		Execution: &external.WorkflowExecution{
+		Execution: &shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(workflowID),
 			RunId:      common.StringPtr(runID),
 		},
-		BranchToken:     branchToken,
 		FirstEventId:    common.Int64Ptr(firstEventID),
 		NextEventId:     common.Int64Ptr(nextEventID),
 		MaximumPageSize: common.Int32Ptr(pageSize),
@@ -321,18 +317,14 @@ func (h *HistoryRereplicatorImpl) getHistory(domainID string, workflowID string,
 
 func (h *HistoryRereplicatorImpl) getPrevRunID(domainID string, workflowID string, runID string) (string, error) {
 
-	var branchToken []byte // use nil meaning that do not care whetehr the branch has changed or not
-	var token []byte       // use nil since we are only getting the first event batch, for the start event
+	var token []byte // use nil since we are only getting the first event batch, for the start event
 	pageSize := int32(1)
-	response, err := h.getHistory(domainID, workflowID, runID, branchToken, common.FirstEventID, common.EndEventID, token, pageSize)
+	response, err := h.getHistory(domainID, workflowID, runID, common.FirstEventID, common.EndEventID, token, pageSize)
 	if err != nil {
 		return "", err
 	}
 
-	blob, err := h.dataBlobFromPublic(response.HistoryBatches[0])
-	if err != nil {
-		return "", err
-	}
+	blob := response.HistoryBatches[0]
 	historyEvents, err := h.deserializeBlob(blob)
 	if err != nil {
 		return "", err
@@ -347,7 +339,7 @@ func (h *HistoryRereplicatorImpl) getPrevRunID(domainID string, workflowID strin
 	return attr.GetContinuedExecutionRunId(), nil
 }
 
-func (h *HistoryRereplicatorImpl) getNextRunID(blob *internal.DataBlob) (string, error) {
+func (h *HistoryRereplicatorImpl) getNextRunID(blob *shared.DataBlob) (string, error) {
 
 	historyEvents, err := h.deserializeBlob(blob)
 	if err != nil {
@@ -363,13 +355,13 @@ func (h *HistoryRereplicatorImpl) getNextRunID(blob *internal.DataBlob) (string,
 	return attr.GetNewExecutionRunId(), nil
 }
 
-func (h *HistoryRereplicatorImpl) deserializeBlob(blob *internal.DataBlob) ([]*internal.HistoryEvent, error) {
+func (h *HistoryRereplicatorImpl) deserializeBlob(blob *shared.DataBlob) ([]*shared.HistoryEvent, error) {
 
 	var err error
-	var historyEvents []*internal.HistoryEvent
+	var historyEvents []*shared.HistoryEvent
 
 	switch blob.GetEncodingType() {
-	case internal.EncodingTypeThriftRW:
+	case shared.EncodingTypeThriftRW:
 		historyEvents, err = h.serializer.DeserializeBatchEvents(&persistence.DataBlob{
 			Encoding: common.EncodingTypeThriftRW,
 			Data:     blob.Data,
@@ -385,54 +377,4 @@ func (h *HistoryRereplicatorImpl) deserializeBlob(blob *internal.DataBlob) ([]*i
 		return nil, ErrEmptyHistoryRawEventBatch
 	}
 	return historyEvents, nil
-}
-
-// the conversion functions below exists due to the fact that there are 2 (same) API defination,
-// one in the service, one on the client. although the definition are the same,
-// the name prefix are different
-
-func (h *HistoryRereplicatorImpl) dataBlobFromPublic(blob *external.DataBlob) (*internal.DataBlob, error) {
-	switch blob.GetEncodingType() {
-	case external.EncodingTypeThriftRW:
-		return &internal.DataBlob{
-			EncodingType: internal.EncodingTypeThriftRW.Ptr(),
-			Data:         blob.Data,
-		}, nil
-	default:
-		return nil, ErrUnknownEncodingType
-	}
-}
-
-func (h *HistoryRereplicatorImpl) dataBlobToPublic(blob *internal.DataBlob) (*external.DataBlob, error) {
-	switch blob.GetEncodingType() {
-	case internal.EncodingTypeThriftRW:
-		return &external.DataBlob{
-			EncodingType: external.EncodingTypeThriftRW.Ptr(),
-			Data:         blob.Data,
-		}, nil
-	default:
-		return nil, ErrUnknownEncodingType
-	}
-}
-
-func (h *HistoryRereplicatorImpl) replicationInfoFromPublic(in map[string]*external.ReplicationInfo) map[string]*internal.ReplicationInfo {
-	out := map[string]*internal.ReplicationInfo{}
-	for k, v := range in {
-		out[k] = &internal.ReplicationInfo{
-			Version:     v.Version,
-			LastEventId: v.LastEventId,
-		}
-	}
-	return out
-}
-
-func (h *HistoryRereplicatorImpl) replicationInfoToPublic(in map[string]*internal.ReplicationInfo) map[string]*external.ReplicationInfo {
-	out := map[string]*external.ReplicationInfo{}
-	for k, v := range in {
-		out[k] = &external.ReplicationInfo{
-			Version:     v.Version,
-			LastEventId: v.LastEventId,
-		}
-	}
-	return out
 }

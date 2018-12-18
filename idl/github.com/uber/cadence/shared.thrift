@@ -264,7 +264,7 @@ enum EncodingType {
 
 struct DataBlob {
   10: optional EncodingType EncodingType
-	20: optional binary Data
+  20: optional binary Data
 }
 
 struct ReplicationInfo {
@@ -1052,24 +1052,6 @@ struct GetWorkflowExecutionHistoryRequest {
 struct GetWorkflowExecutionHistoryResponse {
   10: optional History history
   20: optional binary nextPageToken
-}
-
-struct GetWorkflowExecutionRawHistoryRequest {
-  10: optional string domain
-  20: optional WorkflowExecution execution
-  30: optional binary branchToken
-  40: optional i64 (js.type = "Long") firstEventId
-  50: optional i64 (js.type = "Long") nextEventId
-  60: optional i32 maximumPageSize
-  70: optional binary nextPageToken
-}
-
-struct GetWorkflowExecutionRawHistoryResponse {
-  10: optional binary branchToken
-  20: optional binary nextPageToken
-  30: optional list<DataBlob> historyBatches
-  40: optional map<string, ReplicationInfo> replicationInfo
-  50: optional i32 eventStoreVersion
 }
 
 struct SignalWorkflowExecutionRequest {
