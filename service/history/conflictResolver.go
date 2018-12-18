@@ -131,7 +131,7 @@ func (r *conflictResolverImpl) reset(prevRunID string, requestID string, replayE
 	resetMutableStateBuilder.UpdateReplicationStateLastEventID(sourceCluster, lastEvent.GetVersion(), replayEventID)
 
 	r.logger.WithField(logging.TagResetNextEventID, resetMutableStateBuilder.GetNextEventID()).Info("All events applied for execution.")
-	msBuilder, err := r.context.resetWorkflowExecution(prevRunID, resetMutableStateBuilder)
+	msBuilder, err := r.context.resetMutableState(prevRunID, resetMutableStateBuilder)
 	if err != nil {
 		r.logError("Conflict resolution err reset workflow.", err)
 	}

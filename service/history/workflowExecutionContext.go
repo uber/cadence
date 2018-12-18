@@ -123,7 +123,8 @@ func (c *workflowExecutionContext) loadWorkflowExecutionInternal() error {
 	return nil
 }
 
-func (c *workflowExecutionContext) resetWorkflowExecution(prevRunID string, resetBuilder mutableState) (mutableState,
+// this only resets one mutableState for a workflow
+func (c *workflowExecutionContext) resetMutableState(prevRunID string, resetBuilder mutableState) (mutableState,
 	error) {
 	snapshotRequest := resetBuilder.ResetSnapshot(prevRunID)
 	snapshotRequest.Condition = c.updateCondition
@@ -135,6 +136,14 @@ func (c *workflowExecutionContext) resetWorkflowExecution(prevRunID string, rese
 
 	c.clear()
 	return c.loadWorkflowExecution()
+}
+
+// this reset is more complex than "resetMutableState", it involes currentMutableState and newMutableState, and also append new history
+// append history to new run
+// append history to current run if current run is not closed
+// update mutableState(terminate current run) and create new run
+func (c *workflowExecutionContext) resetWorkflowExecution(currMutableState, newMutableState mutableState, transferTasks, timerTasks, replicationTasks []persistence.Task) error {
+
 }
 
 func (c *workflowExecutionContext) updateWorkflowExecutionWithContext(context []byte, transferTasks []persistence.Task,
