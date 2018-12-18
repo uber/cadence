@@ -2413,7 +2413,9 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 		return
 	}
 	var currMutableState mutableState
+	var currContext *workflowExecutionContext
 	if resp.RunID == execution.GetRunId() {
+		currContext = context
 		currMutableState = forkMutableState
 	} else {
 		currExecution := workflow.WorkflowExecution{
@@ -2455,8 +2457,8 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 	}
 
 	// generate new transfer tasks to
-	//  1. re-schedule task for scheduled(not started) activities/childWF.
-	//  2. re-schedule task to resend sigals/requestCancel if initiated but not delivered
+	//  1. re-schedule task for scheduled(not started) activities (ignore childWFs for now).
+	//  2. re-schedule task to resend signals/requestCancel if initiated but not delivered
 	//  3. add a new decision
 	startedActivityIDs, transferTasks, retError := e.filterTransferTasksForReset(newStateBuilder.getTransferTasks(), newMutableState)
 
@@ -2495,10 +2497,6 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 		return
 	}
 
-	/////////////////////////////////////////////////////////////////////////
-	// After done everything in mutableState, start writing to persistence
-	//////////////////////////////////////////////////////////////////////////
-
 	// fork a new history branch
 	forkResp, retError := e.historyV2Mgr.ForkHistoryBranch(&persistence.ForkHistoryBranchRequest{
 		ForkBranchToken: forkMutableState.GetCurrentBranch(),
@@ -2517,22 +2515,40 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 		})
 	}()
 
-	newHistory := newMutableState.GetHistoryBuilder().GetHistory().Events
 	// update replication and generate replication task
+	replicationTasks := e.generateReplicationTasksForReset(newMutableState, domainEntry)
+
+	// finally, write to persistence
+	retError = currContext.resetWorkflowExecution(currMutableState, newMutableState, transferTasks, timerTasks, replicationTasks)
+	return
+}
+
+func (e *historyEngineImpl) generateReplicationTasksForReset(newMutableState mutableState, domainEntry *cache.DomainCacheEntry) []persistence.Task {
+	var repTasks []persistence.Task
 	if newMutableState.GetReplicationState() != nil {
+		newHistory := newMutableState.GetHistoryBuilder().GetHistory().Events
+
+		firstEvent := newHistory[0]
+		newMutableState.GetExecutionInfo().SetLastFirstEventID(firstEvent.GetEventId())
+
 		lastEvent := newHistory[len(newHistory)-1]
 		clusterMetadata := e.shard.GetService().GetClusterMetadata()
 		newMutableState.UpdateReplicationStateLastEventID(clusterMetadata.GetCurrentClusterName(), lastEvent.GetVersion(), lastEvent.GetEventId())
 		// replication task is generated with reset event(decision task failed)
-		newMutableState.CreateReplicationTask(0, nil)
+		if domainEntry.CanReplicateEvent() {
+			replicationTask := &persistence.HistoryReplicationTask{
+				FirstEventID:        firstEvent.GetEventId(),
+				NextEventID:         firstEvent.GetEventId() + 1,
+				Version:             newMutableState.GetCurrentVersion(),
+				LastReplicationInfo: newMutableState.GetReplicationState().LastReplicationInfo,
+				EventStoreVersion:   persistence.EventStoreVersionV2,
+				BranchToken:         newMutableState.GetCurrentBranch(),
+			}
+
+			repTasks = append(repTasks, replicationTask)
+		}
 	}
-
-	// append history to new run
-	// append history to current run if current run is not closed
-
-	// update mutableState(terminate current run) and create new run
-
-	return nil
+	return repTasks
 }
 
 func (e *historyEngineImpl) replayReceivedSignals(receivedSignals []*workflow.HistoryEvent, msBuilder mutableState) {
