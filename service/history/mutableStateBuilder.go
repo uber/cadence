@@ -836,6 +836,10 @@ func (e *mutableStateBuilder) GetRetryBackoffDuration(errReason string) time.Dur
 	return getBackoffInterval(info.Attempt, info.MaximumAttempts, info.InitialInterval, info.MaximumInterval, info.BackoffCoefficient, time.Now(), info.ExpirationTime, errReason, info.NonRetriableErrors)
 }
 
+func (e *mutableStateBuilder) GetAllSignalsToSend() map[int64]*persistence.SignalInfo {
+	return e.pendingSignalInfoIDs
+}
+
 // GetSignalInfo get details about a signal request that is currently in progress.
 func (e *mutableStateBuilder) GetSignalInfo(initiatedEventID int64) (*persistence.SignalInfo, bool) {
 	ri, ok := e.pendingSignalInfoIDs[initiatedEventID]

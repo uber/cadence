@@ -2478,6 +2478,11 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending child workflow "),
 		}
 	}
+	if len(newMutableState.GetAllSignalsToSend()) > 0 {
+		return &workflow.BadRequestError{
+			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending signals to send, pending signal: %+v ", newMutableState.GetAllSignalsToSend()),
+		}
+	}
 
 	// generate new transfer tasks to
 	//  1. re-schedule task for scheduled(not started) activities (ignore childWFs for now).
@@ -2623,18 +2628,12 @@ func (e *historyEngineImpl) filterTransferTasksForReset(prevTansferTasks []persi
 				continue
 			}
 		case persistence.TransferTaskTypeSignalExecution:
-			task, ok := t.(*persistence.SignalExecutionTask)
-			if !ok {
-				return nil, nil, errUnknownTransferTask
-			}
-			_, isPending := msBuilder.GetSignalInfo(task.InitiatedID)
-			if !isPending {
-				continue
-			}
+			// skip all transferTasks for sending signal for first version
+			continue
 		case persistence.TransferTaskTypeCloseExecution:
 			fallthrough
 		default:
-			return nil, nil, &workflow.BadRequestError{
+			return nil, nil, &workflow.InternalServiceError{
 				Message: fmt.Sprintf("unrecoginzed transfer task type for reset: %v", t.GetType()),
 			}
 		}

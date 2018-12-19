@@ -149,6 +149,14 @@ func (c *workflowExecutionContext) resetWorkflowExecution(currMutableState mutab
 		return
 	}
 
+	// Since we always reset to decision task, there shouldn't be any buffered events.
+	// Therefore currently ResetWorkflowExecution persistence API doesn't implement setting buffered events.
+	if newMutableState.HasBufferedEvents() {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("reset workflow execution shouldn't have buffered events"),
+		}
+	}
+
 	if updateCurr {
 		hBuilder := currMutableState.GetHistoryBuilder()
 		size, retError := c.appendHistoryEvents(hBuilder, hBuilder.GetHistory().GetEvents(), transactionID)
@@ -171,7 +179,37 @@ func (c *workflowExecutionContext) resetWorkflowExecution(currMutableState mutab
 	}
 	newMutableState.IncrementHistorySize(size)
 
-	return nil
+	snapshotRequest := newMutableState.ResetSnapshot("")
+	if len(snapshotRequest.InsertChildExecutionInfos) > 0 ||
+		len(snapshotRequest.InsertSignalInfos) > 0 ||
+		len(snapshotRequest.InsertSignalRequestedIDs) > 0 {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("something went wrong, we shouldn't see any pending childWF, sending Signal or signal requested"),
+		}
+	}
+
+	resetWFReq := &persistence.ResetWorkflowExecutionRequest{
+		PrevRunID:  currMutableState.GetExecutionInfo().RunID,
+		Condition:  c.updateCondition,
+		UpdateCurr: updateCurr,
+
+		CurrExecutionInfo:    currMutableState.GetExecutionInfo(),
+		CurrReplicationState: currMutableState.GetReplicationState(),
+		CurrTransferTasks:    []persistence.Task{closeTask},
+		CurrTimerTasks:       []persistence.Task{cleanupTask},
+
+		InsertExecutionInfo:    newMutableState.GetExecutionInfo(),
+		InsertReplicationState: newMutableState.GetReplicationState(),
+		InsertTransferTasks:    transferTasks,
+		InsertTimerTasks:       timerTasks,
+		InsertReplicationTasks: replicationTasks,
+
+		InsertTimerInfos:         snapshotRequest.InsertTimerInfos,
+		InsertActivityInfos:      snapshotRequest.InsertActivityInfos,
+		InsertRequestCancelInfos: snapshotRequest.InsertRequestCancelInfos,
+	}
+
+	return c.shard.ResetWorkflowExecution(resetWFReq)
 }
 
 func (c *workflowExecutionContext) updateWorkflowExecutionWithContext(context []byte, transferTasks []persistence.Task,

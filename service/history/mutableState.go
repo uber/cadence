@@ -138,6 +138,7 @@ type (
 		GetRetryBackoffDuration(errReason string) time.Duration
 		GetScheduleIDByActivityID(string) (int64, bool)
 		GetSignalInfo(int64) (*persistence.SignalInfo, bool)
+		GetAllSignalsToSend() map[int64]*persistence.SignalInfo
 		GetStartVersion() int64
 		GetUserTimer(string) (bool, *persistence.TimerInfo)
 		GetWorkflowType() *workflow.WorkflowType

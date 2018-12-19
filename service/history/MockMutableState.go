@@ -1563,6 +1563,19 @@ func (_m *mockMutableState) GetScheduleIDByActivityID(_a0 string) (int64, bool) 
 	return r0, r1
 }
 
+func (_m *mockMutableState) GetAllSignalsToSend() map[int64]*persistence.SignalInfo {
+	ret := _m.Called()
+
+	var r0 map[int64]*persistence.SignalInfo
+	if rf, ok := ret.Get(0).(func() map[int64]*persistence.SignalInfo); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(map[int64]*persistence.SignalInfo)
+	}
+
+	return r0
+}
+
 // GetSignalInfo provides a mock function with given fields: _a0
 func (_m *mockMutableState) GetSignalInfo(_a0 int64) (*persistence.SignalInfo, bool) {
 	ret := _m.Called(_a0)
