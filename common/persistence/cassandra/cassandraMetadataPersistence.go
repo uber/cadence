@@ -42,7 +42,9 @@ const (
 
 	templateDomainConfigType = `{` +
 		`retention: ?, ` +
-		`emit_metric: ?` +
+		`emit_metric: ?, ` +
+		`archival_bucket: ?, ` +
+		`archival_status: ?` +
 		`}`
 
 	templateDomainReplicationConfigType = `{` +
@@ -64,6 +66,7 @@ const (
 
 	templateGetDomainByNameQuery = `SELECT domain.id, domain.name, domain.status, domain.description, ` +
 		`domain.owner_email, domain.data, config.retention, config.emit_metric, ` +
+		`config.archival_bucket, config.archival_status, ` +
 		`replication_config.active_cluster_name, replication_config.clusters, ` +
 		`is_global_domain, ` +
 		`config_version, ` +
@@ -152,6 +155,8 @@ func (m *cassandraMetadataPersistence) CreateDomain(request *p.CreateDomainReque
 		request.Info.Data,
 		request.Config.Retention,
 		request.Config.EmitMetric,
+		request.Config.ArchivalBucketName,
+		request.Config.ArchivalStatus,
 		request.ReplicationConfig.ActiveClusterName,
 		p.SerializeClusterConfigs(request.ReplicationConfig.Clusters),
 		request.IsGlobalDomain,
@@ -245,6 +250,8 @@ func (m *cassandraMetadataPersistence) GetDomain(request *p.GetDomainRequest) (*
 		&info.Data,
 		&config.Retention,
 		&config.EmitMetric,
+		&config.ArchivalBucketName,
+		&config.ArchivalStatus,
 		&replicationConfig.ActiveClusterName,
 		&replicationClusters,
 		&isGlobalDomain,
@@ -260,6 +267,10 @@ func (m *cassandraMetadataPersistence) GetDomain(request *p.GetDomainRequest) (*
 	replicationConfig.ActiveClusterName = p.GetOrUseDefaultActiveCluster(m.currentClusterName, replicationConfig.ActiveClusterName)
 	replicationConfig.Clusters = p.DeserializeClusterConfigs(replicationClusters)
 	replicationConfig.Clusters = p.GetOrUseDefaultClusters(m.currentClusterName, replicationConfig.Clusters)
+
+	if len(config.ArchivalBucketName) == 0 {
+		config.ArchivalStatus = workflow.ArchivalStatusNeverEnabled
+	}
 
 	return &p.GetDomainResponse{
 		Info:                info,
@@ -289,6 +300,8 @@ func (m *cassandraMetadataPersistence) UpdateDomain(request *p.UpdateDomainReque
 		request.Info.Data,
 		request.Config.Retention,
 		request.Config.EmitMetric,
+		request.Config.ArchivalBucketName,
+		request.Config.ArchivalStatus,
 		request.ReplicationConfig.ActiveClusterName,
 		p.SerializeClusterConfigs(request.ReplicationConfig.Clusters),
 		request.ConfigVersion,

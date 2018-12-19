@@ -21,8 +21,8 @@
 package blobstore
 
 import (
-	"context"
 	"errors"
+	"context"
 	"io"
 )
 

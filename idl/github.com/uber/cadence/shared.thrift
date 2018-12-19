@@ -243,9 +243,8 @@ enum TaskListKind {
 
 enum ArchivalStatus {
   NEVER_ENABLED,
-  ENABLED,
-  PAUSED,
   DISABLED,
+  ENABLED,
 }
 
 struct Header {
@@ -828,6 +827,8 @@ struct DomainInfo {
   // A key-value map for any customized purpose
   50: optional map<string,string> data
 }
+
+const i32 INFINITE_ARCHIVAL_RETENTION = -1;
 
 struct DomainConfiguration {
   10: optional i32 workflowExecutionRetentionPeriodInDays
