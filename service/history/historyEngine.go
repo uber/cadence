@@ -2414,11 +2414,13 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 	}
 	var currMutableState mutableState
 	var currContext *workflowExecutionContext
+	var currExecution workflow.WorkflowExecution
 	if resp.RunID == execution.GetRunId() {
 		currContext = context
 		currMutableState = forkMutableState
+		currExecution = execution
 	} else {
-		currExecution := workflow.WorkflowExecution{
+		currExecution = workflow.WorkflowExecution{
 			WorkflowId: request.WorkflowExecution.WorkflowId,
 			RunId:      common.StringPtr(resp.RunID),
 		}
@@ -2442,6 +2444,24 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 		return &workflow.BadRequestError{
 			Message: fmt.Sprintf("reset is not allowed when workflow has pending child workflow. RunID: %v", currMutableState.GetExecutionInfo().RunID),
 		}
+	}
+
+	// terminate the current run if it is running
+	terminateCurr := false
+	var closeTask, cleanupTask persistence.Task
+	if currMutableState.IsWorkflowExecutionRunning() {
+		defer func() {
+			if retError != nil {
+				currContext.clear()
+			}
+		}()
+		terminateCurr = true
+		currMutableState.AddWorkflowExecutionTerminatedEvent(&workflow.TerminateWorkflowExecutionRequest{
+			Reason:   common.StringPtr(request.GetReason()),
+			Details:  nil,
+			Identity: common.StringPtr(identityHistoryService),
+		})
+		closeTask, cleanupTask, retError = e.getDeleteWorkflowTasks(currMutableState.GetExecutionInfo().DomainID, execution.GetWorkflowId(), e.getTimerBuilder(&currExecution))
 	}
 
 	// replay history to reset point(exclusive) to rebuild mutableState, then continue to replay to collect received signals
@@ -2520,7 +2540,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 	replicationTasks := e.generateReplicationTasksForReset(newMutableState, domainEntry)
 
 	// finally, write to persistence
-	retError = currContext.resetWorkflowExecution(currMutableState, newMutableState, transferTasks, timerTasks, replicationTasks, request.GetReason())
+	retError = currContext.resetWorkflowExecution(currMutableState, terminateCurr, closeTask, cleanupTask, newMutableState, transferTasks, timerTasks, replicationTasks)
 	return
 }
 

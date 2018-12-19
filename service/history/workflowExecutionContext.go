@@ -142,27 +142,14 @@ func (c *workflowExecutionContext) resetMutableState(prevRunID string, resetBuil
 // 1. append history to new run
 // 2. append history to current run if current run is not closed
 // 3. update mutableState(terminate current run if not closed) and create new run
-func (c *workflowExecutionContext) resetWorkflowExecution(currMutableState, newMutableState mutableState, transferTasks, timerTasks, replicationTasks []persistence.Task, reason string) (retError error) {
+func (c *workflowExecutionContext) resetWorkflowExecution(currMutableState mutableState, updateCurr bool, closeTask, cleanupTask persistence.Task, newMutableState mutableState, transferTasks, timerTasks, replicationTasks []persistence.Task) (retError error) {
 
 	transactionID, retError := c.shard.GetNextTransferTaskID()
 	if retError != nil {
 		return
 	}
 
-	terminateCurr := false
-	if currMutableState.IsWorkflowExecutionRunning() {
-		defer func() {
-			if retError != nil {
-				c.clear()
-			}
-		}()
-
-		terminateCurr = true
-		currMutableState.AddWorkflowExecutionTerminatedEvent(&workflow.TerminateWorkflowExecutionRequest{
-			Reason:   common.StringPtr(reason),
-			Details:  nil,
-			Identity: common.StringPtr(identityHistoryService),
-		})
+	if updateCurr {
 		hBuilder := currMutableState.GetHistoryBuilder()
 		size, retError := c.appendHistoryEvents(hBuilder, hBuilder.GetHistory().GetEvents(), transactionID)
 		if retError != nil {
