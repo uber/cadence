@@ -129,7 +129,6 @@ func (s *Service) Stop() {
 	default:
 	}
 	s.params.Logger.Infof("%v stopped", common.WorkerServiceName)
-	s.domainCache.Stop()
 }
 
 func (s *Service) startReplicator(params *service.BootstrapParams, base service.Service, log bark.Logger) {

@@ -122,6 +122,7 @@ func (r *Replicator) Stop() {
 	for _, processor := range r.processors {
 		processor.Stop()
 	}
+	r.domainCache.Stop()
 }
 
 func getConsumerName(currentCluster, remoteCluster string) string {
