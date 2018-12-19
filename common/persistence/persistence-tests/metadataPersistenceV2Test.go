@@ -112,10 +112,10 @@ func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 			Data:        data,
 		},
 		&p.DomainConfig{
-			Retention:          retention,
-			EmitMetric:         emitMetric,
-			ArchivalBucketName: archivalBucketName,
-			ArchivalStatus:     archivalStatus,
+			Retention:      retention,
+			EmitMetric:     emitMetric,
+			ArchivalBucket: archivalBucketName,
+			ArchivalStatus: archivalStatus,
 		},
 		&p.DomainReplicationConfig{},
 		isGlobalDomain,
@@ -139,7 +139,7 @@ func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 	m.Equal(data, resp1.Info.Data)
 	m.Equal(retention, resp1.Config.Retention)
 	m.Equal(emitMetric, resp1.Config.EmitMetric)
-	m.Equal(archivalBucketName, resp1.Config.ArchivalBucketName)
+	m.Equal(archivalBucketName, resp1.Config.ArchivalBucket)
 	m.Equal(archivalStatus, resp1.Config.ArchivalStatus)
 	m.Equal(cluster.TestCurrentClusterName, resp1.ReplicationConfig.ActiveClusterName)
 	m.Equal(1, len(resp1.ReplicationConfig.Clusters))
@@ -159,10 +159,10 @@ func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 			Data:        map[string]string{},
 		},
 		&p.DomainConfig{
-			Retention:          100,
-			EmitMetric:         false,
-			ArchivalBucketName: "",
-			ArchivalStatus:     gen.ArchivalStatusNeverEnabled,
+			Retention:      100,
+			EmitMetric:     false,
+			ArchivalBucket: "",
+			ArchivalStatus: gen.ArchivalStatusNeverEnabled,
 		},
 		&p.DomainReplicationConfig{},
 		isGlobalDomain,
@@ -216,10 +216,10 @@ func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
 			Data:        data,
 		},
 		&p.DomainConfig{
-			Retention:          retention,
-			EmitMetric:         emitMetric,
-			ArchivalBucketName: archivalBucketName,
-			ArchivalStatus:     archivalStatus,
+			Retention:      retention,
+			EmitMetric:     emitMetric,
+			ArchivalBucket: archivalBucketName,
+			ArchivalStatus: archivalStatus,
 		},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: clusterActive,
@@ -244,7 +244,7 @@ func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
 	m.Equal(data, resp2.Info.Data)
 	m.Equal(retention, resp2.Config.Retention)
 	m.Equal(emitMetric, resp2.Config.EmitMetric)
-	m.Equal(archivalBucketName, resp2.Config.ArchivalBucketName)
+	m.Equal(archivalBucketName, resp2.Config.ArchivalBucket)
 	m.Equal(archivalStatus, resp2.Config.ArchivalStatus)
 	m.Equal(clusterActive, resp2.ReplicationConfig.ActiveClusterName)
 	m.Equal(len(clusters), len(resp2.ReplicationConfig.Clusters))
@@ -267,7 +267,7 @@ func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
 	m.Equal(data, resp3.Info.Data)
 	m.Equal(retention, resp3.Config.Retention)
 	m.Equal(emitMetric, resp3.Config.EmitMetric)
-	m.Equal(archivalBucketName, resp3.Config.ArchivalBucketName)
+	m.Equal(archivalBucketName, resp3.Config.ArchivalBucket)
 	m.Equal(archivalStatus, resp3.Config.ArchivalStatus)
 	m.Equal(clusterActive, resp3.ReplicationConfig.ActiveClusterName)
 	m.Equal(len(clusters), len(resp3.ReplicationConfig.Clusters))
@@ -333,10 +333,10 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 					Data:        data,
 				},
 				&p.DomainConfig{
-					Retention:          retention,
-					EmitMetric:         emitMetric,
-					ArchivalBucketName: archivalBucketName,
-					ArchivalStatus:     archivalStatus,
+					Retention:      retention,
+					EmitMetric:     emitMetric,
+					ArchivalBucket: archivalBucketName,
+					ArchivalStatus: archivalStatus,
 				},
 				&p.DomainReplicationConfig{
 					ActiveClusterName: clusterActive,
@@ -364,7 +364,7 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 	m.Equal(owner, resp.Info.OwnerEmail)
 	m.Equal(retention, resp.Config.Retention)
 	m.Equal(emitMetric, resp.Config.EmitMetric)
-	m.Equal(archivalBucketName, resp.Config.ArchivalBucketName)
+	m.Equal(archivalBucketName, resp.Config.ArchivalBucket)
 	m.Equal(archivalStatus, resp.Config.ArchivalStatus)
 	m.Equal(clusterActive, resp.ReplicationConfig.ActiveClusterName)
 	m.Equal(len(clusters), len(resp.ReplicationConfig.Clusters))
@@ -420,10 +420,10 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 			Data:        data,
 		},
 		&p.DomainConfig{
-			Retention:          retention,
-			EmitMetric:         emitMetric,
-			ArchivalBucketName: archivalBucketName,
-			ArchivalStatus:     archivalStatus,
+			Retention:      retention,
+			EmitMetric:     emitMetric,
+			ArchivalBucket: archivalBucketName,
+			ArchivalStatus: archivalStatus,
 		},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: clusterActive,
@@ -459,10 +459,10 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 					Data:        updatedData,
 				},
 				&p.DomainConfig{
-					Retention:          resp2.Config.Retention,
-					EmitMetric:         resp2.Config.EmitMetric,
-					ArchivalBucketName: resp2.Config.ArchivalBucketName,
-					ArchivalStatus:     resp2.Config.ArchivalStatus,
+					Retention:      resp2.Config.Retention,
+					EmitMetric:     resp2.Config.EmitMetric,
+					ArchivalBucket: resp2.Config.ArchivalBucket,
+					ArchivalStatus: resp2.Config.ArchivalStatus,
 				},
 				&p.DomainReplicationConfig{
 					ActiveClusterName: resp2.ReplicationConfig.ActiveClusterName,
@@ -493,7 +493,7 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 
 	m.Equal(retention, resp3.Config.Retention)
 	m.Equal(emitMetric, resp3.Config.EmitMetric)
-	m.Equal(archivalBucketName, resp3.Config.ArchivalBucketName)
+	m.Equal(archivalBucketName, resp3.Config.ArchivalBucket)
 	m.Equal(archivalStatus, resp3.Config.ArchivalStatus)
 	m.Equal(clusterActive, resp3.ReplicationConfig.ActiveClusterName)
 	m.Equal(len(clusters), len(resp3.ReplicationConfig.Clusters))
@@ -549,10 +549,10 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 			Data:        data,
 		},
 		&p.DomainConfig{
-			Retention:          retention,
-			EmitMetric:         emitMetric,
-			ArchivalBucketName: archivalBucketName,
-			ArchivalStatus:     archivalStatus,
+			Retention:      retention,
+			EmitMetric:     emitMetric,
+			ArchivalBucket: archivalBucketName,
+			ArchivalStatus: archivalStatus,
 		},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: clusterActive,
@@ -604,10 +604,10 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 			Data:        updatedData,
 		},
 		&p.DomainConfig{
-			Retention:          updatedRetention,
-			EmitMetric:         updatedEmitMetric,
-			ArchivalBucketName: archivalBucketName,
-			ArchivalStatus:     updatedArchivalStatus,
+			Retention:      updatedRetention,
+			EmitMetric:     updatedEmitMetric,
+			ArchivalBucket: archivalBucketName,
+			ArchivalStatus: updatedArchivalStatus,
 		},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: updateClusterActive,
@@ -631,7 +631,7 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	m.Equal(updatedData, resp4.Info.Data)
 	m.Equal(updatedRetention, resp4.Config.Retention)
 	m.Equal(updatedEmitMetric, resp4.Config.EmitMetric)
-	m.Equal(archivalBucketName, resp4.Config.ArchivalBucketName)
+	m.Equal(archivalBucketName, resp4.Config.ArchivalBucket)
 	m.Equal(updatedArchivalStatus, resp4.Config.ArchivalStatus)
 	m.Equal(updateClusterActive, resp4.ReplicationConfig.ActiveClusterName)
 	m.Equal(len(updateClusters), len(resp4.ReplicationConfig.Clusters))
@@ -654,7 +654,7 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	m.Equal(updatedData, resp5.Info.Data)
 	m.Equal(updatedRetention, resp5.Config.Retention)
 	m.Equal(updatedEmitMetric, resp5.Config.EmitMetric)
-	m.Equal(archivalBucketName, resp5.Config.ArchivalBucketName)
+	m.Equal(archivalBucketName, resp5.Config.ArchivalBucket)
 	m.Equal(updatedArchivalStatus, resp5.Config.ArchivalStatus)
 	m.Equal(updateClusterActive, resp5.ReplicationConfig.ActiveClusterName)
 	m.Equal(len(updateClusters), len(resp5.ReplicationConfig.Clusters))
@@ -704,10 +704,10 @@ func (m *MetadataPersistenceSuiteV2) TestDeleteDomain() {
 			Data:        data,
 		},
 		&p.DomainConfig{
-			Retention:          int32(retention),
-			EmitMetric:         emitMetric,
-			ArchivalBucketName: archivalBucketName,
-			ArchivalStatus:     archivalStatus,
+			Retention:      int32(retention),
+			EmitMetric:     emitMetric,
+			ArchivalBucket: archivalBucketName,
+			ArchivalStatus: archivalStatus,
 		},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: clusterActive,
@@ -748,10 +748,10 @@ func (m *MetadataPersistenceSuiteV2) TestDeleteDomain() {
 			Data:        data,
 		},
 		&p.DomainConfig{
-			Retention:          int32(retention),
-			EmitMetric:         emitMetric,
-			ArchivalBucketName: archivalBucketName,
-			ArchivalStatus:     archivalStatus,
+			Retention:      int32(retention),
+			EmitMetric:     emitMetric,
+			ArchivalBucket: archivalBucketName,
+			ArchivalStatus: archivalStatus,
 		},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: clusterActive,
@@ -813,10 +813,10 @@ func (m *MetadataPersistenceSuiteV2) TestListDomains() {
 				Data:        map[string]string{"k1": "v1"},
 			},
 			Config: &p.DomainConfig{
-				Retention:          109,
-				EmitMetric:         true,
-				ArchivalBucketName: "bucket-test-name",
-				ArchivalStatus:     gen.ArchivalStatusEnabled,
+				Retention:      109,
+				EmitMetric:     true,
+				ArchivalBucket: "bucket-test-name",
+				ArchivalStatus: gen.ArchivalStatusEnabled,
 			},
 			ReplicationConfig: &p.DomainReplicationConfig{
 				ActiveClusterName: clusterActive1,
@@ -837,10 +837,10 @@ func (m *MetadataPersistenceSuiteV2) TestListDomains() {
 				Data:        map[string]string{"k1": "v2"},
 			},
 			Config: &p.DomainConfig{
-				Retention:          326,
-				EmitMetric:         false,
-				ArchivalBucketName: "",
-				ArchivalStatus:     gen.ArchivalStatusNeverEnabled,
+				Retention:      326,
+				EmitMetric:     false,
+				ArchivalBucket: "",
+				ArchivalStatus: gen.ArchivalStatusNeverEnabled,
 			},
 			ReplicationConfig: &p.DomainReplicationConfig{
 				ActiveClusterName: clusterActive2,

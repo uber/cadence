@@ -969,10 +969,10 @@ type (
 	// DomainConfig describes the domain configuration
 	DomainConfig struct {
 		// NOTE: this retention is in days, not in seconds
-		Retention          int32
-		EmitMetric         bool
-		ArchivalBucketName string
-		ArchivalStatus     workflow.ArchivalStatus
+		Retention      int32
+		EmitMetric     bool
+		ArchivalBucket string
+		ArchivalStatus workflow.ArchivalStatus
 	}
 
 	// DomainReplicationConfig describes the cross DC domain replication configuration

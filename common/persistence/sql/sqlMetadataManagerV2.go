@@ -118,6 +118,8 @@ const (
 		id,
 		retention, 
 		emit_metric,
+		archival_bucket,
+		archival_status,
 		config_version,
 		name, 
 		status, 

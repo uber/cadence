@@ -297,10 +297,10 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 			Data:        registerRequest.Data,
 		},
 		Config: &persistence.DomainConfig{
-			Retention:          registerRequest.GetWorkflowExecutionRetentionPeriodInDays(),
-			EmitMetric:         registerRequest.GetEmitMetric(),
-			ArchivalBucketName: archivalBucketName,
-			ArchivalStatus:     archivalStatus,
+			Retention:      registerRequest.GetWorkflowExecutionRetentionPeriodInDays(),
+			EmitMetric:     registerRequest.GetEmitMetric(),
+			ArchivalBucket: archivalBucketName,
+			ArchivalStatus: archivalStatus,
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: activeClusterName,
@@ -468,7 +468,7 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 	failoverNotificationVersion := getResponse.FailoverNotificationVersion
 
 	// ensure that if bucket is already set it cannot be updated
-	if len(config.ArchivalBucketName) != 0 && updateRequest.Configuration != nil && wh.customBucketNameProvided(updateRequest.Configuration.ArchivalBucketName) {
+	if len(config.ArchivalBucket) != 0 && updateRequest.Configuration != nil && wh.customBucketNameProvided(updateRequest.Configuration.ArchivalBucketName) {
 		return nil, wh.error(errBucketNameUpdate, scope)
 	}
 
@@ -585,18 +585,18 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 				if updatedConfig.GetArchivalStatus() != gen.ArchivalStatusEnabled {
 					return nil, wh.error(errDisallowedStatusChange, scope)
 				}
-				name = config.ArchivalBucketName
+				name = config.ArchivalBucket
 				status = gen.ArchivalStatusEnabled
 			case gen.ArchivalStatusEnabled:
 				if updatedConfig.GetArchivalStatus() != gen.ArchivalStatusDisabled {
 					return nil, wh.error(errDisallowedStatusChange, scope)
 				}
-				name = config.ArchivalBucketName
+				name = config.ArchivalBucket
 				status = gen.ArchivalStatusDisabled
 			default:
 				return nil, wh.error(errUnknownArchivalStatus, scope)
 			}
-			config.ArchivalBucketName = name
+			config.ArchivalBucket = name
 			config.ArchivalStatus = status
 		}
 	}
@@ -2816,7 +2816,7 @@ func (wh *WorkflowHandler) createDomainResponse(info *persistence.DomainInfo, co
 	}
 
 	if configResult.GetArchivalStatus() != gen.ArchivalStatusNeverEnabled {
-		bucketName := config.ArchivalBucketName
+		bucketName := config.ArchivalBucket
 		configResult.ArchivalBucketName = common.StringPtr(bucketName)
 		metadata, err := wh.blobstoreClient.BucketMetadata(context.Background(), bucketName)
 
