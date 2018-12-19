@@ -216,7 +216,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 		return wh.error(errRequestNotSet, scope)
 	}
 
-	if customBucketNameProvided(registerRequest.CustomArchivalBucketName) && !registerRequest.GetEnableArchival() {
+	if wh.customBucketNameProvided(registerRequest.CustomArchivalBucketName) && !registerRequest.GetEnableArchival() {
 		return wh.error(errSettingBucketNameWithoutEnabling, scope)
 	}
 
@@ -283,7 +283,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 	archivalBucketName := ""
 	archivalStatus := gen.ArchivalStatusNeverEnabled
 	if registerRequest.GetEnableArchival() {
-		archivalBucketName = bucketName(registerRequest.CustomArchivalBucketName)
+		archivalBucketName = wh.bucketName(registerRequest.CustomArchivalBucketName)
 		archivalStatus = gen.ArchivalStatusEnabled
 	}
 
@@ -468,7 +468,7 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 	failoverNotificationVersion := getResponse.FailoverNotificationVersion
 
 	// ensure that if bucket is already set it cannot be updated
-	if len(config.ArchivalBucketName) != 0 && updateRequest.Configuration != nil && customBucketNameProvided(updateRequest.Configuration.ArchivalBucketName) {
+	if len(config.ArchivalBucketName) != 0 && updateRequest.Configuration != nil && wh.customBucketNameProvided(updateRequest.Configuration.ArchivalBucketName) {
 		return nil, wh.error(errBucketNameUpdate, scope)
 	}
 
@@ -579,7 +579,7 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 				if updatedConfig.GetArchivalStatus() != gen.ArchivalStatusEnabled {
 					return nil, wh.error(errDisallowedStatusChange, scope)
 				}
-				name = bucketName(updatedConfig.ArchivalBucketName)
+				name = wh.bucketName(updatedConfig.ArchivalBucketName)
 				status = gen.ArchivalStatusEnabled
 			case gen.ArchivalStatusDisabled:
 				if updatedConfig.GetArchivalStatus() != gen.ArchivalStatusEnabled {
@@ -2965,18 +2965,13 @@ func (wh *WorkflowHandler) validateClusterName(clusterName string) error {
 	return nil
 }
 
-func bucketName(customBucketName *string) string {
-	if customBucketNameProvided(customBucketName) {
+func (wh *WorkflowHandler) bucketName(customBucketName *string) string {
+	if wh.customBucketNameProvided(customBucketName) {
 		return *customBucketName
 	}
-	return defaultBucketName()
+	return fmt.Sprintf("cadence_%v", wh.Service.GetClusterMetadata().GetDeploymentGroup())
 }
 
-func defaultBucketName() string {
-	// TODO: what is the best way to get this?
-	return ""
-}
-
-func customBucketNameProvided(customBucketName *string) bool {
+func (wh *WorkflowHandler) customBucketNameProvided(customBucketName *string) bool {
 	return customBucketName != nil && len(*customBucketName) != 0
 }
