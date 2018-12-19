@@ -174,7 +174,11 @@ func (p *ipDispatcherProvider) Get(name string, address string) (*yarpc.Dispatch
 		return nil, errors.New("invalid ip:port address")
 	}
 
-	channel, err := tchannel.NewChannelTransport(tchannel.ServiceName(crossDCCaller))
+	channel, err := tchannel.NewChannelTransport(
+		tchannel.ServiceName(crossDCCaller),
+		// this aim to get rid of the annoying popup about accepting incoming network connections
+		tchannel.ListenAddr("127.0.0.1:0"),
+	)
 	if err != nil {
 		return nil, err
 	}
