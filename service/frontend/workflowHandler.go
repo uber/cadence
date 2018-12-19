@@ -113,10 +113,10 @@ var (
 	errInvalidTaskStartToCloseTimeoutSeconds      = &gen.BadRequestError{Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}
 
 	// archival config errors
-	errInvalidEnableArchival                      = &gen.BadRequestError{Message: "Request specifies custom bucket without enabling archival."}
-	errDisallowedStatusChange                     = &gen.BadRequestError{Message: "Provided archival config status change is not allowed."}
-	errDisallowedBucketMetadata                = &gen.BadRequestError{Message: "Cannot set bucket owner or bucket retention (must update bucket manually)."}
-	errBucketNameUpdate                    = &gen.BadRequestError{Message: "Cannot update bucket name after it is set."}
+	errInvalidEnableArchival    = &gen.BadRequestError{Message: "Request specifies custom bucket without enabling archival."}
+	errDisallowedStatusChange   = &gen.BadRequestError{Message: "Provided archival config status change is not allowed."}
+	errDisallowedBucketMetadata = &gen.BadRequestError{Message: "Cannot set bucket owner or bucket retention (must update bucket manually)."}
+	errBucketNameUpdate         = &gen.BadRequestError{Message: "Cannot update bucket name after it is set."}
 
 	// err indicating that this cluster is not the master, so cannot do domain registration or update
 	errNotMasterCluster                = &gen.BadRequestError{Message: "Cluster is not master cluster, cannot do domain registration or domain update."}
@@ -285,7 +285,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 		archivalBucketName = bucketName(registerRequest.CustomArchivalBucketName)
 		archivalStatus = gen.ArchivalStatusEnabled
 	}
-	
+
 	domainRequest := &persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          uuid.New(),
@@ -296,10 +296,10 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 			Data:        registerRequest.Data,
 		},
 		Config: &persistence.DomainConfig{
-			Retention:  registerRequest.GetWorkflowExecutionRetentionPeriodInDays(),
-			EmitMetric: registerRequest.GetEmitMetric(),
+			Retention:          registerRequest.GetWorkflowExecutionRetentionPeriodInDays(),
+			EmitMetric:         registerRequest.GetEmitMetric(),
 			ArchivalBucketName: archivalBucketName,
-			ArchivalStatus: archivalStatus,
+			ArchivalStatus:     archivalStatus,
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: activeClusterName,
@@ -2796,7 +2796,7 @@ func (wh *WorkflowHandler) createDomainResponse(info *persistence.DomainInfo, co
 	configResult := &gen.DomainConfiguration{
 		EmitMetric:                             common.BoolPtr(config.EmitMetric),
 		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(config.Retention),
-		ArchivalStatus: &config.ArchivalStatus,
+		ArchivalStatus:                         &config.ArchivalStatus,
 	}
 
 	if *configResult.ArchivalStatus != gen.ArchivalStatusNeverEnabled {
