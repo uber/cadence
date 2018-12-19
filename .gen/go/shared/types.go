@@ -40507,6 +40507,7 @@ type WorkflowExecutionStartedEventAttributes struct {
 	Attempt                             *int32                  `json:"attempt,omitempty"`
 	ExpirationTimestamp                 *int64                  `json:"expirationTimestamp,omitempty"`
 	CronSchedule                        *string                 `json:"cronSchedule,omitempty"`
+	FirstDecisionTaskBackoffSeconds     *int32                  `json:"firstDecisionTaskBackoffSeconds,omitempty"`
 }
 
 // ToWire translates a WorkflowExecutionStartedEventAttributes struct into a Thrift-level intermediate
@@ -40526,7 +40527,7 @@ type WorkflowExecutionStartedEventAttributes struct {
 //   }
 func (v *WorkflowExecutionStartedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [19]wire.Field
+		fields [20]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -40682,6 +40683,14 @@ func (v *WorkflowExecutionStartedEventAttributes) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 100, Value: w}
+		i++
+	}
+	if v.FirstDecisionTaskBackoffSeconds != nil {
+		w, err = wire.NewValueI32(*(v.FirstDecisionTaskBackoffSeconds)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 110, Value: w}
 		i++
 	}
 
@@ -40886,6 +40895,16 @@ func (v *WorkflowExecutionStartedEventAttributes) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 110:
+			if field.Value.Type() == wire.TI32 {
+				var x int32
+				x, err = field.Value.GetI32(), error(nil)
+				v.FirstDecisionTaskBackoffSeconds = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -40899,7 +40918,7 @@ func (v *WorkflowExecutionStartedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [19]string
+	var fields [20]string
 	i := 0
 	if v.WorkflowType != nil {
 		fields[i] = fmt.Sprintf("WorkflowType: %v", v.WorkflowType)
@@ -40977,6 +40996,10 @@ func (v *WorkflowExecutionStartedEventAttributes) String() string {
 		fields[i] = fmt.Sprintf("CronSchedule: %v", *(v.CronSchedule))
 		i++
 	}
+	if v.FirstDecisionTaskBackoffSeconds != nil {
+		fields[i] = fmt.Sprintf("FirstDecisionTaskBackoffSeconds: %v", *(v.FirstDecisionTaskBackoffSeconds))
+		i++
+	}
 
 	return fmt.Sprintf("WorkflowExecutionStartedEventAttributes{%v}", strings.Join(fields[:i], ", "))
 }
@@ -41048,6 +41071,9 @@ func (v *WorkflowExecutionStartedEventAttributes) Equals(rhs *WorkflowExecutionS
 	if !_String_EqualsPtr(v.CronSchedule, rhs.CronSchedule) {
 		return false
 	}
+	if !_I32_EqualsPtr(v.FirstDecisionTaskBackoffSeconds, rhs.FirstDecisionTaskBackoffSeconds) {
+		return false
+	}
 
 	return true
 }
@@ -41114,6 +41140,9 @@ func (v *WorkflowExecutionStartedEventAttributes) MarshalLogObject(enc zapcore.O
 	}
 	if v.CronSchedule != nil {
 		enc.AddString("cronSchedule", *v.CronSchedule)
+	}
+	if v.FirstDecisionTaskBackoffSeconds != nil {
+		enc.AddInt32("firstDecisionTaskBackoffSeconds", *v.FirstDecisionTaskBackoffSeconds)
 	}
 	return err
 }
@@ -41303,6 +41332,16 @@ func (v *WorkflowExecutionStartedEventAttributes) GetExpirationTimestamp() (o in
 func (v *WorkflowExecutionStartedEventAttributes) GetCronSchedule() (o string) {
 	if v.CronSchedule != nil {
 		return *v.CronSchedule
+	}
+
+	return
+}
+
+// GetFirstDecisionTaskBackoffSeconds returns the value of FirstDecisionTaskBackoffSeconds if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionStartedEventAttributes) GetFirstDecisionTaskBackoffSeconds() (o int32) {
+	if v.FirstDecisionTaskBackoffSeconds != nil {
+		return *v.FirstDecisionTaskBackoffSeconds
 	}
 
 	return

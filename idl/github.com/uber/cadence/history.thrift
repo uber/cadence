@@ -48,6 +48,7 @@ struct StartWorkflowExecutionRequest {
   56: optional string continuedFailureReason
   57: optional binary continuedFailureDetails
   58: optional binary lastCompletionResult
+  60: optional i32 firstDecisionTaskBackoffSeconds
 }
 
 struct DescribeMutableStateRequest{

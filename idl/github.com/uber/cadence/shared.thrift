@@ -412,6 +412,7 @@ struct WorkflowExecutionStartedEventAttributes {
   80: optional i32 attempt
   90: optional i64 (js.type = "Long") expirationTimestamp
   100: optional string cronSchedule
+  110: optional i32 firstDecisionTaskBackoffSeconds
 }
 
 struct WorkflowExecutionCompletedEventAttributes {

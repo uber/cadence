@@ -7223,15 +7223,16 @@ func (v *SignalWorkflowExecutionRequest) GetChildWorkflowOnly() (o bool) {
 }
 
 type StartWorkflowExecutionRequest struct {
-	DomainUUID              *string                               `json:"domainUUID,omitempty"`
-	StartRequest            *shared.StartWorkflowExecutionRequest `json:"startRequest,omitempty"`
-	ParentExecutionInfo     *ParentExecutionInfo                  `json:"parentExecutionInfo,omitempty"`
-	Attempt                 *int32                                `json:"attempt,omitempty"`
-	ExpirationTimestamp     *int64                                `json:"expirationTimestamp,omitempty"`
-	ContinueAsNewInitiator  *shared.ContinueAsNewInitiator        `json:"continueAsNewInitiator,omitempty"`
-	ContinuedFailureReason  *string                               `json:"continuedFailureReason,omitempty"`
-	ContinuedFailureDetails []byte                                `json:"continuedFailureDetails,omitempty"`
-	LastCompletionResult    []byte                                `json:"lastCompletionResult,omitempty"`
+	DomainUUID                      *string                               `json:"domainUUID,omitempty"`
+	StartRequest                    *shared.StartWorkflowExecutionRequest `json:"startRequest,omitempty"`
+	ParentExecutionInfo             *ParentExecutionInfo                  `json:"parentExecutionInfo,omitempty"`
+	Attempt                         *int32                                `json:"attempt,omitempty"`
+	ExpirationTimestamp             *int64                                `json:"expirationTimestamp,omitempty"`
+	ContinueAsNewInitiator          *shared.ContinueAsNewInitiator        `json:"continueAsNewInitiator,omitempty"`
+	ContinuedFailureReason          *string                               `json:"continuedFailureReason,omitempty"`
+	ContinuedFailureDetails         []byte                                `json:"continuedFailureDetails,omitempty"`
+	LastCompletionResult            []byte                                `json:"lastCompletionResult,omitempty"`
+	FirstDecisionTaskBackoffSeconds *int32                                `json:"firstDecisionTaskBackoffSeconds,omitempty"`
 }
 
 // ToWire translates a StartWorkflowExecutionRequest struct into a Thrift-level intermediate
@@ -7251,7 +7252,7 @@ type StartWorkflowExecutionRequest struct {
 //   }
 func (v *StartWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 	var (
-		fields [9]wire.Field
+		fields [10]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -7327,6 +7328,14 @@ func (v *StartWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 58, Value: w}
+		i++
+	}
+	if v.FirstDecisionTaskBackoffSeconds != nil {
+		w, err = wire.NewValueI32(*(v.FirstDecisionTaskBackoffSeconds)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 60, Value: w}
 		i++
 	}
 
@@ -7455,6 +7464,16 @@ func (v *StartWorkflowExecutionRequest) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 60:
+			if field.Value.Type() == wire.TI32 {
+				var x int32
+				x, err = field.Value.GetI32(), error(nil)
+				v.FirstDecisionTaskBackoffSeconds = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -7468,7 +7487,7 @@ func (v *StartWorkflowExecutionRequest) String() string {
 		return "<nil>"
 	}
 
-	var fields [9]string
+	var fields [10]string
 	i := 0
 	if v.DomainUUID != nil {
 		fields[i] = fmt.Sprintf("DomainUUID: %v", *(v.DomainUUID))
@@ -7504,6 +7523,10 @@ func (v *StartWorkflowExecutionRequest) String() string {
 	}
 	if v.LastCompletionResult != nil {
 		fields[i] = fmt.Sprintf("LastCompletionResult: %v", v.LastCompletionResult)
+		i++
+	}
+	if v.FirstDecisionTaskBackoffSeconds != nil {
+		fields[i] = fmt.Sprintf("FirstDecisionTaskBackoffSeconds: %v", *(v.FirstDecisionTaskBackoffSeconds))
 		i++
 	}
 
@@ -7557,6 +7580,9 @@ func (v *StartWorkflowExecutionRequest) Equals(rhs *StartWorkflowExecutionReques
 	if !((v.LastCompletionResult == nil && rhs.LastCompletionResult == nil) || (v.LastCompletionResult != nil && rhs.LastCompletionResult != nil && bytes.Equal(v.LastCompletionResult, rhs.LastCompletionResult))) {
 		return false
 	}
+	if !_I32_EqualsPtr(v.FirstDecisionTaskBackoffSeconds, rhs.FirstDecisionTaskBackoffSeconds) {
+		return false
+	}
 
 	return true
 }
@@ -7593,6 +7619,9 @@ func (v *StartWorkflowExecutionRequest) MarshalLogObject(enc zapcore.ObjectEncod
 	}
 	if v.LastCompletionResult != nil {
 		enc.AddString("lastCompletionResult", base64.StdEncoding.EncodeToString(v.LastCompletionResult))
+	}
+	if v.FirstDecisionTaskBackoffSeconds != nil {
+		enc.AddInt32("firstDecisionTaskBackoffSeconds", *v.FirstDecisionTaskBackoffSeconds)
 	}
 	return err
 }
@@ -7682,6 +7711,16 @@ func (v *StartWorkflowExecutionRequest) GetContinuedFailureDetails() (o []byte) 
 func (v *StartWorkflowExecutionRequest) GetLastCompletionResult() (o []byte) {
 	if v.LastCompletionResult != nil {
 		return v.LastCompletionResult
+	}
+
+	return
+}
+
+// GetFirstDecisionTaskBackoffSeconds returns the value of FirstDecisionTaskBackoffSeconds if it is set or its
+// zero value if it is unset.
+func (v *StartWorkflowExecutionRequest) GetFirstDecisionTaskBackoffSeconds() (o int32) {
+	if v.FirstDecisionTaskBackoffSeconds != nil {
+		return *v.FirstDecisionTaskBackoffSeconds
 	}
 
 	return

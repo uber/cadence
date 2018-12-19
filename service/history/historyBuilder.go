@@ -467,6 +467,7 @@ func (b *historyBuilder) newWorkflowExecutionStartedEvent(
 	attributes.ContinuedFailureReason = startRequest.ContinuedFailureReason
 	attributes.ContinuedFailureDetails = startRequest.ContinuedFailureDetails
 	attributes.Initiator = startRequest.ContinueAsNewInitiator
+	attributes.FirstDecisionTaskBackoffSeconds = startRequest.FirstDecisionTaskBackoffSeconds
 
 	parentInfo := startRequest.ParentExecutionInfo
 	if parentInfo != nil {
