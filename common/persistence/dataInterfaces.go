@@ -751,10 +751,15 @@ type (
 		UpdateCurr           bool
 		CurrExecutionInfo    *WorkflowExecutionInfo
 		CurrReplicationState *ReplicationState
+		CurrTransferTasks    []Task
+		CurrTimerTasks       []Task
 
 		// For new mutable state
 		InsertExecutionInfo       *WorkflowExecutionInfo
 		InsertReplicationState    *ReplicationState
+		InsertTransferTasks       []Task
+		InsertTimerTasks          []Task
+		InsertReplicationTasks    []Task
 		InsertActivityInfos       []*ActivityInfo
 		InsertTimerInfos          []*TimerInfo
 		InsertChildExecutionInfos []*ChildExecutionInfo
