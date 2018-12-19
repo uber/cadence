@@ -113,11 +113,11 @@ var (
 	errInvalidTaskStartToCloseTimeoutSeconds      = &gen.BadRequestError{Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}
 
 	// archival errors
-	errSettingBucketNameWithoutEnabling       = &gen.BadRequestError{Message: "Request specifies custom bucket without enabling archival."}
-	errDisallowedStatusChange                 = &gen.BadRequestError{Message: "Disallowed archival status change. Allowable changes are: never_enabled->enabled, enabled->disabled and disabled->enabled."}
-	errDisallowedBucketMetadata               = &gen.BadRequestError{Message: "Cannot set bucket owner or bucket retention (must update bucket manually)."}
-	errBucketNameUpdate                       = &gen.BadRequestError{Message: "Cannot update bucket name after after archival has been enabled for the first time."}
-	errUnknownArchivalStatus                  = &gen.BadRequestError{Message: "Got unknown archival status."}
+	errSettingBucketNameWithoutEnabling = &gen.BadRequestError{Message: "Request specifies custom bucket without enabling archival."}
+	errDisallowedStatusChange           = &gen.BadRequestError{Message: "Disallowed archival status change. Allowable changes are: never_enabled->enabled, enabled->disabled and disabled->enabled."}
+	errDisallowedBucketMetadata         = &gen.BadRequestError{Message: "Cannot set bucket owner or bucket retention (must update bucket manually)."}
+	errBucketNameUpdate                 = &gen.BadRequestError{Message: "Cannot update bucket name after after archival has been enabled for the first time."}
+	errUnknownArchivalStatus            = &gen.BadRequestError{Message: "Got unknown archival status."}
 
 	// err indicating that this cluster is not the master, so cannot do domain registration or update
 	errNotMasterCluster                = &gen.BadRequestError{Message: "Cluster is not master cluster, cannot do domain registration or domain update."}
