@@ -753,8 +753,8 @@ type (
 		CurrReplicationState *ReplicationState
 
 		// For new mutable state
-		ExecutionInfo             *WorkflowExecutionInfo
-		ReplicationState          *ReplicationState
+		InsertExecutionInfo       *WorkflowExecutionInfo
+		InsertReplicationState    *ReplicationState
 		InsertActivityInfos       []*ActivityInfo
 		InsertTimerInfos          []*TimerInfo
 		InsertChildExecutionInfos []*ChildExecutionInfo

@@ -1300,6 +1300,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Cre
 		d.logger.Panic(fmt.Sprintf("Unknown CreateWorkflowMode: %v", request.CreateWorkflowMode))
 	}
 
+	// TODO use createMutableState() to make code much cleaner
 	if request.ReplicationState == nil {
 		// Cross DC feature is currently disabled so we will be creating workflow executions without replication state
 		batch.Query(templateCreateWorkflowExecutionQuery,
@@ -1533,11 +1534,161 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecut
 	return &p.InternalGetWorkflowExecutionResponse{State: state}, nil
 }
 
-func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.InternalUpdateWorkflowExecutionRequest) error {
-	batch := d.session.NewBatch(gocql.LoggedBatch)
-	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
-	executionInfo := request.ExecutionInfo
-	replicationState := request.ReplicationState
+func (d *cassandraPersistence) createMutableState(batch *gocql.Batch, executionInfo *p.InternalWorkflowExecutionInfo, replicationState *p.ReplicationState, cqlNowTimestamp int64) {
+	if executionInfo.ParentDomainID == "" {
+		executionInfo.ParentDomainID = emptyDomainID
+	}
+	if executionInfo.ParentRunID == "" {
+		executionInfo.ParentRunID = emptyRunID
+	}
+
+	completionData, completionEncoding := p.FromDataBlob(executionInfo.CompletionEvent)
+	if replicationState == nil {
+		// Updates will be called with null ReplicationState while the feature is disabled
+		batch.Query(templateCreateWorkflowExecutionQuery,
+			d.shardID,
+			executionInfo.DomainID,
+			executionInfo.WorkflowID,
+			executionInfo.RunID,
+			rowTypeExecution,
+
+			//execution
+			executionInfo.DomainID,
+			executionInfo.WorkflowID,
+			executionInfo.RunID,
+			executionInfo.ParentDomainID,
+			executionInfo.ParentWorkflowID,
+			executionInfo.ParentRunID,
+			executionInfo.InitiatedID,
+			completionData,
+			completionEncoding,
+			executionInfo.TaskList,
+			executionInfo.WorkflowTypeName,
+			executionInfo.WorkflowTimeout,
+			executionInfo.DecisionTimeoutValue,
+			executionInfo.ExecutionContext,
+			executionInfo.State,
+			executionInfo.CloseStatus,
+			executionInfo.LastFirstEventID,
+			executionInfo.NextEventID,
+			executionInfo.LastProcessedEvent,
+			executionInfo.StartTimestamp,
+			cqlNowTimestamp,
+			executionInfo.CreateRequestID,
+			executionInfo.SignalCount,
+			executionInfo.HistorySize,
+			executionInfo.DecisionVersion,
+			executionInfo.DecisionScheduleID,
+			executionInfo.DecisionStartedID,
+			executionInfo.DecisionRequestID,
+			executionInfo.DecisionTimeout,
+			executionInfo.DecisionAttempt,
+			executionInfo.DecisionTimestamp,
+			executionInfo.CancelRequested,
+			executionInfo.CancelRequestID,
+			executionInfo.StickyTaskList,
+			executionInfo.StickyScheduleToStartTimeout,
+			executionInfo.ClientLibraryVersion,
+			executionInfo.ClientFeatureVersion,
+			executionInfo.ClientImpl,
+			executionInfo.Attempt,
+			executionInfo.HasRetryPolicy,
+			executionInfo.InitialInterval,
+			executionInfo.BackoffCoefficient,
+			executionInfo.MaximumInterval,
+			executionInfo.ExpirationTime,
+			executionInfo.MaximumAttempts,
+			executionInfo.NonRetriableErrors,
+			executionInfo.EventStoreVersion,
+			executionInfo.BranchToken,
+
+			executionInfo.NextEventID,
+			defaultVisibilityTimestamp,
+			rowTypeExecutionTaskID)
+	} else {
+		lastReplicationInfo := make(map[string]map[string]interface{})
+		for k, v := range replicationState.LastReplicationInfo {
+			lastReplicationInfo[k] = createReplicationInfoMap(v)
+		}
+
+		batch.Query(templateCreateWorkflowExecutionWithReplicationQuery,
+			d.shardID,
+			executionInfo.DomainID,
+			executionInfo.WorkflowID,
+			executionInfo.RunID,
+			rowTypeExecution,
+
+			//execution
+			executionInfo.DomainID,
+			executionInfo.WorkflowID,
+			executionInfo.RunID,
+			executionInfo.ParentDomainID,
+			executionInfo.ParentWorkflowID,
+			executionInfo.ParentRunID,
+			executionInfo.InitiatedID,
+			completionData,
+			completionEncoding,
+			executionInfo.TaskList,
+			executionInfo.WorkflowTypeName,
+			executionInfo.WorkflowTimeout,
+			executionInfo.DecisionTimeoutValue,
+			executionInfo.ExecutionContext,
+			executionInfo.State,
+			executionInfo.CloseStatus,
+			executionInfo.LastFirstEventID,
+			executionInfo.NextEventID,
+			executionInfo.LastProcessedEvent,
+			executionInfo.StartTimestamp,
+			cqlNowTimestamp,
+			executionInfo.CreateRequestID,
+			executionInfo.SignalCount,
+			executionInfo.HistorySize,
+			executionInfo.DecisionVersion,
+			executionInfo.DecisionScheduleID,
+			executionInfo.DecisionStartedID,
+			executionInfo.DecisionRequestID,
+			executionInfo.DecisionTimeout,
+			executionInfo.DecisionAttempt,
+			executionInfo.DecisionTimestamp,
+			executionInfo.CancelRequested,
+			executionInfo.CancelRequestID,
+			executionInfo.StickyTaskList,
+			executionInfo.StickyScheduleToStartTimeout,
+			executionInfo.ClientLibraryVersion,
+			executionInfo.ClientFeatureVersion,
+			executionInfo.ClientImpl,
+			executionInfo.Attempt,
+			executionInfo.HasRetryPolicy,
+			executionInfo.InitialInterval,
+			executionInfo.BackoffCoefficient,
+			executionInfo.MaximumInterval,
+			executionInfo.ExpirationTime,
+			executionInfo.MaximumAttempts,
+			executionInfo.NonRetriableErrors,
+			executionInfo.EventStoreVersion,
+			executionInfo.BranchToken,
+
+			//replicationState
+			replicationState.CurrentVersion,
+			replicationState.StartVersion,
+			replicationState.LastWriteVersion,
+			replicationState.LastWriteEventID,
+			lastReplicationInfo,
+
+			executionInfo.NextEventID,
+			defaultVisibilityTimestamp,
+			rowTypeExecutionTaskID,
+		)
+	}
+}
+
+func (d *cassandraPersistence) updateMutableState(batch *gocql.Batch, executionInfo *p.InternalWorkflowExecutionInfo, replicationState *p.ReplicationState, cqlNowTimestamp, condition int64) {
+	if executionInfo.ParentDomainID == "" {
+		executionInfo.ParentDomainID = emptyDomainID
+	}
+	if executionInfo.ParentRunID == "" {
+		executionInfo.ParentRunID = emptyRunID
+	}
 
 	completionData, completionEncoding := p.FromDataBlob(executionInfo.CompletionEvent)
 	if replicationState == nil {
@@ -1599,7 +1750,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.InternalUpdate
 			executionInfo.RunID,
 			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID,
-			request.Condition)
+			condition)
 	} else {
 		lastReplicationInfo := make(map[string]map[string]interface{})
 		for k, v := range replicationState.LastReplicationInfo {
@@ -1668,8 +1819,17 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.InternalUpdate
 			executionInfo.RunID,
 			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID,
-			request.Condition)
+			condition)
 	}
+}
+
+func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.InternalUpdateWorkflowExecutionRequest) error {
+	batch := d.session.NewBatch(gocql.LoggedBatch)
+	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
+	executionInfo := request.ExecutionInfo
+	replicationState := request.ReplicationState
+
+	d.updateMutableState(batch, executionInfo, replicationState, cqlNowTimestamp, request.Condition)
 
 	d.createTransferTasks(batch, request.TransferTasks, executionInfo.DomainID, executionInfo.WorkflowID,
 		executionInfo.RunID)
@@ -1818,113 +1978,43 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.InternalUpdate
 func (d *cassandraPersistence) ResetWorkflowExecution(request *p.InternalResetWorkflowExecutionRequest) error {
 	batch := d.session.NewBatch(gocql.LoggedBatch)
 	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
-	executionInfo := request.ExecutionInfo
-	replicationState := request.ReplicationState
 
-	lastReplicationInfo := make(map[string]map[string]interface{})
-	for k, v := range replicationState.LastReplicationInfo {
-		lastReplicationInfo[k] = createReplicationInfoMap(v)
-	}
+	currExecutionInfo := request.CurrExecutionInfo
+	currReplicationState := request.InsertReplicationState
 
-	parentDomainID := emptyDomainID
-	if executionInfo.ParentDomainID != "" {
-		parentDomainID = executionInfo.ParentDomainID
-	}
-	parentRunID := emptyRunID
-	if executionInfo.ParentRunID != "" {
-		parentRunID = executionInfo.ParentRunID
-	}
+	insertExecutionInfo := request.InsertExecutionInfo
+	insertReplicationState := request.InsertReplicationState
 
+	startVersion := common.EmptyVersion
+	lastWriteVersion := common.EmptyVersion
+	if insertReplicationState != nil {
+		startVersion = insertReplicationState.StartVersion
+		lastWriteVersion = insertReplicationState.LastWriteVersion
+	}
 	batch.Query(templateUpdateCurrentWorkflowExecutionQuery,
-		executionInfo.RunID,
-		executionInfo.RunID,
-		executionInfo.CreateRequestID,
-		executionInfo.State,
-		executionInfo.CloseStatus,
-		replicationState.StartVersion,
-		replicationState.LastWriteVersion,
-		replicationState.LastWriteVersion,
-		executionInfo.State,
+		insertExecutionInfo.RunID,
+		insertExecutionInfo.RunID,
+		insertExecutionInfo.CreateRequestID,
+		insertExecutionInfo.State,
+		insertExecutionInfo.CloseStatus,
+		startVersion,
+		lastWriteVersion,
+		lastWriteVersion,
+		insertExecutionInfo.State,
 		d.shardID,
 		rowTypeExecution,
-		executionInfo.DomainID,
-		executionInfo.WorkflowID,
+		insertExecutionInfo.DomainID,
+		insertExecutionInfo.WorkflowID,
 		permanentRunID,
 		defaultVisibilityTimestamp,
 		rowTypeExecutionTaskID,
 		request.PrevRunID,
 	)
 
-	completionEvent := executionInfo.CompletionEvent
-	var completionEventData []byte
-	var completionEventEncoding common.EncodingType
-	if completionEvent != nil {
-		completionEventData = completionEvent.Data
-		completionEventEncoding = completionEvent.Encoding
+	d.createMutableState(batch, insertExecutionInfo, insertReplicationState, cqlNowTimestamp)
+	if request.UpdateCurr {
+		d.updateMutableState(batch, currExecutionInfo, currReplicationState, cqlNowTimestamp, request.Condition)
 	}
-	batch.Query(templateUpdateWorkflowExecutionWithReplicationQuery,
-		executionInfo.DomainID,
-		executionInfo.WorkflowID,
-		executionInfo.RunID,
-		parentDomainID,
-		executionInfo.ParentWorkflowID,
-		parentRunID,
-		executionInfo.InitiatedID,
-		completionEventData,
-		completionEventEncoding,
-		executionInfo.TaskList,
-		executionInfo.WorkflowTypeName,
-		executionInfo.WorkflowTimeout,
-		executionInfo.DecisionTimeoutValue,
-		executionInfo.ExecutionContext,
-		executionInfo.State,
-		executionInfo.CloseStatus,
-		executionInfo.LastFirstEventID,
-		executionInfo.NextEventID,
-		executionInfo.LastProcessedEvent,
-		executionInfo.StartTimestamp,
-		cqlNowTimestamp,
-		executionInfo.CreateRequestID,
-		executionInfo.SignalCount,
-		executionInfo.HistorySize,
-		executionInfo.DecisionVersion,
-		executionInfo.DecisionScheduleID,
-		executionInfo.DecisionStartedID,
-		executionInfo.DecisionRequestID,
-		executionInfo.DecisionTimeout,
-		executionInfo.DecisionAttempt,
-		executionInfo.DecisionTimestamp,
-		executionInfo.CancelRequested,
-		executionInfo.CancelRequestID,
-		executionInfo.StickyTaskList,
-		executionInfo.StickyScheduleToStartTimeout,
-		executionInfo.ClientLibraryVersion,
-		executionInfo.ClientFeatureVersion,
-		executionInfo.ClientImpl,
-		executionInfo.Attempt,
-		executionInfo.HasRetryPolicy,
-		executionInfo.InitialInterval,
-		executionInfo.BackoffCoefficient,
-		executionInfo.MaximumInterval,
-		executionInfo.ExpirationTime,
-		executionInfo.MaximumAttempts,
-		executionInfo.NonRetriableErrors,
-		executionInfo.EventStoreVersion,
-		executionInfo.BranchToken,
-		replicationState.CurrentVersion,
-		replicationState.StartVersion,
-		replicationState.LastWriteVersion,
-		replicationState.LastWriteEventID,
-		lastReplicationInfo,
-		executionInfo.NextEventID,
-		d.shardID,
-		rowTypeExecution,
-		executionInfo.DomainID,
-		executionInfo.WorkflowID,
-		executionInfo.RunID,
-		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID,
-		request.Condition)
 
 	d.resetActivityInfos(batch, request.InsertActivityInfos, executionInfo.DomainID, executionInfo.WorkflowID,
 		executionInfo.RunID, request.Condition)
@@ -1995,20 +2085,6 @@ func (d *cassandraPersistence) ResetMutableState(request *p.InternalResetMutable
 	executionInfo := request.ExecutionInfo
 	replicationState := request.ReplicationState
 
-	lastReplicationInfo := make(map[string]map[string]interface{})
-	for k, v := range replicationState.LastReplicationInfo {
-		lastReplicationInfo[k] = createReplicationInfoMap(v)
-	}
-
-	parentDomainID := emptyDomainID
-	if executionInfo.ParentDomainID != "" {
-		parentDomainID = executionInfo.ParentDomainID
-	}
-	parentRunID := emptyRunID
-	if executionInfo.ParentRunID != "" {
-		parentRunID = executionInfo.ParentRunID
-	}
-
 	batch.Query(templateUpdateCurrentWorkflowExecutionQuery,
 		executionInfo.RunID,
 		executionInfo.RunID,
@@ -2029,76 +2105,7 @@ func (d *cassandraPersistence) ResetMutableState(request *p.InternalResetMutable
 		request.PrevRunID,
 	)
 
-	completionEvent := executionInfo.CompletionEvent
-	var completionEventData []byte
-	var completionEventEncoding common.EncodingType
-	if completionEvent != nil {
-		completionEventData = completionEvent.Data
-		completionEventEncoding = completionEvent.Encoding
-	}
-	batch.Query(templateUpdateWorkflowExecutionWithReplicationQuery,
-		executionInfo.DomainID,
-		executionInfo.WorkflowID,
-		executionInfo.RunID,
-		parentDomainID,
-		executionInfo.ParentWorkflowID,
-		parentRunID,
-		executionInfo.InitiatedID,
-		completionEventData,
-		completionEventEncoding,
-		executionInfo.TaskList,
-		executionInfo.WorkflowTypeName,
-		executionInfo.WorkflowTimeout,
-		executionInfo.DecisionTimeoutValue,
-		executionInfo.ExecutionContext,
-		executionInfo.State,
-		executionInfo.CloseStatus,
-		executionInfo.LastFirstEventID,
-		executionInfo.NextEventID,
-		executionInfo.LastProcessedEvent,
-		executionInfo.StartTimestamp,
-		cqlNowTimestamp,
-		executionInfo.CreateRequestID,
-		executionInfo.SignalCount,
-		executionInfo.HistorySize,
-		executionInfo.DecisionVersion,
-		executionInfo.DecisionScheduleID,
-		executionInfo.DecisionStartedID,
-		executionInfo.DecisionRequestID,
-		executionInfo.DecisionTimeout,
-		executionInfo.DecisionAttempt,
-		executionInfo.DecisionTimestamp,
-		executionInfo.CancelRequested,
-		executionInfo.CancelRequestID,
-		executionInfo.StickyTaskList,
-		executionInfo.StickyScheduleToStartTimeout,
-		executionInfo.ClientLibraryVersion,
-		executionInfo.ClientFeatureVersion,
-		executionInfo.ClientImpl,
-		executionInfo.Attempt,
-		executionInfo.HasRetryPolicy,
-		executionInfo.InitialInterval,
-		executionInfo.BackoffCoefficient,
-		executionInfo.MaximumInterval,
-		executionInfo.ExpirationTime,
-		executionInfo.MaximumAttempts,
-		executionInfo.NonRetriableErrors,
-		executionInfo.EventStoreVersion,
-		executionInfo.BranchToken,
-		replicationState.CurrentVersion,
-		replicationState.StartVersion,
-		replicationState.LastWriteVersion,
-		replicationState.LastWriteEventID,
-		lastReplicationInfo,
-		executionInfo.NextEventID,
-		d.shardID,
-		rowTypeExecution,
-		executionInfo.DomainID,
-		executionInfo.WorkflowID,
-		executionInfo.RunID,
-		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID,
-		request.Condition)
+	d.updateMutableState(batch, executionInfo, replicationState, cqlNowTimestamp, request.Condition)
 
 	d.resetActivityInfos(batch, request.InsertActivityInfos, executionInfo.DomainID, executionInfo.WorkflowID,
 		executionInfo.RunID, request.Condition)

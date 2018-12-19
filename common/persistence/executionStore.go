@@ -536,7 +536,7 @@ func (m *executionManagerImpl) ResetWorkflowExecution(request *ResetWorkflowExec
 		}
 	}
 
-	executionInfo, err := m.SerializeExecutionInfo(request.ExecutionInfo, request.Encoding)
+	executionInfo, err := m.SerializeExecutionInfo(request.InsertExecutionInfo, request.Encoding)
 	if err != nil {
 		return err
 	}
@@ -558,8 +558,8 @@ func (m *executionManagerImpl) ResetWorkflowExecution(request *ResetWorkflowExec
 		CurrExecutionInfo:    currExecution,
 		CurrReplicationState: request.CurrReplicationState,
 
-		ExecutionInfo:             executionInfo,
-		ReplicationState:          request.ReplicationState,
+		InsertExecutionInfo:       executionInfo,
+		InsertReplicationState:    request.InsertReplicationState,
 		InsertActivityInfos:       insertActivityInfos,
 		InsertTimerInfos:          request.InsertTimerInfos,
 		InsertChildExecutionInfos: insertChildExecutionInfos,
