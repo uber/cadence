@@ -102,7 +102,7 @@ func (p *indexProcessor) Start() error {
 		return err
 	}
 
-	esProcessor, err := NewESProcessorAndStart(p.config, p.esClient, p.esProcessorName, p.logger)
+	esProcessor, err := NewESProcessorAndStart(p.config, p.esClient, p.esProcessorName, p.logger, p.metricsClient)
 	if err != nil {
 		logging.LogIndexProcessorStartFailedEvent(p.logger, err)
 		return err
@@ -186,6 +186,7 @@ func (p *indexProcessor) process(msg messaging.Message) error {
 		logger.WithFields(bark.Fields{
 			logging.TagErr: err,
 		}).Error("Failed to deserialize index messages.")
+		p.metricsClient.IncCounter(metrics.IndexProcessorScope, metrics.IndexProcessorCorruptedData)
 		return err
 	}
 
@@ -216,6 +217,7 @@ func (p *indexProcessor) process(msg messaging.Message) error {
 		//logger.Infof("vance in process, delete record is: %v", record)
 	default:
 		logger.Error("Unknown message type")
+		p.metricsClient.IncCounter(metrics.IndexProcessorScope, metrics.IndexProcessorCorruptedData)
 		err = errUnknownMessageType
 	}
 

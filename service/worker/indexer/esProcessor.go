@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/metrics"
 	"time"
 )
 
@@ -47,6 +48,7 @@ type esProcessorImpl struct {
 	mapToKafkaMsg collection.ConcurrentTxMap // key: esDocID+visType
 	config        *Config
 	logger        bark.Logger
+	metricsClient metrics.Client
 }
 
 const (
@@ -60,12 +62,14 @@ const (
 )
 
 // NewESProcessorAndStart create new ESProcessor and start
-func NewESProcessorAndStart(config *Config, client *elastic.Client, processorName string, logger bark.Logger) (ESProcessor, error) {
+func NewESProcessorAndStart(config *Config, client *elastic.Client, processorName string,
+	logger bark.Logger, metricsClient metrics.Client) (ESProcessor, error) {
 	p := &esProcessorImpl{
 		config: config,
 		logger: logger.WithFields(bark.Fields{
 			logging.TagWorkflowComponent: logging.TagValueIndexerESProcessorComponent,
 		}),
+		metricsClient: metricsClient,
 	}
 
 	processor, err := client.BulkProcessor().
@@ -109,6 +113,7 @@ func (p *esProcessorImpl) bulkAfterAction(id int64, requests []elastic.BulkableR
 		p.logger.WithFields(bark.Fields{
 			logging.TagErr: err,
 		}).Error("Error commit bulk request.")
+		p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorFailures)
 
 		time.Sleep(p.config.ESProcessorRetryInterval())
 		for _, request := range requests {
@@ -118,7 +123,7 @@ func (p *esProcessorImpl) bulkAfterAction(id int64, requests []elastic.BulkableR
 					logging.TagErr:       err,
 					logging.TagESRequest: request.String(),
 				}).Error("Get request source err.")
-				// emit metric
+				p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
 				continue
 			}
 			if r := p.getESRequest(req); r != nil {
@@ -136,7 +141,7 @@ func (p *esProcessorImpl) bulkAfterAction(id int64, requests []elastic.BulkableR
 				logging.TagErr:       err,
 				logging.TagESRequest: requests[i].String(),
 			}).Error("Get request source err.")
-			// emit metric
+			p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
 			continue
 		}
 
@@ -145,6 +150,7 @@ func (p *esProcessorImpl) bulkAfterAction(id int64, requests []elastic.BulkableR
 			p.logger.WithFields(bark.Fields{
 				logging.TagErr: err,
 			}).Error("Unmarshal request err.")
+			p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
 			continue
 		}
 		var head string
@@ -178,11 +184,10 @@ func (p *esProcessorImpl) ackKafkaMsg(key string) {
 		return // duplicate kafka message
 	}
 	kafkaMsg, ok := msg.(messaging.Message)
-	if !ok {
+	if !ok { // must be bug in code and bad deployment
 		p.logger.WithFields(bark.Fields{
 			logging.TagESKey: key,
-		}).Error("Message is not kafka message.")
-		return
+		}).Fatal("Message is not kafka message.")
 	}
 
 	kafkaMsg.Ack()
@@ -206,6 +211,7 @@ func (p *esProcessorImpl) getESRequest(input []string) elastic.BulkableRequest {
 		p.logger.WithFields(bark.Fields{
 			logging.TagErr: err,
 		}).Error("Unmarshal request err.")
+		p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
 		return nil
 	}
 
