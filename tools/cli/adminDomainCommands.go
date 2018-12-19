@@ -238,8 +238,8 @@ func AdminUpdateDomain(c *cli.Context) {
 		updateConfig := &shared.DomainConfiguration{
 			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(int32(retentionDays)),
 			EmitMetric:                             common.BoolPtr(emitMetric),
-			ArchivalStatus: archivalStatus,
-			ArchivalBucketName: common.StringPtr(bucketName),
+			ArchivalStatus:                         archivalStatus,
+			ArchivalBucketName:                     common.StringPtr(bucketName),
 		}
 		replicationConfig := &shared.DomainReplicationConfiguration{
 			Clusters: clusters,
@@ -293,8 +293,8 @@ func AdminDescribeDomain(c *cli.Context) {
 			retention = fmt.Sprintf("%v", resp.Configuration.GetArchivalRetentionPeriodInDays())
 			owner = resp.Configuration.GetArchivalBucketOwner()
 		}
-		fmt.Printf("Name: %v\nDescription: %v\nOwnerEmail: %v\nDomainData: %v\nStatus: %v\nRetentionInDays: %v\n" +
-			"EmitMetrics: %v\nActiveClusterName: %v\nClusters: %v\nArchivalStatus: %v\n" +
+		fmt.Printf("Name: %v\nDescription: %v\nOwnerEmail: %v\nDomainData: %v\nStatus: %v\nRetentionInDays: %v\n"+
+			"EmitMetrics: %v\nActiveClusterName: %v\nClusters: %v\nArchivalStatus: %v\n"+
 			"BucketName: %v\nArchivalRetentionInDays: %v\nBucketOwner: %v\n",
 			resp.DomainInfo.GetName(),
 			resp.DomainInfo.GetDescription(),
