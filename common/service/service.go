@@ -21,10 +21,12 @@
 package service
 
 import (
-	"github.com/uber/cadence/common/archival"
 	"math/rand"
 	"os"
 	"time"
+
+	"github.com/uber/cadence/common/archival"
+	"github.com/uber/cadence/common/blobstore"
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
@@ -62,10 +64,12 @@ type (
 		PersistenceConfig  config.Persistence
 		ClusterMetadata    cluster.Metadata
 		ReplicatorConfig   config.Replicator
+		MetricsClient      metrics.Client
 		MessagingClient    messaging.Client
 		DynamicConfig      dynamicconfig.Client
 		DispatcherProvider client.DispatcherProvider
 		ArchivalClient     archival.Client
+		BlobstoreClient    blobstore.Client
 	}
 
 	// RingpopFactory provides a bootstrapped ringpop
@@ -111,12 +115,12 @@ func New(params *BootstrapParams) Service {
 		metricsScope:          params.MetricScope,
 		numberOfHistoryShards: params.PersistenceConfig.NumHistoryShards,
 		clusterMetadata:       params.ClusterMetadata,
+		metricsClient:         params.MetricsClient,
 		messagingClient:       params.MessagingClient,
 		dispatcherProvider:    params.DispatcherProvider,
 		dynamicCollection:     dynamicconfig.NewCollection(params.DynamicConfig, params.Logger),
 	}
 	sVice.runtimeMetricsReporter = metrics.NewRuntimeMetricsReporter(params.MetricScope, time.Minute, sVice.logger)
-	sVice.metricsClient = metrics.NewClient(params.MetricScope, getMetricsServiceIdx(params.Name, params.Logger))
 	sVice.dispatcher = sVice.rpcFactory.CreateDispatcher()
 	if sVice.dispatcher == nil {
 		sVice.logger.Fatal("Unable to create yarpc dispatcher")
@@ -254,7 +258,8 @@ func (h *serviceImpl) GetMessagingClient() messaging.Client {
 	return h.messagingClient
 }
 
-func getMetricsServiceIdx(serviceName string, logger bark.Logger) metrics.ServiceIdx {
+// GetMetricsServiceIdx returns the metrics name
+func GetMetricsServiceIdx(serviceName string, logger bark.Logger) metrics.ServiceIdx {
 	switch serviceName {
 	case common.FrontendServiceName:
 		return metrics.Frontend

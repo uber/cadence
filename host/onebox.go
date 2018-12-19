@@ -28,6 +28,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/metrics"
+
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
@@ -287,8 +290,9 @@ func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup) {
 		VisibilityStore:  "test",
 		DataStores:       map[string]config.DataStore{"test": {Cassandra: &cassandraConfig}},
 	}
-
+	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 	params.DynamicConfig = dynamicconfig.NewNopClient()
+	params.BlobstoreClient = blobstore.NewNopClient()
 
 	// TODO when cross DC is public, remove this temporary override
 	var kafkaProducer messaging.Producer
@@ -305,7 +309,8 @@ func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup) {
 
 	c.frontEndService = service.New(params)
 	c.frontendHandler = frontend.NewWorkflowHandler(
-		c.frontEndService, frontend.NewConfig(dynamicconfig.NewNopCollection()), c.metadataMgr, c.historyMgr, c.historyV2Mgr, c.visibilityMgr, kafkaProducer)
+		c.frontEndService, frontend.NewConfig(dynamicconfig.NewNopCollection()),
+		c.metadataMgr, c.historyMgr, c.historyV2Mgr, c.visibilityMgr, kafkaProducer, params.BlobstoreClient)
 	err = c.frontendHandler.Start()
 	if err != nil {
 		c.logger.WithField("error", err).Fatal("Failed to start frontend")
@@ -336,6 +341,7 @@ func (c *cadenceImpl) startHistory(rpHosts []string, startWG *sync.WaitGroup, en
 			VisibilityStore:  "test",
 			DataStores:       map[string]config.DataStore{"test": {Cassandra: &cassandraConfig}},
 		}
+		params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 		service := service.New(params)
 		historyConfig := history.NewConfig(dynamicconfig.NewNopCollection(), c.numberOfHistoryShards)
 		historyConfig.HistoryMgrNumConns = dynamicconfig.GetIntPropertyFn(c.numberOfHistoryShards)
@@ -369,6 +375,7 @@ func (c *cadenceImpl) startMatching(rpHosts []string, startWG *sync.WaitGroup) {
 		VisibilityStore:  "test",
 		DataStores:       map[string]config.DataStore{"test": {Cassandra: &cassandraConfig}},
 	}
+	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 	service := service.New(params)
 	c.matchingHandler = matching.NewHandler(
 		service, matching.NewConfig(dynamicconfig.NewNopCollection()), c.taskMgr, c.metadataMgr,
@@ -396,6 +403,7 @@ func (c *cadenceImpl) startWorker(rpHosts []string, startWG *sync.WaitGroup) {
 		VisibilityStore:  "test",
 		DataStores:       map[string]config.DataStore{"test": {Cassandra: &cassandraConfig}},
 	}
+	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 	service := service.New(params)
 	service.Start()
 
