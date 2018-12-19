@@ -105,7 +105,7 @@ func AdminRegisterDomain(c *cli.Context) {
 	}
 
 	customBucketName := ""
-	if c.IsSet(FlagEnableArchival) && c.IsSet(FlagCustomArchivalBucketName) {
+	if c.IsSet(FlagCustomArchivalBucketName) {
 		customBucketName = c.String(FlagCustomArchivalBucketName)
 	}
 
