@@ -129,7 +129,7 @@ func ChildWorkflowExecutionFailedCausePtr(t s.ChildWorkflowExecutionFailedCause)
 	return &t
 }
 
-// ArchivalStatusPtr makes a copy and returns the pointer to a ArchivalStatus.
+// ArchivalStatusPtr makes a copy and returns the pointer to an ArchivalStatus.
 func ArchivalStatusPtr(t s.ArchivalStatus) *s.ArchivalStatus {
 	return &t
 }

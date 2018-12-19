@@ -112,11 +112,12 @@ var (
 	errInvalidExecutionStartToCloseTimeoutSeconds = &gen.BadRequestError{Message: "A valid ExecutionStartToCloseTimeoutSeconds is not set on request."}
 	errInvalidTaskStartToCloseTimeoutSeconds      = &gen.BadRequestError{Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}
 
-	// archival config errors
-	errInvalidEnableArchival    = &gen.BadRequestError{Message: "Request specifies custom bucket without enabling archival."}
-	errDisallowedStatusChange   = &gen.BadRequestError{Message: "Provided archival config status change is not allowed."}
-	errDisallowedBucketMetadata = &gen.BadRequestError{Message: "Cannot set bucket owner or bucket retention (must update bucket manually)."}
-	errBucketNameUpdate         = &gen.BadRequestError{Message: "Cannot update bucket name after it is set."}
+	// archival errors
+	errSettingBucketNameWithoutEnabling       = &gen.BadRequestError{Message: "Request specifies custom bucket without enabling archival."}
+	errDisallowedStatusChange                 = &gen.BadRequestError{Message: "Disallowed archival status change. Allowable changes are: never_enabled->enabled, enabled->disabled and disabled->enabled."}
+	errDisallowedBucketMetadata               = &gen.BadRequestError{Message: "Cannot set bucket owner or bucket retention (must update bucket manually)."}
+	errBucketNameUpdate                       = &gen.BadRequestError{Message: "Cannot update bucket name after after archival has been enabled for the first time."}
+	errUnknownArchivalStatus                  = &gen.BadRequestError{Message: "Got unknown archival status."}
 
 	// err indicating that this cluster is not the master, so cannot do domain registration or update
 	errNotMasterCluster                = &gen.BadRequestError{Message: "Cluster is not master cluster, cannot do domain registration or domain update."}
@@ -216,7 +217,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 	}
 
 	if customBucketNameProvided(registerRequest.CustomArchivalBucketName) && !registerRequest.GetEnableArchival() {
-		return wh.error(errInvalidEnableArchival, scope)
+		return wh.error(errSettingBucketNameWithoutEnabling, scope)
 	}
 
 	if err := wh.checkPermission(registerRequest.SecurityToken, scope); err != nil {
@@ -418,7 +419,9 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 
 	if updateRequest.Configuration != nil {
 		cfg := updateRequest.Configuration
-		if cfg.GetArchivalStatus() == gen.ArchivalStatusNeverEnabled {
+
+		// ensure intended archival state transition is to either enable or disable archival
+		if cfg.ArchivalStatus != nil && cfg.GetArchivalStatus() == gen.ArchivalStatusNeverEnabled {
 			return nil, wh.error(errDisallowedStatusChange, scope)
 		}
 		if cfg.ArchivalBucketOwner != nil || cfg.ArchivalRetentionPeriodInDays != nil {
@@ -464,6 +467,7 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 	failoverVersion := getResponse.FailoverVersion
 	failoverNotificationVersion := getResponse.FailoverNotificationVersion
 
+	// ensure that if bucket is already set it cannot be updated
 	if len(config.ArchivalBucketName) != 0 && updateRequest.Configuration != nil && customBucketNameProvided(updateRequest.Configuration.ArchivalBucketName) {
 		return nil, wh.error(errBucketNameUpdate, scope)
 	}
@@ -567,21 +571,33 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 			config.Retention = updatedConfig.GetWorkflowExecutionRetentionPeriodInDays()
 		}
 		if updatedConfig.ArchivalStatus != nil {
-			if config.ArchivalStatus == gen.ArchivalStatusNeverEnabled || config.ArchivalStatus == gen.ArchivalStatusDisabled {
+			name := ""
+			status := gen.ArchivalStatusNeverEnabled
+
+			switch config.ArchivalStatus {
+			case gen.ArchivalStatusNeverEnabled:
 				if updatedConfig.GetArchivalStatus() != gen.ArchivalStatusEnabled {
 					return nil, wh.error(errDisallowedStatusChange, scope)
 				}
-				config.ArchivalStatus = gen.ArchivalStatusEnabled
-				if config.ArchivalStatus == gen.ArchivalStatusNeverEnabled {
-					config.ArchivalBucketName = bucketName(updatedConfig.ArchivalBucketName)
+				name = bucketName(updatedConfig.ArchivalBucketName)
+				status = gen.ArchivalStatusEnabled
+			case gen.ArchivalStatusDisabled:
+				if updatedConfig.GetArchivalStatus() != gen.ArchivalStatusEnabled {
+					return nil, wh.error(errDisallowedStatusChange, scope)
 				}
-			}
-			if config.ArchivalStatus == gen.ArchivalStatusEnabled {
+				name = config.ArchivalBucketName
+				status = gen.ArchivalStatusEnabled
+			case gen.ArchivalStatusEnabled:
 				if updatedConfig.GetArchivalStatus() != gen.ArchivalStatusDisabled {
 					return nil, wh.error(errDisallowedStatusChange, scope)
 				}
-				config.ArchivalStatus = gen.ArchivalStatusDisabled
+				name = config.ArchivalBucketName
+				status = gen.ArchivalStatusDisabled
+			default:
+				return nil, wh.error(errUnknownArchivalStatus, scope)
 			}
+			config.ArchivalBucketName = name
+			config.ArchivalStatus = status
 		}
 	}
 	if updateRequest.ReplicationConfiguration != nil {
@@ -2796,13 +2812,15 @@ func (wh *WorkflowHandler) createDomainResponse(info *persistence.DomainInfo, co
 	configResult := &gen.DomainConfiguration{
 		EmitMetric:                             common.BoolPtr(config.EmitMetric),
 		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(config.Retention),
-		ArchivalStatus:                         &config.ArchivalStatus,
+		ArchivalStatus:                         common.ArchivalStatusPtr(config.ArchivalStatus),
 	}
 
-	if *configResult.ArchivalStatus != gen.ArchivalStatusNeverEnabled {
+	if configResult.GetArchivalStatus() != gen.ArchivalStatusNeverEnabled {
 		bucketName := config.ArchivalBucketName
 		configResult.ArchivalBucketName = common.StringPtr(bucketName)
 		metadata, err := wh.blobstoreClient.BucketMetadata(context.Background(), bucketName)
+
+		// TODO: handle error correctly once there is a working implementation of blobstore
 		if err == nil {
 			configResult.ArchivalRetentionPeriodInDays = common.Int32Ptr(int32(metadata.RetentionDays))
 			configResult.ArchivalBucketOwner = common.StringPtr(metadata.Owner)
