@@ -828,8 +828,6 @@ struct DomainInfo {
   50: optional map<string,string> data
 }
 
-const i32 INFINITE_ARCHIVAL_RETENTION = -1;
-
 struct DomainConfiguration {
   10: optional i32 workflowExecutionRetentionPeriodInDays
   20: optional bool emitMetric

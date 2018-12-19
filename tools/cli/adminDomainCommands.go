@@ -211,14 +211,23 @@ func AdminUpdateDomain(c *cli.Context) {
 			}
 		}
 
-		// TODO: if bucket name has already been set from response of describe domain, then cannot set custom bucket name
-		// TODO: check response to make sure archival status actually is changing
-
-		if c.IsSet(FlagDisableArchival) && c.IsSet(FlagEnableArchival) {
-			ErrorAndExit("Option format is invalid.", errors.New("cannot provide both enable and disable archival flags"))
+		var archivalStatus *shared.ArchivalStatus
+		if c.IsSet(FlagArchivalStatus) {
+			switch c.String(FlagArchivalStatus) {
+			case "enabled":
+				archivalStatus = common.ArchivalStatusPtr(shared.ArchivalStatusEnabled)
+			case "disabled":
+				archivalStatus = common.ArchivalStatusPtr(shared.ArchivalStatusDisabled)
+			default:
+				ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagArchivalStatus), errors.New("invalid status, options are {enabled, disabled}"))
+			}
 		}
-		if !c.IsSet(FlagEnableArchival) && c.IsSet(FlagCustomArchivalBucketName) {
-			ErrorAndExit("Option format is invalid.", errors.New("must enable archival if setting custom bucket name"))
+		bucketName := ""
+		if c.IsSet(FlagCustomArchivalBucketName) {
+			if archivalStatus == nil || *archivalStatus != shared.ArchivalStatusEnabled {
+				ErrorAndExit("Option format is invalid.", errors.New("must enable archival if setting custom bucket name"))
+			}
+			bucketName = c.String(FlagCustomArchivalBucketName)
 		}
 
 		updateInfo := &shared.UpdateDomainInfo{
@@ -229,6 +238,8 @@ func AdminUpdateDomain(c *cli.Context) {
 		updateConfig := &shared.DomainConfiguration{
 			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(int32(retentionDays)),
 			EmitMetric:                             common.BoolPtr(emitMetric),
+			ArchivalStatus: archivalStatus,
+			ArchivalBucketName: common.StringPtr(bucketName),
 		}
 		replicationConfig := &shared.DomainReplicationConfiguration{
 			Clusters: clusters,
@@ -273,8 +284,18 @@ func AdminDescribeDomain(c *cli.Context) {
 			ErrorAndExit(fmt.Sprintf("Domain %s does not exist.", domain), err)
 		}
 	} else {
-		fmt.Printf("Name: %v\nDescription: %v\nOwnerEmail: %v\nDomainData: %v\nStatus: %v\nRetentionInDays: %v\n"+
-			"EmitMetrics: %v\nActiveClusterName: %v\nClusters: %v\n",
+		archivalStatus := resp.Configuration.GetArchivalStatus()
+		bucketName := ""
+		retention := ""
+		owner := ""
+		if archivalStatus != shared.ArchivalStatusNeverEnabled {
+			bucketName = resp.Configuration.GetArchivalBucketName()
+			retention = fmt.Sprintf("%v", resp.Configuration.GetArchivalRetentionPeriodInDays())
+			owner = resp.Configuration.GetArchivalBucketOwner()
+		}
+		fmt.Printf("Name: %v\nDescription: %v\nOwnerEmail: %v\nDomainData: %v\nStatus: %v\nRetentionInDays: %v\n" +
+			"EmitMetrics: %v\nActiveClusterName: %v\nClusters: %v\nArchivalStatus: %v\n" +
+			"BucketName: %v\nArchivalRetentionInDays: %v\nBucketOwner: %v\n",
 			resp.DomainInfo.GetName(),
 			resp.DomainInfo.GetDescription(),
 			resp.DomainInfo.GetOwnerEmail(),
@@ -283,7 +304,11 @@ func AdminDescribeDomain(c *cli.Context) {
 			resp.Configuration.GetWorkflowExecutionRetentionPeriodInDays(),
 			resp.Configuration.GetEmitMetric(),
 			resp.ReplicationConfiguration.GetActiveClusterName(),
-			serverClustersToString(resp.ReplicationConfiguration.Clusters))
+			serverClustersToString(resp.ReplicationConfiguration.Clusters),
+			archivalStatus.String(),
+			bucketName,
+			retention,
+			owner)
 	}
 }
 

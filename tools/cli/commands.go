@@ -129,8 +129,8 @@ const (
 	FlagEmitMetricWithAlias               = FlagEmitMetric + ", em"
 	FlagEnableArchival                    = "enable_archival"
 	FlagEnableArchivalWithAlias           = FlagEnableArchival + ", ea"
-	FlagDisableArchival                   = "disable_archival"
-	FlagDisableArchivalWithAlias          = FlagDisableArchival + ", da"
+	FlagArchivalStatus                    = "archival_status"
+	FlagArchivalStatusWithAlias           = FlagArchivalStatus + ", as"
 	FlagCustomArchivalBucketName          = "custom_bucket"
 	FlagCustomArchivalBucketNameWithAlias = FlagCustomArchivalBucketName + ", cab"
 
