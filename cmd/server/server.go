@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/common/archival"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
@@ -131,11 +132,12 @@ func (s *server) startService() common.Daemon {
 	params.DispatcherProvider = client.NewIPYarpcDispatcherProvider()
 	// TODO: We need to switch Cadence to use zap logger, until then just pass zap.NewNop
 
+	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 	enableVisibilityToKafka := dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, dynamicconfig.DefaultEnableVisibilityToKafka)
 	if params.ClusterMetadata.IsGlobalDomainEnabled() {
-		params.MessagingClient = messaging.NewKafkaClient(&s.cfg.Kafka, zap.NewNop(), params.Logger, params.MetricScope, true)
+		params.MessagingClient = messaging.NewKafkaClient(&s.cfg.Kafka, params.MetricsClient, zap.NewNop(), params.Logger, params.MetricScope, true)
 	} else if enableVisibilityToKafka() {
-		params.MessagingClient = messaging.NewKafkaClient(&s.cfg.Kafka, zap.NewNop(), params.Logger, params.MetricScope, false)
+		params.MessagingClient = messaging.NewKafkaClient(&s.cfg.Kafka, params.MetricsClient, zap.NewNop(), params.Logger, params.MetricScope, false)
 	} else {
 		params.MessagingClient = nil
 	}

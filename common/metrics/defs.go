@@ -335,6 +335,11 @@ const (
 	// AdminClientGetWorkflowExecutionRawHistoryScope tracks RPC calls to admin service
 	AdminClientGetWorkflowExecutionRawHistoryScope
 
+	// MessagingPublishScope tracks Publish calls made by service to messaging layer
+	MessagingClientPublishScope
+	// MessagingPublishBatchScope tracks Publish calls made by service to messaging layer
+	MessagingClientPublishBatchScope
+
 	// DomainCacheScope tracks domain cache callbacks
 	DomainCacheScope
 	// PersistenceAppendHistoryNodesScope tracks AppendHistoryNodes calls made by service to persistence layer
@@ -733,6 +738,10 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminClientDescribeHistoryHostScope:                 {operation: "AdminClientDescribeHistoryHost", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientDescribeWorkflowExecutionScope:           {operation: "AdminClientDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientGetWorkflowExecutionRawHistoryScope:      {operation: "AdminClientGetWorkflowExecutionRawHistory", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
+
+		MessagingClientPublishScope:      {operation: "MessagingClientPublish"},
+		MessagingClientPublishBatchScope: {operation: "MessagingClientPublishBatch"},
+
 		DomainCacheScope: {operation: "DomainCache"},
 	},
 	// Frontend Scope Names
