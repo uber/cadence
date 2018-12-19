@@ -331,10 +331,6 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(request *p.GetDomainRequest) 
 	replicationConfig.Clusters = p.DeserializeClusterConfigs(replicationClusters)
 	replicationConfig.Clusters = p.GetOrUseDefaultClusters(m.currentClusterName, replicationConfig.Clusters)
 
-	if len(config.ArchivalBucketName) == 0 {
-		config.ArchivalStatus = workflow.ArchivalStatusNeverEnabled
-	}
-
 	return &p.GetDomainResponse{
 		Info:                        info,
 		Config:                      config,
@@ -381,9 +377,6 @@ func (m *cassandraMetadataPersistenceV2) ListDomains(request *p.ListDomainsReque
 			// do not include the metadata record
 			if domain.Info.Data == nil {
 				domain.Info.Data = map[string]string{}
-			}
-			if len(domain.Config.ArchivalBucketName) == 0 {
-				domain.Config.ArchivalStatus = workflow.ArchivalStatusNeverEnabled
 			}
 			domain.ReplicationConfig.ActiveClusterName = p.GetOrUseDefaultActiveCluster(m.currentClusterName, domain.ReplicationConfig.ActiveClusterName)
 			domain.ReplicationConfig.Clusters = p.DeserializeClusterConfigs(replicationClusters)

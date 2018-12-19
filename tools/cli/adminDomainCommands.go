@@ -119,7 +119,7 @@ func AdminRegisterDomain(c *cli.Context) {
 		Clusters:                               clusters,
 		ActiveClusterName:                      common.StringPtr(activeClusterName),
 		SecurityToken:                          common.StringPtr(securityToken),
-		ArchivalEnabled:                        common.BoolPtr(enableArchival),
+		EnableArchival:                         common.BoolPtr(enableArchival),
 		CustomArchivalBucketName:               common.StringPtr(customBucketName),
 	}
 

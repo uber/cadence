@@ -24444,7 +24444,7 @@ type RegisterDomainRequest struct {
 	ActiveClusterName                      *string                            `json:"activeClusterName,omitempty"`
 	Data                                   map[string]string                  `json:"data,omitempty"`
 	SecurityToken                          *string                            `json:"securityToken,omitempty"`
-	ArchivalEnabled                        *bool                              `json:"archivalEnabled,omitempty"`
+	EnableArchival                         *bool                              `json:"enableArchival,omitempty"`
 	CustomArchivalBucketName               *string                            `json:"customArchivalBucketName,omitempty"`
 }
 
@@ -24543,8 +24543,8 @@ func (v *RegisterDomainRequest) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 90, Value: w}
 		i++
 	}
-	if v.ArchivalEnabled != nil {
-		w, err = wire.NewValueBool(*(v.ArchivalEnabled)), error(nil)
+	if v.EnableArchival != nil {
+		w, err = wire.NewValueBool(*(v.EnableArchival)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -24675,7 +24675,7 @@ func (v *RegisterDomainRequest) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TBool {
 				var x bool
 				x, err = field.Value.GetBool(), error(nil)
-				v.ArchivalEnabled = &x
+				v.EnableArchival = &x
 				if err != nil {
 					return err
 				}
@@ -24742,8 +24742,8 @@ func (v *RegisterDomainRequest) String() string {
 		fields[i] = fmt.Sprintf("SecurityToken: %v", *(v.SecurityToken))
 		i++
 	}
-	if v.ArchivalEnabled != nil {
-		fields[i] = fmt.Sprintf("ArchivalEnabled: %v", *(v.ArchivalEnabled))
+	if v.EnableArchival != nil {
+		fields[i] = fmt.Sprintf("EnableArchival: %v", *(v.EnableArchival))
 		i++
 	}
 	if v.CustomArchivalBucketName != nil {
@@ -24791,7 +24791,7 @@ func (v *RegisterDomainRequest) Equals(rhs *RegisterDomainRequest) bool {
 	if !_String_EqualsPtr(v.SecurityToken, rhs.SecurityToken) {
 		return false
 	}
-	if !_Bool_EqualsPtr(v.ArchivalEnabled, rhs.ArchivalEnabled) {
+	if !_Bool_EqualsPtr(v.EnableArchival, rhs.EnableArchival) {
 		return false
 	}
 	if !_String_EqualsPtr(v.CustomArchivalBucketName, rhs.CustomArchivalBucketName) {
@@ -24834,8 +24834,8 @@ func (v *RegisterDomainRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err
 	if v.SecurityToken != nil {
 		enc.AddString("securityToken", *v.SecurityToken)
 	}
-	if v.ArchivalEnabled != nil {
-		enc.AddBool("archivalEnabled", *v.ArchivalEnabled)
+	if v.EnableArchival != nil {
+		enc.AddBool("enableArchival", *v.EnableArchival)
 	}
 	if v.CustomArchivalBucketName != nil {
 		enc.AddString("customArchivalBucketName", *v.CustomArchivalBucketName)
@@ -24933,6 +24933,7 @@ func (v *RegisterDomainRequest) GetSecurityToken() (o string) {
 	return
 }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 type ReplicationInfo struct {
 	Version     *int64 `json:"version,omitempty"`
@@ -25098,6 +25099,13 @@ func (v *RegisterDomainRequest) GetArchivalEnabled() (o bool) {
 	if v.ArchivalEnabled != nil {
 		return *v.ArchivalEnabled
 >>>>>>> Update IDL
+=======
+// GetEnableArchival returns the value of EnableArchival if it is set or its
+// zero value if it is unset.
+func (v *RegisterDomainRequest) GetEnableArchival() (o bool) {
+	if v.EnableArchival != nil {
+		return *v.EnableArchival
+>>>>>>> rename thrift field
 	}
 
 	return

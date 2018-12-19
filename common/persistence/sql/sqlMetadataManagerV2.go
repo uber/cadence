@@ -80,7 +80,7 @@ const (
 		name,
 		retention, 
 		emit_metric,
-        archival_bucket,
+		archival_bucket,
 		archival_status,
 		config_version,
 		status, 
@@ -355,10 +355,6 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(result *domainRow) (
 				Message: fmt.Sprintf("Error in deserializing ReplicationConfig.Clusters. Error: %v", err),
 			}
 		}
-	}
-
-	if len(result.DomainConfig.ArchivalBucketName) == 0 {
-		result.ArchivalStatus = workflow.ArchivalStatusNeverEnabled
 	}
 
 	return &persistence.GetDomainResponse{

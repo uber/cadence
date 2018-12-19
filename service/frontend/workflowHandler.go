@@ -215,7 +215,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 		return wh.error(errRequestNotSet, scope)
 	}
 
-	if customBucketNameProvided(registerRequest.CustomArchivalBucketName) && !registerRequest.GetArchivalEnabled() {
+	if customBucketNameProvided(registerRequest.CustomArchivalBucketName) && !registerRequest.GetEnableArchival() {
 		return wh.error(errInvalidEnableArchival, scope)
 	}
 
@@ -281,7 +281,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 
 	archivalBucketName := ""
 	archivalStatus := gen.ArchivalStatusNeverEnabled
-	if registerRequest.GetArchivalEnabled() {
+	if registerRequest.GetEnableArchival() {
 		archivalBucketName = bucketName(registerRequest.CustomArchivalBucketName)
 		archivalStatus = gen.ArchivalStatusEnabled
 	}
