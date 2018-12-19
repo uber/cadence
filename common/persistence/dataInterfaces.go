@@ -1229,6 +1229,8 @@ type (
 	GetHistoryTreeRequest struct {
 		// A UUID of a tree
 		TreeID string
+		// optional: can provide treeID via branchToken if treeID is empty
+		BranchToken []byte
 	}
 
 	// ForkingInProgressBranch is part of GetHistoryTreeResponse
@@ -2076,6 +2078,25 @@ func NewHistoryBranchToken(treeID string) ([]byte, error) {
 	branchID := uuid.New()
 	bi := &workflow.HistoryBranch{
 		TreeID:    &treeID,
+		BranchID:  &branchID,
+		Ancestors: []*workflow.HistoryBranchRange{},
+	}
+	token, err := internalThriftEncoder.Encode(bi)
+	if err != nil {
+		return nil, err
+	}
+	return token, nil
+}
+
+func NewHistoryBranchTokenFromAnother(branchID string, anotherToken []byte) ([]byte, error) {
+	var branch workflow.HistoryBranch
+	err := internalThriftEncoder.Decode(anotherToken, &branch)
+	if err != nil {
+		return nil, err
+	}
+
+	bi := &workflow.HistoryBranch{
+		TreeID:    branch.TreeID,
 		BranchID:  &branchID,
 		Ancestors: []*workflow.HistoryBranchRange{},
 	}

@@ -575,6 +575,32 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.Ti
 	domainID, workflowExecution := t.getDomainIDAndWorkflowExecution(task)
 	op = func() error {
 		if msBuilder.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
+			resp, err := t.historyService.historyV2Mgr.GetHistoryTree(&persistence.GetHistoryTreeRequest{
+				BranchToken: msBuilder.GetCurrentBranch(),
+			})
+			if err != nil {
+				return err
+			}
+			if len(resp.ForkingInProgressBranches) > 0 {
+				for _, br := range resp.ForkingInProgressBranches {
+					if time.Now().After(br.ForkTime.Add(time.Minute)) {
+						bt, err := persistence.NewHistoryBranchTokenFromAnother(br.BranchID, msBuilder.GetCurrentBranch())
+						if err != nil {
+							return err
+						}
+						t.historyService.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
+							// actually we don't know it is success or fail. but use true for safety
+							// the worst case is we may leak some data that will never deleted
+							Success:     true,
+							BranchToken: bt,
+						})
+					} else {
+						return &workflow.ServiceBusyError{
+							Message: "waiting for forking to complete",
+						}
+					}
+				}
+			}
 			return t.historyService.historyV2Mgr.DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
 				BranchToken: msBuilder.GetCurrentBranch(),
 			})

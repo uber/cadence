@@ -129,6 +129,14 @@ func (m *historyV2ManagerImpl) CompleteForkBranch(request *CompleteForkBranchReq
 
 // GetHistoryTree returns all branch information of a tree
 func (m *historyV2ManagerImpl) GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error) {
+	if len(request.TreeID) == 0 {
+		var branch workflow.HistoryBranch
+		err := m.thrifteEncoder.Decode(request.BranchToken, &branch)
+		if err != nil {
+			return nil, err
+		}
+		request.TreeID = branch.GetTreeID()
+	}
 	return m.persistence.GetHistoryTree(request)
 }
 
