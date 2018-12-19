@@ -43,6 +43,7 @@ type indexProcessor struct {
 	esClient        *elastic.Client
 	esProcessor     ESProcessor
 	esProcessorName string
+	esIndexName     string
 	config          *Config
 	logger          bark.Logger
 	metricsClient   metrics.Client
@@ -54,27 +55,28 @@ type indexProcessor struct {
 }
 
 const (
-	esDocIDDelimiter      = "~"
-	esDocType             = "_doc"
-	esVisibilityIndexName = "test-vis" // TODO: configuration index name
-	versionTypeExternal   = "external"
-	versionForOpen        = 10
-	versionForClose       = 20
-	versionForDelete      = 30
+	esDocIDDelimiter = "~"
+	esDocType        = "_doc"
+
+	versionTypeExternal = "external"
+	versionForOpen      = 10
+	versionForClose     = 20
+	versionForDelete    = 30
 )
 
 var (
 	errUnknownMessageType = &shared.BadRequestError{Message: "unknown message type"}
 )
 
-func newIndexProcessor(appName, consumerName string, kafkaClient messaging.Client, esClient *elastic.Client, esProcessorName string,
-	config *Config, logger bark.Logger, metricsClient metrics.Client) *indexProcessor {
+func newIndexProcessor(appName, consumerName string, kafkaClient messaging.Client, esClient *elastic.Client,
+	esProcessorName, esIndexName string, config *Config, logger bark.Logger, metricsClient metrics.Client) *indexProcessor {
 	return &indexProcessor{
 		appName:         appName,
 		consumerName:    consumerName,
 		kafkaClient:     kafkaClient,
 		esClient:        esClient,
 		esProcessorName: esProcessorName,
+		esIndexName:     esIndexName,
 		config:          config,
 		logger: logger.WithFields(bark.Fields{
 			logging.TagWorkflowComponent: logging.TagValueIndexerProcessorComponent,
@@ -194,7 +196,7 @@ func (p *indexProcessor) process(msg messaging.Message) error {
 	case indexer.VisibilityMsgTypeOpen:
 		docID := record.GetWorkflowID() + esDocIDDelimiter + record.GetRunID()
 		req := elastic.NewBulkIndexRequest().
-			Index(esVisibilityIndexName).
+			Index(p.esIndexName).
 			Type(esDocType).
 			Id(docID).
 			VersionType(versionTypeExternal).
@@ -205,7 +207,7 @@ func (p *indexProcessor) process(msg messaging.Message) error {
 	case indexer.VisibilityMsgTypeClosed:
 		docID := record.GetWorkflowID() + esDocIDDelimiter + record.GetRunID()
 		req := elastic.NewBulkIndexRequest().
-			Index(esVisibilityIndexName).
+			Index(p.esIndexName).
 			Type(esDocType).
 			Id(docID).
 			VersionType(versionTypeExternal).

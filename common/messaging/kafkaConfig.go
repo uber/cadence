@@ -51,9 +51,6 @@ type (
 	}
 )
 
-// VisibilityAppName is used to find topics for visibility
-const VisibilityAppName = "visibility"
-
 // Validate will validate config for kafka
 func (k *KafkaConfig) Validate(checkCluster bool, checkApp bool) {
 	if len(k.Clusters) == 0 {

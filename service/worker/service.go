@@ -162,7 +162,7 @@ func (s *Service) startReplicator(params *service.BootstrapParams, base service.
 }
 
 func (s *Service) startIndexer(params *service.BootstrapParams, base service.Service, log bark.Logger) {
-	indexer := indexer.NewIndexer(s.config.IndexerCfg, params.MessagingClient, params.ESClient, log, s.metricsClient)
+	indexer := indexer.NewIndexer(s.config.IndexerCfg, params.MessagingClient, params.ESClient, params.ESConfig, log, s.metricsClient)
 	if err := indexer.Start(); err != nil {
 		indexer.Stop()
 		log.Fatalf("fail to start indexer: %v", err)

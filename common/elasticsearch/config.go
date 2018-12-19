@@ -25,6 +25,9 @@ import (
 )
 
 // Config for connecting to ElasticSearch
-type Config struct {
-	URL url.URL `yaml:url`
-}
+type (
+	Config struct {
+		URL     url.URL           `yaml:url`
+		Indices map[string]string `yaml:indices`
+	}
+)

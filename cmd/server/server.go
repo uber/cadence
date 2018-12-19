@@ -158,6 +158,12 @@ func (s *server) startService() common.Daemon {
 			log.Fatalf("error creating elastic search client: %v", err)
 		}
 		params.ESClient = esClient
+
+		params.ESConfig = &s.cfg.ElasticSearch
+		indexName, ok := params.ESConfig.Indices[common.VisibilityAppName]
+		if !ok || len(indexName) == 0 {
+			log.Fatalf("elastic search config missing visibility index")
+		}
 	}
 
 	params.Logger.Info("Starting service " + s.name)

@@ -24,6 +24,8 @@ import (
 	"fmt"
 	"github.com/olivere/elastic"
 	"github.com/uber-common/bark"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
@@ -39,6 +41,7 @@ type (
 		logger              bark.Logger
 		metricsClient       metrics.Client
 		visibilityProcessor *indexProcessor
+		visibilityIndexName string
 	}
 
 	// Config contains all configs for indexer
@@ -58,24 +61,28 @@ const (
 )
 
 // NewIndexer create a new Indexer
-func NewIndexer(config *Config, client messaging.Client, esClient *elastic.Client, logger bark.Logger, metricsClient metrics.Client) *Indexer {
+func NewIndexer(config *Config, client messaging.Client, esClient *elastic.Client, esConfig *elasticsearch.Config,
+	logger bark.Logger, metricsClient metrics.Client) *Indexer {
 	logger = logger.WithFields(bark.Fields{
 		logging.TagWorkflowComponent: logging.TagValueIndexerComponent,
 	})
+
 	return &Indexer{
-		config:        config,
-		kafkaClient:   client,
-		esClient:      esClient,
-		logger:        logger,
-		metricsClient: metricsClient,
+		config:              config,
+		kafkaClient:         client,
+		esClient:            esClient,
+		logger:              logger,
+		metricsClient:       metricsClient,
+		visibilityIndexName: esConfig.Indices[common.VisibilityAppName],
 	}
 }
 
 // Start indexer
 func (x Indexer) Start() error {
-	visibilityApp := messaging.VisibilityAppName
+	visibilityApp := common.VisibilityAppName
 	visConsumerName := getConsumerName(visibilityApp)
-	x.visibilityProcessor = newIndexProcessor(visibilityApp, visConsumerName, x.kafkaClient, x.esClient, visibilityProcessorName, x.config, x.logger, x.metricsClient)
+	x.visibilityProcessor = newIndexProcessor(visibilityApp, visConsumerName, x.kafkaClient, x.esClient,
+		visibilityProcessorName, x.visibilityIndexName, x.config, x.logger, x.metricsClient)
 	return x.visibilityProcessor.Start()
 }
 
