@@ -18,10 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package replicator
+package xdc
 
 import (
 	"context"
+	"time"
 
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/admin"
@@ -60,17 +61,18 @@ type (
 
 	// HistoryRereplicatorImpl is the implementation of HistoryRereplicator
 	HistoryRereplicatorImpl struct {
-		domainCache   cache.DomainCache
-		adminClient   a.Client
-		historyClient h.Client
-		serializer    persistence.HistorySerializer
-		logger        bark.Logger
+		domainCache        cache.DomainCache
+		adminClient        a.Client
+		historyClient      h.Client
+		serializer         persistence.HistorySerializer
+		replicationTimeout time.Duration
+		logger             bark.Logger
 	}
 )
 
 // NewHistoryRereplicator create a new HistoryRereplicatorImpl
 func NewHistoryRereplicator(domainCache cache.DomainCache, adminClient a.Client, historyClient h.Client,
-	serializer persistence.HistorySerializer, logger bark.Logger) *HistoryRereplicatorImpl {
+	serializer persistence.HistorySerializer, replicationTimeout time.Duration, logger bark.Logger) *HistoryRereplicatorImpl {
 
 	return &HistoryRereplicatorImpl{
 		domainCache:   domainCache,
@@ -252,7 +254,7 @@ func (h *HistoryRereplicatorImpl) sendReplicationRawRequest(request *history.Rep
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), h.replicationTimeout)
 	defer cancel()
 	err := h.historyClient.ReplicateRawEvents(ctx, request)
 	if err != nil {
@@ -284,7 +286,7 @@ func (h *HistoryRereplicatorImpl) getHistory(domainID string, workflowID string,
 	}
 	domainName := domainEntry.GetInfo().Name
 
-	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), h.replicationTimeout)
 	defer cancel()
 	response, err := h.adminClient.GetWorkflowExecutionRawHistory(ctx, &admin.GetWorkflowExecutionRawHistoryRequest{
 		Domain: common.StringPtr(domainName),

@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/xdc"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -61,7 +62,7 @@ type (
 		logger              bark.Logger
 		metricsClient       metrics.Client
 		domainReplicator    DomainReplicator
-		historyRereplicator HistoryRereplicator
+		historyRereplicator xdc.HistoryRereplicator
 		historyClient       history.Client
 		msgEncoder          codec.BinaryEncoder
 	}
@@ -90,7 +91,7 @@ var (
 
 func newReplicationTaskProcessor(currentCluster, sourceCluster, consumer string, client messaging.Client, config *Config,
 	logger bark.Logger, metricsClient metrics.Client, domainReplicator DomainReplicator,
-	historyRereplicator HistoryRereplicator, historyClient history.Client) *replicationTaskProcessor {
+	historyRereplicator xdc.HistoryRereplicator, historyClient history.Client) *replicationTaskProcessor {
 
 	retryableHistoryClient := history.NewRetryableClient(historyClient, common.CreateHistoryServiceRetryPolicy(),
 		common.IsWhitelistServiceTransientError)

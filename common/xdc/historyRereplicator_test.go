@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package replicator
+package xdc
 
 import (
 	"os"
@@ -108,6 +108,7 @@ func (s *historyRereplicatorSuite) SetupTest() {
 		s.mockAdminClient,
 		s.mockHistoryClient,
 		persistence.NewHistorySerializer(),
+		30*time.Second,
 		s.logger,
 	)
 }

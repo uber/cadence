@@ -26,6 +26,7 @@ import (
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/xdc"
 
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/client/history"
@@ -40,18 +41,17 @@ import (
 type (
 	// Replicator is the processor for replication tasks
 	Replicator struct {
-		domainCache         cache.DomainCache
-		clusterMetadata     cluster.Metadata
-		domainReplicator    DomainReplicator
-		historyRereplicator HistoryRereplicator
-		clientBean          client.Bean
-		historyClient       history.Client
-		config              *Config
-		client              messaging.Client
-		processors          []*replicationTaskProcessor
-		logger              bark.Logger
-		metricsClient       metrics.Client
-		historySerializer   persistence.HistorySerializer
+		domainCache       cache.DomainCache
+		clusterMetadata   cluster.Metadata
+		domainReplicator  DomainReplicator
+		clientBean        client.Bean
+		historyClient     history.Client
+		config            *Config
+		client            messaging.Client
+		processors        []*replicationTaskProcessor
+		logger            bark.Logger
+		metricsClient     metrics.Client
+		historySerializer persistence.HistorySerializer
 	}
 
 	// Config contains all the replication config for worker
@@ -102,7 +102,7 @@ func (r *Replicator) Start() error {
 				logging.TagSourceCluster:     cluster,
 				logging.TagConsumerName:      consumerName,
 			})
-			historyRereplicator := NewHistoryRereplicator(r.domainCache, adminClient, r.historyClient, r.historySerializer, logger)
+			historyRereplicator := xdc.NewHistoryRereplicator(r.domainCache, adminClient, r.historyClient, r.historySerializer, replicationTimeout, logger)
 			r.processors = append(r.processors, newReplicationTaskProcessor(currentClusterName, cluster, consumerName, r.client,
 				r.config, logger, r.metricsClient, r.domainReplicator, historyRereplicator, r.historyClient))
 		}
