@@ -2462,6 +2462,9 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 			Identity: common.StringPtr(identityHistoryService),
 		})
 		closeTask, cleanupTask, retError = e.getDeleteWorkflowTasks(currMutableState.GetExecutionInfo().DomainID, execution.GetWorkflowId(), e.getTimerBuilder(&currExecution))
+		if retError != nil {
+			return
+		}
 	}
 
 	// replay history to reset point(exclusive) to rebuild mutableState, then continue to replay to collect received signals
