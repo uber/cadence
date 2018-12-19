@@ -35,7 +35,9 @@ import (
 
 // ESProcessor is interface for elastic search bulk processor
 type ESProcessor interface {
+	// Stop processor and clean up
 	Stop()
+	// Add request to bulk, and record kafka message in map with provided key
 	Add(request elastic.BulkableRequest, key string, kafkaMsg messaging.Message)
 }
 
@@ -52,6 +54,7 @@ const (
 	esRequestTypeUpdate = "update"
 	esRequestTypeDelete = "delete"
 
+	// retry configs for es bulk processor
 	esProcessorInitialRetryInterval = 200 * time.Millisecond
 	esProcessorMaxRetryInterval     = 20 * time.Second
 )
@@ -71,17 +74,15 @@ func NewESProcessorAndStart(config *Config, client *elastic.Client, processorNam
 		BulkActions(config.ESProcessorBulkActions()).
 		BulkSize(config.ESProcessorBulkSize()).
 		FlushInterval(config.ESProcessorFlushInterval()).
-		After(p.bulkAfterAction).
-		Stats(true).
 		Backoff(elastic.NewExponentialBackoff(esProcessorInitialRetryInterval, esProcessorMaxRetryInterval)).
+		After(p.bulkAfterAction).
 		Do(context.Background())
 	if err != nil {
 		return nil, err
 	}
+
 	p.processor = processor
-
 	p.mapToKafkaMsg = collection.NewShardedConcurrentTxMap(1024, p.hashFn)
-
 	return p, nil
 }
 
@@ -96,36 +97,27 @@ func (p *esProcessorImpl) Add(request elastic.BulkableRequest, key string, kafka
 		kafkaMsg.Ack() // duplicate message
 		return
 	}
-	p.processor.Add(request)
 	p.mapToKafkaMsg.Put(key, kafkaMsg)
+	p.processor.Add(request)
 }
 
-func (p *esProcessorImpl) ackKafkaMsg(key string) {
-	msg, ok := p.mapToKafkaMsg.Get(key)
-	if !ok {
-		return // duplicate kafka message
-	}
-	kafkaMsg, ok := msg.(messaging.Message)
-	if !ok {
-		p.logger.Error("message not kafka message, key: %v, msg: %v", key, msg)
-		return
-	}
-
-	kafkaMsg.Ack()
-	//p.logger.Info("ack kafka message with key:", key)
-	p.mapToKafkaMsg.Remove(key)
-}
-
+// bulkAfterAction is triggered after bulk processor commit
 func (p *esProcessorImpl) bulkAfterAction(id int64, requests []elastic.BulkableRequest, response *elastic.BulkResponse, err error) {
-	//p.logger.Infof("vancexu after.  %v: %v", len(requests), requests)
-	//p.logger.Infof("vancexu after response %v", prettyPrint(response))
 	if err != nil {
-		//p.logger.Error(err)
+		// This happens after configured retry, which means something bad happens on cluster or index
+		// We sleep then check until things go right or we die
+		p.logger.WithFields(bark.Fields{
+			logging.TagErr: err,
+		}).Error("Error commit bulk request.")
+
 		time.Sleep(p.config.ESProcessorRetryInterval())
 		for _, request := range requests {
 			req, err := request.Source()
-			if err != nil { // if happens, manually investigate and re-insert
-				p.logger.Error("get request source err: ", err)
+			if err != nil {
+				p.logger.WithFields(bark.Fields{
+					logging.TagErr:       err,
+					logging.TagESRequest: request.String(),
+				}).Error("Get request source err.")
 				// emit metric
 				continue
 			}
@@ -139,15 +131,20 @@ func (p *esProcessorImpl) bulkAfterAction(id int64, requests []elastic.BulkableR
 	responseItems := response.Items
 	for i := 0; i < len(requests); i++ {
 		req, err := requests[i].Source()
-		if err != nil { // if happens, manually investigate and re-insert
-			p.logger.Error("get request source err: ", err)
+		if err != nil {
+			p.logger.WithFields(bark.Fields{
+				logging.TagErr:       err,
+				logging.TagESRequest: requests[i].String(),
+			}).Error("Get request source err.")
 			// emit metric
 			continue
 		}
 
 		var reqHead map[string]map[string]interface{}
 		if err := json.Unmarshal([]byte(req[0]), &reqHead); err != nil {
-			p.logger.Error("unmarshal request err: ", err)
+			p.logger.WithFields(bark.Fields{
+				logging.TagErr: err,
+			}).Error("Unmarshal request err.")
 			continue
 		}
 		var head string
@@ -175,6 +172,24 @@ func (p *esProcessorImpl) bulkAfterAction(id int64, requests []elastic.BulkableR
 	}
 }
 
+func (p *esProcessorImpl) ackKafkaMsg(key string) {
+	msg, ok := p.mapToKafkaMsg.Get(key)
+	if !ok {
+		return // duplicate kafka message
+	}
+	kafkaMsg, ok := msg.(messaging.Message)
+	if !ok {
+		p.logger.WithFields(bark.Fields{
+			logging.TagESKey: key,
+		}).Error("Message is not kafka message.")
+		return
+	}
+
+	kafkaMsg.Ack()
+	//p.logger.Info("ack kafka message with key:", key)
+	p.mapToKafkaMsg.Remove(key)
+}
+
 func (p *esProcessorImpl) hashFn(key interface{}) uint32 {
 	id, ok := key.(string)
 	if !ok {
@@ -188,7 +203,9 @@ func (p *esProcessorImpl) hashFn(key interface{}) uint32 {
 func (p *esProcessorImpl) getESRequest(input []string) elastic.BulkableRequest {
 	var reqHead map[string]map[string]interface{}
 	if err := json.Unmarshal([]byte(input[0]), &reqHead); err != nil {
-		p.logger.Error("unmarshal request err: ", err)
+		p.logger.WithFields(bark.Fields{
+			logging.TagErr: err,
+		}).Error("Unmarshal request err.")
 		return nil
 	}
 
@@ -208,16 +225,22 @@ func (p *esProcessorImpl) getESRequest(input []string) elastic.BulkableRequest {
 	var doc indexer.VisibilityMsg
 	if len(input) == 2 {
 		if err := json.Unmarshal([]byte(input[1]), &doc); err != nil {
-			p.logger.Error("unmarshal request body err: ", err)
+			p.logger.WithFields(bark.Fields{
+				logging.TagErr: err,
+			}).Error("Unmarshal request body err.")
 			return nil
 		}
 	}
 
 	switch getReqType(reqHead) {
 	case esRequestTypeIndex:
-		return elastic.NewBulkIndexRequest().Index(index).Type(typ).Id(id).
-			VersionType(versionType).Version(version).Doc(doc)
-
+		return elastic.NewBulkIndexRequest().
+			Index(index).
+			Type(typ).
+			Id(id).
+			VersionType(versionType).
+			Version(version).
+			Doc(doc)
 	case esRequestTypeDelete:
 	}
 

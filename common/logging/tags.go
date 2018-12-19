@@ -79,6 +79,8 @@ const (
 	TagCursorTimestamp            = "cursor-timestamp"
 	TagHistorySize                = "history-size"
 	TagEventCount                 = "event-count"
+	TagESRequest                  = "es-request"
+	TagESKey                      = "es-mapping-key"
 
 	// workflow logging tag values
 	// TagWorkflowComponent Values

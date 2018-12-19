@@ -24,6 +24,7 @@ import (
 	"github.com/olivere/elastic"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/indexer"
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/logging"
@@ -60,6 +61,10 @@ const (
 	versionForOpen        = 10
 	versionForClose       = 20
 	versionForDelete      = 30
+)
+
+var (
+	errUnknownMessageType = &shared.BadRequestError{Message: "unknown message type"}
 )
 
 func newIndexProcessor(appName, consumerName string, kafkaClient messaging.Client, esClient *elastic.Client, esProcessorName string,
@@ -161,25 +166,29 @@ func (p *indexProcessor) messageProcessLoop(workerWG *sync.WaitGroup, workerID i
 				p.logger.Info("Worker for index processor shutting down.")
 				return // channel closed
 			}
-			logger := p.logger.WithFields(bark.Fields{
-				logging.TagPartitionKey: msg.Partition(),
-				logging.TagOffset:       msg.Offset(),
-				logging.TagAttemptStart: time.Now(),
-			})
-			p.process(msg, logger) // what if power off here?
+			err := p.process(msg)
+			if err != nil {
+				msg.Nack()
+			}
 		}
 	}
 }
 
-func (p *indexProcessor) process(msg messaging.Message, logger bark.Logger) (bark.Logger, error) {
+func (p *indexProcessor) process(msg messaging.Message) error {
+	logger := p.logger.WithFields(bark.Fields{
+		logging.TagPartitionKey: msg.Partition(),
+		logging.TagOffset:       msg.Offset(),
+		logging.TagAttemptStart: time.Now(),
+	})
+
 	record, err := p.deserialize(msg.Value())
 	if err != nil {
 		logger.WithFields(bark.Fields{
 			logging.TagErr: err,
 		}).Error("Failed to deserialize index messages.")
-
-		return logger, err
+		return err
 	}
+
 	switch record.GetMsgType() {
 	case indexer.VisibilityMsgTypeOpen:
 		docID := record.GetWorkflowID() + esDocIDDelimiter + record.GetRunID()
@@ -205,8 +214,12 @@ func (p *indexProcessor) process(msg messaging.Message, logger bark.Logger) (bar
 		p.esProcessor.Add(req, key, msg)
 	case indexer.VisibilityMsgTypeDelete:
 		//logger.Infof("vance in process, delete record is: %v", record)
+	default:
+		logger.Error("Unknown message type")
+		err = errUnknownMessageType
 	}
-	return logger, nil
+
+	return err
 }
 
 func (p *indexProcessor) deserialize(payload []byte) (*indexer.VisibilityMsg, error) {
