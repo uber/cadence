@@ -915,7 +915,7 @@ func (s *workflowHandlerSuite) TestUpdateDomain_Success_ArchivalNeverEnabledToEn
 
 func bucketMetadataResponse(owner string, retentionDays int) *blobstore.BucketMetadataResponse {
 	return &blobstore.BucketMetadataResponse{
-		Owner: owner,
+		Owner:         owner,
 		RetentionDays: retentionDays,
 	}
 }
@@ -924,10 +924,10 @@ func updateRequest(archivalBucketName *string, archivalStatus *shared.ArchivalSt
 	return &shared.UpdateDomainRequest{
 		Name: common.StringPtr("test-name"),
 		Configuration: &shared.DomainConfiguration{
-			ArchivalBucketName: archivalBucketName,
-			ArchivalStatus: archivalStatus,
+			ArchivalBucketName:            archivalBucketName,
+			ArchivalStatus:                archivalStatus,
 			ArchivalRetentionPeriodInDays: archivalRetentionDays,
-			ArchivalBucketOwner: archivalOwner,
+			ArchivalBucketOwner:           archivalOwner,
 		},
 	}
 }
@@ -935,16 +935,16 @@ func updateRequest(archivalBucketName *string, archivalStatus *shared.ArchivalSt
 func persistenceGetDomainResponse(archivalBucket string, archivalStatus shared.ArchivalStatus) *persistence.GetDomainResponse {
 	return &persistence.GetDomainResponse{
 		Info: &persistence.DomainInfo{
-			ID: "test-id",
-			Name: "test-name",
-			Status: 0,
+			ID:          "test-id",
+			Name:        "test-name",
+			Status:      0,
 			Description: "test-description",
-			OwnerEmail: "test-owner-email",
-			Data: make(map[string]string),
+			OwnerEmail:  "test-owner-email",
+			Data:        make(map[string]string),
 		},
 		Config: &persistence.DomainConfig{
-			Retention: 0,
-			EmitMetric: true,
+			Retention:      0,
+			EmitMetric:     true,
 			ArchivalBucket: archivalBucket,
 			ArchivalStatus: archivalStatus,
 		},
@@ -959,22 +959,22 @@ func persistenceGetDomainResponse(archivalBucket string, archivalStatus shared.A
 				},
 			},
 		},
-		IsGlobalDomain: false,
-		ConfigVersion: 0,
-		FailoverVersion: 0,
+		IsGlobalDomain:              false,
+		ConfigVersion:               0,
+		FailoverVersion:             0,
 		FailoverNotificationVersion: 0,
-		NotificationVersion: 0,
-		TableVersion: 0,
+		NotificationVersion:         0,
+		TableVersion:                0,
 	}
 }
 
 func registerDomainRequest(enableArchival bool, customBucketName *string) *shared.RegisterDomainRequest {
 	return &shared.RegisterDomainRequest{
-		Name: common.StringPtr("test-domain"),
-		Description: common.StringPtr("test-description"),
-		OwnerEmail: common.StringPtr("test-owner-email"),
+		Name:                                   common.StringPtr("test-domain"),
+		Description:                            common.StringPtr("test-description"),
+		OwnerEmail:                             common.StringPtr("test-owner-email"),
 		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(10),
-		EmitMetric: common.BoolPtr(true),
+		EmitMetric:                             common.BoolPtr(true),
 		Clusters: []*shared.ClusterReplicationConfiguration{
 			{
 				ClusterName: common.StringPtr("active"),
@@ -983,10 +983,10 @@ func registerDomainRequest(enableArchival bool, customBucketName *string) *share
 				ClusterName: common.StringPtr("standby"),
 			},
 		},
-		ActiveClusterName: common.StringPtr("active"),
-		Data: make(map[string]string),
-		SecurityToken: common.StringPtr("token"),
-		EnableArchival: common.BoolPtr(enableArchival),
+		ActiveClusterName:        common.StringPtr("active"),
+		Data:                     make(map[string]string),
+		SecurityToken:            common.StringPtr("token"),
+		EnableArchival:           common.BoolPtr(enableArchival),
 		CustomArchivalBucketName: customBucketName,
 	}
 }
