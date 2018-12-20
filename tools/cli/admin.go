@@ -329,7 +329,7 @@ func newAdminDomainCommands() []cli.Command {
 				},
 				cli.StringFlag{
 					Name:  FlagArchivalStatusWithAlias,
-					Usage: "Flag to update archival status, valid values are: {enable, disable}",
+					Usage: "Flag to update archival status, valid values are: {enabled, disabled}",
 				},
 				cli.StringFlag{
 					Name:  FlagCustomArchivalBucketNameWithAlias,
