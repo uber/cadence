@@ -45,11 +45,13 @@ type ESProcessor interface {
 // esProcessorImpl is agent of elastic.BulkProcessor
 type esProcessorImpl struct {
 	processor     *elastic.BulkProcessor
-	mapToKafkaMsg collection.ConcurrentTxMap // key: esDocID+visType
+	mapToKafkaMsg collection.ConcurrentTxMap // used to map ES request to kafka message. key: esDocID+visType
 	config        *Config
 	logger        bark.Logger
 	metricsClient metrics.Client
 }
+
+var _ ESProcessor = (*esProcessorImpl)(nil)
 
 const (
 	esRequestTypeIndex  = "index"
@@ -109,26 +111,17 @@ func (p *esProcessorImpl) Add(request elastic.BulkableRequest, key string, kafka
 func (p *esProcessorImpl) bulkAfterAction(id int64, requests []elastic.BulkableRequest, response *elastic.BulkResponse, err error) {
 	if err != nil {
 		// This happens after configured retry, which means something bad happens on cluster or index
-		// We sleep then check until things go right or we die
+		// When cluster back to live, processor will re-commit those failure requests
 		p.logger.WithFields(bark.Fields{
 			logging.TagErr: err,
 		}).Error("Error commit bulk request.")
-		p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorFailures)
 
-		time.Sleep(p.config.ESProcessorRetryInterval())
 		for _, request := range requests {
-			req, err := request.Source()
-			if err != nil {
-				p.logger.WithFields(bark.Fields{
-					logging.TagErr:       err,
-					logging.TagESRequest: request.String(),
-				}).Error("Get request source err.")
-				p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
-				continue
-			}
-			if r := p.getESRequest(req); r != nil {
-				p.processor.Add(r)
-			}
+			p.logger.WithFields(bark.Fields{
+				logging.TagESRequest: request.String(),
+			}).Error("ES request failed.")
+
+			p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorFailures)
 		}
 		return
 	}

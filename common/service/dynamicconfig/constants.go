@@ -160,7 +160,6 @@ var keys = map[Key]string{
 	WorkerESProcessorBulkActions:     "worker.ESProcessorBulkActions",
 	WorkerESProcessorBulkSize:        "worker.ESProcessorBulkSize",
 	WorkerESProcessorFlushInterval:   "worker.ESProcessorFlushInterval",
-	WorkerESProcessorRetryInterval:   "worker.ESProcessorRetryInterval",
 }
 
 const (
@@ -401,8 +400,6 @@ const (
 	WorkerESProcessorBulkSize
 	// WorkerESProcessorFlushInterval is flush interval for esProcessor
 	WorkerESProcessorFlushInterval
-	// WorkerESProcessorRetryInterval is retry interval when bulk processor
-	WorkerESProcessorRetryInterval
 
 	// lastKeyForTest must be the last one in this const group for testing purpose
 	lastKeyForTest
@@ -463,4 +460,4 @@ func TaskTypeFilter(taskType int) FilterOption {
 }
 
 // DefaultEnableVisibilityToKafka default value for config EnableVisibilityToKafka
-const DefaultEnableVisibilityToKafka = false
+const DefaultEnableVisibilityToKafka = true

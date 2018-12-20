@@ -52,7 +52,6 @@ type (
 		ESProcessorBulkActions   dynamicconfig.IntPropertyFn // max number of requests in bulk
 		ESProcessorBulkSize      dynamicconfig.IntPropertyFn // max total size of bytes in bulk
 		ESProcessorFlushInterval dynamicconfig.DurationPropertyFn
-		ESProcessorRetryInterval dynamicconfig.DurationPropertyFn // retry interval on ES catastrophe
 	}
 )
 

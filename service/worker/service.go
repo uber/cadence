@@ -98,7 +98,6 @@ func NewConfig(dc *dynamicconfig.Collection) *Config {
 			ESProcessorBulkActions:   dc.GetIntProperty(dynamicconfig.WorkerESProcessorBulkActions, 1000),
 			ESProcessorBulkSize:      dc.GetIntProperty(dynamicconfig.WorkerESProcessorBulkSize, 2<<24), // 16MB
 			ESProcessorFlushInterval: dc.GetDurationProperty(dynamicconfig.WorkerESProcessorFlushInterval, 10*time.Second),
-			ESProcessorRetryInterval: dc.GetDurationProperty(dynamicconfig.WorkerESProcessorRetryInterval, 5*time.Minute),
 		},
 	}
 }
