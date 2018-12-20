@@ -23,6 +23,7 @@ package frontend
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 
 	"strconv"
 
@@ -48,6 +49,7 @@ var _ adminserviceserver.Interface = (*AdminHandler)(nil)
 type (
 	// AdminHandler - Thrift handler inteface for admin service
 	AdminHandler struct {
+		status                int32
 		numberOfHistoryShards int
 		service.Service
 		history       history.Client
@@ -64,6 +66,7 @@ func NewAdminHandler(
 	sVice service.Service, numberOfHistoryShards int, metadataMgr persistence.MetadataManager,
 	historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager) *AdminHandler {
 	handler := &AdminHandler{
+		status:                common.DaemonStatusInitialized,
 		numberOfHistoryShards: numberOfHistoryShards,
 		Service:               sVice,
 		domainCache:           cache.NewDomainCache(metadataMgr, sVice.GetClusterMetadata(), sVice.GetMetricsClient(), sVice.GetLogger()),
@@ -77,6 +80,10 @@ func NewAdminHandler(
 
 // Start starts the handler
 func (adh *AdminHandler) Start() error {
+	if !atomic.CompareAndSwapInt32(&adh.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+		return nil
+	}
+
 	adh.domainCache.Start()
 	adh.Service.GetDispatcher().Register(adminserviceserver.New(adh))
 	adh.Service.Start()
@@ -92,6 +99,9 @@ func (adh *AdminHandler) Start() error {
 
 // Stop stops the handler
 func (adh *AdminHandler) Stop() {
+	if !atomic.CompareAndSwapInt32(&adh.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
+		return
+	}
 	adh.Service.Stop()
 	adh.domainCache.Stop()
 }
