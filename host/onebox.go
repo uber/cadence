@@ -184,6 +184,7 @@ func (c *cadenceImpl) Stop() {
 		c.shutdownWG.Add(3)
 	}
 	c.frontendHandler.Stop()
+	c.adminHandler.Stop()
 	for _, historyHandler := range c.historyHandlers {
 		historyHandler.Stop()
 	}
