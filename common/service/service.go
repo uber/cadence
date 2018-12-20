@@ -150,8 +150,8 @@ func (h *serviceImpl) GetHostName() string {
 
 // Start starts a yarpc service
 func (h *serviceImpl) Start() {
-	if !atomic.CompareAndSwapInt32(&adh.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
-		return nil
+	if !atomic.CompareAndSwapInt32(&h.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+		return
 	}
 
 	var err error
