@@ -22,7 +22,9 @@ package frontend
 
 import (
 	"context"
+	"errors"
 	"github.com/stretchr/testify/suite"
+	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/persistence"
 	"log"
@@ -560,6 +562,152 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Success_ArchivalNotEnabled() {
 	assert.NoError(s.T(), err)
 	mMetadataManager.AssertCalled(s.T(), "CreateDomain", mock.Anything)
 	clusterMetadata.AssertNotCalled(s.T(), "GetDeploymentGroup")
+}
+
+func (s *workflowHandlerSuite) TestDescribeDomain_Success_ArchivalNeverEnabled() {
+	config := NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger))
+	mMetadataManager := &mocks.MetadataManager{}
+	mMetadataManager.On("GetDomain", mock.Anything).Return(persistenceGetDomainResponse("", shared.ArchivalStatusNeverEnabled), nil)
+	mBlobstore := &mocks.Client{}
+	wh := NewWorkflowHandler(s.mockService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
+		s.mockVisibilityMgr, s.mockProducer, mBlobstore)
+	wh.metricsClient = wh.Service.GetMetricsClient()
+	wh.startWG.Done()
+
+	req := &shared.DescribeDomainRequest{
+		Name: common.StringPtr("test-domain"),
+	}
+	result, err := wh.DescribeDomain(context.Background(), req)
+
+	assert.NoError(s.T(), err)
+	assert.NotNil(s.T(), result)
+	assert.NotNil(s.T(), result.Configuration)
+	assert.Equal(s.T(), result.Configuration.GetArchivalStatus(), shared.ArchivalStatusNeverEnabled)
+	assert.Equal(s.T(), result.Configuration.GetArchivalBucketName(), "")
+	assert.Equal(s.T(), result.Configuration.GetArchivalRetentionPeriodInDays(), int32(0))
+	assert.Equal(s.T(), result.Configuration.GetArchivalBucketOwner(), "")
+	mBlobstore.AssertNotCalled(s.T(), "BucketMetadata", mock.Anything, mock.Anything)
+}
+
+func (s *workflowHandlerSuite) TestDescribeDomain_Success_ArchivalEnabled() {
+	config := NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger))
+	mMetadataManager := &mocks.MetadataManager{}
+	mMetadataManager.On("GetDomain", mock.Anything).Return(persistenceGetDomainResponse("bucket-name", shared.ArchivalStatusEnabled), nil)
+	mBlobstore := &mocks.Client{}
+	mBlobstore.On("BucketMetadata", mock.Anything, mock.Anything).Return(bucketMetadataResponse("test-owner", 10), nil)
+	wh := NewWorkflowHandler(s.mockService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
+		s.mockVisibilityMgr, s.mockProducer, mBlobstore)
+	wh.metricsClient = wh.Service.GetMetricsClient()
+	wh.startWG.Done()
+
+	req := &shared.DescribeDomainRequest{
+		Name: common.StringPtr("test-domain"),
+	}
+	result, err := wh.DescribeDomain(context.Background(), req)
+
+	assert.NoError(s.T(), err)
+	assert.NotNil(s.T(), result)
+	assert.NotNil(s.T(), result.Configuration)
+	assert.Equal(s.T(), result.Configuration.GetArchivalStatus(), shared.ArchivalStatusEnabled)
+	assert.Equal(s.T(), result.Configuration.GetArchivalBucketName(), "bucket-name")
+	assert.Equal(s.T(), result.Configuration.GetArchivalRetentionPeriodInDays(), int32(10))
+	assert.Equal(s.T(), result.Configuration.GetArchivalBucketOwner(), "test-owner")
+	mBlobstore.AssertCalled(s.T(), "BucketMetadata", mock.Anything, mock.Anything)
+}
+
+func (s *workflowHandlerSuite) TestDescribeDomain_Success_ArchivalDisabled() {
+	config := NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger))
+	mMetadataManager := &mocks.MetadataManager{}
+	mMetadataManager.On("GetDomain", mock.Anything).Return(persistenceGetDomainResponse("bucket-name", shared.ArchivalStatusDisabled), nil)
+	mBlobstore := &mocks.Client{}
+	mBlobstore.On("BucketMetadata", mock.Anything, mock.Anything).Return(bucketMetadataResponse("test-owner", 10), nil)
+	wh := NewWorkflowHandler(s.mockService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
+		s.mockVisibilityMgr, s.mockProducer, mBlobstore)
+	wh.metricsClient = wh.Service.GetMetricsClient()
+	wh.startWG.Done()
+
+	req := &shared.DescribeDomainRequest{
+		Name: common.StringPtr("test-domain"),
+	}
+	result, err := wh.DescribeDomain(context.Background(), req)
+
+	assert.NoError(s.T(), err)
+	assert.NotNil(s.T(), result)
+	assert.NotNil(s.T(), result.Configuration)
+	assert.Equal(s.T(), result.Configuration.GetArchivalStatus(), shared.ArchivalStatusDisabled)
+	assert.Equal(s.T(), result.Configuration.GetArchivalBucketName(), "bucket-name")
+	assert.Equal(s.T(), result.Configuration.GetArchivalRetentionPeriodInDays(), int32(10))
+	assert.Equal(s.T(), result.Configuration.GetArchivalBucketOwner(), "test-owner")
+	mBlobstore.AssertCalled(s.T(), "BucketMetadata", mock.Anything, mock.Anything)
+}
+
+func (s *workflowHandlerSuite) TestDescribeDomain_Success_BlobstoreReturnsError() {
+	config := NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger))
+	mMetadataManager := &mocks.MetadataManager{}
+	mMetadataManager.On("GetDomain", mock.Anything).Return(persistenceGetDomainResponse("bucket-name", shared.ArchivalStatusDisabled), nil)
+	mBlobstore := &mocks.Client{}
+	mBlobstore.On("BucketMetadata", mock.Anything, mock.Anything).Return(nil, errors.New("blobstore error"))
+	wh := NewWorkflowHandler(s.mockService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
+		s.mockVisibilityMgr, s.mockProducer, mBlobstore)
+	wh.metricsClient = wh.Service.GetMetricsClient()
+	wh.startWG.Done()
+
+	req := &shared.DescribeDomainRequest{
+		Name: common.StringPtr("test-domain"),
+	}
+	result, err := wh.DescribeDomain(context.Background(), req)
+
+	assert.NoError(s.T(), err)
+	assert.NotNil(s.T(), result)
+	assert.NotNil(s.T(), result.Configuration)
+	assert.Equal(s.T(), result.Configuration.GetArchivalStatus(), shared.ArchivalStatusDisabled)
+	assert.Equal(s.T(), result.Configuration.GetArchivalBucketName(), "bucket-name")
+	assert.Equal(s.T(), result.Configuration.GetArchivalRetentionPeriodInDays(), int32(0))
+	assert.Equal(s.T(), result.Configuration.GetArchivalBucketOwner(), "")
+	mBlobstore.AssertCalled(s.T(), "BucketMetadata", mock.Anything, mock.Anything)
+}
+
+func bucketMetadataResponse(owner string, retentionDays int) *blobstore.BucketMetadataResponse {
+	return &blobstore.BucketMetadataResponse{
+		Owner: owner,
+		RetentionDays: retentionDays,
+	}
+}
+
+func persistenceGetDomainResponse(archivalBucket string, archivalStatus shared.ArchivalStatus) *persistence.GetDomainResponse {
+	return &persistence.GetDomainResponse{
+		Info: &persistence.DomainInfo{
+			ID: "test-id",
+			Name: "test-name",
+			Status: 0,
+			Description: "test-description",
+			OwnerEmail: "test-owner-email",
+			Data: make(map[string]string),
+		},
+		Config: &persistence.DomainConfig{
+			Retention: 0,
+			EmitMetric: true,
+			ArchivalBucket: archivalBucket,
+			ArchivalStatus: archivalStatus,
+		},
+		ReplicationConfig: &persistence.DomainReplicationConfig{
+			ActiveClusterName: "active",
+			Clusters: []*persistence.ClusterReplicationConfig{
+				{
+					ClusterName: "active",
+				},
+				{
+					ClusterName: "standby",
+				},
+			},
+		},
+		IsGlobalDomain: false,
+		ConfigVersion: 0,
+		FailoverVersion: 0,
+		FailoverNotificationVersion: 0,
+		NotificationVersion: 0,
+		TableVersion: 0,
+	}
 }
 
 func registerDomainRequest(enableArchival bool, customBucketName *string) *shared.RegisterDomainRequest {
