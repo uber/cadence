@@ -1189,7 +1189,6 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(d
 		DomainUUID:                      common.StringPtr(domainID),
 		StartRequest:                    createRequest,
 		ParentExecutionInfo:             parentExecutionInfo,
-		Attempt:                         common.Int32Ptr(previousExecutionState.GetExecutionInfo().Attempt),
 		LastCompletionResult:            attributes.LastCompletionResult,
 		ContinuedFailureReason:          attributes.FailureReason,
 		ContinuedFailureDetails:         attributes.FailureDetails,
@@ -1202,13 +1201,15 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(d
 		if !expirationTime.IsZero() {
 			req.ExpirationTimestamp = common.Int64Ptr(expirationTime.UnixNano())
 		}
-	} else if attributes.RetryPolicy != nil && attributes.RetryPolicy.GetExpirationIntervalInSeconds() > 0 {
-		// ContinueAsNew by decider or cron, but retry policy has expiration time.
-		expirationTime := time.Now().Add(time.Second * time.Duration(attributes.RetryPolicy.GetExpirationIntervalInSeconds()))
-		req.ExpirationTimestamp = common.Int64Ptr(expirationTime.UnixNano())
-	}
-	if attributes.GetInitiator() == workflow.ContinueAsNewInitiatorCronSchedule {
+	} else {
+		// ContinueAsNew by decider or cron
 		req.Attempt = common.Int32Ptr(0)
+		if attributes.RetryPolicy != nil && attributes.RetryPolicy.GetExpirationIntervalInSeconds() > 0 {
+			// has retry policy and expiration time.
+			expirationSeconds := attributes.RetryPolicy.GetExpirationIntervalInSeconds() + req.GetFirstDecisionTaskBackoffSeconds()
+			expirationTime := time.Now().Add(time.Second * time.Duration(expirationSeconds))
+			req.ExpirationTimestamp = common.Int64Ptr(expirationTime.UnixNano())
+		}
 	}
 
 	// History event only has domainName so domainID has to be passed in explicitly to update the mutable state
@@ -2296,11 +2297,9 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(sour
 		PreviousRunID:        prevRunID,
 		ReplicationState:     newStateBuilder.GetReplicationState(),
 		HasRetryPolicy:       startedAttributes.RetryPolicy != nil,
-		Attempt:              e.executionInfo.Attempt,
 		InitialInterval:      e.executionInfo.InitialInterval,
 		BackoffCoefficient:   e.executionInfo.BackoffCoefficient,
 		MaximumInterval:      e.executionInfo.MaximumInterval,
-		ExpirationTime:       e.executionInfo.ExpirationTime,
 		MaximumAttempts:      e.executionInfo.MaximumAttempts,
 		NonRetriableErrors:   e.executionInfo.NonRetriableErrors,
 		EventStoreVersion:    newStateBuilder.GetEventStoreVersion(),
@@ -2311,8 +2310,9 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(sour
 	if continueAsNewAttributes.GetInitiator() == workflow.ContinueAsNewInitiatorRetryPolicy {
 		// retry
 		continueAsNew.Attempt = continueAsNew.Attempt + 1
-	} else if continueAsNewAttributes.GetInitiator() == workflow.ContinueAsNewInitiatorCronSchedule {
-		// cron
+		continueAsNew.ExpirationTime = e.executionInfo.ExpirationTime
+	} else {
+		// by cron or decider
 		continueAsNew.Attempt = 0
 		if startedAttributes.RetryPolicy != nil && continueAsNew.ExpirationSeconds > 0 {
 			expirationInSeconds := startedAttributes.RetryPolicy.GetExpirationIntervalInSeconds() + continueAsNewAttributes.GetBackoffStartIntervalInSeconds()
