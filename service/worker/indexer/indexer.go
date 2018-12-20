@@ -46,7 +46,6 @@ type (
 
 	// Config contains all configs for indexer
 	Config struct {
-		EnableIndexer            dynamicconfig.BoolPropertyFn
 		IndexerConcurrency       dynamicconfig.IntPropertyFn
 		ESProcessorNumOfWorkers  dynamicconfig.IntPropertyFn
 		ESProcessorBulkActions   dynamicconfig.IntPropertyFn // max number of requests in bulk

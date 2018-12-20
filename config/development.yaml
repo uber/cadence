@@ -109,6 +109,7 @@ kafka:
       dlq-topic: cadence-visibility-dlq
 
 elasticsearch:
+  enable: false
   url:
     scheme: "http"
     host: "127.0.0.1:9200"

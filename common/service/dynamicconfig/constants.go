@@ -458,6 +458,3 @@ func TaskTypeFilter(taskType int) FilterOption {
 		filterMap[TaskType] = taskType
 	}
 }
-
-// DefaultEnableVisibilityToKafka default value for config EnableVisibilityToKafka
-const DefaultEnableVisibilityToKafka = true
