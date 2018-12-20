@@ -24,6 +24,7 @@ import (
 	"context"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/persistence"
 	"log"
 	"os"
 	"testing"
@@ -469,4 +470,65 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidTaskStar
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	assert.Error(s.T(), err)
 	assert.Equal(s.T(), errInvalidTaskStartToCloseTimeoutSeconds, err)
+}
+
+func (s *workflowHandlerSuite) TestRegisterDomain_Failed_CustomBucketGivenButArchivalNotEnabled() {
+	config := NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger))
+	wh := NewWorkflowHandler(s.mockService, config, s.mockMetadataMgr, s.mockHistoryMgr, s.mockHistoryV2Mgr,
+		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient)
+	wh.metricsClient = wh.Service.GetMetricsClient()
+	wh.startWG.Done()
+
+	req := registerDomainRequest(false, common.StringPtr("custom-bucket-name"))
+	err := wh.RegisterDomain(context.Background(), req)
+	assert.Error(s.T(), err)
+	assert.Equal(s.T(), errSettingBucketNameWithoutEnabling, err)
+	s.mockMetadataMgr.AssertNotCalled(s.T(), "CreateDomain", mock.Anything)
+}
+
+func (s *workflowHandlerSuite) TestRegisterDomain_Success_CustomBucketAndArchivalEnabled() {
+	config := NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger))
+	clusterMetadata := &mocks.ClusterMetadata{}
+	clusterMetadata.On("IsGlobalDomainEnabled").Return(false)
+	clusterMetadata.On("GetCurrentClusterName").Return("active")
+	clusterMetadata.On("GetNextFailoverVersion", mock.Anything, mock.Anything).Return(int64(0))
+	mMetadataManager := &mocks.MetadataManager{}
+	mMetadataManager.On("GetDomain", mock.Anything).Return(nil, &shared.EntityNotExistsError{})
+	mMetadataManager.On("CreateDomain", mock.Anything).Return(&persistence.CreateDomainResponse{
+		ID: "test-id",
+	}, nil)
+
+	mService := cs.NewTestService(clusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.logger)
+	wh := NewWorkflowHandler(mService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
+		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient)
+	wh.metricsClient = wh.Service.GetMetricsClient()
+	wh.startWG.Done()
+
+	req := registerDomainRequest(true, common.StringPtr("custom-bucket-name"))
+	err := wh.RegisterDomain(context.Background(), req)
+	assert.NoError(s.T(), err)
+	mMetadataManager.AssertCalled(s.T(), "CreateDomain", mock.Anything)
+}
+
+func registerDomainRequest(enableArchival bool, customBucketName *string) *shared.RegisterDomainRequest {
+	return &shared.RegisterDomainRequest{
+		Name: common.StringPtr("test-domain"),
+		Description: common.StringPtr("test-description"),
+		OwnerEmail: common.StringPtr("test-owner-email"),
+		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(10),
+		EmitMetric: common.BoolPtr(true),
+		Clusters: []*shared.ClusterReplicationConfiguration{
+			{
+				ClusterName: common.StringPtr("active"),
+			},
+			{
+				ClusterName: common.StringPtr("standby"),
+			},
+		},
+		ActiveClusterName: common.StringPtr("active"),
+		Data: make(map[string]string),
+		SecurityToken: common.StringPtr("token"),
+		EnableArchival: common.BoolPtr(enableArchival),
+		CustomArchivalBucketName: customBucketName,
+	}
 }
