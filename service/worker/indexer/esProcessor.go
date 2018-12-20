@@ -34,22 +34,35 @@ import (
 	"time"
 )
 
-// ESProcessor is interface for elastic search bulk processor
-type ESProcessor interface {
-	// Stop processor and clean up
-	Stop()
-	// Add request to bulk, and record kafka message in map with provided key
-	Add(request elastic.BulkableRequest, key string, kafkaMsg messaging.Message)
-}
+type (
+	// ESProcessor is interface for elastic search bulk processor
+	ESProcessor interface {
+		// Stop processor and clean up
+		Stop()
+		// Add request to bulk, and record kafka message in map with provided key
+		Add(request elastic.BulkableRequest, key string, kafkaMsg messaging.Message)
+	}
 
-// esProcessorImpl is agent of elastic.BulkProcessor
-type esProcessorImpl struct {
-	processor     *elastic.BulkProcessor
-	mapToKafkaMsg collection.ConcurrentTxMap // used to map ES request to kafka message. key: esDocID+visType
-	config        *Config
-	logger        bark.Logger
-	metricsClient metrics.Client
-}
+	// ElasticBulkProcessor is interface for elastic.BulkProcessor
+	// (elastic package doesn't provide such interface that tests can mock)
+	ElasticBulkProcessor interface {
+		Start(ctx context.Context) error
+		Stop() error
+		Close() error
+		Stats() elastic.BulkProcessorStats
+		Add(request elastic.BulkableRequest)
+		Flush() error
+	}
+
+	// esProcessorImpl implements ESProcessor, it's an agent of elastic.BulkProcessor
+	esProcessorImpl struct {
+		processor     ElasticBulkProcessor
+		mapToKafkaMsg collection.ConcurrentTxMap // used to map ES request to kafka message. key: esDocID+visType
+		config        *Config
+		logger        bark.Logger
+		metricsClient metrics.Client
+	}
+)
 
 var _ ESProcessor = (*esProcessorImpl)(nil)
 
