@@ -67,10 +67,6 @@ type (
 var _ ESProcessor = (*esProcessorImpl)(nil)
 
 const (
-	esRequestTypeIndex  = "index"
-	esRequestTypeUpdate = "update"
-	esRequestTypeDelete = "delete"
-
 	// retry configs for es bulk processor
 	esProcessorInitialRetryInterval = 200 * time.Millisecond
 	esProcessorMaxRetryInterval     = 20 * time.Second
@@ -141,50 +137,34 @@ func (p *esProcessorImpl) bulkAfterAction(id int64, requests []elastic.BulkableR
 
 	responseItems := response.Items
 	for i := 0; i < len(requests); i++ {
-		req, err := requests[i].Source()
-		if err != nil {
-			p.logger.WithFields(bark.Fields{
-				logging.TagErr:       err,
-				logging.TagESRequest: requests[i].String(),
-			}).Error("Get request source err.")
-			p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
+		visType := p.getVisibilityType(requests[i])
+		if visType == "" {
 			continue
 		}
-
-		var reqHead map[string]map[string]interface{}
-		if err := json.Unmarshal([]byte(req[0]), &reqHead); err != nil {
-			p.logger.WithFields(bark.Fields{
-				logging.TagErr: err,
-			}).Error("Unmarshal request err.")
-			p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
-			continue
-		}
-		var head string
-		for _, header := range reqHead {
-			head = convertESVersionToVisibilityMsgType(header["version"].(float64))
-		}
-
 		responseItem := responseItems[i]
-		for _, res := range responseItem {
-			key := res.Id + head
-			if res.Status >= 200 && res.Status < 300 {
-				// success, ack kafka msg
+		for _, resp := range responseItem {
+			key := resp.Id + visType
+			switch {
+			case isResponseSuccess(resp.Status):
 				p.ackKafkaMsg(key)
-			} else if res.Status == 409 {
-				// version conflict, discard
-				p.ackKafkaMsg(key)
-				//p.logger.Info("version conflict")
-			} else {
-				// re-enqueue error request to retry until success
-				if r := p.getESRequest(req); r != nil {
-					p.processor.Add(r)
-				}
+			case !isResponseRetriable(resp.Status):
+				p.nackKafkaMsg(key)
+			default:
+				// do nothing, bulk processor will retry
 			}
 		}
 	}
 }
 
 func (p *esProcessorImpl) ackKafkaMsg(key string) {
+	p.ackKafkaMsgHelper(key, false)
+}
+
+func (p *esProcessorImpl) nackKafkaMsg(key string) {
+	p.ackKafkaMsgHelper(key, true)
+}
+
+func (p *esProcessorImpl) ackKafkaMsgHelper(key string, nack bool) {
 	msg, ok := p.mapToKafkaMsg.Get(key)
 	if !ok {
 		return // duplicate kafka message
@@ -196,8 +176,11 @@ func (p *esProcessorImpl) ackKafkaMsg(key string) {
 		}).Fatal("Message is not kafka message.")
 	}
 
-	kafkaMsg.Ack()
-	//p.logger.Info("ack kafka message with key:", key)
+	if nack {
+		kafkaMsg.Nack()
+	} else {
+		kafkaMsg.Ack()
+	}
 	p.mapToKafkaMsg.Remove(key)
 }
 
@@ -210,63 +193,34 @@ func (p *esProcessorImpl) hashFn(key interface{}) uint32 {
 	return uint32(common.WorkflowIDToHistoryShard(id, numOfShards))
 }
 
-// getESRequest from elastic.BulkableRequest.Source()
-func (p *esProcessorImpl) getESRequest(input []string) elastic.BulkableRequest {
+func (p *esProcessorImpl) getVisibilityType(request elastic.BulkableRequest) string {
+	req, err := request.Source()
+	if err != nil {
+		p.logger.WithFields(bark.Fields{
+			logging.TagErr:       err,
+			logging.TagESRequest: request.String(),
+		}).Error("Get request source err.")
+		p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
+		return ""
+	}
+
 	var reqHead map[string]map[string]interface{}
-	if err := json.Unmarshal([]byte(input[0]), &reqHead); err != nil {
+	if err := json.Unmarshal([]byte(req[0]), &reqHead); err != nil {
 		p.logger.WithFields(bark.Fields{
 			logging.TagErr: err,
 		}).Error("Unmarshal request err.")
 		p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
-		return nil
+		return ""
 	}
 
-	var index string
-	var id string
-	var typ string
-	var version int64
-	var versionType string
-	for _, m := range reqHead {
-		index = m["_index"].(string)
-		id = m["_id"].(string)
-		typ = m["_type"].(string)
-		version = int64(m["version"].(float64))
-		versionType = m["version_type"].(string)
+	var visType string
+	for _, header := range reqHead {
+		visType = p.convertESVersionToVisibilityType(header["version"].(float64))
 	}
-
-	var doc indexer.VisibilityMsg
-	if len(input) == 2 {
-		if err := json.Unmarshal([]byte(input[1]), &doc); err != nil {
-			p.logger.WithFields(bark.Fields{
-				logging.TagErr: err,
-			}).Error("Unmarshal request body err.")
-			return nil
-		}
-	}
-
-	switch getReqType(reqHead) {
-	case esRequestTypeIndex:
-		return elastic.NewBulkIndexRequest().
-			Index(index).
-			Type(typ).
-			Id(id).
-			VersionType(versionType).
-			Version(version).
-			Doc(doc)
-	case esRequestTypeDelete:
-	}
-
-	return nil
+	return visType
 }
 
-func getReqType(input map[string]map[string]interface{}) string {
-	for k := range input {
-		return k
-	}
-	return ""
-}
-
-func convertESVersionToVisibilityMsgType(version float64) string {
+func (p *esProcessorImpl) convertESVersionToVisibilityType(version float64) string {
 	switch version {
 	case float64(versionForOpen):
 		return indexer.VisibilityMsgTypeOpen.String()
@@ -275,5 +229,31 @@ func convertESVersionToVisibilityMsgType(version float64) string {
 	case float64(versionForDelete):
 		return indexer.VisibilityMsgTypeDelete.String()
 	}
+
+	p.logger.Errorf("Unknown version %v in ES request. ", version)
+	p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
 	return ""
+}
+
+// 409 - Version Conflict
+// 404 - Not Found
+func isResponseSuccess(status int) bool {
+	if status > 200 && status < 300 || status == 409 || status == 404 {
+		return true
+	}
+	return false
+}
+
+// isResponseRetriable is complaint with elastic.BulkProcessorService.RetryItemStatusCodes
+// responses with these status will be kept in queue and retried until success
+// 408 - Request Timeout
+// 429 - Too Many Requests
+// 503 - Service Unavailable
+// 507 - Insufficient Storage
+func isResponseRetriable(status int) bool {
+	switch status {
+	case 408, 429, 503, 507:
+		return true
+	}
+	return false
 }

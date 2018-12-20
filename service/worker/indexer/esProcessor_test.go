@@ -140,12 +140,12 @@ func (s *esProcessorSuite) TestAdd() {
 //}
 
 func (s *esProcessorSuite) TestConvertESVersionToVisibilityMsgType() {
-	typ := convertESVersionToVisibilityMsgType(versionForOpen)
+	typ := s.esProcessor.convertESVersionToVisibilityType(versionForOpen)
 	s.Equal(indexer.VisibilityMsgTypeOpen.String(), typ)
-	typ = convertESVersionToVisibilityMsgType(versionForClose)
+	typ = s.esProcessor.convertESVersionToVisibilityType(versionForClose)
 	s.Equal(indexer.VisibilityMsgTypeClosed.String(), typ)
-	typ = convertESVersionToVisibilityMsgType(versionForDelete)
+	typ = s.esProcessor.convertESVersionToVisibilityType(versionForDelete)
 	s.Equal(indexer.VisibilityMsgTypeDelete.String(), typ)
-	typ = convertESVersionToVisibilityMsgType(0)
+	typ = s.esProcessor.convertESVersionToVisibilityType(0)
 	s.Equal("", typ)
 }
