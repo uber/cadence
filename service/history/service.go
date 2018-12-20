@@ -23,6 +23,7 @@ package history
 import (
 	"time"
 
+	"fmt"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
 	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
@@ -227,6 +228,7 @@ type Service struct {
 // NewService builds a new cadence-history service
 func NewService(params *service.BootstrapParams) common.Daemon {
 	params.UpdateLoggerWithServiceName(common.HistoryServiceName)
+	fmt.Println(params.ESConfig)
 	return &Service{
 		params: params,
 		stopC:  make(chan struct{}),
