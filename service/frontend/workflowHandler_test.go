@@ -508,6 +508,58 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Success_CustomBucketAndArchiva
 	err := wh.RegisterDomain(context.Background(), req)
 	assert.NoError(s.T(), err)
 	mMetadataManager.AssertCalled(s.T(), "CreateDomain", mock.Anything)
+	clusterMetadata.AssertNotCalled(s.T(), "GetDeploymentGroup")
+}
+
+func (s *workflowHandlerSuite) TestRegisterDomain_Success_ArchivalEnabledWithoutCustomBucket() {
+	config := NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger))
+	clusterMetadata := &mocks.ClusterMetadata{}
+	clusterMetadata.On("IsGlobalDomainEnabled").Return(false)
+	clusterMetadata.On("GetCurrentClusterName").Return("active")
+	clusterMetadata.On("GetNextFailoverVersion", mock.Anything, mock.Anything).Return(int64(0))
+	clusterMetadata.On("GetDeploymentGroup").Return("test-deployment-group")
+	mMetadataManager := &mocks.MetadataManager{}
+	mMetadataManager.On("GetDomain", mock.Anything).Return(nil, &shared.EntityNotExistsError{})
+	mMetadataManager.On("CreateDomain", mock.Anything).Return(&persistence.CreateDomainResponse{
+		ID: "test-id",
+	}, nil)
+
+	mService := cs.NewTestService(clusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.logger)
+	wh := NewWorkflowHandler(mService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
+		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient)
+	wh.metricsClient = wh.Service.GetMetricsClient()
+	wh.startWG.Done()
+
+	req := registerDomainRequest(true, common.StringPtr(""))
+	err := wh.RegisterDomain(context.Background(), req)
+	assert.NoError(s.T(), err)
+	mMetadataManager.AssertCalled(s.T(), "CreateDomain", mock.Anything)
+	clusterMetadata.AssertCalled(s.T(), "GetDeploymentGroup")
+}
+
+func (s *workflowHandlerSuite) TestRegisterDomain_Success_ArchivalNotEnabled() {
+	config := NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger))
+	clusterMetadata := &mocks.ClusterMetadata{}
+	clusterMetadata.On("IsGlobalDomainEnabled").Return(false)
+	clusterMetadata.On("GetCurrentClusterName").Return("active")
+	clusterMetadata.On("GetNextFailoverVersion", mock.Anything, mock.Anything).Return(int64(0))
+	mMetadataManager := &mocks.MetadataManager{}
+	mMetadataManager.On("GetDomain", mock.Anything).Return(nil, &shared.EntityNotExistsError{})
+	mMetadataManager.On("CreateDomain", mock.Anything).Return(&persistence.CreateDomainResponse{
+		ID: "test-id",
+	}, nil)
+
+	mService := cs.NewTestService(clusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.logger)
+	wh := NewWorkflowHandler(mService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
+		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient)
+	wh.metricsClient = wh.Service.GetMetricsClient()
+	wh.startWG.Done()
+
+	req := registerDomainRequest(false, common.StringPtr(""))
+	err := wh.RegisterDomain(context.Background(), req)
+	assert.NoError(s.T(), err)
+	mMetadataManager.AssertCalled(s.T(), "CreateDomain", mock.Anything)
+	clusterMetadata.AssertNotCalled(s.T(), "GetDeploymentGroup")
 }
 
 func registerDomainRequest(enableArchival bool, customBucketName *string) *shared.RegisterDomainRequest {
