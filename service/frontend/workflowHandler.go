@@ -427,6 +427,9 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 		if cfg.ArchivalBucketOwner != nil || cfg.ArchivalRetentionPeriodInDays != nil {
 			return nil, wh.error(errDisallowedBucketMetadata, scope)
 		}
+		if wh.customBucketNameProvided(cfg.ArchivalBucketName) && cfg.GetArchivalStatus() != gen.ArchivalStatusEnabled {
+			return nil, wh.error(errSettingBucketNameWithoutEnabling, scope)
+		}
 	}
 
 	// don't require permission for failover request
