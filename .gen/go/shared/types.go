@@ -24933,8 +24933,26 @@ func (v *RegisterDomainRequest) GetSecurityToken() (o string) {
 	return
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
+// GetEnableArchival returns the value of EnableArchival if it is set or its
+// zero value if it is unset.
+func (v *RegisterDomainRequest) GetEnableArchival() (o bool) {
+	if v.EnableArchival != nil {
+		return *v.EnableArchival
+	}
+
+	return
+}
+
+// GetCustomArchivalBucketName returns the value of CustomArchivalBucketName if it is set or its
+// zero value if it is unset.
+func (v *RegisterDomainRequest) GetCustomArchivalBucketName() (o string) {
+	if v.CustomArchivalBucketName != nil {
+		return *v.CustomArchivalBucketName
+	}
+
+	return
+}
+
 type ReplicationInfo struct {
 	Version     *int64 `json:"version,omitempty"`
 	LastEventId *int64 `json:"lastEventId,omitempty"`
@@ -25092,38 +25110,16 @@ func (v *ReplicationInfo) MarshalLogObject(enc zapcore.ObjectEncoder) (err error
 func (v *ReplicationInfo) GetVersion() (o int64) {
 	if v.Version != nil {
 		return *v.Version
-=======
-// GetArchivalEnabled returns the value of ArchivalEnabled if it is set or its
-// zero value if it is unset.
-func (v *RegisterDomainRequest) GetArchivalEnabled() (o bool) {
-	if v.ArchivalEnabled != nil {
-		return *v.ArchivalEnabled
->>>>>>> Update IDL
-=======
-// GetEnableArchival returns the value of EnableArchival if it is set or its
-// zero value if it is unset.
-func (v *RegisterDomainRequest) GetEnableArchival() (o bool) {
-	if v.EnableArchival != nil {
-		return *v.EnableArchival
->>>>>>> rename thrift field
 	}
 
 	return
 }
 
-<<<<<<< HEAD
 // GetLastEventId returns the value of LastEventId if it is set or its
 // zero value if it is unset.
 func (v *ReplicationInfo) GetLastEventId() (o int64) {
 	if v.LastEventId != nil {
 		return *v.LastEventId
-=======
-// GetCustomArchivalBucketName returns the value of CustomArchivalBucketName if it is set or its
-// zero value if it is unset.
-func (v *RegisterDomainRequest) GetCustomArchivalBucketName() (o string) {
-	if v.CustomArchivalBucketName != nil {
-		return *v.CustomArchivalBucketName
->>>>>>> Update IDL
 	}
 
 	return
