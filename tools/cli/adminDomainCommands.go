@@ -40,7 +40,7 @@ Once archival is finished this file should be deleted and archival config change
 
 // AdminRegisterDomain register a domain
 func AdminRegisterDomain(c *cli.Context) {
-	frontendClient := cFactory.ServerFrontendClient(c)
+	frontendClient := CFactory.ServerFrontendClient(c)
 	domain := getRequiredGlobalOption(c, FlagDomain)
 
 	description := c.String(FlagDescription)
@@ -139,7 +139,7 @@ func AdminRegisterDomain(c *cli.Context) {
 
 // AdminUpdateDomain updates a domain
 func AdminUpdateDomain(c *cli.Context) {
-	frontendClient := cFactory.ServerFrontendClient(c)
+	frontendClient := CFactory.ServerFrontendClient(c)
 	domain := getRequiredGlobalOption(c, FlagDomain)
 
 	var updateRequest *shared.UpdateDomainRequest
@@ -268,7 +268,7 @@ func AdminUpdateDomain(c *cli.Context) {
 
 // AdminDescribeDomain updates a domain
 func AdminDescribeDomain(c *cli.Context) {
-	frontendClient := cFactory.ServerFrontendClient(c)
+	frontendClient := CFactory.ServerFrontendClient(c)
 	domain := getRequiredGlobalOption(c, FlagDomain)
 
 	ctx, cancel := newContext()

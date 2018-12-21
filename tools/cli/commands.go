@@ -181,7 +181,7 @@ const (
 )
 
 var (
-	cFactory ClientFactory
+	CFactory ClientFactory
 
 	colorRed     = color.New(color.FgRed).SprintFunc()
 	colorMagenta = color.New(color.FgMagenta).SprintFunc()
@@ -529,7 +529,7 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 
 // StartWorkflow starts a new workflow execution
 func StartWorkflow(c *cli.Context) {
-	serviceClient := cFactory.ClientFrontendClient(c)
+	serviceClient := CFactory.ClientFrontendClient(c)
 
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	taskList := getRequiredOption(c, FlagTaskList)
@@ -579,7 +579,7 @@ func StartWorkflow(c *cli.Context) {
 
 // RunWorkflow starts a new workflow execution and print workflow progress and result
 func RunWorkflow(c *cli.Context) {
-	serviceClient := cFactory.ClientFrontendClient(c)
+	serviceClient := CFactory.ClientFrontendClient(c)
 
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	taskList := getRequiredOption(c, FlagTaskList)
@@ -749,7 +749,7 @@ func CancelWorkflow(c *cli.Context) {
 
 // SignalWorkflow signals a workflow execution
 func SignalWorkflow(c *cli.Context) {
-	serviceClient := cFactory.ClientFrontendClient(c)
+	serviceClient := CFactory.ClientFrontendClient(c)
 
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)
@@ -792,7 +792,7 @@ func QueryWorkflowUsingStackTrace(c *cli.Context) {
 }
 
 func queryWorkflowHelper(c *cli.Context, queryType string) {
-	serviceClient := cFactory.ClientFrontendClient(c)
+	serviceClient := CFactory.ClientFrontendClient(c)
 
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)
@@ -1166,12 +1166,12 @@ func ObserveHistoryWithID(c *cli.Context) {
 }
 
 func getDomainClient(c *cli.Context) client.DomainClient {
-	return client.NewDomainClient(cFactory.ClientFrontendClient(c), &client.Options{})
+	return client.NewDomainClient(CFactory.ClientFrontendClient(c), &client.Options{})
 }
 
 func getWorkflowClient(c *cli.Context) client.Client {
 	domain := getRequiredGlobalOption(c, FlagDomain)
-	return client.NewClient(cFactory.ClientFrontendClient(c), domain, &client.Options{})
+	return client.NewClient(CFactory.ClientFrontendClient(c), domain, &client.Options{})
 }
 
 func getRequiredOption(c *cli.Context, optionName string) string {
