@@ -100,7 +100,7 @@ var (
 				clusterName[0]: config.Address{RPCName: common.FrontendServiceName, RPCAddress: clusterAddress[0]},
 				clusterName[1]: config.Address{RPCName: common.FrontendServiceName, RPCAddress: clusterAddress[1]},
 			},
-			DeploymentGroup:                "test",
+			DeploymentGroup: "test",
 		},
 		{
 			EnableGlobalDomain:             true,
@@ -112,7 +112,7 @@ var (
 				clusterName[0]: config.Address{RPCName: common.FrontendServiceName, RPCAddress: clusterAddress[0]},
 				clusterName[1]: config.Address{RPCName: common.FrontendServiceName, RPCAddress: clusterAddress[1]},
 			},
-			DeploymentGroup:                "test",
+			DeploymentGroup: "test",
 		},
 	}
 	clusterReplicationConfig = []*workflow.ClusterReplicationConfiguration{
