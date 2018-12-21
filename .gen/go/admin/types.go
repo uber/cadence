@@ -815,7 +815,6 @@ func (v *GetWorkflowExecutionRawHistoryRequest) GetNextPageToken() (o []byte) {
 }
 
 type GetWorkflowExecutionRawHistoryResponse struct {
-	BranchToken       []byte                             `json:"branchToken,omitempty"`
 	NextPageToken     []byte                             `json:"nextPageToken,omitempty"`
 	HistoryBatches    []*shared.DataBlob                 `json:"historyBatches,omitempty"`
 	ReplicationInfo   map[string]*shared.ReplicationInfo `json:"replicationInfo,omitempty"`
@@ -906,26 +905,18 @@ func (_Map_String_ReplicationInfo_MapItemList) Close() {}
 //   }
 func (v *GetWorkflowExecutionRawHistoryResponse) ToWire() (wire.Value, error) {
 	var (
-		fields [5]wire.Field
+		fields [4]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
-	if v.BranchToken != nil {
-		w, err = wire.NewValueBinary(v.BranchToken), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 10, Value: w}
-		i++
-	}
 	if v.NextPageToken != nil {
 		w, err = wire.NewValueBinary(v.NextPageToken), error(nil)
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 20, Value: w}
+		fields[i] = wire.Field{ID: 10, Value: w}
 		i++
 	}
 	if v.HistoryBatches != nil {
@@ -933,7 +924,7 @@ func (v *GetWorkflowExecutionRawHistoryResponse) ToWire() (wire.Value, error) {
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 30, Value: w}
+		fields[i] = wire.Field{ID: 20, Value: w}
 		i++
 	}
 	if v.ReplicationInfo != nil {
@@ -941,7 +932,7 @@ func (v *GetWorkflowExecutionRawHistoryResponse) ToWire() (wire.Value, error) {
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 40, Value: w}
+		fields[i] = wire.Field{ID: 30, Value: w}
 		i++
 	}
 	if v.EventStoreVersion != nil {
@@ -949,7 +940,7 @@ func (v *GetWorkflowExecutionRawHistoryResponse) ToWire() (wire.Value, error) {
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 50, Value: w}
+		fields[i] = wire.Field{ID: 40, Value: w}
 		i++
 	}
 
@@ -1038,21 +1029,13 @@ func (v *GetWorkflowExecutionRawHistoryResponse) FromWire(w wire.Value) error {
 		switch field.ID {
 		case 10:
 			if field.Value.Type() == wire.TBinary {
-				v.BranchToken, err = field.Value.GetBinary(), error(nil)
-				if err != nil {
-					return err
-				}
-
-			}
-		case 20:
-			if field.Value.Type() == wire.TBinary {
 				v.NextPageToken, err = field.Value.GetBinary(), error(nil)
 				if err != nil {
 					return err
 				}
 
 			}
-		case 30:
+		case 20:
 			if field.Value.Type() == wire.TList {
 				v.HistoryBatches, err = _List_DataBlob_Read(field.Value.GetList())
 				if err != nil {
@@ -1060,7 +1043,7 @@ func (v *GetWorkflowExecutionRawHistoryResponse) FromWire(w wire.Value) error {
 				}
 
 			}
-		case 40:
+		case 30:
 			if field.Value.Type() == wire.TMap {
 				v.ReplicationInfo, err = _Map_String_ReplicationInfo_Read(field.Value.GetMap())
 				if err != nil {
@@ -1068,7 +1051,7 @@ func (v *GetWorkflowExecutionRawHistoryResponse) FromWire(w wire.Value) error {
 				}
 
 			}
-		case 50:
+		case 40:
 			if field.Value.Type() == wire.TI32 {
 				var x int32
 				x, err = field.Value.GetI32(), error(nil)
@@ -1091,12 +1074,8 @@ func (v *GetWorkflowExecutionRawHistoryResponse) String() string {
 		return "<nil>"
 	}
 
-	var fields [5]string
+	var fields [4]string
 	i := 0
-	if v.BranchToken != nil {
-		fields[i] = fmt.Sprintf("BranchToken: %v", v.BranchToken)
-		i++
-	}
 	if v.NextPageToken != nil {
 		fields[i] = fmt.Sprintf("NextPageToken: %v", v.NextPageToken)
 		i++
@@ -1159,9 +1138,6 @@ func (v *GetWorkflowExecutionRawHistoryResponse) Equals(rhs *GetWorkflowExecutio
 	} else if rhs == nil {
 		return false
 	}
-	if !((v.BranchToken == nil && rhs.BranchToken == nil) || (v.BranchToken != nil && rhs.BranchToken != nil && bytes.Equal(v.BranchToken, rhs.BranchToken))) {
-		return false
-	}
 	if !((v.NextPageToken == nil && rhs.NextPageToken == nil) || (v.NextPageToken != nil && rhs.NextPageToken != nil && bytes.Equal(v.NextPageToken, rhs.NextPageToken))) {
 		return false
 	}
@@ -1206,9 +1182,6 @@ func (v *GetWorkflowExecutionRawHistoryResponse) MarshalLogObject(enc zapcore.Ob
 	if v == nil {
 		return nil
 	}
-	if v.BranchToken != nil {
-		enc.AddString("branchToken", base64.StdEncoding.EncodeToString(v.BranchToken))
-	}
 	if v.NextPageToken != nil {
 		enc.AddString("nextPageToken", base64.StdEncoding.EncodeToString(v.NextPageToken))
 	}
@@ -1222,16 +1195,6 @@ func (v *GetWorkflowExecutionRawHistoryResponse) MarshalLogObject(enc zapcore.Ob
 		enc.AddInt32("eventStoreVersion", *v.EventStoreVersion)
 	}
 	return err
-}
-
-// GetBranchToken returns the value of BranchToken if it is set or its
-// zero value if it is unset.
-func (v *GetWorkflowExecutionRawHistoryResponse) GetBranchToken() (o []byte) {
-	if v.BranchToken != nil {
-		return v.BranchToken
-	}
-
-	return
 }
 
 // GetNextPageToken returns the value of NextPageToken if it is set or its

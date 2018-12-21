@@ -24,6 +24,7 @@ import (
 	"context"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"strconv"
 
@@ -169,6 +170,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 	sw := adh.startRequestProfile(scope)
 	defer sw.Stop()
 	var err error
+	var size int
 
 	domainID, err := adh.domainCache.GetDomainID(request.GetDomain())
 	if err != nil {
@@ -261,7 +263,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 
 	// TODO need to deal with transient decision if to be used by client getting history
 	var historyBatches []*gen.History
-	_, historyBatches, token.PersistenceToken, _, err = historyService.PaginateHistory(
+	_, historyBatches, token.PersistenceToken, size, err = historyService.PaginateHistory(
 		adh.historyMgr,
 		adh.historyV2Mgr,
 		adh.metricsClient,
@@ -280,6 +282,8 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 	if err != nil {
 		return nil, err
 	}
+
+	adh.metricsClient.RecordTimer(scope, metrics.HistorySize, time.Duration(size))
 
 	serializer := persistence.NewHistorySerializer()
 	blobs := []*gen.DataBlob{}
