@@ -215,7 +215,13 @@ func (p *esProcessorImpl) getVisibilityType(request elastic.BulkableRequest) str
 
 	var visType string
 	for _, header := range reqHead {
-		visType = p.convertESVersionToVisibilityType(header["version"].(float64))
+		h, ok := header["version"].(float64)
+		if !ok {
+			p.logger.Error("Request missing version field.")
+			p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
+			return ""
+		}
+		visType = p.convertESVersionToVisibilityType(h)
 	}
 	return visType
 }
@@ -238,7 +244,7 @@ func (p *esProcessorImpl) convertESVersionToVisibilityType(version float64) stri
 // 409 - Version Conflict
 // 404 - Not Found
 func isResponseSuccess(status int) bool {
-	if status > 200 && status < 300 || status == 409 || status == 404 {
+	if status >= 200 && status < 300 || status == 409 || status == 404 {
 		return true
 	}
 	return false
