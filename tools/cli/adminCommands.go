@@ -109,7 +109,7 @@ func AdminShowWorkflow(c *cli.Context) {
 
 // AdminDescribeWorkflow describe a new workflow execution for admin
 func AdminDescribeWorkflow(c *cli.Context) {
-	adminClient := CFactory.ServerAdminClient(c)
+	adminClient := cFactory.ServerAdminClient(c)
 
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)
@@ -267,7 +267,7 @@ func AdminGetShardID(c *cli.Context) {
 
 // AdminDescribeHistoryHost describes history host
 func AdminDescribeHistoryHost(c *cli.Context) {
-	adminClient := CFactory.ServerAdminClient(c)
+	adminClient := cFactory.ServerAdminClient(c)
 
 	wid := c.String(FlagWorkflowID)
 	sid := c.Int(FlagShardID)

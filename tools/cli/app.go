@@ -100,7 +100,7 @@ func NewCliApp() *cli.App {
 	}
 
 	// set builder if not customized
-	if CFactory == nil {
+	if cFactory == nil {
 		SetFactory(NewClientFactory())
 	}
 	return app
