@@ -76,5 +76,5 @@ clustersInfo:
   defaultArchivalBucket: "cadence-development"
 
 blobstore:
-  dataDirectory: "/tmp/blobstore/"
-  dynamicBucketCreation: true
+  blobstoreDirectory: "/tmp/blobstore/"
+  createDirectories: true

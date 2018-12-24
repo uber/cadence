@@ -21,42 +21,86 @@
 package blobstore
 
 import (
+	"errors"
 	"context"
+	"path/filepath"
+)
+
+var (
+	errDirectoryDidNotExist = errors.New("needed directory did not exist and createDirectories is disabled")
 )
 
 type (
 	// Config describes the configuration needed to construct a blobstore client backed by file system
 	Config struct {
-		DataDirectory         string `yaml:"dataDirectory"`
-		DynamicBucketCreation bool   `yaml:"dynamicBucketCreation"`
+		BlobstoreDirectory         string `yaml:"blobstoreDirectory"`
+		CreateDirectories bool   `yaml:"createDirectories"`
 	}
 
 	fileBlobstoreClient struct {
-		dataDirectory         string
-		defaultArchivalBucket string
-		dynamicBucketCreation bool
+		blobstoreDirectoryPath         string
+		defaultBucketDirectoryPath string
+		createDirectories bool
 	}
 )
 
-func NewFileBlobstoreClient(dataDirectory string, defaultArchivalBucket string, dynamicBucketCreation bool) (Client, error) {
-	// basically we will make the default archival bucket as a directory under dataDir
+// TODO: figure out how I want to name the paths, my current thought is
+// blobstorePath and defaultBucketPath (I really don't know whats best here)?
+// blobstoreDirPath and defaultBucketDirPath??
+
+func NewFileBlobstoreClient(blobstoreDirectoryPath string, defaultBucketName string, createDirectories bool) (Client, error) {
+	blobstoreDirExists, err := directoryExists(blobstoreDirectoryPath)
+	if err != nil {
+		return nil, err
+	}
+	if !blobstoreDirExists {
+		if !createDirectories {
+			return nil, errDirectoryDidNotExist
+		}
+		if err = ensureDirectoryExists(blobstoreDirectoryPath); err != nil {
+			return nil, err
+		}
+	}
+
+	defaultBucketDirectoryPath := constructBucketDirectoryPath(blobstoreDirectoryPath, defaultBucketName)
+	defaultBucketExists, err := directoryExists(defaultBucketDirectoryPath)
+	if err != nil {
+		return nil, err
+	}
+	if !defaultBucketExists {
+		if !createDirectories {
+			return nil, errDirectoryDidNotExist
+		}
+		if err = ensureDirectoryExists(defaultBucketDirectory); err != nil {
+			return nil, err
+		}
+	}
+
 	return &fileBlobstoreClient{
-		dataDirectory:         dataDirectory,
-		defaultArchivalBucket: defaultArchivalBucket,
-		dynamicBucketCreation: dynamicBucketCreation,
+		blobstoreDirectoryPath:         blobstoreDirectoryPath,
+		defaultBucketDirectoryPath: defaultBucketDirectory,
+		createDirectories: createDirectories,
 	}, nil
 }
 
-func (c *fileBlobstoreClient) UploadBlob(ctx context.Context, bucket string, path string, blob *Blob) error {
+func (c *fileBlobstoreClient) UploadBlob(ctx context.Context, bucket string, filename string, blob *Blob) error {
 	return nil
 }
 
-func (c *fileBlobstoreClient) DownloadBlob(ctx context.Context, bucket string, path string) (*Blob, error) {
+func (c *fileBlobstoreClient) DownloadBlob(ctx context.Context, bucket string, filename string) (*Blob, error) {
 	return nil, nil
 }
 
 func (c *fileBlobstoreClient) BucketMetadata(ctx context.Context, bucket string) (*BucketMetadataResponse, error) {
 	return nil, nil
+}
+
+func constructBucketDirectoryPath(blobstoreDirectory string, bucketName string) string {
+	return filepath.Join(blobstoreDirectory, bucketName)
+}
+
+func constructBlobFilepath(blobstoreDirectory string, bucket string, filename string) string {
+	return filepath.Join(blobstoreDirectory, bucket, filename)
 }
 
 // what do the contents of these files look like?

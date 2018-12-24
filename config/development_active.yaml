@@ -112,5 +112,5 @@ kafka:
       dlq-topic: standby-dlq
 
 blobstore:
-  dataDirectory: "/tmp/blobstore/"
-  dynamicBucketCreation: true
+  blobstoreDirectory: "/tmp/blobstore/"
+  createDirectories: true

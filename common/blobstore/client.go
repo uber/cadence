@@ -51,7 +51,7 @@ type BucketMetadataResponse struct {
 
 // Client is used to operate on blobs in a blobstore
 type Client interface {
-	UploadBlob(ctx context.Context, bucket string, path string, blob *Blob) error
-	DownloadBlob(ctx context.Context, bucket string, path string) (*Blob, error)
+	UploadBlob(ctx context.Context, bucket string, filename string, blob *Blob) error
+	DownloadBlob(ctx context.Context, bucket string, filename string) (*Blob, error)
 	BucketMetadata(ctx context.Context, bucket string) (*BucketMetadataResponse, error)
 }
