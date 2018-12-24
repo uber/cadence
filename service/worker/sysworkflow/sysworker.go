@@ -24,7 +24,7 @@ import (
 	"context"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/client/frontend"
-	"github.com/uber/cadence/common/archival"
+	"github.com/uber/cadence/common/blobstore"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/worker"
 	"go.uber.org/cadence/workflow"
@@ -46,7 +46,7 @@ func init() {
 }
 
 // NewSysWorker returns a new SysWorker
-func NewSysWorker(frontendClient frontend.Client, scope tally.Scope, archivalClient archival.Client) *SysWorker {
+func NewSysWorker(frontendClient frontend.Client, scope tally.Scope, archivalClient blobstore.Client) *SysWorker {
 	logger, _ := zap.NewProduction()
 	actCtx := context.WithValue(context.Background(), archivalClientKey, archivalClient)
 	actCtx = context.WithValue(context.Background(), frontendClientKey, frontendClient)

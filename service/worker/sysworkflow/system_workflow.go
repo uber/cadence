@@ -25,14 +25,11 @@ import (
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/archival"
 	"github.com/uber/cadence/common/logging"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/.gen/go/shared"
-	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
-	"math/rand"
 	"time"
 )
 
@@ -46,7 +43,7 @@ func SystemWorkflow(ctx workflow.Context) error {
 	logger.Info("started new system workflow")
 	signalsHandled := 0
 	for ; signalsHandled < SignalsUntilContinueAsNew; signalsHandled++ {
-		var signal Signal
+		var signal signal
 		if more := ch.Receive(ctx, &signal); !more {
 			scope.Counter(ChannelClosedUnexpectedlyError).Inc(1)
 			logger.Error("cadence channel was unexpectedly closed")
@@ -56,7 +53,7 @@ func SystemWorkflow(ctx workflow.Context) error {
 	}
 
 	for {
-		var signal Signal
+		var signal signal
 		if ok := ch.ReceiveAsync(&signal); !ok {
 			break
 		}
@@ -72,7 +69,7 @@ func SystemWorkflow(ctx workflow.Context) error {
 	return workflow.NewContinueAsNewError(ctx, SystemWorkflowFnName)
 }
 
-func selectSystemTask(scope tally.Scope, signal Signal, ctx workflow.Context, logger *zap.Logger) {
+func selectSystemTask(scope tally.Scope, signal signal, ctx workflow.Context, logger *zap.Logger) {
 	scope.Counter(HandledSignalCount).Inc(1)
 
 	ao := workflow.ActivityOptions{
@@ -91,7 +88,7 @@ func selectSystemTask(scope tally.Scope, signal Signal, ctx workflow.Context, lo
 
 	actCtx := workflow.WithActivityOptions(ctx, ao)
 	switch signal.RequestType {
-	case ArchivalRequest:
+	case archivalRequest:
 		if err := workflow.ExecuteActivity(
 			actCtx,
 			ArchivalActivityFnName,
@@ -107,43 +104,8 @@ func selectSystemTask(scope tally.Scope, signal Signal, ctx workflow.Context, lo
 }
 
 // ArchivalActivity is the archival activity code
-func ArchivalActivity(
-	ctx context.Context,
-	request archival.PutRequest,
-) error {
-	userWorkflowID := request.WorkflowID
-	userRunID := request.RunID
-
-	logger := activity.GetLogger(ctx)
-	logger.Info("starting archival",
-		zap.String(logging.TagUserWorkflowID, userWorkflowID),
-		zap.String(logging.TagUserRunID, userRunID))
-
-	// TODO: do not actually access history until timer to purge history is moved here
-	//his, err := history(ctx, domainName, userWorkflowID, userRunID)
-	//if err != nil {
-	//	logger.Error("failed to get history")
-	//	return err
-	//}
-
-	archivalClient := ctx.Value(archivalClientKey).(archival.Client)
-	err := archivalClient.PutWorkflow(ctx, &request)
-	logger.Info("called archive", zap.Error(err))
-
-	for i := 0; i < 20; i++ {
-		time.Sleep(100 * time.Millisecond)
-		activity.RecordHeartbeat(ctx, i)
-
-		// if activity failure occurs restart the activity from the beginning
-		if 0 == rand.Intn(40) {
-			logger.Info("activity failed, will retry...")
-			return cadence.NewCustomError("some-retryable-error")
-		}
-	}
-
-	logger.Info("finished archival",
-		zap.String(logging.TagUserWorkflowID, userWorkflowID),
-		zap.String(logging.TagUserRunID, userRunID))
+func ArchivalActivity(ctx context.Context) error {
+	// TODO: write this activity
 	return nil
 }
 

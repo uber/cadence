@@ -75,8 +75,8 @@ const (
 type RequestType int
 
 const (
-	// ArchivalRequest is the archive signal identifier
-	ArchivalRequest RequestType = iota
+	archivalRequest RequestType = iota
+	backfillRequest
 )
 
 type contextKey int
