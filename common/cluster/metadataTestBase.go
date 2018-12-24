@@ -41,8 +41,10 @@ const (
 	TestCurrentClusterFrontendAddress = "127.0.0.1:7104"
 	// TestAlternativeClusterFrontendAddress is the ip port address of alternative cluster
 	TestAlternativeClusterFrontendAddress = "127.0.0.1:8104"
-	// TestDeploymentGroup is alternative deployment group used for test
-	TestDeploymentGroup = "test"
+	// TestArchivalEnabled is whether archival is enabled for cluster
+	TestArchivalEnabled = false
+	// TestDefaultArchivalBucket is the archival bucket named for cluster
+	TestDefaultArchivalBucket = "test-bucket"
 )
 
 var (
@@ -68,9 +70,10 @@ func GetTestClusterMetadata(enableGlobalDomain bool, isMasterCluster bool) Metad
 		TestCurrentClusterName,
 		TestAllClusterFailoverVersions,
 		map[string]config.Address{
-			TestCurrentClusterName:     config.Address{RPCName: common.FrontendServiceName, RPCAddress: TestCurrentClusterFrontendAddress},
-			TestAlternativeClusterName: config.Address{RPCName: common.FrontendServiceName, RPCAddress: TestAlternativeClusterFrontendAddress},
+			TestCurrentClusterName:     {RPCName: common.FrontendServiceName, RPCAddress: TestCurrentClusterFrontendAddress},
+			TestAlternativeClusterName: {RPCName: common.FrontendServiceName, RPCAddress: TestAlternativeClusterFrontendAddress},
 		},
-		TestDeploymentGroup,
+		dynamicconfig.GetBoolPropertyFn(TestArchivalEnabled),
+		TestDefaultArchivalBucket,
 	)
 }

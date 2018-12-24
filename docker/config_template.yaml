@@ -72,4 +72,9 @@ clustersInfo:
     active:
       rpcName: "cadence-frontend"
       rpcAddress: "127.0.0.1:7933"
-  deploymentGroup: "development"
+  enableArchival: true
+  defaultArchivalBucket: "cadence-development"
+
+blobstore:
+  dataDirectory: "/tmp/blobstore/"
+  dynamicBucketCreation: true

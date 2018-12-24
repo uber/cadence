@@ -22,6 +22,7 @@ package config
 
 import (
 	"encoding/json"
+	"github.com/uber/cadence/common/blobstore"
 	"time"
 
 	"github.com/uber-go/tally/m3"
@@ -45,6 +46,8 @@ type (
 		Services map[string]Service `yaml:"services"`
 		// Kafka is the config for connecting to kafka
 		Kafka messaging.KafkaConfig `yaml:"kafka"`
+		// Blobstore is the config for interacting with blobstore client
+		Blobstore blobstore.Config `yaml:"blobstore"`
 	}
 
 	// Service contains the service specific config items
@@ -199,8 +202,11 @@ type (
 		ClusterInitialFailoverVersions map[string]int64 `yaml:"clusterInitialFailoverVersion"`
 		// ClusterAddress contains all cluster names to corresponding address
 		ClusterAddress map[string]Address `yaml:"clusterAddress"`
-		// DeploymentGroup contains the deployment group name
-		DeploymentGroup string `yaml:"deploymentGroup"`
+
+		// EnableArchival whether archival is enabled
+		EnableArchival bool `yaml:"enableArchival"`
+		// DefaultArchivalBucket contains default archival bucket
+		DefaultArchivalBucket string `yaml:"defaultArchivalBucket"`
 	}
 
 	// Address indicate the remote cluster's service name and address

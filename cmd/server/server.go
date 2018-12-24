@@ -21,12 +21,12 @@
 package main
 
 import (
+	"github.com/uber/cadence/common/blobstore"
 	"log"
 	"time"
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service"
@@ -112,13 +112,13 @@ func (s *server) startService() common.Daemon {
 	params.DynamicConfig = dynamicconfig.NewNopClient()
 	dc := dynamicconfig.NewCollection(params.DynamicConfig, params.Logger)
 
-	params.BlobstoreClient = blobstore.NewNopClient()
-
 	svcCfg := s.cfg.Services[s.name]
 	params.MetricScope = svcCfg.Metrics.NewScope()
 	params.RPCFactory = svcCfg.RPC.NewFactory(params.Name, params.Logger)
 	params.PProfInitializer = svcCfg.PProf.NewInitializer(params.Logger)
 	enableGlobalDomain := dc.GetBoolProperty(dynamicconfig.EnableGlobalDomain, s.cfg.ClustersInfo.EnableGlobalDomain)
+	enableArchival := dc.GetBoolProperty(dynamicconfig.EnableArchival, s.cfg.ClustersInfo.EnableArchival)
+
 	params.ClusterMetadata = cluster.NewMetadata(
 		enableGlobalDomain,
 		s.cfg.ClustersInfo.FailoverVersionIncrement,
@@ -126,7 +126,8 @@ func (s *server) startService() common.Daemon {
 		s.cfg.ClustersInfo.CurrentClusterName,
 		s.cfg.ClustersInfo.ClusterInitialFailoverVersions,
 		s.cfg.ClustersInfo.ClusterAddress,
-		s.cfg.ClustersInfo.DeploymentGroup,
+		enableArchival,
+		s.cfg.ClustersInfo.DefaultArchivalBucket,
 	)
 	params.DispatcherProvider = client.NewIPYarpcDispatcherProvider()
 	// TODO: We need to switch Cadence to use zap logger, until then just pass zap.NewNop
@@ -139,6 +140,14 @@ func (s *server) startService() common.Daemon {
 		params.MessagingClient = messaging.NewKafkaClient(&s.cfg.Kafka, params.MetricsClient, zap.NewNop(), params.Logger, params.MetricScope, false)
 	} else {
 		params.MessagingClient = nil
+	}
+
+	if params.ClusterMetadata.IsArchivalEnabled() {
+		blobstoreClient, err := blobstore.NewFileBlobstoreClient(s.cfg.Blobstore.DataDirectory, s.cfg.ClustersInfo.DefaultArchivalBucket, s.cfg.Blobstore.DynamicBucketCreation)
+		if err != nil {
+			log.Fatalf("error creating blobstore client: %v", err)
+		}
+		params.BlobstoreClient = blobstoreClient
 	}
 
 	params.Logger.Info("Starting service " + s.name)

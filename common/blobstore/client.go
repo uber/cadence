@@ -34,6 +34,8 @@ const (
 	NoCompression CompressionType = iota
 )
 
+var ErrBlobNotExists = errors.New("blob with requested name does not exist")
+
 // Blob defines a blob
 type Blob struct {
 	Body            io.Reader
@@ -52,23 +54,4 @@ type Client interface {
 	UploadBlob(ctx context.Context, bucket string, path string, blob *Blob) error
 	DownloadBlob(ctx context.Context, bucket string, path string) (*Blob, error)
 	BucketMetadata(ctx context.Context, bucket string) (*BucketMetadataResponse, error)
-}
-
-type nopClient struct{}
-
-func (c *nopClient) UploadBlob(ctx context.Context, bucket string, path string, blob *Blob) error {
-	return errors.New("not implemented")
-}
-
-func (c *nopClient) DownloadBlob(ctx context.Context, bucket string, path string) (*Blob, error) {
-	return nil, errors.New("not implemented")
-}
-
-func (c *nopClient) BucketMetadata(ctx context.Context, bucket string) (*BucketMetadataResponse, error) {
-	return nil, errors.New("not implemented")
-}
-
-// NewNopClient creates a nop client
-func NewNopClient() Client {
-	return &nopClient{}
 }
