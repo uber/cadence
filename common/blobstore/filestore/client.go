@@ -23,6 +23,7 @@ package blobstore
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common/blobstore"
 	"path/filepath"
 )
 
@@ -34,8 +35,8 @@ type fileStoreClient struct {
 	storeDirectory string
 }
 
-// NewFileStoreClient returns a new blobstore Client backed by file system
-func NewFileStoreClient(cfg *Config) Client {
+// NewFileStoreClient returns a new Client backed by file system
+func NewFileStoreClient(cfg *Config) blobstore.Client {
 	cfg.Validate()
 	setupDirectories(cfg)
 	writeMetadataFiles(cfg)
@@ -44,15 +45,34 @@ func NewFileStoreClient(cfg *Config) Client {
 	}
 }
 
-func (c *fileStoreClient) UploadBlob(ctx context.Context, bucket string, filename string, blob *Blob) error {
+// TODO: it makes sense to have a file_blob.go that knows how to serialize and deserialize blobs to and from files
+
+func (c *fileStoreClient) UploadBlob(_ context.Context, bucket string, filename string, blob *blobstore.Blob) error {
+	// check that bucket exists if not return error
+	// convert blob into bytes this involves figuring out how to write tags and body into byte array
+	// construct blob path from datastoreDir, bucket, filename
+	// write blob (this potentially replaces an existing blob)
+
+
 	return nil
 }
 
-func (c *fileStoreClient) DownloadBlob(ctx context.Context, bucket string, filename string) (*Blob, error) {
+func (c *fileStoreClient) DownloadBlob(_ context.Context, bucket string, filename string) (*blobstore.Blob, error) {
+	// check that bucket exists if not return error
+	// construct blob path from datastoreDir, bucket and fileanme
+	// read the whole file into memory, construct blob
+	// return result
+
+
 	return nil, nil
 }
 
-func (c *fileStoreClient) BucketMetadata(ctx context.Context, bucket string) (*BucketMetadataResponse, error) {
+func (c *fileStoreClient) BucketMetadata(_ context.Context, bucket string) (*blobstore.BucketMetadataResponse, error) {
+	// check if bucket exists if not return error
+	// check that metadata file exists if not return error
+	// attempt to deserialize metadata file, if failed return error
+	// otherwise return metadata
+
 	return nil, nil
 }
 
