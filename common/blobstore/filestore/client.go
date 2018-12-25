@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package blobstore
+package filestore
 
 import (
 	"context"
@@ -31,23 +31,29 @@ const (
 	metadataFilename = "metadata"
 )
 
-type fileStoreClient struct {
+type client struct {
 	storeDirectory string
 }
 
 // NewFileStoreClient returns a new Client backed by file system
-func NewFileStoreClient(cfg *Config) blobstore.Client {
-	cfg.Validate()
-	setupDirectories(cfg)
-	writeMetadataFiles(cfg)
-	return &fileStoreClient{
-		storeDirectory: cfg.StoreDirectory,
+func NewClient(cfg *Config) (blobstore.Client, error) {
+	if err := cfg.Validate(); err != nil {
+		return nil, err
 	}
+	if err := setupDirectories(cfg); err != nil {
+		return nil, err
+	}
+	if err := writeMetadataFiles(cfg); err != nil {
+		return nil, err
+	}
+	return &client{
+		storeDirectory: cfg.StoreDirectory,
+	}, nil
 }
 
 // TODO: it makes sense to have a file_blob.go that knows how to serialize and deserialize blobs to and from files
 
-func (c *fileStoreClient) UploadBlob(_ context.Context, bucket string, filename string, blob *blobstore.Blob) error {
+func (c *client) UploadBlob(_ context.Context, bucket string, filename string, blob *blobstore.Blob) error {
 	// check that bucket exists if not return error
 	// convert blob into bytes this involves figuring out how to write tags and body into byte array
 	// construct blob path from datastoreDir, bucket, filename
@@ -57,7 +63,7 @@ func (c *fileStoreClient) UploadBlob(_ context.Context, bucket string, filename 
 	return nil
 }
 
-func (c *fileStoreClient) DownloadBlob(_ context.Context, bucket string, filename string) (*blobstore.Blob, error) {
+func (c *client) DownloadBlob(_ context.Context, bucket string, filename string) (*blobstore.Blob, error) {
 	// check that bucket exists if not return error
 	// construct blob path from datastoreDir, bucket and fileanme
 	// read the whole file into memory, construct blob
@@ -67,7 +73,7 @@ func (c *fileStoreClient) DownloadBlob(_ context.Context, bucket string, filenam
 	return nil, nil
 }
 
-func (c *fileStoreClient) BucketMetadata(_ context.Context, bucket string) (*blobstore.BucketMetadataResponse, error) {
+func (c *client) BucketMetadata(_ context.Context, bucket string) (*blobstore.BucketMetadataResponse, error) {
 	// check if bucket exists if not return error
 	// check that metadata file exists if not return error
 	// attempt to deserialize metadata file, if failed return error
@@ -76,10 +82,11 @@ func (c *fileStoreClient) BucketMetadata(_ context.Context, bucket string) (*blo
 	return nil, nil
 }
 
-func setupDirectories(cfg *Config) {
+func setupDirectories(cfg *Config) error {
+	var err error
 	ensureExists := func(directoryPath string) {
 		if err := createIfNotExists(directoryPath); err != nil {
-			panic(fmt.Sprintf("failed to ensure directory %v exists: %v", directoryPath, err))
+			err = fmt.Errorf("failed to ensure directory %v exists: %v", directoryPath, err)
 		}
 	}
 
@@ -88,17 +95,19 @@ func setupDirectories(cfg *Config) {
 	for _, b := range cfg.CustomBuckets {
 		ensureExists(bucketDirectory(cfg.StoreDirectory, b.Name))
 	}
+	return err
 }
 
-func writeMetadataFiles(cfg *Config) {
+func writeMetadataFiles(cfg *Config) error {
+	var err error
 	writeMetadataFile := func(bucketConfig BucketConfig) {
 		path := bucketItemPath(cfg.StoreDirectory, bucketConfig.Name, metadataFilename)
 		bytes, err := serialize(&bucketConfig)
 		if err != nil {
-			panic(fmt.Sprintf("failed to write metadata file for bucket %v: %v", bucketConfig.Name, err))
+			err = fmt.Errorf("failed to write metadata file for bucket %v: %v", bucketConfig.Name, err)
 		}
 		if err := writeFile(path, bytes); err != nil {
-			panic(fmt.Sprintf("failed to write metadata file for bucket %v: %v", bucketConfig.Name, err))
+			err = fmt.Errorf("failed to write metadata file for bucket %v: %v", bucketConfig.Name, err)
 		}
 	}
 
@@ -106,6 +115,7 @@ func writeMetadataFiles(cfg *Config) {
 	for _, b := range cfg.CustomBuckets {
 		writeMetadataFile(b)
 	}
+	return err
 }
 
 func bucketDirectory(storeDirectory string, bucketName string) string {

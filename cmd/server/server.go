@@ -21,7 +21,7 @@
 package main
 
 import (
-	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/blobstore/filestore"
 	"log"
 	"time"
 
@@ -143,7 +143,10 @@ func (s *server) startService() common.Daemon {
 	}
 
 	if params.ClusterMetadata.IsArchivalEnabled() {
-		params.BlobstoreClient = blobstore.NewFileStoreClient(&s.cfg.Blobstore)
+		params.BlobstoreClient, err = filestore.NewClient(&s.cfg.Blobstore)
+		if err != nil {
+			log.Fatalf("error creating blobstore: %v", err)
+		}
 	}
 
 	params.Logger.Info("Starting service " + s.name)

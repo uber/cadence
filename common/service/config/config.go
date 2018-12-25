@@ -22,7 +22,7 @@ package config
 
 import (
 	"encoding/json"
-	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/blobstore/filestore"
 	"time"
 
 	"github.com/uber-go/tally/m3"
@@ -46,8 +46,8 @@ type (
 		Services map[string]Service `yaml:"services"`
 		// Kafka is the config for connecting to kafka
 		Kafka messaging.KafkaConfig `yaml:"kafka"`
-		// Blobstore is the config for interacting with blobstore client
-		Blobstore blobstore.Config `yaml:"blobstore"`
+		// Blobstore is the config used for constructing a blobstore client
+		Blobstore filestore.Config `yaml:"blobstore"`
 	}
 
 	// Service contains the service specific config items

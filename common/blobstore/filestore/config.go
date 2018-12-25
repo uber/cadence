@@ -18,9 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package blobstore
+package filestore
 
 import (
+	"errors"
 	"gopkg.in/yaml.v2"
 )
 
@@ -41,27 +42,28 @@ type (
 )
 
 // Validate validates config
-func (c *Config) Validate() {
-	if len(c.StoreDirectory) == 0 {
-		panic("Empty store directory")
-	}
-
+func (c *Config) Validate() error {
+	var err error
 	validateBucketConfig := func(b BucketConfig) {
 		if len(b.Name) == 0 {
-			panic("Empty bucket name")
+			err = errors.New("empty bucket name")
 		}
 		if len(b.Owner) == 0 {
-			panic("Empty bucket owner")
+			err = errors.New("empty bucket owner")
 		}
 		if b.RetentionDays < 0 {
-			panic("Negative retention days")
+			err = errors.New("negative retention days")
 		}
 	}
 
+	if len(c.StoreDirectory) == 0 {
+		err = errors.New("empty store directory")
+	}
 	validateBucketConfig(c.DefaultBucket)
 	for _, b := range c.CustomBuckets {
 		validateBucketConfig(b)
 	}
+	return err
 }
 
 func serialize(b *BucketConfig) ([]byte, error) {
