@@ -31,9 +31,10 @@ const (
 )
 
 type fileStoreClient struct {
-	storeDirectory         string
+	storeDirectory string
 }
 
+// NewFileStoreClient returns a new blobstore Client backed by file system
 func NewFileStoreClient(cfg *Config) Client {
 	cfg.Validate()
 	setupDirectories(cfg)

@@ -35,7 +35,9 @@ const (
 )
 
 var (
+	// ErrBlobNotExists indicates that requested blob does not exist
 	ErrBlobNotExists = errors.New("blob with requested name does not exist")
+	// ErrBucketNotExists indicates that requested bucket does not exist
 	ErrBucketNotExists = errors.New("requested bucket does not exist")
 )
 
