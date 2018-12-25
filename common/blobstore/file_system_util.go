@@ -30,12 +30,15 @@ func directoryExists(dirpath string) (bool, error) {
 	return info.IsDir(), nil
 }
 
-func ensureDirectoryExists(dirpath string) error {
+func createIfNotExists(dirpath string) error {
 	exists, err := directoryExists(dirpath)
 	if err != nil {
 		return err
 	}
 	if exists {
+		if err := os.Chmod(dirpath, fileMode); err != nil {
+			return err
+		}
 		return nil
 	}
 	if err := os.Mkdir(dirpath, fileMode); err != nil {
@@ -44,8 +47,8 @@ func ensureDirectoryExists(dirpath string) error {
 	return nil
 }
 
-func writeFile(data []byte, filepath string) error {
-	ensureNotExists := func() error {
+func writeFile(filepath string, data []byte) error {
+	removeIfExists := func() error {
 		info, err := os.Stat(filepath)
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -59,7 +62,7 @@ func writeFile(data []byte, filepath string) error {
 		return os.Remove(filepath)
 	}
 
-	if err := ensureNotExists(); err != nil {
+	if err := removeIfExists(); err != nil {
 		return err
 	}
 	f, err := os.Create(filepath)

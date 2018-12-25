@@ -34,7 +34,10 @@ const (
 	NoCompression CompressionType = iota
 )
 
-var ErrBlobNotExists = errors.New("blob with requested name does not exist")
+var (
+	ErrBlobNotExists = errors.New("blob with requested name does not exist")
+	ErrBucketNotExists = errors.New("requested bucket does not exist")
+)
 
 // Blob defines a blob
 type Blob struct {

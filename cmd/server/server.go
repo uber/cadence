@@ -143,7 +143,7 @@ func (s *server) startService() common.Daemon {
 	}
 
 	if params.ClusterMetadata.IsArchivalEnabled() {
-		blobstoreClient, err := blobstore.NewFileBlobstoreClient(s.cfg.Blobstore.BlobstoreDirectory, s.cfg.ClustersInfo.DefaultArchivalBucket, s.cfg.Blobstore.CreateDirectories)
+		blobstoreClient, err := blobstore.NewFileBlobstoreClient(&s.cfg.Blobstore)
 		if err != nil {
 			log.Fatalf("error creating blobstore client: %v", err)
 		}
