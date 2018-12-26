@@ -85,7 +85,7 @@ func (c *client) BucketMetadata(_ context.Context, bucket string) (*blobstore.Bu
 func setupDirectories(cfg *Config) error {
 	var err error
 	ensureExists := func(directoryPath string) {
-		if err := createIfNotExists(directoryPath); err != nil {
+		if err := createDirIfNotExists(directoryPath); err != nil {
 			err = fmt.Errorf("failed to ensure directory %v exists: %v", directoryPath, err)
 		}
 	}
