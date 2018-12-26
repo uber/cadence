@@ -145,8 +145,8 @@ func (e *eventsCacheImpl) getHistoryEventFromStore(domainID, workflowID, runID s
 			return nil, err
 		}
 
-		if len(response.History) > 0 {
-			historyEvent = response.History[0]
+		if len(response.HistoryEvents) > 0 {
+			historyEvent = response.HistoryEvents[0]
 		}
 	} else {
 		response, err := e.eventsMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
