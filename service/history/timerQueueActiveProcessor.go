@@ -262,13 +262,15 @@ Update_History_Loop:
 			hasTimer, ti := tBuilder.GetUserTimer(td.TimerID)
 			if !hasTimer {
 				t.logger.Debugf("Failed to find in memory user timer: %s", td.TimerID)
-				return fmt.Errorf("Failed to find in memory user timer: %s", td.TimerID)
+				retError = fmt.Errorf("Failed to find in memory user timer: %s", td.TimerID)
+				return
 			}
 
 			if isExpired := tBuilder.IsTimerExpired(td, task.VisibilityTimestamp); isExpired {
 				// Add TimerFired event to history.
 				if msBuilder.AddTimerFiredEvent(ti.StartedID, ti.TimerID) == nil {
-					return errFailedToAddTimerFiredEvent
+					retError = errFailedToAddTimerFiredEvent
+					return
 				}
 
 				scheduleNewDecision = !msBuilder.HasPendingDecisionTask()
@@ -296,9 +298,11 @@ Update_History_Loop:
 				continue Update_History_Loop
 			}
 		}
-		return err
+		retError = err
+		return
 	}
-	return ErrMaxAttemptsExceeded
+	retError = ErrMaxAttemptsExceeded
+	return
 }
 
 func (t *timerQueueActiveProcessorImpl) processActivityTimeout(timerTask *persistence.TimerTaskInfo) (retError error) {
@@ -400,7 +404,8 @@ Update_History_Loop:
 				{
 					t.metricsClient.IncCounter(metrics.TimerActiveTaskActivityTimeoutScope, metrics.ScheduleToCloseTimeoutCounter)
 					if msBuilder.AddActivityTaskTimedOutEvent(ai.ScheduleID, ai.StartedID, timeoutType, nil) == nil {
-						return errFailedToAddTimeoutEvent
+						retError = errFailedToAddTimeoutEvent
+						return
 					}
 					updateHistory = true
 				}
@@ -410,7 +415,8 @@ Update_History_Loop:
 					t.metricsClient.IncCounter(metrics.TimerActiveTaskActivityTimeoutScope, metrics.StartToCloseTimeoutCounter)
 					if ai.StartedID != common.EmptyEventID {
 						if msBuilder.AddActivityTaskTimedOutEvent(ai.ScheduleID, ai.StartedID, timeoutType, nil) == nil {
-							return errFailedToAddTimeoutEvent
+							retError = errFailedToAddTimeoutEvent
+							return
 						}
 						updateHistory = true
 					}
@@ -420,7 +426,8 @@ Update_History_Loop:
 				{
 					t.metricsClient.IncCounter(metrics.TimerActiveTaskActivityTimeoutScope, metrics.HeartbeatTimeoutCounter)
 					if msBuilder.AddActivityTaskTimedOutEvent(ai.ScheduleID, ai.StartedID, timeoutType, ai.Details) == nil {
-						return errFailedToAddTimeoutEvent
+						retError = errFailedToAddTimeoutEvent
+						return
 					}
 					updateHistory = true
 				}
@@ -430,7 +437,8 @@ Update_History_Loop:
 					t.metricsClient.IncCounter(metrics.TimerActiveTaskActivityTimeoutScope, metrics.ScheduleToStartTimeoutCounter)
 					if ai.StartedID == common.EmptyEventID {
 						if msBuilder.AddActivityTaskTimedOutEvent(ai.ScheduleID, ai.StartedID, timeoutType, nil) == nil {
-							return errFailedToAddTimeoutEvent
+							retError = errFailedToAddTimeoutEvent
+							return
 						}
 						updateHistory = true
 					}
@@ -453,15 +461,17 @@ Update_History_Loop:
 				if err == ErrConflict {
 					continue Update_History_Loop
 				}
-				return err
+				retError = err
+				return
 			}
 
-			return nil
+			return
 		}
 
-		return nil
+		return
 	}
-	return ErrMaxAttemptsExceeded
+	retError = ErrMaxAttemptsExceeded
+	return
 }
 
 func (t *timerQueueActiveProcessorImpl) processDecisionTimeout(task *persistence.TimerTaskInfo) (retError error) {
@@ -489,7 +499,8 @@ Update_History_Loop:
 		}
 		ok, err := verifyTaskVersion(t.shard, t.logger, task.DomainID, di.Version, task.Version, task)
 		if err != nil {
-			return err
+			retError = err
+			return
 		} else if !ok {
 			return nil
 		}
@@ -511,7 +522,8 @@ Update_History_Loop:
 				timeoutEvent := msBuilder.AddDecisionTaskScheduleToStartTimeoutEvent(scheduleID)
 				if timeoutEvent == nil {
 					// Unable to add DecisionTaskTimedout event to history
-					return &workflow.InternalServiceError{Message: "Unable to add DecisionTaskScheduleToStartTimeout event to history."}
+					retError = &workflow.InternalServiceError{Message: "Unable to add DecisionTaskScheduleToStartTimeout event to history."}
+					return
 				}
 
 				// reschedule decision, which will be on its original task list
@@ -528,13 +540,15 @@ Update_History_Loop:
 					continue Update_History_Loop
 				}
 			}
-			return err
+			retError = err
+			return
 		}
 
 		return nil
 
 	}
-	return ErrMaxAttemptsExceeded
+	retError = ErrMaxAttemptsExceeded
+	return
 }
 
 func (t *timerQueueActiveProcessorImpl) processWorkflowBackoffTimer(task *persistence.TimerTaskInfo) (retError error) {
@@ -580,9 +594,9 @@ Update_History_Loop:
 
 func (t *timerQueueActiveProcessorImpl) processActivityRetryTimer(task *persistence.TimerTaskInfo) error {
 
-	processFn := func() error {
+	processFn := func() (retError error) {
 		context, release, err0 := t.cache.getOrCreateWorkflowExecution(t.timerQueueProcessorBase.getDomainIDAndWorkflowExecution(task))
-		defer release(nil)
+		defer func() { release(retError) }()
 		if err0 != nil {
 			return err0
 		}
@@ -624,7 +638,8 @@ func (t *timerQueueActiveProcessorImpl) processActivityRetryTimer(task *persiste
 		if scheduledEvent.ActivityTaskScheduledEventAttributes.Domain != nil {
 			domainEntry, err := t.shard.GetDomainCache().GetDomain(scheduledEvent.ActivityTaskScheduledEventAttributes.GetDomain())
 			if err != nil {
-				return &workflow.InternalServiceError{Message: "Unable to re-schedule activity across domain."}
+				retError = &workflow.InternalServiceError{Message: "Unable to re-schedule activity across domain."}
+				return
 			}
 			targetDomainID = domainEntry.GetInfo().ID
 		}
@@ -650,7 +665,8 @@ func (t *timerQueueActiveProcessorImpl) processActivityRetryTimer(task *persiste
 		t.logger.Debugf("Adding ActivityTask for retry, WorkflowID: %v, RunID: %v, ScheduledID: %v, TaskList: %v, Attempt: %v, Err: %v",
 			task.WorkflowID, task.RunID, scheduledID, taskList.GetName(), task.ScheduleAttempt, err)
 
-		return err
+		retError = err
+		return
 	}
 
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {

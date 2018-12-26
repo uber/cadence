@@ -193,7 +193,8 @@ func (p *replicatorQueueProcessorImpl) processSyncActivityTask(task *persistence
 		},
 	}
 
-	return p.replicator.Publish(replicationTask)
+	retError = p.replicator.Publish(replicationTask)
+	return
 }
 
 func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persistence.ReplicationTaskInfo) error {
