@@ -133,20 +133,22 @@ func AdminDescribeWorkflow(c *cli.Context) {
 
 	prettyPrintJSONObject(resp)
 
-	msStr := resp.GetMutableStateInDatabase()
-	ms := persistence.WorkflowMutableState{}
-	err = json.Unmarshal([]byte(msStr), &ms)
-	if err != nil {
-		ErrorAndExit("json.Unmarshal err", err)
-	}
-	if ms.ExecutionInfo.EventStoreVersion == persistence.EventStoreVersionV2 {
-		branchInfo := shared.HistoryBranch{}
-		thriftrwEncoder := codec.NewThriftRWEncoder()
-		err := thriftrwEncoder.Decode(ms.ExecutionInfo.BranchToken, &branchInfo)
+	if resp != nil {
+		msStr := resp.GetMutableStateInDatabase()
+		ms := persistence.WorkflowMutableState{}
+		err = json.Unmarshal([]byte(msStr), &ms)
 		if err != nil {
-			ErrorAndExit("thriftrwEncoder.Decode err", err)
+			ErrorAndExit("json.Unmarshal err", err)
 		}
-		prettyPrintJSONObject(branchInfo)
+		if ms.ExecutionInfo != nil && ms.ExecutionInfo.EventStoreVersion == persistence.EventStoreVersionV2 {
+			branchInfo := shared.HistoryBranch{}
+			thriftrwEncoder := codec.NewThriftRWEncoder()
+			err := thriftrwEncoder.Decode(ms.ExecutionInfo.BranchToken, &branchInfo)
+			if err != nil {
+				ErrorAndExit("thriftrwEncoder.Decode err", err)
+			}
+			prettyPrintJSONObject(branchInfo)
+		}
 	}
 }
 
