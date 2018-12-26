@@ -27,6 +27,16 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
+var (
+	standbyTaskPostActionNoOp          = func() error { return nil }
+	standbyTaskPostActionTaskDiscarded = func(nextEventID *int64) error {
+		if nextEventID == nil {
+			return nil
+		}
+		return ErrTaskDiscarded
+	}
+)
+
 // verifyTaskVersion, will return true if failover version check is successful
 func verifyTaskVersion(shard ShardContext, logger bark.Logger, domainID string, version int64, taskVersion int64, task interface{}) (bool, error) {
 	if !shard.GetService().GetClusterMetadata().IsGlobalDomainEnabled() {
