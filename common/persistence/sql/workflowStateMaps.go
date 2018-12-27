@@ -128,6 +128,7 @@ var (
 	// Omit shard_id, run_id, domain_id, workflow_id, schedule_id since they're in the primary key
 	activityInfoColumns = []string{
 		"version",
+		"schedule_event_batch_id",
 		"scheduled_event",
 		"scheduled_event_encoding",
 		"scheduled_time",
@@ -178,6 +179,7 @@ type (
 	activityInfoMapsRow struct {
 		activityInfoMapsPrimaryKey
 		Version                  int64
+		ScheduledEventBatchID    int64
 		ScheduledEvent           []byte
 		ScheduledEventEncoding   string
 		ScheduledTime            time.Time
@@ -229,6 +231,7 @@ func updateActivityInfos(tx *sqlx.Tx,
 					ScheduleID: v.ScheduleID,
 				},
 				Version:                  v.Version,
+				ScheduledEventBatchID:    v.ScheduledEventBatchID,
 				ScheduledEvent:           v.ScheduledEvent.Data,
 				ScheduledEventEncoding:   string(v.ScheduledEvent.Encoding),
 				ScheduledTime:            v.ScheduledTime,
@@ -371,6 +374,7 @@ func getActivityInfoMap(tx *sqlx.Tx,
 		info := &persistence.InternalActivityInfo{
 			Version:                  v.Version,
 			ScheduleID:               v.ScheduleID,
+			ScheduledEventBatchID:    v.ScheduledEventBatchID,
 			ScheduledEvent:           persistence.NewDataBlob(v.ScheduledEvent, common.EncodingType(v.ScheduledEventEncoding)),
 			ScheduledTime:            v.ScheduledTime,
 			StartedID:                v.StartedID,

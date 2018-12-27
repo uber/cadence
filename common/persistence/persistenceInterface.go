@@ -194,6 +194,7 @@ type (
 	InternalActivityInfo struct {
 		Version                  int64
 		ScheduleID               int64
+		ScheduledEventBatchID    int64
 		ScheduledEvent           *DataBlob
 		ScheduledTime            time.Time
 		StartedID                int64

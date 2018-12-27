@@ -1,0 +1,1 @@
+ALTER TYPE activity_info ADD  schedule_event_batch_id int;

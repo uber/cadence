@@ -529,6 +529,7 @@ type (
 	ActivityInfo struct {
 		Version                  int64
 		ScheduleID               int64
+		ScheduledEventBatchID    int64
 		ScheduledEvent           *workflow.HistoryEvent
 		ScheduledTime            time.Time
 		StartedID                int64

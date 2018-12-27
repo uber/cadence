@@ -239,6 +239,7 @@ func (m *executionManagerImpl) DeserializeActivityInfos(infos map[int64]*Interna
 
 			Version:                        v.Version,
 			ScheduleID:                     v.ScheduleID,
+			ScheduledEventBatchID:          v.ScheduledEventBatchID,
 			ScheduledTime:                  v.ScheduledTime,
 			StartedID:                      v.StartedID,
 			StartedTime:                    v.StartedTime,
@@ -402,6 +403,7 @@ func (m *executionManagerImpl) SerializeUpsertActivityInfos(infos []*ActivityInf
 		i := &InternalActivityInfo{
 			Version:                        v.Version,
 			ScheduleID:                     v.ScheduleID,
+			ScheduledEventBatchID:          v.ScheduledEventBatchID,
 			ScheduledEvent:                 scheduledEvent,
 			ScheduledTime:                  v.ScheduledTime,
 			StartedID:                      v.StartedID,

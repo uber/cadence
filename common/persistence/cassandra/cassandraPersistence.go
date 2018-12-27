@@ -223,6 +223,7 @@ const (
 	templateActivityInfoType = `{` +
 		`version: ?,` +
 		`schedule_id: ?, ` +
+		`schedule_event_batch_id: ?, ` +
 		`scheduled_event: ?, ` +
 		`scheduled_time: ?, ` +
 		`started_id: ?, ` +
@@ -3083,6 +3084,7 @@ func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityI
 			a.ScheduleID,
 			a.Version,
 			a.ScheduleID,
+			a.ScheduledEventBatchID,
 			scheduledEventData,
 			a.ScheduledTime,
 			a.StartedID,
@@ -3805,6 +3807,8 @@ func createActivityInfo(result map[string]interface{}) *p.InternalActivityInfo {
 			info.Version = v.(int64)
 		case "schedule_id":
 			info.ScheduleID = v.(int64)
+		case "schedule_event_batch_id":
+			info.ScheduledEventBatchID = v.(int64)
 		case "scheduled_event":
 			scheduledEventData = v.([]byte)
 		case "scheduled_time":
@@ -3888,6 +3892,8 @@ func createTimerInfo(result map[string]interface{}) *p.TimerInfo {
 
 func createChildExecutionInfo(result map[string]interface{}, logger bark.Logger) *p.InternalChildExecutionInfo {
 	info := &p.InternalChildExecutionInfo{}
+	var encoding common.EncodingType
+	var initiatedData []byte
 	var startedData []byte
 	for k, v := range result {
 		switch k {
@@ -3896,7 +3902,7 @@ func createChildExecutionInfo(result map[string]interface{}, logger bark.Logger)
 		case "initiated_id":
 			info.InitiatedID = v.(int64)
 		case "initiated_event":
-			info.InitiatedEvent.Data = v.([]byte)
+			initiatedData = v.([]byte)
 		case "started_id":
 			info.StartedID = v.(int64)
 		case "started_event":
@@ -3904,10 +3910,11 @@ func createChildExecutionInfo(result map[string]interface{}, logger bark.Logger)
 		case "create_request_id":
 			info.CreateRequestID = v.(gocql.UUID).String()
 		case "event_data_encoding":
-			info.InitiatedEvent.Encoding = common.EncodingType(v.(string))
+			encoding = common.EncodingType(v.(string))
 		}
 	}
-	info.StartedEvent = p.NewDataBlob(startedData, info.InitiatedEvent.Encoding)
+	info.InitiatedEvent = p.NewDataBlob(initiatedData, encoding)
+	info.StartedEvent = p.NewDataBlob(startedData, encoding)
 	return info
 }
 
@@ -3989,6 +3996,7 @@ func resetActivityInfoMap(activityInfos []*p.InternalActivityInfo) (map[int64]ma
 		aInfo := make(map[string]interface{})
 		aInfo["version"] = a.Version
 		aInfo["schedule_id"] = a.ScheduleID
+		aInfo["schedule_event_batch_id"] = a.ScheduledEventBatchID
 		aInfo["scheduled_event"] = a.ScheduledEvent.Data
 		aInfo["scheduled_time"] = a.ScheduledTime
 		aInfo["started_id"] = a.StartedID

@@ -139,7 +139,8 @@ CREATE TYPE timer_task (
 CREATE TYPE activity_info (
   version                   bigint,
   schedule_id               bigint,
-  scheduled_event           blob,
+  schedule_event_batch_id   bigint,
+  scheduled_event           blob,  -- deprecated
   scheduled_time            timestamp,
   started_id                bigint,
   started_event             blob,
