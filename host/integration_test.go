@@ -3452,7 +3452,7 @@ func (s *integrationSuite) TestVisibility() {
 	s.Nil(err1)
 
 	// wait until the start workflow is done
-	var nexttoken []byte
+	var nextToken []byte
 	historyEventFilterType := workflow.HistoryEventFilterTypeCloseEvent
 	for {
 		historyResponse, historyErr := s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
@@ -3463,14 +3463,14 @@ func (s *integrationSuite) TestVisibility() {
 			},
 			WaitForNewEvent:        common.BoolPtr(true),
 			HistoryEventFilterType: &historyEventFilterType,
-			NextPageToken:          nexttoken,
+			NextPageToken:          nextToken,
 		})
 		s.Nil(historyErr)
 		if len(historyResponse.NextPageToken) == 0 {
 			break
 		}
 
-		nexttoken = historyResponse.NextPageToken
+		nextToken = historyResponse.NextPageToken
 	}
 
 	startRequest = &workflow.StartWorkflowExecutionRequest{
@@ -3504,6 +3504,7 @@ func (s *integrationSuite) TestVisibility() {
 		s.Nil(err3)
 		closedCount = len(resp.Executions)
 		if closedCount == 1 {
+			s.Equal(int64(5), *(resp.Executions[0].HistoryLength))
 			break
 		}
 		s.logger.Info("Closed WorkflowExecution is not yet visible")
