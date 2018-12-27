@@ -18,33 +18,47 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-namespace java com.uber.cadence.indexer
+package elasticsearch
 
-include "shared.thrift"
+import "github.com/uber/cadence/.gen/go/indexer"
 
-enum MessageType {
-  Index
-  Delete
-}
+// All legal fields allowed in elastic search index
+const (
+	DomainID      = "DomainID"
+	WorkflowID    = "WorkflowID"
+	RunID         = "RunID"
+	WorkflowType  = "WorkflowType"
+	StartTime     = "StartTime"
+	CloseTime     = "CloseTime"
+	CloseStatus   = "CloseStatus"
+	HistoryLength = "HistoryLength"
 
-enum FieldType {
-  String
-  Int
-  Bool
-}
+	KafkaKey = "KafkaKey"
+)
 
-struct Field {
-  10: optional FieldType type
-  20: optional string stringData
-  30: optional i64 (js.type = "Long") intData
-  40: optional bool boolData
-}
+// Supported field types
+var (
+	FieldTypeString = indexer.FieldTypeString
+	FieldTypeInt    = indexer.FieldTypeInt
+	FieldTypeBool   = indexer.FieldTypeBool
+)
 
-struct Message {
-  10: optional MessageType messageType
-  20: optional string domainID
-  30: optional string workflowID
-  40: optional string runID
-  50: optional i64 (js.type = "Long") version
-  60: optional map<string,Field> fields
+var (
+	validFieldName = map[string]interface{}{
+		DomainID:      struct{}{},
+		WorkflowID:    struct{}{},
+		RunID:         struct{}{},
+		WorkflowType:  struct{}{},
+		StartTime:     struct{}{},
+		CloseTime:     struct{}{},
+		CloseStatus:   struct{}{},
+		HistoryLength: struct{}{},
+		KafkaKey:      struct{}{},
+	}
+)
+
+// IsFieldNameValid return true if given field name are allowed to index in elastic search
+func IsFieldNameValid(name string) bool {
+	_, ok := validFieldName[name]
+	return ok
 }

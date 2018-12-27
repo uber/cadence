@@ -25,8 +25,8 @@ import (
 	"github.com/olivere/elastic"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
-	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/common/collection"
+	es "github.com/uber/cadence/common/elasticsearch"
 	msgMocks "github.com/uber/cadence/common/messaging/mocks"
 	"github.com/uber/cadence/common/metrics"
 	mmocks "github.com/uber/cadence/common/metrics/mocks"
@@ -132,13 +132,15 @@ func (s *esProcessorSuite) TestAdd() {
 }
 
 func (s *esProcessorSuite) TestBulkAfterAction() {
-	version := int64(versionForOpen)
+	version := int64(3)
+	testKey := "testKey"
 	request := elastic.NewBulkIndexRequest().
 		Index(testIndex).
 		Type(testType).
 		Id(testID).
 		VersionType(versionTypeExternal).
-		Version(version)
+		Version(version).
+		Doc(map[string]interface{}{es.KafkaKey: testKey})
 	requests := []elastic.BulkableRequest{request}
 
 	mSuccess := map[string]*elastic.BulkResponseItem{
@@ -157,21 +159,22 @@ func (s *esProcessorSuite) TestBulkAfterAction() {
 	}
 
 	mockKafkaMsg := &msgMocks.Message{}
-	key := testID + indexer.VisibilityMsgTypeOpen.String()
-	s.esProcessor.mapToKafkaMsg.Put(key, mockKafkaMsg)
+	s.esProcessor.mapToKafkaMsg.Put(testKey, mockKafkaMsg)
 	mockKafkaMsg.On("Ack").Return(nil).Once()
 	s.esProcessor.bulkAfterAction(0, requests, response, nil)
 	mockKafkaMsg.AssertExpectations(s.T())
 }
 
 func (s *esProcessorSuite) TestBulkAfterAction_Nack() {
-	version := int64(versionForOpen)
+	version := int64(3)
+	testKey := "testKey"
 	request := elastic.NewBulkIndexRequest().
 		Index(testIndex).
 		Type(testType).
 		Id(testID).
 		VersionType(versionTypeExternal).
-		Version(version)
+		Version(version).
+		Doc(map[string]interface{}{es.KafkaKey: testKey})
 	requests := []elastic.BulkableRequest{request}
 
 	mFailed := map[string]*elastic.BulkResponseItem{
@@ -190,15 +193,14 @@ func (s *esProcessorSuite) TestBulkAfterAction_Nack() {
 	}
 
 	mockKafkaMsg := &msgMocks.Message{}
-	key := testID + indexer.VisibilityMsgTypeOpen.String()
-	s.esProcessor.mapToKafkaMsg.Put(key, mockKafkaMsg)
+	s.esProcessor.mapToKafkaMsg.Put(testKey, mockKafkaMsg)
 	mockKafkaMsg.On("Nack").Return(nil).Once()
 	s.esProcessor.bulkAfterAction(0, requests, response, nil)
 	mockKafkaMsg.AssertExpectations(s.T())
 }
 
 func (s *esProcessorSuite) TestBulkAfterAction_Error() {
-	version := int64(versionForOpen)
+	version := int64(3)
 	request := elastic.NewBulkIndexRequest().
 		Index(testIndex).
 		Type(testType).
@@ -265,34 +267,20 @@ func (s *esProcessorSuite) TestHashFn() {
 	s.NotEqual(uint32(0), s.esProcessor.hashFn("test"))
 }
 
-func (s *esProcessorSuite) TestGetVisibilityType() {
+func (s *esProcessorSuite) TestGetKeyForKafkaMsg() {
 	request := elastic.NewBulkIndexRequest()
-	s.mockMetricClient.On("IncCounter", metrics.ESProcessorScope, metrics.ESProcessorCorruptedData).Once()
-	s.Equal("", s.esProcessor.getVisibilityType(request))
+	s.PanicsWithValue("KafkaKey not found", func() { s.esProcessor.getKeyForKafkaMsg(request) })
 
-	request = elastic.NewBulkIndexRequest().VersionType(versionTypeExternal).Version(123) // unknown version
-	s.mockMetricClient.On("IncCounter", metrics.ESProcessorScope, metrics.ESProcessorCorruptedData).Once()
-	s.Equal("", s.esProcessor.getVisibilityType(request))
+	m := map[string]interface{}{
+		es.KafkaKey: 1,
+	}
+	request.Doc(m)
+	s.PanicsWithValue("KafkaKey is not string", func() { s.esProcessor.getKeyForKafkaMsg(request) })
 
-	request = elastic.NewBulkIndexRequest().
-		Index(testIndex).
-		Type(testType).
-		Id(testID).
-		VersionType(versionTypeExternal).
-		Version(versionForOpen)
-	s.Equal(indexer.VisibilityMsgTypeOpen.String(), s.esProcessor.getVisibilityType(request))
-}
-
-func (s *esProcessorSuite) TestConvertESVersionToVisibilityMsgType() {
-	typ := s.esProcessor.convertESVersionToVisibilityType(versionForOpen)
-	s.Equal(indexer.VisibilityMsgTypeOpen.String(), typ)
-	typ = s.esProcessor.convertESVersionToVisibilityType(versionForClose)
-	s.Equal(indexer.VisibilityMsgTypeClosed.String(), typ)
-	typ = s.esProcessor.convertESVersionToVisibilityType(versionForDelete)
-	s.Equal(indexer.VisibilityMsgTypeDelete.String(), typ)
-	s.mockMetricClient.On("IncCounter", metrics.ESProcessorScope, metrics.ESProcessorCorruptedData).Once()
-	typ = s.esProcessor.convertESVersionToVisibilityType(0)
-	s.Equal("", typ)
+	testKey := "test-key"
+	m[es.KafkaKey] = testKey
+	request.Doc(m)
+	s.Equal(testKey, s.esProcessor.getKeyForKafkaMsg(request))
 }
 
 func (s *esProcessorSuite) TestIsResponseSuccess() {

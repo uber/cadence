@@ -27,7 +27,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/uber/cadence/.gen/go/shared"
 	"go.uber.org/multierr"
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/zap/zapcore"
@@ -36,19 +35,14 @@ import (
 	"strings"
 )
 
-type VisibilityMsg struct {
-	MsgType       *VisibilityMsgType                   `json:"msgType,omitempty"`
-	DomainID      *string                              `json:"domainID,omitempty"`
-	WorkflowID    *string                              `json:"workflowID,omitempty"`
-	RunID         *string                              `json:"runID,omitempty"`
-	WorkflowType  *string                              `json:"workflowType,omitempty"`
-	StartTime     *int64                               `json:"startTime,omitempty"`
-	CloseTime     *int64                               `json:"closeTime,omitempty"`
-	CloseStatus   *shared.WorkflowExecutionCloseStatus `json:"closeStatus,omitempty"`
-	HistoryLength *int64                               `json:"historyLength,omitempty"`
+type Field struct {
+	Type       *FieldType `json:"type,omitempty"`
+	StringData *string    `json:"stringData,omitempty"`
+	IntData    *int64     `json:"intData,omitempty"`
+	BoolData   *bool      `json:"boolData,omitempty"`
 }
 
-// ToWire translates a VisibilityMsg struct into a Thrift-level intermediate
+// ToWire translates a Field struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -63,16 +57,536 @@ type VisibilityMsg struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *VisibilityMsg) ToWire() (wire.Value, error) {
+func (v *Field) ToWire() (wire.Value, error) {
 	var (
-		fields [9]wire.Field
+		fields [4]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
-	if v.MsgType != nil {
-		w, err = v.MsgType.ToWire()
+	if v.Type != nil {
+		w, err = v.Type.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.StringData != nil {
+		w, err = wire.NewValueString(*(v.StringData)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.IntData != nil {
+		w, err = wire.NewValueI64(*(v.IntData)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+	if v.BoolData != nil {
+		w, err = wire.NewValueBool(*(v.BoolData)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 40, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _FieldType_Read(w wire.Value) (FieldType, error) {
+	var v FieldType
+	err := v.FromWire(w)
+	return v, err
+}
+
+// FromWire deserializes a Field struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a Field struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v Field
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *Field) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TI32 {
+				var x FieldType
+				x, err = _FieldType_Read(field.Value)
+				v.Type = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.StringData = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 30:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.IntData = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 40:
+			if field.Value.Type() == wire.TBool {
+				var x bool
+				x, err = field.Value.GetBool(), error(nil)
+				v.BoolData = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a Field
+// struct.
+func (v *Field) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [4]string
+	i := 0
+	if v.Type != nil {
+		fields[i] = fmt.Sprintf("Type: %v", *(v.Type))
+		i++
+	}
+	if v.StringData != nil {
+		fields[i] = fmt.Sprintf("StringData: %v", *(v.StringData))
+		i++
+	}
+	if v.IntData != nil {
+		fields[i] = fmt.Sprintf("IntData: %v", *(v.IntData))
+		i++
+	}
+	if v.BoolData != nil {
+		fields[i] = fmt.Sprintf("BoolData: %v", *(v.BoolData))
+		i++
+	}
+
+	return fmt.Sprintf("Field{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _FieldType_EqualsPtr(lhs, rhs *FieldType) bool {
+	if lhs != nil && rhs != nil {
+
+		x := *lhs
+		y := *rhs
+		return x.Equals(y)
+	}
+	return lhs == nil && rhs == nil
+}
+
+func _String_EqualsPtr(lhs, rhs *string) bool {
+	if lhs != nil && rhs != nil {
+
+		x := *lhs
+		y := *rhs
+		return (x == y)
+	}
+	return lhs == nil && rhs == nil
+}
+
+func _I64_EqualsPtr(lhs, rhs *int64) bool {
+	if lhs != nil && rhs != nil {
+
+		x := *lhs
+		y := *rhs
+		return (x == y)
+	}
+	return lhs == nil && rhs == nil
+}
+
+func _Bool_EqualsPtr(lhs, rhs *bool) bool {
+	if lhs != nil && rhs != nil {
+
+		x := *lhs
+		y := *rhs
+		return (x == y)
+	}
+	return lhs == nil && rhs == nil
+}
+
+// Equals returns true if all the fields of this Field match the
+// provided Field.
+//
+// This function performs a deep comparison.
+func (v *Field) Equals(rhs *Field) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_FieldType_EqualsPtr(v.Type, rhs.Type) {
+		return false
+	}
+	if !_String_EqualsPtr(v.StringData, rhs.StringData) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.IntData, rhs.IntData) {
+		return false
+	}
+	if !_Bool_EqualsPtr(v.BoolData, rhs.BoolData) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of Field.
+func (v *Field) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Type != nil {
+		err = multierr.Append(err, enc.AddObject("type", *v.Type))
+	}
+	if v.StringData != nil {
+		enc.AddString("stringData", *v.StringData)
+	}
+	if v.IntData != nil {
+		enc.AddInt64("intData", *v.IntData)
+	}
+	if v.BoolData != nil {
+		enc.AddBool("boolData", *v.BoolData)
+	}
+	return err
+}
+
+// GetType returns the value of Type if it is set or its
+// zero value if it is unset.
+func (v *Field) GetType() (o FieldType) {
+	if v.Type != nil {
+		return *v.Type
+	}
+
+	return
+}
+
+// GetStringData returns the value of StringData if it is set or its
+// zero value if it is unset.
+func (v *Field) GetStringData() (o string) {
+	if v.StringData != nil {
+		return *v.StringData
+	}
+
+	return
+}
+
+// GetIntData returns the value of IntData if it is set or its
+// zero value if it is unset.
+func (v *Field) GetIntData() (o int64) {
+	if v.IntData != nil {
+		return *v.IntData
+	}
+
+	return
+}
+
+// GetBoolData returns the value of BoolData if it is set or its
+// zero value if it is unset.
+func (v *Field) GetBoolData() (o bool) {
+	if v.BoolData != nil {
+		return *v.BoolData
+	}
+
+	return
+}
+
+type FieldType int32
+
+const (
+	FieldTypeString FieldType = 0
+	FieldTypeInt    FieldType = 1
+	FieldTypeBool   FieldType = 2
+)
+
+// FieldType_Values returns all recognized values of FieldType.
+func FieldType_Values() []FieldType {
+	return []FieldType{
+		FieldTypeString,
+		FieldTypeInt,
+		FieldTypeBool,
+	}
+}
+
+// UnmarshalText tries to decode FieldType from a byte slice
+// containing its name.
+//
+//   var v FieldType
+//   err := v.UnmarshalText([]byte("String"))
+func (v *FieldType) UnmarshalText(value []byte) error {
+	switch s := string(value); s {
+	case "String":
+		*v = FieldTypeString
+		return nil
+	case "Int":
+		*v = FieldTypeInt
+		return nil
+	case "Bool":
+		*v = FieldTypeBool
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "FieldType", err)
+		}
+		*v = FieldType(val)
+		return nil
+	}
+}
+
+// MarshalText encodes FieldType to text.
+//
+// If the enum value is recognized, its name is returned. Otherwise,
+// its integer value is returned.
+//
+// This implements the TextMarshaler interface.
+func (v FieldType) MarshalText() ([]byte, error) {
+	switch int32(v) {
+	case 0:
+		return []byte("String"), nil
+	case 1:
+		return []byte("Int"), nil
+	case 2:
+		return []byte("Bool"), nil
+	}
+	return []byte(strconv.FormatInt(int64(v), 10)), nil
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of FieldType.
+// Enums are logged as objects, where the value is logged with key "value", and
+// if this value's name is known, the name is logged with key "name".
+func (v FieldType) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddInt32("value", int32(v))
+	switch int32(v) {
+	case 0:
+		enc.AddString("name", "String")
+	case 1:
+		enc.AddString("name", "Int")
+	case 2:
+		enc.AddString("name", "Bool")
+	}
+	return nil
+}
+
+// Ptr returns a pointer to this enum value.
+func (v FieldType) Ptr() *FieldType {
+	return &v
+}
+
+// ToWire translates FieldType into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// Enums are represented as 32-bit integers over the wire.
+func (v FieldType) ToWire() (wire.Value, error) {
+	return wire.NewValueI32(int32(v)), nil
+}
+
+// FromWire deserializes FieldType from its Thrift-level
+// representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TI32)
+//   if err != nil {
+//     return FieldType(0), err
+//   }
+//
+//   var v FieldType
+//   if err := v.FromWire(x); err != nil {
+//     return FieldType(0), err
+//   }
+//   return v, nil
+func (v *FieldType) FromWire(w wire.Value) error {
+	*v = (FieldType)(w.GetI32())
+	return nil
+}
+
+// String returns a readable string representation of FieldType.
+func (v FieldType) String() string {
+	w := int32(v)
+	switch w {
+	case 0:
+		return "String"
+	case 1:
+		return "Int"
+	case 2:
+		return "Bool"
+	}
+	return fmt.Sprintf("FieldType(%d)", w)
+}
+
+// Equals returns true if this FieldType value matches the provided
+// value.
+func (v FieldType) Equals(rhs FieldType) bool {
+	return v == rhs
+}
+
+// MarshalJSON serializes FieldType into JSON.
+//
+// If the enum value is recognized, its name is returned. Otherwise,
+// its integer value is returned.
+//
+// This implements json.Marshaler.
+func (v FieldType) MarshalJSON() ([]byte, error) {
+	switch int32(v) {
+	case 0:
+		return ([]byte)("\"String\""), nil
+	case 1:
+		return ([]byte)("\"Int\""), nil
+	case 2:
+		return ([]byte)("\"Bool\""), nil
+	}
+	return ([]byte)(strconv.FormatInt(int64(v), 10)), nil
+}
+
+// UnmarshalJSON attempts to decode FieldType from its JSON
+// representation.
+//
+// This implementation supports both, numeric and string inputs. If a
+// string is provided, it must be a known enum name.
+//
+// This implements json.Unmarshaler.
+func (v *FieldType) UnmarshalJSON(text []byte) error {
+	d := json.NewDecoder(bytes.NewReader(text))
+	d.UseNumber()
+	t, err := d.Token()
+	if err != nil {
+		return err
+	}
+
+	switch w := t.(type) {
+	case json.Number:
+		x, err := w.Int64()
+		if err != nil {
+			return err
+		}
+		if x > math.MaxInt32 {
+			return fmt.Errorf("enum overflow from JSON %q for %q", text, "FieldType")
+		}
+		if x < math.MinInt32 {
+			return fmt.Errorf("enum underflow from JSON %q for %q", text, "FieldType")
+		}
+		*v = (FieldType)(x)
+		return nil
+	case string:
+		return v.UnmarshalText([]byte(w))
+	default:
+		return fmt.Errorf("invalid JSON value %q (%T) to unmarshal into %q", t, t, "FieldType")
+	}
+}
+
+type Message struct {
+	MessageType *MessageType      `json:"messageType,omitempty"`
+	DomainID    *string           `json:"domainID,omitempty"`
+	WorkflowID  *string           `json:"workflowID,omitempty"`
+	RunID       *string           `json:"runID,omitempty"`
+	Version     *int64            `json:"version,omitempty"`
+	Fields      map[string]*Field `json:"fields,omitempty"`
+}
+
+type _Map_String_Field_MapItemList map[string]*Field
+
+func (m _Map_String_Field_MapItemList) ForEach(f func(wire.MapItem) error) error {
+	for k, v := range m {
+		if v == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", k)
+		}
+		kw, err := wire.NewValueString(k), error(nil)
+		if err != nil {
+			return err
+		}
+
+		vw, err := v.ToWire()
+		if err != nil {
+			return err
+		}
+		err = f(wire.MapItem{Key: kw, Value: vw})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m _Map_String_Field_MapItemList) Size() int {
+	return len(m)
+}
+
+func (_Map_String_Field_MapItemList) KeyType() wire.Type {
+	return wire.TBinary
+}
+
+func (_Map_String_Field_MapItemList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_Map_String_Field_MapItemList) Close() {}
+
+// ToWire translates a Message struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *Message) ToWire() (wire.Value, error) {
+	var (
+		fields [6]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.MessageType != nil {
+		w, err = v.MessageType.ToWire()
 		if err != nil {
 			return w, err
 		}
@@ -103,67 +617,71 @@ func (v *VisibilityMsg) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 40, Value: w}
 		i++
 	}
-	if v.WorkflowType != nil {
-		w, err = wire.NewValueString(*(v.WorkflowType)), error(nil)
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
 		if err != nil {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 50, Value: w}
 		i++
 	}
-	if v.StartTime != nil {
-		w, err = wire.NewValueI64(*(v.StartTime)), error(nil)
+	if v.Fields != nil {
+		w, err = wire.NewValueMap(_Map_String_Field_MapItemList(v.Fields)), error(nil)
 		if err != nil {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 60, Value: w}
 		i++
 	}
-	if v.CloseTime != nil {
-		w, err = wire.NewValueI64(*(v.CloseTime)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 70, Value: w}
-		i++
-	}
-	if v.CloseStatus != nil {
-		w, err = v.CloseStatus.ToWire()
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 80, Value: w}
-		i++
-	}
-	if v.HistoryLength != nil {
-		w, err = wire.NewValueI64(*(v.HistoryLength)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 90, Value: w}
-		i++
-	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _VisibilityMsgType_Read(w wire.Value) (VisibilityMsgType, error) {
-	var v VisibilityMsgType
+func _MessageType_Read(w wire.Value) (MessageType, error) {
+	var v MessageType
 	err := v.FromWire(w)
 	return v, err
 }
 
-func _WorkflowExecutionCloseStatus_Read(w wire.Value) (shared.WorkflowExecutionCloseStatus, error) {
-	var v shared.WorkflowExecutionCloseStatus
+func _Field_Read(w wire.Value) (*Field, error) {
+	var v Field
 	err := v.FromWire(w)
-	return v, err
+	return &v, err
 }
 
-// FromWire deserializes a VisibilityMsg struct from its Thrift-level
+func _Map_String_Field_Read(m wire.MapItemList) (map[string]*Field, error) {
+	if m.KeyType() != wire.TBinary {
+		return nil, nil
+	}
+
+	if m.ValueType() != wire.TStruct {
+		return nil, nil
+	}
+
+	o := make(map[string]*Field, m.Size())
+	err := m.ForEach(func(x wire.MapItem) error {
+		k, err := x.Key.GetString(), error(nil)
+		if err != nil {
+			return err
+		}
+
+		v, err := _Field_Read(x.Value)
+		if err != nil {
+			return err
+		}
+
+		o[k] = v
+		return nil
+	})
+	m.Close()
+	return o, err
+}
+
+// FromWire deserializes a Message struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a VisibilityMsg struct
+// An error is returned if we were unable to build a Message struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -171,21 +689,21 @@ func _WorkflowExecutionCloseStatus_Read(w wire.Value) (shared.WorkflowExecutionC
 //     return nil, err
 //   }
 //
-//   var v VisibilityMsg
+//   var v Message
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *VisibilityMsg) FromWire(w wire.Value) error {
+func (v *Message) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 10:
 			if field.Value.Type() == wire.TI32 {
-				var x VisibilityMsgType
-				x, err = _VisibilityMsgType_Read(field.Value)
-				v.MsgType = &x
+				var x MessageType
+				x, err = _MessageType_Read(field.Value)
+				v.MessageType = &x
 				if err != nil {
 					return err
 				}
@@ -222,50 +740,18 @@ func (v *VisibilityMsg) FromWire(w wire.Value) error {
 
 			}
 		case 50:
-			if field.Value.Type() == wire.TBinary {
-				var x string
-				x, err = field.Value.GetString(), error(nil)
-				v.WorkflowType = &x
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
 				if err != nil {
 					return err
 				}
 
 			}
 		case 60:
-			if field.Value.Type() == wire.TI64 {
-				var x int64
-				x, err = field.Value.GetI64(), error(nil)
-				v.StartTime = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 70:
-			if field.Value.Type() == wire.TI64 {
-				var x int64
-				x, err = field.Value.GetI64(), error(nil)
-				v.CloseTime = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 80:
-			if field.Value.Type() == wire.TI32 {
-				var x shared.WorkflowExecutionCloseStatus
-				x, err = _WorkflowExecutionCloseStatus_Read(field.Value)
-				v.CloseStatus = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 90:
-			if field.Value.Type() == wire.TI64 {
-				var x int64
-				x, err = field.Value.GetI64(), error(nil)
-				v.HistoryLength = &x
+			if field.Value.Type() == wire.TMap {
+				v.Fields, err = _Map_String_Field_Read(field.Value.GetMap())
 				if err != nil {
 					return err
 				}
@@ -277,17 +763,17 @@ func (v *VisibilityMsg) FromWire(w wire.Value) error {
 	return nil
 }
 
-// String returns a readable string representation of a VisibilityMsg
+// String returns a readable string representation of a Message
 // struct.
-func (v *VisibilityMsg) String() string {
+func (v *Message) String() string {
 	if v == nil {
 		return "<nil>"
 	}
 
-	var fields [9]string
+	var fields [6]string
 	i := 0
-	if v.MsgType != nil {
-		fields[i] = fmt.Sprintf("MsgType: %v", *(v.MsgType))
+	if v.MessageType != nil {
+		fields[i] = fmt.Sprintf("MessageType: %v", *(v.MessageType))
 		i++
 	}
 	if v.DomainID != nil {
@@ -302,31 +788,19 @@ func (v *VisibilityMsg) String() string {
 		fields[i] = fmt.Sprintf("RunID: %v", *(v.RunID))
 		i++
 	}
-	if v.WorkflowType != nil {
-		fields[i] = fmt.Sprintf("WorkflowType: %v", *(v.WorkflowType))
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
 		i++
 	}
-	if v.StartTime != nil {
-		fields[i] = fmt.Sprintf("StartTime: %v", *(v.StartTime))
-		i++
-	}
-	if v.CloseTime != nil {
-		fields[i] = fmt.Sprintf("CloseTime: %v", *(v.CloseTime))
-		i++
-	}
-	if v.CloseStatus != nil {
-		fields[i] = fmt.Sprintf("CloseStatus: %v", *(v.CloseStatus))
-		i++
-	}
-	if v.HistoryLength != nil {
-		fields[i] = fmt.Sprintf("HistoryLength: %v", *(v.HistoryLength))
+	if v.Fields != nil {
+		fields[i] = fmt.Sprintf("Fields: %v", v.Fields)
 		i++
 	}
 
-	return fmt.Sprintf("VisibilityMsg{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("Message{%v}", strings.Join(fields[:i], ", "))
 }
 
-func _VisibilityMsgType_EqualsPtr(lhs, rhs *VisibilityMsgType) bool {
+func _MessageType_EqualsPtr(lhs, rhs *MessageType) bool {
 	if lhs != nil && rhs != nil {
 
 		x := *lhs
@@ -336,47 +810,34 @@ func _VisibilityMsgType_EqualsPtr(lhs, rhs *VisibilityMsgType) bool {
 	return lhs == nil && rhs == nil
 }
 
-func _String_EqualsPtr(lhs, rhs *string) bool {
-	if lhs != nil && rhs != nil {
-
-		x := *lhs
-		y := *rhs
-		return (x == y)
+func _Map_String_Field_Equals(lhs, rhs map[string]*Field) bool {
+	if len(lhs) != len(rhs) {
+		return false
 	}
-	return lhs == nil && rhs == nil
+
+	for lk, lv := range lhs {
+		rv, ok := rhs[lk]
+		if !ok {
+			return false
+		}
+		if !lv.Equals(rv) {
+			return false
+		}
+	}
+	return true
 }
 
-func _I64_EqualsPtr(lhs, rhs *int64) bool {
-	if lhs != nil && rhs != nil {
-
-		x := *lhs
-		y := *rhs
-		return (x == y)
-	}
-	return lhs == nil && rhs == nil
-}
-
-func _WorkflowExecutionCloseStatus_EqualsPtr(lhs, rhs *shared.WorkflowExecutionCloseStatus) bool {
-	if lhs != nil && rhs != nil {
-
-		x := *lhs
-		y := *rhs
-		return x.Equals(y)
-	}
-	return lhs == nil && rhs == nil
-}
-
-// Equals returns true if all the fields of this VisibilityMsg match the
-// provided VisibilityMsg.
+// Equals returns true if all the fields of this Message match the
+// provided Message.
 //
 // This function performs a deep comparison.
-func (v *VisibilityMsg) Equals(rhs *VisibilityMsg) bool {
+func (v *Message) Equals(rhs *Message) bool {
 	if v == nil {
 		return rhs == nil
 	} else if rhs == nil {
 		return false
 	}
-	if !_VisibilityMsgType_EqualsPtr(v.MsgType, rhs.MsgType) {
+	if !_MessageType_EqualsPtr(v.MessageType, rhs.MessageType) {
 		return false
 	}
 	if !_String_EqualsPtr(v.DomainID, rhs.DomainID) {
@@ -388,33 +849,35 @@ func (v *VisibilityMsg) Equals(rhs *VisibilityMsg) bool {
 	if !_String_EqualsPtr(v.RunID, rhs.RunID) {
 		return false
 	}
-	if !_String_EqualsPtr(v.WorkflowType, rhs.WorkflowType) {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
 		return false
 	}
-	if !_I64_EqualsPtr(v.StartTime, rhs.StartTime) {
-		return false
-	}
-	if !_I64_EqualsPtr(v.CloseTime, rhs.CloseTime) {
-		return false
-	}
-	if !_WorkflowExecutionCloseStatus_EqualsPtr(v.CloseStatus, rhs.CloseStatus) {
-		return false
-	}
-	if !_I64_EqualsPtr(v.HistoryLength, rhs.HistoryLength) {
+	if !((v.Fields == nil && rhs.Fields == nil) || (v.Fields != nil && rhs.Fields != nil && _Map_String_Field_Equals(v.Fields, rhs.Fields))) {
 		return false
 	}
 
 	return true
 }
 
+type _Map_String_Field_Zapper map[string]*Field
+
 // MarshalLogObject implements zapcore.ObjectMarshaler, enabling
-// fast logging of VisibilityMsg.
-func (v *VisibilityMsg) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+// fast logging of _Map_String_Field_Zapper.
+func (m _Map_String_Field_Zapper) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	for k, v := range m {
+		err = multierr.Append(err, enc.AddObject((string)(k), v))
+	}
+	return err
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of Message.
+func (v *Message) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	if v == nil {
 		return nil
 	}
-	if v.MsgType != nil {
-		err = multierr.Append(err, enc.AddObject("msgType", *v.MsgType))
+	if v.MessageType != nil {
+		err = multierr.Append(err, enc.AddObject("messageType", *v.MessageType))
 	}
 	if v.DomainID != nil {
 		enc.AddString("domainID", *v.DomainID)
@@ -425,29 +888,20 @@ func (v *VisibilityMsg) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) 
 	if v.RunID != nil {
 		enc.AddString("runID", *v.RunID)
 	}
-	if v.WorkflowType != nil {
-		enc.AddString("workflowType", *v.WorkflowType)
+	if v.Version != nil {
+		enc.AddInt64("version", *v.Version)
 	}
-	if v.StartTime != nil {
-		enc.AddInt64("startTime", *v.StartTime)
-	}
-	if v.CloseTime != nil {
-		enc.AddInt64("closeTime", *v.CloseTime)
-	}
-	if v.CloseStatus != nil {
-		err = multierr.Append(err, enc.AddObject("closeStatus", *v.CloseStatus))
-	}
-	if v.HistoryLength != nil {
-		enc.AddInt64("historyLength", *v.HistoryLength)
+	if v.Fields != nil {
+		err = multierr.Append(err, enc.AddObject("fields", (_Map_String_Field_Zapper)(v.Fields)))
 	}
 	return err
 }
 
-// GetMsgType returns the value of MsgType if it is set or its
+// GetMessageType returns the value of MessageType if it is set or its
 // zero value if it is unset.
-func (v *VisibilityMsg) GetMsgType() (o VisibilityMsgType) {
-	if v.MsgType != nil {
-		return *v.MsgType
+func (v *Message) GetMessageType() (o MessageType) {
+	if v.MessageType != nil {
+		return *v.MessageType
 	}
 
 	return
@@ -455,7 +909,7 @@ func (v *VisibilityMsg) GetMsgType() (o VisibilityMsgType) {
 
 // GetDomainID returns the value of DomainID if it is set or its
 // zero value if it is unset.
-func (v *VisibilityMsg) GetDomainID() (o string) {
+func (v *Message) GetDomainID() (o string) {
 	if v.DomainID != nil {
 		return *v.DomainID
 	}
@@ -465,7 +919,7 @@ func (v *VisibilityMsg) GetDomainID() (o string) {
 
 // GetWorkflowID returns the value of WorkflowID if it is set or its
 // zero value if it is unset.
-func (v *VisibilityMsg) GetWorkflowID() (o string) {
+func (v *Message) GetWorkflowID() (o string) {
 	if v.WorkflowID != nil {
 		return *v.WorkflowID
 	}
@@ -475,7 +929,7 @@ func (v *VisibilityMsg) GetWorkflowID() (o string) {
 
 // GetRunID returns the value of RunID if it is set or its
 // zero value if it is unset.
-func (v *VisibilityMsg) GetRunID() (o string) {
+func (v *Message) GetRunID() (o string) {
 	if v.RunID != nil {
 		return *v.RunID
 	}
@@ -483,212 +937,169 @@ func (v *VisibilityMsg) GetRunID() (o string) {
 	return
 }
 
-// GetWorkflowType returns the value of WorkflowType if it is set or its
+// GetVersion returns the value of Version if it is set or its
 // zero value if it is unset.
-func (v *VisibilityMsg) GetWorkflowType() (o string) {
-	if v.WorkflowType != nil {
-		return *v.WorkflowType
+func (v *Message) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
 	}
 
 	return
 }
 
-// GetStartTime returns the value of StartTime if it is set or its
+// GetFields returns the value of Fields if it is set or its
 // zero value if it is unset.
-func (v *VisibilityMsg) GetStartTime() (o int64) {
-	if v.StartTime != nil {
-		return *v.StartTime
+func (v *Message) GetFields() (o map[string]*Field) {
+	if v.Fields != nil {
+		return v.Fields
 	}
 
 	return
 }
 
-// GetCloseTime returns the value of CloseTime if it is set or its
-// zero value if it is unset.
-func (v *VisibilityMsg) GetCloseTime() (o int64) {
-	if v.CloseTime != nil {
-		return *v.CloseTime
-	}
-
-	return
-}
-
-// GetCloseStatus returns the value of CloseStatus if it is set or its
-// zero value if it is unset.
-func (v *VisibilityMsg) GetCloseStatus() (o shared.WorkflowExecutionCloseStatus) {
-	if v.CloseStatus != nil {
-		return *v.CloseStatus
-	}
-
-	return
-}
-
-// GetHistoryLength returns the value of HistoryLength if it is set or its
-// zero value if it is unset.
-func (v *VisibilityMsg) GetHistoryLength() (o int64) {
-	if v.HistoryLength != nil {
-		return *v.HistoryLength
-	}
-
-	return
-}
-
-type VisibilityMsgType int32
+type MessageType int32
 
 const (
-	VisibilityMsgTypeOpen   VisibilityMsgType = 0
-	VisibilityMsgTypeClosed VisibilityMsgType = 1
-	VisibilityMsgTypeDelete VisibilityMsgType = 2
+	MessageTypeIndex  MessageType = 0
+	MessageTypeDelete MessageType = 1
 )
 
-// VisibilityMsgType_Values returns all recognized values of VisibilityMsgType.
-func VisibilityMsgType_Values() []VisibilityMsgType {
-	return []VisibilityMsgType{
-		VisibilityMsgTypeOpen,
-		VisibilityMsgTypeClosed,
-		VisibilityMsgTypeDelete,
+// MessageType_Values returns all recognized values of MessageType.
+func MessageType_Values() []MessageType {
+	return []MessageType{
+		MessageTypeIndex,
+		MessageTypeDelete,
 	}
 }
 
-// UnmarshalText tries to decode VisibilityMsgType from a byte slice
+// UnmarshalText tries to decode MessageType from a byte slice
 // containing its name.
 //
-//   var v VisibilityMsgType
-//   err := v.UnmarshalText([]byte("Open"))
-func (v *VisibilityMsgType) UnmarshalText(value []byte) error {
+//   var v MessageType
+//   err := v.UnmarshalText([]byte("Index"))
+func (v *MessageType) UnmarshalText(value []byte) error {
 	switch s := string(value); s {
-	case "Open":
-		*v = VisibilityMsgTypeOpen
-		return nil
-	case "Closed":
-		*v = VisibilityMsgTypeClosed
+	case "Index":
+		*v = MessageTypeIndex
 		return nil
 	case "Delete":
-		*v = VisibilityMsgTypeDelete
+		*v = MessageTypeDelete
 		return nil
 	default:
 		val, err := strconv.ParseInt(s, 10, 32)
 		if err != nil {
-			return fmt.Errorf("unknown enum value %q for %q: %v", s, "VisibilityMsgType", err)
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "MessageType", err)
 		}
-		*v = VisibilityMsgType(val)
+		*v = MessageType(val)
 		return nil
 	}
 }
 
-// MarshalText encodes VisibilityMsgType to text.
+// MarshalText encodes MessageType to text.
 //
 // If the enum value is recognized, its name is returned. Otherwise,
 // its integer value is returned.
 //
 // This implements the TextMarshaler interface.
-func (v VisibilityMsgType) MarshalText() ([]byte, error) {
+func (v MessageType) MarshalText() ([]byte, error) {
 	switch int32(v) {
 	case 0:
-		return []byte("Open"), nil
+		return []byte("Index"), nil
 	case 1:
-		return []byte("Closed"), nil
-	case 2:
 		return []byte("Delete"), nil
 	}
 	return []byte(strconv.FormatInt(int64(v), 10)), nil
 }
 
 // MarshalLogObject implements zapcore.ObjectMarshaler, enabling
-// fast logging of VisibilityMsgType.
+// fast logging of MessageType.
 // Enums are logged as objects, where the value is logged with key "value", and
 // if this value's name is known, the name is logged with key "name".
-func (v VisibilityMsgType) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+func (v MessageType) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	enc.AddInt32("value", int32(v))
 	switch int32(v) {
 	case 0:
-		enc.AddString("name", "Open")
+		enc.AddString("name", "Index")
 	case 1:
-		enc.AddString("name", "Closed")
-	case 2:
 		enc.AddString("name", "Delete")
 	}
 	return nil
 }
 
 // Ptr returns a pointer to this enum value.
-func (v VisibilityMsgType) Ptr() *VisibilityMsgType {
+func (v MessageType) Ptr() *MessageType {
 	return &v
 }
 
-// ToWire translates VisibilityMsgType into a Thrift-level intermediate
+// ToWire translates MessageType into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
 // Enums are represented as 32-bit integers over the wire.
-func (v VisibilityMsgType) ToWire() (wire.Value, error) {
+func (v MessageType) ToWire() (wire.Value, error) {
 	return wire.NewValueI32(int32(v)), nil
 }
 
-// FromWire deserializes VisibilityMsgType from its Thrift-level
+// FromWire deserializes MessageType from its Thrift-level
 // representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TI32)
 //   if err != nil {
-//     return VisibilityMsgType(0), err
+//     return MessageType(0), err
 //   }
 //
-//   var v VisibilityMsgType
+//   var v MessageType
 //   if err := v.FromWire(x); err != nil {
-//     return VisibilityMsgType(0), err
+//     return MessageType(0), err
 //   }
 //   return v, nil
-func (v *VisibilityMsgType) FromWire(w wire.Value) error {
-	*v = (VisibilityMsgType)(w.GetI32())
+func (v *MessageType) FromWire(w wire.Value) error {
+	*v = (MessageType)(w.GetI32())
 	return nil
 }
 
-// String returns a readable string representation of VisibilityMsgType.
-func (v VisibilityMsgType) String() string {
+// String returns a readable string representation of MessageType.
+func (v MessageType) String() string {
 	w := int32(v)
 	switch w {
 	case 0:
-		return "Open"
+		return "Index"
 	case 1:
-		return "Closed"
-	case 2:
 		return "Delete"
 	}
-	return fmt.Sprintf("VisibilityMsgType(%d)", w)
+	return fmt.Sprintf("MessageType(%d)", w)
 }
 
-// Equals returns true if this VisibilityMsgType value matches the provided
+// Equals returns true if this MessageType value matches the provided
 // value.
-func (v VisibilityMsgType) Equals(rhs VisibilityMsgType) bool {
+func (v MessageType) Equals(rhs MessageType) bool {
 	return v == rhs
 }
 
-// MarshalJSON serializes VisibilityMsgType into JSON.
+// MarshalJSON serializes MessageType into JSON.
 //
 // If the enum value is recognized, its name is returned. Otherwise,
 // its integer value is returned.
 //
 // This implements json.Marshaler.
-func (v VisibilityMsgType) MarshalJSON() ([]byte, error) {
+func (v MessageType) MarshalJSON() ([]byte, error) {
 	switch int32(v) {
 	case 0:
-		return ([]byte)("\"Open\""), nil
+		return ([]byte)("\"Index\""), nil
 	case 1:
-		return ([]byte)("\"Closed\""), nil
-	case 2:
 		return ([]byte)("\"Delete\""), nil
 	}
 	return ([]byte)(strconv.FormatInt(int64(v), 10)), nil
 }
 
-// UnmarshalJSON attempts to decode VisibilityMsgType from its JSON
+// UnmarshalJSON attempts to decode MessageType from its JSON
 // representation.
 //
 // This implementation supports both, numeric and string inputs. If a
 // string is provided, it must be a known enum name.
 //
 // This implements json.Unmarshaler.
-func (v *VisibilityMsgType) UnmarshalJSON(text []byte) error {
+func (v *MessageType) UnmarshalJSON(text []byte) error {
 	d := json.NewDecoder(bytes.NewReader(text))
 	d.UseNumber()
 	t, err := d.Token()
@@ -703,16 +1114,16 @@ func (v *VisibilityMsgType) UnmarshalJSON(text []byte) error {
 			return err
 		}
 		if x > math.MaxInt32 {
-			return fmt.Errorf("enum overflow from JSON %q for %q", text, "VisibilityMsgType")
+			return fmt.Errorf("enum overflow from JSON %q for %q", text, "MessageType")
 		}
 		if x < math.MinInt32 {
-			return fmt.Errorf("enum underflow from JSON %q for %q", text, "VisibilityMsgType")
+			return fmt.Errorf("enum underflow from JSON %q for %q", text, "MessageType")
 		}
-		*v = (VisibilityMsgType)(x)
+		*v = (MessageType)(x)
 		return nil
 	case string:
 		return v.UnmarshalText([]byte(w))
 	default:
-		return fmt.Errorf("invalid JSON value %q (%T) to unmarshal into %q", t, t, "VisibilityMsgType")
+		return fmt.Errorf("invalid JSON value %q (%T) to unmarshal into %q", t, t, "MessageType")
 	}
 }

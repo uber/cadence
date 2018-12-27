@@ -81,6 +81,7 @@ const (
 	TagEventCount                 = "event-count"
 	TagESRequest                  = "es-request"
 	TagESKey                      = "es-mapping-key"
+	TagESField                    = "es-field"
 
 	// workflow logging tag values
 	// TagWorkflowComponent Values

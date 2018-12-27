@@ -155,15 +155,15 @@ func (p *kafkaProducer) getProducerMessage(message interface{}) (*sarama.Produce
 			Value: sarama.ByteEncoder(payload),
 		}
 		return msg, nil
-	case *indexer.VisibilityMsg:
-		visMsg := message.(*indexer.VisibilityMsg)
-		payload, err := p.serializeThrift(visMsg)
+	case *indexer.Message:
+		indexMsg := message.(*indexer.Message)
+		payload, err := p.serializeThrift(indexMsg)
 		if err != nil {
 			return nil, err
 		}
 		msg := &sarama.ProducerMessage{
 			Topic: p.topic,
-			Key:   sarama.StringEncoder(visMsg.GetWorkflowID()),
+			Key:   sarama.StringEncoder(indexMsg.GetWorkflowID()),
 			Value: sarama.ByteEncoder(payload),
 		}
 		return msg, nil

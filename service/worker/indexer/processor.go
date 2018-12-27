@@ -21,12 +21,14 @@
 package indexer
 
 import (
+	"fmt"
 	"github.com/olivere/elastic"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
+	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
@@ -59,9 +61,6 @@ const (
 	esDocType        = "_doc"
 
 	versionTypeExternal = "external"
-	versionForOpen      = 10
-	versionForClose     = 20
-	versionForDelete    = 30
 )
 
 var (
@@ -183,7 +182,7 @@ func (p *indexProcessor) process(msg messaging.Message) error {
 		logging.TagAttemptStart: time.Now(),
 	})
 
-	record, err := p.deserialize(msg.Value())
+	indexMsg, err := p.deserialize(msg.Value())
 	if err != nil {
 		logger.WithFields(bark.Fields{
 			logging.TagErr: err,
@@ -192,31 +191,22 @@ func (p *indexProcessor) process(msg messaging.Message) error {
 		return err
 	}
 
-	switch record.GetMsgType() {
-	case indexer.VisibilityMsgTypeOpen:
-		docID := record.GetWorkflowID() + esDocIDDelimiter + record.GetRunID()
+	switch indexMsg.GetMessageType() {
+	case indexer.MessageTypeIndex:
+		docID := indexMsg.GetWorkflowID() + esDocIDDelimiter + indexMsg.GetRunID()
+		doc := p.dumpFieldsToMap(indexMsg.Fields)
+		key := fmt.Sprintf("%v-%v", msg.Partition(), msg.Offset())
+		fulfillDoc(doc, indexMsg, key)
 		req := elastic.NewBulkIndexRequest().
 			Index(p.esIndexName).
 			Type(esDocType).
 			Id(docID).
 			VersionType(versionTypeExternal).
-			Version(versionForOpen).
-			Doc(*record)
-		key := docID + indexer.VisibilityMsgTypeOpen.String()
+			Version(indexMsg.GetVersion()).
+			Doc(doc)
 		p.esProcessor.Add(req, key, msg)
-	case indexer.VisibilityMsgTypeClosed:
-		docID := record.GetWorkflowID() + esDocIDDelimiter + record.GetRunID()
-		req := elastic.NewBulkIndexRequest().
-			Index(p.esIndexName).
-			Type(esDocType).
-			Id(docID).
-			VersionType(versionTypeExternal).
-			Version(versionForClose).
-			Doc(*record)
-		key := docID + indexer.VisibilityMsgTypeClosed.String()
-		p.esProcessor.Add(req, key, msg)
-	case indexer.VisibilityMsgTypeDelete:
-		//logger.Infof("vance in process, delete record is: %v", record)
+	case indexer.MessageTypeDelete:
+		// TODO
 	default:
 		logger.Error("Unknown message type")
 		p.metricsClient.IncCounter(metrics.IndexProcessorScope, metrics.IndexProcessorCorruptedData)
@@ -226,10 +216,43 @@ func (p *indexProcessor) process(msg messaging.Message) error {
 	return err
 }
 
-func (p *indexProcessor) deserialize(payload []byte) (*indexer.VisibilityMsg, error) {
-	var msg indexer.VisibilityMsg
+func (p *indexProcessor) deserialize(payload []byte) (*indexer.Message, error) {
+	var msg indexer.Message
 	if err := p.msgEncoder.Decode(payload, &msg); err != nil {
 		return nil, err
 	}
 	return &msg, nil
+}
+
+func (p *indexProcessor) dumpFieldsToMap(fields map[string]*indexer.Field) map[string]interface{} {
+	doc := make(map[string]interface{})
+	for k, v := range fields {
+		if !es.IsFieldNameValid(k) {
+			p.logger.WithFields(bark.Fields{
+				logging.TagESField: k,
+			}).Error("Unregistered field.")
+			p.metricsClient.IncCounter(metrics.IndexProcessorScope, metrics.IndexProcessorCorruptedData)
+			continue
+		}
+
+		switch v.GetType() {
+		case indexer.FieldTypeString:
+			doc[k] = v.GetStringData()
+		case indexer.FieldTypeInt:
+			doc[k] = v.GetIntData()
+		case indexer.FieldTypeBool:
+			doc[k] = v.GetBoolData()
+		default:
+			// must be bug in code and bad deployment, check data sent from producer
+			p.logger.Fatalf("Unknown field type")
+		}
+	}
+	return doc
+}
+
+func fulfillDoc(doc map[string]interface{}, msg *indexer.Message, kafkaKey string) {
+	doc[es.DomainID] = msg.GetDomainID()
+	doc[es.WorkflowID] = msg.GetWorkflowID()
+	doc[es.RunID] = msg.GetRunID()
+	doc[es.KafkaKey] = kafkaKey
 }

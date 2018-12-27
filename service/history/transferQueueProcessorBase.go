@@ -27,6 +27,7 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
+	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/persistence"
@@ -140,7 +141,7 @@ func (t *transferQueueProcessorBase) pushDecision(task *persistence.TransferTask
 
 func (t *transferQueueProcessorBase) recordWorkflowStarted(
 	domainID string, execution workflow.WorkflowExecution, workflowTypeName string,
-	startTimeUnixNano int64, workflowTimeout int32) error {
+	startTimeUnixNano int64, workflowTimeout int32, nextEventID int64) error {
 	domain := defaultDomainName
 	isSampledEnabled := false
 	wid := execution.GetWorkflowId()
@@ -162,14 +163,18 @@ func (t *transferQueueProcessorBase) recordWorkflowStarted(
 
 	// publish to kafka
 	if t.visibilityProducer != nil {
-		msgType := indexer.VisibilityMsgTypeOpen
-		msg := &indexer.VisibilityMsg{
-			MsgType:      &msgType,
-			DomainID:     common.StringPtr(domainID),
-			WorkflowID:   common.StringPtr(wid),
-			RunID:        common.StringPtr(execution.GetRunId()),
-			WorkflowType: common.StringPtr(workflowTypeName),
-			StartTime:    common.Int64Ptr(startTimeUnixNano),
+		msgType := indexer.MessageTypeIndex
+		fields := map[string]*indexer.Field{
+			es.WorkflowType: {Type: &es.FieldTypeString, StringData: common.StringPtr(workflowTypeName)},
+			es.StartTime:    {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(startTimeUnixNano)},
+		}
+		msg := &indexer.Message{
+			MessageType: &msgType,
+			DomainID:    common.StringPtr(domainID),
+			WorkflowID:  common.StringPtr(wid),
+			RunID:       common.StringPtr(execution.GetRunId()),
+			Version:     common.Int64Ptr(nextEventID),
+			Fields:      fields,
 		}
 		err := t.visibilityProducer.Publish(msg)
 		if err != nil {
@@ -190,7 +195,7 @@ func (t *transferQueueProcessorBase) recordWorkflowStarted(
 func (t *transferQueueProcessorBase) recordWorkflowClosed(
 	domainID string, execution workflow.WorkflowExecution, workflowTypeName string,
 	startTimeUnixNano int64, endTimeUnixNano int64, closeStatus workflow.WorkflowExecutionCloseStatus,
-	historyLength int64) error {
+	historyLength int64, nextEventID int64) error {
 	// Record closing in visibility store
 	retentionSeconds := int64(0)
 	domain := defaultDomainName
@@ -217,17 +222,21 @@ func (t *transferQueueProcessorBase) recordWorkflowClosed(
 
 	// publish to kafka
 	if t.visibilityProducer != nil {
-		msgType := indexer.VisibilityMsgTypeClosed
-		msg := &indexer.VisibilityMsg{
-			MsgType:       &msgType,
-			DomainID:      common.StringPtr(domainID),
-			WorkflowID:    common.StringPtr(wid),
-			RunID:         common.StringPtr(execution.GetRunId()),
-			WorkflowType:  common.StringPtr(workflowTypeName),
-			StartTime:     common.Int64Ptr(startTimeUnixNano),
-			CloseTime:     common.Int64Ptr(endTimeUnixNano),
-			CloseStatus:   &closeStatus,
-			HistoryLength: common.Int64Ptr(historyLength),
+		msgType := indexer.MessageTypeIndex
+		fields := map[string]*indexer.Field{
+			es.WorkflowType:  {Type: &es.FieldTypeString, StringData: common.StringPtr(workflowTypeName)},
+			es.StartTime:     {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(startTimeUnixNano)},
+			es.CloseTime:     {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(endTimeUnixNano)},
+			es.CloseStatus:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(closeStatus))},
+			es.HistoryLength: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(historyLength)},
+		}
+		msg := &indexer.Message{
+			MessageType: &msgType,
+			DomainID:    common.StringPtr(domainID),
+			WorkflowID:  common.StringPtr(wid),
+			RunID:       common.StringPtr(execution.GetRunId()),
+			Version:     common.Int64Ptr(nextEventID),
+			Fields:      fields,
 		}
 		err := t.visibilityProducer.Publish(msg)
 		if err != nil {

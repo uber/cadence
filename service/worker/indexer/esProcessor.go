@@ -25,9 +25,9 @@ import (
 	"encoding/json"
 	"github.com/olivere/elastic"
 	"github.com/uber-common/bark"
-	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
+	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
@@ -57,7 +57,7 @@ type (
 	// esProcessorImpl implements ESProcessor, it's an agent of elastic.BulkProcessor
 	esProcessorImpl struct {
 		processor     ElasticBulkProcessor
-		mapToKafkaMsg collection.ConcurrentTxMap // used to map ES request to kafka message. key: esDocID+visType
+		mapToKafkaMsg collection.ConcurrentTxMap // used to map ES request to kafka message
 		config        *Config
 		logger        bark.Logger
 		metricsClient metrics.Client
@@ -137,13 +137,12 @@ func (p *esProcessorImpl) bulkAfterAction(id int64, requests []elastic.BulkableR
 
 	responseItems := response.Items
 	for i := 0; i < len(requests); i++ {
-		visType := p.getVisibilityType(requests[i])
-		if visType == "" {
+		key := p.getKeyForKafkaMsg(requests[i])
+		if key == "" {
 			continue
 		}
 		responseItem := responseItems[i]
 		for _, resp := range responseItem {
-			key := resp.Id + visType
 			switch {
 			case isResponseSuccess(resp.Status):
 				p.ackKafkaMsg(key)
@@ -193,7 +192,7 @@ func (p *esProcessorImpl) hashFn(key interface{}) uint32 {
 	return uint32(common.WorkflowIDToHistoryShard(id, numOfShards))
 }
 
-func (p *esProcessorImpl) getVisibilityType(request elastic.BulkableRequest) string {
+func (p *esProcessorImpl) getKeyForKafkaMsg(request elastic.BulkableRequest) string {
 	req, err := request.Source()
 	if err != nil {
 		p.logger.WithFields(bark.Fields{
@@ -204,41 +203,29 @@ func (p *esProcessorImpl) getVisibilityType(request elastic.BulkableRequest) str
 		return ""
 	}
 
-	var reqHead map[string]map[string]interface{}
-	if err := json.Unmarshal([]byte(req[0]), &reqHead); err != nil {
-		p.logger.WithFields(bark.Fields{
-			logging.TagErr: err,
-		}).Error("Unmarshal request err.")
-		p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
-		return ""
-	}
-
-	var visType string
-	for _, header := range reqHead {
-		h, ok := header["version"].(float64)
-		if !ok {
-			p.logger.Error("Request missing version field.")
+	var key string
+	if len(req) == 2 { // index or update requests
+		var body map[string]interface{}
+		if err := json.Unmarshal([]byte(req[1]), &body); err != nil {
+			p.logger.WithFields(bark.Fields{
+				logging.TagErr: err,
+			}).Error("Unmarshal request body err.")
 			p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
 			return ""
 		}
-		visType = p.convertESVersionToVisibilityType(h)
-	}
-	return visType
-}
 
-func (p *esProcessorImpl) convertESVersionToVisibilityType(version float64) string {
-	switch version {
-	case float64(versionForOpen):
-		return indexer.VisibilityMsgTypeOpen.String()
-	case float64(versionForClose):
-		return indexer.VisibilityMsgTypeClosed.String()
-	case float64(versionForDelete):
-		return indexer.VisibilityMsgTypeDelete.String()
+		k, ok := body[es.KafkaKey]
+		if !ok {
+			// must be bug in code and bad deployment, check processor that add es requests
+			panic("KafkaKey not found")
+		}
+		key, ok = k.(string)
+		if !ok {
+			// must be bug in code and bad deployment, check processor that add es requests
+			panic("KafkaKey is not string")
+		}
 	}
-
-	p.logger.Errorf("Unknown version %v in ES request. ", version)
-	p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
-	return ""
+	return key
 }
 
 // 409 - Version Conflict
