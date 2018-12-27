@@ -24,6 +24,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/uber/cadence/common/blobstore"
+	"os"
 	"path/filepath"
 )
 
@@ -51,69 +52,111 @@ func NewClient(cfg *Config) (blobstore.Client, error) {
 	}, nil
 }
 
-// TODO: it makes sense to have a file_blob.go that knows how to serialize and deserialize blobs to and from files
-
 func (c *client) UploadBlob(_ context.Context, bucket string, filename string, blob *blobstore.Blob) error {
-	// check that bucket exists if not return error
-	// convert blob into bytes this involves figuring out how to write tags and body into byte array
-	// construct blob path from datastoreDir, bucket, filename
-	// write blob (this potentially replaces an existing blob)
-
-	return nil
+	exists, err := directoryExists(bucketDirectory(c.storeDirectory, bucket))
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return blobstore.ErrBucketNotExists
+	}
+	data, err := serializeBlob(blob)
+	if err != nil {
+		return err
+	}
+	blobPath := bucketItemPath(c.storeDirectory, bucket, filename)
+	return writeFile(blobPath, data)
 }
 
 func (c *client) DownloadBlob(_ context.Context, bucket string, filename string) (*blobstore.Blob, error) {
-	// check that bucket exists if not return error
-	// construct blob path from datastoreDir, bucket and fileanme
-	// read the whole file into memory, construct blob
-	// return result
-
-	return nil, nil
+	exists, err := directoryExists(bucketDirectory(c.storeDirectory, bucket))
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, blobstore.ErrBucketNotExists
+	}
+	blobPath := bucketItemPath(c.storeDirectory, bucket, filename)
+	data, err := readFile(blobPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, blobstore.ErrBlobNotExists
+		}
+		return nil, err
+	}
+	return deserializeBlob(data)
 }
 
 func (c *client) BucketMetadata(_ context.Context, bucket string) (*blobstore.BucketMetadataResponse, error) {
-	// check if bucket exists if not return error
-	// check that metadata file exists if not return error
-	// attempt to deserialize metadata file, if failed return error
-	// otherwise return metadata
+	exists, err := directoryExists(bucketDirectory(c.storeDirectory, bucket))
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, blobstore.ErrBucketNotExists
+	}
 
-	return nil, nil
+	metadataFilepath := bucketItemPath(c.storeDirectory, bucket, metadataFilename)
+	exists, err = fileExists(metadataFilepath)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, fmt.Errorf("failed to get metadata, file at %v does not exist", metadataFilepath)
+	}
+
+	data, err := readFile(metadataFilepath)
+	if err != nil {
+		return nil, err
+	}
+	bucketCfg, err := deserializeBucketConfig(data)
+	if err != nil {
+		return nil, err
+	}
+
+	return &blobstore.BucketMetadataResponse{
+		Owner: bucketCfg.Owner,
+		RetentionDays: bucketCfg.RetentionDays,
+	}, nil
 }
 
 func setupDirectories(cfg *Config) error {
-	var err error
-	ensureExists := func(directoryPath string) {
-		if err := mkdirAll(directoryPath); err != nil {
-			err = fmt.Errorf("failed to ensure directory %v exists: %v", directoryPath, err)
+	if err := mkdirAll(cfg.StoreDirectory); err != nil {
+		return err
+	}
+	if err := mkdirAll(bucketDirectory(cfg.StoreDirectory, cfg.DefaultBucket.Name)); err != nil {
+		return err
+	}
+	for _, b := range cfg.CustomBuckets {
+		if err := mkdirAll(bucketDirectory(cfg.StoreDirectory, b.Name)); err != nil {
+			return err
 		}
 	}
-
-	ensureExists(cfg.StoreDirectory)
-	ensureExists(bucketDirectory(cfg.StoreDirectory, cfg.DefaultBucket.Name))
-	for _, b := range cfg.CustomBuckets {
-		ensureExists(bucketDirectory(cfg.StoreDirectory, b.Name))
-	}
-	return err
+	return nil
 }
 
 func writeMetadataFiles(cfg *Config) error {
-	var err error
-	writeMetadataFile := func(bucketConfig BucketConfig) {
+	writeMetadataFile := func(bucketConfig BucketConfig) error {
 		path := bucketItemPath(cfg.StoreDirectory, bucketConfig.Name, metadataFilename)
 		bytes, err := serializeBucketConfig(&bucketConfig)
 		if err != nil {
-			err = fmt.Errorf("failed to write metadata file for bucket %v: %v", bucketConfig.Name, err)
+			return fmt.Errorf("failed to write metadata file for bucket %v: %v", bucketConfig.Name, err)
 		}
 		if err := writeFile(path, bytes); err != nil {
-			err = fmt.Errorf("failed to write metadata file for bucket %v: %v", bucketConfig.Name, err)
+			return fmt.Errorf("failed to write metadata file for bucket %v: %v", bucketConfig.Name, err)
 		}
+		return nil
 	}
 
-	writeMetadataFile(cfg.DefaultBucket)
-	for _, b := range cfg.CustomBuckets {
-		writeMetadataFile(b)
+	if err := writeMetadataFile(cfg.DefaultBucket); err != nil {
+		return err
 	}
-	return err
+	for _, b := range cfg.CustomBuckets {
+		if err := writeMetadataFile(b); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func bucketDirectory(storeDirectory string, bucketName string) string {
