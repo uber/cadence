@@ -20,8 +20,8 @@ func (s *ConfigSuite) SetupTest() {
 }
 
 func (s *ConfigSuite) TestValidate() {
-	testCases := []struct{
-		config *Config
+	testCases := []struct {
+		config  *Config
 		isValid bool
 	}{
 		{
@@ -33,7 +33,7 @@ func (s *ConfigSuite) TestValidate() {
 		{
 			config: &Config{
 				StoreDirectory: "test-store-directory",
-				DefaultBucket: BucketConfig{},
+				DefaultBucket:  BucketConfig{},
 			},
 			isValid: false,
 		},
@@ -50,7 +50,7 @@ func (s *ConfigSuite) TestValidate() {
 			config: &Config{
 				StoreDirectory: "test-store-directory",
 				DefaultBucket: BucketConfig{
-					Name: "test-default-bucket-name",
+					Name:  "test-default-bucket-name",
 					Owner: "test-default-bucket-owner",
 				},
 			},
@@ -60,8 +60,8 @@ func (s *ConfigSuite) TestValidate() {
 			config: &Config{
 				StoreDirectory: "test-store-directory",
 				DefaultBucket: BucketConfig{
-					Name: "test-default-bucket-name",
-					Owner: "test-default-bucket-owner",
+					Name:          "test-default-bucket-name",
+					Owner:         "test-default-bucket-owner",
 					RetentionDays: -1,
 				},
 			},
@@ -71,8 +71,8 @@ func (s *ConfigSuite) TestValidate() {
 			config: &Config{
 				StoreDirectory: "test-store-directory",
 				DefaultBucket: BucketConfig{
-					Name: "test-default-bucket-name",
-					Owner: "test-default-bucket-owner",
+					Name:          "test-default-bucket-name",
+					Owner:         "test-default-bucket-owner",
 					RetentionDays: 10,
 				},
 			},
@@ -82,20 +82,8 @@ func (s *ConfigSuite) TestValidate() {
 			config: &Config{
 				StoreDirectory: "test-store-directory",
 				DefaultBucket: BucketConfig{
-					Name: "test-default-bucket-name",
-					Owner: "test-default-bucket-owner",
-					RetentionDays: 10,
-				},
-				CustomBuckets: []BucketConfig{},
-			},
-			isValid: true,
-		},
-		{
-			config: &Config{
-				StoreDirectory: "test-store-directory",
-				DefaultBucket: BucketConfig{
-					Name: "test-default-bucket-name",
-					Owner: "test-default-bucket-owner",
+					Name:          "test-default-bucket-name",
+					Owner:         "test-default-bucket-owner",
 					RetentionDays: 10,
 				},
 				CustomBuckets: []BucketConfig{
@@ -108,14 +96,14 @@ func (s *ConfigSuite) TestValidate() {
 			config: &Config{
 				StoreDirectory: "test-store-directory",
 				DefaultBucket: BucketConfig{
-					Name: "test-default-bucket-name",
-					Owner: "test-default-bucket-owner",
+					Name:          "test-default-bucket-name",
+					Owner:         "test-default-bucket-owner",
 					RetentionDays: 10,
 				},
 				CustomBuckets: []BucketConfig{
 					{
-						Name: "test-custom-bucket-name",
-						Owner: "test-custom-bucket-owner",
+						Name:          "test-custom-bucket-name",
+						Owner:         "test-custom-bucket-owner",
 						RetentionDays: 10,
 					},
 				},

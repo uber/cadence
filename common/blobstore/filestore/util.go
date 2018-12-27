@@ -26,11 +26,7 @@ import (
 	"os"
 )
 
-const mode = os.FileMode(0600)
-
-var (
-	errReadFileNotExists = errors.New("attempted to read a file which does not exist")
-)
+const mode = os.FileMode(0700)
 
 func fileExists(filepath string) (bool, error) {
 	info, err := os.Stat(filepath)
@@ -47,8 +43,8 @@ func fileExists(filepath string) (bool, error) {
 	return true, nil
 }
 
-func directoryExists(dir string) (bool, error) {
-	info, err := os.Stat(dir)
+func directoryExists(path string) (bool, error) {
+	info, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return false, nil
@@ -62,36 +58,12 @@ func directoryExists(dir string) (bool, error) {
 	return true, nil
 }
 
-func createDirIfNotExists(dir string) error {
-	exists, err := directoryExists(dir)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return nil
-	}
-	if err := os.Mkdir(dir, mode); err != nil {
-		return err
-	}
-	return nil
+func mkdirAll(path string) error {
+	return os.MkdirAll(path, mode)
 }
 
 func writeFile(filepath string, data []byte) error {
-	removeIfExists := func() error {
-		info, err := os.Stat(filepath)
-		if err != nil {
-			if os.IsNotExist(err) {
-				return nil
-			}
-			return err
-		}
-		if info.IsDir() {
-			return errors.New("attempted to delete directory")
-		}
-		return os.Remove(filepath)
-	}
-
-	if err := removeIfExists(); err != nil {
+	if err := os.Remove(filepath); err != nil && !os.IsNotExist(err) {
 		return err
 	}
 	f, err := os.Create(filepath)
@@ -109,12 +81,5 @@ func writeFile(filepath string, data []byte) error {
 }
 
 func readFile(filepath string) ([]byte, error) {
-	exists, err := fileExists(filepath)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errReadFileNotExists
-	}
 	return ioutil.ReadFile(filepath)
 }

@@ -202,11 +202,8 @@ type (
 		ClusterInitialFailoverVersions map[string]int64 `yaml:"clusterInitialFailoverVersion"`
 		// ClusterAddress contains all cluster names to corresponding address
 		ClusterAddress map[string]Address `yaml:"clusterAddress"`
-
 		// EnableArchival whether archival is enabled
 		EnableArchival bool `yaml:"enableArchival"`
-		// DefaultArchivalBucket contains default archival bucket
-		DefaultArchivalBucket string `yaml:"defaultArchivalBucket"`
 	}
 
 	// Address indicate the remote cluster's service name and address

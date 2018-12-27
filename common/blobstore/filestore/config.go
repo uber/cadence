@@ -43,27 +43,31 @@ type (
 
 // Validate validates config
 func (c *Config) Validate() error {
-	var err error
-	validateBucketConfig := func(b BucketConfig) {
+	validateBucketConfig := func(b BucketConfig) error {
 		if len(b.Name) == 0 {
-			err = errors.New("empty bucket name")
+			return errors.New("empty bucket name")
 		}
 		if len(b.Owner) == 0 {
-			err = errors.New("empty bucket owner")
+			return errors.New("empty bucket owner")
 		}
 		if b.RetentionDays < 0 {
-			err = errors.New("negative retention days")
+			return errors.New("negative retention days")
 		}
+		return nil
 	}
 
 	if len(c.StoreDirectory) == 0 {
-		err = errors.New("empty store directory")
+		return errors.New("empty store directory")
 	}
-	validateBucketConfig(c.DefaultBucket)
+	if err := validateBucketConfig(c.DefaultBucket); err != nil {
+		return err
+	}
 	for _, b := range c.CustomBuckets {
-		validateBucketConfig(b)
+		if err := validateBucketConfig(b); err != nil {
+			return err
+		}
 	}
-	return err
+	return nil
 }
 
 func serialize(b *BucketConfig) ([]byte, error) {

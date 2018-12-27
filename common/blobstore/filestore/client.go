@@ -59,7 +59,6 @@ func (c *client) UploadBlob(_ context.Context, bucket string, filename string, b
 	// construct blob path from datastoreDir, bucket, filename
 	// write blob (this potentially replaces an existing blob)
 
-
 	return nil
 }
 
@@ -68,7 +67,6 @@ func (c *client) DownloadBlob(_ context.Context, bucket string, filename string)
 	// construct blob path from datastoreDir, bucket and fileanme
 	// read the whole file into memory, construct blob
 	// return result
-
 
 	return nil, nil
 }
@@ -85,7 +83,7 @@ func (c *client) BucketMetadata(_ context.Context, bucket string) (*blobstore.Bu
 func setupDirectories(cfg *Config) error {
 	var err error
 	ensureExists := func(directoryPath string) {
-		if err := createDirIfNotExists(directoryPath); err != nil {
+		if err := mkdirAll(directoryPath); err != nil {
 			err = fmt.Errorf("failed to ensure directory %v exists: %v", directoryPath, err)
 		}
 	}
