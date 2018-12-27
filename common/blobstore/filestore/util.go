@@ -21,7 +21,11 @@
 package filestore
 
 import (
+	"bytes"
+	"encoding/gob"
 	"errors"
+	"github.com/uber/cadence/common/blobstore"
+	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 )
@@ -82,4 +86,53 @@ func writeFile(filepath string, data []byte) error {
 
 func readFile(filepath string) ([]byte, error) {
 	return ioutil.ReadFile(filepath)
+}
+
+func serializeBucketConfig(bucketCfg *BucketConfig) ([]byte, error) {
+	return yaml.Marshal(bucketCfg)
+}
+
+func deserializeBucketConfig(data []byte) (*BucketConfig, error) {
+	bucketCfg := &BucketConfig{}
+	if err := yaml.Unmarshal(data, bucketCfg); err != nil {
+		return nil, err
+	}
+	return bucketCfg, nil
+}
+
+type serializedBlob struct {
+	Body []byte
+	Tags map[string]string
+}
+
+func serializeBlob(blob *blobstore.Blob) ([]byte, error) {
+	buf := bytes.Buffer{}
+	encoder := gob.NewEncoder(&buf)
+	body, err := ioutil.ReadAll(blob.Body)
+	if err != nil {
+		return nil, err
+	}
+	serBlob := serializedBlob{
+		Body: body,
+		Tags: blob.Tags,
+	}
+	if err := encoder.Encode(serBlob); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func deserializeBlob(data []byte) (*blobstore.Blob, error) {
+	serBlob := &serializedBlob{}
+	dataReader := bytes.NewReader(data)
+	decoder := gob.NewDecoder(dataReader)
+	if err := decoder.Decode(serBlob); err != nil {
+		return nil, err
+	}
+
+	return &blobstore.Blob{
+		Body: bytes.NewReader(serBlob.Body),
+		Tags: serBlob.Tags,
+		CompressionType: blobstore.NoCompression,
+	}, nil
 }

@@ -120,17 +120,3 @@ func (s *ConfigSuite) TestValidate() {
 		}
 	}
 }
-
-func (s *ConfigSuite) TestSerialization() {
-	inCfg := &BucketConfig{
-		Name:          "test-custom-bucket-name",
-		Owner:         "test-custom-bucket-owner",
-		RetentionDays: 10,
-	}
-	bytes, err := serialize(inCfg)
-	s.NoError(err)
-
-	outCfg, err := deserialize(bytes)
-	s.NoError(err)
-	s.Equal(inCfg, outCfg)
-}

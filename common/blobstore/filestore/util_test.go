@@ -1,8 +1,10 @@
 package filestore
 
 import (
+	"bytes"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/uber/cadence/common/blobstore"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -123,6 +125,37 @@ func (s *UtilSuite) TestReadFile() {
 	data, err = readFile(fpath)
 	s.NoError(err)
 	s.Equal("file contents", string(data))
+}
+
+func (s *UtilSuite) TestSerializationBucketConfig() {
+	inCfg := &BucketConfig{
+		Name:          "test-custom-bucket-name",
+		Owner:         "test-custom-bucket-owner",
+		RetentionDays: 10,
+	}
+	bytes, err := serializeBucketConfig(inCfg)
+	s.NoError(err)
+
+	outCfg, err := deserializeBucketConfig(bytes)
+	s.NoError(err)
+	s.Equal(inCfg, outCfg)
+}
+
+func (s *UtilSuite) TestSerializationBlob() {
+	inBlob := &blobstore.Blob{
+		Body: bytes.NewReader([]byte("file contents")),
+		Tags: map[string]string{"key1": "value1", "key2": "value2"},
+		CompressionType: blobstore.NoCompression,
+	}
+	data, err := serializeBlob(inBlob)
+	s.NoError(err)
+
+	outBlob, err := deserializeBlob(data)
+	s.NoError(err)
+	s.Equal(inBlob.Tags, outBlob.Tags)
+	s.Equal(inBlob.CompressionType, outBlob.CompressionType)
+	outBody, err := ioutil.ReadAll(outBlob.Body)
+	s.Equal("file contents", string(outBody))
 }
 
 func (s *UtilSuite) createFile(dir string, filename string) {

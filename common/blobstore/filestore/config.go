@@ -22,7 +22,6 @@ package filestore
 
 import (
 	"errors"
-	"gopkg.in/yaml.v2"
 )
 
 type (
@@ -68,16 +67,4 @@ func (c *Config) Validate() error {
 		}
 	}
 	return nil
-}
-
-func serialize(b *BucketConfig) ([]byte, error) {
-	return yaml.Marshal(b)
-}
-
-func deserialize(data []byte) (*BucketConfig, error) {
-	bc := &BucketConfig{}
-	if err := yaml.Unmarshal(data, bc); err != nil {
-		return nil, err
-	}
-	return bc, nil
 }

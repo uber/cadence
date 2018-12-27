@@ -100,7 +100,7 @@ func writeMetadataFiles(cfg *Config) error {
 	var err error
 	writeMetadataFile := func(bucketConfig BucketConfig) {
 		path := bucketItemPath(cfg.StoreDirectory, bucketConfig.Name, metadataFilename)
-		bytes, err := serialize(&bucketConfig)
+		bytes, err := serializeBucketConfig(&bucketConfig)
 		if err != nil {
 			err = fmt.Errorf("failed to write metadata file for bucket %v: %v", bucketConfig.Name, err)
 		}
