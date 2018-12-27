@@ -15,13 +15,13 @@ import (
 )
 
 const (
-	defaultBucketName         = "default-bucket-name"
-	defaultBucketOwner        = "default-bucket-owner"
-	defaultBucketRetenionDays = 10
-	customBucketNamePrefix    = "custom-bucket-name"
-	customBucketOwner         = "custom-bucket-owner"
-	customBucketRetenionDays  = 100
-	numberOfCustomBuckets     = 5
+	defaultBucketName          = "default-bucket-name"
+	defaultBucketOwner         = "default-bucket-owner"
+	defaultBucketRetentionDays = 10
+	customBucketNamePrefix     = "custom-bucket-name"
+	customBucketOwner          = "custom-bucket-owner"
+	customBucketRetentionDays  = 100
+	numberOfCustomBuckets      = 5
 )
 
 type ClientSuite struct {
@@ -246,7 +246,7 @@ func (s *ClientSuite) TestBucketMetadataSuccess() {
 	metadata, err := client.BucketMetadata(context.Background(), defaultBucketName)
 	s.NoError(err)
 	s.NotNil(metadata)
-	s.Equal(defaultBucketRetenionDays, metadata.RetentionDays)
+	s.Equal(defaultBucketRetentionDays, metadata.RetentionDays)
 	s.Equal(defaultBucketOwner, metadata.Owner)
 }
 
@@ -273,14 +273,14 @@ func (s *ClientSuite) constructConfig(storeDir string) *Config {
 	cfg.DefaultBucket = BucketConfig{
 		Name:          defaultBucketName,
 		Owner:         defaultBucketOwner,
-		RetentionDays: defaultBucketRetenionDays,
+		RetentionDays: defaultBucketRetentionDays,
 	}
 
 	for i := 0; i < numberOfCustomBuckets; i++ {
 		cfg.CustomBuckets = append(cfg.CustomBuckets, BucketConfig{
 			Name:          fmt.Sprintf("%v-%v", customBucketNamePrefix, i),
 			Owner:         customBucketOwner,
-			RetentionDays: customBucketRetenionDays,
+			RetentionDays: customBucketRetentionDays,
 		})
 	}
 	return cfg
