@@ -128,7 +128,7 @@ var (
 	// Omit shard_id, run_id, domain_id, workflow_id, schedule_id since they're in the primary key
 	activityInfoColumns = []string{
 		"version",
-		"schedule_event_batch_id",
+		"scheduled_event_batch_id",
 		"scheduled_event",
 		"scheduled_event_encoding",
 		"scheduled_time",

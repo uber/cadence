@@ -223,7 +223,7 @@ const (
 	templateActivityInfoType = `{` +
 		`version: ?,` +
 		`schedule_id: ?, ` +
-		`schedule_event_batch_id: ?, ` +
+		`scheduled_event_batch_id: ?, ` +
 		`scheduled_event: ?, ` +
 		`scheduled_time: ?, ` +
 		`started_id: ?, ` +
@@ -3807,7 +3807,7 @@ func createActivityInfo(result map[string]interface{}) *p.InternalActivityInfo {
 			info.Version = v.(int64)
 		case "schedule_id":
 			info.ScheduleID = v.(int64)
-		case "schedule_event_batch_id":
+		case "scheduled_event_batch_id":
 			info.ScheduledEventBatchID = v.(int64)
 		case "scheduled_event":
 			scheduledEventData = v.([]byte)
@@ -3996,7 +3996,7 @@ func resetActivityInfoMap(activityInfos []*p.InternalActivityInfo) (map[int64]ma
 		aInfo := make(map[string]interface{})
 		aInfo["version"] = a.Version
 		aInfo["schedule_id"] = a.ScheduleID
-		aInfo["schedule_event_batch_id"] = a.ScheduledEventBatchID
+		aInfo["scheduled_event_batch_id"] = a.ScheduledEventBatchID
 		aInfo["scheduled_event"] = a.ScheduledEvent.Data
 		aInfo["scheduled_time"] = a.ScheduledTime
 		aInfo["started_id"] = a.StartedID

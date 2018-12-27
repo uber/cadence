@@ -1,1 +1,1 @@
-ALTER TYPE activity_info ADD  schedule_event_batch_id int;
+ALTER TYPE activity_info ADD  scheduled_event_batch_id int;
