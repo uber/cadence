@@ -143,8 +143,8 @@ func (s *UtilSuite) TestSerializationBucketConfig() {
 
 func (s *UtilSuite) TestSerializationBlob() {
 	inBlob := &blobstore.Blob{
-		Body: bytes.NewReader([]byte("file contents")),
-		Tags: map[string]string{"key1": "value1", "key2": "value2"},
+		Body:            bytes.NewReader([]byte("file contents")),
+		Tags:            map[string]string{"key1": "value1", "key2": "value2"},
 		CompressionType: blobstore.NoCompression,
 	}
 	data, err := serializeBlob(inBlob)

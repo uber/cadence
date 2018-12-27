@@ -131,8 +131,8 @@ func deserializeBlob(data []byte) (*blobstore.Blob, error) {
 	}
 
 	return &blobstore.Blob{
-		Body: bytes.NewReader(serBlob.Body),
-		Tags: serBlob.Tags,
+		Body:            bytes.NewReader(serBlob.Body),
+		Tags:            serBlob.Tags,
 		CompressionType: blobstore.NoCompression,
 	}, nil
 }

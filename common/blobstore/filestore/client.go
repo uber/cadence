@@ -115,7 +115,7 @@ func (c *client) BucketMetadata(_ context.Context, bucket string) (*blobstore.Bu
 	}
 
 	return &blobstore.BucketMetadataResponse{
-		Owner: bucketCfg.Owner,
+		Owner:         bucketCfg.Owner,
 		RetentionDays: bucketCfg.RetentionDays,
 	}, nil
 }

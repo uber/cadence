@@ -2,7 +2,6 @@ package filestore
 
 import (
 	"bytes"
-	"path"
 	"context"
 	"fmt"
 	"github.com/stretchr/testify/require"
@@ -10,18 +9,19 @@ import (
 	"github.com/uber/cadence/common/blobstore"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"testing"
 )
 
 const (
-	defaultBucketName = "default-bucket-name"
-	defaultBucketOwner = "default-bucket-owner"
+	defaultBucketName         = "default-bucket-name"
+	defaultBucketOwner        = "default-bucket-owner"
 	defaultBucketRetenionDays = 10
-	customBucketNamePrefix = "custom-bucket-name"
-	customBucketOwner = "custom-bucket-owner"
-	customBucketRetenionDays = 100
-	numberOfCustomBuckets = 5
+	customBucketNamePrefix    = "custom-bucket-name"
+	customBucketOwner         = "custom-bucket-owner"
+	customBucketRetenionDays  = 100
+	numberOfCustomBuckets     = 5
 )
 
 type ClientSuite struct {
@@ -252,8 +252,8 @@ func (s *ClientSuite) TestBucketMetadataSuccess() {
 
 func (s *ClientSuite) constructBlob(body string, tags map[string]string) *blobstore.Blob {
 	return &blobstore.Blob{
-		Body: bytes.NewReader([]byte(body)),
-		Tags: tags,
+		Body:            bytes.NewReader([]byte(body)),
+		Tags:            tags,
 		CompressionType: blobstore.NoCompression,
 	}
 }
@@ -271,15 +271,15 @@ func (s *ClientSuite) constructConfig(storeDir string) *Config {
 		StoreDirectory: storeDir,
 	}
 	cfg.DefaultBucket = BucketConfig{
-		Name: defaultBucketName,
-		Owner: defaultBucketOwner,
+		Name:          defaultBucketName,
+		Owner:         defaultBucketOwner,
 		RetentionDays: defaultBucketRetenionDays,
 	}
 
 	for i := 0; i < numberOfCustomBuckets; i++ {
 		cfg.CustomBuckets = append(cfg.CustomBuckets, BucketConfig{
-			Name: fmt.Sprintf("%v-%v", customBucketNamePrefix, i),
-			Owner: customBucketOwner,
+			Name:          fmt.Sprintf("%v-%v", customBucketNamePrefix, i),
+			Owner:         customBucketOwner,
 			RetentionDays: customBucketRetenionDays,
 		})
 	}
