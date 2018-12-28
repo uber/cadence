@@ -80,7 +80,7 @@ clustersInfo:
 archival:
   enableArchival: true
   blobstore:
-    storeDirectory: "/tmp/blobstore/"
+    storeDirectory: "/tmp/development/blobstore/"
     defaultBucket:
       name: "cadence-development"
       owner: "cadence"

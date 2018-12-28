@@ -112,7 +112,7 @@ kafka:
 archival:
   enableArchival: true
   blobstore:
-    storeDirectory: "/tmp/blobstore/"
+    storeDirectory: "/tmp/dev_active/blobstore/"
     defaultBucket:
       name: "cadence-development"
       owner: "cadence"
