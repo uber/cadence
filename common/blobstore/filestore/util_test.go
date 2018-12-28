@@ -179,7 +179,7 @@ func (s *UtilSuite) TestSerializationBlob() {
 }
 
 func (s *UtilSuite) createFile(dir string, filename string) {
-	err := ioutil.WriteFile(filepath.Join(dir, filename), []byte("file contents"), mode)
+	err := ioutil.WriteFile(filepath.Join(dir, filename), []byte("file contents"), fileMode)
 	s.Nil(err)
 }
 
@@ -204,9 +204,9 @@ func (s *UtilSuite) assertDirectoryNotExists(path string) {
 func (s *UtilSuite) assertCorrectFileMode(path string) {
 	info, err := os.Stat(path)
 	s.NoError(err)
-	mode := mode
+	mode := fileMode
 	if info.IsDir() {
-		mode = mode | os.ModeDir
+		mode = dirMode | os.ModeDir
 	}
 	s.Equal(mode, info.Mode())
 }

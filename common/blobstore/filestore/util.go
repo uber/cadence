@@ -30,7 +30,10 @@ import (
 	"os"
 )
 
-const mode = os.FileMode(0700)
+const (
+	dirMode  = os.FileMode(0700)
+	fileMode = os.FileMode(0600)
+)
 
 func fileExists(filepath string) (bool, error) {
 	info, err := os.Stat(filepath)
@@ -63,7 +66,7 @@ func directoryExists(path string) (bool, error) {
 }
 
 func mkdirAll(path string) error {
-	return os.MkdirAll(path, mode)
+	return os.MkdirAll(path, dirMode)
 }
 
 func writeFile(filepath string, data []byte) error {
@@ -75,7 +78,7 @@ func writeFile(filepath string, data []byte) error {
 	if err != nil {
 		return err
 	}
-	if err = f.Chmod(mode); err != nil {
+	if err = f.Chmod(fileMode); err != nil {
 		return err
 	}
 	if _, err = f.Write(data); err != nil {
