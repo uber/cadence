@@ -27,7 +27,6 @@ import (
 )
 
 type (
-
 	// executionManagerImpl implements ExecutionManager based on ExecutionStore, statsComputer and HistorySerializer
 	executionManagerImpl struct {
 		serializer    HistorySerializer
@@ -114,6 +113,7 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(info *InternalWorkflowEx
 		ParentWorkflowID:             info.ParentWorkflowID,
 		ParentRunID:                  info.ParentRunID,
 		InitiatedID:                  info.InitiatedID,
+		CompletionEventBatchID:       info.CompletionEventBatchID,
 		TaskList:                     info.TaskList,
 		WorkflowTypeName:             info.WorkflowTypeName,
 		WorkflowTimeout:              info.WorkflowTimeout,
@@ -212,10 +212,15 @@ func (m *executionManagerImpl) DeserializeChildExecutionInfos(infos map[int64]*I
 			InitiatedEvent: initiatedEvent,
 			StartedEvent:   startedEvent,
 
-			Version:         v.Version,
-			InitiatedID:     v.InitiatedID,
-			StartedID:       v.StartedID,
-			CreateRequestID: v.CreateRequestID,
+			Version:               v.Version,
+			InitiatedID:           v.InitiatedID,
+			InitiatedEventBatchID: v.InitiatedEventBatchID,
+			StartedID:             v.StartedID,
+			StartedWorkflowID:     v.StartedWorkflowID,
+			StartedRunID:          v.StartedRunID,
+			CreateRequestID:       v.CreateRequestID,
+			DomainName:            v.DomainName,
+			WorkflowTypeName:      v.WorkflowTypeName,
 		}
 		newInfos[k] = c
 	}
@@ -379,10 +384,15 @@ func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(infos []*Child
 			InitiatedEvent: initiatedEvent,
 			StartedEvent:   startedEvent,
 
-			Version:         v.Version,
-			InitiatedID:     v.InitiatedID,
-			CreateRequestID: v.CreateRequestID,
-			StartedID:       v.StartedID,
+			Version:               v.Version,
+			InitiatedID:           v.InitiatedID,
+			InitiatedEventBatchID: v.InitiatedEventBatchID,
+			CreateRequestID:       v.CreateRequestID,
+			StartedID:             v.StartedID,
+			StartedWorkflowID:     v.StartedWorkflowID,
+			StartedRunID:          v.StartedRunID,
+			DomainName:            v.DomainName,
+			WorkflowTypeName:      v.WorkflowTypeName,
 		}
 		newInfos = append(newInfos, i)
 	}
@@ -455,6 +465,7 @@ func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInf
 		ParentWorkflowID:             info.ParentWorkflowID,
 		ParentRunID:                  info.ParentRunID,
 		InitiatedID:                  info.InitiatedID,
+		CompletionEventBatchID:       info.CompletionEventBatchID,
 		CompletionEvent:              completionEvent,
 		TaskList:                     info.TaskList,
 		WorkflowTypeName:             info.WorkflowTypeName,

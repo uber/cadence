@@ -763,7 +763,8 @@ func (e *mutableStateBuilder) GetActivityScheduledEvent(scheduleEventID int64) (
 	}
 
 	scheduledEvent, err := e.eventsCache.getEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID,
-		e.executionInfo.RunID, ai.ScheduleID, e.executionInfo.EventStoreVersion, e.executionInfo.GetCurrentBranch())
+		e.executionInfo.RunID, ai.ScheduledEventBatchID, ai.ScheduleID, e.executionInfo.EventStoreVersion,
+		e.executionInfo.GetCurrentBranch())
 	if err != nil {
 		return nil, false
 	}
@@ -808,27 +809,12 @@ func (e *mutableStateBuilder) GetChildExecutionInitiatedEvent(initiatedEventID i
 	}
 
 	initiatedEvent, err := e.eventsCache.getEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID,
-		e.executionInfo.RunID, ci.InitiatedID, e.executionInfo.EventStoreVersion, e.executionInfo.GetCurrentBranch())
+		e.executionInfo.RunID, ci.InitiatedEventBatchID, ci.InitiatedID, e.executionInfo.EventStoreVersion,
+		e.executionInfo.GetCurrentBranch())
 	if err != nil {
 		return nil, false
 	}
 	return initiatedEvent, true
-}
-
-// GetChildExecutionStartedEvent reads out the ChildExecutionStartedEvent from mutable state for in-progress child
-// executions
-func (e *mutableStateBuilder) GetChildExecutionStartedEvent(initiatedEventID int64) (*workflow.HistoryEvent, bool) {
-	ci, ok := e.pendingChildExecutionInfoIDs[initiatedEventID]
-	if !ok {
-		return nil, false
-	}
-
-	startedEvent, err := e.eventsCache.getEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID,
-		e.executionInfo.RunID, ci.StartedID, e.executionInfo.EventStoreVersion, e.executionInfo.GetCurrentBranch())
-	if err != nil {
-		return nil, false
-	}
-	return startedEvent, true
 }
 
 // GetRequestCancelInfo gives details about a request cancellation that is currently in progress.
@@ -876,8 +862,10 @@ func (e *mutableStateBuilder) GetCompletionEvent() (*workflow.HistoryEvent, bool
 
 	// Completion EventID is always one less than NextEventID after workflow is completed
 	completionEventID := e.executionInfo.NextEventID - 1
+	firstEventID := e.executionInfo.CompletionEventBatchID
 	completionEvent, err := e.eventsCache.getEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID,
-		e.executionInfo.RunID, completionEventID, e.executionInfo.EventStoreVersion, e.executionInfo.GetCurrentBranch())
+		e.executionInfo.RunID, firstEventID, completionEventID, e.executionInfo.EventStoreVersion,
+		e.executionInfo.GetCurrentBranch())
 	if err != nil {
 		return nil, false
 	}
@@ -1611,11 +1599,11 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(decisionCompletedEve
 	e.eventsCache.putEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID, e.executionInfo.RunID,
 		event.GetEventId(), event)
 
-	ai := e.ReplicateActivityTaskScheduledEvent(event)
+	ai := e.ReplicateActivityTaskScheduledEvent(decisionCompletedEventID, event)
 	return event, ai
 }
 
-func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(
+func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(firstEventID int64,
 	event *workflow.HistoryEvent) *persistence.ActivityInfo {
 	attributes := event.ActivityTaskScheduledEventAttributes
 
@@ -1625,6 +1613,7 @@ func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(
 	ai := &persistence.ActivityInfo{
 		Version:                  event.GetVersion(),
 		ScheduleID:               scheduleEventID,
+		ScheduledEventBatchID:    firstEventID,
 		ScheduledTime:            time.Unix(0, *event.Timestamp),
 		StartedID:                common.EmptyEventID,
 		StartedTime:              time.Time{},
@@ -1862,13 +1851,14 @@ func (e *mutableStateBuilder) AddCompletedWorkflowEvent(decisionCompletedEventID
 	// Write the event to cache only on active cluster
 	e.writeCompletionEventToCache(event)
 
-	e.ReplicateWorkflowExecutionCompletedEvent(event)
+	e.ReplicateWorkflowExecutionCompletedEvent(decisionCompletedEventID, event)
 	return event
 }
 
-func (e *mutableStateBuilder) ReplicateWorkflowExecutionCompletedEvent(event *workflow.HistoryEvent) {
+func (e *mutableStateBuilder) ReplicateWorkflowExecutionCompletedEvent(firstEventID int64, event *workflow.HistoryEvent) {
 	e.executionInfo.State = persistence.WorkflowStateCompleted
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusCompleted
+	e.executionInfo.CompletionEventBatchID = firstEventID // Used when completion event needs to be loaded from database
 }
 
 func (e *mutableStateBuilder) AddFailWorkflowEvent(decisionCompletedEventID int64,
@@ -1883,14 +1873,15 @@ func (e *mutableStateBuilder) AddFailWorkflowEvent(decisionCompletedEventID int6
 	// Write the event to cache only on active cluster
 	e.writeCompletionEventToCache(event)
 
-	e.ReplicateWorkflowExecutionFailedEvent(event)
+	e.ReplicateWorkflowExecutionFailedEvent(decisionCompletedEventID, event)
 
 	return event
 }
 
-func (e *mutableStateBuilder) ReplicateWorkflowExecutionFailedEvent(event *workflow.HistoryEvent) {
+func (e *mutableStateBuilder) ReplicateWorkflowExecutionFailedEvent(firstEventID int64, event *workflow.HistoryEvent) {
 	e.executionInfo.State = persistence.WorkflowStateCompleted
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusFailed
+	e.executionInfo.CompletionEventBatchID = firstEventID // Used when completion event needs to be loaded from database
 }
 
 func (e *mutableStateBuilder) AddTimeoutWorkflowEvent() *workflow.HistoryEvent {
@@ -1904,14 +1895,15 @@ func (e *mutableStateBuilder) AddTimeoutWorkflowEvent() *workflow.HistoryEvent {
 	// Write the event to cache only on active cluster
 	e.writeCompletionEventToCache(event)
 
-	e.ReplicateWorkflowExecutionTimedoutEvent(event)
+	e.ReplicateWorkflowExecutionTimedoutEvent(event.GetEventId(), event)
 
 	return event
 }
 
-func (e *mutableStateBuilder) ReplicateWorkflowExecutionTimedoutEvent(event *workflow.HistoryEvent) {
+func (e *mutableStateBuilder) ReplicateWorkflowExecutionTimedoutEvent(firstEventID int64, event *workflow.HistoryEvent) {
 	e.executionInfo.State = persistence.WorkflowStateCompleted
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusTimedOut
+	e.executionInfo.CompletionEventBatchID = firstEventID // Used when completion event needs to be loaded from database
 }
 
 func (e *mutableStateBuilder) AddWorkflowExecutionCancelRequestedEvent(cause string,
@@ -1946,14 +1938,15 @@ func (e *mutableStateBuilder) AddWorkflowExecutionCanceledEvent(decisionTaskComp
 	event := e.hBuilder.AddWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID, attributes)
 	// Write the event to cache only on active cluster
 	e.writeCompletionEventToCache(event)
-	e.ReplicateWorkflowExecutionCanceledEvent(event)
+	e.ReplicateWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID, event)
 
 	return event
 }
 
-func (e *mutableStateBuilder) ReplicateWorkflowExecutionCanceledEvent(event *workflow.HistoryEvent) {
+func (e *mutableStateBuilder) ReplicateWorkflowExecutionCanceledEvent(firstEventID int64, event *workflow.HistoryEvent) {
 	e.executionInfo.State = persistence.WorkflowStateCompleted
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusCanceled
+	e.executionInfo.CompletionEventBatchID = firstEventID // Used when completion event needs to be loaded from database
 }
 
 func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionInitiatedEvent(
@@ -2213,14 +2206,15 @@ func (e *mutableStateBuilder) AddWorkflowExecutionTerminatedEvent(
 	// Write the event to cache only on active cluster
 	e.writeCompletionEventToCache(event)
 
-	e.ReplicateWorkflowExecutionTerminatedEvent(event)
+	e.ReplicateWorkflowExecutionTerminatedEvent(event.GetEventId(), event)
 
 	return event
 }
 
-func (e *mutableStateBuilder) ReplicateWorkflowExecutionTerminatedEvent(event *workflow.HistoryEvent) {
+func (e *mutableStateBuilder) ReplicateWorkflowExecutionTerminatedEvent(firstEventID int64, event *workflow.HistoryEvent) {
 	e.executionInfo.State = persistence.WorkflowStateCompleted
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusTerminated
+	e.executionInfo.CompletionEventBatchID = firstEventID // Used when completion event needs to be loaded from database
 }
 
 func (e *mutableStateBuilder) AddWorkflowExecutionSignaled(
@@ -2446,7 +2440,7 @@ func (e *mutableStateBuilder) AddStartChildWorkflowExecutionInitiatedEvent(decis
 	e.eventsCache.putEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID, e.executionInfo.RunID,
 		event.GetEventId(), event)
 
-	ci := e.ReplicateStartChildWorkflowExecutionInitiatedEvent(event, createRequestID)
+	ci := e.ReplicateStartChildWorkflowExecutionInitiatedEvent(decisionCompletedEventID, event, createRequestID)
 	if ci == nil {
 		return nil, nil
 	}
@@ -2454,15 +2448,20 @@ func (e *mutableStateBuilder) AddStartChildWorkflowExecutionInitiatedEvent(decis
 	return event, ci
 }
 
-func (e *mutableStateBuilder) ReplicateStartChildWorkflowExecutionInitiatedEvent(event *workflow.HistoryEvent,
-	createRequestID string) *persistence.ChildExecutionInfo {
+func (e *mutableStateBuilder) ReplicateStartChildWorkflowExecutionInitiatedEvent(firstEventID int64,
+	event *workflow.HistoryEvent, createRequestID string) *persistence.ChildExecutionInfo {
 
 	initiatedEventID := event.GetEventId()
+	attributes := event.StartChildWorkflowExecutionInitiatedEventAttributes
 	ci := &persistence.ChildExecutionInfo{
-		Version:         event.GetVersion(),
-		InitiatedID:     initiatedEventID,
-		StartedID:       common.EmptyEventID,
-		CreateRequestID: createRequestID,
+		Version:               event.GetVersion(),
+		InitiatedID:           initiatedEventID,
+		InitiatedEventBatchID: firstEventID,
+		StartedID:             common.EmptyEventID,
+		StartedWorkflowID:     attributes.GetWorkflowId(),
+		CreateRequestID:       createRequestID,
+		DomainName:            attributes.GetDomain(),
+		WorkflowTypeName:      attributes.GetWorkflowType().GetName(),
 	}
 
 	e.pendingChildExecutionInfoIDs[initiatedEventID] = ci
@@ -2481,10 +2480,6 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionStartedEvent(domain *stri
 	}
 
 	event := e.hBuilder.AddChildWorkflowExecutionStartedEvent(domain, execution, workflowType, initiatedID)
-	// Write the event to cache only on active cluster
-	e.eventsCache.putEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID, e.executionInfo.RunID,
-		event.GetEventId(), event)
-
 	if err := e.ReplicateChildWorkflowExecutionStartedEvent(event); err != nil {
 		return nil
 	}
@@ -2498,6 +2493,7 @@ func (e *mutableStateBuilder) ReplicateChildWorkflowExecutionStartedEvent(event 
 
 	ci, _ := e.GetChildExecutionInfo(initiatedID)
 	ci.StartedID = event.GetEventId()
+	ci.StartedRunID = attributes.GetWorkflowExecution().GetRunId()
 	e.updateChildExecutionInfos[ci] = struct{}{}
 
 	return nil
@@ -2536,11 +2532,10 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCompletedEvent(initiatedI
 		return nil
 	}
 
-	// TODO: Move Domain and WorkflowType directly to mutable state
-	startedEvent, _ := e.eventsCache.getEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID,
-		e.executionInfo.RunID, ci.StartedID, e.executionInfo.EventStoreVersion, e.executionInfo.GetCurrentBranch())
-	domain := startedEvent.ChildWorkflowExecutionStartedEventAttributes.Domain
-	workflowType := startedEvent.ChildWorkflowExecutionStartedEventAttributes.WorkflowType
+	domain := &ci.DomainName
+	workflowType := &workflow.WorkflowType{
+		Name: common.StringPtr(ci.WorkflowTypeName),
+	}
 
 	event := e.hBuilder.AddChildWorkflowExecutionCompletedEvent(domain, childExecution, workflowType, ci.InitiatedID,
 		ci.StartedID, attributes)
@@ -2566,11 +2561,10 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionFailedEvent(initiatedID i
 		return nil
 	}
 
-	// TODO: Move Domain and WorkflowType directly to mutable state
-	startedEvent, _ := e.eventsCache.getEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID,
-		e.executionInfo.RunID, ci.StartedID, e.executionInfo.EventStoreVersion, e.executionInfo.GetCurrentBranch())
-	domain := startedEvent.ChildWorkflowExecutionStartedEventAttributes.Domain
-	workflowType := startedEvent.ChildWorkflowExecutionStartedEventAttributes.WorkflowType
+	domain := &ci.DomainName
+	workflowType := &workflow.WorkflowType{
+		Name: common.StringPtr(ci.WorkflowTypeName),
+	}
 
 	event := e.hBuilder.AddChildWorkflowExecutionFailedEvent(domain, childExecution, workflowType, ci.InitiatedID,
 		ci.StartedID, attributes)
@@ -2596,11 +2590,10 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCanceledEvent(initiatedID
 		return nil
 	}
 
-	// TODO: Move Domain and WorkflowType directly to mutable state
-	startedEvent, _ := e.eventsCache.getEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID,
-		e.executionInfo.RunID, ci.StartedID, e.executionInfo.EventStoreVersion, e.executionInfo.GetCurrentBranch())
-	domain := startedEvent.ChildWorkflowExecutionStartedEventAttributes.Domain
-	workflowType := startedEvent.ChildWorkflowExecutionStartedEventAttributes.WorkflowType
+	domain := &ci.DomainName
+	workflowType := &workflow.WorkflowType{
+		Name: common.StringPtr(ci.WorkflowTypeName),
+	}
 
 	event := e.hBuilder.AddChildWorkflowExecutionCanceledEvent(domain, childExecution, workflowType, ci.InitiatedID,
 		ci.StartedID, attributes)
@@ -2626,11 +2619,10 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTerminatedEvent(initiated
 		return nil
 	}
 
-	// TODO: Move Domain and WorkflowType directly to mutable state
-	startedEvent, _ := e.eventsCache.getEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID,
-		e.executionInfo.RunID, ci.StartedID, e.executionInfo.EventStoreVersion, e.executionInfo.GetCurrentBranch())
-	domain := startedEvent.ChildWorkflowExecutionStartedEventAttributes.Domain
-	workflowType := startedEvent.ChildWorkflowExecutionStartedEventAttributes.WorkflowType
+	domain := &ci.DomainName
+	workflowType := &workflow.WorkflowType{
+		Name: common.StringPtr(ci.WorkflowTypeName),
+	}
 
 	event := e.hBuilder.AddChildWorkflowExecutionTerminatedEvent(domain, childExecution, workflowType, ci.InitiatedID,
 		ci.StartedID, attributes)
@@ -2656,11 +2648,10 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTimedOutEvent(initiatedID
 		return nil
 	}
 
-	// TODO: Move Domain and WorkflowType directly to mutable state
-	startedEvent, _ := e.eventsCache.getEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID,
-		e.executionInfo.RunID, ci.StartedID, e.executionInfo.EventStoreVersion, e.executionInfo.GetCurrentBranch())
-	domain := startedEvent.ChildWorkflowExecutionStartedEventAttributes.Domain
-	workflowType := startedEvent.ChildWorkflowExecutionStartedEventAttributes.WorkflowType
+	domain := &ci.DomainName
+	workflowType := &workflow.WorkflowType{
+		Name: common.StringPtr(ci.WorkflowTypeName),
+	}
 
 	event := e.hBuilder.AddChildWorkflowExecutionTimedOutEvent(domain, childExecution, workflowType, ci.InitiatedID,
 		ci.StartedID, attributes)

@@ -596,12 +596,17 @@ func deleteTimerInfoMap(tx *sqlx.Tx, shardID int, domainID, workflowID, runID st
 var (
 	childExecutionInfoColumns = []string{
 		"version",
+		"initiated_event_batch_id",
 		"initiated_event",
 		"initiated_event_encoding",
 		"started_id",
+		"started_workflow_id",
+		"started_run_id",
 		"started_event",
 		"started_event_encoding",
 		"create_request_id",
+		"domain_name",
+		"workflow_type_name",
 	}
 	childExecutionInfoTableName = "child_execution_info_maps"
 	childExecutionInfoKey       = "initiated_id"
@@ -624,12 +629,17 @@ type (
 	childExecutionInfoMapsRow struct {
 		childExecutionInfoMapsPrimaryKey
 		Version                int64
+		InitiatedEventBatchID  int64
 		InitiatedEvent         *[]byte
 		InitiatedEventEncoding string
 		StartedID              int64
+		StartedWorkflowID      string
+		StartedRunID           string
 		StartedEvent           *[]byte
 		StartedEventEncoding   string
 		CreateRequestID        string
+		DomainName             string
+		WorkflowTypeName       string
 	}
 )
 
@@ -652,10 +662,15 @@ func updateChildExecutionInfos(tx *sqlx.Tx,
 					InitiatedID: v.InitiatedID,
 				},
 				Version:                v.Version,
+				InitiatedEventBatchID:  v.InitiatedEventBatchID,
 				StartedID:              v.StartedID,
+				StartedWorkflowID:      v.StartedWorkflowID,
+				StartedRunID:           v.StartedRunID,
 				InitiatedEvent:         &v.InitiatedEvent.Data,
 				InitiatedEventEncoding: string(v.InitiatedEvent.Encoding),
 				CreateRequestID:        v.CreateRequestID,
+				DomainName:             v.DomainName,
+				WorkflowTypeName:       v.WorkflowTypeName,
 			}
 			if v.StartedEvent != nil {
 				row.StartedEvent = &v.StartedEvent.Data
@@ -716,10 +731,15 @@ func getChildExecutionInfoMap(tx *sqlx.Tx,
 	ret := make(map[int64]*persistence.InternalChildExecutionInfo)
 	for _, v := range childExecutionInfoMapsRows {
 		info := &persistence.InternalChildExecutionInfo{
-			InitiatedID:     v.InitiatedID,
-			Version:         v.Version,
-			StartedID:       v.StartedID,
-			CreateRequestID: v.CreateRequestID,
+			InitiatedID:           v.InitiatedID,
+			InitiatedEventBatchID: v.InitiatedEventBatchID,
+			Version:               v.Version,
+			StartedID:             v.StartedID,
+			StartedWorkflowID:     v.StartedWorkflowID,
+			StartedRunID:          v.StartedRunID,
+			CreateRequestID:       v.CreateRequestID,
+			DomainName:            v.DomainName,
+			WorkflowTypeName:      v.WorkflowTypeName,
 		}
 		if v.InitiatedEvent != nil {
 			info.InitiatedEvent = persistence.NewDataBlob(*v.InitiatedEvent, common.EncodingType(v.InitiatedEventEncoding))
