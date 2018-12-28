@@ -178,20 +178,20 @@ func (s *ClientSuite) TestUploadDownloadBlob() {
 	defer os.RemoveAll(dir)
 
 	client := s.constructClient(dir)
-	blob1 := s.constructBlob("body version 1", map[string]string{})
-	blobFilename1 := "blob1.blob"
-	s.NoError(client.UploadBlob(context.Background(), defaultBucketName, blobFilename1, blob1))
-	downloadBlob1, err := client.DownloadBlob(context.Background(), defaultBucketName, blobFilename1)
+	blob := s.constructBlob("body version 1", map[string]string{})
+	blobFilename := "blob.blob"
+	s.NoError(client.UploadBlob(context.Background(), defaultBucketName, blobFilename, blob))
+	downloadBlob, err := client.DownloadBlob(context.Background(), defaultBucketName, blobFilename)
 	s.NoError(err)
-	s.NotNil(downloadBlob1)
-	s.assertBlobEquals(map[string]string{}, "body version 1", downloadBlob1)
+	s.NotNil(downloadBlob)
+	s.assertBlobEquals(map[string]string{}, "body version 1", downloadBlob)
 
-	blob1Replacement := s.constructBlob("body version 2", map[string]string{"key": "value"})
-	s.NoError(client.UploadBlob(context.Background(), defaultBucketName, blobFilename1, blob1Replacement))
-	downloadBlob1, err = client.DownloadBlob(context.Background(), defaultBucketName, blobFilename1)
+	blob = s.constructBlob("body version 2", map[string]string{"key": "value"})
+	s.NoError(client.UploadBlob(context.Background(), defaultBucketName, blobFilename, blob))
+	downloadBlob, err = client.DownloadBlob(context.Background(), defaultBucketName, blobFilename)
 	s.NoError(err)
-	s.NotNil(downloadBlob1)
-	s.assertBlobEquals(map[string]string{"key": "value"}, "body version 2", downloadBlob1)
+	s.NotNil(downloadBlob)
+	s.assertBlobEquals(map[string]string{"key": "value"}, "body version 2", downloadBlob)
 }
 
 func (s *ClientSuite) TestUploadDownloadBlobCustomBucket() {

@@ -97,10 +97,9 @@ var (
 			CurrentClusterName:             clusterName[0],
 			ClusterInitialFailoverVersions: map[string]int64{clusterName[0]: 0, clusterName[1]: 1},
 			ClusterAddress: map[string]config.Address{
-				clusterName[0]: {RPCName: common.FrontendServiceName, RPCAddress: clusterAddress[0]},
-				clusterName[1]: {RPCName: common.FrontendServiceName, RPCAddress: clusterAddress[1]},
+				clusterName[0]: config.Address{RPCName: common.FrontendServiceName, RPCAddress: clusterAddress[0]},
+				clusterName[1]: config.Address{RPCName: common.FrontendServiceName, RPCAddress: clusterAddress[1]},
 			},
-			EnableArchival: false,
 		},
 		{
 			EnableGlobalDomain:             true,
@@ -112,7 +111,6 @@ var (
 				clusterName[0]: {RPCName: common.FrontendServiceName, RPCAddress: clusterAddress[0]},
 				clusterName[1]: {RPCName: common.FrontendServiceName, RPCAddress: clusterAddress[1]},
 			},
-			EnableArchival: false,
 		},
 	}
 	clusterReplicationConfig = []*workflow.ClusterReplicationConfiguration{
@@ -142,7 +140,7 @@ func (s *testCluster) setupCluster(no int, enableEventsV2 bool) {
 		clusterInfo.CurrentClusterName,
 		clusterInfo.ClusterInitialFailoverVersions,
 		clusterInfo.ClusterAddress,
-		dynamicconfig.GetBoolPropertyFn(clusterInfo.EnableArchival),
+		dynamicconfig.GetBoolPropertyFn(false),
 		"",
 	)
 	s.TestBase = persistencetests.NewTestBaseWithCassandra(&options)

@@ -50,7 +50,7 @@ import (
 	"github.com/uber/cadence/service/matching"
 	"github.com/uber/cadence/service/worker"
 	"github.com/uber/cadence/service/worker/replicator"
-	"github.com/uber/ringpop-go"
+	ringpop "github.com/uber/ringpop-go"
 	"github.com/uber/ringpop-go/discovery/statichosts"
 	"github.com/uber/ringpop-go/swim"
 	tcg "github.com/uber/tchannel-go"
