@@ -30,6 +30,7 @@ const (
 	historyBlobFilenameExt = ".history"
 )
 
+// HistoryBlobFilename constructs name of history file from domainID, workflowID and runID
 func HistoryBlobFilename(domainID string, workflowID string, runID string) string {
 	hashInput := strings.Join([]string{domainID, workflowID, runID}, "")
 	hash := farm.Fingerprint64([]byte(hashInput))
