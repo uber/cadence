@@ -541,6 +541,8 @@ func (entry *DomainCacheEntry) duplicate() *DomainCacheEntry {
 	result.config = &persistence.DomainConfig{
 		Retention:  entry.config.Retention,
 		EmitMetric: entry.config.EmitMetric,
+		ArchivalBucket: entry.config.ArchivalBucket,
+		ArchivalStatus: entry.config.ArchivalStatus,
 	}
 	result.replicationConfig = &persistence.DomainReplicationConfig{
 		ActiveClusterName: entry.replicationConfig.ActiveClusterName,

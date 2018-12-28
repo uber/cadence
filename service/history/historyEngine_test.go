@@ -1350,7 +1350,10 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowSuccess() 
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
-			Config: &persistence.DomainConfig{Retention: 1},
+			Config: &persistence.DomainConfig{
+				Retention: 1,
+				ArchivalStatus: workflow.ArchivalStatusEnabled,
+			},
 			ReplicationConfig: &persistence.DomainReplicationConfig{
 				ActiveClusterName: cluster.TestCurrentClusterName,
 				Clusters: []*persistence.ClusterReplicationConfig{
@@ -1362,7 +1365,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowSuccess() 
 		nil,
 	)
 
-	s.mockClusterMetadata.On("IsArchivalEnabled").Return(false)
+	s.mockClusterMetadata.On("IsArchivalEnabled").Return(true)
+	s.mockArchivalClient.On("Archive", mock.Anything).Return(nil)
 	_, err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &history.RespondDecisionTaskCompletedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CompleteRequest: &workflow.RespondDecisionTaskCompletedRequest{
@@ -1420,7 +1424,10 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowSuccess() {
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
-			Config: &persistence.DomainConfig{Retention: 1},
+			Config: &persistence.DomainConfig{
+				Retention: 1,
+				ArchivalStatus: workflow.ArchivalStatusEnabled,
+			},
 			ReplicationConfig: &persistence.DomainReplicationConfig{
 				ActiveClusterName: cluster.TestCurrentClusterName,
 				Clusters: []*persistence.ClusterReplicationConfig{
@@ -1431,7 +1438,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowSuccess() {
 		},
 		nil,
 	)
-	s.mockClusterMetadata.On("IsArchivalEnabled").Return(false)
+	s.mockClusterMetadata.On("IsArchivalEnabled").Return(true)
+	s.mockArchivalClient.On("Archive", mock.Anything).Return(nil)
 	_, err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &history.RespondDecisionTaskCompletedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CompleteRequest: &workflow.RespondDecisionTaskCompletedRequest{
