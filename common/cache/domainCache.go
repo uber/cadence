@@ -154,27 +154,6 @@ func NewDomainCacheEntryWithInfo(info *persistence.DomainInfo) *DomainCacheEntry
 	}
 }
 
-// NewDomainCacheEntry returns a DomainCacheEntry (used for testing)
-func NewDomainCacheEntry(
-	info *persistence.DomainInfo,
-	config *persistence.DomainConfig,
-	replicationConfig *persistence.DomainReplicationConfig,
-	configVersion int64,
-	failoverVersion int64,
-	isGlobalDomain bool,
-	failoverNotificationVersion int64,
-) *DomainCacheEntry {
-	return &DomainCacheEntry{
-		info: info,
-		config: config,
-		replicationConfig: replicationConfig,
-		configVersion: configVersion,
-		failoverVersion: failoverVersion,
-		isGlobalDomain: isGlobalDomain,
-		failoverNotificationVersion: failoverNotificationVersion,
-	}
-}
-
 func (c *domainCache) GetCacheSize() (sizeOfCacheByName int64, sizeOfCacheByID int64) {
 	return int64(c.cacheByID.Load().(Cache).Size()), int64(c.cacheNameToID.Load().(Cache).Size())
 }

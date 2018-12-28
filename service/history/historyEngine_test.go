@@ -1361,8 +1361,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowSuccess() 
 		},
 		nil,
 	)
-	s.mockClusterMetadata.On("IsArchivalEnabled").Return(true)
-	s.mockArchivalClient.On("Archive", mock.Anything).Return(nil)
+
+	s.mockClusterMetadata.On("IsArchivalEnabled").Return(false)
 	_, err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &history.RespondDecisionTaskCompletedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CompleteRequest: &workflow.RespondDecisionTaskCompletedRequest{
@@ -1431,8 +1431,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowSuccess() {
 		},
 		nil,
 	)
-	s.mockClusterMetadata.On("IsArchivalEnabled").Return(true)
-	s.mockArchivalClient.On("Archive", mock.Anything).Return(nil)
+	s.mockClusterMetadata.On("IsArchivalEnabled").Return(false)
 	_, err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &history.RespondDecisionTaskCompletedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CompleteRequest: &workflow.RespondDecisionTaskCompletedRequest{
