@@ -1712,14 +1712,18 @@ Update_History_Loop:
 			transferTasks = append(transferTasks, tranT)
 			timerTasks = append(timerTasks, timerT)
 
-			if e.shard.GetService().GetClusterMetadata().IsArchivalEnabled() {
+			domainCfg := domainEntry.GetConfig()
+			if e.shard.GetService().GetClusterMetadata().IsArchivalEnabled() && domainCfg.ArchivalStatus == workflow.ArchivalStatusEnabled {
 				request := &sysworkflow.ArchiveRequest{
 					DomainName: domainEntry.GetInfo().Name,
 					DomainID:   domainEntry.GetInfo().ID,
 					WorkflowID: workflowExecution.GetWorkflowId(),
 					RunID:      workflowExecution.GetRunId(),
+					Bucket:     domainCfg.ArchivalBucket,
 				}
-				e.archivalClient.Archive(request)
+				if err := e.archivalClient.Archive(request); err != nil {
+					return nil, err
+				}
 			}
 		}
 

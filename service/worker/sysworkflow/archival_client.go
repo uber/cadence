@@ -37,6 +37,7 @@ type (
 		DomainID   string
 		WorkflowID string
 		RunID      string
+		Bucket     string
 	}
 
 	// BackfillRequest is request to Backfill

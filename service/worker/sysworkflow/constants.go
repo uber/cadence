@@ -59,6 +59,12 @@ const (
 	WorkflowStartToCloseTimeout = time.Hour * 24 * 30
 	// DecisionTaskStartToCloseTimeout is the time for decision to finish
 	DecisionTaskStartToCloseTimeout = time.Minute
+	// DomainIDTag tag which identifies the domainID of an archived history
+	DomainIDTag = "domainID"
+	// WorkflowIDTag tag which identifies the workflowID of an archived history
+	WorkflowIDTag = "workflowID"
+	//RunIDTag tag which identifies the runID of an archived history
+	RunIDTag = "runID"
 )
 
 // RequestType is the type for signals that can be sent to system workflows

@@ -21,12 +21,17 @@
 package sysworkflow
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"github.com/uber-go/tally"
+	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/logging"
 	"go.uber.org/cadence"
+	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
+	"io/ioutil"
 	"time"
 )
 
@@ -110,13 +115,48 @@ func selectSystemTask(scope tally.Scope, signal signal, ctx workflow.Context, lo
 }
 
 // ArchivalActivity is the archival activity code
-func ArchivalActivity(_ context.Context) error {
-	// TODO: write this activity
+func ArchivalActivity(ctx context.Context, request ArchiveRequest) error {
+	fields := zap.Fields(zap.String(DomainIDTag, request.DomainID), zap.String(WorkflowIDTag, request.WorkflowID), zap.String(RunIDTag, request.RunID))
+	logger := activity.GetLogger(ctx).WithOptions(fields)
+	logger.Info("called archival activity")
+
+	blobstoreClient := ctx.Value(blobstoreClientKey).(blobstore.Client)
+
+	// TODO: the rest of this method is temporary (follow diff will do history archives and delete from cassandra)
+	body := fmt.Sprintf("DomainID: %v\n WorkflowID: %v\n RunID: %v", request.DomainID, request.WorkflowID, request.RunID)
+	blobFilename := HistoryBlobFilename(request.DomainID, request.WorkflowID, request.RunID)
+	blob := blobstore.Blob{
+		Body:            bytes.NewReader([]byte(body)),
+		CompressionType: blobstore.NoCompression,
+		Tags: map[string]string{
+			DomainIDTag:   request.DomainID,
+			WorkflowIDTag: request.WorkflowID,
+			RunIDTag:      request.RunID,
+		},
+	}
+	if err := blobstoreClient.UploadBlob(ctx, request.Bucket, blobFilename, &blob); err != nil {
+		logger.Error("archival failed, could not upload blob", zap.String("blobname", blobFilename), zap.Error(err))
+		return err
+	}
+
+	// TODO: only downloading blob to show that blobstore works, final impl will not download blobs after upload
+	downloadedBlob, err := blobstoreClient.DownloadBlob(ctx, request.Bucket, blobFilename)
+	if err != nil {
+		logger.Error("archival failed, could not download blob", zap.String("blobname", blobFilename), zap.Error(err))
+		return err
+	}
+
+	bytes, err := ioutil.ReadAll(downloadedBlob.Body)
+	if err != nil {
+		logger.Error("archival failed, could not read body of downloaded blob", zap.String("blobname", blobFilename), zap.Error(err))
+		return err
+	}
+	logger.Info("archival successful", zap.String("blobname", blobFilename), zap.Int("body-size", len(bytes)))
 	return nil
 }
 
 // BackfillActivity is the backfill activity code
-func BackfillActivity(_ context.Context) error {
+func BackfillActivity(_ context.Context, _ BackfillRequest) error {
 	// TODO: write this activity
 	return nil
 }
