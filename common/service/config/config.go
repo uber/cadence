@@ -46,8 +46,8 @@ type (
 		Services map[string]Service `yaml:"services"`
 		// Kafka is the config for connecting to kafka
 		Kafka messaging.KafkaConfig `yaml:"kafka"`
-		// Blobstore is the config used for constructing a blobstore client
-		Blobstore filestore.Config `yaml:"blobstore"`
+		// Archival is the config for archival
+		Archival Archival `yaml:"archival"`
 	}
 
 	// Service contains the service specific config items
@@ -173,8 +173,7 @@ type (
 	}
 
 	// Replicator describes the configuration of replicator
-	Replicator struct {
-	}
+	Replicator struct{}
 
 	// Logger contains the config items for logger
 	Logger struct {
@@ -202,8 +201,6 @@ type (
 		ClusterInitialFailoverVersions map[string]int64 `yaml:"clusterInitialFailoverVersion"`
 		// ClusterAddress contains all cluster names to corresponding address
 		ClusterAddress map[string]Address `yaml:"clusterAddress"`
-		// EnableArchival whether archival is enabled
-		EnableArchival bool `yaml:"enableArchival"`
 	}
 
 	// Address indicate the remote cluster's service name and address
@@ -238,6 +235,14 @@ type (
 		// If FlushBytes is unspecified, it defaults  to 1432 bytes, which is
 		// considered safe for local traffic.
 		FlushBytes int `yaml:"flushBytes"`
+	}
+
+	// Archival contains the config for archival
+	Archival struct {
+		// EnableArchival whether archival is enabled
+		EnableArchival bool `yaml:"enableArchival"`
+		// Blobstore the configuration for blobstore
+		Blobstore filestore.Config `yaml:"blobstore"`
 	}
 
 	// BootstrapMode is an enum type for ringpop bootstrap mode

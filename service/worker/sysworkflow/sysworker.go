@@ -43,12 +43,13 @@ type (
 func init() {
 	workflow.RegisterWithOptions(SystemWorkflow, workflow.RegisterOptions{Name: SystemWorkflowFnName})
 	activity.RegisterWithOptions(ArchivalActivity, activity.RegisterOptions{Name: ArchivalActivityFnName})
+	activity.RegisterWithOptions(BackfillActivity, activity.RegisterOptions{Name: BackfillActivityFnName})
 }
 
 // NewSysWorker returns a new SysWorker
-func NewSysWorker(frontendClient frontend.Client, scope tally.Scope, archivalClient blobstore.Client) *SysWorker {
+func NewSysWorker(frontendClient frontend.Client, scope tally.Scope, blobstoreClient blobstore.Client) *SysWorker {
 	logger, _ := zap.NewProduction()
-	actCtx := context.WithValue(context.Background(), archivalClientKey, archivalClient)
+	actCtx := context.WithValue(context.Background(), blobstoreClientKey, blobstoreClient)
 	actCtx = context.WithValue(context.Background(), frontendClientKey, frontendClient)
 	wo := worker.Options{
 		Logger:                    logger,

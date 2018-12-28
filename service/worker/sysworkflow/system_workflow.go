@@ -23,11 +23,8 @@ package sysworkflow
 import (
 	"context"
 	"github.com/uber-go/tally"
-	"github.com/uber/cadence/client/frontend"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/logging"
 	"go.uber.org/cadence"
-	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 	"time"
@@ -97,6 +94,15 @@ func selectSystemTask(scope tally.Scope, signal signal, ctx workflow.Context, lo
 			scope.Counter(ArchivalFailureErr)
 			logger.Error("failed to execute archival activity", zap.Error(err))
 		}
+	case backfillRequest:
+		if err := workflow.ExecuteActivity(
+			actCtx,
+			BackfillActivityFnName,
+			*signal.BackillRequest,
+		).Get(ctx, nil); err != nil {
+			scope.Counter(BackfillFailureErr)
+			logger.Error("failed to backfill", zap.Error(err))
+		}
 	default:
 		scope.Counter(UnknownSignalTypeErr).Inc(1)
 		logger.Error("received unknown request type")
@@ -104,46 +110,13 @@ func selectSystemTask(scope tally.Scope, signal signal, ctx workflow.Context, lo
 }
 
 // ArchivalActivity is the archival activity code
-func ArchivalActivity(ctx context.Context) error {
+func ArchivalActivity(_ context.Context) error {
 	// TODO: write this activity
 	return nil
 }
 
-func history(
-	ctx context.Context,
-	domainName string,
-	workflowID string,
-	runID string,
-) (*shared.History, error) {
-
-	frontendClient := ctx.Value(frontendClientKey).(frontend.Client)
-	execution := &shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}
-	historyResponse, err := frontendClient.GetWorkflowExecutionHistory(ctx, &shared.GetWorkflowExecutionHistoryRequest{
-		Domain:    common.StringPtr(domainName),
-		Execution: execution,
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	events := historyResponse.History.Events
-	for historyResponse.NextPageToken != nil {
-		historyResponse, err = frontendClient.GetWorkflowExecutionHistory(ctx, &shared.GetWorkflowExecutionHistoryRequest{
-			Domain:        common.StringPtr(domainName),
-			Execution:     execution,
-			NextPageToken: historyResponse.NextPageToken,
-		})
-		if err != nil {
-			return nil, err
-		}
-		events = append(events, historyResponse.History.Events...)
-	}
-
-	return &shared.History{
-		Events: events,
-	}, nil
+// BackfillActivity is the backfill activity code
+func BackfillActivity(_ context.Context) error {
+	// TODO: write this activity
+	return nil
 }

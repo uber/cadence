@@ -36,7 +36,7 @@ type client struct {
 	storeDirectory string
 }
 
-// NewFileStoreClient returns a new Client backed by file system
+// NewClient returns a new Client backed by file system
 func NewClient(cfg *Config) (blobstore.Client, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err

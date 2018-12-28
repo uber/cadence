@@ -117,6 +117,10 @@ func (s *Service) Start() {
 		s.startReplicator(params, base, log)
 	}
 
+	if params.ClusterMetadata.IsArchivalEnabled() {
+		s.startSysWorker(base, log, params.MetricScope)
+	}
+
 	log.Infof("%v started", common.WorkerServiceName)
 	<-s.stopC
 	base.Stop()
@@ -132,7 +136,6 @@ func (s *Service) Stop() {
 }
 
 func (s *Service) startReplicator(params *service.BootstrapParams, base service.Service, log bark.Logger) {
-
 	history, err := base.GetClientFactory().NewHistoryClient()
 	if err != nil {
 		log.Fatalf("failed to create history service client: %v", err)

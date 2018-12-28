@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/service/worker/sysworkflow"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -71,6 +72,7 @@ type (
 		metricsClient        metrics.Client
 		logger               bark.Logger
 		config               *Config
+		archivalClient       sysworkflow.ArchivalClient
 	}
 
 	// shardContextWrapper wraps ShardContext to notify transferQueueProcessor on new tasks.
@@ -163,6 +165,7 @@ func NewEngineWithShardContext(
 		metricsClient:        shard.GetMetricsClient(),
 		historyEventNotifier: historyEventNotifier,
 		config:               config,
+		archivalClient:       sysworkflow.NewArchivalClient(frontendClient, shard.GetConfig().NumSysWorkflows),
 	}
 	var visibilityProducer messaging.Producer
 	if config.EnableVisibilityToKafka() {
@@ -1708,6 +1711,16 @@ Update_History_Loop:
 			}
 			transferTasks = append(transferTasks, tranT)
 			timerTasks = append(timerTasks, timerT)
+
+			if e.shard.GetService().GetClusterMetadata().IsArchivalEnabled() {
+				request := &sysworkflow.ArchiveRequest{
+					DomainName: domainEntry.GetInfo().Name,
+					DomainID:   domainEntry.GetInfo().ID,
+					WorkflowID: workflowExecution.GetWorkflowId(),
+					RunID:      workflowExecution.GetRunId(),
+				}
+				e.archivalClient.Archive(request)
+			}
 		}
 
 		// Generate a transaction ID for appending events to history

@@ -28,7 +28,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/metrics"
 
 	"github.com/stretchr/testify/mock"
@@ -51,7 +50,7 @@ import (
 	"github.com/uber/cadence/service/matching"
 	"github.com/uber/cadence/service/worker"
 	"github.com/uber/cadence/service/worker/replicator"
-	ringpop "github.com/uber/ringpop-go"
+	"github.com/uber/ringpop-go"
 	"github.com/uber/ringpop-go/discovery/statichosts"
 	"github.com/uber/ringpop-go/swim"
 	tcg "github.com/uber/tchannel-go"
@@ -301,7 +300,6 @@ func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup) {
 	}
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 	params.DynamicConfig = dynamicconfig.NewNopClient()
-	params.BlobstoreClient = blobstore.NewNopClient()
 
 	// TODO when cross DC is public, remove this temporary override
 	var kafkaProducer messaging.Producer

@@ -117,7 +117,7 @@ func (s *server) startService() common.Daemon {
 	params.RPCFactory = svcCfg.RPC.NewFactory(params.Name, params.Logger)
 	params.PProfInitializer = svcCfg.PProf.NewInitializer(params.Logger)
 	enableGlobalDomain := dc.GetBoolProperty(dynamicconfig.EnableGlobalDomain, s.cfg.ClustersInfo.EnableGlobalDomain)
-	enableArchival := dc.GetBoolProperty(dynamicconfig.EnableArchival, s.cfg.ClustersInfo.EnableArchival)
+	enableArchival := dc.GetBoolProperty(dynamicconfig.EnableArchival, s.cfg.Archival.EnableArchival)
 
 	params.ClusterMetadata = cluster.NewMetadata(
 		enableGlobalDomain,
@@ -127,7 +127,7 @@ func (s *server) startService() common.Daemon {
 		s.cfg.ClustersInfo.ClusterInitialFailoverVersions,
 		s.cfg.ClustersInfo.ClusterAddress,
 		enableArchival,
-		s.cfg.Blobstore.DefaultBucket.Name,
+		s.cfg.Archival.Blobstore.DefaultBucket.Name,
 	)
 	params.DispatcherProvider = client.NewIPYarpcDispatcherProvider()
 	// TODO: We need to switch Cadence to use zap logger, until then just pass zap.NewNop
@@ -143,7 +143,7 @@ func (s *server) startService() common.Daemon {
 	}
 
 	if params.ClusterMetadata.IsArchivalEnabled() {
-		params.BlobstoreClient, err = filestore.NewClient(&s.cfg.Blobstore)
+		params.BlobstoreClient, err = filestore.NewClient(&s.cfg.Archival.Blobstore)
 		if err != nil {
 			log.Fatalf("error creating blobstore: %v", err)
 		}

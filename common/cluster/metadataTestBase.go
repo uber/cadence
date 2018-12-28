@@ -43,8 +43,6 @@ const (
 	TestAlternativeClusterFrontendAddress = "127.0.0.1:8104"
 	// TestArchivalEnabled is whether archival is enabled for cluster
 	TestArchivalEnabled = false
-	// TestDefaultArchivalBucket is the archival bucket named for cluster
-	TestDefaultArchivalBucket = "test-bucket"
 )
 
 var (
@@ -74,6 +72,6 @@ func GetTestClusterMetadata(enableGlobalDomain bool, isMasterCluster bool) Metad
 			TestAlternativeClusterName: {RPCName: common.FrontendServiceName, RPCAddress: TestAlternativeClusterFrontendAddress},
 		},
 		dynamicconfig.GetBoolPropertyFn(TestArchivalEnabled),
-		TestDefaultArchivalBucket,
+		"",
 	)
 }
