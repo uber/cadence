@@ -303,7 +303,7 @@ func (t *transferQueueStandbyProcessorImpl) processCancelExecution(transferTask 
 	}
 	if lastAttempt {
 		postProcessingFn = func() error {
-			return standbyTaskPostActionTaskDiscarded(nextEventID)
+			return standbyTrensferTaskPostActionTaskDiscarded(nextEventID, transferTask, t.logger)
 		}
 	}
 
@@ -339,7 +339,7 @@ func (t *transferQueueStandbyProcessorImpl) processSignalExecution(transferTask 
 	}
 	if lastAttempt {
 		postProcessingFn = func() error {
-			return standbyTaskPostActionTaskDiscarded(nextEventID)
+			return standbyTrensferTaskPostActionTaskDiscarded(nextEventID, transferTask, t.logger)
 		}
 	}
 
@@ -375,7 +375,7 @@ func (t *transferQueueStandbyProcessorImpl) processStartChildExecution(transferT
 	}
 	if lastAttempt {
 		postProcessingFn = func() error {
-			return standbyTaskPostActionTaskDiscarded(nextEventID)
+			return standbyTrensferTaskPostActionTaskDiscarded(nextEventID, transferTask, t.logger)
 		}
 	}
 
@@ -492,18 +492,5 @@ func (t *transferQueueStandbyProcessorImpl) discardTask(transferTask *persistenc
 	// the current time got from shard is already delayed by t.shard.GetConfig().StandbyClusterDelay()
 	// so discard will be true if task is delayed by 2*t.shard.GetConfig().StandbyClusterDelay()
 	now := t.shard.GetCurrentTime(t.clusterName)
-	discard := now.Sub(transferTask.GetVisibilityTimestamp()) > t.shard.GetConfig().StandbyClusterDelay()
-	if discard {
-		t.logger.WithFields(bark.Fields{
-			logging.TagDomainID:            transferTask.DomainID,
-			logging.TagWorkflowExecutionID: transferTask.WorkflowID,
-			logging.TagWorkflowRunID:       transferTask.RunID,
-			logging.TagTaskID:              transferTask.GetTaskID(),
-			logging.TagTaskType:            transferTask.GetTaskType(),
-			logging.TagVersion:             transferTask.GetVersion(),
-			logging.TagTimestamp:           transferTask.VisibilityTimestamp,
-			logging.TagEventID:             transferTask.ScheduleID,
-		}).Error("Discarding standby transfer task due to task being pending for too long.")
-	}
-	return discard
+	return now.Sub(transferTask.GetVisibilityTimestamp()) > t.shard.GetConfig().StandbyClusterDelay()
 }

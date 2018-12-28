@@ -186,7 +186,7 @@ func (t *timerQueueStandbyProcessorImpl) processExpiredUserTimer(timerTask *pers
 	}
 	if lastAttempt {
 		postProcessingFn = func() error {
-			return standbyTaskPostActionTaskDiscarded(nextEventID)
+			return standbyTimerTaskPostActionTaskDiscarded(nextEventID, timerTask, t.logger)
 		}
 	}
 
@@ -246,7 +246,7 @@ func (t *timerQueueStandbyProcessorImpl) processActivityTimeout(timerTask *persi
 	}
 	if lastAttempt {
 		postProcessingFn = func() error {
-			return standbyTaskPostActionTaskDiscarded(nextEventID)
+			return standbyTimerTaskPostActionTaskDiscarded(nextEventID, timerTask, t.logger)
 		}
 	}
 
@@ -326,7 +326,7 @@ func (t *timerQueueStandbyProcessorImpl) processDecisionTimeout(timerTask *persi
 	}
 	if lastAttempt {
 		postProcessingFn = func() error {
-			return standbyTaskPostActionTaskDiscarded(nextEventID)
+			return standbyTimerTaskPostActionTaskDiscarded(nextEventID, timerTask, t.logger)
 		}
 	}
 
@@ -369,7 +369,7 @@ func (t *timerQueueStandbyProcessorImpl) processWorkflowBackoffTimer(timerTask *
 	}
 	if lastAttempt {
 		postProcessingFn = func() error {
-			return standbyTaskPostActionTaskDiscarded(nextEventID)
+			return standbyTimerTaskPostActionTaskDiscarded(nextEventID, timerTask, t.logger)
 		}
 	}
 
@@ -411,7 +411,7 @@ func (t *timerQueueStandbyProcessorImpl) processWorkflowTimeout(timerTask *persi
 	}
 	if lastAttempt {
 		postProcessingFn = func() error {
-			return standbyTaskPostActionTaskDiscarded(nextEventID)
+			return standbyTimerTaskPostActionTaskDiscarded(nextEventID, timerTask, t.logger)
 		}
 	}
 
@@ -527,20 +527,5 @@ func (t *timerQueueStandbyProcessorImpl) discardTask(timerTask *persistence.Time
 	// the current time got from shard is already delayed by t.shard.GetConfig().StandbyClusterDelay()
 	// so discard will be true if task is delayed by 2*t.shard.GetConfig().StandbyClusterDelay()
 	now := t.shard.GetCurrentTime(t.clusterName)
-	discard := now.Sub(timerTask.GetVisibilityTimestamp()) > t.shard.GetConfig().StandbyClusterDelay()
-	if discard {
-		t.logger.WithFields(bark.Fields{
-			logging.TagDomainID:            timerTask.DomainID,
-			logging.TagWorkflowExecutionID: timerTask.WorkflowID,
-			logging.TagWorkflowRunID:       timerTask.RunID,
-			logging.TagTaskID:              timerTask.GetTaskID(),
-			logging.TagTaskType:            timerTask.GetTaskType(),
-			logging.TagVersion:             timerTask.GetVersion(),
-			logging.TagTimeoutType:         timerTask.TimeoutType,
-			logging.TagTimestamp:           timerTask.VisibilityTimestamp,
-			logging.TagEventID:             timerTask.EventID,
-			logging.TagAttempt:             timerTask.ScheduleAttempt,
-		}).Error("Discarding standby timer task due to task being pending for too long.")
-	}
-	return discard
+	return now.Sub(timerTask.GetVisibilityTimestamp()) > t.shard.GetConfig().StandbyClusterDelay()
 }
