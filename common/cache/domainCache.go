@@ -539,8 +539,8 @@ func (entry *DomainCacheEntry) duplicate() *DomainCacheEntry {
 		result.info.Data[k] = v
 	}
 	result.config = &persistence.DomainConfig{
-		Retention:  entry.config.Retention,
-		EmitMetric: entry.config.EmitMetric,
+		Retention:      entry.config.Retention,
+		EmitMetric:     entry.config.EmitMetric,
 		ArchivalBucket: entry.config.ArchivalBucket,
 		ArchivalStatus: entry.config.ArchivalStatus,
 	}

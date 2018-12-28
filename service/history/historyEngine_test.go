@@ -1349,9 +1349,9 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowSuccess() 
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
 		&persistence.GetDomainResponse{
-			Info:   &persistence.DomainInfo{ID: domainID},
+			Info: &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{
-				Retention: 1,
+				Retention:      1,
 				ArchivalStatus: workflow.ArchivalStatusEnabled,
 			},
 			ReplicationConfig: &persistence.DomainReplicationConfig{
@@ -1423,9 +1423,9 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowSuccess() {
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
 		&persistence.GetDomainResponse{
-			Info:   &persistence.DomainInfo{ID: domainID},
+			Info: &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{
-				Retention: 1,
+				Retention:      1,
 				ArchivalStatus: workflow.ArchivalStatusEnabled,
 			},
 			ReplicationConfig: &persistence.DomainReplicationConfig{
