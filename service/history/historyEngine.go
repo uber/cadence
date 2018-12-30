@@ -1721,6 +1721,8 @@ Update_History_Loop:
 					RunID:      workflowExecution.GetRunId(),
 					Bucket:     domainCfg.ArchivalBucket,
 				}
+
+				// TODO: this will actually be scheduling a timer to do archival
 				if err := e.archivalClient.Archive(request); err != nil {
 					return nil, err
 				}

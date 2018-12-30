@@ -26,6 +26,7 @@ import (
 	"github.com/uber/cadence/common/blobstore"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 const (
@@ -33,6 +34,7 @@ const (
 )
 
 type client struct {
+	sync.Mutex
 	storeDirectory string
 }
 
@@ -53,6 +55,9 @@ func NewClient(cfg *Config) (blobstore.Client, error) {
 }
 
 func (c *client) UploadBlob(_ context.Context, bucket string, filename string, blob *blobstore.Blob) error {
+	c.Lock()
+	defer c.Unlock()
+
 	exists, err := directoryExists(bucketDirectory(c.storeDirectory, bucket))
 	if err != nil {
 		return err
@@ -69,6 +74,9 @@ func (c *client) UploadBlob(_ context.Context, bucket string, filename string, b
 }
 
 func (c *client) DownloadBlob(_ context.Context, bucket string, filename string) (*blobstore.Blob, error) {
+	c.Lock()
+	defer c.Unlock()
+
 	exists, err := directoryExists(bucketDirectory(c.storeDirectory, bucket))
 	if err != nil {
 		return nil, err
@@ -88,6 +96,9 @@ func (c *client) DownloadBlob(_ context.Context, bucket string, filename string)
 }
 
 func (c *client) BucketMetadata(_ context.Context, bucket string) (*blobstore.BucketMetadataResponse, error) {
+	c.Lock()
+	defer c.Unlock()
+
 	exists, err := directoryExists(bucketDirectory(c.storeDirectory, bucket))
 	if err != nil {
 		return nil, err
