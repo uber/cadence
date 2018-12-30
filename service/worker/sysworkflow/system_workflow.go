@@ -23,6 +23,7 @@ package sysworkflow
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/common/blobstore"
@@ -84,7 +85,7 @@ func selectSystemTask(scope tally.Scope, signal signal, ctx workflow.Context, lo
 			MaximumInterval:          time.Minute,
 			ExpirationInterval:       time.Hour * 24 * 30,
 			MaximumAttempts:          0,
-			NonRetriableErrorReasons: []string{"bad-error"},
+			NonRetriableErrorReasons: []string{},
 		},
 	}
 
@@ -116,7 +117,11 @@ func selectSystemTask(scope tally.Scope, signal signal, ctx workflow.Context, lo
 
 // ArchivalActivity is the archival activity code
 func ArchivalActivity(ctx context.Context, request ArchiveRequest) error {
-	fields := zap.Fields(zap.String(DomainIDTag, request.DomainID), zap.String(WorkflowIDTag, request.WorkflowID), zap.String(RunIDTag, request.RunID))
+	fields := zap.Fields(
+		zap.String(DomainIDTag, request.DomainID),
+		zap.String(WorkflowIDTag, request.WorkflowID),
+		zap.String(RunIDTag, request.RunID),
+		zap.String(BucketNameTag, request.Bucket))
 	logger := activity.GetLogger(ctx).WithOptions(fields)
 	logger.Info("called archival activity")
 
@@ -150,6 +155,10 @@ func ArchivalActivity(ctx context.Context, request ArchiveRequest) error {
 	if err != nil {
 		logger.Error("archival failed, could not read body of downloaded blob", zap.String("blobname", blobFilename), zap.Error(err))
 		return err
+	}
+	if len(downloadedBlob.Tags) != len(blob.Tags) {
+		logger.Error("archival failed, did not read correct blob back", zap.String("blobname", blobFilename))
+		return errors.New("downloaded blob is not valid")
 	}
 	logger.Info("archival successful", zap.String("blobname", blobFilename), zap.Int("body-size", len(bytes)))
 	return nil

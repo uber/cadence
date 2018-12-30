@@ -50,7 +50,7 @@ func init() {
 func NewSysWorker(frontendClient frontend.Client, scope tally.Scope, blobstoreClient blobstore.Client) *SysWorker {
 	logger, _ := zap.NewProduction()
 	actCtx := context.WithValue(context.Background(), blobstoreClientKey, blobstoreClient)
-	actCtx = context.WithValue(context.Background(), frontendClientKey, frontendClient)
+	actCtx = context.WithValue(actCtx, frontendClientKey, frontendClient)
 	wo := worker.Options{
 		Logger:                    logger,
 		MetricsScope:              scope.SubScope(SystemWorkflowScope),

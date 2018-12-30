@@ -65,6 +65,8 @@ const (
 	WorkflowIDTag = "workflowID"
 	//RunIDTag tag which identifies the runID of an archived history
 	RunIDTag = "runID"
+	// BucketNameTag tag which identifies the bucket name
+	BucketNameTag = "bucket-name"
 )
 
 // RequestType is the type for signals that can be sent to system workflows

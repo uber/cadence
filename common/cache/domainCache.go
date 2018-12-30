@@ -319,7 +319,7 @@ func (c *domainCache) refreshDomains() error {
 	prevEntries := []*DomainCacheEntry{}
 	nextEntries := []*DomainCacheEntry{}
 
-	// make a copy of the existing domain cache, so we can calaulate diff and do compare and swap
+	// make a copy of the existing domain cache, so we can calculate diff and do compare and swap
 	newCacheNameToID := newDomainCache()
 	newCacheByID := newDomainCache()
 	for _, domain := range c.GetAllDomain() {
