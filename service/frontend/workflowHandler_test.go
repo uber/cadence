@@ -75,6 +75,10 @@ func (s *workflowHandlerSuite) SetupSuite() {
 	}
 }
 
+func (s *workflowHandlerSuite) TearDownSuite() {
+
+}
+
 func (s *workflowHandlerSuite) SetupTest() {
 	s.logger = bark.NewNopLogger()
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}

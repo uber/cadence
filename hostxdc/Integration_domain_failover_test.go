@@ -108,8 +108,8 @@ var (
 			CurrentClusterName:             clusterName[1],
 			ClusterInitialFailoverVersions: map[string]int64{clusterName[0]: 0, clusterName[1]: 1},
 			ClusterAddress: map[string]config.Address{
-				clusterName[0]: {RPCName: common.FrontendServiceName, RPCAddress: clusterAddress[0]},
-				clusterName[1]: {RPCName: common.FrontendServiceName, RPCAddress: clusterAddress[1]},
+				clusterName[0]: config.Address{RPCName: common.FrontendServiceName, RPCAddress: clusterAddress[0]},
+				clusterName[1]: config.Address{RPCName: common.FrontendServiceName, RPCAddress: clusterAddress[1]},
 			},
 		},
 	}
