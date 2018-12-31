@@ -31,13 +31,13 @@ type MockEventsCache struct {
 }
 
 // getEvent is mock implementation for getEvent of EventsCache
-func (_m *MockEventsCache) getEvent(domainID, workflowID, runID string, eventID int64, eventStoreVersion int32,
+func (_m *MockEventsCache) getEvent(domainID, workflowID, runID string, firstEventID, eventID int64, eventStoreVersion int32,
 	branchToken []byte) (*shared.HistoryEvent, error) {
-	ret := _m.Called(domainID, workflowID, runID, eventID, eventStoreVersion, branchToken)
+	ret := _m.Called(domainID, workflowID, runID, firstEventID, eventID, eventStoreVersion, branchToken)
 
 	var r0 *shared.HistoryEvent
-	if rf, ok := ret.Get(0).(func(string, string, string, int64, int32, []byte) *shared.HistoryEvent); ok {
-		r0 = rf(domainID, workflowID, runID, eventID, eventStoreVersion, branchToken)
+	if rf, ok := ret.Get(0).(func(string, string, string, int64, int64, int32, []byte) *shared.HistoryEvent); ok {
+		r0 = rf(domainID, workflowID, runID, firstEventID, eventID, eventStoreVersion, branchToken)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*shared.HistoryEvent)

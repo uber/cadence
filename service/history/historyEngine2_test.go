@@ -806,7 +806,7 @@ func (s *engine2Suite) TestRecordActivityTaskStartedSuccess() {
 	)
 
 	s.mockEventsCache.On("getEvent", domainID, workflowExecution.GetWorkflowId(), workflowExecution.GetRunId(),
-		scheduledEvent.GetEventId(), mock.Anything, mock.Anything).Return(scheduledEvent, nil)
+		decisionCompletedEvent.GetEventId(), scheduledEvent.GetEventId(), mock.Anything, mock.Anything).Return(scheduledEvent, nil)
 	response, err := s.historyEngine.RecordActivityTaskStarted(context.Background(), &h.RecordActivityTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
 		WorkflowExecution: &workflowExecution,

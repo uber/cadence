@@ -4542,7 +4542,7 @@ func addDecisionTaskScheduledEvent(builder mutableState) *decisionInfo {
 }
 
 func addDecisionTaskStartedEvent(builder mutableState, scheduleID int64, taskList,
-	identity string) *workflow.HistoryEvent {
+identity string) *workflow.HistoryEvent {
 	return addDecisionTaskStartedEventWithRequestID(builder, scheduleID, validRunID, taskList, identity)
 }
 
@@ -4569,7 +4569,7 @@ func addDecisionTaskCompletedEvent(builder mutableState, scheduleID, startedID i
 }
 
 func addActivityTaskScheduledEvent(builder mutableState, decisionCompletedID int64, activityID, activityType,
-	taskList string, input []byte, timeout, queueTimeout, heartbeatTimeout int32) (*workflow.HistoryEvent,
+taskList string, input []byte, timeout, queueTimeout, heartbeatTimeout int32) (*workflow.HistoryEvent,
 	*persistence.ActivityInfo) {
 
 	return builder.AddActivityTaskScheduledEvent(decisionCompletedID, &workflow.ScheduleActivityTaskDecisionAttributes{
@@ -4769,6 +4769,7 @@ func copyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *p
 		ParentWorkflowID:             sourceInfo.ParentWorkflowID,
 		ParentRunID:                  sourceInfo.ParentRunID,
 		InitiatedID:                  sourceInfo.InitiatedID,
+		CompletionEventBatchID:       sourceInfo.CompletionEventBatchID,
 		CompletionEvent:              sourceInfo.CompletionEvent,
 		TaskList:                     sourceInfo.TaskList,
 		StickyTaskList:               sourceInfo.StickyTaskList,
@@ -4797,6 +4798,7 @@ func copyActivityInfo(sourceInfo *persistence.ActivityInfo) *persistence.Activit
 	return &persistence.ActivityInfo{
 		Version:                  sourceInfo.Version,
 		ScheduleID:               sourceInfo.ScheduleID,
+		ScheduledEventBatchID:    sourceInfo.ScheduledEventBatchID,
 		ScheduledEvent:           sourceInfo.ScheduledEvent,
 		StartedID:                sourceInfo.StartedID,
 		StartedEvent:             sourceInfo.StartedEvent,
@@ -4859,10 +4861,15 @@ func copySignalInfo(sourceInfo *persistence.SignalInfo) *persistence.SignalInfo 
 
 func copyChildInfo(sourceInfo *persistence.ChildExecutionInfo) *persistence.ChildExecutionInfo {
 	result := &persistence.ChildExecutionInfo{
-		Version:         sourceInfo.Version,
-		InitiatedID:     sourceInfo.InitiatedID,
-		StartedID:       sourceInfo.StartedID,
-		CreateRequestID: sourceInfo.CreateRequestID,
+		Version:               sourceInfo.Version,
+		InitiatedID:           sourceInfo.InitiatedID,
+		InitiatedEventBatchID: sourceInfo.InitiatedEventBatchID,
+		StartedID:             sourceInfo.StartedID,
+		StartedWorkflowID:     sourceInfo.StartedWorkflowID,
+		StartedRunID:          sourceInfo.StartedRunID,
+		CreateRequestID:       sourceInfo.CreateRequestID,
+		DomainName:            sourceInfo.DomainName,
+		WorkflowTypeName:      sourceInfo.WorkflowTypeName,
 	}
 
 	if sourceInfo.InitiatedEvent != nil {
