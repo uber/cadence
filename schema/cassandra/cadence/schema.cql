@@ -188,7 +188,7 @@ CREATE TYPE child_execution_info (
   started_id                bigint,
   started_workflow_id       text,
   started_run_id            uuid,
-  started_event             blob, // deprecated
+  started_event             blob, -- deprecated
   create_request_id         uuid,
   event_data_encoding       text, -- Protocol used for history serialization
   domain_name               text,

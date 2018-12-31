@@ -4100,7 +4100,11 @@ func resetChildExecutionInfoMap(childExecutionInfos []*p.InternalChildExecutionI
 		cInfo["create_request_id"] = c.CreateRequestID
 		cInfo["started_id"] = c.StartedID
 		cInfo["started_workflow_id"] = c.StartedWorkflowID
-		cInfo["started_run_id"] = c.StartedRunID
+		startedRunID := emptyRunID
+		if c.StartedRunID != "" {
+			startedRunID = c.StartedRunID
+		}
+		cInfo["started_run_id"] = startedRunID
 		cInfo["domain_name"] = c.DomainName
 		cInfo["workflow_type_name"] = c.WorkflowTypeName
 
