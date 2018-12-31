@@ -1022,12 +1022,12 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeStartChildWorkflowExecution
 	}
 
 	ci := &persistence.ChildExecutionInfo{
-		Version:         event.GetVersion(),
-		InitiatedID:     event.GetEventId(),
+		Version:               event.GetVersion(),
+		InitiatedID:           event.GetEventId(),
 		InitiatedEventBatchID: event.GetEventId(),
-		StartedID:       common.EmptyEventID,
-		CreateRequestID: createRequestID,
-		DomainName:      targetDomain,
+		StartedID:             common.EmptyEventID,
+		CreateRequestID:       createRequestID,
+		DomainName:            targetDomain,
 	}
 
 	// the create request ID is generated inside, cannot assert equal

@@ -4542,7 +4542,7 @@ func addDecisionTaskScheduledEvent(builder mutableState) *decisionInfo {
 }
 
 func addDecisionTaskStartedEvent(builder mutableState, scheduleID int64, taskList,
-identity string) *workflow.HistoryEvent {
+	identity string) *workflow.HistoryEvent {
 	return addDecisionTaskStartedEventWithRequestID(builder, scheduleID, validRunID, taskList, identity)
 }
 
@@ -4569,7 +4569,7 @@ func addDecisionTaskCompletedEvent(builder mutableState, scheduleID, startedID i
 }
 
 func addActivityTaskScheduledEvent(builder mutableState, decisionCompletedID int64, activityID, activityType,
-taskList string, input []byte, timeout, queueTimeout, heartbeatTimeout int32) (*workflow.HistoryEvent,
+	taskList string, input []byte, timeout, queueTimeout, heartbeatTimeout int32) (*workflow.HistoryEvent,
 	*persistence.ActivityInfo) {
 
 	return builder.AddActivityTaskScheduledEvent(decisionCompletedID, &workflow.ScheduleActivityTaskDecisionAttributes{
