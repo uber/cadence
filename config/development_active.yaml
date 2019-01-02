@@ -110,8 +110,8 @@ kafka:
       dlq-topic: standby-dlq
 
 archival:
-  enableArchival: true
-  blobstore:
+  enabled: true
+  filestore:
     storeDirectory: "/tmp/dev_active/blobstore/"
     defaultBucket:
       name: "cadence-development"

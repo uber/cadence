@@ -23,10 +23,11 @@ package filestore
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common/blobstore"
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/uber/cadence/common/blobstore"
 )
 
 const (

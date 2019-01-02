@@ -78,8 +78,8 @@ clustersInfo:
       rpcAddress: "127.0.0.1:7933"
 
 archival:
-  enableArchival: true
-  blobstore:
+  enabled: true
+  filestore:
     storeDirectory: "/tmp/development/blobstore/"
     defaultBucket:
       name: "cadence-development"

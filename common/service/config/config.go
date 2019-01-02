@@ -239,10 +239,10 @@ type (
 
 	// Archival contains the config for archival
 	Archival struct {
-		// EnableArchival whether archival is enabled
-		EnableArchival bool `yaml:"enableArchival"`
-		// Blobstore the configuration for blobstore
-		Blobstore filestore.Config `yaml:"blobstore"`
+		// Enabled whether archival is enabled
+		Enabled bool `yaml:"enabled"`
+		// Filestore the configuration for file based blobstore
+		Filestore filestore.Config `yaml:"filestore"`
 	}
 
 	// BootstrapMode is an enum type for ringpop bootstrap mode
