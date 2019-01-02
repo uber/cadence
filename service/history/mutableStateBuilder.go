@@ -2532,7 +2532,11 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCompletedEvent(initiatedI
 		return nil
 	}
 
-	domain := &ci.DomainName
+
+	var domain *string
+	if len(ci.DomainName) > 0 {
+		domain = &ci.DomainName
+	}
 	workflowType := &workflow.WorkflowType{
 		Name: common.StringPtr(ci.WorkflowTypeName),
 	}
@@ -2561,7 +2565,10 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionFailedEvent(initiatedID i
 		return nil
 	}
 
-	domain := &ci.DomainName
+	var domain *string
+	if len(ci.DomainName) > 0 {
+		domain = &ci.DomainName
+	}
 	workflowType := &workflow.WorkflowType{
 		Name: common.StringPtr(ci.WorkflowTypeName),
 	}
@@ -2590,7 +2597,10 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCanceledEvent(initiatedID
 		return nil
 	}
 
-	domain := &ci.DomainName
+	var domain *string
+	if len(ci.DomainName) > 0 {
+		domain = &ci.DomainName
+	}
 	workflowType := &workflow.WorkflowType{
 		Name: common.StringPtr(ci.WorkflowTypeName),
 	}
@@ -2619,7 +2629,10 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTerminatedEvent(initiated
 		return nil
 	}
 
-	domain := &ci.DomainName
+	var domain *string
+	if len(ci.DomainName) > 0 {
+		domain = &ci.DomainName
+	}
 	workflowType := &workflow.WorkflowType{
 		Name: common.StringPtr(ci.WorkflowTypeName),
 	}
@@ -2648,7 +2661,10 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTimedOutEvent(initiatedID
 		return nil
 	}
 
-	domain := &ci.DomainName
+	var domain *string
+	if len(ci.DomainName) > 0 {
+		domain = &ci.DomainName
+	}
 	workflowType := &workflow.WorkflowType{
 		Name: common.StringPtr(ci.WorkflowTypeName),
 	}
