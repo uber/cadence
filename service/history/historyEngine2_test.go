@@ -119,7 +119,6 @@ func (s *engine2Suite) SetupTest() {
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
 	s.mockDomainCache = &cache.DomainCacheMock{}
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(cache.NewDomainCacheEntryForTest(&p.DomainInfo{ID: validDomainID}, nil), nil)
-	s.mockInitiator.On("Archive", mock.Anything).Return(nil)
 
 	mockShard := &shardContextImpl{
 		service:                   s.mockService,
