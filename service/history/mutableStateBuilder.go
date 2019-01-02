@@ -2532,7 +2532,6 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCompletedEvent(initiatedI
 		return nil
 	}
 
-
 	var domain *string
 	if len(ci.DomainName) > 0 {
 		domain = &ci.DomainName
