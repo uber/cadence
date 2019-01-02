@@ -1191,8 +1191,8 @@ func (r *historyReplicator) flushEventsBuffer(context workflowExecutionContext, 
 		return ErrCorruptedMutableStateDecision
 	}
 	msBuilder.UpdateReplicationStateVersion(msBuilder.GetLastWriteVersion(), true)
-	msBuilder.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID,
-		workflow.DecisionTaskFailedCauseFailoverCloseDecision, nil, identityHistoryService)
+	msBuilder.AddDecisionTaskFailedEvent(makeDecisionTaskFailedEventAttributes(di.ScheduleID, di.StartedID,
+		workflow.DecisionTaskFailedCauseFailoverCloseDecision, nil, identityHistoryService))
 
 	// there is no need to generate a new decision and corresponding decision timer task
 	// here, the intent is to flush the buffered events

@@ -529,10 +529,10 @@ func (s *HistoryV2PersistenceSuite) readWithError(branch []byte, minID, maxID in
 		if err != nil {
 			return nil, err
 		}
-		if len(resp.History) > 0 {
+		if len(resp.HistoryEvents) > 0 {
 			s.True(resp.Size > 0)
 		}
-		res = append(res, resp.History...)
+		res = append(res, resp.HistoryEvents...)
 		token = resp.NextPageToken
 		if len(token) == 0 {
 			break

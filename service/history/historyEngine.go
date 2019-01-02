@@ -2607,7 +2607,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 		return
 	}
 	var currMutableState mutableState
-	var currContext *workflowExecutionContext
+	var currContext workflowExecutionContext
 	var currExecution workflow.WorkflowExecution
 	if resp.RunID == forkExecution.GetRunId() {
 		currContext = forkContext
@@ -2888,7 +2888,7 @@ func (e *historyEngineImpl) replayReceivedSignals(receivedSignals []*workflow.Hi
 			Identity:   se.GetWorkflowExecutionSignaledEventAttributes().Identity,
 			Input:      se.GetWorkflowExecutionSignaledEventAttributes().Input,
 		}
-		msBuilder.AddWorkflowExecutionSignaled(sigReq)
+		msBuilder.AddWorkflowExecutionSignaled(sigReq.GetSignalName(), sigReq.GetInput(), sigReq.GetIdentity())
 	}
 }
 
