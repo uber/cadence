@@ -23,6 +23,8 @@ package history
 import (
 	"time"
 
+	"fmt"
+
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/shared"
@@ -41,6 +43,8 @@ type (
 		getTimerTasks() []persistence.Task
 		getNewRunTransferTasks() []persistence.Task
 		getNewRunTimerTasks() []persistence.Task
+		getMutableState() mutableState
+		filterTransferTasksForReset() ([]int64, []int64, []persistence.Task, error)
 	}
 
 	stateBuilderImpl struct {
@@ -70,6 +74,10 @@ func newStateBuilder(shard ShardContext, msBuilder mutableState, logger bark.Log
 	}
 }
 
+func (b *stateBuilderImpl) getMutableState() mutableState {
+	return b.msBuilder
+}
+
 func (b *stateBuilderImpl) getTransferTasks() []persistence.Task {
 	return b.transferTasks
 }
@@ -94,8 +102,10 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 	var newRunStateBuilder mutableState
 	for _, event := range history {
 		lastEvent = event
-		// must set the current version, since this is standby here, not active
-		b.msBuilder.UpdateReplicationStateVersion(event.GetVersion(), true)
+		// NOTE: stateBuilder is also being used in the active side
+		if b.msBuilder.GetReplicationState() != nil {
+			b.msBuilder.UpdateReplicationStateVersion(event.GetVersion(), true)
+		}
 		switch event.GetEventType() {
 		case shared.EventTypeWorkflowExecutionStarted:
 			attributes := event.WorkflowExecutionStartedEventAttributes
@@ -568,4 +578,65 @@ func (b *stateBuilderImpl) getTimerBuilder(event *shared.HistoryEvent) *timerBui
 		return newTimerBuilderForStandby(b.shard.GetConfig(), b.logger, timeSource)
 	}
 	return newTimerBuilder(b.shard.GetConfig(), b.logger, timeSource)
+}
+
+func (b *stateBuilderImpl) filterTransferTasksForReset() ([]int64, []int64, []persistence.Task, error) {
+	transTasks := []persistence.Task{}
+	startedActivityIDs := []int64{}
+	scheduledActivityIDs := []int64{}
+
+	for _, t := range b.transferTasks {
+		switch t.GetType() {
+		case persistence.TransferTaskTypeActivityTask:
+			task, ok := t.(*persistence.ActivityTask)
+			if !ok {
+				return nil, nil, nil, errUnknownTransferTask
+			}
+			ai, isPending := b.msBuilder.GetActivityInfo(task.ScheduleID)
+			if !isPending {
+				// it means activity has completed
+				continue
+			}
+
+			if ai.StartedID != common.EmptyEventID {
+				// it means activity has started
+				// we don't want to schedule activity again if it already started by the reset point
+				// instead, we will failed those started activity(if they have retry then schedule backoff retry)
+				startedActivityIDs = append(startedActivityIDs, task.ScheduleID)
+				continue
+			}
+
+			//finally it means activity has scheduled but not started yet
+			scheduledActivityIDs = append(scheduledActivityIDs, task.ScheduleID)
+
+		case persistence.TransferTaskTypeStartChildExecution:
+			// skip all transferTasks for childWF for first version
+			continue
+		case persistence.TransferTaskTypeDecisionTask:
+			// skip all transferTasks for decision since we only reset to decisionTaskCompleted
+			continue
+		case persistence.TransferTaskTypeCancelExecution:
+			task, ok := t.(*persistence.CancelExecutionTask)
+			if !ok {
+				return nil, nil, nil, errUnknownTransferTask
+			}
+			_, isPending := b.msBuilder.GetRequestCancelInfo(task.InitiatedID)
+			if !isPending {
+				continue
+			}
+		case persistence.TransferTaskTypeSignalExecution:
+			// skip all transferTasks for sending signal for first version
+			continue
+		case persistence.TransferTaskTypeCloseExecution:
+			fallthrough
+		default:
+			return nil, nil, nil, &shared.InternalServiceError{
+				Message: fmt.Sprintf("unrecoginzed transfer task type for reset: %v", t.GetType()),
+			}
+		}
+
+		transTasks = append(transTasks, t)
+	}
+
+	return scheduledActivityIDs, startedActivityIDs, transTasks, nil
 }

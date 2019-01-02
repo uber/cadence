@@ -135,3 +135,60 @@ func (_m *mockStateBuilder) applyEvents(domainID string, requestID string, execu
 
 	return r0, r1, r2, r3
 }
+
+// getMutableState provides a mock function with given fields:
+func (_m *mockStateBuilder) getMutableState() mutableState {
+	ret := _m.Called()
+
+	var r0 mutableState
+	if rf, ok := ret.Get(0).(func() mutableState); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(mutableState)
+		}
+	}
+	return r0
+}
+
+// getMutableState provides a mock function with given fields:
+func (_m *mockStateBuilder) filterTransferTasksForReset() ([]int64, []int64, []persistence.Task, error) {
+	ret := _m.Called()
+
+	var r0 []int64
+	if rf, ok := ret.Get(0).(func() []int64); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]int64)
+		}
+	}
+
+	var r1 []int64
+	if rf, ok := ret.Get(0).(func() []int64); ok {
+		r1 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r1 = ret.Get(0).([]int64)
+		}
+	}
+
+	var r2 []persistence.Task
+	if rf, ok := ret.Get(0).(func() []persistence.Task); ok {
+		r2 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r2 = ret.Get(0).([]persistence.Task)
+		}
+	}
+
+	var r3 error
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r3 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r3 = ret.Get(0).(error)
+		}
+	}
+	return r0, r1, r2, r3
+}

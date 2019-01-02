@@ -137,23 +137,23 @@ func (s *conflictResolverSuite) TestGetHistory() {
 	nextEventID := int64(101)
 
 	event1 := &shared.HistoryEvent{
-		EventId:                                 common.Int64Ptr(1),
+		EventId: common.Int64Ptr(1),
 		WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{},
 	}
 	event2 := &shared.HistoryEvent{
-		EventId:                              common.Int64Ptr(2),
+		EventId: common.Int64Ptr(2),
 		DecisionTaskScheduledEventAttributes: &shared.DecisionTaskScheduledEventAttributes{},
 	}
 	event3 := &shared.HistoryEvent{
-		EventId:                            common.Int64Ptr(3),
+		EventId: common.Int64Ptr(3),
 		DecisionTaskStartedEventAttributes: &shared.DecisionTaskStartedEventAttributes{},
 	}
 	event4 := &shared.HistoryEvent{
-		EventId:                              common.Int64Ptr(4),
+		EventId: common.Int64Ptr(4),
 		DecisionTaskCompletedEventAttributes: &shared.DecisionTaskCompletedEventAttributes{},
 	}
 	event5 := &shared.HistoryEvent{
-		EventId:                              common.Int64Ptr(5),
+		EventId: common.Int64Ptr(5),
 		ActivityTaskScheduledEventAttributes: &shared.ActivityTaskScheduledEventAttributes{},
 	}
 
@@ -207,16 +207,16 @@ func (s *conflictResolverSuite) TestReset() {
 		EventId: common.Int64Ptr(1),
 		Version: common.Int64Ptr(12),
 		WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
-			WorkflowType:                        &shared.WorkflowType{Name: common.StringPtr("some random workflow type")},
-			TaskList:                            &shared.TaskList{Name: common.StringPtr("some random workflow type")},
-			Input:                               []byte("some random input"),
+			WorkflowType: &shared.WorkflowType{Name: common.StringPtr("some random workflow type")},
+			TaskList:     &shared.TaskList{Name: common.StringPtr("some random workflow type")},
+			Input:        []byte("some random input"),
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(123),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(233),
 			Identity:                            common.StringPtr("some random identity"),
 		},
 	}
 	event2 := &shared.HistoryEvent{
-		EventId:                              common.Int64Ptr(2),
+		EventId: common.Int64Ptr(2),
 		DecisionTaskScheduledEventAttributes: &shared.DecisionTaskScheduledEventAttributes{},
 	}
 
@@ -294,7 +294,7 @@ func (s *conflictResolverSuite) TestReset() {
 		Execution: execution,
 	}).Return(&persistence.GetWorkflowExecutionResponse{}, nil).Once() // return empty resoonse since we are not testing the load
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
-	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(cache.NewDomainCacheEntryWithInfo(&persistence.DomainInfo{}), nil)
+	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{}, nil), nil)
 
 	_, err := s.conflictResolver.reset(prevRunID, createRequestID, nextEventID-1, executionInfo)
 	s.Nil(err)

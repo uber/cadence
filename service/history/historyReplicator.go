@@ -786,6 +786,7 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 	if msBuilder.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
 		historySize, err = r.shard.AppendHistoryV2Events(&persistence.AppendHistoryNodesRequest{
 			IsNewBranch:   true,
+			Info:          historyGarbageCleanupInfo(domainID, execution.GetWorkflowId(), execution.GetRunId()),
 			BranchToken:   msBuilder.GetCurrentBranch(),
 			Events:        history.Events,
 			TransactionID: transactionID,
