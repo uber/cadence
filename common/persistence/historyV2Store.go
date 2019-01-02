@@ -212,7 +212,7 @@ func (m *historyV2ManagerImpl) ReadHistoryBranchByBatch(request *ReadHistoryBran
 func (m *historyV2ManagerImpl) ReadHistoryBranch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchResponse, error) {
 	resp := &ReadHistoryBranchResponse{}
 	var err error
-	resp.History, _, resp.NextPageToken, resp.Size, resp.LastFirstEventID, err = m.readHistoryBranch(false, request)
+	resp.HistoryEvents, _, resp.NextPageToken, resp.Size, resp.LastFirstEventID, err = m.readHistoryBranch(false, request)
 	if err != nil {
 		return nil, err
 	}
