@@ -464,7 +464,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 	domainID := domainEntry.GetInfo().ID
 
 	request := startRequest.StartRequest
-	retError = validateStartWorkflowExecutionRequest(request)
+	retError = validateStartWorkflowExecutionRequest(request, e.config.MaxIDLengthLimit())
 	if retError != nil {
 		return
 	}
@@ -1096,6 +1096,7 @@ func (e *historyEngineImpl) RespondDecisionTaskCompleted(ctx context.Context, re
 
 	sizeLimitError := e.config.BlobSizeLimitError(domainEntry.GetInfo().Name)
 	sizeLimitWarn := e.config.BlobSizeLimitWarn(domainEntry.GetInfo().Name)
+	maxIDLengthLimit := e.config.MaxIDLengthLimit()
 
 	sizeChecker := &decisionBlobSizeChecker{
 		sizeLimitWarn:  sizeLimitWarn,
@@ -1190,7 +1191,7 @@ Update_History_Loop:
 					targetDomainID = domainEntry.GetInfo().ID
 				}
 
-				if err = validateActivityScheduleAttributes(attributes, executionInfo.WorkflowTimeout); err != nil {
+				if err = validateActivityScheduleAttributes(attributes, executionInfo.WorkflowTimeout, maxIDLengthLimit); err != nil {
 					failDecision = true
 					failCause = workflow.DecisionTaskFailedCauseBadScheduleActivityAttributes
 					failMessage = err.Error()
@@ -1383,7 +1384,7 @@ Update_History_Loop:
 				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
 					metrics.DecisionTypeStartTimerCounter)
 				attributes := d.StartTimerDecisionAttributes
-				if err = validateTimerScheduleAttributes(attributes); err != nil {
+				if err = validateTimerScheduleAttributes(attributes, maxIDLengthLimit); err != nil {
 					failDecision = true
 					failCause = workflow.DecisionTaskFailedCauseBadStartTimerAttributes
 					failMessage = err.Error()
@@ -1401,7 +1402,7 @@ Update_History_Loop:
 				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
 					metrics.DecisionTypeCancelActivityCounter)
 				attributes := d.RequestCancelActivityTaskDecisionAttributes
-				if err = validateActivityCancelAttributes(attributes); err != nil {
+				if err = validateActivityCancelAttributes(attributes, maxIDLengthLimit); err != nil {
 					failDecision = true
 					failCause = workflow.DecisionTaskFailedCauseBadRequestCancelActivityAttributes
 					failMessage = err.Error()
@@ -1426,7 +1427,7 @@ Update_History_Loop:
 				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
 					metrics.DecisionTypeCancelTimerCounter)
 				attributes := d.CancelTimerDecisionAttributes
-				if err = validateTimerCancelAttributes(attributes); err != nil {
+				if err = validateTimerCancelAttributes(attributes, maxIDLengthLimit); err != nil {
 					failDecision = true
 					failCause = workflow.DecisionTaskFailedCauseBadCancelTimerAttributes
 					failMessage = err.Error()
@@ -1445,7 +1446,7 @@ Update_History_Loop:
 				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
 					metrics.DecisionTypeRecordMarkerCounter)
 				attributes := d.RecordMarkerDecisionAttributes
-				if err = validateRecordMarkerAttributes(attributes); err != nil {
+				if err = validateRecordMarkerAttributes(attributes, maxIDLengthLimit); err != nil {
 					failDecision = true
 					failCause = workflow.DecisionTaskFailedCauseBadRecordMarkerAttributes
 					failMessage = err.Error()
@@ -1465,7 +1466,7 @@ Update_History_Loop:
 				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
 					metrics.DecisionTypeCancelExternalWorkflowCounter)
 				attributes := d.RequestCancelExternalWorkflowExecutionDecisionAttributes
-				if err = validateCancelExternalWorkflowExecutionAttributes(attributes); err != nil {
+				if err = validateCancelExternalWorkflowExecutionAttributes(attributes, maxIDLengthLimit); err != nil {
 					failDecision = true
 					failCause = workflow.DecisionTaskFailedCauseBadRequestCancelExternalWorkflowExecutionAttributes
 					failMessage = err.Error()
@@ -1504,7 +1505,7 @@ Update_History_Loop:
 					metrics.DecisionTypeSignalExternalWorkflowCounter)
 
 				attributes := d.SignalExternalWorkflowExecutionDecisionAttributes
-				if err = validateSignalExternalWorkflowExecutionAttributes(attributes); err != nil {
+				if err = validateSignalExternalWorkflowExecutionAttributes(attributes, maxIDLengthLimit); err != nil {
 					failDecision = true
 					failCause = workflow.DecisionTaskFailedCauseBadSignalWorkflowExecutionAttributes
 					failMessage = err.Error()
@@ -1562,7 +1563,7 @@ Update_History_Loop:
 					continue Process_Decision_Loop
 				}
 				attributes := d.ContinueAsNewWorkflowExecutionDecisionAttributes
-				if err = validateContinueAsNewWorkflowExecutionAttributes(executionInfo, attributes); err != nil {
+				if err = validateContinueAsNewWorkflowExecutionAttributes(executionInfo, attributes, maxIDLengthLimit); err != nil {
 					failDecision = true
 					failCause = workflow.DecisionTaskFailedCauseBadContinueAsNewAttributes
 					failMessage = err.Error()
@@ -1600,7 +1601,7 @@ Update_History_Loop:
 					metrics.DecisionTypeChildWorkflowCounter)
 				targetDomainID := domainID
 				attributes := d.StartChildWorkflowExecutionDecisionAttributes
-				if err = validateStartChildExecutionAttributes(executionInfo, attributes); err != nil {
+				if err = validateStartChildExecutionAttributes(executionInfo, attributes, maxIDLengthLimit); err != nil {
 					failDecision = true
 					failCause = workflow.DecisionTaskFailedCauseBadStartChildExecutionAttributes
 					failMessage = err.Error()
@@ -2264,7 +2265,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	// Start workflow and signal
 	startRequest := getStartRequest(domainID, sRequest)
 	request := startRequest.StartRequest
-	retError = validateStartWorkflowExecutionRequest(request)
+	retError = validateStartWorkflowExecutionRequest(request, e.config.MaxIDLengthLimit())
 	if retError != nil {
 		return
 	}
@@ -2778,7 +2779,7 @@ func (s *shardContextWrapper) NotifyNewHistoryEvent(event *historyEventNotificat
 	return err
 }
 
-func validateActivityScheduleAttributes(attributes *workflow.ScheduleActivityTaskDecisionAttributes, wfTimeout int32) error {
+func validateActivityScheduleAttributes(attributes *workflow.ScheduleActivityTaskDecisionAttributes, wfTimeout int32, maxIDLengthLimit int) error {
 	if attributes == nil {
 		return &workflow.BadRequestError{Message: "ScheduleActivityTaskDecisionAttributes is not set on decision."}
 	}
@@ -2799,15 +2800,15 @@ func validateActivityScheduleAttributes(attributes *workflow.ScheduleActivityTas
 		return err
 	}
 
-	if len(attributes.GetActivityId()) > common.MaxIDLengthLimit {
+	if len(attributes.GetActivityId()) > maxIDLengthLimit {
 		return &workflow.BadRequestError{Message: "ActivityID exceeds length limit."}
 	}
 
-	if len(attributes.GetActivityType().GetName()) > common.MaxIDLengthLimit {
+	if len(attributes.GetActivityType().GetName()) > maxIDLengthLimit {
 		return &workflow.BadRequestError{Message: "ActivityType exceeds length limit."}
 	}
 
-	if len(attributes.GetDomain()) > common.MaxIDLengthLimit {
+	if len(attributes.GetDomain()) > maxIDLengthLimit {
 		return &workflow.BadRequestError{Message: "Domain exceeds length limit."}
 	}
 
@@ -2868,14 +2869,14 @@ func validateActivityScheduleAttributes(attributes *workflow.ScheduleActivityTas
 	return nil
 }
 
-func validateTimerScheduleAttributes(attributes *workflow.StartTimerDecisionAttributes) error {
+func validateTimerScheduleAttributes(attributes *workflow.StartTimerDecisionAttributes, maxIDLengthLimit int) error {
 	if attributes == nil {
 		return &workflow.BadRequestError{Message: "StartTimerDecisionAttributes is not set on decision."}
 	}
 	if attributes.TimerId == nil || *attributes.TimerId == "" {
 		return &workflow.BadRequestError{Message: "TimerId is not set on decision."}
 	}
-	if len(attributes.GetTimerId()) > common.MaxIDLengthLimit {
+	if len(attributes.GetTimerId()) > maxIDLengthLimit {
 		return &workflow.BadRequestError{Message: "TimerId exceeds length limit."}
 	}
 	if attributes.StartToFireTimeoutSeconds == nil || *attributes.StartToFireTimeoutSeconds <= 0 {
@@ -2884,40 +2885,40 @@ func validateTimerScheduleAttributes(attributes *workflow.StartTimerDecisionAttr
 	return nil
 }
 
-func validateActivityCancelAttributes(attributes *workflow.RequestCancelActivityTaskDecisionAttributes) error {
+func validateActivityCancelAttributes(attributes *workflow.RequestCancelActivityTaskDecisionAttributes, maxIDLengthLimit int) error {
 	if attributes == nil {
 		return &workflow.BadRequestError{Message: "RequestCancelActivityTaskDecisionAttributes is not set on decision."}
 	}
 	if attributes.ActivityId == nil || *attributes.ActivityId == "" {
 		return &workflow.BadRequestError{Message: "ActivityId is not set on decision."}
 	}
-	if len(attributes.GetActivityId()) > common.MaxIDLengthLimit {
+	if len(attributes.GetActivityId()) > maxIDLengthLimit {
 		return &workflow.BadRequestError{Message: "ActivityId exceeds length limit."}
 	}
 	return nil
 }
 
-func validateTimerCancelAttributes(attributes *workflow.CancelTimerDecisionAttributes) error {
+func validateTimerCancelAttributes(attributes *workflow.CancelTimerDecisionAttributes, maxIDLengthLimit int) error {
 	if attributes == nil {
 		return &workflow.BadRequestError{Message: "CancelTimerDecisionAttributes is not set on decision."}
 	}
 	if attributes.TimerId == nil || *attributes.TimerId == "" {
 		return &workflow.BadRequestError{Message: "TimerId is not set on decision."}
 	}
-	if len(attributes.GetTimerId()) > common.MaxIDLengthLimit {
+	if len(attributes.GetTimerId()) > maxIDLengthLimit {
 		return &workflow.BadRequestError{Message: "TimerId exceeds length limit."}
 	}
 	return nil
 }
 
-func validateRecordMarkerAttributes(attributes *workflow.RecordMarkerDecisionAttributes) error {
+func validateRecordMarkerAttributes(attributes *workflow.RecordMarkerDecisionAttributes, maxIDLengthLimit int) error {
 	if attributes == nil {
 		return &workflow.BadRequestError{Message: "RecordMarkerDecisionAttributes is not set on decision."}
 	}
 	if attributes.MarkerName == nil || *attributes.MarkerName == "" {
 		return &workflow.BadRequestError{Message: "MarkerName is not set on decision."}
 	}
-	if len(attributes.GetMarkerName()) > common.MaxIDLengthLimit {
+	if len(attributes.GetMarkerName()) > maxIDLengthLimit {
 		return &workflow.BadRequestError{Message: "MarkerName exceeds length limit."}
 	}
 
@@ -2948,17 +2949,17 @@ func validateCancelWorkflowExecutionAttributes(attributes *workflow.CancelWorkfl
 	return nil
 }
 
-func validateCancelExternalWorkflowExecutionAttributes(attributes *workflow.RequestCancelExternalWorkflowExecutionDecisionAttributes) error {
+func validateCancelExternalWorkflowExecutionAttributes(attributes *workflow.RequestCancelExternalWorkflowExecutionDecisionAttributes, maxIDLengthLimit int) error {
 	if attributes == nil {
 		return &workflow.BadRequestError{Message: "RequestCancelExternalWorkflowExecutionDecisionAttributes is not set on decision."}
 	}
 	if attributes.WorkflowId == nil {
 		return &workflow.BadRequestError{Message: "WorkflowId is not set on decision."}
 	}
-	if len(attributes.GetDomain()) > common.MaxIDLengthLimit {
+	if len(attributes.GetDomain()) > maxIDLengthLimit {
 		return &workflow.BadRequestError{Message: "Domain exceeds length limit."}
 	}
-	if len(attributes.GetWorkflowId()) > common.MaxIDLengthLimit {
+	if len(attributes.GetWorkflowId()) > maxIDLengthLimit {
 		return &workflow.BadRequestError{Message: "WorkflowId exceeds length limit."}
 	}
 	runID := attributes.GetRunId()
@@ -2969,7 +2970,7 @@ func validateCancelExternalWorkflowExecutionAttributes(attributes *workflow.Requ
 	return nil
 }
 
-func validateSignalExternalWorkflowExecutionAttributes(attributes *workflow.SignalExternalWorkflowExecutionDecisionAttributes) error {
+func validateSignalExternalWorkflowExecutionAttributes(attributes *workflow.SignalExternalWorkflowExecutionDecisionAttributes, maxIDLengthLimit int) error {
 	if attributes == nil {
 		return &workflow.BadRequestError{Message: "SignalExternalWorkflowExecutionDecisionAttributes is not set on decision."}
 	}
@@ -2979,10 +2980,10 @@ func validateSignalExternalWorkflowExecutionAttributes(attributes *workflow.Sign
 	if attributes.Execution.WorkflowId == nil {
 		return &workflow.BadRequestError{Message: "WorkflowId is not set on decision."}
 	}
-	if len(attributes.GetDomain()) > common.MaxIDLengthLimit {
+	if len(attributes.GetDomain()) > maxIDLengthLimit {
 		return &workflow.BadRequestError{Message: "Domain exceeds length limit."}
 	}
-	if len(attributes.Execution.GetWorkflowId()) > common.MaxIDLengthLimit {
+	if len(attributes.Execution.GetWorkflowId()) > maxIDLengthLimit {
 		return &workflow.BadRequestError{Message: "WorkflowId exceeds length limit."}
 	}
 
@@ -3001,7 +3002,7 @@ func validateSignalExternalWorkflowExecutionAttributes(attributes *workflow.Sign
 }
 
 func validateContinueAsNewWorkflowExecutionAttributes(executionInfo *persistence.WorkflowExecutionInfo,
-	attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes) error {
+	attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes, maxIDLengthLimit int) error {
 	if attributes == nil {
 		return &workflow.BadRequestError{Message: "ContinueAsNewWorkflowExecutionDecisionAttributes is not set on decision."}
 	}
@@ -3015,10 +3016,10 @@ func validateContinueAsNewWorkflowExecutionAttributes(executionInfo *persistence
 	if attributes.TaskList == nil || attributes.TaskList.GetName() == "" {
 		attributes.TaskList = &workflow.TaskList{Name: common.StringPtr(executionInfo.TaskList)}
 	}
-	if len(attributes.TaskList.GetName()) > common.MaxIDLengthLimit {
+	if len(attributes.TaskList.GetName()) > maxIDLengthLimit {
 		return &workflow.BadRequestError{Message: "TaskList exceeds length limit."}
 	}
-	if len(attributes.WorkflowType.GetName()) > common.MaxIDLengthLimit {
+	if len(attributes.WorkflowType.GetName()) > maxIDLengthLimit {
 		return &workflow.BadRequestError{Message: "WorkflowType exceeds length limit."}
 	}
 
@@ -3036,7 +3037,7 @@ func validateContinueAsNewWorkflowExecutionAttributes(executionInfo *persistence
 }
 
 func validateStartChildExecutionAttributes(parentInfo *persistence.WorkflowExecutionInfo,
-	attributes *workflow.StartChildWorkflowExecutionDecisionAttributes) error {
+	attributes *workflow.StartChildWorkflowExecutionDecisionAttributes, maxIDLengthLimit int) error {
 	if attributes == nil {
 		return &workflow.BadRequestError{Message: "StartChildWorkflowExecutionDecisionAttributes is not set on decision."}
 	}
@@ -3053,15 +3054,15 @@ func validateStartChildExecutionAttributes(parentInfo *persistence.WorkflowExecu
 		return &workflow.BadRequestError{Message: "Required field ChildPolicy is not set on decision."}
 	}
 
-	if len(attributes.GetDomain()) > common.MaxIDLengthLimit {
+	if len(attributes.GetDomain()) > maxIDLengthLimit {
 		return &workflow.BadRequestError{Message: "Domain exceeds length limit."}
 	}
 
-	if len(attributes.GetWorkflowId()) > common.MaxIDLengthLimit {
+	if len(attributes.GetWorkflowId()) > maxIDLengthLimit {
 		return &workflow.BadRequestError{Message: "WorkflowId exceeds length limit."}
 	}
 
-	if len(attributes.WorkflowType.GetName()) > common.MaxIDLengthLimit {
+	if len(attributes.WorkflowType.GetName()) > maxIDLengthLimit {
 		return &workflow.BadRequestError{Message: "WorkflowType exceeds length limit."}
 	}
 
@@ -3078,7 +3079,7 @@ func validateStartChildExecutionAttributes(parentInfo *persistence.WorkflowExecu
 		attributes.TaskList = &workflow.TaskList{Name: common.StringPtr(parentInfo.TaskList)}
 	}
 
-	if len(attributes.TaskList.GetName()) > common.MaxIDLengthLimit {
+	if len(attributes.TaskList.GetName()) > maxIDLengthLimit {
 		return &workflow.BadRequestError{Message: "TaskList exceeds length limit."}
 	}
 
@@ -3095,7 +3096,7 @@ func validateStartChildExecutionAttributes(parentInfo *persistence.WorkflowExecu
 	return nil
 }
 
-func validateStartWorkflowExecutionRequest(request *workflow.StartWorkflowExecutionRequest) error {
+func validateStartWorkflowExecutionRequest(request *workflow.StartWorkflowExecutionRequest, maxIDLengthLimit int) error {
 	if request.ExecutionStartToCloseTimeoutSeconds == nil || request.GetExecutionStartToCloseTimeoutSeconds() <= 0 {
 		return &workflow.BadRequestError{Message: "Missing or invalid ExecutionStartToCloseTimeoutSeconds."}
 	}
@@ -3108,16 +3109,16 @@ func validateStartWorkflowExecutionRequest(request *workflow.StartWorkflowExecut
 	if request.WorkflowType == nil || request.WorkflowType.Name == nil || request.WorkflowType.GetName() == "" {
 		return &workflow.BadRequestError{Message: "Missing WorkflowType."}
 	}
-	if len(request.GetDomain()) > common.MaxIDLengthLimit {
+	if len(request.GetDomain()) > maxIDLengthLimit {
 		return &workflow.BadRequestError{Message: "Domain exceeds length limit."}
 	}
-	if len(request.GetWorkflowId()) > common.MaxIDLengthLimit {
+	if len(request.GetWorkflowId()) > maxIDLengthLimit {
 		return &workflow.BadRequestError{Message: "WorkflowId exceeds length limit."}
 	}
-	if len(request.TaskList.GetName()) > common.MaxIDLengthLimit {
+	if len(request.TaskList.GetName()) > maxIDLengthLimit {
 		return &workflow.BadRequestError{Message: "TaskList exceeds length limit."}
 	}
-	if len(request.WorkflowType.GetName()) > common.MaxIDLengthLimit {
+	if len(request.WorkflowType.GetName()) > maxIDLengthLimit {
 		return &workflow.BadRequestError{Message: "WorkflowType exceeds length limit."}
 	}
 

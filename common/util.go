@@ -71,10 +71,6 @@ const (
 	FailureReasonDecisionBlobSizeExceedsLimit = "DECISION_BLOB_SIZE_EXCEEDS_LIMIT"
 	// TerminateReasonSizeExceedsLimit is reason to terminate workflow when history size exceed limit
 	TerminateReasonSizeExceedsLimit = "HISTORY_SIZE_EXCEEDS_LIMIT"
-
-	// MaxIDLengthLimit is the length limit for various IDs, including: Domain, TaskList, WorkflowID, ActivityID, TimerID,
-	// WorkflowType, ActivityType, SignalName, MarkerName, ErrorReason/FailureReason/CancelCause, Identity, RequestID
-	MaxIDLengthLimit = 1000 // max ID length limit
 )
 
 var (
