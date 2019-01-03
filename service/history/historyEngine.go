@@ -2644,7 +2644,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 	newMutableState, transferTasks, timerTasks, retError := e.buildNewMutableStateForReset(forkMutableState, request.GetReason(), request.GetDecisionTaskCompletedEventId(), request.GetRequestId(), newRunID)
 	// complete the fork process at the end, it is OK even if this defer fails, because our timer task can still clean up correctly
 	defer func() {
-		if len(newMutableState.GetExecutionInfo().GetCurrentBranch()) > 0 {
+		if newMutableState != nil && len(newMutableState.GetExecutionInfo().GetCurrentBranch()) > 0 {
 			e.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
 				BranchToken: newMutableState.GetExecutionInfo().GetCurrentBranch(),
 				Success:     retError == nil,
