@@ -99,6 +99,13 @@ func (e *eventsCacheImpl) getEvent(domainID, workflowID, runID string, firstEven
 	event, err := e.getHistoryEventFromStore(domainID, workflowID, runID, firstEventID, eventID, eventStoreVersion, branchToken)
 	if err != nil {
 		e.metricsClient.IncCounter(metrics.EventsCacheGetEventScope, metrics.CacheFailures)
+		e.logger.WithFields(bark.Fields{
+			logging.TagDomainID:            domainID,
+			logging.TagWorkflowExecutionID: workflowID,
+			logging.TagWorkflowRunID:       runID,
+			logging.TagEventID:             eventID,
+			logging.TagErr:                 err,
+		}).Error("EventsCache unable to retrieve event from store")
 		return nil, err
 	}
 
@@ -153,7 +160,7 @@ func (e *eventsCacheImpl) getHistoryEventFromStore(domainID, workflowID, runID s
 				WorkflowId: common.StringPtr(workflowID),
 				RunId:      common.StringPtr(runID),
 			},
-			FirstEventID:  eventID,
+			FirstEventID:  firstEventID,
 			NextEventID:   eventID + 1,
 			PageSize:      1,
 			NextPageToken: nil,
