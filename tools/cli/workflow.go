@@ -543,7 +543,7 @@ func newWorkflowCommands() []cli.Command {
 				},
 				cli.StringFlag{
 					Name:  FlagEventID,
-					Usage: "The eventID of a DecisionTaskCompleted you want to reset to (exclusive)",
+					Usage: "The eventID of a DecisionTaskCompleted/DecisionTaskFailed you want to reset to (exclusive)",
 				},
 				cli.StringFlag{
 					Name:  FlagReason,
