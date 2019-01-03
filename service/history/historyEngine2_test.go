@@ -55,7 +55,7 @@ type (
 		*require.Assertions
 		historyEngine       *historyEngineImpl
 		mockMatchingClient  *mocks.MatchingClient
-		mockInitiator       *mocks.Initiator
+		mockArchivalClient  *mocks.ArchivalClient
 		mockHistoryClient   *mocks.HistoryClient
 		mockMetadataMgr     *mocks.MetadataManager
 		mockVisibilityMgr   *mocks.VisibilityManager
@@ -100,7 +100,7 @@ func (s *engine2Suite) SetupTest() {
 
 	shardID := 0
 	s.mockMatchingClient = &mocks.MatchingClient{}
-	s.mockInitiator = &mocks.Initiator{}
+	s.mockArchivalClient = &mocks.ArchivalClient{}
 	s.mockHistoryClient = &mocks.HistoryClient{}
 	s.mockMetadataMgr = &mocks.MetadataManager{}
 	s.mockVisibilityMgr = &mocks.VisibilityManager{}
@@ -119,7 +119,6 @@ func (s *engine2Suite) SetupTest() {
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
 	s.mockDomainCache = &cache.DomainCacheMock{}
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(cache.NewDomainCacheEntryWithInfo(&p.DomainInfo{ID: validDomainID}), nil)
-	s.mockInitiator.On("Archive", mock.Anything).Return(nil)
 
 	mockShard := &shardContextImpl{
 		service:                   s.mockService,
@@ -147,6 +146,7 @@ func (s *engine2Suite) SetupTest() {
 		metricsClient:      metrics.NewClient(tally.NoopScope, metrics.History),
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
 		config:             s.config,
+		archivalClient:     s.mockArchivalClient,
 	}
 	h.txProcessor = newTransferQueueProcessor(mockShard, h, s.mockVisibilityMgr, s.mockProducer, s.mockMatchingClient, s.mockHistoryClient, s.logger)
 	h.timerProcessor = newTimerQueueProcessor(mockShard, h, s.mockMatchingClient, s.logger)
@@ -161,6 +161,7 @@ func (s *engine2Suite) TearDownTest() {
 	s.mockVisibilityMgr.AssertExpectations(s.T())
 	s.mockProducer.AssertExpectations(s.T())
 	s.mockClientBean.AssertExpectations(s.T())
+	s.mockArchivalClient.AssertExpectations(s.T())
 }
 
 func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {

@@ -66,6 +66,7 @@ type (
 		mockService         service.Service
 		mockDomainCache     *cache.DomainCacheMock
 		mockClientBean      *client.MockClientBean
+		mockArchivalClient  *mocks.ArchivalClient
 
 		shardClosedCh chan int
 		config        *Config
@@ -117,6 +118,7 @@ func (s *engine3Suite) SetupTest() {
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
 	s.mockDomainCache = &cache.DomainCacheMock{}
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(cache.NewDomainCacheEntryWithInfo(&p.DomainInfo{ID: validDomainID}), nil)
+	s.mockArchivalClient = &mocks.ArchivalClient{}
 
 	mockShard := &shardContextImpl{
 		service:                   s.mockService,
@@ -146,6 +148,7 @@ func (s *engine3Suite) SetupTest() {
 		metricsClient:      metrics.NewClient(tally.NoopScope, metrics.History),
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
 		config:             s.config,
+		archivalClient:     s.mockArchivalClient,
 	}
 	h.txProcessor = newTransferQueueProcessor(mockShard, h, s.mockVisibilityMgr, s.mockProducer, s.mockMatchingClient, s.mockHistoryClient, s.logger)
 	h.timerProcessor = newTimerQueueProcessor(mockShard, h, s.mockMatchingClient, s.logger)
@@ -161,6 +164,7 @@ func (s *engine3Suite) TearDownTest() {
 	s.mockVisibilityMgr.AssertExpectations(s.T())
 	s.mockProducer.AssertExpectations(s.T())
 	s.mockClientBean.AssertExpectations(s.T())
+	s.mockArchivalClient.AssertExpectations(s.T())
 }
 
 func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {

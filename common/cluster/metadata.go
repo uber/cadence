@@ -49,8 +49,11 @@ type (
 		ClusterNameForFailoverVersion(failoverVersion int64) string
 		// GetAllClientAddress return the frontend address for each cluster name
 		GetAllClientAddress() map[string]config.Address
-		// GetDeploymentGroup returns the deployment group of cluster
-		GetDeploymentGroup() string
+
+		// IsArchivalEnabled whether archival is enabled
+		IsArchivalEnabled() bool
+		// GetDefaultArchivalBucket returns the default archival bucket name
+		GetDefaultArchivalBucket() string
 	}
 
 	metadataImpl struct {
@@ -70,16 +73,25 @@ type (
 		initialFailoverVersionClusters map[int64]string
 		// clusterToAddress contains the cluster name to corresponding frontend client
 		clusterToAddress map[string]config.Address
-		// deploymentGroup is the deployment group name of cluster
-		deploymentGroup string
+
+		// enableArchival whether archival is enabled
+		enableArchival dynamicconfig.BoolPropertyFn
+		// defaultArchivalBucket is the default archival bucket name used for this cluster
+		defaultArchivalBucket string
 	}
 )
 
 // NewMetadata create a new instance of Metadata
-func NewMetadata(enableGlobalDomain dynamicconfig.BoolPropertyFn, failoverVersionIncrement int64,
-	masterClusterName string, currentClusterName string,
+func NewMetadata(
+	enableGlobalDomain dynamicconfig.BoolPropertyFn,
+	failoverVersionIncrement int64,
+	masterClusterName string,
+	currentClusterName string,
 	clusterInitialFailoverVersions map[string]int64,
-	clusterToAddress map[string]config.Address, deploymentGroup string) Metadata {
+	clusterToAddress map[string]config.Address,
+	enableArchival dynamicconfig.BoolPropertyFn,
+	defaultArchivalBucket string,
+) Metadata {
 
 	if len(clusterInitialFailoverVersions) < 0 {
 		panic("Empty initial failover versions for cluster")
@@ -87,8 +99,6 @@ func NewMetadata(enableGlobalDomain dynamicconfig.BoolPropertyFn, failoverVersio
 		panic("Master cluster name is empty")
 	} else if len(currentClusterName) == 0 {
 		panic("Current cluster name is empty")
-	} else if len(deploymentGroup) == 0 {
-		panic("Deployment group name is empty")
 	}
 	initialFailoverVersionClusters := make(map[int64]string)
 	for clusterName, initialFailoverVersion := range clusterInitialFailoverVersions {
@@ -118,6 +128,13 @@ func NewMetadata(enableGlobalDomain dynamicconfig.BoolPropertyFn, failoverVersio
 		panic("Cluster to address size is different than Cluster to initial failover versions")
 	}
 
+	defaultArchivalBucketSet := len(defaultArchivalBucket) != 0
+	if enableArchival() && !defaultArchivalBucketSet {
+		panic("Archival enabled but no default bucket set")
+	} else if !enableArchival() && defaultArchivalBucketSet {
+		panic("Archival not enabled but default bucket set")
+	}
+
 	return &metadataImpl{
 		enableGlobalDomain:             enableGlobalDomain,
 		failoverVersionIncrement:       failoverVersionIncrement,
@@ -126,7 +143,8 @@ func NewMetadata(enableGlobalDomain dynamicconfig.BoolPropertyFn, failoverVersio
 		clusterInitialFailoverVersions: clusterInitialFailoverVersions,
 		initialFailoverVersionClusters: initialFailoverVersionClusters,
 		clusterToAddress:               clusterToAddress,
-		deploymentGroup:                deploymentGroup,
+		enableArchival:                 enableArchival,
+		defaultArchivalBucket:          defaultArchivalBucket,
 	}
 }
 
@@ -197,7 +215,12 @@ func (metadata *metadataImpl) GetAllClientAddress() map[string]config.Address {
 	return metadata.clusterToAddress
 }
 
-// GetDeploymentGroup returns the deployment group name for cluster
-func (metadata *metadataImpl) GetDeploymentGroup() string {
-	return metadata.deploymentGroup
+// IsArchivalEnabled whether archival is enabled
+func (metadata *metadataImpl) IsArchivalEnabled() bool {
+	return metadata.enableArchival()
+}
+
+// GetDefaultArchivalBucket returns the default archival bucket name
+func (metadata *metadataImpl) GetDefaultArchivalBucket() string {
+	return metadata.defaultArchivalBucket
 }

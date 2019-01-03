@@ -41,8 +41,6 @@ const (
 	TestCurrentClusterFrontendAddress = "127.0.0.1:7104"
 	// TestAlternativeClusterFrontendAddress is the ip port address of alternative cluster
 	TestAlternativeClusterFrontendAddress = "127.0.0.1:8104"
-	// TestDeploymentGroup is alternative deployment group used for test
-	TestDeploymentGroup = "test"
 )
 
 var (
@@ -86,7 +84,8 @@ func GetTestClusterMetadata(enableGlobalDomain bool, isMasterCluster bool) Metad
 			TestCurrentClusterName,
 			TestAllClusterFailoverVersions,
 			TestAllClusterAddress,
-			TestDeploymentGroup,
+			dynamicconfig.GetBoolPropertyFn(false),
+			"",
 		)
 	}
 
@@ -97,6 +96,7 @@ func GetTestClusterMetadata(enableGlobalDomain bool, isMasterCluster bool) Metad
 		TestCurrentClusterName,
 		TestSingleDCAllClusterFailoverVersions,
 		TestSingleDCAllClusterAddress,
-		TestDeploymentGroup,
+		dynamicconfig.GetBoolPropertyFn(false),
+		"",
 	)
 }

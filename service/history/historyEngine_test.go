@@ -58,7 +58,7 @@ type (
 		*require.Assertions
 		mockHistoryEngine   *historyEngineImpl
 		mockMatchingClient  *mocks.MatchingClient
-		mockInitiator       *mocks.Initiator
+		mockArchivalClient  *mocks.ArchivalClient
 		mockHistoryClient   *mocks.HistoryClient
 		mockMetadataMgr     *mocks.MetadataManager
 		mockVisibilityMgr   *mocks.VisibilityManager
@@ -104,7 +104,7 @@ func (s *engineSuite) SetupTest() {
 
 	shardID := 0
 	s.mockMatchingClient = &mocks.MatchingClient{}
-	s.mockInitiator = &mocks.Initiator{}
+	s.mockArchivalClient = &mocks.ArchivalClient{}
 	s.mockHistoryClient = &mocks.HistoryClient{}
 	s.mockMetadataMgr = &mocks.MetadataManager{}
 	s.mockVisibilityMgr = &mocks.VisibilityManager{}
@@ -154,7 +154,6 @@ func (s *engineSuite) SetupTest() {
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockClusterMetadata.On("GetAllClusterFailoverVersions").Return(cluster.TestSingleDCAllClusterFailoverVersions)
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
-	s.mockInitiator.On("Archive", mock.Anything).Return(nil)
 	h := &historyEngineImpl{
 		currentClusterName:   currentClusterName,
 		shard:                shardContextWrapper,
@@ -166,6 +165,7 @@ func (s *engineSuite) SetupTest() {
 		tokenSerializer:      common.NewJSONTaskTokenSerializer(),
 		historyEventNotifier: historyEventNotifier,
 		config:               NewDynamicConfigForTest(),
+		archivalClient:       s.mockArchivalClient,
 	}
 	h.txProcessor = newTransferQueueProcessor(shardContextWrapper, h, s.mockVisibilityMgr, s.mockProducer, s.mockMatchingClient, s.mockHistoryClient, s.logger)
 	h.timerProcessor = newTimerQueueProcessor(shardContextWrapper, h, s.mockMatchingClient, s.logger)
@@ -183,6 +183,7 @@ func (s *engineSuite) TearDownTest() {
 	s.mockVisibilityMgr.AssertExpectations(s.T())
 	s.mockProducer.AssertExpectations(s.T())
 	s.mockClientBean.AssertExpectations(s.T())
+	s.mockArchivalClient.AssertExpectations(s.T())
 }
 
 func (s *engineSuite) TestGetMutableStateSync() {
@@ -1351,8 +1352,11 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowSuccess() 
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
 		&persistence.GetDomainResponse{
-			Info:   &persistence.DomainInfo{ID: domainID},
-			Config: &persistence.DomainConfig{Retention: 1},
+			Info: &persistence.DomainInfo{ID: domainID},
+			Config: &persistence.DomainConfig{
+				Retention:      1,
+				ArchivalStatus: workflow.ArchivalStatusEnabled,
+			},
 			ReplicationConfig: &persistence.DomainReplicationConfig{
 				ActiveClusterName: cluster.TestCurrentClusterName,
 				Clusters: []*persistence.ClusterReplicationConfig{
@@ -1363,6 +1367,9 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowSuccess() 
 		},
 		nil,
 	)
+
+	s.mockClusterMetadata.On("IsArchivalEnabled").Return(true)
+	s.mockArchivalClient.On("Archive", mock.Anything).Return(nil)
 	_, err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &history.RespondDecisionTaskCompletedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CompleteRequest: &workflow.RespondDecisionTaskCompletedRequest{
@@ -1419,8 +1426,11 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowSuccess() {
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
 		&persistence.GetDomainResponse{
-			Info:   &persistence.DomainInfo{ID: domainID},
-			Config: &persistence.DomainConfig{Retention: 1},
+			Info: &persistence.DomainInfo{ID: domainID},
+			Config: &persistence.DomainConfig{
+				Retention:      1,
+				ArchivalStatus: workflow.ArchivalStatusEnabled,
+			},
 			ReplicationConfig: &persistence.DomainReplicationConfig{
 				ActiveClusterName: cluster.TestCurrentClusterName,
 				Clusters: []*persistence.ClusterReplicationConfig{
@@ -1431,6 +1441,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowSuccess() {
 		},
 		nil,
 	)
+	s.mockClusterMetadata.On("IsArchivalEnabled").Return(true)
+	s.mockArchivalClient.On("Archive", mock.Anything).Return(nil)
 	_, err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &history.RespondDecisionTaskCompletedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CompleteRequest: &workflow.RespondDecisionTaskCompletedRequest{
@@ -4388,29 +4400,30 @@ func (s *engineSuite) TestRemoveSignalMutableState() {
 
 func (s *engineSuite) TestValidateSignalExternalWorkflowExecutionAttributes() {
 	var attributes *workflow.SignalExternalWorkflowExecutionDecisionAttributes
-	err := validateSignalExternalWorkflowExecutionAttributes(attributes)
+	maxIDLengthLimit := 1000
+	err := validateSignalExternalWorkflowExecutionAttributes(attributes, maxIDLengthLimit)
 	s.EqualError(err, "BadRequestError{Message: SignalExternalWorkflowExecutionDecisionAttributes is not set on decision.}")
 
 	attributes = &workflow.SignalExternalWorkflowExecutionDecisionAttributes{}
-	err = validateSignalExternalWorkflowExecutionAttributes(attributes)
+	err = validateSignalExternalWorkflowExecutionAttributes(attributes, maxIDLengthLimit)
 	s.EqualError(err, "BadRequestError{Message: Execution is nil on decision.}")
 
 	attributes.Execution = &workflow.WorkflowExecution{}
 	attributes.Execution.WorkflowId = common.StringPtr("workflow-id")
-	err = validateSignalExternalWorkflowExecutionAttributes(attributes)
+	err = validateSignalExternalWorkflowExecutionAttributes(attributes, maxIDLengthLimit)
 	s.EqualError(err, "BadRequestError{Message: SignalName is not set on decision.}")
 
 	attributes.Execution.RunId = common.StringPtr("run-id")
-	err = validateSignalExternalWorkflowExecutionAttributes(attributes)
+	err = validateSignalExternalWorkflowExecutionAttributes(attributes, maxIDLengthLimit)
 	s.EqualError(err, "BadRequestError{Message: Invalid RunId set on decision.}")
 	attributes.Execution.RunId = common.StringPtr(validRunID)
 
 	attributes.SignalName = common.StringPtr("my signal name")
-	err = validateSignalExternalWorkflowExecutionAttributes(attributes)
+	err = validateSignalExternalWorkflowExecutionAttributes(attributes, maxIDLengthLimit)
 	s.EqualError(err, "BadRequestError{Message: Input is not set on decision.}")
 
 	attributes.Input = []byte("test input")
-	err = validateSignalExternalWorkflowExecutionAttributes(attributes)
+	err = validateSignalExternalWorkflowExecutionAttributes(attributes, maxIDLengthLimit)
 	s.Nil(err)
 }
 

@@ -28,7 +28,6 @@ import (
 	"github.com/robfig/cron"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
-
 	"go.uber.org/yarpc/yarpcerrors"
 	"golang.org/x/net/context"
 
