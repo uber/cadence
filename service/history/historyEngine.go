@@ -2981,7 +2981,7 @@ func (e *historyEngineImpl) replayHistoryEvents(decisionTaskCompletedEventId int
 		NextPageToken: nextPageToken,
 	}
 	var resetMutableState *mutableStateBuilder
-	var lastFirstEvent *workflow.HistoryEvent
+	var lastBatch []*workflow.HistoryEvent
 
 	for {
 		var readResp *persistence.ReadHistoryBranchByBatchResponse
@@ -3003,7 +3003,7 @@ func (e *historyEngineImpl) replayHistoryEvents(decisionTaskCompletedEventId int
 				continue
 			}
 
-			lastFirstEvent = firstEvent
+			lastBatch = history
 			if firstEvent.GetEventId() == common.FirstEventID {
 				if firstEvent.GetEventType() != workflow.EventTypeWorkflowExecutionStarted {
 					retError = &workflow.InternalServiceError{
@@ -3048,10 +3048,8 @@ func (e *historyEngineImpl) replayHistoryEvents(decisionTaskCompletedEventId int
 		}
 	}
 
-	if lastFirstEvent.GetEventType() != workflow.EventTypeDecisionTaskStarted {
-		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("wrong DecisionFinishEventId, previous batch is not EventTypeDecisionTaskStarted, eventId: %v", lastFirstEvent.GetEventId()),
-		}
+	retError = validateLastBatchOfReset(lastBatch)
+	if retError != nil {
 		return
 	}
 
@@ -3062,6 +3060,23 @@ func (e *historyEngineImpl) replayHistoryEvents(decisionTaskCompletedEventId int
 	resetMutableState.executionInfo.SetNextEventID(decisionTaskCompletedEventId)
 
 	return
+}
+
+func validateLastBatchOfReset(lastBatch []*workflow.HistoryEvent) error {
+	firstEvent := lastBatch[0]
+	if firstEvent.GetEventType() == workflow.EventTypeDecisionTaskStarted {
+		return nil
+	}
+	if len(lastBatch) >= 2 {
+		// in case of trasient decision
+		secEvent := lastBatch[1]
+		if secEvent.GetEventType() == workflow.EventTypeDecisionTaskStarted {
+			return nil
+		}
+	}
+	return &workflow.BadRequestError{
+		Message: fmt.Sprintf("wrong DecisionFinishEventId, previous batch doesn't include EventTypeDecisionTaskStarted, lastFirstEventId: %v", firstEvent.GetEventId()),
+	}
 }
 
 type updateWorkflowAction struct {
