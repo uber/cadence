@@ -2797,7 +2797,7 @@ func (e *historyEngineImpl) buildNewMutableStateForReset(forkMutableState mutabl
 	// fork a new history branch
 	forkResp, retError := e.historyV2Mgr.ForkHistoryBranch(&persistence.ForkHistoryBranchRequest{
 		ForkBranchToken: forkMutableState.GetCurrentBranch(),
-		ForkNodeID:      newMutableState.GetNextEventID(),
+		ForkNodeID:      resetDecisionCompletedEventID,
 		Info:            historyGarbageCleanupInfo(domainID, workflowID, newRunID),
 	})
 	if retError != nil {

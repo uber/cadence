@@ -236,6 +236,14 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(currMutableState m
 		}
 	}
 
+	var currTransferTasks, currTimerTasks []persistence.Task
+	if closeTask != nil {
+		currTransferTasks = []persistence.Task{closeTask}
+	}
+	if cleanupTask != nil {
+		currTimerTasks = []persistence.Task{cleanupTask}
+	}
+
 	resetWFReq := &persistence.ResetWorkflowExecutionRequest{
 		PrevRunID:  currMutableState.GetExecutionInfo().RunID,
 		Condition:  c.updateCondition,
@@ -243,8 +251,8 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(currMutableState m
 
 		CurrExecutionInfo:    currMutableState.GetExecutionInfo(),
 		CurrReplicationState: currMutableState.GetReplicationState(),
-		CurrTransferTasks:    []persistence.Task{closeTask},
-		CurrTimerTasks:       []persistence.Task{cleanupTask},
+		CurrTransferTasks:    currTransferTasks,
+		CurrTimerTasks:       currTimerTasks,
 
 		InsertExecutionInfo:    newMutableState.GetExecutionInfo(),
 		InsertReplicationState: newMutableState.GetReplicationState(),
