@@ -1927,7 +1927,6 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 			if err != nil {
 				return nil, wh.error(err, scope)
 			}
-
 			token.FirstEventID = token.NextEventID
 			token.NextEventID = nextEventID
 			token.IsWorkflowRunning = isWorkflowRunning
