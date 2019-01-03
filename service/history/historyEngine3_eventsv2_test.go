@@ -433,11 +433,11 @@ func (s *engine3Suite) TestResetWorkflowExecution_NoReplication() {
 		RunId:      common.StringPtr(forkRunID),
 	}
 	request.ResetRequest = &workflow.ResetWorkflowExecutionRequest{
-		Domain:                       common.StringPtr("testDomainName"),
-		WorkflowExecution:            &we,
-		Reason:                       common.StringPtr("test reset"),
-		DecisionTaskCompletedEventId: common.Int64Ptr(29),
-		RequestId:                    common.StringPtr(uuid.New().String()),
+		Domain:                common.StringPtr("testDomainName"),
+		WorkflowExecution:     &we,
+		Reason:                common.StringPtr("test reset"),
+		DecisionFinishEventId: common.Int64Ptr(29),
+		RequestId:             common.StringPtr(uuid.New().String()),
 	}
 
 	forkGwmsRequest := &p.GetWorkflowExecutionRequest{
@@ -1115,11 +1115,11 @@ func (s *engine3Suite) TestResetWorkflowExecution_NoReplication_WithRequestCance
 		RunId:      common.StringPtr(forkRunID),
 	}
 	request.ResetRequest = &workflow.ResetWorkflowExecutionRequest{
-		Domain:                       common.StringPtr("testDomainName"),
-		WorkflowExecution:            &we,
-		Reason:                       common.StringPtr("test reset"),
-		DecisionTaskCompletedEventId: common.Int64Ptr(30),
-		RequestId:                    common.StringPtr(uuid.New().String()),
+		Domain:                common.StringPtr("testDomainName"),
+		WorkflowExecution:     &we,
+		Reason:                common.StringPtr("test reset"),
+		DecisionFinishEventId: common.Int64Ptr(30),
+		RequestId:             common.StringPtr(uuid.New().String()),
 	}
 
 	forkGwmsRequest := &p.GetWorkflowExecutionRequest{
@@ -1802,11 +1802,11 @@ func (s *engine3Suite) TODOTestResetWorkflowExecution_Replication_WithRequestCan
 		RunId:      common.StringPtr(forkRunID),
 	}
 	request.ResetRequest = &workflow.ResetWorkflowExecutionRequest{
-		Domain:                       common.StringPtr(domainName),
-		WorkflowExecution:            &we,
-		Reason:                       common.StringPtr("test reset"),
-		DecisionTaskCompletedEventId: common.Int64Ptr(30),
-		RequestId:                    common.StringPtr(uuid.New().String()),
+		Domain:                common.StringPtr(domainName),
+		WorkflowExecution:     &we,
+		Reason:                common.StringPtr("test reset"),
+		DecisionFinishEventId: common.Int64Ptr(30),
+		RequestId:             common.StringPtr(uuid.New().String()),
 	}
 
 	forkGwmsRequest := &p.GetWorkflowExecutionRequest{

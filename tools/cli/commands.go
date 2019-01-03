@@ -1179,9 +1179,9 @@ func ResetWorkflow(c *cli.Context) {
 			WorkflowId: common.StringPtr(wid),
 			RunId:      common.StringPtr(rid),
 		},
-		Reason:                       common.StringPtr(reason),
-		DecisionTaskCompletedEventId: common.Int64Ptr(eventID),
-		RequestId:                    common.StringPtr(uuid.New()),
+		Reason:                common.StringPtr(reason),
+		DecisionFinishEventId: common.Int64Ptr(eventID),
+		RequestId:             common.StringPtr(uuid.New()),
 	})
 	if err != nil {
 		ErrorAndExit("reset failed", err)

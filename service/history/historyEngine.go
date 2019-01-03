@@ -2641,7 +2641,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 		return
 	}
 
-	newMutableState, transferTasks, timerTasks, retError := e.buildNewMutableStateForReset(forkMutableState, request.GetReason(), request.GetDecisionTaskCompletedEventId(), request.GetRequestId(), newRunID)
+	newMutableState, transferTasks, timerTasks, retError := e.buildNewMutableStateForReset(forkMutableState, request.GetReason(), request.GetDecisionFinishEventId(), request.GetRequestId(), newRunID)
 	// complete the fork process at the end, it is OK even if this defer fails, because our timer task can still clean up correctly
 	defer func() {
 		if newMutableState != nil && len(newMutableState.GetExecutionInfo().GetCurrentBranch()) > 0 {
@@ -3031,7 +3031,7 @@ func (e *historyEngineImpl) replayHistoryEvents(decisionTaskCompletedEventId int
 			// avoid replay this event in stateBuilder which will run into NPE if WF doesn't enable XDC
 			if firstEvent.GetEventType() == workflow.EventTypeWorkflowExecutionContinuedAsNew {
 				retError = &workflow.BadRequestError{
-					Message: fmt.Sprintf("wrong DecisionTaskCompletedEventId, cannot replay history to continueAsNew"),
+					Message: fmt.Sprintf("wrong DecisionFinishEventId, cannot replay history to continueAsNew"),
 				}
 			}
 
@@ -3050,7 +3050,7 @@ func (e *historyEngineImpl) replayHistoryEvents(decisionTaskCompletedEventId int
 
 	if lastFirstEvent.GetEventType() != workflow.EventTypeDecisionTaskStarted {
 		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("wrong DecisionTaskCompletedEventId, previous batch is not EventTypeDecisionTaskStarted, eventId: %v", lastFirstEvent.GetEventId()),
+			Message: fmt.Sprintf("wrong DecisionFinishEventId, previous batch is not EventTypeDecisionTaskStarted, eventId: %v", lastFirstEvent.GetEventId()),
 		}
 		return
 	}

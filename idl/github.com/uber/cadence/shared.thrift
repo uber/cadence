@@ -1135,7 +1135,7 @@ struct ResetWorkflowExecutionRequest {
   10: optional string domain
   20: optional WorkflowExecution workflowExecution
   30: optional string reason
-  40: optional i64 (js.type = "Long") decisionTaskCompletedEventId
+  40: optional i64 (js.type = "Long") decisionFinishEventId
   50: optional string requestId
 }
 

@@ -27020,11 +27020,11 @@ func (v *ResetStickyTaskListResponse) MarshalLogObject(enc zapcore.ObjectEncoder
 }
 
 type ResetWorkflowExecutionRequest struct {
-	Domain                       *string            `json:"domain,omitempty"`
-	WorkflowExecution            *WorkflowExecution `json:"workflowExecution,omitempty"`
-	Reason                       *string            `json:"reason,omitempty"`
-	DecisionTaskCompletedEventId *int64             `json:"decisionTaskCompletedEventId,omitempty"`
-	RequestId                    *string            `json:"requestId,omitempty"`
+	Domain                *string            `json:"domain,omitempty"`
+	WorkflowExecution     *WorkflowExecution `json:"workflowExecution,omitempty"`
+	Reason                *string            `json:"reason,omitempty"`
+	DecisionFinishEventId *int64             `json:"decisionFinishEventId,omitempty"`
+	RequestId             *string            `json:"requestId,omitempty"`
 }
 
 // ToWire translates a ResetWorkflowExecutionRequest struct into a Thrift-level intermediate
@@ -27074,8 +27074,8 @@ func (v *ResetWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 30, Value: w}
 		i++
 	}
-	if v.DecisionTaskCompletedEventId != nil {
-		w, err = wire.NewValueI64(*(v.DecisionTaskCompletedEventId)), error(nil)
+	if v.DecisionFinishEventId != nil {
+		w, err = wire.NewValueI64(*(v.DecisionFinishEventId)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -27148,7 +27148,7 @@ func (v *ResetWorkflowExecutionRequest) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TI64 {
 				var x int64
 				x, err = field.Value.GetI64(), error(nil)
-				v.DecisionTaskCompletedEventId = &x
+				v.DecisionFinishEventId = &x
 				if err != nil {
 					return err
 				}
@@ -27191,8 +27191,8 @@ func (v *ResetWorkflowExecutionRequest) String() string {
 		fields[i] = fmt.Sprintf("Reason: %v", *(v.Reason))
 		i++
 	}
-	if v.DecisionTaskCompletedEventId != nil {
-		fields[i] = fmt.Sprintf("DecisionTaskCompletedEventId: %v", *(v.DecisionTaskCompletedEventId))
+	if v.DecisionFinishEventId != nil {
+		fields[i] = fmt.Sprintf("DecisionFinishEventId: %v", *(v.DecisionFinishEventId))
 		i++
 	}
 	if v.RequestId != nil {
@@ -27222,7 +27222,7 @@ func (v *ResetWorkflowExecutionRequest) Equals(rhs *ResetWorkflowExecutionReques
 	if !_String_EqualsPtr(v.Reason, rhs.Reason) {
 		return false
 	}
-	if !_I64_EqualsPtr(v.DecisionTaskCompletedEventId, rhs.DecisionTaskCompletedEventId) {
+	if !_I64_EqualsPtr(v.DecisionFinishEventId, rhs.DecisionFinishEventId) {
 		return false
 	}
 	if !_String_EqualsPtr(v.RequestId, rhs.RequestId) {
@@ -27247,8 +27247,8 @@ func (v *ResetWorkflowExecutionRequest) MarshalLogObject(enc zapcore.ObjectEncod
 	if v.Reason != nil {
 		enc.AddString("reason", *v.Reason)
 	}
-	if v.DecisionTaskCompletedEventId != nil {
-		enc.AddInt64("decisionTaskCompletedEventId", *v.DecisionTaskCompletedEventId)
+	if v.DecisionFinishEventId != nil {
+		enc.AddInt64("decisionFinishEventId", *v.DecisionFinishEventId)
 	}
 	if v.RequestId != nil {
 		enc.AddString("requestId", *v.RequestId)
@@ -27286,11 +27286,11 @@ func (v *ResetWorkflowExecutionRequest) GetReason() (o string) {
 	return
 }
 
-// GetDecisionTaskCompletedEventId returns the value of DecisionTaskCompletedEventId if it is set or its
+// GetDecisionFinishEventId returns the value of DecisionFinishEventId if it is set or its
 // zero value if it is unset.
-func (v *ResetWorkflowExecutionRequest) GetDecisionTaskCompletedEventId() (o int64) {
-	if v.DecisionTaskCompletedEventId != nil {
-		return *v.DecisionTaskCompletedEventId
+func (v *ResetWorkflowExecutionRequest) GetDecisionFinishEventId() (o int64) {
+	if v.DecisionFinishEventId != nil {
+		return *v.DecisionFinishEventId
 	}
 
 	return
