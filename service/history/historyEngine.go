@@ -2748,6 +2748,9 @@ func (e *historyEngineImpl) buildNewMutableStateForReset(forkMutableState mutabl
 	// failed the in-flight decision(started).
 	// Note that we need to ensure DecisionTaskFailed event is appended right after DecisionTaskStarted event
 	di, _ := newMutableState.GetInFlightDecisionTask()
+	// always enforce the attempt to zero
+	di.Attempt = 0
+	newMutableState.UpdateDecision(di)
 
 	newMutableState.AddDecisionTaskFailedEvent(workflow.DecisionTaskFailedEventAttributes{
 		ScheduledEventId: common.Int64Ptr(di.ScheduleID),
