@@ -290,6 +290,10 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 		archivalStatus = gen.ArchivalStatusEnabled
 	}
 
+	if err := wh.verifyArchivalConfigValid(archivalBucketName, archivalStatus); err != nil {
+		return wh.error(err, scope)
+	}
+
 	domainRequest := &persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          uuid.New(),
@@ -601,6 +605,10 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 				status = gen.ArchivalStatusDisabled
 			default:
 				return nil, wh.error(errUnknownArchivalStatus, scope)
+			}
+
+			if err := wh.verifyArchivalConfigValid(name, status); err != nil {
+				return nil, wh.error(err, scope)
 			}
 			config.ArchivalBucket = name
 			config.ArchivalStatus = status
@@ -3131,4 +3139,14 @@ func (wh *WorkflowHandler) bucketName(customBucketName *string) string {
 
 func (wh *WorkflowHandler) customBucketNameProvided(customBucketName *string) bool {
 	return customBucketName != nil && len(*customBucketName) != 0
+}
+
+func (wh *WorkflowHandler) verifyArchivalConfigValid(bucketName string, status gen.ArchivalStatus) error {
+	bucketNameEmpty := len(bucketName) == 0
+	neverEnabled := status == gen.ArchivalStatusNeverEnabled
+	if (bucketNameEmpty && neverEnabled) || (!bucketNameEmpty && !neverEnabled) {
+		return nil
+	}
+	errMsg := "Invalid bucket config generated: bucket-name: %s and status: %s"
+	return &gen.BadRequestError{Message: fmt.Sprintf(errMsg, bucketName, status.String())}
 }
