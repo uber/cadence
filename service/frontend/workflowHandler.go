@@ -28,8 +28,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/uber/cadence/common/blobstore"
-
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
