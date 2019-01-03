@@ -101,6 +101,7 @@ CREATE TYPE transfer_task (
   type                       int,    -- enum TaskType {ActivityTask, DecisionTask, DeleteExecution, CancelExecution, StartChildExecution, ReplicationTask}
   schedule_id                bigint,
   version                    bigint, -- the failover version when this task is created, used to compare against the mutable state, in case the events got overwritten
+  record_visibility          boolean, -- indicates whether or not to create a visibility record
 );
 
 CREATE TYPE replication_task (

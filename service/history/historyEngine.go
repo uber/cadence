@@ -2789,9 +2789,10 @@ func (e *historyEngineImpl) buildNewMutableStateForReset(forkMutableState mutabl
 		return
 	}
 	transferTasks = append(transferTasks, &persistence.DecisionTask{
-		DomainID:   domainID,
-		TaskList:   di.TaskList,
-		ScheduleID: di.ScheduleID,
+		DomainID:         domainID,
+		TaskList:         di.TaskList,
+		ScheduleID:       di.ScheduleID,
+		RecordVisibility: true,
 	})
 
 	// fork a new history branch

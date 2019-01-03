@@ -293,6 +293,7 @@ type (
 		TaskType                int
 		ScheduleID              int64
 		Version                 int64
+		RecordVisibility        bool
 	}
 
 	// ReplicationTaskInfo describes the replication task created for replication of history events
@@ -379,6 +380,7 @@ type (
 		TaskList            string
 		ScheduleID          int64
 		Version             int64
+		RecordVisibility    bool
 	}
 
 	// CloseExecutionTask identifies a transfer task for deletion of execution

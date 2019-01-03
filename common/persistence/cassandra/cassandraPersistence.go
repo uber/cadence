@@ -185,6 +185,7 @@ const (
 		`task_list: ?, ` +
 		`type: ?, ` +
 		`schedule_id: ?, ` +
+		`record_visibility: ?, ` +
 		`version: ?` +
 		`}`
 
@@ -2823,6 +2824,7 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 		targetWorkflowID := p.TransferTaskTransferTargetWorkflowID
 		targetRunID := p.TransferTaskTransferTargetRunID
 		targetChildWorkflowOnly := false
+		recordVisibility := false
 
 		switch task.GetType() {
 		case p.TransferTaskTypeActivityTask:
@@ -2834,6 +2836,7 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 			targetDomainID = task.(*p.DecisionTask).DomainID
 			taskList = task.(*p.DecisionTask).TaskList
 			scheduleID = task.(*p.DecisionTask).ScheduleID
+			recordVisibility = task.(*p.DecisionTask).RecordVisibility
 
 		case p.TransferTaskTypeCancelExecution:
 			targetDomainID = task.(*p.CancelExecutionTask).TargetDomainID
@@ -2885,6 +2888,7 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 			taskList,
 			task.GetType(),
 			scheduleID,
+			recordVisibility,
 			task.GetVersion(),
 			defaultVisibilityTimestamp,
 			task.GetTaskID())
@@ -3697,6 +3701,8 @@ func createTransferTaskInfo(result map[string]interface{}) *p.TransferTaskInfo {
 			info.TaskType = v.(int)
 		case "schedule_id":
 			info.ScheduleID = v.(int64)
+		case "record_visibility":
+			info.RecordVisibility = v.(bool)
 		case "version":
 			info.Version = v.(int64)
 		}
