@@ -61,9 +61,11 @@ type (
 
 	// Config contains all the replication config for worker
 	Config struct {
+		EnableHistoryRereplication dynamicconfig.BoolPropertyFn
+
 		PersistenceMaxQPS          dynamicconfig.IntPropertyFn
 		ReplicatorConcurrency      dynamicconfig.IntPropertyFn
-		ReplicatorBufferRetryCount int
+		ReplicatorBufferRetryCount dynamicconfig.IntPropertyFn
 		ReplicationTaskMaxRetry    dynamicconfig.IntPropertyFn
 	}
 )
