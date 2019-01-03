@@ -2753,6 +2753,24 @@ func (wh *WorkflowHandler) DescribeTaskList(ctx context.Context, request *gen.De
 	return response, nil
 }
 
+func (wh *WorkflowHandler) readFullPageV2Events(req *persistence.ReadHistoryBranchRequest) ([]*gen.HistoryEvent, int, []byte, error) {
+	// NOTE: because V2 history stores events in different branch ranges due to forking operation, each ReadHistoryBranch cannot guarantee to return pageSize
+	historyEvents := []*gen.HistoryEvent{}
+	size := int(0)
+	for {
+		response, err := wh.historyV2Mgr.ReadHistoryBranch(req)
+		if err != nil {
+			return nil, 0, nil, err
+		}
+		historyEvents = append(historyEvents, response.HistoryEvents...)
+		size += response.Size
+		if len(historyEvents) >= req.PageSize || len(response.NextPageToken) == 0 {
+			return historyEvents, size, response.NextPageToken, nil
+		}
+		req.NextPageToken = response.NextPageToken
+	}
+}
+
 func (wh *WorkflowHandler) getHistory(scope int, domainID string, execution gen.WorkflowExecution,
 	firstEventID, nextEventID int64, pageSize int32, nextPageToken []byte,
 	transientDecision *gen.TransientDecisionInfo, eventStoreVersion int32, branchToken []byte) (*gen.History, []byte, error) {
@@ -2760,20 +2778,17 @@ func (wh *WorkflowHandler) getHistory(scope int, domainID string, execution gen.
 	historyEvents := []*gen.HistoryEvent{}
 	var size int
 	if eventStoreVersion == persistence.EventStoreVersionV2 {
-		response, err := wh.historyV2Mgr.ReadHistoryBranch(&persistence.ReadHistoryBranchRequest{
+		var err error
+		historyEvents, size, nextPageToken, err = wh.readFullPageV2Events(&persistence.ReadHistoryBranchRequest{
 			BranchToken:   branchToken,
 			MinEventID:    firstEventID,
 			MaxEventID:    nextEventID,
 			PageSize:      int(pageSize),
 			NextPageToken: nextPageToken,
 		})
-
 		if err != nil {
 			return nil, nil, err
 		}
-		historyEvents = append(historyEvents, response.HistoryEvents...)
-		nextPageToken = response.NextPageToken
-		size = response.Size
 	} else {
 		response, err := wh.historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
 			DomainID:      domainID,
