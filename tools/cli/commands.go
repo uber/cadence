@@ -1169,8 +1169,11 @@ func ResetWorkflow(c *cli.Context) {
 	if eventID <= 0 {
 		ErrorAndExit("wrong eventID", fmt.Errorf("eventID must be greater than 0"))
 	}
+	ctx, cancel := newContext()
+	defer cancel()
+
 	frontendClient := cFactory.ServerFrontendClient(c)
-	resp, err := frontendClient.ResetWorkflowExecution(context.Background(), &shared.ResetWorkflowExecutionRequest{
+	resp, err := frontendClient.ResetWorkflowExecution(ctx, &shared.ResetWorkflowExecutionRequest{
 		Domain: common.StringPtr(domain),
 		WorkflowExecution: &shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(wid),
