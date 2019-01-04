@@ -1812,9 +1812,8 @@ func (e *historyEngineImpl) RespondDecisionTaskFailed(ctx context.Context, req *
 				return nil, &workflow.EntityNotExistsError{Message: "Decision task not found."}
 			}
 
-			msBuilder.AddDecisionTaskFailedEvent(
-				makeDecisionTaskFailedEventAttributes(di.ScheduleID, di.StartedID, request.GetCause(), request.Details,
-					request.GetIdentity()))
+			msBuilder.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, request.GetCause(), request.Details,
+				request.GetIdentity(), "", "", "")
 
 			return nil, nil
 		})
@@ -2758,16 +2757,8 @@ func (e *historyEngineImpl) buildNewMutableStateForReset(forkMutableState mutabl
 	di.Attempt = 0
 	newMutableState.UpdateDecision(di)
 
-	newMutableState.AddDecisionTaskFailedEvent(workflow.DecisionTaskFailedEventAttributes{
-		ScheduledEventId: common.Int64Ptr(di.ScheduleID),
-		StartedEventId:   common.Int64Ptr(di.StartedID),
-		Cause:            common.DecisionTaskFailedCausePtr(workflow.DecisionTaskFailedCauseResetWorkflow),
-		Details:          nil,
-		Reason:           common.StringPtr(resetReason),
-		Identity:         common.StringPtr(identityHistoryService),
-		ForkRunId:        common.StringPtr(forkMutableState.GetExecutionInfo().RunID),
-		NewRunId:         common.StringPtr(newRunID),
-	})
+	newMutableState.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, workflow.DecisionTaskFailedCauseResetWorkflow, nil,
+		identityHistoryService, forkMutableState.GetExecutionInfo().RunID, newRunID, resetReason)
 
 	// generate new transfer tasks to
 	//  1. re-schedule task for scheduled(not started) activities
@@ -3281,8 +3272,7 @@ func (e *historyEngineImpl) failDecision(context workflowExecutionContext, sched
 		return nil, err
 	}
 
-	msBuilder.AddDecisionTaskFailedEvent(
-		makeDecisionTaskFailedEventAttributes(scheduleID, startedID, cause, nil, request.GetIdentity()))
+	msBuilder.AddDecisionTaskFailedEvent(scheduleID, startedID, cause, nil, request.GetIdentity(), "", "", "")
 
 	// Return new builder back to the caller for further updates
 	return msBuilder, nil

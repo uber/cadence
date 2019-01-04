@@ -1528,11 +1528,20 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduleToStartTimeoutEvent(schedul
 	return event
 }
 
-func (e *mutableStateBuilder) AddDecisionTaskFailedEvent(attr workflow.DecisionTaskFailedEventAttributes) *workflow.HistoryEvent {
+func (e *mutableStateBuilder) AddDecisionTaskFailedEvent(scheduleEventID int64, startedEventID int64, cause workflow.DecisionTaskFailedCause,
+	details []byte, identity, reason, forkRunID, newRunID string) *workflow.HistoryEvent {
 
+	attr := workflow.DecisionTaskFailedEventAttributes{
+		ScheduledEventId: common.Int64Ptr(scheduleEventID),
+		StartedEventId:   common.Int64Ptr(startedEventID),
+		Cause:            common.DecisionTaskFailedCausePtr(cause),
+		Details:          details,
+		Identity:         common.StringPtr(identity),
+		Reason:           common.StringPtr(reason),
+		ForkRunId:        common.StringPtr(forkRunID),
+		NewRunId:         common.StringPtr(newRunID),
+	}
 	hasPendingDecision := e.HasPendingDecisionTask()
-	scheduleEventID := attr.GetScheduledEventId()
-	startedEventID := attr.GetStartedEventId()
 
 	dt, ok := e.GetPendingDecision(scheduleEventID)
 	if !hasPendingDecision || !ok || dt.StartedID != startedEventID {

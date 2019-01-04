@@ -317,16 +317,6 @@ func (c *workflowExecutionContextImpl) updateVersion() error {
 	return nil
 }
 
-func makeDecisionTaskFailedEventAttributes(schID, startedID int64, cause workflow.DecisionTaskFailedCause, details []byte, identity string) workflow.DecisionTaskFailedEventAttributes {
-	return workflow.DecisionTaskFailedEventAttributes{
-		ScheduledEventId: common.Int64Ptr(schID),
-		StartedEventId:   common.Int64Ptr(startedID),
-		Cause:            common.DecisionTaskFailedCausePtr(cause),
-		Details:          details,
-		Identity:         common.StringPtr(identity),
-	}
-}
-
 func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNewRun(transferTasks []persistence.Task,
 	timerTasks []persistence.Task, transactionID int64, newStateBuilder mutableState) error {
 	if c.msBuilder.GetReplicationState() != nil {
@@ -344,8 +334,8 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNewRun(transfe
 		if di, ok := c.msBuilder.GetInFlightDecisionTask(); ok && c.msBuilder.IsWorkflowExecutionRunning() {
 			if di.Version < currentVersion {
 				// we have a decision on the fly with a lower version, fail it
-				c.msBuilder.AddDecisionTaskFailedEvent(makeDecisionTaskFailedEventAttributes(di.ScheduleID, di.StartedID,
-					workflow.DecisionTaskFailedCauseFailoverCloseDecision, nil, identityHistoryService))
+				c.msBuilder.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID,
+					workflow.DecisionTaskFailedCauseFailoverCloseDecision, nil, identityHistoryService, "", "", "")
 
 				var transT, timerT []persistence.Task
 				transT, timerT, err := c.scheduleNewDecision(transT, timerT)
@@ -827,8 +817,8 @@ func (c *workflowExecutionContextImpl) failInflightDecision() error {
 	}
 
 	if di, ok := msBuilder.GetInFlightDecisionTask(); ok {
-		msBuilder.AddDecisionTaskFailedEvent(makeDecisionTaskFailedEventAttributes(di.ScheduleID, di.StartedID,
-			workflow.DecisionTaskFailedCauseForceCloseDecision, nil, identityHistoryService))
+		msBuilder.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID,
+			workflow.DecisionTaskFailedCauseForceCloseDecision, nil, identityHistoryService, "", "", "")
 
 		var transT, timerT []persistence.Task
 		transT, timerT, err1 = c.scheduleNewDecision(transT, timerT)
