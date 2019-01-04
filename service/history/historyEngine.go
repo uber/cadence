@@ -3073,13 +3073,8 @@ func (e *historyEngineImpl) replayHistoryEvents(decisionTaskCompletedEventId int
 
 func validateLastBatchOfReset(lastBatch []*workflow.HistoryEvent) error {
 	firstEvent := lastBatch[0]
-	if firstEvent.GetEventType() == workflow.EventTypeDecisionTaskStarted {
-		return nil
-	}
-	if len(lastBatch) >= 2 {
-		// in case of trasient decision
-		secEvent := lastBatch[1]
-		if secEvent.GetEventType() == workflow.EventTypeDecisionTaskStarted {
+	for _, event := range lastBatch {
+		if event.GetEventType() == workflow.EventTypeDecisionTaskStarted {
 			return nil
 		}
 	}
