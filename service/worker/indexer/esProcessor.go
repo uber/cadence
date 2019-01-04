@@ -40,6 +40,7 @@ type (
 		// Stop processor and clean up
 		Stop()
 		// Add request to bulk, and record kafka message in map with provided key
+		// This call will be blocked when downstream has issues
 		Add(request elastic.BulkableRequest, key string, kafkaMsg messaging.Message)
 	}
 

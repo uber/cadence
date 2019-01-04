@@ -40,11 +40,15 @@ struct Field {
   40: optional bool boolData
 }
 
+struct IndexAttributes {
+  10: optional map<string,Field> fields
+}
+
 struct Message {
   10: optional MessageType messageType
   20: optional string domainID
   30: optional string workflowID
   40: optional string runID
   50: optional i64 (js.type = "Long") version
-  60: optional map<string,Field> fields
+  60: optional IndexAttributes indexAttributes
 }

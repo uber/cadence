@@ -163,19 +163,7 @@ func (t *transferQueueProcessorBase) recordWorkflowStarted(
 
 	// publish to kafka
 	if t.visibilityProducer != nil {
-		msgType := indexer.MessageTypeIndex
-		fields := map[string]*indexer.Field{
-			es.WorkflowType: {Type: &es.FieldTypeString, StringData: common.StringPtr(workflowTypeName)},
-			es.StartTime:    {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(startTimeUnixNano)},
-		}
-		msg := &indexer.Message{
-			MessageType: &msgType,
-			DomainID:    common.StringPtr(domainID),
-			WorkflowID:  common.StringPtr(wid),
-			RunID:       common.StringPtr(execution.GetRunId()),
-			Version:     common.Int64Ptr(nextEventID),
-			Fields:      fields,
-		}
+		msg := getVisibilityMessageForOpenExecution(domainID, execution, workflowTypeName, startTimeUnixNano, nextEventID)
 		err := t.visibilityProducer.Publish(msg)
 		if err != nil {
 			return err
@@ -222,22 +210,8 @@ func (t *transferQueueProcessorBase) recordWorkflowClosed(
 
 	// publish to kafka
 	if t.visibilityProducer != nil {
-		msgType := indexer.MessageTypeIndex
-		fields := map[string]*indexer.Field{
-			es.WorkflowType:  {Type: &es.FieldTypeString, StringData: common.StringPtr(workflowTypeName)},
-			es.StartTime:     {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(startTimeUnixNano)},
-			es.CloseTime:     {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(endTimeUnixNano)},
-			es.CloseStatus:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(closeStatus))},
-			es.HistoryLength: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(historyLength)},
-		}
-		msg := &indexer.Message{
-			MessageType: &msgType,
-			DomainID:    common.StringPtr(domainID),
-			WorkflowID:  common.StringPtr(wid),
-			RunID:       common.StringPtr(execution.GetRunId()),
-			Version:     common.Int64Ptr(nextEventID),
-			Fields:      fields,
-		}
+		msg := getVisibilityMessageForCloseExecution(domainID, execution, workflowTypeName,
+			startTimeUnixNano, endTimeUnixNano, closeStatus, historyLength, nextEventID)
 		err := t.visibilityProducer.Publish(msg)
 		if err != nil {
 			return err
@@ -255,4 +229,52 @@ func (t *transferQueueProcessorBase) recordWorkflowClosed(
 		HistoryLength:    historyLength,
 		RetentionSeconds: retentionSeconds,
 	})
+}
+
+func getVisibilityMessageForOpenExecution(domainID string, execution workflow.WorkflowExecution, workflowTypeName string,
+	startTimeUnixNano int64, nextEventID int64) *indexer.Message {
+
+	msgType := indexer.MessageTypeIndex
+	fields := map[string]*indexer.Field{
+		es.WorkflowType: {Type: &es.FieldTypeString, StringData: common.StringPtr(workflowTypeName)},
+		es.StartTime:    {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(startTimeUnixNano)},
+	}
+
+	msg := &indexer.Message{
+		MessageType: &msgType,
+		DomainID:    common.StringPtr(domainID),
+		WorkflowID:  common.StringPtr(execution.GetWorkflowId()),
+		RunID:       common.StringPtr(execution.GetRunId()),
+		Version:     common.Int64Ptr(nextEventID),
+		IndexAttributes: &indexer.IndexAttributes{
+			Fields: fields,
+		},
+	}
+	return msg
+}
+
+func getVisibilityMessageForCloseExecution(domainID string, execution workflow.WorkflowExecution, workflowTypeName string,
+	startTimeUnixNano int64, endTimeUnixNano int64, closeStatus workflow.WorkflowExecutionCloseStatus,
+	historyLength int64, nextEventID int64) *indexer.Message {
+
+	msgType := indexer.MessageTypeIndex
+	fields := map[string]*indexer.Field{
+		es.WorkflowType:  {Type: &es.FieldTypeString, StringData: common.StringPtr(workflowTypeName)},
+		es.StartTime:     {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(startTimeUnixNano)},
+		es.CloseTime:     {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(endTimeUnixNano)},
+		es.CloseStatus:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(closeStatus))},
+		es.HistoryLength: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(historyLength)},
+	}
+
+	msg := &indexer.Message{
+		MessageType: &msgType,
+		DomainID:    common.StringPtr(domainID),
+		WorkflowID:  common.StringPtr(execution.GetWorkflowId()),
+		RunID:       common.StringPtr(execution.GetRunId()),
+		Version:     common.Int64Ptr(nextEventID),
+		IndexAttributes: &indexer.IndexAttributes{
+			Fields: fields,
+		},
+	}
+	return msg
 }

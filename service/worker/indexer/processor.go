@@ -175,14 +175,14 @@ func (p *indexProcessor) messageProcessLoop(workerWG *sync.WaitGroup, workerID i
 	}
 }
 
-func (p *indexProcessor) process(msg messaging.Message) error {
+func (p *indexProcessor) process(kafkaMsg messaging.Message) error {
 	logger := p.logger.WithFields(bark.Fields{
-		logging.TagPartitionKey: msg.Partition(),
-		logging.TagOffset:       msg.Offset(),
+		logging.TagPartitionKey: kafkaMsg.Partition(),
+		logging.TagOffset:       kafkaMsg.Offset(),
 		logging.TagAttemptStart: time.Now(),
 	})
 
-	indexMsg, err := p.deserialize(msg.Value())
+	indexMsg, err := p.deserialize(kafkaMsg.Value())
 	if err != nil {
 		logger.WithFields(bark.Fields{
 			logging.TagErr: err,
@@ -193,18 +193,7 @@ func (p *indexProcessor) process(msg messaging.Message) error {
 
 	switch indexMsg.GetMessageType() {
 	case indexer.MessageTypeIndex:
-		docID := indexMsg.GetWorkflowID() + esDocIDDelimiter + indexMsg.GetRunID()
-		doc := p.dumpFieldsToMap(indexMsg.Fields)
-		key := fmt.Sprintf("%v-%v", msg.Partition(), msg.Offset())
-		fulfillDoc(doc, indexMsg, key)
-		req := elastic.NewBulkIndexRequest().
-			Index(p.esIndexName).
-			Type(esDocType).
-			Id(docID).
-			VersionType(versionTypeExternal).
-			Version(indexMsg.GetVersion()).
-			Doc(doc)
-		p.esProcessor.Add(req, key, msg)
+		p.addMessageToESProcessor(kafkaMsg, indexMsg)
 	case indexer.MessageTypeDelete:
 		// TODO
 	default:
@@ -222,6 +211,26 @@ func (p *indexProcessor) deserialize(payload []byte) (*indexer.Message, error) {
 		return nil, err
 	}
 	return &msg, nil
+}
+
+func (p *indexProcessor) addMessageToESProcessor(kafkaMsg messaging.Message, indexMsg *indexer.Message) {
+	keyToKafkaMsg := fmt.Sprintf("%v-%v", kafkaMsg.Partition(), kafkaMsg.Offset())
+	docID := indexMsg.GetWorkflowID() + esDocIDDelimiter + indexMsg.GetRunID()
+	doc := p.generateESDoc(indexMsg, keyToKafkaMsg)
+	req := elastic.NewBulkIndexRequest().
+		Index(p.esIndexName).
+		Type(esDocType).
+		Id(docID).
+		VersionType(versionTypeExternal).
+		Version(indexMsg.GetVersion()).
+		Doc(doc)
+	p.esProcessor.Add(req, keyToKafkaMsg, kafkaMsg)
+}
+
+func (p *indexProcessor) generateESDoc(msg *indexer.Message, keyToKafkaMsg string) map[string]interface{} {
+	doc := p.dumpFieldsToMap(msg.IndexAttributes.Fields)
+	fulfillDoc(doc, msg, keyToKafkaMsg)
+	return doc
 }
 
 func (p *indexProcessor) dumpFieldsToMap(fields map[string]*indexer.Field) map[string]interface{} {
@@ -250,9 +259,9 @@ func (p *indexProcessor) dumpFieldsToMap(fields map[string]*indexer.Field) map[s
 	return doc
 }
 
-func fulfillDoc(doc map[string]interface{}, msg *indexer.Message, kafkaKey string) {
+func fulfillDoc(doc map[string]interface{}, msg *indexer.Message, keyToKafkaMsg string) {
 	doc[es.DomainID] = msg.GetDomainID()
 	doc[es.WorkflowID] = msg.GetWorkflowID()
 	doc[es.RunID] = msg.GetRunID()
-	doc[es.KafkaKey] = kafkaKey
+	doc[es.KafkaKey] = keyToKafkaMsg
 }
