@@ -2660,6 +2660,12 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 
 	// finally, write to persistence
 	retError = currContext.resetWorkflowExecution(currMutableState, terminateCurr, closeTask, cleanupTask, newMutableState, transferTasks, timerTasks, replicationTasks)
+
+	if retError == nil {
+		e.txProcessor.NotifyNewTask(e.currentClusterName, transferTasks)
+		e.timerProcessor.NotifyNewTimers(e.currentClusterName, e.shard.GetCurrentTime(e.currentClusterName), timerTasks)
+	}
+
 	return
 }
 
