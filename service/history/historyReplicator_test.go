@@ -1300,9 +1300,8 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	msBuilderIn.On("HasBufferedEvents").Return(true).Once()
 	msBuilderIn.On("GetInFlightDecisionTask").Return(pendingDecisionInfo, true)
 	msBuilderIn.On("UpdateReplicationStateVersion", currentLastWriteVersion, true).Once()
-	msBuilderIn.On("AddDecisionTaskFailedEvent",
-		makeDecisionTaskFailedEventAttributes(pendingDecisionInfo.ScheduleID, pendingDecisionInfo.StartedID,
-			workflow.DecisionTaskFailedCauseFailoverCloseDecision, ([]byte)(nil), identityHistoryService)).Return(&shared.HistoryEvent{}).Once()
+	msBuilderIn.On("AddDecisionTaskFailedEvent", pendingDecisionInfo.ScheduleID, pendingDecisionInfo.StartedID,
+		workflow.DecisionTaskFailedCauseFailoverCloseDecision, ([]byte)(nil), identityHistoryService, "", "", "").Return(&shared.HistoryEvent{}).Once()
 	context.On("updateWorkflowExecution", ([]persistence.Task)(nil), ([]persistence.Task)(nil), mock.Anything).Return(nil).Once()
 
 	// after the flush, the pending buffered events are gone, however, the last event ID should increase
