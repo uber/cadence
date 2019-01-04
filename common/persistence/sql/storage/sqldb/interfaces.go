@@ -431,7 +431,7 @@ type (
 
 		InsertIntoCurrentExecutions(row *CurrentExecutionsRow) (sql.Result, error)
 		UpdateCurrentExecutions(row *CurrentExecutionsRow) (sql.Result, error)
-		SelectFromCurrentExecutions(filter *QueryFilter) ([]CurrentExecutionsRow, error)
+		SelectFromCurrentExecutions(filter *QueryFilter) (*CurrentExecutionsRow, error)
 		DeleteFromCurrentExecutions(filter *QueryFilter) (sql.Result, error)
 		LockCurrentExecutions(filter *QueryFilter) (string, error)
 

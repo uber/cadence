@@ -405,10 +405,10 @@ func (mdb *DB) UpdateCurrentExecutions(row *sqldb.CurrentExecutionsRow) (sql.Res
 }
 
 // SelectFromCurrentExecutions reads one or more rows from current_executions table
-func (mdb *DB) SelectFromCurrentExecutions(filter *sqldb.QueryFilter) ([]sqldb.CurrentExecutionsRow, error) {
-	var rows []sqldb.CurrentExecutionsRow
-	err := mdb.conn.Select(&rows, getCurrentExecutionQry, filter.ShardID, filter.DomainID, filter.WorkflowID)
-	return rows, err
+func (mdb *DB) SelectFromCurrentExecutions(filter *sqldb.QueryFilter) (*sqldb.CurrentExecutionsRow, error) {
+	var row sqldb.CurrentExecutionsRow
+	err := mdb.conn.Get(&row, getCurrentExecutionQry, filter.ShardID, filter.DomainID, filter.WorkflowID)
+	return &row, err
 }
 
 // DeleteFromCurrentExecutions deletes a single row in current_executions table
