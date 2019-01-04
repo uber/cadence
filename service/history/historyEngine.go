@@ -3067,7 +3067,7 @@ func (e *historyEngineImpl) replayHistoryEvents(decisionTaskCompletedEventId int
 	resetMutableState.executionInfo.StartTimestamp = startTime
 	resetMutableState.executionInfo.LastUpdatedTimestamp = startTime
 	resetMutableState.executionInfo.SetNextEventID(decisionTaskCompletedEventId)
-
+	resetMutableState.ClearStickyness()
 	return
 }
 
