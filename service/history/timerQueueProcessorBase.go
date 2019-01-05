@@ -559,6 +559,20 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.Ti
 		return nil
 	}
 
+	err = t.deleteWorkflowExecution(task)
+	if err != nil {
+		return err
+	}
+
+	err = t.deleteWorkflowHistory(task, msBuilder)
+	if err != nil {
+		return err
+	}
+
+	return t.deleteWorkflowVisibility()
+}
+
+func (t *timerQueueProcessorBase) deleteWorkflowExecution(task *persistence.TimerTaskInfo) error {
 	op := func() error {
 		return t.executionManager.DeleteWorkflowExecution(&persistence.DeleteWorkflowExecutionRequest{
 			DomainID:   task.DomainID,
@@ -566,14 +580,12 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.Ti
 			RunID:      task.RunID,
 		})
 	}
+	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+}
 
-	err = backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
-	if err != nil {
-		return err
-	}
-
+func (t *timerQueueProcessorBase) deleteWorkflowHistory(task *persistence.TimerTaskInfo, msBuilder mutableState) error {
 	domainID, workflowExecution := t.getDomainIDAndWorkflowExecution(task)
-	op = func() error {
+	op := func() error {
 		if msBuilder.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
 			logger := t.logger.WithFields(bark.Fields{
 				logging.TagHistoryShardID:      t.shard.GetShardID(),
@@ -591,8 +603,12 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.Ti
 				Execution: workflowExecution,
 			})
 	}
-
 	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+}
+
+func (t *timerQueueProcessorBase) deleteWorkflowVisibility() error {
+	// TODO
+	return nil
 }
 
 func (t *timerQueueProcessorBase) getTimerTaskType(taskType int) string {
