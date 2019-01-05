@@ -191,7 +191,6 @@ func (t *transferQueueStandbyProcessorImpl) processActivityTask(transferTask *pe
 }
 
 func (t *transferQueueStandbyProcessorImpl) processDecisionTask(transferTask *persistence.TransferTaskInfo) error {
-
 	var decisionScheduleToStartTimeout *int32
 	var tasklist *workflow.TaskList
 	processTaskIfClosed := false
