@@ -1157,6 +1157,7 @@ func ObserveHistory(c *cli.Context) {
 	printWorkflowProgress(c, wid, rid)
 }
 
+// ResetWorkflow reset workflow
 func ResetWorkflow(c *cli.Context) {
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)

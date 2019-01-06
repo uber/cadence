@@ -343,8 +343,8 @@ func historyGarbageCleanupInfo(domainID, workflowID, runID string) string {
 	return fmt.Sprintf("%v:%v:%v", domainID, workflowID, runID)
 }
 
-func (e *workflowResetor) setEventIDsWithHistory(msBuilder mutableState) int64 {
-	clusterMetadata := e.eng.shard.GetService().GetClusterMetadata()
+func (w *workflowResetor) setEventIDsWithHistory(msBuilder mutableState) int64 {
+	clusterMetadata := w.eng.shard.GetService().GetClusterMetadata()
 	history := msBuilder.GetHistoryBuilder().GetHistory().Events
 	firstEvent := history[0]
 	lastEvent := history[len(history)-1]
@@ -448,7 +448,7 @@ func getRespondActivityTaskFailedRequestFromActivity(ai *persistence.ActivityInf
 	}
 }
 
-func (w *workflowResetor) replayHistoryEvents(decisionTaskCompletedEventId int64, requestId string, prevMutableState mutableState, newRunID string) (wfTimeoutSecs int64, receivedSignalsAfterReset []*workflow.HistoryEvent, sBuilder stateBuilder, retError error) {
+func (w *workflowResetor) replayHistoryEvents(decisionFinishEventID int64, requestID string, prevMutableState mutableState, newRunID string) (wfTimeoutSecs int64, receivedSignalsAfterReset []*workflow.HistoryEvent, sBuilder stateBuilder, retError error) {
 	clusterMetadata := w.eng.shard.GetService().GetClusterMetadata()
 
 	prevExecution := workflow.WorkflowExecution{
@@ -479,7 +479,7 @@ func (w *workflowResetor) replayHistoryEvents(decisionTaskCompletedEventId int64
 			firstEvent := history[0]
 
 			// for saving received signals only
-			if firstEvent.GetEventId() >= decisionTaskCompletedEventId {
+			if firstEvent.GetEventId() >= decisionFinishEventID {
 				for _, e := range batch.Events {
 					if e.GetEventType() == workflow.EventTypeWorkflowExecutionSignaled {
 						receivedSignalsAfterReset = append(receivedSignalsAfterReset, e)
@@ -520,7 +520,7 @@ func (w *workflowResetor) replayHistoryEvents(decisionTaskCompletedEventId int64
 				}
 			}
 
-			_, _, _, retError = sBuilder.applyEvents(domainID, requestId, prevExecution, history, nil, persistence.EventStoreVersionV2, persistence.EventStoreVersionV2)
+			_, _, _, retError = sBuilder.applyEvents(domainID, requestID, prevExecution, history, nil, persistence.EventStoreVersionV2, persistence.EventStoreVersionV2)
 			if retError != nil {
 				return
 			}
@@ -542,7 +542,7 @@ func (w *workflowResetor) replayHistoryEvents(decisionTaskCompletedEventId int64
 	resetMutableState.executionInfo.RunID = newRunID
 	resetMutableState.executionInfo.StartTimestamp = startTime
 	resetMutableState.executionInfo.LastUpdatedTimestamp = startTime
-	resetMutableState.executionInfo.SetNextEventID(decisionTaskCompletedEventId)
+	resetMutableState.executionInfo.SetNextEventID(decisionFinishEventID)
 	resetMutableState.ClearStickyness()
 	return
 }
