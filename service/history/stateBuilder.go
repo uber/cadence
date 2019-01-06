@@ -580,6 +580,7 @@ func (b *stateBuilderImpl) getTimerBuilder(event *shared.HistoryEvent) *timerBui
 	return newTimerBuilder(b.shard.GetConfig(), b.logger, timeSource)
 }
 
+//TODO remove
 func (b *stateBuilderImpl) filterTransferTasksForReset() ([]int64, []int64, []persistence.Task, error) {
 	transTasks := []persistence.Task{}
 	startedActivityIDs := []int64{}

@@ -854,6 +854,10 @@ func (e *mutableStateBuilder) GetAllSignalsToSend() map[int64]*persistence.Signa
 	return e.pendingSignalInfoIDs
 }
 
+func (e *mutableStateBuilder) GetAllRequestCancels() map[int64]*persistence.RequestCancelInfo {
+	return e.pendingRequestCancelInfoIDs
+}
+
 // GetCompletionEvent retrieves the workflow completion event from mutable state
 func (e *mutableStateBuilder) GetCompletionEvent() (*workflow.HistoryEvent, bool) {
 	return e.executionInfo.CompletionEvent, true

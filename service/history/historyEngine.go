@@ -2562,7 +2562,7 @@ func (e *historyEngineImpl) SyncActivity(ctx context.Context, request *h.SyncAct
 	return e.replicator.SyncActivity(ctx, request)
 }
 
-// ResetWorkflowExecution only allows resetting to decisionTaskCompleted, but exclude that batch of decisionTaskCompleted.
+// ResetWorkflowExecution only allows resetting to decisionTaskCompleted, but exclude that batch of decisionTaskCompleted/decisionTaskFailed/decisionTaskTimeout.
 // It will then fail the decision with cause of "reset_workflow"
 func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetRequest *h.ResetWorkflowExecutionRequest) (response *workflow.ResetWorkflowExecutionResponse, retError error) {
 	domainEntry, retError := e.getActiveDomainEntry(resetRequest.DomainUUID)
@@ -2703,6 +2703,12 @@ func validateResetWorkflowBeforeReplay(forkMutableState, currMutableState mutabl
 }
 
 func validateResetWorkflowAfterReplay(newMutableState mutableState) (retError error) {
+	if len(newMutableState.GetAllRequestCancels()) > 0 {
+		retError = &workflow.BadRequestError{
+			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending request cancel "),
+		}
+		return
+	}
 	if len(newMutableState.GetPendingChildExecutionInfos()) > 0 {
 		retError = &workflow.BadRequestError{
 			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending child workflow "),
@@ -2734,6 +2740,34 @@ func validateResetWorkflowAfterReplay(newMutableState mutableState) (retError er
 	return
 }
 
+// Generate new transfer tasks to re-schedule task for scheduled(not started) activities.
+// Fail the started activities
+// NOTE 1: activities with retry may have started but don't have the start event, we also re-schedule it)
+// NOTE 2: ignore requestCancel/childWFs/singalExternal for now).
+func (e *historyEngineImpl) scheduleUnstartedActivitiesAndFailStarted(msBuilder mutableState) ([]persistence.Task, error) {
+	var tasks []persistence.Task
+	exeInfo := msBuilder.GetExecutionInfo()
+	// activities
+	for _, ai := range msBuilder.GetPendingActivityInfos() {
+		if ai.StartedID != common.EmptyEventID {
+			// this means the activity has started but not completed, we need to fail the activity
+			request := getRespondActivityTaskFailedRequestFromActivity(ai, "workflowReset")
+			if msBuilder.AddActivityTaskFailedEvent(ai.ScheduleID, ai.StartedID, request) == nil {
+				// Unable to add ActivityTaskFailed event to history
+				return nil, &workflow.InternalServiceError{Message: "Unable to add ActivityTaskFailed event to mutableState."}
+			}
+			continue
+		}
+		t := &persistence.ActivityTask{
+			DomainID:   exeInfo.DomainID,
+			TaskList:   exeInfo.TaskList,
+			ScheduleID: ai.ScheduleID,
+		}
+		tasks = append(tasks, t)
+	}
+	return tasks, nil
+}
+
 func (e *historyEngineImpl) buildNewMutableStateForReset(forkMutableState mutableState, resetReason string, resetDecisionCompletedEventID int64, requestedID, newRunID string) (newMutableState mutableState, transferTasks, timerTasks []persistence.Task, retError error) {
 	domainID := forkMutableState.GetExecutionInfo().DomainID
 	workflowID := forkMutableState.GetExecutionInfo().WorkflowID
@@ -2760,21 +2794,19 @@ func (e *historyEngineImpl) buildNewMutableStateForReset(forkMutableState mutabl
 	newMutableState.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, workflow.DecisionTaskFailedCauseResetWorkflow, nil,
 		identityHistoryService, forkMutableState.GetExecutionInfo().RunID, newRunID, resetReason)
 
-	// generate new transfer tasks to
-	//  1. re-schedule task for scheduled(not started) activities
-	//  2. re-schedule task to resend requestCancel if initiated but not delivered
-	//  NOTE: ignore childWFs/singalExternal for now).
-	scheduledActivityIDs, startedActivityIDs, transferTasks, retError := newStateBuilder.filterTransferTasksForReset()
+	transferTasks, retError = e.scheduleUnstartedActivitiesAndFailStarted(newMutableState)
 	if retError != nil {
 		return
 	}
+	// we will need a timer for the scheduled activities
+	needActivityTimer := len(transferTasks) > 0
 
 	// generate new timer tasks: we need 4 timers:
 	// 1. WF timeout,
 	// 2. user timers for timers started but not fired by reset
 	// 3. activity timeout for scheduled but not started activities
 	// 4. activity retry timer for started activities and have retryPolicy
-	timerTasks, retError = e.generateTimerTasksAndFailStartedActivities(newStateBuilder.getTimerTasks(), newMutableState, wfTimeoutSecs, scheduledActivityIDs, startedActivityIDs)
+	timerTasks, retError = e.generateTimerTasksForReset(newStateBuilder.getTimerTasks(), newMutableState, wfTimeoutSecs, needActivityTimer)
 	if retError != nil {
 		return
 	}
@@ -2893,18 +2925,7 @@ func (e *historyEngineImpl) replayReceivedSignals(receivedSignals []*workflow.Hi
 	}
 }
 
-func getLaskTaskByType(allTasks []persistence.Task, typeIndex int) (persistence.Task, error) {
-	for i := len(allTasks) - 1; i >= 0; i-- {
-		if allTasks[i].GetType() == typeIndex {
-			return allTasks[i], nil
-		}
-	}
-	return nil, &workflow.InternalServiceError{
-		Message: fmt.Sprintf("missing timer tasks for type %v", typeIndex),
-	}
-}
-
-func (e *historyEngineImpl) generateTimerTasksAndFailStartedActivities(allTimerTasks []persistence.Task, msBuilder mutableState, wfTimeoutSecs int64, scheduledActivityIDs, startedActivityIDs []int64) ([]persistence.Task, error) {
+func (e *historyEngineImpl) generateTimerTasksForReset(allTimerTasks []persistence.Task, msBuilder mutableState, wfTimeoutSecs int64, needActivityTimer bool) ([]persistence.Task, error) {
 	timerTasks := []persistence.Task{}
 
 	// WF timeout task
@@ -2914,42 +2935,23 @@ func (e *historyEngineImpl) generateTimerTasksAndFailStartedActivities(allTimerT
 	}
 	timerTasks = append(timerTasks, wfTimeoutTask)
 
+	we := &workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(msBuilder.GetExecutionInfo().WorkflowID),
+		RunId:      common.StringPtr(msBuilder.GetExecutionInfo().RunID),
+	}
+	tb := e.getTimerBuilder(we)
 	// user timer task
 	if len(msBuilder.GetPendingTimerInfos()) > 0 {
-		// get last user timer
-		tt, err := getLaskTaskByType(allTimerTasks, persistence.TaskTypeUserTimer)
-		if err != nil {
-			return nil, err
-		}
+		tb.loadUserTimers(msBuilder)
+		tt := tb.firstTimerTaskWithoutChecking()
 		timerTasks = append(timerTasks, tt)
 	}
 
 	// activity timer
-	if len(scheduledActivityIDs) > 0 {
-		// get last activity timer
-		tt, err := getLaskTaskByType(allTimerTasks, persistence.TaskTypeActivityTimeout)
-		if err != nil {
-			return nil, err
-		}
+	if needActivityTimer {
+		tb.loadActivityTimers(msBuilder)
+		tt := tb.firstActivityTimerTaskWithoutChecking()
 		timerTasks = append(timerTasks, tt)
-	}
-
-	//fail the started activites and schedule retry if having retryPolicy
-	resetReason := "WorkflowReset"
-	for _, aid := range startedActivityIDs {
-		ai, _ := msBuilder.GetActivityInfo(aid)
-		retryTask := msBuilder.CreateActivityRetryTimer(ai, resetReason)
-		if retryTask != nil {
-			// need retry
-			timerTasks = append(timerTasks, retryTask)
-		} else {
-			// we will create new decision
-			request := getRespondActivityTaskFailedRequestFromActivity(ai, resetReason)
-			if msBuilder.AddActivityTaskFailedEvent(aid, ai.StartedID, request) == nil {
-				// Unable to add ActivityTaskFailed event to history
-				return nil, &workflow.InternalServiceError{Message: "Unable to add ActivityTaskFailed event to history."}
-			}
-		}
 	}
 
 	return timerTasks, nil

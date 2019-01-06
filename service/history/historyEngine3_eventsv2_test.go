@@ -454,10 +454,11 @@ func (s *engine3Suite) TestResetWorkflowExecution_NoReplication() {
 	timerAfterReset := "timerID3"
 	actIDCompleted1 := "actID0"
 	actIDCompleted2 := "actID1"
-	actIDStartedRetry := "actID2"
+	actIDStarted1 := "actID2"
 	actIDNotStarted := "actID3"
-	actIDStartedNoRetry := "actID4"
-	signalName1 := "sig1"
+	actIDStarted2 := "actID4"
+	signalName1 :=
+		"sig1"
 	signalName2 := "sig2"
 	forkBranchToken := []byte("forkBranchToken")
 	forkExeInfo := &p.WorkflowExecutionInfo{
@@ -711,7 +712,7 @@ func (s *engine3Suite) TestResetWorkflowExecution_NoReplication() {
 						Version:   common.Int64Ptr(common.EmptyVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskScheduled),
 						ActivityTaskScheduledEventAttributes: &workflow.ActivityTaskScheduledEventAttributes{
-							ActivityId: common.StringPtr(actIDStartedRetry),
+							ActivityId: common.StringPtr(actIDStarted1),
 							ActivityType: &workflow.ActivityType{
 								Name: common.StringPtr("actType1"),
 							},
@@ -789,7 +790,7 @@ func (s *engine3Suite) TestResetWorkflowExecution_NoReplication() {
 						Version:   common.Int64Ptr(common.EmptyVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskScheduled),
 						ActivityTaskScheduledEventAttributes: &workflow.ActivityTaskScheduledEventAttributes{
-							ActivityId: common.StringPtr(actIDStartedNoRetry),
+							ActivityId: common.StringPtr(actIDStarted2),
 							ActivityType: &workflow.ActivityType{
 								Name: common.StringPtr("actType2"),
 							},
@@ -997,18 +998,20 @@ func (s *engine3Suite) TestResetWorkflowExecution_NoReplication() {
 	s.Equal(true, ok)
 	s.Equal(newBranchToken, appendReq.BranchToken)
 	s.Equal(false, appendReq.IsNewBranch)
-	s.Equal(5, len(appendReq.Events))
+	s.Equal(6, len(appendReq.Events))
 	s.Equal(workflow.EventTypeDecisionTaskFailed, appendReq.Events[0].GetEventType())
 	s.Equal(workflow.EventTypeActivityTaskFailed, appendReq.Events[1].GetEventType())
-	s.Equal(workflow.EventTypeWorkflowExecutionSignaled, appendReq.Events[2].GetEventType())
+	s.Equal(workflow.EventTypeActivityTaskFailed, appendReq.Events[2].GetEventType())
 	s.Equal(workflow.EventTypeWorkflowExecutionSignaled, appendReq.Events[3].GetEventType())
-	s.Equal(workflow.EventTypeDecisionTaskScheduled, appendReq.Events[4].GetEventType())
+	s.Equal(workflow.EventTypeWorkflowExecutionSignaled, appendReq.Events[4].GetEventType())
+	s.Equal(workflow.EventTypeDecisionTaskScheduled, appendReq.Events[5].GetEventType())
 
 	s.Equal(int64(29), appendReq.Events[0].GetEventId())
 	s.Equal(int64(30), appendReq.Events[1].GetEventId())
 	s.Equal(int64(31), appendReq.Events[2].GetEventId())
 	s.Equal(int64(32), appendReq.Events[3].GetEventId())
 	s.Equal(int64(33), appendReq.Events[4].GetEventId())
+	s.Equal(int64(34), appendReq.Events[5].GetEventId())
 
 	// verify executionManager request
 	calls = s.mockExecutionMgr.Calls
@@ -1032,9 +1035,9 @@ func (s *engine3Suite) TestResetWorkflowExecution_NoReplication() {
 	s.Equal("wfType", resetReq.InsertExecutionInfo.WorkflowTypeName)
 	s.True(len(resetReq.InsertExecutionInfo.RunID) > 0)
 	s.Equal([]byte(newBranchToken), resetReq.InsertExecutionInfo.BranchToken)
-	// 34 = resetEventID(29) + 5 in a batch
-	s.Equal(int64(33), resetReq.InsertExecutionInfo.DecisionScheduleID)
-	s.Equal(int64(34), resetReq.InsertExecutionInfo.NextEventID)
+	// 35 = resetEventID(29) + 6 in a batch
+	s.Equal(int64(34), resetReq.InsertExecutionInfo.DecisionScheduleID)
+	s.Equal(int64(35), resetReq.InsertExecutionInfo.NextEventID)
 
 	// one activity task and one decision task
 	s.Equal(2, len(resetReq.InsertTransferTasks))
@@ -1042,17 +1045,16 @@ func (s *engine3Suite) TestResetWorkflowExecution_NoReplication() {
 	s.Equal(p.TransferTaskTypeDecisionTask, resetReq.InsertTransferTasks[1].GetType())
 
 	// WF timeout task, user timer, activity timeout timer, activity retry timer
-	s.Equal(4, len(resetReq.InsertTimerTasks))
+	s.Equal(3, len(resetReq.InsertTimerTasks))
 	s.Equal(p.TaskTypeWorkflowTimeout, resetReq.InsertTimerTasks[0].GetType())
 	s.Equal(p.TaskTypeUserTimer, resetReq.InsertTimerTasks[1].GetType())
 	s.Equal(p.TaskTypeActivityTimeout, resetReq.InsertTimerTasks[2].GetType())
-	s.Equal(p.TaskTypeActivityRetryTimer, resetReq.InsertTimerTasks[3].GetType())
 
 	s.Equal(2, len(resetReq.InsertTimerInfos))
 	s.assertTimerIDs([]string{timerUnfiredID1, timerUnfiredID2}, resetReq.InsertTimerInfos)
 
-	s.Equal(2, len(resetReq.InsertActivityInfos))
-	s.assertActivityIDs([]string{actIDStartedRetry, actIDNotStarted}, resetReq.InsertActivityInfos)
+	s.Equal(1, len(resetReq.InsertActivityInfos))
+	s.assertActivityIDs([]string{actIDNotStarted}, resetReq.InsertActivityInfos)
 
 	s.Nil(resetReq.InsertReplicationTasks)
 	s.Nil(resetReq.InsertReplicationState)
@@ -1175,7 +1177,6 @@ func (s *engine3Suite) TestResetWorkflowExecution_NoReplication_WithRequestCance
 		RunID:            currRunID,
 		NextEventID:      common.FirstEventID,
 	}
-	compareCurrExeInfo := copyWorkflowExecutionInfo(currExeInfo)
 	currGwmsResponse := &p.GetWorkflowExecutionResponse{State: &p.WorkflowMutableState{
 		ExecutionInfo: currExeInfo,
 	}}
@@ -1644,123 +1645,13 @@ func (s *engine3Suite) TestResetWorkflowExecution_NoReplication_WithRequestCance
 		}
 	}
 
-	newBranchToken := []byte("newBranch")
-	forkResp := &p.ForkHistoryBranchResponse{
-		NewBranchToken: newBranchToken,
-	}
-
-	completeReq := &p.CompleteForkBranchRequest{
-		BranchToken: newBranchToken,
-		Success:     true,
-	}
-	completeReqErr := &p.CompleteForkBranchRequest{
-		BranchToken: newBranchToken,
-		Success:     false,
-	}
-
-	appendV1Resp := &p.AppendHistoryEventsResponse{
-		Size: 100,
-	}
-	appendV2Resp := &p.AppendHistoryNodesResponse{
-		Size: 200,
-	}
-
 	s.mockExecutionMgr.On("GetWorkflowExecution", forkGwmsRequest).Return(forkGwmsResponse, nil).Once()
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(gcurResponse, nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", currGwmsRequest).Return(currGwmsResponse, nil).Once()
 	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", readHistoryReq).Return(readHistoryResp, nil).Once()
-	s.mockHistoryV2Mgr.On("ForkHistoryBranch", mock.Anything).Return(forkResp, nil).Once()
-	s.mockHistoryV2Mgr.On("CompleteForkBranch", completeReq).Return(nil).Once()
-	s.mockHistoryV2Mgr.On("CompleteForkBranch", completeReqErr).Return(nil).Maybe()
-	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(appendV1Resp, nil).Once()
-	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(appendV2Resp, nil).Once()
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", int64(0)).Return("test")
-	s.mockExecutionMgr.On("ResetWorkflowExecution", mock.Anything).Return(nil).Once()
-	response, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
-	s.Nil(err)
-	s.NotNil(response.RunId)
-
-	// verify historyEvent: 5 events to append
-	// 1. decisionFailed :29
-	// 2. activityFailed :30
-	// 3. signal 1 :31
-	// 4. signal 2 :32
-	// 5. decisionTaskScheduled :33
-	calls := s.mockHistoryV2Mgr.Calls
-	s.Equal(4, len(calls))
-	appendCall := calls[2]
-	s.Equal("AppendHistoryNodes", appendCall.Method)
-	appendReq, ok := appendCall.Arguments[0].(*p.AppendHistoryNodesRequest)
-	s.Equal(true, ok)
-	s.Equal(newBranchToken, appendReq.BranchToken)
-	s.Equal(false, appendReq.IsNewBranch)
-	s.Equal(5, len(appendReq.Events))
-	s.Equal(workflow.EventTypeDecisionTaskFailed, appendReq.Events[0].GetEventType())
-	s.Equal(workflow.EventTypeActivityTaskFailed, appendReq.Events[1].GetEventType())
-	s.Equal(workflow.EventTypeWorkflowExecutionSignaled, appendReq.Events[2].GetEventType())
-	s.Equal(workflow.EventTypeWorkflowExecutionSignaled, appendReq.Events[3].GetEventType())
-	s.Equal(workflow.EventTypeDecisionTaskScheduled, appendReq.Events[4].GetEventType())
-
-	s.Equal(int64(30), appendReq.Events[0].GetEventId())
-	s.Equal(int64(31), appendReq.Events[1].GetEventId())
-	s.Equal(int64(32), appendReq.Events[2].GetEventId())
-	s.Equal(int64(33), appendReq.Events[3].GetEventId())
-	s.Equal(int64(34), appendReq.Events[4].GetEventId())
-
-	// verify executionManager request
-	calls = s.mockExecutionMgr.Calls
-	s.Equal(4, len(calls))
-	resetCall := calls[3]
-	s.Equal("ResetWorkflowExecution", resetCall.Method)
-	resetReq, ok := resetCall.Arguments[0].(*p.ResetWorkflowExecutionRequest)
-	s.Equal(true, ok)
-	s.Equal(currRunID, resetReq.PrevRunID)
-	s.Equal(true, resetReq.UpdateCurr)
-	compareCurrExeInfo.State = p.WorkflowStateCompleted
-	compareCurrExeInfo.CloseStatus = p.WorkflowCloseStatusTerminated
-	compareCurrExeInfo.NextEventID = 2
-	compareCurrExeInfo.HistorySize = 100
-	s.Equal(compareCurrExeInfo, resetReq.CurrExecutionInfo)
-	s.Equal(1, len(resetReq.CurrTransferTasks))
-	s.Equal(1, len(resetReq.CurrTimerTasks))
-	s.Equal(p.TransferTaskTypeCloseExecution, resetReq.CurrTransferTasks[0].GetType())
-	s.Equal(p.TaskTypeDeleteHistoryEvent, resetReq.CurrTimerTasks[0].GetType())
-
-	s.Equal("wfType", resetReq.InsertExecutionInfo.WorkflowTypeName)
-	s.True(len(resetReq.InsertExecutionInfo.RunID) > 0)
-	s.Equal([]byte(newBranchToken), resetReq.InsertExecutionInfo.BranchToken)
-
-	s.Equal(int64(34), resetReq.InsertExecutionInfo.DecisionScheduleID)
-	s.Equal(int64(35), resetReq.InsertExecutionInfo.NextEventID)
-
-	s.Equal(3, len(resetReq.InsertTransferTasks))
-	s.Equal(p.TransferTaskTypeActivityTask, resetReq.InsertTransferTasks[0].GetType())
-	s.Equal(p.TransferTaskTypeCancelExecution, resetReq.InsertTransferTasks[1].GetType())
-	s.Equal(p.TransferTaskTypeDecisionTask, resetReq.InsertTransferTasks[2].GetType())
-
-	// WF timeout task, user timer, activity timeout timer, activity retry timer
-	s.Equal(4, len(resetReq.InsertTimerTasks))
-	s.Equal(p.TaskTypeWorkflowTimeout, resetReq.InsertTimerTasks[0].GetType())
-	s.Equal(p.TaskTypeUserTimer, resetReq.InsertTimerTasks[1].GetType())
-	s.Equal(p.TaskTypeActivityTimeout, resetReq.InsertTimerTasks[2].GetType())
-	s.Equal(p.TaskTypeActivityRetryTimer, resetReq.InsertTimerTasks[3].GetType())
-
-	s.Equal(2, len(resetReq.InsertTimerInfos))
-	s.assertTimerIDs([]string{timerUnfiredID1, timerUnfiredID2}, resetReq.InsertTimerInfos)
-
-	s.Equal(2, len(resetReq.InsertActivityInfos))
-	s.assertActivityIDs([]string{actIDStartedRetry, actIDNotStarted}, resetReq.InsertActivityInfos)
-
-	s.Equal(1, len(resetReq.InsertRequestCancelInfos))
-	s.Equal(int64(23), resetReq.InsertRequestCancelInfos[0].InitiatedID)
-
-	s.Nil(resetReq.InsertReplicationTasks)
-	s.Nil(resetReq.InsertReplicationState)
-
-	// not supported feature
-	s.Nil(resetReq.InsertChildExecutionInfos)
-	s.Nil(resetReq.InsertSignalInfos)
-	s.Nil(resetReq.InsertSignalRequestedIDs)
+	s.mockHistoryV2Mgr.On("CompleteForkBranch", mock.Anything).Return(nil).Maybe()
+	_, err = s.historyEngine.ResetWorkflowExecution(context.Background(), request)
+	s.EqualError(err, "BadRequestError{Message: it is not allowed resetting to a point that workflow has pending request cancel }")
 }
 
 func (s *engine3Suite) TODOTestResetWorkflowExecution_Replication_WithRequestCancel() {

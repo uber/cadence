@@ -380,6 +380,19 @@ func (_m *mockMutableState) GetAllSignalsToSend() map[int64]*persistence.SignalI
 	return r0
 }
 
+func (_m *mockMutableState) GetAllRequestCancels() map[int64]*persistence.RequestCancelInfo {
+	ret := _m.Called()
+
+	var r0 map[int64]*persistence.RequestCancelInfo
+	if rf, ok := ret.Get(0).(func() map[int64]*persistence.RequestCancelInfo); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(map[int64]*persistence.RequestCancelInfo)
+	}
+
+	return r0
+}
+
 // AddDecisionTaskScheduleToStartTimeoutEvent provides a mock function with given fields: _a0
 func (_m *mockMutableState) AddDecisionTaskScheduleToStartTimeoutEvent(_a0 int64) *shared.HistoryEvent {
 	ret := _m.Called(_a0)
