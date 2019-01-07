@@ -39,7 +39,7 @@ that zombie history segments can remain under some rare failure cases. Consider 
 4. Our assumption of child branch fork being successful is actually wrong and the child never successfully forked.
 Under this rare case the section of parent history which was assumed to be common to child will be a zombie history section.
 
- */
+*/
 func DeleteWorkflowExecutionHistoryV2(historyV2Mgr HistoryV2Manager, branchToken []byte, logger bark.Logger) error {
 	err := historyV2Mgr.DeleteHistoryBranch(&DeleteHistoryBranchRequest{
 		BranchToken: branchToken,
