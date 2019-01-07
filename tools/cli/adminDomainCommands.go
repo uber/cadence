@@ -284,7 +284,6 @@ func AdminDescribeDomain(c *cli.Context) {
 		ErrorAndExit(fmt.Sprintf("Domain %s does not exist.", domain), err)
 	}
 
-	archivalStatus := resp.Configuration.GetArchivalStatus()
 	var formatStr = "Name: %v\nDescription: %v\nOwnerEmail: %v\nDomainData: %v\nStatus: %v\nRetentionInDays: %v\n" +
 		"EmitMetrics: %v\nActiveClusterName: %v\nClusters: %v\nArchivalStatus: %v\n"
 	descValues := []interface{}{
@@ -297,14 +296,20 @@ func AdminDescribeDomain(c *cli.Context) {
 		resp.Configuration.GetEmitMetric(),
 		resp.ReplicationConfiguration.GetActiveClusterName(),
 		serverClustersToString(resp.ReplicationConfiguration.Clusters),
-		archivalStatus.String(),
+		resp.Configuration.GetArchivalStatus().String(),
 	}
-	if archivalStatus != shared.ArchivalStatusNeverEnabled {
-		formatStr = formatStr + "BucketName: %v\nArchivalRetentionInDays: %v\nBucketOwner: %v\n"
-		descValues = append(descValues,
-			resp.Configuration.GetArchivalBucketName(),
-			fmt.Sprintf("%v", resp.Configuration.GetArchivalRetentionPeriodInDays()),
-			resp.Configuration.GetArchivalBucketOwner())
+
+	if resp.Configuration.ArchivalBucketName != nil {
+		formatStr = formatStr + "BucketName: %v\n"
+		descValues = append(descValues, resp.Configuration.GetArchivalBucketName())
+	}
+	if resp.Configuration.ArchivalRetentionPeriodInDays != nil {
+		formatStr = formatStr + "ArchivalRetentionInDays: %v\n"
+		descValues = append(descValues, resp.Configuration.GetArchivalRetentionPeriodInDays())
+	}
+	if resp.Configuration.ArchivalBucketOwner != nil {
+		formatStr = formatStr + "BucketOwner: %v\n"
+		descValues = append(descValues, resp.Configuration.GetArchivalBucketOwner())
 	}
 	fmt.Printf(formatStr, descValues...)
 }
