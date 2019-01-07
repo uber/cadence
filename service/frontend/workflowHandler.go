@@ -432,7 +432,7 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 	if updateRequest.Configuration != nil {
 		cfg := updateRequest.GetConfiguration()
 
-		if !wh.Service.GetClusterMetadata().IsArchivalEnabled() && cfg.ArchivalStatus != nil && cfg.GetArchivalStatus() == gen.ArchivalStatusEnabled {
+		if !wh.Service.GetClusterMetadata().IsArchivalEnabled() && cfg.GetArchivalStatus() == gen.ArchivalStatusEnabled {
 			return nil, wh.error(errArchivalNotEnabledForCluster, scope)
 		}
 		// ensure intended archival state transition is to either enable or disable archival
