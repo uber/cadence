@@ -794,6 +794,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	compareCurrExeInfo.CloseStatus = p.WorkflowCloseStatusTerminated
 	compareCurrExeInfo.NextEventID = 2
 	compareCurrExeInfo.HistorySize = 100
+	compareCurrExeInfo.CompletionEventBatchID = 1
 	s.Equal(compareCurrExeInfo, resetReq.CurrExecutionInfo)
 	s.Equal(1, len(resetReq.CurrTransferTasks))
 	s.Equal(1, len(resetReq.CurrTimerTasks))
