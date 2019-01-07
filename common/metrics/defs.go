@@ -136,6 +136,8 @@ const (
 	PersistenceUpdateWorkflowExecutionScope
 	// PersistenceResetMutableStateScope tracks ResetMutableState calls made by service to persistence layer
 	PersistenceResetMutableStateScope
+	// PersistenceResetWorkflowExecutionScope tracks ResetWorkflowExecution calls made by service to persistence layer
+	PersistenceResetWorkflowExecutionScope
 	// PersistenceDeleteWorkflowExecutionScope tracks DeleteWorkflowExecution calls made by service to persistence layer
 	PersistenceDeleteWorkflowExecutionScope
 	// PersistenceGetCurrentExecutionScope tracks GetCurrentExecution calls made by service to persistence layer
@@ -240,6 +242,8 @@ const (
 	HistoryClientRemoveSignalMutableStateScope
 	// HistoryClientTerminateWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientTerminateWorkflowExecutionScope
+	// HistoryClientResetWorkflowExecutionScope tracks RPC calls to history service
+	HistoryClientResetWorkflowExecutionScope
 	// HistoryClientScheduleDecisionTaskScope tracks RPC calls to history service
 	HistoryClientScheduleDecisionTaskScope
 	// HistoryClientRecordChildExecutionCompletedScope tracks RPC calls to history service
@@ -359,6 +363,8 @@ const (
 	PersistenceForkHistoryBranchScope
 	// PersistenceDeleteHistoryBranchScope tracks DeleteHistoryBranch calls made by service to persistence layer
 	PersistenceDeleteHistoryBranchScope
+	// PersistenceCompleteForkBranchScope tracks CompleteForkBranch calls made by service to persistence layer
+	PersistenceCompleteForkBranchScope
 	// PersistenceGetHistoryTreeScope tracks GetHistoryTree calls made by service to persistence layer
 	PersistenceGetHistoryTreeScope
 
@@ -439,6 +445,8 @@ const (
 	FrontendResetStickyTaskListScope
 	// FrontendListDomainsScope is the metric scope for frontend.ListDomain
 	FrontendListDomainsScope
+	// FrontendResetWorkflowExecutionScope is the metric scope for frontend.ResetWorkflowExecution
+	FrontendResetWorkflowExecutionScope
 
 	NumFrontendScopes
 )
@@ -587,6 +595,8 @@ const (
 	SessionSizeStatsScope
 	// SessionCountStatsScope is the scope used for emiting session update count related stats
 	SessionCountStatsScope
+	// HistoryResetWorkflowExecutionScope tracks ResetWorkflowExecution API calls received by service
+	HistoryResetWorkflowExecutionScope
 
 	NumHistoryScopes
 )
@@ -646,6 +656,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceGetWorkflowExecutionScope:                     {operation: "GetWorkflowExecution"},
 		PersistenceUpdateWorkflowExecutionScope:                  {operation: "UpdateWorkflowExecution"},
 		PersistenceResetMutableStateScope:                        {operation: "ResetMutableState"},
+		PersistenceResetWorkflowExecutionScope:                   {operation: "ResetWorkflowExecution"},
 		PersistenceDeleteWorkflowExecutionScope:                  {operation: "DeleteWorkflowExecution"},
 		PersistenceGetCurrentExecutionScope:                      {operation: "GetCurrentExecution"},
 		PersistenceGetTransferTasksScope:                         {operation: "GetTransferTasks"},
@@ -685,6 +696,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceReadHistoryBranchScope:                        {operation: "ReadHistoryBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceForkHistoryBranchScope:                        {operation: "ForkHistoryBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceDeleteHistoryBranchScope:                      {operation: "DeleteHistoryBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceCompleteForkBranchScope:                       {operation: "CompleteForkBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceGetHistoryTreeScope:                           {operation: "GetHistoryTree", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 
 		HistoryClientStartWorkflowExecutionScope:            {operation: "HistoryClientStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
@@ -704,6 +716,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryClientSignalWithStartWorkflowExecutionScope:  {operation: "HistoryClientSignalWithStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientRemoveSignalMutableStateScope:          {operation: "HistoryClientRemoveSignalMutableStateScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientTerminateWorkflowExecutionScope:        {operation: "HistoryClientTerminateWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
+		HistoryClientResetWorkflowExecutionScope:            {operation: "HistoryClientResetWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientScheduleDecisionTaskScope:              {operation: "HistoryClientScheduleDecisionTask", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientRecordChildExecutionCompletedScope:     {operation: "HistoryClientRecordChildExecutionCompleted", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientReplicateEventsScope:                   {operation: "HistoryClientReplicateEvents", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
@@ -786,6 +799,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendSignalWorkflowExecutionScope:          {operation: "SignalWorkflowExecution"},
 		FrontendSignalWithStartWorkflowExecutionScope: {operation: "SignalWithStartWorkflowExecution"},
 		FrontendTerminateWorkflowExecutionScope:       {operation: "TerminateWorkflowExecution"},
+		FrontendResetWorkflowExecutionScope:           {operation: "ResetWorkflowExecution"},
 		FrontendRequestCancelWorkflowExecutionScope:   {operation: "RequestCancelWorkflowExecution"},
 		FrontendListOpenWorkflowExecutionsScope:       {operation: "ListOpenWorkflowExecutions"},
 		FrontendListClosedWorkflowExecutionsScope:     {operation: "ListClosedWorkflowExecutions"},
@@ -817,6 +831,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistorySignalWithStartWorkflowExecutionScope: {operation: "SignalWithStartWorkflowExecution"},
 		HistoryRemoveSignalMutableStateScope:         {operation: "RemoveSignalMutableState"},
 		HistoryTerminateWorkflowExecutionScope:       {operation: "TerminateWorkflowExecution"},
+		HistoryResetWorkflowExecutionScope:           {operation: "ResetWorkflowExecution"},
 		HistoryScheduleDecisionTaskScope:             {operation: "ScheduleDecisionTask"},
 		HistoryRecordChildExecutionCompletedScope:    {operation: "RecordChildExecutionCompleted"},
 		HistoryRequestCancelWorkflowExecutionScope:   {operation: "RequestCancelWorkflowExecution"},
