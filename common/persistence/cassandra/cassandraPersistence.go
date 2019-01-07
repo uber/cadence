@@ -203,8 +203,6 @@ const (
 		`event_store_version: ?, ` +
 		`branch_token: ?, ` +
 		`reset_workflow: ?, ` +
-		`new_run_first_event_id: ?,` +
-		`new_run_next_event_id: ?,` +
 		`new_run_event_store_version: ?, ` +
 		`new_run_branch_token: ? ` +
 		`}`
@@ -1872,25 +1870,72 @@ func (d *cassandraPersistence) ResetWorkflowExecution(request *p.InternalResetWo
 		startVersion = insertReplicationState.StartVersion
 		lastWriteVersion = insertReplicationState.LastWriteVersion
 	}
-	batch.Query(templateUpdateCurrentWorkflowExecutionQuery,
-		insertExecutionInfo.RunID,
-		insertExecutionInfo.RunID,
-		insertExecutionInfo.CreateRequestID,
-		insertExecutionInfo.State,
-		insertExecutionInfo.CloseStatus,
-		startVersion,
-		lastWriteVersion,
-		lastWriteVersion,
-		insertExecutionInfo.State,
-		d.shardID,
-		rowTypeExecution,
-		insertExecutionInfo.DomainID,
-		insertExecutionInfo.WorkflowID,
-		permanentRunID,
-		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID,
-		request.PrevRunID,
-	)
+
+	if currReplicationState == nil {
+		batch.Query(templateUpdateCurrentWorkflowExecutionQuery,
+			insertExecutionInfo.RunID,
+			insertExecutionInfo.RunID,
+			insertExecutionInfo.CreateRequestID,
+			insertExecutionInfo.State,
+			insertExecutionInfo.CloseStatus,
+			startVersion,
+			lastWriteVersion,
+			lastWriteVersion,
+			insertExecutionInfo.State,
+			d.shardID,
+			rowTypeExecution,
+			insertExecutionInfo.DomainID,
+			insertExecutionInfo.WorkflowID,
+			permanentRunID,
+			defaultVisibilityTimestamp,
+			rowTypeExecutionTaskID,
+			currExecutionInfo.RunID,
+		)
+	} else {
+		// NOTE: workflow_state is either 1 or 2, there is no 0(created)
+		prevRunState := 2
+		if request.UpdateCurr {
+			prevRunState = 1
+		}
+		batch.Query(templateUpdateCurrentWorkflowExecutionForNewQuery,
+			insertExecutionInfo.RunID,
+			insertExecutionInfo.RunID,
+			insertExecutionInfo.CreateRequestID,
+			insertExecutionInfo.State,
+			insertExecutionInfo.CloseStatus,
+			startVersion,
+			lastWriteVersion,
+			lastWriteVersion,
+			insertExecutionInfo.State,
+			d.shardID,
+			rowTypeExecution,
+			insertExecutionInfo.DomainID,
+			insertExecutionInfo.WorkflowID,
+			permanentRunID,
+			defaultVisibilityTimestamp,
+			rowTypeExecutionTaskID,
+			currExecutionInfo.RunID,
+			request.PrevRunVersion,
+			prevRunState,
+		)
+	}
+
+	// for forkRun, check condition without updating anything to make sure the forkRun hasn't been deleted.
+	// Without this check, it will run into race condition with deleteHistoryEvent timer task
+	// we only do it when forkRun != currentRun
+	if request.ForkRunID != currExecutionInfo.RunID {
+		batch.Query(templateCheckWorkflowExecutionQuery,
+			request.ForkRunNextEventID,
+			d.shardID,
+			rowTypeExecution,
+			currExecutionInfo.DomainID,
+			currExecutionInfo.WorkflowID,
+			request.ForkRunID,
+			defaultVisibilityTimestamp,
+			rowTypeExecutionTaskID,
+			request.ForkRunNextEventID,
+		)
+	}
 
 	if request.UpdateCurr {
 		d.updateMutableState(batch, currExecutionInfo, currReplicationState, cqlNowTimestamp, true, request.Condition)
@@ -1993,7 +2038,7 @@ func (d *cassandraPersistence) ResetWorkflowExecution(request *p.InternalResetWo
 	}
 
 	if !applied {
-		return d.getExecutionConditionalUpdateFailure(previous, iter, currExecutionInfo.RunID, request.Condition, request.RangeID, request.PrevRunID)
+		return d.getExecutionConditionalUpdateFailure(previous, iter, currExecutionInfo.RunID, request.Condition, request.RangeID, currExecutionInfo.RunID)
 	}
 
 	return nil
@@ -2908,8 +2953,6 @@ func (d *cassandraPersistence) createReplicationTasks(batch *gocql.Batch, replic
 		var eventStoreVersion, newRunEventStoreVersion int32
 		var branchToken, newRunBranchToken []byte
 		resetWorkflow := false
-		newRunFirstEventID := common.EmptyEventID
-		newRunNextEventID := common.EmptyEventID
 
 		switch task.GetType() {
 		case p.ReplicationTaskTypeHistory:
@@ -2925,8 +2968,6 @@ func (d *cassandraPersistence) createReplicationTasks(batch *gocql.Batch, replic
 			for k, v := range histTask.LastReplicationInfo {
 				lastReplicationInfo[k] = createReplicationInfoMap(v)
 			}
-			newRunFirstEventID = histTask.NewRunFirstEventID
-			newRunNextEventID = histTask.NewRunNextEventID
 			resetWorkflow = histTask.ResetWorkflow
 		case p.ReplicationTaskTypeSyncActivity:
 			version = task.GetVersion()
@@ -2956,8 +2997,6 @@ func (d *cassandraPersistence) createReplicationTasks(batch *gocql.Batch, replic
 			eventStoreVersion,
 			branchToken,
 			resetWorkflow,
-			newRunFirstEventID,
-			newRunNextEventID,
 			newRunEventStoreVersion,
 			newRunBranchToken,
 			defaultVisibilityTimestamp,
@@ -3745,10 +3784,6 @@ func createReplicationTaskInfo(result map[string]interface{}) *p.ReplicationTask
 			info.BranchToken = v.([]byte)
 		case "reset_workflow":
 			info.ResetWorkflow = v.(bool)
-		case "new_run_first_event_id":
-			info.NewRunFirstEventID = v.(int64)
-		case "new_run_next_event_id":
-			info.NewRunNextEventID = v.(int64)
 		case "new_run_event_store_version":
 			info.NewRunEventStoreVersion = int32(v.(int))
 		case "new_run_branch_token":

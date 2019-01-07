@@ -512,6 +512,7 @@ struct DecisionTaskFailedEventAttributes {
   // for reset workflow
   60: optional string forkRunId
   70: optional string newRunId
+  80: optional i64 (js.type = "Long") forkEventVersion
 }
 
 struct ActivityTaskScheduledEventAttributes {

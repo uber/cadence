@@ -52,10 +52,10 @@ type (
 		getLogger() bark.Logger
 		loadWorkflowExecution() (mutableState, error)
 		lock(context.Context) error
-		replicateContinueAsNewWorkflowExecution(newStateBuilder mutableState, transactionID int64) error
+		appendFirstBatchHistoryForContinueAsNew(newStateBuilder mutableState, transactionID int64) error
 		replicateWorkflowExecution(request *h.ReplicateEventsRequest, transferTasks []persistence.Task, timerTasks []persistence.Task, lastEventID, transactionID int64, now time.Time) error
 		resetMutableState(prevRunID string, resetBuilder mutableState) (mutableState, error)
-		resetWorkflowExecution(currMutableState mutableState, updateCurr bool, closeTask, cleanupTask persistence.Task, newMutableState mutableState, transferTasks, timerTasks, replicationTasks []persistence.Task) (retError error)
+		resetWorkflowExecution(currMutableState mutableState, updateCurr bool, closeTask, cleanupTask persistence.Task, newMutableState mutableState, transferTasks, timerTasks, replicationTasks []persistence.Task, forkRunID string, forkRunNextEventID, prevRunVersion int64) (retError error)
 		scheduleNewDecision(transferTasks []persistence.Task, timerTasks []persistence.Task) ([]persistence.Task, []persistence.Task, error)
 		unlock()
 		updateHelper(transferTasks []persistence.Task, timerTasks []persistence.Task, transactionID int64, now time.Time, createReplicationTask bool, standbyHistoryBuilder *historyBuilder, sourceCluster string) error
@@ -84,7 +84,8 @@ type (
 )
 
 var (
-	persistenceOperationRetryPolicy = common.CreatePersistanceRetryPolicy()
+	persistenceOperationRetryPolicy                          = common.CreatePersistanceRetryPolicy()
+	_                               workflowExecutionContext = (*workflowExecutionContextImpl)(nil)
 )
 
 func newWorkflowExecutionContext(domainID string, execution workflow.WorkflowExecution, shard ShardContext,
@@ -188,7 +189,7 @@ func (c *workflowExecutionContextImpl) resetMutableState(prevRunID string, reset
 // 1. append history to new run
 // 2. append history to current run if current run is not closed
 // 3. update mutableState(terminate current run if not closed) and create new run
-func (c *workflowExecutionContextImpl) resetWorkflowExecution(currMutableState mutableState, updateCurr bool, closeTask, cleanupTask persistence.Task, newMutableState mutableState, transferTasks, timerTasks, replicationTasks []persistence.Task) (retError error) {
+func (c *workflowExecutionContextImpl) resetWorkflowExecution(currMutableState mutableState, updateCurr bool, closeTask, cleanupTask persistence.Task, newMutableState mutableState, transferTasks, timerTasks, replicationTasks []persistence.Task, forkRunID string, forkRunNextEventID, prevRunVersion int64) (retError error) {
 
 	transactionID, retError := c.shard.GetNextTransferTaskID()
 	if retError != nil {
@@ -245,9 +246,13 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(currMutableState m
 	}
 
 	resetWFReq := &persistence.ResetWorkflowExecutionRequest{
-		PrevRunID:  currMutableState.GetExecutionInfo().RunID,
+		PrevRunVersion: prevRunVersion,
+
 		Condition:  c.updateCondition,
 		UpdateCurr: updateCurr,
+
+		ForkRunID:          forkRunID,
+		ForkRunNextEventID: forkRunNextEventID,
 
 		CurrExecutionInfo:    currMutableState.GetExecutionInfo(),
 		CurrReplicationState: currMutableState.GetReplicationState(),
@@ -335,7 +340,7 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNewRun(transfe
 			if di.Version < currentVersion {
 				// we have a decision on the fly with a lower version, fail it
 				c.msBuilder.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID,
-					workflow.DecisionTaskFailedCauseFailoverCloseDecision, nil, identityHistoryService, "", "", "")
+					workflow.DecisionTaskFailedCauseFailoverCloseDecision, nil, identityHistoryService, "", "", "", 0)
 
 				var transT, timerT []persistence.Task
 				transT, timerT, err := c.scheduleNewDecision(transT, timerT)
@@ -675,15 +680,10 @@ func (c *workflowExecutionContextImpl) appendHistoryEvents(builder *historyBuild
 	return historySize, nil
 }
 
-func (c *workflowExecutionContextImpl) replicateContinueAsNewWorkflowExecution(newStateBuilder mutableState,
-	transactionID int64) error {
-	return c.appendFirstBatchHistoryForContinueAsNew(nil, newStateBuilder, transactionID)
-}
-
 func (c *workflowExecutionContextImpl) continueAsNewWorkflowExecution(context []byte, newStateBuilder mutableState,
 	transferTasks []persistence.Task, timerTasks []persistence.Task, transactionID int64) error {
 
-	err1 := c.appendFirstBatchHistoryForContinueAsNew(context, newStateBuilder, transactionID)
+	err1 := c.appendFirstBatchHistoryForContinueAsNew(newStateBuilder, transactionID)
 	if err1 != nil {
 		return err1
 	}
@@ -696,7 +696,7 @@ func (c *workflowExecutionContextImpl) continueAsNewWorkflowExecution(context []
 	return err2
 }
 
-func (c *workflowExecutionContextImpl) appendFirstBatchHistoryForContinueAsNew(context []byte, newStateBuilder mutableState,
+func (c *workflowExecutionContextImpl) appendFirstBatchHistoryForContinueAsNew(newStateBuilder mutableState,
 	transactionID int64) error {
 	executionInfo := newStateBuilder.GetExecutionInfo()
 	domainID := executionInfo.DomainID
@@ -818,7 +818,7 @@ func (c *workflowExecutionContextImpl) failInflightDecision() error {
 
 	if di, ok := msBuilder.GetInFlightDecisionTask(); ok {
 		msBuilder.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID,
-			workflow.DecisionTaskFailedCauseForceCloseDecision, nil, identityHistoryService, "", "", "")
+			workflow.DecisionTaskFailedCauseForceCloseDecision, nil, identityHistoryService, "", "", "", 0)
 
 		var transT, timerT []persistence.Task
 		transT, timerT, err1 = c.scheduleNewDecision(transT, timerT)

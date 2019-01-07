@@ -555,9 +555,13 @@ func (m *executionManagerImpl) ResetWorkflowExecution(request *ResetWorkflowExec
 	}
 
 	newRequest := &InternalResetWorkflowExecutionRequest{
-		PrevRunID: request.PrevRunID,
+		PrevRunVersion: request.PrevRunVersion,
+
 		Condition: request.Condition,
 		RangeID:   request.RangeID,
+
+		ForkRunID:          request.ForkRunID,
+		ForkRunNextEventID: request.ForkRunNextEventID,
 
 		UpdateCurr:           request.UpdateCurr,
 		CurrExecutionInfo:    currExecution,

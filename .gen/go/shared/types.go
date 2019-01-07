@@ -8264,6 +8264,7 @@ type DecisionTaskFailedEventAttributes struct {
 	Reason           *string                  `json:"reason,omitempty"`
 	ForkRunId        *string                  `json:"forkRunId,omitempty"`
 	NewRunId         *string                  `json:"newRunId,omitempty"`
+	ForkEventVersion *int64                   `json:"forkEventVersion,omitempty"`
 }
 
 // ToWire translates a DecisionTaskFailedEventAttributes struct into a Thrift-level intermediate
@@ -8283,7 +8284,7 @@ type DecisionTaskFailedEventAttributes struct {
 //   }
 func (v *DecisionTaskFailedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [8]wire.Field
+		fields [9]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -8351,6 +8352,14 @@ func (v *DecisionTaskFailedEventAttributes) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 70, Value: w}
+		i++
+	}
+	if v.ForkEventVersion != nil {
+		w, err = wire.NewValueI64(*(v.ForkEventVersion)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 80, Value: w}
 		i++
 	}
 
@@ -8463,6 +8472,16 @@ func (v *DecisionTaskFailedEventAttributes) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 80:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.ForkEventVersion = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -8476,7 +8495,7 @@ func (v *DecisionTaskFailedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [8]string
+	var fields [9]string
 	i := 0
 	if v.ScheduledEventId != nil {
 		fields[i] = fmt.Sprintf("ScheduledEventId: %v", *(v.ScheduledEventId))
@@ -8508,6 +8527,10 @@ func (v *DecisionTaskFailedEventAttributes) String() string {
 	}
 	if v.NewRunId != nil {
 		fields[i] = fmt.Sprintf("NewRunId: %v", *(v.NewRunId))
+		i++
+	}
+	if v.ForkEventVersion != nil {
+		fields[i] = fmt.Sprintf("ForkEventVersion: %v", *(v.ForkEventVersion))
 		i++
 	}
 
@@ -8558,6 +8581,9 @@ func (v *DecisionTaskFailedEventAttributes) Equals(rhs *DecisionTaskFailedEventA
 	if !_String_EqualsPtr(v.NewRunId, rhs.NewRunId) {
 		return false
 	}
+	if !_I64_EqualsPtr(v.ForkEventVersion, rhs.ForkEventVersion) {
+		return false
+	}
 
 	return true
 }
@@ -8591,6 +8617,9 @@ func (v *DecisionTaskFailedEventAttributes) MarshalLogObject(enc zapcore.ObjectE
 	}
 	if v.NewRunId != nil {
 		enc.AddString("newRunId", *v.NewRunId)
+	}
+	if v.ForkEventVersion != nil {
+		enc.AddInt64("forkEventVersion", *v.ForkEventVersion)
 	}
 	return err
 }
@@ -8670,6 +8699,16 @@ func (v *DecisionTaskFailedEventAttributes) GetForkRunId() (o string) {
 func (v *DecisionTaskFailedEventAttributes) GetNewRunId() (o string) {
 	if v.NewRunId != nil {
 		return *v.NewRunId
+	}
+
+	return
+}
+
+// GetForkEventVersion returns the value of ForkEventVersion if it is set or its
+// zero value if it is unset.
+func (v *DecisionTaskFailedEventAttributes) GetForkEventVersion() (o int64) {
+	if v.ForkEventVersion != nil {
+		return *v.ForkEventVersion
 	}
 
 	return

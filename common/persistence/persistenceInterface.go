@@ -299,9 +299,14 @@ type (
 
 	// InternalResetWorkflowExecutionRequest is used to reset workflow execution state  for Persistence Interface
 	InternalResetWorkflowExecutionRequest struct {
-		PrevRunID string
+		PrevRunVersion int64
+
 		Condition int64
 		RangeID   int64
+
+		// for fork run (we need to make sure the forkRun hasn't been deleted)
+		ForkRunID          string
+		ForkRunNextEventID int64
 
 		// for current mutable state
 		UpdateCurr           bool

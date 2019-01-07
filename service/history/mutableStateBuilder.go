@@ -1533,7 +1533,7 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduleToStartTimeoutEvent(schedul
 }
 
 func (e *mutableStateBuilder) AddDecisionTaskFailedEvent(scheduleEventID int64, startedEventID int64, cause workflow.DecisionTaskFailedCause,
-	details []byte, identity, reason, forkRunID, newRunID string) *workflow.HistoryEvent {
+	details []byte, identity, reason, forkRunID, newRunID string, forkEventVersion int64) *workflow.HistoryEvent {
 
 	attr := workflow.DecisionTaskFailedEventAttributes{
 		ScheduledEventId: common.Int64Ptr(scheduleEventID),
@@ -1544,6 +1544,7 @@ func (e *mutableStateBuilder) AddDecisionTaskFailedEvent(scheduleEventID int64, 
 		Reason:           common.StringPtr(reason),
 		ForkRunId:        common.StringPtr(forkRunID),
 		NewRunId:         common.StringPtr(newRunID),
+		ForkEventVersion: common.Int64Ptr(forkEventVersion),
 	}
 	hasPendingDecision := e.HasPendingDecisionTask()
 
