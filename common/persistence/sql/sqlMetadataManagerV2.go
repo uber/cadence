@@ -149,18 +149,23 @@ func (m *sqlMetadataManagerV2) CreateDomain(request *persistence.CreateDomainReq
 }
 
 func (m *sqlMetadataManagerV2) GetDomain(request *persistence.GetDomainRequest) (*persistence.GetDomainResponse, error) {
-	if request.Name == "" && request.ID == "" {
+	filter := &sqldb.DomainFilter{}
+	switch {
+	case request.Name != "" && request.ID != "":
+		return nil, &workflow.BadRequestError{
+			Message: "GetDomain operation failed.  Both ID and Name specified in request.",
+		}
+	case request.Name != "":
+		filter.Name = &request.Name
+	case request.ID != "":
+		filter.ID = &request.ID
+	default:
 		return nil, &workflow.BadRequestError{
 			Message: "GetDomain operation failed.  Both ID and Name are empty.",
 		}
 	}
-	if request.Name != "" && request.ID != "" {
-		return nil, &workflow.BadRequestError{
-			Message: "GetDomain operation failed.  Both ID and Name specified in request.",
-		}
-	}
 
-	rows, err := m.db.SelectFromDomain(&sqldb.QueryFilter{DomainID: request.ID, DomainName: request.Name})
+	rows, err := m.db.SelectFromDomain(filter)
 	if err != nil {
 		switch err {
 		case sql.ErrNoRows:
@@ -288,14 +293,14 @@ func (m *sqlMetadataManagerV2) UpdateDomain(request *persistence.UpdateDomainReq
 
 func (m *sqlMetadataManagerV2) DeleteDomain(request *persistence.DeleteDomainRequest) error {
 	return m.txExecute("DeleteDomain", func(tx sqldb.Tx) error {
-		_, err := tx.DeleteFromDomain(&sqldb.QueryFilter{DomainID: request.ID})
+		_, err := tx.DeleteFromDomain(&sqldb.DomainFilter{ID: &request.ID})
 		return err
 	})
 }
 
 func (m *sqlMetadataManagerV2) DeleteDomainByName(request *persistence.DeleteDomainByNameRequest) error {
 	return m.txExecute("DeleteDomainByName", func(tx sqldb.Tx) error {
-		_, err := tx.DeleteFromDomain(&sqldb.QueryFilter{DomainName: request.Name})
+		_, err := tx.DeleteFromDomain(&sqldb.DomainFilter{Name: &request.Name})
 		return err
 	})
 }
@@ -311,7 +316,7 @@ func (m *sqlMetadataManagerV2) GetMetadata() (*persistence.GetMetadataResponse, 
 }
 
 func (m *sqlMetadataManagerV2) ListDomains(request *persistence.ListDomainsRequest) (*persistence.ListDomainsResponse, error) {
-	rows, err := m.db.SelectFromDomain(&sqldb.QueryFilter{})
+	rows, err := m.db.SelectFromDomain(&sqldb.DomainFilter{})
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return &persistence.ListDomainsResponse{}, nil

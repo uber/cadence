@@ -101,21 +101,21 @@ func (mdb *DB) UpdateShards(row *sqldb.ShardsRow) (sql.Result, error) {
 }
 
 // SelectFromShards reads one or more rows from shards table
-func (mdb *DB) SelectFromShards(filter *sqldb.QueryFilter) (*sqldb.ShardsRow, error) {
+func (mdb *DB) SelectFromShards(filter *sqldb.ShardsFilter) (*sqldb.ShardsRow, error) {
 	var row sqldb.ShardsRow
 	err := mdb.conn.Get(&row, getShardQry, filter.ShardID)
 	return &row, err
 }
 
 // ReadLockShards acquires a read lock on a single row in shards table
-func (mdb *DB) ReadLockShards(filter *sqldb.QueryFilter) (int, error) {
+func (mdb *DB) ReadLockShards(filter *sqldb.ShardsFilter) (int, error) {
 	var rangeID int
 	err := mdb.conn.Get(&rangeID, readLockShardQry, filter.ShardID)
 	return rangeID, err
 }
 
 // WriteLockShards acquires a write lock on a single row in shards table
-func (mdb *DB) WriteLockShards(filter *sqldb.QueryFilter) (int, error) {
+func (mdb *DB) WriteLockShards(filter *sqldb.ShardsFilter) (int, error) {
 	var rangeID int
 	err := mdb.conn.Get(&rangeID, lockShardQry, filter.ShardID)
 	return rangeID, err

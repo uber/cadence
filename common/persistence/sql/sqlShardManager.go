@@ -80,7 +80,7 @@ func (m *sqlShardManager) CreateShard(request *persistence.CreateShardRequest) e
 }
 
 func (m *sqlShardManager) GetShard(request *persistence.GetShardRequest) (*persistence.GetShardResponse, error) {
-	row, err := m.db.SelectFromShards(&sqldb.QueryFilter{ShardID: request.ShardID})
+	row, err := m.db.SelectFromShards(&sqldb.ShardsFilter{ShardID: int64(request.ShardID)})
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, &workflow.EntityNotExistsError{
@@ -161,7 +161,7 @@ func (m *sqlShardManager) UpdateShard(request *persistence.UpdateShardRequest) e
 
 // initiated by the owning shard
 func lockShard(tx sqldb.Tx, shardID int, oldRangeID int64) error {
-	rangeID, err := tx.WriteLockShards(&sqldb.QueryFilter{ShardID: shardID})
+	rangeID, err := tx.WriteLockShards(&sqldb.ShardsFilter{ShardID: int64(shardID)})
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return &workflow.InternalServiceError{
@@ -185,7 +185,7 @@ func lockShard(tx sqldb.Tx, shardID int, oldRangeID int64) error {
 
 // initiated by the owning shard
 func readLockShard(tx sqldb.Tx, shardID int, oldRangeID int64) error {
-	rangeID, err := tx.ReadLockShards(&sqldb.QueryFilter{ShardID: shardID})
+	rangeID, err := tx.ReadLockShards(&sqldb.ShardsFilter{ShardID: int64(shardID)})
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return &workflow.InternalServiceError{

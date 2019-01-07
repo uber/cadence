@@ -74,17 +74,17 @@ func (mdb *DB) InsertIntoTasks(rows []sqldb.TasksRow) (sql.Result, error) {
 }
 
 // SelectFromTasks reads one or more rows from tasks table
-func (mdb *DB) SelectFromTasks(filter *sqldb.QueryFilter) ([]sqldb.TasksRow, error) {
+func (mdb *DB) SelectFromTasks(filter *sqldb.TasksFilter) ([]sqldb.TasksRow, error) {
 	var err error
 	var rows []sqldb.TasksRow
 	err = mdb.conn.Select(&rows, getTaskQry, filter.DomainID,
-		filter.TaskListName, filter.TaskType, *filter.MinTaskID, filter.MaxTaskID)
+		filter.TaskListName, filter.TaskType, *filter.MinTaskID, *filter.MaxTaskID)
 	return rows, err
 }
 
 // DeleteFromTasks deletes one or more rows from tasks table
-func (mdb *DB) DeleteFromTasks(filter *sqldb.QueryFilter) (sql.Result, error) {
-	return mdb.conn.Exec(deleteTaskQry, filter.DomainID, filter.TaskListName, filter.TaskType, filter.TaskID)
+func (mdb *DB) DeleteFromTasks(filter *sqldb.TasksFilter) (sql.Result, error) {
+	return mdb.conn.Exec(deleteTaskQry, filter.DomainID, filter.TaskListName, filter.TaskType, *filter.TaskID)
 }
 
 // InsertIntoTaskLists inserts one or more rows into task_lists table
@@ -103,21 +103,21 @@ func (mdb *DB) UpdateTaskLists(row *sqldb.TaskListsRow) (sql.Result, error) {
 }
 
 // SelectFromTaskLists reads one or more rows from task_lists table
-func (mdb *DB) SelectFromTaskLists(filter *sqldb.QueryFilter) (*sqldb.TaskListsRow, error) {
+func (mdb *DB) SelectFromTaskLists(filter *sqldb.TaskListsFilter) (*sqldb.TaskListsRow, error) {
 	var err error
 	var row sqldb.TaskListsRow
-	err = mdb.conn.Get(&row, getTaskListQry, filter.DomainID, filter.TaskListName, filter.TaskType)
+	err = mdb.conn.Get(&row, getTaskListQry, filter.DomainID, filter.Name, filter.TaskType)
 	return &row, err
 }
 
 // DeleteFromTaskLists deletes a row from task_lists table
-func (mdb *DB) DeleteFromTaskLists(filter *sqldb.QueryFilter) (sql.Result, error) {
-	return mdb.conn.Exec(deleteTaskQry, filter.DomainID, filter.TaskListName, filter.TaskType)
+func (mdb *DB) DeleteFromTaskLists(filter *sqldb.TaskListsFilter) (sql.Result, error) {
+	return mdb.conn.Exec(deleteTaskQry, filter.DomainID, filter.Name, filter.TaskType)
 }
 
 // LockTaskLists locks a row in task_lists table
-func (mdb *DB) LockTaskLists(filter *sqldb.QueryFilter) (int64, error) {
+func (mdb *DB) LockTaskLists(filter *sqldb.TaskListsFilter) (int64, error) {
 	var rangeID int64
-	err := mdb.conn.Get(&rangeID, lockTaskListQry, filter.DomainID, filter.TaskListName, filter.TaskType)
+	err := mdb.conn.Get(&rangeID, lockTaskListQry, filter.DomainID, filter.Name, filter.TaskType)
 	return rangeID, err
 }

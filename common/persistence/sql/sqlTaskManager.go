@@ -56,8 +56,8 @@ func newTaskPersistence(cfg config.SQL, log bark.Logger) (persistence.TaskManage
 func (m *sqlTaskManager) LeaseTaskList(request *persistence.LeaseTaskListRequest) (*persistence.LeaseTaskListResponse, error) {
 	var rangeID int64
 	var ackLevel int64
-	row, err := m.db.SelectFromTaskLists(&sqldb.QueryFilter{
-		DomainID: request.DomainID, TaskListName: request.TaskList, TaskType: request.TaskType})
+	row, err := m.db.SelectFromTaskLists(&sqldb.TaskListsFilter{
+		DomainID: request.DomainID, Name: request.TaskList, TaskType: int64(request.TaskType)})
 	if err != nil {
 		if err == sql.ErrNoRows {
 			row = &sqldb.TaskListsRow{
@@ -207,10 +207,10 @@ func (m *sqlTaskManager) CreateTasks(request *persistence.CreateTasksRequest) (*
 }
 
 func (m *sqlTaskManager) GetTasks(request *persistence.GetTasksRequest) (*persistence.GetTasksResponse, error) {
-	rows, err := m.db.SelectFromTasks(&sqldb.QueryFilter{
+	rows, err := m.db.SelectFromTasks(&sqldb.TasksFilter{
 		DomainID:     request.DomainID,
 		TaskListName: request.TaskList,
-		TaskType:     request.TaskType,
+		TaskType:     int64(request.TaskType),
 		MinTaskID:    &request.ReadLevel,
 		MaxTaskID:    &request.MaxReadLevel,
 	})
@@ -238,8 +238,8 @@ func (m *sqlTaskManager) GetTasks(request *persistence.GetTasksRequest) (*persis
 func (m *sqlTaskManager) CompleteTask(request *persistence.CompleteTaskRequest) error {
 	taskID := request.TaskID
 	taskList := request.TaskList
-	_, err := m.db.DeleteFromTasks(&sqldb.QueryFilter{
-		DomainID: taskList.DomainID, TaskListName: taskList.Name, TaskType: taskList.TaskType, TaskID: taskID})
+	_, err := m.db.DeleteFromTasks(&sqldb.TasksFilter{
+		DomainID: taskList.DomainID, TaskListName: taskList.Name, TaskType: int64(taskList.TaskType), TaskID: &taskID})
 	if err != nil && err != sql.ErrNoRows {
 		return &workflow.InternalServiceError{Message: err.Error()}
 	}
@@ -247,7 +247,7 @@ func (m *sqlTaskManager) CompleteTask(request *persistence.CompleteTaskRequest) 
 }
 
 func lockTaskList(tx sqldb.Tx, domainID, name string, taskListType int, oldRangeID int64) error {
-	rangeID, err := tx.LockTaskLists(&sqldb.QueryFilter{DomainID: domainID, TaskListName: name, TaskType: taskListType})
+	rangeID, err := tx.LockTaskLists(&sqldb.TaskListsFilter{DomainID: domainID, Name: name, TaskType: int64(taskListType)})
 	if err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Failed to lock task list. Error: %v", err),

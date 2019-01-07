@@ -93,13 +93,13 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.InternalGetWo
 		offset = newOffset
 	}
 
-	rows, err := m.db.SelectFromEvents(&sqldb.QueryFilter{
+	rows, err := m.db.SelectFromEvents(&sqldb.EventsFilter{
 		DomainID:     request.DomainID,
 		WorkflowID:   *request.Execution.WorkflowId,
 		RunID:        *request.Execution.RunId,
-		FirstEventID: common.IntPtr(int(offset + 1)),
-		NextEventID:  int(request.NextEventID),
-		PageSize:     request.PageSize,
+		FirstEventID: common.Int64Ptr(offset + 1),
+		NextEventID:  &request.NextEventID,
+		PageSize:     &request.PageSize,
 	})
 
 	// TODO: Ensure that no last empty page is requested
@@ -143,7 +143,7 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.InternalGetWo
 }
 
 func (m *sqlHistoryManager) DeleteWorkflowExecutionHistory(request *p.DeleteWorkflowExecutionHistoryRequest) error {
-	_, err := m.db.DeleteFromEvents(&sqldb.QueryFilter{
+	_, err := m.db.DeleteFromEvents(&sqldb.EventsFilter{
 		DomainID: request.DomainID, WorkflowID: *request.Execution.WorkflowId, RunID: *request.Execution.RunId})
 	if err != nil {
 		return &workflow.InternalServiceError{
@@ -174,11 +174,11 @@ func (m *sqlHistoryManager) overWriteHistoryEvents(request *p.InternalAppendHist
 }
 
 func lockEventForUpdate(tx sqldb.Tx, req *p.InternalAppendHistoryEventsRequest) error {
-	row, err := tx.LockEvents(&sqldb.QueryFilter{
+	row, err := tx.LockEvents(&sqldb.EventsFilter{
 		DomainID:     req.DomainID,
 		WorkflowID:   *req.Execution.WorkflowId,
 		RunID:        *req.Execution.RunId,
-		FirstEventID: common.IntPtr(int(req.FirstEventID)),
+		FirstEventID: &req.FirstEventID,
 	})
 	if err != nil {
 		return err

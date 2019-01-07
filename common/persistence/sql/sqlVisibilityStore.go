@@ -107,12 +107,12 @@ func (s *sqlVisibilityStore) ListOpenWorkflowExecutions(request *p.ListWorkflowE
 	return s.listWorkflowExecutions("ListOpenWorkflowExecutions", request.NextPageToken, request.EarliestStartTime, request.LatestStartTime,
 		func(readLevel *visibilityPageToken) ([]sqldb.VisibilityRow, error) {
 			minStartTime := time.Unix(0, request.EarliestStartTime)
-			return s.db.SelectFromVisibility(&sqldb.QueryFilter{
+			return s.db.SelectFromVisibility(&sqldb.VisibilityFilter{
 				DomainID:     request.DomainUUID,
 				MinStartTime: &minStartTime,
 				MaxStartTime: &readLevel.Time,
-				RunID:        readLevel.RunID,
-				PageSize:     request.PageSize,
+				RunID:        &readLevel.RunID,
+				PageSize:     &request.PageSize,
 			})
 		})
 }
@@ -121,13 +121,13 @@ func (s *sqlVisibilityStore) ListClosedWorkflowExecutions(request *p.ListWorkflo
 	return s.listWorkflowExecutions("ListClosedWorkflowExecutions", request.NextPageToken, request.EarliestStartTime, request.LatestStartTime,
 		func(readLevel *visibilityPageToken) ([]sqldb.VisibilityRow, error) {
 			minStartTime := time.Unix(0, request.EarliestStartTime)
-			return s.db.SelectFromVisibility(&sqldb.QueryFilter{
+			return s.db.SelectFromVisibility(&sqldb.VisibilityFilter{
 				DomainID:     request.DomainUUID,
 				MinStartTime: &minStartTime,
 				MaxStartTime: &readLevel.Time,
 				Closed:       true,
-				RunID:        readLevel.RunID,
-				PageSize:     request.PageSize,
+				RunID:        &readLevel.RunID,
+				PageSize:     &request.PageSize,
 			})
 		})
 }
@@ -136,13 +136,13 @@ func (s *sqlVisibilityStore) ListOpenWorkflowExecutionsByType(request *p.ListWor
 	return s.listWorkflowExecutions("ListOpenWorkflowExecutionsByType", request.NextPageToken, request.EarliestStartTime, request.LatestStartTime,
 		func(readLevel *visibilityPageToken) ([]sqldb.VisibilityRow, error) {
 			minStartTime := time.Unix(0, request.EarliestStartTime)
-			return s.db.SelectFromVisibility(&sqldb.QueryFilter{
+			return s.db.SelectFromVisibility(&sqldb.VisibilityFilter{
 				DomainID:         request.DomainUUID,
 				MinStartTime:     &minStartTime,
 				MaxStartTime:     &readLevel.Time,
-				RunID:            readLevel.RunID,
+				RunID:            &readLevel.RunID,
 				WorkflowTypeName: &request.WorkflowTypeName,
-				PageSize:         request.PageSize,
+				PageSize:         &request.PageSize,
 			})
 		})
 }
@@ -151,14 +151,14 @@ func (s *sqlVisibilityStore) ListClosedWorkflowExecutionsByType(request *p.ListW
 	return s.listWorkflowExecutions("ListClosedWorkflowExecutionsByType", request.NextPageToken, request.EarliestStartTime, request.LatestStartTime,
 		func(readLevel *visibilityPageToken) ([]sqldb.VisibilityRow, error) {
 			minStartTime := time.Unix(0, request.EarliestStartTime)
-			return s.db.SelectFromVisibility(&sqldb.QueryFilter{
+			return s.db.SelectFromVisibility(&sqldb.VisibilityFilter{
 				DomainID:         request.DomainUUID,
 				MinStartTime:     &minStartTime,
 				MaxStartTime:     &readLevel.Time,
 				Closed:           true,
-				RunID:            readLevel.RunID,
+				RunID:            &readLevel.RunID,
 				WorkflowTypeName: &request.WorkflowTypeName,
-				PageSize:         request.PageSize,
+				PageSize:         &request.PageSize,
 			})
 		})
 }
@@ -167,13 +167,13 @@ func (s *sqlVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(request *p.L
 	return s.listWorkflowExecutions("ListOpenWorkflowExecutionsByWorkflowID", request.NextPageToken, request.EarliestStartTime, request.LatestStartTime,
 		func(readLevel *visibilityPageToken) ([]sqldb.VisibilityRow, error) {
 			minStartTime := time.Unix(0, request.EarliestStartTime)
-			return s.db.SelectFromVisibility(&sqldb.QueryFilter{
+			return s.db.SelectFromVisibility(&sqldb.VisibilityFilter{
 				DomainID:     request.DomainUUID,
 				MinStartTime: &minStartTime,
 				MaxStartTime: &readLevel.Time,
-				RunID:        readLevel.RunID,
-				WorkflowID:   request.WorkflowID,
-				PageSize:     request.PageSize,
+				RunID:        &readLevel.RunID,
+				WorkflowID:   &request.WorkflowID,
+				PageSize:     &request.PageSize,
 			})
 		})
 }
@@ -182,14 +182,14 @@ func (s *sqlVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(request *p
 	return s.listWorkflowExecutions("ListClosedWorkflowExecutionsByWorkflowID", request.NextPageToken, request.EarliestStartTime, request.LatestStartTime,
 		func(readLevel *visibilityPageToken) ([]sqldb.VisibilityRow, error) {
 			minStartTime := time.Unix(0, request.EarliestStartTime)
-			return s.db.SelectFromVisibility(&sqldb.QueryFilter{
+			return s.db.SelectFromVisibility(&sqldb.VisibilityFilter{
 				DomainID:     request.DomainUUID,
 				MinStartTime: &minStartTime,
 				MaxStartTime: &readLevel.Time,
 				Closed:       true,
-				RunID:        readLevel.RunID,
-				WorkflowID:   request.WorkflowID,
-				PageSize:     request.PageSize,
+				RunID:        &readLevel.RunID,
+				WorkflowID:   &request.WorkflowID,
+				PageSize:     &request.PageSize,
 			})
 		})
 }
@@ -198,24 +198,24 @@ func (s *sqlVisibilityStore) ListClosedWorkflowExecutionsByStatus(request *p.Lis
 	return s.listWorkflowExecutions("ListClosedWorkflowExecutionsByStatus", request.NextPageToken, request.EarliestStartTime, request.LatestStartTime,
 		func(readLevel *visibilityPageToken) ([]sqldb.VisibilityRow, error) {
 			minStartTime := time.Unix(0, request.EarliestStartTime)
-			return s.db.SelectFromVisibility(&sqldb.QueryFilter{
+			return s.db.SelectFromVisibility(&sqldb.VisibilityFilter{
 				DomainID:     request.DomainUUID,
 				MinStartTime: &minStartTime,
 				MaxStartTime: &readLevel.Time,
 				Closed:       true,
-				RunID:        readLevel.RunID,
-				CloseStatus:  common.IntPtr(int(request.Status)),
-				PageSize:     request.PageSize,
+				RunID:        &readLevel.RunID,
+				CloseStatus:  common.Int32Ptr(int32(request.Status)),
+				PageSize:     &request.PageSize,
 			})
 		})
 }
 
 func (s *sqlVisibilityStore) GetClosedWorkflowExecution(request *p.GetClosedWorkflowExecutionRequest) (*p.GetClosedWorkflowExecutionResponse, error) {
 	execution := request.Execution
-	rows, err := s.db.SelectFromVisibility(&sqldb.QueryFilter{
+	rows, err := s.db.SelectFromVisibility(&sqldb.VisibilityFilter{
 		DomainID: request.DomainUUID,
 		Closed:   true,
-		RunID:    *execution.RunId,
+		RunID:    execution.RunId,
 	})
 	if err != nil {
 		if err == sql.ErrNoRows {

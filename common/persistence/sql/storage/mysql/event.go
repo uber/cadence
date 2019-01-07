@@ -58,20 +58,20 @@ func (mdb *DB) UpdateEvents(row *sqldb.EventsRow) (sql.Result, error) {
 }
 
 // SelectFromEvents reads one or more rows from events table
-func (mdb *DB) SelectFromEvents(filter *sqldb.QueryFilter) ([]sqldb.EventsRow, error) {
+func (mdb *DB) SelectFromEvents(filter *sqldb.EventsFilter) ([]sqldb.EventsRow, error) {
 	var rows []sqldb.EventsRow
 	err := mdb.conn.Select(&rows, getEventsQry,
-		filter.DomainID, filter.WorkflowID, filter.RunID, *filter.FirstEventID, filter.NextEventID, filter.PageSize)
+		filter.DomainID, filter.WorkflowID, filter.RunID, *filter.FirstEventID, *filter.NextEventID, *filter.PageSize)
 	return rows, err
 }
 
 // DeleteFromEvents deletes one or more rows from events table
-func (mdb *DB) DeleteFromEvents(filter *sqldb.QueryFilter) (sql.Result, error) {
+func (mdb *DB) DeleteFromEvents(filter *sqldb.EventsFilter) (sql.Result, error) {
 	return mdb.conn.Exec(deleteEventsQry, filter.DomainID, filter.WorkflowID, filter.RunID)
 }
 
 // LockEvents acquires a write lock on a single row in events table
-func (mdb *DB) LockEvents(filter *sqldb.QueryFilter) (*sqldb.EventsRow, error) {
+func (mdb *DB) LockEvents(filter *sqldb.EventsFilter) (*sqldb.EventsRow, error) {
 	var row sqldb.EventsRow
 	err := mdb.conn.Get(&row, lockEventQry, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.FirstEventID)
 	return &row, err

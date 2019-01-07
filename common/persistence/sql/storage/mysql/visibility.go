@@ -93,30 +93,30 @@ func (mdb *DB) UpdateVisibility(row *sqldb.VisibilityRow) (sql.Result, error) {
 }
 
 // SelectFromVisibility reads one or more rows from visibility table
-func (mdb *DB) SelectFromVisibility(filter *sqldb.QueryFilter) ([]sqldb.VisibilityRow, error) {
+func (mdb *DB) SelectFromVisibility(filter *sqldb.VisibilityFilter) ([]sqldb.VisibilityRow, error) {
 	var err error
 	var rows []sqldb.VisibilityRow
 	switch {
-	case filter.MinStartTime == nil && filter.RunID != "" && filter.Closed:
+	case filter.MinStartTime == nil && filter.RunID != nil && filter.Closed:
 		var row sqldb.VisibilityRow
-		err = mdb.conn.Get(&row, templateGetClosedWorkflowExecution, filter.DomainID, filter.RunID)
+		err = mdb.conn.Get(&row, templateGetClosedWorkflowExecution, filter.DomainID, *filter.RunID)
 		if err == nil {
 			rows = append(rows, row)
 		}
-	case filter.MinStartTime != nil && filter.WorkflowID != "":
+	case filter.MinStartTime != nil && filter.WorkflowID != nil:
 		qry := templateGetOpenWorkflowExecutionsByID
 		if filter.Closed {
 			qry = templateGetClosedWorkflowExecutionsByID
 		}
 		err = mdb.conn.Select(&rows,
 			qry,
-			filter.WorkflowID,
+			*filter.WorkflowID,
 			filter.DomainID,
 			*filter.MinStartTime,
 			*filter.MaxStartTime,
-			filter.RunID,
+			*filter.RunID,
 			*filter.MinStartTime,
-			filter.PageSize)
+			*filter.PageSize)
 	case filter.MinStartTime != nil && filter.WorkflowTypeName != nil:
 		qry := templateGetOpenWorkflowExecutionsByType
 		if filter.Closed {
@@ -126,11 +126,11 @@ func (mdb *DB) SelectFromVisibility(filter *sqldb.QueryFilter) ([]sqldb.Visibili
 			qry,
 			*filter.WorkflowTypeName,
 			filter.DomainID,
-			filter.MinStartTime,
-			filter.MaxStartTime,
-			filter.RunID,
-			filter.MaxStartTime,
-			filter.PageSize)
+			*filter.MinStartTime,
+			*filter.MaxStartTime,
+			*filter.RunID,
+			*filter.MaxStartTime,
+			*filter.PageSize)
 	case filter.MinStartTime != nil && filter.CloseStatus != nil:
 		err = mdb.conn.Select(&rows,
 			templateGetClosedWorkflowExecutionsByStatus,
@@ -138,9 +138,9 @@ func (mdb *DB) SelectFromVisibility(filter *sqldb.QueryFilter) ([]sqldb.Visibili
 			filter.DomainID,
 			*filter.MinStartTime,
 			*filter.MaxStartTime,
-			filter.RunID,
+			*filter.RunID,
 			*filter.MaxStartTime,
-			filter.PageSize)
+			*filter.PageSize)
 	case filter.MinStartTime != nil:
 		qry := templateGetOpenWorkflowExecutions
 		if filter.Closed {
@@ -151,9 +151,9 @@ func (mdb *DB) SelectFromVisibility(filter *sqldb.QueryFilter) ([]sqldb.Visibili
 			filter.DomainID,
 			*filter.MinStartTime,
 			*filter.MaxStartTime,
-			filter.RunID,
+			*filter.RunID,
 			*filter.MaxStartTime,
-			filter.PageSize)
+			*filter.PageSize)
 	default:
 		return nil, fmt.Errorf("invalid query filter")
 	}

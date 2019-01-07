@@ -26,36 +26,6 @@ import (
 )
 
 type (
-	// QueryFilter contains the column names that can be used to
-	// filter results through a SQL WHERE clause
-	QueryFilter struct {
-		Closed                bool
-		ShardID               int
-		TaskType              int
-		NextEventID           int
-		PageSize              int
-		TaskID                int64
-		DomainID              string
-		DomainName            string
-		WorkflowID            string
-		RunID                 string
-		TaskListName          string
-		VisiblityTimestamp    time.Time
-		ScheduleID            *int
-		InitiatedID           *int
-		FirstEventID          *int
-		MinTaskID             *int64
-		MaxTaskID             *int64
-		TimerID               *string
-		CloseStatus           *int
-		WorkflowTypeName      *string
-		SignalID              *string
-		MinVisiblityTimestamp *time.Time
-		MaxVisiblityTimestamp *time.Time
-		MinStartTime          *time.Time
-		MaxStartTime          *time.Time
-	}
-
 	// DomainRow represents a row in domain table
 	DomainRow struct {
 		ID                          string
@@ -75,6 +45,13 @@ type (
 		IsGlobalDomain              bool
 		ActiveClusterName           string
 		Clusters                    []byte
+	}
+
+	// DomainFilter contains the column names within domain table that
+	// can be used to filter results through a WHERE clause
+	DomainFilter struct {
+		ID   *string
+		Name *string
 	}
 
 	// DomainMetadataRow represents a row in domain_metadata table
@@ -97,13 +74,19 @@ type (
 		DomainNotificationVersion int64
 	}
 
+	// ShardsFilter contains the column names within shards table that
+	// can be used to filter results through a WHERE clause
+	ShardsFilter struct {
+		ShardID int64
+	}
+
 	// TransferTasksRow represents a row in transfer_tasks table
 	TransferTasksRow struct {
 		ShardID                 int
+		TaskID                  int64
 		DomainID                string
 		WorkflowID              string
 		RunID                   string
-		TaskID                  int64
 		TaskType                int
 		TargetDomainID          string
 		TargetWorkflowID        string
@@ -113,6 +96,15 @@ type (
 		ScheduleID              int64
 		Version                 int64
 		VisibilityTimestamp     time.Time
+	}
+
+	// TransferTasksFilter contains the column names within transfer_tasks table that
+	// can be used to filter results through a WHERE clause
+	TransferTasksFilter struct {
+		ShardID   int
+		TaskID    *int64
+		MinTaskID *int64
+		MaxTaskID *int64
 	}
 
 	// ExecutionsRow represents a row in executions table
@@ -164,6 +156,15 @@ type (
 		CronSchedule                 string
 	}
 
+	// ExecutionsFilter contains the column names within domain table that
+	// can be used to filter results through a WHERE clause
+	ExecutionsFilter struct {
+		ShardID    int
+		DomainID   string
+		WorkflowID string
+		RunID      string
+	}
+
 	// CurrentExecutionsRow represents a row in current_executions table
 	CurrentExecutionsRow struct {
 		ShardID          int64
@@ -177,6 +178,14 @@ type (
 		StartVersion     int64
 	}
 
+	// CurrentExecutionsFilter contains the column names within domain table that
+	// can be used to filter results through a WHERE clause
+	CurrentExecutionsFilter struct {
+		ShardID    int64
+		DomainID   string
+		WorkflowID string
+	}
+
 	// BufferedEventsRow represents a row in buffered_events table
 	BufferedEventsRow struct {
 		ShardID      int
@@ -187,57 +196,106 @@ type (
 		DataEncoding string
 	}
 
+	// BufferedEventsFilter contains the column names within domain table that
+	// can be used to filter results through a WHERE clause
+	BufferedEventsFilter struct {
+		ShardID    int
+		DomainID   string
+		WorkflowID string
+		RunID      string
+	}
+
 	// TasksRow represents a row in tasks table
 	TasksRow struct {
 		DomainID     string
+		TaskType     int64
+		TaskID       int64
+		TaskListName string
 		WorkflowID   string
 		RunID        string
 		ScheduleID   int64
-		TaskID       int64
-		TaskType     int64
-		TaskListName string
 		ExpiryTs     time.Time
+	}
+
+	// TasksFilter contains the column names within domain table that
+	// can be used to filter results through a WHERE clause
+	TasksFilter struct {
+		DomainID     string
+		TaskListName string
+		TaskType     int64
+		TaskID       *int64
+		MinTaskID    *int64
+		MaxTaskID    *int64
 	}
 
 	// TaskListsRow represents a row in task_lists table
 	TaskListsRow struct {
 		DomainID string
-		RangeID  int64
 		Name     string
 		TaskType int64
+		RangeID  int64
 		AckLevel int64
 		Kind     int64
 		ExpiryTs time.Time
 	}
 
+	// TaskListsFilter contains the column names within domain table that
+	// can be used to filter results through a WHERE clause
+	TaskListsFilter struct {
+		DomainID string
+		Name     string
+		TaskType int64
+	}
+
 	// ReplicationTasksRow represents a row in replication_tasks table
 	ReplicationTasksRow struct {
+		ShardID             int
+		TaskID              int64
 		DomainID            string
 		WorkflowID          string
 		RunID               string
-		TaskID              int64
 		TaskType            int
 		FirstEventID        int64
 		NextEventID         int64
 		Version             int64
 		LastReplicationInfo []byte
 		ScheduledID         int64
-		ShardID             int
+	}
+
+	// ReplicationTasksFilter contains the column names within domain table that
+	// can be used to filter results through a WHERE clause
+	ReplicationTasksFilter struct {
+		ShardID   int
+		TaskID    *int64
+		MinTaskID *int64
+		MaxTaskID *int64
+		PageSize  *int
 	}
 
 	// TimerTasksRow represents a row in timer_tasks table
 	TimerTasksRow struct {
 		ShardID             int
+		VisibilityTimestamp time.Time
+		TaskID              int64
 		DomainID            string
 		WorkflowID          string
 		RunID               string
-		VisibilityTimestamp time.Time
-		TaskID              int64
 		TaskType            int
 		TimeoutType         int
 		EventID             int64
 		ScheduleAttempt     int64
 		Version             int64
+	}
+
+	// TimerTasksFilter contains the column names within domain table that
+	// can be used to filter results through a WHERE clause
+	TimerTasksFilter struct {
+		ShardID                int
+		TaskID                 int64
+		VisibilityTimestamp    *time.Time
+		MinVisibilityTimestamp *time.Time
+		MaxVisibilityTimestamp *time.Time
+		PageSize               *int
 	}
 
 	// EventsRow represents a row in events table
@@ -251,6 +309,17 @@ type (
 		TxID         int64
 		Data         []byte
 		DataEncoding string
+	}
+
+	// EventsFilter contains the column names within domain table that
+	// can be used to filter results through a WHERE clause
+	EventsFilter struct {
+		DomainID     string
+		WorkflowID   string
+		RunID        string
+		FirstEventID *int64
+		NextEventID  *int64
+		PageSize     *int
 	}
 
 	// ActivityInfoMapsRow represents a row in activity_info_maps table
@@ -292,6 +361,16 @@ type (
 		NonRetriableErrors       *[]byte
 	}
 
+	// ActivityInfoMapsFilter contains the column names within domain table that
+	// can be used to filter results through a WHERE clause
+	ActivityInfoMapsFilter struct {
+		ShardID    int64
+		DomainID   string
+		WorkflowID string
+		RunID      string
+		ScheduleID *int64
+	}
+
 	// TimerInfoMapsRow represents a row in timer_info_maps table
 	TimerInfoMapsRow struct {
 		ShardID    int64
@@ -303,6 +382,16 @@ type (
 		StartedID  int64
 		ExpiryTime time.Time
 		TaskID     int64
+	}
+
+	// TimerInfoMapsFilter contains the column names within domain table that
+	// can be used to filter results through a WHERE clause
+	TimerInfoMapsFilter struct {
+		ShardID    int64
+		DomainID   string
+		WorkflowID string
+		RunID      string
+		TimerID    *string
 	}
 
 	// ChildExecutionInfoMapsRow represents a row in child_execution_info_maps table
@@ -326,6 +415,16 @@ type (
 		WorkflowTypeName       string
 	}
 
+	// ChildExecutionInfoMapsFilter contains the column names within domain table that
+	// can be used to filter results through a WHERE clause
+	ChildExecutionInfoMapsFilter struct {
+		ShardID     int64
+		DomainID    string
+		WorkflowID  string
+		RunID       string
+		InitiatedID *int64
+	}
+
 	// RequestCancelInfoMapsRow represents a row in request_cancel_info_maps table
 	RequestCancelInfoMapsRow struct {
 		ShardID         int64
@@ -335,6 +434,16 @@ type (
 		InitiatedID     int64
 		Version         int64
 		CancelRequestID string
+	}
+
+	// RequestCancelInfoMapsFilter contains the column names within domain table that
+	// can be used to filter results through a WHERE clause
+	RequestCancelInfoMapsFilter struct {
+		ShardID     int64
+		DomainID    string
+		WorkflowID  string
+		RunID       string
+		InitiatedID *int64
 	}
 
 	// SignalInfoMapsRow represents a row in signal_info_maps table
@@ -349,6 +458,16 @@ type (
 		SignalName      string
 		Input           *[]byte
 		Control         *[]byte
+	}
+
+	// SignalInfoMapsFilter contains the column names within domain table that
+	// can be used to filter results through a WHERE clause
+	SignalInfoMapsFilter struct {
+		ShardID     int64
+		DomainID    string
+		WorkflowID  string
+		RunID       string
+		InitiatedID *int64
 	}
 
 	// BufferedReplicationTaskMapsRow represents a row in buffered_replication_task_maps table
@@ -366,6 +485,16 @@ type (
 		NewRunHistoryEncoding string
 	}
 
+	// BufferedReplicationTaskMapsFilter contains the column names within domain table that
+	// can be used to filter results through a WHERE clause
+	BufferedReplicationTaskMapsFilter struct {
+		ShardID      int64
+		DomainID     string
+		WorkflowID   string
+		RunID        string
+		FirstEventID *int64
+	}
+
 	// SignalsRequestedSetsRow represents a row in signals_requested_sets table
 	SignalsRequestedSetsRow struct {
 		ShardID    int64
@@ -375,24 +504,48 @@ type (
 		SignalID   string
 	}
 
+	// SignalsRequestedSetsFilter contains the column names within domain table that
+	// can be used to filter results through a WHERE clause
+	SignalsRequestedSetsFilter struct {
+		ShardID    int64
+		DomainID   string
+		WorkflowID string
+		RunID      string
+		SignalID   *string
+	}
+
 	// VisibilityRow represents a row in executions_visibility table
 	VisibilityRow struct {
 		DomainID         string
-		WorkflowID       string
 		RunID            string
 		WorkflowTypeName string
+		WorkflowID       string
 		StartTime        time.Time
 		CloseStatus      *int32
 		CloseTime        *time.Time
 		HistoryLength    *int64
 	}
 
+	// VisibilityFilter contains the column names within domain table that
+	// can be used to filter results through a WHERE clause
+	VisibilityFilter struct {
+		DomainID         string
+		Closed           bool
+		RunID            *string
+		WorkflowID       *string
+		WorkflowTypeName *string
+		CloseStatus      *int32
+		MinStartTime     *time.Time
+		MaxStartTime     *time.Time
+		PageSize         *int
+	}
+
 	// tableCRUD defines the API for interacting with the database tables
 	tableCRUD interface {
 		InsertIntoDomain(rows *DomainRow) (sql.Result, error)
 		UpdateDomain(row *DomainRow) (sql.Result, error)
-		SelectFromDomain(filter *QueryFilter) ([]DomainRow, error)
-		DeleteFromDomain(filter *QueryFilter) (sql.Result, error)
+		SelectFromDomain(filter *DomainFilter) ([]DomainRow, error)
+		DeleteFromDomain(filter *DomainFilter) (sql.Result, error)
 
 		LockDomainMetadata() error
 		UpdateDomainMetadata(row *DomainMetadataRow) (sql.Result, error)
@@ -400,88 +553,88 @@ type (
 
 		InsertIntoShards(rows *ShardsRow) (sql.Result, error)
 		UpdateShards(row *ShardsRow) (sql.Result, error)
-		SelectFromShards(filter *QueryFilter) (*ShardsRow, error)
-		ReadLockShards(filter *QueryFilter) (int, error)
-		WriteLockShards(filter *QueryFilter) (int, error)
+		SelectFromShards(filter *ShardsFilter) (*ShardsRow, error)
+		ReadLockShards(filter *ShardsFilter) (int, error)
+		WriteLockShards(filter *ShardsFilter) (int, error)
 
 		InsertIntoTasks(rows []TasksRow) (sql.Result, error)
-		SelectFromTasks(filter *QueryFilter) ([]TasksRow, error)
-		DeleteFromTasks(filter *QueryFilter) (sql.Result, error)
+		SelectFromTasks(filter *TasksFilter) ([]TasksRow, error)
+		DeleteFromTasks(filter *TasksFilter) (sql.Result, error)
 
 		InsertIntoTaskLists(row *TaskListsRow) (sql.Result, error)
 		ReplaceIntoTaskLists(row *TaskListsRow) (sql.Result, error)
 		UpdateTaskLists(row *TaskListsRow) (sql.Result, error)
-		SelectFromTaskLists(filter *QueryFilter) (*TaskListsRow, error)
-		DeleteFromTaskLists(filter *QueryFilter) (sql.Result, error)
-		LockTaskLists(filter *QueryFilter) (int64, error)
+		SelectFromTaskLists(filter *TaskListsFilter) (*TaskListsRow, error)
+		DeleteFromTaskLists(filter *TaskListsFilter) (sql.Result, error)
+		LockTaskLists(filter *TaskListsFilter) (int64, error)
 
 		InsertIntoEvents(row *EventsRow) (sql.Result, error)
 		UpdateEvents(rows *EventsRow) (sql.Result, error)
-		SelectFromEvents(filter *QueryFilter) ([]EventsRow, error)
-		DeleteFromEvents(filter *QueryFilter) (sql.Result, error)
-		LockEvents(filter *QueryFilter) (*EventsRow, error)
+		SelectFromEvents(filter *EventsFilter) ([]EventsRow, error)
+		DeleteFromEvents(filter *EventsFilter) (sql.Result, error)
+		LockEvents(filter *EventsFilter) (*EventsRow, error)
 
 		InsertIntoExecutions(row *ExecutionsRow) (sql.Result, error)
 		UpdateExecutions(row *ExecutionsRow) (sql.Result, error)
-		SelectFromExecutions(filter *QueryFilter) (*ExecutionsRow, error)
-		DeleteFromExecutions(filter *QueryFilter) (sql.Result, error)
-		LockExecutions(filter *QueryFilter) (int, error)
+		SelectFromExecutions(filter *ExecutionsFilter) (*ExecutionsRow, error)
+		DeleteFromExecutions(filter *ExecutionsFilter) (sql.Result, error)
+		LockExecutions(filter *ExecutionsFilter) (int, error)
 
-		LockCurrentExecutionsJoinExecutions(filter *QueryFilter) ([]CurrentExecutionsRow, error)
+		LockCurrentExecutionsJoinExecutions(filter *CurrentExecutionsFilter) ([]CurrentExecutionsRow, error)
 
 		InsertIntoCurrentExecutions(row *CurrentExecutionsRow) (sql.Result, error)
 		UpdateCurrentExecutions(row *CurrentExecutionsRow) (sql.Result, error)
-		SelectFromCurrentExecutions(filter *QueryFilter) (*CurrentExecutionsRow, error)
-		DeleteFromCurrentExecutions(filter *QueryFilter) (sql.Result, error)
-		LockCurrentExecutions(filter *QueryFilter) (string, error)
+		SelectFromCurrentExecutions(filter *CurrentExecutionsFilter) (*CurrentExecutionsRow, error)
+		DeleteFromCurrentExecutions(filter *CurrentExecutionsFilter) (sql.Result, error)
+		LockCurrentExecutions(filter *CurrentExecutionsFilter) (string, error)
 
 		InsertIntoTransferTasks(rows []TransferTasksRow) (sql.Result, error)
-		SelectFromTransferTasks(filter *QueryFilter) ([]TransferTasksRow, error)
-		DeleteFromTransferTasks(filter *QueryFilter) (sql.Result, error)
+		SelectFromTransferTasks(filter *TransferTasksFilter) ([]TransferTasksRow, error)
+		DeleteFromTransferTasks(filter *TransferTasksFilter) (sql.Result, error)
 
 		InsertIntoTimerTasks(rows []TimerTasksRow) (sql.Result, error)
-		SelectFromTimerTasks(filter *QueryFilter) ([]TimerTasksRow, error)
-		DeleteFromTimerTasks(filter *QueryFilter) (sql.Result, error)
+		SelectFromTimerTasks(filter *TimerTasksFilter) ([]TimerTasksRow, error)
+		DeleteFromTimerTasks(filter *TimerTasksFilter) (sql.Result, error)
 
 		InsertIntoBufferedEvents(rows []BufferedEventsRow) (sql.Result, error)
-		SelectFromBufferedEvents(filter *QueryFilter) ([]BufferedEventsRow, error)
-		DeleteFromBufferedEvents(filter *QueryFilter) (sql.Result, error)
+		SelectFromBufferedEvents(filter *BufferedEventsFilter) ([]BufferedEventsRow, error)
+		DeleteFromBufferedEvents(filter *BufferedEventsFilter) (sql.Result, error)
 
 		InsertIntoReplicationTasks(rows []ReplicationTasksRow) (sql.Result, error)
-		SelectFromReplicationTasks(filter *QueryFilter) ([]ReplicationTasksRow, error)
-		DeleteFromReplicationTasks(filter *QueryFilter) (sql.Result, error)
+		SelectFromReplicationTasks(filter *ReplicationTasksFilter) ([]ReplicationTasksRow, error)
+		DeleteFromReplicationTasks(filter *ReplicationTasksFilter) (sql.Result, error)
 
 		ReplaceIntoActivityInfoMaps(rows []ActivityInfoMapsRow) (sql.Result, error)
-		SelectFromActivityInfoMaps(filter *QueryFilter) ([]ActivityInfoMapsRow, error)
-		DeleteFromActivityInfoMaps(filter *QueryFilter) (sql.Result, error)
+		SelectFromActivityInfoMaps(filter *ActivityInfoMapsFilter) ([]ActivityInfoMapsRow, error)
+		DeleteFromActivityInfoMaps(filter *ActivityInfoMapsFilter) (sql.Result, error)
 
 		ReplaceIntoTimerInfoMaps(rows []TimerInfoMapsRow) (sql.Result, error)
-		SelectFromTimerInfoMaps(filter *QueryFilter) ([]TimerInfoMapsRow, error)
-		DeleteFromTimerInfoMaps(filter *QueryFilter) (sql.Result, error)
+		SelectFromTimerInfoMaps(filter *TimerInfoMapsFilter) ([]TimerInfoMapsRow, error)
+		DeleteFromTimerInfoMaps(filter *TimerInfoMapsFilter) (sql.Result, error)
 
 		ReplaceIntoChildExecutionInfoMaps(rows []ChildExecutionInfoMapsRow) (sql.Result, error)
-		SelectFromChildExecutionInfoMaps(filter *QueryFilter) ([]ChildExecutionInfoMapsRow, error)
-		DeleteFromChildExecutionInfoMaps(filter *QueryFilter) (sql.Result, error)
+		SelectFromChildExecutionInfoMaps(filter *ChildExecutionInfoMapsFilter) ([]ChildExecutionInfoMapsRow, error)
+		DeleteFromChildExecutionInfoMaps(filter *ChildExecutionInfoMapsFilter) (sql.Result, error)
 
 		ReplaceIntoRequestCancelInfoMaps(rows []RequestCancelInfoMapsRow) (sql.Result, error)
-		SelectFromRequestCancelInfoMaps(filter *QueryFilter) ([]RequestCancelInfoMapsRow, error)
-		DeleteFromRequestCancelInfoMaps(filter *QueryFilter) (sql.Result, error)
+		SelectFromRequestCancelInfoMaps(filter *RequestCancelInfoMapsFilter) ([]RequestCancelInfoMapsRow, error)
+		DeleteFromRequestCancelInfoMaps(filter *RequestCancelInfoMapsFilter) (sql.Result, error)
 
 		ReplaceIntoSignalInfoMaps(rows []SignalInfoMapsRow) (sql.Result, error)
-		SelectFromSignalInfoMaps(filter *QueryFilter) ([]SignalInfoMapsRow, error)
-		DeleteFromSignalInfoMaps(filter *QueryFilter) (sql.Result, error)
+		SelectFromSignalInfoMaps(filter *SignalInfoMapsFilter) ([]SignalInfoMapsRow, error)
+		DeleteFromSignalInfoMaps(filter *SignalInfoMapsFilter) (sql.Result, error)
 
 		ReplaceIntoBufferedReplicationTasks(rows *BufferedReplicationTaskMapsRow) (sql.Result, error)
-		SelectFromBufferedReplicationTasks(filter *QueryFilter) ([]BufferedReplicationTaskMapsRow, error)
-		DeleteFromBufferedReplicationTasks(filter *QueryFilter) (sql.Result, error)
+		SelectFromBufferedReplicationTasks(filter *BufferedReplicationTaskMapsFilter) ([]BufferedReplicationTaskMapsRow, error)
+		DeleteFromBufferedReplicationTasks(filter *BufferedReplicationTaskMapsFilter) (sql.Result, error)
 
 		InsertIntoSignalsRequestedSets(rows []SignalsRequestedSetsRow) (sql.Result, error)
-		SelectFromSignalsRequestedSets(filter *QueryFilter) ([]SignalsRequestedSetsRow, error)
-		DeleteFromSignalsRequestedSets(filter *QueryFilter) (sql.Result, error)
+		SelectFromSignalsRequestedSets(filter *SignalsRequestedSetsFilter) ([]SignalsRequestedSetsRow, error)
+		DeleteFromSignalsRequestedSets(filter *SignalsRequestedSetsFilter) (sql.Result, error)
 
 		InsertIntoVisibility(row *VisibilityRow) (sql.Result, error)
 		UpdateVisibility(row *VisibilityRow) (sql.Result, error)
-		SelectFromVisibility(filter *QueryFilter) ([]VisibilityRow, error)
+		SelectFromVisibility(filter *VisibilityFilter) ([]VisibilityRow, error)
 	}
 
 	// Tx defines the API for a SQL transaction

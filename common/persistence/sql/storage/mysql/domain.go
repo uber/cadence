@@ -127,21 +127,21 @@ func (mdb *DB) UpdateDomain(row *sqldb.DomainRow) (sql.Result, error) {
 }
 
 // SelectFromDomain reads one or more rows from domains table
-func (mdb *DB) SelectFromDomain(filter *sqldb.QueryFilter) ([]sqldb.DomainRow, error) {
-	if filter.DomainID != "" || filter.DomainName != "" {
+func (mdb *DB) SelectFromDomain(filter *sqldb.DomainFilter) ([]sqldb.DomainRow, error) {
+	if filter.ID != nil || filter.Name != nil {
 		return mdb.selectFromDomain(filter)
 	}
 	return mdb.selectAllFromDomain()
 }
 
-func (mdb *DB) selectFromDomain(filter *sqldb.QueryFilter) ([]sqldb.DomainRow, error) {
+func (mdb *DB) selectFromDomain(filter *sqldb.DomainFilter) ([]sqldb.DomainRow, error) {
 	var err error
 	var row sqldb.DomainRow
 	switch {
-	case filter.DomainID != "":
-		err = mdb.conn.Get(&row, getDomainByIDQry, filter.DomainID)
-	case filter.DomainName != "":
-		err = mdb.conn.Get(&row, getDomainByNameQry, filter.DomainName)
+	case filter.ID != nil:
+		err = mdb.conn.Get(&row, getDomainByIDQry, *filter.ID)
+	case filter.Name != nil:
+		err = mdb.conn.Get(&row, getDomainByNameQry, *filter.Name)
 	}
 	if err != nil {
 		return nil, err
@@ -156,14 +156,14 @@ func (mdb *DB) selectAllFromDomain() ([]sqldb.DomainRow, error) {
 }
 
 // DeleteFromDomain deletes a single row in domains table
-func (mdb *DB) DeleteFromDomain(filter *sqldb.QueryFilter) (sql.Result, error) {
+func (mdb *DB) DeleteFromDomain(filter *sqldb.DomainFilter) (sql.Result, error) {
 	var err error
 	var result sql.Result
 	switch {
-	case filter.DomainID != "":
-		result, err = mdb.conn.Exec(deleteDomainByIDQry, filter.DomainID)
+	case filter.ID != nil:
+		result, err = mdb.conn.Exec(deleteDomainByIDQry, filter.ID)
 	default:
-		result, err = mdb.conn.Exec(deleteDomainByNameQry, filter.DomainName)
+		result, err = mdb.conn.Exec(deleteDomainByNameQry, filter.Name)
 	}
 	return result, err
 }
