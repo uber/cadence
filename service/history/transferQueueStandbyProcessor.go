@@ -473,6 +473,10 @@ func (t *transferQueueStandbyProcessorImpl) fetchHistoryFromRemote(transferTask 
 	if !t.shard.GetConfig().EnableHistoryRereplication() {
 		return nil
 	}
+
+	t.metricsClient.IncCounter(metrics.HistoryRereplicationByTransferTaskScope, metrics.CadenceClientRequests)
+	stopwatch := t.metricsClient.StartTimer(metrics.HistoryRereplicationByTransferTaskScope, metrics.CadenceClientLatency)
+	defer stopwatch.Stop()
 	err := t.historyRereplicator.SendMultiWorkflowHistory(
 		transferTask.DomainID, transferTask.WorkflowID,
 		transferTask.RunID, nextEventID,

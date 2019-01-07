@@ -320,7 +320,7 @@ func (s *historyReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Incom
 	).Once()
 
 	err = s.historyReplicator.SyncActivity(ctx.Background(), request)
-	s.Equal(ErrRetrySyncActivity, err)
+	s.Equal(newRetryTaskErrorWithHint(ErrRetrySyncActivityMsg, domainID, workflowID, runID, nextEventID), err)
 }
 
 func (s *historyReplicatorSuite) TestSyncActivity_ActivityCompleted() {
