@@ -28,11 +28,13 @@ import (
 	"time"
 
 	"github.com/uber-common/bark"
+	"github.com/uber/cadence/.gen/go/indexer"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
@@ -50,25 +52,26 @@ var (
 
 type (
 	timerQueueProcessorBase struct {
-		scope            int
-		shard            ShardContext
-		historyService   *historyEngineImpl
-		cache            *historyCache
-		executionManager persistence.ExecutionManager
-		status           int32
-		shutdownWG       sync.WaitGroup
-		shutdownCh       chan struct{}
-		tasksCh          chan *persistence.TimerTaskInfo
-		config           *Config
-		logger           bark.Logger
-		metricsClient    metrics.Client
-		timerFiredCount  uint64
-		timerProcessor   timerProcessor
-		timerQueueAckMgr timerQueueAckMgr
-		timerGate        TimerGate
-		rateLimiter      common.TokenBucket
-		startDelay       dynamicconfig.DurationPropertyFn
-		retryPolicy      backoff.RetryPolicy
+		scope              int
+		shard              ShardContext
+		historyService     *historyEngineImpl
+		cache              *historyCache
+		executionManager   persistence.ExecutionManager
+		status             int32
+		shutdownWG         sync.WaitGroup
+		shutdownCh         chan struct{}
+		tasksCh            chan *persistence.TimerTaskInfo
+		config             *Config
+		logger             bark.Logger
+		metricsClient      metrics.Client
+		timerFiredCount    uint64
+		timerProcessor     timerProcessor
+		timerQueueAckMgr   timerQueueAckMgr
+		timerGate          TimerGate
+		rateLimiter        common.TokenBucket
+		startDelay         dynamicconfig.DurationPropertyFn
+		retryPolicy        backoff.RetryPolicy
+		visibilityProducer messaging.Producer
 
 		// worker coroutines notification
 		workerNotificationChans []chan struct{}
@@ -86,7 +89,9 @@ type (
 
 func newTimerQueueProcessorBase(scope int, shard ShardContext, historyService *historyEngineImpl,
 	timerQueueAckMgr timerQueueAckMgr, timerGate TimerGate, maxPollRPS dynamicconfig.IntPropertyFn,
-	startDelay dynamicconfig.DurationPropertyFn, logger bark.Logger) *timerQueueProcessorBase {
+	startDelay dynamicconfig.DurationPropertyFn, visibilityProducer messaging.Producer,
+	logger bark.Logger) *timerQueueProcessorBase {
+
 	log := logger.WithFields(bark.Fields{
 		logging.TagWorkflowComponent: logging.TagValueTimerQueueComponent,
 	})
@@ -118,6 +123,7 @@ func newTimerQueueProcessorBase(scope int, shard ShardContext, historyService *h
 		rateLimiter:             common.NewTokenBucket(maxPollRPS(), common.NewRealTimeSource()),
 		startDelay:              startDelay,
 		retryPolicy:             common.CreatePersistanceRetryPolicy(),
+		visibilityProducer:      visibilityProducer,
 	}
 
 	return base
@@ -569,7 +575,7 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.Ti
 		return err
 	}
 
-	return t.deleteWorkflowVisibility()
+	return t.deleteWorkflowVisibility(task)
 }
 
 func (t *timerQueueProcessorBase) deleteWorkflowExecution(task *persistence.TimerTaskInfo) error {
@@ -606,9 +612,29 @@ func (t *timerQueueProcessorBase) deleteWorkflowHistory(task *persistence.TimerT
 	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 }
 
-func (t *timerQueueProcessorBase) deleteWorkflowVisibility() error {
-	// TODO
-	return nil
+func (t *timerQueueProcessorBase) deleteWorkflowVisibility(task *persistence.TimerTaskInfo) error {
+	if t.visibilityProducer == nil {
+		return nil
+	}
+
+	msg := getVisibilityMessageForDeletion(task.DomainID, task.WorkflowID, task.RunID, task.GetTaskID())
+	op := func() error {
+		return t.visibilityProducer.Publish(msg)
+	}
+
+	return backoff.Retry(op, kafkaOperationRetryPolicy, common.IsKafkaTransientError)
+}
+
+func getVisibilityMessageForDeletion(domainID, workflowID, runID string, docVersion int64) *indexer.Message {
+	msgType := indexer.MessageTypeDelete
+	msg := &indexer.Message{
+		MessageType: &msgType,
+		DomainID:    common.StringPtr(domainID),
+		WorkflowID:  common.StringPtr(workflowID),
+		RunID:       common.StringPtr(runID),
+		Version:     common.Int64Ptr(docVersion),
+	}
+	return msg
 }
 
 func (t *timerQueueProcessorBase) getTimerTaskType(taskType int) string {
