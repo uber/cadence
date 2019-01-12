@@ -693,10 +693,9 @@ func (w *workflowResetorImpl) ApplyResetEvent(ctx context.Context, request *h.Re
 	retError = currContext.resetWorkflowExecution(currMutableState, false, nil, nil, newMsBuilder, newRunTransferTasks, newRunTimerTasks, nil, forkExecution.GetRunId(), forkMutableState.GetNextEventID(), prevRunVersion)
 	if retError != nil {
 		return
-	} else {
-		now := time.Unix(0, lastEvent.GetTimestamp())
-		w.replicator.notify(request.GetSourceCluster(), now, newRunTransferTasks, newRunTimerTasks)
 	}
+	now := time.Unix(0, lastEvent.GetTimestamp())
+	w.replicator.notify(request.GetSourceCluster(), now, newRunTransferTasks, newRunTimerTasks)
 	return nil
 }
 
