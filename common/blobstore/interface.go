@@ -23,15 +23,12 @@ package blobstore
 import (
 	"context"
 	"errors"
-	"io"
+	"strings"
 )
 
-// CompressionType defines the type of compression used for a blob
-type CompressionType int
-
 const (
-	// NoCompression indicates that blob is not compressed
-	NoCompression CompressionType = iota
+	// KeySeparator separates pieces of a key
+	KeySeparator = "_"
 )
 
 var (
@@ -41,22 +38,36 @@ var (
 	ErrBucketNotExists = errors.New("requested bucket does not exist")
 )
 
-// Blob defines a blob
-type Blob struct {
-	Body            io.Reader
-	CompressionType CompressionType
-	Tags            map[string]string
-}
+type (
+	// Blob defines a blob
+	Blob struct {
+		Body []byte
+		Tags map[string]string
+	}
 
-// BucketMetadataResponse contains information relating to a bucket's configuration
-type BucketMetadataResponse struct {
-	Owner         string
-	RetentionDays int
-}
+	// BucketMetadataResponse contains information relating to a bucket's configuration
+	BucketMetadataResponse struct {
+		Owner         string
+		RetentionDays int
+	}
+)
 
 // Client is used to operate on blobs in a blobstore
 type Client interface {
-	UploadBlob(ctx context.Context, bucket string, filename string, blob *Blob) error
-	DownloadBlob(ctx context.Context, bucket string, filename string) (*Blob, error)
+	Upload(ctx context.Context, bucket string, key string, blob *Blob) error
+	Download(ctx context.Context, bucket string, key string) (*Blob, error)
+	Exists(ctx context.Context, bucket string, key string) (bool, error)
+	Delete(ctx context.Context, bucket string, key string) (bool, error)
+	ListByPrefix(ctx context.Context, bucket string, prefix string) ([]string, error)
 	BucketMetadata(ctx context.Context, bucket string) (*BucketMetadataResponse, error)
+}
+
+// ConstructKey constructs a blob key based upon name pieces
+func ConstructKey(pieces ...string) (string, error) {
+	for _, p := range pieces {
+		if strings.Contains(p, KeySeparator) {
+			return "", errors.New("key pieces cannot contain underscore")
+		}
+	}
+	return strings.Join(pieces, KeySeparator), nil
 }
