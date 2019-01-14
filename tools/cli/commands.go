@@ -176,7 +176,7 @@ const (
 	defaultContextTimeoutForLongPoll = 2 * time.Minute
 	defaultDecisionTimeoutInSeconds  = 10
 	defaultPageSizeForList           = 500
-	defaultWorkflowIDReusePolicy     = shared.WorkflowIdReusePolicyAllowDuplicateFailedOnly
+	defaultWorkflowIDReusePolicy     = s.WorkflowIdReusePolicyAllowDuplicateFailedOnly
 
 	workflowStatusNotSet = -1
 	showErrorStackEnv    = `CADENCE_CLI_SHOW_STACKS`
@@ -536,7 +536,7 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 
 // StartWorkflow starts a new workflow execution
 func StartWorkflow(c *cli.Context) {
-	serviceClient := cFactory.ServerFrontendClient(c)
+	serviceClient := cFactory.ClientFrontendClient(c)
 
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	taskList := getRequiredOption(c, FlagTaskList)
@@ -560,14 +560,14 @@ func StartWorkflow(c *cli.Context) {
 	tcCtx, cancel := newContext()
 	defer cancel()
 
-	startRequest := &shared.StartWorkflowExecutionRequest{
+	startRequest := &s.StartWorkflowExecutionRequest{
 		RequestId:  common.StringPtr(uuid.New()),
 		Domain:     common.StringPtr(domain),
 		WorkflowId: common.StringPtr(wid),
-		WorkflowType: &shared.WorkflowType{
+		WorkflowType: &s.WorkflowType{
 			Name: common.StringPtr(workflowType),
 		},
-		TaskList: &shared.TaskList{
+		TaskList: &s.TaskList{
 			Name: common.StringPtr(taskList),
 		},
 		Input:                               []byte(input),
@@ -592,7 +592,7 @@ func StartWorkflow(c *cli.Context) {
 
 // RunWorkflow starts a new workflow execution and print workflow progress and result
 func RunWorkflow(c *cli.Context) {
-	serviceClient := cFactory.ServerFrontendClient(c)
+	serviceClient := cFactory.ClientFrontendClient(c)
 
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	taskList := getRequiredOption(c, FlagTaskList)
@@ -620,14 +620,14 @@ func RunWorkflow(c *cli.Context) {
 	tcCtx, cancel := newContextForLongPoll(contextTimeout)
 	defer cancel()
 
-	startRequest := &shared.StartWorkflowExecutionRequest{
+	startRequest := &s.StartWorkflowExecutionRequest{
 		RequestId:  common.StringPtr(uuid.New()),
 		Domain:     common.StringPtr(domain),
 		WorkflowId: common.StringPtr(wid),
-		WorkflowType: &shared.WorkflowType{
+		WorkflowType: &s.WorkflowType{
 			Name: common.StringPtr(workflowType),
 		},
-		TaskList: &shared.TaskList{
+		TaskList: &s.TaskList{
 			Name: common.StringPtr(taskList),
 		},
 		Input:                               []byte(input),
@@ -1408,9 +1408,9 @@ func getWorkflowStatus(statusStr string) s.WorkflowExecutionCloseStatus {
 	return 0
 }
 
-func getWorkflowIDReusePolicy(value int) *shared.WorkflowIdReusePolicy {
+func getWorkflowIDReusePolicy(value int) *s.WorkflowIdReusePolicy {
 	if value >= 0 && value <= len(s.WorkflowIdReusePolicy_Values()) {
-		return shared.WorkflowIdReusePolicy(value).Ptr()
+		return s.WorkflowIdReusePolicy(value).Ptr()
 	}
 	// At this point, the policy should return if the value is valid
 	ErrorAndExit(fmt.Sprintf("Option %v value is not in supported range.", FlagWorkflowIDReusePolicy), nil)
