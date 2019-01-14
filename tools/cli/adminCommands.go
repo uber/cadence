@@ -102,7 +102,7 @@ func AdminShowWorkflow(c *cli.Context) {
 		if err != nil {
 			ErrorAndExit("DeserializeBatchEvents err", err)
 		}
-		allEvents.Events = append(allEvents.Events, historyBatch)
+		allEvents.Events = append(allEvents.Events, historyBatch...)
 		for _, e := range historyBatch {
 			jsonstr, err := json.Marshal(e)
 			if err != nil {
