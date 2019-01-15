@@ -265,7 +265,6 @@ func (w *workflowResetorImpl) failStartedActivities(msBuilder mutableState) erro
 				// Unable to add ActivityTaskFailed event to history
 				return &workflow.InternalServiceError{Message: "Unable to add ActivityTaskFailed event to mutableState."}
 			}
-			continue
 		}
 	}
 	return nil
@@ -401,7 +400,7 @@ func (w *workflowResetorImpl) generateReplicationTasksForReset(terminateCurr boo
 	var repTasks []persistence.Task
 	if newMutableState.GetReplicationState() != nil {
 		if terminateCurr {
-			// we will 2 replication tasks for this case
+			// we will generate 2 replication tasks for this case
 			firstEventIDForCurr := w.setEventIDsWithHistory(currMutableState)
 			if domainEntry.CanReplicateEvent() {
 				replicationTask := &persistence.HistoryReplicationTask{
@@ -628,9 +627,9 @@ func (w *workflowResetorImpl) ApplyResetEvent(ctx context.Context, request *h.Re
 		RunId:      common.StringPtr(forkAttr.GetForkRunId()),
 	}
 
-	forkContext, forkRelease, retError := w.eng.historyCache.getOrCreateWorkflowExecutionWithTimeout(ctx, domainID, forkExecution)
-	if retError != nil {
-		return retError
+	forkContext, forkRelease, forkErr := w.eng.historyCache.getOrCreateWorkflowExecutionWithTimeout(ctx, domainID, forkExecution)
+	if forkErr != nil {
+		return forkErr
 	}
 	defer func() { forkRelease(retError) }()
 	forkMutableState, retError = forkContext.loadWorkflowExecution()
@@ -651,9 +650,10 @@ func (w *workflowResetorImpl) ApplyResetEvent(ctx context.Context, request *h.Re
 			WorkflowId: forkExecution.WorkflowId,
 			RunId:      common.StringPtr(currentRunID),
 		}
-		currContext, currRelease, retError = w.eng.historyCache.getOrCreateWorkflowExecutionWithTimeout(ctx, domainID, currExecution)
-		if retError != nil {
-			return retError
+		var currErr error
+		currContext, currRelease, currErr = w.eng.historyCache.getOrCreateWorkflowExecutionWithTimeout(ctx, domainID, currExecution)
+		if currErr != nil {
+			return currErr
 		}
 		defer func() { currRelease(retError) }()
 		currMutableState, retError = currContext.loadWorkflowExecution()
