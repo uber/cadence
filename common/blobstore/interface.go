@@ -37,6 +37,7 @@ var (
 	// ErrBucketNotExists indicates that requested bucket does not exist
 	ErrBucketNotExists = errors.New("requested bucket does not exist")
 )
+
 // BucketMetadataResponse contains information relating to a bucket's configuration
 type BucketMetadataResponse struct {
 	Owner         string

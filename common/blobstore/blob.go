@@ -1,3 +1,23 @@
+// Copyright (c) 2017 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 package blobstore
 
 import (
@@ -6,80 +26,138 @@ import (
 	"fmt"
 	"io/ioutil"
 )
-// Blob defines a blob
-type Blob struct {
-	Body []byte
-	Tags map[string]string
-}
+
+/**
+
+In order to add a new compression format do the following:
+- Add a new compression constant
+- Change Compress method to use new compression package
+- Add a case to Decompress to handle new compression format
+- Update unit tests
+
+ */
 
 const (
-	// NoCompression indicates that no compression was used
-	NoCompression = "none"
-	// Gzip indicates that "compress/gzip" package was used
-	Gzip = "compression/gzip"
+	compressionTag = "compression"
 
-	// Compression is the metadata tag name used to identify a blob's compression
-	Compression = "Compression"
-	// InUseCompression is the compression being used
-	InUseCompression = Gzip
+	// following are all compression formats that have ever been used, names should describe the package that was used for compression
+	noCompression = "none"
+	gzipCompression = "compression/gzip"
 )
 
 var (
-	errBlobAlreadyCompressed = fmt.Errorf("cannot compress blob which already specifies %v in metadata", Compression)
-	errCompressionTagNotFound = fmt.Errorf("cannot decompress blob, %v metadata tag not found", Compression)
+	errBlobAlreadyCompressed  = fmt.Errorf("cannot compress blob, %v tag already specified", compressionTag)
+	errBlobAlreadyDecompressed = fmt.Errorf("cannot decompress blob, does not have %v tag", compressionTag)
 )
 
-// Compress modifies blob to be in compressed form
-func (b *Blob) Compress() error {
-	if _, ok := b.Tags[Compression]; ok {
-		return errBlobAlreadyCompressed
+type (
+	Blob interface {
+		Body() []byte
+		Tags() map[string]string
+		Compress() (Blob, error)
+		Decompress() (Blob, error)
 	}
-	b.Tags[Compression] = InUseCompression
+
+	blob struct {
+		body []byte
+		tags map[string]string
+	}
+)
+
+// NewBlob constructs blob with body and tags
+func NewBlob(body []byte, tags map[string]string) Blob {
+	return &blob{
+		body: body,
+		tags: tags,
+	}
+}
+
+// Body returns blob's body
+func (b *blob) Body() []byte {
+	return b.body
+}
+
+// Tags returns blob's tags
+func (b *blob) Tags() map[string]string {
+	return b.tags
+}
+
+// Compress compresses blob returning a new blob. Returned Blob does not share any references with this Blob.
+func (b *blob) Compress() (Blob, error) {
+	if _, ok := b.tags[compressionTag]; ok {
+		return nil, errBlobAlreadyCompressed
+	}
 	var buf bytes.Buffer
 	w := gzip.NewWriter(&buf)
-	if _, err := w.Write(b.Body); err != nil {
-		// cannot call Close in defer because some bytes may not be written to underlying writer until Close is called
+	if _, err := w.Write(b.body); err != nil {
 		w.Close()
-		return err
+		return nil, err
 	}
+	// must call close before accessing buf.Bytes()
 	w.Close()
-	b.Body = buf.Bytes()
-	return nil
+
+	compressedBody := buf.Bytes()
+	tags := duplicateTags(b.tags)
+	tags[compressionTag] = gzipCompression
+	return &blob{
+		tags: tags,
+		body: compressedBody,
+	}, nil
 }
 
-// Decompress modifies blob to be in decompressed form
-func (b *Blob) Decompress() error {
-	if _, ok := b.Tags[Compression]; !ok {
-		return errCompressionTagNotFound
+// Decompress decompresses blob returning a new blob. Returned Blob does not share any references with this Blob.
+func (b *blob) Decompress() (Blob, error) {
+	if _, ok := b.tags[compressionTag]; !ok {
+		return nil, errBlobAlreadyDecompressed
 	}
-	compressionUsed := b.Tags[Compression]
-	delete(b.Tags, Compression)
-	switch compressionUsed {
-	case NoCompression:
-		return nil
-	case Gzip:
-		decompressedBody, err := decompressGzipBytes(b.Body)
+	compression := b.tags[compressionTag]
+	tags := duplicateTags(b.tags)
+	delete(tags, compressionTag)
+
+	switch compression {
+	case noCompression:
+		return &blob{
+			tags: tags,
+			body: duplicateBody(b.body),
+		}, nil
+	case gzipCompression:
+		dBody, err := gzipDecompress(b.body)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		b.Body = decompressedBody
-		return nil
+		return &blob{
+			tags: tags,
+			body: dBody,
+		}, nil
 	default:
-		return fmt.Errorf("blob has unknown compression of %v, cannot decompress", compressionUsed)
+		// this should never happen
+		return nil, fmt.Errorf("blob has unknown compression of %v, cannot decompress", compression)
 	}
 }
 
-func decompressGzipBytes(data []byte) ([]byte, error) {
-	reader, err := gzip.NewReader(bytes.NewReader(data))
+func gzipDecompress(data []byte) ([]byte, error) {
+	r, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
 		return nil, err
 	}
-	defer func () {
-		reader.Close()
+	defer func() {
+		r.Close()
 	}()
-	decompressedData, err := ioutil.ReadAll(reader)
-	if err != nil {
-		return nil, err
+	return ioutil.ReadAll(r)
+}
+
+func duplicateTags(tags map[string]string) map[string]string {
+	result := make(map[string]string, len(tags))
+	for k, v := range tags {
+		result[k] = v
 	}
-	return decompressedData, nil
+	return result
+}
+
+func duplicateBody(body []byte) []byte {
+	result := make([]byte, len(body), len(body))
+	for i, b := range body {
+		result[i] = b
+	}
+	return result
 }
