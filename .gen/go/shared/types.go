@@ -24574,8 +24574,8 @@ type RegisterDomainRequest struct {
 	ActiveClusterName                      *string                            `json:"activeClusterName,omitempty"`
 	Data                                   map[string]string                  `json:"data,omitempty"`
 	SecurityToken                          *string                            `json:"securityToken,omitempty"`
-	EnableArchival                         *bool                              `json:"enableArchival,omitempty"`
-	CustomArchivalBucketName               *string                            `json:"customArchivalBucketName,omitempty"`
+	ArchivalStatus                         *ArchivalStatus                    `json:"archivalStatus,omitempty"`
+	ArchivalBucketName                     *string                            `json:"archivalBucketName,omitempty"`
 }
 
 // ToWire translates a RegisterDomainRequest struct into a Thrift-level intermediate
@@ -24673,16 +24673,16 @@ func (v *RegisterDomainRequest) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 90, Value: w}
 		i++
 	}
-	if v.EnableArchival != nil {
-		w, err = wire.NewValueBool(*(v.EnableArchival)), error(nil)
+	if v.ArchivalStatus != nil {
+		w, err = v.ArchivalStatus.ToWire()
 		if err != nil {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 100, Value: w}
 		i++
 	}
-	if v.CustomArchivalBucketName != nil {
-		w, err = wire.NewValueString(*(v.CustomArchivalBucketName)), error(nil)
+	if v.ArchivalBucketName != nil {
+		w, err = wire.NewValueString(*(v.ArchivalBucketName)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -24802,10 +24802,10 @@ func (v *RegisterDomainRequest) FromWire(w wire.Value) error {
 
 			}
 		case 100:
-			if field.Value.Type() == wire.TBool {
-				var x bool
-				x, err = field.Value.GetBool(), error(nil)
-				v.EnableArchival = &x
+			if field.Value.Type() == wire.TI32 {
+				var x ArchivalStatus
+				x, err = _ArchivalStatus_Read(field.Value)
+				v.ArchivalStatus = &x
 				if err != nil {
 					return err
 				}
@@ -24815,7 +24815,7 @@ func (v *RegisterDomainRequest) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TBinary {
 				var x string
 				x, err = field.Value.GetString(), error(nil)
-				v.CustomArchivalBucketName = &x
+				v.ArchivalBucketName = &x
 				if err != nil {
 					return err
 				}
@@ -24872,12 +24872,12 @@ func (v *RegisterDomainRequest) String() string {
 		fields[i] = fmt.Sprintf("SecurityToken: %v", *(v.SecurityToken))
 		i++
 	}
-	if v.EnableArchival != nil {
-		fields[i] = fmt.Sprintf("EnableArchival: %v", *(v.EnableArchival))
+	if v.ArchivalStatus != nil {
+		fields[i] = fmt.Sprintf("ArchivalStatus: %v", *(v.ArchivalStatus))
 		i++
 	}
-	if v.CustomArchivalBucketName != nil {
-		fields[i] = fmt.Sprintf("CustomArchivalBucketName: %v", *(v.CustomArchivalBucketName))
+	if v.ArchivalBucketName != nil {
+		fields[i] = fmt.Sprintf("ArchivalBucketName: %v", *(v.ArchivalBucketName))
 		i++
 	}
 
@@ -24921,10 +24921,10 @@ func (v *RegisterDomainRequest) Equals(rhs *RegisterDomainRequest) bool {
 	if !_String_EqualsPtr(v.SecurityToken, rhs.SecurityToken) {
 		return false
 	}
-	if !_Bool_EqualsPtr(v.EnableArchival, rhs.EnableArchival) {
+	if !_ArchivalStatus_EqualsPtr(v.ArchivalStatus, rhs.ArchivalStatus) {
 		return false
 	}
-	if !_String_EqualsPtr(v.CustomArchivalBucketName, rhs.CustomArchivalBucketName) {
+	if !_String_EqualsPtr(v.ArchivalBucketName, rhs.ArchivalBucketName) {
 		return false
 	}
 
@@ -24964,11 +24964,11 @@ func (v *RegisterDomainRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err
 	if v.SecurityToken != nil {
 		enc.AddString("securityToken", *v.SecurityToken)
 	}
-	if v.EnableArchival != nil {
-		enc.AddBool("enableArchival", *v.EnableArchival)
+	if v.ArchivalStatus != nil {
+		err = multierr.Append(err, enc.AddObject("archivalStatus", *v.ArchivalStatus))
 	}
-	if v.CustomArchivalBucketName != nil {
-		enc.AddString("customArchivalBucketName", *v.CustomArchivalBucketName)
+	if v.ArchivalBucketName != nil {
+		enc.AddString("archivalBucketName", *v.ArchivalBucketName)
 	}
 	return err
 }
@@ -25063,21 +25063,21 @@ func (v *RegisterDomainRequest) GetSecurityToken() (o string) {
 	return
 }
 
-// GetEnableArchival returns the value of EnableArchival if it is set or its
+// GetArchivalStatus returns the value of ArchivalStatus if it is set or its
 // zero value if it is unset.
-func (v *RegisterDomainRequest) GetEnableArchival() (o bool) {
-	if v.EnableArchival != nil {
-		return *v.EnableArchival
+func (v *RegisterDomainRequest) GetArchivalStatus() (o ArchivalStatus) {
+	if v.ArchivalStatus != nil {
+		return *v.ArchivalStatus
 	}
 
 	return
 }
 
-// GetCustomArchivalBucketName returns the value of CustomArchivalBucketName if it is set or its
+// GetArchivalBucketName returns the value of ArchivalBucketName if it is set or its
 // zero value if it is unset.
-func (v *RegisterDomainRequest) GetCustomArchivalBucketName() (o string) {
-	if v.CustomArchivalBucketName != nil {
-		return *v.CustomArchivalBucketName
+func (v *RegisterDomainRequest) GetArchivalBucketName() (o string) {
+	if v.ArchivalBucketName != nil {
+		return *v.ArchivalBucketName
 	}
 
 	return
