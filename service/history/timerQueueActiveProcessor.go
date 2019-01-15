@@ -208,7 +208,6 @@ func (t *timerQueueActiveProcessorImpl) process(timerTask *persistence.TimerTask
 	if err != nil {
 		return metrics.TimerActiveQueueProcessorScope, err
 	} else if !ok {
-		t.timerQueueAckMgr.completeTimerTask(timerTask)
 		t.logger.Debugf("Discarding timer: (%v, %v), for WorkflowID: %v, RunID: %v, Type: %v, EventID: %v, Error: %v",
 			timerTask.TaskID, timerTask.VisibilityTimestamp, timerTask.WorkflowID, timerTask.RunID, timerTask.TaskType, timerTask.EventID, err)
 		return metrics.TimerActiveQueueProcessorScope, nil
@@ -242,7 +241,6 @@ func (t *timerQueueActiveProcessorImpl) process(timerTask *persistence.TimerTask
 }
 
 func (t *timerQueueActiveProcessorImpl) processExpiredUserTimer(task *persistence.TimerTaskInfo) (retError error) {
-
 	context, release, err0 := t.cache.getOrCreateWorkflowExecution(t.timerQueueProcessorBase.getDomainIDAndWorkflowExecution(task))
 	if err0 != nil {
 		return err0

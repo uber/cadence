@@ -143,8 +143,8 @@ type Config struct {
 func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, enableVisibilityToKafka bool) *Config {
 	return &Config{
 		NumberOfShards:                                        numberOfShards,
-		EnableSyncActivityHeartbeat:                           dc.GetBoolProperty(dynamicconfig.EnableSyncActivityHeartbeat, false),
-		EnableHistoryRereplication:                            dc.GetBoolProperty(dynamicconfig.EnableHistoryRereplication, false),
+		EnableSyncActivityHeartbeat:                           dc.GetBoolProperty(dynamicconfig.EnableSyncActivityHeartbeat, true),
+		EnableHistoryRereplication:                            dc.GetBoolProperty(dynamicconfig.EnableHistoryRereplication, true),
 		RPS:                                                   dc.GetIntProperty(dynamicconfig.HistoryRPS, 3000),
 		MaxIDLengthLimit:                                      dc.GetIntProperty(dynamicconfig.MaxIDLengthLimit, 1000),
 		PersistenceMaxQPS:                                     dc.GetIntProperty(dynamicconfig.HistoryPersistenceMaxQPS, 9000),
