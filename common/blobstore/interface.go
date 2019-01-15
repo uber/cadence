@@ -37,20 +37,11 @@ var (
 	// ErrBucketNotExists indicates that requested bucket does not exist
 	ErrBucketNotExists = errors.New("requested bucket does not exist")
 )
-
-type (
-	// Blob defines a blob
-	Blob struct {
-		Body []byte
-		Tags map[string]string
-	}
-
-	// BucketMetadataResponse contains information relating to a bucket's configuration
-	BucketMetadataResponse struct {
-		Owner         string
-		RetentionDays int
-	}
-)
+// BucketMetadataResponse contains information relating to a bucket's configuration
+type BucketMetadataResponse struct {
+	Owner         string
+	RetentionDays int
+}
 
 // Client is used to operate on blobs in a blobstore
 type Client interface {
