@@ -3934,7 +3934,7 @@ func (s *resetorSuite) TestApplyReset() {
 					Details:          nil,
 					Identity:         common.StringPtr(identityHistoryService),
 					Reason:           common.StringPtr("resetWFtest"),
-					ForkRunId:        common.StringPtr(forkRunID),
+					BaseRunId:        common.StringPtr(forkRunID),
 					NewRunId:         common.StringPtr(newRunID),
 					ForkEventVersion: common.Int64Ptr(currentVersion),
 				},

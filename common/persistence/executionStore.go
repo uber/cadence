@@ -561,8 +561,8 @@ func (m *executionManagerImpl) ResetWorkflowExecution(request *ResetWorkflowExec
 		Condition: request.Condition,
 		RangeID:   request.RangeID,
 
-		ForkRunID:          request.ForkRunID,
-		ForkRunNextEventID: request.ForkRunNextEventID,
+		BaseRunID:          request.BaseRunID,
+		BaseRunNextEventID: request.BaseRunNextEventID,
 
 		UpdateCurr:           request.UpdateCurr,
 		CurrExecutionInfo:    currExecution,

@@ -1918,17 +1918,17 @@ func (d *cassandraPersistence) ResetWorkflowExecution(request *p.InternalResetWo
 	// for forkRun, check condition without updating anything to make sure the forkRun hasn't been deleted.
 	// Without this check, it will run into race condition with deleteHistoryEvent timer task
 	// we only do it when forkRun != currentRun
-	if request.ForkRunID != currExecutionInfo.RunID {
+	if request.BaseRunID != currExecutionInfo.RunID {
 		batch.Query(templateCheckWorkflowExecutionQuery,
-			request.ForkRunNextEventID,
+			request.BaseRunNextEventID,
 			d.shardID,
 			rowTypeExecution,
 			currExecutionInfo.DomainID,
 			currExecutionInfo.WorkflowID,
-			request.ForkRunID,
+			request.BaseRunID,
 			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID,
-			request.ForkRunNextEventID,
+			request.BaseRunNextEventID,
 		)
 	}
 

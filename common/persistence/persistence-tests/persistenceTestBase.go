@@ -847,8 +847,8 @@ func (s *TestBase) ResetWorkflowExecution(condition int64, info *p.WorkflowExecu
 	}
 
 	return s.ExecutionManager.ResetWorkflowExecution(&p.ResetWorkflowExecutionRequest{
-		ForkRunID:          forkRunID,
-		ForkRunNextEventID: forkRunNextEventID,
+		BaseRunID:          forkRunID,
+		BaseRunNextEventID: forkRunNextEventID,
 
 		PrevRunVersion: prevRunVersion,
 		PrevRunState:   prevRunState,

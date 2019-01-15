@@ -8262,7 +8262,7 @@ type DecisionTaskFailedEventAttributes struct {
 	Details          []byte                   `json:"details,omitempty"`
 	Identity         *string                  `json:"identity,omitempty"`
 	Reason           *string                  `json:"reason,omitempty"`
-	ForkRunId        *string                  `json:"forkRunId,omitempty"`
+	BaseRunId        *string                  `json:"baseRunId,omitempty"`
 	NewRunId         *string                  `json:"newRunId,omitempty"`
 	ForkEventVersion *int64                   `json:"forkEventVersion,omitempty"`
 }
@@ -8338,8 +8338,8 @@ func (v *DecisionTaskFailedEventAttributes) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 50, Value: w}
 		i++
 	}
-	if v.ForkRunId != nil {
-		w, err = wire.NewValueString(*(v.ForkRunId)), error(nil)
+	if v.BaseRunId != nil {
+		w, err = wire.NewValueString(*(v.BaseRunId)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -8456,7 +8456,7 @@ func (v *DecisionTaskFailedEventAttributes) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TBinary {
 				var x string
 				x, err = field.Value.GetString(), error(nil)
-				v.ForkRunId = &x
+				v.BaseRunId = &x
 				if err != nil {
 					return err
 				}
@@ -8521,8 +8521,8 @@ func (v *DecisionTaskFailedEventAttributes) String() string {
 		fields[i] = fmt.Sprintf("Reason: %v", *(v.Reason))
 		i++
 	}
-	if v.ForkRunId != nil {
-		fields[i] = fmt.Sprintf("ForkRunId: %v", *(v.ForkRunId))
+	if v.BaseRunId != nil {
+		fields[i] = fmt.Sprintf("BaseRunId: %v", *(v.BaseRunId))
 		i++
 	}
 	if v.NewRunId != nil {
@@ -8575,7 +8575,7 @@ func (v *DecisionTaskFailedEventAttributes) Equals(rhs *DecisionTaskFailedEventA
 	if !_String_EqualsPtr(v.Reason, rhs.Reason) {
 		return false
 	}
-	if !_String_EqualsPtr(v.ForkRunId, rhs.ForkRunId) {
+	if !_String_EqualsPtr(v.BaseRunId, rhs.BaseRunId) {
 		return false
 	}
 	if !_String_EqualsPtr(v.NewRunId, rhs.NewRunId) {
@@ -8612,8 +8612,8 @@ func (v *DecisionTaskFailedEventAttributes) MarshalLogObject(enc zapcore.ObjectE
 	if v.Reason != nil {
 		enc.AddString("reason", *v.Reason)
 	}
-	if v.ForkRunId != nil {
-		enc.AddString("forkRunId", *v.ForkRunId)
+	if v.BaseRunId != nil {
+		enc.AddString("baseRunId", *v.BaseRunId)
 	}
 	if v.NewRunId != nil {
 		enc.AddString("newRunId", *v.NewRunId)
@@ -8684,11 +8684,11 @@ func (v *DecisionTaskFailedEventAttributes) GetReason() (o string) {
 	return
 }
 
-// GetForkRunId returns the value of ForkRunId if it is set or its
+// GetBaseRunId returns the value of BaseRunId if it is set or its
 // zero value if it is unset.
-func (v *DecisionTaskFailedEventAttributes) GetForkRunId() (o string) {
-	if v.ForkRunId != nil {
-		return *v.ForkRunId
+func (v *DecisionTaskFailedEventAttributes) GetBaseRunId() (o string) {
+	if v.BaseRunId != nil {
+		return *v.BaseRunId
 	}
 
 	return

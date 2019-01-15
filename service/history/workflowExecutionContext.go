@@ -55,7 +55,7 @@ type (
 		appendFirstBatchHistoryForContinueAsNew(newStateBuilder mutableState, transactionID int64) error
 		replicateWorkflowExecution(request *h.ReplicateEventsRequest, transferTasks []persistence.Task, timerTasks []persistence.Task, lastEventID, transactionID int64, now time.Time) error
 		resetMutableState(prevRunID string, resetBuilder mutableState) (mutableState, error)
-		resetWorkflowExecution(currMutableState mutableState, updateCurr bool, closeTask, cleanupTask persistence.Task, newMutableState mutableState, transferTasks, timerTasks, replicationTasks []persistence.Task, forkRunID string, forkRunNextEventID, prevRunVersion int64) (retError error)
+		resetWorkflowExecution(currMutableState mutableState, updateCurr bool, closeTask, cleanupTask persistence.Task, newMutableState mutableState, transferTasks, timerTasks, replicationTasks []persistence.Task, baseRunID string, forkRunNextEventID, prevRunVersion int64) (retError error)
 		scheduleNewDecision(transferTasks []persistence.Task, timerTasks []persistence.Task) ([]persistence.Task, []persistence.Task, error)
 		unlock()
 		updateHelper(transferTasks []persistence.Task, timerTasks []persistence.Task, transactionID int64, now time.Time, createReplicationTask bool, standbyHistoryBuilder *historyBuilder, sourceCluster string) error
@@ -189,7 +189,7 @@ func (c *workflowExecutionContextImpl) resetMutableState(prevRunID string, reset
 // 1. append history to new run
 // 2. append history to current run if current run is not closed
 // 3. update mutableState(terminate current run if not closed) and create new run
-func (c *workflowExecutionContextImpl) resetWorkflowExecution(currMutableState mutableState, updateCurr bool, closeTask, cleanupTask persistence.Task, newMutableState mutableState, transferTasks, timerTasks, replicationTasks []persistence.Task, forkRunID string, forkRunNextEventID, prevRunVersion int64) (retError error) {
+func (c *workflowExecutionContextImpl) resetWorkflowExecution(currMutableState mutableState, updateCurr bool, closeTask, cleanupTask persistence.Task, newMutableState mutableState, transferTasks, timerTasks, replicationTasks []persistence.Task, baseRunID string, baseRunNextEventID, prevRunVersion int64) (retError error) {
 
 	transactionID, retError := c.shard.GetNextTransferTaskID()
 	if retError != nil {
@@ -257,8 +257,8 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(currMutableState m
 		Condition:  c.updateCondition,
 		UpdateCurr: updateCurr,
 
-		ForkRunID:          forkRunID,
-		ForkRunNextEventID: forkRunNextEventID,
+		BaseRunID:          baseRunID,
+		BaseRunNextEventID: baseRunNextEventID,
 
 		CurrExecutionInfo:    currMutableState.GetExecutionInfo(),
 		CurrReplicationState: currMutableState.GetReplicationState(),
