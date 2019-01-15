@@ -840,11 +840,18 @@ func (s *TestBase) ResetWorkflowExecution(condition int64, info *p.WorkflowExecu
 	requestCancelInfos []*p.RequestCancelInfo, signalInfos []*p.SignalInfo, ids []string, trasTasks, timerTasks, replTasks []p.Task,
 	updateCurr bool, currInfo *p.WorkflowExecutionInfo, currReplicationState *p.ReplicationState,
 	currTrasTasks, currTimerTasks []p.Task, forkRunID string, forkRunNextEventID int64, prevRunVersion int64) error {
+
+	prevRunState := p.WorkflowStateCompleted
+	if updateCurr {
+		prevRunState = p.WorkflowStateRunning
+	}
+
 	return s.ExecutionManager.ResetWorkflowExecution(&p.ResetWorkflowExecutionRequest{
 		ForkRunID:          forkRunID,
 		ForkRunNextEventID: forkRunNextEventID,
 
 		PrevRunVersion: prevRunVersion,
+		PrevRunState:   prevRunState,
 
 		Condition: condition,
 		RangeID:   s.ShardInfo.RangeID,

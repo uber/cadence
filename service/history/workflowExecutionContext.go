@@ -245,8 +245,14 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(currMutableState m
 		currTimerTasks = []persistence.Task{cleanupTask}
 	}
 
+	// NOTE: workflow_state in current record is either completed(2) or running(1), there is no 0(created)
+	prevRunState := persistence.WorkflowStateCompleted
+	if updateCurr {
+		prevRunState = persistence.WorkflowStateRunning
+	}
 	resetWFReq := &persistence.ResetWorkflowExecutionRequest{
 		PrevRunVersion: prevRunVersion,
+		PrevRunState:   prevRunState,
 
 		Condition:  c.updateCondition,
 		UpdateCurr: updateCurr,

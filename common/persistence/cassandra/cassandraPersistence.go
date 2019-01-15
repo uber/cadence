@@ -1892,11 +1892,6 @@ func (d *cassandraPersistence) ResetWorkflowExecution(request *p.InternalResetWo
 			currExecutionInfo.RunID,
 		)
 	} else {
-		// NOTE: workflow_state is either 1 or 2, there is no 0(created)
-		prevRunState := 2
-		if request.UpdateCurr {
-			prevRunState = 1
-		}
 		batch.Query(templateUpdateCurrentWorkflowExecutionForNewQuery,
 			insertExecutionInfo.RunID,
 			insertExecutionInfo.RunID,
@@ -1916,7 +1911,7 @@ func (d *cassandraPersistence) ResetWorkflowExecution(request *p.InternalResetWo
 			rowTypeExecutionTaskID,
 			currExecutionInfo.RunID,
 			request.PrevRunVersion,
-			prevRunState,
+			request.PrevRunState,
 		)
 	}
 

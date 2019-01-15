@@ -300,6 +300,7 @@ type (
 	// InternalResetWorkflowExecutionRequest is used to reset workflow execution state  for Persistence Interface
 	InternalResetWorkflowExecutionRequest struct {
 		PrevRunVersion int64
+		PrevRunState   int
 
 		Condition int64
 		RangeID   int64

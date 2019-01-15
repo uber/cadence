@@ -766,6 +766,7 @@ type (
 
 		// for current workflow record
 		PrevRunVersion int64
+		PrevRunState   int
 
 		// for shard record
 		RangeID int64

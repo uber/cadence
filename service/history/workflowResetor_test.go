@@ -2067,6 +2067,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	resetReq, ok := resetCall.Arguments[0].(*p.ResetWorkflowExecutionRequest)
 	s.Equal(true, ok)
 	s.Equal(true, resetReq.UpdateCurr)
+	s.Equal(p.WorkflowStateRunning, resetReq.PrevRunState)
 	compareCurrExeInfo.State = p.WorkflowStateCompleted
 	compareCurrExeInfo.CloseStatus = p.WorkflowCloseStatusTerminated
 	compareCurrExeInfo.NextEventID = 2
@@ -3354,6 +3355,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 	resetReq, ok := resetCall.Arguments[0].(*p.ResetWorkflowExecutionRequest)
 	s.Equal(true, ok)
 	s.Equal(false, resetReq.UpdateCurr)
+	s.Equal(p.WorkflowStateCompleted, resetReq.PrevRunState)
 	s.Equal(compareCurrExeInfo, resetReq.CurrExecutionInfo)
 	s.Equal(0, len(resetReq.CurrTransferTasks))
 	s.Equal(0, len(resetReq.CurrTimerTasks))
@@ -4044,6 +4046,7 @@ func (s *resetorSuite) TestApplyReset() {
 	resetReq, ok := resetCall.Arguments[0].(*p.ResetWorkflowExecutionRequest)
 	s.Equal(true, ok)
 	s.Equal(false, resetReq.UpdateCurr)
+	s.Equal(p.WorkflowStateCompleted, resetReq.PrevRunState)
 	s.Equal(compareCurrExeInfo, resetReq.CurrExecutionInfo)
 	s.Equal(0, len(resetReq.CurrTransferTasks))
 	s.Equal(0, len(resetReq.CurrTimerTasks))
