@@ -35,22 +35,23 @@ In order to add a new compression format do the following:
 - Add a case to Decompress to handle new compression format
 - Update unit tests
 
- */
+*/
 
 const (
 	compressionTag = "compression"
 
 	// following are all compression formats that have ever been used, names should describe the package that was used for compression
-	noCompression = "none"
+	noCompression   = "none"
 	gzipCompression = "compression/gzip"
 )
 
 var (
-	errBlobAlreadyCompressed  = fmt.Errorf("cannot compress blob, %v tag already specified", compressionTag)
+	errBlobAlreadyCompressed   = fmt.Errorf("cannot compress blob, %v tag already specified", compressionTag)
 	errBlobAlreadyDecompressed = fmt.Errorf("cannot decompress blob, does not have %v tag", compressionTag)
 )
 
 type (
+	// Blob is the entity that blobstore handles
 	Blob interface {
 		Body() []byte
 		Tags() map[string]string
