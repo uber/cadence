@@ -35,11 +35,16 @@ all source files. To verify that all files contain the header execute:
 make copyright
 ```
 
-## Commit Messages
+## Commit Messages And Titles of Pull Requests
 
 Overcommit adds some requirements to your commit messages. At Uber, we follow the
 [Chris Beams](http://chris.beams.io/posts/git-commit/) guide to writing git
 commit messages. Read it, follow it, learn it, love it.
+
+All commit messages are from the titles of your pull requets. So make sure follow the rules when titling it. 
+Please don't use very generic title like "bug fixes". 
+
+All PR titles should start with UPPER case.
 
 ## Issues to start with
 
