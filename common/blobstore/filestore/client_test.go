@@ -93,6 +93,8 @@ func (s *ClientSuite) TestNewClient_Fail_WriteMetadataFilesFailure() {
 	s.Nil(client)
 }
 
+// TODO: make sure I add tests for updated functionality of client (keys test and already compressed blobs)
+
 func (s *ClientSuite) TestUpload_Fail_BucketNotExists() {
 	dir, err := ioutil.TempDir("", "TestUpload_Fail_BucketNotExists")
 	s.NoError(err)

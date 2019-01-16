@@ -52,6 +52,7 @@ type (
 		Tags() map[string]string
 		Compress() (Blob, error)
 		Decompress() (Blob, error)
+		Compressed() bool
 	}
 
 	blob struct {
@@ -129,6 +130,12 @@ func (b *blob) Decompress() (Blob, error) {
 		// this should never happen
 		return nil, fmt.Errorf("blob has unknown compression of %v, cannot decompress", compression)
 	}
+}
+
+// Compressed returns true if the blob is compressed false otherwise
+func (b *blob) Compressed() bool {
+	_, ok := b.tags[compressionTag]
+	return ok
 }
 
 func gzipDecompress(data []byte) ([]byte, error) {

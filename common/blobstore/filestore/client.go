@@ -56,7 +56,7 @@ func NewClient(cfg *Config) (blobstore.Client, error) {
 	}, nil
 }
 
-func (c *client) Upload(_ context.Context, bucket string, key string, blob blobstore.Blob) error {
+func (c *client) Upload(_ context.Context, bucket string, key blobstore.Key, blob blobstore.Blob) error {
 	c.Lock()
 	defer c.Unlock()
 
@@ -68,19 +68,22 @@ func (c *client) Upload(_ context.Context, bucket string, key string, blob blobs
 		return blobstore.ErrBucketNotExists
 	}
 
-	cBlob, err := blob.Compress()
-	if err != nil {
-		return err
+	cBlob := blob
+	if !blob.Compressed() {
+		cBlob, err = blob.Compress()
+		if err != nil {
+			return err
+		}
 	}
 	fileBytes, err := serializeBlob(cBlob)
 	if err != nil {
 		return err
 	}
-	blobPath := bucketItemPath(c.storeDirectory, bucket, key)
+	blobPath := bucketItemPath(c.storeDirectory, bucket, key.String())
 	return writeFile(blobPath, fileBytes)
 }
 
-func (c *client) Download(_ context.Context, bucket string, key string) (blobstore.Blob, error) {
+func (c *client) Download(_ context.Context, bucket string, key blobstore.Key) (blobstore.Blob, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -91,7 +94,7 @@ func (c *client) Download(_ context.Context, bucket string, key string) (blobsto
 	if !exists {
 		return nil, blobstore.ErrBucketNotExists
 	}
-	blobPath := bucketItemPath(c.storeDirectory, bucket, key)
+	blobPath := bucketItemPath(c.storeDirectory, bucket, key.String())
 	fileBytes, err := readFile(blobPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -103,10 +106,13 @@ func (c *client) Download(_ context.Context, bucket string, key string) (blobsto
 	if err != nil {
 		return nil, err
 	}
+	if !cBlob.Compressed() {
+		return cBlob, nil
+	}
 	return cBlob.Decompress()
 }
 
-func (c *client) Exists(_ context.Context, bucket string, key string) (bool, error) {
+func (c *client) Exists(_ context.Context, bucket string, key blobstore.Key) (bool, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -117,11 +123,11 @@ func (c *client) Exists(_ context.Context, bucket string, key string) (bool, err
 	if !exists {
 		return false, blobstore.ErrBucketNotExists
 	}
-	blobPath := bucketItemPath(c.storeDirectory, bucket, key)
+	blobPath := bucketItemPath(c.storeDirectory, bucket, key.String())
 	return fileExists(blobPath)
 }
 
-func (c *client) Delete(_ context.Context, bucket string, key string) (bool, error) {
+func (c *client) Delete(_ context.Context, bucket string, key blobstore.Key) (bool, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -132,11 +138,11 @@ func (c *client) Delete(_ context.Context, bucket string, key string) (bool, err
 	if !exists {
 		return false, blobstore.ErrBucketNotExists
 	}
-	blobPath := bucketItemPath(c.storeDirectory, bucket, key)
+	blobPath := bucketItemPath(c.storeDirectory, bucket, key.String())
 	return deleteFile(blobPath)
 }
 
-func (c *client) ListByPrefix(_ context.Context, bucket string, prefix string) ([]string, error) {
+func (c *client) ListByPrefix(_ context.Context, bucket string, prefix string) ([]blobstore.Key, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -158,7 +164,7 @@ func (c *client) ListByPrefix(_ context.Context, bucket string, prefix string) (
 			filesWithPrefix = append(filesWithPrefix, f)
 		}
 	}
-	return filesWithPrefix, nil
+	return convertFileNamesToKeys(filesWithPrefix)
 }
 
 func (c *client) BucketMetadata(_ context.Context, bucket string) (*blobstore.BucketMetadataResponse, error) {
@@ -242,4 +248,16 @@ func bucketDirectory(storeDirectory string, bucketName string) string {
 
 func bucketItemPath(storeDirectory string, bucketName string, filename string) string {
 	return filepath.Join(bucketDirectory(storeDirectory, bucketName), filename)
+}
+
+func convertFileNamesToKeys(filenames []string) ([]blobstore.Key, error) {
+	var keys []blobstore.Key
+	for _, name := range filenames {
+		k, err := blobstore.NewKeyFromString(name)
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, k)
+	}
+	return keys, nil
 }
