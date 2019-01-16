@@ -68,14 +68,7 @@ func (c *client) Upload(_ context.Context, bucket string, key blobstore.Key, blo
 		return blobstore.ErrBucketNotExists
 	}
 
-	cBlob := blob
-	if !blob.Compressed() {
-		cBlob, err = blob.Compress()
-		if err != nil {
-			return err
-		}
-	}
-	fileBytes, err := serializeBlob(cBlob)
+	fileBytes, err := serializeBlob(blob)
 	if err != nil {
 		return err
 	}
@@ -102,14 +95,7 @@ func (c *client) Download(_ context.Context, bucket string, key blobstore.Key) (
 		}
 		return nil, err
 	}
-	cBlob, err := deserializeBlob(fileBytes)
-	if err != nil {
-		return nil, err
-	}
-	if !cBlob.Compressed() {
-		return cBlob, nil
-	}
-	return cBlob.Decompress()
+	return deserializeBlob(fileBytes)
 }
 
 func (c *client) Exists(_ context.Context, bucket string, key blobstore.Key) (bool, error) {

@@ -219,44 +219,6 @@ func (s *ClientSuite) TestUploadDownload_Success_CustomBucket() {
 	s.assertBlobEquals(map[string]string{}, "blob body", downloadBlob)
 }
 
-func (s *ClientSuite) TestUploadDownload_Success_BlobNotCompressed() {
-	dir, err := ioutil.TempDir("", "TestUploadDownload_Success_BlobNotCompressed")
-	s.NoError(err)
-	defer os.RemoveAll(dir)
-
-	client := s.constructClient(dir)
-	blob := blobstore.NewBlob([]byte("blob body"), map[string]string{})
-	key, err := blobstore.NewKeyFromString("blob.blob")
-	s.NoError(err)
-	s.False(blob.Compressed())
-	s.NoError(client.Upload(context.Background(), defaultBucketName, key, blob))
-	downloadBlob, err := client.Download(context.Background(), defaultBucketName, key)
-	s.False(downloadBlob.Compressed())
-	s.NoError(err)
-	s.NotNil(downloadBlob)
-	s.assertBlobEquals(map[string]string{}, "blob body", downloadBlob)
-}
-
-func (s *ClientSuite) TestUploadDownload_Success_BlobCompressed() {
-	dir, err := ioutil.TempDir("", "TestUploadDownload_Success_BlobCompressed")
-	s.NoError(err)
-	defer os.RemoveAll(dir)
-
-	client := s.constructClient(dir)
-	blob := blobstore.NewBlob([]byte("blob body"), map[string]string{})
-	cBlob, err := blob.Compress()
-	s.NoError(err)
-	s.True(cBlob.Compressed())
-	key, err := blobstore.NewKeyFromString("blob.blob")
-	s.NoError(err)
-	s.NoError(client.Upload(context.Background(), defaultBucketName, key, cBlob))
-	downloadBlob, err := client.Download(context.Background(), defaultBucketName, key)
-	s.False(downloadBlob.Compressed())
-	s.NoError(err)
-	s.NotNil(downloadBlob)
-	s.assertBlobEquals(map[string]string{}, "blob body", downloadBlob)
-}
-
 func (s *ClientSuite) TestExists_Fail_BucketNotExists() {
 	dir, err := ioutil.TempDir("", "TestExists_Fail_BucketNotExists")
 	s.NoError(err)
