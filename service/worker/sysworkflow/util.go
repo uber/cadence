@@ -23,27 +23,38 @@ package sysworkflow
 import (
 	"fmt"
 	"github.com/dgryski/go-farm"
+	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/blobstore"
 	"strings"
 )
 
 const (
-	historyBlobFilenameExt = ".history"
+	historyBlobKeyExt = ".history"
 )
 
-// HistoryBlobFilename constructs name of history file from domainID, workflowID and runID
-func HistoryBlobFilename(domainID string, workflowID string, runID string) string {
+func HistoryBlobKey(domainID, workflowID, runID, pageToken, version string) (blobstore.Key, error) {
 	hashInput := strings.Join([]string{domainID, workflowID, runID}, "")
-	hash := farm.Fingerprint64([]byte(hashInput))
-	return fmt.Sprintf("%v%v", hash, historyBlobFilenameExt)
+	hash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(hashInput)))
+	return blobstore.NewKey(historyBlobKeyExt, hash, pageToken, version)
 }
 
-// TODO: I should be constructing file names correctly
-// TODO: Given user tags and history events I should be able to construct a JSON byte array
+type historyBlobHeader struct {
+	domainName string `json:"domain_name"`
+	domainID string `json:"domain_id"`
+	workflowID string `json:"workflow_id"`
+	runID string `json:"run_id"`
+	pageToken string `json:"page_token"`
+	version string `json:"version"`
+	uploadDateTime string `json:"upload_date_time"`
+	uploadCluster string `json:"update_cluster"`
+	eventCount int64 `json:"event_count"`
+}
 
+type historyBlob struct {
+	header *historyBlobHeader `json:"header"`
+	events *shared.History `json:"events"`
+}
 
-// file names should take as input the following
-/**
-- domainID, workflowID, runID (under this is different pages, under each page is different versions of that page)
-- pageNumber
-- historyVersion
- */
+func HistoryBlob() ([]byte, error) {
+
+}
