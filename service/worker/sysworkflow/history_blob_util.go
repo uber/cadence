@@ -29,32 +29,34 @@ import (
 )
 
 const (
-	historyBlobKeyExt = ".history"
+	// HistoryBlobKeyExt is the blob key extension on all history blobs
+	HistoryBlobKeyExt = ".history"
 )
 
-func HistoryBlobKey(domainID, workflowID, runID, pageToken, version string) (blobstore.Key, error) {
+type (
+	// HistoryBlobHeader is the header attached to all history blobs
+	HistoryBlobHeader struct {
+		DomainName     *string `json:"domain_name"`
+		DomainID       *string `json:"domain_id"`
+		WorkflowID     *string `json:"workflow_id"`
+		RunID          *string `json:"run_id"`
+		PageToken      *string `json:"page_token"`
+		Version        *string `json:"version"`
+		UploadDateTime *string `json:"upload_date_time"`
+		UploadCluster  *string `json:"update_cluster"`
+		EventCount     *int64  `json:"event_count"`
+	}
+
+	// HistoryBlob is the serialized that histories get uploaded as
+	HistoryBlob struct {
+		Header *HistoryBlobHeader `json:"header"`
+		Events *shared.History    `json:"events"`
+	}
+)
+
+// NewHistoryBlobKey returns a key for history blob
+func NewHistoryBlobKey(domainID, workflowID, runID, pageToken, version string) (blobstore.Key, error) {
 	hashInput := strings.Join([]string{domainID, workflowID, runID}, "")
 	hash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(hashInput)))
-	return blobstore.NewKey(historyBlobKeyExt, hash, pageToken, version)
-}
-
-type historyBlobHeader struct {
-	domainName string `json:"domain_name"`
-	domainID string `json:"domain_id"`
-	workflowID string `json:"workflow_id"`
-	runID string `json:"run_id"`
-	pageToken string `json:"page_token"`
-	version string `json:"version"`
-	uploadDateTime string `json:"upload_date_time"`
-	uploadCluster string `json:"update_cluster"`
-	eventCount int64 `json:"event_count"`
-}
-
-type historyBlob struct {
-	header *historyBlobHeader `json:"header"`
-	events *shared.History `json:"events"`
-}
-
-func HistoryBlob() ([]byte, error) {
-
+	return blobstore.NewKey(HistoryBlobKeyExt, hash, pageToken, version)
 }

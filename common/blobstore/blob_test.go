@@ -96,7 +96,7 @@ func (s *BlobSuite) TestCompressDecompress_Success_GzipFormat() {
 	s.NoError(err)
 	s.NotNil(cBlob)
 	expectedTags := map[string]string{
-		"user_tag": "user_value",
+		"user_tag":     "user_value",
 		compressionTag: gzipCompression,
 	}
 	s.Equal(expectedTags, cBlob.Tags())
@@ -105,7 +105,7 @@ func (s *BlobSuite) TestCompressDecompress_Success_GzipFormat() {
 	dBlob, err := cBlob.Decompress()
 	s.NoError(err)
 	s.NotNil(dBlob)
-	expectedTags =  map[string]string{"user_tag": "user_value"}
+	expectedTags = map[string]string{"user_tag": "user_value"}
 	s.Equal(expectedTags, dBlob.Tags())
 	s.Equal(body, dBlob.Body())
 }

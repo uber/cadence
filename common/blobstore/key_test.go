@@ -20,41 +20,41 @@ func (s *KeySuite) SetupTest() {
 }
 
 func (s *KeySuite) TestNewKey() {
-	testCases := []struct{
-		extension string
-		pieces []string
-		expectError bool
+	testCases := []struct {
+		extension      string
+		pieces         []string
+		expectError    bool
 		expectBuiltKey string
 	}{
 		{
-			extension: "ext",
-			pieces: []string{},
+			extension:   "ext",
+			pieces:      []string{},
 			expectError: true,
 		},
 		{
-			extension: "ext",
-			pieces: []string{"1", "2", "3", "4", "5"},
+			extension:   "ext",
+			pieces:      []string{"1", "2", "3", "4", "5"},
 			expectError: true,
 		},
 		{
-			extension: "invalid_extension.",
-			pieces: []string{"foo", "bar"},
+			extension:   "invalid_extension.",
+			pieces:      []string{"foo", "bar"},
 			expectError: true,
 		},
 		{
-			extension: "ext",
-			pieces: []string{"invalid=piece"},
+			extension:   "ext",
+			pieces:      []string{"invalid=piece"},
 			expectError: true,
 		},
 		{
-			extension: longString(60),
-			pieces: []string{longString(60), longString(60), longString(60), longString(60)},
+			extension:   longString(60),
+			pieces:      []string{longString(60), longString(60), longString(60), longString(60)},
 			expectError: true,
 		},
 		{
-			extension: "ext",
-			pieces: []string{"valid", "set", "of", "pieces"},
-			expectError: false,
+			extension:      "ext",
+			pieces:         []string{"valid", "set", "of", "pieces"},
+			expectError:    false,
 			expectBuiltKey: "valid_set_of_pieces.ext",
 		},
 	}
@@ -73,42 +73,42 @@ func (s *KeySuite) TestNewKey() {
 }
 
 func (s *KeySuite) TestNewKeyFromString() {
-	testCases := []struct{
-		inputStr string
-		expectError bool
-		expectBuiltKey string
-		expectExtension string
+	testCases := []struct {
+		inputStr         string
+		expectError      bool
+		expectBuiltKey   string
+		expectExtension  string
 		expectNamePieces []string
 	}{
 		{
-			inputStr: "",
+			inputStr:    "",
 			expectError: true,
 		},
 		{
-			inputStr: "ext",
+			inputStr:    "ext",
 			expectError: true,
 		},
 		{
-			inputStr: "foo.bar.baz.ext",
+			inputStr:    "foo.bar.baz.ext",
 			expectError: true,
 		},
 		{
-			inputStr: "1_2_3_4_5.ext",
+			inputStr:    "1_2_3_4_5.ext",
 			expectError: true,
 		},
 		{
-			inputStr: "1=4_5.ext",
+			inputStr:    "1=4_5.ext",
 			expectError: true,
 		},
 		{
-			inputStr: "foo_bar_bax.e,x,t,",
+			inputStr:    "foo_bar_bax.e,x,t,",
 			expectError: true,
 		},
 		{
-			inputStr: "foo1_bar2_3baz.ext",
-			expectError: false,
-			expectBuiltKey: "foo1_bar2_3baz.ext",
-			expectExtension: "ext",
+			inputStr:         "foo1_bar2_3baz.ext",
+			expectError:      false,
+			expectBuiltKey:   "foo1_bar2_3baz.ext",
+			expectExtension:  "ext",
 			expectNamePieces: []string{"foo1", "bar2", "3baz"},
 		},
 	}
@@ -135,4 +135,3 @@ func longString(length int) string {
 	}
 	return result
 }
-

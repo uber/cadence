@@ -33,8 +33,8 @@ type (
 		Extension() string
 	}
 	key struct {
-		str string
-		pieces []string
+		str       string
+		pieces    []string
 		extension string
 	}
 )
@@ -65,8 +65,8 @@ func NewKey(extension string, pieces ...string) (Key, error) {
 		return nil, fmt.Errorf("produced key size of %v greater than limit of %v", len(str), keySizeLimit)
 	}
 	return &key{
-		str: str,
-		pieces: pieces,
+		str:       str,
+		pieces:    pieces,
 		extension: extension,
 	}, nil
 }
