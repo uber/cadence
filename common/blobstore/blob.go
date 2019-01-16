@@ -45,11 +45,6 @@ const (
 	gzipCompression = "compression/gzip"
 )
 
-var (
-	errBlobAlreadyCompressed   = fmt.Errorf("cannot compress blob, %v tag already specified", compressionTag)
-	errBlobAlreadyDecompressed = fmt.Errorf("cannot decompress blob, does not have %v tag", compressionTag)
-)
-
 type (
 	// Blob is the entity that blobstore handles
 	Blob interface {
@@ -86,7 +81,7 @@ func (b *blob) Tags() map[string]string {
 // Compress compresses blob returning a new blob. Returned Blob does not share any references with this Blob.
 func (b *blob) Compress() (Blob, error) {
 	if _, ok := b.tags[compressionTag]; ok {
-		return nil, errBlobAlreadyCompressed
+		return nil, fmt.Errorf("cannot compress blob, %v tag already specified", compressionTag)
 	}
 	var buf bytes.Buffer
 	w := gzip.NewWriter(&buf)
@@ -109,7 +104,7 @@ func (b *blob) Compress() (Blob, error) {
 // Decompress decompresses blob returning a new blob. Returned Blob does not share any references with this Blob.
 func (b *blob) Decompress() (Blob, error) {
 	if _, ok := b.tags[compressionTag]; !ok {
-		return nil, errBlobAlreadyDecompressed
+		return nil, fmt.Errorf("cannot decompress blob, does not have %v tag", compressionTag)
 	}
 	compression := b.tags[compressionTag]
 	tags := duplicateTags(b.tags)

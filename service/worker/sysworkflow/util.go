@@ -36,3 +36,14 @@ func HistoryBlobFilename(domainID string, workflowID string, runID string) strin
 	hash := farm.Fingerprint64([]byte(hashInput))
 	return fmt.Sprintf("%v%v", hash, historyBlobFilenameExt)
 }
+
+// TODO: I should be constructing file names correctly
+// TODO: Given user tags and history events I should be able to construct a JSON byte array
+
+
+// file names should take as input the following
+/**
+- domainID, workflowID, runID (under this is different pages, under each page is different versions of that page)
+- pageNumber
+- historyVersion
+ */

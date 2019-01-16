@@ -23,12 +23,6 @@ package blobstore
 import (
 	"context"
 	"errors"
-	"strings"
-)
-
-const (
-	// KeySeparator separates pieces of a key
-	KeySeparator = "_"
 )
 
 var (
@@ -52,14 +46,4 @@ type Client interface {
 	Delete(ctx context.Context, bucket string, key string) (bool, error)
 	ListByPrefix(ctx context.Context, bucket string, prefix string) ([]string, error)
 	BucketMetadata(ctx context.Context, bucket string) (*BucketMetadataResponse, error)
-}
-
-// ConstructKey constructs a key based upon name pieces
-func ConstructKey(pieces ...string) (string, error) {
-	for _, p := range pieces {
-		if strings.Contains(p, KeySeparator) {
-			return "", errors.New("key pieces cannot contain underscore")
-		}
-	}
-	return strings.Join(pieces, KeySeparator), nil
 }

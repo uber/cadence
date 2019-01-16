@@ -45,7 +45,6 @@ func (s *BlobSuite) TestCompress_Fail_AlreadyCompressed() {
 	}
 	cBlob, err := b.Compress()
 	s.Error(err)
-	s.Equal(errBlobAlreadyCompressed, err)
 	s.Nil(cBlob)
 }
 
@@ -53,7 +52,6 @@ func (s *BlobSuite) TestDecompress_Fail_AlreadyDecompressed() {
 	b := &blob{}
 	dBlob, err := b.Decompress()
 	s.Error(err)
-	s.Equal(errBlobAlreadyDecompressed, err)
 	s.Nil(dBlob)
 }
 
