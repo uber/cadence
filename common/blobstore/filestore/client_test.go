@@ -99,7 +99,7 @@ func (s *ClientSuite) TestUpload_Fail_BucketNotExists() {
 	defer os.RemoveAll(dir)
 	client := s.constructClient(dir)
 
-	blob := s.constructBlob("blob body", map[string]string{"tagKey": "tagValue"})
+	blob := blobstore.NewBlob([]byte("blob body"), map[string]string{"tagKey": "tagValue"})
 	blobFilename := "blob.blob"
 	s.Equal(blobstore.ErrBucketNotExists, client.Upload(context.Background(), "bucket-not-exists", blobFilename, blob))
 }
@@ -113,7 +113,7 @@ func (s *ClientSuite) TestUpload_Fail_ErrorOnWrite() {
 	s.NoError(mkdirAll(path.Join(dir, defaultBucketName, blobFilename, "foo")))
 	client := s.constructClient(dir)
 
-	blob := s.constructBlob("blob body", map[string]string{"tagKey": "tagValue"})
+	blob := blobstore.NewBlob([]byte("blob body"), map[string]string{"tagKey": "tagValue"})
 	s.Error(client.Upload(context.Background(), defaultBucketName, blobFilename, blob))
 }
 
@@ -145,7 +145,7 @@ func (s *ClientSuite) TestDownload_Fail_NoPermissions() {
 	defer os.RemoveAll(dir)
 	client := s.constructClient(dir)
 
-	blob := s.constructBlob("blob body", map[string]string{"tagKey": "tagValue"})
+	blob := blobstore.NewBlob([]byte("blob body"), map[string]string{"tagKey": "tagValue"})
 	blobFilename := "blob.blob"
 	s.NoError(client.Upload(context.Background(), defaultBucketName, blobFilename, blob))
 	os.Chmod(bucketItemPath(dir, defaultBucketName, blobFilename), os.FileMode(0000))
@@ -177,7 +177,7 @@ func (s *ClientSuite) TestUploadDownload_Success() {
 	defer os.RemoveAll(dir)
 
 	client := s.constructClient(dir)
-	blob := s.constructBlob("body version 1", map[string]string{})
+	blob := blobstore.NewBlob([]byte("body version 1"), map[string]string{})
 	blobFilename := "blob.blob"
 	s.NoError(client.Upload(context.Background(), defaultBucketName, blobFilename, blob))
 	downloadBlob, err := client.Download(context.Background(), defaultBucketName, blobFilename)
@@ -185,7 +185,7 @@ func (s *ClientSuite) TestUploadDownload_Success() {
 	s.NotNil(downloadBlob)
 	s.assertBlobEquals(map[string]string{}, "body version 1", downloadBlob)
 
-	blob = s.constructBlob("body version 2", map[string]string{"key": "value"})
+	blob = blobstore.NewBlob([]byte("body version 2"), map[string]string{"key": "value"})
 	s.NoError(client.Upload(context.Background(), defaultBucketName, blobFilename, blob))
 	downloadBlob, err = client.Download(context.Background(), defaultBucketName, blobFilename)
 	s.NoError(err)
@@ -199,7 +199,7 @@ func (s *ClientSuite) TestUploadDownload_Success_CustomBucket() {
 	defer os.RemoveAll(dir)
 
 	client := s.constructClient(dir)
-	blob := s.constructBlob("blob body", map[string]string{})
+	blob := blobstore.NewBlob([]byte("blob body"), map[string]string{})
 	blobFilename := "blob.blob"
 	customBucketName := fmt.Sprintf("%v-%v", customBucketNamePrefix, 3)
 	s.NoError(client.Upload(context.Background(), customBucketName, blobFilename, blob))
@@ -230,7 +230,7 @@ func (s *ClientSuite) TestExists_Success() {
 	s.NoError(err)
 	s.False(exists)
 
-	blob := s.constructBlob("body", map[string]string{})
+	blob := blobstore.NewBlob([]byte("body"), map[string]string{})
 	blobFilename := "blob.blob"
 	s.NoError(client.Upload(context.Background(), defaultBucketName, blobFilename, blob))
 	exists, err = client.Exists(context.Background(), defaultBucketName, blobFilename)
@@ -259,7 +259,7 @@ func (s *ClientSuite) TestDelete_Success() {
 	s.NoError(err)
 	s.False(deleted)
 
-	blob := s.constructBlob("body", map[string]string{})
+	blob := blobstore.NewBlob([]byte("body"), map[string]string{})
 	blobFilename := "blob.blob"
 	s.NoError(client.Upload(context.Background(), defaultBucketName, blobFilename, blob))
 	deleted, err = client.Delete(context.Background(), defaultBucketName, blobFilename)
@@ -289,7 +289,7 @@ func (s *ClientSuite) TestListByPrefix_Success() {
 
 	allFiles := []string{"matching_1", "matching_2", "not_matching_1", "not_matching_2", "matching_3"}
 	for _, f := range allFiles {
-		blob := s.constructBlob("blob body", map[string]string{})
+		blob := blobstore.NewBlob([]byte("blob body"), map[string]string{})
 		s.NoError(client.Upload(context.Background(), defaultBucketName, f, blob))
 	}
 	matchingFiles, err := client.ListByPrefix(context.Background(), defaultBucketName, "matching")
@@ -357,13 +357,6 @@ func (s *ClientSuite) TestBucketMetadata_Success() {
 	s.Equal(defaultBucketOwner, metadata.Owner)
 }
 
-func (s *ClientSuite) constructBlob(body string, tags map[string]string) *blobstore.Blob {
-	return &blobstore.Blob{
-		Body: []byte(body),
-		Tags: tags,
-	}
-}
-
 func (s *ClientSuite) constructClient(storeDir string) blobstore.Client {
 	cfg := s.constructConfig(storeDir)
 	client, err := NewClient(cfg)
@@ -392,7 +385,7 @@ func (s *ClientSuite) constructConfig(storeDir string) *Config {
 	return cfg
 }
 
-func (s *ClientSuite) assertBlobEquals(expectedTags map[string]string, expectedBody string, actual *blobstore.Blob) {
-	s.Equal(expectedTags, actual.Tags)
-	s.Equal(expectedBody, string(actual.Body))
+func (s *ClientSuite) assertBlobEquals(expectedTags map[string]string, expectedBody string, actual blobstore.Blob) {
+	s.Equal(expectedTags, actual.Tags())
+	s.Equal(expectedBody, string(actual.Body()))
 }

@@ -133,21 +133,29 @@ func deserializeBucketConfig(data []byte) (*BucketConfig, error) {
 	return bucketCfg, nil
 }
 
-func serializeBlob(blob *blobstore.Blob) ([]byte, error) {
+type serializableBlob struct {
+	Body []byte
+	Tags map[string]string
+}
+
+func serializeBlob(blob blobstore.Blob) ([]byte, error) {
 	buf := bytes.Buffer{}
 	encoder := gob.NewEncoder(&buf)
-	if err := encoder.Encode(blob); err != nil {
+	sBlob := &serializableBlob{
+		Body: blob.Body(),
+		Tags: blob.Tags(),
+	}
+	if err := encoder.Encode(sBlob); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil
 }
 
-func deserializeBlob(data []byte) (*blobstore.Blob, error) {
-	blob := &blobstore.Blob{}
-	dataReader := bytes.NewReader(data)
-	decoder := gob.NewDecoder(dataReader)
-	if err := decoder.Decode(blob); err != nil {
+func deserializeBlob(data []byte) (blobstore.Blob, error) {
+	sBlob := &serializableBlob{}
+	decoder := gob.NewDecoder(bytes.NewReader(data))
+	if err := decoder.Decode(sBlob); err != nil {
 		return nil, err
 	}
-	return blob, nil
+	return blobstore.NewBlob(sBlob.Body, sBlob.Tags), nil
 }

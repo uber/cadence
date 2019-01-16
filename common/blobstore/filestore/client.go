@@ -56,7 +56,7 @@ func NewClient(cfg *Config) (blobstore.Client, error) {
 	}, nil
 }
 
-func (c *client) Upload(_ context.Context, bucket string, key string, blob *blobstore.Blob) error {
+func (c *client) Upload(_ context.Context, bucket string, key string, blob blobstore.Blob) error {
 	c.Lock()
 	defer c.Unlock()
 
@@ -67,15 +67,20 @@ func (c *client) Upload(_ context.Context, bucket string, key string, blob *blob
 	if !exists {
 		return blobstore.ErrBucketNotExists
 	}
-	data, err := serializeBlob(blob)
+
+	cBlob, err := blob.Compress()
+	if err != nil {
+		return err
+	}
+	fileBytes, err := serializeBlob(cBlob)
 	if err != nil {
 		return err
 	}
 	blobPath := bucketItemPath(c.storeDirectory, bucket, key)
-	return writeFile(blobPath, data)
+	return writeFile(blobPath, fileBytes)
 }
 
-func (c *client) Download(_ context.Context, bucket string, key string) (*blobstore.Blob, error) {
+func (c *client) Download(_ context.Context, bucket string, key string) (blobstore.Blob, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -87,14 +92,18 @@ func (c *client) Download(_ context.Context, bucket string, key string) (*blobst
 		return nil, blobstore.ErrBucketNotExists
 	}
 	blobPath := bucketItemPath(c.storeDirectory, bucket, key)
-	data, err := readFile(blobPath)
+	fileBytes, err := readFile(blobPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, blobstore.ErrBlobNotExists
 		}
 		return nil, err
 	}
-	return deserializeBlob(data)
+	cBlob, err := deserializeBlob(fileBytes)
+	if err != nil {
+		return nil, err
+	}
+	return cBlob.Decompress()
 }
 
 func (c *client) Exists(_ context.Context, bucket string, key string) (bool, error) {
