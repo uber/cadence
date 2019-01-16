@@ -16,6 +16,9 @@ const (
 
 	// piecesLimit indicates the limit on the number of separate pieces that can be used to construct a key name
 	piecesLimit = 4
+
+	// extensionSeparator indicates the token used to separate key name from key extension
+	extensionSeparator = "."
 )
 
 var (
@@ -56,7 +59,8 @@ func NewKey(extension string, pieces ...string) (Key, error) {
 			return nil, fmt.Errorf("piece, %v, contained illegal characters - allowed characters are %v", p, allowedRegex.String())
 		}
 	}
-	str := fmt.Sprintf("%v.%v",  strings.Join(pieces, piecesSeparator), extension)
+	name := strings.Join(pieces, piecesSeparator)
+	str := strings.Join([]string{name, extension}, extensionSeparator)
 	if len(str) > keySizeLimit {
 		return nil, fmt.Errorf("produced key size of %v greater than limit of %v", len(str), keySizeLimit)
 	}
@@ -65,6 +69,17 @@ func NewKey(extension string, pieces ...string) (Key, error) {
 		pieces: pieces,
 		extension: extension,
 	}, nil
+}
+
+// NewKeyFromString constructs a valid key from string or returns error if input produces invalid key
+func NewKeyFromString(str string) (Key, error) {
+	keyParts := strings.Split(str, extensionSeparator)
+	if len(keyParts) != 2 {
+		return nil, fmt.Errorf("%v is invalid exactly one %q should exist in key", str, extensionSeparator)
+	}
+	namePieces := strings.Split(keyParts[0], piecesSeparator)
+	extension := keyParts[1]
+	return NewKey(extension, namePieces...)
 }
 
 // String returns the built string representation of key of form foo_bar_baz_raz.ext

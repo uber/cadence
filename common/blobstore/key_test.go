@@ -24,7 +24,7 @@ func (s *KeySuite) TestNewKey() {
 		extension string
 		pieces []string
 		expectError bool
-		builtKey string
+		expectBuiltKey string
 	}{
 		{
 			extension: "ext",
@@ -55,7 +55,7 @@ func (s *KeySuite) TestNewKey() {
 			extension: "ext",
 			pieces: []string{"valid", "set", "of", "pieces"},
 			expectError: false,
-			builtKey: "valid_set_of_pieces.ext",
+			expectBuiltKey: "valid_set_of_pieces.ext",
 		},
 	}
 
@@ -67,7 +67,63 @@ func (s *KeySuite) TestNewKey() {
 		} else {
 			s.NoError(err)
 			s.NotNil(key)
-			s.Equal(tc.builtKey, key.String())
+			s.Equal(tc.expectBuiltKey, key.String())
+		}
+	}
+}
+
+func (s *KeySuite) TestNewKeyFromString() {
+	testCases := []struct{
+		inputStr string
+		expectError bool
+		expectBuiltKey string
+		expectExtension string
+		expectNamePieces []string
+	}{
+		{
+			inputStr: "",
+			expectError: true,
+		},
+		{
+			inputStr: "ext",
+			expectError: true,
+		},
+		{
+			inputStr: "foo.bar.baz.ext",
+			expectError: true,
+		},
+		{
+			inputStr: "1_2_3_4_5.ext",
+			expectError: true,
+		},
+		{
+			inputStr: "1=4_5.ext",
+			expectError: true,
+		},
+		{
+			inputStr: "foo_bar_bax.e,x,t,",
+			expectError: true,
+		},
+		{
+			inputStr: "foo1_bar2_3baz.ext",
+			expectError: false,
+			expectBuiltKey: "foo1_bar2_3baz.ext",
+			expectExtension: "ext",
+			expectNamePieces: []string{"foo1", "bar2", "3baz"},
+		},
+	}
+
+	for _, tc := range testCases {
+		key, err := NewKeyFromString(tc.inputStr)
+		if tc.expectError {
+			s.Error(err)
+			s.Nil(key)
+		} else {
+			s.NoError(err)
+			s.NotNil(key)
+			s.Equal(tc.expectBuiltKey, key.String())
+			s.Equal(tc.expectNamePieces, key.Pieces())
+			s.Equal(tc.expectExtension, key.Extension())
 		}
 	}
 }

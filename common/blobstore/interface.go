@@ -40,10 +40,10 @@ type BucketMetadataResponse struct {
 
 // Client is used to operate on blobs in a blobstore
 type Client interface {
-	Upload(ctx context.Context, bucket string, key string, blob Blob) error
-	Download(ctx context.Context, bucket string, key string) (Blob, error)
-	Exists(ctx context.Context, bucket string, key string) (bool, error)
-	Delete(ctx context.Context, bucket string, key string) (bool, error)
-	ListByPrefix(ctx context.Context, bucket string, prefix string) ([]string, error)
+	Upload(ctx context.Context, bucket string, key Key, blob Blob) error
+	Download(ctx context.Context, bucket string, key Key) (Blob, error)
+	Exists(ctx context.Context, bucket string, key Key) (bool, error)
+	Delete(ctx context.Context, bucket string, key Key) (bool, error)
+	ListByPrefix(ctx context.Context, bucket string, prefix string) ([]Key, error)
 	BucketMetadata(ctx context.Context, bucket string) (*BucketMetadataResponse, error)
 }
