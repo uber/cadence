@@ -2950,16 +2950,15 @@ func (wh *WorkflowHandler) createDomainResponse(info *persistence.DomainInfo, co
 		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(config.Retention),
 		ArchivalStatus:                         common.ArchivalStatusPtr(config.ArchivalStatus),
 	}
-
 	if configResult.GetArchivalStatus() != gen.ArchivalStatusNeverEnabled {
 		bucketName := config.ArchivalBucket
 		configResult.ArchivalBucketName = common.StringPtr(bucketName)
-		metadata, err := wh.blobstoreClient.BucketMetadata(context.Background(), bucketName)
-
-		// TODO: handle error correctly once there is a working implementation of blobstore
-		if err == nil {
-			configResult.ArchivalRetentionPeriodInDays = common.Int32Ptr(int32(metadata.RetentionDays))
-			configResult.ArchivalBucketOwner = common.StringPtr(metadata.Owner)
+		if wh.blobstoreClient != nil {
+			metadata, err := wh.blobstoreClient.BucketMetadata(context.Background(), bucketName)
+			if err == nil {
+				configResult.ArchivalRetentionPeriodInDays = common.Int32Ptr(int32(metadata.RetentionDays))
+				configResult.ArchivalBucketOwner = common.StringPtr(metadata.Owner)
+			}
 		}
 	}
 
