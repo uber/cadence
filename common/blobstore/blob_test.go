@@ -74,18 +74,6 @@ func (s *BlobSuite) TestDecompress_Fail_InvalidCompressionType() {
 	s.Nil(dBlob)
 }
 
-func (s *BlobSuite) TestDecompress_Success_NoCompression() {
-	b := &blob{
-		tags: map[string]string{compressionTag: noCompression},
-		body: []byte("non-compressed blob body"),
-	}
-	dBlob, err := b.Decompress()
-	s.NoError(err)
-	s.NotNil(dBlob)
-	s.Empty(dBlob.Tags())
-	s.Equal([]byte("non-compressed blob body"), dBlob.Body())
-}
-
 func (s *BlobSuite) TestCompressDecompress_Success_GzipFormat() {
 	body := []byte("some random blob body")
 	b := &blob{

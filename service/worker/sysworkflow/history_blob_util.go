@@ -21,7 +21,7 @@
 package sysworkflow
 
 import (
-	"code.uber.internal/devexp/cadence-server/.tmp/.go/goroot/src/encoding/json"
+	"encoding/json"
 	"fmt"
 	"github.com/dgryski/go-farm"
 	"github.com/uber/cadence/.gen/go/shared"
@@ -51,7 +51,7 @@ type (
 		EventCount           *int64  `json:"event_count"`
 	}
 
-	// HistoryBlob is the serialized that histories get uploaded as
+	// HistoryBlob is the serializable data that forms the body of a blob
 	HistoryBlob struct {
 		Header *HistoryBlobHeader `json:"header"`
 		Events *shared.History    `json:"events"`
@@ -59,44 +59,25 @@ type (
 )
 
 // NewHistoryBlobKey returns a key for history blob
-func NewHistoryBlobKey(domainID, workflowID, runID, pageToken, version string) (blobstore.Key, error) {
+func NewHistoryBlobKey(domainID, workflowID, runID, pageToken, closeFailoverVersion string) (blobstore.Key, error) {
 	hashInput := strings.Join([]string{domainID, workflowID, runID}, "")
 	hash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(hashInput)))
-	return blobstore.NewKey(HistoryBlobKeyExt, hash, pageToken, version)
+	return blobstore.NewKey(HistoryBlobKeyExt, hash, pageToken, closeFailoverVersion)
 }
 
-// TODO: come up with some better naming for this method
-// perhaps there is not such method as this maybe there is just a method that given historyBlob marshall it
-// given a history blob header construct the tags
-// these two methods are easily testable
-// they allow me to construct a blob with a single line and two method calls
-func MakeBlobOrWhateverMethodName(historyBlob *HistoryBlob) (blobstore.Blob, error) {
-
-	// TODO: this code all needs to be cleaned up, factored in different methods and tested
-	body, err := json.Marshal(historyBlob)
+// ConvertHeaderToTags
+func ConvertHeaderToTags(header *HistoryBlobHeader) (map[string]string, error) {
+	var tempMap map[string]interface{}
+	bytes, err := json.Marshal(header)
 	if err != nil {
 		return nil, err
 	}
-
-	var m map[string]interface{}
-	inrec, err := json.Marshal(historyBlob.Header)
-	if err != nil {
+	if err := json.Unmarshal(bytes, &tempMap); err != nil {
 		return nil, err
 	}
-
-	if err = json.Unmarshal(inrec, &m); err != nil {
-		return nil, err
+	result := make(map[string]string, len(tempMap))
+	for k, v := range tempMap {
+		result[k] = fmt.Sprintf("%v", v)
 	}
-
-	var tags map[string]string
-	for k, v := range m {
-		tags[k] = fmt.Sprintf("%v", v)
-	}
-
-	return blobstore.NewBlob(body, tags), nil
+	return result, nil
 }
-
-// maybe you make it symmetric so given a tag map[string]string you can get the header
-// given a byte array which is the blob body you can construct the HistoryBlob again
-
-// That way we have four small methods which are self contained and give us all the flexibility we need

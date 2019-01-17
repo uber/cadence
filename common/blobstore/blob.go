@@ -30,10 +30,10 @@ import (
 /**
 
 In order to add a new compression format do the following:
-- Add a new compression constant
-- Change Compress method to use new compression package
-- Add a case to Decompress to handle new compression format
-- Update unit tests
+1. Add a new compression constant
+2. Change Compress method to use new compression package
+3. Add a case to Decompress to handle new compression format
+4. Update unit tests
 
 */
 
@@ -41,7 +41,6 @@ const (
 	compressionTag = "compression"
 
 	// following are all compression formats that have ever been used, names should describe the package that was used for compression
-	noCompression   = "none"
 	gzipCompression = "compression/gzip"
 )
 
@@ -81,8 +80,8 @@ func (b *blob) Tags() map[string]string {
 
 // Compress compresses blob returning a new blob. Returned Blob does not share any references with this Blob.
 func (b *blob) Compress() (Blob, error) {
-	if _, ok := b.tags[compressionTag]; ok {
-		return nil, fmt.Errorf("cannot compress blob, %v tag already specified", compressionTag)
+	if b.Compressed() {
+		return nil, fmt.Errorf("blob is already compressed",)
 	}
 	var buf bytes.Buffer
 	w := gzip.NewWriter(&buf)
@@ -104,19 +103,14 @@ func (b *blob) Compress() (Blob, error) {
 
 // Decompress decompresses blob returning a new blob. Returned Blob does not share any references with this Blob.
 func (b *blob) Decompress() (Blob, error) {
-	if _, ok := b.tags[compressionTag]; !ok {
-		return nil, fmt.Errorf("cannot decompress blob, does not have %v tag", compressionTag)
+	if !b.Compressed() {
+		return nil, fmt.Errorf("blob already decompressed")
 	}
 	compression := b.tags[compressionTag]
 	tags := duplicateTags(b.tags)
 	delete(tags, compressionTag)
 
 	switch compression {
-	case noCompression:
-		return &blob{
-			tags: tags,
-			body: duplicateBody(b.body),
-		}, nil
 	case gzipCompression:
 		dBody, err := gzipDecompress(b.body)
 		if err != nil {
@@ -153,14 +147,6 @@ func duplicateTags(tags map[string]string) map[string]string {
 	result := make(map[string]string, len(tags))
 	for k, v := range tags {
 		result[k] = v
-	}
-	return result
-}
-
-func duplicateBody(body []byte) []byte {
-	result := make([]byte, len(body), len(body))
-	for i, b := range body {
-		result[i] = b
 	}
 	return result
 }
