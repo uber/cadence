@@ -5,6 +5,9 @@ language: go
 directories:
     - $HOME/.glide/cache
 
+go:
+  - 1.11.4
+
 env:
   global:
   - ZOOKEEPER_PEERS=localhost:2181
