@@ -55,18 +55,18 @@ func (_m *BlobstoreClient) BucketMetadata(ctx context.Context, bucket string) (*
 }
 
 // Delete provides a mock function with given fields: ctx, bucket, key
-func (_m *BlobstoreClient) Delete(ctx context.Context, bucket string, key string) (bool, error) {
+func (_m *BlobstoreClient) Delete(ctx context.Context, bucket string, key blobstore.Key) (bool, error) {
 	ret := _m.Called(ctx, bucket, key)
 
 	var r0 bool
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) bool); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, blobstore.Key) bool); ok {
 		r0 = rf(ctx, bucket, key)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string, blobstore.Key) error); ok {
 		r1 = rf(ctx, bucket, key)
 	} else {
 		r1 = ret.Error(1)
@@ -76,11 +76,11 @@ func (_m *BlobstoreClient) Delete(ctx context.Context, bucket string, key string
 }
 
 // Download provides a mock function with given fields: ctx, bucket, key
-func (_m *BlobstoreClient) Download(ctx context.Context, bucket string, key string) (blobstore.Blob, error) {
+func (_m *BlobstoreClient) Download(ctx context.Context, bucket string, key blobstore.Key) (blobstore.Blob, error) {
 	ret := _m.Called(ctx, bucket, key)
 
 	var r0 blobstore.Blob
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) blobstore.Blob); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, blobstore.Key) blobstore.Blob); ok {
 		r0 = rf(ctx, bucket, key)
 	} else {
 		if ret.Get(0) != nil {
@@ -89,7 +89,7 @@ func (_m *BlobstoreClient) Download(ctx context.Context, bucket string, key stri
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string, blobstore.Key) error); ok {
 		r1 = rf(ctx, bucket, key)
 	} else {
 		r1 = ret.Error(1)
@@ -99,18 +99,18 @@ func (_m *BlobstoreClient) Download(ctx context.Context, bucket string, key stri
 }
 
 // Exists provides a mock function with given fields: ctx, bucket, key
-func (_m *BlobstoreClient) Exists(ctx context.Context, bucket string, key string) (bool, error) {
+func (_m *BlobstoreClient) Exists(ctx context.Context, bucket string, key blobstore.Key) (bool, error) {
 	ret := _m.Called(ctx, bucket, key)
 
 	var r0 bool
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) bool); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, blobstore.Key) bool); ok {
 		r0 = rf(ctx, bucket, key)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string, blobstore.Key) error); ok {
 		r1 = rf(ctx, bucket, key)
 	} else {
 		r1 = ret.Error(1)
@@ -120,15 +120,15 @@ func (_m *BlobstoreClient) Exists(ctx context.Context, bucket string, key string
 }
 
 // ListByPrefix provides a mock function with given fields: ctx, bucket, prefix
-func (_m *BlobstoreClient) ListByPrefix(ctx context.Context, bucket string, prefix string) ([]string, error) {
+func (_m *BlobstoreClient) ListByPrefix(ctx context.Context, bucket string, prefix string) ([]blobstore.Key, error) {
 	ret := _m.Called(ctx, bucket, prefix)
 
-	var r0 []string
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) []string); ok {
+	var r0 []blobstore.Key
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) []blobstore.Key); ok {
 		r0 = rf(ctx, bucket, prefix)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]string)
+			r0 = ret.Get(0).([]blobstore.Key)
 		}
 	}
 
@@ -143,11 +143,11 @@ func (_m *BlobstoreClient) ListByPrefix(ctx context.Context, bucket string, pref
 }
 
 // Upload provides a mock function with given fields: ctx, bucket, key, blob
-func (_m *BlobstoreClient) Upload(ctx context.Context, bucket string, key string, blob blobstore.Blob) error {
+func (_m *BlobstoreClient) Upload(ctx context.Context, bucket string, key blobstore.Key, blob blobstore.Blob) error {
 	ret := _m.Called(ctx, bucket, key, blob)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, blobstore.Blob) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, blobstore.Key, blobstore.Blob) error); ok {
 		r0 = rf(ctx, bucket, key, blob)
 	} else {
 		r0 = ret.Error(0)

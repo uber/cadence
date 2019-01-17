@@ -144,13 +144,17 @@ func (c *client) ListByPrefix(_ context.Context, bucket string, prefix string) (
 	if err != nil {
 		return nil, err
 	}
-	var filesWithPrefix []string
+	var matchingKeys []blobstore.Key
 	for _, f := range files {
 		if strings.HasPrefix(f, prefix) {
-			filesWithPrefix = append(filesWithPrefix, f)
+			key, err := blobstore.NewKeyFromString(f)
+			if err != nil {
+				return nil, err
+			}
+			matchingKeys = append(matchingKeys, key)
 		}
 	}
-	return convertFileNamesToKeys(filesWithPrefix)
+	return matchingKeys, nil
 }
 
 func (c *client) BucketMetadata(_ context.Context, bucket string) (*blobstore.BucketMetadataResponse, error) {
@@ -234,16 +238,4 @@ func bucketDirectory(storeDirectory string, bucketName string) string {
 
 func bucketItemPath(storeDirectory string, bucketName string, filename string) string {
 	return filepath.Join(bucketDirectory(storeDirectory, bucketName), filename)
-}
-
-func convertFileNamesToKeys(filenames []string) ([]blobstore.Key, error) {
-	var keys []blobstore.Key
-	for _, name := range filenames {
-		k, err := blobstore.NewKeyFromString(name)
-		if err != nil {
-			return nil, err
-		}
-		keys = append(keys, k)
-	}
-	return keys, nil
 }

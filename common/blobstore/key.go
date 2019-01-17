@@ -30,13 +30,10 @@ import (
 const (
 	// piecesSeparator is used to separate different sections of a key name
 	piecesSeparator = "_"
-
 	// keySizeLimit indicates the max length of a key including separator tokens and extension
 	keySizeLimit = 255
-
 	// piecesLimit indicates the limit on the number of separate pieces that can be used to construct a key name
 	piecesLimit = 4
-
 	// extensionSeparator indicates the token used to separate key name from key extension
 	extensionSeparator = "."
 )

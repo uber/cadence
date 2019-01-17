@@ -43,10 +43,10 @@ type (
 		WorkflowID           *string `json:"workflow_id,omitempty"`
 		RunID                *string `json:"run_id,omitempty"`
 		PageToken            *string `json:"page_token,omitempty"`
-		StartFailoverVersion *string `json:"start_failover_version,omitempty"`
-		CloseFailoverVersion *string `json:"close_failover_version,omitempty"`
-		StartEventID         *int64  `json:"start_event_id,omitempty"`
-		CloseEventID         *int64  `json:"close_event_id,omitempty"`
+		FirstFailoverVersion *string `json:"first_failover_version,omitempty"`
+		LastFailoverVersion  *string `json:"last_failover_version,omitempty"`
+		FirstEventID         *int64  `json:"first_event_id,omitempty"`
+		LastEventID          *int64  `json:"last_event_id,omitempty"`
 		UploadDateTime       *string `json:"upload_date_time,omitempty"`
 		UploadCluster        *string `json:"upload_cluster,omitempty"`
 		EventCount           *int64  `json:"event_count,omitempty"`
@@ -55,20 +55,20 @@ type (
 	// HistoryBlob is the serializable data that forms the body of a blob
 	HistoryBlob struct {
 		Header *HistoryBlobHeader `json:"header"`
-		Events *shared.History    `json:"events"`
+		Body   *shared.History    `json:"body"`
 	}
 )
 
 // NewHistoryBlobKey returns a key for history blob
-func NewHistoryBlobKey(domainID, workflowID, runID, pageToken, closeFailoverVersion string) (blobstore.Key, error) {
-	if len(domainID) == 0 || len(workflowID) == 0 || len(runID) == 0 || len(pageToken) == 0 || len(closeFailoverVersion) == 0 {
+func NewHistoryBlobKey(domainID, workflowID, runID, pageToken, failoverVersion string) (blobstore.Key, error) {
+	if len(domainID) == 0 || len(workflowID) == 0 || len(runID) == 0 || len(pageToken) == 0 || len(failoverVersion) == 0 {
 		return nil, errors.New("all inputs required to be non-empty")
 	}
 	domainIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(domainID)))
 	workflowIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(workflowID)))
 	runIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(runID)))
 	combinedHash := strings.Join([]string{domainIDHash, workflowIDHash, runIDHash}, "")
-	return blobstore.NewKey(HistoryBlobKeyExt, combinedHash, pageToken, closeFailoverVersion)
+	return blobstore.NewKey(HistoryBlobKeyExt, combinedHash, pageToken, failoverVersion)
 }
 
 // ConvertHeaderToTags converts header into metadata tags for blob
