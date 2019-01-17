@@ -22,13 +22,9 @@ package sysworkflow
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"github.com/uber-go/tally"
-	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/logging"
 	"go.uber.org/cadence"
-	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 	"time"
@@ -115,7 +111,7 @@ func selectSystemTask(scope tally.Scope, signal signal, ctx workflow.Context, lo
 
 // ArchivalActivity is the archival activity code
 func ArchivalActivity(ctx context.Context, request ArchiveRequest) error {
-	fields := zap.Fields(
+/*	fields := zap.Fields(
 		zap.String(DomainIDTag, request.DomainID),
 		zap.String(WorkflowIDTag, request.WorkflowID),
 		zap.String(RunIDTag, request.RunID),
@@ -151,8 +147,8 @@ func ArchivalActivity(ctx context.Context, request ArchiveRequest) error {
 	if len(downloadedBlob.Tags) != len(blob.Tags) {
 		logger.Error("archival failed, did not read correct blob back", zap.String("blobname", blobFilename))
 		return errors.New("downloaded blob is not valid")
-	}
-	logger.Info("archival successful", zap.String("blobname", blobFilename), zap.Int("body-size", len(downloadedBlob.Body)))
+	}*/
+	//logger.Info("archival successful", zap.String("blobname", blobFilename), zap.Int("body-size", len(downloadedBlob.Body)))
 	return nil
 }
 

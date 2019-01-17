@@ -22,6 +22,7 @@ package sysworkflow
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/dgryski/go-farm"
 	"github.com/uber/cadence/.gen/go/shared"
@@ -31,24 +32,24 @@ import (
 
 const (
 	// HistoryBlobKeyExt is the blob key extension on all history blobs
-	HistoryBlobKeyExt = ".history"
+	HistoryBlobKeyExt = "history"
 )
 
 type (
 	// HistoryBlobHeader is the header attached to all history blobs
 	HistoryBlobHeader struct {
-		DomainName           *string `json:"domain_name"`
-		DomainID             *string `json:"domain_id"`
-		WorkflowID           *string `json:"workflow_id"`
-		RunID                *string `json:"run_id"`
-		PageToken            *string `json:"page_token"`
-		StartFailoverVersion *string `json:"start_failover_version"`
-		CloseFailoverVersion *string `json"close_failover_version"`
-		StartEventID         *int64  `json:"start_event_id"`
-		CloseEventID         *int64  `json:"close_event_id"`
-		UploadDateTime       *string `json:"upload_date_time"`
-		UploadCluster        *string `json:"upload_cluster"`
-		EventCount           *int64  `json:"event_count"`
+		DomainName           *string `json:"domain_name,omitempty"`
+		DomainID             *string `json:"domain_id,omitempty"`
+		WorkflowID           *string `json:"workflow_id,omitempty"`
+		RunID                *string `json:"run_id,omitempty"`
+		PageToken            *string `json:"page_token,omitempty"`
+		StartFailoverVersion *string `json:"start_failover_version,omitempty"`
+		CloseFailoverVersion *string `json:"close_failover_version,omitempty"`
+		StartEventID         *int64  `json:"start_event_id,omitempty"`
+		CloseEventID         *int64  `json:"close_event_id,omitempty"`
+		UploadDateTime       *string `json:"upload_date_time,omitempty"`
+		UploadCluster        *string `json:"upload_cluster,omitempty"`
+		EventCount           *int64  `json:"event_count,omitempty"`
 	}
 
 	// HistoryBlob is the serializable data that forms the body of a blob
@@ -60,12 +61,17 @@ type (
 
 // NewHistoryBlobKey returns a key for history blob
 func NewHistoryBlobKey(domainID, workflowID, runID, pageToken, closeFailoverVersion string) (blobstore.Key, error) {
-	hashInput := strings.Join([]string{domainID, workflowID, runID}, "")
-	hash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(hashInput)))
-	return blobstore.NewKey(HistoryBlobKeyExt, hash, pageToken, closeFailoverVersion)
+	if len(domainID) == 0 || len(workflowID) == 0 || len(runID) == 0 || len(pageToken) == 0 || len(closeFailoverVersion) == 0 {
+		return nil, errors.New("all inputs required to be non-empty")
+	}
+	domainIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(domainID)))
+	workflowIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(workflowID)))
+	runIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(runID)))
+	combinedHash := strings.Join([]string{domainIDHash, workflowIDHash, runIDHash}, "")
+	return blobstore.NewKey(HistoryBlobKeyExt, combinedHash, pageToken, closeFailoverVersion)
 }
 
-// ConvertHeaderToTags
+// ConvertHeaderToTags converts header into metadata tags for blob
 func ConvertHeaderToTags(header *HistoryBlobHeader) (map[string]string, error) {
 	var tempMap map[string]interface{}
 	bytes, err := json.Marshal(header)
