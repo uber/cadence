@@ -739,6 +739,7 @@ func (w *workflowResetorImpl) replicateResetEvent(baseMutableState mutableState,
 				newMsBuilder = newMutableStateBuilderWithReplicationState(
 					clusterMetadata.GetCurrentClusterName(),
 					w.eng.shard.GetConfig(),
+					w.eng.shard.GetEventsCache(),
 					w.eng.logger,
 					firstEvent.GetVersion(),
 				)
