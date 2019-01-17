@@ -4,8 +4,6 @@ sudo: required
 language: go
 directories:
     - $HOME/.glide/cache
-go:
-  - 1.11.1
 
 env:
   global:
