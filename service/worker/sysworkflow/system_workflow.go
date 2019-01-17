@@ -111,44 +111,7 @@ func selectSystemTask(scope tally.Scope, signal signal, ctx workflow.Context, lo
 
 // ArchivalActivity is the archival activity code
 func ArchivalActivity(ctx context.Context, request ArchiveRequest) error {
-/*	fields := zap.Fields(
-		zap.String(DomainIDTag, request.DomainID),
-		zap.String(WorkflowIDTag, request.WorkflowID),
-		zap.String(RunIDTag, request.RunID),
-		zap.String(BucketNameTag, request.Bucket))
-	logger := activity.GetLogger(ctx).WithOptions(fields)
-	logger.Info("called archival activity")
-
-	blobstoreClient := ctx.Value(blobstoreClientKey).(blobstore.Client)
-
-	// TODO: the rest of this method is temporary (follow diff will do history archives and delete from cassandra)
-	body := fmt.Sprintf("DomainID: %v\n WorkflowID: %v\n RunID: %v", request.DomainID, request.WorkflowID, request.RunID)
-	blobFilename := HistoryBlobFilename(request.DomainID, request.WorkflowID, request.RunID)
-	blob := blobstore.Blob{
-		Body: []byte(body),
-		Tags: map[string]string{
-			DomainIDTag:   request.DomainID,
-			WorkflowIDTag: request.WorkflowID,
-			RunIDTag:      request.RunID,
-		},
-	}
-	if err := blobstoreClient.Upload(ctx, request.Bucket, blobFilename, &blob); err != nil {
-		logger.Error("archival failed, could not upload blob", zap.String("blobname", blobFilename), zap.Error(err))
-		return err
-	}
-
-	// TODO: only downloading blob to show that blobstore works, final impl will not download blobs after upload
-	downloadedBlob, err := blobstoreClient.Download(ctx, request.Bucket, blobFilename)
-	if err != nil {
-		logger.Error("archival failed, could not download blob", zap.String("blobname", blobFilename), zap.Error(err))
-		return err
-	}
-
-	if len(downloadedBlob.Tags) != len(blob.Tags) {
-		logger.Error("archival failed, did not read correct blob back", zap.String("blobname", blobFilename))
-		return errors.New("downloaded blob is not valid")
-	}*/
-	//logger.Info("archival successful", zap.String("blobname", blobFilename), zap.Int("body-size", len(downloadedBlob.Body)))
+	// TODO: write this activity
 	return nil
 }
 
