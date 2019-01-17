@@ -81,7 +81,7 @@ func (b *blob) Tags() map[string]string {
 // Compress compresses blob returning a new blob. Returned Blob does not share any references with this Blob.
 func (b *blob) Compress() (Blob, error) {
 	if b.Compressed() {
-		return nil, fmt.Errorf("blob is already compressed",)
+		return nil, fmt.Errorf("blob is already compressed")
 	}
 	var buf bytes.Buffer
 	w := gzip.NewWriter(&buf)

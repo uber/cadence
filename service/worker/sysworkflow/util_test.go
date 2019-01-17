@@ -22,26 +22,26 @@ func (s *UtilSuite) SetupTest() {
 
 func (s *UtilSuite) TestNewHistoryBlobKey() {
 	testCases := []struct {
-		domainID string
-		workflowID string
-		runID string
-		pageToken string
+		domainID             string
+		workflowID           string
+		runID                string
+		pageToken            string
 		closeFailoverVersion string
-		expectError bool
-		expectBuiltKey string
+		expectError          bool
+		expectBuiltKey       string
 	}{
 		{
-			domainID: "",
+			domainID:    "",
 			expectError: true,
 		},
 		{
-			domainID: "testDomainID",
-			workflowID: "testWorkflowID",
-			runID: "testRunID",
-			pageToken: "testPageToken",
+			domainID:             "testDomainID",
+			workflowID:           "testWorkflowID",
+			runID:                "testRunID",
+			pageToken:            "testPageToken",
 			closeFailoverVersion: "testCloseFailoverVersion",
-			expectError: false,
-			expectBuiltKey: "17971674567288329890367046253745284795510285995943906173973_testPageToken_testCloseFailoverVersion.history",
+			expectError:          false,
+			expectBuiltKey:       "17971674567288329890367046253745284795510285995943906173973_testPageToken_testCloseFailoverVersion.history",
 		},
 	}
 
@@ -60,15 +60,15 @@ func (s *UtilSuite) TestNewHistoryBlobKey() {
 
 func (s *UtilSuite) TestConvertHeaderToTags() {
 	testCases := []struct {
-		header *HistoryBlobHeader
+		header     *HistoryBlobHeader
 		expectTags map[string]string
 	}{
 		{
-			header: nil,
+			header:     nil,
 			expectTags: map[string]string{},
 		},
 		{
-			header: &HistoryBlobHeader{},
+			header:     &HistoryBlobHeader{},
 			expectTags: map[string]string{},
 		},
 		{
@@ -91,11 +91,11 @@ func (s *UtilSuite) TestConvertHeaderToTags() {
 		},
 		{
 			header: &HistoryBlobHeader{
-				DomainID: common.StringPtr("test-domain-id"),
+				DomainID:   common.StringPtr("test-domain-id"),
 				EventCount: common.Int64Ptr(9),
 			},
 			expectTags: map[string]string{
-				"domain_id": "test-domain-id",
+				"domain_id":   "test-domain-id",
 				"event_count": "9",
 			},
 		},
