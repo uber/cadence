@@ -218,9 +218,14 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 
 	clusterMetadata := wh.GetClusterMetadata()
 	defaultBucket := clusterMetadata.GetDefaultArchivalBucket()
-	requestArchivalConfig, err := registerRequestToArchivalConfig(registerRequest, defaultBucket)
-	if err != nil {
-		return wh.error(err, scope)
+	clusterConfiguredForArchival := len(defaultBucket) != 0
+	var requestArchivalConfig *archivalConfigUpdate
+	var err error
+	if clusterConfiguredForArchival {
+		requestArchivalConfig, err = registerRequestToArchivalConfig(registerRequest, defaultBucket)
+		if err != nil {
+			return wh.error(err, scope)
+		}
 	}
 	// TODO remove the IsGlobalDomainEnabled check once cross DC is public
 	if clusterMetadata.IsGlobalDomainEnabled() && !clusterMetadata.IsMasterCluster() {
@@ -278,9 +283,12 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 	}
 
 	currentArchivalState := neverEnabledState()
-	nextArchivalState, _, err := currentArchivalState.updateState(requestArchivalConfig)
-	if err != nil {
-		return wh.error(err, scope)
+	nextArchivalState := currentArchivalState
+	if clusterConfiguredForArchival {
+		nextArchivalState, _, err = currentArchivalState.updateState(requestArchivalConfig)
+		if err != nil {
+			return wh.error(err, scope)
+		}
 	}
 
 	domainRequest := &persistence.CreateDomainRequest{
@@ -422,10 +430,16 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 
 	clusterMetadata := wh.GetClusterMetadata()
 	defaultBucket := clusterMetadata.GetDefaultArchivalBucket()
-	requestArchivalConfig, err := updateRequestToArchivalConfig(updateRequest, defaultBucket)
-	if err != nil {
-		return nil, wh.error(err, scope)
+	clusterConfiguredForArchival := len(defaultBucket) != 0
+	var requestArchivalConfig *archivalConfigUpdate
+	var err error
+	if clusterConfiguredForArchival {
+		requestArchivalConfig, err = updateRequestToArchivalConfig(updateRequest, defaultBucket)
+		if err != nil {
+			return nil, wh.error(err, scope)
+		}
 	}
+
 	// TODO remove the IsGlobalDomainEnabled check once cross DC is public
 	if !clusterMetadata.IsGlobalDomainEnabled() {
 		updateRequest.ReplicationConfiguration = nil
@@ -460,9 +474,13 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 		bucket: config.ArchivalBucket,
 		status: config.ArchivalStatus,
 	}
-	nextArchivalState, archivalConfigChanged, err := currentArchivalState.updateState(requestArchivalConfig)
-	if err != nil {
-		return nil, wh.error(err, scope)
+	nextArchivalState := currentArchivalState
+	archivalConfigChanged := false
+	if clusterConfiguredForArchival {
+		nextArchivalState, archivalConfigChanged, err = currentArchivalState.updateState(requestArchivalConfig)
+		if err != nil {
+			return nil, wh.error(err, scope)
+		}
 	}
 
 	// whether active cluster is changed
