@@ -42,7 +42,8 @@ type (
 		DomainID             *string `json:"domain_id,omitempty"`
 		WorkflowID           *string `json:"workflow_id,omitempty"`
 		RunID                *string `json:"run_id,omitempty"`
-		PageToken            *string `json:"page_token,omitempty"`
+		CurrentPageToken     *string `json:"current_page_token,omitempty"`
+		NextPageToken        *string `json:"next_page_token,omitempty"`
 		FirstFailoverVersion *string `json:"first_failover_version,omitempty"`
 		LastFailoverVersion  *string `json:"last_failover_version,omitempty"`
 		FirstEventID         *int64  `json:"first_event_id,omitempty"`
