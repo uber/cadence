@@ -2,12 +2,11 @@
 
 
 [[projects]]
-  digest = "1:f11e03e8297265765272534835027251cc808ed6dab124f5f5dbc37f7c908abb"
+  digest = "1:9362b2212139b7821f73a86169bf80ce6b0264956f87d82ab3aeedb2b5c08fea"
   name = "github.com/Shopify/sarama"
   packages = ["."]
   pruneopts = ""
-  revision = "ec843464b50d4c8b56403ec9d589cf41ea30e722"
-  version = "v1.19.0"
+  revision = "35324cf48e33d8260e1c7c18854465a904ade249"
 
 [[projects]]
   digest = "1:21a774cd1c70bc7b328522ad415933eb1f329ad72773f4d0112210fc0dbccc55"
@@ -34,12 +33,12 @@
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
-  digest = "1:6da5545112f73dbad12895d25e39818c1c3e8040ebba488d4d3fe43bc8685eb6"
+  digest = "1:21589021e86a0fdfef012b3de1133b15a7af5466c1cb6e106e643639b2fbd1ec"
   name = "github.com/bsm/sarama-cluster"
   packages = ["."]
   pruneopts = ""
-  revision = "c618e605e15c0d7535f6c96ff8efbb0dba4fd66c"
-  version = "v2.1.15"
+  revision = "ccdc0803695fbce22f1706d04ded46cd518fd832"
+  version = "v2.1.8"
 
 [[projects]]
   digest = "1:47fe89a242ccbae03d31b4c665d3d983786acd316c0d7c51bcfa0d019b205004"

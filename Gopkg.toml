@@ -28,7 +28,7 @@ ignored = ["github.com/uber/cadence/.gen"]
 
 [[constraint]]
   name = "github.com/Shopify/sarama"
-  version = "1.17.0"
+  revision = "35324cf48e33d8260e1c7c18854465a904ade249"
 
 [[constraint]]
   name = "github.com/apache/thrift"
