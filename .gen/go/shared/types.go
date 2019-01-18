@@ -26812,29 +26812,39 @@ func (v *RegisterDomainRequest) GetSecurityToken() (o string) {
 	return
 }
 
+// IsSetSecurityToken returns true if SecurityToken is not nil.
+func (v *RegisterDomainRequest) IsSetSecurityToken() bool {
+	return v != nil && v.SecurityToken != nil
+}
+
 // GetArchivalStatus returns the value of ArchivalStatus if it is set or its
 // zero value if it is unset.
 func (v *RegisterDomainRequest) GetArchivalStatus() (o ArchivalStatus) {
-	if v.ArchivalStatus != nil {
+	if v != nil && v.ArchivalStatus != nil {
 		return *v.ArchivalStatus
 	}
 
 	return
 }
 
+// IsSetArchivalStatus returns true if ArchivalStatus is not nil.
+func (v *RegisterDomainRequest) IsSetArchivalStatus() bool {
+	return v != nil && v.ArchivalStatus != nil
+}
+
 // GetArchivalBucketName returns the value of ArchivalBucketName if it is set or its
 // zero value if it is unset.
 func (v *RegisterDomainRequest) GetArchivalBucketName() (o string) {
-	if v.ArchivalBucketName != nil {
+	if v != nil && v.ArchivalBucketName != nil {
 		return *v.ArchivalBucketName
 	}
 
 	return
 }
 
-// IsSetCustomArchivalBucketName returns true if CustomArchivalBucketName is not nil.
-func (v *RegisterDomainRequest) IsSetCustomArchivalBucketName() bool {
-	return v != nil && v.CustomArchivalBucketName != nil
+// IsSetArchivalBucketName returns true if ArchivalBucketName is not nil.
+func (v *RegisterDomainRequest) IsSetArchivalBucketName() bool {
+	return v != nil && v.ArchivalBucketName != nil
 }
 
 type ReplicationInfo struct {
