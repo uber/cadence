@@ -72,13 +72,13 @@ func (s *KeySuite) TestNewKey() {
 			expectError: true,
 		},
 		{
-			extension: "",
-			pieces: []string{"1"},
+			extension:   "",
+			pieces:      []string{"1"},
 			expectError: true,
 		},
 		{
-			extension: "ext",
-			pieces: []string{"1", ""},
+			extension:   "ext",
+			pieces:      []string{"1", ""},
 			expectError: true,
 		},
 		{
@@ -115,12 +115,11 @@ func (s *KeySuite) TestNewKeyFromString() {
 			expectError: true,
 		},
 		{
-			inputStr: "name.",
+			inputStr:    "name.",
 			expectError: true,
-
 		},
 		{
-			inputStr: ".ext",
+			inputStr:    ".ext",
 			expectError: true,
 		},
 		{
