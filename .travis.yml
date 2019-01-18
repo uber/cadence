@@ -4,9 +4,8 @@ sudo: required
 language: go
 directories:
     - $HOME/.glide/cache
-
 go:
-  - 1.11.4
+  - 1.11.1
 
 env:
   global:
@@ -21,6 +20,7 @@ addons:
       - openjdk-8-jre
       - python
       - python-dev
+      - python-pip
 
 services:
   - mysql
