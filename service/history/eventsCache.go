@@ -22,6 +22,7 @@ package history
 
 import (
 	"github.com/uber-common/bark"
+	"time"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -43,6 +44,7 @@ type (
 		cache.Cache
 		eventsMgr     persistence.HistoryManager
 		eventsV2Mgr   persistence.HistoryV2Manager
+		disabled      bool
 		logger        bark.Logger
 		metricsClient metrics.Client
 	}
@@ -58,19 +60,27 @@ type (
 var _ eventsCache = (*eventsCacheImpl)(nil)
 
 func newEventsCache(shardCtx ShardContext) eventsCache {
-	opts := &cache.Options{}
 	config := shardCtx.GetConfig()
-	opts.InitialCapacity = config.EventsCacheInitialSize()
-	opts.TTL = config.EventsCacheTTL()
+
+	return newEventsCacheWithOptions(config.EventsCacheInitialSize(), config.EventsCacheMaxSize(), config.EventsCacheTTL(),
+		shardCtx.GetHistoryManager(), shardCtx.GetHistoryV2Manager(), true, shardCtx.GetLogger(), shardCtx.GetMetricsClient())
+}
+
+func newEventsCacheWithOptions(initialSize, maxSize int, ttl time.Duration, eventsMgr persistence.HistoryManager,
+	eventsV2Mgr persistence.HistoryV2Manager, disabled bool, logger bark.Logger, metrics metrics.Client) *eventsCacheImpl {
+	opts := &cache.Options{}
+	opts.InitialCapacity = initialSize
+	opts.TTL = ttl
 
 	return &eventsCacheImpl{
-		Cache:       cache.New(config.EventsCacheMaxSize(), opts),
-		eventsMgr:   shardCtx.GetHistoryManager(),
-		eventsV2Mgr: shardCtx.GetHistoryV2Manager(),
-		logger: shardCtx.GetLogger().WithFields(bark.Fields{
+		Cache:       cache.New(maxSize, opts),
+		eventsMgr:   eventsMgr,
+		eventsV2Mgr: eventsV2Mgr,
+		disabled:    disabled,
+		logger: logger.WithFields(bark.Fields{
 			logging.TagWorkflowComponent: logging.TagValueEventsCacheComponent,
 		}),
-		metricsClient: shardCtx.GetMetricsClient(),
+		metricsClient: metrics,
 	}
 }
 
@@ -90,9 +100,12 @@ func (e *eventsCacheImpl) getEvent(domainID, workflowID, runID string, firstEven
 	defer sw.Stop()
 
 	key := newEventKey(domainID, workflowID, runID, eventID)
-	event, cacheHit := e.Cache.Get(key).(*shared.HistoryEvent)
-	if cacheHit {
-		return event, nil
+	// Test hook for disabling cache
+	if !e.disabled {
+		event, cacheHit := e.Cache.Get(key).(*shared.HistoryEvent)
+		if cacheHit {
+			return event, nil
+		}
 	}
 
 	e.metricsClient.IncCounter(metrics.EventsCacheGetEventScope, metrics.CacheMissCounter)
