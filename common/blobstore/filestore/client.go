@@ -21,6 +21,7 @@
 package filestore
 
 import (
+	"github.com/uber/cadence/common/blobstore/blob"
 	"context"
 	"fmt"
 	"os"
@@ -56,7 +57,7 @@ func NewClient(cfg *Config) (blobstore.Client, error) {
 	}, nil
 }
 
-func (c *client) Upload(_ context.Context, bucket string, key blobstore.Key, blob blobstore.Blob) error {
+func (c *client) Upload(_ context.Context, bucket string, key blob.Key, blob blobstore.Blob) error {
 	c.Lock()
 	defer c.Unlock()
 

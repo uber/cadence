@@ -21,6 +21,7 @@
 package blobstore
 
 import (
+	"github.com/uber/cadence/common/blobstore/blob"
 	"context"
 	"errors"
 )
@@ -40,10 +41,10 @@ type BucketMetadataResponse struct {
 
 // Client is used to operate on blobs in a blobstore
 type Client interface {
-	Upload(ctx context.Context, bucket string, key Key, blob Blob) error
-	Download(ctx context.Context, bucket string, key Key) (Blob, error)
-	Exists(ctx context.Context, bucket string, key Key) (bool, error)
-	Delete(ctx context.Context, bucket string, key Key) (bool, error)
-	ListByPrefix(ctx context.Context, bucket string, prefix string) ([]Key, error)
+	Upload(ctx context.Context, bucket string, key blob.Key, blob blob.Blob) error
+	Download(ctx context.Context, bucket string, key blob.Key) (blob.Blob, error)
+	Exists(ctx context.Context, bucket string, key blob.Key) (bool, error)
+	Delete(ctx context.Context, bucket string, key blob.Key) (bool, error)
+	ListByPrefix(ctx context.Context, bucket string, prefix string) ([]blob.Key, error)
 	BucketMetadata(ctx context.Context, bucket string) (*BucketMetadataResponse, error)
 }
