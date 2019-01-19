@@ -762,6 +762,11 @@ func (e *mutableStateBuilder) GetActivityScheduledEvent(scheduleEventID int64) (
 		return nil, false
 	}
 
+	// Needed for backward compatibility reason
+	if ai.ScheduledEvent != nil {
+		return ai.ScheduledEvent, true
+	}
+
 	scheduledEvent, err := e.eventsCache.getEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID,
 		e.executionInfo.RunID, ai.ScheduledEventBatchID, ai.ScheduleID, e.executionInfo.EventStoreVersion,
 		e.executionInfo.GetCurrentBranch())
@@ -806,6 +811,11 @@ func (e *mutableStateBuilder) GetChildExecutionInitiatedEvent(initiatedEventID i
 	ci, ok := e.pendingChildExecutionInfoIDs[initiatedEventID]
 	if !ok {
 		return nil, false
+	}
+
+	// Needed for backward compatibility reason
+	if ci.InitiatedEvent != nil {
+		return ci.InitiatedEvent, true
 	}
 
 	initiatedEvent, err := e.eventsCache.getEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID,
@@ -858,6 +868,11 @@ func (e *mutableStateBuilder) GetAllRequestCancels() map[int64]*persistence.Requ
 func (e *mutableStateBuilder) GetCompletionEvent() (*workflow.HistoryEvent, bool) {
 	if e.executionInfo.State != persistence.WorkflowStateCompleted {
 		return nil, false
+	}
+
+	// Needed for backward compatibility reason
+	if e.executionInfo.CompletionEvent != nil {
+		return e.executionInfo.CompletionEvent, true
 	}
 
 	// Completion EventID is always one less than NextEventID after workflow is completed

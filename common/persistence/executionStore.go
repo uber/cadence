@@ -222,6 +222,17 @@ func (m *executionManagerImpl) DeserializeChildExecutionInfos(infos map[int64]*I
 			DomainName:            v.DomainName,
 			WorkflowTypeName:      v.WorkflowTypeName,
 		}
+
+		// Needed for backward compatibility reason.
+		// ChildWorkflowExecutionStartedEvent was only used by transfer queue processing of StartChildWorkflow.
+		// Updated the code to instead directly read WorkflowId and RunId from mutable state
+		// Existing mutable state won't have those values set so instead use started event to set StartedWorkflowID and
+		// StartedRunID on the mutable state before passing it to application
+		if startedEvent != nil {
+			startedExecution := startedEvent.ChildWorkflowExecutionStartedEventAttributes.WorkflowExecution
+			c.StartedWorkflowID = startedExecution.GetWorkflowId()
+			c.StartedRunID = startedExecution.GetRunId()
+		}
 		newInfos[k] = c
 	}
 	return newInfos, nil
