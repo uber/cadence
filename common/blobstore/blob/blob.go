@@ -37,6 +37,8 @@ In order to add a new compression format do the following:
 //	gzipCompression = "compression/gzip"
 //)
 
+
+
 type Blob struct {
 	Body []byte
 	Tags map[string]string
@@ -46,6 +48,21 @@ func NewBlob(body []byte, tags map[string]string) Blob {
 	return Blob{
 		Body: body,
 		Tags: tags,
+	}
+}
+
+func DeepCopy(blob Blob) Blob {
+	tagsCopy := make(map[string]string, len(blob.Tags))
+	for k, v := range blob.Tags {
+		tagsCopy[k] = v
+	}
+	bodyCopy := make([]byte, len(blob.Body), len(blob.Body))
+	for i, b := range blob.Body {
+		bodyCopy[i] = b
+	}
+	return Blob{
+		Body: bodyCopy,
+		Tags: tagsCopy,
 	}
 }
 

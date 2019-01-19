@@ -22,6 +22,7 @@ package common
 
 import (
 	s "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/blobstore/blob"
 )
 
 // IntPtr makes a copy and returns the pointer to an int.
@@ -131,6 +132,11 @@ func ChildWorkflowExecutionFailedCausePtr(t s.ChildWorkflowExecutionFailedCause)
 
 // ArchivalStatusPtr makes a copy and returns the pointer to an ArchivalStatus.
 func ArchivalStatusPtr(t s.ArchivalStatus) *s.ArchivalStatus {
+	return &t
+}
+
+// BlobPtr makes a copy and returns the pointer to a Blob.
+func BlobPtr(t blob.Blob) *blob.Blob {
 	return &t
 }
 
