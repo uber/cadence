@@ -22,6 +22,7 @@
 
 package mocks
 
+import blob "github.com/uber/cadence/common/blobstore/blob"
 import blobstore "github.com/uber/cadence/common/blobstore"
 import context "context"
 import mock "github.com/stretchr/testify/mock"
@@ -55,18 +56,18 @@ func (_m *BlobstoreClient) BucketMetadata(ctx context.Context, bucket string) (*
 }
 
 // Delete provides a mock function with given fields: ctx, bucket, key
-func (_m *BlobstoreClient) Delete(ctx context.Context, bucket string, key blobstore.Key) (bool, error) {
+func (_m *BlobstoreClient) Delete(ctx context.Context, bucket string, key blob.Key) (bool, error) {
 	ret := _m.Called(ctx, bucket, key)
 
 	var r0 bool
-	if rf, ok := ret.Get(0).(func(context.Context, string, blobstore.Key) bool); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, blob.Key) bool); ok {
 		r0 = rf(ctx, bucket, key)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, blobstore.Key) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string, blob.Key) error); ok {
 		r1 = rf(ctx, bucket, key)
 	} else {
 		r1 = ret.Error(1)
@@ -76,20 +77,20 @@ func (_m *BlobstoreClient) Delete(ctx context.Context, bucket string, key blobst
 }
 
 // Download provides a mock function with given fields: ctx, bucket, key
-func (_m *BlobstoreClient) Download(ctx context.Context, bucket string, key blobstore.Key) (blobstore.Blob, error) {
+func (_m *BlobstoreClient) Download(ctx context.Context, bucket string, key blob.Key) (*blob.Blob, error) {
 	ret := _m.Called(ctx, bucket, key)
 
-	var r0 blobstore.Blob
-	if rf, ok := ret.Get(0).(func(context.Context, string, blobstore.Key) blobstore.Blob); ok {
+	var r0 *blob.Blob
+	if rf, ok := ret.Get(0).(func(context.Context, string, blob.Key) *blob.Blob); ok {
 		r0 = rf(ctx, bucket, key)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(blobstore.Blob)
+			r0 = ret.Get(0).(*blob.Blob)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, blobstore.Key) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string, blob.Key) error); ok {
 		r1 = rf(ctx, bucket, key)
 	} else {
 		r1 = ret.Error(1)
@@ -99,18 +100,18 @@ func (_m *BlobstoreClient) Download(ctx context.Context, bucket string, key blob
 }
 
 // Exists provides a mock function with given fields: ctx, bucket, key
-func (_m *BlobstoreClient) Exists(ctx context.Context, bucket string, key blobstore.Key) (bool, error) {
+func (_m *BlobstoreClient) Exists(ctx context.Context, bucket string, key blob.Key) (bool, error) {
 	ret := _m.Called(ctx, bucket, key)
 
 	var r0 bool
-	if rf, ok := ret.Get(0).(func(context.Context, string, blobstore.Key) bool); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, blob.Key) bool); ok {
 		r0 = rf(ctx, bucket, key)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, blobstore.Key) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string, blob.Key) error); ok {
 		r1 = rf(ctx, bucket, key)
 	} else {
 		r1 = ret.Error(1)
@@ -120,15 +121,15 @@ func (_m *BlobstoreClient) Exists(ctx context.Context, bucket string, key blobst
 }
 
 // ListByPrefix provides a mock function with given fields: ctx, bucket, prefix
-func (_m *BlobstoreClient) ListByPrefix(ctx context.Context, bucket string, prefix string) ([]blobstore.Key, error) {
+func (_m *BlobstoreClient) ListByPrefix(ctx context.Context, bucket string, prefix string) ([]blob.Key, error) {
 	ret := _m.Called(ctx, bucket, prefix)
 
-	var r0 []blobstore.Key
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) []blobstore.Key); ok {
+	var r0 []blob.Key
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) []blob.Key); ok {
 		r0 = rf(ctx, bucket, prefix)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]blobstore.Key)
+			r0 = ret.Get(0).([]blob.Key)
 		}
 	}
 
@@ -142,13 +143,13 @@ func (_m *BlobstoreClient) ListByPrefix(ctx context.Context, bucket string, pref
 	return r0, r1
 }
 
-// Upload provides a mock function with given fields: ctx, bucket, key, blob
-func (_m *BlobstoreClient) Upload(ctx context.Context, bucket string, key blobstore.Key, blob blobstore.Blob) error {
-	ret := _m.Called(ctx, bucket, key, blob)
+// Upload provides a mock function with given fields: ctx, bucket, key, _a3
+func (_m *BlobstoreClient) Upload(ctx context.Context, bucket string, key blob.Key, _a3 *blob.Blob) error {
+	ret := _m.Called(ctx, bucket, key, _a3)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, blobstore.Key, blobstore.Blob) error); ok {
-		r0 = rf(ctx, bucket, key, blob)
+	if rf, ok := ret.Get(0).(func(context.Context, string, blob.Key, *blob.Blob) error); ok {
+		r0 = rf(ctx, bucket, key, _a3)
 	} else {
 		r0 = ret.Error(0)
 	}

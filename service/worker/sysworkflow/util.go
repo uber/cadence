@@ -26,7 +26,7 @@ import (
 	"fmt"
 	"github.com/dgryski/go-farm"
 	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/blobstore/blob"
 	"strings"
 )
 
@@ -61,7 +61,7 @@ type (
 )
 
 // NewHistoryBlobKey returns a key for history blob
-func NewHistoryBlobKey(domainID, workflowID, runID, pageToken, failoverVersion string) (blobstore.Key, error) {
+func NewHistoryBlobKey(domainID, workflowID, runID, pageToken, failoverVersion string) (blob.Key, error) {
 	if len(domainID) == 0 || len(workflowID) == 0 || len(runID) == 0 || len(pageToken) == 0 || len(failoverVersion) == 0 {
 		return nil, errors.New("all inputs required to be non-empty")
 	}
@@ -69,7 +69,7 @@ func NewHistoryBlobKey(domainID, workflowID, runID, pageToken, failoverVersion s
 	workflowIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(workflowID)))
 	runIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(runID)))
 	combinedHash := strings.Join([]string{domainIDHash, workflowIDHash, runIDHash}, "")
-	return blobstore.NewKey(HistoryBlobKeyExt, combinedHash, pageToken, failoverVersion)
+	return blob.NewKey(HistoryBlobKeyExt, combinedHash, pageToken, failoverVersion)
 }
 
 // ConvertHeaderToTags converts header into metadata tags for blob
