@@ -1,3 +1,23 @@
+// Copyright (c) 2017 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 package blob
 
 import (
@@ -20,7 +40,7 @@ func (s *BlobWrapperSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 }
 
-func (s *BlobWrapperSuite) TestJsonEncodedWrapFn() {
+func (s *BlobWrapperSuite) TestJSONEncodedWrapFn() {
 	testCases := []struct {
 		inputTags   map[string]string
 		inputBody   []byte
@@ -57,7 +77,7 @@ func (s *BlobWrapperSuite) TestJsonEncodedWrapFn() {
 	}
 
 	for _, tc := range testCases {
-		wrapFn := JsonEncoded()
+		wrapFn := JSONEncoded()
 		blob := NewBlob(tc.inputBody, tc.inputTags)
 		err := wrapFn(blob)
 		if tc.expectError {
@@ -142,7 +162,7 @@ func (s *BlobWrapperSuite) TestWrap() {
 				wrappersTag: "encoding:exists,",
 			},
 			inputBody:   []byte("test-body"),
-			functions:   []WrapFn{JsonEncoded()},
+			functions:   []WrapFn{JSONEncoded()},
 			expectError: true,
 		},
 		{
@@ -165,7 +185,7 @@ func (s *BlobWrapperSuite) TestWrap() {
 				wrappersTag:    "compression:exists,",
 			},
 			inputBody:   []byte("test-body"),
-			functions:   []WrapFn{JsonEncoded()},
+			functions:   []WrapFn{JSONEncoded()},
 			expectError: false,
 			expectTags: map[string]string{
 				"user_tag_key": "user_tag_value",
@@ -178,7 +198,7 @@ func (s *BlobWrapperSuite) TestWrap() {
 				"user_tag_key": "user_tag_value",
 			},
 			inputBody:   []byte("test-body"),
-			functions:   []WrapFn{JsonEncoded(), GzipCompressed()},
+			functions:   []WrapFn{JSONEncoded(), GzipCompressed()},
 			expectError: false,
 			expectTags: map[string]string{
 				"user_tag_key": "user_tag_value",
@@ -191,7 +211,7 @@ func (s *BlobWrapperSuite) TestWrap() {
 				"user_tag_key": "user_tag_value",
 			},
 			inputBody:   []byte("test-body"),
-			functions:   []WrapFn{GzipCompressed(), JsonEncoded()},
+			functions:   []WrapFn{GzipCompressed(), JSONEncoded()},
 			expectError: false,
 			expectTags: map[string]string{
 				"user_tag_key": "user_tag_value",
@@ -224,13 +244,6 @@ func (s *BlobWrapperSuite) TestWrap() {
 }
 
 func (s *BlobWrapperSuite) TestUnwrap() {
-
-	// stack is malformed returns an error
-	// wrapper contained unknown key returns error
-	// encodingKey only given
-	// compressionKey only given
-	// both given in each order
-
 	testCases := []struct {
 		inputBlob            *Blob
 		expectError          bool
@@ -248,7 +261,7 @@ func (s *BlobWrapperSuite) TestUnwrap() {
 				map[string]string{"user_tag_key": "user_tag_value"},
 				[]byte("test-body"),
 			),
-			expectError: false,
+			expectError:          false,
 			expectWrappingLayers: &WrappingLayers{},
 			expectBlob: s.wrappedBlob(
 				map[string]string{"user_tag_key": "user_tag_value"},
@@ -259,14 +272,91 @@ func (s *BlobWrapperSuite) TestUnwrap() {
 			inputBlob: s.wrappedBlob(
 				map[string]string{
 					"user_tag_key": "user_tag_value",
-					wrappersTag: "",
+					wrappersTag:    "",
 				},
 				[]byte("test-body"),
 			),
-			expectError: false,
+			expectError:          false,
 			expectWrappingLayers: &WrappingLayers{},
 			expectBlob: s.wrappedBlob(
 				map[string]string{"user_tag_key": "user_tag_value"},
+				[]byte("test-body"),
+			),
+		},
+		{
+			inputBlob: s.wrappedBlob(
+				map[string]string{
+					wrappersTag: "malformed_wrapper",
+				},
+				[]byte("test-body"),
+			),
+			expectError: true,
+		},
+		{
+			inputBlob: s.wrappedBlob(
+				map[string]string{
+					wrappersTag: "unknown:exists,",
+				},
+				[]byte("test-body"),
+			),
+			expectError: true,
+		},
+		{
+			inputBlob: s.wrappedBlob(
+				map[string]string{
+					"user_tag_key": "user_tag_value",
+				},
+				[]byte("test-body"),
+				JSONEncoded(),
+			),
+			expectError: false,
+			expectWrappingLayers: &WrappingLayers{
+				EncodingFormat: common.StringPtr("json"),
+			},
+			expectBlob: s.wrappedBlob(
+				map[string]string{
+					"user_tag_key": "user_tag_value",
+				},
+				[]byte("test-body"),
+			),
+		},
+		{
+			inputBlob: s.wrappedBlob(
+				map[string]string{
+					"user_tag_key": "user_tag_value",
+				},
+				[]byte("test-body"),
+				GzipCompressed(),
+			),
+			expectError: false,
+			expectWrappingLayers: &WrappingLayers{
+				Compression: common.StringPtr("compress/gzip"),
+			},
+			expectBlob: s.wrappedBlob(
+				map[string]string{
+					"user_tag_key": "user_tag_value",
+				},
+				[]byte("test-body"),
+			),
+		},
+		{
+			inputBlob: s.wrappedBlob(
+				map[string]string{
+					"user_tag_key": "user_tag_value",
+				},
+				[]byte("test-body"),
+				GzipCompressed(),
+				JSONEncoded(),
+			),
+			expectError: false,
+			expectWrappingLayers: &WrappingLayers{
+				EncodingFormat: common.StringPtr("json"),
+				Compression:    common.StringPtr("compress/gzip"),
+			},
+			expectBlob: s.wrappedBlob(
+				map[string]string{
+					"user_tag_key": "user_tag_value",
+				},
 				[]byte("test-body"),
 			),
 		},

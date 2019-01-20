@@ -24,7 +24,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"errors"
-	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/blobstore/blob"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
@@ -133,29 +133,20 @@ func deserializeBucketConfig(data []byte) (*BucketConfig, error) {
 	return bucketCfg, nil
 }
 
-type serializableBlob struct {
-	Body []byte
-	Tags map[string]string
-}
-
-func serializeBlob(blob blobstore.Blob) ([]byte, error) {
+func serializeBlob(blob *blob.Blob) ([]byte, error) {
 	buf := bytes.Buffer{}
 	encoder := gob.NewEncoder(&buf)
-	sBlob := &serializableBlob{
-		Body: blob.Body(),
-		Tags: blob.Tags(),
-	}
-	if err := encoder.Encode(sBlob); err != nil {
+	if err := encoder.Encode(blob); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil
 }
 
-func deserializeBlob(data []byte) (blobstore.Blob, error) {
-	sBlob := &serializableBlob{}
+func deserializeBlob(data []byte) (*blob.Blob, error) {
+	blob := &blob.Blob{}
 	decoder := gob.NewDecoder(bytes.NewReader(data))
-	if err := decoder.Decode(sBlob); err != nil {
+	if err := decoder.Decode(blob); err != nil {
 		return nil, err
 	}
-	return blobstore.NewBlob(sBlob.Body, sBlob.Tags), nil
+	return blob, nil
 }

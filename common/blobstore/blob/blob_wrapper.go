@@ -1,3 +1,23 @@
+// Copyright (c) 2017 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 package blob
 
 import (
@@ -30,8 +50,8 @@ type (
 	}
 )
 
-// JsonEncoded returns a WrapFn used to indicate that at the encoding layer json was used
-func JsonEncoded() WrapFn {
+// JSONEncoded returns a WrapFn used to indicate that at the encoding layer json was used
+func JSONEncoded() WrapFn {
 	return func(b *Blob) error {
 		wrappers := common.StringPtr(b.Tags[wrappersTag])
 		if exists(wrappers, encodingKey) {
@@ -79,6 +99,8 @@ func Wrap(blob *Blob, functions ...WrapFn) (*Blob, error) {
 	return wrappedBlob, nil
 }
 
+// Unwrap returns a deep copy of input blob with all layers unwrapped. Input blob is not modified.
+// Returned WrappingLayers indicate the layers that were unwrapped and the values of such each layer.
 func Unwrap(blob *Blob) (*Blob, *WrappingLayers, error) {
 	wrappingLayers := &WrappingLayers{}
 	if blob == nil {

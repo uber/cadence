@@ -28,7 +28,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-
 	"github.com/uber/cadence/common/blobstore"
 )
 
@@ -57,7 +56,7 @@ func NewClient(cfg *Config) (blobstore.Client, error) {
 	}, nil
 }
 
-func (c *client) Upload(_ context.Context, bucket string, key blob.Key, blob blobstore.Blob) error {
+func (c *client) Upload(_ context.Context, bucket string, key blob.Key, blob *blob.Blob) error {
 	c.Lock()
 	defer c.Unlock()
 
@@ -77,7 +76,7 @@ func (c *client) Upload(_ context.Context, bucket string, key blob.Key, blob blo
 	return writeFile(blobPath, fileBytes)
 }
 
-func (c *client) Download(_ context.Context, bucket string, key blobstore.Key) (blobstore.Blob, error) {
+func (c *client) Download(_ context.Context, bucket string, key blob.Key) (*blob.Blob, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -99,7 +98,7 @@ func (c *client) Download(_ context.Context, bucket string, key blobstore.Key) (
 	return deserializeBlob(fileBytes)
 }
 
-func (c *client) Exists(_ context.Context, bucket string, key blobstore.Key) (bool, error) {
+func (c *client) Exists(_ context.Context, bucket string, key blob.Key) (bool, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -114,7 +113,7 @@ func (c *client) Exists(_ context.Context, bucket string, key blobstore.Key) (bo
 	return fileExists(blobPath)
 }
 
-func (c *client) Delete(_ context.Context, bucket string, key blobstore.Key) (bool, error) {
+func (c *client) Delete(_ context.Context, bucket string, key blob.Key) (bool, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -129,7 +128,7 @@ func (c *client) Delete(_ context.Context, bucket string, key blobstore.Key) (bo
 	return deleteFile(blobPath)
 }
 
-func (c *client) ListByPrefix(_ context.Context, bucket string, prefix string) ([]blobstore.Key, error) {
+func (c *client) ListByPrefix(_ context.Context, bucket string, prefix string) ([]blob.Key, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -145,10 +144,10 @@ func (c *client) ListByPrefix(_ context.Context, bucket string, prefix string) (
 	if err != nil {
 		return nil, err
 	}
-	var matchingKeys []blobstore.Key
+	var matchingKeys []blob.Key
 	for _, f := range files {
 		if strings.HasPrefix(f, prefix) {
-			key, err := blobstore.NewKeyFromString(f)
+			key, err := blob.NewKeyFromString(f)
 			if err != nil {
 				return nil, err
 			}

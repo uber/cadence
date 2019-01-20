@@ -23,7 +23,7 @@ package filestore
 import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/blobstore/blob"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -204,14 +204,14 @@ func (s *UtilSuite) TestSerializationBucketConfig() {
 }
 
 func (s *UtilSuite) TestSerializationBlob() {
-	inBlob := blobstore.NewBlob([]byte("file contents"), map[string]string{"key1": "value1", "key2": "value2"})
+	inBlob := blob.NewBlob([]byte("file contents"), map[string]string{"key1": "value1", "key2": "value2"})
 	data, err := serializeBlob(inBlob)
 	s.NoError(err)
 
 	outBlob, err := deserializeBlob(data)
 	s.NoError(err)
-	s.Equal(inBlob.Tags(), outBlob.Tags())
-	s.Equal("file contents", string(outBlob.Body()))
+	s.Equal(inBlob.Tags, outBlob.Tags)
+	s.Equal("file contents", string(outBlob.Body))
 }
 
 func (s *UtilSuite) createFile(dir string, filename string) {

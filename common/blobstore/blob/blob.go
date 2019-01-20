@@ -20,11 +20,13 @@
 
 package blob
 
+// Blob is the entity that gets handled by blobstore
 type Blob struct {
 	Body []byte
 	Tags map[string]string
 }
 
+// NewBlob constructs a new blob with body and tags
 func NewBlob(body []byte, tags map[string]string) *Blob {
 	return &Blob{
 		Body: body,
@@ -32,6 +34,7 @@ func NewBlob(body []byte, tags map[string]string) *Blob {
 	}
 }
 
+// DeepCopy returns a deep copy of input blob
 func DeepCopy(blob *Blob) *Blob {
 	if blob == nil {
 		return nil
