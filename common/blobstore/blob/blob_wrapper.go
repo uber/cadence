@@ -3,17 +3,18 @@ package blob
 import (
 	"bytes"
 	"compress/gzip"
-	"github.com/uber/cadence/common"
-	"strings"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common"
+	"io/ioutil"
+	"strings"
 )
 
 const (
-	wrappersTag = "wrappers"
-	encodingKey = "encoding"
-	compressionKey = "compression"
-	jsonEncoding = "json"
+	wrappersTag     = "wrappers"
+	encodingKey     = "encoding"
+	compressionKey  = "compression"
+	jsonEncoding    = "json"
 	gzipCompression = "compress/gzip"
 )
 
@@ -25,7 +26,7 @@ type (
 	// WrappingLayers indicates the values of every wrapping layer of a blob, nil fields indicate that blob was not wrapped with layer.
 	WrappingLayers struct {
 		EncodingFormat *string
-		CompressionFormat *string
+		Compression    *string
 	}
 )
 
@@ -43,18 +44,19 @@ func JsonEncoded() WrapFn {
 }
 
 // GzipCompressed returns a WrapFn used to compresses body using gzip and indicates that at the compression layer gzip was used
-func WrapGzipCompressed() WrapFn {
+func GzipCompressed() WrapFn {
 	return func(b *Blob) error {
 		wrappers := common.StringPtr(b.Tags[wrappersTag])
 		if exists(wrappers, compressionKey) {
 			return errors.New("compression layer already specified")
 		}
 		push(wrappers, compressionKey, gzipCompression)
+		b.Tags[wrappersTag] = *wrappers
 		var buf bytes.Buffer
 		w := gzip.NewWriter(&buf)
 		if _, err := w.Write(b.Body); err != nil {
 			w.Close()
-			return nil
+			return err
 		}
 		// must call close before accessing buf.Bytes()
 		w.Close()
@@ -68,7 +70,7 @@ func Wrap(blob *Blob, functions ...WrapFn) (*Blob, error) {
 	if blob == nil {
 		return nil, nil
 	}
-	wrappedBlob := common.BlobPtr(DeepCopy(*blob))
+	wrappedBlob := DeepCopy(blob)
 	for _, f := range functions {
 		if err := f(wrappedBlob); err != nil {
 			return nil, err
@@ -82,7 +84,7 @@ func Unwrap(blob *Blob) (*Blob, *WrappingLayers, error) {
 	if blob == nil {
 		return nil, wrappingLayers, nil
 	}
-	unwrappedBlob := common.BlobPtr(DeepCopy(*blob))
+	unwrappedBlob := DeepCopy(blob)
 	wrappers, ok := blob.Tags[wrappersTag]
 	if !ok {
 		return unwrappedBlob, wrappingLayers, nil
@@ -97,8 +99,8 @@ func Unwrap(blob *Blob) (*Blob, *WrappingLayers, error) {
 		case encodingKey:
 			wrappingLayers.EncodingFormat = common.StringPtr(v)
 		case compressionKey:
-			wrappingLayers.CompressionFormat = common.StringPtr(v)
-			dBody, err := decompress(v)
+			wrappingLayers.Compression = common.StringPtr(v)
+			dBody, err := decompress(v, unwrappedBlob.Body)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -111,24 +113,32 @@ func Unwrap(blob *Blob) (*Blob, *WrappingLayers, error) {
 	return unwrappedBlob, wrappingLayers, nil
 }
 
-func decompress(compression string) ([]byte, error) {
-
+func decompress(compression string, data []byte) ([]byte, error) {
+	switch compression {
+	case gzipCompression:
+		r, err := gzip.NewReader(bytes.NewReader(data))
+		if err != nil {
+			return nil, err
+		}
+		dBody, err := ioutil.ReadAll(r)
+		r.Close()
+		return dBody, err
+	default:
+		return nil, fmt.Errorf("cannot decompress, encountered unknown compression format: %v", compression)
+	}
 }
-
-
 
 /**
 
 IMPORTANT:
 The following provides a naive stack implementation that is tightly coupled
-to blob_wrapper's usage (specifically the exists function is not robust).
-If a stack is needed in other places, a more robust implementation should be created and added to common/collection.
-This naive implementation is used to here to avoid allocations of many small objects (this is expensive for golang's GC).
+to blob_wrapper's usage. In particular the exists function is not robust.
+This naive implementation is used here to avoid allocations of many small objects (this is expensive for golang's GC).
 
- */
+*/
 
 const (
-	mapSeparator = ","
+	mapSeparator  = ","
 	pairSeparator = ":"
 )
 
@@ -157,4 +167,3 @@ func pop(stack *string) (key string, value string, err error) {
 func exists(stack *string, key string) bool {
 	return strings.Contains(*stack, key)
 }
-

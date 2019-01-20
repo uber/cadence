@@ -21,9 +21,9 @@
 package filestore
 
 import (
-	"github.com/uber/cadence/common/blobstore/blob"
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common/blobstore/blob"
 	"os"
 	"path/filepath"
 	"strings"

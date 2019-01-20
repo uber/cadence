@@ -21,9 +21,9 @@
 package blobstore
 
 import (
-	"github.com/uber/cadence/common/blobstore/blob"
 	"context"
 	"errors"
+	"github.com/uber/cadence/common/blobstore/blob"
 )
 
 var (
