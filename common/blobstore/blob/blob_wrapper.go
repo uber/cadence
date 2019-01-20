@@ -34,8 +34,18 @@ const (
 	wrappersTag     = "wrappers"
 	encodingKey     = "encoding"
 	compressionKey  = "compression"
-	jsonEncoding    = "json"
-	gzipCompression = "compress/gzip"
+)
+
+// the following constants are all encoding formats that have ever been used
+const (
+	// JSONEncoding indicates blob was encoded as JSON
+	JSONEncoding = "json"
+)
+
+// the following constants are all compressions that have ever been used, names should describe the package used
+const (
+	// GzipCompression indicates blob was compressed using compress/gzip package
+	GzipCompression = "compress/gzip"
 )
 
 type (
@@ -57,7 +67,7 @@ func JSONEncoded() WrapFn {
 		if exists(wrappers, encodingKey) {
 			return errors.New("encoding layer already specified")
 		}
-		push(wrappers, encodingKey, jsonEncoding)
+		push(wrappers, encodingKey, JSONEncoding)
 		b.Tags[wrappersTag] = *wrappers
 		return nil
 	}
@@ -70,7 +80,7 @@ func GzipCompressed() WrapFn {
 		if exists(wrappers, compressionKey) {
 			return errors.New("compression layer already specified")
 		}
-		push(wrappers, compressionKey, gzipCompression)
+		push(wrappers, compressionKey, GzipCompression)
 		b.Tags[wrappersTag] = *wrappers
 		var buf bytes.Buffer
 		w := gzip.NewWriter(&buf)
@@ -137,7 +147,7 @@ func Unwrap(blob *Blob) (*Blob, *WrappingLayers, error) {
 
 func decompress(compression string, data []byte) ([]byte, error) {
 	switch compression {
-	case gzipCompression:
+	case GzipCompression:
 		r, err := gzip.NewReader(bytes.NewReader(data))
 		if err != nil {
 			return nil, err
@@ -155,7 +165,7 @@ func decompress(compression string, data []byte) ([]byte, error) {
 IMPORTANT:
 The following provides a naive stack implementation that is tightly coupled
 to blob_wrapper's usage. In particular the exists function is not robust.
-This naive implementation is used here to avoid allocations of many small objects (this is expensive for golang's GC).
+A more robust implementation is overkill for this simple use case.
 
 */
 
