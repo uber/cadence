@@ -31,9 +31,9 @@ import (
 )
 
 const (
-	wrappersTag     = "wrappers"
-	encodingKey     = "encoding"
-	compressionKey  = "compression"
+	wrappersTag    = "wrappers"
+	encodingKey    = "encoding"
+	compressionKey = "compression"
 )
 
 // the following constants are all encoding formats that have ever been used
