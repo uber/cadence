@@ -63,7 +63,7 @@ func newEventsCache(shardCtx ShardContext) eventsCache {
 	config := shardCtx.GetConfig()
 
 	return newEventsCacheWithOptions(config.EventsCacheInitialSize(), config.EventsCacheMaxSize(), config.EventsCacheTTL(),
-		shardCtx.GetHistoryManager(), shardCtx.GetHistoryV2Manager(), true, shardCtx.GetLogger(), shardCtx.GetMetricsClient())
+		shardCtx.GetHistoryManager(), shardCtx.GetHistoryV2Manager(), false, shardCtx.GetLogger(), shardCtx.GetMetricsClient())
 }
 
 func newEventsCacheWithOptions(initialSize, maxSize int, ttl time.Duration, eventsMgr persistence.HistoryManager,
