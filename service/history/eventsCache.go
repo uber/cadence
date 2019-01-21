@@ -57,6 +57,10 @@ type (
 	}
 )
 
+var (
+	errEventNotFoundInBatch = &shared.InternalServiceError{Message: "History event not found within expected batch"}
+)
+
 var _ eventsCache = (*eventsCacheImpl)(nil)
 
 func newEventsCache(shardCtx ShardContext) eventsCache {
@@ -190,13 +194,11 @@ func (e *eventsCacheImpl) getHistoryEventFromStore(domainID, workflowID, runID s
 	}
 
 	// find history event from batch and return back single event to caller
-	var historyEvent *shared.HistoryEvent
 	for _, e := range historyEvents {
 		if e.GetEventId() == eventID {
-			historyEvent = e
-			break
+			return e, nil
 		}
 	}
 
-	return historyEvent, nil
+	return nil, errEventNotFoundInBatch
 }
