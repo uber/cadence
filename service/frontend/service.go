@@ -26,6 +26,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/mocks"
+	"github.com/uber/cadence/common/persistence"
 	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
@@ -37,6 +38,7 @@ type Config struct {
 	VisibilityMaxPageSize    dynamicconfig.IntPropertyFnWithDomainFilter
 	EnableVisibilitySampling dynamicconfig.BoolPropertyFn
 	VisibilityListMaxQPS     dynamicconfig.IntPropertyFnWithDomainFilter
+	EnableVisibilityToKafka  dynamicconfig.BoolPropertyFn
 	HistoryMaxPageSize       dynamicconfig.IntPropertyFnWithDomainFilter
 	RPS                      dynamicconfig.IntPropertyFn
 	MaxIDLengthLimit         dynamicconfig.IntPropertyFn
@@ -57,12 +59,13 @@ type Config struct {
 }
 
 // NewConfig returns new service config with default values
-func NewConfig(dc *dynamicconfig.Collection) *Config {
+func NewConfig(dc *dynamicconfig.Collection, enableVisibilityToKafka bool) *Config {
 	return &Config{
 		PersistenceMaxQPS:              dc.GetIntProperty(dynamicconfig.FrontendPersistenceMaxQPS, 2000),
 		VisibilityMaxPageSize:          dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendVisibilityMaxPageSize, 1000),
 		EnableVisibilitySampling:       dc.GetBoolProperty(dynamicconfig.EnableVisibilitySampling, true),
 		VisibilityListMaxQPS:           dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendVisibilityListMaxQPS, 1),
+		EnableVisibilityToKafka:        dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, enableVisibilityToKafka),
 		HistoryMaxPageSize:             dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendHistoryMaxPageSize, common.GetHistoryMaxPageSize),
 		RPS:                            dc.GetIntProperty(dynamicconfig.FrontendRPS, 1200),
 		MaxIDLengthLimit:               dc.GetIntProperty(dynamicconfig.MaxIDLengthLimit, 1000),
@@ -88,7 +91,7 @@ func NewService(params *service.BootstrapParams) common.Daemon {
 	params.UpdateLoggerWithServiceName(common.FrontendServiceName)
 	return &Service{
 		params: params,
-		config: NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, params.Logger)),
+		config: NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, params.Logger), params.ESConfig.Enable),
 		stopC:  make(chan struct{}),
 	}
 }
@@ -114,7 +117,13 @@ func (s *Service) Start() {
 		log.Fatalf("failed to create metadata manager: %v", err)
 	}
 
-	visibility, err := pFactory.NewVisibilityManager(s.config.EnableVisibilitySampling()) // enable rate limit on list operations
+	var visibility persistence.VisibilityManager
+	if s.config.EnableVisibilityToKafka() {
+		visibilityIndexName := params.ESConfig.Indices[common.VisibilityAppName]
+		visibility, err = persistence.NewElasticSearchVisibilityManager(params.ESClient, visibilityIndexName, log)
+	} else {
+		visibility, err = pFactory.NewVisibilityManager(s.config.EnableVisibilitySampling())
+	}
 	if err != nil {
 		log.Fatalf("failed to create visibility manager: %v", err)
 	}
