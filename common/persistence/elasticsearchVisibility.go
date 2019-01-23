@@ -96,7 +96,7 @@ func (v *esVisibilityManager) ListOpenWorkflowExecutions(
 	}
 
 	isOpen := true
-	searchResult, err := v.getSearchResult(request, token, isOpen)
+	searchResult, err := v.getSearchResult(request, token, nil, isOpen)
 	if err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ListOpenWorkflowExecutions failed. Error: %v", err),
@@ -115,7 +115,7 @@ func (v *esVisibilityManager) ListClosedWorkflowExecutions(
 	}
 
 	isOpen := false
-	searchResult, err := v.getSearchResult(request, token, isOpen)
+	searchResult, err := v.getSearchResult(request, token, nil, isOpen)
 	if err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ListClosedWorkflowExecutions failed. Error: %v", err),
@@ -128,27 +128,101 @@ func (v *esVisibilityManager) ListClosedWorkflowExecutions(
 func (v *esVisibilityManager) ListOpenWorkflowExecutionsByType(
 	request *ListWorkflowExecutionsByTypeRequest) (*ListWorkflowExecutionsResponse, error) {
 
-	return v.ListOpenWorkflowExecutions(&request.ListWorkflowExecutionsRequest)
+	token, err := v.getNextPageToken(request.NextPageToken)
+	if err != nil {
+		return nil, err
+	}
+
+	isOpen := true
+	matchQuery := elastic.NewMatchQuery(es.WorkflowType, request.WorkflowTypeName)
+	searchResult, err := v.getSearchResult(&request.ListWorkflowExecutionsRequest, token, matchQuery, isOpen)
+	if err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ListOpenWorkflowExecutionsByType failed. Error: %v", err),
+		}
+	}
+
+	return v.getListWorkflowExecutionsResponse(searchResult.Hits, token, isOpen)
 }
 
 func (v *esVisibilityManager) ListClosedWorkflowExecutionsByType(
 	request *ListWorkflowExecutionsByTypeRequest) (*ListWorkflowExecutionsResponse, error) {
-	return v.ListClosedWorkflowExecutions(&request.ListWorkflowExecutionsRequest)
+
+	token, err := v.getNextPageToken(request.NextPageToken)
+	if err != nil {
+		return nil, err
+	}
+
+	isOpen := false
+	matchQuery := elastic.NewMatchQuery(es.WorkflowType, request.WorkflowTypeName)
+	searchResult, err := v.getSearchResult(&request.ListWorkflowExecutionsRequest, token, matchQuery, isOpen)
+	if err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByType failed. Error: %v", err),
+		}
+	}
+
+	return v.getListWorkflowExecutionsResponse(searchResult.Hits, token, isOpen)
 }
 
 func (v *esVisibilityManager) ListOpenWorkflowExecutionsByWorkflowID(
 	request *ListWorkflowExecutionsByWorkflowIDRequest) (*ListWorkflowExecutionsResponse, error) {
-	return v.ListOpenWorkflowExecutions(&request.ListWorkflowExecutionsRequest)
+
+	token, err := v.getNextPageToken(request.NextPageToken)
+	if err != nil {
+		return nil, err
+	}
+
+	isOpen := true
+	matchQuery := elastic.NewMatchQuery(es.WorkflowID, request.WorkflowID)
+	searchResult, err := v.getSearchResult(&request.ListWorkflowExecutionsRequest, token, matchQuery, isOpen)
+	if err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ListOpenWorkflowExecutionsByWorkflowID failed. Error: %v", err),
+		}
+	}
+
+	return v.getListWorkflowExecutionsResponse(searchResult.Hits, token, isOpen)
 }
 
 func (v *esVisibilityManager) ListClosedWorkflowExecutionsByWorkflowID(
 	request *ListWorkflowExecutionsByWorkflowIDRequest) (*ListWorkflowExecutionsResponse, error) {
-	return v.ListClosedWorkflowExecutions(&request.ListWorkflowExecutionsRequest)
+
+	token, err := v.getNextPageToken(request.NextPageToken)
+	if err != nil {
+		return nil, err
+	}
+
+	isOpen := false
+	matchQuery := elastic.NewMatchQuery(es.WorkflowID, request.WorkflowID)
+	searchResult, err := v.getSearchResult(&request.ListWorkflowExecutionsRequest, token, matchQuery, isOpen)
+	if err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByWorkflowID failed. Error: %v", err),
+		}
+	}
+
+	return v.getListWorkflowExecutionsResponse(searchResult.Hits, token, isOpen)
 }
 
 func (v *esVisibilityManager) ListClosedWorkflowExecutionsByStatus(
 	request *ListClosedWorkflowExecutionsByStatusRequest) (*ListWorkflowExecutionsResponse, error) {
-	return v.ListClosedWorkflowExecutions(&request.ListWorkflowExecutionsRequest)
+
+	token, err := v.getNextPageToken(request.NextPageToken)
+	if err != nil {
+		return nil, err
+	}
+
+	isOpen := false
+	matchQuery := elastic.NewMatchQuery(es.CloseStatus, int32(request.Status))
+	searchResult, err := v.getSearchResult(&request.ListWorkflowExecutionsRequest, token, matchQuery, isOpen)
+	if err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByStatus failed. Error: %v", err),
+		}
+	}
+
+	return v.getListWorkflowExecutionsResponse(searchResult.Hits, token, isOpen)
 }
 
 func (v *esVisibilityManager) GetClosedWorkflowExecution(
@@ -173,7 +247,7 @@ func (v *esVisibilityManager) getNextPageToken(token []byte) (*esVisibilityPageT
 }
 
 func (v *esVisibilityManager) getSearchResult(request *ListWorkflowExecutionsRequest, token *esVisibilityPageToken,
-	isOpen bool) (*elastic.SearchResult, error) {
+	matchQuery *elastic.MatchQuery, isOpen bool) (*elastic.SearchResult, error) {
 
 	matchDomainQuery := elastic.NewMatchQuery(es.DomainID, request.DomainUUID)
 	existClosedStatusQuery := elastic.NewExistsQuery(es.CloseStatus)
@@ -186,6 +260,9 @@ func (v *esVisibilityManager) getSearchResult(request *ListWorkflowExecutionsReq
 	rangeQuery = rangeQuery.Gte(request.EarliestStartTime).Lte(request.LatestStartTime) // TODO rename request fields for close time
 
 	boolQuery := elastic.NewBoolQuery().Must(matchDomainQuery).Filter(rangeQuery)
+	if matchQuery != nil {
+		boolQuery = boolQuery.Must(matchQuery)
+	}
 	if isOpen {
 		boolQuery = boolQuery.MustNot(existClosedStatusQuery)
 	} else {
