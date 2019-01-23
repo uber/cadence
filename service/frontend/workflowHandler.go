@@ -155,7 +155,15 @@ func NewWorkflowHandler(sVice service.Service, config *Config, metadataMgr persi
 
 // Start starts the handler
 func (wh *WorkflowHandler) Start() error {
-	wh.Service.GetDispatcher().Register(workflowserviceserver.New(wh))
+	currentClusteName := wh.GetClusterMetadata().GetCurrentClusterName()
+	dcRediectionHandle := NewDCRedirectionHandler(
+		currentClusteName,
+		NewNoopRedirectionPolicy(currentClusteName),
+		wh.GetClientBean(),
+		wh,
+	)
+	wh.Service.GetDispatcher().Register(workflowserviceserver.New(dcRediectionHandle))
+	// wh.Service.GetDispatcher().Register(workflowserviceserver.New(wh))
 	wh.Service.GetDispatcher().Register(metaserver.New(wh))
 	wh.Service.Start()
 	wh.domainCache.Start()
