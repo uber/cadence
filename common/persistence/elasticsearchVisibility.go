@@ -227,7 +227,36 @@ func (v *esVisibilityManager) ListClosedWorkflowExecutionsByStatus(
 
 func (v *esVisibilityManager) GetClosedWorkflowExecution(
 	request *GetClosedWorkflowExecutionRequest) (*GetClosedWorkflowExecutionResponse, error) {
-	return nil, errNotSupported
+
+	matchDomainQuery := elastic.NewMatchQuery(es.DomainID, request.DomainUUID)
+	existClosedStatusQuery := elastic.NewExistsQuery(es.CloseStatus)
+	matchWorkflowIDQuery := elastic.NewMatchQuery(es.WorkflowID, request.Execution.GetWorkflowId())
+	boolQuery := elastic.NewBoolQuery().Must(matchDomainQuery).Must(existClosedStatusQuery).Must(matchWorkflowIDQuery)
+	rid := request.Execution.GetRunId()
+	if rid != "" {
+		matchRunIDQuery := elastic.NewMatchQuery(es.RunID, rid)
+		boolQuery = boolQuery.Must(matchRunIDQuery)
+	}
+
+	ctx := context.Background()
+	searchResult, err := v.esClient.Search().
+		Index(v.index).
+		Query(boolQuery).
+		Do(ctx)
+	if err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("GetClosedWorkflowExecution failed. Error: %v", err),
+		}
+	}
+
+	response := &GetClosedWorkflowExecutionResponse{}
+	actualHits := searchResult.Hits.Hits
+	if len(actualHits) == 0 {
+		return response, nil
+	}
+	response.Execution = v.convertSearchResultToVisibilityRecord(actualHits[0], false)
+
+	return response, nil
 }
 
 func (v *esVisibilityManager) getNextPageToken(token []byte) (*esVisibilityPageToken, error) {
