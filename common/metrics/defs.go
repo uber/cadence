@@ -350,6 +350,19 @@ const (
 	// MessagingPublishBatchScope tracks Publish calls made by service to messaging layer
 	MessagingClientPublishBatchScope
 
+	// BlobstoreClientUploadScope tracks Upload calls to blobstore
+	BlobstoreClientUploadScope
+	// BlobstoreClientDownloadScope tracks Download calls to blobstore
+	BlobstoreClientDownloadScope
+	// BlobstoreClientExistsScope tracks Exists calls to blobstore
+	BlobstoreClientExistsScope
+	// BlobstoreClientDeleteScope tracks Delete calls to blobstore
+	BlobstoreClientDeleteScope
+	// BlobstoreClientListByPrefixScope tracks ListByPrefix calls to blobstore
+	BlobstoreClientListByPrefixScope
+	// BlobstoreClientBucketMetadataScope tracks BucketMetadata calls to blobstore
+	BlobstoreClientBucketMetadataScope
+
 	// DomainCacheScope tracks domain cache callbacks
 	DomainCacheScope
 	// HistoryRereplicationByTransferTaskScope tracks history replication calls made by transfer task
