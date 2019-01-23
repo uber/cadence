@@ -25,6 +25,7 @@ import (
 	"errors"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/config"
 	"log"
 	"os"
 	"testing"
@@ -63,6 +64,7 @@ type (
 		mockClientBean      *client.MockClientBean
 		mockService         cs.Service
 		mockBlobstoreClient *mocks.Client
+		dcRedirectionPolicy config.DCRedirectionPolicy
 	}
 )
 
@@ -94,6 +96,9 @@ func (s *workflowHandlerSuite) SetupTest() {
 	s.mockClientBean = &client.MockClientBean{}
 	s.mockService = cs.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.logger)
 	s.mockBlobstoreClient = &mocks.Client{}
+	s.dcRedirectionPolicy = config.DCRedirectionPolicy{
+		Policy: DCRredirectionPolicyNoop,
+	}
 }
 
 func (s *workflowHandlerSuite) TearDownTest() {
@@ -180,7 +185,7 @@ func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
 	config.DisableListVisibilityByFilter = dc.GetBoolPropertyFnFilteredByDomain(true)
 
 	wh := NewWorkflowHandler(s.mockService, config, s.mockMetadataMgr, s.mockHistoryMgr,
-		s.mockHistoryV2Mgr, s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient)
+		s.mockHistoryV2Mgr, s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient, s.dcRedirectionPolicy)
 	mockDomainCache := &cache.DomainCacheMock{}
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.domainCache = mockDomainCache
@@ -249,7 +254,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_RequestIdNotSet
 	config := NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger))
 	config.RPS = dc.GetIntPropertyFn(10)
 	wh := NewWorkflowHandler(s.mockService, config, s.mockMetadataMgr, s.mockHistoryMgr,
-		s.mockHistoryV2Mgr, s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient)
+		s.mockHistoryV2Mgr, s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
@@ -281,7 +286,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_StartRequestNot
 	config := NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger))
 	config.RPS = dc.GetIntPropertyFn(10)
 	wh := NewWorkflowHandler(s.mockService, config, s.mockMetadataMgr, s.mockHistoryMgr,
-		s.mockHistoryV2Mgr, s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient)
+		s.mockHistoryV2Mgr, s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
@@ -294,7 +299,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_DomainNotSet() 
 	config := NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger))
 	config.RPS = dc.GetIntPropertyFn(10)
 	wh := NewWorkflowHandler(s.mockService, config, s.mockMetadataMgr, s.mockHistoryMgr,
-		s.mockHistoryV2Mgr, s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient)
+		s.mockHistoryV2Mgr, s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
@@ -326,7 +331,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowIdNotSe
 	config := NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger))
 	config.RPS = dc.GetIntPropertyFn(10)
 	wh := NewWorkflowHandler(s.mockService, config, s.mockMetadataMgr, s.mockHistoryMgr, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient)
+		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
@@ -358,7 +363,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowTypeNot
 	config := NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger))
 	config.RPS = dc.GetIntPropertyFn(10)
 	wh := NewWorkflowHandler(s.mockService, config, s.mockMetadataMgr, s.mockHistoryMgr, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient)
+		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
@@ -391,7 +396,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_TaskListNotSet(
 	config := NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger))
 	config.RPS = dc.GetIntPropertyFn(10)
 	wh := NewWorkflowHandler(s.mockService, config, s.mockMetadataMgr, s.mockHistoryMgr, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient)
+		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
@@ -424,7 +429,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidExecutio
 	config := NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger))
 	config.RPS = dc.GetIntPropertyFn(10)
 	wh := NewWorkflowHandler(s.mockService, config, s.mockMetadataMgr, s.mockHistoryMgr, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient)
+		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
@@ -457,7 +462,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidTaskStar
 	config := NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger))
 	config.RPS = dc.GetIntPropertyFn(10)
 	wh := NewWorkflowHandler(s.mockService, config, s.mockMetadataMgr, s.mockHistoryMgr, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient)
+		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
@@ -501,7 +506,7 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Failed() {
 
 	mService := cs.NewTestService(clusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.logger)
 	wh := NewWorkflowHandler(mService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient)
+		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
@@ -536,7 +541,7 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Success_EnabledWithNoBucket() 
 
 	mService := cs.NewTestService(clusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.logger)
 	wh := NewWorkflowHandler(mService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient)
+		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
@@ -560,7 +565,7 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Success_EnabledWithBucket() {
 
 	mService := cs.NewTestService(clusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.logger)
 	wh := NewWorkflowHandler(mService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient)
+		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
@@ -584,7 +589,7 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Success_ClusterNotConfiguredFo
 
 	mService := cs.NewTestService(clusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.logger)
 	wh := NewWorkflowHandler(mService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient)
+		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
@@ -608,7 +613,7 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Success_NotEnabled() {
 
 	mService := cs.NewTestService(clusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.logger)
 	wh := NewWorkflowHandler(mService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient)
+		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
@@ -623,7 +628,7 @@ func (s *workflowHandlerSuite) TestDescribeDomain_Success_ArchivalNeverEnabled()
 	mMetadataManager.On("GetDomain", mock.Anything).Return(persistenceGetDomainResponse("", shared.ArchivalStatusNeverEnabled), nil)
 	mBlobstore := &mocks.Client{}
 	wh := NewWorkflowHandler(s.mockService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockProducer, mBlobstore)
+		s.mockVisibilityMgr, s.mockProducer, mBlobstore, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
@@ -649,7 +654,7 @@ func (s *workflowHandlerSuite) TestDescribeDomain_Success_ArchivalEnabled() {
 	mBlobstore := &mocks.Client{}
 	mBlobstore.On("BucketMetadata", mock.Anything, mock.Anything).Return(bucketMetadataResponse("test-owner", 10), nil)
 	wh := NewWorkflowHandler(s.mockService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockProducer, mBlobstore)
+		s.mockVisibilityMgr, s.mockProducer, mBlobstore, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
@@ -675,7 +680,7 @@ func (s *workflowHandlerSuite) TestDescribeDomain_Success_ArchivalDisabled() {
 	mBlobstore := &mocks.Client{}
 	mBlobstore.On("BucketMetadata", mock.Anything, mock.Anything).Return(bucketMetadataResponse("test-owner", 10), nil)
 	wh := NewWorkflowHandler(s.mockService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockProducer, mBlobstore)
+		s.mockVisibilityMgr, s.mockProducer, mBlobstore, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
@@ -701,7 +706,7 @@ func (s *workflowHandlerSuite) TestDescribeDomain_Success_BlobstoreReturnsError(
 	mBlobstore := &mocks.Client{}
 	mBlobstore.On("BucketMetadata", mock.Anything, mock.Anything).Return(nil, errors.New("blobstore error"))
 	wh := NewWorkflowHandler(s.mockService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockProducer, mBlobstore)
+		s.mockVisibilityMgr, s.mockProducer, mBlobstore, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
@@ -730,7 +735,7 @@ func (s *workflowHandlerSuite) TestUpdateDomain_Failed_RequestInvalid() {
 
 	mService := cs.NewTestService(clusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.logger)
 	wh := NewWorkflowHandler(mService, config, s.mockMetadataMgr, s.mockHistoryMgr, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient)
+		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
@@ -765,7 +770,7 @@ func (s *workflowHandlerSuite) TestUpdateDomain_Failure_UpdateExistingBucketName
 	clusterMetadata.On("GetDefaultArchivalBucket").Return("test-archival-bucket")
 	mService := cs.NewTestService(clusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.logger)
 	wh := NewWorkflowHandler(mService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient)
+		s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
@@ -790,7 +795,7 @@ func (s *workflowHandlerSuite) TestUpdateDomain_Success_ArchivalEnabledToArchiva
 	mBlobstore := &mocks.Client{}
 	mBlobstore.On("BucketMetadata", mock.Anything, mock.Anything).Return(bucketMetadataResponse("test-owner", 10), nil)
 	wh := NewWorkflowHandler(mService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockProducer, mBlobstore)
+		s.mockVisibilityMgr, s.mockProducer, mBlobstore, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
@@ -820,7 +825,7 @@ func (s *workflowHandlerSuite) TestUpdateDomain_Success_ClusterNotConfiguredForA
 	mBlobstore := &mocks.Client{}
 	mBlobstore.On("BucketMetadata", mock.Anything, mock.Anything).Return(bucketMetadataResponse("test-owner", 10), nil)
 	wh := NewWorkflowHandler(mService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockProducer, mBlobstore)
+		s.mockVisibilityMgr, s.mockProducer, mBlobstore, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
@@ -850,7 +855,7 @@ func (s *workflowHandlerSuite) TestUpdateDomain_Success_ArchivalEnabledToArchiva
 	mBlobstore := &mocks.Client{}
 	mBlobstore.On("BucketMetadata", mock.Anything, mock.Anything).Return(bucketMetadataResponse("test-owner", 10), nil)
 	wh := NewWorkflowHandler(mService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockProducer, mBlobstore)
+		s.mockVisibilityMgr, s.mockProducer, mBlobstore, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
@@ -880,7 +885,7 @@ func (s *workflowHandlerSuite) TestUpdateDomain_Success_ArchivalEnabledToEnabled
 	mBlobstore := &mocks.Client{}
 	mBlobstore.On("BucketMetadata", mock.Anything, mock.Anything).Return(bucketMetadataResponse("test-owner", 10), nil)
 	wh := NewWorkflowHandler(mService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockProducer, mBlobstore)
+		s.mockVisibilityMgr, s.mockProducer, mBlobstore, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
@@ -910,7 +915,7 @@ func (s *workflowHandlerSuite) TestUpdateDomain_Failure_ArchivalEnabledToNeverEn
 	mBlobstore := &mocks.Client{}
 	mBlobstore.On("BucketMetadata", mock.Anything, mock.Anything).Return(bucketMetadataResponse("test-owner", 10), nil)
 	wh := NewWorkflowHandler(mService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockProducer, mBlobstore)
+		s.mockVisibilityMgr, s.mockProducer, mBlobstore, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
@@ -935,7 +940,7 @@ func (s *workflowHandlerSuite) TestUpdateDomain_Success_ArchivalNeverEnabledToNe
 	mBlobstore := &mocks.Client{}
 	mBlobstore.On("BucketMetadata", mock.Anything, mock.Anything).Return(bucketMetadataResponse("test-owner", 10), nil)
 	wh := NewWorkflowHandler(mService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockProducer, mBlobstore)
+		s.mockVisibilityMgr, s.mockProducer, mBlobstore, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
@@ -963,7 +968,7 @@ func (s *workflowHandlerSuite) TestUpdateDomain_Success_ArchivalNeverEnabledToEn
 	mBlobstore := &mocks.Client{}
 	mBlobstore.On("BucketMetadata", mock.Anything, mock.Anything).Return(bucketMetadataResponse("test-owner", 10), nil)
 	wh := NewWorkflowHandler(mService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockProducer, mBlobstore)
+		s.mockVisibilityMgr, s.mockProducer, mBlobstore, s.dcRedirectionPolicy)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 

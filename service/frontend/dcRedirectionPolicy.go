@@ -21,8 +21,17 @@
 package frontend
 
 import (
+	"fmt"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/service/config"
+)
+
+const (
+	// DCRredirectionPolicyNoop means no rredirrection
+	DCRredirectionPolicyNoop = "noop"
+	// DCRredirectionPolicyForwarding means forwarding from an DC to another DC
+	DCRredirectionPolicyForwarding = "forwarding"
 )
 
 type (
@@ -48,6 +57,29 @@ type (
 		domainCache       cache.DomainCache
 	}
 )
+
+// RedirectionPolicyGenerator generate corresponding redirection policy
+func RedirectionPolicyGenerator(clusterMetadata cluster.Metadata,
+	domainCache cache.DomainCache, policy config.DCRedirectionPolicy) DCRedirectionPolicy {
+	switch policy.Policy {
+	case DCRredirectionPolicyNoop:
+		return NewNoopRedirectionPolicy(clusterMetadata.GetCurrentClusterName())
+	case DCRredirectionPolicyForwarding:
+		currentClusterName := clusterMetadata.GetCurrentClusterName()
+		clusterAddress := clusterMetadata.GetAllClientAddress()
+		if policy.FromDC != currentClusterName {
+			panic(fmt.Sprintf("Incorrect from DC: %v", policy.FromDC))
+		}
+		if _, ok := clusterAddress[policy.ToDC]; !ok {
+			panic(fmt.Sprintf("Incorrect to DC: %v", policy.ToDC))
+		}
+		return NewForwardingDCRedirectionPolicy(
+			policy.FromDC, policy.ToDC, currentClusterName, domainCache,
+		)
+	default:
+		panic(fmt.Sprintf("Unknown DC redirection policy %v", policy.Policy))
+	}
+}
 
 // NewNoopRedirectionPolicy is DC redirection policy which does nothing
 func NewNoopRedirectionPolicy(currentClusteName string) *NoopRedirectionPolicy {

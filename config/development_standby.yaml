@@ -81,6 +81,11 @@ clustersInfo:
       rpcName: "cadence-frontend"
       rpcAddress: "127.0.0.1:8933"
 
+dcRrediectionPolicy:
+  policy: "noop"
+  fromDC: ""
+  toDC: ""
+
 kafka:
   clusters:
     test:
