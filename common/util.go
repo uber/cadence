@@ -207,6 +207,24 @@ func IsKafkaTransientError(err error) bool {
 	return true
 }
 
+// IsBlobstoreTransientError checks if the error is a retryable error.
+func IsBlobstoreTransientError(err error) bool {
+	return !IsBlobstoreNonRetryableError(err)
+}
+
+// IsBlobstoreNonRetryableError checks if the error is a non retryable error.
+func IsBlobstoreNonRetryableError(err error) bool {
+	switch err.(type) {
+	case *workflow.BadRequestError:
+		return true
+	case *workflow.BlobstoreNonRetryableError:
+		return true
+	case *workflow.BlobEncodingError:
+		return true
+	}
+	return false
+}
+
 // IsServiceTransientError checks if the error is a retryable error.
 func IsServiceTransientError(err error) bool {
 	return !IsServiceNonRetryableError(err)

@@ -41,27 +41,27 @@ var (
 	// ErrCheckBucketExists could not verify that bucket directory exists
 	ErrCheckBucketExists = &shared.BadRequestError{Message: "could not verify that bucket directory exists"}
 	// ErrWriteFile could not write file
-	ErrWriteFile = &shared.BlobstoreOperationError{Message: "could not write file"}
+	ErrWriteFile = &shared.BlobstoreNonRetryableError{Message: "could not write file"}
 	// ErrReadFile could not read file
-	ErrReadFile = &shared.BlobstoreOperationError{Message: "could not read file"}
+	ErrReadFile = &shared.BlobstoreNonRetryableError{Message: "could not read file"}
 	// ErrCheckFileExists could not check if file exists
-	ErrCheckFileExists = &shared.BlobstoreOperationError{Message: "could not check if file exists"}
+	ErrCheckFileExists = &shared.BlobstoreNonRetryableError{Message: "could not check if file exists"}
 	// ErrDeleteFile could not delete file
-	ErrDeleteFile = &shared.BlobstoreOperationError{Message: "could not delete file"}
+	ErrDeleteFile = &shared.BlobstoreNonRetryableError{Message: "could not delete file"}
 	// ErrListFiles could not list files
-	ErrListFiles = &shared.BlobstoreOperationError{Message: "could not list files"}
+	ErrListFiles = &shared.BlobstoreNonRetryableError{Message: "could not list files"}
 	// ErrConstructKey could not construct key
-	ErrConstructKey = &shared.BlobstoreOperationError{Message: "could not construct key"}
+	ErrConstructKey = &shared.BlobstoreNonRetryableError{Message: "could not construct key"}
 	// ErrMetadataFileNotExists metadata file not exists
-	ErrMetadataFileNotExists = &shared.BlobstoreOperationError{Message: "metadata file not exists"}
+	ErrMetadataFileNotExists = &shared.BlobstoreNonRetryableError{Message: "metadata file not exists"}
 	// ErrBucketConfigDeserialization bucket config could not be deserialized
-	ErrBucketConfigDeserialization = &shared.BlobstoreOperationError{Message: "bucket config could not be deserialized"}
+	ErrBucketConfigDeserialization = &shared.BlobstoreNonRetryableError{Message: "bucket config could not be deserialized"}
 )
 
 type client struct {
 	sync.Mutex
 	storeDirectory string
-	logger bark.Logger
+	logger         bark.Logger
 }
 
 // NewClient returns a new Client backed by file system
@@ -81,7 +81,7 @@ func NewClient(cfg *Config, logger bark.Logger) (blobstore.Client, error) {
 	}
 	return &client{
 		storeDirectory: cfg.StoreDirectory,
-		logger: logger,
+		logger:         logger,
 	}, nil
 }
 

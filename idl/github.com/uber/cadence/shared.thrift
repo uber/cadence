@@ -28,7 +28,7 @@ exception BlobEncodingError {
     1: required string message
 }
 
-exception BlobstoreOperationError {
+exception BlobstoreNonRetryableError {
     1: required string message
 }
 

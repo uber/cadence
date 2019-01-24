@@ -2812,11 +2812,11 @@ func (v *BlobEncodingError) Error() string {
 	return v.String()
 }
 
-type BlobstoreOperationError struct {
+type BlobstoreNonRetryableError struct {
 	Message string `json:"message,required"`
 }
 
-// ToWire translates a BlobstoreOperationError struct into a Thrift-level intermediate
+// ToWire translates a BlobstoreNonRetryableError struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -2831,7 +2831,7 @@ type BlobstoreOperationError struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *BlobstoreOperationError) ToWire() (wire.Value, error) {
+func (v *BlobstoreNonRetryableError) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
 		i      int = 0
@@ -2849,11 +2849,11 @@ func (v *BlobstoreOperationError) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-// FromWire deserializes a BlobstoreOperationError struct from its Thrift-level
+// FromWire deserializes a BlobstoreNonRetryableError struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a BlobstoreOperationError struct
+// An error is returned if we were unable to build a BlobstoreNonRetryableError struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -2861,12 +2861,12 @@ func (v *BlobstoreOperationError) ToWire() (wire.Value, error) {
 //     return nil, err
 //   }
 //
-//   var v BlobstoreOperationError
+//   var v BlobstoreNonRetryableError
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *BlobstoreOperationError) FromWire(w wire.Value) error {
+func (v *BlobstoreNonRetryableError) FromWire(w wire.Value) error {
 	var err error
 
 	messageIsSet := false
@@ -2885,15 +2885,15 @@ func (v *BlobstoreOperationError) FromWire(w wire.Value) error {
 	}
 
 	if !messageIsSet {
-		return errors.New("field Message of BlobstoreOperationError is required")
+		return errors.New("field Message of BlobstoreNonRetryableError is required")
 	}
 
 	return nil
 }
 
-// String returns a readable string representation of a BlobstoreOperationError
+// String returns a readable string representation of a BlobstoreNonRetryableError
 // struct.
-func (v *BlobstoreOperationError) String() string {
+func (v *BlobstoreNonRetryableError) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -2903,14 +2903,14 @@ func (v *BlobstoreOperationError) String() string {
 	fields[i] = fmt.Sprintf("Message: %v", v.Message)
 	i++
 
-	return fmt.Sprintf("BlobstoreOperationError{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("BlobstoreNonRetryableError{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this BlobstoreOperationError match the
-// provided BlobstoreOperationError.
+// Equals returns true if all the fields of this BlobstoreNonRetryableError match the
+// provided BlobstoreNonRetryableError.
 //
 // This function performs a deep comparison.
-func (v *BlobstoreOperationError) Equals(rhs *BlobstoreOperationError) bool {
+func (v *BlobstoreNonRetryableError) Equals(rhs *BlobstoreNonRetryableError) bool {
 	if v == nil {
 		return rhs == nil
 	} else if rhs == nil {
@@ -2924,8 +2924,8 @@ func (v *BlobstoreOperationError) Equals(rhs *BlobstoreOperationError) bool {
 }
 
 // MarshalLogObject implements zapcore.ObjectMarshaler, enabling
-// fast logging of BlobstoreOperationError.
-func (v *BlobstoreOperationError) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+// fast logging of BlobstoreNonRetryableError.
+func (v *BlobstoreNonRetryableError) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	if v == nil {
 		return nil
 	}
@@ -2935,9 +2935,9 @@ func (v *BlobstoreOperationError) MarshalLogObject(enc zapcore.ObjectEncoder) (e
 
 // GetMessage returns the value of Message if it is set or its
 // zero value if it is unset.
-func (v *BlobstoreOperationError) GetMessage() (o string) { return v.Message }
+func (v *BlobstoreNonRetryableError) GetMessage() (o string) { return v.Message }
 
-func (v *BlobstoreOperationError) Error() string {
+func (v *BlobstoreNonRetryableError) Error() string {
 	return v.String()
 }
 
