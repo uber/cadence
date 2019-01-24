@@ -71,6 +71,10 @@ const (
 	retryKafkaOperationMaxInterval        = 10 * time.Second
 	retryKafkaOperationExpirationInterval = 30 * time.Second
 
+	retryBlobstoreClientInitialInterval    = time.Second
+	retryBlobstoreClientMaxInterval        = 10 * time.Second
+	retryBlobstoreClientExpirationInterval = time.Minute
+
 	// FailureReasonCompleteResultExceedsLimit is failureReason for complete result exceeds limit
 	FailureReasonCompleteResultExceedsLimit = "COMPLETE_RESULT_EXCEEDS_LIMIT"
 	// FailureReasonFailureDetailsExceedsLimit is failureReason for failure details exceeds limit
@@ -175,6 +179,15 @@ func CreateKafkaOperationRetryPolicy() backoff.RetryPolicy {
 	policy := backoff.NewExponentialRetryPolicy(retryKafkaOperationInitialInterval)
 	policy.SetMaximumInterval(retryKafkaOperationMaxInterval)
 	policy.SetExpirationInterval(retryKafkaOperationExpirationInterval)
+
+	return policy
+}
+
+// CreateBlobstoreClientRetryPolicy creates a retry policy for blobstore client
+func CreateBlobstoreClientRetryPolicy() backoff.RetryPolicy {
+	policy := backoff.NewExponentialRetryPolicy(retryBlobstoreClientInitialInterval)
+	policy.SetMaximumInterval(retryBlobstoreClientMaxInterval)
+	policy.SetExpirationInterval(retryBlobstoreClientExpirationInterval)
 
 	return policy
 }

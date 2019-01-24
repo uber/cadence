@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/blobstore/blob"
 	"io/ioutil"
@@ -65,7 +66,7 @@ func (s *ClientSuite) TestNewClient_Fail_InvalidConfig() {
 		},
 	}
 
-	client, err := NewClient(invalidCfg)
+	client, err := NewClient(invalidCfg, bark.NewNopLogger())
 	s.Error(err)
 	s.Nil(client)
 }
@@ -77,7 +78,7 @@ func (s *ClientSuite) TestNewClient_Fail_SetupDirectoryFailure() {
 	os.Chmod(dir, os.FileMode(0600))
 
 	cfg := s.constructConfig(dir)
-	client, err := NewClient(cfg)
+	client, err := NewClient(cfg, bark.NewNopLogger())
 	s.Error(err)
 	s.Nil(client)
 }
@@ -89,7 +90,7 @@ func (s *ClientSuite) TestNewClient_Fail_WriteMetadataFilesFailure() {
 	s.NoError(mkdirAll(filepath.Join(dir, defaultBucketName, metadataFilename, "foo")))
 
 	cfg := s.constructConfig(dir)
-	client, err := NewClient(cfg)
+	client, err := NewClient(cfg, bark.NewNopLogger())
 	s.Error(err)
 	s.Nil(client)
 }
@@ -382,7 +383,7 @@ func (s *ClientSuite) TestBucketMetadata_Success() {
 
 func (s *ClientSuite) constructClient(storeDir string) blobstore.Client {
 	cfg := s.constructConfig(storeDir)
-	client, err := NewClient(cfg)
+	client, err := NewClient(cfg, bark.NewNopLogger())
 	s.NoError(err)
 	s.NotNil(client)
 	return client
