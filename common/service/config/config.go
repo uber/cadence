@@ -44,7 +44,7 @@ type (
 		// ClustersInfo is the config containing all valid clusters and active cluster
 		ClustersInfo ClustersInfo `yaml:"clustersInfo"`
 		// DCRedirectionPolicy contains the frontend datacenter redirection policy
-		DCRedirectionPolicy DCRedirectionPolicy `yaml:"dcRrediectionPolicy"`
+		DCRedirectionPolicy DCRedirectionPolicy `yaml:"dcRedirectionPolicy"`
 		// Services is a map of service name to service config items
 		Services map[string]Service `yaml:"services"`
 		// Kafka is the config for connecting to kafka

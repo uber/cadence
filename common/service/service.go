@@ -42,7 +42,7 @@ import (
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/common/elasticsearch"
-	ringpop "github.com/uber/ringpop-go"
+	"github.com/uber/ringpop-go"
 	"go.uber.org/yarpc"
 )
 

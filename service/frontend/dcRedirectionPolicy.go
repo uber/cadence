@@ -22,16 +22,19 @@ package frontend
 
 import (
 	"fmt"
+
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/service/config"
 )
 
 const (
-	// DCRredirectionPolicyNoop means no rredirrection
-	DCRredirectionPolicyNoop = "noop"
-	// DCRredirectionPolicyForwarding means forwarding from an DC to another DC
-	DCRredirectionPolicyForwarding = "forwarding"
+	// DCRedirectionPolicyDefault means no redirection
+	DCRedirectionPolicyDefault = ""
+	// DCRedirectionPolicyNoop means no redirection
+	DCRedirectionPolicyNoop = "noop"
+	// DCRedirectionPolicyForwarding means forwarding from an DC to another DC
+	DCRedirectionPolicyForwarding = "forwarding"
 )
 
 type (
@@ -62,9 +65,12 @@ type (
 func RedirectionPolicyGenerator(clusterMetadata cluster.Metadata,
 	domainCache cache.DomainCache, policy config.DCRedirectionPolicy) DCRedirectionPolicy {
 	switch policy.Policy {
-	case DCRredirectionPolicyNoop:
+	case DCRedirectionPolicyDefault:
+		// default policy, noop
 		return NewNoopRedirectionPolicy(clusterMetadata.GetCurrentClusterName())
-	case DCRredirectionPolicyForwarding:
+	case DCRedirectionPolicyNoop:
+		return NewNoopRedirectionPolicy(clusterMetadata.GetCurrentClusterName())
+	case DCRedirectionPolicyForwarding:
 		currentClusterName := clusterMetadata.GetCurrentClusterName()
 		clusterAddress := clusterMetadata.GetAllClientAddress()
 		if policy.FromDC != currentClusterName {

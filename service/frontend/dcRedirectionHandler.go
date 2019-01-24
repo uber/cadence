@@ -23,8 +23,8 @@ package frontend
 import (
 	"context"
 	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/service"
 )
 
 type (
@@ -33,19 +33,19 @@ type (
 		currentClusteName string
 		redirectionPolicy DCRedirectionPolicy
 		tokenSerializer   common.TaskTokenSerializer
-		clientBean        client.Bean
+		sevice            service.Service
 		frontendHandler   *WorkflowHandler
 	}
 )
 
 // NewDCRedirectionHandler creates a thrift handler for the cadence service, frontend and admin
 func NewDCRedirectionHandler(currentClusteName string, redirectionPolicy DCRedirectionPolicy,
-	clientBean client.Bean, frontendHandler *WorkflowHandler) *DCRedirectionHandlerImpl {
+	sevice service.Service, frontendHandler *WorkflowHandler) *DCRedirectionHandlerImpl {
 	return &DCRedirectionHandlerImpl{
 		currentClusteName: currentClusteName,
 		redirectionPolicy: redirectionPolicy,
 		tokenSerializer:   common.NewJSONTaskTokenSerializer(),
-		clientBean:        clientBean,
+		sevice:            sevice,
 		frontendHandler:   frontendHandler,
 	}
 }
@@ -114,7 +114,7 @@ func (handler *DCRedirectionHandlerImpl) DescribeTaskList(
 		return handler.frontendHandler.DescribeTaskList(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).DescribeTaskList(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).DescribeTaskList(ctx, request)
 }
 
 // DescribeWorkflowExecution API call
@@ -132,7 +132,7 @@ func (handler *DCRedirectionHandlerImpl) DescribeWorkflowExecution(
 		return handler.frontendHandler.DescribeWorkflowExecution(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).DescribeWorkflowExecution(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).DescribeWorkflowExecution(ctx, request)
 }
 
 // GetWorkflowExecutionHistory API call
@@ -150,7 +150,7 @@ func (handler *DCRedirectionHandlerImpl) GetWorkflowExecutionHistory(
 		return handler.frontendHandler.GetWorkflowExecutionHistory(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).GetWorkflowExecutionHistory(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).GetWorkflowExecutionHistory(ctx, request)
 }
 
 // ListClosedWorkflowExecutions API call
@@ -168,7 +168,7 @@ func (handler *DCRedirectionHandlerImpl) ListClosedWorkflowExecutions(
 		return handler.frontendHandler.ListClosedWorkflowExecutions(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).ListClosedWorkflowExecutions(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).ListClosedWorkflowExecutions(ctx, request)
 }
 
 // ListOpenWorkflowExecutions API call
@@ -186,7 +186,7 @@ func (handler *DCRedirectionHandlerImpl) ListOpenWorkflowExecutions(
 		return handler.frontendHandler.ListOpenWorkflowExecutions(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).ListOpenWorkflowExecutions(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).ListOpenWorkflowExecutions(ctx, request)
 }
 
 // PollForActivityTask API call
@@ -204,7 +204,7 @@ func (handler *DCRedirectionHandlerImpl) PollForActivityTask(
 		return handler.frontendHandler.PollForActivityTask(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).PollForActivityTask(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).PollForActivityTask(ctx, request)
 }
 
 // PollForDecisionTask API call
@@ -222,7 +222,7 @@ func (handler *DCRedirectionHandlerImpl) PollForDecisionTask(
 		return handler.frontendHandler.PollForDecisionTask(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).PollForDecisionTask(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).PollForDecisionTask(ctx, request)
 }
 
 // QueryWorkflow API call
@@ -240,7 +240,7 @@ func (handler *DCRedirectionHandlerImpl) QueryWorkflow(
 		return handler.frontendHandler.QueryWorkflow(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).QueryWorkflow(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).QueryWorkflow(ctx, request)
 }
 
 // RecordActivityTaskHeartbeat API call
@@ -263,7 +263,7 @@ func (handler *DCRedirectionHandlerImpl) RecordActivityTaskHeartbeat(
 		return handler.frontendHandler.RecordActivityTaskHeartbeat(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).RecordActivityTaskHeartbeat(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).RecordActivityTaskHeartbeat(ctx, request)
 }
 
 // RecordActivityTaskHeartbeatByID API call
@@ -281,7 +281,7 @@ func (handler *DCRedirectionHandlerImpl) RecordActivityTaskHeartbeatByID(
 		return handler.frontendHandler.RecordActivityTaskHeartbeatByID(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).RecordActivityTaskHeartbeatByID(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).RecordActivityTaskHeartbeatByID(ctx, request)
 }
 
 // RequestCancelWorkflowExecution API call
@@ -299,7 +299,7 @@ func (handler *DCRedirectionHandlerImpl) RequestCancelWorkflowExecution(
 		return handler.frontendHandler.RequestCancelWorkflowExecution(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).RequestCancelWorkflowExecution(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).RequestCancelWorkflowExecution(ctx, request)
 }
 
 // ResetStickyTaskList API call
@@ -317,7 +317,7 @@ func (handler *DCRedirectionHandlerImpl) ResetStickyTaskList(
 		return handler.frontendHandler.ResetStickyTaskList(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).ResetStickyTaskList(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).ResetStickyTaskList(ctx, request)
 }
 
 // ResetWorkflowExecution API call
@@ -335,7 +335,7 @@ func (handler *DCRedirectionHandlerImpl) ResetWorkflowExecution(
 		return handler.frontendHandler.ResetWorkflowExecution(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).ResetWorkflowExecution(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).ResetWorkflowExecution(ctx, request)
 }
 
 // RespondActivityTaskCanceled API call
@@ -358,7 +358,7 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCanceled(
 		return handler.frontendHandler.RespondActivityTaskCanceled(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).RespondActivityTaskCanceled(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).RespondActivityTaskCanceled(ctx, request)
 }
 
 // RespondActivityTaskCanceledByID API call
@@ -376,7 +376,7 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCanceledByID(
 		return handler.frontendHandler.RespondActivityTaskCanceledByID(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).RespondActivityTaskCanceledByID(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).RespondActivityTaskCanceledByID(ctx, request)
 }
 
 // RespondActivityTaskCompleted API call
@@ -399,7 +399,7 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCompleted(
 		return handler.frontendHandler.RespondActivityTaskCompleted(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).RespondActivityTaskCompleted(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).RespondActivityTaskCompleted(ctx, request)
 }
 
 // RespondActivityTaskCompletedByID API call
@@ -417,7 +417,7 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCompletedByID(
 		return handler.frontendHandler.RespondActivityTaskCompletedByID(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).RespondActivityTaskCompletedByID(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).RespondActivityTaskCompletedByID(ctx, request)
 }
 
 // RespondActivityTaskFailed API call
@@ -440,7 +440,7 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskFailed(
 		return handler.frontendHandler.RespondActivityTaskFailed(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).RespondActivityTaskFailed(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).RespondActivityTaskFailed(ctx, request)
 }
 
 // RespondActivityTaskFailedByID API call
@@ -458,7 +458,7 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskFailedByID(
 		return handler.frontendHandler.RespondActivityTaskFailedByID(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).RespondActivityTaskFailedByID(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).RespondActivityTaskFailedByID(ctx, request)
 }
 
 // RespondDecisionTaskCompleted API call
@@ -481,7 +481,7 @@ func (handler *DCRedirectionHandlerImpl) RespondDecisionTaskCompleted(
 		return handler.frontendHandler.RespondDecisionTaskCompleted(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).RespondDecisionTaskCompleted(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).RespondDecisionTaskCompleted(ctx, request)
 }
 
 // RespondDecisionTaskFailed API call
@@ -504,7 +504,7 @@ func (handler *DCRedirectionHandlerImpl) RespondDecisionTaskFailed(
 		return handler.frontendHandler.RespondDecisionTaskFailed(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).RespondDecisionTaskFailed(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).RespondDecisionTaskFailed(ctx, request)
 }
 
 // RespondQueryTaskCompleted API call
@@ -527,7 +527,7 @@ func (handler *DCRedirectionHandlerImpl) RespondQueryTaskCompleted(
 		return handler.frontendHandler.RespondQueryTaskCompleted(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).RespondQueryTaskCompleted(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).RespondQueryTaskCompleted(ctx, request)
 }
 
 // SignalWithStartWorkflowExecution API call
@@ -545,7 +545,7 @@ func (handler *DCRedirectionHandlerImpl) SignalWithStartWorkflowExecution(
 		return handler.frontendHandler.SignalWithStartWorkflowExecution(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).SignalWithStartWorkflowExecution(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).SignalWithStartWorkflowExecution(ctx, request)
 }
 
 // SignalWorkflowExecution API call
@@ -563,7 +563,7 @@ func (handler *DCRedirectionHandlerImpl) SignalWorkflowExecution(
 		return handler.frontendHandler.SignalWorkflowExecution(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).SignalWorkflowExecution(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).SignalWorkflowExecution(ctx, request)
 }
 
 // StartWorkflowExecution API call
@@ -581,7 +581,7 @@ func (handler *DCRedirectionHandlerImpl) StartWorkflowExecution(
 		return handler.frontendHandler.StartWorkflowExecution(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).StartWorkflowExecution(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).StartWorkflowExecution(ctx, request)
 }
 
 // TerminateWorkflowExecution API call
@@ -599,5 +599,5 @@ func (handler *DCRedirectionHandlerImpl) TerminateWorkflowExecution(
 		return handler.frontendHandler.TerminateWorkflowExecution(ctx, request)
 	}
 
-	return handler.clientBean.GetRemoteFrontendClient(targetDC).TerminateWorkflowExecution(ctx, request)
+	return handler.sevice.GetClientBean().GetRemoteFrontendClient(targetDC).TerminateWorkflowExecution(ctx, request)
 }

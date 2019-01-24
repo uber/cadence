@@ -284,9 +284,7 @@ func (c *cadenceImpl) GetFrontendService() service.Service {
 
 func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup) {
 	params := new(service.BootstrapParams)
-	params.DCRedirectionPolicy = config.DCRedirectionPolicy{
-		Policy: frontend.DCRredirectionPolicyNoop,
-	}
+	params.DCRedirectionPolicy = config.DCRedirectionPolicy{}
 	params.Name = common.FrontendServiceName
 	params.Logger = c.logger
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.FrontendPProfPort())

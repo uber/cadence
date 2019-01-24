@@ -165,16 +165,15 @@ func (wh *WorkflowHandler) Start() error {
 		wh.dcRedirectionPolicy,
 	)
 	dcRediectionHandle := NewDCRedirectionHandler(
-		currentClusteName, dcRedirectionPolicy, wh.GetClientBean(), wh,
+		currentClusteName, dcRedirectionPolicy, wh.Service, wh,
 	)
 	wh.Service.GetDispatcher().Register(workflowserviceserver.New(dcRediectionHandle))
-	// wh.Service.GetDispatcher().Register(workflowserviceserver.New(wh))
 	wh.Service.GetDispatcher().Register(metaserver.New(wh))
 	wh.Service.Start()
 	wh.domainCache.Start()
 
-	wh.history = wh.Service.GetClientBean().GetHistoryClient()
-	wh.matchingRawClient = wh.Service.GetClientBean().GetMatchingClient()
+	wh.history = wh.GetClientBean().GetHistoryClient()
+	wh.matchingRawClient = wh.GetClientBean().GetMatchingClient()
 	wh.matching = matching.NewRetryableClient(wh.matchingRawClient, common.CreateMatchingServiceRetryPolicy(),
 		common.IsWhitelistServiceTransientError)
 	wh.metricsClient = wh.Service.GetMetricsClient()

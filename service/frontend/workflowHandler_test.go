@@ -23,13 +23,14 @@ package frontend
 import (
 	"context"
 	"errors"
-	"github.com/uber/cadence/common/blobstore"
-	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/config"
 	"log"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/config"
 
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
@@ -97,7 +98,7 @@ func (s *workflowHandlerSuite) SetupTest() {
 	s.mockService = cs.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.logger)
 	s.mockBlobstoreClient = &mocks.BlobstoreClient{}
 	s.dcRedirectionPolicy = config.DCRedirectionPolicy{
-		Policy: DCRredirectionPolicyNoop,
+		Policy: DCRedirectionPolicyNoop,
 	}
 }
 

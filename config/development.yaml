@@ -77,7 +77,7 @@ clustersInfo:
       rpcName: "cadence-frontend"
       rpcAddress: "127.0.0.1:7933"
 
-dcRrediectionPolicy:
+dcRedirectionPolicy:
   policy: "noop"
   fromDC: ""
   toDC: ""

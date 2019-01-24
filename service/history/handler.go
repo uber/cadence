@@ -121,25 +121,25 @@ func (h *Handler) Start() error {
 	h.Service.Start()
 
 	h.matchingServiceClient = matching.NewRetryableClient(
-		h.Service.GetClientBean().GetMatchingClient(),
+		h.GetClientBean().GetMatchingClient(),
 		common.CreateMatchingServiceRetryPolicy(),
 		common.IsWhitelistServiceTransientError,
 	)
 
 	h.historyServiceClient = hc.NewRetryableClient(
-		h.Service.GetClientBean().GetHistoryClient(),
+		h.GetClientBean().GetHistoryClient(),
 		common.CreateHistoryServiceRetryPolicy(),
 		common.IsWhitelistServiceTransientError,
 	)
 
 	h.frontendServiceClient = frontend.NewRetryableClient(
-		h.Service.GetClientBean().GetFrontendClient(),
+		h.GetClientBean().GetFrontendClient(),
 		common.CreateFrontendServiceRetryPolicy(),
 		common.IsWhitelistServiceTransientError,
 	)
 
 	h.publicClient = public.NewRetryableClient(
-		h.Service.GetClientBean().GetPublicClient(),
+		h.GetClientBean().GetPublicClient(),
 		common.CreatePublicClientRetryPolicy(),
 		common.IsWhitelistServiceTransientError,
 	)
