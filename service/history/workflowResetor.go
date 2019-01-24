@@ -130,7 +130,7 @@ func (w *workflowResetorImpl) ResetWorkflowExecution(ctx context.Context, resetR
 		return
 	}
 
-	retError = validateResetWorkflowBeforeReplay(baseMutableState, currMutableState)
+	retError = validateResetWorkflowBeforeReplay(baseMutableState, currMutableState, request.GetRequestId())
 	if retError != nil {
 		return
 	}
@@ -190,7 +190,7 @@ func (w *workflowResetorImpl) checkDomainStatus(newMutableState mutableState, pr
 	return nil
 }
 
-func validateResetWorkflowBeforeReplay(baseMutableState, currMutableState mutableState) (retError error) {
+func validateResetWorkflowBeforeReplay(baseMutableState, currMutableState mutableState, requestID string) (retError error) {
 	if baseMutableState.GetEventStoreVersion() != persistence.EventStoreVersionV2 {
 		retError = &workflow.BadRequestError{
 			Message: fmt.Sprintf("reset API is not supported for V1 history events"),
@@ -213,6 +213,12 @@ func validateResetWorkflowBeforeReplay(baseMutableState, currMutableState mutabl
 		retError = &workflow.InternalServiceError{
 			Message: fmt.Sprintf("current workflow should already been terminated"),
 		}
+	}
+	if currMutableState.GetExecutionInfo().CreateRequestID == requestID {
+		retError = &workflow.BadRequestError{
+			Message: fmt.Sprintf("reset has been processed, new runID: %v ", currMutableState.GetExecutionInfo().RunID),
+		}
+		return
 	}
 	return
 }
