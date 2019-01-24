@@ -140,7 +140,7 @@ func NewEngineWithShardContext(
 	publicClient public.Client,
 	historyEventNotifier historyEventNotifier,
 	publisher messaging.Producer,
-	messagingClient messaging.Client,
+	visibilityProducer messaging.Producer,
 	config *Config,
 ) Engine {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
@@ -171,10 +171,7 @@ func NewEngineWithShardContext(
 		config:               config,
 		archivalClient:       sysworkflow.NewArchivalClient(publicClient, shard.GetConfig().NumSysWorkflows),
 	}
-	var visibilityProducer messaging.Producer
-	if config.EnableVisibilityToKafka() {
-		visibilityProducer = getVisibilityProducer(messagingClient, shard.GetMetricsClient())
-	}
+
 	txProcessor := newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, visibilityProducer, matching, historyClient, logger)
 	historyEngImpl.timerProcessor = newTimerQueueProcessor(shard, historyEngImpl, matching, visibilityProducer, logger)
 	historyEngImpl.txProcessor = txProcessor
@@ -3329,18 +3326,4 @@ func getWorkflowAlreadyStartedError(errMsg string, createRequestID string, workf
 		StartRequestId: common.StringPtr(fmt.Sprintf("%v", createRequestID)),
 		RunId:          common.StringPtr(fmt.Sprintf("%v", runID)),
 	}
-}
-
-func getVisibilityProducer(messagingClient messaging.Client, metricsClient metrics.Client) messaging.Producer {
-	if messagingClient == nil {
-		return nil
-	}
-	visibilityProducer, err := messagingClient.NewProducer(common.VisibilityAppName)
-	if err != nil {
-		panic(err)
-	}
-	if metricsClient != nil {
-		visibilityProducer = messaging.NewMetricProducer(visibilityProducer, metricsClient)
-	}
-	return visibilityProducer
 }
