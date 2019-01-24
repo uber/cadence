@@ -1344,15 +1344,12 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent() *decisionInfo {
 	var newDecisionEvent *workflow.HistoryEvent
 	scheduleID := e.GetNextEventID() // we will generate the schedule event later for repeatedly failing decisions
 	// Avoid creating new history events when decisions are continuously failing
-	fmt.Println("scheduleID 1:", scheduleID, e.executionInfo.DecisionAttempt)
 	if e.executionInfo.DecisionAttempt == 0 {
 		newDecisionEvent = e.hBuilder.AddDecisionTaskScheduledEvent(taskList, startToCloseTimeoutSeconds,
 			e.executionInfo.DecisionAttempt)
 		scheduleID = newDecisionEvent.GetEventId()
-		fmt.Println("inside scheduleID:", scheduleID)
 	}
 
-	fmt.Println("scheduleID 2:", scheduleID, e.executionInfo.DecisionAttempt)
 	return e.ReplicateDecisionTaskScheduledEvent(
 		e.GetCurrentVersion(),
 		scheduleID,

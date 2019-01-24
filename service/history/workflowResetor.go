@@ -361,6 +361,7 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(baseMutableState muta
 		RecordVisibility: true,
 	})
 
+	setTaskInfo(newMutableState.GetCurrentVersion(), time.Now(), transferTasks, timerTasks)
 	// fork a new history branch
 	forkResp, retError := w.eng.historyV2Mgr.ForkHistoryBranch(&persistence.ForkHistoryBranchRequest{
 		ForkBranchToken: baseMutableState.GetCurrentBranch(),
