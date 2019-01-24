@@ -294,6 +294,7 @@ func (w *workflowResetorImpl) scheduleUnstartedActivities(msBuilder mutableState
 func (w *workflowResetorImpl) buildNewMutableStateForReset(baseMutableState mutableState, resetReason string, resetDecisionCompletedEventID int64, requestedID, newRunID string) (newMutableState mutableState, transferTasks, timerTasks []persistence.Task, retError error) {
 	domainID := baseMutableState.GetExecutionInfo().DomainID
 	workflowID := baseMutableState.GetExecutionInfo().WorkflowID
+	baseRunID := baseMutableState.GetExecutionInfo().RunID
 
 	// replay history to reset point(exclusive) to rebuild mutableState
 	forkEventVersion, wfTimeoutSecs, receivedSignals, newStateBuilder, retError := w.replayHistoryEvents(resetDecisionCompletedEventID, requestedID, baseMutableState, newRunID)
@@ -314,7 +315,7 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(baseMutableState muta
 	newMutableState.ClearDecisionAttempt()
 
 	event := newMutableState.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, workflow.DecisionTaskFailedCauseResetWorkflow, nil,
-		identityHistoryService, baseMutableState.GetExecutionInfo().RunID, newRunID, resetReason, forkEventVersion)
+		identityHistoryService, resetReason, baseRunID, newRunID, forkEventVersion)
 	if event == nil {
 		retError = &workflow.InternalServiceError{Message: "Failed to add decision failed event."}
 	}
