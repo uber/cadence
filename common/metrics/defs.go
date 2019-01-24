@@ -350,19 +350,6 @@ const (
 	// MessagingPublishBatchScope tracks Publish calls made by service to messaging layer
 	MessagingClientPublishBatchScope
 
-	// BlobstoreClientUploadScope tracks Upload calls to blobstore
-	BlobstoreClientUploadScope
-	// BlobstoreClientDownloadScope tracks Download calls to blobstore
-	BlobstoreClientDownloadScope
-	// BlobstoreClientExistsScope tracks Exists calls to blobstore
-	BlobstoreClientExistsScope
-	// BlobstoreClientDeleteScope tracks Delete calls to blobstore
-	BlobstoreClientDeleteScope
-	// BlobstoreClientListByPrefixScope tracks ListByPrefix calls to blobstore
-	BlobstoreClientListByPrefixScope
-	// BlobstoreClientBucketMetadataScope tracks BucketMetadata calls to blobstore
-	BlobstoreClientBucketMetadataScope
-
 	// DomainCacheScope tracks domain cache callbacks
 	DomainCacheScope
 	// HistoryRereplicationByTransferTaskScope tracks history replication calls made by transfer task
@@ -386,6 +373,19 @@ const (
 	PersistenceCompleteForkBranchScope
 	// PersistenceGetHistoryTreeScope tracks GetHistoryTree calls made by service to persistence layer
 	PersistenceGetHistoryTreeScope
+
+	// BlobstoreClientUploadScope tracks Upload calls to blobstore
+	BlobstoreClientUploadScope
+	// BlobstoreClientDownloadScope tracks Download calls to blobstore
+	BlobstoreClientDownloadScope
+	// BlobstoreClientExistsScope tracks Exists calls to blobstore
+	BlobstoreClientExistsScope
+	// BlobstoreClientDeleteScope tracks Delete calls to blobstore
+	BlobstoreClientDeleteScope
+	// BlobstoreClientListByPrefixScope tracks ListByPrefix calls to blobstore
+	BlobstoreClientListByPrefixScope
+	// BlobstoreClientBucketMetadataScope tracks BucketMetadata calls to blobstore
+	BlobstoreClientBucketMetadataScope
 
 	NumCommonScopes
 )
@@ -729,6 +729,13 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceDeleteHistoryBranchScope:                      {operation: "DeleteHistoryBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceCompleteForkBranchScope:                       {operation: "CompleteForkBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceGetHistoryTreeScope:                           {operation: "GetHistoryTree", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+
+		BlobstoreClientUploadScope:         {operation: "Upload"},
+		BlobstoreClientDownloadScope:       {operation: "Download"},
+		BlobstoreClientExistsScope:         {operation: "Exists"},
+		BlobstoreClientDeleteScope:         {operation: "Delete"},
+		BlobstoreClientListByPrefixScope:   {operation: "ListByPrefix"},
+		BlobstoreClientBucketMetadataScope: {operation: "BucketMetadata"},
 
 		HistoryClientStartWorkflowExecutionScope:            {operation: "HistoryClientStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientRecordActivityTaskHeartbeatScope:       {operation: "HistoryClientRecordActivityTaskHeartbeat", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
