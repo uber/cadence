@@ -118,7 +118,7 @@ func (s *ClientSuite) TestUpload_Fail_ErrorOnWrite() {
 	client := s.constructClient(dir)
 
 	b := blob.NewBlob([]byte("blob body"), map[string]string{"tagKey": "tagValue"})
-	s.Error(client.Upload(context.Background(), defaultBucketName, key, b))
+	s.Equal(ErrWriteFile, client.Upload(context.Background(), defaultBucketName, key, b))
 }
 
 func (s *ClientSuite) TestDownload_Fail_BucketNotExists() {
@@ -160,8 +160,7 @@ func (s *ClientSuite) TestDownload_Fail_NoPermissions() {
 	os.Chmod(bucketItemPath(dir, defaultBucketName, key.String()), os.FileMode(0000))
 
 	b, err = client.Download(context.Background(), defaultBucketName, key)
-	s.NotEqual(blobstore.ErrBlobNotExists, err)
-	s.Error(err)
+	s.Equal(ErrReadFile, err)
 	s.Nil(b)
 }
 
@@ -176,8 +175,7 @@ func (s *ClientSuite) TestDownload_Fail_BlobFormatInvalid() {
 	s.NoError(writeFile(filepath.Join(dir, defaultBucketName, key.String()), []byte("invalid")))
 
 	b, err := client.Download(context.Background(), defaultBucketName, key)
-	s.NotEqual(blobstore.ErrBlobNotExists, err)
-	s.Error(err)
+	s.Equal(blobstore.ErrBlobDeserialization, err)
 	s.Nil(b)
 }
 
@@ -340,7 +338,7 @@ func (s *ClientSuite) TestBucketMetadata_Fail_CheckFileExistsError() {
 	s.NoError(os.Chmod(bucketDirectory(dir, defaultBucketName), os.FileMode(0000)))
 
 	metadata, err := client.BucketMetadata(context.Background(), defaultBucketName)
-	s.Error(err)
+	s.Equal(ErrCheckFileExists, err)
 	s.Nil(metadata)
 }
 
@@ -352,7 +350,7 @@ func (s *ClientSuite) TestBucketMetadata_Fail_FileNotExistsError() {
 	s.NoError(os.Remove(bucketItemPath(dir, defaultBucketName, metadataFilename)))
 
 	metadata, err := client.BucketMetadata(context.Background(), defaultBucketName)
-	s.Error(err)
+	s.Equal(ErrMetadataFileNotExists, err)
 	s.Nil(metadata)
 }
 
@@ -364,7 +362,7 @@ func (s *ClientSuite) TestBucketMetadata_Fail_InvalidFileFormat() {
 	s.NoError(writeFile(bucketItemPath(dir, defaultBucketName, metadataFilename), []byte("invalid")))
 
 	metadata, err := client.BucketMetadata(context.Background(), defaultBucketName)
-	s.Error(err)
+	s.Equal(ErrBucketConfigDeserialization, err)
 	s.Nil(metadata)
 }
 
