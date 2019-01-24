@@ -310,21 +310,27 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(baseMutableState muta
 	// failed the in-flight decision(started).
 	// Note that we need to ensure DecisionTaskFailed event is appended right after DecisionTaskStarted event
 	di, _ := newMutableState.GetInFlightDecisionTask()
-	// always enforce the attempt to zero
-	di.Attempt = 0
-	newMutableState.UpdateDecision(di)
+	// Before that, always enforce the attempt to zero so that we can get around of transient decision
+	newMutableState.ClearDecisionAttempt()
 
-	newMutableState.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, workflow.DecisionTaskFailedCauseResetWorkflow, nil,
+	event := newMutableState.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, workflow.DecisionTaskFailedCauseResetWorkflow, nil,
 		identityHistoryService, baseMutableState.GetExecutionInfo().RunID, newRunID, resetReason, forkEventVersion)
+	if event == nil {
+		retError = &workflow.InternalServiceError{Message: "Failed to add decision failed event."}
+	}
+	// enforce the attempt to zero again so that we can always schedule a new decision
+	newMutableState.ClearDecisionAttempt()
 
 	retError = w.failStartedActivities(newMutableState)
 	if retError != nil {
 		return
 	}
+
 	transferTasks, retError = w.scheduleUnstartedActivities(newMutableState)
 	if retError != nil {
 		return
 	}
+
 	// we will need a timer for the scheduled activities
 	needActivityTimer := len(transferTasks) > 0
 
@@ -346,6 +352,7 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(baseMutableState muta
 		retError = &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
 		return
 	}
+
 	transferTasks = append(transferTasks, &persistence.DecisionTask{
 		DomainID:         domainID,
 		TaskList:         di.TaskList,
