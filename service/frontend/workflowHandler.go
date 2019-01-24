@@ -63,6 +63,7 @@ type (
 		historyMgr        persistence.HistoryManager
 		historyV2Mgr      persistence.HistoryV2Manager
 		visibilityMgr     persistence.VisibilityManager
+		esVisibilityMgr   persistence.VisibilityManager
 		history           history.Client
 		matching          matching.Client
 		matchingRawClient matching.Client
@@ -133,7 +134,8 @@ var (
 
 // NewWorkflowHandler creates a thrift handler for the cadence service
 func NewWorkflowHandler(sVice service.Service, config *Config, metadataMgr persistence.MetadataManager,
-	historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager, visibilityMgr persistence.VisibilityManager,
+	historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
+	visibilityMgr persistence.VisibilityManager, esVisibilityManager persistence.VisibilityManager,
 	kafkaProducer messaging.Producer, blobstoreClient blobstore.Client) *WorkflowHandler {
 	handler := &WorkflowHandler{
 		Service:          sVice,
@@ -142,6 +144,7 @@ func NewWorkflowHandler(sVice service.Service, config *Config, metadataMgr persi
 		historyMgr:       historyMgr,
 		historyV2Mgr:     historyV2Mgr,
 		visibilityMgr:    visibilityMgr,
+		esVisibilityMgr:  esVisibilityManager,
 		tokenSerializer:  common.NewJSONTaskTokenSerializer(),
 		domainCache:      cache.NewDomainCache(metadataMgr, sVice.GetClusterMetadata(), sVice.GetMetricsClient(), sVice.GetLogger()),
 		rateLimiter:      common.NewTokenBucket(config.RPS(), common.NewRealTimeSource()),
@@ -2366,12 +2369,14 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 		LatestStartTime:   listRequest.StartTimeFilter.GetLatestTime(),
 	}
 
+	visibilityMgr := wh.getVisibilityManager(domain)
+
 	var persistenceResp *persistence.ListWorkflowExecutionsResponse
 	if listRequest.ExecutionFilter != nil {
 		if wh.config.DisableListVisibilityByFilter(domain) {
 			err = errNoPermission
 		} else {
-			persistenceResp, err = wh.visibilityMgr.ListOpenWorkflowExecutionsByWorkflowID(
+			persistenceResp, err = visibilityMgr.ListOpenWorkflowExecutionsByWorkflowID(
 				&persistence.ListWorkflowExecutionsByWorkflowIDRequest{
 					ListWorkflowExecutionsRequest: baseReq,
 					WorkflowID:                    listRequest.ExecutionFilter.GetWorkflowId(),
@@ -2382,14 +2387,14 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 		if wh.config.DisableListVisibilityByFilter(domain) {
 			err = errNoPermission
 		} else {
-			persistenceResp, err = wh.visibilityMgr.ListOpenWorkflowExecutionsByType(&persistence.ListWorkflowExecutionsByTypeRequest{
+			persistenceResp, err = visibilityMgr.ListOpenWorkflowExecutionsByType(&persistence.ListWorkflowExecutionsByTypeRequest{
 				ListWorkflowExecutionsRequest: baseReq,
 				WorkflowTypeName:              listRequest.TypeFilter.GetName(),
 			})
 		}
 		logging.LogListOpenWorkflowByFilter(wh.GetLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByType)
 	} else {
-		persistenceResp, err = wh.visibilityMgr.ListOpenWorkflowExecutions(&baseReq)
+		persistenceResp, err = visibilityMgr.ListOpenWorkflowExecutions(&baseReq)
 	}
 
 	if err != nil {
@@ -2469,12 +2474,14 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 		LatestStartTime:   listRequest.StartTimeFilter.GetLatestTime(),
 	}
 
+	visibilityMgr := wh.getVisibilityManager(domain)
+
 	var persistenceResp *persistence.ListWorkflowExecutionsResponse
 	if listRequest.ExecutionFilter != nil {
 		if wh.config.DisableListVisibilityByFilter(domain) {
 			err = errNoPermission
 		} else {
-			persistenceResp, err = wh.visibilityMgr.ListClosedWorkflowExecutionsByWorkflowID(
+			persistenceResp, err = visibilityMgr.ListClosedWorkflowExecutionsByWorkflowID(
 				&persistence.ListWorkflowExecutionsByWorkflowIDRequest{
 					ListWorkflowExecutionsRequest: baseReq,
 					WorkflowID:                    listRequest.ExecutionFilter.GetWorkflowId(),
@@ -2485,7 +2492,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 		if wh.config.DisableListVisibilityByFilter(domain) {
 			err = errNoPermission
 		} else {
-			persistenceResp, err = wh.visibilityMgr.ListClosedWorkflowExecutionsByType(&persistence.ListWorkflowExecutionsByTypeRequest{
+			persistenceResp, err = visibilityMgr.ListClosedWorkflowExecutionsByType(&persistence.ListWorkflowExecutionsByTypeRequest{
 				ListWorkflowExecutionsRequest: baseReq,
 				WorkflowTypeName:              listRequest.TypeFilter.GetName(),
 			})
@@ -2495,14 +2502,14 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 		if wh.config.DisableListVisibilityByFilter(domain) {
 			err = errNoPermission
 		} else {
-			persistenceResp, err = wh.visibilityMgr.ListClosedWorkflowExecutionsByStatus(&persistence.ListClosedWorkflowExecutionsByStatusRequest{
+			persistenceResp, err = visibilityMgr.ListClosedWorkflowExecutionsByStatus(&persistence.ListClosedWorkflowExecutionsByStatusRequest{
 				ListWorkflowExecutionsRequest: baseReq,
 				Status:                        listRequest.GetStatusFilter(),
 			})
 		}
 		logging.LogListClosedWorkflowByFilter(wh.GetLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByStatus)
 	} else {
-		persistenceResp, err = wh.visibilityMgr.ListClosedWorkflowExecutions(&baseReq)
+		persistenceResp, err = visibilityMgr.ListClosedWorkflowExecutions(&baseReq)
 	}
 
 	if err != nil {
@@ -3114,4 +3121,14 @@ func (wh *WorkflowHandler) bucketName(customBucketName *string) string {
 
 func (wh *WorkflowHandler) customBucketNameProvided(customBucketName *string) bool {
 	return customBucketName != nil && len(*customBucketName) != 0
+}
+
+func (wh *WorkflowHandler) getVisibilityManager(domain string) persistence.VisibilityManager {
+	var visibilityMgr persistence.VisibilityManager
+	if wh.config.EnableReadVisibilityFromES(domain) && wh.esVisibilityMgr != nil {
+		visibilityMgr = wh.esVisibilityMgr
+	} else {
+		visibilityMgr = wh.visibilityMgr
+	}
+	return visibilityMgr
 }

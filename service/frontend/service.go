@@ -34,14 +34,15 @@ import (
 
 // Config represents configuration for cadence-frontend service
 type Config struct {
-	PersistenceMaxQPS        dynamicconfig.IntPropertyFn
-	VisibilityMaxPageSize    dynamicconfig.IntPropertyFnWithDomainFilter
-	EnableVisibilitySampling dynamicconfig.BoolPropertyFn
-	VisibilityListMaxQPS     dynamicconfig.IntPropertyFnWithDomainFilter
-	EnableVisibilityToKafka  dynamicconfig.BoolPropertyFn
-	HistoryMaxPageSize       dynamicconfig.IntPropertyFnWithDomainFilter
-	RPS                      dynamicconfig.IntPropertyFn
-	MaxIDLengthLimit         dynamicconfig.IntPropertyFn
+	PersistenceMaxQPS          dynamicconfig.IntPropertyFn
+	VisibilityMaxPageSize      dynamicconfig.IntPropertyFnWithDomainFilter
+	EnableVisibilitySampling   dynamicconfig.BoolPropertyFn
+	VisibilityListMaxQPS       dynamicconfig.IntPropertyFnWithDomainFilter
+	EnableVisibilityToKafka    dynamicconfig.BoolPropertyFn
+	EnableReadVisibilityFromES dynamicconfig.BoolPropertyFnWithDomainFilter
+	HistoryMaxPageSize         dynamicconfig.IntPropertyFnWithDomainFilter
+	RPS                        dynamicconfig.IntPropertyFn
+	MaxIDLengthLimit           dynamicconfig.IntPropertyFn
 
 	// Persistence settings
 	HistoryMgrNumConns dynamicconfig.IntPropertyFn
@@ -66,6 +67,7 @@ func NewConfig(dc *dynamicconfig.Collection, enableVisibilityToKafka bool) *Conf
 		EnableVisibilitySampling:       dc.GetBoolProperty(dynamicconfig.EnableVisibilitySampling, true),
 		VisibilityListMaxQPS:           dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendVisibilityListMaxQPS, 1),
 		EnableVisibilityToKafka:        dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, enableVisibilityToKafka),
+		EnableReadVisibilityFromES:     dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableReadVisibilityFromES, false),
 		HistoryMaxPageSize:             dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendHistoryMaxPageSize, common.GetHistoryMaxPageSize),
 		RPS:                            dc.GetIntProperty(dynamicconfig.FrontendRPS, 1200),
 		MaxIDLengthLimit:               dc.GetIntProperty(dynamicconfig.MaxIDLengthLimit, 1000),
@@ -117,15 +119,18 @@ func (s *Service) Start() {
 		log.Fatalf("failed to create metadata manager: %v", err)
 	}
 
-	var visibility persistence.VisibilityManager
-	if s.config.EnableVisibilityToKafka() {
-		visibilityIndexName := params.ESConfig.Indices[common.VisibilityAppName]
-		visibility, err = persistence.NewElasticSearchVisibilityManager(params.ESClient, visibilityIndexName, log)
-	} else {
-		visibility, err = pFactory.NewVisibilityManager(s.config.EnableVisibilitySampling())
-	}
+	visibility, err := pFactory.NewVisibilityManager(s.config.EnableVisibilitySampling())
 	if err != nil {
 		log.Fatalf("failed to create visibility manager: %v", err)
+	}
+
+	var esVisibility persistence.VisibilityManager
+	if s.config.EnableVisibilityToKafka() {
+		visibilityIndexName := params.ESConfig.Indices[common.VisibilityAppName]
+		esVisibility, err = persistence.NewElasticSearchVisibilityManager(params.ESClient, visibilityIndexName, log)
+		if err != nil {
+			log.Fatalf("failed to create esVisibility manager: %v", err)
+		}
 	}
 
 	history, err := pFactory.NewHistoryManager()
@@ -148,8 +153,7 @@ func (s *Service) Start() {
 		kafkaProducer = &mocks.KafkaProducer{}
 	}
 
-	wfHandler := NewWorkflowHandler(base, s.config, metadata, history, historyV2, visibility,
-		kafkaProducer, params.BlobstoreClient)
+	wfHandler := NewWorkflowHandler(base, s.config, metadata, history, historyV2, visibility, esVisibility, kafkaProducer, params.BlobstoreClient)
 	wfHandler.Start()
 	switch params.DCRedirectionPolicy.Policy {
 	case DCRedirectionPolicyDefault:

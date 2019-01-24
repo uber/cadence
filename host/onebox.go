@@ -323,7 +323,7 @@ func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup) {
 		c.frontEndService, c.numberOfHistoryShards, c.metadataMgr, c.historyMgr, c.historyV2Mgr)
 	c.frontendHandler = frontend.NewWorkflowHandler(
 		c.frontEndService, frontend.NewConfig(dynamicconfig.NewNopCollection(), false),
-		c.metadataMgr, c.historyMgr, c.historyV2Mgr, c.visibilityMgr, kafkaProducer, params.BlobstoreClient)
+		c.metadataMgr, c.historyMgr, c.historyV2Mgr, c.visibilityMgr, c.visibilityMgr, kafkaProducer, params.BlobstoreClient)
 	err = c.frontendHandler.Start()
 	if err != nil {
 		c.logger.WithField("error", err).Fatal("Failed to start frontend")
