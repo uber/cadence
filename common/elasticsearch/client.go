@@ -26,11 +26,10 @@ import (
 	"time"
 )
 
-// Client is a wrapper around ElasticSearch client library.
-//
-// It simplifies the interface and enables mocking. We intentionally let implementation details of the elastic library
-// bleed through, as the main purpose is testability not abstraction.
 type (
+	// Client is a wrapper around ElasticSearch client library.
+	// It simplifies the interface and enables mocking. We intentionally let implementation details of the elastic library
+	// bleed through, as the main purpose is testability not abstraction.
 	Client interface {
 		GetRawClient() *elastic.Client
 		Search(ctx context.Context, p *SearchParameters) (*elastic.SearchResult, error)
