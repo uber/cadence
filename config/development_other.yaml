@@ -86,8 +86,7 @@ clustersInfo:
 
 dcRedirectionPolicy:
   policy: "forwarding"
-  fromDC: "other"
-  toDC: "active"
+  toDC: "standby"
 
 kafka:
   clusters:

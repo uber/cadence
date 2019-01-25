@@ -85,8 +85,8 @@ clustersInfo:
       rpcAddress: "127.0.0.1:9933"
 
 dcRedirectionPolicy:
-  policy: "noop"
-  toDC: ""
+  policy: "forwarding"
+  toDC: "other"
 
 kafka:
   clusters:
