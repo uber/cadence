@@ -50,6 +50,16 @@ func NewDCRedirectionHandler(currentClusteName string, redirectionPolicy DCRedir
 	}
 }
 
+// Start starts the handler
+func (handler *DCRedirectionHandlerImpl) Start() error {
+	return handler.frontendHandler.Start()
+}
+
+// Stop stops the handler
+func (handler *DCRedirectionHandlerImpl) Stop() {
+	handler.frontendHandler.Stop()
+}
+
 // Domain APIs, domain APIs does not require redirection
 
 // DeprecateDomain API call

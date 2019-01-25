@@ -25,7 +25,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common/service/config"
 	"sync"
 	"time"
 
@@ -59,22 +58,21 @@ var _ workflowserviceserver.Interface = (*WorkflowHandler)(nil)
 type (
 	// WorkflowHandler - Thrift handler inteface for workflow service
 	WorkflowHandler struct {
-		domainCache         cache.DomainCache
-		metadataMgr         persistence.MetadataManager
-		historyMgr          persistence.HistoryManager
-		historyV2Mgr        persistence.HistoryV2Manager
-		visibitiltyMgr      persistence.VisibilityManager
-		history             history.Client
-		matching            matching.Client
-		matchingRawClient   matching.Client
-		tokenSerializer     common.TaskTokenSerializer
-		metricsClient       metrics.Client
-		startWG             sync.WaitGroup
-		rateLimiter         common.TokenBucket
-		config              *Config
-		domainReplicator    DomainReplicator
-		blobstoreClient     blobstore.Client
-		dcRedirectionPolicy config.DCRedirectionPolicy
+		domainCache       cache.DomainCache
+		metadataMgr       persistence.MetadataManager
+		historyMgr        persistence.HistoryManager
+		historyV2Mgr      persistence.HistoryV2Manager
+		visibitiltyMgr    persistence.VisibilityManager
+		history           history.Client
+		matching          matching.Client
+		matchingRawClient matching.Client
+		tokenSerializer   common.TaskTokenSerializer
+		metricsClient     metrics.Client
+		startWG           sync.WaitGroup
+		rateLimiter       common.TokenBucket
+		config            *Config
+		domainReplicator  DomainReplicator
+		blobstoreClient   blobstore.Client
 		service.Service
 	}
 
@@ -136,20 +134,19 @@ var (
 // NewWorkflowHandler creates a thrift handler for the cadence service
 func NewWorkflowHandler(sVice service.Service, config *Config, metadataMgr persistence.MetadataManager,
 	historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager, visibilityMgr persistence.VisibilityManager,
-	kafkaProducer messaging.Producer, blobstoreClient blobstore.Client, dcRedirectionPolicy config.DCRedirectionPolicy) *WorkflowHandler {
+	kafkaProducer messaging.Producer, blobstoreClient blobstore.Client) *WorkflowHandler {
 	handler := &WorkflowHandler{
-		Service:             sVice,
-		config:              config,
-		metadataMgr:         metadataMgr,
-		historyMgr:          historyMgr,
-		historyV2Mgr:        historyV2Mgr,
-		visibitiltyMgr:      visibilityMgr,
-		tokenSerializer:     common.NewJSONTaskTokenSerializer(),
-		domainCache:         cache.NewDomainCache(metadataMgr, sVice.GetClusterMetadata(), sVice.GetMetricsClient(), sVice.GetLogger()),
-		rateLimiter:         common.NewTokenBucket(config.RPS(), common.NewRealTimeSource()),
-		domainReplicator:    NewDomainReplicator(kafkaProducer, sVice.GetLogger()),
-		blobstoreClient:     blobstoreClient,
-		dcRedirectionPolicy: dcRedirectionPolicy,
+		Service:          sVice,
+		config:           config,
+		metadataMgr:      metadataMgr,
+		historyMgr:       historyMgr,
+		historyV2Mgr:     historyV2Mgr,
+		visibitiltyMgr:   visibilityMgr,
+		tokenSerializer:  common.NewJSONTaskTokenSerializer(),
+		domainCache:      cache.NewDomainCache(metadataMgr, sVice.GetClusterMetadata(), sVice.GetMetricsClient(), sVice.GetLogger()),
+		rateLimiter:      common.NewTokenBucket(config.RPS(), common.NewRealTimeSource()),
+		domainReplicator: NewDomainReplicator(kafkaProducer, sVice.GetLogger()),
+		blobstoreClient:  blobstoreClient,
 	}
 	// prevent us from trying to serve requests before handler's Start() is complete
 	handler.startWG.Add(1)
@@ -158,16 +155,10 @@ func NewWorkflowHandler(sVice service.Service, config *Config, metadataMgr persi
 
 // Start starts the handler
 func (wh *WorkflowHandler) Start() error {
-	currentClusteName := wh.GetClusterMetadata().GetCurrentClusterName()
-	dcRedirectionPolicy := RedirectionPolicyGenerator(
-		wh.GetClusterMetadata(),
-		wh.domainCache,
-		wh.dcRedirectionPolicy,
-	)
-	dcRediectionHandle := NewDCRedirectionHandler(
-		currentClusteName, dcRedirectionPolicy, wh.Service, wh,
-	)
-	wh.Service.GetDispatcher().Register(workflowserviceserver.New(dcRediectionHandle))
+	// previously we call wh.Service.GetDispatcher().Register(workflowserviceserver.New(dcRediectionHandle)) here
+	// which does the registration of this handler
+	// however due to the introduction of dc redirection handler,
+	// the registration needs to be specially handled, in the service.go
 	wh.Service.GetDispatcher().Register(metaserver.New(wh))
 	wh.Service.Start()
 	wh.domainCache.Start()

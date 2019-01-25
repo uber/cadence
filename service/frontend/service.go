@@ -21,6 +21,8 @@
 package frontend
 
 import (
+	"fmt"
+	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/mocks"
@@ -138,8 +140,27 @@ func (s *Service) Start() {
 	}
 
 	wfHandler := NewWorkflowHandler(base, s.config, metadata, history, historyV2, visibility,
-		kafkaProducer, params.BlobstoreClient, params.DCRedirectionPolicy)
+		kafkaProducer, params.BlobstoreClient)
 	wfHandler.Start()
+	switch params.DCRedirectionPolicy.Policy {
+	case DCRedirectionPolicyDefault:
+		base.GetDispatcher().Register(workflowserviceserver.New(wfHandler))
+	case DCRedirectionPolicyNoop:
+		base.GetDispatcher().Register(workflowserviceserver.New(wfHandler))
+	case DCRedirectionPolicyForwarding:
+		dcRedirectionPolicy := RedirectionPolicyGenerator(
+			base.GetClusterMetadata(),
+			wfHandler.domainCache,
+			params.DCRedirectionPolicy,
+		)
+		currentClusteName := base.GetClusterMetadata().GetCurrentClusterName()
+		dcRediectionHandle := NewDCRedirectionHandler(
+			currentClusteName, dcRedirectionPolicy, base, wfHandler,
+		)
+		base.GetDispatcher().Register(workflowserviceserver.New(dcRediectionHandle))
+	default:
+		panic(fmt.Sprintf("Unknown DC redirection policy %v", params.DCRedirectionPolicy.Policy))
+	}
 
 	adminHandler := NewAdminHandler(base, pConfig.NumHistoryShards, metadata, history, historyV2)
 	adminHandler.Start()
