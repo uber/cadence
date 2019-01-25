@@ -37,7 +37,7 @@ const esPersistenceName = "elasticsearch"
 
 type (
 	esVisibilityManager struct {
-		esClient *elastic.Client
+		esClient es.Client
 		index    string
 		logger   bark.Logger
 	}
@@ -64,7 +64,7 @@ var (
 )
 
 // NewElasticSearchVisibilityManager create a visibility manager connecting to ElasticSearch
-func NewElasticSearchVisibilityManager(esClient *elastic.Client, index string, logger bark.Logger) (VisibilityManager, error) {
+func NewElasticSearchVisibilityManager(esClient es.Client, index string, logger bark.Logger) (VisibilityManager, error) {
 
 	return &esVisibilityManager{
 		esClient: esClient,
@@ -239,10 +239,11 @@ func (v *esVisibilityManager) GetClosedWorkflowExecution(
 	}
 
 	ctx := context.Background()
-	searchResult, err := v.esClient.Search().
-		Index(v.index).
-		Query(boolQuery).
-		Do(ctx)
+	params := &es.SearchParameters{
+		Index: v.index,
+		Query: boolQuery,
+	}
+	searchResult, err := v.esClient.Search(ctx, params)
 	if err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("GetClosedWorkflowExecution failed. Error: %v", err),
@@ -299,17 +300,18 @@ func (v *esVisibilityManager) getSearchResult(request *ListWorkflowExecutionsReq
 	}
 
 	ctx := context.Background()
-	search := v.esClient.Search().
-		Index(v.index).
-		Query(boolQuery).
-		From(token.From).
-		Size(request.PageSize)
-	if isOpen {
-		search = search.Sort(es.StartTime, false)
-	} else {
-		search = search.Sort(es.CloseTime, false)
+	params := &es.SearchParameters{
+		Index:    v.index,
+		Query:    boolQuery,
+		From:     token.From,
+		PageSize: request.PageSize,
 	}
-	return search.Do(ctx)
+	if isOpen {
+		params.Sorter = append(params.Sorter, elastic.NewFieldSort(es.StartTime).Desc())
+	} else {
+		params.Sorter = append(params.Sorter, elastic.NewFieldSort(es.CloseTime).Desc())
+	}
+	return v.esClient.Search(ctx, params)
 }
 
 func (v *esVisibilityManager) getListWorkflowExecutionsResponse(searchHits *elastic.SearchHits,

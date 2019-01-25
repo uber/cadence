@@ -18,24 +18,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package elasticsearch
+package persistence
 
-// Factory is interface to create ElasticSearch client
-type Factory interface {
-	NewClient() (Client, error)
+import (
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+	"testing"
+)
+
+type ESVisibilitySuite struct {
+	suite.Suite
+	// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
+	// not merely log an error
+	*require.Assertions
 }
 
-type clientFactory struct {
-	Config *Config
+func TestESVisibilitySuite(t *testing.T) {
+	suite.Run(t, new(ESVisibilitySuite))
 }
 
-var _ Factory = (*clientFactory)(nil)
-
-// NewFactory create a new ElasticSearch client
-func NewFactory(config *Config) Factory {
-	return &clientFactory{Config: config}
-}
-
-func (f *clientFactory) NewClient() (Client, error) {
-	return newClient(f.Config)
+func (s *ESVisibilitySuite) SetupTest() {
+	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
+	s.Assertions = require.New(s.T())
 }

@@ -75,7 +75,7 @@ const (
 )
 
 // NewESProcessorAndStart create new ESProcessor and start
-func NewESProcessorAndStart(config *Config, client *elastic.Client, processorName string,
+func NewESProcessorAndStart(config *Config, client es.Client, processorName string,
 	logger bark.Logger, metricsClient metrics.Client) (ESProcessor, error) {
 	p := &esProcessorImpl{
 		config: config,
@@ -85,7 +85,7 @@ func NewESProcessorAndStart(config *Config, client *elastic.Client, processorNam
 		metricsClient: metricsClient,
 	}
 
-	processor, err := client.BulkProcessor().
+	processor, err := client.GetRawClient().BulkProcessor().
 		Name(processorName).
 		Workers(config.ESProcessorNumOfWorkers()).
 		BulkActions(config.ESProcessorBulkActions()).
