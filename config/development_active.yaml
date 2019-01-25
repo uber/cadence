@@ -87,7 +87,6 @@ clustersInfo:
 
 dcRedirectionPolicy:
   policy: "noop"
-  fromDC: ""
   toDC: ""
 
 kafka:

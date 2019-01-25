@@ -219,7 +219,6 @@ type (
 	// DCRedirectionPolicy contains the frontend datacenter redirection policy
 	DCRedirectionPolicy struct {
 		Policy string `yaml:"policy"`
-		FromDC string `yaml:"fromDC"`
 		ToDC   string `yaml:"toDC"`
 	}
 

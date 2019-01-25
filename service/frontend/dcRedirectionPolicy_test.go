@@ -47,7 +47,6 @@ type (
 		suite.Suite
 		fromDC                        string
 		toDC                          string
-		currentClusteName             string
 		mockMetadataMgr               *mocks.MetadataManager
 		mockClusterMetadata           *mocks.ClusterMetadata
 		forwardingDCRedirectionPolicy *ForwardingDCRedirectionPolicy
@@ -109,7 +108,6 @@ func (s *forwardingDCRedirectionPolicySuite) TearDownSuite() {
 func (s *forwardingDCRedirectionPolicySuite) SetupTest() {
 	s.fromDC = cluster.TestCurrentClusterName
 	s.toDC = cluster.TestAlternativeClusterName
-	s.currentClusteName = cluster.TestCurrentClusterName
 	log2 := log.New()
 	log2.Level = log.DebugLevel
 	s.logger = bark.NewLoggerFromLogrus(log2)
@@ -123,7 +121,7 @@ func (s *forwardingDCRedirectionPolicySuite) SetupTest() {
 		s.logger,
 	)
 	s.forwardingDCRedirectionPolicy = NewForwardingDCRedirectionPolicy(
-		s.fromDC, s.toDC, s.currentClusteName, domainCache,
+		s.fromDC, s.toDC, domainCache,
 	)
 }
 
@@ -151,11 +149,11 @@ func (s *forwardingDCRedirectionPolicySuite) TestGetTargetDatacenter_LocalDomain
 
 	targetCluster, err := s.forwardingDCRedirectionPolicy.GetTargetDatacenterByID(domainID)
 	s.Nil(err)
-	s.Equal(s.currentClusteName, targetCluster)
+	s.Equal(s.fromDC, targetCluster)
 
 	targetCluster, err = s.forwardingDCRedirectionPolicy.GetTargetDatacenterByName(domainName)
 	s.Nil(err)
-	s.Equal(s.currentClusteName, targetCluster)
+	s.Equal(s.fromDC, targetCluster)
 }
 
 func (s *forwardingDCRedirectionPolicySuite) TestGetTargetDatacenter_GlobalDomain_OneReplicationCluster() {
@@ -178,11 +176,11 @@ func (s *forwardingDCRedirectionPolicySuite) TestGetTargetDatacenter_GlobalDomai
 
 	targetCluster, err := s.forwardingDCRedirectionPolicy.GetTargetDatacenterByID(domainID)
 	s.Nil(err)
-	s.Equal(s.currentClusteName, targetCluster)
+	s.Equal(s.fromDC, targetCluster)
 
 	targetCluster, err = s.forwardingDCRedirectionPolicy.GetTargetDatacenterByName(domainName)
 	s.Nil(err)
-	s.Equal(s.currentClusteName, targetCluster)
+	s.Equal(s.fromDC, targetCluster)
 }
 
 func (s *forwardingDCRedirectionPolicySuite) TestGetTargetDatacenter_GlobalDomain_NoFowarding() {
@@ -206,11 +204,11 @@ func (s *forwardingDCRedirectionPolicySuite) TestGetTargetDatacenter_GlobalDomai
 
 	targetCluster, err := s.forwardingDCRedirectionPolicy.GetTargetDatacenterByID(domainID)
 	s.Nil(err)
-	s.Equal(s.currentClusteName, targetCluster)
+	s.Equal(s.fromDC, targetCluster)
 
 	targetCluster, err = s.forwardingDCRedirectionPolicy.GetTargetDatacenterByName(domainName)
 	s.Nil(err)
-	s.Equal(s.currentClusteName, targetCluster)
+	s.Equal(s.fromDC, targetCluster)
 }
 
 func (s *forwardingDCRedirectionPolicySuite) TestGetTargetDatacenter_GlobalDomain_Fowarding() {

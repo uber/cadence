@@ -75,7 +75,6 @@ clustersInfo:
 
 dcRedirectionPolicy:
   policy: "noop"
-  fromDC: ""
   toDC: ""
 
 archival:

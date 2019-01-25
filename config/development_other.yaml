@@ -72,7 +72,6 @@ clustersInfo:
   currentClusterName: "other"
   clusterInitialFailoverVersion:
     active: 1
-    standby: 0
     other: 2
   clusterAddress:
     active:

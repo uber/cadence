@@ -73,7 +73,6 @@ clustersInfo:
   clusterInitialFailoverVersion:
     active: 1
     standby: 0
-    other: 2
   clusterAddress:
     active:
       rpcName: "cadence-frontend"
@@ -87,7 +86,6 @@ clustersInfo:
 
 dcRedirectionPolicy:
   policy: "noop"
-  fromDC: ""
   toDC: ""
 
 kafka:

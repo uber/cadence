@@ -53,11 +53,9 @@ type (
 	// API calls if domain is effective global, fromDC is current cluster,
 	// fromDC is not in replication config and toDC is in replication config,
 	ForwardingDCRedirectionPolicy struct {
-		fromDC            string
-		toDC              string
-		currentClusteName string
-		clusteMetadata    cluster.Metadata
-		domainCache       cache.DomainCache
+		fromDC      string
+		toDC        string
+		domainCache cache.DomainCache
 	}
 )
 
@@ -73,14 +71,11 @@ func RedirectionPolicyGenerator(clusterMetadata cluster.Metadata,
 	case DCRedirectionPolicyForwarding:
 		currentClusterName := clusterMetadata.GetCurrentClusterName()
 		clusterAddress := clusterMetadata.GetAllClientAddress()
-		if policy.FromDC != currentClusterName {
-			panic(fmt.Sprintf("Incorrect from DC: %v", policy.FromDC))
-		}
 		if _, ok := clusterAddress[policy.ToDC]; !ok {
 			panic(fmt.Sprintf("Incorrect to DC: %v", policy.ToDC))
 		}
 		return NewForwardingDCRedirectionPolicy(
-			policy.FromDC, policy.ToDC, currentClusterName, domainCache,
+			currentClusterName, policy.ToDC, domainCache,
 		)
 	default:
 		panic(fmt.Sprintf("Unknown DC redirection policy %v", policy.Policy))
@@ -105,12 +100,11 @@ func (policy *NoopRedirectionPolicy) GetTargetDatacenterByID(domainID string) (s
 }
 
 // NewForwardingDCRedirectionPolicy creates a datacenter redirection policy forwarding API calls
-func NewForwardingDCRedirectionPolicy(fromDC string, toDC string, currentClusteName string, domainCache cache.DomainCache) *ForwardingDCRedirectionPolicy {
+func NewForwardingDCRedirectionPolicy(fromDC string, toDC string, domainCache cache.DomainCache) *ForwardingDCRedirectionPolicy {
 	return &ForwardingDCRedirectionPolicy{
-		fromDC:            fromDC,
-		toDC:              toDC,
-		currentClusteName: currentClusteName,
-		domainCache:       domainCache,
+		fromDC:      fromDC,
+		toDC:        toDC,
+		domainCache: domainCache,
 	}
 }
 
@@ -136,12 +130,12 @@ func (policy *ForwardingDCRedirectionPolicy) GetTargetDatacenterByID(domainID st
 
 func (policy *ForwardingDCRedirectionPolicy) getTargetDatacenter(domainEntry *cache.DomainCacheEntry) string {
 	if !domainEntry.IsGlobalDomain() {
-		return policy.currentClusteName
+		return policy.fromDC
 	}
 
 	if len(domainEntry.GetReplicationConfig().Clusters) == 1 {
 		// do not do dc redirection if domain is only targeting at 1 dc (effectively local domain)
-		return policy.currentClusteName
+		return policy.fromDC
 	}
 
 	replicationClusterNames := map[string]struct{}{}
@@ -152,8 +146,8 @@ func (policy *ForwardingDCRedirectionPolicy) getTargetDatacenter(domainEntry *ca
 	_, containsFromDC := replicationClusterNames[policy.fromDC]
 	_, containsToDC := replicationClusterNames[policy.toDC]
 
-	if policy.fromDC == policy.currentClusteName && !containsFromDC && containsToDC {
+	if !containsFromDC && containsToDC {
 		return policy.toDC
 	}
-	return policy.currentClusteName
+	return policy.fromDC
 }
