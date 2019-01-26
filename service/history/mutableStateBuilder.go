@@ -1125,10 +1125,6 @@ func (e *mutableStateBuilder) FailDecision(incrementAttempt bool) {
 	e.UpdateDecision(failDecisionInfo)
 }
 
-func (e *mutableStateBuilder) ClearDecisionAttempt() {
-	e.executionInfo.DecisionAttempt = 0
-}
-
 func (e *mutableStateBuilder) ClearStickyness() {
 	e.executionInfo.StickyTaskList = ""
 	e.executionInfo.StickyScheduleToStartTimeout = 0
@@ -1588,11 +1584,16 @@ func (e *mutableStateBuilder) AddDecisionTaskFailedEvent(scheduleEventID int64, 
 
 	var event *workflow.HistoryEvent
 	// Only emit DecisionTaskFailedEvent for the very first time
-	if dt.Attempt == 0 {
+	if dt.Attempt == 0 || cause == workflow.DecisionTaskFailedCauseResetWorkflow {
 		event = e.hBuilder.AddDecisionTaskFailedEvent(attr)
 	}
 
 	e.ReplicateDecisionTaskFailedEvent()
+
+	// always clear decision attempt for reset
+	if cause == workflow.DecisionTaskFailedCauseResetWorkflow {
+		e.executionInfo.DecisionAttempt = 0
+	}
 	return event
 }
 

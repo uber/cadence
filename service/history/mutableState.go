@@ -90,7 +90,6 @@ type (
 		BeforeAddDecisionTaskCompletedEvent()
 		BufferReplicationTask(*h.ReplicateEventsRequest) error
 		ClearStickyness()
-		ClearDecisionAttempt()
 		CloseUpdateSession() (*mutableStateSessionUpdates, error)
 		CopyToPersistence() *persistence.WorkflowMutableState
 		CreateActivityRetryTimer(*persistence.ActivityInfo, string) persistence.Task

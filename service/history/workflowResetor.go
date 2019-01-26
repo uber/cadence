@@ -323,16 +323,12 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(ctx context.Context, 
 	// failed the in-flight decision(started).
 	// Note that we need to ensure DecisionTaskFailed event is appended right after DecisionTaskStarted event
 	di, _ := newMutableState.GetInFlightDecisionTask()
-	// Before that, always enforce the attempt to zero so that we can get around of transient decision
-	newMutableState.ClearDecisionAttempt()
 
 	event := newMutableState.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, workflow.DecisionTaskFailedCauseResetWorkflow, nil,
 		identityHistoryService, resetReason, baseRunID, newRunID, forkEventVersion)
 	if event == nil {
 		retError = &workflow.InternalServiceError{Message: "Failed to add decision failed event."}
 	}
-	// enforce the attempt to zero again so that we can always schedule a new decision
-	newMutableState.ClearDecisionAttempt()
 
 	retError = w.failStartedActivities(newMutableState)
 	if retError != nil {

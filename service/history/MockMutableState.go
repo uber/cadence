@@ -851,11 +851,6 @@ func (_m *mockMutableState) BufferReplicationTask(_a0 *h.ReplicateEventsRequest)
 	return r0
 }
 
-// ClearDecisionAttempt provides a mock function with given fields:
-func (_m *mockMutableState) ClearDecisionAttempt() {
-	_m.Called()
-}
-
 // ClearStickyness provides a mock function with given fields:
 func (_m *mockMutableState) ClearStickyness() {
 	_m.Called()
