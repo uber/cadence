@@ -127,10 +127,7 @@ func (s *Service) Start() {
 	var esVisibility persistence.VisibilityManager
 	if s.config.EnableVisibilityToKafka() {
 		visibilityIndexName := params.ESConfig.Indices[common.VisibilityAppName]
-		esVisibility, err = persistence.NewElasticSearchVisibilityManager(params.ESClient, visibilityIndexName, log)
-		if err != nil {
-			log.Fatalf("failed to create esVisibility manager: %v", err)
-		}
+		esVisibility = persistence.NewElasticSearchVisibilityManager(params.ESClient, visibilityIndexName, log)
 	}
 
 	history, err := pFactory.NewHistoryManager()

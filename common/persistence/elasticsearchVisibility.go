@@ -60,17 +60,16 @@ type (
 var _ VisibilityManager = (*esVisibilityManager)(nil)
 
 var (
-	errNotSupported = errors.New("operation not support")
+	errOperationNotSupported = errors.New("operation not support")
 )
 
 // NewElasticSearchVisibilityManager create a visibility manager connecting to ElasticSearch
-func NewElasticSearchVisibilityManager(esClient es.Client, index string, logger bark.Logger) (VisibilityManager, error) {
-
+func NewElasticSearchVisibilityManager(esClient es.Client, index string, logger bark.Logger) VisibilityManager {
 	return &esVisibilityManager{
 		esClient: esClient,
 		index:    index,
 		logger:   logger.WithField(logging.TagWorkflowComponent, logging.TagValueESVisibilityManager),
-	}, nil
+	}
 }
 
 func (v *esVisibilityManager) Close() {}
@@ -80,11 +79,11 @@ func (v *esVisibilityManager) GetName() string {
 }
 
 func (v *esVisibilityManager) RecordWorkflowExecutionStarted(request *RecordWorkflowExecutionStartedRequest) error {
-	return errNotSupported
+	return errOperationNotSupported
 }
 
 func (v *esVisibilityManager) RecordWorkflowExecutionClosed(request *RecordWorkflowExecutionClosedRequest) error {
-	return errNotSupported
+	return errOperationNotSupported
 }
 
 func (v *esVisibilityManager) ListOpenWorkflowExecutions(
@@ -266,9 +265,7 @@ func (v *esVisibilityManager) getNextPageToken(token []byte) (*esVisibilityPageT
 	if len(token) > 0 {
 		result, err = v.deserializePageToken(token)
 		if err != nil {
-			return nil, &workflow.BadRequestError{
-				Message: fmt.Sprintf("not able to deserialize page token in request. err: %v", err),
-			}
+			return nil, err
 		}
 	} else {
 		result = &esVisibilityPageToken{From: 0}
@@ -323,7 +320,7 @@ func (v *esVisibilityManager) getListWorkflowExecutionsResponse(searchHits *elas
 
 	nextPageToken, err := v.serializePageToken(&esVisibilityPageToken{From: token.From + numOfActualHits})
 	if err != nil {
-		return nil, &workflow.BadRequestError{Message: "unable to serialize page token"}
+		return nil, err
 	}
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
@@ -340,12 +337,22 @@ func (v *esVisibilityManager) getListWorkflowExecutionsResponse(searchHits *elas
 func (v *esVisibilityManager) deserializePageToken(data []byte) (*esVisibilityPageToken, error) {
 	var token esVisibilityPageToken
 	err := json.Unmarshal(data, &token)
-	return &token, err
+	if err != nil {
+		return nil, &workflow.BadRequestError{
+			Message: fmt.Sprintf("unable to deserialize page token. err: %v", err),
+		}
+	}
+	return &token, nil
 }
 
 func (v *esVisibilityManager) serializePageToken(token *esVisibilityPageToken) ([]byte, error) {
 	data, err := json.Marshal(token)
-	return data, err
+	if err != nil {
+		return nil, &workflow.BadRequestError{
+			Message: fmt.Sprintf("unable to serialize page token. err: %v", err),
+		}
+	}
+	return data, nil
 }
 
 func (v *esVisibilityManager) convertSearchResultToVisibilityRecord(hit *elastic.SearchHit, isOpen bool) *workflow.WorkflowExecutionInfo {
