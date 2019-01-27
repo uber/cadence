@@ -175,7 +175,7 @@ func (s *workflowHandlerSuite) TestMergeDomainData_Nil() {
 
 func (s *workflowHandlerSuite) getWorkflowHandler(config *Config) *WorkflowHandler {
 	return NewWorkflowHandler(s.mockService, config, s.mockMetadataMgr, s.mockHistoryMgr,
-		s.mockHistoryV2Mgr, s.mockVisibilityMgr, s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient)
+		s.mockHistoryV2Mgr, s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient)
 }
 
 func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
@@ -485,7 +485,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidTaskStar
 func (s *workflowHandlerSuite) getWorkflowHandlerWithParams(mService cs.Service, config *Config,
 	mMetadataManager persistence.MetadataManager, blobStore blobstore.Client) *WorkflowHandler {
 	return NewWorkflowHandler(mService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockVisibilityMgr, s.mockProducer, blobStore)
+		s.mockVisibilityMgr, s.mockProducer, blobStore)
 }
 
 func (s *workflowHandlerSuite) TestRegisterDomain_Failed() {

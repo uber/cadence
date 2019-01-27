@@ -119,16 +119,16 @@ func (s *Service) Start() {
 		log.Fatalf("failed to create metadata manager: %v", err)
 	}
 
-	visibility, err := pFactory.NewVisibilityManager(s.config.EnableVisibilitySampling())
+	visibilityFromDB, err := pFactory.NewVisibilityManager(s.config.EnableVisibilitySampling())
 	if err != nil {
 		log.Fatalf("failed to create visibility manager: %v", err)
 	}
-
-	var esVisibility persistence.VisibilityManager
+	var visibilityFromES persistence.VisibilityManager
 	if s.config.EnableVisibilityToKafka() {
 		visibilityIndexName := params.ESConfig.Indices[common.VisibilityAppName]
-		esVisibility = persistence.NewElasticSearchVisibilityManager(params.ESClient, visibilityIndexName, log)
+		visibilityFromES = persistence.NewElasticSearchVisibilityManager(params.ESClient, visibilityIndexName, log)
 	}
+	visibility := persistence.NewVisibilityManagerWrapper(visibilityFromDB, visibilityFromES, s.config.EnableReadVisibilityFromES)
 
 	history, err := pFactory.NewHistoryManager()
 	if err != nil {
@@ -150,7 +150,7 @@ func (s *Service) Start() {
 		kafkaProducer = &mocks.KafkaProducer{}
 	}
 
-	wfHandler := NewWorkflowHandler(base, s.config, metadata, history, historyV2, visibility, esVisibility, kafkaProducer, params.BlobstoreClient)
+	wfHandler := NewWorkflowHandler(base, s.config, metadata, history, historyV2, visibility, kafkaProducer, params.BlobstoreClient)
 	wfHandler.Start()
 	switch params.DCRedirectionPolicy.Policy {
 	case DCRedirectionPolicyDefault:
