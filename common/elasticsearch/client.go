@@ -58,14 +58,14 @@ type (
 
 	// elasticWrapper implements Client
 	elasticWrapper struct {
-		client *elastic.Client // retryingClient will use exponential back off to retry failed rpc
+		client *elastic.Client
 	}
 )
 
 var _ Client = (*elasticWrapper)(nil)
 
-// newClient returns a new implementation of Client
-func newClient(config *Config) (Client, error) {
+// NewClient create a ES client
+func NewClient(config *Config) (Client, error) {
 	client, err := elastic.NewClient(
 		elastic.SetURL(config.URL.String()),
 		elastic.SetRetrier(elastic.NewBackoffRetrier(elastic.NewExponentialBackoff(128*time.Millisecond, 513*time.Millisecond))),
@@ -73,7 +73,12 @@ func newClient(config *Config) (Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &elasticWrapper{client: client}, nil
+	return NewWrapperClient(client), nil
+}
+
+// NewWrapperClient returns a new implementation of Client
+func NewWrapperClient(esClient *elastic.Client) Client {
+	return &elasticWrapper{client: esClient}
 }
 
 func (c *elasticWrapper) Search(ctx context.Context, p *SearchParameters) (*elastic.SearchResult, error) {
