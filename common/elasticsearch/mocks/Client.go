@@ -31,20 +31,27 @@ type Client struct {
 	mock.Mock
 }
 
-// GetRawClient provides a mock function with given fields:
-func (_m *Client) GetRawClient() *elastic.Client {
-	ret := _m.Called()
+// RunBulkProcessor provides a mock function with given fields: ctx, p
+func (_m *Client) RunBulkProcessor(ctx context.Context, p *elasticsearch.BulkProcessorParameters) (*elastic.BulkProcessor, error) {
+	ret := _m.Called(ctx, p)
 
-	var r0 *elastic.Client
-	if rf, ok := ret.Get(0).(func() *elastic.Client); ok {
-		r0 = rf()
+	var r0 *elastic.BulkProcessor
+	if rf, ok := ret.Get(0).(func(context.Context, *elasticsearch.BulkProcessorParameters) *elastic.BulkProcessor); ok {
+		r0 = rf(ctx, p)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*elastic.Client)
+			r0 = ret.Get(0).(*elastic.BulkProcessor)
 		}
 	}
 
-	return r0
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *elasticsearch.BulkProcessorParameters) error); ok {
+		r1 = rf(ctx, p)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // Search provides a mock function with given fields: ctx, p

@@ -31,8 +31,8 @@ type (
 	// It simplifies the interface and enables mocking. We intentionally let implementation details of the elastic library
 	// bleed through, as the main purpose is testability not abstraction.
 	Client interface {
-		GetRawClient() *elastic.Client
 		Search(ctx context.Context, p *SearchParameters) (*elastic.SearchResult, error)
+		RunBulkProcessor(ctx context.Context, p *BulkProcessorParameters) (*elastic.BulkProcessor, error)
 	}
 
 	// SearchParameters holds all required and optional parameters for executing a search
@@ -42,6 +42,18 @@ type (
 		From     int
 		PageSize int
 		Sorter   []elastic.Sorter
+	}
+
+	// BulkProcessorParameters holds all required and optional parameters for executing bulk service
+	BulkProcessorParameters struct {
+		Name          string
+		NumOfWorkers  int
+		BulkActions   int
+		BulkSize      int
+		FlushInterval time.Duration
+		Backoff       elastic.Backoff
+		BeforeFunc    elastic.BulkBeforeFunc
+		AfterFunc     elastic.BulkAfterFunc
 	}
 
 	// elasticWrapper implements Client
@@ -64,10 +76,6 @@ func newClient(config *Config) (Client, error) {
 	return &elasticWrapper{client: client}, nil
 }
 
-func (c *elasticWrapper) GetRawClient() *elastic.Client {
-	return c.client
-}
-
 func (c *elasticWrapper) Search(ctx context.Context, p *SearchParameters) (*elastic.SearchResult, error) {
 	searchService := c.client.Search(p.Index).
 		Query(p.Query).
@@ -79,4 +87,16 @@ func (c *elasticWrapper) Search(ctx context.Context, p *SearchParameters) (*elas
 	}
 
 	return searchService.Do(ctx)
+}
+
+func (c *elasticWrapper) RunBulkProcessor(ctx context.Context, p *BulkProcessorParameters) (*elastic.BulkProcessor, error) {
+	return c.client.BulkProcessor().
+		Name(p.Name).
+		Workers(p.NumOfWorkers).
+		BulkActions(p.BulkActions).
+		BulkSize(p.BulkSize).
+		FlushInterval(p.FlushInterval).
+		Backoff(p.Backoff).
+		After(p.AfterFunc).
+		Do(ctx)
 }
