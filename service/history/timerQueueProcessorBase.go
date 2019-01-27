@@ -22,6 +22,7 @@ package history
 
 import (
 	"errors"
+	"github.com/uber/cadence/service/worker/sysworkflow"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -576,6 +577,16 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.Ti
 	}
 
 	return t.deleteWorkflowVisibility(task)
+}
+
+func (t *timerQueueProcessorBase) processArchiveHistoryEvent(task *persistence.TimerTaskInfo) error {
+	request := &sysworkflow.ArchiveRequest{
+		DomainID:   task.DomainID,
+		WorkflowID: task.WorkflowID,
+		RunID:      task.RunID,
+		LastWriteVersion:    task.,
+	}
+	return t.historyService.archivalClient.Archive(request)
 }
 
 func (t *timerQueueProcessorBase) deleteWorkflowExecution(task *persistence.TimerTaskInfo) error {

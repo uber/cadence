@@ -33,11 +33,10 @@ import (
 type (
 	// ArchiveRequest is request to Archive
 	ArchiveRequest struct {
-		DomainName string
 		DomainID   string
 		WorkflowID string
 		RunID      string
-		Bucket     string
+		LastWriteVersion int64
 	}
 
 	// BackfillRequest is request to Backfill

@@ -365,6 +365,24 @@ func (tb *timerBuilder) createDeleteHistoryEventTimerTask(d time.Duration) *pers
 	}
 }
 
+func (tb *timerBuilder) createArchiveHistoryEventTimerTask(
+	d time.Duration,
+	targetDomainID string,
+	targetWorkflowID string,
+	targetRunID string,
+	targetLastWriteVersion int64,
+) *persistence.ArchiveHistoryEventTask {
+
+	expiryTime := tb.timeSource.Now().Add(d)
+	return &persistence.ArchiveHistoryEventTask{
+		VisibilityTimestamp:    expiryTime,
+		TargetDomainID:         targetDomainID,
+		TargetWorkflowID:       targetWorkflowID,
+		TargetRunID:            targetRunID,
+		TargetLastWriteVersion: targetLastWriteVersion,
+	}
+}
+
 // createDecisionTimeoutTask - Creates a decision timeout task.
 func (tb *timerBuilder) createDecisionTimeoutTask(fireTimeOut int32, eventID, attempt int64,
 	timeoutType w.TimeoutType) *persistence.DecisionTimeoutTask {
