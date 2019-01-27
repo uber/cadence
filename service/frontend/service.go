@@ -123,7 +123,7 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("failed to create visibility manager: %v", err)
 	}
-	var visibilityFromES persistence.VisibilityManager
+	var visibilityFromES persistence.VisibilityManager // TODO: wrap esVisibilityMgr with rate limiter, metrics, sampler
 	if s.config.EnableVisibilityToKafka() {
 		visibilityIndexName := params.ESConfig.Indices[common.VisibilityAppName]
 		visibilityFromES = persistence.NewElasticSearchVisibilityManager(params.ESClient, visibilityIndexName, log)
