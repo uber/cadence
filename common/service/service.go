@@ -40,7 +40,7 @@ import (
 
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
-	"github.com/uber/cadence/common/elasticsearch"
+	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/ringpop-go"
 	"go.uber.org/yarpc"
 )
@@ -67,8 +67,8 @@ type (
 		ReplicatorConfig    config.Replicator
 		MetricsClient       metrics.Client
 		MessagingClient     messaging.Client
-		ESClient            *elasticsearch.Client
-		ESConfig            *elasticsearch.Config
+		ESClient            es.Client
+		ESConfig            *es.Config
 		DynamicConfig       dynamicconfig.Client
 		DispatcherProvider  client.DispatcherProvider
 		BlobstoreClient     blobstore.Client
