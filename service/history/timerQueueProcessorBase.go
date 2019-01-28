@@ -562,7 +562,6 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.Ti
 	if err != nil {
 		return err
 	} else if msBuilder == nil || msBuilder.IsWorkflowExecutionRunning() {
-		// this can happen if workflow is reset.
 		return nil
 	}
 	ok, err := verifyTaskVersion(t.shard, t.logger, task.DomainID, msBuilder.GetLastWriteVersion(), task.Version, task)
@@ -597,7 +596,6 @@ func (t *timerQueueProcessorBase) processArchiveHistoryEvent(task *persistence.T
 	if err != nil {
 		return err
 	} else if msBuilder == nil || msBuilder.IsWorkflowExecutionRunning() {
-		// this can happen if workflow is reset.
 		return nil
 	}
 	ok, err := verifyTaskVersion(t.shard, t.logger, task.DomainID, msBuilder.GetLastWriteVersion(), task.Version, task)

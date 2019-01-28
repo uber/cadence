@@ -1718,7 +1718,6 @@ Update_History_Loop:
 			tranT, timerT, err := e.getWorkflowHistoryCleanupTasks(
 				domainID,
 				workflowExecution.GetWorkflowId(),
-				workflowExecution.GetRunId(),
 				tBuilder)
 			if err != nil {
 				return nil, err
@@ -2601,7 +2600,6 @@ Update_History_Loop:
 			tranT, timerT, err := e.getWorkflowHistoryCleanupTasks(
 				domainID,
 				execution.GetWorkflowId(),
-				execution.GetRunId(),
 				tBuilder)
 			if err != nil {
 				return err
@@ -2670,15 +2668,15 @@ func (e *historyEngineImpl) updateWorkflowExecution(ctx context.Context, domainI
 }
 
 func (e *historyEngineImpl) getWorkflowHistoryCleanupTasks(
-	domainID, workflowID, runID string,
+	domainID, workflowID string,
 	tBuilder *timerBuilder,
 ) (persistence.Task, persistence.Task, error) {
-	return getWorkflowHistoryCleanupTasksFromShard(e.shard, domainID, workflowID, runID, tBuilder)
+	return getWorkflowHistoryCleanupTasksFromShard(e.shard, domainID, workflowID, tBuilder)
 }
 
 func getWorkflowHistoryCleanupTasksFromShard(
 	shard ShardContext,
-	domainID, workflowID, runID string,
+	domainID, workflowID string,
 	tBuilder *timerBuilder,
 ) (persistence.Task, persistence.Task, error) {
 
@@ -2695,11 +2693,7 @@ func getWorkflowHistoryCleanupTasksFromShard(
 	clusterEnablesArchival := shard.GetService().GetClusterMetadata().IsArchivalEnabled()
 	domainEnablesArchival := domainEntry.GetConfig().ArchivalStatus == workflow.ArchivalStatusEnabled
 	if clusterEnablesArchival && domainEnablesArchival {
-		archivalTask := tBuilder.createArchiveHistoryEventTimerTask(
-			time.Duration(retentionInDays)*time.Hour*24,
-			domainID,
-			workflowID,
-			runID)
+		archivalTask := tBuilder.createArchiveHistoryEventTimerTask(time.Duration(retentionInDays) * time.Hour * 24)
 		return &persistence.CloseExecutionTask{}, archivalTask, nil
 	}
 	deleteTask := tBuilder.createDeleteHistoryEventTimerTask(time.Duration(retentionInDays) * time.Hour * 24)

@@ -402,9 +402,6 @@ type (
 		VisibilityTimestamp time.Time
 		TaskID              int64
 		Version             int64
-		TargetDomainID      string
-		TargetWorkflowID    string
-		TargetRunID         string
 	}
 
 	// DecisionTimeoutTask identifies a timeout task.

@@ -365,18 +365,10 @@ func (tb *timerBuilder) createDeleteHistoryEventTimerTask(d time.Duration) *pers
 	}
 }
 
-func (tb *timerBuilder) createArchiveHistoryEventTimerTask(
-	d time.Duration,
-	targetDomainID string,
-	targetWorkflowID string,
-	targetRunID string,
-) *persistence.ArchiveHistoryEventTask {
+func (tb *timerBuilder) createArchiveHistoryEventTimerTask(d time.Duration) *persistence.ArchiveHistoryEventTask {
 	expiryTime := tb.timeSource.Now().Add(d)
 	return &persistence.ArchiveHistoryEventTask{
 		VisibilityTimestamp: expiryTime,
-		TargetDomainID:      targetDomainID,
-		TargetWorkflowID:    targetWorkflowID,
-		TargetRunID:         targetRunID,
 	}
 }
 

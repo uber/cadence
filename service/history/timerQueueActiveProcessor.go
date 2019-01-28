@@ -762,7 +762,6 @@ Update_History_Loop:
 			t.shard,
 			domainID,
 			executionInfo.GetWorkflowId(),
-			executionInfo.GetRunId(),
 			tBuilder)
 		if err != nil {
 			return err
@@ -815,7 +814,6 @@ func (t *timerQueueActiveProcessorImpl) updateWorkflowExecution(
 		tranT, timerT, err := t.historyService.getWorkflowHistoryCleanupTasks(
 			executionInfo.DomainID,
 			executionInfo.WorkflowID,
-			executionInfo.RunID,
 			tBuilder)
 		if err != nil {
 			return err
