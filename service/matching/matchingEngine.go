@@ -86,6 +86,11 @@ var (
 	identityKey identityCtxKey = "identity"
 )
 
+const (
+	maxQueryWaitCount = 5
+	maxQueryLoopCount = 5
+)
+
 func (t *taskListID) String() string {
 	var r string
 	if t.taskType == persistence.TaskListTypeActivity {
@@ -429,7 +434,7 @@ func (e *matchingEngineImpl) QueryWorkflow(ctx context.Context, queryRequest *m.
 	taskListKind := common.TaskListKindPtr(queryRequest.TaskList.GetKind())
 
 query_loop:
-	for {
+	for i := 0; i < maxQueryWaitCount; i++ {
 		tlMgr, err := e.getTaskListManager(taskList, taskListKind)
 		if err != nil {
 			return nil, err
@@ -463,7 +468,7 @@ query_loop:
 				// query before first decision completed, so wait for first decision task to complete
 				expectedNextEventID := result.waitNextEventID
 			wait_loop:
-				for {
+				for i := 0; i < maxQueryWaitCount; i++ {
 					ms, err := e.historyService.GetMutableState(ctx, &h.GetMutableStateRequest{
 						DomainUUID:          queryRequest.DomainUUID,
 						Execution:           queryRequest.QueryRequest.Execution,
@@ -473,6 +478,15 @@ query_loop:
 						if ms.GetPreviousStartedEventId() > 0 {
 							// now we have at least one decision task completed, so retry query
 							continue query_loop
+						}
+
+						if !ms.GetIsWorkflowRunning() {
+							return nil, &workflow.QueryFailedError{Message: "workflow closed without making any progress"}
+						}
+
+						if expectedNextEventID >= ms.GetNextEventId() {
+							// this should not happen, check to prevent busy loop
+							return nil, &workflow.QueryFailedError{Message: "workflow not making any progress"}
 						}
 
 						// keep waiting
