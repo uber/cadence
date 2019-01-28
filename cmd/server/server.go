@@ -120,6 +120,8 @@ func (s *server) startService() common.Daemon {
 	enableGlobalDomain := dc.GetBoolProperty(dynamicconfig.EnableGlobalDomain, s.cfg.ClustersInfo.EnableGlobalDomain)
 	enableArchival := dc.GetBoolProperty(dynamicconfig.EnableArchival, s.cfg.Archival.Enabled)
 
+	params.DCRedirectionPolicy = s.cfg.DCRedirectionPolicy
+
 	params.ClusterMetadata = cluster.NewMetadata(
 		enableGlobalDomain,
 		s.cfg.ClustersInfo.FailoverVersionIncrement,
@@ -153,8 +155,7 @@ func (s *server) startService() common.Daemon {
 
 	// enable visibility to kafka and enable visibility to elastic search are using one config
 	if enableVisibilityToKafka {
-		esFactory := elasticsearch.NewFactory(&s.cfg.ElasticSearch)
-		esClient, err := esFactory.NewClient()
+		esClient, err := elasticsearch.NewClient(&s.cfg.ElasticSearch)
 		if err != nil {
 			log.Fatalf("error creating elastic search client: %v", err)
 		}

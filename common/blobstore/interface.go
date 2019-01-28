@@ -23,15 +23,7 @@ package blobstore
 import (
 	"context"
 	"errors"
-	"io"
-)
-
-// CompressionType defines the type of compression used for a blob
-type CompressionType int
-
-const (
-	// NoCompression indicates that blob is not compressed
-	NoCompression CompressionType = iota
+	"github.com/uber/cadence/common/blobstore/blob"
 )
 
 var (
@@ -41,13 +33,6 @@ var (
 	ErrBucketNotExists = errors.New("requested bucket does not exist")
 )
 
-// Blob defines a blob
-type Blob struct {
-	Body            io.Reader
-	CompressionType CompressionType
-	Tags            map[string]string
-}
-
 // BucketMetadataResponse contains information relating to a bucket's configuration
 type BucketMetadataResponse struct {
 	Owner         string
@@ -56,7 +41,10 @@ type BucketMetadataResponse struct {
 
 // Client is used to operate on blobs in a blobstore
 type Client interface {
-	UploadBlob(ctx context.Context, bucket string, filename string, blob *Blob) error
-	DownloadBlob(ctx context.Context, bucket string, filename string) (*Blob, error)
+	Upload(ctx context.Context, bucket string, key blob.Key, blob *blob.Blob) error
+	Download(ctx context.Context, bucket string, key blob.Key) (*blob.Blob, error)
+	Exists(ctx context.Context, bucket string, key blob.Key) (bool, error)
+	Delete(ctx context.Context, bucket string, key blob.Key) (bool, error)
+	ListByPrefix(ctx context.Context, bucket string, prefix string) ([]blob.Key, error)
 	BucketMetadata(ctx context.Context, bucket string) (*BucketMetadataResponse, error)
 }

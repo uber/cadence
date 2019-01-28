@@ -89,6 +89,7 @@ const (
 	TagValueHistoryBuilderComponent           = "history-builder"
 	TagValueHistoryEngineComponent            = "history-engine"
 	TagValueHistoryCacheComponent             = "history-cache"
+	TagValueEventsCacheComponent              = "events-cache"
 	TagValueTransferQueueComponent            = "transfer-queue-processor"
 	TagValueTimerQueueComponent               = "timer-queue-processor"
 	TagValueReplicatorQueueComponent          = "replicator-queue-processor"
@@ -100,6 +101,7 @@ const (
 	TagValueIndexerComponent                  = "indexer"
 	TagValueIndexerProcessorComponent         = "indexer-processor"
 	TagValueIndexerESProcessorComponent       = "indexer-es-processor"
+	TagValueESVisibilityManager               = "es-visibility-manager"
 
 	// TagHistoryBuilderAction values
 	TagValueActionWorkflowStarted                 = "add-workflowexecution-started-event"

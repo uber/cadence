@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/client/public"
 	"time"
 
 	"github.com/uber/cadence/service/worker/sysworkflow"
@@ -136,9 +137,10 @@ func NewEngineWithShardContext(
 	matching matching.Client,
 	historyClient hc.Client,
 	frontendClient frontend.Client,
+	publicClient public.Client,
 	historyEventNotifier historyEventNotifier,
 	publisher messaging.Producer,
-	messagingClient messaging.Client,
+	visibilityProducer messaging.Producer,
 	config *Config,
 ) Engine {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
@@ -167,12 +169,9 @@ func NewEngineWithShardContext(
 		metricsClient:        shard.GetMetricsClient(),
 		historyEventNotifier: historyEventNotifier,
 		config:               config,
-		archivalClient:       sysworkflow.NewArchivalClient(frontendClient, shard.GetConfig().NumSysWorkflows),
+		archivalClient:       sysworkflow.NewArchivalClient(publicClient, shard.GetConfig().NumSysWorkflows),
 	}
-	var visibilityProducer messaging.Producer
-	if config.EnableVisibilityToKafka() {
-		visibilityProducer = getVisibilityProducer(messagingClient, shard.GetMetricsClient())
-	}
+
 	txProcessor := newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, visibilityProducer, matching, historyClient, logger)
 	historyEngImpl.timerProcessor = newTimerQueueProcessor(shard, historyEngImpl, matching, visibilityProducer, logger)
 	historyEngImpl.txProcessor = txProcessor
@@ -291,6 +290,7 @@ func (e *historyEngineImpl) createMutableState(clusterMetadata cluster.Metadata,
 		msBuilder = newMutableStateBuilderWithReplicationState(
 			clusterMetadata.GetCurrentClusterName(),
 			e.shard.GetConfig(),
+			e.shard.GetEventsCache(),
 			e.logger,
 			domainEntry.GetFailoverVersion(),
 		)
@@ -298,6 +298,7 @@ func (e *historyEngineImpl) createMutableState(clusterMetadata cluster.Metadata,
 		msBuilder = newMutableStateBuilder(
 			clusterMetadata.GetCurrentClusterName(),
 			e.shard.GetConfig(),
+			e.shard.GetEventsCache(),
 			e.logger,
 		)
 	}
@@ -831,7 +832,9 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(ctx context.Context,
 				p.LastHeartbeatTimestamp = common.Int64Ptr(lastHeartbeatUnixNano)
 				p.HeartbeatDetails = ai.Details
 			}
-			p.ActivityType = ai.ScheduledEvent.ActivityTaskScheduledEventAttributes.ActivityType
+			// TODO: move to mutable state instead of loading it from event
+			scheduledEvent, _ := msBuilder.GetActivityScheduledEvent(ai.ScheduleID)
+			p.ActivityType = scheduledEvent.ActivityTaskScheduledEventAttributes.ActivityType
 			p.LastStartedTimestamp = common.Int64Ptr(ai.StartedTime.UnixNano())
 			p.Attempt = common.Int32Ptr(ai.Attempt)
 			result.PendingActivities = append(result.PendingActivities, p)
@@ -3323,18 +3326,4 @@ func getWorkflowAlreadyStartedError(errMsg string, createRequestID string, workf
 		StartRequestId: common.StringPtr(fmt.Sprintf("%v", createRequestID)),
 		RunId:          common.StringPtr(fmt.Sprintf("%v", runID)),
 	}
-}
-
-func getVisibilityProducer(messagingClient messaging.Client, metricsClient metrics.Client) messaging.Producer {
-	if messagingClient == nil {
-		return nil
-	}
-	visibilityProducer, err := messagingClient.NewProducer(common.VisibilityAppName)
-	if err != nil {
-		panic(err)
-	}
-	if metricsClient != nil {
-		visibilityProducer = messaging.NewMetricProducer(visibilityProducer, metricsClient)
-	}
-	return visibilityProducer
 }

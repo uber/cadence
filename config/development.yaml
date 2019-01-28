@@ -77,6 +77,10 @@ clustersInfo:
       rpcName: "cadence-frontend"
       rpcAddress: "127.0.0.1:7933"
 
+dcRedirectionPolicy:
+  policy: "noop"
+  toDC: ""
+
 archival:
   enabled: true
   filestore:
@@ -99,14 +103,14 @@ kafka:
       brokers:
         - 127.0.0.1:9092
   topics:
-    cadence-visibility:
+    cadence-visibility-dev:
       cluster: test
-    cadence-visibility-dlq:
+    cadence-visibility-dev-dlq:
       cluster: test
   applications:
     visibility:
-      topic: cadence-visibility
-      dlq-topic: cadence-visibility-dlq
+      topic: cadence-visibility-dev
+      dlq-topic: cadence-visibility-dev-dlq
 
 elasticsearch:
   enable: false
@@ -114,5 +118,5 @@ elasticsearch:
     scheme: "http"
     host: "127.0.0.1:9200"
   indices:
-    visibility: visibility-dev
+    visibility: cadence-visibility-dev
 

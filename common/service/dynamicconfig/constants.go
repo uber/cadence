@@ -48,11 +48,12 @@ var keys = map[Key]string{
 	testGetBoolPropertyFilteredByTaskListInfoKey:     "testGetBoolPropertyFilteredByTaskListInfoKey",
 
 	// system settings
-	EnableGlobalDomain:       "system.enableGlobalDomain",
-	EnableNewKafkaClient:     "system.enableNewKafkaClient",
-	EnableVisibilitySampling: "system.enableVisibilitySampling",
-	EnableVisibilityToKafka:  "system.enableVisibilityToKafka",
-	EnableArchival:           "system.enableArchival",
+	EnableGlobalDomain:         "system.enableGlobalDomain",
+	EnableNewKafkaClient:       "system.enableNewKafkaClient",
+	EnableVisibilitySampling:   "system.enableVisibilitySampling",
+	EnableVisibilityToKafka:    "system.enableVisibilityToKafka",
+	EnableReadVisibilityFromES: "system.enableReadVisibilityFromES",
+	EnableArchival:             "system.enableArchival",
 
 	// size limit
 	BlobSizeLimitError:     "limit.blobSize.error",
@@ -97,6 +98,9 @@ var keys = map[Key]string{
 	HistoryCacheInitialSize:                               "history.cacheInitialSize",
 	HistoryCacheMaxSize:                                   "history.cacheMaxSize",
 	HistoryCacheTTL:                                       "history.cacheTTL",
+	EventsCacheInitialSize:                                "history.eventsCacheInitialSize",
+	EventsCacheMaxSize:                                    "history.eventsCacheMaxSize",
+	EventsCacheTTL:                                        "history.eventsCacheTTL",
 	AcquireShardInterval:                                  "history.acquireShardInterval",
 	StandbyClusterDelay:                                   "history.standbyClusterDelay",
 	TimerTaskBatchSize:                                    "history.timerTaskBatchSize",
@@ -186,6 +190,8 @@ const (
 	EnableVisibilitySampling
 	// EnableVisibilityToKafka is key for enable kafka
 	EnableVisibilityToKafka
+	// EnableReadVisibilityFromES is key for enable read from elastic search
+	EnableReadVisibilityFromES
 	// DisableListVisibilityByFilter is config to disable list open/close workflow using filter
 	DisableListVisibilityByFilter
 	// EnableArchival is key for enable archival
@@ -272,6 +278,12 @@ const (
 	HistoryCacheMaxSize
 	// HistoryCacheTTL is TTL of history cache
 	HistoryCacheTTL
+	// EventsCacheInitialSize is initial size of events cache
+	EventsCacheInitialSize
+	// EventsCacheMaxSize is max size of events cache
+	EventsCacheMaxSize
+	// EventsCacheTTL is TTL of events cache
+	EventsCacheTTL
 	// AcquireShardInterval is interval that timer used to acquire shard
 	AcquireShardInterval
 	// StandbyClusterDelay is the atrificial delay added to standby cluster's view of active cluster's time

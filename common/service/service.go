@@ -38,11 +38,10 @@ import (
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 
-	"github.com/olivere/elastic"
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
-	"github.com/uber/cadence/common/elasticsearch"
-	ringpop "github.com/uber/ringpop-go"
+	es "github.com/uber/cadence/common/elasticsearch"
+	"github.com/uber/ringpop-go"
 	"go.uber.org/yarpc"
 )
 
@@ -57,22 +56,23 @@ type (
 	// BootstrapParams holds the set of parameters
 	// needed to bootstrap a service
 	BootstrapParams struct {
-		Name               string
-		Logger             bark.Logger
-		MetricScope        tally.Scope
-		RingpopFactory     RingpopFactory
-		RPCFactory         common.RPCFactory
-		PProfInitializer   common.PProfInitializer
-		PersistenceConfig  config.Persistence
-		ClusterMetadata    cluster.Metadata
-		ReplicatorConfig   config.Replicator
-		MetricsClient      metrics.Client
-		MessagingClient    messaging.Client
-		ESClient           *elastic.Client
-		ESConfig           *elasticsearch.Config
-		DynamicConfig      dynamicconfig.Client
-		DispatcherProvider client.DispatcherProvider
-		BlobstoreClient    blobstore.Client
+		Name                string
+		Logger              bark.Logger
+		MetricScope         tally.Scope
+		RingpopFactory      RingpopFactory
+		RPCFactory          common.RPCFactory
+		PProfInitializer    common.PProfInitializer
+		PersistenceConfig   config.Persistence
+		ClusterMetadata     cluster.Metadata
+		ReplicatorConfig    config.Replicator
+		MetricsClient       metrics.Client
+		MessagingClient     messaging.Client
+		ESClient            es.Client
+		ESConfig            *es.Config
+		DynamicConfig       dynamicconfig.Client
+		DispatcherProvider  client.DispatcherProvider
+		BlobstoreClient     blobstore.Client
+		DCRedirectionPolicy config.DCRedirectionPolicy
 	}
 
 	// RingpopFactory provides a bootstrapped ringpop

@@ -18,28 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package elasticsearch
+package public
 
-import "github.com/olivere/elastic"
+import (
+	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
+)
 
-// Factory is interface to create ElasticSearch client
-type Factory interface {
-	NewClient() (*elastic.Client, error)
-}
-
-type clientFactory struct {
-	Config *Config
-}
-
-var _ Factory = (*clientFactory)(nil)
-
-// NewFactory create a new ElasticSearch client
-func NewFactory(config *Config) Factory {
-	return &clientFactory{Config: config}
-}
-
-func (f *clientFactory) NewClient() (*elastic.Client, error) {
-	return elastic.NewClient(
-		elastic.SetURL(f.Config.URL.String()),
-	)
+// Client is the interface exposed by frontend service client
+type Client interface {
+	workflowserviceclient.Interface
 }
