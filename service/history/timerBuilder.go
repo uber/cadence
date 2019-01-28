@@ -370,16 +370,13 @@ func (tb *timerBuilder) createArchiveHistoryEventTimerTask(
 	targetDomainID string,
 	targetWorkflowID string,
 	targetRunID string,
-	targetLastWriteVersion int64,
 ) *persistence.ArchiveHistoryEventTask {
-
 	expiryTime := tb.timeSource.Now().Add(d)
 	return &persistence.ArchiveHistoryEventTask{
-		VisibilityTimestamp:    expiryTime,
-		TargetDomainID:         targetDomainID,
-		TargetWorkflowID:       targetWorkflowID,
-		TargetRunID:            targetRunID,
-		TargetLastWriteVersion: targetLastWriteVersion,
+		VisibilityTimestamp: expiryTime,
+		TargetDomainID:      targetDomainID,
+		TargetWorkflowID:    targetWorkflowID,
+		TargetRunID:         targetRunID,
 	}
 }
 

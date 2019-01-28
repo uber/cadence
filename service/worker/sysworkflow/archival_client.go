@@ -33,9 +33,9 @@ import (
 type (
 	// ArchiveRequest is request to Archive
 	ArchiveRequest struct {
-		DomainID   string
-		WorkflowID string
-		RunID      string
+		DomainID         string
+		WorkflowID       string
+		RunID            string
 		LastWriteVersion int64
 	}
 
@@ -72,9 +72,6 @@ func NewArchivalClient(publicClient public.Client, numSWFn dynamicconfig.IntProp
 
 // Archive starts an archival task
 func (c *archivalClient) Archive(request *ArchiveRequest) error {
-	if request.DomainName == Domain {
-		return nil
-	}
 	workflowID := fmt.Sprintf("%v-%v", WorkflowIDPrefix, rand.Intn(c.numSWFn()))
 	workflowOptions := client.StartWorkflowOptions{
 		ID: workflowID,

@@ -399,13 +399,12 @@ type (
 
 	// ArchiveHistoryEventTask identifies a timer task for archival of history events of completed execution.
 	ArchiveHistoryEventTask struct {
-		VisibilityTimestamp    time.Time
-		TaskID                 int64
-		Version                int64
-		TargetDomainID         string
-		TargetWorkflowID       string
-		TargetRunID            string
-		TargetLastWriteVersion int64
+		VisibilityTimestamp time.Time
+		TaskID              int64
+		Version             int64
+		TargetDomainID      string
+		TargetWorkflowID    string
+		TargetRunID         string
 	}
 
 	// DecisionTimeoutTask identifies a timeout task.

@@ -398,7 +398,6 @@ func (w *workflowResetorImpl) terminateIfCurrIsRunning(currMutableState mutableS
 			currMutableState.GetExecutionInfo().DomainID,
 			currExecution.GetWorkflowId(),
 			currExecution.GetRunId(),
-			currMutableState.GetLastWriteVersion(),
 			w.eng.getTimerBuilder(&currExecution))
 		if retError != nil {
 			return

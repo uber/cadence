@@ -237,7 +237,7 @@ func (t *timerQueueActiveProcessorImpl) process(timerTask *persistence.TimerTask
 		return metrics.TimerActiveTaskDeleteHistoryEventScope, t.timerQueueProcessorBase.processDeleteHistoryEvent(timerTask)
 
 	case persistence.TaskTypeArchiveHistoryEvent:
-		// return metrics.TimerActiveTaskArchiveHistoryEventScope, t.timer
+		return metrics.TimerActiveTaskArchiveHistoryEventScope, t.timerQueueProcessorBase.processArchiveHistoryEvent(timerTask)
 
 	default:
 		return metrics.TimerActiveQueueProcessorScope, errUnknownTimerTask
@@ -763,7 +763,6 @@ Update_History_Loop:
 			domainID,
 			executionInfo.GetWorkflowId(),
 			executionInfo.GetRunId(),
-			msBuilder.GetLastWriteVersion(),
 			tBuilder)
 		if err != nil {
 			return err
@@ -817,7 +816,6 @@ func (t *timerQueueActiveProcessorImpl) updateWorkflowExecution(
 			executionInfo.DomainID,
 			executionInfo.WorkflowID,
 			executionInfo.RunID,
-			msBuilder.GetLastWriteVersion(),
 			tBuilder)
 		if err != nil {
 			return err

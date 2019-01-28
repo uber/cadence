@@ -1719,7 +1719,6 @@ Update_History_Loop:
 				domainID,
 				workflowExecution.GetWorkflowId(),
 				workflowExecution.GetRunId(),
-				msBuilder.GetLastWriteVersion(),
 				tBuilder)
 			if err != nil {
 				return nil, err
@@ -2603,7 +2602,6 @@ Update_History_Loop:
 				domainID,
 				execution.GetWorkflowId(),
 				execution.GetRunId(),
-				msBuilder.GetLastWriteVersion(),
 				tBuilder)
 			if err != nil {
 				return err
@@ -2673,16 +2671,14 @@ func (e *historyEngineImpl) updateWorkflowExecution(ctx context.Context, domainI
 
 func (e *historyEngineImpl) getWorkflowHistoryCleanupTasks(
 	domainID, workflowID, runID string,
-	lastWriteVersion int64,
 	tBuilder *timerBuilder,
 ) (persistence.Task, persistence.Task, error) {
-	return getWorkflowHistoryCleanupTasksFromShard(e.shard, domainID, workflowID, runID, lastWriteVersion, tBuilder)
+	return getWorkflowHistoryCleanupTasksFromShard(e.shard, domainID, workflowID, runID, tBuilder)
 }
 
 func getWorkflowHistoryCleanupTasksFromShard(
 	shard ShardContext,
 	domainID, workflowID, runID string,
-	lastWriteVersion int64,
 	tBuilder *timerBuilder,
 ) (persistence.Task, persistence.Task, error) {
 
@@ -2703,8 +2699,7 @@ func getWorkflowHistoryCleanupTasksFromShard(
 			time.Duration(retentionInDays)*time.Hour*24,
 			domainID,
 			workflowID,
-			runID,
-			lastWriteVersion)
+			runID)
 		return &persistence.CloseExecutionTask{}, archivalTask, nil
 	}
 	deleteTask := tBuilder.createDeleteHistoryEventTimerTask(time.Duration(retentionInDays) * time.Hour * 24)
