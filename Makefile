@@ -70,10 +70,12 @@ DEP ?= $(shell which dep)
 
 dep-ensured:
 ifndef SKIP_DEP_ENSURE
+	./install-dep.sh
 	${DEP} ensure
 endif
 
 dep-ensured-vendor-only:
+	./install-dep.sh
 	${DEP} ensure -vendor-only 
 
 SKIP_DEP_ENSURE := true
