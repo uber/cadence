@@ -217,9 +217,7 @@ func IsBlobstoreNonRetryableError(err error) bool {
 	switch err.(type) {
 	case *workflow.BadRequestError:
 		return true
-	case *workflow.BlobstoreNonRetryableError:
-		return true
-	case *workflow.BlobEncodingError:
+	case *workflow.EntityNotExistsError:
 		return true
 	}
 	return false

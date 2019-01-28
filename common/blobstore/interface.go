@@ -28,13 +28,13 @@ import (
 
 var (
 	// ErrBucketNotExists indicates that requested bucket does not exist
-	ErrBucketNotExists = &shared.BadRequestError{Message: "requested bucket does not exist"}
+	ErrBucketNotExists = &shared.EntityNotExistsError{Message: "requested bucket does not exist"}
 	// ErrBlobNotExists indicates that requested blob does not exist
-	ErrBlobNotExists = &shared.BadRequestError{Message: "requested blob does not exist"}
+	ErrBlobNotExists = &shared.EntityNotExistsError{Message: "requested blob does not exist"}
 	// ErrBlobSerialization indicates that a failure occurred in serializing blob
-	ErrBlobSerialization = &shared.BlobEncodingError{Message: "failed to serialize blob"}
+	ErrBlobSerialization = &shared.BadRequestError{Message: "failed to serialize blob"}
 	// ErrBlobDeserialization indicates that a failure occurred in deserializing blob
-	ErrBlobDeserialization = &shared.BlobEncodingError{Message: "failed to deserialize blob"}
+	ErrBlobDeserialization = &shared.BadRequestError{Message: "failed to deserialize blob"}
 )
 
 // BucketMetadataResponse contains information relating to a bucket's configuration

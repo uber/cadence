@@ -330,18 +330,6 @@ func (s *ClientSuite) TestBucketMetadata_Fail_BucketNotExists() {
 	s.Nil(metadata)
 }
 
-func (s *ClientSuite) TestBucketMetadata_Fail_CheckFileExistsError() {
-	dir, err := ioutil.TempDir("", "TestBucketMetadata_Fail_CheckFileExistsError")
-	s.NoError(err)
-	defer os.RemoveAll(dir)
-	client := s.constructClient(dir)
-	s.NoError(os.Chmod(bucketDirectory(dir, defaultBucketName), os.FileMode(0000)))
-
-	metadata, err := client.BucketMetadata(context.Background(), defaultBucketName)
-	s.Equal(ErrCheckFileExists, err)
-	s.Nil(metadata)
-}
-
 func (s *ClientSuite) TestBucketMetadata_Fail_FileNotExistsError() {
 	dir, err := ioutil.TempDir("", "TestBucketMetadata_Fail_FileNotExistsError")
 	s.NoError(err)
@@ -350,7 +338,7 @@ func (s *ClientSuite) TestBucketMetadata_Fail_FileNotExistsError() {
 	s.NoError(os.Remove(bucketItemPath(dir, defaultBucketName, metadataFilename)))
 
 	metadata, err := client.BucketMetadata(context.Background(), defaultBucketName)
-	s.Equal(ErrMetadataFileNotExists, err)
+	s.Equal(ErrReadFile, err)
 	s.Nil(metadata)
 }
 

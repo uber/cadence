@@ -24,14 +24,6 @@ exception BadRequestError {
   1: required string message
 }
 
-exception BlobEncodingError {
-    1: required string message
-}
-
-exception BlobstoreNonRetryableError {
-    1: required string message
-}
-
 exception InternalServiceError {
   1: required string message
 }
