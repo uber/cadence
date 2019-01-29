@@ -66,17 +66,15 @@ PKG_TEST_DIRS := $(filter-out $(INTEG_TEST_ROOT)%,$(TEST_DIRS))
 GOCOVERPKG_ARG := -coverpkg="$(PROJECT_ROOT)/common/...,$(PROJECT_ROOT)/service/...,$(PROJECT_ROOT)/client/...,$(PROJECT_ROOT)/tools/..."
 
 
-DEP ?= $(shell which dep)
-
 dep-ensured:
 ifndef SKIP_DEP_ENSURE
 	./install-dep.sh
-	${DEP} ensure
+	dep ensure
 endif
 
 dep-ensured-vendor-only:
 	./install-dep.sh
-	${DEP} ensure -vendor-only 
+	dep ensure -vendor-only 
 
 SKIP_DEP_ENSURE := true
 
