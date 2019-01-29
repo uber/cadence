@@ -67,16 +67,12 @@ GOCOVERPKG_ARG := -coverpkg="$(PROJECT_ROOT)/common/...,$(PROJECT_ROOT)/service/
 
 
 dep-ensured:
-ifndef SKIP_DEP_ENSURE
 	./install-dep.sh
+ifdef CI_BUILD
+	dep ensure -vendor-only 
+else
 	dep ensure
 endif
-
-dep-ensured-vendor-only:
-	./install-dep.sh
-	dep ensure -vendor-only 
-
-SKIP_DEP_ENSURE := true
 
 yarpc-install:
 	go get './vendor/go.uber.org/thriftrw'
@@ -158,7 +154,7 @@ cover_profile: clean bins_nothrift
 cover: cover_profile
 	go tool cover -html=$(BUILD)/cover.out;
 
-cover_ci: dep-ensured-vendor-only cover_profile
+cover_ci: cover_profile
 	goveralls -coverprofile=$(BUILD)/cover.out -service=travis-ci || echo -e "\x1b[31mCoveralls failed\x1b[m"; \
 
 lint: dep-ensured
