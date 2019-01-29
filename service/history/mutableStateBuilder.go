@@ -1217,6 +1217,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(d
 		ExecutionStartToCloseTimeoutSeconds: attributes.ExecutionStartToCloseTimeoutSeconds,
 		Input:                               attributes.Input,
 		RetryPolicy:                         attributes.RetryPolicy,
+		CronSchedule:                        attributes.CronSchedule,
 	}
 
 	req := &h.StartWorkflowExecutionRequest{
