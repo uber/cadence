@@ -158,7 +158,7 @@ cover_profile: clean bins_nothrift
 cover: cover_profile
 	go tool cover -html=$(BUILD)/cover.out;
 
-cover_ci: cover_profile
+cover_ci: dep-ensured-vendor-only cover_profile
 	goveralls -coverprofile=$(BUILD)/cover.out -service=travis-ci || echo -e "\x1b[31mCoveralls failed\x1b[m"; \
 
 lint: dep-ensured
