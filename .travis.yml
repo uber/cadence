@@ -44,7 +44,7 @@ before_script:
   - mysql -u root -e "GRANT ALL PRIVILEGES ON *.* TO 'uber'@'localhost' IDENTIFIED BY 'uber';"
 
 script:
-  - make cover_ci CI_BUILD=1
+  - travis_wait 40 make cover_ci CI_BUILD=1
 
 after_success:
   - export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
