@@ -92,11 +92,15 @@ shard_id = :shard_id
 
 // InsertIntoShards inserts one or more rows into shards table
 func (mdb *DB) InsertIntoShards(row *sqldb.ShardsRow) (sql.Result, error) {
+	row.UpdatedAt = mdb.converter.ToMySQLDateTime(row.UpdatedAt)
+	row.TimerAckLevel = mdb.converter.ToMySQLDateTime(row.TimerAckLevel)
 	return mdb.conn.NamedExec(createShardQry, row)
 }
 
 // UpdateShards updates one or more rows into shards table
 func (mdb *DB) UpdateShards(row *sqldb.ShardsRow) (sql.Result, error) {
+	row.UpdatedAt = mdb.converter.ToMySQLDateTime(row.UpdatedAt)
+	row.TimerAckLevel = mdb.converter.ToMySQLDateTime(row.TimerAckLevel)
 	return mdb.conn.NamedExec(updateShardQry, row)
 }
 
@@ -104,6 +108,11 @@ func (mdb *DB) UpdateShards(row *sqldb.ShardsRow) (sql.Result, error) {
 func (mdb *DB) SelectFromShards(filter *sqldb.ShardsFilter) (*sqldb.ShardsRow, error) {
 	var row sqldb.ShardsRow
 	err := mdb.conn.Get(&row, getShardQry, filter.ShardID)
+	if err != nil {
+		return nil, err
+	}
+	row.UpdatedAt = mdb.converter.FromMySQLDateTime(row.UpdatedAt)
+	row.TimerAckLevel = mdb.converter.FromMySQLDateTime(row.TimerAckLevel)
 	return &row, err
 }
 

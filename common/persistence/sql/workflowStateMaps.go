@@ -52,8 +52,6 @@ func updateActivityInfos(tx sqldb.Tx,
 				ScheduleID:               v.ScheduleID,
 				ScheduledEventBatchID:    v.ScheduledEventBatchID,
 				Version:                  v.Version,
-				ScheduledEvent:           v.ScheduledEvent.Data,
-				ScheduledEventEncoding:   string(v.ScheduledEvent.Encoding),
 				ScheduledTime:            v.ScheduledTime,
 				StartedID:                v.StartedID,
 				StartedTime:              v.StartedTime,
@@ -80,6 +78,10 @@ func updateActivityInfos(tx sqldb.Tx,
 			if v.StartedEvent != nil {
 				rows[i].StartedEvent = &v.StartedEvent.Data
 				rows[i].StartedEventEncoding = string(v.StartedEvent.Encoding)
+			}
+			if v.ScheduledEvent != nil {
+				rows[i].ScheduledEvent = v.ScheduledEvent.Data
+				rows[i].ScheduledEventEncoding = string(v.ScheduledEvent.Encoding)
 			}
 
 			if v.Details != nil {
@@ -154,7 +156,6 @@ func getActivityInfoMap(tx sqldb.Tx,
 
 	ret := make(map[int64]*persistence.InternalActivityInfo)
 	for _, v := range rows {
-
 		info := &persistence.InternalActivityInfo{
 			Version:                  v.Version,
 			ScheduleID:               v.ScheduleID,

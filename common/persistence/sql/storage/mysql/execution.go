@@ -367,11 +367,15 @@ shard_id=? AND domain_id=? AND workflow_id=? AND run_id=?`
 
 // InsertIntoExecutions inserts a row into executions table
 func (mdb *DB) InsertIntoExecutions(row *sqldb.ExecutionsRow) (sql.Result, error) {
+	row.StartTime = mdb.converter.ToMySQLDateTime(row.StartTime)
+	row.LastUpdatedTime = mdb.converter.ToMySQLDateTime(row.LastUpdatedTime)
 	return mdb.conn.NamedExec(createExecutionQry, row)
 }
 
 // UpdateExecutions updates a single row in executions table
 func (mdb *DB) UpdateExecutions(row *sqldb.ExecutionsRow) (sql.Result, error) {
+	row.StartTime = mdb.converter.ToMySQLDateTime(row.StartTime)
+	row.LastUpdatedTime = mdb.converter.ToMySQLDateTime(row.LastUpdatedTime)
 	return mdb.conn.NamedExec(updateExecutionQry, row)
 }
 
@@ -379,6 +383,11 @@ func (mdb *DB) UpdateExecutions(row *sqldb.ExecutionsRow) (sql.Result, error) {
 func (mdb *DB) SelectFromExecutions(filter *sqldb.ExecutionsFilter) (*sqldb.ExecutionsRow, error) {
 	var row sqldb.ExecutionsRow
 	err := mdb.conn.Get(&row, getExecutionQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+	if err != nil {
+		return nil, err
+	}
+	row.StartTime = mdb.converter.FromMySQLDateTime(row.StartTime)
+	row.LastUpdatedTime = mdb.converter.FromMySQLDateTime(row.LastUpdatedTime)
 	return &row, err
 }
 
@@ -433,13 +442,22 @@ func (mdb *DB) LockCurrentExecutionsJoinExecutions(filter *sqldb.CurrentExecutio
 
 // InsertIntoTransferTasks inserts one or more rows into transfer_tasks table
 func (mdb *DB) InsertIntoTransferTasks(rows []sqldb.TransferTasksRow) (sql.Result, error) {
+	for i := range rows {
+		rows[i].VisibilityTimestamp = mdb.converter.ToMySQLDateTime(rows[i].VisibilityTimestamp)
+	}
 	return mdb.conn.NamedExec(createTransferTasksQry, rows)
 }
 
 // SelectFromTransferTasks reads one or more rows from transfer_tasks table
 func (mdb *DB) SelectFromTransferTasks(filter *sqldb.TransferTasksFilter) ([]sqldb.TransferTasksRow, error) {
 	var rows []sqldb.TransferTasksRow
-	err := mdb.conn.Select(&rows, getTransferTasksQry, filter.ShardID, *filter.MinTaskID, filter.MaxTaskID)
+	err := mdb.conn.Select(&rows, getTransferTasksQry, filter.ShardID, *filter.MinTaskID, *filter.MaxTaskID)
+	if err != nil {
+		return nil, err
+	}
+	for i := range rows {
+		rows[i].VisibilityTimestamp = mdb.converter.FromMySQLDateTime(rows[i].VisibilityTimestamp)
+	}
 	return rows, err
 }
 
@@ -453,6 +471,9 @@ func (mdb *DB) DeleteFromTransferTasks(filter *sqldb.TransferTasksFilter) (sql.R
 
 // InsertIntoTimerTasks inserts one or more rows into timer_tasks table
 func (mdb *DB) InsertIntoTimerTasks(rows []sqldb.TimerTasksRow) (sql.Result, error) {
+	for i := range rows {
+		rows[i].VisibilityTimestamp = mdb.converter.ToMySQLDateTime(rows[i].VisibilityTimestamp)
+	}
 	return mdb.conn.NamedExec(createTimerTasksQry, rows)
 }
 
@@ -461,6 +482,12 @@ func (mdb *DB) SelectFromTimerTasks(filter *sqldb.TimerTasksFilter) ([]sqldb.Tim
 	var rows []sqldb.TimerTasksRow
 	err := mdb.conn.Select(&rows, getTimerTasksQry, filter.ShardID, *filter.MinVisibilityTimestamp,
 		filter.TaskID, *filter.MinVisibilityTimestamp, *filter.MaxVisibilityTimestamp, *filter.PageSize)
+	if err != nil {
+		return nil, err
+	}
+	for i := range rows {
+		rows[i].VisibilityTimestamp = mdb.converter.FromMySQLDateTime(rows[i].VisibilityTimestamp)
+	}
 	return rows, err
 }
 

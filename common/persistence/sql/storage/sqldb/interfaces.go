@@ -48,7 +48,10 @@ type (
 	}
 
 	// DomainFilter contains the column names within domain table that
-	// can be used to filter results through a WHERE clause
+	// can be used to filter results through a WHERE clause. When ID is not
+	// nil, it will be used for WHERE condition. If ID is nil and Name is non-nil,
+	// Name will be used for WHERE condition. When both ID and Name are nil,
+	// no WHERE clause will be used
 	DomainFilter struct {
 		ID   *string
 		Name *string
@@ -544,7 +547,11 @@ type (
 	tableCRUD interface {
 		InsertIntoDomain(rows *DomainRow) (sql.Result, error)
 		UpdateDomain(row *DomainRow) (sql.Result, error)
+		// SelectFromDomain returns domains that match filter criteria. Either ID or
+		// Name can be specified to filter results. If both are not specified, all rows
+		// will be returned
 		SelectFromDomain(filter *DomainFilter) ([]DomainRow, error)
+		// DeleteDomain deletes a single row. One of ID or Name MUST be specified
 		DeleteFromDomain(filter *DomainFilter) (sql.Result, error)
 
 		LockDomainMetadata() error
@@ -589,11 +596,22 @@ type (
 		LockCurrentExecutions(filter *CurrentExecutionsFilter) (string, error)
 
 		InsertIntoTransferTasks(rows []TransferTasksRow) (sql.Result, error)
+		// SelectFromTransferTasks returns rows that match filter criteria from transfer_tasks table.
+		// Required filter params - {shardID, minTaskID, maxTaskID}
 		SelectFromTransferTasks(filter *TransferTasksFilter) ([]TransferTasksRow, error)
+		// DeleteFromTransferTasks deletes one or more rows from transfer_tasks table.
+		// Filter params - shardID is required. If TaskID is not nil, a single row is deleted.
+		// When MinTaskID and MaxTaskID are not-nil, a range of rows are deleted.
 		DeleteFromTransferTasks(filter *TransferTasksFilter) (sql.Result, error)
 
 		InsertIntoTimerTasks(rows []TimerTasksRow) (sql.Result, error)
+		// SelectFromTimerTasks returns one or more rows from timer_tasks table
+		// Required filter Params - {shardID, taskID, minVisibilityTimestamp, maxVisibilityTimestamp, pageSize}
 		SelectFromTimerTasks(filter *TimerTasksFilter) ([]TimerTasksRow, error)
+		// DeleteFromTimerTasks deletes one or more rows from timer_tasks table
+		// Required filter Params:
+		//  - to delete one row - {shardID, visibilityTimestamp, taskID}
+		//  - to delete multiple rows - {shardID, minVisibilityTimestamp, maxVisibilityTimestamp}
 		DeleteFromTimerTasks(filter *TimerTasksFilter) (sql.Result, error)
 
 		InsertIntoBufferedEvents(rows []BufferedEventsRow) (sql.Result, error)
@@ -601,39 +619,93 @@ type (
 		DeleteFromBufferedEvents(filter *BufferedEventsFilter) (sql.Result, error)
 
 		InsertIntoReplicationTasks(rows []ReplicationTasksRow) (sql.Result, error)
+		// SelectFromReplicationTasks returns one or more rows from replication_tasks table
+		// Required filter params - {shardID, minTaskID, maxTaskID, pageSize}
 		SelectFromReplicationTasks(filter *ReplicationTasksFilter) ([]ReplicationTasksRow, error)
+		// DeleteFromReplicationTasks deletes a row from replication_tasks table
+		// Required filter params - {shardID, taskID}
 		DeleteFromReplicationTasks(filter *ReplicationTasksFilter) (sql.Result, error)
 
 		ReplaceIntoActivityInfoMaps(rows []ActivityInfoMapsRow) (sql.Result, error)
+		// SelectFromActivityInfoMaps returns one or more rows from activity_info_maps
+		// Required filter params - {shardID, domainID, workflowID, runID}
 		SelectFromActivityInfoMaps(filter *ActivityInfoMapsFilter) ([]ActivityInfoMapsRow, error)
+		// DeleteFromActivityInfoMaps deletes a row from activity_info_maps table
+		// Required filter params
+		// - single row delete - {shardID, domainID, workflowID, runID, scheduleID}
+		// - range delete - {shardID, domainID, workflowID, runID}
 		DeleteFromActivityInfoMaps(filter *ActivityInfoMapsFilter) (sql.Result, error)
 
 		ReplaceIntoTimerInfoMaps(rows []TimerInfoMapsRow) (sql.Result, error)
+		// SelectFromTimerInfoMaps returns one or more rows form timer_info_maps table
+		// Required filter params - {shardID, domainID, workflowID, runID}
 		SelectFromTimerInfoMaps(filter *TimerInfoMapsFilter) ([]TimerInfoMapsRow, error)
+		// DeleteFromTimerInfoMaps deletes one or more rows from timer_info_maps
+		// Required filter params
+		// - single row - {shardID, domainID, workflowID, runID, timerID}
+		// - multiple rows - {shardID, domainID, workflowID, runID}
 		DeleteFromTimerInfoMaps(filter *TimerInfoMapsFilter) (sql.Result, error)
 
 		ReplaceIntoChildExecutionInfoMaps(rows []ChildExecutionInfoMapsRow) (sql.Result, error)
+		// SelectFromChildExecutionInfoMaps returns one or more rows form child_execution_info_maps table
+		// Required filter params - {shardID, domainID, workflowID, runID}
 		SelectFromChildExecutionInfoMaps(filter *ChildExecutionInfoMapsFilter) ([]ChildExecutionInfoMapsRow, error)
+		// DeleteFromChildExecutionInfoMaps deletes one or more rows from child_execution_info_maps
+		// Required filter params
+		// - single row - {shardID, domainID, workflowID, runID, initiatedID}
+		// - multiple rows - {shardID, domainID, workflowID, runID}
 		DeleteFromChildExecutionInfoMaps(filter *ChildExecutionInfoMapsFilter) (sql.Result, error)
 
 		ReplaceIntoRequestCancelInfoMaps(rows []RequestCancelInfoMapsRow) (sql.Result, error)
+		// SelectFromRequestCancelInfoMaps returns one or more rows form request_cancel_info_maps table
+		// Required filter params - {shardID, domainID, workflowID, runID}
 		SelectFromRequestCancelInfoMaps(filter *RequestCancelInfoMapsFilter) ([]RequestCancelInfoMapsRow, error)
+		// DeleteFromRequestCancelInfoMaps deletes one or more rows from request_cancel_info_maps
+		// Required filter params
+		// - single row - {shardID, domainID, workflowID, runID, initiatedID}
+		// - multiple rows - {shardID, domainID, workflowID, runID}
 		DeleteFromRequestCancelInfoMaps(filter *RequestCancelInfoMapsFilter) (sql.Result, error)
 
 		ReplaceIntoSignalInfoMaps(rows []SignalInfoMapsRow) (sql.Result, error)
+		// SelectFromSignalInfoMaps returns one or more rows form signal_info_maps table
+		// Required filter params - {shardID, domainID, workflowID, runID}
 		SelectFromSignalInfoMaps(filter *SignalInfoMapsFilter) ([]SignalInfoMapsRow, error)
+		// DeleteFromSignalInfoMaps deletes one or more rows from signal_info_maps table
+		// Required filter params
+		// - single row - {shardID, domainID, workflowID, runID, initiatedID}
+		// - multiple rows - {shardID, domainID, workflowID, runID}
 		DeleteFromSignalInfoMaps(filter *SignalInfoMapsFilter) (sql.Result, error)
 
 		ReplaceIntoBufferedReplicationTasks(rows *BufferedReplicationTaskMapsRow) (sql.Result, error)
+		// SelectFromSignalInfoMaps returns one or more rows form buffered_replication_tasks table
+		// Required filter params - {shardID, domainID, workflowID, runID}
 		SelectFromBufferedReplicationTasks(filter *BufferedReplicationTaskMapsFilter) ([]BufferedReplicationTaskMapsRow, error)
+		// DeleteFromBufferedReplicationTasks deletes one or more rows from buffered_replication_tasks
+		// Required filter params
+		// - single row - {shardID, domainID, workflowID, runID, firstEventID}
+		// - multiple rows - {shardID, domainID, workflowID, runID}
 		DeleteFromBufferedReplicationTasks(filter *BufferedReplicationTaskMapsFilter) (sql.Result, error)
 
 		InsertIntoSignalsRequestedSets(rows []SignalsRequestedSetsRow) (sql.Result, error)
+		// SelectFromSignalInfoMaps returns one or more rows form singals_requested_sets table
+		// Required filter params - {shardID, domainID, workflowID, runID}
 		SelectFromSignalsRequestedSets(filter *SignalsRequestedSetsFilter) ([]SignalsRequestedSetsRow, error)
+		// DeleteFromSignalsRequestedSets deletes one or more rows from signals_requested_sets
+		// Required filter params
+		// - single row - {shardID, domainID, workflowID, runID, signalID}
+		// - multiple rows - {shardID, domainID, workflowID, runID}
 		DeleteFromSignalsRequestedSets(filter *SignalsRequestedSetsFilter) (sql.Result, error)
 
 		InsertIntoVisibility(row *VisibilityRow) (sql.Result, error)
 		UpdateVisibility(row *VisibilityRow) (sql.Result, error)
+		// SelectFromVisibility returns one or more rows from visibility table
+		// Required filter params:
+		// - getClosedWorkflowExecution - retrieves single row - {domainID, runID, closed=true}
+		// - All other queries retrieve multiple rows (range):
+		//   - MUST specify following required params:
+		//     - domainID, minStartTime, maxStartTime, runID and pageSize where some or all of these may come from previous page token
+		//   - OPTIONALLY specify one of following params
+		//     - workflowID, workflowTypeName, closeStatus (along with closed=true)
 		SelectFromVisibility(filter *VisibilityFilter) ([]VisibilityRow, error)
 	}
 

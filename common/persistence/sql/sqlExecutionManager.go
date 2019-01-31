@@ -1617,6 +1617,7 @@ func updateExecution(tx sqldb.Tx,
 		CurrentVersion:               common.EmptyVersion,
 		SignalCount:                  int(executionInfo.SignalCount),
 		CronSchedule:                 executionInfo.CronSchedule,
+		CompletionEventBatchID:       &executionInfo.CompletionEventBatchID,
 	}
 
 	if executionInfo.ExecutionContext != nil {
@@ -1627,7 +1628,6 @@ func updateExecution(tx sqldb.Tx,
 	if completionEvent != nil {
 		row.CompletionEvent = &completionEvent.Data
 		row.CompletionEventEncoding = common.StringPtr(string(completionEvent.Encoding))
-		row.CompletionEventBatchID = &executionInfo.CompletionEventBatchID
 	}
 	if replicationState != nil {
 		row.StartVersion = replicationState.StartVersion

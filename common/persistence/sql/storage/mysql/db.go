@@ -27,9 +27,10 @@ import (
 
 // DB represents a logical connection to mysql database
 type DB struct {
-	db   *sqlx.DB
-	tx   *sqlx.Tx
-	conn sqldb.Conn
+	db        *sqlx.DB
+	tx        *sqlx.Tx
+	conn      sqldb.Conn
+	converter DataConverter
 }
 
 var _ sqldb.Tx = (*DB)(nil)
@@ -43,6 +44,7 @@ func NewDB(xdb *sqlx.DB, tx *sqlx.Tx) *DB {
 	if tx != nil {
 		mdb.conn = tx
 	}
+	mdb.converter = &converter{}
 	return mdb
 }
 

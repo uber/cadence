@@ -70,6 +70,9 @@ task_type = :task_type
 
 // InsertIntoTasks inserts one or more rows into tasks table
 func (mdb *DB) InsertIntoTasks(rows []sqldb.TasksRow) (sql.Result, error) {
+	for i := range rows {
+		rows[i].ExpiryTs = mdb.converter.ToMySQLDateTime(rows[i].ExpiryTs)
+	}
 	return mdb.conn.NamedExec(createTaskQry, rows)
 }
 
@@ -79,6 +82,12 @@ func (mdb *DB) SelectFromTasks(filter *sqldb.TasksFilter) ([]sqldb.TasksRow, err
 	var rows []sqldb.TasksRow
 	err = mdb.conn.Select(&rows, getTaskQry, filter.DomainID,
 		filter.TaskListName, filter.TaskType, *filter.MinTaskID, *filter.MaxTaskID)
+	if err != nil {
+		return nil, err
+	}
+	for i := range rows {
+		rows[i].ExpiryTs = mdb.converter.FromMySQLDateTime(rows[i].ExpiryTs)
+	}
 	return rows, err
 }
 
@@ -89,16 +98,19 @@ func (mdb *DB) DeleteFromTasks(filter *sqldb.TasksFilter) (sql.Result, error) {
 
 // InsertIntoTaskLists inserts one or more rows into task_lists table
 func (mdb *DB) InsertIntoTaskLists(row *sqldb.TaskListsRow) (sql.Result, error) {
+	row.ExpiryTs = mdb.converter.ToMySQLDateTime(row.ExpiryTs)
 	return mdb.conn.NamedExec(createTaskListQry, row)
 }
 
 // ReplaceIntoTaskLists replaces one or more rows in task_lists table
 func (mdb *DB) ReplaceIntoTaskLists(row *sqldb.TaskListsRow) (sql.Result, error) {
+	row.ExpiryTs = mdb.converter.ToMySQLDateTime(row.ExpiryTs)
 	return mdb.conn.NamedExec(replaceTaskListQry, row)
 }
 
 // UpdateTaskLists updates a row in task_lists table
 func (mdb *DB) UpdateTaskLists(row *sqldb.TaskListsRow) (sql.Result, error) {
+	row.ExpiryTs = mdb.converter.ToMySQLDateTime(row.ExpiryTs)
 	return mdb.conn.NamedExec(updateTaskListQry, row)
 }
 
@@ -107,6 +119,10 @@ func (mdb *DB) SelectFromTaskLists(filter *sqldb.TaskListsFilter) (*sqldb.TaskLi
 	var err error
 	var row sqldb.TaskListsRow
 	err = mdb.conn.Get(&row, getTaskListQry, filter.DomainID, filter.Name, filter.TaskType)
+	if err != nil {
+		return nil, err
+	}
+	row.ExpiryTs = mdb.converter.FromMySQLDateTime(row.ExpiryTs)
 	return &row, err
 }
 

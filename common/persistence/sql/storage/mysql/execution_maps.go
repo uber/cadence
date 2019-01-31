@@ -147,6 +147,12 @@ var (
 
 // ReplaceIntoActivityInfoMaps replaces one or more rows in activity_info_maps table
 func (mdb *DB) ReplaceIntoActivityInfoMaps(rows []sqldb.ActivityInfoMapsRow) (sql.Result, error) {
+	for i := range rows {
+		rows[i].ScheduledTime = mdb.converter.ToMySQLDateTime(rows[i].ScheduledTime)
+		rows[i].StartedTime = mdb.converter.ToMySQLDateTime(rows[i].StartedTime)
+		rows[i].LastHeartbeatUpdatedTime = mdb.converter.ToMySQLDateTime(rows[i].LastHeartbeatUpdatedTime)
+		rows[i].ExpirationTime = mdb.converter.ToMySQLDateTime(rows[i].ExpirationTime)
+	}
 	return mdb.conn.NamedExec(setKeyInActivityInfoMapQry, rows)
 }
 
@@ -159,6 +165,10 @@ func (mdb *DB) SelectFromActivityInfoMaps(filter *sqldb.ActivityInfoMapsFilter) 
 		rows[i].DomainID = filter.DomainID
 		rows[i].WorkflowID = filter.WorkflowID
 		rows[i].RunID = filter.RunID
+		rows[i].ScheduledTime = mdb.converter.FromMySQLDateTime(rows[i].ScheduledTime)
+		rows[i].StartedTime = mdb.converter.FromMySQLDateTime(rows[i].StartedTime)
+		rows[i].LastHeartbeatUpdatedTime = mdb.converter.FromMySQLDateTime(rows[i].LastHeartbeatUpdatedTime)
+		rows[i].ExpirationTime = mdb.converter.FromMySQLDateTime(rows[i].ExpirationTime)
 	}
 	return rows, err
 }
@@ -189,6 +199,9 @@ var (
 
 // ReplaceIntoTimerInfoMaps replaces one or more rows in timer_info_maps table
 func (mdb *DB) ReplaceIntoTimerInfoMaps(rows []sqldb.TimerInfoMapsRow) (sql.Result, error) {
+	for i := range rows {
+		rows[i].ExpiryTime = mdb.converter.ToMySQLDateTime(rows[i].ExpiryTime)
+	}
 	return mdb.conn.NamedExec(setKeyInTimerInfoMapSQLQuery, rows)
 }
 

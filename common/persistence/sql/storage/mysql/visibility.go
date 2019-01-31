@@ -74,6 +74,7 @@ const (
 
 // InsertIntoVisibility inserts a row into executions_visibility table
 func (mdb *DB) InsertIntoVisibility(row *sqldb.VisibilityRow) (sql.Result, error) {
+	row.StartTime = mdb.converter.ToMySQLDateTime(row.StartTime)
 	return mdb.conn.Exec(templateCreateWorkflowExecutionStarted,
 		row.DomainID,
 		row.WorkflowID,
@@ -84,10 +85,11 @@ func (mdb *DB) InsertIntoVisibility(row *sqldb.VisibilityRow) (sql.Result, error
 
 // UpdateVisibility updates a row in executions_visibility table
 func (mdb *DB) UpdateVisibility(row *sqldb.VisibilityRow) (sql.Result, error) {
+	closeTime := mdb.converter.ToMySQLDateTime(*row.CloseTime)
 	return mdb.conn.Exec(templateUpdateWorkflowExecutionClosed,
-		row.CloseTime,
-		row.CloseStatus,
-		row.HistoryLength,
+		closeTime,
+		*row.CloseStatus,
+		*row.HistoryLength,
 		row.DomainID,
 		row.RunID)
 }
@@ -112,8 +114,8 @@ func (mdb *DB) SelectFromVisibility(filter *sqldb.VisibilityFilter) ([]sqldb.Vis
 			qry,
 			*filter.WorkflowID,
 			filter.DomainID,
-			*filter.MinStartTime,
-			*filter.MaxStartTime,
+			mdb.converter.ToMySQLDateTime(*filter.MinStartTime),
+			mdb.converter.ToMySQLDateTime(*filter.MaxStartTime),
 			*filter.RunID,
 			*filter.MinStartTime,
 			*filter.PageSize)
@@ -126,8 +128,8 @@ func (mdb *DB) SelectFromVisibility(filter *sqldb.VisibilityFilter) ([]sqldb.Vis
 			qry,
 			*filter.WorkflowTypeName,
 			filter.DomainID,
-			*filter.MinStartTime,
-			*filter.MaxStartTime,
+			mdb.converter.ToMySQLDateTime(*filter.MinStartTime),
+			mdb.converter.ToMySQLDateTime(*filter.MaxStartTime),
 			*filter.RunID,
 			*filter.MaxStartTime,
 			*filter.PageSize)
@@ -136,10 +138,10 @@ func (mdb *DB) SelectFromVisibility(filter *sqldb.VisibilityFilter) ([]sqldb.Vis
 			templateGetClosedWorkflowExecutionsByStatus,
 			*filter.CloseStatus,
 			filter.DomainID,
-			*filter.MinStartTime,
-			*filter.MaxStartTime,
+			mdb.converter.ToMySQLDateTime(*filter.MinStartTime),
+			mdb.converter.ToMySQLDateTime(*filter.MaxStartTime),
 			*filter.RunID,
-			*filter.MaxStartTime,
+			mdb.converter.ToMySQLDateTime(*filter.MaxStartTime),
 			*filter.PageSize)
 	case filter.MinStartTime != nil:
 		qry := templateGetOpenWorkflowExecutions
@@ -149,13 +151,21 @@ func (mdb *DB) SelectFromVisibility(filter *sqldb.VisibilityFilter) ([]sqldb.Vis
 		err = mdb.conn.Select(&rows,
 			qry,
 			filter.DomainID,
-			*filter.MinStartTime,
-			*filter.MaxStartTime,
+			mdb.converter.ToMySQLDateTime(*filter.MinStartTime),
+			mdb.converter.ToMySQLDateTime(*filter.MaxStartTime),
 			*filter.RunID,
-			*filter.MaxStartTime,
+			mdb.converter.ToMySQLDateTime(*filter.MaxStartTime),
 			*filter.PageSize)
 	default:
 		return nil, fmt.Errorf("invalid query filter")
+	}
+	if err != nil {
+		return nil, err
+	}
+	for i := range rows {
+		rows[i].StartTime = mdb.converter.FromMySQLDateTime(rows[i].StartTime)
+		closeTime := mdb.converter.FromMySQLDateTime(*rows[i].CloseTime)
+		rows[i].CloseTime = &closeTime
 	}
 	return rows, err
 }
