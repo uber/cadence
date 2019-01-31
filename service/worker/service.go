@@ -41,7 +41,7 @@ import (
 )
 
 const (
-	publicClientRetryLimit = 5
+	publicClientRetryLimit   = 5
 	publicClientPollingDelay = time.Second
 )
 
@@ -52,10 +52,10 @@ type (
 	// 3. Sysworker: Handles running cadence client worker, thereby enabling cadence to host arbitrary system workflows
 	Service struct {
 		stopC         chan struct{}
-		isStopped int32
+		isStopped     int32
 		params        *service.BootstrapParams
 		config        *Config
-		logger bark.Logger
+		logger        bark.Logger
 		metricsClient metrics.Client
 	}
 
@@ -204,7 +204,8 @@ func (s *Service) startSysWorker(base service.Service, pFactory persistencefacto
 		historyManager,
 		historyV2Manager,
 		s.params.BlobstoreClient,
-		domainCache)
+		domainCache,
+		s.config.SysWorkflowCfg)
 	if err := sysWorker.Start(); err != nil {
 		sysWorker.Stop()
 		s.logger.Fatalf("failed to start sysworker: %v", err)

@@ -22,43 +22,75 @@ package sysworkflow
 
 import (
 	"context"
-	"github.com/uber-go/tally"
+	"github.com/uber-common/bark"
 	"github.com/uber/cadence/client/public"
 	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/worker"
 	"go.uber.org/cadence/workflow"
-	"go.uber.org/zap"
 )
 
 type (
 	// Config for SysWorker
-	Config struct{}
+	Config struct {
+		EnableArchivalCompression dynamicconfig.BoolPropertyFn
+	}
 	// SysWorker is the cadence client worker responsible for running system workflows
 	SysWorker struct {
 		worker worker.Worker
 	}
 )
 
+type contextKey int
+
+const (
+	metricsKey contextKey = iota
+	loggerKey
+	clusterMetadataKey
+	historyManagerKey
+	historyV2ManagerKey
+	blobstoreKey
+	domainCacheKey
+	configKey
+)
+
 func init() {
-	workflow.RegisterWithOptions(SystemWorkflow, workflow.RegisterOptions{Name: SystemWorkflowFnName})
-	activity.RegisterWithOptions(ArchivalActivity, activity.RegisterOptions{Name: ArchivalActivityFnName})
-	activity.RegisterWithOptions(BackfillActivity, activity.RegisterOptions{Name: BackfillActivityFnName})
+	workflow.RegisterWithOptions(SystemWorkflow, workflow.RegisterOptions{Name: systemWorkflowFnName})
+	activity.RegisterWithOptions(ArchivalActivity, activity.RegisterOptions{Name: archivalActivityFnName})
+	activity.RegisterWithOptions(BackfillActivity, activity.RegisterOptions{Name: backfillActivityFnName})
 }
 
 // NewSysWorker returns a new SysWorker
-func NewSysWorker(publicClient public.Client, scope tally.Scope, blobstoreClient blobstore.Client) *SysWorker {
-	logger, _ := zap.NewProduction()
-	actCtx := context.WithValue(context.Background(), blobstoreClientKey, blobstoreClient)
-	actCtx = context.WithValue(actCtx, frontendClientKey, publicClient)
+func NewSysWorker(
+	publicClient public.Client,
+	metrics metrics.Client,
+	logger bark.Logger,
+	clusterMetadata cluster.Metadata,
+	historyManager persistence.HistoryManager,
+	historyV2Manager persistence.HistoryV2Manager,
+	blobstore blobstore.Client,
+	domainCache cache.DomainCache,
+	config *Config) *SysWorker {
+
+	actCtx := context.Background()
+	actCtx = context.WithValue(actCtx, metricsKey, metrics)
+	actCtx = context.WithValue(actCtx, loggerKey, logger)
+	actCtx = context.WithValue(actCtx, clusterMetadataKey, clusterMetadata)
+	actCtx = context.WithValue(actCtx, historyManagerKey, historyManager)
+	actCtx = context.WithValue(actCtx, historyV2ManagerKey, historyV2Manager)
+	actCtx = context.WithValue(actCtx, blobstoreKey, blobstore)
+	actCtx = context.WithValue(actCtx, domainCacheKey, domainCache)
+	actCtx = context.WithValue(actCtx, configKey, config)
 	wo := worker.Options{
-		Logger:                    logger,
-		MetricsScope:              scope.SubScope(SystemWorkflowScope),
 		BackgroundActivityContext: actCtx,
 	}
 	return &SysWorker{
-		// TODO: after we do task list fan out workers should listen on all task lists
-		worker: worker.New(publicClient, Domain, DecisionTaskList, wo),
+		worker: worker.New(publicClient, SystemDomainName, decisionTaskList, wo),
 	}
 }
 
