@@ -28,6 +28,26 @@ import (
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"go.uber.org/cadence/client"
 	"math/rand"
+	"time"
+)
+
+type requestType int
+
+const (
+	archivalRequest requestType = iota
+	backfillRequest
+)
+
+const (
+	// SystemDomainName is domain name for all system workflows
+	SystemDomainName = "cadence-system"
+
+	workflowIDPrefix                = "cadsys-wf"
+	decisionTaskList                = "cadsys-decision-tl"
+	workflowStartToCloseTimeout     = time.Hour * 24 * 30
+	decisionTaskStartToCloseTimeout = time.Minute
+	signalName                      = "cadsys-signal-sig"
+	systemWorkflowFnName            = "SystemWorkflow"
 )
 
 type (
@@ -56,7 +76,7 @@ type (
 	}
 
 	signal struct {
-		RequestType    RequestType
+		RequestType    requestType
 		ArchiveRequest *ArchiveRequest
 		BackillRequest *BackfillRequest
 	}
@@ -65,20 +85,19 @@ type (
 // NewArchivalClient creates a new ArchivalClient
 func NewArchivalClient(publicClient public.Client, numSWFn dynamicconfig.IntPropertyFn) ArchivalClient {
 	return &archivalClient{
-		cadenceClient: client.NewClient(publicClient, Domain, &client.Options{}),
+		cadenceClient: client.NewClient(publicClient, SystemDomainName, &client.Options{}),
 		numSWFn:       numSWFn,
 	}
 }
 
 // Archive starts an archival task
 func (c *archivalClient) Archive(request *ArchiveRequest) error {
-	workflowID := fmt.Sprintf("%v-%v", WorkflowIDPrefix, rand.Intn(c.numSWFn()))
+	workflowID := fmt.Sprintf("%v-%v", workflowIDPrefix, rand.Intn(c.numSWFn()))
 	workflowOptions := client.StartWorkflowOptions{
-		ID: workflowID,
-		// TODO: once we have higher load, this should select one random of X task lists to do load balancing
-		TaskList:                        DecisionTaskList,
-		ExecutionStartToCloseTimeout:    WorkflowStartToCloseTimeout,
-		DecisionTaskStartToCloseTimeout: DecisionTaskStartToCloseTimeout,
+		ID:                              workflowID,
+		TaskList:                        decisionTaskList,
+		ExecutionStartToCloseTimeout:    workflowStartToCloseTimeout,
+		DecisionTaskStartToCloseTimeout: decisionTaskStartToCloseTimeout,
 		WorkflowIDReusePolicy:           client.WorkflowIDReusePolicyAllowDuplicate,
 	}
 	signal := signal{
@@ -89,10 +108,10 @@ func (c *archivalClient) Archive(request *ArchiveRequest) error {
 	_, err := c.cadenceClient.SignalWithStartWorkflow(
 		context.Background(),
 		workflowID,
-		SignalName,
+		signalName,
 		signal,
 		workflowOptions,
-		SystemWorkflowFnName,
+		systemWorkflowFnName,
 	)
 
 	return err

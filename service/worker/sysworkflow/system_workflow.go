@@ -23,31 +23,34 @@ package sysworkflow
 import (
 	"context"
 	"fmt"
-	"github.com/uber-go/tally"
-	"github.com/uber/cadence/common/logging"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/workflow"
-	"go.uber.org/zap"
 	"time"
+)
+
+const (
+	signalsUntilContinueAsNew = 1000
+	archivalActivityFnName    = "ArchivalActivity"
+	backfillActivityFnName    = "BackfillActivity"
 )
 
 // SystemWorkflow is the system workflow code
 func SystemWorkflow(ctx workflow.Context) error {
-	id := workflow.GetInfo(ctx).WorkflowExecution.ID
-	logger := workflow.GetLogger(ctx)
-	scope := workflow.GetMetricsScope(ctx).Tagged(map[string]string{SystemWorkflowIDTag: id})
-	ch := workflow.GetSignalChannel(ctx, SignalName)
+	//id := workflow.GetInfo(ctx).WorkflowExecution.ID
+	//logger := workflow.GetLogger(ctx)
+	//scope := workflow.GetMetricsScope(ctx).Tagged(map[string]string{SystemWorkflowIDTag: id})
+	ch := workflow.GetSignalChannel(ctx, signalName)
 
-	logger.Info("started new system workflow")
+	//logger.Info("started new system workflow")
 	signalsHandled := 0
-	for ; signalsHandled < SignalsUntilContinueAsNew; signalsHandled++ {
+	for ; signalsHandled < signalsUntilContinueAsNew; signalsHandled++ {
 		var signal signal
 		if more := ch.Receive(ctx, &signal); !more {
-			scope.Counter(ChannelClosedUnexpectedlyError).Inc(1)
-			logger.Error("cadence channel was unexpectedly closed")
+			//scope.Counter(ChannelClosedUnexpectedlyError).Inc(1)
+			//logger.Error("cadence channel was unexpectedly closed")
 			break
 		}
-		selectSystemTask(scope, signal, ctx, logger)
+		selectSystemTask(signal, ctx)
 	}
 
 	for {
@@ -55,31 +58,33 @@ func SystemWorkflow(ctx workflow.Context) error {
 		if ok := ch.ReceiveAsync(&signal); !ok {
 			break
 		}
-		selectSystemTask(scope, signal, ctx, logger)
+		selectSystemTask(signal, ctx)
 		signalsHandled++
 	}
 
-	logger.Info("completed current set of iterations, continuing as new",
-		zap.Int(logging.TagIterationsUntilContinueAsNew, signalsHandled))
+	//logger.Info("completed current set of iterations, continuing as new",
+	//	zap.Int(logging.TagIterationsUntilContinueAsNew, signalsHandled))
 
-	ctx = workflow.WithExecutionStartToCloseTimeout(ctx, WorkflowStartToCloseTimeout)
-	ctx = workflow.WithWorkflowTaskStartToCloseTimeout(ctx, DecisionTaskStartToCloseTimeout)
-	return workflow.NewContinueAsNewError(ctx, SystemWorkflowFnName)
+	ctx = workflow.WithExecutionStartToCloseTimeout(ctx, workflowStartToCloseTimeout)
+	ctx = workflow.WithWorkflowTaskStartToCloseTimeout(ctx, decisionTaskStartToCloseTimeout)
+	return workflow.NewContinueAsNewError(ctx, systemWorkflowFnName)
 }
 
-func selectSystemTask(scope tally.Scope, signal signal, ctx workflow.Context, logger *zap.Logger) {
-	scope.Counter(HandledSignalCount).Inc(1)
+func selectSystemTask(signal signal, ctx workflow.Context) {
+	// scope.Counter(HandledSignalCount).Inc(1)
 
 	ao := workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
 		StartToCloseTimeout:    time.Minute,
 		HeartbeatTimeout:       time.Second * 10,
 		RetryPolicy: &cadence.RetryPolicy{
-			InitialInterval:          time.Second,
-			BackoffCoefficient:       2.0,
-			MaximumInterval:          time.Minute,
-			ExpirationInterval:       time.Hour * 24 * 30,
-			MaximumAttempts:          0,
+			InitialInterval:    time.Second,
+			BackoffCoefficient: 2.0,
+			MaximumInterval:    time.Minute,
+			// TODO: I need to think through what this should really be
+			ExpirationInterval: time.Hour * 24 * 30,
+			MaximumAttempts:    0,
+			// TODO: some types of non-retryable errors will need to be added here - maybe I map them to hardcoded string
 			NonRetriableErrorReasons: []string{},
 		},
 	}
@@ -89,24 +94,24 @@ func selectSystemTask(scope tally.Scope, signal signal, ctx workflow.Context, lo
 	case archivalRequest:
 		if err := workflow.ExecuteActivity(
 			actCtx,
-			ArchivalActivityFnName,
+			archivalActivityFnName,
 			*signal.ArchiveRequest,
 		).Get(ctx, nil); err != nil {
-			scope.Counter(ArchivalFailureErr)
-			logger.Error("failed to execute archival activity", zap.Error(err))
+			//scope.Counter(ArchivalFailureErr)
+			//logger.Error("failed to execute archival activity", zap.Error(err))
 		}
 	case backfillRequest:
 		if err := workflow.ExecuteActivity(
 			actCtx,
-			BackfillActivityFnName,
+			backfillActivityFnName,
 			*signal.BackillRequest,
 		).Get(ctx, nil); err != nil {
-			scope.Counter(BackfillFailureErr)
-			logger.Error("failed to backfill", zap.Error(err))
+			//scope.Counter(BackfillFailureErr)
+			//logger.Error("failed to backfill", zap.Error(err))
 		}
 	default:
-		scope.Counter(UnknownSignalTypeErr).Inc(1)
-		logger.Error("received unknown request type")
+		//scope.Counter(UnknownSignalTypeErr).Inc(1)
+		//logger.Error("received unknown request type")
 	}
 }
 

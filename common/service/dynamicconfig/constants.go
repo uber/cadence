@@ -163,6 +163,7 @@ var keys = map[Key]string{
 	WorkerESProcessorBulkActions:             "worker.ESProcessorBulkActions",
 	WorkerESProcessorBulkSize:                "worker.ESProcessorBulkSize",
 	WorkerESProcessorFlushInterval:           "worker.ESProcessorFlushInterval",
+	EnableArchivalCompression:                "worker.EnableArchivalCompression",
 }
 
 const (
@@ -409,6 +410,8 @@ const (
 	WorkerESProcessorBulkSize
 	// WorkerESProcessorFlushInterval is flush interval for esProcessor
 	WorkerESProcessorFlushInterval
+	// EnableArchivalCompression indicates whether blobs are compressed before they are archived
+	EnableArchivalCompression
 
 	// lastKeyForTest must be the last one in this const group for testing purpose
 	lastKeyForTest
