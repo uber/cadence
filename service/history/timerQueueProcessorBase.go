@@ -627,6 +627,7 @@ func (t *timerQueueProcessorBase) processArchiveHistoryEvent(task *persistence.T
 		WorkflowID:       task.WorkflowID,
 		RunID:            task.RunID,
 		LastWriteVersion: task.Version,
+		IsEventsV2:       msBuilder.GetEventStoreVersion() == persistence.EventStoreVersionV2,
 	})
 }
 

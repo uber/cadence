@@ -30,11 +30,6 @@ import (
 	"strings"
 )
 
-const (
-	// HistoryBlobKeyExt is the blob key extension on all history blobs
-	HistoryBlobKeyExt = "history"
-)
-
 type (
 	// HistoryBlobHeader is the header attached to all history blobs
 	HistoryBlobHeader struct {
@@ -69,7 +64,7 @@ func NewHistoryBlobKey(domainID, workflowID, runID, pageToken, failoverVersion s
 	workflowIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(workflowID)))
 	runIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(runID)))
 	combinedHash := strings.Join([]string{domainIDHash, workflowIDHash, runIDHash}, "")
-	return blob.NewKey(HistoryBlobKeyExt, combinedHash, pageToken, failoverVersion)
+	return blob.NewKey(historyBlobKeyExt, combinedHash, pageToken, failoverVersion)
 }
 
 // ConvertHeaderToTags converts header into metadata tags for blob

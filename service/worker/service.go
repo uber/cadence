@@ -112,6 +112,8 @@ func (s *Service) Start() {
 	pConfig.SetMaxQPS(pConfig.DefaultStore, s.config.ReplicationCfg.PersistenceMaxQPS())
 	pFactory := persistencefactory.New(&pConfig, s.params.ClusterMetadata.GetCurrentClusterName(), s.metricsClient, s.logger)
 
+	// TODO: @dandrew consider bootstraping a runtime context that is a bucket of everything worker need from config
+
 	if base.GetClusterMetadata().IsGlobalDomainEnabled() {
 		s.startReplicator(base, pFactory)
 	}

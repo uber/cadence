@@ -149,6 +149,7 @@ func NewEngineWithShardContext(
 	}
 	shard = shardWrapper
 	logger := shard.GetLogger()
+	metricsClient := shard.GetMetricsClient()
 	executionManager := shard.GetExecutionManager()
 	historyManager := shard.GetHistoryManager()
 	historyV2Manager := shard.GetHistoryV2Manager()
@@ -164,10 +165,10 @@ func NewEngineWithShardContext(
 		logger: logger.WithFields(bark.Fields{
 			logging.TagWorkflowComponent: logging.TagValueHistoryEngineComponent,
 		}),
-		metricsClient:        shard.GetMetricsClient(),
+		metricsClient:        metricsClient,
 		historyEventNotifier: historyEventNotifier,
 		config:               config,
-		archivalClient:       sysworkflow.NewArchivalClient(publicClient, shard.GetConfig().NumSysWorkflows),
+		archivalClient:       sysworkflow.NewArchivalClient(publicClient, shard.GetConfig().NumSysWorkflows, logger, metricsClient),
 	}
 
 	txProcessor := newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, visibilityProducer, matching, historyClient, logger)

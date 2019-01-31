@@ -22,32 +22,25 @@ package sysworkflow
 
 import (
 	"context"
-	"fmt"
+	"github.com/uber-common/bark"
+	"github.com/uber/cadence/client/public"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/logging"
 	"go.uber.org/cadence"
+	"go.uber.org/cadence/.gen/go/shared"
+	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/workflow"
 	"time"
 )
 
-const (
-	signalsUntilContinueAsNew = 1000
-	archivalActivityFnName    = "ArchivalActivity"
-	backfillActivityFnName    = "BackfillActivity"
-)
-
 // SystemWorkflow is the system workflow code
+// TODO: I should be able to have bark logger and metrics client on this context...
 func SystemWorkflow(ctx workflow.Context) error {
-	//id := workflow.GetInfo(ctx).WorkflowExecution.ID
-	//logger := workflow.GetLogger(ctx)
-	//scope := workflow.GetMetricsScope(ctx).Tagged(map[string]string{SystemWorkflowIDTag: id})
 	ch := workflow.GetSignalChannel(ctx, signalName)
-
-	//logger.Info("started new system workflow")
 	signalsHandled := 0
 	for ; signalsHandled < signalsUntilContinueAsNew; signalsHandled++ {
 		var signal signal
 		if more := ch.Receive(ctx, &signal); !more {
-			//scope.Counter(ChannelClosedUnexpectedlyError).Inc(1)
-			//logger.Error("cadence channel was unexpectedly closed")
 			break
 		}
 		selectSystemTask(signal, ctx)
@@ -61,18 +54,12 @@ func SystemWorkflow(ctx workflow.Context) error {
 		selectSystemTask(signal, ctx)
 		signalsHandled++
 	}
-
-	//logger.Info("completed current set of iterations, continuing as new",
-	//	zap.Int(logging.TagIterationsUntilContinueAsNew, signalsHandled))
-
 	ctx = workflow.WithExecutionStartToCloseTimeout(ctx, workflowStartToCloseTimeout)
 	ctx = workflow.WithWorkflowTaskStartToCloseTimeout(ctx, decisionTaskStartToCloseTimeout)
 	return workflow.NewContinueAsNewError(ctx, systemWorkflowFnName)
 }
 
 func selectSystemTask(signal signal, ctx workflow.Context) {
-	// scope.Counter(HandledSignalCount).Inc(1)
-
 	ao := workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
 		StartToCloseTimeout:    time.Minute,
@@ -97,8 +84,6 @@ func selectSystemTask(signal signal, ctx workflow.Context) {
 			archivalActivityFnName,
 			*signal.ArchiveRequest,
 		).Get(ctx, nil); err != nil {
-			//scope.Counter(ArchivalFailureErr)
-			//logger.Error("failed to execute archival activity", zap.Error(err))
 		}
 	case backfillRequest:
 		if err := workflow.ExecuteActivity(
@@ -106,21 +91,56 @@ func selectSystemTask(signal signal, ctx workflow.Context) {
 			backfillActivityFnName,
 			*signal.BackillRequest,
 		).Get(ctx, nil); err != nil {
-			//scope.Counter(BackfillFailureErr)
-			//logger.Error("failed to backfill", zap.Error(err))
 		}
 	default:
-		//scope.Counter(UnknownSignalTypeErr).Inc(1)
-		//logger.Error("received unknown request type")
 	}
 }
 
 // ArchivalActivity is the archival activity code
 func ArchivalActivity(ctx context.Context, request ArchiveRequest) error {
-	fmt.Printf("called archival activity: %+v\n", request)
-	// TODO: write this activity
+	logger := ctx.Value(loggerKey).(bark.Logger)
+	workflowInfo := activity.GetInfo(ctx)
+	logger = logger.WithFields(bark.Fields{
+		logging.TagWorkflowComponent:       logging.TagValueArchivalSystemWorkflowComponent,
+		logging.TagArchiveIsEventsV2: request.IsEventsV2,
+		logging.TagArchiveDomainID:         request.DomainID,
+		logging.TagArchiveWorkflowID:       request.WorkflowID,
+		logging.TagArchiveRunID:            request.RunID,
+		logging.TagArchiveLastWriteVersion: request.LastWriteVersion,
+		logging.TagWorkflowExecutionID:     workflowInfo.WorkflowExecution.ID,
+		logging.TagWorkflowRunID:           workflowInfo.WorkflowExecution.RunID,
+		logging.TagArchivalRetryAttempt:    workflowInfo.Attempt,
+	})
+	logger.Info("andrew test log: archival activity called")
+
+
+
+
+	// read history, doing checks along the way
+	// generate a blob
+	// upload history
+	// do delete also with checks
 	return nil
 }
+
+func isExecutionClosed(
+	ctx context.Context,
+	publicClient public.Client,
+	domain string,
+	execution shared.WorkflowExecution,
+) (bool, error) {
+	request := &shared.DescribeWorkflowExecutionRequest{
+		Domain: common.StringPtr(domain),
+		Execution: &execution,
+	}
+	resp, err := publicClient.DescribeWorkflowExecution(ctx, request)
+	if err != nil {
+		return false, err
+	}
+	return resp.WorkflowExecutionInfo.CloseStatus != nil, nil
+}
+
+// next write a function which will read history using public client
 
 // BackfillActivity is the backfill activity code
 func BackfillActivity(_ context.Context, _ BackfillRequest) error {

@@ -46,19 +46,6 @@ type (
 	}
 )
 
-type contextKey int
-
-const (
-	metricsKey contextKey = iota
-	loggerKey
-	clusterMetadataKey
-	historyManagerKey
-	historyV2ManagerKey
-	blobstoreKey
-	domainCacheKey
-	configKey
-)
-
 func init() {
 	workflow.RegisterWithOptions(SystemWorkflow, workflow.RegisterOptions{Name: systemWorkflowFnName})
 	activity.RegisterWithOptions(ArchivalActivity, activity.RegisterOptions{Name: archivalActivityFnName})
@@ -78,6 +65,7 @@ func NewSysWorker(
 	config *Config) *SysWorker {
 
 	actCtx := context.Background()
+	actCtx = context.WithValue(actCtx, publicClientKey, publicClient)
 	actCtx = context.WithValue(actCtx, metricsKey, metrics)
 	actCtx = context.WithValue(actCtx, loggerKey, logger)
 	actCtx = context.WithValue(actCtx, clusterMetadataKey, clusterMetadata)
