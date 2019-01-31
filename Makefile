@@ -21,7 +21,7 @@ THRIFTRW_SRCS = \
   idl/github.com/uber/cadence/admin.thrift \
 
 PROGS = cadence
-TEST_ARG ?= -race -v -timeout 40m
+TEST_ARG ?= -race -v -timeout 30m
 BUILD := ./build
 TOOLS_CMD_ROOT=./cmd/tools
 INTEG_TEST_ROOT=./host
