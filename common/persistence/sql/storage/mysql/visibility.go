@@ -170,8 +170,10 @@ func (mdb *DB) SelectFromVisibility(filter *sqldb.VisibilityFilter) ([]sqldb.Vis
 	}
 	for i := range rows {
 		rows[i].StartTime = mdb.converter.FromMySQLDateTime(rows[i].StartTime)
-		closeTime := mdb.converter.FromMySQLDateTime(*rows[i].CloseTime)
-		rows[i].CloseTime = &closeTime
+		if rows[i].CloseTime != nil {
+			closeTime := mdb.converter.FromMySQLDateTime(*rows[i].CloseTime)
+			rows[i].CloseTime = &closeTime
+		}
 	}
 	return rows, err
 }
