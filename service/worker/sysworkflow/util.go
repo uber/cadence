@@ -56,15 +56,15 @@ type (
 )
 
 // NewHistoryBlobKey returns a key for history blob
-func NewHistoryBlobKey(domainID, workflowID, runID, pageToken, failoverVersion string) (blob.Key, error) {
-	if len(domainID) == 0 || len(workflowID) == 0 || len(runID) == 0 || len(pageToken) == 0 || len(failoverVersion) == 0 {
+func NewHistoryBlobKey(domainID, workflowID, runID, pageToken, lastEventFailoverVersion string) (blob.Key, error) {
+	if len(domainID) == 0 || len(workflowID) == 0 || len(runID) == 0 || len(pageToken) == 0 || len(lastEventFailoverVersion) == 0 {
 		return nil, errors.New("all inputs required to be non-empty")
 	}
 	domainIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(domainID)))
 	workflowIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(workflowID)))
 	runIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(runID)))
 	combinedHash := strings.Join([]string{domainIDHash, workflowIDHash, runIDHash}, "")
-	return blob.NewKey(historyBlobKeyExt, combinedHash, pageToken, failoverVersion)
+	return blob.NewKey(historyBlobKeyExt, combinedHash, pageToken, lastEventFailoverVersion)
 }
 
 // ConvertHeaderToTags converts header into metadata tags for blob

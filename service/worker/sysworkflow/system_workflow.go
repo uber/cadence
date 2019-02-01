@@ -123,7 +123,7 @@ func ArchivalActivity(ctx context.Context, request ArchiveRequest) error {
 	return nil
 }
 
-func isExecutionClosed(
+func executionClosed(
 	ctx context.Context,
 	publicClient public.Client,
 	domain string,
@@ -140,7 +140,25 @@ func isExecutionClosed(
 	return resp.WorkflowExecutionInfo.CloseStatus != nil, nil
 }
 
-// next write a function which will read history using public client
+func buildHistoryBlob(
+	ctx context.Context,
+	publicClient public.Client,
+	domain string,
+	execution shared.WorkflowExecution,
+	nextPageToken []byte,
+	expectedLastWriteVersion int64,
+	sizeLimit int,
+) (*HistoryBlob, error) {
+	request := &shared.GetWorkflowExecutionHistoryRequest{
+		Domain: common.StringPtr(domain),
+		Execution: &execution,
+		NextPageToken: nextPageToken,
+	}
+	resp, err := publicClient.GetWorkflowExecutionHistory(ctx, request)
+	if err != nil {
+
+	}
+}
 
 // BackfillActivity is the backfill activity code
 func BackfillActivity(_ context.Context, _ BackfillRequest) error {
