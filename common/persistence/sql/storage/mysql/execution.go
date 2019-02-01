@@ -480,6 +480,8 @@ func (mdb *DB) InsertIntoTimerTasks(rows []sqldb.TimerTasksRow) (sql.Result, err
 // SelectFromTimerTasks reads one or more rows from timer_tasks table
 func (mdb *DB) SelectFromTimerTasks(filter *sqldb.TimerTasksFilter) ([]sqldb.TimerTasksRow, error) {
 	var rows []sqldb.TimerTasksRow
+	*filter.MinVisibilityTimestamp = mdb.converter.ToMySQLDateTime(*filter.MinVisibilityTimestamp)
+	*filter.MaxVisibilityTimestamp = mdb.converter.ToMySQLDateTime(*filter.MaxVisibilityTimestamp)
 	err := mdb.conn.Select(&rows, getTimerTasksQry, filter.ShardID, *filter.MinVisibilityTimestamp,
 		filter.TaskID, *filter.MinVisibilityTimestamp, *filter.MaxVisibilityTimestamp, *filter.PageSize)
 	if err != nil {
@@ -494,8 +496,11 @@ func (mdb *DB) SelectFromTimerTasks(filter *sqldb.TimerTasksFilter) ([]sqldb.Tim
 // DeleteFromTimerTasks deletes one or more rows from timer_tasks table
 func (mdb *DB) DeleteFromTimerTasks(filter *sqldb.TimerTasksFilter) (sql.Result, error) {
 	if filter.MinVisibilityTimestamp != nil {
+		*filter.MinVisibilityTimestamp = mdb.converter.ToMySQLDateTime(*filter.MinVisibilityTimestamp)
+		*filter.MaxVisibilityTimestamp = mdb.converter.ToMySQLDateTime(*filter.MaxVisibilityTimestamp)
 		return mdb.conn.Exec(rangeDeleteTimerTaskQry, filter.ShardID, *filter.MinVisibilityTimestamp, *filter.MaxVisibilityTimestamp)
 	}
+	*filter.VisibilityTimestamp = mdb.converter.ToMySQLDateTime(*filter.VisibilityTimestamp)
 	return mdb.conn.Exec(deleteTimerTaskQry, filter.ShardID, *filter.VisibilityTimestamp, filter.TaskID)
 }
 

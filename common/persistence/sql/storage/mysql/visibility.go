@@ -98,6 +98,12 @@ func (mdb *DB) UpdateVisibility(row *sqldb.VisibilityRow) (sql.Result, error) {
 func (mdb *DB) SelectFromVisibility(filter *sqldb.VisibilityFilter) ([]sqldb.VisibilityRow, error) {
 	var err error
 	var rows []sqldb.VisibilityRow
+	if filter.MinStartTime != nil {
+		*filter.MinStartTime = mdb.converter.ToMySQLDateTime(*filter.MinStartTime)
+	}
+	if filter.MaxStartTime != nil {
+		*filter.MaxStartTime = mdb.converter.ToMySQLDateTime(*filter.MaxStartTime)
+	}
 	switch {
 	case filter.MinStartTime == nil && filter.RunID != nil && filter.Closed:
 		var row sqldb.VisibilityRow
