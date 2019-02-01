@@ -4024,10 +4024,11 @@ func resetActivityInfoMap(activityInfos []*p.InternalActivityInfo) (map[int64]ma
 		if a.StartedEvent != nil && a.ScheduledEvent.Encoding != a.StartedEvent.Encoding {
 			return nil, p.NewHistorySerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", a.ScheduledEvent.Encoding, a.StartedEvent.Encoding))
 		}
-		scheduledEventData, _ := p.FromDataBlob(a.ScheduledEvent)
+		scheduledEventData, encoding := p.FromDataBlob(a.ScheduledEvent)
 		startedEventData, _ := p.FromDataBlob(a.StartedEvent)
 		aInfo := make(map[string]interface{})
 		aInfo["version"] = a.Version
+		aInfo["event_data_encoding"] = encoding
 		aInfo["schedule_id"] = a.ScheduleID
 		aInfo["scheduled_event_batch_id"] = a.ScheduledEventBatchID
 		aInfo["scheduled_event"] = scheduledEventData
@@ -4056,7 +4057,6 @@ func resetActivityInfoMap(activityInfos []*p.InternalActivityInfo) (map[int64]ma
 		aInfo["expiration_time"] = a.ExpirationTime
 		aInfo["max_attempts"] = a.MaximumAttempts
 		aInfo["non_retriable_errors"] = a.NonRetriableErrors
-		aInfo["event_data_encoding"] = a.ScheduledEvent.Encoding
 
 		aMap[a.ScheduleID] = aInfo
 	}
