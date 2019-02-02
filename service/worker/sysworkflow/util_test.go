@@ -46,7 +46,7 @@ func (s *UtilSuite) TestNewHistoryBlobKey() {
 		workflowID           string
 		runID                string
 		pageToken            string
-		closeFailoverVersion string
+		closeFailoverVersion int64
 		expectError          bool
 		expectBuiltKey       string
 	}{
@@ -59,9 +59,9 @@ func (s *UtilSuite) TestNewHistoryBlobKey() {
 			workflowID:           "testWorkflowID",
 			runID:                "testRunID",
 			pageToken:            "testPageToken",
-			closeFailoverVersion: "testCloseFailoverVersion",
+			closeFailoverVersion: 9,
 			expectError:          false,
-			expectBuiltKey:       "17971674567288329890367046253745284795510285995943906173973_testPageToken_testCloseFailoverVersion.history",
+			expectBuiltKey:       "17971674567288329890367046253745284795510285995943906173973_testPageToken_9.history",
 		},
 	}
 

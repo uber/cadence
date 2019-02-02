@@ -42,7 +42,6 @@ const (
 	blobstoreKey
 	domainCacheKey
 	configKey
-	publicClientKey
 )
 
 const (

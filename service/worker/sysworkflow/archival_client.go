@@ -24,9 +24,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/uber-common/bark"
 	"github.com/uber/cadence/client/public"
-	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"go.uber.org/cadence/client"
 	"math/rand"
@@ -55,8 +53,6 @@ type (
 	archivalClient struct {
 		cadenceClient client.Client
 		numSWFn       dynamicconfig.IntPropertyFn
-		logger        bark.Logger
-		metricsClient metrics.Client
 	}
 
 	signal struct {
@@ -70,14 +66,10 @@ type (
 func NewArchivalClient(
 	publicClient public.Client,
 	numSWFn dynamicconfig.IntPropertyFn,
-	logger bark.Logger,
-	metricsClient metrics.Client,
 ) ArchivalClient {
 	return &archivalClient{
 		cadenceClient: client.NewClient(publicClient, SystemDomainName, &client.Options{}),
 		numSWFn:       numSWFn,
-		logger:        logger,
-		metricsClient: metricsClient,
 	}
 }
 
@@ -95,7 +87,6 @@ func (c *archivalClient) Archive(request *ArchiveRequest) error {
 		RequestType:    archivalRequest,
 		ArchiveRequest: request,
 	}
-	// TODO: I should be passing logger and metrics to workflow here
 	_, err := c.cadenceClient.SignalWithStartWorkflow(
 		context.Background(),
 		workflowID,

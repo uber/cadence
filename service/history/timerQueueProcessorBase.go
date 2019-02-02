@@ -635,7 +635,19 @@ func (t *timerQueueProcessorBase) processArchiveHistoryEvent(task *persistence.T
 	if err != nil {
 		return err
 	}
-	return t.historyService.archivalClient.Archive(req)
+	if err := t.historyService.archivalClient.Archive(req); err != nil {
+		t.logger.WithFields(bark.Fields{
+			logging.TagHistoryShardID:      t.shard.GetShardID(),
+			logging.TagTaskID:              task.GetTaskID(),
+			logging.TagTaskType:            task.GetTaskType(),
+			logging.TagDomainID:            task.DomainID,
+			logging.TagWorkflowExecutionID: task.WorkflowID,
+			logging.TagWorkflowRunID:       task.RunID,
+			logging.TagErr:                 err,
+		}).Error("failed to initiate archival")
+		return err
+	}
+	return nil
 }
 
 func (t *timerQueueProcessorBase) deleteWorkflowExecution(task *persistence.TimerTaskInfo) error {

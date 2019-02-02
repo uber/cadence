@@ -184,6 +184,7 @@ func CreateKafkaOperationRetryPolicy() backoff.RetryPolicy {
 }
 
 // CreateBlobstoreClientRetryPolicy creates a retry policy for blobstore client
+// TODO: looks like blobstore retry is not currently being used at all?
 func CreateBlobstoreClientRetryPolicy() backoff.RetryPolicy {
 	policy := backoff.NewExponentialRetryPolicy(retryBlobstoreClientInitialInterval)
 	policy.SetMaximumInterval(retryBlobstoreClientMaxInterval)

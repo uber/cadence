@@ -168,7 +168,7 @@ func NewEngineWithShardContext(
 		metricsClient:        metricsClient,
 		historyEventNotifier: historyEventNotifier,
 		config:               config,
-		archivalClient:       sysworkflow.NewArchivalClient(publicClient, shard.GetConfig().NumSysWorkflows, logger, metricsClient),
+		archivalClient:       sysworkflow.NewArchivalClient(publicClient, shard.GetConfig().NumSysWorkflows),
 	}
 
 	txProcessor := newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, visibilityProducer, matching, historyClient, logger)

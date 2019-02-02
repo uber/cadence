@@ -38,7 +38,7 @@ import (
 type (
 	// Config for SysWorker
 	Config struct {
-		EnableArchivalCompression dynamicconfig.BoolPropertyFn
+		EnableArchivalCompression dynamicconfig.BoolPropertyFnWithDomainFilter
 		HistoryPageSize           dynamicconfig.IntPropertyFnWithDomainFilter
 		TargetArchivalBlobSize    dynamicconfig.IntPropertyFnWithDomainFilter
 	}
@@ -46,6 +46,12 @@ type (
 	SysWorker struct {
 		worker worker.Worker
 	}
+)
+
+// these globals exist as a work around because no primitive exists to pass such objects to workflow code
+var (
+	globalLogger        bark.Logger
+	globalMetricsClient metrics.Client
 )
 
 func init() {
@@ -64,10 +70,13 @@ func NewSysWorker(
 	historyV2Manager persistence.HistoryV2Manager,
 	blobstore blobstore.Client,
 	domainCache cache.DomainCache,
-	config *Config) *SysWorker {
+	config *Config,
+) *SysWorker {
+
+	globalLogger = logger
+	globalMetricsClient = metrics
 
 	actCtx := context.Background()
-	actCtx = context.WithValue(actCtx, publicClientKey, publicClient)
 	actCtx = context.WithValue(actCtx, metricsKey, metrics)
 	actCtx = context.WithValue(actCtx, loggerKey, logger)
 	actCtx = context.WithValue(actCtx, clusterMetadataKey, clusterMetadata)

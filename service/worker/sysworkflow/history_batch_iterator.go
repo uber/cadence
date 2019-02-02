@@ -21,7 +21,7 @@
 package sysworkflow
 
 import (
-	"code.uber.internal/devexp/cadence-tools/go-build/.go/src/gb2/src/github.com/pkg/errors"
+	"errors"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
@@ -29,6 +29,7 @@ import (
 )
 
 type (
+	// HistoryBatchIterator is used to iterate over batches of history from the persistence layer
 	HistoryBatchIterator interface {
 		Next() (*HistoryBatch, error)
 		HasNext() bool
@@ -49,12 +50,14 @@ type (
 		domain            string // only used for dynamic config lookup
 	}
 
+	// HistoryBatch contains a page of history events and an estimate of its serialized size
 	HistoryBatch struct {
 		events []*shared.HistoryEvent
 		size   int
 	}
 )
 
+// NewHistoryBatchIterator returns a new HistoryBatchIterator
 func NewHistoryBatchIterator(
 	historyManager persistence.HistoryManager,
 	historyV2Manager persistence.HistoryV2Manager,
@@ -82,7 +85,7 @@ func NewHistoryBatchIterator(
 	}
 }
 
-// Next returns the next item and advances iterator
+// Next returns the next item and advances iterator. Returns error if iterator is empty or if history could not be read.
 func (i *historyBatchIterator) Next() (*HistoryBatch, error) {
 	if !i.HasNext() {
 		return nil, errors.New("iterator is empty")

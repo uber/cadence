@@ -29,6 +29,7 @@ import (
 )
 
 type (
+	// HistoryBlobIterator is used to get history blobs
 	HistoryBlobIterator interface {
 		Next() (*HistoryBlob, error)
 		HasNext() bool
@@ -45,6 +46,7 @@ type (
 	}
 )
 
+// NewHistoryBlobIterator returns a new HistoryBlobIterator
 func NewHistoryBlobIterator(
 	historyManager persistence.HistoryManager,
 	historyV2Manager persistence.HistoryV2Manager,
@@ -73,6 +75,7 @@ func NewHistoryBlobIterator(
 	}
 }
 
+// Next returns history blob and advances iterator. Returns error is iterator is empty, or if history could not be fetched.
 func (i *historyBlobIterator) Next() (*HistoryBlob, error) {
 	if !i.HasNext() {
 		return nil, errors.New("iterator is empty")
@@ -122,6 +125,7 @@ func (i *historyBlobIterator) Next() (*HistoryBlob, error) {
 	}, nil
 }
 
+// HasNext returns true if there are more items to iterate over
 func (i *historyBlobIterator) HasNext() bool {
 	return i.hbItr.HasNext()
 }

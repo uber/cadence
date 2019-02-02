@@ -21,8 +21,8 @@
 package sysworkflow
 
 import (
-	"code.uber.internal/devexp/cadence-server/.tmp/.go/goroot/src/encoding/json"
 	"context"
+	"encoding/json"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
