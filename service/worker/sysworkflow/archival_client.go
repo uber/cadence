@@ -35,11 +35,12 @@ import (
 type (
 	// ArchiveRequest is request to Archive
 	ArchiveRequest struct {
-		DomainID         string
-		WorkflowID       string
-		RunID            string
-		LastWriteVersion int64
-		IsEventsV2 bool
+		DomainID          string
+		WorkflowID        string
+		RunID             string
+		EventStoreVersion int32
+		BranchToken       []byte
+		LastFirstEventID  int64
 	}
 
 	// BackfillRequest is request to Backfill

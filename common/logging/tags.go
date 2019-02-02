@@ -169,7 +169,7 @@ const (
 	TagArchiveWorkflowID         = "archive-workflow-id"
 	TagArchiveRunID              = "archive-run-id"
 	TagArchiveLastWriteVersion   = "archive-last-write-version"
-	TagArchiveIsEventsV2 = "is-events-v2"
+	TagArchiveIsEventsV2         = "is-events-v2"
 	TagArchivalRetryAttempt      = "archival-retry-attempt"
 	TagBucket                    = "bucket"
 	TagFileBlobstoreBlobPath     = "file-blobstore-blob-path"

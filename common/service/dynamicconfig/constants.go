@@ -164,6 +164,8 @@ var keys = map[Key]string{
 	WorkerESProcessorBulkSize:                "worker.ESProcessorBulkSize",
 	WorkerESProcessorFlushInterval:           "worker.ESProcessorFlushInterval",
 	EnableArchivalCompression:                "worker.EnableArchivalCompression",
+	WorkerHistoryPageSize:                    "worker.WorkerHistoryPageSize",
+	WorkerTargetArchivalBlobSize:             "worker.WorkerTargetArchivalBlobSize",
 }
 
 const (
@@ -412,6 +414,10 @@ const (
 	WorkerESProcessorFlushInterval
 	// EnableArchivalCompression indicates whether blobs are compressed before they are archived
 	EnableArchivalCompression
+	// WorkerHistoryPageSize indicates the page size of history fetched from persistence for archival
+	WorkerHistoryPageSize
+	// WorkerTargetArchivalBlobSize indicates the target blob size in bytes for archival, actual blob size may vary
+	WorkerTargetArchivalBlobSize
 
 	// lastKeyForTest must be the last one in this const group for testing purpose
 	lastKeyForTest

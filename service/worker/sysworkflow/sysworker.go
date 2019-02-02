@@ -39,6 +39,8 @@ type (
 	// Config for SysWorker
 	Config struct {
 		EnableArchivalCompression dynamicconfig.BoolPropertyFn
+		HistoryPageSize           dynamicconfig.IntPropertyFnWithDomainFilter
+		TargetArchivalBlobSize    dynamicconfig.IntPropertyFnWithDomainFilter
 	}
 	// SysWorker is the cadence client worker responsible for running system workflows
 	SysWorker struct {

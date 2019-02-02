@@ -622,13 +622,20 @@ func (t *timerQueueProcessorBase) processArchiveHistoryEvent(task *persistence.T
 	} else if !ok {
 		return nil
 	}
-	return t.historyService.archivalClient.Archive(&sysworkflow.ArchiveRequest{
-		DomainID:         task.DomainID,
-		WorkflowID:       task.WorkflowID,
-		RunID:            task.RunID,
-		LastWriteVersion: task.Version,
-		IsEventsV2:       msBuilder.GetEventStoreVersion() == persistence.EventStoreVersionV2,
-	})
+
+	req := &sysworkflow.ArchiveRequest{
+		DomainID:          task.DomainID,
+		WorkflowID:        task.WorkflowID,
+		RunID:             task.RunID,
+		EventStoreVersion: msBuilder.GetEventStoreVersion(),
+		BranchToken:       msBuilder.GetCurrentBranch(),
+		LastFirstEventID:  msBuilder.GetLastFirstEventID(),
+	}
+	err = t.deleteWorkflowExecution(task)
+	if err != nil {
+		return err
+	}
+	return t.historyService.archivalClient.Archive(req)
 }
 
 func (t *timerQueueProcessorBase) deleteWorkflowExecution(task *persistence.TimerTaskInfo) error {

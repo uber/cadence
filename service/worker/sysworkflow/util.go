@@ -39,8 +39,8 @@ type (
 		RunID                *string `json:"run_id,omitempty"`
 		CurrentPageToken     *string `json:"current_page_token,omitempty"`
 		NextPageToken        *string `json:"next_page_token,omitempty"`
-		FirstFailoverVersion *string `json:"first_failover_version,omitempty"`
-		LastFailoverVersion  *string `json:"last_failover_version,omitempty"`
+		FirstFailoverVersion *int64  `json:"first_failover_version,omitempty"`
+		LastFailoverVersion  *int64  `json:"last_failover_version,omitempty"`
 		FirstEventID         *int64  `json:"first_event_id,omitempty"`
 		LastEventID          *int64  `json:"last_event_id,omitempty"`
 		UploadDateTime       *string `json:"upload_date_time,omitempty"`
@@ -56,15 +56,15 @@ type (
 )
 
 // NewHistoryBlobKey returns a key for history blob
-func NewHistoryBlobKey(domainID, workflowID, runID, pageToken, lastEventFailoverVersion string) (blob.Key, error) {
-	if len(domainID) == 0 || len(workflowID) == 0 || len(runID) == 0 || len(pageToken) == 0 || len(lastEventFailoverVersion) == 0 {
+func NewHistoryBlobKey(domainID, workflowID, runID, pageToken string, lastEventFailoverVersion int64) (blob.Key, error) {
+	if len(domainID) == 0 || len(workflowID) == 0 || len(runID) == 0 || len(pageToken) == 0 {
 		return nil, errors.New("all inputs required to be non-empty")
 	}
 	domainIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(domainID)))
 	workflowIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(workflowID)))
 	runIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(runID)))
 	combinedHash := strings.Join([]string{domainIDHash, workflowIDHash, runIDHash}, "")
-	return blob.NewKey(historyBlobKeyExt, combinedHash, pageToken, lastEventFailoverVersion)
+	return blob.NewKey(historyBlobKeyExt, combinedHash, pageToken, fmt.Sprintf("%v", lastEventFailoverVersion))
 }
 
 // ConvertHeaderToTags converts header into metadata tags for blob
