@@ -48,7 +48,10 @@ const (
 	signalName                      = "cadsys-signal-sig"
 	signalsUntilContinueAsNew       = 1000
 	systemWorkflowFnName            = "SystemWorkflow"
-	archivalActivityFnName          = "ArchivalActivity"
+	archivalUploadActivityFnName          = "ArchivalUploadActivity"
+	archivalGarbageCollectActivityFnName = "ArchivalGarbageCollectActivity"
+	archivalDeletePersistenceHistoryFnName = "ArchivalDeletePersistenceHistory"
 	backfillActivityFnName          = "BackfillActivity"
 	historyBlobKeyExt               = "history"
+	archivalUploadActivityNonRetryableErrStr = "ArchivalUploadActivityNonRetryableErr"
 )

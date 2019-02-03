@@ -23,18 +23,18 @@ package sysworkflow
 import (
 	"context"
 	"encoding/json"
-	"github.com/uber-common/bark"
+	"errors"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/blobstore/blob"
-	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/logging"
-	"github.com/uber/cadence/common/persistence"
 	"go.uber.org/cadence"
-	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/workflow"
 	"time"
+)
+
+var (
+	archivalUploadActivityNonRetryableErr = errors.New(archivalUploadActivityNonRetryableErrStr)
+	// TODO: other archival functions will follow the same pattern here...
 )
 
 // SystemWorkflow is the system workflow code
@@ -80,12 +80,12 @@ func selectSystemTask(signal signal, ctx workflow.Context) {
 	actCtx := workflow.WithActivityOptions(ctx, ao)
 	switch signal.RequestType {
 	case archivalRequest:
-		if err := workflow.ExecuteActivity(
-			actCtx,
-			archivalActivityFnName,
-			*signal.ArchiveRequest,
-		).Get(ctx, nil); err != nil {
-		}
+		//if err := workflow.ExecuteActivity(
+		//	actCtx,
+		//	archivalActivityFnName,
+		//	*signal.ArchiveRequest,
+		//).Get(ctx, nil); err != nil {
+		//}
 	case backfillRequest:
 		if err := workflow.ExecuteActivity(
 			actCtx,
@@ -97,52 +97,56 @@ func selectSystemTask(signal signal, ctx workflow.Context) {
 	}
 }
 
-// ArchivalActivity is the archival activity code
-func ArchivalActivity(ctx context.Context, request ArchiveRequest) error {
-
-	// TODO: check if archival is enabled for domain using domain cache
-	logger := ctx.Value(loggerKey).(bark.Logger)
-	workflowInfo := activity.GetInfo(ctx)
-	logger = logger.WithFields(bark.Fields{
-		// TODO: check if I need to add more stuff here...
-		logging.TagWorkflowComponent:    logging.TagValueArchivalSystemWorkflowComponent,
-		logging.TagArchiveIsEventsV2:    request.EventStoreVersion == persistence.EventStoreVersionV2,
-		logging.TagArchiveDomainID:      request.DomainID,
-		logging.TagArchiveWorkflowID:    request.WorkflowID,
-		logging.TagArchiveRunID:         request.RunID,
-		logging.TagWorkflowExecutionID:  workflowInfo.WorkflowExecution.ID,
-		logging.TagWorkflowRunID:        workflowInfo.WorkflowExecution.RunID,
-		logging.TagArchivalRetryAttempt: workflowInfo.Attempt,
-	})
-	domainCache := ctx.Value(domainCacheKey).(cache.DomainCache)
-	entry, err := domainCache.GetDomainByID(request.DomainID)
-	if err != nil {
-		// TODO: it is cases like this that I need to think through retrayble vs non-retryable errors
-		return err
+// ArchivalUploadActivity handles reading history from persistence, generating blobs and uploading blobs.
+// Returned string slice represents the keys of all uploaded blobs.
+// If error is returned it will either be a retryable or non-retryable.
+// All non-retryable errors are mapped to error: archivalUploadActivityNonRetryableErr.
+// ArchivalUploadActivity is idempotent.
+// TODO: think through activity to make sure it truely is idempotent and that failures and retries are handled reasonably
+func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) ([]string, error) {
+	container, ok := ctx.Value(sysWorkerContainerKey).(*SysWorkerContainer)
+	if !ok {
+		return nil, archivalUploadActivityNonRetryableErr
 	}
-
-	// TODO: pull out everything I need in a reasonable order
-	// TODO: consider creating a struct that contains everything needed to read history and passing it to iterators
-	// config := ctx.Value(configKey).(*Config)
-	itr := NewHistoryBlobIterator(
-		ctx.Value(historyManagerKey).(persistence.HistoryManager),
-		ctx.Value(historyV2ManagerKey).(persistence.HistoryV2Manager),
+	domainCache := container.DomainCache
+	clusterMetadata := container.ClusterMetadata
+	domainCacheEntry, err := domainCache.GetDomainByID(request.DomainID)
+	if err != nil {
+		return nil, archivalUploadActivityNonRetryableErr
+	}
+	if !clusterMetadata.IsArchivalEnabled() {
+		// for now if archival is disabled simply abort the activity
+		// a more in depth design meeting is needed to decide the correct way to handle backfilling/pausing archival
+		return nil, archivalUploadActivityNonRetryableErr
+	}
+	if domainCacheEntry.GetConfig().ArchivalStatus != shared.ArchivalStatusEnabled {
+		// for now if archival is disabled simply abort the activity
+		// a more in depth design meeting is needed to decide the correct way to handle backfilling/pausing archival
+		return nil, archivalUploadActivityNonRetryableErr
+	}
+	historyBlobItr := NewHistoryBlobIterator(
+		container.HistoryManager,
+		container.HistoryV2Manager,
 		request.DomainID,
 		request.WorkflowID,
 		request.RunID,
 		request.EventStoreVersion,
 		request.BranchToken,
 		request.LastFirstEventID,
-		ctx.Value(configKey).(*Config),
-		entry.GetInfo().Name,
-	)
+		container.Config,
+		domainCacheEntry.GetInfo().Name,
+		container.ClusterMetadata.GetCurrentClusterName())
 
-	bStore := ctx.Value(blobstoreKey).(blobstore.Client)
-	for itr.HasNext() {
-		historyBlob, err := itr.Next()
+	blobstoreClient := container.Blobstore
+	var uploadedBlobKeys []string
+	bucket := domainCacheEntry.GetConfig().ArchivalBucket
+	for historyBlobItr.HasNext() {
+		historyBlob, err := historyBlobItr.Next()
 		if err != nil {
-			// TODO: also need to think through retries here...
-			return err
+			if common.IsPersistenceTransientError(err) {
+				return uploadedBlobKeys, err
+			}
+			return uploadedBlobKeys, archivalUploadActivityNonRetryableErr
 		}
 		key, err := NewHistoryBlobKey(
 			request.DomainID,
@@ -152,42 +156,54 @@ func ArchivalActivity(ctx context.Context, request ArchiveRequest) error {
 			*historyBlob.Header.LastFailoverVersion,
 		)
 		if err != nil {
-			// TODO: think through retryable error here
-			return err
+			return nil, archivalUploadActivityNonRetryableErr
+		}
+		exists, err := blobstoreClient.Exists(ctx, bucket, key)
+		if err != nil {
+			if common.IsBlobstoreTransientError(err) {
+				return uploadedBlobKeys, err
+			}
+			return uploadedBlobKeys, archivalUploadActivityNonRetryableErr
+		}
+		if exists {
+			continue
 		}
 
 		body, err := json.Marshal(historyBlob)
 		if err != nil {
-			// TODO: think through retryable errors here
-			return err
+			return nil, archivalUploadActivityNonRetryableErr
 		}
 		tags, err := ConvertHeaderToTags(historyBlob.Header)
 		if err != nil {
-			return err
+			return nil, archivalUploadActivityNonRetryableErr
 		}
 		unwrappedBlob := blob.NewBlob(body, tags)
 		blob, err := blob.Wrap(unwrappedBlob, blob.JSONEncoded(), blob.GzipCompressed())
 		if err != nil {
-			return err
+			return nil, archivalUploadActivityNonRetryableErr
 		}
-
-		// TODO: make sure I am plumbing through the correct blobstore so that it has retries and timeouts out of the box
-		if err := bStore.Upload(ctx, entry.GetConfig().ArchivalBucket, key, blob); err != nil {
-			return err
+		if err := blobstoreClient.Upload(ctx, bucket, key, blob); err != nil {
+			if common.IsBlobstoreTransientError(err) {
+				return uploadedBlobKeys, err
+			}
+			return uploadedBlobKeys, archivalUploadActivityNonRetryableErr
 		}
-
-		// TODO: if at anypoint we encounter a non-retryable error we should clean up everything that we have uploaded to blobstore already, so workflow needs to keep some additional state
 	}
+	return uploadedBlobKeys, nil
+}
 
+func ArchivalGarbageCollectActivity(ctx context.Context, blobsToDelete []string) error {
+	return nil
+}
+
+func ArchivalDeletePersistenceHistory(ctx context.Context, request ArchiveRequest) error {
+/**
 	// once once we get here can we delete the history
 	if request.EventStoreVersion == persistence.EventStoreVersionV2 {
-		// TODO: consider if I want to do type cast assertions or actually check their success - I don't think I need to assert because a workflow panic is fine in this case
-		historyV2Manager := ctx.Value(historyV2ManagerKey).(persistence.HistoryV2Manager)
-
-		// TODO: figuring out when this can be retried is tricky
-		return persistence.DeleteWorkflowExecutionHistoryV2(historyV2Manager, request.BranchToken, logger)
+		if err := persistence.DeleteWorkflowExecutionHistoryV2(container.HistoryV2Manager, request.BranchToken, container.Logger); err != nil {
+			return nil, err
+		}
 	}
-	historyManager := ctx.Value(historyManagerKey).(persistence.HistoryManager)
 	deleteHistoryReq := &persistence.DeleteWorkflowExecutionHistoryRequest{
 		DomainID: request.DomainID,
 		Execution: shared.WorkflowExecution{
@@ -195,11 +211,12 @@ func ArchivalActivity(ctx context.Context, request ArchiveRequest) error {
 			RunId:      common.StringPtr(request.RunID),
 		},
 	}
-	return historyManager.DeleteWorkflowExecutionHistory(deleteHistoryReq)
-
-	// TODO: make sure I am logging and emitting metrics everywhere correctly in activity and in workflow
-	logger.Info("andrew test log: archival activity called")
-	return nil
+	if err := container.HistoryManager.DeleteWorkflowExecutionHistory(deleteHistoryReq); err != nil {
+		return nil, err
+	}
+	return nil, nil
+ */
+ return nil
 }
 
 // BackfillActivity is the backfill activity code

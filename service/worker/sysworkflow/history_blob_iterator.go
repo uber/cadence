@@ -29,6 +29,10 @@ import (
 	"time"
 )
 
+var (
+	iteratorEmptyErr = errors.New("iterator is empty")
+)
+
 type (
 	// HistoryBlobIterator is used to get history blobs
 	HistoryBlobIterator interface {
@@ -87,7 +91,7 @@ func NewHistoryBlobIterator(
 // Next returns history blob and advances iterator. Returns error is iterator is empty, or if history could not be fetched.
 func (i *historyBlobIterator) Next() (*HistoryBlob, error) {
 	if !i.HasNext() {
-		return nil, errors.New("iterator is empty")
+		return nil, iteratorEmptyErr
 	}
 	var events []*shared.HistoryEvent
 	var size int

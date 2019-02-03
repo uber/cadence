@@ -21,7 +21,6 @@
 package sysworkflow
 
 import (
-	"errors"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
@@ -88,7 +87,7 @@ func NewHistoryBatchIterator(
 // Next returns the next item and advances iterator. Returns error if iterator is empty or if history could not be read.
 func (i *historyBatchIterator) Next() (*HistoryBatch, error) {
 	if !i.HasNext() {
-		return nil, errors.New("iterator is empty")
+		return nil, iteratorEmptyErr
 	}
 	batch, nextPageToken, err := i.readHistory()
 	if err != nil {

@@ -49,15 +49,15 @@ type (
 
 	// SysWorkerContainer contains everything needed to bootstrap SysWorker and all hosted system workflows
 	SysWorkerContainer struct {
-		publicClient     public.Client
-		metricsClient          metrics.Client
-		logger           bark.Logger
-		clusterMetadata  cluster.Metadata
-		historyManager   persistence.HistoryManager
-		historyV2Manager persistence.HistoryV2Manager
-		blobstore        blobstore.Client
-		domainCache      cache.DomainCache
-		config           *Config
+		PublicClient     public.Client
+		MetricsClient          metrics.Client
+		Logger           bark.Logger
+		ClusterMetadata  cluster.Metadata
+		HistoryManager   persistence.HistoryManager
+		HistoryV2Manager persistence.HistoryV2Manager
+		Blobstore        blobstore.Client
+		DomainCache      cache.DomainCache
+		Config           *Config
 	}
 
 	// Config for SysWorker
@@ -76,23 +76,25 @@ var (
 
 func init() {
 	workflow.RegisterWithOptions(SystemWorkflow, workflow.RegisterOptions{Name: systemWorkflowFnName})
-	activity.RegisterWithOptions(ArchivalActivity, activity.RegisterOptions{Name: archivalActivityFnName})
+	activity.RegisterWithOptions(ArchivalUploadActivity, activity.RegisterOptions{Name: archivalUploadActivityFnName})
+	activity.RegisterWithOptions(ArchivalGarbageCollectActivity, activity.RegisterOptions{Name: archivalGarbageCollectActivityFnName})
+	activity.RegisterWithOptions(ArchivalDeletePersistenceHistory, activity.RegisterOptions{Name: archivalDeletePersistenceHistoryFnName})
 	activity.RegisterWithOptions(BackfillActivity, activity.RegisterOptions{Name: backfillActivityFnName})
 }
 
 // NewSysWorker returns a new SysWorker
 func NewSysWorker(container *SysWorkerContainer) SysWorker {
-	logger := container.logger.WithFields(bark.Fields{
+	logger := container.Logger.WithFields(bark.Fields{
 		logging.TagWorkflowComponent: logging.TagValueArchivalSystemWorkflowComponent,
 	})
 	globalLogger = logger
-	globalMetricsClient = container.metricsClient
+	globalMetricsClient = container.MetricsClient
 	actCtx := context.WithValue(context.Background(), sysWorkerContainerKey, container)
 	wo := worker.Options{
 		BackgroundActivityContext: actCtx,
 	}
 	return &sysworker{
-		worker: worker.New(container.publicClient, SystemDomainName, decisionTaskList, wo),
+		worker: worker.New(container.PublicClient, SystemDomainName, decisionTaskList, wo),
 	}
 }
 

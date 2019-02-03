@@ -205,16 +205,19 @@ func (s *Service) startSysWorker(base service.Service, pFactory persistencefacto
 		common.CreateBlobstoreClientRetryPolicy(),
 		common.IsBlobstoreTransientError)
 
-	sysWorker := sysworkflow.NewSysWorker(
-		publicClient,
-		s.metricsClient,
-		s.logger,
-		base.GetClusterMetadata(),
-		historyManager,
-		historyV2Manager,
-		blobstoreClient,
-		domainCache,
-		s.config.SysWorkflowCfg)
+	sysWorkerContainer := &sysworkflow.SysWorkerContainer{
+		PublicClient: publicClient,
+		MetricsClient: s.metricsClient,
+		Logger: s.logger,
+		ClusterMetadata: base.GetClusterMetadata(),
+		HistoryManager: historyManager,
+		HistoryV2Manager: historyV2Manager,
+		Blobstore: blobstoreClient,
+		DomainCache: domainCache,
+		Config: s.config.SysWorkflowCfg,
+
+	}
+	sysWorker := sysworkflow.NewSysWorker(sysWorkerContainer)
 	if err := sysWorker.Start(); err != nil {
 		sysWorker.Stop()
 		s.logger.Fatalf("failed to start sysworker: %v", err)
