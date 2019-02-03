@@ -38,7 +38,6 @@ import (
 )
 
 // SystemWorkflow is the system workflow code
-// TODO: will have to put logger and metrics in global to get them out here
 func SystemWorkflow(ctx workflow.Context) error {
 	ch := workflow.GetSignalChannel(ctx, signalName)
 	signalsHandled := 0
@@ -69,13 +68,11 @@ func selectSystemTask(signal signal, ctx workflow.Context) {
 		StartToCloseTimeout:    time.Minute,
 		HeartbeatTimeout:       time.Second * 10,
 		RetryPolicy: &cadence.RetryPolicy{
-			InitialInterval:    time.Second,
-			BackoffCoefficient: 2.0,
-			MaximumInterval:    time.Minute,
-			// TODO: I need to think through what this should really be
-			ExpirationInterval: time.Hour * 24 * 30,
-			MaximumAttempts:    0,
-			// TODO: some types of non-retryable errors will need to be added here - maybe I map them to hardcoded string
+			InitialInterval:          time.Second,
+			BackoffCoefficient:       2.0,
+			MaximumInterval:          time.Minute,
+			ExpirationInterval:       time.Hour * 24 * 30,
+			MaximumAttempts:          0,
 			NonRetriableErrorReasons: []string{},
 		},
 	}

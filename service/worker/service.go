@@ -23,6 +23,7 @@ package worker
 import (
 	"context"
 	"github.com/uber/cadence/client/public"
+	"github.com/uber/cadence/common/blobstore"
 	"sync/atomic"
 	"time"
 
@@ -199,6 +200,11 @@ func (s *Service) startSysWorker(base service.Service, pFactory persistencefacto
 	domainCache := cache.NewDomainCache(metadataV2Mgr, s.params.ClusterMetadata, s.metricsClient, s.logger)
 	domainCache.Start()
 
+	blobstoreClient := blobstore.NewRetryableClient(
+		blobstore.NewMetricClient(s.params.BlobstoreClient, s.metricsClient),
+		common.CreateBlobstoreClientRetryPolicy(),
+		common.IsBlobstoreTransientError)
+
 	sysWorker := sysworkflow.NewSysWorker(
 		publicClient,
 		s.metricsClient,
@@ -206,7 +212,7 @@ func (s *Service) startSysWorker(base service.Service, pFactory persistencefacto
 		base.GetClusterMetadata(),
 		historyManager,
 		historyV2Manager,
-		s.params.BlobstoreClient,
+		blobstoreClient,
 		domainCache,
 		s.config.SysWorkflowCfg)
 	if err := sysWorker.Start(); err != nil {

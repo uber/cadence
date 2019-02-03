@@ -26,6 +26,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"strconv"
+	"time"
 )
 
 type (
@@ -36,13 +37,14 @@ type (
 	}
 
 	historyBlobIterator struct {
-		hbItr      HistoryBatchIterator
-		config     *Config
-		domainID   string
-		workflowID string
-		runID      string
-		domain     string // only used for dynamic config lookup
-		pageToken  int
+		hbItr       HistoryBatchIterator
+		config      *Config
+		domainID    string
+		workflowID  string
+		runID       string
+		domain      string // only used for dynamic config lookup
+		pageToken   int
+		clusterName string
 	}
 )
 
@@ -58,6 +60,7 @@ func NewHistoryBlobIterator(
 	lastFirstEventID int64,
 	config *Config,
 	domain string,
+	clusterName string,
 ) HistoryBlobIterator {
 	return &historyBlobIterator{
 		hbItr: NewHistoryBatchIterator(
@@ -71,7 +74,13 @@ func NewHistoryBlobIterator(
 			lastFirstEventID,
 			config.HistoryPageSize,
 			domain),
-		config: config,
+		config:      config,
+		domainID:    domainID,
+		workflowID:  workflowID,
+		runID:       runID,
+		domain:      domain,
+		pageToken:   0,
+		clusterName: clusterName,
 	}
 }
 
@@ -84,8 +93,9 @@ func (i *historyBlobIterator) Next() (*HistoryBlob, error) {
 	var size int
 	var firstEvent *shared.HistoryEvent
 	var lastEvent *shared.HistoryEvent
-	var eventCount int
+	var eventCount int64
 
+	// continue until blob is large enough, rough estimations are fine here because the blob will be compressed anyways
 	for i.hbItr.HasNext() && size < i.config.TargetArchivalBlobSize(i.domain) {
 		batch, err := i.hbItr.Next()
 		if err != nil {
@@ -97,7 +107,7 @@ func (i *historyBlobIterator) Next() (*HistoryBlob, error) {
 			firstEvent = batch.events[0]
 		}
 		lastEvent = batch.events[len(batch.events)-1]
-		eventCount += len(batch.events)
+		eventCount += int64(len(batch.events))
 	}
 
 	header := &HistoryBlobHeader{
@@ -110,10 +120,11 @@ func (i *historyBlobIterator) Next() (*HistoryBlob, error) {
 		LastFailoverVersion:  lastEvent.Version,
 		FirstEventID:         firstEvent.EventId,
 		LastEventID:          lastEvent.EventId,
-		// TODO: figure out how to generate the rest of the header, we need cluster upload cluster, we should have date time be in milisecondson header (refer to chronos) and we need event count which we have.
-
+		UploadDateTime:       common.StringPtr(time.Now().String()),
+		UploadCluster:        &i.clusterName,
+		EventCount:           &eventCount,
 	}
-	if i.hbItr.HasNext() {
+	if i.HasNext() {
 		i.pageToken++
 		header.NextPageToken = common.StringPtr(strconv.Itoa(i.pageToken))
 	}

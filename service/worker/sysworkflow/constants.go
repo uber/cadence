@@ -34,14 +34,7 @@ const (
 type contextKey int
 
 const (
-	metricsKey contextKey = iota
-	loggerKey
-	clusterMetadataKey
-	historyManagerKey
-	historyV2ManagerKey
-	blobstoreKey
-	domainCacheKey
-	configKey
+	sysWorkerContainerKey contextKey = iota
 )
 
 const (

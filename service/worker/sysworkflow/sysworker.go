@@ -27,6 +27,7 @@ import (
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
@@ -36,15 +37,34 @@ import (
 )
 
 type (
+	// SysWorker is a cadence client worker which enables running arbitrary system workflows
+	SysWorker interface {
+		Start() error
+		Stop()
+	}
+
+	sysworker struct {
+		worker worker.Worker
+	}
+
+	// SysWorkerContainer contains everything needed to bootstrap SysWorker and all hosted system workflows
+	SysWorkerContainer struct {
+		publicClient     public.Client
+		metricsClient          metrics.Client
+		logger           bark.Logger
+		clusterMetadata  cluster.Metadata
+		historyManager   persistence.HistoryManager
+		historyV2Manager persistence.HistoryV2Manager
+		blobstore        blobstore.Client
+		domainCache      cache.DomainCache
+		config           *Config
+	}
+
 	// Config for SysWorker
 	Config struct {
 		EnableArchivalCompression dynamicconfig.BoolPropertyFnWithDomainFilter
 		HistoryPageSize           dynamicconfig.IntPropertyFnWithDomainFilter
 		TargetArchivalBlobSize    dynamicconfig.IntPropertyFnWithDomainFilter
-	}
-	// SysWorker is the cadence client worker responsible for running system workflows
-	SysWorker struct {
-		worker worker.Worker
 	}
 )
 
@@ -61,40 +81,23 @@ func init() {
 }
 
 // NewSysWorker returns a new SysWorker
-func NewSysWorker(
-	publicClient public.Client,
-	metrics metrics.Client,
-	logger bark.Logger,
-	clusterMetadata cluster.Metadata,
-	historyManager persistence.HistoryManager,
-	historyV2Manager persistence.HistoryV2Manager,
-	blobstore blobstore.Client,
-	domainCache cache.DomainCache,
-	config *Config,
-) *SysWorker {
-
+func NewSysWorker(container *SysWorkerContainer) SysWorker {
+	logger := container.logger.WithFields(bark.Fields{
+		logging.TagWorkflowComponent: logging.TagValueArchivalSystemWorkflowComponent,
+	})
 	globalLogger = logger
-	globalMetricsClient = metrics
-
-	actCtx := context.Background()
-	actCtx = context.WithValue(actCtx, metricsKey, metrics)
-	actCtx = context.WithValue(actCtx, loggerKey, logger)
-	actCtx = context.WithValue(actCtx, clusterMetadataKey, clusterMetadata)
-	actCtx = context.WithValue(actCtx, historyManagerKey, historyManager)
-	actCtx = context.WithValue(actCtx, historyV2ManagerKey, historyV2Manager)
-	actCtx = context.WithValue(actCtx, blobstoreKey, blobstore)
-	actCtx = context.WithValue(actCtx, domainCacheKey, domainCache)
-	actCtx = context.WithValue(actCtx, configKey, config)
+	globalMetricsClient = container.metricsClient
+	actCtx := context.WithValue(context.Background(), sysWorkerContainerKey, container)
 	wo := worker.Options{
 		BackgroundActivityContext: actCtx,
 	}
-	return &SysWorker{
-		worker: worker.New(publicClient, SystemDomainName, decisionTaskList, wo),
+	return &sysworker{
+		worker: worker.New(container.publicClient, SystemDomainName, decisionTaskList, wo),
 	}
 }
 
 // Start the SysWorker
-func (w *SysWorker) Start() error {
+func (w *sysworker) Start() error {
 	if err := w.worker.Start(); err != nil {
 		w.worker.Stop()
 		return err
@@ -103,6 +106,6 @@ func (w *SysWorker) Start() error {
 }
 
 // Stop the SysWorker
-func (w *SysWorker) Stop() {
+func (w *sysworker) Stop() {
 	w.worker.Stop()
 }
