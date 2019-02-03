@@ -26,6 +26,8 @@ import (
 	"errors"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/blobstore/blob"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/workflow"
@@ -98,9 +100,8 @@ func selectSystemTask(signal signal, ctx workflow.Context) {
 }
 
 // ArchivalUploadActivity handles reading history from persistence, generating blobs and uploading blobs.
-// Returned string slice represents the keys of all uploaded blobs.
-// If error is returned it will either be a retryable or non-retryable.
-// All non-retryable errors are mapped to error: archivalUploadActivityNonRetryableErr.
+// Returned string slice represents the keys of all uploaded blobs (including those which were already uploaded).
+// If error is returned it will be of type archivalUploadActivityNonRetryableErr, all retryable errors are retried in activity forever.
 // ArchivalUploadActivity is idempotent.
 func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) ([]string, error) {
 	container, ok := ctx.Value(sysWorkerContainerKey).(*SysWorkerContainer)
@@ -140,18 +141,11 @@ func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) ([]stri
 	var uploadedBlobKeys []string
 	bucket := domainCacheEntry.GetConfig().ArchivalBucket
 	for historyBlobItr.HasNext() {
-		historyBlob, err := historyBlobItr.Next()
-
-
-
-
-
+		historyBlob, err := nextBlobRetryForever(historyBlobItr)
 		if err != nil {
-			if common.IsPersistenceTransientError(err) {
-				return uploadedBlobKeys, err
-			}
 			return uploadedBlobKeys, archivalUploadActivityNonRetryableErr
 		}
+
 		key, err := NewHistoryBlobKey(
 			request.DomainID,
 			request.WorkflowID,
@@ -162,14 +156,11 @@ func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) ([]stri
 		if err != nil {
 			return uploadedBlobKeys, archivalUploadActivityNonRetryableErr
 		}
-		exists, err := blobstoreClient.Exists(ctx, bucket, key)
-		if err != nil {
-			if common.IsBlobstoreTransientError(err) {
-				return uploadedBlobKeys, err
-			}
+
+		if exists, err := blobExistsRetryForever(blobstoreClient, bucket, key); err != nil {
 			return uploadedBlobKeys, archivalUploadActivityNonRetryableErr
-		}
-		if exists {
+		} else if exists {
+			uploadedBlobKeys = append(uploadedBlobKeys, key.String())
 			continue
 		}
 
@@ -181,43 +172,58 @@ func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) ([]stri
 		if err != nil {
 			return uploadedBlobKeys, archivalUploadActivityNonRetryableErr
 		}
-		unwrappedBlob := blob.NewBlob(body, tags)
-		blob, err := blob.Wrap(unwrappedBlob, blob.JSONEncoded(), blob.GzipCompressed())
+		wrapFunctions := []blob.WrapFn{blob.JSONEncoded()}
+		if container.Config.EnableArchivalCompression(domainCacheEntry.GetInfo().Name) {
+			wrapFunctions = append(wrapFunctions, blob.GzipCompressed())
+		}
+		currBlob, err := blob.Wrap(blob.NewBlob(body, tags), wrapFunctions...)
 		if err != nil {
 			return uploadedBlobKeys, archivalUploadActivityNonRetryableErr
 		}
-		if err := blobstoreClient.Upload(ctx, bucket, key, blob); err != nil {
-			if common.IsBlobstoreTransientError(err) {
-				return uploadedBlobKeys, err
-			}
+
+		if err := blobUploadRetryForever(blobstoreClient, bucket, key, currBlob); err != nil {
 			return uploadedBlobKeys, archivalUploadActivityNonRetryableErr
 		}
+		uploadedBlobKeys = append(uploadedBlobKeys, key.String())
 	}
 	return uploadedBlobKeys, nil
 }
 
-func
-
-/**
-func (t *timerQueueProcessorBase) deleteWorkflowExecution(task *persistence.TimerTaskInfo) error {
-	op := func() error {
-		return t.executionManager.DeleteWorkflowExecution(&persistence.DeleteWorkflowExecutionRequest{
-			DomainID:   task.DomainID,
-			WorkflowID: task.WorkflowID,
-			RunID:      task.RunID,
-		})
+func nextBlobRetryForever(historyBlobItr HistoryBlobIterator) (*HistoryBlob, error) {
+	result, err := historyBlobItr.Next()
+	if err == nil {
+		return result, nil
 	}
-	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+
+	op := func() error {
+		result, err = historyBlobItr.Next()
+		return err
+	}
+	for err != nil && common.IsPersistenceTransientError(err) {
+		err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+	}
+	return result, err
 }
- */
 
-// on errors which I can check if they are retryable, retry them forever
-// that means only only error type that should get returned from teh activity is nonRetryable error type
-// the activity might return an error for some weird other reason, like a panic, or it might never be called, that is what
-// the server side retries are for.
+func blobExistsRetryForever(blobstoreClient blobstore.Client, bucket string, key blob.Key) (bool, error) {
+	exists, err := blobstoreClient.Exists(context.Background(), bucket, key)
+	for err != nil && common.IsBlobstoreTransientError(err) {
+		// blobstoreClient is already retryable so no extra retry/backoff logic is needed here
+		exists, err = blobstoreClient.Exists(context.Background(), bucket, key)
+	}
+	return exists, err
+}
+
+func blobUploadRetryForever(blobstoreClient blobstore.Client, bucket string, key blob.Key, blob *blob.Blob) error {
+	err := blobstoreClient.Upload(context.Background(), bucket, key, blob)
+	for err != nil && common.IsBlobstoreTransientError(err) {
+		// blobstoreClient is already retryable so no extra retry/backoff logic is needed here
+		err = blobstoreClient.Upload(context.Background(), bucket, key, blob)
+	}
+	return err
+}
 
 
-// retry the activity, on return error of type non-retryable
 // TODO: consider if this retryable activity needs to heartbeat?
 
 func ArchivalGarbageCollectActivity(ctx context.Context, blobsToDelete []string) error {
