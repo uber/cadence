@@ -50,7 +50,7 @@ type (
 	// SysWorkerContainer contains everything needed to bootstrap SysWorker and all hosted system workflows
 	SysWorkerContainer struct {
 		PublicClient     public.Client
-		MetricsClient          metrics.Client
+		MetricsClient    metrics.Client
 		Logger           bark.Logger
 		ClusterMetadata  cluster.Metadata
 		HistoryManager   persistence.HistoryManager

@@ -102,7 +102,6 @@ func selectSystemTask(signal signal, ctx workflow.Context) {
 // If error is returned it will either be a retryable or non-retryable.
 // All non-retryable errors are mapped to error: archivalUploadActivityNonRetryableErr.
 // ArchivalUploadActivity is idempotent.
-// TODO: think through activity to make sure it truely is idempotent and that failures and retries are handled reasonably
 func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) ([]string, error) {
 	container, ok := ctx.Value(sysWorkerContainerKey).(*SysWorkerContainer)
 	if !ok {
@@ -142,6 +141,11 @@ func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) ([]stri
 	bucket := domainCacheEntry.GetConfig().ArchivalBucket
 	for historyBlobItr.HasNext() {
 		historyBlob, err := historyBlobItr.Next()
+
+
+
+
+
 		if err != nil {
 			if common.IsPersistenceTransientError(err) {
 				return uploadedBlobKeys, err
@@ -156,7 +160,7 @@ func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) ([]stri
 			*historyBlob.Header.LastFailoverVersion,
 		)
 		if err != nil {
-			return nil, archivalUploadActivityNonRetryableErr
+			return uploadedBlobKeys, archivalUploadActivityNonRetryableErr
 		}
 		exists, err := blobstoreClient.Exists(ctx, bucket, key)
 		if err != nil {
@@ -171,16 +175,16 @@ func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) ([]stri
 
 		body, err := json.Marshal(historyBlob)
 		if err != nil {
-			return nil, archivalUploadActivityNonRetryableErr
+			return uploadedBlobKeys, archivalUploadActivityNonRetryableErr
 		}
 		tags, err := ConvertHeaderToTags(historyBlob.Header)
 		if err != nil {
-			return nil, archivalUploadActivityNonRetryableErr
+			return uploadedBlobKeys, archivalUploadActivityNonRetryableErr
 		}
 		unwrappedBlob := blob.NewBlob(body, tags)
 		blob, err := blob.Wrap(unwrappedBlob, blob.JSONEncoded(), blob.GzipCompressed())
 		if err != nil {
-			return nil, archivalUploadActivityNonRetryableErr
+			return uploadedBlobKeys, archivalUploadActivityNonRetryableErr
 		}
 		if err := blobstoreClient.Upload(ctx, bucket, key, blob); err != nil {
 			if common.IsBlobstoreTransientError(err) {
@@ -191,6 +195,30 @@ func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) ([]stri
 	}
 	return uploadedBlobKeys, nil
 }
+
+func
+
+/**
+func (t *timerQueueProcessorBase) deleteWorkflowExecution(task *persistence.TimerTaskInfo) error {
+	op := func() error {
+		return t.executionManager.DeleteWorkflowExecution(&persistence.DeleteWorkflowExecutionRequest{
+			DomainID:   task.DomainID,
+			WorkflowID: task.WorkflowID,
+			RunID:      task.RunID,
+		})
+	}
+	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+}
+ */
+
+// on errors which I can check if they are retryable, retry them forever
+// that means only only error type that should get returned from teh activity is nonRetryable error type
+// the activity might return an error for some weird other reason, like a panic, or it might never be called, that is what
+// the server side retries are for.
+
+
+// retry the activity, on return error of type non-retryable
+// TODO: consider if this retryable activity needs to heartbeat?
 
 func ArchivalGarbageCollectActivity(ctx context.Context, blobsToDelete []string) error {
 	return nil
