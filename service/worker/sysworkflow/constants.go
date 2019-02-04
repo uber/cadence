@@ -41,17 +41,16 @@ const (
 	// SystemDomainName is domain name for all system workflows
 	SystemDomainName = "cadence-system"
 
-	workflowIDPrefix                         = "cadsys-wf"
-	decisionTaskList                         = "cadsys-decision-tl"
-	workflowStartToCloseTimeout              = time.Hour * 24 * 30
-	decisionTaskStartToCloseTimeout          = time.Minute
-	signalName                               = "cadsys-signal-sig"
-	signalsUntilContinueAsNew                = 1000
-	systemWorkflowFnName                     = "SystemWorkflow"
-	archivalUploadActivityFnName             = "ArchivalUploadActivity"
-	archivalGarbageCollectActivityFnName     = "ArchivalGarbageCollectActivity"
-	archivalDeletePersistenceHistoryFnName   = "ArchivalDeletePersistenceHistory"
-	backfillActivityFnName                   = "BackfillActivity"
-	historyBlobKeyExt                        = "history"
-	archivalUploadActivityNonRetryableErrStr = "ArchivalUploadActivityNonRetryableErr"
+	workflowIDPrefix                    = "cadsys-wf"
+	decisionTaskList                    = "cadsys-decision-tl"
+	workflowStartToCloseTimeout         = time.Hour * 24 * 30
+	decisionTaskStartToCloseTimeout     = time.Minute
+	signalName                          = "cadsys-signal-sig"
+	signalsUntilContinueAsNew           = 1000
+	systemWorkflowFnName                = "SystemWorkflow"
+	archivalUploadActivityFnName        = "ArchivalUploadActivity"
+	archivalDeleteHistoryActivityFnName = "ArchivalDeleteHistory"
+	backfillActivityFnName              = "BackfillActivity"
+	historyBlobKeyExt                   = "history"
+	archivalActivityNonRetryableErrStr  = "ArchivalActivityNonRetryableErr"
 )

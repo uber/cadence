@@ -77,8 +77,7 @@ var (
 func init() {
 	workflow.RegisterWithOptions(SystemWorkflow, workflow.RegisterOptions{Name: systemWorkflowFnName})
 	activity.RegisterWithOptions(ArchivalUploadActivity, activity.RegisterOptions{Name: archivalUploadActivityFnName})
-	activity.RegisterWithOptions(ArchivalGarbageCollectActivity, activity.RegisterOptions{Name: archivalGarbageCollectActivityFnName})
-	activity.RegisterWithOptions(ArchivalDeletePersistenceHistory, activity.RegisterOptions{Name: archivalDeletePersistenceHistoryFnName})
+	activity.RegisterWithOptions(ArchivalDeleteHistoryActivity, activity.RegisterOptions{Name: archivalDeleteHistoryActivityFnName})
 	activity.RegisterWithOptions(BackfillActivity, activity.RegisterOptions{Name: backfillActivityFnName})
 }
 

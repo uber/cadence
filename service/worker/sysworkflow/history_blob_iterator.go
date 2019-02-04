@@ -29,6 +29,12 @@ import (
 	"time"
 )
 
+/**
+IMPORTANT: Under the assumption that history is immutable, the following iterator will deterministically return identical
+blobs from Next regardless of the current cluster and regardless of the number of times this iteration occurs. This property
+makes any concurrent uploads of history safe.
+*/
+
 type (
 	// HistoryBlobIterator is used to get history blobs
 	HistoryBlobIterator interface {
@@ -72,6 +78,8 @@ func NewHistoryBlobIterator(
 	clusterName string,
 ) HistoryBlobIterator {
 	return &historyBlobIterator{
+		blobPageToken: common.FirstBlobPageToken,
+
 		historyManager:    historyManager,
 		historyV2Manager:  historyV2Manager,
 		domainID:          domainID,

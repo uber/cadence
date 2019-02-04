@@ -29,14 +29,14 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/blobstore/blob"
+	"github.com/uber/cadence/common/persistence"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/workflow"
 	"time"
 )
 
 var (
-	archivalUploadActivityNonRetryableErr = errors.New(archivalUploadActivityNonRetryableErrStr)
-	// TODO: other archival functions will follow the same pattern here...
+	errArchivalActivityNonRetryable = errors.New(archivalActivityNonRetryableErrStr)
 )
 
 // SystemWorkflow is the system workflow code
@@ -75,19 +75,27 @@ func selectSystemTask(signal signal, ctx workflow.Context) {
 			MaximumInterval:          time.Minute,
 			ExpirationInterval:       time.Hour * 24 * 30,
 			MaximumAttempts:          0,
-			NonRetriableErrorReasons: []string{},
+			NonRetriableErrorReasons: []string{archivalActivityNonRetryableErrStr},
 		},
 	}
 
 	actCtx := workflow.WithActivityOptions(ctx, ao)
 	switch signal.RequestType {
 	case archivalRequest:
-		//if err := workflow.ExecuteActivity(
-		//	actCtx,
-		//	archivalActivityFnName,
-		//	*signal.ArchiveRequest,
-		//).Get(ctx, nil); err != nil {
-		//}
+		if err := workflow.ExecuteActivity(
+			actCtx,
+			archivalUploadActivityFnName,
+			*signal.ArchiveRequest,
+		).Get(ctx, nil); err != nil {
+			// log and emit metrics
+		}
+		if err := workflow.ExecuteActivity(
+			actCtx,
+			archivalDeleteHistoryActivityFnName,
+			*signal.ArchiveRequest,
+		).Get(ctx, nil); err != nil {
+			// log and emit metrics
+		}
 	case backfillRequest:
 		if err := workflow.ExecuteActivity(
 			actCtx,
@@ -99,30 +107,32 @@ func selectSystemTask(signal signal, ctx workflow.Context) {
 	}
 }
 
-// ArchivalUploadActivity handles reading history from persistence, generating blobs and uploading blobs.
-// Returned string slice represents the keys of all uploaded blobs (including those which were already uploaded).
-// If error is returned it will be of type archivalUploadActivityNonRetryableErr, all retryable errors are retried in activity forever.
-// ArchivalUploadActivity is idempotent.
-func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) ([]string, error) {
+// ArchivalUploadActivity does the following three things:
+// 1. Read history from persistence
+// 2. Construct blobs
+// 3. Upload blobs
+// It is assumed that history is immutable when this activity is running. Under this assumption this activity is idempotent.
+// If an error is returned it will be of type archivalActivityNonRetryableErr. All retryable errors are retried forever.
+func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) error {
 	container, ok := ctx.Value(sysWorkerContainerKey).(*SysWorkerContainer)
 	if !ok {
-		return nil, archivalUploadActivityNonRetryableErr
+		return errArchivalActivityNonRetryable
 	}
 	domainCache := container.DomainCache
 	clusterMetadata := container.ClusterMetadata
 	domainCacheEntry, err := domainCache.GetDomainByID(request.DomainID)
 	if err != nil {
-		return nil, archivalUploadActivityNonRetryableErr
+		return errArchivalActivityNonRetryable
 	}
 	if !clusterMetadata.IsArchivalEnabled() {
 		// for now if archival is disabled simply abort the activity
 		// a more in depth design meeting is needed to decide the correct way to handle backfilling/pausing archival
-		return nil, archivalUploadActivityNonRetryableErr
+		return errArchivalActivityNonRetryable
 	}
 	if domainCacheEntry.GetConfig().ArchivalStatus != shared.ArchivalStatusEnabled {
 		// for now if archival is disabled simply abort the activity
 		// a more in depth design meeting is needed to decide the correct way to handle backfilling/pausing archival
-		return nil, archivalUploadActivityNonRetryableErr
+		return errArchivalActivityNonRetryable
 	}
 	historyBlobItr := NewHistoryBlobIterator(
 		container.HistoryManager,
@@ -138,39 +148,28 @@ func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) ([]stri
 		container.ClusterMetadata.GetCurrentClusterName())
 
 	blobstoreClient := container.Blobstore
-	var uploadedBlobKeys []string
 	bucket := domainCacheEntry.GetConfig().ArchivalBucket
 	for historyBlobItr.HasNext() {
 		historyBlob, err := nextBlobRetryForever(historyBlobItr)
 		if err != nil {
-			return uploadedBlobKeys, archivalUploadActivityNonRetryableErr
+			return errArchivalActivityNonRetryable
 		}
-
-		key, err := NewHistoryBlobKey(
-			request.DomainID,
-			request.WorkflowID,
-			request.RunID,
-			*historyBlob.Header.CurrentPageToken,
-			*historyBlob.Header.LastFailoverVersion,
-		)
+		key, err := NewHistoryBlobKey(request.DomainID, request.WorkflowID, request.RunID, *historyBlob.Header.CurrentPageToken)
 		if err != nil {
-			return uploadedBlobKeys, archivalUploadActivityNonRetryableErr
+			return errArchivalActivityNonRetryable
 		}
-
 		if exists, err := blobExistsRetryForever(blobstoreClient, bucket, key); err != nil {
-			return uploadedBlobKeys, archivalUploadActivityNonRetryableErr
+			return errArchivalActivityNonRetryable
 		} else if exists {
-			uploadedBlobKeys = append(uploadedBlobKeys, key.String())
 			continue
 		}
-
 		body, err := json.Marshal(historyBlob)
 		if err != nil {
-			return uploadedBlobKeys, archivalUploadActivityNonRetryableErr
+			return errArchivalActivityNonRetryable
 		}
 		tags, err := ConvertHeaderToTags(historyBlob.Header)
 		if err != nil {
-			return uploadedBlobKeys, archivalUploadActivityNonRetryableErr
+			return errArchivalActivityNonRetryable
 		}
 		wrapFunctions := []blob.WrapFn{blob.JSONEncoded()}
 		if container.Config.EnableArchivalCompression(domainCacheEntry.GetInfo().Name) {
@@ -178,15 +177,53 @@ func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) ([]stri
 		}
 		currBlob, err := blob.Wrap(blob.NewBlob(body, tags), wrapFunctions...)
 		if err != nil {
-			return uploadedBlobKeys, archivalUploadActivityNonRetryableErr
+			return errArchivalActivityNonRetryable
 		}
-
 		if err := blobUploadRetryForever(blobstoreClient, bucket, key, currBlob); err != nil {
-			return uploadedBlobKeys, archivalUploadActivityNonRetryableErr
+			return errArchivalActivityNonRetryable
 		}
-		uploadedBlobKeys = append(uploadedBlobKeys, key.String())
 	}
-	return uploadedBlobKeys, nil
+	return nil
+}
+
+// ArchivalDeleteHistoryActivity deletes the workflow execution history from persistence.
+// All retryable errors are retried forever. If an error is returned it is of type archivalActivityNonRetryableErr.
+func ArchivalDeleteHistoryActivity(ctx context.Context, request ArchiveRequest) error {
+	container, ok := ctx.Value(sysWorkerContainerKey).(*SysWorkerContainer)
+	if !ok {
+		return errArchivalActivityNonRetryable
+	}
+	if request.EventStoreVersion == persistence.EventStoreVersionV2 {
+		err := persistence.DeleteWorkflowExecutionHistoryV2(container.HistoryV2Manager, request.BranchToken, container.Logger)
+		if err == nil {
+			return nil
+		}
+		op := func() error {
+			return persistence.DeleteWorkflowExecutionHistoryV2(container.HistoryV2Manager, request.BranchToken, container.Logger)
+		}
+		for err != nil && common.IsPersistenceTransientError(err) {
+			err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+		}
+		return errArchivalActivityNonRetryable
+	}
+	deleteHistoryReq := &persistence.DeleteWorkflowExecutionHistoryRequest{
+		DomainID: request.DomainID,
+		Execution: shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(request.WorkflowID),
+			RunId:      common.StringPtr(request.RunID),
+		},
+	}
+	err := container.HistoryManager.DeleteWorkflowExecutionHistory(deleteHistoryReq)
+	if err == nil {
+		return nil
+	}
+	op := func() error {
+		return container.HistoryManager.DeleteWorkflowExecutionHistory(deleteHistoryReq)
+	}
+	for err != nil && common.IsPersistenceTransientError(err) {
+		err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+	}
+	return errArchivalActivityNonRetryable
 }
 
 func nextBlobRetryForever(historyBlobItr HistoryBlobIterator) (*HistoryBlob, error) {
@@ -223,35 +260,7 @@ func blobUploadRetryForever(blobstoreClient blobstore.Client, bucket string, key
 	return err
 }
 
-
 // TODO: consider if this retryable activity needs to heartbeat?
-
-func ArchivalGarbageCollectActivity(ctx context.Context, blobsToDelete []string) error {
-	return nil
-}
-
-func ArchivalDeletePersistenceHistory(ctx context.Context, request ArchiveRequest) error {
-/**
-	// once once we get here can we delete the history
-	if request.EventStoreVersion == persistence.EventStoreVersionV2 {
-		if err := persistence.DeleteWorkflowExecutionHistoryV2(container.HistoryV2Manager, request.BranchToken, container.Logger); err != nil {
-			return nil, err
-		}
-	}
-	deleteHistoryReq := &persistence.DeleteWorkflowExecutionHistoryRequest{
-		DomainID: request.DomainID,
-		Execution: shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(request.WorkflowID),
-			RunId:      common.StringPtr(request.RunID),
-		},
-	}
-	if err := container.HistoryManager.DeleteWorkflowExecutionHistory(deleteHistoryReq); err != nil {
-		return nil, err
-	}
-	return nil, nil
- */
- return nil
-}
 
 // BackfillActivity is the backfill activity code
 func BackfillActivity(_ context.Context, _ BackfillRequest) error {
