@@ -44,7 +44,8 @@ type (
 	}
 
 	sysworker struct {
-		worker worker.Worker
+		worker      worker.Worker
+		domainCache cache.DomainCache
 	}
 
 	// SysWorkerContainer contains everything needed to bootstrap SysWorker and all hosted system workflows
@@ -93,7 +94,8 @@ func NewSysWorker(container *SysWorkerContainer) SysWorker {
 		BackgroundActivityContext: actCtx,
 	}
 	return &sysworker{
-		worker: worker.New(container.PublicClient, SystemDomainName, decisionTaskList, wo),
+		worker:      worker.New(container.PublicClient, SystemDomainName, decisionTaskList, wo),
+		domainCache: container.DomainCache,
 	}
 }
 
@@ -109,4 +111,5 @@ func (w *sysworker) Start() error {
 // Stop the SysWorker
 func (w *sysworker) Stop() {
 	w.worker.Stop()
+	w.domainCache.Stop()
 }

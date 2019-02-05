@@ -87,6 +87,7 @@ func (c *archivalClient) Archive(request *ArchiveRequest) error {
 		RequestType:    archivalRequest,
 		ArchiveRequest: request,
 	}
+
 	_, err := c.cadenceClient.SignalWithStartWorkflow(
 		context.Background(),
 		workflowID,

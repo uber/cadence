@@ -23,7 +23,6 @@ package sysworkflow
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -36,7 +35,7 @@ import (
 )
 
 var (
-	errArchivalActivityNonRetryable = errors.New(archivalActivityNonRetryableErrStr)
+	errArchivalActivityNonRetryable = cadence.NewCustomError(archivalActivityNonRetryableErrStr)
 )
 
 // SystemWorkflow is the system workflow code

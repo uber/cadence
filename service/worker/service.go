@@ -193,11 +193,11 @@ func (s *Service) startSysWorker(base service.Service, pFactory persistencefacto
 	if err != nil {
 		s.logger.Fatalf("failed to start sysworker, could not create HistoryV2Manager: %v", err)
 	}
-	metadataV2Mgr, err := pFactory.NewMetadataManager(persistencefactory.MetadataV2)
+	metadataMgr, err := pFactory.NewMetadataManager(persistencefactory.MetadataV1V2)
 	if err != nil {
 		s.logger.Fatalf("failed to start sysworker, could not create MetadataManager: %v", err)
 	}
-	domainCache := cache.NewDomainCache(metadataV2Mgr, s.params.ClusterMetadata, s.metricsClient, s.logger)
+	domainCache := cache.NewDomainCache(metadataMgr, s.params.ClusterMetadata, s.metricsClient, s.logger)
 	domainCache.Start()
 
 	blobstoreClient := blobstore.NewRetryableClient(

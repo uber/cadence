@@ -635,6 +635,7 @@ func (t *timerQueueProcessorBase) processArchiveHistoryEvent(task *persistence.T
 	if err != nil {
 		return err
 	}
+
 	if err := t.historyService.archivalClient.Archive(req); err != nil {
 		t.logger.WithFields(bark.Fields{
 			logging.TagHistoryShardID:      t.shard.GetShardID(),
