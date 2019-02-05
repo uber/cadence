@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/common/blobstore/blob"
 	"github.com/uber/cadence/common/persistence"
 	"go.uber.org/cadence"
+	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/workflow"
 	"time"
 )
@@ -181,6 +182,7 @@ func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) error {
 		if err := blobUploadRetryForever(blobstoreClient, bucket, key, currBlob); err != nil {
 			return errArchivalActivityNonRetryable
 		}
+		activity.RecordHeartbeat(ctx, historyBlob.Header.CurrentPageToken)
 	}
 	return nil
 }
