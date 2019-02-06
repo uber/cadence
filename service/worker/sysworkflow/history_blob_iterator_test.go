@@ -6,32 +6,32 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	metricsMocks "github.com/uber/cadence/common/metrics/mocks"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
-	"github.com/uber/cadence/.gen/go/shared"
 	"testing"
 )
 
 const (
-	testDomainID = "test-domain-id"
-	testWorkflowID = "test-workflow-id"
-	testRunID = "test-run-id"
+	testDomainID          = "test-domain-id"
+	testWorkflowID        = "test-workflow-id"
+	testRunID             = "test-run-id"
 	testEventStoreVersion = "test-event-store-version"
-	testBranchToken = "test-branch-token"
-	testLastFirstEventID = "test-last-first-event-id"
-	testDomain = "test-domain"
-	testClusterName = "test-cluster-name"
+	testBranchToken       = "test-branch-token"
+	testLastFirstEventID  = "test-last-first-event-id"
+	testDomain            = "test-domain"
+	testClusterName       = "test-cluster-name"
 )
 
 type HistoryBlobIteratorSuite struct {
 	*require.Assertions
 	suite.Suite
-	logger bark.Logger
-	metricsClient *metricsMocks.Client
-	mockHistoryManager *mocks.HistoryManager
+	logger               bark.Logger
+	metricsClient        *metricsMocks.Client
+	mockHistoryManager   *mocks.HistoryManager
 	mockHistoryV2Manager *mocks.HistoryV2Manager
 }
 
@@ -59,7 +59,7 @@ func (s *HistoryBlobIteratorSuite) constructHistoryEvent(eventId int64) *shared.
 
 func (s *HistoryBlobIteratorSuite) constructConfig(historyPageSize, targetArchivalBlobSize int) *Config {
 	return &Config{
-		HistoryPageSize:           dynamicconfig.GetIntPropertyFilteredByDomain(historyPageSize),
-		TargetArchivalBlobSize:    dynamicconfig.GetIntPropertyFilteredByDomain(targetArchivalBlobSize),
+		HistoryPageSize:        dynamicconfig.GetIntPropertyFilteredByDomain(historyPageSize),
+		TargetArchivalBlobSize: dynamicconfig.GetIntPropertyFilteredByDomain(targetArchivalBlobSize),
 	}
 }

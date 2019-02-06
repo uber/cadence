@@ -624,12 +624,12 @@ func (t *timerQueueProcessorBase) processArchiveHistoryEvent(task *persistence.T
 	}
 
 	req := &sysworkflow.ArchiveRequest{
-		DomainID:          task.DomainID,
-		WorkflowID:        task.WorkflowID,
-		RunID:             task.RunID,
-		EventStoreVersion: msBuilder.GetEventStoreVersion(),
-		BranchToken:       msBuilder.GetCurrentBranch(),
-		LastFirstEventID:  msBuilder.GetLastFirstEventID(),
+		DomainID:             task.DomainID,
+		WorkflowID:           task.WorkflowID,
+		RunID:                task.RunID,
+		EventStoreVersion:    msBuilder.GetEventStoreVersion(),
+		BranchToken:          msBuilder.GetCurrentBranch(),
+		LastFirstEventID:     msBuilder.GetLastFirstEventID(),
 		CloseFailoverVersion: msBuilder.GetLastWriteVersion(),
 	}
 	err = t.deleteWorkflowExecution(task)

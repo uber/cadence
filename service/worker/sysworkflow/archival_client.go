@@ -33,12 +33,12 @@ import (
 type (
 	// ArchiveRequest is request to Archive
 	ArchiveRequest struct {
-		DomainID          string
-		WorkflowID        string
-		RunID             string
-		EventStoreVersion int32
-		BranchToken       []byte
-		LastFirstEventID  int64
+		DomainID             string
+		WorkflowID           string
+		RunID                string
+		EventStoreVersion    int32
+		BranchToken          []byte
+		LastFirstEventID     int64
 		CloseFailoverVersion int64
 	}
 

@@ -54,17 +54,17 @@ type (
 		finishedIteration    bool
 
 		// the following are only used to read history and dynamic config
-		historyManager    persistence.HistoryManager
-		historyV2Manager  persistence.HistoryV2Manager
-		domainID          string
-		workflowID        string
-		runID             string
-		eventStoreVersion int32
-		branchToken       []byte
-		lastFirstEventID  int64
-		config            *Config
-		domain            string
-		clusterName       string
+		historyManager       persistence.HistoryManager
+		historyV2Manager     persistence.HistoryV2Manager
+		domainID             string
+		workflowID           string
+		runID                string
+		eventStoreVersion    int32
+		branchToken          []byte
+		lastFirstEventID     int64
+		config               *Config
+		domain               string
+		clusterName          string
 		closeFailoverVersion int64
 	}
 )
@@ -90,21 +90,21 @@ func NewHistoryBlobIterator(
 		logger:        logger,
 		metricsClient: metricsClient,
 
-		blobPageToken: common.FirstBlobPageToken,
+		blobPageToken:        common.FirstBlobPageToken,
 		persistencePageToken: []byte{},
-		finishedIteration: false,
+		finishedIteration:    false,
 
-		historyManager:    historyManager,
-		historyV2Manager:  historyV2Manager,
-		domainID:          domainID,
-		workflowID:        workflowID,
-		runID:             runID,
-		eventStoreVersion: eventStoreVersion,
-		branchToken:       branchToken,
-		lastFirstEventID:  lastFirstEventID,
-		config:            config,
-		domain:            domain,
-		clusterName:       clusterName,
+		historyManager:       historyManager,
+		historyV2Manager:     historyV2Manager,
+		domainID:             domainID,
+		workflowID:           workflowID,
+		runID:                runID,
+		eventStoreVersion:    eventStoreVersion,
+		branchToken:          branchToken,
+		lastFirstEventID:     lastFirstEventID,
+		config:               config,
+		domain:               domain,
+		clusterName:          clusterName,
 		closeFailoverVersion: closeFailoverVersion,
 	}
 }
