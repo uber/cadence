@@ -1250,8 +1250,8 @@ const (
 	SysWorkerArchivalDeleteHistoryActivityNonRetryableFailures
 	SysWorkerArchivalDeleteHistorySuccessful
 	SysWorkerGetDomainFailures
-	SysWorkerArchivalNotEnabledForClusterFailures
-	SysWorkerArchivalNotEnabledForDomainFailures
+	SysWorkerArchivalNotEnabledForCluster
+	SysWorkerArchivalNotEnabledForDomain
 	SysWorkerNextOnDepletedIterator
 	SysWorkerHistoryReadEventsFailures
 	SysWorkerNextBlobNonRetryableFailures
@@ -1442,8 +1442,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		SysWorkerArchivalDeleteHistoryActivityNonRetryableFailures: {metricName: "sysworker.archival-delete-history-activity-non-retryable-errors"},
 		SysWorkerArchivalDeleteHistorySuccessful:                   {metricName: "sysworker.archival-delete-history-successful"},
 		SysWorkerGetDomainFailures:                                 {metricName: "sysworker.get-domain-errors"},
-		SysWorkerArchivalNotEnabledForClusterFailures:              {metricName: "sysworker.archival-not-enabled-for-cluster-errors"},
-		SysWorkerArchivalNotEnabledForDomainFailures:               {metricName: "sysworker.archival-not-enabled-for-domain-errors"},
+		SysWorkerArchivalNotEnabledForCluster:              {metricName: "sysworker.archival-not-enabled-for-cluster"},
+		SysWorkerArchivalNotEnabledForDomain:               {metricName: "sysworker.archival-not-enabled-for-domain"},
 		SysWorkerNextOnDepletedIterator:                            {metricName: "sysworker.next-on-depleted-iterator"},
 		SysWorkerHistoryReadEventsFailures:                         {metricName: "sysworker.history-read-events-errors"},
 		SysWorkerNextBlobNonRetryableFailures:                      {metricName: "sysworker.next-blob-non-retryable-errors"},

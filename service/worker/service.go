@@ -92,7 +92,6 @@ func NewConfig(dc *dynamicconfig.Collection) *Config {
 			EnableArchivalCompression: dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableArchivalCompression, true),
 			HistoryPageSize:           dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkerHistoryPageSize, 250),
 			TargetArchivalBlobSize:    dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkerTargetArchivalBlobSize, 2*1024*1024), // 2MB
-
 		},
 		IndexerCfg: &indexer.Config{
 			IndexerConcurrency:       dc.GetIntProperty(dynamicconfig.WorkerIndexerConcurrency, 1000),
