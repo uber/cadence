@@ -39,16 +39,16 @@ import (
 )
 
 var (
-	errArchivalUploadActivityGetDomain = cadence.NewCustomError(errArchivalUploadActivityGetDomainStr)
-	errArchivalUploadActivityNextBlob = cadence.NewCustomError(errArchivalUploadActivityNextBlobStr)
-	errArchivalUploadActivityConstructKey = cadence.NewCustomError(errArchivalUploadActivityConstructKeyStr)
-	errArchivalUploadActivityBlobExists = cadence.NewCustomError(errArchivalUploadActivityBlobExistsStr)
-	errArchivalUploadActivityMarshalBlob = cadence.NewCustomError(errArchivalUploadActivityMarshalBlobStr)
+	errArchivalUploadActivityGetDomain           = cadence.NewCustomError(errArchivalUploadActivityGetDomainStr)
+	errArchivalUploadActivityNextBlob            = cadence.NewCustomError(errArchivalUploadActivityNextBlobStr)
+	errArchivalUploadActivityConstructKey        = cadence.NewCustomError(errArchivalUploadActivityConstructKeyStr)
+	errArchivalUploadActivityBlobExists          = cadence.NewCustomError(errArchivalUploadActivityBlobExistsStr)
+	errArchivalUploadActivityMarshalBlob         = cadence.NewCustomError(errArchivalUploadActivityMarshalBlobStr)
 	errArchivalUploadActivityConvertHeaderToTags = cadence.NewCustomError(errArchivalUploadActivityConvertHeaderToTagsStr)
-	errArchivalUploadActivityWrapBlob = cadence.NewCustomError(errArchivalUploadActivityWrapBlobStr)
-	errArchivalUploadActivityUploadBlob = cadence.NewCustomError(errArchivalUploadActivityUploadBlobStr)
-	errDeleteHistoryActivityDeleteFromV2 = cadence.NewCustomError(errDeleteHistoryActivityDeleteFromV2Str)
-	errDeleteHistoryActivityDeleteFromV1 = cadence.NewCustomError(errDeleteHistoryActivityDeleteFromV1Str)
+	errArchivalUploadActivityWrapBlob            = cadence.NewCustomError(errArchivalUploadActivityWrapBlobStr)
+	errArchivalUploadActivityUploadBlob          = cadence.NewCustomError(errArchivalUploadActivityUploadBlobStr)
+	errDeleteHistoryActivityDeleteFromV2         = cadence.NewCustomError(errDeleteHistoryActivityDeleteFromV2Str)
+	errDeleteHistoryActivityDeleteFromV1         = cadence.NewCustomError(errDeleteHistoryActivityDeleteFromV1Str)
 )
 
 // SystemWorkflow is the system workflow code
@@ -97,10 +97,10 @@ func selectSystemTask(signal signal, ctx workflow.Context, logger bark.Logger, m
 		StartToCloseTimeout:    time.Minute,
 		HeartbeatTimeout:       time.Second * 10,
 		RetryPolicy: &cadence.RetryPolicy{
-			InitialInterval:          time.Second,
-			BackoffCoefficient:       2.0,
-			MaximumInterval:          time.Minute,
-			ExpirationInterval:       time.Hour * 24 * 30,
+			InitialInterval:    time.Second,
+			BackoffCoefficient: 2.0,
+			MaximumInterval:    time.Minute,
+			ExpirationInterval: time.Hour * 24 * 30,
 			NonRetriableErrorReasons: []string{
 				errArchivalUploadActivityGetDomainStr,
 				errArchivalUploadActivityNextBlobStr,
@@ -112,7 +112,7 @@ func selectSystemTask(signal signal, ctx workflow.Context, logger bark.Logger, m
 				errArchivalUploadActivityUploadBlobStr,
 				errDeleteHistoryActivityDeleteFromV2Str,
 				errDeleteHistoryActivityDeleteFromV1Str,
-				},
+			},
 		},
 	}
 

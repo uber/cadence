@@ -54,14 +54,14 @@ const (
 	historyBlobKeyExt                   = "history"
 
 	// the following are all non-retryable error strings
-	errArchivalUploadActivityGetDomainStr = "failed to get domain from domain cache"
-	errArchivalUploadActivityNextBlobStr = "failed to get next blob from iterator"
-	errArchivalUploadActivityConstructKeyStr = "failed to construct blob key"
-	errArchivalUploadActivityBlobExistsStr = "failed to check if blob exists already"
-	errArchivalUploadActivityMarshalBlobStr = "failed to marshal history blob"
+	errArchivalUploadActivityGetDomainStr           = "failed to get domain from domain cache"
+	errArchivalUploadActivityNextBlobStr            = "failed to get next blob from iterator"
+	errArchivalUploadActivityConstructKeyStr        = "failed to construct blob key"
+	errArchivalUploadActivityBlobExistsStr          = "failed to check if blob exists already"
+	errArchivalUploadActivityMarshalBlobStr         = "failed to marshal history blob"
 	errArchivalUploadActivityConvertHeaderToTagsStr = "failed to convert header to tags"
-	errArchivalUploadActivityWrapBlobStr = "failed to wrap blob"
-	errArchivalUploadActivityUploadBlobStr = "failed to upload blob"
-	errDeleteHistoryActivityDeleteFromV2Str = "failed to delete history from events v2"
-	errDeleteHistoryActivityDeleteFromV1Str = "failed to delete history from events v1"
+	errArchivalUploadActivityWrapBlobStr            = "failed to wrap blob"
+	errArchivalUploadActivityUploadBlobStr          = "failed to upload blob"
+	errDeleteHistoryActivityDeleteFromV2Str         = "failed to delete history from events v2"
+	errDeleteHistoryActivityDeleteFromV1Str         = "failed to delete history from events v1"
 )
