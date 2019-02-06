@@ -734,6 +734,14 @@ const (
 	ESProcessorScope
 	// IndexProcessorScope is scope used by all metric emitted by index processor
 	IndexProcessorScope
+	// SystemWorkflowScope is scope used by all metrics emitted by SystemWorkflow
+	SystemWorkflowScope
+	// ArchivalUploadActivity is scope used by all metrics emitted by ArchivalUploadActivity
+	ArchivalUploadActivityScope
+	// ArchivalDeleteHistoryActivity is scope used by all metrics emitted by ArchivalDeleteHistoryActivity
+	ArchivalDeleteHistoryActivityScope
+	// HistoryBlobIteratorScope is scope used by all metrics emitted by HistoryBlobIterator
+	HistoryBlobIteratorScope
 
 	NumWorkerScopes
 )
@@ -1039,13 +1047,17 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 	},
 	// Worker Scope Names
 	Worker: {
-		ReplicatorScope:             {operation: "Replicator"},
-		DomainReplicationTaskScope:  {operation: "DomainReplicationTask"},
-		HistoryReplicationTaskScope: {operation: "HistoryReplicationTask"},
-		SyncShardTaskScope:          {operation: "SyncShardTask"},
-		SyncActivityTaskScope:       {operation: "SyncActivityTask"},
-		ESProcessorScope:            {operation: "ESProcessor"},
-		IndexProcessorScope:         {operation: "IndexProcessor"},
+		ReplicatorScope:                    {operation: "Replicator"},
+		DomainReplicationTaskScope:         {operation: "DomainReplicationTask"},
+		HistoryReplicationTaskScope:        {operation: "HistoryReplicationTask"},
+		SyncShardTaskScope:                 {operation: "SyncShardTask"},
+		SyncActivityTaskScope:              {operation: "SyncActivityTask"},
+		ESProcessorScope:                   {operation: "ESProcessor"},
+		IndexProcessorScope:                {operation: "IndexProcessor"},
+		SystemWorkflowScope:                {operation: "SystemWorkflow"},
+		ArchivalUploadActivityScope:        {operation: "ArchivalUploadActivity"},
+		ArchivalDeleteHistoryActivityScope: {operation: "ArchivalDeleteHistoryActivity"},
+		HistoryBlobIteratorScope:           {operation: "HistoryBlobIterator"},
 	},
 }
 
@@ -1229,6 +1241,28 @@ const (
 	ESProcessorFailures
 	ESProcessorCorruptedData
 	IndexProcessorCorruptedData
+	SysWorkerWorkflowStarted
+	SysWorkerReceivedSignal
+	SysWorkerContinueAsNew
+	SysWorkerContinueAsNewLatency
+	SysWorkerArchivalUploadActivityNonRetryableFailures
+	SysWorkerArchivalUploadSuccessful
+	SysWorkerArchivalDeleteHistoryActivityNonRetryableFailures
+	SysWorkerArchivalDeleteHistorySuccessful
+	SysWorkerGetDomainFailures
+	SysWorkerArchivalNotEnabledForClusterFailures
+	SysWorkerArchivalNotEnabledForDomainFailures
+	SysWorkerNextOnDepletedIterator
+	SysWorkerHistoryReadEventsFailures
+	SysWorkerNextBlobNonRetryableFailures
+	SysWorkerKeyConstructionFailures
+	SysWorkerBlobExistsNonRetryableFailures
+	SysWorkerMarshalBlobFailures
+	SysWorkerConvertHeaderToTagsFailures
+	SysWorkerWrapBlobFailures
+	SysWorkerBlobUploadNonRetryableFailures
+	SysWorkerDeleteHistoryV2NonRetryableFailures
+	SysWorkerDeleteHistoryV1NonRetryableFailures
 
 	NumWorkerMetrics
 )
@@ -1393,12 +1427,34 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		SyncMatchLatency:              {metricName: "syncmatch.latency", metricType: Timer},
 	},
 	Worker: {
-		ReplicatorMessages:          {metricName: "replicator.messages"},
-		ReplicatorFailures:          {metricName: "replicator.errors"},
-		ReplicatorLatency:           {metricName: "replicator.latency"},
-		ESProcessorFailures:         {metricName: "es-processor.errors"},
-		ESProcessorCorruptedData:    {metricName: "es-processor.corrupted-data"},
-		IndexProcessorCorruptedData: {metricName: "index-processor.corrupted-data"},
+		ReplicatorMessages:                                         {metricName: "replicator.messages"},
+		ReplicatorFailures:                                         {metricName: "replicator.errors"},
+		ReplicatorLatency:                                          {metricName: "replicator.latency"},
+		ESProcessorFailures:                                        {metricName: "es-processor.errors"},
+		ESProcessorCorruptedData:                                   {metricName: "es-processor.corrupted-data"},
+		IndexProcessorCorruptedData:                                {metricName: "index-processor.corrupted-data"},
+		SysWorkerWorkflowStarted:                                   {metricName: "sysworker.workflow-started"},
+		SysWorkerReceivedSignal:                                    {metricName: "sysworker.received-signal"},
+		SysWorkerContinueAsNew:                                     {metricName: "sysworker.continue-as-new"},
+		SysWorkerContinueAsNewLatency:                              {metricName: "sysworker.continue-as-new-latency"},
+		SysWorkerArchivalUploadActivityNonRetryableFailures:        {metricName: "sysworker.archival-upload-activity-non-retryable-errors"},
+		SysWorkerArchivalUploadSuccessful:                          {metricName: "sysworker.archival-upload-successful"},
+		SysWorkerArchivalDeleteHistoryActivityNonRetryableFailures: {metricName: "sysworker.archival-delete-history-activity-non-retryable-errors"},
+		SysWorkerArchivalDeleteHistorySuccessful:                   {metricName: "sysworker.archival-delete-history-successful"},
+		SysWorkerGetDomainFailures:                                 {metricName: "sysworker.get-domain-errors"},
+		SysWorkerArchivalNotEnabledForClusterFailures:              {metricName: "sysworker.archival-not-enabled-for-cluster-errors"},
+		SysWorkerArchivalNotEnabledForDomainFailures:               {metricName: "sysworker.archival-not-enabled-for-domain-errors"},
+		SysWorkerNextOnDepletedIterator:                            {metricName: "sysworker.next-on-depleted-iterator"},
+		SysWorkerHistoryReadEventsFailures:                         {metricName: "sysworker.history-read-events-errors"},
+		SysWorkerNextBlobNonRetryableFailures:                      {metricName: "sysworker.next-blob-non-retryable-errors"},
+		SysWorkerKeyConstructionFailures:                           {metricName: "sysworker.key-construction-errors"},
+		SysWorkerBlobExistsNonRetryableFailures:                    {metricName: "sysworker.blob-exists-non-retryable-errors"},
+		SysWorkerMarshalBlobFailures:                               {metricName: "sysworker.marshal-blob-errors"},
+		SysWorkerConvertHeaderToTagsFailures:                       {metricName: "sysworker.convert-header-to-tags-errors"},
+		SysWorkerWrapBlobFailures:                                  {metricName: "sysworker.wrap-blob-errors"},
+		SysWorkerBlobUploadNonRetryableFailures:                    {metricName: "sysworker.blob-upload-non-retryable-errors"},
+		SysWorkerDeleteHistoryV2NonRetryableFailures:               {metricName: "sysworker.delete-history-v2-non-retryable-errors"},
+		SysWorkerDeleteHistoryV1NonRetryableFailures:               {metricName: "sysworker.delete-history-v1-non-retryable-errors"},
 	},
 }
 

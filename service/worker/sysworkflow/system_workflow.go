@@ -23,11 +23,14 @@ package sysworkflow
 import (
 	"context"
 	"encoding/json"
+	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/blobstore/blob"
+	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
@@ -41,6 +44,14 @@ var (
 
 // SystemWorkflow is the system workflow code
 func SystemWorkflow(ctx workflow.Context) error {
+	sysWorkflowInfo := workflow.GetInfo(ctx)
+	logger := globalLogger.WithFields(bark.Fields{
+		logging.TagWorkflowExecutionID: sysWorkflowInfo.WorkflowExecution.ID,
+		logging.TagWorkflowRunID:       sysWorkflowInfo.WorkflowExecution.RunID,
+	})
+	logger.Info("started system workflow")
+	globalMetricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerWorkflowStarted)
+	sw := globalMetricsClient.StartTimer(metrics.SystemWorkflowScope, metrics.SysWorkerContinueAsNewLatency)
 	ch := workflow.GetSignalChannel(ctx, signalName)
 	signalsHandled := 0
 	for ; signalsHandled < signalsUntilContinueAsNew; signalsHandled++ {
@@ -48,7 +59,8 @@ func SystemWorkflow(ctx workflow.Context) error {
 		if more := ch.Receive(ctx, &signal); !more {
 			break
 		}
-		selectSystemTask(signal, ctx)
+		globalMetricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerReceivedSignal)
+		selectSystemTask(signal, ctx, logger, globalMetricsClient)
 	}
 
 	for {
@@ -56,15 +68,21 @@ func SystemWorkflow(ctx workflow.Context) error {
 		if ok := ch.ReceiveAsync(&signal); !ok {
 			break
 		}
-		selectSystemTask(signal, ctx)
+		globalMetricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerReceivedSignal)
+		selectSystemTask(signal, ctx, logger, globalMetricsClient)
 		signalsHandled++
 	}
 	ctx = workflow.WithExecutionStartToCloseTimeout(ctx, workflowStartToCloseTimeout)
 	ctx = workflow.WithWorkflowTaskStartToCloseTimeout(ctx, decisionTaskStartToCloseTimeout)
+	globalMetricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerContinueAsNew)
+	sw.Stop()
+	logger.WithFields(bark.Fields{
+		logging.TagNumberOfSignalsUntilContinueAsNew: signalsHandled,
+	}).Info("system workflow is continuing as new")
 	return workflow.NewContinueAsNewError(ctx, systemWorkflowFnName)
 }
 
-func selectSystemTask(signal signal, ctx workflow.Context) {
+func selectSystemTask(signal signal, ctx workflow.Context, logger bark.Logger, metricsClient metrics.Client) {
 	ao := workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
 		StartToCloseTimeout:    time.Minute,
@@ -74,7 +92,6 @@ func selectSystemTask(signal signal, ctx workflow.Context) {
 			BackoffCoefficient:       2.0,
 			MaximumInterval:          time.Minute,
 			ExpirationInterval:       time.Hour * 24 * 30,
-			MaximumAttempts:          0,
 			NonRetriableErrorReasons: []string{archivalActivityNonRetryableErrStr},
 		},
 	}
@@ -82,19 +99,40 @@ func selectSystemTask(signal signal, ctx workflow.Context) {
 	actCtx := workflow.WithActivityOptions(ctx, ao)
 	switch signal.RequestType {
 	case archivalRequest:
+		request := *signal.ArchiveRequest
 		if err := workflow.ExecuteActivity(
 			actCtx,
 			archivalUploadActivityFnName,
-			*signal.ArchiveRequest,
+			request,
 		).Get(ctx, nil); err != nil {
-			// log and emit metrics
+			logger.WithFields(bark.Fields{
+				logging.TagErr:                             err,
+				logging.TagArchiveRequestDomainID:          request.DomainID,
+				logging.TagArchiveRequestWorkflowID:        request.WorkflowID,
+				logging.TagArchiveRequestRunID:             request.RunID,
+				logging.TagArchiveRequestEventStoreVersion: request.EventStoreVersion,
+				logging.TagArchiveRequestLastFirstEventID:  request.LastFirstEventID,
+			}).Error("ArchivalUploadActivity encountered non-retryable error")
+			metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerArchivalUploadActivityNonRetryableFailures)
+		} else {
+			metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerArchivalUploadSuccessful)
 		}
 		if err := workflow.ExecuteActivity(
 			actCtx,
 			archivalDeleteHistoryActivityFnName,
-			*signal.ArchiveRequest,
+			request,
 		).Get(ctx, nil); err != nil {
-			// log and emit metrics
+			logger.WithFields(bark.Fields{
+				logging.TagErr:                             err,
+				logging.TagArchiveRequestDomainID:          request.DomainID,
+				logging.TagArchiveRequestWorkflowID:        request.WorkflowID,
+				logging.TagArchiveRequestRunID:             request.RunID,
+				logging.TagArchiveRequestEventStoreVersion: request.EventStoreVersion,
+				logging.TagArchiveRequestLastFirstEventID:  request.LastFirstEventID,
+			}).Error("ArchivalDeleteHistoryActivity encountered non-retryable error")
+			metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerArchivalDeleteHistoryActivityNonRetryableFailures)
+		} else {
+			metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerArchivalDeleteHistorySuccessful)
 		}
 	case backfillRequest:
 		if err := workflow.ExecuteActivity(
@@ -114,27 +152,40 @@ func selectSystemTask(signal signal, ctx workflow.Context) {
 // It is assumed that history is immutable when this activity is running. Under this assumption this activity is idempotent.
 // If an error is returned it will be of type archivalActivityNonRetryableErr. All retryable errors are retried forever.
 func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) error {
-	container, ok := ctx.Value(sysWorkerContainerKey).(*SysWorkerContainer)
-	if !ok {
-		return errArchivalActivityNonRetryable
-	}
+	container := ctx.Value(sysWorkerContainerKey).(*SysWorkerContainer)
+	logger := container.Logger.WithFields(bark.Fields{
+		logging.TagArchiveRequestDomainID:          request.DomainID,
+		logging.TagArchiveRequestWorkflowID:        request.WorkflowID,
+		logging.TagArchiveRequestRunID:             request.RunID,
+		logging.TagArchiveRequestEventStoreVersion: request.EventStoreVersion,
+		logging.TagArchiveRequestLastFirstEventID:  request.LastFirstEventID,
+	})
+	metricsClient := container.MetricsClient
 	domainCache := container.DomainCache
 	clusterMetadata := container.ClusterMetadata
 	domainCacheEntry, err := domainCache.GetDomainByID(request.DomainID)
 	if err != nil {
+		logger.WithError(err).Error("failed to get domain from domain cache")
+		metricsClient.IncCounter(metrics.ArchivalUploadActivityScope, metrics.SysWorkerGetDomainFailures)
 		return errArchivalActivityNonRetryable
 	}
 	if !clusterMetadata.IsArchivalEnabled() {
 		// for now if archival is disabled simply abort the activity
 		// a more in depth design meeting is needed to decide the correct way to handle backfilling/pausing archival
+		logger.Error("archival is not enabled for cluster, skipping archival upload")
+		metricsClient.IncCounter(metrics.ArchivalUploadActivityScope, metrics.SysWorkerArchivalNotEnabledForClusterFailures)
 		return errArchivalActivityNonRetryable
 	}
 	if domainCacheEntry.GetConfig().ArchivalStatus != shared.ArchivalStatusEnabled {
 		// for now if archival is disabled simply abort the activity
 		// a more in depth design meeting is needed to decide the correct way to handle backfilling/pausing archival
+		logger.Error("archival is not enabled for domain, skipping archival upload")
+		metricsClient.IncCounter(metrics.ArchivalUploadActivityScope, metrics.SysWorkerArchivalNotEnabledForDomainFailures)
 		return errArchivalActivityNonRetryable
 	}
 	historyBlobItr := NewHistoryBlobIterator(
+		logger,
+		metricsClient,
 		container.HistoryManager,
 		container.HistoryV2Manager,
 		request.DomainID,
@@ -145,30 +196,41 @@ func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) error {
 		request.LastFirstEventID,
 		container.Config,
 		domainCacheEntry.GetInfo().Name,
-		container.ClusterMetadata.GetCurrentClusterName())
+		container.ClusterMetadata.GetCurrentClusterName(),
+	)
 
 	blobstoreClient := container.Blobstore
 	bucket := domainCacheEntry.GetConfig().ArchivalBucket
 	for historyBlobItr.HasNext() {
 		historyBlob, err := nextBlobRetryForever(historyBlobItr)
 		if err != nil {
+			logger.WithError(err).Error("failed to get next blob from iterator, stopping archival upload")
+			metricsClient.IncCounter(metrics.ArchivalUploadActivityScope, metrics.SysWorkerNextBlobNonRetryableFailures)
 			return errArchivalActivityNonRetryable
 		}
 		key, err := NewHistoryBlobKey(request.DomainID, request.WorkflowID, request.RunID, *historyBlob.Header.CurrentPageToken)
 		if err != nil {
+			logger.WithError(err).Error("failed to construct blob key, stopping archival upload")
+			metricsClient.IncCounter(metrics.ArchivalUploadActivityScope, metrics.SysWorkerKeyConstructionFailures)
 			return errArchivalActivityNonRetryable
 		}
 		if exists, err := blobExistsRetryForever(blobstoreClient, bucket, key); err != nil {
+			logger.WithError(err).Error("failed to check if blob exists already, stopping archival upload")
+			metricsClient.IncCounter(metrics.ArchivalUploadActivityScope, metrics.SysWorkerBlobExistsNonRetryableFailures)
 			return errArchivalActivityNonRetryable
 		} else if exists {
 			continue
 		}
 		body, err := json.Marshal(historyBlob)
 		if err != nil {
+			logger.WithError(err).Error("failed to marshal history blob. stopping archival upload")
+			metricsClient.IncCounter(metrics.ArchivalUploadActivityScope, metrics.SysWorkerMarshalBlobFailures)
 			return errArchivalActivityNonRetryable
 		}
 		tags, err := ConvertHeaderToTags(historyBlob.Header)
 		if err != nil {
+			logger.WithError(err).Error("failed to convert header to tags, stopping archival upload")
+			metricsClient.IncCounter(metrics.ArchivalUploadActivityScope, metrics.SysWorkerConvertHeaderToTagsFailures)
 			return errArchivalActivityNonRetryable
 		}
 		wrapFunctions := []blob.WrapFn{blob.JSONEncoded()}
@@ -177,9 +239,13 @@ func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) error {
 		}
 		currBlob, err := blob.Wrap(blob.NewBlob(body, tags), wrapFunctions...)
 		if err != nil {
+			logger.WithError(err).Error("failed to wrap blob, stopping archival upload")
+			metricsClient.IncCounter(metrics.ArchivalUploadActivityScope, metrics.SysWorkerWrapBlobFailures)
 			return errArchivalActivityNonRetryable
 		}
 		if err := blobUploadRetryForever(blobstoreClient, bucket, key, currBlob); err != nil {
+			logger.WithError(err).Error("failed to upload blob, stopping archival upload")
+			metricsClient.IncCounter(metrics.ArchivalUploadActivityScope, metrics.SysWorkerBlobUploadNonRetryableFailures)
 			return errArchivalActivityNonRetryable
 		}
 		activity.RecordHeartbeat(ctx, historyBlob.Header.CurrentPageToken)
@@ -190,10 +256,15 @@ func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) error {
 // ArchivalDeleteHistoryActivity deletes the workflow execution history from persistence.
 // All retryable errors are retried forever. If an error is returned it is of type archivalActivityNonRetryableErr.
 func ArchivalDeleteHistoryActivity(ctx context.Context, request ArchiveRequest) error {
-	container, ok := ctx.Value(sysWorkerContainerKey).(*SysWorkerContainer)
-	if !ok {
-		return errArchivalActivityNonRetryable
-	}
+	container := ctx.Value(sysWorkerContainerKey).(*SysWorkerContainer)
+	logger := container.Logger.WithFields(bark.Fields{
+		logging.TagArchiveRequestDomainID:          request.DomainID,
+		logging.TagArchiveRequestWorkflowID:        request.WorkflowID,
+		logging.TagArchiveRequestRunID:             request.RunID,
+		logging.TagArchiveRequestEventStoreVersion: request.EventStoreVersion,
+		logging.TagArchiveRequestLastFirstEventID:  request.LastFirstEventID,
+	})
+	metricsClient := container.MetricsClient
 	if request.EventStoreVersion == persistence.EventStoreVersionV2 {
 		err := persistence.DeleteWorkflowExecutionHistoryV2(container.HistoryV2Manager, request.BranchToken, container.Logger)
 		if err == nil {
@@ -205,6 +276,8 @@ func ArchivalDeleteHistoryActivity(ctx context.Context, request ArchiveRequest) 
 		for err != nil && common.IsPersistenceTransientError(err) {
 			err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
 		}
+		logger.WithError(err).Error("failed to delete history from events v2")
+		metricsClient.IncCounter(metrics.ArchivalDeleteHistoryActivityScope, metrics.SysWorkerDeleteHistoryV2NonRetryableFailures)
 		return errArchivalActivityNonRetryable
 	}
 	deleteHistoryReq := &persistence.DeleteWorkflowExecutionHistoryRequest{
@@ -224,6 +297,8 @@ func ArchivalDeleteHistoryActivity(ctx context.Context, request ArchiveRequest) 
 	for err != nil && common.IsPersistenceTransientError(err) {
 		err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
 	}
+	logger.WithError(err).Error("failed to delete history from events v1")
+	metricsClient.IncCounter(metrics.ArchivalDeleteHistoryActivityScope, metrics.SysWorkerDeleteHistoryV1NonRetryableFailures)
 	return errArchivalActivityNonRetryable
 }
 
@@ -260,8 +335,6 @@ func blobUploadRetryForever(blobstoreClient blobstore.Client, bucket string, key
 	}
 	return err
 }
-
-// TODO: consider if this retryable activity needs to heartbeat?
 
 // BackfillActivity is the backfill activity code
 func BackfillActivity(_ context.Context, _ BackfillRequest) error {

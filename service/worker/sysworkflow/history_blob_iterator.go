@@ -22,8 +22,10 @@ package sysworkflow
 
 import (
 	"errors"
+	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"strconv"
 	"time"
@@ -43,6 +45,9 @@ type (
 	}
 
 	historyBlobIterator struct {
+		logger        bark.Logger
+		metricsClient metrics.Client
+
 		// the following defines the state of the iterator
 		blobPageToken        int
 		persistencePageToken []byte
@@ -65,6 +70,8 @@ type (
 
 // NewHistoryBlobIterator returns a new HistoryBlobIterator
 func NewHistoryBlobIterator(
+	logger bark.Logger,
+	metricsClient metrics.Client,
 	historyManager persistence.HistoryManager,
 	historyV2Manager persistence.HistoryV2Manager,
 	domainID string,
@@ -78,6 +85,9 @@ func NewHistoryBlobIterator(
 	clusterName string,
 ) HistoryBlobIterator {
 	return &historyBlobIterator{
+		logger:        logger,
+		metricsClient: metricsClient,
+
 		blobPageToken: common.FirstBlobPageToken,
 
 		historyManager:    historyManager,
@@ -99,10 +109,14 @@ func NewHistoryBlobIterator(
 // If error is returned then no iterator is state is advanced.
 func (i *historyBlobIterator) Next() (*HistoryBlob, error) {
 	if !i.HasNext() {
-		return nil, errors.New("iterator is empty")
+		i.logger.Error("called Next on depleted iterator")
+		i.metricsClient.IncCounter(metrics.HistoryBlobIteratorScope, metrics.SysWorkerNextOnDepletedIterator)
+		return nil, errors.New("iterator is depleted")
 	}
 	events, nextPersistencePageToken, historyEndReached, err := i.readBlobEvents(i.persistencePageToken)
 	if err != nil {
+		i.logger.WithError(err).Error("failed to read history events to construct blob")
+		i.metricsClient.IncCounter(metrics.HistoryBlobIteratorScope, metrics.SysWorkerHistoryReadEventsFailures)
 		return nil, err
 	}
 
