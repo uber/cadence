@@ -46,6 +46,7 @@ type (
 		UploadDateTime       *string `json:"upload_date_time,omitempty"`
 		UploadCluster        *string `json:"upload_cluster,omitempty"`
 		EventCount           *int64  `json:"event_count,omitempty"`
+		CloseFailoverVersion *int64  `json:"close_failover_version,omitempty"`
 	}
 
 	// HistoryBlob is the serializable data that forms the body of a blob

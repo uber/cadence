@@ -630,6 +630,7 @@ func (t *timerQueueProcessorBase) processArchiveHistoryEvent(task *persistence.T
 		EventStoreVersion: msBuilder.GetEventStoreVersion(),
 		BranchToken:       msBuilder.GetCurrentBranch(),
 		LastFirstEventID:  msBuilder.GetLastFirstEventID(),
+		CloseFailoverVersion: msBuilder.GetLastWriteVersion(),
 	}
 	err = t.deleteWorkflowExecution(task)
 	if err != nil {

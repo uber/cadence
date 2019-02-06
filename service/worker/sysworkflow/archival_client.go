@@ -39,6 +39,7 @@ type (
 		EventStoreVersion int32
 		BranchToken       []byte
 		LastFirstEventID  int64
+		CloseFailoverVersion int64
 	}
 
 	// BackfillRequest is request to Backfill

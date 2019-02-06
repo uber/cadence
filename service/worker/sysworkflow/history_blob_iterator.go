@@ -65,6 +65,7 @@ type (
 		config            *Config
 		domain            string
 		clusterName       string
+		closeFailoverVersion int64
 	}
 )
 
@@ -83,12 +84,15 @@ func NewHistoryBlobIterator(
 	config *Config,
 	domain string,
 	clusterName string,
+	closeFailoverVersion int64,
 ) HistoryBlobIterator {
 	return &historyBlobIterator{
 		logger:        logger,
 		metricsClient: metricsClient,
 
 		blobPageToken: common.FirstBlobPageToken,
+		persistencePageToken: []byte{},
+		finishedIteration: false,
 
 		historyManager:    historyManager,
 		historyV2Manager:  historyV2Manager,
@@ -101,6 +105,7 @@ func NewHistoryBlobIterator(
 		config:            config,
 		domain:            domain,
 		clusterName:       clusterName,
+		closeFailoverVersion: closeFailoverVersion,
 	}
 }
 
@@ -133,6 +138,7 @@ func (i *historyBlobIterator) Next() (*HistoryBlob, error) {
 		WorkflowID:           &i.workflowID,
 		RunID:                &i.runID,
 		CurrentPageToken:     common.StringPtr(strconv.Itoa(i.blobPageToken)),
+		NextPageToken:        common.StringPtr(strconv.Itoa(common.LastBlobNextPageToken)),
 		FirstFailoverVersion: firstEvent.Version,
 		LastFailoverVersion:  lastEvent.Version,
 		FirstEventID:         firstEvent.EventId,
@@ -140,6 +146,7 @@ func (i *historyBlobIterator) Next() (*HistoryBlob, error) {
 		UploadDateTime:       common.StringPtr(time.Now().String()),
 		UploadCluster:        &i.clusterName,
 		EventCount:           &eventCount,
+		CloseFailoverVersion: &i.closeFailoverVersion,
 	}
 	if i.HasNext() {
 		i.blobPageToken++
@@ -172,7 +179,7 @@ func (i *historyBlobIterator) readBlobEvents(pageToken []byte) ([]*shared.Histor
 	if err != nil {
 		return nil, nil, false, err
 	}
-	// Exceeding target blob size is fine because blob will be compressed anyways (just want to avoid creating very small blobs).
+	// Exceeding target blob size is fine because blob will be compressed anyways (just generally want to avoid creating very small blobs).
 	for len(nextPageToken) > 0 && size < i.config.TargetArchivalBlobSize(i.domain) {
 		currHistoryEvents, currSize, currNextPageToken, err := i.readHistory(nextPageToken)
 		if err != nil {
