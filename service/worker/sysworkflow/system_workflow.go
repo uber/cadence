@@ -217,6 +217,7 @@ func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) error {
 		container.Config,
 		domainCacheEntry.GetInfo().Name,
 		container.ClusterMetadata.GetCurrentClusterName(),
+		request.CloseFailoverVersion,
 	)
 
 	blobstoreClient := container.Blobstore
