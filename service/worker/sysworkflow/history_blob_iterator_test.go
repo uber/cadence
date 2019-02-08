@@ -70,7 +70,7 @@ type (
 	page struct {
 		size                      int
 		numEvents                 int
-		firstEventId              int64
+		firstEventID              int64
 		firstEventFailoverVersion int64
 		lastEventFailoverVersion  int64
 	}
@@ -147,7 +147,7 @@ func (s *HistoryBlobIteratorSuite) TestReadBlobEvents_Fail_FirstCallToReadHistor
 		{
 			size:                      1,
 			numEvents:                 1,
-			firstEventId:              1,
+			firstEventID:              1,
 			firstEventFailoverVersion: 1,
 			lastEventFailoverVersion:  1,
 		},
@@ -168,14 +168,14 @@ func (s *HistoryBlobIteratorSuite) TestReadBlobEvents_Fail_NonFirstCallToReadHis
 		{
 			size:                      1,
 			numEvents:                 1,
-			firstEventId:              1,
+			firstEventID:              1,
 			firstEventFailoverVersion: 1,
 			lastEventFailoverVersion:  1,
 		},
 		{
 			size:                      1,
 			numEvents:                 1,
-			firstEventId:              2,
+			firstEventID:              2,
 			firstEventFailoverVersion: 1,
 			lastEventFailoverVersion:  1,
 		},
@@ -196,21 +196,21 @@ func (s *HistoryBlobIteratorSuite) TestReadBlobEvents_Success_ReadToHistoryEnd()
 		{
 			size:                      200,
 			numEvents:                 10,
-			firstEventId:              1,
+			firstEventID:              1,
 			firstEventFailoverVersion: 1,
 			lastEventFailoverVersion:  1,
 		},
 		{
 			size:                      100,
 			numEvents:                 15,
-			firstEventId:              11,
+			firstEventID:              11,
 			firstEventFailoverVersion: 1,
 			lastEventFailoverVersion:  1,
 		},
 		{
 			size:                      500,
 			numEvents:                 50,
-			firstEventId:              26,
+			firstEventID:              26,
 			firstEventFailoverVersion: 1,
 			lastEventFailoverVersion:  1,
 		},
@@ -234,21 +234,21 @@ func (s *HistoryBlobIteratorSuite) TestReadBlobEvents_Success_TargetSizeSatisfie
 		{
 			size:                      200,
 			numEvents:                 10,
-			firstEventId:              1,
+			firstEventID:              1,
 			firstEventFailoverVersion: 1,
 			lastEventFailoverVersion:  1,
 		},
 		{
 			size:                      100,
 			numEvents:                 15,
-			firstEventId:              11,
+			firstEventID:              11,
 			firstEventFailoverVersion: 1,
 			lastEventFailoverVersion:  1,
 		},
 		{
 			size:                      500,
 			numEvents:                 50,
-			firstEventId:              26,
+			firstEventID:              26,
 			firstEventFailoverVersion: 1,
 			lastEventFailoverVersion:  1,
 		},
@@ -273,21 +273,21 @@ func (s *HistoryBlobIteratorSuite) TestReadBlobEvents_Success_TargetSizeSatisfie
 		{
 			size:                      200,
 			numEvents:                 10,
-			firstEventId:              1,
+			firstEventID:              1,
 			firstEventFailoverVersion: 1,
 			lastEventFailoverVersion:  1,
 		},
 		{
 			size:                      100,
 			numEvents:                 15,
-			firstEventId:              11,
+			firstEventID:              11,
 			firstEventFailoverVersion: 1,
 			lastEventFailoverVersion:  1,
 		},
 		{
 			size:                      500,
 			numEvents:                 50,
-			firstEventId:              26,
+			firstEventID:              26,
 			firstEventFailoverVersion: 1,
 			lastEventFailoverVersion:  1,
 		},
@@ -311,21 +311,21 @@ func (s *HistoryBlobIteratorSuite) TestNext_Fail_IteratorDepleted() {
 		{
 			size:                      200,
 			numEvents:                 10,
-			firstEventId:              1,
+			firstEventID:              1,
 			firstEventFailoverVersion: 1,
 			lastEventFailoverVersion:  1,
 		},
 		{
 			size:                      100,
 			numEvents:                 15,
-			firstEventId:              11,
+			firstEventID:              11,
 			firstEventFailoverVersion: 1,
 			lastEventFailoverVersion:  2,
 		},
 		{
 			size:                      500,
 			numEvents:                 50,
-			firstEventId:              26,
+			firstEventID:              26,
 			firstEventFailoverVersion: 2,
 			lastEventFailoverVersion:  5,
 		},
@@ -338,9 +338,9 @@ func (s *HistoryBlobIteratorSuite) TestNext_Fail_IteratorDepleted() {
 	blob, err := itr.Next()
 	expectedIteratorState := iteratorState{
 		// when iteration is finished page token is not advanced
-		blobPageToken: startingIteratorState.blobPageToken,
+		blobPageToken:        startingIteratorState.blobPageToken,
 		persistencePageToken: nil,
-		finishedIteration: true,
+		finishedIteration:    true,
 	}
 	s.assertStateMatches(expectedIteratorState, itr)
 	s.NotNil(blob)
@@ -364,21 +364,21 @@ func (s *HistoryBlobIteratorSuite) TestNext_Fail_ReturnErrOnSecondCallToNext() {
 		{
 			size:                      200,
 			numEvents:                 10,
-			firstEventId:              1,
+			firstEventID:              1,
 			firstEventFailoverVersion: 1,
 			lastEventFailoverVersion:  1,
 		},
 		{
 			size:                      100,
 			numEvents:                 15,
-			firstEventId:              11,
+			firstEventID:              11,
 			firstEventFailoverVersion: 1,
 			lastEventFailoverVersion:  2,
 		},
 		{
 			size:                      500,
 			numEvents:                 50,
-			firstEventId:              26,
+			firstEventID:              26,
 			firstEventFailoverVersion: 2,
 			lastEventFailoverVersion:  5,
 		},
@@ -390,14 +390,14 @@ func (s *HistoryBlobIteratorSuite) TestNext_Fail_ReturnErrOnSecondCallToNext() {
 	startingIteratorState := s.copyIteratorState(itr)
 	blob, err := itr.Next()
 	expectedIteratorState := iteratorState{
-		blobPageToken: startingIteratorState.blobPageToken + 1,
+		blobPageToken:        startingIteratorState.blobPageToken + 1,
 		persistencePageToken: pageTokens[2],
-		finishedIteration: false,
+		finishedIteration:    false,
 	}
 	s.assertStateMatches(expectedIteratorState, itr)
 	s.NotNil(blob)
 	s.Equal(strconv.Itoa(common.FirstBlobPageToken), *blob.Header.CurrentPageToken)
-	s.Equal(strconv.Itoa(common.FirstBlobPageToken + 1), *blob.Header.NextPageToken)
+	s.Equal(strconv.Itoa(common.FirstBlobPageToken+1), *blob.Header.NextPageToken)
 	s.Equal(int64(1), *blob.Header.FirstFailoverVersion)
 	s.Equal(int64(2), *blob.Header.LastFailoverVersion)
 	s.Equal(int64(1), *blob.Header.FirstEventID)
@@ -415,11 +415,11 @@ func (s *HistoryBlobIteratorSuite) TestNext_Success_TenCallsToNext() {
 	var pages []page
 	for i := 0; i < 100; i++ {
 		p := page{
-			size: 1000,
-			numEvents: 10,
-			firstEventId: common.FirstEventID + int64(i * 10),
+			size:                      1000,
+			numEvents:                 10,
+			firstEventID:              common.FirstEventID + int64(i*10),
 			firstEventFailoverVersion: 1,
-			lastEventFailoverVersion: 1,
+			lastEventFailoverVersion:  1,
 		}
 		pages = append(pages, p)
 	}
@@ -428,9 +428,9 @@ func (s *HistoryBlobIteratorSuite) TestNext_Success_TenCallsToNext() {
 	config := s.constructConfig(testDefaultPersistencePageSize, 10000)
 	itr := s.constructTestHistoryBlobIterator(historyManager, nil, config)
 	expectedIteratorState := iteratorState{
-		blobPageToken: common.FirstBlobPageToken,
+		blobPageToken:        common.FirstBlobPageToken,
 		persistencePageToken: nil,
-		finishedIteration: false,
+		finishedIteration:    false,
 	}
 	for i := 0; i < 10; i++ {
 		s.assertStateMatches(expectedIteratorState, itr)
@@ -438,18 +438,18 @@ func (s *HistoryBlobIteratorSuite) TestNext_Success_TenCallsToNext() {
 		blob, err := itr.Next()
 		s.NoError(err)
 		s.NotNil(blob)
-		s.Equal(common.FirstEventID + int64(i * 100), *blob.Header.FirstEventID)
-		s.Equal(int64(100 + (i * 100)), *blob.Header.LastEventID)
-		s.Equal(strconv.Itoa(i + 1), *blob.Header.CurrentPageToken)
+		s.Equal(common.FirstEventID+int64(i*100), *blob.Header.FirstEventID)
+		s.Equal(int64(100+(i*100)), *blob.Header.LastEventID)
+		s.Equal(strconv.Itoa(i+1), *blob.Header.CurrentPageToken)
 		if i == 9 {
 			s.Equal(strconv.Itoa(common.LastBlobNextPageToken), *blob.Header.NextPageToken)
 		} else {
-			s.Equal(strconv.Itoa(i + 2), *blob.Header.NextPageToken)
+			s.Equal(strconv.Itoa(i+2), *blob.Header.NextPageToken)
 		}
 		s.Equal(int64(100), *blob.Header.EventCount)
 		if i < 9 {
 			expectedIteratorState.blobPageToken = expectedIteratorState.blobPageToken + 1
-			expectedIteratorState.persistencePageToken = pageTokens[10 + (i * 10)]
+			expectedIteratorState.persistencePageToken = pageTokens[10+(i*10)]
 		} else {
 			expectedIteratorState.persistencePageToken = nil
 			expectedIteratorState.finishedIteration = true
@@ -517,7 +517,7 @@ func (s *HistoryBlobIteratorSuite) constructHistoryEvents(page page) []*shared.H
 	var events []*shared.HistoryEvent
 	for i := 0; i < page.numEvents; i++ {
 		event := &shared.HistoryEvent{
-			EventId: common.Int64Ptr(page.firstEventId + int64(i)),
+			EventId: common.Int64Ptr(page.firstEventID + int64(i)),
 			Version: common.Int64Ptr(page.firstEventFailoverVersion),
 		}
 		if i == page.numEvents-1 {
