@@ -91,7 +91,7 @@ func NewHistoryBlobIterator(
 		metricsClient: metricsClient,
 
 		blobPageToken:        common.FirstBlobPageToken,
-		persistencePageToken: []byte{},
+		persistencePageToken: nil,
 		finishedIteration:    false,
 
 		historyManager:       historyManager,
