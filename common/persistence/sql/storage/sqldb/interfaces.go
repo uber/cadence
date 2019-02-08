@@ -197,6 +197,7 @@ type (
 		ShardID    int64
 		DomainID   UUID
 		WorkflowID string
+		RunID      UUID
 	}
 
 	// BufferedEventsRow represents a row in buffered_events table
@@ -606,7 +607,11 @@ type (
 
 		InsertIntoCurrentExecutions(row *CurrentExecutionsRow) (sql.Result, error)
 		UpdateCurrentExecutions(row *CurrentExecutionsRow) (sql.Result, error)
+		// SelectFromCurrentExecutions returns one or more rows from current_executions table
+		// Required params - {shardID, domainID, workflowID}
 		SelectFromCurrentExecutions(filter *CurrentExecutionsFilter) (*CurrentExecutionsRow, error)
+		// DeleteFromCurrentExecutions performa a conditinal delete of a row in current_executions table
+		// Required params - {shardID, domainID, workflowID, runID}
 		DeleteFromCurrentExecutions(filter *CurrentExecutionsFilter) (sql.Result, error)
 		LockCurrentExecutions(filter *CurrentExecutionsFilter) (UUID, error)
 
