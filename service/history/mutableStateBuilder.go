@@ -2364,6 +2364,13 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(sour
 		initiatedID = newExecutionInfo.InitiatedID
 	}
 
+	cronSchedule := startedAttributes.GetCronSchedule()
+	if len(cronSchedule) == 0 && len(e.executionInfo.CronSchedule) > 0 {
+		// The initial implementation of CronSchedule (server release 0.5.1) did not properly set the CronSchedule on
+		// the start event. To keep backward compatible, we need to check both the start event and the mutable state.
+		cronSchedule = e.executionInfo.CronSchedule
+	}
+
 	continueAsNew := &persistence.CreateWorkflowExecutionRequest{
 		// NOTE: there is no replication task for the start / decision scheduled event,
 		// the above 2 events will be replicated along with previous continue as new event.
@@ -2384,7 +2391,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(sour
 		PreviousRunID:        prevRunID,
 		ReplicationState:     newStateBuilder.GetReplicationState(),
 		HasRetryPolicy:       startedAttributes.RetryPolicy != nil,
-		CronSchedule:         startedAttributes.GetCronSchedule(),
+		CronSchedule:         cronSchedule,
 		EventStoreVersion:    newStateBuilder.GetEventStoreVersion(),
 		BranchToken:          newStateBuilder.GetCurrentBranch(),
 	}
