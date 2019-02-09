@@ -540,21 +540,28 @@ func (s *HistoryBlobIteratorSuite) constructTestHistoryBlobIterator(
 	if config == nil {
 		config = s.constructConfig(testDefaultPersistencePageSize, testDefaultTargetArchivalBlobSize)
 	}
+
+	request := ArchiveRequest{
+		DomainID:             testDomainID,
+		WorkflowID:           testWorkflowID,
+		RunID:                testRunID,
+		EventStoreVersion:    int32(eventStoreVersion),
+		BranchToken:          testBranchToken,
+		LastFirstEventID:     testLastFirstEventID,
+		CloseFailoverVersion: testCloseFailoverVersion,
+	}
+	container := &SysWorkerContainer{
+		HistoryManager:   mockHistoryManager,
+		HistoryV2Manager: mockHistoryV2Manager,
+		Config:           config,
+	}
 	return NewHistoryBlobIterator(
 		s.logger,
 		s.metricsClient,
-		mockHistoryManager,
-		mockHistoryV2Manager,
-		testDomainID,
-		testWorkflowID,
-		testRunID,
-		int32(eventStoreVersion),
-		testBranchToken,
-		testLastFirstEventID,
-		config,
+		request,
+		container,
 		testDomain,
 		testClusterName,
-		testCloseFailoverVersion,
 	).(*historyBlobIterator)
 }
 

@@ -203,22 +203,10 @@ func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) error {
 		metricsClient.IncCounter(metrics.ArchivalUploadActivityScope, metrics.SysWorkerArchivalNotEnabledForDomain)
 		return nil
 	}
-	historyBlobItr := NewHistoryBlobIterator(
-		logger,
-		metricsClient,
-		container.HistoryManager,
-		container.HistoryV2Manager,
-		request.DomainID,
-		request.WorkflowID,
-		request.RunID,
-		request.EventStoreVersion,
-		request.BranchToken,
-		request.LastFirstEventID,
-		container.Config,
-		domainCacheEntry.GetInfo().Name,
-		container.ClusterMetadata.GetCurrentClusterName(),
-		request.CloseFailoverVersion,
-	)
+
+	domainName := domainCacheEntry.GetInfo().Name
+	clusterName := container.ClusterMetadata.GetCurrentClusterName()
+	historyBlobItr := NewHistoryBlobIterator(logger, metricsClient, request, container, domainName, clusterName)
 
 	blobstoreClient := container.Blobstore
 	bucket := domainCacheEntry.GetConfig().ArchivalBucket
@@ -255,7 +243,7 @@ func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) error {
 			return errArchivalUploadActivityConvertHeaderToTags
 		}
 		wrapFunctions := []blob.WrapFn{blob.JSONEncoded()}
-		if container.Config.EnableArchivalCompression(domainCacheEntry.GetInfo().Name) {
+		if container.Config.EnableArchivalCompression(domainName) {
 			wrapFunctions = append(wrapFunctions, blob.GzipCompressed())
 		}
 		currBlob, err := blob.Wrap(blob.NewBlob(body, tags), wrapFunctions...)
@@ -340,19 +328,27 @@ func nextBlobRetryForever(historyBlobItr HistoryBlobIterator) (*HistoryBlob, err
 }
 
 func blobExistsRetryForever(blobstoreClient blobstore.Client, bucket string, key blob.Key) (bool, error) {
-	exists, err := blobstoreClient.Exists(context.Background(), bucket, key)
+	ctx, cancel := context.WithTimeout(context.Background(), blobstoreOperationsDefaultTimeout)
+	exists, err := blobstoreClient.Exists(ctx, bucket, key)
+	cancel()
 	for err != nil && common.IsBlobstoreTransientError(err) {
 		// blobstoreClient is already retryable so no extra retry/backoff logic is needed here
-		exists, err = blobstoreClient.Exists(context.Background(), bucket, key)
+		ctx, cancel = context.WithTimeout(context.Background(), blobstoreOperationsDefaultTimeout)
+		exists, err = blobstoreClient.Exists(ctx, bucket, key)
+		cancel()
 	}
 	return exists, err
 }
 
 func blobUploadRetryForever(blobstoreClient blobstore.Client, bucket string, key blob.Key, blob *blob.Blob) error {
-	err := blobstoreClient.Upload(context.Background(), bucket, key, blob)
+	ctx, cancel := context.WithTimeout(context.Background(), blobstoreOperationsDefaultTimeout)
+	err := blobstoreClient.Upload(ctx, bucket, key, blob)
+	cancel()
 	for err != nil && common.IsBlobstoreTransientError(err) {
 		// blobstoreClient is already retryable so no extra retry/backoff logic is needed here
-		err = blobstoreClient.Upload(context.Background(), bucket, key, blob)
+		ctx, cancel = context.WithTimeout(context.Background(), blobstoreOperationsDefaultTimeout)
+		err = blobstoreClient.Upload(ctx, bucket, key, blob)
+		cancel()
 	}
 	return err
 }

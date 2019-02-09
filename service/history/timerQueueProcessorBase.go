@@ -585,7 +585,8 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.Ti
 	ok, err := verifyTaskVersion(t.shard, t.logger, task.DomainID, msBuilder.GetLastWriteVersion(), task.Version, task)
 	if err != nil {
 		return err
-	} else if !ok {
+	}
+	if !ok {
 		return nil
 	}
 

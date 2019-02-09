@@ -22,13 +22,14 @@ package sysworkflow
 
 import (
 	"errors"
+	"strconv"
+	"time"
+
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"strconv"
-	"time"
 )
 
 /**
@@ -73,18 +74,10 @@ type (
 func NewHistoryBlobIterator(
 	logger bark.Logger,
 	metricsClient metrics.Client,
-	historyManager persistence.HistoryManager,
-	historyV2Manager persistence.HistoryV2Manager,
-	domainID string,
-	workflowID string,
-	runID string,
-	eventStoreVersion int32,
-	branchToken []byte,
-	lastFirstEventID int64,
-	config *Config,
-	domain string,
+	request ArchiveRequest,
+	container *SysWorkerContainer,
+	domainName string,
 	clusterName string,
-	closeFailoverVersion int64,
 ) HistoryBlobIterator {
 	return &historyBlobIterator{
 		logger:        logger,
@@ -94,18 +87,18 @@ func NewHistoryBlobIterator(
 		persistencePageToken: nil,
 		finishedIteration:    false,
 
-		historyManager:       historyManager,
-		historyV2Manager:     historyV2Manager,
-		domainID:             domainID,
-		workflowID:           workflowID,
-		runID:                runID,
-		eventStoreVersion:    eventStoreVersion,
-		branchToken:          branchToken,
-		lastFirstEventID:     lastFirstEventID,
-		config:               config,
-		domain:               domain,
+		historyManager:       container.HistoryManager,
+		historyV2Manager:     container.HistoryV2Manager,
+		domainID:             request.DomainID,
+		workflowID:           request.WorkflowID,
+		runID:                request.RunID,
+		eventStoreVersion:    request.EventStoreVersion,
+		branchToken:          request.BranchToken,
+		lastFirstEventID:     request.LastFirstEventID,
+		config:               container.Config,
+		domain:               domainName,
 		clusterName:          clusterName,
-		closeFailoverVersion: closeFailoverVersion,
+		closeFailoverVersion: request.CloseFailoverVersion,
 	}
 }
 
