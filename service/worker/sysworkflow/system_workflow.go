@@ -54,13 +54,15 @@ var (
 // SystemWorkflow is the system workflow code
 func SystemWorkflow(ctx workflow.Context) error {
 	sysWorkflowInfo := workflow.GetInfo(ctx)
-	logger := globalLogger.WithFields(bark.Fields{
+	isReplay := workflow.IsReplaying(ctx)
+	logger := NewReplayBarkLogger(globalLogger.WithFields(bark.Fields{
 		logging.TagWorkflowExecutionID: sysWorkflowInfo.WorkflowExecution.ID,
 		logging.TagWorkflowRunID:       sysWorkflowInfo.WorkflowExecution.RunID,
-	})
+	}), isReplay, false)
 	logger.Info("started system workflow")
-	globalMetricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerWorkflowStarted)
-	sw := globalMetricsClient.StartTimer(metrics.SystemWorkflowScope, metrics.SysWorkerContinueAsNewLatency)
+	metricsClient := NewReplayMetricsClient(globalMetricsClient, isReplay)
+	metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerWorkflowStarted)
+	sw := metricsClient.StartTimer(metrics.SystemWorkflowScope, metrics.SysWorkerContinueAsNewLatency)
 	ch := workflow.GetSignalChannel(ctx, signalName)
 	signalsHandled := 0
 	for ; signalsHandled < signalsUntilContinueAsNew; signalsHandled++ {
@@ -68,8 +70,8 @@ func SystemWorkflow(ctx workflow.Context) error {
 		if more := ch.Receive(ctx, &signal); !more {
 			break
 		}
-		globalMetricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerReceivedSignal)
-		selectSystemTask(signal, ctx, logger, globalMetricsClient)
+		metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerReceivedSignal)
+		selectSystemTask(signal, ctx, logger, metricsClient)
 	}
 
 	for {
@@ -77,13 +79,13 @@ func SystemWorkflow(ctx workflow.Context) error {
 		if ok := ch.ReceiveAsync(&signal); !ok {
 			break
 		}
-		globalMetricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerReceivedSignal)
-		selectSystemTask(signal, ctx, logger, globalMetricsClient)
+		metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerReceivedSignal)
+		selectSystemTask(signal, ctx, logger, metricsClient)
 		signalsHandled++
 	}
 	ctx = workflow.WithExecutionStartToCloseTimeout(ctx, workflowStartToCloseTimeout)
 	ctx = workflow.WithWorkflowTaskStartToCloseTimeout(ctx, decisionTaskStartToCloseTimeout)
-	globalMetricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerContinueAsNew)
+	metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerContinueAsNew)
 	sw.Stop()
 	logger.WithFields(bark.Fields{
 		logging.TagNumberOfSignalsUntilContinueAsNew: signalsHandled,
