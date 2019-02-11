@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/blobstore/blob"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -100,7 +101,7 @@ func selectSystemTask(signal signal, ctx workflow.Context, logger bark.Logger, m
 		ao := workflow.ActivityOptions{
 			ScheduleToStartTimeout: time.Minute,
 			StartToCloseTimeout:    5 * time.Minute,
-			HeartbeatTimeout:       time.Second * 10,
+			HeartbeatTimeout:      heartbeatTimeout,
 			RetryPolicy: &cadence.RetryPolicy{
 				InitialInterval:    time.Second,
 				BackoffCoefficient: 2.0,
@@ -115,8 +116,6 @@ func selectSystemTask(signal signal, ctx workflow.Context, logger bark.Logger, m
 					errArchivalUploadActivityConvertHeaderToTagsStr,
 					errArchivalUploadActivityWrapBlobStr,
 					errArchivalUploadActivityUploadBlobStr,
-					errDeleteHistoryActivityDeleteFromV2Str,
-					errDeleteHistoryActivityDeleteFromV1Str,
 				},
 			},
 		}
@@ -168,6 +167,12 @@ func selectSystemTask(signal signal, ctx workflow.Context, logger bark.Logger, m
 // It is assumed that history is immutable when this activity is running. Under this assumption this activity is idempotent.
 // If an error is returned it will be of type archivalActivityNonRetryableErr. All retryable errors are retried forever.
 func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) error {
+	go func() {
+		for {
+			<-time.After(heartbeatTimeout / 2)
+			activity.RecordHeartbeat(ctx)
+		}
+	}()
 	container := ctx.Value(sysWorkerContainerKey).(*SysWorkerContainer)
 	logger := container.Logger.WithFields(bark.Fields{
 		logging.TagArchiveRequestDomainID:          request.DomainID,
@@ -179,7 +184,7 @@ func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) error {
 	metricsClient := container.MetricsClient
 	domainCache := container.DomainCache
 	clusterMetadata := container.ClusterMetadata
-	domainCacheEntry, err := domainCache.GetDomainByID(request.DomainID)
+	domainCacheEntry, err := getDomainByIDRetryForever(domainCache, request.DomainID)
 	if err != nil {
 		logger.WithError(err).Error("failed to get domain from domain cache")
 		metricsClient.IncCounter(metrics.ArchivalUploadActivityScope, metrics.SysWorkerGetDomainFailures)
@@ -256,7 +261,6 @@ func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) error {
 			metricsClient.IncCounter(metrics.ArchivalUploadActivityScope, metrics.SysWorkerBlobUploadNonRetryableFailures)
 			return errArchivalUploadActivityUploadBlob
 		}
-		activity.RecordHeartbeat(ctx, historyBlob.Header.CurrentPageToken)
 	}
 	return nil
 }
@@ -350,4 +354,19 @@ func blobUploadRetryForever(blobstoreClient blobstore.Client, bucket string, key
 		cancel()
 	}
 	return err
+}
+
+func getDomainByIDRetryForever(domainCache cache.DomainCache, id string) (*cache.DomainCacheEntry, error) {
+	entry, err := domainCache.GetDomainByID(id)
+	if err == nil {
+		return entry, nil
+	}
+	op := func() error {
+		entry, err = domainCache.GetDomainByID(id)
+		return err
+	}
+	for err != nil && common.IsPersistenceTransientError(err) {
+		backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+	}
+	return entry, err
 }

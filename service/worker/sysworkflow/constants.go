@@ -51,6 +51,7 @@ const (
 	archivalUploadActivityFnName        = "ArchivalUploadActivity"
 	historyBlobKeyExt                   = "history"
 	blobstoreOperationsDefaultTimeout   = 5 * time.Second
+	heartbeatTimeout = 10 * time.Second
 
 	// the following are all non-retryable error strings
 	errArchivalUploadActivityGetDomainStr           = "failed to get domain from domain cache"
