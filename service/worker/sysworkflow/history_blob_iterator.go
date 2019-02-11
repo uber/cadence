@@ -70,6 +70,10 @@ type (
 	}
 )
 
+var (
+	errIteratorDepleted = errors.New("iterator is depleted")
+)
+
 // NewHistoryBlobIterator returns a new HistoryBlobIterator
 func NewHistoryBlobIterator(
 	logger bark.Logger,
@@ -109,7 +113,7 @@ func (i *historyBlobIterator) Next() (*HistoryBlob, error) {
 	if !i.HasNext() {
 		i.logger.Error("called Next on depleted iterator")
 		i.metricsClient.IncCounter(metrics.HistoryBlobIteratorScope, metrics.SysWorkerNextOnDepletedIterator)
-		return nil, errors.New("iterator is depleted")
+		return nil, errIteratorDepleted
 	}
 	events, nextPersistencePageToken, historyEndReached, err := i.readBlobEvents(i.persistencePageToken)
 	if err != nil {

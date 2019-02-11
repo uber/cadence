@@ -94,36 +94,34 @@ func SystemWorkflow(ctx workflow.Context) error {
 }
 
 func selectSystemTask(signal signal, ctx workflow.Context, logger bark.Logger, metricsClient metrics.Client) {
-	ao := workflow.ActivityOptions{
-		ScheduleToStartTimeout: time.Minute,
-		StartToCloseTimeout:    time.Minute,
-		HeartbeatTimeout:       time.Second * 10,
-		RetryPolicy: &cadence.RetryPolicy{
-			InitialInterval:    time.Second,
-			BackoffCoefficient: 2.0,
-			MaximumInterval:    time.Minute,
-			ExpirationInterval: time.Hour * 24 * 30,
-			NonRetriableErrorReasons: []string{
-				errArchivalUploadActivityGetDomainStr,
-				errArchivalUploadActivityNextBlobStr,
-				errArchivalUploadActivityConstructKeyStr,
-				errArchivalUploadActivityBlobExistsStr,
-				errArchivalUploadActivityMarshalBlobStr,
-				errArchivalUploadActivityConvertHeaderToTagsStr,
-				errArchivalUploadActivityWrapBlobStr,
-				errArchivalUploadActivityUploadBlobStr,
-				errDeleteHistoryActivityDeleteFromV2Str,
-				errDeleteHistoryActivityDeleteFromV1Str,
-			},
-		},
-	}
-
-	actCtx := workflow.WithActivityOptions(ctx, ao)
 	switch signal.RequestType {
 	case archivalRequest:
 		request := *signal.ArchiveRequest
+		ao := workflow.ActivityOptions{
+			ScheduleToStartTimeout: time.Minute,
+			StartToCloseTimeout:    5 * time.Minute,
+			HeartbeatTimeout:       time.Second * 10,
+			RetryPolicy: &cadence.RetryPolicy{
+				InitialInterval:    time.Second,
+				BackoffCoefficient: 2.0,
+				MaximumInterval:    time.Minute,
+				ExpirationInterval: time.Hour * 24 * 30,
+				NonRetriableErrorReasons: []string{
+					errArchivalUploadActivityGetDomainStr,
+					errArchivalUploadActivityNextBlobStr,
+					errArchivalUploadActivityConstructKeyStr,
+					errArchivalUploadActivityBlobExistsStr,
+					errArchivalUploadActivityMarshalBlobStr,
+					errArchivalUploadActivityConvertHeaderToTagsStr,
+					errArchivalUploadActivityWrapBlobStr,
+					errArchivalUploadActivityUploadBlobStr,
+					errDeleteHistoryActivityDeleteFromV2Str,
+					errDeleteHistoryActivityDeleteFromV1Str,
+				},
+			},
+		}
 		if err := workflow.ExecuteActivity(
-			actCtx,
+			workflow.WithActivityOptions(ctx, ao),
 			archivalUploadActivityFnName,
 			request,
 		).Get(ctx, nil); err != nil {
@@ -139,9 +137,12 @@ func selectSystemTask(signal signal, ctx workflow.Context, logger bark.Logger, m
 		} else {
 			metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerArchivalUploadSuccessful)
 		}
-		if err := workflow.ExecuteActivity(
-			actCtx,
-			archivalDeleteHistoryActivityFnName,
+		lao := workflow.LocalActivityOptions{
+			ScheduleToCloseTimeout: 10 * time.Second,
+		}
+		if err := workflow.ExecuteLocalActivity(
+			workflow.WithLocalActivityOptions(ctx, lao),
+			ArchivalDeleteHistoryActivity,
 			request,
 		).Get(ctx, nil); err != nil {
 			logger.WithFields(bark.Fields{
@@ -155,13 +156,6 @@ func selectSystemTask(signal signal, ctx workflow.Context, logger bark.Logger, m
 			metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerArchivalDeleteHistoryActivityNonRetryableFailures)
 		} else {
 			metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerArchivalDeleteHistorySuccessful)
-		}
-	case backfillRequest:
-		if err := workflow.ExecuteActivity(
-			actCtx,
-			backfillActivityFnName,
-			*signal.BackillRequest,
-		).Get(ctx, nil); err != nil {
 		}
 	default:
 	}
@@ -356,10 +350,4 @@ func blobUploadRetryForever(blobstoreClient blobstore.Client, bucket string, key
 		cancel()
 	}
 	return err
-}
-
-// BackfillActivity is the backfill activity code
-func BackfillActivity(_ context.Context, _ BackfillRequest) error {
-	// TODO: write this activity
-	return nil
 }

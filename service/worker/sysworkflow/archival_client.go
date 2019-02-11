@@ -22,7 +22,6 @@ package sysworkflow
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/uber/cadence/client/public"
 	"github.com/uber/cadence/common/service/dynamicconfig"
@@ -42,13 +41,9 @@ type (
 		CloseFailoverVersion int64
 	}
 
-	// BackfillRequest is request to Backfill
-	BackfillRequest struct{}
-
 	// ArchivalClient is used to archive workflow histories
 	ArchivalClient interface {
 		Archive(*ArchiveRequest) error
-		Backfill(*BackfillRequest) error
 	}
 
 	archivalClient struct {
@@ -59,7 +54,6 @@ type (
 	signal struct {
 		RequestType    requestType
 		ArchiveRequest *ArchiveRequest
-		BackillRequest *BackfillRequest
 	}
 )
 
@@ -98,10 +92,4 @@ func (c *archivalClient) Archive(request *ArchiveRequest) error {
 		systemWorkflowFnName,
 	)
 	return err
-}
-
-// Backfill starts a backfill task
-func (c *archivalClient) Backfill(request *BackfillRequest) error {
-	// TODO: implement this once backfill is supported
-	return errors.New("not implemented")
 }

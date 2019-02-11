@@ -49,8 +49,6 @@ const (
 	signalsUntilContinueAsNew           = 1000
 	systemWorkflowFnName                = "SystemWorkflow"
 	archivalUploadActivityFnName        = "ArchivalUploadActivity"
-	archivalDeleteHistoryActivityFnName = "ArchivalDeleteHistoryActivity"
-	backfillActivityFnName              = "BackfillActivity"
 	historyBlobKeyExt                   = "history"
 	blobstoreOperationsDefaultTimeout   = 5 * time.Second
 

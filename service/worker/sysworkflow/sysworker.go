@@ -80,8 +80,6 @@ var (
 func init() {
 	workflow.RegisterWithOptions(SystemWorkflow, workflow.RegisterOptions{Name: systemWorkflowFnName})
 	activity.RegisterWithOptions(ArchivalUploadActivity, activity.RegisterOptions{Name: archivalUploadActivityFnName})
-	activity.RegisterWithOptions(ArchivalDeleteHistoryActivity, activity.RegisterOptions{Name: archivalDeleteHistoryActivityFnName})
-	activity.RegisterWithOptions(BackfillActivity, activity.RegisterOptions{Name: backfillActivityFnName})
 }
 
 // NewSysWorker returns a new SysWorker
