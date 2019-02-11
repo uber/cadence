@@ -150,10 +150,10 @@ CREATE TABLE tasks (
   run_id CHAR(64) NOT NULL,
   schedule_id BIGINT NOT NULL,
   task_list_name VARCHAR(255) NOT NULL,
-  task_list_type TINYINT NOT NULL,
+  task_type TINYINT NOT NULL, -- {Activity, Decision}
   task_id BIGINT NOT NULL,
   expiry_ts TIMESTAMP(3) NOT NULL,
-  PRIMARY KEY (shard_id, domain_id, task_list_name, task_list_type, task_id)
+  PRIMARY KEY (shard_id, domain_id, task_list_name, task_type, task_id)
 );
 
 CREATE TABLE task_lists (
@@ -204,9 +204,9 @@ CREATE TABLE events (
 	run_id         VARCHAR(64) NOT NULL,
 	first_event_id BIGINT NOT NULL,
 	batch_version  BIGINT,
-	range_id       INT NOT NULL,
-	tx_id          INT NOT NULL,
-	data BLOB      NOT NULL,
+	range_id       BIGINT NOT NULL,
+	tx_id          BIGINT NOT NULL,
+	data MEDIUMBLOB  NOT NULL,
 	data_encoding  VARCHAR(64) NOT NULL,
 	PRIMARY KEY (domain_id, workflow_id, run_id, first_event_id)
 );
