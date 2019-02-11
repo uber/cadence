@@ -47,12 +47,12 @@ CREATE TABLE shards (
 CREATE TABLE transfer_tasks(
 	shard_id INT NOT NULL,
 	domain_id BINARY(16) NOT NULL,
-	workflow_id VARCHAR(64) NOT NULL,
+	workflow_id VARCHAR(255) NOT NULL,
 	run_id BINARY(16) NOT NULL,
 	task_id BIGINT NOT NULL,
 	task_type TINYINT NOT NULL,
 	target_domain_id BINARY(16) NOT NULL,
-	target_workflow_id VARCHAR(64) NOT NULL,
+	target_workflow_id VARCHAR(255) NOT NULL,
 	target_run_id BINARY(16),
 	target_child_workflow_only TINYINT(1) NOT NULL,
 	task_list VARCHAR(255) NOT NULL,
@@ -65,11 +65,11 @@ CREATE TABLE transfer_tasks(
 CREATE TABLE executions(
   shard_id INT NOT NULL,
 	domain_id BINARY(16) NOT NULL,
-	workflow_id VARCHAR(64) NOT NULL,
+	workflow_id VARCHAR(255) NOT NULL,
 	run_id BINARY(16) NOT NULL,
 	--
 	parent_domain_id BINARY(16), -- 1.
-	parent_workflow_id VARCHAR(64), -- 2.
+	parent_workflow_id VARCHAR(255), -- 2.
 	parent_run_id BINARY(16), -- 3.
 	initiated_id BIGINT, -- 4. these (parent-related fields) are nullable as their default values are not checked by tests
 	completion_event_batch_id BIGINT, -- 5.
@@ -118,7 +118,7 @@ CREATE TABLE executions(
 CREATE TABLE current_executions(
   shard_id INT NOT NULL,
   domain_id BINARY(16) NOT NULL,
-  workflow_id VARCHAR(64) NOT NULL,
+  workflow_id VARCHAR(255) NOT NULL,
   --
   run_id BINARY(16) NOT NULL,
   create_request_id VARCHAR(64) NOT NULL,
@@ -133,7 +133,7 @@ CREATE TABLE buffered_events (
   id BIGINT AUTO_INCREMENT NOT NULL,
   shard_id INT NOT NULL,
 	domain_id BINARY(16) NOT NULL,
-	workflow_id VARCHAR(64) NOT NULL,
+	workflow_id VARCHAR(255) NOT NULL,
 	run_id BINARY(16) NOT NULL,
 	--
 	data BLOB NOT NULL,
@@ -146,7 +146,7 @@ CREATE INDEX buffered_events_by_events_ids ON buffered_events(shard_id, domain_i
 CREATE TABLE tasks (
   shard_id INT NOT NULL DEFAULT 0,
   domain_id BINARY(16) NOT NULL,
-  workflow_id VARCHAR(64) NOT NULL,
+  workflow_id VARCHAR(255) NOT NULL,
   run_id BINARY(16) NOT NULL,
   schedule_id BIGINT NOT NULL,
   task_list_name VARCHAR(255) NOT NULL,
@@ -172,7 +172,7 @@ CREATE TABLE replication_tasks (
 	task_id BIGINT NOT NULL,
 	--
 	domain_id BINARY(16) NOT NULL,
-	workflow_id VARCHAR(64) NOT NULL,
+	workflow_id VARCHAR(255) NOT NULL,
 	run_id BINARY(16) NOT NULL,
 	task_type TINYINT NOT NULL,
 	first_event_id BIGINT NOT NULL,
@@ -189,7 +189,7 @@ CREATE TABLE timer_tasks (
 	task_id BIGINT NOT NULL,
 	--
 	domain_id BINARY(16) NOT NULL,
-	workflow_id VARCHAR(64) NOT NULL,
+	workflow_id VARCHAR(255) NOT NULL,
 	run_id BINARY(16) NOT NULL,
 	task_type TINYINT NOT NULL,
 	timeout_type TINYINT NOT NULL,
@@ -201,7 +201,7 @@ CREATE TABLE timer_tasks (
 
 CREATE TABLE events (
 	domain_id      BINARY(16) NOT NULL,
-	workflow_id    VARCHAR(64) NOT NULL,
+	workflow_id    VARCHAR(255) NOT NULL,
 	run_id         BINARY(16) NOT NULL,
 	first_event_id BIGINT NOT NULL,
 	batch_version  BIGINT,
@@ -216,7 +216,7 @@ CREATE TABLE activity_info_maps (
 -- each row corresponds to one key of one map<string, ActivityInfo>
 	shard_id INT NOT NULL,
 	domain_id BINARY(16) NOT NULL,
-	workflow_id VARCHAR(64) NOT NULL,
+	workflow_id VARCHAR(255) NOT NULL,
   run_id BINARY(16) NOT NULL,
 	schedule_id BIGINT NOT NULL, -- the key.
 -- fields of activity_info type follow
@@ -256,7 +256,7 @@ non_retriable_errors        BLOB, -- this was a list<text>. The use pattern is t
 CREATE TABLE timer_info_maps (
 shard_id INT NOT NULL,
 domain_id BINARY(16) NOT NULL,
-workflow_id VARCHAR(64) NOT NULL,
+workflow_id VARCHAR(255) NOT NULL,
 run_id BINARY(16) NOT NULL,
 timer_id VARCHAR(255) NOT NULL, -- what string type should this be?
 --
@@ -270,7 +270,7 @@ timer_id VARCHAR(255) NOT NULL, -- what string type should this be?
 CREATE TABLE child_execution_info_maps (
   shard_id INT NOT NULL,
 domain_id BINARY(16) NOT NULL,
-workflow_id VARCHAR(64) NOT NULL,
+workflow_id VARCHAR(255) NOT NULL,
 run_id BINARY(16) NOT NULL,
 initiated_id BIGINT NOT NULL,
 --
@@ -279,7 +279,7 @@ initiated_event_batch_id  BIGINT NOT NULL,
 initiated_event BLOB,
 initiated_event_encoding  VARCHAR(16),
 started_id BIGINT NOT NULL,
-started_workflow_id VARCHAR(64) NOT NULL,
+started_workflow_id VARCHAR(255) NOT NULL,
 started_run_id BINARY(16),
 started_event BLOB,
 started_event_encoding  VARCHAR(16),
@@ -292,7 +292,7 @@ PRIMARY KEY (shard_id, domain_id, workflow_id, run_id, initiated_id)
 CREATE TABLE request_cancel_info_maps (
 shard_id INT NOT NULL,
 domain_id BINARY(16) NOT NULL,
-workflow_id VARCHAR(64) NOT NULL,
+workflow_id VARCHAR(255) NOT NULL,
 run_id BINARY(16) NOT NULL,
 initiated_id BIGINT NOT NULL,
 --
@@ -305,7 +305,7 @@ PRIMARY KEY (shard_id, domain_id, workflow_id, run_id, initiated_id)
 CREATE TABLE signal_info_maps (
 shard_id INT NOT NULL,
 domain_id BINARY(16) NOT NULL,
-workflow_id VARCHAR(64) NOT NULL,
+workflow_id VARCHAR(255) NOT NULL,
 run_id BINARY(16) NOT NULL,
 initiated_id BIGINT NOT NULL,
 --
@@ -320,7 +320,7 @@ PRIMARY KEY (shard_id, domain_id, workflow_id, run_id, initiated_id)
 CREATE TABLE buffered_replication_task_maps (
  shard_id INT NOT NULL,
 domain_id BINARY(16) NOT NULL,
-workflow_id VARCHAR(64) NOT NULL,
+workflow_id VARCHAR(255) NOT NULL,
 run_id BINARY(16) NOT NULL,
 first_event_id BIGINT NOT NULL,
 --
@@ -336,7 +336,7 @@ PRIMARY KEY (shard_id, domain_id, workflow_id, run_id, first_event_id)
 CREATE TABLE signals_requested_sets (
 	shard_id INT NOT NULL,
 	domain_id BINARY(16) NOT NULL,
-	workflow_id VARCHAR(64) NOT NULL,
+	workflow_id VARCHAR(255) NOT NULL,
 	run_id BINARY(16) NOT NULL,
 	signal_id VARCHAR(64) NOT NULL,
 	--
