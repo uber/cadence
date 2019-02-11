@@ -140,7 +140,6 @@ func (i *historyBlobIterator) Next() (*HistoryBlob, error) {
 		UploadCluster:        &i.clusterName,
 		EventCount:           &eventCount,
 		CloseFailoverVersion: &i.closeFailoverVersion,
-		// TODO: add deterministic blob construction algorithm identifier here (will do this on this diff)...
 	}
 	if i.HasNext() {
 		i.blobPageToken++
