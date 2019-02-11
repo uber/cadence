@@ -59,6 +59,8 @@ type (
 		Blobstore        blobstore.Client
 		DomainCache      cache.DomainCache
 		Config           *Config
+
+		HistoryBlobIterator HistoryBlobIterator // this is only set in testing code
 	}
 
 	// Config for SysWorker

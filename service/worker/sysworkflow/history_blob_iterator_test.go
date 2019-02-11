@@ -217,7 +217,7 @@ func (s *HistoryBlobIteratorSuite) TestReadBlobEvents_Success_ReadToHistoryEnd()
 	}
 	historyManager, pageTokens := s.constructMockHistoryManager(-1, pages...)
 	// ensure target blob size is greater than total history length to ensure all of history is read
-	config := s.constructConfig(testDefaultPersistencePageSize, 1000)
+	config := constructConfig(testDefaultPersistencePageSize, 1000)
 	itr := s.constructTestHistoryBlobIterator(historyManager, nil, config)
 	startingIteratorState := s.copyIteratorState(itr)
 	events, nextPageToken, historyEndReached, err := itr.readBlobEvents(pageTokens[0])
@@ -255,7 +255,7 @@ func (s *HistoryBlobIteratorSuite) TestReadBlobEvents_Success_TargetSizeSatisfie
 	}
 	historyManager, pageTokens := s.constructMockHistoryManager(-1, pages...)
 	// ensure target blob size is smaller than full length of history so that not all of history is read
-	config := s.constructConfig(testDefaultPersistencePageSize, 250)
+	config := constructConfig(testDefaultPersistencePageSize, 250)
 	itr := s.constructTestHistoryBlobIterator(historyManager, nil, config)
 	startingIteratorState := s.copyIteratorState(itr)
 	events, nextPageToken, historyEndReached, err := itr.readBlobEvents(pageTokens[0])
@@ -294,7 +294,7 @@ func (s *HistoryBlobIteratorSuite) TestReadBlobEvents_Success_TargetSizeSatisfie
 	}
 	historyManager, pageTokens := s.constructMockHistoryManager(-1, pages...)
 	// set target blob size such that all of history is read and the target blob size becomes satisfied upon reading last blob
-	config := s.constructConfig(testDefaultPersistencePageSize, 301)
+	config := constructConfig(testDefaultPersistencePageSize, 301)
 	itr := s.constructTestHistoryBlobIterator(historyManager, nil, config)
 	startingIteratorState := s.copyIteratorState(itr)
 	events, nextPageToken, historyEndReached, err := itr.readBlobEvents(pageTokens[0])
@@ -332,7 +332,7 @@ func (s *HistoryBlobIteratorSuite) TestNext_Fail_IteratorDepleted() {
 	}
 	historyManager, _ := s.constructMockHistoryManager(-1, pages...)
 	// set target blob size such that a single call to next will read all of history
-	config := s.constructConfig(testDefaultPersistencePageSize, 301)
+	config := constructConfig(testDefaultPersistencePageSize, 301)
 	itr := s.constructTestHistoryBlobIterator(historyManager, nil, config)
 	startingIteratorState := s.copyIteratorState(itr)
 	blob, err := itr.Next()
@@ -385,7 +385,7 @@ func (s *HistoryBlobIteratorSuite) TestNext_Fail_ReturnErrOnSecondCallToNext() {
 	}
 	historyManager, pageTokens := s.constructMockHistoryManager(2, pages...)
 	// set target blob size such that the first two pages are read for blob one without error, third page will return error
-	config := s.constructConfig(testDefaultPersistencePageSize, 250)
+	config := constructConfig(testDefaultPersistencePageSize, 250)
 	itr := s.constructTestHistoryBlobIterator(historyManager, nil, config)
 	startingIteratorState := s.copyIteratorState(itr)
 	blob, err := itr.Next()
@@ -425,7 +425,7 @@ func (s *HistoryBlobIteratorSuite) TestNext_Success_TenCallsToNext() {
 	}
 	historyManager, pageTokens := s.constructMockHistoryManager(-1, pages...)
 	// set config such that every 10 persistence pages is one blob
-	config := s.constructConfig(testDefaultPersistencePageSize, 10000)
+	config := constructConfig(testDefaultPersistencePageSize, 10000)
 	itr := s.constructTestHistoryBlobIterator(historyManager, nil, config)
 	expectedIteratorState := iteratorState{
 		blobPageToken:        common.FirstBlobPageToken,
@@ -538,7 +538,7 @@ func (s *HistoryBlobIteratorSuite) constructTestHistoryBlobIterator(
 		eventStoreVersion = persistence.EventStoreVersionV2
 	}
 	if config == nil {
-		config = s.constructConfig(testDefaultPersistencePageSize, testDefaultTargetArchivalBlobSize)
+		config = constructConfig(testDefaultPersistencePageSize, testDefaultTargetArchivalBlobSize)
 	}
 
 	request := ArchiveRequest{
@@ -565,9 +565,10 @@ func (s *HistoryBlobIteratorSuite) constructTestHistoryBlobIterator(
 	).(*historyBlobIterator)
 }
 
-func (s *HistoryBlobIteratorSuite) constructConfig(historyPageSize, targetArchivalBlobSize int) *Config {
+func constructConfig(historyPageSize, targetArchivalBlobSize int) *Config {
 	return &Config{
-		HistoryPageSize:        dynamicconfig.GetIntPropertyFilteredByDomain(historyPageSize),
-		TargetArchivalBlobSize: dynamicconfig.GetIntPropertyFilteredByDomain(targetArchivalBlobSize),
+		HistoryPageSize:           dynamicconfig.GetIntPropertyFilteredByDomain(historyPageSize),
+		TargetArchivalBlobSize:    dynamicconfig.GetIntPropertyFilteredByDomain(targetArchivalBlobSize),
+		EnableArchivalCompression: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
 	}
 }

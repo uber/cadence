@@ -206,7 +206,10 @@ func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) error {
 
 	domainName := domainCacheEntry.GetInfo().Name
 	clusterName := container.ClusterMetadata.GetCurrentClusterName()
-	historyBlobItr := NewHistoryBlobIterator(logger, metricsClient, request, container, domainName, clusterName)
+	historyBlobItr := container.HistoryBlobIterator
+	if historyBlobItr == nil {
+		historyBlobItr = NewHistoryBlobIterator(logger, metricsClient, request, container, domainName, clusterName)
+	}
 
 	blobstoreClient := container.Blobstore
 	bucket := domainCacheEntry.GetConfig().ArchivalBucket
