@@ -101,7 +101,7 @@ func selectSystemTask(signal signal, ctx workflow.Context, logger bark.Logger, m
 		ao := workflow.ActivityOptions{
 			ScheduleToStartTimeout: time.Minute,
 			StartToCloseTimeout:    5 * time.Minute,
-			HeartbeatTimeout:      heartbeatTimeout,
+			HeartbeatTimeout:       heartbeatTimeout,
 			RetryPolicy: &cadence.RetryPolicy{
 				InitialInterval:    time.Second,
 				BackoffCoefficient: 2.0,
