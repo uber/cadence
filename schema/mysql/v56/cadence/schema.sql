@@ -136,7 +136,7 @@ CREATE TABLE buffered_events (
 	workflow_id VARCHAR(255) NOT NULL,
 	run_id BINARY(16) NOT NULL,
 	--
-	data BLOB NOT NULL,
+	data MEDIUMBLOB NOT NULL,
 	data_encoding VARCHAR(16) NOT NULL,
 	PRIMARY KEY (id)
 );
