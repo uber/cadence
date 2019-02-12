@@ -22,7 +22,6 @@ package history
 
 import (
 	"errors"
-	"sync"
 	"time"
 
 	"github.com/uber-common/bark"
@@ -37,20 +36,20 @@ import (
 
 type (
 	replicatorQueueProcessorImpl struct {
-		currentClusterNamer string
-		shard               ShardContext
-		historyCache        *historyCache
-		executionMgr        persistence.ExecutionManager
-		historyMgr          persistence.HistoryManager
-		historyV2Mgr        persistence.HistoryV2Manager
-		replicator          messaging.Producer
-		metricsClient       metrics.Client
-		options             *QueueProcessorOptions
-		logger              bark.Logger
+		currentClusterNamer   string
+		shard                 ShardContext
+		historyCache          *historyCache
+		replicationTaskFilter queueTaskFilter
+		executionMgr          persistence.ExecutionManager
+		historyMgr            persistence.HistoryManager
+		historyV2Mgr          persistence.HistoryV2Manager
+		replicator            messaging.Producer
+		metricsClient         metrics.Client
+		options               *QueueProcessorOptions
+		logger                bark.Logger
 		*queueProcessorBase
 		queueAckMgr
 
-		sync.Mutex
 		lastShardSyncTimestamp time.Time
 	}
 )
@@ -84,17 +83,22 @@ func newReplicatorQueueProcessor(shard ShardContext, historyCache *historyCache,
 		logging.TagWorkflowComponent: logging.TagValueReplicatorQueueComponent,
 	})
 
+	replicationTaskFilter := func(qTask queueTaskInfo) (bool, error) {
+		return true, nil
+	}
+
 	processor := &replicatorQueueProcessorImpl{
-		currentClusterNamer: currentClusterNamer,
-		shard:               shard,
-		historyCache:        historyCache,
-		executionMgr:        executionMgr,
-		historyMgr:          historyMgr,
-		historyV2Mgr:        historyV2Mgr,
-		replicator:          replicator,
-		metricsClient:       shard.GetMetricsClient(),
-		options:             options,
-		logger:              logger,
+		currentClusterNamer:   currentClusterNamer,
+		shard:                 shard,
+		historyCache:          historyCache,
+		replicationTaskFilter: replicationTaskFilter,
+		executionMgr:          executionMgr,
+		historyMgr:            historyMgr,
+		historyV2Mgr:          historyV2Mgr,
+		replicator:            replicator,
+		metricsClient:         shard.GetMetricsClient(),
+		options:               options,
+		logger:                logger,
 	}
 
 	queueAckMgr := newQueueAckMgr(shard, options, processor, shard.GetReplicatorAckLevel(), logger)
@@ -105,11 +109,17 @@ func newReplicatorQueueProcessor(shard ShardContext, historyCache *historyCache,
 	return processor
 }
 
-func (p *replicatorQueueProcessorImpl) process(qTask queueTaskInfo) (int, error) {
+func (p *replicatorQueueProcessorImpl) getTaskFilter() queueTaskFilter {
+	return p.replicationTaskFilter
+}
+
+func (p *replicatorQueueProcessorImpl) process(qTask queueTaskInfo, shouldProcessTask bool) (int, error) {
 	task, ok := qTask.(*persistence.ReplicationTaskInfo)
 	if !ok {
 		return metrics.ReplicatorQueueProcessorScope, errUnexpectedQueueTask
 	}
+	// replication queue should always process all tasks
+	// so should not do anything to shouldProcessTask variable
 
 	switch task.TaskType {
 	case persistence.ReplicationTaskTypeSyncActivity:
@@ -166,14 +176,20 @@ func (p *replicatorQueueProcessorImpl) processSyncActivityTask(task *persistence
 		return nil
 	}
 
-	// int64 can only represent several hundred years of time
-	// when activity is started, the hearbeat timestamp will be empty
-	// but due the in64 limitation, the actual timestamp got is
-	// roughly 17xx year.
-	// set the heartbeat timestamp to started time if empty
-	heartbeatTime := activityInfo.LastHeartBeatUpdatedTime.UnixNano()
-	if heartbeatTime < activityInfo.StartedTime.UnixNano() {
-		heartbeatTime = activityInfo.StartedTime.UnixNano()
+	var startedTime *int64
+	var heartbeatTime *int64
+	if activityInfo.StartedID != common.EmptyEventID {
+		startedTime = common.Int64Ptr(activityInfo.StartedTime.UnixNano())
+
+		// int64 can only represent several hundred years of time
+		// when activity is started, the hearbeat timestamp will be empty
+		// but due the in64 limitation, the actual timestamp got is
+		// roughly 17xx year.
+		// set the heartbeat timestamp to started time if empty
+		heartbeatTime = common.Int64Ptr(activityInfo.LastHeartBeatUpdatedTime.UnixNano())
+		if *heartbeatTime < *startedTime {
+			heartbeatTime = startedTime
+		}
 	}
 
 	replicationTask := &replicator.ReplicationTask{
@@ -186,8 +202,8 @@ func (p *replicatorQueueProcessorImpl) processSyncActivityTask(task *persistence
 			ScheduledId:       common.Int64Ptr(activityInfo.ScheduleID),
 			ScheduledTime:     common.Int64Ptr(activityInfo.ScheduledTime.UnixNano()),
 			StartedId:         common.Int64Ptr(activityInfo.StartedID),
-			StartedTime:       common.Int64Ptr(activityInfo.StartedTime.UnixNano()),
-			LastHeartbeatTime: common.Int64Ptr(heartbeatTime),
+			StartedTime:       startedTime,
+			LastHeartbeatTime: heartbeatTime,
 			Details:           activityInfo.Details,
 			Attempt:           common.Int32Ptr(activityInfo.Attempt),
 		},
@@ -212,13 +228,7 @@ func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persi
 		return err
 	}
 
-	err = p.replicator.Publish(replicationTask)
-	if err == nil {
-		p.Lock()
-		p.lastShardSyncTimestamp = common.NewRealTimeSource().Now()
-		p.Unlock()
-	}
-	return err
+	return p.replicator.Publish(replicationTask)
 }
 
 // GenerateReplicationTask generate replication task
@@ -300,15 +310,7 @@ func (p *replicatorQueueProcessorImpl) updateAckLevel(ackLevel int64) error {
 	// this is a hack, since there is not dedicated ticker on the queue processor
 	// to periodically send out sync shard message, put it here
 	now := common.NewRealTimeSource().Now()
-	sendSyncTask := false
-	p.Lock()
 	if p.lastShardSyncTimestamp.Add(p.shard.GetConfig().ShardSyncMinInterval()).Before(now) {
-		p.lastShardSyncTimestamp = now
-		sendSyncTask = true
-	}
-	p.Unlock()
-
-	if sendSyncTask {
 		syncStatusTask := &replicator.ReplicationTask{
 			TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeSyncShardStatus),
 			SyncShardStatusTaskAttributes: &replicator.SyncShardStatusTaskAttributes{
@@ -318,9 +320,10 @@ func (p *replicatorQueueProcessorImpl) updateAckLevel(ackLevel int64) error {
 			},
 		}
 		// ignore the error
-		p.replicator.Publish(syncStatusTask)
+		if syncErr := p.replicator.Publish(syncStatusTask); syncErr == nil {
+			p.lastShardSyncTimestamp = now
+		}
 	}
-
 	return err
 }
 

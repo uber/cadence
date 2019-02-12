@@ -205,13 +205,13 @@ func (r *historyReplicator) SyncActivity(ctx context.Context, request *h.SyncAct
 		return nil
 	}
 
-	lastHeartbeatTime := time.Unix(0, request.GetLastHeartbeatTime())
 	if ai.Version == request.GetVersion() {
 		if ai.Attempt > request.GetAttempt() {
 			// this should not retry, can be caused by failover or reset
 			return nil
 		}
 		if ai.Attempt == request.GetAttempt() {
+			lastHeartbeatTime := time.Unix(0, request.GetLastHeartbeatTime())
 			if ai.LastHeartBeatUpdatedTime.After(lastHeartbeatTime) {
 				// this should not retry, can be caused by out of order delivery
 				return nil
@@ -221,7 +221,7 @@ func (r *historyReplicator) SyncActivity(ctx context.Context, request *h.SyncAct
 		}
 		// version equal & attempt larger then existing, should update activity
 	}
-	// version latger then existing, should update activity
+	// version larger then existing, should update activity
 
 	// calculate whether to reset the activity timer task status bits
 	// reset timer task status bits if
@@ -412,7 +412,10 @@ func (r *historyReplicator) ApplyOtherEventsMissingMutableState(ctx context.Cont
 	// we need to check the current workflow execution
 	_, currentMutableState, currentRelease, err := r.getCurrentWorkflowMutableState(ctx, domainID, workflowID)
 	if err != nil {
-		return err
+		if _, ok := err.(*shared.EntityNotExistsError); !ok {
+			return err
+		}
+		return newRetryTaskErrorWithHint(ErrWorkflowNotFoundMsg, domainID, workflowID, runID, common.FirstEventID)
 	}
 	currentRunID := currentMutableState.GetExecutionInfo().RunID
 	currentLastWriteVersion := currentMutableState.GetLastWriteVersion()
