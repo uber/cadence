@@ -50,11 +50,6 @@ type (
 		cadenceClient client.Client
 		numSWFn       dynamicconfig.IntPropertyFn
 	}
-
-	signal struct {
-		RequestType    requestType
-		ArchiveRequest *ArchiveRequest
-	}
 )
 
 // NewArchivalClient creates a new ArchivalClient
@@ -78,18 +73,15 @@ func (c *archivalClient) Archive(request *ArchiveRequest) error {
 		DecisionTaskStartToCloseTimeout: decisionTaskStartToCloseTimeout,
 		WorkflowIDReusePolicy:           client.WorkflowIDReusePolicyAllowDuplicate,
 	}
-	signal := signal{
-		RequestType:    archivalRequest,
-		ArchiveRequest: request,
-	}
-
+	var carryoverRequests []ArchiveRequest
 	_, err := c.cadenceClient.SignalWithStartWorkflow(
 		context.Background(),
 		workflowID,
 		signalName,
-		signal,
+		*request,
 		workflowOptions,
-		systemWorkflowFnName,
+		archiveSystemWorkflowFnName,
+		carryoverRequests,
 	)
 	return err
 }

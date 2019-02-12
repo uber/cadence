@@ -52,8 +52,8 @@ var (
 	errDeleteHistoryActivityDeleteFromV1         = cadence.NewCustomError(errDeleteHistoryActivityDeleteFromV1Str)
 )
 
-// SystemWorkflow is the system workflow code
-func SystemWorkflow(ctx workflow.Context) error {
+// ArchiveSystemWorkflow is the system workflow which archives and deletes history
+func ArchiveSystemWorkflow(ctx workflow.Context, carryoverRequests []ArchiveRequest) error {
 	sysWorkflowInfo := workflow.GetInfo(ctx)
 	isReplay := workflow.IsReplaying(ctx)
 	logger := NewReplayBarkLogger(globalLogger.WithFields(bark.Fields{
@@ -64,26 +64,49 @@ func SystemWorkflow(ctx workflow.Context) error {
 	metricsClient := NewReplayMetricsClient(globalMetricsClient, isReplay)
 	metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerWorkflowStarted)
 	sw := metricsClient.StartTimer(metrics.SystemWorkflowScope, metrics.SysWorkerContinueAsNewLatency)
-	ch := workflow.GetSignalChannel(ctx, signalName)
 	signalsHandled := 0
-	for ; signalsHandled < signalsUntilContinueAsNew; signalsHandled++ {
-		var signal signal
-		if more := ch.Receive(ctx, &signal); !more {
-			break
-		}
-		metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerReceivedSignal)
-		selectSystemTask(signal, ctx, logger, metricsClient)
+
+	// step 1: start workers to process archival requests in parallel
+	workQueue := workflow.NewChannel(ctx)
+	for i := 0; i < numWorkers; i++ {
+		workflow.Go(ctx, func(ctx workflow.Context) {
+			for {
+				var request ArchiveRequest
+				workQueue.Receive(ctx, &request)
+				handleRequest(request, ctx, logger, metricsClient)
+			}
+		})
 	}
 
-	for {
-		var signal signal
-		if ok := ch.ReceiveAsync(&signal); !ok {
+	// step 2: pump carryover requests into worker queue
+	for _, request := range carryoverRequests {
+		signalsHandled++
+		workQueue.Send(ctx, request)
+	}
+
+	// step 3: pump current iterations workload into worker queue
+	ch := workflow.GetSignalChannel(ctx, signalName)
+	for ; signalsHandled < signalsUntilContinueAsNew; signalsHandled++ {
+		var request ArchiveRequest
+		if more := ch.Receive(ctx, &request); !more {
 			break
 		}
 		metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerReceivedSignal)
-		selectSystemTask(signal, ctx, logger, metricsClient)
-		signalsHandled++
+		workQueue.Send(ctx, request)
 	}
+
+	// step 4: drain signal channel to get next run's carryover
+	var co []ArchiveRequest
+	for {
+		var request ArchiveRequest
+		if ok := ch.ReceiveAsync(&request); !ok {
+			break
+		}
+		metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerReceivedSignal)
+		co = append(co, request)
+	}
+
+	// step 5: schedule new run
 	ctx = workflow.WithExecutionStartToCloseTimeout(ctx, workflowStartToCloseTimeout)
 	ctx = workflow.WithWorkflowTaskStartToCloseTimeout(ctx, decisionTaskStartToCloseTimeout)
 	metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerContinueAsNew)
@@ -91,72 +114,105 @@ func SystemWorkflow(ctx workflow.Context) error {
 	logger.WithFields(bark.Fields{
 		logging.TagNumberOfSignalsUntilContinueAsNew: signalsHandled,
 	}).Info("system workflow is continuing as new")
-	return workflow.NewContinueAsNewError(ctx, systemWorkflowFnName)
+	// TODO: we need some concept of wait group so that we do not continueAsNew until all outstanding requests have been finished
+	return workflow.NewContinueAsNewError(ctx, archiveSystemWorkflowFnName, co)
 }
 
-func selectSystemTask(signal signal, ctx workflow.Context, logger bark.Logger, metricsClient metrics.Client) {
-	switch signal.RequestType {
-	case archivalRequest:
-		request := *signal.ArchiveRequest
-		ao := workflow.ActivityOptions{
-			ScheduleToStartTimeout: time.Minute,
-			StartToCloseTimeout:    5 * time.Minute,
-			HeartbeatTimeout:       heartbeatTimeout,
-			RetryPolicy: &cadence.RetryPolicy{
-				InitialInterval:    time.Second,
-				BackoffCoefficient: 2.0,
-				MaximumInterval:    time.Minute,
-				ExpirationInterval: time.Hour * 24 * 30,
-				NonRetriableErrorReasons: []string{
-					errArchivalUploadActivityGetDomainStr,
-					errArchivalUploadActivityNextBlobStr,
-					errArchivalUploadActivityConstructKeyStr,
-					errArchivalUploadActivityBlobExistsStr,
-					errArchivalUploadActivityMarshalBlobStr,
-					errArchivalUploadActivityConvertHeaderToTagsStr,
-					errArchivalUploadActivityWrapBlobStr,
-					errArchivalUploadActivityUploadBlobStr,
-				},
+func handleRequest(request ArchiveRequest, ctx workflow.Context, logger bark.Logger, metricsClient metrics.Client) {
+	uploadActOpts := workflow.ActivityOptions{
+		ScheduleToStartTimeout: time.Minute,
+		StartToCloseTimeout:    5 * time.Minute,
+		HeartbeatTimeout:       heartbeatTimeout,
+		RetryPolicy: &cadence.RetryPolicy{
+			InitialInterval:    time.Second,
+			BackoffCoefficient: 2.0,
+			MaximumInterval:    time.Minute,
+			ExpirationInterval: time.Hour * 24 * 30,
+			NonRetriableErrorReasons: []string{
+				errArchivalUploadActivityGetDomainStr,
+				errArchivalUploadActivityNextBlobStr,
+				errArchivalUploadActivityConstructKeyStr,
+				errArchivalUploadActivityBlobExistsStr,
+				errArchivalUploadActivityMarshalBlobStr,
+				errArchivalUploadActivityConvertHeaderToTagsStr,
+				errArchivalUploadActivityWrapBlobStr,
+				errArchivalUploadActivityUploadBlobStr,
 			},
-		}
-		if err := workflow.ExecuteActivity(
-			workflow.WithActivityOptions(ctx, ao),
-			archivalUploadActivityFnName,
-			request,
-		).Get(ctx, nil); err != nil {
-			logger.WithFields(bark.Fields{
-				logging.TagErr:                             err,
-				logging.TagArchiveRequestDomainID:          request.DomainID,
-				logging.TagArchiveRequestWorkflowID:        request.WorkflowID,
-				logging.TagArchiveRequestRunID:             request.RunID,
-				logging.TagArchiveRequestEventStoreVersion: request.EventStoreVersion,
-				logging.TagArchiveRequestLastFirstEventID:  request.LastFirstEventID,
-			}).Error("ArchivalUploadActivity encountered non-retryable error")
-			metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerArchivalUploadActivityNonRetryableFailures)
-		} else {
-			metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerArchivalUploadSuccessful)
-		}
-		lao := workflow.LocalActivityOptions{
-			ScheduleToCloseTimeout: 10 * time.Second,
-		}
-		if err := workflow.ExecuteLocalActivity(
-			workflow.WithLocalActivityOptions(ctx, lao),
-			ArchivalDeleteHistoryActivity,
-			request,
-		).Get(ctx, nil); err != nil {
-			logger.WithFields(bark.Fields{
-				logging.TagErr:                             err,
-				logging.TagArchiveRequestDomainID:          request.DomainID,
-				logging.TagArchiveRequestWorkflowID:        request.WorkflowID,
-				logging.TagArchiveRequestRunID:             request.RunID,
-				logging.TagArchiveRequestEventStoreVersion: request.EventStoreVersion,
-				logging.TagArchiveRequestLastFirstEventID:  request.LastFirstEventID,
-			}).Error("ArchivalDeleteHistoryActivity encountered non-retryable error")
-			metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerArchivalDeleteHistoryActivityNonRetryableFailures)
-		} else {
-			metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerArchivalDeleteHistorySuccessful)
-		}
-	default:
+		},
+	}
+	if err := workflow.ExecuteActivity(
+		workflow.WithActivityOptions(ctx, uploadActOpts),
+		archivalUploadActivityFnName,
+		request,
+	).Get(ctx, nil); err != nil {
+		logger.WithFields(bark.Fields{
+			logging.TagErr:                             err,
+			logging.TagArchiveRequestDomainID:          request.DomainID,
+			logging.TagArchiveRequestWorkflowID:        request.WorkflowID,
+			logging.TagArchiveRequestRunID:             request.RunID,
+			logging.TagArchiveRequestEventStoreVersion: request.EventStoreVersion,
+			logging.TagArchiveRequestLastFirstEventID:  request.LastFirstEventID,
+		}).Error("ArchivalUploadActivity encountered non-retryable error")
+		metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerArchivalUploadActivityNonRetryableFailures)
+	} else {
+		metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerArchivalUploadSuccessful)
+	}
+	lao := workflow.LocalActivityOptions{
+		ScheduleToCloseTimeout: 10 * time.Second,
+		RetryPolicy: &cadence.RetryPolicy{
+			InitialInterval:    time.Second,
+			BackoffCoefficient: 2.0,
+			MaximumInterval:    time.Minute,
+			MaximumAttempts:    10,
+			NonRetriableErrorReasons: []string{
+				errDeleteHistoryActivityDeleteFromV1Str,
+				errDeleteHistoryActivityDeleteFromV2Str,
+			},
+		},
+	}
+	err := workflow.ExecuteLocalActivity(workflow.WithLocalActivityOptions(ctx, lao), ArchivalDeleteHistoryActivity, request).Get(ctx, nil)
+	if err == nil {
+		metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerArchivalDeleteHistorySuccessful)
+		return
+	}
+	logger.WithFields(bark.Fields{
+		logging.TagErr:                             err,
+		logging.TagArchiveRequestDomainID:          request.DomainID,
+		logging.TagArchiveRequestWorkflowID:        request.WorkflowID,
+		logging.TagArchiveRequestRunID:             request.RunID,
+		logging.TagArchiveRequestEventStoreVersion: request.EventStoreVersion,
+		logging.TagArchiveRequestLastFirstEventID:  request.LastFirstEventID,
+	}).Warn("ArchivalDeleteHistoryActivity could not be completed as a local activity, attempting to run as normal activity")
+	deleteActOpts := workflow.ActivityOptions{
+		ScheduleToStartTimeout: time.Minute,
+		StartToCloseTimeout:    5 * time.Minute,
+		RetryPolicy: &cadence.RetryPolicy{
+			InitialInterval:    time.Second,
+			BackoffCoefficient: 2.0,
+			MaximumInterval:    time.Minute,
+			ExpirationInterval: time.Hour * 24 * 30,
+			NonRetriableErrorReasons: []string{
+				errDeleteHistoryActivityDeleteFromV1Str,
+				errDeleteHistoryActivityDeleteFromV2Str,
+			},
+		},
+	}
+	if err := workflow.ExecuteActivity(
+		workflow.WithActivityOptions(ctx, deleteActOpts),
+		archivalDeleteHistoryActivityFnName,
+		request,
+	).Get(ctx, nil); err != nil {
+		logger.WithFields(bark.Fields{
+			logging.TagErr:                             err,
+			logging.TagArchiveRequestDomainID:          request.DomainID,
+			logging.TagArchiveRequestWorkflowID:        request.WorkflowID,
+			logging.TagArchiveRequestRunID:             request.RunID,
+			logging.TagArchiveRequestEventStoreVersion: request.EventStoreVersion,
+			logging.TagArchiveRequestLastFirstEventID:  request.LastFirstEventID,
+		}).Error("ArchivalDeleteHistoryActivity encountered non-retryable error")
+		metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerArchivalDeleteHistoryActivityNonRetryableFailures)
+	} else {
+		metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerArchivalDeleteHistorySuccessful)
 	}
 }
 

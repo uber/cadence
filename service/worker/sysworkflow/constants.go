@@ -24,12 +24,6 @@ import (
 	"time"
 )
 
-type requestType int
-
-const (
-	archivalRequest requestType = iota
-)
-
 type contextKey int
 
 const (
@@ -40,17 +34,19 @@ const (
 	// SystemDomainName is domain name for all system workflows
 	SystemDomainName = "cadence-system"
 
-	workflowIDPrefix                  = "cadsys-wf"
-	decisionTaskList                  = "cadsys-decision-tl"
-	workflowStartToCloseTimeout       = time.Hour * 24 * 30
-	decisionTaskStartToCloseTimeout   = time.Minute
-	signalName                        = "cadsys-signal-sig"
-	signalsUntilContinueAsNew         = 1000
-	systemWorkflowFnName              = "SystemWorkflow"
-	archivalUploadActivityFnName      = "ArchivalUploadActivity"
-	historyBlobKeyExt                 = "history"
-	blobstoreOperationsDefaultTimeout = 5 * time.Second
-	heartbeatTimeout                  = 10 * time.Second
+	workflowIDPrefix                    = "cadsys-wf"
+	decisionTaskList                    = "cadsys-decision-tl"
+	workflowStartToCloseTimeout         = time.Hour * 24 * 30
+	decisionTaskStartToCloseTimeout     = time.Minute
+	signalName                          = "cadsys-signal-sig"
+	signalsUntilContinueAsNew           = 1000
+	archiveSystemWorkflowFnName         = "ArchiveSystemWorkflow"
+	archivalUploadActivityFnName        = "ArchivalUploadActivity"
+	archivalDeleteHistoryActivityFnName = "ArchivalDeleteHistoryActivity"
+	historyBlobKeyExt                   = "history"
+	blobstoreOperationsDefaultTimeout   = 5 * time.Second
+	heartbeatTimeout                    = 10 * time.Second
+	numWorkers                          = 50
 
 	// the following are all non-retryable error strings
 	errArchivalUploadActivityGetDomainStr           = "failed to get domain from domain cache"
