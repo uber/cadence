@@ -64,34 +64,37 @@ func ArchiveSystemWorkflow(ctx workflow.Context, carryoverRequests []ArchiveRequ
 	metricsClient := NewReplayMetricsClient(globalMetricsClient, isReplay)
 	metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerWorkflowStarted)
 	sw := metricsClient.StartTimer(metrics.SystemWorkflowScope, metrics.SysWorkerContinueAsNewLatency)
-	signalsHandled := 0
+	requestsHandled := 0
 
 	// step 1: start workers to process archival requests in parallel
 	workQueue := workflow.NewChannel(ctx)
+	finishedWorkQueue := workflow.NewBufferedChannel(ctx, signalsUntilContinueAsNew * 10) // make large enough that never blocks on send
 	for i := 0; i < numWorkers; i++ {
 		workflow.Go(ctx, func(ctx workflow.Context) {
 			for {
 				var request ArchiveRequest
 				workQueue.Receive(ctx, &request)
 				handleRequest(request, ctx, logger, metricsClient)
+				finishedWorkQueue.Send(ctx, nil)
 			}
 		})
 	}
 
 	// step 2: pump carryover requests into worker queue
 	for _, request := range carryoverRequests {
-		signalsHandled++
+		requestsHandled++
 		workQueue.Send(ctx, request)
 	}
 
 	// step 3: pump current iterations workload into worker queue
 	ch := workflow.GetSignalChannel(ctx, signalName)
-	for ; signalsHandled < signalsUntilContinueAsNew; signalsHandled++ {
+	for requestsHandled < signalsUntilContinueAsNew {
 		var request ArchiveRequest
 		if more := ch.Receive(ctx, &request); !more {
 			break
 		}
 		metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerReceivedSignal)
+		requestsHandled++
 		workQueue.Send(ctx, request)
 	}
 
@@ -106,15 +109,19 @@ func ArchiveSystemWorkflow(ctx workflow.Context, carryoverRequests []ArchiveRequ
 		co = append(co, request)
 	}
 
-	// step 5: schedule new run
+	// step 5: wait for all in progress work to finish
+	for i := 0; i < requestsHandled; i++ {
+		finishedWorkQueue.Receive(ctx, nil)
+	}
+
+	// step 6: schedule new run
 	ctx = workflow.WithExecutionStartToCloseTimeout(ctx, workflowStartToCloseTimeout)
 	ctx = workflow.WithWorkflowTaskStartToCloseTimeout(ctx, decisionTaskStartToCloseTimeout)
 	metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerContinueAsNew)
 	sw.Stop()
 	logger.WithFields(bark.Fields{
-		logging.TagNumberOfSignalsUntilContinueAsNew: signalsHandled,
+		logging.TagNumberOfSignalsUntilContinueAsNew: requestsHandled,
 	}).Info("system workflow is continuing as new")
-	// TODO: we need some concept of wait group so that we do not continueAsNew until all outstanding requests have been finished
 	return workflow.NewContinueAsNewError(ctx, archiveSystemWorkflowFnName, co)
 }
 
