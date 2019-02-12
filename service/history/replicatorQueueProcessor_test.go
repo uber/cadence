@@ -341,7 +341,7 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_ActivityRetry() {
 		},
 	}).Return(nil).Once()
 
-	_, err := s.replicatorQueueProcessor.process(task)
+	_, err := s.replicatorQueueProcessor.process(task, true)
 	s.Nil(err)
 }
 

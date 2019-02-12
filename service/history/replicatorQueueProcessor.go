@@ -22,7 +22,6 @@ package history
 
 import (
 	"errors"
-	"sync"
 	"time"
 
 	"github.com/uber-common/bark"
@@ -51,7 +50,6 @@ type (
 		*queueProcessorBase
 		queueAckMgr
 
-		sync.Mutex
 		lastShardSyncTimestamp time.Time
 	}
 )
@@ -230,13 +228,7 @@ func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persi
 		return err
 	}
 
-	err = p.replicator.Publish(replicationTask)
-	if err == nil {
-		p.Lock()
-		p.lastShardSyncTimestamp = common.NewRealTimeSource().Now()
-		p.Unlock()
-	}
-	return err
+	return p.replicator.Publish(replicationTask)
 }
 
 // GenerateReplicationTask generate replication task
@@ -318,15 +310,7 @@ func (p *replicatorQueueProcessorImpl) updateAckLevel(ackLevel int64) error {
 	// this is a hack, since there is not dedicated ticker on the queue processor
 	// to periodically send out sync shard message, put it here
 	now := common.NewRealTimeSource().Now()
-	sendSyncTask := false
-	p.Lock()
 	if p.lastShardSyncTimestamp.Add(p.shard.GetConfig().ShardSyncMinInterval()).Before(now) {
-		p.lastShardSyncTimestamp = now
-		sendSyncTask = true
-	}
-	p.Unlock()
-
-	if sendSyncTask {
 		syncStatusTask := &replicator.ReplicationTask{
 			TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeSyncShardStatus),
 			SyncShardStatusTaskAttributes: &replicator.SyncShardStatusTaskAttributes{
@@ -336,9 +320,10 @@ func (p *replicatorQueueProcessorImpl) updateAckLevel(ackLevel int64) error {
 			},
 		}
 		// ignore the error
-		p.replicator.Publish(syncStatusTask)
+		if syncErr := p.replicator.Publish(syncStatusTask); syncErr == nil {
+			p.lastShardSyncTimestamp = now
+		}
 	}
-
 	return err
 }
 
