@@ -33,10 +33,10 @@ import (
 //  - db serialization converts uuid to bytes as opposed to string
 type UUID []byte
 
-// NewUUIDFromString returns a new UUID parsed from the given string
+// MustParseUUID returns a UUID parsed from the given string representation
 // returns nil if the input is empty string
 // panics if the given input is malformed
-func NewUUIDFromString(s string) UUID {
+func MustParseUUID(s string) UUID {
 	if s == "" {
 		return nil
 	}

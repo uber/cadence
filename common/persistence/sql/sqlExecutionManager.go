@@ -76,7 +76,7 @@ func (m *sqlExecutionManager) createWorkflowExecutionTx(tx sqldb.Tx, request *p.
 	var err error
 	var row *sqldb.CurrentExecutionsRow
 	workflowID := *request.Execution.WorkflowId
-	domainID := sqldb.NewUUIDFromString(request.DomainID)
+	domainID := sqldb.MustParseUUID(request.DomainID)
 	if row, err = lockCurrentExecutionIfExists(tx, m.shardID, domainID, workflowID); err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func (m *sqlExecutionManager) createWorkflowExecutionTx(tx sqldb.Tx, request *p.
 		}
 	}
 
-	runID := sqldb.NewUUIDFromString(*request.Execution.RunId)
+	runID := sqldb.MustParseUUID(*request.Execution.RunId)
 	if err := createOrUpdateCurrentExecution(tx, request, m.shardID, domainID, runID); err != nil {
 		return nil, err
 	}
@@ -165,8 +165,8 @@ func (m *sqlExecutionManager) createWorkflowExecutionTx(tx sqldb.Tx, request *p.
 }
 
 func (m *sqlExecutionManager) GetWorkflowExecution(request *p.GetWorkflowExecutionRequest) (*p.InternalGetWorkflowExecutionResponse, error) {
-	domainID := sqldb.NewUUIDFromString(request.DomainID)
-	runID := sqldb.NewUUIDFromString(*request.Execution.RunId)
+	domainID := sqldb.MustParseUUID(request.DomainID)
+	runID := sqldb.MustParseUUID(*request.Execution.RunId)
 	wfID := *request.Execution.WorkflowId
 	execution, err := m.db.SelectFromExecutions(&sqldb.ExecutionsFilter{
 		ShardID: m.shardID, DomainID: domainID, WorkflowID: wfID, RunID: runID})
@@ -404,9 +404,9 @@ func (m *sqlExecutionManager) UpdateWorkflowExecution(request *p.InternalUpdateW
 
 func (m *sqlExecutionManager) updateWorkflowExecutionTx(tx sqldb.Tx, request *p.InternalUpdateWorkflowExecutionRequest) error {
 	executionInfo := request.ExecutionInfo
-	domainID := sqldb.NewUUIDFromString(executionInfo.DomainID)
+	domainID := sqldb.MustParseUUID(executionInfo.DomainID)
 	workflowID := executionInfo.WorkflowID
-	runID := sqldb.NewUUIDFromString(executionInfo.RunID)
+	runID := sqldb.MustParseUUID(executionInfo.RunID)
 	shardID := m.shardID
 	if err := createTransferTasks(tx, request.TransferTasks, shardID, domainID, workflowID, runID); err != nil {
 		return &workflow.InternalServiceError{
@@ -511,8 +511,8 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(tx sqldb.Tx, request *p.
 	}
 
 	if request.ContinueAsNew != nil {
-		newDomainID := sqldb.NewUUIDFromString(request.ContinueAsNew.DomainID)
-		newRunID := sqldb.NewUUIDFromString(request.ContinueAsNew.Execution.GetRunId())
+		newDomainID := sqldb.MustParseUUID(request.ContinueAsNew.DomainID)
+		newRunID := sqldb.MustParseUUID(request.ContinueAsNew.Execution.GetRunId())
 		if err := createOrUpdateCurrentExecution(tx, request.ContinueAsNew, shardID, newDomainID, newRunID); err != nil {
 			return err
 		}
@@ -621,8 +621,8 @@ func (m *sqlExecutionManager) ResetMutableState(request *p.InternalResetMutableS
 func (m *sqlExecutionManager) resetMutableStateTx(tx sqldb.Tx, request *p.InternalResetMutableStateRequest) error {
 	info := request.ExecutionInfo
 	replicationState := request.ReplicationState
-	domainID := sqldb.NewUUIDFromString(info.DomainID)
-	runID := sqldb.NewUUIDFromString(info.RunID)
+	domainID := sqldb.MustParseUUID(info.DomainID)
+	runID := sqldb.MustParseUUID(info.RunID)
 
 	if err := updateCurrentExecution(tx,
 		m.shardID,
@@ -821,9 +821,9 @@ func (m *sqlExecutionManager) resetMutableStateTx(tx sqldb.Tx, request *p.Intern
 func (m *sqlExecutionManager) DeleteWorkflowExecution(request *p.DeleteWorkflowExecutionRequest) error {
 	if _, err := m.db.DeleteFromExecutions(&sqldb.ExecutionsFilter{
 		ShardID:    m.shardID,
-		DomainID:   sqldb.NewUUIDFromString(request.DomainID),
+		DomainID:   sqldb.MustParseUUID(request.DomainID),
 		WorkflowID: request.WorkflowID,
-		RunID:      sqldb.NewUUIDFromString(request.RunID),
+		RunID:      sqldb.MustParseUUID(request.RunID),
 	}); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("DeleteWorkflowExecution operation failed. Error: %v", err),
@@ -835,7 +835,7 @@ func (m *sqlExecutionManager) DeleteWorkflowExecution(request *p.DeleteWorkflowE
 func (m *sqlExecutionManager) GetCurrentExecution(request *p.GetCurrentExecutionRequest) (*p.GetCurrentExecutionResponse, error) {
 	row, err := m.db.SelectFromCurrentExecutions(&sqldb.CurrentExecutionsFilter{
 		ShardID:    int64(m.shardID),
-		DomainID:   sqldb.NewUUIDFromString(request.DomainID),
+		DomainID:   sqldb.MustParseUUID(request.DomainID),
 		WorkflowID: request.WorkflowID,
 	})
 	if err != nil {
@@ -1174,9 +1174,9 @@ func createExecution(
 
 	if request.ParentExecution != nil {
 		row.InitiatedID = &request.InitiatedID
-		row.ParentDomainID = sqldb.UUIDPtr(sqldb.NewUUIDFromString(request.ParentDomainID))
+		row.ParentDomainID = sqldb.UUIDPtr(sqldb.MustParseUUID(request.ParentDomainID))
 		row.ParentWorkflowID = request.ParentExecution.WorkflowId
-		row.ParentRunID = sqldb.UUIDPtr(sqldb.NewUUIDFromString(*request.ParentExecution.RunId))
+		row.ParentRunID = sqldb.UUIDPtr(sqldb.MustParseUUID(*request.ParentExecution.RunId))
 	}
 
 	_, err := tx.InsertIntoExecutions(row)
@@ -1302,35 +1302,35 @@ func createTransferTasks(tx sqldb.Tx, transferTasks []p.Task, shardID int, domai
 
 		switch task.GetType() {
 		case p.TransferTaskTypeActivityTask:
-			transferTasksRows[i].TargetDomainID = sqldb.NewUUIDFromString(task.(*p.ActivityTask).DomainID)
+			transferTasksRows[i].TargetDomainID = sqldb.MustParseUUID(task.(*p.ActivityTask).DomainID)
 			transferTasksRows[i].TaskList = task.(*p.ActivityTask).TaskList
 			transferTasksRows[i].ScheduleID = task.(*p.ActivityTask).ScheduleID
 
 		case p.TransferTaskTypeDecisionTask:
-			transferTasksRows[i].TargetDomainID = sqldb.NewUUIDFromString(task.(*p.DecisionTask).DomainID)
+			transferTasksRows[i].TargetDomainID = sqldb.MustParseUUID(task.(*p.DecisionTask).DomainID)
 			transferTasksRows[i].TaskList = task.(*p.DecisionTask).TaskList
 			transferTasksRows[i].ScheduleID = task.(*p.DecisionTask).ScheduleID
 
 		case p.TransferTaskTypeCancelExecution:
-			transferTasksRows[i].TargetDomainID = sqldb.NewUUIDFromString(task.(*p.CancelExecutionTask).TargetDomainID)
+			transferTasksRows[i].TargetDomainID = sqldb.MustParseUUID(task.(*p.CancelExecutionTask).TargetDomainID)
 			transferTasksRows[i].TargetWorkflowID = task.(*p.CancelExecutionTask).TargetWorkflowID
 			if task.(*p.CancelExecutionTask).TargetRunID != "" {
-				transferTasksRows[i].TargetRunID = sqldb.NewUUIDFromString(task.(*p.CancelExecutionTask).TargetRunID)
+				transferTasksRows[i].TargetRunID = sqldb.MustParseUUID(task.(*p.CancelExecutionTask).TargetRunID)
 			}
 			transferTasksRows[i].TargetChildWorkflowOnly = task.(*p.CancelExecutionTask).TargetChildWorkflowOnly
 			transferTasksRows[i].ScheduleID = task.(*p.CancelExecutionTask).InitiatedID
 
 		case p.TransferTaskTypeSignalExecution:
-			transferTasksRows[i].TargetDomainID = sqldb.NewUUIDFromString(task.(*p.SignalExecutionTask).TargetDomainID)
+			transferTasksRows[i].TargetDomainID = sqldb.MustParseUUID(task.(*p.SignalExecutionTask).TargetDomainID)
 			transferTasksRows[i].TargetWorkflowID = task.(*p.SignalExecutionTask).TargetWorkflowID
 			if task.(*p.SignalExecutionTask).TargetRunID != "" {
-				transferTasksRows[i].TargetRunID = sqldb.NewUUIDFromString(task.(*p.SignalExecutionTask).TargetRunID)
+				transferTasksRows[i].TargetRunID = sqldb.MustParseUUID(task.(*p.SignalExecutionTask).TargetRunID)
 			}
 			transferTasksRows[i].TargetChildWorkflowOnly = task.(*p.SignalExecutionTask).TargetChildWorkflowOnly
 			transferTasksRows[i].ScheduleID = task.(*p.SignalExecutionTask).InitiatedID
 
 		case p.TransferTaskTypeStartChildExecution:
-			transferTasksRows[i].TargetDomainID = sqldb.NewUUIDFromString(task.(*p.StartChildExecutionTask).TargetDomainID)
+			transferTasksRows[i].TargetDomainID = sqldb.MustParseUUID(task.(*p.StartChildExecutionTask).TargetDomainID)
 			transferTasksRows[i].TargetWorkflowID = task.(*p.StartChildExecutionTask).TargetWorkflowID
 			transferTasksRows[i].ScheduleID = task.(*p.StartChildExecutionTask).InitiatedID
 
@@ -1575,9 +1575,9 @@ func updateExecution(tx sqldb.Tx,
 	replicationState *p.ReplicationState,
 	shardID int) error {
 	row := &sqldb.ExecutionsRow{
-		DomainID:                     sqldb.NewUUIDFromString(executionInfo.DomainID),
+		DomainID:                     sqldb.MustParseUUID(executionInfo.DomainID),
 		WorkflowID:                   executionInfo.WorkflowID,
-		RunID:                        sqldb.NewUUIDFromString(executionInfo.RunID),
+		RunID:                        sqldb.MustParseUUID(executionInfo.RunID),
 		TaskList:                     executionInfo.TaskList,
 		WorkflowTypeName:             executionInfo.WorkflowTypeName,
 		WorkflowTimeoutSeconds:       int64(executionInfo.WorkflowTimeout),
@@ -1634,9 +1634,9 @@ func updateExecution(tx sqldb.Tx,
 	}
 
 	if executionInfo.ParentDomainID != "" {
-		row.ParentDomainID = sqldb.UUIDPtr(sqldb.NewUUIDFromString(executionInfo.ParentDomainID))
+		row.ParentDomainID = sqldb.UUIDPtr(sqldb.MustParseUUID(executionInfo.ParentDomainID))
 		row.ParentWorkflowID = &executionInfo.ParentWorkflowID
-		row.ParentRunID = sqldb.UUIDPtr(sqldb.NewUUIDFromString(executionInfo.ParentRunID))
+		row.ParentRunID = sqldb.UUIDPtr(sqldb.MustParseUUID(executionInfo.ParentRunID))
 		row.InitiatedID = &executionInfo.InitiatedID
 		row.CompletionEvent = nil
 	}

@@ -56,7 +56,7 @@ func newTaskPersistence(cfg config.SQL, log bark.Logger) (persistence.TaskManage
 func (m *sqlTaskManager) LeaseTaskList(request *persistence.LeaseTaskListRequest) (*persistence.LeaseTaskListResponse, error) {
 	var rangeID int64
 	var ackLevel int64
-	domainID := sqldb.NewUUIDFromString(request.DomainID)
+	domainID := sqldb.MustParseUUID(request.DomainID)
 	row, err := m.db.SelectFromTaskLists(&sqldb.TaskListsFilter{
 		DomainID: domainID,
 		Name:     request.TaskList,
@@ -127,7 +127,7 @@ func (m *sqlTaskManager) LeaseTaskList(request *persistence.LeaseTaskListRequest
 }
 
 func (m *sqlTaskManager) UpdateTaskList(request *persistence.UpdateTaskListRequest) (*persistence.UpdateTaskListResponse, error) {
-	domainID := sqldb.NewUUIDFromString(request.TaskListInfo.DomainID)
+	domainID := sqldb.MustParseUUID(request.TaskListInfo.DomainID)
 	if request.TaskListInfo.Kind == persistence.TaskListKindSticky {
 		if _, err := m.db.ReplaceIntoTaskLists(&sqldb.TaskListsRow{
 			DomainID: domainID,
@@ -183,9 +183,9 @@ func (m *sqlTaskManager) CreateTasks(request *persistence.CreateTasksRequest) (*
 			expiryTime = time.Now().Add(time.Second * time.Duration(v.Data.ScheduleToStartTimeout))
 		}
 		tasksRows[i] = sqldb.TasksRow{
-			DomainID:     sqldb.NewUUIDFromString(v.Data.DomainID),
+			DomainID:     sqldb.MustParseUUID(v.Data.DomainID),
 			WorkflowID:   v.Data.WorkflowID,
-			RunID:        sqldb.NewUUIDFromString(v.Data.RunID),
+			RunID:        sqldb.MustParseUUID(v.Data.RunID),
 			ScheduleID:   v.Data.ScheduleID,
 			TaskListName: request.TaskListInfo.Name,
 			TaskType:     int64(request.TaskListInfo.TaskType),
@@ -200,7 +200,7 @@ func (m *sqlTaskManager) CreateTasks(request *persistence.CreateTasksRequest) (*
 		}
 		// Lock task list before committing.
 		err1 := lockTaskList(tx,
-			sqldb.NewUUIDFromString(request.TaskListInfo.DomainID),
+			sqldb.MustParseUUID(request.TaskListInfo.DomainID),
 			request.TaskListInfo.Name,
 			request.TaskListInfo.TaskType, request.TaskListInfo.RangeID)
 		if err1 != nil {
@@ -214,7 +214,7 @@ func (m *sqlTaskManager) CreateTasks(request *persistence.CreateTasksRequest) (*
 
 func (m *sqlTaskManager) GetTasks(request *persistence.GetTasksRequest) (*persistence.GetTasksResponse, error) {
 	rows, err := m.db.SelectFromTasks(&sqldb.TasksFilter{
-		DomainID:     sqldb.NewUUIDFromString(request.DomainID),
+		DomainID:     sqldb.MustParseUUID(request.DomainID),
 		TaskListName: request.TaskList,
 		TaskType:     int64(request.TaskType),
 		MinTaskID:    &request.ReadLevel,
@@ -246,7 +246,7 @@ func (m *sqlTaskManager) CompleteTask(request *persistence.CompleteTaskRequest) 
 	taskID := request.TaskID
 	taskList := request.TaskList
 	_, err := m.db.DeleteFromTasks(&sqldb.TasksFilter{
-		DomainID:     sqldb.NewUUIDFromString(taskList.DomainID),
+		DomainID:     sqldb.MustParseUUID(taskList.DomainID),
 		TaskListName: taskList.Name,
 		TaskType:     int64(taskList.TaskType),
 		TaskID:       &taskID})
