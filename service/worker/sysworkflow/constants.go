@@ -28,7 +28,6 @@ type requestType int
 
 const (
 	archivalRequest requestType = iota
-	backfillRequest
 )
 
 type contextKey int
