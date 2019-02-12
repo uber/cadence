@@ -68,7 +68,7 @@ func ArchiveSystemWorkflow(ctx workflow.Context, carryoverRequests []ArchiveRequ
 
 	// step 1: start workers to process archival requests in parallel
 	workQueue := workflow.NewChannel(ctx)
-	finishedWorkQueue := workflow.NewBufferedChannel(ctx, signalsUntilContinueAsNew * 10) // make large enough that never blocks on send
+	finishedWorkQueue := workflow.NewBufferedChannel(ctx, signalsUntilContinueAsNew*10) // make large enough that never blocks on send
 	for i := 0; i < numWorkers; i++ {
 		workflow.Go(ctx, func(ctx workflow.Context) {
 			for {
