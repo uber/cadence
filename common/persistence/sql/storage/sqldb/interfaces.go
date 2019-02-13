@@ -610,7 +610,10 @@ type (
 		// SelectFromCurrentExecutions returns one or more rows from current_executions table
 		// Required params - {shardID, domainID, workflowID}
 		SelectFromCurrentExecutions(filter *CurrentExecutionsFilter) (*CurrentExecutionsRow, error)
-		// DeleteFromCurrentExecutions performa a conditinal delete of a row in current_executions table
+		// DeleteFromCurrentExecutions deletes a single row that matches the filter criteria
+		// If a row exist, that row will be deleted and this method will return success
+		// If there is no row matching the filter criteria, this method will still return success
+		// Callers can check the output of Result.RowsAffected() to see if a row was deleted or not
 		// Required params - {shardID, domainID, workflowID, runID}
 		DeleteFromCurrentExecutions(filter *CurrentExecutionsFilter) (sql.Result, error)
 		LockCurrentExecutions(filter *CurrentExecutionsFilter) (UUID, error)
