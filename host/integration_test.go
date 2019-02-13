@@ -24,7 +24,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"flag"
 	"fmt"
 	"math/rand"
 	"os"
@@ -72,26 +71,26 @@ func (s *IntegrationBase) setupShards() {
 	}
 }
 
-func TestRateLimitBufferedEventsTestIntegrationSuite(t *testing.T) {
-	flag.Parse()
-	if *integration && !*testEventsV2 {
-		s := new(integrationSuite)
-		suite.Run(t, s)
-	} else {
-		t.Skip()
-	}
-}
-
-func TestIntegrationSuiteEventsV2(t *testing.T) {
-	flag.Parse()
-	if *integration && *testEventsV2 {
-		s := new(integrationSuite)
-		s.enableEventsV2 = true
-		suite.Run(t, s)
-	} else {
-		t.Skip()
-	}
-}
+//func TestRateLimitBufferedEventsTestIntegrationSuite(t *testing.T) {
+//	flag.Parse()
+//	if *integration && !*testEventsV2 {
+//		s := new(integrationSuite)
+//		suite.Run(t, s)
+//	} else {
+//		t.Skip()
+//	}
+//}
+//
+//func TestIntegrationSuiteEventsV2(t *testing.T) {
+//	flag.Parse()
+//	if *integration && *testEventsV2 {
+//		s := new(integrationSuite)
+//		s.enableEventsV2 = true
+//		suite.Run(t, s)
+//	} else {
+//		t.Skip()
+//	}
+//}
 
 func (s *integrationSuite) SetupSuite() {
 	if testing.Verbose() {
