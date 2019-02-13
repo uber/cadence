@@ -24,7 +24,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/uber-go/tally"
-	"github.com/uber/cadence/common/logging"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
@@ -58,9 +57,6 @@ func SystemWorkflow(ctx workflow.Context) error {
 		selectSystemTask(scope, signal, ctx, logger)
 		signalsHandled++
 	}
-
-	logger.Info("completed current set of iterations, continuing as new",
-		zap.Int(logging.TagIterationsUntilContinueAsNew, signalsHandled))
 
 	ctx = workflow.WithExecutionStartToCloseTimeout(ctx, WorkflowStartToCloseTimeout)
 	ctx = workflow.WithWorkflowTaskStartToCloseTimeout(ctx, DecisionTaskStartToCloseTimeout)
