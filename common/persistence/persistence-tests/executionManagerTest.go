@@ -22,6 +22,8 @@ package persistencetests
 
 import (
 	"fmt"
+	"math"
+	"math/rand"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -31,10 +33,6 @@ import (
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
-
-	"math"
-
-	"math/rand"
 
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
