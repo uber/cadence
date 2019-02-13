@@ -147,7 +147,7 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_WorkflowMissing() {
 		},
 	}).Return(nil, &shared.EntityNotExistsError{})
 
-	_, err := s.replicatorQueueProcessor.process(task)
+	_, err := s.replicatorQueueProcessor.process(task, true)
 	s.Nil(err)
 }
 
@@ -187,7 +187,7 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_WorkflowCompleted() {
 	})
 	msBuilder.On("IsWorkflowExecutionRunning").Return(false)
 
-	_, err := s.replicatorQueueProcessor.process(task)
+	_, err := s.replicatorQueueProcessor.process(task, true)
 	s.Nil(err)
 }
 
@@ -247,7 +247,101 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_ActivityCompleted() {
 		}, nil,
 	).Once()
 
-	_, err := s.replicatorQueueProcessor.process(task)
+	_, err := s.replicatorQueueProcessor.process(task, true)
+	s.Nil(err)
+}
+
+func (s *replicatorQueueProcessorSuite) TestSyncActivity_ActivityRetry() {
+	domainName := "some random domain name"
+	domainID := validDomainID
+	workflowID := "some random workflow ID"
+	runID := uuid.New()
+	scheduleID := int64(144)
+	taskID := int64(1444)
+	version := int64(2333)
+	nextEventID := int64(133)
+	task := &persistence.ReplicationTaskInfo{
+		TaskType:    persistence.ReplicationTaskTypeSyncActivity,
+		TaskID:      taskID,
+		DomainID:    domainID,
+		WorkflowID:  workflowID,
+		RunID:       runID,
+		ScheduledID: scheduleID,
+	}
+	s.mockExecutionMgr.On("CompleteReplicationTask", &persistence.CompleteReplicationTaskRequest{TaskID: taskID}).Return(nil).Once()
+
+	context, release, _ := s.replicatorQueueProcessor.historyCache.getOrCreateWorkflowExecution(
+		domainID,
+		shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(workflowID),
+			RunId:      common.StringPtr(runID),
+		},
+	)
+	msBuilder := &mockMutableState{}
+	context.(*workflowExecutionContextImpl).msBuilder = msBuilder
+	release(nil)
+
+	activityVersion := int64(333)
+	activityScheduleID := scheduleID
+	activityScheduledTime := time.Now()
+	activityStartedID := common.EmptyEventID
+	activityStartedTime := time.Time{}
+	activityHeartbeatTime := time.Time{}
+	activityAttempt := int32(16384)
+	activityDetails := []byte("some random activity progress")
+
+	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
+	msBuilder.On("GetReplicationState").Return(&persistence.ReplicationState{
+		CurrentVersion:   version,
+		StartVersion:     version,
+		LastWriteVersion: version,
+		LastWriteEventID: nextEventID - 1,
+	})
+	msBuilder.On("GetLastWriteVersion").Return(version)
+	msBuilder.On("UpdateReplicationStateVersion", version, false).Once()
+	msBuilder.On("GetActivityInfo", scheduleID).Return(&persistence.ActivityInfo{
+		Version:                  activityVersion,
+		ScheduleID:               activityScheduleID,
+		ScheduledTime:            activityScheduledTime,
+		StartedID:                activityStartedID,
+		StartedTime:              activityStartedTime,
+		LastHeartBeatUpdatedTime: activityHeartbeatTime,
+		Details:                  activityDetails,
+		Attempt:                  activityAttempt,
+	}, true)
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: domainID}).Return(
+		&persistence.GetDomainResponse{
+			Info:   &persistence.DomainInfo{ID: domainID, Name: domainName},
+			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
+			FailoverVersion: version,
+			IsGlobalDomain:  true,
+			TableVersion:    persistence.DomainTableVersionV1,
+		}, nil,
+	).Once()
+	s.mockProducer.On("Publish", &replicator.ReplicationTask{
+		TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeSyncActivity),
+		SyncActicvityTaskAttributes: &replicator.SyncActicvityTaskAttributes{
+			DomainId:          common.StringPtr(domainID),
+			WorkflowId:        common.StringPtr(workflowID),
+			RunId:             common.StringPtr(runID),
+			Version:           common.Int64Ptr(activityVersion),
+			ScheduledId:       common.Int64Ptr(activityScheduleID),
+			ScheduledTime:     common.Int64Ptr(activityScheduledTime.UnixNano()),
+			StartedId:         common.Int64Ptr(activityStartedID),
+			StartedTime:       nil,
+			LastHeartbeatTime: nil,
+			Details:           activityDetails,
+			Attempt:           common.Int32Ptr(activityAttempt),
+		},
+	}).Return(nil).Once()
+
+	_, err := s.replicatorQueueProcessor.process(task, true)
 	s.Nil(err)
 }
 
@@ -341,6 +435,6 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_ActivityRunning() {
 		},
 	}).Return(nil).Once()
 
-	_, err := s.replicatorQueueProcessor.process(task)
+	_, err := s.replicatorQueueProcessor.process(task, true)
 	s.Nil(err)
 }
