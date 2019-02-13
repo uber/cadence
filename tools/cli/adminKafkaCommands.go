@@ -60,15 +60,19 @@ import (
 type filterFn func(*replicator.ReplicationTask) bool
 type filterFnForVisibility func(*indexer.Message) bool
 
+type kafkaMessageType int
+
+const (
+	kafkaMessageTypeReplicationTask kafkaMessageType = iota
+	kafkaMessageTypeVisibilityMsg
+)
+
 const (
 	bufferSize                 = 4096
 	preambleVersion0      byte = 0x59
 	malformedMessage           = "Input was malformed"
 	chanBufferSize             = 10000
 	maxRereplicateEventID      = 999999
-
-	kafkaMessageTypeReplicationTask = 0
-	kafkaMessageTypeVisibilityMsg   = 1
 )
 
 var (
@@ -76,12 +80,12 @@ var (
 )
 
 type writerChannel struct {
-	Type                   int
+	Type                   kafkaMessageType
 	ReplicationTaskChannel chan *replicator.ReplicationTask
 	VisibilityMsgChannel   chan *indexer.Message
 }
 
-func newWriterChannel(messageType int) *writerChannel {
+func newWriterChannel(messageType kafkaMessageType) *writerChannel {
 	ch := &writerChannel{
 		Type: messageType,
 	}
@@ -112,7 +116,7 @@ func AdminKafkaParse(c *cli.Context) {
 	defer outputFile.Close()
 
 	readerCh := make(chan []byte, chanBufferSize)
-	writerCh := newWriterChannel(c.Int(FlagMessageType))
+	writerCh := newWriterChannel(kafkaMessageType(c.Int(FlagMessageType)))
 	doneCh := make(chan struct{})
 
 	var skippedCount int32

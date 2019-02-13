@@ -390,7 +390,7 @@ func newAdminKafkaCommands() []cli.Command {
 				cli.IntFlag{
 					Name:  FlagMessageTypeWithAlias,
 					Usage: "Kafka message type (0: replicationTasks; 1: visibility)",
-					Value: kafkaMessageTypeReplicationTask,
+					Value: 0,
 				},
 			},
 			Action: func(c *cli.Context) {
