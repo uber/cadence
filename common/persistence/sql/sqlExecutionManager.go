@@ -844,6 +844,10 @@ func (m *sqlExecutionManager) DeleteWorkflowExecution(request *p.DeleteWorkflowE
 		}); err != nil {
 			return err
 		}
+		// its possible for a new run of the same workflow to have started after the run we are deleting
+		// here was finished. In that case, current_executions table will have the same workflowID but different
+		// runID. The following code will delete the row from current_executions if and only if the runID is
+		// same as the one we are trying to delete here
 		_, err := tx.DeleteFromCurrentExecutions(&sqldb.CurrentExecutionsFilter{
 			ShardID:    int64(m.shardID),
 			DomainID:   domainID,
