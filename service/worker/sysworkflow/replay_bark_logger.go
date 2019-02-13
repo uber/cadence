@@ -20,26 +20,29 @@
 
 package sysworkflow
 
-import "github.com/uber-common/bark"
+import (
+	"github.com/uber-common/bark"
+	"go.uber.org/cadence/workflow"
+)
 
 type replayBarkLogger struct {
 	logger            bark.Logger
-	isReplay          bool
+	ctx               workflow.Context
 	enableLogInReplay bool
 }
 
 // NewReplayBarkLogger creates a bark logger which is aware of cadence's replay mode
-func NewReplayBarkLogger(logger bark.Logger, isReplay bool, enableLogInReplay bool) bark.Logger {
+func NewReplayBarkLogger(logger bark.Logger, ctx workflow.Context, enableLogInReplay bool) bark.Logger {
 	return &replayBarkLogger{
 		logger:            logger,
-		isReplay:          isReplay,
+		ctx:               ctx,
 		enableLogInReplay: enableLogInReplay,
 	}
 }
 
 // Debug logs at debug level
 func (r *replayBarkLogger) Debug(args ...interface{}) {
-	if r.isReplay && !r.enableLogInReplay {
+	if workflow.IsReplaying(r.ctx) && !r.enableLogInReplay {
 		return
 	}
 	r.logger.Debug(args)
@@ -47,7 +50,7 @@ func (r *replayBarkLogger) Debug(args ...interface{}) {
 
 // Debugf logs at debug level with fmt.Printf-like formatting
 func (r *replayBarkLogger) Debugf(format string, args ...interface{}) {
-	if r.isReplay && !r.enableLogInReplay {
+	if workflow.IsReplaying(r.ctx) && !r.enableLogInReplay {
 		return
 	}
 	r.logger.Debugf(format, args)
@@ -55,7 +58,7 @@ func (r *replayBarkLogger) Debugf(format string, args ...interface{}) {
 
 // Info logs at info level
 func (r *replayBarkLogger) Info(args ...interface{}) {
-	if r.isReplay && !r.enableLogInReplay {
+	if workflow.IsReplaying(r.ctx) && !r.enableLogInReplay {
 		return
 	}
 	r.logger.Info(args)
@@ -63,7 +66,7 @@ func (r *replayBarkLogger) Info(args ...interface{}) {
 
 // Infof logs at info level with fmt.Printf-like formatting
 func (r *replayBarkLogger) Infof(format string, args ...interface{}) {
-	if r.isReplay && !r.enableLogInReplay {
+	if workflow.IsReplaying(r.ctx) && !r.enableLogInReplay {
 		return
 	}
 	r.logger.Infof(format, args)
@@ -71,7 +74,7 @@ func (r *replayBarkLogger) Infof(format string, args ...interface{}) {
 
 // Warn logs at warn level
 func (r *replayBarkLogger) Warn(args ...interface{}) {
-	if r.isReplay && !r.enableLogInReplay {
+	if workflow.IsReplaying(r.ctx) && !r.enableLogInReplay {
 		return
 	}
 	r.logger.Warn(args)
@@ -79,7 +82,7 @@ func (r *replayBarkLogger) Warn(args ...interface{}) {
 
 // Warnf logs at warn level with fmt.Printf-like formatting
 func (r *replayBarkLogger) Warnf(format string, args ...interface{}) {
-	if r.isReplay && !r.enableLogInReplay {
+	if workflow.IsReplaying(r.ctx) && !r.enableLogInReplay {
 		return
 	}
 	r.logger.Warnf(format, args)
@@ -87,7 +90,7 @@ func (r *replayBarkLogger) Warnf(format string, args ...interface{}) {
 
 // Error logs at error level
 func (r *replayBarkLogger) Error(args ...interface{}) {
-	if r.isReplay && !r.enableLogInReplay {
+	if workflow.IsReplaying(r.ctx) && !r.enableLogInReplay {
 		return
 	}
 	r.logger.Error(args)
@@ -95,7 +98,7 @@ func (r *replayBarkLogger) Error(args ...interface{}) {
 
 // Errorf logs at error level with fmt.Printf-like formatting
 func (r *replayBarkLogger) Errorf(format string, args ...interface{}) {
-	if r.isReplay && !r.enableLogInReplay {
+	if workflow.IsReplaying(r.ctx) && !r.enableLogInReplay {
 		return
 	}
 	r.logger.Errorf(format, args)
@@ -103,7 +106,7 @@ func (r *replayBarkLogger) Errorf(format string, args ...interface{}) {
 
 // Fatal logs at fatal level, then terminate process (irrecoverable)
 func (r *replayBarkLogger) Fatal(args ...interface{}) {
-	if r.isReplay && !r.enableLogInReplay {
+	if workflow.IsReplaying(r.ctx) && !r.enableLogInReplay {
 		return
 	}
 	r.logger.Fatal(args)
@@ -111,7 +114,7 @@ func (r *replayBarkLogger) Fatal(args ...interface{}) {
 
 // Fatalf logs at fatal level with fmt.Printf-like formatting, then terminate process (irrecoverable)
 func (r *replayBarkLogger) Fatalf(format string, args ...interface{}) {
-	if r.isReplay && !r.enableLogInReplay {
+	if workflow.IsReplaying(r.ctx) && !r.enableLogInReplay {
 		return
 	}
 	r.logger.Fatalf(format, args)
@@ -119,7 +122,7 @@ func (r *replayBarkLogger) Fatalf(format string, args ...interface{}) {
 
 // Panic logs at panic level, then panic (recoverable)
 func (r *replayBarkLogger) Panic(args ...interface{}) {
-	if r.isReplay && !r.enableLogInReplay {
+	if workflow.IsReplaying(r.ctx) && !r.enableLogInReplay {
 		return
 	}
 	r.logger.Panic(args)
@@ -127,7 +130,7 @@ func (r *replayBarkLogger) Panic(args ...interface{}) {
 
 // Panicf logs at panic level with fmt.Printf-like formatting, then panic (recoverable)
 func (r *replayBarkLogger) Panicf(format string, args ...interface{}) {
-	if r.isReplay && !r.enableLogInReplay {
+	if workflow.IsReplaying(r.ctx) && !r.enableLogInReplay {
 		return
 	}
 	r.logger.Panicf(format, args)
@@ -137,7 +140,7 @@ func (r *replayBarkLogger) Panicf(format string, args ...interface{}) {
 func (r *replayBarkLogger) WithField(key string, value interface{}) bark.Logger {
 	return &replayBarkLogger{
 		logger:            r.logger.WithField(key, value),
-		isReplay:          r.isReplay,
+		ctx:               r.ctx,
 		enableLogInReplay: r.enableLogInReplay,
 	}
 }
@@ -146,7 +149,7 @@ func (r *replayBarkLogger) WithField(key string, value interface{}) bark.Logger 
 func (r *replayBarkLogger) WithFields(keyValues bark.LogFields) bark.Logger {
 	return &replayBarkLogger{
 		logger:            r.logger.WithFields(keyValues),
-		isReplay:          r.isReplay,
+		ctx:               r.ctx,
 		enableLogInReplay: r.enableLogInReplay,
 	}
 }
@@ -155,7 +158,7 @@ func (r *replayBarkLogger) WithFields(keyValues bark.LogFields) bark.Logger {
 func (r *replayBarkLogger) WithError(err error) bark.Logger {
 	return &replayBarkLogger{
 		logger:            r.logger.WithError(err),
-		isReplay:          r.isReplay,
+		ctx:               r.ctx,
 		enableLogInReplay: r.enableLogInReplay,
 	}
 }

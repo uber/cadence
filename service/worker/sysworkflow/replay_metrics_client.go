@@ -23,25 +23,26 @@ package sysworkflow
 import (
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/common/metrics"
+	"go.uber.org/cadence/workflow"
 	"time"
 )
 
 type replayMetricsClient struct {
-	client   metrics.Client
-	isReplay bool
+	client metrics.Client
+	ctx    workflow.Context
 }
 
 // NewReplayMetricsClient creates a metrics client which is aware of cadence's replay mode
-func NewReplayMetricsClient(client metrics.Client, isReplay bool) metrics.Client {
+func NewReplayMetricsClient(client metrics.Client, ctx workflow.Context) metrics.Client {
 	return &replayMetricsClient{
-		client:   client,
-		isReplay: isReplay,
+		client: client,
+		ctx:    ctx,
 	}
 }
 
 // IncCounter increments a counter metric
 func (r *replayMetricsClient) IncCounter(scope int, counter int) {
-	if r.isReplay {
+	if workflow.IsReplaying(r.ctx) {
 		return
 	}
 	r.client.IncCounter(scope, counter)
@@ -49,7 +50,7 @@ func (r *replayMetricsClient) IncCounter(scope int, counter int) {
 
 // AddCounter adds delta to the counter metric
 func (r *replayMetricsClient) AddCounter(scope int, counter int, delta int64) {
-	if r.isReplay {
+	if workflow.IsReplaying(r.ctx) {
 		return
 	}
 	r.client.AddCounter(scope, counter, delta)
@@ -57,7 +58,7 @@ func (r *replayMetricsClient) AddCounter(scope int, counter int, delta int64) {
 
 // StartTimer starts a timer for the given metric name. Time will be recorded when stopwatch is stopped.
 func (r *replayMetricsClient) StartTimer(scope int, timer int) tally.Stopwatch {
-	if r.isReplay {
+	if workflow.IsReplaying(r.ctx) {
 		return r.nopStopwatch()
 	}
 	return r.client.StartTimer(scope, timer)
@@ -65,7 +66,7 @@ func (r *replayMetricsClient) StartTimer(scope int, timer int) tally.Stopwatch {
 
 // RecordTimer starts a timer for the given metric name
 func (r *replayMetricsClient) RecordTimer(scope int, timer int, d time.Duration) {
-	if r.isReplay {
+	if workflow.IsReplaying(r.ctx) {
 		return
 	}
 	r.RecordTimer(scope, timer, d)
@@ -73,7 +74,7 @@ func (r *replayMetricsClient) RecordTimer(scope int, timer int, d time.Duration)
 
 // UpdateGauge reports Gauge type absolute value metric
 func (r *replayMetricsClient) UpdateGauge(scope int, gauge int, value float64) {
-	if r.isReplay {
+	if workflow.IsReplaying(r.ctx) {
 		return
 	}
 	r.UpdateGauge(scope, gauge, value)
@@ -82,8 +83,8 @@ func (r *replayMetricsClient) UpdateGauge(scope int, gauge int, value float64) {
 // Tagged returns a client that adds the given tags to all metrics
 func (r *replayMetricsClient) Tagged(tags map[string]string) metrics.Client {
 	return &replayMetricsClient{
-		client:   r.client.Tagged(tags),
-		isReplay: r.isReplay,
+		client: r.client.Tagged(tags),
+		ctx:    r.ctx,
 	}
 }
 

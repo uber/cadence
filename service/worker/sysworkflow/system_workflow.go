@@ -55,13 +55,12 @@ var (
 // ArchiveSystemWorkflow is the system workflow which archives and deletes history
 func ArchiveSystemWorkflow(ctx workflow.Context, carryoverRequests []ArchiveRequest) error {
 	sysWorkflowInfo := workflow.GetInfo(ctx)
-	isReplay := workflow.IsReplaying(ctx)
 	logger := NewReplayBarkLogger(globalLogger.WithFields(bark.Fields{
 		logging.TagWorkflowExecutionID: sysWorkflowInfo.WorkflowExecution.ID,
 		logging.TagWorkflowRunID:       sysWorkflowInfo.WorkflowExecution.RunID,
-	}), isReplay, false)
+	}), ctx, false)
 	logger.Info("started system workflow")
-	metricsClient := NewReplayMetricsClient(globalMetricsClient, isReplay)
+	metricsClient := NewReplayMetricsClient(globalMetricsClient, ctx)
 	metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerWorkflowStarted)
 	sw := metricsClient.StartTimer(metrics.SystemWorkflowScope, metrics.SysWorkerContinueAsNewLatency)
 	requestsHandled := 0
@@ -98,7 +97,12 @@ func ArchiveSystemWorkflow(ctx workflow.Context, carryoverRequests []ArchiveRequ
 		workQueue.Send(ctx, request)
 	}
 
-	// step 4: drain signal channel to get next run's carryover
+	// step 4: wait for all in progress work to finish
+	for i := 0; i < requestsHandled; i++ {
+		finishedWorkQueue.Receive(ctx, nil)
+	}
+
+	// step 5: drain signal channel to get next run's carryover
 	var co []ArchiveRequest
 	for {
 		var request ArchiveRequest
@@ -107,11 +111,6 @@ func ArchiveSystemWorkflow(ctx workflow.Context, carryoverRequests []ArchiveRequ
 		}
 		metricsClient.IncCounter(metrics.SystemWorkflowScope, metrics.SysWorkerReceivedSignal)
 		co = append(co, request)
-	}
-
-	// step 5: wait for all in progress work to finish
-	for i := 0; i < requestsHandled; i++ {
-		finishedWorkQueue.Receive(ctx, nil)
 	}
 
 	// step 6: schedule new run
