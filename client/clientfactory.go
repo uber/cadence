@@ -214,9 +214,6 @@ func (cf *rpcClientFactory) NewPublicClientWithTimeout(
 	}
 
 	client := public.NewClient(timeout, longPollTimeout, common.NewClientCache(keyResolver, clientProvider))
-	if cf.metricsClient != nil {
-		client = public.NewMetricClient(client, cf.metricsClient)
-	}
 	return client, nil
 }
 
