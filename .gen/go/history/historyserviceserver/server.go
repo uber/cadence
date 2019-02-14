@@ -84,6 +84,11 @@ type Interface interface {
 		ReplicateRequest *history.ReplicateEventsRequest,
 	) error
 
+	ReplicateRawEvents(
+		ctx context.Context,
+		ReplicateRequest *history.ReplicateRawEventsRequest,
+	) error
+
 	RequestCancelWorkflowExecution(
 		ctx context.Context,
 		CancelRequest *history.RequestCancelWorkflowExecutionRequest,
@@ -93,6 +98,11 @@ type Interface interface {
 		ctx context.Context,
 		ResetRequest *history.ResetStickyTaskListRequest,
 	) (*history.ResetStickyTaskListResponse, error)
+
+	ResetWorkflowExecution(
+		ctx context.Context,
+		ResetRequest *history.ResetWorkflowExecutionRequest,
+	) (*shared.ResetWorkflowExecutionResponse, error)
 
 	RespondActivityTaskCanceled(
 		ctx context.Context,
@@ -277,6 +287,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "ReplicateRawEvents",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.ReplicateRawEvents),
+				},
+				Signature:    "ReplicateRawEvents(ReplicateRequest *history.ReplicateRawEventsRequest)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "RequestCancelWorkflowExecution",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -295,6 +316,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.ResetStickyTaskList),
 				},
 				Signature:    "ResetStickyTaskList(ResetRequest *history.ResetStickyTaskListRequest) (*history.ResetStickyTaskListResponse)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "ResetWorkflowExecution",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.ResetWorkflowExecution),
+				},
+				Signature:    "ResetWorkflowExecution(ResetRequest *history.ResetWorkflowExecutionRequest) (*shared.ResetWorkflowExecutionResponse)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -432,7 +464,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 24)
+	procedures := make([]transport.Procedure, 0, 26)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -629,6 +661,25 @@ func (h handler) ReplicateEvents(ctx context.Context, body wire.Value) (thrift.R
 	return response, err
 }
 
+func (h handler) ReplicateRawEvents(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_ReplicateRawEvents_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	err := h.impl.ReplicateRawEvents(ctx, args.ReplicateRequest)
+
+	hadError := err != nil
+	result, err := history.HistoryService_ReplicateRawEvents_Helper.WrapResponse(err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
 func (h handler) RequestCancelWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_RequestCancelWorkflowExecution_Args
 	if err := args.FromWire(body); err != nil {
@@ -658,6 +709,25 @@ func (h handler) ResetStickyTaskList(ctx context.Context, body wire.Value) (thri
 
 	hadError := err != nil
 	result, err := history.HistoryService_ResetStickyTaskList_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) ResetWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_ResetWorkflowExecution_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.ResetWorkflowExecution(ctx, args.ResetRequest)
+
+	hadError := err != nil
+	result, err := history.HistoryService_ResetWorkflowExecution_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {

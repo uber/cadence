@@ -23,6 +23,7 @@ package history
 import (
 	"time"
 
+	"fmt"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
 	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
@@ -34,19 +35,25 @@ import (
 type Config struct {
 	NumberOfShards int
 
-	EnableSyncActivityHeartbeat dynamicconfig.BoolPropertyFn
-	RPS                         dynamicconfig.IntPropertyFn
-	PersistenceMaxQPS           dynamicconfig.IntPropertyFn
-	EnableVisibilitySampling    dynamicconfig.BoolPropertyFn
-	VisibilityOpenMaxQPS        dynamicconfig.IntPropertyFnWithDomainFilter
-	VisibilityClosedMaxQPS      dynamicconfig.IntPropertyFnWithDomainFilter
-	EnableVisibilityToKafka     dynamicconfig.BoolPropertyFn
+	RPS                      dynamicconfig.IntPropertyFn
+	MaxIDLengthLimit         dynamicconfig.IntPropertyFn
+	PersistenceMaxQPS        dynamicconfig.IntPropertyFn
+	EnableVisibilitySampling dynamicconfig.BoolPropertyFn
+	VisibilityOpenMaxQPS     dynamicconfig.IntPropertyFnWithDomainFilter
+	VisibilityClosedMaxQPS   dynamicconfig.IntPropertyFnWithDomainFilter
+	EnableVisibilityToKafka  dynamicconfig.BoolPropertyFn
 
 	// HistoryCache settings
 	// Change of these configs require shard restart
 	HistoryCacheInitialSize dynamicconfig.IntPropertyFn
 	HistoryCacheMaxSize     dynamicconfig.IntPropertyFn
 	HistoryCacheTTL         dynamicconfig.DurationPropertyFn
+
+	// EventsCache settings
+	// Change of these configs require shard restart
+	EventsCacheInitialSize dynamicconfig.IntPropertyFn
+	EventsCacheMaxSize     dynamicconfig.IntPropertyFn
+	EventsCacheTTL         dynamicconfig.DurationPropertyFn
 
 	// ShardController settings
 	RangeSizeBits        uint
@@ -120,27 +127,33 @@ type Config struct {
 	// whether or not using eventsV2
 	EnableEventsV2 dynamicconfig.BoolPropertyFnWithDomainFilter
 
-	EnableArchival  dynamicconfig.BoolPropertyFnWithDomainFilter
 	NumSysWorkflows dynamicconfig.IntPropertyFn
 
-	BlobSizeLimitError dynamicconfig.IntPropertyFnWithDomainFilter
-	BlobSizeLimitWarn  dynamicconfig.IntPropertyFnWithDomainFilter
+	BlobSizeLimitError     dynamicconfig.IntPropertyFnWithDomainFilter
+	BlobSizeLimitWarn      dynamicconfig.IntPropertyFnWithDomainFilter
+	HistorySizeLimitError  dynamicconfig.IntPropertyFnWithDomainFilter
+	HistorySizeLimitWarn   dynamicconfig.IntPropertyFnWithDomainFilter
+	HistoryCountLimitError dynamicconfig.IntPropertyFnWithDomainFilter
+	HistoryCountLimitWarn  dynamicconfig.IntPropertyFnWithDomainFilter
 }
 
 // NewConfig returns new service config with default values
-func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
+func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, enableVisibilityToKafka bool) *Config {
 	return &Config{
 		NumberOfShards:                                        numberOfShards,
-		EnableSyncActivityHeartbeat:                           dc.GetBoolProperty(dynamicconfig.EnableSyncActivityHeartbeat, false),
 		RPS:                                                   dc.GetIntProperty(dynamicconfig.HistoryRPS, 3000),
+		MaxIDLengthLimit:                                      dc.GetIntProperty(dynamicconfig.MaxIDLengthLimit, 1000),
 		PersistenceMaxQPS:                                     dc.GetIntProperty(dynamicconfig.HistoryPersistenceMaxQPS, 9000),
 		EnableVisibilitySampling:                              dc.GetBoolProperty(dynamicconfig.EnableVisibilitySampling, true),
 		VisibilityOpenMaxQPS:                                  dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryVisibilityOpenMaxQPS, 300),
 		VisibilityClosedMaxQPS:                                dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryVisibilityClosedMaxQPS, 300),
-		EnableVisibilityToKafka:                               dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, dynamicconfig.DefaultEnableVisibilityToKafka),
+		EnableVisibilityToKafka:                               dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, enableVisibilityToKafka),
 		HistoryCacheInitialSize:                               dc.GetIntProperty(dynamicconfig.HistoryCacheInitialSize, 128),
 		HistoryCacheMaxSize:                                   dc.GetIntProperty(dynamicconfig.HistoryCacheMaxSize, 512),
 		HistoryCacheTTL:                                       dc.GetDurationProperty(dynamicconfig.HistoryCacheTTL, time.Hour),
+		EventsCacheInitialSize:                                dc.GetIntProperty(dynamicconfig.EventsCacheInitialSize, 128),
+		EventsCacheMaxSize:                                    dc.GetIntProperty(dynamicconfig.EventsCacheMaxSize, 512),
+		EventsCacheTTL:                                        dc.GetDurationProperty(dynamicconfig.EventsCacheTTL, time.Hour),
 		RangeSizeBits:                                         20, // 20 bits for sequencer, 2^20 sequence number for any range
 		AcquireShardInterval:                                  dc.GetDurationProperty(dynamicconfig.AcquireShardInterval, time.Minute),
 		StandbyClusterDelay:                                   dc.GetDurationProperty(dynamicconfig.AcquireShardInterval, 5*time.Minute),
@@ -158,7 +171,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		TimerProcessorMaxPollRPS:                              dc.GetIntProperty(dynamicconfig.TimerProcessorMaxPollRPS, 20),
 		TimerProcessorMaxPollInterval:                         dc.GetDurationProperty(dynamicconfig.TimerProcessorMaxPollInterval, 5*time.Minute),
 		TimerProcessorMaxPollIntervalJitterCoefficient:        dc.GetFloat64Property(dynamicconfig.TimerProcessorMaxPollIntervalJitterCoefficient, 0.15),
-		TimerProcessorMaxTimeShift:                            dc.GetDurationProperty(dynamicconfig.TimerProcessorMaxPollInterval, 1*time.Second),
+		TimerProcessorMaxTimeShift:                            dc.GetDurationProperty(dynamicconfig.TimerProcessorMaxTimeShift, 1*time.Second),
 		TransferTaskBatchSize:                                 dc.GetIntProperty(dynamicconfig.TransferTaskBatchSize, 100),
 		TransferProcessorFailoverMaxPollRPS:                   dc.GetIntProperty(dynamicconfig.TransferProcessorFailoverMaxPollRPS, 1),
 		TransferProcessorMaxPollRPS:                           dc.GetIntProperty(dynamicconfig.TransferProcessorMaxPollRPS, 20),
@@ -193,11 +206,14 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		EventEncodingType:          dc.GetStringPropertyFnWithDomainFilter(dynamicconfig.DefaultEventEncoding, string(common.EncodingTypeJSON)),
 		EnableEventsV2:             dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableEventsV2, false),
 
-		EnableArchival:  dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableArchival, false),
 		NumSysWorkflows: dc.GetIntProperty(dynamicconfig.NumSystemWorkflows, 1000),
 
-		BlobSizeLimitError: dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitError, 2*1024*1024),
-		BlobSizeLimitWarn:  dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitWarn, 256*1024),
+		BlobSizeLimitError:     dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitError, 2*1024*1024),
+		BlobSizeLimitWarn:      dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitError, 256*1024),
+		HistorySizeLimitError:  dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistorySizeLimitError, 200*1024*1024),
+		HistorySizeLimitWarn:   dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistorySizeLimitWarn, 50*1024*1024),
+		HistoryCountLimitError: dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryCountLimitError, 200*1024),
+		HistoryCountLimitWarn:  dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryCountLimitWarn, 50*1024),
 	}
 }
 
@@ -217,12 +233,14 @@ type Service struct {
 // NewService builds a new cadence-history service
 func NewService(params *service.BootstrapParams) common.Daemon {
 	params.UpdateLoggerWithServiceName(common.HistoryServiceName)
+	fmt.Println(params.ESConfig)
 	return &Service{
 		params: params,
 		stopC:  make(chan struct{}),
 		config: NewConfig(
 			dynamicconfig.NewCollection(params.DynamicConfig, params.Logger),
 			params.PersistenceConfig.NumHistoryShards,
+			params.ESConfig.Enable,
 		),
 	}
 }

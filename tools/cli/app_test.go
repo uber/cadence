@@ -21,6 +21,10 @@
 package cli
 
 import (
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/golang/mock/gomock"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pborman/uuid"
@@ -36,9 +40,6 @@ import (
 	clientFrontend "go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	clientFrontendTest "go.uber.org/cadence/.gen/go/cadence/workflowservicetest"
 	"go.uber.org/cadence/.gen/go/shared"
-	"strings"
-	"testing"
-	"time"
 )
 
 type cliAppSuite struct {
@@ -92,11 +93,11 @@ func (s *cliAppSuite) SetupTest() {
 
 	s.clientFrontendClient = clientFrontendTest.NewMockClient(s.mockCtrl)
 	s.serverAdminClient = serverAdminTest.NewMockClient(s.mockCtrl)
-	cFactory = &clientFactoryMock{
+	SetFactory(&clientFactoryMock{
 		clientFrontendClient: s.clientFrontendClient,
 		serverFrontendClient: serverFrontendTest.NewMockClient(s.mockCtrl),
 		serverAdminClient:    s.serverAdminClient,
-	}
+	})
 }
 
 func (s *cliAppSuite) TearDownTest() {
@@ -269,10 +270,10 @@ func (s *cliAppSuite) TestStartWorkflow() {
 	resp := &shared.StartWorkflowExecutionResponse{RunId: common.StringPtr(uuid.New())}
 	s.clientFrontendClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, nil).Times(2)
 	// start with wid
-	err := s.app.Run([]string{"", "--do", domainName, "workflow", "start", "-tl", "testTaskList", "-wt", "testWorkflowType", "-et", "60", "-w", "wid"})
+	err := s.app.Run([]string{"", "--do", domainName, "workflow", "start", "-tl", "testTaskList", "-wt", "testWorkflowType", "-et", "60", "-w", "wid", "wrp", "2"})
 	s.Nil(err)
 	// start without wid
-	err = s.app.Run([]string{"", "--do", domainName, "workflow", "start", "-tl", "testTaskList", "-wt", "testWorkflowType", "-et", "60"})
+	err = s.app.Run([]string{"", "--do", domainName, "workflow", "start", "-tl", "testTaskList", "-wt", "testWorkflowType", "-et", "60", "wrp", "2"})
 	s.Nil(err)
 }
 
@@ -290,10 +291,10 @@ func (s *cliAppSuite) TestRunWorkflow() {
 	s.clientFrontendClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, nil).Times(2)
 	s.clientFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any(), callOptions...).Return(history, nil).Times(2)
 	// start with wid
-	err := s.app.Run([]string{"", "--do", domainName, "workflow", "run", "-tl", "testTaskList", "-wt", "testWorkflowType", "-et", "60", "-w", "wid"})
+	err := s.app.Run([]string{"", "--do", domainName, "workflow", "run", "-tl", "testTaskList", "-wt", "testWorkflowType", "-et", "60", "-w", "wid", "wrp", "2"})
 	s.Nil(err)
 	// start without wid
-	err = s.app.Run([]string{"", "--do", domainName, "workflow", "run", "-tl", "testTaskList", "-wt", "testWorkflowType", "-et", "60"})
+	err = s.app.Run([]string{"", "--do", domainName, "workflow", "run", "-tl", "testTaskList", "-wt", "testWorkflowType", "-et", "60", "wrp", "2"})
 	s.Nil(err)
 }
 
@@ -476,8 +477,9 @@ var describeTaskListResponse = &shared.DescribeTaskListResponse{
 
 func (s *cliAppSuite) TestAdminDescribeWorkflow() {
 	resp := &admin.DescribeWorkflowExecutionResponse{
-		ShardId:     common.StringPtr("test-shard-id"),
-		HistoryAddr: common.StringPtr("ip:port"),
+		ShardId:                common.StringPtr("test-shard-id"),
+		HistoryAddr:            common.StringPtr("ip:port"),
+		MutableStateInDatabase: common.StringPtr("{}"),
 	}
 
 	s.serverAdminClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, nil)
@@ -561,4 +563,31 @@ func (s *cliAppSuite) TestAnyToString() {
 func (s *cliAppSuite) TestIsAttributeName() {
 	s.True(isAttributeName("WorkflowExecutionStartedEventAttributes"))
 	s.False(isAttributeName("workflowExecutionStartedEventAttributes"))
+}
+
+func (s *cliAppSuite) TestGetWorkflowIdReusePolicy() {
+	res := getWorkflowIDReusePolicy(2)
+	s.Equal(res.String(), shared.WorkflowIdReusePolicyRejectDuplicate.String())
+}
+
+func (s *cliAppSuite) TestGetWorkflowIdReusePolicy_Failed_ExceedRange() {
+	oldOsExit := osExit
+	defer func() { osExit = oldOsExit }()
+	var errorCode int
+	osExit = func(code int) {
+		errorCode = code
+	}
+	getWorkflowIDReusePolicy(2147483647)
+	s.Equal(1, errorCode)
+}
+
+func (s *cliAppSuite) TestGetWorkflowIdReusePolicy_Failed_Negative() {
+	oldOsExit := osExit
+	defer func() { osExit = oldOsExit }()
+	var errorCode int
+	osExit = func(code int) {
+		errorCode = code
+	}
+	getWorkflowIDReusePolicy(-1)
+	s.Equal(1, errorCode)
 }

@@ -21,7 +21,7 @@
 package frontend
 
 import (
-	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
+	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 )
 
 // Client is the interface exposed by frontend service client

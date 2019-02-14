@@ -71,6 +71,10 @@ ignored = ["github.com/uber/cadence/.gen"]
   version = "1.0.0"
 
 [[constraint]]
+  name = "github.com/google/uuid"
+  version = "1.1.0"
+
+[[constraint]]
   branch = "master"
   name = "github.com/sirupsen/logrus"
 
@@ -108,7 +112,7 @@ ignored = ["github.com/uber/cadence/.gen"]
 
 [[constraint]]
   name = "go.uber.org/cadence"
-  version = "0.7.6"
+  branch = "master"
 
 [[constraint]]
   name = "go.uber.org/yarpc"
@@ -134,3 +138,7 @@ ignored = ["github.com/uber/cadence/.gen"]
   branch = "batch"
   name = "github.com/jmoiron/sqlx"
   source = "github.com/mfateev/sqlx"
+
+[[constraint]]
+  name = "github.com/robfig/cron"
+  version = "1.1.0"

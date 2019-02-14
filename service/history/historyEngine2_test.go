@@ -36,6 +36,7 @@ import (
 	"github.com/uber-go/tally"
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -54,7 +55,7 @@ type (
 		*require.Assertions
 		historyEngine       *historyEngineImpl
 		mockMatchingClient  *mocks.MatchingClient
-		mockInitiator       *mocks.Initiator
+		mockArchivalClient  *mocks.ArchivalClient
 		mockHistoryClient   *mocks.HistoryClient
 		mockMetadataMgr     *mocks.MetadataManager
 		mockVisibilityMgr   *mocks.VisibilityManager
@@ -63,9 +64,11 @@ type (
 		mockShardManager    *mocks.ShardManager
 		mockClusterMetadata *mocks.ClusterMetadata
 		mockProducer        *mocks.KafkaProducer
+		mockClientBean      *client.MockClientBean
 		mockMessagingClient messaging.Client
 		mockService         service.Service
 		mockDomainCache     *cache.DomainCacheMock
+		mockEventsCache     *MockEventsCache
 
 		shardClosedCh chan int
 		config        *Config
@@ -98,7 +101,7 @@ func (s *engine2Suite) SetupTest() {
 
 	shardID := 0
 	s.mockMatchingClient = &mocks.MatchingClient{}
-	s.mockInitiator = &mocks.Initiator{}
+	s.mockArchivalClient = &mocks.ArchivalClient{}
 	s.mockHistoryClient = &mocks.HistoryClient{}
 	s.mockMetadataMgr = &mocks.MetadataManager{}
 	s.mockVisibilityMgr = &mocks.VisibilityManager{}
@@ -110,13 +113,16 @@ func (s *engine2Suite) SetupTest() {
 	s.shardClosedCh = make(chan int, 100)
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
-	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.logger)
+	s.mockClientBean = &client.MockClientBean{}
+	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean, s.logger)
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("GetAllClusterFailoverVersions").Return(cluster.TestAllClusterFailoverVersions)
+	s.mockClusterMetadata.On("GetAllClusterFailoverVersions").Return(cluster.TestSingleDCAllClusterFailoverVersions)
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
 	s.mockDomainCache = &cache.DomainCacheMock{}
-	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(cache.NewDomainCacheEntryWithInfo(&p.DomainInfo{ID: validDomainID}), nil)
-	s.mockInitiator.On("Archive", mock.Anything).Return(nil)
+	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(cache.NewDomainCacheEntryForTest(&p.DomainInfo{ID: validDomainID}, nil), nil)
+	s.mockEventsCache = &MockEventsCache{}
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything).Return()
 
 	mockShard := &shardContextImpl{
 		service:                   s.mockService,
@@ -131,6 +137,7 @@ func (s *engine2Suite) SetupTest() {
 		config:                    s.config,
 		logger:                    s.logger,
 		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
+		eventsCache:               s.mockEventsCache,
 	}
 
 	historyCache := newHistoryCache(mockShard)
@@ -144,9 +151,10 @@ func (s *engine2Suite) SetupTest() {
 		metricsClient:      metrics.NewClient(tally.NoopScope, metrics.History),
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
 		config:             s.config,
+		archivalClient:     s.mockArchivalClient,
 	}
 	h.txProcessor = newTransferQueueProcessor(mockShard, h, s.mockVisibilityMgr, s.mockProducer, s.mockMatchingClient, s.mockHistoryClient, s.logger)
-	h.timerProcessor = newTimerQueueProcessor(mockShard, h, s.mockMatchingClient, s.logger)
+	h.timerProcessor = newTimerQueueProcessor(mockShard, h, s.mockMatchingClient, s.mockProducer, s.logger)
 	s.historyEngine = h
 }
 
@@ -156,8 +164,9 @@ func (s *engine2Suite) TearDownTest() {
 	s.mockHistoryMgr.AssertExpectations(s.T())
 	s.mockShardManager.AssertExpectations(s.T())
 	s.mockVisibilityMgr.AssertExpectations(s.T())
-	s.mockClusterMetadata.AssertExpectations(s.T())
 	s.mockProducer.AssertExpectations(s.T())
+	s.mockClientBean.AssertExpectations(s.T())
+	s.mockArchivalClient.AssertExpectations(s.T())
 }
 
 func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
@@ -170,7 +179,8 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	stickyTl := "stickyTaskList"
 	identity := "testIdentity"
 
-	msBuilder := newMutableStateBuilder("test", s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder("test", s.config, s.mockEventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	executionInfo := msBuilder.GetExecutionInfo()
 	executionInfo.StickyTaskList = stickyTl
 
@@ -795,6 +805,8 @@ func (s *engine2Suite) TestRecordActivityTaskStartedSuccess() {
 		nil,
 	)
 
+	s.mockEventsCache.On("getEvent", domainID, workflowExecution.GetWorkflowId(), workflowExecution.GetRunId(),
+		decisionCompletedEvent.GetEventId(), scheduledEvent.GetEventId(), mock.Anything, mock.Anything).Return(scheduledEvent, nil)
 	response, err := s.historyEngine.RecordActivityTaskStarted(context.Background(), &h.RecordActivityTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
 		WorkflowExecution: &workflowExecution,
@@ -908,7 +920,8 @@ func (s *engine2Suite) TestRequestCancelWorkflowExecutionFail() {
 
 func (s *engine2Suite) createExecutionStartedState(we workflow.WorkflowExecution, tl, identity string,
 	startDecision bool) mutableState {
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.logger)
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.mockEventsCache,
+		s.logger)
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	if startDecision {
@@ -938,7 +951,8 @@ func (s *engine2Suite) TestRespondDecisionTaskCompletedRecordMarkerDecision() {
 	markerDetails := []byte("marker details")
 	markerName := "marker name"
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.mockEventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -1341,7 +1355,8 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 		},
 	}
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.mockEventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	ms := createMutableState(msBuilder)
 	gwmsResponse := &p.GetWorkflowExecutionResponse{State: ms}
 	gceResponse := &p.GetCurrentExecutionResponse{RunID: runID}
@@ -1450,7 +1465,8 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotRunning()
 		},
 	}
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.mockEventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	ms := createMutableState(msBuilder)
 	ms.ExecutionInfo.State = p.WorkflowStateCompleted
 	gwmsResponse := &p.GetWorkflowExecutionResponse{State: ms}

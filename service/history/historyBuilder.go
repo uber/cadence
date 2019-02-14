@@ -119,10 +119,8 @@ func (b *historyBuilder) AddDecisionTaskTimedOutEvent(scheduleEventID int64,
 	return b.addEventToHistory(event)
 }
 
-func (b *historyBuilder) AddDecisionTaskFailedEvent(scheduleEventID int64, startedEventID int64,
-	cause workflow.DecisionTaskFailedCause, details []byte, identity string) *workflow.HistoryEvent {
-	event := b.newDecisionTaskFailedEvent(scheduleEventID, startedEventID, cause, details, identity)
-
+func (b *historyBuilder) AddDecisionTaskFailedEvent(attr workflow.DecisionTaskFailedEventAttributes) *workflow.HistoryEvent {
+	event := b.newDecisionTaskFailedEvent(attr)
 	return b.addEventToHistory(event)
 }
 
@@ -462,6 +460,12 @@ func (b *historyBuilder) newWorkflowExecutionStartedEvent(
 	attributes.RetryPolicy = request.RetryPolicy
 	attributes.Attempt = common.Int32Ptr(startRequest.GetAttempt())
 	attributes.ExpirationTimestamp = startRequest.ExpirationTimestamp
+	attributes.CronSchedule = request.CronSchedule
+	attributes.LastCompletionResult = startRequest.LastCompletionResult
+	attributes.ContinuedFailureReason = startRequest.ContinuedFailureReason
+	attributes.ContinuedFailureDetails = startRequest.ContinuedFailureDetails
+	attributes.Initiator = startRequest.ContinueAsNewInitiator
+	attributes.FirstDecisionTaskBackoffSeconds = startRequest.FirstDecisionTaskBackoffSeconds
 
 	parentInfo := startRequest.ParentExecutionInfo
 	if parentInfo != nil {
@@ -527,17 +531,9 @@ func (b *historyBuilder) newDecisionTaskTimedOutEvent(scheduleEventID int64, sta
 	return historyEvent
 }
 
-func (b *historyBuilder) newDecisionTaskFailedEvent(scheduleEventID int64, startedEventID int64,
-	cause workflow.DecisionTaskFailedCause, details []byte, identity string) *workflow.HistoryEvent {
+func (b *historyBuilder) newDecisionTaskFailedEvent(attr workflow.DecisionTaskFailedEventAttributes) *workflow.HistoryEvent {
 	historyEvent := b.msBuilder.CreateNewHistoryEvent(workflow.EventTypeDecisionTaskFailed)
-	attributes := &workflow.DecisionTaskFailedEventAttributes{}
-	attributes.ScheduledEventId = common.Int64Ptr(scheduleEventID)
-	attributes.StartedEventId = common.Int64Ptr(startedEventID)
-	attributes.Cause = common.DecisionTaskFailedCausePtr(cause)
-	attributes.Details = details
-	attributes.Identity = common.StringPtr(identity)
-	historyEvent.DecisionTaskFailedEventAttributes = attributes
-
+	historyEvent.DecisionTaskFailedEventAttributes = &attr
 	return historyEvent
 }
 
@@ -824,6 +820,13 @@ func (b *historyBuilder) newWorkflowExecutionContinuedAsNewEvent(decisionTaskCom
 	attributes.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(*request.TaskStartToCloseTimeoutSeconds)
 	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
 	attributes.BackoffStartIntervalInSeconds = common.Int32Ptr(request.GetBackoffStartIntervalInSeconds())
+	attributes.Initiator = request.Initiator
+	if attributes.Initiator == nil {
+		attributes.Initiator = workflow.ContinueAsNewInitiatorDecider.Ptr()
+	}
+	attributes.FailureReason = request.FailureReason
+	attributes.FailureDetails = request.FailureDetails
+	attributes.LastCompletionResult = request.LastCompletionResult
 	historyEvent.WorkflowExecutionContinuedAsNewEventAttributes = attributes
 
 	return historyEvent

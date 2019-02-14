@@ -135,6 +135,22 @@ func newWorkflowCommands() []cli.Command {
 					Usage: "Decision task start to close timeout in seconds",
 				},
 				cli.StringFlag{
+					Name: FlagCronSchedule,
+					Usage: "Optional cron schedule for the workflow. Cron spec is as following: \n" +
+						"\t┌───────────── minute (0 - 59) \n" +
+						"\t│ ┌───────────── hour (0 - 23) \n" +
+						"\t│ │ ┌───────────── day of the month (1 - 31) \n" +
+						"\t│ │ │ ┌───────────── month (1 - 12) \n" +
+						"\t│ │ │ │ ┌───────────── day of the week (0 - 6) (Sunday to Saturday) \n" +
+						"\t│ │ │ │ │ \n" +
+						"\t* * * * *",
+				},
+				cli.IntFlag{
+					Name: FlagWorkflowIDReusePolicyAlias,
+					Usage: "Optional input to configure if the same workflow ID is allow to use for new workflow execution. " +
+						"Available options: 0: AllowDuplicateFailedOnly, 1: AllowDuplicate, 2: RejectDuplicate",
+				},
+				cli.StringFlag{
 					Name:  FlagInputWithAlias,
 					Usage: "Optional input for the workflow, in JSON format. If there are multiple parameters, concatenate them and separate by space.",
 				},
@@ -176,6 +192,22 @@ func newWorkflowCommands() []cli.Command {
 				cli.IntFlag{
 					Name:  FlagContextTimeoutWithAlias,
 					Usage: "Optional timeout for start command context in seconds, default value is 120",
+				},
+				cli.StringFlag{
+					Name: FlagCronSchedule,
+					Usage: "Optional cron schedule for the workflow. Cron spec is as following: \n" +
+						"\t┌───────────── minute (0 - 59) \n" +
+						"\t│ ┌───────────── hour (0 - 23) \n" +
+						"\t│ │ ┌───────────── day of the month (1 - 31) \n" +
+						"\t│ │ │ ┌───────────── month (1 - 12) \n" +
+						"\t│ │ │ │ ┌───────────── day of the week (0 - 6) (Sunday to Saturday) \n" +
+						"\t│ │ │ │ │ \n" +
+						"\t* * * * *",
+				},
+				cli.IntFlag{
+					Name: FlagWorkflowIDReusePolicyAlias,
+					Usage: "Optional input to configure if the same workflow ID is allow to use for new workflow execution. " +
+						"Available options: 0: AllowDuplicateFailedOnly, 1: AllowDuplicate, 2: RejectDuplicate",
 				},
 				cli.StringFlag{
 					Name:  FlagInputWithAlias,
@@ -516,6 +548,32 @@ func newWorkflowCommands() []cli.Command {
 			},
 			Action: func(c *cli.Context) {
 				ObserveHistoryWithID(c)
+			},
+		},
+		{
+			Name:    "reset",
+			Aliases: []string{"rs"},
+			Usage:   "reset the workflow",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagWorkflowIDWithAlias,
+					Usage: "WorkflowID",
+				},
+				cli.StringFlag{
+					Name:  FlagRunIDWithAlias,
+					Usage: "RunID",
+				},
+				cli.StringFlag{
+					Name:  FlagEventID,
+					Usage: "The eventID of a DecisionTaskCompleted/DecisionTaskFailed you want to reset to (exclusive)",
+				},
+				cli.StringFlag{
+					Name:  FlagReason,
+					Usage: "reason to do the reset",
+				},
+			},
+			Action: func(c *cli.Context) {
+				ResetWorkflow(c)
 			},
 		},
 	}

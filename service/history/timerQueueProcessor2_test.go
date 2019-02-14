@@ -34,6 +34,7 @@ import (
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -62,8 +63,10 @@ type (
 		mockShard           ShardContext
 		mockClusterMetadata *mocks.ClusterMetadata
 		mockProducer        *mocks.KafkaProducer
+		mockClientBean      *client.MockClientBean
 		mockMessagingClient messaging.Client
 		mockService         service.Service
+		mockEventsCache     *MockEventsCache
 	}
 )
 
@@ -112,7 +115,9 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 	s.shardClosedCh = make(chan int, 100)
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
-	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.logger)
+	s.mockClientBean = &client.MockClientBean{}
+	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean, s.logger)
+	s.mockEventsCache = &MockEventsCache{}
 
 	domainCache := cache.NewDomainCache(s.mockMetadataMgr, s.mockClusterMetadata, metricsClient, s.logger)
 	s.mockShard = &shardContextImpl{
@@ -127,6 +132,7 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 		config:                    s.config,
 		logger:                    s.logger,
 		domainCache:               domainCache,
+		eventsCache:               s.mockEventsCache,
 		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
 		timerMaxReadLevelMap:      make(map[string]time.Time),
 	}
@@ -134,8 +140,9 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 	historyCache := newHistoryCache(s.mockShard)
 	// this is used by shard context, not relevent to this test, so we do not care how many times "GetCurrentClusterName" os called
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("GetAllClusterFailoverVersions").Return(cluster.TestAllClusterFailoverVersions)
+	s.mockClusterMetadata.On("GetAllClusterFailoverVersions").Return(cluster.TestSingleDCAllClusterFailoverVersions)
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
+	s.mockClusterMetadata.On("IsArchivalEnabled").Return(false)
 	h := &historyEngineImpl{
 		currentClusterName: s.mockShard.GetService().GetClusterMetadata().GetCurrentClusterName(),
 		shard:              s.mockShard,
@@ -147,7 +154,7 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 		metricsClient:      s.mockShard.GetMetricsClient(),
 	}
 	h.txProcessor = newTransferQueueProcessor(s.mockShard, h, s.mockVisibilityMgr, s.mockProducer, s.mockMatchingClient, &mocks.HistoryClient{}, s.logger)
-	h.timerProcessor = newTimerQueueProcessor(s.mockShard, h, s.mockMatchingClient, s.logger)
+	h.timerProcessor = newTimerQueueProcessor(s.mockShard, h, s.mockMatchingClient, s.mockProducer, s.logger)
 	s.mockHistoryEngine = h
 }
 
@@ -157,8 +164,8 @@ func (s *timerQueueProcessor2Suite) TearDownTest() {
 	s.mockExecutionMgr.AssertExpectations(s.T())
 	s.mockHistoryMgr.AssertExpectations(s.T())
 	s.mockVisibilityMgr.AssertExpectations(s.T())
-	s.mockClusterMetadata.AssertExpectations(s.T())
 	s.mockProducer.AssertExpectations(s.T())
+	s.mockClientBean.AssertExpectations(s.T())
 }
 
 func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
@@ -168,7 +175,7 @@ func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 
 	taskList := "user-timer-update-times-out"
 
-	builder := newMutableStateBuilder(cluster.TestCurrentClusterName, s.config, s.logger)
+	builder := newMutableStateBuilder(cluster.TestCurrentClusterName, s.config, s.mockEventsCache, s.logger)
 	startRequest := &workflow.StartWorkflowExecutionRequest{
 		WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr("wType")},
 		TaskList:                            common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
@@ -240,7 +247,7 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout() {
 		RunId: common.StringPtr(validRunID)}
 	taskList := "task-workflow-times-out"
 
-	builder := newMutableStateBuilder(cluster.TestCurrentClusterName, s.config, s.logger)
+	builder := newMutableStateBuilder(cluster.TestCurrentClusterName, s.config, s.mockEventsCache, s.logger)
 	startRequest := &workflow.StartWorkflowExecutionRequest{
 		WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr("wType")},
 		TaskList:                            common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),

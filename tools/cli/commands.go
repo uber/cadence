@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/urfave/cli"
 
+	"github.com/uber/cadence/.gen/go/shared"
 	s "go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/client"
 )
@@ -48,83 +49,91 @@ import (
 Flags used to specify cli command line arguments
 */
 const (
-	FlagPort                       = "port"
-	FlagUsername                   = "username"
-	FlagPassword                   = "password"
-	FlagKeyspace                   = "keyspace"
-	FlagAddress                    = "address"
-	FlagAddressWithAlias           = FlagAddress + ", ad"
-	FlagHistoryAddress             = "history_address"
-	FlagHistoryAddressWithAlias    = FlagHistoryAddress + ", had"
-	FlagDomainID                   = "domain_id"
-	FlagDomain                     = "domain"
-	FlagDomainWithAlias            = FlagDomain + ", do"
-	FlagShardID                    = "shard_id"
-	FlagShardIDWithAlias           = FlagShardID + ", sid"
-	FlagWorkflowID                 = "workflow_id"
-	FlagWorkflowIDWithAlias        = FlagWorkflowID + ", wid, w"
-	FlagRunID                      = "run_id"
-	FlagTreeID                     = "tree_id"
-	FlagBranchID                   = "branch_id"
-	FlagNumberOfShards             = "number_of_shards"
-	FlagRunIDWithAlias             = FlagRunID + ", rid, r"
-	FlagTargetCluster              = "target_cluster"
-	FlagMinEventID                 = "min_event_id"
-	FlagMaxEventID                 = "max_event_id"
-	FlagTaskList                   = "tasklist"
-	FlagTaskListWithAlias          = FlagTaskList + ", tl"
-	FlagTaskListType               = "tasklisttype"
-	FlagTaskListTypeWithAlias      = FlagTaskListType + ", tlt"
-	FlagWorkflowType               = "workflow_type"
-	FlagWorkflowTypeWithAlias      = FlagWorkflowType + ", wt"
-	FlagWorkflowStatus             = "status"
-	FlagWorkflowStatusWithAlias    = FlagWorkflowStatus + ", s"
-	FlagExecutionTimeout           = "execution_timeout"
-	FlagExecutionTimeoutWithAlias  = FlagExecutionTimeout + ", et"
-	FlagDecisionTimeout            = "decision_timeout"
-	FlagDecisionTimeoutWithAlias   = FlagDecisionTimeout + ", dt"
-	FlagContextTimeout             = "context_timeout"
-	FlagContextTimeoutWithAlias    = FlagContextTimeout + ", ct"
-	FlagInput                      = "input"
-	FlagInputWithAlias             = FlagInput + ", i"
-	FlagInputFile                  = "input_file"
-	FlagInputFileWithAlias         = FlagInputFile + ", if"
-	FlagInputTopic                 = "input_topic"
-	FlagInputTopicWithAlias        = FlagInputTopic + ", it"
-	FlagHostFile                   = "host_file"
-	FlagCluster                    = "cluster"
-	FlagInputCluster               = "input_cluster"
-	FlagStartOffset                = "start_offset"
-	FlagTopic                      = "topic"
-	FlagGroup                      = "group"
-	FlagReason                     = "reason"
-	FlagReasonWithAlias            = FlagReason + ", re"
-	FlagOpen                       = "open"
-	FlagOpenWithAlias              = FlagOpen + ", op"
-	FlagMore                       = "more"
-	FlagMoreWithAlias              = FlagMore + ", m"
-	FlagPageSize                   = "pagesize"
-	FlagPageSizeWithAlias          = FlagPageSize + ", ps"
-	FlagEarliestTime               = "earliest_time"
-	FlagEarliestTimeWithAlias      = FlagEarliestTime + ", et"
-	FlagLatestTime                 = "latest_time"
-	FlagLatestTimeWithAlias        = FlagLatestTime + ", lt"
-	FlagPrintEventVersion          = "print_event_version"
-	FlagPrintEventVersionWithAlias = FlagPrintEventVersion + ", pev"
-	FlagPrintFullyDetail           = "print_full"
-	FlagPrintFullyDetailWithAlias  = FlagPrintFullyDetail + ", pf"
-	FlagPrintRawTime               = "print_raw_time"
-	FlagPrintRawTimeWithAlias      = FlagPrintRawTime + ", prt"
-	FlagPrintDateTime              = "print_datetime"
-	FlagPrintDateTimeWithAlias     = FlagPrintDateTime + ", pdt"
-	FlagDescription                = "description"
-	FlagDescriptionWithAlias       = FlagDescription + ", desc"
-	FlagOwnerEmail                 = "owner_email"
-	FlagOwnerEmailWithAlias        = FlagOwnerEmail + ", oe"
-	FlagRetentionDays              = "retention"
-	FlagRetentionDaysWithAlias     = FlagRetentionDays + ", rd"
-	FlagEmitMetric                 = "emit_metric"
-	FlagEmitMetricWithAlias        = FlagEmitMetric + ", em"
+	FlagPort                        = "port"
+	FlagUsername                    = "username"
+	FlagPassword                    = "password"
+	FlagKeyspace                    = "keyspace"
+	FlagAddress                     = "address"
+	FlagAddressWithAlias            = FlagAddress + ", ad"
+	FlagHistoryAddress              = "history_address"
+	FlagHistoryAddressWithAlias     = FlagHistoryAddress + ", had"
+	FlagDomainID                    = "domain_id"
+	FlagDomain                      = "domain"
+	FlagDomainWithAlias             = FlagDomain + ", do"
+	FlagShardID                     = "shard_id"
+	FlagShardIDWithAlias            = FlagShardID + ", sid"
+	FlagWorkflowID                  = "workflow_id"
+	FlagWorkflowIDWithAlias         = FlagWorkflowID + ", wid, w"
+	FlagRunID                       = "run_id"
+	FlagTreeID                      = "tree_id"
+	FlagBranchID                    = "branch_id"
+	FlagNumberOfShards              = "number_of_shards"
+	FlagRunIDWithAlias              = FlagRunID + ", rid, r"
+	FlagTargetCluster               = "target_cluster"
+	FlagMinEventID                  = "min_event_id"
+	FlagMaxEventID                  = "max_event_id"
+	FlagTaskList                    = "tasklist"
+	FlagTaskListWithAlias           = FlagTaskList + ", tl"
+	FlagTaskListType                = "tasklisttype"
+	FlagTaskListTypeWithAlias       = FlagTaskListType + ", tlt"
+	FlagWorkflowIDReusePolicy       = "workflowidreusepolicy"
+	FlagWorkflowIDReusePolicyAlias  = FlagWorkflowIDReusePolicy + ", wrp"
+	FlagCronSchedule                = "cron"
+	FlagWorkflowType                = "workflow_type"
+	FlagWorkflowTypeWithAlias       = FlagWorkflowType + ", wt"
+	FlagWorkflowStatus              = "status"
+	FlagWorkflowStatusWithAlias     = FlagWorkflowStatus + ", s"
+	FlagExecutionTimeout            = "execution_timeout"
+	FlagExecutionTimeoutWithAlias   = FlagExecutionTimeout + ", et"
+	FlagDecisionTimeout             = "decision_timeout"
+	FlagDecisionTimeoutWithAlias    = FlagDecisionTimeout + ", dt"
+	FlagContextTimeout              = "context_timeout"
+	FlagContextTimeoutWithAlias     = FlagContextTimeout + ", ct"
+	FlagInput                       = "input"
+	FlagInputWithAlias              = FlagInput + ", i"
+	FlagInputFile                   = "input_file"
+	FlagInputFileWithAlias          = FlagInputFile + ", if"
+	FlagInputTopic                  = "input_topic"
+	FlagInputTopicWithAlias         = FlagInputTopic + ", it"
+	FlagHostFile                    = "host_file"
+	FlagCluster                     = "cluster"
+	FlagInputCluster                = "input_cluster"
+	FlagStartOffset                 = "start_offset"
+	FlagTopic                       = "topic"
+	FlagGroup                       = "group"
+	FlagReason                      = "reason"
+	FlagReasonWithAlias             = FlagReason + ", re"
+	FlagOpen                        = "open"
+	FlagOpenWithAlias               = FlagOpen + ", op"
+	FlagMore                        = "more"
+	FlagMoreWithAlias               = FlagMore + ", m"
+	FlagPageSize                    = "pagesize"
+	FlagPageSizeWithAlias           = FlagPageSize + ", ps"
+	FlagEarliestTime                = "earliest_time"
+	FlagEarliestTimeWithAlias       = FlagEarliestTime + ", et"
+	FlagLatestTime                  = "latest_time"
+	FlagLatestTimeWithAlias         = FlagLatestTime + ", lt"
+	FlagPrintEventVersion           = "print_event_version"
+	FlagPrintEventVersionWithAlias  = FlagPrintEventVersion + ", pev"
+	FlagPrintFullyDetail            = "print_full"
+	FlagPrintFullyDetailWithAlias   = FlagPrintFullyDetail + ", pf"
+	FlagPrintRawTime                = "print_raw_time"
+	FlagPrintRawTimeWithAlias       = FlagPrintRawTime + ", prt"
+	FlagPrintDateTime               = "print_datetime"
+	FlagPrintDateTimeWithAlias      = FlagPrintDateTime + ", pdt"
+	FlagDescription                 = "description"
+	FlagDescriptionWithAlias        = FlagDescription + ", desc"
+	FlagOwnerEmail                  = "owner_email"
+	FlagOwnerEmailWithAlias         = FlagOwnerEmail + ", oe"
+	FlagRetentionDays               = "retention"
+	FlagRetentionDaysWithAlias      = FlagRetentionDays + ", rd"
+	FlagEmitMetric                  = "emit_metric"
+	FlagEmitMetricWithAlias         = FlagEmitMetric + ", em"
+	FlagArchivalStatus              = "archival_status"
+	FlagArchivalStatusWithAlias     = FlagArchivalStatus + ", as"
+	FlagArchivalBucketName          = "bucket"
+	FlagArchivalBucketNameWithAlias = FlagArchivalBucketName + ", ab"
+
 	FlagName                       = "name"
 	FlagNameWithAlias              = FlagName + ", n"
 	FlagOutputFilename             = "output_filename"
@@ -149,6 +158,8 @@ const (
 	FlagSkipErrorModeWithAlias     = FlagSkipErrorMode + ", serr"
 	FlagHeadersMode                = "headers"
 	FlagHeadersModeWithAlias       = FlagHeadersMode + ", he"
+	FlagMessageType                = "message_type"
+	FlagMessageTypeWithAlias       = FlagMessageType + ", mt"
 )
 
 const (
@@ -165,10 +176,16 @@ const (
 	defaultContextTimeoutForLongPoll = 2 * time.Minute
 	defaultDecisionTimeoutInSeconds  = 10
 	defaultPageSizeForList           = 500
+	defaultWorkflowIDReusePolicy     = s.WorkflowIdReusePolicyAllowDuplicateFailedOnly
 
 	workflowStatusNotSet = -1
 	showErrorStackEnv    = `CADENCE_CLI_SHOW_STACKS`
 )
+
+// SetFactory is used to set the ClientFactory global
+func SetFactory(factory ClientFactory) {
+	cFactory = factory
+}
 
 var (
 	cFactory ClientFactory
@@ -522,7 +539,7 @@ func StartWorkflow(c *cli.Context) {
 	serviceClient := cFactory.ClientFrontendClient(c)
 
 	domain := getRequiredGlobalOption(c, FlagDomain)
-	tasklist := getRequiredOption(c, FlagTaskList)
+	taskList := getRequiredOption(c, FlagTaskList)
 	workflowType := getRequiredOption(c, FlagWorkflowType)
 	et := c.Int(FlagExecutionTimeout)
 	if et == 0 {
@@ -533,13 +550,17 @@ func StartWorkflow(c *cli.Context) {
 	if len(wid) == 0 {
 		wid = uuid.New()
 	}
+	reusePolicy := defaultWorkflowIDReusePolicy.Ptr()
+	if c.IsSet(FlagWorkflowIDReusePolicy) {
+		reusePolicy = getWorkflowIDReusePolicy(c.Int(FlagWorkflowIDReusePolicy))
+	}
 
 	input := processJSONInput(c)
 
 	tcCtx, cancel := newContext()
 	defer cancel()
 
-	resp, err := serviceClient.StartWorkflowExecution(tcCtx, &s.StartWorkflowExecutionRequest{
+	startRequest := &s.StartWorkflowExecutionRequest{
 		RequestId:  common.StringPtr(uuid.New()),
 		Domain:     common.StringPtr(domain),
 		WorkflowId: common.StringPtr(wid),
@@ -547,13 +568,20 @@ func StartWorkflow(c *cli.Context) {
 			Name: common.StringPtr(workflowType),
 		},
 		TaskList: &s.TaskList{
-			Name: common.StringPtr(tasklist),
+			Name: common.StringPtr(taskList),
 		},
 		Input:                               []byte(input),
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(int32(et)),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(int32(dt)),
 		Identity:                            common.StringPtr(getCliIdentity()),
-	})
+		WorkflowIdReusePolicy:               reusePolicy,
+	}
+
+	if c.IsSet(FlagCronSchedule) {
+		startRequest.CronSchedule = common.StringPtr(c.String(FlagCronSchedule))
+	}
+
+	resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest)
 
 	if err != nil {
 		ErrorAndExit("Failed to create workflow.", err)
@@ -567,7 +595,7 @@ func RunWorkflow(c *cli.Context) {
 	serviceClient := cFactory.ClientFrontendClient(c)
 
 	domain := getRequiredGlobalOption(c, FlagDomain)
-	tasklist := getRequiredOption(c, FlagTaskList)
+	taskList := getRequiredOption(c, FlagTaskList)
 	workflowType := getRequiredOption(c, FlagWorkflowType)
 	et := c.Int(FlagExecutionTimeout)
 	if et == 0 {
@@ -577,6 +605,10 @@ func RunWorkflow(c *cli.Context) {
 	wid := c.String(FlagWorkflowID)
 	if len(wid) == 0 {
 		wid = uuid.New()
+	}
+	reusePolicy := defaultWorkflowIDReusePolicy.Ptr()
+	if c.IsSet(FlagWorkflowIDReusePolicy) {
+		reusePolicy = getWorkflowIDReusePolicy(c.Int(FlagWorkflowIDReusePolicy))
 	}
 
 	input := processJSONInput(c)
@@ -588,7 +620,7 @@ func RunWorkflow(c *cli.Context) {
 	tcCtx, cancel := newContextForLongPoll(contextTimeout)
 	defer cancel()
 
-	resp, err := serviceClient.StartWorkflowExecution(tcCtx, &s.StartWorkflowExecutionRequest{
+	startRequest := &s.StartWorkflowExecutionRequest{
 		RequestId:  common.StringPtr(uuid.New()),
 		Domain:     common.StringPtr(domain),
 		WorkflowId: common.StringPtr(wid),
@@ -596,13 +628,19 @@ func RunWorkflow(c *cli.Context) {
 			Name: common.StringPtr(workflowType),
 		},
 		TaskList: &s.TaskList{
-			Name: common.StringPtr(tasklist),
+			Name: common.StringPtr(taskList),
 		},
 		Input:                               []byte(input),
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(int32(et)),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(int32(dt)),
 		Identity:                            common.StringPtr(getCliIdentity()),
-	})
+		WorkflowIdReusePolicy:               reusePolicy,
+	}
+	if c.IsSet(FlagCronSchedule) {
+		startRequest.CronSchedule = common.StringPtr(c.String(FlagCronSchedule))
+	}
+
+	resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest)
 
 	if err != nil {
 		ErrorAndExit("Failed to run workflow.", err)
@@ -616,7 +654,7 @@ func RunWorkflow(c *cli.Context) {
 		{"Run Id", resp.GetRunId()},
 		{"Type", workflowType},
 		{"Domain", domain},
-		{"Task List", tasklist},
+		{"Task List", taskList},
 		{"Args", truncate(input)}, // in case of large input
 	}
 	table.SetBorder(false)
@@ -1131,6 +1169,39 @@ func ObserveHistory(c *cli.Context) {
 	printWorkflowProgress(c, wid, rid)
 }
 
+// ResetWorkflow reset workflow
+func ResetWorkflow(c *cli.Context) {
+	domain := getRequiredGlobalOption(c, FlagDomain)
+	wid := getRequiredOption(c, FlagWorkflowID)
+	rid := getRequiredOption(c, FlagRunID)
+	reason := getRequiredOption(c, FlagReason)
+	if len(reason) == 0 {
+		ErrorAndExit("wrong reason", fmt.Errorf("reason cannot be empty"))
+	}
+	eventID := c.Int64(FlagEventID)
+	if eventID <= 0 {
+		ErrorAndExit("wrong eventID", fmt.Errorf("eventID must be greater than 0"))
+	}
+	ctx, cancel := newContext()
+	defer cancel()
+
+	frontendClient := cFactory.ServerFrontendClient(c)
+	resp, err := frontendClient.ResetWorkflowExecution(ctx, &shared.ResetWorkflowExecutionRequest{
+		Domain: common.StringPtr(domain),
+		WorkflowExecution: &shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(wid),
+			RunId:      common.StringPtr(rid),
+		},
+		Reason:                common.StringPtr(reason),
+		DecisionFinishEventId: common.Int64Ptr(eventID),
+		RequestId:             common.StringPtr(uuid.New()),
+	})
+	if err != nil {
+		ErrorAndExit("reset failed", err)
+	}
+	prettyPrintJSONObject(resp)
+}
+
 // ObserveHistoryWithID show the process of running workflow
 func ObserveHistoryWithID(c *cli.Context) {
 	if !c.Args().Present() {
@@ -1335,4 +1406,13 @@ func getWorkflowStatus(statusStr string) s.WorkflowExecutionCloseStatus {
 	ErrorAndExit(optionErr, errors.New("option status is not one of allowed values "+
 		"[completed, failed, canceled, terminated, continueasnew, timedout]"))
 	return 0
+}
+
+func getWorkflowIDReusePolicy(value int) *s.WorkflowIdReusePolicy {
+	if value >= 0 && value <= len(s.WorkflowIdReusePolicy_Values()) {
+		return s.WorkflowIdReusePolicy(value).Ptr()
+	}
+	// At this point, the policy should return if the value is valid
+	ErrorAndExit(fmt.Sprintf("Option %v value is not in supported range.", FlagWorkflowIDReusePolicy), nil)
+	return nil
 }

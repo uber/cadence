@@ -21,10 +21,12 @@
 package service
 
 import (
-	"github.com/uber/cadence/common/archival"
 	"math/rand"
 	"os"
+	"sync/atomic"
 	"time"
+
+	"github.com/uber/cadence/common/blobstore"
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
@@ -38,7 +40,8 @@ import (
 
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
-	ringpop "github.com/uber/ringpop-go"
+	es "github.com/uber/cadence/common/elasticsearch"
+	"github.com/uber/ringpop-go"
 	"go.uber.org/yarpc"
 )
 
@@ -53,19 +56,23 @@ type (
 	// BootstrapParams holds the set of parameters
 	// needed to bootstrap a service
 	BootstrapParams struct {
-		Name               string
-		Logger             bark.Logger
-		MetricScope        tally.Scope
-		RingpopFactory     RingpopFactory
-		RPCFactory         common.RPCFactory
-		PProfInitializer   common.PProfInitializer
-		PersistenceConfig  config.Persistence
-		ClusterMetadata    cluster.Metadata
-		ReplicatorConfig   config.Replicator
-		MessagingClient    messaging.Client
-		DynamicConfig      dynamicconfig.Client
-		DispatcherProvider client.DispatcherProvider
-		ArchivalClient     archival.Client
+		Name                string
+		Logger              bark.Logger
+		MetricScope         tally.Scope
+		RingpopFactory      RingpopFactory
+		RPCFactory          common.RPCFactory
+		PProfInitializer    common.PProfInitializer
+		PersistenceConfig   config.Persistence
+		ClusterMetadata     cluster.Metadata
+		ReplicatorConfig    config.Replicator
+		MetricsClient       metrics.Client
+		MessagingClient     messaging.Client
+		ESClient            es.Client
+		ESConfig            *es.Config
+		DynamicConfig       dynamicconfig.Client
+		DispatcherProvider  client.DispatcherProvider
+		BlobstoreClient     blobstore.Client
+		DCRedirectionPolicy config.DCRedirectionPolicy
 	}
 
 	// RingpopFactory provides a bootstrapped ringpop
@@ -76,6 +83,7 @@ type (
 
 	// Service contains the objects specific to this service
 	serviceImpl struct {
+		status                 int32
 		sName                  string
 		hostName               string
 		hostInfo               *membership.HostInfo
@@ -85,7 +93,6 @@ type (
 		membershipMonitor      membership.Monitor
 		rpcFactory             common.RPCFactory
 		pprofInitializer       common.PProfInitializer
-		clientFactory          client.Factory
 		clientBean             client.Bean
 		numberOfHistoryShards  int
 		logger                 bark.Logger
@@ -103,6 +110,7 @@ type (
 // TODO: have a better name for Service.
 func New(params *BootstrapParams) Service {
 	sVice := &serviceImpl{
+		status:                common.DaemonStatusInitialized,
 		sName:                 params.Name,
 		logger:                params.Logger,
 		rpcFactory:            params.RPCFactory,
@@ -111,12 +119,12 @@ func New(params *BootstrapParams) Service {
 		metricsScope:          params.MetricScope,
 		numberOfHistoryShards: params.PersistenceConfig.NumHistoryShards,
 		clusterMetadata:       params.ClusterMetadata,
+		metricsClient:         params.MetricsClient,
 		messagingClient:       params.MessagingClient,
 		dispatcherProvider:    params.DispatcherProvider,
 		dynamicCollection:     dynamicconfig.NewCollection(params.DynamicConfig, params.Logger),
 	}
 	sVice.runtimeMetricsReporter = metrics.NewRuntimeMetricsReporter(params.MetricScope, time.Minute, sVice.logger)
-	sVice.metricsClient = metrics.NewClient(params.MetricScope, getMetricsServiceIdx(params.Name, params.Logger))
 	sVice.dispatcher = sVice.rpcFactory.CreateDispatcher()
 	if sVice.dispatcher == nil {
 		sVice.logger.Fatal("Unable to create yarpc dispatcher")
@@ -143,6 +151,10 @@ func (h *serviceImpl) GetHostName() string {
 
 // Start starts a yarpc service
 func (h *serviceImpl) Start() {
+	if !atomic.CompareAndSwapInt32(&h.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+		return
+	}
+
 	var err error
 
 	h.metricsScope.Counter(metrics.RestartCount).Inc(1)
@@ -183,10 +195,11 @@ func (h *serviceImpl) Start() {
 	}
 	h.hostInfo = hostInfo
 
-	h.clientFactory = client.NewRPCClientFactory(h.rpcFactory, h.membershipMonitor, h.metricsClient,
-		h.numberOfHistoryShards)
-
-	h.clientBean, err = client.NewClientBean(h.clientFactory, h.dispatcherProvider, h.clusterMetadata)
+	h.clientBean, err = client.NewClientBean(
+		client.NewRPCClientFactory(h.rpcFactory, h.membershipMonitor, h.metricsClient, h.numberOfHistoryShards),
+		h.dispatcherProvider,
+		h.clusterMetadata,
+	)
 	if err != nil {
 		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("fail to initialize client bean")
 	}
@@ -200,6 +213,10 @@ func (h *serviceImpl) Start() {
 
 // Stop closes the associated transport
 func (h *serviceImpl) Stop() {
+	if !atomic.CompareAndSwapInt32(&h.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
+		return
+	}
+
 	if h.membershipMonitor != nil {
 		h.membershipMonitor.Stop()
 	}
@@ -222,10 +239,6 @@ func (h *serviceImpl) GetLogger() bark.Logger {
 
 func (h *serviceImpl) GetMetricsClient() metrics.Client {
 	return h.metricsClient
-}
-
-func (h *serviceImpl) GetClientFactory() client.Factory {
-	return h.clientFactory
 }
 
 func (h *serviceImpl) GetClientBean() client.Bean {
@@ -254,7 +267,8 @@ func (h *serviceImpl) GetMessagingClient() messaging.Client {
 	return h.messagingClient
 }
 
-func getMetricsServiceIdx(serviceName string, logger bark.Logger) metrics.ServiceIdx {
+// GetMetricsServiceIdx returns the metrics name
+func GetMetricsServiceIdx(serviceName string, logger bark.Logger) metrics.ServiceIdx {
 	switch serviceName {
 	case common.FrontendServiceName:
 		return metrics.Frontend

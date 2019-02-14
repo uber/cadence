@@ -16,11 +16,12 @@ THRIFTRW_SRCS = \
   idl/github.com/uber/cadence/history.thrift \
   idl/github.com/uber/cadence/matching.thrift \
   idl/github.com/uber/cadence/replicator.thrift \
+  idl/github.com/uber/cadence/indexer.thrift \
   idl/github.com/uber/cadence/shared.thrift \
   idl/github.com/uber/cadence/admin.thrift \
 
 PROGS = cadence
-TEST_ARG ?= -race -v -timeout 30m
+TEST_ARG ?= -race -v -timeout 40m
 BUILD := ./build
 TOOLS_CMD_ROOT=./cmd/tools
 INTEG_TEST_ROOT=./host
@@ -100,7 +101,6 @@ test: dep-ensured bins
 		go test -timeout 20m -race -coverprofile=$@ "$$dir" | tee -a test.log; \
 	done;
 
-# need to run xdc tests with race detector off because of ringpop bug causing data race issue
 test_eventsV2: dep-ensured bins
 	@rm -f test_eventsV2
 	@rm -f test_eventsV2.log
@@ -117,6 +117,7 @@ test_eventsV2_xdc: dep-ensured bins
 		go test -timeout 20m -coverprofile=$@ "$$dir" -v -eventsV2xdc=true | tee -a test_eventsV2_xdc.log; \
 	done;
 
+# need to run xdc tests with race detector off because of ringpop bug causing data race issue
 test_xdc: dep-ensured bins
 	@rm -f test
 	@rm -f test.log
@@ -128,16 +129,6 @@ cover_profile: clean bins_nothrift
 	@mkdir -p $(BUILD)
 	@echo "mode: atomic" > $(BUILD)/cover.out
 
-	@echo Running integration test
-	@mkdir -p $(BUILD)/$(INTEG_TEST_DIR)
-	@time go test $(INTEG_TEST_ROOT) $(TEST_ARG) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_DIR)/coverage.out || exit 1;
-	@cat $(BUILD)/$(INTEG_TEST_DIR)/coverage.out | grep -v "mode: atomic" >> $(BUILD)/cover.out
-
-	@echo Running integration test for cross dc
-	@mkdir -p $(BUILD)/$(INTEG_TEST_XDC_DIR)
-	@time go test $(INTEG_TEST_XDC_ROOT) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_XDC_DIR)/coverage.out || exit 1;
-	@cat $(BUILD)/$(INTEG_TEST_XDC_DIR)/coverage.out | grep -v "mode: atomic" >> $(BUILD)/cover.out
-
 	@echo Running package tests:
 	@for dir in $(PKG_TEST_DIRS); do \
 		mkdir -p $(BUILD)/"$$dir"; \
@@ -145,10 +136,34 @@ cover_profile: clean bins_nothrift
 		cat $(BUILD)/"$$dir"/coverage.out | grep -v "mode: atomic" >> $(BUILD)/cover.out; \
 	done;
 
+cover_integration_profile: clean bins_nothrift
+	@mkdir -p $(BUILD)
+	@echo "mode: atomic" > $(BUILD)/cover.out
+
+	@echo Running integration test
+	@mkdir -p $(BUILD)/$(INTEG_TEST_DIR)
+	@time go test $(INTEG_TEST_ROOT) $(TEST_ARG) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_DIR)/coverage.out || exit 1;
+	@cat $(BUILD)/$(INTEG_TEST_DIR)/coverage.out | grep -v "mode: atomic" >> $(BUILD)/cover.out
+
+cover_xdc_profile: clean bins_nothrift
+	@mkdir -p $(BUILD)
+	@echo "mode: atomic" > $(BUILD)/cover.out
+
+	@echo Running integration test for cross dc
+	@mkdir -p $(BUILD)/$(INTEG_TEST_XDC_DIR)
+	@time go test $(INTEG_TEST_XDC_ROOT) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_XDC_DIR)/coverage.out || exit 1;
+	@cat $(BUILD)/$(INTEG_TEST_XDC_DIR)/coverage.out | grep -v "mode: atomic" >> $(BUILD)/cover.out
+
 cover: cover_profile
 	go tool cover -html=$(BUILD)/cover.out;
 
 cover_ci: cover_profile
+	goveralls -coverprofile=$(BUILD)/cover.out -service=travis-ci || echo -e "\x1b[31mCoveralls failed\x1b[m"; \
+
+cover_integration_ci: cover_integration_profile
+	goveralls -coverprofile=$(BUILD)/cover.out -service=travis-ci || echo -e "\x1b[31mCoveralls failed\x1b[m"; \
+
+cover_xdc_ci: cover_xdc_profile
 	goveralls -coverprofile=$(BUILD)/cover.out -service=travis-ci || echo -e "\x1b[31mCoveralls failed\x1b[m"; \
 
 lint: dep-ensured
@@ -193,6 +208,7 @@ install-schema-cdc: bins
 	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_visibility_active --rf 1
 	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_visibility_active setup-schema -v 0.0
 	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_visibility_active update-schema -d ./schema/cassandra/visibility/versioned
+
 	@echo Setting up cadence_standby key space
 	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_standby --rf 1
 	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_standby setup-schema -v 0.0
@@ -201,8 +217,19 @@ install-schema-cdc: bins
 	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_visibility_standby setup-schema -v 0.0
 	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_visibility_standby update-schema -d ./schema/cassandra/visibility/versioned
 
+	@echo Setting up cadence_other key space
+	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_other --rf 1
+	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_other setup-schema -v 0.0
+	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_other update-schema -d ./schema/cassandra/cadence/versioned
+	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_visibility_other --rf 1
+	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_visibility_other setup-schema -v 0.0
+	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_visibility_other update-schema -d ./schema/cassandra/visibility/versioned
+
 start-cdc-active: bins
 	./cadence-server --zone active start
 
 start-cdc-standby: bins
 	./cadence-server --zone standby start
+
+start-cdc-other: bins
+	./cadence-server --zone other start

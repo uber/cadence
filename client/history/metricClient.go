@@ -351,6 +351,23 @@ func (c *metricClient) TerminateWorkflowExecution(
 	return err
 }
 
+func (c *metricClient) ResetWorkflowExecution(
+	context context.Context,
+	request *h.ResetWorkflowExecutionRequest,
+	opts ...yarpc.CallOption) (*shared.ResetWorkflowExecutionResponse, error) {
+	c.metricsClient.IncCounter(metrics.HistoryClientResetWorkflowExecutionScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.HistoryClientResetWorkflowExecutionScope, metrics.CadenceClientLatency)
+	resp, err := c.client.ResetWorkflowExecution(context, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.HistoryClientResetWorkflowExecutionScope, metrics.CadenceClientFailures)
+	}
+
+	return resp, err
+}
+
 func (c *metricClient) ScheduleDecisionTask(
 	context context.Context,
 	request *h.ScheduleDecisionTaskRequest,
@@ -397,6 +414,23 @@ func (c *metricClient) ReplicateEvents(
 
 	if err != nil {
 		c.metricsClient.IncCounter(metrics.HistoryClientReplicateEventsScope, metrics.CadenceClientFailures)
+	}
+
+	return err
+}
+
+func (c *metricClient) ReplicateRawEvents(
+	context context.Context,
+	request *h.ReplicateRawEventsRequest,
+	opts ...yarpc.CallOption) error {
+	c.metricsClient.IncCounter(metrics.HistoryClientReplicateRawEventsScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.HistoryClientReplicateRawEventsScope, metrics.CadenceClientLatency)
+	err := c.client.ReplicateRawEvents(context, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.HistoryClientReplicateRawEventsScope, metrics.CadenceClientFailures)
 	}
 
 	return err

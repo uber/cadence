@@ -60,7 +60,7 @@ type (
 		AddCompletedWorkflowEvent(int64, *workflow.CompleteWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent
 		AddContinueAsNewEvent(int64, *cache.DomainCacheEntry, string, *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes, int32) (*workflow.HistoryEvent, mutableState, error)
 		AddDecisionTaskCompletedEvent(int64, int64, *workflow.RespondDecisionTaskCompletedRequest) *workflow.HistoryEvent
-		AddDecisionTaskFailedEvent(int64, int64, workflow.DecisionTaskFailedCause, []uint8, string) *workflow.HistoryEvent
+		AddDecisionTaskFailedEvent(scheduleEventID int64, startedEventID int64, cause workflow.DecisionTaskFailedCause, details []byte, identity, reason, baseRunID, newRunID string, forkEventVersion int64) *workflow.HistoryEvent
 		AddDecisionTaskScheduleToStartTimeoutEvent(int64) *workflow.HistoryEvent
 		AddDecisionTaskScheduledEvent() *decisionInfo
 		AddDecisionTaskStartedEvent(int64, string, *workflow.PollForDecisionTaskRequest) (*workflow.HistoryEvent, *decisionInfo)
@@ -110,11 +110,9 @@ type (
 		GetActivityByActivityID(string) (*persistence.ActivityInfo, bool)
 		GetActivityInfo(int64) (*persistence.ActivityInfo, bool)
 		GetActivityScheduledEvent(int64) (*workflow.HistoryEvent, bool)
-		GetActivityStartedEvent(int64) (*workflow.HistoryEvent, bool)
 		GetAllBufferedReplicationTasks() map[int64]*persistence.BufferedReplicationTask
 		GetChildExecutionInfo(int64) (*persistence.ChildExecutionInfo, bool)
 		GetChildExecutionInitiatedEvent(int64) (*workflow.HistoryEvent, bool)
-		GetChildExecutionStartedEvent(int64) (*workflow.HistoryEvent, bool)
 		GetCompletionEvent() (*workflow.HistoryEvent, bool)
 		GetContinueAsNew() *persistence.CreateWorkflowExecutionRequest
 		GetCurrentBranch() []byte
@@ -136,8 +134,11 @@ type (
 		GetReplicationState() *persistence.ReplicationState
 		GetRequestCancelInfo(int64) (*persistence.RequestCancelInfo, bool)
 		GetRetryBackoffDuration(errReason string) time.Duration
+		GetCronBackoffDuration() time.Duration
 		GetScheduleIDByActivityID(string) (int64, bool)
 		GetSignalInfo(int64) (*persistence.SignalInfo, bool)
+		GetAllSignalsToSend() map[int64]*persistence.SignalInfo
+		GetAllRequestCancels() map[int64]*persistence.RequestCancelInfo
 		GetStartVersion() int64
 		GetUserTimer(string) (bool, *persistence.TimerInfo)
 		GetWorkflowType() *workflow.WorkflowType
@@ -157,7 +158,7 @@ type (
 		ReplicateActivityTaskCanceledEvent(*workflow.HistoryEvent) error
 		ReplicateActivityTaskCompletedEvent(*workflow.HistoryEvent) error
 		ReplicateActivityTaskFailedEvent(*workflow.HistoryEvent) error
-		ReplicateActivityTaskScheduledEvent(*workflow.HistoryEvent) *persistence.ActivityInfo
+		ReplicateActivityTaskScheduledEvent(int64, *workflow.HistoryEvent) *persistence.ActivityInfo
 		ReplicateActivityTaskStartedEvent(*workflow.HistoryEvent)
 		ReplicateActivityTaskTimedOutEvent(*workflow.HistoryEvent) error
 		ReplicateChildWorkflowExecutionCanceledEvent(*workflow.HistoryEvent)
@@ -178,20 +179,20 @@ type (
 		ReplicateSignalExternalWorkflowExecutionFailedEvent(*workflow.HistoryEvent)
 		ReplicateSignalExternalWorkflowExecutionInitiatedEvent(*workflow.HistoryEvent, string) *persistence.SignalInfo
 		ReplicateStartChildWorkflowExecutionFailedEvent(*workflow.HistoryEvent)
-		ReplicateStartChildWorkflowExecutionInitiatedEvent(*workflow.HistoryEvent, string) *persistence.ChildExecutionInfo
+		ReplicateStartChildWorkflowExecutionInitiatedEvent(int64, *workflow.HistoryEvent, string) *persistence.ChildExecutionInfo
 		ReplicateTimerCanceledEvent(*workflow.HistoryEvent)
 		ReplicateTimerFiredEvent(*workflow.HistoryEvent)
 		ReplicateTimerStartedEvent(*workflow.HistoryEvent) *persistence.TimerInfo
 		ReplicateTransientDecisionTaskScheduled() *decisionInfo
 		ReplicateWorkflowExecutionCancelRequestedEvent(*workflow.HistoryEvent)
-		ReplicateWorkflowExecutionCanceledEvent(*workflow.HistoryEvent)
-		ReplicateWorkflowExecutionCompletedEvent(*workflow.HistoryEvent)
+		ReplicateWorkflowExecutionCanceledEvent(int64, *workflow.HistoryEvent)
+		ReplicateWorkflowExecutionCompletedEvent(int64, *workflow.HistoryEvent)
 		ReplicateWorkflowExecutionContinuedAsNewEvent(string, string, *workflow.HistoryEvent, *workflow.HistoryEvent, *decisionInfo, mutableState, int32) error
-		ReplicateWorkflowExecutionFailedEvent(*workflow.HistoryEvent)
+		ReplicateWorkflowExecutionFailedEvent(int64, *workflow.HistoryEvent)
 		ReplicateWorkflowExecutionSignaled(*workflow.HistoryEvent)
 		ReplicateWorkflowExecutionStartedEvent(string, *string, workflow.WorkflowExecution, string, *workflow.WorkflowExecutionStartedEventAttributes)
-		ReplicateWorkflowExecutionTerminatedEvent(*workflow.HistoryEvent)
-		ReplicateWorkflowExecutionTimedoutEvent(*workflow.HistoryEvent)
+		ReplicateWorkflowExecutionTerminatedEvent(int64, *workflow.HistoryEvent)
+		ReplicateWorkflowExecutionTimedoutEvent(int64, *workflow.HistoryEvent)
 		ResetSnapshot(string) *persistence.ResetMutableStateRequest
 		SetHistoryBuilder(hBuilder *historyBuilder)
 		SetHistoryTree(treeID string) error

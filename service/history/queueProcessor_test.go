@@ -27,6 +27,7 @@ import (
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
@@ -53,6 +54,7 @@ type (
 		mockMessagingClient messaging.Client
 		mockProcessor       *MockProcessor
 		mockQueueAckMgr     *MockQueueAckMgr
+		mockClientBean      *client.MockClientBean
 
 		scope            int
 		notificationChan chan struct{}
@@ -75,10 +77,7 @@ func (s *queueProcessorSuite) SetupSuite() {
 }
 
 func (s *queueProcessorSuite) TearDownSuite() {
-	s.mockMetadataMgr.AssertExpectations(s.T())
-	s.mockClusterMetadata.AssertExpectations(s.T())
-	s.mockProcessor.AssertExpectations(s.T())
-	s.mockQueueAckMgr.AssertExpectations(s.T())
+
 }
 
 func (s *queueProcessorSuite) SetupTest() {
@@ -92,7 +91,8 @@ func (s *queueProcessorSuite) SetupTest() {
 	s.mockQueueAckMgr = &MockQueueAckMgr{}
 	s.mockMetadataMgr = &mocks.MetadataManager{}
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
-	s.mockService = service.NewTestService(s.mockClusterMetadata, nil, metricsClient, s.logger)
+	s.mockClientBean = &client.MockClientBean{}
+	s.mockService = service.NewTestService(s.mockClusterMetadata, nil, metricsClient, s.mockClientBean, s.logger)
 	s.mockShard = &shardContextImpl{
 		service:                   s.mockService,
 		shardInfo:                 &persistence.ShardInfo{ShardID: shardID, RangeID: 1, TransferAckLevel: 0},
@@ -113,8 +113,9 @@ func (s *queueProcessorSuite) SetupTest() {
 		s.clusterName,
 		s.mockShard,
 		&QueueProcessorOptions{
-			MaxPollRPS:  dynamicconfig.GetIntPropertyFn(10),
-			WorkerCount: dynamicconfig.GetIntPropertyFn(1),
+			MaxPollRPS:    dynamicconfig.GetIntPropertyFn(10),
+			WorkerCount:   dynamicconfig.GetIntPropertyFn(1),
+			MaxRetryCount: dynamicconfig.GetIntPropertyFn(1),
 		},
 		s.mockProcessor,
 		s.mockQueueAckMgr,
@@ -123,6 +124,10 @@ func (s *queueProcessorSuite) SetupTest() {
 }
 
 func (s *queueProcessorSuite) TearDownTest() {
+	s.mockMetadataMgr.AssertExpectations(s.T())
+	s.mockProcessor.AssertExpectations(s.T())
+	s.mockQueueAckMgr.AssertExpectations(s.T())
+	s.mockClientBean.AssertExpectations(s.T())
 }
 
 func (s *queueProcessorSuite) TestProcessTaskAndAck_ShutDown() {
@@ -130,18 +135,52 @@ func (s *queueProcessorSuite) TestProcessTaskAndAck_ShutDown() {
 	s.queueProcessor.processTaskAndAck(s.notificationChan, &persistence.TransferTaskInfo{})
 }
 
-func (s *queueProcessorSuite) TestProcessTaskAndAck_NoErr() {
+func (s *queueProcessorSuite) TestProcessTaskAndAck_DomainErrRetry_ProcessNoErr() {
 	task := &persistence.TransferTaskInfo{TaskID: 12345}
-	s.mockProcessor.On("process", task).Return(s.scope, nil).Once()
+	var taskFilterErr queueTaskFilter = func(qTask queueTaskInfo) (bool, error) {
+		return false, errors.New("some random error")
+	}
+	var taskFilter queueTaskFilter = func(qTask queueTaskInfo) (bool, error) {
+		return true, nil
+	}
+	s.mockProcessor.On("getTaskFilter").Return(taskFilterErr).Once()
+	s.mockProcessor.On("getTaskFilter").Return(taskFilter).Once()
+	s.mockProcessor.On("process", task, true).Return(s.scope, nil).Once()
 	s.mockQueueAckMgr.On("completeQueueTask", task.GetTaskID()).Once()
 	s.queueProcessor.processTaskAndAck(s.notificationChan, task)
 }
 
-func (s *queueProcessorSuite) TestProcessTaskAndAck_ErrNoErr() {
+func (s *queueProcessorSuite) TestProcessTaskAndAck_DomainFalse_ProcessNoErr() {
+	task := &persistence.TransferTaskInfo{TaskID: 12345}
+	var taskFilter queueTaskFilter = func(qTask queueTaskInfo) (bool, error) {
+		return false, nil
+	}
+	s.mockProcessor.On("getTaskFilter").Return(taskFilter).Once()
+	s.mockProcessor.On("process", task, false).Return(s.scope, nil).Once()
+	s.mockQueueAckMgr.On("completeQueueTask", task.GetTaskID()).Once()
+	s.queueProcessor.processTaskAndAck(s.notificationChan, task)
+}
+
+func (s *queueProcessorSuite) TestProcessTaskAndAck_DomainTrue_ProcessNoErr() {
+	task := &persistence.TransferTaskInfo{TaskID: 12345}
+	var taskFilter queueTaskFilter = func(qTask queueTaskInfo) (bool, error) {
+		return true, nil
+	}
+	s.mockProcessor.On("getTaskFilter").Return(taskFilter).Once()
+	s.mockProcessor.On("process", task, true).Return(s.scope, nil).Once()
+	s.mockQueueAckMgr.On("completeQueueTask", task.GetTaskID()).Once()
+	s.queueProcessor.processTaskAndAck(s.notificationChan, task)
+}
+
+func (s *queueProcessorSuite) TestProcessTaskAndAck_DomainTrue_ProcessErrNoErr() {
 	err := errors.New("some random err")
 	task := &persistence.TransferTaskInfo{TaskID: 12345}
-	s.mockProcessor.On("process", task).Return(s.scope, err).Once()
-	s.mockProcessor.On("process", task).Return(s.scope, nil).Once()
+	var taskFilter queueTaskFilter = func(qTask queueTaskInfo) (bool, error) {
+		return true, nil
+	}
+	s.mockProcessor.On("getTaskFilter").Return(taskFilter).Once()
+	s.mockProcessor.On("process", task, true).Return(s.scope, err).Once()
+	s.mockProcessor.On("process", task, true).Return(s.scope, nil).Once()
 	s.mockQueueAckMgr.On("completeQueueTask", task.GetTaskID()).Once()
 	s.queueProcessor.processTaskAndAck(s.notificationChan, task)
 }

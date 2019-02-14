@@ -62,7 +62,7 @@ type (
 			DriverName string
 		}
 		// TODO this is used for global domain test
-		// when crtoss DC is public, remove EnableGlobalDomain
+		// when cross DC is public, remove EnableGlobalDomain
 		EnableGlobalDomain bool // is global domain enabled
 		IsMasterCluster    bool // is master cluster
 		ClusterMetadata    cluster.Metadata
@@ -824,6 +824,49 @@ func (s *TestBase) ResetMutableState(prevRunID string, info *p.WorkflowExecution
 		ReplicationState:          replicationState,
 		Condition:                 nextEventID,
 		RangeID:                   s.ShardInfo.RangeID,
+		InsertActivityInfos:       activityInfos,
+		InsertTimerInfos:          timerInfos,
+		InsertChildExecutionInfos: childExecutionInfos,
+		InsertRequestCancelInfos:  requestCancelInfos,
+		InsertSignalInfos:         signalInfos,
+		InsertSignalRequestedIDs:  ids,
+		Encoding:                  pickRandomEncoding(),
+	})
+}
+
+// ResetWorkflowExecution is  utility method to reset WF
+func (s *TestBase) ResetWorkflowExecution(condition int64, info *p.WorkflowExecutionInfo, replicationState *p.ReplicationState,
+	activityInfos []*p.ActivityInfo, timerInfos []*p.TimerInfo, childExecutionInfos []*p.ChildExecutionInfo,
+	requestCancelInfos []*p.RequestCancelInfo, signalInfos []*p.SignalInfo, ids []string, trasTasks, timerTasks, replTasks []p.Task,
+	updateCurr bool, currInfo *p.WorkflowExecutionInfo, currReplicationState *p.ReplicationState,
+	currTrasTasks, currTimerTasks []p.Task, forkRunID string, forkRunNextEventID int64, prevRunVersion int64) error {
+
+	prevRunState := p.WorkflowStateCompleted
+	if updateCurr {
+		prevRunState = p.WorkflowStateRunning
+	}
+
+	return s.ExecutionManager.ResetWorkflowExecution(&p.ResetWorkflowExecutionRequest{
+		BaseRunID:          forkRunID,
+		BaseRunNextEventID: forkRunNextEventID,
+
+		PrevRunVersion: prevRunVersion,
+		PrevRunState:   prevRunState,
+
+		Condition: condition,
+		RangeID:   s.ShardInfo.RangeID,
+
+		UpdateCurr:           updateCurr,
+		CurrExecutionInfo:    currInfo,
+		CurrReplicationState: currReplicationState,
+		CurrTransferTasks:    currTrasTasks,
+		CurrTimerTasks:       currTimerTasks,
+
+		InsertExecutionInfo:       info,
+		InsertReplicationState:    replicationState,
+		InsertTransferTasks:       trasTasks,
+		InsertTimerTasks:          timerTasks,
+		InsertReplicationTasks:    replTasks,
 		InsertActivityInfos:       activityInfos,
 		InsertTimerInfos:          timerInfos,
 		InsertChildExecutionInfos: childExecutionInfos,

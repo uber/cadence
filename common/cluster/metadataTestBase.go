@@ -21,6 +21,8 @@
 package cluster
 
 import (
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
@@ -49,6 +51,22 @@ var (
 		TestCurrentClusterName:     TestCurrentClusterInitialFailoverVersion,
 		TestAlternativeClusterName: TestAlternativeClusterInitialFailoverVersion,
 	}
+	// TestAllClusterAddress is the same as above, juse convinent for test mocking
+	TestAllClusterAddress = map[string]config.Address{
+		TestCurrentClusterName:     config.Address{RPCName: common.FrontendServiceName, RPCAddress: TestCurrentClusterFrontendAddress},
+		TestAlternativeClusterName: config.Address{RPCName: common.FrontendServiceName, RPCAddress: TestAlternativeClusterFrontendAddress},
+	}
+
+	// TestSingleDCAllClusterNames is the all cluster names used for test
+	TestSingleDCAllClusterNames = []string{TestCurrentClusterName}
+	// TestSingleDCAllClusterFailoverVersions is the same as above, juse convinent for test mocking
+	TestSingleDCAllClusterFailoverVersions = map[string]int64{
+		TestCurrentClusterName: TestCurrentClusterInitialFailoverVersion,
+	}
+	// TestSingleDCAllClusterAddress is the same as above, juse convinent for test mocking
+	TestSingleDCAllClusterAddress = map[string]config.Address{
+		TestCurrentClusterName: config.Address{RPCName: common.FrontendServiceName, RPCAddress: TestCurrentClusterFrontendAddress},
+	}
 )
 
 // GetTestClusterMetadata return an cluster metadata instance, which is initialized
@@ -57,15 +75,28 @@ func GetTestClusterMetadata(enableGlobalDomain bool, isMasterCluster bool) Metad
 	if !isMasterCluster {
 		masterClusterName = TestAlternativeClusterName
 	}
+
+	if enableGlobalDomain {
+		return NewMetadata(
+			dynamicconfig.GetBoolPropertyFn(true),
+			TestFailoverVersionIncrement,
+			masterClusterName,
+			TestCurrentClusterName,
+			TestAllClusterFailoverVersions,
+			TestAllClusterAddress,
+			dynamicconfig.GetBoolPropertyFn(false),
+			"",
+		)
+	}
+
 	return NewMetadata(
-		dynamicconfig.GetBoolPropertyFn(enableGlobalDomain),
+		dynamicconfig.GetBoolPropertyFn(false),
 		TestFailoverVersionIncrement,
-		masterClusterName,
 		TestCurrentClusterName,
-		TestAllClusterFailoverVersions,
-		map[string]string{
-			TestCurrentClusterName:     TestCurrentClusterFrontendAddress,
-			TestAlternativeClusterName: TestAlternativeClusterFrontendAddress,
-		},
+		TestCurrentClusterName,
+		TestSingleDCAllClusterFailoverVersions,
+		TestSingleDCAllClusterAddress,
+		dynamicconfig.GetBoolPropertyFn(false),
+		"",
 	)
 }

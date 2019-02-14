@@ -36,6 +36,7 @@ const (
 	TagHistoryBuilderAction       = "history-builder-action"
 	TagStoreOperation             = "store-operation"
 	TagDomainID                   = "domain-id"
+	TagDomainIDs                  = "domain-ids"
 	TagWorkflowExecutionID        = "execution-id"
 	TagWorkflowRunID              = "run-id"
 	TagHistoryShardID             = "shard-id"
@@ -77,12 +78,18 @@ const (
 	TagTimerTaskStatus            = "timer-task-status"
 	TagScheduleAttempt            = "schedule-attempt"
 	TagCursorTimestamp            = "cursor-timestamp"
+	TagHistorySize                = "history-size"
+	TagEventCount                 = "event-count"
+	TagESRequest                  = "es-request"
+	TagESKey                      = "es-mapping-key"
+	TagESField                    = "es-field"
 
 	// workflow logging tag values
 	// TagWorkflowComponent Values
 	TagValueHistoryBuilderComponent           = "history-builder"
 	TagValueHistoryEngineComponent            = "history-engine"
 	TagValueHistoryCacheComponent             = "history-cache"
+	TagValueEventsCacheComponent              = "events-cache"
 	TagValueTransferQueueComponent            = "transfer-queue-processor"
 	TagValueTimerQueueComponent               = "timer-queue-processor"
 	TagValueReplicatorQueueComponent          = "replicator-queue-processor"
@@ -91,6 +98,10 @@ const (
 	TagValueReplicatorComponent               = "replicator"
 	TagValueReplicationTaskProcessorComponent = "replication-task-processor"
 	TagValueHistoryReplicatorComponent        = "history-replicator"
+	TagValueIndexerComponent                  = "indexer"
+	TagValueIndexerProcessorComponent         = "indexer-processor"
+	TagValueIndexerESProcessorComponent       = "indexer-es-processor"
+	TagValueESVisibilityManager               = "es-visibility-manager"
 
 	// TagHistoryBuilderAction values
 	TagValueActionWorkflowStarted                 = "add-workflowexecution-started-event"
@@ -156,4 +167,9 @@ const (
 	TagUserWorkflowID               = "user-workflow-id"
 	TagUserRunID                    = "user-run-id"
 	TagIterationsUntilContinueAsNew = "iterations-until-continue-as-new"
+	TagBucket                       = "bucket"
+	TagFileBlobstoreBlobPath        = "file-blobstore-blob-path"
+	TagBlobKey                      = "blob-key"
+	TagBlobKeyPrefix                = "blob-key-prefix"
+	TagFileBlobstoreMetadataPath    = "file-blobstore-metadata-path"
 )

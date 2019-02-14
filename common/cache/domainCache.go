@@ -147,10 +147,22 @@ func newDomainCacheEntry(clusterMetadata cluster.Metadata) *DomainCacheEntry {
 	return &DomainCacheEntry{clusterMetadata: clusterMetadata}
 }
 
-// NewDomainCacheEntryWithInfo returns an entry with domainInfo
-func NewDomainCacheEntryWithInfo(info *persistence.DomainInfo) *DomainCacheEntry {
+// NewDomainCacheEntryWithReplicationForTest returns an entry with test data
+func NewDomainCacheEntryWithReplicationForTest(info *persistence.DomainInfo, config *persistence.DomainConfig, repConfig *persistence.DomainReplicationConfig, clusterMetadata cluster.Metadata) *DomainCacheEntry {
 	return &DomainCacheEntry{
-		info: info,
+		info:              info,
+		config:            config,
+		isGlobalDomain:    true,
+		replicationConfig: repConfig,
+		clusterMetadata:   clusterMetadata,
+	}
+}
+
+// NewDomainCacheEntryForTest returns an entry with domainInfo
+func NewDomainCacheEntryForTest(info *persistence.DomainInfo, config *persistence.DomainConfig) *DomainCacheEntry {
+	return &DomainCacheEntry{
+		info:   info,
+		config: config,
 	}
 }
 
@@ -319,7 +331,7 @@ func (c *domainCache) refreshDomains() error {
 	prevEntries := []*DomainCacheEntry{}
 	nextEntries := []*DomainCacheEntry{}
 
-	// make a copy of the existing domain cache, so we can calaulate diff and do compare and swap
+	// make a copy of the existing domain cache, so we can calculate diff and do compare and swap
 	newCacheNameToID := newDomainCache()
 	newCacheByID := newDomainCache()
 	for _, domain := range c.GetAllDomain() {
@@ -539,8 +551,10 @@ func (entry *DomainCacheEntry) duplicate() *DomainCacheEntry {
 		result.info.Data[k] = v
 	}
 	result.config = &persistence.DomainConfig{
-		Retention:  entry.config.Retention,
-		EmitMetric: entry.config.EmitMetric,
+		Retention:      entry.config.Retention,
+		EmitMetric:     entry.config.EmitMetric,
+		ArchivalBucket: entry.config.ArchivalBucket,
+		ArchivalStatus: entry.config.ArchivalStatus,
 	}
 	result.replicationConfig = &persistence.DomainReplicationConfig{
 		ActiveClusterName: entry.replicationConfig.ActiveClusterName,

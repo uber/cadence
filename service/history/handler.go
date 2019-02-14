@@ -23,11 +23,10 @@ package history
 import (
 	"context"
 	"fmt"
-	"github.com/uber-common/bark"
-	"github.com/uber/cadence/common/logging"
 	"sync"
 
 	"github.com/pborman/uuid"
+	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/health"
 	"github.com/uber/cadence/.gen/go/health/metaserver"
 	hist "github.com/uber/cadence/.gen/go/history"
@@ -36,8 +35,10 @@ import (
 	"github.com/uber/cadence/client/frontend"
 	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
+	"github.com/uber/cadence/client/public"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
@@ -60,6 +61,7 @@ type (
 		historyServiceClient  hc.Client
 		matchingServiceClient matching.Client
 		frontendServiceClient frontend.Client
+		publicClient          public.Client
 		hServiceResolver      membership.ServiceResolver
 		controller            *shardController
 		tokenSerializer       common.TaskTokenSerializer
@@ -68,6 +70,7 @@ type (
 		config                *Config
 		historyEventNotifier  historyEventNotifier
 		publisher             messaging.Producer
+		visibilityProducer    messaging.Producer
 		rateLimiter           common.TokenBucket
 		service.Service
 	}
@@ -116,26 +119,30 @@ func (h *Handler) Start() error {
 	h.Service.GetDispatcher().Register(historyserviceserver.New(h))
 	h.Service.GetDispatcher().Register(metaserver.New(h))
 	h.Service.Start()
-	matchingServiceClient, err0 := h.Service.GetClientFactory().NewMatchingClient()
-	if err0 != nil {
-		return err0
-	}
-	h.matchingServiceClient = matching.NewRetryableClient(matchingServiceClient, common.CreateMatchingRetryPolicy(),
-		common.IsWhitelistServiceTransientError)
 
-	historyServiceClient, err0 := h.Service.GetClientFactory().NewHistoryClient()
-	if err0 != nil {
-		return err0
-	}
-	h.historyServiceClient = hc.NewRetryableClient(historyServiceClient, common.CreateHistoryServiceRetryPolicy(),
-		common.IsWhitelistServiceTransientError)
+	h.matchingServiceClient = matching.NewRetryableClient(
+		h.GetClientBean().GetMatchingClient(),
+		common.CreateMatchingServiceRetryPolicy(),
+		common.IsWhitelistServiceTransientError,
+	)
 
-	frontendServiceClient, err0 := h.Service.GetClientFactory().NewFrontendClient()
-	if err0 != nil {
-		return err0
-	}
-	h.frontendServiceClient = frontend.NewRetryableClient(frontendServiceClient,
-		common.CreateFrontendServiceRetryPolicy(), common.IsWhitelistServiceTransientError)
+	h.historyServiceClient = hc.NewRetryableClient(
+		h.GetClientBean().GetHistoryClient(),
+		common.CreateHistoryServiceRetryPolicy(),
+		common.IsWhitelistServiceTransientError,
+	)
+
+	h.frontendServiceClient = frontend.NewRetryableClient(
+		h.GetClientBean().GetFrontendClient(),
+		common.CreateFrontendServiceRetryPolicy(),
+		common.IsWhitelistServiceTransientError,
+	)
+
+	h.publicClient = public.NewRetryableClient(
+		h.GetClientBean().GetPublicClient(),
+		common.CreatePublicClientRetryPolicy(),
+		common.IsWhitelistServiceTransientError,
+	)
 
 	hServiceResolver, err1 := h.GetMembershipMonitor().GetResolver(common.HistoryServiceName)
 	if err1 != nil {
@@ -149,6 +156,14 @@ func (h *Handler) Start() error {
 		h.publisher, err = h.GetMessagingClient().NewProducerWithClusterName(h.GetClusterMetadata().GetCurrentClusterName())
 		if err != nil {
 			h.GetLogger().Fatalf("Creating kafka producer failed: %v", err)
+		}
+	}
+
+	if h.config.EnableVisibilityToKafka() {
+		var err error
+		h.visibilityProducer, err = h.GetMessagingClient().NewProducer(common.VisibilityAppName)
+		if err != nil {
+			h.GetLogger().Fatalf("Creating visibility producer failed: %v", err)
 		}
 	}
 
@@ -182,7 +197,7 @@ func (h *Handler) Stop() {
 // CreateEngine is implementation for HistoryEngineFactory used for creating the engine instance for shard
 func (h *Handler) CreateEngine(context ShardContext) Engine {
 	return NewEngineWithShardContext(context, h.visibilityMgr, h.matchingServiceClient, h.historyServiceClient,
-		h.frontendServiceClient, h.historyEventNotifier, h.publisher, h.GetMessagingClient(), h.config)
+		h.frontendServiceClient, h.publicClient, h.historyEventNotifier, h.publisher, h.visibilityProducer, h.config)
 }
 
 // Health is for health check
@@ -904,6 +919,41 @@ func (h *Handler) TerminateWorkflowExecution(ctx context.Context,
 	return nil
 }
 
+// ResetWorkflowExecution reset an existing workflow execution
+// in the history and immediately terminating the execution instance.
+func (h *Handler) ResetWorkflowExecution(ctx context.Context,
+	wrappedRequest *hist.ResetWorkflowExecutionRequest) (*gen.ResetWorkflowExecutionResponse, error) {
+	h.startWG.Wait()
+
+	scope := metrics.HistoryResetWorkflowExecutionScope
+	h.metricsClient.IncCounter(scope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	defer sw.Stop()
+
+	domainID := wrappedRequest.GetDomainUUID()
+	if domainID == "" {
+		return nil, h.error(errDomainNotSet, scope, domainID, "")
+	}
+
+	if ok, _ := h.rateLimiter.TryConsume(1); !ok {
+		return nil, h.error(errHistoryHostThrottle, scope, domainID, "")
+	}
+
+	workflowExecution := wrappedRequest.ResetRequest.WorkflowExecution
+	workflowID := workflowExecution.GetWorkflowId()
+	engine, err1 := h.controller.GetEngine(workflowID)
+	if err1 != nil {
+		return nil, h.error(err1, scope, domainID, workflowID)
+	}
+
+	resp, err2 := engine.ResetWorkflowExecution(ctx, wrappedRequest)
+	if err2 != nil {
+		return nil, h.error(err2, scope, domainID, workflowID)
+	}
+
+	return resp, nil
+}
+
 // ScheduleDecisionTask is used for creating a decision task for already started workflow execution.  This is mainly
 // used by transfer queue processor during the processing of StartChildWorkflowExecution task, where it first starts
 // child execution without creating the decision task and then calls this API after updating the mutable state of
@@ -1046,6 +1096,39 @@ func (h *Handler) ReplicateEvents(ctx context.Context, replicateRequest *hist.Re
 	}
 
 	err2 := engine.ReplicateEvents(ctx, replicateRequest)
+	if err2 != nil {
+		return h.error(err2, scope, domainID, workflowID)
+	}
+
+	return nil
+}
+
+// ReplicateRawEvents is called by processor to replicate history raw events for passive domains
+func (h *Handler) ReplicateRawEvents(ctx context.Context, replicateRequest *hist.ReplicateRawEventsRequest) error {
+	h.startWG.Wait()
+
+	scope := metrics.HistoryReplicateRawEventsScope
+	h.metricsClient.IncCounter(scope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	defer sw.Stop()
+
+	domainID := replicateRequest.GetDomainUUID()
+	if domainID == "" {
+		return h.error(errDomainNotSet, scope, domainID, "")
+	}
+
+	if ok, _ := h.rateLimiter.TryConsume(1); !ok {
+		return h.error(errHistoryHostThrottle, scope, domainID, "")
+	}
+
+	workflowExecution := replicateRequest.WorkflowExecution
+	workflowID := workflowExecution.GetWorkflowId()
+	engine, err1 := h.controller.GetEngine(workflowID)
+	if err1 != nil {
+		return h.error(err1, scope, domainID, workflowID)
+	}
+
+	err2 := engine.ReplicateRawEvents(ctx, replicateRequest)
 	if err2 != nil {
 		return h.error(err2, scope, domainID, workflowID)
 	}

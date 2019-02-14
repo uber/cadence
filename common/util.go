@@ -22,15 +22,16 @@ package common
 
 import (
 	"encoding/json"
-	"github.com/uber/cadence/common/logging"
-	"github.com/uber/cadence/common/metrics"
 	"sync"
 	"time"
 
+	"github.com/robfig/cron"
+	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/metrics"
 	"go.uber.org/yarpc/yarpcerrors"
 	"golang.org/x/net/context"
 
-	"github.com/dgryski/go-farm"
+	farm "github.com/dgryski/go-farm"
 	"github.com/uber-common/bark"
 
 	"math/rand"
@@ -50,13 +51,29 @@ const (
 	historyServiceOperationMaxInterval        = 10 * time.Second
 	historyServiceOperationExpirationInterval = 30 * time.Second
 
+	matchingServiceOperationInitialInterval    = 1000 * time.Millisecond
+	matchingServiceOperationMaxInterval        = 10 * time.Second
+	matchingServiceOperationExpirationInterval = 30 * time.Second
+
 	frontendServiceOperationInitialInterval    = 200 * time.Millisecond
 	frontendServiceOperationMaxInterval        = 5 * time.Second
 	frontendServiceOperationExpirationInterval = 15 * time.Second
 
-	matchingServiceOperationInitialInterval    = 1000 * time.Millisecond
-	matchingServiceOperationMaxInterval        = 10 * time.Second
-	matchingServiceOperationExpirationInterval = 30 * time.Second
+	publicClientOperationInitialInterval    = 200 * time.Millisecond
+	publicClientOperationMaxInterval        = 5 * time.Second
+	publicClientOperationExpirationInterval = 15 * time.Second
+
+	adminServiceOperationInitialInterval    = 200 * time.Millisecond
+	adminServiceOperationMaxInterval        = 5 * time.Second
+	adminServiceOperationExpirationInterval = 15 * time.Second
+
+	retryKafkaOperationInitialInterval    = 50 * time.Millisecond
+	retryKafkaOperationMaxInterval        = 10 * time.Second
+	retryKafkaOperationExpirationInterval = 30 * time.Second
+
+	retryBlobstoreClientInitialInterval    = time.Second
+	retryBlobstoreClientMaxInterval        = 10 * time.Second
+	retryBlobstoreClientExpirationInterval = time.Minute
 
 	// FailureReasonCompleteResultExceedsLimit is failureReason for complete result exceeds limit
 	FailureReasonCompleteResultExceedsLimit = "COMPLETE_RESULT_EXCEEDS_LIMIT"
@@ -68,6 +85,8 @@ const (
 	FailureReasonHeartbeatExceedsLimit = "HEARTBEAT_EXCEEDS_LIMIT"
 	// FailureReasonDecisionBlobSizeExceedsLimit is the failureReason for decision blob exceeds size limit
 	FailureReasonDecisionBlobSizeExceedsLimit = "DECISION_BLOB_SIZE_EXCEEDS_LIMIT"
+	// TerminateReasonSizeExceedsLimit is reason to terminate workflow when history size exceed limit
+	TerminateReasonSizeExceedsLimit = "HISTORY_SIZE_EXCEEDS_LIMIT"
 )
 
 var (
@@ -119,6 +138,15 @@ func CreateHistoryServiceRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
+// CreateMatchingServiceRetryPolicy creates a retry policy for calls to matching service
+func CreateMatchingServiceRetryPolicy() backoff.RetryPolicy {
+	policy := backoff.NewExponentialRetryPolicy(matchingServiceOperationInitialInterval)
+	policy.SetMaximumInterval(matchingServiceOperationMaxInterval)
+	policy.SetExpirationInterval(matchingServiceOperationExpirationInterval)
+
+	return policy
+}
+
 // CreateFrontendServiceRetryPolicy creates a retry policy for calls to frontend service
 func CreateFrontendServiceRetryPolicy() backoff.RetryPolicy {
 	policy := backoff.NewExponentialRetryPolicy(frontendServiceOperationInitialInterval)
@@ -128,11 +156,38 @@ func CreateFrontendServiceRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
-// CreateMatchingRetryPolicy creates a retry policy for calls to matching service
-func CreateMatchingRetryPolicy() backoff.RetryPolicy {
-	policy := backoff.NewExponentialRetryPolicy(matchingServiceOperationInitialInterval)
-	policy.SetMaximumInterval(matchingServiceOperationMaxInterval)
-	policy.SetExpirationInterval(matchingServiceOperationExpirationInterval)
+// CreateAdminServiceRetryPolicy creates a retry policy for calls to matching service
+func CreateAdminServiceRetryPolicy() backoff.RetryPolicy {
+	policy := backoff.NewExponentialRetryPolicy(adminServiceOperationInitialInterval)
+	policy.SetMaximumInterval(adminServiceOperationMaxInterval)
+	policy.SetExpirationInterval(adminServiceOperationExpirationInterval)
+
+	return policy
+}
+
+// CreatePublicClientRetryPolicy creates a retry policy for calls to frontend service
+func CreatePublicClientRetryPolicy() backoff.RetryPolicy {
+	policy := backoff.NewExponentialRetryPolicy(publicClientOperationInitialInterval)
+	policy.SetMaximumInterval(publicClientOperationMaxInterval)
+	policy.SetExpirationInterval(publicClientOperationExpirationInterval)
+
+	return policy
+}
+
+// CreateKafkaOperationRetryPolicy creates a retry policy for kafka operation
+func CreateKafkaOperationRetryPolicy() backoff.RetryPolicy {
+	policy := backoff.NewExponentialRetryPolicy(retryKafkaOperationInitialInterval)
+	policy.SetMaximumInterval(retryKafkaOperationMaxInterval)
+	policy.SetExpirationInterval(retryKafkaOperationExpirationInterval)
+
+	return policy
+}
+
+// CreateBlobstoreClientRetryPolicy creates a retry policy for blobstore client
+func CreateBlobstoreClientRetryPolicy() backoff.RetryPolicy {
+	policy := backoff.NewExponentialRetryPolicy(retryBlobstoreClientInitialInterval)
+	policy.SetMaximumInterval(retryBlobstoreClientMaxInterval)
+	policy.SetExpirationInterval(retryBlobstoreClientExpirationInterval)
 
 	return policy
 }
@@ -144,6 +199,27 @@ func IsPersistenceTransientError(err error) bool {
 		return true
 	}
 
+	return false
+}
+
+// IsKafkaTransientError check if the error is a transient kafka error
+func IsKafkaTransientError(err error) bool {
+	return true
+}
+
+// IsBlobstoreTransientError checks if the error is a retryable error.
+func IsBlobstoreTransientError(err error) bool {
+	return !IsBlobstoreNonRetryableError(err)
+}
+
+// IsBlobstoreNonRetryableError checks if the error is a non retryable error.
+func IsBlobstoreNonRetryableError(err error) bool {
+	switch err.(type) {
+	case *workflow.BadRequestError:
+		return true
+	case *workflow.EntityNotExistsError:
+		return true
+	}
 	return false
 }
 
@@ -308,6 +384,17 @@ func ValidateRetryPolicy(policy *workflow.RetryPolicy) error {
 	return nil
 }
 
+// ValidateCronSchedule validates a cron schedule spec
+func ValidateCronSchedule(cronSchedule string) error {
+	if cronSchedule == "" {
+		return nil
+	}
+	if _, err := cron.Parse(cronSchedule); err != nil {
+		return &workflow.BadRequestError{Message: "Invalid CronSchedule."}
+	}
+	return nil
+}
+
 // CreateHistoryStartWorkflowRequest create a start workflow request for history
 func CreateHistoryStartWorkflowRequest(domainID string, startRequest *workflow.StartWorkflowExecutionRequest) *h.StartWorkflowExecutionRequest {
 	histRequest := &h.StartWorkflowExecutionRequest{
@@ -322,6 +409,8 @@ func CreateHistoryStartWorkflowRequest(domainID string, startRequest *workflow.S
 	return histRequest
 }
 
+// CheckEventBlobSizeLimit checks if a blob data exceeds limits. It logs a warning if it exceeds warnLimit,
+// and return ErrBlobSizeExceedsLimit if it exceeds errorLimit.
 func CheckEventBlobSizeLimit(actualSize, warnLimit, errorLimit int, domainID, workflowID, runID string, metricsClient metrics.Client, scope int, logger bark.Logger) error {
 	if metricsClient != nil {
 		metricsClient.RecordTimer(

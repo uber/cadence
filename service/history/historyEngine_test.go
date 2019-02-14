@@ -30,6 +30,7 @@ import (
 
 	"github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -57,7 +58,7 @@ type (
 		*require.Assertions
 		mockHistoryEngine   *historyEngineImpl
 		mockMatchingClient  *mocks.MatchingClient
-		mockInitiator       *mocks.Initiator
+		mockArchivalClient  *mocks.ArchivalClient
 		mockHistoryClient   *mocks.HistoryClient
 		mockMetadataMgr     *mocks.MetadataManager
 		mockVisibilityMgr   *mocks.VisibilityManager
@@ -66,10 +67,13 @@ type (
 		mockShardManager    *mocks.ShardManager
 		mockClusterMetadata *mocks.ClusterMetadata
 		mockProducer        *mocks.KafkaProducer
+		mockClientBean      *client.MockClientBean
+		mockEventsCache     *MockEventsCache
 		mockMessagingClient messaging.Client
 		mockService         service.Service
 		mockMetricClient    metrics.Client
 		shardClosedCh       chan int
+		eventsCache         eventsCache
 		config              *Config
 		logger              bark.Logger
 	}
@@ -102,7 +106,7 @@ func (s *engineSuite) SetupTest() {
 
 	shardID := 0
 	s.mockMatchingClient = &mocks.MatchingClient{}
-	s.mockInitiator = &mocks.Initiator{}
+	s.mockArchivalClient = &mocks.ArchivalClient{}
 	s.mockHistoryClient = &mocks.HistoryClient{}
 	s.mockMetadataMgr = &mocks.MetadataManager{}
 	s.mockVisibilityMgr = &mocks.VisibilityManager{}
@@ -114,9 +118,11 @@ func (s *engineSuite) SetupTest() {
 	s.shardClosedCh = make(chan int, 100)
 	s.mockMetricClient = metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
-	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.logger)
+	s.mockClientBean = &client.MockClientBean{}
+	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.logger)
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("GetAllClusterFailoverVersions").Return(cluster.TestAllClusterFailoverVersions)
+	s.mockClusterMetadata.On("GetAllClusterFailoverVersions").Return(cluster.TestSingleDCAllClusterFailoverVersions)
+	s.mockEventsCache = &MockEventsCache{}
 
 	historyEventNotifier := newHistoryEventNotifier(
 		s.mockMetricClient,
@@ -139,6 +145,8 @@ func (s *engineSuite) SetupTest() {
 		logger:                    s.logger,
 		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
 	}
+	s.eventsCache = newEventsCache(mockShard)
+	mockShard.eventsCache = s.eventsCache
 	currentClusterName := s.mockService.GetClusterMetadata().GetCurrentClusterName()
 	shardContextWrapper := &shardContextWrapper{
 		currentClusterName:   currentClusterName,
@@ -149,9 +157,8 @@ func (s *engineSuite) SetupTest() {
 	historyCache := newHistoryCache(shardContextWrapper)
 	// this is used by shard context, not relevant to this test, so we do not care how many times "GetCurrentClusterName" os called
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("GetAllClusterFailoverVersions").Return(cluster.TestAllClusterFailoverVersions)
+	s.mockClusterMetadata.On("GetAllClusterFailoverVersions").Return(cluster.TestSingleDCAllClusterFailoverVersions)
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
-	s.mockInitiator.On("Archive", mock.Anything).Return(nil)
 	h := &historyEngineImpl{
 		currentClusterName:   currentClusterName,
 		shard:                shardContextWrapper,
@@ -163,9 +170,10 @@ func (s *engineSuite) SetupTest() {
 		tokenSerializer:      common.NewJSONTaskTokenSerializer(),
 		historyEventNotifier: historyEventNotifier,
 		config:               NewDynamicConfigForTest(),
+		archivalClient:       s.mockArchivalClient,
 	}
 	h.txProcessor = newTransferQueueProcessor(shardContextWrapper, h, s.mockVisibilityMgr, s.mockProducer, s.mockMatchingClient, s.mockHistoryClient, s.logger)
-	h.timerProcessor = newTimerQueueProcessor(shardContextWrapper, h, s.mockMatchingClient, s.logger)
+	h.timerProcessor = newTimerQueueProcessor(shardContextWrapper, h, s.mockMatchingClient, s.mockProducer, s.logger)
 	h.historyEventNotifier.Start()
 	shardContextWrapper.txProcessor = h.txProcessor
 	s.mockHistoryEngine = h
@@ -178,8 +186,9 @@ func (s *engineSuite) TearDownTest() {
 	s.mockHistoryMgr.AssertExpectations(s.T())
 	s.mockShardManager.AssertExpectations(s.T())
 	s.mockVisibilityMgr.AssertExpectations(s.T())
-	s.mockClusterMetadata.AssertExpectations(s.T())
 	s.mockProducer.AssertExpectations(s.T())
+	s.mockClientBean.AssertExpectations(s.T())
+	s.mockArchivalClient.AssertExpectations(s.T())
 }
 
 func (s *engineSuite) TestGetMutableStateSync() {
@@ -192,7 +201,8 @@ func (s *engineSuite) TestGetMutableStateSync() {
 	tasklist := "testTaskList"
 	identity := "testIdentity"
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, execution, "wType", tasklist, []byte("input"), 100, 200, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tasklist, identity)
@@ -251,7 +261,8 @@ func (s *engineSuite) TestGetMutableStateLongPoll() {
 	tasklist := "testTaskList"
 	identity := "testIdentity"
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, execution, "wType", tasklist, []byte("input"), 100, 200, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tasklist, identity)
@@ -343,7 +354,8 @@ func (s *engineSuite) TestGetMutableStateLongPollTimeout() {
 	tasklist := "testTaskList"
 	identity := "testIdentity"
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, execution, "wType", tasklist, []byte("input"), 100, 200, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tasklist, identity)
@@ -495,7 +507,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedUpdateExecutionFailed() {
 	})
 	identity := "testIdentity"
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -547,7 +560,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfTaskCompleted() {
 	})
 	identity := "testIdentity"
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	startedEvent := addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -597,7 +611,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfTaskNotStarted() {
 	})
 	identity := "testIdentity"
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
 	addDecisionTaskScheduledEvent(msBuilder)
 
@@ -651,7 +666,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedConflictOnUpdate() {
 	activity3Type := "activity_type3"
 	activity3Input := []byte("input3")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
 	di1 := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent1 := addDecisionTaskStartedEvent(msBuilder, di1.ScheduleID, tl, identity)
@@ -767,7 +783,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedMaxAttemptsExceeded() {
 	executionContext := []byte("context")
 	input := []byte("input")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -842,7 +859,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowFailed() {
 	activity2Result := []byte("activity2_result")
 	workflowResult := []byte("workflow result")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 25, 200, identity)
 	di1 := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent1 := addDecisionTaskStartedEvent(msBuilder, di1.ScheduleID, tl, identity)
@@ -939,7 +957,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowFailed() {
 	reason := "workflow fail reason"
 	details := []byte("workflow fail details")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 25, 200, identity)
 	di1 := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent1 := addDecisionTaskStartedEvent(msBuilder, di1.ScheduleID, tl, identity)
@@ -1031,7 +1050,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedBadDecisionAttributes() {
 	activity1Input := []byte("input1")
 	activity1Result := []byte("activity1_result")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 25, 200, identity)
 	di1 := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent1 := addDecisionTaskStartedEvent(msBuilder, di1.ScheduleID, tl, identity)
@@ -1159,7 +1179,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledAtt
 		executionContext := []byte("context")
 		input := []byte("input")
 
-		msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+		msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+			bark.NewLoggerFromLogrus(log.New()))
 		addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), workflowTimeout, 200, identity)
 		di := addDecisionTaskScheduledEvent(msBuilder)
 		addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -1243,7 +1264,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledDec
 	executionContext := []byte("context")
 	input := []byte("input")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -1328,7 +1350,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowSuccess() 
 	executionContext := []byte("context")
 	workflowResult := []byte("success")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -1348,8 +1371,11 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowSuccess() 
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
 		&persistence.GetDomainResponse{
-			Info:   &persistence.DomainInfo{ID: domainID},
-			Config: &persistence.DomainConfig{Retention: 1},
+			Info: &persistence.DomainInfo{ID: domainID},
+			Config: &persistence.DomainConfig{
+				Retention:      1,
+				ArchivalStatus: workflow.ArchivalStatusEnabled,
+			},
 			ReplicationConfig: &persistence.DomainReplicationConfig{
 				ActiveClusterName: cluster.TestCurrentClusterName,
 				Clusters: []*persistence.ClusterReplicationConfig{
@@ -1360,6 +1386,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowSuccess() 
 		},
 		nil,
 	)
+
+	s.mockClusterMetadata.On("IsArchivalEnabled").Return(true)
 	_, err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &history.RespondDecisionTaskCompletedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CompleteRequest: &workflow.RespondDecisionTaskCompletedRequest{
@@ -1395,7 +1423,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowSuccess() {
 	details := []byte("fail workflow details")
 	reason := "fail workflow reason"
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -1416,8 +1445,11 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowSuccess() {
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
 		&persistence.GetDomainResponse{
-			Info:   &persistence.DomainInfo{ID: domainID},
-			Config: &persistence.DomainConfig{Retention: 1},
+			Info: &persistence.DomainInfo{ID: domainID},
+			Config: &persistence.DomainConfig{
+				Retention:      1,
+				ArchivalStatus: workflow.ArchivalStatusEnabled,
+			},
 			ReplicationConfig: &persistence.DomainReplicationConfig{
 				ActiveClusterName: cluster.TestCurrentClusterName,
 				Clusters: []*persistence.ClusterReplicationConfig{
@@ -1428,6 +1460,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowSuccess() {
 		},
 		nil,
 	)
+	s.mockClusterMetadata.On("IsArchivalEnabled").Return(true)
 	_, err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &history.RespondDecisionTaskCompletedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CompleteRequest: &workflow.RespondDecisionTaskCompletedRequest{
@@ -1461,7 +1494,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowSucc
 	identity := "testIdentity"
 	executionContext := []byte("context")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -1530,7 +1564,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFail
 	identity := "testIdentity"
 	executionContext := []byte("context")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -1591,7 +1626,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFail
 	executionContext := []byte("context")
 	foreignDomain := "unknown domain"
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -1789,7 +1825,8 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfNoAIdProvided() {
 	})
 	identity := "testIdentity"
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	ms := createMutableState(msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: validRunID}
@@ -1830,7 +1867,8 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfNoAidFound() {
 	})
 	identity := "testIdentity"
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	ms := createMutableState(msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: validRunID}
@@ -1880,7 +1918,8 @@ func (s *engineSuite) TestRespondActivityTaskCompletedUpdateExecutionFailed() {
 	activityInput := []byte("input1")
 	activityResult := []byte("activity result")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent := addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -1941,7 +1980,8 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfTaskCompleted() {
 	activityInput := []byte("input1")
 	activityResult := []byte("activity result")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent := addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -2003,7 +2043,8 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfTaskNotStarted() {
 	activityInput := []byte("input1")
 	activityResult := []byte("activity result")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent := addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -2064,7 +2105,8 @@ func (s *engineSuite) TestRespondActivityTaskCompletedConflictOnUpdate() {
 	activity2Type := "activity_type2"
 	activity2Input := []byte("input2")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent1 := addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -2145,7 +2187,8 @@ func (s *engineSuite) TestRespondActivityTaskCompletedMaxAttemptsExceeded() {
 	activityInput := []byte("input1")
 	activityResult := []byte("activity result")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent := addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -2207,7 +2250,8 @@ func (s *engineSuite) TestRespondActivityTaskCompletedSuccess() {
 	activityInput := []byte("input1")
 	activityResult := []byte("activity result")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent := addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -2279,7 +2323,8 @@ func (s *engineSuite) TestRespondActivityTaskCompletedByIdSuccess() {
 		ActivityID: activityID,
 	})
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
 	decisionScheduledEvent := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent := addDecisionTaskStartedEvent(msBuilder, decisionScheduledEvent.ScheduleID, tl, identity)
@@ -2482,7 +2527,8 @@ func (s *engineSuite) TestRespondActivityTaskFailededIfNoAIdProvided() {
 	})
 	identity := "testIdentity"
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	ms := createMutableState(msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: validRunID}
@@ -2523,7 +2569,8 @@ func (s *engineSuite) TestRespondActivityTaskFailededIfNoAIdFound() {
 	})
 	identity := "testIdentity"
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	ms := createMutableState(msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: validRunID}
@@ -2572,7 +2619,8 @@ func (s *engineSuite) TestRespondActivityTaskFailedUpdateExecutionFailed() {
 	activityType := "activity_type1"
 	activityInput := []byte("input1")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent := addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -2633,7 +2681,8 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfTaskCompleted() {
 	failReason := "fail reason"
 	details := []byte("fail details")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent := addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -2695,7 +2744,8 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfTaskNotStarted() {
 	activityType := "activity_type1"
 	activityInput := []byte("input1")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent := addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -2757,7 +2807,8 @@ func (s *engineSuite) TestRespondActivityTaskFailedConflictOnUpdate() {
 	activity2Input := []byte("input2")
 	activity2Result := []byte("activity2_result")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 25, 25, identity)
 	di1 := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent1 := addDecisionTaskStartedEvent(msBuilder, di1.ScheduleID, tl, identity)
@@ -2842,7 +2893,8 @@ func (s *engineSuite) TestRespondActivityTaskFailedMaxAttemptsExceeded() {
 	activityType := "activity_type1"
 	activityInput := []byte("input1")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent := addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -2904,7 +2956,8 @@ func (s *engineSuite) TestRespondActivityTaskFailedSuccess() {
 	failReason := "failed"
 	failDetails := []byte("fail details.")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent := addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -2978,7 +3031,8 @@ func (s *engineSuite) TestRespondActivityTaskFailedByIDSuccess() {
 		ActivityID: activityID,
 	})
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
 	decisionScheduledEvent := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent := addDecisionTaskStartedEvent(msBuilder, decisionScheduledEvent.ScheduleID, tl, identity)
@@ -3051,7 +3105,8 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_NoTimer() {
 	activityType := "activity_type1"
 	activityInput := []byte("input1")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent := addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -3111,7 +3166,8 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_TimerRunning() {
 	activityType := "activity_type1"
 	activityInput := []byte("input1")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent := addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -3178,7 +3234,8 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatByIDSuccess() {
 		ActivityID: activityID,
 	})
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent := addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -3238,7 +3295,8 @@ func (s *engineSuite) TestRespondActivityTaskCanceled_Scheduled() {
 	activityType := "activity_type1"
 	activityInput := []byte("input1")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent := addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -3295,7 +3353,8 @@ func (s *engineSuite) TestRespondActivityTaskCanceled_Started() {
 	activityType := "activity_type1"
 	activityInput := []byte("input1")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent := addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -3366,7 +3425,8 @@ func (s *engineSuite) TestRespondActivityTaskCanceledByID_Started() {
 		ActivityID: activityID,
 	})
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
 	decisionScheduledEvent := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent := addDecisionTaskStartedEvent(msBuilder, decisionScheduledEvent.ScheduleID, tl, identity)
@@ -3465,7 +3525,8 @@ func (s *engineSuite) TestRespondActivityTaskCanceledIfNoAIdProvided() {
 	})
 	identity := "testIdentity"
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	ms := createMutableState(msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: validRunID}
@@ -3506,7 +3567,8 @@ func (s *engineSuite) TestRespondActivityTaskCanceledIfNoAidFound() {
 	})
 	identity := "testIdentity"
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	ms := createMutableState(msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: validRunID}
@@ -3553,7 +3615,8 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NotSchedule
 	identity := "testIdentity"
 	activityID := "activity1_id"
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -3620,7 +3683,8 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Scheduled()
 	activityType := "activity_type1"
 	activityInput := []byte("input1")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent := addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -3694,7 +3758,8 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NoHeartBeat
 	activityType := "activity_type1"
 	activityInput := []byte("input1")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent := addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -3824,7 +3889,8 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Success() {
 	activityType := "activity_type1"
 	activityInput := []byte("input1")
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 	decisionStartedEvent := addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
@@ -3952,7 +4018,8 @@ func (s *engineSuite) TestStarTimer_DuplicateTimerID() {
 	identity := "testIdentity"
 	timerID := "t1"
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
@@ -4061,7 +4128,8 @@ func (s *engineSuite) TestUserTimer_RespondDecisionTaskCompleted() {
 	identity := "testIdentity"
 	timerID := "t1"
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	// Verify cancel timer with a start event.
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
@@ -4133,7 +4201,8 @@ func (s *engineSuite) TestCancelTimer_RespondDecisionTaskCompleted_NoStartTimer(
 	identity := "testIdentity"
 	timerID := "t1"
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	// Verify cancel timer with a start event.
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
@@ -4209,7 +4278,8 @@ func (s *engineSuite) TestSignalWorkflowExecution() {
 		},
 	}
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	ms := createMutableState(msBuilder)
 	ms.ExecutionInfo.DomainID = validDomainID
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
@@ -4263,7 +4333,8 @@ func (s *engineSuite) TestSignalWorkflowExecution_DuplicateRequest() {
 		},
 	}
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	ms := createMutableState(msBuilder)
 	// assume duplicate request id
 	ms.SignalRequestedIDs = make(map[string]struct{})
@@ -4316,7 +4387,8 @@ func (s *engineSuite) TestSignalWorkflowExecution_Failed() {
 		},
 	}
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	ms := createMutableState(msBuilder)
 	ms.ExecutionInfo.State = persistence.WorkflowStateCompleted
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
@@ -4357,7 +4429,8 @@ func (s *engineSuite) TestRemoveSignalMutableState() {
 		RequestId: common.StringPtr(requestID),
 	}
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.eventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
 	ms := createMutableState(msBuilder)
 	ms.ExecutionInfo.DomainID = validDomainID
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
@@ -4385,29 +4458,30 @@ func (s *engineSuite) TestRemoveSignalMutableState() {
 
 func (s *engineSuite) TestValidateSignalExternalWorkflowExecutionAttributes() {
 	var attributes *workflow.SignalExternalWorkflowExecutionDecisionAttributes
-	err := validateSignalExternalWorkflowExecutionAttributes(attributes)
+	maxIDLengthLimit := 1000
+	err := validateSignalExternalWorkflowExecutionAttributes(attributes, maxIDLengthLimit)
 	s.EqualError(err, "BadRequestError{Message: SignalExternalWorkflowExecutionDecisionAttributes is not set on decision.}")
 
 	attributes = &workflow.SignalExternalWorkflowExecutionDecisionAttributes{}
-	err = validateSignalExternalWorkflowExecutionAttributes(attributes)
+	err = validateSignalExternalWorkflowExecutionAttributes(attributes, maxIDLengthLimit)
 	s.EqualError(err, "BadRequestError{Message: Execution is nil on decision.}")
 
 	attributes.Execution = &workflow.WorkflowExecution{}
 	attributes.Execution.WorkflowId = common.StringPtr("workflow-id")
-	err = validateSignalExternalWorkflowExecutionAttributes(attributes)
+	err = validateSignalExternalWorkflowExecutionAttributes(attributes, maxIDLengthLimit)
 	s.EqualError(err, "BadRequestError{Message: SignalName is not set on decision.}")
 
 	attributes.Execution.RunId = common.StringPtr("run-id")
-	err = validateSignalExternalWorkflowExecutionAttributes(attributes)
+	err = validateSignalExternalWorkflowExecutionAttributes(attributes, maxIDLengthLimit)
 	s.EqualError(err, "BadRequestError{Message: Invalid RunId set on decision.}")
 	attributes.Execution.RunId = common.StringPtr(validRunID)
 
 	attributes.SignalName = common.StringPtr("my signal name")
-	err = validateSignalExternalWorkflowExecutionAttributes(attributes)
+	err = validateSignalExternalWorkflowExecutionAttributes(attributes, maxIDLengthLimit)
 	s.EqualError(err, "BadRequestError{Message: Input is not set on decision.}")
 
 	attributes.Input = []byte("test input")
-	err = validateSignalExternalWorkflowExecutionAttributes(attributes)
+	err = validateSignalExternalWorkflowExecutionAttributes(attributes, maxIDLengthLimit)
 	s.Nil(err)
 }
 
@@ -4423,24 +4497,8 @@ func (s *engineSuite) getBuilder(domainID string, we workflow.WorkflowExecution)
 
 func (s *engineSuite) getActivityScheduledEvent(msBuilder mutableState,
 	scheduleID int64) *workflow.HistoryEvent {
-
-	ai, ok := msBuilder.GetActivityInfo(scheduleID)
-	if !ok {
-		return nil
-	}
-
-	return ai.ScheduledEvent
-}
-
-func (s *engineSuite) getActivityStartedEvent(msBuilder mutableState,
-	scheduleID int64) *workflow.HistoryEvent {
-
-	ai, ok := msBuilder.GetActivityInfo(scheduleID)
-	if !ok {
-		return nil
-	}
-
-	return ai.StartedEvent
+	event, _ := msBuilder.GetActivityScheduledEvent(scheduleID)
+	return event
 }
 
 func (s *engineSuite) printHistory(builder mutableState) string {
@@ -4511,6 +4569,7 @@ func addDecisionTaskCompletedEvent(builder mutableState, scheduleID, startedID i
 func addActivityTaskScheduledEvent(builder mutableState, decisionCompletedID int64, activityID, activityType,
 	taskList string, input []byte, timeout, queueTimeout, heartbeatTimeout int32) (*workflow.HistoryEvent,
 	*persistence.ActivityInfo) {
+
 	return builder.AddActivityTaskScheduledEvent(decisionCompletedID, &workflow.ScheduleActivityTaskDecisionAttributes{
 		ActivityId:                    common.StringPtr(activityID),
 		ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityType)},
@@ -4708,6 +4767,7 @@ func copyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *p
 		ParentWorkflowID:             sourceInfo.ParentWorkflowID,
 		ParentRunID:                  sourceInfo.ParentRunID,
 		InitiatedID:                  sourceInfo.InitiatedID,
+		CompletionEventBatchID:       sourceInfo.CompletionEventBatchID,
 		CompletionEvent:              sourceInfo.CompletionEvent,
 		TaskList:                     sourceInfo.TaskList,
 		StickyTaskList:               sourceInfo.StickyTaskList,
@@ -4736,6 +4796,7 @@ func copyActivityInfo(sourceInfo *persistence.ActivityInfo) *persistence.Activit
 	return &persistence.ActivityInfo{
 		Version:                  sourceInfo.Version,
 		ScheduleID:               sourceInfo.ScheduleID,
+		ScheduledEventBatchID:    sourceInfo.ScheduledEventBatchID,
 		ScheduledEvent:           sourceInfo.ScheduledEvent,
 		StartedID:                sourceInfo.StartedID,
 		StartedEvent:             sourceInfo.StartedEvent,
@@ -4798,10 +4859,15 @@ func copySignalInfo(sourceInfo *persistence.SignalInfo) *persistence.SignalInfo 
 
 func copyChildInfo(sourceInfo *persistence.ChildExecutionInfo) *persistence.ChildExecutionInfo {
 	result := &persistence.ChildExecutionInfo{
-		Version:         sourceInfo.Version,
-		InitiatedID:     sourceInfo.InitiatedID,
-		StartedID:       sourceInfo.StartedID,
-		CreateRequestID: sourceInfo.CreateRequestID,
+		Version:               sourceInfo.Version,
+		InitiatedID:           sourceInfo.InitiatedID,
+		InitiatedEventBatchID: sourceInfo.InitiatedEventBatchID,
+		StartedID:             sourceInfo.StartedID,
+		StartedWorkflowID:     sourceInfo.StartedWorkflowID,
+		StartedRunID:          sourceInfo.StartedRunID,
+		CreateRequestID:       sourceInfo.CreateRequestID,
+		DomainName:            sourceInfo.DomainName,
+		WorkflowTypeName:      sourceInfo.WorkflowTypeName,
 	}
 
 	if sourceInfo.InitiatedEvent != nil {

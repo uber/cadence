@@ -38,13 +38,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
+	"github.com/uber/cadence/.gen/go/admin"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/persistence-tests"
-	"github.com/uber/cadence/service/history"
+	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/service/matching"
 )
 
@@ -72,7 +72,7 @@ func (s *IntegrationBase) setupShards() {
 	}
 }
 
-func TestIntegrationSuite(t *testing.T) {
+func TestRateLimitBufferedEventsTestIntegrationSuite(t *testing.T) {
 	flag.Parse()
 	if *integration && !*testEventsV2 {
 		s := new(integrationSuite)
@@ -137,7 +137,7 @@ func (s *integrationSuite) setupSuite(enableGlobalDomain bool, isMasterCluster b
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
 
 	s.host = NewCadence(s.ClusterMetadata, client.NewIPYarpcDispatcherProvider(), s.mockMessagingClient, s.MetadataProxy, s.MetadataManagerV2, s.ShardMgr, s.HistoryMgr, s.HistoryV2Mgr, s.ExecutionMgrFactory, s.TaskMgr,
-		s.VisibilityMgr, testNumberOfHistoryShards, testNumberOfHistoryHosts, s.logger, 0, false, s.enableEventsV2)
+		s.VisibilityMgr, testNumberOfHistoryShards, testNumberOfHistoryHosts, s.logger, 0, false, s.enableEventsV2, false)
 	s.host.Start()
 
 	s.engine = s.host.GetFrontendClient()
@@ -1067,6 +1067,118 @@ func (s *integrationSuite) TestWorkflowRetry() {
 
 	events = s.getHistory(s.domainName, executions[2])
 	s.Equal(workflow.EventTypeWorkflowExecutionCompleted, events[len(events)-1].GetEventType())
+}
+
+func (s *integrationSuite) TestCronWorkflow() {
+	id := "integration-wf-cron-test"
+	wt := "integration-wf-cron-type"
+	tl := "integration-wf-cron-tasklist"
+	identity := "worker1"
+
+	workflowType := &workflow.WorkflowType{}
+	workflowType.Name = common.StringPtr(wt)
+
+	taskList := &workflow.TaskList{}
+	taskList.Name = common.StringPtr(tl)
+
+	request := &workflow.StartWorkflowExecutionRequest{
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		Identity:                            common.StringPtr(identity),
+		CronSchedule:                        common.StringPtr("@every 5s"), //minimum interval by standard spec is 1m (* * * * *), use non-standard descriptor for short interval for test
+	}
+
+	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err0)
+
+	s.logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
+
+	var executions []*workflow.WorkflowExecution
+
+	attemptCount := 0
+
+	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+		executions = append(executions, execution)
+		attemptCount++
+		if attemptCount == 2 {
+			return nil, []*workflow.Decision{
+				{
+					DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
+					CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+						Result: []byte("cron-test-result"),
+					},
+				}}, nil
+		}
+		return nil, []*workflow.Decision{
+			{
+				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeFailWorkflowExecution),
+				FailWorkflowExecutionDecisionAttributes: &workflow.FailWorkflowExecutionDecisionAttributes{
+					Reason:  common.StringPtr("cron-test-error"),
+					Details: nil,
+				},
+			}}, nil
+	}
+
+	poller := &TaskPoller{
+		Engine:          s.engine,
+		Domain:          s.domainName,
+		TaskList:        taskList,
+		Identity:        identity,
+		DecisionHandler: dtHandler,
+		Logger:          s.logger,
+		T:               s.T(),
+	}
+
+	_, err := poller.PollAndProcessDecisionTask(false, false)
+	s.True(err == nil, err)
+
+	_, err = poller.PollAndProcessDecisionTask(false, false)
+	s.True(err == nil, err)
+
+	_, err = poller.PollAndProcessDecisionTask(false, false)
+	s.True(err == nil, err)
+
+	s.Equal(3, attemptCount)
+
+	terminateErr := s.engine.TerminateWorkflowExecution(createContext(), &workflow.TerminateWorkflowExecutionRequest{
+		Domain: common.StringPtr(s.domainName),
+		WorkflowExecution: &workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(id),
+		},
+	})
+
+	fmt.Printf("terminate_err: %v\n", terminateErr)
+
+	events := s.getHistory(s.domainName, executions[0])
+	lastEvent := events[len(events)-1]
+	s.Equal(workflow.EventTypeWorkflowExecutionContinuedAsNew, lastEvent.GetEventType())
+	attributes := lastEvent.WorkflowExecutionContinuedAsNewEventAttributes
+	s.Equal(workflow.ContinueAsNewInitiatorCronSchedule, attributes.GetInitiator())
+	s.Equal("cron-test-error", attributes.GetFailureReason())
+	s.Equal(0, len(attributes.GetLastCompletionResult()))
+
+	events = s.getHistory(s.domainName, executions[1])
+	lastEvent = events[len(events)-1]
+	s.Equal(workflow.EventTypeWorkflowExecutionContinuedAsNew, lastEvent.GetEventType())
+	attributes = lastEvent.WorkflowExecutionContinuedAsNewEventAttributes
+	s.Equal(workflow.ContinueAsNewInitiatorCronSchedule, attributes.GetInitiator())
+	s.Equal("", attributes.GetFailureReason())
+	s.Equal("cron-test-result", string(attributes.GetLastCompletionResult()))
+
+	events = s.getHistory(s.domainName, executions[2])
+	lastEvent = events[len(events)-1]
+	s.Equal(workflow.EventTypeWorkflowExecutionContinuedAsNew, lastEvent.GetEventType())
+	attributes = lastEvent.WorkflowExecutionContinuedAsNewEventAttributes
+	s.Equal(workflow.ContinueAsNewInitiatorCronSchedule, attributes.GetInitiator())
+	s.Equal("cron-test-error", attributes.GetFailureReason())
+	s.Equal("cron-test-result", string(attributes.GetLastCompletionResult()))
 }
 
 func (s *integrationSuite) TestActivityHeartBeatWorkflow_Timeout() {
@@ -2058,16 +2170,12 @@ func (s *integrationSuite) TestRateLimitBufferedEvents() {
 				s.Nil(s.sendSignal(s.domainName, workflowExecution, "SignalName", buf.Bytes(), identity))
 			}
 
-			// Rate limitted signals
-			for i := 0; i < 10; i++ {
-				buf := new(bytes.Buffer)
-				binary.Write(buf, binary.LittleEndian, i)
-				signalErr := s.sendSignal(s.domainName, workflowExecution, "SignalName", buf.Bytes(), identity)
-				s.NotNil(signalErr)
-				s.Equal(history.ErrBufferedEventsLimitExceeded, signalErr)
-			}
+			buf := new(bytes.Buffer)
+			binary.Write(buf, binary.LittleEndian, 101)
+			signalErr := s.sendSignal(s.domainName, workflowExecution, "SignalName", buf.Bytes(), identity)
+			s.Nil(signalErr)
 
-			// First decision is empty
+			// this decision will be ignored as he decision task is already failed
 			return nil, []*workflow.Decision{}, nil
 		}
 
@@ -2091,10 +2199,10 @@ func (s *integrationSuite) TestRateLimitBufferedEvents() {
 		T:               s.T(),
 	}
 
-	// Make first decision to schedule activity
+	// first decision to send 101 signals, the last signal will force fail decision and flush buffered events.
 	_, err := poller.PollAndProcessDecisionTask(false, false)
 	s.logger.Infof("PollAndProcessDecisionTask: %v", err)
-	s.Nil(err)
+	s.EqualError(err, "EntityNotExistsError{Message: Decision task not found.}")
 
 	// Process signal in decider
 	_, err = poller.PollAndProcessDecisionTask(true, false)
@@ -2104,7 +2212,7 @@ func (s *integrationSuite) TestRateLimitBufferedEvents() {
 	s.printWorkflowHistory(s.domainName, workflowExecution)
 
 	s.True(workflowComplete)
-	s.Equal(100, signalCount)
+	s.Equal(101, signalCount) // check that all 101 signals are received.
 }
 
 func (s *integrationSuite) TestSignalWorkflow_DuplicateRequest() {
@@ -3344,7 +3452,7 @@ func (s *integrationSuite) TestVisibility() {
 	s.Nil(err1)
 
 	// wait until the start workflow is done
-	var nexttoken []byte
+	var nextToken []byte
 	historyEventFilterType := workflow.HistoryEventFilterTypeCloseEvent
 	for {
 		historyResponse, historyErr := s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
@@ -3355,14 +3463,14 @@ func (s *integrationSuite) TestVisibility() {
 			},
 			WaitForNewEvent:        common.BoolPtr(true),
 			HistoryEventFilterType: &historyEventFilterType,
-			NextPageToken:          nexttoken,
+			NextPageToken:          nextToken,
 		})
 		s.Nil(historyErr)
 		if len(historyResponse.NextPageToken) == 0 {
 			break
 		}
 
-		nexttoken = historyResponse.NextPageToken
+		nextToken = historyResponse.NextPageToken
 	}
 
 	startRequest = &workflow.StartWorkflowExecutionRequest{
@@ -3387,6 +3495,7 @@ func (s *integrationSuite) TestVisibility() {
 	closedCount := 0
 	openCount := 0
 
+	var historyLength int64
 	for i := 0; i < 10; i++ {
 		resp, err3 := s.engine.ListClosedWorkflowExecutions(createContext(), &workflow.ListClosedWorkflowExecutionsRequest{
 			Domain:          common.StringPtr(s.domainName),
@@ -3396,12 +3505,14 @@ func (s *integrationSuite) TestVisibility() {
 		s.Nil(err3)
 		closedCount = len(resp.Executions)
 		if closedCount == 1 {
+			historyLength = *(resp.Executions[0].HistoryLength)
 			break
 		}
 		s.logger.Info("Closed WorkflowExecution is not yet visible")
 		time.Sleep(100 * time.Millisecond)
 	}
 	s.Equal(1, closedCount)
+	s.Equal(int64(5), historyLength)
 
 	for i := 0; i < 10; i++ {
 		resp, err4 := s.engine.ListOpenWorkflowExecutions(createContext(), &workflow.ListOpenWorkflowExecutionsRequest{
@@ -4873,6 +4984,245 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistory_Close() {
 		}
 	}
 	s.Equal(1, len(events))
+}
+
+func (s *integrationSuite) TestGetWorkflowExecutionRawHistory_All() {
+	workflowID := "interation-get-workflow-history-raw-events-all"
+	workflowTypeName := "interation-get-workflow-history-raw-events-all-type"
+	tasklistName := "interation-get-workflow-history-raw-events-all-tasklist"
+	identity := "worker1"
+	activityName := "activity_type1"
+
+	workflowType := &workflow.WorkflowType{}
+	workflowType.Name = common.StringPtr(workflowTypeName)
+
+	taskList := &workflow.TaskList{}
+	taskList.Name = common.StringPtr(tasklistName)
+
+	// Start workflow execution
+	request := &workflow.StartWorkflowExecutionRequest{
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(workflowID),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		Identity:                            common.StringPtr(identity),
+	}
+
+	we, err := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err)
+	execution := &workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(workflowID),
+		RunId:      common.StringPtr(we.GetRunId()),
+	}
+
+	s.logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
+
+	// decider logic
+	activityScheduled := false
+	activityData := int32(1)
+	// var signalEvent *workflow.HistoryEvent
+	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+
+		if !activityScheduled {
+			activityScheduled = true
+			buf := new(bytes.Buffer)
+			s.Nil(binary.Write(buf, binary.LittleEndian, activityData))
+
+			return nil, []*workflow.Decision{{
+				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
+				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
+					ActivityId:                    common.StringPtr(strconv.Itoa(int(1))),
+					ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityName)},
+					TaskList:                      taskList,
+					Input:                         buf.Bytes(),
+					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
+					ScheduleToStartTimeoutSeconds: common.Int32Ptr(25),
+					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
+					HeartbeatTimeoutSeconds:       common.Int32Ptr(25),
+				},
+			}}, nil
+		}
+
+		return nil, []*workflow.Decision{{
+			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
+			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+				Result: []byte("Done."),
+			},
+		}}, nil
+	}
+
+	// activity handler
+	atHandler := func(execution *workflow.WorkflowExecution, activityType *workflow.ActivityType,
+		activityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
+
+		return []byte("Activity Result."), false, nil
+	}
+
+	poller := &TaskPoller{
+		Engine:          s.engine,
+		Domain:          s.domainName,
+		TaskList:        taskList,
+		Identity:        identity,
+		DecisionHandler: dtHandler,
+		ActivityHandler: atHandler,
+		Logger:          s.logger,
+		T:               s.T(),
+	}
+
+	// this function poll events from history side
+	pageSize := 1
+	getHistory := func(domain string, execution *workflow.WorkflowExecution, firstEventID int64, nextEventID int64,
+		token []byte) (*admin.GetWorkflowExecutionRawHistoryResponse, error) {
+
+		return s.host.GetAdminClient().GetWorkflowExecutionRawHistory(createContext(), &admin.GetWorkflowExecutionRawHistoryRequest{
+			Domain:          common.StringPtr(domain),
+			Execution:       execution,
+			FirstEventId:    common.Int64Ptr(firstEventID),
+			NextEventId:     common.Int64Ptr(nextEventID),
+			MaximumPageSize: common.Int32Ptr(int32(pageSize)),
+			NextPageToken:   token,
+		})
+	}
+
+	serializer := persistence.NewHistorySerializer()
+	convertBlob := func(blobs []*workflow.DataBlob) []*workflow.HistoryEvent {
+		events := []*workflow.HistoryEvent{}
+		for _, blob := range blobs {
+			s.True(blob.GetEncodingType() == workflow.EncodingTypeThriftRW)
+			blobEvents, err := serializer.DeserializeBatchEvents(&persistence.DataBlob{
+				Encoding: common.EncodingTypeThriftRW,
+				Data:     blob.Data,
+			})
+			s.Nil(err)
+			events = append(events, blobEvents...)
+		}
+		return events
+	}
+
+	var blobs []*workflow.DataBlob
+	var token []byte
+
+	resp, err := getHistory(s.domainName, execution, common.FirstEventID, common.EndEventID, token)
+	s.Nil(err)
+	s.True(len(resp.HistoryBatches) == pageSize)
+	blobs = append(blobs, resp.HistoryBatches...)
+	token = resp.NextPageToken
+	if s.enableEventsV2 {
+		s.Equal(int32(2), resp.GetEventStoreVersion())
+	} else {
+		s.Equal(int32(0), resp.GetEventStoreVersion())
+	}
+	s.Nil(token)
+	// until now, only start event and decision task scheduled should be in the history
+	events := convertBlob(blobs)
+	s.True(len(events) == 2)
+
+	// poll so workflow will make progress, and get history from the very begining
+	poller.PollAndProcessDecisionTask(false, false)
+	blobs = nil
+	token = nil
+	for continuePaging := true; continuePaging; continuePaging = len(token) != 0 {
+		resp, err = getHistory(s.domainName, execution, common.FirstEventID, common.EndEventID, token)
+		s.Nil(err)
+		s.True(len(resp.HistoryBatches) == pageSize)
+		blobs = append(blobs, resp.HistoryBatches...)
+		token = resp.NextPageToken
+		if s.enableEventsV2 {
+			s.Equal(int32(2), resp.GetEventStoreVersion())
+		} else {
+			s.Equal(int32(0), resp.GetEventStoreVersion())
+		}
+	}
+	// now, there shall be 3 batches of events:
+	// 1. start event and decision task scheduled;
+	// 2. decision task started
+	// 3. decision task completed and activity task scheduled
+	events = convertBlob(blobs)
+	s.True(len(blobs) == 3)
+	s.True(len(events) == 5)
+
+	// continue the workflow by processing activity
+	poller.PollAndProcessActivityTask(false)
+	// continue to get the history
+	token = nil
+	beginingEventID := events[len(events)-1].GetEventId() + 1
+	for continuePaging := true; continuePaging; continuePaging = len(token) != 0 {
+		resp, err = getHistory(s.domainName, execution, beginingEventID, common.EndEventID, token)
+		s.Nil(err)
+		s.True(len(resp.HistoryBatches) == pageSize)
+		blobs = append(blobs, resp.HistoryBatches...)
+		token = resp.NextPageToken
+		if s.enableEventsV2 {
+			s.Equal(int32(2), resp.GetEventStoreVersion())
+		} else {
+			s.Equal(int32(0), resp.GetEventStoreVersion())
+		}
+	}
+	// now, there shall be 5 batches of events:
+	// 1. start event and decision task scheduled;
+	// 2. decision task started
+	// 3. decision task completed and activity task scheduled
+	// 4. activity task started
+	// 5. activity task completed and decision task scheduled
+	events = convertBlob(blobs)
+	s.True(len(blobs) == 5)
+	s.True(len(events) == 8)
+
+	// continue the workflow by processing decision, after this, workflow shall end
+	poller.PollAndProcessDecisionTask(false, false)
+	// continue to get the history
+	token = nil
+	beginingEventID = events[len(events)-1].GetEventId() + 1
+	for continuePaging := true; continuePaging; continuePaging = len(token) != 0 {
+		resp, err = getHistory(s.domainName, execution, beginingEventID, common.EndEventID, token)
+		s.Nil(err)
+		s.True(len(resp.HistoryBatches) == pageSize)
+		blobs = append(blobs, resp.HistoryBatches...)
+		token = resp.NextPageToken
+		if s.enableEventsV2 {
+			s.Equal(int32(2), resp.GetEventStoreVersion())
+		} else {
+			s.Equal(int32(0), resp.GetEventStoreVersion())
+		}
+	}
+	// now, there shall be 7 batches of events:
+	// 1. start event and decision task scheduled;
+	// 2. decision task started
+	// 3. decision task completed and activity task scheduled
+	// 4. activity task started
+	// 5. activity task completed and decision task scheduled
+	// 6. decision task started
+	// 7. decision task completed and workflow execution completed
+	events = convertBlob(blobs)
+	s.True(len(blobs) == 7)
+	s.True(len(events) == 11)
+
+	// get history in between
+	blobs = nil // clear existing blobs
+	token = nil
+	for continuePaging := true; continuePaging; continuePaging = len(token) != 0 {
+		resp, err = getHistory(s.domainName, execution, 4, 7, token)
+		s.Nil(err)
+		s.True(len(resp.HistoryBatches) == pageSize)
+		blobs = append(blobs, resp.HistoryBatches...)
+		token = resp.NextPageToken
+		if s.enableEventsV2 {
+			s.Equal(int32(2), resp.GetEventStoreVersion())
+		} else {
+			s.Equal(int32(0), resp.GetEventStoreVersion())
+		}
+	}
+	// should get the following events
+	// 1. decision task completed and activity task scheduled
+	// 2. activity task started
+	events = convertBlob(blobs)
+	s.True(len(blobs) == 2)
+	s.True(len(events) == 3)
 }
 
 func (s *integrationSuite) TestDescribeTaskList() {
@@ -6471,32 +6821,27 @@ func (s *integrationSuite) TestTaskProcessingProtectionForRateLimitError() {
 	s.Nil(err)
 
 	// Send one signal to create a new decision
-	for i := 0; i < 1; i++ {
-		buf := new(bytes.Buffer)
-		binary.Write(buf, binary.LittleEndian, i)
-		s.Nil(s.sendSignal(s.domainName, workflowExecution, "SignalName", buf.Bytes(), identity))
-	}
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.LittleEndian, 0)
+	s.Nil(s.sendSignal(s.domainName, workflowExecution, "SignalName", buf.Bytes(), identity))
 
 	// Drop decision to cause all events to be buffered from now on
 	_, err = poller.PollAndProcessDecisionTask(false, true)
 	s.logger.Infof("PollAndProcessDecisionTask: %v", err)
 	s.Nil(err)
 
-	// Buffered Signals
+	// Buffered 100 Signals
 	for i := 1; i < 101; i++ {
 		buf := new(bytes.Buffer)
 		binary.Write(buf, binary.LittleEndian, i)
 		s.Nil(s.sendSignal(s.domainName, workflowExecution, "SignalName", buf.Bytes(), identity))
 	}
 
-	// Rate limitted signals
-	for i := 0; i < 10; i++ {
-		buf := new(bytes.Buffer)
-		binary.Write(buf, binary.LittleEndian, i)
-		signalErr := s.sendSignal(s.domainName, workflowExecution, "SignalName", buf.Bytes(), identity)
-		s.NotNil(signalErr)
-		s.Equal(history.ErrBufferedEventsLimitExceeded, signalErr)
-	}
+	// 101 signal, which will fail the decision
+	buf = new(bytes.Buffer)
+	binary.Write(buf, binary.LittleEndian, 101)
+	signalErr := s.sendSignal(s.domainName, workflowExecution, "SignalName", buf.Bytes(), identity)
+	s.Nil(signalErr)
 
 	// Process signal in decider
 	_, err = poller.PollAndProcessDecisionTaskWithAttempt(true, false, false, false, 0)
@@ -6506,7 +6851,7 @@ func (s *integrationSuite) TestTaskProcessingProtectionForRateLimitError() {
 	s.printWorkflowHistory(s.domainName, workflowExecution)
 
 	s.True(workflowComplete)
-	s.Equal(101, signalCount)
+	s.Equal(102, signalCount)
 }
 
 func (s *integrationSuite) TestStickyTimeout_NonTransientDecision() {

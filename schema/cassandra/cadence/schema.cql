@@ -26,6 +26,7 @@ CREATE TYPE workflow_execution (
   parent_workflow_id               text,   -- ID of parent workflow which started the workflow execution
   parent_run_id                    uuid,   -- RunID of parent workflow which started the workflow execution
   initiated_id                     bigint, -- Initiated event ID of parent workflow which started this execution
+  completion_event_batch_id        bigint,
   completion_event                 blob,   -- Completion event used to communicate result to parent workflow execution
   completion_event_data_encoding   text, -- Protocol used for history serialization
   task_list                        text,
@@ -67,6 +68,8 @@ CREATE TYPE workflow_execution (
   history_size                     bigint,
   last_first_event_id              bigint,
   next_event_id                    bigint,
+  cron_schedule                    text,
+  expiration_seconds               int,    -- retry expiration duration in seconds
 );
 
 -- Replication information for each cluster
@@ -99,6 +102,7 @@ CREATE TYPE transfer_task (
   type                       int,    -- enum TaskType {ActivityTask, DecisionTask, DeleteExecution, CancelExecution, StartChildExecution, ReplicationTask}
   schedule_id                bigint,
   version                    bigint, -- the failover version when this task is created, used to compare against the mutable state, in case the events got overwritten
+  record_visibility          boolean, -- indicates whether or not to create a visibility record
 );
 
 CREATE TYPE replication_task (
@@ -116,6 +120,7 @@ CREATE TYPE replication_task (
   branch_token               blob, -- if eventV2, then query with this token
   new_run_event_store_version        int, -- indiciates which version of event store to query for new run(continueAsNew)
   new_run_branch_token               blob, -- if eventV2, then query with this token for new run(continueAsNew)
+  reset_workflow             boolean, -- whether the task is for resetWorkflowExecution
 );
 
 CREATE TYPE timer_task (
@@ -135,7 +140,8 @@ CREATE TYPE timer_task (
 CREATE TYPE activity_info (
   version                   bigint,
   schedule_id               bigint,
-  scheduled_event           blob,
+  scheduled_event_batch_id  bigint,
+  scheduled_event           blob,  -- deprecated
   scheduled_time            timestamp,
   started_id                bigint,
   started_event             blob,
@@ -175,13 +181,18 @@ CREATE TYPE timer_info (
 
 -- Child execution in progress mutable state
 CREATE TYPE child_execution_info (
-  version           bigint,
-  initiated_id      bigint,
-  initiated_event   blob,
-  started_id        bigint,
-  started_event     blob,
-  create_request_id uuid,
-  event_data_encoding   text, -- Protocol used for history serialization
+  version                   bigint,
+  initiated_id              bigint,
+  initiated_event_batch_id  bigint,
+  initiated_event           blob,
+  started_id                bigint,
+  started_workflow_id       text,
+  started_run_id            uuid,
+  started_event             blob, -- deprecated
+  create_request_id         uuid,
+  event_data_encoding       text, -- Protocol used for history serialization
+  domain_name               text,
+  workflow_type_name        text,
 );
 
 -- External workflow cancellation in progress mutable state
@@ -228,7 +239,9 @@ CREATE TYPE domain (
 
 CREATE TYPE domain_config (
   retention   int,
-  emit_metric boolean
+  emit_metric boolean,
+  archival_bucket text,
+  archival_status int
 );
 
 CREATE TYPE cluster_replication_config (
@@ -328,11 +341,13 @@ CREATE TABLE history_node (
     };
 
 CREATE TABLE history_tree (
-tree_id           uuid,
-branch_id         uuid,
-ancestors         list<frozen<branch_range>>,
-in_progress       boolean, -- For fork operation to prevent race condition to leak event data when forking branches
-PRIMARY KEY ((tree_id), branch_id )
+  tree_id           uuid,
+  branch_id         uuid,
+  ancestors         list<frozen<branch_range>>,
+  in_progress       boolean, -- For fork operation to prevent race condition to leak event data when forking branches
+  fork_time         timestamp, -- For fork operation to prevent race condition to leak event data when forking branches
+  info              text, -- For background cleanup when fork operation cannot finish self cleanup due to crash
+  PRIMARY KEY ((tree_id), branch_id )
 ) WITH COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
   };
