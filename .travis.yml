@@ -51,7 +51,7 @@ before_script:
 
 script:
   - if [ "$TEST_SUITE" == "unit" ]; then travis_wait 20 make cover_ci ; else echo 'skipping unit tests'; fi
-  - if [ "$TEST_SUITE" == "integration" ]; then travis_wait 30 make cover_integration_ci ; else echo 'skipping integration tests'; fi
+  - if [ "$TEST_SUITE" == "integration" ]; then travis_wait 20 make cover_integration_ci ; else echo 'skipping integration tests'; fi
   - if [ "$TEST_SUITE" == "xdc" ]; then travis_wait 20 make cover_xdc_ci ; else echo 'skipping xdc tests'; fi
 
 after_success:
