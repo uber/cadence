@@ -22,7 +22,6 @@ package sysworkflow
 
 import (
 	"errors"
-	"strconv"
 	"time"
 
 	"github.com/uber-common/bark"
@@ -134,8 +133,8 @@ func (i *historyBlobIterator) Next() (*HistoryBlob, error) {
 		DomainID:             &i.domainID,
 		WorkflowID:           &i.workflowID,
 		RunID:                &i.runID,
-		CurrentPageToken:     common.StringPtr(strconv.Itoa(i.blobPageToken)),
-		NextPageToken:        common.StringPtr(strconv.Itoa(common.LastBlobNextPageToken)),
+		CurrentPageToken:     common.IntPtr(i.blobPageToken),
+		NextPageToken:        common.IntPtr(common.LastBlobNextPageToken),
 		FirstFailoverVersion: firstEvent.Version,
 		LastFailoverVersion:  lastEvent.Version,
 		FirstEventID:         firstEvent.EventId,
@@ -147,7 +146,7 @@ func (i *historyBlobIterator) Next() (*HistoryBlob, error) {
 	}
 	if i.HasNext() {
 		i.blobPageToken++
-		header.NextPageToken = common.StringPtr(strconv.Itoa(i.blobPageToken))
+		header.NextPageToken = common.IntPtr(i.blobPageToken)
 	}
 	return &HistoryBlob{
 		Header: header,

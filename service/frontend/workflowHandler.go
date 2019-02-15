@@ -25,6 +25,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common/blobstore/blob"
+	"github.com/uber/cadence/service/worker/sysworkflow"
 	"sync"
 	"time"
 
@@ -87,6 +89,10 @@ type (
 		BranchToken       []byte
 		ReplicationInfo   map[string]*gen.ReplicationInfo
 	}
+
+	getHistoryContinuationTokenArchival struct {
+		BlobstorePageToken int
+	}
 )
 
 var (
@@ -111,6 +117,7 @@ var (
 	errWorkflowTypeNotSet                         = &gen.BadRequestError{Message: "WorkflowType is not set on request."}
 	errInvalidExecutionStartToCloseTimeoutSeconds = &gen.BadRequestError{Message: "A valid ExecutionStartToCloseTimeoutSeconds is not set on request."}
 	errInvalidTaskStartToCloseTimeoutSeconds      = &gen.BadRequestError{Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}
+	errDomainArchivalBucketNotSet                 = &gen.BadRequestError{Message: "Domain config does not have archival bucket set."}
 
 	// err for string too long
 	errDomainTooLong       = &gen.BadRequestError{Message: "Domain length exceeds limit."}
@@ -1860,6 +1867,68 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		getRequest.MaximumPageSize = common.Int32Ptr(common.GetHistoryMaxPageSize)
 	}
 
+	// TODO: this needs to be refactored
+	if getRequest.GetExecution().GetRunId() != "" {
+		if _, err := wh.history.GetMutableState(ctx, &h.GetMutableStateRequest{
+			DomainUUID:          common.StringPtr(domainID),
+			Execution:           getRequest.Execution,
+			ExpectedNextEventId: common.Int64Ptr(common.EndEventID),
+		}); err != nil {
+			// if request specifies runID and mutable state could not be fetched assume history is archived
+			entry, err := wh.domainCache.GetDomainByID(domainID)
+			if err != nil {
+				return nil, wh.error(err, scope)
+			}
+			archivalBucket := entry.GetConfig().ArchivalBucket
+			if archivalBucket == "" {
+				return nil, wh.error(errDomainArchivalBucketNotSet, scope)
+			}
+
+			var token *getHistoryContinuationTokenArchival
+			if getRequest.NextPageToken != nil {
+				token, err = deserializeHistoryTokenArchival(getRequest.NextPageToken)
+				if err != nil {
+					return nil, wh.error(errInvalidNextPageToken, scope)
+				}
+			} else {
+				token = &getHistoryContinuationTokenArchival{
+					BlobstorePageToken: common.FirstBlobPageToken,
+				}
+			}
+			key, err := sysworkflow.NewHistoryBlobKey(domainID, getRequest.Execution.GetWorkflowId(), getRequest.Execution.GetRunId(), token.BlobstorePageToken)
+			if err != nil {
+				return nil, wh.error(err, scope)
+			}
+			b, err := wh.blobstoreClient.Download(ctx, archivalBucket, key)
+			if err != nil {
+				return nil, wh.error(err, scope)
+			}
+			unwrappedBlob, wrappingLayers, err := blob.Unwrap(b)
+			if err != nil {
+				return nil, wh.error(err, scope)
+			}
+			var historyBlob *sysworkflow.HistoryBlob
+			switch *wrappingLayers.EncodingFormat {
+			case blob.JSONEncoding:
+				if err := json.Unmarshal(unwrappedBlob.Body, historyBlob); err != nil {
+					return nil, wh.error(err, scope)
+				}
+			}
+			if *historyBlob.Header.NextPageToken == common.LastBlobNextPageToken {
+				token = nil
+			} else {
+				token = &getHistoryContinuationTokenArchival{
+					BlobstorePageToken: *historyBlob.Header.NextPageToken,
+				}
+			}
+			nextToken, err := serializeHistoryTokenArchival(token)
+			if err != nil {
+				return nil, wh.error(err, scope)
+			}
+			return createGetWorkflowExecutionHistoryResponse(historyBlob.Body, nextToken), nil
+		}
+	}
+
 	// this function return the following 5 things,
 	// 1. the workflow run ID
 	// 2. the last first event ID (the event ID of the last batch of events in the history)
@@ -3061,6 +3130,21 @@ func deserializeHistoryToken(bytes []byte) (*getHistoryContinuationToken, error)
 }
 
 func serializeHistoryToken(token *getHistoryContinuationToken) ([]byte, error) {
+	if token == nil {
+		return nil, nil
+	}
+
+	bytes, err := json.Marshal(token)
+	return bytes, err
+}
+
+func deserializeHistoryTokenArchival(bytes []byte) (*getHistoryContinuationTokenArchival, error) {
+	token := &getHistoryContinuationTokenArchival{}
+	err := json.Unmarshal(bytes, token)
+	return token, err
+}
+
+func serializeHistoryTokenArchival(token *getHistoryContinuationTokenArchival) ([]byte, error) {
 	if token == nil {
 		return nil, nil
 	}
