@@ -21,13 +21,13 @@
 package main
 
 import (
-	"github.com/uber/cadence/common/archival"
 	"log"
 	"time"
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
@@ -36,6 +36,8 @@ import (
 	"github.com/uber/cadence/service/matching"
 	"github.com/uber/cadence/service/worker"
 
+	"github.com/uber/cadence/common/blobstore/filestore"
+	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/messaging"
 	"go.uber.org/zap"
 )
@@ -111,13 +113,15 @@ func (s *server) startService() common.Daemon {
 	params.DynamicConfig = dynamicconfig.NewNopClient()
 	dc := dynamicconfig.NewCollection(params.DynamicConfig, params.Logger)
 
-	params.ArchivalClient = archival.NewNopClient()
-
 	svcCfg := s.cfg.Services[s.name]
 	params.MetricScope = svcCfg.Metrics.NewScope()
 	params.RPCFactory = svcCfg.RPC.NewFactory(params.Name, params.Logger)
 	params.PProfInitializer = svcCfg.PProf.NewInitializer(params.Logger)
 	enableGlobalDomain := dc.GetBoolProperty(dynamicconfig.EnableGlobalDomain, s.cfg.ClustersInfo.EnableGlobalDomain)
+	enableArchival := dc.GetBoolProperty(dynamicconfig.EnableArchival, s.cfg.Archival.Enabled)
+
+	params.DCRedirectionPolicy = s.cfg.DCRedirectionPolicy
+
 	params.ClusterMetadata = cluster.NewMetadata(
 		enableGlobalDomain,
 		s.cfg.ClustersInfo.FailoverVersionIncrement,
@@ -125,17 +129,42 @@ func (s *server) startService() common.Daemon {
 		s.cfg.ClustersInfo.CurrentClusterName,
 		s.cfg.ClustersInfo.ClusterInitialFailoverVersions,
 		s.cfg.ClustersInfo.ClusterAddress,
+		enableArchival,
+		s.cfg.Archival.Filestore.DefaultBucket.Name,
 	)
 	params.DispatcherProvider = client.NewIPYarpcDispatcherProvider()
 	// TODO: We need to switch Cadence to use zap logger, until then just pass zap.NewNop
 
-	enableVisibilityToKafka := dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, dynamicconfig.DefaultEnableVisibilityToKafka)
+	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
+	params.ESConfig = &s.cfg.ElasticSearch
+	params.ESConfig.Enable = dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, params.ESConfig.Enable)() // force override with dynamic config
 	if params.ClusterMetadata.IsGlobalDomainEnabled() {
-		params.MessagingClient = messaging.NewKafkaClient(&s.cfg.Kafka, zap.NewNop(), params.Logger, params.MetricScope, true)
-	} else if enableVisibilityToKafka() {
-		params.MessagingClient = messaging.NewKafkaClient(&s.cfg.Kafka, zap.NewNop(), params.Logger, params.MetricScope, false)
+		params.MessagingClient = messaging.NewKafkaClient(&s.cfg.Kafka, params.MetricsClient, zap.NewNop(), params.Logger, params.MetricScope, true, params.ESConfig.Enable)
+	} else if params.ESConfig.Enable {
+		params.MessagingClient = messaging.NewKafkaClient(&s.cfg.Kafka, params.MetricsClient, zap.NewNop(), params.Logger, params.MetricScope, false, params.ESConfig.Enable)
 	} else {
 		params.MessagingClient = nil
+	}
+
+	// enable visibility to kafka and enable visibility to elastic search are using one config
+	if params.ESConfig.Enable {
+		esClient, err := elasticsearch.NewClient(&s.cfg.ElasticSearch)
+		if err != nil {
+			log.Fatalf("error creating elastic search client: %v", err)
+		}
+		params.ESClient = esClient
+
+		indexName, ok := params.ESConfig.Indices[common.VisibilityAppName]
+		if !ok || len(indexName) == 0 {
+			log.Fatalf("elastic search config missing visibility index")
+		}
+	}
+
+	if params.ClusterMetadata.IsArchivalEnabled() {
+		params.BlobstoreClient, err = filestore.NewClient(&s.cfg.Archival.Filestore, params.Logger)
+		if err != nil {
+			log.Fatalf("error creating blobstore: %v", err)
+		}
 	}
 
 	params.Logger.Info("Starting service " + s.name)

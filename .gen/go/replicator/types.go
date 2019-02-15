@@ -28,7 +28,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/shared"
 	"go.uber.org/multierr"
 	"go.uber.org/thriftrw/wire"
@@ -625,18 +624,19 @@ func (v *DomainTaskAttributes) GetFailoverVersion() (o int64) {
 }
 
 type HistoryTaskAttributes struct {
-	TargetClusters          []string                            `json:"targetClusters,omitempty"`
-	DomainId                *string                             `json:"domainId,omitempty"`
-	WorkflowId              *string                             `json:"workflowId,omitempty"`
-	RunId                   *string                             `json:"runId,omitempty"`
-	FirstEventId            *int64                              `json:"firstEventId,omitempty"`
-	NextEventId             *int64                              `json:"nextEventId,omitempty"`
-	Version                 *int64                              `json:"version,omitempty"`
-	ReplicationInfo         map[string]*history.ReplicationInfo `json:"replicationInfo,omitempty"`
-	History                 *shared.History                     `json:"history,omitempty"`
-	NewRunHistory           *shared.History                     `json:"newRunHistory,omitempty"`
-	EventStoreVersion       *int32                              `json:"eventStoreVersion,omitempty"`
-	NewRunEventStoreVersion *int32                              `json:"newRunEventStoreVersion,omitempty"`
+	TargetClusters          []string                           `json:"targetClusters,omitempty"`
+	DomainId                *string                            `json:"domainId,omitempty"`
+	WorkflowId              *string                            `json:"workflowId,omitempty"`
+	RunId                   *string                            `json:"runId,omitempty"`
+	FirstEventId            *int64                             `json:"firstEventId,omitempty"`
+	NextEventId             *int64                             `json:"nextEventId,omitempty"`
+	Version                 *int64                             `json:"version,omitempty"`
+	ReplicationInfo         map[string]*shared.ReplicationInfo `json:"replicationInfo,omitempty"`
+	History                 *shared.History                    `json:"history,omitempty"`
+	NewRunHistory           *shared.History                    `json:"newRunHistory,omitempty"`
+	EventStoreVersion       *int32                             `json:"eventStoreVersion,omitempty"`
+	NewRunEventStoreVersion *int32                             `json:"newRunEventStoreVersion,omitempty"`
+	ResetWorkflow           *bool                              `json:"resetWorkflow,omitempty"`
 }
 
 type _List_String_ValueList []string
@@ -665,7 +665,7 @@ func (_List_String_ValueList) ValueType() wire.Type {
 
 func (_List_String_ValueList) Close() {}
 
-type _Map_String_ReplicationInfo_MapItemList map[string]*history.ReplicationInfo
+type _Map_String_ReplicationInfo_MapItemList map[string]*shared.ReplicationInfo
 
 func (m _Map_String_ReplicationInfo_MapItemList) ForEach(f func(wire.MapItem) error) error {
 	for k, v := range m {
@@ -720,7 +720,7 @@ func (_Map_String_ReplicationInfo_MapItemList) Close() {}
 //   }
 func (v *HistoryTaskAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [12]wire.Field
+		fields [13]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -822,6 +822,14 @@ func (v *HistoryTaskAttributes) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 110, Value: w}
 		i++
 	}
+	if v.ResetWorkflow != nil {
+		w, err = wire.NewValueBool(*(v.ResetWorkflow)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 120, Value: w}
+		i++
+	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
@@ -844,13 +852,13 @@ func _List_String_Read(l wire.ValueList) ([]string, error) {
 	return o, err
 }
 
-func _ReplicationInfo_Read(w wire.Value) (*history.ReplicationInfo, error) {
-	var v history.ReplicationInfo
+func _ReplicationInfo_Read(w wire.Value) (*shared.ReplicationInfo, error) {
+	var v shared.ReplicationInfo
 	err := v.FromWire(w)
 	return &v, err
 }
 
-func _Map_String_ReplicationInfo_Read(m wire.MapItemList) (map[string]*history.ReplicationInfo, error) {
+func _Map_String_ReplicationInfo_Read(m wire.MapItemList) (map[string]*shared.ReplicationInfo, error) {
 	if m.KeyType() != wire.TBinary {
 		return nil, nil
 	}
@@ -859,7 +867,7 @@ func _Map_String_ReplicationInfo_Read(m wire.MapItemList) (map[string]*history.R
 		return nil, nil
 	}
 
-	o := make(map[string]*history.ReplicationInfo, m.Size())
+	o := make(map[string]*shared.ReplicationInfo, m.Size())
 	err := m.ForEach(func(x wire.MapItem) error {
 		k, err := x.Key.GetString(), error(nil)
 		if err != nil {
@@ -1018,6 +1026,16 @@ func (v *HistoryTaskAttributes) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 120:
+			if field.Value.Type() == wire.TBool {
+				var x bool
+				x, err = field.Value.GetBool(), error(nil)
+				v.ResetWorkflow = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -1031,7 +1049,7 @@ func (v *HistoryTaskAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [12]string
+	var fields [13]string
 	i := 0
 	if v.TargetClusters != nil {
 		fields[i] = fmt.Sprintf("TargetClusters: %v", v.TargetClusters)
@@ -1081,6 +1099,10 @@ func (v *HistoryTaskAttributes) String() string {
 		fields[i] = fmt.Sprintf("NewRunEventStoreVersion: %v", *(v.NewRunEventStoreVersion))
 		i++
 	}
+	if v.ResetWorkflow != nil {
+		fields[i] = fmt.Sprintf("ResetWorkflow: %v", *(v.ResetWorkflow))
+		i++
+	}
 
 	return fmt.Sprintf("HistoryTaskAttributes{%v}", strings.Join(fields[:i], ", "))
 }
@@ -1100,7 +1122,7 @@ func _List_String_Equals(lhs, rhs []string) bool {
 	return true
 }
 
-func _Map_String_ReplicationInfo_Equals(lhs, rhs map[string]*history.ReplicationInfo) bool {
+func _Map_String_ReplicationInfo_Equals(lhs, rhs map[string]*shared.ReplicationInfo) bool {
 	if len(lhs) != len(rhs) {
 		return false
 	}
@@ -1118,6 +1140,16 @@ func _Map_String_ReplicationInfo_Equals(lhs, rhs map[string]*history.Replication
 }
 
 func _I32_EqualsPtr(lhs, rhs *int32) bool {
+	if lhs != nil && rhs != nil {
+
+		x := *lhs
+		y := *rhs
+		return (x == y)
+	}
+	return lhs == nil && rhs == nil
+}
+
+func _Bool_EqualsPtr(lhs, rhs *bool) bool {
 	if lhs != nil && rhs != nil {
 
 		x := *lhs
@@ -1173,6 +1205,9 @@ func (v *HistoryTaskAttributes) Equals(rhs *HistoryTaskAttributes) bool {
 	if !_I32_EqualsPtr(v.NewRunEventStoreVersion, rhs.NewRunEventStoreVersion) {
 		return false
 	}
+	if !_Bool_EqualsPtr(v.ResetWorkflow, rhs.ResetWorkflow) {
+		return false
+	}
 
 	return true
 }
@@ -1188,7 +1223,7 @@ func (l _List_String_Zapper) MarshalLogArray(enc zapcore.ArrayEncoder) (err erro
 	return err
 }
 
-type _Map_String_ReplicationInfo_Zapper map[string]*history.ReplicationInfo
+type _Map_String_ReplicationInfo_Zapper map[string]*shared.ReplicationInfo
 
 // MarshalLogObject implements zapcore.ObjectMarshaler, enabling
 // fast logging of _Map_String_ReplicationInfo_Zapper.
@@ -1240,6 +1275,9 @@ func (v *HistoryTaskAttributes) MarshalLogObject(enc zapcore.ObjectEncoder) (err
 	}
 	if v.NewRunEventStoreVersion != nil {
 		enc.AddInt32("newRunEventStoreVersion", *v.NewRunEventStoreVersion)
+	}
+	if v.ResetWorkflow != nil {
+		enc.AddBool("resetWorkflow", *v.ResetWorkflow)
 	}
 	return err
 }
@@ -1316,7 +1354,7 @@ func (v *HistoryTaskAttributes) GetVersion() (o int64) {
 
 // GetReplicationInfo returns the value of ReplicationInfo if it is set or its
 // zero value if it is unset.
-func (v *HistoryTaskAttributes) GetReplicationInfo() (o map[string]*history.ReplicationInfo) {
+func (v *HistoryTaskAttributes) GetReplicationInfo() (o map[string]*shared.ReplicationInfo) {
 	if v.ReplicationInfo != nil {
 		return v.ReplicationInfo
 	}
@@ -1359,6 +1397,16 @@ func (v *HistoryTaskAttributes) GetEventStoreVersion() (o int32) {
 func (v *HistoryTaskAttributes) GetNewRunEventStoreVersion() (o int32) {
 	if v.NewRunEventStoreVersion != nil {
 		return *v.NewRunEventStoreVersion
+	}
+
+	return
+}
+
+// GetResetWorkflow returns the value of ResetWorkflow if it is set or its
+// zero value if it is unset.
+func (v *HistoryTaskAttributes) GetResetWorkflow() (o bool) {
+	if v.ResetWorkflow != nil {
+		return *v.ResetWorkflow
 	}
 
 	return

@@ -52,7 +52,9 @@ type (
 
 		mockMetadataMgr     *mocks.MetadataManager
 		mockVisibilityMgr   *mocks.VisibilityManager
+		mockMatchingClient  *mocks.MatchingClient
 		mockClusterMetadata *mocks.ClusterMetadata
+		mockEventsCache     *MockEventsCache
 	}
 )
 
@@ -80,6 +82,7 @@ func (s *timerQueueProcessorSuite) SetupTest() {
 	s.ShardContext.config.TransferProcessorUpdateAckInterval = dynamicconfig.GetDurationPropertyFn(100 * time.Millisecond)
 	s.ShardContext.config.TimerProcessorUpdateAckInterval = dynamicconfig.GetDurationPropertyFn(100 * time.Millisecond)
 
+	s.mockMatchingClient = &mocks.MatchingClient{}
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 
@@ -101,6 +104,7 @@ func (s *timerQueueProcessorSuite) SetupTest() {
 	s.engineImpl.txProcessor = newTransferQueueProcessor(
 		s.ShardContext, s.engineImpl, s.mockVisibilityMgr, &mocks.KafkaProducer{}, &mocks.MatchingClient{}, &mocks.HistoryClient{}, s.logger,
 	)
+	s.engineImpl.timerProcessor = newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.mockMatchingClient, &mocks.KafkaProducer{}, s.logger)
 }
 
 func (s *timerQueueProcessorSuite) TearDownTest() {
@@ -140,7 +144,8 @@ func (s *timerQueueProcessorSuite) createExecutionWithTimers(domainID string, we
 	identity string, timeOuts []int32) (*persistence.WorkflowMutableState, []persistence.Task) {
 
 	// Generate first decision task event.
-	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(), s.logger)
+	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(),
+		s.ShardContext.GetEventsCache(), s.logger)
 	addWorkflowExecutionStartedEvent(builder, we, "wType", tl, []byte("input"), 100, 200, identity)
 	di := addDecisionTaskScheduledEvent(builder)
 
@@ -154,7 +159,8 @@ func (s *timerQueueProcessorSuite) createExecutionWithTimers(domainID string, we
 	state0, err2 := s.GetWorkflowExecutionInfo(domainID, we)
 	s.NoError(err2, "No error expected.")
 
-	builder = newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(), s.logger)
+	builder = newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(),
+		s.ShardContext.GetEventsCache(), s.logger)
 	builder.Load(state0)
 	startedEvent := addDecisionTaskStartedEvent(builder, di.ScheduleID, tl, identity)
 	addDecisionTaskCompletedEvent(builder, di.ScheduleID, *startedEvent.EventId, nil, identity)
@@ -192,7 +198,8 @@ func (s *timerQueueProcessorSuite) addDecisionTimer(domainID string, we workflow
 	s.NoError(err)
 
 	condition := state.ExecutionInfo.NextEventID
-	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(), s.logger)
+	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(),
+		s.ShardContext.GetEventsCache(), s.logger)
 	builder.Load(state)
 
 	di := addDecisionTaskScheduledEvent(builder)
@@ -213,7 +220,8 @@ func (s *timerQueueProcessorSuite) addDecisionTimer(domainID string, we workflow
 func (s *timerQueueProcessorSuite) addUserTimer(domainID string, we workflow.WorkflowExecution, timerID string, tb *timerBuilder) []persistence.Task {
 	state, err := s.GetWorkflowExecutionInfo(domainID, we)
 	s.NoError(err)
-	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(), s.logger)
+	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(),
+		s.ShardContext.GetEventsCache(), s.logger)
 	builder.Load(state)
 	condition := state.ExecutionInfo.NextEventID
 
@@ -233,7 +241,8 @@ func (s *timerQueueProcessorSuite) addHeartBeatTimer(domainID string,
 	we workflow.WorkflowExecution, tb *timerBuilder) (*workflow.HistoryEvent, []persistence.Task) {
 	state, err := s.GetWorkflowExecutionInfo(domainID, we)
 	s.NoError(err)
-	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(), s.logger)
+	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(),
+		s.ShardContext.GetEventsCache(), s.logger)
 	builder.Load(state)
 	condition := state.ExecutionInfo.NextEventID
 
@@ -280,7 +289,7 @@ func (s *timerQueueProcessorSuite) TestSingleTimerTask() {
 	s.NotEmpty(timerInfo, "Expected non empty timers list")
 	s.Equal(1, len(timerInfo))
 
-	processor := newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.matchingClient, s.logger).(*timerQueueProcessorImpl)
+	processor := s.engineImpl.timerProcessor.(*timerQueueProcessorImpl)
 	processor.Start()
 	processor.NotifyNewTimers(cluster.TestCurrentClusterName, s.ShardContext.GetCurrentTime(cluster.TestCurrentClusterName), tt)
 
@@ -303,7 +312,7 @@ func (s *timerQueueProcessorSuite) TestManyTimerTasks() {
 	s.NotEmpty(timerInfo, "Expected non empty timers list")
 	s.Equal(1, len(timerInfo))
 
-	processor := newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.matchingClient, s.logger).(*timerQueueProcessorImpl)
+	processor := s.engineImpl.timerProcessor.(*timerQueueProcessorImpl)
 	processor.Start()
 	processor.NotifyNewTimers(cluster.TestCurrentClusterName, s.ShardContext.GetCurrentTime(cluster.TestCurrentClusterName), tt)
 
@@ -326,7 +335,7 @@ func (s *timerQueueProcessorSuite) TestTimerTaskAfterProcessorStart() {
 	s.NoError(err, "No error expected.")
 	s.Empty(timerInfo, "Expected empty timers list")
 
-	processor := newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.matchingClient, s.logger).(*timerQueueProcessorImpl)
+	processor := s.engineImpl.timerProcessor.(*timerQueueProcessorImpl)
 	processor.Start()
 
 	tBuilder := newTimerBuilder(s.ShardContext.GetConfig(), s.logger, common.NewRealTimeSource())
@@ -353,7 +362,8 @@ func (s *timerQueueProcessorSuite) checkTimedOutEventFor(domainID string, we wor
 	scheduleID int64) bool {
 	info, err1 := s.GetWorkflowExecutionInfo(domainID, we)
 	s.NoError(err1)
-	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(), s.logger)
+	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(),
+		s.ShardContext.GetEventsCache(), s.logger)
 	builder.Load(info)
 	_, isRunning := builder.GetActivityInfo(scheduleID)
 
@@ -364,7 +374,8 @@ func (s *timerQueueProcessorSuite) checkTimedOutEventForUserTimer(domainID strin
 	timerID string) bool {
 	info, err1 := s.GetWorkflowExecutionInfo(domainID, we)
 	s.NoError(err1)
-	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(), s.logger)
+	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(),
+		s.ShardContext.GetEventsCache(), s.logger)
 	builder.Load(info)
 
 	isRunning, _ := builder.GetUserTimer(timerID)
@@ -401,12 +412,13 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToStart_WithOutS
 	s.createExecutionWithTimers(domainID, workflowExecution, taskList, "identity", []int32{})
 
 	// TimeoutTypeScheduleToStart - Without Start
-	processor := newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.matchingClient, s.logger).(*timerQueueProcessorImpl)
+	processor := s.engineImpl.timerProcessor.(*timerQueueProcessorImpl)
 	processor.Start()
 
 	state, err := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.NoError(err)
-	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(), s.logger)
+	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(),
+		s.ShardContext.GetEventsCache(), s.logger)
 	builder.Load(state)
 	condition := state.ExecutionInfo.NextEventID
 
@@ -444,12 +456,13 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToStart_WithStar
 	s.createExecutionWithTimers(domainID, workflowExecution, taskList, "identity", []int32{})
 
 	// TimeoutTypeScheduleToStart - With Start
-	p := newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.matchingClient, s.logger).(*timerQueueProcessorImpl)
+	p := s.engineImpl.timerProcessor.(*timerQueueProcessorImpl)
 	p.Start()
 
 	state, err := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.NoError(err)
-	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(), s.logger)
+	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(),
+		s.ShardContext.GetEventsCache(), s.logger)
 	builder.Load(state)
 	condition := state.ExecutionInfo.NextEventID
 
@@ -489,12 +502,13 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToStart_MoreThan
 	s.createExecutionWithTimers(domainID, workflowExecution, taskList, "identity", []int32{})
 
 	// TimeoutTypeScheduleToStart - Without Start
-	processor := newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.matchingClient, s.logger).(*timerQueueProcessorImpl)
+	processor := s.engineImpl.timerProcessor.(*timerQueueProcessorImpl)
 	processor.Start()
 
 	state, err := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.NoError(err)
-	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(), s.logger)
+	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(),
+		s.ShardContext.GetEventsCache(), s.logger)
 	builder.Load(state)
 	condition := state.ExecutionInfo.NextEventID
 
@@ -534,12 +548,13 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTaskStartToClose_WithStart()
 	s.createExecutionWithTimers(domainID, workflowExecution, taskList, "identity", []int32{})
 
 	// TimeoutTypeStartToClose - Just start.
-	p := newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.matchingClient, s.logger).(*timerQueueProcessorImpl)
+	p := s.engineImpl.timerProcessor.(*timerQueueProcessorImpl)
 	p.Start()
 
 	state, err := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.NoError(err)
-	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(), s.logger)
+	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(),
+		s.ShardContext.GetEventsCache(), s.logger)
 	builder.Load(state)
 	condition := state.ExecutionInfo.NextEventID
 
@@ -577,12 +592,13 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTaskStartToClose_CompletedAc
 	s.createExecutionWithTimers(domainID, workflowExecution, taskList, "identity", []int32{})
 
 	// TimeoutTypeStartToClose - Start and Completed activity.
-	p := newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.matchingClient, s.logger).(*timerQueueProcessorImpl)
+	p := s.engineImpl.timerProcessor.(*timerQueueProcessorImpl)
 	p.Start()
 
 	state, err := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.NoError(err)
-	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(), s.logger)
+	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(),
+		s.ShardContext.GetEventsCache(), s.logger)
 	builder.Load(state)
 	condition := state.ExecutionInfo.NextEventID
 
@@ -625,12 +641,13 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToClose_JustSche
 	s.createExecutionWithTimers(domainID, workflowExecution, taskList, "identity", []int32{})
 
 	// TimeoutTypeScheduleToClose - Just Scheduled.
-	p := newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.matchingClient, s.logger).(*timerQueueProcessorImpl)
+	p := s.engineImpl.timerProcessor.(*timerQueueProcessorImpl)
 	p.Start()
 
 	state, err := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.NoError(err)
-	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(), s.logger)
+	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(),
+		s.ShardContext.GetEventsCache(), s.logger)
 	builder.Load(state)
 	condition := state.ExecutionInfo.NextEventID
 
@@ -668,12 +685,13 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToClose_Started(
 	s.createExecutionWithTimers(domainID, workflowExecution, taskList, "identity", []int32{})
 
 	// TimeoutTypeScheduleToClose - Scheduled and started.
-	p := newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.matchingClient, s.logger).(*timerQueueProcessorImpl)
+	p := s.engineImpl.timerProcessor.(*timerQueueProcessorImpl)
 	p.Start()
 
 	state, err := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.NoError(err)
-	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(), s.logger)
+	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(),
+		s.ShardContext.GetEventsCache(), s.logger)
 	builder.Load(state)
 	condition := state.ExecutionInfo.NextEventID
 
@@ -713,12 +731,13 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToClose_Complete
 	s.createExecutionWithTimers(domainID, workflowExecution, taskList, "identity", []int32{})
 
 	// TimeoutTypeScheduleToClose - Scheduled, started, completed.
-	p := newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.matchingClient, s.logger).(*timerQueueProcessorImpl)
+	p := s.engineImpl.timerProcessor.(*timerQueueProcessorImpl)
 	p.Start()
 
 	state, err := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.NoError(err)
-	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(), s.logger)
+	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(),
+		s.ShardContext.GetEventsCache(), s.logger)
 	builder.Load(state)
 	condition := state.ExecutionInfo.NextEventID
 
@@ -763,7 +782,7 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTaskHeartBeat_JustStarted() 
 	s.createExecutionWithTimers(domainID, workflowExecution, taskList, "identity", []int32{})
 
 	// TimeoutTypeHeartbeat - Scheduled, started.
-	p := newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.matchingClient, s.logger).(*timerQueueProcessorImpl)
+	p := s.engineImpl.timerProcessor.(*timerQueueProcessorImpl)
 	p.Start()
 
 	tBuilder := newTimerBuilder(s.ShardContext.GetConfig(), s.logger, &mockTimeSource{currTime: time.Now()})
@@ -788,12 +807,13 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTask_SameExpiry() {
 	s.createExecutionWithTimers(domainID, workflowExecution, taskList, "identity", []int32{})
 
 	// TimeoutTypeScheduleToClose - Scheduled, started, completed.
-	p := newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.matchingClient, s.logger).(*timerQueueProcessorImpl)
+	p := s.engineImpl.timerProcessor.(*timerQueueProcessorImpl)
 	p.Start()
 
 	state, err := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.NoError(err)
-	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(), s.logger)
+	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(),
+		s.ShardContext.GetEventsCache(), s.logger)
 	builder.Load(state)
 	condition := state.ExecutionInfo.NextEventID
 
@@ -838,7 +858,8 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTask_SameExpiry() {
 	// assert activity infos are deleted
 	state, err = s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.NoError(err)
-	builder = newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(), s.logger)
+	builder = newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(),
+		s.ShardContext.GetEventsCache(), s.logger)
 	builder.Load(state)
 	s.Equal(0, len(builder.pendingActivityInfoIDs))
 }
@@ -852,7 +873,7 @@ func (s *timerQueueProcessorSuite) TestTimerUserTimers() {
 	s.createExecutionWithTimers(domainID, workflowExecution, taskList, "identity", []int32{})
 
 	// Single timer.
-	p := newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.matchingClient, s.logger).(*timerQueueProcessorImpl)
+	p := s.engineImpl.timerProcessor.(*timerQueueProcessorImpl)
 	p.Start()
 
 	tBuilder := newTimerBuilder(s.ShardContext.GetConfig(), s.logger, &mockTimeSource{currTime: time.Now()})
@@ -875,12 +896,13 @@ func (s *timerQueueProcessorSuite) TestTimerUserTimers_SameExpiry() {
 	s.createExecutionWithTimers(domainID, workflowExecution, taskList, "identity", []int32{})
 
 	// Two timers.
-	p := newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.matchingClient, s.logger).(*timerQueueProcessorImpl)
+	p := s.engineImpl.timerProcessor.(*timerQueueProcessorImpl)
 	p.Start()
 
 	state, err := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.NoError(err)
-	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(), s.logger)
+	builder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(),
+		s.ShardContext.GetEventsCache(), s.logger)
 	builder.Load(state)
 	condition := state.ExecutionInfo.NextEventID
 
@@ -913,7 +935,8 @@ func (s *timerQueueProcessorSuite) TestTimerUserTimers_SameExpiry() {
 	// assert user timer infos are deleted
 	state, err = s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.NoError(err)
-	builder = newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(), s.logger)
+	builder = newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.ShardContext.GetConfig(),
+		s.ShardContext.GetEventsCache(), s.logger)
 	builder.Load(state)
 	s.Equal(0, len(builder.pendingTimerInfoIDs))
 }
@@ -926,7 +949,7 @@ func (s *timerQueueProcessorSuite) TestTimersOnClosedWorkflow() {
 	taskList := "closed-workflow-queue"
 	s.createExecutionWithTimers(domainID, workflowExecution, taskList, "identity", []int32{})
 
-	p := newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.matchingClient, s.logger).(*timerQueueProcessorImpl)
+	p := s.engineImpl.timerProcessor.(*timerQueueProcessorImpl)
 	p.Start()
 
 	tBuilder := newTimerBuilder(s.ShardContext.GetConfig(), s.logger, &mockTimeSource{currTime: time.Now()})

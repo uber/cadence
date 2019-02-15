@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -53,7 +54,7 @@ type (
 )
 
 func newTimerQueueActiveProcessor(shard ShardContext, historyService *historyEngineImpl, matchingClient matching.Client,
-	taskAllocator taskAllocator, logger bark.Logger) *timerQueueActiveProcessorImpl {
+	taskAllocator taskAllocator, visibilityProducer messaging.Producer, logger bark.Logger) *timerQueueActiveProcessorImpl {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 	timeNow := func() time.Time {
 		return shard.GetCurrentTime(currentClusterName)
@@ -98,6 +99,7 @@ func newTimerQueueActiveProcessor(shard ShardContext, historyService *historyEng
 			timerGate,
 			shard.GetConfig().TimerProcessorMaxPollRPS,
 			shard.GetConfig().TimerProcessorStartDelay,
+			visibilityProducer,
 			logger,
 		),
 		timerQueueAckMgr: timerQueueAckMgr,
@@ -107,8 +109,10 @@ func newTimerQueueActiveProcessor(shard ShardContext, historyService *historyEng
 	return processor
 }
 
-func newTimerQueueFailoverProcessor(shard ShardContext, historyService *historyEngineImpl, domainIDs map[string]struct{}, standbyClusterName string,
-	minLevel time.Time, maxLevel time.Time, matchingClient matching.Client, taskAllocator taskAllocator, logger bark.Logger) (func(ackLevel TimerSequenceID) error, *timerQueueActiveProcessorImpl) {
+func newTimerQueueFailoverProcessor(shard ShardContext, historyService *historyEngineImpl, domainIDs map[string]struct{},
+	standbyClusterName string, minLevel time.Time, maxLevel time.Time, matchingClient matching.Client,
+	taskAllocator taskAllocator, visibilityProducer messaging.Producer,
+	logger bark.Logger) (func(ackLevel TimerSequenceID) error, *timerQueueActiveProcessorImpl) {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 	timeNow := func() time.Time {
 		// should use current cluster's time when doing domain failover
@@ -135,7 +139,7 @@ func newTimerQueueFailoverProcessor(shard ShardContext, historyService *historyE
 
 	logger = logger.WithFields(bark.Fields{
 		logging.TagWorkflowCluster: currentClusterName,
-		logging.TagDomainID:        domainIDs,
+		logging.TagDomainIDs:       domainIDs,
 		logging.TagFailover:        "from: " + standbyClusterName,
 	})
 	timerTaskFilter := func(timer *persistence.TimerTaskInfo) (bool, error) {
@@ -172,6 +176,7 @@ func newTimerQueueFailoverProcessor(shard ShardContext, historyService *historyE
 			timerGate,
 			shard.GetConfig().TimerProcessorFailoverMaxPollRPS,
 			shard.GetConfig().TimerProcessorFailoverStartDelay,
+			visibilityProducer,
 			logger,
 		),
 		timerQueueAckMgr: timerQueueAckMgr,
@@ -192,44 +197,67 @@ func (t *timerQueueActiveProcessorImpl) getTimerFiredCount() uint64 {
 	return t.timerQueueProcessorBase.getTimerFiredCount()
 }
 
+func (t *timerQueueActiveProcessorImpl) getTaskFilter() timerTaskFilter {
+	return t.timerTaskFilter
+}
+
 // NotifyNewTimers - Notify the processor about the new active timer events arrival.
 // This should be called each time new timer events arrives, otherwise timers maybe fired unexpected.
 func (t *timerQueueActiveProcessorImpl) notifyNewTimers(timerTasks []persistence.Task) {
 	t.timerQueueProcessorBase.notifyNewTimers(timerTasks)
 }
 
-func (t *timerQueueActiveProcessorImpl) process(timerTask *persistence.TimerTaskInfo) (int, error) {
-	ok, err := t.timerTaskFilter(timerTask)
-	if err != nil {
-		return metrics.TimerActiveQueueProcessorScope, err
-	} else if !ok {
-		t.timerQueueAckMgr.completeTimerTask(timerTask)
-		t.logger.Debugf("Discarding timer: (%v, %v), for WorkflowID: %v, RunID: %v, Type: %v, EventID: %v, Error: %v",
-			timerTask.TaskID, timerTask.VisibilityTimestamp, timerTask.WorkflowID, timerTask.RunID, timerTask.TaskType, timerTask.EventID, err)
-		return metrics.TimerActiveQueueProcessorScope, nil
-	}
+func (t *timerQueueActiveProcessorImpl) process(timerTask *persistence.TimerTaskInfo, shouldProcessTask bool) (int, error) {
 
+	var err error
 	switch timerTask.TaskType {
 	case persistence.TaskTypeUserTimer:
-		return metrics.TimerActiveTaskUserTimerScope, t.processExpiredUserTimer(timerTask)
+		if shouldProcessTask {
+			err = t.processExpiredUserTimer(timerTask)
+		}
+		return metrics.TimerActiveTaskUserTimerScope, err
 
 	case persistence.TaskTypeActivityTimeout:
-		return metrics.TimerActiveTaskActivityTimeoutScope, t.processActivityTimeout(timerTask)
+		if shouldProcessTask {
+			err = t.processActivityTimeout(timerTask)
+		}
+		return metrics.TimerActiveTaskActivityTimeoutScope, err
 
 	case persistence.TaskTypeDecisionTimeout:
-		return metrics.TimerActiveTaskDecisionTimeoutScope, t.processDecisionTimeout(timerTask)
+		if shouldProcessTask {
+			err = t.processDecisionTimeout(timerTask)
+		}
+		return metrics.TimerActiveTaskDecisionTimeoutScope, err
 
 	case persistence.TaskTypeWorkflowTimeout:
-		return metrics.TimerActiveTaskWorkflowTimeoutScope, t.processWorkflowTimeout(timerTask)
+		if shouldProcessTask {
+			err = t.processWorkflowTimeout(timerTask)
+		}
+		return metrics.TimerActiveTaskWorkflowTimeoutScope, err
 
 	case persistence.TaskTypeActivityRetryTimer:
-		return metrics.TimerActiveTaskActivityRetryTimerScope, t.processActivityRetryTimer(timerTask)
+		if shouldProcessTask {
+			err = t.processActivityRetryTimer(timerTask)
+		}
+		return metrics.TimerActiveTaskActivityRetryTimerScope, err
 
-	case persistence.TaskTypeWorkflowRetryTimer:
-		return metrics.TimerActiveTaskWorkflowRetryTimerScope, t.processWorkflowRetryTimer(timerTask)
+	case persistence.TaskTypeWorkflowBackoffTimer:
+		if shouldProcessTask {
+			err = t.processWorkflowBackoffTimer(timerTask)
+		}
+		return metrics.TimerActiveTaskWorkflowBackoffTimerScope, err
 
 	case persistence.TaskTypeDeleteHistoryEvent:
-		return metrics.TimerActiveTaskDeleteHistoryEventScope, t.timerQueueProcessorBase.processDeleteHistoryEvent(timerTask)
+		if shouldProcessTask {
+			err = t.timerQueueProcessorBase.processDeleteHistoryEvent(timerTask)
+		}
+		return metrics.TimerActiveTaskDeleteHistoryEventScope, err
+
+	case persistence.TaskTypeArchiveHistoryEvent:
+		if shouldProcessTask {
+			err = t.timerQueueProcessorBase.processArchiveHistoryEvent(timerTask)
+		}
+		return metrics.TimerActiveTaskArchiveHistoryEventScope, err
 
 	default:
 		return metrics.TimerActiveQueueProcessorScope, errUnknownTimerTask
@@ -281,7 +309,6 @@ Update_History_Loop:
 					// Update the task ID tracking the corresponding timer task.
 					ti.TaskID = TimerTaskStatusCreated
 					msBuilder.UpdateUserTimer(ti.TimerID, ti)
-					defer t.notifyNewTimers(timerTasks)
 				}
 
 				// Done!
@@ -457,7 +484,6 @@ Update_History_Loop:
 				return err
 			}
 
-			t.notifyNewTimers(timerTasks)
 			return nil
 		}
 
@@ -539,13 +565,19 @@ Update_History_Loop:
 	return ErrMaxAttemptsExceeded
 }
 
-func (t *timerQueueActiveProcessorImpl) processWorkflowRetryTimer(task *persistence.TimerTaskInfo) (retError error) {
+func (t *timerQueueActiveProcessorImpl) processWorkflowBackoffTimer(task *persistence.TimerTaskInfo) (retError error) {
 
 	context, release, err0 := t.cache.getOrCreateWorkflowExecution(t.timerQueueProcessorBase.getDomainIDAndWorkflowExecution(task))
 	if err0 != nil {
 		return err0
 	}
 	defer func() { release(retError) }()
+
+	if task.TimeoutType == persistence.WorkflowBackoffTimeoutTypeRetry {
+		t.metricsClient.IncCounter(metrics.TimerActiveTaskWorkflowBackoffTimerScope, metrics.WorkflowRetryBackoffTimerCount)
+	} else {
+		t.metricsClient.IncCounter(metrics.TimerActiveTaskWorkflowBackoffTimerScope, metrics.WorkflowCronBackoffTimerCount)
+	}
 
 Update_History_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
@@ -556,7 +588,8 @@ Update_History_Loop:
 			return nil
 		}
 
-		if msBuilder.HasPendingDecisionTask() {
+		if msBuilder.GetPreviousStartedEventID() != common.EmptyEventID ||
+			msBuilder.HasPendingDecisionTask() {
 			// already has decision task
 			return nil
 		}
@@ -616,7 +649,10 @@ func (t *timerQueueActiveProcessorImpl) processActivityRetryTimer(task *persiste
 
 		domainID := task.DomainID
 		targetDomainID := domainID
-		scheduledEvent, _ := msBuilder.GetActivityScheduledEvent(scheduledID)
+		scheduledEvent, ok := msBuilder.GetActivityScheduledEvent(scheduledID)
+		if !ok {
+			return &workflow.InternalServiceError{Message: "Unable to get activity schedule event."}
+		}
 		if scheduledEvent.ActivityTaskScheduledEventAttributes.Domain != nil {
 			domainEntry, err := t.shard.GetDomainCache().GetDomain(scheduledEvent.ActivityTaskScheduledEventAttributes.GetDomain())
 			if err != nil {
@@ -687,8 +723,14 @@ Update_History_Loop:
 		}
 
 		timeoutReason := getTimeoutErrorReason(workflow.TimeoutTypeStartToClose)
-		retryBackoffInterval := msBuilder.GetRetryBackoffDuration(timeoutReason)
-		if retryBackoffInterval == common.NoRetryBackoff {
+		backoffInterval := msBuilder.GetRetryBackoffDuration(timeoutReason)
+		continueAsNewInitiator := workflow.ContinueAsNewInitiatorRetryPolicy
+		if backoffInterval == common.NoRetryBackoff {
+			// check if a cron backoff is needed
+			backoffInterval = msBuilder.GetCronBackoffDuration()
+			continueAsNewInitiator = workflow.ContinueAsNewInitiatorCronSchedule
+		}
+		if backoffInterval == common.NoRetryBackoff {
 			if e := msBuilder.AddTimeoutWorkflowEvent(); e == nil {
 				// If we failed to add the event that means the workflow is already completed.
 				// we drop this timeout event.
@@ -706,7 +748,7 @@ Update_History_Loop:
 			return err
 		}
 
-		// workflow timeout, but a retry is needed, so we do continue as new to retry
+		// workflow timeout, but a retry or cron is needed, so we do continue as new to retry or cron
 		startEvent, err := getWorkflowStartedEvent(t.historyService.historyMgr, t.historyService.historyV2Mgr, msBuilder.GetEventStoreVersion(), msBuilder.GetCurrentBranch(), t.logger, domainID, workflowExecution.GetWorkflowId(), workflowExecution.GetRunId())
 		if err != nil {
 			return err
@@ -720,9 +762,10 @@ Update_History_Loop:
 			Input:                               startAttributes.Input,
 			ExecutionStartToCloseTimeoutSeconds: startAttributes.ExecutionStartToCloseTimeoutSeconds,
 			TaskStartToCloseTimeoutSeconds:      startAttributes.TaskStartToCloseTimeoutSeconds,
-			BackoffStartIntervalInSeconds:       common.Int32Ptr(int32(retryBackoffInterval.Seconds())),
-			Initiator:                           workflow.ContinueAsNewInitiatorRetryPolicy.Ptr(),
+			BackoffStartIntervalInSeconds:       common.Int32Ptr(int32(backoffInterval.Seconds())),
+			Initiator:                           continueAsNewInitiator.Ptr(),
 			FailureReason:                       common.StringPtr(timeoutReason),
+			CronSchedule:                        common.StringPtr(msBuilder.GetExecutionInfo().CronSchedule),
 		}
 		domainEntry, err := getActiveDomainEntryFromShard(t.shard, &domainID)
 		if err != nil {
@@ -737,9 +780,14 @@ Update_History_Loop:
 			return err
 		}
 
-		tBuilder := t.historyService.getTimerBuilder(context.getExecution())
+		executionInfo := context.getExecution()
+		tBuilder := t.historyService.getTimerBuilder(executionInfo)
 		var transferTasks, timerTasks []persistence.Task
-		tranT, timerT, err := getDeleteWorkflowTasksFromShard(t.shard, domainID, workflowExecution.GetWorkflowId(), tBuilder)
+		tranT, timerT, err := getWorkflowHistoryCleanupTasksFromShard(
+			t.shard,
+			domainID,
+			executionInfo.GetWorkflowId(),
+			tBuilder)
 		if err != nil {
 			return err
 		}
@@ -754,12 +802,13 @@ Update_History_Loop:
 
 		timersToNotify := append(timerTasks, msBuilder.GetContinueAsNew().TimerTasks...)
 		err = context.continueAsNewWorkflowExecution(nil, continueAsNewBuilder, transferTasks, timerTasks, transactionID)
-		t.notifyNewTimers(timersToNotify)
 
 		if err != nil {
 			if err == ErrConflict {
 				continue Update_History_Loop
 			}
+		} else {
+			t.historyService.timerProcessor.NotifyNewTimers(t.currentClusterName, t.shard.GetCurrentTime(t.currentClusterName), timersToNotify)
 		}
 		return err
 	}
@@ -787,9 +836,12 @@ func (t *timerQueueActiveProcessorImpl) updateWorkflowExecution(
 
 	if createDeletionTask {
 		tBuilder := t.historyService.getTimerBuilder(context.getExecution())
-		tranT, timerT, err := t.historyService.getDeleteWorkflowTasks(executionInfo.DomainID, executionInfo.WorkflowID, tBuilder)
+		tranT, timerT, err := t.historyService.getWorkflowHistoryCleanupTasks(
+			executionInfo.DomainID,
+			executionInfo.WorkflowID,
+			tBuilder)
 		if err != nil {
-			return nil
+			return err
 		}
 		transferTasks = append(transferTasks, tranT)
 		timerTasks = append(timerTasks, timerT)
@@ -811,6 +863,6 @@ func (t *timerQueueActiveProcessorImpl) updateWorkflowExecution(
 		return err
 	}
 
-	t.notifyNewTimers(timerTasks)
-	return err
+	t.historyService.timerProcessor.NotifyNewTimers(t.currentClusterName, t.shard.GetCurrentTime(t.currentClusterName), timerTasks)
+	return nil
 }

@@ -27,6 +27,7 @@ import (
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
@@ -53,6 +54,8 @@ type (
 		mockMessagingClient messaging.Client
 		mockProcessor       *MockTimerProcessor
 		mockQueueAckMgr     *MockTimerQueueAckMgr
+		mockClientBean      *client.MockClientBean
+		mockProducer        messaging.Producer
 
 		scope            int
 		notificationChan chan struct{}
@@ -75,10 +78,7 @@ func (s *timerQueueProcessorBaseSuite) SetupSuite() {
 }
 
 func (s *timerQueueProcessorBaseSuite) TearDownSuite() {
-	s.mockMetadataMgr.AssertExpectations(s.T())
-	s.mockClusterMetadata.AssertExpectations(s.T())
-	s.mockProcessor.AssertExpectations(s.T())
-	s.mockQueueAckMgr.AssertExpectations(s.T())
+
 }
 
 func (s *timerQueueProcessorBaseSuite) SetupTest() {
@@ -92,7 +92,8 @@ func (s *timerQueueProcessorBaseSuite) SetupTest() {
 	s.mockQueueAckMgr = &MockTimerQueueAckMgr{}
 	s.mockMetadataMgr = &mocks.MetadataManager{}
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
-	s.mockService = service.NewTestService(s.mockClusterMetadata, nil, metricsClient, s.logger)
+	s.mockClientBean = &client.MockClientBean{}
+	s.mockService = service.NewTestService(s.mockClusterMetadata, nil, metricsClient, s.mockClientBean, s.logger)
 	s.mockShard = &shardContextImpl{
 		service:                   s.mockService,
 		shardInfo:                 &persistence.ShardInfo{ShardID: shardID, RangeID: 1, TransferAckLevel: 0},
@@ -105,6 +106,7 @@ func (s *timerQueueProcessorBaseSuite) SetupTest() {
 		metricsClient:             metricsClient,
 		standbyClusterCurrentTime: make(map[string]time.Time),
 	}
+	s.mockProducer = &mocks.KafkaProducer{}
 
 	s.scope = 0
 	s.notificationChan = make(chan struct{})
@@ -121,12 +123,17 @@ func (s *timerQueueProcessorBaseSuite) SetupTest() {
 		NewLocalTimerGate(),
 		dynamicconfig.GetIntPropertyFn(10),
 		dynamicconfig.GetDurationPropertyFn(0*time.Second),
+		s.mockProducer,
 		s.logger,
 	)
 	s.timerQueueProcessor.timerProcessor = s.mockProcessor
 }
 
 func (s *timerQueueProcessorBaseSuite) TearDownTest() {
+	s.mockMetadataMgr.AssertExpectations(s.T())
+	s.mockProcessor.AssertExpectations(s.T())
+	s.mockQueueAckMgr.AssertExpectations(s.T())
+	s.mockClientBean.AssertExpectations(s.T())
 }
 
 func (s *timerQueueProcessorBaseSuite) TestProcessTaskAndAck_ShutDown() {
@@ -134,16 +141,50 @@ func (s *timerQueueProcessorBaseSuite) TestProcessTaskAndAck_ShutDown() {
 	s.timerQueueProcessor.processTaskAndAck(s.notificationChan, &persistence.TimerTaskInfo{})
 }
 
-func (s *timerQueueProcessorBaseSuite) TestProcessTaskAndAck_NoErr() {
+func (s *timerQueueProcessorBaseSuite) TestProcessTaskAndAck_DomainErrRetry_ProcessNoErr() {
 	task := &persistence.TimerTaskInfo{TaskID: 12345, VisibilityTimestamp: time.Now()}
-	s.mockProcessor.On("process", task).Return(s.scope, nil).Once()
+	var taskFilterErr timerTaskFilter = func(timer *persistence.TimerTaskInfo) (bool, error) {
+		return false, errors.New("some random error")
+	}
+	var taskFilter timerTaskFilter = func(timer *persistence.TimerTaskInfo) (bool, error) {
+		return true, nil
+	}
+	s.mockProcessor.On("getTaskFilter").Return(taskFilterErr).Once()
+	s.mockProcessor.On("getTaskFilter").Return(taskFilter).Once()
+	s.mockProcessor.On("process", task, true).Return(s.scope, nil).Once()
 	s.mockQueueAckMgr.On("completeQueueTask", task.GetTaskID()).Once()
 	s.timerQueueProcessor.processTaskAndAck(s.notificationChan, task)
 }
 
-func (s *timerQueueProcessorBaseSuite) TestProcessTaskAndAck_ErrNoErr() {
+func (s *timerQueueProcessorBaseSuite) TestProcessTaskAndAck_DomainFalse_ProcessNoErr() {
+	task := &persistence.TimerTaskInfo{TaskID: 12345, VisibilityTimestamp: time.Now()}
+	var taskFilter timerTaskFilter = func(timer *persistence.TimerTaskInfo) (bool, error) {
+		return true, nil
+	}
+	s.mockProcessor.On("getTaskFilter").Return(taskFilter).Once()
+	s.mockProcessor.On("process", task, false).Return(s.scope, nil).Once()
+	s.mockQueueAckMgr.On("completeQueueTask", task.GetTaskID()).Once()
+	s.timerQueueProcessor.processTaskAndAck(s.notificationChan, task)
+}
+
+func (s *timerQueueProcessorBaseSuite) TestProcessTaskAndAck_DomainTrue_ProcessNoErr() {
+	task := &persistence.TimerTaskInfo{TaskID: 12345, VisibilityTimestamp: time.Now()}
+	var taskFilter timerTaskFilter = func(timer *persistence.TimerTaskInfo) (bool, error) {
+		return true, nil
+	}
+	s.mockProcessor.On("getTaskFilter").Return(taskFilter).Once()
+	s.mockProcessor.On("process", task, false).Return(s.scope, nil).Once()
+	s.mockQueueAckMgr.On("completeQueueTask", task.GetTaskID()).Once()
+	s.timerQueueProcessor.processTaskAndAck(s.notificationChan, task)
+}
+
+func (s *timerQueueProcessorBaseSuite) TestProcessTaskAndAck_DomainTrue_ProcessErrNoErr() {
 	err := errors.New("some random err")
 	task := &persistence.TimerTaskInfo{TaskID: 12345, VisibilityTimestamp: time.Now()}
+	var taskFilter timerTaskFilter = func(timer *persistence.TimerTaskInfo) (bool, error) {
+		return true, nil
+	}
+	s.mockProcessor.On("getTaskFilter").Return(taskFilter).Once()
 	s.mockProcessor.On("process", task).Return(s.scope, err).Once()
 	s.mockProcessor.On("process", task).Return(s.scope, nil).Once()
 	s.mockQueueAckMgr.On("completeQueueTask", task.GetTaskID()).Once()

@@ -115,7 +115,14 @@ const (
 	TaskTypeWorkflowTimeout
 	TaskTypeDeleteHistoryEvent
 	TaskTypeActivityRetryTimer
-	TaskTypeWorkflowRetryTimer
+	TaskTypeWorkflowBackoffTimer
+	TaskTypeArchiveHistoryEvent
+)
+
+// Types of workflow backoff timeout
+const (
+	WorkflowBackoffTimeoutTypeRetry = iota
+	WorkflowBackoffTimeoutTypeCron
 )
 
 const (
@@ -216,6 +223,7 @@ type (
 		ParentWorkflowID             string
 		ParentRunID                  string
 		InitiatedID                  int64
+		CompletionEventBatchID       int64
 		CompletionEvent              *workflow.HistoryEvent
 		TaskList                     string
 		WorkflowTypeName             string
@@ -258,6 +266,8 @@ type (
 		// events V2 related
 		EventStoreVersion int32
 		BranchToken       []byte
+		CronSchedule      string
+		ExpirationSeconds int32
 	}
 
 	// ReplicationState represents mutable state information for global domains.
@@ -285,6 +295,7 @@ type (
 		TaskType                int
 		ScheduleID              int64
 		Version                 int64
+		RecordVisibility        bool
 	}
 
 	// ReplicationTaskInfo describes the replication task created for replication of history events
@@ -303,6 +314,7 @@ type (
 		BranchToken             []byte
 		NewRunEventStoreVersion int32
 		NewRunBranchToken       []byte
+		ResetWorkflow           bool
 	}
 
 	// TimerTaskInfo describes a timer task.
@@ -368,6 +380,7 @@ type (
 		TaskList            string
 		ScheduleID          int64
 		Version             int64
+		RecordVisibility    bool
 	}
 
 	// CloseExecutionTask identifies a transfer task for deletion of execution
@@ -379,6 +392,13 @@ type (
 
 	// DeleteHistoryEventTask identifies a timer task for deletion of history events of completed execution.
 	DeleteHistoryEventTask struct {
+		VisibilityTimestamp time.Time
+		TaskID              int64
+		Version             int64
+	}
+
+	// ArchiveHistoryEventTask identifies a timer task for archival of history events of completed execution.
+	ArchiveHistoryEventTask struct {
 		VisibilityTimestamp time.Time
 		TaskID              int64
 		Version             int64
@@ -462,12 +482,13 @@ type (
 		Attempt             int32
 	}
 
-	// WorkflowRetryTimerTask to schedule first decision task for retried workflow
-	WorkflowRetryTimerTask struct {
+	// WorkflowBackoffTimerTask to schedule first decision task for retried workflow
+	WorkflowBackoffTimerTask struct {
 		VisibilityTimestamp time.Time
 		TaskID              int64
 		EventID             int64
 		Version             int64
+		TimeoutType         int // 0 for retry, 1 for cron.
 	}
 
 	// HistoryReplicationTask is the replication task created for shipping history replication events to other clusters
@@ -480,6 +501,7 @@ type (
 		LastReplicationInfo     map[string]*ReplicationInfo
 		EventStoreVersion       int32
 		BranchToken             []byte
+		ResetWorkflow           bool
 		NewRunEventStoreVersion int32
 		NewRunBranchToken       []byte
 	}
@@ -516,6 +538,7 @@ type (
 	ActivityInfo struct {
 		Version                  int64
 		ScheduleID               int64
+		ScheduledEventBatchID    int64
 		ScheduledEvent           *workflow.HistoryEvent
 		ScheduledTime            time.Time
 		StartedID                int64
@@ -559,12 +582,17 @@ type (
 
 	// ChildExecutionInfo has details for pending child executions.
 	ChildExecutionInfo struct {
-		Version         int64
-		InitiatedID     int64
-		InitiatedEvent  *workflow.HistoryEvent
-		StartedID       int64
-		StartedEvent    *workflow.HistoryEvent
-		CreateRequestID string
+		Version               int64
+		InitiatedID           int64
+		InitiatedEventBatchID int64
+		InitiatedEvent        *workflow.HistoryEvent
+		StartedID             int64
+		StartedWorkflowID     string
+		StartedRunID          string
+		StartedEvent          *workflow.HistoryEvent
+		CreateRequestID       string
+		DomainName            string
+		WorkflowTypeName      string
 	}
 
 	// RequestCancelInfo has details for pending external workflow cancellations
@@ -656,7 +684,9 @@ type (
 		// 2 means using eventsV2, empty/0/1 means using events(V1)
 		EventStoreVersion int32
 		// for eventsV2: branchToken from historyPersistence
-		BranchToken []byte
+		BranchToken       []byte
+		CronSchedule      string
+		ExpirationSeconds int32
 	}
 
 	// CreateWorkflowExecutionResponse is the response to CreateWorkflowExecutionRequest
@@ -724,7 +754,7 @@ type (
 		Encoding common.EncodingType
 	}
 
-	// ResetMutableStateRequest is used to reset workflow execution state
+	// ResetMutableStateRequest is used to reset workflow execution state for a single run
 	ResetMutableStateRequest struct {
 		PrevRunID        string
 		ExecutionInfo    *WorkflowExecutionInfo
@@ -733,6 +763,43 @@ type (
 		RangeID          int64
 
 		// Mutable state
+		InsertActivityInfos       []*ActivityInfo
+		InsertTimerInfos          []*TimerInfo
+		InsertChildExecutionInfos []*ChildExecutionInfo
+		InsertRequestCancelInfos  []*RequestCancelInfo
+		InsertSignalInfos         []*SignalInfo
+		InsertSignalRequestedIDs  []string
+		//Optional. It is to suggest a binary encoding type to serialize history events
+		Encoding common.EncodingType
+	}
+
+	// ResetWorkflowExecutionRequest is used to reset workflow execution state for current run and create new run
+	ResetWorkflowExecutionRequest struct {
+		// for base run (we need to make sure the baseRun hasn't been deleted after forking)
+		BaseRunID          string
+		BaseRunNextEventID int64
+
+		// for current workflow record
+		PrevRunVersion int64
+		PrevRunState   int
+
+		// for shard record
+		RangeID int64
+
+		// for current mutable state
+		Condition            int64
+		UpdateCurr           bool
+		CurrExecutionInfo    *WorkflowExecutionInfo
+		CurrReplicationState *ReplicationState
+		CurrTransferTasks    []Task
+		CurrTimerTasks       []Task
+
+		// For new mutable state
+		InsertExecutionInfo       *WorkflowExecutionInfo
+		InsertReplicationState    *ReplicationState
+		InsertTransferTasks       []Task
+		InsertTimerTasks          []Task
+		InsertReplicationTasks    []Task
 		InsertActivityInfos       []*ActivityInfo
 		InsertTimerInfos          []*TimerInfo
 		InsertChildExecutionInfos []*ChildExecutionInfo
@@ -958,8 +1025,10 @@ type (
 	// DomainConfig describes the domain configuration
 	DomainConfig struct {
 		// NOTE: this retention is in days, not in seconds
-		Retention  int32
-		EmitMetric bool
+		Retention      int32
+		EmitMetric     bool
+		ArchivalBucket string
+		ArchivalStatus workflow.ArchivalStatus
 	}
 
 	// DomainReplicationConfig describes the cross DC domain replication configuration
@@ -1107,6 +1176,8 @@ type (
 	AppendHistoryNodesRequest struct {
 		// true if this is the first append request to the branch
 		IsNewBranch bool
+		// the info for clean up data in background
+		Info string
 		// The branch to be appended
 		BranchToken []byte
 		// The batch of events to be appended. The first eventID will become the nodeID of this batch
@@ -1141,7 +1212,7 @@ type (
 	// ReadHistoryBranchResponse is the response to ReadHistoryBranchRequest
 	ReadHistoryBranchResponse struct {
 		// History events
-		History []*workflow.HistoryEvent
+		HistoryEvents []*workflow.HistoryEvent
 		// Token to read next page if there are more events beyond page size.
 		// Use this to set NextPageToken on ReadHistoryBranchRequest to read the next page.
 		// Empty means we have reached the last page, not need to continue
@@ -1174,12 +1245,22 @@ type (
 		// Application must provide a void forking nodeID, it must be a valid nodeID in that branch. A valid nodeID is the firstEventID of a valid batch of events.
 		// And ForkNodeID > 1 because forking from 1 doesn't make any sense.
 		ForkNodeID int64
+		// the info for clean up data in background
+		Info string
 	}
 
 	// ForkHistoryBranchResponse is the response to ForkHistoryBranchRequest
 	ForkHistoryBranchResponse struct {
 		// branchToken to represent the new branch
 		NewBranchToken []byte
+	}
+
+	// CompleteForkBranchRequest is used to complete forking
+	CompleteForkBranchRequest struct {
+		// the new branch returned from ForkHistoryBranchRequest
+		BranchToken []byte
+		// true means the fork is success, will update the flag, otherwise will delete the new branch
+		Success bool
 	}
 
 	// DeleteHistoryBranchRequest is used to remove a history branch
@@ -1192,12 +1273,22 @@ type (
 	GetHistoryTreeRequest struct {
 		// A UUID of a tree
 		TreeID string
+		// optional: can provide treeID via branchToken if treeID is empty
+		BranchToken []byte
+	}
+
+	// ForkingInProgressBranch is part of GetHistoryTreeResponse
+	ForkingInProgressBranch struct {
+		BranchID string
+		ForkTime time.Time
+		Info     string
 	}
 
 	// GetHistoryTreeResponse is a response to GetHistoryTreeRequest
 	GetHistoryTreeResponse struct {
 		// all branches of a tree
-		Branches []*workflow.HistoryBranch
+		Branches                  []*workflow.HistoryBranch
+		ForkingInProgressBranches []ForkingInProgressBranch
 	}
 
 	// AppendHistoryEventsResponse is response for AppendHistoryEventsRequest
@@ -1230,6 +1321,7 @@ type (
 		GetWorkflowExecution(request *GetWorkflowExecutionRequest) (*GetWorkflowExecutionResponse, error)
 		UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) (*UpdateWorkflowExecutionResponse, error)
 		ResetMutableState(request *ResetMutableStateRequest) error
+		ResetWorkflowExecution(request *ResetWorkflowExecutionRequest) error
 		DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error
 		GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)
 
@@ -1299,6 +1391,8 @@ type (
 		ReadHistoryBranchByBatch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchByBatchResponse, error)
 		// ForkHistoryBranch forks a new branch from a old branch
 		ForkHistoryBranch(request *ForkHistoryBranchRequest) (*ForkHistoryBranchResponse, error)
+		// CompleteForkBranch will complete the forking process after update mutableState, this is to help preventing data leakage
+		CompleteForkBranch(request *CompleteForkBranchRequest) error
 		// DeleteHistoryBranch removes a branch
 		// If this is the last branch to delete, it will also remove the root node
 		DeleteHistoryBranch(request *DeleteHistoryBranchRequest) error
@@ -1488,6 +1582,41 @@ func (a *DeleteHistoryEventTask) SetVisibilityTimestamp(timestamp time.Time) {
 	a.VisibilityTimestamp = timestamp
 }
 
+// GetType returns the type of the archive execution task
+func (a *ArchiveHistoryEventTask) GetType() int {
+	return TaskTypeArchiveHistoryEvent
+}
+
+// GetVersion returns the version of the archive execution task
+func (a *ArchiveHistoryEventTask) GetVersion() int64 {
+	return a.Version
+}
+
+// SetVersion sets the version of the archive execution task
+func (a *ArchiveHistoryEventTask) SetVersion(version int64) {
+	a.Version = version
+}
+
+// GetTaskID returns the sequence ID of the archive execution task
+func (a *ArchiveHistoryEventTask) GetTaskID() int64 {
+	return a.TaskID
+}
+
+// SetTaskID sets the sequence ID of the archive execution task
+func (a *ArchiveHistoryEventTask) SetTaskID(id int64) {
+	a.TaskID = id
+}
+
+// GetVisibilityTimestamp get the visibility timestamp
+func (a *ArchiveHistoryEventTask) GetVisibilityTimestamp() time.Time {
+	return a.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp set the visibility timestamp
+func (a *ArchiveHistoryEventTask) SetVisibilityTimestamp(timestamp time.Time) {
+	a.VisibilityTimestamp = timestamp
+}
+
 // GetType returns the type of the timer task
 func (d *DecisionTimeoutTask) GetType() int {
 	return TaskTypeDecisionTimeout
@@ -1629,37 +1758,37 @@ func (r *ActivityRetryTimerTask) SetVisibilityTimestamp(t time.Time) {
 }
 
 // GetType returns the type of the retry timer task
-func (r *WorkflowRetryTimerTask) GetType() int {
-	return TaskTypeWorkflowRetryTimer
+func (r *WorkflowBackoffTimerTask) GetType() int {
+	return TaskTypeWorkflowBackoffTimer
 }
 
 // GetVersion returns the version of the retry timer task
-func (r *WorkflowRetryTimerTask) GetVersion() int64 {
+func (r *WorkflowBackoffTimerTask) GetVersion() int64 {
 	return r.Version
 }
 
 // SetVersion returns the version of the retry timer task
-func (r *WorkflowRetryTimerTask) SetVersion(version int64) {
+func (r *WorkflowBackoffTimerTask) SetVersion(version int64) {
 	r.Version = version
 }
 
 // GetTaskID returns the sequence ID.
-func (r *WorkflowRetryTimerTask) GetTaskID() int64 {
+func (r *WorkflowBackoffTimerTask) GetTaskID() int64 {
 	return r.TaskID
 }
 
 // SetTaskID sets the sequence ID.
-func (r *WorkflowRetryTimerTask) SetTaskID(id int64) {
+func (r *WorkflowBackoffTimerTask) SetTaskID(id int64) {
 	r.TaskID = id
 }
 
 // GetVisibilityTimestamp gets the visibility time stamp
-func (r *WorkflowRetryTimerTask) GetVisibilityTimestamp() time.Time {
+func (r *WorkflowBackoffTimerTask) GetVisibilityTimestamp() time.Time {
 	return r.VisibilityTimestamp
 }
 
 // SetVisibilityTimestamp gets the visibility time stamp
-func (r *WorkflowRetryTimerTask) SetVisibilityTimestamp(t time.Time) {
+func (r *WorkflowBackoffTimerTask) SetVisibilityTimestamp(t time.Time) {
 	r.VisibilityTimestamp = t
 }
 
@@ -2028,6 +2157,26 @@ func NewHistoryBranchToken(treeID string) ([]byte, error) {
 	branchID := uuid.New()
 	bi := &workflow.HistoryBranch{
 		TreeID:    &treeID,
+		BranchID:  &branchID,
+		Ancestors: []*workflow.HistoryBranchRange{},
+	}
+	token, err := internalThriftEncoder.Encode(bi)
+	if err != nil {
+		return nil, err
+	}
+	return token, nil
+}
+
+// NewHistoryBranchTokenFromAnother make up a branchToken
+func NewHistoryBranchTokenFromAnother(branchID string, anotherToken []byte) ([]byte, error) {
+	var branch workflow.HistoryBranch
+	err := internalThriftEncoder.Decode(anotherToken, &branch)
+	if err != nil {
+		return nil, err
+	}
+
+	bi := &workflow.HistoryBranch{
+		TreeID:    branch.TreeID,
 		BranchID:  &branchID,
 		Ancestors: []*workflow.HistoryBranchRange{},
 	}

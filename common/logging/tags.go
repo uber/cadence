@@ -36,6 +36,7 @@ const (
 	TagHistoryBuilderAction       = "history-builder-action"
 	TagStoreOperation             = "store-operation"
 	TagDomainID                   = "domain-id"
+	TagDomainIDs                  = "domain-ids"
 	TagWorkflowExecutionID        = "execution-id"
 	TagWorkflowRunID              = "run-id"
 	TagHistoryShardID             = "shard-id"
@@ -79,12 +80,16 @@ const (
 	TagCursorTimestamp            = "cursor-timestamp"
 	TagHistorySize                = "history-size"
 	TagEventCount                 = "event-count"
+	TagESRequest                  = "es-request"
+	TagESKey                      = "es-mapping-key"
+	TagESField                    = "es-field"
 
 	// workflow logging tag values
 	// TagWorkflowComponent Values
 	TagValueHistoryBuilderComponent           = "history-builder"
 	TagValueHistoryEngineComponent            = "history-engine"
 	TagValueHistoryCacheComponent             = "history-cache"
+	TagValueEventsCacheComponent              = "events-cache"
 	TagValueTransferQueueComponent            = "transfer-queue-processor"
 	TagValueTimerQueueComponent               = "timer-queue-processor"
 	TagValueReplicatorQueueComponent          = "replicator-queue-processor"
@@ -93,6 +98,11 @@ const (
 	TagValueReplicatorComponent               = "replicator"
 	TagValueReplicationTaskProcessorComponent = "replication-task-processor"
 	TagValueHistoryReplicatorComponent        = "history-replicator"
+	TagValueIndexerComponent                  = "indexer"
+	TagValueIndexerProcessorComponent         = "indexer-processor"
+	TagValueIndexerESProcessorComponent       = "indexer-es-processor"
+	TagValueESVisibilityManager               = "es-visibility-manager"
+	TagValueArchivalSystemWorkflowComponent   = "archival-system-workflow"
 
 	// TagHistoryBuilderAction values
 	TagValueActionWorkflowStarted                 = "add-workflowexecution-started-event"
@@ -154,8 +164,16 @@ const (
 	TagTreeID   = "tree-id"
 	TagBranchID = "branch-id"
 
-	// system workflow tags
-	TagUserWorkflowID               = "user-workflow-id"
-	TagUserRunID                    = "user-run-id"
-	TagIterationsUntilContinueAsNew = "iterations-until-continue-as-new"
+	// archival tags
+	TagArchiveRequestDomainID            = "archive-request-domain-id"
+	TagArchiveRequestWorkflowID          = "archive-request-workflow-id"
+	TagArchiveRequestRunID               = "archive-request-run-id"
+	TagArchiveRequestEventStoreVersion   = "archive-request-event-store-version"
+	TagArchiveRequestLastFirstEventID    = "archive-request-last-first-event-id"
+	TagNumberOfSignalsUntilContinueAsNew = "number-of-signals-until-continue-as-new"
+	TagBucket                            = "bucket"
+	TagFileBlobstoreBlobPath             = "file-blobstore-blob-path"
+	TagBlobKey                           = "blob-key"
+	TagBlobKeyPrefix                     = "blob-key-prefix"
+	TagFileBlobstoreMetadataPath         = "file-blobstore-metadata-path"
 )

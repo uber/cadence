@@ -22,9 +22,11 @@ package config
 
 import (
 	"encoding/json"
+	"github.com/uber/cadence/common/blobstore/filestore"
 	"time"
 
 	"github.com/uber-go/tally/m3"
+	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/ringpop-go/discovery"
@@ -41,10 +43,16 @@ type (
 		Log Logger `yaml:"log"`
 		// ClustersInfo is the config containing all valid clusters and active cluster
 		ClustersInfo ClustersInfo `yaml:"clustersInfo"`
+		// DCRedirectionPolicy contains the frontend datacenter redirection policy
+		DCRedirectionPolicy DCRedirectionPolicy `yaml:"dcRedirectionPolicy"`
 		// Services is a map of service name to service config items
 		Services map[string]Service `yaml:"services"`
 		// Kafka is the config for connecting to kafka
 		Kafka messaging.KafkaConfig `yaml:"kafka"`
+		// Archival is the config for archival
+		Archival Archival `yaml:"archival"`
+		// ElasticSearch if config for connecting to ElasticSearch
+		ElasticSearch elasticsearch.Config `yaml:elasticsearch`
 	}
 
 	// Service contains the service specific config items
@@ -166,7 +174,7 @@ type (
 		// ConnectAddr is the remote addr of the database
 		ConnectAddr string `yaml:"connectAddr" validate:"nonzero"`
 		// ConnectProtocol is the protocol that goes with the ConnectAddr ex - tcp, unix
-		ConnectProtocol string `yaml:"connectProtocol validate:"nonzero""`
+		ConnectProtocol string `yaml:"connectProtocol" validate:"nonzero"`
 		// MaxQPS the max request rate on this datastore
 		MaxQPS int `yaml:"maxQPS"`
 		// MaxConns the max number of connections to this datastore
@@ -174,8 +182,7 @@ type (
 	}
 
 	// Replicator describes the configuration of replicator
-	Replicator struct {
-	}
+	Replicator struct{}
 
 	// Logger contains the config items for logger
 	Logger struct {
@@ -202,7 +209,21 @@ type (
 		// ClusterInitialFailoverVersions contains all cluster names to corresponding initial failover version
 		ClusterInitialFailoverVersions map[string]int64 `yaml:"clusterInitialFailoverVersion"`
 		// ClusterAddress contains all cluster names to corresponding address
-		ClusterAddress map[string]string `yaml:"clusterAddress"`
+		ClusterAddress map[string]Address `yaml:"clusterAddress"`
+	}
+
+	// Address indicate the remote cluster's service name and address
+	Address struct {
+		// RPCName indicate the remote service name
+		RPCName string `yaml:"rpcName"`
+		// Address indicate the remote service IP address
+		RPCAddress string `yaml:"rpcAddress"`
+	}
+
+	// DCRedirectionPolicy contains the frontend datacenter redirection policy
+	DCRedirectionPolicy struct {
+		Policy string `yaml:"policy"`
+		ToDC   string `yaml:"toDC"`
 	}
 
 	// Metrics contains the config items for metrics subsystem
@@ -229,6 +250,14 @@ type (
 		// If FlushBytes is unspecified, it defaults  to 1432 bytes, which is
 		// considered safe for local traffic.
 		FlushBytes int `yaml:"flushBytes"`
+	}
+
+	// Archival contains the config for archival
+	Archival struct {
+		// Enabled whether archival is enabled
+		Enabled bool `yaml:"enabled"`
+		// Filestore the configuration for file based blobstore
+		Filestore filestore.Config `yaml:"filestore"`
 	}
 
 	// BootstrapMode is an enum type for ringpop bootstrap mode

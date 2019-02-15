@@ -27,18 +27,13 @@ import (
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/persistence"
 )
 
 type (
-	workflowIdentifier struct {
-		domainID   string
-		workflowID string
-		runID      string
-	}
-
 	historyEventNotification struct {
-		workflowIdentifier
+		id                     definition.WorkflowIdentifier
 		lastFirstEventID       int64
 		nextEventID            int64
 		previousStartedEventID int64
@@ -71,9 +66,11 @@ type (
 			*workflow.StartWorkflowExecutionResponse, error)
 		RemoveSignalMutableState(ctx context.Context, request *h.RemoveSignalMutableStateRequest) error
 		TerminateWorkflowExecution(ctx context.Context, request *h.TerminateWorkflowExecutionRequest) error
+		ResetWorkflowExecution(ctx context.Context, request *h.ResetWorkflowExecutionRequest) (*workflow.ResetWorkflowExecutionResponse, error)
 		ScheduleDecisionTask(ctx context.Context, request *h.ScheduleDecisionTaskRequest) error
 		RecordChildExecutionCompleted(ctx context.Context, request *h.RecordChildExecutionCompletedRequest) error
 		ReplicateEvents(ctx context.Context, request *h.ReplicateEventsRequest) error
+		ReplicateRawEvents(ctx context.Context, request *h.ReplicateRawEventsRequest) error
 		SyncShardStatus(ctx context.Context, request *h.SyncShardStatusRequest) error
 		SyncActivity(ctx context.Context, request *h.SyncActivityRequest) error
 	}
@@ -105,7 +102,8 @@ type (
 	}
 
 	processor interface {
-		process(task queueTaskInfo) (int, error)
+		process(task queueTaskInfo, shouldProcessTask bool) (int, error)
+		getTaskFilter() queueTaskFilter
 		readTasks(readLevel int64) ([]queueTaskInfo, bool, error)
 		updateAckLevel(taskID int64) error
 		queueShutdown() error
@@ -132,7 +130,8 @@ type (
 
 	timerProcessor interface {
 		notifyNewTimers(timerTask []persistence.Task)
-		process(task *persistence.TimerTaskInfo) (int, error)
+		process(task *persistence.TimerTaskInfo, shouldProcessTask bool) (int, error)
+		getTaskFilter() timerTaskFilter
 	}
 
 	timerQueueAckMgr interface {
@@ -147,15 +146,7 @@ type (
 	historyEventNotifier interface {
 		common.Daemon
 		NotifyNewHistoryEvent(event *historyEventNotification)
-		WatchHistoryEvent(identifier workflowIdentifier) (string, chan *historyEventNotification, error)
-		UnwatchHistoryEvent(identifier workflowIdentifier, subscriberID string) error
+		WatchHistoryEvent(identifier definition.WorkflowIdentifier) (string, chan *historyEventNotification, error)
+		UnwatchHistoryEvent(identifier definition.WorkflowIdentifier, subscriberID string) error
 	}
 )
-
-func newWorkflowIdentifier(domainID string, execution *workflow.WorkflowExecution) workflowIdentifier {
-	return workflowIdentifier{
-		domainID:   domainID,
-		workflowID: execution.GetWorkflowId(),
-		runID:      execution.GetRunId(),
-	}
-}

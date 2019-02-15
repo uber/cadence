@@ -35,6 +35,10 @@ const (
 	BufferedEventID int64 = -123
 	// TransientEventID is the id of the transient event
 	TransientEventID int64 = -124
+	// FirstBlobPageToken is the page token identifying the first blob for each history archival
+	FirstBlobPageToken = 1
+	// LastBlobNextPageToken is the next page token on the last blob for each history archival
+	LastBlobNextPageToken = -1
 )
 
 const (
@@ -72,4 +76,9 @@ const (
 	GetHistoryWarnSizeLimit = 500 * 1024 // Warn when size goes over 500KB
 	// GetHistoryMaxPageSize is the max page size for get history
 	GetHistoryMaxPageSize = 1000
+)
+
+const (
+	// VisibilityAppName is used to find kafka topics and ES indexName for visibility
+	VisibilityAppName = "visibility"
 )

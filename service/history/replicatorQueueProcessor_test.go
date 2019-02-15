@@ -32,6 +32,7 @@ import (
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -53,6 +54,7 @@ type (
 		mockProducer        *mocks.KafkaProducer
 		mockMetadataMgr     *mocks.MetadataManager
 		mockClusterMetadata *mocks.ClusterMetadata
+		mockClientBean      *client.MockClientBean
 		mockMessagingClient messaging.Client
 		mockService         service.Service
 
@@ -74,10 +76,7 @@ func (s *replicatorQueueProcessorSuite) SetupSuite() {
 }
 
 func (s *replicatorQueueProcessorSuite) TearDownSuite() {
-	s.mockExecutionMgr.AssertExpectations(s.T())
-	s.mockHistoryMgr.AssertExpectations(s.T())
-	s.mockHistoryV2Mgr.AssertExpectations(s.T())
-	s.mockProducer.AssertExpectations(s.T())
+
 }
 
 func (s *replicatorQueueProcessorSuite) SetupTest() {
@@ -93,7 +92,8 @@ func (s *replicatorQueueProcessorSuite) SetupTest() {
 	s.mockMetadataMgr = &mocks.MetadataManager{}
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
-	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.logger)
+	s.mockClientBean = &client.MockClientBean{}
+	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean, s.logger)
 	s.mockShard = &shardContextImpl{
 		service:                   s.mockService,
 		shardInfo:                 &persistence.ShardInfo{ShardID: 0, RangeID: 1, TransferAckLevel: 0},
@@ -117,6 +117,11 @@ func (s *replicatorQueueProcessorSuite) SetupTest() {
 }
 
 func (s *replicatorQueueProcessorSuite) TearDownTest() {
+	s.mockExecutionMgr.AssertExpectations(s.T())
+	s.mockHistoryMgr.AssertExpectations(s.T())
+	s.mockHistoryV2Mgr.AssertExpectations(s.T())
+	s.mockProducer.AssertExpectations(s.T())
+	s.mockClientBean.AssertExpectations(s.T())
 }
 
 func (s *replicatorQueueProcessorSuite) TestSyncActivity_WorkflowMissing() {
@@ -142,7 +147,7 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_WorkflowMissing() {
 		},
 	}).Return(nil, &shared.EntityNotExistsError{})
 
-	_, err := s.replicatorQueueProcessor.process(task)
+	_, err := s.replicatorQueueProcessor.process(task, true)
 	s.Nil(err)
 }
 
@@ -182,7 +187,7 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_WorkflowCompleted() {
 	})
 	msBuilder.On("IsWorkflowExecutionRunning").Return(false)
 
-	_, err := s.replicatorQueueProcessor.process(task)
+	_, err := s.replicatorQueueProcessor.process(task, true)
 	s.Nil(err)
 }
 
@@ -242,7 +247,101 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_ActivityCompleted() {
 		}, nil,
 	).Once()
 
-	_, err := s.replicatorQueueProcessor.process(task)
+	_, err := s.replicatorQueueProcessor.process(task, true)
+	s.Nil(err)
+}
+
+func (s *replicatorQueueProcessorSuite) TestSyncActivity_ActivityRetry() {
+	domainName := "some random domain name"
+	domainID := validDomainID
+	workflowID := "some random workflow ID"
+	runID := uuid.New()
+	scheduleID := int64(144)
+	taskID := int64(1444)
+	version := int64(2333)
+	nextEventID := int64(133)
+	task := &persistence.ReplicationTaskInfo{
+		TaskType:    persistence.ReplicationTaskTypeSyncActivity,
+		TaskID:      taskID,
+		DomainID:    domainID,
+		WorkflowID:  workflowID,
+		RunID:       runID,
+		ScheduledID: scheduleID,
+	}
+	s.mockExecutionMgr.On("CompleteReplicationTask", &persistence.CompleteReplicationTaskRequest{TaskID: taskID}).Return(nil).Once()
+
+	context, release, _ := s.replicatorQueueProcessor.historyCache.getOrCreateWorkflowExecution(
+		domainID,
+		shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(workflowID),
+			RunId:      common.StringPtr(runID),
+		},
+	)
+	msBuilder := &mockMutableState{}
+	context.(*workflowExecutionContextImpl).msBuilder = msBuilder
+	release(nil)
+
+	activityVersion := int64(333)
+	activityScheduleID := scheduleID
+	activityScheduledTime := time.Now()
+	activityStartedID := common.EmptyEventID
+	activityStartedTime := time.Time{}
+	activityHeartbeatTime := time.Time{}
+	activityAttempt := int32(16384)
+	activityDetails := []byte("some random activity progress")
+
+	msBuilder.On("IsWorkflowExecutionRunning").Return(true)
+	msBuilder.On("GetReplicationState").Return(&persistence.ReplicationState{
+		CurrentVersion:   version,
+		StartVersion:     version,
+		LastWriteVersion: version,
+		LastWriteEventID: nextEventID - 1,
+	})
+	msBuilder.On("GetLastWriteVersion").Return(version)
+	msBuilder.On("UpdateReplicationStateVersion", version, false).Once()
+	msBuilder.On("GetActivityInfo", scheduleID).Return(&persistence.ActivityInfo{
+		Version:                  activityVersion,
+		ScheduleID:               activityScheduleID,
+		ScheduledTime:            activityScheduledTime,
+		StartedID:                activityStartedID,
+		StartedTime:              activityStartedTime,
+		LastHeartBeatUpdatedTime: activityHeartbeatTime,
+		Details:                  activityDetails,
+		Attempt:                  activityAttempt,
+	}, true)
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: domainID}).Return(
+		&persistence.GetDomainResponse{
+			Info:   &persistence.DomainInfo{ID: domainID, Name: domainName},
+			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
+			FailoverVersion: version,
+			IsGlobalDomain:  true,
+			TableVersion:    persistence.DomainTableVersionV1,
+		}, nil,
+	).Once()
+	s.mockProducer.On("Publish", &replicator.ReplicationTask{
+		TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeSyncActivity),
+		SyncActicvityTaskAttributes: &replicator.SyncActicvityTaskAttributes{
+			DomainId:          common.StringPtr(domainID),
+			WorkflowId:        common.StringPtr(workflowID),
+			RunId:             common.StringPtr(runID),
+			Version:           common.Int64Ptr(activityVersion),
+			ScheduledId:       common.Int64Ptr(activityScheduleID),
+			ScheduledTime:     common.Int64Ptr(activityScheduledTime.UnixNano()),
+			StartedId:         common.Int64Ptr(activityStartedID),
+			StartedTime:       nil,
+			LastHeartbeatTime: nil,
+			Details:           activityDetails,
+			Attempt:           common.Int32Ptr(activityAttempt),
+		},
+	}).Return(nil).Once()
+
+	_, err := s.replicatorQueueProcessor.process(task, true)
 	s.Nil(err)
 }
 
@@ -336,6 +435,6 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_ActivityRunning() {
 		},
 	}).Return(nil).Once()
 
-	_, err := s.replicatorQueueProcessor.process(task)
+	_, err := s.replicatorQueueProcessor.process(task, true)
 	s.Nil(err)
 }

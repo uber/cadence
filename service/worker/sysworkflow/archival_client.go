@@ -23,67 +23,65 @@ package sysworkflow
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/client/frontend"
-	"github.com/uber/cadence/common/archival"
+	"github.com/uber/cadence/client/public"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"go.uber.org/cadence/client"
 	"math/rand"
 )
 
 type (
-
-	// Initiator is used to trigger system tasks
-	Initiator interface {
-		Archive(request *archival.PutRequest) error
+	// ArchiveRequest is request to Archive
+	ArchiveRequest struct {
+		DomainID             string
+		WorkflowID           string
+		RunID                string
+		EventStoreVersion    int32
+		BranchToken          []byte
+		LastFirstEventID     int64
+		CloseFailoverVersion int64
 	}
 
-	initiator struct {
+	// ArchivalClient is used to archive workflow histories
+	ArchivalClient interface {
+		Archive(*ArchiveRequest) error
+	}
+
+	archivalClient struct {
 		cadenceClient client.Client
 		numSWFn       dynamicconfig.IntPropertyFn
 	}
-
-	// Signal is the data sent to system tasks
-	Signal struct {
-		RequestType    RequestType
-		ArchiveRequest *archival.PutRequest
-	}
 )
 
-// NewInitiator creates a new Initiator
-func NewInitiator(frontendClient frontend.Client, numSWFn dynamicconfig.IntPropertyFn) Initiator {
-	return &initiator{
-		cadenceClient: client.NewClient(frontendClient, Domain, &client.Options{}),
+// NewArchivalClient creates a new ArchivalClient
+func NewArchivalClient(
+	publicClient public.Client,
+	numSWFn dynamicconfig.IntPropertyFn,
+) ArchivalClient {
+	return &archivalClient{
+		cadenceClient: client.NewClient(publicClient, SystemDomainName, &client.Options{}),
 		numSWFn:       numSWFn,
 	}
 }
 
 // Archive starts an archival task
-func (i *initiator) Archive(request *archival.PutRequest) error {
-	if request.DomainName == Domain {
-		return nil
-	}
-	workflowID := fmt.Sprintf("%v-%v", WorkflowIDPrefix, rand.Intn(i.numSWFn()))
+func (c *archivalClient) Archive(request *ArchiveRequest) error {
+	workflowID := fmt.Sprintf("%v-%v", workflowIDPrefix, rand.Intn(c.numSWFn()))
 	workflowOptions := client.StartWorkflowOptions{
-		ID: workflowID,
-		// TODO: once we have higher load, this should select one random of X task lists to do load balancing
-		TaskList:                        DecisionTaskList,
-		ExecutionStartToCloseTimeout:    WorkflowStartToCloseTimeout,
-		DecisionTaskStartToCloseTimeout: DecisionTaskStartToCloseTimeout,
+		ID:                              workflowID,
+		TaskList:                        decisionTaskList,
+		ExecutionStartToCloseTimeout:    workflowStartToCloseTimeout,
+		DecisionTaskStartToCloseTimeout: decisionTaskStartToCloseTimeout,
 		WorkflowIDReusePolicy:           client.WorkflowIDReusePolicyAllowDuplicate,
 	}
-	signal := Signal{
-		RequestType:    ArchivalRequest,
-		ArchiveRequest: request,
-	}
-
-	_, err := i.cadenceClient.SignalWithStartWorkflow(
+	var carryoverRequests []ArchiveRequest
+	_, err := c.cadenceClient.SignalWithStartWorkflow(
 		context.Background(),
 		workflowID,
-		SignalName,
-		signal,
+		signalName,
+		*request,
 		workflowOptions,
-		SystemWorkflowFnName,
+		archiveSystemWorkflowFnName,
+		carryoverRequests,
 	)
-
 	return err
 }

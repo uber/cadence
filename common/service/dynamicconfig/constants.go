@@ -48,10 +48,12 @@ var keys = map[Key]string{
 	testGetBoolPropertyFilteredByTaskListInfoKey:     "testGetBoolPropertyFilteredByTaskListInfoKey",
 
 	// system settings
-	EnableGlobalDomain:       "system.enableGlobalDomain",
-	EnableNewKafkaClient:     "system.enableNewKafkaClient",
-	EnableVisibilitySampling: "system.enableVisibilitySampling",
-	EnableVisibilityToKafka:  "system.enableVisibilityToKafka",
+	EnableGlobalDomain:         "system.enableGlobalDomain",
+	EnableNewKafkaClient:       "system.enableNewKafkaClient",
+	EnableVisibilitySampling:   "system.enableVisibilitySampling",
+	EnableVisibilityToKafka:    "system.enableVisibilityToKafka",
+	EnableReadVisibilityFromES: "system.enableReadVisibilityFromES",
+	EnableArchival:             "system.enableArchival",
 
 	// size limit
 	BlobSizeLimitError:     "limit.blobSize.error",
@@ -60,6 +62,7 @@ var keys = map[Key]string{
 	HistorySizeLimitWarn:   "limit.historySize.warn",
 	HistoryCountLimitError: "limit.historyCount.error",
 	HistoryCountLimitWarn:  "limit.historyCount.warn",
+	MaxIDLengthLimit:       "limit.maxIDLength",
 
 	// frontend settings
 	FrontendPersistenceMaxQPS:      "frontend.persistenceMaxQPS",
@@ -85,7 +88,6 @@ var keys = map[Key]string{
 	MatchingMaxTaskBatchSize:                "matching.maxTaskBatchSize",
 
 	// history settings
-	EnableSyncActivityHeartbeat:                           "history.enableSyncActivityHeartbeat",
 	HistoryRPS:                                            "history.rps",
 	HistoryPersistenceMaxQPS:                              "history.persistenceMaxQPS",
 	HistoryVisibilityOpenMaxQPS:                           "history.historyVisibilityOpenMaxQPS",
@@ -94,6 +96,9 @@ var keys = map[Key]string{
 	HistoryCacheInitialSize:                               "history.cacheInitialSize",
 	HistoryCacheMaxSize:                                   "history.cacheMaxSize",
 	HistoryCacheTTL:                                       "history.cacheTTL",
+	EventsCacheInitialSize:                                "history.eventsCacheInitialSize",
+	EventsCacheMaxSize:                                    "history.eventsCacheMaxSize",
+	EventsCacheTTL:                                        "history.eventsCacheTTL",
 	AcquireShardInterval:                                  "history.acquireShardInterval",
 	StandbyClusterDelay:                                   "history.standbyClusterDelay",
 	TimerTaskBatchSize:                                    "history.timerTaskBatchSize",
@@ -146,12 +151,21 @@ var keys = map[Key]string{
 	EnableAdminProtection:                                 "history.enableAdminProtection",
 	AdminOperationToken:                                   "history.adminOperationToken",
 	EnableEventsV2:                                        "history.enableEventsV2",
-	EnableArchival:                                        "history.enableArchival",
 	NumSystemWorkflows:                                    "history.numSystemWorkflows",
 
-	WorkerPersistenceMaxQPS:       "worker.persistenceMaxQPS",
-	WorkerReplicatorConcurrency:   "worker.replicatorConcurrency",
-	WorkerReplicationTaskMaxRetry: "worker.replicationTaskMaxRetry",
+	WorkerPersistenceMaxQPS:                  "worker.persistenceMaxQPS",
+	WorkerReplicatorConcurrency:              "worker.replicatorConcurrency",
+	WorkerReplicatorActivityBufferRetryCount: "worker.replicatorActivityBufferRetryCount",
+	WorkerReplicatorHistoryBufferRetryCount:  "worker.replicatorHistoryBufferRetryCount",
+	WorkerReplicationTaskMaxRetry:            "worker.replicationTaskMaxRetry",
+	WorkerIndexerConcurrency:                 "worker.indexerConcurrency",
+	WorkerESProcessorNumOfWorkers:            "worker.ESProcessorNumOfWorkers",
+	WorkerESProcessorBulkActions:             "worker.ESProcessorBulkActions",
+	WorkerESProcessorBulkSize:                "worker.ESProcessorBulkSize",
+	WorkerESProcessorFlushInterval:           "worker.ESProcessorFlushInterval",
+	EnableArchivalCompression:                "worker.EnableArchivalCompression",
+	WorkerHistoryPageSize:                    "worker.WorkerHistoryPageSize",
+	WorkerTargetArchivalBlobSize:             "worker.WorkerTargetArchivalBlobSize",
 }
 
 const (
@@ -177,8 +191,12 @@ const (
 	EnableVisibilitySampling
 	// EnableVisibilityToKafka is key for enable kafka
 	EnableVisibilityToKafka
+	// EnableReadVisibilityFromES is key for enable read from elastic search
+	EnableReadVisibilityFromES
 	// DisableListVisibilityByFilter is config to disable list open/close workflow using filter
 	DisableListVisibilityByFilter
+	// EnableArchival is key for enable archival
+	EnableArchival
 
 	// BlobSizeLimitError is the per event blob size limit
 	BlobSizeLimitError
@@ -192,6 +210,10 @@ const (
 	HistoryCountLimitError
 	// HistoryCountLimitWarn is the per workflow execution history event count limit for warning
 	HistoryCountLimitWarn
+
+	// MaxIDLengthLimit is the length limit for various IDs, including: Domain, TaskList, WorkflowID, ActivityID, TimerID,
+	// WorkflowType, ActivityType, SignalName, MarkerName, ErrorReason/FailureReason/CancelCause, Identity, RequestID
+	MaxIDLengthLimit
 
 	// key for frontend
 
@@ -237,8 +259,6 @@ const (
 
 	// key for history
 
-	// EnableSyncActivityHeartbeat whether enable sending out sync activity heartbeat replication task
-	EnableSyncActivityHeartbeat
 	// HistoryRPS is request rate per second for each history host
 	HistoryRPS
 	// HistoryPersistenceMaxQPS is the max qps history host can query DB
@@ -255,6 +275,12 @@ const (
 	HistoryCacheMaxSize
 	// HistoryCacheTTL is TTL of history cache
 	HistoryCacheTTL
+	// EventsCacheInitialSize is initial size of events cache
+	EventsCacheInitialSize
+	// EventsCacheMaxSize is max size of events cache
+	EventsCacheMaxSize
+	// EventsCacheTTL is TTL of events cache
+	EventsCacheTTL
 	// AcquireShardInterval is interval that timer used to acquire shard
 	AcquireShardInterval
 	// StandbyClusterDelay is the atrificial delay added to standby cluster's view of active cluster's time
@@ -353,8 +379,6 @@ const (
 	ShardSyncMinInterval
 	// DefaultEventEncoding is the encoding type for history events
 	DefaultEventEncoding
-	// EnableArchival is key for enable archival of workflows in a domain
-	EnableArchival
 	// NumSystemWorkflows is key for number of system workflows running in total
 	NumSystemWorkflows
 
@@ -365,14 +389,35 @@ const (
 
 	// EnableEventsV2 is whether to use eventsV2
 	EnableEventsV2
-	// key for histoworkerry
+
+	// key for worker
 
 	// WorkerPersistenceMaxQPS is the max qps worker host can query DB
 	WorkerPersistenceMaxQPS
-	// WorkerReplicatorConcurrency is the max concurrenct tasks to be processed at any given time
+	// WorkerReplicatorConcurrency is the max concurrent tasks to be processed at any given time
 	WorkerReplicatorConcurrency
+	// WorkerReplicatorActivityBufferRetryCount is the retry attempt when encounter retry error on activity
+	WorkerReplicatorActivityBufferRetryCount
+	// WorkerReplicatorHistoryBufferRetryCount is the retry attempt when encounter retry error on history
+	WorkerReplicatorHistoryBufferRetryCount
 	// WorkerReplicationTaskMaxRetry is the max retry for any task
 	WorkerReplicationTaskMaxRetry
+	// WorkerIndexerConcurrency is the max concurrent messages to be processed at any given time
+	WorkerIndexerConcurrency
+	// WorkerESProcessorNumOfWorkers is num of workers for esProcessor
+	WorkerESProcessorNumOfWorkers
+	// WorkerESProcessorBulkActions is max number of requests in bulk for esProcessor
+	WorkerESProcessorBulkActions
+	// WorkerESProcessorBulkSize is max total size of bulk in bytes for esProcessor
+	WorkerESProcessorBulkSize
+	// WorkerESProcessorFlushInterval is flush interval for esProcessor
+	WorkerESProcessorFlushInterval
+	// EnableArchivalCompression indicates whether blobs are compressed before they are archived
+	EnableArchivalCompression
+	// WorkerHistoryPageSize indicates the page size of history fetched from persistence for archival
+	WorkerHistoryPageSize
+	// WorkerTargetArchivalBlobSize indicates the target blob size in bytes for archival, actual blob size may vary
+	WorkerTargetArchivalBlobSize
 
 	// lastKeyForTest must be the last one in this const group for testing purpose
 	lastKeyForTest
@@ -431,6 +476,3 @@ func TaskTypeFilter(taskType int) FilterOption {
 		filterMap[TaskType] = taskType
 	}
 }
-
-// DefaultEnableVisibilityToKafka default value for config EnableVisibilityToKafka
-const DefaultEnableVisibilityToKafka = false

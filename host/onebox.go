@@ -28,12 +28,17 @@ import (
 	"sync"
 	"time"
 
+	"github.com/uber/cadence/common/metrics"
+
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
+	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
+	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/mocks"
@@ -72,6 +77,7 @@ const (
 type Cadence interface {
 	Start() error
 	Stop()
+	GetAdminClient() adminserviceclient.Interface
 	GetFrontendClient() workflowserviceclient.Interface
 	FrontendAddress() string
 	GetFrontendService() service.Service
@@ -79,30 +85,32 @@ type Cadence interface {
 
 type (
 	cadenceImpl struct {
-		frontendHandler       *frontend.WorkflowHandler
-		matchingHandler       *matching.Handler
-		historyHandlers       []*history.Handler
-		numberOfHistoryShards int
-		numberOfHistoryHosts  int
-		logger                bark.Logger
-		clusterMetadata       cluster.Metadata
-		dispatcherProvider    client.DispatcherProvider
-		messagingClient       messaging.Client
-		metadataMgr           persistence.MetadataManager
-		metadataMgrV2         persistence.MetadataManager
-		shardMgr              persistence.ShardManager
-		historyMgr            persistence.HistoryManager
-		historyV2Mgr          persistence.HistoryV2Manager
-		taskMgr               persistence.TaskManager
-		visibilityMgr         persistence.VisibilityManager
-		executionMgrFactory   persistence.ExecutionManagerFactory
-		shutdownCh            chan struct{}
-		shutdownWG            sync.WaitGroup
-		frontEndService       service.Service
-		clusterNo             int // cluster number
-		replicator            *replicator.Replicator
-		enableWorkerService   bool // tmp flag used to tell if onbox should create worker service
-		enableEventsV2        bool
+		adminHandler            *frontend.AdminHandler
+		frontendHandler         *frontend.WorkflowHandler
+		matchingHandler         *matching.Handler
+		historyHandlers         []*history.Handler
+		numberOfHistoryShards   int
+		numberOfHistoryHosts    int
+		logger                  bark.Logger
+		clusterMetadata         cluster.Metadata
+		dispatcherProvider      client.DispatcherProvider
+		messagingClient         messaging.Client
+		metadataMgr             persistence.MetadataManager
+		metadataMgrV2           persistence.MetadataManager
+		shardMgr                persistence.ShardManager
+		historyMgr              persistence.HistoryManager
+		historyV2Mgr            persistence.HistoryV2Manager
+		taskMgr                 persistence.TaskManager
+		visibilityMgr           persistence.VisibilityManager
+		executionMgrFactory     persistence.ExecutionManagerFactory
+		shutdownCh              chan struct{}
+		shutdownWG              sync.WaitGroup
+		frontEndService         service.Service
+		clusterNo               int // cluster number
+		replicator              *replicator.Replicator
+		enableWorkerService     bool // tmp flag used to tell if onebox should create worker service
+		enableEventsV2          bool
+		enableVisibilityToKafka bool
 	}
 
 	ringpopFactoryImpl struct {
@@ -115,27 +123,28 @@ func NewCadence(clusterMetadata cluster.Metadata, dispatcherProvider client.Disp
 	metadataMgrV2 persistence.MetadataManager, shardMgr persistence.ShardManager, historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
 	executionMgrFactory persistence.ExecutionManagerFactory, taskMgr persistence.TaskManager,
 	visibilityMgr persistence.VisibilityManager, numberOfHistoryShards, numberOfHistoryHosts int,
-	logger bark.Logger, clusterNo int, enableWorker, enableEventsV2 bool) Cadence {
+	logger bark.Logger, clusterNo int, enableWorker, enableEventsV2, enableVisibilityToKafka bool) Cadence {
 
 	return &cadenceImpl{
-		numberOfHistoryShards: numberOfHistoryShards,
-		numberOfHistoryHosts:  numberOfHistoryHosts,
-		logger:                logger,
-		clusterMetadata:       clusterMetadata,
-		dispatcherProvider:    dispatcherProvider,
-		messagingClient:       messagingClient,
-		metadataMgr:           metadataMgr,
-		metadataMgrV2:         metadataMgrV2,
-		visibilityMgr:         visibilityMgr,
-		shardMgr:              shardMgr,
-		historyMgr:            historyMgr,
-		historyV2Mgr:          historyV2Mgr,
-		taskMgr:               taskMgr,
-		executionMgrFactory:   executionMgrFactory,
-		shutdownCh:            make(chan struct{}),
-		clusterNo:             clusterNo,
-		enableWorkerService:   enableWorker,
-		enableEventsV2:        enableEventsV2,
+		numberOfHistoryShards:   numberOfHistoryShards,
+		numberOfHistoryHosts:    numberOfHistoryHosts,
+		logger:                  logger,
+		clusterMetadata:         clusterMetadata,
+		dispatcherProvider:      dispatcherProvider,
+		messagingClient:         messagingClient,
+		metadataMgr:             metadataMgr,
+		metadataMgrV2:           metadataMgrV2,
+		visibilityMgr:           visibilityMgr,
+		shardMgr:                shardMgr,
+		historyMgr:              historyMgr,
+		historyV2Mgr:            historyV2Mgr,
+		taskMgr:                 taskMgr,
+		executionMgrFactory:     executionMgrFactory,
+		shutdownCh:              make(chan struct{}),
+		clusterNo:               clusterNo,
+		enableWorkerService:     enableWorker,
+		enableEventsV2:          enableEventsV2,
+		enableVisibilityToKafka: enableVisibilityToKafka,
 	}
 }
 
@@ -177,6 +186,7 @@ func (c *cadenceImpl) Stop() {
 		c.shutdownWG.Add(3)
 	}
 	c.frontendHandler.Stop()
+	c.adminHandler.Stop()
 	for _, historyHandler := range c.historyHandlers {
 		historyHandler.Stop()
 	}
@@ -260,8 +270,12 @@ func (c *cadenceImpl) WorkerPProfPort() int {
 	return 7109
 }
 
+func (c *cadenceImpl) GetAdminClient() adminserviceclient.Interface {
+	return NewAdminClient(c.frontEndService.GetDispatcher())
+}
+
 func (c *cadenceImpl) GetFrontendClient() workflowserviceclient.Interface {
-	return New(c.frontEndService.GetDispatcher())
+	return NewFrontendClient(c.frontEndService.GetDispatcher())
 }
 
 // For integration tests to get hold of FE instance.
@@ -271,6 +285,7 @@ func (c *cadenceImpl) GetFrontendService() service.Service {
 
 func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup) {
 	params := new(service.BootstrapParams)
+	params.DCRedirectionPolicy = config.DCRedirectionPolicy{}
 	params.Name = common.FrontendServiceName
 	params.Logger = c.logger
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.FrontendPProfPort())
@@ -287,7 +302,7 @@ func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup) {
 		VisibilityStore:  "test",
 		DataStores:       map[string]config.DataStore{"test": {Cassandra: &cassandraConfig}},
 	}
-
+	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 	params.DynamicConfig = dynamicconfig.NewNopClient()
 
 	// TODO when cross DC is public, remove this temporary override
@@ -304,11 +319,19 @@ func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup) {
 	}
 
 	c.frontEndService = service.New(params)
+	c.adminHandler = frontend.NewAdminHandler(
+		c.frontEndService, c.numberOfHistoryShards, c.metadataMgr, c.historyMgr, c.historyV2Mgr)
 	c.frontendHandler = frontend.NewWorkflowHandler(
-		c.frontEndService, frontend.NewConfig(dynamicconfig.NewNopCollection()), c.metadataMgr, c.historyMgr, c.historyV2Mgr, c.visibilityMgr, kafkaProducer)
+		c.frontEndService, frontend.NewConfig(dynamicconfig.NewNopCollection(), false),
+		c.metadataMgr, c.historyMgr, c.historyV2Mgr, c.visibilityMgr, kafkaProducer, params.BlobstoreClient)
 	err = c.frontendHandler.Start()
 	if err != nil {
 		c.logger.WithField("error", err).Fatal("Failed to start frontend")
+	}
+	c.frontEndService.GetDispatcher().Register(workflowserviceserver.New(c.frontendHandler))
+	err = c.adminHandler.Start()
+	if err != nil {
+		c.logger.WithField("error", err).Fatal("Failed to start admin")
 	}
 	startWG.Done()
 	<-c.shutdownCh
@@ -336,8 +359,9 @@ func (c *cadenceImpl) startHistory(rpHosts []string, startWG *sync.WaitGroup, en
 			VisibilityStore:  "test",
 			DataStores:       map[string]config.DataStore{"test": {Cassandra: &cassandraConfig}},
 		}
+		params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 		service := service.New(params)
-		historyConfig := history.NewConfig(dynamicconfig.NewNopCollection(), c.numberOfHistoryShards)
+		historyConfig := history.NewConfig(dynamicconfig.NewNopCollection(), c.numberOfHistoryShards, c.enableVisibilityToKafka)
 		historyConfig.HistoryMgrNumConns = dynamicconfig.GetIntPropertyFn(c.numberOfHistoryShards)
 		historyConfig.ExecutionMgrNumConns = dynamicconfig.GetIntPropertyFn(c.numberOfHistoryShards)
 		historyConfig.EnableEventsV2 = dynamicconfig.GetBoolPropertyFnFilteredByDomain(enableEventsV2)
@@ -369,6 +393,7 @@ func (c *cadenceImpl) startMatching(rpHosts []string, startWG *sync.WaitGroup) {
 		VisibilityStore:  "test",
 		DataStores:       map[string]config.DataStore{"test": {Cassandra: &cassandraConfig}},
 	}
+	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 	service := service.New(params)
 	c.matchingHandler = matching.NewHandler(
 		service, matching.NewConfig(dynamicconfig.NewNopCollection()), c.taskMgr, c.metadataMgr,
@@ -396,18 +421,17 @@ func (c *cadenceImpl) startWorker(rpHosts []string, startWG *sync.WaitGroup) {
 		VisibilityStore:  "test",
 		DataStores:       map[string]config.DataStore{"test": {Cassandra: &cassandraConfig}},
 	}
+	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 	service := service.New(params)
 	service.Start()
 
-	historyClient, err := service.GetClientFactory().NewHistoryClient()
-	if err != nil {
-		c.logger.WithField("error", err).Fatal("Failed to create history service client when start worker")
-	}
 	metadataManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgrV2, service.GetMetricsClient(), c.logger)
+	domainCache := cache.NewDomainCache(metadataManager, params.ClusterMetadata, service.GetMetricsClient(), service.GetLogger())
+	domainCache.Start()
 
 	workerConfig := worker.NewConfig(dynamicconfig.NewNopCollection())
 	workerConfig.ReplicationCfg.ReplicatorConcurrency = dynamicconfig.GetIntPropertyFn(10)
-	c.replicator = replicator.NewReplicator(c.clusterMetadata, metadataManager, historyClient,
+	c.replicator = replicator.NewReplicator(c.clusterMetadata, metadataManager, domainCache, service.GetClientBean(),
 		workerConfig.ReplicationCfg, c.messagingClient, c.logger, service.GetMetricsClient())
 	if err := c.replicator.Start(); err != nil {
 		c.replicator.Stop()
@@ -415,6 +439,7 @@ func (c *cadenceImpl) startWorker(rpHosts []string, startWG *sync.WaitGroup) {
 	}
 	startWG.Done()
 	<-c.shutdownCh
+	domainCache.Stop()
 	c.shutdownWG.Done()
 }
 

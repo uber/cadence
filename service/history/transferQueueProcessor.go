@@ -21,18 +21,21 @@
 package history
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync/atomic"
 	"time"
 
 	"github.com/uber-common/bark"
+	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/xdc"
 )
 
 var (
@@ -40,7 +43,7 @@ var (
 )
 
 type (
-	transferTaskFilter func(timer *persistence.TransferTaskInfo) (bool, error)
+	queueTaskFilter func(qTask queueTaskInfo) (bool, error)
 
 	transferQueueProcessorImpl struct {
 		isGlobalDomainEnabled bool
@@ -75,8 +78,20 @@ func newTransferQueueProcessor(shard ShardContext, historyService *historyEngine
 	standbyTaskProcessors := make(map[string]*transferQueueStandbyProcessorImpl)
 	for clusterName := range shard.GetService().GetClusterMetadata().GetAllClusterFailoverVersions() {
 		if clusterName != currentClusterName {
+			historyRereplicator := xdc.NewHistoryRereplicator(
+				currentClusterName,
+				shard.GetDomainCache(),
+				shard.GetService().GetClientBean().GetRemoteAdminClient(clusterName),
+				func(ctx context.Context, request *h.ReplicateRawEventsRequest) error {
+					return historyService.ReplicateRawEvents(ctx, request)
+				},
+				persistence.NewHistorySerializer(),
+				historyRereplicationTimeout,
+				logger,
+			)
 			standbyTaskProcessors[clusterName] = newTransferQueueStandbyProcessor(
-				clusterName, shard, historyService, visibilityMgr, visibilityProducer, matchingClient, taskAllocator, logger,
+				clusterName, shard, historyService, visibilityMgr, visibilityProducer,
+				matchingClient, taskAllocator, historyRereplicator, logger,
 			)
 		}
 	}

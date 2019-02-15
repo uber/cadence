@@ -89,14 +89,12 @@ func (s *integrationCrossDCSuite) SetupSuite() {
 func (s *integrationCrossDCSuite) TearDownSuite() {
 }
 
-func (s *integrationCrossDCSuite) SetupTest() {
-	s.setupTest(false, false)
-}
-
 func (s *integrationCrossDCSuite) TearDownTest() {
-	s.host.Stop()
-	s.host = nil
-	s.TearDownWorkflowStore()
+	if s.host != nil {
+		s.host.Stop()
+		s.host = nil
+		s.TearDownWorkflowStore()
+	}
 }
 
 func (s *integrationCrossDCSuite) setupTest(enableGlobalDomain bool, isMasterCluster bool) {
@@ -114,7 +112,7 @@ func (s *integrationCrossDCSuite) setupTest(enableGlobalDomain bool, isMasterClu
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
 
 	s.host = NewCadence(s.ClusterMetadata, client.NewIPYarpcDispatcherProvider(), s.mockMessagingClient, s.MetadataProxy, s.MetadataManagerV2, s.ShardMgr, s.HistoryMgr, s.HistoryV2Mgr, s.ExecutionMgrFactory, s.TaskMgr,
-		s.VisibilityMgr, testNumberOfHistoryShards, testNumberOfHistoryHosts, s.logger, 0, false, s.enableEventsV2)
+		s.VisibilityMgr, testNumberOfHistoryShards, testNumberOfHistoryHosts, s.logger, 0, false, s.enableEventsV2, false)
 
 	s.host.Start()
 

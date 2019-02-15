@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -64,6 +65,7 @@ type (
 		mockProducer               *mocks.KafkaProducer
 		mockMessagingClient        messaging.Client
 		mockQueueAckMgr            *MockQueueAckMgr
+		mockClientBean             *client.MockClientBean
 		mockTransferQueueProcessor *MockTransferQueueProcessor
 		mockTimerQueueProcessor    *MockTimerQueueProcessor
 		mockService                service.Service
@@ -121,9 +123,10 @@ func (s *transferQueueActiveProcessorSuite) SetupTest() {
 	s.mockProducer = &mocks.KafkaProducer{}
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
-	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.logger)
+	s.mockClientBean = &client.MockClientBean{}
+	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean, s.logger)
 
-	s.mockShard = &shardContextImpl{
+	shardContext := &shardContextImpl{
 		service:                   s.mockService,
 		shardInfo:                 &persistence.ShardInfo{ShardID: shardID, RangeID: 1, TransferAckLevel: 0},
 		transferSequenceNumber:    1,
@@ -138,6 +141,8 @@ func (s *transferQueueActiveProcessorSuite) SetupTest() {
 		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
 		timerMaxReadLevelMap:      make(map[string]time.Time),
 	}
+	shardContext.eventsCache = newEventsCache(shardContext)
+	s.mockShard = shardContext
 
 	historyCache := newHistoryCache(s.mockShard)
 	h := &historyEngineImpl{
@@ -170,6 +175,7 @@ func (s *transferQueueActiveProcessorSuite) TearDownTest() {
 	s.mockTransferQueueProcessor.AssertExpectations(s.T())
 	s.mockTimerQueueProcessor.AssertExpectations(s.T())
 	s.mockQueueAckMgr.AssertExpectations(s.T())
+	s.mockClientBean.AssertExpectations(s.T())
 }
 
 func (s *transferQueueActiveProcessorSuite) TestProcessActivityTask_Success() {
@@ -182,7 +188,8 @@ func (s *transferQueueActiveProcessorSuite) TestProcessActivityTask_Success() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(), s.mockShard.GetConfig(), s.logger, s.version)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, s.version)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -223,7 +230,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessActivityTask_Success() {
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockMatchingClient.On("AddActivityTask", nil, s.createAddActivityTaskRequest(transferTask, ai)).Once().Return(nil)
 
-	_, err := s.transferQueueActiveProcessor.process(transferTask)
+	_, err := s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
 }
 
@@ -237,7 +244,8 @@ func (s *transferQueueActiveProcessorSuite) TestProcessActivityTask_Duplication(
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(), s.mockShard.GetConfig(), s.logger, s.version)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, s.version)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -281,7 +289,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessActivityTask_Duplication(
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 
-	_, err := s.transferQueueActiveProcessor.process(transferTask)
+	_, err := s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
 }
 
@@ -294,7 +302,8 @@ func (s *transferQueueActiveProcessorSuite) TestProcessDecisionTask_FirstDecisio
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(), s.mockShard.GetConfig(), s.logger, s.version)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, s.version)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -327,9 +336,9 @@ func (s *transferQueueActiveProcessorSuite) TestProcessDecisionTask_FirstDecisio
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockMatchingClient.On("AddDecisionTask", nil, s.createAddDecisionTaskRequest(transferTask, msBuilder)).Once().Return(nil)
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionStarted", s.createRecordWorkflowExecutionStartedRequest(transferTask, msBuilder)).Once().Return(nil)
-	s.mockProducer.On("Publish", mock.Anything).Return(nil)
+	s.mockProducer.On("Publish", mock.Anything).Return(nil).Once()
 
-	_, err := s.transferQueueActiveProcessor.process(transferTask)
+	_, err := s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
 }
 
@@ -342,7 +351,8 @@ func (s *transferQueueActiveProcessorSuite) TestProcessDecisionTask_NonFirstDeci
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(), s.mockShard.GetConfig(), s.logger, s.version)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, s.version)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -381,7 +391,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessDecisionTask_NonFirstDeci
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockMatchingClient.On("AddDecisionTask", nil, s.createAddDecisionTaskRequest(transferTask, msBuilder)).Once().Return(nil)
 
-	_, err := s.transferQueueActiveProcessor.process(transferTask)
+	_, err := s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
 }
 
@@ -396,7 +406,8 @@ func (s *transferQueueActiveProcessorSuite) TestProcessDecisionTask_Sticky_NonFi
 	stickyTaskListName := "some random sticky task list"
 	stickyTaskListTimeout := int32(233)
 
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(), s.mockShard.GetConfig(), s.logger, s.version)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, s.version)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -439,7 +450,66 @@ func (s *transferQueueActiveProcessorSuite) TestProcessDecisionTask_Sticky_NonFi
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockMatchingClient.On("AddDecisionTask", nil, s.createAddDecisionTaskRequest(transferTask, msBuilder)).Once().Return(nil)
 
-	_, err := s.transferQueueActiveProcessor.process(transferTask)
+	_, err := s.transferQueueActiveProcessor.process(transferTask, true)
+	s.Nil(err)
+}
+
+func (s *transferQueueActiveProcessorSuite) TestProcessDecisionTask_DecisionNotSticky_MutableStateSticky() {
+	domainID := "some random domain ID"
+	execution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr("some random workflow ID"),
+		RunId:      common.StringPtr(uuid.New()),
+	}
+	workflowType := "some random workflow type"
+	taskListName := "some random task list"
+	stickyTaskListName := "some random sticky task list"
+	stickyTaskListTimeout := int32(233)
+
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, s.version)
+	msBuilder.AddWorkflowExecutionStartedEvent(
+		execution,
+		&history.StartWorkflowExecutionRequest{
+			DomainUUID: common.StringPtr(domainID),
+			StartRequest: &workflow.StartWorkflowExecutionRequest{
+				WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+				TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskListName)},
+				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
+				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+			},
+		},
+	)
+
+	di := addDecisionTaskScheduledEvent(msBuilder)
+	event := addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, taskListName, uuid.New())
+	di.StartedID = event.GetEventId()
+	event = addDecisionTaskCompletedEvent(msBuilder, di.ScheduleID, di.StartedID, nil, "some random identity")
+	// set the sticky tasklist attr
+	executionInfo := msBuilder.GetExecutionInfo()
+	executionInfo.StickyTaskList = stickyTaskListName
+	executionInfo.StickyScheduleToStartTimeout = stickyTaskListTimeout
+
+	// make another round of decision
+	taskID := int64(59)
+	di = addDecisionTaskScheduledEvent(msBuilder)
+	msBuilder.UpdateReplicationStateLastEventID(s.mockClusterMetadata.GetCurrentClusterName(), s.version, di.ScheduleID)
+
+	transferTask := &persistence.TransferTaskInfo{
+		Version:    s.version,
+		DomainID:   domainID,
+		WorkflowID: execution.GetWorkflowId(),
+		RunID:      execution.GetRunId(),
+		TaskID:     taskID,
+		TaskList:   taskListName,
+		TaskType:   persistence.TransferTaskTypeDecisionTask,
+		ScheduleID: di.ScheduleID,
+	}
+
+	persistenceMutableState := createMutableState(msBuilder)
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
+	s.mockMatchingClient.On("AddDecisionTask", nil, s.createAddDecisionTaskRequest(transferTask, msBuilder)).Once().Return(nil)
+
+	_, err := s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
 }
 
@@ -452,7 +522,8 @@ func (s *transferQueueActiveProcessorSuite) TestProcessDecisionTask_Duplication(
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(), s.mockShard.GetConfig(), s.logger, s.version)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, s.version)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -487,7 +558,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessDecisionTask_Duplication(
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 
-	_, err := s.transferQueueActiveProcessor.process(transferTask)
+	_, err := s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
 }
 
@@ -508,7 +579,8 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_HasParent(
 		RunId:      common.StringPtr(uuid.New()),
 	}
 
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(), s.mockShard.GetConfig(), s.logger, s.version)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, s.version)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -558,8 +630,9 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_HasParent(
 		CompletionEvent:    event,
 	}).Return(nil).Once()
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything).Return(nil).Once()
+	s.mockProducer.On("Publish", mock.Anything).Return(nil).Once()
 
-	_, err := s.transferQueueActiveProcessor.process(transferTask)
+	_, err := s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
 }
 
@@ -572,7 +645,8 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_NoParent()
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(), s.mockShard.GetConfig(), s.logger, s.version)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, s.version)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -609,8 +683,9 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_NoParent()
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything).Return(nil).Once()
+	s.mockProducer.On("Publish", mock.Anything).Return(nil).Once()
 
-	_, err := s.transferQueueActiveProcessor.process(transferTask)
+	_, err := s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
 }
 
@@ -629,7 +704,8 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCancelExecution_Success()
 		RunId:      common.StringPtr(uuid.New()),
 	}
 
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(), s.mockShard.GetConfig(), s.logger, s.version)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, s.version)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -673,7 +749,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCancelExecution_Success()
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", s.version).Return(cluster.TestCurrentClusterName)
 	s.mockTimerQueueProcessor.On("NotifyNewTimers", cluster.TestCurrentClusterName, mock.Anything, mock.Anything).Once()
 
-	_, err := s.transferQueueActiveProcessor.process(transferTask)
+	_, err := s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
 }
 
@@ -692,7 +768,8 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCancelExecution_Failure()
 		RunId:      common.StringPtr(uuid.New()),
 	}
 
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(), s.mockShard.GetConfig(), s.logger, s.version)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, s.version)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -737,7 +814,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCancelExecution_Failure()
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", s.version).Return(cluster.TestCurrentClusterName)
 	s.mockTimerQueueProcessor.On("NotifyNewTimers", cluster.TestCurrentClusterName, mock.Anything, mock.Anything).Once()
 
-	_, err := s.transferQueueActiveProcessor.process(transferTask)
+	_, err := s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
 }
 
@@ -756,7 +833,8 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCancelExecution_Duplicati
 		RunId:      common.StringPtr(uuid.New()),
 	}
 
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(), s.mockShard.GetConfig(), s.logger, s.version)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, s.version)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -798,7 +876,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCancelExecution_Duplicati
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 
-	_, err := s.transferQueueActiveProcessor.process(transferTask)
+	_, err := s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
 }
 
@@ -820,7 +898,8 @@ func (s *transferQueueActiveProcessorSuite) TestProcessSignalExecution_Success()
 	signalInput := []byte("some random signal input")
 	signalControl := []byte("some random signal control")
 
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(), s.mockShard.GetConfig(), s.logger, s.version)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, s.version)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -874,7 +953,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessSignalExecution_Success()
 		RequestId: common.StringPtr(si.SignalRequestID),
 	}).Return(nil).Once()
 
-	_, err := s.transferQueueActiveProcessor.process(transferTask)
+	_, err := s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
 }
 
@@ -896,7 +975,8 @@ func (s *transferQueueActiveProcessorSuite) TestProcessSignalExecution_Failure()
 	signalInput := []byte("some random signal input")
 	signalControl := []byte("some random signal control")
 
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(), s.mockShard.GetConfig(), s.logger, s.version)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, s.version)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -942,7 +1022,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessSignalExecution_Failure()
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", s.version).Return(cluster.TestCurrentClusterName)
 	s.mockTimerQueueProcessor.On("NotifyNewTimers", cluster.TestCurrentClusterName, mock.Anything, mock.Anything).Once()
 
-	_, err := s.transferQueueActiveProcessor.process(transferTask)
+	_, err := s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
 }
 
@@ -964,7 +1044,8 @@ func (s *transferQueueActiveProcessorSuite) TestProcessSignalExecution_Duplicati
 	signalInput := []byte("some random signal input")
 	signalControl := []byte("some random signal control")
 
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(), s.mockShard.GetConfig(), s.logger, s.version)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, s.version)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -1007,7 +1088,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessSignalExecution_Duplicati
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 
-	_, err := s.transferQueueActiveProcessor.process(transferTask)
+	_, err := s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
 }
 
@@ -1028,7 +1109,8 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Succe
 	childWorkflowType := "some random child workflow type"
 	childTaskListName := "some random child task list"
 
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(), s.mockShard.GetConfig(), s.logger, s.version)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, s.version)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -1101,7 +1183,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Succe
 	}).Return(nil).Once()
 	s.mockTimerQueueProcessor.On("NotifyNewTimers", cluster.TestCurrentClusterName, mock.Anything, mock.Anything).Once()
 
-	_, err := s.transferQueueActiveProcessor.process(transferTask)
+	_, err := s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
 }
 
@@ -1121,7 +1203,8 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Failu
 	childWorkflowType := "some random child workflow type"
 	childTaskListName := "some random child task list"
 
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(), s.mockShard.GetConfig(), s.logger, s.version)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, s.version)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -1187,7 +1270,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Failu
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", s.version).Return(cluster.TestCurrentClusterName)
 	s.mockTimerQueueProcessor.On("NotifyNewTimers", cluster.TestCurrentClusterName, mock.Anything, mock.Anything).Once()
 
-	_, err := s.transferQueueActiveProcessor.process(transferTask)
+	_, err := s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
 }
 
@@ -1208,7 +1291,8 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Succe
 	childWorkflowType := "some random child workflow type"
 	childTaskListName := "some random child task list"
 
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(), s.mockShard.GetConfig(), s.logger, s.version)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, s.version)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -1273,7 +1357,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Succe
 		},
 	}).Return(nil).Once()
 
-	_, err := s.transferQueueActiveProcessor.process(transferTask)
+	_, err := s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
 }
 
@@ -1296,7 +1380,8 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Dupli
 	childWorkflowType := "some random child workflow type"
 	childTaskListName := "some random child task list"
 
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(), s.mockShard.GetConfig(), s.logger, s.version)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, s.version)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -1358,7 +1443,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Dupli
 	}, nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 
-	_, err := s.transferQueueActiveProcessor.process(transferTask)
+	_, err := s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
 }
 
@@ -1389,7 +1474,7 @@ func (s *transferQueueActiveProcessorSuite) createAddDecisionTaskRequest(task *p
 	taskList := &workflow.TaskList{Name: &task.TaskList}
 	executionInfo := msBuilder.GetExecutionInfo()
 	timeout := executionInfo.WorkflowTimeout
-	if msBuilder.IsStickyTaskListEnabled() {
+	if msBuilder.GetExecutionInfo().TaskList != task.TaskList {
 		taskList.Kind = common.TaskListKindPtr(workflow.TaskListKindSticky)
 		timeout = executionInfo.StickyScheduleToStartTimeout
 	}

@@ -21,17 +21,28 @@
 package host
 
 import (
+	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/common"
 	"go.uber.org/yarpc"
 )
 
-// Client is the interface exposed by frontend service client
-type Client interface {
+// AdminClient is the interface exposed by admin service client
+type AdminClient interface {
+	adminserviceclient.Interface
+}
+
+// FrontendClient is the interface exposed by frontend service client
+type FrontendClient interface {
 	workflowserviceclient.Interface
 }
 
-// New creates a client to cadence frontend
-func New(d *yarpc.Dispatcher) Client {
+// NewAdminClient creates a client to cadence admin client
+func NewAdminClient(d *yarpc.Dispatcher) AdminClient {
+	return adminserviceclient.New(d.ClientConfig(common.FrontendServiceName))
+}
+
+// NewFrontendClient creates a client to cadence frontend client
+func NewFrontendClient(d *yarpc.Dispatcher) FrontendClient {
 	return workflowserviceclient.New(d.ClientConfig(common.FrontendServiceName))
 }

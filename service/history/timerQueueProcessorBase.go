@@ -22,17 +22,20 @@ package history
 
 import (
 	"errors"
+	"github.com/uber/cadence/service/worker/sysworkflow"
 	"math"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/uber-common/bark"
+	"github.com/uber/cadence/.gen/go/indexer"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
@@ -50,25 +53,26 @@ var (
 
 type (
 	timerQueueProcessorBase struct {
-		scope            int
-		shard            ShardContext
-		historyService   *historyEngineImpl
-		cache            *historyCache
-		executionManager persistence.ExecutionManager
-		status           int32
-		shutdownWG       sync.WaitGroup
-		shutdownCh       chan struct{}
-		tasksCh          chan *persistence.TimerTaskInfo
-		config           *Config
-		logger           bark.Logger
-		metricsClient    metrics.Client
-		timerFiredCount  uint64
-		timerProcessor   timerProcessor
-		timerQueueAckMgr timerQueueAckMgr
-		timerGate        TimerGate
-		rateLimiter      common.TokenBucket
-		startDelay       dynamicconfig.DurationPropertyFn
-		retryPolicy      backoff.RetryPolicy
+		scope              int
+		shard              ShardContext
+		historyService     *historyEngineImpl
+		cache              *historyCache
+		executionManager   persistence.ExecutionManager
+		status             int32
+		shutdownWG         sync.WaitGroup
+		shutdownCh         chan struct{}
+		tasksCh            chan *persistence.TimerTaskInfo
+		config             *Config
+		logger             bark.Logger
+		metricsClient      metrics.Client
+		timerFiredCount    uint64
+		timerProcessor     timerProcessor
+		timerQueueAckMgr   timerQueueAckMgr
+		timerGate          TimerGate
+		rateLimiter        common.TokenBucket
+		startDelay         dynamicconfig.DurationPropertyFn
+		retryPolicy        backoff.RetryPolicy
+		visibilityProducer messaging.Producer
 
 		// worker coroutines notification
 		workerNotificationChans []chan struct{}
@@ -86,7 +90,9 @@ type (
 
 func newTimerQueueProcessorBase(scope int, shard ShardContext, historyService *historyEngineImpl,
 	timerQueueAckMgr timerQueueAckMgr, timerGate TimerGate, maxPollRPS dynamicconfig.IntPropertyFn,
-	startDelay dynamicconfig.DurationPropertyFn, logger bark.Logger) *timerQueueProcessorBase {
+	startDelay dynamicconfig.DurationPropertyFn, visibilityProducer messaging.Producer,
+	logger bark.Logger) *timerQueueProcessorBase {
+
 	log := logger.WithFields(bark.Fields{
 		logging.TagWorkflowComponent: logging.TagValueTimerQueueComponent,
 	})
@@ -118,6 +124,7 @@ func newTimerQueueProcessorBase(scope int, shard ShardContext, historyService *h
 		rateLimiter:             common.NewTokenBucket(maxPollRPS(), common.NewRealTimeSource()),
 		startDelay:              startDelay,
 		retryPolicy:             common.CreatePersistanceRetryPolicy(),
+		visibilityProducer:      visibilityProducer,
 	}
 
 	return base
@@ -249,17 +256,23 @@ func (t *timerQueueProcessorBase) notifyNewTimers(timerTasks []persistence.Task)
 			} else {
 				t.metricsClient.IncCounter(metrics.TimerStandbyTaskDeleteHistoryEventScope, metrics.NewTimerCounter)
 			}
+		case persistence.TaskTypeArchiveHistoryEvent:
+			if isActive {
+				t.metricsClient.IncCounter(metrics.TimerActiveTaskArchiveHistoryEventScope, metrics.NewTimerCounter)
+			} else {
+				t.metricsClient.IncCounter(metrics.TimerStandbyTaskArchiveHistoryEventScope, metrics.NewTimerCounter)
+			}
 		case persistence.TaskTypeActivityRetryTimer:
 			if isActive {
 				t.metricsClient.IncCounter(metrics.TimerActiveTaskActivityRetryTimerScope, metrics.NewTimerCounter)
 			} else {
 				t.metricsClient.IncCounter(metrics.TimerStandbyTaskActivityRetryTimerScope, metrics.NewTimerCounter)
 			}
-		case persistence.TaskTypeWorkflowRetryTimer:
+		case persistence.TaskTypeWorkflowBackoffTimer:
 			if isActive {
-				t.metricsClient.IncCounter(metrics.TimerActiveTaskWorkflowRetryTimerScope, metrics.NewTimerCounter)
+				t.metricsClient.IncCounter(metrics.TimerActiveTaskWorkflowBackoffTimerScope, metrics.NewTimerCounter)
 			} else {
-				t.metricsClient.IncCounter(metrics.TimerStandbyTaskWorkflowRetryTimerScope, metrics.NewTimerCounter)
+				t.metricsClient.IncCounter(metrics.TimerStandbyTaskWorkflowBackoffTimerScope, metrics.NewTimerCounter)
 			}
 			// TODO add default
 		}
@@ -395,12 +408,37 @@ func (t *timerQueueProcessorBase) retryTasks() {
 func (t *timerQueueProcessorBase) processTaskAndAck(notificationChan <-chan struct{}, task *persistence.TimerTaskInfo) {
 
 	var scope int
+	var shouldProcessTask bool
 	var err error
 	startTime := time.Now()
 	logger := t.initializeLoggerForTask(task)
 	attempt := 0
+	incAttempt := func() {
+		attempt++
+		if attempt >= t.config.TimerTaskMaxRetryCount() {
+			t.metricsClient.RecordTimer(scope, metrics.TaskAttemptTimer, time.Duration(attempt))
+			logging.LogCriticalErrorEvent(logger, "Critical error processing timer task, retrying.", err)
+		}
+	}
+
+FilterLoop:
+	for {
+		select {
+		case <-t.shutdownCh:
+			// this must return without ack
+			return
+		default:
+			shouldProcessTask, err = t.timerProcessor.getTaskFilter()(task)
+			if err == nil {
+				break FilterLoop
+			}
+			incAttempt()
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+
 	op := func() error {
-		scope, err = t.processTaskOnce(notificationChan, task, logger)
+		scope, err = t.processTaskOnce(notificationChan, task, shouldProcessTask, logger)
 		return t.handleTaskError(scope, startTime, notificationChan, err, logger)
 	}
 	retryCondition := func(err error) bool {
@@ -425,26 +463,19 @@ func (t *timerQueueProcessorBase) processTaskAndAck(notificationChan <-chan stru
 				t.ackTaskOnce(task, scope)
 				return
 			}
-
-			attempt++
-
-			if attempt >= t.config.TimerTaskMaxRetryCount() {
-				t.metricsClient.RecordTimer(scope, metrics.TaskAttemptTimer, time.Duration(attempt))
-				logging.LogCriticalErrorEvent(logger, "Critical error processing timer task, retrying.", err)
-			}
+			incAttempt()
 		}
 	}
 }
 
-func (t *timerQueueProcessorBase) processTaskOnce(notificationChan <-chan struct{}, task *persistence.TimerTaskInfo, logger bark.Logger) (int, error) {
-
+func (t *timerQueueProcessorBase) processTaskOnce(notificationChan <-chan struct{}, task *persistence.TimerTaskInfo, shouldProcessTask bool, logger bark.Logger) (int, error) {
 	select {
 	case <-notificationChan:
 	default:
 	}
 
 	startTime := time.Now()
-	scope, err := t.timerProcessor.process(task)
+	scope, err := t.timerProcessor.process(task, shouldProcessTask)
 	t.metricsClient.IncCounter(scope, metrics.TaskRequests)
 	t.metricsClient.RecordTimer(scope, metrics.TaskProcessingLatency, time.Since(startTime))
 
@@ -549,7 +580,41 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.Ti
 	if err != nil {
 		return err
 	} else if msBuilder == nil || msBuilder.IsWorkflowExecutionRunning() {
-		// this can happen if workflow is reset.
+		return nil
+	}
+	ok, err := verifyTaskVersion(t.shard, t.logger, task.DomainID, msBuilder.GetLastWriteVersion(), task.Version, task)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return nil
+	}
+
+	err = t.deleteWorkflowExecution(task)
+	if err != nil {
+		return err
+	}
+
+	err = t.deleteWorkflowHistory(task, msBuilder)
+	if err != nil {
+		return err
+	}
+
+	return t.deleteWorkflowVisibility(task)
+}
+
+func (t *timerQueueProcessorBase) processArchiveHistoryEvent(task *persistence.TimerTaskInfo) (retError error) {
+
+	context, release, err := t.cache.getOrCreateWorkflowExecution(t.getDomainIDAndWorkflowExecution(task))
+	if err != nil {
+		return err
+	}
+	defer func() { release(retError) }()
+
+	msBuilder, err := loadMutableStateForTimerTask(context, task, t.metricsClient, t.logger)
+	if err != nil {
+		return err
+	} else if msBuilder == nil || msBuilder.IsWorkflowExecutionRunning() {
 		return nil
 	}
 	ok, err := verifyTaskVersion(t.shard, t.logger, task.DomainID, msBuilder.GetLastWriteVersion(), task.Version, task)
@@ -559,6 +624,36 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.Ti
 		return nil
 	}
 
+	req := &sysworkflow.ArchiveRequest{
+		DomainID:             task.DomainID,
+		WorkflowID:           task.WorkflowID,
+		RunID:                task.RunID,
+		EventStoreVersion:    msBuilder.GetEventStoreVersion(),
+		BranchToken:          msBuilder.GetCurrentBranch(),
+		LastFirstEventID:     msBuilder.GetLastFirstEventID(),
+		CloseFailoverVersion: msBuilder.GetLastWriteVersion(),
+	}
+	err = t.deleteWorkflowExecution(task)
+	if err != nil {
+		return err
+	}
+
+	if err := t.historyService.archivalClient.Archive(req); err != nil {
+		t.logger.WithFields(bark.Fields{
+			logging.TagHistoryShardID:      t.shard.GetShardID(),
+			logging.TagTaskID:              task.GetTaskID(),
+			logging.TagTaskType:            task.GetTaskType(),
+			logging.TagDomainID:            task.DomainID,
+			logging.TagWorkflowExecutionID: task.WorkflowID,
+			logging.TagWorkflowRunID:       task.RunID,
+			logging.TagErr:                 err,
+		}).Error("failed to initiate archival")
+		return err
+	}
+	return nil
+}
+
+func (t *timerQueueProcessorBase) deleteWorkflowExecution(task *persistence.TimerTaskInfo) error {
 	op := func() error {
 		return t.executionManager.DeleteWorkflowExecution(&persistence.DeleteWorkflowExecutionRequest{
 			DomainID:   task.DomainID,
@@ -566,18 +661,22 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.Ti
 			RunID:      task.RunID,
 		})
 	}
+	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+}
 
-	err = backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
-	if err != nil {
-		return err
-	}
-
+func (t *timerQueueProcessorBase) deleteWorkflowHistory(task *persistence.TimerTaskInfo, msBuilder mutableState) error {
 	domainID, workflowExecution := t.getDomainIDAndWorkflowExecution(task)
-	op = func() error {
+	op := func() error {
 		if msBuilder.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
-			return t.historyService.historyV2Mgr.DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
-				BranchToken: msBuilder.GetCurrentBranch(),
+			logger := t.logger.WithFields(bark.Fields{
+				logging.TagHistoryShardID:      t.shard.GetShardID(),
+				logging.TagTaskID:              task.GetTaskID(),
+				logging.TagTaskType:            task.GetTaskType(),
+				logging.TagDomainID:            task.DomainID,
+				logging.TagWorkflowExecutionID: task.WorkflowID,
+				logging.TagWorkflowRunID:       task.RunID,
 			})
+			return persistence.DeleteWorkflowExecutionHistoryV2(t.historyService.historyV2Mgr, msBuilder.GetCurrentBranch(), logger)
 		}
 		return t.historyService.historyMgr.DeleteWorkflowExecutionHistory(
 			&persistence.DeleteWorkflowExecutionHistoryRequest{
@@ -585,8 +684,32 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.Ti
 				Execution: workflowExecution,
 			})
 	}
-
 	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+}
+
+func (t *timerQueueProcessorBase) deleteWorkflowVisibility(task *persistence.TimerTaskInfo) error {
+	if t.visibilityProducer == nil {
+		return nil
+	}
+
+	msg := getVisibilityMessageForDeletion(task.DomainID, task.WorkflowID, task.RunID, task.GetTaskID())
+	op := func() error {
+		return t.visibilityProducer.Publish(msg)
+	}
+
+	return backoff.Retry(op, kafkaOperationRetryPolicy, common.IsKafkaTransientError)
+}
+
+func getVisibilityMessageForDeletion(domainID, workflowID, runID string, docVersion int64) *indexer.Message {
+	msgType := indexer.MessageTypeDelete
+	msg := &indexer.Message{
+		MessageType: &msgType,
+		DomainID:    common.StringPtr(domainID),
+		WorkflowID:  common.StringPtr(workflowID),
+		RunID:       common.StringPtr(runID),
+		Version:     common.Int64Ptr(docVersion),
+	}
+	return msg
 }
 
 func (t *timerQueueProcessorBase) getTimerTaskType(taskType int) string {
@@ -601,10 +724,12 @@ func (t *timerQueueProcessorBase) getTimerTaskType(taskType int) string {
 		return "WorkflowTimeout"
 	case persistence.TaskTypeDeleteHistoryEvent:
 		return "DeleteHistoryEvent"
+	case persistence.TaskTypeArchiveHistoryEvent:
+		return "ArchiveHistoryEvent"
 	case persistence.TaskTypeActivityRetryTimer:
 		return "ActivityRetryTimerTask"
-	case persistence.TaskTypeWorkflowRetryTimer:
-		return "WorkflowRetryTimerTask"
+	case persistence.TaskTypeWorkflowBackoffTimer:
+		return "WorkflowBackoffTimerTask"
 	}
 	return "UnKnown"
 }

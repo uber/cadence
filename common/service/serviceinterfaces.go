@@ -46,8 +46,6 @@ type (
 
 		GetMetricsClient() metrics.Client
 
-		GetClientFactory() client.Factory
-
 		GetClientBean() client.Bean
 
 		GetDispatcher() *yarpc.Dispatcher

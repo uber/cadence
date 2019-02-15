@@ -23,11 +23,15 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+
+	"io/ioutil"
+
 	"github.com/gocql/gocql"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/persistence"
 	cassp "github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/tools/cassandra"
@@ -43,6 +47,7 @@ func AdminShowWorkflow(c *cli.Context) {
 	rid := c.String(FlagRunID)
 	tid := c.String(FlagTreeID)
 	bid := c.String(FlagBranchID)
+	outputFileName := c.String(FlagOutputFilename)
 
 	session := connectToCassandra(c)
 	serializer := persistence.NewHistorySerializer()
@@ -88,6 +93,7 @@ func AdminShowWorkflow(c *cli.Context) {
 	if len(history) == 0 {
 		ErrorAndExit("no events", nil)
 	}
+	allEvents := &shared.History{}
 	totalSize := 0
 	for idx, b := range history {
 		totalSize += len(b.Data)
@@ -96,6 +102,7 @@ func AdminShowWorkflow(c *cli.Context) {
 		if err != nil {
 			ErrorAndExit("DeserializeBatchEvents err", err)
 		}
+		allEvents.Events = append(allEvents.Events, historyBatch...)
 		for _, e := range historyBatch {
 			jsonstr, err := json.Marshal(e)
 			if err != nil {
@@ -105,6 +112,16 @@ func AdminShowWorkflow(c *cli.Context) {
 		}
 	}
 	fmt.Printf("======== total batches %v, total blob len: %v ======\n", len(history), totalSize)
+
+	if outputFileName != "" {
+		data, err := json.Marshal(allEvents.Events)
+		if err != nil {
+			ErrorAndExit("Failed to serialize history data.", err)
+		}
+		if err := ioutil.WriteFile(outputFileName, data, 0777); err != nil {
+			ErrorAndExit("Failed to export history data file.", err)
+		}
+	}
 }
 
 // AdminDescribeWorkflow describe a new workflow execution for admin
@@ -130,6 +147,24 @@ func AdminDescribeWorkflow(c *cli.Context) {
 	}
 
 	prettyPrintJSONObject(resp)
+
+	if resp != nil {
+		msStr := resp.GetMutableStateInDatabase()
+		ms := persistence.WorkflowMutableState{}
+		err = json.Unmarshal([]byte(msStr), &ms)
+		if err != nil {
+			ErrorAndExit("json.Unmarshal err", err)
+		}
+		if ms.ExecutionInfo != nil && ms.ExecutionInfo.EventStoreVersion == persistence.EventStoreVersionV2 {
+			branchInfo := shared.HistoryBranch{}
+			thriftrwEncoder := codec.NewThriftRWEncoder()
+			err := thriftrwEncoder.Decode(ms.ExecutionInfo.BranchToken, &branchInfo)
+			if err != nil {
+				ErrorAndExit("thriftrwEncoder.Decode err", err)
+			}
+			prettyPrintJSONObject(branchInfo)
+		}
+	}
 }
 
 // AdminDeleteWorkflow describe a new workflow execution for admin
@@ -274,7 +309,7 @@ func AdminDescribeHistoryHost(c *cli.Context) {
 	addr := c.String(FlagHistoryAddress)
 	printFully := c.Bool(FlagPrintFullyDetail)
 
-	if len(wid) <= 0 && !c.IsSet(FlagShardID) && len(addr) <= 0 {
+	if len(wid) == 0 && !c.IsSet(FlagShardID) && len(addr) == 0 {
 		ErrorAndExit("at least one of them is required to provide to lookup host: workflowID, shardID and host address", nil)
 		return
 	}
