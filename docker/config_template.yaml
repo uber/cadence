@@ -28,7 +28,6 @@ services:
   frontend:
     rpc:
       port: 7933
-      bindOnLocalHost: ${BIND_ON_LOCALHOST}
       bindOnIP: ${BIND_ON_IP}
     metrics:
       statsd:
@@ -38,7 +37,6 @@ services:
   matching:
     rpc:
       port: 7935
-      bindOnLocalHost: ${BIND_ON_LOCALHOST}
       bindOnIP: ${BIND_ON_IP}
     metrics:
       statsd:
@@ -48,7 +46,6 @@ services:
   history:
     rpc:
       port: 7934
-      bindOnLocalHost: ${BIND_ON_LOCALHOST}
       bindOnIP: ${BIND_ON_IP}
     metrics:
       statsd:
@@ -58,7 +55,6 @@ services:
   worker:
     rpc:
       port: 7939
-      bindOnLocalHost: ${BIND_ON_LOCALHOST}
       bindOnIP: ${BIND_ON_IP}
     metrics:
       statsd:
