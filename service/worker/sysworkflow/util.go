@@ -22,7 +22,6 @@ package sysworkflow
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/dgryski/go-farm"
 	"github.com/uber/cadence/.gen/go/shared"
@@ -58,13 +57,17 @@ type (
 	}
 )
 
+var (
+	errInvalidKeyInput = &shared.BadRequestError{Message: "invalid input to construct history blob key"}
+)
+
 // NewHistoryBlobKey returns a key for history blob
 func NewHistoryBlobKey(domainID, workflowID, runID string, pageToken int) (blob.Key, error) {
 	if len(domainID) == 0 || len(workflowID) == 0 || len(runID) == 0 {
-		return nil, errors.New("all inputs required to be non-empty")
+		return nil, errInvalidKeyInput
 	}
 	if pageToken < common.FirstBlobPageToken {
-		return nil, errors.New("pageToken is lower than first page")
+		return nil, errInvalidKeyInput
 	}
 	domainIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(domainID)))
 	workflowIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(workflowID)))

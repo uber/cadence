@@ -3182,12 +3182,11 @@ func (wh *WorkflowHandler) getArchivedHistory(
 			return nil, wh.error(err, scope)
 		}
 	}
-	if *historyBlob.Header.NextPageToken == common.LastBlobNextPageToken {
+	token = &getHistoryContinuationTokenArchival{
+		BlobstorePageToken: *historyBlob.Header.NextPageToken,
+	}
+	if token.BlobstorePageToken == common.LastBlobNextPageToken {
 		token = nil
-	} else {
-		token = &getHistoryContinuationTokenArchival{
-			BlobstorePageToken: *historyBlob.Header.NextPageToken,
-		}
 	}
 	nextToken, err := serializeHistoryTokenArchival(token)
 	if err != nil {
