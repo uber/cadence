@@ -519,17 +519,22 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 			if len(existingClustersNames) != len(targetClustersNames) {
 				return errCannotModifyClustersFromDomain
 			}
-			for clusterName := range existingClustersNames {
-				if _, ok := targetClustersNames[clusterName]; !ok {
-					return errCannotModifyClustersFromDomain
+			// TODO remove the if check after DC migration is over
+			// KEEP the logic inside the if check
+			if !wh.config.EnableDCMigration() {
+				for clusterName := range existingClustersNames {
+					if _, ok := targetClustersNames[clusterName]; !ok {
+						return errCannotModifyClustersFromDomain
+					}
 				}
-			}
-			// -- END
 
-			// validate that updated clusters is a superset of existing clusters
-			for _, cluster := range replicationConfig.Clusters {
-				if _, ok := targetClustersNames[cluster.ClusterName]; !ok {
-					return errCannotModifyClustersFromDomain
+				// -- END
+
+				// validate that updated clusters is a superset of existing clusters
+				for _, cluster := range replicationConfig.Clusters {
+					if _, ok := targetClustersNames[cluster.ClusterName]; !ok {
+						return errCannotModifyClustersFromDomain
+					}
 				}
 			}
 			replicationConfig.Clusters = clusters

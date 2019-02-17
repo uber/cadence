@@ -122,6 +122,10 @@ func (s *server) startService() common.Daemon {
 
 	params.DCRedirectionPolicy = s.cfg.DCRedirectionPolicy
 
+	clustersDisabled := map[string]struct{}{}
+	for _, clusterName := range s.cfg.ClustersInfo.ClustersDisabled {
+		clustersDisabled[clusterName] = struct{}{}
+	}
 	params.ClusterMetadata = cluster.NewMetadata(
 		enableGlobalDomain,
 		s.cfg.ClustersInfo.FailoverVersionIncrement,
@@ -129,6 +133,7 @@ func (s *server) startService() common.Daemon {
 		s.cfg.ClustersInfo.CurrentClusterName,
 		s.cfg.ClustersInfo.ClusterInitialFailoverVersions,
 		s.cfg.ClustersInfo.ClusterAddress,
+		clustersDisabled,
 		enableArchival,
 		s.cfg.Archival.Filestore.DefaultBucket.Name,
 	)

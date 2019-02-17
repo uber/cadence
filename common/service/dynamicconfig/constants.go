@@ -90,6 +90,8 @@ var keys = map[Key]string{
 	MatchingMaxTaskBatchSize:                "matching.maxTaskBatchSize",
 
 	// history settings
+	// TODO remove after DC migration is over
+	EnableDCMigration:                                     "history.enableDCMigration",
 	HistoryRPS:                                            "history.rps",
 	HistoryPersistenceMaxQPS:                              "history.persistenceMaxQPS",
 	HistoryVisibilityOpenMaxQPS:                           "history.historyVisibilityOpenMaxQPS",
@@ -155,6 +157,7 @@ var keys = map[Key]string{
 	EnableEventsV2:                                        "history.enableEventsV2",
 	NumSystemWorkflows:                                    "history.numSystemWorkflows",
 
+	WorrkerrReplicatorDCMigrrationRetryCount: "worker.replicatorDCMigrrationRetryCount",
 	WorkerPersistenceMaxQPS:                  "worker.persistenceMaxQPS",
 	WorkerReplicatorConcurrency:              "worker.replicatorConcurrency",
 	WorkerReplicatorActivityBufferRetryCount: "worker.replicatorActivityBufferRetryCount",
@@ -265,6 +268,9 @@ const (
 
 	// key for history
 
+	// EnableDCMigration whether DC migration is enabled or not
+	// TODO remove after DC migration is over
+	EnableDCMigration
 	// HistoryRPS is request rate per second for each history host
 	HistoryRPS
 	// HistoryPersistenceMaxQPS is the max qps history host can query DB
@@ -398,6 +404,8 @@ const (
 
 	// key for worker
 
+	// WorrkerrReplicatorDCMigrrationRetryCount is the retry attempt when doing dc migration
+	WorrkerrReplicatorDCMigrrationRetryCount
 	// WorkerPersistenceMaxQPS is the max qps worker host can query DB
 	WorkerPersistenceMaxQPS
 	// WorkerReplicatorConcurrency is the max concurrent tasks to be processed at any given time

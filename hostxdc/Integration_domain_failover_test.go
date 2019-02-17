@@ -140,6 +140,7 @@ func (s *testCluster) setupCluster(no int, enableEventsV2 bool) {
 		clusterInfo.CurrentClusterName,
 		clusterInfo.ClusterInitialFailoverVersions,
 		clusterInfo.ClusterAddress,
+		map[string]struct{}{},
 		dynamicconfig.GetBoolPropertyFn(false),
 		"",
 	)

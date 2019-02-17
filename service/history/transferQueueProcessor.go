@@ -78,6 +78,9 @@ func newTransferQueueProcessor(shard ShardContext, historyService *historyEngine
 	standbyTaskProcessors := make(map[string]*transferQueueStandbyProcessorImpl)
 	for clusterName := range shard.GetService().GetClusterMetadata().GetAllClusterFailoverVersions() {
 		if clusterName != currentClusterName {
+			if shard.GetService().GetClusterMetadata().IsClusterDisabled(clusterName) {
+				continue
+			}
 			historyRereplicator := xdc.NewHistoryRereplicator(
 				currentClusterName,
 				shard.GetDomainCache(),
@@ -155,6 +158,9 @@ func (t *transferQueueProcessorImpl) NotifyNewTask(clusterName string, transferT
 	}
 
 	standbyTaskProcessor, ok := t.standbyTaskProcessors[clusterName]
+	if !ok && t.config.EnableDCMigration() {
+		return
+	}
 	if !ok {
 		panic(fmt.Sprintf("Cannot find transfer processor for %s.", clusterName))
 	}
@@ -168,6 +174,9 @@ func (t *transferQueueProcessorImpl) FailoverDomain(domainIDs map[string]struct{
 	minLevel := t.shard.GetTransferClusterAckLevel(t.currentClusterName)
 	standbyClusterName := t.currentClusterName
 	for cluster := range t.shard.GetService().GetClusterMetadata().GetAllClusterFailoverVersions() {
+		if t.shard.GetService().GetClusterMetadata().IsClusterDisabled(cluster) {
+			continue
+		}
 		ackLevel := t.shard.GetTransferClusterAckLevel(cluster)
 		if ackLevel < minLevel {
 			minLevel = ackLevel

@@ -673,11 +673,13 @@ func (s *transferQueueStandbyProcessorSuite) TestProcessCancelExecution_Pending(
 	s.Equal(ErrTaskRetry, err)
 
 	s.mockShard.SetCurrentTime(s.clusterName, time.Now().Add(3*s.mockShard.GetConfig().StandbyClusterDelay()))
-	s.mockHistoryRereplicator.On("SendMultiWorkflowHistory",
-		transferTask.DomainID, transferTask.WorkflowID,
-		transferTask.RunID, nextEventID,
-		transferTask.RunID, common.EndEventID,
-	).Return(nil).Once()
+	if !s.mockShard.GetConfig().EnableDCMigration() {
+		s.mockHistoryRereplicator.On("SendMultiWorkflowHistory",
+			transferTask.DomainID, transferTask.WorkflowID,
+			transferTask.RunID, nextEventID,
+			transferTask.RunID, common.EndEventID,
+		).Return(nil).Once()
+	}
 	_, err = s.transferQueueStandbyProcessor.process(transferTask, true)
 	s.Equal(ErrTaskDiscarded, err)
 }
@@ -809,11 +811,13 @@ func (s *transferQueueStandbyProcessorSuite) TestProcessSignalExecution_Pending(
 	s.Equal(ErrTaskRetry, err)
 
 	s.mockShard.SetCurrentTime(s.clusterName, time.Now().Add(3*s.mockShard.GetConfig().StandbyClusterDelay()))
-	s.mockHistoryRereplicator.On("SendMultiWorkflowHistory",
-		transferTask.DomainID, transferTask.WorkflowID,
-		transferTask.RunID, nextEventID,
-		transferTask.RunID, common.EndEventID,
-	).Return(nil).Once()
+	if !s.mockShard.GetConfig().EnableDCMigration() {
+		s.mockHistoryRereplicator.On("SendMultiWorkflowHistory",
+			transferTask.DomainID, transferTask.WorkflowID,
+			transferTask.RunID, nextEventID,
+			transferTask.RunID, common.EndEventID,
+		).Return(nil).Once()
+	}
 	_, err = s.transferQueueStandbyProcessor.process(transferTask, true)
 	s.Equal(ErrTaskDiscarded, err)
 }
@@ -945,11 +949,13 @@ func (s *transferQueueStandbyProcessorSuite) TestProcessStartChildExecution_Pend
 	s.Equal(ErrTaskRetry, err)
 
 	s.mockShard.SetCurrentTime(s.clusterName, time.Now().Add(3*s.mockShard.GetConfig().StandbyClusterDelay()))
-	s.mockHistoryRereplicator.On("SendMultiWorkflowHistory",
-		transferTask.DomainID, transferTask.WorkflowID,
-		transferTask.RunID, nextEventID,
-		transferTask.RunID, common.EndEventID,
-	).Return(nil).Once()
+	if !s.mockShard.GetConfig().EnableDCMigration() {
+		s.mockHistoryRereplicator.On("SendMultiWorkflowHistory",
+			transferTask.DomainID, transferTask.WorkflowID,
+			transferTask.RunID, nextEventID,
+			transferTask.RunID, common.EndEventID,
+		).Return(nil).Once()
+	}
 	_, err = s.transferQueueStandbyProcessor.process(transferTask, true)
 	s.Equal(ErrTaskDiscarded, err)
 }

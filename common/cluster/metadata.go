@@ -50,6 +50,9 @@ type (
 		// GetAllClientAddress return the frontend address for each cluster name
 		GetAllClientAddress() map[string]config.Address
 
+		// TODO remove after DC migration is over
+		IsClusterDisabled(cluster string) bool
+
 		// IsArchivalEnabled whether archival is enabled
 		IsArchivalEnabled() bool
 		// GetDefaultArchivalBucket returns the default archival bucket name
@@ -74,6 +77,9 @@ type (
 		// clusterToAddress contains the cluster name to corresponding frontend client
 		clusterToAddress map[string]config.Address
 
+		// TODO remove after DC migration is over
+		clustersDisabled map[string]struct{}
+
 		// enableArchival whether archival is enabled
 		enableArchival dynamicconfig.BoolPropertyFn
 		// defaultArchivalBucket is the default archival bucket name used for this cluster
@@ -89,6 +95,7 @@ func NewMetadata(
 	currentClusterName string,
 	clusterInitialFailoverVersions map[string]int64,
 	clusterToAddress map[string]config.Address,
+	clustersDisabled map[string]struct{},
 	enableArchival dynamicconfig.BoolPropertyFn,
 	defaultArchivalBucket string,
 ) Metadata {
@@ -147,6 +154,7 @@ func NewMetadata(
 		clusterInitialFailoverVersions: clusterInitialFailoverVersions,
 		initialFailoverVersionClusters: initialFailoverVersionClusters,
 		clusterToAddress:               clusterToAddress,
+		clustersDisabled:               clustersDisabled,
 		enableArchival:                 enableArchival,
 		defaultArchivalBucket:          defaultArchivalBucket,
 	}
@@ -217,6 +225,12 @@ func (metadata *metadataImpl) ClusterNameForFailoverVersion(failoverVersion int6
 // GetAllClientAddress return the frontend address for each cluster name
 func (metadata *metadataImpl) GetAllClientAddress() map[string]config.Address {
 	return metadata.clusterToAddress
+}
+
+// GetAllClientAddress return the frontend address for each cluster name
+func (metadata *metadataImpl) IsClusterDisabled(cluster string) bool {
+	_, ok := metadata.clustersDisabled[cluster]
+	return ok
 }
 
 // IsArchivalEnabled whether archival is enabled

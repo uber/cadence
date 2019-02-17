@@ -491,6 +491,10 @@ func (t *transferQueueStandbyProcessorImpl) fetchHistoryAndVerifyOnce(transferTa
 
 func (t *transferQueueStandbyProcessorImpl) fetchHistoryFromRemote(transferTask *persistence.TransferTaskInfo, nextEventID int64) error {
 
+	if t.shard.GetConfig().EnableDCMigration() {
+		return nil
+	}
+
 	t.metricsClient.IncCounter(metrics.HistoryRereplicationByTransferTaskScope, metrics.CadenceClientRequests)
 	stopwatch := t.metricsClient.StartTimer(metrics.HistoryRereplicationByTransferTaskScope, metrics.CadenceClientLatency)
 	defer stopwatch.Stop()

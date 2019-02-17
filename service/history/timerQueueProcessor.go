@@ -75,6 +75,9 @@ func newTimerQueueProcessor(shard ShardContext, historyService *historyEngineImp
 	standbyTimerProcessors := make(map[string]*timerQueueStandbyProcessorImpl)
 	for clusterName := range shard.GetService().GetClusterMetadata().GetAllClusterFailoverVersions() {
 		if clusterName != shard.GetService().GetClusterMetadata().GetCurrentClusterName() {
+			if shard.GetService().GetClusterMetadata().IsClusterDisabled(clusterName) {
+				continue
+			}
 			historyRereplicator := xdc.NewHistoryRereplicator(
 				currentClusterName,
 				shard.GetDomainCache(),
@@ -145,6 +148,9 @@ func (t *timerQueueProcessorImpl) NotifyNewTimers(clusterName string, currentTim
 	}
 
 	standbyTimerProcessor, ok := t.standbyTimerProcessors[clusterName]
+	if !ok && t.config.EnableDCMigration() {
+		return
+	}
 	if !ok {
 		panic(fmt.Sprintf("Cannot find timer processor for %s.", clusterName))
 	}
@@ -157,6 +163,9 @@ func (t *timerQueueProcessorImpl) FailoverDomain(domainIDs map[string]struct{}) 
 	minLevel := t.shard.GetTimerClusterAckLevel(t.currentClusterName)
 	standbyClusterName := t.currentClusterName
 	for cluster := range t.shard.GetService().GetClusterMetadata().GetAllClusterFailoverVersions() {
+		if t.shard.GetService().GetClusterMetadata().IsClusterDisabled(cluster) {
+			continue
+		}
 		ackLevel := t.shard.GetTimerClusterAckLevel(cluster)
 		if ackLevel.Before(minLevel) {
 			minLevel = ackLevel
@@ -192,6 +201,9 @@ func (t *timerQueueProcessorImpl) getTimerFiredCount(clusterName string) uint64 
 	}
 
 	standbyTimerProcessor, ok := t.standbyTimerProcessors[clusterName]
+	if !ok && t.config.EnableDCMigration() {
+		return 0
+	}
 	if !ok {
 		panic(fmt.Sprintf("Cannot find timer processor for %s.", clusterName))
 	}

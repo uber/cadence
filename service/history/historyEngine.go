@@ -2532,7 +2532,7 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(ctx context.Context, c
 }
 
 func (e *historyEngineImpl) ReplicateEvents(ctx context.Context, replicateRequest *h.ReplicateEventsRequest) error {
-	return e.replicator.ApplyEvents(ctx, replicateRequest)
+	return e.replicator.ApplyEvents(ctx, replicateRequest, false)
 }
 
 func (e *historyEngineImpl) ReplicateRawEvents(ctx context.Context, replicateRequest *h.ReplicateRawEventsRequest) error {

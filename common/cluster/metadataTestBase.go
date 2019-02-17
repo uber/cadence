@@ -84,6 +84,7 @@ func GetTestClusterMetadata(enableGlobalDomain bool, isMasterCluster bool) Metad
 			TestCurrentClusterName,
 			TestAllClusterFailoverVersions,
 			TestAllClusterAddress,
+			map[string]struct{}{},
 			dynamicconfig.GetBoolPropertyFn(false),
 			"",
 		)
@@ -96,6 +97,7 @@ func GetTestClusterMetadata(enableGlobalDomain bool, isMasterCluster bool) Metad
 		TestCurrentClusterName,
 		TestSingleDCAllClusterFailoverVersions,
 		TestSingleDCAllClusterAddress,
+		map[string]struct{}{},
 		dynamicconfig.GetBoolPropertyFn(false),
 		"",
 	)

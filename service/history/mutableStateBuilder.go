@@ -385,7 +385,6 @@ func (e *mutableStateBuilder) UpdateReplicationStateVersion(version int64, force
 // mutableState is loaded for this workflow execution.
 func (e *mutableStateBuilder) UpdateReplicationStateLastEventID(clusterName string, lastWriteVersion, lastEventID int64) {
 	e.replicationState.LastWriteVersion = lastWriteVersion
-	// TODO: Rename this to NextEventID to stay consistent naming convention with rest of code base
 	e.replicationState.LastWriteEventID = lastEventID
 	if clusterName != e.currentCluster {
 		info, ok := e.replicationState.LastReplicationInfo[clusterName]

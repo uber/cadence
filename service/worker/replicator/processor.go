@@ -432,6 +432,10 @@ RetryLoop:
 		return err
 	}
 
+	if p.config.EnableDCMigration() {
+		return nil
+	}
+
 	p.metricsClient.IncCounter(metrics.HistoryRereplicationByActivityReplicationScope, metrics.CadenceClientRequests)
 	stopwatch := p.metricsClient.StartTimer(metrics.HistoryRereplicationByActivityReplicationScope, metrics.CadenceClientLatency)
 	defer stopwatch.Stop()
@@ -465,7 +469,7 @@ Loop:
 			break Loop
 		}
 	}
-	if !processTask {
+	if !processTask && !p.config.EnableDCMigration() {
 		logger.Warn("Dropping non-targeted history task.")
 		return nil
 	}
@@ -490,20 +494,40 @@ Loop:
 		ResetWorkflow:           attr.ResetWorkflow,
 	}
 
-RetryLoop:
-	for i := 0; i < p.config.ReplicatorHistoryBufferRetryCount(); i++ {
-		ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
-		err = p.historyClient.ReplicateEvents(ctx, req)
-		cancel()
+	doLocking := p.config.EnableDCMigration() && !processTask
+	if doLocking {
+	ECMigrationRetryLoop:
+		for i := 0; i < p.config.ReplicatorDCMigrrationRetryCount(); i++ {
+			workflowIdendifier := definition.NewWorkflowIdentifier(attr.GetDomainId(), attr.GetWorkflowId(), "")
+			p.rereplicationLock.LockID(workflowIdendifier)
 
-		// Replication tasks could be slightly out of order for a particular workflow execution
-		// We first try to apply the events without buffering enabled with a small delay to account for such delays
-		// Caller should try to apply the event with buffering enabled once we return RetryTaskError after all retries
-		if p.isRetryTaskError(err) {
-			time.Sleep(retryErrorWaitMillis * time.Millisecond)
-			continue RetryLoop
+			ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
+			err = p.historyClient.ReplicateEvents(ctx, req)
+			cancel()
+
+			p.rereplicationLock.UnlockID(workflowIdendifier)
+			if p.isRetryTaskError(err) {
+				time.Sleep(retryErrorWaitMillis * time.Millisecond)
+				continue ECMigrationRetryLoop
+			}
+			break ECMigrationRetryLoop
 		}
-		break RetryLoop
+	} else {
+	RetryLoop:
+		for i := 0; i < p.config.ReplicatorHistoryBufferRetryCount(); i++ {
+			ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
+			err = p.historyClient.ReplicateEvents(ctx, req)
+			cancel()
+
+			// Replication tasks could be slightly out of order for a particular workflow execution
+			// We first try to apply the events without buffering enabled with a small delay to account for such delays
+			// Caller should try to apply the event with buffering enabled once we return RetryTaskError after all retries
+			if p.isRetryTaskError(err) {
+				time.Sleep(retryErrorWaitMillis * time.Millisecond)
+				continue RetryLoop
+			}
+			break RetryLoop
+		}
 	}
 
 	// here we lock on the current workflow (run ID being empty) to ensure only one message will actually
@@ -538,6 +562,7 @@ RetryLoop:
 		logger.WithField(logging.TagErr, resendErr).Error("error resend history")
 	}
 	// should return the replication error, not the resending error
+
 	return err
 }
 

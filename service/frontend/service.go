@@ -36,6 +36,10 @@ import (
 
 // Config represents configuration for cadence-frontend service
 type Config struct {
+	// TODO remove after DC migration is over
+	// NOTE: DO NOT TURN ON THE FLAG UNLESS YOU KNOW WHAT YOU ARE DOING
+	EnableDCMigration dynamicconfig.BoolPropertyFn
+
 	PersistenceMaxQPS               dynamicconfig.IntPropertyFn
 	VisibilityMaxPageSize           dynamicconfig.IntPropertyFnWithDomainFilter
 	EnableVisibilitySampling        dynamicconfig.BoolPropertyFn
@@ -66,6 +70,8 @@ type Config struct {
 // NewConfig returns new service config with default values
 func NewConfig(dc *dynamicconfig.Collection, enableVisibilityToKafka bool) *Config {
 	return &Config{
+		// TODO remove after DC migration is over
+		EnableDCMigration:               dc.GetBoolProperty(dynamicconfig.EnableDCMigration, false),
 		PersistenceMaxQPS:               dc.GetIntProperty(dynamicconfig.FrontendPersistenceMaxQPS, 2000),
 		VisibilityMaxPageSize:           dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendVisibilityMaxPageSize, 1000),
 		EnableVisibilitySampling:        dc.GetBoolProperty(dynamicconfig.EnableVisibilitySampling, true),

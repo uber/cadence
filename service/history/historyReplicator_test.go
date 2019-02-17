@@ -1012,7 +1012,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLes
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 
 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn,
-		request, s.logger)
+		request, s.logger, false) // TODO remove 'false' when DC migration is over
 	s.Nil(msBuilderOut)
 	s.Nil(err)
 }
@@ -1062,7 +1062,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLes
 
 	context.On("updateWorkflowExecution", ([]persistence.Task)(nil), ([]persistence.Task)(nil), mock.Anything).Return(nil).Once()
 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn,
-		request, s.logger)
+		request, s.logger, false) // TODO remove 'false' when DC migration is over
 	s.Nil(msBuilderOut)
 	s.Nil(err)
 }
@@ -1083,66 +1083,69 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingEqu
 	}
 	msBuilderIn.On("GetReplicationState").Return(&persistence.ReplicationState{LastWriteVersion: currentLastWriteVersion})
 
-	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn, request, s.logger)
+	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn, request,
+		s.logger, false) // TODO remove 'false' when DC migration is over
 	s.Equal(msBuilderIn, msBuilderOut)
 	s.Nil(err)
 }
 
-func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGreaterThanCurrent_CurrentWasNotActive_SameCluster() {
-	currentLastWriteVersion := int64(10)
-	incomingVersion := currentLastWriteVersion + 10
+// TODO uncomment this test once DC migration is done
+// func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGreaterThanCurrent_CurrentWasNotActive_SameCluster() {
+// 	currentLastWriteVersion := int64(10)
+// 	incomingVersion := currentLastWriteVersion + 10
 
-	prevActiveCluster := cluster.TestAlternativeClusterName
-	context := &mockWorkflowExecutionContext{}
-	defer context.AssertExpectations(s.T())
-	msBuilderIn := &mockMutableState{}
-	defer msBuilderIn.AssertExpectations(s.T())
+// 	prevActiveCluster := cluster.TestAlternativeClusterName
+// 	context := &mockWorkflowExecutionContext{}
+// 	defer context.AssertExpectations(s.T())
+// 	msBuilderIn := &mockMutableState{}
+// 	defer msBuilderIn.AssertExpectations(s.T())
 
-	request := &h.ReplicateEventsRequest{
-		Version: common.Int64Ptr(incomingVersion),
-		History: &shared.History{Events: []*shared.HistoryEvent{
-			&shared.HistoryEvent{Timestamp: common.Int64Ptr(time.Now().UnixNano())},
-		}},
-	}
-	msBuilderIn.On("GetReplicationState").Return(&persistence.ReplicationState{
-		LastWriteVersion: currentLastWriteVersion,
-	})
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
-	s.mockClusterMetadata.On("IsVersionFromSameCluster", incomingVersion, currentLastWriteVersion).Return(true)
+// 	request := &h.ReplicateEventsRequest{
+// 		Version: common.Int64Ptr(incomingVersion),
+// 		History: &shared.History{Events: []*shared.HistoryEvent{
+// 			&shared.HistoryEvent{Timestamp: common.Int64Ptr(time.Now().UnixNano())},
+// 		}},
+// 	}
+// 	msBuilderIn.On("GetReplicationState").Return(&persistence.ReplicationState{
+// 		LastWriteVersion: currentLastWriteVersion,
+// 	})
+// 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
+// 	s.mockClusterMetadata.On("IsVersionFromSameCluster", incomingVersion, currentLastWriteVersion).Return(true)
 
-	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn,
-		request, s.logger)
-	s.Equal(msBuilderIn, msBuilderOut)
-	s.Nil(err)
-}
+// 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn,
+// 		request, s.logger)
+// 	s.Equal(msBuilderIn, msBuilderOut)
+// 	s.Nil(err)
+// }
 
-func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGreaterThanCurrent_CurrentWasNotActive_DiffCluster() {
-	currentLastWriteVersion := int64(10)
-	incomingVersion := currentLastWriteVersion + 10
+// TODO uncomment this test once DC migration is done
+// func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGreaterThanCurrent_CurrentWasNotActive_DiffCluster() {
+// 	currentLastWriteVersion := int64(10)
+// 	incomingVersion := currentLastWriteVersion + 10
 
-	prevActiveCluster := cluster.TestAlternativeClusterName
-	context := &mockWorkflowExecutionContext{}
-	defer context.AssertExpectations(s.T())
-	msBuilderIn := &mockMutableState{}
-	defer msBuilderIn.AssertExpectations(s.T())
+// 	prevActiveCluster := cluster.TestAlternativeClusterName
+// 	context := &mockWorkflowExecutionContext{}
+// 	defer context.AssertExpectations(s.T())
+// 	msBuilderIn := &mockMutableState{}
+// 	defer msBuilderIn.AssertExpectations(s.T())
 
-	request := &h.ReplicateEventsRequest{
-		Version: common.Int64Ptr(incomingVersion),
-		History: &shared.History{Events: []*shared.HistoryEvent{
-			&shared.HistoryEvent{Timestamp: common.Int64Ptr(time.Now().UnixNano())},
-		}},
-	}
-	msBuilderIn.On("GetReplicationState").Return(&persistence.ReplicationState{
-		LastWriteVersion: currentLastWriteVersion,
-	})
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
-	s.mockClusterMetadata.On("IsVersionFromSameCluster", incomingVersion, currentLastWriteVersion).Return(false)
+// 	request := &h.ReplicateEventsRequest{
+// 		Version: common.Int64Ptr(incomingVersion),
+// 		History: &shared.History{Events: []*shared.HistoryEvent{
+// 			&shared.HistoryEvent{Timestamp: common.Int64Ptr(time.Now().UnixNano())},
+// 		}},
+// 	}
+// 	msBuilderIn.On("GetReplicationState").Return(&persistence.ReplicationState{
+// 		LastWriteVersion: currentLastWriteVersion,
+// 	})
+// 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
+// 	s.mockClusterMetadata.On("IsVersionFromSameCluster", incomingVersion, currentLastWriteVersion).Return(false)
 
-	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn,
-		request, s.logger)
-	s.Nil(msBuilderOut)
-	s.Equal(ErrMoreThan2DC, err)
-}
+// 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn,
+// 		request, s.logger)
+// 	s.Nil(msBuilderOut)
+// 	s.Equal(ErrMoreThan2DC, err)
+// }
 
 func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGreaterThanCurrent_CurrentWasActive_MissingReplicationInfo() {
 	runID := uuid.New()
@@ -1193,7 +1196,8 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	msBuilderMid := &mockMutableState{}
 	msBuilderMid.On("GetNextEventID").Return(int64(12345)) // this is used by log
 	mockConflictResolver.On("reset", runID, mock.Anything, currentReplicationInfoLastEventID, exeInfo).Return(msBuilderMid, nil)
-	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn, request, s.logger)
+	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn, request,
+		s.logger, false) // TODO remove 'false' when DC migration is over
 	s.Equal(msBuilderMid, msBuilderOut)
 	s.Nil(err)
 }
@@ -1254,7 +1258,8 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	msBuilderMid := &mockMutableState{}
 	msBuilderMid.On("GetNextEventID").Return(int64(12345)) // this is used by log
 	mockConflictResolver.On("reset", runID, mock.Anything, currentReplicationInfoLastEventID, exeInfo).Return(msBuilderMid, nil)
-	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn, request, s.logger)
+	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn, request,
+		s.logger, false) // TODO remove 'false' when DC migration is over
 	s.Equal(msBuilderMid, msBuilderOut)
 	s.Nil(err)
 }
@@ -1290,7 +1295,8 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	})
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
 
-	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn, request, s.logger)
+	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn, request,
+		s.logger, false) // TODO remove 'false' when DC migration is over
 	s.Nil(msBuilderOut)
 	s.Equal(ErrImpossibleRemoteClaimSeenHigherVersion, err)
 }
@@ -1343,7 +1349,8 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	msBuilderMid := &mockMutableState{}
 	msBuilderMid.On("GetNextEventID").Return(int64(12345)) // this is used by log
 	mockConflictResolver.On("reset", runID, mock.Anything, incomingReplicationInfoLastEventID, exeInfo).Return(msBuilderMid, nil)
-	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn, request, s.logger)
+	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn, request,
+		s.logger, false) // TODO remove 'false' when DC migration is over
 	s.Equal(msBuilderMid, msBuilderOut)
 	s.Nil(err)
 }
@@ -1379,7 +1386,8 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	})
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
 
-	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn, request, s.logger)
+	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn, request,
+		s.logger, false) // TODO remove 'false' when DC migration is over
 	s.Nil(msBuilderOut)
 	s.Equal(ErrCorruptedReplicationInfo, err)
 }
@@ -1423,7 +1431,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(prevActiveCluster)
 
 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn,
-		request, s.logger)
+		request, s.logger, false) // TODO remove 'false' when DC migration is over
 	s.Equal(msBuilderIn, msBuilderOut)
 	s.Nil(err)
 }
@@ -1494,7 +1502,8 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	msBuilderMid := &mockMutableState{}
 	msBuilderMid.On("GetNextEventID").Return(int64(12345)) // this is used by log
 	mockConflictResolver.On("reset", runID, mock.Anything, incomingReplicationInfoLastEventID, exeInfo).Return(msBuilderMid, nil)
-	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn, request, s.logger)
+	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn, request,
+		s.logger, false) // TODO remove 'false' when DC migration is over
 	s.Equal(msBuilderMid, msBuilderOut)
 	s.Nil(err)
 }

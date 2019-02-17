@@ -48,6 +48,9 @@ var (
 
 	// ErrUnknownEncodingType indicate that the encoding type is unknown
 	ErrUnknownEncodingType = errors.NewInternalFailureError("unknown encoding type")
+
+	// ErrFailoverDuringResend indicate that failover happend during resend
+	ErrFailoverDuringResend = errors.NewInternalFailureError("failover happened during resend")
 )
 
 const (
@@ -190,6 +193,9 @@ func (c *historyRereplicationContext) sendSingleWorkflowHistory(domainID string,
 	var eventStoreVersion int32
 	var replicationInfo map[string]*shared.ReplicationInfo
 
+	// TODO remove after DC migration is over
+	var newestHistoryVersion *int64
+
 	var token []byte
 	for doPaging := true; doPaging; doPaging = len(token) > 0 {
 		response, err := c.getHistory(domainID, workflowID, runID, firstEventID, nextEventID, token, defaultPageSize)
@@ -197,15 +203,26 @@ func (c *historyRereplicationContext) sendSingleWorkflowHistory(domainID string,
 			return "", err
 		}
 
-		eventStoreVersion = response.GetEventStoreVersion()
-		replicationInfo = response.ReplicationInfo
-		token = response.NextPageToken
-
 		if len(response.HistoryBatches) == 0 {
 			// this case can happen if standby side try to fetch history events
 			// from active while active's history length < standby's history length
 			// due to standby containing stale history
 			return "", c.handleEmptyHistory(domainID, workflowID, runID, replicationInfo)
+		}
+
+		eventStoreVersion = response.GetEventStoreVersion()
+		replicationInfo = response.ReplicationInfo
+		token = response.NextPageToken
+
+		// TODO remove after DC migration is over
+		currentNewestHistoryVersion := c.getLargestVersion(replicationInfo)
+		if newestHistoryVersion == nil {
+			newestHistoryVersion = currentNewestHistoryVersion
+		}
+		if newestHistoryVersion != nil && currentNewestHistoryVersion != nil {
+			if *newestHistoryVersion < *currentNewestHistoryVersion {
+				return "", ErrFailoverDuringResend
+			}
 		}
 
 		for _, batch := range response.HistoryBatches {
@@ -479,4 +496,14 @@ func (c *historyRereplicationContext) deserializeBlob(blob *shared.DataBlob) ([]
 	}
 
 	return historyEvents, nil
+}
+
+func (c *historyRereplicationContext) getLargestVersion(replicationInfos map[string]*shared.ReplicationInfo) *int64 {
+	var largestVersion *int64
+	for _, info := range replicationInfos {
+		if largestVersion == nil || *largestVersion < info.GetVersion() {
+			largestVersion = common.Int64Ptr(info.GetVersion())
+		}
+	}
+	return largestVersion
 }

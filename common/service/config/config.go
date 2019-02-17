@@ -214,6 +214,9 @@ type (
 		ClusterInitialFailoverVersions map[string]int64 `yaml:"clusterInitialFailoverVersion"`
 		// ClusterAddress contains all cluster names to corresponding address
 		ClusterAddress map[string]Address `yaml:"clusterAddress"`
+		// ClusterDisabled contains the clusters not to be enabled
+		// TODO remove after DC migration is over
+		ClustersDisabled []string `yaml:"clustersDisabled"`
 	}
 
 	// Address indicate the remote cluster's service name and address

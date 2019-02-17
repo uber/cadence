@@ -73,6 +73,7 @@ clustersInfo:
   clusterInitialFailoverVersion:
     active: 1
     standby: 0
+    other: 2
   clusterAddress:
     active:
       rpcName: "cadence-frontend"
@@ -83,6 +84,8 @@ clustersInfo:
     other:
       rpcName: "cadence-frontend"
       rpcAddress: "127.0.0.1:9933"
+  # TODO remove after DC migration is over
+  clustersDisabled: ["other"]
 
 dcRedirectionPolicy:
   policy: "forwarding"
