@@ -61,7 +61,7 @@ type (
 		runID                string
 		eventStoreVersion    int32
 		branchToken          []byte
-		lastFirstEventID     int64
+		nextEventID          int64
 		config               *Config
 		domain               string
 		clusterName          string
@@ -97,7 +97,7 @@ func NewHistoryBlobIterator(
 		runID:                request.RunID,
 		eventStoreVersion:    request.EventStoreVersion,
 		branchToken:          request.BranchToken,
-		lastFirstEventID:     request.LastFirstEventID,
+		nextEventID:          request.NextEventID,
 		config:               container.Config,
 		domain:               domainName,
 		clusterName:          clusterName,
@@ -196,7 +196,7 @@ func (i *historyBlobIterator) readHistory(pageToken []byte) ([]*shared.HistoryEv
 		req := &persistence.ReadHistoryBranchRequest{
 			BranchToken:   i.branchToken,
 			MinEventID:    common.FirstEventID,
-			MaxEventID:    i.lastFirstEventID,
+			MaxEventID:    i.nextEventID,
 			PageSize:      i.config.HistoryPageSize(i.domain),
 			NextPageToken: pageToken,
 		}
@@ -209,7 +209,7 @@ func (i *historyBlobIterator) readHistory(pageToken []byte) ([]*shared.HistoryEv
 			RunId:      common.StringPtr(i.runID),
 		},
 		FirstEventID:  common.FirstEventID,
-		NextEventID:   i.lastFirstEventID,
+		NextEventID:   i.nextEventID,
 		PageSize:      i.config.HistoryPageSize(i.domain),
 		NextPageToken: pageToken,
 	}

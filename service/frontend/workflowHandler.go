@@ -1867,66 +1867,8 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		getRequest.MaximumPageSize = common.Int32Ptr(common.GetHistoryMaxPageSize)
 	}
 
-	// TODO: this needs to be refactored
-	if getRequest.GetExecution().GetRunId() != "" {
-		if _, err := wh.history.GetMutableState(ctx, &h.GetMutableStateRequest{
-			DomainUUID:          common.StringPtr(domainID),
-			Execution:           getRequest.Execution,
-			ExpectedNextEventId: common.Int64Ptr(common.EndEventID),
-		}); err != nil {
-			// if request specifies runID and mutable state could not be fetched assume history is archived
-			entry, err := wh.domainCache.GetDomainByID(domainID)
-			if err != nil {
-				return nil, wh.error(err, scope)
-			}
-			archivalBucket := entry.GetConfig().ArchivalBucket
-			if archivalBucket == "" {
-				return nil, wh.error(errDomainArchivalBucketNotSet, scope)
-			}
-
-			var token *getHistoryContinuationTokenArchival
-			if getRequest.NextPageToken != nil {
-				token, err = deserializeHistoryTokenArchival(getRequest.NextPageToken)
-				if err != nil {
-					return nil, wh.error(errInvalidNextPageToken, scope)
-				}
-			} else {
-				token = &getHistoryContinuationTokenArchival{
-					BlobstorePageToken: common.FirstBlobPageToken,
-				}
-			}
-			key, err := sysworkflow.NewHistoryBlobKey(domainID, getRequest.Execution.GetWorkflowId(), getRequest.Execution.GetRunId(), token.BlobstorePageToken)
-			if err != nil {
-				return nil, wh.error(err, scope)
-			}
-			b, err := wh.blobstoreClient.Download(ctx, archivalBucket, key)
-			if err != nil {
-				return nil, wh.error(err, scope)
-			}
-			unwrappedBlob, wrappingLayers, err := blob.Unwrap(b)
-			if err != nil {
-				return nil, wh.error(err, scope)
-			}
-			var historyBlob *sysworkflow.HistoryBlob
-			switch *wrappingLayers.EncodingFormat {
-			case blob.JSONEncoding:
-				if err := json.Unmarshal(unwrappedBlob.Body, historyBlob); err != nil {
-					return nil, wh.error(err, scope)
-				}
-			}
-			if *historyBlob.Header.NextPageToken == common.LastBlobNextPageToken {
-				token = nil
-			} else {
-				token = &getHistoryContinuationTokenArchival{
-					BlobstorePageToken: *historyBlob.Header.NextPageToken,
-				}
-			}
-			nextToken, err := serializeHistoryTokenArchival(token)
-			if err != nil {
-				return nil, wh.error(err, scope)
-			}
-			return createGetWorkflowExecutionHistoryResponse(historyBlob.Body, nextToken), nil
-		}
+	if wh.historyArchived(ctx, getRequest, domainID) {
+		return wh.getArchivedHistory(ctx, getRequest, domainID, scope)
 	}
 
 	// this function return the following 5 things,
@@ -3181,4 +3123,75 @@ func (wh *WorkflowHandler) bucketName(customBucketName *string) string {
 
 func (wh *WorkflowHandler) customBucketNameProvided(customBucketName *string) bool {
 	return customBucketName != nil && len(*customBucketName) != 0
+}
+
+func (wh *WorkflowHandler) historyArchived(ctx context.Context, request *gen.GetWorkflowExecutionHistoryRequest, domainID string) bool {
+	if request.GetExecution() == nil || request.GetExecution().GetRunId() == "" {
+		return false
+	}
+	describeMutableStateRequest := &h.DescribeMutableStateRequest{
+		DomainUUID: common.StringPtr(domainID),
+		Execution:  request.Execution,
+	}
+	resp, err := wh.history.DescribeMutableState(ctx, describeMutableStateRequest)
+	return err != nil || resp.GetMutableStateInDatabase() == ""
+}
+
+func (wh *WorkflowHandler) getArchivedHistory(
+	ctx context.Context,
+	request *gen.GetWorkflowExecutionHistoryRequest,
+	domainID string,
+	scope int,
+) (*gen.GetWorkflowExecutionHistoryResponse, error) {
+
+	entry, err := wh.domainCache.GetDomainByID(domainID)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+	archivalBucket := entry.GetConfig().ArchivalBucket
+	if archivalBucket == "" {
+		return nil, wh.error(errDomainArchivalBucketNotSet, scope)
+	}
+	var token *getHistoryContinuationTokenArchival
+	if request.NextPageToken != nil {
+		token, err = deserializeHistoryTokenArchival(request.NextPageToken)
+		if err != nil {
+			return nil, wh.error(errInvalidNextPageToken, scope)
+		}
+	} else {
+		token = &getHistoryContinuationTokenArchival{
+			BlobstorePageToken: common.FirstBlobPageToken,
+		}
+	}
+	key, err := sysworkflow.NewHistoryBlobKey(domainID, request.Execution.GetWorkflowId(), request.Execution.GetRunId(), token.BlobstorePageToken)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+	b, err := wh.blobstoreClient.Download(ctx, archivalBucket, key)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+	unwrappedBlob, wrappingLayers, err := blob.Unwrap(b)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+	historyBlob := &sysworkflow.HistoryBlob{}
+	switch *wrappingLayers.EncodingFormat {
+	case blob.JSONEncoding:
+		if err := json.Unmarshal(unwrappedBlob.Body, historyBlob); err != nil {
+			return nil, wh.error(err, scope)
+		}
+	}
+	if *historyBlob.Header.NextPageToken == common.LastBlobNextPageToken {
+		token = nil
+	} else {
+		token = &getHistoryContinuationTokenArchival{
+			BlobstorePageToken: *historyBlob.Header.NextPageToken,
+		}
+	}
+	nextToken, err := serializeHistoryTokenArchival(token)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+	return createGetWorkflowExecutionHistoryResponse(historyBlob.Body, nextToken), nil
 }

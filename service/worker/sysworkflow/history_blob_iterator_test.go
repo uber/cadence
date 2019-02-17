@@ -41,7 +41,7 @@ const (
 	testDomainID                      = "test-domain-id"
 	testWorkflowID                    = "test-workflow-id"
 	testRunID                         = "test-run-id"
-	testLastFirstEventID              = 1800
+	testNextEventID                   = 1800
 	testDomain                        = "test-domain"
 	testClusterName                   = "test-cluster-name"
 	testCloseFailoverVersion          = 100
@@ -475,7 +475,7 @@ func (s *HistoryBlobIteratorSuite) constructMockHistoryManager(returnErrorOnPage
 				RunId:      common.StringPtr(testRunID),
 			},
 			FirstEventID:  common.FirstEventID,
-			NextEventID:   testLastFirstEventID,
+			NextEventID:   testNextEventID,
 			PageSize:      testDefaultPersistencePageSize,
 			NextPageToken: pageToken,
 		}
@@ -547,7 +547,7 @@ func (s *HistoryBlobIteratorSuite) constructTestHistoryBlobIterator(
 		RunID:                testRunID,
 		EventStoreVersion:    int32(eventStoreVersion),
 		BranchToken:          testBranchToken,
-		LastFirstEventID:     testLastFirstEventID,
+		NextEventID:          testNextEventID,
 		CloseFailoverVersion: testCloseFailoverVersion,
 	}
 	container := &SysWorkerContainer{
