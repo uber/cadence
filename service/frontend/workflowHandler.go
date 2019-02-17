@@ -25,11 +25,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common/blobstore/blob"
-	"github.com/uber/cadence/service/worker/sysworkflow"
 	"sync"
 	"time"
 
+	"github.com/uber/cadence/common/blobstore/blob"
+	"github.com/uber/cadence/service/worker/sysworkflow"
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
