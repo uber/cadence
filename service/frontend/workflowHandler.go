@@ -28,8 +28,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/uber/cadence/common/blobstore/blob"
-	"github.com/uber/cadence/service/worker/sysworkflow"
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
@@ -45,6 +43,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/blobstore/blob"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/logging"
@@ -52,6 +51,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/service/worker/sysworkflow"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
