@@ -21,13 +21,26 @@
 package cli
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
+	"fmt"
 	"github.com/olekukonko/tablewriter"
 	"github.com/olivere/elastic"
+	"github.com/uber/cadence/.gen/go/indexer"
+	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/urfave/cli"
 	"os"
 	"strconv"
+	"strings"
 	"time"
+)
+
+const (
+	esDocIDDelimiter = "~"
+	esDocType        = "_doc"
+
+	versionTypeExternal = "external"
 )
 
 func newESClient(url string) (*elastic.Client, error) {
@@ -41,11 +54,17 @@ func newESClient(url string) (*elastic.Client, error) {
 	return client, nil
 }
 
-func AdminCatIndices(c *cli.Context) {
+func getESClient(c *cli.Context) *elastic.Client {
 	esClient, err := newESClient(c.String(FlagURL))
 	if err != nil {
 		ErrorAndExit("Unable to create ElasticSearch client", err)
 	}
+	return esClient
+}
+
+func AdminCatIndices(c *cli.Context) {
+	esClient := getESClient(c)
+
 	ctx := context.Background()
 	resp, err := esClient.CatIndices().Do(ctx)
 	if err != nil {
@@ -72,5 +91,110 @@ func AdminCatIndices(c *cli.Context) {
 }
 
 func AdminIndex(c *cli.Context) {
+	esClient := getESClient(c)
+	indexName := getRequiredOption(c, FlagIndex)
+	inputFileName := getRequiredOption(c, FlagInputFile)
+	batchSize := c.Int(FlagBatchSize)
 
+	messages, err := parseIndexerMessage(inputFileName)
+	if err != nil {
+		ErrorAndExit("Unable to parse indexer message", err)
+	}
+
+	bulkRequest := esClient.Bulk()
+	bulkConductFn := func() {
+		_, err := bulkRequest.Do(context.Background())
+		if err != nil {
+			ErrorAndExit("Bulk failed", err)
+		}
+		if bulkRequest.NumberOfActions() != 0 {
+			ErrorAndExit(fmt.Sprintf("Bulk request not done, %d", bulkRequest.NumberOfActions()), err)
+		}
+	}
+	for i, message := range messages {
+		docID := message.GetWorkflowID() + esDocIDDelimiter + message.GetRunID()
+		var req elastic.BulkableRequest
+		switch message.GetMessageType() {
+		case indexer.MessageTypeIndex:
+			doc := generateESDoc(message)
+			req = elastic.NewBulkIndexRequest().
+				Index(indexName).
+				Type(esDocType).
+				Id(docID).
+				VersionType(versionTypeExternal).
+				Version(message.GetVersion()).
+				Doc(doc)
+		case indexer.MessageTypeDelete:
+			req = elastic.NewBulkDeleteRequest().
+				Index(indexName).
+				Type(esDocType).
+				Id(docID).
+				VersionType(versionTypeExternal).
+				Version(message.GetVersion())
+		default:
+			ErrorAndExit("Unknown message type", nil)
+		}
+		bulkRequest.Add(req)
+
+		if i%batchSize == batchSize-1 {
+			bulkConductFn()
+		}
+	}
+	if bulkRequest.NumberOfActions() != 0 {
+		bulkConductFn()
+	}
+}
+
+func parseIndexerMessage(fileName string) (messages []*indexer.Message, err error) {
+	file, err := os.Open(fileName)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	idx := 0
+	for scanner.Scan() {
+		idx++
+		line := strings.TrimSpace(scanner.Text())
+		if len(line) == 0 {
+			fmt.Printf("line %v is empty, skipped\n", idx)
+			continue
+		}
+
+		msg := &indexer.Message{}
+		err := json.Unmarshal([]byte(line), msg)
+		if err != nil {
+			fmt.Printf("line %v cannot be deserialized to indexer message: %v.\n", idx, line)
+			return nil, err
+		}
+		messages = append(messages, msg)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return messages, nil
+}
+
+func generateESDoc(msg *indexer.Message) map[string]interface{} {
+	doc := make(map[string]interface{})
+	doc[es.DomainID] = msg.GetDomainID()
+	doc[es.WorkflowID] = msg.GetWorkflowID()
+	doc[es.RunID] = msg.GetRunID()
+
+	fields := msg.IndexAttributes.Fields
+	for k, v := range fields {
+		switch v.GetType() {
+		case indexer.FieldTypeString:
+			doc[k] = v.GetStringData()
+		case indexer.FieldTypeInt:
+			doc[k] = v.GetIntData()
+		case indexer.FieldTypeBool:
+			doc[k] = v.GetBoolData()
+		default:
+			ErrorAndExit("Unknow field type", nil)
+		}
+	}
+	return doc
 }

@@ -136,6 +136,8 @@ const (
 	FlagMessageTypeWithAlias        = FlagMessageType + ", mt"
 	FlagURL                         = "url"
 	FlagIndex                       = "index"
+	FlagBatchSize                   = "batch_size"
+	FlagBatchSizeWithAlias          = FlagBatchSize + ", bs"
 )
 
 var flagsForExecution = []cli.Flag{

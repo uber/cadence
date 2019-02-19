@@ -599,6 +599,11 @@ func newAdminElasticSearchCommands() []cli.Command {
 					Name:  FlagInputFileWithAlias,
 					Usage: "Input file of indexer.Message in json format, separated by newline",
 				},
+				cli.IntFlag{
+					Name:  FlagBatchSizeWithAlias,
+					Usage: "Optional batch size of actions for bulk operations",
+					Value: 1000,
+				},
 			},
 			Action: func(c *cli.Context) {
 				AdminIndex(c)
