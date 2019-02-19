@@ -592,6 +592,10 @@ func newAdminElasticSearchCommands() []cli.Command {
 					Usage: "URL of ElasticSearch cluster",
 				},
 				cli.StringFlag{
+					Name:  FlagMuttleyDestinationWithAlias,
+					Usage: "Optional muttely destination to ElasticSearch cluster",
+				},
+				cli.StringFlag{
 					Name:  FlagIndex,
 					Usage: "ElasticSearch target index",
 				},

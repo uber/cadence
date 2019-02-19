@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/.gen/go/indexer"
 	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/urfave/cli"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -43,23 +44,52 @@ const (
 	versionTypeExternal = "external"
 )
 
-func newESClient(url string) (*elastic.Client, error) {
-	client, err := elastic.NewClient(
-		elastic.SetURL(url),
-		elastic.SetRetrier(elastic.NewBackoffRetrier(elastic.NewExponentialBackoff(128*time.Millisecond, 513*time.Millisecond))),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return client, nil
+const (
+	headerSource      = "rpc-caller"
+	headerDestination = "rpc-service"
+)
+
+// muttleyTransport wraps around default http.Transport to add muttley specific headers to all requests
+type muttleyTransport struct {
+	http.Transport
+
+	source      string
+	destination string
+}
+
+func (t *muttleyTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	r.Header.Set(headerSource, t.source)
+	r.Header.Set(headerDestination, t.destination)
+	return t.Transport.RoundTrip(r)
 }
 
 func getESClient(c *cli.Context) *elastic.Client {
-	esClient, err := newESClient(c.String(FlagURL))
+	url := getRequiredOption(c, FlagURL)
+	var client *elastic.Client
+	var err error
+	retrier := elastic.NewBackoffRetrier(elastic.NewExponentialBackoff(128*time.Millisecond, 513*time.Millisecond))
+	if c.IsSet(FlagMuttleyDestination) {
+		httpClient := &http.Client{
+			Transport: &muttleyTransport{
+				source:      "cadence-cli",
+				destination: c.String(FlagMuttleyDestination),
+			},
+		}
+		client, err = elastic.NewClient(
+			elastic.SetHttpClient(httpClient),
+			elastic.SetURL(url),
+			elastic.SetRetrier(retrier),
+		)
+	} else {
+		client, err = elastic.NewClient(
+			elastic.SetURL(url),
+			elastic.SetRetrier(retrier),
+		)
+	}
 	if err != nil {
 		ErrorAndExit("Unable to create ElasticSearch client", err)
 	}
-	return esClient
+	return client
 }
 
 // AdminCatIndices cat indices for ES cluster
