@@ -134,6 +134,8 @@ const (
 	FlagHeadersModeWithAlias        = FlagHeadersMode + ", he"
 	FlagMessageType                 = "message_type"
 	FlagMessageTypeWithAlias        = FlagMessageType + ", mt"
+	FlagURL                         = "url"
+	FlagIndex                       = "index"
 )
 
 var flagsForExecution = []cli.Flag{
