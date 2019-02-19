@@ -782,6 +782,8 @@ const (
 	ArchiverArchivalWorkflowScope
 	// ArchiverClientScope is scope used by all metrics emitted by archiver.Client
 	ArchiverClientScope
+	// TaskListScavengerScope is scope used by all metrics emitted by worker.tasklist.Scavenger module
+	TaskListScavengerScope
 
 	NumWorkerScopes
 )
@@ -1138,6 +1140,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ArchiverPumpScope:                  {operation: "ArchiverPump"},
 		ArchiverArchivalWorkflowScope:      {operation: "ArchiverArchivalWorkflow"},
 		ArchiverClientScope:                {operation: "ArchiverClient"},
+		TaskListScavengerScope:             {operation: "tasklistscavenger"},
 	},
 	// Blobstore Scope Names
 	Blobstore: {
@@ -1378,7 +1381,13 @@ const (
 	ArchiverPumpedNotEqualHandledCount
 	ArchiverHandleAllRequestsLatency
 	ArchiverWorkflowStoppingCount
-
+	ArchiverClientSendSignalFailureCount
+	TaskProcessedCount
+	TaskDeletedCount
+	TaskListProcessedCount
+	TaskListDeletedCount
+	StartedCount
+	StoppedCount
 	NumWorkerMetrics
 )
 
@@ -1593,6 +1602,13 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ArchiverPumpedNotEqualHandledCount:                     {metricName: "archiver_pumped_not_equal_handled", oldMetricName: "archiver.pumped-not-equal-handled"},
 		ArchiverHandleAllRequestsLatency:                       {metricName: "archiver_handle_all_requests_latency", oldMetricName: "archiver.handle-all-requests-latency"},
 		ArchiverWorkflowStoppingCount:                          {metricName: "archiver_workflow_stopping", oldMetricName: "archiver.workflow-stopping"},
+		ArchiverClientSendSignalFailureCount:                   {metricName: "archiver_client_send_signal_error", oldMetricName: "archiver.client-send-signal-error"},
+		TaskProcessedCount:                                     {metricName: "task.processed", metricType: Gauge},
+		TaskDeletedCount:                                       {metricName: "task.deleted", metricType: Gauge},
+		TaskListProcessedCount:                                 {metricName: "tasklist.processed", metricType: Gauge},
+		TaskListDeletedCount:                                   {metricName: "tasklist.deleted", metricType: Gauge},
+		StartedCount:                                           {metricName: "started", metricType: Counter},
+		StoppedCount:                                           {metricName: "stopped", metricType: Counter},
 	},
 }
 
