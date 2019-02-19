@@ -62,6 +62,7 @@ func getESClient(c *cli.Context) *elastic.Client {
 	return esClient
 }
 
+// AdminCatIndices cat indices for ES cluster
 func AdminCatIndices(c *cli.Context) {
 	esClient := getESClient(c)
 
@@ -90,6 +91,7 @@ func AdminCatIndices(c *cli.Context) {
 	table.Render()
 }
 
+// AdminIndex used to bulk insert message from kafka parse
 func AdminIndex(c *cli.Context) {
 	esClient := getESClient(c)
 	indexName := getRequiredOption(c, FlagIndex)
