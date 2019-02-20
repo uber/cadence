@@ -36,7 +36,6 @@ import (
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
 
-	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
@@ -976,37 +975,7 @@ func (s *workflowHandlerSuite) TestHistoryArchived() {
 	s.False(wh.historyArchived(context.Background(), getHistoryRequest, "test-domain"))
 
 	mockHistoryClient := &mocks.HistoryClient{}
-	mockHistoryClient.On("DescribeMutableState", mock.Anything, mock.Anything).Return(nil, errors.New("error getting mutable state")).Once()
-	wh = &WorkflowHandler{
-		history: mockHistoryClient,
-	}
-	getHistoryRequest = &shared.GetWorkflowExecutionHistoryRequest{
-		Execution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr("test-workflow-id"),
-			RunId:      common.StringPtr("test-run-id"),
-		},
-	}
-	s.True(wh.historyArchived(context.Background(), getHistoryRequest, "test-domain"))
-	mockHistoryClient.AssertCalled(s.T(), "DescribeMutableState", mock.Anything, mock.Anything)
-
-	describeMutableStateResponse := &history.DescribeMutableStateResponse{}
-	mockHistoryClient.On("DescribeMutableState", mock.Anything, mock.Anything).Return(describeMutableStateResponse, nil).Once()
-	wh = &WorkflowHandler{
-		history: mockHistoryClient,
-	}
-	getHistoryRequest = &shared.GetWorkflowExecutionHistoryRequest{
-		Execution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr("test-workflow-id"),
-			RunId:      common.StringPtr("test-run-id"),
-		},
-	}
-	s.True(wh.historyArchived(context.Background(), getHistoryRequest, "test-domain"))
-	mockHistoryClient.AssertCalled(s.T(), "DescribeMutableState", mock.Anything, mock.Anything)
-
-	describeMutableStateResponse = &history.DescribeMutableStateResponse{
-		MutableStateInDatabase: common.StringPtr("some mutable state in database"),
-	}
-	mockHistoryClient.On("DescribeMutableState", mock.Anything, mock.Anything).Return(describeMutableStateResponse, nil).Once()
+	mockHistoryClient.On("GetMutableState", mock.Anything, mock.Anything).Return(nil, nil).Once()
 	wh = &WorkflowHandler{
 		history: mockHistoryClient,
 	}
@@ -1017,7 +986,30 @@ func (s *workflowHandlerSuite) TestHistoryArchived() {
 		},
 	}
 	s.False(wh.historyArchived(context.Background(), getHistoryRequest, "test-domain"))
-	mockHistoryClient.AssertCalled(s.T(), "DescribeMutableState", mock.Anything, mock.Anything)
+
+	mockHistoryClient.On("GetMutableState", mock.Anything, mock.Anything).Return(nil, &shared.EntityNotExistsError{Message: "got archival indication error"}).Once()
+	wh = &WorkflowHandler{
+		history: mockHistoryClient,
+	}
+	getHistoryRequest = &shared.GetWorkflowExecutionHistoryRequest{
+		Execution: &shared.WorkflowExecution{
+			WorkflowId: common.StringPtr("test-workflow-id"),
+			RunId:      common.StringPtr("test-run-id"),
+		},
+	}
+	s.True(wh.historyArchived(context.Background(), getHistoryRequest, "test-domain"))
+
+	mockHistoryClient.On("GetMutableState", mock.Anything, mock.Anything).Return(nil, errors.New("got non-archival indication error")).Once()
+	wh = &WorkflowHandler{
+		history: mockHistoryClient,
+	}
+	getHistoryRequest = &shared.GetWorkflowExecutionHistoryRequest{
+		Execution: &shared.WorkflowExecution{
+			WorkflowId: common.StringPtr("test-workflow-id"),
+			RunId:      common.StringPtr("test-run-id"),
+		},
+	}
+	s.False(wh.historyArchived(context.Background(), getHistoryRequest, "test-domain"))
 }
 
 func (s *workflowHandlerSuite) TestGetArchivedHistory_Failure_DomainCacheEntryError() {
