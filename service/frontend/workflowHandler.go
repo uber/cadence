@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go.uber.org/cadence/.gen/go/shared"
 	"sync"
 	"time"
 
@@ -3129,12 +3130,20 @@ func (wh *WorkflowHandler) historyArchived(ctx context.Context, request *gen.Get
 	if request.GetExecution() == nil || request.GetExecution().GetRunId() == "" {
 		return false
 	}
-	describeMutableStateRequest := &h.DescribeMutableStateRequest{
+	getMutableStateRequest := &h.GetMutableStateRequest{
 		DomainUUID: common.StringPtr(domainID),
-		Execution:  request.Execution,
+		Execution: request.Execution,
 	}
-	resp, err := wh.history.DescribeMutableState(ctx, describeMutableStateRequest)
-	return err != nil || resp.GetMutableStateInDatabase() == ""
+	_, err := wh.history.GetMutableState(ctx, getMutableStateRequest)
+	if err == nil {
+		return false
+	}
+	switch err.(type) {
+	case *shared.EntityNotExistsError:
+		// the only case in which history is assumed to be archived is if getting mutable state returns entity not found error
+		return true
+	}
+	return false
 }
 
 func (wh *WorkflowHandler) getArchivedHistory(
