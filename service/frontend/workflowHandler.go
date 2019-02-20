@@ -25,7 +25,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go.uber.org/cadence/.gen/go/shared"
 	"sync"
 	"time"
 
@@ -38,6 +37,7 @@ import (
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
 	"github.com/uber/cadence/.gen/go/replicator"
+	"github.com/uber/cadence/.gen/go/shared"
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
@@ -3132,7 +3132,7 @@ func (wh *WorkflowHandler) historyArchived(ctx context.Context, request *gen.Get
 	}
 	getMutableStateRequest := &h.GetMutableStateRequest{
 		DomainUUID: common.StringPtr(domainID),
-		Execution: request.Execution,
+		Execution:  request.Execution,
 	}
 	_, err := wh.history.GetMutableState(ctx, getMutableStateRequest)
 	if err == nil {
