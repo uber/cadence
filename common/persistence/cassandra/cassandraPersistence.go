@@ -321,7 +321,8 @@ const (
 		`name: ?, ` +
 		`type: ?, ` +
 		`ack_level: ?, ` +
-		`kind: ? ` +
+		`kind: ?, ` +
+		`last_updated: ? ` +
 		`}`
 
 	templateTaskType = `{` +
@@ -827,6 +828,14 @@ workflow_state = ? ` +
 		`and type = ? ` +
 		`and task_id = ?`
 
+	templateRangeCompleteTaskQuery = `DELETE FROM tasks ` +
+		`WHERE domain_id = ? ` +
+		`AND task_list_name = ? ` +
+		`AND task_list_type = ? ` +
+		`AND type = ? ` +
+		`AND task_id >= ? ` +
+		`AND task_id <= ? `
+
 	templateGetTaskList = `SELECT ` +
 		`range_id, ` +
 		`task_list ` +
@@ -866,6 +875,14 @@ workflow_state = ? ` +
 		`range_id, ` +
 		`task_list ` +
 		`) VALUES (?, ?, ?, ?, ?, ?, ` + templateTaskListType + `) USING TTL ?`
+
+	templateDeleteTaskListQuery = `DELETE FROM tasks ` +
+		`WHERE domain_id = ? ` +
+		`AND task_list_name = ? ` +
+		`AND task_list_type = ? ` +
+		`AND type = ? ` +
+		`AND task_id = ? ` +
+		`IF range_id = ?`
 )
 
 var (
@@ -2516,6 +2533,7 @@ func (d *cassandraPersistence) LeaseTaskList(request *p.LeaseTaskListRequest) (*
 			Message: fmt.Sprintf("LeaseTaskList requires non empty task list"),
 		}
 	}
+	now := time.Now()
 	query := d.session.Query(templateGetTaskList,
 		request.DomainID,
 		request.TaskList,
@@ -2540,6 +2558,7 @@ func (d *cassandraPersistence) LeaseTaskList(request *p.LeaseTaskListRequest) (*
 				request.TaskType,
 				0,
 				request.TaskListKind,
+				now,
 			)
 		} else if isThrottlingError(err) {
 			return nil, &workflow.ServiceBusyError{
@@ -2562,6 +2581,7 @@ func (d *cassandraPersistence) LeaseTaskList(request *p.LeaseTaskListRequest) (*
 			request.TaskType,
 			ackLevel,
 			taskListKind,
+			now,
 			request.DomainID,
 			&request.TaskList,
 			request.TaskType,
@@ -2588,7 +2608,15 @@ func (d *cassandraPersistence) LeaseTaskList(request *p.LeaseTaskListRequest) (*
 			Msg: fmt.Sprintf("LeaseTaskList failed to apply. db rangeID %v", previousRangeID),
 		}
 	}
-	tli := &p.TaskListInfo{DomainID: request.DomainID, Name: request.TaskList, TaskType: request.TaskType, RangeID: rangeID + 1, AckLevel: ackLevel, Kind: request.TaskListKind}
+	tli := &p.TaskListInfo{
+		DomainID:    request.DomainID,
+		Name:        request.TaskList,
+		TaskType:    request.TaskType,
+		RangeID:     rangeID + 1,
+		AckLevel:    ackLevel,
+		Kind:        request.TaskListKind,
+		LastUpdated: now,
+	}
 	return &p.LeaseTaskListResponse{TaskListInfo: tli}, nil
 }
 
@@ -2609,6 +2637,7 @@ func (d *cassandraPersistence) UpdateTaskList(request *p.UpdateTaskListRequest) 
 			tli.TaskType,
 			tli.AckLevel,
 			tli.Kind,
+			time.Now(),
 			stickyTaskListTTL,
 		)
 		err := query.Exec()
@@ -2632,6 +2661,7 @@ func (d *cassandraPersistence) UpdateTaskList(request *p.UpdateTaskListRequest) 
 		tli.TaskType,
 		tli.AckLevel,
 		tli.Kind,
+		time.Now(),
 		tli.DomainID,
 		&tli.Name,
 		tli.TaskType,
@@ -2666,6 +2696,35 @@ func (d *cassandraPersistence) UpdateTaskList(request *p.UpdateTaskListRequest) 
 	}
 
 	return &p.UpdateTaskListResponse{}, nil
+}
+
+func (d *cassandraPersistence) ListTaskList(request *p.ListTaskListRequest) (*p.ListTaskListResponse, error) {
+	return nil, &workflow.InternalServiceError{
+		Message: fmt.Sprintf("unsupported operation"),
+	}
+}
+
+func (d *cassandraPersistence) DeleteTaskList(request *p.DeleteTaskListRequest) error {
+	query := d.session.Query(templateDeleteTaskListQuery,
+		request.DomainID, request.TaskListName, request.TaskListType, rowTypeTaskList, taskListTaskID, request.RangeID)
+	previous := make(map[string]interface{})
+	applied, err := query.MapScanCAS(previous)
+	if err != nil {
+		if isThrottlingError(err) {
+			return &workflow.ServiceBusyError{
+				Message: fmt.Sprintf("DeleteTaskList operation failed. Error: %v", err),
+			}
+		}
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("DeleteTaskList operation failed. Error: %v", err),
+		}
+	}
+	if !applied {
+		return &p.ConditionFailedError{
+			Msg: fmt.Sprintf("DeleteTaskList operation failed: expected_range_id=%v but found %+v", request.RangeID, previous),
+		}
+	}
+	return nil
 }
 
 // From TaskManager interface
@@ -2713,6 +2772,7 @@ func (d *cassandraPersistence) CreateTasks(request *p.CreateTasksRequest) (*p.Cr
 		taskListType,
 		ackLevel,
 		taskListKind,
+		time.Now(),
 		domainID,
 		taskList,
 		taskListType,
@@ -2815,6 +2875,23 @@ func (d *cassandraPersistence) CompleteTask(request *p.CompleteTaskRequest) erro
 		}
 	}
 
+	return nil
+}
+
+func (d *cassandraPersistence) RangeCompleteTask(request *p.RangeCompleteTaskRequest) error {
+	query := d.session.Query(templateRangeCompleteTaskQuery,
+		request.DomainID, request.TaskListName, request.TaskType, rowTypeTask, request.MinTaskID, request.MaxTaskID)
+	err := query.Exec()
+	if err != nil {
+		if isThrottlingError(err) {
+			return &workflow.ServiceBusyError{
+				Message: fmt.Sprintf("RangeCompleteTask operation failed. Error: %v", err),
+			}
+		}
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("RangeCompleteTask operation failed. Error: %v", err),
+		}
+	}
 	return nil
 }
 
