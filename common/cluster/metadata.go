@@ -50,10 +50,8 @@ type (
 		// GetAllClientAddress return the frontend address for each cluster name
 		GetAllClientAddress() map[string]config.Address
 
-		// IsArchivalEnabled whether archival is enabled
-		IsArchivalEnabled() bool
-		// GetDefaultArchivalBucket returns the default archival bucket name
-		GetDefaultArchivalBucket() string
+		// ArchivalConfig returns the archival config of the cluster
+		ArchivalConfig() ArchivalConfig
 	}
 
 	metadataImpl struct {
@@ -74,10 +72,10 @@ type (
 		// clusterToAddress contains the cluster name to corresponding frontend client
 		clusterToAddress map[string]config.Address
 
-		// enableArchival whether archival is enabled
-		enableArchival dynamicconfig.BoolPropertyFn
-		// defaultArchivalBucket is the default archival bucket name used for this cluster
-		defaultArchivalBucket string
+		// archivalStatus is cluster's archival status
+		archivalStatus dynamicconfig.StringPropertyFn
+		// defaultBucket is the default archival bucket name used for this cluster
+		defaultBucket string
 	}
 )
 
@@ -89,8 +87,8 @@ func NewMetadata(
 	currentClusterName string,
 	clusterInitialFailoverVersions map[string]int64,
 	clusterToAddress map[string]config.Address,
-	enableArchival dynamicconfig.BoolPropertyFn,
-	defaultArchivalBucket string,
+	archivalStatus dynamicconfig.StringPropertyFn,
+	defaultBucket string,
 ) Metadata {
 
 	if len(clusterInitialFailoverVersions) == 0 {
@@ -132,11 +130,13 @@ func NewMetadata(
 		}
 	}
 
-	defaultArchivalBucketSet := len(defaultArchivalBucket) != 0
-	if enableArchival() && !defaultArchivalBucketSet {
-		panic("Archival enabled but no default bucket set")
-	} else if !enableArchival() && defaultArchivalBucketSet {
-		panic("Archival not enabled but default bucket set")
+	bucketSet := len(defaultBucket) != 0
+	disabled := GetArchivalStatus(archivalStatus()) == ArchivalDisabled
+	if disabled && bucketSet {
+		panic("Cluster status indicates cluster is not configured for archival but default bucket was set")
+	}
+	if !disabled && !bucketSet {
+		panic("Cluster status indicates cluster is configured for archival but no default bucket was set")
 	}
 
 	return &metadataImpl{
@@ -147,8 +147,8 @@ func NewMetadata(
 		clusterInitialFailoverVersions: clusterInitialFailoverVersions,
 		initialFailoverVersionClusters: initialFailoverVersionClusters,
 		clusterToAddress:               clusterToAddress,
-		enableArchival:                 enableArchival,
-		defaultArchivalBucket:          defaultArchivalBucket,
+		archivalStatus:                 archivalStatus,
+		defaultBucket:                  defaultBucket,
 	}
 }
 
@@ -219,12 +219,30 @@ func (metadata *metadataImpl) GetAllClientAddress() map[string]config.Address {
 	return metadata.clusterToAddress
 }
 
-// IsArchivalEnabled whether archival is enabled
-func (metadata *metadataImpl) IsArchivalEnabled() bool {
-	return metadata.enableArchival()
-}
+// ArchivalConfig returns the archival config of the cluster.
+// The cluster is considered disabled for archival if either there is no default bucket or if config indicates disabled.
+// If status is paused or enabled then default bucket is set.
+func (metadata *metadataImpl) ArchivalConfig() (retCfg ArchivalConfig) {
+	// extra safety measure to make sure a valid state is always returned
+	defer func() {
+		if !retCfg.IsValid() {
+			retCfg = ArchivalConfig{
+				status:        ArchivalDisabled,
+				defaultBucket: "",
+			}
+		}
+	}()
 
-// GetDefaultArchivalBucket returns the default archival bucket name
-func (metadata *metadataImpl) GetDefaultArchivalBucket() string {
-	return metadata.defaultArchivalBucket
+	bucketSet := len(metadata.defaultBucket) != 0
+	status := GetArchivalStatus(metadata.archivalStatus())
+	if !bucketSet || status == ArchivalDisabled {
+		return ArchivalConfig{
+			status:        ArchivalDisabled,
+			defaultBucket: "",
+		}
+	}
+	return ArchivalConfig{
+		status:        status,
+		defaultBucket: metadata.defaultBucket,
+	}
 }

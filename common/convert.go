@@ -129,11 +129,6 @@ func ChildWorkflowExecutionFailedCausePtr(t s.ChildWorkflowExecutionFailedCause)
 	return &t
 }
 
-// ArchivalStatusPtr makes a copy and returns the pointer to an ArchivalStatus.
-func ArchivalStatusPtr(t s.ArchivalStatus) *s.ArchivalStatus {
-	return &t
-}
-
 // StringDefault returns value if string pointer is set otherwise default value of string
 func StringDefault(v *string) string {
 	var defaultString string
