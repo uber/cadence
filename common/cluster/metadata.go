@@ -51,7 +51,7 @@ type (
 		GetAllClientAddress() map[string]config.Address
 
 		// ArchivalConfig returns the archival config of the cluster
-		ArchivalConfig() ArchivalConfig
+		ArchivalConfig() *ArchivalConfig
 	}
 
 	metadataImpl struct {
@@ -222,11 +222,11 @@ func (metadata *metadataImpl) GetAllClientAddress() map[string]config.Address {
 // ArchivalConfig returns the archival config of the cluster.
 // The cluster is considered disabled for archival if either there is no default bucket or if config indicates disabled.
 // If status is paused or enabled then default bucket is set.
-func (metadata *metadataImpl) ArchivalConfig() (retCfg ArchivalConfig) {
+func (metadata *metadataImpl) ArchivalConfig() (retCfg *ArchivalConfig) {
 	// extra safety measure to make sure a valid state is always returned
 	defer func() {
 		if !retCfg.IsValid() {
-			retCfg = ArchivalConfig{
+			retCfg = &ArchivalConfig{
 				status:        ArchivalDisabled,
 				defaultBucket: "",
 			}
@@ -236,12 +236,12 @@ func (metadata *metadataImpl) ArchivalConfig() (retCfg ArchivalConfig) {
 	bucketSet := len(metadata.defaultBucket) != 0
 	status := GetArchivalStatus(metadata.archivalStatus())
 	if !bucketSet || status == ArchivalDisabled {
-		return ArchivalConfig{
+		return &ArchivalConfig{
 			status:        ArchivalDisabled,
 			defaultBucket: "",
 		}
 	}
-	return ArchivalConfig{
+	return &ArchivalConfig{
 		status:        status,
 		defaultBucket: metadata.defaultBucket,
 	}

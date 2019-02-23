@@ -72,3 +72,12 @@ func (a *ArchivalConfig) GetDefaultBucket() string {
 func (a *ArchivalConfig) GetArchivalStatus() ArchivalStatus {
 	return a.status
 }
+
+// ConfiguredForArchival returns true if cluster is configured to handle archival, false otherwise.
+// If cluster is configured for archival then defaultBucket will be set.
+func (a *ArchivalConfig) ConfiguredForArchival() bool {
+	if !a.IsValid() {
+		return false
+	}
+	return a.status != ArchivalDisabled
+}

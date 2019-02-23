@@ -2693,7 +2693,9 @@ func getWorkflowHistoryCleanupTasksFromShard(
 		retentionInDays = domainEntry.GetRetentionDays(workflowID)
 	}
 
-	clusterEnablesArchival := shard.GetService().GetClusterMetadata().IsArchivalEnabled()
+	// TODO: this will need to change to have a single timer task and do these checks at point retention kicks in
+	clusterArchivalConfig := shard.GetService().GetClusterMetadata().ArchivalConfig()
+	clusterEnablesArchival := clusterArchivalConfig.GetArchivalStatus() == cluster.ArchivalEnabled
 	domainEnablesArchival := domainEntry.GetConfig().ArchivalStatus == workflow.ArchivalStatusEnabled
 	if clusterEnablesArchival && domainEnablesArchival {
 		archivalTask := tBuilder.createArchiveHistoryEventTimerTask(time.Duration(retentionInDays) * time.Hour * 24)

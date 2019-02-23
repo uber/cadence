@@ -103,7 +103,7 @@ func AdminRegisterDomain(c *cli.Context) {
 		ActiveClusterName:                      common.StringPtr(activeClusterName),
 		SecurityToken:                          common.StringPtr(securityToken),
 		ArchivalStatus:                         archivalStatus(c),
-		ArchivalBucketName:                     archivalBucketName(c),
+		ArchivalBucketName:                     common.StringPtr(c.String(FlagArchivalBucketName)),
 	}
 
 	ctx, cancel := newContext()
@@ -203,7 +203,7 @@ func AdminUpdateDomain(c *cli.Context) {
 			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(int32(retentionDays)),
 			EmitMetric:                             common.BoolPtr(emitMetric),
 			ArchivalStatus:                         archivalStatus(c),
-			ArchivalBucketName:                     archivalBucketName(c),
+			ArchivalBucketName:                     common.StringPtr(c.String(FlagArchivalBucketName)),
 		}
 		replicationConfig := &shared.DomainReplicationConfiguration{
 			Clusters: clusters,
@@ -263,7 +263,7 @@ func AdminDescribeDomain(c *cli.Context) {
 		serverClustersToString(resp.ReplicationConfiguration.Clusters),
 		archivalStatus.String(),
 	}
-	if archivalStatus != shared.ArchivalStatusNeverEnabled {
+	if archivalStatus == shared.ArchivalStatusEnabled {
 		formatStr = formatStr + "BucketName: %v\nArchivalRetentionInDays: %v\nBucketOwner: %v\n"
 		descValues = append(descValues,
 			resp.Configuration.GetArchivalBucketName(),
@@ -285,19 +285,9 @@ func serverClustersToString(clusters []*shared.ClusterReplicationConfiguration) 
 	return res
 }
 
-func archivalBucketName(c *cli.Context) *string {
-	archivalBucketName := c.String(FlagArchivalBucketName)
-	if len(archivalBucketName) == 0 {
-		return nil
-	}
-	return common.StringPtr(archivalBucketName)
-}
-
 func archivalStatus(c *cli.Context) *shared.ArchivalStatus {
 	if c.IsSet(FlagArchivalStatus) {
 		switch c.String(FlagArchivalStatus) {
-		case "never_enabled":
-			return common.ArchivalStatusPtr(shared.ArchivalStatusNeverEnabled)
 		case "disabled":
 			return common.ArchivalStatusPtr(shared.ArchivalStatusDisabled)
 		case "enabled":

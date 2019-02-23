@@ -25,7 +25,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common/cluster"
 	"sync"
 	"time"
 
@@ -288,7 +287,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 	currentArchivalState := neverEnabledState()
 	nextArchivalState := currentArchivalState
 	archivalClusterConfig := clusterMetadata.ArchivalConfig()
-	if archivalClusterConfig.GetArchivalStatus() != cluster.ArchivalDisabled {
+	if archivalClusterConfig.ConfiguredForArchival() {
 		archivalEvent, err := registerToEvent(registerRequest, archivalClusterConfig.GetDefaultBucket())
 		if err != nil {
 			return wh.error(err, scope)
@@ -312,7 +311,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 			Retention:      registerRequest.GetWorkflowExecutionRetentionPeriodInDays(),
 			EmitMetric:     registerRequest.GetEmitMetric(),
 			ArchivalBucket: nextArchivalState.bucket,
-			ArchivalEnabled: nextArchivalState.enabled,
+			ArchivalStatus: nextArchivalState.status,
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: activeClusterName,
@@ -469,12 +468,12 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 
 	currentArchivalState := &archivalState{
 		bucket: config.ArchivalBucket,
-		enabled: config.ArchivalEnabled,
+		status: config.ArchivalStatus,
 	}
 	nextArchivalState := currentArchivalState
 	archivalConfigChanged := false
 	archivalClusterConfig := clusterMetadata.ArchivalConfig()
-	if archivalClusterConfig.GetArchivalStatus() != cluster.ArchivalDisabled {
+	if archivalClusterConfig.ConfiguredForArchival() {
 		archivalEvent, err := updateToEvent(updateRequest, archivalClusterConfig.GetDefaultBucket())
 		if err != nil {
 			return nil, wh.error(err, scope)
@@ -586,7 +585,7 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 		if archivalConfigChanged {
 			configurationChanged = true
 			config.ArchivalBucket = nextArchivalState.bucket
-			config.ArchivalEnabled = nextArchivalState.enabled
+			config.ArchivalStatus = nextArchivalState.status
 		}
 	}
 	if updateRequest.ReplicationConfiguration != nil {
@@ -2936,13 +2935,13 @@ func (wh *WorkflowHandler) createDomainResponse(info *persistence.DomainInfo, co
 	configResult := &gen.DomainConfiguration{
 		EmitMetric:                             common.BoolPtr(config.EmitMetric),
 		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(config.Retention),
-		ArchivalEnabled:                         common.BoolPtr(config.ArchivalEnabled),
+		ArchivalStatus:                         common.ArchivalStatusPtr(config.ArchivalStatus),
 	}
 
-	if *configResult.ArchivalEnabled {
+	if *configResult.ArchivalStatus == gen.ArchivalStatusEnabled {
 		bucketName := config.ArchivalBucket
 		configResult.ArchivalBucketName = common.StringPtr(bucketName)
-		if wh.GetClusterMetadata().ArchivalConfig().GetArchivalStatus() != cluster.ArchivalDisabled {
+		if wh.GetClusterMetadata().ArchivalConfig().ConfiguredForArchival() {
 			metadata, err := wh.blobstoreClient.BucketMetadata(context.Background(), bucketName)
 			if err == nil {
 				configResult.ArchivalRetentionPeriodInDays = common.Int32Ptr(int32(metadata.RetentionDays))

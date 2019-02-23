@@ -242,6 +242,11 @@ enum TaskListKind {
   STICKY,
 }
 
+enum ArchivalStatus {
+  DISABLED,
+  ENABLED,
+}
+
 struct Header {
     10: optional map<string, binary> fields
 }
@@ -833,7 +838,7 @@ struct DomainConfiguration {
   20: optional bool emitMetric
   30: optional string archivalBucketName
   40: optional i32 archivalRetentionPeriodInDays
-  50: optional bool archivalEnabled
+  50: optional ArchivalStatus archivalStatus
   60: optional string archivalBucketOwner
 }
 
@@ -864,7 +869,7 @@ struct RegisterDomainRequest {
   // A key-value map for any customized purpose
   80: optional map<string,string> data
   90: optional string securityToken
-  100: optional bool archivalEnabled
+  100: optional ArchivalStatus archivalStatus
   110: optional string archivalBucketName
 }
 

@@ -26,51 +26,50 @@ import (
 
 type (
 	// archivalState represents the state of archival config
-	// the only invalid state is enabled=true and bucket=""
+	// the only invalid state is {bucket="", status=enabled}
 	// once bucket is set it is immutable
-	// the initial state is enabled=false and bucket="", this is what all domains initially default to
+	// the initial state is {bucket="", status=disabled}, this is what all domains initially default to
 	archivalState struct {
 		bucket string
-		enabled bool
+		status shared.ArchivalStatus
 	}
 
 	// archivalEvent represents a change request to archival config state
 	// the only restriction placed on events is that defaultBucket is not empty
 	// setting requestedBucket to empty string means user is not attempting to set bucket
-	// requestedEnabled can be nil, true, or false (nil indicates no update by user is being attempted)
+	// status can be nil, enabled, or disabled (nil indicates no update by user is being attempted)
 	archivalEvent struct {
-		defaultBucket   string
-		bucket string
-		enabled *bool
+		defaultBucket string
+		bucket        string
+		status        *shared.ArchivalStatus
 	}
 )
 
-// the following errors represents impossible conditions that should never occur
+// the following errors represents impossible code states that should never occur
 var (
-	errInvalidState              = &shared.BadRequestError{Message: "Encountered illegal state: archival is enabled but bucket is not set (should be impossible)."}
-	errInvalidEvent           = &shared.BadRequestError{Message: "Encountered illegal event: default bucket is not set (should be impossible)."}
-	errCannotHandleStateChange   = &shared.BadRequestError{Message: "Encountered current state and event that cannot be handled (should be impossible)"}
+	errInvalidState            = &shared.BadRequestError{Message: "Encountered illegal state: archival is enabled but bucket is not set (should be impossible)"}
+	errInvalidEvent            = &shared.BadRequestError{Message: "Encountered illegal event: default bucket is not set (should be impossible)"}
+	errCannotHandleStateChange = &shared.BadRequestError{Message: "Encountered current state and event that cannot be handled (should be impossible)"}
 )
 
-// the following errors represents bad user input, but which are possible to occur
+// the following errors represents bad user input
 var (
-	errDisallowedBucketMetadata  = &shared.BadRequestError{Message: "Cannot set bucket owner or bucket retention (must update bucket manually)."}
-	errBucketNameUpdate          = &shared.BadRequestError{Message: "Cannot update existing bucket name."}
-
+	errDisallowedBucketMetadata = &shared.BadRequestError{Message: "Cannot set bucket owner or bucket retention (must update bucket manually)"}
+	errBucketNameUpdate         = &shared.BadRequestError{Message: "Cannot update existing bucket name"}
 )
 
 func neverEnabledState() *archivalState {
 	return &archivalState{
 		bucket: "",
-		enabled: false,
+		status: shared.ArchivalStatusDisabled,
 	}
 }
 
 func registerToEvent(request *shared.RegisterDomainRequest, defaultBucket string) (*archivalEvent, error) {
 	event := &archivalEvent{
-		defaultBucket:   defaultBucket,
-		bucket: request.GetArchivalBucketName(),
-		enabled: request.ArchivalEnabled,
+		defaultBucket: defaultBucket,
+		bucket:        request.GetArchivalBucketName(),
+		status:        request.ArchivalStatus,
 	}
 	if err := event.validate(); err != nil {
 		return nil, err
@@ -88,7 +87,7 @@ func updateToEvent(request *shared.UpdateDomainRequest, defaultBucket string) (*
 			return nil, errDisallowedBucketMetadata
 		}
 		event.bucket = cfg.GetArchivalBucketName()
-		event.enabled = cfg.ArchivalEnabled
+		event.status = cfg.ArchivalStatus
 	}
 	if err := event.validate(); err != nil {
 		return nil, err
@@ -104,7 +103,7 @@ func (e *archivalEvent) validate() error {
 }
 
 func (s *archivalState) validate() error {
-	if s.enabled && len(s.bucket) == 0 {
+	if s.status == shared.ArchivalStatusEnabled && len(s.bucket) == 0 {
 		return errInvalidState
 	}
 	return nil
@@ -143,116 +142,115 @@ func (s *archivalState) getNextState(e *archivalEvent) (nextState *archivalState
 	At this point state and event are both non-nil and valid.
 
 	State can be any one of the following:
-	{enabled=true,  bucket="foo"}
-	{enabled=false, bucket="foo"}
-	{enabled=false, bucket=""}
+	{status=enabled,  bucket="foo"}
+	{status=disabled, bucket="foo"}
+	{status=disabled, bucket=""}
 
 	Event can be any one of the following:
-	{enabled=true,  bucket="foo", defaultBucket="bar"}
-	{enabled=true,  bucket="",    defaultBucket="bar"}
-	{enabled=false, bucket="foo", defaultBucket="bar"}
-	{enabled=false, bucket="",    defaultBucket="bar"}
-	{enabled=nil,   bucket="foo", defaultBucket="bar"}
-	{enabled=nil,   bucket="",    defaultBucket="bar"}
-	 */
+	{status=enabled,  bucket="foo", defaultBucket="bar"}
+	{status=enabled,  bucket="",    defaultBucket="bar"}
+	{status=disabled, bucket="foo", defaultBucket="bar"}
+	{status=disabled, bucket="",    defaultBucket="bar"}
+	{status=nil,      bucket="foo", defaultBucket="bar"}
+	{status=nil,      bucket="",    defaultBucket="bar"}
+	*/
 
-	 stateBucketSet := len(s.bucket) != 0
-	 eventBucketSet := len(e.bucket) != 0
+	stateBucketSet := len(s.bucket) != 0
+	eventBucketSet := len(e.bucket) != 0
 
-	 // factor this case out to ensure that bucket name is immutable
-	 if stateBucketSet && eventBucketSet && s.bucket != e.bucket {
-	 	return nil, false, errBucketNameUpdate
-	 }
+	// factor this case out to ensure that bucket name is immutable
+	if stateBucketSet && eventBucketSet && s.bucket != e.bucket {
+		return nil, false, errBucketNameUpdate
+	}
 
-	 // state 1
-	 if s.enabled && stateBucketSet {
-	 	if e.enabled != nil && *e.enabled && eventBucketSet {
+	// state 1
+	if s.status == shared.ArchivalStatusEnabled && stateBucketSet {
+		if e.status != nil && *e.status == shared.ArchivalStatusEnabled && eventBucketSet {
 			return s, false, nil
 		}
-	 	if e.enabled != nil && *e.enabled && !eventBucketSet {
+		if e.status != nil && *e.status == shared.ArchivalStatusEnabled && !eventBucketSet {
 			return s, false, nil
 		}
-	 	if e.enabled != nil && !(*e.enabled) && eventBucketSet {
+		if e.status != nil && *e.status == shared.ArchivalStatusDisabled && eventBucketSet {
 			return &archivalState{
 				bucket: s.bucket,
-				enabled: false,
+				status: shared.ArchivalStatusDisabled,
 			}, true, nil
 		}
-	 	if e.enabled != nil && !(*e.enabled) && !eventBucketSet {
+		if e.status != nil && *e.status == shared.ArchivalStatusDisabled && !eventBucketSet {
 			return &archivalState{
 				bucket: s.bucket,
-				enabled: false,
+				status: shared.ArchivalStatusDisabled,
 			}, true, nil
 		}
-	 	if e.enabled == nil && eventBucketSet {
+		if e.status == nil && eventBucketSet {
 			return s, false, nil
 		}
-	 	if e.enabled == nil && !eventBucketSet {
+		if e.status == nil && !eventBucketSet {
 			return s, false, nil
 		}
-	 }
+	}
 
-	 // state 2
-	 if !s.enabled && stateBucketSet {
-		 if e.enabled != nil && *e.enabled && eventBucketSet {
-		 	return &archivalState{
-		 		enabled: true,
-		 		bucket: s.bucket,
-			}, true, nil
-		 }
-		 if e.enabled != nil && *e.enabled && !eventBucketSet {
-		 	return &archivalState{
-		 		enabled: true,
-		 		bucket: s.bucket,
-			}, true, nil
-		 }
-		 if e.enabled != nil && !(*e.enabled) && eventBucketSet {
-		 	return s, false, nil
-		 }
-		 if e.enabled != nil && !(*e.enabled) && !eventBucketSet {
-			 return s, false, nil
-		 }
-		 if e.enabled == nil && eventBucketSet {
-			return s, false, nil
-		 }
-		 if e.enabled == nil && !eventBucketSet {
-			return s, false, nil
-		 }
-	 }
-
-	 // state 3
-	 if !s.enabled && !stateBucketSet {
-		 if e.enabled != nil && *e.enabled && eventBucketSet {
+	// state 2
+	if s.status == shared.ArchivalStatusDisabled && stateBucketSet {
+		if e.status != nil && *e.status == shared.ArchivalStatusEnabled && eventBucketSet {
 			return &archivalState{
-				enabled: true,
+				status: shared.ArchivalStatusEnabled,
+				bucket: s.bucket,
+			}, true, nil
+		}
+		if e.status != nil && *e.status == shared.ArchivalStatusEnabled && !eventBucketSet {
+			return &archivalState{
+				status: shared.ArchivalStatusEnabled,
+				bucket: s.bucket,
+			}, true, nil
+		}
+		if e.status != nil && *e.status == shared.ArchivalStatusDisabled && eventBucketSet {
+			return s, false, nil
+		}
+		if e.status != nil && *e.status == shared.ArchivalStatusDisabled && !eventBucketSet {
+			return s, false, nil
+		}
+		if e.status == nil && eventBucketSet {
+			return s, false, nil
+		}
+		if e.status == nil && !eventBucketSet {
+			return s, false, nil
+		}
+	}
+
+	// state 3
+	if s.status == shared.ArchivalStatusDisabled && !stateBucketSet {
+		if e.status != nil && *e.status == shared.ArchivalStatusEnabled && eventBucketSet {
+			return &archivalState{
+				status: shared.ArchivalStatusEnabled,
 				bucket: e.bucket,
 			}, true, nil
-		 }
-		 if e.enabled != nil && *e.enabled && !eventBucketSet {
+		}
+		if e.status != nil && *e.status == shared.ArchivalStatusEnabled && !eventBucketSet {
 			return &archivalState{
-				enabled: true,
+				status: shared.ArchivalStatusEnabled,
 				bucket: e.defaultBucket,
 			}, true, nil
-		 }
-		 if e.enabled != nil && !(*e.enabled) && eventBucketSet {
+		}
+		if e.status != nil && *e.status == shared.ArchivalStatusDisabled && eventBucketSet {
 			return &archivalState{
-				enabled: false,
+				status: shared.ArchivalStatusDisabled,
 				bucket: e.bucket,
 			}, true, nil
-		 }
-		 if e.enabled != nil && !(*e.enabled) && !eventBucketSet {
+		}
+		if e.status != nil && *e.status == shared.ArchivalStatusDisabled && !eventBucketSet {
 			return s, false, nil
-		 }
-		 if e.enabled == nil && eventBucketSet {
+		}
+		if e.status == nil && eventBucketSet {
 			return &archivalState{
-				enabled: false,
+				status: shared.ArchivalStatusDisabled,
 				bucket: e.bucket,
 			}, true, nil
-		 }
-		 if e.enabled == nil && !eventBucketSet {
+		}
+		if e.status == nil && !eventBucketSet {
 			return s, false, nil
-		 }
-	 }
-
-	 return nil, false, errCannotHandleStateChange
+		}
+	}
+	return nil, false, errCannotHandleStateChange
 }

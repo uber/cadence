@@ -1062,7 +1062,7 @@ type (
 		Retention      int32
 		EmitMetric     bool
 		ArchivalBucket string
-		ArchivalEnabled bool
+		ArchivalStatus workflow.ArchivalStatus
 	}
 
 	// DomainReplicationConfig describes the cross DC domain replication configuration
