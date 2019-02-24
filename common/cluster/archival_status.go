@@ -24,7 +24,7 @@ type (
 	// ArchivalStatus represents the archival status of the cluster
 	ArchivalStatus int
 
-	// ArchivalConfig is an immutable representation of the current cluster configuration of archival
+	// ArchivalConfig is an immutable representation of the current archival configuration of the cluster
 	ArchivalConfig struct {
 		status        ArchivalStatus
 		defaultBucket string

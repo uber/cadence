@@ -263,12 +263,17 @@ func AdminDescribeDomain(c *cli.Context) {
 		serverClustersToString(resp.ReplicationConfiguration.Clusters),
 		archivalStatus.String(),
 	}
-	if archivalStatus == shared.ArchivalStatusEnabled {
-		formatStr = formatStr + "BucketName: %v\nArchivalRetentionInDays: %v\nBucketOwner: %v\n"
-		descValues = append(descValues,
-			resp.Configuration.GetArchivalBucketName(),
-			fmt.Sprintf("%v", resp.Configuration.GetArchivalRetentionPeriodInDays()),
-			resp.Configuration.GetArchivalBucketOwner())
+	if resp.Configuration.GetArchivalBucketName() != "" {
+		formatStr = formatStr + "BucketName: %v\n"
+		descValues = append(descValues, resp.Configuration.GetArchivalBucketName())
+	}
+	if resp.Configuration.GetArchivalRetentionPeriodInDays() != 0 {
+		formatStr = formatStr + "ArchivalRetentionInDays: %v\n"
+		descValues = append(descValues, resp.Configuration.GetArchivalRetentionPeriodInDays())
+	}
+	if resp.Configuration.GetArchivalBucketOwner() != "" {
+		formatStr = formatStr + "BucketOwner: %v\n"
+		descValues = append(descValues, resp.Configuration.GetArchivalBucketOwner())
 	}
 	fmt.Printf(formatStr, descValues...)
 }

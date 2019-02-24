@@ -30,7 +30,6 @@ import (
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/blobstore/blob"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -254,9 +253,10 @@ func ArchivalUploadActivity(ctx context.Context, request ArchiveRequest) error {
 		metricsClient.IncCounter(metrics.ArchivalUploadActivityScope, metrics.SysWorkerGetDomainFailures)
 		return errArchivalUploadActivityGetDomain
 	}
-	if clusterMetadata.ArchivalConfig().GetArchivalStatus() != cluster.ArchivalEnabled {
-		// for now if archival is disabled simply abort the activity
-		// a more in depth design meeting is needed to decide the correct way to handle backfilling/pausing archival
+
+	// if signal is being handled when cluster is paused or enabled then keep processing signal
+	// only if cluster sets archival to disabled should the activity be aborted
+	if !clusterMetadata.ArchivalConfig().ConfiguredForArchival() {
 		logger.Warn("archival is not enabled for cluster, skipping archival upload")
 		metricsClient.IncCounter(metrics.ArchivalUploadActivityScope, metrics.SysWorkerArchivalNotEnabledForCluster)
 		return nil
