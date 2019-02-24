@@ -40,6 +40,21 @@ const (
 	ArchivalEnabled
 )
 
+// NewArchivalConfig constructs a new ArchivalConfig
+func NewArchivalConfig(status ArchivalStatus, defaultBucket string) *ArchivalConfig {
+	ac := &ArchivalConfig{
+		status: status,
+		defaultBucket: defaultBucket,
+	}
+	if !ac.IsValid() {
+		return &ArchivalConfig{
+			status: ArchivalDisabled,
+			defaultBucket: "",
+		}
+	}
+	return ac
+}
+
 // GetArchivalStatus converts input string to ArchivalStatus.
 // Valid input strings are "disabled", "paused", and "enabled".
 // If non-valid string is given status of Disabled is returned.
