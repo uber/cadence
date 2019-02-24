@@ -2936,17 +2936,13 @@ func (wh *WorkflowHandler) createDomainResponse(info *persistence.DomainInfo, co
 		EmitMetric:                             common.BoolPtr(config.EmitMetric),
 		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(config.Retention),
 		ArchivalStatus:                         common.ArchivalStatusPtr(config.ArchivalStatus),
+		ArchivalBucketName:                     common.StringPtr(config.ArchivalBucket),
 	}
-
-	if *configResult.ArchivalStatus == gen.ArchivalStatusEnabled {
-		bucketName := config.ArchivalBucket
-		configResult.ArchivalBucketName = common.StringPtr(bucketName)
-		if wh.GetClusterMetadata().ArchivalConfig().ConfiguredForArchival() {
-			metadata, err := wh.blobstoreClient.BucketMetadata(context.Background(), bucketName)
-			if err == nil {
-				configResult.ArchivalRetentionPeriodInDays = common.Int32Ptr(int32(metadata.RetentionDays))
-				configResult.ArchivalBucketOwner = common.StringPtr(metadata.Owner)
-			}
+	if wh.GetClusterMetadata().ArchivalConfig().ConfiguredForArchival() {
+		metadata, err := wh.blobstoreClient.BucketMetadata(context.Background(), config.ArchivalBucket)
+		if err == nil {
+			configResult.ArchivalRetentionPeriodInDays = common.Int32Ptr(int32(metadata.RetentionDays))
+			configResult.ArchivalBucketOwner = common.StringPtr(metadata.Owner)
 		}
 	}
 

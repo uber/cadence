@@ -133,10 +133,10 @@ func NewMetadata(
 	bucketSet := len(defaultBucket) != 0
 	disabled := GetArchivalStatus(archivalStatus()) == ArchivalDisabled
 	if disabled && bucketSet {
-		panic("Cluster status indicates cluster is not configured for archival but default bucket was set")
+		panic("Cluster archival status indicates cluster is not configured for archival but default bucket was set")
 	}
 	if !disabled && !bucketSet {
-		panic("Cluster status indicates cluster is configured for archival but no default bucket was set")
+		panic("Cluster archival status indicates cluster is configured for archival but no default bucket was set")
 	}
 
 	return &metadataImpl{
