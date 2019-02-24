@@ -43,12 +43,12 @@ const (
 // NewArchivalConfig constructs a new ArchivalConfig
 func NewArchivalConfig(status ArchivalStatus, defaultBucket string) *ArchivalConfig {
 	ac := &ArchivalConfig{
-		status: status,
+		status:        status,
 		defaultBucket: defaultBucket,
 	}
 	if !ac.IsValid() {
 		return &ArchivalConfig{
-			status: ArchivalDisabled,
+			status:        ArchivalDisabled,
 			defaultBucket: "",
 		}
 	}
