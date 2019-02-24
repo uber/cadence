@@ -661,8 +661,6 @@ const (
 	TimerActiveTaskWorkflowBackoffTimerScope
 	// TimerActiveTaskDeleteHistoryEventScope is the scope used by metric emitted by timer queue processor for processing history event cleanup
 	TimerActiveTaskDeleteHistoryEventScope
-	// TimerActiveTaskArchiveHistoryEventScope is the scope used by metric emitted by timer queue processor for processing history archival event
-	TimerActiveTaskArchiveHistoryEventScope
 	// TimerStandbyTaskActivityTimeoutScope is the scope used by metric emitted by timer queue processor for processing activity timeouts
 	TimerStandbyTaskActivityTimeoutScope
 	// TimerStandbyTaskDecisionTimeoutScope is the scope used by metric emitted by timer queue processor for processing decision timeouts
@@ -675,8 +673,6 @@ const (
 	TimerStandbyTaskActivityRetryTimerScope
 	// TimerStandbyTaskDeleteHistoryEventScope is the scope used by metric emitted by timer queue processor for processing history event cleanup
 	TimerStandbyTaskDeleteHistoryEventScope
-	// TimerStandbyTaskArchiveHistoryEventScope is the scope used by metric emitted by timer queue processor for processing history archival event
-	TimerStandbyTaskArchiveHistoryEventScope
 	// TimerStandbyTaskWorkflowBackoffTimerScope is the scope used by metric emitted by timer queue processor for processing retry task.
 	TimerStandbyTaskWorkflowBackoffTimerScope
 	// HistoryEventNotificationScope is the scope used by shard history event nitification
@@ -1046,7 +1042,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		TimerActiveTaskActivityRetryTimerScope:       {operation: "TimerActiveTaskActivityRetryTimer"},
 		TimerActiveTaskWorkflowBackoffTimerScope:     {operation: "TimerActiveTaskWorkflowBackoffTimer"},
 		TimerActiveTaskDeleteHistoryEventScope:       {operation: "TimerActiveTaskDeleteHistoryEvent"},
-		TimerActiveTaskArchiveHistoryEventScope:      {operation: "TimerActiveTaskArchiveHistoryEvent"},
 		TimerStandbyTaskActivityTimeoutScope:         {operation: "TimerStandbyTaskActivityTimeout"},
 		TimerStandbyTaskDecisionTimeoutScope:         {operation: "TimerStandbyTaskDecisionTimeout"},
 		TimerStandbyTaskUserTimerScope:               {operation: "TimerStandbyTaskUserTimer"},
@@ -1054,7 +1049,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		TimerStandbyTaskActivityRetryTimerScope:      {operation: "TimerStandbyTaskActivityRetryTimer"},
 		TimerStandbyTaskWorkflowBackoffTimerScope:    {operation: "TimerStandbyTaskWorkflowBackoffTimer"},
 		TimerStandbyTaskDeleteHistoryEventScope:      {operation: "TimerStandbyTaskDeleteHistoryEvent"},
-		TimerStandbyTaskArchiveHistoryEventScope:     {operation: "TimerStandbyTaskArchiveHistoryEvent"},
 		HistoryEventNotificationScope:                {operation: "HistoryEventNotification"},
 		ReplicatorQueueProcessorScope:                {operation: "ReplicatorQueueProcessor"},
 		ReplicatorTaskHistoryScope:                   {operation: "ReplicatorTaskHistory"},

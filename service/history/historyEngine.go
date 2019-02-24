@@ -26,9 +26,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/uber/cadence/client/public"
-	"time"
-
 	"github.com/uber/cadence/service/worker/sysworkflow"
+	"time"
 
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
@@ -2691,15 +2690,6 @@ func getWorkflowHistoryCleanupTasksFromShard(
 		}
 	} else {
 		retentionInDays = domainEntry.GetRetentionDays(workflowID)
-	}
-
-	// TODO: this will need to change to have a single timer task and do these checks at point retention kicks in
-	clusterArchivalConfig := shard.GetService().GetClusterMetadata().ArchivalConfig()
-	clusterEnablesArchival := clusterArchivalConfig.GetArchivalStatus() == cluster.ArchivalEnabled
-	domainEnablesArchival := domainEntry.GetConfig().ArchivalStatus == workflow.ArchivalStatusEnabled
-	if clusterEnablesArchival && domainEnablesArchival {
-		archivalTask := tBuilder.createArchiveHistoryEventTimerTask(time.Duration(retentionInDays) * time.Hour * 24)
-		return &persistence.CloseExecutionTask{}, archivalTask, nil
 	}
 	deleteTask := tBuilder.createDeleteHistoryEventTimerTask(time.Duration(retentionInDays) * time.Hour * 24)
 	return &persistence.CloseExecutionTask{}, deleteTask, nil
