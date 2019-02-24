@@ -2938,7 +2938,7 @@ func (wh *WorkflowHandler) createDomainResponse(info *persistence.DomainInfo, co
 		ArchivalStatus:                         common.ArchivalStatusPtr(config.ArchivalStatus),
 		ArchivalBucketName:                     common.StringPtr(config.ArchivalBucket),
 	}
-	if wh.GetClusterMetadata().ArchivalConfig().ConfiguredForArchival() {
+	if wh.GetClusterMetadata().ArchivalConfig().ConfiguredForArchival() && config.ArchivalBucket != "" {
 		metadata, err := wh.blobstoreClient.BucketMetadata(context.Background(), config.ArchivalBucket)
 		if err == nil {
 			configResult.ArchivalRetentionPeriodInDays = common.Int32Ptr(int32(metadata.RetentionDays))
