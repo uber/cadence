@@ -236,7 +236,7 @@ func (m *sqlTaskManager) ListTaskList(request *persistence.ListTaskListRequest) 
 
 	var nextPageToken []byte
 	switch {
-	case len(rows) == request.PageSize:
+	case len(rows) >= request.PageSize:
 		lastRow := &rows[request.PageSize-1]
 		nextPageToken, err = gobSerialize(&taskListPageToken{
 			ShardID:  pageToken.ShardID,
@@ -246,10 +246,6 @@ func (m *sqlTaskManager) ListTaskList(request *persistence.ListTaskListRequest) 
 		})
 	case pageToken.ShardID+1 < m.nShards:
 		nextPageToken, err = gobSerialize(&taskListPageToken{ShardID: pageToken.ShardID + 1, TaskType: math.MinInt16})
-	default:
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("invalid state: request:%+v, pageToken=%+v, len(rows)=%v", request, pageToken, len(rows)),
-		}
 	}
 
 	if err != nil {
