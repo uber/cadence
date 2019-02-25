@@ -154,8 +154,9 @@ func (s *esProcessorSuite) TestAdd_ConcurrentAdd() {
 	mockKafkaMsg := &msgMocks.Message{}
 	key := "test-key"
 
-	addFunc := func() {
+	addFunc := func(wg *sync.WaitGroup) {
 		s.esProcessor.Add(request, key, mockKafkaMsg)
+		wg.Done()
 	}
 	duplicates := 5
 	wg := &sync.WaitGroup{}
@@ -163,8 +164,7 @@ func (s *esProcessorSuite) TestAdd_ConcurrentAdd() {
 	s.mockBulkProcessor.On("Add", request).Return().Once()
 	mockKafkaMsg.On("Ack").Return(nil).Times(duplicates - 1)
 	for i := 0; i < duplicates; i++ {
-		addFunc()
-		wg.Done()
+		addFunc(wg)
 	}
 	wg.Wait()
 	mockKafkaMsg.AssertExpectations(s.T())
