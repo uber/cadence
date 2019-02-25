@@ -938,7 +938,7 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 
 	// current workflow is completed
 	if currentState == persistence.WorkflowStateCompleted {
-		// allow the application of worrkflow creation if currentLastWriteVersion > incomingVersion
+		// allow the application of workflow creation if currentLastWriteVersion > incomingVersion
 		// because this can be caused by missing replication events
 		// proceed to create workflow
 		isBrandNew = false
