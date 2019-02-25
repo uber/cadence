@@ -140,7 +140,7 @@ func (s *testCluster) setupCluster(no int, enableEventsV2 bool) {
 		clusterInfo.CurrentClusterName,
 		clusterInfo.ClusterInitialFailoverVersions,
 		clusterInfo.ClusterAddress,
-		dynamicconfig.GetBoolPropertyFn(false),
+		dynamicconfig.GetStringPropertyFn("disabled"),
 		"",
 	)
 	s.TestBase = persistencetests.NewTestBaseWithCassandra(&options)
