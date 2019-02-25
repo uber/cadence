@@ -53,7 +53,7 @@ task_type = :task_type
 
 	listTaskListQry = `SELECT domain_id, range_id, name, task_type, ack_level, kind, expiry_ts, last_updated ` +
 		`FROM task_lists ` +
-		`WHERE shard_id = ? AND domain_id > ? AND name > ? AND task_type > ? LIMIT ?`
+		`WHERE shard_id = ? AND domain_id > ? AND name > ? AND task_type > ? ORDER BY domain_id,name,task_type LIMIT ?`
 
 	getTaskListQry = `SELECT domain_id, range_id, name, task_type, ack_level, kind, expiry_ts, last_updated ` +
 		`FROM task_lists ` +
