@@ -35,7 +35,6 @@ import (
 	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/client/frontend"
 	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
@@ -137,7 +136,6 @@ func NewEngineWithShardContext(
 	visibilityMgr persistence.VisibilityManager,
 	matching matching.Client,
 	historyClient hc.Client,
-	frontendClient frontend.Client,
 	publicClient public.Client,
 	historyEventNotifier historyEventNotifier,
 	publisher messaging.Producer,
@@ -170,7 +168,7 @@ func NewEngineWithShardContext(
 		metricsClient:        shard.GetMetricsClient(),
 		historyEventNotifier: historyEventNotifier,
 		config:               config,
-		archivalClient:       sysworkflow.NewArchivalClient(publicClient, shard.GetConfig().NumSysWorkflows),
+		archivalClient:       sysworkflow.NewArchivalClient(publicClient, shard.GetConfig().NumArchiveSystemWorkflows),
 	}
 
 	txProcessor := newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, visibilityProducer, matching, historyClient, logger)

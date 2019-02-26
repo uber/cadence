@@ -111,7 +111,14 @@ func (p *esProcessorImpl) Stop() {
 
 // Add an ES request, and an map item for kafka message
 func (p *esProcessorImpl) Add(request elastic.BulkableRequest, key string, kafkaMsg messaging.Message) {
-	p.mapToKafkaMsg.Put(key, kafkaMsg)
+	actionWhenFoundDuplicates := func(key interface{}, value interface{}) error {
+		kafkaMsg.Ack()
+		return nil
+	}
+	_, isDup, _ := p.mapToKafkaMsg.PutOrDo(key, kafkaMsg, actionWhenFoundDuplicates)
+	if isDup {
+		return
+	}
 	p.processor.Add(request)
 }
 

@@ -22,17 +22,15 @@ package sysworkflow
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"github.com/dgryski/go-farm"
-	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common/blobstore/blob"
+	"strconv"
 	"strings"
-)
 
-const (
-	// HistoryBlobKeyExt is the blob key extension on all history blobs
-	HistoryBlobKeyExt = "history"
+	"github.com/dgryski/go-farm"
+
+	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/blobstore/blob"
 )
 
 type (
@@ -42,15 +40,16 @@ type (
 		DomainID             *string `json:"domain_id,omitempty"`
 		WorkflowID           *string `json:"workflow_id,omitempty"`
 		RunID                *string `json:"run_id,omitempty"`
-		CurrentPageToken     *string `json:"current_page_token,omitempty"`
-		NextPageToken        *string `json:"next_page_token,omitempty"`
-		FirstFailoverVersion *string `json:"first_failover_version,omitempty"`
-		LastFailoverVersion  *string `json:"last_failover_version,omitempty"`
+		CurrentPageToken     *int    `json:"current_page_token,omitempty"`
+		NextPageToken        *int    `json:"next_page_token,omitempty"`
+		FirstFailoverVersion *int64  `json:"first_failover_version,omitempty"`
+		LastFailoverVersion  *int64  `json:"last_failover_version,omitempty"`
 		FirstEventID         *int64  `json:"first_event_id,omitempty"`
 		LastEventID          *int64  `json:"last_event_id,omitempty"`
 		UploadDateTime       *string `json:"upload_date_time,omitempty"`
 		UploadCluster        *string `json:"upload_cluster,omitempty"`
 		EventCount           *int64  `json:"event_count,omitempty"`
+		CloseFailoverVersion *int64  `json:"close_failover_version,omitempty"`
 	}
 
 	// HistoryBlob is the serializable data that forms the body of a blob
@@ -60,16 +59,28 @@ type (
 	}
 )
 
+var (
+	errInvalidKeyInput = &shared.BadRequestError{Message: "invalid input to construct history blob key"}
+)
+
 // NewHistoryBlobKey returns a key for history blob
-func NewHistoryBlobKey(domainID, workflowID, runID, pageToken, failoverVersion string) (blob.Key, error) {
-	if len(domainID) == 0 || len(workflowID) == 0 || len(runID) == 0 || len(pageToken) == 0 || len(failoverVersion) == 0 {
-		return nil, errors.New("all inputs required to be non-empty")
+func NewHistoryBlobKey(domainID, workflowID, runID string, pageToken int) (blob.Key, error) {
+	if len(domainID) == 0 || len(workflowID) == 0 || len(runID) == 0 {
+		return nil, errInvalidKeyInput
+	}
+	if pageToken < common.FirstBlobPageToken {
+		return nil, errInvalidKeyInput
 	}
 	domainIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(domainID)))
 	workflowIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(workflowID)))
 	runIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(runID)))
 	combinedHash := strings.Join([]string{domainIDHash, workflowIDHash, runIDHash}, "")
-	return blob.NewKey(HistoryBlobKeyExt, combinedHash, pageToken, failoverVersion)
+	return blob.NewKey(historyBlobKeyExt, combinedHash, StringPageToken(pageToken))
+}
+
+// StringPageToken converts input blob page token to string form
+func StringPageToken(pageToken int) string {
+	return strconv.Itoa(pageToken)
 }
 
 // ConvertHeaderToTags converts header into metadata tags for blob

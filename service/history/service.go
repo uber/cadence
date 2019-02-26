@@ -28,6 +28,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
 	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
@@ -35,13 +36,14 @@ import (
 type Config struct {
 	NumberOfShards int
 
-	RPS                      dynamicconfig.IntPropertyFn
-	MaxIDLengthLimit         dynamicconfig.IntPropertyFn
-	PersistenceMaxQPS        dynamicconfig.IntPropertyFn
-	EnableVisibilitySampling dynamicconfig.BoolPropertyFn
-	VisibilityOpenMaxQPS     dynamicconfig.IntPropertyFnWithDomainFilter
-	VisibilityClosedMaxQPS   dynamicconfig.IntPropertyFnWithDomainFilter
-	EnableVisibilityToKafka  dynamicconfig.BoolPropertyFn
+	RPS                             dynamicconfig.IntPropertyFn
+	MaxIDLengthLimit                dynamicconfig.IntPropertyFn
+	PersistenceMaxQPS               dynamicconfig.IntPropertyFn
+	EnableVisibilitySampling        dynamicconfig.BoolPropertyFn
+	EnableReadFromClosedExecutionV2 dynamicconfig.BoolPropertyFn
+	VisibilityOpenMaxQPS            dynamicconfig.IntPropertyFnWithDomainFilter
+	VisibilityClosedMaxQPS          dynamicconfig.IntPropertyFnWithDomainFilter
+	EnableVisibilityToKafka         dynamicconfig.BoolPropertyFn
 
 	// HistoryCache settings
 	// Change of these configs require shard restart
@@ -127,7 +129,7 @@ type Config struct {
 	// whether or not using eventsV2
 	EnableEventsV2 dynamicconfig.BoolPropertyFnWithDomainFilter
 
-	NumSysWorkflows dynamicconfig.IntPropertyFn
+	NumArchiveSystemWorkflows dynamicconfig.IntPropertyFn
 
 	BlobSizeLimitError     dynamicconfig.IntPropertyFnWithDomainFilter
 	BlobSizeLimitWarn      dynamicconfig.IntPropertyFnWithDomainFilter
@@ -145,6 +147,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, enableVisibilit
 		MaxIDLengthLimit:                                      dc.GetIntProperty(dynamicconfig.MaxIDLengthLimit, 1000),
 		PersistenceMaxQPS:                                     dc.GetIntProperty(dynamicconfig.HistoryPersistenceMaxQPS, 9000),
 		EnableVisibilitySampling:                              dc.GetBoolProperty(dynamicconfig.EnableVisibilitySampling, true),
+		EnableReadFromClosedExecutionV2:                       dc.GetBoolProperty(dynamicconfig.EnableReadFromClosedExecutionV2, false),
 		VisibilityOpenMaxQPS:                                  dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryVisibilityOpenMaxQPS, 300),
 		VisibilityClosedMaxQPS:                                dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryVisibilityClosedMaxQPS, 300),
 		EnableVisibilityToKafka:                               dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, enableVisibilityToKafka),
@@ -206,7 +209,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, enableVisibilit
 		EventEncodingType:          dc.GetStringPropertyFnWithDomainFilter(dynamicconfig.DefaultEventEncoding, string(common.EncodingTypeJSON)),
 		EnableEventsV2:             dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableEventsV2, false),
 
-		NumSysWorkflows: dc.GetIntProperty(dynamicconfig.NumSystemWorkflows, 1000),
+		NumArchiveSystemWorkflows: dc.GetIntProperty(dynamicconfig.NumArchiveSystemWorkflows, 1000),
 
 		BlobSizeLimitError:     dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitError, 2*1024*1024),
 		BlobSizeLimitWarn:      dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitError, 256*1024),
@@ -260,8 +263,12 @@ func (s *Service) Start() {
 	pConfig := params.PersistenceConfig
 	pConfig.HistoryMaxConns = s.config.HistoryMgrNumConns()
 	pConfig.SetMaxQPS(pConfig.DefaultStore, s.config.PersistenceMaxQPS())
-	pConfig.SamplingConfig.VisibilityOpenMaxQPS = s.config.VisibilityOpenMaxQPS
-	pConfig.SamplingConfig.VisibilityClosedMaxQPS = s.config.VisibilityClosedMaxQPS
+	pConfig.VisibilityConfig = &config.VisibilityConfig{
+		VisibilityOpenMaxQPS:            s.config.VisibilityOpenMaxQPS,
+		VisibilityClosedMaxQPS:          s.config.VisibilityClosedMaxQPS,
+		EnableSampling:                  s.config.EnableVisibilitySampling,
+		EnableReadFromClosedExecutionV2: s.config.EnableReadFromClosedExecutionV2,
+	}
 	pFactory := persistencefactory.New(&pConfig, params.ClusterMetadata.GetCurrentClusterName(), s.metricsClient, log)
 
 	shardMgr, err := pFactory.NewShardManager()
@@ -274,7 +281,7 @@ func (s *Service) Start() {
 		log.Fatalf("failed to create metadata manager: %v", err)
 	}
 
-	visibility, err := pFactory.NewVisibilityManager(s.config.EnableVisibilitySampling())
+	visibility, err := pFactory.NewVisibilityManager()
 	if err != nil {
 		log.Fatalf("failed to create visibility manager: %v", err)
 	}

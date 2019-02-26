@@ -48,12 +48,13 @@ var keys = map[Key]string{
 	testGetBoolPropertyFilteredByTaskListInfoKey:     "testGetBoolPropertyFilteredByTaskListInfoKey",
 
 	// system settings
-	EnableGlobalDomain:         "system.enableGlobalDomain",
-	EnableNewKafkaClient:       "system.enableNewKafkaClient",
-	EnableVisibilitySampling:   "system.enableVisibilitySampling",
-	EnableVisibilityToKafka:    "system.enableVisibilityToKafka",
-	EnableReadVisibilityFromES: "system.enableReadVisibilityFromES",
-	EnableArchival:             "system.enableArchival",
+	EnableGlobalDomain:              "system.enableGlobalDomain",
+	EnableNewKafkaClient:            "system.enableNewKafkaClient",
+	EnableVisibilitySampling:        "system.enableVisibilitySampling",
+	EnableReadFromClosedExecutionV2: "system.enableReadFromClosedExecutionV2",
+	EnableVisibilityToKafka:         "system.enableVisibilityToKafka",
+	EnableReadVisibilityFromES:      "system.enableReadVisibilityFromES",
+	EnableArchival:                  "system.enableArchival",
 
 	// size limit
 	BlobSizeLimitError:     "limit.blobSize.error",
@@ -68,6 +69,7 @@ var keys = map[Key]string{
 	FrontendPersistenceMaxQPS:      "frontend.persistenceMaxQPS",
 	FrontendVisibilityMaxPageSize:  "frontend.visibilityMaxPageSize",
 	FrontendVisibilityListMaxQPS:   "frontend.visibilityListMaxQPS",
+	FrontendESVisibilityListMaxQPS: "frontend.esVisibilityListMaxQPS",
 	FrontendHistoryMaxPageSize:     "frontend.historyMaxPageSize",
 	FrontendRPS:                    "frontend.rps",
 	FrontendHistoryMgrNumConns:     "frontend.historyMgrNumConns",
@@ -151,7 +153,7 @@ var keys = map[Key]string{
 	EnableAdminProtection:                                 "history.enableAdminProtection",
 	AdminOperationToken:                                   "history.adminOperationToken",
 	EnableEventsV2:                                        "history.enableEventsV2",
-	NumSystemWorkflows:                                    "history.numSystemWorkflows",
+	NumArchiveSystemWorkflows:                             "history.numArchiveSystemWorkflows",
 
 	WorkerPersistenceMaxQPS:                  "worker.persistenceMaxQPS",
 	WorkerReplicatorConcurrency:              "worker.replicatorConcurrency",
@@ -163,6 +165,9 @@ var keys = map[Key]string{
 	WorkerESProcessorBulkActions:             "worker.ESProcessorBulkActions",
 	WorkerESProcessorBulkSize:                "worker.ESProcessorBulkSize",
 	WorkerESProcessorFlushInterval:           "worker.ESProcessorFlushInterval",
+	EnableArchivalCompression:                "worker.EnableArchivalCompression",
+	WorkerHistoryPageSize:                    "worker.WorkerHistoryPageSize",
+	WorkerTargetArchivalBlobSize:             "worker.WorkerTargetArchivalBlobSize",
 }
 
 const (
@@ -186,6 +191,8 @@ const (
 	EnableNewKafkaClient
 	// EnableVisibilitySampling is key for enable visibility sampling
 	EnableVisibilitySampling
+	// EnableReadFromClosedExecutionV2 is key for enable read from cadence_visibility.closed_executions_v2
+	EnableReadFromClosedExecutionV2
 	// EnableVisibilityToKafka is key for enable kafka
 	EnableVisibilityToKafka
 	// EnableReadVisibilityFromES is key for enable read from elastic search
@@ -220,6 +227,8 @@ const (
 	FrontendVisibilityMaxPageSize
 	// FrontendVisibilityListMaxQPS is max qps frontend can list open/close workflows
 	FrontendVisibilityListMaxQPS
+	// FrontendESVisibilityListMaxQPS is max qps frontend can list open/close workflows from ElasticSearch
+	FrontendESVisibilityListMaxQPS
 	// FrontendHistoryMaxPageSize is default max size for GetWorkflowExecutionHistory in one page
 	FrontendHistoryMaxPageSize
 	// FrontendRPS is workflow rate limit per second
@@ -260,9 +269,9 @@ const (
 	HistoryRPS
 	// HistoryPersistenceMaxQPS is the max qps history host can query DB
 	HistoryPersistenceMaxQPS
-	// HistoryVisibilityOpenMaxQPS is max qps one history host can query visibility open_executions
+	// HistoryVisibilityOpenMaxQPS is max qps one history host can write visibility open_executions
 	HistoryVisibilityOpenMaxQPS
-	// HistoryVisibilityClosedMaxQPS is max qps one history host can query visibility closed_executions
+	// HistoryVisibilityClosedMaxQPS is max qps one history host can write visibility closed_executions
 	HistoryVisibilityClosedMaxQPS
 	// HistoryLongPollExpirationInterval is the long poll expiration interval in the history service
 	HistoryLongPollExpirationInterval
@@ -376,8 +385,8 @@ const (
 	ShardSyncMinInterval
 	// DefaultEventEncoding is the encoding type for history events
 	DefaultEventEncoding
-	// NumSystemWorkflows is key for number of system workflows running in total
-	NumSystemWorkflows
+	// NumArchiveSystemWorkflows is key for number of archive system workflows running in total
+	NumArchiveSystemWorkflows
 
 	// EnableAdminProtection is whether to enable admin checking
 	EnableAdminProtection
@@ -409,6 +418,12 @@ const (
 	WorkerESProcessorBulkSize
 	// WorkerESProcessorFlushInterval is flush interval for esProcessor
 	WorkerESProcessorFlushInterval
+	// EnableArchivalCompression indicates whether blobs are compressed before they are archived
+	EnableArchivalCompression
+	// WorkerHistoryPageSize indicates the page size of history fetched from persistence for archival
+	WorkerHistoryPageSize
+	// WorkerTargetArchivalBlobSize indicates the target blob size in bytes for archival, actual blob size may vary
+	WorkerTargetArchivalBlobSize
 
 	// lastKeyForTest must be the last one in this const group for testing purpose
 	lastKeyForTest
