@@ -3100,18 +3100,6 @@ func (wh *WorkflowHandler) validateClusterName(clusterName string) error {
 	}
 	return nil
 }
-<<<<<<< HEAD
-
-func (wh *WorkflowHandler) bucketName(customBucketName *string) string {
-	if wh.customBucketNameProvided(customBucketName) {
-		return *customBucketName
-	}
-	return wh.Service.GetClusterMetadata().GetDefaultArchivalBucket()
-}
-
-func (wh *WorkflowHandler) customBucketNameProvided(customBucketName *string) bool {
-	return customBucketName != nil && len(*customBucketName) != 0
-}
 
 func (wh *WorkflowHandler) historyArchived(ctx context.Context, request *gen.GetWorkflowExecutionHistoryRequest, domainID string) bool {
 	if request.GetExecution() == nil || request.GetExecution().GetRunId() == "" {
