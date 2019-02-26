@@ -22,7 +22,6 @@ package history
 
 import (
 	"errors"
-	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/service/worker/sysworkflow"
 	"math"
 	"sync"
@@ -633,12 +632,11 @@ func (t *timerQueueProcessorBase) processArchiveHistoryEvent(task *persistence.T
 		NextEventID:          msBuilder.GetNextEventID(),
 		CloseFailoverVersion: msBuilder.GetLastWriteVersion(),
 	}
-	key := definition.NewWorkflowIdentifier(task.DomainID, task.WorkflowID, task.RunID)
-	t.cache.Delete(key)
 	err = t.deleteWorkflowExecution(task)
 	if err != nil {
 		return err
 	}
+	context.clear()
 	if err := t.historyService.archivalClient.Archive(req); err != nil {
 		t.logger.WithFields(bark.Fields{
 			logging.TagHistoryShardID:      t.shard.GetShardID(),
