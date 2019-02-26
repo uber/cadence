@@ -636,6 +636,8 @@ func (t *timerQueueProcessorBase) processArchiveHistoryEvent(task *persistence.T
 	if err != nil {
 		return err
 	}
+	// calling clear here to force accesses of mutable state to read database
+	// if this is not called then callers will get mutable state even though its been removed from database
 	context.clear()
 	if err := t.historyService.archivalClient.Archive(req); err != nil {
 		t.logger.WithFields(bark.Fields{
