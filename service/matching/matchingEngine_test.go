@@ -1636,18 +1636,18 @@ func (m *testTaskManager) CompleteTask(request *persistence.CompleteTaskRequest)
 	return nil
 }
 
-func (m *testTaskManager) RangeCompleteTask(request *persistence.RangeCompleteTaskRequest) error {
+func (m *testTaskManager) CompleteTasksLessThan(request *persistence.CompleteTasksLessThanRequest) (int, error) {
 	tlm := m.getTaskListManager(newTaskListID(request.DomainID, request.TaskListName, request.TaskType))
 	tlm.Lock()
 	defer tlm.Unlock()
 	keys := tlm.tasks.Keys()
 	for _, key := range keys {
 		id := key.(int64)
-		if id >= request.MinTaskID && id <= request.MaxTaskID {
+		if id <= request.TaskID {
 			tlm.tasks.Remove(id)
 		}
 	}
-	return nil
+	return persistence.UnknownNumRowsAffected, nil
 }
 
 func (m *testTaskManager) ListTaskList(

@@ -828,12 +828,11 @@ workflow_state = ? ` +
 		`and type = ? ` +
 		`and task_id = ?`
 
-	templateRangeCompleteTaskQuery = `DELETE FROM tasks ` +
+	templateCompleteTasksLessThanQuery = `DELETE FROM tasks ` +
 		`WHERE domain_id = ? ` +
 		`AND task_list_name = ? ` +
 		`AND task_list_type = ? ` +
 		`AND type = ? ` +
-		`AND task_id >= ? ` +
 		`AND task_id <= ? `
 
 	templateGetTaskList = `SELECT ` +
@@ -2878,21 +2877,24 @@ func (d *cassandraPersistence) CompleteTask(request *p.CompleteTaskRequest) erro
 	return nil
 }
 
-func (d *cassandraPersistence) RangeCompleteTask(request *p.RangeCompleteTaskRequest) error {
-	query := d.session.Query(templateRangeCompleteTaskQuery,
-		request.DomainID, request.TaskListName, request.TaskType, rowTypeTask, request.MinTaskID, request.MaxTaskID)
+// CompleteTasksLessThan deletes all tasks less than or equal to the given task id. This API ignores the
+// Limit request parameter i.e. either all tasks leq the task_id will be deleted or an error will
+// be returned to the caller
+func (d *cassandraPersistence) CompleteTasksLessThan(request *p.CompleteTasksLessThanRequest) (int, error) {
+	query := d.session.Query(templateCompleteTasksLessThanQuery,
+		request.DomainID, request.TaskListName, request.TaskType, rowTypeTask, request.TaskID)
 	err := query.Exec()
 	if err != nil {
 		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("RangeCompleteTask operation failed. Error: %v", err),
+			return 0, &workflow.ServiceBusyError{
+				Message: fmt.Sprintf("CompleteTasksLessThan operation failed. Error: %v", err),
 			}
 		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("RangeCompleteTask operation failed. Error: %v", err),
+		return 0, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("CompleteTasksLessThan operation failed. Error: %v", err),
 		}
 	}
-	return nil
+	return p.UnknownNumRowsAffected, nil
 }
 
 func (d *cassandraPersistence) GetTimerIndexTasks(request *p.GetTimerIndexTasksRequest) (*p.GetTimerIndexTasksResponse,

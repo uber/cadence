@@ -234,13 +234,15 @@ type (
 	// TasksFilter contains the column names within domain table that
 	// can be used to filter results through a WHERE clause
 	TasksFilter struct {
-		DomainID     UUID
-		TaskListName string
-		TaskType     int64
-		TaskID       *int64
-		MinTaskID    *int64
-		MaxTaskID    *int64
-		PageSize     *int
+		DomainID             UUID
+		TaskListName         string
+		TaskType             int64
+		TaskID               *int64
+		MinTaskID            *int64
+		MaxTaskID            *int64
+		TaskIDLessThanEquals *int64
+		Limit                *int
+		PageSize             *int
 	}
 
 	// TaskListsRow represents a row in task_lists table
@@ -590,8 +592,11 @@ type (
 		SelectFromTasks(filter *TasksFilter) ([]TasksRow, error)
 		// DeleteFromTasks deletes a row from tasks table
 		// Required filter params:
-		//  to delete single row - {domainID, tasklistName, taskType, taskID}
-		//  to delete multiple rows - {domainID, tasklistName, taskType, minTaskID, maxTaskID}
+		//  to delete single row
+		//     - {domainID, tasklistName, taskType, taskID}
+		//  to delete multiple rows
+		//    - {domainID, tasklistName, taskType, taskIDLessThanEquals, limit }
+		//    - this will delete upto limit number of tasks less than or equal to the given task id
 		DeleteFromTasks(filter *TasksFilter) (sql.Result, error)
 
 		InsertIntoTaskLists(row *TaskListsRow) (sql.Result, error)

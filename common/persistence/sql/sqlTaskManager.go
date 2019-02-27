@@ -374,18 +374,24 @@ func (m *sqlTaskManager) CompleteTask(request *persistence.CompleteTaskRequest) 
 	return nil
 }
 
-func (m *sqlTaskManager) RangeCompleteTask(request *persistence.RangeCompleteTaskRequest) error {
-	_, err := m.db.DeleteFromTasks(&sqldb.TasksFilter{
-		DomainID:     sqldb.MustParseUUID(request.DomainID),
-		TaskListName: request.TaskListName,
-		TaskType:     int64(request.TaskType),
-		MinTaskID:    &request.MinTaskID,
-		MaxTaskID:    &request.MaxTaskID,
+func (m *sqlTaskManager) CompleteTasksLessThan(request *persistence.CompleteTasksLessThanRequest) (int, error) {
+	result, err := m.db.DeleteFromTasks(&sqldb.TasksFilter{
+		DomainID:             sqldb.MustParseUUID(request.DomainID),
+		TaskListName:         request.TaskListName,
+		TaskType:             int64(request.TaskType),
+		TaskIDLessThanEquals: &request.TaskID,
+		Limit:                &request.Limit,
 	})
 	if err != nil {
-		return &workflow.InternalServiceError{Message: err.Error()}
+		return 0, &workflow.InternalServiceError{Message: err.Error()}
 	}
-	return nil
+	nRows, err := result.RowsAffected()
+	if err != nil {
+		return 0, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("rowsAffected returned error: %v", err),
+		}
+	}
+	return int(nRows), nil
 }
 
 func (m *sqlTaskManager) shardID(domainID string, name string) int {

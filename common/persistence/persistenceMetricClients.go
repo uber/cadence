@@ -509,15 +509,15 @@ func (p *taskPersistenceClient) CompleteTask(request *CompleteTaskRequest) error
 	return err
 }
 
-func (p *taskPersistenceClient) RangeCompleteTask(request *RangeCompleteTaskRequest) error {
-	p.metricClient.IncCounter(metrics.PersistenceRangeCompleteTaskScope, metrics.PersistenceRequests)
-	sw := p.metricClient.StartTimer(metrics.PersistenceRangeCompleteTaskScope, metrics.PersistenceLatency)
-	err := p.persistence.RangeCompleteTask(request)
+func (p *taskPersistenceClient) CompleteTasksLessThan(request *CompleteTasksLessThanRequest) (int, error) {
+	p.metricClient.IncCounter(metrics.PersistenceCompleteTasksLessThanScope, metrics.PersistenceRequests)
+	sw := p.metricClient.StartTimer(metrics.PersistenceCompleteTasksLessThanScope, metrics.PersistenceLatency)
+	result, err := p.persistence.CompleteTasksLessThan(request)
 	sw.Stop()
 	if err != nil {
-		p.updateErrorMetric(metrics.PersistenceRangeCompleteTaskScope, err)
+		p.updateErrorMetric(metrics.PersistenceCompleteTasksLessThanScope, err)
 	}
-	return err
+	return result, err
 }
 
 func (p *taskPersistenceClient) LeaseTaskList(request *LeaseTaskListRequest) (*LeaseTaskListResponse, error) {

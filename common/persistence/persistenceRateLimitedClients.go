@@ -370,11 +370,11 @@ func (p *taskRateLimitedPersistenceClient) CompleteTask(request *CompleteTaskReq
 	return err
 }
 
-func (p *taskRateLimitedPersistenceClient) RangeCompleteTask(request *RangeCompleteTaskRequest) error {
+func (p *taskRateLimitedPersistenceClient) CompleteTasksLessThan(request *CompleteTasksLessThanRequest) (int, error) {
 	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
-		return ErrPersistenceLimitExceeded
+		return 0, ErrPersistenceLimitExceeded
 	}
-	return p.persistence.RangeCompleteTask(request)
+	return p.persistence.CompleteTasksLessThan(request)
 }
 
 func (p *taskRateLimitedPersistenceClient) LeaseTaskList(request *LeaseTaskListRequest) (*LeaseTaskListResponse, error) {

@@ -76,7 +76,8 @@ task_type = :task_type
 		`WHERE domain_id = ? AND task_list_name = ? AND task_type = ? AND task_id = ?`
 
 	rangeDeleteTaskQry = `DELETE FROM tasks ` +
-		`WHERE domain_id = ? AND task_list_name = ? AND task_type = ? AND task_id >= ? AND task_id <= ?`
+		`WHERE domain_id = ? AND task_list_name = ? AND task_type = ? AND task_id <= ? ` +
+		`ORDER BY domain_id,task_list_name,task_type,task_id LIMIT ?`
 )
 
 // InsertIntoTasks inserts one or more rows into tasks table
@@ -104,9 +105,12 @@ func (mdb *DB) SelectFromTasks(filter *sqldb.TasksFilter) ([]sqldb.TasksRow, err
 
 // DeleteFromTasks deletes one or more rows from tasks table
 func (mdb *DB) DeleteFromTasks(filter *sqldb.TasksFilter) (sql.Result, error) {
-	if filter.MinTaskID != nil && filter.MaxTaskID != nil {
+	if filter.TaskIDLessThanEquals != nil {
+		if filter.Limit == nil || *filter.Limit == 0 {
+			return nil, fmt.Errorf("missing limit parameter")
+		}
 		return mdb.conn.Exec(rangeDeleteTaskQry,
-			filter.DomainID, filter.TaskListName, filter.TaskType, *filter.MinTaskID, *filter.MaxTaskID)
+			filter.DomainID, filter.TaskListName, filter.TaskType, *filter.TaskIDLessThanEquals, *filter.Limit)
 	}
 	return mdb.conn.Exec(deleteTaskQry, filter.DomainID, filter.TaskListName, filter.TaskType, *filter.TaskID)
 }

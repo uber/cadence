@@ -119,6 +119,9 @@ const (
 	TaskTypeArchiveHistoryEvent
 )
 
+// UnknownNumRowsAffected is returned when the number of rows that an API affected cannot be determined
+const UnknownNumRowsAffected = -1
+
 // Types of workflow backoff timeout
 const (
 	WorkflowBackoffTimeoutTypeRetry = iota
@@ -956,13 +959,13 @@ type (
 		TaskID   int64
 	}
 
-	// RangeCompleteTaskRequest contains the request params needed to invoke RangeCompleteTask API
-	RangeCompleteTaskRequest struct {
+	// CompleteTasksLessThanRequest contains the request params needed to invoke CompleteTasksLessThan API
+	CompleteTasksLessThanRequest struct {
 		DomainID     string
 		TaskListName string
 		TaskType     int
-		MinTaskID    int64
-		MaxTaskID    int64
+		TaskID       int64 // Tasks less than or equal to this ID will be completed
+		Limit        int   // Limit on the max number of tasks that can be completed. Required param
 	}
 
 	// GetTimerIndexTasksRequest is the request for GetTimerIndexTasks
@@ -1388,7 +1391,16 @@ type (
 		CreateTasks(request *CreateTasksRequest) (*CreateTasksResponse, error)
 		GetTasks(request *GetTasksRequest) (*GetTasksResponse, error)
 		CompleteTask(request *CompleteTaskRequest) error
-		RangeCompleteTask(request *RangeCompleteTaskRequest) error
+		// CompleteTasksLessThan completes tasks less than or equal to the given task id
+		// This API takes a limit parameter which specifies the count of maxRows that
+		// can be deleted. This parameter may be ignored by the underlying storage, but
+		// its mandatory to specify it. On success this method returns the number of rows
+		// actually deleted. If the underlying storage doesn't support "limit", all rows
+		// less than or equal to taskID will be deleted.
+		// On success, this method returns:
+		//  - number of rows actually deleted, if limit is honored
+		//  - UnknownNumRowsDeleted, when all rows below value are deleted
+		CompleteTasksLessThan(request *CompleteTasksLessThanRequest) (int, error)
 	}
 
 	// HistoryManager is used to manage Workflow Execution HistoryEventBatch

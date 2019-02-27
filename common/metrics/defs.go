@@ -170,8 +170,8 @@ const (
 	PersistenceGetTasksScope
 	// PersistenceCompleteTaskScope tracks CompleteTask calls made by service to persistence layer
 	PersistenceCompleteTaskScope
-	// PersistenceRangeCompleteTaskScope is the metric scope for persistence.TaskManager.RangeCompleteTask API
-	PersistenceRangeCompleteTaskScope
+	// PersistenceCompleteTasksLessThanScope is the metric scope for persistence.TaskManager.PersistenceCompleteTasksLessThan API
+	PersistenceCompleteTasksLessThanScope
 	// PersistenceLeaseTaskListScope tracks LeaseTaskList calls made by service to persistence layer
 	PersistenceLeaseTaskListScope
 	// PersistenceUpdateTaskListScope tracks PersistenceUpdateTaskListScope calls made by service to persistence layer
@@ -798,7 +798,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceCreateTaskScope:                               {operation: "CreateTask", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceGetTasksScope:                                 {operation: "GetTasks", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceCompleteTaskScope:                             {operation: "CompleteTask", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceRangeCompleteTaskScope:                        {operation: "RangeCompleteTask", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceCompleteTasksLessThanScope:                    {operation: "CompleteTasksLessThan", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceLeaseTaskListScope:                            {operation: "LeaseTaskList", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceUpdateTaskListScope:                           {operation: "UpdateTaskList", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceListTaskListScope:                             {operation: "ListTaskList", tags: map[string]string{ShardTagName: NoneShardsTagValue}},

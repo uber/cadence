@@ -153,7 +153,7 @@ func (s *MatchingPersistenceSuite) TestCompleteDecisionTask() {
 	}
 }
 
-func (s *MatchingPersistenceSuite) TestRangeCompleteTasks() {
+func (s *MatchingPersistenceSuite) TestCompleteTasksLessThan() {
 	domainID := uuid.New()
 	taskList := "range-complete-task-tl0"
 	wfExec := gen.WorkflowExecution{
@@ -166,46 +166,59 @@ func (s *MatchingPersistenceSuite) TestRangeCompleteTasks() {
 		30: taskList,
 		40: taskList,
 		50: taskList,
+		60: taskList,
 	})
 	s.NoError(err)
 
 	resp, err := s.GetTasks(domainID, taskList, p.TaskListTypeActivity, 10)
 	s.NoError(err)
 	s.NotNil(resp.Tasks)
-	s.Equal(5, len(resp.Tasks), "getTasks returned wrong number of tasks")
+	s.Equal(6, len(resp.Tasks), "getTasks returned wrong number of tasks")
 
 	tasks := resp.Tasks
 
 	testCases := []struct {
-		input  [2]int64
+		taskID int64
+		limit  int
 		output []int64
 	}{
 		{
-			input:  [2]int64{tasks[0].TaskID, tasks[0].TaskID},
-			output: []int64{tasks[1].TaskID, tasks[2].TaskID, tasks[3].TaskID, tasks[4].TaskID},
+			taskID: tasks[5].TaskID,
+			limit:  1,
+			output: []int64{tasks[1].TaskID, tasks[2].TaskID, tasks[3].TaskID, tasks[4].TaskID, tasks[5].TaskID},
 		},
 		{
-			input:  [2]int64{tasks[1].TaskID, tasks[2].TaskID},
-			output: []int64{tasks[3].TaskID, tasks[4].TaskID},
+			taskID: tasks[5].TaskID,
+			limit:  2,
+			output: []int64{tasks[3].TaskID, tasks[4].TaskID, tasks[5].TaskID},
 		},
 		{
-			input:  [2]int64{tasks[3].TaskID, tasks[4].TaskID},
+			taskID: tasks[5].TaskID,
+			limit:  10,
 			output: []int64{},
 		},
 	}
 
-	req := &p.RangeCompleteTaskRequest{DomainID: domainID, TaskListName: taskList, TaskType: p.TaskListTypeActivity}
+	remaining := len(resp.Tasks)
+	req := &p.CompleteTasksLessThanRequest{DomainID: domainID, TaskListName: taskList, TaskType: p.TaskListTypeActivity, Limit: 1}
 
 	for _, tc := range testCases {
-		req.MaxTaskID = tc.input[0]
-		req.MaxTaskID = tc.input[1]
-		s.NoError(s.TaskMgr.RangeCompleteTask(req))
+		req.TaskID = tc.taskID
+		req.Limit = tc.limit
+		nRows, err := s.TaskMgr.CompleteTasksLessThan(req)
+		s.NoError(err)
 		resp, err := s.GetTasks(domainID, taskList, p.TaskListTypeActivity, 10)
 		s.NoError(err)
+		if nRows == p.UnknownNumRowsAffected {
+			s.Equal(0, len(resp.Tasks), "expected all tasks to be deleted")
+			break
+		}
+		s.Equal(remaining-len(tc.output), nRows, "expected only LIMIT number of rows to be deleted")
 		s.Equal(len(tc.output), len(resp.Tasks), "rangeCompleteTask deleted wrong set of tasks")
 		for i := range tc.output {
 			s.Equal(tc.output[i], resp.Tasks[i].TaskID)
 		}
+		remaining = len(tc.output)
 	}
 }
 
