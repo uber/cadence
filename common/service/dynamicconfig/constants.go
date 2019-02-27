@@ -155,7 +155,8 @@ var keys = map[Key]string{
 	EnableAdminProtection:                                 "history.enableAdminProtection",
 	AdminOperationToken:                                   "history.adminOperationToken",
 	EnableEventsV2:                                        "history.enableEventsV2",
-	NumSystemWorkflows:                                    "history.numSystemWorkflows",
+	NumArchiveSystemWorkflows:                             "history.numArchiveSystemWorkflows",
+	EmitShardDiffLog:                                      "history.emitShardDiffLog",
 
 	WorrkerrReplicatorDCMigrrationRetryCount: "worker.replicatorDCMigrrationRetryCount",
 	WorkerPersistenceMaxQPS:                  "worker.persistenceMaxQPS",
@@ -198,6 +199,8 @@ const (
 	EnableReadFromClosedExecutionV2
 	// EnableVisibilityToKafka is key for enable kafka
 	EnableVisibilityToKafka
+	// EmitShardDiffLog whether emit the shard diff log
+	EmitShardDiffLog
 	// EnableReadVisibilityFromES is key for enable read from elastic search
 	EnableReadVisibilityFromES
 	// DisableListVisibilityByFilter is config to disable list open/close workflow using filter
@@ -391,8 +394,8 @@ const (
 	ShardSyncMinInterval
 	// DefaultEventEncoding is the encoding type for history events
 	DefaultEventEncoding
-	// NumSystemWorkflows is key for number of system workflows running in total
-	NumSystemWorkflows
+	// NumArchiveSystemWorkflows is key for number of archive system workflows running in total
+	NumArchiveSystemWorkflows
 
 	// EnableAdminProtection is whether to enable admin checking
 	EnableAdminProtection

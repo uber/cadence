@@ -21,6 +21,8 @@
 package history
 
 import (
+	goctx "context"
+
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/matching"
@@ -30,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/xdc"
+	"time"
 )
 
 type (
@@ -489,10 +492,45 @@ func (t *transferQueueStandbyProcessorImpl) fetchHistoryAndVerifyOnce(transferTa
 	return nil
 }
 
-func (t *transferQueueStandbyProcessorImpl) fetchHistoryFromRemote(transferTask *persistence.TransferTaskInfo, nextEventID int64) error {
+func (t *transferQueueStandbyProcessorImpl) fetchHistoryFromRemote(transferTask *persistence.TransferTaskInfo, nextEventID int64) (retError error) {
 
 	if t.shard.GetConfig().EnableDCMigration() {
-		return nil
+		doDCMigration, err := canDoDCMigration(t.shard.GetService().GetClusterMetadata(), t.shard.GetDomainCache(), transferTask.DomainID)
+		if err != nil {
+			return err
+		}
+		if !doDCMigration {
+			return nil
+		}
+		domainID, execution := t.getDomainIDAndWorkflowExecution(transferTask)
+		context, release, err := t.cache.getOrCreateWorkflowExecution(domainID, execution)
+		if err != nil {
+			return err
+		}
+		defer func() { release(retError) }()
+		msBuilder, err := loadMutableStateForTransferTask(context, transferTask, t.metricsClient, t.logger)
+		if err != nil {
+			return err
+		} else if msBuilder == nil {
+			return nil
+		}
+		dcMigrationHandler := newDCMigrationHandler(t.shard.GetHistoryManager(), t.shard.GetHistoryV2Manager())
+		firstBatchLastEventID, err := dcMigrationHandler.getFirstBatchLastEventID(domainID, &execution, msBuilder.GetEventStoreVersion(), msBuilder.GetCurrentBranch())
+		if err != nil {
+			return err
+		}
+		historyReplicator := newHistoryReplicator(t.shard, t.historyService, t.cache, t.shard.GetDomainCache(),
+			t.shard.GetHistoryManager(), t.shard.GetHistoryV2Manager(), t.logger)
+
+		ctx, cancel := goctx.WithTimeout(goctx.Background(), 30*time.Second)
+		defer cancel()
+		_, err = historyReplicator.resetMutableState(ctx, context, msBuilder, firstBatchLastEventID,
+			msBuilder.GetLastWriteVersion(), time.Now().UnixNano(), t.logger)
+		if err != nil {
+			return err
+		}
+		release(nil)
+		nextEventID = firstBatchLastEventID + 1
 	}
 
 	t.metricsClient.IncCounter(metrics.HistoryRereplicationByTransferTaskScope, metrics.CadenceClientRequests)

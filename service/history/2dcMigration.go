@@ -26,6 +26,8 @@ import (
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -114,4 +116,21 @@ func (r *dcMigrationHandler) getFirstBatchLastEventID(domainID string, execution
 		return 0, err
 	}
 	return response.History.Events[len(response.History.Events)-1].GetEventId(), nil
+}
+
+func canDoDCMigration(clusterMetadata cluster.Metadata, domainCache cache.DomainCache, domainID string) (bool, error) {
+	domainEntry, err := domainCache.GetDomainByID(domainID)
+	if err != nil {
+		return false, err
+	}
+
+	doDCMigration := true
+	for _, targetCluster := range domainEntry.GetReplicationConfig().Clusters {
+		if targetCluster.ClusterName == clusterMetadata.GetCurrentClusterName() {
+			// if target cluster contains current cluster,
+			// then do not do dc migration
+			doDCMigration = false
+		}
+	}
+	return doDCMigration, nil
 }

@@ -502,7 +502,7 @@ func (r *historyReplicator) ApplyOtherEventsVersionChecking(ctx context.Context,
 	// if not applied, the replication info will not be up to date.
 
 	if previousActiveCluster != r.clusterMetadata.GetCurrentClusterName() {
-		doDCMigration, err := r.canDoDCMigration(context.getDomainID())
+		doDCMigration, err := canDoDCMigration(r.clusterMetadata, r.domainCache, context.getDomainID())
 		if err != nil {
 			return nil, err
 		}
@@ -511,7 +511,14 @@ func (r *historyReplicator) ApplyOtherEventsVersionChecking(ctx context.Context,
 			// it is possible that a workflow will not generate any event in few rounds of failover
 			// meaning that the incoming version > last write version and
 			// (incoming version - last write version) % failover version increment == 0
+
+			// TODO remove the if check after DC migration is over, keep the return statement
 			if !doDCMigration {
+				return msBuilder, nil
+			}
+
+			// TODO remove after DC migration is over
+			if request.GetForceBufferEvents() {
 				return msBuilder, nil
 			}
 		}
@@ -627,7 +634,7 @@ func (r *historyReplicator) ApplyOtherEvents(ctx context.Context, context workfl
 		logger.Debugf("Buffer out of order replication task.  NextEvent: %v, FirstEvent: %v",
 			msBuilder.GetNextEventID(), firstEventID)
 
-		if !request.GetForceBufferEvents() {
+		if !request.GetForceBufferEvents() || r.shard.GetConfig().EnableDCMigration() {
 			return newRetryTaskErrorWithHint(
 				ErrRetryBufferEventsMsg,
 				context.getDomainID(),
@@ -973,7 +980,7 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 
 	// current workflow is completed
 	if currentState == persistence.WorkflowStateCompleted {
-		// allow the application of worrkflow creation if currentLastWriteVersion > incomingVersion
+		// allow the application of workflow creation if currentLastWriteVersion > incomingVersion
 		// because this can be caused by missing replication events
 		// proceed to create workflow
 		isBrandNew = false
@@ -1320,21 +1327,4 @@ func newRetryTaskErrorWithHint(msg string, domainID string, workflowID string, r
 		RunId:       common.StringPtr(runID),
 		NextEventId: common.Int64Ptr(nextEventID),
 	}
-}
-
-func (r *historyReplicator) canDoDCMigration(domainID string) (bool, error) {
-	domainEntry, err := r.domainCache.GetDomainByID(domainID)
-	if err != nil {
-		return false, err
-	}
-
-	doDCMigration := true
-	for _, targetCluster := range domainEntry.GetReplicationConfig().Clusters {
-		if targetCluster.ClusterName == r.clusterMetadata.GetCurrentClusterName() {
-			// if target cluster contains current cluster,
-			// then do not do dc migration
-			doDCMigration = false
-		}
-	}
-	return doDCMigration, nil
 }
