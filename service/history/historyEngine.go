@@ -27,14 +27,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/uber/cadence/client/public"
-	"github.com/uber/cadence/service/worker/sysworkflow"
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
+	"github.com/uber/cadence/client/public"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -44,6 +43,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/worker/sysworkflow"
 	"go.uber.org/yarpc"
 )
 
