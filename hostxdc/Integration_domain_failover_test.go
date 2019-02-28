@@ -45,6 +45,7 @@ import (
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/metrics/mocks"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/messaging"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
@@ -134,6 +135,8 @@ func (s *testCluster) setupCluster(no int, enableEventsV2 bool) {
 	options.DBName = "integration_" + clusterName[no]
 	clusterInfo := clustersInfo[no]
 	options.ClusterMetadata = cluster.NewMetadata(
+		bark.NewNopLogger(),
+		&mocks.Client{},
 		dynamicconfig.GetBoolPropertyFn(clusterInfo.EnableGlobalDomain),
 		clusterInfo.FailoverVersionIncrement,
 		clusterInfo.MasterClusterName,
