@@ -20,6 +20,11 @@
 
 package cluster
 
+import (
+	"fmt"
+	"strings"
+)
+
 type (
 	// ArchivalStatus represents the archival status of the cluster
 	ArchivalStatus int
@@ -55,20 +60,18 @@ func NewArchivalConfig(status ArchivalStatus, defaultBucket string) *ArchivalCon
 	return ac
 }
 
-// GetArchivalStatus converts input string to ArchivalStatus.
-// Valid input strings are "disabled", "paused", and "enabled".
-// If non-valid string is given status of Disabled is returned.
-func GetArchivalStatus(str string) ArchivalStatus {
+// GetArchivalStatus converts input string to ArchivalStatus. Returns error on invalid input.
+func GetArchivalStatus(str string) (ArchivalStatus, error) {
+	str = strings.TrimSpace(strings.ToLower(str))
 	switch str {
-	case "disabled":
-		return ArchivalDisabled
+	case "", "disabled":
+		return ArchivalDisabled, nil
 	case "paused":
-		return ArchivalPaused
+		return ArchivalPaused, nil
 	case "enabled":
-		return ArchivalEnabled
-	default:
-		return ArchivalDisabled
+		return ArchivalEnabled, nil
 	}
+	return ArchivalDisabled, fmt.Errorf("invalid archival status of %v, valid status are: {\"\", \"disabled\", \"paused\", \"enabled\"}", str)
 }
 
 // IsValid returns true if ArchivalConfig is valid, false otherwise.

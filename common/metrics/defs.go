@@ -455,6 +455,9 @@ const (
 	// BlobstoreClientBucketMetadataScope tracks BucketMetadata calls to blobstore
 	BlobstoreClientBucketMetadataScope
 
+	// ClusterMetadataArchivalConfigScope tracks ArchivalConfig calls to ClusterMetadata
+	ClusterMetadataArchivalConfigScope
+
 	// ElasticsearchRecordWorkflowExecutionStartedScope tracks RecordWorkflowExecutionStarted calls made by service to persistence layer
 	ElasticsearchRecordWorkflowExecutionStartedScope
 	// ElasticsearchRecordWorkflowExecutionClosedScope tracks RecordWorkflowExecutionClosed calls made by service to persistence layer
@@ -713,6 +716,8 @@ const (
 	SessionCountStatsScope
 	// HistoryResetWorkflowExecutionScope tracks ResetWorkflowExecution API calls received by service
 	HistoryResetWorkflowExecutionScope
+	// HistoryProcessDeleteHistoryEventScope tracks ProcessDeleteHistoryEvent processing calls
+	HistoryProcessDeleteHistoryEventScope
 
 	NumHistoryScopes
 )
@@ -832,6 +837,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		BlobstoreClientDeleteScope:         {operation: "Delete", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
 		BlobstoreClientListByPrefixScope:   {operation: "ListByPrefix", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
 		BlobstoreClientBucketMetadataScope: {operation: "BucketMetadata", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
+
+		ClusterMetadataArchivalConfigScope: {operation: "ArchivalConfig"},
 
 		HistoryClientStartWorkflowExecutionScope:            {operation: "HistoryClientStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientRecordActivityTaskHeartbeatScope:       {operation: "HistoryClientRecordActivityTaskHeartbeat", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
@@ -1008,6 +1015,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryRemoveSignalMutableStateScope:         {operation: "RemoveSignalMutableState"},
 		HistoryTerminateWorkflowExecutionScope:       {operation: "TerminateWorkflowExecution"},
 		HistoryResetWorkflowExecutionScope:           {operation: "ResetWorkflowExecution"},
+		HistoryProcessDeleteHistoryEventScope:        {operation: "ProcessDeleteHistoryEvent"},
 		HistoryScheduleDecisionTaskScope:             {operation: "ScheduleDecisionTask"},
 		HistoryRecordChildExecutionCompletedScope:    {operation: "RecordChildExecutionCompleted"},
 		HistoryRequestCancelWorkflowExecutionScope:   {operation: "RequestCancelWorkflowExecution"},
@@ -1139,6 +1147,8 @@ const (
 	HistoryCount
 	EventBlobSize
 
+	ArchivalConfigFailures
+
 	ElasticsearchRequests
 	ElasticsearchFailures
 	ElasticsearchLatency
@@ -1254,6 +1264,9 @@ const (
 	DeleteRequestCancelInfoCount
 	WorkflowRetryBackoffTimerCount
 	WorkflowCronBackoffTimerCount
+	WorkflowCleanupDeleteCount
+	WorkflowCleanupArchiveCount
+	WorkflowCleanupNopCount
 
 	NumHistoryMetrics
 )
@@ -1348,6 +1361,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistorySize:                                         {metricName: "history-size", metricType: Timer},
 		HistoryCount:                                        {metricName: "history-count", metricType: Timer},
 		EventBlobSize:                                       {metricName: "event-blob-size", metricType: Timer},
+		ArchivalConfigFailures:                              {metricName: "archivalconfig.failures", metricType: Counter},
 		ElasticsearchRequests:                               {metricName: "elasticsearch.requests", metricType: Counter},
 		ElasticsearchFailures:                               {metricName: "elasticsearch.errors", metricType: Counter},
 		ElasticsearchLatency:                                {metricName: "elasticsearch.latency", metricType: Timer},
@@ -1459,6 +1473,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		DeleteRequestCancelInfoCount:                 {metricName: "delete-request-cancel-info", metricType: Timer},
 		WorkflowRetryBackoffTimerCount:               {metricName: "workflow-retry-backoff-timer", metricType: Counter},
 		WorkflowCronBackoffTimerCount:                {metricName: "workflow-cron-backoff-timer", metricType: Counter},
+		WorkflowCleanupDeleteCount:                   {metricName: "workflow-cleanup-delete", metricType: Counter},
+		WorkflowCleanupArchiveCount:                  {metricName: "workflow-cleanup-archive", metricType: Counter},
+		WorkflowCleanupNopCount:                      {metricName: "workflow-cleanup-nop", metricType: Counter},
 	},
 	Matching: {
 		PollSuccessCounter:            {metricName: "poll.success"},

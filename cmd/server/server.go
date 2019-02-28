@@ -122,7 +122,10 @@ func (s *server) startService() common.Daemon {
 
 	params.DCRedirectionPolicy = s.cfg.DCRedirectionPolicy
 
+	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 	params.ClusterMetadata = cluster.NewMetadata(
+		params.Logger,
+		params.MetricsClient,
 		enableGlobalDomain,
 		s.cfg.ClustersInfo.FailoverVersionIncrement,
 		s.cfg.ClustersInfo.MasterClusterName,
@@ -133,9 +136,6 @@ func (s *server) startService() common.Daemon {
 		s.cfg.Archival.Filestore.DefaultBucket.Name,
 	)
 	params.DispatcherProvider = client.NewIPYarpcDispatcherProvider()
-	// TODO: We need to switch Cadence to use zap logger, until then just pass zap.NewNop
-
-	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 	params.ESConfig = &s.cfg.ElasticSearch
 	params.ESConfig.Enable = dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, params.ESConfig.Enable)() // force override with dynamic config
 	if params.ClusterMetadata.IsGlobalDomainEnabled() {

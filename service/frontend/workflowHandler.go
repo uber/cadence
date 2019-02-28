@@ -288,7 +288,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 	nextArchivalState := currentArchivalState
 	archivalClusterConfig := clusterMetadata.ArchivalConfig()
 	if archivalClusterConfig.ConfiguredForArchival() {
-		archivalEvent, err := registerToEvent(registerRequest, archivalClusterConfig.GetDefaultBucket())
+		archivalEvent, err := wh.toArchivalRegisterEvent(registerRequest, archivalClusterConfig.GetDefaultBucket())
 		if err != nil {
 			return wh.error(err, scope)
 		}
@@ -474,7 +474,7 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 	archivalConfigChanged := false
 	archivalClusterConfig := clusterMetadata.ArchivalConfig()
 	if archivalClusterConfig.ConfiguredForArchival() {
-		archivalEvent, err := updateToEvent(updateRequest, archivalClusterConfig.GetDefaultBucket())
+		archivalEvent, err := wh.toArchivalUpdateEvent(updateRequest, archivalClusterConfig.GetDefaultBucket())
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}

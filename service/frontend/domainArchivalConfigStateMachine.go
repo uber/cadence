@@ -24,6 +24,10 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 )
 
+// domainArchivalConfigStateMachine is only used by workflowHandler.
+// It is simply meant to simplify the logic around archival domain state changes.
+// Logically this class can be thought of as part of workflowHandler.
+
 type (
 	// archivalState represents the state of archival config
 	// the only invalid state is {bucket="", status=enabled}
@@ -65,7 +69,7 @@ func neverEnabledState() *archivalState {
 	}
 }
 
-func registerToEvent(request *shared.RegisterDomainRequest, defaultBucket string) (*archivalEvent, error) {
+func (wh *WorkflowHandler) toArchivalRegisterEvent(request *shared.RegisterDomainRequest, defaultBucket string) (*archivalEvent, error) {
 	event := &archivalEvent{
 		defaultBucket: defaultBucket,
 		bucket:        request.GetArchivalBucketName(),
@@ -77,7 +81,7 @@ func registerToEvent(request *shared.RegisterDomainRequest, defaultBucket string
 	return event, nil
 }
 
-func updateToEvent(request *shared.UpdateDomainRequest, defaultBucket string) (*archivalEvent, error) {
+func (wh *WorkflowHandler) toArchivalUpdateEvent(request *shared.UpdateDomainRequest, defaultBucket string) (*archivalEvent, error) {
 	event := &archivalEvent{
 		defaultBucket: defaultBucket,
 	}
