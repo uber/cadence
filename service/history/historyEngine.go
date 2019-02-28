@@ -25,10 +25,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/client/public"
-	"github.com/uber/cadence/service/worker/sysworkflow"
 	"time"
 
+	"github.com/uber/cadence/client/public"
+	"github.com/uber/cadence/service/worker/sysworkflow"
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
