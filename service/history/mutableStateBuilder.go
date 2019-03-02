@@ -906,16 +906,11 @@ func (e *mutableStateBuilder) DeletePendingSignal(initiatedEventID int64) {
 	e.deleteSignalInfo = common.Int64Ptr(initiatedEventID)
 }
 
-func (e *mutableStateBuilder) writeCompletionEventToCache(completionEvent *workflow.HistoryEvent) error {
-	// First check to see if this is a Child Workflow
-	if e.HasParentExecution() {
-		// Store the completion result within events cache so we can communicate the result to parent execution
-		// during the processing of DeleteTransferTask without loading this event from database
-		e.eventsCache.putEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID, e.executionInfo.RunID,
-			completionEvent.GetEventId(), completionEvent)
-	}
-
-	return nil
+func (e *mutableStateBuilder) writeCompletionEventToCache(completionEvent *workflow.HistoryEvent) {
+	// Store the completion result within events cache so we can communicate the result to parent execution
+	// during the processing of DeleteTransferTask without loading this event from database
+	e.eventsCache.putEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID, e.executionInfo.RunID,
+		completionEvent.GetEventId(), completionEvent)
 }
 
 func (e *mutableStateBuilder) hasPendingTasks() bool {
@@ -2302,6 +2297,8 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 	}
 
 	continueAsNewEvent := e.hBuilder.AddContinuedAsNewEvent(decisionCompletedEventID, newRunID, attributes)
+	// Write the event to cache only on active cluster
+	e.writeCompletionEventToCache(continueAsNewEvent)
 
 	var newStateBuilder *mutableStateBuilder
 	if domainEntry.IsGlobalDomain() {
