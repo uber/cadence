@@ -804,9 +804,9 @@ func (wh *WorkflowHandler) PollForActivityTask(
 				ctxTimeout = ctxDeadline.Sub(callTime).String()
 			}
 			wh.Service.GetLogger().WithFields(bark.Fields{
-				logging.TagTaskListName: pollRequest.GetTaskList().GetName(),
+				logging.TagTaskListName:   pollRequest.GetTaskList().GetName(),
 				logging.TagContextTimeout: ctxTimeout,
-				logging.TagErr: err,
+				logging.TagErr:            err,
 			}).Error("PollForActivityTask failed.")
 			return nil, wh.error(err, scope)
 		}
@@ -880,9 +880,9 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 				ctxTimeout = ctxDeadline.Sub(callTime).String()
 			}
 			wh.Service.GetLogger().WithFields(bark.Fields{
-				logging.TagTaskListName: pollRequest.GetTaskList().GetName(),
+				logging.TagTaskListName:   pollRequest.GetTaskList().GetName(),
 				logging.TagContextTimeout: ctxTimeout,
-				logging.TagErr: err,
+				logging.TagErr:            err,
 			}).Error("PollForDecisionTask failed.")
 			return nil, wh.error(err, scope)
 		}
