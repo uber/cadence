@@ -69,7 +69,7 @@ func newTaskListDB(store persistence.TaskManager, domainID string, name string, 
 func (db *taskListDB) RangeID() int64 {
 	db.Lock()
 	defer db.Unlock()
-	return atomic.LoadInt64(&db.rangeID)
+	return db.rangeID
 }
 
 // RenewLease renews the lease on a tasklist. If there is no previous lease,
@@ -88,7 +88,7 @@ func (db *taskListDB) RenewLease() (taskListState, error) {
 		return taskListState{}, err
 	}
 	db.ackLevel = resp.TaskListInfo.AckLevel
-	atomic.StoreInt64(&db.rangeID, resp.TaskListInfo.RangeID)
+	db.rangeID = resp.TaskListInfo.RangeID
 	return taskListState{rangeID: db.rangeID, ackLevel: db.ackLevel}, nil
 }
 
@@ -102,7 +102,7 @@ func (db *taskListDB) UpdateState(ackLevel int64) error {
 			Name:     db.taskListName,
 			TaskType: db.taskType,
 			AckLevel: ackLevel,
-			RangeID:  atomic.LoadInt64(&db.rangeID),
+			RangeID:  db.rangeID,
 			Kind:     db.taskListKind,
 		},
 	})
@@ -122,7 +122,7 @@ func (db *taskListDB) CreateTasks(tasks []*persistence.CreateTaskInfo) (*persist
 			Name:     db.taskListName,
 			TaskType: db.taskType,
 			AckLevel: db.ackLevel,
-			RangeID:  atomic.LoadInt64(&db.rangeID),
+			RangeID:  db.rangeID,
 			Kind:     db.taskListKind,
 		},
 		Tasks: tasks,
