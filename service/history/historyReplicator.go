@@ -1016,7 +1016,6 @@ func (r *historyReplicator) flushCurrentWorkflowBuffer(ctx context.Context, doma
 	nextEventID = currentMutableState.GetNextEventID()
 	createTaskID = currentMutableState.GetExecutionInfo().CreateTaskID
 	isRunning = currentMutableState.IsWorkflowExecutionRunning()
-	currentRelease(err)
 
 	return runID, nextEventID, createTaskID, isRunning, nil
 }
