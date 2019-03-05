@@ -23,6 +23,7 @@ package history
 import (
 	"context"
 	"fmt"
+	"go.uber.org/cadence/.gen/go/shared"
 	"time"
 
 	"github.com/uber-common/bark"
@@ -44,7 +45,7 @@ const (
 
 type (
 	workflowExecutionContext interface {
-		appendHistoryEvents(builder *historyBuilder, history []*workflow.HistoryEvent, transactionID int64) (int, error)
+		appendHistoryEvents(history []*workflow.HistoryEvent, transactionID int64) (int, error)
 		clear()
 		continueAsNewWorkflowExecution(context []byte, newStateBuilder mutableState, transferTasks []persistence.Task, timerTasks []persistence.Task, transactionID int64) error
 		getDomainID() string
@@ -224,7 +225,7 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(currMutableState m
 	if updateCurr {
 		hBuilder := currMutableState.GetHistoryBuilder()
 		var size int
-		size, retError = c.appendHistoryEvents(hBuilder, hBuilder.GetHistory().GetEvents(), transactionID)
+		size, retError = c.appendHistoryEvents(hBuilder.GetHistory().GetEvents(), transactionID)
 		if retError != nil {
 			return
 		}
@@ -460,7 +461,7 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 	if hasNewStandbyHistoryEvents {
 		firstEvent := standbyHistoryBuilder.GetFirstEvent()
 		// Note: standby events has no transient decision events
-		newHistorySize, err = c.appendHistoryEvents(standbyHistoryBuilder, standbyHistoryBuilder.history, transactionID)
+		newHistorySize, err = c.appendHistoryEvents(standbyHistoryBuilder.history, transactionID)
 		if err != nil {
 			return err
 		}
@@ -473,14 +474,14 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 		firstEvent := activeHistoryBuilder.GetFirstEvent()
 		// Transient decision events need to be written as a separate batch
 		if activeHistoryBuilder.HasTransientEvents() {
-			newHistorySize, err = c.appendHistoryEvents(activeHistoryBuilder, activeHistoryBuilder.transientHistory, transactionID)
+			newHistorySize, err = c.appendHistoryEvents(activeHistoryBuilder.transientHistory, transactionID)
 			if err != nil {
 				return err
 			}
 		}
 
 		var size int
-		size, err = c.appendHistoryEvents(activeHistoryBuilder, activeHistoryBuilder.history, transactionID)
+		size, err = c.appendHistoryEvents(activeHistoryBuilder.history, transactionID)
 		if err != nil {
 			return err
 		}
@@ -543,7 +544,7 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 				if err1 != nil {
 					return err1
 				}
-				newHistorySize, err = c.appendHistoryEvents(activeHistoryBuilder, activeHistoryBuilder.history, terminateTransactionID)
+				newHistorySize, err = c.appendHistoryEvents(activeHistoryBuilder.history, terminateTransactionID)
 				if err != nil {
 					return err
 				}
@@ -653,8 +654,12 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 	return nil
 }
 
-func (c *workflowExecutionContextImpl) appendHistoryEvents(builder *historyBuilder, history []*workflow.HistoryEvent,
+func (c *workflowExecutionContextImpl) appendHistoryEvents(history []*workflow.HistoryEvent,
 	transactionID int64) (int, error) {
+
+	if err := c.validateNoEventsAfterWorkflowFinish(history); err != nil {
+		return 0, err
+	}
 
 	firstEvent := history[0]
 	var historySize int
@@ -926,4 +931,36 @@ func (c *workflowExecutionContextImpl) emitSessionUpdateStats(stats *persistence
 		time.Duration(stats.DeleteSignalInfoCount))
 	c.metricsClient.RecordTimer(metrics.SessionCountStatsScope, metrics.DeleteRequestCancelInfoCount,
 		time.Duration(stats.DeleteRequestCancelInfoCount))
+}
+
+func (c *workflowExecutionContextImpl) validateNoEventsAfterWorkflowFinish(input []*workflow.HistoryEvent) error {
+	if len(input) == 0 {
+		return nil
+	}
+
+	seenWorkflowCompletionEvent := false
+	for _, event := range input {
+		if seenWorkflowCompletionEvent {
+			c.logger.WithFields(bark.Fields{
+				logging.TagDomainID:            c.domainID,
+				logging.TagWorkflowExecutionID: c.workflowExecution.GetWorkflowId(),
+				logging.TagWorkflowRunID:       c.workflowExecution.GetRunId(),
+			}).Warn("encount case where events appears after workflow finish.")
+
+			return &shared.InternalServiceError{Message: "error validating last event being workflow finish event."}
+		}
+
+		switch event.GetEventType() {
+		case workflow.EventTypeWorkflowExecutionCompleted,
+			workflow.EventTypeWorkflowExecutionFailed,
+			workflow.EventTypeWorkflowExecutionTimedOut,
+			workflow.EventTypeWorkflowExecutionTerminated,
+			workflow.EventTypeWorkflowExecutionContinuedAsNew,
+			workflow.EventTypeWorkflowExecutionCanceled:
+
+			seenWorkflowCompletionEvent = true
+		}
+	}
+
+	return nil
 }
