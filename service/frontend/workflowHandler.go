@@ -747,6 +747,8 @@ func (wh *WorkflowHandler) PollForActivityTask(
 	ctx context.Context,
 	pollRequest *gen.PollForActivityTaskRequest) (*gen.PollForActivityTaskResponse, error) {
 
+	callTime := time.Now()
+
 	scope := metrics.FrontendPollForActivityTaskScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
@@ -797,8 +799,16 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		err = wh.cancelOutstandingPoll(ctx, err, domainID, persistence.TaskListTypeActivity, pollRequest.TaskList, pollerID)
 		if err != nil {
 			// For all other errors log an error and return it back to client.
-			wh.Service.GetLogger().Errorf(
-				"PollForActivityTask failed. TaskList: %v, Error: %v", pollRequest.TaskList.GetName(), err)
+			ctxTimeout := "not-set"
+			ctxDeadline, ok := ctx.Deadline()
+			if ok {
+				ctxTimeout = ctxDeadline.Sub(callTime).String()
+			}
+			wh.Service.GetLogger().WithFields(bark.Fields{
+				logging.TagTaskListName:   pollRequest.GetTaskList().GetName(),
+				logging.TagContextTimeout: ctxTimeout,
+				logging.TagErr:            err,
+			}).Error("PollForActivityTask failed.")
 			return nil, wh.error(err, scope)
 		}
 	}
@@ -809,6 +819,8 @@ func (wh *WorkflowHandler) PollForActivityTask(
 func (wh *WorkflowHandler) PollForDecisionTask(
 	ctx context.Context,
 	pollRequest *gen.PollForDecisionTaskRequest) (*gen.PollForDecisionTaskResponse, error) {
+
+	callTime := time.Now()
 
 	scope := metrics.FrontendPollForDecisionTaskScope
 	sw := wh.startRequestProfile(scope)
@@ -863,8 +875,16 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		err = wh.cancelOutstandingPoll(ctx, err, domainID, persistence.TaskListTypeDecision, pollRequest.TaskList, pollerID)
 		if err != nil {
 			// For all other errors log an error and return it back to client.
-			wh.Service.GetLogger().Errorf(
-				"PollForDecisionTask failed. TaskList: %v, Error: %v", pollRequest.TaskList.GetName(), err)
+			ctxTimeout := "not-set"
+			ctxDeadline, ok := ctx.Deadline()
+			if ok {
+				ctxTimeout = ctxDeadline.Sub(callTime).String()
+			}
+			wh.Service.GetLogger().WithFields(bark.Fields{
+				logging.TagTaskListName:   pollRequest.GetTaskList().GetName(),
+				logging.TagContextTimeout: ctxTimeout,
+				logging.TagErr:            err,
+			}).Error("PollForDecisionTask failed.")
 			return nil, wh.error(err, scope)
 		}
 
