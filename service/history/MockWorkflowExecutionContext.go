@@ -38,19 +38,19 @@ type mockWorkflowExecutionContext struct {
 
 var _ workflowExecutionContext = (*mockWorkflowExecutionContext)(nil)
 
-func (_m *mockWorkflowExecutionContext) appendHistoryEvents(_a0 []*workflow.HistoryEvent, _a1 int64) (int, error) {
-	ret := _m.Called(_a0, _a1)
+func (_m *mockWorkflowExecutionContext) appendHistoryEvents(_a0 []*workflow.HistoryEvent, _a1 int64, _a2 bool) (int, error) {
+	ret := _m.Called(_a0, _a1, _a2)
 
 	var r0 int
-	if rf, ok := ret.Get(0).(func([]*workflow.HistoryEvent, int64) int); ok {
-		r0 = rf(_a0, _a1)
+	if rf, ok := ret.Get(0).(func([]*workflow.HistoryEvent, int64, bool) int); ok {
+		r0 = rf(_a0, _a1, _a2)
 	} else {
 		r0 = ret.Get(0).(int)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func([]*workflow.HistoryEvent, int64) error); ok {
-		r1 = rf(_a0, _a1)
+	if rf, ok := ret.Get(1).(func([]*workflow.HistoryEvent, int64, bool) error); ok {
+		r1 = rf(_a0, _a1, _a2)
 	} else {
 		r1 = ret.Error(1)
 	}
