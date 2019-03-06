@@ -23,7 +23,6 @@ package history
 import (
 	"context"
 	"fmt"
-	"go.uber.org/cadence/.gen/go/shared"
 	"time"
 
 	"github.com/uber-common/bark"
@@ -945,9 +944,9 @@ func (c *workflowExecutionContextImpl) validateNoEventsAfterWorkflowFinish(input
 				logging.TagDomainID:            c.domainID,
 				logging.TagWorkflowExecutionID: c.workflowExecution.GetWorkflowId(),
 				logging.TagWorkflowRunID:       c.workflowExecution.GetRunId(),
-			}).Warn("encount case where events appears after workflow finish.")
+			}).Error("encounter case where events appears after workflow finish.")
 
-			return &shared.InternalServiceError{Message: "error validating last event being workflow finish event."}
+			return ErrEventsAterWorkflowFinish
 		}
 
 		switch event.GetEventType() {
