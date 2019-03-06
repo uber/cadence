@@ -1043,7 +1043,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 					Execution:                     &workflowExecution,
 					ScheduleId:                    &scheduleID,
 					TaskList:                      taskList,
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
+					ScheduleToStartTimeoutSeconds: common.Int32Ptr(600),
 				}
 
 				_, err := engine.AddActivityTask(&addRequest)
@@ -1057,6 +1057,9 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 			}
 		}
 	}
+
+	s.EqualValues(iterations*engineCount*taskCount, s.taskManager.getCreateTaskCount(tlID))
+
 	activityTypeName := "activity1"
 	activityID := "activityId1"
 	activityType := &workflow.ActivityType{Name: &activityTypeName}
@@ -1082,7 +1085,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 						TaskList:                      &workflow.TaskList{Name: taskList.Name},
 						ActivityType:                  activityType,
 						Input:                         activityInput,
-						ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
+						ScheduleToStartTimeoutSeconds: common.Int32Ptr(600),
 						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(2),
 						StartToCloseTimeoutSeconds:    common.Int32Ptr(1),
 						HeartbeatTimeoutSeconds:       common.Int32Ptr(1),
@@ -1129,7 +1132,6 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 				if err != nil {
 					panic(err)
 				}
-
 				//taskToken, _ := s.matchingEngine.tokenSerializer.Serialize(token)
 				//s.EqualValues(taskToken, result.TaskToken, fmt.Sprintf("%v!=%v", string(taskToken)))
 				s.EqualValues(token, resultToken, fmt.Sprintf("%v!=%v", token, resultToken))
@@ -1195,7 +1197,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 					Execution:                     &workflowExecution,
 					ScheduleId:                    &scheduleID,
 					TaskList:                      taskList,
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
+					ScheduleToStartTimeoutSeconds: common.Int32Ptr(600),
 				}
 
 				_, err := engine.AddDecisionTask(&addRequest)
