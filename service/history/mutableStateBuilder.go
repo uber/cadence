@@ -745,17 +745,6 @@ func (e *mutableStateBuilder) GetWorkflowType() *workflow.WorkflowType {
 	return wType
 }
 
-func (e *mutableStateBuilder) GetLastUpdatedTimestamp() int64 {
-	lastUpdated := e.executionInfo.LastUpdatedTimestamp.UnixNano()
-	if e.executionInfo.StartTimestamp.UnixNano() >= lastUpdated {
-		// This could happen due to clock skews
-		// ensure that the lastUpdatedTimestamp is always greater than the StartTimestamp
-		lastUpdated = e.executionInfo.StartTimestamp.UnixNano() + 1
-	}
-
-	return lastUpdated
-}
-
 func (e *mutableStateBuilder) GetActivityScheduledEvent(scheduleEventID int64) (*workflow.HistoryEvent, bool) {
 	ai, ok := e.pendingActivityInfoIDs[scheduleEventID]
 	if !ok {

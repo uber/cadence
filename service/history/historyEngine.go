@@ -815,7 +815,11 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(ctx context.Context,
 		// for closed workflow
 		closeStatus := getWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
 		result.WorkflowExecutionInfo.CloseStatus = &closeStatus
-		result.WorkflowExecutionInfo.CloseTime = common.Int64Ptr(msBuilder.GetLastUpdatedTimestamp())
+		completionEvent, ok := msBuilder.GetCompletionEvent()
+		if !ok {
+			return nil, &workflow.InternalServiceError{Message: "Unable to get workflow completion event."}
+		}
+		result.WorkflowExecutionInfo.CloseTime = common.Int64Ptr(completionEvent.GetTimestamp())
 	}
 
 	if len(msBuilder.GetPendingActivityInfos()) > 0 {
