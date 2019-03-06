@@ -622,13 +622,13 @@ func (w *workflowResetorImpl) replayHistoryEvents(decisionFinishEventID int64, r
 				if prevMutableState.GetReplicationState() != nil {
 					resetMutableState = newMutableStateBuilderWithReplicationState(
 						clusterMetadata.GetCurrentClusterName(),
-						w.eng.shard.GetConfig(),
+						w.eng.shard,
 						w.eng.shard.GetEventsCache(),
 						w.eng.logger,
 						firstEvent.GetVersion(),
 					)
 				} else {
-					resetMutableState = newMutableStateBuilder(clusterMetadata.GetCurrentClusterName(), w.eng.shard.GetConfig(),
+					resetMutableState = newMutableStateBuilder(clusterMetadata.GetCurrentClusterName(), w.eng.shard,
 						w.eng.shard.GetEventsCache(), w.eng.logger)
 				}
 
@@ -826,7 +826,7 @@ func (w *workflowResetorImpl) replicateResetEvent(baseMutableState mutableState,
 				wfTimeoutSecs = int64(firstEvent.GetWorkflowExecutionStartedEventAttributes().GetExecutionStartToCloseTimeoutSeconds())
 				newMsBuilder = newMutableStateBuilderWithReplicationState(
 					clusterMetadata.GetCurrentClusterName(),
-					w.eng.shard.GetConfig(),
+					w.eng.shard,
 					w.eng.shard.GetEventsCache(),
 					w.eng.logger,
 					firstEvent.GetVersion(),

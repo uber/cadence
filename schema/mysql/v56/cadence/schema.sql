@@ -89,6 +89,7 @@ CREATE TABLE executions(
   last_write_event_id BIGINT,
   last_replication_info BLOB,
   -- replication_state members end
+  last_event_task_id BIGINT NOT NULL,
 	last_first_event_id BIGINT NOT NULL,
 	next_event_id BIGINT NOT NULL, -- very important! for conditional updates of all the dependent tables.
 	last_processed_event BIGINT NOT NULL,

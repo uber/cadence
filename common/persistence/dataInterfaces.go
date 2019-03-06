@@ -235,6 +235,7 @@ type (
 		State                        int
 		CloseStatus                  int
 		LastFirstEventID             int64
+		LastEventTaskID              int64
 		NextEventID                  int64
 		LastProcessedEvent           int64
 		StartTimestamp               time.Time
@@ -654,6 +655,7 @@ type (
 		WorkflowTimeout             int32
 		DecisionTimeoutValue        int32
 		ExecutionContext            []byte
+		LastEventTaskID             int64
 		NextEventID                 int64
 		LastProcessedEvent          int64
 		SignalCount                 int32

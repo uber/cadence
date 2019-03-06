@@ -110,6 +110,8 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 		if b.msBuilder.GetReplicationState() != nil {
 			b.msBuilder.UpdateReplicationStateVersion(event.GetVersion(), true)
 		}
+		b.msBuilder.GetExecutionInfo().LastEventTaskID = event.GetTaskId()
+
 		switch event.GetEventType() {
 		case shared.EventTypeWorkflowExecutionStarted:
 			attributes := event.WorkflowExecutionStartedEventAttributes
@@ -388,7 +390,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			// Create mutable state updates for the new run
 			newRunMutableStateBuilder = newMutableStateBuilderWithReplicationState(
 				b.clusterMetadata.GetCurrentClusterName(),
-				b.shard.GetConfig(),
+				b.shard,
 				b.shard.GetEventsCache(),
 				b.logger,
 				newRunStartedEvent.GetVersion(),

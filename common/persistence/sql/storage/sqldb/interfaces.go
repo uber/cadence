@@ -136,6 +136,7 @@ type (
 		LastWriteEventID             *int64
 		LastReplicationInfo          *[]byte
 		LastFirstEventID             int64
+		LastEventTaskID              int64
 		NextEventID                  int64
 		LastProcessedEvent           int64
 		StartTime                    time.Time

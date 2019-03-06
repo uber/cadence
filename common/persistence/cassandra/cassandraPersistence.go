@@ -130,6 +130,7 @@ const (
 		`state: ?, ` +
 		`close_status: ?, ` +
 		`last_first_event_id: ?, ` +
+		`last_event_task_id: ?, ` +
 		`next_event_id: ?, ` +
 		`last_processed_event: ?, ` +
 		`start_time: ?, ` +
@@ -1362,6 +1363,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Cre
 			p.WorkflowStateCreated,
 			p.WorkflowCloseStatusNone,
 			common.FirstEventID,
+			request.LastEventTaskID,
 			request.NextEventID,
 			request.LastProcessedEvent,
 			cqlNowTimestamp,
@@ -1428,6 +1430,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Cre
 			p.WorkflowStateCreated,
 			p.WorkflowCloseStatusNone,
 			common.FirstEventID,
+			request.LastEventTaskID,
 			request.NextEventID,
 			request.LastProcessedEvent,
 			cqlNowTimestamp,
@@ -1615,6 +1618,7 @@ func (d *cassandraPersistence) updateMutableState(batch *gocql.Batch, executionI
 			executionInfo.State,
 			executionInfo.CloseStatus,
 			executionInfo.LastFirstEventID,
+			executionInfo.LastEventTaskID,
 			executionInfo.NextEventID,
 			executionInfo.LastProcessedEvent,
 			executionInfo.StartTimestamp,
@@ -1681,6 +1685,7 @@ func (d *cassandraPersistence) updateMutableState(batch *gocql.Batch, executionI
 			executionInfo.State,
 			executionInfo.CloseStatus,
 			executionInfo.LastFirstEventID,
+			executionInfo.LastEventTaskID,
 			executionInfo.NextEventID,
 			executionInfo.LastProcessedEvent,
 			executionInfo.StartTimestamp,
@@ -3723,6 +3728,8 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *p.InternalWorkf
 			info.CloseStatus = v.(int)
 		case "last_first_event_id":
 			info.LastFirstEventID = v.(int64)
+		case "last_event_task_id":
+			info.LastEventTaskID = v.(int64)
 		case "next_event_id":
 			info.NextEventID = v.(int64)
 		case "last_processed_event":

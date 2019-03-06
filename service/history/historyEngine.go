@@ -286,7 +286,7 @@ func (e *historyEngineImpl) createMutableState(clusterMetadata cluster.Metadata,
 		// target clusters or not
 		msBuilder = newMutableStateBuilderWithReplicationState(
 			clusterMetadata.GetCurrentClusterName(),
-			e.shard.GetConfig(),
+			e.shard,
 			e.shard.GetEventsCache(),
 			e.logger,
 			domainEntry.GetFailoverVersion(),
@@ -294,7 +294,7 @@ func (e *historyEngineImpl) createMutableState(clusterMetadata cluster.Metadata,
 	} else {
 		msBuilder = newMutableStateBuilder(
 			clusterMetadata.GetCurrentClusterName(),
-			e.shard.GetConfig(),
+			e.shard,
 			e.shard.GetEventsCache(),
 			e.logger,
 		)
@@ -327,6 +327,12 @@ func (e *historyEngineImpl) generateFirstDecisionTask(domainID string, msBuilder
 }
 
 func (e *historyEngineImpl) appendFirstBatchHistoryEvents(msBuilder mutableState, domainID string, execution workflow.WorkflowExecution) (historySize int, err error) {
+	// call FlushBufferedEvents to assign task id to event
+	// as well as update last event task id in new state builder
+	err = msBuilder.FlushBufferedEvents()
+	if err != nil {
+		return 0, err
+	}
 	events := msBuilder.GetHistoryBuilder().GetHistory().Events
 	startedEvent := events[0]
 	if msBuilder.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
@@ -421,6 +427,7 @@ func (e *historyEngineImpl) createWorkflow(startRequest *h.StartWorkflowExecutio
 		WorkflowTimeout:             *request.ExecutionStartToCloseTimeoutSeconds,
 		DecisionTimeoutValue:        *request.TaskStartToCloseTimeoutSeconds,
 		ExecutionContext:            nil,
+		LastEventTaskID:             currExeInfo.LastEventTaskID,
 		NextEventID:                 msBuilder.GetNextEventID(),
 		LastProcessedEvent:          common.EmptyEventID,
 		HistorySize:                 int64(msBuilder.GetHistorySize()),
