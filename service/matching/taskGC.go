@@ -25,7 +25,7 @@ import (
 	"time"
 )
 
-type taskCleaner struct {
+type taskGC struct {
 	lock           int64
 	db             *taskListDB
 	ackLevel       int64
@@ -35,65 +35,64 @@ type taskCleaner struct {
 
 var maxTimeBetweenTaskDeletes = time.Second
 
-// newTaskCleaner returns an instance of a taskCleaner object
-// The returned taskCleaner attempts to delete a batch of completed tasks
-// from persistence everytime Run() method is called. Internally, cleaner
-// maintains the current delete cursor and updates this after successful deletes
+// newTaskGC returns an instance of a task garbage collector object
+// taskGC internally maintains a delete cursor and attempts to delete
+// a batch of tasks everytime Run() method is called.
 //
-// In order for the cleaner to actually delete tasks when Run() is called, one of
+// In order for the taskGC to actually delete tasks when Run() is called, one of
 // two conditions must be met
-//  - Size Threshold: More than MaxDeleteBatchSize tasks are pending to be deleted (rough estimation)
+//  - Size Threshold: More than MaxDeleteBatchSize tasks are waiting to be deleted (rough estimation)
 //  - Time Threshold: Time since previous delete was attempted exceeds maxTimeBetweenTaskDeletes
 //
 // Finally, the Run() method is safe to be called from multiple threads. The underlying
 // implementation will make sure only one caller executes Run() and others simply bail out
-func newTaskCleaner(db *taskListDB, config *taskListConfig) *taskCleaner {
-	return &taskCleaner{db: db, config: config}
+func newTaskGC(db *taskListDB, config *taskListConfig) *taskGC {
+	return &taskGC{db: db, config: config}
 }
 
 // Run deletes a batch of completed tasks, if its possible to do so
 // Only attempts deletion if size or time thresholds are met
-func (tc *taskCleaner) Run(ackLevel int64) {
-	tc.tryDeleteNextBatch(ackLevel, false)
+func (tgc *taskGC) Run(ackLevel int64) {
+	tgc.tryDeleteNextBatch(ackLevel, false)
 }
 
 // RunNow deletes a batch of completed tasks if its possible to do so
 // This method attempts deletions without waiting for size/time threshold to be met
-func (tc *taskCleaner) RunNow(ackLevel int64) {
-	tc.tryDeleteNextBatch(ackLevel, true)
+func (tgc *taskGC) RunNow(ackLevel int64) {
+	tgc.tryDeleteNextBatch(ackLevel, true)
 }
 
-func (tc *taskCleaner) tryDeleteNextBatch(ackLevel int64, ignoreTimeCond bool) {
-	if !tc.tryLock() {
+func (tgc *taskGC) tryDeleteNextBatch(ackLevel int64, ignoreTimeCond bool) {
+	if !tgc.tryLock() {
 		return
 	}
-	defer tc.unlock()
-	batchSize := tc.config.MaxTaskDeleteBatchSize()
-	if !tc.checkPrecond(ackLevel, batchSize, ignoreTimeCond) {
+	defer tgc.unlock()
+	batchSize := tgc.config.MaxTaskDeleteBatchSize()
+	if !tgc.checkPrecond(ackLevel, batchSize, ignoreTimeCond) {
 		return
 	}
-	tc.lastDeleteTime = time.Now()
-	n, err := tc.db.CompleteTasksLessThan(ackLevel, batchSize)
+	tgc.lastDeleteTime = time.Now()
+	n, err := tgc.db.CompleteTasksLessThan(ackLevel, batchSize)
 	switch {
 	case err != nil:
 		return
 	case n < batchSize:
-		tc.ackLevel = ackLevel
+		tgc.ackLevel = ackLevel
 	}
 }
 
-func (tc *taskCleaner) checkPrecond(ackLevel int64, batchSize int, ignoreTimeCond bool) bool {
-	backlog := ackLevel - tc.ackLevel
+func (tgc *taskGC) checkPrecond(ackLevel int64, batchSize int, ignoreTimeCond bool) bool {
+	backlog := ackLevel - tgc.ackLevel
 	if backlog >= int64(batchSize) {
 		return true
 	}
-	return backlog > 0 && (ignoreTimeCond || time.Now().Sub(tc.lastDeleteTime) > maxTimeBetweenTaskDeletes)
+	return backlog > 0 && (ignoreTimeCond || time.Now().Sub(tgc.lastDeleteTime) > maxTimeBetweenTaskDeletes)
 }
 
-func (tc *taskCleaner) tryLock() bool {
-	return atomic.CompareAndSwapInt64(&tc.lock, 0, 1)
+func (tgc *taskGC) tryLock() bool {
+	return atomic.CompareAndSwapInt64(&tgc.lock, 0, 1)
 }
 
-func (tc *taskCleaner) unlock() {
-	atomic.StoreInt64(&tc.lock, 0)
+func (tgc *taskGC) unlock() {
+	atomic.StoreInt64(&tgc.lock, 0)
 }

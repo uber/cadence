@@ -184,7 +184,7 @@ func (c *taskListManagerImpl) isIdle(lastWriteTime time.Time) bool {
 
 func (c *taskListManagerImpl) handleIdleTimeout() {
 	c.persistAckLevel()
-	c.cleaner.RunNow(c.taskAckManager.getAckLevel())
+	c.taskGC.RunNow(c.taskAckManager.getAckLevel())
 	c.Stop()
 }
 
