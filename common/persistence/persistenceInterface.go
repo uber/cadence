@@ -144,7 +144,6 @@ type (
 		StartTimestamp               time.Time
 		LastUpdatedTimestamp         time.Time
 		CreateRequestID              string
-		CreateTaskID                 int64
 		SignalCount                  int32
 		HistorySize                  int64
 		DecisionVersion              int64

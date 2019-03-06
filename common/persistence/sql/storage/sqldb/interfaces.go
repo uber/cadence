@@ -141,7 +141,6 @@ type (
 		StartTime                    time.Time
 		LastUpdatedTime              time.Time
 		CreateRequestID              string
-		CreateTaskID                 int64
 		DecisionVersion              int64
 		DecisionScheduleID           int64
 		DecisionStartedID            int64
