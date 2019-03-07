@@ -303,8 +303,8 @@ func (_m *mockMutableState) AddCompletedWorkflowEvent(_a0 int64, _a1 *shared.Com
 }
 
 // AddContinueAsNewEvent provides a mock function with given fields: _a0, _a1, _a2, _a3, _a4, _a5, _a6
-func (_m *mockMutableState) AddContinueAsNewEvent(_a0 int64, _a1 int64, _a2 *cache.DomainCacheEntry, _a3 string, _a4 *shared.ContinueAsNewWorkflowExecutionDecisionAttributes, _a5 int32, _a6 int64) (*shared.HistoryEvent, mutableState, error) {
-	ret := _m.Called(_a0, _a1, _a2, _a3, _a4, _a5, _a6)
+func (_m *mockMutableState) AddContinueAsNewEvent(_a0 int64, _a1 int64, _a2 *cache.DomainCacheEntry, _a3 string, _a4 *shared.ContinueAsNewWorkflowExecutionDecisionAttributes, _a5 int32) (*shared.HistoryEvent, mutableState, error) {
+	ret := _m.Called(_a0, _a1, _a2, _a3, _a4, _a5)
 
 	var r0 *shared.HistoryEvent
 	if rf, ok := ret.Get(0).(func(int64, int64, *cache.DomainCacheEntry, string, *shared.ContinueAsNewWorkflowExecutionDecisionAttributes, int32) *shared.HistoryEvent); ok {
