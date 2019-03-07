@@ -295,7 +295,7 @@ func (t *transferQueueStandbyProcessorImpl) processCloseExecution(transferTask *
 		var wfCloseTime int64
 		if !ok {
 			// This is need for backwards compatibility
-			// TODO: remove usage of getLastUpdatedTimestamp after release 0.3.6, only use completionEvent timestamp
+			// TODO: remove usage of getLastUpdatedTimestamp after release 0.5.4, only use completionEvent timestamp
 			wfCloseTime = getLastUpdatedTimestamp(msBuilder)
 		} else {
 			wfCloseTime = completionEvent.GetTimestamp()

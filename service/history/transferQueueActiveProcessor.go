@@ -397,7 +397,7 @@ func (t *transferQueueActiveProcessorImpl) processCloseExecution(task *persisten
 		}
 
 		// This is need for backwards compatibility
-		// TODO: remove usage of getLastUpdatedTimestamp after release 0.3.6, only use completionEvent timestamp
+		// TODO: remove usage of getLastUpdatedTimestamp after release 0.5.4, only use completionEvent timestamp
 		wfCloseTime = getLastUpdatedTimestamp(msBuilder)
 	} else {
 		wfCloseTime = completionEvent.GetTimestamp()
@@ -1085,7 +1085,7 @@ func getWorkflowExecutionCloseStatus(status int) workflow.WorkflowExecutionClose
 	}
 }
 
-// TODO: remove this after release 0.3.6
+// TODO: remove this after release 0.5.4
 func getLastUpdatedTimestamp(msBuilder mutableState) int64 {
 	executionInfo := msBuilder.GetExecutionInfo()
 
