@@ -221,6 +221,12 @@ type Interface interface {
 		UpdateRequest *shared.UpdateDomainRequest,
 		opts ...yarpc.CallOption,
 	) (*shared.UpdateDomainResponse, error)
+
+	UpdateWorkflow(
+		ctx context.Context,
+		UpdateRequest *shared.UpdateWorkflowRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.UpdateWorkflowResponse, error)
 }
 
 // New builds a new client for the WorkflowService service.
@@ -957,5 +963,28 @@ func (c client) UpdateDomain(
 	}
 
 	success, err = cadence.WorkflowService_UpdateDomain_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) UpdateWorkflow(
+	ctx context.Context,
+	_UpdateRequest *shared.UpdateWorkflowRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.UpdateWorkflowResponse, err error) {
+
+	args := cadence.WorkflowService_UpdateWorkflow_Helper.Args(_UpdateRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_UpdateWorkflow_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = cadence.WorkflowService_UpdateWorkflow_Helper.UnwrapResponse(&result)
 	return
 }

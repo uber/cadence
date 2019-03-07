@@ -1058,3 +1058,36 @@ func (mr *_MockClientRecorder) UpdateDomain(
 	args := append([]interface{}{ctx, _UpdateRequest}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "UpdateDomain", args...)
 }
+
+// UpdateWorkflow responds to a UpdateWorkflow call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().UpdateWorkflow(gomock.Any(), ...).Return(...)
+// 	... := client.UpdateWorkflow(...)
+func (m *MockClient) UpdateWorkflow(
+	ctx context.Context,
+	_UpdateRequest *shared.UpdateWorkflowRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.UpdateWorkflowResponse, err error) {
+
+	args := []interface{}{ctx, _UpdateRequest}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "UpdateWorkflow", args...)
+	success, _ = ret[i].(*shared.UpdateWorkflowResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) UpdateWorkflow(
+	ctx interface{},
+	_UpdateRequest interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _UpdateRequest}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "UpdateWorkflow", args...)
+}

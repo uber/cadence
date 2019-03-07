@@ -22404,7 +22404,67 @@ type PollForDecisionTaskResponse struct {
 	NextPageToken             []byte             `json:"nextPageToken,omitempty"`
 	Query                     *WorkflowQuery     `json:"query,omitempty"`
 	WorkflowExecutionTaskList *TaskList          `json:"WorkflowExecutionTaskList,omitempty"`
+	Updates                   []*WorkflowUpdate  `json:"updates,omitempty"`
+	Queries                   []*WorkflowQuery   `json:"queries,omitempty"`
 }
+
+type _List_WorkflowUpdate_ValueList []*WorkflowUpdate
+
+func (v _List_WorkflowUpdate_ValueList) ForEach(f func(wire.Value) error) error {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
+		w, err := x.ToWire()
+		if err != nil {
+			return err
+		}
+		err = f(w)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (v _List_WorkflowUpdate_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_WorkflowUpdate_ValueList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_List_WorkflowUpdate_ValueList) Close() {}
+
+type _List_WorkflowQuery_ValueList []*WorkflowQuery
+
+func (v _List_WorkflowQuery_ValueList) ForEach(f func(wire.Value) error) error {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
+		w, err := x.ToWire()
+		if err != nil {
+			return err
+		}
+		err = f(w)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (v _List_WorkflowQuery_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_WorkflowQuery_ValueList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_List_WorkflowQuery_ValueList) Close() {}
 
 // ToWire translates a PollForDecisionTaskResponse struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
@@ -22423,7 +22483,7 @@ type PollForDecisionTaskResponse struct {
 //   }
 func (v *PollForDecisionTaskResponse) ToWire() (wire.Value, error) {
 	var (
-		fields [11]wire.Field
+		fields [13]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -22517,6 +22577,22 @@ func (v *PollForDecisionTaskResponse) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 90, Value: w}
 		i++
 	}
+	if v.Updates != nil {
+		w, err = wire.NewValueList(_List_WorkflowUpdate_ValueList(v.Updates)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 100, Value: w}
+		i++
+	}
+	if v.Queries != nil {
+		w, err = wire.NewValueList(_List_WorkflowQuery_ValueList(v.Queries)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 110, Value: w}
+		i++
+	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
@@ -22525,6 +22601,48 @@ func _WorkflowQuery_Read(w wire.Value) (*WorkflowQuery, error) {
 	var v WorkflowQuery
 	err := v.FromWire(w)
 	return &v, err
+}
+
+func _WorkflowUpdate_Read(w wire.Value) (*WorkflowUpdate, error) {
+	var v WorkflowUpdate
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _List_WorkflowUpdate_Read(l wire.ValueList) ([]*WorkflowUpdate, error) {
+	if l.ValueType() != wire.TStruct {
+		return nil, nil
+	}
+
+	o := make([]*WorkflowUpdate, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
+		i, err := _WorkflowUpdate_Read(x)
+		if err != nil {
+			return err
+		}
+		o = append(o, i)
+		return nil
+	})
+	l.Close()
+	return o, err
+}
+
+func _List_WorkflowQuery_Read(l wire.ValueList) ([]*WorkflowQuery, error) {
+	if l.ValueType() != wire.TStruct {
+		return nil, nil
+	}
+
+	o := make([]*WorkflowQuery, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
+		i, err := _WorkflowQuery_Read(x)
+		if err != nil {
+			return err
+		}
+		o = append(o, i)
+		return nil
+	})
+	l.Close()
+	return o, err
 }
 
 // FromWire deserializes a PollForDecisionTaskResponse struct from its Thrift-level
@@ -22645,6 +22763,22 @@ func (v *PollForDecisionTaskResponse) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 100:
+			if field.Value.Type() == wire.TList {
+				v.Updates, err = _List_WorkflowUpdate_Read(field.Value.GetList())
+				if err != nil {
+					return err
+				}
+
+			}
+		case 110:
+			if field.Value.Type() == wire.TList {
+				v.Queries, err = _List_WorkflowQuery_Read(field.Value.GetList())
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -22658,7 +22792,7 @@ func (v *PollForDecisionTaskResponse) String() string {
 		return "<nil>"
 	}
 
-	var fields [11]string
+	var fields [13]string
 	i := 0
 	if v.TaskToken != nil {
 		fields[i] = fmt.Sprintf("TaskToken: %v", v.TaskToken)
@@ -22704,8 +22838,46 @@ func (v *PollForDecisionTaskResponse) String() string {
 		fields[i] = fmt.Sprintf("WorkflowExecutionTaskList: %v", v.WorkflowExecutionTaskList)
 		i++
 	}
+	if v.Updates != nil {
+		fields[i] = fmt.Sprintf("Updates: %v", v.Updates)
+		i++
+	}
+	if v.Queries != nil {
+		fields[i] = fmt.Sprintf("Queries: %v", v.Queries)
+		i++
+	}
 
 	return fmt.Sprintf("PollForDecisionTaskResponse{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _List_WorkflowUpdate_Equals(lhs, rhs []*WorkflowUpdate) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for i, lv := range lhs {
+		rv := rhs[i]
+		if !lv.Equals(rv) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func _List_WorkflowQuery_Equals(lhs, rhs []*WorkflowQuery) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for i, lv := range lhs {
+		rv := rhs[i]
+		if !lv.Equals(rv) {
+			return false
+		}
+	}
+
+	return true
 }
 
 // Equals returns true if all the fields of this PollForDecisionTaskResponse match the
@@ -22751,8 +22923,36 @@ func (v *PollForDecisionTaskResponse) Equals(rhs *PollForDecisionTaskResponse) b
 	if !((v.WorkflowExecutionTaskList == nil && rhs.WorkflowExecutionTaskList == nil) || (v.WorkflowExecutionTaskList != nil && rhs.WorkflowExecutionTaskList != nil && v.WorkflowExecutionTaskList.Equals(rhs.WorkflowExecutionTaskList))) {
 		return false
 	}
+	if !((v.Updates == nil && rhs.Updates == nil) || (v.Updates != nil && rhs.Updates != nil && _List_WorkflowUpdate_Equals(v.Updates, rhs.Updates))) {
+		return false
+	}
+	if !((v.Queries == nil && rhs.Queries == nil) || (v.Queries != nil && rhs.Queries != nil && _List_WorkflowQuery_Equals(v.Queries, rhs.Queries))) {
+		return false
+	}
 
 	return true
+}
+
+type _List_WorkflowUpdate_Zapper []*WorkflowUpdate
+
+// MarshalLogArray implements zapcore.ArrayMarshaler, enabling
+// fast logging of _List_WorkflowUpdate_Zapper.
+func (l _List_WorkflowUpdate_Zapper) MarshalLogArray(enc zapcore.ArrayEncoder) (err error) {
+	for _, v := range l {
+		err = multierr.Append(err, enc.AppendObject(v))
+	}
+	return err
+}
+
+type _List_WorkflowQuery_Zapper []*WorkflowQuery
+
+// MarshalLogArray implements zapcore.ArrayMarshaler, enabling
+// fast logging of _List_WorkflowQuery_Zapper.
+func (l _List_WorkflowQuery_Zapper) MarshalLogArray(enc zapcore.ArrayEncoder) (err error) {
+	for _, v := range l {
+		err = multierr.Append(err, enc.AppendObject(v))
+	}
+	return err
 }
 
 // MarshalLogObject implements zapcore.ObjectMarshaler, enabling
@@ -22793,6 +22993,12 @@ func (v *PollForDecisionTaskResponse) MarshalLogObject(enc zapcore.ObjectEncoder
 	}
 	if v.WorkflowExecutionTaskList != nil {
 		err = multierr.Append(err, enc.AddObject("WorkflowExecutionTaskList", v.WorkflowExecutionTaskList))
+	}
+	if v.Updates != nil {
+		err = multierr.Append(err, enc.AddArray("updates", (_List_WorkflowUpdate_Zapper)(v.Updates)))
+	}
+	if v.Queries != nil {
+		err = multierr.Append(err, enc.AddArray("queries", (_List_WorkflowQuery_Zapper)(v.Queries)))
 	}
 	return err
 }
@@ -22902,6 +23108,26 @@ func (v *PollForDecisionTaskResponse) GetQuery() (o *WorkflowQuery) {
 func (v *PollForDecisionTaskResponse) GetWorkflowExecutionTaskList() (o *TaskList) {
 	if v.WorkflowExecutionTaskList != nil {
 		return v.WorkflowExecutionTaskList
+	}
+
+	return
+}
+
+// GetUpdates returns the value of Updates if it is set or its
+// zero value if it is unset.
+func (v *PollForDecisionTaskResponse) GetUpdates() (o []*WorkflowUpdate) {
+	if v.Updates != nil {
+		return v.Updates
+	}
+
+	return
+}
+
+// GetQueries returns the value of Queries if it is set or its
+// zero value if it is unset.
+func (v *PollForDecisionTaskResponse) GetQueries() (o []*WorkflowQuery) {
+	if v.Queries != nil {
+		return v.Queries
 	}
 
 	return
@@ -23079,6 +23305,190 @@ func (v *PollerInfo) GetIdentity() (o string) {
 	return
 }
 
+type QueryCompletedType int32
+
+const (
+	QueryCompletedTypeCompleted        QueryCompletedType = 0
+	QueryCompletedTypeResultNotChanged QueryCompletedType = 1
+	QueryCompletedTypeFailed           QueryCompletedType = 2
+)
+
+// QueryCompletedType_Values returns all recognized values of QueryCompletedType.
+func QueryCompletedType_Values() []QueryCompletedType {
+	return []QueryCompletedType{
+		QueryCompletedTypeCompleted,
+		QueryCompletedTypeResultNotChanged,
+		QueryCompletedTypeFailed,
+	}
+}
+
+// UnmarshalText tries to decode QueryCompletedType from a byte slice
+// containing its name.
+//
+//   var v QueryCompletedType
+//   err := v.UnmarshalText([]byte("COMPLETED"))
+func (v *QueryCompletedType) UnmarshalText(value []byte) error {
+	switch s := string(value); s {
+	case "COMPLETED":
+		*v = QueryCompletedTypeCompleted
+		return nil
+	case "RESULT_NOT_CHANGED":
+		*v = QueryCompletedTypeResultNotChanged
+		return nil
+	case "FAILED":
+		*v = QueryCompletedTypeFailed
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "QueryCompletedType", err)
+		}
+		*v = QueryCompletedType(val)
+		return nil
+	}
+}
+
+// MarshalText encodes QueryCompletedType to text.
+//
+// If the enum value is recognized, its name is returned. Otherwise,
+// its integer value is returned.
+//
+// This implements the TextMarshaler interface.
+func (v QueryCompletedType) MarshalText() ([]byte, error) {
+	switch int32(v) {
+	case 0:
+		return []byte("COMPLETED"), nil
+	case 1:
+		return []byte("RESULT_NOT_CHANGED"), nil
+	case 2:
+		return []byte("FAILED"), nil
+	}
+	return []byte(strconv.FormatInt(int64(v), 10)), nil
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of QueryCompletedType.
+// Enums are logged as objects, where the value is logged with key "value", and
+// if this value's name is known, the name is logged with key "name".
+func (v QueryCompletedType) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddInt32("value", int32(v))
+	switch int32(v) {
+	case 0:
+		enc.AddString("name", "COMPLETED")
+	case 1:
+		enc.AddString("name", "RESULT_NOT_CHANGED")
+	case 2:
+		enc.AddString("name", "FAILED")
+	}
+	return nil
+}
+
+// Ptr returns a pointer to this enum value.
+func (v QueryCompletedType) Ptr() *QueryCompletedType {
+	return &v
+}
+
+// ToWire translates QueryCompletedType into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// Enums are represented as 32-bit integers over the wire.
+func (v QueryCompletedType) ToWire() (wire.Value, error) {
+	return wire.NewValueI32(int32(v)), nil
+}
+
+// FromWire deserializes QueryCompletedType from its Thrift-level
+// representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TI32)
+//   if err != nil {
+//     return QueryCompletedType(0), err
+//   }
+//
+//   var v QueryCompletedType
+//   if err := v.FromWire(x); err != nil {
+//     return QueryCompletedType(0), err
+//   }
+//   return v, nil
+func (v *QueryCompletedType) FromWire(w wire.Value) error {
+	*v = (QueryCompletedType)(w.GetI32())
+	return nil
+}
+
+// String returns a readable string representation of QueryCompletedType.
+func (v QueryCompletedType) String() string {
+	w := int32(v)
+	switch w {
+	case 0:
+		return "COMPLETED"
+	case 1:
+		return "RESULT_NOT_CHANGED"
+	case 2:
+		return "FAILED"
+	}
+	return fmt.Sprintf("QueryCompletedType(%d)", w)
+}
+
+// Equals returns true if this QueryCompletedType value matches the provided
+// value.
+func (v QueryCompletedType) Equals(rhs QueryCompletedType) bool {
+	return v == rhs
+}
+
+// MarshalJSON serializes QueryCompletedType into JSON.
+//
+// If the enum value is recognized, its name is returned. Otherwise,
+// its integer value is returned.
+//
+// This implements json.Marshaler.
+func (v QueryCompletedType) MarshalJSON() ([]byte, error) {
+	switch int32(v) {
+	case 0:
+		return ([]byte)("\"COMPLETED\""), nil
+	case 1:
+		return ([]byte)("\"RESULT_NOT_CHANGED\""), nil
+	case 2:
+		return ([]byte)("\"FAILED\""), nil
+	}
+	return ([]byte)(strconv.FormatInt(int64(v), 10)), nil
+}
+
+// UnmarshalJSON attempts to decode QueryCompletedType from its JSON
+// representation.
+//
+// This implementation supports both, numeric and string inputs. If a
+// string is provided, it must be a known enum name.
+//
+// This implements json.Unmarshaler.
+func (v *QueryCompletedType) UnmarshalJSON(text []byte) error {
+	d := json.NewDecoder(bytes.NewReader(text))
+	d.UseNumber()
+	t, err := d.Token()
+	if err != nil {
+		return err
+	}
+
+	switch w := t.(type) {
+	case json.Number:
+		x, err := w.Int64()
+		if err != nil {
+			return err
+		}
+		if x > math.MaxInt32 {
+			return fmt.Errorf("enum overflow from JSON %q for %q", text, "QueryCompletedType")
+		}
+		if x < math.MinInt32 {
+			return fmt.Errorf("enum underflow from JSON %q for %q", text, "QueryCompletedType")
+		}
+		*v = (QueryCompletedType)(x)
+		return nil
+	case string:
+		return v.UnmarshalText([]byte(w))
+	default:
+		return fmt.Errorf("invalid JSON value %q (%T) to unmarshal into %q", t, t, "QueryCompletedType")
+	}
+}
+
 type QueryFailedError struct {
 	Message string `json:"message,required"`
 }
@@ -23206,6 +23616,268 @@ func (v *QueryFailedError) GetMessage() (o string) { return v.Message }
 
 func (v *QueryFailedError) Error() string {
 	return v.String()
+}
+
+type QueryResult struct {
+	CompletedType *QueryCompletedType `json:"completedType,omitempty"`
+	QueryResult   []byte              `json:"queryResult,omitempty"`
+	ErrorMessage  *string             `json:"errorMessage,omitempty"`
+	VersionToken  []byte              `json:"versionToken,omitempty"`
+}
+
+// ToWire translates a QueryResult struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *QueryResult) ToWire() (wire.Value, error) {
+	var (
+		fields [4]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.CompletedType != nil {
+		w, err = v.CompletedType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.QueryResult != nil {
+		w, err = wire.NewValueBinary(v.QueryResult), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+	if v.ErrorMessage != nil {
+		w, err = wire.NewValueString(*(v.ErrorMessage)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 40, Value: w}
+		i++
+	}
+	if v.VersionToken != nil {
+		w, err = wire.NewValueBinary(v.VersionToken), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 50, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _QueryCompletedType_Read(w wire.Value) (QueryCompletedType, error) {
+	var v QueryCompletedType
+	err := v.FromWire(w)
+	return v, err
+}
+
+// FromWire deserializes a QueryResult struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a QueryResult struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v QueryResult
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *QueryResult) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 20:
+			if field.Value.Type() == wire.TI32 {
+				var x QueryCompletedType
+				x, err = _QueryCompletedType_Read(field.Value)
+				v.CompletedType = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 30:
+			if field.Value.Type() == wire.TBinary {
+				v.QueryResult, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 40:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.ErrorMessage = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 50:
+			if field.Value.Type() == wire.TBinary {
+				v.VersionToken, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a QueryResult
+// struct.
+func (v *QueryResult) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [4]string
+	i := 0
+	if v.CompletedType != nil {
+		fields[i] = fmt.Sprintf("CompletedType: %v", *(v.CompletedType))
+		i++
+	}
+	if v.QueryResult != nil {
+		fields[i] = fmt.Sprintf("QueryResult: %v", v.QueryResult)
+		i++
+	}
+	if v.ErrorMessage != nil {
+		fields[i] = fmt.Sprintf("ErrorMessage: %v", *(v.ErrorMessage))
+		i++
+	}
+	if v.VersionToken != nil {
+		fields[i] = fmt.Sprintf("VersionToken: %v", v.VersionToken)
+		i++
+	}
+
+	return fmt.Sprintf("QueryResult{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _QueryCompletedType_EqualsPtr(lhs, rhs *QueryCompletedType) bool {
+	if lhs != nil && rhs != nil {
+
+		x := *lhs
+		y := *rhs
+		return x.Equals(y)
+	}
+	return lhs == nil && rhs == nil
+}
+
+// Equals returns true if all the fields of this QueryResult match the
+// provided QueryResult.
+//
+// This function performs a deep comparison.
+func (v *QueryResult) Equals(rhs *QueryResult) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_QueryCompletedType_EqualsPtr(v.CompletedType, rhs.CompletedType) {
+		return false
+	}
+	if !((v.QueryResult == nil && rhs.QueryResult == nil) || (v.QueryResult != nil && rhs.QueryResult != nil && bytes.Equal(v.QueryResult, rhs.QueryResult))) {
+		return false
+	}
+	if !_String_EqualsPtr(v.ErrorMessage, rhs.ErrorMessage) {
+		return false
+	}
+	if !((v.VersionToken == nil && rhs.VersionToken == nil) || (v.VersionToken != nil && rhs.VersionToken != nil && bytes.Equal(v.VersionToken, rhs.VersionToken))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of QueryResult.
+func (v *QueryResult) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.CompletedType != nil {
+		err = multierr.Append(err, enc.AddObject("completedType", *v.CompletedType))
+	}
+	if v.QueryResult != nil {
+		enc.AddString("queryResult", base64.StdEncoding.EncodeToString(v.QueryResult))
+	}
+	if v.ErrorMessage != nil {
+		enc.AddString("errorMessage", *v.ErrorMessage)
+	}
+	if v.VersionToken != nil {
+		enc.AddString("versionToken", base64.StdEncoding.EncodeToString(v.VersionToken))
+	}
+	return err
+}
+
+// GetCompletedType returns the value of CompletedType if it is set or its
+// zero value if it is unset.
+func (v *QueryResult) GetCompletedType() (o QueryCompletedType) {
+	if v.CompletedType != nil {
+		return *v.CompletedType
+	}
+
+	return
+}
+
+// GetQueryResult returns the value of QueryResult if it is set or its
+// zero value if it is unset.
+func (v *QueryResult) GetQueryResult() (o []byte) {
+	if v.QueryResult != nil {
+		return v.QueryResult
+	}
+
+	return
+}
+
+// GetErrorMessage returns the value of ErrorMessage if it is set or its
+// zero value if it is unset.
+func (v *QueryResult) GetErrorMessage() (o string) {
+	if v.ErrorMessage != nil {
+		return *v.ErrorMessage
+	}
+
+	return
+}
+
+// GetVersionToken returns the value of VersionToken if it is set or its
+// zero value if it is unset.
+func (v *QueryResult) GetVersionToken() (o []byte) {
+	if v.VersionToken != nil {
+		return v.VersionToken
+	}
+
+	return
 }
 
 type QueryTaskCompletedType int32
@@ -23380,9 +24052,10 @@ func (v *QueryTaskCompletedType) UnmarshalJSON(text []byte) error {
 }
 
 type QueryWorkflowRequest struct {
-	Domain    *string            `json:"domain,omitempty"`
-	Execution *WorkflowExecution `json:"execution,omitempty"`
-	Query     *WorkflowQuery     `json:"query,omitempty"`
+	Domain       *string            `json:"domain,omitempty"`
+	Execution    *WorkflowExecution `json:"execution,omitempty"`
+	Query        *WorkflowQuery     `json:"query,omitempty"`
+	VersionToken []byte             `json:"versionToken,omitempty"`
 }
 
 // ToWire translates a QueryWorkflowRequest struct into a Thrift-level intermediate
@@ -23402,7 +24075,7 @@ type QueryWorkflowRequest struct {
 //   }
 func (v *QueryWorkflowRequest) ToWire() (wire.Value, error) {
 	var (
-		fields [3]wire.Field
+		fields [4]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -23430,6 +24103,14 @@ func (v *QueryWorkflowRequest) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+	if v.VersionToken != nil {
+		w, err = wire.NewValueBinary(v.VersionToken), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 40, Value: w}
 		i++
 	}
 
@@ -23484,6 +24165,14 @@ func (v *QueryWorkflowRequest) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 40:
+			if field.Value.Type() == wire.TBinary {
+				v.VersionToken, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -23497,7 +24186,7 @@ func (v *QueryWorkflowRequest) String() string {
 		return "<nil>"
 	}
 
-	var fields [3]string
+	var fields [4]string
 	i := 0
 	if v.Domain != nil {
 		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
@@ -23509,6 +24198,10 @@ func (v *QueryWorkflowRequest) String() string {
 	}
 	if v.Query != nil {
 		fields[i] = fmt.Sprintf("Query: %v", v.Query)
+		i++
+	}
+	if v.VersionToken != nil {
+		fields[i] = fmt.Sprintf("VersionToken: %v", v.VersionToken)
 		i++
 	}
 
@@ -23534,6 +24227,9 @@ func (v *QueryWorkflowRequest) Equals(rhs *QueryWorkflowRequest) bool {
 	if !((v.Query == nil && rhs.Query == nil) || (v.Query != nil && rhs.Query != nil && v.Query.Equals(rhs.Query))) {
 		return false
 	}
+	if !((v.VersionToken == nil && rhs.VersionToken == nil) || (v.VersionToken != nil && rhs.VersionToken != nil && bytes.Equal(v.VersionToken, rhs.VersionToken))) {
+		return false
+	}
 
 	return true
 }
@@ -23552,6 +24248,9 @@ func (v *QueryWorkflowRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err 
 	}
 	if v.Query != nil {
 		err = multierr.Append(err, enc.AddObject("query", v.Query))
+	}
+	if v.VersionToken != nil {
+		enc.AddString("versionToken", base64.StdEncoding.EncodeToString(v.VersionToken))
 	}
 	return err
 }
@@ -23586,8 +24285,19 @@ func (v *QueryWorkflowRequest) GetQuery() (o *WorkflowQuery) {
 	return
 }
 
+// GetVersionToken returns the value of VersionToken if it is set or its
+// zero value if it is unset.
+func (v *QueryWorkflowRequest) GetVersionToken() (o []byte) {
+	if v.VersionToken != nil {
+		return v.VersionToken
+	}
+
+	return
+}
+
 type QueryWorkflowResponse struct {
-	QueryResult []byte `json:"queryResult,omitempty"`
+	QueryResult  []byte `json:"queryResult,omitempty"`
+	VersionToken []byte `json:"versionToken,omitempty"`
 }
 
 // ToWire translates a QueryWorkflowResponse struct into a Thrift-level intermediate
@@ -23607,7 +24317,7 @@ type QueryWorkflowResponse struct {
 //   }
 func (v *QueryWorkflowResponse) ToWire() (wire.Value, error) {
 	var (
-		fields [1]wire.Field
+		fields [2]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -23619,6 +24329,14 @@ func (v *QueryWorkflowResponse) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.VersionToken != nil {
+		w, err = wire.NewValueBinary(v.VersionToken), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
 		i++
 	}
 
@@ -23655,6 +24373,14 @@ func (v *QueryWorkflowResponse) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				v.VersionToken, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -23668,10 +24394,14 @@ func (v *QueryWorkflowResponse) String() string {
 		return "<nil>"
 	}
 
-	var fields [1]string
+	var fields [2]string
 	i := 0
 	if v.QueryResult != nil {
 		fields[i] = fmt.Sprintf("QueryResult: %v", v.QueryResult)
+		i++
+	}
+	if v.VersionToken != nil {
+		fields[i] = fmt.Sprintf("VersionToken: %v", v.VersionToken)
 		i++
 	}
 
@@ -23691,6 +24421,9 @@ func (v *QueryWorkflowResponse) Equals(rhs *QueryWorkflowResponse) bool {
 	if !((v.QueryResult == nil && rhs.QueryResult == nil) || (v.QueryResult != nil && rhs.QueryResult != nil && bytes.Equal(v.QueryResult, rhs.QueryResult))) {
 		return false
 	}
+	if !((v.VersionToken == nil && rhs.VersionToken == nil) || (v.VersionToken != nil && rhs.VersionToken != nil && bytes.Equal(v.VersionToken, rhs.VersionToken))) {
+		return false
+	}
 
 	return true
 }
@@ -23704,6 +24437,9 @@ func (v *QueryWorkflowResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (err
 	if v.QueryResult != nil {
 		enc.AddString("queryResult", base64.StdEncoding.EncodeToString(v.QueryResult))
 	}
+	if v.VersionToken != nil {
+		enc.AddString("versionToken", base64.StdEncoding.EncodeToString(v.VersionToken))
+	}
 	return err
 }
 
@@ -23712,6 +24448,16 @@ func (v *QueryWorkflowResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (err
 func (v *QueryWorkflowResponse) GetQueryResult() (o []byte) {
 	if v.QueryResult != nil {
 		return v.QueryResult
+	}
+
+	return
+}
+
+// GetVersionToken returns the value of VersionToken if it is set or its
+// zero value if it is unset.
+func (v *QueryWorkflowResponse) GetVersionToken() (o []byte) {
+	if v.VersionToken != nil {
+		return v.VersionToken
 	}
 
 	return
@@ -29151,6 +29897,8 @@ type RespondDecisionTaskCompletedRequest struct {
 	ReturnNewDecisionTask      *bool                      `json:"returnNewDecisionTask,omitempty"`
 	ForceCreateNewDecisionTask *bool                      `json:"forceCreateNewDecisionTask,omitempty"`
 	BinaryChecksum             *string                    `json:"binaryChecksum,omitempty"`
+	UpdateResults              []*UpdateResult            `json:"updateResults,omitempty"`
+	QueryResults               []*QueryResult             `json:"queryResults,omitempty"`
 }
 
 type _List_Decision_ValueList []*Decision
@@ -29182,6 +29930,64 @@ func (_List_Decision_ValueList) ValueType() wire.Type {
 
 func (_List_Decision_ValueList) Close() {}
 
+type _List_UpdateResult_ValueList []*UpdateResult
+
+func (v _List_UpdateResult_ValueList) ForEach(f func(wire.Value) error) error {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
+		w, err := x.ToWire()
+		if err != nil {
+			return err
+		}
+		err = f(w)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (v _List_UpdateResult_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_UpdateResult_ValueList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_List_UpdateResult_ValueList) Close() {}
+
+type _List_QueryResult_ValueList []*QueryResult
+
+func (v _List_QueryResult_ValueList) ForEach(f func(wire.Value) error) error {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
+		w, err := x.ToWire()
+		if err != nil {
+			return err
+		}
+		err = f(w)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (v _List_QueryResult_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_QueryResult_ValueList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_List_QueryResult_ValueList) Close() {}
+
 // ToWire translates a RespondDecisionTaskCompletedRequest struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
@@ -29199,7 +30005,7 @@ func (_List_Decision_ValueList) Close() {}
 //   }
 func (v *RespondDecisionTaskCompletedRequest) ToWire() (wire.Value, error) {
 	var (
-		fields [8]wire.Field
+		fields [10]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -29269,6 +30075,22 @@ func (v *RespondDecisionTaskCompletedRequest) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 80, Value: w}
 		i++
 	}
+	if v.UpdateResults != nil {
+		w, err = wire.NewValueList(_List_UpdateResult_ValueList(v.UpdateResults)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 90, Value: w}
+		i++
+	}
+	if v.QueryResults != nil {
+		w, err = wire.NewValueList(_List_QueryResult_ValueList(v.QueryResults)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 100, Value: w}
+		i++
+	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
@@ -29301,6 +30123,54 @@ func _StickyExecutionAttributes_Read(w wire.Value) (*StickyExecutionAttributes, 
 	var v StickyExecutionAttributes
 	err := v.FromWire(w)
 	return &v, err
+}
+
+func _UpdateResult_Read(w wire.Value) (*UpdateResult, error) {
+	var v UpdateResult
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _List_UpdateResult_Read(l wire.ValueList) ([]*UpdateResult, error) {
+	if l.ValueType() != wire.TStruct {
+		return nil, nil
+	}
+
+	o := make([]*UpdateResult, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
+		i, err := _UpdateResult_Read(x)
+		if err != nil {
+			return err
+		}
+		o = append(o, i)
+		return nil
+	})
+	l.Close()
+	return o, err
+}
+
+func _QueryResult_Read(w wire.Value) (*QueryResult, error) {
+	var v QueryResult
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _List_QueryResult_Read(l wire.ValueList) ([]*QueryResult, error) {
+	if l.ValueType() != wire.TStruct {
+		return nil, nil
+	}
+
+	o := make([]*QueryResult, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
+		i, err := _QueryResult_Read(x)
+		if err != nil {
+			return err
+		}
+		o = append(o, i)
+		return nil
+	})
+	l.Close()
+	return o, err
 }
 
 // FromWire deserializes a RespondDecisionTaskCompletedRequest struct from its Thrift-level
@@ -29397,6 +30267,22 @@ func (v *RespondDecisionTaskCompletedRequest) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 90:
+			if field.Value.Type() == wire.TList {
+				v.UpdateResults, err = _List_UpdateResult_Read(field.Value.GetList())
+				if err != nil {
+					return err
+				}
+
+			}
+		case 100:
+			if field.Value.Type() == wire.TList {
+				v.QueryResults, err = _List_QueryResult_Read(field.Value.GetList())
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -29410,7 +30296,7 @@ func (v *RespondDecisionTaskCompletedRequest) String() string {
 		return "<nil>"
 	}
 
-	var fields [8]string
+	var fields [10]string
 	i := 0
 	if v.TaskToken != nil {
 		fields[i] = fmt.Sprintf("TaskToken: %v", v.TaskToken)
@@ -29444,11 +30330,49 @@ func (v *RespondDecisionTaskCompletedRequest) String() string {
 		fields[i] = fmt.Sprintf("BinaryChecksum: %v", *(v.BinaryChecksum))
 		i++
 	}
+	if v.UpdateResults != nil {
+		fields[i] = fmt.Sprintf("UpdateResults: %v", v.UpdateResults)
+		i++
+	}
+	if v.QueryResults != nil {
+		fields[i] = fmt.Sprintf("QueryResults: %v", v.QueryResults)
+		i++
+	}
 
 	return fmt.Sprintf("RespondDecisionTaskCompletedRequest{%v}", strings.Join(fields[:i], ", "))
 }
 
 func _List_Decision_Equals(lhs, rhs []*Decision) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for i, lv := range lhs {
+		rv := rhs[i]
+		if !lv.Equals(rv) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func _List_UpdateResult_Equals(lhs, rhs []*UpdateResult) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for i, lv := range lhs {
+		rv := rhs[i]
+		if !lv.Equals(rv) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func _List_QueryResult_Equals(lhs, rhs []*QueryResult) bool {
 	if len(lhs) != len(rhs) {
 		return false
 	}
@@ -29497,6 +30421,12 @@ func (v *RespondDecisionTaskCompletedRequest) Equals(rhs *RespondDecisionTaskCom
 	if !_String_EqualsPtr(v.BinaryChecksum, rhs.BinaryChecksum) {
 		return false
 	}
+	if !((v.UpdateResults == nil && rhs.UpdateResults == nil) || (v.UpdateResults != nil && rhs.UpdateResults != nil && _List_UpdateResult_Equals(v.UpdateResults, rhs.UpdateResults))) {
+		return false
+	}
+	if !((v.QueryResults == nil && rhs.QueryResults == nil) || (v.QueryResults != nil && rhs.QueryResults != nil && _List_QueryResult_Equals(v.QueryResults, rhs.QueryResults))) {
+		return false
+	}
 
 	return true
 }
@@ -29506,6 +30436,28 @@ type _List_Decision_Zapper []*Decision
 // MarshalLogArray implements zapcore.ArrayMarshaler, enabling
 // fast logging of _List_Decision_Zapper.
 func (l _List_Decision_Zapper) MarshalLogArray(enc zapcore.ArrayEncoder) (err error) {
+	for _, v := range l {
+		err = multierr.Append(err, enc.AppendObject(v))
+	}
+	return err
+}
+
+type _List_UpdateResult_Zapper []*UpdateResult
+
+// MarshalLogArray implements zapcore.ArrayMarshaler, enabling
+// fast logging of _List_UpdateResult_Zapper.
+func (l _List_UpdateResult_Zapper) MarshalLogArray(enc zapcore.ArrayEncoder) (err error) {
+	for _, v := range l {
+		err = multierr.Append(err, enc.AppendObject(v))
+	}
+	return err
+}
+
+type _List_QueryResult_Zapper []*QueryResult
+
+// MarshalLogArray implements zapcore.ArrayMarshaler, enabling
+// fast logging of _List_QueryResult_Zapper.
+func (l _List_QueryResult_Zapper) MarshalLogArray(enc zapcore.ArrayEncoder) (err error) {
 	for _, v := range l {
 		err = multierr.Append(err, enc.AppendObject(v))
 	}
@@ -29541,6 +30493,12 @@ func (v *RespondDecisionTaskCompletedRequest) MarshalLogObject(enc zapcore.Objec
 	}
 	if v.BinaryChecksum != nil {
 		enc.AddString("binaryChecksum", *v.BinaryChecksum)
+	}
+	if v.UpdateResults != nil {
+		err = multierr.Append(err, enc.AddArray("updateResults", (_List_UpdateResult_Zapper)(v.UpdateResults)))
+	}
+	if v.QueryResults != nil {
+		err = multierr.Append(err, enc.AddArray("queryResults", (_List_QueryResult_Zapper)(v.QueryResults)))
 	}
 	return err
 }
@@ -29620,6 +30578,26 @@ func (v *RespondDecisionTaskCompletedRequest) GetForceCreateNewDecisionTask() (o
 func (v *RespondDecisionTaskCompletedRequest) GetBinaryChecksum() (o string) {
 	if v.BinaryChecksum != nil {
 		return *v.BinaryChecksum
+	}
+
+	return
+}
+
+// GetUpdateResults returns the value of UpdateResults if it is set or its
+// zero value if it is unset.
+func (v *RespondDecisionTaskCompletedRequest) GetUpdateResults() (o []*UpdateResult) {
+	if v.UpdateResults != nil {
+		return v.UpdateResults
+	}
+
+	return
+}
+
+// GetQueryResults returns the value of QueryResults if it is set or its
+// zero value if it is unset.
+func (v *RespondDecisionTaskCompletedRequest) GetQueryResults() (o []*QueryResult) {
+	if v.QueryResults != nil {
+		return v.QueryResults
 	}
 
 	return
@@ -38515,6 +39493,177 @@ func (v *TransientDecisionInfo) GetStartedEvent() (o *HistoryEvent) {
 	return
 }
 
+type UpdateCompletedType int32
+
+const (
+	UpdateCompletedTypeCompleted UpdateCompletedType = 0
+	UpdateCompletedTypeFailed    UpdateCompletedType = 1
+)
+
+// UpdateCompletedType_Values returns all recognized values of UpdateCompletedType.
+func UpdateCompletedType_Values() []UpdateCompletedType {
+	return []UpdateCompletedType{
+		UpdateCompletedTypeCompleted,
+		UpdateCompletedTypeFailed,
+	}
+}
+
+// UnmarshalText tries to decode UpdateCompletedType from a byte slice
+// containing its name.
+//
+//   var v UpdateCompletedType
+//   err := v.UnmarshalText([]byte("COMPLETED"))
+func (v *UpdateCompletedType) UnmarshalText(value []byte) error {
+	switch s := string(value); s {
+	case "COMPLETED":
+		*v = UpdateCompletedTypeCompleted
+		return nil
+	case "FAILED":
+		*v = UpdateCompletedTypeFailed
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "UpdateCompletedType", err)
+		}
+		*v = UpdateCompletedType(val)
+		return nil
+	}
+}
+
+// MarshalText encodes UpdateCompletedType to text.
+//
+// If the enum value is recognized, its name is returned. Otherwise,
+// its integer value is returned.
+//
+// This implements the TextMarshaler interface.
+func (v UpdateCompletedType) MarshalText() ([]byte, error) {
+	switch int32(v) {
+	case 0:
+		return []byte("COMPLETED"), nil
+	case 1:
+		return []byte("FAILED"), nil
+	}
+	return []byte(strconv.FormatInt(int64(v), 10)), nil
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of UpdateCompletedType.
+// Enums are logged as objects, where the value is logged with key "value", and
+// if this value's name is known, the name is logged with key "name".
+func (v UpdateCompletedType) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddInt32("value", int32(v))
+	switch int32(v) {
+	case 0:
+		enc.AddString("name", "COMPLETED")
+	case 1:
+		enc.AddString("name", "FAILED")
+	}
+	return nil
+}
+
+// Ptr returns a pointer to this enum value.
+func (v UpdateCompletedType) Ptr() *UpdateCompletedType {
+	return &v
+}
+
+// ToWire translates UpdateCompletedType into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// Enums are represented as 32-bit integers over the wire.
+func (v UpdateCompletedType) ToWire() (wire.Value, error) {
+	return wire.NewValueI32(int32(v)), nil
+}
+
+// FromWire deserializes UpdateCompletedType from its Thrift-level
+// representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TI32)
+//   if err != nil {
+//     return UpdateCompletedType(0), err
+//   }
+//
+//   var v UpdateCompletedType
+//   if err := v.FromWire(x); err != nil {
+//     return UpdateCompletedType(0), err
+//   }
+//   return v, nil
+func (v *UpdateCompletedType) FromWire(w wire.Value) error {
+	*v = (UpdateCompletedType)(w.GetI32())
+	return nil
+}
+
+// String returns a readable string representation of UpdateCompletedType.
+func (v UpdateCompletedType) String() string {
+	w := int32(v)
+	switch w {
+	case 0:
+		return "COMPLETED"
+	case 1:
+		return "FAILED"
+	}
+	return fmt.Sprintf("UpdateCompletedType(%d)", w)
+}
+
+// Equals returns true if this UpdateCompletedType value matches the provided
+// value.
+func (v UpdateCompletedType) Equals(rhs UpdateCompletedType) bool {
+	return v == rhs
+}
+
+// MarshalJSON serializes UpdateCompletedType into JSON.
+//
+// If the enum value is recognized, its name is returned. Otherwise,
+// its integer value is returned.
+//
+// This implements json.Marshaler.
+func (v UpdateCompletedType) MarshalJSON() ([]byte, error) {
+	switch int32(v) {
+	case 0:
+		return ([]byte)("\"COMPLETED\""), nil
+	case 1:
+		return ([]byte)("\"FAILED\""), nil
+	}
+	return ([]byte)(strconv.FormatInt(int64(v), 10)), nil
+}
+
+// UnmarshalJSON attempts to decode UpdateCompletedType from its JSON
+// representation.
+//
+// This implementation supports both, numeric and string inputs. If a
+// string is provided, it must be a known enum name.
+//
+// This implements json.Unmarshaler.
+func (v *UpdateCompletedType) UnmarshalJSON(text []byte) error {
+	d := json.NewDecoder(bytes.NewReader(text))
+	d.UseNumber()
+	t, err := d.Token()
+	if err != nil {
+		return err
+	}
+
+	switch w := t.(type) {
+	case json.Number:
+		x, err := w.Int64()
+		if err != nil {
+			return err
+		}
+		if x > math.MaxInt32 {
+			return fmt.Errorf("enum overflow from JSON %q for %q", text, "UpdateCompletedType")
+		}
+		if x < math.MinInt32 {
+			return fmt.Errorf("enum underflow from JSON %q for %q", text, "UpdateCompletedType")
+		}
+		*v = (UpdateCompletedType)(x)
+		return nil
+	case string:
+		return v.UnmarshalText([]byte(w))
+	default:
+		return fmt.Errorf("invalid JSON value %q (%T) to unmarshal into %q", t, t, "UpdateCompletedType")
+	}
+}
+
 type UpdateDomainInfo struct {
 	Description *string           `json:"description,omitempty"`
 	OwnerEmail  *string           `json:"ownerEmail,omitempty"`
@@ -39291,6 +40440,772 @@ func (v *UpdateDomainResponse) GetFailoverVersion() (o int64) {
 func (v *UpdateDomainResponse) GetIsGlobalDomain() (o bool) {
 	if v.IsGlobalDomain != nil {
 		return *v.IsGlobalDomain
+	}
+
+	return
+}
+
+type UpdateFailedError struct {
+	Message string `json:"message,required"`
+}
+
+// ToWire translates a UpdateFailedError struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *UpdateFailedError) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	w, err = wire.NewValueString(v.Message), error(nil)
+	if err != nil {
+		return w, err
+	}
+	fields[i] = wire.Field{ID: 1, Value: w}
+	i++
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a UpdateFailedError struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a UpdateFailedError struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v UpdateFailedError
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *UpdateFailedError) FromWire(w wire.Value) error {
+	var err error
+
+	messageIsSet := false
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TBinary {
+				v.Message, err = field.Value.GetString(), error(nil)
+				if err != nil {
+					return err
+				}
+				messageIsSet = true
+			}
+		}
+	}
+
+	if !messageIsSet {
+		return errors.New("field Message of UpdateFailedError is required")
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a UpdateFailedError
+// struct.
+func (v *UpdateFailedError) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	fields[i] = fmt.Sprintf("Message: %v", v.Message)
+	i++
+
+	return fmt.Sprintf("UpdateFailedError{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this UpdateFailedError match the
+// provided UpdateFailedError.
+//
+// This function performs a deep comparison.
+func (v *UpdateFailedError) Equals(rhs *UpdateFailedError) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !(v.Message == rhs.Message) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of UpdateFailedError.
+func (v *UpdateFailedError) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	enc.AddString("message", v.Message)
+	return err
+}
+
+// GetMessage returns the value of Message if it is set or its
+// zero value if it is unset.
+func (v *UpdateFailedError) GetMessage() (o string) { return v.Message }
+
+func (v *UpdateFailedError) Error() string {
+	return v.String()
+}
+
+type UpdateResult struct {
+	CompletedType *UpdateCompletedType `json:"completedType,omitempty"`
+	UpdateResult  []byte               `json:"updateResult,omitempty"`
+	ErrorMessage  *string              `json:"errorMessage,omitempty"`
+	VersionToken  []byte               `json:"versionToken,omitempty"`
+}
+
+// ToWire translates a UpdateResult struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *UpdateResult) ToWire() (wire.Value, error) {
+	var (
+		fields [4]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.CompletedType != nil {
+		w, err = v.CompletedType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.UpdateResult != nil {
+		w, err = wire.NewValueBinary(v.UpdateResult), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+	if v.ErrorMessage != nil {
+		w, err = wire.NewValueString(*(v.ErrorMessage)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 40, Value: w}
+		i++
+	}
+	if v.VersionToken != nil {
+		w, err = wire.NewValueBinary(v.VersionToken), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 50, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _UpdateCompletedType_Read(w wire.Value) (UpdateCompletedType, error) {
+	var v UpdateCompletedType
+	err := v.FromWire(w)
+	return v, err
+}
+
+// FromWire deserializes a UpdateResult struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a UpdateResult struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v UpdateResult
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *UpdateResult) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 20:
+			if field.Value.Type() == wire.TI32 {
+				var x UpdateCompletedType
+				x, err = _UpdateCompletedType_Read(field.Value)
+				v.CompletedType = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 30:
+			if field.Value.Type() == wire.TBinary {
+				v.UpdateResult, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 40:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.ErrorMessage = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 50:
+			if field.Value.Type() == wire.TBinary {
+				v.VersionToken, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a UpdateResult
+// struct.
+func (v *UpdateResult) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [4]string
+	i := 0
+	if v.CompletedType != nil {
+		fields[i] = fmt.Sprintf("CompletedType: %v", *(v.CompletedType))
+		i++
+	}
+	if v.UpdateResult != nil {
+		fields[i] = fmt.Sprintf("UpdateResult: %v", v.UpdateResult)
+		i++
+	}
+	if v.ErrorMessage != nil {
+		fields[i] = fmt.Sprintf("ErrorMessage: %v", *(v.ErrorMessage))
+		i++
+	}
+	if v.VersionToken != nil {
+		fields[i] = fmt.Sprintf("VersionToken: %v", v.VersionToken)
+		i++
+	}
+
+	return fmt.Sprintf("UpdateResult{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _UpdateCompletedType_EqualsPtr(lhs, rhs *UpdateCompletedType) bool {
+	if lhs != nil && rhs != nil {
+
+		x := *lhs
+		y := *rhs
+		return x.Equals(y)
+	}
+	return lhs == nil && rhs == nil
+}
+
+// Equals returns true if all the fields of this UpdateResult match the
+// provided UpdateResult.
+//
+// This function performs a deep comparison.
+func (v *UpdateResult) Equals(rhs *UpdateResult) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_UpdateCompletedType_EqualsPtr(v.CompletedType, rhs.CompletedType) {
+		return false
+	}
+	if !((v.UpdateResult == nil && rhs.UpdateResult == nil) || (v.UpdateResult != nil && rhs.UpdateResult != nil && bytes.Equal(v.UpdateResult, rhs.UpdateResult))) {
+		return false
+	}
+	if !_String_EqualsPtr(v.ErrorMessage, rhs.ErrorMessage) {
+		return false
+	}
+	if !((v.VersionToken == nil && rhs.VersionToken == nil) || (v.VersionToken != nil && rhs.VersionToken != nil && bytes.Equal(v.VersionToken, rhs.VersionToken))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of UpdateResult.
+func (v *UpdateResult) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.CompletedType != nil {
+		err = multierr.Append(err, enc.AddObject("completedType", *v.CompletedType))
+	}
+	if v.UpdateResult != nil {
+		enc.AddString("updateResult", base64.StdEncoding.EncodeToString(v.UpdateResult))
+	}
+	if v.ErrorMessage != nil {
+		enc.AddString("errorMessage", *v.ErrorMessage)
+	}
+	if v.VersionToken != nil {
+		enc.AddString("versionToken", base64.StdEncoding.EncodeToString(v.VersionToken))
+	}
+	return err
+}
+
+// GetCompletedType returns the value of CompletedType if it is set or its
+// zero value if it is unset.
+func (v *UpdateResult) GetCompletedType() (o UpdateCompletedType) {
+	if v.CompletedType != nil {
+		return *v.CompletedType
+	}
+
+	return
+}
+
+// GetUpdateResult returns the value of UpdateResult if it is set or its
+// zero value if it is unset.
+func (v *UpdateResult) GetUpdateResult() (o []byte) {
+	if v.UpdateResult != nil {
+		return v.UpdateResult
+	}
+
+	return
+}
+
+// GetErrorMessage returns the value of ErrorMessage if it is set or its
+// zero value if it is unset.
+func (v *UpdateResult) GetErrorMessage() (o string) {
+	if v.ErrorMessage != nil {
+		return *v.ErrorMessage
+	}
+
+	return
+}
+
+// GetVersionToken returns the value of VersionToken if it is set or its
+// zero value if it is unset.
+func (v *UpdateResult) GetVersionToken() (o []byte) {
+	if v.VersionToken != nil {
+		return v.VersionToken
+	}
+
+	return
+}
+
+type UpdateWorkflowRequest struct {
+	Domain    *string            `json:"domain,omitempty"`
+	Execution *WorkflowExecution `json:"execution,omitempty"`
+	Update    *WorkflowUpdate    `json:"update,omitempty"`
+}
+
+// ToWire translates a UpdateWorkflowRequest struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *UpdateWorkflowRequest) ToWire() (wire.Value, error) {
+	var (
+		fields [3]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Domain != nil {
+		w, err = wire.NewValueString(*(v.Domain)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.Execution != nil {
+		w, err = v.Execution.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.Update != nil {
+		w, err = v.Update.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a UpdateWorkflowRequest struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a UpdateWorkflowRequest struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v UpdateWorkflowRequest
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *UpdateWorkflowRequest) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Domain = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TStruct {
+				v.Execution, err = _WorkflowExecution_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 30:
+			if field.Value.Type() == wire.TStruct {
+				v.Update, err = _WorkflowUpdate_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a UpdateWorkflowRequest
+// struct.
+func (v *UpdateWorkflowRequest) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [3]string
+	i := 0
+	if v.Domain != nil {
+		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
+		i++
+	}
+	if v.Execution != nil {
+		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		i++
+	}
+	if v.Update != nil {
+		fields[i] = fmt.Sprintf("Update: %v", v.Update)
+		i++
+	}
+
+	return fmt.Sprintf("UpdateWorkflowRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this UpdateWorkflowRequest match the
+// provided UpdateWorkflowRequest.
+//
+// This function performs a deep comparison.
+func (v *UpdateWorkflowRequest) Equals(rhs *UpdateWorkflowRequest) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.Domain, rhs.Domain) {
+		return false
+	}
+	if !((v.Execution == nil && rhs.Execution == nil) || (v.Execution != nil && rhs.Execution != nil && v.Execution.Equals(rhs.Execution))) {
+		return false
+	}
+	if !((v.Update == nil && rhs.Update == nil) || (v.Update != nil && rhs.Update != nil && v.Update.Equals(rhs.Update))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of UpdateWorkflowRequest.
+func (v *UpdateWorkflowRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Domain != nil {
+		enc.AddString("domain", *v.Domain)
+	}
+	if v.Execution != nil {
+		err = multierr.Append(err, enc.AddObject("execution", v.Execution))
+	}
+	if v.Update != nil {
+		err = multierr.Append(err, enc.AddObject("update", v.Update))
+	}
+	return err
+}
+
+// GetDomain returns the value of Domain if it is set or its
+// zero value if it is unset.
+func (v *UpdateWorkflowRequest) GetDomain() (o string) {
+	if v.Domain != nil {
+		return *v.Domain
+	}
+
+	return
+}
+
+// GetExecution returns the value of Execution if it is set or its
+// zero value if it is unset.
+func (v *UpdateWorkflowRequest) GetExecution() (o *WorkflowExecution) {
+	if v.Execution != nil {
+		return v.Execution
+	}
+
+	return
+}
+
+// GetUpdate returns the value of Update if it is set or its
+// zero value if it is unset.
+func (v *UpdateWorkflowRequest) GetUpdate() (o *WorkflowUpdate) {
+	if v.Update != nil {
+		return v.Update
+	}
+
+	return
+}
+
+type UpdateWorkflowResponse struct {
+	UpdateResult []byte `json:"updateResult,omitempty"`
+	VersionToken []byte `json:"versionToken,omitempty"`
+}
+
+// ToWire translates a UpdateWorkflowResponse struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *UpdateWorkflowResponse) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.UpdateResult != nil {
+		w, err = wire.NewValueBinary(v.UpdateResult), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.VersionToken != nil {
+		w, err = wire.NewValueBinary(v.VersionToken), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a UpdateWorkflowResponse struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a UpdateWorkflowResponse struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v UpdateWorkflowResponse
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *UpdateWorkflowResponse) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				v.UpdateResult, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				v.VersionToken, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a UpdateWorkflowResponse
+// struct.
+func (v *UpdateWorkflowResponse) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.UpdateResult != nil {
+		fields[i] = fmt.Sprintf("UpdateResult: %v", v.UpdateResult)
+		i++
+	}
+	if v.VersionToken != nil {
+		fields[i] = fmt.Sprintf("VersionToken: %v", v.VersionToken)
+		i++
+	}
+
+	return fmt.Sprintf("UpdateWorkflowResponse{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this UpdateWorkflowResponse match the
+// provided UpdateWorkflowResponse.
+//
+// This function performs a deep comparison.
+func (v *UpdateWorkflowResponse) Equals(rhs *UpdateWorkflowResponse) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.UpdateResult == nil && rhs.UpdateResult == nil) || (v.UpdateResult != nil && rhs.UpdateResult != nil && bytes.Equal(v.UpdateResult, rhs.UpdateResult))) {
+		return false
+	}
+	if !((v.VersionToken == nil && rhs.VersionToken == nil) || (v.VersionToken != nil && rhs.VersionToken != nil && bytes.Equal(v.VersionToken, rhs.VersionToken))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of UpdateWorkflowResponse.
+func (v *UpdateWorkflowResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.UpdateResult != nil {
+		enc.AddString("updateResult", base64.StdEncoding.EncodeToString(v.UpdateResult))
+	}
+	if v.VersionToken != nil {
+		enc.AddString("versionToken", base64.StdEncoding.EncodeToString(v.VersionToken))
+	}
+	return err
+}
+
+// GetUpdateResult returns the value of UpdateResult if it is set or its
+// zero value if it is unset.
+func (v *UpdateWorkflowResponse) GetUpdateResult() (o []byte) {
+	if v.UpdateResult != nil {
+		return v.UpdateResult
+	}
+
+	return
+}
+
+// GetVersionToken returns the value of VersionToken if it is set or its
+// zero value if it is unset.
+func (v *UpdateWorkflowResponse) GetVersionToken() (o []byte) {
+	if v.VersionToken != nil {
+		return v.VersionToken
 	}
 
 	return
@@ -43986,6 +45901,176 @@ func (v *WorkflowTypeFilter) MarshalLogObject(enc zapcore.ObjectEncoder) (err er
 func (v *WorkflowTypeFilter) GetName() (o string) {
 	if v.Name != nil {
 		return *v.Name
+	}
+
+	return
+}
+
+type WorkflowUpdate struct {
+	UpdateType *string `json:"updateType,omitempty"`
+	UpdateArgs []byte  `json:"updateArgs,omitempty"`
+}
+
+// ToWire translates a WorkflowUpdate struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *WorkflowUpdate) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.UpdateType != nil {
+		w, err = wire.NewValueString(*(v.UpdateType)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.UpdateArgs != nil {
+		w, err = wire.NewValueBinary(v.UpdateArgs), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a WorkflowUpdate struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a WorkflowUpdate struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v WorkflowUpdate
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *WorkflowUpdate) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.UpdateType = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				v.UpdateArgs, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a WorkflowUpdate
+// struct.
+func (v *WorkflowUpdate) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.UpdateType != nil {
+		fields[i] = fmt.Sprintf("UpdateType: %v", *(v.UpdateType))
+		i++
+	}
+	if v.UpdateArgs != nil {
+		fields[i] = fmt.Sprintf("UpdateArgs: %v", v.UpdateArgs)
+		i++
+	}
+
+	return fmt.Sprintf("WorkflowUpdate{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this WorkflowUpdate match the
+// provided WorkflowUpdate.
+//
+// This function performs a deep comparison.
+func (v *WorkflowUpdate) Equals(rhs *WorkflowUpdate) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.UpdateType, rhs.UpdateType) {
+		return false
+	}
+	if !((v.UpdateArgs == nil && rhs.UpdateArgs == nil) || (v.UpdateArgs != nil && rhs.UpdateArgs != nil && bytes.Equal(v.UpdateArgs, rhs.UpdateArgs))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of WorkflowUpdate.
+func (v *WorkflowUpdate) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.UpdateType != nil {
+		enc.AddString("updateType", *v.UpdateType)
+	}
+	if v.UpdateArgs != nil {
+		enc.AddString("updateArgs", base64.StdEncoding.EncodeToString(v.UpdateArgs))
+	}
+	return err
+}
+
+// GetUpdateType returns the value of UpdateType if it is set or its
+// zero value if it is unset.
+func (v *WorkflowUpdate) GetUpdateType() (o string) {
+	if v.UpdateType != nil {
+		return *v.UpdateType
+	}
+
+	return
+}
+
+// GetUpdateArgs returns the value of UpdateArgs if it is set or its
+// zero value if it is unset.
+func (v *WorkflowUpdate) GetUpdateArgs() (o []byte) {
+	if v.UpdateArgs != nil {
+		return v.UpdateArgs
 	}
 
 	return

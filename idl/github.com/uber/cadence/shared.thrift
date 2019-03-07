@@ -54,6 +54,10 @@ exception QueryFailedError {
   1: required string message
 }
 
+exception UpdateFailedError {
+  1: required string message
+}
+
 exception DomainNotActiveError {
   1: required string message
   2: required string domainName
@@ -223,6 +227,17 @@ enum ChildPolicy {
 
 enum QueryTaskCompletedType {
   COMPLETED,
+  FAILED,
+}
+
+enum UpdateCompletedType {
+  COMPLETED,
+  FAILED,
+}
+
+enum QueryCompletedType {
+  COMPLETED,
+  RESULT_NOT_CHANGED,
   FAILED,
 }
 
@@ -952,8 +967,10 @@ struct PollForDecisionTaskResponse {
   54: optional i64 (js.type = "Long") backlogCountHint
   60: optional History history
   70: optional binary nextPageToken
-  80: optional WorkflowQuery query
+  80: optional WorkflowQuery query // DEPRECATED: use queries
   90: optional TaskList WorkflowExecutionTaskList
+  100: optional list<WorkflowUpdate> updates
+  110: optional list<WorkflowQuery> queries
 }
 
 struct StickyExecutionAttributes {
@@ -970,6 +987,22 @@ struct RespondDecisionTaskCompletedRequest {
   60: optional bool returnNewDecisionTask
   70: optional bool forceCreateNewDecisionTask
   80: optional string binaryChecksum
+  90: optional list<UpdateResult> updateResults
+  100: optional list<QueryResult> queryResults
+}
+
+struct UpdateResult {
+  20: optional UpdateCompletedType completedType
+  30: optional binary updateResult
+  40: optional string errorMessage
+  50: optional binary versionToken;
+}
+
+struct QueryResult {
+  20: optional QueryCompletedType completedType
+  30: optional binary queryResult
+  40: optional string errorMessage
+  50: optional binary versionToken;
 }
 
 struct RespondDecisionTaskCompletedResponse {
@@ -1176,15 +1209,33 @@ struct QueryWorkflowRequest {
   10: optional string domain
   20: optional WorkflowExecution execution
   30: optional WorkflowQuery query
+  40: optional binary versionToken
 }
 
 struct QueryWorkflowResponse {
   10: optional binary queryResult
+  20: optional binary versionToken
 }
 
 struct WorkflowQuery {
   10: optional string queryType
   20: optional binary queryArgs
+}
+
+struct UpdateWorkflowRequest {
+  10: optional string domain
+  20: optional WorkflowExecution execution
+  30: optional WorkflowUpdate update
+}
+
+struct UpdateWorkflowResponse {
+  10: optional binary updateResult
+  20: optional binary versionToken
+}
+
+struct WorkflowUpdate {
+  10: optional string updateType
+  20: optional binary updateArgs
 }
 
 struct ResetStickyTaskListRequest {
