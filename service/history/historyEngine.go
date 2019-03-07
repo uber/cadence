@@ -27,6 +27,8 @@ import (
 	"fmt"
 	"time"
 
+	"go.uber.org/cadence/.gen/go/shared"
+
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
@@ -118,6 +120,9 @@ var (
 	ErrBufferedEventsLimitExceeded = &workflow.LimitExceededError{Message: "Exceeded workflow execution limit for buffered events"}
 	// ErrSignalsLimitExceeded is the error indicating limit reached for maximum number of signal events
 	ErrSignalsLimitExceeded = &workflow.LimitExceededError{Message: "Exceeded workflow execution limit for signal events"}
+	// ErrEventsAterWorkflowFinish is the error indicating server error trying to write events after workflow finish event
+	ErrEventsAterWorkflowFinish = &shared.InternalServiceError{Message: "error validating last event being workflow finish event."}
+
 	// FailedWorkflowCloseState is a set of failed workflow close states, used for start workflow policy
 	// for start workflow execution API
 	FailedWorkflowCloseState = map[int]bool{
@@ -816,7 +821,11 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(ctx context.Context,
 		// for closed workflow
 		closeStatus := getWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
 		result.WorkflowExecutionInfo.CloseStatus = &closeStatus
-		result.WorkflowExecutionInfo.CloseTime = common.Int64Ptr(msBuilder.GetLastUpdatedTimestamp())
+		completionEvent, ok := msBuilder.GetCompletionEvent()
+		if !ok {
+			return nil, &workflow.InternalServiceError{Message: "Unable to get workflow completion event."}
+		}
+		result.WorkflowExecutionInfo.CloseTime = common.Int64Ptr(completionEvent.GetTimestamp())
 	}
 
 	if len(msBuilder.GetPendingActivityInfos()) > 0 {
@@ -1280,7 +1289,7 @@ Update_History_Loop:
 					}
 
 					startAttributes := startEvent.WorkflowExecutionStartedEventAttributes
-					continueAsnewAttributes := &workflow.ContinueAsNewWorkflowExecutionDecisionAttributes{
+					continueAsNewAttributes := &workflow.ContinueAsNewWorkflowExecutionDecisionAttributes{
 						WorkflowType:                        startAttributes.WorkflowType,
 						TaskList:                            startAttributes.TaskList,
 						RetryPolicy:                         startAttributes.RetryPolicy,
@@ -1293,7 +1302,8 @@ Update_History_Loop:
 						CronSchedule:                        common.StringPtr(msBuilder.GetExecutionInfo().CronSchedule),
 					}
 
-					if _, continueAsNewBuilder, err = msBuilder.AddContinueAsNewEvent(completedID, domainEntry, startAttributes.GetParentWorkflowDomain(), continueAsnewAttributes, eventStoreVersion); err != nil {
+					if _, continueAsNewBuilder, err = msBuilder.AddContinueAsNewEvent(completedID, domainEntry,
+						startAttributes.GetParentWorkflowDomain(), continueAsNewAttributes, eventStoreVersion); err != nil {
 						return nil, err
 					}
 				}
@@ -1352,7 +1362,7 @@ Update_History_Loop:
 					}
 
 					startAttributes := startEvent.WorkflowExecutionStartedEventAttributes
-					continueAsnewAttributes := &workflow.ContinueAsNewWorkflowExecutionDecisionAttributes{
+					continueAsNewAttributes := &workflow.ContinueAsNewWorkflowExecutionDecisionAttributes{
 						WorkflowType:                        startAttributes.WorkflowType,
 						TaskList:                            startAttributes.TaskList,
 						RetryPolicy:                         startAttributes.RetryPolicy,
@@ -1367,7 +1377,8 @@ Update_History_Loop:
 						CronSchedule:                        common.StringPtr(msBuilder.GetExecutionInfo().CronSchedule),
 					}
 
-					if _, continueAsNewBuilder, err = msBuilder.AddContinueAsNewEvent(completedID, domainEntry, startAttributes.GetParentWorkflowDomain(), continueAsnewAttributes, eventStoreVersion); err != nil {
+					if _, continueAsNewBuilder, err = msBuilder.AddContinueAsNewEvent(completedID, domainEntry,
+						startAttributes.GetParentWorkflowDomain(), continueAsNewAttributes, eventStoreVersion); err != nil {
 						return nil, err
 					}
 				}
