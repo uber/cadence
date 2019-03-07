@@ -490,6 +490,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 	).Once()
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", continueAsNewEvent.GetVersion()).Return(sourceCluster).Once()
 	s.mockMutableState.On("ReplicateWorkflowExecutionContinuedAsNewEvent",
+		continueAsNewEvent.GetEventId(),
 		sourceCluster,
 		domainID,
 		continueAsNewEvent,
@@ -813,6 +814,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 	).Once()
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", continueAsNewEvent.GetVersion()).Return(sourceCluster).Once()
 	s.mockMutableState.On("ReplicateWorkflowExecutionContinuedAsNewEvent",
+		continueAsNewEvent.GetEventId(),
 		sourceCluster,
 		domainID,
 		continueAsNewEvent,

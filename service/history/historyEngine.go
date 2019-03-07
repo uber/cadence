@@ -1302,7 +1302,7 @@ Update_History_Loop:
 						CronSchedule:                        common.StringPtr(msBuilder.GetExecutionInfo().CronSchedule),
 					}
 
-					if _, continueAsNewBuilder, err = msBuilder.AddContinueAsNewEvent(completedID, domainEntry,
+					if _, continueAsNewBuilder, err = msBuilder.AddContinueAsNewEvent(completedID, completedID, domainEntry,
 						startAttributes.GetParentWorkflowDomain(), continueAsNewAttributes, eventStoreVersion); err != nil {
 						return nil, err
 					}
@@ -1377,7 +1377,7 @@ Update_History_Loop:
 						CronSchedule:                        common.StringPtr(msBuilder.GetExecutionInfo().CronSchedule),
 					}
 
-					if _, continueAsNewBuilder, err = msBuilder.AddContinueAsNewEvent(completedID, domainEntry,
+					if _, continueAsNewBuilder, err = msBuilder.AddContinueAsNewEvent(completedID, completedID, domainEntry,
 						startAttributes.GetParentWorkflowDomain(), continueAsNewAttributes, eventStoreVersion); err != nil {
 						return nil, err
 					}
@@ -1621,7 +1621,7 @@ Update_History_Loop:
 					parentDomainName = parentDomainEntry.GetInfo().Name
 				}
 
-				_, newStateBuilder, err := msBuilder.AddContinueAsNewEvent(completedID, domainEntry, parentDomainName, attributes, eventStoreVersion)
+				_, newStateBuilder, err := msBuilder.AddContinueAsNewEvent(completedID, completedID, domainEntry, parentDomainName, attributes, eventStoreVersion)
 				if err != nil {
 					return nil, err
 				}
