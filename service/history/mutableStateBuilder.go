@@ -891,6 +891,11 @@ func (e *mutableStateBuilder) GetCompletionEvent() (*workflow.HistoryEvent, bool
 		return e.executionInfo.CompletionEvent, true
 	}
 
+	// Needed for backward compatibility reason
+	if e.executionInfo.CompletionEventBatchID == common.EmptyEventID {
+		return nil, false
+	}
+
 	// Completion EventID is always one less than NextEventID after workflow is completed
 	completionEventID := e.executionInfo.NextEventID - 1
 	firstEventID := e.executionInfo.CompletionEventBatchID
