@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package sysworkflow
+package archiver
 
 import (
 	"bytes"
@@ -62,6 +62,7 @@ type (
 )
 
 var (
+	// TODO: this should not be this RPC level errror but make sure this is non-retryable everywhere in code
 	errInvalidKeyInput = &shared.BadRequestError{Message: "invalid input to construct history blob key"}
 )
 
@@ -77,7 +78,7 @@ func NewHistoryBlobKey(domainID, workflowID, runID string, pageToken int) (blob.
 	workflowIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(workflowID)))
 	runIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(runID)))
 	combinedHash := strings.Join([]string{domainIDHash, workflowIDHash, runIDHash}, "")
-	return blob.NewKey(historyBlobKeyExt, combinedHash, StringPageToken(pageToken))
+	return blob.NewKey("history", combinedHash, StringPageToken(pageToken))
 }
 
 // StringPageToken converts input blob page token to string form

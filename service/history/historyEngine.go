@@ -43,8 +43,12 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+<<<<<<< HEAD
 	"github.com/uber/cadence/service/worker/sysworkflow"
 	"go.uber.org/cadence/.gen/go/shared"
+=======
+	"github.com/uber/cadence/service/worker/archiver"
+>>>>>>> renamed files and started large archival workflow refactor
 	"go.uber.org/yarpc"
 )
 
@@ -73,7 +77,7 @@ type (
 		metricsClient        metrics.Client
 		logger               bark.Logger
 		config               *Config
-		archivalClient       sysworkflow.ArchivalClient
+		archivalClient       archiver.Client
 		resetor              workflowResetor
 	}
 
@@ -170,7 +174,7 @@ func NewEngineWithShardContext(
 		metricsClient:        shard.GetMetricsClient(),
 		historyEventNotifier: historyEventNotifier,
 		config:               config,
-		archivalClient:       sysworkflow.NewArchivalClient(publicClient, shard.GetConfig().NumArchiveSystemWorkflows),
+		archivalClient:       archiver.NewClient(publicClient, shard.GetConfig().NumArchiveSystemWorkflows),
 	}
 
 	txProcessor := newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, visibilityProducer, matching, historyClient, logger)

@@ -1,4 +1,4 @@
-package sysworkflow
+package archiver
 
 import (
 	"github.com/uber-common/bark"

@@ -18,16 +18,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package sysworkflow
+package archiver
 
 import (
 	"context"
 	"fmt"
+	"math/rand"
+
 	"github.com/uber/cadence/client/public"
 	"github.com/uber/cadence/common/service/dynamicconfig"
-	"go.uber.org/cadence/client"
-	"math/rand"
+	cclient "go.uber.org/cadence/client"
+
 )
+
+// TODO: regenerate client_mock once code builds again...
 
 type (
 	// ArchiveRequest is request to Archive
@@ -41,46 +45,35 @@ type (
 		CloseFailoverVersion int64
 	}
 
-	// ArchivalClient is used to archive workflow histories
-	ArchivalClient interface {
-		Archive(*ArchiveRequest) error
+	// Client is used to archive workflow histories
+	Client interface {
+		Archive(context.Context, *ArchiveRequest) error
 	}
 
-	archivalClient struct {
-		cadenceClient client.Client
-		numSWFn       dynamicconfig.IntPropertyFn
+	client struct {
+		cadenceClient cclient.Client
+		numWorkflows       dynamicconfig.IntPropertyFn
 	}
 )
 
-// NewArchivalClient creates a new ArchivalClient
-func NewArchivalClient(
-	publicClient public.Client,
-	numSWFn dynamicconfig.IntPropertyFn,
-) ArchivalClient {
-	return &archivalClient{
-		cadenceClient: client.NewClient(publicClient, SystemDomainName, &client.Options{}),
-		numSWFn:       numSWFn,
+// NewClient creates a new Client
+func NewClient(publicClient public.Client, numWorkflows dynamicconfig.IntPropertyFn) Client {
+	return &client{
+		cadenceClient: cclient.NewClient(publicClient, SystemDomainName, &cclient.Options{}),
+		numWorkflows:       numWorkflows,
 	}
 }
 
 // Archive starts an archival task
-func (c *archivalClient) Archive(request *ArchiveRequest) error {
-	workflowID := fmt.Sprintf("%v-%v", workflowIDPrefix, rand.Intn(c.numSWFn()))
-	workflowOptions := client.StartWorkflowOptions{
+func (c *client) Archive(ctx context.Context, request *ArchiveRequest) error {
+	workflowID := fmt.Sprintf("%v-%v", workflowIDPrefix, rand.Intn(c.numWorkflows()))
+	workflowOptions := cclient.StartWorkflowOptions{
 		ID:                              workflowID,
 		TaskList:                        decisionTaskList,
 		ExecutionStartToCloseTimeout:    workflowStartToCloseTimeout,
-		DecisionTaskStartToCloseTimeout: decisionTaskStartToCloseTimeout,
-		WorkflowIDReusePolicy:           client.WorkflowIDReusePolicyAllowDuplicate,
+		DecisionTaskStartToCloseTimeout: workflowTaskStartToCloseTimeout,
+		WorkflowIDReusePolicy:           cclient.WorkflowIDReusePolicyAllowDuplicate,
 	}
-	_, err := c.cadenceClient.SignalWithStartWorkflow(
-		context.Background(),
-		workflowID,
-		signalName,
-		*request,
-		workflowOptions,
-		archiveSystemWorkflowFnName,
-		nil,
-	)
+	_, err := c.cadenceClient.SignalWithStartWorkflow(ctx, workflowID, signalName, *request, workflowOptions, archiveSystemWorkflowFnName, nil)
 	return err
 }

@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package sysworkflow
+package archiver
 
 import (
 	"go.uber.org/cadence"
@@ -27,21 +27,10 @@ import (
 
 // TODO: rename sysworkflow to archival, this package is specific to triggering and doing archival
 
-var (
-	errArchivalUploadActivityGetDomain           = cadence.NewCustomError(errArchivalUploadActivityGetDomainStr)
-	errArchivalUploadActivityNextBlob            = cadence.NewCustomError(errArchivalUploadActivityNextBlobStr)
-	errArchivalUploadActivityConstructKey        = cadence.NewCustomError(errArchivalUploadActivityConstructKeyStr)
-	errArchivalUploadActivityBlobExists          = cadence.NewCustomError(errArchivalUploadActivityBlobExistsStr)
-	errArchivalUploadActivityMarshalBlob         = cadence.NewCustomError(errArchivalUploadActivityMarshalBlobStr)
-	errArchivalUploadActivityConvertHeaderToTags = cadence.NewCustomError(errArchivalUploadActivityConvertHeaderToTagsStr)
-	errArchivalUploadActivityWrapBlob            = cadence.NewCustomError(errArchivalUploadActivityWrapBlobStr)
-	errArchivalUploadActivityUploadBlob          = cadence.NewCustomError(errArchivalUploadActivityUploadBlobStr)
-	errDeleteHistoryActivityDeleteFromV2         = cadence.NewCustomError(errDeleteHistoryActivityDeleteFromV2Str)
-	errDeleteHistoryActivityDeleteFromV1         = cadence.NewCustomError(errDeleteHistoryActivityDeleteFromV1Str)
-)
 
-func archiveSystemWorkflow(ctx workflow.Context, carryover []ArchiveRequest) error {
-	archivalsPerIteration := globalConfig.ArchivalsPerIteration()
+
+func archivalWorkflow(ctx workflow.Context, carryover []ArchiveRequest) error {
+	archivalsPerIteration := globalConfig.ArchivalsPerIteration() // TODO: consider if reading dynamic config needs to be in activity
 	requestCh := workflow.NewBufferedChannel(ctx, archivalsPerIteration)
 	archiver := NewArchiver(ctx, globalLogger, globalMetricsClient, globalConfig.ArchiverConcurrency(), requestCh)
 	archiver.Start()
