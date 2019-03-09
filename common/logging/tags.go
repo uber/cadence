@@ -171,8 +171,10 @@ const (
 	TagArchiveRequestWorkflowID          = "archive-request-workflow-id"
 	TagArchiveRequestRunID               = "archive-request-run-id"
 	TagArchiveRequestEventStoreVersion   = "archive-request-event-store-version"
+	TagArchiveRequestBranchToken         = "archive-request-branch-token"
 	TagArchiveRequestNextEventID         = "archive-request-next-event-id"
-	TagNumberOfSignalsUntilContinueAsNew = "number-of-signals-until-continue-as-new"
+	TagArchiveRequestCloseFailoverVersion = "archive-request-close-failover-version"
+
 	TagBucket                            = "bucket"
 	TagFileBlobstoreBlobPath             = "file-blobstore-blob-path"
 	TagBlobKey                           = "blob-key"

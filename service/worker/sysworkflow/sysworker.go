@@ -68,19 +68,24 @@ type (
 		EnableArchivalCompression dynamicconfig.BoolPropertyFnWithDomainFilter
 		HistoryPageSize           dynamicconfig.IntPropertyFnWithDomainFilter
 		TargetArchivalBlobSize    dynamicconfig.IntPropertyFnWithDomainFilter
+		ArchiverConcurrency       dynamicconfig.IntPropertyFn
+		ArchivalsPerIteration     dynamicconfig.IntPropertyFn
 	}
 )
+
+// TODO: consider renaming this file, its sorta weirdly named
 
 // these globals exist as a work around because no primitive exists to pass such objects to workflow code
 var (
 	globalLogger        bark.Logger
 	globalMetricsClient metrics.Client
+	globalConfig        *Config
 )
 
 func init() {
-	workflow.RegisterWithOptions(ArchiveSystemWorkflow, workflow.RegisterOptions{Name: archiveSystemWorkflowFnName})
-	activity.RegisterWithOptions(ArchivalUploadActivity, activity.RegisterOptions{Name: archivalUploadActivityFnName})
-	activity.RegisterWithOptions(ArchivalDeleteHistoryActivity, activity.RegisterOptions{Name: archivalDeleteHistoryActivityFnName})
+	workflow.RegisterWithOptions(archiveSystemWorkflow, workflow.RegisterOptions{Name: archiveSystemWorkflowFnName})
+	activity.RegisterWithOptions(archivalUploadActivity, activity.RegisterOptions{Name: archivalUploadActivityFnName})
+	activity.RegisterWithOptions(archivalDeleteHistoryActivity, activity.RegisterOptions{Name: archivalDeleteHistoryActivityFnName})
 }
 
 // NewSysWorker returns a new SysWorker
@@ -90,6 +95,7 @@ func NewSysWorker(container *SysWorkerContainer) SysWorker {
 	})
 	globalLogger = logger
 	globalMetricsClient = container.MetricsClient
+	globalConfig = container.Config
 	actCtx := context.WithValue(context.Background(), sysWorkerContainerKey, container)
 	wo := worker.Options{
 		BackgroundActivityContext: actCtx,

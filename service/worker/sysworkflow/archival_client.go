@@ -73,7 +73,6 @@ func (c *archivalClient) Archive(request *ArchiveRequest) error {
 		DecisionTaskStartToCloseTimeout: decisionTaskStartToCloseTimeout,
 		WorkflowIDReusePolicy:           client.WorkflowIDReusePolicyAllowDuplicate,
 	}
-	var carryoverRequests []ArchiveRequest
 	_, err := c.cadenceClient.SignalWithStartWorkflow(
 		context.Background(),
 		workflowID,
@@ -81,7 +80,7 @@ func (c *archivalClient) Archive(request *ArchiveRequest) error {
 		*request,
 		workflowOptions,
 		archiveSystemWorkflowFnName,
-		carryoverRequests,
+		nil,
 	)
 	return err
 }

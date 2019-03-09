@@ -21,6 +21,8 @@
 package sysworkflow
 
 import (
+	"bytes"
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -98,4 +100,33 @@ func ConvertHeaderToTags(header *HistoryBlobHeader) (map[string]string, error) {
 		result[k] = fmt.Sprintf("%v", v)
 	}
 	return result, nil
+}
+
+// HashArchiveRequest returns a hash of ArchiveRequest
+// TODO: write unit tests for this method
+func HashArchiveRequest(archiveRequest ArchiveRequest) uint64 {
+	var b bytes.Buffer
+	gob.NewEncoder(&b).Encode(archiveRequest)
+	return farm.Fingerprint64(b.Bytes())
+}
+
+// Equal returns true if a and b are equal, false otherwise.
+// Does comparision in deterministic fashion (e.g. no iteration over map). Therefore is safe to call from workflow code.
+// TODO: write unit tests for this method
+func Equal(a []uint64, b []uint64) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	aMap := make(map[uint64]int)
+	for _, elem := range a {
+		aMap[elem] = aMap[elem] + 1
+	}
+	for _, elem := range b {
+		count := aMap[elem]
+		if count == 0 {
+			return false
+		}
+		aMap[elem] = aMap[elem] - 1
+	}
+	return true
 }
