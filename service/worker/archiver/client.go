@@ -23,6 +23,7 @@ package archiver
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common"
 	"math/rand"
 
 	"github.com/uber/cadence/client/public"
@@ -47,7 +48,7 @@ type (
 
 	// Client is used to archive workflow histories
 	Client interface {
-		Archive(context.Context, *ArchiveRequest) error
+		Archive(*ArchiveRequest) error
 	}
 
 	client struct {
@@ -59,13 +60,13 @@ type (
 // NewClient creates a new Client
 func NewClient(publicClient public.Client, numWorkflows dynamicconfig.IntPropertyFn) Client {
 	return &client{
-		cadenceClient: cclient.NewClient(publicClient, SystemDomainName, &cclient.Options{}),
+		cadenceClient: cclient.NewClient(publicClient, common.SystemDomainName, &cclient.Options{}),
 		numWorkflows:       numWorkflows,
 	}
 }
 
 // Archive starts an archival task
-func (c *client) Archive(ctx context.Context, request *ArchiveRequest) error {
+func (c *client) Archive(request *ArchiveRequest) error {
 	workflowID := fmt.Sprintf("%v-%v", workflowIDPrefix, rand.Intn(c.numWorkflows()))
 	workflowOptions := cclient.StartWorkflowOptions{
 		ID:                              workflowID,
@@ -74,6 +75,6 @@ func (c *client) Archive(ctx context.Context, request *ArchiveRequest) error {
 		DecisionTaskStartToCloseTimeout: workflowTaskStartToCloseTimeout,
 		WorkflowIDReusePolicy:           cclient.WorkflowIDReusePolicyAllowDuplicate,
 	}
-	_, err := c.cadenceClient.SignalWithStartWorkflow(ctx, workflowID, signalName, *request, workflowOptions, archiveSystemWorkflowFnName, nil)
+	_, err := c.cadenceClient.SignalWithStartWorkflow(context.Background(), workflowID, signalName, *request, workflowOptions, archivalWorkflowFnName, nil)
 	return err
 }

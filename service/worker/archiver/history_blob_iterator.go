@@ -78,7 +78,7 @@ func NewHistoryBlobIterator(
 	logger bark.Logger,
 	metricsClient metrics.Client,
 	request ArchiveRequest,
-	container *SysWorkerContainer,
+	container *BootstrapContainer,
 	domainName string,
 	clusterName string,
 ) HistoryBlobIterator {
@@ -111,13 +111,11 @@ func NewHistoryBlobIterator(
 func (i *historyBlobIterator) Next() (*HistoryBlob, error) {
 	if !i.HasNext() {
 		i.logger.Error("called Next on depleted iterator")
-		i.metricsClient.IncCounter(metrics.HistoryBlobIteratorScope, metrics.SysWorkerNextOnDepletedIterator)
 		return nil, errIteratorDepleted
 	}
 	events, nextPersistencePageToken, historyEndReached, err := i.readBlobEvents(i.persistencePageToken)
 	if err != nil {
 		i.logger.WithError(err).Error("failed to read history events to construct blob")
-		i.metricsClient.IncCounter(metrics.HistoryBlobIteratorScope, metrics.SysWorkerHistoryReadEventsFailures)
 		return nil, err
 	}
 
