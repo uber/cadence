@@ -21,13 +21,8 @@
 package archiver
 
 import (
-	"go.uber.org/cadence"
 	"go.uber.org/cadence/workflow"
 )
-
-// TODO: rename sysworkflow to archival, this package is specific to triggering and doing archival
-
-
 
 func archivalWorkflow(ctx workflow.Context, carryover []ArchiveRequest) error {
 	archivalsPerIteration := globalConfig.ArchivalsPerIteration() // TODO: consider if reading dynamic config needs to be in activity
@@ -59,87 +54,3 @@ func archivalWorkflow(ctx workflow.Context, carryover []ArchiveRequest) error {
 	ctx = workflow.WithWorkflowTaskStartToCloseTimeout(ctx, workflowTaskStartToCloseTimeout)
 	return workflow.NewContinueAsNewError(ctx, archiveSystemWorkflowFnName, pumpResult.UnhandledCarryover)
 }
-
-
-
-
-
-
-
-
-
-
-
-//// ArchiveSystemWorkflow is the system workflow which archives and deletes history
-//func ArchiveSystemWorkflow2(ctx workflow.Context, carryoverRequests []ArchiveRequest) error {
-//	sysWorkflowInfo := workflow.GetInfo(ctx)
-//	logger := NewReplayBarkLogger(globalLogger.WithFields(bark.Fields{
-//		logging.TagWorkflowExecutionID: sysWorkflowInfo.WorkflowExecution.ID,
-//		logging.TagWorkflowRunID:       sysWorkflowInfo.WorkflowExecution.RunID,
-//	}), ctx, false)
-//	logger.Info("started system workflow")
-//
-//	metricsClient := NewReplayMetricsClient(globalMetricsClient, ctx)
-//	metricsClient.IncCounter(metrics.ArchiveSystemWorkflowScope, metrics.SysWorkerWorkflowStarted)
-//	sw := metricsClient.StartTimer(metrics.ArchiveSystemWorkflowScope, metrics.SysWorkerContinueAsNewLatency)
-//	requestsHandled := 0
-//
-//	// step 1: start workers to process archival requests in parallel
-//	workQueue := workflow.NewChannel(ctx)
-//	finishedWorkQueue := workflow.NewBufferedChannel(ctx, signalsUntilContinueAsNew*10) // make large enough that never blocks on send
-//	for i := 0; i < numWorkers; i++ {
-//		workflow.Go(ctx, func(ctx workflow.Context) {
-//			for {
-//				var request ArchiveRequest
-//				workQueue.Receive(ctx, &request)
-//				// handleRequest(request, ctx, logger, metricsClient)
-//				finishedWorkQueue.Send(ctx, nil)
-//			}
-//		})
-//	}
-//
-//	// step 2: pump carryover requests into worker queue
-//	for _, request := range carryoverRequests {
-//		requestsHandled++
-//		workQueue.Send(ctx, request)
-//	}
-//
-//	// step 3: pump current iterations workload into worker queue
-//	ch := workflow.GetSignalChannel(ctx, signalName)
-//	for requestsHandled < signalsUntilContinueAsNew {
-//		var request ArchiveRequest
-//		if more := ch.Receive(ctx, &request); !more {
-//			break
-//		}
-//		metricsClient.IncCounter(metrics.ArchiveSystemWorkflowScope, metrics.SysWorkerReceivedSignal)
-//		requestsHandled++
-//		workQueue.Send(ctx, request)
-//	}
-//
-//	// step 4: wait for all in progress work to finish
-//	for i := 0; i < requestsHandled; i++ {
-//		finishedWorkQueue.Receive(ctx, nil)
-//	}
-//
-//	// step 5: drain signal channel to get next run's carryover
-//	var co []ArchiveRequest
-//	for {
-//		var request ArchiveRequest
-//		if ok := ch.ReceiveAsync(&request); !ok {
-//			break
-//		}
-//		metricsClient.IncCounter(metrics.ArchiveSystemWorkflowScope, metrics.SysWorkerReceivedSignal)
-//		co = append(co, request)
-//	}
-//
-//	// step 6: schedule new run
-//	ctx = workflow.WithExecutionStartToCloseTimeout(ctx, workflowStartToCloseTimeout)
-//	ctx = workflow.WithWorkflowTaskStartToCloseTimeout(ctx, decisionTaskStartToCloseTimeout)
-//	metricsClient.IncCounter(metrics.ArchiveSystemWorkflowScope, metrics.SysWorkerContinueAsNew)
-//	sw.Stop()
-//	logger.WithFields(bark.Fields{
-//		logging.TagNumberOfSignalsUntilContinueAsNew: requestsHandled,
-//	}).Info("system workflow is continuing as new")
-//	return workflow.NewContinueAsNewError(ctx, archiveSystemWorkflowFnName, co)
-//}
-

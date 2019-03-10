@@ -166,7 +166,7 @@ const (
 	TagTreeID   = "tree-id"
 	TagBranchID = "branch-id"
 
-	// archival tags
+	// archival tags (archival request tags)
 	TagArchiveRequestDomainID            = "archive-request-domain-id"
 	TagArchiveRequestWorkflowID          = "archive-request-workflow-id"
 	TagArchiveRequestRunID               = "archive-request-run-id"
@@ -175,10 +175,16 @@ const (
 	TagArchiveRequestNextEventID         = "archive-request-next-event-id"
 	TagArchiveRequestCloseFailoverVersion = "archive-request-close-failover-version"
 
+	// archival tags (blob tags)
 	TagBucket                            = "bucket"
-	TagFileBlobstoreBlobPath             = "file-blobstore-blob-path"
 	TagBlobKey                           = "blob-key"
-	TagBlobKeyPrefix                     = "blob-key-prefix"
+
+	// archival tags (file blobstore tags)
+	TagFileBlobstoreBlobPath             = "file-blobstore-blob-path"
 	TagFileBlobstoreMetadataPath         = "file-blobstore-metadata-path"
+
+	// archival tags (other tags)
 	TagClusterArchivalStatus             = "cluster-archival-status"
+	TagArchivalUploadSkipReason          = "archival-upload-skip-reason"
+	TagArchivalUploadFailReason         = "archival-upload-fail-reason"
 )

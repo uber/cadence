@@ -49,7 +49,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	cs "github.com/uber/cadence/common/service"
 	dc "github.com/uber/cadence/common/service/dynamicconfig"
-	"github.com/uber/cadence/service/worker/sysworkflow"
+	"github.com/uber/cadence/service/worker/archiver"
 )
 
 type (
@@ -110,6 +110,8 @@ func (s *workflowHandlerSuite) TearDownTest() {
 	s.mockClientBean.AssertExpectations(s.T())
 	s.mockBlobstoreClient.AssertExpectations(s.T())
 }
+
+// TODO: make sure I have a test that covers accessing a partially uploaded history, this is valid case
 
 func (s *workflowHandlerSuite) TestMergeDomainData_Overriding() {
 	wh := &WorkflowHandler{}
