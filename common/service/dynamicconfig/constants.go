@@ -171,7 +171,7 @@ var keys = map[Key]string{
 	EnableArchivalCompression:                "worker.EnableArchivalCompression",
 	WorkerHistoryPageSize:                    "worker.WorkerHistoryPageSize",
 	WorkerTargetArchivalBlobSize:             "worker.WorkerTargetArchivalBlobSize",
-	WorkerArchiverConcurrency:                "worker.ArchiverConcurrency",
+	WorkerProcessorConcurrency:               "worker.ProcessorConcurrency",
 	WorkerArchivalsPerIteration:              "worker.ArchivalsPerIteration",
 }
 
@@ -435,8 +435,8 @@ const (
 	WorkerHistoryPageSize
 	// WorkerTargetArchivalBlobSize indicates the target blob size in bytes for archival, actual blob size may vary
 	WorkerTargetArchivalBlobSize
-	// WorkerArchiverConcurrency controls the number of go routines handling archival work per archival workflow
-	WorkerArchiverConcurrency
+	// WorkerProcessorConcurrency controls the number of go routines handling archival work per archival workflow
+	WorkerProcessorConcurrency
 	// WorkerArchivalsPerIteration controls the number of archivals handled in each iteration of archival workflow
 	WorkerArchivalsPerIteration
 

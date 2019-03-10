@@ -61,6 +61,7 @@ type (
 )
 
 const (
+	// ErrMessageNewRunHistorySizeZero indicates that new run's history size is zero
 	ErrMessageNewRunHistorySizeZero = "encounter new run history size being zero"
 )
 

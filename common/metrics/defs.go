@@ -1082,13 +1082,13 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 	},
 	// Worker Scope Names
 	Worker: {
-		ReplicatorScope:                    {operation: "Replicator"},
-		DomainReplicationTaskScope:         {operation: "DomainReplicationTask"},
-		HistoryReplicationTaskScope:        {operation: "HistoryReplicationTask"},
-		SyncShardTaskScope:                 {operation: "SyncShardTask"},
-		SyncActivityTaskScope:              {operation: "SyncActivityTask"},
-		ESProcessorScope:                   {operation: "ESProcessor"},
-		IndexProcessorScope:                {operation: "IndexProcessor"},
+		ReplicatorScope:             {operation: "Replicator"},
+		DomainReplicationTaskScope:  {operation: "DomainReplicationTask"},
+		HistoryReplicationTaskScope: {operation: "HistoryReplicationTask"},
+		SyncShardTaskScope:          {operation: "SyncShardTask"},
+		SyncActivityTaskScope:       {operation: "SyncActivityTask"},
+		ESProcessorScope:            {operation: "ESProcessor"},
+		IndexProcessorScope:         {operation: "IndexProcessor"},
 	},
 }
 
@@ -1458,12 +1458,12 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		SyncMatchLatency:              {metricName: "syncmatch.latency", metricType: Timer},
 	},
 	Worker: {
-		ReplicatorMessages:                                         {metricName: "replicator.messages"},
-		ReplicatorFailures:                                         {metricName: "replicator.errors"},
-		ReplicatorLatency:                                          {metricName: "replicator.latency"},
-		ESProcessorFailures:                                        {metricName: "es-processor.errors"},
-		ESProcessorCorruptedData:                                   {metricName: "es-processor.corrupted-data"},
-		IndexProcessorCorruptedData:                                {metricName: "index-processor.corrupted-data"},
+		ReplicatorMessages:          {metricName: "replicator.messages"},
+		ReplicatorFailures:          {metricName: "replicator.errors"},
+		ReplicatorLatency:           {metricName: "replicator.latency"},
+		ESProcessorFailures:         {metricName: "es-processor.errors"},
+		ESProcessorCorruptedData:    {metricName: "es-processor.corrupted-data"},
+		IndexProcessorCorruptedData: {metricName: "index-processor.corrupted-data"},
 	},
 }
 

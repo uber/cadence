@@ -22,9 +22,9 @@ package archiver
 
 import (
 	"bytes"
-	"code.uber.internal/safety/ride-check/go-build/.go/src/gb2/src/github.com/pkg/errors"
 	"encoding/gob"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common/logging"
@@ -137,10 +137,10 @@ func Equal(a []uint64, b []uint64) bool {
 // TagLoggerWithRequest returns a logger with all tags from request added
 func TagLoggerWithRequest(logger bark.Logger, request ArchiveRequest) bark.Logger {
 	return logger.WithFields(bark.Fields{
-		logging.TagArchiveRequestDomainID:             request.DomainID,
-		logging.TagArchiveRequestWorkflowID:           request.WorkflowID,
-		logging.TagArchiveRequestRunID:                request.RunID,
-		logging.TagArchiveRequestEventStoreVersion:    request.EventStoreVersion,
+		logging.TagArchiveRequestDomainID:          request.DomainID,
+		logging.TagArchiveRequestWorkflowID:        request.WorkflowID,
+		logging.TagArchiveRequestRunID:             request.RunID,
+		logging.TagArchiveRequestEventStoreVersion: request.EventStoreVersion,
 		// TODO: verify that this logs correctly and lets us delete history
 		logging.TagArchiveRequestBranchToken:          string(request.BranchToken),
 		logging.TagArchiveRequestNextEventID:          request.NextEventID,

@@ -541,17 +541,17 @@ func LogSkipArchivalUpload(logger bark.Logger, reason string) {
 // LogFailArchivalUploadAttempt is used to log that archival upload attempt has failed
 func LogFailArchivalUploadAttempt(logger bark.Logger, err error, reason, bucket, blobKey string) {
 	logger.WithFields(bark.Fields{
-		TagErr: err,
+		TagErr:                      err,
 		TagArchivalUploadFailReason: reason,
-		TagBucket: bucket,
-		TagBlobKey: blobKey,
+		TagBucket:                   bucket,
+		TagBlobKey:                  blobKey,
 	}).Error("Archival upload attempt is giving up, possibly could retry.")
 }
 
 // LogBlobAlreadyUploaded is used to log that a blob which is requested for upload has already been uploaded
 func LogBlobAlreadyUploaded(logger bark.Logger, bucket, blobKey string) {
 	logger.WithFields(bark.Fields{
-		TagBucket: bucket,
+		TagBucket:  bucket,
 		TagBlobKey: blobKey,
 	}).Info("Blob has already been uploaded.")
 }

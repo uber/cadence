@@ -103,7 +103,7 @@ const (
 	TagValueIndexerProcessorComponent         = "indexer-processor"
 	TagValueIndexerESProcessorComponent       = "indexer-es-processor"
 	TagValueESVisibilityManager               = "es-visibility-manager"
-	TagValueArchiverComponent    = "archiver"
+	TagValueArchiverComponent                 = "archiver"
 
 	// TagHistoryBuilderAction values
 	TagValueActionWorkflowStarted                 = "add-workflowexecution-started-event"
@@ -167,24 +167,24 @@ const (
 	TagBranchID = "branch-id"
 
 	// archival tags (archival request tags)
-	TagArchiveRequestDomainID            = "archive-request-domain-id"
-	TagArchiveRequestWorkflowID          = "archive-request-workflow-id"
-	TagArchiveRequestRunID               = "archive-request-run-id"
-	TagArchiveRequestEventStoreVersion   = "archive-request-event-store-version"
-	TagArchiveRequestBranchToken         = "archive-request-branch-token"
-	TagArchiveRequestNextEventID         = "archive-request-next-event-id"
+	TagArchiveRequestDomainID             = "archive-request-domain-id"
+	TagArchiveRequestWorkflowID           = "archive-request-workflow-id"
+	TagArchiveRequestRunID                = "archive-request-run-id"
+	TagArchiveRequestEventStoreVersion    = "archive-request-event-store-version"
+	TagArchiveRequestBranchToken          = "archive-request-branch-token"
+	TagArchiveRequestNextEventID          = "archive-request-next-event-id"
 	TagArchiveRequestCloseFailoverVersion = "archive-request-close-failover-version"
 
 	// archival tags (blob tags)
-	TagBucket                            = "bucket"
-	TagBlobKey                           = "blob-key"
+	TagBucket  = "bucket"
+	TagBlobKey = "blob-key"
 
 	// archival tags (file blobstore tags)
-	TagFileBlobstoreBlobPath             = "file-blobstore-blob-path"
-	TagFileBlobstoreMetadataPath         = "file-blobstore-metadata-path"
+	TagFileBlobstoreBlobPath     = "file-blobstore-blob-path"
+	TagFileBlobstoreMetadataPath = "file-blobstore-metadata-path"
 
 	// archival tags (other tags)
-	TagClusterArchivalStatus             = "cluster-archival-status"
-	TagArchivalUploadSkipReason          = "archival-upload-skip-reason"
-	TagArchivalUploadFailReason         = "archival-upload-fail-reason"
+	TagClusterArchivalStatus    = "cluster-archival-status"
+	TagArchivalUploadSkipReason = "archival-upload-skip-reason"
+	TagArchivalUploadFailReason = "archival-upload-fail-reason"
 )

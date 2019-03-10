@@ -993,8 +993,8 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Success_GetFirstPage() {
 	clusterMetadata.On("IsGlobalDomainEnabled").Return(false)
 	mService := cs.NewTestService(clusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.logger)
 	mBlobstore := &mocks.BlobstoreClient{}
-	unwrappedBlob := &sysworkflow.HistoryBlob{
-		Header: &sysworkflow.HistoryBlobHeader{
+	unwrappedBlob := &archiver.HistoryBlob{
+		Header: &archiver.HistoryBlobHeader{
 			CurrentPageToken: common.IntPtr(common.FirstBlobPageToken),
 			NextPageToken:    common.IntPtr(common.FirstBlobPageToken + 1),
 		},
@@ -1028,8 +1028,8 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Success_GetLastPage() {
 	clusterMetadata.On("IsGlobalDomainEnabled").Return(false)
 	mService := cs.NewTestService(clusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.logger)
 	mBlobstore := &mocks.BlobstoreClient{}
-	unwrappedBlob := &sysworkflow.HistoryBlob{
-		Header: &sysworkflow.HistoryBlobHeader{
+	unwrappedBlob := &archiver.HistoryBlob{
+		Header: &archiver.HistoryBlobHeader{
 			CurrentPageToken: common.IntPtr(5),
 			NextPageToken:    common.IntPtr(common.LastBlobNextPageToken),
 		},

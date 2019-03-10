@@ -1,3 +1,23 @@
+// Copyright (c) 2017 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 package archiver
 
 import (
@@ -18,12 +38,12 @@ type (
 	}
 
 	processor struct {
-		ctx workflow.Context
-		logger bark.Logger
+		ctx           workflow.Context
+		logger        bark.Logger
 		metricsClient metrics.Client
-		concurrency int
-		requestCh workflow.Channel
-		resultCh workflow.Channel
+		concurrency   int
+		requestCh     workflow.Channel
+		resultCh      workflow.Channel
 	}
 )
 
@@ -36,12 +56,12 @@ func NewProcessor(
 	requestCh workflow.Channel,
 ) Processor {
 	return &processor{
-		ctx: ctx,
-		logger: logger,
+		ctx:           ctx,
+		logger:        logger,
 		metricsClient: metricsClient,
-		concurrency: concurrency,
-		requestCh: requestCh,
-		resultCh: workflow.NewBufferedChannel(ctx, concurrency),
+		concurrency:   concurrency,
+		requestCh:     requestCh,
+		resultCh:      workflow.NewBufferedChannel(ctx, concurrency),
 	}
 }
 
@@ -83,9 +103,9 @@ func (a *processor) handleRequest(request ArchiveRequest) {
 		StartToCloseTimeout:    5 * time.Minute,
 		HeartbeatTimeout:       time.Minute,
 		RetryPolicy: &cadence.RetryPolicy{
-			InitialInterval:    100 * time.Millisecond,
-			BackoffCoefficient: 2.0,
-			ExpirationInterval: 10 * time.Minute,
+			InitialInterval:          100 * time.Millisecond,
+			BackoffCoefficient:       2.0,
+			ExpirationInterval:       10 * time.Minute,
 			NonRetriableErrorReasons: uploadHistoryActivityNonRetryableErrors,
 		},
 	}
@@ -99,9 +119,9 @@ func (a *processor) handleRequest(request ArchiveRequest) {
 	localDeleteActOpts := workflow.LocalActivityOptions{
 		ScheduleToCloseTimeout: 1 * time.Minute,
 		RetryPolicy: &cadence.RetryPolicy{
-			InitialInterval:    100 * time.Millisecond,
-			BackoffCoefficient: 2.0,
-			ExpirationInterval: 3 * time.Minute,
+			InitialInterval:          100 * time.Millisecond,
+			BackoffCoefficient:       2.0,
+			ExpirationInterval:       3 * time.Minute,
 			NonRetriableErrorReasons: deleteHistoryActivityNonRetryableErrors,
 		},
 	}
@@ -118,9 +138,9 @@ func (a *processor) handleRequest(request ArchiveRequest) {
 		StartToCloseTimeout:    5 * time.Minute,
 		HeartbeatTimeout:       time.Minute,
 		RetryPolicy: &cadence.RetryPolicy{
-			InitialInterval:    100 * time.Millisecond,
-			BackoffCoefficient: 2.0,
-			ExpirationInterval: 10 * time.Minute,
+			InitialInterval:          100 * time.Millisecond,
+			BackoffCoefficient:       2.0,
+			ExpirationInterval:       10 * time.Minute,
 			NonRetriableErrorReasons: deleteHistoryActivityNonRetryableErrors,
 		},
 	}
@@ -132,5 +152,3 @@ func (a *processor) handleRequest(request ArchiveRequest) {
 		// emit some success metric
 	}
 }
-
-

@@ -22,22 +22,21 @@ package worker
 
 import (
 	"context"
-	"github.com/uber/cadence/client/public"
-	"github.com/uber/cadence/common/blobstore"
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/common/cache"
-
 	"github.com/uber-common/bark"
+	"github.com/uber/cadence/client/public"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/metrics"
 	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/service/worker/archiver"
 	"github.com/uber/cadence/service/worker/indexer"
 	"github.com/uber/cadence/service/worker/replicator"
-	"github.com/uber/cadence/service/worker/sysworkflow"
 	"go.uber.org/cadence/.gen/go/shared"
 )
 
@@ -63,7 +62,7 @@ type (
 	// Config contains all the service config for worker
 	Config struct {
 		ReplicationCfg *replicator.Config
-		SysWorkflowCfg *sysworkflow.Config
+		SysWorkflowCfg *archiver.Config
 		IndexerCfg     *indexer.Config
 	}
 )
@@ -88,11 +87,11 @@ func NewConfig(dc *dynamicconfig.Collection) *Config {
 			ReplicatorHistoryBufferRetryCount:  dc.GetIntProperty(dynamicconfig.WorkerReplicatorHistoryBufferRetryCount, 8),
 			ReplicationTaskMaxRetry:            dc.GetIntProperty(dynamicconfig.WorkerReplicationTaskMaxRetry, 50),
 		},
-		SysWorkflowCfg: &sysworkflow.Config{
+		SysWorkflowCfg: &archiver.Config{
 			EnableArchivalCompression: dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableArchivalCompression, true),
 			HistoryPageSize:           dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkerHistoryPageSize, 250),
 			TargetArchivalBlobSize:    dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkerTargetArchivalBlobSize, 2*1024*1024), // 2MB
-			ArchiverConcurrency:       dc.GetIntProperty(dynamicconfig.WorkerArchiverConcurrency, 50),
+			ProcessorConcurrency:      dc.GetIntProperty(dynamicconfig.WorkerProcessorConcurrency, 50),
 			ArchivalsPerIteration:     dc.GetIntProperty(dynamicconfig.WorkerArchivalsPerIteration, 1000),
 		},
 		IndexerCfg: &indexer.Config{
@@ -206,7 +205,7 @@ func (s *Service) startSysWorker(base service.Service, pFactory persistencefacto
 		common.CreateBlobstoreClientRetryPolicy(),
 		common.IsBlobstoreTransientError)
 
-	sysWorkerContainer := &sysworkflow.SysWorkerContainer{
+	sysWorkerContainer := &archiver.BootstrapContainer{
 		PublicClient:     publicClient,
 		MetricsClient:    s.metricsClient,
 		Logger:           s.logger,
@@ -217,7 +216,7 @@ func (s *Service) startSysWorker(base service.Service, pFactory persistencefacto
 		DomainCache:      domainCache,
 		Config:           s.config.SysWorkflowCfg,
 	}
-	sysWorker := sysworkflow.NewSysWorker(sysWorkerContainer)
+	sysWorker := archiver.NewClientWorker(sysWorkerContainer)
 	if err := sysWorker.Start(); err != nil {
 		sysWorker.Stop()
 		s.logger.Fatalf("failed to start sysworker: %v", err)
@@ -226,7 +225,7 @@ func (s *Service) startSysWorker(base service.Service, pFactory persistencefacto
 
 func (s *Service) waitForFrontendStart(publicClient public.Client) {
 	request := &shared.DescribeDomainRequest{
-		Name: common.StringPtr(sysworkflow.SystemDomainName),
+		Name: common.StringPtr(common.SystemDomainName),
 	}
 
 RetryLoop:

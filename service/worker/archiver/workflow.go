@@ -32,7 +32,7 @@ func archivalWorkflow(ctx workflow.Context, carryover []ArchiveRequest) error {
 	archiver := NewProcessor(ctx, globalLogger, globalMetricsClient, globalConfig.ProcessorConcurrency(), requestCh)
 	archiver.Start()
 	signalCh := workflow.GetSignalChannel(ctx, signalName)
-	pump := NewPump(ctx, globalLogger, globalMetricsClient, carryover, workflowStartToCloseTimeout / 2, archivalsPerIteration, requestCh, signalCh)
+	pump := NewPump(ctx, globalLogger, globalMetricsClient, carryover, workflowStartToCloseTimeout/2, archivalsPerIteration, requestCh, signalCh)
 	pumpResult := pump.Run()
 	handledHashes := archiver.Finished()
 	if pumpResult.TimeoutWithoutSignals {

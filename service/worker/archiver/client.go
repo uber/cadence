@@ -29,7 +29,6 @@ import (
 	"github.com/uber/cadence/client/public"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	cclient "go.uber.org/cadence/client"
-
 )
 
 // TODO: regenerate client_mock once code builds again...
@@ -53,7 +52,7 @@ type (
 
 	client struct {
 		cadenceClient cclient.Client
-		numWorkflows       dynamicconfig.IntPropertyFn
+		numWorkflows  dynamicconfig.IntPropertyFn
 	}
 )
 
@@ -61,7 +60,7 @@ type (
 func NewClient(publicClient public.Client, numWorkflows dynamicconfig.IntPropertyFn) Client {
 	return &client{
 		cadenceClient: cclient.NewClient(publicClient, common.SystemDomainName, &cclient.Options{}),
-		numWorkflows:       numWorkflows,
+		numWorkflows:  numWorkflows,
 	}
 }
 

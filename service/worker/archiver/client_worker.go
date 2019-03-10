@@ -53,15 +53,15 @@ type (
 
 	// BootstrapContainer contains everything need for bootstrapping
 	BootstrapContainer struct {
-		PublicClient     public.Client
-		MetricsClient    metrics.Client
-		Logger           bark.Logger
-		ClusterMetadata  cluster.Metadata
-		HistoryManager   persistence.HistoryManager
-		HistoryV2Manager persistence.HistoryV2Manager
-		Blobstore        blobstore.Client
-		DomainCache      cache.DomainCache
-		Config           *Config
+		PublicClient        public.Client
+		MetricsClient       metrics.Client
+		Logger              bark.Logger
+		ClusterMetadata     cluster.Metadata
+		HistoryManager      persistence.HistoryManager
+		HistoryV2Manager    persistence.HistoryV2Manager
+		Blobstore           blobstore.Client
+		DomainCache         cache.DomainCache
+		Config              *Config
 		HistoryBlobIterator HistoryBlobIterator // this is only set in testing code
 	}
 
@@ -70,7 +70,7 @@ type (
 		EnableArchivalCompression dynamicconfig.BoolPropertyFnWithDomainFilter
 		HistoryPageSize           dynamicconfig.IntPropertyFnWithDomainFilter
 		TargetArchivalBlobSize    dynamicconfig.IntPropertyFnWithDomainFilter
-		ProcessorConcurrency       dynamicconfig.IntPropertyFn
+		ProcessorConcurrency      dynamicconfig.IntPropertyFn
 		ArchivalsPerIteration     dynamicconfig.IntPropertyFn
 	}
 
@@ -78,16 +78,15 @@ type (
 )
 
 const (
-	workflowIDPrefix                    = "cadence-archival"
-	decisionTaskList                    = "cadence-archival-tl"
-	signalName                          = "cadence-archival-signal"
-	archivalWorkflowFnName         = "archivalWorkflow"
-	workflowStartToCloseTimeout = time.Hour * 24 * 30
+	workflowIDPrefix                = "cadence-archival"
+	decisionTaskList                = "cadence-archival-tl"
+	signalName                      = "cadence-archival-signal"
+	archivalWorkflowFnName          = "archivalWorkflow"
+	workflowStartToCloseTimeout     = time.Hour * 24 * 30
 	workflowTaskStartToCloseTimeout = time.Minute
 
 	bootstrapContainerKey contextKey = iota
 )
-
 
 // these globals exist as a work around because no primitive exists to pass such objects to workflow code
 var (

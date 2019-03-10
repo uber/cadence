@@ -257,8 +257,8 @@ func (c *client) ListByPrefix(_ context.Context, bucket string, prefix string) (
 	files, err := listFiles(bd)
 	if err != nil {
 		c.logger.WithFields(bark.Fields{
-			logging.TagErr:           err,
-			logging.TagBucket:        bucket,
+			logging.TagErr:    err,
+			logging.TagBucket: bucket,
 		}).Error("ListByPrefix failed, could not list files")
 		return nil, ErrListFiles
 	}
