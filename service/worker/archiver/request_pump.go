@@ -59,7 +59,6 @@ func NewPump(
 // Blocks until either timout occurs or request limit is satisfied.
 // Returns a PumpResult which contains a summary of what was pumped.
 // Upon returning request channel is closed.
-// TODO: add more metrics to this method
 func (p *pump) Run() PumpResult {
 	defer func() {
 		p.requestCh.Close()
@@ -94,7 +93,6 @@ func (p *pump) Run() PumpResult {
 	selector.AddReceive(p.signalCh, func(ch workflow.Channel, more bool) {
 		if !more {
 			p.logger.Error("signal channel channel closed unexpectedly")
-			p.metricsClient.IncCounter(metrics.ArchiveSystemWorkflowScope, metrics.SysWorkerChannelClosedFailures)
 			finished = true
 			return
 		}

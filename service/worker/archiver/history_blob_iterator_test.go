@@ -549,7 +549,7 @@ func (s *HistoryBlobIteratorSuite) constructTestHistoryBlobIterator(
 		NextEventID:          testNextEventID,
 		CloseFailoverVersion: testCloseFailoverVersion,
 	}
-	container := &SysWorkerContainer{
+	container := &BootstrapContainer{
 		HistoryManager:   mockHistoryManager,
 		HistoryV2Manager: mockHistoryV2Manager,
 		Config:           config,

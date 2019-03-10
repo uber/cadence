@@ -105,7 +105,7 @@ func init() {
 // NewClientWorker returns a new ClientWorker
 func NewClientWorker(container *BootstrapContainer) ClientWorker {
 	globalLogger = container.Logger.WithFields(bark.Fields{
-		logging.TagWorkflowComponent: logging.TagValueArchiveSystemWorkflowComponent,
+		logging.TagWorkflowComponent: logging.TagValueArchiverComponent,
 	})
 	globalMetricsClient = container.MetricsClient
 	globalConfig = container.Config

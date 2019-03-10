@@ -24,24 +24,23 @@ import (
 	"go.uber.org/cadence/workflow"
 )
 
+// TODO: consider if reading dynamic config needs to be in activity
+
 func archivalWorkflow(ctx workflow.Context, carryover []ArchiveRequest) error {
-	archivalsPerIteration := globalConfig.ArchivalsPerIteration() // TODO: consider if reading dynamic config needs to be in activity
+	archivalsPerIteration := globalConfig.ArchivalsPerIteration()
 	requestCh := workflow.NewBufferedChannel(ctx, archivalsPerIteration)
-	archiver := NewArchiver(ctx, globalLogger, globalMetricsClient, globalConfig.ArchiverConcurrency(), requestCh)
+	archiver := NewProcessor(ctx, globalLogger, globalMetricsClient, globalConfig.ProcessorConcurrency(), requestCh)
 	archiver.Start()
 	signalCh := workflow.GetSignalChannel(ctx, signalName)
 	pump := NewPump(ctx, globalLogger, globalMetricsClient, carryover, workflowStartToCloseTimeout / 2, archivalsPerIteration, requestCh, signalCh)
 	pumpResult := pump.Run()
 	handledHashes := archiver.Finished()
 	if pumpResult.TimeoutWithoutSignals {
-		// TODO: emit metric in this case
 		return nil
 	}
 	if len(pumpResult.UnhandledCarryover) > 0 {
-		// TODO: should emit metric here and log indicating that backlog is building
 	}
 	if !Equal(pumpResult.PumpedHashes, handledHashes) {
-		// TODO: should emit metric here and log indicating that something very bad happened
 	}
 	for {
 		var request ArchiveRequest
@@ -52,5 +51,5 @@ func archivalWorkflow(ctx workflow.Context, carryover []ArchiveRequest) error {
 	}
 	ctx = workflow.WithExecutionStartToCloseTimeout(ctx, workflowStartToCloseTimeout)
 	ctx = workflow.WithWorkflowTaskStartToCloseTimeout(ctx, workflowTaskStartToCloseTimeout)
-	return workflow.NewContinueAsNewError(ctx, archiveSystemWorkflowFnName, pumpResult.UnhandledCarryover)
+	return workflow.NewContinueAsNewError(ctx, archivalWorkflowFnName, pumpResult.UnhandledCarryover)
 }

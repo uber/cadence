@@ -1,22 +1,13 @@
 package archiver
 
 import (
-	"context"
-	"encoding/json"
+	"time"
+
 	"github.com/uber-common/bark"
-	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/backoff"
-	"github.com/uber/cadence/common/blobstore"
-	"github.com/uber/cadence/common/blobstore/blob"
-	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/persistence"
 	"go.uber.org/cadence"
-	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/workflow"
-	"time"
 )
 
 type (
@@ -55,7 +46,6 @@ func NewProcessor(
 }
 
 // Start spawns concurrency count of go routines to handle archivals (does not block).
-// TODO: emit metrics here
 func (a *processor) Start() {
 	for i := 0; i < a.concurrency; i++ {
 		workflow.Go(a.ctx, func(ctx workflow.Context) {
@@ -73,11 +63,8 @@ func (a *processor) Start() {
 	}
 }
 
-// TODO: make sure context is respected everywhere to bail out of activities
-
 // Finished will block until all work has been finished.
 // Returns hashes of requests handled.
-// TODO: emit metrics here
 func (a *processor) Finished() []uint64 {
 	var handledHashes []uint64
 	for i := 0; i < a.concurrency; i++ {
@@ -90,15 +77,7 @@ func (a *processor) Finished() []uint64 {
 }
 
 func (a *processor) handleRequest(request ArchiveRequest) {
-	logger := a.logger.WithFields(bark.Fields{
-		logging.TagArchiveRequestDomainID:          request.DomainID,
-		logging.TagArchiveRequestWorkflowID:        request.WorkflowID,
-		logging.TagArchiveRequestRunID:             request.RunID,
-		logging.TagArchiveRequestEventStoreVersion: request.EventStoreVersion,
-		logging.TagArchiveRequestBranchToken:       string(request.BranchToken),
-		logging.TagArchiveRequestNextEventID:       request.NextEventID,
-		logging.TagArchiveRequestCloseFailoverVersion: request.CloseFailoverVersion,
-	})
+	logger := TagLoggerWithRequest(a.logger, request)
 	uploadActOpts := workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
 		StartToCloseTimeout:    5 * time.Minute,
@@ -106,26 +85,15 @@ func (a *processor) handleRequest(request ArchiveRequest) {
 		RetryPolicy: &cadence.RetryPolicy{
 			InitialInterval:    100 * time.Millisecond,
 			BackoffCoefficient: 2.0,
-			ExpirationInterval: 15 * time.Minute,
-			// TODO: double check these are still correct
-			NonRetriableErrorReasons: []string{
-				errArchivalUploadActivityGetDomainStr,
-				errArchivalUploadActivityNextBlobStr,
-				errArchivalUploadActivityConstructKeyStr,
-				errArchivalUploadActivityBlobExistsStr,
-				errArchivalUploadActivityMarshalBlobStr,
-				errArchivalUploadActivityConvertHeaderToTagsStr,
-				errArchivalUploadActivityWrapBlobStr,
-				errArchivalUploadActivityUploadBlobStr,
-			},
+			ExpirationInterval: 10 * time.Minute,
+			NonRetriableErrorReasons: uploadHistoryActivityNonRetryableErrors,
 		},
 	}
 	uploadActCtx := workflow.WithActivityOptions(a.ctx, uploadActOpts)
 	if err := workflow.ExecuteActivity(uploadActCtx, uploadHistoryActivityFnName, request).Get(uploadActCtx, nil); err != nil {
 		logger.WithField(logging.TagErr, err).Error("failed to upload history, moving on to deleting history without archiving")
-		a.metricsClient.IncCounter(metrics.ArchiveSystemWorkflowScope, metrics.SysWorkerArchivalUploadActivityNonRetryableFailures)
 	} else {
-		a.metricsClient.IncCounter(metrics.ArchiveSystemWorkflowScope, metrics.SysWorkerArchivalUploadSuccessful)
+		// emit success metric
 	}
 
 	localDeleteActOpts := workflow.LocalActivityOptions{
@@ -134,21 +102,17 @@ func (a *processor) handleRequest(request ArchiveRequest) {
 			InitialInterval:    100 * time.Millisecond,
 			BackoffCoefficient: 2.0,
 			ExpirationInterval: 3 * time.Minute,
-			NonRetriableErrorReasons: []string{
-				errDeleteHistoryActivityDeleteFromV1Str,
-				errDeleteHistoryActivityDeleteFromV2Str,
-			},
+			NonRetriableErrorReasons: deleteHistoryActivityNonRetryableErrors,
 		},
 	}
 	localDeleteActCtx := workflow.WithLocalActivityOptions(a.ctx, localDeleteActOpts)
-	err := workflow.ExecuteLocalActivity(localDeleteActCtx, archivalDeleteHistoryActivity, request).Get(localDeleteActCtx, nil)
+	err := workflow.ExecuteLocalActivity(localDeleteActCtx, deleteHistoryActivity, request).Get(localDeleteActCtx, nil)
 	if err == nil {
-		a.metricsClient.IncCounter(metrics.ArchiveSystemWorkflowScope, metrics.SysWorkerArchivalDeleteHistorySuccessful)
+		// emit success metric
 		return
 	}
-	// TODO: emit metric here as well
+	// emit metric here indicating that local activity for delete failed
 	a.logger.WithField(logging.TagErr, err).Warn("archivalDeleteHistoryActivity could not be completed as a local activity, attempting to run as normal activity")
-
 	deleteActOpts := workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
 		StartToCloseTimeout:    5 * time.Minute,
@@ -156,20 +120,16 @@ func (a *processor) handleRequest(request ArchiveRequest) {
 		RetryPolicy: &cadence.RetryPolicy{
 			InitialInterval:    100 * time.Millisecond,
 			BackoffCoefficient: 2.0,
-			ExpirationInterval: 15 * time.Minute,
-			NonRetriableErrorReasons: []string{
-				errDeleteHistoryActivityDeleteFromV1Str,
-				errDeleteHistoryActivityDeleteFromV2Str,
-			},
+			ExpirationInterval: 10 * time.Minute,
+			NonRetriableErrorReasons: deleteHistoryActivityNonRetryableErrors,
 		},
 	}
 	deleteActCtx := workflow.WithActivityOptions(a.ctx, deleteActOpts)
-	if err := workflow.ExecuteActivity(deleteActCtx, archivalDeleteHistoryActivityFnName, request).Get(deleteActCtx, nil); err != nil {
+	if err := workflow.ExecuteActivity(deleteActCtx, deleteHistoryActivityFnName, request).Get(deleteActCtx, nil); err != nil {
 		logger.WithField(logging.TagErr, err).Error("failed to delete history, this means zombie histories are left")
-		// TODO: rename these metrics because they might not be non-retryable errors anymore
-		a.metricsClient.IncCounter(metrics.ArchiveSystemWorkflowScope, metrics.SysWorkerArchivalDeleteHistoryActivityNonRetryableFailures)
+		// emit some failure metric
 	} else {
-		a.metricsClient.IncCounter(metrics.ArchiveSystemWorkflowScope, metrics.SysWorkerArchivalDeleteHistorySuccessful)
+		// emit some success metric
 	}
 }
 

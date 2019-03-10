@@ -26,6 +26,8 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
+	"github.com/uber-common/bark"
+	"github.com/uber/cadence/common/logging"
 	"strconv"
 	"strings"
 
@@ -130,4 +132,18 @@ func Equal(a []uint64, b []uint64) bool {
 		aMap[elem] = aMap[elem] - 1
 	}
 	return true
+}
+
+// TagLoggerWithRequest returns a logger with all tags from request added
+func TagLoggerWithRequest(logger bark.Logger, request ArchiveRequest) bark.Logger {
+	return logger.WithFields(bark.Fields{
+		logging.TagArchiveRequestDomainID:             request.DomainID,
+		logging.TagArchiveRequestWorkflowID:           request.WorkflowID,
+		logging.TagArchiveRequestRunID:                request.RunID,
+		logging.TagArchiveRequestEventStoreVersion:    request.EventStoreVersion,
+		// TODO: verify that this logs correctly and lets us delete history
+		logging.TagArchiveRequestBranchToken:          string(request.BranchToken),
+		logging.TagArchiveRequestNextEventID:          request.NextEventID,
+		logging.TagArchiveRequestCloseFailoverVersion: request.CloseFailoverVersion,
+	})
 }

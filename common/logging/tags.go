@@ -103,7 +103,7 @@ const (
 	TagValueIndexerProcessorComponent         = "indexer-processor"
 	TagValueIndexerESProcessorComponent       = "indexer-es-processor"
 	TagValueESVisibilityManager               = "es-visibility-manager"
-	TagValueArchiveSystemWorkflowComponent    = "archive-system-workflow"
+	TagValueArchiverComponent    = "archiver"
 
 	// TagHistoryBuilderAction values
 	TagValueActionWorkflowStarted                 = "add-workflowexecution-started-event"
