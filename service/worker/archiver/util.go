@@ -22,6 +22,7 @@ package archiver
 
 import (
 	"bytes"
+	"code.uber.internal/safety/ride-check/go-build/.go/src/gb2/src/github.com/pkg/errors"
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
@@ -62,8 +63,7 @@ type (
 )
 
 var (
-	// TODO: this should not be this RPC level errror but make sure this is non-retryable everywhere in code
-	errInvalidKeyInput = &shared.BadRequestError{Message: "invalid input to construct history blob key"}
+	errInvalidKeyInput = errors.New("invalid input to construct history blob key")
 )
 
 // NewHistoryBlobKey returns a key for history blob

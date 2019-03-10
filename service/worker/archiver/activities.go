@@ -27,16 +27,16 @@ const (
 	blobstoreTimeout = 30 * time.Second
 
 	// the following describe the non-retryable errors that can get returned from uploadHistoryActivity
-	nonRetryableErrGetDomainByID = "uploadHistoryActivity got non-retryable error: could not get domain cache entry"
-	nonRetryableErrBlobExists = "uploadHistoryActivity got non-retryable error: could not check if blob already exists"
-	nonRetryableErrUploadBlob = "uploadHistoryActivity got non-retryable error: could not upload blob"
-	nonRetryableErrNextBlob = "uploadHistoryActivity got non-retryable error: could not get next blob from history blob iterator"
-	nonRetryableErrEmptyBucket = "uploadHistoryActivity got non-retryable error: domain is enabled for archival but bucket is not set"
-	nonRetryableErrConstructBlob = "uploadHistoryActivity got non-retryable error: failed to construct blob"
+	nonRetryableErrGetDomainByID = "could not get domain cache entry"
+	nonRetryableErrBlobExists = "could not check if blob already exists"
+	nonRetryableErrUploadBlob = "could not upload blob"
+	nonRetryableErrNextBlob = "could not get next blob from history blob iterator"
+	nonRetryableErrEmptyBucket = "domain is enabled for archival but bucket is not set"
+	nonRetryableErrConstructBlob = "failed to construct blob"
 
 	// the following describe the non-retryable errors that can get returned from deleteHistoryActivity
-	errDeleteHistoryActivityDeleteFromV2Str         = "failed to delete history from events v2"
-	errDeleteHistoryActivityDeleteFromV1Str         = "failed to delete history from events v1"
+	nonRetryableErrDeleteHistoryV1 = "failed to delete history from events_v1"
+	nonRetryableErrDeleteHistoryV2 = "failed to delete history from events_v2"
 )
 
 func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) error {
@@ -97,6 +97,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) error {
 		blob, reason, err := constructBlob(historyBlob, container.Config.EnableArchivalCompression(domainName))
 		if err != nil {
 			logging.LogFailArchivalUploadAttempt(logger, err, reason, bucket, key.String())
+			return cadence.NewCustomError(nonRetryableErrConstructBlob)
 		}
 		if err := uploadBlob(ctx, blobstoreClient, bucket, key, blob); err != nil {
 			logging.LogFailArchivalUploadAttempt(logger, err, "could not upload blob", bucket, key.String())
@@ -110,41 +111,18 @@ func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) error {
 	go activityHeartbeat(ctx)
 	container := ctx.Value(bootstrapContainerKey).(*BootstrapContainer)
 	logger := taggedLogger(container.Logger, request, activity.GetInfo(ctx).Attempt)
-	// metricsClient := container.MetricsClient
 	if request.EventStoreVersion == persistence.EventStoreVersionV2 {
-		// TODO: move these two cases into the methods below so they look like they follow the same pattern as upload
-		err := persistence.DeleteWorkflowExecutionHistoryV2(container.HistoryV2Manager, request.BranchToken, container.Logger)
-		if err == nil {
-			return nil
+		if err := deleteHistoryV2(ctx, container, request); err != nil {
+			logger.WithError(err).Error("failed to delete history from events v2")
+			return err
 		}
-		op := func() error {
-			return persistence.DeleteWorkflowExecutionHistoryV2(container.HistoryV2Manager, request.BranchToken, container.Logger)
-		}
-		for err != nil && common.IsPersistenceTransientError(err) {
-			err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
-		}
-		logger.WithError(err).Error("failed to delete history from events v2")
-		return errDeleteHistoryActivityDeleteFromV2
-	}
-	deleteHistoryReq := &persistence.DeleteWorkflowExecutionHistoryRequest{
-		DomainID: request.DomainID,
-		Execution: shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(request.WorkflowID),
-			RunId:      common.StringPtr(request.RunID),
-		},
-	}
-	err := container.HistoryManager.DeleteWorkflowExecutionHistory(deleteHistoryReq)
-	if err == nil {
 		return nil
 	}
-	op := func() error {
-		return container.HistoryManager.DeleteWorkflowExecutionHistory(deleteHistoryReq)
+	if err := deleteHistoryV1(ctx, container, request); err != nil {
+		logger.WithError(err).Error("failed to delete history from events v1")
+		return err
 	}
-	for err != nil && common.IsPersistenceTransientError(err) {
-		err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
-	}
-	logger.WithError(err).Error("failed to delete history from events v1")
-	return errDeleteHistoryActivityDeleteFromV1
+	return nil
 }
 
 func taggedLogger(logger bark.Logger, request ArchiveRequest, attempt int32) bark.Logger {
@@ -256,6 +234,53 @@ func constructBlob(historyBlob *HistoryBlob, enableCompression bool) (*blob.Blob
 		return nil, "failed to wrap blob", err
 	}
 	return blob, "", nil
+}
+
+func deleteHistoryV1(ctx context.Context, container *BootstrapContainer, request ArchiveRequest, ) error {
+	deleteHistoryReq := &persistence.DeleteWorkflowExecutionHistoryRequest{
+		DomainID: request.DomainID,
+		Execution: shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(request.WorkflowID),
+			RunId:      common.StringPtr(request.RunID),
+		},
+	}
+	err := container.HistoryManager.DeleteWorkflowExecutionHistory(deleteHistoryReq)
+	if err == nil {
+		return nil
+	}
+	op := func() error {
+		return container.HistoryManager.DeleteWorkflowExecutionHistory(deleteHistoryReq)
+	}
+	for err != nil {
+		if !common.IsPersistenceTransientError(err) {
+			return cadence.NewCustomError(nonRetryableErrDeleteHistoryV1)
+		}
+		if contextExpired(ctx) {
+			return ctx.Err()
+		}
+		err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+	}
+	return nil
+}
+
+func deleteHistoryV2(ctx context.Context, container *BootstrapContainer, request ArchiveRequest) error {
+	err := persistence.DeleteWorkflowExecutionHistoryV2(container.HistoryV2Manager, request.BranchToken, container.Logger)
+	if err == nil {
+		return nil
+	}
+	op := func() error {
+		return persistence.DeleteWorkflowExecutionHistoryV2(container.HistoryV2Manager, request.BranchToken, container.Logger)
+	}
+	for err != nil {
+		if !common.IsPersistenceTransientError(err) {
+			return cadence.NewCustomError(nonRetryableErrDeleteHistoryV2)
+		}
+		if contextExpired(ctx) {
+			return ctx.Err()
+		}
+		err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+	}
+	return nil
 }
 
 func activityHeartbeat(ctx context.Context) {
