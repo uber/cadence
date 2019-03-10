@@ -76,7 +76,7 @@ func (a *processor) Start() {
 					break
 				}
 				a.handleRequest(request)
-				handledHashes = append(handledHashes, HashArchiveRequest(request))
+				handledHashes = append(handledHashes, hashArchiveRequest(request))
 			}
 			a.resultCh.Send(a.ctx, handledHashes)
 		})
@@ -97,7 +97,7 @@ func (a *processor) Finished() []uint64 {
 }
 
 func (a *processor) handleRequest(request ArchiveRequest) {
-	logger := TagLoggerWithRequest(a.logger, request)
+	logger := tagLoggerWithRequest(a.logger, request)
 	uploadActOpts := workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
 		StartToCloseTimeout:    5 * time.Minute,

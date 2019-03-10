@@ -39,6 +39,7 @@ import (
 )
 
 const (
+	readConfigActivityFnName    = "readConfigActivity"
 	uploadHistoryActivityFnName = "uploadHistoryActivity"
 	deleteHistoryActivityFnName = "deleteHistoryActivity"
 	heartbeatTimeout            = time.Minute
@@ -60,10 +61,25 @@ var (
 	deleteHistoryActivityNonRetryableErrors = []string{errDeleteHistoryV1, errDeleteHistoryV2}
 )
 
+type (
+	readConfigActivityResult struct {
+		processorConcurrency  int
+		archivalsPerIteration int
+	}
+)
+
+func readConfigActivity(ctx context.Context) (readConfigActivityResult, error) {
+	container := ctx.Value(bootstrapContainerKey).(*BootstrapContainer)
+	return readConfigActivityResult{
+		processorConcurrency:  container.Config.ProcessorConcurrency(),
+		archivalsPerIteration: container.Config.ArchivalsPerIteration(),
+	}, nil
+}
+
 func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) error {
 	go activityHeartbeat(ctx)
 	container := ctx.Value(bootstrapContainerKey).(*BootstrapContainer)
-	logger := TagLoggerWithRequest(container.Logger, request).WithField(logging.TagAttempt, activity.GetInfo(ctx).Attempt)
+	logger := tagLoggerWithRequest(container.Logger, request).WithField(logging.TagAttempt, activity.GetInfo(ctx).Attempt)
 	metricsClient := container.MetricsClient
 	domainCache := container.DomainCache
 	clusterMetadata := container.ClusterMetadata
@@ -131,7 +147,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) error {
 func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) error {
 	go activityHeartbeat(ctx)
 	container := ctx.Value(bootstrapContainerKey).(*BootstrapContainer)
-	logger := TagLoggerWithRequest(container.Logger, request).WithField(logging.TagAttempt, activity.GetInfo(ctx).Attempt)
+	logger := tagLoggerWithRequest(container.Logger, request).WithField(logging.TagAttempt, activity.GetInfo(ctx).Attempt)
 	if request.EventStoreVersion == persistence.EventStoreVersionV2 {
 		if err := deleteHistoryV2(ctx, container, request); err != nil {
 			logger.WithError(err).Error("failed to delete history from events v2")

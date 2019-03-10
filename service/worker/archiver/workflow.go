@@ -21,18 +21,22 @@
 package archiver
 
 import (
+	"time"
+
 	"go.uber.org/cadence/workflow"
 )
 
-// TODO: consider if reading dynamic config needs to be in activity
-
 func archivalWorkflow(ctx workflow.Context, carryover []ArchiveRequest) error {
-	archivalsPerIteration := globalConfig.ArchivalsPerIteration()
-	requestCh := workflow.NewBufferedChannel(ctx, archivalsPerIteration)
-	archiver := NewProcessor(ctx, globalLogger, globalMetricsClient, globalConfig.ProcessorConcurrency(), requestCh)
+	config, err := readConfig(ctx)
+	if err != nil {
+		// log and emit metric
+		return err
+	}
+	requestCh := workflow.NewBufferedChannel(ctx, config.archivalsPerIteration)
+	archiver := NewProcessor(ctx, globalLogger, globalMetricsClient, config.processorConcurrency, requestCh)
 	archiver.Start()
 	signalCh := workflow.GetSignalChannel(ctx, signalName)
-	pump := NewPump(ctx, globalLogger, globalMetricsClient, carryover, workflowStartToCloseTimeout/2, archivalsPerIteration, requestCh, signalCh)
+	pump := NewPump(ctx, globalLogger, globalMetricsClient, carryover, workflowStartToCloseTimeout/2, config.archivalsPerIteration, requestCh, signalCh)
 	pumpResult := pump.Run()
 	handledHashes := archiver.Finished()
 	if pumpResult.TimeoutWithoutSignals {
@@ -40,7 +44,7 @@ func archivalWorkflow(ctx workflow.Context, carryover []ArchiveRequest) error {
 	}
 	if len(pumpResult.UnhandledCarryover) > 0 {
 	}
-	if !Equal(pumpResult.PumpedHashes, handledHashes) {
+	if !equal(pumpResult.PumpedHashes, handledHashes) {
 	}
 	for {
 		var request ArchiveRequest
@@ -52,4 +56,17 @@ func archivalWorkflow(ctx workflow.Context, carryover []ArchiveRequest) error {
 	ctx = workflow.WithExecutionStartToCloseTimeout(ctx, workflowStartToCloseTimeout)
 	ctx = workflow.WithWorkflowTaskStartToCloseTimeout(ctx, workflowTaskStartToCloseTimeout)
 	return workflow.NewContinueAsNewError(ctx, archivalWorkflowFnName, pumpResult.UnhandledCarryover)
+}
+
+func readConfig(ctx workflow.Context) (*readConfigActivityResult, error) {
+	opts := workflow.ActivityOptions{
+		ScheduleToStartTimeout: 30 * time.Second,
+		StartToCloseTimeout:    30 * time.Second,
+	}
+	actCtx := workflow.WithActivityOptions(ctx, opts)
+	result := &readConfigActivityResult{}
+	if err := workflow.ExecuteActivity(actCtx, readConfigActivityFnName).Get(actCtx, result); err != nil {
+		return nil, err
+	}
+	return result, nil
 }

@@ -31,8 +31,6 @@ import (
 	cclient "go.uber.org/cadence/client"
 )
 
-// TODO: regenerate client_mock once code builds again...
-
 type (
 	// ArchiveRequest is request to Archive
 	ArchiveRequest struct {

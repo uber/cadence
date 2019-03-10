@@ -21,10 +21,11 @@
 package archiver
 
 import (
+	"time"
+
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common/metrics"
 	"go.uber.org/cadence/workflow"
-	"time"
 )
 
 type (
@@ -97,7 +98,7 @@ func (p *pump) Run() PumpResult {
 	for i := 0; i < carryoverBoundIndex; i++ {
 		request := p.carryover[i]
 		p.requestCh.Send(p.ctx, request)
-		pumpResult.PumpedHashes = append(pumpResult.PumpedHashes, HashArchiveRequest(request))
+		pumpResult.PumpedHashes = append(pumpResult.PumpedHashes, hashArchiveRequest(request))
 	}
 	if len(pumpResult.PumpedHashes) == p.requestLimit {
 		return pumpResult
@@ -119,7 +120,7 @@ func (p *pump) Run() PumpResult {
 		var request ArchiveRequest
 		ch.Receive(p.ctx, &request)
 		p.requestCh.Send(p.ctx, request)
-		pumpResult.PumpedHashes = append(pumpResult.PumpedHashes, HashArchiveRequest(request))
+		pumpResult.PumpedHashes = append(pumpResult.PumpedHashes, hashArchiveRequest(request))
 		finished = len(pumpResult.PumpedHashes) == p.requestLimit
 	})
 	for !finished {

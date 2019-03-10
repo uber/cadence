@@ -105,18 +105,15 @@ func ConvertHeaderToTags(header *HistoryBlobHeader) (map[string]string, error) {
 	return result, nil
 }
 
-// HashArchiveRequest returns a hash of ArchiveRequest
 // TODO: write unit tests for this method
-func HashArchiveRequest(archiveRequest ArchiveRequest) uint64 {
+func hashArchiveRequest(archiveRequest ArchiveRequest) uint64 {
 	var b bytes.Buffer
 	gob.NewEncoder(&b).Encode(archiveRequest)
 	return farm.Fingerprint64(b.Bytes())
 }
 
-// Equal returns true if a and b are equal, false otherwise.
-// Does comparision in deterministic fashion (e.g. no iteration over map). Therefore is safe to call from workflow code.
 // TODO: write unit tests for this method
-func Equal(a []uint64, b []uint64) bool {
+func equal(a []uint64, b []uint64) bool {
 	if len(a) != len(b) {
 		return false
 	}
@@ -134,14 +131,12 @@ func Equal(a []uint64, b []uint64) bool {
 	return true
 }
 
-// TagLoggerWithRequest returns a logger with all tags from request added
-func TagLoggerWithRequest(logger bark.Logger, request ArchiveRequest) bark.Logger {
+func tagLoggerWithRequest(logger bark.Logger, request ArchiveRequest) bark.Logger {
 	return logger.WithFields(bark.Fields{
-		logging.TagArchiveRequestDomainID:          request.DomainID,
-		logging.TagArchiveRequestWorkflowID:        request.WorkflowID,
-		logging.TagArchiveRequestRunID:             request.RunID,
-		logging.TagArchiveRequestEventStoreVersion: request.EventStoreVersion,
-		// TODO: verify that this logs correctly and lets us delete history
+		logging.TagArchiveRequestDomainID:             request.DomainID,
+		logging.TagArchiveRequestWorkflowID:           request.WorkflowID,
+		logging.TagArchiveRequestRunID:                request.RunID,
+		logging.TagArchiveRequestEventStoreVersion:    request.EventStoreVersion,
 		logging.TagArchiveRequestBranchToken:          string(request.BranchToken),
 		logging.TagArchiveRequestNextEventID:          request.NextEventID,
 		logging.TagArchiveRequestCloseFailoverVersion: request.CloseFailoverVersion,
