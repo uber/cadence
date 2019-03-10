@@ -111,8 +111,6 @@ func (s *workflowHandlerSuite) TearDownTest() {
 	s.mockBlobstoreClient.AssertExpectations(s.T())
 }
 
-// TODO: make sure I have a test that covers accessing a partially uploaded history, this is valid case
-
 func (s *workflowHandlerSuite) TestMergeDomainData_Overriding() {
 	wh := &WorkflowHandler{}
 	out := wh.mergeDomainData(
