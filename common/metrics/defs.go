@@ -1305,6 +1305,10 @@ const (
 	ESProcessorFailures
 	ESProcessorCorruptedData
 	IndexProcessorCorruptedData
+	ArchiverNonRetryableErrorCount
+	ArchiverSkipUploadCount
+	ArchiverBlobAlreadyExists
+	ArchiverActivityLatency
 
 	NumWorkerMetrics
 )
@@ -1485,6 +1489,10 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ESProcessorFailures:         {metricName: "es-processor.errors"},
 		ESProcessorCorruptedData:    {metricName: "es-processor.corrupted-data"},
 		IndexProcessorCorruptedData: {metricName: "index-processor.corrupted-data"},
+		ArchiverNonRetryableErrorCount: {metricName: "archiver.non-retryable-error"},
+		ArchiverSkipUploadCount: {metricName: "archiver.skip-upload"},
+		ArchiverBlobAlreadyExists: {metricName: "archiver.blob-already-exists"},
+		ArchiverActivityLatency: {metricName: "archiver.activity-latency"},
 	},
 }
 

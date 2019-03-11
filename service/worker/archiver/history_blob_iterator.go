@@ -27,7 +27,6 @@ import (
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -46,7 +45,6 @@ type (
 
 	historyBlobIterator struct {
 		logger        bark.Logger
-		metricsClient metrics.Client
 
 		// the following defines the state of the iterator
 		blobPageToken        int
@@ -76,7 +74,6 @@ var (
 // NewHistoryBlobIterator returns a new HistoryBlobIterator
 func NewHistoryBlobIterator(
 	logger bark.Logger,
-	metricsClient metrics.Client,
 	request ArchiveRequest,
 	container *BootstrapContainer,
 	domainName string,
@@ -84,7 +81,6 @@ func NewHistoryBlobIterator(
 ) HistoryBlobIterator {
 	return &historyBlobIterator{
 		logger:        logger,
-		metricsClient: metricsClient,
 
 		blobPageToken:        common.FirstBlobPageToken,
 		persistencePageToken: nil,
