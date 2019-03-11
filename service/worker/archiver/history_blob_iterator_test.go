@@ -554,14 +554,7 @@ func (s *HistoryBlobIteratorSuite) constructTestHistoryBlobIterator(
 		HistoryV2Manager: mockHistoryV2Manager,
 		Config:           config,
 	}
-	return NewHistoryBlobIterator(
-		s.logger,
-		s.metricsClient,
-		request,
-		container,
-		testDomain,
-		testClusterName,
-	).(*historyBlobIterator)
+	return NewHistoryBlobIterator(request, container, testDomain, testClusterName).(*historyBlobIterator)
 }
 
 func constructConfig(historyPageSize, targetArchivalBlobSize int) *Config {

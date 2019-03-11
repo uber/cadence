@@ -84,6 +84,10 @@ func (p *pump) Run() PumpResult {
 	defer func() {
 		p.requestCh.Close()
 	}()
+
+	sw := p.metricsClient.StartTimer(metrics.ArchiverPumpScope, metrics.CadenceLatency)
+	defer sw.Stop()
+
 	carryoverBoundIndex := len(p.carryover)
 	if carryoverBoundIndex > p.requestLimit {
 		carryoverBoundIndex = p.requestLimit
@@ -92,6 +96,7 @@ func (p *pump) Run() PumpResult {
 	for i := carryoverBoundIndex; i < len(p.carryover); i++ {
 		unhandledCarryover = append(unhandledCarryover, p.carryover[i])
 	}
+	p.metricsClient.UpdateGauge(metrics.ArchiverPumpScope, metrics.ArchiverBacklogSizeGauge, float64(len(unhandledCarryover)))
 	pumpResult := PumpResult{
 		UnhandledCarryover: unhandledCarryover,
 	}
@@ -106,7 +111,9 @@ func (p *pump) Run() PumpResult {
 	selector := workflow.NewSelector(p.ctx)
 	finished := false
 	selector.AddFuture(workflow.NewTimer(p.ctx, p.timeout), func(_ workflow.Future) {
+		p.metricsClient.IncCounter(metrics.ArchiverPumpScope, metrics.ArchiverPumpTimeoutCount)
 		if len(p.carryover) == len(pumpResult.PumpedHashes) {
+			p.metricsClient.IncCounter(metrics.ArchiverPumpScope, metrics.ArchiverPumpTimeoutWithoutSignalsCount)
 			pumpResult.TimeoutWithoutSignals = true
 		}
 		finished = true
@@ -114,6 +121,7 @@ func (p *pump) Run() PumpResult {
 	selector.AddReceive(p.signalCh, func(ch workflow.Channel, more bool) {
 		if !more {
 			p.logger.Error("signal channel channel closed unexpectedly")
+			p.metricsClient.IncCounter(metrics.ArchiverPumpScope, metrics.ArchiverPumpSignalChannelClosedCount)
 			finished = true
 			return
 		}
@@ -122,6 +130,9 @@ func (p *pump) Run() PumpResult {
 		p.requestCh.Send(p.ctx, request)
 		pumpResult.PumpedHashes = append(pumpResult.PumpedHashes, hashArchiveRequest(request))
 		finished = len(pumpResult.PumpedHashes) == p.requestLimit
+		if finished {
+			p.metricsClient.IncCounter(metrics.ArchiverPumpScope, metrics.ArchiverPumpSignalThresholdCount)
+		}
 	})
 	for !finished {
 		selector.Select(p.ctx)

@@ -1318,6 +1318,11 @@ const (
 	ArchiverDeleteLocalSuccessCount
 	ArchiverDeleteFailedAllRetriesCount
 	ArchiverDeleteSuccessCount
+	ArchiverBacklogSizeGauge
+	ArchiverPumpTimeoutCount
+	ArchiverPumpSignalThresholdCount
+	ArchiverPumpTimeoutWithoutSignalsCount
+	ArchiverPumpSignalChannelClosedCount
 
 	NumWorkerMetrics
 )
@@ -1514,6 +1519,11 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ArchiverDeleteLocalSuccessCount:          {metricName: "archiver.delete-local-success"},
 		ArchiverDeleteFailedAllRetriesCount:      {metricName: "archiver.delete-failed-all-retries"},
 		ArchiverDeleteSuccessCount:               {metricName: "archiver.delete-success"},
+		ArchiverBacklogSizeGauge:                 {metricName: "archiver.backlog-size"},
+		ArchiverPumpTimeoutCount:                 {metricName: "archiver.pump-timeout"},
+		ArchiverPumpSignalThresholdCount:         {metricName: "archiver.pump-signal-threshold"},
+		ArchiverPumpTimeoutWithoutSignalsCount:   {metricName: "archiver.pump-timeout-without-signals"},
+		ArchiverPumpSignalChannelClosedCount:     {metricName: "archiver.pump-signal-channel-closed"},
 	},
 }
 

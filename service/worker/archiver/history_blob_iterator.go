@@ -24,7 +24,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
@@ -44,8 +43,6 @@ type (
 	}
 
 	historyBlobIterator struct {
-		logger bark.Logger
-
 		// the following defines the state of the iterator
 		blobPageToken        int
 		persistencePageToken []byte
@@ -73,15 +70,12 @@ var (
 
 // NewHistoryBlobIterator returns a new HistoryBlobIterator
 func NewHistoryBlobIterator(
-	logger bark.Logger,
 	request ArchiveRequest,
 	container *BootstrapContainer,
 	domainName string,
 	clusterName string,
 ) HistoryBlobIterator {
 	return &historyBlobIterator{
-		logger: logger,
-
 		blobPageToken:        common.FirstBlobPageToken,
 		persistencePageToken: nil,
 		finishedIteration:    false,
@@ -106,12 +100,10 @@ func NewHistoryBlobIterator(
 // If error is returned then no iterator is state is advanced.
 func (i *historyBlobIterator) Next() (*HistoryBlob, error) {
 	if !i.HasNext() {
-		i.logger.Error("called Next on depleted iterator")
 		return nil, errIteratorDepleted
 	}
 	events, nextPersistencePageToken, historyEndReached, err := i.readBlobEvents(i.persistencePageToken)
 	if err != nil {
-		i.logger.WithError(err).Error("failed to read history events to construct blob")
 		return nil, err
 	}
 
