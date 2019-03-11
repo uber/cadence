@@ -63,7 +63,7 @@ var (
 
 type (
 	readConfigActivityResult struct {
-		ArchiverConcurrency  int
+		ArchiverConcurrency   int
 		ArchivalsPerIteration int
 	}
 )
@@ -71,7 +71,7 @@ type (
 func readConfigActivity(ctx context.Context) (readConfigActivityResult, error) {
 	container := ctx.Value(bootstrapContainerKey).(*BootstrapContainer)
 	result := readConfigActivityResult{
-		ArchiverConcurrency:  container.Config.ArchiverConcurrency(),
+		ArchiverConcurrency:   container.Config.ArchiverConcurrency(),
 		ArchivalsPerIteration: container.Config.ArchivalsPerIteration(),
 	}
 	return result, nil

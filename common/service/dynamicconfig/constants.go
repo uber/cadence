@@ -171,7 +171,7 @@ var keys = map[Key]string{
 	EnableArchivalCompression:                "worker.EnableArchivalCompression",
 	WorkerHistoryPageSize:                    "worker.WorkerHistoryPageSize",
 	WorkerTargetArchivalBlobSize:             "worker.WorkerTargetArchivalBlobSize",
-	WorkerArchiverConcurrency:               "worker.ArchiverConcurrency",
+	WorkerArchiverConcurrency:                "worker.ArchiverConcurrency",
 	WorkerArchivalsPerIteration:              "worker.ArchivalsPerIteration",
 }
 
