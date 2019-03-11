@@ -1136,6 +1136,7 @@ struct SignalWorkflowExecutionRequest {
   50: optional string identity
   60: optional string requestId
   70: optional binary control
+  80: optional binary versionToken
 }
 
 struct SignalWithStartWorkflowExecutionRequest {
@@ -1209,7 +1210,6 @@ struct QueryWorkflowRequest {
   10: optional string domain
   20: optional WorkflowExecution execution
   30: optional WorkflowQuery query
-  40: optional binary versionToken
 }
 
 struct QueryWorkflowResponse {
@@ -1226,6 +1226,7 @@ struct UpdateWorkflowRequest {
   10: optional string domain
   20: optional WorkflowExecution execution
   30: optional WorkflowUpdate update
+  40: optional binary versionToken
 }
 
 struct UpdateWorkflowResponse {
