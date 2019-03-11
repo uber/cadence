@@ -63,17 +63,18 @@ var (
 
 type (
 	readConfigActivityResult struct {
-		processorConcurrency  int
-		archivalsPerIteration int
+		ProcessorConcurrency  int
+		ArchivalsPerIteration int
 	}
 )
 
 func readConfigActivity(ctx context.Context) (readConfigActivityResult, error) {
 	container := ctx.Value(bootstrapContainerKey).(*BootstrapContainer)
-	return readConfigActivityResult{
-		processorConcurrency:  container.Config.ProcessorConcurrency(),
-		archivalsPerIteration: container.Config.ArchivalsPerIteration(),
-	}, nil
+	result := readConfigActivityResult{
+		ProcessorConcurrency:  container.Config.ProcessorConcurrency(),
+		ArchivalsPerIteration: container.Config.ArchivalsPerIteration(),
+	}
+	return result, nil
 }
 
 func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) error {

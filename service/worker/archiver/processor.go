@@ -75,7 +75,7 @@ func (a *processor) Start() {
 				if more := a.requestCh.Receive(ctx, &request); !more {
 					break
 				}
-				a.handleRequest(request)
+				handleRequest(ctx, a.logger, request)
 				handledHashes = append(handledHashes, hashArchiveRequest(request))
 			}
 			a.resultCh.Send(a.ctx, handledHashes)
@@ -96,8 +96,8 @@ func (a *processor) Finished() []uint64 {
 	return handledHashes
 }
 
-func (a *processor) handleRequest(request ArchiveRequest) {
-	logger := tagLoggerWithRequest(a.logger, request)
+func handleRequest(ctx workflow.Context, logger bark.Logger, request ArchiveRequest) {
+	logger = tagLoggerWithRequest(logger, request)
 	uploadActOpts := workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
 		StartToCloseTimeout:    5 * time.Minute,
@@ -109,7 +109,7 @@ func (a *processor) handleRequest(request ArchiveRequest) {
 			NonRetriableErrorReasons: uploadHistoryActivityNonRetryableErrors,
 		},
 	}
-	uploadActCtx := workflow.WithActivityOptions(a.ctx, uploadActOpts)
+	uploadActCtx := workflow.WithActivityOptions(ctx, uploadActOpts)
 	if err := workflow.ExecuteActivity(uploadActCtx, uploadHistoryActivityFnName, request).Get(uploadActCtx, nil); err != nil {
 		logger.WithField(logging.TagErr, err).Error("failed to upload history, moving on to deleting history without archiving")
 	} else {
@@ -125,14 +125,14 @@ func (a *processor) handleRequest(request ArchiveRequest) {
 			NonRetriableErrorReasons: deleteHistoryActivityNonRetryableErrors,
 		},
 	}
-	localDeleteActCtx := workflow.WithLocalActivityOptions(a.ctx, localDeleteActOpts)
+	localDeleteActCtx := workflow.WithLocalActivityOptions(ctx, localDeleteActOpts)
 	err := workflow.ExecuteLocalActivity(localDeleteActCtx, deleteHistoryActivity, request).Get(localDeleteActCtx, nil)
 	if err == nil {
 		// emit success metric
 		return
 	}
 	// emit metric here indicating that local activity for delete failed
-	a.logger.WithField(logging.TagErr, err).Warn("archivalDeleteHistoryActivity could not be completed as a local activity, attempting to run as normal activity")
+	logger.WithField(logging.TagErr, err).Warn("archivalDeleteHistoryActivity could not be completed as a local activity, attempting to run as normal activity")
 	deleteActOpts := workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
 		StartToCloseTimeout:    5 * time.Minute,
@@ -144,7 +144,7 @@ func (a *processor) handleRequest(request ArchiveRequest) {
 			NonRetriableErrorReasons: deleteHistoryActivityNonRetryableErrors,
 		},
 	}
-	deleteActCtx := workflow.WithActivityOptions(a.ctx, deleteActOpts)
+	deleteActCtx := workflow.WithActivityOptions(ctx, deleteActOpts)
 	if err := workflow.ExecuteActivity(deleteActCtx, deleteHistoryActivityFnName, request).Get(deleteActCtx, nil); err != nil {
 		logger.WithField(logging.TagErr, err).Error("failed to delete history, this means zombie histories are left")
 		// emit some failure metric

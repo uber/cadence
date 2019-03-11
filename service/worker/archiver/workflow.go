@@ -23,28 +23,35 @@ package archiver
 import (
 	"time"
 
+	"github.com/uber-common/bark"
+	"github.com/uber/cadence/common/logging"
 	"go.uber.org/cadence/workflow"
 )
 
 func archivalWorkflow(ctx workflow.Context, carryover []ArchiveRequest) error {
+	workflowInfo := workflow.GetInfo(ctx)
+	globalLogger.WithFields(bark.Fields{
+		logging.TagDomain:              workflowInfo.Domain,
+		logging.TagWorkflowExecutionID: workflowInfo.WorkflowExecution.ID,
+		logging.TagWorkflowRunID:       workflowInfo.WorkflowExecution.RunID,
+	}).Info("archival system workflow started")
 	config, err := readConfig(ctx)
 	if err != nil {
 		// log and emit metric
 		return err
 	}
-	requestCh := workflow.NewBufferedChannel(ctx, config.archivalsPerIteration)
-	archiver := NewProcessor(ctx, globalLogger, globalMetricsClient, config.processorConcurrency, requestCh)
+	requestCh := workflow.NewBufferedChannel(ctx, config.ArchivalsPerIteration)
+	archiver := NewProcessor(ctx, globalLogger, globalMetricsClient, config.ProcessorConcurrency, requestCh)
 	archiver.Start()
 	signalCh := workflow.GetSignalChannel(ctx, signalName)
-	pump := NewPump(ctx, globalLogger, globalMetricsClient, carryover, workflowStartToCloseTimeout/2, config.archivalsPerIteration, requestCh, signalCh)
+	pump := NewPump(ctx, globalLogger, globalMetricsClient, carryover, workflowStartToCloseTimeout/2, config.ArchivalsPerIteration, requestCh, signalCh)
 	pumpResult := pump.Run()
 	handledHashes := archiver.Finished()
 	if pumpResult.TimeoutWithoutSignals {
 		return nil
 	}
-	if len(pumpResult.UnhandledCarryover) > 0 {
-	}
 	if !equal(pumpResult.PumpedHashes, handledHashes) {
+		// log and emit metric
 	}
 	for {
 		var request ArchiveRequest
@@ -58,15 +65,15 @@ func archivalWorkflow(ctx workflow.Context, carryover []ArchiveRequest) error {
 	return workflow.NewContinueAsNewError(ctx, archivalWorkflowFnName, pumpResult.UnhandledCarryover)
 }
 
-func readConfig(ctx workflow.Context) (*readConfigActivityResult, error) {
+func readConfig(ctx workflow.Context) (readConfigActivityResult, error) {
 	opts := workflow.ActivityOptions{
 		ScheduleToStartTimeout: 30 * time.Second,
 		StartToCloseTimeout:    30 * time.Second,
 	}
 	actCtx := workflow.WithActivityOptions(ctx, opts)
-	result := &readConfigActivityResult{}
-	if err := workflow.ExecuteActivity(actCtx, readConfigActivityFnName).Get(actCtx, result); err != nil {
-		return nil, err
+	var result readConfigActivityResult
+	if err := workflow.ExecuteActivity(actCtx, readConfigActivityFnName).Get(actCtx, &result); err != nil {
+		return readConfigActivityResult{}, err
 	}
 	return result, nil
 }
