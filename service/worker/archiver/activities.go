@@ -89,14 +89,14 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	encounteredBlobAlreadyExists := false
 	container := ctx.Value(bootstrapContainerKey).(*BootstrapContainer)
 	metricsClient := container.MetricsClient
-	sw := metricsClient.StartTimer(metrics.ArchiverUploadHistoryActivityScope, metrics.ArchiverActivityLatency)
+	sw := metricsClient.StartTimer(metrics.ArchiverUploadHistoryActivityScope, metrics.CadenceLatency)
 	defer func() {
 		sw.Stop()
 		if skippedArchival {
 			metricsClient.IncCounter(metrics.ArchiverUploadHistoryActivityScope, metrics.ArchiverSkipUploadCount)
 		}
 		if encounteredBlobAlreadyExists {
-			metricsClient.IncCounter(metrics.ArchiverUploadHistoryActivityScope, metrics.ArchiverBlobAlreadyExists)
+			metricsClient.IncCounter(metrics.ArchiverUploadHistoryActivityScope, metrics.ArchiverBlobAlreadyExistsCount)
 		}
 		if err != nil {
 			if err == contextTimeoutErr {
@@ -176,7 +176,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) (err error) {
 	container := ctx.Value(bootstrapContainerKey).(*BootstrapContainer)
 	metricsClient := container.MetricsClient
-	sw := metricsClient.StartTimer(metrics.ArchiverDeleteHistoryActivityScope, metrics.ArchiverActivityLatency)
+	sw := metricsClient.StartTimer(metrics.ArchiverDeleteHistoryActivityScope, metrics.CadenceLatency)
 	defer func() {
 		sw.Stop()
 		if err != nil {
@@ -219,7 +219,7 @@ func nextBlob(ctx context.Context, historyBlobItr HistoryBlobIterator) (*History
 		if contextExpired(ctx) {
 			return nil, contextTimeoutErr
 		}
-		backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+		err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
 	}
 	return blob, nil
 }
@@ -276,7 +276,7 @@ func getDomainByID(ctx context.Context, domainCache cache.DomainCache, id string
 		if contextExpired(ctx) {
 			return nil, contextTimeoutErr
 		}
-		backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+		err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
 	}
 	return entry, nil
 }

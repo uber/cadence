@@ -768,8 +768,6 @@ const (
 	ArchiverDeleteHistoryActivityScope
 	// ArchiverClientScope is scope used by all metrics emitted by archiver.Client
 	ArchiverClientScope
-	// ArchiverHistoryBlobIteratorScope is scope used by all metrics emitted by archiver.HistoryBlobIterator
-	ArchiverHistoryBlobIteratorScope
 	// ArchiverScope is scope used by all metrics emitted by archiver.Archiver
 	ArchiverScope
 	// ArchiverPumpScope is scope used by all metrics emitted by archiver.Pump
@@ -1106,7 +1104,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ArchiverUploadHistoryActivityScope: {operation: "ArchiverUploadHistoryActivity"},
 		ArchiverDeleteHistoryActivityScope: {operation: "ArchiverDeleteHistoryActivity"},
 		ArchiverClientScope:                {operation: "ArchiverClient"},
-		ArchiverHistoryBlobIteratorScope:   {operation: "ArchiverHistoryBlobIterator"},
 		ArchiverScope:                      {operation: "Archiver"},
 		ArchiverPumpScope:                  {operation: "ArchiverPump"},
 		ArchiverArchivalWorkflowScope:      {operation: "ArchiverArchivalWorkflow"},
@@ -1307,8 +1304,20 @@ const (
 	IndexProcessorCorruptedData
 	ArchiverNonRetryableErrorCount
 	ArchiverSkipUploadCount
-	ArchiverBlobAlreadyExists
-	ArchiverActivityLatency
+	ArchiverBlobAlreadyExistsCount
+	ArchiverStartedCount
+	ArchiverStoppedCount
+	ArchiverCoroutineStartedCount
+	ArchiverCoroutineStoppedCount
+	ArchiverHandleRequestLatency
+	ArchiverUploadWithRetriesLatency
+	ArchiverDeleteWithRetriesLatency
+	ArchiverUploadFailedAllRetriesCount
+	ArchiverUploadSuccessCount
+	ArchiverDeleteLocalFailedAllRetriesCount
+	ArchiverDeleteLocalSuccessCount
+	ArchiverDeleteFailedAllRetriesCount
+	ArchiverDeleteSuccessCount
 
 	NumWorkerMetrics
 )
@@ -1491,8 +1500,20 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		IndexProcessorCorruptedData:    {metricName: "index-processor.corrupted-data"},
 		ArchiverNonRetryableErrorCount: {metricName: "archiver.non-retryable-error"},
 		ArchiverSkipUploadCount:        {metricName: "archiver.skip-upload"},
-		ArchiverBlobAlreadyExists:      {metricName: "archiver.blob-already-exists"},
-		ArchiverActivityLatency:        {metricName: "archiver.activity-latency"},
+		ArchiverBlobAlreadyExistsCount:      {metricName: "archiver.blob-already-exists"},
+		ArchiverStartedCount:      {metricName: "archiver.started"},
+		ArchiverStoppedCount:      {metricName: "archiver.stopped"},
+		ArchiverCoroutineStartedCount:      {metricName: "archiver.coroutine-started"},
+		ArchiverCoroutineStoppedCount:      {metricName: "archiver.coroutine-stopped"},
+		ArchiverHandleRequestLatency:      {metricName: "archiver.handle-request-latency"},
+		ArchiverUploadWithRetriesLatency:      {metricName: "archiver.upload-with-retries-latency"},
+		ArchiverDeleteWithRetriesLatency:      {metricName: "archiver.delete-with-retries-latency"},
+		ArchiverUploadFailedAllRetriesCount:      {metricName: "archiver.upload-failed-all-retries"},
+		ArchiverUploadSuccessCount:      {metricName: "archiver.upload-success"},
+		ArchiverDeleteLocalFailedAllRetriesCount:      {metricName: "archiver.delete-local-failed-all-retries"},
+		ArchiverDeleteLocalSuccessCount:      {metricName: "archiver.delete-local-success"},
+		ArchiverDeleteFailedAllRetriesCount:      {metricName: "archiver.delete-failed-all-retries"},
+		ArchiverDeleteSuccessCount:      {metricName: "archiver.delete-success"},
 	},
 }
 
