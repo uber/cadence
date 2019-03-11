@@ -25,10 +25,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/client/public"
 	"time"
 
-	"github.com/uber/cadence/service/worker/sysworkflow"
+	"go.uber.org/cadence/.gen/go/shared"
 
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
@@ -36,6 +35,7 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
+	"github.com/uber/cadence/client/public"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -45,6 +45,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/worker/sysworkflow"
 	"go.uber.org/yarpc"
 )
 
@@ -119,6 +120,9 @@ var (
 	ErrBufferedEventsLimitExceeded = &workflow.LimitExceededError{Message: "Exceeded workflow execution limit for buffered events"}
 	// ErrSignalsLimitExceeded is the error indicating limit reached for maximum number of signal events
 	ErrSignalsLimitExceeded = &workflow.LimitExceededError{Message: "Exceeded workflow execution limit for signal events"}
+	// ErrEventsAterWorkflowFinish is the error indicating server error trying to write events after workflow finish event
+	ErrEventsAterWorkflowFinish = &shared.InternalServiceError{Message: "error validating last event being workflow finish event."}
+
 	// FailedWorkflowCloseState is a set of failed workflow close states, used for start workflow policy
 	// for start workflow execution API
 	FailedWorkflowCloseState = map[int]bool{
@@ -167,7 +171,7 @@ func NewEngineWithShardContext(
 		metricsClient:        shard.GetMetricsClient(),
 		historyEventNotifier: historyEventNotifier,
 		config:               config,
-		archivalClient:       sysworkflow.NewArchivalClient(publicClient, shard.GetConfig().NumSysWorkflows),
+		archivalClient:       sysworkflow.NewArchivalClient(publicClient, shard.GetConfig().NumArchiveSystemWorkflows),
 	}
 
 	txProcessor := newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, visibilityProducer, matching, historyClient, logger)
@@ -287,7 +291,7 @@ func (e *historyEngineImpl) createMutableState(clusterMetadata cluster.Metadata,
 		// target clusters or not
 		msBuilder = newMutableStateBuilderWithReplicationState(
 			clusterMetadata.GetCurrentClusterName(),
-			e.shard.GetConfig(),
+			e.shard,
 			e.shard.GetEventsCache(),
 			e.logger,
 			domainEntry.GetFailoverVersion(),
@@ -295,7 +299,7 @@ func (e *historyEngineImpl) createMutableState(clusterMetadata cluster.Metadata,
 	} else {
 		msBuilder = newMutableStateBuilder(
 			clusterMetadata.GetCurrentClusterName(),
-			e.shard.GetConfig(),
+			e.shard,
 			e.shard.GetEventsCache(),
 			e.logger,
 		)
@@ -328,6 +332,12 @@ func (e *historyEngineImpl) generateFirstDecisionTask(domainID string, msBuilder
 }
 
 func (e *historyEngineImpl) appendFirstBatchHistoryEvents(msBuilder mutableState, domainID string, execution workflow.WorkflowExecution) (historySize int, err error) {
+	// call FlushBufferedEvents to assign task id to event
+	// as well as update last event task id in new state builder
+	err = msBuilder.FlushBufferedEvents()
+	if err != nil {
+		return 0, err
+	}
 	events := msBuilder.GetHistoryBuilder().GetHistory().Events
 	startedEvent := events[0]
 	if msBuilder.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
@@ -422,6 +432,7 @@ func (e *historyEngineImpl) createWorkflow(startRequest *h.StartWorkflowExecutio
 		WorkflowTimeout:             *request.ExecutionStartToCloseTimeoutSeconds,
 		DecisionTimeoutValue:        *request.TaskStartToCloseTimeoutSeconds,
 		ExecutionContext:            nil,
+		LastEventTaskID:             currExeInfo.LastEventTaskID,
 		NextEventID:                 msBuilder.GetNextEventID(),
 		LastProcessedEvent:          common.EmptyEventID,
 		HistorySize:                 int64(msBuilder.GetHistorySize()),
@@ -810,7 +821,11 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(ctx context.Context,
 		// for closed workflow
 		closeStatus := getWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
 		result.WorkflowExecutionInfo.CloseStatus = &closeStatus
-		result.WorkflowExecutionInfo.CloseTime = common.Int64Ptr(msBuilder.GetLastUpdatedTimestamp())
+		completionEvent, ok := msBuilder.GetCompletionEvent()
+		if !ok {
+			return nil, &workflow.InternalServiceError{Message: "Unable to get workflow completion event."}
+		}
+		result.WorkflowExecutionInfo.CloseTime = common.Int64Ptr(completionEvent.GetTimestamp())
 	}
 
 	if len(msBuilder.GetPendingActivityInfos()) > 0 {
@@ -1274,7 +1289,7 @@ Update_History_Loop:
 					}
 
 					startAttributes := startEvent.WorkflowExecutionStartedEventAttributes
-					continueAsnewAttributes := &workflow.ContinueAsNewWorkflowExecutionDecisionAttributes{
+					continueAsNewAttributes := &workflow.ContinueAsNewWorkflowExecutionDecisionAttributes{
 						WorkflowType:                        startAttributes.WorkflowType,
 						TaskList:                            startAttributes.TaskList,
 						RetryPolicy:                         startAttributes.RetryPolicy,
@@ -1287,7 +1302,8 @@ Update_History_Loop:
 						CronSchedule:                        common.StringPtr(msBuilder.GetExecutionInfo().CronSchedule),
 					}
 
-					if _, continueAsNewBuilder, err = msBuilder.AddContinueAsNewEvent(completedID, domainEntry, startAttributes.GetParentWorkflowDomain(), continueAsnewAttributes, eventStoreVersion); err != nil {
+					if _, continueAsNewBuilder, err = msBuilder.AddContinueAsNewEvent(completedID, completedID, domainEntry,
+						startAttributes.GetParentWorkflowDomain(), continueAsNewAttributes, eventStoreVersion); err != nil {
 						return nil, err
 					}
 				}
@@ -1346,7 +1362,7 @@ Update_History_Loop:
 					}
 
 					startAttributes := startEvent.WorkflowExecutionStartedEventAttributes
-					continueAsnewAttributes := &workflow.ContinueAsNewWorkflowExecutionDecisionAttributes{
+					continueAsNewAttributes := &workflow.ContinueAsNewWorkflowExecutionDecisionAttributes{
 						WorkflowType:                        startAttributes.WorkflowType,
 						TaskList:                            startAttributes.TaskList,
 						RetryPolicy:                         startAttributes.RetryPolicy,
@@ -1361,7 +1377,8 @@ Update_History_Loop:
 						CronSchedule:                        common.StringPtr(msBuilder.GetExecutionInfo().CronSchedule),
 					}
 
-					if _, continueAsNewBuilder, err = msBuilder.AddContinueAsNewEvent(completedID, domainEntry, startAttributes.GetParentWorkflowDomain(), continueAsnewAttributes, eventStoreVersion); err != nil {
+					if _, continueAsNewBuilder, err = msBuilder.AddContinueAsNewEvent(completedID, completedID, domainEntry,
+						startAttributes.GetParentWorkflowDomain(), continueAsNewAttributes, eventStoreVersion); err != nil {
 						return nil, err
 					}
 				}
@@ -1604,7 +1621,7 @@ Update_History_Loop:
 					parentDomainName = parentDomainEntry.GetInfo().Name
 				}
 
-				_, newStateBuilder, err := msBuilder.AddContinueAsNewEvent(completedID, domainEntry, parentDomainName, attributes, eventStoreVersion)
+				_, newStateBuilder, err := msBuilder.AddContinueAsNewEvent(completedID, completedID, domainEntry, parentDomainName, attributes, eventStoreVersion)
 				if err != nil {
 					return nil, err
 				}
@@ -2691,13 +2708,6 @@ func getWorkflowHistoryCleanupTasksFromShard(
 		}
 	} else {
 		retentionInDays = domainEntry.GetRetentionDays(workflowID)
-	}
-
-	clusterEnablesArchival := shard.GetService().GetClusterMetadata().IsArchivalEnabled()
-	domainEnablesArchival := domainEntry.GetConfig().ArchivalStatus == workflow.ArchivalStatusEnabled
-	if clusterEnablesArchival && domainEnablesArchival {
-		archivalTask := tBuilder.createArchiveHistoryEventTimerTask(time.Duration(retentionInDays) * time.Hour * 24)
-		return &persistence.CloseExecutionTask{}, archivalTask, nil
 	}
 	deleteTask := tBuilder.createDeleteHistoryEventTimerTask(time.Duration(retentionInDays) * time.Hour * 24)
 	return &persistence.CloseExecutionTask{}, deleteTask, nil

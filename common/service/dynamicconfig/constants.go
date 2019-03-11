@@ -54,7 +54,7 @@ var keys = map[Key]string{
 	EnableReadFromClosedExecutionV2: "system.enableReadFromClosedExecutionV2",
 	EnableVisibilityToKafka:         "system.enableVisibilityToKafka",
 	EnableReadVisibilityFromES:      "system.enableReadVisibilityFromES",
-	EnableArchival:                  "system.enableArchival",
+	ArchivalStatus:                  "system.archivalStatus",
 
 	// size limit
 	BlobSizeLimitError:     "limit.blobSize.error",
@@ -153,7 +153,8 @@ var keys = map[Key]string{
 	EnableAdminProtection:                                 "history.enableAdminProtection",
 	AdminOperationToken:                                   "history.adminOperationToken",
 	EnableEventsV2:                                        "history.enableEventsV2",
-	NumSystemWorkflows:                                    "history.numSystemWorkflows",
+	NumArchiveSystemWorkflows:                             "history.numArchiveSystemWorkflows",
+	EmitShardDiffLog:                                      "history.emitShardDiffLog",
 
 	WorkerPersistenceMaxQPS:                  "worker.persistenceMaxQPS",
 	WorkerReplicatorConcurrency:              "worker.replicatorConcurrency",
@@ -195,12 +196,14 @@ const (
 	EnableReadFromClosedExecutionV2
 	// EnableVisibilityToKafka is key for enable kafka
 	EnableVisibilityToKafka
+	// EmitShardDiffLog whether emit the shard diff log
+	EmitShardDiffLog
 	// EnableReadVisibilityFromES is key for enable read from elastic search
 	EnableReadVisibilityFromES
 	// DisableListVisibilityByFilter is config to disable list open/close workflow using filter
 	DisableListVisibilityByFilter
-	// EnableArchival is key for enable archival
-	EnableArchival
+	// ArchivalStatus is key for the status of archival
+	ArchivalStatus
 
 	// BlobSizeLimitError is the per event blob size limit
 	BlobSizeLimitError
@@ -385,8 +388,8 @@ const (
 	ShardSyncMinInterval
 	// DefaultEventEncoding is the encoding type for history events
 	DefaultEventEncoding
-	// NumSystemWorkflows is key for number of system workflows running in total
-	NumSystemWorkflows
+	// NumArchiveSystemWorkflows is key for number of archive system workflows running in total
+	NumArchiveSystemWorkflows
 
 	// EnableAdminProtection is whether to enable admin checking
 	EnableAdminProtection

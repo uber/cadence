@@ -291,10 +291,20 @@ func (t *transferQueueStandbyProcessorImpl) processCloseExecution(transferTask *
 			return nil
 		}
 
+		completionEvent, ok := msBuilder.GetCompletionEvent()
+		var wfCloseTime int64
+		if !ok {
+			// This is need for backwards compatibility
+			// TODO: remove usage of getLastUpdatedTimestamp after release 0.5.4, only use completionEvent timestamp
+			wfCloseTime = getLastUpdatedTimestamp(msBuilder)
+		} else {
+			wfCloseTime = completionEvent.GetTimestamp()
+		}
+
 		executionInfo := msBuilder.GetExecutionInfo()
 		workflowTypeName := executionInfo.WorkflowTypeName
 		workflowStartTimestamp := executionInfo.StartTimestamp.UnixNano()
-		workflowCloseTimestamp := msBuilder.GetLastUpdatedTimestamp()
+		workflowCloseTimestamp := wfCloseTime
 		workflowCloseStatus := getWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
 		workflowHistoryLength := msBuilder.GetNextEventID() - 1
 

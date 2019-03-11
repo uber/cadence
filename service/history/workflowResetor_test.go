@@ -73,6 +73,7 @@ type (
 		mockDomainCache     *cache.DomainCacheMock
 		mockArchivalClient  *sysworkflow.ArchivalClientMock
 		mockClientBean      *client.MockClientBean
+		mockEventsCache     *MockEventsCache
 		resetor             workflowResetor
 
 		shardClosedCh chan int
@@ -125,6 +126,7 @@ func (s *resetorSuite) SetupTest() {
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
 	s.mockDomainCache = &cache.DomainCacheMock{}
 	s.mockArchivalClient = &sysworkflow.ArchivalClientMock{}
+	s.mockEventsCache = &MockEventsCache{}
 
 	mockShard := &shardContextImpl{
 		service:                   s.mockService,
@@ -134,6 +136,7 @@ func (s *resetorSuite) SetupTest() {
 		historyMgr:                s.mockHistoryMgr,
 		historyV2Mgr:              s.mockHistoryV2Mgr,
 		domainCache:               s.mockDomainCache,
+		eventsCache:               s.mockEventsCache,
 		shardManager:              s.mockShardManager,
 		maxTransferSequenceNumber: 100000,
 		closeCh:                   s.shardClosedCh,
@@ -176,6 +179,7 @@ func (s *resetorSuite) TearDownTest() {
 	s.mockProducer.AssertExpectations(s.T())
 	s.mockClientBean.AssertExpectations(s.T())
 	s.mockArchivalClient.AssertExpectations(s.T())
+	s.mockEventsCache.AssertExpectations(s.T())
 }
 
 func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
@@ -748,8 +752,9 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	s.mockHistoryV2Mgr.On("CompleteForkBranch", completeReqErr).Return(nil).Maybe()
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(appendV1Resp, nil).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(appendV2Resp, nil).Once()
-	s.mockClusterMetadata.On("IsArchivalEnabled").Return(false)
 	s.mockExecutionMgr.On("ResetWorkflowExecution", mock.Anything).Return(nil).Once()
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
+
 	response, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
 	s.Nil(err)
 	s.NotNil(response.RunId)
@@ -789,6 +794,8 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	resetCall := calls[3]
 	s.Equal("ResetWorkflowExecution", resetCall.Method)
 	resetReq, ok := resetCall.Arguments[0].(*p.ResetWorkflowExecutionRequest)
+	s.True(resetReq.CurrExecutionInfo.LastEventTaskID > 0)
+	resetReq.CurrExecutionInfo.LastEventTaskID = 0
 	s.Equal(true, ok)
 	s.Equal(true, resetReq.UpdateCurr)
 	compareCurrExeInfo.State = p.WorkflowStateCompleted
@@ -1420,7 +1427,8 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication_WithRequestCance
 	s.mockExecutionMgr.On("GetWorkflowExecution", currGwmsRequest).Return(currGwmsResponse, nil).Once()
 	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", readHistoryReq).Return(readHistoryResp, nil).Once()
 	s.mockHistoryV2Mgr.On("CompleteForkBranch", mock.Anything).Return(nil).Maybe()
-	s.mockClusterMetadata.On("IsArchivalEnabled").Return(false)
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
+
 	_, err = s.historyEngine.ResetWorkflowExecution(context.Background(), request)
 	s.EqualError(err, "BadRequestError{Message: it is not allowed resetting to a point that workflow has pending request cancel }")
 }
@@ -2030,8 +2038,9 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(appendV1Resp, nil).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(appendV2Resp, nil).Once()
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", mock.Anything).Return("active")
-	s.mockClusterMetadata.On("IsArchivalEnabled").Return(false)
 	s.mockExecutionMgr.On("ResetWorkflowExecution", mock.Anything).Return(nil).Once()
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
+
 	response, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
 	s.Nil(err)
 	s.NotNil(response.RunId)
@@ -2069,6 +2078,8 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	resetCall := calls[3]
 	s.Equal("ResetWorkflowExecution", resetCall.Method)
 	resetReq, ok := resetCall.Arguments[0].(*p.ResetWorkflowExecutionRequest)
+	s.True(resetReq.CurrExecutionInfo.LastEventTaskID > 0)
+	resetReq.CurrExecutionInfo.LastEventTaskID = 0
 	s.Equal(true, ok)
 	s.Equal(true, resetReq.UpdateCurr)
 	s.Equal(p.WorkflowStateRunning, resetReq.PrevRunState)
@@ -2714,7 +2725,8 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 	s.mockHistoryV2Mgr.On("ForkHistoryBranch", mock.Anything).Return(forkResp, nil).Once()
 	s.mockHistoryV2Mgr.On("CompleteForkBranch", completeReqErr).Return(nil).Once()
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", mock.Anything).Return("standby")
-	s.mockClusterMetadata.On("IsArchivalEnabled").Return(false)
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
+
 	_, err = s.historyEngine.ResetWorkflowExecution(context.Background(), request)
 	s.EqualError(err, "DomainNotActiveError{Message: Domain: testDomainName is active in cluster: standby, while current cluster active is a standby cluster., DomainName: testDomainName, CurrentCluster: active, ActiveCluster: standby}")
 }

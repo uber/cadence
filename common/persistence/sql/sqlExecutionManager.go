@@ -1163,6 +1163,7 @@ func createExecution(
 		State:                        p.WorkflowStateCreated,
 		CloseStatus:                  p.WorkflowCloseStatusNone,
 		LastFirstEventID:             common.FirstEventID,
+		LastEventTaskID:              request.LastEventTaskID,
 		NextEventID:                  request.NextEventID,
 		LastProcessedEvent:           request.LastProcessedEvent,
 		StartTime:                    nowTimestamp,

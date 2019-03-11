@@ -130,6 +130,7 @@ const (
 		`state: ?, ` +
 		`close_status: ?, ` +
 		`last_first_event_id: ?, ` +
+		`last_event_task_id: ?, ` +
 		`next_event_id: ?, ` +
 		`last_processed_event: ?, ` +
 		`start_time: ?, ` +
@@ -321,7 +322,8 @@ const (
 		`name: ?, ` +
 		`type: ?, ` +
 		`ack_level: ?, ` +
-		`kind: ? ` +
+		`kind: ?, ` +
+		`last_updated: ? ` +
 		`}`
 
 	templateTaskType = `{` +
@@ -827,6 +829,13 @@ workflow_state = ? ` +
 		`and type = ? ` +
 		`and task_id = ?`
 
+	templateCompleteTasksLessThanQuery = `DELETE FROM tasks ` +
+		`WHERE domain_id = ? ` +
+		`AND task_list_name = ? ` +
+		`AND task_list_type = ? ` +
+		`AND type = ? ` +
+		`AND task_id <= ? `
+
 	templateGetTaskList = `SELECT ` +
 		`range_id, ` +
 		`task_list ` +
@@ -866,6 +875,14 @@ workflow_state = ? ` +
 		`range_id, ` +
 		`task_list ` +
 		`) VALUES (?, ?, ?, ?, ?, ?, ` + templateTaskListType + `) USING TTL ?`
+
+	templateDeleteTaskListQuery = `DELETE FROM tasks ` +
+		`WHERE domain_id = ? ` +
+		`AND task_list_name = ? ` +
+		`AND task_list_type = ? ` +
+		`AND type = ? ` +
+		`AND task_id = ? ` +
+		`IF range_id = ?`
 )
 
 var (
@@ -1346,6 +1363,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Cre
 			p.WorkflowStateCreated,
 			p.WorkflowCloseStatusNone,
 			common.FirstEventID,
+			request.LastEventTaskID,
 			request.NextEventID,
 			request.LastProcessedEvent,
 			cqlNowTimestamp,
@@ -1412,6 +1430,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Cre
 			p.WorkflowStateCreated,
 			p.WorkflowCloseStatusNone,
 			common.FirstEventID,
+			request.LastEventTaskID,
 			request.NextEventID,
 			request.LastProcessedEvent,
 			cqlNowTimestamp,
@@ -1599,6 +1618,7 @@ func (d *cassandraPersistence) updateMutableState(batch *gocql.Batch, executionI
 			executionInfo.State,
 			executionInfo.CloseStatus,
 			executionInfo.LastFirstEventID,
+			executionInfo.LastEventTaskID,
 			executionInfo.NextEventID,
 			executionInfo.LastProcessedEvent,
 			executionInfo.StartTimestamp,
@@ -1665,6 +1685,7 @@ func (d *cassandraPersistence) updateMutableState(batch *gocql.Batch, executionI
 			executionInfo.State,
 			executionInfo.CloseStatus,
 			executionInfo.LastFirstEventID,
+			executionInfo.LastEventTaskID,
 			executionInfo.NextEventID,
 			executionInfo.LastProcessedEvent,
 			executionInfo.StartTimestamp,
@@ -2516,6 +2537,7 @@ func (d *cassandraPersistence) LeaseTaskList(request *p.LeaseTaskListRequest) (*
 			Message: fmt.Sprintf("LeaseTaskList requires non empty task list"),
 		}
 	}
+	now := time.Now()
 	query := d.session.Query(templateGetTaskList,
 		request.DomainID,
 		request.TaskList,
@@ -2540,6 +2562,7 @@ func (d *cassandraPersistence) LeaseTaskList(request *p.LeaseTaskListRequest) (*
 				request.TaskType,
 				0,
 				request.TaskListKind,
+				now,
 			)
 		} else if isThrottlingError(err) {
 			return nil, &workflow.ServiceBusyError{
@@ -2553,6 +2576,15 @@ func (d *cassandraPersistence) LeaseTaskList(request *p.LeaseTaskListRequest) (*
 			}
 		}
 	} else {
+		// if request.RangeID is > 0, we are trying to renew an already existing
+		// lease on the task list. If request.RangeID=0, we are trying to steal
+		// the tasklist from its current owner
+		if request.RangeID > 0 && request.RangeID != rangeID {
+			return nil, &p.ConditionFailedError{
+				Msg: fmt.Sprintf("leaseTaskList:renew failed: taskList:%v, taskListType:%v, haveRangeID:%v, gotRangeID:%v",
+					request.TaskList, request.TaskType, request.RangeID, rangeID),
+			}
+		}
 		ackLevel = tlDB["ack_level"].(int64)
 		taskListKind := tlDB["kind"].(int)
 		query = d.session.Query(templateUpdateTaskListQuery,
@@ -2562,6 +2594,7 @@ func (d *cassandraPersistence) LeaseTaskList(request *p.LeaseTaskListRequest) (*
 			request.TaskType,
 			ackLevel,
 			taskListKind,
+			now,
 			request.DomainID,
 			&request.TaskList,
 			request.TaskType,
@@ -2585,10 +2618,19 @@ func (d *cassandraPersistence) LeaseTaskList(request *p.LeaseTaskListRequest) (*
 	if !applied {
 		previousRangeID := previous["range_id"]
 		return nil, &p.ConditionFailedError{
-			Msg: fmt.Sprintf("LeaseTaskList failed to apply. db rangeID %v", previousRangeID),
+			Msg: fmt.Sprintf("leaseTaskList: taskList:%v, taskListType:%v, haveRangeID:%v, gotRangeID:%v",
+				request.TaskList, request.TaskType, rangeID, previousRangeID),
 		}
 	}
-	tli := &p.TaskListInfo{DomainID: request.DomainID, Name: request.TaskList, TaskType: request.TaskType, RangeID: rangeID + 1, AckLevel: ackLevel, Kind: request.TaskListKind}
+	tli := &p.TaskListInfo{
+		DomainID:    request.DomainID,
+		Name:        request.TaskList,
+		TaskType:    request.TaskType,
+		RangeID:     rangeID + 1,
+		AckLevel:    ackLevel,
+		Kind:        request.TaskListKind,
+		LastUpdated: now,
+	}
 	return &p.LeaseTaskListResponse{TaskListInfo: tli}, nil
 }
 
@@ -2609,6 +2651,7 @@ func (d *cassandraPersistence) UpdateTaskList(request *p.UpdateTaskListRequest) 
 			tli.TaskType,
 			tli.AckLevel,
 			tli.Kind,
+			time.Now(),
 			stickyTaskListTTL,
 		)
 		err := query.Exec()
@@ -2632,6 +2675,7 @@ func (d *cassandraPersistence) UpdateTaskList(request *p.UpdateTaskListRequest) 
 		tli.TaskType,
 		tli.AckLevel,
 		tli.Kind,
+		time.Now(),
 		tli.DomainID,
 		&tli.Name,
 		tli.TaskType,
@@ -2666,6 +2710,35 @@ func (d *cassandraPersistence) UpdateTaskList(request *p.UpdateTaskListRequest) 
 	}
 
 	return &p.UpdateTaskListResponse{}, nil
+}
+
+func (d *cassandraPersistence) ListTaskList(request *p.ListTaskListRequest) (*p.ListTaskListResponse, error) {
+	return nil, &workflow.InternalServiceError{
+		Message: fmt.Sprintf("unsupported operation"),
+	}
+}
+
+func (d *cassandraPersistence) DeleteTaskList(request *p.DeleteTaskListRequest) error {
+	query := d.session.Query(templateDeleteTaskListQuery,
+		request.DomainID, request.TaskListName, request.TaskListType, rowTypeTaskList, taskListTaskID, request.RangeID)
+	previous := make(map[string]interface{})
+	applied, err := query.MapScanCAS(previous)
+	if err != nil {
+		if isThrottlingError(err) {
+			return &workflow.ServiceBusyError{
+				Message: fmt.Sprintf("DeleteTaskList operation failed. Error: %v", err),
+			}
+		}
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("DeleteTaskList operation failed. Error: %v", err),
+		}
+	}
+	if !applied {
+		return &p.ConditionFailedError{
+			Msg: fmt.Sprintf("DeleteTaskList operation failed: expected_range_id=%v but found %+v", request.RangeID, previous),
+		}
+	}
+	return nil
 }
 
 // From TaskManager interface
@@ -2713,6 +2786,7 @@ func (d *cassandraPersistence) CreateTasks(request *p.CreateTasksRequest) (*p.Cr
 		taskListType,
 		ackLevel,
 		taskListKind,
+		time.Now(),
 		domainID,
 		taskList,
 		taskListType,
@@ -2816,6 +2890,26 @@ func (d *cassandraPersistence) CompleteTask(request *p.CompleteTaskRequest) erro
 	}
 
 	return nil
+}
+
+// CompleteTasksLessThan deletes all tasks less than or equal to the given task id. This API ignores the
+// Limit request parameter i.e. either all tasks leq the task_id will be deleted or an error will
+// be returned to the caller
+func (d *cassandraPersistence) CompleteTasksLessThan(request *p.CompleteTasksLessThanRequest) (int, error) {
+	query := d.session.Query(templateCompleteTasksLessThanQuery,
+		request.DomainID, request.TaskListName, request.TaskType, rowTypeTask, request.TaskID)
+	err := query.Exec()
+	if err != nil {
+		if isThrottlingError(err) {
+			return 0, &workflow.ServiceBusyError{
+				Message: fmt.Sprintf("CompleteTasksLessThan operation failed. Error: %v", err),
+			}
+		}
+		return 0, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("CompleteTasksLessThan operation failed. Error: %v", err),
+		}
+	}
+	return p.UnknownNumRowsAffected, nil
 }
 
 func (d *cassandraPersistence) GetTimerIndexTasks(request *p.GetTimerIndexTasksRequest) (*p.GetTimerIndexTasksResponse,
@@ -3634,6 +3728,8 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *p.InternalWorkf
 			info.CloseStatus = v.(int)
 		case "last_first_event_id":
 			info.LastFirstEventID = v.(int64)
+		case "last_event_task_id":
+			info.LastEventTaskID = v.(int64)
 		case "next_event_id":
 			info.NextEventID = v.(int64)
 		case "last_processed_event":

@@ -37,12 +37,14 @@ import (
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
 	"github.com/uber/cadence/.gen/go/replicator"
+	"github.com/uber/cadence/.gen/go/shared"
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/blobstore/blob"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/logging"
@@ -50,6 +52,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/service/worker/sysworkflow"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -87,6 +90,10 @@ type (
 		BranchToken       []byte
 		ReplicationInfo   map[string]*gen.ReplicationInfo
 	}
+
+	getHistoryContinuationTokenArchival struct {
+		BlobstorePageToken int
+	}
 )
 
 var (
@@ -111,6 +118,7 @@ var (
 	errWorkflowTypeNotSet                         = &gen.BadRequestError{Message: "WorkflowType is not set on request."}
 	errInvalidExecutionStartToCloseTimeoutSeconds = &gen.BadRequestError{Message: "A valid ExecutionStartToCloseTimeoutSeconds is not set on request."}
 	errInvalidTaskStartToCloseTimeoutSeconds      = &gen.BadRequestError{Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}
+	errDomainArchivalBucketNotSet                 = &gen.BadRequestError{Message: "Domain config does not have archival bucket set."}
 
 	// err for string too long
 	errDomainTooLong       = &gen.BadRequestError{Message: "Domain length exceeds limit."}
@@ -221,16 +229,6 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 	}
 
 	clusterMetadata := wh.GetClusterMetadata()
-	defaultBucket := clusterMetadata.GetDefaultArchivalBucket()
-	clusterConfiguredForArchival := len(defaultBucket) != 0
-	var requestArchivalConfig *archivalConfigUpdate
-	var err error
-	if clusterConfiguredForArchival {
-		requestArchivalConfig, err = registerRequestToArchivalConfig(registerRequest, defaultBucket)
-		if err != nil {
-			return wh.error(err, scope)
-		}
-	}
 	// TODO remove the IsGlobalDomainEnabled check once cross DC is public
 	if clusterMetadata.IsGlobalDomainEnabled() && !clusterMetadata.IsMasterCluster() {
 		return wh.error(errNotMasterCluster, scope)
@@ -245,7 +243,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 	}
 
 	// first check if the name is already registered as the local domain
-	_, err = wh.metadataMgr.GetDomain(&persistence.GetDomainRequest{Name: registerRequest.GetName()})
+	_, err := wh.metadataMgr.GetDomain(&persistence.GetDomainRequest{Name: registerRequest.GetName()})
 	if err != nil {
 		if _, ok := err.(*gen.EntityNotExistsError); !ok {
 			return wh.error(err, scope)
@@ -288,8 +286,13 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 
 	currentArchivalState := neverEnabledState()
 	nextArchivalState := currentArchivalState
-	if clusterConfiguredForArchival {
-		nextArchivalState, _, err = currentArchivalState.updateState(requestArchivalConfig)
+	archivalClusterConfig := clusterMetadata.ArchivalConfig()
+	if archivalClusterConfig.ConfiguredForArchival() {
+		archivalEvent, err := wh.toArchivalRegisterEvent(registerRequest, archivalClusterConfig.GetDefaultBucket())
+		if err != nil {
+			return wh.error(err, scope)
+		}
+		nextArchivalState, _, err = currentArchivalState.getNextState(archivalEvent)
 		if err != nil {
 			return wh.error(err, scope)
 		}
@@ -433,17 +436,6 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 	}
 
 	clusterMetadata := wh.GetClusterMetadata()
-	defaultBucket := clusterMetadata.GetDefaultArchivalBucket()
-	clusterConfiguredForArchival := len(defaultBucket) != 0
-	var requestArchivalConfig *archivalConfigUpdate
-	var err error
-	if clusterConfiguredForArchival {
-		requestArchivalConfig, err = updateRequestToArchivalConfig(updateRequest, defaultBucket)
-		if err != nil {
-			return nil, wh.error(err, scope)
-		}
-	}
-
 	// TODO remove the IsGlobalDomainEnabled check once cross DC is public
 	if !clusterMetadata.IsGlobalDomainEnabled() {
 		updateRequest.ReplicationConfiguration = nil
@@ -474,14 +466,19 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 	failoverVersion := getResponse.FailoverVersion
 	failoverNotificationVersion := getResponse.FailoverNotificationVersion
 
-	currentArchivalState := &archivalConfigState{
+	currentArchivalState := &archivalState{
 		bucket: config.ArchivalBucket,
 		status: config.ArchivalStatus,
 	}
 	nextArchivalState := currentArchivalState
 	archivalConfigChanged := false
-	if clusterConfiguredForArchival {
-		nextArchivalState, archivalConfigChanged, err = currentArchivalState.updateState(requestArchivalConfig)
+	archivalClusterConfig := clusterMetadata.ArchivalConfig()
+	if archivalClusterConfig.ConfiguredForArchival() {
+		archivalEvent, err := wh.toArchivalUpdateEvent(updateRequest, archivalClusterConfig.GetDefaultBucket())
+		if err != nil {
+			return nil, wh.error(err, scope)
+		}
+		nextArchivalState, archivalConfigChanged, err = currentArchivalState.getNextState(archivalEvent)
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
@@ -749,6 +746,8 @@ func (wh *WorkflowHandler) PollForActivityTask(
 	ctx context.Context,
 	pollRequest *gen.PollForActivityTaskRequest) (*gen.PollForActivityTaskResponse, error) {
 
+	callTime := time.Now()
+
 	scope := metrics.FrontendPollForActivityTaskScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
@@ -799,8 +798,16 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		err = wh.cancelOutstandingPoll(ctx, err, domainID, persistence.TaskListTypeActivity, pollRequest.TaskList, pollerID)
 		if err != nil {
 			// For all other errors log an error and return it back to client.
-			wh.Service.GetLogger().Errorf(
-				"PollForActivityTask failed. TaskList: %v, Error: %v", pollRequest.TaskList.GetName(), err)
+			ctxTimeout := "not-set"
+			ctxDeadline, ok := ctx.Deadline()
+			if ok {
+				ctxTimeout = ctxDeadline.Sub(callTime).String()
+			}
+			wh.Service.GetLogger().WithFields(bark.Fields{
+				logging.TagTaskListName:   pollRequest.GetTaskList().GetName(),
+				logging.TagContextTimeout: ctxTimeout,
+				logging.TagErr:            err,
+			}).Error("PollForActivityTask failed.")
 			return nil, wh.error(err, scope)
 		}
 	}
@@ -811,6 +818,8 @@ func (wh *WorkflowHandler) PollForActivityTask(
 func (wh *WorkflowHandler) PollForDecisionTask(
 	ctx context.Context,
 	pollRequest *gen.PollForDecisionTaskRequest) (*gen.PollForDecisionTaskResponse, error) {
+
+	callTime := time.Now()
 
 	scope := metrics.FrontendPollForDecisionTaskScope
 	sw := wh.startRequestProfile(scope)
@@ -865,8 +874,16 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		err = wh.cancelOutstandingPoll(ctx, err, domainID, persistence.TaskListTypeDecision, pollRequest.TaskList, pollerID)
 		if err != nil {
 			// For all other errors log an error and return it back to client.
-			wh.Service.GetLogger().Errorf(
-				"PollForDecisionTask failed. TaskList: %v, Error: %v", pollRequest.TaskList.GetName(), err)
+			ctxTimeout := "not-set"
+			ctxDeadline, ok := ctx.Deadline()
+			if ok {
+				ctxTimeout = ctxDeadline.Sub(callTime).String()
+			}
+			wh.Service.GetLogger().WithFields(bark.Fields{
+				logging.TagTaskListName:   pollRequest.GetTaskList().GetName(),
+				logging.TagContextTimeout: ctxTimeout,
+				logging.TagErr:            err,
+			}).Error("PollForDecisionTask failed.")
 			return nil, wh.error(err, scope)
 		}
 
@@ -1858,6 +1875,10 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		}).Warn("GetHistory page size is larger than threshold")
 
 		getRequest.MaximumPageSize = common.Int32Ptr(common.GetHistoryMaxPageSize)
+	}
+
+	if wh.historyArchived(ctx, getRequest, domainID) {
+		return wh.getArchivedHistory(ctx, getRequest, domainID, scope)
 	}
 
 	// this function return the following 5 things,
@@ -2935,16 +2956,13 @@ func (wh *WorkflowHandler) createDomainResponse(info *persistence.DomainInfo, co
 		EmitMetric:                             common.BoolPtr(config.EmitMetric),
 		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(config.Retention),
 		ArchivalStatus:                         common.ArchivalStatusPtr(config.ArchivalStatus),
+		ArchivalBucketName:                     common.StringPtr(config.ArchivalBucket),
 	}
-	if configResult.GetArchivalStatus() != gen.ArchivalStatusNeverEnabled {
-		bucketName := config.ArchivalBucket
-		configResult.ArchivalBucketName = common.StringPtr(bucketName)
-		if wh.blobstoreClient != nil {
-			metadata, err := wh.blobstoreClient.BucketMetadata(context.Background(), bucketName)
-			if err == nil {
-				configResult.ArchivalRetentionPeriodInDays = common.Int32Ptr(int32(metadata.RetentionDays))
-				configResult.ArchivalBucketOwner = common.StringPtr(metadata.Owner)
-			}
+	if wh.GetClusterMetadata().ArchivalConfig().ConfiguredForArchival() && config.ArchivalBucket != "" {
+		metadata, err := wh.blobstoreClient.BucketMetadata(context.Background(), config.ArchivalBucket)
+		if err == nil {
+			configResult.ArchivalRetentionPeriodInDays = common.Int32Ptr(int32(metadata.RetentionDays))
+			configResult.ArchivalBucketOwner = common.StringPtr(metadata.Owner)
 		}
 	}
 
@@ -3069,6 +3087,21 @@ func serializeHistoryToken(token *getHistoryContinuationToken) ([]byte, error) {
 	return bytes, err
 }
 
+func deserializeHistoryTokenArchival(bytes []byte) (*getHistoryContinuationTokenArchival, error) {
+	token := &getHistoryContinuationTokenArchival{}
+	err := json.Unmarshal(bytes, token)
+	return token, err
+}
+
+func serializeHistoryTokenArchival(token *getHistoryContinuationTokenArchival) ([]byte, error) {
+	if token == nil {
+		return nil, nil
+	}
+
+	bytes, err := json.Marshal(token)
+	return bytes, err
+}
+
 func createServiceBusyError() *gen.ServiceBusyError {
 	err := &gen.ServiceBusyError{}
 	err.Message = "Too many outstanding requests to the cadence service"
@@ -3088,13 +3121,80 @@ func (wh *WorkflowHandler) validateClusterName(clusterName string) error {
 	return nil
 }
 
-func (wh *WorkflowHandler) bucketName(customBucketName *string) string {
-	if wh.customBucketNameProvided(customBucketName) {
-		return *customBucketName
+func (wh *WorkflowHandler) historyArchived(ctx context.Context, request *gen.GetWorkflowExecutionHistoryRequest, domainID string) bool {
+	if request.GetExecution() == nil || request.GetExecution().GetRunId() == "" {
+		return false
 	}
-	return wh.Service.GetClusterMetadata().GetDefaultArchivalBucket()
+	getMutableStateRequest := &h.GetMutableStateRequest{
+		DomainUUID: common.StringPtr(domainID),
+		Execution:  request.Execution,
+	}
+	_, err := wh.history.GetMutableState(ctx, getMutableStateRequest)
+	if err == nil {
+		return false
+	}
+	switch err.(type) {
+	case *shared.EntityNotExistsError:
+		// the only case in which history is assumed to be archived is if getting mutable state returns entity not found error
+		return true
+	}
+	return false
 }
 
-func (wh *WorkflowHandler) customBucketNameProvided(customBucketName *string) bool {
-	return customBucketName != nil && len(*customBucketName) != 0
+func (wh *WorkflowHandler) getArchivedHistory(
+	ctx context.Context,
+	request *gen.GetWorkflowExecutionHistoryRequest,
+	domainID string,
+	scope int,
+) (*gen.GetWorkflowExecutionHistoryResponse, error) {
+
+	entry, err := wh.domainCache.GetDomainByID(domainID)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+	archivalBucket := entry.GetConfig().ArchivalBucket
+	if archivalBucket == "" {
+		return nil, wh.error(errDomainArchivalBucketNotSet, scope)
+	}
+	var token *getHistoryContinuationTokenArchival
+	if request.NextPageToken != nil {
+		token, err = deserializeHistoryTokenArchival(request.NextPageToken)
+		if err != nil {
+			return nil, wh.error(errInvalidNextPageToken, scope)
+		}
+	} else {
+		token = &getHistoryContinuationTokenArchival{
+			BlobstorePageToken: common.FirstBlobPageToken,
+		}
+	}
+	key, err := sysworkflow.NewHistoryBlobKey(domainID, request.Execution.GetWorkflowId(), request.Execution.GetRunId(), token.BlobstorePageToken)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+	b, err := wh.blobstoreClient.Download(ctx, archivalBucket, key)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+	unwrappedBlob, wrappingLayers, err := blob.Unwrap(b)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+	historyBlob := &sysworkflow.HistoryBlob{}
+	switch *wrappingLayers.EncodingFormat {
+	case blob.JSONEncoding:
+		if err := json.Unmarshal(unwrappedBlob.Body, historyBlob); err != nil {
+			return nil, wh.error(err, scope)
+		}
+	}
+	token = &getHistoryContinuationTokenArchival{
+		BlobstorePageToken: *historyBlob.Header.NextPageToken,
+	}
+	if token.BlobstorePageToken == common.LastBlobNextPageToken {
+		token = nil
+	}
+	nextToken, err := serializeHistoryTokenArchival(token)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+	return createGetWorkflowExecutionHistoryResponse(historyBlob.Body, nextToken), nil
 }
