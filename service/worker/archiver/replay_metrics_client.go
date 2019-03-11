@@ -94,5 +94,5 @@ type nopStopwatchRecorder struct{}
 func (n *nopStopwatchRecorder) RecordStopwatch(stopwatchStart time.Time) {}
 
 func (r *replayMetricsClient) nopStopwatch() tally.Stopwatch {
-	return tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{})
+	return tally.NewStopwatch(workflow.Now(r.ctx), &nopStopwatchRecorder{})
 }

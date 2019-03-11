@@ -25,33 +25,46 @@ import (
 
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/metrics"
 	"go.uber.org/cadence/workflow"
 )
 
 func archivalWorkflow(ctx workflow.Context, carryover []ArchiveRequest) error {
+	metricsClient := NewReplayMetricsClient(globalMetricsClient, ctx)
+	metricsClient.IncCounter(metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverWorkflowStartedCount)
+	sw := metricsClient.StartTimer(metrics.ArchiverArchivalWorkflowScope, metrics.CadenceLatency)
+	defer sw.Stop()
 	workflowInfo := workflow.GetInfo(ctx)
-	logger := globalLogger.WithFields(bark.Fields{
+	logger := NewReplayBarkLogger(globalLogger.WithFields(bark.Fields{
 		logging.TagWorkflowExecutionID: workflowInfo.WorkflowExecution.ID,
 		logging.TagWorkflowRunID:       workflowInfo.WorkflowExecution.RunID,
-	})
+	}), ctx, false)
 	logger.Info("archival system workflow started")
 	config, err := readConfig(ctx)
 	if err != nil {
-		// log and emit metric
+		logger.WithError(err).Error("failed to read dynamic config")
+		metricsClient.IncCounter(metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverReadDynamicConfigErrorCount)
 		return err
 	}
 	requestCh := workflow.NewBufferedChannel(ctx, config.ArchivalsPerIteration)
-	archiver := NewArchiver(ctx, globalLogger, globalMetricsClient, config.ArchiverConcurrency, requestCh)
+	archiver := NewArchiver(ctx, logger, metricsClient, config.ArchiverConcurrency, requestCh)
+	archiverSW := metricsClient.StartTimer(metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverHandleAllRequestsLatency)
 	archiver.Start()
 	signalCh := workflow.GetSignalChannel(ctx, signalName)
-	pump := NewPump(ctx, globalLogger, globalMetricsClient, carryover, workflowStartToCloseTimeout/2, config.ArchivalsPerIteration, requestCh, signalCh)
+	pump := NewPump(ctx, logger, metricsClient, carryover, workflowStartToCloseTimeout/2, config.ArchivalsPerIteration, requestCh, signalCh)
 	pumpResult := pump.Run()
+	metricsClient.AddCounter(metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverNumPumpedRequestsCount, int64(len(pumpResult.PumpedHashes)))
 	handledHashes := archiver.Finished()
-	if pumpResult.TimeoutWithoutSignals {
-		return nil
-	}
+	archiverSW.Stop()
+	metricsClient.AddCounter(metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverNumHandledRequestsCount, int64(len(handledHashes)))
 	if !equal(pumpResult.PumpedHashes, handledHashes) {
-		// log and emit metric
+		logger.Error("handled archival requests do not match pumped archival requests")
+		metricsClient.IncCounter(metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverPumpedNotEqualHandledCount)
+	}
+	if pumpResult.TimeoutWithoutSignals {
+		logger.Info("workflow stopping because pump did not get any signals within timeout threshold")
+		metricsClient.IncCounter(metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverWorkflowStoppingCount)
+		return nil
 	}
 	for {
 		var request ArchiveRequest

@@ -26,16 +26,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/uber-common/bark"
-	"github.com/uber/cadence/common/logging"
 	"strconv"
 	"strings"
 
 	"github.com/dgryski/go-farm"
-
+	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore/blob"
+	"github.com/uber/cadence/common/logging"
 )
 
 type (
@@ -105,14 +104,12 @@ func ConvertHeaderToTags(header *HistoryBlobHeader) (map[string]string, error) {
 	return result, nil
 }
 
-// TODO: write unit tests for this method
 func hashArchiveRequest(archiveRequest ArchiveRequest) uint64 {
 	var b bytes.Buffer
 	gob.NewEncoder(&b).Encode(archiveRequest)
 	return farm.Fingerprint64(b.Bytes())
 }
 
-// TODO: write unit tests for this method
 func equal(a []uint64, b []uint64) bool {
 	if len(a) != len(b) {
 		return false

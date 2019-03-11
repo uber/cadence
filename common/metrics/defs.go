@@ -1323,6 +1323,13 @@ const (
 	ArchiverPumpSignalThresholdCount
 	ArchiverPumpTimeoutWithoutSignalsCount
 	ArchiverPumpSignalChannelClosedCount
+	ArchiverWorkflowStartedCount
+	ArchiverNumPumpedRequestsCount
+	ArchiverNumHandledRequestsCount
+	ArchiverPumpedNotEqualHandledCount
+	ArchiverReadDynamicConfigErrorCount
+	ArchiverHandleAllRequestsLatency
+	ArchiverWorkflowStoppingCount
 
 	NumWorkerMetrics
 )
@@ -1524,6 +1531,13 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ArchiverPumpSignalThresholdCount:         {metricName: "archiver.pump-signal-threshold"},
 		ArchiverPumpTimeoutWithoutSignalsCount:   {metricName: "archiver.pump-timeout-without-signals"},
 		ArchiverPumpSignalChannelClosedCount:     {metricName: "archiver.pump-signal-channel-closed"},
+		ArchiverWorkflowStartedCount:             {metricName: "archiver.workflow-started"},
+		ArchiverNumPumpedRequestsCount:           {metricName: "archiver.num-pumped-requests"},
+		ArchiverNumHandledRequestsCount:          {metricName: "archiver.num-handled-requests"},
+		ArchiverPumpedNotEqualHandledCount:       {metricName: "archiver.pumped-not-equal-handled"},
+		ArchiverReadDynamicConfigErrorCount:      {metricName: "archiver.read-dynamic-config-error"},
+		ArchiverHandleAllRequestsLatency:         {metricName: "archiver.handle-all-requests-latency"},
+		ArchiverWorkflowStoppingCount:            {metricName: "archiver.workflow-stopping"},
 	},
 }
 
