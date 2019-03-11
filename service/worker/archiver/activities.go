@@ -21,12 +21,11 @@
 package archiver
 
 import (
-	"errors"
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
-	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -35,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
@@ -61,7 +61,7 @@ const (
 var (
 	uploadHistoryActivityNonRetryableErrors = []string{errGetDomainByID, errBlobExists, errUploadBlob, errNextBlob, errEmptyBucket, errConstructBlob}
 	deleteHistoryActivityNonRetryableErrors = []string{errDeleteHistoryV1, errDeleteHistoryV2}
-	contextTimeoutErr = errors.New("activity aborted because context timed out")
+	contextTimeoutErr                       = errors.New("activity aborted because context timed out")
 )
 
 type (

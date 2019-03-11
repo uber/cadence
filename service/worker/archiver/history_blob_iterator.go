@@ -44,7 +44,7 @@ type (
 	}
 
 	historyBlobIterator struct {
-		logger        bark.Logger
+		logger bark.Logger
 
 		// the following defines the state of the iterator
 		blobPageToken        int
@@ -80,7 +80,7 @@ func NewHistoryBlobIterator(
 	clusterName string,
 ) HistoryBlobIterator {
 	return &historyBlobIterator{
-		logger:        logger,
+		logger: logger,
 
 		blobPageToken:        common.FirstBlobPageToken,
 		persistencePageToken: nil,
