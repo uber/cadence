@@ -31,13 +31,13 @@ import (
 )
 
 type (
-	// Processor is used to process archival requests
-	Processor interface {
+	// Archiver is used to process archival requests
+	Archiver interface {
 		Start()
 		Finished() []uint64
 	}
 
-	processor struct {
+	archiver struct {
 		ctx           workflow.Context
 		logger        bark.Logger
 		metricsClient metrics.Client
@@ -47,15 +47,15 @@ type (
 	}
 )
 
-// NewProcessor returns a new Processor
-func NewProcessor(
+// NewArchiver returns a new Archiver
+func NewArchiver(
 	ctx workflow.Context,
 	logger bark.Logger,
 	metricsClient metrics.Client,
 	concurrency int,
 	requestCh workflow.Channel,
-) Processor {
-	return &processor{
+) Archiver {
+	return &archiver{
 		ctx:           ctx,
 		logger:        logger,
 		metricsClient: metricsClient,
@@ -66,7 +66,7 @@ func NewProcessor(
 }
 
 // Start spawns concurrency count of go routines to handle archivals (does not block).
-func (a *processor) Start() {
+func (a *archiver) Start() {
 	for i := 0; i < a.concurrency; i++ {
 		workflow.Go(a.ctx, func(ctx workflow.Context) {
 			var handledHashes []uint64
@@ -85,7 +85,7 @@ func (a *processor) Start() {
 
 // Finished will block until all work has been finished.
 // Returns hashes of requests handled.
-func (a *processor) Finished() []uint64 {
+func (a *archiver) Finished() []uint64 {
 	var handledHashes []uint64
 	for i := 0; i < a.concurrency; i++ {
 		var subResult []uint64

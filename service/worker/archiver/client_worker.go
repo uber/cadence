@@ -70,7 +70,7 @@ type (
 		EnableArchivalCompression dynamicconfig.BoolPropertyFnWithDomainFilter
 		HistoryPageSize           dynamicconfig.IntPropertyFnWithDomainFilter
 		TargetArchivalBlobSize    dynamicconfig.IntPropertyFnWithDomainFilter
-		ProcessorConcurrency      dynamicconfig.IntPropertyFn
+		ArchiverConcurrency      dynamicconfig.IntPropertyFn
 		ArchivalsPerIteration     dynamicconfig.IntPropertyFn
 	}
 
@@ -105,6 +105,7 @@ func init() {
 func NewClientWorker(container *BootstrapContainer) ClientWorker {
 	globalLogger = container.Logger.WithFields(bark.Fields{
 		logging.TagWorkflowComponent: logging.TagValueArchiverComponent,
+		logging.TagDomain: common.SystemDomainName,
 	})
 	globalMetricsClient = container.MetricsClient
 	actCtx := context.WithValue(context.Background(), bootstrapContainerKey, container)

@@ -30,18 +30,18 @@ import (
 
 func archivalWorkflow(ctx workflow.Context, carryover []ArchiveRequest) error {
 	workflowInfo := workflow.GetInfo(ctx)
-	globalLogger.WithFields(bark.Fields{
-		logging.TagDomain:              workflowInfo.Domain,
+	logger := globalLogger.WithFields(bark.Fields{
 		logging.TagWorkflowExecutionID: workflowInfo.WorkflowExecution.ID,
 		logging.TagWorkflowRunID:       workflowInfo.WorkflowExecution.RunID,
-	}).Info("archival system workflow started")
+	})
+	logger.Info("archival system workflow started")
 	config, err := readConfig(ctx)
 	if err != nil {
 		// log and emit metric
 		return err
 	}
 	requestCh := workflow.NewBufferedChannel(ctx, config.ArchivalsPerIteration)
-	archiver := NewProcessor(ctx, globalLogger, globalMetricsClient, config.ProcessorConcurrency, requestCh)
+	archiver := NewArchiver(ctx, globalLogger, globalMetricsClient, config.ProcessorConcurrency, requestCh)
 	archiver.Start()
 	signalCh := workflow.GetSignalChannel(ctx, signalName)
 	pump := NewPump(ctx, globalLogger, globalMetricsClient, carryover, workflowStartToCloseTimeout/2, config.ArchivalsPerIteration, requestCh, signalCh)

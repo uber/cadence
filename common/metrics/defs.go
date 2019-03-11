@@ -762,6 +762,20 @@ const (
 	ESProcessorScope
 	// IndexProcessorScope is scope used by all metric emitted by index processor
 	IndexProcessorScope
+	// ArchiverUploadHistoryActivityScope is scope used by all metrics emitted by archiver.UploadHistoryActivity
+	ArchiverUploadHistoryActivityScope
+	// ArchiverDeleteHistoryActivityScope is scope used by all metrics emitted by archiver.DeleteHistoryActivity
+	ArchiverDeleteHistoryActivityScope
+	// ArchiverClientScope is scope used by all metrics emitted by archiver.Client
+	ArchiverClientScope
+	// ArchiverHistoryBlobIteratorScope is scope used by all metrics emitted by archiver.HistoryBlobIterator
+	ArchiverHistoryBlobIteratorScope
+	// ArchiverScope is scope used by all metrics emitted by archiver.Archiver
+	ArchiverScope
+	// ArchiverPumpScope is scope used by all metrics emitted by archiver.Pump
+	ArchiverPumpScope
+	// ArchiverArchivalWorkflowScope is scope used by all metrics emitted by archiver.ArchivalWorkflow
+	ArchiverArchivalWorkflowScope
 
 	NumWorkerScopes
 )
@@ -1089,6 +1103,13 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		SyncActivityTaskScope:       {operation: "SyncActivityTask"},
 		ESProcessorScope:            {operation: "ESProcessor"},
 		IndexProcessorScope:         {operation: "IndexProcessor"},
+		ArchiverUploadHistoryActivityScope: {operation: "ArchiverUploadHistoryActivity"},
+		ArchiverDeleteHistoryActivityScope: {operation: "ArchiverDeleteHistoryActivity"},
+		ArchiverClientScope: {operation: "ArchiverClient"},
+		ArchiverHistoryBlobIteratorScope: {operation: "ArchiverHistoryBlobIterator"},
+		ArchiverScope: {operation: "Archiver"},
+		ArchiverPumpScope: {operation: "ArchiverPump"},
+		ArchiverArchivalWorkflowScope: {operation: "ArchiverArchivalWorkflow"},
 	},
 }
 
