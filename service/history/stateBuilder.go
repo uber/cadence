@@ -61,8 +61,7 @@ type (
 )
 
 const (
-	// ErrMessageNewRunHistorySizeZero indicates that new run's history size is zero
-	ErrMessageNewRunHistorySizeZero = "encounter new run history size being zero"
+	errMessageNewRunHistorySizeZero = "encounter new run history size being zero"
 )
 
 var _ stateBuilder = (*stateBuilderImpl)(nil)
@@ -394,7 +393,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 
 		case shared.EventTypeWorkflowExecutionContinuedAsNew:
 			if len(newRunHistory) == 0 {
-				return nil, nil, nil, errors.NewInternalFailureError(ErrMessageNewRunHistorySizeZero)
+				return nil, nil, nil, errors.NewInternalFailureError(errMessageNewRunHistorySizeZero)
 			}
 			newRunStartedEvent := newRunHistory[0]
 			// Create mutable state updates for the new run

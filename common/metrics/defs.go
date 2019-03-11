@@ -766,8 +766,6 @@ const (
 	ArchiverUploadHistoryActivityScope
 	// ArchiverDeleteHistoryActivityScope is scope used by all metrics emitted by archiver.DeleteHistoryActivity
 	ArchiverDeleteHistoryActivityScope
-	// ArchiverClientScope is scope used by all metrics emitted by archiver.Client
-	ArchiverClientScope
 	// ArchiverScope is scope used by all metrics emitted by archiver.Archiver
 	ArchiverScope
 	// ArchiverPumpScope is scope used by all metrics emitted by archiver.Pump
@@ -1103,7 +1101,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		IndexProcessorScope:                {operation: "IndexProcessor"},
 		ArchiverUploadHistoryActivityScope: {operation: "ArchiverUploadHistoryActivity"},
 		ArchiverDeleteHistoryActivityScope: {operation: "ArchiverDeleteHistoryActivity"},
-		ArchiverClientScope:                {operation: "ArchiverClient"},
 		ArchiverScope:                      {operation: "Archiver"},
 		ArchiverPumpScope:                  {operation: "ArchiverPump"},
 		ArchiverArchivalWorkflowScope:      {operation: "ArchiverArchivalWorkflow"},

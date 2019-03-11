@@ -135,7 +135,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	clusterName := container.ClusterMetadata.GetCurrentClusterName()
 	historyBlobItr := container.HistoryBlobIterator
 	if historyBlobItr == nil {
-		historyBlobItr = NewHistoryBlobIterator(logger, request, container, domainName, clusterName)
+		historyBlobItr = NewHistoryBlobIterator(request, container, domainName, clusterName)
 	}
 	blobstoreClient := container.Blobstore
 	for historyBlobItr.HasNext() {

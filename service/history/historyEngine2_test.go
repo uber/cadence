@@ -25,9 +25,12 @@ import (
 	"encoding/json"
 	"errors"
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 	"github.com/uber/cadence/service/worker/archiver"
 >>>>>>> fix more unit tests
+=======
+>>>>>>> small fixes
 	"os"
 	"testing"
 
@@ -38,7 +41,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
-
 	"github.com/uber-go/tally"
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -51,6 +53,7 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/service/worker/archiver"
 )
 
 type (
