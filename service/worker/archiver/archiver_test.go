@@ -3,6 +3,8 @@ package archiver
 import (
 	"context"
 	"errors"
+	"fmt"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -25,6 +27,7 @@ var (
 
 func init() {
 	workflow.Register(handleRequestWorkflow)
+	workflow.Register(startAndFinishArchiverWorkflow)
 }
 
 type archiverSuite struct {
@@ -123,7 +126,56 @@ func (s *archiverSuite) TestHandleRequest_LocalDeleteFailsThenSucceeds() {
 	s.NoError(env.GetWorkflowError())
 }
 
+func (s *archiverSuite) TestRunArchiver() {
+	numRequests := 1000
+	concurrency := 10
+	archiverTestMetrics.On("IncCounter", metrics.ArchiverScope, metrics.ArchiverUploadSuccessCount).Times(numRequests)
+	archiverTestMetrics.On("IncCounter", metrics.ArchiverScope, metrics.ArchiverDeleteLocalSuccessCount).Times(numRequests)
+	archiverTestMetrics.On("IncCounter", metrics.ArchiverScope, metrics.ArchiverStartedCount).Once()
+	archiverTestMetrics.On("IncCounter", metrics.ArchiverScope, metrics.ArchiverCoroutineStartedCount).Times(concurrency)
+	archiverTestMetrics.On("IncCounter", metrics.ArchiverScope, metrics.ArchiverCoroutineStoppedCount).Times(concurrency)
+	archiverTestMetrics.On("IncCounter", metrics.ArchiverScope, metrics.ArchiverStoppedCount).Once()
+
+	env := s.NewTestWorkflowEnvironment()
+	env.OnActivity(uploadHistoryActivityFnName, mock.Anything, mock.Anything).Return(nil)
+	env.OnActivity(deleteHistoryActivityFnName, mock.Anything, mock.Anything).Return(nil)
+	env.ExecuteWorkflow(startAndFinishArchiverWorkflow, concurrency, numRequests)
+
+	env.AssertExpectations(s.T())
+	s.True(env.IsWorkflowCompleted())
+	s.NoError(env.GetWorkflowError())
+}
+
 func handleRequestWorkflow(ctx workflow.Context, request ArchiveRequest) error {
 	handleRequest(ctx, archiverTestLogger, archiverTestMetrics, request)
 	return nil
+}
+
+func startAndFinishArchiverWorkflow(ctx workflow.Context, concurrency int, numRequests int) error {
+	requestCh := workflow.NewBufferedChannel(ctx, numRequests)
+	archiver := NewArchiver(ctx, archiverTestLogger, archiverTestMetrics, concurrency, requestCh)
+	archiver.Start()
+	sentHashes := make([]uint64, numRequests, numRequests)
+	workflow.Go(ctx, func(ctx workflow.Context) {
+		for i := 0; i < numRequests; i++ {
+			ar, hash := randomArchiveRequest()
+			requestCh.Send(ctx, ar)
+			sentHashes[i] = hash
+		}
+		requestCh.Close()
+	})
+	handledHashes := archiver.Finished()
+	if !equal(handledHashes, sentHashes) {
+		return errors.New("handled hashes does not equal sent hashes")
+	}
+	return nil
+}
+
+func randomArchiveRequest() (ArchiveRequest, uint64) {
+	ar := ArchiveRequest{
+		DomainID:   fmt.Sprintf("%v", rand.Intn(1000)),
+		WorkflowID: fmt.Sprintf("%v", rand.Intn(1000)),
+		RunID:      fmt.Sprintf("%v", rand.Intn(1000)),
+	}
+	return ar, hashArchiveRequest(ar)
 }
