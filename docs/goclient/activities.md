@@ -1,9 +1,3 @@
----
-layout: doc
-title: Activities
-weight: 1
----
-
 # Activities
 
 An activity is the implementation of a particular task in the business logic.

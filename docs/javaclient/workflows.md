@@ -1,9 +1,3 @@
----
-layout: doc
-title: Workflows
-weight: 32
----
-
 # Workflows
 
 Workflow encapsulates the orchestration of activities and child workflows.

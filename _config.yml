@@ -46,6 +46,14 @@ kramdown:
   math_engine: mathjax
   syntax_highlighter: rouge
 
+# Defaults
+defaults:
+  -
+    scope:
+      path: "docs"
+    values:
+      layout: "doc"
+
 # Exclude from processing.
 # The following items will not be processed, by default. Create a custom list
 # to override the default setting.

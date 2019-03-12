@@ -1,9 +1,3 @@
----
-layout: doc
-title: Workflow APIs
-weight: 25
----
-
 # Workflow APIs
 
 This topic contains information about the `SideEffect` and `Query` APIs. For additional information,
