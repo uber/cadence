@@ -1,9 +1,11 @@
 version: '3'
 services:
-  cassandra:
-    image: cassandra:3.11
+  mysql:
+    image: mysql:5.7
     ports:
-      - "9042:9042"
+      - "3306:3306"
+    environment:
+      - "MYSQL_ROOT_PASSWORD=root"
   statsd:
     image: hopsoft/graphite-statsd
     ports:
@@ -12,17 +14,20 @@ services:
       - "8125:8125"
       - "8126:8126"
   cadence:
-    image: ubercadence/server:0.5.5
+    image: ubercadence/server:0.5.4
     ports:
-     - "7933:7933"
-     - "7934:7934"
-     - "7935:7935"
-     - "7939:7939"
+      - "7933:7933"
+      - "7934:7934"
+      - "7935:7935"
+      - "7939:7939"
     environment:
-      - "CASSANDRA_SEEDS=cassandra"
+      - "DB=mysql"
+      - "MYSQL_USER=root"
+      - "MYSQL_PWD=root"
+      - "MYSQL_SEEDS=mysql"
       - "STATSD_ENDPOINT=statsd:8125"
     depends_on:
-      - cassandra
+      - mysql
       - statsd
   cadence-web:
     image: ubercadence/web:3.1.2

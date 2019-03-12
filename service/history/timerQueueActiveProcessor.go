@@ -253,12 +253,6 @@ func (t *timerQueueActiveProcessorImpl) process(timerTask *persistence.TimerTask
 		}
 		return metrics.TimerActiveTaskDeleteHistoryEventScope, err
 
-	case persistence.TaskTypeArchiveHistoryEvent:
-		if shouldProcessTask {
-			err = t.timerQueueProcessorBase.processArchiveHistoryEvent(timerTask)
-		}
-		return metrics.TimerActiveTaskArchiveHistoryEventScope, err
-
 	default:
 		return metrics.TimerActiveQueueProcessorScope, errUnknownTimerTask
 	}
@@ -774,7 +768,7 @@ Update_History_Loop:
 		if t.config.EnableEventsV2(domainEntry.GetInfo().Name) {
 			eventStoreVersion = persistence.EventStoreVersionV2
 		}
-		_, continueAsNewBuilder, err := msBuilder.AddContinueAsNewEvent(common.EmptyEventID, domainEntry, startAttributes.GetParentWorkflowDomain(), continueAsnewAttributes, eventStoreVersion)
+		_, continueAsNewBuilder, err := msBuilder.AddContinueAsNewEvent(msBuilder.GetNextEventID(), common.EmptyEventID, domainEntry, startAttributes.GetParentWorkflowDomain(), continueAsnewAttributes, eventStoreVersion)
 		if err != nil {
 			return err
 		}

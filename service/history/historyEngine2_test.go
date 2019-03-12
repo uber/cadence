@@ -180,7 +180,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	stickyTl := "stickyTaskList"
 	identity := "testIdentity"
 
-	msBuilder := newMutableStateBuilder("test", s.config, s.mockEventsCache,
+	msBuilder := newMutableStateBuilder("test", s.historyEngine.shard, s.mockEventsCache,
 		bark.NewLoggerFromLogrus(log.New()))
 	executionInfo := msBuilder.GetExecutionInfo()
 	executionInfo.StickyTaskList = stickyTl
@@ -921,7 +921,7 @@ func (s *engine2Suite) TestRequestCancelWorkflowExecutionFail() {
 
 func (s *engine2Suite) createExecutionStartedState(we workflow.WorkflowExecution, tl, identity string,
 	startDecision bool) mutableState {
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.mockEventsCache,
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.historyEngine.shard, s.mockEventsCache,
 		s.logger)
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
@@ -952,7 +952,7 @@ func (s *engine2Suite) TestRespondDecisionTaskCompletedRecordMarkerDecision() {
 	markerDetails := []byte("marker details")
 	markerName := "marker name"
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.mockEventsCache,
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.historyEngine.shard, s.mockEventsCache,
 		bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
 	di := addDecisionTaskScheduledEvent(msBuilder)
@@ -1356,7 +1356,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 		},
 	}
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.mockEventsCache,
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.historyEngine.shard, s.mockEventsCache,
 		bark.NewLoggerFromLogrus(log.New()))
 	ms := createMutableState(msBuilder)
 	gwmsResponse := &p.GetWorkflowExecutionResponse{State: ms}
@@ -1466,7 +1466,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotRunning()
 		},
 	}
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.mockEventsCache,
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.historyEngine.shard, s.mockEventsCache,
 		bark.NewLoggerFromLogrus(log.New()))
 	ms := createMutableState(msBuilder)
 	ms.ExecutionInfo.State = p.WorkflowStateCompleted
@@ -1496,6 +1496,139 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotRunning()
 	s.Nil(err)
 	s.NotNil(resp.GetRunId())
 	s.NotEqual(runID, resp.GetRunId())
+}
+
+func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_DuplicateRequests() {
+	domainID := validDomainID
+	workflowID := "wId"
+	runID := validRunID
+	workflowType := "workflowType"
+	taskList := "testTaskList"
+	identity := "testIdentity"
+	signalName := "my signal name"
+	input := []byte("test input")
+	requestID := "testRequestID"
+	sRequest := &h.SignalWithStartWorkflowExecutionRequest{
+		DomainUUID: common.StringPtr(domainID),
+		SignalWithStartRequest: &workflow.SignalWithStartWorkflowExecutionRequest{
+			Domain:                              common.StringPtr(domainID),
+			WorkflowId:                          common.StringPtr(workflowID),
+			WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+			TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
+			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
+			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
+			Identity:                            common.StringPtr(identity),
+			SignalName:                          common.StringPtr(signalName),
+			Input:                               input,
+			RequestId:                           common.StringPtr(requestID),
+		},
+	}
+
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.historyEngine.shard, s.mockEventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
+	ms := createMutableState(msBuilder)
+	ms.ExecutionInfo.State = p.WorkflowStateCompleted
+	gwmsResponse := &p.GetWorkflowExecutionResponse{State: ms}
+	gceResponse := &p.GetCurrentExecutionResponse{RunID: runID}
+	workflowAlreadyStartedErr := &p.WorkflowExecutionAlreadyStartedError{
+		Msg:              "random message",
+		StartRequestID:   requestID, // use same requestID
+		RunID:            runID,
+		State:            p.WorkflowStateRunning,
+		CloseStatus:      p.WorkflowCloseStatusNone,
+		LastWriteVersion: common.EmptyVersion,
+	}
+
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(gceResponse, nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
+	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: 0}, nil).Once()
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, workflowAlreadyStartedErr).Once()
+	s.mockHistoryMgr.On("DeleteWorkflowExecutionHistory", mock.Anything).Return(nil).Once()
+	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
+		&p.GetDomainResponse{
+			Info:   &p.DomainInfo{ID: domainID},
+			Config: &p.DomainConfig{Retention: 1},
+			ReplicationConfig: &p.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*p.ClusterReplicationConfig{
+					&p.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
+			TableVersion: p.DomainTableVersionV1,
+		},
+		nil,
+	)
+
+	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
+	s.Nil(err)
+	s.NotNil(resp.GetRunId())
+	s.Equal(runID, resp.GetRunId())
+}
+
+func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_WorkflowAlreadyStarted() {
+	domainID := validDomainID
+	workflowID := "wId"
+	runID := validRunID
+	workflowType := "workflowType"
+	taskList := "testTaskList"
+	identity := "testIdentity"
+	signalName := "my signal name"
+	input := []byte("test input")
+	requestID := "testRequestID"
+	sRequest := &h.SignalWithStartWorkflowExecutionRequest{
+		DomainUUID: common.StringPtr(domainID),
+		SignalWithStartRequest: &workflow.SignalWithStartWorkflowExecutionRequest{
+			Domain:                              common.StringPtr(domainID),
+			WorkflowId:                          common.StringPtr(workflowID),
+			WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+			TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
+			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
+			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
+			Identity:                            common.StringPtr(identity),
+			SignalName:                          common.StringPtr(signalName),
+			Input:                               input,
+			RequestId:                           common.StringPtr(requestID),
+		},
+	}
+
+	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.historyEngine.shard, s.mockEventsCache,
+		bark.NewLoggerFromLogrus(log.New()))
+	ms := createMutableState(msBuilder)
+	ms.ExecutionInfo.State = p.WorkflowStateCompleted
+	gwmsResponse := &p.GetWorkflowExecutionResponse{State: ms}
+	gceResponse := &p.GetCurrentExecutionResponse{RunID: runID}
+	workflowAlreadyStartedErr := &p.WorkflowExecutionAlreadyStartedError{
+		Msg:              "random message",
+		StartRequestID:   "new request ID",
+		RunID:            runID,
+		State:            p.WorkflowStateRunning,
+		CloseStatus:      p.WorkflowCloseStatusNone,
+		LastWriteVersion: common.EmptyVersion,
+	}
+
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(gceResponse, nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
+	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: 0}, nil).Once()
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, workflowAlreadyStartedErr).Once()
+	s.mockHistoryMgr.On("DeleteWorkflowExecutionHistory", mock.Anything).Return(nil).Once()
+	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
+		&p.GetDomainResponse{
+			Info:   &p.DomainInfo{ID: domainID},
+			Config: &p.DomainConfig{Retention: 1},
+			ReplicationConfig: &p.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*p.ClusterReplicationConfig{
+					&p.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
+			TableVersion: p.DomainTableVersionV1,
+		},
+		nil,
+	)
+
+	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
+	s.Nil(resp)
+	s.NotNil(err)
 }
 
 func (s *engine2Suite) getBuilder(domainID string, we workflow.WorkflowExecution) mutableState {

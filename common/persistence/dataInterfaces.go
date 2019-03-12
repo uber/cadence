@@ -116,8 +116,10 @@ const (
 	TaskTypeDeleteHistoryEvent
 	TaskTypeActivityRetryTimer
 	TaskTypeWorkflowBackoffTimer
-	TaskTypeArchiveHistoryEvent
 )
+
+// UnknownNumRowsAffected is returned when the number of rows that an API affected cannot be determined
+const UnknownNumRowsAffected = -1
 
 // Types of workflow backoff timeout
 const (
@@ -233,6 +235,7 @@ type (
 		State                        int
 		CloseStatus                  int
 		LastFirstEventID             int64
+		LastEventTaskID              int64
 		NextEventID                  int64
 		LastProcessedEvent           int64
 		StartTimestamp               time.Time
@@ -333,12 +336,14 @@ type (
 
 	// TaskListInfo describes a state of a task list implementation.
 	TaskListInfo struct {
-		DomainID string
-		Name     string
-		TaskType int
-		RangeID  int64
-		AckLevel int64
-		Kind     int
+		DomainID    string
+		Name        string
+		TaskType    int
+		RangeID     int64
+		AckLevel    int64
+		Kind        int
+		Expiry      time.Time
+		LastUpdated time.Time
 	}
 
 	// TaskInfo describes either activity or decision task
@@ -392,13 +397,6 @@ type (
 
 	// DeleteHistoryEventTask identifies a timer task for deletion of history events of completed execution.
 	DeleteHistoryEventTask struct {
-		VisibilityTimestamp time.Time
-		TaskID              int64
-		Version             int64
-	}
-
-	// ArchiveHistoryEventTask identifies a timer task for archival of history events of completed execution.
-	ArchiveHistoryEventTask struct {
 		VisibilityTimestamp time.Time
 		TaskID              int64
 		Version             int64
@@ -657,6 +655,7 @@ type (
 		WorkflowTimeout             int32
 		DecisionTimeoutValue        int32
 		ExecutionContext            []byte
+		LastEventTaskID             int64
 		NextEventID                 int64
 		LastProcessedEvent          int64
 		SignalCount                 int32
@@ -879,6 +878,7 @@ type (
 		TaskList     string
 		TaskType     int
 		TaskListKind int
+		RangeID      int64
 	}
 
 	// LeaseTaskListResponse is response to LeaseTaskListRequest
@@ -893,6 +893,26 @@ type (
 
 	// UpdateTaskListResponse is the response to UpdateTaskList
 	UpdateTaskListResponse struct {
+	}
+
+	// ListTaskListRequest contains the request params needed to invoke ListTaskList API
+	ListTaskListRequest struct {
+		PageSize  int
+		PageToken []byte
+	}
+
+	// ListTaskListResponse is the response from ListTaskList API
+	ListTaskListResponse struct {
+		Items         []TaskListInfo
+		NextPageToken []byte
+	}
+
+	// DeleteTaskListRequest contains the request params needed to invoke DeleteTaskList API
+	DeleteTaskListRequest struct {
+		DomainID     string
+		TaskListName string
+		TaskListType int
+		RangeID      int64
 	}
 
 	// CreateTasksRequest is used to create a new task for a workflow exectution
@@ -920,7 +940,6 @@ type (
 		ReadLevel    int64
 		MaxReadLevel int64 // inclusive
 		BatchSize    int
-		RangeID      int64
 	}
 
 	// GetTasksResponse is the response to GetTasksRequests
@@ -932,6 +951,15 @@ type (
 	CompleteTaskRequest struct {
 		TaskList *TaskListInfo
 		TaskID   int64
+	}
+
+	// CompleteTasksLessThanRequest contains the request params needed to invoke CompleteTasksLessThan API
+	CompleteTasksLessThanRequest struct {
+		DomainID     string
+		TaskListName string
+		TaskType     int
+		TaskID       int64 // Tasks less than or equal to this ID will be completed
+		Limit        int   // Limit on the max number of tasks that can be completed. Required param
 	}
 
 	// GetTimerIndexTasksRequest is the request for GetTimerIndexTasks
@@ -1352,9 +1380,21 @@ type (
 		GetName() string
 		LeaseTaskList(request *LeaseTaskListRequest) (*LeaseTaskListResponse, error)
 		UpdateTaskList(request *UpdateTaskListRequest) (*UpdateTaskListResponse, error)
+		ListTaskList(request *ListTaskListRequest) (*ListTaskListResponse, error)
+		DeleteTaskList(request *DeleteTaskListRequest) error
 		CreateTasks(request *CreateTasksRequest) (*CreateTasksResponse, error)
 		GetTasks(request *GetTasksRequest) (*GetTasksResponse, error)
 		CompleteTask(request *CompleteTaskRequest) error
+		// CompleteTasksLessThan completes tasks less than or equal to the given task id
+		// This API takes a limit parameter which specifies the count of maxRows that
+		// can be deleted. This parameter may be ignored by the underlying storage, but
+		// its mandatory to specify it. On success this method returns the number of rows
+		// actually deleted. If the underlying storage doesn't support "limit", all rows
+		// less than or equal to taskID will be deleted.
+		// On success, this method returns:
+		//  - number of rows actually deleted, if limit is honored
+		//  - UnknownNumRowsDeleted, when all rows below value are deleted
+		CompleteTasksLessThan(request *CompleteTasksLessThanRequest) (int, error)
 	}
 
 	// HistoryManager is used to manage Workflow Execution HistoryEventBatch
@@ -1579,41 +1619,6 @@ func (a *DeleteHistoryEventTask) GetVisibilityTimestamp() time.Time {
 
 // SetVisibilityTimestamp set the visibility timestamp
 func (a *DeleteHistoryEventTask) SetVisibilityTimestamp(timestamp time.Time) {
-	a.VisibilityTimestamp = timestamp
-}
-
-// GetType returns the type of the archive execution task
-func (a *ArchiveHistoryEventTask) GetType() int {
-	return TaskTypeArchiveHistoryEvent
-}
-
-// GetVersion returns the version of the archive execution task
-func (a *ArchiveHistoryEventTask) GetVersion() int64 {
-	return a.Version
-}
-
-// SetVersion sets the version of the archive execution task
-func (a *ArchiveHistoryEventTask) SetVersion(version int64) {
-	a.Version = version
-}
-
-// GetTaskID returns the sequence ID of the archive execution task
-func (a *ArchiveHistoryEventTask) GetTaskID() int64 {
-	return a.TaskID
-}
-
-// SetTaskID sets the sequence ID of the archive execution task
-func (a *ArchiveHistoryEventTask) SetTaskID(id int64) {
-	a.TaskID = id
-}
-
-// GetVisibilityTimestamp get the visibility timestamp
-func (a *ArchiveHistoryEventTask) GetVisibilityTimestamp() time.Time {
-	return a.VisibilityTimestamp
-}
-
-// SetVisibilityTimestamp set the visibility timestamp
-func (a *ArchiveHistoryEventTask) SetVisibilityTimestamp(timestamp time.Time) {
 	a.VisibilityTimestamp = timestamp
 }
 

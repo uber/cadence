@@ -83,6 +83,7 @@ const (
 	TagESRequest                  = "es-request"
 	TagESKey                      = "es-mapping-key"
 	TagESField                    = "es-field"
+	TagContextTimeout             = "context-timeout"
 
 	// workflow logging tag values
 	// TagWorkflowComponent Values
@@ -176,4 +177,5 @@ const (
 	TagBlobKey                           = "blob-key"
 	TagBlobKeyPrefix                     = "blob-key-prefix"
 	TagFileBlobstoreMetadataPath         = "file-blobstore-metadata-path"
+	TagClusterArchivalStatus             = "cluster-archival-status"
 )

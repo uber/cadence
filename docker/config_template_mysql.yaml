@@ -3,20 +3,26 @@ log:
   level: "${LOG_LEVEL}"
 
 persistence:
-  defaultStore: cass-default
-  visibilityStore: cass-visibility
+  defaultStore: mysql-default
+  visibilityStore: mysql-visibility
   numHistoryShards: ${NUM_HISTORY_SHARDS}
   datastores:
-    cass-default:
-      cassandra:
-        hosts: "${CASSANDRA_SEEDS}"
-        keyspace: "${KEYSPACE}"
-        consistency: "${CASSANDRA_CONSISTENCY}"
-    cass-visibility:
-      cassandra:
-        hosts: "${CASSANDRA_SEEDS}"
-        keyspace: "${VISIBILITY_KEYSPACE}"
-        consistency: "${CASSANDRA_CONSISTENCY}"
+    mysql-default:
+      sql:
+        driverName: "mysql"
+        databaseName: "${DBNAME}"
+        connectAddr: "${MYSQL_SEEDS}:3306"
+        connectProtocol: "tcp"
+        user: "${MYSQL_USER}"
+        password: "${MYSQL_PWD}"
+    mysql-visibility:
+      sql:
+        driverName: "mysql"
+        databaseName: "${VISIBILITY_DBNAME}"
+        connectAddr: "${MYSQL_SEEDS}:3306"
+        connectProtocol: "tcp"
+        user: "${MYSQL_USER}"
+        password: "${MYSQL_PWD}"
 
 ringpop:
   name: cadence
