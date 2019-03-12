@@ -57,7 +57,7 @@ func archivalWorkflow(ctx workflow.Context, carryover []ArchiveRequest) error {
 	handledHashes := archiver.Finished()
 	archiverSW.Stop()
 	metricsClient.AddCounter(metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverNumHandledRequestsCount, int64(len(handledHashes)))
-	if !equal(pumpResult.PumpedHashes, handledHashes) {
+	if !hashesEqual(pumpResult.PumpedHashes, handledHashes) {
 		logger.Error("handled archival requests do not match pumped archival requests")
 		metricsClient.IncCounter(metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverPumpedNotEqualHandledCount)
 	}

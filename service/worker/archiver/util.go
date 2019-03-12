@@ -110,7 +110,7 @@ func hashArchiveRequest(archiveRequest ArchiveRequest) uint64 {
 	return farm.Fingerprint64(b.Bytes())
 }
 
-func equal(a []uint64, b []uint64) bool {
+func hashesEqual(a []uint64, b []uint64) bool {
 	if len(a) != len(b) {
 		return false
 	}

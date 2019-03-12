@@ -165,7 +165,7 @@ func startAndFinishArchiverWorkflow(ctx workflow.Context, concurrency int, numRe
 		requestCh.Close()
 	})
 	handledHashes := archiver.Finished()
-	if !equal(handledHashes, sentHashes) {
+	if !hashesEqual(handledHashes, sentHashes) {
 		return errors.New("handled hashes does not equal sent hashes")
 	}
 	return nil

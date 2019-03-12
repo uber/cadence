@@ -772,6 +772,8 @@ const (
 	ArchiverPumpScope
 	// ArchiverArchivalWorkflowScope is scope used by all metrics emitted by archiver.ArchivalWorkflow
 	ArchiverArchivalWorkflowScope
+	// ArchiverClientScope is scope used by all metrics emitted by archiver.Client
+	ArchiverClientScope
 
 	NumWorkerScopes
 )
@@ -1104,6 +1106,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ArchiverScope:                      {operation: "Archiver"},
 		ArchiverPumpScope:                  {operation: "ArchiverPump"},
 		ArchiverArchivalWorkflowScope:      {operation: "ArchiverArchivalWorkflow"},
+		ArchiverClientScope:                {operation: "ArchiverClient"},
 	},
 }
 
@@ -1327,6 +1330,7 @@ const (
 	ArchiverReadDynamicConfigErrorCount
 	ArchiverHandleAllRequestsLatency
 	ArchiverWorkflowStoppingCount
+	ArchiverClientSendSignalFailureCount
 
 	NumWorkerMetrics
 )
@@ -1535,6 +1539,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ArchiverReadDynamicConfigErrorCount:      {metricName: "archiver.read-dynamic-config-error"},
 		ArchiverHandleAllRequestsLatency:         {metricName: "archiver.handle-all-requests-latency"},
 		ArchiverWorkflowStoppingCount:            {metricName: "archiver.workflow-stopping"},
+		ArchiverClientSendSignalFailureCount:     {metricName: "archiver.client-send-signal-error"},
 	},
 }
 

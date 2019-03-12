@@ -23,10 +23,13 @@ package archiver
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common"
 	"math/rand"
 
+	"github.com/uber-common/bark"
 	"github.com/uber/cadence/client/public"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	cclient "go.uber.org/cadence/client"
 )
@@ -49,14 +52,23 @@ type (
 	}
 
 	client struct {
+		metricsClient metrics.Client
+		logger        bark.Logger
 		cadenceClient cclient.Client
 		numWorkflows  dynamicconfig.IntPropertyFn
 	}
 )
 
 // NewClient creates a new Client
-func NewClient(publicClient public.Client, numWorkflows dynamicconfig.IntPropertyFn) Client {
+func NewClient(
+	metricsClient metrics.Client,
+	logger bark.Logger,
+	publicClient public.Client,
+	numWorkflows dynamicconfig.IntPropertyFn,
+) Client {
 	return &client{
+		metricsClient: metricsClient,
+		logger:        logger,
 		cadenceClient: cclient.NewClient(publicClient, common.SystemDomainName, &cclient.Options{}),
 		numWorkflows:  numWorkflows,
 	}
@@ -72,6 +84,14 @@ func (c *client) Archive(request *ArchiveRequest) error {
 		DecisionTaskStartToCloseTimeout: workflowTaskStartToCloseTimeout,
 		WorkflowIDReusePolicy:           cclient.WorkflowIDReusePolicyAllowDuplicate,
 	}
-	_, err := c.cadenceClient.SignalWithStartWorkflow(context.Background(), workflowID, signalName, *request, workflowOptions, archivalWorkflowFnName, nil)
+	exec, err := c.cadenceClient.SignalWithStartWorkflow(context.Background(), workflowID, signalName, *request, workflowOptions, archivalWorkflowFnName, nil)
+	if err != nil {
+		tagLoggerWithRequest(c.logger, *request).WithFields(bark.Fields{
+			logging.TagErr:                 err,
+			logging.TagWorkflowExecutionID: exec.ID,
+			logging.TagWorkflowRunID:       exec.RunID,
+		}).Error("failed to SignalWithStartWorkflow to archival system workflow")
+		c.metricsClient.IncCounter(metrics.ArchiverClientScope, metrics.ArchiverClientSendSignalFailureCount)
+	}
 	return err
 }
