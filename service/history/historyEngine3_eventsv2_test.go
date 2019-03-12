@@ -183,9 +183,8 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	stickyTl := "stickyTaskList"
 	identity := "testIdentity"
 
-	msBuilder := newMutableStateBuilder("test", s.config, s.mockEventsCache,
-		bark.NewLoggerFromLogrus(log.New()))
-	msBuilder.SetHistoryTree(msBuilder.GetExecutionInfo().RunID)
+	msBuilder := newMutableStateBuilderWithEventV2("test", s.config, s.mockEventsCache,
+		bark.NewLoggerFromLogrus(log.New()), we.GetRunId())
 	executionInfo := msBuilder.GetExecutionInfo()
 	executionInfo.StickyTaskList = stickyTl
 
@@ -322,9 +321,8 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 		},
 	}
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.mockEventsCache,
-		bark.NewLoggerFromLogrus(log.New()))
-	msBuilder.SetHistoryTree(msBuilder.GetExecutionInfo().RunID)
+	msBuilder := newMutableStateBuilderWithEventV2(s.mockClusterMetadata.GetCurrentClusterName(), s.config, s.mockEventsCache,
+		bark.NewLoggerFromLogrus(log.New()), runID)
 	ms := createMutableState(msBuilder)
 	gwmsResponse := &p.GetWorkflowExecutionResponse{State: ms}
 	gceResponse := &p.GetCurrentExecutionResponse{RunID: runID}

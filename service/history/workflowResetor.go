@@ -73,12 +73,6 @@ func (w *workflowResetorImpl) ResetWorkflowExecution(ctx context.Context, resetR
 		}
 		return
 	}
-	if request.GetDecisionFinishEventId() <= common.FirstEventID {
-		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("Decision finish ID must be > 1."),
-		}
-		return
-	}
 
 	baseExecution := workflow.WorkflowExecution{
 		WorkflowId: request.WorkflowExecution.WorkflowId,
