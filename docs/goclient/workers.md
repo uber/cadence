@@ -1,9 +1,3 @@
----
-layout: doc
-title: Workers
-weight: 24
----
-
 # Workers
 
 A worker or *worker service* is a service that hosts the workflow and activity implementations. The worker polls the *Cadence service* for tasks, performs those tasks and communicates task execution results back to the *Cadence service*. Worker services are developed, deployed and operated by Cadence customers.

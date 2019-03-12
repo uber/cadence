@@ -1,9 +1,3 @@
----
-layout: doc
-title: Complete an activity asynchronously
-weight: 25
----
-
 # Completing an activity asynchronously
 
 There are certain scenarios when completing an activity upon completion of its function is not possible

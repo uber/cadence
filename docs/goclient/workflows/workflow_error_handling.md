@@ -1,9 +1,3 @@
----
-layout: doc
-title: Workflow error handling
-weight: 23
----
-
 # Error handling
 
 An activity, or child workflow, might fail and you could handle errors differently based on different
