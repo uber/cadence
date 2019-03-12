@@ -181,7 +181,7 @@ func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 
 	taskList := "user-timer-update-times-out"
 
-	builder := newMutableStateBuilderWithEventV2(cluster.TestCurrentClusterName, s.config, s.mockEventsCache, s.logger, we.GetRunId())
+	builder := newMutableStateBuilderWithEventV2(cluster.TestCurrentClusterName, s.mockShard, s.mockEventsCache, s.logger, we.GetRunId())
 	startRequest := &workflow.StartWorkflowExecutionRequest{
 		WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr("wType")},
 		TaskList:                            common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
@@ -253,7 +253,7 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout() {
 		RunId: common.StringPtr(validRunID)}
 	taskList := "task-workflow-times-out"
 
-	builder := newMutableStateBuilderWithEventV2(cluster.TestCurrentClusterName, s.config, s.mockEventsCache, s.logger, we.GetRunId())
+	builder := newMutableStateBuilderWithEventV2(cluster.TestCurrentClusterName, s.mockShard, s.mockEventsCache, s.logger, we.GetRunId())
 	startRequest := &workflow.StartWorkflowExecutionRequest{
 		WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr("wType")},
 		TaskList:                            common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
