@@ -22,9 +22,9 @@ package archiver
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
-	"errors"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
@@ -41,6 +41,7 @@ import (
 	"go.uber.org/cadence/testsuite"
 	"go.uber.org/cadence/worker"
 )
+
 const (
 	testArchivalBucket     = "test-archival-bucket"
 	testCurrentClusterName = "test-current-cluster-name"
@@ -48,17 +49,16 @@ const (
 
 var (
 	persistenceNonRetryableErr = errors.New("persistence non-retryable error")
-	persistenceRetryableErr = &shared.InternalServiceError{}
-	blobstoreNonRetryableErr = &shared.BadRequestError{}
-	blobstoreRetryableErr = errors.New("blobstore retryable error")
+	persistenceRetryableErr    = &shared.InternalServiceError{}
+	blobstoreNonRetryableErr   = &shared.BadRequestError{}
+	blobstoreRetryableErr      = errors.New("blobstore retryable error")
 )
-
 
 type activitiesSuite struct {
 	suite.Suite
 	testsuite.WorkflowTestSuite
 
-	logger bark.Logger
+	logger        bark.Logger
 	metricsClient *mmocks.Client
 }
 
@@ -571,4 +571,3 @@ func getCanceledContext() context.Context {
 	cancel()
 	return ctx
 }
-

@@ -43,12 +43,8 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-<<<<<<< HEAD
-	"github.com/uber/cadence/service/worker/sysworkflow"
-	"go.uber.org/cadence/.gen/go/shared"
-=======
 	"github.com/uber/cadence/service/worker/archiver"
->>>>>>> renamed files and started large archival workflow refactor
+	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/yarpc"
 )
 
