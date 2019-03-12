@@ -40,7 +40,6 @@ CREATE TYPE workflow_execution (
   start_time                       timestamp,
   last_updated_time                timestamp,
   create_request_id                uuid,
-  create_task_id               bigint, -- transer task id used when creating this workflow, used by replication
   decision_version                 bigint,
   decision_schedule_id             bigint,
   decision_started_id              bigint,
@@ -71,6 +70,7 @@ CREATE TYPE workflow_execution (
   next_event_id                    bigint,
   cron_schedule                    text,
   expiration_seconds               int,    -- retry expiration duration in seconds
+  last_event_task_id               bigint,
 );
 
 -- Replication information for each cluster
@@ -310,7 +310,7 @@ CREATE TABLE executions (
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
   };
 
--- events table is deprecated in favor of v2 talbes: history_node/history_tree
+-- events table is deprecated in favor of v2 tables: history_node/history_tree
 CREATE TABLE events (
   domain_id           uuid,
   workflow_id         text,

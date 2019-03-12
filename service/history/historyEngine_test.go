@@ -24,10 +24,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/uber/cadence/service/worker/sysworkflow"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/uber/cadence/service/worker/sysworkflow"
 
 	"github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -4802,6 +4803,7 @@ func copyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *p
 		ExecutionContext:             sourceInfo.ExecutionContext,
 		State:                        sourceInfo.State,
 		CloseStatus:                  sourceInfo.CloseStatus,
+		LastEventTaskID:              sourceInfo.LastEventTaskID,
 		NextEventID:                  sourceInfo.NextEventID,
 		LastProcessedEvent:           sourceInfo.LastProcessedEvent,
 		LastUpdatedTimestamp:         sourceInfo.LastUpdatedTimestamp,

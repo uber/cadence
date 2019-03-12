@@ -23,6 +23,8 @@ package history
 import (
 	"time"
 
+	"github.com/uber/cadence/common/errors"
+
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/shared"
@@ -35,8 +37,7 @@ import (
 type (
 	stateBuilder interface {
 		applyEvents(domainID, requestID string, execution shared.WorkflowExecution, history []*shared.HistoryEvent,
-			newRunHistory []*shared.HistoryEvent, eventStoreVersion, newRunEventStoreVersion int32,
-			createTaskID, newRunCreateTaskID int64) (*shared.HistoryEvent,
+			newRunHistory []*shared.HistoryEvent, eventStoreVersion, newRunEventStoreVersion int32) (*shared.HistoryEvent,
 			*decisionInfo, mutableState, error)
 		getTransferTasks() []persistence.Task
 		getTimerTasks() []persistence.Task
@@ -57,6 +58,10 @@ type (
 		newRunTransferTasks []persistence.Task
 		newRunTimerTasks    []persistence.Task
 	}
+)
+
+const (
+	ErrMessageNewRunHistorySizeZero = "encounter new run history size being zero"
 )
 
 var _ stateBuilder = (*stateBuilderImpl)(nil)
@@ -93,8 +98,7 @@ func (b *stateBuilderImpl) getNewRunTimerTasks() []persistence.Task {
 }
 
 func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution shared.WorkflowExecution,
-	history []*shared.HistoryEvent, newRunHistory []*shared.HistoryEvent,
-	eventStoreVersion, newRunEventStoreVersion int32, createTaskID int64, newRunCreateTaskID int64) (*shared.HistoryEvent,
+	history []*shared.HistoryEvent, newRunHistory []*shared.HistoryEvent, eventStoreVersion, newRunEventStoreVersion int32) (*shared.HistoryEvent,
 	*decisionInfo, mutableState, error) {
 	var lastEvent *shared.HistoryEvent
 	var lastDecision *decisionInfo
@@ -104,7 +108,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 		firstEvent = history[0]
 	}
 
-	// need to clear the stickness since workflow turned to passive
+	// need to clear the stickiness since workflow turned to passive
 	b.msBuilder.ClearStickyness()
 	for _, event := range history {
 		lastEvent = event
@@ -112,6 +116,8 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 		if b.msBuilder.GetReplicationState() != nil {
 			b.msBuilder.UpdateReplicationStateVersion(event.GetVersion(), true)
 		}
+		b.msBuilder.GetExecutionInfo().LastEventTaskID = event.GetTaskId()
+
 		switch event.GetEventType() {
 		case shared.EventTypeWorkflowExecutionStarted:
 			attributes := event.WorkflowExecutionStartedEventAttributes
@@ -124,7 +130,6 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 				parentDomainID = &parentDomainEntry.GetInfo().ID
 			}
 			b.msBuilder.ReplicateWorkflowExecutionStartedEvent(domainID, parentDomainID, execution, requestID, attributes)
-			b.msBuilder.GetExecutionInfo().CreateTaskID = createTaskID
 
 			b.timerTasks = append(b.timerTasks, b.scheduleWorkflowTimerTask(event, b.msBuilder))
 			if eventStoreVersion == persistence.EventStoreVersionV2 {
@@ -141,7 +146,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 
 			b.transferTasks = append(b.transferTasks, b.scheduleDecisionTransferTask(domainID, b.getTaskList(b.msBuilder),
 				di.ScheduleID))
-			// since we do not use stickyness on the standby side, there shall be no decision schedule to start timeout
+			// since we do not use stickiness on the standby side, there shall be no decision schedule to start timeout
 
 			lastDecision = di
 
@@ -168,7 +173,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			if di := b.msBuilder.ReplicateTransientDecisionTaskScheduled(); di != nil {
 				b.transferTasks = append(b.transferTasks, b.scheduleDecisionTransferTask(domainID, b.getTaskList(b.msBuilder),
 					di.ScheduleID))
-				// since we do not use stickyness on the standby side, there shall be no decision schedule to start timeout
+				// since we do not use stickiness on the standby side, there shall be no decision schedule to start timeout
 				lastDecision = di
 			}
 
@@ -179,7 +184,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			if di := b.msBuilder.ReplicateTransientDecisionTaskScheduled(); di != nil {
 				b.transferTasks = append(b.transferTasks, b.scheduleDecisionTransferTask(domainID, b.getTaskList(b.msBuilder),
 					di.ScheduleID))
-				// since we do not use stickyness on the standby side, there shall be no decision schedule to start timeout
+				// since we do not use stickiness on the standby side, there shall be no decision schedule to start timeout
 				lastDecision = di
 			}
 
@@ -387,11 +392,14 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			}
 
 		case shared.EventTypeWorkflowExecutionContinuedAsNew:
+			if len(newRunHistory) == 0 {
+				return nil, nil, nil, errors.NewInternalFailureError(ErrMessageNewRunHistorySizeZero)
+			}
 			newRunStartedEvent := newRunHistory[0]
 			// Create mutable state updates for the new run
 			newRunMutableStateBuilder = newMutableStateBuilderWithReplicationState(
 				b.clusterMetadata.GetCurrentClusterName(),
-				b.shard.GetConfig(),
+				b.shard,
 				b.shard.GetEventsCache(),
 				b.logger,
 				newRunStartedEvent.GetVersion(),
@@ -410,8 +418,6 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 				newRunHistory,
 				nil,
 				newRunEventStoreVersion,
-				0,
-				newRunCreateTaskID,
 				0,
 			)
 			if err != nil {
@@ -433,8 +439,8 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			b.newRunTransferTasks = append(b.newRunTransferTasks, newRunStateBuilder.getTransferTasks()...)
 			b.newRunTimerTasks = append(b.newRunTimerTasks, newRunStateBuilder.getTimerTasks()...)
 
-			err = b.msBuilder.ReplicateWorkflowExecutionContinuedAsNewEvent(sourceClusterName, domainID, event,
-				newRunStartedEvent, newRunDecisionInfo, newRunMutableStateBuilder, newRunEventStoreVersion, newRunCreateTaskID)
+			err = b.msBuilder.ReplicateWorkflowExecutionContinuedAsNewEvent(firstEvent.GetEventId(), sourceClusterName, domainID, event,
+				newRunStartedEvent, newRunDecisionInfo, newRunMutableStateBuilder, newRunEventStoreVersion)
 			if err != nil {
 				return nil, nil, nil, err
 			}

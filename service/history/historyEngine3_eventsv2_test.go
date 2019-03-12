@@ -22,9 +22,10 @@ package history
 
 import (
 	"context"
-	"github.com/uber/cadence/service/worker/sysworkflow"
 	"os"
 	"testing"
+
+	"github.com/uber/cadence/service/worker/sysworkflow"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"

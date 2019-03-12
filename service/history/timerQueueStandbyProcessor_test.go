@@ -180,7 +180,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Pending() 
 	version := int64(4096)
 	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(
 		s.mockClusterMetadata.GetCurrentClusterName(),
-		s.mockShard.GetConfig(),
+		s.mockShard,
 		s.mockShard.GetEventsCache(),
 		s.logger,
 		version,
@@ -569,6 +569,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Multiple_Ca
 		s.Equal(1, len(input.UpsertActivityInfos))
 		msBuilder.executionInfo.LastUpdatedTimestamp = input.ExecutionInfo.LastUpdatedTimestamp
 		input.RangeID = 0
+		input.ExecutionInfo.LastEventTaskID = 0
+		msBuilder.executionInfo.LastEventTaskID = 0
 		s.Equal(&persistence.UpdateWorkflowExecutionRequest{
 			ExecutionInfo:                 msBuilder.executionInfo,
 			ReplicationState:              msBuilder.replicationState,
