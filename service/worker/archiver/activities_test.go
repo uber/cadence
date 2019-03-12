@@ -69,7 +69,7 @@ func TestActivitiesSuite(t *testing.T) {
 func (s *activitiesSuite) SetupTest() {
 	s.logger = bark.NewNopLogger()
 	s.metricsClient = &mmocks.Client{}
-	s.metricsClient.On("StartTimer", metrics.ArchiverUploadHistoryActivityScope, metrics.CadenceLatency).Return(tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{})).Once()
+	s.metricsClient.On("StartTimer", mock.Anything, metrics.CadenceLatency).Return(tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{})).Once()
 }
 
 func (s *activitiesSuite) TearDownTest() {
@@ -522,6 +522,132 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Success() {
 		CloseFailoverVersion: testCloseFailoverVersion,
 	}
 	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	s.NoError(err)
+}
+
+func (s *activitiesSuite) TestDeleteHistoryActivity_Fail_DeleteFromV2NonRetryableError() {
+	s.metricsClient.On("IncCounter", metrics.ArchiverDeleteHistoryActivityScope, metrics.ArchiverNonRetryableErrorCount).Once()
+	mockHistoryV2Manager := &mocks.HistoryV2Manager{}
+	mockHistoryV2Manager.On("DeleteHistoryBranch", mock.Anything).Return(persistenceNonRetryableErr)
+	container := &BootstrapContainer{
+		Logger:           s.logger,
+		MetricsClient:    s.metricsClient,
+		HistoryV2Manager: mockHistoryV2Manager,
+	}
+	env := s.NewTestActivityEnvironment()
+	env.SetWorkerOptions(worker.Options{
+		BackgroundActivityContext: context.WithValue(context.Background(), bootstrapContainerKey, container),
+	})
+	request := ArchiveRequest{
+		DomainID:             testDomainID,
+		WorkflowID:           testWorkflowID,
+		RunID:                testRunID,
+		BranchToken:          testBranchToken,
+		NextEventID:          testNextEventID,
+		CloseFailoverVersion: testCloseFailoverVersion,
+		EventStoreVersion:    persistence.EventStoreVersionV2,
+	}
+	_, err := env.ExecuteActivity(deleteHistoryActivity, request)
+	s.Equal(errDeleteHistoryV2, err.Error())
+}
+
+func (s *activitiesSuite) TestDeleteHistoryActivity_Fail_TimeoutOnDeleteHistoryV2() {
+	s.metricsClient.On("IncCounter", metrics.ArchiverDeleteHistoryActivityScope, metrics.CadenceErrContextTimeoutCounter).Once()
+	mockHistoryV2Manager := &mocks.HistoryV2Manager{}
+	mockHistoryV2Manager.On("DeleteHistoryBranch", mock.Anything).Return(persistenceRetryableErr)
+	container := &BootstrapContainer{
+		Logger:           s.logger,
+		MetricsClient:    s.metricsClient,
+		HistoryV2Manager: mockHistoryV2Manager,
+	}
+	env := s.NewTestActivityEnvironment()
+	env.SetWorkerOptions(worker.Options{
+		BackgroundActivityContext: context.WithValue(getCanceledContext(), bootstrapContainerKey, container),
+	})
+	request := ArchiveRequest{
+		DomainID:             testDomainID,
+		WorkflowID:           testWorkflowID,
+		RunID:                testRunID,
+		BranchToken:          testBranchToken,
+		NextEventID:          testNextEventID,
+		CloseFailoverVersion: testCloseFailoverVersion,
+		EventStoreVersion:    persistence.EventStoreVersionV2,
+	}
+	_, err := env.ExecuteActivity(deleteHistoryActivity, request)
+	s.Equal(contextTimeoutErr.Error(), err.Error())
+}
+
+func (s *activitiesSuite) TestDeleteHistoryActivity_Fail_DeleteFromV1NonRetryableError() {
+	s.metricsClient.On("IncCounter", metrics.ArchiverDeleteHistoryActivityScope, metrics.ArchiverNonRetryableErrorCount).Once()
+	mockHistoryManager := &mocks.HistoryManager{}
+	mockHistoryManager.On("DeleteWorkflowExecutionHistory", mock.Anything).Return(persistenceNonRetryableErr)
+	container := &BootstrapContainer{
+		Logger:         s.logger,
+		MetricsClient:  s.metricsClient,
+		HistoryManager: mockHistoryManager,
+	}
+	env := s.NewTestActivityEnvironment()
+	env.SetWorkerOptions(worker.Options{
+		BackgroundActivityContext: context.WithValue(context.Background(), bootstrapContainerKey, container),
+	})
+	request := ArchiveRequest{
+		DomainID:             testDomainID,
+		WorkflowID:           testWorkflowID,
+		RunID:                testRunID,
+		BranchToken:          testBranchToken,
+		NextEventID:          testNextEventID,
+		CloseFailoverVersion: testCloseFailoverVersion,
+	}
+	_, err := env.ExecuteActivity(deleteHistoryActivity, request)
+	s.Equal(errDeleteHistoryV1, err.Error())
+}
+
+func (s *activitiesSuite) TestDeleteHistoryActivity_Fail_TimeoutOnDeleteHistoryV1() {
+	s.metricsClient.On("IncCounter", metrics.ArchiverDeleteHistoryActivityScope, metrics.CadenceErrContextTimeoutCounter).Once()
+	mockHistoryManager := &mocks.HistoryManager{}
+	mockHistoryManager.On("DeleteWorkflowExecutionHistory", mock.Anything).Return(persistenceRetryableErr)
+	container := &BootstrapContainer{
+		Logger:         s.logger,
+		MetricsClient:  s.metricsClient,
+		HistoryManager: mockHistoryManager,
+	}
+	env := s.NewTestActivityEnvironment()
+	env.SetWorkerOptions(worker.Options{
+		BackgroundActivityContext: context.WithValue(getCanceledContext(), bootstrapContainerKey, container),
+	})
+	request := ArchiveRequest{
+		DomainID:             testDomainID,
+		WorkflowID:           testWorkflowID,
+		RunID:                testRunID,
+		BranchToken:          testBranchToken,
+		NextEventID:          testNextEventID,
+		CloseFailoverVersion: testCloseFailoverVersion,
+	}
+	_, err := env.ExecuteActivity(deleteHistoryActivity, request)
+	s.Equal(contextTimeoutErr.Error(), err.Error())
+}
+
+func (s *activitiesSuite) TestDeleteHistoryActivity_Success() {
+	mockHistoryManager := &mocks.HistoryManager{}
+	mockHistoryManager.On("DeleteWorkflowExecutionHistory", mock.Anything).Return(nil)
+	container := &BootstrapContainer{
+		Logger:         s.logger,
+		MetricsClient:  s.metricsClient,
+		HistoryManager: mockHistoryManager,
+	}
+	env := s.NewTestActivityEnvironment()
+	env.SetWorkerOptions(worker.Options{
+		BackgroundActivityContext: context.WithValue(getCanceledContext(), bootstrapContainerKey, container),
+	})
+	request := ArchiveRequest{
+		DomainID:             testDomainID,
+		WorkflowID:           testWorkflowID,
+		RunID:                testRunID,
+		BranchToken:          testBranchToken,
+		NextEventID:          testNextEventID,
+		CloseFailoverVersion: testCloseFailoverVersion,
+	}
+	_, err := env.ExecuteActivity(deleteHistoryActivity, request)
 	s.NoError(err)
 }
 
