@@ -25,11 +25,6 @@ var (
 	archiverTestLogger  *mocks.Logger
 )
 
-func init() {
-	workflow.Register(handleRequestWorkflow)
-	workflow.Register(startAndFinishArchiverWorkflow)
-}
-
 type archiverSuite struct {
 	suite.Suite
 	testsuite.WorkflowTestSuite
@@ -37,6 +32,11 @@ type archiverSuite struct {
 
 func TestArchiverSuite(t *testing.T) {
 	suite.Run(t, new(archiverSuite))
+}
+
+func (s *archiverSuite) SetupSuite() {
+	workflow.Register(handleRequestWorkflow)
+	workflow.Register(startAndFinishArchiverWorkflow)
 }
 
 func (s *archiverSuite) SetupTest() {

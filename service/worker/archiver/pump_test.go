@@ -20,13 +20,6 @@ var (
 	pumpTestLogger  *mocks.Logger
 )
 
-func init() {
-	workflow.Register(carryoverSatisfiesLimitWorkflow)
-	workflow.Register(pumpWorkflow)
-	workflow.Register(signalChClosePumpWorkflow)
-	workflow.Register(signalAndCarryoverPumpWorkflow)
-}
-
 type pumpSuite struct {
 	suite.Suite
 	testsuite.WorkflowTestSuite
@@ -34,6 +27,13 @@ type pumpSuite struct {
 
 func TestPumpSuite(t *testing.T) {
 	suite.Run(t, new(pumpSuite))
+}
+
+func (s *pumpSuite) SetupSuite() {
+	workflow.Register(carryoverSatisfiesLimitWorkflow)
+	workflow.Register(pumpWorkflow)
+	workflow.Register(signalChClosePumpWorkflow)
+	workflow.Register(signalAndCarryoverPumpWorkflow)
 }
 
 func (s *pumpSuite) SetupTest() {

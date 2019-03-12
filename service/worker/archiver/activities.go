@@ -127,6 +127,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	}
 	bucket := domainCacheEntry.GetConfig().ArchivalBucket
 	if len(bucket) == 0 {
+		// this should not be able to occur, if domain enables archival bucket should always be set
 		logging.LogFailArchivalUploadAttempt(logger, err, "domain enables archival but does not have a bucket set", "", "")
 		return cadence.NewCustomError(errEmptyBucket)
 
