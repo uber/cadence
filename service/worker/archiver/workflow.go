@@ -29,6 +29,12 @@ import (
 	"go.uber.org/cadence/workflow"
 )
 
+// WARNING: These globals are used for testing only!
+var (
+	testOverrideArchiver Archiver
+	testOverridePump     Pump
+)
+
 func archivalWorkflow(ctx workflow.Context, carryover []ArchiveRequest) error {
 	metricsClient := NewReplayMetricsClient(globalMetricsClient, ctx)
 	metricsClient.IncCounter(metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverWorkflowStartedCount)
@@ -48,10 +54,16 @@ func archivalWorkflow(ctx workflow.Context, carryover []ArchiveRequest) error {
 	}
 	requestCh := workflow.NewBufferedChannel(ctx, config.ArchivalsPerIteration)
 	archiver := NewArchiver(ctx, logger, metricsClient, config.ArchiverConcurrency, requestCh)
+	if testOverrideArchiver != nil {
+		archiver = testOverrideArchiver
+	}
 	archiverSW := metricsClient.StartTimer(metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverHandleAllRequestsLatency)
 	archiver.Start()
 	signalCh := workflow.GetSignalChannel(ctx, signalName)
 	pump := NewPump(ctx, logger, metricsClient, carryover, workflowStartToCloseTimeout/2, config.ArchivalsPerIteration, requestCh, signalCh)
+	if testOverridePump != nil {
+		pump = testOverridePump
+	}
 	pumpResult := pump.Run()
 	metricsClient.AddCounter(metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverNumPumpedRequestsCount, int64(len(pumpResult.PumpedHashes)))
 	handledHashes := archiver.Finished()
