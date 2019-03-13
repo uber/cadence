@@ -25,8 +25,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/uber/cadence/service/worker/sysworkflow"
-
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
