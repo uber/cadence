@@ -24,17 +24,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-	"github.com/uber/cadence/service/worker/archiver"
->>>>>>> fix more unit tests
-=======
->>>>>>> small fixes
 	"os"
 	"testing"
-
-	"github.com/uber/cadence/service/worker/sysworkflow"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"

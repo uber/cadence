@@ -28,10 +28,6 @@ import (
 	"testing"
 	"time"
 
-<<<<<<< HEAD
-	"github.com/uber/cadence/service/worker/sysworkflow"
-
-=======
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
@@ -39,7 +35,6 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
->>>>>>> fix more unit tests
 	"github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
