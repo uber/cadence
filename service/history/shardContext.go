@@ -929,6 +929,7 @@ func (s *shardContextImpl) updateShardInfoLocked() error {
 	if s.lastUpdated.Add(s.config.ShardUpdateMinInterval()).After(now) {
 		return nil
 	}
+
 	updatedShardInfo := copyShardInfo(s.shardInfo)
 	s.emitShardInfoMetricsLogsLocked()
 
@@ -1121,6 +1122,19 @@ func acquireShard(shardItem *historyShardsItem, closeCh chan<- int) (ShardContex
 			logging.TagErr:            err,
 		}).Error("Fail to acquire shard.")
 		return nil, err
+	}
+
+	// TODO remove once DC migration is finished
+	clusterMetadata := shardItem.service.GetClusterMetadata()
+	for clusterName := range shardInfo.ClusterTransferAckLevel {
+		if _, ok := clusterMetadata.GetAllClusterFailoverVersions()[clusterName]; !ok {
+			delete(shardInfo.ClusterTransferAckLevel, clusterName)
+		}
+	}
+	for clusterName := range shardInfo.ClusterTimerAckLevel {
+		if _, ok := clusterMetadata.GetAllClusterFailoverVersions()[clusterName]; !ok {
+			delete(shardInfo.ClusterTimerAckLevel, clusterName)
+		}
 	}
 
 	updatedShardInfo := copyShardInfo(shardInfo)
