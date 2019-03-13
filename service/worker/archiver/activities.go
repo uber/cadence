@@ -83,7 +83,7 @@ func readConfigActivity(ctx context.Context) (readConfigActivityResult, error) {
 // uploadHistoryActivity is used to upload a workflow execution history to blobstore.
 // method will retry all retryable operations until context expires.
 // archival will be skipped and no error will be returned if cluster or domain is not figured for archival.
-// method will always return either: nil, contextTimeoutErr or an error from uploadHistoryActivityNonRetryableErrors.
+// method will always return either: nil, errContextTimeout or an error from uploadHistoryActivityNonRetryableErrors.
 func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err error) {
 	skippedArchival := false
 	encounteredBlobAlreadyExists := false
@@ -135,7 +135,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	domainName := domainCacheEntry.GetInfo().Name
 	clusterName := container.ClusterMetadata.GetCurrentClusterName()
 	historyBlobItr := container.HistoryBlobIterator
-	if historyBlobItr == nil {
+	if historyBlobItr == nil { // only will be set by testing code
 		historyBlobItr = NewHistoryBlobIterator(request, container, domainName, clusterName)
 	}
 	blobstoreClient := container.Blobstore
