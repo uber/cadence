@@ -48,10 +48,10 @@ const (
 )
 
 var (
-	persistenceNonRetryableErr = errors.New("persistence non-retryable error")
-	persistenceRetryableErr    = &shared.InternalServiceError{}
-	blobstoreNonRetryableErr   = &shared.BadRequestError{}
-	blobstoreRetryableErr      = errors.New("blobstore retryable error")
+	errPersistenceNonRetryable = errors.New("persistence non-retryable error")
+	errPersistenceRetryable    = &shared.InternalServiceError{}
+	errBlobstoreNonRetryable   = &shared.BadRequestError{}
+	errBlobstoreRetryable      = errors.New("blobstore retryable error")
 )
 
 type activitiesSuite struct {
@@ -78,7 +78,7 @@ func (s *activitiesSuite) TearDownTest() {
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Fail_DomainCacheNonRetryableError() {
 	domainCache := &cache.DomainCacheMock{}
-	domainCache.On("GetDomainByID", mock.Anything).Return(nil, persistenceNonRetryableErr).Once()
+	domainCache.On("GetDomainByID", mock.Anything).Return(nil, errPersistenceNonRetryable).Once()
 	s.metricsClient.On("IncCounter", metrics.ArchiverUploadHistoryActivityScope, metrics.ArchiverNonRetryableErrorCount).Once()
 	container := &BootstrapContainer{
 		Logger:        s.logger,
@@ -103,7 +103,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_DomainCacheNonRetryable
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Fail_TimeoutGettingDomainCacheEntry() {
 	domainCache := &cache.DomainCacheMock{}
-	domainCache.On("GetDomainByID", mock.Anything).Return(nil, persistenceRetryableErr).Once()
+	domainCache.On("GetDomainByID", mock.Anything).Return(nil, errPersistenceRetryable).Once()
 	s.metricsClient.On("IncCounter", metrics.ArchiverUploadHistoryActivityScope, metrics.CadenceErrContextTimeoutCounter).Once()
 	container := &BootstrapContainer{
 		Logger:        s.logger,
@@ -123,7 +123,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_TimeoutGettingDomainCac
 		CloseFailoverVersion: testCloseFailoverVersion,
 	}
 	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
-	s.Equal(contextTimeoutErr.Error(), err.Error())
+	s.Equal(errContextTimeout.Error(), err.Error())
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Skip_ClusterArchivalNotEnabled() {
@@ -206,7 +206,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_NextBlobNonRetryableErr
 	domainCache, mockClusterMetadata := s.archivalConfig(true, testArchivalBucket, true)
 	mockHistoryBlobIterator := &HistoryBlobIteratorMock{}
 	mockHistoryBlobIterator.On("HasNext").Return(true)
-	mockHistoryBlobIterator.On("Next").Return(nil, persistenceNonRetryableErr)
+	mockHistoryBlobIterator.On("Next").Return(nil, errPersistenceNonRetryable)
 	container := &BootstrapContainer{
 		Logger:              s.logger,
 		MetricsClient:       s.metricsClient,
@@ -235,7 +235,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_TimeoutGettingNextBlob(
 	domainCache, mockClusterMetadata := s.archivalConfig(true, testArchivalBucket, true)
 	mockHistoryBlobIterator := &HistoryBlobIteratorMock{}
 	mockHistoryBlobIterator.On("HasNext").Return(true)
-	mockHistoryBlobIterator.On("Next").Return(nil, persistenceRetryableErr)
+	mockHistoryBlobIterator.On("Next").Return(nil, errPersistenceRetryable)
 	container := &BootstrapContainer{
 		Logger:              s.logger,
 		MetricsClient:       s.metricsClient,
@@ -256,7 +256,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_TimeoutGettingNextBlob(
 		CloseFailoverVersion: testCloseFailoverVersion,
 	}
 	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
-	s.Equal(contextTimeoutErr.Error(), err.Error())
+	s.Equal(errContextTimeout.Error(), err.Error())
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Fail_ConstructBlobKeyError() {
@@ -305,7 +305,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_BlobExistsNonRetryableE
 	}
 	mockHistoryBlobIterator.On("Next").Return(historyBlob, nil)
 	mockBlobstore := &mocks.BlobstoreClient{}
-	mockBlobstore.On("Exists", mock.Anything, mock.Anything, mock.Anything).Return(false, blobstoreNonRetryableErr)
+	mockBlobstore.On("Exists", mock.Anything, mock.Anything, mock.Anything).Return(false, errBlobstoreNonRetryable)
 	container := &BootstrapContainer{
 		Logger:              s.logger,
 		MetricsClient:       s.metricsClient,
@@ -342,7 +342,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_TimeoutOnBlobExists() {
 	}
 	mockHistoryBlobIterator.On("Next").Return(historyBlob, nil)
 	mockBlobstore := &mocks.BlobstoreClient{}
-	mockBlobstore.On("Exists", mock.Anything, mock.Anything, mock.Anything).Return(false, blobstoreRetryableErr)
+	mockBlobstore.On("Exists", mock.Anything, mock.Anything, mock.Anything).Return(false, errBlobstoreRetryable)
 	container := &BootstrapContainer{
 		Logger:              s.logger,
 		MetricsClient:       s.metricsClient,
@@ -364,7 +364,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_TimeoutOnBlobExists() {
 		CloseFailoverVersion: testCloseFailoverVersion,
 	}
 	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
-	s.Equal(contextTimeoutErr.Error(), err.Error())
+	s.Equal(errContextTimeout.Error(), err.Error())
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Nop_BlobAlreadyExists() {
@@ -420,7 +420,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_UploadBlobNonRetryableE
 	mockHistoryBlobIterator.On("Next").Return(historyBlob, nil)
 	mockBlobstore := &mocks.BlobstoreClient{}
 	mockBlobstore.On("Exists", mock.Anything, mock.Anything, mock.Anything).Return(false, nil)
-	mockBlobstore.On("Upload", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(blobstoreNonRetryableErr)
+	mockBlobstore.On("Upload", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errBlobstoreNonRetryable)
 	container := &BootstrapContainer{
 		Logger:              s.logger,
 		MetricsClient:       s.metricsClient,
@@ -460,7 +460,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_TimeoutOnUploadBlob() {
 	mockHistoryBlobIterator.On("Next").Return(historyBlob, nil)
 	mockBlobstore := &mocks.BlobstoreClient{}
 	mockBlobstore.On("Exists", mock.Anything, mock.Anything, mock.Anything).Return(false, nil)
-	mockBlobstore.On("Upload", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(blobstoreRetryableErr)
+	mockBlobstore.On("Upload", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errBlobstoreRetryable)
 	container := &BootstrapContainer{
 		Logger:              s.logger,
 		MetricsClient:       s.metricsClient,
@@ -483,7 +483,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_TimeoutOnUploadBlob() {
 		CloseFailoverVersion: testCloseFailoverVersion,
 	}
 	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
-	s.Equal(contextTimeoutErr.Error(), err.Error())
+	s.Equal(errContextTimeout.Error(), err.Error())
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Success() {
@@ -528,7 +528,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Success() {
 func (s *activitiesSuite) TestDeleteHistoryActivity_Fail_DeleteFromV2NonRetryableError() {
 	s.metricsClient.On("IncCounter", metrics.ArchiverDeleteHistoryActivityScope, metrics.ArchiverNonRetryableErrorCount).Once()
 	mockHistoryV2Manager := &mocks.HistoryV2Manager{}
-	mockHistoryV2Manager.On("DeleteHistoryBranch", mock.Anything).Return(persistenceNonRetryableErr)
+	mockHistoryV2Manager.On("DeleteHistoryBranch", mock.Anything).Return(errPersistenceNonRetryable)
 	container := &BootstrapContainer{
 		Logger:           s.logger,
 		MetricsClient:    s.metricsClient,
@@ -554,7 +554,7 @@ func (s *activitiesSuite) TestDeleteHistoryActivity_Fail_DeleteFromV2NonRetryabl
 func (s *activitiesSuite) TestDeleteHistoryActivity_Fail_TimeoutOnDeleteHistoryV2() {
 	s.metricsClient.On("IncCounter", metrics.ArchiverDeleteHistoryActivityScope, metrics.CadenceErrContextTimeoutCounter).Once()
 	mockHistoryV2Manager := &mocks.HistoryV2Manager{}
-	mockHistoryV2Manager.On("DeleteHistoryBranch", mock.Anything).Return(persistenceRetryableErr)
+	mockHistoryV2Manager.On("DeleteHistoryBranch", mock.Anything).Return(errPersistenceRetryable)
 	container := &BootstrapContainer{
 		Logger:           s.logger,
 		MetricsClient:    s.metricsClient,
@@ -574,13 +574,13 @@ func (s *activitiesSuite) TestDeleteHistoryActivity_Fail_TimeoutOnDeleteHistoryV
 		EventStoreVersion:    persistence.EventStoreVersionV2,
 	}
 	_, err := env.ExecuteActivity(deleteHistoryActivity, request)
-	s.Equal(contextTimeoutErr.Error(), err.Error())
+	s.Equal(errContextTimeout.Error(), err.Error())
 }
 
 func (s *activitiesSuite) TestDeleteHistoryActivity_Fail_DeleteFromV1NonRetryableError() {
 	s.metricsClient.On("IncCounter", metrics.ArchiverDeleteHistoryActivityScope, metrics.ArchiverNonRetryableErrorCount).Once()
 	mockHistoryManager := &mocks.HistoryManager{}
-	mockHistoryManager.On("DeleteWorkflowExecutionHistory", mock.Anything).Return(persistenceNonRetryableErr)
+	mockHistoryManager.On("DeleteWorkflowExecutionHistory", mock.Anything).Return(errPersistenceNonRetryable)
 	container := &BootstrapContainer{
 		Logger:         s.logger,
 		MetricsClient:  s.metricsClient,
@@ -605,7 +605,7 @@ func (s *activitiesSuite) TestDeleteHistoryActivity_Fail_DeleteFromV1NonRetryabl
 func (s *activitiesSuite) TestDeleteHistoryActivity_Fail_TimeoutOnDeleteHistoryV1() {
 	s.metricsClient.On("IncCounter", metrics.ArchiverDeleteHistoryActivityScope, metrics.CadenceErrContextTimeoutCounter).Once()
 	mockHistoryManager := &mocks.HistoryManager{}
-	mockHistoryManager.On("DeleteWorkflowExecutionHistory", mock.Anything).Return(persistenceRetryableErr)
+	mockHistoryManager.On("DeleteWorkflowExecutionHistory", mock.Anything).Return(errPersistenceRetryable)
 	container := &BootstrapContainer{
 		Logger:         s.logger,
 		MetricsClient:  s.metricsClient,
@@ -624,7 +624,7 @@ func (s *activitiesSuite) TestDeleteHistoryActivity_Fail_TimeoutOnDeleteHistoryV
 		CloseFailoverVersion: testCloseFailoverVersion,
 	}
 	_, err := env.ExecuteActivity(deleteHistoryActivity, request)
-	s.Equal(contextTimeoutErr.Error(), err.Error())
+	s.Equal(errContextTimeout.Error(), err.Error())
 }
 
 func (s *activitiesSuite) TestDeleteHistoryActivity_Success() {

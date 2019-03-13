@@ -70,7 +70,7 @@ func (s *workflowSuite) TestArchivalWorkflow_Fail_HashesDoNotEqual() {
 	mockMetricsClient.On("AddCounter", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverNumPumpedRequestsCount, int64(3)).Once()
 	mockMetricsClient.On("AddCounter", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverNumHandledRequestsCount, int64(3)).Once()
 	mockMetricsClient.On("IncCounter", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverPumpedNotEqualHandledCount).Once()
-	mockArchiver := &ArchiverMock{}
+	mockArchiver := &MockArchiver{}
 	mockArchiver.On("Start").Once()
 	mockArchiver.On("Finished").Return([]uint64{9, 7, 0}).Once()
 	mockPump := &PumpMock{}
@@ -100,7 +100,7 @@ func (s *workflowSuite) TestArchivalWorkflow_Exit_TimeoutWithoutSignals() {
 	mockMetricsClient.On("AddCounter", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverNumPumpedRequestsCount, int64(0)).Once()
 	mockMetricsClient.On("AddCounter", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverNumHandledRequestsCount, int64(0)).Once()
 	mockMetricsClient.On("IncCounter", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverWorkflowStoppingCount).Once()
-	mockArchiver := &ArchiverMock{}
+	mockArchiver := &MockArchiver{}
 	mockArchiver.On("Start").Once()
 	mockArchiver.On("Finished").Return([]uint64{}).Once()
 	mockPump := &PumpMock{}
@@ -129,7 +129,7 @@ func (s *workflowSuite) TestArchivalWorkflow_Success() {
 	mockMetricsClient.On("StartTimer", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverHandleAllRequestsLatency).Return(tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{})).Once()
 	mockMetricsClient.On("AddCounter", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverNumPumpedRequestsCount, int64(5)).Once()
 	mockMetricsClient.On("AddCounter", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverNumHandledRequestsCount, int64(5)).Once()
-	mockArchiver := &ArchiverMock{}
+	mockArchiver := &MockArchiver{}
 	mockArchiver.On("Start").Once()
 	mockArchiver.On("Finished").Return([]uint64{1, 2, 3, 4, 5}).Once()
 	mockPump := &PumpMock{}

@@ -61,7 +61,7 @@ const (
 var (
 	uploadHistoryActivityNonRetryableErrors = []string{errGetDomainByID, errBlobExists, errUploadBlob, errNextBlob, errEmptyBucket, errConstructBlob}
 	deleteHistoryActivityNonRetryableErrors = []string{errDeleteHistoryV1, errDeleteHistoryV2}
-	contextTimeoutErr                       = errors.New("activity aborted because context timed out")
+	errContextTimeout                       = errors.New("activity aborted because context timed out")
 )
 
 type (
@@ -99,7 +99,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 			metricsClient.IncCounter(metrics.ArchiverUploadHistoryActivityScope, metrics.ArchiverBlobAlreadyExistsCount)
 		}
 		if err != nil {
-			if err == contextTimeoutErr {
+			if err == errContextTimeout {
 				metricsClient.IncCounter(metrics.ArchiverUploadHistoryActivityScope, metrics.CadenceErrContextTimeoutCounter)
 			} else {
 				metricsClient.IncCounter(metrics.ArchiverUploadHistoryActivityScope, metrics.ArchiverNonRetryableErrorCount)
@@ -181,7 +181,7 @@ func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	defer func() {
 		sw.Stop()
 		if err != nil {
-			if err == contextTimeoutErr {
+			if err == errContextTimeout {
 				metricsClient.IncCounter(metrics.ArchiverDeleteHistoryActivityScope, metrics.CadenceErrContextTimeoutCounter)
 			} else {
 				metricsClient.IncCounter(metrics.ArchiverDeleteHistoryActivityScope, metrics.ArchiverNonRetryableErrorCount)
@@ -218,7 +218,7 @@ func nextBlob(ctx context.Context, historyBlobItr HistoryBlobIterator) (*History
 			return nil, cadence.NewCustomError(errNextBlob)
 		}
 		if contextExpired(ctx) {
-			return nil, contextTimeoutErr
+			return nil, errContextTimeout
 		}
 		err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
 	}
@@ -234,7 +234,7 @@ func blobExists(ctx context.Context, blobstoreClient blobstore.Client, bucket st
 			return false, cadence.NewCustomError(errBlobExists)
 		}
 		if contextExpired(ctx) {
-			return false, contextTimeoutErr
+			return false, errContextTimeout
 		}
 		bCtx, cancel = context.WithTimeout(ctx, blobstoreTimeout)
 		exists, err = blobstoreClient.Exists(bCtx, bucket, key)
@@ -252,7 +252,7 @@ func uploadBlob(ctx context.Context, blobstoreClient blobstore.Client, bucket st
 			return cadence.NewCustomError(errUploadBlob)
 		}
 		if contextExpired(ctx) {
-			return contextTimeoutErr
+			return errContextTimeout
 		}
 		bCtx, cancel = context.WithTimeout(ctx, blobstoreTimeout)
 		err = blobstoreClient.Upload(bCtx, bucket, key, blob)
@@ -275,7 +275,7 @@ func getDomainByID(ctx context.Context, domainCache cache.DomainCache, id string
 			return nil, cadence.NewCustomError(errGetDomainByID)
 		}
 		if contextExpired(ctx) {
-			return nil, contextTimeoutErr
+			return nil, errContextTimeout
 		}
 		err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
 	}
@@ -322,7 +322,7 @@ func deleteHistoryV1(ctx context.Context, container *BootstrapContainer, request
 			return cadence.NewCustomError(errDeleteHistoryV1)
 		}
 		if contextExpired(ctx) {
-			return contextTimeoutErr
+			return errContextTimeout
 		}
 		err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
 	}
@@ -342,7 +342,7 @@ func deleteHistoryV2(ctx context.Context, container *BootstrapContainer, request
 			return cadence.NewCustomError(errDeleteHistoryV2)
 		}
 		if contextExpired(ctx) {
-			return contextTimeoutErr
+			return errContextTimeout
 		}
 		err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
 	}
