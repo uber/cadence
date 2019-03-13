@@ -259,7 +259,6 @@ func (t *timerQueueActiveProcessorImpl) process(timerTask *persistence.TimerTask
 }
 
 func (t *timerQueueActiveProcessorImpl) processExpiredUserTimer(task *persistence.TimerTaskInfo) (retError error) {
-
 	context, release, err0 := t.cache.getOrCreateWorkflowExecution(t.timerQueueProcessorBase.getDomainIDAndWorkflowExecution(task))
 	if err0 != nil {
 		return err0
@@ -769,12 +768,7 @@ Update_History_Loop:
 		if t.config.EnableEventsV2(domainEntry.GetInfo().Name) {
 			eventStoreVersion = persistence.EventStoreVersionV2
 		}
-		createTaskID, err := t.shard.GetNextTransferTaskID()
-		if err != nil {
-			return err
-		}
-		_, continueAsNewBuilder, err := msBuilder.AddContinueAsNewEvent(common.EmptyEventID, domainEntry,
-			startAttributes.GetParentWorkflowDomain(), continueAsnewAttributes, eventStoreVersion, createTaskID)
+		_, continueAsNewBuilder, err := msBuilder.AddContinueAsNewEvent(msBuilder.GetNextEventID(), common.EmptyEventID, domainEntry, startAttributes.GetParentWorkflowDomain(), continueAsnewAttributes, eventStoreVersion)
 		if err != nil {
 			return err
 		}
