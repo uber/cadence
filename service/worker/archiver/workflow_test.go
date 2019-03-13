@@ -105,7 +105,7 @@ func (s *workflowSuite) TestArchivalWorkflow_Exit_TimeoutWithoutSignals() {
 	mockArchiver.On("Finished").Return([]uint64{}).Once()
 	mockPump := &PumpMock{}
 	mockPump.On("Run").Return(PumpResult{
-		PumpedHashes: []uint64{},
+		PumpedHashes:          []uint64{},
 		TimeoutWithoutSignals: true,
 	}).Once()
 	globalLogger = bark.NewNopLogger()
