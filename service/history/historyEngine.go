@@ -27,8 +27,6 @@ import (
 	"fmt"
 	"time"
 
-	"go.uber.org/cadence/.gen/go/shared"
-
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
@@ -46,6 +44,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/worker/sysworkflow"
+	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/yarpc"
 )
 
@@ -225,6 +224,25 @@ func (e *historyEngineImpl) Stop() {
 
 func (e *historyEngineImpl) registerDomainFailoverCallback() {
 
+	// NOTE: READ BEFORE MODIFICATION
+	//
+	// Tasks, e.g. transfer tasks and timer tasks, are created when holding the shard lock
+	// meaning tasks -> release of shard lock
+	//
+	// Domain change notification follows the following steps, order matters
+	// 1. lock all task processing.
+	// 2. domain changes visible to everyone (Note: lock of task processing prevents task processing logic seeing the domain changes).
+	// 3. failover min and max task levels are calaulated, then update to shard.
+	// 4. failover start & task processing unlock & shard domain version notification update. (order does not matter for this discussion)
+	//
+	// The above guarantees that task created during the failover will be processed.
+	// If the task is created after domain change:
+	// 		then active processor will handle it. (simple case)
+	// If the task is created before domain change:
+	//		task -> release of shard lock
+	//		failover min / max task levels calculated & updated to shard (using shard lock) -> failover start
+	// above 2 guarantees that failover start is after persistence of the task.
+
 	failoverPredicate := func(shardNotificationVersion int64, nextDomain *cache.DomainCacheEntry, action func()) {
 		domainFailoverNotificationVersion := nextDomain.GetFailoverNotificationVersion()
 		domainActiveCluster := nextDomain.GetReplicationConfig().ActiveClusterName
@@ -266,7 +284,7 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 			if len(failoverDomainIDs) > 0 {
 				e.logger.WithFields(bark.Fields{
 					logging.TagDomainIDs: failoverDomainIDs,
-				}).Infof("Domain Failover Start.")
+				}).Info("Domain Failover Start.")
 
 				e.txProcessor.FailoverDomain(failoverDomainIDs)
 				e.timerProcessor.FailoverDomain(failoverDomainIDs)
@@ -279,6 +297,7 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 				e.txProcessor.NotifyNewTask(e.currentClusterName, fakeDecisionTask)
 				e.timerProcessor.NotifyNewTimers(e.currentClusterName, now, fakeDecisionTimeoutTask)
 			}
+
 			e.shard.UpdateDomainNotificationVersion(nextDomains[len(nextDomains)-1].GetNotificationVersion() + 1)
 		},
 	)
@@ -366,7 +385,7 @@ func (e *historyEngineImpl) appendFirstBatchHistoryEvents(msBuilder mutableState
 	return
 }
 
-func fullfillExecutionInfo(msBuilder mutableState, domainID, taskList string, execution workflow.WorkflowExecution, lastFirstEventID int64) {
+func fulfillExecutionInfo(msBuilder mutableState, domainID, taskList string, execution workflow.WorkflowExecution, lastFirstEventID int64) {
 	info := msBuilder.GetExecutionInfo()
 	info.DomainID = domainID
 	info.WorkflowID = *execution.WorkflowId
@@ -526,28 +545,27 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 	// set versions and timestamp for timer and transfer tasks
 	setTaskInfo(msBuilder.GetCurrentVersion(), time.Now(), transferTasks, timerTasks)
 
-	needDeleteHistory := true
 	historySize, retError := e.appendFirstBatchHistoryEvents(msBuilder, domainID, execution)
 	if retError != nil {
 		return
 	}
-	// delete the history if this API call is not successful, otherwise the history events will be zombie data
+	// delete history if createWorkflow failed, otherwise history will leak
+	shouldDeleteHistory := true
 	defer func() {
-		if needDeleteHistory {
+		if shouldDeleteHistory {
 			e.deleteEvents(domainID, execution, eventStoreVersion, msBuilder.GetCurrentBranch())
 		}
 	}()
 
 	// prepare for execution persistence operation
 	msBuilder.IncrementHistorySize(historySize)
-	fullfillExecutionInfo(msBuilder, domainID, taskList, execution, startedEvent.GetEventId())
+	fulfillExecutionInfo(msBuilder, domainID, taskList, execution, startedEvent.GetEventId())
 
 	// create as brand new
 	createMode := persistence.CreateWorkflowModeBrandNew
 	prevRunID := ""
 	prevLastWriteVersion := int64(0)
 	retError = e.createWorkflow(startRequest, msBuilder, createMode, prevRunID, prevLastWriteVersion, firstDecisionTask, transferTasks, timerTasks, replicationTasks, clusterMetadata)
-
 	if retError != nil {
 		t, ok := retError.(*persistence.WorkflowExecutionAlreadyStartedError)
 		if ok {
@@ -555,6 +573,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 				return &workflow.StartWorkflowExecutionResponse{
 					RunId: common.StringPtr(t.RunID),
 				}, nil
+				// delete history is expected here because duplicate start request will create history with different rid
 			}
 
 			if msBuilder.GetCurrentVersion() < t.LastWriteVersion {
@@ -579,7 +598,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 	}
 
 	if retError == nil {
-		needDeleteHistory = false
+		shouldDeleteHistory = false
 		e.timerProcessor.NotifyNewTimers(e.currentClusterName, e.shard.GetCurrentTime(e.currentClusterName), timerTasks)
 		return &workflow.StartWorkflowExecutionResponse{
 			RunId: execution.RunId,
@@ -2371,20 +2390,20 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	// set versions and timestamp for timer and transfer tasks
 	setTaskInfo(msBuilder.GetCurrentVersion(), time.Now(), transferTasks, timerTasks)
 
-	needDeleteHistory := true
 	historySize, retError := e.appendFirstBatchHistoryEvents(msBuilder, domainID, execution)
 	if retError != nil {
 		return
 	}
-	// delete the history if this API call is not successful, otherwise the history events will be zombie data
+	// delete history if createWorkflow failed, otherwise history will leak
+	shouldDeleteHistory := true
 	defer func() {
-		if needDeleteHistory {
+		if shouldDeleteHistory {
 			e.deleteEvents(domainID, execution, eventStoreVersion, msBuilder.GetCurrentBranch())
 		}
 	}()
 
 	msBuilder.IncrementHistorySize(historySize)
-	fullfillExecutionInfo(msBuilder, domainID, taskList, execution, startedEvent.GetEventId())
+	fulfillExecutionInfo(msBuilder, domainID, taskList, execution, startedEvent.GetEventId())
 
 	if prevMutableState != nil {
 		createMode := persistence.CreateWorkflowModeWorkflowIDReuse
@@ -2402,13 +2421,13 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 			return &workflow.StartWorkflowExecutionResponse{
 				RunId: common.StringPtr(t.RunID),
 			}, nil
+			// delete history is expected here because duplicate start request will create history with different rid
 		}
 	}
 
 	if retError == nil {
-		needDeleteHistory = false
+		shouldDeleteHistory = false
 		e.timerProcessor.NotifyNewTimers(e.currentClusterName, e.shard.GetCurrentTime(e.currentClusterName), timerTasks)
-
 		return &workflow.StartWorkflowExecutionResponse{
 			RunId: execution.RunId,
 		}, nil
