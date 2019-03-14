@@ -29,19 +29,24 @@ import (
 	"go.uber.org/cadence/workflow"
 )
 
-// WARNING: These globals are used for testing only!
-var (
-	testOverrideArchiver Archiver
-	testOverridePump     Pump
-)
-
 func archivalWorkflow(ctx workflow.Context, carryover []ArchiveRequest) error {
-	metricsClient := NewReplayMetricsClient(globalMetricsClient, ctx)
+	return archivalWorkflowHelper(ctx, globalLogger, globalMetricsClient, nil, nil, carryover)
+}
+
+func archivalWorkflowHelper(
+	ctx workflow.Context,
+	logger bark.Logger,
+	metricsClient metrics.Client,
+	archiver Archiver, // enables tests to inject mocks
+	pump Pump, // enables tests to inject mocks
+	carryover []ArchiveRequest,
+) error {
+	metricsClient = NewReplayMetricsClient(metricsClient, ctx)
 	metricsClient.IncCounter(metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverWorkflowStartedCount)
 	sw := metricsClient.StartTimer(metrics.ArchiverArchivalWorkflowScope, metrics.CadenceLatency)
 	defer sw.Stop()
 	workflowInfo := workflow.GetInfo(ctx)
-	logger := NewReplayBarkLogger(globalLogger.WithFields(bark.Fields{
+	logger = NewReplayBarkLogger(logger.WithFields(bark.Fields{
 		logging.TagWorkflowExecutionID: workflowInfo.WorkflowExecution.ID,
 		logging.TagWorkflowRunID:       workflowInfo.WorkflowExecution.RunID,
 	}), ctx, false)
@@ -53,16 +58,14 @@ func archivalWorkflow(ctx workflow.Context, carryover []ArchiveRequest) error {
 		return err
 	}
 	requestCh := workflow.NewBufferedChannel(ctx, config.ArchivalsPerIteration)
-	archiver := NewArchiver(ctx, logger, metricsClient, config.ArchiverConcurrency, requestCh)
-	if testOverrideArchiver != nil {
-		archiver = testOverrideArchiver
+	if archiver == nil {
+		archiver = NewArchiver(ctx, logger, metricsClient, config.ArchiverConcurrency, requestCh)
 	}
 	archiverSW := metricsClient.StartTimer(metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverHandleAllRequestsLatency)
 	archiver.Start()
 	signalCh := workflow.GetSignalChannel(ctx, signalName)
-	pump := NewPump(ctx, logger, metricsClient, carryover, workflowStartToCloseTimeout/2, config.ArchivalsPerIteration, requestCh, signalCh)
-	if testOverridePump != nil {
-		pump = testOverridePump
+	if pump == nil {
+		pump = NewPump(ctx, logger, metricsClient, carryover, workflowStartToCloseTimeout/2, config.ArchivalsPerIteration, requestCh, signalCh)
 	}
 	pumpResult := pump.Run()
 	metricsClient.AddCounter(metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverNumPumpedRequestsCount, int64(len(pumpResult.PumpedHashes)))
