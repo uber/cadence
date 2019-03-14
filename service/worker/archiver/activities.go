@@ -41,10 +41,8 @@ import (
 )
 
 const (
-	readConfigActivityFnName    = "readConfigActivity"
 	uploadHistoryActivityFnName = "uploadHistoryActivity"
 	deleteHistoryActivityFnName = "deleteHistoryActivity"
-	heartbeatTimeout            = time.Minute
 	blobstoreTimeout            = 30 * time.Second
 
 	errGetDomainByID = "could not get domain cache entry"
@@ -63,22 +61,6 @@ var (
 	deleteHistoryActivityNonRetryableErrors = []string{errDeleteHistoryV1, errDeleteHistoryV2}
 	errContextTimeout                       = errors.New("activity aborted because context timed out")
 )
-
-type (
-	readConfigActivityResult struct {
-		ArchiverConcurrency   int
-		ArchivalsPerIteration int
-	}
-)
-
-func readConfigActivity(ctx context.Context) (readConfigActivityResult, error) {
-	container := ctx.Value(bootstrapContainerKey).(*BootstrapContainer)
-	result := readConfigActivityResult{
-		ArchiverConcurrency:   container.Config.ArchiverConcurrency(),
-		ArchivalsPerIteration: container.Config.ArchivalsPerIteration(),
-	}
-	return result, nil
-}
 
 // uploadHistoryActivity is used to upload a workflow execution history to blobstore.
 // method will retry all retryable operations until context expires.
@@ -106,7 +88,6 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 			}
 		}
 	}()
-	go activityHeartbeat(ctx)
 	logger := tagLoggerWithRequest(container.Logger, request).WithField(logging.TagAttempt, activity.GetInfo(ctx).Attempt)
 	domainCache := container.DomainCache
 	clusterMetadata := container.ClusterMetadata
@@ -188,7 +169,6 @@ func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 			}
 		}
 	}()
-	go activityHeartbeat(ctx)
 	logger := tagLoggerWithRequest(container.Logger, request).WithField(logging.TagAttempt, activity.GetInfo(ctx).Attempt)
 	if request.EventStoreVersion == persistence.EventStoreVersionV2 {
 		if err := deleteHistoryV2(ctx, container, request); err != nil {
@@ -214,6 +194,7 @@ func nextBlob(ctx context.Context, historyBlobItr HistoryBlobIterator) (*History
 		return err
 	}
 	for err != nil {
+		activity.RecordHeartbeat(ctx)
 		if !common.IsPersistenceTransientError(err) {
 			return nil, cadence.NewCustomError(errNextBlob)
 		}
@@ -230,6 +211,7 @@ func blobExists(ctx context.Context, blobstoreClient blobstore.Client, bucket st
 	exists, err := blobstoreClient.Exists(bCtx, bucket, key)
 	cancel()
 	for err != nil {
+		activity.RecordHeartbeat(ctx)
 		if !common.IsBlobstoreTransientError(err) {
 			return false, cadence.NewCustomError(errBlobExists)
 		}
@@ -248,6 +230,7 @@ func uploadBlob(ctx context.Context, blobstoreClient blobstore.Client, bucket st
 	err := blobstoreClient.Upload(bCtx, bucket, key, blob)
 	cancel()
 	for err != nil {
+		activity.RecordHeartbeat(ctx)
 		if !common.IsBlobstoreTransientError(err) {
 			return cadence.NewCustomError(errUploadBlob)
 		}
@@ -271,6 +254,7 @@ func getDomainByID(ctx context.Context, domainCache cache.DomainCache, id string
 		return err
 	}
 	for err != nil {
+		activity.RecordHeartbeat(ctx)
 		if !common.IsPersistenceTransientError(err) {
 			return nil, cadence.NewCustomError(errGetDomainByID)
 		}
@@ -318,6 +302,7 @@ func deleteHistoryV1(ctx context.Context, container *BootstrapContainer, request
 		return container.HistoryManager.DeleteWorkflowExecutionHistory(deleteHistoryReq)
 	}
 	for err != nil {
+		activity.RecordHeartbeat(ctx)
 		if !common.IsPersistenceTransientError(err) {
 			return cadence.NewCustomError(errDeleteHistoryV1)
 		}
@@ -338,6 +323,7 @@ func deleteHistoryV2(ctx context.Context, container *BootstrapContainer, request
 		return persistence.DeleteWorkflowExecutionHistoryV2(container.HistoryV2Manager, request.BranchToken, container.Logger)
 	}
 	for err != nil {
+		activity.RecordHeartbeat(ctx)
 		if !common.IsPersistenceTransientError(err) {
 			return cadence.NewCustomError(errDeleteHistoryV2)
 		}
@@ -347,17 +333,6 @@ func deleteHistoryV2(ctx context.Context, container *BootstrapContainer, request
 		err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
 	}
 	return nil
-}
-
-func activityHeartbeat(ctx context.Context) {
-	for {
-		select {
-		case <-time.After(heartbeatTimeout / 2):
-			activity.RecordHeartbeat(ctx)
-		case <-ctx.Done():
-			return
-		}
-	}
 }
 
 func contextExpired(ctx context.Context) bool {

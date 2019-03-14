@@ -39,6 +39,7 @@ const (
 	TagDomain                     = "domain"
 	TagDomainIDs                  = "domain-ids"
 	TagWorkflowExecutionID        = "execution-id"
+	TagWorkflowType               = "workflow-type"
 	TagWorkflowRunID              = "run-id"
 	TagHistoryShardID             = "shard-id"
 	TagHistoryShardTime           = "shard-time"

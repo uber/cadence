@@ -21,16 +21,15 @@
 package archiver
 
 import (
-	"errors"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/common/metrics"
 	mmocks "github.com/uber/cadence/common/metrics/mocks"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 	"go.uber.org/cadence/testsuite"
 	"go.uber.org/cadence/workflow"
 )
@@ -40,6 +39,7 @@ var (
 	workflowTestLogger   bark.Logger
 	workflowTestArchiver *MockArchiver
 	workflowTestPump     *PumpMock
+	workflowTestConfig   *Config
 )
 
 type workflowSuite struct {
@@ -60,21 +60,10 @@ func (s *workflowSuite) SetupTest() {
 	workflowTestLogger = bark.NewNopLogger()
 	workflowTestArchiver = &MockArchiver{}
 	workflowTestPump = &PumpMock{}
-}
-
-func (s *workflowSuite) TestArchivalWorkflow_Fail_ReadConfigError() {
-	workflowTestMetrics.On("IncCounter", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverWorkflowStartedCount).Once()
-	workflowTestMetrics.On("StartTimer", metrics.ArchiverArchivalWorkflowScope, metrics.CadenceLatency).Return(tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{})).Once()
-	workflowTestMetrics.On("IncCounter", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverReadDynamicConfigErrorCount).Once()
-
-	env := s.NewTestWorkflowEnvironment()
-	actErr := errors.New("error reading dynamic config")
-	env.OnActivity(readConfigActivity, mock.Anything).Return(readConfigActivityResult{}, actErr)
-	env.ExecuteWorkflow(archivalWorkflowTest)
-
-	env.AssertExpectations(s.T())
-	s.True(env.IsWorkflowCompleted())
-	s.Equal(actErr.Error(), env.GetWorkflowError().Error())
+	workflowTestConfig = &Config{
+		ArchiverConcurrency:   dynamicconfig.GetIntPropertyFn(0),
+		ArchivalsPerIteration: dynamicconfig.GetIntPropertyFn(0),
+	}
 }
 
 func (s *workflowSuite) TestArchivalWorkflow_Fail_HashesDoNotEqual() {
@@ -91,7 +80,6 @@ func (s *workflowSuite) TestArchivalWorkflow_Fail_HashesDoNotEqual() {
 	}).Once()
 
 	env := s.NewTestWorkflowEnvironment()
-	env.OnActivity(readConfigActivity, mock.Anything).Return(readConfigActivityResult{}, nil)
 	env.ExecuteWorkflow(archivalWorkflowTest)
 
 	s.True(env.IsWorkflowCompleted())
@@ -115,7 +103,6 @@ func (s *workflowSuite) TestArchivalWorkflow_Exit_TimeoutWithoutSignals() {
 	}).Once()
 
 	env := s.NewTestWorkflowEnvironment()
-	env.OnActivity(readConfigActivity, mock.Anything).Return(readConfigActivityResult{}, nil)
 	env.ExecuteWorkflow(archivalWorkflowTest)
 
 	s.True(env.IsWorkflowCompleted())
@@ -136,7 +123,6 @@ func (s *workflowSuite) TestArchivalWorkflow_Success() {
 	}).Once()
 
 	env := s.NewTestWorkflowEnvironment()
-	env.OnActivity(readConfigActivity, mock.Anything).Return(readConfigActivityResult{}, nil)
 	env.ExecuteWorkflow(archivalWorkflowTest)
 
 	s.True(env.IsWorkflowCompleted())
@@ -146,5 +132,5 @@ func (s *workflowSuite) TestArchivalWorkflow_Success() {
 }
 
 func archivalWorkflowTest(ctx workflow.Context) error {
-	return archivalWorkflowHelper(ctx, workflowTestLogger, workflowTestMetrics, workflowTestArchiver, workflowTestPump, nil)
+	return archivalWorkflowHelper(ctx, workflowTestLogger, workflowTestMetrics, workflowTestConfig, workflowTestArchiver, workflowTestPump, nil)
 }

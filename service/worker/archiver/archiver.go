@@ -61,7 +61,7 @@ func NewArchiver(
 		metricsClient: metricsClient,
 		concurrency:   concurrency,
 		requestCh:     requestCh,
-		resultCh:      workflow.NewBufferedChannel(ctx, concurrency),
+		resultCh:      workflow.NewChannel(ctx),
 	}
 }
 
@@ -106,11 +106,11 @@ func handleRequest(ctx workflow.Context, logger bark.Logger, metricsClient metri
 
 	logger = tagLoggerWithRequest(logger, request)
 	ao := workflow.ActivityOptions{
-		ScheduleToStartTimeout: time.Minute,
+		ScheduleToStartTimeout: 10 * time.Minute,
 		StartToCloseTimeout:    5 * time.Minute,
-		HeartbeatTimeout:       time.Minute,
+		HeartbeatTimeout:       2 * time.Minute,
 		RetryPolicy: &cadence.RetryPolicy{
-			InitialInterval:          100 * time.Millisecond,
+			InitialInterval:          time.Second,
 			BackoffCoefficient:       2.0,
 			ExpirationInterval:       10 * time.Minute,
 			NonRetriableErrorReasons: uploadHistoryActivityNonRetryableErrors,
@@ -129,7 +129,7 @@ func handleRequest(ctx workflow.Context, logger bark.Logger, metricsClient metri
 	lao := workflow.LocalActivityOptions{
 		ScheduleToCloseTimeout: 1 * time.Minute,
 		RetryPolicy: &cadence.RetryPolicy{
-			InitialInterval:          100 * time.Millisecond,
+			InitialInterval:          time.Second,
 			BackoffCoefficient:       2.0,
 			ExpirationInterval:       3 * time.Minute,
 			NonRetriableErrorReasons: deleteHistoryActivityNonRetryableErrors,
@@ -145,11 +145,11 @@ func handleRequest(ctx workflow.Context, logger bark.Logger, metricsClient metri
 	metricsClient.IncCounter(metrics.ArchiverScope, metrics.ArchiverDeleteLocalFailedAllRetriesCount)
 	logger.WithField(logging.TagErr, err).Warn("deleting history though local activity failed, attempting to run as normal activity")
 	ao = workflow.ActivityOptions{
-		ScheduleToStartTimeout: time.Minute,
+		ScheduleToStartTimeout: 10 * time.Minute,
 		StartToCloseTimeout:    5 * time.Minute,
-		HeartbeatTimeout:       time.Minute,
+		HeartbeatTimeout:       2 * time.Minute,
 		RetryPolicy: &cadence.RetryPolicy{
-			InitialInterval:          100 * time.Millisecond,
+			InitialInterval:          time.Second,
 			BackoffCoefficient:       2.0,
 			ExpirationInterval:       10 * time.Minute,
 			NonRetriableErrorReasons: deleteHistoryActivityNonRetryableErrors,

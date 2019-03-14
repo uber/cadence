@@ -92,11 +92,11 @@ const (
 var (
 	globalLogger        bark.Logger
 	globalMetricsClient metrics.Client
+	globalConfig        *Config
 )
 
 func init() {
 	workflow.RegisterWithOptions(archivalWorkflow, workflow.RegisterOptions{Name: archivalWorkflowFnName})
-	activity.RegisterWithOptions(readConfigActivity, activity.RegisterOptions{Name: readConfigActivityFnName})
 	activity.RegisterWithOptions(uploadHistoryActivity, activity.RegisterOptions{Name: uploadHistoryActivityFnName})
 	activity.RegisterWithOptions(deleteHistoryActivity, activity.RegisterOptions{Name: deleteHistoryActivityFnName})
 }
@@ -108,6 +108,7 @@ func NewClientWorker(container *BootstrapContainer) ClientWorker {
 		logging.TagDomain:            common.SystemDomainName,
 	})
 	globalMetricsClient = container.MetricsClient
+	globalConfig = container.Config
 	actCtx := context.WithValue(context.Background(), bootstrapContainerKey, container)
 	wo := worker.Options{
 		BackgroundActivityContext: actCtx,

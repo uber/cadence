@@ -21,22 +21,26 @@
 package archiver
 
 import (
-	"time"
-
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"go.uber.org/cadence/workflow"
 )
 
+type dynamicConfigResult struct {
+	ArchiverConcurrency   int
+	ArchivalsPerIteration int
+}
+
 func archivalWorkflow(ctx workflow.Context, carryover []ArchiveRequest) error {
-	return archivalWorkflowHelper(ctx, globalLogger, globalMetricsClient, nil, nil, carryover)
+	return archivalWorkflowHelper(ctx, globalLogger, globalMetricsClient, globalConfig, nil, nil, carryover)
 }
 
 func archivalWorkflowHelper(
 	ctx workflow.Context,
 	logger bark.Logger,
 	metricsClient metrics.Client,
+	config *Config,
 	archiver Archiver, // enables tests to inject mocks
 	pump Pump, // enables tests to inject mocks
 	carryover []ArchiveRequest,
@@ -49,23 +53,28 @@ func archivalWorkflowHelper(
 	logger = NewReplayBarkLogger(logger.WithFields(bark.Fields{
 		logging.TagWorkflowExecutionID: workflowInfo.WorkflowExecution.ID,
 		logging.TagWorkflowRunID:       workflowInfo.WorkflowExecution.RunID,
+		logging.TagTaskListName:        workflowInfo.TaskListName,
+		logging.TagWorkflowType:        workflowInfo.WorkflowType.Name,
 	}), ctx, false)
 	logger.Info("archival system workflow started")
-	config, err := readConfig(ctx)
-	if err != nil {
-		logger.WithError(err).Error("failed to read dynamic config")
-		metricsClient.IncCounter(metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverReadDynamicConfigErrorCount)
-		return err
-	}
-	requestCh := workflow.NewBufferedChannel(ctx, config.ArchivalsPerIteration)
+	var dcResult dynamicConfigResult
+	_ = workflow.SideEffect(
+		ctx,
+		func(ctx workflow.Context) interface{} {
+			return dynamicConfigResult{
+				ArchiverConcurrency:   config.ArchiverConcurrency(),
+				ArchivalsPerIteration: config.ArchivalsPerIteration(),
+			}
+		}).Get(&dcResult)
+	requestCh := workflow.NewBufferedChannel(ctx, dcResult.ArchivalsPerIteration)
 	if archiver == nil {
-		archiver = NewArchiver(ctx, logger, metricsClient, config.ArchiverConcurrency, requestCh)
+		archiver = NewArchiver(ctx, logger, metricsClient, dcResult.ArchiverConcurrency, requestCh)
 	}
 	archiverSW := metricsClient.StartTimer(metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverHandleAllRequestsLatency)
 	archiver.Start()
 	signalCh := workflow.GetSignalChannel(ctx, signalName)
 	if pump == nil {
-		pump = NewPump(ctx, logger, metricsClient, carryover, workflowStartToCloseTimeout/2, config.ArchivalsPerIteration, requestCh, signalCh)
+		pump = NewPump(ctx, logger, metricsClient, carryover, workflowStartToCloseTimeout/2, dcResult.ArchivalsPerIteration, requestCh, signalCh)
 	}
 	pumpResult := pump.Run()
 	metricsClient.AddCounter(metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverNumPumpedRequestsCount, int64(len(pumpResult.PumpedHashes)))
@@ -92,17 +101,4 @@ func archivalWorkflowHelper(
 	ctx = workflow.WithExecutionStartToCloseTimeout(ctx, workflowStartToCloseTimeout)
 	ctx = workflow.WithWorkflowTaskStartToCloseTimeout(ctx, workflowTaskStartToCloseTimeout)
 	return workflow.NewContinueAsNewError(ctx, archivalWorkflowFnName, pumpResult.UnhandledCarryover)
-}
-
-func readConfig(ctx workflow.Context) (readConfigActivityResult, error) {
-	opts := workflow.ActivityOptions{
-		ScheduleToStartTimeout: 30 * time.Second,
-		StartToCloseTimeout:    30 * time.Second,
-	}
-	actCtx := workflow.WithActivityOptions(ctx, opts)
-	var result readConfigActivityResult
-	if err := workflow.ExecuteActivity(actCtx, readConfigActivityFnName).Get(actCtx, &result); err != nil {
-		return readConfigActivityResult{}, err
-	}
-	return result, nil
 }
