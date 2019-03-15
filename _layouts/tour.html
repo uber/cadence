@@ -12,11 +12,8 @@
     </div>
     <div id="right-side" class="split">
       {% for code_content in site.code_content %}
-        <h2>code_content.name</h2>
+        <h2>{{ code_content.name }}</h2>
         <p>{{ code_content.content | markdownify }}</p>
-        {% if page.codecontent == code_content.name }
-          {{ code_content.content | markdownify }}
-        {% endif %}
       {% endfor %}
     </div>
   </div>
