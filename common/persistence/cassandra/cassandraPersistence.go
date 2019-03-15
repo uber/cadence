@@ -1984,8 +1984,12 @@ func (d *cassandraPersistence) ResetWorkflowExecution(request *p.InternalResetWo
 		)
 	}
 
-	d.createReplicationTasks(batch, request.InsertReplicationTasks, insertExecutionInfo.DomainID, insertExecutionInfo.WorkflowID, insertExecutionInfo.RunID)
-	d.createReplicationTasks(batch, request.CurrReplicationTasks, currExecutionInfo.DomainID, currExecutionInfo.WorkflowID, currExecutionInfo.RunID)
+	if len(request.InsertReplicationTasks) > 0 {
+		d.createReplicationTasks(batch, request.InsertReplicationTasks, insertExecutionInfo.DomainID, insertExecutionInfo.WorkflowID, insertExecutionInfo.RunID)
+	}
+	if len(request.CurrReplicationTasks) > 0 {
+		d.createReplicationTasks(batch, request.CurrReplicationTasks, currExecutionInfo.DomainID, currExecutionInfo.WorkflowID, currExecutionInfo.RunID)
+	}
 
 	// we need to insert new mutableState, there is no condition to check. We use update without condition as insert
 	d.updateMutableState(batch, insertExecutionInfo, insertReplicationState, cqlNowTimestamp, false, 0)
