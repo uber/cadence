@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+
+<html lang="en-us">
+{% include head.html %}
+
+<body>
+  {% include top_bar.html %}
+
+  <div class="relative-content">
+    <div vertical-slide left="#left-side" right="#right-side" class="ui-draggable"></div>
+    <div id="left-side">
+      {{ content }}
+    </div>
+    <div id="right-side">
+      {{ page.sections['codecontent'] | textilize }}
+    </div>
+  </div>
+
+  {% include scripts.html %}
+</body>
+</html>

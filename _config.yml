@@ -15,8 +15,8 @@
 # in the templates via {{ site.myvariable }}.
 title: Cadence
 email: cadence-group@uber.com
-baseurl: "" # the subpath of your site, e.g. /blog
-url: "https://cadenceworkflow.io" # the base hostname & protocol for your site, e.g. http://example.com
+baseurl: "/cadence" # the subpath of your site, e.g. /blog
+url: "https://dmetzgar.github.io" # the base hostname & protocol for your site, e.g. http://example.com
 
 # Build settings
 markdown: kramdown
@@ -53,6 +53,11 @@ defaults:
       path: "docs"
     values:
       layout: "doc"
+  -
+    scope:
+      path: "tour"
+    values:
+      layout: "tour"
 
 # Exclude from processing.
 # The following items will not be processed, by default. Create a custom list
