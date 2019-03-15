@@ -1,3 +1,7 @@
+---
+title: Test1code
+---
+
 Here's some code.
 ```go
 package simple
