@@ -336,11 +336,11 @@ func (s *matchingEngineSuite) PollForTasksEmptyResultTest(taskType int) {
 		s.Equal(1, len(descResp.Pollers))
 		s.Equal(identity, descResp.Pollers[0].GetIdentity())
 		s.NotEmpty(descResp.Pollers[0].GetLastAccessTime())
-		s.Equal(int64(0), descResp.GetBacklogCountHint())
-		s.Equal(int64(0), descResp.GetAckLevel())
-		s.Equal(int64(0), descResp.GetReadLevel())
+		s.Zero(descResp.GetBacklogCountHint())
+		s.Zero(descResp.GetAckLevel())
+		s.Zero(descResp.GetReadLevel())
 		s.Equal(int64(1), descResp.GetTaskIDBlock().GetStartID())
-		s.Equal(int64(2), descResp.GetTaskIDBlock().GetEndID())
+		s.Equal(s.matchingEngine.config.RangeSize, descResp.GetTaskIDBlock().GetEndID())
 	}
 	s.EqualValues(1, s.taskManager.taskLists[*tlID].rangeID)
 }
