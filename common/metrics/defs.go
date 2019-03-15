@@ -352,6 +352,8 @@ const (
 	AdminClientDescribeWorkflowExecutionScope
 	// AdminClientGetWorkflowExecutionRawHistoryScope tracks RPC calls to admin service
 	AdminClientGetWorkflowExecutionRawHistoryScope
+	// AdminClientDescribeTaskListScope tracks RPC calls to admin service
+	AdminClientDescribeTaskListScope
 	// PublicClientDeprecateDomainScope tracks RPC calls to frontend service
 	PublicClientDeprecateDomainScope
 	// PublicClientDescribeDomainScope tracks RPC calls to frontend service

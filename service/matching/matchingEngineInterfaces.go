@@ -23,6 +23,7 @@ package matching
 import (
 	"context"
 
+	a "github.com/uber/cadence/.gen/go/admin"
 	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 )
@@ -38,6 +39,6 @@ type (
 		QueryWorkflow(ctx context.Context, request *m.QueryWorkflowRequest) (*workflow.QueryWorkflowResponse, error)
 		RespondQueryTaskCompleted(ctx context.Context, request *m.RespondQueryTaskCompletedRequest) error
 		CancelOutstandingPoll(ctx context.Context, request *m.CancelOutstandingPollRequest) error
-		DescribeTaskList(ctx context.Context, request *m.DescribeTaskListRequest) (*workflow.DescribeTaskListResponse, error)
+		DescribeTaskList(ctx context.Context, request *m.DescribeTaskListRequest) (*a.DescribeTaskListResponse, error)
 	}
 )

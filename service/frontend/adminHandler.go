@@ -34,8 +34,10 @@ import (
 	"github.com/uber/cadence/.gen/go/admin/adminserviceserver"
 	h "github.com/uber/cadence/.gen/go/history"
 	hist "github.com/uber/cadence/.gen/go/history"
+	m "github.com/uber/cadence/.gen/go/matching"
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/history"
+	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/logging"
@@ -53,23 +55,27 @@ type (
 		status                int32
 		numberOfHistoryShards int
 		service.Service
-		history       history.Client
-		domainCache   cache.DomainCache
-		metricsClient metrics.Client
-		historyMgr    persistence.HistoryManager
-		historyV2Mgr  persistence.HistoryV2Manager
-		startWG       sync.WaitGroup
+		history           history.Client
+		matching          matching.Client
+		matchingRawClient matching.Client
+		domainCache       cache.DomainCache
+		metricsClient     metrics.Client
+		historyMgr        persistence.HistoryManager
+		historyV2Mgr      persistence.HistoryV2Manager
+		startWG           sync.WaitGroup
+		config            *Config
 	}
 )
 
 // NewAdminHandler creates a thrift handler for the cadence admin service
 func NewAdminHandler(
-	sVice service.Service, numberOfHistoryShards int, metadataMgr persistence.MetadataManager,
+	sVice service.Service, config *Config, numberOfHistoryShards int, metadataMgr persistence.MetadataManager,
 	historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager) *AdminHandler {
 	handler := &AdminHandler{
 		status:                common.DaemonStatusInitialized,
 		numberOfHistoryShards: numberOfHistoryShards,
 		Service:               sVice,
+		config:                config,
 		domainCache:           cache.NewDomainCache(metadataMgr, sVice.GetClusterMetadata(), sVice.GetMetricsClient(), sVice.GetLogger()),
 		historyMgr:            historyMgr,
 		historyV2Mgr:          historyV2Mgr,
@@ -90,6 +96,9 @@ func (adh *AdminHandler) Start() error {
 	adh.Service.Start()
 
 	adh.history = adh.GetClientBean().GetHistoryClient()
+	adh.matchingRawClient = adh.GetClientBean().GetMatchingClient()
+	adh.matching = matching.NewRetryableClient(adh.matchingRawClient, common.CreateMatchingServiceRetryPolicy(),
+		common.IsWhitelistServiceTransientError)
 	adh.metricsClient = adh.Service.GetMetricsClient()
 	adh.startWG.Done()
 	return nil
@@ -322,6 +331,39 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 	return result, nil
 }
 
+// DescribeTaskList returns information about the target tasklist, right now this API returns the
+// pollers which polled this tasklist in last few minutes and status of tasklist's ackManager
+// (readLevel, ackLevel, backlogCountHint and taskIDBlock).
+func (adh *AdminHandler) DescribeTaskList(ctx context.Context, request *gen.DescribeTaskListRequest) (*admin.DescribeTaskListResponse, error) {
+	scope := metrics.AdminClientDescribeTaskListScope
+
+	if request == nil {
+		return nil, adh.error(errRequestNotSet, scope)
+	}
+
+	if request.GetDomain() == "" {
+		return nil, adh.error(errDomainNotSet, scope)
+	}
+	domainID, err := adh.domainCache.GetDomainID(request.GetDomain())
+	if err != nil {
+		return nil, adh.error(err, scope)
+	}
+
+	if err := adh.validateTaskList(request.TaskList, scope); err != nil {
+		return nil, err
+	}
+
+	if err := adh.validateTaskListType(request.TaskListType, scope); err != nil {
+		return nil, err
+	}
+
+	resp, err := adh.matching.DescribeTaskList(ctx, &m.DescribeTaskListRequest{
+		DomainUUID:  common.StringPtr(domainID),
+		DescRequest: request,
+	})
+	return resp, err
+}
+
 // startRequestProfile initiates recording of request metrics
 func (adh *AdminHandler) startRequestProfile(scope int) tally.Stopwatch {
 	adh.startWG.Wait()
@@ -345,4 +387,21 @@ func (adh *AdminHandler) error(err error, scope int) error {
 		logging.LogUncategorizedError(adh.Service.GetLogger(), err)
 		return &gen.InternalServiceError{Message: err.Error()}
 	}
+}
+
+func (adh *AdminHandler) validateTaskListType(t *gen.TaskListType, scope int) error {
+	if t == nil {
+		return adh.error(errTaskListTypeNotSet, scope)
+	}
+	return nil
+}
+
+func (adh *AdminHandler) validateTaskList(t *gen.TaskList, scope int) error {
+	if t == nil || t.Name == nil || t.GetName() == "" {
+		return adh.error(errTaskListNotSet, scope)
+	}
+	if len(t.GetName()) > adh.config.MaxIDLengthLimit() {
+		return adh.error(errTaskListTooLong, scope)
+	}
+	return nil
 }

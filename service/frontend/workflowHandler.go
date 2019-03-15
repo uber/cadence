@@ -31,6 +31,7 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
+	a "github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
 	"github.com/uber/cadence/.gen/go/health"
 	"github.com/uber/cadence/.gen/go/health/metaserver"
@@ -2713,7 +2714,8 @@ func (wh *WorkflowHandler) DescribeWorkflowExecution(ctx context.Context, reques
 }
 
 // DescribeTaskList returns information about the target tasklist, right now this API returns the
-// pollers which polled this tasklist in last few minutes.
+// pollers which polled this tasklist in last few minutes and status of tasklist's ackManager
+// (readLevel, ackLevel, backlogCountHint and taskIDBlock).
 func (wh *WorkflowHandler) DescribeTaskList(ctx context.Context, request *gen.DescribeTaskListRequest) (*gen.DescribeTaskListResponse, error) {
 
 	scope := metrics.FrontendDescribeTaskListScope
@@ -2744,13 +2746,14 @@ func (wh *WorkflowHandler) DescribeTaskList(ctx context.Context, request *gen.De
 		return nil, err
 	}
 
-	var response *gen.DescribeTaskListResponse
+	var adminResponse *a.DescribeTaskListResponse
 	op := func() error {
 		var err error
-		response, err = wh.matching.DescribeTaskList(ctx, &m.DescribeTaskListRequest{
+		adminResponse, err = wh.matching.DescribeTaskList(ctx, &m.DescribeTaskListRequest{
 			DomainUUID:  common.StringPtr(domainID),
 			DescRequest: request,
 		})
+
 		return err
 	}
 
@@ -2759,6 +2762,9 @@ func (wh *WorkflowHandler) DescribeTaskList(ctx context.Context, request *gen.De
 		return nil, wh.error(err, scope)
 	}
 
+	response := &gen.DescribeTaskListResponse{
+		Pollers: adminResponse.Pollers,
+	}
 	return response, nil
 }
 

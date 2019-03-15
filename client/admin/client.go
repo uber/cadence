@@ -103,6 +103,22 @@ func (c *clientImpl) GetWorkflowExecutionRawHistory(
 	return client.GetWorkflowExecutionRawHistory(ctx, request, opts...)
 }
 
+func (c *clientImpl) DescribeTaskList(
+	ctx context.Context,
+	request *shared.DescribeTaskListRequest,
+	opts ...yarpc.CallOption,
+) (*admin.DescribeTaskListResponse, error) {
+
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return client.DescribeTaskList(ctx, request, opts...)
+}
+
 func (c *clientImpl) createContext(parent context.Context) (context.Context, context.CancelFunc) {
 	if parent == nil {
 		return context.WithTimeout(context.Background(), c.timeout)

@@ -19,6 +19,7 @@
 // THE SOFTWARE.
 
 include "shared.thrift"
+include "admin.thrift"
 
 namespace java com.uber.cadence.matching
 
@@ -196,7 +197,7 @@ service MatchingService {
   * DescribeTaskList returns information about the target tasklist, right now this API returns the
   * pollers which polled this tasklist in last few minutes.
   **/
-  shared.DescribeTaskListResponse DescribeTaskList(1: DescribeTaskListRequest request)
+  admin.DescribeTaskListResponse DescribeTaskList(1: DescribeTaskListRequest request)
     throws (
         1: shared.BadRequestError badRequestError,
         2: shared.InternalServiceError internalServiceError,

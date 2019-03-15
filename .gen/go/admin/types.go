@@ -34,6 +34,386 @@ import (
 	"strings"
 )
 
+type DescribeTaskListResponse struct {
+	Pollers          []*shared.PollerInfo `json:"pollers,omitempty"`
+	BacklogCountHint *int64               `json:"backlogCountHint,omitempty"`
+	ReadLevel        *int64               `json:"readLevel,omitempty"`
+	AckLevel         *int64               `json:"ackLevel,omitempty"`
+	TaskIDBlock      *TaskIDBlock         `json:"taskIDBlock,omitempty"`
+}
+
+type _List_PollerInfo_ValueList []*shared.PollerInfo
+
+func (v _List_PollerInfo_ValueList) ForEach(f func(wire.Value) error) error {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
+		w, err := x.ToWire()
+		if err != nil {
+			return err
+		}
+		err = f(w)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (v _List_PollerInfo_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_PollerInfo_ValueList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_List_PollerInfo_ValueList) Close() {}
+
+// ToWire translates a DescribeTaskListResponse struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *DescribeTaskListResponse) ToWire() (wire.Value, error) {
+	var (
+		fields [5]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Pollers != nil {
+		w, err = wire.NewValueList(_List_PollerInfo_ValueList(v.Pollers)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.BacklogCountHint != nil {
+		w, err = wire.NewValueI64(*(v.BacklogCountHint)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.ReadLevel != nil {
+		w, err = wire.NewValueI64(*(v.ReadLevel)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+	if v.AckLevel != nil {
+		w, err = wire.NewValueI64(*(v.AckLevel)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 40, Value: w}
+		i++
+	}
+	if v.TaskIDBlock != nil {
+		w, err = v.TaskIDBlock.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 50, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _PollerInfo_Read(w wire.Value) (*shared.PollerInfo, error) {
+	var v shared.PollerInfo
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _List_PollerInfo_Read(l wire.ValueList) ([]*shared.PollerInfo, error) {
+	if l.ValueType() != wire.TStruct {
+		return nil, nil
+	}
+
+	o := make([]*shared.PollerInfo, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
+		i, err := _PollerInfo_Read(x)
+		if err != nil {
+			return err
+		}
+		o = append(o, i)
+		return nil
+	})
+	l.Close()
+	return o, err
+}
+
+func _TaskIDBlock_Read(w wire.Value) (*TaskIDBlock, error) {
+	var v TaskIDBlock
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a DescribeTaskListResponse struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a DescribeTaskListResponse struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v DescribeTaskListResponse
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *DescribeTaskListResponse) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TList {
+				v.Pollers, err = _List_PollerInfo_Read(field.Value.GetList())
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.BacklogCountHint = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 30:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.ReadLevel = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 40:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.AckLevel = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 50:
+			if field.Value.Type() == wire.TStruct {
+				v.TaskIDBlock, err = _TaskIDBlock_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a DescribeTaskListResponse
+// struct.
+func (v *DescribeTaskListResponse) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [5]string
+	i := 0
+	if v.Pollers != nil {
+		fields[i] = fmt.Sprintf("Pollers: %v", v.Pollers)
+		i++
+	}
+	if v.BacklogCountHint != nil {
+		fields[i] = fmt.Sprintf("BacklogCountHint: %v", *(v.BacklogCountHint))
+		i++
+	}
+	if v.ReadLevel != nil {
+		fields[i] = fmt.Sprintf("ReadLevel: %v", *(v.ReadLevel))
+		i++
+	}
+	if v.AckLevel != nil {
+		fields[i] = fmt.Sprintf("AckLevel: %v", *(v.AckLevel))
+		i++
+	}
+	if v.TaskIDBlock != nil {
+		fields[i] = fmt.Sprintf("TaskIDBlock: %v", v.TaskIDBlock)
+		i++
+	}
+
+	return fmt.Sprintf("DescribeTaskListResponse{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _List_PollerInfo_Equals(lhs, rhs []*shared.PollerInfo) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for i, lv := range lhs {
+		rv := rhs[i]
+		if !lv.Equals(rv) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func _I64_EqualsPtr(lhs, rhs *int64) bool {
+	if lhs != nil && rhs != nil {
+
+		x := *lhs
+		y := *rhs
+		return (x == y)
+	}
+	return lhs == nil && rhs == nil
+}
+
+// Equals returns true if all the fields of this DescribeTaskListResponse match the
+// provided DescribeTaskListResponse.
+//
+// This function performs a deep comparison.
+func (v *DescribeTaskListResponse) Equals(rhs *DescribeTaskListResponse) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Pollers == nil && rhs.Pollers == nil) || (v.Pollers != nil && rhs.Pollers != nil && _List_PollerInfo_Equals(v.Pollers, rhs.Pollers))) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.BacklogCountHint, rhs.BacklogCountHint) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.ReadLevel, rhs.ReadLevel) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.AckLevel, rhs.AckLevel) {
+		return false
+	}
+	if !((v.TaskIDBlock == nil && rhs.TaskIDBlock == nil) || (v.TaskIDBlock != nil && rhs.TaskIDBlock != nil && v.TaskIDBlock.Equals(rhs.TaskIDBlock))) {
+		return false
+	}
+
+	return true
+}
+
+type _List_PollerInfo_Zapper []*shared.PollerInfo
+
+// MarshalLogArray implements zapcore.ArrayMarshaler, enabling
+// fast logging of _List_PollerInfo_Zapper.
+func (l _List_PollerInfo_Zapper) MarshalLogArray(enc zapcore.ArrayEncoder) (err error) {
+	for _, v := range l {
+		err = multierr.Append(err, enc.AppendObject(v))
+	}
+	return err
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of DescribeTaskListResponse.
+func (v *DescribeTaskListResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Pollers != nil {
+		err = multierr.Append(err, enc.AddArray("pollers", (_List_PollerInfo_Zapper)(v.Pollers)))
+	}
+	if v.BacklogCountHint != nil {
+		enc.AddInt64("backlogCountHint", *v.BacklogCountHint)
+	}
+	if v.ReadLevel != nil {
+		enc.AddInt64("readLevel", *v.ReadLevel)
+	}
+	if v.AckLevel != nil {
+		enc.AddInt64("ackLevel", *v.AckLevel)
+	}
+	if v.TaskIDBlock != nil {
+		err = multierr.Append(err, enc.AddObject("taskIDBlock", v.TaskIDBlock))
+	}
+	return err
+}
+
+// GetPollers returns the value of Pollers if it is set or its
+// zero value if it is unset.
+func (v *DescribeTaskListResponse) GetPollers() (o []*shared.PollerInfo) {
+	if v.Pollers != nil {
+		return v.Pollers
+	}
+
+	return
+}
+
+// GetBacklogCountHint returns the value of BacklogCountHint if it is set or its
+// zero value if it is unset.
+func (v *DescribeTaskListResponse) GetBacklogCountHint() (o int64) {
+	if v.BacklogCountHint != nil {
+		return *v.BacklogCountHint
+	}
+
+	return
+}
+
+// GetReadLevel returns the value of ReadLevel if it is set or its
+// zero value if it is unset.
+func (v *DescribeTaskListResponse) GetReadLevel() (o int64) {
+	if v.ReadLevel != nil {
+		return *v.ReadLevel
+	}
+
+	return
+}
+
+// GetAckLevel returns the value of AckLevel if it is set or its
+// zero value if it is unset.
+func (v *DescribeTaskListResponse) GetAckLevel() (o int64) {
+	if v.AckLevel != nil {
+		return *v.AckLevel
+	}
+
+	return
+}
+
+// GetTaskIDBlock returns the value of TaskIDBlock if it is set or its
+// zero value if it is unset.
+func (v *DescribeTaskListResponse) GetTaskIDBlock() (o *TaskIDBlock) {
+	if v.TaskIDBlock != nil {
+		return v.TaskIDBlock
+	}
+
+	return
+}
+
 type DescribeWorkflowExecutionRequest struct {
 	Domain    *string                   `json:"domain,omitempty"`
 	Execution *shared.WorkflowExecution `json:"execution,omitempty"`
@@ -675,16 +1055,6 @@ func (v *GetWorkflowExecutionRawHistoryRequest) String() string {
 	return fmt.Sprintf("GetWorkflowExecutionRawHistoryRequest{%v}", strings.Join(fields[:i], ", "))
 }
 
-func _I64_EqualsPtr(lhs, rhs *int64) bool {
-	if lhs != nil && rhs != nil {
-
-		x := *lhs
-		y := *rhs
-		return (x == y)
-	}
-	return lhs == nil && rhs == nil
-}
-
 func _I32_EqualsPtr(lhs, rhs *int32) bool {
 	if lhs != nil && rhs != nil {
 
@@ -1232,6 +1602,178 @@ func (v *GetWorkflowExecutionRawHistoryResponse) GetReplicationInfo() (o map[str
 func (v *GetWorkflowExecutionRawHistoryResponse) GetEventStoreVersion() (o int32) {
 	if v.EventStoreVersion != nil {
 		return *v.EventStoreVersion
+	}
+
+	return
+}
+
+type TaskIDBlock struct {
+	StartID *int64 `json:"startID,omitempty"`
+	EndID   *int64 `json:"endID,omitempty"`
+}
+
+// ToWire translates a TaskIDBlock struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *TaskIDBlock) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.StartID != nil {
+		w, err = wire.NewValueI64(*(v.StartID)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.EndID != nil {
+		w, err = wire.NewValueI64(*(v.EndID)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a TaskIDBlock struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a TaskIDBlock struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v TaskIDBlock
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *TaskIDBlock) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.StartID = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.EndID = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a TaskIDBlock
+// struct.
+func (v *TaskIDBlock) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.StartID != nil {
+		fields[i] = fmt.Sprintf("StartID: %v", *(v.StartID))
+		i++
+	}
+	if v.EndID != nil {
+		fields[i] = fmt.Sprintf("EndID: %v", *(v.EndID))
+		i++
+	}
+
+	return fmt.Sprintf("TaskIDBlock{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this TaskIDBlock match the
+// provided TaskIDBlock.
+//
+// This function performs a deep comparison.
+func (v *TaskIDBlock) Equals(rhs *TaskIDBlock) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_I64_EqualsPtr(v.StartID, rhs.StartID) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.EndID, rhs.EndID) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of TaskIDBlock.
+func (v *TaskIDBlock) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.StartID != nil {
+		enc.AddInt64("startID", *v.StartID)
+	}
+	if v.EndID != nil {
+		enc.AddInt64("endID", *v.EndID)
+	}
+	return err
+}
+
+// GetStartID returns the value of StartID if it is set or its
+// zero value if it is unset.
+func (v *TaskIDBlock) GetStartID() (o int64) {
+	if v.StartID != nil {
+		return *v.StartID
+	}
+
+	return
+}
+
+// GetEndID returns the value of EndID if it is set or its
+// zero value if it is unset.
+func (v *TaskIDBlock) GetEndID() (o int64) {
+	if v.EndID != nil {
+		return *v.EndID
 	}
 
 	return

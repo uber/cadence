@@ -26,6 +26,7 @@ package matchingservicetest
 import (
 	"context"
 	"github.com/golang/mock/gomock"
+	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/matching"
 	"github.com/uber/cadence/.gen/go/matching/matchingserviceclient"
 	"github.com/uber/cadence/.gen/go/shared"
@@ -166,7 +167,7 @@ func (m *MockClient) DescribeTaskList(
 	ctx context.Context,
 	_Request *matching.DescribeTaskListRequest,
 	opts ...yarpc.CallOption,
-) (success *shared.DescribeTaskListResponse, err error) {
+) (success *admin.DescribeTaskListResponse, err error) {
 
 	args := []interface{}{ctx, _Request}
 	for _, o := range opts {
@@ -174,7 +175,7 @@ func (m *MockClient) DescribeTaskList(
 	}
 	i := 0
 	ret := m.ctrl.Call(m, "DescribeTaskList", args...)
-	success, _ = ret[i].(*shared.DescribeTaskListResponse)
+	success, _ = ret[i].(*admin.DescribeTaskListResponse)
 	i++
 	err, _ = ret[i].(error)
 	return

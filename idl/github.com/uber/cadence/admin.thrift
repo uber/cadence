@@ -58,6 +58,20 @@ service AdminService {
       3: shared.EntityNotExistsError entityNotExistError,
       4: shared.ServiceBusyError serviceBusyError,
     )
+
+  /**
+  * DescribeTaskList returns information about the target tasklist, right now this API returns the
+  * pollers which polled this tasklist in last few minutes and status of tasklist's ackManager
+  * (readLevel, ackLevel, backlogCountHint and taskIDBlock).
+  **/
+  DescribeTaskListResponse DescribeTaskList(1: shared.DescribeTaskListRequest request)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.EntityNotExistsError entityNotExistError,
+      4: shared.LimitExceededError limitExceededError,
+      5: shared.ServiceBusyError serviceBusyError,
+    )
 }
 
 struct DescribeWorkflowExecutionRequest {
@@ -86,4 +100,17 @@ struct GetWorkflowExecutionRawHistoryResponse {
   20: optional list<shared.DataBlob> historyBatches
   30: optional map<string, shared.ReplicationInfo> replicationInfo
   40: optional i32 eventStoreVersion
+}
+
+struct TaskIDBlock {
+  10: optional i64 (js.type = "Long")  startID
+  20: optional i64 (js.type = "Long")  endID
+}
+
+struct DescribeTaskListResponse {
+  10: optional list<shared.PollerInfo> pollers
+  20: optional i64 (js.type = "Long") backlogCountHint
+  30: optional i64 (js.type = "Long") readLevel
+  40: optional i64 (js.type = "Long") ackLevel
+  50: optional TaskIDBlock taskIDBlock
 }

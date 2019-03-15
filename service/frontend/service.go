@@ -22,6 +22,7 @@ package frontend
 
 import (
 	"fmt"
+
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/messaging"
@@ -194,7 +195,7 @@ func (s *Service) Start() {
 		panic(fmt.Sprintf("Unknown DC redirection policy %v", params.DCRedirectionPolicy.Policy))
 	}
 
-	adminHandler := NewAdminHandler(base, pConfig.NumHistoryShards, metadata, history, historyV2)
+	adminHandler := NewAdminHandler(base, s.config, pConfig.NumHistoryShards, metadata, history, historyV2)
 	adminHandler.Start()
 
 	log.Infof("%v started", common.FrontendServiceName)

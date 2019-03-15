@@ -23,6 +23,7 @@ package matching
 import (
 	"context"
 
+	a "github.com/uber/cadence/.gen/go/admin"
 	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/metrics"
@@ -166,7 +167,7 @@ func (c *metricClient) CancelOutstandingPoll(
 func (c *metricClient) DescribeTaskList(
 	ctx context.Context,
 	request *m.DescribeTaskListRequest,
-	opts ...yarpc.CallOption) (*workflow.DescribeTaskListResponse, error) {
+	opts ...yarpc.CallOption) (*a.DescribeTaskListResponse, error) {
 	c.metricsClient.IncCounter(metrics.MatchingClientDescribeTaskListScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.MatchingClientDescribeTaskListScope, metrics.CadenceClientLatency)

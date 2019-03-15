@@ -25,6 +25,7 @@ package matchingserviceclient
 
 import (
 	"context"
+	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/matching"
 	"github.com/uber/cadence/.gen/go/shared"
 	"go.uber.org/thriftrw/wire"
@@ -58,7 +59,7 @@ type Interface interface {
 		ctx context.Context,
 		Request *matching.DescribeTaskListRequest,
 		opts ...yarpc.CallOption,
-	) (*shared.DescribeTaskListResponse, error)
+	) (*admin.DescribeTaskListResponse, error)
 
 	PollForActivityTask(
 		ctx context.Context,
@@ -182,7 +183,7 @@ func (c client) DescribeTaskList(
 	ctx context.Context,
 	_Request *matching.DescribeTaskListRequest,
 	opts ...yarpc.CallOption,
-) (success *shared.DescribeTaskListResponse, err error) {
+) (success *admin.DescribeTaskListResponse, err error) {
 
 	args := matching.MatchingService_DescribeTaskList_Helper.Args(_Request)
 

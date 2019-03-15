@@ -25,6 +25,7 @@ package matchingserviceserver
 
 import (
 	"context"
+	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/matching"
 	"github.com/uber/cadence/.gen/go/shared"
 	"go.uber.org/thriftrw/wire"
@@ -52,7 +53,7 @@ type Interface interface {
 	DescribeTaskList(
 		ctx context.Context,
 		Request *matching.DescribeTaskListRequest,
-	) (*shared.DescribeTaskListResponse, error)
+	) (*admin.DescribeTaskListResponse, error)
 
 	PollForActivityTask(
 		ctx context.Context,
@@ -126,7 +127,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.DescribeTaskList),
 				},
-				Signature:    "DescribeTaskList(Request *matching.DescribeTaskListRequest) (*shared.DescribeTaskListResponse)",
+				Signature:    "DescribeTaskList(Request *matching.DescribeTaskListRequest) (*admin.DescribeTaskListResponse)",
 				ThriftModule: matching.ThriftModule,
 			},
 

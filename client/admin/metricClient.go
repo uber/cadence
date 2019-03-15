@@ -97,3 +97,21 @@ func (c *metricClient) GetWorkflowExecutionRawHistory(
 	}
 	return resp, err
 }
+
+func (c *metricClient) DescribeTaskList(
+	ctx context.Context,
+	request *shared.DescribeTaskListRequest,
+	opts ...yarpc.CallOption,
+) (*admin.DescribeTaskListResponse, error) {
+
+	c.metricsClient.IncCounter(metrics.AdminClientDescribeTaskListScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.AdminClientDescribeTaskListScope, metrics.CadenceClientLatency)
+	resp, err := c.client.DescribeTaskList(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.AdminClientDescribeTaskListScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
+}

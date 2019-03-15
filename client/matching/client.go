@@ -24,6 +24,7 @@ import (
 	"context"
 	"time"
 
+	a "github.com/uber/cadence/.gen/go/admin"
 	m "github.com/uber/cadence/.gen/go/matching"
 	"github.com/uber/cadence/.gen/go/matching/matchingserviceclient"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -148,7 +149,7 @@ func (c *clientImpl) CancelOutstandingPoll(ctx context.Context, request *m.Cance
 	return client.CancelOutstandingPoll(ctx, request, opts...)
 }
 
-func (c *clientImpl) DescribeTaskList(ctx context.Context, request *m.DescribeTaskListRequest, opts ...yarpc.CallOption) (*workflow.DescribeTaskListResponse, error) {
+func (c *clientImpl) DescribeTaskList(ctx context.Context, request *m.DescribeTaskListRequest, opts ...yarpc.CallOption) (*a.DescribeTaskListResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getClientForTasklist(request.DescRequest.TaskList.GetName())
 	if err != nil {

@@ -60,6 +60,29 @@ func (_m *AdminClient) DescribeHistoryHost(ctx context.Context, request *shared.
 	return r0, r1
 }
 
+// DescribeTaskList provides a mock function with given fields: ctx, Request, opts
+func (_m *AdminClient) DescribeTaskList(ctx context.Context, request *shared.DescribeTaskListRequest, opts ...yarpc.CallOption) (*admin.DescribeTaskListResponse, error) {
+	ret := _m.Called(ctx, request)
+
+	var r0 *admin.DescribeTaskListResponse
+	if rf, ok := ret.Get(0).(func(context.Context, *shared.DescribeTaskListRequest) *admin.DescribeTaskListResponse); ok {
+		r0 = rf(ctx, request)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*admin.DescribeTaskListResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *shared.DescribeTaskListRequest) error); ok {
+		r1 = rf(ctx, request)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DescribeWorkflowExecution provides a mock function with given fields: ctx, request
 func (_m *AdminClient) DescribeWorkflowExecution(ctx context.Context, request *admin.DescribeWorkflowExecutionRequest, opts ...yarpc.CallOption) (*admin.DescribeWorkflowExecutionResponse, error) {
 	ret := _m.Called(ctx, request)

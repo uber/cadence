@@ -26,6 +26,7 @@ import (
 	"math"
 	"sync"
 
+	a "github.com/uber/cadence/.gen/go/admin"
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -555,7 +556,7 @@ func (e *matchingEngineImpl) CancelOutstandingPoll(ctx context.Context, request 
 	return nil
 }
 
-func (e *matchingEngineImpl) DescribeTaskList(ctx context.Context, request *m.DescribeTaskListRequest) (*workflow.DescribeTaskListResponse, error) {
+func (e *matchingEngineImpl) DescribeTaskList(ctx context.Context, request *m.DescribeTaskListRequest) (*a.DescribeTaskListResponse, error) {
 	domainID := request.GetDomainUUID()
 	taskListType := persistence.TaskListTypeDecision
 	if request.DescRequest.GetTaskListType() == workflow.TaskListTypeActivity {
@@ -570,14 +571,7 @@ func (e *matchingEngineImpl) DescribeTaskList(ctx context.Context, request *m.De
 		return nil, err
 	}
 
-	pollers := []*workflow.PollerInfo{}
-	for _, poller := range tlMgr.GetAllPollerInfo() {
-		pollers = append(pollers, &workflow.PollerInfo{
-			Identity:       common.StringPtr(poller.identity),
-			LastAccessTime: common.Int64Ptr(poller.lastAccessTime.UnixNano()),
-		})
-	}
-	return &workflow.DescribeTaskListResponse{Pollers: pollers}, nil
+	return tlMgr.DescribeTaskList(), nil
 }
 
 // Loads a task from persistence and wraps it in a task context

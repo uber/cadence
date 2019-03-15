@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/uber-go/tally"
+	a "github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/health"
 	m "github.com/uber/cadence/.gen/go/matching"
 	"github.com/uber/cadence/.gen/go/matching/matchingserviceserver"
@@ -223,8 +224,9 @@ func (h *Handler) CancelOutstandingPoll(ctx context.Context,
 }
 
 // DescribeTaskList returns information about the target tasklist, right now this API returns the
-// pollers which polled this tasklist in last few minutes.
-func (h *Handler) DescribeTaskList(ctx context.Context, request *m.DescribeTaskListRequest) (*gen.DescribeTaskListResponse, error) {
+// pollers which polled this tasklist in last few minutes and status of tasklist's ackManager
+// (readLevel, ackLevel, backlogCountHint and taskIDBlock).
+func (h *Handler) DescribeTaskList(ctx context.Context, request *m.DescribeTaskListRequest) (*a.DescribeTaskListResponse, error) {
 	scope := metrics.MatchingDescribeTaskListScope
 	sw := h.startRequestProfile("DescribeTaskList", scope)
 	defer sw.Stop()

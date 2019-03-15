@@ -407,12 +407,6 @@ func _GetWorkflowExecutionRawHistoryResponse_Read(w wire.Value) (*GetWorkflowExe
 	return &v, err
 }
 
-func _ServiceBusyError_Read(w wire.Value) (*shared.ServiceBusyError, error) {
-	var v shared.ServiceBusyError
-	err := v.FromWire(w)
-	return &v, err
-}
-
 // FromWire deserializes a AdminService_GetWorkflowExecutionRawHistory_Result struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.

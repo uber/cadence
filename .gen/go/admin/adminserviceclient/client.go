@@ -42,6 +42,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*shared.DescribeHistoryHostResponse, error)
 
+	DescribeTaskList(
+		ctx context.Context,
+		Request *shared.DescribeTaskListRequest,
+		opts ...yarpc.CallOption,
+	) (*admin.DescribeTaskListResponse, error)
+
 	DescribeWorkflowExecution(
 		ctx context.Context,
 		Request *admin.DescribeWorkflowExecutionRequest,
@@ -99,6 +105,29 @@ func (c client) DescribeHistoryHost(
 	}
 
 	success, err = admin.AdminService_DescribeHistoryHost_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) DescribeTaskList(
+	ctx context.Context,
+	_Request *shared.DescribeTaskListRequest,
+	opts ...yarpc.CallOption,
+) (success *admin.DescribeTaskListResponse, err error) {
+
+	args := admin.AdminService_DescribeTaskList_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_DescribeTaskList_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = admin.AdminService_DescribeTaskList_Helper.UnwrapResponse(&result)
 	return
 }
 

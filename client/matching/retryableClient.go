@@ -23,6 +23,7 @@ package matching
 import (
 	"context"
 
+	a "github.com/uber/cadence/.gen/go/admin"
 	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
@@ -144,9 +145,9 @@ func (c *retryableClient) CancelOutstandingPoll(
 func (c *retryableClient) DescribeTaskList(
 	ctx context.Context,
 	request *m.DescribeTaskListRequest,
-	opts ...yarpc.CallOption) (*workflow.DescribeTaskListResponse, error) {
+	opts ...yarpc.CallOption) (*a.DescribeTaskListResponse, error) {
 
-	var resp *workflow.DescribeTaskListResponse
+	var resp *a.DescribeTaskListResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.DescribeTaskList(ctx, request, opts...)
