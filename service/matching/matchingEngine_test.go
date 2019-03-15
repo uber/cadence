@@ -330,12 +330,18 @@ func (s *matchingEngineSuite) PollForTasksEmptyResultTest(taskType int) {
 			DescRequest: &workflow.DescribeTaskListRequest{
 				TaskList:     taskList,
 				TaskListType: &taskListType,
+				IsAdmin:      common.BoolPtr(true),
 			},
 		})
 		s.NoError(err)
 		s.Equal(1, len(descResp.Pollers))
 		s.Equal(identity, descResp.Pollers[0].GetIdentity())
 		s.NotEmpty(descResp.Pollers[0].GetLastAccessTime())
+		s.Zero(descResp.GetBacklogCountHint())
+		s.Zero(descResp.GetAckLevel())
+		s.Zero(descResp.GetReadLevel())
+		s.Equal(int64(1), descResp.GetTaskIDBlock().GetStartID())
+		s.Equal(s.matchingEngine.config.RangeSize, descResp.GetTaskIDBlock().GetEndID())
 	}
 	s.EqualValues(1, s.taskManager.taskLists[*tlID].rangeID)
 }
