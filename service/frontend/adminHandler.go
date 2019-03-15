@@ -335,7 +335,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 // pollers which polled this tasklist in last few minutes and status of tasklist's ackManager
 // (readLevel, ackLevel, backlogCountHint and taskIDBlock).
 func (adh *AdminHandler) DescribeTaskList(ctx context.Context, request *gen.DescribeTaskListRequest) (*admin.DescribeTaskListResponse, error) {
-	scope := metrics.AdminClientDescribeTaskListScope
+	scope := metrics.AdminDescribeTaskListScope
 
 	if request == nil {
 		return nil, adh.error(errRequestNotSet, scope)

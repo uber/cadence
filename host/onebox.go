@@ -320,7 +320,8 @@ func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup) {
 
 	c.frontEndService = service.New(params)
 	c.adminHandler = frontend.NewAdminHandler(
-		c.frontEndService, c.numberOfHistoryShards, c.metadataMgr, c.historyMgr, c.historyV2Mgr)
+		c.frontEndService, frontend.NewConfig(dynamicconfig.NewNopCollection(), false),
+		c.numberOfHistoryShards, c.metadataMgr, c.historyMgr, c.historyV2Mgr)
 	c.frontendHandler = frontend.NewWorkflowHandler(
 		c.frontEndService, frontend.NewConfig(dynamicconfig.NewNopCollection(), false),
 		c.metadataMgr, c.historyMgr, c.historyV2Mgr, c.visibilityMgr, kafkaProducer, params.BlobstoreClient)
