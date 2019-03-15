@@ -24,6 +24,7 @@ import (
 	"context"
 
 	"github.com/stretchr/testify/mock"
+	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/matching"
 	"github.com/uber/cadence/.gen/go/shared"
 	"go.uber.org/yarpc"
@@ -167,15 +168,15 @@ func (_m *MatchingClient) CancelOutstandingPoll(ctx context.Context,
 
 // DescribeTaskList provides a mock function with given fields: ctx, request
 func (_m *MatchingClient) DescribeTaskList(ctx context.Context,
-	request *matching.DescribeTaskListRequest, opts ...yarpc.CallOption) (*shared.DescribeTaskListResponse, error) {
+	request *matching.DescribeTaskListRequest, opts ...yarpc.CallOption) (*admin.DescribeTaskListResponse, error) {
 	ret := _m.Called(ctx, request)
 
-	var r0 *shared.DescribeTaskListResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *matching.DescribeTaskListRequest) *shared.DescribeTaskListResponse); ok {
+	var r0 *admin.DescribeTaskListResponse
+	if rf, ok := ret.Get(0).(func(context.Context, *matching.DescribeTaskListRequest) *admin.DescribeTaskListResponse); ok {
 		r0 = rf(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*shared.DescribeTaskListResponse)
+			r0 = ret.Get(0).(*admin.DescribeTaskListResponse)
 		}
 	}
 
