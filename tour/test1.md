@@ -1,11 +1,6 @@
 ---
 title: Some Title
----
-
-Does this work?
-
-{% capture codecontent %}
-
+codecontent: |
 Here's some code.
 ```go
 package simple
@@ -28,5 +23,6 @@ func SimpleActivity(ctx context.Context, value string) (string, error) {
     return "Processed: " + value, nil
 }
 ```
+---
 
-{% endcapture %}
+Does this work?

@@ -11,11 +11,11 @@
 }
 
 #left-side {
-    border-right: 2px solid darkgray;
+    border: 1px solid darkgray;
     padding: 4px;
 }
 
 #right-side {
-    border-left: 2px solid darkgray;
+    border: 1px solid darkgray;
     padding: 4px;
 }
