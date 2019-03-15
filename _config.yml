@@ -61,7 +61,8 @@ defaults:
 
 # Code content collection
 collections:
-  - code_content
+  code_content:
+    output: true
 
 
 # Exclude from processing.
