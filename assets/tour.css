@@ -1,35 +1,21 @@
-.relative-content {
-    display: block;
-    position: relative;
-    height: 100%;
+.split, .gutter.gutter-horizontal {
+    float: left;
+}
+.gutter.gutter-horizontal {
+    cursor: ew-resize;
+}
+
+#flex {
+    display: flex;
+    flex-direction: row;
 }
 
 #left-side {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    width: 50%;
-    overflow: hidden;
-}
-
-div[vertical-slide] {
-    position: absolute;
-    top: 0px;
-    bottom: 0px;
-    width: 5px;
-    background: #e0ebf5;
-    left: 50%;
-    right: 50%;
-    z-index: 100;
-    cursor: move;
+    border-right: 2px solid darkgray;
+    padding: 4px;
 }
 
 #right-side {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    right: 0;
-    left: 50%;
-    background: #fff;
+    border-left: 2px solid darkgray;
+    padding: 4px;
 }

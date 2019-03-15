@@ -6,18 +6,21 @@
 <body>
   {% include top_bar.html %}
 
-  <div>
+  <div id="flex">
     <div id="left-side" class="split">
       {{ content }}
     </div>
     <div id="right-side" class="split">
-      {{ page.codecontent | textilize }}
+      {{ codecontent }}
     </div>
   </div>
 
   {% include scripts.html %}
   <script>
-    Split(['#left-side', '#right-side']);
+    Split(['#left-side', '#right-side'], {
+      sizes: [50, 50],
+      gutterSize: 2,
+    });
   </script>
 </body>
 </html>
