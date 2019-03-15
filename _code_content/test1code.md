@@ -1,5 +1,5 @@
 ---
-title: Test1code
+name: test1
 ---
 
 Here's some code.
