@@ -132,23 +132,33 @@ func (tl *throttledLogger) Panicf(format string, args ...interface{}) {
 
 // Return a logger with the specified key-value pair set, to be logged in a subsequent normal logging call
 func (tl *throttledLogger) WithField(key string, value interface{}) bark.Logger {
-	return &throttledLogger{tb: tl.tb, log: tl.log.WithField(key, value)}
+	return tl.clone(tl.log.WithField(key, value))
 }
 
 // Return a logger with the specified key-value pairs set, to be included in a subsequent normal logging call
 func (tl *throttledLogger) WithFields(keyValues bark.LogFields) bark.Logger {
-	return &throttledLogger{tb: tl.tb, log: tl.log.WithFields(keyValues)}
+	return tl.clone(tl.log.WithFields(keyValues))
 }
 
 // Return a logger with the specified error set, to be included in a subsequent normal logging call
 func (tl *throttledLogger) WithError(err error) bark.Logger {
-	return &throttledLogger{tb: tl.tb, log: tl.log.WithError(err)}
+	return tl.clone(tl.log.WithError(err))
 }
 
 // Return map fields associated with this logger, if any (i.e. if this logger was returned from WithField[s])
 // If no fields are set, returns nil
 func (tl *throttledLogger) Fields() bark.Fields {
 	return tl.log.Fields()
+}
+
+func (tl *throttledLogger) clone(log bark.Logger) bark.Logger {
+	result := &throttledLogger{
+		rps: atomic.LoadInt32(&tl.rps),
+		tb:  tl.tb,
+		log: log,
+	}
+	result.cfg.rps = tl.cfg.rps
+	return result
 }
 
 func (tl *throttledLogger) rateLimit(f func()) {
