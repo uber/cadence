@@ -360,6 +360,7 @@ func (c *cadenceImpl) startHistory(rpHosts []string, startWG *sync.WaitGroup, en
 			DataStores:       map[string]config.DataStore{"test": {Cassandra: &cassandraConfig}},
 		}
 		params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
+		params.DynamicConfig = dynamicconfig.NewNopClient()
 		service := service.New(params)
 		historyConfig := history.NewConfig(dynamicconfig.NewNopCollection(), c.numberOfHistoryShards, c.enableVisibilityToKafka)
 		historyConfig.HistoryMgrNumConns = dynamicconfig.GetIntPropertyFn(c.numberOfHistoryShards)
@@ -394,6 +395,7 @@ func (c *cadenceImpl) startMatching(rpHosts []string, startWG *sync.WaitGroup) {
 		DataStores:       map[string]config.DataStore{"test": {Cassandra: &cassandraConfig}},
 	}
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
+	params.DynamicConfig = dynamicconfig.NewNopClient()
 	service := service.New(params)
 	c.matchingHandler = matching.NewHandler(
 		service, matching.NewConfig(dynamicconfig.NewNopCollection()), c.taskMgr, c.metadataMgr,
@@ -422,6 +424,7 @@ func (c *cadenceImpl) startWorker(rpHosts []string, startWG *sync.WaitGroup) {
 		DataStores:       map[string]config.DataStore{"test": {Cassandra: &cassandraConfig}},
 	}
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
+	params.DynamicConfig = dynamicconfig.NewNopClient()
 	service := service.New(params)
 	service.Start()
 
