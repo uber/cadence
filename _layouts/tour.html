@@ -6,16 +6,18 @@
 <body>
   {% include top_bar.html %}
 
-  <div class="relative-content">
-    <div vertical-slide left="#left-side" right="#right-side" class="ui-draggable"></div>
-    <div id="left-side">
+  <div>
+    <div id="left-side" class="split">
       {{ content }}
     </div>
-    <div id="right-side">
-      {{ page.sections['codecontent'] | textilize }}
+    <div id="right-side" class="split">
+      {{ page.codecontent | textilize }}
     </div>
   </div>
 
   {% include scripts.html %}
+  <script>
+    Split(['#left-side', '#right-side']);
+  </script>
 </body>
 </html>
