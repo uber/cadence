@@ -96,6 +96,7 @@ type (
 		clientBean             client.Bean
 		numberOfHistoryShards  int
 		logger                 bark.Logger
+		throttledLogger        bark.Logger
 		metricsScope           tally.Scope
 		runtimeMetricsReporter *metrics.RuntimeMetricsReporter
 		metricsClient          metrics.Client
@@ -113,6 +114,7 @@ func New(params *BootstrapParams) Service {
 		status:                common.DaemonStatusInitialized,
 		sName:                 params.Name,
 		logger:                params.Logger,
+		throttledLogger:       logging.NewThrottledLogger(params.Logger),
 		rpcFactory:            params.RPCFactory,
 		rpFactory:             params.RingpopFactory,
 		pprofInitializer:      params.PProfInitializer,
@@ -235,6 +237,10 @@ func (h *serviceImpl) Stop() {
 // GetLogger returns the service logger
 func (h *serviceImpl) GetLogger() bark.Logger {
 	return h.logger
+}
+
+func (h *serviceImpl) GetThrottledLogger() bark.Logger {
+	return h.throttledLogger
 }
 
 func (h *serviceImpl) GetMetricsClient() metrics.Client {
