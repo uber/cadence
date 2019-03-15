@@ -44,6 +44,8 @@ type (
 		// tokens were acquired before timeout, false
 		// otherwise
 		Consume(count int, timeout time.Duration) bool
+		// Reset resets the token bucket rps limit to the given value
+		Reset(rps int)
 	}
 
 	// PriorityTokenBucket is the interface for rate limiter with priority
@@ -124,10 +126,7 @@ const (
 func New(rps int, timeSource clock.TimeSource) TokenBucket {
 	tb := new(tokenBucketImpl)
 	tb.timeSource = timeSource
-	tb.fillInterval = int64(time.Millisecond * 100)
-	tb.fillRate = (rps * 100) / millisPerSecond
-	tb.overflowRps = rps - (10 * tb.fillRate)
-	tb.refill(time.Now().UnixNano())
+	tb.Reset(rps)
 	return tb
 }
 
@@ -182,6 +181,15 @@ func (tb *tokenBucketImpl) Consume(count int, timeout time.Duration) bool {
 
 		remTime = expiryTime - now
 	}
+}
+
+func (tb *tokenBucketImpl) Reset(rps int) {
+	tb.Lock()
+	defer tb.Unlock()
+	tb.fillInterval = int64(time.Millisecond * 100)
+	tb.fillRate = (rps * 100) / millisPerSecond
+	tb.overflowRps = rps - (10 * tb.fillRate)
+	tb.nextOverflowRefillTime = 0
 }
 
 func (tb *tokenBucketImpl) refill(now int64) {

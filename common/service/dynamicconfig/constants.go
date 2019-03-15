@@ -66,6 +66,9 @@ var keys = map[Key]string{
 	HistoryCountLimitWarn:  "limit.historyCount.warn",
 	MaxIDLengthLimit:       "limit.maxIDLength",
 
+	// common to all services
+	ThrottledLogRPS: "service.throttledLogRPS",
+
 	// frontend settings
 	FrontendPersistenceMaxQPS:      "frontend.persistenceMaxQPS",
 	FrontendVisibilityMaxPageSize:  "frontend.visibilityMaxPageSize",
@@ -227,6 +230,11 @@ const (
 	// MaxIDLengthLimit is the length limit for various IDs, including: Domain, TaskList, WorkflowID, ActivityID, TimerID,
 	// WorkflowType, ActivityType, SignalName, MarkerName, ErrorReason/FailureReason/CancelCause, Identity, RequestID
 	MaxIDLengthLimit
+
+	// common to all services
+
+	// ThrottledLogRPS is the rate limit on number of log messages emitted per second for throttled logger
+	ThrottledLogRPS
 
 	// key for frontend
 
