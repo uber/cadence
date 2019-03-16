@@ -162,7 +162,9 @@ var keys = map[Key]string{
 	HistoryThrottledLogRPS:                                "history.throttledLogRPS",
 
 	WorkerPersistenceMaxQPS:                  "worker.persistenceMaxQPS",
-	WorkerReplicatorConcurrency:              "worker.replicatorConcurrency",
+	WorkerReplicatorMetaTaskConcurrency:      "worker.replicatorMetaTaskConcurrency",
+	WorkerReplicatorTaskConcurrency:          "worker.replicatorTaskConcurrency",
+	WorkerReplicatorMessageConcurrency:       "worker.replicatorMessageConcurrency",
 	WorkerReplicatorActivityBufferRetryCount: "worker.replicatorActivityBufferRetryCount",
 	WorkerReplicatorHistoryBufferRetryCount:  "worker.replicatorHistoryBufferRetryCount",
 	WorkerReplicationTaskMaxRetry:            "worker.replicationTaskMaxRetry",
@@ -421,8 +423,12 @@ const (
 
 	// WorkerPersistenceMaxQPS is the max qps worker host can query DB
 	WorkerPersistenceMaxQPS
-	// WorkerReplicatorConcurrency is the max concurrent tasks to be processed at any given time
-	WorkerReplicatorConcurrency
+	// WorkerReplicatorMetaTaskConcurrency is the number of coroutine handling metadata related tasks
+	WorkerReplicatorMetaTaskConcurrency
+	// WorkerReplicatorTaskConcurrency is the number of coroutine handling non metadata related tasks
+	WorkerReplicatorTaskConcurrency
+	// WorkerReplicatorMessageConcurrency is the max concurrent tasks provided by messaging client
+	WorkerReplicatorMessageConcurrency
 	// WorkerReplicatorActivityBufferRetryCount is the retry attempt when encounter retry error on activity
 	WorkerReplicatorActivityBufferRetryCount
 	// WorkerReplicatorHistoryBufferRetryCount is the retry attempt when encounter retry error on history

@@ -75,7 +75,7 @@ func (s *RetryPolicySuite) TestNumberOfAttempts() {
 		next = r.NextBackOff()
 	}
 
-	s.Equal(done, next)
+	s.Equal(Done, next)
 }
 
 // Test to make sure relative maximum interval for each retry is honoured
@@ -118,7 +118,7 @@ func (s *RetryPolicySuite) TestExpirationInterval() {
 	clock.moveClock(6 * time.Minute)
 	next := r.NextBackOff()
 
-	s.Equal(done, next)
+	s.Equal(Done, next)
 }
 
 func (s *RetryPolicySuite) TestExpirationOverflow() {
@@ -160,13 +160,13 @@ func (s *RetryPolicySuite) TestDefaultPublishRetryPolicy() {
 		10000 * time.Millisecond,
 		6000 * time.Millisecond,
 		1300 * time.Millisecond,
-		done,
+		Done,
 	}
 
 	for _, expected := range expectedResult {
 		next := r.NextBackOff()
-		if expected == done {
-			s.Equal(done, next, "backoff not done yet!!!")
+		if expected == Done {
+			s.Equal(Done, next, "backoff not done yet!!!")
 		} else {
 			min, _ := getNextBackoffRange(expected)
 			s.True(next >= min, "NextBackoff too low: actual: %v, expected: %v", next, expected)
@@ -185,7 +185,7 @@ func (s *RetryPolicySuite) TestNoMaxAttempts() {
 	for i := 0; i < 100; i++ {
 		next := r.NextBackOff()
 		//print("Iter: ", i, ", Next Backoff: ", next.String(), "\n")
-		s.True(next > 0 || next == done, "Unexpected value for next retry duration: %v", next)
+		s.True(next > 0 || next == Done, "Unexpected value for next retry duration: %v", next)
 		clock.moveClock(next)
 	}
 }
@@ -197,7 +197,7 @@ func (s *RetryPolicySuite) TestUnbounded() {
 	for i := 0; i < 100; i++ {
 		next := r.NextBackOff()
 		//print("Iter: ", i, ", Next Backoff: ", next.String(), "\n")
-		s.True(next > 0 || next == done, "Unexpected value for next retry duration: %v", next)
+		s.True(next > 0 || next == Done, "Unexpected value for next retry duration: %v", next)
 		clock.moveClock(next)
 	}
 }

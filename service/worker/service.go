@@ -86,10 +86,12 @@ func NewConfig(dc *dynamicconfig.Collection) *Config {
 	return &Config{
 		ReplicationCfg: &replicator.Config{
 			PersistenceMaxQPS:                  dc.GetIntProperty(dynamicconfig.WorkerPersistenceMaxQPS, 500),
-			ReplicatorConcurrency:              dc.GetIntProperty(dynamicconfig.WorkerReplicatorConcurrency, 1000),
+			ReplicatorMetaTaskConcurrency:      dc.GetIntProperty(dynamicconfig.WorkerReplicatorMetaTaskConcurrency, 64),
+			ReplicatorTaskConcurrency:          dc.GetIntProperty(dynamicconfig.WorkerReplicatorTaskConcurrency, 256),
+			ReplicatorMessageConcurrency:       dc.GetIntProperty(dynamicconfig.WorkerReplicatorMessageConcurrency, 2048),
 			ReplicatorActivityBufferRetryCount: dc.GetIntProperty(dynamicconfig.WorkerReplicatorActivityBufferRetryCount, 8),
 			ReplicatorHistoryBufferRetryCount:  dc.GetIntProperty(dynamicconfig.WorkerReplicatorHistoryBufferRetryCount, 8),
-			ReplicationTaskMaxRetry:            dc.GetIntProperty(dynamicconfig.WorkerReplicationTaskMaxRetry, 50),
+			ReplicationTaskMaxRetry:            dc.GetIntProperty(dynamicconfig.WorkerReplicationTaskMaxRetry, 400),
 		},
 		ArchiverConfig: &archiver.Config{
 			EnableArchivalCompression: dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableArchivalCompression, true),

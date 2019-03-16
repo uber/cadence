@@ -25,6 +25,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/common/task"
+
 	h "github.com/uber/cadence/.gen/go/history"
 
 	"github.com/uber/cadence/client"
@@ -62,7 +64,9 @@ type (
 	// Config contains all the replication config for worker
 	Config struct {
 		PersistenceMaxQPS                  dynamicconfig.IntPropertyFn
-		ReplicatorConcurrency              dynamicconfig.IntPropertyFn
+		ReplicatorMetaTaskConcurrency      dynamicconfig.IntPropertyFn
+		ReplicatorTaskConcurrency          dynamicconfig.IntPropertyFn
+		ReplicatorMessageConcurrency       dynamicconfig.IntPropertyFn
 		ReplicatorActivityBufferRetryCount dynamicconfig.IntPropertyFn
 		ReplicatorHistoryBufferRetryCount  dynamicconfig.IntPropertyFn
 		ReplicationTaskMaxRetry            dynamicconfig.IntPropertyFn
@@ -128,8 +132,16 @@ func (r *Replicator) Start() error {
 				replicationTimeout,
 				logger,
 			)
-			r.processors = append(r.processors, newReplicationTaskProcessor(currentClusterName, cluster, consumerName, r.client,
-				r.config, logger, r.metricsClient, r.domainReplicator, historyRereplicator, r.historyClient))
+			r.processors = append(r.processors, newReplicationTaskProcessor(
+				currentClusterName, cluster, consumerName, r.client,
+				r.config, logger, r.metricsClient, r.domainReplicator,
+				historyRereplicator, r.historyClient,
+				task.NewSequentialTaskProcessor(
+					r.config.ReplicatorTaskConcurrency(),
+					replicationSequentialTaskQueueHashFn,
+					logger,
+				),
+			))
 		}
 	}
 

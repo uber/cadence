@@ -27,9 +27,10 @@ import (
 )
 
 const (
-	// NoInterval represents Maximim interval
-	NoInterval                      = 0
-	done              time.Duration = -1
+	// NoInterval represents Maximum interval
+	NoInterval = 0
+	// Done indicate that there should be no retry
+	Done              time.Duration = -1
 	noMaximumAttempts               = 0
 
 	defaultBackoffCoefficient = 2.0
@@ -134,18 +135,18 @@ func (p *ExponentialRetryPolicy) SetMaximumAttempts(maximumAttempts int) {
 func (p *ExponentialRetryPolicy) ComputeNextDelay(elapsedTime time.Duration, numAttempts int) time.Duration {
 	// Check to see if we ran out of maximum number of attempts
 	if p.maximumAttempts != noMaximumAttempts && numAttempts >= p.maximumAttempts {
-		return done
+		return Done
 	}
 
 	// Stop retrying after expiration interval is elapsed
 	if p.expirationInterval != NoInterval && elapsedTime > p.expirationInterval {
-		return done
+		return Done
 	}
 
 	nextInterval := float64(p.initialInterval) * math.Pow(p.backoffCoefficient, float64(numAttempts))
 	// Disallow retries if initialInterval is negative or nextInterval overflows
 	if nextInterval <= 0 {
-		return done
+		return Done
 	}
 	if p.maximumInterval != NoInterval {
 		nextInterval = math.Min(nextInterval, float64(p.maximumInterval))
@@ -159,7 +160,7 @@ func (p *ExponentialRetryPolicy) ComputeNextDelay(elapsedTime time.Duration, num
 	// Bail out if the next interval is smaller than initial retry interval
 	nextDuration := time.Duration(nextInterval)
 	if nextDuration < p.initialInterval {
-		return done
+		return Done
 	}
 
 	// add jitter to avoid global synchronization

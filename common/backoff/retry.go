@@ -48,7 +48,7 @@ func (c *ConcurrentRetrier) Throttle() {
 }
 
 func (c *ConcurrentRetrier) throttleInternal() time.Duration {
-	next := done
+	next := Done
 
 	// Check if we have failure count.
 	failureCount := c.failureCount
@@ -60,7 +60,7 @@ func (c *ConcurrentRetrier) throttleInternal() time.Duration {
 		}
 	}
 
-	if next != done {
+	if next != Done {
 		time.Sleep(next)
 	}
 
@@ -100,7 +100,7 @@ func Retry(operation Operation, policy RetryPolicy, isRetryable IsRetryable) err
 			return nil
 		}
 
-		if next = r.NextBackOff(); next == done {
+		if next = r.NextBackOff(); next == Done {
 			return err
 		}
 
