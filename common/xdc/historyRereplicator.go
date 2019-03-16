@@ -165,13 +165,17 @@ func (h *HistoryRereplicatorImpl) SendMultiWorkflowHistory(domainID string, work
 	for len(runID) != 0 {
 		runID, err = rereplicationContext.getPrevRunID(domainID, workflowID, runID)
 		if err != nil {
+			if _, ok := err.(*shared.EntityNotExistsError); ok {
+				// it is possible that this run ID (input)'s corresponding history does not exists
+				break
+			}
 			return err
 		}
 		runIDs = append(runIDs, runID)
 	}
 
-	// the last runID append in the array is empty
-	// for all the runIDs, send the history
+	// the last run ID append in the array is empty, or last run ID's corresponding history is deleted
+	// for all the other run IDs, send the history
 	for index := len(runIDs) - 2; index > -1; index-- {
 		runID = runIDs[index]
 		firstEventID, nextEventID := rereplicationContext.eventIDRange(runID, beginningRunID, beginningFirstEventID, endingRunID, endingNextEventID)
@@ -436,16 +440,12 @@ func (c *historyRereplicationContext) getPrevRunID(domainID string, workflowID s
 	pageSize := int32(1)
 	response, err := c.getHistory(domainID, workflowID, runID, common.FirstEventID, common.EndEventID, token, pageSize)
 	if err != nil {
-		if _, ok := err.(*shared.EntityNotExistsError); !ok {
-			return "", err
-		}
-		// EntityNotExistsError error, set the run ID to "" indicating no prev run
-		return "", nil
+		return "", err
 	}
 	if len(response.HistoryBatches) == 0 {
 		// is it possible that remote mutable state / history are deleted, while mutable state still accessible from cache
-		// treat this case as no prev run ID
-		return "", nil
+		// treat this case entity not exists
+		return "", &shared.EntityNotExistsError{}
 	}
 
 	blob := response.HistoryBatches[0]

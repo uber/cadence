@@ -1214,7 +1214,7 @@ func (s *historyRereplicatorSuite) TestGetPrevEventID_EmptyEvents() {
 	}, nil).Once()
 
 	runID, err := s.getDummyRereplicationContext().getPrevRunID(s.domainID, workflowID, currentRunID)
-	s.Nil(err)
+	s.IsType(&shared.EntityNotExistsError{}, err)
 	s.Equal("", runID)
 }
 
