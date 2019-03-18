@@ -32,7 +32,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-// AdminDescribeTaskList shows poller and ack manager related info for a task list.
+// AdminDescribeTaskList displays poller and status information of task list.
 func AdminDescribeTaskList(c *cli.Context) {
 	frontendClient := cFactory.ServerFrontendClient(c)
 	domain := getRequiredGlobalOption(c, FlagDomain)
@@ -45,10 +45,10 @@ func AdminDescribeTaskList(c *cli.Context) {
 	ctx, cancel := newContext()
 	defer cancel()
 	request := &s.DescribeTaskListRequest{
-		Domain:       common.StringPtr(domain),
-		TaskList:     &s.TaskList{Name: common.StringPtr(taskList)},
-		TaskListType: &taskListType,
-		IsAdmin:      common.BoolPtr(true),
+		Domain:                common.StringPtr(domain),
+		TaskList:              &s.TaskList{Name: common.StringPtr(taskList)},
+		TaskListType:          &taskListType,
+		IncludeTaskListStatus: common.BoolPtr(true),
 	}
 
 	response, err := frontendClient.DescribeTaskList(ctx, request)
@@ -56,7 +56,11 @@ func AdminDescribeTaskList(c *cli.Context) {
 		ErrorAndExit("Operation DescribeTaskList failed.", err)
 	}
 
-	printAckMgrInfo(response)
+	taskListStatus := response.GetTaskListStatus()
+	if taskListStatus == nil {
+		ErrorAndExit(colorMagenta("No tasklist status information."), nil)
+	}
+	printTaskListStatus(taskListStatus)
 	fmt.Printf("\n")
 
 	pollers := response.Pollers
@@ -66,8 +70,8 @@ func AdminDescribeTaskList(c *cli.Context) {
 	printPollerInfo(pollers, taskListType)
 }
 
-func printAckMgrInfo(response *s.DescribeTaskListResponse) {
-	taskIDBlock := response.GetTaskIDBlock()
+func printTaskListStatus(taskListStatus *s.TaskListStatus) {
+	taskIDBlock := taskListStatus.GetTaskIDBlock()
 
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetBorder(false)
@@ -75,9 +79,9 @@ func printAckMgrInfo(response *s.DescribeTaskListResponse) {
 	table.SetHeader([]string{"Read Level", "Ack Level", "Backlog", "Lease Start TaskID", "Lease End TaskID"})
 	table.SetHeaderLine(false)
 	table.SetHeaderColor(tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue)
-	table.Append([]string{strconv.FormatInt(response.GetReadLevel(), 10),
-		strconv.FormatInt(response.GetAckLevel(), 10),
-		strconv.FormatInt(response.GetBacklogCountHint(), 10),
+	table.Append([]string{strconv.FormatInt(taskListStatus.GetReadLevel(), 10),
+		strconv.FormatInt(taskListStatus.GetAckLevel(), 10),
+		strconv.FormatInt(taskListStatus.GetBacklogCountHint(), 10),
 		strconv.FormatInt(taskIDBlock.GetStartID(), 10),
 		strconv.FormatInt(taskIDBlock.GetEndID(), 10)})
 	table.Render()

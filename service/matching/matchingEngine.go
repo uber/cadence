@@ -570,7 +570,7 @@ func (e *matchingEngineImpl) DescribeTaskList(ctx context.Context, request *m.De
 		return nil, err
 	}
 
-	return tlMgr.DescribeTaskList(request.DescRequest.GetIsAdmin()), nil
+	return tlMgr.DescribeTaskList(request.DescRequest.GetIncludeTaskListStatus()), nil
 }
 
 // Loads a task from persistence and wraps it in a task context

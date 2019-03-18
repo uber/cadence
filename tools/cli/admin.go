@@ -621,7 +621,7 @@ func newAdminTaskListCommands() []cli.Command {
 		{
 			Name:    "describe",
 			Aliases: []string{"desc"},
-			Usage:   "Describe pollers and ack manager related info of tasklist",
+			Usage:   "Describe pollers and status information of tasklist",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagTaskListWithAlias,

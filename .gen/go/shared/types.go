@@ -10820,10 +10820,10 @@ func (v *DescribeHistoryHostResponse) GetAddress() (o string) {
 }
 
 type DescribeTaskListRequest struct {
-	Domain       *string       `json:"domain,omitempty"`
-	TaskList     *TaskList     `json:"taskList,omitempty"`
-	TaskListType *TaskListType `json:"taskListType,omitempty"`
-	IsAdmin      *bool         `json:"isAdmin,omitempty"`
+	Domain                *string       `json:"domain,omitempty"`
+	TaskList              *TaskList     `json:"taskList,omitempty"`
+	TaskListType          *TaskListType `json:"taskListType,omitempty"`
+	IncludeTaskListStatus *bool         `json:"includeTaskListStatus,omitempty"`
 }
 
 // ToWire translates a DescribeTaskListRequest struct into a Thrift-level intermediate
@@ -10873,8 +10873,8 @@ func (v *DescribeTaskListRequest) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 30, Value: w}
 		i++
 	}
-	if v.IsAdmin != nil {
-		w, err = wire.NewValueBool(*(v.IsAdmin)), error(nil)
+	if v.IncludeTaskListStatus != nil {
+		w, err = wire.NewValueBool(*(v.IncludeTaskListStatus)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -10945,7 +10945,7 @@ func (v *DescribeTaskListRequest) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TBool {
 				var x bool
 				x, err = field.Value.GetBool(), error(nil)
-				v.IsAdmin = &x
+				v.IncludeTaskListStatus = &x
 				if err != nil {
 					return err
 				}
@@ -10978,8 +10978,8 @@ func (v *DescribeTaskListRequest) String() string {
 		fields[i] = fmt.Sprintf("TaskListType: %v", *(v.TaskListType))
 		i++
 	}
-	if v.IsAdmin != nil {
-		fields[i] = fmt.Sprintf("IsAdmin: %v", *(v.IsAdmin))
+	if v.IncludeTaskListStatus != nil {
+		fields[i] = fmt.Sprintf("IncludeTaskListStatus: %v", *(v.IncludeTaskListStatus))
 		i++
 	}
 
@@ -11015,7 +11015,7 @@ func (v *DescribeTaskListRequest) Equals(rhs *DescribeTaskListRequest) bool {
 	if !_TaskListType_EqualsPtr(v.TaskListType, rhs.TaskListType) {
 		return false
 	}
-	if !_Bool_EqualsPtr(v.IsAdmin, rhs.IsAdmin) {
+	if !_Bool_EqualsPtr(v.IncludeTaskListStatus, rhs.IncludeTaskListStatus) {
 		return false
 	}
 
@@ -11037,8 +11037,8 @@ func (v *DescribeTaskListRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (e
 	if v.TaskListType != nil {
 		err = multierr.Append(err, enc.AddObject("taskListType", *v.TaskListType))
 	}
-	if v.IsAdmin != nil {
-		enc.AddBool("isAdmin", *v.IsAdmin)
+	if v.IncludeTaskListStatus != nil {
+		enc.AddBool("includeTaskListStatus", *v.IncludeTaskListStatus)
 	}
 	return err
 }
@@ -11073,22 +11073,19 @@ func (v *DescribeTaskListRequest) GetTaskListType() (o TaskListType) {
 	return
 }
 
-// GetIsAdmin returns the value of IsAdmin if it is set or its
+// GetIncludeTaskListStatus returns the value of IncludeTaskListStatus if it is set or its
 // zero value if it is unset.
-func (v *DescribeTaskListRequest) GetIsAdmin() (o bool) {
-	if v.IsAdmin != nil {
-		return *v.IsAdmin
+func (v *DescribeTaskListRequest) GetIncludeTaskListStatus() (o bool) {
+	if v.IncludeTaskListStatus != nil {
+		return *v.IncludeTaskListStatus
 	}
 
 	return
 }
 
 type DescribeTaskListResponse struct {
-	Pollers          []*PollerInfo `json:"pollers,omitempty"`
-	BacklogCountHint *int64        `json:"backlogCountHint,omitempty"`
-	ReadLevel        *int64        `json:"readLevel,omitempty"`
-	AckLevel         *int64        `json:"ackLevel,omitempty"`
-	TaskIDBlock      *TaskIDBlock  `json:"taskIDBlock,omitempty"`
+	Pollers        []*PollerInfo   `json:"pollers,omitempty"`
+	TaskListStatus *TaskListStatus `json:"taskListStatus,omitempty"`
 }
 
 type _List_PollerInfo_ValueList []*PollerInfo
@@ -11137,7 +11134,7 @@ func (_List_PollerInfo_ValueList) Close() {}
 //   }
 func (v *DescribeTaskListResponse) ToWire() (wire.Value, error) {
 	var (
-		fields [5]wire.Field
+		fields [2]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -11151,36 +11148,12 @@ func (v *DescribeTaskListResponse) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 10, Value: w}
 		i++
 	}
-	if v.BacklogCountHint != nil {
-		w, err = wire.NewValueI64(*(v.BacklogCountHint)), error(nil)
+	if v.TaskListStatus != nil {
+		w, err = v.TaskListStatus.ToWire()
 		if err != nil {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 20, Value: w}
-		i++
-	}
-	if v.ReadLevel != nil {
-		w, err = wire.NewValueI64(*(v.ReadLevel)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 30, Value: w}
-		i++
-	}
-	if v.AckLevel != nil {
-		w, err = wire.NewValueI64(*(v.AckLevel)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 40, Value: w}
-		i++
-	}
-	if v.TaskIDBlock != nil {
-		w, err = v.TaskIDBlock.ToWire()
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 50, Value: w}
 		i++
 	}
 
@@ -11211,8 +11184,8 @@ func _List_PollerInfo_Read(l wire.ValueList) ([]*PollerInfo, error) {
 	return o, err
 }
 
-func _TaskIDBlock_Read(w wire.Value) (*TaskIDBlock, error) {
-	var v TaskIDBlock
+func _TaskListStatus_Read(w wire.Value) (*TaskListStatus, error) {
+	var v TaskListStatus
 	err := v.FromWire(w)
 	return &v, err
 }
@@ -11248,38 +11221,8 @@ func (v *DescribeTaskListResponse) FromWire(w wire.Value) error {
 
 			}
 		case 20:
-			if field.Value.Type() == wire.TI64 {
-				var x int64
-				x, err = field.Value.GetI64(), error(nil)
-				v.BacklogCountHint = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 30:
-			if field.Value.Type() == wire.TI64 {
-				var x int64
-				x, err = field.Value.GetI64(), error(nil)
-				v.ReadLevel = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 40:
-			if field.Value.Type() == wire.TI64 {
-				var x int64
-				x, err = field.Value.GetI64(), error(nil)
-				v.AckLevel = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 50:
 			if field.Value.Type() == wire.TStruct {
-				v.TaskIDBlock, err = _TaskIDBlock_Read(field.Value)
+				v.TaskListStatus, err = _TaskListStatus_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -11298,26 +11241,14 @@ func (v *DescribeTaskListResponse) String() string {
 		return "<nil>"
 	}
 
-	var fields [5]string
+	var fields [2]string
 	i := 0
 	if v.Pollers != nil {
 		fields[i] = fmt.Sprintf("Pollers: %v", v.Pollers)
 		i++
 	}
-	if v.BacklogCountHint != nil {
-		fields[i] = fmt.Sprintf("BacklogCountHint: %v", *(v.BacklogCountHint))
-		i++
-	}
-	if v.ReadLevel != nil {
-		fields[i] = fmt.Sprintf("ReadLevel: %v", *(v.ReadLevel))
-		i++
-	}
-	if v.AckLevel != nil {
-		fields[i] = fmt.Sprintf("AckLevel: %v", *(v.AckLevel))
-		i++
-	}
-	if v.TaskIDBlock != nil {
-		fields[i] = fmt.Sprintf("TaskIDBlock: %v", v.TaskIDBlock)
+	if v.TaskListStatus != nil {
+		fields[i] = fmt.Sprintf("TaskListStatus: %v", v.TaskListStatus)
 		i++
 	}
 
@@ -11352,16 +11283,7 @@ func (v *DescribeTaskListResponse) Equals(rhs *DescribeTaskListResponse) bool {
 	if !((v.Pollers == nil && rhs.Pollers == nil) || (v.Pollers != nil && rhs.Pollers != nil && _List_PollerInfo_Equals(v.Pollers, rhs.Pollers))) {
 		return false
 	}
-	if !_I64_EqualsPtr(v.BacklogCountHint, rhs.BacklogCountHint) {
-		return false
-	}
-	if !_I64_EqualsPtr(v.ReadLevel, rhs.ReadLevel) {
-		return false
-	}
-	if !_I64_EqualsPtr(v.AckLevel, rhs.AckLevel) {
-		return false
-	}
-	if !((v.TaskIDBlock == nil && rhs.TaskIDBlock == nil) || (v.TaskIDBlock != nil && rhs.TaskIDBlock != nil && v.TaskIDBlock.Equals(rhs.TaskIDBlock))) {
+	if !((v.TaskListStatus == nil && rhs.TaskListStatus == nil) || (v.TaskListStatus != nil && rhs.TaskListStatus != nil && v.TaskListStatus.Equals(rhs.TaskListStatus))) {
 		return false
 	}
 
@@ -11388,17 +11310,8 @@ func (v *DescribeTaskListResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (
 	if v.Pollers != nil {
 		err = multierr.Append(err, enc.AddArray("pollers", (_List_PollerInfo_Zapper)(v.Pollers)))
 	}
-	if v.BacklogCountHint != nil {
-		enc.AddInt64("backlogCountHint", *v.BacklogCountHint)
-	}
-	if v.ReadLevel != nil {
-		enc.AddInt64("readLevel", *v.ReadLevel)
-	}
-	if v.AckLevel != nil {
-		enc.AddInt64("ackLevel", *v.AckLevel)
-	}
-	if v.TaskIDBlock != nil {
-		err = multierr.Append(err, enc.AddObject("taskIDBlock", v.TaskIDBlock))
+	if v.TaskListStatus != nil {
+		err = multierr.Append(err, enc.AddObject("taskListStatus", v.TaskListStatus))
 	}
 	return err
 }
@@ -11413,41 +11326,11 @@ func (v *DescribeTaskListResponse) GetPollers() (o []*PollerInfo) {
 	return
 }
 
-// GetBacklogCountHint returns the value of BacklogCountHint if it is set or its
+// GetTaskListStatus returns the value of TaskListStatus if it is set or its
 // zero value if it is unset.
-func (v *DescribeTaskListResponse) GetBacklogCountHint() (o int64) {
-	if v.BacklogCountHint != nil {
-		return *v.BacklogCountHint
-	}
-
-	return
-}
-
-// GetReadLevel returns the value of ReadLevel if it is set or its
-// zero value if it is unset.
-func (v *DescribeTaskListResponse) GetReadLevel() (o int64) {
-	if v.ReadLevel != nil {
-		return *v.ReadLevel
-	}
-
-	return
-}
-
-// GetAckLevel returns the value of AckLevel if it is set or its
-// zero value if it is unset.
-func (v *DescribeTaskListResponse) GetAckLevel() (o int64) {
-	if v.AckLevel != nil {
-		return *v.AckLevel
-	}
-
-	return
-}
-
-// GetTaskIDBlock returns the value of TaskIDBlock if it is set or its
-// zero value if it is unset.
-func (v *DescribeTaskListResponse) GetTaskIDBlock() (o *TaskIDBlock) {
-	if v.TaskIDBlock != nil {
-		return v.TaskIDBlock
+func (v *DescribeTaskListResponse) GetTaskListStatus() (o *TaskListStatus) {
+	if v.TaskListStatus != nil {
+		return v.TaskListStatus
 	}
 
 	return
@@ -37466,6 +37349,260 @@ func (v *TaskListMetadata) MarshalLogObject(enc zapcore.ObjectEncoder) (err erro
 func (v *TaskListMetadata) GetMaxTasksPerSecond() (o float64) {
 	if v.MaxTasksPerSecond != nil {
 		return *v.MaxTasksPerSecond
+	}
+
+	return
+}
+
+type TaskListStatus struct {
+	BacklogCountHint *int64       `json:"backlogCountHint,omitempty"`
+	ReadLevel        *int64       `json:"readLevel,omitempty"`
+	AckLevel         *int64       `json:"ackLevel,omitempty"`
+	TaskIDBlock      *TaskIDBlock `json:"taskIDBlock,omitempty"`
+}
+
+// ToWire translates a TaskListStatus struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *TaskListStatus) ToWire() (wire.Value, error) {
+	var (
+		fields [4]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.BacklogCountHint != nil {
+		w, err = wire.NewValueI64(*(v.BacklogCountHint)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.ReadLevel != nil {
+		w, err = wire.NewValueI64(*(v.ReadLevel)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.AckLevel != nil {
+		w, err = wire.NewValueI64(*(v.AckLevel)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+	if v.TaskIDBlock != nil {
+		w, err = v.TaskIDBlock.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 40, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _TaskIDBlock_Read(w wire.Value) (*TaskIDBlock, error) {
+	var v TaskIDBlock
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a TaskListStatus struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a TaskListStatus struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v TaskListStatus
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *TaskListStatus) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.BacklogCountHint = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.ReadLevel = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 30:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.AckLevel = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 40:
+			if field.Value.Type() == wire.TStruct {
+				v.TaskIDBlock, err = _TaskIDBlock_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a TaskListStatus
+// struct.
+func (v *TaskListStatus) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [4]string
+	i := 0
+	if v.BacklogCountHint != nil {
+		fields[i] = fmt.Sprintf("BacklogCountHint: %v", *(v.BacklogCountHint))
+		i++
+	}
+	if v.ReadLevel != nil {
+		fields[i] = fmt.Sprintf("ReadLevel: %v", *(v.ReadLevel))
+		i++
+	}
+	if v.AckLevel != nil {
+		fields[i] = fmt.Sprintf("AckLevel: %v", *(v.AckLevel))
+		i++
+	}
+	if v.TaskIDBlock != nil {
+		fields[i] = fmt.Sprintf("TaskIDBlock: %v", v.TaskIDBlock)
+		i++
+	}
+
+	return fmt.Sprintf("TaskListStatus{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this TaskListStatus match the
+// provided TaskListStatus.
+//
+// This function performs a deep comparison.
+func (v *TaskListStatus) Equals(rhs *TaskListStatus) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_I64_EqualsPtr(v.BacklogCountHint, rhs.BacklogCountHint) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.ReadLevel, rhs.ReadLevel) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.AckLevel, rhs.AckLevel) {
+		return false
+	}
+	if !((v.TaskIDBlock == nil && rhs.TaskIDBlock == nil) || (v.TaskIDBlock != nil && rhs.TaskIDBlock != nil && v.TaskIDBlock.Equals(rhs.TaskIDBlock))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of TaskListStatus.
+func (v *TaskListStatus) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.BacklogCountHint != nil {
+		enc.AddInt64("backlogCountHint", *v.BacklogCountHint)
+	}
+	if v.ReadLevel != nil {
+		enc.AddInt64("readLevel", *v.ReadLevel)
+	}
+	if v.AckLevel != nil {
+		enc.AddInt64("ackLevel", *v.AckLevel)
+	}
+	if v.TaskIDBlock != nil {
+		err = multierr.Append(err, enc.AddObject("taskIDBlock", v.TaskIDBlock))
+	}
+	return err
+}
+
+// GetBacklogCountHint returns the value of BacklogCountHint if it is set or its
+// zero value if it is unset.
+func (v *TaskListStatus) GetBacklogCountHint() (o int64) {
+	if v.BacklogCountHint != nil {
+		return *v.BacklogCountHint
+	}
+
+	return
+}
+
+// GetReadLevel returns the value of ReadLevel if it is set or its
+// zero value if it is unset.
+func (v *TaskListStatus) GetReadLevel() (o int64) {
+	if v.ReadLevel != nil {
+		return *v.ReadLevel
+	}
+
+	return
+}
+
+// GetAckLevel returns the value of AckLevel if it is set or its
+// zero value if it is unset.
+func (v *TaskListStatus) GetAckLevel() (o int64) {
+	if v.AckLevel != nil {
+		return *v.AckLevel
+	}
+
+	return
+}
+
+// GetTaskIDBlock returns the value of TaskIDBlock if it is set or its
+// zero value if it is unset.
+func (v *TaskListStatus) GetTaskIDBlock() (o *TaskIDBlock) {
+	if v.TaskIDBlock != nil {
+		return v.TaskIDBlock
 	}
 
 	return

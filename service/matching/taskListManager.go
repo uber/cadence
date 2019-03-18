@@ -62,7 +62,7 @@ type (
 		SyncMatchQueryTask(ctx context.Context, queryTask *queryTaskInfo) error
 		CancelPoller(pollerID string)
 		GetAllPollerInfo() []*pollerInfo
-		DescribeTaskList(isAdmin bool) *s.DescribeTaskListResponse
+		DescribeTaskList(includeTaskListStatus bool) *s.DescribeTaskListResponse
 		String() string
 	}
 
@@ -546,7 +546,7 @@ func (c *taskListManagerImpl) GetAllPollerInfo() []*pollerInfo {
 // DescribeTaskList returns information about the target tasklist, right now this API returns the
 // pollers which polled this tasklist in last few minutes and status of tasklist's ackManager
 // (readLevel, ackLevel, backlogCountHint and taskIDBlock).
-func (c *taskListManagerImpl) DescribeTaskList(isAdminRequest bool) *s.DescribeTaskListResponse {
+func (c *taskListManagerImpl) DescribeTaskList(includeTaskListStatus bool) *s.DescribeTaskListResponse {
 	pollers := []*s.PollerInfo{}
 	for _, poller := range c.GetAllPollerInfo() {
 		pollers = append(pollers, &s.PollerInfo{
@@ -556,18 +556,21 @@ func (c *taskListManagerImpl) DescribeTaskList(isAdminRequest bool) *s.DescribeT
 	}
 
 	response := &s.DescribeTaskListResponse{Pollers: pollers}
-	if !isAdminRequest {
+	if !includeTaskListStatus {
 		return response
 	}
 
 	taskIDBlock := c.rangeIDToTaskIDBlock(c.db.RangeID())
-	response.ReadLevel = common.Int64Ptr(c.taskAckManager.getReadLevel())
-	response.AckLevel = common.Int64Ptr(c.taskAckManager.getAckLevel())
-	response.BacklogCountHint = common.Int64Ptr(c.taskAckManager.getBacklogCountHint())
-	response.TaskIDBlock = &s.TaskIDBlock{
-		StartID: common.Int64Ptr(taskIDBlock.start),
-		EndID:   common.Int64Ptr(taskIDBlock.end),
+	response.TaskListStatus = &s.TaskListStatus{
+		ReadLevel:        common.Int64Ptr(c.taskAckManager.getReadLevel()),
+		AckLevel:         common.Int64Ptr(c.taskAckManager.getAckLevel()),
+		BacklogCountHint: common.Int64Ptr(c.taskAckManager.getBacklogCountHint()),
+		TaskIDBlock: &s.TaskIDBlock{
+			StartID: common.Int64Ptr(taskIDBlock.start),
+			EndID:   common.Int64Ptr(taskIDBlock.end),
+		},
 	}
+
 	return response
 }
 
