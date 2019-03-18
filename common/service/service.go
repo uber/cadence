@@ -58,6 +58,7 @@ type (
 	BootstrapParams struct {
 		Name                string
 		Logger              bark.Logger
+		ThrottledLogger     bark.Logger
 		MetricScope         tally.Scope
 		RingpopFactory      RingpopFactory
 		RPCFactory          common.RPCFactory
@@ -107,8 +108,6 @@ type (
 	}
 )
 
-const defaultThrottledLogRPS = 20
-
 // New instantiates a Service Instance
 // TODO: have a better name for Service.
 func New(params *BootstrapParams) Service {
@@ -116,6 +115,7 @@ func New(params *BootstrapParams) Service {
 		status:                common.DaemonStatusInitialized,
 		sName:                 params.Name,
 		logger:                params.Logger,
+		throttledLogger:       params.ThrottledLogger,
 		rpcFactory:            params.RPCFactory,
 		rpFactory:             params.RingpopFactory,
 		pprofInitializer:      params.PProfInitializer,
@@ -128,8 +128,6 @@ func New(params *BootstrapParams) Service {
 		dynamicCollection:     dynamicconfig.NewCollection(params.DynamicConfig, params.Logger),
 	}
 
-	tlRPS := sVice.dynamicCollection.GetIntProperty(dynamicconfig.ThrottledLogRPS, defaultThrottledLogRPS)
-	sVice.throttledLogger = logging.NewThrottledLogger(params.Logger, tlRPS)
 	sVice.runtimeMetricsReporter = metrics.NewRuntimeMetricsReporter(params.MetricScope, time.Minute, sVice.logger)
 	sVice.dispatcher = sVice.rpcFactory.CreateDispatcher()
 	if sVice.dispatcher == nil {

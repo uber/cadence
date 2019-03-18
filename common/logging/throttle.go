@@ -38,6 +38,8 @@ type throttledLogger struct {
 	}
 }
 
+var _ bark.Logger = (*throttledLogger)(nil)
+
 // NewThrottledLogger returns an implementation of bark logger that throttles the
 // log messages being emitted. The underlying implementation uses a token bucket
 // ratelimiter and stops emitting logs once the bucket runs out of tokens

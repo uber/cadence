@@ -91,7 +91,7 @@ func (s *serviceTestBase) GetLogger() bark.Logger {
 }
 
 func (s *serviceTestBase) GetThrottledLogger() bark.Logger {
-	return logging.NewThrottledLogger(s.logger, func(opts ...dynamicconfig.FilterOption) int { return defaultThrottledLogRPS })
+	return logging.NewThrottledLogger(s.logger, func(opts ...dynamicconfig.FilterOption) int { return 10 })
 }
 
 // GetMetricsClient returns the metric client for service
