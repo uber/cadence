@@ -1789,7 +1789,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	maxDecisionTimeout := int32(wh.config.MaxDecisionStartToCloseTimeout(startRequest.GetDomain()))
 	// TODO: remove this assignment and logging in future, so that frontend will just return bad request for large decision timeout
 	if startRequest.GetTaskStartToCloseTimeoutSeconds() > startRequest.GetExecutionStartToCloseTimeoutSeconds() {
-		logging.LogDecisionTimeoutLargerThanWorkflowTimeout(wh.Service.GetLogger(),
+		logging.LogDecisionTimeoutLargerThanWorkflowTimeout(wh.Service.GetThrottledLogger(),
 			startRequest.GetTaskStartToCloseTimeoutSeconds(),
 			startRequest.GetDomain(),
 			startRequest.GetWorkflowId(),
