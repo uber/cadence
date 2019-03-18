@@ -1092,7 +1092,6 @@ type decisionBlobSizeChecker struct {
 }
 
 func (c *decisionBlobSizeChecker) failWorkflowIfBlobSizeExceedsLimit(blob []byte, message string) (bool, error) {
-
 	err := common.CheckEventBlobSizeLimit(len(blob), c.sizeLimitWarn, c.sizeLimitError,
 		c.domainID, c.workflowID, c.runID, c.metricsClient, metrics.HistoryRespondDecisionTaskCompletedScope, c.logger)
 
@@ -1107,6 +1106,17 @@ func (c *decisionBlobSizeChecker) failWorkflowIfBlobSizeExceedsLimit(blob []byte
 
 	if evt := c.msBuilder.AddFailWorkflowEvent(c.completedID, attributes); evt == nil {
 		return false, &workflow.InternalServiceError{Message: "Unable to add fail workflow event."}
+	}
+
+	// If there is a in-flight decision, fail the decision first. So that we don't close the workflow with buffered events
+	if c.msBuilder.HasInFlightDecisionTask() {
+		di, _ := c.msBuilder.GetInFlightDecisionTask()
+
+		event := c.msBuilder.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, workflow.DecisionTaskFailedCauseResetWorkflow, nil,
+			identityHistoryService, decisionFailureForBuffered, "", "", 0)
+		if event == nil {
+			return true, &workflow.InternalServiceError{Message: "Failed to add decision failed event."}
+		}
 	}
 
 	return true, nil
@@ -2484,6 +2494,17 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(ctx context.Context, term
 		func(msBuilder mutableState, tBuilder *timerBuilder) ([]persistence.Task, error) {
 			if !msBuilder.IsWorkflowExecutionRunning() {
 				return nil, ErrWorkflowCompleted
+			}
+
+			// If there is a in-flight decision, fail the decision first. So that we don't close the workflow with buffered events
+			if msBuilder.HasInFlightDecisionTask() {
+				di, _ := msBuilder.GetInFlightDecisionTask()
+
+				event := msBuilder.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, workflow.DecisionTaskFailedCauseResetWorkflow, nil,
+					identityHistoryService, decisionFailureForBuffered, "", "", 0)
+				if event == nil {
+					return nil, &workflow.InternalServiceError{Message: "Failed to add decision failed event."}
+				}
 			}
 
 			if msBuilder.AddWorkflowExecutionTerminatedEvent(request) == nil {

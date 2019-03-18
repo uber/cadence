@@ -393,6 +393,19 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(ctx context.Context, 
 func (w *workflowResetorImpl) terminateIfCurrIsRunning(currMutableState mutableState, reason string, currExecution workflow.WorkflowExecution) (terminateCurr bool, closeTask, cleanupTask persistence.Task, retError error) {
 	if currMutableState.IsWorkflowExecutionRunning() {
 		terminateCurr = true
+
+		// If there is a in-flight decision, fail the decision first. So that we don't close the workflow with buffered events
+		if currMutableState.HasInFlightDecisionTask() {
+			di, _ := currMutableState.GetInFlightDecisionTask()
+
+			event := currMutableState.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, workflow.DecisionTaskFailedCauseResetWorkflow, nil,
+				identityHistoryService, decisionFailureForBuffered, "", "", 0)
+			if event == nil {
+				retError = &workflow.InternalServiceError{Message: "Failed to add decision failed event."}
+				return
+			}
+		}
+
 		currMutableState.AddWorkflowExecutionTerminatedEvent(&workflow.TerminateWorkflowExecutionRequest{
 			Reason:   common.StringPtr(reason),
 			Details:  nil,
