@@ -22,6 +22,7 @@ package host
 
 import (
 	"context"
+	"github.com/uber/cadence/common/blobstore"
 	"testing"
 	"time"
 
@@ -48,11 +49,19 @@ type (
 	// IntegrationBase is a base struct for integration tests
 	IntegrationBase struct {
 		persistencetests.TestBase
+		BlobstoreBase
 		mockMessagingClient messaging.Client
 		mockProducer        messaging.Producer
 		host                Cadence
 		engine              wsc.Interface
 		logger              bark.Logger
+	}
+
+	// BlobstoreBase is a base struct for blobstore being used in integration tests
+	BlobstoreBase struct {
+		client         blobstore.Client
+		storeDirectory string
+		bucketName     string
 	}
 
 	// TaskPoller is used in integration tests to poll decision or activity tasks
