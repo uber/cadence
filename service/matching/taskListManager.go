@@ -472,9 +472,8 @@ func (c *taskListManagerImpl) getTask(ctx context.Context) (*getTaskResult, erro
 		c.metricsClient.IncCounter(scope, metrics.PollSuccessCounter)
 		return result, nil
 	case <-childCtx.Done():
-		err := ErrNoTasks
 		c.metricsClient.IncCounter(scope, metrics.PollTimeoutCounter)
-		return nil, err
+		return nil, ErrNoTasks
 	}
 }
 

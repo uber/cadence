@@ -459,7 +459,7 @@ func ValidateLongPollContextTimeout(ctx context.Context, handlerName string, log
 		logger.WithFields(bark.Fields{
 			logging.TagHandlerName: handlerName,
 			logging.TagErr:         err,
-		}).Error("Context timeout not set.")
+		}).Error("Context timeout not set for long poll API.")
 		return err
 	}
 
@@ -470,14 +470,14 @@ func ValidateLongPollContextTimeout(ctx context.Context, handlerName string, log
 			logging.TagHandlerName:    handlerName,
 			logging.TagContextTimeout: timeout,
 			logging.TagErr:            err,
-		}).Errorf("Long poll context timeout is too short.")
+		}).Errorf("Context timeout is too short for long poll API.")
 		return err
 	}
 	if timeout < NormalLongPollTimeout {
 		logger.WithFields(bark.Fields{
 			logging.TagHandlerName:    handlerName,
 			logging.TagContextTimeout: timeout,
-		}).Infof("Long poll context timeout is lower than normal value.")
+		}).Infof("Context timeout is lower than normal value for long poll API.")
 	}
 	return nil
 }
