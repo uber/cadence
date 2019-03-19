@@ -1,5 +1,4 @@
 ---
-layout: doc
 title: How Cadence works
 weight: 2
 ---

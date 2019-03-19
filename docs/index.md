@@ -1,7 +1,7 @@
----
-# Feel free to add content and custom Front Matter to this file.
-# To modify the layout, see https://jekyllrb.com/docs/themes/#overriding-theme-defaults
+# Documentation
 
-layout: doc
-title: Documentation
----
+This documentation library contains information about how to use Cadence.
+
+Cadence is a distributed, scalable, durable, and highly available orchestration
+engine we developed at Uber Engineering to execute asynchronous long-running business
+logic in a scalable and resilient way.

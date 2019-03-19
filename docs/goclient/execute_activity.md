@@ -1,9 +1,3 @@
----
-layout: doc
-title: Execute an activity
-weight: 21
----
-
 # Execute an activity
 
 The primary responsibility of a workflow implementation is to schedule activities for execution. The

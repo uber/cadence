@@ -1,9 +1,3 @@
----
-layout: doc
-title: Versioning workflows
-weight: 26
----
-
 # Workflow versioning
 
 The definition code of a Cadence workflow must be deterministic because Cadence uses event sourcing

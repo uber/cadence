@@ -1,5 +1,4 @@
 ---
-layout: doc
 title: Cross-DC Replication
 weight: 3
 ---

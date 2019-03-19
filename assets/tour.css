@@ -1,0 +1,21 @@
+.split, .gutter.gutter-horizontal {
+    float: left;
+}
+.gutter.gutter-horizontal {
+    cursor: ew-resize;
+}
+
+#flex {
+    display: flex;
+    flex-direction: row;
+}
+
+#left-side {
+    border: 1px solid darkgray;
+    padding: 4px;
+}
+
+#right-side {
+    border: 1px solid darkgray;
+    padding: 4px;
+}

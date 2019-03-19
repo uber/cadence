@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+
+<html lang="en-us">
+{% include head.html %}
+
+<body>
+  {% include top_bar.html %}
+
+  <div id="flex">
+    <div id="left-side" class="split">
+      {{ content }}
+    </div>
+    <div id="right-side" class="split">
+      {% for code_content in site.code_content %}
+        {% if page.codecontent == code_content.name %}
+          {{ code_content.content | markdownify }}
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  {% include scripts.html %}
+  <script>
+    Split(['#left-side', '#right-side'], {
+      sizes: [50, 50],
+      gutterSize: 2,
+    });
+  </script>
+</body>
+</html>

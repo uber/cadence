@@ -1,9 +1,3 @@
----
-layout: doc
-title: Child workflows
-weight: 22
----
-
 # Child workflows
 
 `workflow.ExecuteChildWorkflow` enables the scheduling of other workflows from within a workflow's
