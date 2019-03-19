@@ -163,5 +163,5 @@ There are a lot of use cases:
 ```
 Something need to know:
 1. When reset, a new run will be kicked off with the same workflowID. But if there is a running execution for the workflow(workflowID), the current run will be terminated.
-2. decision_finish_event_id is the ID of events including: DecisionTaskComplete/DecisionTaskFailed/DecisionTaskTimeout.
+2. decision_finish_event_id is the ID of events of the type: DecisionTaskComplete/DecisionTaskFailed/DecisionTaskTimeout.
 3. To restart workflow from the beginning, just reset to the first decision task finish event.
