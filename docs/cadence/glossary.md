@@ -1,5 +1,4 @@
 ---
-layout: doc
 title: Glossary
 weight: 100
 ---
