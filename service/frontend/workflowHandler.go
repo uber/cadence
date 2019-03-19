@@ -120,6 +120,7 @@ var (
 	errWorkflowTypeNotSet                         = &gen.BadRequestError{Message: "WorkflowType is not set on request."}
 	errInvalidExecutionStartToCloseTimeoutSeconds = &gen.BadRequestError{Message: "A valid ExecutionStartToCloseTimeoutSeconds is not set on request."}
 	errInvalidTaskStartToCloseTimeoutSeconds      = &gen.BadRequestError{Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}
+	errContextTimeoutTooShort                     = &gen.BadRequestError{Message: "Context timeout is too short."}
 
 	// err for archival
 	errDomainHasNeverBeenEnabledForArchival = &gen.BadRequestError{Message: "Attempted to fetch history from archival, but domain has never been enabled for archival."}
@@ -142,6 +143,11 @@ var (
 	errCannotDoDomainFailoverAndUpdate = &gen.BadRequestError{Message: "Cannot set active cluster to current cluster when other parameters are set."}
 
 	frontendServiceRetryPolicy = common.CreateFrontendServiceRetryPolicy()
+)
+
+const (
+	minLongPollTimeout    = time.Second * 2
+	normalLongPollTimeout = time.Second * 20
 )
 
 // NewWorkflowHandler creates a thrift handler for the cadence service
@@ -766,6 +772,10 @@ func (wh *WorkflowHandler) PollForActivityTask(
 	}
 
 	wh.Service.GetLogger().Debug("Received PollForActivityTask")
+	if err := wh.validateLongPollContextTimeout(ctx, scope); err != nil {
+		return nil, err
+	}
+
 	if pollRequest.Domain == nil || pollRequest.GetDomain() == "" {
 		return nil, wh.error(errDomainNotSet, scope)
 	}
@@ -839,6 +849,10 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	}
 
 	wh.Service.GetLogger().Debug("Received PollForDecisionTask")
+	if err := wh.validateLongPollContextTimeout(ctx, scope); err != nil {
+		return nil, err
+	}
+
 	if pollRequest.Domain == nil || pollRequest.GetDomain() == "" {
 		return nil, wh.error(errDomainNotSet, scope)
 	}
@@ -2890,6 +2904,33 @@ func (wh *WorkflowHandler) error(err error, scope int) error {
 	logging.LogUncategorizedError(wh.Service.GetLogger(), err)
 	wh.metricsClient.IncCounter(scope, metrics.CadenceFailures)
 	return fmt.Errorf("Cadence internal uncategorized error, msg: %v", err.Error())
+}
+
+func (wh *WorkflowHandler) validateLongPollContextTimeout(ctx context.Context, scope int) error {
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		return nil
+	}
+	handlerName := "PollForDecisionTask"
+	if scope == metrics.FrontendPollForActivityTaskScope {
+		handlerName = "PollForActivityTask"
+	}
+
+	timeout := deadline.Sub(time.Now())
+	if timeout < minLongPollTimeout {
+		// If the timeout is too short, return error directly, no need to call matching.
+		err := errContextTimeoutTooShort
+		wh.Service.GetLogger().WithFields(bark.Fields{
+			logging.TagContextTimeout: timeout,
+		}).Errorf("Context timeout for %s is too short.", handlerName)
+		return wh.error(err, scope)
+	}
+	if timeout < normalLongPollTimeout {
+		wh.Service.GetLogger().WithFields(bark.Fields{
+			logging.TagContextTimeout: timeout,
+		}).Infof("Context timeout for %s is lower than normal value.", handlerName)
+	}
+	return nil
 }
 
 func (wh *WorkflowHandler) validateTaskListType(t *gen.TaskListType, scope int) error {

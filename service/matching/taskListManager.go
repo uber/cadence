@@ -43,6 +43,10 @@ import (
 
 const (
 	done time.Duration = -1
+
+	// Time budget for empty task to propagate through the function stack and be returned to
+	// pollForActivityTask or pollForDecisionTask handler.
+	returnEmptyTaskTimeBudget time.Duration = time.Second
 )
 
 // NOTE: Is this good enough for stress tests?
@@ -410,12 +414,23 @@ func (c *taskListManagerImpl) getTask(ctx context.Context) (*getTaskResult, erro
 	defer timer.Stop()
 
 	pollerID, ok := ctx.Value(pollerIDKey).(string)
+
 	childCtx := ctx
+	// We need to set a shorter timeout than the original ctx; otherwise, by the time ctx deadline is
+	// reached, instead of emptyTask, context timeout error is returned to the frontend by the rpc stack,
+	// which counts against our SLO. By shortening the timeout by a very small amount, the emptyTask can be
+	// returned to the handler before a context timeout error is generated.
+	if deadline, ok := childCtx.Deadline(); ok {
+		var cancel context.CancelFunc
+		childCtx, cancel = context.WithTimeout(ctx, deadline.Sub(time.Now())-returnEmptyTaskTimeBudget)
+		defer cancel()
+	}
+
 	if ok && pollerID != "" {
 		// Found pollerID on context, add it to the map to allow it to be canceled in
 		// response to CancelPoller call
 		var cancel context.CancelFunc
-		childCtx, cancel = context.WithCancel(ctx)
+		childCtx, cancel = context.WithCancel(childCtx)
 		c.outstandingPollsLock.Lock()
 		c.outstandingPollsMap[pollerID] = cancel
 		c.outstandingPollsLock.Unlock()
