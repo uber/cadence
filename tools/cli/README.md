@@ -155,12 +155,13 @@ Canceling a running workflow execution will record a WorkflowExecutionCancelRequ
 The Reset command allows resetting a workflow to a particular point and continue running from there.
 There are a lot of use cases:
 1. Rerun a failed workflow from the beginning with the same start parameters.
-2. Rerun a failed workflow from the failing point without losing the progress.
-3. after deploy new code, reset an open workflow to let workflow run to different flows.
+2. Rerun a failed workflow from the failing point without losing the achieved progress(history).
+3. After deploy new code, reset an open workflow to let workflow run to different flows.
 
 ```
 ./cadence workflow reset -w <wid> -r <rid> --event_id <decision_finish_event_id> --reason "some_reason"
 ```
 Something need to know:
 1. When reset, a new run will be kicked off with the same workflowID. But if there is a running execution for the workflow(workflowID), the current run will be terminated.
-2. decision_finish_event_id is the ID of events including: DecisionTaskComplete/DecisionTaskFailed/DecisionTaskTimeout
+2. decision_finish_event_id is the ID of events including: DecisionTaskComplete/DecisionTaskFailed/DecisionTaskTimeout.
+3. To restart workflow from the beginning, just reset to the first decision task finish event.
