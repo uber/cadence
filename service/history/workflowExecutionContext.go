@@ -531,15 +531,9 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 					return err1
 				}
 
-				// If there is a in-flight decision, fail the decision first. So that we don't close the workflow with buffered events
-				if c.msBuilder.HasInFlightDecisionTask() {
-					di, _ := c.msBuilder.GetInFlightDecisionTask()
-
-					event := c.msBuilder.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, workflow.DecisionTaskFailedCauseResetWorkflow, nil,
-						identityHistoryService, decisionFailureForBuffered, "", "", 0)
-					if event == nil {
-						return &workflow.InternalServiceError{Message: "Failed to add decision failed event."}
-					}
+				err = failInFlightDecisionToCollectSignals(c.msBuilder)
+				if err != nil {
+					return err
 				}
 
 				c.msBuilder.AddWorkflowExecutionTerminatedEvent(&workflow.TerminateWorkflowExecutionRequest{

@@ -1099,6 +1099,11 @@ func (c *decisionBlobSizeChecker) failWorkflowIfBlobSizeExceedsLimit(blob []byte
 		return false, nil
 	}
 
+	err = failInFlightDecisionToCollectSignals(c.msBuilder)
+	if err != nil {
+		return false, err
+	}
+
 	attributes := &workflow.FailWorkflowExecutionDecisionAttributes{
 		Reason:  common.StringPtr(common.FailureReasonDecisionBlobSizeExceedsLimit),
 		Details: []byte(message),
@@ -1108,18 +1113,21 @@ func (c *decisionBlobSizeChecker) failWorkflowIfBlobSizeExceedsLimit(blob []byte
 		return false, &workflow.InternalServiceError{Message: "Unable to add fail workflow event."}
 	}
 
-	// If there is a in-flight decision, fail the decision first. So that we don't close the workflow with buffered events
-	if c.msBuilder.HasInFlightDecisionTask() {
-		di, _ := c.msBuilder.GetInFlightDecisionTask()
+	return true, nil
+}
 
-		event := c.msBuilder.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, workflow.DecisionTaskFailedCauseResetWorkflow, nil,
+// Before closing workflow, if there is a in-flight decision, fail the decision first. So that we don't close the workflow with buffered events
+func failInFlightDecisionToCollectSignals(msBuilder mutableState) error {
+	if msBuilder.HasInFlightDecisionTask() {
+		di, _ := msBuilder.GetInFlightDecisionTask()
+
+		event := msBuilder.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, workflow.DecisionTaskFailedCauseResetWorkflow, nil,
 			identityHistoryService, decisionFailureForBuffered, "", "", 0)
 		if event == nil {
-			return true, &workflow.InternalServiceError{Message: "Failed to add decision failed event."}
+			return &workflow.InternalServiceError{Message: "Failed to add decision failed event."}
 		}
 	}
-
-	return true, nil
+	return nil
 }
 
 // RespondDecisionTaskCompleted completes a decision task
@@ -2496,15 +2504,9 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(ctx context.Context, term
 				return nil, ErrWorkflowCompleted
 			}
 
-			// If there is a in-flight decision, fail the decision first. So that we don't close the workflow with buffered events
-			if msBuilder.HasInFlightDecisionTask() {
-				di, _ := msBuilder.GetInFlightDecisionTask()
-
-				event := msBuilder.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, workflow.DecisionTaskFailedCauseResetWorkflow, nil,
-					identityHistoryService, decisionFailureForBuffered, "", "", 0)
-				if event == nil {
-					return nil, &workflow.InternalServiceError{Message: "Failed to add decision failed event."}
-				}
+			err := failInFlightDecisionToCollectSignals(msBuilder)
+			if err != nil {
+				return nil, err
 			}
 
 			if msBuilder.AddWorkflowExecutionTerminatedEvent(request) == nil {

@@ -394,16 +394,9 @@ func (w *workflowResetorImpl) terminateIfCurrIsRunning(currMutableState mutableS
 	if currMutableState.IsWorkflowExecutionRunning() {
 		terminateCurr = true
 
-		// If there is a in-flight decision, fail the decision first. So that we don't close the workflow with buffered events
-		if currMutableState.HasInFlightDecisionTask() {
-			di, _ := currMutableState.GetInFlightDecisionTask()
-
-			event := currMutableState.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, workflow.DecisionTaskFailedCauseResetWorkflow, nil,
-				identityHistoryService, decisionFailureForBuffered, "", "", 0)
-			if event == nil {
-				retError = &workflow.InternalServiceError{Message: "Failed to add decision failed event."}
-				return
-			}
+		retError = failInFlightDecisionToCollectSignals(currMutableState)
+		if retError != nil {
+			return
 		}
 
 		currMutableState.AddWorkflowExecutionTerminatedEvent(&workflow.TerminateWorkflowExecutionRequest{
