@@ -40,9 +40,7 @@ type ClientImpl struct {
 // reporter holds the common tags for the service
 // serviceIdx indicates the service type in (InputhostIndex, ... StorageIndex)
 func NewClient(scope tally.Scope, serviceIdx ServiceIdx) Client {
-	commonScopes := ScopeDefs[Common]
-	serviceScopes := ScopeDefs[serviceIdx]
-	totalScopes := len(commonScopes) + len(serviceScopes)
+	totalScopes := len(ScopeDefs[Common]) + len(ScopeDefs[serviceIdx])
 	metricsClient := &ClientImpl{
 		parentScope: scope,
 		childScopes: make(map[int]tally.Scope, totalScopes),
