@@ -44,6 +44,7 @@ import (
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore/filestore"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
@@ -3842,7 +3843,7 @@ func (s *integrationSuite) TestArchival_NotEnabled() {
 		Config: &persistence.DomainConfig{
 			Retention:      0,
 			EmitMetric:     false,
-			ArchivalStatus: shared.ArchivalStatusDisabled,
+			ArchivalStatus: workflow.ArchivalStatusDisabled,
 			ArchivalBucket: archivalBucket,
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
@@ -3856,7 +3857,7 @@ func (s *integrationSuite) TestArchival_NotEnabled() {
 	s.NoError(err)
 	s.NotNil(getDomainResp)
 	s.Equal(int32(0), getDomainResp.Config.Retention)
-	s.Equal(shared.ArchivalStatusDisabled, getDomainResp.Config.ArchivalStatus)
+	s.Equal(workflow.ArchivalStatusDisabled, getDomainResp.Config.ArchivalStatus)
 	s.Equal(archivalBucket, getDomainResp.Config.ArchivalBucket)
 
 	workflowID := "archival-workflow-id"
@@ -3898,7 +3899,7 @@ func (s *integrationSuite) TestArchival_Enabled() {
 		Config: &persistence.DomainConfig{
 			Retention:      0,
 			EmitMetric:     false,
-			ArchivalStatus: shared.ArchivalStatusEnabled,
+			ArchivalStatus: workflow.ArchivalStatusEnabled,
 			ArchivalBucket: archivalBucket,
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
@@ -3912,7 +3913,7 @@ func (s *integrationSuite) TestArchival_Enabled() {
 	s.NoError(err)
 	s.NotNil(getDomainResp)
 	s.Equal(int32(0), getDomainResp.Config.Retention)
-	s.Equal(shared.ArchivalStatusEnabled, getDomainResp.Config.ArchivalStatus)
+	s.Equal(workflow.ArchivalStatusEnabled, getDomainResp.Config.ArchivalStatus)
 	s.Equal(archivalBucket, getDomainResp.Config.ArchivalBucket)
 
 	workflowID := "archival-workflow-id"
@@ -3928,8 +3929,7 @@ func (s *integrationSuite) TestArchival_Enabled() {
 			RunId:      common.StringPtr(runID),
 		},
 	}
-	time.Sleep(10 * time.Second)
-	var getHistoryResp *shared.GetWorkflowExecutionHistoryResponse
+	var getHistoryResp *workflow.GetWorkflowExecutionHistoryResponse
 	for i := 0; i < 10; i++ {
 		getHistoryResp, err = s.engine.GetWorkflowExecutionHistory(createContext(), getHistoryReq)
 		if getHistoryResp != nil && getHistoryResp.GetArchived() {
