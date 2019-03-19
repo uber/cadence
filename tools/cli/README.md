@@ -151,7 +151,7 @@ Use option `--workflowidreusepolicy` or `--wrp` to configure the workflow id re-
 Terminating a running workflow execution will record a WorkflowExecutionTerminated event as the closing event in the history. No more decision tasks will be scheduled for a terminated workflow execution.  
 Canceling a running workflow execution will record a WorkflowExecutionCancelRequested event in the history, and a new decision task will be scheduled. The workflow has a chance to do some clean up work after cancellation.
 
-- Restart, reset workflow
+- Restart, reset workflow    
 The Reset command allows resetting a workflow to a particular point and continue running from there.
 There are a lot of use cases:
 1. Rerun a failed workflow from the beginning with the same start parameters.
