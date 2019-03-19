@@ -150,3 +150,17 @@ Use option `--workflowidreusepolicy` or `--wrp` to configure the workflow id re-
 ```
 Terminating a running workflow execution will record a WorkflowExecutionTerminated event as the closing event in the history. No more decision tasks will be scheduled for a terminated workflow execution.  
 Canceling a running workflow execution will record a WorkflowExecutionCancelRequested event in the history, and a new decision task will be scheduled. The workflow has a chance to do some clean up work after cancellation.
+
+- Restart, reset workflow
+The Reset command allows resetting a workflow to a particular point and continue running from there.
+There are a lot of use cases:
+1. Rerun a failed workflow from the beginning with the same start parameters.
+2. Rerun a failed workflow from the failing point without losing the progress.
+3. after deploy new code, reset an open workflow to let workflow run to different flows.
+
+```
+./cadence workflow reset -w <wid> -r <rid> --event_id <decision_finish_event_id> --reason "some_reason"
+```
+Something need to know:
+1. When reset, a new run will be kicked off with the same workflowID. But if there is a running execution for the workflow(workflowID), the current run will be terminated.
+2. decision_finish_event_id is the ID of events including: DecisionTaskComplete/DecisionTaskFailed/DecisionTaskTimeout
