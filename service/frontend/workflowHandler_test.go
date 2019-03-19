@@ -260,16 +260,25 @@ func (s *workflowHandlerSuite) TestPollForTask_Failed_ContextTimeoutTooShort() {
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 
-	shortCtx, cancel := context.WithTimeout(context.Background(), minLongPollTimeout-time.Millisecond)
+	bgCtx := context.Background()
+	_, err := wh.PollForDecisionTask(bgCtx, &shared.PollForDecisionTaskRequest{})
+	assert.Error(s.T(), err)
+	assert.Equal(s.T(), common.ErrContextTimeoutNotSet, err)
+
+	_, err = wh.PollForActivityTask(bgCtx, &shared.PollForActivityTaskRequest{})
+	assert.Error(s.T(), err)
+	assert.Equal(s.T(), common.ErrContextTimeoutNotSet, err)
+
+	shortCtx, cancel := context.WithTimeout(bgCtx, common.MinLongPollTimeout-time.Millisecond)
 	defer cancel()
 
-	_, err := wh.PollForDecisionTask(shortCtx, &shared.PollForDecisionTaskRequest{})
+	_, err = wh.PollForDecisionTask(shortCtx, &shared.PollForDecisionTaskRequest{})
 	assert.Error(s.T(), err)
-	assert.Equal(s.T(), errContextTimeoutTooShort, err)
+	assert.Equal(s.T(), common.ErrContextTimeoutTooShort, err)
 
 	_, err = wh.PollForActivityTask(shortCtx, &shared.PollForActivityTaskRequest{})
 	assert.Error(s.T(), err)
-	assert.Equal(s.T(), errContextTimeoutTooShort, err)
+	assert.Equal(s.T(), common.ErrContextTimeoutTooShort, err)
 }
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_RequestIdNotSet() {

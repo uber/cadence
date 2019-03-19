@@ -89,3 +89,10 @@ const (
 	// SystemDomainName is domain name for all cadence system workflows
 	SystemDomainName = "cadence-system"
 )
+
+const (
+	// MinLongPollTimeout is the minimum context timeout for long poll API
+	MinLongPollTimeout = time.Second * 2
+	// NormalLongPollTimeout is the recommended context timeout for long poll API
+	NormalLongPollTimeout = time.Second * 20
+)
