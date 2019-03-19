@@ -1126,6 +1126,8 @@ func failInFlightDecisionToClearBufferedEvents(msBuilder mutableState) error {
 		if event == nil {
 			return &workflow.InternalServiceError{Message: "Failed to add decision failed event."}
 		}
+
+		return msBuilder.FlushBufferedEvents()
 	}
 	return nil
 }
