@@ -22,7 +22,6 @@ package host
 
 import (
 	"context"
-	"github.com/uber/cadence/common/blobstore"
 	"testing"
 	"time"
 
@@ -31,6 +30,7 @@ import (
 	wsc "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/messaging"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/service/history"

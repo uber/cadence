@@ -139,6 +139,7 @@ func (s *integrationSuite) TearDownSuite() {
 	s.host.Stop()
 	s.host = nil
 	s.TearDownWorkflowStore()
+	os.RemoveAll(s.BlobstoreBase.storeDirectory)
 }
 
 func (s *integrationSuite) SetupTest() {
