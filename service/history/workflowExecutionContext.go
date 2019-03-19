@@ -531,7 +531,7 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 					return err1
 				}
 
-				err = failInFlightDecisionToCollectSignals(c.msBuilder)
+				err = failInFlightDecisionToClearBufferedEvents(c.msBuilder)
 				if err != nil {
 					return err
 				}

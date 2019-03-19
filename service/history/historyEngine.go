@@ -1099,7 +1099,7 @@ func (c *decisionBlobSizeChecker) failWorkflowIfBlobSizeExceedsLimit(blob []byte
 		return false, nil
 	}
 
-	err = failInFlightDecisionToCollectSignals(c.msBuilder)
+	err = failInFlightDecisionToClearBufferedEvents(c.msBuilder)
 	if err != nil {
 		return false, err
 	}
@@ -1117,7 +1117,7 @@ func (c *decisionBlobSizeChecker) failWorkflowIfBlobSizeExceedsLimit(blob []byte
 }
 
 // Before closing workflow, if there is a in-flight decision, fail the decision first. So that we don't close the workflow with buffered events
-func failInFlightDecisionToCollectSignals(msBuilder mutableState) error {
+func failInFlightDecisionToClearBufferedEvents(msBuilder mutableState) error {
 	if msBuilder.HasInFlightDecisionTask() {
 		di, _ := msBuilder.GetInFlightDecisionTask()
 
@@ -2504,7 +2504,7 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(ctx context.Context, term
 				return nil, ErrWorkflowCompleted
 			}
 
-			err := failInFlightDecisionToCollectSignals(msBuilder)
+			err := failInFlightDecisionToClearBufferedEvents(msBuilder)
 			if err != nil {
 				return nil, err
 			}

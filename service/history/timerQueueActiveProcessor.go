@@ -715,7 +715,7 @@ Update_History_Loop:
 			}
 		}
 
-		err = failInFlightDecisionToCollectSignals(msBuilder)
+		err = failInFlightDecisionToClearBufferedEvents(msBuilder)
 		if err != nil {
 			return err
 		}

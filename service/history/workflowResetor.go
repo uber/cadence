@@ -394,7 +394,7 @@ func (w *workflowResetorImpl) terminateIfCurrIsRunning(currMutableState mutableS
 	if currMutableState.IsWorkflowExecutionRunning() {
 		terminateCurr = true
 
-		retError = failInFlightDecisionToCollectSignals(currMutableState)
+		retError = failInFlightDecisionToClearBufferedEvents(currMutableState)
 		if retError != nil {
 			return
 		}
