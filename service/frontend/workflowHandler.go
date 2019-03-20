@@ -2015,7 +2015,11 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
-	return createGetWorkflowExecutionHistoryResponse(history, nextToken), nil
+	return &gen.GetWorkflowExecutionHistoryResponse{
+		History:       history,
+		NextPageToken: nextToken,
+		Archived:      common.BoolPtr(false),
+	}, nil
 }
 
 // SignalWorkflowExecution is used to send a signal event to running workflow execution.  This results in
@@ -3078,14 +3082,6 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(ctx context.Context
 	return resp, nil
 }
 
-func createGetWorkflowExecutionHistoryResponse(
-	history *gen.History, nextPageToken []byte) *gen.GetWorkflowExecutionHistoryResponse {
-	resp := &gen.GetWorkflowExecutionHistoryResponse{}
-	resp.History = history
-	resp.NextPageToken = nextPageToken
-	return resp
-}
-
 func deserializeHistoryToken(bytes []byte) (*getHistoryContinuationToken, error) {
 	token := &getHistoryContinuationToken{}
 	err := json.Unmarshal(bytes, token)
@@ -3210,5 +3206,9 @@ func (wh *WorkflowHandler) getArchivedHistory(
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
-	return createGetWorkflowExecutionHistoryResponse(historyBlob.Body, nextToken), nil
+	return &gen.GetWorkflowExecutionHistoryResponse{
+		History:       historyBlob.Body,
+		NextPageToken: nextToken,
+		Archived:      common.BoolPtr(true),
+	}, nil
 }
