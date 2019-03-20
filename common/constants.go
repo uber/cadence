@@ -91,8 +91,10 @@ const (
 )
 
 const (
-	// MinLongPollTimeout is the minimum context timeout for long poll API
+	// MinLongPollTimeout is the minimum context timeout for long poll API, below which
+	// the request won't be processed
 	MinLongPollTimeout = time.Second * 2
-	// NormalLongPollTimeout is the recommended context timeout for long poll API
-	NormalLongPollTimeout = time.Second * 20
+	// CriticalLongPollTimeout is a threshold for the context timeout passed into long poll API,
+	// below which a warning will be logged
+	CriticalLongPollTimeout = time.Second * 20
 )

@@ -202,13 +202,15 @@ func (s *matchingEngineSuite) TestPollForDecisionTasksEmptyResult() {
 }
 
 func (s *matchingEngineSuite) TestPollForActivityTasksEmptyResultWithShortContext() {
-	callContext, cancel := context.WithTimeout(s.callContext, returnEmptyTaskTimeBudget+10*time.Millisecond)
+	shortContextTimeout := returnEmptyTaskTimeBudget + 10*time.Millisecond
+	callContext, cancel := context.WithTimeout(s.callContext, shortContextTimeout)
 	defer cancel()
 	s.PollForTasksEmptyResultTest(callContext, persistence.TaskListTypeActivity)
 }
 
 func (s *matchingEngineSuite) TestPollForDecisionTasksEmptyResultWithShortContext() {
-	callContext, cancel := context.WithTimeout(s.callContext, returnEmptyTaskTimeBudget+10*time.Millisecond)
+	shortContextTimeout := returnEmptyTaskTimeBudget + 10*time.Millisecond
+	callContext, cancel := context.WithTimeout(s.callContext, shortContextTimeout)
 	defer cancel()
 	s.PollForTasksEmptyResultTest(callContext, persistence.TaskListTypeDecision)
 }
