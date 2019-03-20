@@ -363,7 +363,7 @@ func (s *ESVisibilitySuite) TestGetListWorkflowExecutionsResponse() {
 
 	// test for empty hits
 	searchHits := &elastic.SearchHits{}
-	resp, err := s.visibilityMgr.getListWorkflowExecutionsResponse(searchHits, token, isOpen)
+	resp, err := s.visibilityMgr.getListWorkflowExecutionsResponse(searchHits, token, isOpen, 1)
 	s.NoError(err)
 	s.Equal(0, len(resp.NextPageToken))
 	s.Equal(0, len(resp.Executions))
@@ -383,10 +383,16 @@ func (s *ESVisibilitySuite) TestGetListWorkflowExecutionsResponse() {
 		Source: source,
 	}
 	searchHits.Hits = []*elastic.SearchHit{searchHit}
-	resp, err = s.visibilityMgr.getListWorkflowExecutionsResponse(searchHits, token, isOpen)
+	resp, err = s.visibilityMgr.getListWorkflowExecutionsResponse(searchHits, token, isOpen, 1)
 	s.NoError(err)
 	serializedToken, _ := s.visibilityMgr.serializePageToken(&esVisibilityPageToken{From: 1})
 	s.Equal(serializedToken, resp.NextPageToken)
+	s.Equal(1, len(resp.Executions))
+
+	// test for last page hits
+	resp, err = s.visibilityMgr.getListWorkflowExecutionsResponse(searchHits, token, isOpen, 2)
+	s.NoError(err)
+	s.Equal(0, len(resp.NextPageToken))
 	s.Equal(1, len(resp.Executions))
 }
 
