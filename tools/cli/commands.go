@@ -56,7 +56,7 @@ const (
 	defaultTimeFormat                = "15:04:05"   // used for converting UnixNano to string like 16:16:36 (only time)
 	defaultDateTimeFormat            = time.RFC3339 // used for converting UnixNano to string like 2018-02-15T16:16:36-08:00
 	defaultDomainRetentionDays       = 3
-	defaultContextTimeoutInSeconds   = 10
+	defaultContextTimeoutInSeconds   = 5
 	defaultContextTimeout            = defaultContextTimeoutInSeconds * time.Second
 	defaultContextTimeoutForLongPoll = 2 * time.Minute
 
@@ -936,7 +936,7 @@ func listOpenWorkflow(client client.Client, pageSize int, earliestTime, latestTi
 		request.TypeFilter = &s.WorkflowTypeFilter{Name: common.StringPtr(workflowType)}
 	}
 
-	ctx, cancel := newContext(c)
+	ctx, cancel := newContextForLongPoll(c)
 	defer cancel()
 	response, err := client.ListOpenWorkflow(ctx, request)
 	if err != nil {
@@ -1152,7 +1152,7 @@ func newContext(c *cli.Context) (context.Context, context.CancelFunc) {
 
 func newContextForLongPoll(c *cli.Context) (context.Context, context.CancelFunc) {
 	contextTimeout := defaultContextTimeoutForLongPoll
-	if c.GlobalInt(FlagContextTimeout) > 0 {
+	if c.GlobalIsSet(FlagContextTimeout) {
 		contextTimeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
 	}
 	return context.WithTimeout(context.Background(), contextTimeout)
