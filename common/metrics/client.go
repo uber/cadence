@@ -26,6 +26,29 @@ import (
 	"github.com/uber-go/tally"
 )
 
+// N.B - this is a temporary Stopwatch struct to allow us to migrate to the
+// new style metric names
+
+// Stopwatch is a helper for simpler tracking of elapsed time, use the
+// Stop() method to report time elapsed since its created back to the
+// timer or histogram.
+type Stopwatch struct {
+	recorder1 tally.Stopwatch
+	recorder2 tally.Stopwatch
+}
+
+// NewStopwatch creates a new immutable stopwatch for recording the start
+// time to a stopwatch reporter.
+func NewStopwatch(r1, r2 tally.Stopwatch) Stopwatch {
+	return Stopwatch{recorder1: r1, recorder2: r2}
+}
+
+// Stop reports time elapsed since the stopwatch start to the recorder.
+func (sw Stopwatch) Stop() {
+	sw.recorder1.Stop()
+	sw.recorder2.Stop()
+}
+
 // ClientImpl is used for reporting metrics by various Cadence services
 type ClientImpl struct {
 	//parentReporter is the parent scope for the metrics
@@ -71,34 +94,45 @@ func NewClient(scope tally.Scope, serviceIdx ServiceIdx) Client {
 // to metrics backend
 func (m *ClientImpl) IncCounter(scopeIdx int, counterIdx int) {
 	name := string(m.metricDefs[counterIdx].metricName)
+	oldName := string(m.metricDefs[counterIdx].oldMetricName)
 	m.childScopes[scopeIdx].Counter(name).Inc(1)
+	m.childScopes[scopeIdx].Counter(oldName).Inc(1)
 }
 
 // AddCounter adds delta to the counter and
 // emits to the metrics backend
 func (m *ClientImpl) AddCounter(scopeIdx int, counterIdx int, delta int64) {
 	name := string(m.metricDefs[counterIdx].metricName)
+	oldName := string(m.metricDefs[counterIdx].oldMetricName)
 	m.childScopes[scopeIdx].Counter(name).Inc(delta)
+	m.childScopes[scopeIdx].Counter(oldName).Inc(delta)
 }
 
 // StartTimer starts a timer for the given
 // metric name
-func (m *ClientImpl) StartTimer(scopeIdx int, timerIdx int) tally.Stopwatch {
+func (m *ClientImpl) StartTimer(scopeIdx int, timerIdx int) Stopwatch {
 	name := string(m.metricDefs[timerIdx].metricName)
-	return m.childScopes[scopeIdx].Timer(name).Start()
+	oldName := string(m.metricDefs[timerIdx].oldMetricName)
+	stopwatch1 := m.childScopes[scopeIdx].Timer(name).Start()
+	stopwatch2 := m.childScopes[scopeIdx].Timer(oldName).Start()
+	return NewStopwatch(stopwatch1, stopwatch2)
 }
 
 // RecordTimer record and emit a timer for the given
 // metric name
 func (m *ClientImpl) RecordTimer(scopeIdx int, timerIdx int, d time.Duration) {
 	name := string(m.metricDefs[timerIdx].metricName)
+	oldName := string(m.metricDefs[timerIdx].oldMetricName)
 	m.childScopes[scopeIdx].Timer(name).Record(d)
+	m.childScopes[scopeIdx].Timer(oldName).Record(d)
 }
 
 // UpdateGauge reports Gauge type metric
 func (m *ClientImpl) UpdateGauge(scopeIdx int, gaugeIdx int, value float64) {
 	name := string(m.metricDefs[gaugeIdx].metricName)
+	oldName := string(m.metricDefs[gaugeIdx].oldMetricName)
 	m.childScopes[scopeIdx].Gauge(name).Update(value)
+	m.childScopes[scopeIdx].Gauge(oldName).Update(value)
 }
 
 // Tagged returns a client that adds the given tags to all metrics

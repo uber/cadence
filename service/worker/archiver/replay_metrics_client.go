@@ -21,10 +21,11 @@
 package archiver
 
 import (
+	"time"
+
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/common/metrics"
 	"go.uber.org/cadence/workflow"
-	"time"
 )
 
 type replayMetricsClient struct {
@@ -57,7 +58,7 @@ func (r *replayMetricsClient) AddCounter(scope int, counter int, delta int64) {
 }
 
 // StartTimer starts a timer for the given metric name. Time will be recorded when stopwatch is stopped.
-func (r *replayMetricsClient) StartTimer(scope int, timer int) tally.Stopwatch {
+func (r *replayMetricsClient) StartTimer(scope int, timer int) metrics.Stopwatch {
 	if workflow.IsReplaying(r.ctx) {
 		return r.nopStopwatch()
 	}
@@ -93,6 +94,8 @@ type nopStopwatchRecorder struct{}
 // RecordStopwatch is a nop impl for replay mode
 func (n *nopStopwatchRecorder) RecordStopwatch(stopwatchStart time.Time) {}
 
-func (r *replayMetricsClient) nopStopwatch() tally.Stopwatch {
-	return tally.NewStopwatch(workflow.Now(r.ctx), &nopStopwatchRecorder{})
+func (r *replayMetricsClient) nopStopwatch() metrics.Stopwatch {
+	stopwatch1 := tally.NewStopwatch(workflow.Now(r.ctx), &nopStopwatchRecorder{})
+	stopwatch2 := tally.NewStopwatch(workflow.Now(r.ctx), &nopStopwatchRecorder{})
+	return metrics.NewStopwatch(stopwatch1, stopwatch2)
 }
