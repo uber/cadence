@@ -324,6 +324,10 @@ func (v *esVisibilityManager) getListWorkflowExecutionsResponse(searchHits *elas
 	actualHits := searchHits.Hits
 	numOfActualHits := len(actualHits)
 
+	if numOfActualHits == 0 {
+		return response, nil
+	}
+
 	nextPageToken, err := v.serializePageToken(&esVisibilityPageToken{From: token.From + numOfActualHits})
 	if err != nil {
 		return nil, err
