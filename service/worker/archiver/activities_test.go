@@ -69,7 +69,9 @@ func TestActivitiesSuite(t *testing.T) {
 func (s *activitiesSuite) SetupTest() {
 	s.logger = bark.NewNopLogger()
 	s.metricsClient = &mmocks.Client{}
-	s.metricsClient.On("StartTimer", mock.Anything, metrics.CadenceLatency).Return(tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{})).Once()
+	r1 := tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{})
+	r2 := tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{})
+	s.metricsClient.On("StartTimer", mock.Anything, metrics.CadenceLatency).Return(metrics.NewStopwatch(r1, r2)).Once()
 }
 
 func (s *activitiesSuite) TearDownTest() {

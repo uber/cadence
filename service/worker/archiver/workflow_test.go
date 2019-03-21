@@ -68,8 +68,8 @@ func (s *workflowSuite) SetupTest() {
 
 func (s *workflowSuite) TestArchivalWorkflow_Fail_HashesDoNotEqual() {
 	workflowTestMetrics.On("IncCounter", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverWorkflowStartedCount).Once()
-	workflowTestMetrics.On("StartTimer", metrics.ArchiverArchivalWorkflowScope, metrics.CadenceLatency).Return(tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{})).Once()
-	workflowTestMetrics.On("StartTimer", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverHandleAllRequestsLatency).Return(tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{})).Once()
+	workflowTestMetrics.On("StartTimer", metrics.ArchiverArchivalWorkflowScope, metrics.CadenceLatency).Return(metrics.NewStopwatch(tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{}), tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{}))).Once()
+	workflowTestMetrics.On("StartTimer", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverHandleAllRequestsLatency).Return(metrics.NewStopwatch(tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{}), tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{}))).Once()
 	workflowTestMetrics.On("AddCounter", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverNumPumpedRequestsCount, int64(3)).Once()
 	workflowTestMetrics.On("AddCounter", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverNumHandledRequestsCount, int64(3)).Once()
 	workflowTestMetrics.On("IncCounter", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverPumpedNotEqualHandledCount).Once()
@@ -90,8 +90,8 @@ func (s *workflowSuite) TestArchivalWorkflow_Fail_HashesDoNotEqual() {
 
 func (s *workflowSuite) TestArchivalWorkflow_Exit_TimeoutWithoutSignals() {
 	workflowTestMetrics.On("IncCounter", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverWorkflowStartedCount).Once()
-	workflowTestMetrics.On("StartTimer", metrics.ArchiverArchivalWorkflowScope, metrics.CadenceLatency).Return(tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{})).Once()
-	workflowTestMetrics.On("StartTimer", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverHandleAllRequestsLatency).Return(tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{})).Once()
+	workflowTestMetrics.On("StartTimer", metrics.ArchiverArchivalWorkflowScope, metrics.CadenceLatency).Return(metrics.NewStopwatch(tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{}), tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{}))).Once()
+	workflowTestMetrics.On("StartTimer", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverHandleAllRequestsLatency).Return(metrics.NewStopwatch(tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{}), tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{}))).Once()
 	workflowTestMetrics.On("AddCounter", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverNumPumpedRequestsCount, int64(0)).Once()
 	workflowTestMetrics.On("AddCounter", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverNumHandledRequestsCount, int64(0)).Once()
 	workflowTestMetrics.On("IncCounter", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverWorkflowStoppingCount).Once()
@@ -112,8 +112,8 @@ func (s *workflowSuite) TestArchivalWorkflow_Exit_TimeoutWithoutSignals() {
 
 func (s *workflowSuite) TestArchivalWorkflow_Success() {
 	workflowTestMetrics.On("IncCounter", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverWorkflowStartedCount).Once()
-	workflowTestMetrics.On("StartTimer", metrics.ArchiverArchivalWorkflowScope, metrics.CadenceLatency).Return(tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{})).Once()
-	workflowTestMetrics.On("StartTimer", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverHandleAllRequestsLatency).Return(tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{})).Once()
+	workflowTestMetrics.On("StartTimer", metrics.ArchiverArchivalWorkflowScope, metrics.CadenceLatency).Return(metrics.NewStopwatch(tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{}), tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{}))).Once()
+	workflowTestMetrics.On("StartTimer", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverHandleAllRequestsLatency).Return(metrics.NewStopwatch(tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{}), tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{}))).Once()
 	workflowTestMetrics.On("AddCounter", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverNumPumpedRequestsCount, int64(5)).Once()
 	workflowTestMetrics.On("AddCounter", metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverNumHandledRequestsCount, int64(5)).Once()
 	workflowTestArchiver.On("Start").Once()

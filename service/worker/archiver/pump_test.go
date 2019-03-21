@@ -58,7 +58,9 @@ func (s *pumpSuite) SetupSuite() {
 
 func (s *pumpSuite) SetupTest() {
 	pumpTestMetrics = &mmocks.Client{}
-	pumpTestMetrics.On("StartTimer", mock.Anything, mock.Anything).Return(tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{})).Once()
+	r1 := tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{})
+	r2 := tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{})
+	pumpTestMetrics.On("StartTimer", mock.Anything, mock.Anything).Return(metrics.NewStopwatch(r1, r2)).Once()
 	pumpTestLogger = &mocks.Logger{}
 }
 

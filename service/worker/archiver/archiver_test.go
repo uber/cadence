@@ -61,7 +61,9 @@ func (s *archiverSuite) SetupSuite() {
 
 func (s *archiverSuite) SetupTest() {
 	archiverTestMetrics = &mmocks.Client{}
-	archiverTestMetrics.On("StartTimer", mock.Anything, mock.Anything).Return(tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{}))
+	r1 := tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{})
+	r2 := tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{})
+	archiverTestMetrics.On("StartTimer", mock.Anything, mock.Anything).Return(metrics.NewStopwatch(r1, r2))
 	archiverTestLogger = &mocks.Logger{}
 	archiverTestLogger.On("WithFields", mock.Anything).Return(archiverTestLogger)
 	archiverTestLogger.On("WithField", mock.Anything, mock.Anything).Return(archiverTestLogger).Maybe()
