@@ -41,5 +41,8 @@ type (
 		UpdateGauge(scope int, gauge int, value float64)
 		// Tagged returns a client that adds the given tags to all metrics
 		Tagged(tags map[string]string) Client
+		// Scope return an internal scope that can be used to add additional
+		// information to metrics
+		Scope(scope int) Scope
 	}
 )

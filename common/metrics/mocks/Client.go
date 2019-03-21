@@ -81,3 +81,17 @@ func (_m *Client) Tagged(tags map[string]string) metrics.Client {
 func (_m *Client) UpdateGauge(scope int, gauge int, value float64) {
 	_m.Called(scope, gauge, value)
 }
+
+// Scope provides a mock function with given fields: scope
+func (_m *Client) Scope(scope int) metrics.Scope {
+	ret := _m.Called(scope)
+
+	var r0 metrics.Scope
+	if rf, ok := ret.Get(0).(func(int) metrics.Scope); ok {
+		r0 = rf(scope)
+	} else {
+		r0 = ret.Get(0).(metrics.Scope)
+	}
+
+	return r0
+}

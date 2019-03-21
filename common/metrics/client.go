@@ -147,6 +147,12 @@ func (m *ClientImpl) Tagged(tags map[string]string) Client {
 	return NewClient(scope, m.serviceIdx)
 }
 
+// Scope return a new internal metrics scope that can be used to add additional
+// information to the metrics emitted
+func (m *ClientImpl) Scope(scopeIdx int) Scope {
+	return newMetricsScope(m.childScopes[scopeIdx], m.metricDefs)
+}
+
 func getMetricDefs(serviceIdx ServiceIdx) map[int]metricDefinition {
 	defs := make(map[int]metricDefinition)
 	for idx, def := range MetricDefs[Common] {
