@@ -29,9 +29,11 @@ import (
 
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -435,7 +437,8 @@ func (s *TestShardContext) AppendHistoryEvents(request *persistence.AppendHistor
 }
 
 // AppendHistoryV2Events append history V2 events
-func (s *TestShardContext) AppendHistoryV2Events(request *persistence.AppendHistoryNodesRequest, domainID string) (int, error) {
+func (s *TestShardContext) AppendHistoryV2Events(
+	request *persistence.AppendHistoryNodesRequest, domainID string, execution shared.WorkflowExecution) (int, error) {
 	resp, err := s.historyV2Mgr.AppendHistoryNodes(request)
 	return resp.Size, err
 }
@@ -452,6 +455,11 @@ func (s *TestShardContext) GetConfig() *Config {
 
 // GetLogger test implementation
 func (s *TestShardContext) GetLogger() bark.Logger {
+	return s.logger
+}
+
+// GetThrottledLogger returns a throttled logger
+func (s *TestShardContext) GetThrottledLogger() bark.Logger {
 	return s.logger
 }
 
@@ -472,8 +480,8 @@ func (s *TestShardContext) GetRangeID() int64 {
 }
 
 // GetTimeSource test implementation
-func (s *TestShardContext) GetTimeSource() common.TimeSource {
-	return common.NewRealTimeSource()
+func (s *TestShardContext) GetTimeSource() clock.TimeSource {
+	return clock.NewRealTimeSource()
 }
 
 // SetCurrentTime test implementation
@@ -521,7 +529,7 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options persistencetests.TestBa
 	s.TestBase.Setup()
 	log := bark.NewLoggerFromLogrus(log.New())
 	config := NewDynamicConfigForTest()
-	clusterMetadata := cluster.GetTestClusterMetadata(options.EnableGlobalDomain, options.IsMasterCluster)
+	clusterMetadata := cluster.GetTestClusterMetadata(options.EnableGlobalDomain, options.IsMasterCluster, options.EnableArchival)
 	s.ShardContext = newTestShardContext(s.ShardInfo, 0, s.HistoryMgr, s.HistoryV2Mgr, s.ExecutionManager, s.MetadataManager, s.MetadataManagerV2,
 		clusterMetadata, nil, config, log)
 	s.TestBase.TaskIDGenerator = s.ShardContext
@@ -533,7 +541,7 @@ func (s *TestBase) SetupWorkflowStore() {
 	s.TestBase.Setup()
 	log := bark.NewLoggerFromLogrus(log.New())
 	config := NewDynamicConfigForTest()
-	clusterMetadata := cluster.GetTestClusterMetadata(false, false)
+	clusterMetadata := cluster.GetTestClusterMetadata(false, false, false)
 	s.ShardContext = newTestShardContext(s.ShardInfo, 0, s.HistoryMgr, s.HistoryV2Mgr, s.ExecutionManager, s.MetadataManager, s.MetadataManagerV2,
 		clusterMetadata, nil, config, log)
 	s.TestBase.TaskIDGenerator = s.ShardContext

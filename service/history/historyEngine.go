@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/client/public"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/definition"
 	ce "github.com/uber/cadence/common/errors"
@@ -72,6 +73,7 @@ type (
 		historyCache         *historyCache
 		metricsClient        metrics.Client
 		logger               bark.Logger
+		throttledLogger      bark.Logger
 		config               *Config
 		archivalClient       archiver.Client
 		resetor              workflowResetor
@@ -165,6 +167,9 @@ func NewEngineWithShardContext(
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
 		historyCache:       historyCache,
 		logger: logger.WithFields(bark.Fields{
+			logging.TagWorkflowComponent: logging.TagValueHistoryEngineComponent,
+		}),
+		throttledLogger: shard.GetThrottledLogger().WithFields(bark.Fields{
 			logging.TagWorkflowComponent: logging.TagValueHistoryEngineComponent,
 		}),
 		metricsClient:        shard.GetMetricsClient(),
@@ -369,7 +374,7 @@ func (e *historyEngineImpl) appendFirstBatchHistoryEvents(msBuilder mutableState
 			// It is ok to use 0 for TransactionID because RunID is unique so there are
 			// no potential duplicates to override.
 			TransactionID: 0,
-		}, domainID)
+		}, domainID, execution)
 	} else {
 		historySize, err = e.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
 			DomainID:  domainID,
@@ -1087,12 +1092,16 @@ type decisionBlobSizeChecker struct {
 }
 
 func (c *decisionBlobSizeChecker) failWorkflowIfBlobSizeExceedsLimit(blob []byte, message string) (bool, error) {
-
 	err := common.CheckEventBlobSizeLimit(len(blob), c.sizeLimitWarn, c.sizeLimitError,
 		c.domainID, c.workflowID, c.runID, c.metricsClient, metrics.HistoryRespondDecisionTaskCompletedScope, c.logger)
 
 	if err == nil {
 		return false, nil
+	}
+
+	err = failInFlightDecisionToClearBufferedEvents(c.msBuilder)
+	if err != nil {
+		return false, err
 	}
 
 	attributes := &workflow.FailWorkflowExecutionDecisionAttributes{
@@ -1105,6 +1114,22 @@ func (c *decisionBlobSizeChecker) failWorkflowIfBlobSizeExceedsLimit(blob []byte
 	}
 
 	return true, nil
+}
+
+// Before closing workflow, if there is a in-flight decision, fail the decision first. So that we don't close the workflow with buffered events
+func failInFlightDecisionToClearBufferedEvents(msBuilder mutableState) error {
+	if msBuilder.HasInFlightDecisionTask() {
+		di, _ := msBuilder.GetInFlightDecisionTask()
+
+		event := msBuilder.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, workflow.DecisionTaskFailedCauseResetWorkflow, nil,
+			identityHistoryService, decisionFailureForBuffered, "", "", 0)
+		if event == nil {
+			return &workflow.InternalServiceError{Message: "Failed to add decision failed event."}
+		}
+
+		return msBuilder.FlushBufferedEvents()
+	}
+	return nil
 }
 
 // RespondDecisionTaskCompleted completes a decision task
@@ -1153,7 +1178,7 @@ func (e *historyEngineImpl) RespondDecisionTaskCompleted(ctx context.Context, re
 		workflowID:     token.WorkflowID,
 		runID:          token.RunID,
 		metricsClient:  e.metricsClient,
-		logger:         e.logger,
+		logger:         e.throttledLogger,
 	}
 
 Update_History_Loop:
@@ -2481,6 +2506,11 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(ctx context.Context, term
 				return nil, ErrWorkflowCompleted
 			}
 
+			err := failInFlightDecisionToClearBufferedEvents(msBuilder)
+			if err != nil {
+				return nil, err
+			}
+
 			if msBuilder.AddWorkflowExecutionTerminatedEvent(request) == nil {
 				return nil, &workflow.InternalServiceError{Message: "Unable to terminate workflow execution."}
 			}
@@ -2806,7 +2836,7 @@ func (e *historyEngineImpl) getTimerBuilder(we *workflow.WorkflowExecution) *tim
 		logging.TagWorkflowExecutionID: we.WorkflowId,
 		logging.TagWorkflowRunID:       we.RunId,
 	})
-	return newTimerBuilder(e.shard.GetConfig(), lg, common.NewRealTimeSource())
+	return newTimerBuilder(e.shard.GetConfig(), lg, clock.NewRealTimeSource())
 }
 
 func (s *shardContextWrapper) UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) (*persistence.UpdateWorkflowExecutionResponse, error) {

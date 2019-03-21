@@ -32,9 +32,11 @@ import (
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/common/tokenbucket"
 )
 
 var _ matchingserviceserver.Interface = (*Handler)(nil)
@@ -48,7 +50,7 @@ type Handler struct {
 	metricsClient   metrics.Client
 	startWG         sync.WaitGroup
 	domainCache     cache.DomainCache
-	rateLimiter     common.TokenBucket
+	rateLimiter     tokenbucket.TokenBucket
 	service.Service
 }
 
@@ -63,7 +65,7 @@ func NewHandler(sVice service.Service, config *Config, taskPersistence persisten
 		taskPersistence: taskPersistence,
 		metadataMgr:     metadataMgr,
 		config:          config,
-		rateLimiter:     common.NewTokenBucket(config.RPS(), common.NewRealTimeSource()),
+		rateLimiter:     tokenbucket.New(config.RPS(), clock.NewRealTimeSource()),
 	}
 	// prevent us from trying to serve requests before matching engine is started and ready
 	handler.startWG.Add(1)
@@ -160,6 +162,10 @@ func (h *Handler) PollForActivityTask(ctx context.Context,
 		return nil, h.handleErr(errMatchingHostThrottle, scope)
 	}
 
+	if err := common.ValidateLongPollContextTimeout(ctx, "PollForActivityTask", h.Service.GetLogger()); err != nil {
+		return nil, h.handleErr(err, scope)
+	}
+
 	response, err := h.engine.PollForActivityTask(ctx, pollRequest)
 	return response, h.handleErr(err, scope)
 }
@@ -174,6 +180,10 @@ func (h *Handler) PollForDecisionTask(ctx context.Context,
 
 	if ok, _ := h.rateLimiter.TryConsume(1); !ok {
 		return nil, h.handleErr(errMatchingHostThrottle, scope)
+	}
+
+	if err := common.ValidateLongPollContextTimeout(ctx, "PollForDecisionTask", h.Service.GetLogger()); err != nil {
+		return nil, h.handleErr(err, scope)
 	}
 
 	response, err := h.engine.PollForDecisionTask(ctx, pollRequest)
