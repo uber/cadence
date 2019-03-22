@@ -24,12 +24,10 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
-	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -69,9 +67,7 @@ func TestActivitiesSuite(t *testing.T) {
 func (s *activitiesSuite) SetupTest() {
 	s.logger = bark.NewNopLogger()
 	s.metricsClient = &mmocks.Client{}
-	r1 := tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{})
-	r2 := tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{})
-	s.metricsClient.On("StartTimer", mock.Anything, metrics.CadenceLatency).Return(metrics.NewStopwatch(r1, r2)).Once()
+	s.metricsClient.On("StartTimer", mock.Anything, metrics.CadenceLatency).Return(metrics.NewTestStopwatch()).Once()
 }
 
 func (s *activitiesSuite) TearDownTest() {

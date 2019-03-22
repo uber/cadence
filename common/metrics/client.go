@@ -33,20 +33,28 @@ import (
 // Stop() method to report time elapsed since its created back to the
 // timer or histogram.
 type Stopwatch struct {
-	recorder1 tally.Stopwatch
-	recorder2 tally.Stopwatch
+	start time.Time
+	scope tally.Scope
+	name1 string
+	name2 string
 }
 
 // NewStopwatch creates a new immutable stopwatch for recording the start
 // time to a stopwatch reporter.
-func NewStopwatch(r1, r2 tally.Stopwatch) Stopwatch {
-	return Stopwatch{recorder1: r1, recorder2: r2}
+func NewStopwatch(scope tally.Scope, name1, name2 string) Stopwatch {
+	return Stopwatch{time.Now(), scope, name1, name2}
+}
+
+// NewTestStopwatch returns a new test stopwatch
+func NewTestStopwatch() Stopwatch {
+	return Stopwatch{time.Now(), tally.NoopScope, "timer_1", "timer_2"}
 }
 
 // Stop reports time elapsed since the stopwatch start to the recorder.
 func (sw Stopwatch) Stop() {
-	sw.recorder1.Stop()
-	sw.recorder2.Stop()
+	d := time.Now().Sub(sw.start)
+	sw.scope.Timer(sw.name1).Record(d)
+	sw.scope.Timer(sw.name2).Record(d)
 }
 
 // ClientImpl is used for reporting metrics by various Cadence services
@@ -113,9 +121,7 @@ func (m *ClientImpl) AddCounter(scopeIdx int, counterIdx int, delta int64) {
 func (m *ClientImpl) StartTimer(scopeIdx int, timerIdx int) Stopwatch {
 	name := string(m.metricDefs[timerIdx].metricName)
 	oldName := string(m.metricDefs[timerIdx].oldMetricName)
-	stopwatch1 := m.childScopes[scopeIdx].Timer(name).Start()
-	stopwatch2 := m.childScopes[scopeIdx].Timer(oldName).Start()
-	return NewStopwatch(stopwatch1, stopwatch2)
+	return NewStopwatch(m.childScopes[scopeIdx], name, oldName)
 }
 
 // RecordTimer record and emit a timer for the given

@@ -23,7 +23,6 @@ package archiver
 import (
 	"time"
 
-	"github.com/uber-go/tally"
 	"github.com/uber/cadence/common/metrics"
 	"go.uber.org/cadence/workflow"
 )
@@ -95,7 +94,5 @@ type nopStopwatchRecorder struct{}
 func (n *nopStopwatchRecorder) RecordStopwatch(stopwatchStart time.Time) {}
 
 func (r *replayMetricsClient) nopStopwatch() metrics.Stopwatch {
-	stopwatch1 := tally.NewStopwatch(workflow.Now(r.ctx), &nopStopwatchRecorder{})
-	stopwatch2 := tally.NewStopwatch(workflow.Now(r.ctx), &nopStopwatchRecorder{})
-	return metrics.NewStopwatch(stopwatch1, stopwatch2)
+	return metrics.NewTestStopwatch()
 }
