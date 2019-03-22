@@ -22,6 +22,7 @@ package common
 
 import (
 	"encoding/json"
+	"math"
 	"sync"
 	"time"
 
@@ -407,6 +408,24 @@ func ValidateCronSchedule(cronSchedule string) error {
 	return nil
 }
 
+// GetBackoffForNextCronSchedule calculates the backoff time for the next run given
+// a cronSchedule and current time
+func GetBackoffForNextCronSchedule(cronSchedule string, nowTime time.Time) time.Duration {
+	if len(cronSchedule) == 0 {
+		return NoRetryBackoff
+	}
+
+	schedule, err := cron.ParseStandard(cronSchedule)
+	if err != nil {
+		return NoRetryBackoff
+	}
+
+	nowTime = nowTime.In(time.UTC)
+	backoffInterval := schedule.Next(nowTime).Sub(nowTime)
+	roundedInterval := time.Second * time.Duration(math.Ceil(backoffInterval.Seconds()))
+	return roundedInterval
+}
+
 // CreateHistoryStartWorkflowRequest create a start workflow request for history
 func CreateHistoryStartWorkflowRequest(domainID string, startRequest *workflow.StartWorkflowExecutionRequest) *h.StartWorkflowExecutionRequest {
 	histRequest := &h.StartWorkflowExecutionRequest{
@@ -417,6 +436,10 @@ func CreateHistoryStartWorkflowRequest(domainID string, startRequest *workflow.S
 		expirationInSeconds := startRequest.RetryPolicy.GetExpirationIntervalInSeconds()
 		deadline := time.Now().Add(time.Second * time.Duration(expirationInSeconds))
 		histRequest.ExpirationTimestamp = Int64Ptr(deadline.Round(time.Millisecond).UnixNano())
+	}
+	cronBackoff := GetBackoffForNextCronSchedule(startRequest.GetCronSchedule(), time.Now())
+	if cronBackoff != NoRetryBackoff {
+		histRequest.FirstDecisionTaskBackoffSeconds = Int32Ptr(int32(math.Ceil(cronBackoff.Seconds())))
 	}
 	return histRequest
 }
