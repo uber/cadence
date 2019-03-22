@@ -1373,7 +1373,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 	identity := "worker1"
 
 	targetBackoffDuration := time.Second * 5
-	backoffDurationTolerance := time.Millisecond * 100
+	backoffDurationTolerance := time.Millisecond * 500
 
 	workflowType := &workflow.WorkflowType{}
 	workflowType.Name = common.StringPtr(wt)
