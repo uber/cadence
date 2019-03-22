@@ -22,6 +22,8 @@ package metrics
 
 import (
 	"time"
+
+	"github.com/uber-go/tally"
 )
 
 type (
@@ -39,10 +41,16 @@ type (
 		RecordTimer(scope int, timer int, d time.Duration)
 		// UpdateGauge reports Gauge type absolute value metric
 		UpdateGauge(scope int, gauge int, value float64)
-		// Tagged returns a client that adds the given tags to all metrics
-		Tagged(tags map[string]string) Client
 		// Scope return an internal scope that can be used to add additional
 		// information to metrics
-		Scope(scope int) Scope
+		Scope(scope int, tags ...Tag) Scope
+	}
+
+	// Scope is an interface for metrics
+	Scope interface {
+		Counter(id int) tally.Counter
+		Gauge(id int) tally.Gauge
+		Timer(id int) tally.Timer
+		Tagged(tags ...Tag) Scope
 	}
 )
