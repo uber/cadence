@@ -1443,7 +1443,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 	// Make sure the cron workflow start running at a proper time, in this case 5 second after the
 	// startWorkflowExecution request
 	backoffDuration := time.Now().Sub(startWorkflowTS)
-	s.True(backoffDuration > targetBackoffDuration-backoffDurationTolerance)
+	s.True(backoffDuration > targetBackoffDuration)
 	s.True(backoffDuration < targetBackoffDuration+backoffDurationTolerance)
 
 	_, err = poller.PollAndProcessDecisionTask(false, false)
