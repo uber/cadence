@@ -832,6 +832,7 @@ struct DomainInfo {
   40: optional string ownerEmail
   // A key-value map for any customized purpose
   50: optional map<string,string> data
+  60: optional string uuid
 }
 
 struct DomainConfiguration {

@@ -13332,6 +13332,7 @@ type DomainInfo struct {
 	Description *string           `json:"description,omitempty"`
 	OwnerEmail  *string           `json:"ownerEmail,omitempty"`
 	Data        map[string]string `json:"data,omitempty"`
+	UUID        *string           `json:"uuid,omitempty"`
 }
 
 type _Map_String_String_MapItemList map[string]string
@@ -13386,7 +13387,7 @@ func (_Map_String_String_MapItemList) Close() {}
 //   }
 func (v *DomainInfo) ToWire() (wire.Value, error) {
 	var (
-		fields [5]wire.Field
+		fields [6]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -13430,6 +13431,14 @@ func (v *DomainInfo) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 50, Value: w}
+		i++
+	}
+	if v.UUID != nil {
+		w, err = wire.NewValueString(*(v.UUID)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 60, Value: w}
 		i++
 	}
 
@@ -13540,6 +13549,16 @@ func (v *DomainInfo) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 60:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.UUID = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -13553,7 +13572,7 @@ func (v *DomainInfo) String() string {
 		return "<nil>"
 	}
 
-	var fields [5]string
+	var fields [6]string
 	i := 0
 	if v.Name != nil {
 		fields[i] = fmt.Sprintf("Name: %v", *(v.Name))
@@ -13573,6 +13592,10 @@ func (v *DomainInfo) String() string {
 	}
 	if v.Data != nil {
 		fields[i] = fmt.Sprintf("Data: %v", v.Data)
+		i++
+	}
+	if v.UUID != nil {
+		fields[i] = fmt.Sprintf("UUID: %v", *(v.UUID))
 		i++
 	}
 
@@ -13631,6 +13654,9 @@ func (v *DomainInfo) Equals(rhs *DomainInfo) bool {
 	if !((v.Data == nil && rhs.Data == nil) || (v.Data != nil && rhs.Data != nil && _Map_String_String_Equals(v.Data, rhs.Data))) {
 		return false
 	}
+	if !_String_EqualsPtr(v.UUID, rhs.UUID) {
+		return false
+	}
 
 	return true
 }
@@ -13666,6 +13692,9 @@ func (v *DomainInfo) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	}
 	if v.Data != nil {
 		err = multierr.Append(err, enc.AddObject("data", (_Map_String_String_Zapper)(v.Data)))
+	}
+	if v.UUID != nil {
+		enc.AddString("uuid", *v.UUID)
 	}
 	return err
 }
@@ -13743,6 +13772,21 @@ func (v *DomainInfo) GetData() (o map[string]string) {
 // IsSetData returns true if Data is not nil.
 func (v *DomainInfo) IsSetData() bool {
 	return v != nil && v.Data != nil
+}
+
+// GetUUID returns the value of UUID if it is set or its
+// zero value if it is unset.
+func (v *DomainInfo) GetUUID() (o string) {
+	if v != nil && v.UUID != nil {
+		return *v.UUID
+	}
+
+	return
+}
+
+// IsSetUUID returns true if UUID is not nil.
+func (v *DomainInfo) IsSetUUID() bool {
+	return v != nil && v.UUID != nil
 }
 
 type DomainNotActiveError struct {
