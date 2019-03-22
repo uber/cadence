@@ -10472,6 +10472,7 @@ func (v *DeprecateDomainRequest) IsSetSecurityToken() bool {
 
 type DescribeDomainRequest struct {
 	Name *string `json:"name,omitempty"`
+	UUID *string `json:"uuid,omitempty"`
 }
 
 // ToWire translates a DescribeDomainRequest struct into a Thrift-level intermediate
@@ -10491,7 +10492,7 @@ type DescribeDomainRequest struct {
 //   }
 func (v *DescribeDomainRequest) ToWire() (wire.Value, error) {
 	var (
-		fields [1]wire.Field
+		fields [2]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -10503,6 +10504,14 @@ func (v *DescribeDomainRequest) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.UUID != nil {
+		w, err = wire.NewValueString(*(v.UUID)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
 		i++
 	}
 
@@ -10541,6 +10550,16 @@ func (v *DescribeDomainRequest) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.UUID = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -10554,10 +10573,14 @@ func (v *DescribeDomainRequest) String() string {
 		return "<nil>"
 	}
 
-	var fields [1]string
+	var fields [2]string
 	i := 0
 	if v.Name != nil {
 		fields[i] = fmt.Sprintf("Name: %v", *(v.Name))
+		i++
+	}
+	if v.UUID != nil {
+		fields[i] = fmt.Sprintf("UUID: %v", *(v.UUID))
 		i++
 	}
 
@@ -10577,6 +10600,9 @@ func (v *DescribeDomainRequest) Equals(rhs *DescribeDomainRequest) bool {
 	if !_String_EqualsPtr(v.Name, rhs.Name) {
 		return false
 	}
+	if !_String_EqualsPtr(v.UUID, rhs.UUID) {
+		return false
+	}
 
 	return true
 }
@@ -10589,6 +10615,9 @@ func (v *DescribeDomainRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err
 	}
 	if v.Name != nil {
 		enc.AddString("name", *v.Name)
+	}
+	if v.UUID != nil {
+		enc.AddString("uuid", *v.UUID)
 	}
 	return err
 }
@@ -10606,6 +10635,21 @@ func (v *DescribeDomainRequest) GetName() (o string) {
 // IsSetName returns true if Name is not nil.
 func (v *DescribeDomainRequest) IsSetName() bool {
 	return v != nil && v.Name != nil
+}
+
+// GetUUID returns the value of UUID if it is set or its
+// zero value if it is unset.
+func (v *DescribeDomainRequest) GetUUID() (o string) {
+	if v != nil && v.UUID != nil {
+		return *v.UUID
+	}
+
+	return
+}
+
+// IsSetUUID returns true if UUID is not nil.
+func (v *DescribeDomainRequest) IsSetUUID() bool {
+	return v != nil && v.UUID != nil
 }
 
 type DescribeDomainResponse struct {

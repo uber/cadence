@@ -886,6 +886,7 @@ struct ListDomainsResponse {
 
 struct DescribeDomainRequest {
   10: optional string name
+  20: optional string uuid
 }
 
 struct DescribeDomainResponse {
