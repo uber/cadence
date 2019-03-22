@@ -1,9 +1,3 @@
----
-layout: doc
-title: Key Features
-weight: 1
----
-
 # Key features
 
 ### Dynamic workflow execution graphs
@@ -21,8 +15,8 @@ efficient and fault tolerant.
 
 ### Durable Timers
 Implement delayed execution of tasks in your workflows that are robust to worker failures. Cadence
-provides two easy-to-use APIs for implementing time-based events in your workflows: `cadence.Sleep`
-and `cadence.Timer`. Cadence ensures that the timer settings are persisted and the events are generated
+provides two easy-to-use APIs for implementing time-based events in your workflows: `workflow.Sleep`
+and `workflow.Timer`. Cadence ensures that the timer settings are persisted and the events are generated
 even if the workers executing the workflow crash.
 
 ### Signals
@@ -56,8 +50,8 @@ activities on failure. For every activity execution, Cadence will return a succe
 result, or a timeout to the workflow code and let the workflow code determine how each one of those
 result types should be handled.
 
-### Asynch Activity Completion
-Incorporate human input or thrid-party service asynchronous callbacks into your workflows. Cadence
+### Async Activity Completion
+Incorporate human input or third-party service asynchronous callbacks into your workflows. Cadence
 allows a workflow to pause execution on an activity and wait for an external actor to resume it with
 a callback. During this pause, the activity does not have any actively executing code, such as a polling
 loop, and is merely an entry in the Cadence datastore. Therefore, the workflow is unaffected by any

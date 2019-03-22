@@ -1,9 +1,4 @@
----
-title: Cross-DC Replication
-weight: 3
----
-
-# Cadence Cross-DC (XDC)
+# Cadence Cross-DC Replication
 The Cadence Global Domain feature provides clients with the capability to continue their workflow execution from another
 cluster in the event of a datacenter failover.  Although you can configure a Global Domain to be replicated to any number of
 clusters, it is only considered active in a single cluster.
