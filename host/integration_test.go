@@ -1394,9 +1394,8 @@ func (s *integrationSuite) TestCronWorkflow() {
 		CronSchedule:                        common.StringPtr("@every 5s"), //minimum interval by standard spec is 1m (* * * * *), use non-standard descriptor for short interval for test
 	}
 
-	ctx := createContext()
 	startWorkflowTS := time.Now()
-	we, err0 := s.engine.StartWorkflowExecution(ctx, request)
+	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
 	s.logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
