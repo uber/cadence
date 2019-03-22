@@ -1,9 +1,4 @@
----
-title: Glossary
-weight: 100
----
-
-# Cadence glossary
+# Glossary
 
 This glossary contains terms that are used with the Cadence product.
 
