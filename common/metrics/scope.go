@@ -20,7 +20,11 @@
 
 package metrics
 
-import "github.com/uber-go/tally"
+import (
+	"time"
+
+	"github.com/uber-go/tally"
+)
 
 type metricsScope struct {
 	scope tally.Scope
@@ -31,19 +35,29 @@ func newMetricsScope(scope tally.Scope, defs map[int]metricDefinition) Scope {
 	return &metricsScope{scope, defs}
 }
 
-func (m *metricsScope) Counter(id int) tally.Counter {
+func (m *metricsScope) IncCounter(id int) {
 	name := string(m.defs[id].metricName)
-	return m.scope.Counter(name)
+	m.scope.Counter(name).Inc(1)
 }
 
-func (m *metricsScope) Gauge(id int) tally.Gauge {
+func (m *metricsScope) AddCounter(id int, delta int64) {
 	name := string(m.defs[id].metricName)
-	return m.scope.Gauge(name)
+	m.scope.Counter(name).Inc(delta)
 }
 
-func (m *metricsScope) Timer(id int) tally.Timer {
+func (m *metricsScope) UpdateGauge(id int, value float64) {
 	name := string(m.defs[id].metricName)
-	return m.scope.Timer(name)
+	m.scope.Gauge(name).Update(value)
+}
+
+func (m *metricsScope) StartTimer(id int) tally.Stopwatch {
+	name := string(m.defs[id].metricName)
+	return m.scope.Timer(name).Start()
+}
+
+func (m *metricsScope) RecordTimer(id int, d time.Duration) {
+	name := string(m.defs[id].metricName)
+	m.scope.Timer(name).Record(d)
 }
 
 func (m *metricsScope) Tagged(tags ...Tag) Scope {
