@@ -66,27 +66,6 @@ func TestIntegrationSuite(t *testing.T) {
 	suite.Run(t, new(integrationSuite))
 }
 
-//func TestRateLimitBufferedEventsTestIntegrationSuite(t *testing.T) {
-//	flag.Parse()
-//	if *integration && !*testEventsV2 {
-//		s := new(integrationSuite)
-//		suite.Run(t, s)
-//	} else {
-//		t.Skip()
-//	}
-//}
-//
-//func TestIntegrationSuiteEventsV2(t *testing.T) {
-//	flag.Parse()
-//	if *integration && *testEventsV2 {
-//		s := new(integrationSuite)
-//		s.enableEventsV2 = true
-//		suite.Run(t, s)
-//	} else {
-//		t.Skip()
-//	}
-//}
-
 func (s *integrationSuite) TestStartWorkflowExecution() {
 	id := "integration-start-workflow-test"
 	wt := "integration-start-workflow-test-type"

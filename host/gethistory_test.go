@@ -486,7 +486,7 @@ func (s *integrationSuite) TestGetWorkflowExecutionRawHistory_All() {
 	s.True(len(resp.HistoryBatches) == pageSize)
 	blobs = append(blobs, resp.HistoryBatches...)
 	token = resp.NextPageToken
-	if *testEventsV2 {
+	if *EnableEventsV2 {
 		s.Equal(int32(2), resp.GetEventStoreVersion())
 	} else {
 		s.Equal(int32(0), resp.GetEventStoreVersion())
@@ -506,7 +506,7 @@ func (s *integrationSuite) TestGetWorkflowExecutionRawHistory_All() {
 		s.True(len(resp.HistoryBatches) == pageSize)
 		blobs = append(blobs, resp.HistoryBatches...)
 		token = resp.NextPageToken
-		if *testEventsV2 {
+		if *EnableEventsV2 {
 			s.Equal(int32(2), resp.GetEventStoreVersion())
 		} else {
 			s.Equal(int32(0), resp.GetEventStoreVersion())
@@ -531,7 +531,7 @@ func (s *integrationSuite) TestGetWorkflowExecutionRawHistory_All() {
 		s.True(len(resp.HistoryBatches) == pageSize)
 		blobs = append(blobs, resp.HistoryBatches...)
 		token = resp.NextPageToken
-		if *testEventsV2 {
+		if *EnableEventsV2 {
 			s.Equal(int32(2), resp.GetEventStoreVersion())
 		} else {
 			s.Equal(int32(0), resp.GetEventStoreVersion())
@@ -558,7 +558,7 @@ func (s *integrationSuite) TestGetWorkflowExecutionRawHistory_All() {
 		s.True(len(resp.HistoryBatches) == pageSize)
 		blobs = append(blobs, resp.HistoryBatches...)
 		token = resp.NextPageToken
-		if *testEventsV2 {
+		if *EnableEventsV2 {
 			s.Equal(int32(2), resp.GetEventStoreVersion())
 		} else {
 			s.Equal(int32(0), resp.GetEventStoreVersion())
@@ -585,7 +585,7 @@ func (s *integrationSuite) TestGetWorkflowExecutionRawHistory_All() {
 		s.True(len(resp.HistoryBatches) == pageSize)
 		blobs = append(blobs, resp.HistoryBatches...)
 		token = resp.NextPageToken
-		if *testEventsV2 {
+		if *EnableEventsV2 {
 			s.Equal(int32(2), resp.GetEventStoreVersion())
 		} else {
 			s.Equal(int32(0), resp.GetEventStoreVersion())
