@@ -1140,7 +1140,10 @@ func failInFlightDecisionToClearBufferedEvents(msBuilder mutableState) error {
 }
 
 // RespondDecisionTaskCompleted completes a decision task
-func (e *historyEngineImpl) RespondDecisionTaskCompleted(ctx context.Context, req *h.RespondDecisionTaskCompletedRequest) (response *h.RespondDecisionTaskCompletedResponse, retError error) {
+func (e *historyEngineImpl) RespondDecisionTaskCompleted(
+	ctx context.Context,
+	req *h.RespondDecisionTaskCompletedRequest,
+) (response *h.RespondDecisionTaskCompletedResponse, retError error) {
 
 	domainEntry, err := e.getActiveDomainEntry(req.DomainUUID)
 	if err != nil {
