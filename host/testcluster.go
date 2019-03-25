@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/common/persistence/persistence-tests"
 	"io/ioutil"
 	"os"
+	"sync"
 )
 
 type (
@@ -36,6 +37,8 @@ type (
 	TestCluster struct {
 		persistencetests.TestBase
 		BlobstoreBase
+		sync.Mutex // This lock is to protect the race in ringpop initialization.
+
 		Host   Cadence
 		engine wsc.Interface
 		Logger bark.Logger
@@ -55,6 +58,9 @@ type (
 
 // SetupCluster sets up the test cluster
 func (tc *TestCluster) SetupCluster(options *TestClusterOptions) {
+	tc.Lock()
+	defer tc.Unlock()
+
 	tc.TestBase = persistencetests.NewTestBaseWithCassandra(options.PersistOptions)
 	tc.TestBase.Setup()
 	tc.setupShards(options.NumHistoryShards)
@@ -124,6 +130,9 @@ func (tc *TestCluster) setupBlobstore() {
 
 // TearDownCluster tears down the test cluster
 func (tc *TestCluster) TearDownCluster() {
+	tc.Lock()
+	defer tc.Unlock()
+
 	tc.Host.Stop()
 	tc.Host = nil
 	tc.TearDownWorkflowStore()
