@@ -212,8 +212,8 @@ func blobExists(ctx context.Context, blobstoreClient blobstore.Client, bucket st
 	cancel()
 	for err != nil {
 		activity.RecordHeartbeat(ctx)
-		if !common.IsBlobstoreTransientError(err) {
-			return false, cadence.NewCustomError(errBlobExists)
+		if !blobstoreClient.IsRetryableError(err) {
+			return false, cadence.NewCanceledError(errBlobExists)
 		}
 		if contextExpired(ctx) {
 			return false, errContextTimeout
@@ -231,7 +231,7 @@ func uploadBlob(ctx context.Context, blobstoreClient blobstore.Client, bucket st
 	cancel()
 	for err != nil {
 		activity.RecordHeartbeat(ctx)
-		if !common.IsBlobstoreTransientError(err) {
+		if !blobstoreClient.IsRetryableError(err) {
 			return cadence.NewCustomError(errUploadBlob)
 		}
 		if contextExpired(ctx) {
