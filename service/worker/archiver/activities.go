@@ -213,7 +213,7 @@ func blobExists(ctx context.Context, blobstoreClient blobstore.Client, bucket st
 	for err != nil {
 		activity.RecordHeartbeat(ctx)
 		if !blobstoreClient.IsRetryableError(err) {
-			return false, cadence.NewCanceledError(errBlobExists)
+			return false, cadence.NewCustomError(errBlobExists)
 		}
 		if contextExpired(ctx) {
 			return false, errContextTimeout
