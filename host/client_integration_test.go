@@ -61,10 +61,10 @@ type (
 		// not merely log an error
 		*require.Assertions
 		IntegrationBase
-		wfService      workflowserviceclient.Interface
-		wfClient       client.Client
-		worker         cworker.Worker
-		taskList       string
+		wfService workflowserviceclient.Interface
+		wfClient  client.Client
+		worker    cworker.Worker
+		taskList  string
 	}
 )
 
