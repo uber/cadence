@@ -66,6 +66,7 @@ const rpAppNamePrefix string = "cadence"
 const maxRpJoinTimeout = 30 * time.Second
 
 var (
+	// EnableEventsV2 indicates whether events v2 is enabled for integration tests
 	EnableEventsV2     = flag.Bool("eventsV2", false, "run integration tests with eventsV2")
 	enableGlobalDomain = flag.Bool("enableGlobalDomain", false, "run integration tests with global domain")
 	enableArchival     = flag.Bool("enableArchival", false, "run integration tests with archival")

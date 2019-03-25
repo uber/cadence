@@ -58,10 +58,7 @@ func (tc *TestCluster) SetupCluster(options *TestClusterOptions) {
 	tc.TestBase = persistencetests.NewTestBaseWithCassandra(options.PersistOptions)
 	tc.TestBase.Setup()
 	tc.setupShards(options.NumHistoryShards)
-
-	if options.EnableArchival {
-		tc.setupBlobstore()
-	}
+	tc.setupBlobstore()
 
 	cadenceParams := &CadenceParams{
 		ClusterMetadata:               tc.ClusterMetadata,
