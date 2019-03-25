@@ -29,7 +29,6 @@ import (
 	"strconv"
 
 	"github.com/pborman/uuid"
-	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/admin/adminserviceserver"
 	h "github.com/uber/cadence/.gen/go/history"
@@ -105,7 +104,8 @@ func (adh *AdminHandler) Stop() {
 }
 
 // DescribeWorkflowExecution returns information about the specified workflow execution.
-func (adh *AdminHandler) DescribeWorkflowExecution(ctx context.Context, request *admin.DescribeWorkflowExecutionRequest) (*admin.DescribeWorkflowExecutionResponse, error) {
+func (adh *AdminHandler) DescribeWorkflowExecution(ctx context.Context, request *admin.DescribeWorkflowExecutionRequest) (resp *admin.DescribeWorkflowExecutionResponse, retError error) {
+	defer logging.CapturePanic(adh.GetLogger(), &retError)
 	scope := metrics.AdminDescribeWorkflowExecutionScope
 	if request == nil {
 		return nil, adh.error(errRequestNotSet, scope)
@@ -127,7 +127,7 @@ func (adh *AdminHandler) DescribeWorkflowExecution(ctx context.Context, request 
 	domainID, err := adh.domainCache.GetDomainID(request.GetDomain())
 
 	historyAddr := historyHost.GetAddress()
-	resp, err := adh.history.DescribeMutableState(ctx, &hist.DescribeMutableStateRequest{
+	resp2, err := adh.history.DescribeMutableState(ctx, &hist.DescribeMutableStateRequest{
 		DomainUUID: &domainID,
 		Execution:  request.Execution,
 	})
@@ -137,13 +137,14 @@ func (adh *AdminHandler) DescribeWorkflowExecution(ctx context.Context, request 
 	return &admin.DescribeWorkflowExecutionResponse{
 		ShardId:                common.StringPtr(shardIDForOutput),
 		HistoryAddr:            common.StringPtr(historyAddr),
-		MutableStateInDatabase: resp.MutableStateInDatabase,
-		MutableStateInCache:    resp.MutableStateInCache,
+		MutableStateInDatabase: resp2.MutableStateInDatabase,
+		MutableStateInCache:    resp2.MutableStateInCache,
 	}, err
 }
 
 // DescribeHistoryHost returns information about the internal states of a history host
-func (adh *AdminHandler) DescribeHistoryHost(ctx context.Context, request *gen.DescribeHistoryHostRequest) (*gen.DescribeHistoryHostResponse, error) {
+func (adh *AdminHandler) DescribeHistoryHost(ctx context.Context, request *gen.DescribeHistoryHostRequest) (resp *gen.DescribeHistoryHostResponse, retError error) {
+	defer logging.CapturePanic(adh.GetLogger(), &retError)
 	scope := metrics.AdminDescribeHistoryHostScope
 	if request == nil || (request.ShardIdForHost == nil && request.ExecutionForHost == nil && request.HostAddress == nil) {
 		return nil, adh.error(errRequestNotSet, scope)
@@ -161,7 +162,8 @@ func (adh *AdminHandler) DescribeHistoryHost(ctx context.Context, request *gen.D
 
 // GetWorkflowExecutionRawHistory - retrieves the history of workflow execution
 func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
-	ctx context.Context, request *admin.GetWorkflowExecutionRawHistoryRequest) (*admin.GetWorkflowExecutionRawHistoryResponse, error) {
+	ctx context.Context, request *admin.GetWorkflowExecutionRawHistoryRequest) (resp *admin.GetWorkflowExecutionRawHistoryResponse, retError error) {
+	defer logging.CapturePanic(adh.GetLogger(), &retError)
 
 	scope := metrics.AdminGetWorkflowExecutionRawHistoryScope
 	sw := adh.startRequestProfile(scope)
@@ -323,7 +325,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 }
 
 // startRequestProfile initiates recording of request metrics
-func (adh *AdminHandler) startRequestProfile(scope int) tally.Stopwatch {
+func (adh *AdminHandler) startRequestProfile(scope int) metrics.Stopwatch {
 	adh.startWG.Wait()
 	sw := adh.metricsClient.StartTimer(scope, metrics.CadenceLatency)
 	adh.metricsClient.IncCounter(scope, metrics.CadenceRequests)

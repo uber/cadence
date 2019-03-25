@@ -28,6 +28,10 @@ const TagHostname = "hostname"
 
 // Tags
 const (
+	// system tags
+	TagStackTrace = "cadence-stack-trace"
+	TagPanicError = "cadence-panic-error"
+
 	// workflow logging tags
 	TagWorkflowEventID            = "wf-event-id"
 	TagWorkflowComponent          = "wf-component"
@@ -91,6 +95,7 @@ const (
 	TagESKey                      = "es-mapping-key"
 	TagESField                    = "es-field"
 	TagContextTimeout             = "context-timeout"
+	TagHandlerName                = "handler-name"
 
 	// workflow logging tag values
 	// TagWorkflowComponent Values
