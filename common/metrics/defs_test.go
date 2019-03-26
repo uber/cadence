@@ -29,7 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var IsMetric = regexp.MustCompile(`^[a-zA-Z][a-zA-Z_]*$`).MatchString
+var IsMetric = regexp.MustCompile(`^[a-z][a-z_]*$`).MatchString
 
 func TestScopeDefsMapped(t *testing.T) {
 	for i := PersistenceCreateShardScope; i < NumCommonScopes; i++ {
