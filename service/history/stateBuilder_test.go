@@ -151,8 +151,10 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted() 
 	parentName := "some random parent domain names"
 	parentDomainID := uuid.New()
 
+	cronSchedule := "* * * * *"
 	executionInfo := &persistence.WorkflowExecutionInfo{
 		WorkflowTimeout: 100,
+		CronSchedule:    cronSchedule,
 	}
 
 	now := time.Now()
@@ -188,10 +190,29 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted() 
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
-	s.Equal(1, len(s.stateBuilder.timerTasks))
-	timerTask, ok := s.stateBuilder.timerTasks[0].(*persistence.WorkflowTimeoutTask)
-	s.True(ok)
-	s.True(timerTask.VisibilityTimestamp.Equal(now.Add(time.Duration(executionInfo.WorkflowTimeout) * time.Second)))
+
+	backoffDuration := common.GetBackoffForNextCronSchedule(cronSchedule, now)
+	expectedTimerTasksLength := 1
+	if backoffDuration != common.NoRetryBackoff {
+		expectedTimerTasksLength = 2
+	}
+	s.Equal(expectedTimerTasksLength, len(s.stateBuilder.timerTasks))
+
+	for i := 0; i < expectedTimerTasksLength; i++ {
+		switch timerTask := s.stateBuilder.timerTasks[i].(type) {
+		case *persistence.WorkflowTimeoutTask:
+			timeout := now.Add(time.Duration(executionInfo.WorkflowTimeout) * time.Second)
+			if backoffDuration != common.NoRetryBackoff {
+				timeout = timeout.Add(backoffDuration)
+			}
+			s.True(timerTask.VisibilityTimestamp.Equal(timeout))
+		case *persistence.WorkflowBackoffTimerTask:
+			s.NotEqual(common.NoRetryBackoff, backoffDuration)
+			s.True(timerTask.VisibilityTimestamp.Equal(now.Add(backoffDuration)))
+		default:
+			s.FailNow("Unexpected timer task type.")
+		}
+	}
 
 	s.Empty(s.stateBuilder.transferTasks)
 	s.Empty(s.stateBuilder.newRunTimerTasks)
