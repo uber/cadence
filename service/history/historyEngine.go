@@ -1509,7 +1509,6 @@ Update_History_Loop:
 					// schedule a decision task to ensure the workflow makes progress.
 					msBuilder.AddActivityTaskCanceledEvent(ai.ScheduleID, ai.StartedID, *actCancelReqEvent.EventId,
 						[]byte(activityCancelationMsgActivityNotStarted), common.StringDefault(request.Identity))
-					isComplete = false
 					hasUnhandledEvents = true
 				}
 
