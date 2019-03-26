@@ -128,18 +128,18 @@ kafka:
 
 archival:
   status: "enabled"
-  defaultBucket: "cadence-other-development"
+  defaultBucket: "cadence-development"
   filestore:
     storeDirectory: "/tmp/development/blobstore/"
     defaultBucket:
-      name: "cadence-other-development"
+      name: "cadence-development"
       owner: "cadence"
       retentionDays: 10
     customBuckets:
-      - name: "custom-other-bucket-1"
+      - name: "custom-bucket-1"
         owner: "custom-owner-1"
         retentionDays: 10
-      - name: "custom-other-bucket-2"
+      - name: "custom-bucket-2"
         owner: "custom-owner-2"
         retentionDays: 5
 

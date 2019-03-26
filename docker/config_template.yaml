@@ -80,8 +80,8 @@ dcRedirectionPolicy:
 archival:
   status: "enabled"
   defaultBucket: "cadence-development"
-  blobstore:
-    storeDirectory: "/tmp/blobstore/"
+  filestore:
+    storeDirectory: "/tmp/development/blobstore/"
     defaultBucket:
       name: "cadence-development"
       owner: "cadence"
