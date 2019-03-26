@@ -172,7 +172,7 @@ func (s *integrationSuite) TestActivityHeartbeatDetailsDuringRetry() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
+	s.Logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
 
 	workflowComplete := false
 	activitiesScheduled := false
@@ -206,7 +206,7 @@ func (s *integrationSuite) TestActivityHeartbeatDetailsDuringRetry() {
 		}
 
 		workflowComplete = true
-		s.logger.Info("Completing Workflow.")
+		s.Logger.Info("Completing Workflow.")
 		return nil, []*workflow.Decision{{
 			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
 			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
@@ -224,7 +224,7 @@ func (s *integrationSuite) TestActivityHeartbeatDetailsDuringRetry() {
 
 		var err error
 		if activityExecutedCount == 0 {
-			s.logger.Infof("Heartbeating for activity: %s", activityID)
+			s.Logger.Infof("Heartbeating for activity: %s", activityID)
 			_, err = s.engine.RecordActivityTaskHeartbeat(createContext(), &workflow.RecordActivityTaskHeartbeatRequest{
 				TaskToken: taskToken, Details: heartbeatDetails})
 			s.Nil(err)
@@ -246,7 +246,7 @@ func (s *integrationSuite) TestActivityHeartbeatDetailsDuringRetry() {
 		Identity:        identity,
 		DecisionHandler: dtHandler,
 		ActivityHandler: atHandler,
-		Logger:          s.logger,
+		Logger:          s.Logger,
 		T:               s.T(),
 	}
 
