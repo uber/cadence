@@ -1343,7 +1343,7 @@ const (
 // MetricDefs record the metrics for all services
 var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 	Common: {
-		CadenceRequests:                                     {metricName: "cadence.requests", oldMetricName: "cadence.requests", metricType: Counter},
+		CadenceRequests:                                     {metricName: "cadence_requests", oldMetricName: "cadence.requests", metricType: Counter},
 		CadenceFailures:                                     {metricName: "cadence_errors", oldMetricName: "cadence.errors", metricType: Counter},
 		CadenceCriticalFailures:                             {metricName: "cadence_errors_critical", oldMetricName: "cadence.errors.critical", metricType: Counter},
 		CadenceLatency:                                      {metricName: "cadence_latency", oldMetricName: "cadence.latency", metricType: Timer},
