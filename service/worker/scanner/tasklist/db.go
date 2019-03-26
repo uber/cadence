@@ -23,6 +23,7 @@ package tasklist
 import (
 	"time"
 
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
 	p "github.com/uber/cadence/common/persistence"
 )
@@ -75,11 +76,17 @@ func (s *Scavenger) listTaskList(pageSize int, pageToken []byte) (*p.ListTaskLis
 }
 
 func (s *Scavenger) deleteTaskList(key *taskListKey, rangeID int64) error {
-	return s.db.DeleteTaskList(&p.DeleteTaskListRequest{
-		DomainID:     key.DomainID,
-		TaskListName: key.Name,
-		TaskListType: key.TaskType,
-		RangeID:      rangeID,
+	// retry only on service busy errors
+	return backoff.Retry(func() error {
+		return s.db.DeleteTaskList(&p.DeleteTaskListRequest{
+			DomainID:     key.DomainID,
+			TaskListName: key.Name,
+			TaskListType: key.TaskType,
+			RangeID:      rangeID,
+		})
+	}, retryForeverPolicy, func(err error) bool {
+		_, ok := err.(*shared.ServiceBusyError)
+		return ok
 	})
 }
 

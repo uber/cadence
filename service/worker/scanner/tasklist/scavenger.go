@@ -75,7 +75,7 @@ var (
 	taskBatchSize       = 16                // number of tasks we read from persistence in one call
 	maxTasksPerJob      = 256               // maximum number of tasks we process for a task list as part of a single job
 	nWorkers            = taskListBatchSize // number of go routines processing task lists
-	taskListGracePeriod = time.Minute       // amount of time a task list has to be idle before it becomes a candidate for deletion
+	taskListGracePeriod = 48 * time.Hour    // amount of time a task list has to be idle before it becomes a candidate for deletion
 	epochStartTime      = time.Unix(0, 0)
 )
 

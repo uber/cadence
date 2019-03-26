@@ -93,6 +93,14 @@ func (s *Scavenger) tryDeleteTaskList(key *taskListKey, state taskListState) {
 	if delta < taskListGracePeriod {
 		return
 	}
+	// usually, matching engine is the authoritative owner of a tasklist
+	// and its incorrect for any other entity to mutate task lists (including deleting it)
+	// the delete here is safe because of two reasons:
+	//   - we delete the task list only if the lastUpdated is > 48H. If a task list is idle for
+	//     this amount of time, it will no longer be owned by any host in matching enginer (because
+	//     of idle timeout). If any new host has to take ownership of this at this time, it can only
+	//     do so by updating the rangeID
+	//   - deleteTaskList is a conditional delete where condition is the rangeID
 	err := s.deleteTaskList(key, state.rangeID)
 	if err != nil {
 		s.logger.Errorf("deleteTaskList error: %v", err)
