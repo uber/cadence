@@ -1505,9 +1505,12 @@ Update_History_Loop:
 				}
 
 				if ai.StartedID == common.EmptyEventID {
-					// We haven't started the activity yet, we can cancel the activity right away.
+					// We haven't started the activity yet, we can cancel the activity right away and
+					// schedule a decision task to ensure the workflow makes progress.
 					msBuilder.AddActivityTaskCanceledEvent(ai.ScheduleID, ai.StartedID, *actCancelReqEvent.EventId,
 						[]byte(activityCancelationMsgActivityNotStarted), common.StringDefault(request.Identity))
+					isComplete = false
+					hasUnhandledEvents = true
 				}
 
 			case workflow.DecisionTypeCancelTimer:
