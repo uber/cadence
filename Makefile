@@ -144,7 +144,7 @@ cover_integration_profile: clean bins_nothrift
 	@mkdir -p $(BUILD)
 	@echo "mode: atomic" > $(BUILD)/cover.out
 
-	@echo Running integration test
+	@echo Running integration test with eventsV2 $(EVENTSV2)
 	@mkdir -p $(BUILD)/$(INTEG_TEST_DIR)
 	@time go test $(INTEG_TEST_ROOT) $(TEST_ARG) -eventsV2=$(EVENTSV2) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_DIR)/coverage.out || exit 1;
 	@cat $(BUILD)/$(INTEG_TEST_DIR)/coverage.out | grep -v "mode: atomic" >> $(BUILD)/cover.out
