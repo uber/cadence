@@ -26,6 +26,8 @@ import (
 
 	"io/ioutil"
 
+	"strconv"
+
 	"github.com/gocql/gocql"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/admin"
@@ -227,37 +229,35 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		}
 	}
 
-	permanentRunID := "30000000-0000-f000-f000-000000000001"
-	selectTmpl := "select execution from executions where shard_id = ? and type = 1 and domain_id = ? and workflow_id = ? and run_id = ? "
-	deleteTmpl := "delete from executions where shard_id = ? and type = 1 and domain_id = ? and workflow_id = ? and run_id = ? "
-
-	query := session.Query(selectTmpl, shardID, domainID, wid, permanentRunID)
-	_, err = readOneRow(query)
+	shardIDInt, err := strconv.Atoi(shardID)
 	if err != nil {
-		fmt.Printf("readOneRow for permanentRunID, %v, skip \n", err)
-	} else {
-
-		query := session.Query(deleteTmpl, shardID, domainID, wid, permanentRunID)
-		err := query.Exec()
-		if err != nil {
+		ErrorAndExit("strconv.Atoi(shardID) err", err)
+	}
+	exeStore := cassp.NewWorkflowExecutionPersistenceFromSession(session, shardIDInt, bark.NewNopLogger())
+	req := &persistence.DeleteWorkflowExecutionRequest{
+		DomainID:   domainID,
+		WorkflowID: wid,
+		RunID:      rid,
+	}
+	err = exeStore.DeleteWorkflowCurrentRow(req)
+	if err != nil {
+		if skipError {
+			fmt.Println("delete current row failed, ", err)
+		} else {
 			ErrorAndExit("delete current row failed", err)
 		}
-		fmt.Println("delete current row successfully")
 	}
+	fmt.Println("delete current row successfully")
 
-	query = session.Query(selectTmpl, shardID, domainID, wid, rid)
-	_, err = readOneRow(query)
+	err = exeStore.DeleteWorkflowExecution(req)
 	if err != nil {
-		fmt.Printf("readOneRow for rid %v, %v, skip \n", rid, err)
-	} else {
-
-		query := session.Query(deleteTmpl, shardID, domainID, wid, rid)
-		err := query.Exec()
-		if err != nil {
+		if skipError {
+			fmt.Println("delete mutableState row failed, ", err)
+		} else {
 			ErrorAndExit("delete mutableState row failed", err)
 		}
-		fmt.Println("delete mutableState row successfully")
 	}
+	fmt.Println("delete mutableState row successfully")
 }
 
 func readOneRow(query *gocql.Query) (map[string]interface{}, error) {
