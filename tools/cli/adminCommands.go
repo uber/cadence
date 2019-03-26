@@ -239,15 +239,6 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		WorkflowID: wid,
 		RunID:      rid,
 	}
-	err = exeStore.DeleteWorkflowCurrentRow(req)
-	if err != nil {
-		if skipError {
-			fmt.Println("delete current row failed, ", err)
-		} else {
-			ErrorAndExit("delete current row failed", err)
-		}
-	}
-	fmt.Println("delete current row successfully")
 
 	err = exeStore.DeleteWorkflowExecution(req)
 	if err != nil {
@@ -258,6 +249,16 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		}
 	}
 	fmt.Println("delete mutableState row successfully")
+
+	err = exeStore.DeleteWorkflowCurrentRow(req)
+	if err != nil {
+		if skipError {
+			fmt.Println("delete current row failed, ", err)
+		} else {
+			ErrorAndExit("delete current row failed", err)
+		}
+	}
+	fmt.Println("delete current row successfully")
 }
 
 func readOneRow(query *gocql.Query) (map[string]interface{}, error) {
