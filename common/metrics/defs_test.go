@@ -84,9 +84,9 @@ func TestMetricDefsMapped(t *testing.T) {
 
 func TestMetricDefs(t *testing.T) {
 	for service, metrics := range MetricDefs {
-		for metric, metricDef := range metrics {
+		for _, metricDef := range metrics {
 			matched := IsMetric(string(metricDef.metricName))
-			assert.True(t, matched, fmt.Sprintf("Service: %v, metric: %v invalid", service, metric))
+			assert.True(t, matched, fmt.Sprintf("Service: %v, metric_name: %v", service, metricDef.metricName))
 		}
 	}
 }
