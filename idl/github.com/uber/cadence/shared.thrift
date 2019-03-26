@@ -294,6 +294,7 @@ struct WorkflowExecutionInfo {
   40: optional i64 (js.type = "Long") closeTime
   50: optional WorkflowExecutionCloseStatus closeStatus
   60: optional i64 (js.type = "Long") historyLength
+  70: optional WorkflowExecution parentExecution
 }
 
 struct WorkflowExecutionConfiguration {
