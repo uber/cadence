@@ -1234,6 +1234,7 @@ Update_History_Loop:
 		completedID := *completedEvent.EventId
 		hasUnhandledEvents := msBuilder.HasBufferedEvents()
 		isComplete := false
+		activityNotStartedCancelled := false
 		transferTasks := []persistence.Task{}
 		timerTasks := []persistence.Task{}
 		var continueAsNewBuilder mutableState
@@ -1509,7 +1510,7 @@ Update_History_Loop:
 					// schedule a decision task to ensure the workflow makes progress.
 					msBuilder.AddActivityTaskCanceledEvent(ai.ScheduleID, ai.StartedID, *actCancelReqEvent.EventId,
 						[]byte(activityCancelationMsgActivityNotStarted), common.StringDefault(request.Identity))
-					hasUnhandledEvents = true
+					activityNotStartedCancelled = true
 				}
 
 			case workflow.DecisionTypeCancelTimer:
@@ -1756,8 +1757,7 @@ Update_History_Loop:
 
 		// Schedule another decision task if new events came in during this decision or if request forced to
 		createNewDecisionTask := !isComplete && (hasUnhandledEvents ||
-			request.GetForceCreateNewDecisionTask())
-
+			request.GetForceCreateNewDecisionTask() || activityNotStartedCancelled)
 		var newDecisionTaskScheduledID int64
 		if createNewDecisionTask {
 			di := msBuilder.AddDecisionTaskScheduledEvent()
