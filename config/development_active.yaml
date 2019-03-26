@@ -128,17 +128,18 @@ kafka:
       dlq-topic: other-dlq
 
 archival:
-  status: enabled
+  status: "enabled"
+  defaultBucket: "cadence-active-development"
   filestore:
-    storeDirectory: "/tmp/dev_active/blobstore/"
+    storeDirectory: "/tmp/development/blobstore/"
     defaultBucket:
-      name: "cadence-development"
+      name: "cadence-active-development"
       owner: "cadence"
       retentionDays: 10
     customBuckets:
-      - name: "custom-bucket-1"
+      - name: "custom-active-bucket-1"
         owner: "custom-owner-1"
         retentionDays: 10
-      - name: "custom-bucket-2"
+      - name: "custom-active-bucket-2"
         owner: "custom-owner-2"
         retentionDays: 5

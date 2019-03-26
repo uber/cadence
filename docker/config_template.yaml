@@ -78,7 +78,8 @@ dcRedirectionPolicy:
   toDC: ""
 
 archival:
-  status: enabled
+  status: "enabled"
+  defaultBucket: "cadence-development"
   blobstore:
     storeDirectory: "/tmp/blobstore/"
     defaultBucket:
