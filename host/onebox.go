@@ -541,7 +541,7 @@ func newRingpopFactory(rpHosts []string, initLock sync.Mutex) service.RingpopFac
 func (p *ringpopFactoryImpl) CreateRingpop(dispatcher *yarpc.Dispatcher) (*ringpop.Ringpop, error) {
 	p.initLock.Lock()
 	defer p.initLock.Unlock()
-	
+
 	var ch *tcg.Channel
 	var err error
 	if ch, err = p.getChannel(dispatcher); err != nil {
