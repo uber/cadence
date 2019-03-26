@@ -162,6 +162,7 @@ func (s *Service) startScanner(base service.Service) {
 	storeType := s.config.ScannerCfg.Persistence.DefaultStoreType()
 	if storeType != config.StoreTypeSQL {
 		s.logger.Infof("Scanner not started: incompatible persistence store type %v", storeType)
+		return
 	}
 	sdkClient := public.NewRetryableClient(
 		base.GetClientBean().GetPublicClient(),
