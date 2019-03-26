@@ -34,6 +34,8 @@ import (
 	es "github.com/uber/cadence/common/elasticsearch"
 	esMocks "github.com/uber/cadence/common/elasticsearch/mocks"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 	"strings"
 	"testing"
 )
@@ -88,7 +90,10 @@ func (s *ESVisibilitySuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.mockESClient = &esMocks.Client{}
-	mgr := NewElasticSearchVisibilityManager(s.mockESClient, testIndex, bark.NewNopLogger())
+	config := &config.VisibilityConfig{
+		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+	}
+	mgr := NewElasticSearchVisibilityManager(s.mockESClient, testIndex, config, bark.NewNopLogger())
 	s.visibilityMgr = mgr.(*esVisibilityManager)
 }
 
@@ -325,11 +330,11 @@ func (s *ESVisibilitySuite) TestGetSearchResult() {
 	tieBreakerSorter := elastic.NewFieldSort(es.RunID).Desc()
 
 	earliestTime := request.EarliestStartTime - oneMilliSecondInNano
-	lastestTime := request.LatestStartTime + oneMilliSecondInNano
+	latestTime := request.LatestStartTime + oneMilliSecondInNano
 
 	// test for open
 	isOpen := true
-	rangeQuery := elastic.NewRangeQuery(es.StartTime).Gte(earliestTime).Lte(lastestTime)
+	rangeQuery := elastic.NewRangeQuery(es.StartTime).Gte(earliestTime).Lte(latestTime)
 	boolQuery := elastic.NewBoolQuery().Must(matchDomainQuery).Filter(rangeQuery).MustNot(existClosedStatusQuery)
 	params := &es.SearchParameters{
 		Index:    testIndex,
@@ -343,7 +348,7 @@ func (s *ESVisibilitySuite) TestGetSearchResult() {
 
 	// test for closed
 	isOpen = false
-	rangeQuery = elastic.NewRangeQuery(es.CloseTime).Gte(earliestTime).Lte(lastestTime)
+	rangeQuery = elastic.NewRangeQuery(es.CloseTime).Gte(earliestTime).Lte(latestTime)
 	boolQuery = elastic.NewBoolQuery().Must(matchDomainQuery).Filter(rangeQuery).Must(existClosedStatusQuery)
 	params.Query = boolQuery
 	params.Sorter = []elastic.Sorter{elastic.NewFieldSort(es.CloseTime).Desc(), tieBreakerSorter}

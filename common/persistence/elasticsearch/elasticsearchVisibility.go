@@ -32,11 +32,11 @@ import (
 	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/logging"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/config"
 )
 
 const (
-	esPersistenceName    = "elasticsearch"
-	defaultESSearchLimit = 10000
+	esPersistenceName = "elasticsearch"
 )
 
 type (
@@ -44,6 +44,7 @@ type (
 		esClient es.Client
 		index    string
 		logger   bark.Logger
+		config   *config.VisibilityConfig
 	}
 
 	esVisibilityPageToken struct {
@@ -74,11 +75,12 @@ var (
 )
 
 // NewElasticSearchVisibilityManager create a visibility manager connecting to ElasticSearch
-func NewElasticSearchVisibilityManager(esClient es.Client, index string, logger bark.Logger) p.VisibilityManager {
+func NewElasticSearchVisibilityManager(esClient es.Client, index string, config *config.VisibilityConfig, logger bark.Logger) p.VisibilityManager {
 	return &esVisibilityManager{
 		esClient: esClient,
 		index:    index,
 		logger:   logger.WithField(logging.TagWorkflowComponent, logging.TagValueESVisibilityManager),
+		config:   config,
 	}
 }
 
@@ -349,7 +351,7 @@ func (v *esVisibilityManager) getListWorkflowExecutionsResponse(searchHits *elas
 
 		// ES Search API support pagination using From and PageSize, but has limit that From+PageSize cannot exceed a threshold
 		// to retrieve deeper pages, use ES SearchAfter
-		if searchHits.TotalHits <= defaultESSearchLimit { // use ES Search From+Size
+		if searchHits.TotalHits <= int64(v.config.ESIndexMaxResultWindow()) { // use ES Search From+Size
 			nextPageToken, err = v.serializePageToken(&esVisibilityPageToken{From: token.From + numOfActualHits})
 		} else { // use ES Search After
 			lastExecution := response.Executions[len(response.Executions)-1]
