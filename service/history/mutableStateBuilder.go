@@ -1779,6 +1779,7 @@ func (e *mutableStateBuilder) AddActivityTaskStartedEvent(ai *persistence.Activi
 	ai.StartedID = common.TransientEventID
 	ai.RequestID = requestID
 	ai.StartedTime = time.Now()
+	ai.LastHeartBeatUpdatedTime = ai.StartedTime
 	ai.StartedIdentity = identity
 	e.UpdateActivity(ai)
 	e.syncActivityTasks[ai.ScheduleID] = struct{}{}
