@@ -21,10 +21,9 @@
 package tasklist
 
 import (
+	"strings"
 	"sync/atomic"
 	"time"
-
-	"strings"
 
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common/logging"
@@ -70,8 +69,7 @@ func (s *Scavenger) deleteHandler(key *taskListKey, state taskListState) (handle
 		}
 
 		taskID := resp.Tasks[nTasks-1].TaskID
-		_, err = s.completeTasks(key, taskID, nTasks)
-		if err != nil {
+		if _, err = s.completeTasks(key, taskID, nTasks); err != nil {
 			return handlerStatusErr, err
 		}
 
@@ -97,13 +95,12 @@ func (s *Scavenger) tryDeleteTaskList(key *taskListKey, state taskListState) {
 	// and its incorrect for any other entity to mutate task lists (including deleting it)
 	// the delete here is safe because of two reasons:
 	//   - we delete the task list only if the lastUpdated is > 48H. If a task list is idle for
-	//     this amount of time, it will no longer be owned by any host in matching enginer (because
+	//     this amount of time, it will no longer be owned by any host in matching engine (because
 	//     of idle timeout). If any new host has to take ownership of this at this time, it can only
 	//     do so by updating the rangeID
 	//   - deleteTaskList is a conditional delete where condition is the rangeID
-	err := s.deleteTaskList(key, state.rangeID)
-	if err != nil {
-		s.logger.Errorf("deleteTaskList error: %v", err)
+	if err := s.deleteTaskList(key, state.rangeID); err != nil {
+		s.logger.WithFields(bark.Fields{logging.TagErr: err}).Error("deleteTaskList error")
 		return
 	}
 	atomic.AddInt64(&s.stats.tasklist.nDeleted, 1)

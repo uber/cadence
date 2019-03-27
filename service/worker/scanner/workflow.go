@@ -22,14 +22,13 @@ package scanner
 
 import (
 	"context"
-
-	"go.uber.org/cadence/workflow"
-
 	"time"
 
-	"github.com/uber/cadence/service/worker/scanner/tasklist"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
+	"go.uber.org/cadence/workflow"
+
+	"github.com/uber/cadence/service/worker/scanner/tasklist"
 )
 
 type contextKey int

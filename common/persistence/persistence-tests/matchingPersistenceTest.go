@@ -159,19 +159,21 @@ func (s *MatchingPersistenceSuite) TestGetTasksWithNoMaxReadLevel() {
 		{5, firstTaskID + 2, []int64{firstTaskID + 3, firstTaskID + 4}},
 	}
 
-	for i, tc := range testCases {
-		response, err := s.TaskMgr.GetTasks(&p.GetTasksRequest{
-			DomainID:  domainID,
-			TaskList:  taskList,
-			TaskType:  p.TaskListTypeActivity,
-			BatchSize: tc.batchSz,
-			ReadLevel: tc.readLevel,
+	for _, tc := range testCases {
+		s.Run(fmt.Sprintf("tc_%v_%v", tc.batchSz, tc.readLevel), func() {
+			response, err := s.TaskMgr.GetTasks(&p.GetTasksRequest{
+				DomainID:  domainID,
+				TaskList:  taskList,
+				TaskType:  p.TaskListTypeActivity,
+				BatchSize: tc.batchSz,
+				ReadLevel: tc.readLevel,
+			})
+			s.NoError(err)
+			s.Equal(len(tc.taskIDs), len(response.Tasks), "wrong number of tasks")
+			for i := range tc.taskIDs {
+				s.Equal(tc.taskIDs[i], response.Tasks[i].TaskID, "wrong set of tasks")
+			}
 		})
-		s.NoError(err)
-		s.Equal(len(tc.taskIDs), len(response.Tasks), "wrong number of tasks for test case %v", i)
-		for i := range tc.taskIDs {
-			s.Equal(tc.taskIDs[i], response.Tasks[i].TaskID, "wrong set of tasks for test case %v", i)
-		}
 	}
 }
 

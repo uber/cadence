@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
 	pfactory "github.com/uber/cadence/common/persistence/persistence-factory"
@@ -154,7 +155,7 @@ func (s *Scanner) startWorkflow(client cclient.Client) error {
 		if _, ok := err.(*shared.WorkflowExecutionAlreadyStartedError); ok {
 			return nil
 		}
-		s.context.logger.Errorf("error starting scanner workflow:%v", err)
+		s.context.logger.WithFields(bark.Fields{logging.TagErr: err}).Error("error starting scanner workflow")
 		return err
 	}
 	s.context.logger.Info("Scanner workflow successfully started")

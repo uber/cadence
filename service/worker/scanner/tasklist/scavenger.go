@@ -28,6 +28,7 @@ import (
 	"sync/atomic"
 
 	"github.com/uber-common/bark"
+	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
 )
@@ -146,7 +147,7 @@ func (s *Scavenger) run() {
 	for {
 		resp, err := s.listTaskList(taskListBatchSize, pageToken)
 		if err != nil {
-			s.logger.Errorf("listTaskList error:%v", err)
+			s.logger.WithFields(bark.Fields{logging.TagErr: err}).Error("listTaskList error")
 			return
 		}
 
