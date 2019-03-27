@@ -361,6 +361,17 @@ func (s *ESVisibilitySuite) TestGetSearchResult() {
 	params.Query = boolQuery
 	s.mockESClient.On("Search", mock.Anything, params).Return(nil, nil).Once()
 	s.visibilityMgr.getSearchResult(request, token, matchQuery, isOpen)
+
+	// test for search after
+	runID := "runID"
+	token = &esVisibilityPageToken{
+		SortTime:   latestTime,
+		TieBreaker: runID,
+	}
+	params.From = 0
+	params.SearchAfter = []interface{}{token.SortTime, token.TieBreaker}
+	s.mockESClient.On("Search", mock.Anything, params).Return(nil, nil).Once()
+	s.visibilityMgr.getSearchResult(request, token, matchQuery, isOpen)
 }
 
 func (s *ESVisibilitySuite) TestGetListWorkflowExecutionsResponse() {
@@ -400,6 +411,36 @@ func (s *ESVisibilitySuite) TestGetListWorkflowExecutionsResponse() {
 	s.NoError(err)
 	s.Equal(0, len(resp.NextPageToken))
 	s.Equal(1, len(resp.Executions))
+
+	// test for search after
+	token = &esVisibilityPageToken{}
+	searchHits.Hits = []*elastic.SearchHit{}
+	searchHits.TotalHits = int64(s.visibilityMgr.config.ESIndexMaxResultWindow() + 1)
+	for i := int64(0); i < searchHits.TotalHits; i++ {
+		searchHits.Hits = append(searchHits.Hits, searchHit)
+	}
+	numOfHits := len(searchHits.Hits)
+	resp, err = s.visibilityMgr.getListWorkflowExecutionsResponse(searchHits, token, true, numOfHits)
+	s.NoError(err)
+	s.Equal(numOfHits, len(resp.Executions))
+	nextPageToken, err := s.visibilityMgr.deserializePageToken(resp.NextPageToken)
+	s.NoError(err)
+	s.Equal(int64(1547596872371000000), nextPageToken.SortTime)
+	s.Equal("e481009e-14b3-45ae-91af-dce6e2a88365", nextPageToken.TieBreaker)
+	s.Equal(0, nextPageToken.From)
+	// for close record
+	resp, err = s.visibilityMgr.getListWorkflowExecutionsResponse(searchHits, token, false, numOfHits)
+	s.NoError(err)
+	s.Equal(numOfHits, len(resp.Executions))
+	nextPageToken, _ = s.visibilityMgr.deserializePageToken(resp.NextPageToken)
+	s.Equal(int64(1547596872817380000), nextPageToken.SortTime)
+	s.Equal("e481009e-14b3-45ae-91af-dce6e2a88365", nextPageToken.TieBreaker)
+	s.Equal(0, nextPageToken.From)
+	// for last page
+	resp, err = s.visibilityMgr.getListWorkflowExecutionsResponse(searchHits, token, false, numOfHits+1)
+	s.NoError(err)
+	s.Equal(0, len(resp.NextPageToken))
+	s.Equal(numOfHits, len(resp.Executions))
 }
 
 func (s *ESVisibilitySuite) TestDeserializePageToken() {
@@ -416,6 +457,12 @@ func (s *ESVisibilitySuite) TestDeserializePageToken() {
 	err, ok := err.(*workflow.BadRequestError)
 	s.True(ok)
 	s.True(strings.Contains(err.Error(), "unable to deserialize page token"))
+
+	token = &esVisibilityPageToken{SortTime: 123, TieBreaker: "unique"}
+	data, _ = s.visibilityMgr.serializePageToken(token)
+	result, err = s.visibilityMgr.deserializePageToken(data)
+	s.NoError(err)
+	s.Equal(token, result)
 }
 
 func (s *ESVisibilitySuite) TestSerializePageToken() {
@@ -425,8 +472,20 @@ func (s *ESVisibilitySuite) TestSerializePageToken() {
 	token, err := s.visibilityMgr.deserializePageToken(data)
 	s.NoError(err)
 	s.Equal(0, token.From)
+	s.Equal(int64(0), token.SortTime)
+	s.Equal("", token.TieBreaker)
 
 	newToken := &esVisibilityPageToken{From: 5}
+	data, err = s.visibilityMgr.serializePageToken(newToken)
+	s.NoError(err)
+	s.True(len(data) > 0)
+	token, err = s.visibilityMgr.deserializePageToken(data)
+	s.NoError(err)
+	s.Equal(newToken, token)
+
+	sortTime := int64(123)
+	tieBreaker := "unique"
+	newToken = &esVisibilityPageToken{SortTime: sortTime, TieBreaker: tieBreaker}
 	data, err = s.visibilityMgr.serializePageToken(newToken)
 	s.NoError(err)
 	s.True(len(data) > 0)

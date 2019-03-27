@@ -325,7 +325,7 @@ func (v *esVisibilityManager) getSearchResult(request *p.ListWorkflowExecutionsR
 	}
 	params.Sorter = append(params.Sorter, elastic.NewFieldSort(es.RunID).Desc())
 
-	if token.SortTime != 0 {
+	if token.SortTime != 0 && token.TieBreaker != "" {
 		params.SearchAfter = []interface{}{token.SortTime, token.TieBreaker}
 	}
 
