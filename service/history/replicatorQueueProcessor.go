@@ -179,6 +179,7 @@ func (p *replicatorQueueProcessorImpl) processSyncActivityTask(task *persistence
 
 	var startedTime *int64
 	var heartbeatTime *int64
+	scheduledTime := common.Int64Ptr(activityInfo.ScheduledTime.UnixNano())
 	if activityInfo.StartedID != common.EmptyEventID {
 		startedTime = common.Int64Ptr(activityInfo.StartedTime.UnixNano())
 
@@ -187,10 +188,13 @@ func (p *replicatorQueueProcessorImpl) processSyncActivityTask(task *persistence
 		// but due the in64 limitation, the actual timestamp got is
 		// roughly 17xx year.
 		// set the heartbeat timestamp to started time if empty
-		heartbeatTime = common.Int64Ptr(activityInfo.LastHeartBeatUpdatedTime.UnixNano())
-		if *heartbeatTime < *startedTime {
-			heartbeatTime = startedTime
-		}
+
+	}
+	heartbeatTime = common.Int64Ptr(activityInfo.LastHeartBeatUpdatedTime.UnixNano())
+	if startedTime != nil && *heartbeatTime < *startedTime {
+		heartbeatTime = startedTime
+	} else if *heartbeatTime < *scheduledTime {
+		heartbeatTime = scheduledTime
 	}
 
 	replicationTask := &replicator.ReplicationTask{
@@ -201,7 +205,7 @@ func (p *replicatorQueueProcessorImpl) processSyncActivityTask(task *persistence
 			RunId:             common.StringPtr(task.RunID),
 			Version:           common.Int64Ptr(activityInfo.Version),
 			ScheduledId:       common.Int64Ptr(activityInfo.ScheduleID),
-			ScheduledTime:     common.Int64Ptr(activityInfo.ScheduledTime.UnixNano()),
+			ScheduledTime:     scheduledTime,
 			StartedId:         common.Int64Ptr(activityInfo.StartedID),
 			StartedTime:       startedTime,
 			LastHeartbeatTime: heartbeatTime,
