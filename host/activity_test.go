@@ -981,3 +981,241 @@ func (s *integrationSuite) TestActivityCancellation() {
 	<-cancelCh
 	s.Logger.Infof("Waiting for workflow to complete: RunId: %v", *we.RunId)
 }
+
+func (s *integrationSuite) TestActivityCancellationNotStarted() {
+	id := "integration-activity-cancellation-test"
+	wt := "integration-activity-cancellation-test-type"
+	tl := "integration-activity-cancellation-test-tasklist"
+	identity := "worker1"
+	activityName := "activity_timer"
+
+	workflowType := &workflow.WorkflowType{}
+	workflowType.Name = common.StringPtr(wt)
+
+	taskList := &workflow.TaskList{}
+	taskList.Name = common.StringPtr(tl)
+
+	request := &workflow.StartWorkflowExecutionRequest{
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		Identity:                            common.StringPtr(identity),
+	}
+
+	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err0)
+
+	s.Logger.Infof("StartWorkflowExecution: response: %v \n", we.GetRunId())
+
+	activityCounter := int32(0)
+	scheduleActivity := true
+	requestCancellation := false
+
+	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+		if scheduleActivity {
+			activityCounter++
+			buf := new(bytes.Buffer)
+			s.Nil(binary.Write(buf, binary.LittleEndian, activityCounter))
+
+			return []byte(strconv.Itoa(int(activityCounter))), []*workflow.Decision{{
+				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
+				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
+					ActivityId:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
+					ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityName)},
+					TaskList:                      &workflow.TaskList{Name: common.StringPtr("no_worker_tasklist")},
+					Input:                         buf.Bytes(),
+					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(15),
+					ScheduleToStartTimeoutSeconds: common.Int32Ptr(2),
+					StartToCloseTimeoutSeconds:    common.Int32Ptr(15),
+					HeartbeatTimeoutSeconds:       common.Int32Ptr(0),
+				},
+			}}, nil
+		}
+
+		if requestCancellation {
+			return []byte(strconv.Itoa(int(activityCounter))), []*workflow.Decision{{
+				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeRequestCancelActivityTask),
+				RequestCancelActivityTaskDecisionAttributes: &workflow.RequestCancelActivityTaskDecisionAttributes{
+					ActivityId: common.StringPtr(strconv.Itoa(int(activityCounter))),
+				},
+			}}, nil
+		}
+
+		s.Logger.Info("Completing Workflow.")
+
+		return []byte(strconv.Itoa(int(activityCounter))), []*workflow.Decision{{
+			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
+			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+				Result: []byte("Done."),
+			},
+		}}, nil
+	}
+
+	atHandler := func(execution *workflow.WorkflowExecution, activityType *workflow.ActivityType,
+		activityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
+		return nil, false, nil
+	}
+
+	poller := &TaskPoller{
+		Engine:          s.engine,
+		Domain:          s.domainName,
+		TaskList:        taskList,
+		Identity:        identity,
+		DecisionHandler: dtHandler,
+		ActivityHandler: atHandler,
+		Logger:          s.Logger,
+		T:               s.T(),
+	}
+
+	_, err := poller.PollAndProcessDecisionTask(false, false)
+	s.True(err == nil || err == matching.ErrNoTasks)
+
+	s.Logger.Info("Trying to cancel the task in a different thread.")
+	scheduleActivity = false
+	requestCancellation = true
+	_, err = poller.PollAndProcessDecisionTask(false, false)
+	s.True(err == nil || err == matching.ErrNoTasks)
+
+	//	err = poller.PollAndProcessActivityTask(false)
+	//	s.True(err == nil || err == matching.ErrNoTasks)
+
+	s.printWorkflowHistory(s.domainName, &workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(id),
+		RunId:      common.StringPtr(we.GetRunId()),
+	})
+}
+
+func (s *integrationSuite) TestBlahCancellationNotStartedOld() {
+	id := "integration-activity-cancellation-notstarted-test"
+	wt := "integration-activity-cancellation-notstarted-test-type"
+	tl := "integration-activity-cancellation-notstarted-test-tasklist"
+	identity := "worker1"
+	activityName := "cancellation-notstarted_activity"
+
+	workflowType := &workflow.WorkflowType{}
+	workflowType.Name = common.StringPtr(wt)
+
+	taskList := &workflow.TaskList{}
+	taskList.Name = common.StringPtr(tl)
+
+	request := &workflow.StartWorkflowExecutionRequest{
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(300),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
+		Identity:                            common.StringPtr(identity),
+	}
+
+	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err0)
+
+	s.Logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
+
+	workflowComplete := false
+	activitiesScheduled := false
+	cancelActivity := false
+	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+		s.Logger.Info("Running dt handler.")
+		if !activitiesScheduled {
+			s.Logger.Info("Scheduling activities.")
+
+			activitiesScheduled = true
+			cancelActivity = true
+			return nil, []*workflow.Decision{{
+				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
+				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
+					ActivityId:                    common.StringPtr("A"),
+					ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityName)},
+					TaskList:                      &workflow.TaskList{Name: common.StringPtr("NoWorker")},
+					Input:                         []byte("ScheduleToStart"),
+					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(35),
+					ScheduleToStartTimeoutSeconds: common.Int32Ptr(3), // ActivityID A is expected to timeout using ScheduleToStart
+					StartToCloseTimeoutSeconds:    common.Int32Ptr(30),
+					HeartbeatTimeoutSeconds:       common.Int32Ptr(0),
+				},
+			},
+			}, nil
+		}
+
+		if cancelActivity {
+			s.Logger.Errorf("Cancelling activity.")
+			workflowComplete = true
+			return nil, []*workflow.Decision{{
+				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeRequestCancelActivityTask),
+				RequestCancelActivityTaskDecisionAttributes: &workflow.RequestCancelActivityTaskDecisionAttributes{
+					ActivityId: common.StringPtr("A"),
+				},
+			}}, nil
+		}
+
+		s.Logger.Info("Completing Workflow.")
+		workflowComplete = true
+		return nil, []*workflow.Decision{{
+			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
+			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+				Result: []byte("Done."),
+			},
+		}}, nil
+	}
+
+	atHandler := func(execution *workflow.WorkflowExecution, activityType *workflow.ActivityType,
+		activityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
+		s.Fail("Activity not expected to start")
+		return []byte("Activity Result."), false, nil
+	}
+
+	poller := &TaskPoller{
+		Engine:          s.engine,
+		Domain:          s.domainName,
+		TaskList:        taskList,
+		Identity:        identity,
+		DecisionHandler: dtHandler,
+		ActivityHandler: atHandler,
+		Logger:          s.Logger,
+		T:               s.T(),
+	}
+
+	_, err := poller.PollAndProcessDecisionTask(false, false)
+	s.True(err == nil || err == matching.ErrNoTasks)
+	s.Logger.Info("Polled decision task 1.")
+
+	go func() {
+		err = poller.PollAndProcessActivityTask(false)
+		s.Logger.Infof("Activity Processing Completed.  Error: %v", err)
+	}()
+	s.Logger.Info("Setup activity task poller.")
+
+	go func() {
+		_, err := poller.PollAndProcessDecisionTask(false, false)
+		s.True(err == nil || err == matching.ErrNoTasks)
+		s.Logger.Info("Polled decision task 2.")
+	}()
+
+	s.Logger.Infof("Waiting for workflow to complete: RunId: %v", *we.RunId)
+	for i := 0; i < 10; i++ {
+		s.Logger.Infof("Processing decision task: %v", i)
+		_, err := poller.PollAndProcessDecisionTask(false, false)
+		s.Nil(err, "Poll for decision task failed.")
+
+		if workflowComplete {
+			break
+		}
+	}
+
+	s.printWorkflowHistory(s.domainName, &workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(id),
+		RunId:      common.StringPtr(we.GetRunId()),
+	})
+	s.True(workflowComplete)
+}
