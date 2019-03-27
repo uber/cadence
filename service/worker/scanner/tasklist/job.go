@@ -42,7 +42,6 @@ type (
 
 	job struct {
 		input jobInput
-		wg    *sync.WaitGroup // wait group that's set to done after the job is processed
 	}
 
 	jobQueue struct {
@@ -59,7 +58,7 @@ func newJobQueue(size int, stopC chan struct{}) *jobQueue {
 	}
 }
 
-func newJob(info *p.TaskListInfo, wg *sync.WaitGroup) *job {
+func newJob(info *p.TaskListInfo) *job {
 	return &job{
 		input: jobInput{
 			taskListKey: taskListKey{
@@ -72,7 +71,6 @@ func newJob(info *p.TaskListInfo, wg *sync.WaitGroup) *job {
 				lastUpdated: info.LastUpdated,
 			},
 		},
-		wg: wg,
 	}
 }
 

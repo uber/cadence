@@ -40,8 +40,10 @@ type (
 		deferredJobQ *threadSafeList // Queue of deferred jobs to be picked up and executed later (for fairness)
 		db           p.TaskManager
 		metrics      metrics.Client
-		stats        stats
 		logger       bark.Logger
+		outstanding  int64
+		signalC      chan struct{}
+		stats        stats
 		started      int64
 		stopped      int64
 		stopC        chan struct{}
@@ -98,6 +100,7 @@ func NewScavenger(db p.TaskManager, metrics metrics.Client, logger bark.Logger) 
 		db:           db,
 		metrics:      metrics,
 		logger:       logger,
+		signalC:      make(chan struct{}, 1),
 		stopC:        stopC,
 		jobQ:         newJobQueue(taskListBatchSize, stopC),
 		deferredJobQ: newThreadSafeList(),
@@ -132,88 +135,6 @@ func (s *Scavenger) Stop() {
 	s.logger.Info("Tasklist scavenger stopped")
 }
 
-// run does a single run over all task lists
-func (s *Scavenger) run() {
-	defer func() {
-		s.emitStats()
-		go s.Stop()
-		s.stopWG.Done()
-	}()
-
-	var wg sync.WaitGroup
-	var pageToken []byte
-
-	// Step #1: process each task list once
-	for {
-		resp, err := s.listTaskList(taskListBatchSize, pageToken)
-		if err != nil {
-			s.logger.WithFields(bark.Fields{logging.TagErr: err}).Error("listTaskList error")
-			return
-		}
-
-		wg.Add(len(resp.Items))
-		atomic.AddInt64(&s.stats.tasklist.nProcessed, int64(len(resp.Items)))
-		for _, item := range resp.Items {
-			if !s.jobQ.add(newJob(&item, &wg)) {
-				return
-			}
-		}
-
-		pageToken = resp.NextPageToken
-		if pageToken == nil {
-			break
-		}
-	}
-
-	if !s.awaitWaitGroup(&wg) {
-		return
-	}
-
-	// Step #2: When some task lists have lot of work to do, we avoid doing
-	// too much work in one shot (for fairness). After doing some amount of
-	// work, the task list processor adds the task list to a defferedQ which
-	// is picked up for processing at a later time. Here, we process all
-	// entries in the defferedQ
-	for e := s.deferredJobQ.remove(); e != nil; e = s.deferredJobQ.remove() {
-		wg.Add(1)
-		if !s.jobQ.add(e.Value.(*job)) {
-			return
-		}
-		if !s.awaitWaitGroup(&wg) {
-			return
-		}
-	}
-}
-
-// worker runs in a separate go routine and processes a single task list
-func (s *Scavenger) worker() {
-	defer s.stopWG.Done()
-	for s.Alive() {
-		job, ok := s.jobQ.remove()
-		if !ok {
-			return
-		}
-		status, err := s.deleteHandler(&job.input.taskListKey, job.input.taskListState)
-		if err != nil {
-			return
-		}
-		if status == handlerStatusDefer {
-			// we have more work to do but we intentionally limited the amount of
-			// tasks we processed to maxTasksPerJob for fairness among task lists
-			// Add this job to the list of deferredJobQ to be picked up later
-			s.deferredJobQ.add(job)
-		}
-		job.wg.Done()
-	}
-}
-
-func (s *Scavenger) emitStats() {
-	s.metrics.UpdateGauge(metrics.TaskListScavengerScope, metrics.TaskProcessedCount, float64(s.stats.task.nProcessed))
-	s.metrics.UpdateGauge(metrics.TaskListScavengerScope, metrics.TaskDeletedCount, float64(s.stats.task.nDeleted))
-	s.metrics.UpdateGauge(metrics.TaskListScavengerScope, metrics.TaskListProcessedCount, float64(s.stats.tasklist.nProcessed))
-	s.metrics.UpdateGauge(metrics.TaskListScavengerScope, metrics.TaskListDeletedCount, float64(s.stats.tasklist.nDeleted))
-}
-
 // Alive returns true if the scavenger is still running
 func (s *Scavenger) Alive() bool {
 	select {
@@ -224,14 +145,106 @@ func (s *Scavenger) Alive() bool {
 	}
 }
 
-func (s *Scavenger) awaitWaitGroup(wg *sync.WaitGroup) bool {
-	doneC := make(chan struct{})
-	go func() {
-		wg.Wait()
-		close(doneC)
+// run does a single run over all task lists
+func (s *Scavenger) run() {
+	defer func() {
+		s.emitStats()
+		go s.Stop()
+		s.stopWG.Done()
 	}()
+
+	var pageToken []byte
+
+	// Step #1: process each task list once
+	for {
+		resp, err := s.listTaskList(taskListBatchSize, pageToken)
+		if err != nil {
+			s.logger.WithFields(bark.Fields{logging.TagErr: err}).Error("listTaskList error")
+			return
+		}
+
+		atomic.AddInt64(&s.stats.tasklist.nProcessed, int64(len(resp.Items)))
+		for _, item := range resp.Items {
+			atomic.AddInt64(&s.outstanding, 1)
+			if !s.jobQ.add(newJob(&item)) {
+				return
+			}
+		}
+
+		pageToken = resp.NextPageToken
+		if pageToken == nil {
+			break
+		}
+	}
+
+	if !s.waitForSignal() { // wait for atleast one job to finish
+		return
+	}
+
+	// Step #2: When some task lists have lot of work to do, we avoid doing
+	// too much work in one shot (for fairness). After doing some amount of
+	// work, the task list processor adds the task list to a defferedQ which
+	// is picked up for processing at a later time. Here, we process all
+	// entries in the defferedQ
+	for atomic.LoadInt64(&s.outstanding) > 0 || s.deferredJobQ.len() > 0 {
+		for e := s.deferredJobQ.remove(); e != nil; e = s.deferredJobQ.remove() {
+			atomic.AddInt64(&s.outstanding, 1)
+			if !s.jobQ.add(e.Value.(*job)) {
+				return
+			}
+		}
+		if !s.waitForSignal() { // wait for one job to finish
+			return
+		}
+	}
+}
+
+// worker runs in a separate go routine and processes a single task list
+func (s *Scavenger) worker() {
+	defer func() {
+		s.stopWG.Done()
+	}()
+
+	for s.Alive() {
+		job, ok := s.jobQ.remove()
+		if !ok {
+			s.signal()
+			return
+		}
+		//fmt.Println("worker got new job", job.input.Name)
+		status, err := s.deleteHandler(&job.input.taskListKey, job.input.taskListState)
+		if err != nil {
+			s.signal()
+			return
+		}
+		if status == handlerStatusDefer {
+			// we have more work to do but we intentionally limited the amount of
+			// tasks we processed to maxTasksPerJob for fairness among task lists
+			// Add this job to the list of deferredJobQ to be picked up later
+			s.deferredJobQ.add(job)
+		}
+		s.signal()
+	}
+}
+
+func (s *Scavenger) emitStats() {
+	s.metrics.UpdateGauge(metrics.TaskListScavengerScope, metrics.TaskProcessedCount, float64(s.stats.task.nProcessed))
+	s.metrics.UpdateGauge(metrics.TaskListScavengerScope, metrics.TaskDeletedCount, float64(s.stats.task.nDeleted))
+	s.metrics.UpdateGauge(metrics.TaskListScavengerScope, metrics.TaskListProcessedCount, float64(s.stats.tasklist.nProcessed))
+	s.metrics.UpdateGauge(metrics.TaskListScavengerScope, metrics.TaskListDeletedCount, float64(s.stats.tasklist.nDeleted))
+}
+
+func (s *Scavenger) signal() {
+	atomic.AddInt64(&s.outstanding, -1)
 	select {
-	case <-doneC:
+	case s.signalC <- struct{}{}:
+	default:
+	}
+}
+
+func (s *Scavenger) waitForSignal() bool {
+	select {
+	case <-s.signalC:
 		return true
 	case <-s.stopC:
 		return false
