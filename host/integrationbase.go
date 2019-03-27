@@ -21,23 +21,33 @@
 package host
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/mocks"
-	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/persistence-tests"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/transport/tchannel"
 )
 
 type (
 	// IntegrationBase is a base struct for integration tests
 	IntegrationBase struct {
-		TestCluster
+		suite.Suite
+
+		testCluster       *TestCluster
+		engine            FrontendClient
+		adminClient       AdminClient
+		Logger            bark.Logger
 		domainName        string
 		foreignDomainName string
 	}
@@ -45,37 +55,41 @@ type (
 
 func (s *IntegrationBase) setupSuite(enableGlobalDomain bool, isMasterCluster bool, enableWorker bool, enableArchival bool) {
 	s.setupLogger()
-	s.setupCadenceHost(enableGlobalDomain, isMasterCluster, enableWorker, enableArchival)
 
-	s.domainName = "integration-test-domain"
-	s.MetadataManager.CreateDomain(&persistence.CreateDomainRequest{
-		Info: &persistence.DomainInfo{
-			ID:          uuid.New(),
-			Name:        s.domainName,
-			Status:      persistence.DomainStatusRegistered,
-			Description: "Test domain for integration test",
-		},
-		Config: &persistence.DomainConfig{
-			Retention:  1,
-			EmitMetric: false,
-		},
-		ReplicationConfig: &persistence.DomainReplicationConfig{},
-	})
+	if *frontendAddress != "" {
+		s.Logger.WithField("address", *frontendAddress).Info("Running integration test against specified frontend")
+		channel, err := tchannel.NewChannelTransport(tchannel.ServiceName("cadence-frontend"))
+		s.Require().NoError(err)
+		dispatcher := yarpc.NewDispatcher(yarpc.Config{
+			Name: "unittest",
+			Outbounds: yarpc.Outbounds{
+				"cadence-frontend": {Unary: channel.NewSingleOutbound(*frontendAddress)},
+			},
+		})
+		if err := dispatcher.Start(); err != nil {
+			s.Logger.WithField("error", err).Fatal("Failed to create outbound transport channel")
+		}
 
-	s.foreignDomainName = "integration-foreign-test-domain"
-	s.MetadataManager.CreateDomain(&persistence.CreateDomainRequest{
-		Info: &persistence.DomainInfo{
-			ID:          uuid.New(),
-			Name:        s.foreignDomainName,
-			Status:      persistence.DomainStatusRegistered,
-			Description: "Test foreign domain for integration test",
-		},
-		Config: &persistence.DomainConfig{
-			Retention:  1,
-			EmitMetric: false,
-		},
-		ReplicationConfig: &persistence.DomainReplicationConfig{},
-	})
+		s.engine = NewFrontendClient(dispatcher)
+		s.adminClient = NewAdminClient(dispatcher)
+	} else {
+		s.Logger.Info("Running integration test against test cluster")
+		cluster, err := s.setupCadenceHost(enableGlobalDomain, isMasterCluster, enableWorker, enableArchival)
+		s.Require().NoError(err)
+		s.testCluster = cluster
+		s.engine = s.testCluster.GetFrontendClient()
+		s.adminClient = s.testCluster.GetAdminClient()
+	}
+
+	s.domainName = s.randomizeStr("integration-test-domain")
+	s.Require().NoError(s.testCluster.GetFrontendClient().RegisterDomain(createContext(), &workflow.RegisterDomainRequest{
+		Name: &s.domainName,
+	}))
+
+	s.foreignDomainName = s.randomizeStr("integration-foreign-test-domain")
+	s.Require().NoError(s.testCluster.GetFrontendClient().RegisterDomain(createContext(), &workflow.RegisterDomainRequest{
+		Name: &s.foreignDomainName,
+	}))
 }
 
 func (s *IntegrationBase) setupLogger() {
@@ -90,7 +104,7 @@ func (s *IntegrationBase) setupLogger() {
 	s.Logger = bark.NewLoggerFromLogrus(logger)
 }
 
-func (s *IntegrationBase) setupCadenceHost(enableGlobalDomain bool, isMasterCluster bool, enableWorker bool, enableArchival bool) {
+func (s *IntegrationBase) setupCadenceHost(enableGlobalDomain bool, isMasterCluster bool, enableWorker bool, enableArchival bool) (*TestCluster, error) {
 	persistOptions := &persistencetests.TestBaseOptions{
 		EnableGlobalDomain: enableGlobalDomain,
 		IsMasterCluster:    isMasterCluster,
@@ -104,11 +118,37 @@ func (s *IntegrationBase) setupCadenceHost(enableGlobalDomain bool, isMasterClus
 		NumHistoryShards: testNumberOfHistoryShards,
 		EnableEventsV2:   *EnableEventsV2,
 	}
-	s.SetupCluster(options)
+	return NewCluster(options, s.Logger)
 }
 
 func (s *IntegrationBase) tearDownSuite() {
-	s.TearDownCluster()
+	if s.testCluster != nil {
+		s.testCluster.TearDownCluster()
+	}
+}
+
+func (s *IntegrationBase) registerDomain(domain string, desc string, archivalStatus workflow.ArchivalStatus, archivalBucket string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	return s.engine.RegisterDomain(ctx, &workflow.RegisterDomainRequest{
+		Name:               &domain,
+		Description:        &desc,
+		ArchivalStatus:     &archivalStatus,
+		ArchivalBucketName: &archivalBucket,
+	})
+}
+
+func (s *IntegrationBase) describeDomain(domain string) (*workflow.DescribeDomainResponse, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	return s.engine.DescribeDomain(ctx, &workflow.DescribeDomainRequest{
+		Name: &domain,
+	})
+}
+
+func (s *IntegrationBase) randomizeStr(id string) string {
+	return fmt.Sprintf("%v-%v", id, uuid.New())
 }
 
 func (s *IntegrationBase) printWorkflowHistory(domain string, execution *workflow.WorkflowExecution) {

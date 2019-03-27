@@ -454,7 +454,7 @@ func (s *integrationSuite) TestGetWorkflowExecutionRawHistory_All() {
 	getHistory := func(domain string, execution *workflow.WorkflowExecution, firstEventID int64, nextEventID int64,
 		token []byte) (*admin.GetWorkflowExecutionRawHistoryResponse, error) {
 
-		return s.Host.GetAdminClient().GetWorkflowExecutionRawHistory(createContext(), &admin.GetWorkflowExecutionRawHistoryRequest{
+		return s.adminClient.GetWorkflowExecutionRawHistory(createContext(), &admin.GetWorkflowExecutionRawHistoryRequest{
 			Domain:          common.StringPtr(domain),
 			Execution:       execution,
 			FirstEventId:    common.Int64Ptr(firstEventID),

@@ -32,6 +32,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -41,6 +42,10 @@ type (
 		// not merely log an error
 		*require.Assertions
 		IntegrationBase
+		testCluster       *TestCluster
+		ClusterMetadata   cluster.Metadata
+		MetadataManager   persistence.MetadataManager
+		MetadataManagerV2 persistence.MetadataManager
 	}
 )
 
@@ -62,13 +67,16 @@ func (s *integrationCrossDCSuite) SetupTest() {
 }
 
 func (s *integrationCrossDCSuite) TearDownTest() {
-	if s.Host != nil {
-		s.tearDownSuite()
+	if s.testCluster != nil {
+		s.testCluster.TearDownCluster()
+		s.testCluster = nil
 	}
 }
 
 func (s *integrationCrossDCSuite) setupTest(enableGlobalDomain bool, isMasterCluster bool) {
-	s.setupCadenceHost(enableGlobalDomain, isMasterCluster, false, false)
+	cluster, err := s.setupCadenceHost(enableGlobalDomain, isMasterCluster, false, false)
+	s.Require().NoError(err)
+	s.testCluster = cluster
 }
 
 // Note: if the global domain is not enabled, active clusters and clusters
