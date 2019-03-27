@@ -28,21 +28,21 @@ import (
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common/logging"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/worker/scanner/executor"
 )
 
-// handlerStatus is the return code from a task list handler
-type handlerStatus int
+type handlerStatus = executor.TaskStatus
 
 const (
-	handlerStatusDone handlerStatus = iota
-	handlerStatusDefer
-	handlerStatusErr
+	handlerStatusDone  = executor.TaskStatusDone
+	handlerStatusErr   = executor.TaskStatusErr
+	handlerStatusDefer = executor.TaskStatusDefer
 )
 
 const scannerTaskListPrefix = "cadence-sys-scanner"
 
-// deleteHandler handles deletions for a given task list
-func (s *Scavenger) deleteHandler(key *taskListKey, state taskListState) (handlerStatus, error) {
+// deleteHandler handles deletions for a given executorTask list
+func (s *Scavenger) deleteHandler(key *taskListKey, state *taskListState) handlerStatus {
 	var err error
 	var nProcessed, nDeleted int
 
@@ -52,55 +52,55 @@ func (s *Scavenger) deleteHandler(key *taskListKey, state taskListState) (handle
 		resp, err1 := s.getTasks(key, taskBatchSize)
 		if err1 != nil {
 			err = err1
-			return handlerStatusErr, err
+			return handlerStatusErr
 		}
 
 		nTasks := len(resp.Tasks)
 		if nTasks == 0 {
 			s.tryDeleteTaskList(key, state)
-			return handlerStatusDone, nil
+			return handlerStatusDone
 		}
 
 		for _, task := range resp.Tasks {
 			nProcessed++
 			if !s.isTaskExpired(task) {
-				return handlerStatusDone, nil
+				return handlerStatusDone
 			}
 		}
 
 		taskID := resp.Tasks[nTasks-1].TaskID
 		if _, err = s.completeTasks(key, taskID, nTasks); err != nil {
-			return handlerStatusErr, err
+			return handlerStatusErr
 		}
 
 		nDeleted += nTasks
 		if nTasks < taskBatchSize {
 			s.tryDeleteTaskList(key, state)
-			return handlerStatusDone, nil
+			return handlerStatusDone
 		}
 	}
 
-	return handlerStatusDefer, nil
+	return handlerStatusDefer
 }
 
-func (s *Scavenger) tryDeleteTaskList(key *taskListKey, state taskListState) {
+func (s *Scavenger) tryDeleteTaskList(key *taskListKey, state *taskListState) {
 	if strings.HasPrefix(key.Name, scannerTaskListPrefix) {
-		return // avoid deleting our own task list
+		return // avoid deleting our own executorTask list
 	}
 	delta := time.Now().Sub(state.lastUpdated)
 	if delta < taskListGracePeriod {
 		return
 	}
 	// usually, matching engine is the authoritative owner of a tasklist
-	// and its incorrect for any other entity to mutate task lists (including deleting it)
+	// and its incorrect for any other entity to mutate executorTask lists (including deleting it)
 	// the delete here is safe because of two reasons:
-	//   - we delete the task list only if the lastUpdated is > 48H. If a task list is idle for
+	//   - we delete the executorTask list only if the lastUpdated is > 48H. If a executorTask list is idle for
 	//     this amount of time, it will no longer be owned by any host in matching engine (because
 	//     of idle timeout). If any new host has to take ownership of this at this time, it can only
 	//     do so by updating the rangeID
 	//   - deleteTaskList is a conditional delete where condition is the rangeID
 	if err := s.deleteTaskList(key, state.rangeID); err != nil {
-		s.logger.WithFields(bark.Fields{logging.TagErr: err}).Error("deleteTaskList error")
+		s.logger.WithFields(bark.Fields{logging.TagErr: err.Error()}).Error("deleteTaskList error")
 		return
 	}
 	atomic.AddInt64(&s.stats.tasklist.nDeleted, 1)
@@ -111,7 +111,7 @@ func (s *Scavenger) tryDeleteTaskList(key *taskListKey, state taskListState) {
 	}).Info("tasklist deleted")
 }
 
-func (s *Scavenger) deleteHandlerLog(key *taskListKey, state taskListState, nProcessed int, nDeleted int, err error) {
+func (s *Scavenger) deleteHandlerLog(key *taskListKey, state *taskListState, nProcessed int, nDeleted int, err error) {
 	atomic.AddInt64(&s.stats.task.nDeleted, int64(nDeleted))
 	atomic.AddInt64(&s.stats.task.nProcessed, int64(nProcessed))
 	if err != nil {

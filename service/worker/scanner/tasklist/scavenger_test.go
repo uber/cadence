@@ -60,6 +60,7 @@ func (s *ScavengerTestSuite) SetupTest() {
 	s.scvgr = NewScavenger(s.taskMgr, metrics.NewClient(tally.NoopScope, metrics.Worker), bark.NewLoggerFromLogrus(logrus.New()))
 	maxTasksPerJob = 4
 	nWorkers = 4
+	executorPollInterval = time.Millisecond * 50
 }
 
 func (s *ScavengerTestSuite) TestAllExpiredTasks() {
@@ -77,7 +78,7 @@ func (s *ScavengerTestSuite) TestAllExpiredTasks() {
 	for tl, tbl := range s.taskTables {
 		tasks := tbl.get(100)
 		s.Equal(0, len(tasks), "failed to delete all expired tasks")
-		s.Nil(s.taskListTable.get(tl), "failed to delete expired task list")
+		s.Nil(s.taskListTable.get(tl), "failed to delete expired executorTask list")
 	}
 }
 
@@ -95,8 +96,8 @@ func (s *ScavengerTestSuite) TestAllAliveTasks() {
 	s.runScavenger()
 	for tl, tbl := range s.taskTables {
 		tasks := tbl.get(100)
-		s.Equal(nTasks, len(tasks), "scavenger deleted a non-expired task")
-		s.NotNil(s.taskListTable.get(tl), "scavenger deleted a non-expired task list")
+		s.Equal(nTasks, len(tasks), "scavenger deleted a non-expired executorTask")
+		s.NotNil(s.taskListTable.get(tl), "scavenger deleted a non-expired executorTask list")
 	}
 }
 
@@ -117,7 +118,7 @@ func (s *ScavengerTestSuite) TestExpiredTasksFollowedByAlive() {
 		tasks := tbl.get(100)
 		s.Equal(nTasks/2, len(tasks), "scavenger deleted non-expired tasks")
 		s.Equal(int64(nTasks/2), tasks[0].TaskID, "scavenger deleted wrong set of tasks")
-		s.NotNil(s.taskListTable.get(tl), "scavenger deleted a non-expired task list")
+		s.NotNil(s.taskListTable.get(tl), "scavenger deleted a non-expired executorTask list")
 	}
 }
 
@@ -137,7 +138,7 @@ func (s *ScavengerTestSuite) TestAliveTasksFollowedByExpired() {
 	for tl, tbl := range s.taskTables {
 		tasks := tbl.get(100)
 		s.Equal(nTasks, len(tasks), "scavenger deleted non-expired tasks")
-		s.NotNil(s.taskListTable.get(tl), "scavenger deleted a non-expired task list")
+		s.NotNil(s.taskListTable.get(tl), "scavenger deleted a non-expired executorTask list")
 	}
 }
 
@@ -163,7 +164,7 @@ func (s *ScavengerTestSuite) TestAllExpiredTasksWithErrors() {
 
 func (s *ScavengerTestSuite) runScavenger() {
 	s.scvgr.Start()
-	timer := time.NewTimer(2 * time.Second)
+	timer := time.NewTimer(10 * time.Second)
 	select {
 	case <-s.scvgr.stopC:
 		timer.Stop()

@@ -18,79 +18,72 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tasklist
+package executor
 
 import (
 	"container/list"
 	"sync"
-
-	p "github.com/uber/cadence/common/persistence"
 )
 
 type (
+	runQueue struct {
+		tasks         chan Task
+		deferredTasks *threadSafeList
+		stopC         chan struct{}
+	}
+
 	// threadSafeList is a wrapper around list.List which
 	// guarantees thread safety
 	threadSafeList struct {
 		sync.Mutex
 		list *list.List
 	}
-
-	jobInput struct {
-		taskListKey
-		taskListState
-	}
-
-	job struct {
-		input jobInput
-	}
-
-	jobQueue struct {
-		jobs  chan *job
-		stopC chan struct{}
-	}
 )
 
-// newJobQueue returns an instance of task lists worker job queue
-func newJobQueue(size int, stopC chan struct{}) *jobQueue {
-	return &jobQueue{
-		jobs:  make(chan *job, size),
-		stopC: stopC,
+// newRunQueue returns an instance of task run queue
+func newRunQueue(size int, stopC chan struct{}) *runQueue {
+	return &runQueue{
+		tasks:         make(chan Task, size),
+		deferredTasks: newThreadSafeList(),
+		stopC:         stopC,
 	}
 }
 
-func newJob(info *p.TaskListInfo) *job {
-	return &job{
-		input: jobInput{
-			taskListKey: taskListKey{
-				DomainID: info.DomainID,
-				Name:     info.Name,
-				TaskType: info.TaskType,
-			},
-			taskListState: taskListState{
-				rangeID:     info.RangeID,
-				lastUpdated: info.LastUpdated,
-			},
-		},
-	}
-}
-
-func (jq *jobQueue) add(job *job) bool {
+func (rq *runQueue) add(task Task) bool {
 	select {
-	case jq.jobs <- job:
+	case rq.tasks <- task:
 		return true
-	case <-jq.stopC:
+	case <-rq.stopC:
 		return false
 	}
 }
 
-func (jq *jobQueue) remove() (*job, bool) {
+func (rq *runQueue) addAndDefer(task Task) {
+	rq.deferredTasks.add(task)
+}
+
+// remove returns the next task from run queue
+// if there are no active tasks in runq, a task
+// from deferredQ is returned
+func (rq *runQueue) remove() (Task, bool) {
 	select {
-	case job, ok := <-jq.jobs:
+	case job, ok := <-rq.tasks:
 		if !ok {
 			return nil, false
 		}
 		return job, true
-	case <-jq.stopC:
+	default:
+		if task := rq.deferredTasks.remove(); task != nil {
+			return task.Value.(Task), true
+		}
+	}
+	select {
+	case job, ok := <-rq.tasks:
+		if !ok {
+			return nil, false
+		}
+		return job, true
+	case <-rq.stopC:
 		return nil, false
 	}
 }
