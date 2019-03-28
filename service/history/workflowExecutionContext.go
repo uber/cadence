@@ -895,15 +895,26 @@ func (c *workflowExecutionContextImpl) emitWorkflowExecutionStats(stats *persist
 	if stats == nil {
 		return
 	}
-	// N.B. - Dual emit is required here so that we can see aggregate timer stats across all
-	// domains along with the individual domains stats
-	c.metricsClient.RecordTimer(metrics.ExecutionSizeStatsScope, metrics.HistorySize,
-		time.Duration(executionInfoHistorySize))
+
+	domain := ""
 	if entry, err := c.shard.GetDomainCache().GetDomainByID(c.domainID); err == nil && entry != nil && entry.GetInfo() != nil {
-		c.metricsClient.Scope(metrics.ExecutionSizeStatsScope, metrics.DomainTag(entry.GetInfo().Name)).
-			RecordTimer(metrics.HistorySize, time.Duration(executionInfoHistorySize))
+		domain = entry.GetInfo().Name
 	}
 
+	// emit domain tagged metrics if we can retrieve the domain
+	if len(domain) > 0 {
+		domainSizeScope := c.metricsClient.Scope(metrics.ExecutionSizeStatsScope, metrics.DomainTag(domain))
+		domainCountScope := c.metricsClient.Scope(metrics.ExecutionCountStatsScope, metrics.DomainTag(domain))
+		emitWorkflowExecutionStats(domainSizeScope, domainCountScope, stats, executionInfoHistorySize)
+	}
+
+	// N.B - always emit domain "all" metrics for aggregate information as we
+	// need a way to look at aggregate stats across all domain
+	allSizeScope := c.metricsClient.Scope(metrics.ExecutionSizeStatsScope, metrics.DomainAllTag())
+	allCountScope := c.metricsClient.Scope(metrics.ExecutionCountStatsScope, metrics.DomainAllTag())
+	emitWorkflowExecutionStats(allSizeScope, allCountScope, stats, executionInfoHistorySize)
+
+	// TODO: (@shreyassrivatsan) remove the below legacy style metrics
 	c.metricsClient.RecordTimer(metrics.ExecutionSizeStatsScope, metrics.MutableStateSize,
 		time.Duration(stats.MutableStateSize))
 	c.metricsClient.RecordTimer(metrics.ExecutionSizeStatsScope, metrics.ExecutionInfoSize,
@@ -937,6 +948,29 @@ func (c *workflowExecutionContextImpl) emitWorkflowExecutionStats(stats *persist
 }
 
 func (c *workflowExecutionContextImpl) emitSessionUpdateStats(stats *persistence.MutableStateUpdateSessionStats) {
+	if stats == nil {
+		return
+	}
+
+	domain := ""
+	if entry, err := c.shard.GetDomainCache().GetDomainByID(c.domainID); err == nil && entry != nil && entry.GetInfo() != nil {
+		domain = entry.GetInfo().Name
+	}
+
+	// emit domain tagged metrics if we can retrieve the domain
+	if len(domain) > 0 {
+		domainSizeScope := c.metricsClient.Scope(metrics.SessionSizeStatsScope, metrics.DomainTag(domain))
+		domainCountScope := c.metricsClient.Scope(metrics.SessionCountStatsScope, metrics.DomainTag(domain))
+		emitSessionUpdateStats(domainSizeScope, domainCountScope, stats)
+	}
+
+	// N.B - always emit domain "all" metrics for aggregate information as we
+	// need a way to look at aggregate stats across all domain
+	allSizeScope := c.metricsClient.Scope(metrics.SessionSizeStatsScope, metrics.DomainAllTag())
+	allCountScope := c.metricsClient.Scope(metrics.SessionCountStatsScope, metrics.DomainAllTag())
+	emitSessionUpdateStats(allSizeScope, allCountScope, stats)
+
+	// TODO: (@shreyassrivatsan) remove the below legacy style metrics
 	c.metricsClient.RecordTimer(metrics.SessionSizeStatsScope, metrics.MutableStateSize,
 		time.Duration(stats.MutableStateSize))
 	c.metricsClient.RecordTimer(metrics.SessionSizeStatsScope, metrics.ExecutionInfoSize,
@@ -973,6 +1007,48 @@ func (c *workflowExecutionContextImpl) emitSessionUpdateStats(stats *persistence
 		time.Duration(stats.DeleteSignalInfoCount))
 	c.metricsClient.RecordTimer(metrics.SessionCountStatsScope, metrics.DeleteRequestCancelInfoCount,
 		time.Duration(stats.DeleteRequestCancelInfoCount))
+}
+
+func emitWorkflowExecutionStats(sizeScope, countScope metrics.Scope, stats *persistence.MutableStateStats, executionInfoHistorySize int64) {
+	sizeScope.RecordTimer(metrics.HistorySize, time.Duration(executionInfoHistorySize))
+	sizeScope.RecordTimer(metrics.MutableStateSize, time.Duration(stats.MutableStateSize))
+	sizeScope.RecordTimer(metrics.ExecutionInfoSize, time.Duration(stats.MutableStateSize))
+	sizeScope.RecordTimer(metrics.ActivityInfoSize, time.Duration(stats.ActivityInfoSize))
+	sizeScope.RecordTimer(metrics.TimerInfoSize, time.Duration(stats.TimerInfoSize))
+	sizeScope.RecordTimer(metrics.ChildInfoSize, time.Duration(stats.ChildInfoSize))
+	sizeScope.RecordTimer(metrics.SignalInfoSize, time.Duration(stats.SignalInfoSize))
+	sizeScope.RecordTimer(metrics.BufferedEventsSize, time.Duration(stats.BufferedEventsSize))
+	sizeScope.RecordTimer(metrics.BufferedReplicationTasksSize, time.Duration(stats.BufferedReplicationTasksSize))
+
+	countScope.RecordTimer(metrics.ActivityInfoCount, time.Duration(stats.ActivityInfoCount))
+	countScope.RecordTimer(metrics.TimerInfoCount, time.Duration(stats.TimerInfoCount))
+	countScope.RecordTimer(metrics.ChildInfoCount, time.Duration(stats.ChildInfoCount))
+	countScope.RecordTimer(metrics.SignalInfoCount, time.Duration(stats.SignalInfoCount))
+	countScope.RecordTimer(metrics.RequestCancelInfoCount, time.Duration(stats.RequestCancelInfoCount))
+	countScope.RecordTimer(metrics.BufferedEventsCount, time.Duration(stats.BufferedEventsCount))
+	countScope.RecordTimer(metrics.BufferedReplicationTasksCount, time.Duration(stats.BufferedReplicationTasksCount))
+}
+
+func emitSessionUpdateStats(sizeScope, countScope metrics.Scope, stats *persistence.MutableStateUpdateSessionStats) {
+	sizeScope.RecordTimer(metrics.MutableStateSize, time.Duration(stats.MutableStateSize))
+	sizeScope.RecordTimer(metrics.ExecutionInfoSize, time.Duration(stats.ExecutionInfoSize))
+	sizeScope.RecordTimer(metrics.ActivityInfoSize, time.Duration(stats.ActivityInfoSize))
+	sizeScope.RecordTimer(metrics.TimerInfoSize, time.Duration(stats.TimerInfoSize))
+	sizeScope.RecordTimer(metrics.ChildInfoSize, time.Duration(stats.ChildInfoSize))
+	sizeScope.RecordTimer(metrics.SignalInfoSize, time.Duration(stats.SignalInfoSize))
+	sizeScope.RecordTimer(metrics.BufferedEventsSize, time.Duration(stats.BufferedEventsSize))
+	sizeScope.RecordTimer(metrics.BufferedReplicationTasksSize, time.Duration(stats.BufferedReplicationTasksSize))
+
+	countScope.RecordTimer(metrics.ActivityInfoCount, time.Duration(stats.ActivityInfoCount))
+	countScope.RecordTimer(metrics.TimerInfoCount, time.Duration(stats.TimerInfoCount))
+	countScope.RecordTimer(metrics.ChildInfoCount, time.Duration(stats.ChildInfoCount))
+	countScope.RecordTimer(metrics.SignalInfoCount, time.Duration(stats.SignalInfoCount))
+	countScope.RecordTimer(metrics.RequestCancelInfoCount, time.Duration(stats.RequestCancelInfoCount))
+	countScope.RecordTimer(metrics.DeleteActivityInfoCount, time.Duration(stats.DeleteActivityInfoCount))
+	countScope.RecordTimer(metrics.DeleteTimerInfoCount, time.Duration(stats.DeleteTimerInfoCount))
+	countScope.RecordTimer(metrics.DeleteChildInfoCount, time.Duration(stats.DeleteChildInfoCount))
+	countScope.RecordTimer(metrics.DeleteSignalInfoCount, time.Duration(stats.DeleteSignalInfoCount))
+	countScope.RecordTimer(metrics.DeleteRequestCancelInfoCount, time.Duration(stats.DeleteRequestCancelInfoCount))
 }
 
 // validateNoEventsAfterWorkflowFinish perform check on history event batch
