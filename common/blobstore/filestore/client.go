@@ -171,6 +171,14 @@ func (c *client) Download(_ context.Context, bucket string, key blob.Key) (*blob
 	return blob, nil
 }
 
+func (c *client) GetTags(ctx context.Context, bucket string, key blob.Key) (map[string]string, error) {
+	blob, err := c.Download(ctx, bucket, key)
+	if err != nil {
+		return nil, err
+	}
+	return blob.Tags, nil
+}
+
 func (c *client) Exists(_ context.Context, bucket string, key blob.Key) (bool, error) {
 	c.Lock()
 	defer c.Unlock()

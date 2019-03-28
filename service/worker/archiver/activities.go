@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math/rand"
 	"time"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -46,18 +47,20 @@ const (
 	blobstoreTimeout            = 30 * time.Second
 
 	errGetDomainByID = "could not get domain cache entry"
-	errBlobExists    = "could not check if blob already exists"
+	errGetTags    = "could not get blob tags"
 	errUploadBlob    = "could not upload blob"
-	errNextBlob      = "could not get next blob from history blob iterator"
+	errReadBlob      = "could not read blob"
 	errEmptyBucket   = "domain is enabled for archival but bucket is not set"
 	errConstructBlob = "failed to construct blob"
+	errDownloadBlob  = "could not download existing blob"
 
 	errDeleteHistoryV1 = "failed to delete history from events_v1"
 	errDeleteHistoryV2 = "failed to delete history from events_v2"
 )
 
 var (
-	uploadHistoryActivityNonRetryableErrors = []string{errGetDomainByID, errBlobExists, errUploadBlob, errNextBlob, errEmptyBucket, errConstructBlob}
+	// TODO: check that my non-retryable errors are still correct
+	uploadHistoryActivityNonRetryableErrors = []string{errGetDomainByID, errGetTags, errUploadBlob, errReadBlob, errEmptyBucket, errConstructBlob}
 	deleteHistoryActivityNonRetryableErrors = []string{errDeleteHistoryV1, errDeleteHistoryV2}
 	errContextTimeout                       = errors.New("activity aborted because context timed out")
 )
@@ -67,19 +70,12 @@ var (
 // archival will be skipped and no error will be returned if cluster or domain is not figured for archival.
 // method will always return either: nil, errContextTimeout or an error from uploadHistoryActivityNonRetryableErrors.
 func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err error) {
-	skippedArchival := false
-	encounteredBlobAlreadyExists := false
 	container := ctx.Value(bootstrapContainerKey).(*BootstrapContainer)
 	metricsClient := container.MetricsClient
 	sw := metricsClient.StartTimer(metrics.ArchiverUploadHistoryActivityScope, metrics.CadenceLatency)
+	logger := tagLoggerWithRequest(container.Logger, request).WithField(logging.TagAttempt, activity.GetInfo(ctx).Attempt)
 	defer func() {
 		sw.Stop()
-		if skippedArchival {
-			metricsClient.IncCounter(metrics.ArchiverUploadHistoryActivityScope, metrics.ArchiverSkipUploadCount)
-		}
-		if encounteredBlobAlreadyExists {
-			metricsClient.IncCounter(metrics.ArchiverUploadHistoryActivityScope, metrics.ArchiverBlobAlreadyExistsCount)
-		}
 		if err != nil {
 			if err == errContextTimeout {
 				metricsClient.IncCounter(metrics.ArchiverUploadHistoryActivityScope, metrics.CadenceErrContextTimeoutCounter)
@@ -88,7 +84,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 			}
 		}
 	}()
-	logger := tagLoggerWithRequest(container.Logger, request).WithField(logging.TagAttempt, activity.GetInfo(ctx).Attempt)
+
 	domainCache := container.DomainCache
 	clusterMetadata := container.ClusterMetadata
 	domainCacheEntry, err := getDomainByID(ctx, domainCache, request.DomainID)
@@ -98,12 +94,12 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	}
 	if clusterMetadata.ArchivalConfig().GetArchivalStatus() != cluster.ArchivalEnabled {
 		logging.LogSkipArchivalUpload(logger, "cluster is not enabled for archival")
-		skippedArchival = true
+		metricsClient.IncCounter(metrics.ArchiverUploadHistoryActivityScope, metrics.ArchiverSkipUploadCount)
 		return nil
 	}
 	if domainCacheEntry.GetConfig().ArchivalStatus != shared.ArchivalStatusEnabled {
 		logging.LogSkipArchivalUpload(logger, "domain is not enabled for archival")
-		skippedArchival = true
+		metricsClient.IncCounter(metrics.ArchiverUploadHistoryActivityScope, metrics.ArchiverSkipUploadCount)
 		return nil
 	}
 	bucket := domainCacheEntry.GetConfig().ArchivalBucket
@@ -111,42 +107,64 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 		// this should not be able to occur, if domain enables archival bucket should always be set
 		logging.LogFailArchivalUploadAttempt(logger, err, "domain enables archival but does not have a bucket set", "", "")
 		return cadence.NewCustomError(errEmptyBucket)
-
 	}
 	domainName := domainCacheEntry.GetInfo().Name
 	clusterName := container.ClusterMetadata.GetCurrentClusterName()
-	historyBlobItr := container.HistoryBlobIterator
-	if historyBlobItr == nil { // only will be set by testing code
-		historyBlobItr = NewHistoryBlobIterator(request, container, domainName, clusterName)
+	historyBlobReader := container.HistoryBlobReader
+	if historyBlobReader == nil { // only will be set by testing code
+		historyBlobReader = NewHistoryBlobReader(NewHistoryBlobIterator(request, container, domainName, clusterName))
 	}
 	blobstoreClient := container.Blobstore
-	for historyBlobItr.HasNext() {
-		historyBlob, err := nextBlob(ctx, historyBlobItr)
-		if err != nil {
-			logging.LogFailArchivalUploadAttempt(logger, err, "could not get next history blob from iterator", bucket, "")
-			return err
-		}
-		key, err := NewHistoryBlobKey(request.DomainID, request.WorkflowID, request.RunID, *historyBlob.Header.CurrentPageToken)
+	finished := false
+	for pageToken := common.FirstBlobPageToken; !finished; pageToken++ {
+		check := false
+		key, err := NewHistoryBlobKey(request.DomainID, request.WorkflowID, request.RunID, pageToken)
 		if err != nil {
 			logging.LogFailArchivalUploadAttempt(logger, err, "could not construct blob key", bucket, "")
 			return cadence.NewCustomError(errConstructBlob)
 		}
-		if exists, err := blobExists(ctx, blobstoreClient, bucket, key); err != nil {
+		tags, exists, err := getTags(ctx, blobstoreClient, bucket, key)
+		if err != nil {
 			logging.LogFailArchivalUploadAttempt(logger, err, "could not check if blob already exists", bucket, key.String())
 			return err
-		} else if exists {
-			logging.LogBlobAlreadyUploaded(logger, bucket, key.String())
-			encounteredBlobAlreadyExists = true
-			continue
+		}
+		if exists {
+			finished = tags
+			// this is a sampling based sanity check used to ensure deterministic blob construction
+			// is operating as expected, the correctness of archival depends on this deterministic construction
+			check = runConstructionCheck(container.Config.DeterministicConstructionCheckProbability())
+			if !check {
+				continue
+			}
+		}
+		historyBlob, err := readBlob(ctx, historyBlobReader, pageToken)
+		if err != nil {
+			logging.LogFailArchivalUploadAttempt(logger, err, "could not get history blob from reader", bucket, "")
+			return err
 		}
 		blob, reason, err := constructBlob(historyBlob, container.Config.EnableArchivalCompression(domainName))
 		if err != nil {
 			logging.LogFailArchivalUploadAttempt(logger, err, reason, bucket, key.String())
 			return cadence.NewCustomError(errConstructBlob)
 		}
+		if check {
+			existingBlob, err := downloadBlob(ctx, blobstoreClient, bucket, key)
+			if err != nil {
+				logger.WithError(err).Error("failed to download blob for deterministic construction verification")
+				metricsClient.IncCounter(metrics.ArchiverUploadHistoryActivityScope, metrics.ArchiverCouldNotRunDeterministicConstructionCheckCount)
+			}
+			if !blob.Equal(existingBlob) {
+				logger.Error("deterministic construction check failed")
+				metricsClient.IncCounter(metrics.ArchiverUploadHistoryActivityScope, metrics.ArchiverDeterministicConstructionCheckFailedCount)
+			}
+			continue
+		}
 		if err := uploadBlob(ctx, blobstoreClient, bucket, key, blob); err != nil {
 			logging.LogFailArchivalUploadAttempt(logger, err, "could not upload blob", bucket, key.String())
 			return err
+		}
+		if *historyBlob.Header.IsLast {
+			finished = true
 		}
 	}
 	return nil
@@ -184,19 +202,19 @@ func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	return nil
 }
 
-func nextBlob(ctx context.Context, historyBlobItr HistoryBlobIterator) (*HistoryBlob, error) {
-	blob, err := historyBlobItr.Next()
+func readBlob(ctx context.Context, historyBlobReader HistoryBlobReader, blobPage int) (*HistoryBlob, error) {
+	blob, err := historyBlobReader.GetBlob(blobPage)
 	if err == nil {
 		return blob, nil
 	}
 	op := func() error {
-		blob, err = historyBlobItr.Next()
+		blob, err = historyBlobReader.GetBlob(blobPage)
 		return err
 	}
 	for err != nil {
 		activity.RecordHeartbeat(ctx)
 		if !common.IsPersistenceTransientError(err) {
-			return nil, cadence.NewCustomError(errNextBlob)
+			return nil, cadence.NewCustomError(errReadBlob)
 		}
 		if contextExpired(ctx) {
 			return nil, errContextTimeout
@@ -206,23 +224,26 @@ func nextBlob(ctx context.Context, historyBlobItr HistoryBlobIterator) (*History
 	return blob, nil
 }
 
-func blobExists(ctx context.Context, blobstoreClient blobstore.Client, bucket string, key blob.Key) (bool, error) {
+func getTags(ctx context.Context, blobstoreClient blobstore.Client, bucket string, key blob.Key) (map[string]string, bool, error) {
 	bCtx, cancel := context.WithTimeout(ctx, blobstoreTimeout)
-	exists, err := blobstoreClient.Exists(bCtx, bucket, key)
+	tags, err := blobstoreClient.GetTags(bCtx, bucket, key)
 	cancel()
 	for err != nil {
 		activity.RecordHeartbeat(ctx)
+		if err == blobstore.ErrBlobNotExists {
+			return nil, false, nil
+		}
 		if !blobstoreClient.IsRetryableError(err) {
-			return false, cadence.NewCustomError(errBlobExists)
+			return nil, false, cadence.NewCustomError(errGetTags)
 		}
 		if contextExpired(ctx) {
-			return false, errContextTimeout
+			return nil, false, errContextTimeout
 		}
 		bCtx, cancel = context.WithTimeout(ctx, blobstoreTimeout)
-		exists, err = blobstoreClient.Exists(bCtx, bucket, key)
+		tags, err = blobstoreClient.GetTags(bCtx, bucket, key)
 		cancel()
 	}
-	return exists, nil
+	return tags, true, nil
 }
 
 func uploadBlob(ctx context.Context, blobstoreClient blobstore.Client, bucket string, key blob.Key, blob *blob.Blob) error {
@@ -242,6 +263,25 @@ func uploadBlob(ctx context.Context, blobstoreClient blobstore.Client, bucket st
 		cancel()
 	}
 	return nil
+}
+
+func downloadBlob(ctx context.Context, blobstoreClient blobstore.Client, bucket string, key blob.Key) (*blob.Blob, error) {
+	bCtx, cancel := context.WithTimeout(ctx, blobstoreTimeout)
+	blob, err := blobstoreClient.Download(bCtx, bucket, key)
+	cancel()
+	for err != nil {
+		activity.RecordHeartbeat(ctx)
+		if !blobstoreClient.IsRetryableError(err) {
+			return nil, cadence.NewCustomError(errDownloadBlob)
+		}
+		if contextExpired(ctx) {
+			return nil, errContextTimeout
+		}
+		bCtx, cancel = context.WithTimeout(ctx, blobstoreTimeout)
+		blob, err = blobstoreClient.Download(bCtx, bucket, key)
+		cancel()
+	}
+	return blob, nil
 }
 
 func getDomainByID(ctx context.Context, domainCache cache.DomainCache, id string) (*cache.DomainCacheEntry, error) {
@@ -342,4 +382,8 @@ func contextExpired(ctx context.Context) bool {
 	default:
 		return false
 	}
+}
+
+func runConstructionCheck(probability float64) bool {
+	return rand.Intn(int(1.0/probability)) == 0
 }

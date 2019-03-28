@@ -26,10 +26,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	metricsMocks "github.com/uber/cadence/common/metrics/mocks"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
@@ -56,8 +54,6 @@ type (
 	HistoryBlobIteratorSuite struct {
 		*require.Assertions
 		suite.Suite
-		logger        bark.Logger
-		metricsClient *metricsMocks.Client
 	}
 
 	iteratorState struct {
@@ -81,9 +77,6 @@ func TestHistoryBlobIteratorSuite(t *testing.T) {
 
 func (s *HistoryBlobIteratorSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
-	s.logger = bark.NewNopLogger()
-	s.metricsClient = &metricsMocks.Client{}
-	s.metricsClient.On("IncCounter", mock.Anything, mock.Anything)
 }
 
 func (s *HistoryBlobIteratorSuite) TestReadHistory_Failed_EventsV2() {

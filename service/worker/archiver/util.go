@@ -46,6 +46,7 @@ type (
 		RunID                *string `json:"run_id,omitempty"`
 		CurrentPageToken     *int    `json:"current_page_token,omitempty"`
 		NextPageToken        *int    `json:"next_page_token,omitempty"`
+		IsLast               *bool   `json:"is_last,omitempty"`
 		FirstFailoverVersion *int64  `json:"first_failover_version,omitempty"`
 		LastFailoverVersion  *int64  `json:"last_failover_version,omitempty"`
 		FirstEventID         *int64  `json:"first_event_id,omitempty"`
@@ -102,6 +103,11 @@ func ConvertHeaderToTags(header *HistoryBlobHeader) (map[string]string, error) {
 		result[k] = fmt.Sprintf("%v", v)
 	}
 	return result, nil
+}
+
+// ConvertTagsToHeader converts metadata tags for blob into header
+func ConvertTagsToHeader(tags map[string]string) (*HistoryBlobHeader, error) {
+
 }
 
 func hashArchiveRequest(archiveRequest ArchiveRequest) uint64 {

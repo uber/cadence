@@ -3269,7 +3269,7 @@ func (wh *WorkflowHandler) getArchivedHistory(
 	token = &getHistoryContinuationTokenArchival{
 		BlobstorePageToken: *historyBlob.Header.NextPageToken,
 	}
-	if token.BlobstorePageToken == common.LastBlobNextPageToken {
+	if *historyBlob.Header.IsLast {
 		token = nil
 	}
 	nextToken, err := serializeHistoryTokenArchival(token)

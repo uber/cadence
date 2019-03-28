@@ -176,6 +176,7 @@ var keys = map[Key]string{
 	WorkerTargetArchivalBlobSize:             "worker.WorkerTargetArchivalBlobSize",
 	WorkerArchiverConcurrency:                "worker.ArchiverConcurrency",
 	WorkerArchivalsPerIteration:              "worker.ArchivalsPerIteration",
+	WorkerDeterministicConstructionCheckProbability: "worker.DeterministicConstructionCheckProbability",
 	WorkerThrottledLogRPS:                    "worker.throttledLogRPS",
 }
 
@@ -449,6 +450,8 @@ const (
 	WorkerArchiverConcurrency
 	// WorkerArchivalsPerIteration controls the number of archivals handled in each iteration of archival workflow
 	WorkerArchivalsPerIteration
+	// WorkerDeterministicConstructionCheckProbability controls the probability of running a deterministic construction check for any given archival
+	WorkerDeterministicConstructionCheckProbability
 	// WorkerThrottledLogRPS is the rate limit on number of log messages emitted per second for throttled logger
 	WorkerThrottledLogRPS
 
