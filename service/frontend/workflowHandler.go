@@ -47,6 +47,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/cron"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
@@ -1778,7 +1779,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(err, scope)
 	}
 
-	if err := common.ValidateCronSchedule(startRequest.GetCronSchedule()); err != nil {
+	if err := cron.ValidateSchedule(startRequest.GetCronSchedule()); err != nil {
 		return nil, wh.error(err, scope)
 	}
 
@@ -1886,6 +1887,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
+	domainScope := wh.metricsClient.Scope(scope, metrics.DomainTag(getRequest.GetDomain()))
 	if err := wh.validateExecutionAndEmitMetrics(getRequest.Execution, scope); err != nil {
 		return nil, err
 	}
@@ -1993,8 +1995,19 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	history.Events = []*gen.HistoryEvent{}
 	if isCloseEventOnly {
 		if !isWorkflowRunning {
-			history, _, err = wh.getHistory(scope, domainID, *execution, lastFirstEventID, nextEventID,
-				getRequest.GetMaximumPageSize(), nil, token.TransientDecision, token.EventStoreVersion, token.BranchToken)
+			history, _, err = wh.getHistory(
+				scope,
+				domainScope,
+				domainID,
+				*execution,
+				lastFirstEventID,
+				nextEventID,
+				getRequest.GetMaximumPageSize(),
+				nil,
+				token.TransientDecision,
+				token.EventStoreVersion,
+				token.BranchToken,
+			)
 			if err != nil {
 				return nil, wh.error(err, scope)
 			}
@@ -2016,9 +2029,19 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 				token = nil
 			}
 		} else {
-			history, token.PersistenceToken, err =
-				wh.getHistory(scope, domainID, *execution, token.FirstEventID, token.NextEventID,
-					getRequest.GetMaximumPageSize(), token.PersistenceToken, token.TransientDecision, token.EventStoreVersion, token.BranchToken)
+			history, token.PersistenceToken, err = wh.getHistory(
+				scope,
+				domainScope,
+				domainID,
+				*execution,
+				token.FirstEventID,
+				token.NextEventID,
+				getRequest.GetMaximumPageSize(),
+				token.PersistenceToken,
+				token.TransientDecision,
+				token.EventStoreVersion,
+				token.BranchToken,
+			)
 			if err != nil {
 				return nil, wh.error(err, scope)
 			}
@@ -2184,7 +2207,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(ctx context.Context,
 		return nil, wh.error(err, scope)
 	}
 
-	if err := common.ValidateCronSchedule(signalWithStartRequest.GetCronSchedule()); err != nil {
+	if err := cron.ValidateSchedule(signalWithStartRequest.GetCronSchedule()); err != nil {
 		return nil, wh.error(err, scope)
 	}
 
@@ -2808,9 +2831,18 @@ func (wh *WorkflowHandler) DescribeTaskList(ctx context.Context, request *gen.De
 	return response, nil
 }
 
-func (wh *WorkflowHandler) getHistory(scope int, domainID string, execution gen.WorkflowExecution,
-	firstEventID, nextEventID int64, pageSize int32, nextPageToken []byte,
-	transientDecision *gen.TransientDecisionInfo, eventStoreVersion int32, branchToken []byte) (*gen.History, []byte, error) {
+func (wh *WorkflowHandler) getHistory(
+	scope int,
+	domainScope metrics.Scope,
+	domainID string,
+	execution gen.WorkflowExecution,
+	firstEventID, nextEventID int64,
+	pageSize int32,
+	nextPageToken []byte,
+	transientDecision *gen.TransientDecisionInfo,
+	eventStoreVersion int32,
+	branchToken []byte,
+) (*gen.History, []byte, error) {
 
 	historyEvents := []*gen.HistoryEvent{}
 	var size int
@@ -2845,7 +2877,10 @@ func (wh *WorkflowHandler) getHistory(scope int, domainID string, execution gen.
 	}
 
 	if len(historyEvents) > 0 {
+		// N.B. - Dual emit is required here so that we can see aggregate timer stats across all
+		// domains along with the individual domains stats
 		wh.metricsClient.RecordTimer(scope, metrics.HistorySize, time.Duration(size))
+		domainScope.RecordTimer(metrics.HistorySize, time.Duration(size))
 
 		if size > common.GetHistoryWarnSizeLimit {
 			wh.GetThrottledLogger().WithFields(bark.Fields{
@@ -3068,15 +3103,18 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(ctx context.Context
 		if dErr != nil {
 			return nil, dErr
 		}
+		domainScope := wh.metricsClient.Scope(scope, metrics.DomainTag(domain.GetInfo().Name))
 		history, persistenceToken, err = wh.getHistory(
 			scope,
+			domainScope,
 			domainID,
 			*matchingResp.WorkflowExecution,
 			firstEventID,
 			nextEventID,
 			int32(wh.config.HistoryMaxPageSize(domain.GetInfo().Name)),
 			nil,
-			matchingResp.DecisionInfo, eventStoreVersion, branchToken)
+			matchingResp.DecisionInfo, eventStoreVersion, branchToken,
+		)
 		if err != nil {
 			return nil, err
 		}
