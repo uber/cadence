@@ -183,6 +183,7 @@ func (p *replicatorQueueProcessorImpl) processSyncActivityTask(task *persistence
 	if activityInfo.StartedID != common.EmptyEventID {
 		startedTime = common.Int64Ptr(activityInfo.StartedTime.UnixNano())
 	}
+	// LastHeartBeatUpdatedTime must be valid when getting the sync activity replication task
 	heartbeatTime = common.Int64Ptr(activityInfo.LastHeartBeatUpdatedTime.UnixNano())
 
 	replicationTask := &replicator.ReplicationTask{

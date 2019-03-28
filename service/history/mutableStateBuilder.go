@@ -1795,6 +1795,7 @@ func (e *mutableStateBuilder) ReplicateActivityTaskStartedEvent(event *workflow.
 	ai.StartedID = event.GetEventId()
 	ai.RequestID = attributes.GetRequestId()
 	ai.StartedTime = time.Unix(0, event.GetTimestamp())
+	ai.LastHeartBeatUpdatedTime = ai.StartedTime
 	e.updateActivityInfos[ai] = struct{}{}
 }
 
