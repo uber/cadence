@@ -105,9 +105,10 @@ func ConvertHeaderToTags(header *HistoryBlobHeader) (map[string]string, error) {
 	return result, nil
 }
 
-// ConvertTagsToHeader converts metadata tags for blob into header
-func ConvertTagsToHeader(tags map[string]string) (*HistoryBlobHeader, error) {
-
+// IsLast returns true if tags indicate blob is the last blob in archived history, false otherwise
+func IsLast(tags map[string]string) bool {
+	last, ok := tags["is_last"]
+	return ok && last == "true"
 }
 
 func hashArchiveRequest(archiveRequest ArchiveRequest) uint64 {

@@ -67,11 +67,11 @@ type (
 
 	// Config for ClientWorker
 	Config struct {
-		EnableArchivalCompression dynamicconfig.BoolPropertyFnWithDomainFilter
-		HistoryPageSize           dynamicconfig.IntPropertyFnWithDomainFilter
-		TargetArchivalBlobSize    dynamicconfig.IntPropertyFnWithDomainFilter
-		ArchiverConcurrency       dynamicconfig.IntPropertyFn
-		ArchivalsPerIteration     dynamicconfig.IntPropertyFn
+		EnableArchivalCompression                 dynamicconfig.BoolPropertyFnWithDomainFilter
+		HistoryPageSize                           dynamicconfig.IntPropertyFnWithDomainFilter
+		TargetArchivalBlobSize                    dynamicconfig.IntPropertyFnWithDomainFilter
+		ArchiverConcurrency                       dynamicconfig.IntPropertyFn
+		ArchivalsPerIteration                     dynamicconfig.IntPropertyFn
 		DeterministicConstructionCheckProbability dynamicconfig.FloatPropertyFn
 	}
 
