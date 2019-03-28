@@ -51,10 +51,10 @@ import (
 )
 
 const (
-	conditionalRetryCount                    = 5
-	activityCancelationMsgActivityIDUnknown  = "ACTIVITY_ID_UNKNOWN"
-	activityCancelationMsgActivityNotStarted = "ACTIVITY_ID_NOT_STARTED"
-	timerCancelationMsgTimerIDUnknown        = "TIMER_ID_UNKNOWN"
+	conditionalRetryCount                     = 5
+	activityCancellationMsgActivityIDUnknown  = "ACTIVITY_ID_UNKNOWN"
+	activityCancellationMsgActivityNotStarted = "ACTIVITY_ID_NOT_STARTED"
+	timerCancellationMsgTimerIDUnknown        = "TIMER_ID_UNKNOWN"
 )
 
 type (
@@ -1523,7 +1523,7 @@ Update_History_Loop:
 					common.StringDefault(request.Identity))
 				if !isRunning {
 					msBuilder.AddRequestCancelActivityTaskFailedEvent(completedID, activityID,
-						activityCancelationMsgActivityIDUnknown)
+						activityCancellationMsgActivityIDUnknown)
 					continue Process_Decision_Loop
 				}
 
@@ -1531,7 +1531,7 @@ Update_History_Loop:
 					// We haven't started the activity yet, we can cancel the activity right away and
 					// schedule a decision task to ensure the workflow makes progress.
 					msBuilder.AddActivityTaskCanceledEvent(ai.ScheduleID, ai.StartedID, *actCancelReqEvent.EventId,
-						[]byte(activityCancelationMsgActivityNotStarted), common.StringDefault(request.Identity))
+						[]byte(activityCancellationMsgActivityNotStarted), common.StringDefault(request.Identity))
 					activityNotStartedCancelled = true
 				}
 
