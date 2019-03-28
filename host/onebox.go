@@ -147,7 +147,7 @@ type (
 
 	ringpopFactoryImpl struct {
 		rpHosts  []string
-		initLock sync.Mutex
+		initLock *sync.Mutex
 	}
 )
 
@@ -192,7 +192,7 @@ func (c *cadenceImpl) Start() error {
 	}
 
 	var startWG sync.WaitGroup
-	var ringpopInitLock sync.Mutex
+	ringpopInitLock := &sync.Mutex{}
 	startWG.Add(2)
 	go c.startHistory(rpHosts, &startWG, c.enableEventsV2, ringpopInitLock)
 	go c.startMatching(rpHosts, &startWG, ringpopInitLock)
@@ -316,7 +316,7 @@ func (c *cadenceImpl) GetFrontendService() service.Service {
 	return c.frontEndService
 }
 
-func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup, ringpopInitLock sync.Mutex) {
+func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup, ringpopInitLock *sync.Mutex) {
 	params := new(service.BootstrapParams)
 	params.DCRedirectionPolicy = config.DCRedirectionPolicy{}
 	params.Name = common.FrontendServiceName
@@ -373,7 +373,7 @@ func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup, r
 	c.shutdownWG.Done()
 }
 
-func (c *cadenceImpl) startHistory(rpHosts []string, startWG *sync.WaitGroup, enableEventsV2 bool, ringpopInitLock sync.Mutex) {
+func (c *cadenceImpl) startHistory(rpHosts []string, startWG *sync.WaitGroup, enableEventsV2 bool, ringpopInitLock *sync.Mutex) {
 
 	pprofPorts := c.HistoryPProfPort()
 	for i, hostport := range c.HistoryServiceAddress() {
@@ -412,7 +412,7 @@ func (c *cadenceImpl) startHistory(rpHosts []string, startWG *sync.WaitGroup, en
 	c.shutdownWG.Done()
 }
 
-func (c *cadenceImpl) startMatching(rpHosts []string, startWG *sync.WaitGroup, ringpopInitLock sync.Mutex) {
+func (c *cadenceImpl) startMatching(rpHosts []string, startWG *sync.WaitGroup, ringpopInitLock *sync.Mutex) {
 
 	params := new(service.BootstrapParams)
 	params.Name = common.MatchingServiceName
@@ -443,7 +443,7 @@ func (c *cadenceImpl) startMatching(rpHosts []string, startWG *sync.WaitGroup, r
 	c.shutdownWG.Done()
 }
 
-func (c *cadenceImpl) startWorker(rpHosts []string, startWG *sync.WaitGroup, ringpopInitLock sync.Mutex) {
+func (c *cadenceImpl) startWorker(rpHosts []string, startWG *sync.WaitGroup, ringpopInitLock *sync.Mutex) {
 	params := new(service.BootstrapParams)
 	params.Name = common.WorkerServiceName
 	params.Logger = c.logger
@@ -531,7 +531,7 @@ func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, s
 	}
 }
 
-func newRingpopFactory(rpHosts []string, initLock sync.Mutex) service.RingpopFactory {
+func newRingpopFactory(rpHosts []string, initLock *sync.Mutex) service.RingpopFactory {
 	return &ringpopFactoryImpl{
 		rpHosts:  rpHosts,
 		initLock: initLock,
