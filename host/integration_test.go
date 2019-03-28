@@ -49,7 +49,7 @@ type (
 )
 
 func (s *integrationSuite) SetupSuite() {
-	s.setupSuite(*enableGlobalDomain, false, true, false)
+	s.setupSuite(*enableGlobalDomain, false, true, true)
 }
 
 func (s *integrationSuite) TearDownSuite() {

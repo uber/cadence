@@ -81,14 +81,17 @@ func (s *IntegrationBase) setupSuite(enableGlobalDomain bool, isMasterCluster bo
 		s.adminClient = s.testCluster.GetAdminClient()
 	}
 
+	var retentionDays int32 = 1
 	s.domainName = s.randomizeStr("integration-test-domain")
 	s.Require().NoError(s.testCluster.GetFrontendClient().RegisterDomain(createContext(), &workflow.RegisterDomainRequest{
 		Name: &s.domainName,
+		WorkflowExecutionRetentionPeriodInDays:&retentionDays,
 	}))
 
 	s.foreignDomainName = s.randomizeStr("integration-foreign-test-domain")
 	s.Require().NoError(s.testCluster.GetFrontendClient().RegisterDomain(createContext(), &workflow.RegisterDomainRequest{
 		Name: &s.foreignDomainName,
+		WorkflowExecutionRetentionPeriodInDays:&retentionDays,
 	}))
 }
 

@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"github.com/uber/cadence/common/cluster"
 	"strconv"
 	"time"
 
@@ -33,7 +34,7 @@ import (
 )
 
 func (s *integrationSuite) TestArchival_NotEnabled() {
-	//s.Equal(cluster.ArchivalEnabled, s.ClusterMetadata.ArchivalConfig().GetArchivalStatus())
+	s.Equal(cluster.ArchivalEnabled, s.testCluster.testBase.ClusterMetadata.ArchivalConfig().GetArchivalStatus())
 
 	domain := fmt.Sprintf("archival_domain_not_enabled-%v", uuid.New())
 	description := "Test domain for archival not enabled integration test"
@@ -71,7 +72,7 @@ func (s *integrationSuite) TestArchival_NotEnabled() {
 }
 
 func (s *integrationSuite) TestArchival_Enabled() {
-	//s.Equal(cluster.ArchivalEnabled, s.ClusterMetadata.ArchivalConfig().GetArchivalStatus())
+	s.Equal(cluster.ArchivalEnabled, s.testCluster.testBase.ClusterMetadata.ArchivalConfig().GetArchivalStatus())
 
 	domain := fmt.Sprintf("archival_domain_enabled-%v", uuid.New())
 	desc := "Test domain for archival enabled integration test"
