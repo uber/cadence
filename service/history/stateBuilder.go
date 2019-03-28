@@ -23,8 +23,6 @@ package history
 import (
 	"time"
 
-	"github.com/uber/cadence/common/errors"
-
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/shared"
@@ -32,6 +30,8 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/cron"
+	"github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -543,8 +543,8 @@ func (b *stateBuilderImpl) scheduleWorkflowTimerTask(event *shared.HistoryEvent,
 	timeout := now.Add(time.Duration(msBuilder.GetExecutionInfo().WorkflowTimeout) * time.Second)
 
 	cronSchedule := b.msBuilder.GetExecutionInfo().CronSchedule
-	cronBackoffDuration := common.GetBackoffForNextCronSchedule(cronSchedule, now)
-	if cronBackoffDuration != common.NoRetryBackoff {
+	cronBackoffDuration := cron.GetBackoffForNextSchedule(cronSchedule, now)
+	if cronBackoffDuration != cron.NoBackoff {
 		timeout = timeout.Add(cronBackoffDuration)
 		timerTasks = append(timerTasks, &persistence.WorkflowBackoffTimerTask{
 			VisibilityTimestamp: now.Add(cronBackoffDuration),

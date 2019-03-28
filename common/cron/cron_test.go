@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package common
+package cron
 
 import (
 	"testing"
@@ -33,29 +33,29 @@ func Test_NextCronSchedule(t *testing.T) {
 	// every day cron
 	now, _ := time.Parse(time.RFC3339, "2018-12-17T08:00:00-08:00") // UTC: 2018-12-17 16:00:00 +0000 UTC
 	cronSpec := "0 10 * * *"
-	backoff := GetBackoffForNextCronSchedule(cronSpec, now)
+	backoff := GetBackoffForNextSchedule(cronSpec, now)
 	a.Equal(time.Hour*18, backoff)
-	backoff = GetBackoffForNextCronSchedule(cronSpec, now.Add(backoff))
+	backoff = GetBackoffForNextSchedule(cronSpec, now.Add(backoff))
 	a.Equal(time.Hour*24, backoff)
 
 	// every hour cron
 	now, _ = time.Parse(time.RFC3339, "2018-12-17T08:08:00+00:00")
 	cronSpec = "0 * * * *"
-	backoff = GetBackoffForNextCronSchedule(cronSpec, now)
+	backoff = GetBackoffForNextSchedule(cronSpec, now)
 	a.Equal(time.Minute*52, backoff)
-	backoff = GetBackoffForNextCronSchedule(cronSpec, now.Add(backoff))
+	backoff = GetBackoffForNextSchedule(cronSpec, now.Add(backoff))
 	a.Equal(time.Hour, backoff)
 
 	// every minute cron
 	now, _ = time.Parse(time.RFC3339, "2018-12-17T08:08:18+00:00")
 	cronSpec = "* * * * *"
-	backoff = GetBackoffForNextCronSchedule(cronSpec, now)
+	backoff = GetBackoffForNextSchedule(cronSpec, now)
 	a.Equal(time.Second*42, backoff)
-	backoff = GetBackoffForNextCronSchedule(cronSpec, now.Add(backoff))
+	backoff = GetBackoffForNextSchedule(cronSpec, now.Add(backoff))
 	a.Equal(time.Minute, backoff)
 
 	// invalid cron spec
 	cronSpec = "invalid-cron-spec"
-	backoff = GetBackoffForNextCronSchedule(cronSpec, now)
-	a.Equal(NoRetryBackoff, backoff)
+	backoff = GetBackoffForNextSchedule(cronSpec, now)
+	a.Equal(NoBackoff, backoff)
 }

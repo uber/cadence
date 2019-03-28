@@ -26,7 +26,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/robfig/cron"
+	"github.com/uber/cadence/common/cron"
+
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -397,35 +398,6 @@ func ValidateRetryPolicy(policy *workflow.RetryPolicy) error {
 	return nil
 }
 
-// ValidateCronSchedule validates a cron schedule spec
-func ValidateCronSchedule(cronSchedule string) error {
-	if cronSchedule == "" {
-		return nil
-	}
-	if _, err := cron.Parse(cronSchedule); err != nil {
-		return &workflow.BadRequestError{Message: "Invalid CronSchedule."}
-	}
-	return nil
-}
-
-// GetBackoffForNextCronSchedule calculates the backoff time for the next run given
-// a cronSchedule and current time
-func GetBackoffForNextCronSchedule(cronSchedule string, nowTime time.Time) time.Duration {
-	if len(cronSchedule) == 0 {
-		return NoRetryBackoff
-	}
-
-	schedule, err := cron.ParseStandard(cronSchedule)
-	if err != nil {
-		return NoRetryBackoff
-	}
-
-	nowTime = nowTime.In(time.UTC)
-	backoffInterval := schedule.Next(nowTime).Sub(nowTime)
-	roundedInterval := time.Second * time.Duration(math.Ceil(backoffInterval.Seconds()))
-	return roundedInterval
-}
-
 // CreateHistoryStartWorkflowRequest create a start workflow request for history
 func CreateHistoryStartWorkflowRequest(domainID string, startRequest *workflow.StartWorkflowExecutionRequest) *h.StartWorkflowExecutionRequest {
 	histRequest := &h.StartWorkflowExecutionRequest{
@@ -437,7 +409,7 @@ func CreateHistoryStartWorkflowRequest(domainID string, startRequest *workflow.S
 		deadline := time.Now().Add(time.Second * time.Duration(expirationInSeconds))
 		histRequest.ExpirationTimestamp = Int64Ptr(deadline.Round(time.Millisecond).UnixNano())
 	}
-	cronBackoff := GetBackoffForNextCronSchedule(startRequest.GetCronSchedule(), time.Now())
+	cronBackoff := cron.GetBackoffForNextSchedule(startRequest.GetCronSchedule(), time.Now())
 	if cronBackoff != NoRetryBackoff {
 		histRequest.FirstDecisionTaskBackoffSeconds = Int32Ptr(int32(math.Ceil(cronBackoff.Seconds())))
 	}
