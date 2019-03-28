@@ -22,7 +22,6 @@ package history
 
 import (
 	"errors"
-	"fmt"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -571,7 +570,6 @@ func (t *timerQueueProcessorBase) getDomainIDAndWorkflowExecution(task *persiste
 }
 
 func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.TimerTaskInfo) (retError error) {
-	fmt.Println("ANDREW IS HERE IN DELETING HISTORY EVENT TIMER TASK")
 	context, release, err := t.cache.getOrCreateWorkflowExecution(t.getDomainIDAndWorkflowExecution(task))
 	if err != nil {
 		return err

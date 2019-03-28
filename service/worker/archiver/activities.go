@@ -72,7 +72,6 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	container := ctx.Value(bootstrapContainerKey).(*BootstrapContainer)
 	metricsClient := container.MetricsClient
 	sw := metricsClient.StartTimer(metrics.ArchiverUploadHistoryActivityScope, metrics.CadenceLatency)
-	logger := tagLoggerWithRequest(container.Logger, request).WithField(logging.TagAttempt, activity.GetInfo(ctx).Attempt)
 	defer func() {
 		sw.Stop()
 		if err != nil {
@@ -84,6 +83,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 		}
 	}()
 
+	logger := tagLoggerWithRequest(container.Logger, request).WithField(logging.TagAttempt, activity.GetInfo(ctx).Attempt)
 	domainCache := container.DomainCache
 	clusterMetadata := container.ClusterMetadata
 	domainCacheEntry, err := getDomainByID(ctx, domainCache, request.DomainID)
@@ -116,7 +116,6 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	blobstoreClient := container.Blobstore
 	handledLastBlob := false
 	for pageToken := common.FirstBlobPageToken; !handledLastBlob; pageToken++ {
-		runConstTest := false
 		key, err := NewHistoryBlobKey(request.DomainID, request.WorkflowID, request.RunID, pageToken)
 		if err != nil {
 			logging.LogFailArchivalUploadAttempt(logger, err, "could not construct blob key", bucket, "")
@@ -127,6 +126,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 			logging.LogFailArchivalUploadAttempt(logger, err, "could not get blob tags", bucket, key.String())
 			return err
 		}
+		runConstTest := false
 		if err == nil {
 			handledLastBlob = IsLast(tags)
 			// this is a sampling based sanity check used to ensure deterministic blob construction
@@ -136,7 +136,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 				continue
 			}
 		}
-		historyBlob, err := readBlob(ctx, historyBlobReader, pageToken)
+		historyBlob, err := getBlob(ctx, historyBlobReader, pageToken)
 		if err != nil {
 			logging.LogFailArchivalUploadAttempt(logger, err, "could not get history blob from reader", bucket, "")
 			return err
@@ -198,7 +198,7 @@ func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	return nil
 }
 
-func readBlob(ctx context.Context, historyBlobReader HistoryBlobReader, blobPage int) (*HistoryBlob, error) {
+func getBlob(ctx context.Context, historyBlobReader HistoryBlobReader, blobPage int) (*HistoryBlob, error) {
 	blob, err := historyBlobReader.GetBlob(blobPage)
 	op := func() error {
 		blob, err = historyBlobReader.GetBlob(blobPage)
