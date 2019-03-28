@@ -1,0 +1,28 @@
+#!/bin/bash
+
+set +u
+
+echo "--- :golang: Setting up Golang build environment"
+
+if [[ ! -z "${BUILDKITE_GOLANG_IMPORT_PATH:-}" ]] && [[ "$BUILDKITE_GOLANG_IMPORT_PATH" != "" ]]; then
+  NEW_GOPATH="$(pwd)/tmp/go"
+  NEW_BUILD_CHECKOUT_PATH="$NEW_GOPATH/src/$BUILDKITE_GOLANG_IMPORT_PATH"
+
+  # Create the regular GOPATH folders
+  mkdir -p "$NEW_GOPATH/bin"
+  mkdir -p "$NEW_GOPATH/src"
+
+  # Create the /src/x.com/project/name path, and create a symlink of the
+  # current build to that new directory
+  mkdir -p "$NEW_BUILD_CHECKOUT_PATH"
+  rm -rf "$NEW_BUILD_CHECKOUT_PATH"
+  ln -s "$(pwd)" "$NEW_BUILD_CHECKOUT_PATH"
+
+  export GOPATH=$NEW_GOPATH
+  echo "New \$GOPATH is set to $NEW_GOPATH"
+  echo "Build will now be at $NEW_BUILD_CHECKOUT_PATH"
+
+  export BUILDKITE_BUILD_CHECKOUT_PATH=$NEW_BUILD_CHECKOUT_PATH
+else
+  echo "No \$BUILDKITE_GOLANG_IMPORT_PATH set, skipping..."
+fi
