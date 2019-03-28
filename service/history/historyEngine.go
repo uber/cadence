@@ -86,7 +86,7 @@ type (
 		currentClusterName string
 		ShardContext
 		txProcessor          transferQueueProcessor
-		replcatorProcessor   queueProcessor
+		replicatorProcessor  queueProcessor
 		historyEventNotifier historyEventNotifier
 	}
 )
@@ -188,7 +188,7 @@ func NewEngineWithShardContext(
 	if publisher != nil {
 		replicatorProcessor := newReplicatorQueueProcessor(shard, historyEngImpl.historyCache, publisher, executionManager, historyManager, historyV2Manager, logger)
 		historyEngImpl.replicatorProcessor = replicatorProcessor
-		shardWrapper.replcatorProcessor = replicatorProcessor
+		shardWrapper.replicatorProcessor = replicatorProcessor
 		historyEngImpl.replicator = newHistoryReplicator(shard, historyEngImpl, historyCache, shard.GetDomainCache(), historyManager, historyV2Manager,
 			logger)
 	}
@@ -2878,7 +2878,7 @@ func (s *shardContextWrapper) UpdateWorkflowExecution(request *persistence.Updat
 	if err == nil {
 		s.txProcessor.NotifyNewTask(s.currentClusterName, request.TransferTasks)
 		if len(request.ReplicationTasks) > 0 {
-			s.replcatorProcessor.notifyNewTask()
+			s.replicatorProcessor.notifyNewTask()
 		}
 	}
 	return resp, err
@@ -2890,7 +2890,7 @@ func (s *shardContextWrapper) CreateWorkflowExecution(request *persistence.Creat
 	if err == nil {
 		s.txProcessor.NotifyNewTask(s.currentClusterName, request.TransferTasks)
 		if len(request.ReplicationTasks) > 0 {
-			s.replcatorProcessor.notifyNewTask()
+			s.replicatorProcessor.notifyNewTask()
 		}
 	}
 	return resp, err
