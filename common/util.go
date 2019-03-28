@@ -22,10 +22,12 @@ package common
 
 import (
 	"encoding/json"
+	"math"
 	"sync"
 	"time"
 
-	"github.com/robfig/cron"
+	"github.com/uber/cadence/common/cron"
+
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -70,10 +72,6 @@ const (
 	retryKafkaOperationInitialInterval    = 50 * time.Millisecond
 	retryKafkaOperationMaxInterval        = 10 * time.Second
 	retryKafkaOperationExpirationInterval = 30 * time.Second
-
-	retryBlobstoreClientInitialInterval    = time.Second
-	retryBlobstoreClientMaxInterval        = 10 * time.Second
-	retryBlobstoreClientExpirationInterval = time.Minute
 
 	// FailureReasonCompleteResultExceedsLimit is failureReason for complete result exceeds limit
 	FailureReasonCompleteResultExceedsLimit = "COMPLETE_RESULT_EXCEEDS_LIMIT"
@@ -187,15 +185,6 @@ func CreateKafkaOperationRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
-// CreateBlobstoreClientRetryPolicy creates a retry policy for blobstore client
-func CreateBlobstoreClientRetryPolicy() backoff.RetryPolicy {
-	policy := backoff.NewExponentialRetryPolicy(retryBlobstoreClientInitialInterval)
-	policy.SetMaximumInterval(retryBlobstoreClientMaxInterval)
-	policy.SetExpirationInterval(retryBlobstoreClientExpirationInterval)
-
-	return policy
-}
-
 // IsPersistenceTransientError checks if the error is a transient persistence error
 func IsPersistenceTransientError(err error) bool {
 	switch err.(type) {
@@ -209,22 +198,6 @@ func IsPersistenceTransientError(err error) bool {
 // IsKafkaTransientError check if the error is a transient kafka error
 func IsKafkaTransientError(err error) bool {
 	return true
-}
-
-// IsBlobstoreTransientError checks if the error is a retryable error.
-func IsBlobstoreTransientError(err error) bool {
-	return !IsBlobstoreNonRetryableError(err)
-}
-
-// IsBlobstoreNonRetryableError checks if the error is a non retryable error.
-func IsBlobstoreNonRetryableError(err error) bool {
-	switch err.(type) {
-	case *workflow.BadRequestError:
-		return true
-	case *workflow.EntityNotExistsError:
-		return true
-	}
-	return false
 }
 
 // IsServiceTransientError checks if the error is a retryable error.
@@ -396,17 +369,6 @@ func ValidateRetryPolicy(policy *workflow.RetryPolicy) error {
 	return nil
 }
 
-// ValidateCronSchedule validates a cron schedule spec
-func ValidateCronSchedule(cronSchedule string) error {
-	if cronSchedule == "" {
-		return nil
-	}
-	if _, err := cron.Parse(cronSchedule); err != nil {
-		return &workflow.BadRequestError{Message: "Invalid CronSchedule."}
-	}
-	return nil
-}
-
 // CreateHistoryStartWorkflowRequest create a start workflow request for history
 func CreateHistoryStartWorkflowRequest(domainID string, startRequest *workflow.StartWorkflowExecutionRequest) *h.StartWorkflowExecutionRequest {
 	histRequest := &h.StartWorkflowExecutionRequest{
@@ -417,6 +379,10 @@ func CreateHistoryStartWorkflowRequest(domainID string, startRequest *workflow.S
 		expirationInSeconds := startRequest.RetryPolicy.GetExpirationIntervalInSeconds()
 		deadline := time.Now().Add(time.Second * time.Duration(expirationInSeconds))
 		histRequest.ExpirationTimestamp = Int64Ptr(deadline.Round(time.Millisecond).UnixNano())
+	}
+	cronBackoff := cron.GetBackoffForNextSchedule(startRequest.GetCronSchedule(), time.Now())
+	if cronBackoff != NoRetryBackoff {
+		histRequest.FirstDecisionTaskBackoffSeconds = Int32Ptr(int32(math.Ceil(cronBackoff.Seconds())))
 	}
 	return histRequest
 }
