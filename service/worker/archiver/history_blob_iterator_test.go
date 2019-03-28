@@ -338,6 +338,7 @@ func (s *HistoryBlobIteratorSuite) TestNext_Fail_IteratorDepleted() {
 	s.NotNil(blob)
 	s.Equal(common.FirstBlobPageToken, *blob.Header.CurrentPageToken)
 	s.Equal(common.LastBlobNextPageToken, *blob.Header.NextPageToken)
+	s.True(*blob.Header.IsLast)
 	s.Equal(int64(1), *blob.Header.FirstFailoverVersion)
 	s.Equal(int64(5), *blob.Header.LastFailoverVersion)
 	s.Equal(int64(1), *blob.Header.FirstEventID)
@@ -435,8 +436,10 @@ func (s *HistoryBlobIteratorSuite) TestNext_Success_TenCallsToNext() {
 		s.Equal(i+1, *blob.Header.CurrentPageToken)
 		if i == 9 {
 			s.Equal(common.LastBlobNextPageToken, *blob.Header.NextPageToken)
+			s.True(*blob.Header.IsLast)
 		} else {
 			s.Equal(i+2, *blob.Header.NextPageToken)
+			s.False(*blob.Header.IsLast)
 		}
 		s.Equal(int64(100), *blob.Header.EventCount)
 		if i < 9 {
