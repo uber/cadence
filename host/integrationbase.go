@@ -74,7 +74,7 @@ func (s *IntegrationBase) setupSuite(enableGlobalDomain bool, isMasterCluster bo
 		s.adminClient = NewAdminClient(dispatcher)
 	} else {
 		s.Logger.Info("Running integration test against test cluster")
-		cluster, err := s.setupCadenceHost(enableGlobalDomain, isMasterCluster, enableWorker, enableArchival)
+		cluster, err := SetupTestCluster(enableGlobalDomain, isMasterCluster, enableWorker, enableArchival, s.Logger)
 		s.Require().NoError(err)
 		s.testCluster = cluster
 		s.engine = s.testCluster.GetFrontendClient()
@@ -84,14 +84,14 @@ func (s *IntegrationBase) setupSuite(enableGlobalDomain bool, isMasterCluster bo
 	var retentionDays int32 = 1
 	s.domainName = s.randomizeStr("integration-test-domain")
 	s.Require().NoError(s.testCluster.GetFrontendClient().RegisterDomain(createContext(), &workflow.RegisterDomainRequest{
-		Name: &s.domainName,
-		WorkflowExecutionRetentionPeriodInDays:&retentionDays,
+		Name:                                   &s.domainName,
+		WorkflowExecutionRetentionPeriodInDays: &retentionDays,
 	}))
 
 	s.foreignDomainName = s.randomizeStr("integration-foreign-test-domain")
 	s.Require().NoError(s.testCluster.GetFrontendClient().RegisterDomain(createContext(), &workflow.RegisterDomainRequest{
-		Name: &s.foreignDomainName,
-		WorkflowExecutionRetentionPeriodInDays:&retentionDays,
+		Name:                                   &s.foreignDomainName,
+		WorkflowExecutionRetentionPeriodInDays: &retentionDays,
 	}))
 }
 
@@ -107,7 +107,7 @@ func (s *IntegrationBase) setupLogger() {
 	s.Logger = bark.NewLoggerFromLogrus(logger)
 }
 
-func (s *IntegrationBase) setupCadenceHost(enableGlobalDomain bool, isMasterCluster bool, enableWorker bool, enableArchival bool) (*TestCluster, error) {
+func SetupTestCluster(enableGlobalDomain bool, isMasterCluster bool, enableWorker bool, enableArchival bool, logger bark.Logger) (*TestCluster, error) {
 	persistOptions := &persistencetests.TestBaseOptions{
 		EnableGlobalDomain: enableGlobalDomain,
 		IsMasterCluster:    isMasterCluster,
@@ -121,12 +121,15 @@ func (s *IntegrationBase) setupCadenceHost(enableGlobalDomain bool, isMasterClus
 		NumHistoryShards: testNumberOfHistoryShards,
 		EnableEventsV2:   *EnableEventsV2,
 	}
-	return NewCluster(options, s.Logger)
+	return NewCluster(options, logger)
 }
 
 func (s *IntegrationBase) tearDownSuite() {
 	if s.testCluster != nil {
 		s.testCluster.TearDownCluster()
+		s.testCluster = nil
+		s.engine = nil
+		s.adminClient = nil
 	}
 }
 
