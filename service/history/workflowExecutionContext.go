@@ -27,6 +27,7 @@ import (
 
 	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
+	"github.com/uber/cadence/.gen/go/shared"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -684,6 +685,13 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 		c.emitSessionUpdateStats(resp.MutableStateUpdateSessionStats)
 	}
 
+	// emit workflow completion stats if any
+	if executionInfo.State == persistence.WorkflowStateCompleted {
+		if event, ok := c.msBuilder.GetCompletionEvent(); ok {
+			c.emitWorkflowCompletionStats(event)
+		}
+	}
+
 	return nil
 }
 
@@ -1009,6 +1017,20 @@ func (c *workflowExecutionContextImpl) emitSessionUpdateStats(stats *persistence
 		time.Duration(stats.DeleteRequestCancelInfoCount))
 }
 
+func (c *workflowExecutionContextImpl) emitWorkflowCompletionStats(event *workflow.HistoryEvent) {
+	domain := ""
+	if entry, err := c.shard.GetDomainCache().GetDomainByID(c.domainID); err == nil && entry != nil && entry.GetInfo() != nil {
+		domain = entry.GetInfo().Name
+	}
+
+	if len(domain) > 0 {
+		domainScope := c.metricsClient.Scope(metrics.WorkflowCompletionStatsScope, metrics.DomainTag(domain))
+		emitWorkflowCompletionStats(domainScope, event)
+	}
+	scope := c.metricsClient.Scope(metrics.WorkflowCompletionStatsScope, metrics.DomainAllTag())
+	emitWorkflowCompletionStats(scope, event)
+}
+
 func emitWorkflowExecutionStats(sizeScope, countScope metrics.Scope, stats *persistence.MutableStateStats, executionInfoHistorySize int64) {
 	sizeScope.RecordTimer(metrics.HistorySize, time.Duration(executionInfoHistorySize))
 	sizeScope.RecordTimer(metrics.MutableStateSize, time.Duration(stats.MutableStateSize))
@@ -1049,6 +1071,24 @@ func emitSessionUpdateStats(sizeScope, countScope metrics.Scope, stats *persiste
 	countScope.RecordTimer(metrics.DeleteChildInfoCount, time.Duration(stats.DeleteChildInfoCount))
 	countScope.RecordTimer(metrics.DeleteSignalInfoCount, time.Duration(stats.DeleteSignalInfoCount))
 	countScope.RecordTimer(metrics.DeleteRequestCancelInfoCount, time.Duration(stats.DeleteRequestCancelInfoCount))
+}
+
+func emitWorkflowCompletionStats(scope metrics.Scope, event *workflow.HistoryEvent) {
+	if event.EventType == nil {
+		return
+	}
+	switch *event.EventType {
+	case shared.EventTypeWorkflowExecutionCompleted:
+		scope.IncCounter(metrics.WorkflowSuccessCount)
+	case shared.EventTypeWorkflowExecutionCanceled:
+		scope.IncCounter(metrics.WorkflowCancelCount)
+	case shared.EventTypeWorkflowExecutionFailed:
+		scope.IncCounter(metrics.WorkflowFailedCount)
+	case shared.EventTypeWorkflowExecutionTimedOut:
+		scope.IncCounter(metrics.WorkflowTimeoutCount)
+	case shared.EventTypeWorkflowExecutionTerminated:
+		scope.IncCounter(metrics.WorkflowTerminateCount)
+	}
 }
 
 // validateNoEventsAfterWorkflowFinish perform check on history event batch
