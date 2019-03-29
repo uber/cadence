@@ -3,7 +3,7 @@ steps:
     agents:
       queue: "*"
       docker: "*"
-    command: "make cover_integration_ci"
+    command: "ccm create test -v 3.9 -n 1 -s --root && make cover_integration_ci"
     plugins:
       - docker-compose#v3.0.0:
           run: integrationtest

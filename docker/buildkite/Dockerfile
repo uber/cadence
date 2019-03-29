@@ -28,7 +28,7 @@ RUN go get -u golang.org/x/lint/golint
 RUN go get github.com/axw/gocov/gocov
 RUN go get github.com/mattn/goveralls
 RUN go get golang.org/x/tools/cmd/cover
-RUN ccm create test -v 3.9 -n 1 -s --root
+# RUN ccm create test -v 3.9 -n 1 -s --root
 
 
 # The golang Docker sets the $GOPATH to be /go
