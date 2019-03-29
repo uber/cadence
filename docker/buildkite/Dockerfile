@@ -1,6 +1,8 @@
 FROM golang:1.11.1
 
+# Tried to set Python to ignore warnings due to the instructions at this link:
 # https://github.com/yaml/pyyaml/wiki/PyYAML-yaml.load(input)-Deprecation
+# But this causes all the pip installs to fail, so don't do this:
 # ENV PYTHONWARNINGS=ignore::yaml.YAMLLoadWarning
 # ENV PYTHONWARNINGS=ignore
 
@@ -17,10 +19,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 RUN curl https://bootstrap.pypa.io/get-pip.py | python
-# RUN pip install pip --upgrade
-# RUN pip install wheel --upgrade
-# RUN pip install pyyaml --upgrade
-# RUN pip install setuptools --upgrade
 RUN pip install PyYAML==3.13
 RUN pip install ccm
 
