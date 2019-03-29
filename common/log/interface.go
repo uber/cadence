@@ -60,6 +60,8 @@ const (
 	valueTypeError valueTypeEnum = "error"
 	// duration type value
 	valueTypeDuration valueTypeEnum = "duration"
+	// time type value
+	valueTypeTime valueTypeEnum = "time"
 	// it will be converted into string by fmt.Sprintf("%+v")
 	valueTypeObject valueTypeEnum = "object"
 )
