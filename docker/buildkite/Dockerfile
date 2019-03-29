@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       python-dev \
       python-pip \
       python-setuptools \
+      python-yaml \
       time \
     && rm -rf /var/lib/apt/lists/*
 
