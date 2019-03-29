@@ -39,19 +39,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
-	"github.com/uber-go/tally"
 	wsc "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/messaging"
-	"github.com/uber/cadence/common/metrics/mocks"
-	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
-	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/host"
-	"go.uber.org/zap"
+	"gopkg.in/yaml.v2"
 )
 
 type (
@@ -72,33 +65,7 @@ const (
 )
 
 var (
-	clusterName    = []string{"active", "standby"}
-	topicName      = []string{"active", "standby"}
-	clusterAddress = []string{cluster.TestCurrentClusterFrontendAddress, cluster.TestAlternativeClusterFrontendAddress}
-	clustersInfo   = []*config.ClustersInfo{
-		{
-			EnableGlobalDomain:             true,
-			FailoverVersionIncrement:       10,
-			MasterClusterName:              clusterName[0],
-			CurrentClusterName:             clusterName[0],
-			ClusterInitialFailoverVersions: map[string]int64{clusterName[0]: 0, clusterName[1]: 1},
-			ClusterAddress: map[string]config.Address{
-				clusterName[0]: {RPCName: common.FrontendServiceName, RPCAddress: clusterAddress[0]},
-				clusterName[1]: {RPCName: common.FrontendServiceName, RPCAddress: clusterAddress[1]},
-			},
-		},
-		{
-			EnableGlobalDomain:             true,
-			FailoverVersionIncrement:       10,
-			MasterClusterName:              clusterName[0],
-			CurrentClusterName:             clusterName[1],
-			ClusterInitialFailoverVersions: map[string]int64{clusterName[0]: 0, clusterName[1]: 1},
-			ClusterAddress: map[string]config.Address{
-				clusterName[0]: {RPCName: common.FrontendServiceName, RPCAddress: clusterAddress[0]},
-				clusterName[1]: {RPCName: common.FrontendServiceName, RPCAddress: clusterAddress[1]},
-			},
-		},
-	}
+	clusterName              = []string{"active", "standby"}
 	clusterReplicationConfig = []*workflow.ClusterReplicationConfiguration{
 		{
 			ClusterName: common.StringPtr(clusterName[0]),
@@ -108,80 +75,6 @@ var (
 		},
 	}
 )
-
-func (s *integrationClustersTestSuite) newTestCluster(no int) *host.TestCluster {
-	persistOptions := &persistencetests.TestBaseOptions{}
-	persistOptions.DBName = "integration_" + clusterName[no]
-	clusterInfo := clustersInfo[no]
-	persistOptions.ClusterMetadata = cluster.NewMetadata(
-		bark.NewNopLogger(),
-		&mocks.Client{},
-		dynamicconfig.GetBoolPropertyFn(clusterInfo.EnableGlobalDomain),
-		clusterInfo.FailoverVersionIncrement,
-		clusterInfo.MasterClusterName,
-		clusterInfo.CurrentClusterName,
-		clusterInfo.ClusterInitialFailoverVersions,
-		clusterInfo.ClusterAddress,
-		dynamicconfig.GetStringPropertyFn("disabled"),
-		"",
-	)
-
-	options := &host.TestClusterOptions{
-		PersistOptions:   persistOptions,
-		MessagingClient:  s.createMessagingClient(),
-		NumHistoryShards: 1,
-		EnableWorker:     true,
-		EnableEventsV2:   *host.EnableEventsV2,
-		ClusterNo:        no,
-	}
-
-	c, err := host.NewCluster(options, s.logger.WithField("Cluster", clusterName[no]))
-	s.Require().NoError(err)
-	return c
-}
-
-func (s *integrationClustersTestSuite) createMessagingClient() messaging.Client {
-	clusters := make(map[string]messaging.ClusterConfig)
-	clusters["test"] = messaging.ClusterConfig{
-		Brokers: []string{"127.0.0.1:9092"},
-	}
-	topics := make(map[string]messaging.TopicConfig)
-	topics[topicName[0]] = messaging.TopicConfig{
-		Cluster: "test",
-	}
-	topics[topicName[1]] = messaging.TopicConfig{
-		Cluster: "test",
-	}
-	topics[topicName[0]+"-dlq"] = messaging.TopicConfig{
-		Cluster: "test",
-	}
-	topics[topicName[1]+"-dlq"] = messaging.TopicConfig{
-		Cluster: "test",
-	}
-	topics[topicName[0]+"-retry"] = messaging.TopicConfig{
-		Cluster: "test",
-	}
-	topics[topicName[1]+"-retry"] = messaging.TopicConfig{
-		Cluster: "test",
-	}
-	clusterToTopic := make(map[string]messaging.TopicList)
-	clusterToTopic[clusterName[0]] = getTopicList(topicName[0])
-	clusterToTopic[clusterName[1]] = getTopicList(topicName[1])
-	kafkaConfig := messaging.KafkaConfig{
-		Clusters:       clusters,
-		Topics:         topics,
-		ClusterToTopic: clusterToTopic,
-	}
-	return messaging.NewKafkaClient(&kafkaConfig, nil, zap.NewNop(), s.logger, tally.NoopScope, true, false)
-}
-
-func getTopicList(topicName string) messaging.TopicList {
-	return messaging.TopicList{
-		Topic:      topicName,
-		RetryTopic: topicName + "-retry",
-		DLQTopic:   topicName + "-dlq",
-	}
-}
 
 func createContext() context.Context {
 	ctx, _ := context.WithTimeout(context.Background(), 90*time.Second)
@@ -204,8 +97,20 @@ func (s *integrationClustersTestSuite) SetupSuite() {
 	logger.Formatter = formatter
 	s.logger = bark.NewLoggerFromLogrus(logger)
 
-	s.cluster1 = s.newTestCluster(0)
-	s.cluster2 = s.newTestCluster(1)
+	fileName := "testdata/integrationtestclusters.yaml"
+	file, err := os.Open(fileName)
+	s.Require().NoError(err)
+
+	var clusterConfigs []*host.TestClusterConfig
+	s.Require().NoError(yaml.NewDecoder(file).Decode(&clusterConfigs))
+
+	c, err := host.NewCluster(clusterConfigs[0], s.logger.WithField("Cluster", clusterName[0]))
+	s.Require().NoError(err)
+	s.cluster1 = c
+
+	c, err = host.NewCluster(clusterConfigs[1], s.logger.WithField("Cluster", clusterName[1]))
+	s.Require().NoError(err)
+	s.cluster2 = c
 }
 
 func (s *integrationClustersTestSuite) SetupTest() {

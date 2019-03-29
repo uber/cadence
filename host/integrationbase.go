@@ -33,10 +33,9 @@ import (
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/mocks"
-	"github.com/uber/cadence/common/persistence/persistence-tests"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/tchannel"
+	"gopkg.in/yaml.v2"
 )
 
 type (
@@ -53,7 +52,7 @@ type (
 	}
 )
 
-func (s *IntegrationBase) setupSuite(enableGlobalDomain bool, isMasterCluster bool, enableWorker bool, enableArchival bool) {
+func (s *IntegrationBase) setupSuite() {
 	s.setupLogger()
 
 	if *frontendAddress != "" {
@@ -74,7 +73,7 @@ func (s *IntegrationBase) setupSuite(enableGlobalDomain bool, isMasterCluster bo
 		s.adminClient = NewAdminClient(dispatcher)
 	} else {
 		s.Logger.Info("Running integration test against test cluster")
-		cluster, err := SetupTestCluster(enableGlobalDomain, isMasterCluster, enableWorker, enableArchival, s.Logger)
+		cluster, err := SetupTestCluster(s.Logger)
 		s.Require().NoError(err)
 		s.testCluster = cluster
 		s.engine = s.testCluster.GetFrontendClient()
@@ -107,21 +106,22 @@ func (s *IntegrationBase) setupLogger() {
 	s.Logger = bark.NewLoggerFromLogrus(logger)
 }
 
-func SetupTestCluster(enableGlobalDomain bool, isMasterCluster bool, enableWorker bool, enableArchival bool, logger bark.Logger) (*TestCluster, error) {
-	persistOptions := &persistencetests.TestBaseOptions{
-		EnableGlobalDomain: enableGlobalDomain,
-		IsMasterCluster:    isMasterCluster,
-		EnableArchival:     enableArchival,
+func SetupTestCluster(logger bark.Logger) (*TestCluster, error) {
+
+	fileName := "testdata/integrationtestcluster.yaml"
+	file, err := os.Open(fileName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open test cluster config file %v: %v", fileName, err)
 	}
 
-	options := &TestClusterOptions{
-		PersistOptions:   persistOptions,
-		EnableWorker:     enableWorker,
-		MessagingClient:  mocks.NewMockMessagingClient(&mocks.KafkaProducer{}, nil),
-		NumHistoryShards: testNumberOfHistoryShards,
-		EnableEventsV2:   *EnableEventsV2,
+	var options TestClusterConfig
+	if err := yaml.NewDecoder(file).Decode(&options); err != nil {
+		return nil, fmt.Errorf("failed to decode test cluster config: %v", err)
 	}
-	return NewCluster(options, logger)
+
+	options.EnableEventsV2 = *EnableEventsV2
+
+	return NewCluster(&options, logger)
 }
 
 func (s *IntegrationBase) tearDownSuite() {

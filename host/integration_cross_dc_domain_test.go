@@ -92,7 +92,7 @@ func (s *integrationCrossDCSuite) TearDownTest() {
 }
 
 func (s *integrationCrossDCSuite) setupTest(enableGlobalDomain bool, isMasterCluster bool) {
-	c, err := SetupTestCluster(enableGlobalDomain, isMasterCluster, false, false, s.logger)
+	c, err := SetupTestCluster(s.logger)
 	s.Require().NoError(err)
 	s.testCluster = c
 	s.engine = c.GetFrontendClient()

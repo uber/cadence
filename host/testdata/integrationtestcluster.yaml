@@ -1,0 +1,11 @@
+persistoptions:
+  enableglobaldomain: false
+  ismastercluster: false
+  enablearchival: true
+enableworker: true
+enableeventsv2: false
+enablearchival: false
+clusterno: 0
+numhistoryshards: 4
+messagingclientconfig:
+  usemock: true

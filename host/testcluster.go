@@ -21,13 +21,20 @@
 package host
 
 import (
-	"github.com/uber-common/bark"
-	"github.com/uber/cadence/client"
-	"github.com/uber/cadence/common/blobstore/filestore"
-	"github.com/uber/cadence/common/messaging"
-	"github.com/uber/cadence/common/persistence/persistence-tests"
 	"io/ioutil"
 	"os"
+
+	"github.com/uber-common/bark"
+	"github.com/uber-go/tally"
+	"github.com/uber/cadence/client"
+	"github.com/uber/cadence/common/blobstore/filestore"
+	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/messaging"
+	metricsmocks "github.com/uber/cadence/common/metrics/mocks"
+	"github.com/uber/cadence/common/mocks"
+	"github.com/uber/cadence/common/persistence/persistence-tests"
+	"github.com/uber/cadence/common/service/dynamicconfig"
+	"go.uber.org/zap"
 )
 
 type (
@@ -38,20 +45,41 @@ type (
 		host      Cadence
 	}
 
-	// TestClusterOptions are options for test cluster
-	TestClusterOptions struct {
-		PersistOptions   *persistencetests.TestBaseOptions
-		EnableWorker     bool
-		EnableEventsV2   bool
-		EnableArchival   bool
-		ClusterNo        int
-		NumHistoryShards int
-		MessagingClient  messaging.Client
+	// TestClusterConfig are config for a test cluster
+	TestClusterConfig struct {
+		PersistOptions        *persistencetests.TestBaseOptions
+		EnableWorker          bool
+		EnableEventsV2        bool
+		EnableArchival        bool
+		ClusterNo             int
+		NumHistoryShards      int
+		MessagingClientConfig *MessagingClientConfig
+	}
+
+	// MessagingClientConfig is the config for messaging config
+	MessagingClientConfig struct {
+		UseMock     bool
+		KafkaConfig *messaging.KafkaConfig
 	}
 )
 
 // NewCluster creates and sets up the test cluster
-func NewCluster(options *TestClusterOptions, logger bark.Logger) (*TestCluster, error) {
+func NewCluster(options *TestClusterConfig, logger bark.Logger) (*TestCluster, error) {
+	if options.PersistOptions.ClusterInfo != nil {
+		options.PersistOptions.ClusterMetadata = cluster.NewMetadata(
+			logger,
+			&metricsmocks.Client{},
+			dynamicconfig.GetBoolPropertyFn(options.PersistOptions.ClusterInfo.EnableGlobalDomain),
+			options.PersistOptions.ClusterInfo.FailoverVersionIncrement,
+			options.PersistOptions.ClusterInfo.MasterClusterName,
+			options.PersistOptions.ClusterInfo.CurrentClusterName,
+			options.PersistOptions.ClusterInfo.ClusterInitialFailoverVersions,
+			options.PersistOptions.ClusterInfo.ClusterAddress,
+			dynamicconfig.GetStringPropertyFn("disabled"),
+			"",
+		)
+	}
+
 	testBase := persistencetests.NewTestBaseWithCassandra(options.PersistOptions)
 	testBase.Setup()
 	setupShards(testBase, options.NumHistoryShards, logger)
@@ -60,7 +88,7 @@ func NewCluster(options *TestClusterOptions, logger bark.Logger) (*TestCluster, 
 	cadenceParams := &CadenceParams{
 		ClusterMetadata:               testBase.ClusterMetadata,
 		DispatcherProvider:            client.NewIPYarpcDispatcherProvider(),
-		MessagingClient:               options.MessagingClient,
+		MessagingClient:               getMessagingClient(options.MessagingClientConfig, logger),
 		MetadataMgr:                   testBase.MetadataProxy,
 		MetadataMgrV2:                 testBase.MetadataManagerV2,
 		ShardMgr:                      testBase.ShardMgr,
@@ -120,6 +148,14 @@ func setupBlobstore(logger bark.Logger) *BlobstoreBase {
 		storeDirectory: storeDirectory,
 		bucketName:     bucketName,
 	}
+}
+
+func getMessagingClient(config *MessagingClientConfig, logger bark.Logger) messaging.Client {
+	if config.UseMock {
+		return mocks.NewMockMessagingClient(&mocks.KafkaProducer{}, nil)
+	}
+
+	return messaging.NewKafkaClient(config.KafkaConfig, nil, zap.NewNop(), logger, tally.NoopScope, true, false)
 }
 
 // TearDownCluster tears down the test cluster
