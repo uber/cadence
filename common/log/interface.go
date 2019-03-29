@@ -62,7 +62,7 @@ const (
 	// pre-defined value types(in tagValues.go)
 	valueTypeWorkflowAction         valueTypeEnum = "value_for_workflow_action"
 	valueTypeWorkflowListFilterType valueTypeEnum = "value_for_workflow_list_filter_type"
-
+	// pre-defined value types(in tagValues.go)
 	valueTypeSysComponent       valueTypeEnum = "value_for_sys_component"
 	valueTypeSysLifecycle       valueTypeEnum = "value_for_sys_lifecycle"
 	valueTypeSysErrorType       valueTypeEnum = "value_for_sys_error_type"
