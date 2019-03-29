@@ -7,7 +7,7 @@ package log
 //   2. System (sys-): these tags are internal information which usually cannot be understood by our customers,
 //      If possible, it is recommended to categorize further into sub-systems:
 //          2.1 XDC subsystem: xdc-
-//			2.2 Archival subsystem: archival-
+//          2.2 Archival subsystem: archival-
 //   3. There is a preserved prefix for internal logging: logging-
 
 // Reserved prefix for logging system: logging-
