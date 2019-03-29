@@ -74,7 +74,7 @@ func TestClientIntegrationSuite(t *testing.T) {
 }
 
 func (s *clientIntegrationSuite) SetupSuite() {
-	s.setupSuite(false, false, false, false)
+	s.setupSuite("testdata/clientintegrationtestcluster.yaml")
 
 	var err error
 	s.wfService, err = s.buildServiceClient()

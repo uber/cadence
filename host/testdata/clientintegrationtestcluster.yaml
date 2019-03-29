@@ -1,19 +1,11 @@
 persistoptions:
-  dbname: ""
-  cassandra:
-    dbport: 0
-    schemadir: ""
-  sql:
-    dbport: 0
-    schemadir: ""
-    drivername: ""
   enableglobaldomain: false
   ismastercluster: false
-  clustermetadata: null
   enablearchival: false
 enableworker: false
 enableeventsv2: false
 enablearchival: false
 clusterno: 0
 numhistoryshards: 4
-messagingclientconfig: {}
+messagingclientconfig:
+  usemock: true

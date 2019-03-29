@@ -52,7 +52,7 @@ type (
 	}
 )
 
-func (s *IntegrationBase) setupSuite() {
+func (s *IntegrationBase) setupSuite(defaultClusterConfigFile string) {
 	s.setupLogger()
 
 	if *frontendAddress != "" {
@@ -73,7 +73,7 @@ func (s *IntegrationBase) setupSuite() {
 		s.adminClient = NewAdminClient(dispatcher)
 	} else {
 		s.Logger.Info("Running integration test against test cluster")
-		cluster, err := SetupTestCluster(s.Logger)
+		cluster, err := SetupTestCluster(s.Logger, defaultClusterConfigFile)
 		s.Require().NoError(err)
 		s.testCluster = cluster
 		s.engine = s.testCluster.GetFrontendClient()
@@ -106,12 +106,14 @@ func (s *IntegrationBase) setupLogger() {
 	s.Logger = bark.NewLoggerFromLogrus(logger)
 }
 
-func SetupTestCluster(logger bark.Logger) (*TestCluster, error) {
-
-	fileName := "testdata/integrationtestcluster.yaml"
-	file, err := os.Open(fileName)
+func SetupTestCluster(logger bark.Logger, configFile string) (*TestCluster, error) {
+	configLocation := configFile
+	if *TestClusterConfigFile != "" {
+		configLocation = *TestClusterConfigFile
+	}
+	file, err := os.Open(configLocation)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open test cluster config file %v: %v", fileName, err)
+		return nil, fmt.Errorf("failed to open test cluster config file %v: %v", configLocation, err)
 	}
 
 	var options TestClusterConfig

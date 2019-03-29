@@ -61,7 +61,8 @@ type (
 )
 
 const (
-	cacheRefreshInterval = cache.DomainCacheRefreshInterval + time.Second
+	defaultTestClustersConfig = "testdata/integrationtestclusters.yaml"
+	cacheRefreshInterval      = cache.DomainCacheRefreshInterval + time.Second
 )
 
 var (
@@ -97,7 +98,10 @@ func (s *integrationClustersTestSuite) SetupSuite() {
 	logger.Formatter = formatter
 	s.logger = bark.NewLoggerFromLogrus(logger)
 
-	fileName := "testdata/integrationtestclusters.yaml"
+	fileName := defaultTestClustersConfig
+	if *host.TestClusterConfigFile != "" {
+		fileName = *host.TestClusterConfigFile
+	}
 	file, err := os.Open(fileName)
 	s.Require().NoError(err)
 

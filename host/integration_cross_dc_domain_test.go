@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/persistence-tests"
 )
 
 type (
@@ -92,7 +93,14 @@ func (s *integrationCrossDCSuite) TearDownTest() {
 }
 
 func (s *integrationCrossDCSuite) setupTest(enableGlobalDomain bool, isMasterCluster bool) {
-	c, err := SetupTestCluster(s.logger)
+	c, err := NewCluster(&TestClusterConfig{
+		PersistOptions: &persistencetests.TestBaseOptions{
+			EnableGlobalDomain: enableGlobalDomain,
+			IsMasterCluster:    isMasterCluster,
+			EnableArchival:     false,
+		},
+		EnableWorker: false,
+	}, s.logger)
 	s.Require().NoError(err)
 	s.testCluster = c
 	s.engine = c.GetFrontendClient()
