@@ -1,5 +1,6 @@
 FROM golang:1.11.1
 
+ENV PYTHONWARNINGS=ignore::yaml.YAMLLoadWarning
 RUN apt-get update && apt-get install -y --no-install-recommends \
       gettext-base \
       libyaml-dev \
@@ -11,7 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       time \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install ccm
+RUN pip install --user ccm
 
 RUN go get -u github.com/golang/dep/cmd/dep
 RUN go get -u github.com/Masterminds/glide
