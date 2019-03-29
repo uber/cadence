@@ -2,7 +2,7 @@ FROM golang:1.11.1
 
 # https://github.com/yaml/pyyaml/wiki/PyYAML-yaml.load(input)-Deprecation
 # ENV PYTHONWARNINGS=ignore::yaml.YAMLLoadWarning
-ENV PYTHONWARNINGS=ignore
+# ENV PYTHONWARNINGS=ignore
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       curl \
