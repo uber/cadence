@@ -4,6 +4,7 @@ FROM golang:1.11.1
 ENV PYTHONWARNINGS=ignore::yaml.YAMLLoadWarning
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+      curl \
       gettext-base \
       libyaml-dev \
       openjdk-8-jre \
@@ -14,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       time \
     && rm -rf /var/lib/apt/lists/*
 
+RUN curl https://bootstrap.pypa.io/get-pip.py | python
 RUN pip install pip --upgrade
 RUN pip install wheel --upgrade
 RUN pip install pyyaml --upgrade
