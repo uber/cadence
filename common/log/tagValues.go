@@ -1,13 +1,13 @@
 package log
 
-// Pre-defined values for TagWFListFilterType
+// Pre-defined values for TagWorkflowListFilterType
 const (
 	TagValueListWorkflowFilterByID     = "WID"
 	TagValueListWorkflowFilterByType   = "WType"
 	TagValueListWorkflowFilterByStatus = "status"
 )
 
-// Pre-defined values for TagWFAction
+// Pre-defined values for TagWorkflowAction
 const (
 	TagValueActionWorkflowStarted                 = "add-workflowexecution-started-event"
 	TagValueActionDecisionTaskScheduled           = "add-decisiontask-scheduled-event"
