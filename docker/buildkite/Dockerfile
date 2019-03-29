@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       time \
     && rm -rf /var/lib/apt/lists/*
 
+RUN pip install wheel --upgrade
 RUN pip install pyyaml --upgrade
 RUN pip install setuptools --upgrade
 RUN pip install ccm
