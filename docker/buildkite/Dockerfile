@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       python-dev \
       python-pip \
       python-setuptools \
+      time \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install ccm
