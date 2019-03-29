@@ -22,7 +22,7 @@ RUN curl https://bootstrap.pypa.io/get-pip.py | python
 # RUN pip install pyyaml --upgrade
 # RUN pip install setuptools --upgrade
 RUN pip install PyYAML==3.13
-RUN pip install --user ccm
+RUN pip install ccm
 
 RUN go get -u github.com/golang/dep/cmd/dep
 RUN go get -u github.com/Masterminds/glide
@@ -30,7 +30,7 @@ RUN go get -u golang.org/x/lint/golint
 RUN go get github.com/axw/gocov/gocov
 RUN go get github.com/mattn/goveralls
 RUN go get golang.org/x/tools/cmd/cover
-RUN ccm create test -v 3.9 -n 1 -s
+RUN ccm create test -v 3.9 -n 1 -s -R
 
 
 # The golang Docker sets the $GOPATH to be /go
