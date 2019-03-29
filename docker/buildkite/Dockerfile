@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # RUN pip install wheel --upgrade
 # RUN pip install pyyaml --upgrade
 # RUN pip install setuptools --upgrade
+RUN pip install PyYAML==3.13
 RUN pip install ccm
 
 RUN go get -u github.com/golang/dep/cmd/dep
