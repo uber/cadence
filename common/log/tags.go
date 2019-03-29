@@ -19,10 +19,10 @@ var (
 // Workflow related tags, prefix : wf-
 var (
 	// general
-	TagWorkflowError          = newTagType("wf-error", valueTypeError)
-	TagWorkflowTimeoutType    = newTagType("wf-timeout-type", valueTypeInteger)
-	TagWorkflowContextTimeout = newTagType("wf-poll-context-timeout", valueTypeDuration)
-	TagWorkflowHandlerName    = newTagType("wf-handler-name", valueTypeString)
+	TagWorkflowError              = newTagType("wf-error", valueTypeError)
+	TagWorkflowTimeoutType        = newTagType("wf-timeout-type", valueTypeInteger)
+	TagWorkflowPollContextTimeout = newTagType("wf-poll-context-timeout", valueTypeDuration)
+	TagWorkflowHandlerName        = newTagType("wf-handler-name", valueTypeString)
 
 	TagWorkflowID             = newTagType("wf-id", valueTypeString)
 	TagWorkflowType           = newTagType("wf-type", valueTypeString)
