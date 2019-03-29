@@ -1,7 +1,10 @@
 steps:
-  - name: ":golang:"
-    command: "./scripts/test.sh"
-    env:
-      BUILDKITE_GOLANG_IMPORT_PATH: "github.com/dmetzgar/cadence"
+  - label: ":golang:"
     agents:
-      docker: '*'
+      queue: "*"
+      docker: "*"
+    command: "make cover_integration_ci"
+    plugins:
+      - docker-compose#v3.0.0:
+          run: integrationtest
+          config: docker/buildkite/docker-compose.yml

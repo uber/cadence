@@ -1,0 +1,16 @@
+version: "3"
+
+services:
+
+  integrationtest:
+    build:
+      context: ../../
+      dockerfile: ./docker/buildkite/Dockerfile
+    volumes:
+      - ../../:/go/src/github.com/uber/cadence
+      - /usr/bin/buildkite-agent:/usr/bin/buildkite-agent
+    environment:
+      - BUILDKITE_AGENT_ACCESS_TOKEN
+      - BUILDKITE_JOB_ID
+      - BUILDKITE_BUILD_ID
+      - BUILDKITE_BUILD_NUMBER
