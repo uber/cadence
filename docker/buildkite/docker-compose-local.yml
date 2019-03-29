@@ -6,3 +6,5 @@ services:
     build:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
+    volumes:
+      - ../../:/go/src/github.com/uber/cadence
