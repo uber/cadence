@@ -18,17 +18,20 @@ var (
 
 // Workflow related tags, prefix : wf-
 var (
+	// Tags with pre-define values
+	TagWorkflowAction         = newTagType("wf-action", valueTypeWorkflowAction)
+	TagWorkflowListFilterType = newTagType("wf-list-filter-type", valueTypeWorkflowListFilterType)
+
 	// general
 	TagWorkflowError              = newTagType("wf-error", valueTypeError)
 	TagWorkflowTimeoutType        = newTagType("wf-timeout-type", valueTypeInteger)
 	TagWorkflowPollContextTimeout = newTagType("wf-poll-context-timeout", valueTypeDuration)
 	TagWorkflowHandlerName        = newTagType("wf-handler-name", valueTypeString)
-
-	TagWorkflowID             = newTagType("wf-id", valueTypeString)
-	TagWorkflowType           = newTagType("wf-type", valueTypeString)
-	TagWorkflowRunID          = newTagType("wf-run-id", valueTypeString)
-	TagWorkflowBeginningRunID = newTagType("wf-beginning-run-id", valueTypeString)
-	TagWorkflowEndingRunID    = newTagType("wf-ending-run-id", valueTypeString)
+	TagWorkflowID                 = newTagType("wf-id", valueTypeString)
+	TagWorkflowType               = newTagType("wf-type", valueTypeString)
+	TagWorkflowRunID              = newTagType("wf-run-id", valueTypeString)
+	TagWorkflowBeginningRunID     = newTagType("wf-beginning-run-id", valueTypeString)
+	TagWorkflowEndingRunID        = newTagType("wf-ending-run-id", valueTypeString)
 
 	// domain related
 	TagWorkflowDomainID   = newTagType("wf-domain-id", valueTypeString)
@@ -53,15 +56,18 @@ var (
 	TagWorkflowDecisionFailCause = newTagType("wf-decision-fail-cause", valueTypeInteger)
 	TagWorkflowTaskListType      = newTagType("wf-task-list-type", valueTypeInteger)
 	TagWorkflowTaskListName      = newTagType("wf-task-list-name", valueTypeString)
-
-	// TagWFListFilterType has pre-defined values in tagValues.go
-	TagWorkflowAction = newTagType("wf-action", valueTypeString)
-	// TagWFListFilterType has pre-defined values in tagValues.go
-	TagWorkflowListFilterType = newTagType("wf-list-filter-type", valueTypeString)
 )
 
 // Generic system related tags, prefix: sys-
 var (
+	// Tags with pre-define values
+	TagSysComponent       = newTagType("sys-component", valueTypeSysComponent)
+	TagSysLifecycle       = newTagType("sys-lifecycle", valueTypeSysLifecycle)
+	TagSysStoreOperation  = newTagType("sys-store-operation", valueTypeSysStoreOperation)
+	TagSysOperationResult = newTagType("sys-error", valueTypeSysOperationResult)
+	TagSysErrorType       = newTagType("sys-error", valueTypeSysErrorType)
+	TagSysShardupdate     = newTagType("sys-error", valueTypeSysShardUpdate)
+
 	// general
 	TagSysError           = newTagType("sys-error", valueTypeError)
 	TagSysTimestamp       = newTagType("sys-timestamp", valueTypeTime)
@@ -98,17 +104,6 @@ var (
 	TagSysESRequest = newTagType("sys-es-request", valueTypeString)
 	TagSysESKey     = newTagType("sys-es-mapping-key", valueTypeString)
 	TagSysESField   = newTagType("sys-es-field", valueTypeString)
-
-	// TagSysLifecycle is a special(important) tag that we have explicitly supported with helper function and pre-defined tag-values
-	// TagSysLifecycle has pre-defined values in tagValues.go
-	TagSysLifecycle = newTagType("sys-lifecycle", valueTypeString)
-	// TagSysMajorEvent is a special(important) tag that we have explicitly supported with helper function and pre-defined tag-values
-	// TagSysMajorEvent has pre-defined values in tagValues.go
-	TagSysMajorEvent = newTagType("sys-major-event", valueTypeString)
-	// TagSysComponent has pre-defined values in tagValues.go
-	TagSysComponent = newTagType("sys-component", valueTypeString)
-	// TagSysStoreOperation has pre-defined values in tagValues.go
-	TagSysStoreOperation = newTagType("sys-store-operation", valueTypeString)
 )
 
 // XDC related tags: prefix: xdc-

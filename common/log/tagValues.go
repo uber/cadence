@@ -1,12 +1,5 @@
 package log
 
-// Pre-defined values for TagWorkflowListFilterType
-const (
-	TagValueListWorkflowFilterByID     = "WID"
-	TagValueListWorkflowFilterByType   = "WType"
-	TagValueListWorkflowFilterByStatus = "status"
-)
-
 // Pre-defined values for TagWorkflowAction
 const (
 	TagValueActionWorkflowStarted                 = "add-workflowexecution-started-event"
@@ -49,117 +42,91 @@ const (
 	TagValueActionUnknownEvent                    = "add-unknown-event"
 )
 
-// Pre-defined values for TagSysLifecycle
+// Pre-defined values for TagWorkflowListFilterType
 const (
-	// History Engine lifecycle
-	TagValueHistoryEngineStarting     TagValueTypeSysLifecycle = "HistoryEngineStarting"
-	TagValueHistoryEngineStarted      TagValueTypeSysLifecycle = "HistoryEngineStarted"
-	TagValueHistoryEngineShuttingDown TagValueTypeSysLifecycle = "HistoryEngineShuttingDown"
-	TagValueHistoryEngineShutdown     TagValueTypeSysLifecycle = "HistoryEngineShutdown"
-
-	// Transfer Queue Processor lifecycle
-	TagValueTransferQueueProcessorStarting         TagValueTypeSysLifecycle = "TransferQueueProcessorStarting"
-	TagValueTransferQueueProcessorStarted          TagValueTypeSysLifecycle = "TransferQueueProcessorStarted"
-	TagValueTransferQueueProcessorShuttingDown     TagValueTypeSysLifecycle = "TransferQueueProcessorShuttingDown"
-	TagValueTransferQueueProcessorShutdown         TagValueTypeSysLifecycle = "TransferQueueProcessorShutdown"
-	TagValueTransferQueueProcessorShutdownTimedout TagValueTypeSysLifecycle = "TransferQueueProcessorShutdownTimedout"
-	TagValueTransferTaskProcessingFailed           TagValueTypeSysLifecycle = "TransferTaskProcessingFailed"
-
-	// ShardController lifecycle
-	TagValueShardControllerStarted          TagValueTypeSysLifecycle = "ShardControllerStarted"
-	TagValueShardControllerShutdown         TagValueTypeSysLifecycle = "ShardControllerShutdown"
-	TagValueShardControllerShuttingDown     TagValueTypeSysLifecycle = "ShardControllerShuttingDown"
-	TagValueShardControllerShutdownTimedout TagValueTypeSysLifecycle = "ShardControllerShutdownTimedout"
-	TagValueRingMembershipChangedEvent      TagValueTypeSysLifecycle = "RingMembershipChangedEvent"
-	TagValueShardClosedEvent                TagValueTypeSysLifecycle = "ShardClosedEvent"
-	TagValueShardItemCreated                TagValueTypeSysLifecycle = "ShardItemCreated"
-	TagValueShardItemRemoved                TagValueTypeSysLifecycle = "ShardItemRemoved"
-	TagValueShardEngineCreating             TagValueTypeSysLifecycle = "ShardEngineCreating"
-	TagValueShardEngineCreated              TagValueTypeSysLifecycle = "ShardEngineCreated"
-	TagValueShardEngineStopping             TagValueTypeSysLifecycle = "ShardEngineStopping"
-	TagValueShardEngineStopped              TagValueTypeSysLifecycle = "ShardEngineStopped"
-
-	// Worker lifecycle
-	TagValueReplicationTaskProcessorStarting         TagValueTypeSysLifecycle = "ReplicationTaskProcessorStarting"
-	TagValueReplicationTaskProcessorStarted          TagValueTypeSysLifecycle = "ReplicationTaskProcessorStarted"
-	TagValueReplicationTaskProcessorStartFailed      TagValueTypeSysLifecycle = "ReplicationTaskProcessorStartFailed"
-	TagValueReplicationTaskProcessorShuttingDown     TagValueTypeSysLifecycle = "ReplicationTaskProcessorShuttingDown"
-	TagValueReplicationTaskProcessorShutdown         TagValueTypeSysLifecycle = "ReplicationTaskProcessorShutdown"
-	TagValueReplicationTaskProcessorShutdownTimedout TagValueTypeSysLifecycle = "ReplicationTaskProcessorShutdownTimedout"
-	TagValueReplicationTaskProcessingFailed          TagValueTypeSysLifecycle = "ReplicationTaskProcessingFailed"
-	TagValueIndexProcessorStarting                   TagValueTypeSysLifecycle = "IndexProcessorStarting"
-	TagValueIndexProcessorStarted                    TagValueTypeSysLifecycle = "IndexProcessorStarted"
-	TagValueIndexProcessorStartFailed                TagValueTypeSysLifecycle = "IndexProcessorStartFailed"
-	TagValueIndexProcessorShuttingDown               TagValueTypeSysLifecycle = "IndexProcessorShuttingDown"
-	TagValueIndexProcessorShutDown                   TagValueTypeSysLifecycle = "IndexProcessorShutDown"
-	TagValueIndexProcessorShuttingDownTimedout       TagValueTypeSysLifecycle = "IndexProcessorShuttingDownTimedout"
-)
-
-// Pre-defined values for TagSysMajorEvent
-
-const (
-	// Errors
-	TagValueInvalidHistoryAction        TagValueTypeSysMajorEvent = "InvalidHistoryAction"
-	TagValueInvalidQueryTask            TagValueTypeSysMajorEvent = "InvalidQueryTask"
-	TagValueQueryTaskFailed             TagValueTypeSysMajorEvent = "QueryTaskFailed"
-	TagValuePersistentStoreError        TagValueTypeSysMajorEvent = "PersistentStoreError"
-	TagValueHistorySerializationError   TagValueTypeSysMajorEvent = "HistorySerializationError"
-	TagValueHistoryDeserializationError TagValueTypeSysMajorEvent = "HistoryDeserializationError"
-	TagValueDuplicateTask               TagValueTypeSysMajorEvent = "DuplicateTask"
-	TagValueMultipleCompletionDecisions TagValueTypeSysMajorEvent = "MultipleCompletionDecisions"
-	TagValueDuplicateTransferTask       TagValueTypeSysMajorEvent = "DuplicateTransferTask"
-	TagValueDecisionFailed              TagValueTypeSysMajorEvent = "DecisionFailed"
-	TagValueInvalidMutableStateAction   TagValueTypeSysMajorEvent = "InvalidMutableStateAction"
-
-	// tasklist
-	TagValueTaskListLoading       TagValueTypeSysMajorEvent = "TaskListLoading"
-	TagValueTaskListLoaded        TagValueTypeSysMajorEvent = "TaskListLoaded"
-	TagValueTaskListUnloading     TagValueTypeSysMajorEvent = "TaskListUnloading"
-	TagValueTaskListUnloaded      TagValueTypeSysMajorEvent = "TaskListUnloaded"
-	TagValueTaskListLoadingFailed TagValueTypeSysMajorEvent = "TaskListLoadingFailed"
-
-	// Shard context events
-	TagValueShardRangeUpdated            TagValueTypeSysMajorEvent = "ShardRangeUpdated"
-	TagValueShardAllocateTimerBeforeRead TagValueTypeSysMajorEvent = "ShardAllocateTimerBeforeRead"
-
-	// General purpose events
-	TagValueOperationFailed   TagValueTypeSysMajorEvent = "OperationFailed"
-	TagValueOperationStuck    TagValueTypeSysMajorEvent = "OperationStuck"
-	TagValueOperationCritical TagValueTypeSysMajorEvent = "OperationCritical"
+	TagValueListWorkflowFilterByID     = "WID"
+	TagValueListWorkflowFilterByType   = "WType"
+	TagValueListWorkflowFilterByStatus = "status"
 )
 
 // Pre-defined values for TagSysComponent
 const (
-	TagValueHistoryBuilderComponent           = "history-builder"
-	TagValueHistoryEngineComponent            = "history-engine"
-	TagValueHistoryCacheComponent             = "history-cache"
-	TagValueEventsCacheComponent              = "events-cache"
-	TagValueTransferQueueComponent            = "transfer-queue-processor"
-	TagValueTimerQueueComponent               = "timer-queue-processor"
-	TagValueReplicatorQueueComponent          = "replicator-queue-processor"
-	TagValueShardController                   = "shard-controller"
-	TagValueMatchingEngineComponent           = "matching-engine"
-	TagValueReplicatorComponent               = "replicator"
-	TagValueReplicationTaskProcessorComponent = "replication-task-processor"
-	TagValueHistoryReplicatorComponent        = "history-replicator"
-	TagValueIndexerComponent                  = "indexer"
-	TagValueIndexerProcessorComponent         = "indexer-processor"
-	TagValueIndexerESProcessorComponent       = "indexer-es-processor"
-	TagValueESVisibilityManager               = "es-visibility-manager"
-	TagValueArchiverComponent                 = "archiver"
+	TagValueComponentTaskList                 = "tasklist"
+	TagValueComponentHistoryBuilder           = "history-builder"
+	TagValueComponentHistoryEngine            = "history-engine"
+	TagValueComponentHistoryCache             = "history-cache"
+	TagValueComponentEventsCache              = "events-cache"
+	TagValueComponentTransferQueue            = "transfer-queue-processor"
+	TagValueComponentTimerQueue               = "timer-queue-processor"
+	TagValueComponentReplicatorQueue          = "replicator-queue-processor"
+	TagValueComponentShardController          = "shard-controller"
+	TagValueComponentShard                    = "shard"
+	TagValueComponentShardItem                = "shard-item"
+	TagValueComponentShardEngine              = "shard-engine"
+	TagValueComponentMatchingEngine           = "matching-engine"
+	TagValueComponentReplicator               = "replicator"
+	TagValueComponentReplicationTaskProcessor = "replication-task-processor"
+	TagValueComponentHistoryReplicator        = "history-replicator"
+	TagValueComponentIndexer                  = "indexer"
+	TagValueComponentIndexerProcessor         = "indexer-processor"
+	TagValueComponentIndexerESProcessor       = "indexer-es-processor"
+	TagValueComponentESVisibilityManager      = "es-visibility-manager"
+	TagValueComponentArchiver                 = "archiver"
+)
+
+// Pre-defined values for TagSysLifecycle
+const (
+	TagValueLifeCycleStarting         tagValueTypeSysLifecycle = "Starting"
+	TagValueLifeCycleStarted          tagValueTypeSysLifecycle = "Started"
+	TagValueLifeCycleStopping         tagValueTypeSysLifecycle = "Stopping"
+	TagValueLifeCycleStopped          tagValueTypeSysLifecycle = "Stopped"
+	TagValueLifeCycleStopTimedout     tagValueTypeSysLifecycle = "StopTimedout"
+	TagValueLifeCycleStartFailed      tagValueTypeSysLifecycle = "StartFailed"
+	TagValueLifeCycleStopFailed       tagValueTypeSysLifecycle = "StopFailed"
+	TagValueLifeCycleProcessingFailed tagValueTypeSysLifecycle = "ProcessingFailed"
+)
+
+// Pre-defined values for SysErrorType
+const (
+	TagValueInvalidHistoryAction        tagValueTypeSysErrorType = "InvalidHistoryAction"
+	TagValueInvalidQueryTask            tagValueTypeSysErrorType = "InvalidQueryTask"
+	TagValueQueryTaskFailed             tagValueTypeSysErrorType = "QueryTaskFailed"
+	TagValuePersistentStoreError        tagValueTypeSysErrorType = "PersistentStoreError"
+	TagValueHistorySerializationError   tagValueTypeSysErrorType = "HistorySerializationError"
+	TagValueHistoryDeserializationError tagValueTypeSysErrorType = "HistoryDeserializationError"
+	TagValueDuplicateTask               tagValueTypeSysErrorType = "DuplicateTask"
+	TagValueMultipleCompletionDecisions tagValueTypeSysErrorType = "MultipleCompletionDecisions"
+	TagValueDuplicateTransferTask       tagValueTypeSysErrorType = "DuplicateTransferTask"
+	TagValueDecisionFailed              tagValueTypeSysErrorType = "DecisionFailed"
+	TagValueInvalidMutableStateAction   tagValueTypeSysErrorType = "InvalidMutableStateAction"
+)
+
+// Pre-defined values for SysShardUpdate
+const (
+	// Shard context events
+	TagValueShardRangeUpdated            tagValueTypeSysShardUpdate = "ShardRangeUpdated"
+	TagValueShardAllocateTimerBeforeRead tagValueTypeSysShardUpdate = "ShardAllocateTimerBeforeRead"
+	TagValueRingMembershipChangedEvent   tagValueTypeSysShardUpdate = "RingMembershipChangedEvent"
+)
+
+// Pre-defined values for OperationResult
+const (
+	TagValueOperationFailed   tagValueTypeOperationResult = "OperationFailed"
+	TagValueOperationStuck    tagValueTypeOperationResult = "OperationStuck"
+	TagValueOperationCritical tagValueTypeOperationResult = "OperationCritical"
 )
 
 // Pre-defined values for TagSysStoreOperation
 const (
-	TagValueStoreOperationGetTasks                = "get-tasks"
-	TagValueStoreOperationCompleteTask            = "complete-task"
-	TagValueStoreOperationCompleteTasksLessThan   = "complete-tasks-less-than"
-	TagValueStoreOperationCreateWorkflowExecution = "create-wf-execution"
-	TagValueStoreOperationGetWorkflowExecution    = "get-wf-execution"
-	TagValueStoreOperationUpdateWorkflowExecution = "update-wf-execution"
-	TagValueStoreOperationDeleteWorkflowExecution = "delete-wf-execution"
-	TagValueStoreOperationUpdateShard             = "update-shard"
-	TagValueStoreOperationCreateTask              = "create-task"
-	TagValueStoreOperationUpdateTaskList          = "update-task-list"
-	TagValueStoreOperationStopTaskList            = "stop-task-list"
+	TagValueStoreOperationGetTasks                tagValueTypeSysStoreOperation = "get-tasks"
+	TagValueStoreOperationCompleteTask            tagValueTypeSysStoreOperation = "complete-task"
+	TagValueStoreOperationCompleteTasksLessThan   tagValueTypeSysStoreOperation = "complete-tasks-less-than"
+	TagValueStoreOperationCreateWorkflowExecution tagValueTypeSysStoreOperation = "create-wf-execution"
+	TagValueStoreOperationGetWorkflowExecution    tagValueTypeSysStoreOperation = "get-wf-execution"
+	TagValueStoreOperationUpdateWorkflowExecution tagValueTypeSysStoreOperation = "update-wf-execution"
+	TagValueStoreOperationDeleteWorkflowExecution tagValueTypeSysStoreOperation = "delete-wf-execution"
+	TagValueStoreOperationUpdateShard             tagValueTypeSysStoreOperation = "update-shard"
+	TagValueStoreOperationCreateTask              tagValueTypeSysStoreOperation = "create-task"
+	TagValueStoreOperationUpdateTaskList          tagValueTypeSysStoreOperation = "update-task-list"
+	TagValueStoreOperationStopTaskList            tagValueTypeSysStoreOperation = "stop-task-list"
 )
