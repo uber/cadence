@@ -2,6 +2,8 @@ package log
 
 // Fields is a K-V map for logging tags
 type Fields map[tagType]interface{}
+type TagValueTypeSysLifecycle string
+type TagValueTypeSysMajorEvent string
 
 // Logger is our abstraction for logging
 // Usage examples:
@@ -25,17 +27,17 @@ type Logger interface {
 
 	// We provide shortcuts for logging system lifecycle and major event
 	// lifecycle
-	DebugWithLifecycle(msg string, lifecycle string, tags ...Fields)
-	InfoWithLifecycle(msg string, lifecycle string, tags ...Fields)
-	WarnWithLifecycle(msg string, lifecycle string, tags ...Fields)
-	ErrorWithLifecycle(msg string, lifecycle string, tags ...Fields)
-	FatalWithLifecycle(msg string, lifecycle string, tags ...Fields)
+	DebugWithLifecycle(msg string, lifecycle TagValueTypeSysLifecycle, tags ...Fields)
+	InfoWithLifecycle(msg string, lifecycle TagValueTypeSysLifecycle, tags ...Fields)
+	WarnWithLifecycle(msg string, lifecycle TagValueTypeSysLifecycle, tags ...Fields)
+	ErrorWithLifecycle(msg string, lifecycle TagValueTypeSysLifecycle, tags ...Fields)
+	FatalWithLifecycle(msg string, lifecycle TagValueTypeSysLifecycle, tags ...Fields)
 	// major event
-	DebugWithMajorEvent(msg string, majorEvent string, tags ...Fields)
-	InfoWithMajorEvent(msg string, majorEvent string, tags ...Fields)
-	WarnWithMajorEvent(msg string, majorEvent string, tags ...Fields)
-	ErrorWithMajorEvent(msg string, majorEvent string, tags ...Fields)
-	FatalWithMajorEvent(msg string, majorEvent string, tags ...Fields)
+	DebugWithMajorEvent(msg string, majorEvent TagValueTypeSysMajorEvent, tags ...Fields)
+	InfoWithMajorEvent(msg string, majorEvent TagValueTypeSysMajorEvent, tags ...Fields)
+	WarnWithMajorEvent(msg string, majorEvent TagValueTypeSysMajorEvent, tags ...Fields)
+	ErrorWithMajorEvent(msg string, majorEvent TagValueTypeSysMajorEvent, tags ...Fields)
+	FatalWithMajorEvent(msg string, majorEvent TagValueTypeSysMajorEvent, tags ...Fields)
 }
 
 // we intentionally make tagType module-private to enforce using pre-defined tag keys
