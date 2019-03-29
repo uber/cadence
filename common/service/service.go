@@ -21,6 +21,7 @@
 package service
 
 import (
+	"fmt"
 	"math/rand"
 	"os"
 	"sync/atomic"
@@ -60,7 +61,7 @@ type (
 		Logger              bark.Logger
 		ThrottledLogger     bark.Logger
 		MetricScope         tally.Scope
-		RingpopFactory      RingpopFactory
+		MembershipFactory   MembershipFactory
 		RPCFactory          common.RPCFactory
 		PProfInitializer    common.PProfInitializer
 		PersistenceConfig   config.Persistence
@@ -82,6 +83,12 @@ type (
 		CreateRingpop(d *yarpc.Dispatcher) (*ringpop.Ringpop, error)
 	}
 
+	// MembershipFactory provides a bootstrapped ringpop
+	MembershipFactory interface {
+		// CreateMembershipMonitor vends a bootstrapped ringpop object
+		CreateMembershipMonitor(d *yarpc.Dispatcher) (*membership.Monitor, error)
+	}
+
 	// Service contains the objects specific to this service
 	serviceImpl struct {
 		status                 int32
@@ -89,8 +96,7 @@ type (
 		hostName               string
 		hostInfo               *membership.HostInfo
 		dispatcher             *yarpc.Dispatcher
-		rp                     *ringpop.Ringpop
-		rpFactory              RingpopFactory
+		membershipFactory      MembershipFactory
 		membershipMonitor      membership.Monitor
 		rpcFactory             common.RPCFactory
 		pprofInitializer       common.PProfInitializer
@@ -117,7 +123,7 @@ func New(params *BootstrapParams) Service {
 		logger:                params.Logger,
 		throttledLogger:       params.ThrottledLogger,
 		rpcFactory:            params.RPCFactory,
-		rpFactory:             params.RingpopFactory,
+		membershipFactory:     params.MembershipFactory,
 		pprofInitializer:      params.PProfInitializer,
 		metricsScope:          params.MetricScope,
 		numberOfHistoryShards: params.PersistenceConfig.NumHistoryShards,
@@ -172,6 +178,8 @@ func (h *serviceImpl) Start() {
 		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("Failed to start yarpc dispatcher")
 	}
 
+	// TODO: needs to be gated behind an interface...
+	fmt.Printf("creating ringpop here!!!\n")
 	// use actual listen port (in case service is bound to :0 or 0.0.0.0:0)
 	h.rp, err = h.rpFactory.CreateRingpop(h.dispatcher)
 	if err != nil {

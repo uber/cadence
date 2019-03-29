@@ -31,6 +31,7 @@ func NewHostInfo(addr string, labels map[string]string) *HostInfo {
 	if labels == nil {
 		labels = make(map[string]string)
 	}
+	//	fmt.Printf("%v, %v\n", addr, labels)
 	return &HostInfo{
 		addr:   addr,
 		labels: labels,
@@ -39,18 +40,21 @@ func NewHostInfo(addr string, labels map[string]string) *HostInfo {
 
 // GetAddress returns the ip:port address
 func (hi *HostInfo) GetAddress() string {
+	//	fmt.Printf("Get address %v\n", hi)
 	return hi.addr
 }
 
 // Identity implements ringpop's Membership interface
 func (hi *HostInfo) Identity() string {
 	// for now we just use the address as the identity
+	//	fmt.Printf("Get identity %v\n", hi)
 	return hi.addr
 }
 
 // Label implements ringpop's Membership interface
 func (hi *HostInfo) Label(key string) (value string, has bool) {
 	value, has = hi.labels[key]
+	//	fmt.Printf("Get Label %v, %v\n", value, has)
 	return
 }
 
