@@ -665,6 +665,10 @@ func (t *timerQueueProcessorBase) archiveWorkflow(task *persistence.TimerTaskInf
 	if err != nil {
 		return err
 	}
+	err = t.deleteWorkflowVisibility(task)
+	if err != nil {
+		return err
+	}
 	// calling clear here to force accesses of mutable state to read database
 	// if this is not called then callers will get mutable state even though its been removed from database
 	context.clear()
