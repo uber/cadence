@@ -183,17 +183,12 @@ const (
 	TagArchiveRequestWorkflowID           = "archive-request-workflow-id"
 	TagArchiveRequestRunID                = "archive-request-run-id"
 	TagArchiveRequestEventStoreVersion    = "archive-request-event-store-version"
-	TagArchiveRequestBranchToken          = "archive-request-branch-token"
 	TagArchiveRequestNextEventID          = "archive-request-next-event-id"
 	TagArchiveRequestCloseFailoverVersion = "archive-request-close-failover-version"
 
 	// archival tags (blob tags)
 	TagBucket  = "bucket"
 	TagBlobKey = "blob-key"
-
-	// archival tags (file blobstore tags)
-	TagFileBlobstoreBlobPath     = "file-blobstore-blob-path"
-	TagFileBlobstoreMetadataPath = "file-blobstore-metadata-path"
 
 	// archival tags (other tags)
 	TagClusterArchivalStatus    = "cluster-archival-status"

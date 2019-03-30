@@ -141,7 +141,6 @@ func tagLoggerWithRequest(logger bark.Logger, request ArchiveRequest) bark.Logge
 		logging.TagArchiveRequestWorkflowID:           request.WorkflowID,
 		logging.TagArchiveRequestRunID:                request.RunID,
 		logging.TagArchiveRequestEventStoreVersion:    request.EventStoreVersion,
-		logging.TagArchiveRequestBranchToken:          string(request.BranchToken),
 		logging.TagArchiveRequestNextEventID:          request.NextEventID,
 		logging.TagArchiveRequestCloseFailoverVersion: request.CloseFailoverVersion,
 	})
