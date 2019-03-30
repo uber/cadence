@@ -72,6 +72,7 @@ var keys = map[Key]string{
 	FrontendVisibilityMaxPageSize:  "frontend.visibilityMaxPageSize",
 	FrontendVisibilityListMaxQPS:   "frontend.visibilityListMaxQPS",
 	FrontendESVisibilityListMaxQPS: "frontend.esVisibilityListMaxQPS",
+	FrontendESIndexMaxResultWindow: "frontend.esIndexMaxResultWindow",
 	FrontendHistoryMaxPageSize:     "frontend.historyMaxPageSize",
 	FrontendRPS:                    "frontend.rps",
 	FrontendHistoryMgrNumConns:     "frontend.historyMgrNumConns",
@@ -162,22 +163,23 @@ var keys = map[Key]string{
 	EmitShardDiffLog:                                      "history.emitShardDiffLog",
 	HistoryThrottledLogRPS:                                "history.throttledLogRPS",
 
-	WorkerPersistenceMaxQPS:                  "worker.persistenceMaxQPS",
-	WorkerReplicatorConcurrency:              "worker.replicatorConcurrency",
-	WorkerReplicatorActivityBufferRetryCount: "worker.replicatorActivityBufferRetryCount",
-	WorkerReplicatorHistoryBufferRetryCount:  "worker.replicatorHistoryBufferRetryCount",
-	WorkerReplicationTaskMaxRetry:            "worker.replicationTaskMaxRetry",
-	WorkerIndexerConcurrency:                 "worker.indexerConcurrency",
-	WorkerESProcessorNumOfWorkers:            "worker.ESProcessorNumOfWorkers",
-	WorkerESProcessorBulkActions:             "worker.ESProcessorBulkActions",
-	WorkerESProcessorBulkSize:                "worker.ESProcessorBulkSize",
-	WorkerESProcessorFlushInterval:           "worker.ESProcessorFlushInterval",
-	EnableArchivalCompression:                "worker.EnableArchivalCompression",
-	WorkerHistoryPageSize:                    "worker.WorkerHistoryPageSize",
-	WorkerTargetArchivalBlobSize:             "worker.WorkerTargetArchivalBlobSize",
-	WorkerArchiverConcurrency:                "worker.ArchiverConcurrency",
-	WorkerArchivalsPerIteration:              "worker.ArchivalsPerIteration",
-	WorkerThrottledLogRPS:                    "worker.throttledLogRPS",
+	WorkerPersistenceMaxQPS:                         "worker.persistenceMaxQPS",
+	WorkerReplicatorConcurrency:                     "worker.replicatorConcurrency",
+	WorkerReplicatorActivityBufferRetryCount:        "worker.replicatorActivityBufferRetryCount",
+	WorkerReplicatorHistoryBufferRetryCount:         "worker.replicatorHistoryBufferRetryCount",
+	WorkerReplicationTaskMaxRetry:                   "worker.replicationTaskMaxRetry",
+	WorkerIndexerConcurrency:                        "worker.indexerConcurrency",
+	WorkerESProcessorNumOfWorkers:                   "worker.ESProcessorNumOfWorkers",
+	WorkerESProcessorBulkActions:                    "worker.ESProcessorBulkActions",
+	WorkerESProcessorBulkSize:                       "worker.ESProcessorBulkSize",
+	WorkerESProcessorFlushInterval:                  "worker.ESProcessorFlushInterval",
+	EnableArchivalCompression:                       "worker.EnableArchivalCompression",
+	WorkerHistoryPageSize:                           "worker.WorkerHistoryPageSize",
+	WorkerTargetArchivalBlobSize:                    "worker.WorkerTargetArchivalBlobSize",
+	WorkerArchiverConcurrency:                       "worker.ArchiverConcurrency",
+	WorkerArchivalsPerIteration:                     "worker.ArchivalsPerIteration",
+	WorkerDeterministicConstructionCheckProbability: "worker.DeterministicConstructionCheckProbability",
+	WorkerThrottledLogRPS:                           "worker.throttledLogRPS",
 }
 
 const (
@@ -246,6 +248,8 @@ const (
 	FrontendVisibilityListMaxQPS
 	// FrontendESVisibilityListMaxQPS is max qps frontend can list open/close workflows from ElasticSearch
 	FrontendESVisibilityListMaxQPS
+	// FrontendESIndexMaxResultWindow is ElasticSearch index setting max_result_window
+	FrontendESIndexMaxResultWindow
 	// FrontendHistoryMaxPageSize is default max size for GetWorkflowExecutionHistory in one page
 	FrontendHistoryMaxPageSize
 	// FrontendRPS is workflow rate limit per second
@@ -453,6 +457,8 @@ const (
 	WorkerArchiverConcurrency
 	// WorkerArchivalsPerIteration controls the number of archivals handled in each iteration of archival workflow
 	WorkerArchivalsPerIteration
+	// WorkerDeterministicConstructionCheckProbability controls the probability of running a deterministic construction check for any given archival
+	WorkerDeterministicConstructionCheckProbability
 	// WorkerThrottledLogRPS is the rate limit on number of log messages emitted per second for throttled logger
 	WorkerThrottledLogRPS
 
