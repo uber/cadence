@@ -27,10 +27,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/uber/cadence/common/cluster"
 	"github.com/pborman/uuid"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cluster"
 )
 
 func (s *integrationSuite) TestArchival_NotEnabled() {
