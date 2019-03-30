@@ -2567,15 +2567,28 @@ func (e *historyEngineImpl) ScheduleDecisionTask(ctx context.Context, scheduleRe
 		RunId:      scheduleRequest.WorkflowExecution.RunId,
 	}
 
-	return e.updateWorkflowExecution(ctx, domainID, execution, false, true,
-		func(msBuilder mutableState, tBuilder *timerBuilder) ([]persistence.Task, error) {
+	return e.updateWorkflowExecutionWithAction(ctx, domainID, execution,
+		func(msBuilder mutableState, tBuilder *timerBuilder) (*updateWorkflowAction, error) {
 			if !msBuilder.IsWorkflowExecutionRunning() {
 				return nil, ErrWorkflowCompleted
 			}
 
-			// Noop
+			postActions := &updateWorkflowAction{
+				createDecision: true,
+			}
 
-			return nil, nil
+			cronBackoffDuration := msBuilder.GetCronBackoffDuration()
+			fmt.Printf("hahaha: %v\n", cronBackoffDuration)
+			fmt.Println(msBuilder.GetNextEventID())
+			if msBuilder.GetNextEventID() == int64(2) && cronBackoffDuration != cron.NoBackoff {
+				postActions.timerTasks = append(postActions.timerTasks, &persistence.WorkflowBackoffTimerTask{
+					VisibilityTimestamp: time.Now().Add(cronBackoffDuration),
+					TimeoutType:         persistence.WorkflowBackoffTimeoutTypeCron,
+				})
+				postActions.createDecision = false
+			}
+
+			return postActions, nil
 		})
 }
 
