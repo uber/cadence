@@ -639,6 +639,7 @@ func (t *timerQueueProcessorBase) deleteWorkflow(task *persistence.TimerTaskInfo
 
 func (t *timerQueueProcessorBase) archiveWorkflow(task *persistence.TimerTaskInfo, msBuilder mutableState, context workflowExecutionContext) error {
 	req := &archiver.ArchiveRequest{
+		ShardID:              t.shard.GetShardID(),
 		DomainID:             task.DomainID,
 		WorkflowID:           task.WorkflowID,
 		RunID:                task.RunID,

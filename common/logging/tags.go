@@ -183,6 +183,7 @@ const (
 	TagArchiveRequestWorkflowID           = "archive-request-workflow-id"
 	TagArchiveRequestRunID                = "archive-request-run-id"
 	TagArchiveRequestEventStoreVersion    = "archive-request-event-store-version"
+	TagArchiveRequestBranchToken          = "archive-request-branch-token"
 	TagArchiveRequestNextEventID          = "archive-request-next-event-id"
 	TagArchiveRequestCloseFailoverVersion = "archive-request-close-failover-version"
 
