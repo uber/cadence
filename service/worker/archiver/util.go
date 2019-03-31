@@ -111,6 +111,11 @@ func IsLast(tags map[string]string) bool {
 	return ok && last == "true"
 }
 
+func modifyBlobForConstCheck(historyBlob *HistoryBlob, existingTags map[string]string) {
+	historyBlob.Header.UploadCluster = common.StringPtr(existingTags["upload_cluster"])
+	historyBlob.Header.UploadDateTime = common.StringPtr(existingTags["upload_date_time"])
+}
+
 func hashArchiveRequest(archiveRequest ArchiveRequest) uint64 {
 	var b bytes.Buffer
 	gob.NewEncoder(&b).Encode(archiveRequest)
