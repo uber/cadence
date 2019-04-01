@@ -48,25 +48,12 @@ type (
 
 	// SequentialTask is the interface for tasks which should be executed sequentially
 	SequentialTask interface {
-		// GenTaskQueue return a new SequentialTaskQueue which this task belongs to
-		// this function can be called if SequentialTaskProcessor does not have any
-		// task queue for this task
-		GenTaskQueue() SequentialTaskQueue
-		Task
-	}
-
-	// SequentialTaskQueue is the generic task queue interface which group
-	// sequential tasks to be executed one by one
-	SequentialTaskQueue interface {
-		// QueueID return the ID of the queue, as well as the tasks inside (same)
+		// QueueID return the ID of the queue this task belongs to
 		QueueID() interface{}
-		// Offer push an task to the task set
-		Offer(task SequentialTask)
-		// Poll pop an task from the task set
-		Poll() SequentialTask
-		// IsEmpty indicate if the task set is empty
-		IsEmpty() bool
-		// Size return the size of the queue
-		Size() int
+		// TaskID return the ID of the task, this task ID is used for sorting
+		TaskID() int64
+		// HashCode return the hash code of the task
+		HashCode() uint32
+		Task
 	}
 )

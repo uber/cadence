@@ -28,26 +28,20 @@ import (
 
 	"github.com/uber-common/bark"
 
-	"github.com/uber/cadence/common/collection"
-
 	"github.com/stretchr/testify/suite"
 )
 
 type (
 	SequentialTaskProcessorSuite struct {
 		suite.Suite
-		processor SequentialTaskProcessor
-	}
-
-	testSequentialTaskQueueImpl struct {
-		id        uint32
-		taskQueue collection.Queue
+		coroutineSize int
+		processor     SequentialTaskProcessor
 	}
 
 	testSequentialTaskImpl struct {
 		waitgroup *sync.WaitGroup
 		queueID   uint32
-		taskID    uint32
+		taskID    int64
 
 		lock   sync.Mutex
 		acked  int
@@ -60,97 +54,84 @@ func TestSequentialTaskProcessorSuite(t *testing.T) {
 }
 
 func (s *SequentialTaskProcessorSuite) SetupTest() {
+	s.coroutineSize = 20
 	s.processor = NewSequentialTaskProcessor(
-		20,
-		func(key interface{}) uint32 {
-			return key.(uint32)
-		},
+		s.coroutineSize,
 		bark.NewNopLogger(),
 	)
 }
 
-func (s *SequentialTaskProcessorSuite) TestSubmit_NoPriorTask() {
+func (s *SequentialTaskProcessorSuite) TestSubmit() {
 	waitgroup := &sync.WaitGroup{}
 	waitgroup.Add(1)
-	task := newTestSequentialTaskImpl(waitgroup, 4, uint32(1))
+	task := newTestSequentialTaskImpl(waitgroup, 4, int64(1))
 
 	// do not start the processor
 	s.Nil(s.processor.Submit(task))
-	sequentialTaskQueue := <-s.processor.(*sequentialTaskProcessorImpl).taskqueueChan
-	sequentialTask := sequentialTaskQueue.Poll()
-	s.True(sequentialTaskQueue.IsEmpty())
-	s.Equal(task, sequentialTask)
+	taskQueue, ok := s.processor.(*sequentialTaskProcessorImpl).coroutineTaskQueues[int(task.HashCode())%s.coroutineSize]
+	s.True(ok)
+	tasks := []SequentialTask{}
+Loop:
+	for {
+		select {
+		case task := <-taskQueue:
+			tasks = append(tasks, task)
+		default:
+			break Loop
+		}
+	}
+	s.Equal(1, len(tasks))
+	s.Equal(task, tasks[0])
 }
 
-func (s *SequentialTaskProcessorSuite) TestSubmit_HasPriorTask() {
+func (s *SequentialTaskProcessorSuite) TestPollAndProcessTaskQueue_ShutDown() {
 	waitgroup := &sync.WaitGroup{}
-	task1 := newTestSequentialTaskImpl(waitgroup, 4, uint32(1))
-	task2 := newTestSequentialTaskImpl(waitgroup, 4, uint32(2))
-
-	// do not start the processor
-	s.Nil(s.processor.Submit(task1))
-	s.Nil(s.processor.Submit(task2))
-	sequentialTaskQueue := <-s.processor.(*sequentialTaskProcessorImpl).taskqueueChan
-	sequentialTask1 := sequentialTaskQueue.Poll()
-	sequentialTask2 := sequentialTaskQueue.Poll()
-	s.True(sequentialTaskQueue.IsEmpty())
-	s.Equal(task1, sequentialTask1)
-	s.Equal(task2, sequentialTask2)
-}
-
-func (s *SequentialTaskProcessorSuite) TestProcessTaskQueue_ShutDown() {
-	waitgroup := &sync.WaitGroup{}
-	waitgroup.Add(2)
-	task1 := newTestSequentialTaskImpl(waitgroup, 4, uint32(1))
-	task2 := newTestSequentialTaskImpl(waitgroup, 4, uint32(2))
-
-	// do not start the processor
-	s.Nil(s.processor.Submit(task1))
-	s.Nil(s.processor.Submit(task2))
-	sequentialTaskQueue := <-s.processor.(*sequentialTaskProcessorImpl).taskqueueChan
+	waitgroup.Add(1)
+	task := newTestSequentialTaskImpl(waitgroup, 4, int64(1))
+	taskQueue := make(chan SequentialTask, 1)
+	taskQueue <- task
 
 	s.processor.Start()
 	s.processor.Stop()
-	s.processor.(*sequentialTaskProcessorImpl).processTaskQueue(sequentialTaskQueue)
 
-	s.Equal(0, task1.NumAcked())
-	s.Equal(0, task1.NumNcked())
-	s.Equal(0, task2.NumAcked())
-	s.Equal(0, task2.NumNcked())
-	s.Equal(1, s.processor.(*sequentialTaskProcessorImpl).taskqueues.Size())
-	s.Equal(2, sequentialTaskQueue.Size())
+	s.processor.(*sequentialTaskProcessorImpl).waitGroup.Add(1)
+	s.processor.(*sequentialTaskProcessorImpl).pollAndProcessTaskQueue(taskQueue)
+	select {
+	case taskInQueue := <-taskQueue:
+		s.Equal(task, taskInQueue)
+	default:
+		s.Fail("there should be one task in task queue when task processing logic is shutdown")
+	}
+	s.Equal(0, task.NumAcked())
+	s.Equal(0, task.NumNcked())
 }
 
 func (s *SequentialTaskProcessorSuite) TestProcessTaskQueue() {
 	waitgroup := &sync.WaitGroup{}
 	waitgroup.Add(2)
-	task1 := newTestSequentialTaskImpl(waitgroup, 4, uint32(1))
-	task2 := newTestSequentialTaskImpl(waitgroup, 4, uint32(2))
+	task1 := newTestSequentialTaskImpl(waitgroup, 4, int64(1))
+	task2 := newTestSequentialTaskImpl(waitgroup, 4, int64(2))
 
-	// do not start the processor
+	s.processor.Start()
 	s.Nil(s.processor.Submit(task1))
 	s.Nil(s.processor.Submit(task2))
-	sequentialTaskQueue := <-s.processor.(*sequentialTaskProcessorImpl).taskqueueChan
-
-	s.processor.(*sequentialTaskProcessorImpl).processTaskQueue(sequentialTaskQueue)
 	waitgroup.Wait()
+	s.processor.Stop()
 
 	s.Equal(1, task1.NumAcked())
 	s.Equal(0, task1.NumNcked())
 	s.Equal(1, task2.NumAcked())
 	s.Equal(0, task2.NumNcked())
-	s.Equal(0, s.processor.(*sequentialTaskProcessorImpl).taskqueues.Size())
-	s.Equal(0, sequentialTaskQueue.Size())
 }
 
-func (s *SequentialTaskProcessorSuite) TestSequentialTaskProcessing() {
+func (s *SequentialTaskProcessorSuite) TestTaskProcessing_UniqueQueueID() {
 	numTasks := 100
 	waitgroup := &sync.WaitGroup{}
 	waitgroup.Add(numTasks)
 
 	tasks := []*testSequentialTaskImpl{}
 	for i := 0; i < numTasks; i++ {
-		tasks = append(tasks, newTestSequentialTaskImpl(waitgroup, 4, uint32(i)))
+		tasks = append(tasks, newTestSequentialTaskImpl(waitgroup, 4, int64(i)))
 	}
 
 	s.processor.Start()
@@ -164,10 +145,9 @@ func (s *SequentialTaskProcessorSuite) TestSequentialTaskProcessing() {
 		s.Equal(1, task.NumAcked())
 		s.Equal(0, task.NumNcked())
 	}
-	s.Equal(0, s.processor.(*sequentialTaskProcessorImpl).taskqueues.Size())
 }
 
-func (s *SequentialTaskProcessorSuite) TestRandomizedTaskProcessing() {
+func (s *SequentialTaskProcessorSuite) TestTaskProcessing_RandomizedQueueID() {
 	numQueues := 100
 	numTasks := 1000
 	waitgroup := &sync.WaitGroup{}
@@ -178,7 +158,7 @@ func (s *SequentialTaskProcessorSuite) TestRandomizedTaskProcessing() {
 		tasks[i] = make([]*testSequentialTaskImpl, numTasks)
 
 		for j := 0; j < numTasks; j++ {
-			tasks[i][j] = newTestSequentialTaskImpl(waitgroup, uint32(i), uint32(j))
+			tasks[i][j] = newTestSequentialTaskImpl(waitgroup, uint32(i), int64(j))
 		}
 
 		randomize(tasks[i])
@@ -206,7 +186,6 @@ func (s *SequentialTaskProcessorSuite) TestRandomizedTaskProcessing() {
 			s.Equal(0, task.NumNcked())
 		}
 	}
-	s.Equal(0, s.processor.(*sequentialTaskProcessorImpl).taskqueues.Size())
 }
 
 func randomize(array []*testSequentialTaskImpl) {
@@ -216,7 +195,7 @@ func randomize(array []*testSequentialTaskImpl) {
 	}
 }
 
-func newTestSequentialTaskImpl(waitgroup *sync.WaitGroup, queueID uint32, taskID uint32) *testSequentialTaskImpl {
+func newTestSequentialTaskImpl(waitgroup *sync.WaitGroup, queueID uint32, taskID int64) *testSequentialTaskImpl {
 	return &testSequentialTaskImpl{
 		waitgroup: waitgroup,
 		queueID:   queueID,
@@ -270,35 +249,14 @@ func (t *testSequentialTaskImpl) NumNcked() int {
 	return t.nacked
 }
 
-func (t *testSequentialTaskImpl) GenTaskQueue() SequentialTaskQueue {
-
-	taskQueue := collection.NewConcurrentPriorityQueue(func(this interface{}, other interface{}) bool {
-		return this.(*testSequentialTaskImpl).taskID < other.(*testSequentialTaskImpl).taskID
-	})
-	taskQueue.Offer(t)
-
-	return &testSequentialTaskQueueImpl{
-		id:        t.queueID,
-		taskQueue: taskQueue,
-	}
+func (t *testSequentialTaskImpl) QueueID() interface{} {
+	return t.queueID
 }
 
-func (t *testSequentialTaskQueueImpl) QueueID() interface{} {
-	return t.id
+func (t *testSequentialTaskImpl) TaskID() int64 {
+	return t.taskID
 }
 
-func (t *testSequentialTaskQueueImpl) Offer(task SequentialTask) {
-	t.taskQueue.Offer(task)
-}
-
-func (t *testSequentialTaskQueueImpl) Poll() SequentialTask {
-	return t.taskQueue.Poll().(SequentialTask)
-}
-
-func (t *testSequentialTaskQueueImpl) IsEmpty() bool {
-	return t.taskQueue.IsEmpty()
-}
-
-func (t *testSequentialTaskQueueImpl) Size() int {
-	return t.taskQueue.Size()
+func (t *testSequentialTaskImpl) HashCode() uint32 {
+	return t.queueID
 }

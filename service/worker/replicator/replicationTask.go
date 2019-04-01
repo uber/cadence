@@ -24,7 +24,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/uber/cadence/common/task"
+	"github.com/dgryski/go-farm"
 
 	"github.com/uber/cadence/common"
 
@@ -212,12 +212,6 @@ func (t *activityReplicationTask) RetryErr(err error) bool {
 	return false
 }
 
-func (t *activityReplicationTask) GenTaskQueue() task.SequentialTaskQueue {
-	taskQueue := newReplicationSequentialTaskQueue(t.queueID)
-	taskQueue.Offer(t)
-	return taskQueue
-}
-
 func (t *historyReplicationTask) Execute() error {
 	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
 	defer cancel()
@@ -269,10 +263,16 @@ func (t *historyReplicationTask) RetryErr(err error) bool {
 	return false
 }
 
-func (t *historyReplicationTask) GenTaskQueue() task.SequentialTaskQueue {
-	taskQueue := newReplicationSequentialTaskQueue(t.queueID)
-	taskQueue.Offer(t)
-	return taskQueue
+func (t *workflowReplicationTask) QueueID() interface{} {
+	return t.queueID
+}
+
+func (t *workflowReplicationTask) TaskID() int64 {
+	return t.taskID
+}
+
+func (t *workflowReplicationTask) HashCode() uint32 {
+	return farm.Fingerprint32([]byte(t.queueID.WorkflowID))
 }
 
 func (t *workflowReplicationTask) Ack() {

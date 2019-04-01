@@ -21,13 +21,13 @@
 package task
 
 import (
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/collection"
 )
 
 type (
@@ -36,23 +36,34 @@ type (
 		shutdownChan chan struct{}
 		waitGroup    sync.WaitGroup
 
-		coroutineSize int
-		taskqueues    collection.ConcurrentTxMap
-		taskqueueChan chan SequentialTaskQueue
-		logger        bark.Logger
+		coroutineSize       int
+		coroutineTaskQueues map[int]chan SequentialTask
+		logger              bark.Logger
 	}
+
+	// SequentialTasks slice of SequentialTask
+	SequentialTasks []SequentialTask
+)
+
+const (
+	coroutineTaskQueueSize           = 100
+	coroutineTaskProcessingBatchSize = 100
 )
 
 // NewSequentialTaskProcessor create a new sequential tasks processor
-func NewSequentialTaskProcessor(coroutineSize int, hashFn collection.HashFunc, logger bark.Logger) SequentialTaskProcessor {
+func NewSequentialTaskProcessor(coroutineSize int, logger bark.Logger) SequentialTaskProcessor {
+
+	coroutineTaskQueues := make(map[int]chan SequentialTask, coroutineSize)
+	for i := 0; i < coroutineSize; i++ {
+		coroutineTaskQueues[i] = make(chan SequentialTask, coroutineTaskQueueSize)
+	}
 
 	return &sequentialTaskProcessorImpl{
-		status:        common.DaemonStatusInitialized,
-		shutdownChan:  make(chan struct{}),
-		coroutineSize: coroutineSize,
-		taskqueues:    collection.NewShardedConcurrentTxMap(1024, hashFn),
-		taskqueueChan: make(chan SequentialTaskQueue, coroutineSize),
-		logger:        logger,
+		status:              common.DaemonStatusInitialized,
+		shutdownChan:        make(chan struct{}),
+		coroutineSize:       coroutineSize,
+		coroutineTaskQueues: coroutineTaskQueues,
+		logger:              logger,
 	}
 }
 
@@ -63,7 +74,8 @@ func (t *sequentialTaskProcessorImpl) Start() {
 
 	t.waitGroup.Add(t.coroutineSize)
 	for i := 0; i < t.coroutineSize; i++ {
-		go t.pollAndProcessTaskQueue()
+		coroutineTaskQueue := t.coroutineTaskQueues[i]
+		go t.pollAndProcessTaskQueue(coroutineTaskQueue)
 	}
 	t.logger.Info("Task processor started.")
 }
@@ -81,84 +93,105 @@ func (t *sequentialTaskProcessorImpl) Stop() {
 }
 
 func (t *sequentialTaskProcessorImpl) Submit(task SequentialTask) error {
-
-	taskqueue := task.GenTaskQueue()
-
-	_, fnEvaluated, err := t.taskqueues.PutOrDo(
-		taskqueue.QueueID(),
-		taskqueue,
-		func(key interface{}, value interface{}) error {
-			value.(SequentialTaskQueue).Offer(task)
-			return nil
-		},
-	)
-	if err != nil {
-		return err
-	}
-
-	// if function evaluated, meaning that the task set is
-	// already dispatched
-	if fnEvaluated {
-		return nil
-	}
-
+	hashCode := int(task.HashCode()) % t.coroutineSize
+	taskQueue := t.coroutineTaskQueues[hashCode]
 	// need to dispatch this task set
 	select {
 	case <-t.shutdownChan:
-	case t.taskqueueChan <- taskqueue:
+	case taskQueue <- task:
 	}
 	return nil
-
 }
 
-func (t *sequentialTaskProcessorImpl) pollAndProcessTaskQueue() {
+func (t *sequentialTaskProcessorImpl) pollAndProcessTaskQueue(coroutineTaskQueue chan SequentialTask) {
 	defer t.waitGroup.Done()
 
 	for {
 		select {
 		case <-t.shutdownChan:
 			return
-		case taskqueue := <-t.taskqueueChan:
-			t.processTaskQueue(taskqueue)
+		default:
+			t.batchPollTaskQueue(coroutineTaskQueue)
 		}
 	}
 }
 
-func (t *sequentialTaskProcessorImpl) processTaskQueue(taskqueue SequentialTaskQueue) {
+func (t *sequentialTaskProcessorImpl) batchPollTaskQueue(coroutineTaskQueue chan SequentialTask) {
+	bufferedSequentialTasks := make(map[interface{}][]SequentialTask)
+	indexTasks := func(task SequentialTask) {
+		sequentialTasks, ok := bufferedSequentialTasks[task.QueueID()]
+		if ok {
+			sequentialTasks = append(sequentialTasks, task)
+			bufferedSequentialTasks[task.QueueID()] = sequentialTasks
+		} else {
+			bufferedSequentialTasks[task.QueueID()] = []SequentialTask{task}
+		}
+	}
+
+	select {
+	case <-t.shutdownChan:
+		return
+	case task := <-coroutineTaskQueue:
+		indexTasks(task)
+	BufferLoop:
+		for i := 0; i < coroutineTaskProcessingBatchSize-1; i++ {
+			select {
+			case <-t.shutdownChan:
+				return
+			case task := <-coroutineTaskQueue:
+				indexTasks(task)
+			default:
+				// currently no more task
+				break BufferLoop
+			}
+		}
+	}
+
+	for _, sequentialTasks := range bufferedSequentialTasks {
+		t.batchProcessingSequentialTasks(sequentialTasks)
+	}
+}
+
+func (t *sequentialTaskProcessorImpl) batchProcessingSequentialTasks(sequentialTasks []SequentialTask) {
+	sort.Sort(SequentialTasks(sequentialTasks))
+
+	for _, task := range sequentialTasks {
+		t.processTaskOnce(task)
+	}
+}
+
+func (t *sequentialTaskProcessorImpl) processTaskOnce(task SequentialTask) {
+	var err error
+
+TaskProcessingLoop:
 	for {
 		select {
 		case <-t.shutdownChan:
 			return
 		default:
-			if !taskqueue.IsEmpty() {
-				t.processTaskOnce(taskqueue)
-			} else {
-				deleted := t.taskqueues.RemoveIf(taskqueue.QueueID(), func(key interface{}, value interface{}) bool {
-					return value.(SequentialTaskQueue).IsEmpty()
-				})
-				if deleted {
-					return
-				}
-
-				// if deletion failed, meaning that task queue is offered with new task
-				// continue execution
+			err = task.Execute()
+			err = task.HandleErr(err)
+			if err == nil || !task.RetryErr(err) {
+				break TaskProcessingLoop
 			}
 		}
 	}
-}
-
-func (t *sequentialTaskProcessorImpl) processTaskOnce(taskqueue SequentialTaskQueue) {
-	task := taskqueue.Poll()
-	err := task.Execute()
-	err = task.HandleErr(err)
 
 	if err != nil {
-		if task.RetryErr(err) {
-			taskqueue.Offer(task)
-		} else {
-			task.Nack()
-		}
+		task.Nack()
 	} else {
 		task.Ack()
 	}
+}
+
+func (tasks SequentialTasks) Len() int {
+	return len(tasks)
+}
+
+func (tasks SequentialTasks) Swap(i, j int) {
+	tasks[i], tasks[j] = tasks[j], tasks[i]
+}
+
+func (tasks SequentialTasks) Less(i, j int) bool {
+	return tasks[i].TaskID() < tasks[j].TaskID()
 }
