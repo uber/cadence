@@ -151,7 +151,7 @@ func setupBlobstore(logger bark.Logger) *BlobstoreBase {
 }
 
 func getMessagingClient(config *MessagingClientConfig, logger bark.Logger) messaging.Client {
-	if config.UseMock {
+	if config == nil || config.UseMock {
 		return mocks.NewMockMessagingClient(&mocks.KafkaProducer{}, nil)
 	}
 
