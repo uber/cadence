@@ -18,51 +18,44 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package metrics
+package cron
 
-const (
-	domain         = "domain"
-	domainAllValue = "all"
+import (
+	"math"
+	"time"
+
+	"github.com/robfig/cron"
+	workflow "github.com/uber/cadence/.gen/go/shared"
 )
 
-// Tag is an interface to define metrics tags
-type Tag interface {
-	Key() string
-	Value() string
+// NoBackoff is used to represent backoff when no cron backoff is needed
+const NoBackoff = time.Duration(-1)
+
+// ValidateSchedule validates a cron schedule spec
+func ValidateSchedule(cronSchedule string) error {
+	if cronSchedule == "" {
+		return nil
+	}
+	if _, err := cron.Parse(cronSchedule); err != nil {
+		return &workflow.BadRequestError{Message: "Invalid CronSchedule."}
+	}
+	return nil
 }
 
-type domainTag struct {
-	value string
-}
+// GetBackoffForNextSchedule calculates the backoff time for the next run given
+// a cronSchedule and current time
+func GetBackoffForNextSchedule(cronSchedule string, nowTime time.Time) time.Duration {
+	if len(cronSchedule) == 0 {
+		return NoBackoff
+	}
 
-type domainAllTag struct{}
+	schedule, err := cron.ParseStandard(cronSchedule)
+	if err != nil {
+		return NoBackoff
+	}
 
-// DomainTag returns a new domain tag
-func DomainTag(value string) Tag {
-	return domainTag{value}
-}
-
-// Key returns the key of the domain tag
-func (d domainTag) Key() string {
-	return domain
-}
-
-// Value returns the value of a domain tag
-func (d domainTag) Value() string {
-	return d.value
-}
-
-// DomainAllTag returns a new domain all tag-value
-func DomainAllTag() Tag {
-	return domainAllTag{}
-}
-
-// Key returns the key of the domain all tag
-func (d domainAllTag) Key() string {
-	return domain
-}
-
-// Value returns the value of the domain all tag
-func (d domainAllTag) Value() string {
-	return domainAllValue
+	nowTime = nowTime.In(time.UTC)
+	backoffInterval := schedule.Next(nowTime).Sub(nowTime)
+	roundedInterval := time.Second * time.Duration(math.Ceil(backoffInterval.Seconds()))
+	return roundedInterval
 }

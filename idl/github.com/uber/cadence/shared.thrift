@@ -294,6 +294,8 @@ struct WorkflowExecutionInfo {
   40: optional i64 (js.type = "Long") closeTime
   50: optional WorkflowExecutionCloseStatus closeStatus
   60: optional i64 (js.type = "Long") historyLength
+  70: optional string parentDomainId
+  80: optional WorkflowExecution parentExecution
 }
 
 struct WorkflowExecutionConfiguration {
@@ -1221,6 +1223,9 @@ struct PendingActivityInfo {
   50: optional i64 (js.type = "Long") lastHeartbeatTimestamp
   60: optional i64 (js.type = "Long") lastStartedTimestamp
   70: optional i32 attempt
+  80: optional i32 maximumAttempts
+  90: optional i64 (js.type = "Long") scheduledTimestamp
+  100: optional i64 (js.type = "Long") expirationTimestamp
 }
 
 struct DescribeWorkflowExecutionResponse {

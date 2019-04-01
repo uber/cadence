@@ -46,6 +46,7 @@ type (
 		RunID                *string `json:"run_id,omitempty"`
 		CurrentPageToken     *int    `json:"current_page_token,omitempty"`
 		NextPageToken        *int    `json:"next_page_token,omitempty"`
+		IsLast               *bool   `json:"is_last,omitempty"`
 		FirstFailoverVersion *int64  `json:"first_failover_version,omitempty"`
 		LastFailoverVersion  *int64  `json:"last_failover_version,omitempty"`
 		FirstEventID         *int64  `json:"first_event_id,omitempty"`
@@ -104,6 +105,17 @@ func ConvertHeaderToTags(header *HistoryBlobHeader) (map[string]string, error) {
 	return result, nil
 }
 
+// IsLast returns true if tags indicate blob is the last blob in archived history, false otherwise
+func IsLast(tags map[string]string) bool {
+	last, ok := tags["is_last"]
+	return ok && last == "true"
+}
+
+func modifyBlobForConstCheck(historyBlob *HistoryBlob, existingTags map[string]string) {
+	historyBlob.Header.UploadCluster = common.StringPtr(existingTags["upload_cluster"])
+	historyBlob.Header.UploadDateTime = common.StringPtr(existingTags["upload_date_time"])
+}
+
 func hashArchiveRequest(archiveRequest ArchiveRequest) uint64 {
 	var b bytes.Buffer
 	gob.NewEncoder(&b).Encode(archiveRequest)
@@ -130,11 +142,12 @@ func hashesEqual(a []uint64, b []uint64) bool {
 
 func tagLoggerWithRequest(logger bark.Logger, request ArchiveRequest) bark.Logger {
 	return logger.WithFields(bark.Fields{
+		logging.TagHistoryShardID:                     request.ShardID,
 		logging.TagArchiveRequestDomainID:             request.DomainID,
 		logging.TagArchiveRequestWorkflowID:           request.WorkflowID,
 		logging.TagArchiveRequestRunID:                request.RunID,
 		logging.TagArchiveRequestEventStoreVersion:    request.EventStoreVersion,
-		logging.TagArchiveRequestBranchToken:          string(request.BranchToken),
+		logging.TagArchiveRequestBranchToken:          request.BranchToken,
 		logging.TagArchiveRequestNextEventID:          request.NextEventID,
 		logging.TagArchiveRequestCloseFailoverVersion: request.CloseFailoverVersion,
 	})

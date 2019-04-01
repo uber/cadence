@@ -38,6 +38,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/cron"
 	"github.com/uber/cadence/common/definition"
 	ce "github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/logging"
@@ -332,7 +333,8 @@ func (e *historyEngineImpl) createMutableState(clusterMetadata cluster.Metadata,
 	return msBuilder
 }
 
-func (e *historyEngineImpl) generateFirstDecisionTask(domainID string, msBuilder mutableState, parentInfo *h.ParentExecutionInfo, taskListName string) ([]persistence.Task, *decisionInfo, error) {
+func (e *historyEngineImpl) generateFirstDecisionTask(domainID string, msBuilder mutableState, parentInfo *h.ParentExecutionInfo,
+	taskListName string, cronBackoffSeconds int32) ([]persistence.Task, *decisionInfo, error) {
 	di := &decisionInfo{
 		TaskList:        taskListName,
 		Version:         common.EmptyVersion,
@@ -341,8 +343,8 @@ func (e *historyEngineImpl) generateFirstDecisionTask(domainID string, msBuilder
 		DecisionTimeout: int32(0),
 	}
 	var transferTasks []persistence.Task
-	if parentInfo == nil {
-		// DecisionTask is only created when it is not a Child Workflow Execution
+	if parentInfo == nil && cronBackoffSeconds == 0 {
+		// DecisionTask is only created when it is not a Child Workflow Execution and no backoff is needed
 		di = msBuilder.AddDecisionTaskScheduledEvent()
 		if di == nil {
 			return nil, nil, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
@@ -535,16 +537,26 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 	}
 
 	taskList := request.TaskList.GetName()
+	cronBackoffSeconds := startRequest.GetFirstDecisionTaskBackoffSeconds()
 	// Generate first decision task event if not child WF
-	transferTasks, firstDecisionTask, retError := e.generateFirstDecisionTask(domainID, msBuilder, startRequest.ParentExecutionInfo, taskList)
+	transferTasks, firstDecisionTask, retError := e.generateFirstDecisionTask(domainID, msBuilder, startRequest.ParentExecutionInfo, taskList, cronBackoffSeconds)
 	if retError != nil {
 		return
 	}
+
 	// Generate first timer task : WF timeout task
-	duration := time.Duration(*request.ExecutionStartToCloseTimeoutSeconds) * time.Second
+	cronBackoffDuration := time.Duration(cronBackoffSeconds) * time.Second
+	timeoutDuration := time.Duration(*request.ExecutionStartToCloseTimeoutSeconds)*time.Second + cronBackoffDuration
 	timerTasks := []persistence.Task{&persistence.WorkflowTimeoutTask{
-		VisibilityTimestamp: e.shard.GetTimeSource().Now().Add(duration),
+		VisibilityTimestamp: e.shard.GetTimeSource().Now().Add(timeoutDuration),
 	}}
+	if cronBackoffSeconds != 0 {
+		timerTasks = append(timerTasks, &persistence.WorkflowBackoffTimerTask{
+			VisibilityTimestamp: e.shard.GetTimeSource().Now().Add(cronBackoffDuration),
+			TimeoutType:         persistence.WorkflowBackoffTimeoutTypeCron,
+		})
+	}
+
 	// generate first replication task
 	replicationTasks := generateFirstReplicationTask(msBuilder, clusterMetadata, domainEntry)
 	// set versions and timestamp for timer and transfer tasks
@@ -841,6 +853,13 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(ctx context.Context,
 			HistoryLength: common.Int64Ptr(msBuilder.GetNextEventID() - common.FirstEventID),
 		},
 	}
+	if executionInfo.ParentRunID != "" {
+		result.WorkflowExecutionInfo.ParentExecution = &workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(executionInfo.ParentWorkflowID),
+			RunId:      common.StringPtr(executionInfo.ParentRunID),
+		}
+		result.WorkflowExecutionInfo.ParentDomainId = common.StringPtr(executionInfo.ParentDomainID)
+	}
 	if executionInfo.State == persistence.WorkflowStateCompleted {
 		// for closed workflow
 		closeStatus := getWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
@@ -875,8 +894,18 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(ctx context.Context,
 				return nil, &workflow.InternalServiceError{Message: "Unable to get activity schedule event."}
 			}
 			p.ActivityType = scheduledEvent.ActivityTaskScheduledEventAttributes.ActivityType
-			p.LastStartedTimestamp = common.Int64Ptr(ai.StartedTime.UnixNano())
-			p.Attempt = common.Int32Ptr(ai.Attempt)
+			if state == workflow.PendingActivityStateScheduled {
+				p.ScheduledTimestamp = common.Int64Ptr(ai.ScheduledTime.UnixNano())
+			} else {
+				p.LastStartedTimestamp = common.Int64Ptr(ai.StartedTime.UnixNano())
+			}
+			if ai.HasRetryPolicy {
+				p.Attempt = common.Int32Ptr(ai.Attempt)
+				p.ExpirationTimestamp = common.Int64Ptr(ai.ExpirationTime.UnixNano())
+				if ai.MaximumAttempts != 0 {
+					p.MaximumAttempts = common.Int32Ptr(ai.MaximumAttempts)
+				}
+			}
 			result.PendingActivities = append(result.PendingActivities, p)
 		}
 	}
@@ -1133,7 +1162,10 @@ func failInFlightDecisionToClearBufferedEvents(msBuilder mutableState) error {
 }
 
 // RespondDecisionTaskCompleted completes a decision task
-func (e *historyEngineImpl) RespondDecisionTaskCompleted(ctx context.Context, req *h.RespondDecisionTaskCompletedRequest) (response *h.RespondDecisionTaskCompletedResponse, retError error) {
+func (e *historyEngineImpl) RespondDecisionTaskCompleted(
+	ctx context.Context,
+	req *h.RespondDecisionTaskCompletedRequest,
+) (response *h.RespondDecisionTaskCompletedResponse, retError error) {
 
 	domainEntry, err := e.getActiveDomainEntry(req.DomainUUID)
 	if err != nil {
@@ -1224,6 +1256,7 @@ Update_History_Loop:
 		completedID := *completedEvent.EventId
 		hasUnhandledEvents := msBuilder.HasBufferedEvents()
 		isComplete := false
+		activityNotStartedCancelled := false
 		transferTasks := []persistence.Task{}
 		timerTasks := []persistence.Task{}
 		var continueAsNewBuilder mutableState
@@ -1320,7 +1353,7 @@ Update_History_Loop:
 
 				// check if this is a cron workflow
 				cronBackoff := msBuilder.GetCronBackoffDuration()
-				if cronBackoff == common.NoRetryBackoff {
+				if cronBackoff == cron.NoBackoff {
 					// not cron, so complete this workflow execution
 					if e := msBuilder.AddCompletedWorkflowEvent(completedID, attributes); e == nil {
 						return nil, &workflow.InternalServiceError{Message: "Unable to add complete workflow event."}
@@ -1393,7 +1426,7 @@ Update_History_Loop:
 					continueAsNewInitiator = workflow.ContinueAsNewInitiatorCronSchedule
 				}
 
-				if backoffInterval == common.NoRetryBackoff {
+				if backoffInterval == cron.NoBackoff {
 					// no retry or cron
 					if evt := msBuilder.AddFailWorkflowEvent(completedID, failedAttributes); evt == nil {
 						return nil, &workflow.InternalServiceError{Message: "Unable to add fail workflow event."}
@@ -1495,9 +1528,11 @@ Update_History_Loop:
 				}
 
 				if ai.StartedID == common.EmptyEventID {
-					// We haven't started the activity yet, we can cancel the activity right away.
+					// We haven't started the activity yet, we can cancel the activity right away and
+					// schedule a decision task to ensure the workflow makes progress.
 					msBuilder.AddActivityTaskCanceledEvent(ai.ScheduleID, ai.StartedID, *actCancelReqEvent.EventId,
 						[]byte(activityCancelationMsgActivityNotStarted), common.StringDefault(request.Identity))
+					activityNotStartedCancelled = true
 				}
 
 			case workflow.DecisionTypeCancelTimer:
@@ -1744,8 +1779,7 @@ Update_History_Loop:
 
 		// Schedule another decision task if new events came in during this decision or if request forced to
 		createNewDecisionTask := !isComplete && (hasUnhandledEvents ||
-			request.GetForceCreateNewDecisionTask())
-
+			request.GetForceCreateNewDecisionTask() || activityNotStartedCancelled)
 		var newDecisionTaskScheduledID int64
 		if createNewDecisionTask {
 			di := msBuilder.AddDecisionTaskScheduledEvent()
@@ -3159,7 +3193,7 @@ func validateStartChildExecutionAttributes(parentInfo *persistence.WorkflowExecu
 		return err
 	}
 
-	if err := common.ValidateCronSchedule(attributes.GetCronSchedule()); err != nil {
+	if err := cron.ValidateSchedule(attributes.GetCronSchedule()); err != nil {
 		return err
 	}
 

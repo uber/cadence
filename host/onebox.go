@@ -146,7 +146,8 @@ type (
 	}
 
 	ringpopFactoryImpl struct {
-		rpHosts []string
+		rpHosts  []string
+		initLock *sync.Mutex
 	}
 )
 
@@ -183,24 +184,25 @@ func (c *cadenceImpl) enableWorker() bool {
 
 func (c *cadenceImpl) Start() error {
 	var rpHosts []string
-	rpHosts = append(rpHosts, c.FrontendAddress())
-	rpHosts = append(rpHosts, c.MatchingServiceAddress())
 	rpHosts = append(rpHosts, c.HistoryServiceAddress()...)
-	if c.enableWorker() {
-		rpHosts = append(rpHosts, c.WorkerServiceAddress())
-	}
 
 	var startWG sync.WaitGroup
-	startWG.Add(2)
+	startWG.Add(1)
 	go c.startHistory(rpHosts, &startWG, c.enableEventsV2)
+	startWG.Wait()
+
+	rpHosts = append(rpHosts, c.MatchingServiceAddress())
+	startWG.Add(1)
 	go c.startMatching(rpHosts, &startWG)
 	startWG.Wait()
 
+	rpHosts = append(rpHosts, c.FrontendAddress())
 	startWG.Add(1)
 	go c.startFrontend(rpHosts, &startWG)
 	startWG.Wait()
 
 	if c.enableWorker() {
+		rpHosts = append(rpHosts, c.WorkerServiceAddress())
 		startWG.Add(1)
 		go c.startWorker(rpHosts, &startWG)
 		startWG.Wait()
