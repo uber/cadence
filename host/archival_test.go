@@ -23,14 +23,15 @@ package host
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/uber/cadence/common/cluster"
 	"strconv"
 	"time"
+
+	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/persistence"
 
 	"github.com/pborman/uuid"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/persistence"
 )
 
 func (s *integrationSuite) TestArchival_NotEnabled() {

@@ -1,10 +1,18 @@
 steps:
-  - label: ":golang:"
+  - label: ":golang: integration test"
     agents:
       queue: "*"
       docker: "*"
-    command: "ccm create test -v 3.9 -n 1 -s --root && make cover_integration_ci"
     plugins:
       - docker-compose#v3.0.0:
-          run: integrationtest
+          run: integration-test
           config: docker/buildkite/docker-compose.yml
+
+  - label: ":golang: integration xdc test"
+      agents:
+        queue: "*"
+        docker: "*"
+      plugins:
+        - docker-compose#v3.0.0:
+            run: integration-test-xdc
+            config: docker/buildkite/docker-compose.yml

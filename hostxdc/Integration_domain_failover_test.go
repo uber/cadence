@@ -142,8 +142,9 @@ func (s *integrationClustersTestSuite) newTestCluster(no int) *host.TestCluster 
 
 func (s *integrationClustersTestSuite) createMessagingClient() messaging.Client {
 	clusters := make(map[string]messaging.ClusterConfig)
+	kafkaAddr := host.GetKafkaAddr()
 	clusters["test"] = messaging.ClusterConfig{
-		Brokers: []string{"127.0.0.1:9092"},
+		Brokers: []string{kafkaAddr},
 	}
 	topics := make(map[string]messaging.TopicConfig)
 	topics[topicName[0]] = messaging.TopicConfig{

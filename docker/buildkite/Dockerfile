@@ -1,4 +1,4 @@
-FROM golang:1.11.1
+FROM golang:1.12.1
 
 # Tried to set Python to ignore warnings due to the instructions at this link:
 # https://github.com/yaml/pyyaml/wiki/PyYAML-yaml.load(input)-Deprecation
@@ -20,7 +20,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN curl https://bootstrap.pypa.io/get-pip.py | python
 RUN pip install PyYAML==3.13
-RUN pip install ccm
 
 RUN go get -u github.com/golang/dep/cmd/dep
 RUN go get -u github.com/Masterminds/glide
@@ -28,8 +27,6 @@ RUN go get -u golang.org/x/lint/golint
 RUN go get github.com/axw/gocov/gocov
 RUN go get github.com/mattn/goveralls
 RUN go get golang.org/x/tools/cmd/cover
-# RUN ccm create test -v 3.9 -n 1 -s --root
-
 
 # The golang Docker sets the $GOPATH to be /go
 # https://github.com/docker-library/golang/blob/c1baf037d71331eb0b8d4c70cff4c29cf124c5e0/1.4/Dockerfile

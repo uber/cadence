@@ -53,10 +53,12 @@ type (
 	TestBaseOptions struct {
 		DBName    string
 		Cassandra struct {
+			DBAddr    string
 			DBPort    int
 			SchemaDir string
 		}
 		SQL struct {
+			DBAddr     string
 			DBPort     int
 			SchemaDir  string
 			DriverName string
@@ -118,7 +120,7 @@ func NewTestBaseWithCassandra(options *TestBaseOptions) TestBase {
 	if options.DBName == "" {
 		options.DBName = "test_" + GenerateRandomDBName(10)
 	}
-	testCluster := cassandra.NewTestCluster(options.Cassandra.DBPort, options.DBName, options.Cassandra.SchemaDir)
+	testCluster := cassandra.NewTestCluster(options.Cassandra.DBAddr, options.Cassandra.DBPort, options.DBName, options.Cassandra.SchemaDir)
 	return newTestBase(options, testCluster)
 }
 
@@ -128,7 +130,7 @@ func NewTestBaseWithSQL(options *TestBaseOptions) TestBase {
 		options.DBName = GenerateRandomDBName(10)
 	}
 	sqlOpts := options.SQL
-	testCluster := sql.NewTestCluster(sqlOpts.DBPort, options.DBName, sqlOpts.SchemaDir, sqlOpts.DriverName)
+	testCluster := sql.NewTestCluster(sqlOpts.DBAddr, sqlOpts.DBPort, options.DBName, sqlOpts.SchemaDir, sqlOpts.DriverName)
 	return newTestBase(options, testCluster)
 }
 

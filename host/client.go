@@ -21,6 +21,8 @@
 package host
 
 import (
+	"os"
+
 	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/common"
@@ -45,4 +47,22 @@ func NewAdminClient(d *yarpc.Dispatcher) AdminClient {
 // NewFrontendClient creates a client to cadence frontend client
 func NewFrontendClient(d *yarpc.Dispatcher) FrontendClient {
 	return workflowserviceclient.New(d.ClientConfig(common.FrontendServiceName))
+}
+
+// GetCassandraAddress return the cassandra address
+func GetCassandraAddress() string {
+	addr := os.Getenv("CASSANDRA_SEEDS")
+	if addr == "" {
+		addr = "127.0.0.1"
+	}
+	return addr
+}
+
+// GetKafkaAddr return the kafka address
+func GetKafkaAddr() string {
+	addr := os.Getenv("KAFKA_SEEDS")
+	if addr == "" {
+		addr = "127.0.0.1"
+	}
+	return addr
 }

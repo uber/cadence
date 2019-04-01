@@ -32,11 +32,11 @@ import (
 )
 
 const (
-	testWorkflowClusterHosts = "127.0.0.1"
-	testPort                 = 0
-	testUser                 = ""
-	testPassword             = ""
-	testSchemaDir            = "schema/cassandra/"
+	testDefaultWorkflowClusterHosts = "127.0.0.1"
+	testDefaultPort                 = 9042
+	testUser                        = ""
+	testPassword                    = ""
+	testSchemaDir                   = "schema/cassandra/"
 )
 
 // TestCluster allows executing cassandra operations in testing.
@@ -49,12 +49,18 @@ type TestCluster struct {
 }
 
 // NewTestCluster returns a new cassandra test cluster
-func NewTestCluster(port int, keyspace string, schemaDir string) *TestCluster {
+func NewTestCluster(addr string, port int, keyspace string, schemaDir string) *TestCluster {
 	if schemaDir == "" {
 		schemaDir = testSchemaDir
 	}
+	if addr == "" {
+		addr = os.Getenv("CASSANDRA_SEEDS")
+		if addr == "" {
+			addr = testDefaultWorkflowClusterHosts
+		}
+	}
 	if port == 0 {
-		port = testPort
+		port = testDefaultPort
 	}
 	var result TestCluster
 	result.keyspace = keyspace
@@ -62,7 +68,7 @@ func NewTestCluster(port int, keyspace string, schemaDir string) *TestCluster {
 	result.cfg = config.Cassandra{
 		User:     testUser,
 		Password: testPassword,
-		Hosts:    testWorkflowClusterHosts,
+		Hosts:    addr,
 		Port:     port,
 		MaxConns: 2,
 		Keyspace: keyspace,
@@ -113,7 +119,7 @@ func (s *TestCluster) TearDownTestDatabase() {
 
 // CreateSession from PersistenceTestCluster interface
 func (s *TestCluster) CreateSession() {
-	s.cluster = NewCassandraCluster(testWorkflowClusterHosts, s.cfg.Port, testUser, testPassword, "")
+	s.cluster = NewCassandraCluster(s.cfg.Hosts, s.cfg.Port, testUser, testPassword, "")
 	s.cluster.Consistency = gocql.Consistency(1)
 	s.cluster.Keyspace = "system"
 	s.cluster.Timeout = 40 * time.Second
@@ -145,7 +151,7 @@ func (s *TestCluster) DropDatabase() {
 // LoadSchema from PersistenceTestCluster interface
 func (s *TestCluster) LoadSchema(fileNames []string, schemaDir string) {
 	workflowSchemaDir := schemaDir + "/cadence"
-	err := LoadCassandraSchema(workflowSchemaDir, fileNames, s.cluster.Port, s.DatabaseName(), true)
+	err := LoadCassandraSchema(workflowSchemaDir, fileNames, s.cluster.Hosts, s.cluster.Port, s.DatabaseName(), true)
 	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
 		log.Fatal(err)
 	}
@@ -154,7 +160,7 @@ func (s *TestCluster) LoadSchema(fileNames []string, schemaDir string) {
 // LoadVisibilitySchema from PersistenceTestCluster interface
 func (s *TestCluster) LoadVisibilitySchema(fileNames []string, schemaDir string) {
 	workflowSchemaDir := schemaDir + "visibility"
-	err := LoadCassandraSchema(workflowSchemaDir, fileNames, s.cluster.Port, s.DatabaseName(), false)
+	err := LoadCassandraSchema(workflowSchemaDir, fileNames, s.cluster.Hosts, s.cluster.Port, s.DatabaseName(), false)
 	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
 		log.Fatal(err)
 	}
