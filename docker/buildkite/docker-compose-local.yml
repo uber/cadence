@@ -1,0 +1,10 @@
+version: "3"
+
+services:
+
+  integrationtest:
+    build:
+      context: ../../
+      dockerfile: ./docker/buildkite/Dockerfile
+    volumes:
+      - ../../:/go/src/github.com/uber/cadence
