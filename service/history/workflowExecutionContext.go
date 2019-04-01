@@ -583,6 +583,23 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 					return err
 				}
 				executionInfo.SetLastFirstEventID(firstEvent.GetEventId())
+
+				// add clean up tasks
+				transferTasks = append(transferTasks, &persistence.CloseExecutionTask{})
+				var retentionInDays int32
+				domainEntry, err := c.shard.GetDomainCache().GetDomainByID(executionInfo.DomainID)
+				if err != nil {
+					if _, ok := err.(*workflow.EntityNotExistsError); !ok {
+						return err
+					}
+				} else {
+					retentionInDays = domainEntry.GetRetentionDays(executionInfo.WorkflowID)
+				}
+				expiryTime := clock.NewRealTimeSource().Now().Add(time.Duration(retentionInDays) * time.Hour * 24)
+				timerT := &persistence.DeleteHistoryEventTask{
+					VisibilityTimestamp: expiryTime,
+				}
+				timerTasks = append(timerTasks, timerT)
 			} // end of hard terminate workflow
 		} // end of enforce history size/count limit
 

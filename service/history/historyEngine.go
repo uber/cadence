@@ -2866,11 +2866,11 @@ func (e *historyEngineImpl) failDecision(context workflowExecutionContext, sched
 }
 
 func (e *historyEngineImpl) getTimerBuilder(we *workflow.WorkflowExecution) *timerBuilder {
-	lg := e.logger.WithFields(bark.Fields{
+	log := e.logger.WithFields(bark.Fields{
 		logging.TagWorkflowExecutionID: we.WorkflowId,
 		logging.TagWorkflowRunID:       we.RunId,
 	})
-	return newTimerBuilder(e.shard.GetConfig(), lg, clock.NewRealTimeSource())
+	return newTimerBuilder(e.shard.GetConfig(), log, clock.NewRealTimeSource())
 }
 
 func (s *shardContextWrapper) UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) (*persistence.UpdateWorkflowExecutionResponse, error) {
