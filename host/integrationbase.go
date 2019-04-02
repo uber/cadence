@@ -55,7 +55,10 @@ type (
 func (s *IntegrationBase) setupSuite(defaultClusterConfigFile string) {
 	s.setupLogger()
 
-	if *frontendAddress != "" {
+	clusterConfig, err := GetTestClusterConfig(s.Logger, defaultClusterConfigFile)
+	s.Require().NoError(err)
+
+	if clusterConfig.FrontendAddress != "" {
 		s.Logger.WithField("address", *frontendAddress).Info("Running integration test against specified frontend")
 		channel, err := tchannel.NewChannelTransport(tchannel.ServiceName("cadence-frontend"))
 		s.Require().NoError(err)
@@ -73,7 +76,7 @@ func (s *IntegrationBase) setupSuite(defaultClusterConfigFile string) {
 		s.adminClient = NewAdminClient(dispatcher)
 	} else {
 		s.Logger.Info("Running integration test against test cluster")
-		cluster, err := SetupTestCluster(s.Logger, defaultClusterConfigFile)
+		cluster, err := NewCluster(clusterConfig, s.Logger)
 		s.Require().NoError(err)
 		s.testCluster = cluster
 		s.engine = s.testCluster.GetFrontendClient()
@@ -106,7 +109,7 @@ func (s *IntegrationBase) setupLogger() {
 	s.Logger = bark.NewLoggerFromLogrus(logger)
 }
 
-func SetupTestCluster(logger bark.Logger, configFile string) (*TestCluster, error) {
+func GetTestClusterConfig(logger bark.Logger, configFile string) (*TestClusterConfig, error) {
 	configLocation := configFile
 	if *TestClusterConfigFile != "" {
 		configLocation = *TestClusterConfigFile
@@ -122,8 +125,8 @@ func SetupTestCluster(logger bark.Logger, configFile string) (*TestCluster, erro
 	}
 
 	options.EnableEventsV2 = *EnableEventsV2
-
-	return NewCluster(&options, logger)
+	options.FrontendAddress = *frontendAddress
+	return &options, nil
 }
 
 func (s *IntegrationBase) tearDownSuite() {

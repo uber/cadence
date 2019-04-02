@@ -30,6 +30,7 @@
   enablearchival: false
   clusterno: 0
   numhistoryshards: 1
+  numhistoryhosts: 1
   messagingclientconfig:
     usemock: false
     kafkaconfig:
@@ -92,6 +93,7 @@
   enablearchival: false
   clusterno: 1
   numhistoryshards: 1
+  numhistoryhosts: 1
   messagingclientconfig:
     usemock: false
     kafkaconfig:

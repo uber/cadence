@@ -47,12 +47,14 @@ type (
 
 	// TestClusterConfig are config for a test cluster
 	TestClusterConfig struct {
+		FrontendAddress       string
 		PersistOptions        *persistencetests.TestBaseOptions
 		EnableWorker          bool
 		EnableEventsV2        bool
 		EnableArchival        bool
 		ClusterNo             int
 		NumHistoryShards      int
+		NumHistoryHosts       int
 		MessagingClientConfig *MessagingClientConfig
 	}
 
@@ -98,7 +100,7 @@ func NewCluster(options *TestClusterConfig, logger bark.Logger) (*TestCluster, e
 		TaskMgr:                       testBase.TaskMgr,
 		VisibilityMgr:                 testBase.VisibilityMgr,
 		NumberOfHistoryShards:         options.NumHistoryShards,
-		NumberOfHistoryHosts:          testNumberOfHistoryHosts,
+		NumberOfHistoryHosts:          options.NumHistoryHosts,
 		Logger:                        logger,
 		ClusterNo:                     options.ClusterNo,
 		EnableWorker:                  options.EnableWorker,
