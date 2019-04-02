@@ -44,6 +44,7 @@ type (
 		suite.Suite
 
 		testCluster       *TestCluster
+		testClusterConfig *TestClusterConfig
 		engine            FrontendClient
 		adminClient       AdminClient
 		Logger            bark.Logger
@@ -55,8 +56,9 @@ type (
 func (s *IntegrationBase) setupSuite(defaultClusterConfigFile string) {
 	s.setupLogger()
 
-	clusterConfig, err := GetTestClusterConfig(s.Logger, defaultClusterConfigFile)
+	clusterConfig, err := GetTestClusterConfig(defaultClusterConfigFile)
 	s.Require().NoError(err)
+	s.testClusterConfig = clusterConfig
 
 	if clusterConfig.FrontendAddress != "" {
 		s.Logger.WithField("address", *frontendAddress).Info("Running integration test against specified frontend")
@@ -109,7 +111,7 @@ func (s *IntegrationBase) setupLogger() {
 	s.Logger = bark.NewLoggerFromLogrus(logger)
 }
 
-func GetTestClusterConfig(logger bark.Logger, configFile string) (*TestClusterConfig, error) {
+func GetTestClusterConfig(configFile string) (*TestClusterConfig, error) {
 	configLocation := configFile
 	if *TestClusterConfigFile != "" {
 		configLocation = *TestClusterConfigFile
