@@ -21,7 +21,6 @@
 package service
 
 import (
-	"fmt"
 	"math/rand"
 	"os"
 	"sync/atomic"
@@ -42,7 +41,6 @@ import (
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
 	es "github.com/uber/cadence/common/elasticsearch"
-	"github.com/uber/ringpop-go"
 	"go.uber.org/yarpc"
 )
 
@@ -77,16 +75,12 @@ type (
 		DCRedirectionPolicy config.DCRedirectionPolicy
 	}
 
-	// RingpopFactory provides a bootstrapped ringpop
-	RingpopFactory interface {
-		// CreateRingpop vends a bootstrapped ringpop object
-		CreateRingpop(d *yarpc.Dispatcher) (*ringpop.Ringpop, error)
-	}
-
-	// MembershipFactory provides a bootstrapped ringpop
+	// MembershipFactory provides a bootstrapped membership monitor
 	MembershipFactory interface {
-		// CreateMembershipMonitor vends a bootstrapped ringpop object
-		CreateMembershipMonitor(d *yarpc.Dispatcher) (*membership.Monitor, error)
+		// CreateMembershipMonitor vends a bootstrapped membership monitor
+		CreateMembershipMonitor(d *yarpc.Dispatcher) (membership.Monitor, error)
+
+		DestroyMembershipMonitor()
 	}
 
 	// Service contains the objects specific to this service
@@ -178,24 +172,11 @@ func (h *serviceImpl) Start() {
 		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("Failed to start yarpc dispatcher")
 	}
 
-	// TODO: needs to be gated behind an interface...
-	fmt.Printf("creating ringpop here!!!\n")
-	// use actual listen port (in case service is bound to :0 or 0.0.0.0:0)
-	h.rp, err = h.rpFactory.CreateRingpop(h.dispatcher)
+	h.membershipMonitor, err = h.membershipFactory.CreateMembershipMonitor(h.dispatcher)
 	if err != nil {
-		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("Ringpop creation failed")
+		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("Membership monitor creation failed")
 	}
 
-	labels, err := h.rp.Labels()
-	if err != nil {
-		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("Ringpop get node labels failed")
-	}
-	err = labels.Set(membership.RoleKey, h.sName)
-	if err != nil {
-		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("Ringpop setting role label failed")
-	}
-
-	h.membershipMonitor = membership.NewRingpopMonitor(cadenceServices, h.rp, h.logger)
 	err = h.membershipMonitor.Start()
 	if err != nil {
 		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("starting membership monitor failed")
@@ -231,10 +212,6 @@ func (h *serviceImpl) Stop() {
 
 	if h.membershipMonitor != nil {
 		h.membershipMonitor.Stop()
-	}
-
-	if h.rp != nil {
-		h.rp.Destroy()
 	}
 
 	if h.dispatcher != nil {

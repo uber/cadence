@@ -21,7 +21,6 @@
 package membership
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/uber-common/bark"
@@ -105,7 +104,6 @@ func (rpo *ringpopMonitor) GetResolver(service string) (ServiceResolver, error) 
 	if !found {
 		return nil, ErrUnknownService
 	}
-	fmt.Printf("Get resolver for %v, %v\n", service, ring)
 	return ring, nil
 }
 

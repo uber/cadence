@@ -21,9 +21,7 @@
 package host
 
 import (
-	"errors"
 	"fmt"
-	"reflect"
 	"sync"
 	"time"
 
@@ -40,6 +38,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
@@ -53,10 +52,6 @@ import (
 	"github.com/uber/cadence/service/worker"
 	"github.com/uber/cadence/service/worker/archiver"
 	"github.com/uber/cadence/service/worker/replicator"
-	"github.com/uber/ringpop-go"
-	"github.com/uber/ringpop-go/discovery/statichosts"
-	"github.com/uber/ringpop-go/swim"
-	tcg "github.com/uber/tchannel-go"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/tchannel"
 )
@@ -139,9 +134,9 @@ type (
 		HistoryConfig                 *HistoryConfig
 	}
 
-	ringpopFactoryImpl struct {
-		rpHosts  []string
-		initLock *sync.Mutex
+	membershipFactoryImpl struct {
+		serviceName string
+		hosts       map[string][]string
 	}
 )
 
@@ -317,7 +312,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.FrontendPProfPort())
 	params.RPCFactory = newRPCFactoryImpl(common.FrontendServiceName, c.FrontendAddress(), c.logger)
 	params.MetricScope = tally.NewTestScope(common.FrontendServiceName, make(map[string]string))
-	params.RingpopFactory = newRingpopFactory(hosts)
+	params.MembershipFactory = newMembershipFactory(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
 	params.DispatcherProvider = c.dispatcherProvider
 	params.MessagingClient = c.messagingClient
@@ -375,7 +370,7 @@ func (c *cadenceImpl) startHistory(hosts map[string][]string, startWG *sync.Wait
 		params.PProfInitializer = newPProfInitializerImpl(c.logger, pprofPorts[i])
 		params.RPCFactory = newRPCFactoryImpl(common.HistoryServiceName, hostport, c.logger)
 		params.MetricScope = tally.NewTestScope(common.HistoryServiceName, make(map[string]string))
-		params.RingpopFactory = newRingpopFactory(hosts)
+		params.MembershipFactory = newMembershipFactory(params.Name, hosts)
 		params.ClusterMetadata = c.clusterMetadata
 		params.DispatcherProvider = c.dispatcherProvider
 		params.MessagingClient = c.messagingClient
@@ -417,7 +412,7 @@ func (c *cadenceImpl) startMatching(hosts map[string][]string, startWG *sync.Wai
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.MatchingPProfPort())
 	params.RPCFactory = newRPCFactoryImpl(common.MatchingServiceName, c.MatchingServiceAddress(), c.logger)
 	params.MetricScope = tally.NewTestScope(common.MatchingServiceName, make(map[string]string))
-	params.RingpopFactory = newRingpopFactory(hosts)
+	params.MembershipFactory = newMembershipFactory(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
 	params.DispatcherProvider = c.dispatcherProvider
 	params.PersistenceConfig = c.persistenceConfig
@@ -444,7 +439,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.WorkerPProfPort())
 	params.RPCFactory = newRPCFactoryImpl(common.WorkerServiceName, c.WorkerServiceAddress(), c.logger)
 	params.MetricScope = tally.NewTestScope(common.WorkerServiceName, make(map[string]string))
-	params.RingpopFactory = newRingpopFactory(hosts)
+	params.MembershipFactory = newMembershipFactory(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
 	params.DispatcherProvider = c.dispatcherProvider
 	params.PersistenceConfig = c.persistenceConfig
@@ -522,59 +517,18 @@ func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, s
 	}
 }
 
-func newRingpopFactory(rpHosts []string) service.RingpopFactory {
-	return &ringpopFactoryImpl{
-		rpHosts: rpHosts,
+func newMembershipFactory(serviceName string, hosts map[string][]string) service.MembershipFactory {
+	return &membershipFactoryImpl{
+		serviceName: serviceName,
+		hosts:       hosts,
 	}
 }
 
-func (p *ringpopFactoryImpl) CreateRingpop(dispatcher *yarpc.Dispatcher) (*ringpop.Ringpop, error) {
-	var ch *tcg.Channel
-	var err error
-	if ch, err = p.getChannel(dispatcher); err != nil {
-		return nil, err
-	}
-
-	rp, err := ringpop.New(fmt.Sprintf("%s", rpAppNamePrefix), ringpop.Channel(ch))
-	if err != nil {
-		return nil, err
-	}
-	err = p.bootstrapRingpop(rp, p.rpHosts)
-	if err != nil {
-		return nil, err
-	}
-	return rp, nil
+func (p *membershipFactoryImpl) CreateMembershipMonitor(dispatcher *yarpc.Dispatcher) (membership.Monitor, error) {
+	return membership.NewSimpleMonitor(p.serviceName, p.hosts), nil
 }
 
-func (p *ringpopFactoryImpl) getChannel(dispatcher *yarpc.Dispatcher) (*tcg.Channel, error) {
-	t := dispatcher.Inbounds()[0].Transports()[0].(*tchannel.ChannelTransport)
-	ty := reflect.ValueOf(t.Channel())
-	var ch *tcg.Channel
-	var ok bool
-	if ch, ok = ty.Interface().(*tcg.Channel); !ok {
-		return nil, errors.New("Unable to get tchannel out of the dispatcher")
-	}
-	return ch, nil
-}
-
-// bootstrapRingpop tries to bootstrap the given ringpop instance using the hosts list
-func (p *ringpopFactoryImpl) bootstrapRingpop(rp *ringpop.Ringpop, rpHosts []string) error {
-	// TODO: log ring hosts
-
-	bOptions := new(swim.BootstrapOptions)
-	bOptions.DiscoverProvider = statichosts.New(rpHosts...)
-	bOptions.MaxJoinDuration = maxRpJoinTimeout
-	bOptions.JoinSize = 1 // this ensures the first guy comes up quickly
-
-	_, err := rp.Bootstrap(bOptions)
-	return err
-}
-
-type rpcFactoryImpl struct {
-	ch          *tchannel.ChannelTransport
-	serviceName string
-	hostPort    string
-	logger      bark.Logger
+func (p *membershipFactoryImpl) DestroyMembershipMonitor() {
 }
 
 func newPProfInitializerImpl(logger bark.Logger, port int) common.PProfInitializer {
@@ -584,6 +538,13 @@ func newPProfInitializerImpl(logger bark.Logger, port int) common.PProfInitializ
 		},
 		Logger: logger,
 	}
+}
+
+type rpcFactoryImpl struct {
+	ch          *tchannel.ChannelTransport
+	serviceName string
+	hostPort    string
+	logger      bark.Logger
 }
 
 func newRPCFactoryImpl(sName string, hostPort string, logger bark.Logger) common.RPCFactory {
