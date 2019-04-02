@@ -879,7 +879,7 @@ func (s *integrationSuite) TestActivityHeartbeatTimeouts() {
 						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(60),
 						ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
 						StartToCloseTimeoutSeconds:    common.Int32Ptr(60),
-						HeartbeatTimeoutSeconds:       common.Int32Ptr(3),
+						HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
 					},
 				}
 
