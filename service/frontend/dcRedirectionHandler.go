@@ -23,13 +23,11 @@ package frontend
 import (
 	"context"
 
-	"github.com/uber/cadence/common/service/config"
-
-	"github.com/uber/cadence/common/cache"
-
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/common/service/config"
 )
 
 type (
@@ -45,49 +43,22 @@ type (
 	}
 )
 
-const (
-	// DomainActivenessAttemptCount indicate the attempts for the following API
-	// if seeing DomainNotActiveError
-	//
-	// 1. StartWorkflowExecution
-	// 2. SignalWithStartWorkflowExecution
-	// 3. SignalWorkflowExecution
-	DomainActivenessAttemptCount = 2
-
-	// APIAttemptCount is the attempt for normal API calls
-	APIAttemptCount = 1
-)
-
-// NewDCRedirectionHandlerWithWorkflowHandler create a dc redirection handler with existing frontend handler
-func NewDCRedirectionHandlerWithWorkflowHandler(wfHandler *WorkflowHandler, policy config.DCRedirectionPolicy) *DCRedirectionHandlerImpl {
+// NewDCRedirectionHandler creates a thrift handler for the cadence service, frontend
+func NewDCRedirectionHandler(wfHandler *WorkflowHandler, policy config.DCRedirectionPolicy) *DCRedirectionHandlerImpl {
 	dcRedirectionPolicy := RedirectionPolicyGenerator(
 		wfHandler.GetClusterMetadata(),
 		wfHandler.domainCache,
 		policy,
 	)
-	dcRedirectionHandler := NewDCRedirectionHandler(
-		wfHandler.GetClusterMetadata().GetCurrentClusterName(),
-		wfHandler.domainCache,
-		wfHandler.config,
-		dcRedirectionPolicy,
-		wfHandler.Service,
-		wfHandler,
-	)
 
-	return dcRedirectionHandler
-}
-
-// NewDCRedirectionHandler creates a thrift handler for the cadence service, frontend and admin
-func NewDCRedirectionHandler(currentClusterName string, domainCache cache.DomainCache, config *Config, redirectionPolicy DCRedirectionPolicy,
-	service service.Service, frontendHandler *WorkflowHandler) *DCRedirectionHandlerImpl {
 	return &DCRedirectionHandlerImpl{
-		currentClusterName: currentClusterName,
-		domainCache:        domainCache,
-		config:             config,
-		redirectionPolicy:  redirectionPolicy,
+		currentClusterName: wfHandler.GetClusterMetadata().GetCurrentClusterName(),
+		domainCache:        wfHandler.domainCache,
+		config:             wfHandler.config,
+		redirectionPolicy:  dcRedirectionPolicy,
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
-		service:            service,
-		frontendHandler:    frontendHandler,
+		service:            wfHandler.Service,
+		frontendHandler:    wfHandler,
 	}
 }
 

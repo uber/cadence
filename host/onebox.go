@@ -364,7 +364,7 @@ func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup) {
 	if err != nil {
 		c.logger.WithField("error", err).Fatal("Failed to start frontend")
 	}
-	dcRedirectionHandler := frontend.NewDCRedirectionHandlerWithWorkflowHandler(c.frontendHandler, params.DCRedirectionPolicy)
+	dcRedirectionHandler := frontend.NewDCRedirectionHandler(c.frontendHandler, params.DCRedirectionPolicy)
 	c.frontEndService.GetDispatcher().Register(workflowserviceserver.New(dcRedirectionHandler))
 	err = c.adminHandler.Start()
 	if err != nil {

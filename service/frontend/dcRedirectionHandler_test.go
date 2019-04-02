@@ -26,6 +26,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/uber/cadence/common/service/config"
+
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
@@ -52,7 +54,7 @@ type (
 		currentClusterName     string
 		alternativeClusterName string
 		config                 *Config
-		redirectionPolicy      DCRedirectionPolicy
+		redirectionPolicy      config.DCRedirectionPolicy
 		service                service.Service
 		domainCache            cache.DomainCache
 
@@ -89,7 +91,7 @@ func (s *dcRedirectionHandlerSuite) SetupTest() {
 	s.currentClusterName = cluster.TestCurrentClusterName
 	s.alternativeClusterName = cluster.TestAlternativeClusterName
 	s.config = NewConfig(dynamicconfig.NewCollection(dynamicconfig.NewNopClient(), s.logger), false, false)
-	s.redirectionPolicy = NewNoopRedirectionPolicy(s.currentClusterName)
+	s.redirectionPolicy = config.DCRedirectionPolicy{}
 	s.mockMetadataMgr = &mocks.MetadataManager{}
 
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
@@ -107,7 +109,7 @@ func (s *dcRedirectionHandlerSuite) SetupTest() {
 	s.frontendHandler.history = s.mockHistoryClient
 	s.frontendHandler.startWG.Done()
 
-	s.handler = NewDCRedirectionHandler(s.currentClusterName, s.frontendHandler.domainCache, s.config, s.redirectionPolicy, s.service, s.frontendHandler)
+	s.handler = NewDCRedirectionHandler(s.frontendHandler, s.redirectionPolicy)
 }
 
 func (s *dcRedirectionHandlerSuite) TearDownTest() {

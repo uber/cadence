@@ -190,7 +190,7 @@ func (s *Service) Start() {
 	wfHandler := NewWorkflowHandler(base, s.config, metadata, history, historyV2, visibility, kafkaProducer,
 		params.BlobstoreClient)
 	wfHandler.Start()
-	dcRedirectionHandler := NewDCRedirectionHandlerWithWorkflowHandler(wfHandler, params.DCRedirectionPolicy)
+	dcRedirectionHandler := NewDCRedirectionHandler(wfHandler, params.DCRedirectionPolicy)
 	base.GetDispatcher().Register(workflowserviceserver.New(dcRedirectionHandler))
 	adminHandler := NewAdminHandler(base, pConfig.NumHistoryShards, metadata, history, historyV2)
 	adminHandler.Start()
