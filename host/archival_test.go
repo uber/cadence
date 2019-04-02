@@ -105,7 +105,7 @@ func (s *integrationSuite) TestArchival_ContinueAsNew() {
 	s.Equal(cluster.ArchivalEnabled, s.ClusterMetadata.ArchivalConfig().GetArchivalStatus())
 
 	domainID := uuid.New()
-	domain := "archival_domain_enabled"
+	domain := "archival_domain_continueAsNew"
 	s.createArchivalDomain(domain, domainID, s.bucketName, true)
 
 	workflowID := "archival-workflow-id"
