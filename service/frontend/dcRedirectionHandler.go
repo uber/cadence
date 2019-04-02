@@ -592,31 +592,18 @@ func (handler *DCRedirectionHandlerImpl) SignalWithStartWorkflowExecution(
 		return nil, err
 	}
 
-	var ok bool
 	var resp *shared.StartWorkflowExecutionResponse
-	attempt := APIAttemptCount
 
-	enableDomainNotActiveForwarding, activeCluster, err := handler.enableDomainNotActiveAutoForwarding(request.GetDomain())
-	if err != nil {
-		return nil, err
-	}
-	if enableDomainNotActiveForwarding {
-		attempt = DomainActivenessAttemptCount
-		targetDC = activeCluster
-	}
-
-	for i := 0; i < attempt; i++ {
-		if targetDC == handler.currentClusterName {
+	err = handler.withDomainNotActiveRedirect(request.GetDomain(), targetDC, func(targetDC string) error {
+		switch {
+		case targetDC == handler.currentClusterName:
 			resp, err = handler.frontendHandler.SignalWithStartWorkflowExecution(ctx, request)
-		} else {
-			resp, err = handler.service.GetClientBean().GetRemoteFrontendClient(targetDC).SignalWithStartWorkflowExecution(ctx, request)
+		default:
+			remoteClient := handler.service.GetClientBean().GetRemoteFrontendClient(targetDC)
+			resp, err = remoteClient.SignalWithStartWorkflowExecution(ctx, request)
 		}
-
-		targetDC, ok = handler.isDomainNotActiveError(err)
-		if !ok {
-			return resp, err
-		}
-	}
+		return err
+	})
 	return resp, err
 }
 
@@ -631,30 +618,16 @@ func (handler *DCRedirectionHandlerImpl) SignalWorkflowExecution(
 		return err
 	}
 
-	var ok bool
-	attempt := APIAttemptCount
-
-	enableDomainNotActiveForwarding, activeCluster, err := handler.enableDomainNotActiveAutoForwarding(request.GetDomain())
-	if err != nil {
-		return err
-	}
-	if enableDomainNotActiveForwarding {
-		attempt = DomainActivenessAttemptCount
-		targetDC = activeCluster
-	}
-
-	for i := 0; i < attempt; i++ {
-		if targetDC == handler.currentClusterName {
+	err = handler.withDomainNotActiveRedirect(request.GetDomain(), targetDC, func(targetDC string) error {
+		switch {
+		case targetDC == handler.currentClusterName:
 			err = handler.frontendHandler.SignalWorkflowExecution(ctx, request)
-		} else {
-			err = handler.service.GetClientBean().GetRemoteFrontendClient(targetDC).SignalWorkflowExecution(ctx, request)
+		default:
+			remoteClient := handler.service.GetClientBean().GetRemoteFrontendClient(targetDC)
+			err = remoteClient.SignalWorkflowExecution(ctx, request)
 		}
-
-		targetDC, ok = handler.isDomainNotActiveError(err)
-		if !ok {
-			return err
-		}
-	}
+		return err
+	})
 	return err
 }
 
@@ -669,31 +642,18 @@ func (handler *DCRedirectionHandlerImpl) StartWorkflowExecution(
 		return nil, err
 	}
 
-	var ok bool
 	var resp *shared.StartWorkflowExecutionResponse
-	attempt := APIAttemptCount
 
-	enableDomainNotActiveForwarding, activeCluster, err := handler.enableDomainNotActiveAutoForwarding(request.GetDomain())
-	if err != nil {
-		return nil, err
-	}
-	if enableDomainNotActiveForwarding {
-		attempt = DomainActivenessAttemptCount
-		targetDC = activeCluster
-	}
-
-	for i := 0; i < attempt; i++ {
-		if targetDC == handler.currentClusterName {
+	err = handler.withDomainNotActiveRedirect(request.GetDomain(), targetDC, func(targetDC string) error {
+		switch {
+		case targetDC == handler.currentClusterName:
 			resp, err = handler.frontendHandler.StartWorkflowExecution(ctx, request)
-		} else {
-			resp, err = handler.service.GetClientBean().GetRemoteFrontendClient(targetDC).StartWorkflowExecution(ctx, request)
+		default:
+			remoteClient := handler.service.GetClientBean().GetRemoteFrontendClient(targetDC)
+			resp, err = remoteClient.StartWorkflowExecution(ctx, request)
 		}
-
-		targetDC, ok = handler.isDomainNotActiveError(err)
-		if !ok || !enableDomainNotActiveForwarding {
-			return resp, err
-		}
-	}
+		return err
+	})
 	return resp, err
 }
 
@@ -744,4 +704,22 @@ func (handler *DCRedirectionHandlerImpl) enableDomainNotActiveAutoForwarding(dom
 	}
 
 	return true, domainEntry.GetReplicationConfig().ActiveClusterName, nil
+}
+
+func (handler *DCRedirectionHandlerImpl) withDomainNotActiveRedirect(domain string, targetDC string, call func(string) error) error {
+	enableDomainNotActiveForwarding, activeCluster, err := handler.enableDomainNotActiveAutoForwarding(domain)
+	if err != nil {
+		return err
+	}
+
+	if enableDomainNotActiveForwarding {
+		targetDC = activeCluster
+	}
+
+	err = call(targetDC)
+	targetDC, ok := handler.isDomainNotActiveError(err)
+	if !ok || !enableDomainNotActiveForwarding {
+		return err
+	}
+	return call(targetDC)
 }
