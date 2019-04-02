@@ -127,7 +127,8 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 			return err
 		}
 		runConstTest := false
-		if err == nil {
+		blobAlreadyExists := err == nil
+		if blobAlreadyExists {
 			handledLastBlob = IsLast(tags)
 			// this is a sampling based sanity check used to ensure deterministic blob construction
 			// is operating as expected, the correctness of archival depends on this deterministic construction
@@ -140,6 +141,11 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 		if err != nil {
 			logging.LogFailArchivalUploadAttempt(logger, err, "could not get history blob from reader", bucket, "")
 			return err
+		}
+		if runConstTest {
+			// some tags are specific to the cluster and time a blob was uploaded from/when
+			// this only updates those specific tags, all other parts of the blob are left unchanged
+			modifyBlobForConstCheck(historyBlob, tags)
 		}
 		blob, reason, err := constructBlob(historyBlob, container.Config.EnableArchivalCompression(domainName))
 		if err != nil {
@@ -205,7 +211,6 @@ func getBlob(ctx context.Context, historyBlobReader HistoryBlobReader, blobPage 
 		return err
 	}
 	for err != nil {
-		activity.RecordHeartbeat(ctx)
 		if !common.IsPersistenceTransientError(err) {
 			return nil, cadence.NewCustomError(errReadBlob)
 		}
@@ -222,7 +227,6 @@ func getTags(ctx context.Context, blobstoreClient blobstore.Client, bucket strin
 	tags, err := blobstoreClient.GetTags(bCtx, bucket, key)
 	cancel()
 	for err != nil {
-		activity.RecordHeartbeat(ctx)
 		if err == blobstore.ErrBlobNotExists {
 			return nil, err
 		}
@@ -244,7 +248,6 @@ func uploadBlob(ctx context.Context, blobstoreClient blobstore.Client, bucket st
 	err := blobstoreClient.Upload(bCtx, bucket, key, blob)
 	cancel()
 	for err != nil {
-		activity.RecordHeartbeat(ctx)
 		if !blobstoreClient.IsRetryableError(err) {
 			return cadence.NewCustomError(errUploadBlob)
 		}
@@ -263,7 +266,6 @@ func downloadBlob(ctx context.Context, blobstoreClient blobstore.Client, bucket 
 	blob, err := blobstoreClient.Download(bCtx, bucket, key)
 	cancel()
 	for err != nil {
-		activity.RecordHeartbeat(ctx)
 		if !blobstoreClient.IsRetryableError(err) {
 			return nil, cadence.NewCustomError(errDownloadBlob)
 		}
@@ -284,7 +286,6 @@ func getDomainByID(ctx context.Context, domainCache cache.DomainCache, id string
 		return err
 	}
 	for err != nil {
-		activity.RecordHeartbeat(ctx)
 		if !common.IsPersistenceTransientError(err) {
 			return nil, cadence.NewCustomError(errGetDomainByID)
 		}
@@ -332,7 +333,6 @@ func deleteHistoryV1(ctx context.Context, container *BootstrapContainer, request
 		return container.HistoryManager.DeleteWorkflowExecutionHistory(deleteHistoryReq)
 	}
 	for err != nil {
-		activity.RecordHeartbeat(ctx)
 		if !common.IsPersistenceTransientError(err) {
 			return cadence.NewCustomError(errDeleteHistoryV1)
 		}
@@ -353,7 +353,6 @@ func deleteHistoryV2(ctx context.Context, container *BootstrapContainer, request
 		return persistence.DeleteWorkflowExecutionHistoryV2(container.HistoryV2Manager, request.BranchToken, container.Logger)
 	}
 	for err != nil {
-		activity.RecordHeartbeat(ctx)
 		if !common.IsPersistenceTransientError(err) {
 			return cadence.NewCustomError(errDeleteHistoryV2)
 		}
