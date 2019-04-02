@@ -97,8 +97,7 @@ func (s *activityReplicationTaskSuite) SetupTest() {
 	log2.Level = log.DebugLevel
 	s.logger = bark.NewLoggerFromLogrus(log2)
 	s.config = &Config{
-		ReplicatorActivityBufferRetryCount: dynamicconfig.GetIntPropertyFn(2),
-		ReplicationTaskMaxRetry:            dynamicconfig.GetIntPropertyFn(10),
+		ReplicationTaskMaxRetry: dynamicconfig.GetIntPropertyFn(10),
 	}
 	s.metricsClient = metrics.NewClient(tally.NoopScope, metrics.Worker)
 
@@ -207,20 +206,18 @@ func (s *activityReplicationTaskSuite) TestHandleErr_NotEnoughAttempt() {
 	s.Equal(randomErr, err)
 }
 
-func (s *activityReplicationTaskSuite) TestHandleErr_EnoughAttempt_NotRetryErr() {
+func (s *activityReplicationTaskSuite) TestHandleErr_NotRetryErr() {
 	task := newActivityReplicationTask(s.getActivityReplicationTask(), s.mockMsg, s.logger,
 		s.config, s.mockHistoryClient, s.metricsClient, s.mockRereplicator)
-	task.attempt = s.config.ReplicatorActivityBufferRetryCount() + 1
 	randomErr := errors.New("some random error")
 
 	err := task.HandleErr(randomErr)
 	s.Equal(randomErr, err)
 }
 
-func (s *activityReplicationTaskSuite) TestHandleErr_EnoughAttempt_RetryErr() {
+func (s *activityReplicationTaskSuite) TestHandleErr_RetryErr() {
 	task := newActivityReplicationTask(s.getActivityReplicationTask(), s.mockMsg, s.logger,
 		s.config, s.mockHistoryClient, s.metricsClient, s.mockRereplicator)
-	task.attempt = s.config.ReplicatorActivityBufferRetryCount() + 1
 	retryErr := &shared.RetryTaskError{
 		DomainId:    common.StringPtr(task.queueID.DomainID),
 		WorkflowId:  common.StringPtr(task.queueID.WorkflowID),
@@ -366,20 +363,18 @@ func (s *historyReplicationTaskSuite) TestHandleErr_NotEnoughAttempt() {
 	s.Equal(randomErr, err)
 }
 
-func (s *historyReplicationTaskSuite) TestHandleErr_EnoughAttempt_NotRetryErr() {
+func (s *historyReplicationTaskSuite) TestHandleErr_NotRetryErr() {
 	task := newHistoryReplicationTask(s.getHistoryReplicationTask(), s.mockMsg, s.sourceCluster, s.logger,
 		s.config, s.mockHistoryClient, s.metricsClient, s.mockRereplicator)
-	task.attempt = s.config.ReplicatorHistoryBufferRetryCount() + 1
 	randomErr := errors.New("some random error")
 
 	err := task.HandleErr(randomErr)
 	s.Equal(randomErr, err)
 }
 
-func (s *historyReplicationTaskSuite) TestHandleErr_EnoughAttempt_RetryErr() {
+func (s *historyReplicationTaskSuite) TestHandleErr_RetryErr() {
 	task := newHistoryReplicationTask(s.getHistoryReplicationTask(), s.mockMsg, s.sourceCluster, s.logger,
 		s.config, s.mockHistoryClient, s.metricsClient, s.mockRereplicator)
-	task.attempt = s.config.ReplicatorHistoryBufferRetryCount() + 1
 	retryErr := &shared.RetryTaskError{
 		DomainId:    common.StringPtr(task.queueID.DomainID),
 		WorkflowId:  common.StringPtr(task.queueID.WorkflowID),

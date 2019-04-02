@@ -161,24 +161,23 @@ var keys = map[Key]string{
 	EmitShardDiffLog:                                      "history.emitShardDiffLog",
 	HistoryThrottledLogRPS:                                "history.throttledLogRPS",
 
-	WorkerPersistenceMaxQPS:                  "worker.persistenceMaxQPS",
-	WorkerReplicatorMetaTaskConcurrency:      "worker.replicatorMetaTaskConcurrency",
-	WorkerReplicatorTaskConcurrency:          "worker.replicatorTaskConcurrency",
-	WorkerReplicatorMessageConcurrency:       "worker.replicatorMessageConcurrency",
-	WorkerReplicatorActivityBufferRetryCount: "worker.replicatorActivityBufferRetryCount",
-	WorkerReplicatorHistoryBufferRetryCount:  "worker.replicatorHistoryBufferRetryCount",
-	WorkerReplicationTaskMaxRetry:            "worker.replicationTaskMaxRetry",
-	WorkerIndexerConcurrency:                 "worker.indexerConcurrency",
-	WorkerESProcessorNumOfWorkers:            "worker.ESProcessorNumOfWorkers",
-	WorkerESProcessorBulkActions:             "worker.ESProcessorBulkActions",
-	WorkerESProcessorBulkSize:                "worker.ESProcessorBulkSize",
-	WorkerESProcessorFlushInterval:           "worker.ESProcessorFlushInterval",
-	EnableArchivalCompression:                "worker.EnableArchivalCompression",
-	WorkerHistoryPageSize:                    "worker.WorkerHistoryPageSize",
-	WorkerTargetArchivalBlobSize:             "worker.WorkerTargetArchivalBlobSize",
-	WorkerArchiverConcurrency:                "worker.ArchiverConcurrency",
-	WorkerArchivalsPerIteration:              "worker.ArchivalsPerIteration",
-	WorkerThrottledLogRPS:                    "worker.throttledLogRPS",
+	WorkerPersistenceMaxQPS:                 "worker.persistenceMaxQPS",
+	WorkerReplicatorMetaTaskConcurrency:     "worker.replicatorMetaTaskConcurrency",
+	WorkerReplicatorTaskConcurrency:         "worker.replicatorTaskConcurrency",
+	WorkerReplicatorMessageConcurrency:      "worker.replicatorMessageConcurrency",
+	WorkerReplicatorHistoryBufferRetryCount: "worker.replicatorHistoryBufferRetryCount",
+	WorkerReplicationTaskMaxRetry:           "worker.replicationTaskMaxRetry",
+	WorkerIndexerConcurrency:                "worker.indexerConcurrency",
+	WorkerESProcessorNumOfWorkers:           "worker.ESProcessorNumOfWorkers",
+	WorkerESProcessorBulkActions:            "worker.ESProcessorBulkActions",
+	WorkerESProcessorBulkSize:               "worker.ESProcessorBulkSize",
+	WorkerESProcessorFlushInterval:          "worker.ESProcessorFlushInterval",
+	EnableArchivalCompression:               "worker.EnableArchivalCompression",
+	WorkerHistoryPageSize:                   "worker.WorkerHistoryPageSize",
+	WorkerTargetArchivalBlobSize:            "worker.WorkerTargetArchivalBlobSize",
+	WorkerArchiverConcurrency:               "worker.ArchiverConcurrency",
+	WorkerArchivalsPerIteration:             "worker.ArchivalsPerIteration",
+	WorkerThrottledLogRPS:                   "worker.throttledLogRPS",
 }
 
 const (
@@ -429,8 +428,6 @@ const (
 	WorkerReplicatorTaskConcurrency
 	// WorkerReplicatorMessageConcurrency is the max concurrent tasks provided by messaging client
 	WorkerReplicatorMessageConcurrency
-	// WorkerReplicatorActivityBufferRetryCount is the retry attempt when encounter retry error on activity
-	WorkerReplicatorActivityBufferRetryCount
 	// WorkerReplicatorHistoryBufferRetryCount is the retry attempt when encounter retry error on history
 	WorkerReplicatorHistoryBufferRetryCount
 	// WorkerReplicationTaskMaxRetry is the max retry for any task

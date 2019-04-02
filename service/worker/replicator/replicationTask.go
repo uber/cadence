@@ -170,10 +170,6 @@ func (t *activityReplicationTask) Execute() error {
 }
 
 func (t *activityReplicationTask) HandleErr(err error) error {
-	if t.attempt < t.config.ReplicatorActivityBufferRetryCount() {
-		return err
-	}
-
 	retryErr, ok := t.convertRetryTaskError(err)
 	if !ok || retryErr.GetRunId() == "" {
 		return err
@@ -219,10 +215,6 @@ func (t *historyReplicationTask) Execute() error {
 }
 
 func (t *historyReplicationTask) HandleErr(err error) error {
-	if t.attempt < t.config.ReplicatorHistoryBufferRetryCount() {
-		return err
-	}
-
 	retryErr, ok := t.convertRetryTaskError(err)
 	if !ok || retryErr.GetRunId() == "" {
 		return err
