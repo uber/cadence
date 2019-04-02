@@ -3,18 +3,18 @@ package membership
 import "fmt"
 
 type simpleMonitor struct {
-	serviceName string
-	hosts       map[string][]string
-	resolvers   map[string]ServiceResolver
+	hostInfo  *HostInfo
+	resolvers map[string]ServiceResolver
 }
 
 // NewSimpleMonitor returns a simple monitor interface
 func NewSimpleMonitor(serviceName string, hosts map[string][]string) Monitor {
 	resolvers := make(map[string]ServiceResolver, len(hosts))
 	for service, hostList := range hosts {
-		resolvers[service] = newSimpleResolver(hostList)
+		resolvers[service] = newSimpleResolver(service, hostList)
 	}
-	return &simpleMonitor{serviceName, hosts, resolvers}
+	hostInfo := NewHostInfo(hosts[serviceName][0], map[string]string{RoleKey: serviceName})
+	return &simpleMonitor{hostInfo, resolvers}
 }
 
 func (s *simpleMonitor) Start() error {
@@ -25,11 +25,11 @@ func (s *simpleMonitor) Stop() {
 }
 
 func (s *simpleMonitor) WhoAmI() (*HostInfo, error) {
-	return NewHostInfo("address", map[string]string{}), nil
+	return s.hostInfo, nil
 }
 
 func (s *simpleMonitor) GetResolver(service string) (ServiceResolver, error) {
-	return newSimpleResolver(s.hosts[service]), nil
+	return s.resolvers[service], nil
 }
 
 func (s *simpleMonitor) Lookup(service string, key string) (*HostInfo, error) {
