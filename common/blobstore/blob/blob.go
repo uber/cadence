@@ -34,21 +34,46 @@ func NewBlob(body []byte, tags map[string]string) *Blob {
 	}
 }
 
-// DeepCopy returns a deep copy of input blob
-func DeepCopy(blob *Blob) *Blob {
-	if blob == nil {
+// DeepCopy returns a deep copy of blob
+func (b *Blob) DeepCopy() *Blob {
+	if b == nil {
 		return nil
 	}
-	tagsCopy := make(map[string]string, len(blob.Tags))
-	for k, v := range blob.Tags {
+	tagsCopy := make(map[string]string, len(b.Tags))
+	for k, v := range b.Tags {
 		tagsCopy[k] = v
 	}
-	bodyCopy := make([]byte, len(blob.Body), len(blob.Body))
-	for i, b := range blob.Body {
+	bodyCopy := make([]byte, len(b.Body), len(b.Body))
+	for i, b := range b.Body {
 		bodyCopy[i] = b
 	}
 	return &Blob{
 		Body: bodyCopy,
 		Tags: tagsCopy,
 	}
+}
+
+// Equal returns true if input blob is equal, false otherwise
+func (b *Blob) Equal(other *Blob) bool {
+	if b == nil && other == nil {
+		return true
+	}
+	if b == nil || other == nil {
+		return false
+	}
+	if len(b.Body) != len(other.Body) || len(b.Tags) != len(other.Tags) {
+		return false
+	}
+	for k, v := range b.Tags {
+		otherVal, ok := other.Tags[k]
+		if !ok || otherVal != v {
+			return false
+		}
+	}
+	for i := 0; i < len(b.Body); i++ {
+		if b.Body[i] != other.Body[i] {
+			return false
+		}
+	}
+	return true
 }

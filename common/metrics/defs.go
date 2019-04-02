@@ -59,6 +59,7 @@ const (
 	History
 	Matching
 	Worker
+	Blobstore
 	NumServices
 )
 
@@ -449,6 +450,8 @@ const (
 	BlobstoreClientUploadScope
 	// BlobstoreClientDownloadScope tracks Download calls to blobstore
 	BlobstoreClientDownloadScope
+	// BlobstoreClientGetTagsScope tracks GetTags calls to blobstore
+	BlobstoreClientGetTagsScope
 	// BlobstoreClientExistsScope tracks Exists calls to blobstore
 	BlobstoreClientExistsScope
 	// BlobstoreClientDeleteScope tracks Delete calls to blobstore
@@ -721,6 +724,8 @@ const (
 	HistoryResetWorkflowExecutionScope
 	// HistoryProcessDeleteHistoryEventScope tracks ProcessDeleteHistoryEvent processing calls
 	HistoryProcessDeleteHistoryEventScope
+	// WorkflowCompletionStatsScope tracks workflow completion updates
+	WorkflowCompletionStatsScope
 
 	NumHistoryScopes
 )
@@ -781,6 +786,26 @@ const (
 	NumWorkerScopes
 )
 
+// Operation scopes for Blobstore
+const (
+	// BlobstoreUploadScope tracks Upload API calls received by blobstore
+	BlobstoreUploadScope = iota + NumCommonScopes
+	// BlobstoreDownloadScope tracks Download API calls received by blobstore
+	BlobstoreDownloadScope
+	// BlobstoreGetTagsScope tracks GetTags API calls received by blobstore
+	BlobstoreGetTagsScope
+	// BlobstoreExistsScope tracks Exists API calls received by blobstore
+	BlobstoreExistsScope
+	// BlobstoreDeleteScope tracks Delete API calls received by blobstore
+	BlobstoreDeleteScope
+	// BlobstoreListByPrefixScope tracks ListByPrefix API calls received by blobstore
+	BlobstoreListByPrefixScope
+	// BlobstoreBucketMetadataScope tracks BucketMetadata API calls received by blobstore
+	BlobstoreBucketMetadataScope
+
+	NumBlobstoreScopes
+)
+
 // ScopeDefs record the scopes for all services
 var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 	// common scope Names
@@ -838,12 +863,13 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceCompleteForkBranchScope:                       {operation: "CompleteForkBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceGetHistoryTreeScope:                           {operation: "GetHistoryTree", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 
-		BlobstoreClientUploadScope:         {operation: "Upload", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
-		BlobstoreClientDownloadScope:       {operation: "Download", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
-		BlobstoreClientExistsScope:         {operation: "Exists", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
-		BlobstoreClientDeleteScope:         {operation: "Delete", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
-		BlobstoreClientListByPrefixScope:   {operation: "ListByPrefix", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
-		BlobstoreClientBucketMetadataScope: {operation: "BucketMetadata", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
+		BlobstoreClientUploadScope:         {operation: "BlobstoreClientUpload", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
+		BlobstoreClientDownloadScope:       {operation: "BlobstoreClientDownload", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
+		BlobstoreClientGetTagsScope:        {operation: "BlobstoreClientGetTags", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
+		BlobstoreClientExistsScope:         {operation: "BlobstoreClientExists", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
+		BlobstoreClientDeleteScope:         {operation: "BlobstoreClientDelete", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
+		BlobstoreClientListByPrefixScope:   {operation: "BlobstoreClientListByPrefix", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
+		BlobstoreClientBucketMetadataScope: {operation: "BlobstoreClientBucketMetadata", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
 
 		ClusterMetadataArchivalConfigScope: {operation: "ArchivalConfig"},
 
@@ -1083,6 +1109,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ExecutionCountStatsScope:                     {operation: "ExecutionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
 		SessionSizeStatsScope:                        {operation: "SessionStats", tags: map[string]string{StatsTypeTagName: SizeStatsTypeTagValue}},
 		SessionCountStatsScope:                       {operation: "SessionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
+		WorkflowCompletionStatsScope:                 {operation: "CompletionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
 	},
 	// Matching Scope Names
 	Matching: {
@@ -1111,6 +1138,16 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ArchiverPumpScope:                  {operation: "ArchiverPump"},
 		ArchiverArchivalWorkflowScope:      {operation: "ArchiverArchivalWorkflow"},
 		ArchiverClientScope:                {operation: "ArchiverClient"},
+	},
+	// Blobstore Scope Names
+	Blobstore: {
+		BlobstoreUploadScope:         {operation: "Upload"},
+		BlobstoreDownloadScope:       {operation: "Download"},
+		BlobstoreGetTagsScope:        {operation: "GetTags"},
+		BlobstoreExistsScope:         {operation: "Exists"},
+		BlobstoreDeleteScope:         {operation: "Delete"},
+		BlobstoreListByPrefixScope:   {operation: "ListByPrefix"},
+		BlobstoreBucketMetadataScope: {operation: "BucketMetadata"},
 	},
 }
 
@@ -1277,6 +1314,11 @@ const (
 	WorkflowCleanupDeleteCount
 	WorkflowCleanupArchiveCount
 	WorkflowCleanupNopCount
+	WorkflowSuccessCount
+	WorkflowCancelCount
+	WorkflowFailedCount
+	WorkflowTimeoutCount
+	WorkflowTerminateCount
 
 	NumHistoryMetrics
 )
@@ -1309,7 +1351,8 @@ const (
 	IndexProcessorCorruptedData
 	ArchiverNonRetryableErrorCount
 	ArchiverSkipUploadCount
-	ArchiverBlobAlreadyExistsCount
+	ArchiverDeterministicConstructionCheckFailedCount
+	ArchiverCouldNotRunDeterministicConstructionCheckCount
 	ArchiverStartedCount
 	ArchiverStoppedCount
 	ArchiverCoroutineStartedCount
@@ -1495,6 +1538,11 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		WorkflowCleanupDeleteCount:                   {metricName: "workflow_cleanup_delete", oldMetricName: "workflow-cleanup-delete", metricType: Counter},
 		WorkflowCleanupArchiveCount:                  {metricName: "workflow_cleanup_archive", oldMetricName: "workflow-cleanup-archive", metricType: Counter},
 		WorkflowCleanupNopCount:                      {metricName: "workflow_cleanup_nop", oldMetricName: "workflow-cleanup-nop", metricType: Counter},
+		WorkflowSuccessCount:                         {metricName: "workflow_success", metricType: Counter},
+		WorkflowCancelCount:                          {metricName: "workflow_cancel", metricType: Counter},
+		WorkflowFailedCount:                          {metricName: "workflow_failed", metricType: Counter},
+		WorkflowTimeoutCount:                         {metricName: "workflow_timeout", metricType: Counter},
+		WorkflowTerminateCount:                       {metricName: "workflow_terminate", metricType: Counter},
 	},
 	Matching: {
 		PollSuccessCounter:            {metricName: "poll_success", oldMetricName: "poll.success"},
@@ -1510,42 +1558,43 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		SyncMatchLatency:              {metricName: "syncmatch_latency", oldMetricName: "syncmatch.latency", metricType: Timer},
 	},
 	Worker: {
-		ReplicatorMessages:                       {metricName: "replicator_messages", oldMetricName: "replicator.messages"},
-		ReplicatorFailures:                       {metricName: "replicator_errors", oldMetricName: "replicator.errors"},
-		ReplicatorMessagesDropped:                {metricName: "replicator_messages_dropped", oldMetricName: "replicator.messages.dropped"},
-		ReplicatorLatency:                        {metricName: "replicator_latency", oldMetricName: "replicator.latency"},
-		ESProcessorFailures:                      {metricName: "es_processor_errors", oldMetricName: "es-processor.errors"},
-		ESProcessorCorruptedData:                 {metricName: "es_processor_corrupted_data", oldMetricName: "es-processor.corrupted-data"},
-		IndexProcessorCorruptedData:              {metricName: "index_processor_corrupted_data", oldMetricName: "index-processor.corrupted-data"},
-		ArchiverNonRetryableErrorCount:           {metricName: "archiver_non_retryable_error", oldMetricName: "archiver.non-retryable-error"},
-		ArchiverSkipUploadCount:                  {metricName: "archiver_skip_upload", oldMetricName: "archiver.skip-upload"},
-		ArchiverBlobAlreadyExistsCount:           {metricName: "archiver_blob_already_exists", oldMetricName: "archiver.blob-already-exists"},
-		ArchiverStartedCount:                     {metricName: "archiver_started", oldMetricName: "archiver.started"},
-		ArchiverStoppedCount:                     {metricName: "archiver_stopped", oldMetricName: "archiver.stopped"},
-		ArchiverCoroutineStartedCount:            {metricName: "archiver_coroutine_started", oldMetricName: "archiver.coroutine-started"},
-		ArchiverCoroutineStoppedCount:            {metricName: "archiver_coroutine_stopped", oldMetricName: "archiver.coroutine-stopped"},
-		ArchiverHandleRequestLatency:             {metricName: "archiver_handle_request_latency", oldMetricName: "archiver.handle-request-latency"},
-		ArchiverUploadWithRetriesLatency:         {metricName: "archiver_upload_with_retries_latency", oldMetricName: "archiver.upload-with-retries-latency"},
-		ArchiverDeleteWithRetriesLatency:         {metricName: "archiver_delete_with_retries_latency", oldMetricName: "archiver.delete-with-retries-latency"},
-		ArchiverUploadFailedAllRetriesCount:      {metricName: "archiver_upload_failed_all_retries", oldMetricName: "archiver.upload-failed-all-retries"},
-		ArchiverUploadSuccessCount:               {metricName: "archiver_upload_success", oldMetricName: "archiver.upload-success"},
-		ArchiverDeleteLocalFailedAllRetriesCount: {metricName: "archiver_delete_local_failed_all_retries", oldMetricName: "archiver.delete-local-failed-all-retries"},
-		ArchiverDeleteLocalSuccessCount:          {metricName: "archiver_delete_local_success", oldMetricName: "archiver.delete-local-success"},
-		ArchiverDeleteFailedAllRetriesCount:      {metricName: "archiver_delete_failed_all_retries", oldMetricName: "archiver.delete-failed-all-retries"},
-		ArchiverDeleteSuccessCount:               {metricName: "archiver_delete_success", oldMetricName: "archiver.delete-success"},
-		ArchiverBacklogSizeGauge:                 {metricName: "archiver_backlog_size", oldMetricName: "archiver.backlog-size"},
-		ArchiverPumpTimeoutCount:                 {metricName: "archiver_pump_timeout", oldMetricName: "archiver.pump-timeout"},
-		ArchiverPumpSignalThresholdCount:         {metricName: "archiver_pump_signal_threshold", oldMetricName: "archiver.pump-signal-threshold"},
-		ArchiverPumpTimeoutWithoutSignalsCount:   {metricName: "archiver_pump_timeout_without_signals", oldMetricName: "archiver.pump-timeout-without-signals"},
-		ArchiverPumpSignalChannelClosedCount:     {metricName: "archiver_pump_signal_channel_closed", oldMetricName: "archiver.pump-signal-channel-closed"},
-		ArchiverWorkflowStartedCount:             {metricName: "archiver_workflow_started", oldMetricName: "archiver.workflow-started"},
-		ArchiverNumPumpedRequestsCount:           {metricName: "archiver_num_pumped_requests", oldMetricName: "archiver.num-pumped-requests"},
-		ArchiverNumHandledRequestsCount:          {metricName: "archiver_num_handled_requests", oldMetricName: "archiver.num-handled-requests"},
-		ArchiverPumpedNotEqualHandledCount:       {metricName: "archiver_pumped_not_equal_handled", oldMetricName: "archiver.pumped-not-equal-handled"},
-		ArchiverReadDynamicConfigErrorCount:      {metricName: "archiver_read_dynamic_config_error", oldMetricName: "archiver.read-dynamic-config-error"},
-		ArchiverHandleAllRequestsLatency:         {metricName: "archiver_handle_all_requests_latency", oldMetricName: "archiver.handle-all-requests-latency"},
-		ArchiverWorkflowStoppingCount:            {metricName: "archiver_workflow_stopping", oldMetricName: "archiver.workflow-stopping"},
-		ArchiverClientSendSignalFailureCount:     {metricName: "archiver_client_send_signal_error", oldMetricName: "archiver.client-send-signal-error"},
+		ReplicatorMessages:                                     {metricName: "replicator_messages", oldMetricName: "replicator.messages"},
+		ReplicatorFailures:                                     {metricName: "replicator_errors", oldMetricName: "replicator.errors"},
+		ReplicatorMessagesDropped:                              {metricName: "replicator_messages_dropped", oldMetricName: "replicator.messages.dropped"},
+		ReplicatorLatency:                                      {metricName: "replicator_latency", oldMetricName: "replicator.latency"},
+		ESProcessorFailures:                                    {metricName: "es_processor_errors", oldMetricName: "es-processor.errors"},
+		ESProcessorCorruptedData:                               {metricName: "es_processor_corrupted_data", oldMetricName: "es-processor.corrupted-data"},
+		IndexProcessorCorruptedData:                            {metricName: "index_processor_corrupted_data", oldMetricName: "index-processor.corrupted-data"},
+		ArchiverNonRetryableErrorCount:                         {metricName: "archiver_non_retryable_error", oldMetricName: "archiver.non-retryable-error"},
+		ArchiverSkipUploadCount:                                {metricName: "archiver_skip_upload", oldMetricName: "archiver.skip-upload"},
+		ArchiverDeterministicConstructionCheckFailedCount:      {metricName: "archiver_deterministic_construction_check_failed", oldMetricName: "archiver.deterministic-construction-check-failed"},
+		ArchiverCouldNotRunDeterministicConstructionCheckCount: {metricName: "archiver_could_not_run_deterministic_construction_check", oldMetricName: "archiver.could-not-run-deterministic-construction-check"},
+		ArchiverStartedCount:                                   {metricName: "archiver_started", oldMetricName: "archiver.started"},
+		ArchiverStoppedCount:                                   {metricName: "archiver_stopped", oldMetricName: "archiver.stopped"},
+		ArchiverCoroutineStartedCount:                          {metricName: "archiver_coroutine_started", oldMetricName: "archiver.coroutine-started"},
+		ArchiverCoroutineStoppedCount:                          {metricName: "archiver_coroutine_stopped", oldMetricName: "archiver.coroutine-stopped"},
+		ArchiverHandleRequestLatency:                           {metricName: "archiver_handle_request_latency", oldMetricName: "archiver.handle-request-latency"},
+		ArchiverUploadWithRetriesLatency:                       {metricName: "archiver_upload_with_retries_latency", oldMetricName: "archiver.upload-with-retries-latency"},
+		ArchiverDeleteWithRetriesLatency:                       {metricName: "archiver_delete_with_retries_latency", oldMetricName: "archiver.delete-with-retries-latency"},
+		ArchiverUploadFailedAllRetriesCount:                    {metricName: "archiver_upload_failed_all_retries", oldMetricName: "archiver.upload-failed-all-retries"},
+		ArchiverUploadSuccessCount:                             {metricName: "archiver_upload_success", oldMetricName: "archiver.upload-success"},
+		ArchiverDeleteLocalFailedAllRetriesCount:               {metricName: "archiver_delete_local_failed_all_retries", oldMetricName: "archiver.delete-local-failed-all-retries"},
+		ArchiverDeleteLocalSuccessCount:                        {metricName: "archiver_delete_local_success", oldMetricName: "archiver.delete-local-success"},
+		ArchiverDeleteFailedAllRetriesCount:                    {metricName: "archiver_delete_failed_all_retries", oldMetricName: "archiver.delete-failed-all-retries"},
+		ArchiverDeleteSuccessCount:                             {metricName: "archiver_delete_success", oldMetricName: "archiver.delete-success"},
+		ArchiverBacklogSizeGauge:                               {metricName: "archiver_backlog_size", oldMetricName: "archiver.backlog-size"},
+		ArchiverPumpTimeoutCount:                               {metricName: "archiver_pump_timeout", oldMetricName: "archiver.pump-timeout"},
+		ArchiverPumpSignalThresholdCount:                       {metricName: "archiver_pump_signal_threshold", oldMetricName: "archiver.pump-signal-threshold"},
+		ArchiverPumpTimeoutWithoutSignalsCount:                 {metricName: "archiver_pump_timeout_without_signals", oldMetricName: "archiver.pump-timeout-without-signals"},
+		ArchiverPumpSignalChannelClosedCount:                   {metricName: "archiver_pump_signal_channel_closed", oldMetricName: "archiver.pump-signal-channel-closed"},
+		ArchiverWorkflowStartedCount:                           {metricName: "archiver_workflow_started", oldMetricName: "archiver.workflow-started"},
+		ArchiverNumPumpedRequestsCount:                         {metricName: "archiver_num_pumped_requests", oldMetricName: "archiver.num-pumped-requests"},
+		ArchiverNumHandledRequestsCount:                        {metricName: "archiver_num_handled_requests", oldMetricName: "archiver.num-handled-requests"},
+		ArchiverPumpedNotEqualHandledCount:                     {metricName: "archiver_pumped_not_equal_handled", oldMetricName: "archiver.pumped-not-equal-handled"},
+		ArchiverReadDynamicConfigErrorCount:                    {metricName: "archiver_read_dynamic_config_error", oldMetricName: "archiver.read-dynamic-config-error"},
+		ArchiverHandleAllRequestsLatency:                       {metricName: "archiver_handle_all_requests_latency", oldMetricName: "archiver.handle-all-requests-latency"},
+		ArchiverWorkflowStoppingCount:                          {metricName: "archiver_workflow_stopping", oldMetricName: "archiver.workflow-stopping"},
+		ArchiverClientSendSignalFailureCount:                   {metricName: "archiver_client_send_signal_error", oldMetricName: "archiver.client-send-signal-error"},
 	},
 }
 
