@@ -1088,7 +1088,7 @@ func CompleteActivity(c *cli.Context) {
 	rid := getRequiredOption(c, FlagRunID)
 	activityID := getRequiredOption(c, FlagActivityID)
 	if len(activityID) == 0 {
-		ErrorAndExit("wrong activityID", fmt.Errorf("activityID cannot be empty"))
+		ErrorAndExit("Invalid activityID", fmt.Errorf("activityID cannot be empty"))
 	}
 	result := getRequiredOption(c, FlagResult)
 	identity := getRequiredOption(c, FlagIdentity)
@@ -1118,7 +1118,7 @@ func FailActivity(c *cli.Context) {
 	rid := getRequiredOption(c, FlagRunID)
 	activityID := getRequiredOption(c, FlagActivityID)
 	if len(activityID) == 0 {
-		ErrorAndExit("wrong activityID", fmt.Errorf("activityID cannot be empty"))
+		ErrorAndExit("Invalid activityID", fmt.Errorf("activityID cannot be empty"))
 	}
 	reason := getRequiredOption(c, FlagReason)
 	detail := getRequiredOption(c, FlagDetail)

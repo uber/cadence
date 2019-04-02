@@ -246,11 +246,11 @@ func newActivityCommands() []cli.Command {
 				},
 				cli.StringFlag{
 					Name:  FlagResult,
-					Usage: "result of the activity",
+					Usage: "Result of the activity",
 				},
 				cli.StringFlag{
 					Name:  FlagIdentity,
-					Usage: "identity of the activity result",
+					Usage: "Identity of the operator",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -275,15 +275,15 @@ func newActivityCommands() []cli.Command {
 				},
 				cli.StringFlag{
 					Name:  FlagReason,
-					Usage: "reason to fail the activity",
+					Usage: "Reason to fail the activity",
 				},
 				cli.StringFlag{
 					Name:  FlagDetail,
-					Usage: "detail to fail the activity",
+					Usage: "Detail to fail the activity",
 				},
 				cli.StringFlag{
 					Name:  FlagIdentity,
-					Usage: "identity of the activity result",
+					Usage: "Identity of the operator",
 				},
 			},
 			Action: func(c *cli.Context) {
