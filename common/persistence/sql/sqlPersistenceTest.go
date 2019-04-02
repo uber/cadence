@@ -34,9 +34,11 @@ import (
 )
 
 const (
-	testUser      = "uber"
-	testPassword  = "uber"
-	testSchemaDir = "schema/mysql/v57"
+	testWorkflowClusterHosts = "127.0.0.1"
+	testPort                 = 3306
+	testUser                 = "uber"
+	testPassword             = "uber"
+	testSchemaDir            = "schema/mysql/v57"
 )
 
 // TestCluster allows executing cassandra operations in testing.
