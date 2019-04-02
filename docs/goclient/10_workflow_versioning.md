@@ -37,19 +37,19 @@ Thus we use `workflow.GetVersion().`
 
 ```go
 var err error
-        v := workflow.GetVersion(ctx, "Step1", workflow.DefaultVersion, 1)
-        if v == workflow.DefaultVersion {
-                err = workflow.ExecuteActivity(ctx, ActivityA, data).Get(ctx, &result1)
-        } else {
-                err = workflow.ExecuteActivity(ctx, ActivityC, data).Get(ctx, &result1)
-        }
-        if err != nil {
-                return "", err
-        }
+v := workflow.GetVersion(ctx, "Step1", workflow.DefaultVersion, 1)
+if v == workflow.DefaultVersion {
+        err = workflow.ExecuteActivity(ctx, ActivityA, data).Get(ctx, &result1)
+} else {
+        err = workflow.ExecuteActivity(ctx, ActivityC, data).Get(ctx, &result1)
+}
+if err != nil {
+        return "", err
+}
 
-        var result2 string
-        err = workflow.ExecuteActivity(ctx, ActivityB, result1).Get(ctx, &result2)
-        return result2, err
+var result2 string
+err = workflow.ExecuteActivity(ctx, ActivityB, result1).Get(ctx, &result2)
+return result2, err
 ```
 When `workflow.GetVersion()` is run for the new workflow execution, it records a marker in the workflow
 history so that all future calls to `GetVersion` for this change ID---`Step 1` in the example---on this
