@@ -23,13 +23,13 @@ package host
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/uber/cadence/common/cluster"
 	"strconv"
 	"time"
 
 	"github.com/pborman/uuid"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -38,39 +38,14 @@ func (s *integrationSuite) TestArchival_NotEnabled() {
 
 	domainID := uuid.New()
 	domain := "archival_domain_not_enabled"
-	archivalBucket := s.bucketName
-	_, err := s.MetadataManager.CreateDomain(&persistence.CreateDomainRequest{
-		Info: &persistence.DomainInfo{
-			ID:          domainID,
-			Name:        domain,
-			Status:      persistence.DomainStatusRegistered,
-			Description: "Test domain for archival not enabled integration test",
-		},
-		Config: &persistence.DomainConfig{
-			Retention:      0,
-			EmitMetric:     false,
-			ArchivalStatus: workflow.ArchivalStatusDisabled,
-			ArchivalBucket: archivalBucket,
-		},
-		ReplicationConfig: &persistence.DomainReplicationConfig{},
-	})
-	s.NoError(err)
-
-	getDomainReq := &persistence.GetDomainRequest{
-		ID: domainID,
-	}
-	getDomainResp, err := s.MetadataManager.GetDomain(getDomainReq)
-	s.NoError(err)
-	s.NotNil(getDomainResp)
-	s.Equal(int32(0), getDomainResp.Config.Retention)
-	s.Equal(workflow.ArchivalStatusDisabled, getDomainResp.Config.ArchivalStatus)
-	s.Equal(archivalBucket, getDomainResp.Config.ArchivalBucket)
+	s.createArchivalDomain(domain, domainID, s.bucketName, false)
 
 	workflowID := "archival-workflow-id"
 	workflowType := "archival-workflow-type"
 	taskList := "archival-task-list"
 	numActivities := 1
-	runID := s.startAndFinishWorkflow(workflowID, workflowType, taskList, domain, numActivities)
+	numRuns := 1
+	runID := s.startAndFinishWorkflow(workflowID, workflowType, taskList, domain, numActivities, numRuns)[0]
 
 	getHistoryReq := &workflow.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(domain),
@@ -79,7 +54,16 @@ func (s *integrationSuite) TestArchival_NotEnabled() {
 			RunId:      common.StringPtr(runID),
 		},
 	}
-	s.True(s.historyDeletedFromPersistence(getHistoryReq))
+
+	var err error
+	for i := 0; i < 10; i++ {
+		_, err = s.engine.GetWorkflowExecutionHistory(createContext(), getHistoryReq)
+		if err != nil {
+			break
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	s.IsType(&workflow.EntityNotExistsError{}, err)
 }
 
 func (s *integrationSuite) TestArchival_Enabled() {
@@ -87,18 +71,95 @@ func (s *integrationSuite) TestArchival_Enabled() {
 
 	domainID := uuid.New()
 	domain := "archival_domain_enabled"
-	archivalBucket := s.bucketName
+	s.createArchivalDomain(domain, domainID, s.bucketName, true)
+
+	workflowID := "archival-workflow-id"
+	workflowType := "archival-workflow-type"
+	taskList := "archival-task-list"
+	numActivities := 1
+	numRuns := 1
+	runID := s.startAndFinishWorkflow(workflowID, workflowType, taskList, domain, numActivities, numRuns)[0]
+
+	getHistoryReq := &workflow.GetWorkflowExecutionHistoryRequest{
+		Domain: common.StringPtr(domain),
+		Execution: &workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(workflowID),
+			RunId:      common.StringPtr(runID),
+		},
+	}
+	var getHistoryResp *workflow.GetWorkflowExecutionHistoryResponse
+	var err error
+	for i := 0; i < 10; i++ {
+		getHistoryResp, err = s.engine.GetWorkflowExecutionHistory(createContext(), getHistoryReq)
+		if getHistoryResp != nil && getHistoryResp.GetArchived() {
+			break
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	s.NoError(err)
+	s.NotNil(getHistoryResp)
+	s.True(getHistoryResp.GetArchived())
+}
+
+func (s *integrationSuite) TestArchival_ContinueAsNew() {
+	s.Equal(cluster.ArchivalEnabled, s.ClusterMetadata.ArchivalConfig().GetArchivalStatus())
+
+	domainID := uuid.New()
+	domain := "archival_domain_enabled"
+	s.createArchivalDomain(domain, domainID, s.bucketName, true)
+
+	workflowID := "archival-workflow-id"
+	workflowType := "archival-workflow-type"
+	taskList := "archival-task-list"
+	numActivities := 1
+	numRuns := 5
+	runIDs := s.startAndFinishWorkflow(workflowID, workflowType, taskList, domain, numActivities, numRuns)
+
+	getHistory := func(workflowID, runID string) (*workflow.GetWorkflowExecutionHistoryResponse, error) {
+		return s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
+			Domain: common.StringPtr(domain),
+			Execution: &workflow.WorkflowExecution{
+				WorkflowId: common.StringPtr(workflowID),
+				RunId:      common.StringPtr(runID),
+			},
+		})
+	}
+
+	for _, runID := range runIDs {
+		var getHistoryResp *workflow.GetWorkflowExecutionHistoryResponse
+		var err error
+		for i := 0; i < 10; i++ {
+			getHistoryResp, err = getHistory(workflowID, runID)
+			if getHistoryResp != nil && getHistoryResp.GetArchived() {
+				break
+			}
+			time.Sleep(200 * time.Millisecond)
+		}
+		s.NoError(err)
+		s.NotNil(getHistoryResp)
+		s.True(getHistoryResp.GetArchived())
+	}
+}
+
+func (s *integrationSuite) createArchivalDomain(domain, domainID, archivalBucket string, enabled bool) {
+	archivalStatus := workflow.ArchivalStatusEnabled
+	description := "Test domain for archival enabled integration test"
+	if !enabled {
+		archivalStatus = workflow.ArchivalStatusDisabled
+		description = "Test domain for archival not enabled integration test"
+	}
+
 	_, err := s.MetadataManager.CreateDomain(&persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          domainID,
 			Name:        domain,
 			Status:      persistence.DomainStatusRegistered,
-			Description: "Test domain for archival enabled integration test",
+			Description: description,
 		},
 		Config: &persistence.DomainConfig{
 			Retention:      0,
 			EmitMetric:     false,
-			ArchivalStatus: workflow.ArchivalStatusEnabled,
+			ArchivalStatus: archivalStatus,
 			ArchivalBucket: archivalBucket,
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
@@ -112,55 +173,11 @@ func (s *integrationSuite) TestArchival_Enabled() {
 	s.NoError(err)
 	s.NotNil(getDomainResp)
 	s.Equal(int32(0), getDomainResp.Config.Retention)
-	s.Equal(workflow.ArchivalStatusEnabled, getDomainResp.Config.ArchivalStatus)
+	s.Equal(archivalStatus, getDomainResp.Config.ArchivalStatus)
 	s.Equal(archivalBucket, getDomainResp.Config.ArchivalBucket)
-
-	workflowID := "archival-workflow-id"
-	workflowType := "archival-workflow-type"
-	taskList := "archival-task-list"
-	numActivities := 1
-	runID := s.startAndFinishWorkflow(workflowID, workflowType, taskList, domain, numActivities)
-
-	// getHistoryReq without runID will cause history to attempt to be read from persistence
-	// the correct way to do this should be to update dynamic config
-	// but there is not currently a good way to do this in test the framework
-	getHistoryReq := &workflow.GetWorkflowExecutionHistoryRequest{
-		Domain: common.StringPtr(domain),
-		Execution: &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-		},
-	}
-	s.True(s.historyDeletedFromPersistence(getHistoryReq))
-	s.False(s.historyArchived(getHistoryReq))
-	// update getHistoryReq to include runID thereby enabling history to be fetched from archival
-	getHistoryReq.Execution.RunId = common.StringPtr(runID)
-	s.True(s.historyArchived(getHistoryReq))
 }
 
-func (s *integrationSuite) historyDeletedFromPersistence(getHistoryReq *workflow.GetWorkflowExecutionHistoryRequest) bool {
-	for i := 0; i < 10; i++ {
-		_, err := s.engine.GetWorkflowExecutionHistory(createContext(), getHistoryReq)
-		if err != nil {
-			_, ok := err.(*workflow.EntityNotExistsError)
-			return ok
-		}
-		time.Sleep(200 * time.Millisecond)
-	}
-	return false
-}
-
-func (s *integrationSuite) historyArchived(getHistoryReq *workflow.GetWorkflowExecutionHistoryRequest) bool {
-	for i := 0; i < 10; i++ {
-		getHistoryResp, _ := s.engine.GetWorkflowExecutionHistory(createContext(), getHistoryReq)
-		if getHistoryResp != nil && getHistoryResp.GetArchived() {
-			return true
-		}
-		time.Sleep(200 * time.Millisecond)
-	}
-	return false
-}
-
-func (s *integrationSuite) startAndFinishWorkflow(id string, wt string, tl string, domain string, numActivities int) string {
+func (s *integrationSuite) startAndFinishWorkflow(id string, wt string, tl string, domain string, numActivities int, numRuns int) []string {
 	identity := "worker1"
 	activityName := "activity_type1"
 	workflowType := &workflow.WorkflowType{
@@ -183,10 +200,13 @@ func (s *integrationSuite) startAndFinishWorkflow(id string, wt string, tl strin
 	we, err := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err)
 	s.Logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
+	var runIDs []string
 
 	workflowComplete := false
 	activityCount := int32(numActivities)
 	activityCounter := int32(0)
+	expectedActivityID := int32(1)
+	runCounter := 1
 
 	dtHandler := func(
 		execution *workflow.WorkflowExecution,
@@ -213,6 +233,23 @@ func (s *integrationSuite) startAndFinishWorkflow(id string, wt string, tl strin
 				},
 			}}, nil
 		}
+		runIDs = append(runIDs, execution.GetRunId())
+		if runCounter < numRuns {
+			activityCounter = int32(0)
+			expectedActivityID = int32(1)
+			runCounter++
+			return []byte(strconv.Itoa(int(activityCounter))), []*workflow.Decision{{
+				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeContinueAsNewWorkflowExecution),
+				ContinueAsNewWorkflowExecutionDecisionAttributes: &workflow.ContinueAsNewWorkflowExecutionDecisionAttributes{
+					WorkflowType:                        workflowType,
+					TaskList:                            &workflow.TaskList{Name: &tl},
+					Input:                               nil,
+					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+				},
+			}}, nil
+		}
+
 		workflowComplete = true
 		return []byte(strconv.Itoa(int(activityCounter))), []*workflow.Decision{{
 			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
@@ -222,7 +259,6 @@ func (s *integrationSuite) startAndFinishWorkflow(id string, wt string, tl strin
 		}}, nil
 	}
 
-	expectedActivity := int32(1)
 	atHandler := func(
 		execution *workflow.WorkflowExecution,
 		activityType *workflow.ActivityType,
@@ -233,12 +269,12 @@ func (s *integrationSuite) startAndFinishWorkflow(id string, wt string, tl strin
 		s.Equal(id, *execution.WorkflowId)
 		s.Equal(activityName, *activityType.Name)
 		id, _ := strconv.Atoi(activityID)
-		s.Equal(int(expectedActivity), id)
+		s.Equal(int(expectedActivityID), id)
 		buf := bytes.NewReader(input)
 		var in int32
 		binary.Read(buf, binary.LittleEndian, &in)
-		s.Equal(expectedActivity, in)
-		expectedActivity++
+		s.Equal(expectedActivityID, in)
+		expectedActivityID++
 		return []byte("Activity Result."), false, nil
 	}
 
@@ -252,22 +288,25 @@ func (s *integrationSuite) startAndFinishWorkflow(id string, wt string, tl strin
 		Logger:          s.Logger,
 		T:               s.T(),
 	}
-	for i := 0; i < numActivities; i++ {
-		_, err := poller.PollAndProcessDecisionTask(false, false)
-		s.Logger.Infof("PollAndProcessDecisionTask: %v", err)
-		s.Nil(err)
-		if i%2 == 0 {
-			err = poller.PollAndProcessActivityTask(false)
-		} else { // just for testing respondActivityTaskCompleteByID
-			err = poller.PollAndProcessActivityTaskWithID(false)
+	for run := 0; run < numRuns; run++ {
+		for i := 0; i < numActivities; i++ {
+			_, err := poller.PollAndProcessDecisionTask(false, false)
+			s.Logger.Infof("PollAndProcessDecisionTask: %v", err)
+			s.Nil(err)
+			if i%2 == 0 {
+				err = poller.PollAndProcessActivityTask(false)
+			} else { // just for testing respondActivityTaskCompleteByID
+				err = poller.PollAndProcessActivityTaskWithID(false)
+			}
+			s.Logger.Infof("PollAndProcessActivityTask: %v", err)
+			s.Nil(err)
 		}
-		s.Logger.Infof("PollAndProcessActivityTask: %v", err)
+
+		_, err = poller.PollAndProcessDecisionTask(true, false)
 		s.Nil(err)
 	}
 
-	s.False(workflowComplete)
-	_, err = poller.PollAndProcessDecisionTask(true, false)
-	s.Nil(err)
 	s.True(workflowComplete)
-	return *we.RunId
+	s.Equal(numRuns, len(runIDs))
+	return runIDs
 }
