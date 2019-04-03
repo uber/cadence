@@ -25,8 +25,9 @@ import (
 )
 
 type (
-	// SequentialTaskProcessor is the generic coroutine pool interface
+	// SequentialTaskProcessor is the generic goroutines interface
 	// which process sequential task
+	// for the definition of sequential task, see SequentialTask
 	SequentialTaskProcessor interface {
 		common.Daemon
 		Submit(task SequentialTask) error
@@ -46,14 +47,18 @@ type (
 		Nack()
 	}
 
+	SequentialTaskPartitionID interface {
+		PartitionID() interface{} // MUST be go primitive type or struct with primitive types
+		HashCode() uint32
+	}
+
 	// SequentialTask is the interface for tasks which should be executed sequentially
+	// one common example is the workflow replication task (containing workflow history),
+	// which must be executed one by one, in the order of the first event ID)
 	SequentialTask interface {
-		// QueueID return the ID of the queue this task belongs to
-		QueueID() interface{}
+		Task
+		SequentialTaskPartitionID
 		// TaskID return the ID of the task, this task ID is used for sorting
 		TaskID() int64
-		// HashCode return the hash code of the task
-		HashCode() uint32
-		Task
 	}
 )

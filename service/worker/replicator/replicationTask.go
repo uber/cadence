@@ -25,33 +25,27 @@ import (
 	"time"
 
 	"github.com/dgryski/go-farm"
-
-	"github.com/uber/cadence/common"
-
-	"github.com/uber/cadence/.gen/go/replicator"
-
 	"github.com/uber-common/bark"
+	h "github.com/uber/cadence/.gen/go/history"
+	"github.com/uber/cadence/.gen/go/replicator"
+	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/history"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/definition"
+	"github.com/uber/cadence/common/locks"
 	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/xdc"
-
-	"github.com/uber/cadence/common/locks"
-
-	"github.com/uber/cadence/client/history"
-
-	h "github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common/definition"
-	"github.com/uber/cadence/common/messaging"
 )
 
 type (
 	workflowReplicationTask struct {
-		queueID  definition.WorkflowIdentifier
-		taskID   int64
-		attempt  int
-		kafkaMsg messaging.Message
-		logger   bark.Logger
+		partitionID definition.WorkflowIdentifier
+		taskID      int64
+		attempt     int
+		kafkaMsg    messaging.Message
+		logger      bark.Logger
 
 		config              *Config
 		historyClient       history.Client
@@ -82,7 +76,7 @@ func newActivityReplicationTask(task *replicator.ReplicationTask, msg messaging.
 	attr := task.SyncActicvityTaskAttributes
 	return &activityReplicationTask{
 		workflowReplicationTask: workflowReplicationTask{
-			queueID: definition.NewWorkflowIdentifier(
+			partitionID: definition.NewWorkflowIdentifier(
 				attr.GetDomainId(), attr.GetWorkflowId(), attr.GetRunId(),
 			),
 			taskID:   attr.GetScheduledId(),
@@ -123,7 +117,7 @@ func newHistoryReplicationTask(task *replicator.ReplicationTask, msg messaging.M
 	attr := task.HistoryTaskAttributes
 	return &historyReplicationTask{
 		workflowReplicationTask: workflowReplicationTask{
-			queueID: definition.NewWorkflowIdentifier(
+			partitionID: definition.NewWorkflowIdentifier(
 				attr.GetDomainId(), attr.GetWorkflowId(), attr.GetRunId(),
 			),
 			taskID:   attr.GetFirstEventId(),
@@ -182,10 +176,10 @@ func (t *activityReplicationTask) HandleErr(err error) error {
 	// this is the retry error
 	beginRunID := retryErr.GetRunId()
 	beginEventID := retryErr.GetNextEventId()
-	endRunID := t.queueID.RunID
+	endRunID := t.partitionID.RunID
 	endEventID := t.taskID + 1 // the next event ID should be at activity schedule ID + 1
 	resendErr := t.historyRereplicator.SendMultiWorkflowHistory(
-		t.queueID.DomainID, t.queueID.WorkflowID,
+		t.partitionID.DomainID, t.partitionID.WorkflowID,
 		beginRunID, beginEventID, endRunID, endEventID,
 	)
 
@@ -227,10 +221,10 @@ func (t *historyReplicationTask) HandleErr(err error) error {
 	// this is the retry error
 	beginRunID := retryErr.GetRunId()
 	beginEventID := retryErr.GetNextEventId()
-	endRunID := t.queueID.RunID
+	endRunID := t.partitionID.RunID
 	endEventID := t.taskID
 	resendErr := t.historyRereplicator.SendMultiWorkflowHistory(
-		t.queueID.DomainID, t.queueID.WorkflowID,
+		t.partitionID.DomainID, t.partitionID.WorkflowID,
 		beginRunID, beginEventID, endRunID, endEventID,
 	)
 	if resendErr != nil {
@@ -255,8 +249,8 @@ func (t *historyReplicationTask) RetryErr(err error) bool {
 	return false
 }
 
-func (t *workflowReplicationTask) QueueID() interface{} {
-	return t.queueID
+func (t *workflowReplicationTask) PartitionID() interface{} {
+	return t.partitionID
 }
 
 func (t *workflowReplicationTask) TaskID() int64 {
@@ -264,7 +258,7 @@ func (t *workflowReplicationTask) TaskID() int64 {
 }
 
 func (t *workflowReplicationTask) HashCode() uint32 {
-	return farm.Fingerprint32([]byte(t.queueID.WorkflowID))
+	return farm.Fingerprint32([]byte(t.partitionID.WorkflowID))
 }
 
 func (t *workflowReplicationTask) Ack() {

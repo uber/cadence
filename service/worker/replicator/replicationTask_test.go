@@ -26,20 +26,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/mock"
-
-	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common/cluster"
-
-	"github.com/uber/cadence/common/definition"
-
 	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/replicator"
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/definition"
 	messageMocks "github.com/uber/cadence/common/messaging/mocks"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
@@ -155,7 +152,7 @@ func (s *activityReplicationTaskSuite) TestNewActivityReplicationTask() {
 	s.Equal(
 		&activityReplicationTask{
 			workflowReplicationTask: workflowReplicationTask{
-				queueID: definition.NewWorkflowIdentifier(
+				partitionID: definition.NewWorkflowIdentifier(
 					replicationAttr.GetDomainId(),
 					replicationAttr.GetWorkflowId(),
 					replicationAttr.GetRunId(),
@@ -219,24 +216,24 @@ func (s *activityReplicationTaskSuite) TestHandleErr_RetryErr() {
 	task := newActivityReplicationTask(s.getActivityReplicationTask(), s.mockMsg, s.logger,
 		s.config, s.mockHistoryClient, s.metricsClient, s.mockRereplicator)
 	retryErr := &shared.RetryTaskError{
-		DomainId:    common.StringPtr(task.queueID.DomainID),
-		WorkflowId:  common.StringPtr(task.queueID.WorkflowID),
+		DomainId:    common.StringPtr(task.partitionID.DomainID),
+		WorkflowId:  common.StringPtr(task.partitionID.WorkflowID),
 		RunId:       common.StringPtr("other random run ID"),
 		NextEventId: common.Int64Ptr(447),
 	}
 
 	s.mockRereplicator.On("SendMultiWorkflowHistory",
-		task.queueID.DomainID, task.queueID.WorkflowID,
+		task.partitionID.DomainID, task.partitionID.WorkflowID,
 		retryErr.GetRunId(), retryErr.GetNextEventId(),
-		task.queueID.RunID, task.taskID+1,
+		task.partitionID.RunID, task.taskID+1,
 	).Return(errors.New("some random error")).Once()
 	err := task.HandleErr(retryErr)
 	s.Equal(retryErr, err)
 
 	s.mockRereplicator.On("SendMultiWorkflowHistory",
-		task.queueID.DomainID, task.queueID.WorkflowID,
+		task.partitionID.DomainID, task.partitionID.WorkflowID,
 		retryErr.GetRunId(), retryErr.GetNextEventId(),
-		task.queueID.RunID, task.taskID+1,
+		task.partitionID.RunID, task.taskID+1,
 	).Return(nil).Once()
 	s.mockHistoryClient.On("SyncActivity", mock.Anything, task.req).Return(nil).Once()
 	err = task.HandleErr(retryErr)
@@ -286,7 +283,7 @@ func (s *activityReplicationTaskSuite) TestQueueID() {
 	task := newActivityReplicationTask(s.getActivityReplicationTask(), s.mockMsg, s.logger,
 		s.config, s.mockHistoryClient, s.metricsClient, s.mockRereplicator)
 
-	s.Equal(task.queueID, task.QueueID())
+	s.Equal(task.partitionID, task.PartitionID())
 }
 
 func (s *activityReplicationTaskSuite) TestTaskID() {
@@ -307,7 +304,7 @@ func (s *historyReplicationTaskSuite) TestNewHistoryReplicationTask() {
 	s.Equal(
 		&historyReplicationTask{
 			workflowReplicationTask: workflowReplicationTask{
-				queueID: definition.NewWorkflowIdentifier(
+				partitionID: definition.NewWorkflowIdentifier(
 					replicationAttr.GetDomainId(),
 					replicationAttr.GetWorkflowId(),
 					replicationAttr.GetRunId(),
@@ -376,24 +373,24 @@ func (s *historyReplicationTaskSuite) TestHandleErr_RetryErr() {
 	task := newHistoryReplicationTask(s.getHistoryReplicationTask(), s.mockMsg, s.sourceCluster, s.logger,
 		s.config, s.mockHistoryClient, s.metricsClient, s.mockRereplicator)
 	retryErr := &shared.RetryTaskError{
-		DomainId:    common.StringPtr(task.queueID.DomainID),
-		WorkflowId:  common.StringPtr(task.queueID.WorkflowID),
+		DomainId:    common.StringPtr(task.partitionID.DomainID),
+		WorkflowId:  common.StringPtr(task.partitionID.WorkflowID),
 		RunId:       common.StringPtr("other random run ID"),
 		NextEventId: common.Int64Ptr(447),
 	}
 
 	s.mockRereplicator.On("SendMultiWorkflowHistory",
-		task.queueID.DomainID, task.queueID.WorkflowID,
+		task.partitionID.DomainID, task.partitionID.WorkflowID,
 		retryErr.GetRunId(), retryErr.GetNextEventId(),
-		task.queueID.RunID, task.taskID,
+		task.partitionID.RunID, task.taskID,
 	).Return(errors.New("some random error")).Once()
 	err := task.HandleErr(retryErr)
 	s.Equal(retryErr, err)
 
 	s.mockRereplicator.On("SendMultiWorkflowHistory",
-		task.queueID.DomainID, task.queueID.WorkflowID,
+		task.partitionID.DomainID, task.partitionID.WorkflowID,
 		retryErr.GetRunId(), retryErr.GetNextEventId(),
-		task.queueID.RunID, task.taskID,
+		task.partitionID.RunID, task.taskID,
 	).Return(nil).Once()
 	s.mockHistoryClient.On("ReplicateEvents", mock.Anything, task.req).Return(nil).Once()
 	err = task.HandleErr(retryErr)
@@ -448,7 +445,7 @@ func (s *historyReplicationTaskSuite) TestQueueID() {
 	task := newHistoryReplicationTask(s.getHistoryReplicationTask(), s.mockMsg, s.sourceCluster, s.logger,
 		s.config, s.mockHistoryClient, s.metricsClient, s.mockRereplicator)
 
-	s.Equal(task.queueID, task.QueueID())
+	s.Equal(task.partitionID, task.PartitionID())
 }
 
 func (s *historyReplicationTaskSuite) TestTaskID() {

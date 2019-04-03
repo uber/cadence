@@ -39,9 +39,9 @@ type (
 	}
 
 	testSequentialTaskImpl struct {
-		waitgroup *sync.WaitGroup
-		queueID   uint32
-		taskID    int64
+		waitgroup   *sync.WaitGroup
+		partitionID uint32
+		taskID      int64
 
 		lock   sync.Mutex
 		acked  int
@@ -69,8 +69,7 @@ func (s *SequentialTaskProcessorSuite) TestSubmit() {
 
 	// do not start the processor
 	s.Nil(s.processor.Submit(task))
-	taskQueue, ok := s.processor.(*sequentialTaskProcessorImpl).coroutineTaskQueues[int(task.HashCode())%s.coroutineSize]
-	s.True(ok)
+	taskQueue := s.processor.(*sequentialTaskProcessorImpl).coroutineTaskQueues[int(task.HashCode())%s.coroutineSize]
 	tasks := []SequentialTask{}
 Loop:
 	for {
@@ -196,11 +195,11 @@ func randomize(array []*testSequentialTaskImpl) {
 	}
 }
 
-func newTestSequentialTaskImpl(waitgroup *sync.WaitGroup, queueID uint32, taskID int64) *testSequentialTaskImpl {
+func newTestSequentialTaskImpl(waitgroup *sync.WaitGroup, partitionID uint32, taskID int64) *testSequentialTaskImpl {
 	return &testSequentialTaskImpl{
-		waitgroup: waitgroup,
-		queueID:   queueID,
-		taskID:    taskID,
+		waitgroup:   waitgroup,
+		partitionID: partitionID,
+		taskID:      taskID,
 	}
 }
 
@@ -250,8 +249,8 @@ func (t *testSequentialTaskImpl) NumNcked() int {
 	return t.nacked
 }
 
-func (t *testSequentialTaskImpl) QueueID() interface{} {
-	return t.queueID
+func (t *testSequentialTaskImpl) PartitionID() interface{} {
+	return t.partitionID
 }
 
 func (t *testSequentialTaskImpl) TaskID() int64 {
@@ -259,5 +258,5 @@ func (t *testSequentialTaskImpl) TaskID() int64 {
 }
 
 func (t *testSequentialTaskImpl) HashCode() uint32 {
-	return t.queueID
+	return t.partitionID
 }

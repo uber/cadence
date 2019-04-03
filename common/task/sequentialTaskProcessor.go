@@ -38,7 +38,7 @@ type (
 
 		coroutineSize       int
 		taskBatchSize       int
-		coroutineTaskQueues map[int]chan SequentialTask
+		coroutineTaskQueues []chan SequentialTask
 		logger              bark.Logger
 	}
 
@@ -49,7 +49,7 @@ type (
 // NewSequentialTaskProcessor create a new sequential tasks processor
 func NewSequentialTaskProcessor(coroutineSize int, taskBatchSize int, logger bark.Logger) SequentialTaskProcessor {
 
-	coroutineTaskQueues := make(map[int]chan SequentialTask, coroutineSize)
+	coroutineTaskQueues := make([]chan SequentialTask, coroutineSize)
 	for i := 0; i < coroutineSize; i++ {
 		coroutineTaskQueues[i] = make(chan SequentialTask, taskBatchSize)
 	}
@@ -116,12 +116,12 @@ func (t *sequentialTaskProcessorImpl) pollAndProcessTaskQueue(coroutineTaskQueue
 func (t *sequentialTaskProcessorImpl) batchPollTaskQueue(coroutineTaskQueue chan SequentialTask) {
 	bufferedSequentialTasks := make(map[interface{}][]SequentialTask)
 	indexTasks := func(task SequentialTask) {
-		sequentialTasks, ok := bufferedSequentialTasks[task.QueueID()]
+		sequentialTasks, ok := bufferedSequentialTasks[task.PartitionID()]
 		if ok {
 			sequentialTasks = append(sequentialTasks, task)
-			bufferedSequentialTasks[task.QueueID()] = sequentialTasks
+			bufferedSequentialTasks[task.PartitionID()] = sequentialTasks
 		} else {
-			bufferedSequentialTasks[task.QueueID()] = []SequentialTask{task}
+			bufferedSequentialTasks[task.PartitionID()] = []SequentialTask{task}
 		}
 	}
 
