@@ -1127,9 +1127,16 @@ type decisionBlobSizeChecker struct {
 }
 
 func (c *decisionBlobSizeChecker) failWorkflowIfBlobSizeExceedsLimit(blob []byte, message string) (bool, error) {
-	err := common.CheckEventBlobSizeLimit(len(blob), c.sizeLimitWarn, c.sizeLimitError,
-		c.domainID, c.workflowID, c.runID, c.metricsClient, metrics.HistoryRespondDecisionTaskCompletedScope, c.logger)
-
+	err := common.CheckEventBlobSizeLimit(
+		len(blob),
+		c.sizeLimitWarn,
+		c.sizeLimitError,
+		c.domainID,
+		c.workflowID,
+		c.runID,
+		c.metricsClient.Scope(metrics.HistoryRespondDecisionTaskCompletedScope),
+		c.logger,
+	)
 	if err == nil {
 		return false, nil
 	}
