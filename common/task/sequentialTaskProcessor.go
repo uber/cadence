@@ -176,9 +176,9 @@ TaskProcessingLoop:
 
 	if err != nil {
 		task.Nack()
-	} else {
-		task.Ack()
+		return
 	}
+	task.Ack()
 }
 
 func (tasks SequentialTasks) Len() int {
