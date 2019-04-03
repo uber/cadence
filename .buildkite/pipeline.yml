@@ -1,12 +1,21 @@
 steps:
-  - label: ":golang: integration test"
+  - label: ":golang: unit test"
     agents:
       queue: "*"
       docker: "*"
     plugins:
       - docker-compose#v3.0.0:
-          run: integration-test
+          run: unit-test
           config: docker/buildkite/docker-compose.yml
+
+  - label: ":golang: integration test"
+      agents:
+        queue: "*"
+        docker: "*"
+      plugins:
+        - docker-compose#v3.0.0:
+            run: integration-test
+            config: docker/buildkite/docker-compose.yml
 
   - label: ":golang: integration xdc test"
       agents:

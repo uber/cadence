@@ -34,6 +34,37 @@ services:
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
 
+  unit-test:
+    build:
+      context: ../../
+      dockerfile: ./docker/buildkite/Dockerfile
+    command:
+      - /bin/sh
+      - -e
+      - -c
+      - |
+        make cover_ci
+    ports:
+      - "7933:7933"
+      - "7934:7934"
+      - "7935:7935"
+      - "7939:7939"
+    environment:
+      - "CASSANDRA_SEEDS=cassandra"
+      - BUILDKITE_AGENT_ACCESS_TOKEN
+      - BUILDKITE_JOB_ID
+      - BUILDKITE_BUILD_ID
+      - BUILDKITE_BUILD_NUMBER
+    depends_on:
+      - cassandra
+    volumes:
+      - ../../:/go/src/github.com/uber/cadence
+      - /usr/bin/buildkite-agent:/usr/bin/buildkite-agent
+    networks:
+      services-network:
+        aliases:
+          - unit-test
+
   integration-test:
     build:
       context: ../../

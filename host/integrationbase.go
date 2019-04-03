@@ -114,6 +114,8 @@ func (s *IntegrationBase) setupLogger() {
 
 // GetTestClusterConfig read test config
 func GetTestClusterConfig(configFile string) (*TestClusterConfig, error) {
+	setupEnv()
+
 	configLocation := configFile
 	if *TestClusterConfigFile != "" {
 		configLocation = *TestClusterConfigFile
@@ -194,4 +196,20 @@ func (s *IntegrationBase) getHistory(domain string, execution *workflow.Workflow
 	}
 
 	return events
+}
+
+func setupEnv() {
+	if os.Getenv("CASSANDRA_SEEDS") == "" {
+		err := os.Setenv("CASSANDRA_SEEDS", "127.0.0.1")
+		if err != nil {
+			panic("error setting env CASSANDRA_SEEDS")
+		}
+	}
+
+	if os.Getenv("KAFKA_SEEDS") == "" {
+		err := os.Setenv("KAFKA_SEEDS", "127.0.0.1")
+		if err != nil {
+			panic("error setting env KAFKA_SEEDS")
+		}
+	}
 }
