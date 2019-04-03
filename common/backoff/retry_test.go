@@ -149,7 +149,7 @@ func (s *RetrySuite) TestConcurrentRetrier() {
 	retrier.Succeeded()
 	s.Equal(int64(0), retrier.failureCount)
 	sleepDuration := retrier.throttleInternal()
-	s.Equal(Done, sleepDuration)
+	s.Equal(done, sleepDuration)
 
 	// Multiple count check.
 	retrier.Failed()
@@ -178,7 +178,7 @@ func (s *RetrySuite) TestConcurrentRetrier() {
 	for i := 0; i < 3; i++ {
 		val := <-ch
 		fmt.Printf("Duration: %d\n", val)
-		s.Equal(Done, val)
+		s.Equal(done, val)
 	}
 }
 
