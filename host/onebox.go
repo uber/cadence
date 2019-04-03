@@ -107,9 +107,15 @@ type (
 		enableVisibilityToKafka       bool
 		blobstoreClient               blobstore.Client
 		enableReadHistoryFromArchival bool
+		historyConfig                 *HistoryConfig
 	}
 
-	// CadenceParams contains everything needed to boostrap Cadence
+	HistoryConfig struct {
+		HistoryCountLimitError int
+		HistoryCountLimitWarn  int
+	}
+
+	// CadenceParams contains everything needed to bootstrap Cadence
 	CadenceParams struct {
 		ClusterMetadata               cluster.Metadata
 		PersistenceConfig             config.Persistence
@@ -132,6 +138,7 @@ type (
 		EnableVisibilityToKafka       bool
 		Blobstore                     blobstore.Client
 		EnableReadHistoryFromArchival bool
+		HistoryConfig                 *HistoryConfig
 	}
 
 	ringpopFactoryImpl struct {
@@ -165,6 +172,7 @@ func NewCadence(params *CadenceParams) Cadence {
 		enableVisibilityToKafka:       params.EnableVisibilityToKafka,
 		blobstoreClient:               params.Blobstore,
 		enableReadHistoryFromArchival: params.EnableReadHistoryFromArchival,
+		historyConfig:                 params.HistoryConfig,
 	}
 }
 
@@ -387,6 +395,15 @@ func (c *cadenceImpl) startHistory(rpHosts []string, startWG *sync.WaitGroup, en
 		historyConfig.HistoryMgrNumConns = dynamicconfig.GetIntPropertyFn(c.numberOfHistoryShards)
 		historyConfig.ExecutionMgrNumConns = dynamicconfig.GetIntPropertyFn(c.numberOfHistoryShards)
 		historyConfig.EnableEventsV2 = dynamicconfig.GetBoolPropertyFnFilteredByDomain(enableEventsV2)
+		optionalHistoryConfig := c.historyConfig
+		if optionalHistoryConfig != nil {
+			if optionalHistoryConfig.HistoryCountLimitWarn != 0 {
+				historyConfig.HistoryCountLimitWarn = dynamicconfig.GetIntPropertyFilteredByDomain(optionalHistoryConfig.HistoryCountLimitWarn)
+			}
+			if optionalHistoryConfig.HistoryCountLimitError != 0 {
+				historyConfig.HistoryCountLimitError = dynamicconfig.GetIntPropertyFilteredByDomain(optionalHistoryConfig.HistoryCountLimitError)
+			}
+		}
 		handler := history.NewHandler(service, historyConfig, c.shardMgr, c.metadataMgr,
 			c.visibilityMgr, c.historyMgr, c.historyV2Mgr, c.executionMgrFactory)
 		handler.Start()

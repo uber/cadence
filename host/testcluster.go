@@ -59,6 +59,7 @@ type (
 		ClusterInfo           config.ClustersInfo
 		MessagingClientConfig *MessagingClientConfig
 		Persistence           persistencetests.TestBaseOptions
+		HistoryConfig         *HistoryConfig
 	}
 
 	// MessagingClientConfig is the config for messaging config
@@ -118,6 +119,7 @@ func NewCluster(options *TestClusterConfig, logger bark.Logger) (*TestCluster, e
 		EnableVisibilityToKafka:       false,
 		EnableReadHistoryFromArchival: options.EnableArchival,
 		Blobstore:                     blobstore.client,
+		HistoryConfig:                 options.HistoryConfig,
 	}
 	cluster := NewCadence(cadenceParams)
 	if err := cluster.Start(); err != nil {
