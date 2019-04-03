@@ -1378,7 +1378,6 @@ const (
 	ArchiverPumpedNotEqualHandledCount
 	ArchiverHandleAllRequestsLatency
 	ArchiverWorkflowStoppingCount
-	ArchiverClientSendSignalFailureCount
 
 	NumWorkerMetrics
 )
@@ -1594,7 +1593,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ArchiverPumpedNotEqualHandledCount:                     {metricName: "archiver_pumped_not_equal_handled", oldMetricName: "archiver.pumped-not-equal-handled"},
 		ArchiverHandleAllRequestsLatency:                       {metricName: "archiver_handle_all_requests_latency", oldMetricName: "archiver.handle-all-requests-latency"},
 		ArchiverWorkflowStoppingCount:                          {metricName: "archiver_workflow_stopping", oldMetricName: "archiver.workflow-stopping"},
-		ArchiverClientSendSignalFailureCount:                   {metricName: "archiver_client_send_signal_error", oldMetricName: "archiver.client-send-signal-error"},
 	},
 }
 
