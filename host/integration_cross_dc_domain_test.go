@@ -21,7 +21,6 @@
 package host
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"strconv"
@@ -57,7 +56,6 @@ type (
 )
 
 func TestIntegrationCrossDCSuite(t *testing.T) {
-	flag.Parse()
 	suite.Run(t, new(integrationCrossDCSuite))
 }
 

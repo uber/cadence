@@ -98,8 +98,8 @@ func (s *clientIntegrationSuite) buildServiceClient() (workflowserviceclient.Int
 	cadenceClientName := "cadence-client"
 	cadenceFrontendService := common.FrontendServiceName
 	hostPort := "127.0.0.1:7104"
-	if *frontendAddress != "" {
-		hostPort = *frontendAddress
+	if s.testClusterConfig.FrontendAddress != "" {
+		hostPort = s.testClusterConfig.FrontendAddress
 	}
 
 	ch, err := tchannel.NewChannelTransport(tchannel.ServiceName(cadenceClientName))

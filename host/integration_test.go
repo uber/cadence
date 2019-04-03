@@ -39,6 +39,8 @@ import (
 	"github.com/uber/cadence/service/matching"
 )
 
+const defaultClusterConfigFile = "testdata/integrationtestcluster.yaml"
+
 type (
 	integrationSuite struct {
 		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
@@ -49,7 +51,11 @@ type (
 )
 
 func (s *integrationSuite) SetupSuite() {
-	s.setupSuite("testdata/integrationtestcluster.yaml")
+	configFile := defaultClusterConfigFile
+	if *TestClusterConfigFile != "" {
+		configFile = *TestClusterConfigFile
+	}
+	s.setupSuite(configFile)
 }
 
 func (s *integrationSuite) TearDownSuite() {

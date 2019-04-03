@@ -53,21 +53,21 @@ type (
 	}
 )
 
-func (s *IntegrationBase) setupSuite(defaultClusterConfigFile string) {
+func (s *IntegrationBase) setupSuite(clusterConfigFile string) {
 	s.setupLogger()
 
-	clusterConfig, err := GetTestClusterConfig(defaultClusterConfigFile)
+	clusterConfig, err := GetTestClusterConfig(clusterConfigFile)
 	s.Require().NoError(err)
 	s.testClusterConfig = clusterConfig
 
 	if clusterConfig.FrontendAddress != "" {
-		s.Logger.WithField("address", *frontendAddress).Info("Running integration test against specified frontend")
+		s.Logger.WithField("address", clusterConfig.FrontendAddress).Info("Running integration test against specified frontend")
 		channel, err := tchannel.NewChannelTransport(tchannel.ServiceName("cadence-frontend"))
 		s.Require().NoError(err)
 		dispatcher := yarpc.NewDispatcher(yarpc.Config{
 			Name: "unittest",
 			Outbounds: yarpc.Outbounds{
-				"cadence-frontend": {Unary: channel.NewSingleOutbound(*frontendAddress)},
+				"cadence-frontend": {Unary: channel.NewSingleOutbound(clusterConfig.FrontendAddress)},
 			},
 		})
 		if err := dispatcher.Start(); err != nil {
@@ -112,13 +112,9 @@ func (s *IntegrationBase) setupLogger() {
 }
 
 func GetTestClusterConfig(configFile string) (*TestClusterConfig, error) {
-	configLocation := configFile
-	if *TestClusterConfigFile != "" {
-		configLocation = *TestClusterConfigFile
-	}
-	file, err := os.Open(configLocation)
+	file, err := os.Open(configFile)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open test cluster config file %v: %v", configLocation, err)
+		return nil, fmt.Errorf("failed to open test cluster config file %v: %v", configFile, err)
 	}
 
 	var options TestClusterConfig
@@ -126,8 +122,6 @@ func GetTestClusterConfig(configFile string) (*TestClusterConfig, error) {
 		return nil, fmt.Errorf("failed to decode test cluster config: %v", err)
 	}
 
-	options.EnableEventsV2 = *EnableEventsV2
-	options.FrontendAddress = *frontendAddress
 	return &options, nil
 }
 
