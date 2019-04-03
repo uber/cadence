@@ -38,7 +38,7 @@ func (s *integrationSuite) TestArchival_NotEnabled() {
 
 	domainID := uuid.New()
 	domain := "archival_domain_not_enabled"
-	s.createArchivalDomain(domain, domainID, s.bucketName, false)
+	s.createArchivalDisabledDomain(domain, domainID)
 
 	workflowID := "archival-workflow-id"
 	workflowType := "archival-workflow-type"
@@ -69,19 +69,15 @@ func (s *integrationSuite) TestArchival_NotEnabled() {
 func (s *integrationSuite) TestArchival_Enabled() {
 	s.Equal(cluster.ArchivalEnabled, s.ClusterMetadata.ArchivalConfig().GetArchivalStatus())
 
-	domainID := uuid.New()
-	domain := "archival_domain_enabled"
-	s.createArchivalDomain(domain, domainID, s.bucketName, true)
-
 	workflowID := "archival-workflow-id"
 	workflowType := "archival-workflow-type"
 	taskList := "archival-task-list"
 	numActivities := 1
 	numRuns := 1
-	runID := s.startAndFinishWorkflow(workflowID, workflowType, taskList, domain, numActivities, numRuns)[0]
+	runID := s.startAndFinishWorkflow(workflowID, workflowType, taskList, s.archivalDomainName, numActivities, numRuns)[0]
 
 	getHistoryReq := &workflow.GetWorkflowExecutionHistoryRequest{
-		Domain: common.StringPtr(domain),
+		Domain: common.StringPtr(s.archivalDomainName),
 		Execution: &workflow.WorkflowExecution{
 			WorkflowId: common.StringPtr(workflowID),
 			RunId:      common.StringPtr(runID),
@@ -104,20 +100,16 @@ func (s *integrationSuite) TestArchival_Enabled() {
 func (s *integrationSuite) TestArchival_ContinueAsNew() {
 	s.Equal(cluster.ArchivalEnabled, s.ClusterMetadata.ArchivalConfig().GetArchivalStatus())
 
-	domainID := uuid.New()
-	domain := "archival_domain_continueAsNew"
-	s.createArchivalDomain(domain, domainID, s.bucketName, true)
-
-	workflowID := "archival-workflow-id"
-	workflowType := "archival-workflow-type"
-	taskList := "archival-task-list"
+	workflowID := "archival-continueAsNew-workflow-id"
+	workflowType := "archival-continueAsNew-workflow-type"
+	taskList := "archival-continueAsNew-task-list"
 	numActivities := 1
 	numRuns := 5
-	runIDs := s.startAndFinishWorkflow(workflowID, workflowType, taskList, domain, numActivities, numRuns)
+	runIDs := s.startAndFinishWorkflow(workflowID, workflowType, taskList, s.archivalDomainName, numActivities, numRuns)
 
 	getHistory := func(workflowID, runID string) (*workflow.GetWorkflowExecutionHistoryResponse, error) {
 		return s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
-			Domain: common.StringPtr(domain),
+			Domain: common.StringPtr(s.archivalDomainName),
 			Execution: &workflow.WorkflowExecution{
 				WorkflowId: common.StringPtr(workflowID),
 				RunId:      common.StringPtr(runID),
@@ -141,26 +133,19 @@ func (s *integrationSuite) TestArchival_ContinueAsNew() {
 	}
 }
 
-func (s *integrationSuite) createArchivalDomain(domain, domainID, archivalBucket string, enabled bool) {
-	archivalStatus := workflow.ArchivalStatusEnabled
-	description := "Test domain for archival enabled integration test"
-	if !enabled {
-		archivalStatus = workflow.ArchivalStatusDisabled
-		description = "Test domain for archival not enabled integration test"
-	}
-
+func (s *integrationSuite) createArchivalDisabledDomain(domain, domainID string) {
 	_, err := s.MetadataManager.CreateDomain(&persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          domainID,
 			Name:        domain,
 			Status:      persistence.DomainStatusRegistered,
-			Description: description,
+			Description: "Test domain for archival not enabled integration test",
 		},
 		Config: &persistence.DomainConfig{
 			Retention:      0,
 			EmitMetric:     false,
-			ArchivalStatus: archivalStatus,
-			ArchivalBucket: archivalBucket,
+			ArchivalStatus: workflow.ArchivalStatusDisabled,
+			ArchivalBucket: s.bucketName,
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
 	})
@@ -173,8 +158,8 @@ func (s *integrationSuite) createArchivalDomain(domain, domainID, archivalBucket
 	s.NoError(err)
 	s.NotNil(getDomainResp)
 	s.Equal(int32(0), getDomainResp.Config.Retention)
-	s.Equal(archivalStatus, getDomainResp.Config.ArchivalStatus)
-	s.Equal(archivalBucket, getDomainResp.Config.ArchivalBucket)
+	s.Equal(workflow.ArchivalStatusDisabled, getDomainResp.Config.ArchivalStatus)
+	s.Equal(s.bucketName, getDomainResp.Config.ArchivalBucket)
 }
 
 func (s *integrationSuite) startAndFinishWorkflow(id string, wt string, tl string, domain string, numActivities int, numRuns int) []string {

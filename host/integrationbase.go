@@ -31,15 +31,16 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/persistence-tests"
+	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 )
 
 type (
 	// IntegrationBase is a base struct for integration tests
 	IntegrationBase struct {
 		TestCluster
-		domainName        string
-		foreignDomainName string
+		domainName         string
+		foreignDomainName  string
+		archivalDomainName string
 	}
 )
 
@@ -73,6 +74,23 @@ func (s *IntegrationBase) setupSuite(enableGlobalDomain bool, isMasterCluster bo
 		Config: &persistence.DomainConfig{
 			Retention:  1,
 			EmitMetric: false,
+		},
+		ReplicationConfig: &persistence.DomainReplicationConfig{},
+	})
+
+	s.archivalDomainName = "integration-archival-enabled-domain"
+	s.MetadataManager.CreateDomain(&persistence.CreateDomainRequest{
+		Info: &persistence.DomainInfo{
+			ID:          uuid.New(),
+			Name:        s.archivalDomainName,
+			Status:      persistence.DomainStatusRegistered,
+			Description: "Test domain for archival enabled integration test",
+		},
+		Config: &persistence.DomainConfig{
+			Retention:      0,
+			EmitMetric:     false,
+			ArchivalStatus: workflow.ArchivalStatusEnabled,
+			ArchivalBucket: s.bucketName,
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
 	})
