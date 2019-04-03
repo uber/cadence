@@ -29,6 +29,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"flag"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"testing"
@@ -102,11 +103,14 @@ func (s *integrationClustersTestSuite) SetupSuite() {
 	if *host.TestClusterConfigFile != "" {
 		fileName = *host.TestClusterConfigFile
 	}
-	file, err := os.Open(fileName)
+	host.SetupEnv()
+
+	confContent, err := ioutil.ReadFile(fileName)
 	s.Require().NoError(err)
+	confContent = []byte(os.ExpandEnv(string(confContent)))
 
 	var clusterConfigs []*host.TestClusterConfig
-	s.Require().NoError(yaml.NewDecoder(file).Decode(&clusterConfigs))
+	s.Require().NoError(yaml.Unmarshal(confContent, &clusterConfigs))
 
 	c, err := host.NewCluster(clusterConfigs[0], s.logger.WithField("Cluster", clusterName[0]))
 	s.Require().NoError(err)

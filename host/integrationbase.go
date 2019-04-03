@@ -114,7 +114,7 @@ func (s *IntegrationBase) setupLogger() {
 
 // GetTestClusterConfig read test config
 func GetTestClusterConfig(configFile string) (*TestClusterConfig, error) {
-	setupEnv()
+	SetupEnv()
 
 	configLocation := configFile
 	if *TestClusterConfigFile != "" {
@@ -124,13 +124,11 @@ func GetTestClusterConfig(configFile string) (*TestClusterConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read test cluster config file %v: %v", configLocation, err)
 	}
-
 	confContent = []byte(os.ExpandEnv(string(confContent)))
 	var options TestClusterConfig
 	if err := yaml.Unmarshal(confContent, &options); err != nil {
 		return nil, fmt.Errorf("failed to decode test cluster config: %v", err)
 	}
-
 	options.EnableEventsV2 = *EnableEventsV2
 	options.FrontendAddress = *frontendAddress
 	return &options, nil
@@ -198,7 +196,8 @@ func (s *IntegrationBase) getHistory(domain string, execution *workflow.Workflow
 	return events
 }
 
-func setupEnv() {
+// SetupEnv setup the necessary env
+func SetupEnv() {
 	if os.Getenv("CASSANDRA_SEEDS") == "" {
 		err := os.Setenv("CASSANDRA_SEEDS", "127.0.0.1")
 		if err != nil {
