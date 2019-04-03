@@ -30,43 +30,9 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/persistence"
 )
 
-func (s *integrationSuite) TestArchival_NotEnabled() {
-	s.Equal(cluster.ArchivalEnabled, s.ClusterMetadata.ArchivalConfig().GetArchivalStatus())
-
-	domainID := uuid.New()
-	domain := "archival_domain_not_enabled"
-	s.createArchivalDisabledDomain(domain, domainID)
-
-	workflowID := "archival-workflow-id"
-	workflowType := "archival-workflow-type"
-	taskList := "archival-task-list"
-	numActivities := 1
-	numRuns := 1
-	runID := s.startAndFinishWorkflow(workflowID, workflowType, taskList, domain, numActivities, numRuns)[0]
-
-	getHistoryReq := &workflow.GetWorkflowExecutionHistoryRequest{
-		Domain: common.StringPtr(domain),
-		Execution: &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
-		},
-	}
-
-	var err error
-	for i := 0; i < 10; i++ {
-		_, err = s.engine.GetWorkflowExecutionHistory(createContext(), getHistoryReq)
-		if err != nil {
-			break
-		}
-		time.Sleep(200 * time.Millisecond)
-	}
-	s.IsType(&workflow.EntityNotExistsError{}, err)
-}
-
-func (s *integrationSuite) TestArchival_Enabled() {
+func (s *integrationSuite) TestArchival() {
 	s.Equal(cluster.ArchivalEnabled, s.ClusterMetadata.ArchivalConfig().GetArchivalStatus())
 
 	workflowID := "archival-workflow-id"
@@ -131,35 +97,6 @@ func (s *integrationSuite) TestArchival_ContinueAsNew() {
 		s.NotNil(getHistoryResp)
 		s.True(getHistoryResp.GetArchived())
 	}
-}
-
-func (s *integrationSuite) createArchivalDisabledDomain(domain, domainID string) {
-	_, err := s.MetadataManager.CreateDomain(&persistence.CreateDomainRequest{
-		Info: &persistence.DomainInfo{
-			ID:          domainID,
-			Name:        domain,
-			Status:      persistence.DomainStatusRegistered,
-			Description: "Test domain for archival not enabled integration test",
-		},
-		Config: &persistence.DomainConfig{
-			Retention:      0,
-			EmitMetric:     false,
-			ArchivalStatus: workflow.ArchivalStatusDisabled,
-			ArchivalBucket: s.bucketName,
-		},
-		ReplicationConfig: &persistence.DomainReplicationConfig{},
-	})
-	s.NoError(err)
-
-	getDomainReq := &persistence.GetDomainRequest{
-		ID: domainID,
-	}
-	getDomainResp, err := s.MetadataManager.GetDomain(getDomainReq)
-	s.NoError(err)
-	s.NotNil(getDomainResp)
-	s.Equal(int32(0), getDomainResp.Config.Retention)
-	s.Equal(workflow.ArchivalStatusDisabled, getDomainResp.Config.ArchivalStatus)
-	s.Equal(s.bucketName, getDomainResp.Config.ArchivalBucket)
 }
 
 func (s *integrationSuite) startAndFinishWorkflow(id string, wt string, tl string, domain string, numActivities int, numRuns int) []string {
