@@ -21,15 +21,16 @@
 package host
 
 import (
+	"io/ioutil"
+	"os"
+	"sync"
+
 	"github.com/uber-common/bark"
 	wsc "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common/blobstore/filestore"
 	"github.com/uber/cadence/common/messaging"
-	"github.com/uber/cadence/common/persistence/persistence-tests"
-	"io/ioutil"
-	"os"
-	"sync"
+	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 )
 
 type (
@@ -85,7 +86,7 @@ func (tc *TestCluster) SetupCluster(options *TestClusterOptions) {
 		EnableWorker:                  options.EnableWorker,
 		EnableEventsV2:                options.EnableEventsV2,
 		EnableVisibilityToKafka:       false,
-		EnableReadHistoryFromArchival: true,
+		EnableReadHistoryFromArchival: true, //options.PersistOptions.EnableArchival,
 		Blobstore:                     tc.BlobstoreBase.client,
 	}
 	tc.Host = NewCadence(cadenceParams)
