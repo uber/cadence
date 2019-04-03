@@ -2792,8 +2792,20 @@ func getWorkflowHistoryCleanupTasksFromShard(
 	} else {
 		retentionInDays = domainEntry.GetRetentionDays(workflowID)
 	}
-	deleteTask := tBuilder.createDeleteHistoryEventTimerTask(time.Duration(retentionInDays) * time.Hour * 24)
+	deleteTask := createDeleteHistoryEventTimerTask(tBuilder, retentionInDays)
 	return &persistence.CloseExecutionTask{}, deleteTask, nil
+}
+
+func createDeleteHistoryEventTimerTask(tBuilder *timerBuilder, retentionInDays int32) *persistence.DeleteHistoryEventTask {
+	retention := time.Duration(retentionInDays) * time.Hour * 24
+	if tBuilder != nil {
+		return tBuilder.createDeleteHistoryEventTimerTask(retention)
+	} else {
+		expiryTime := clock.NewRealTimeSource().Now().Add(retention)
+		return &persistence.DeleteHistoryEventTask{
+			VisibilityTimestamp: expiryTime,
+		}
+	}
 }
 
 func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(domainID string, msBuilder mutableState,
