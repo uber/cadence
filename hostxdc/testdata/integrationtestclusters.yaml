@@ -37,7 +37,7 @@
       clusters:
         test:
           brokers:
-            - ${KAFKA_SEEDS}:9092
+            - "${KAFKA_SEEDS}:9092"
       topics:
         active:
           cluster: test
@@ -100,7 +100,7 @@
       clusters:
         test:
           brokers:
-            - ${KAFKA_SEEDS}:9092
+            - "${KAFKA_SEEDS}:9092"
       topics:
         active:
           cluster: test
