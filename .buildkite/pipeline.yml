@@ -3,6 +3,7 @@ steps:
     agents:
       queue: "*"
       docker: "*"
+    command: "make cover_ci"
     plugins:
       - docker-compose#v3.0.0:
           run: unit-test
@@ -12,6 +13,7 @@ steps:
       agents:
         queue: "*"
         docker: "*"
+      command: "make cover_integration_ci"
       plugins:
         - docker-compose#v3.0.0:
             run: integration-test
@@ -21,6 +23,7 @@ steps:
       agents:
         queue: "*"
         docker: "*"
+      command: "make cover_xdc_ci"
       plugins:
         - docker-compose#v3.0.0:
             run: integration-test-xdc

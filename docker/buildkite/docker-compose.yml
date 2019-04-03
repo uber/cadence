@@ -38,12 +38,6 @@ services:
     build:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
-    command:
-      - /bin/sh
-      - -e
-      - -c
-      - |
-        make cover_ci
     ports:
       - "7933:7933"
       - "7934:7934"
@@ -69,12 +63,6 @@ services:
     build:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
-    command:
-      - /bin/sh
-      - -e
-      - -c
-      - |
-        make cover_integration_ci
     ports:
       - "7933:7933"
       - "7934:7934"
@@ -100,12 +88,6 @@ services:
     build:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
-    command:
-      - /bin/sh
-      - -e
-      - -c
-      - |
-        make cover_xdc_ci
     ports:
       - "7933:7933"
       - "7934:7934"

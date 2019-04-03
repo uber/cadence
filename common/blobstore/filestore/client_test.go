@@ -71,19 +71,6 @@ func (s *ClientSuite) TestNewClient_Fail_InvalidConfig() {
 	s.Nil(client)
 }
 
-func (s *ClientSuite) TestNewClient_Fail_SetupDirectoryFailure() {
-	dir, err := ioutil.TempDir("", "TestNewClient_Fail_SetupDirectoryFailure")
-	s.NoError(err)
-	defer os.RemoveAll(dir)
-	err = os.Chmod(dir, os.FileMode(0600))
-	s.Nil(err, err)
-
-	cfg := s.constructConfig(dir)
-	client, err := NewClient(cfg)
-	s.Error(err)
-	s.Nil(client)
-}
-
 func (s *ClientSuite) TestNewClient_Fail_WriteMetadataFilesFailure() {
 	dir, err := ioutil.TempDir("", "TestNewClient_Fail_WriteMetadataFilesFailure")
 	s.NoError(err)
@@ -145,24 +132,6 @@ func (s *ClientSuite) TestDownload_Fail_BlobNotExists() {
 	s.NoError(err)
 	b, err := client.Download(context.Background(), defaultBucketName, key)
 	s.Equal(blobstore.ErrBlobNotExists, err)
-	s.Nil(b)
-}
-
-func (s *ClientSuite) TestDownload_Fail_NoPermissions() {
-	dir, err := ioutil.TempDir("", "TestDownload_Fail_NoPermissions")
-	s.NoError(err)
-	defer os.RemoveAll(dir)
-	client := s.constructClient(dir)
-
-	b := blob.NewBlob([]byte("blob body"), map[string]string{"tagKey": "tagValue"})
-	key, err := blob.NewKeyFromString("blob.blob")
-	s.NoError(err)
-	s.NoError(client.Upload(context.Background(), defaultBucketName, key, b))
-	err = os.Chmod(bucketItemPath(dir, defaultBucketName, key.String()), os.FileMode(0000))
-	s.Nil(err, err)
-
-	b, err = client.Download(context.Background(), defaultBucketName, key)
-	s.Equal(ErrReadFile, err)
 	s.Nil(b)
 }
 
