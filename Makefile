@@ -29,10 +29,6 @@ INTEG_TEST_DIR=host
 INTEG_TEST_XDC_ROOT=./hostxdc
 INTEG_TEST_XDC_DIR=hostxdc
 
-ifndef EVENTSV2
-override EVENTSV2 = false
-endif
-
 define thriftrwrule
 THRIFTRW_GEN_SRC += $(THRIFT_GENDIR)/go/$1/$1.go
 
@@ -144,9 +140,9 @@ cover_integration_profile: clean bins_nothrift
 	@mkdir -p $(BUILD)
 	@echo "mode: atomic" > $(BUILD)/cover.out
 
-	@echo Running integration test with eventsV2 $(EVENTSV2)
+	@echo Running integration test with config $(TEST_CONFIG)
 	@mkdir -p $(BUILD)/$(INTEG_TEST_DIR)
-	@time go test $(INTEG_TEST_ROOT) $(TEST_ARG) -eventsV2=$(EVENTSV2) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_DIR)/coverage.out || exit 1;
+	@time go test $(INTEG_TEST_ROOT) $(TEST_ARG) -TestClusterConfigFile=$(TEST_CONFIG) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_DIR)/coverage.out || exit 1;
 	@cat $(BUILD)/$(INTEG_TEST_DIR)/coverage.out | grep -v "mode: atomic" >> $(BUILD)/cover.out
 
 cover_xdc_profile: clean bins_nothrift

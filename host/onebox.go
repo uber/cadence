@@ -66,9 +66,6 @@ const rpAppNamePrefix string = "cadence"
 const maxRpJoinTimeout = 30 * time.Second
 
 var (
-	// EnableEventsV2 indicates whether events v2 is enabled for integration tests
-	EnableEventsV2        = flag.Bool("eventsV2", false, "run integration tests with eventsV2")
-	frontendAddress       = flag.String("frontendAddress", "", "host:port for cadence frontend service")
 	TestClusterConfigFile = flag.String("TestClusterConfigFile", "", "test cluster config file location")
 )
 
