@@ -20,7 +20,7 @@ matrix:
   - go: "1.11.1"
     env:
       - TEST_SUITE=integration
-      - TEST_CONFIG="testdata/integrationtestclustereventsv2.yaml"
+      - TEST_CONFIG_FILE="testdata/integrationtestclustereventsv2.yaml"
   - go: "1.11.1"
     env:
       - TEST_SUITE=xdc
