@@ -47,6 +47,7 @@ type (
 		Nack()
 	}
 
+	// SequentialTaskPartitionID is the interface representing the ID of SequentialTask
 	SequentialTaskPartitionID interface {
 		PartitionID() interface{} // MUST be go primitive type or struct with primitive types
 		HashCode() uint32
