@@ -9,6 +9,8 @@ steps:
           run: unit-test
           config: docker/buildkite/docker-compose.yml
 
+  - wait
+
   - label: ":golang: integration test"
       agents:
         queue: "*"
@@ -18,6 +20,8 @@ steps:
         - docker-compose#v3.0.0:
             run: integration-test
             config: docker/buildkite/docker-compose.yml
+
+  - wait
 
   - label: ":golang: integration xdc test"
       agents:
