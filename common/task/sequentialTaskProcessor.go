@@ -37,6 +37,7 @@ type (
 		waitGroup    sync.WaitGroup
 
 		coroutineSize       int
+		taskBatchSize       int
 		coroutineTaskQueues map[int]chan SequentialTask
 		logger              bark.Logger
 	}
@@ -45,23 +46,19 @@ type (
 	SequentialTasks []SequentialTask
 )
 
-const (
-	coroutineTaskQueueSize           = 100
-	coroutineTaskProcessingBatchSize = 100
-)
-
 // NewSequentialTaskProcessor create a new sequential tasks processor
-func NewSequentialTaskProcessor(coroutineSize int, logger bark.Logger) SequentialTaskProcessor {
+func NewSequentialTaskProcessor(coroutineSize int, taskBatchSize int, logger bark.Logger) SequentialTaskProcessor {
 
 	coroutineTaskQueues := make(map[int]chan SequentialTask, coroutineSize)
 	for i := 0; i < coroutineSize; i++ {
-		coroutineTaskQueues[i] = make(chan SequentialTask, coroutineTaskQueueSize)
+		coroutineTaskQueues[i] = make(chan SequentialTask, taskBatchSize)
 	}
 
 	return &sequentialTaskProcessorImpl{
 		status:              common.DaemonStatusInitialized,
 		shutdownChan:        make(chan struct{}),
 		coroutineSize:       coroutineSize,
+		taskBatchSize:       taskBatchSize,
 		coroutineTaskQueues: coroutineTaskQueues,
 		logger:              logger,
 	}
@@ -134,7 +131,7 @@ func (t *sequentialTaskProcessorImpl) batchPollTaskQueue(coroutineTaskQueue chan
 	case task := <-coroutineTaskQueue:
 		indexTasks(task)
 	BufferLoop:
-		for i := 0; i < coroutineTaskProcessingBatchSize-1; i++ {
+		for i := 0; i < t.taskBatchSize-1; i++ {
 			select {
 			case <-t.shutdownChan:
 				return

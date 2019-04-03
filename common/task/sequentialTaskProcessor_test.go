@@ -57,6 +57,7 @@ func (s *SequentialTaskProcessorSuite) SetupTest() {
 	s.coroutineSize = 20
 	s.processor = NewSequentialTaskProcessor(
 		s.coroutineSize,
+		1000,
 		bark.NewNopLogger(),
 	)
 }

@@ -135,7 +135,11 @@ func (r *Replicator) Start() error {
 				currentClusterName, cluster, consumerName, r.client,
 				r.config, logger, r.metricsClient, r.domainReplicator,
 				historyRereplicator, r.historyClient,
-				task.NewSequentialTaskProcessor(r.config.ReplicatorTaskConcurrency(), logger),
+				task.NewSequentialTaskProcessor(
+					r.config.ReplicatorTaskConcurrency(),
+					r.config.ReplicatorMessageConcurrency(),
+					logger,
+				),
 			))
 		}
 	}
