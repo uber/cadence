@@ -2580,7 +2580,7 @@ func (e *historyEngineImpl) ScheduleDecisionTask(ctx context.Context, scheduleRe
 			}
 
 			cronBackoffDuration := msBuilder.GetCronBackoffDuration()
-			if msBuilder.GetNextEventID() == int64(2) && cronBackoffDuration != cron.NoBackoff {
+			if scheduleRequest.GetIsFirstDecision() && cronBackoffDuration != cron.NoBackoff {
 				postActions.timerTasks = append(postActions.timerTasks, &persistence.WorkflowBackoffTimerTask{
 					VisibilityTimestamp: time.Now().Add(cronBackoffDuration),
 					TimeoutType:         persistence.WorkflowBackoffTimeoutTypeCron,
