@@ -15,7 +15,7 @@ that the data needs to be stored in a third-party location until it's ready to b
 the activity. Further, the lifecycle of this activity requires management, and the activity 
 requires manual restart if it fails before acquiring the data.
 
-**Signals**, on the other hand, provides a fully asynch and durable mechanism for providing data to
+**Signals**, on the other hand, provide a fully async and durable mechanism for providing data to
 a running workflow. When a signal is received for a running workflow, Cadence persists the event 
 and the payload in the workflow history. The workflow can then process the signal at any time 
 afterwards without the risk of losing the information. The workflow also has the option to stop 

@@ -75,7 +75,7 @@ Let’s deconstruct the declaration above:
   **context.Context** is that the **Done()** function in **workflow.Context** returns 
   **workflow.Channel** instead the standard go **chan**.
 * The second **string** parameter is a custom workflow parameter that can be used to pass in data 
-  into the workflow on start. A workflow can have one or more such parameters. All parameters to an
+  into the workflow on start. A workflow can have one or more such parameters. All parameters to a
   workflow function must be serializable, which essentially means that params can’t be channels, 
   functions, variadic, or unsafe pointer.
 * Since it only declares error as the return value it means that the workflow does not return a 
@@ -108,8 +108,8 @@ A simplistic way to think about these requirements is that the workflow code is 
   (i.e. **workflow.GetLogger()**)
 * Workflow code should not iterate over maps using range as order of map iteration is randomized
 
-Now that we laid out the ground rules we can take a look at some of the and how to implement some 
-common patterns inside workflows.
+Now that we laid the ground rules we can take a look at some of the special functions and types 
+used for writing Cadence workflows and how to implement some common patterns.
 
 ### Special Cadence client library functions and types
 

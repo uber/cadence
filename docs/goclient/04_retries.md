@@ -1,5 +1,5 @@
 # Activity and Workflow Retries
-\
+
 Activities and workflows can fail due to various intermediate conditions. In those cases, we want
 to retry the failed activity or child workflow or even parent workflow. This can be easily achieved
 by supplying an optional retry policy. A retry policy looks like:
@@ -40,7 +40,7 @@ RetryPolicy struct {
 ```
 
 To enable retry, supply a custom retry policy to the ActivityOptions or ChildWorkflowOptions
-when execute them.
+when you execute them.
 
 ``` go
 expiration := time.Minute * 10
@@ -83,23 +83,23 @@ func SampleActivity(ctx context.Context, inputArg InputParams) error {
 }
 ```
 
-Like retry for activity, you need to supply a retry policy for ChildWorkflowOptions to enable
+Like retry for an activity, you need to supply a retry policy for ChildWorkflowOptions to enable
 retry for child workflow. To enable retry for a parent workflow, you supply a retry policy when
-start workflow via StartWorkflowOptions.
+you start a workflow via StartWorkflowOptions.
 
 There are some subtle changes to workflow's history events when RetryPolicy is used.
 For activity with RetryPolicy:
 
 * The ActivityTaskScheduledEvent will have extended ScheduleToStartTimeout and ScheduleToCloseTimeout. These 2 timeouts
-  will be overwrite by server to be as long as the RetryPolicy's ExpirationInterval. If the ExpirationInterval is not
-  specified it will be overwrite to workflow's timeout.
+  will be overwritten by the server to be as long as the RetryPolicy's ExpirationInterval. If the ExpirationInterval 
+  is not specified it will be overwritten to the workflow's timeout.
 * The ActivityTaskStartedEvent will not show up in history until the activity is completed or failed with no more retry.
   This is to avoid recording the ActivityTaskStarted event but later it failed and retried. Using DescribeWorkflowExecution
   API will return the PendingActivityInfo and it would contain attemptCount if it is retrying.
 
 For workflow with RetryPolicy:
 
-* If workflow failed and need a retry, the workflow execution will be closed with ContinueAsNew event. The event will
-  have ContinueAsNewInitiator set to RetryPolicy and the new RunID for next retry attempt.
+* If a workflow failed and needs to retry, the workflow execution will be closed with a ContinueAsNew event. The event 
+  will have the ContinueAsNewInitiator set to RetryPolicy and the new RunID for next retry attempt.
 * The new attempt will be created immediately. But the first decision task won't be scheduled until the backoff duration
   which is also recorded in the new run's WorkflowExecutionStartedEventAttributes event as firstDecisionTaskBackoffSeconds.
