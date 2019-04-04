@@ -164,7 +164,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow_Timeout() {
 					TaskList:                            &workflow.TaskList{Name: &tl},
 					Input:                               buf.Bytes(),
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1), // set timeout to 1
-					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 				},
 			}}, nil
 		}
@@ -244,7 +244,7 @@ func (s *integrationSuite) TestWorkflowContinueAsNew_TaskID() {
 		TaskList:                            taskList,
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 		Identity:                            common.StringPtr(identity),
 	}
 
@@ -270,7 +270,7 @@ func (s *integrationSuite) TestWorkflowContinueAsNew_TaskID() {
 					TaskList:                            taskList,
 					Input:                               nil,
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 				},
 			}}, nil
 		}
@@ -339,7 +339,7 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 		TaskList:                            taskList,
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 		Identity:                            common.StringPtr(identity),
 	}
 
