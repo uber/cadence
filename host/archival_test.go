@@ -45,8 +45,14 @@ func (s *integrationSuite) TestArchival() {
 	numRuns := 1
 	runID := s.startAndFinishWorkflow(workflowID, workflowType, taskList, s.archivalDomainName, numActivities, numRuns)[0]
 
-	s.validateHistoryArchived(s.archivalDomainName, workflowID, runID)
-	s.validateHistoryDeleted(s.getDomainID(s.archivalDomainName), workflowID, runID)
+	domainID := s.getDomainID(s.archivalDomainName)
+	execution := &workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(workflowID),
+		RunId:      common.StringPtr(runID),
+	}
+	s.True(s.isHistoryArchived(s.archivalDomainName, execution))
+	s.True(s.isHistoryDeleted(domainID, execution))
+	s.True(s.isMutatbleStateDeleted(domainID, execution))
 }
 
 func (s *integrationSuite) TestArchival_ContinueAsNew() {
@@ -61,8 +67,13 @@ func (s *integrationSuite) TestArchival_ContinueAsNew() {
 
 	domainID := s.getDomainID(s.archivalDomainName)
 	for _, runID := range runIDs {
-		s.validateHistoryArchived(s.archivalDomainName, workflowID, runID)
-		s.validateHistoryDeleted(domainID, workflowID, runID)
+		execution := &workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(workflowID),
+			RunId:      common.StringPtr(runID),
+		}
+		s.True(s.isHistoryArchived(s.archivalDomainName, execution))
+		s.True(s.isHistoryDeleted(domainID, execution))
+		s.True(s.isMutatbleStateDeleted(domainID, execution))
 	}
 }
 
@@ -74,57 +85,68 @@ func (s *integrationSuite) getDomainID(domain string) string {
 	return domainResp.DomainInfo.GetUUID()
 }
 
-func (s *integrationSuite) validateHistoryArchived(domain, workflowID, runID string) {
-	var getHistoryResp *workflow.GetWorkflowExecutionHistoryResponse
-	var err error
+func (s *integrationSuite) isHistoryArchived(domain string, execution *workflow.WorkflowExecution) bool {
+	request := &workflow.GetWorkflowExecutionHistoryRequest{
+		Domain:    common.StringPtr(s.archivalDomainName),
+		Execution: execution,
+	}
+
 	for i := 0; i < retryLimit; i++ {
-		getHistoryResp, err = s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
-			Domain: common.StringPtr(s.archivalDomainName),
-			Execution: &workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(workflowID),
-				RunId:      common.StringPtr(runID),
-			},
-		})
-		if getHistoryResp != nil && getHistoryResp.GetArchived() {
-			break
+		getHistoryResp, err := s.engine.GetWorkflowExecutionHistory(createContext(), request)
+		if err == nil && getHistoryResp != nil && getHistoryResp.GetArchived() {
+			return true
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
-	s.NoError(err)
-	s.NotNil(getHistoryResp)
-	s.True(getHistoryResp.GetArchived())
+	return false
 }
 
-func (s *integrationSuite) validateHistoryDeleted(domainID, workflowID, runID string) {
-	var err error
-	for i := 0; i < retryLimit; i++ {
-		if !s.testClusterConfig.EnableEventsV2 {
-			_, err = s.testCluster.testBase.HistoryMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
-				DomainID: domainID,
-				Execution: workflow.WorkflowExecution{
-					WorkflowId: common.StringPtr(workflowID),
-					RunId:      common.StringPtr(runID),
-				},
-				FirstEventID: common.FirstEventID,
-				NextEventID:  common.EndEventID,
-				PageSize:     1,
-			})
-		} else {
-			var resp *persistence.GetHistoryTreeResponse
-			resp, err = s.testCluster.testBase.HistoryV2Mgr.GetHistoryTree(&persistence.GetHistoryTreeRequest{
-				TreeID: runID,
-			})
-			s.Nil(err)
-			if len(resp.Branches) == 0 && len(resp.ForkingInProgressBranches) == 0 {
-				err = &workflow.EntityNotExistsError{}
-			}
+func (s *integrationSuite) isHistoryDeleted(domainID string, execution *workflow.WorkflowExecution) bool {
+	if !s.testClusterConfig.EnableEventsV2 {
+		request := &persistence.GetWorkflowExecutionHistoryRequest{
+			DomainID:     domainID,
+			Execution:    *execution,
+			FirstEventID: common.FirstEventID,
+			NextEventID:  common.EndEventID,
+			PageSize:     1,
 		}
-		if err != nil {
-			break
+		for i := 0; i < retryLimit; i++ {
+			_, err := s.testCluster.testBase.HistoryMgr.GetWorkflowExecutionHistory(request)
+			if _, ok := err.(*workflow.EntityNotExistsError); ok {
+				return true
+			}
+			time.Sleep(200 * time.Millisecond)
+		}
+		return false
+	}
+
+	request := &persistence.GetHistoryTreeRequest{
+		TreeID: execution.GetRunId(),
+	}
+	for i := 0; i < retryLimit; i++ {
+		resp, err := s.testCluster.testBase.HistoryV2Mgr.GetHistoryTree(request)
+		s.Nil(err)
+		if len(resp.Branches) == 0 && len(resp.ForkingInProgressBranches) == 0 {
+			return true
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
-	s.IsType(&workflow.EntityNotExistsError{}, err)
+	return false
+}
+
+func (s *integrationSuite) isMutatbleStateDeleted(domainID string, execution *workflow.WorkflowExecution) bool {
+	request := &persistence.GetWorkflowExecutionRequest{
+		DomainID:  domainID,
+		Execution: *execution,
+	}
+
+	for i := 0; i < retryLimit; i++ {
+		_, err := s.testCluster.testBase.ExecutionManager.GetWorkflowExecution(request)
+		if _, ok := err.(*workflow.EntityNotExistsError); ok {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *integrationSuite) startAndFinishWorkflow(id string, wt string, tl string, domain string, numActivities int, numRuns int) []string {
