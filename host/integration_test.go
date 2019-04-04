@@ -861,7 +861,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 		TaskList:                            taskList,
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
 		CronSchedule:                        common.StringPtr("@every 5s"), //minimum interval by standard spec is 1m (* * * * *), use non-standard descriptor for short interval for test
 	}
