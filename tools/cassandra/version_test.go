@@ -34,7 +34,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/host"
+	"github.com/uber/cadence/environment"
 )
 
 type (
@@ -182,7 +182,7 @@ func (s *VersionTestSuite) TestVerifyCompatibleVersion() {
 	})
 
 	defaultCfg := config.Cassandra{
-		Hosts:    host.GetCassandraAddress(),
+		Hosts:    environment.GetCassandraAddress(),
 		Port:     defaultCassandraPort,
 		User:     "",
 		Password: "",
@@ -220,7 +220,7 @@ func (s *VersionTestSuite) TestCheckCompatibleVersion() {
 }
 
 func (s *VersionTestSuite) createKeyspace(keyspace string) func() {
-	client, err := newCQLClient(host.GetCassandraAddress(), defaultCassandraPort, "", "", "system", defaultTimeout)
+	client, err := newCQLClient(environment.GetCassandraAddress(), defaultCassandraPort, "", "", "system", defaultTimeout)
 	s.NoError(err)
 
 	err = client.CreateKeyspace(keyspace, 1)
@@ -262,7 +262,7 @@ func (s *VersionTestSuite) runCheckCompatibleVersion(
 	}
 
 	cfg := config.Cassandra{
-		Hosts:    host.GetCassandraAddress(),
+		Hosts:    environment.GetCassandraAddress(),
 		Port:     defaultCassandraPort,
 		User:     "",
 		Password: "",

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2016 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,31 +18,41 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package host
+package environment
 
-import (
-	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
-	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
-	"github.com/uber/cadence/common"
-	"go.uber.org/yarpc"
-)
+import "os"
 
-// AdminClient is the interface exposed by admin service client
-type AdminClient interface {
-	adminserviceclient.Interface
+// SetupEnv setup the necessary env
+func SetupEnv() {
+	if os.Getenv("CASSANDRA_SEEDS") == "" {
+		err := os.Setenv("CASSANDRA_SEEDS", "127.0.0.1")
+		if err != nil {
+			panic("error setting env CASSANDRA_SEEDS")
+		}
+	}
+
+	if os.Getenv("KAFKA_SEEDS") == "" {
+		err := os.Setenv("KAFKA_SEEDS", "127.0.0.1")
+		if err != nil {
+			panic("error setting env KAFKA_SEEDS")
+		}
+	}
 }
 
-// FrontendClient is the interface exposed by frontend service client
-type FrontendClient interface {
-	workflowserviceclient.Interface
+// GetCassandraAddress return the cassandra address
+func GetCassandraAddress() string {
+	addr := os.Getenv("CASSANDRA_SEEDS")
+	if addr == "" {
+		addr = "127.0.0.1"
+	}
+	return addr
 }
 
-// NewAdminClient creates a client to cadence admin client
-func NewAdminClient(d *yarpc.Dispatcher) AdminClient {
-	return adminserviceclient.New(d.ClientConfig(common.FrontendServiceName))
-}
-
-// NewFrontendClient creates a client to cadence frontend client
-func NewFrontendClient(d *yarpc.Dispatcher) FrontendClient {
-	return workflowserviceclient.New(d.ClientConfig(common.FrontendServiceName))
+// GetKafkaAddr return the kafka address
+func GetKafkaAddr() string {
+	addr := os.Getenv("KAFKA_SEEDS")
+	if addr == "" {
+		addr = "127.0.0.1"
+	}
+	return addr
 }

@@ -31,7 +31,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
-	"github.com/uber/cadence/host"
+	"github.com/uber/cadence/environment"
 
 	"time"
 
@@ -62,7 +62,7 @@ func (s *CQLClientTestSuite) SetupSuite() {
 	rand := rand.New(rand.NewSource(time.Now().UnixNano()))
 	s.keyspace = fmt.Sprintf("cql_client_test_%v", rand.Int63())
 
-	client, err := newCQLClient(host.GetCassandraAddress(), defaultCassandraPort, "", "", "system", defaultTimeout)
+	client, err := newCQLClient(environment.GetCassandraAddress(), defaultCassandraPort, "", "", "system", defaultTimeout)
 	if err != nil {
 		log.Fatalf("error creating CQLClient, err=%v", err)
 	}
@@ -194,7 +194,7 @@ func (s *CQLClientTestSuite) testCreate(client CQLClient) {
 }
 
 func (s *CQLClientTestSuite) TestCQLClient() {
-	client, err := newCQLClient(host.GetCassandraAddress(), defaultCassandraPort, "", "", s.keyspace, defaultTimeout)
+	client, err := newCQLClient(environment.GetCassandraAddress(), defaultCassandraPort, "", "", s.keyspace, defaultTimeout)
 	s.Nil(err)
 	s.testCreate(client)
 	s.testUpdate(client)

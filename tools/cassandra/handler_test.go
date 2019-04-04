@@ -25,7 +25,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber/cadence/host"
+	"github.com/uber/cadence/environment"
 )
 
 type (
@@ -48,7 +48,7 @@ func (s *HandlerTestSuite) TestValidateSetupSchemaConfig() {
 	config := new(SetupSchemaConfig)
 	s.assertValidateSetupFails(config)
 
-	config.CassHosts = host.GetCassandraAddress()
+	config.CassHosts = environment.GetCassandraAddress()
 	s.assertValidateSetupFails(config)
 
 	config.CassKeyspace = "test-keyspace"
@@ -90,7 +90,7 @@ func (s *HandlerTestSuite) TestValidateUpdateSchemaConfig() {
 	config := new(UpdateSchemaConfig)
 	s.assertValidateUpdateFails(config)
 
-	config.CassHosts = host.GetCassandraAddress()
+	config.CassHosts = environment.GetCassandraAddress()
 	s.assertValidateUpdateFails(config)
 
 	config.CassKeyspace = "test-keyspace"
@@ -117,7 +117,7 @@ func (s *HandlerTestSuite) TestValidateUpdateSchemaConfig() {
 func (s *HandlerTestSuite) TestValidateCreateKeyspaceConfig() {
 	config := new(CreateKeyspaceConfig)
 	s.NotNil(validateCreateKeyspaceConfig(config))
-	config.CassHosts = host.GetCassandraAddress()
+	config.CassHosts = environment.GetCassandraAddress()
 	s.NotNil(validateCreateKeyspaceConfig(config))
 	config.CassKeyspace = "foobar"
 	s.Nil(validateCreateKeyspaceConfig(config))

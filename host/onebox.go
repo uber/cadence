@@ -28,6 +28,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/uber/cadence/environment"
+
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
@@ -325,7 +327,7 @@ func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup) {
 	params.DispatcherProvider = c.dispatcherProvider
 	params.MessagingClient = c.messagingClient
 	params.BlobstoreClient = c.blobstoreClient
-	cassandraConfig := config.Cassandra{Hosts: GetCassandraAddress()}
+	cassandraConfig := config.Cassandra{Hosts: environment.GetCassandraAddress()}
 	params.PersistenceConfig = config.Persistence{
 		NumHistoryShards: c.numberOfHistoryShards,
 		DefaultStore:     "test",
@@ -388,7 +390,7 @@ func (c *cadenceImpl) startHistory(rpHosts []string, startWG *sync.WaitGroup, en
 		params.ClusterMetadata = c.clusterMetadata
 		params.DispatcherProvider = c.dispatcherProvider
 		params.MessagingClient = c.messagingClient
-		cassandraConfig := config.Cassandra{Hosts: GetCassandraAddress()}
+		cassandraConfig := config.Cassandra{Hosts: environment.GetCassandraAddress()}
 		params.PersistenceConfig = config.Persistence{
 			NumHistoryShards: c.numberOfHistoryShards,
 			DefaultStore:     "test",
@@ -428,7 +430,7 @@ func (c *cadenceImpl) startMatching(rpHosts []string, startWG *sync.WaitGroup) {
 	params.RingpopFactory = newRingpopFactory(rpHosts)
 	params.ClusterMetadata = c.clusterMetadata
 	params.DispatcherProvider = c.dispatcherProvider
-	cassandraConfig := config.Cassandra{Hosts: GetCassandraAddress()}
+	cassandraConfig := config.Cassandra{Hosts: environment.GetCassandraAddress()}
 	params.PersistenceConfig = config.Persistence{
 		NumHistoryShards: c.numberOfHistoryShards,
 		DefaultStore:     "test",
@@ -461,7 +463,7 @@ func (c *cadenceImpl) startWorker(rpHosts []string, startWG *sync.WaitGroup) {
 	params.RingpopFactory = newRingpopFactory(rpHosts)
 	params.ClusterMetadata = c.clusterMetadata
 	params.DispatcherProvider = c.dispatcherProvider
-	cassandraConfig := config.Cassandra{Hosts: GetCassandraAddress()}
+	cassandraConfig := config.Cassandra{Hosts: environment.GetCassandraAddress()}
 	params.PersistenceConfig = config.Persistence{
 		NumHistoryShards: c.numberOfHistoryShards,
 		DefaultStore:     "test",

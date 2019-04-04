@@ -34,6 +34,7 @@ import (
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/environment"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/tchannel"
 	"gopkg.in/yaml.v2"
@@ -114,7 +115,7 @@ func (s *IntegrationBase) setupLogger() {
 
 // GetTestClusterConfig read test config
 func GetTestClusterConfig(configFile string) (*TestClusterConfig, error) {
-	SetupEnv()
+	environment.SetupEnv()
 
 	configLocation := configFile
 	if *TestClusterConfigFile != "" {
@@ -194,21 +195,4 @@ func (s *IntegrationBase) getHistory(domain string, execution *workflow.Workflow
 	}
 
 	return events
-}
-
-// SetupEnv setup the necessary env
-func SetupEnv() {
-	if os.Getenv("CASSANDRA_SEEDS") == "" {
-		err := os.Setenv("CASSANDRA_SEEDS", "127.0.0.1")
-		if err != nil {
-			panic("error setting env CASSANDRA_SEEDS")
-		}
-	}
-
-	if os.Getenv("KAFKA_SEEDS") == "" {
-		err := os.Setenv("KAFKA_SEEDS", "127.0.0.1")
-		if err != nil {
-			panic("error setting env KAFKA_SEEDS")
-		}
-	}
 }
