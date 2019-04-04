@@ -9,14 +9,38 @@ The Dockerfile is the same for both.
 To try out the build locally, start from the root folder of this repo 
 (cadence) and run the following commands.
 
-Build the container for integration tests:
+Build the container for 
+
+unit tests:
 ```bash
-docker-compose -f docker/buildkite/docker-compose-local.yml build integrationtest
+docker-compose -f docker/buildkite/docker-compose-local.yml build unit-test
+```
+
+integration tests:
+```bash
+docker-compose -f docker/buildkite/docker-compose-local.yml build integration-test
+```
+
+cross DC integration tests:
+```bash
+docker-compose -f docker/buildkite/docker-compose-local.yml build integration-test-xdc
 ```
 
 Run the integration tests:
+
+unit tests:
+```bash
+docker-compose -f docker/buildkite/docker-compose-local.yml run unit-test
 ```
-docker-compose -f docker/buildkite/docker-compose-local.yml run integrationtest /bin/sh -e -c 'make cover_integration_ci'
+
+integration tests:
+```bash
+docker-compose -f docker/buildkite/docker-compose-local.yml run integration-test
+```
+
+cross DC integration tests:
+```bash
+docker-compose -f docker/buildkite/docker-compose-local.yml run integration-test-xdc
 ```
 
 Note that BuildKite will run basically the same commands.
