@@ -1,7 +1,7 @@
 steps:
   - label: ":golang: unit test"
     agents:
-      queue: "*"
+      queue: "workers"
       docker: "*"
     command: "make cover_ci"
     plugins:
@@ -11,7 +11,7 @@ steps:
 
   - label: ":golang: integration test"
     agents:
-      queue: "*"
+      queue: "workers"
       docker: "*"
     command: "make cover_integration_ci"
     plugins:
@@ -21,7 +21,7 @@ steps:
 
   - label: ":golang: integration xdc test"
     agents:
-      queue: "*"
+      queue: "workers"
       docker: "*"
     command: "make cover_xdc_ci"
     plugins:
