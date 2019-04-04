@@ -716,11 +716,6 @@ Update_History_Loop:
 			}
 		}
 
-		err = failInFlightDecisionToClearBufferedEvents(msBuilder)
-		if err != nil {
-			return err
-		}
-
 		timeoutReason := getTimeoutErrorReason(workflow.TimeoutTypeStartToClose)
 		backoffInterval := msBuilder.GetRetryBackoffDuration(timeoutReason)
 		continueAsNewInitiator := workflow.ContinueAsNewInitiatorRetryPolicy
