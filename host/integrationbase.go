@@ -100,12 +100,11 @@ func (s *IntegrationBase) setupSuite(defaultClusterConfigFile string) {
 	}))
 
 	retentionDays = 0
-	archivalStatus := workflow.ArchivalStatusEnabled
 	s.archivalDomainName = s.randomizeStr("integration-archival-enabled-domain")
 	s.Require().NoError(s.testCluster.GetFrontendClient().RegisterDomain(createContext(), &workflow.RegisterDomainRequest{
 		Name:                                   &s.archivalDomainName,
 		WorkflowExecutionRetentionPeriodInDays: &retentionDays,
-		ArchivalStatus:                         &archivalStatus,
+		ArchivalStatus:                         common.ArchivalStatusPtr(workflow.ArchivalStatusEnabled),
 		ArchivalBucketName:                     &s.testCluster.blobstore.bucketName,
 	}))
 }
