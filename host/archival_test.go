@@ -33,7 +33,10 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
-const retryLimit = 10
+const (
+	retryLimit       = 10
+	retryBackoffTime = 200 * time.Millisecond
+)
 
 func (s *integrationSuite) TestArchival() {
 	s.Equal(cluster.ArchivalEnabled, s.testCluster.testBase.ClusterMetadata.ArchivalConfig().GetArchivalStatus())
@@ -52,7 +55,7 @@ func (s *integrationSuite) TestArchival() {
 	}
 	s.True(s.isHistoryArchived(s.archivalDomainName, execution))
 	s.True(s.isHistoryDeleted(domainID, execution))
-	s.True(s.isMutatbleStateDeleted(domainID, execution))
+	s.True(s.isMutableStateDeleted(domainID, execution))
 }
 
 func (s *integrationSuite) TestArchival_ContinueAsNew() {
@@ -73,7 +76,7 @@ func (s *integrationSuite) TestArchival_ContinueAsNew() {
 		}
 		s.True(s.isHistoryArchived(s.archivalDomainName, execution))
 		s.True(s.isHistoryDeleted(domainID, execution))
-		s.True(s.isMutatbleStateDeleted(domainID, execution))
+		s.True(s.isMutableStateDeleted(domainID, execution))
 	}
 }
 
@@ -96,7 +99,7 @@ func (s *integrationSuite) isHistoryArchived(domain string, execution *workflow.
 		if err == nil && getHistoryResp != nil && getHistoryResp.GetArchived() {
 			return true
 		}
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(retryBackoffTime)
 	}
 	return false
 }
@@ -115,7 +118,7 @@ func (s *integrationSuite) isHistoryDeleted(domainID string, execution *workflow
 			if _, ok := err.(*workflow.EntityNotExistsError); ok {
 				return true
 			}
-			time.Sleep(200 * time.Millisecond)
+			time.Sleep(retryBackoffTime)
 		}
 		return false
 	}
@@ -129,12 +132,12 @@ func (s *integrationSuite) isHistoryDeleted(domainID string, execution *workflow
 		if len(resp.Branches) == 0 && len(resp.ForkingInProgressBranches) == 0 {
 			return true
 		}
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(retryBackoffTime)
 	}
 	return false
 }
 
-func (s *integrationSuite) isMutatbleStateDeleted(domainID string, execution *workflow.WorkflowExecution) bool {
+func (s *integrationSuite) isMutableStateDeleted(domainID string, execution *workflow.WorkflowExecution) bool {
 	request := &persistence.GetWorkflowExecutionRequest{
 		DomainID:  domainID,
 		Execution: *execution,
@@ -145,6 +148,7 @@ func (s *integrationSuite) isMutatbleStateDeleted(domainID string, execution *wo
 		if _, ok := err.(*workflow.EntityNotExistsError); ok {
 			return true
 		}
+		time.Sleep(retryBackoffTime)
 	}
 	return false
 }
