@@ -215,7 +215,7 @@ Loop:
 			})
 		}
 
-		p.Logger.Infof("Completing Decision.  Decisions: %v", decisions)
+		p.Logger.Infof("Completing Decision.  Decisions: %v response.StartedEventId %v", decisions, common.Int64Default(response.StartedEventId))
 		if !respondStickyTaskList {
 			// non sticky tasklist
 			newTask, err := p.Engine.RespondDecisionTaskCompleted(createContext(), &workflow.RespondDecisionTaskCompletedRequest{
