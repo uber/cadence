@@ -25,6 +25,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/uber/cadence/environment"
+
 	"github.com/jmoiron/sqlx"
 
 	log "github.com/sirupsen/logrus"
@@ -33,11 +35,9 @@ import (
 )
 
 const (
-	testDefaultWorkflowClusterHosts = "127.0.0.1"
-	testDefaultPort                 = 3306
-	testUser                        = "uber"
-	testPassword                    = "uber"
-	testSchemaDir                   = "schema/mysql/v56"
+	testUser      = "uber"
+	testPassword  = "uber"
+	testSchemaDir = "schema/mysql/v56"
 )
 
 // TestCluster allows executing cassandra operations in testing.
@@ -54,13 +54,10 @@ func NewTestCluster(addr string, port int, dbName string, schemaDir string, driv
 		schemaDir = testSchemaDir
 	}
 	if addr == "" {
-		addr = os.Getenv("MYSQL_SEEDS")
-		if addr == "" {
-			addr = testDefaultWorkflowClusterHosts
-		}
+		addr = environment.GetMySQLAddress()
 	}
 	if port == 0 {
-		port = testDefaultPort
+		port = environment.GetMySQLPort()
 	}
 	if driverName == "" {
 		driverName = defaultDriverName

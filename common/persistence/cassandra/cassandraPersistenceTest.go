@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/uber/cadence/environment"
+
 	"github.com/gocql/gocql"
 	log "github.com/sirupsen/logrus"
 	"github.com/uber/cadence/common/logging"
@@ -32,11 +34,9 @@ import (
 )
 
 const (
-	testDefaultWorkflowClusterHosts = "127.0.0.1"
-	testDefaultPort                 = 9042
-	testUser                        = ""
-	testPassword                    = ""
-	testSchemaDir                   = "schema/cassandra/"
+	testUser      = ""
+	testPassword  = ""
+	testSchemaDir = "schema/cassandra/"
 )
 
 // TestCluster allows executing cassandra operations in testing.
@@ -54,13 +54,10 @@ func NewTestCluster(addr string, port int, keyspace string, schemaDir string) *T
 		schemaDir = testSchemaDir
 	}
 	if addr == "" {
-		addr = os.Getenv("CASSANDRA_SEEDS")
-		if addr == "" {
-			addr = testDefaultWorkflowClusterHosts
-		}
+		addr = environment.GetCassandraAddress()
 	}
 	if port == 0 {
-		port = testDefaultPort
+		port = environment.GetCassandraPort()
 	}
 	var result TestCluster
 	result.keyspace = keyspace
