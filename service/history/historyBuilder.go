@@ -207,8 +207,10 @@ func (b *historyBuilder) AddTimerStartedEvent(decisionCompletedEventID int64,
 	return b.addEventToHistory(event)
 }
 
-func (b *historyBuilder) AddTimerFiredEvent(startedEventID int64,
-	timerID string) *workflow.HistoryEvent {
+func (b *historyBuilder) AddTimerFiredEvent(
+	startedEventID int64,
+	timerID string,
+) *workflow.HistoryEvent {
 
 	attributes := &workflow.TimerFiredEventAttributes{}
 	attributes.TimerId = common.StringPtr(timerID)
@@ -218,6 +220,24 @@ func (b *historyBuilder) AddTimerFiredEvent(startedEventID int64,
 	event.TimerFiredEventAttributes = attributes
 
 	return b.addEventToHistory(event)
+}
+
+func (b *historyBuilder) CheckAndClearTimerFiredEvent(timerID string) bool {
+	// go over all history events. if we find a timer fired event for the given
+	// timerID, clear it
+	timerFiredIdx := -1
+	for idx, event := range b.history {
+		if *event.EventType == workflow.EventTypeTimerFired &&
+			*event.TimerFiredEventAttributes.TimerId == timerID {
+			timerFiredIdx = idx
+			break
+		}
+	}
+	if timerFiredIdx == -1 {
+		return false
+	}
+	b.removeHistoryAtIdx(timerFiredIdx)
+	return true
 }
 
 func (b *historyBuilder) AddActivityTaskCancelRequestedEvent(decisionCompletedEventID int64,
@@ -962,6 +982,16 @@ func (b *historyBuilder) newChildWorkflowExecutionTimedOutEvent(domain *string, 
 	historyEvent.ChildWorkflowExecutionTimedOutEventAttributes = attributes
 
 	return historyEvent
+}
+
+func (b *historyBuilder) removeHistoryAtIdx(removeIdx int) {
+	// these are buffered events without actual event IDs, so we do not need to
+	// do anything with the event IDs
+	for idx := removeIdx; idx < len(b.history)-1; idx++ {
+		b.history[idx] = b.history[idx+1]
+	}
+	// truncate last element in the slice
+	b.history = b.history[:len(b.history)-1]
 }
 
 func newDecisionTaskScheduledEventWithInfo(eventID, timestamp int64, taskList string, startToCloseTimeoutSeconds int32,

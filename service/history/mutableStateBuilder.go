@@ -2270,13 +2270,20 @@ func (e *mutableStateBuilder) ReplicateTimerFiredEvent(event *workflow.HistoryEv
 	e.DeleteUserTimer(timerID)
 }
 
-func (e *mutableStateBuilder) AddTimerCanceledEvent(decisionCompletedEventID int64,
-	attributes *workflow.CancelTimerDecisionAttributes, identity string) *workflow.HistoryEvent {
+func (e *mutableStateBuilder) AddTimerCanceledEvent(
+	decisionCompletedEventID int64,
+	attributes *workflow.CancelTimerDecisionAttributes,
+	identity string,
+) *workflow.HistoryEvent {
 	timerID := *attributes.TimerId
 	isTimerRunning, ti := e.GetUserTimer(timerID)
 	if !isTimerRunning {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionTimerCanceled, e.GetNextEventID(), fmt.Sprintf(
-			"{IsTimerRunning: %v, timerID: %v}", isTimerRunning, timerID))
+		// if timer is not running then check if it has fired in the mutable state.
+		// If so clear the timer from the mutable state.
+		if !e.hBuilder.CheckAndClearTimerFiredEvent(timerID) {
+			logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionTimerCanceled, e.GetNextEventID(), fmt.Sprintf(
+				"{IsTimerRunning: %v, timerID: %v}", isTimerRunning, timerID))
+		}
 		return nil
 	}
 
