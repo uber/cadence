@@ -287,7 +287,6 @@ func (e *mutableStateBuilder) FlushBufferedEvents() error {
 	var newBufferedEvents []*workflow.HistoryEvent
 	var newCommittedEvents []*workflow.HistoryEvent
 	for _, event := range e.hBuilder.history {
-		fmt.Printf("event type is %v\n", event.EventType)
 		if event.GetEventId() == common.BufferedEventID {
 			newBufferedEvents = append(newBufferedEvents, event)
 		} else {
@@ -457,7 +456,6 @@ func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates,
 	if e.updateBufferedEvents != nil {
 		e.bufferedEvents = append(e.bufferedEvents, e.updateBufferedEvents...)
 		e.updateBufferedEvents = nil
-		fmt.Printf("closed session!!!\n")
 	}
 	if len(e.bufferedEvents) > e.config.MaximumBufferedEventsBatch() {
 		return nil, ErrBufferedEventsLimitExceeded
@@ -538,19 +536,7 @@ func checkAndClearTimerFiredEvent(events []*workflow.HistoryEvent, timerID strin
 	if timerFiredIdx == -1 {
 		return events, nil
 	}
-	timerFiredEvent := events[timerFiredIdx]
-	events = removeHistoryAtIdx(events, timerFiredIdx)
-	return events, timerFiredEvent
-}
-
-func removeHistoryAtIdx(events []*workflow.HistoryEvent, removeIdx int) []*workflow.HistoryEvent {
-	// these are buffered events without actual event IDs, so we do not need to
-	// do anything with the event IDs
-	for idx := removeIdx; idx < len(events)-1; idx++ {
-		events[idx] = events[idx+1]
-	}
-	// truncate last element in the slice
-	return events[:len(events)-1]
+	return append(events[:timerFiredIdx], events[timerFiredIdx+1:]...), events[timerFiredIdx]
 }
 
 func convertUpdateActivityInfos(inputs map[*persistence.ActivityInfo]struct{}) []*persistence.ActivityInfo {
