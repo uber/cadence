@@ -10,6 +10,20 @@ services:
         aliases:
           - cassandra
 
+  mysql:
+    image: mysql:5.7
+    environment:
+      MYSQL_DATABASE: db
+      MYSQL_ROOT_PASSWORD: uber
+    volumes:
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    ports:
+      - "3306:3306"
+    networks:
+      services-network:
+        aliases:
+          - mysql
+
   zookeeper:
     image: wurstmeister/zookeeper:3.4.6
     ports:
@@ -51,8 +65,10 @@ services:
       - "7939:7939"
     environment:
       - "CASSANDRA_SEEDS=cassandra"
+      - "MYSQL_SEEDS=mysql"
     depends_on:
       - cassandra
+      - mysql
     volumes:
       - ../../:/go/src/github.com/uber/cadence
     networks:
