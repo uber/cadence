@@ -64,7 +64,7 @@ func (s *SetupSchemaTestSuite) SetupSuite() {
 	s.log = bark.NewLoggerFromLogrus(log.New())
 	s.rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 	s.keyspace = fmt.Sprintf("setup_schema_test_%v", s.rand.Int63())
-
+	os.Setenv("CASSANDRA_HOST", environment.GetCassandraAddress())
 	client, err := newCQLClient(environment.GetCassandraAddress(), defaultCassandraPort, "", "", "system", defaultTimeout)
 	if err != nil {
 		s.log.Fatal("Error creating CQLClient")
