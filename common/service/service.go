@@ -214,6 +214,10 @@ func (h *serviceImpl) Stop() {
 		h.membershipMonitor.Stop()
 	}
 
+	if h.membershipFactory != nil {
+		h.membershipFactory.DestroyMembershipMonitor()
+	}
+
 	if h.dispatcher != nil {
 		h.dispatcher.Stop()
 	}
