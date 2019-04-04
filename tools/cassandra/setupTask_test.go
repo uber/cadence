@@ -22,18 +22,21 @@ package cassandra
 
 import (
 	"fmt"
-	"github.com/gocql/gocql"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
 	"math/rand"
 	"testing"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/gocql/gocql"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+	"github.com/uber-common/bark"
+	"github.com/uber/cadence/host"
+
 	"io/ioutil"
 	"os"
 	"strconv"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type (
@@ -61,7 +64,7 @@ func (s *SetupSchemaTestSuite) SetupSuite() {
 	s.rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 	s.keyspace = fmt.Sprintf("setup_schema_test_%v", s.rand.Int63())
 
-	client, err := newCQLClient("127.0.0.1", defaultCassandraPort, "", "", "system", defaultTimeout)
+	client, err := newCQLClient(host.GetCassandraAddress(), defaultCassandraPort, "", "", "system", defaultTimeout)
 	if err != nil {
 		s.log.Fatal("Error creating CQLClient")
 	}
@@ -87,7 +90,7 @@ func (s *SetupSchemaTestSuite) TestCreateKeyspace() {
 
 func (s *SetupSchemaTestSuite) TestSetupSchema() {
 
-	client, err := newCQLClient("127.0.0.1", defaultCassandraPort, "", "", s.keyspace, defaultTimeout)
+	client, err := newCQLClient(host.GetCassandraAddress(), defaultCassandraPort, "", "", s.keyspace, defaultTimeout)
 	s.Nil(err)
 
 	// test command fails without required arguments
