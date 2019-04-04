@@ -1126,7 +1126,7 @@ func (s *integrationSuite) TestActivityCancellation() {
 		T:               s.T(),
 	}
 
-	_, err := poller.PollAndProcessDecisionTask(false, false)
+	_, err := poller.PollAndProcessDecisionTask(true, false)
 	s.True(err == nil || err == matching.ErrNoTasks, err)
 
 	cancelCh := make(chan struct{})

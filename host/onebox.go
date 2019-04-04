@@ -66,6 +66,7 @@ const rpAppNamePrefix string = "cadence"
 const maxRpJoinTimeout = 30 * time.Second
 
 var (
+	// TestClusterConfigFile overrides the cluster config for running test.
 	TestClusterConfigFile = flag.String("TestClusterConfigFile", "", "test cluster config file location")
 )
 
