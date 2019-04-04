@@ -509,7 +509,6 @@ func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, s
 		c.blobstoreClient.IsRetryableError)
 	workerConfig := worker.NewConfig(dynamicconfig.NewNopCollection())
 	workerConfig.ArchiverConfig.ArchiverConcurrency = dynamicconfig.GetIntPropertyFn(10)
-	// TODO: change the target blob size here to a small value.
 	bc := &archiver.BootstrapContainer{
 		PublicClient:     publicClient,
 		MetricsClient:    service.GetMetricsClient(),
