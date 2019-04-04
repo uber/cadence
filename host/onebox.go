@@ -28,8 +28,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/uber/cadence/environment"
-
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
@@ -50,6 +48,7 @@ import (
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/service/frontend"
 	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"

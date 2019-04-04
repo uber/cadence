@@ -22,22 +22,19 @@ package cassandra
 
 import (
 	"fmt"
+	"io/ioutil"
 	"math/rand"
+	"os"
+	"strconv"
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/environment"
-
 	"github.com/gocql/gocql"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
-
-	"io/ioutil"
-	"os"
-	"strconv"
-
-	log "github.com/sirupsen/logrus"
+	"github.com/uber/cadence/environment"
 )
 
 type (

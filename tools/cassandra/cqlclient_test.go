@@ -26,16 +26,14 @@ import (
 	"math/rand"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/gocql/gocql"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/environment"
-
-	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type (

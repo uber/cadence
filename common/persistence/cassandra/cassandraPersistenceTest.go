@@ -25,12 +25,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/uber/cadence/environment"
-
 	"github.com/gocql/gocql"
 	log "github.com/sirupsen/logrus"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/environment"
 )
 
 const (
