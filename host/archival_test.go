@@ -30,10 +30,13 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/persistence"
 )
 
+const retryLimit = 10
+
 func (s *integrationSuite) TestArchival() {
-	s.Equal(cluster.ArchivalEnabled, s.ClusterMetadata.ArchivalConfig().GetArchivalStatus())
+	s.Equal(cluster.ArchivalEnabled, s.testCluster.testBase.ClusterMetadata.ArchivalConfig().GetArchivalStatus())
 
 	workflowID := "archival-workflow-id"
 	workflowType := "archival-workflow-type"
@@ -42,17 +45,46 @@ func (s *integrationSuite) TestArchival() {
 	numRuns := 1
 	runID := s.startAndFinishWorkflow(workflowID, workflowType, taskList, s.archivalDomainName, numActivities, numRuns)[0]
 
-	getHistoryReq := &workflow.GetWorkflowExecutionHistoryRequest{
-		Domain: common.StringPtr(s.archivalDomainName),
-		Execution: &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
-		},
+	s.validateHistoryArchived(s.archivalDomainName, workflowID, runID)
+	s.validateHistoryDeleted(s.getDomainID(s.archivalDomainName), workflowID, runID)
+}
+
+func (s *integrationSuite) TestArchival_ContinueAsNew() {
+	s.Equal(cluster.ArchivalEnabled, s.testCluster.testBase.ClusterMetadata.ArchivalConfig().GetArchivalStatus())
+
+	workflowID := "archival-continueAsNew-workflow-id"
+	workflowType := "archival-continueAsNew-workflow-type"
+	taskList := "archival-continueAsNew-task-list"
+	numActivities := 1
+	numRuns := 5
+	runIDs := s.startAndFinishWorkflow(workflowID, workflowType, taskList, s.archivalDomainName, numActivities, numRuns)
+
+	domainID := s.getDomainID(s.archivalDomainName)
+	for _, runID := range runIDs {
+		s.validateHistoryArchived(s.archivalDomainName, workflowID, runID)
+		s.validateHistoryDeleted(domainID, workflowID, runID)
 	}
+}
+
+func (s *integrationSuite) getDomainID(domain string) string {
+	domainResp, err := s.engine.DescribeDomain(createContext(), &workflow.DescribeDomainRequest{
+		Name: common.StringPtr(s.archivalDomainName),
+	})
+	s.Nil(err)
+	return domainResp.DomainInfo.GetUUID()
+}
+
+func (s *integrationSuite) validateHistoryArchived(domain, workflowID, runID string) {
 	var getHistoryResp *workflow.GetWorkflowExecutionHistoryResponse
 	var err error
-	for i := 0; i < 10; i++ {
-		getHistoryResp, err = s.engine.GetWorkflowExecutionHistory(createContext(), getHistoryReq)
+	for i := 0; i < retryLimit; i++ {
+		getHistoryResp, err = s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
+			Domain: common.StringPtr(s.archivalDomainName),
+			Execution: &workflow.WorkflowExecution{
+				WorkflowId: common.StringPtr(workflowID),
+				RunId:      common.StringPtr(runID),
+			},
+		})
 		if getHistoryResp != nil && getHistoryResp.GetArchived() {
 			break
 		}
@@ -63,40 +95,36 @@ func (s *integrationSuite) TestArchival() {
 	s.True(getHistoryResp.GetArchived())
 }
 
-func (s *integrationSuite) TestArchival_ContinueAsNew() {
-	s.Equal(cluster.ArchivalEnabled, s.ClusterMetadata.ArchivalConfig().GetArchivalStatus())
-
-	workflowID := "archival-continueAsNew-workflow-id"
-	workflowType := "archival-continueAsNew-workflow-type"
-	taskList := "archival-continueAsNew-task-list"
-	numActivities := 1
-	numRuns := 5
-	runIDs := s.startAndFinishWorkflow(workflowID, workflowType, taskList, s.archivalDomainName, numActivities, numRuns)
-
-	getHistory := func(workflowID, runID string) (*workflow.GetWorkflowExecutionHistoryResponse, error) {
-		return s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
-			Domain: common.StringPtr(s.archivalDomainName),
-			Execution: &workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(workflowID),
-				RunId:      common.StringPtr(runID),
-			},
-		})
-	}
-
-	for _, runID := range runIDs {
-		var getHistoryResp *workflow.GetWorkflowExecutionHistoryResponse
-		var err error
-		for i := 0; i < 10; i++ {
-			getHistoryResp, err = getHistory(workflowID, runID)
-			if getHistoryResp != nil && getHistoryResp.GetArchived() {
-				break
+func (s *integrationSuite) validateHistoryDeleted(domainID, workflowID, runID string) {
+	var err error
+	for i := 0; i < retryLimit; i++ {
+		if !s.testClusterConfig.EnableEventsV2 {
+			_, err = s.testCluster.testBase.HistoryMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
+				DomainID: domainID,
+				Execution: workflow.WorkflowExecution{
+					WorkflowId: common.StringPtr(workflowID),
+					RunId:      common.StringPtr(runID),
+				},
+				FirstEventID: common.FirstEventID,
+				NextEventID:  common.EndEventID,
+				PageSize:     1,
+			})
+		} else {
+			var resp *persistence.GetHistoryTreeResponse
+			resp, err = s.testCluster.testBase.HistoryV2Mgr.GetHistoryTree(&persistence.GetHistoryTreeRequest{
+				TreeID: runID,
+			})
+			s.Nil(err)
+			if len(resp.Branches) == 0 && len(resp.ForkingInProgressBranches) == 0 {
+				err = &workflow.EntityNotExistsError{}
 			}
-			time.Sleep(200 * time.Millisecond)
 		}
-		s.NoError(err)
-		s.NotNil(getHistoryResp)
-		s.True(getHistoryResp.GetArchived())
+		if err != nil {
+			break
+		}
+		time.Sleep(200 * time.Millisecond)
 	}
+	s.IsType(&workflow.EntityNotExistsError{}, err)
 }
 
 func (s *integrationSuite) startAndFinishWorkflow(id string, wt string, tl string, domain string, numActivities int, numRuns int) []string {

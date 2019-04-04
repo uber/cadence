@@ -106,7 +106,7 @@ func NewCluster(options *TestClusterConfig, logger bark.Logger) (*TestCluster, e
 		EnableWorker:                  options.EnableWorker,
 		EnableEventsV2:                options.EnableEventsV2,
 		EnableVisibilityToKafka:       false,
-		EnableReadHistoryFromArchival: true, //options.PersistOptions.EnableArchival
+		EnableReadHistoryFromArchival: options.EnableArchival,
 		Blobstore:                     blobstore.client,
 	}
 	cluster := NewCadence(cadenceParams)
