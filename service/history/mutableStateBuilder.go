@@ -287,6 +287,7 @@ func (e *mutableStateBuilder) FlushBufferedEvents() error {
 	var newBufferedEvents []*workflow.HistoryEvent
 	var newCommittedEvents []*workflow.HistoryEvent
 	for _, event := range e.hBuilder.history {
+		fmt.Printf("event type is %v\n", event.EventType)
 		if event.GetEventId() == common.BufferedEventID {
 			newBufferedEvents = append(newBufferedEvents, event)
 		} else {
@@ -320,7 +321,6 @@ func (e *mutableStateBuilder) FlushBufferedEvents() error {
 
 	// no decision in-flight, flush all buffered events to committed bucket
 	if !e.HasInFlightDecisionTask() {
-
 		// flush persisted buffered events
 		reorderFunc(e.bufferedEvents)
 
@@ -457,6 +457,7 @@ func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates,
 	if e.updateBufferedEvents != nil {
 		e.bufferedEvents = append(e.bufferedEvents, e.updateBufferedEvents...)
 		e.updateBufferedEvents = nil
+		fmt.Printf("closed session!!!\n")
 	}
 	if len(e.bufferedEvents) > e.config.MaximumBufferedEventsBatch() {
 		return nil, ErrBufferedEventsLimitExceeded
@@ -511,6 +512,45 @@ func (e *mutableStateBuilder) CreateReplicationTask(newRunEventStoreVersion int3
 		NewRunBranchToken:       newRunBranchToken,
 	}
 	return t
+}
+
+func (e *mutableStateBuilder) checkAndClearTimerFiredEvent(timerID string) *workflow.HistoryEvent {
+	var timerEvent *workflow.HistoryEvent
+	e.bufferedEvents, timerEvent = checkAndClearTimerFiredEvent(e.bufferedEvents, timerID)
+	if timerEvent != nil {
+		return timerEvent
+	}
+	e.hBuilder.history, timerEvent = checkAndClearTimerFiredEvent(e.hBuilder.history, timerID)
+	return timerEvent
+}
+
+func checkAndClearTimerFiredEvent(events []*workflow.HistoryEvent, timerID string) ([]*workflow.HistoryEvent, *workflow.HistoryEvent) {
+	// go over all history events. if we find a timer fired event for the given
+	// timerID, clear it
+	timerFiredIdx := -1
+	for idx, event := range events {
+		if *event.EventType == workflow.EventTypeTimerFired &&
+			*event.TimerFiredEventAttributes.TimerId == timerID {
+			timerFiredIdx = idx
+			break
+		}
+	}
+	if timerFiredIdx == -1 {
+		return events, nil
+	}
+	timerFiredEvent := events[timerFiredIdx]
+	events = removeHistoryAtIdx(events, timerFiredIdx)
+	return events, timerFiredEvent
+}
+
+func removeHistoryAtIdx(events []*workflow.HistoryEvent, removeIdx int) []*workflow.HistoryEvent {
+	// these are buffered events without actual event IDs, so we do not need to
+	// do anything with the event IDs
+	for idx := removeIdx; idx < len(events)-1; idx++ {
+		events[idx] = events[idx+1]
+	}
+	// truncate last element in the slice
+	return events[:len(events)-1]
 }
 
 func convertUpdateActivityInfos(inputs map[*persistence.ActivityInfo]struct{}) []*persistence.ActivityInfo {
@@ -1140,7 +1180,7 @@ func (e *mutableStateBuilder) GetInFlightDecisionTask() (*decisionInfo, bool) {
 }
 
 func (e *mutableStateBuilder) HasBufferedEvents() bool {
-	if len(e.bufferedEvents) > 0 || e.updateBufferedEvents != nil {
+	if len(e.bufferedEvents) > 0 || len(e.updateBufferedEvents) > 0 {
 		return true
 	}
 
@@ -2275,20 +2315,26 @@ func (e *mutableStateBuilder) AddTimerCanceledEvent(
 	attributes *workflow.CancelTimerDecisionAttributes,
 	identity string,
 ) *workflow.HistoryEvent {
+	var timerStartedID int64
 	timerID := *attributes.TimerId
 	isTimerRunning, ti := e.GetUserTimer(timerID)
 	if !isTimerRunning {
 		// if timer is not running then check if it has fired in the mutable state.
-		// If so clear the timer from the mutable state.
-		if !e.hBuilder.CheckAndClearTimerFiredEvent(timerID) {
+		// If so clear the timer from the mutable state. We need to check both the
+		// bufferedEvents and the history builder
+		timerFiredEvent := e.checkAndClearTimerFiredEvent(timerID)
+		if timerFiredEvent == nil {
 			logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionTimerCanceled, e.GetNextEventID(), fmt.Sprintf(
 				"{IsTimerRunning: %v, timerID: %v}", isTimerRunning, timerID))
+			return nil
 		}
-		return nil
+		timerStartedID = *timerFiredEvent.TimerFiredEventAttributes.StartedEventId
+	} else {
+		timerStartedID = ti.StartedID
 	}
 
 	// Timer is running.
-	event := e.hBuilder.AddTimerCanceledEvent(ti.StartedID, decisionCompletedEventID, timerID, identity)
+	event := e.hBuilder.AddTimerCanceledEvent(timerStartedID, decisionCompletedEventID, timerID, identity)
 	e.ReplicateTimerCanceledEvent(event)
 
 	return event
