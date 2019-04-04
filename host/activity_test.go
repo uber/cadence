@@ -1127,10 +1127,6 @@ func (s *integrationSuite) TestActivityCancellation() {
 	}
 
 	_, err := poller.PollAndProcessDecisionTask(false, false)
-	s.printWorkflowHistory(s.domainName, &workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(id),
-		RunId:      common.StringPtr(we.GetRunId()),
-	})
 	s.True(err == nil || err == matching.ErrNoTasks, err)
 
 	cancelCh := make(chan struct{})
