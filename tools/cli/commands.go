@@ -21,6 +21,7 @@
 package cli
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -28,6 +29,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"runtime/debug"
 	"strconv"
@@ -1287,6 +1289,266 @@ func ResetWorkflow(c *cli.Context) {
 		ErrorAndExit("reset failed", err)
 	}
 	prettyPrintJSONObject(resp)
+}
+
+func processFixLuna(c *cli.Context, domain string, wes chan shared.WorkflowExecution) {
+	for {
+		select {
+		case we := <-wes:
+			fmt.Println("received: ", we.GetWorkflowId(), we.GetRunId())
+			//doFixLuna(c, domain, we.GetWorkflowId(), we.GetRunId())
+			wid := we.GetWorkflowId()
+			rid := we.GetRunId()
+			var err error
+			for i := 0; i < 3; i++ {
+				err = doFixLuna(c, domain, wid, rid)
+				if err == nil {
+					break
+				}
+				fmt.Println("failed and retry...: ", wid, rid, err)
+				time.Sleep(time.Millisecond * time.Duration(rand.Intn(2000)))
+			}
+			if err != nil {
+				fmt.Println("[ERROR] failed processing: ", wid, rid)
+			}
+		}
+	}
+}
+
+func VerifyLunaInBatch(c *cli.Context) {
+	domain := getRequiredGlobalOption(c, FlagDomain)
+	inFile := getRequiredOption(c, FlagInputFile)
+	separator := getRequiredOption(c, FlagInputSeparator)
+
+	file, err := os.Open(inFile)
+	if err != nil {
+		ErrorAndExit("Open failed", err)
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	idx := 0
+	for scanner.Scan() {
+		idx++
+		line := strings.TrimSpace(scanner.Text())
+		if len(line) == 0 {
+			fmt.Printf("line %v is empty, skipped\n", idx)
+			continue
+		}
+		cols := strings.Split(line, separator)
+		if len(cols) < 2 {
+			ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 2 cols separated by comma, only %v ", idx, len(cols)))
+		}
+		fmt.Printf("Start processing line %v ...\n", idx)
+		wid := strings.TrimSpace(cols[0])
+		rid := strings.TrimSpace(cols[1])
+
+		ctx, cancel := newContext(c)
+		defer cancel()
+
+		frontendClient := cFactory.ServerFrontendClient(c)
+		resp, err := frontendClient.DescribeWorkflowExecution(ctx, &shared.DescribeWorkflowExecutionRequest{
+			Domain: common.StringPtr(domain),
+			Execution: &shared.WorkflowExecution{
+				WorkflowId: common.StringPtr(wid),
+				RunId:      common.StringPtr(rid),
+			},
+		})
+		if err != nil {
+			fmt.Println("failed to desc, ", wid, rid, err)
+		} else {
+			if resp.WorkflowExecutionInfo.CloseStatus != nil && resp.WorkflowExecutionInfo.CloseTime != nil {
+				fmt.Println("terminate succ, ", wid, rid)
+			} else {
+				fmt.Println("terminate fail, ", wid, rid)
+			}
+		}
+		time.Sleep(time.Millisecond * 10)
+	}
+}
+
+func FixLunaInBatch(c *cli.Context) {
+	domain := getRequiredGlobalOption(c, FlagDomain)
+	inFile := getRequiredOption(c, FlagInputFile)
+	inFile2 := getRequiredOption(c, FlagInputFile2)
+	separator := getRequiredOption(c, FlagInputSeparator)
+	parallel := c.Int(FlagParallism)
+
+	wes := make(chan shared.WorkflowExecution)
+	for i := 0; i < parallel; i++ {
+		go processFixLuna(c, domain, wes)
+	}
+
+	// read exclude
+	file2, err := os.Open(inFile2)
+	if err != nil {
+		ErrorAndExit("Open failed2", err)
+	}
+	defer file2.Close()
+	scanner := bufio.NewScanner(file2)
+	idx := 0
+	excludes := map[string]string{}
+	for scanner.Scan() {
+		idx++
+		line := strings.TrimSpace(scanner.Text())
+		if len(line) == 0 {
+			fmt.Printf("line %v is empty, skipped\n", idx)
+			continue
+		}
+		cols := strings.Split(line, separator)
+		if len(cols) < 1 {
+			ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 2 cols separated by comma, only %v ", idx, len(cols)))
+		}
+		wid := strings.TrimSpace(cols[0])
+		rid := "not-needed"
+		excludes[wid] = rid
+	}
+
+	fmt.Println("num of excludes:", len(excludes))
+
+	file, err := os.Open(inFile)
+	if err != nil {
+		ErrorAndExit("Open failed", err)
+	}
+	defer file.Close()
+	scanner = bufio.NewScanner(file)
+	idx = 0
+	for scanner.Scan() {
+		idx++
+		line := strings.TrimSpace(scanner.Text())
+		if len(line) == 0 {
+			fmt.Printf("line %v is empty, skipped\n", idx)
+			continue
+		}
+		cols := strings.Split(line, separator)
+		if len(cols) < 2 {
+			ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 2 cols separated by comma, only %v ", idx, len(cols)))
+		}
+		fmt.Printf("Start processing line %v ...\n", idx)
+		wid := strings.TrimSpace(cols[0])
+		rid := strings.TrimSpace(cols[1])
+
+		_, ok := excludes[wid]
+		if ok {
+			fmt.Println("already processed, skip: ", wid, rid)
+			continue
+		}
+
+		wes <- shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(wid),
+			RunId:      common.StringPtr(rid),
+		}
+	}
+
+	fmt.Println("sleep wait for all goroutines...")
+	time.Sleep(time.Second * 60 * 50)
+}
+
+// CompleteActivity completes an activity
+func FixLuna(c *cli.Context) {
+	domain := getRequiredGlobalOption(c, FlagDomain)
+	wid := getRequiredOption(c, FlagWorkflowID)
+	rid := getRequiredOption(c, FlagRunID)
+
+	doFixLuna(c, domain, wid, rid)
+}
+
+func printErrorAndReturn(msg string, err error) error {
+	fmt.Println(msg)
+	return err
+}
+
+func doFixLuna(c *cli.Context, domain, wid, rid string) error {
+	ctx, cancel := newContext(c)
+	defer cancel()
+
+	frontendClient := cFactory.ServerFrontendClient(c)
+	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &shared.DescribeWorkflowExecutionRequest{
+		Domain: common.StringPtr(domain),
+		Execution: &shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(wid),
+		},
+	})
+	if err != nil {
+		return printErrorAndReturn("DescribeWorkflowExecution failed", err)
+	}
+
+	currentRunID := resp.WorkflowExecutionInfo.Execution.GetRunId()
+	if currentRunID == rid {
+		fmt.Println("current run is the reset run: ", wid, rid)
+		//return nil
+	}
+
+	skipOpen := c.Bool(FlagSkipCurrent)
+	if resp.WorkflowExecutionInfo.CloseStatus == nil || resp.WorkflowExecutionInfo.CloseTime == nil {
+		if skipOpen {
+			fmt.Println("current run is open: ", wid, rid)
+			//skip and not terminate current if open
+			return nil
+		} else {
+			// terminate current
+			err := frontendClient.TerminateWorkflowExecution(ctx, &shared.TerminateWorkflowExecutionRequest{
+				Domain: common.StringPtr(domain),
+				WorkflowExecution: &shared.WorkflowExecution{
+					WorkflowId: common.StringPtr(wid),
+					RunId:      common.StringPtr(currentRunID),
+				},
+				Reason:   common.StringPtr("fix bad deployment"),
+				Identity: common.StringPtr("longer"),
+			})
+			if err != nil {
+				return printErrorAndReturn("TerminateWorkflowExecution failed, need retry...", err)
+			} else {
+				fmt.Println("terminate wid, rid,", wid, currentRunID)
+				time.Sleep(time.Second * 10)
+			}
+		}
+	}
+
+	req := &shared.GetWorkflowExecutionHistoryRequest{
+		Domain: common.StringPtr(domain),
+		Execution: &shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(wid),
+			RunId:      common.StringPtr(rid),
+		},
+		MaximumPageSize: common.Int32Ptr(1000),
+		NextPageToken:   nil,
+	}
+
+	lastDecisionFinishID := int64(0)
+	for {
+		resp, err := frontendClient.GetWorkflowExecutionHistory(ctx, req)
+		if err != nil {
+			return printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
+		}
+		for _, e := range resp.GetHistory().GetEvents() {
+			if e.GetEventType() == shared.EventTypeDecisionTaskCompleted {
+				lastDecisionFinishID = e.GetEventId()
+			}
+		}
+		if len(resp.NextPageToken) != 0 {
+			req.NextPageToken = resp.NextPageToken
+		} else {
+			break
+		}
+	}
+	fmt.Println("lastDecisionFinishID:", wid, rid, lastDecisionFinishID)
+
+	resp2, err := frontendClient.ResetWorkflowExecution(ctx, &shared.ResetWorkflowExecutionRequest{
+		Domain: common.StringPtr(domain),
+		WorkflowExecution: &shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(wid),
+			RunId:      common.StringPtr(rid),
+		},
+		DecisionFinishEventId: common.Int64Ptr(lastDecisionFinishID),
+		RequestId:             common.StringPtr(uuid.New()),
+		Reason:                common.StringPtr("reset to fix bad deployment"),
+	})
+
+	if err != nil {
+		return printErrorAndReturn("ResetWorkflowExecution failed", err)
+	}
+	fmt.Println("new runID for wid/rid is ,", wid, rid, resp2.GetRunId())
+	return nil
 }
 
 // CompleteActivity completes an activity

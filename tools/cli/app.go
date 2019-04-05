@@ -20,7 +20,9 @@
 
 package cli
 
-import "github.com/urfave/cli"
+import (
+	"github.com/urfave/cli"
+)
 
 const (
 	// Version is the controlled version string. It should be updated every time
@@ -54,6 +56,70 @@ func NewCliApp() *cli.App {
 		},
 	}
 	app.Commands = []cli.Command{
+		{
+			Name:  "luna",
+			Usage: "fix luna",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagWorkflowIDWithAlias,
+					Usage: "WorkflowID",
+				},
+				cli.StringFlag{
+					Name:  FlagRunIDWithAlias,
+					Usage: "RunID",
+				},
+			},
+			Action: func(c *cli.Context) {
+				FixLuna(c)
+			},
+		},
+		{
+			Name:  "luna-batch",
+			Usage: "fix luna in batch",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagInputFileWithAlias,
+					Usage: "Input file to use for resetting",
+				},
+				cli.StringFlag{
+					Name:  FlagInputFile2,
+					Usage: "Another input file to use for excluding from resetting",
+				},
+				cli.StringFlag{
+					Name:  FlagInputSeparator,
+					Usage: "Separator for input file",
+				},
+				cli.IntFlag{
+					Name:  FlagParallism,
+					Value: 1,
+					Usage: "batch in parallel",
+				},
+				cli.BoolFlag{
+					Name:  FlagSkipCurrent,
+					Usage: "skip current open",
+				},
+			},
+			Action: func(c *cli.Context) {
+				FixLunaInBatch(c)
+			},
+		},
+		{
+			Name:  "luna-verify",
+			Usage: "verify luna in batch",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagInputFileWithAlias,
+					Usage: "Input file to use",
+				},
+				cli.StringFlag{
+					Name:  FlagInputSeparator,
+					Usage: "Separator for input file",
+				},
+			},
+			Action: func(c *cli.Context) {
+				VerifyLunaInBatch(c)
+			},
+		},
 		{
 			Name:        "domain",
 			Aliases:     []string{"d"},
