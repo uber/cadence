@@ -25,6 +25,8 @@ import (
 
 	"time"
 
+	"log"
+
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/client/public"
@@ -100,7 +102,7 @@ func New(params *BootstrapParams) *Scanner {
 	cfg.Persistence.SetMaxQPS(cfg.Persistence.DefaultStore, cfg.PersistenceMaxQPS())
 	zapLogger, err := zap.NewProduction()
 	if err != nil {
-		zapLogger = zap.NewNop()
+		log.Fatalf("failed to initialize zap logger: %v", err)
 	}
 	return &Scanner{
 		context: scannerContext{
@@ -136,7 +138,11 @@ func (s *Scanner) startWorkflowWithRetry() error {
 	policy := backoff.NewExponentialRetryPolicy(time.Second)
 	policy.SetMaximumInterval(time.Minute)
 	policy.SetExpirationInterval(backoff.NoInterval)
-	return backoff.Retry(func() error { return s.startWorkflow(client) }, policy, func(err error) bool { return true })
+	return backoff.Retry(func() error {
+		return s.startWorkflow(client)
+	}, policy, func(err error) bool {
+		return true
+	})
 }
 
 func (s *Scanner) startWorkflow(client cclient.Client) error {

@@ -27,7 +27,12 @@ import (
 
 	"sync/atomic"
 
+	"sync"
+
 	"github.com/stretchr/testify/suite"
+	"github.com/uber-go/tally"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/metrics"
 )
 
 type (
@@ -45,17 +50,22 @@ func TestExecutionTestSuite(t *testing.T) {
 }
 
 func (s *ExecutorTestSuite) TestStartStop() {
-	e := NewFixedSizePoolExecutor(4)
+	e := NewFixedSizePoolExecutor(
+		4, 4, metrics.NewClient(tally.NoopScope, metrics.Worker), metrics.TaskListScavengerScope)
 	e.Start()
 	e.Stop()
 }
 
 func (s *ExecutorTestSuite) TestTaskExecution() {
-	e := NewFixedSizePoolExecutor(32)
+	e := NewFixedSizePoolExecutor(
+		32, 100, metrics.NewClient(tally.NoopScope, metrics.Worker), metrics.TaskListScavengerScope)
 	e.Start()
 	var runCounter int64
+	var startWG sync.WaitGroup
 	for i := 0; i < 5; i++ {
+		startWG.Add(1)
 		go func() {
+			defer startWG.Done()
 			for i := 0; i < 20; i++ {
 				if i%2 == 0 {
 					e.Submit(&testTask{TaskStatusDefer, &runCounter})
@@ -65,6 +75,7 @@ func (s *ExecutorTestSuite) TestTaskExecution() {
 			}
 		}()
 	}
+	s.True(common.AwaitWaitGroup(&startWG, time.Second*10))
 	s.True(s.awaitCompletion(e))
 	s.Equal(int64(150), runCounter)
 	e.Stop()

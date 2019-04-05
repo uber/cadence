@@ -66,6 +66,7 @@ func (rq *runQueue) addAndDefer(task Task) {
 // if there are no active tasks in runq, a task
 // from deferredQ is returned
 func (rq *runQueue) remove() (Task, bool) {
+	// Give 1st priority to taskQ -if there are no more tasks, handout tasks from deferredQ
 	select {
 	case job, ok := <-rq.tasks:
 		if !ok {
@@ -77,6 +78,8 @@ func (rq *runQueue) remove() (Task, bool) {
 			return task.Value.(Task), true
 		}
 	}
+	// at this point, there are no tasks either in taskQ or deferredQ
+	// simply block on taskQ until we have tasks
 	select {
 	case job, ok := <-rq.tasks:
 		if !ok {
@@ -86,6 +89,10 @@ func (rq *runQueue) remove() (Task, bool) {
 	case <-rq.stopC:
 		return nil, false
 	}
+}
+
+func (rq *runQueue) deferredCount() int {
+	return rq.deferredTasks.len()
 }
 
 // newThreadSafeList returns a new thread safe linked list

@@ -40,7 +40,7 @@ const (
 	maxConcurrentDecisionTaskExecutionSize = 10
 
 	scannerWFCronSchedule                 = "0 7 * * *"
-	scannerWFExecutionStartToCloseTimeout = 22 * time.Hour
+	scannerWFExecutionStartToCloseTimeout = 23 * time.Hour
 
 	scannerWFTaskListName         = "cadence-sys-scanner-tasklist-0"
 	scannerWFName                 = "cadence-sys-scanner-workflow"
@@ -52,12 +52,15 @@ var (
 	scavengerHBInterval = 10 * time.Second
 )
 
-var scannerWFRetryPolicy = cadence.RetryPolicy{
-	InitialInterval:    10 * time.Second,
-	BackoffCoefficient: 1.7,
-	MaximumInterval:    5 * time.Minute,
-	ExpirationInterval: 20 * time.Hour, // after 20 hours, give up and wait for next run of cron
-}
+var (
+	scannerWFRetryPolicy = cadence.RetryPolicy{
+		InitialInterval:    10 * time.Second,
+		BackoffCoefficient: 1.7,
+		MaximumInterval:    5 * time.Minute,
+		ExpirationInterval: 20 * time.Hour, // after 20 hours, give up and wait for next run of cron
+	}
+	scannerActivityRetryPolicy = scannerWFRetryPolicy
+)
 
 func init() {
 	workflow.RegisterWithOptions(Workflow, workflow.RegisterOptions{Name: scannerWFName})
@@ -68,8 +71,9 @@ func init() {
 func Workflow(ctx workflow.Context) error {
 	opts := workflow.ActivityOptions{
 		ScheduleToStartTimeout: 5 * time.Minute,
-		StartToCloseTimeout:    2 * 24 * time.Hour,
+		StartToCloseTimeout:    23 * time.Hour,
 		HeartbeatTimeout:       5 * time.Minute,
+		RetryPolicy:            &scannerActivityRetryPolicy,
 	}
 	future := workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, opts), taskListScavengerActivityName)
 	future.Get(ctx, nil)

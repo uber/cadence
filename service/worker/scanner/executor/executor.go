@@ -23,6 +23,9 @@ package executor
 import (
 	"sync"
 	"sync/atomic"
+
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/metrics"
 )
 
 type (
@@ -45,16 +48,17 @@ type (
 		TaskCount() int64
 	}
 
-	// fixedPoolExecutor is an implemenation of an executor that uses fixes size
+	// fixedPoolExecutor is an implementation of an executor that uses fixed size
 	// goroutine pool. This executor also supports deferred execution of tasks
 	// for fairness
 	fixedPoolExecutor struct {
 		size        int
+		maxDeferred int
 		runQ        *runQueue
 		outstanding int64
-		running     int32
-		startOnce   sync.Once
-		stopOnce    sync.Once
+		status      int32
+		metrics     metrics.Client
+		metricScope int
 		stopC       chan struct{}
 		stopWG      sync.WaitGroup
 	}
@@ -77,41 +81,48 @@ const (
 // to be deferred for fairness. To defer processing of a task, simply return TaskStatsDefer
 // from your task.Run method. When a task is deferred, it will be added to the tail of a
 // deferredTaskQ which in turn will be processed after the current runQ is drained
-func NewFixedSizePoolExecutor(size int) Executor {
+func NewFixedSizePoolExecutor(size int, maxDeferred int, metrics metrics.Client, scope int) Executor {
 	stopC := make(chan struct{})
 	return &fixedPoolExecutor{
-		size:  size,
-		runQ:  newRunQueue(size, stopC),
-		stopC: stopC,
+		size:        size,
+		maxDeferred: maxDeferred,
+		runQ:        newRunQueue(size, stopC),
+		metrics:     metrics,
+		metricScope: scope,
+		stopC:       stopC,
 	}
 }
 
 // Start starts the executor
 func (e *fixedPoolExecutor) Start() {
-	e.startOnce.Do(func() {
-		atomic.StoreInt32(&e.running, 1)
-		for i := 0; i < e.size; i++ {
-			e.stopWG.Add(1)
-			go e.worker()
-		}
-	})
+	if !atomic.CompareAndSwapInt32(&e.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+		return
+	}
+	for i := 0; i < e.size; i++ {
+		e.stopWG.Add(1)
+		go e.worker()
+	}
 }
 
 // Stop stops the executor
 func (e *fixedPoolExecutor) Stop() {
-	if e.alive() {
-		e.stopOnce.Do(func() {
-			close(e.stopC)
-			atomic.StoreInt32(&e.running, 0)
-			e.stopWG.Wait()
-		})
+	if !atomic.CompareAndSwapInt32(&e.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
+		return
 	}
+	close(e.stopC)
+	e.stopWG.Wait()
 }
 
 // Submit is a blocking call that accepts a task for execution
 func (e *fixedPoolExecutor) Submit(task Task) bool {
-	atomic.AddInt64(&e.outstanding, 1)
-	return e.runQ.add(task)
+	if !e.alive() {
+		return false
+	}
+	added := e.runQ.add(task)
+	if added {
+		atomic.AddInt64(&e.outstanding, 1)
+	}
+	return added
 }
 
 // TaskCount returns the total of number of tasks currently outstanding
@@ -128,13 +139,17 @@ func (e *fixedPoolExecutor) worker() {
 		}
 		status := task.Run()
 		if status == TaskStatusDefer {
-			e.runQ.addAndDefer(task)
-			continue
+			if e.runQ.deferredCount() < e.maxDeferred {
+				e.runQ.addAndDefer(task)
+				e.metrics.IncCounter(e.metricScope, metrics.ExecutorTasksDeferredCount)
+				continue
+			}
+			e.metrics.IncCounter(e.metricScope, metrics.ExecutorTasksDroppedCount)
 		}
 		atomic.AddInt64(&e.outstanding, -1)
 	}
 }
 
 func (e *fixedPoolExecutor) alive() bool {
-	return atomic.LoadInt32(&e.running) == 1
+	return atomic.LoadInt32(&e.status) == common.DaemonStatusStarted
 }
