@@ -43,12 +43,6 @@ import (
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
-const (
-	testWorkflowClusterHosts = "127.0.0.1"
-	testDatacenter           = ""
-	testSchemaDir            = "../.."
-)
-
 var (
 	testDomainActiveID           = "7b3fe0f6-e98f-4960-bdb7-220d0fb3f521"
 	testDomainStandbyID          = "ede1e8a6-bdb7-e98f-4960-448b0cdef134"
@@ -522,18 +516,6 @@ func NewDynamicConfigForEventsV2Test() *Config {
 	config := NewConfig(dc, 1, false, cconfig.StoreTypeCassandra)
 	config.EnableEventsV2 = dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableEventsV2, true)
 	return config
-}
-
-// SetupWorkflowStoreWithOptions to setup workflow test base
-func (s *TestBase) SetupWorkflowStoreWithOptions(options persistencetests.TestBaseOptions) {
-	s.TestBase = persistencetests.NewTestBaseWithCassandra(&persistencetests.TestBaseOptions{})
-	s.TestBase.Setup()
-	log := bark.NewLoggerFromLogrus(log.New())
-	config := NewDynamicConfigForTest()
-	clusterMetadata := cluster.GetTestClusterMetadata(options.EnableGlobalDomain, options.IsMasterCluster, options.EnableArchival)
-	s.ShardContext = newTestShardContext(s.ShardInfo, 0, s.HistoryMgr, s.HistoryV2Mgr, s.ExecutionManager, s.MetadataManager, s.MetadataManagerV2,
-		clusterMetadata, nil, config, log)
-	s.TestBase.TaskIDGenerator = s.ShardContext
 }
 
 // SetupWorkflowStore to setup workflow test base

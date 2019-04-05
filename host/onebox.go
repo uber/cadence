@@ -22,7 +22,6 @@ package host
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"reflect"
 	"sync"
@@ -65,13 +64,6 @@ import (
 const rpAppNamePrefix string = "cadence"
 const maxRpJoinTimeout = 30 * time.Second
 
-var (
-	// EnableEventsV2 indicates whether events v2 is enabled for integration tests
-	EnableEventsV2        = flag.Bool("eventsV2", false, "run integration tests with eventsV2")
-	frontendAddress       = flag.String("frontendAddress", "", "host:port for cadence frontend service")
-	TestClusterConfigFile = flag.String("TestClusterConfigFile", "", "test cluster config file location")
-)
-
 // Cadence hosts all of cadence services in one process
 type Cadence interface {
 	Start() error
@@ -84,6 +76,7 @@ type Cadence interface {
 
 type (
 	cadenceImpl struct {
+		initLock                      sync.Mutex
 		adminHandler                  *frontend.AdminHandler
 		frontendHandler               *frontend.WorkflowHandler
 		matchingHandler               *matching.Handler
@@ -92,6 +85,7 @@ type (
 		numberOfHistoryHosts          int
 		logger                        bark.Logger
 		clusterMetadata               cluster.Metadata
+		persistenceConfig             config.Persistence
 		dispatcherProvider            client.DispatcherProvider
 		messagingClient               messaging.Client
 		metadataMgr                   persistence.MetadataManager
@@ -118,6 +112,7 @@ type (
 	// CadenceParams contains everything needed to boostrap Cadence
 	CadenceParams struct {
 		ClusterMetadata               cluster.Metadata
+		PersistenceConfig             config.Persistence
 		DispatcherProvider            client.DispatcherProvider
 		MessagingClient               messaging.Client
 		MetadataMgr                   persistence.MetadataManager
@@ -152,6 +147,7 @@ func NewCadence(params *CadenceParams) Cadence {
 		numberOfHistoryHosts:          params.NumberOfHistoryHosts,
 		logger:                        params.Logger,
 		clusterMetadata:               params.ClusterMetadata,
+		persistenceConfig:             params.PersistenceConfig,
 		dispatcherProvider:            params.DispatcherProvider,
 		messagingClient:               params.MessagingClient,
 		metadataMgr:                   params.MetadataMgr,
@@ -324,13 +320,7 @@ func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup) {
 	params.DispatcherProvider = c.dispatcherProvider
 	params.MessagingClient = c.messagingClient
 	params.BlobstoreClient = c.blobstoreClient
-	cassandraConfig := config.Cassandra{Hosts: "127.0.0.1"}
-	params.PersistenceConfig = config.Persistence{
-		NumHistoryShards: c.numberOfHistoryShards,
-		DefaultStore:     "test",
-		VisibilityStore:  "test",
-		DataStores:       map[string]config.DataStore{"test": {Cassandra: &cassandraConfig}},
-	}
+	params.PersistenceConfig = c.persistenceConfig
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 	params.DynamicConfig = dynamicconfig.NewNopClient()
 
@@ -347,6 +337,7 @@ func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup) {
 		kafkaProducer.(*mocks.KafkaProducer).On("Publish", mock.Anything).Return(nil)
 	}
 
+	c.initLock.Lock()
 	c.frontEndService = service.New(params)
 	c.adminHandler = frontend.NewAdminHandler(
 		c.frontEndService, c.numberOfHistoryShards, c.metadataMgr, c.historyMgr, c.historyV2Mgr)
@@ -364,6 +355,8 @@ func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup) {
 	if err != nil {
 		c.logger.WithField("error", err).Fatal("Failed to start admin")
 	}
+	c.initLock.Unlock()
+
 	startWG.Done()
 	<-c.shutdownCh
 	c.shutdownWG.Done()
@@ -384,15 +377,11 @@ func (c *cadenceImpl) startHistory(rpHosts []string, startWG *sync.WaitGroup, en
 		params.ClusterMetadata = c.clusterMetadata
 		params.DispatcherProvider = c.dispatcherProvider
 		params.MessagingClient = c.messagingClient
-		cassandraConfig := config.Cassandra{Hosts: "127.0.0.1"}
-		params.PersistenceConfig = config.Persistence{
-			NumHistoryShards: c.numberOfHistoryShards,
-			DefaultStore:     "test",
-			VisibilityStore:  "test",
-			DataStores:       map[string]config.DataStore{"test": {Cassandra: &cassandraConfig}},
-		}
+		params.PersistenceConfig = c.persistenceConfig
 		params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 		params.DynamicConfig = dynamicconfig.NewNopClient()
+
+		c.initLock.Lock()
 		service := service.New(params)
 		historyConfig := history.NewConfig(dynamicconfig.NewNopCollection(), c.numberOfHistoryShards, c.enableVisibilityToKafka, config.StoreTypeCassandra)
 		historyConfig.HistoryMgrNumConns = dynamicconfig.GetIntPropertyFn(c.numberOfHistoryShards)
@@ -401,6 +390,8 @@ func (c *cadenceImpl) startHistory(rpHosts []string, startWG *sync.WaitGroup, en
 		handler := history.NewHandler(service, historyConfig, c.shardMgr, c.metadataMgr,
 			c.visibilityMgr, c.historyMgr, c.historyV2Mgr, c.executionMgrFactory)
 		handler.Start()
+		c.initLock.Unlock()
+
 		c.historyHandlers = append(c.historyHandlers, handler)
 	}
 	startWG.Done()
@@ -420,20 +411,18 @@ func (c *cadenceImpl) startMatching(rpHosts []string, startWG *sync.WaitGroup) {
 	params.RingpopFactory = newRingpopFactory(rpHosts)
 	params.ClusterMetadata = c.clusterMetadata
 	params.DispatcherProvider = c.dispatcherProvider
-	cassandraConfig := config.Cassandra{Hosts: "127.0.0.1"}
-	params.PersistenceConfig = config.Persistence{
-		NumHistoryShards: c.numberOfHistoryShards,
-		DefaultStore:     "test",
-		VisibilityStore:  "test",
-		DataStores:       map[string]config.DataStore{"test": {Cassandra: &cassandraConfig}},
-	}
+	params.PersistenceConfig = c.persistenceConfig
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 	params.DynamicConfig = dynamicconfig.NewNopClient()
+
+	c.initLock.Lock()
 	service := service.New(params)
 	c.matchingHandler = matching.NewHandler(
 		service, matching.NewConfig(dynamicconfig.NewNopCollection()), c.taskMgr, c.metadataMgr,
 	)
 	c.matchingHandler.Start()
+	c.initLock.Unlock()
+
 	startWG.Done()
 	<-c.shutdownCh
 	c.shutdownWG.Done()
@@ -449,15 +438,11 @@ func (c *cadenceImpl) startWorker(rpHosts []string, startWG *sync.WaitGroup) {
 	params.RingpopFactory = newRingpopFactory(rpHosts)
 	params.ClusterMetadata = c.clusterMetadata
 	params.DispatcherProvider = c.dispatcherProvider
-	cassandraConfig := config.Cassandra{Hosts: "127.0.0.1"}
-	params.PersistenceConfig = config.Persistence{
-		NumHistoryShards: c.numberOfHistoryShards,
-		DefaultStore:     "test",
-		VisibilityStore:  "test",
-		DataStores:       map[string]config.DataStore{"test": {Cassandra: &cassandraConfig}},
-	}
+	params.PersistenceConfig = c.persistenceConfig
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 	params.DynamicConfig = dynamicconfig.NewNopClient()
+
+	c.initLock.Lock()
 	service := service.New(params)
 	service.Start()
 
@@ -470,6 +455,7 @@ func (c *cadenceImpl) startWorker(rpHosts []string, startWG *sync.WaitGroup) {
 	clientWorkerDomainCache := cache.NewDomainCache(metadataProxyManager, params.ClusterMetadata, service.GetMetricsClient(), service.GetLogger())
 	clientWorkerDomainCache.Start()
 	c.startWorkerClientWorker(params, service, clientWorkerDomainCache)
+	c.initLock.Unlock()
 
 	startWG.Done()
 	<-c.shutdownCh
