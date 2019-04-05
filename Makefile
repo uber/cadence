@@ -33,6 +33,10 @@ ifndef EVENTSV2
 override EVENTSV2 = false
 endif
 
+ifndef STORE_TYPE
+override STORE_TYPE = cassandra
+endif
+
 define thriftrwrule
 THRIFTRW_GEN_SRC += $(THRIFT_GENDIR)/go/$1/$1.go
 
@@ -146,7 +150,7 @@ cover_integration_profile: clean bins_nothrift
 
 	@echo Running integration test with eventsV2 $(EVENTSV2)
 	@mkdir -p $(BUILD)/$(INTEG_TEST_DIR)
-	@time go test $(INTEG_TEST_ROOT) $(TEST_ARG) -eventsV2=$(EVENTSV2) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_DIR)/coverage.out || exit 1;
+	@time go test $(INTEG_TEST_ROOT) $(TEST_ARG) -eventsV2=$(EVENTSV2) -persistenceType=$(STORE_TYPE) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_DIR)/coverage.out || exit 1;
 	@cat $(BUILD)/$(INTEG_TEST_DIR)/coverage.out | grep -v "mode: atomic" >> $(BUILD)/cover.out
 
 cover_xdc_profile: clean bins_nothrift
@@ -155,7 +159,7 @@ cover_xdc_profile: clean bins_nothrift
 
 	@echo Running integration test for cross dc
 	@mkdir -p $(BUILD)/$(INTEG_TEST_XDC_DIR)
-	@time go test $(INTEG_TEST_XDC_ROOT) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_XDC_DIR)/coverage.out || exit 1;
+	@time go test $(INTEG_TEST_XDC_ROOT) -persistenceType=$(STORE_TYPE) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_XDC_DIR)/coverage.out || exit 1;
 	@cat $(BUILD)/$(INTEG_TEST_XDC_DIR)/coverage.out | grep -v "mode: atomic" >> $(BUILD)/cover.out
 
 cover: cover_profile
