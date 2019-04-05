@@ -31,10 +31,12 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/tokenbucket"
 )
 
 type (
@@ -59,7 +61,7 @@ type (
 		processor     processor
 		logger        bark.Logger
 		metricsClient metrics.Client
-		rateLimiter   common.TokenBucket // Read rate limiter
+		rateLimiter   tokenbucket.TokenBucket // Read rate limiter
 		ackMgr        queueAckMgr
 		retryPolicy   backoff.RetryPolicy
 
@@ -78,7 +80,8 @@ type (
 var (
 	errUnexpectedQueueTask = errors.New("unexpected queue task")
 
-	loadQueueTaskThrottleRetryDelay = 5 * time.Second
+	loadDomainEntryForQueueTaskRetryDelay = 100 * time.Millisecond
+	loadQueueTaskThrottleRetryDelay       = 5 * time.Second
 )
 
 func newQueueProcessorBase(clusterName string, shard ShardContext, options *QueueProcessorOptions, processor processor, queueAckMgr queueAckMgr, logger bark.Logger) *queueProcessorBase {
@@ -92,7 +95,7 @@ func newQueueProcessorBase(clusterName string, shard ShardContext, options *Queu
 		shard:                   shard,
 		options:                 options,
 		processor:               processor,
-		rateLimiter:             common.NewTokenBucket(options.MaxPollRPS(), common.NewRealTimeSource()),
+		rateLimiter:             tokenbucket.New(options.MaxPollRPS(), clock.NewRealTimeSource()),
 		workerNotificationChans: workerNotificationChans,
 		status:                  common.DaemonStatusInitialized,
 		notifyCh:                make(chan struct{}, 1),
@@ -301,7 +304,7 @@ FilterLoop:
 				break FilterLoop
 			}
 			incAttempt()
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(loadDomainEntryForQueueTaskRetryDelay)
 		}
 	}
 
@@ -317,7 +320,6 @@ FilterLoop:
 			return true
 		}
 	}
-	defer func() { p.metricsClient.RecordTimer(scope, metrics.TaskLatency, time.Since(startTime)) }()
 
 	for {
 		select {
@@ -327,8 +329,7 @@ FilterLoop:
 		default:
 			err = backoff.Retry(op, p.retryPolicy, retryCondition)
 			if err == nil {
-				p.metricsClient.RecordTimer(scope, metrics.TaskAttemptTimer, time.Duration(attempt))
-				p.ackTaskOnce(task, scope)
+				p.ackTaskOnce(task, scope, shouldProcessTask, startTime, attempt)
 				return
 			}
 			incAttempt()
@@ -344,9 +345,10 @@ func (p *queueProcessorBase) processTaskOnce(notificationChan <-chan struct{}, t
 
 	startTime := time.Now()
 	scope, err := p.processor.process(task, shouldProcessTask)
-	p.metricsClient.IncCounter(scope, metrics.TaskRequests)
-	p.metricsClient.RecordTimer(scope, metrics.TaskProcessingLatency, time.Since(startTime))
-
+	if shouldProcessTask {
+		p.metricsClient.IncCounter(scope, metrics.TaskRequests)
+		p.metricsClient.RecordTimer(scope, metrics.TaskProcessingLatency, time.Since(startTime))
+	}
 	return scope, err
 }
 
@@ -400,13 +402,17 @@ func (p *queueProcessorBase) handleTaskError(scope int, startTime time.Time,
 	return err
 }
 
-func (p *queueProcessorBase) ackTaskOnce(task queueTaskInfo, scope int) {
+func (p *queueProcessorBase) ackTaskOnce(task queueTaskInfo, scope int, reportMetrics bool, startTime time.Time, attempt int) {
 	p.ackMgr.completeQueueTask(task.GetTaskID())
-	p.metricsClient.RecordTimer(
-		scope,
-		metrics.TaskQueueLatency,
-		time.Since(task.GetVisibilityTimestamp()),
-	)
+	if reportMetrics {
+		p.metricsClient.RecordTimer(scope, metrics.TaskAttemptTimer, time.Duration(attempt))
+		p.metricsClient.RecordTimer(scope, metrics.TaskLatency, time.Since(startTime))
+		p.metricsClient.RecordTimer(
+			scope,
+			metrics.TaskQueueLatency,
+			time.Since(task.GetVisibilityTimestamp()),
+		)
+	}
 }
 
 func (p *queueProcessorBase) initializeLoggerForTask(task queueTaskInfo) bark.Logger {

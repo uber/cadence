@@ -20,60 +20,50 @@
 
 package metrics
 
-import "github.com/uber-go/tally"
+import (
+	"time"
 
-type cachedMetricScope struct {
-	tally.Scope
-	counters map[string]tally.Counter
-	timers   map[string]tally.Timer
-	gauges   map[string]tally.Gauge
+	"github.com/uber-go/tally"
+)
+
+type metricsScope struct {
+	scope tally.Scope
+	defs  map[int]metricDefinition
 }
 
-func newScope(scope tally.Scope, metricDefs map[MetricName]MetricType) tally.Scope {
-	s := &cachedMetricScope{
-		Scope:    scope,
-		counters: make(map[string]tally.Counter),
-		timers:   make(map[string]tally.Timer),
-		gauges:   make(map[string]tally.Gauge),
-	}
-
-	for name, t := range metricDefs {
-		switch t {
-		case Counter:
-			s.counters[string(name)] = s.Scope.Counter(string(name))
-		case Timer:
-			s.timers[string(name)] = s.Scope.Timer(string(name))
-		case Gauge:
-			s.gauges[string(name)] = s.Scope.Gauge(string(name))
-		}
-	}
-
-	return s
+func newMetricsScope(scope tally.Scope, defs map[int]metricDefinition) Scope {
+	return &metricsScope{scope, defs}
 }
 
-func (s *cachedMetricScope) Counter(name string) tally.Counter {
-	counter, ok := s.counters[name]
-	if !ok {
-		// this is not a cached metric. Fall back to tally
-		counter = s.Scope.Counter(name)
-	}
-	return counter
+func (m *metricsScope) IncCounter(id int) {
+	name := string(m.defs[id].metricName)
+	m.scope.Counter(name).Inc(1)
 }
 
-func (s *cachedMetricScope) Timer(name string) tally.Timer {
-	timer, ok := s.timers[name]
-	if !ok {
-		// this is not a cached metric. Fall back to tally
-		timer = s.Scope.Timer(name)
-	}
-	return timer
+func (m *metricsScope) AddCounter(id int, delta int64) {
+	name := string(m.defs[id].metricName)
+	m.scope.Counter(name).Inc(delta)
 }
 
-func (s *cachedMetricScope) Gauge(name string) tally.Gauge {
-	gauge, ok := s.gauges[name]
-	if !ok {
-		// this is not a cached metric. Fall back to tally
-		gauge = s.Scope.Gauge(name)
+func (m *metricsScope) UpdateGauge(id int, value float64) {
+	name := string(m.defs[id].metricName)
+	m.scope.Gauge(name).Update(value)
+}
+
+func (m *metricsScope) StartTimer(id int) tally.Stopwatch {
+	name := string(m.defs[id].metricName)
+	return m.scope.Timer(name).Start()
+}
+
+func (m *metricsScope) RecordTimer(id int, d time.Duration) {
+	name := string(m.defs[id].metricName)
+	m.scope.Timer(name).Record(d)
+}
+
+func (m *metricsScope) Tagged(tags ...Tag) Scope {
+	tagMap := make(map[string]string, len(tags))
+	for _, tag := range tags {
+		tagMap[tag.Key()] = tag.Value()
 	}
-	return gauge
+	return newMetricsScope(m.scope.Tagged(tagMap), m.defs)
 }

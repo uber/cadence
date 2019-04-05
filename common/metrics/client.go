@@ -26,6 +26,41 @@ import (
 	"github.com/uber-go/tally"
 )
 
+// N.B - this is a temporary Stopwatch struct to allow us to migrate to the
+// new style metric names
+
+// Stopwatch is a helper for simpler tracking of elapsed time, use the
+// Stop() method to report time elapsed since its created back to the
+// timer or histogram.
+type Stopwatch struct {
+	start time.Time
+	scope tally.Scope
+	name1 string
+	name2 string
+}
+
+// NewStopwatch creates a new immutable stopwatch for recording the start
+// time to a stopwatch reporter.
+func NewStopwatch(scope tally.Scope, name1, name2 string) Stopwatch {
+	return Stopwatch{time.Now(), scope, name1, name2}
+}
+
+// NewTestStopwatch returns a new test stopwatch
+func NewTestStopwatch() Stopwatch {
+	return Stopwatch{time.Now(), tally.NoopScope, "timer_1", "timer_2"}
+}
+
+// Stop reports time elapsed since the stopwatch start to the recorder.
+func (sw Stopwatch) Stop() {
+	d := time.Now().Sub(sw.start)
+	if len(sw.name1) > 0 {
+		sw.scope.Timer(sw.name1).Record(d)
+	}
+	if len(sw.name2) > 0 {
+		sw.scope.Timer(sw.name2).Record(d)
+	}
+}
+
 // ClientImpl is used for reporting metrics by various Cadence services
 type ClientImpl struct {
 	//parentReporter is the parent scope for the metrics
@@ -40,9 +75,7 @@ type ClientImpl struct {
 // reporter holds the common tags for the service
 // serviceIdx indicates the service type in (InputhostIndex, ... StorageIndex)
 func NewClient(scope tally.Scope, serviceIdx ServiceIdx) Client {
-	commonScopes := ScopeDefs[Common]
-	serviceScopes := ScopeDefs[serviceIdx]
-	totalScopes := len(commonScopes) + len(serviceScopes)
+	totalScopes := len(ScopeDefs[Common]) + len(ScopeDefs[serviceIdx])
 	metricsClient := &ClientImpl{
 		parentScope: scope,
 		childScopes: make(map[int]tally.Scope, totalScopes),
@@ -50,17 +83,12 @@ func NewClient(scope tally.Scope, serviceIdx ServiceIdx) Client {
 		serviceIdx:  serviceIdx,
 	}
 
-	metricsMap := make(map[MetricName]MetricType)
-	for _, def := range metricsClient.metricDefs {
-		metricsMap[def.metricName] = def.metricType
-	}
-
 	for idx, def := range ScopeDefs[Common] {
 		scopeTags := map[string]string{
 			OperationTagName: def.operation,
 		}
 		mergeMapToRight(def.tags, scopeTags)
-		metricsClient.childScopes[idx] = newScope(scope.Tagged(scopeTags), metricsMap)
+		metricsClient.childScopes[idx] = scope.Tagged(scopeTags)
 	}
 
 	for idx, def := range ScopeDefs[serviceIdx] {
@@ -69,7 +97,6 @@ func NewClient(scope tally.Scope, serviceIdx ServiceIdx) Client {
 		}
 		mergeMapToRight(def.tags, scopeTags)
 		metricsClient.childScopes[idx] = scope.Tagged(scopeTags)
-		metricsClient.childScopes[idx] = newScope(scope.Tagged(scopeTags), metricsMap)
 	}
 
 	return metricsClient
@@ -79,40 +106,57 @@ func NewClient(scope tally.Scope, serviceIdx ServiceIdx) Client {
 // to metrics backend
 func (m *ClientImpl) IncCounter(scopeIdx int, counterIdx int) {
 	name := string(m.metricDefs[counterIdx].metricName)
+	oldName := string(m.metricDefs[counterIdx].oldMetricName)
 	m.childScopes[scopeIdx].Counter(name).Inc(1)
+	if len(oldName) > 0 {
+		m.childScopes[scopeIdx].Counter(oldName).Inc(1)
+	}
 }
 
 // AddCounter adds delta to the counter and
 // emits to the metrics backend
 func (m *ClientImpl) AddCounter(scopeIdx int, counterIdx int, delta int64) {
 	name := string(m.metricDefs[counterIdx].metricName)
+	oldName := string(m.metricDefs[counterIdx].oldMetricName)
 	m.childScopes[scopeIdx].Counter(name).Inc(delta)
+	if len(oldName) > 0 {
+		m.childScopes[scopeIdx].Counter(oldName).Inc(delta)
+	}
 }
 
 // StartTimer starts a timer for the given
 // metric name
-func (m *ClientImpl) StartTimer(scopeIdx int, timerIdx int) tally.Stopwatch {
+func (m *ClientImpl) StartTimer(scopeIdx int, timerIdx int) Stopwatch {
 	name := string(m.metricDefs[timerIdx].metricName)
-	return m.childScopes[scopeIdx].Timer(name).Start()
+	oldName := string(m.metricDefs[timerIdx].oldMetricName)
+	return NewStopwatch(m.childScopes[scopeIdx], name, oldName)
 }
 
 // RecordTimer record and emit a timer for the given
 // metric name
 func (m *ClientImpl) RecordTimer(scopeIdx int, timerIdx int, d time.Duration) {
 	name := string(m.metricDefs[timerIdx].metricName)
+	oldName := string(m.metricDefs[timerIdx].oldMetricName)
 	m.childScopes[scopeIdx].Timer(name).Record(d)
+	if len(oldName) > 0 {
+		m.childScopes[scopeIdx].Timer(oldName).Record(d)
+	}
 }
 
 // UpdateGauge reports Gauge type metric
 func (m *ClientImpl) UpdateGauge(scopeIdx int, gaugeIdx int, value float64) {
 	name := string(m.metricDefs[gaugeIdx].metricName)
+	oldName := string(m.metricDefs[gaugeIdx].oldMetricName)
 	m.childScopes[scopeIdx].Gauge(name).Update(value)
+	if len(oldName) > 0 {
+		m.childScopes[scopeIdx].Gauge(oldName).Update(value)
+	}
 }
 
-// Tagged returns a client that adds the given tags to all metrics
-func (m *ClientImpl) Tagged(tags map[string]string) Client {
-	scope := m.parentScope.Tagged(tags)
-	return NewClient(scope, m.serviceIdx)
+// Scope return a new internal metrics scope that can be used to add additional
+// information to the metrics emitted
+func (m *ClientImpl) Scope(scopeIdx int, tags ...Tag) Scope {
+	return newMetricsScope(m.childScopes[scopeIdx], m.metricDefs).Tagged(tags...)
 }
 
 func getMetricDefs(serviceIdx ServiceIdx) map[int]metricDefinition {

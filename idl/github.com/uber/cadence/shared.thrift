@@ -294,6 +294,8 @@ struct WorkflowExecutionInfo {
   40: optional i64 (js.type = "Long") closeTime
   50: optional WorkflowExecutionCloseStatus closeStatus
   60: optional i64 (js.type = "Long") historyLength
+  70: optional string parentDomainId
+  80: optional WorkflowExecution parentExecution
 }
 
 struct WorkflowExecutionConfiguration {
@@ -832,6 +834,7 @@ struct DomainInfo {
   40: optional string ownerEmail
   // A key-value map for any customized purpose
   50: optional map<string,string> data
+  60: optional string uuid
 }
 
 struct DomainConfiguration {
@@ -886,6 +889,7 @@ struct ListDomainsResponse {
 
 struct DescribeDomainRequest {
   10: optional string name
+  20: optional string uuid
 }
 
 struct DescribeDomainResponse {
@@ -1094,6 +1098,7 @@ struct GetWorkflowExecutionHistoryRequest {
 struct GetWorkflowExecutionHistoryResponse {
   10: optional History history
   20: optional binary nextPageToken
+  30: optional bool archived
 }
 
 struct SignalWorkflowExecutionRequest {
@@ -1218,6 +1223,9 @@ struct PendingActivityInfo {
   50: optional i64 (js.type = "Long") lastHeartbeatTimestamp
   60: optional i64 (js.type = "Long") lastStartedTimestamp
   70: optional i32 attempt
+  80: optional i32 maximumAttempts
+  90: optional i64 (js.type = "Long") scheduledTimestamp
+  100: optional i64 (js.type = "Long") expirationTimestamp
 }
 
 struct DescribeWorkflowExecutionResponse {
@@ -1230,10 +1238,24 @@ struct DescribeTaskListRequest {
   10: optional string domain
   20: optional TaskList taskList
   30: optional TaskListType taskListType
+  40: optional bool includeTaskListStatus
 }
 
 struct DescribeTaskListResponse {
   10: optional list<PollerInfo> pollers
+  20: optional TaskListStatus taskListStatus
+}
+
+struct TaskListStatus {
+  10: optional i64 (js.type = "Long") backlogCountHint
+  20: optional i64 (js.type = "Long") readLevel
+  30: optional i64 (js.type = "Long") ackLevel
+  40: optional TaskIDBlock taskIDBlock
+}
+
+struct TaskIDBlock {
+  10: optional i64 (js.type = "Long")  startID
+  20: optional i64 (js.type = "Long")  endID
 }
 
 //At least one of the parameters needs to be provided

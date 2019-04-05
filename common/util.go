@@ -22,24 +22,22 @@ package common
 
 import (
 	"encoding/json"
+	"math"
+	"math/rand"
 	"sync"
 	"time"
 
-	"github.com/robfig/cron"
-	"github.com/uber/cadence/common/logging"
-	"github.com/uber/cadence/common/metrics"
-	"go.uber.org/yarpc/yarpcerrors"
-	"golang.org/x/net/context"
-
 	farm "github.com/dgryski/go-farm"
 	"github.com/uber-common/bark"
-
-	"math/rand"
-
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/cron"
+	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/metrics"
+	"go.uber.org/yarpc/yarpcerrors"
+	"golang.org/x/net/context"
 )
 
 const (
@@ -71,10 +69,6 @@ const (
 	retryKafkaOperationMaxInterval        = 10 * time.Second
 	retryKafkaOperationExpirationInterval = 30 * time.Second
 
-	retryBlobstoreClientInitialInterval    = time.Second
-	retryBlobstoreClientMaxInterval        = 10 * time.Second
-	retryBlobstoreClientExpirationInterval = time.Minute
-
 	// FailureReasonCompleteResultExceedsLimit is failureReason for complete result exceeds limit
 	FailureReasonCompleteResultExceedsLimit = "COMPLETE_RESULT_EXCEEDS_LIMIT"
 	// FailureReasonFailureDetailsExceedsLimit is failureReason for failure details exceeds limit
@@ -92,6 +86,10 @@ const (
 var (
 	// ErrBlobSizeExceedsLimit is error for event blob size exceeds limit
 	ErrBlobSizeExceedsLimit = &workflow.BadRequestError{Message: "Blob data size exceeds limit."}
+	// ErrContextTimeoutTooShort is error for setting a very short context timeout when calling a long poll API
+	ErrContextTimeoutTooShort = &workflow.BadRequestError{Message: "Context timeout is too short."}
+	// ErrContextTimeoutNotSet is error for not setting a context timeout when calling a long poll API
+	ErrContextTimeoutNotSet = &workflow.BadRequestError{Message: "Context timeout is not set."}
 )
 
 // AwaitWaitGroup calls Wait on the given wait
@@ -183,15 +181,6 @@ func CreateKafkaOperationRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
-// CreateBlobstoreClientRetryPolicy creates a retry policy for blobstore client
-func CreateBlobstoreClientRetryPolicy() backoff.RetryPolicy {
-	policy := backoff.NewExponentialRetryPolicy(retryBlobstoreClientInitialInterval)
-	policy.SetMaximumInterval(retryBlobstoreClientMaxInterval)
-	policy.SetExpirationInterval(retryBlobstoreClientExpirationInterval)
-
-	return policy
-}
-
 // IsPersistenceTransientError checks if the error is a transient persistence error
 func IsPersistenceTransientError(err error) bool {
 	switch err.(type) {
@@ -205,22 +194,6 @@ func IsPersistenceTransientError(err error) bool {
 // IsKafkaTransientError check if the error is a transient kafka error
 func IsKafkaTransientError(err error) bool {
 	return true
-}
-
-// IsBlobstoreTransientError checks if the error is a retryable error.
-func IsBlobstoreTransientError(err error) bool {
-	return !IsBlobstoreNonRetryableError(err)
-}
-
-// IsBlobstoreNonRetryableError checks if the error is a non retryable error.
-func IsBlobstoreNonRetryableError(err error) bool {
-	switch err.(type) {
-	case *workflow.BadRequestError:
-		return true
-	case *workflow.EntityNotExistsError:
-		return true
-	}
-	return false
 }
 
 // IsServiceTransientError checks if the error is a retryable error.
@@ -354,6 +327,14 @@ func MinInt32(a, b int32) int32 {
 	return b
 }
 
+// MinInt returns the smaller of two given integers
+func MinInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 // ValidateRetryPolicy validates a retry policy
 func ValidateRetryPolicy(policy *workflow.RetryPolicy) error {
 	if policy == nil {
@@ -384,17 +365,6 @@ func ValidateRetryPolicy(policy *workflow.RetryPolicy) error {
 	return nil
 }
 
-// ValidateCronSchedule validates a cron schedule spec
-func ValidateCronSchedule(cronSchedule string) error {
-	if cronSchedule == "" {
-		return nil
-	}
-	if _, err := cron.Parse(cronSchedule); err != nil {
-		return &workflow.BadRequestError{Message: "Invalid CronSchedule."}
-	}
-	return nil
-}
-
 // CreateHistoryStartWorkflowRequest create a start workflow request for history
 func CreateHistoryStartWorkflowRequest(domainID string, startRequest *workflow.StartWorkflowExecutionRequest) *h.StartWorkflowExecutionRequest {
 	histRequest := &h.StartWorkflowExecutionRequest{
@@ -405,6 +375,10 @@ func CreateHistoryStartWorkflowRequest(domainID string, startRequest *workflow.S
 		expirationInSeconds := startRequest.RetryPolicy.GetExpirationIntervalInSeconds()
 		deadline := time.Now().Add(time.Second * time.Duration(expirationInSeconds))
 		histRequest.ExpirationTimestamp = Int64Ptr(deadline.Round(time.Millisecond).UnixNano())
+	}
+	cronBackoff := cron.GetBackoffForNextSchedule(startRequest.GetCronSchedule(), time.Now())
+	if cronBackoff != NoRetryBackoff {
+		histRequest.FirstDecisionTaskBackoffSeconds = Int32Ptr(int32(math.Ceil(cronBackoff.Seconds())))
 	}
 	return histRequest
 }
@@ -433,6 +407,39 @@ func CheckEventBlobSizeLimit(actualSize, warnLimit, errorLimit int, domainID, wo
 		if actualSize > errorLimit {
 			return ErrBlobSizeExceedsLimit
 		}
+	}
+	return nil
+}
+
+// ValidateLongPollContextTimeout check if the context timeout for a long poll handler is too short or below a normal value.
+// If the timeout is not set or too short, it logs an error, and return ErrContextTimeoutNotSet or ErrContextTimeoutTooShort
+// accordingly. If the timeout is only below a normal value, it just logs an info and return nil.
+func ValidateLongPollContextTimeout(ctx context.Context, handlerName string, logger bark.Logger) error {
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		err := ErrContextTimeoutNotSet
+		logger.WithFields(bark.Fields{
+			logging.TagHandlerName: handlerName,
+			logging.TagErr:         err,
+		}).Error("Context timeout not set for long poll API.")
+		return err
+	}
+
+	timeout := deadline.Sub(time.Now())
+	if timeout < MinLongPollTimeout {
+		err := ErrContextTimeoutTooShort
+		logger.WithFields(bark.Fields{
+			logging.TagHandlerName:    handlerName,
+			logging.TagContextTimeout: timeout,
+			logging.TagErr:            err,
+		}).Error("Context timeout is too short for long poll API.")
+		return err
+	}
+	if timeout < CriticalLongPollTimeout {
+		logger.WithFields(bark.Fields{
+			logging.TagHandlerName:    handlerName,
+			logging.TagContextTimeout: timeout,
+		}).Warn("Context timeout is lower than critical value for long poll API.")
 	}
 	return nil
 }

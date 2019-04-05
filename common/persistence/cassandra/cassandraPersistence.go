@@ -725,6 +725,8 @@ workflow_state = ? ` +
 		`and visibility_ts = ? ` +
 		`and task_id = ? `
 
+	templateDeleteWorkflowExecutionCurrentRowQuery = templateDeleteWorkflowExecutionMutableStateQuery + " if current_run_id = ? "
+
 	templateDeleteWorkflowExecutionSignalRequestedQuery = `UPDATE executions ` +
 		`SET signal_requested = signal_requested - ? ` +
 		`WHERE shard_id = ? ` +
@@ -904,8 +906,10 @@ type (
 	}
 )
 
+var _ p.ExecutionStore = (*cassandraPersistence)(nil)
+
 //NewWorkflowExecutionPersistenceFromSession returns new ExecutionStore
-func NewWorkflowExecutionPersistenceFromSession(session *gocql.Session, shardID int, logger bark.Logger) p.ExecutionStore {
+func NewWorkflowExecutionPersistenceFromSession(session *gocql.Session, shardID int, logger bark.Logger) *cassandraPersistence {
 	return &cassandraPersistence{cassandraStore: cassandraStore{session: session, logger: logger}, shardID: shardID}
 }
 
@@ -1985,7 +1989,10 @@ func (d *cassandraPersistence) ResetWorkflowExecution(request *p.InternalResetWo
 	}
 
 	if len(request.InsertReplicationTasks) > 0 {
-		d.createReplicationTasks(batch, request.InsertReplicationTasks, currExecutionInfo.DomainID, currExecutionInfo.WorkflowID, currExecutionInfo.RunID)
+		d.createReplicationTasks(batch, request.InsertReplicationTasks, insertExecutionInfo.DomainID, insertExecutionInfo.WorkflowID, insertExecutionInfo.RunID)
+	}
+	if len(request.CurrReplicationTasks) > 0 {
+		d.createReplicationTasks(batch, request.CurrReplicationTasks, currExecutionInfo.DomainID, currExecutionInfo.WorkflowID, currExecutionInfo.RunID)
 	}
 
 	// we need to insert new mutableState, there is no condition to check. We use update without condition as insert
@@ -2267,6 +2274,32 @@ func (d *cassandraPersistence) DeleteWorkflowExecution(request *p.DeleteWorkflow
 		}
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("DeleteWorkflowExecution operation failed. Error: %v", err),
+		}
+	}
+
+	return nil
+}
+
+func (d *cassandraPersistence) DeleteWorkflowCurrentRow(request *p.DeleteWorkflowExecutionRequest) error {
+	query := d.session.Query(templateDeleteWorkflowExecutionCurrentRowQuery,
+		d.shardID,
+		rowTypeExecution,
+		request.DomainID,
+		request.WorkflowID,
+		permanentRunID,
+		defaultVisibilityTimestamp,
+		rowTypeExecutionTaskID,
+		request.RunID)
+
+	err := query.Exec()
+	if err != nil {
+		if isThrottlingError(err) {
+			return &workflow.ServiceBusyError{
+				Message: fmt.Sprintf("DeleteWorkflowCurrentRow operation failed. Error: %v", err),
+			}
+		}
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("DeleteWorkflowCurrentRow operation failed. Error: %v", err),
 		}
 	}
 

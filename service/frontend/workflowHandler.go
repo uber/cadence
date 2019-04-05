@@ -30,7 +30,6 @@ import (
 
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
-	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
 	"github.com/uber/cadence/.gen/go/health"
 	"github.com/uber/cadence/.gen/go/health/metaserver"
@@ -47,12 +46,15 @@ import (
 	"github.com/uber/cadence/common/blobstore/blob"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/client"
+	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/cron"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/service/worker/sysworkflow"
+	"github.com/uber/cadence/common/tokenbucket"
+	"github.com/uber/cadence/service/worker/archiver"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -72,7 +74,7 @@ type (
 		tokenSerializer   common.TaskTokenSerializer
 		metricsClient     metrics.Client
 		startWG           sync.WaitGroup
-		rateLimiter       common.TokenBucket
+		rateLimiter       tokenbucket.TokenBucket
 		config            *Config
 		domainReplicator  DomainReplicator
 		blobstoreClient   blobstore.Client
@@ -118,7 +120,10 @@ var (
 	errWorkflowTypeNotSet                         = &gen.BadRequestError{Message: "WorkflowType is not set on request."}
 	errInvalidExecutionStartToCloseTimeoutSeconds = &gen.BadRequestError{Message: "A valid ExecutionStartToCloseTimeoutSeconds is not set on request."}
 	errInvalidTaskStartToCloseTimeoutSeconds      = &gen.BadRequestError{Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}
-	errDomainArchivalBucketNotSet                 = &gen.BadRequestError{Message: "Domain config does not have archival bucket set."}
+
+	// err for archival
+	errDomainHasNeverBeenEnabledForArchival = &gen.BadRequestError{Message: "Attempted to fetch history from archival, but domain has never been enabled for archival."}
+	errInvalidNextArchivalPageToken         = &gen.BadRequestError{Message: "Invalid NextPageToken for archival."}
 
 	// err for string too long
 	errDomainTooLong       = &gen.BadRequestError{Message: "Domain length exceeds limit."}
@@ -153,7 +158,7 @@ func NewWorkflowHandler(sVice service.Service, config *Config, metadataMgr persi
 		visibilityMgr:    visibilityMgr,
 		tokenSerializer:  common.NewJSONTaskTokenSerializer(),
 		domainCache:      cache.NewDomainCache(metadataMgr, sVice.GetClusterMetadata(), sVice.GetMetricsClient(), sVice.GetLogger()),
-		rateLimiter:      common.NewTokenBucket(config.RPS(), common.NewRealTimeSource()),
+		rateLimiter:      tokenbucket.New(config.RPS(), clock.NewRealTimeSource()),
 		domainReplicator: NewDomainReplicator(kafkaProducer, sVice.GetLogger()),
 		blobstoreClient:  blobstoreClient,
 	}
@@ -215,7 +220,8 @@ func (wh *WorkflowHandler) checkPermission(securityToken *string, scope int) err
 // entity within Cadence, used as a container for all resources like workflow executions, tasklists, etc.  Domain
 // acts as a sandbox and provides isolation for all resources within the domain.  All resources belongs to exactly one
 // domain.
-func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *gen.RegisterDomainRequest) error {
+func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *gen.RegisterDomainRequest) (retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 	scope := metrics.FrontendRegisterDomainScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
@@ -343,7 +349,8 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 
 // ListDomains returns the information and configuration for a registered domain.
 func (wh *WorkflowHandler) ListDomains(ctx context.Context,
-	listRequest *gen.ListDomainsRequest) (*gen.ListDomainsResponse, error) {
+	listRequest *gen.ListDomainsRequest) (response *gen.ListDomainsResponse, retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 	scope := metrics.FrontendListDomainsScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
@@ -376,7 +383,7 @@ func (wh *WorkflowHandler) ListDomains(ctx context.Context,
 		domains = append(domains, desc)
 	}
 
-	response := &gen.ListDomainsResponse{
+	response = &gen.ListDomainsResponse{
 		Domains:       domains,
 		NextPageToken: resp.NextPageToken,
 	}
@@ -386,8 +393,8 @@ func (wh *WorkflowHandler) ListDomains(ctx context.Context,
 
 // DescribeDomain returns the information and configuration for a registered domain.
 func (wh *WorkflowHandler) DescribeDomain(ctx context.Context,
-	describeRequest *gen.DescribeDomainRequest) (*gen.DescribeDomainResponse, error) {
-
+	describeRequest *gen.DescribeDomainRequest) (response *gen.DescribeDomainResponse, retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 	scope := metrics.FrontendDescribeDomainScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
@@ -396,17 +403,21 @@ func (wh *WorkflowHandler) DescribeDomain(ctx context.Context,
 		return nil, wh.error(errRequestNotSet, scope)
 	}
 
-	if describeRequest.GetName() == "" {
+	if describeRequest.GetName() == "" && describeRequest.GetUUID() == "" {
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
 	// TODO, we should migrate the non global domain to new table, see #773
-	resp, err := wh.metadataMgr.GetDomain(&persistence.GetDomainRequest{Name: describeRequest.GetName()})
+	req := &persistence.GetDomainRequest{
+		Name: describeRequest.GetName(),
+		ID:   describeRequest.GetUUID(),
+	}
+	resp, err := wh.metadataMgr.GetDomain(req)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
 
-	response := &gen.DescribeDomainResponse{
+	response = &gen.DescribeDomainResponse{
 		IsGlobalDomain:  common.BoolPtr(resp.IsGlobalDomain),
 		FailoverVersion: common.Int64Ptr(resp.FailoverVersion),
 	}
@@ -418,7 +429,8 @@ func (wh *WorkflowHandler) DescribeDomain(ctx context.Context,
 
 // UpdateDomain is used to update the information and configuration for a registered domain.
 func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
-	updateRequest *gen.UpdateDomainRequest) (*gen.UpdateDomainResponse, error) {
+	updateRequest *gen.UpdateDomainRequest) (resp *gen.UpdateDomainResponse, retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := metrics.FrontendUpdateDomainScope
 	sw := wh.startRequestProfile(scope)
@@ -671,7 +683,8 @@ func (wh *WorkflowHandler) mergeDomainData(old map[string]string, new map[string
 // DeprecateDomain us used to update status of a registered domain to DEPRECATED.  Once the domain is deprecated
 // it cannot be used to start new workflow executions.  Existing workflow executions will continue to run on
 // deprecated domains.
-func (wh *WorkflowHandler) DeprecateDomain(ctx context.Context, deprecateRequest *gen.DeprecateDomainRequest) error {
+func (wh *WorkflowHandler) DeprecateDomain(ctx context.Context, deprecateRequest *gen.DeprecateDomainRequest) (retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := metrics.FrontendDeprecateDomainScope
 	sw := wh.startRequestProfile(scope)
@@ -744,7 +757,8 @@ func (wh *WorkflowHandler) DeprecateDomain(ctx context.Context, deprecateRequest
 // PollForActivityTask - Poll for an activity task.
 func (wh *WorkflowHandler) PollForActivityTask(
 	ctx context.Context,
-	pollRequest *gen.PollForActivityTaskRequest) (*gen.PollForActivityTaskResponse, error) {
+	pollRequest *gen.PollForActivityTaskRequest) (resp *gen.PollForActivityTaskResponse, retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 
 	callTime := time.Now()
 
@@ -761,6 +775,10 @@ func (wh *WorkflowHandler) PollForActivityTask(
 	}
 
 	wh.Service.GetLogger().Debug("Received PollForActivityTask")
+	if err := common.ValidateLongPollContextTimeout(ctx, "PollForActivityTask", wh.Service.GetLogger()); err != nil {
+		return nil, wh.error(err, scope)
+	}
+
 	if pollRequest.Domain == nil || pollRequest.GetDomain() == "" {
 		return nil, wh.error(errDomainNotSet, scope)
 	}
@@ -782,7 +800,6 @@ func (wh *WorkflowHandler) PollForActivityTask(
 	}
 
 	pollerID := uuid.New()
-	var resp *gen.PollForActivityTaskResponse
 	op := func() error {
 		var err error
 		resp, err = wh.matching.PollForActivityTask(ctx, &m.PollForActivityTaskRequest{
@@ -817,7 +834,8 @@ func (wh *WorkflowHandler) PollForActivityTask(
 // PollForDecisionTask - Poll for a decision task.
 func (wh *WorkflowHandler) PollForDecisionTask(
 	ctx context.Context,
-	pollRequest *gen.PollForDecisionTaskRequest) (*gen.PollForDecisionTaskResponse, error) {
+	pollRequest *gen.PollForDecisionTaskRequest) (resp *gen.PollForDecisionTaskResponse, retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 
 	callTime := time.Now()
 
@@ -834,6 +852,10 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	}
 
 	wh.Service.GetLogger().Debug("Received PollForDecisionTask")
+	if err := common.ValidateLongPollContextTimeout(ctx, "PollForDecisionTask", wh.Service.GetLogger()); err != nil {
+		return nil, wh.error(err, scope)
+	}
+
 	if pollRequest.Domain == nil || pollRequest.GetDomain() == "" {
 		return nil, wh.error(errDomainNotSet, scope)
 	}
@@ -892,7 +914,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	}
 
 	eventStoreVersion := matchingResp.GetEventStoreVersion()
-	resp, err := wh.createPollForDecisionTaskResponse(ctx, scope, domainID, matchingResp, eventStoreVersion, matchingResp.GetBranchToken())
+	resp, err = wh.createPollForDecisionTaskResponse(ctx, scope, domainID, matchingResp, eventStoreVersion, matchingResp.GetBranchToken())
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -928,6 +950,7 @@ func (wh *WorkflowHandler) cancelOutstandingPoll(ctx context.Context, err error,
 func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 	ctx context.Context,
 	heartbeatRequest *gen.RecordActivityTaskHeartbeatRequest) (resp *gen.RecordActivityTaskHeartbeatResponse, err error) {
+	defer logging.CapturePanic(wh.GetLogger(), &err)
 
 	scope := metrics.FrontendRecordActivityTaskHeartbeatScope
 	sw := wh.startRequestProfile(scope)
@@ -962,7 +985,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 
 	if err := common.CheckEventBlobSizeLimit(len(heartbeatRequest.Details), sizeLimitWarn, sizeLimitError,
 		taskToken.DomainID, taskToken.WorkflowID, taskToken.RunID,
-		wh.metricsClient, scope, wh.GetLogger()); err != nil {
+		wh.metricsClient, scope, wh.GetThrottledLogger()); err != nil {
 		// heartbeat details exceed size limit, we would fail the activity immediately with explicit error reason
 		failRequest := &gen.RespondActivityTaskFailedRequest{
 			TaskToken: heartbeatRequest.TaskToken,
@@ -995,6 +1018,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 	ctx context.Context,
 	heartbeatRequest *gen.RecordActivityTaskHeartbeatByIDRequest) (resp *gen.RecordActivityTaskHeartbeatResponse, err error) {
+	defer logging.CapturePanic(wh.GetLogger(), &err)
 
 	scope := metrics.FrontendRecordActivityTaskHeartbeatByIDScope
 	sw := wh.startRequestProfile(scope)
@@ -1048,7 +1072,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 
 	if err := common.CheckEventBlobSizeLimit(len(heartbeatRequest.Details), sizeLimitWarn, sizeLimitError,
 		taskToken.DomainID, taskToken.WorkflowID, taskToken.RunID,
-		wh.metricsClient, scope, wh.GetLogger()); err != nil {
+		wh.metricsClient, scope, wh.GetThrottledLogger()); err != nil {
 		// heartbeat details exceed size limit, we would fail the activity immediately with explicit error reason
 		failRequest := &gen.RespondActivityTaskFailedRequest{
 			TaskToken: token,
@@ -1086,7 +1110,8 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 // RespondActivityTaskCompleted - response to an activity task
 func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 	ctx context.Context,
-	completeRequest *gen.RespondActivityTaskCompletedRequest) error {
+	completeRequest *gen.RespondActivityTaskCompletedRequest) (retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := metrics.FrontendRespondActivityTaskCompletedScope
 	sw := wh.startRequestProfile(scope)
@@ -1123,7 +1148,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 
 	if err := common.CheckEventBlobSizeLimit(len(completeRequest.Result), sizeLimitWarn, sizeLimitError,
 		taskToken.DomainID, taskToken.WorkflowID, taskToken.RunID,
-		wh.metricsClient, scope, wh.GetLogger()); err != nil {
+		wh.metricsClient, scope, wh.GetThrottledLogger()); err != nil {
 		// result exceeds blob size limit, we would record it as failure
 		failRequest := &gen.RespondActivityTaskFailedRequest{
 			TaskToken: completeRequest.TaskToken,
@@ -1154,7 +1179,8 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 // RespondActivityTaskCompletedByID - response to an activity task
 func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 	ctx context.Context,
-	completeRequest *gen.RespondActivityTaskCompletedByIDRequest) error {
+	completeRequest *gen.RespondActivityTaskCompletedByIDRequest) (retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := metrics.FrontendRespondActivityTaskCompletedByIDScope
 	sw := wh.startRequestProfile(scope)
@@ -1211,7 +1237,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 
 	if err := common.CheckEventBlobSizeLimit(len(completeRequest.Result), sizeLimitWarn, sizeLimitError,
 		taskToken.DomainID, taskToken.WorkflowID, taskToken.RunID,
-		wh.metricsClient, scope, wh.GetLogger()); err != nil {
+		wh.metricsClient, scope, wh.GetThrottledLogger()); err != nil {
 		// result exceeds blob size limit, we would record it as failure
 		failRequest := &gen.RespondActivityTaskFailedRequest{
 			TaskToken: token,
@@ -1248,7 +1274,8 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 // RespondActivityTaskFailed - response to an activity task failure
 func (wh *WorkflowHandler) RespondActivityTaskFailed(
 	ctx context.Context,
-	failedRequest *gen.RespondActivityTaskFailedRequest) error {
+	failedRequest *gen.RespondActivityTaskFailedRequest) (retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := metrics.FrontendRespondActivityTaskFailedScope
 	sw := wh.startRequestProfile(scope)
@@ -1285,7 +1312,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 
 	if err := common.CheckEventBlobSizeLimit(len(failedRequest.Details), sizeLimitWarn, sizeLimitError,
 		taskToken.DomainID, taskToken.WorkflowID, taskToken.RunID,
-		wh.metricsClient, scope, wh.GetLogger()); err != nil {
+		wh.metricsClient, scope, wh.GetThrottledLogger()); err != nil {
 		// details exceeds blob size limit, we would truncate the details and put a specific error reason
 		failedRequest.Reason = common.StringPtr(common.FailureReasonFailureDetailsExceedsLimit)
 		failedRequest.Details = failedRequest.Details[0:sizeLimitError]
@@ -1304,7 +1331,8 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 // RespondActivityTaskFailedByID - response to an activity task failure
 func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 	ctx context.Context,
-	failedRequest *gen.RespondActivityTaskFailedByIDRequest) error {
+	failedRequest *gen.RespondActivityTaskFailedByIDRequest) (retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := metrics.FrontendRespondActivityTaskFailedByIDScope
 	sw := wh.startRequestProfile(scope)
@@ -1360,7 +1388,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 
 	if err := common.CheckEventBlobSizeLimit(len(failedRequest.Details), sizeLimitWarn, sizeLimitError,
 		taskToken.DomainID, taskToken.WorkflowID, taskToken.RunID,
-		wh.metricsClient, scope, wh.GetLogger()); err != nil {
+		wh.metricsClient, scope, wh.GetThrottledLogger()); err != nil {
 		// details exceeds blob size limit, we would truncate the details and put a specific error reason
 		failedRequest.Reason = common.StringPtr(common.FailureReasonFailureDetailsExceedsLimit)
 		failedRequest.Details = failedRequest.Details[0:sizeLimitError]
@@ -1386,7 +1414,8 @@ func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 // RespondActivityTaskCanceled - called to cancel an activity task
 func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 	ctx context.Context,
-	cancelRequest *gen.RespondActivityTaskCanceledRequest) error {
+	cancelRequest *gen.RespondActivityTaskCanceledRequest) (retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := metrics.FrontendRespondActivityTaskCanceledScope
 	sw := wh.startRequestProfile(scope)
@@ -1424,7 +1453,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 
 	if err := common.CheckEventBlobSizeLimit(len(cancelRequest.Details), sizeLimitWarn, sizeLimitError,
 		taskToken.DomainID, taskToken.WorkflowID, taskToken.RunID,
-		wh.metricsClient, scope, wh.GetLogger()); err != nil {
+		wh.metricsClient, scope, wh.GetThrottledLogger()); err != nil {
 		// details exceeds blob size limit, we would record it as failure
 		failRequest := &gen.RespondActivityTaskFailedRequest{
 			TaskToken: cancelRequest.TaskToken,
@@ -1455,7 +1484,8 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 // RespondActivityTaskCanceledByID - called to cancel an activity task
 func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 	ctx context.Context,
-	cancelRequest *gen.RespondActivityTaskCanceledByIDRequest) error {
+	cancelRequest *gen.RespondActivityTaskCanceledByIDRequest) (retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := metrics.FrontendRespondActivityTaskCanceledScope
 	sw := wh.startRequestProfile(scope)
@@ -1511,7 +1541,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 
 	if err := common.CheckEventBlobSizeLimit(len(cancelRequest.Details), sizeLimitWarn, sizeLimitError,
 		taskToken.DomainID, taskToken.WorkflowID, taskToken.RunID,
-		wh.metricsClient, scope, wh.GetLogger()); err != nil {
+		wh.metricsClient, scope, wh.GetThrottledLogger()); err != nil {
 		// details exceeds blob size limit, we would record it as failure
 		failRequest := &gen.RespondActivityTaskFailedRequest{
 			TaskToken: token,
@@ -1548,7 +1578,8 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 // RespondDecisionTaskCompleted - response to a decision task
 func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 	ctx context.Context,
-	completeRequest *gen.RespondDecisionTaskCompletedRequest) (*gen.RespondDecisionTaskCompletedResponse, error) {
+	completeRequest *gen.RespondDecisionTaskCompletedRequest) (resp *gen.RespondDecisionTaskCompletedResponse, retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := metrics.FrontendRespondDecisionTaskCompletedScope
 	sw := wh.startRequestProfile(scope)
@@ -1614,7 +1645,8 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 // RespondDecisionTaskFailed - failed response to a decision task
 func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 	ctx context.Context,
-	failedRequest *gen.RespondDecisionTaskFailedRequest) error {
+	failedRequest *gen.RespondDecisionTaskFailedRequest) (retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := metrics.FrontendRespondDecisionTaskFailedScope
 	sw := wh.startRequestProfile(scope)
@@ -1652,7 +1684,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 
 	if err := common.CheckEventBlobSizeLimit(len(failedRequest.Details), sizeLimitWarn, sizeLimitError,
 		taskToken.DomainID, taskToken.WorkflowID, taskToken.RunID,
-		wh.metricsClient, scope, wh.GetLogger()); err != nil {
+		wh.metricsClient, scope, wh.GetThrottledLogger()); err != nil {
 		// details exceed, we would just truncate the size for decision task failed as the details is not used anywhere by client code
 		failedRequest.Details = failedRequest.Details[0:sizeLimitError]
 	}
@@ -1670,7 +1702,8 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 // RespondQueryTaskCompleted - response to a query task
 func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 	ctx context.Context,
-	completeRequest *gen.RespondQueryTaskCompletedRequest) error {
+	completeRequest *gen.RespondQueryTaskCompletedRequest) (retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := metrics.FrontendRespondQueryTaskCompletedScope
 	sw := wh.startRequestProfile(scope)
@@ -1711,7 +1744,8 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 // StartWorkflowExecution - Creates a new workflow execution
 func (wh *WorkflowHandler) StartWorkflowExecution(
 	ctx context.Context,
-	startRequest *gen.StartWorkflowExecutionRequest) (*gen.StartWorkflowExecutionResponse, error) {
+	startRequest *gen.StartWorkflowExecutionRequest) (resp *gen.StartWorkflowExecutionResponse, retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := metrics.FrontendStartWorkflowExecutionScope
 	sw := wh.startRequestProfile(scope)
@@ -1745,7 +1779,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(err, scope)
 	}
 
-	if err := common.ValidateCronSchedule(startRequest.GetCronSchedule()); err != nil {
+	if err := cron.ValidateSchedule(startRequest.GetCronSchedule()); err != nil {
 		return nil, wh.error(err, scope)
 	}
 
@@ -1784,7 +1818,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	maxDecisionTimeout := int32(wh.config.MaxDecisionStartToCloseTimeout(startRequest.GetDomain()))
 	// TODO: remove this assignment and logging in future, so that frontend will just return bad request for large decision timeout
 	if startRequest.GetTaskStartToCloseTimeoutSeconds() > startRequest.GetExecutionStartToCloseTimeoutSeconds() {
-		logging.LogDecisionTimeoutLargerThanWorkflowTimeout(wh.Service.GetLogger(),
+		logging.LogDecisionTimeoutLargerThanWorkflowTimeout(wh.Service.GetThrottledLogger(),
 			startRequest.GetTaskStartToCloseTimeoutSeconds(),
 			startRequest.GetDomain(),
 			startRequest.GetWorkflowId(),
@@ -1817,13 +1851,13 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	sizeLimitError := wh.config.BlobSizeLimitError(startRequest.GetDomain())
 	sizeLimitWarn := wh.config.BlobSizeLimitWarn(startRequest.GetDomain())
 	if err := common.CheckEventBlobSizeLimit(len(startRequest.Input), sizeLimitWarn, sizeLimitError, domainID,
-		startRequest.GetWorkflowId(), "", wh.metricsClient, scope, wh.GetLogger()); err != nil {
+		startRequest.GetWorkflowId(), "", wh.metricsClient, scope, wh.GetThrottledLogger()); err != nil {
 		return nil, wh.error(err, scope)
 	}
 
 	wh.Service.GetLogger().Debugf("Start workflow execution request domainID: %v", domainID)
 
-	resp, err := wh.history.StartWorkflowExecution(ctx, common.CreateHistoryStartWorkflowRequest(domainID, startRequest))
+	resp, err = wh.history.StartWorkflowExecution(ctx, common.CreateHistoryStartWorkflowRequest(domainID, startRequest))
 
 	if err != nil {
 		return nil, wh.error(err, scope)
@@ -1834,7 +1868,8 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 // GetWorkflowExecutionHistory - retrieves the history of workflow execution
 func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	ctx context.Context,
-	getRequest *gen.GetWorkflowExecutionHistoryRequest) (*gen.GetWorkflowExecutionHistoryResponse, error) {
+	getRequest *gen.GetWorkflowExecutionHistoryRequest) (resp *gen.GetWorkflowExecutionHistoryResponse, retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := metrics.FrontendGetWorkflowExecutionHistoryScope
 	sw := wh.startRequestProfile(scope)
@@ -1852,6 +1887,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
+	domainScope := wh.metricsClient.Scope(scope, metrics.DomainTag(getRequest.GetDomain()))
 	if err := wh.validateExecutionAndEmitMetrics(getRequest.Execution, scope); err != nil {
 		return nil, err
 	}
@@ -1877,7 +1913,10 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		getRequest.MaximumPageSize = common.Int32Ptr(common.GetHistoryMaxPageSize)
 	}
 
-	if wh.historyArchived(ctx, getRequest, domainID) {
+	configuredForArchival := wh.GetClusterMetadata().ArchivalConfig().ConfiguredForArchival()
+	enableArchivalRead := wh.config.EnableReadHistoryFromArchival(getRequest.GetDomain())
+	historyArchived := wh.historyArchived(ctx, getRequest, domainID)
+	if configuredForArchival && enableArchivalRead && historyArchived {
 		return wh.getArchivedHistory(ctx, getRequest, domainID, scope)
 	}
 
@@ -1959,8 +1998,19 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	history.Events = []*gen.HistoryEvent{}
 	if isCloseEventOnly {
 		if !isWorkflowRunning {
-			history, _, err = wh.getHistory(scope, domainID, *execution, lastFirstEventID, nextEventID,
-				getRequest.GetMaximumPageSize(), nil, token.TransientDecision, token.EventStoreVersion, token.BranchToken)
+			history, _, err = wh.getHistory(
+				scope,
+				domainScope,
+				domainID,
+				*execution,
+				lastFirstEventID,
+				nextEventID,
+				getRequest.GetMaximumPageSize(),
+				nil,
+				token.TransientDecision,
+				token.EventStoreVersion,
+				token.BranchToken,
+			)
 			if err != nil {
 				return nil, wh.error(err, scope)
 			}
@@ -1982,9 +2032,19 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 				token = nil
 			}
 		} else {
-			history, token.PersistenceToken, err =
-				wh.getHistory(scope, domainID, *execution, token.FirstEventID, token.NextEventID,
-					getRequest.GetMaximumPageSize(), token.PersistenceToken, token.TransientDecision, token.EventStoreVersion, token.BranchToken)
+			history, token.PersistenceToken, err = wh.getHistory(
+				scope,
+				domainScope,
+				domainID,
+				*execution,
+				token.FirstEventID,
+				token.NextEventID,
+				getRequest.GetMaximumPageSize(),
+				token.PersistenceToken,
+				token.TransientDecision,
+				token.EventStoreVersion,
+				token.BranchToken,
+			)
 			if err != nil {
 				return nil, wh.error(err, scope)
 			}
@@ -2002,13 +2062,18 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
-	return createGetWorkflowExecutionHistoryResponse(history, nextToken), nil
+	return &gen.GetWorkflowExecutionHistoryResponse{
+		History:       history,
+		NextPageToken: nextToken,
+		Archived:      common.BoolPtr(false),
+	}, nil
 }
 
 // SignalWorkflowExecution is used to send a signal event to running workflow execution.  This results in
 // WorkflowExecutionSignaled event recorded in the history and a decision task being created for the execution.
 func (wh *WorkflowHandler) SignalWorkflowExecution(ctx context.Context,
-	signalRequest *gen.SignalWorkflowExecutionRequest) error {
+	signalRequest *gen.SignalWorkflowExecutionRequest) (retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := metrics.FrontendSignalWorkflowExecutionScope
 	sw := wh.startRequestProfile(scope)
@@ -2055,7 +2120,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(ctx context.Context,
 	sizeLimitWarn := wh.config.BlobSizeLimitWarn(signalRequest.GetDomain())
 	if err := common.CheckEventBlobSizeLimit(len(signalRequest.Input), sizeLimitWarn, sizeLimitError, domainID,
 		signalRequest.GetWorkflowExecution().GetWorkflowId(), signalRequest.GetWorkflowExecution().GetWorkflowId(),
-		wh.metricsClient, scope, wh.GetLogger()); err != nil {
+		wh.metricsClient, scope, wh.GetThrottledLogger()); err != nil {
 		return wh.error(err, scope)
 	}
 
@@ -2076,7 +2141,8 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(ctx context.Context,
 // If workflow is not running or not found, this results in WorkflowExecutionStarted and WorkflowExecutionSignaled
 // event recorded in history, and a decision task being created for the execution
 func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(ctx context.Context,
-	signalWithStartRequest *gen.SignalWithStartWorkflowExecutionRequest) (*gen.StartWorkflowExecutionResponse, error) {
+	signalWithStartRequest *gen.SignalWithStartWorkflowExecutionRequest) (resp *gen.StartWorkflowExecutionResponse, retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := metrics.FrontendSignalWithStartWorkflowExecutionScope
 	sw := wh.startRequestProfile(scope)
@@ -2144,7 +2210,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(ctx context.Context,
 		return nil, wh.error(err, scope)
 	}
 
-	if err := common.ValidateCronSchedule(signalWithStartRequest.GetCronSchedule()); err != nil {
+	if err := cron.ValidateSchedule(signalWithStartRequest.GetCronSchedule()); err != nil {
 		return nil, wh.error(err, scope)
 	}
 
@@ -2182,15 +2248,14 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(ctx context.Context,
 	sizeLimitError := wh.config.BlobSizeLimitError(signalWithStartRequest.GetDomain())
 	sizeLimitWarn := wh.config.BlobSizeLimitWarn(signalWithStartRequest.GetDomain())
 	if err := common.CheckEventBlobSizeLimit(len(signalWithStartRequest.SignalInput), sizeLimitWarn, sizeLimitError, domainID,
-		signalWithStartRequest.GetWorkflowId(), "", wh.metricsClient, scope, wh.GetLogger()); err != nil {
+		signalWithStartRequest.GetWorkflowId(), "", wh.metricsClient, scope, wh.GetThrottledLogger()); err != nil {
 		return nil, wh.error(err, scope)
 	}
 	if err := common.CheckEventBlobSizeLimit(len(signalWithStartRequest.Input), sizeLimitWarn, sizeLimitError, domainID,
-		signalWithStartRequest.GetWorkflowId(), "", wh.metricsClient, scope, wh.GetLogger()); err != nil {
+		signalWithStartRequest.GetWorkflowId(), "", wh.metricsClient, scope, wh.GetThrottledLogger()); err != nil {
 		return nil, wh.error(err, scope)
 	}
 
-	var resp *gen.StartWorkflowExecutionResponse
 	op := func() error {
 		var err error
 		resp, err = wh.history.SignalWithStartWorkflowExecution(ctx, &h.SignalWithStartWorkflowExecutionRequest{
@@ -2211,7 +2276,8 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(ctx context.Context,
 // TerminateWorkflowExecution terminates an existing workflow execution by recording WorkflowExecutionTerminated event
 // in the history and immediately terminating the execution instance.
 func (wh *WorkflowHandler) TerminateWorkflowExecution(ctx context.Context,
-	terminateRequest *gen.TerminateWorkflowExecutionRequest) error {
+	terminateRequest *gen.TerminateWorkflowExecutionRequest) (retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := metrics.FrontendTerminateWorkflowExecutionScope
 	sw := wh.startRequestProfile(scope)
@@ -2252,7 +2318,8 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(ctx context.Context,
 // ResetWorkflowExecution reset an existing workflow execution to the nextFirstEventID
 // in the history and immediately terminating the current execution instance.
 func (wh *WorkflowHandler) ResetWorkflowExecution(ctx context.Context,
-	resetRequest *gen.ResetWorkflowExecutionRequest) (*gen.ResetWorkflowExecutionResponse, error) {
+	resetRequest *gen.ResetWorkflowExecutionRequest) (resp *gen.ResetWorkflowExecutionResponse, retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := metrics.FrontendResetWorkflowExecutionScope
 	sw := wh.startRequestProfile(scope)
@@ -2279,7 +2346,6 @@ func (wh *WorkflowHandler) ResetWorkflowExecution(ctx context.Context,
 		return nil, wh.error(err, scope)
 	}
 
-	var resp *gen.ResetWorkflowExecutionResponse
 	resp, err = wh.history.ResetWorkflowExecution(ctx, &h.ResetWorkflowExecutionRequest{
 		DomainUUID:   common.StringPtr(domainID),
 		ResetRequest: resetRequest,
@@ -2294,7 +2360,8 @@ func (wh *WorkflowHandler) ResetWorkflowExecution(ctx context.Context,
 // RequestCancelWorkflowExecution - requests to cancel a workflow execution
 func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 	ctx context.Context,
-	cancelRequest *gen.RequestCancelWorkflowExecutionRequest) error {
+	cancelRequest *gen.RequestCancelWorkflowExecutionRequest) (retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := metrics.FrontendRequestCancelWorkflowExecutionScope
 	sw := wh.startRequestProfile(scope)
@@ -2334,7 +2401,8 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 
 // ListOpenWorkflowExecutions - retrieves info for open workflow executions in a domain
 func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
-	listRequest *gen.ListOpenWorkflowExecutionsRequest) (*gen.ListOpenWorkflowExecutionsResponse, error) {
+	listRequest *gen.ListOpenWorkflowExecutionsRequest) (resp *gen.ListOpenWorkflowExecutionsResponse, retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := metrics.FrontendListOpenWorkflowExecutionsScope
 	sw := wh.startRequestProfile(scope)
@@ -2399,7 +2467,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 					WorkflowID:                    listRequest.ExecutionFilter.GetWorkflowId(),
 				})
 		}
-		logging.LogListOpenWorkflowByFilter(wh.GetLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByID)
+		logging.LogListOpenWorkflowByFilter(wh.GetThrottledLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByID)
 	} else if listRequest.TypeFilter != nil {
 		if wh.config.DisableListVisibilityByFilter(domain) {
 			err = errNoPermission
@@ -2409,7 +2477,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 				WorkflowTypeName:              listRequest.TypeFilter.GetName(),
 			})
 		}
-		logging.LogListOpenWorkflowByFilter(wh.GetLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByType)
+		logging.LogListOpenWorkflowByFilter(wh.GetThrottledLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByType)
 	} else {
 		persistenceResp, err = wh.visibilityMgr.ListOpenWorkflowExecutions(&baseReq)
 	}
@@ -2418,7 +2486,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 		return nil, wh.error(err, scope)
 	}
 
-	resp := &gen.ListOpenWorkflowExecutionsResponse{}
+	resp = &gen.ListOpenWorkflowExecutionsResponse{}
 	resp.Executions = persistenceResp.Executions
 	resp.NextPageToken = persistenceResp.NextPageToken
 	return resp, nil
@@ -2426,7 +2494,8 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 
 // ListClosedWorkflowExecutions - retrieves info for closed workflow executions in a domain
 func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
-	listRequest *gen.ListClosedWorkflowExecutionsRequest) (*gen.ListClosedWorkflowExecutionsResponse, error) {
+	listRequest *gen.ListClosedWorkflowExecutionsRequest) (resp *gen.ListClosedWorkflowExecutionsResponse, retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := metrics.FrontendListClosedWorkflowExecutionsScope
 	sw := wh.startRequestProfile(scope)
@@ -2531,14 +2600,16 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 		return nil, wh.error(err, scope)
 	}
 
-	resp := &gen.ListClosedWorkflowExecutionsResponse{}
+	resp = &gen.ListClosedWorkflowExecutionsResponse{}
 	resp.Executions = persistenceResp.Executions
 	resp.NextPageToken = persistenceResp.NextPageToken
 	return resp, nil
 }
 
 // ResetStickyTaskList reset the volatile information in mutable state of a given workflow.
-func (wh *WorkflowHandler) ResetStickyTaskList(ctx context.Context, resetRequest *gen.ResetStickyTaskListRequest) (*gen.ResetStickyTaskListResponse, error) {
+func (wh *WorkflowHandler) ResetStickyTaskList(ctx context.Context, resetRequest *gen.ResetStickyTaskListRequest) (resp *gen.ResetStickyTaskListResponse, retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
+
 	scope := metrics.FrontendResetStickyTaskListScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
@@ -2572,7 +2643,8 @@ func (wh *WorkflowHandler) ResetStickyTaskList(ctx context.Context, resetRequest
 
 // QueryWorkflow returns query result for a specified workflow execution
 func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
-	queryRequest *gen.QueryWorkflowRequest) (*gen.QueryWorkflowResponse, error) {
+	queryRequest *gen.QueryWorkflowRequest) (resp *gen.QueryWorkflowResponse, retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := metrics.FrontendQueryWorkflowScope
 	sw := wh.startRequestProfile(scope)
@@ -2671,7 +2743,8 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 }
 
 // DescribeWorkflowExecution returns information about the specified workflow execution.
-func (wh *WorkflowHandler) DescribeWorkflowExecution(ctx context.Context, request *gen.DescribeWorkflowExecutionRequest) (*gen.DescribeWorkflowExecutionResponse, error) {
+func (wh *WorkflowHandler) DescribeWorkflowExecution(ctx context.Context, request *gen.DescribeWorkflowExecutionRequest) (resp *gen.DescribeWorkflowExecutionResponse, retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := metrics.FrontendDescribeWorkflowExecutionScope
 	sw := wh.startRequestProfile(scope)
@@ -2710,8 +2783,10 @@ func (wh *WorkflowHandler) DescribeWorkflowExecution(ctx context.Context, reques
 }
 
 // DescribeTaskList returns information about the target tasklist, right now this API returns the
-// pollers which polled this tasklist in last few minutes.
-func (wh *WorkflowHandler) DescribeTaskList(ctx context.Context, request *gen.DescribeTaskListRequest) (*gen.DescribeTaskListResponse, error) {
+// pollers which polled this tasklist in last few minutes. If includeTaskListStatus field is true,
+// it will also return status of tasklist's ackManager (readLevel, ackLevel, backlogCountHint and taskIDBlock).
+func (wh *WorkflowHandler) DescribeTaskList(ctx context.Context, request *gen.DescribeTaskListRequest) (resp *gen.DescribeTaskListResponse, retError error) {
+	defer logging.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := metrics.FrontendDescribeTaskListScope
 	sw := wh.startRequestProfile(scope)
@@ -2759,9 +2834,18 @@ func (wh *WorkflowHandler) DescribeTaskList(ctx context.Context, request *gen.De
 	return response, nil
 }
 
-func (wh *WorkflowHandler) getHistory(scope int, domainID string, execution gen.WorkflowExecution,
-	firstEventID, nextEventID int64, pageSize int32, nextPageToken []byte,
-	transientDecision *gen.TransientDecisionInfo, eventStoreVersion int32, branchToken []byte) (*gen.History, []byte, error) {
+func (wh *WorkflowHandler) getHistory(
+	scope int,
+	domainScope metrics.Scope,
+	domainID string,
+	execution gen.WorkflowExecution,
+	firstEventID, nextEventID int64,
+	pageSize int32,
+	nextPageToken []byte,
+	transientDecision *gen.TransientDecisionInfo,
+	eventStoreVersion int32,
+	branchToken []byte,
+) (*gen.History, []byte, error) {
 
 	historyEvents := []*gen.HistoryEvent{}
 	var size int
@@ -2796,10 +2880,13 @@ func (wh *WorkflowHandler) getHistory(scope int, domainID string, execution gen.
 	}
 
 	if len(historyEvents) > 0 {
+		// N.B. - Dual emit is required here so that we can see aggregate timer stats across all
+		// domains along with the individual domains stats
 		wh.metricsClient.RecordTimer(scope, metrics.HistorySize, time.Duration(size))
+		domainScope.RecordTimer(metrics.HistorySize, time.Duration(size))
 
 		if size > common.GetHistoryWarnSizeLimit {
-			wh.GetLogger().WithFields(bark.Fields{
+			wh.GetThrottledLogger().WithFields(bark.Fields{
 				logging.TagWorkflowExecutionID: execution.GetWorkflowId(),
 				logging.TagWorkflowRunID:       execution.GetRunId(),
 				logging.TagDomainID:            domainID,
@@ -2832,7 +2919,7 @@ func (wh *WorkflowHandler) getLoggerForTask(taskToken []byte) bark.Logger {
 }
 
 // startRequestProfile initiates recording of request metrics
-func (wh *WorkflowHandler) startRequestProfile(scope int) tally.Stopwatch {
+func (wh *WorkflowHandler) startRequestProfile(scope int) metrics.Stopwatch {
 	wh.startWG.Wait()
 	sw := wh.metricsClient.StartTimer(scope, metrics.CadenceLatency)
 	wh.metricsClient.IncCounter(scope, metrics.CadenceRequests)
@@ -2950,6 +3037,7 @@ func (wh *WorkflowHandler) createDomainResponse(info *persistence.DomainInfo, co
 		Description: common.StringPtr(info.Description),
 		OwnerEmail:  common.StringPtr(info.OwnerEmail),
 		Data:        info.Data,
+		UUID:        common.StringPtr(info.ID),
 	}
 
 	configResult := &gen.DomainConfiguration{
@@ -3018,15 +3106,18 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(ctx context.Context
 		if dErr != nil {
 			return nil, dErr
 		}
+		domainScope := wh.metricsClient.Scope(scope, metrics.DomainTag(domain.GetInfo().Name))
 		history, persistenceToken, err = wh.getHistory(
 			scope,
+			domainScope,
 			domainID,
 			*matchingResp.WorkflowExecution,
 			firstEventID,
 			nextEventID,
 			int32(wh.config.HistoryMaxPageSize(domain.GetInfo().Name)),
 			nil,
-			matchingResp.DecisionInfo, eventStoreVersion, branchToken)
+			matchingResp.DecisionInfo, eventStoreVersion, branchToken,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -3062,14 +3153,6 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(ctx context.Context
 	}
 
 	return resp, nil
-}
-
-func createGetWorkflowExecutionHistoryResponse(
-	history *gen.History, nextPageToken []byte) *gen.GetWorkflowExecutionHistoryResponse {
-	resp := &gen.GetWorkflowExecutionHistoryResponse{}
-	resp.History = history
-	resp.NextPageToken = nextPageToken
-	return resp
 }
 
 func deserializeHistoryToken(bytes []byte) (*getHistoryContinuationToken, error) {
@@ -3154,20 +3237,20 @@ func (wh *WorkflowHandler) getArchivedHistory(
 	}
 	archivalBucket := entry.GetConfig().ArchivalBucket
 	if archivalBucket == "" {
-		return nil, wh.error(errDomainArchivalBucketNotSet, scope)
+		return nil, wh.error(errDomainHasNeverBeenEnabledForArchival, scope)
 	}
 	var token *getHistoryContinuationTokenArchival
 	if request.NextPageToken != nil {
 		token, err = deserializeHistoryTokenArchival(request.NextPageToken)
 		if err != nil {
-			return nil, wh.error(errInvalidNextPageToken, scope)
+			return nil, wh.error(errInvalidNextArchivalPageToken, scope)
 		}
 	} else {
 		token = &getHistoryContinuationTokenArchival{
 			BlobstorePageToken: common.FirstBlobPageToken,
 		}
 	}
-	key, err := sysworkflow.NewHistoryBlobKey(domainID, request.Execution.GetWorkflowId(), request.Execution.GetRunId(), token.BlobstorePageToken)
+	key, err := archiver.NewHistoryBlobKey(domainID, request.Execution.GetWorkflowId(), request.Execution.GetRunId(), token.BlobstorePageToken)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -3179,7 +3262,7 @@ func (wh *WorkflowHandler) getArchivedHistory(
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
-	historyBlob := &sysworkflow.HistoryBlob{}
+	historyBlob := &archiver.HistoryBlob{}
 	switch *wrappingLayers.EncodingFormat {
 	case blob.JSONEncoding:
 		if err := json.Unmarshal(unwrappedBlob.Body, historyBlob); err != nil {
@@ -3189,12 +3272,16 @@ func (wh *WorkflowHandler) getArchivedHistory(
 	token = &getHistoryContinuationTokenArchival{
 		BlobstorePageToken: *historyBlob.Header.NextPageToken,
 	}
-	if token.BlobstorePageToken == common.LastBlobNextPageToken {
+	if *historyBlob.Header.IsLast {
 		token = nil
 	}
 	nextToken, err := serializeHistoryTokenArchival(token)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
-	return createGetWorkflowExecutionHistoryResponse(historyBlob.Body, nextToken), nil
+	return &gen.GetWorkflowExecutionHistoryResponse{
+		History:       historyBlob.Body,
+		NextPageToken: nextToken,
+		Archived:      common.BoolPtr(true),
+	}, nil
 }

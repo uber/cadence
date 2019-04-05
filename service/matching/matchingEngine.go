@@ -26,19 +26,18 @@ import (
 	"math"
 	"sync"
 
+	"github.com/pborman/uuid"
+	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-
-	"github.com/pborman/uuid"
-	"github.com/uber-common/bark"
-	"github.com/uber/cadence/common/cache"
 )
 
 // Implements matching.Engine
@@ -570,14 +569,7 @@ func (e *matchingEngineImpl) DescribeTaskList(ctx context.Context, request *m.De
 		return nil, err
 	}
 
-	pollers := []*workflow.PollerInfo{}
-	for _, poller := range tlMgr.GetAllPollerInfo() {
-		pollers = append(pollers, &workflow.PollerInfo{
-			Identity:       common.StringPtr(poller.identity),
-			LastAccessTime: common.Int64Ptr(poller.lastAccessTime.UnixNano()),
-		})
-	}
-	return &workflow.DescribeTaskListResponse{Pollers: pollers}, nil
+	return tlMgr.DescribeTaskList(request.DescRequest.GetIncludeTaskListStatus()), nil
 }
 
 // Loads a task from persistence and wraps it in a task context

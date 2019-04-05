@@ -27,9 +27,11 @@ import (
 
 	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
+	"github.com/uber/cadence/.gen/go/shared"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/locks"
@@ -55,7 +57,7 @@ type (
 		appendFirstBatchHistoryForContinueAsNew(newStateBuilder mutableState, transactionID int64) error
 		replicateWorkflowExecution(request *h.ReplicateEventsRequest, transferTasks []persistence.Task, timerTasks []persistence.Task, lastEventID, transactionID int64, now time.Time) error
 		resetMutableState(prevRunID string, resetBuilder mutableState) (mutableState, error)
-		resetWorkflowExecution(currMutableState mutableState, updateCurr bool, closeTask, cleanupTask persistence.Task, newMutableState mutableState, transferTasks, timerTasks, replicationTasks []persistence.Task, baseRunID string, forkRunNextEventID, prevRunVersion int64) (retError error)
+		resetWorkflowExecution(currMutableState mutableState, updateCurr bool, closeTask, cleanupTask persistence.Task, newMutableState mutableState, transferTasks, timerTasks, currReplicationTasks, insertReplicationTasks []persistence.Task, baseRunID string, forkRunNextEventID, prevRunVersion int64) (retError error)
 		scheduleNewDecision(transferTasks []persistence.Task, timerTasks []persistence.Task) ([]persistence.Task, []persistence.Task, error)
 		unlock()
 		updateHelper(transferTasks []persistence.Task, timerTasks []persistence.Task, transactionID int64, now time.Time, createReplicationTask bool, standbyHistoryBuilder *historyBuilder, sourceCluster string) error
@@ -90,8 +92,13 @@ var (
 	kafkaOperationRetryPolicy       = common.CreateKafkaOperationRetryPolicy()
 )
 
-func newWorkflowExecutionContext(domainID string, execution workflow.WorkflowExecution, shard ShardContext,
-	executionManager persistence.ExecutionManager, logger bark.Logger) *workflowExecutionContextImpl {
+func newWorkflowExecutionContext(
+	domainID string,
+	execution workflow.WorkflowExecution,
+	shard ShardContext,
+	executionManager persistence.ExecutionManager,
+	logger bark.Logger,
+) *workflowExecutionContextImpl {
 	lg := logger.WithFields(bark.Fields{
 		logging.TagDomainID:            domainID,
 		logging.TagWorkflowExecutionID: execution.GetWorkflowId(),
@@ -193,7 +200,8 @@ func (c *workflowExecutionContextImpl) resetMutableState(prevRunID string, reset
 // 2. append history to current run if current run is not closed
 // 3. update mutableState(terminate current run if not closed) and create new run
 func (c *workflowExecutionContextImpl) resetWorkflowExecution(currMutableState mutableState, updateCurr bool, closeTask, cleanupTask persistence.Task,
-	newMutableState mutableState, newTransferTasks, newTimerTasks, replicationTasks []persistence.Task, baseRunID string, baseRunNextEventID, prevRunVersion int64) (retError error) {
+	newMutableState mutableState, newTransferTasks, newTimerTasks, currReplicationTasks, insertReplicationTasks []persistence.Task, baseRunID string,
+	baseRunNextEventID, prevRunVersion int64) (retError error) {
 
 	now := time.Now()
 	currTransferTasks := []persistence.Task{}
@@ -249,7 +257,7 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(currMutableState m
 		BranchToken:   newMutableState.GetCurrentBranch(),
 		Events:        hBuilder.GetHistory().GetEvents(),
 		TransactionID: transactionID,
-	}, c.domainID)
+	}, c.domainID, c.workflowExecution)
 	if retError != nil {
 		return
 	}
@@ -281,6 +289,7 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(currMutableState m
 
 		CurrExecutionInfo:    currMutableState.GetExecutionInfo(),
 		CurrReplicationState: currMutableState.GetReplicationState(),
+		CurrReplicationTasks: currReplicationTasks,
 		CurrTransferTasks:    currTransferTasks,
 		CurrTimerTasks:       currTimerTasks,
 
@@ -288,7 +297,7 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(currMutableState m
 		InsertReplicationState: newMutableState.GetReplicationState(),
 		InsertTransferTasks:    newTransferTasks,
 		InsertTimerTasks:       newTimerTasks,
-		InsertReplicationTasks: replicationTasks,
+		InsertReplicationTasks: insertReplicationTasks,
 
 		InsertTimerInfos:         snapshotRequest.InsertTimerInfos,
 		InsertActivityInfos:      snapshotRequest.InsertActivityInfos,
@@ -506,8 +515,17 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 		countLimitWarn := config.HistoryCountLimitWarn(executionInfo.DomainID)
 		historyCount := int(c.msBuilder.GetNextEventID()) - 1
 		historySize := int(c.msBuilder.GetHistorySize()) + newHistorySize
+
+		// N.B. - Dual emit is required here so that we can see aggregate timer stats across all
+		// domains along with the individual domains stats
 		c.metricsClient.RecordTimer(metrics.PersistenceUpdateWorkflowExecutionScope, metrics.HistorySize, time.Duration(historySize))
 		c.metricsClient.RecordTimer(metrics.PersistenceUpdateWorkflowExecutionScope, metrics.HistoryCount, time.Duration(historyCount))
+		if entry, err := c.shard.GetDomainCache().GetDomainByID(executionInfo.DomainID); err == nil && entry != nil && entry.GetInfo() != nil {
+			scope := c.metricsClient.Scope(metrics.PersistenceUpdateWorkflowExecutionScope, metrics.DomainTag(entry.GetInfo().Name))
+			scope.RecordTimer(metrics.HistorySize, time.Duration(historySize))
+			scope.RecordTimer(metrics.HistoryCount, time.Duration(historyCount))
+		}
+
 		if historySize > sizeLimitWarn || historyCount > countLimitWarn {
 			// emit warning
 			c.logger.WithFields(bark.Fields{
@@ -526,6 +544,11 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 				_, err1 := c.loadWorkflowExecution() // reload mutable state
 				if err1 != nil {
 					return err1
+				}
+
+				err = failInFlightDecisionToClearBufferedEvents(c.msBuilder)
+				if err != nil {
+					return err
 				}
 
 				c.msBuilder.AddWorkflowExecutionTerminatedEvent(&workflow.TerminateWorkflowExecutionRequest{
@@ -560,6 +583,14 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 					return err
 				}
 				executionInfo.SetLastFirstEventID(firstEvent.GetEventId())
+
+				// add clean up tasks
+				tranT, timerT, err := getWorkflowHistoryCleanupTasksFromShard(c.shard, executionInfo.DomainID, executionInfo.WorkflowID, nil)
+				if err != nil {
+					return err
+				}
+				transferTasks = append(transferTasks, tranT)
+				timerTasks = append(timerTasks, timerT)
 			} // end of hard terminate workflow
 		} // end of enforce history size/count limit
 
@@ -662,6 +693,13 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 		c.emitSessionUpdateStats(resp.MutableStateUpdateSessionStats)
 	}
 
+	// emit workflow completion stats if any
+	if executionInfo.State == persistence.WorkflowStateCompleted {
+		if event, ok := c.msBuilder.GetCompletionEvent(); ok {
+			c.emitWorkflowCompletionStats(event)
+		}
+	}
+
 	return nil
 }
 
@@ -684,7 +722,7 @@ func (c *workflowExecutionContextImpl) appendHistoryEvents(history []*workflow.H
 			BranchToken:   c.msBuilder.GetCurrentBranch(),
 			Events:        history,
 			TransactionID: transactionID,
-		}, c.domainID)
+		}, c.domainID, c.workflowExecution)
 	} else {
 		historySize, err = c.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
 			DomainID:          c.domainID,
@@ -746,7 +784,7 @@ func (c *workflowExecutionContextImpl) appendFirstBatchHistoryForContinueAsNew(n
 			BranchToken:   newStateBuilder.GetCurrentBranch(),
 			Events:        history.Events,
 			TransactionID: transactionID,
-		}, newStateBuilder.GetExecutionInfo().DomainID)
+		}, newStateBuilder.GetExecutionInfo().DomainID, newExecution)
 	} else {
 		historySize, err = c.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
 			DomainID:          domainID,
@@ -827,7 +865,7 @@ func (c *workflowExecutionContextImpl) scheduleNewDecision(transferTasks []persi
 			ScheduleID: di.ScheduleID,
 		})
 		if msBuilder.IsStickyTaskListEnabled() {
-			tBuilder := newTimerBuilder(c.shard.GetConfig(), c.logger, common.NewRealTimeSource())
+			tBuilder := newTimerBuilder(c.shard.GetConfig(), c.logger, clock.NewRealTimeSource())
 			stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID, di.Attempt,
 				executionInfo.StickyScheduleToStartTimeout)
 			timerTasks = append(timerTasks, stickyTaskTimeoutTimer)
@@ -873,8 +911,26 @@ func (c *workflowExecutionContextImpl) emitWorkflowExecutionStats(stats *persist
 	if stats == nil {
 		return
 	}
-	c.metricsClient.RecordTimer(metrics.ExecutionSizeStatsScope, metrics.HistorySize,
-		time.Duration(executionInfoHistorySize))
+
+	domain := ""
+	if entry, err := c.shard.GetDomainCache().GetDomainByID(c.domainID); err == nil && entry != nil && entry.GetInfo() != nil {
+		domain = entry.GetInfo().Name
+	}
+
+	// emit domain tagged metrics if we can retrieve the domain
+	if len(domain) > 0 {
+		domainSizeScope := c.metricsClient.Scope(metrics.ExecutionSizeStatsScope, metrics.DomainTag(domain))
+		domainCountScope := c.metricsClient.Scope(metrics.ExecutionCountStatsScope, metrics.DomainTag(domain))
+		emitWorkflowExecutionStats(domainSizeScope, domainCountScope, stats, executionInfoHistorySize)
+	}
+
+	// N.B - always emit domain "all" metrics for aggregate information as we
+	// need a way to look at aggregate stats across all domain
+	allSizeScope := c.metricsClient.Scope(metrics.ExecutionSizeStatsScope, metrics.DomainAllTag())
+	allCountScope := c.metricsClient.Scope(metrics.ExecutionCountStatsScope, metrics.DomainAllTag())
+	emitWorkflowExecutionStats(allSizeScope, allCountScope, stats, executionInfoHistorySize)
+
+	// TODO: (@shreyassrivatsan) remove the below legacy style metrics
 	c.metricsClient.RecordTimer(metrics.ExecutionSizeStatsScope, metrics.MutableStateSize,
 		time.Duration(stats.MutableStateSize))
 	c.metricsClient.RecordTimer(metrics.ExecutionSizeStatsScope, metrics.ExecutionInfoSize,
@@ -908,6 +964,29 @@ func (c *workflowExecutionContextImpl) emitWorkflowExecutionStats(stats *persist
 }
 
 func (c *workflowExecutionContextImpl) emitSessionUpdateStats(stats *persistence.MutableStateUpdateSessionStats) {
+	if stats == nil {
+		return
+	}
+
+	domain := ""
+	if entry, err := c.shard.GetDomainCache().GetDomainByID(c.domainID); err == nil && entry != nil && entry.GetInfo() != nil {
+		domain = entry.GetInfo().Name
+	}
+
+	// emit domain tagged metrics if we can retrieve the domain
+	if len(domain) > 0 {
+		domainSizeScope := c.metricsClient.Scope(metrics.SessionSizeStatsScope, metrics.DomainTag(domain))
+		domainCountScope := c.metricsClient.Scope(metrics.SessionCountStatsScope, metrics.DomainTag(domain))
+		emitSessionUpdateStats(domainSizeScope, domainCountScope, stats)
+	}
+
+	// N.B - always emit domain "all" metrics for aggregate information as we
+	// need a way to look at aggregate stats across all domain
+	allSizeScope := c.metricsClient.Scope(metrics.SessionSizeStatsScope, metrics.DomainAllTag())
+	allCountScope := c.metricsClient.Scope(metrics.SessionCountStatsScope, metrics.DomainAllTag())
+	emitSessionUpdateStats(allSizeScope, allCountScope, stats)
+
+	// TODO: (@shreyassrivatsan) remove the below legacy style metrics
 	c.metricsClient.RecordTimer(metrics.SessionSizeStatsScope, metrics.MutableStateSize,
 		time.Duration(stats.MutableStateSize))
 	c.metricsClient.RecordTimer(metrics.SessionSizeStatsScope, metrics.ExecutionInfoSize,
@@ -944,6 +1023,80 @@ func (c *workflowExecutionContextImpl) emitSessionUpdateStats(stats *persistence
 		time.Duration(stats.DeleteSignalInfoCount))
 	c.metricsClient.RecordTimer(metrics.SessionCountStatsScope, metrics.DeleteRequestCancelInfoCount,
 		time.Duration(stats.DeleteRequestCancelInfoCount))
+}
+
+func (c *workflowExecutionContextImpl) emitWorkflowCompletionStats(event *workflow.HistoryEvent) {
+	domain := ""
+	if entry, err := c.shard.GetDomainCache().GetDomainByID(c.domainID); err == nil && entry != nil && entry.GetInfo() != nil {
+		domain = entry.GetInfo().Name
+	}
+
+	if len(domain) > 0 {
+		domainScope := c.metricsClient.Scope(metrics.WorkflowCompletionStatsScope, metrics.DomainTag(domain))
+		emitWorkflowCompletionStats(domainScope, event)
+	}
+	scope := c.metricsClient.Scope(metrics.WorkflowCompletionStatsScope, metrics.DomainAllTag())
+	emitWorkflowCompletionStats(scope, event)
+}
+
+func emitWorkflowExecutionStats(sizeScope, countScope metrics.Scope, stats *persistence.MutableStateStats, executionInfoHistorySize int64) {
+	sizeScope.RecordTimer(metrics.HistorySize, time.Duration(executionInfoHistorySize))
+	sizeScope.RecordTimer(metrics.MutableStateSize, time.Duration(stats.MutableStateSize))
+	sizeScope.RecordTimer(metrics.ExecutionInfoSize, time.Duration(stats.MutableStateSize))
+	sizeScope.RecordTimer(metrics.ActivityInfoSize, time.Duration(stats.ActivityInfoSize))
+	sizeScope.RecordTimer(metrics.TimerInfoSize, time.Duration(stats.TimerInfoSize))
+	sizeScope.RecordTimer(metrics.ChildInfoSize, time.Duration(stats.ChildInfoSize))
+	sizeScope.RecordTimer(metrics.SignalInfoSize, time.Duration(stats.SignalInfoSize))
+	sizeScope.RecordTimer(metrics.BufferedEventsSize, time.Duration(stats.BufferedEventsSize))
+	sizeScope.RecordTimer(metrics.BufferedReplicationTasksSize, time.Duration(stats.BufferedReplicationTasksSize))
+
+	countScope.RecordTimer(metrics.ActivityInfoCount, time.Duration(stats.ActivityInfoCount))
+	countScope.RecordTimer(metrics.TimerInfoCount, time.Duration(stats.TimerInfoCount))
+	countScope.RecordTimer(metrics.ChildInfoCount, time.Duration(stats.ChildInfoCount))
+	countScope.RecordTimer(metrics.SignalInfoCount, time.Duration(stats.SignalInfoCount))
+	countScope.RecordTimer(metrics.RequestCancelInfoCount, time.Duration(stats.RequestCancelInfoCount))
+	countScope.RecordTimer(metrics.BufferedEventsCount, time.Duration(stats.BufferedEventsCount))
+	countScope.RecordTimer(metrics.BufferedReplicationTasksCount, time.Duration(stats.BufferedReplicationTasksCount))
+}
+
+func emitSessionUpdateStats(sizeScope, countScope metrics.Scope, stats *persistence.MutableStateUpdateSessionStats) {
+	sizeScope.RecordTimer(metrics.MutableStateSize, time.Duration(stats.MutableStateSize))
+	sizeScope.RecordTimer(metrics.ExecutionInfoSize, time.Duration(stats.ExecutionInfoSize))
+	sizeScope.RecordTimer(metrics.ActivityInfoSize, time.Duration(stats.ActivityInfoSize))
+	sizeScope.RecordTimer(metrics.TimerInfoSize, time.Duration(stats.TimerInfoSize))
+	sizeScope.RecordTimer(metrics.ChildInfoSize, time.Duration(stats.ChildInfoSize))
+	sizeScope.RecordTimer(metrics.SignalInfoSize, time.Duration(stats.SignalInfoSize))
+	sizeScope.RecordTimer(metrics.BufferedEventsSize, time.Duration(stats.BufferedEventsSize))
+	sizeScope.RecordTimer(metrics.BufferedReplicationTasksSize, time.Duration(stats.BufferedReplicationTasksSize))
+
+	countScope.RecordTimer(metrics.ActivityInfoCount, time.Duration(stats.ActivityInfoCount))
+	countScope.RecordTimer(metrics.TimerInfoCount, time.Duration(stats.TimerInfoCount))
+	countScope.RecordTimer(metrics.ChildInfoCount, time.Duration(stats.ChildInfoCount))
+	countScope.RecordTimer(metrics.SignalInfoCount, time.Duration(stats.SignalInfoCount))
+	countScope.RecordTimer(metrics.RequestCancelInfoCount, time.Duration(stats.RequestCancelInfoCount))
+	countScope.RecordTimer(metrics.DeleteActivityInfoCount, time.Duration(stats.DeleteActivityInfoCount))
+	countScope.RecordTimer(metrics.DeleteTimerInfoCount, time.Duration(stats.DeleteTimerInfoCount))
+	countScope.RecordTimer(metrics.DeleteChildInfoCount, time.Duration(stats.DeleteChildInfoCount))
+	countScope.RecordTimer(metrics.DeleteSignalInfoCount, time.Duration(stats.DeleteSignalInfoCount))
+	countScope.RecordTimer(metrics.DeleteRequestCancelInfoCount, time.Duration(stats.DeleteRequestCancelInfoCount))
+}
+
+func emitWorkflowCompletionStats(scope metrics.Scope, event *workflow.HistoryEvent) {
+	if event.EventType == nil {
+		return
+	}
+	switch *event.EventType {
+	case shared.EventTypeWorkflowExecutionCompleted:
+		scope.IncCounter(metrics.WorkflowSuccessCount)
+	case shared.EventTypeWorkflowExecutionCanceled:
+		scope.IncCounter(metrics.WorkflowCancelCount)
+	case shared.EventTypeWorkflowExecutionFailed:
+		scope.IncCounter(metrics.WorkflowFailedCount)
+	case shared.EventTypeWorkflowExecutionTimedOut:
+		scope.IncCounter(metrics.WorkflowTimeoutCount)
+	case shared.EventTypeWorkflowExecutionTerminated:
+		scope.IncCounter(metrics.WorkflowTerminateCount)
+	}
 }
 
 // validateNoEventsAfterWorkflowFinish perform check on history event batch

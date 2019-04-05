@@ -76,6 +76,9 @@ const (
 	FlagStartOffset                 = "start_offset"
 	FlagTopic                       = "topic"
 	FlagGroup                       = "group"
+	FlagResult                      = "result"
+	FlagIdentity                    = "identity"
+	FlagDetail                      = "detail"
 	FlagReason                      = "reason"
 	FlagReasonWithAlias             = FlagReason + ", re"
 	FlagOpen                        = "open"
@@ -124,6 +127,8 @@ const (
 	FlagDomainDataWithAlias         = FlagDomainData + ", dmd"
 	FlagEventID                     = "event_id"
 	FlagEventIDWithAlias            = FlagEventID + ", eid"
+	FlagActivityID                  = "activity_id"
+	FlagActivityIDWithAlias         = FlagActivityID + ", aid"
 	FlagMaxFieldLength              = "max_field_length"
 	FlagMaxFieldLengthWithAlias     = FlagMaxFieldLength + ", maxl"
 	FlagSecurityToken               = "security_token"
@@ -303,11 +308,6 @@ func getFlagsForListAll() []cli.Flag {
 			Name:  FlagPrintDateTimeWithAlias,
 			Usage: "Print full date time in '2006-01-02T15:04:05Z07:00' format",
 		},
-		cli.IntFlag{
-			Name:  FlagContextTimeoutWithAlias,
-			Value: 30,
-			Usage: "Optional timeout for list command context in seconds",
-		},
 		cli.StringFlag{
 			Name:  FlagWorkflowStatusWithAlias,
 			Usage: "Closed workflow status [completed, failed, canceled, terminated, continueasnew, timedout]",
@@ -371,10 +371,6 @@ func getFlagsForObserve() []cli.Flag {
 
 func getFlagsForObserveID() []cli.Flag {
 	return []cli.Flag{
-		cli.IntFlag{
-			Name:  FlagContextTimeoutWithAlias,
-			Usage: "Optional timeout for start command context in seconds, default value is 120",
-		},
 		cli.BoolFlag{
 			Name:  FlagShowDetailWithAlias,
 			Usage: "Optional show event details",

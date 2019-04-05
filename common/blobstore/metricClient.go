@@ -22,6 +22,7 @@ package blobstore
 
 import (
 	"context"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/blobstore/blob"
 	"github.com/uber/cadence/common/metrics"
 )
@@ -63,6 +64,19 @@ func (c *metricClient) Download(ctx context.Context, bucket string, key blob.Key
 
 	if err != nil {
 		c.metricsClient.IncCounter(metrics.BlobstoreClientDownloadScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
+}
+
+func (c *metricClient) GetTags(ctx context.Context, bucket string, key blob.Key) (map[string]string, error) {
+	c.metricsClient.IncCounter(metrics.BlobstoreClientGetTagsScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.BlobstoreClientGetTagsScope, metrics.CadenceClientLatency)
+	resp, err := c.client.GetTags(ctx, bucket, key)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.BlobstoreClientGetTagsScope, metrics.CadenceClientFailures)
 	}
 	return resp, err
 }
@@ -117,4 +131,12 @@ func (c *metricClient) BucketMetadata(ctx context.Context, bucket string) (*Buck
 		c.metricsClient.IncCounter(metrics.BlobstoreClientBucketMetadataScope, metrics.CadenceClientFailures)
 	}
 	return resp, err
+}
+
+func (c *metricClient) IsRetryableError(err error) bool {
+	return c.client.IsRetryableError(err)
+}
+
+func (c *metricClient) GetRetryPolicy() backoff.RetryPolicy {
+	return c.client.GetRetryPolicy()
 }

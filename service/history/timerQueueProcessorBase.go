@@ -22,8 +22,6 @@ package history
 
 import (
 	"errors"
-	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/service/worker/sysworkflow"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -35,21 +33,25 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/tokenbucket"
+	"github.com/uber/cadence/service/worker/archiver"
 )
 
 var (
-	errTimerTaskNotFound          = errors.New("Timer task not found")
 	errFailedToAddTimeoutEvent    = errors.New("Failed to add timeout event")
 	errFailedToAddTimerFiredEvent = errors.New("Failed to add timer fired event")
 	emptyTime                     = time.Time{}
 	maxTimestamp                  = time.Unix(0, math.MaxInt64)
 
-	loadTimerTaskThrottleRetryDelay = 5 * time.Second
+	loadDomainEntryForTimerTaskRetryDelay = 100 * time.Millisecond
+	loadTimerTaskThrottleRetryDelay       = 5 * time.Second
 )
 
 type (
@@ -70,7 +72,7 @@ type (
 		timerProcessor     timerProcessor
 		timerQueueAckMgr   timerQueueAckMgr
 		timerGate          TimerGate
-		rateLimiter        common.TokenBucket
+		rateLimiter        tokenbucket.TokenBucket
 		startDelay         dynamicconfig.DurationPropertyFn
 		retryPolicy        backoff.RetryPolicy
 		visibilityProducer messaging.Producer
@@ -122,7 +124,7 @@ func newTimerQueueProcessorBase(scope int, shard ShardContext, historyService *h
 		workerNotificationChans: workerNotificationChans,
 		newTimerCh:              make(chan struct{}, 1),
 		lastPollTime:            time.Time{},
-		rateLimiter:             common.NewTokenBucket(maxPollRPS(), common.NewRealTimeSource()),
+		rateLimiter:             tokenbucket.New(maxPollRPS(), clock.NewRealTimeSource()),
 		startDelay:              startDelay,
 		retryPolicy:             common.CreatePersistanceRetryPolicy(),
 		visibilityProducer:      visibilityProducer,
@@ -428,7 +430,7 @@ FilterLoop:
 				break FilterLoop
 			}
 			incAttempt()
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(loadDomainEntryForTimerTaskRetryDelay)
 		}
 	}
 
@@ -444,7 +446,6 @@ FilterLoop:
 			return true
 		}
 	}
-	defer func() { t.metricsClient.RecordTimer(scope, metrics.TaskLatency, time.Since(startTime)) }()
 
 	for {
 		select {
@@ -454,8 +455,7 @@ FilterLoop:
 		default:
 			err = backoff.Retry(op, t.retryPolicy, retryCondition)
 			if err == nil {
-				t.metricsClient.RecordTimer(scope, metrics.TaskAttemptTimer, time.Duration(attempt))
-				t.ackTaskOnce(task, scope)
+				t.ackTaskOnce(task, scope, shouldProcessTask, startTime, attempt)
 				return
 			}
 			incAttempt()
@@ -471,8 +471,10 @@ func (t *timerQueueProcessorBase) processTaskOnce(notificationChan <-chan struct
 
 	startTime := time.Now()
 	scope, err := t.timerProcessor.process(task, shouldProcessTask)
-	t.metricsClient.IncCounter(scope, metrics.TaskRequests)
-	t.metricsClient.RecordTimer(scope, metrics.TaskProcessingLatency, time.Since(startTime))
+	if shouldProcessTask {
+		t.metricsClient.IncCounter(scope, metrics.TaskRequests)
+		t.metricsClient.RecordTimer(scope, metrics.TaskProcessingLatency, time.Since(startTime))
+	}
 
 	return scope, err
 }
@@ -527,13 +529,17 @@ func (t *timerQueueProcessorBase) handleTaskError(scope int, startTime time.Time
 	return err
 }
 
-func (t *timerQueueProcessorBase) ackTaskOnce(task *persistence.TimerTaskInfo, scope int) {
+func (t *timerQueueProcessorBase) ackTaskOnce(task *persistence.TimerTaskInfo, scope int, reportMetrics bool, startTime time.Time, attempt int) {
 	t.timerQueueAckMgr.completeTimerTask(task)
-	t.metricsClient.RecordTimer(
-		scope,
-		metrics.TaskQueueLatency,
-		time.Since(task.GetVisibilityTimestamp()),
-	)
+	if reportMetrics {
+		t.metricsClient.RecordTimer(scope, metrics.TaskAttemptTimer, time.Duration(attempt))
+		t.metricsClient.RecordTimer(scope, metrics.TaskLatency, time.Since(startTime))
+		t.metricsClient.RecordTimer(
+			scope,
+			metrics.TaskQueueLatency,
+			time.Since(task.GetVisibilityTimestamp()),
+		)
+	}
 	atomic.AddUint64(&t.timerFiredCount, 1)
 }
 
@@ -586,7 +592,7 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.Ti
 	}
 
 	clusterArchivalStatus := t.shard.GetService().GetClusterMetadata().ArchivalConfig().GetArchivalStatus()
-	domainCacheEntry, err := t.historyService.getActiveDomainEntry(common.StringPtr(task.DomainID))
+	domainCacheEntry, err := t.historyService.shard.GetDomainCache().GetDomainByID(task.DomainID)
 	if err != nil {
 		return err
 	}
@@ -594,15 +600,15 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.Ti
 	switch clusterArchivalStatus {
 	case cluster.ArchivalDisabled:
 		t.metricsClient.IncCounter(metrics.HistoryProcessDeleteHistoryEventScope, metrics.WorkflowCleanupDeleteCount)
-		return t.deleteWorkflow(task, msBuilder)
+		return t.deleteWorkflow(task, msBuilder, context)
 	case cluster.ArchivalPaused:
 		// TODO: @dandrew once archival backfill is in place cluster:paused && domain:enabled should be a nop rather than a delete
 		t.metricsClient.IncCounter(metrics.HistoryProcessDeleteHistoryEventScope, metrics.WorkflowCleanupDeleteCount)
-		return t.deleteWorkflow(task, msBuilder)
+		return t.deleteWorkflow(task, msBuilder, context)
 	case cluster.ArchivalEnabled:
 		if domainArchivalStatus == workflow.ArchivalStatusDisabled {
 			t.metricsClient.IncCounter(metrics.HistoryProcessDeleteHistoryEventScope, metrics.WorkflowCleanupDeleteCount)
-			return t.deleteWorkflow(task, msBuilder)
+			return t.deleteWorkflow(task, msBuilder, context)
 		}
 		t.metricsClient.IncCounter(metrics.HistoryProcessDeleteHistoryEventScope, metrics.WorkflowCleanupArchiveCount)
 		return t.archiveWorkflow(task, msBuilder, context)
@@ -610,7 +616,7 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.Ti
 	return nil
 }
 
-func (t *timerQueueProcessorBase) deleteWorkflow(task *persistence.TimerTaskInfo, msBuilder mutableState) error {
+func (t *timerQueueProcessorBase) deleteWorkflow(task *persistence.TimerTaskInfo, msBuilder mutableState, context workflowExecutionContext) error {
 	err := t.deleteWorkflowExecution(task)
 	if err != nil {
 		return err
@@ -621,11 +627,19 @@ func (t *timerQueueProcessorBase) deleteWorkflow(task *persistence.TimerTaskInfo
 		return err
 	}
 
-	return t.deleteWorkflowVisibility(task)
+	err = t.deleteWorkflowVisibility(task)
+	if err != nil {
+		return err
+	}
+	// calling clear here to force accesses of mutable state to read database
+	// if this is not called then callers will get mutable state even though its been removed from database
+	context.clear()
+	return nil
 }
 
 func (t *timerQueueProcessorBase) archiveWorkflow(task *persistence.TimerTaskInfo, msBuilder mutableState, context workflowExecutionContext) error {
-	req := &sysworkflow.ArchiveRequest{
+	req := &archiver.ArchiveRequest{
+		ShardID:              t.shard.GetShardID(),
 		DomainID:             task.DomainID,
 		WorkflowID:           task.WorkflowID,
 		RunID:                task.RunID,
@@ -649,6 +663,10 @@ func (t *timerQueueProcessorBase) archiveWorkflow(task *persistence.TimerTaskInf
 		return err
 	}
 	err := t.deleteWorkflowExecution(task)
+	if err != nil {
+		return err
+	}
+	err = t.deleteWorkflowVisibility(task)
 	if err != nil {
 		return err
 	}

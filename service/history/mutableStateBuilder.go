@@ -30,6 +30,7 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/cron"
 	"github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/persistence"
@@ -908,9 +909,9 @@ func (e *mutableStateBuilder) GetRetryBackoffDuration(errReason string) time.Dur
 func (e *mutableStateBuilder) GetCronBackoffDuration() time.Duration {
 	info := e.executionInfo
 	if len(info.CronSchedule) == 0 {
-		return common.NoRetryBackoff
+		return cron.NoBackoff
 	}
-	return getBackoffForNextCronSchedule(info.CronSchedule, time.Now())
+	return cron.GetBackoffForNextSchedule(info.CronSchedule, time.Now())
 }
 
 // GetSignalInfo get details about a signal request that is currently in progress.
@@ -1008,12 +1009,11 @@ func (e *mutableStateBuilder) ReplicateActivityInfo(request *h.SyncActivityReque
 	ai.Version = request.GetVersion()
 	ai.ScheduledTime = time.Unix(0, request.GetScheduledTime())
 	ai.StartedID = request.GetStartedId()
+	ai.LastHeartBeatUpdatedTime = time.Unix(0, request.GetLastHeartbeatTime())
 	if ai.StartedID == common.EmptyEventID {
 		ai.StartedTime = time.Time{}
-		ai.LastHeartBeatUpdatedTime = time.Time{}
 	} else {
 		ai.StartedTime = time.Unix(0, request.GetStartedTime())
-		ai.LastHeartBeatUpdatedTime = time.Unix(0, request.GetLastHeartbeatTime())
 	}
 	ai.Details = request.GetDetails()
 	ai.Attempt = request.GetAttempt()
@@ -1780,6 +1780,7 @@ func (e *mutableStateBuilder) AddActivityTaskStartedEvent(ai *persistence.Activi
 	ai.StartedID = common.TransientEventID
 	ai.RequestID = requestID
 	ai.StartedTime = time.Now()
+	ai.LastHeartBeatUpdatedTime = ai.StartedTime
 	ai.StartedIdentity = identity
 	e.UpdateActivity(ai)
 	e.syncActivityTasks[ai.ScheduleID] = struct{}{}
@@ -1795,6 +1796,7 @@ func (e *mutableStateBuilder) ReplicateActivityTaskStartedEvent(event *workflow.
 	ai.StartedID = event.GetEventId()
 	ai.RequestID = attributes.GetRequestId()
 	ai.StartedTime = time.Unix(0, event.GetTimestamp())
+	ai.LastHeartBeatUpdatedTime = ai.StartedTime
 	e.updateActivityInfos[ai] = struct{}{}
 }
 
@@ -2284,7 +2286,7 @@ func (e *mutableStateBuilder) AddCancelTimerFailedEvent(decisionCompletedEventID
 	// No Operation: We couldn't cancel it probably TIMER_ID_UNKNOWN
 	timerID := attributes.GetTimerId()
 	return e.hBuilder.AddCancelTimerFailedEvent(timerID, decisionCompletedEventID,
-		timerCancelationMsgTimerIDUnknown, identity)
+		timerCancellationMsgTimerIDUnknown, identity)
 }
 
 func (e *mutableStateBuilder) AddRecordMarkerEvent(decisionCompletedEventID int64,
@@ -2384,7 +2386,13 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(firstEventID, decisionComple
 
 	// call FlushBufferedEvents to assign task id to event
 	// as well as update last event task id in new state builder
-	err := newStateBuilder.FlushBufferedEvents()
+	// NOTE: must flush current mutable state first
+	// so the task IDs assigned can be used for comparison for cross DC
+	err := e.FlushBufferedEvents()
+	if err != nil {
+		return nil, nil, err
+	}
+	err = newStateBuilder.FlushBufferedEvents()
 	if err != nil {
 		return nil, nil, err
 	}

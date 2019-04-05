@@ -21,9 +21,10 @@
 package frontend
 
 import (
-	"fmt"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
@@ -32,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/tokenbucket"
 )
 
 // Config represents configuration for cadence-frontend service
@@ -44,9 +46,11 @@ type Config struct {
 	EnableVisibilityToKafka         dynamicconfig.BoolPropertyFn
 	EnableReadVisibilityFromES      dynamicconfig.BoolPropertyFnWithDomainFilter
 	ESVisibilityListMaxQPS          dynamicconfig.IntPropertyFnWithDomainFilter
+	ESIndexMaxResultWindow          dynamicconfig.IntPropertyFn
 	HistoryMaxPageSize              dynamicconfig.IntPropertyFnWithDomainFilter
 	RPS                             dynamicconfig.IntPropertyFn
 	MaxIDLengthLimit                dynamicconfig.IntPropertyFn
+	EnableReadHistoryFromArchival   dynamicconfig.BoolPropertyFnWithDomainFilter
 
 	// Persistence settings
 	HistoryMgrNumConns dynamicconfig.IntPropertyFn
@@ -61,29 +65,38 @@ type Config struct {
 	// size limit system protection
 	BlobSizeLimitError dynamicconfig.IntPropertyFnWithDomainFilter
 	BlobSizeLimitWarn  dynamicconfig.IntPropertyFnWithDomainFilter
+
+	ThrottledLogRPS dynamicconfig.IntPropertyFn
+
+	// Domain specific config
+	EnableDomainNotActiveAutoForwarding dynamicconfig.BoolPropertyFnWithDomainFilter
 }
 
 // NewConfig returns new service config with default values
-func NewConfig(dc *dynamicconfig.Collection, enableVisibilityToKafka bool) *Config {
+func NewConfig(dc *dynamicconfig.Collection, enableVisibilityToKafka bool, enableReadHistoryFromArchival bool) *Config {
 	return &Config{
-		PersistenceMaxQPS:               dc.GetIntProperty(dynamicconfig.FrontendPersistenceMaxQPS, 2000),
-		VisibilityMaxPageSize:           dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendVisibilityMaxPageSize, 1000),
-		EnableVisibilitySampling:        dc.GetBoolProperty(dynamicconfig.EnableVisibilitySampling, true),
-		EnableReadFromClosedExecutionV2: dc.GetBoolProperty(dynamicconfig.EnableReadFromClosedExecutionV2, false),
-		VisibilityListMaxQPS:            dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendVisibilityListMaxQPS, 1),
-		EnableVisibilityToKafka:         dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, enableVisibilityToKafka),
-		EnableReadVisibilityFromES:      dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableReadVisibilityFromES, false),
-		ESVisibilityListMaxQPS:          dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendESVisibilityListMaxQPS, 3),
-		HistoryMaxPageSize:              dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendHistoryMaxPageSize, common.GetHistoryMaxPageSize),
-		RPS:                             dc.GetIntProperty(dynamicconfig.FrontendRPS, 1200),
-		MaxIDLengthLimit:                dc.GetIntProperty(dynamicconfig.MaxIDLengthLimit, 1000),
-		HistoryMgrNumConns:              dc.GetIntProperty(dynamicconfig.FrontendHistoryMgrNumConns, 10),
-		MaxDecisionStartToCloseTimeout:  dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxDecisionStartToCloseTimeout, 600),
-		EnableAdminProtection:           dc.GetBoolProperty(dynamicconfig.EnableAdminProtection, false),
-		AdminOperationToken:             dc.GetStringProperty(dynamicconfig.AdminOperationToken, "CadenceTeamONLY"),
-		DisableListVisibilityByFilter:   dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.DisableListVisibilityByFilter, false),
-		BlobSizeLimitError:              dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitError, 2*1024*1024),
-		BlobSizeLimitWarn:               dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitWarn, 256*1204),
+		PersistenceMaxQPS:                   dc.GetIntProperty(dynamicconfig.FrontendPersistenceMaxQPS, 2000),
+		VisibilityMaxPageSize:               dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendVisibilityMaxPageSize, 1000),
+		EnableVisibilitySampling:            dc.GetBoolProperty(dynamicconfig.EnableVisibilitySampling, true),
+		EnableReadFromClosedExecutionV2:     dc.GetBoolProperty(dynamicconfig.EnableReadFromClosedExecutionV2, false),
+		VisibilityListMaxQPS:                dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendVisibilityListMaxQPS, 1),
+		EnableVisibilityToKafka:             dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, enableVisibilityToKafka),
+		EnableReadVisibilityFromES:          dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableReadVisibilityFromES, false),
+		ESVisibilityListMaxQPS:              dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendESVisibilityListMaxQPS, 3),
+		ESIndexMaxResultWindow:              dc.GetIntProperty(dynamicconfig.FrontendESIndexMaxResultWindow, 10000),
+		HistoryMaxPageSize:                  dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendHistoryMaxPageSize, common.GetHistoryMaxPageSize),
+		RPS:                                 dc.GetIntProperty(dynamicconfig.FrontendRPS, 1200),
+		MaxIDLengthLimit:                    dc.GetIntProperty(dynamicconfig.MaxIDLengthLimit, 1000),
+		EnableReadHistoryFromArchival:       dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableReadHistoryFromArchival, enableReadHistoryFromArchival),
+		HistoryMgrNumConns:                  dc.GetIntProperty(dynamicconfig.FrontendHistoryMgrNumConns, 10),
+		MaxDecisionStartToCloseTimeout:      dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxDecisionStartToCloseTimeout, 600),
+		EnableAdminProtection:               dc.GetBoolProperty(dynamicconfig.EnableAdminProtection, false),
+		AdminOperationToken:                 dc.GetStringProperty(dynamicconfig.AdminOperationToken, "CadenceTeamONLY"),
+		DisableListVisibilityByFilter:       dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.DisableListVisibilityByFilter, false),
+		BlobSizeLimitError:                  dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitError, 2*1024*1024),
+		BlobSizeLimitWarn:                   dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitWarn, 256*1204),
+		ThrottledLogRPS:                     dc.GetIntProperty(dynamicconfig.FrontendThrottledLogRPS, 20),
+		EnableDomainNotActiveAutoForwarding: dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableDomainNotActiveAutoForwarding, false),
 	}
 }
 
@@ -97,9 +110,11 @@ type Service struct {
 // NewService builds a new cadence-frontend service
 func NewService(params *service.BootstrapParams) common.Daemon {
 	params.UpdateLoggerWithServiceName(common.FrontendServiceName)
+	config := NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, params.Logger), params.ESConfig.Enable, false)
+	params.ThrottledLogger = logging.NewThrottledLogger(params.Logger, config.ThrottledLogRPS)
 	return &Service{
 		params: params,
-		config: NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, params.Logger), params.ESConfig.Enable),
+		config: config,
 		stopC:  make(chan struct{}),
 	}
 }
@@ -136,14 +151,16 @@ func (s *Service) Start() {
 	var visibilityFromES persistence.VisibilityManager
 	if s.config.EnableVisibilityToKafka() {
 		visibilityIndexName := params.ESConfig.Indices[common.VisibilityAppName]
-		visibilityFromES = elasticsearch.NewElasticSearchVisibilityManager(params.ESClient, visibilityIndexName, log)
+		visibilityConfigForES := &config.VisibilityConfig{
+			VisibilityListMaxQPS:   s.config.ESVisibilityListMaxQPS,
+			ESIndexMaxResultWindow: s.config.ESIndexMaxResultWindow,
+		}
+
+		visibilityFromES = elasticsearch.NewElasticSearchVisibilityManager(params.ESClient, visibilityIndexName, visibilityConfigForES, log)
 		// wrap with rate limiter
-		esRateLimiter := common.NewTokenBucket(s.config.PersistenceMaxQPS(), common.NewRealTimeSource())
+		esRateLimiter := tokenbucket.New(s.config.PersistenceMaxQPS(), clock.NewRealTimeSource())
 		visibilityFromES = persistence.NewVisibilityPersistenceRateLimitedClient(visibilityFromES, esRateLimiter, log)
 		// wrap with advanced rate limit for list
-		visibilityConfigForES := &config.VisibilityConfig{
-			VisibilityListMaxQPS: s.config.ESVisibilityListMaxQPS,
-		}
 		visibilityFromES = persistence.NewVisibilitySamplingClient(visibilityFromES, visibilityConfigForES, base.GetMetricsClient(), log)
 		// wrap with metrics
 		visibilityFromES = elasticsearch.NewVisibilityMetricsClient(visibilityFromES, base.GetMetricsClient(), log)
@@ -170,28 +187,11 @@ func (s *Service) Start() {
 		kafkaProducer = &mocks.KafkaProducer{}
 	}
 
-	wfHandler := NewWorkflowHandler(base, s.config, metadata, history, historyV2, visibility, kafkaProducer, params.BlobstoreClient)
+	wfHandler := NewWorkflowHandler(base, s.config, metadata, history, historyV2, visibility, kafkaProducer,
+		params.BlobstoreClient)
 	wfHandler.Start()
-	switch params.DCRedirectionPolicy.Policy {
-	case DCRedirectionPolicyDefault:
-		base.GetDispatcher().Register(workflowserviceserver.New(wfHandler))
-	case DCRedirectionPolicyNoop:
-		base.GetDispatcher().Register(workflowserviceserver.New(wfHandler))
-	case DCRedirectionPolicyForwarding:
-		dcRedirectionPolicy := RedirectionPolicyGenerator(
-			base.GetClusterMetadata(),
-			wfHandler.domainCache,
-			params.DCRedirectionPolicy,
-		)
-		currentClusteName := base.GetClusterMetadata().GetCurrentClusterName()
-		dcRediectionHandle := NewDCRedirectionHandler(
-			currentClusteName, dcRedirectionPolicy, base, wfHandler,
-		)
-		base.GetDispatcher().Register(workflowserviceserver.New(dcRediectionHandle))
-	default:
-		panic(fmt.Sprintf("Unknown DC redirection policy %v", params.DCRedirectionPolicy.Policy))
-	}
-
+	dcRedirectionHandler := NewDCRedirectionHandler(wfHandler, params.DCRedirectionPolicy)
+	base.GetDispatcher().Register(workflowserviceserver.New(dcRedirectionHandler))
 	adminHandler := NewAdminHandler(base, pConfig.NumHistoryShards, metadata, history, historyV2)
 	adminHandler.Start()
 

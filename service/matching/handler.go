@@ -25,16 +25,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/health"
 	m "github.com/uber/cadence/.gen/go/matching"
 	"github.com/uber/cadence/.gen/go/matching/matchingserviceserver"
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/common/tokenbucket"
 )
 
 var _ matchingserviceserver.Interface = (*Handler)(nil)
@@ -48,7 +50,7 @@ type Handler struct {
 	metricsClient   metrics.Client
 	startWG         sync.WaitGroup
 	domainCache     cache.DomainCache
-	rateLimiter     common.TokenBucket
+	rateLimiter     tokenbucket.TokenBucket
 	service.Service
 }
 
@@ -63,7 +65,7 @@ func NewHandler(sVice service.Service, config *Config, taskPersistence persisten
 		taskPersistence: taskPersistence,
 		metadataMgr:     metadataMgr,
 		config:          config,
-		rateLimiter:     common.NewTokenBucket(config.RPS(), common.NewRealTimeSource()),
+		rateLimiter:     tokenbucket.New(config.RPS(), clock.NewRealTimeSource()),
 	}
 	// prevent us from trying to serve requests before matching engine is started and ready
 	handler.startWG.Add(1)
@@ -103,7 +105,7 @@ func (h *Handler) Health(ctx context.Context) (*health.HealthStatus, error) {
 }
 
 // startRequestProfile initiates recording of request metrics
-func (h *Handler) startRequestProfile(api string, scope int) tally.Stopwatch {
+func (h *Handler) startRequestProfile(api string, scope int) metrics.Stopwatch {
 	h.startWG.Wait()
 	sw := h.metricsClient.StartTimer(scope, metrics.CadenceLatency)
 	h.Service.GetLogger().WithField("api", api).Debug("Received new request")
@@ -112,7 +114,8 @@ func (h *Handler) startRequestProfile(api string, scope int) tally.Stopwatch {
 }
 
 // AddActivityTask - adds an activity task.
-func (h *Handler) AddActivityTask(ctx context.Context, addRequest *m.AddActivityTaskRequest) error {
+func (h *Handler) AddActivityTask(ctx context.Context, addRequest *m.AddActivityTaskRequest) (retError error) {
+	defer logging.CapturePanic(h.GetLogger(), &retError)
 	startT := time.Now()
 	scope := metrics.MatchingAddActivityTaskScope
 	sw := h.startRequestProfile("AddActivityTask", scope)
@@ -131,7 +134,8 @@ func (h *Handler) AddActivityTask(ctx context.Context, addRequest *m.AddActivity
 }
 
 // AddDecisionTask - adds a decision task.
-func (h *Handler) AddDecisionTask(ctx context.Context, addRequest *m.AddDecisionTaskRequest) error {
+func (h *Handler) AddDecisionTask(ctx context.Context, addRequest *m.AddDecisionTaskRequest) (retError error) {
+	defer logging.CapturePanic(h.GetLogger(), &retError)
 	startT := time.Now()
 	scope := metrics.MatchingAddDecisionTaskScope
 	sw := h.startRequestProfile("AddDecisionTask", scope)
@@ -150,7 +154,8 @@ func (h *Handler) AddDecisionTask(ctx context.Context, addRequest *m.AddDecision
 
 // PollForActivityTask - long poll for an activity task.
 func (h *Handler) PollForActivityTask(ctx context.Context,
-	pollRequest *m.PollForActivityTaskRequest) (*gen.PollForActivityTaskResponse, error) {
+	pollRequest *m.PollForActivityTaskRequest) (resp *gen.PollForActivityTaskResponse, retError error) {
+	defer logging.CapturePanic(h.GetLogger(), &retError)
 
 	scope := metrics.MatchingPollForActivityTaskScope
 	sw := h.startRequestProfile("PollForActivityTask", scope)
@@ -160,13 +165,18 @@ func (h *Handler) PollForActivityTask(ctx context.Context,
 		return nil, h.handleErr(errMatchingHostThrottle, scope)
 	}
 
+	if err := common.ValidateLongPollContextTimeout(ctx, "PollForActivityTask", h.Service.GetLogger()); err != nil {
+		return nil, h.handleErr(err, scope)
+	}
+
 	response, err := h.engine.PollForActivityTask(ctx, pollRequest)
 	return response, h.handleErr(err, scope)
 }
 
 // PollForDecisionTask - long poll for a decision task.
 func (h *Handler) PollForDecisionTask(ctx context.Context,
-	pollRequest *m.PollForDecisionTaskRequest) (*m.PollForDecisionTaskResponse, error) {
+	pollRequest *m.PollForDecisionTaskRequest) (resp *m.PollForDecisionTaskResponse, retError error) {
+	defer logging.CapturePanic(h.GetLogger(), &retError)
 
 	scope := metrics.MatchingPollForDecisionTaskScope
 	sw := h.startRequestProfile("PollForDecisionTask", scope)
@@ -176,13 +186,18 @@ func (h *Handler) PollForDecisionTask(ctx context.Context,
 		return nil, h.handleErr(errMatchingHostThrottle, scope)
 	}
 
+	if err := common.ValidateLongPollContextTimeout(ctx, "PollForDecisionTask", h.Service.GetLogger()); err != nil {
+		return nil, h.handleErr(err, scope)
+	}
+
 	response, err := h.engine.PollForDecisionTask(ctx, pollRequest)
 	return response, h.handleErr(err, scope)
 }
 
 // QueryWorkflow queries a given workflow synchronously and return the query result.
 func (h *Handler) QueryWorkflow(ctx context.Context,
-	queryRequest *m.QueryWorkflowRequest) (*gen.QueryWorkflowResponse, error) {
+	queryRequest *m.QueryWorkflowRequest) (resp *gen.QueryWorkflowResponse, retError error) {
+	defer logging.CapturePanic(h.GetLogger(), &retError)
 	scope := metrics.MatchingQueryWorkflowScope
 	sw := h.startRequestProfile("QueryWorkflow", scope)
 	defer sw.Stop()
@@ -196,7 +211,8 @@ func (h *Handler) QueryWorkflow(ctx context.Context,
 }
 
 // RespondQueryTaskCompleted responds a query task completed
-func (h *Handler) RespondQueryTaskCompleted(ctx context.Context, request *m.RespondQueryTaskCompletedRequest) error {
+func (h *Handler) RespondQueryTaskCompleted(ctx context.Context, request *m.RespondQueryTaskCompletedRequest) (retError error) {
+	defer logging.CapturePanic(h.GetLogger(), &retError)
 	scope := metrics.MatchingRespondQueryTaskCompletedScope
 	sw := h.startRequestProfile("RespondQueryTaskCompleted", scope)
 	defer sw.Stop()
@@ -210,7 +226,8 @@ func (h *Handler) RespondQueryTaskCompleted(ctx context.Context, request *m.Resp
 
 // CancelOutstandingPoll is used to cancel outstanding pollers
 func (h *Handler) CancelOutstandingPoll(ctx context.Context,
-	request *m.CancelOutstandingPollRequest) error {
+	request *m.CancelOutstandingPollRequest) (retError error) {
+	defer logging.CapturePanic(h.GetLogger(), &retError)
 	scope := metrics.MatchingCancelOutstandingPollScope
 	sw := h.startRequestProfile("CancelOutstandingPoll", scope)
 	defer sw.Stop()
@@ -223,8 +240,10 @@ func (h *Handler) CancelOutstandingPoll(ctx context.Context,
 }
 
 // DescribeTaskList returns information about the target tasklist, right now this API returns the
-// pollers which polled this tasklist in last few minutes.
-func (h *Handler) DescribeTaskList(ctx context.Context, request *m.DescribeTaskListRequest) (*gen.DescribeTaskListResponse, error) {
+// pollers which polled this tasklist in last few minutes. If includeTaskListStatus field is true,
+// it will also return status of tasklist's ackManager (readLevel, ackLevel, backlogCountHint and taskIDBlock).
+func (h *Handler) DescribeTaskList(ctx context.Context, request *m.DescribeTaskListRequest) (resp *gen.DescribeTaskListResponse, retError error) {
+	defer logging.CapturePanic(h.GetLogger(), &retError)
 	scope := metrics.MatchingDescribeTaskListScope
 	sw := h.startRequestProfile("DescribeTaskList", scope)
 	defer sw.Stop()

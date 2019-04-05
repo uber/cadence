@@ -27,6 +27,7 @@ import (
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 
+	"github.com/uber/cadence/common/logging"
 	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
 )
 
@@ -45,10 +46,13 @@ type Config struct {
 	// Time to hold a poll request before returning an empty response if there are no tasks
 	LongPollExpirationInterval dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
 	MinTaskThrottlingBurstSize dynamicconfig.IntPropertyFnWithTaskListInfoFilters
+	MaxTaskDeleteBatchSize     dynamicconfig.IntPropertyFnWithTaskListInfoFilters
 
 	// taskWriter configuration
 	OutstandingTaskAppendsThreshold dynamicconfig.IntPropertyFnWithTaskListInfoFilters
 	MaxTaskBatchSize                dynamicconfig.IntPropertyFnWithTaskListInfoFilters
+
+	ThrottledLogRPS dynamicconfig.IntPropertyFn
 }
 
 // NewConfig returns new service config with default values
@@ -64,8 +68,10 @@ func NewConfig(dc *dynamicconfig.Collection) *Config {
 		MaxTasklistIdleTime:             dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.MaxTasklistIdleTime, 5*time.Minute),
 		LongPollExpirationInterval:      dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.MatchingLongPollExpirationInterval, time.Minute),
 		MinTaskThrottlingBurstSize:      dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingMinTaskThrottlingBurstSize, 1),
+		MaxTaskDeleteBatchSize:          dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingMaxTaskDeleteBatchSize, 100),
 		OutstandingTaskAppendsThreshold: dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingOutstandingTaskAppendsThreshold, 250),
 		MaxTaskBatchSize:                dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingMaxTaskBatchSize, 100),
+		ThrottledLogRPS:                 dc.GetIntProperty(dynamicconfig.MatchingThrottledLogRPS, 20),
 	}
 }
 
@@ -79,9 +85,11 @@ type Service struct {
 // NewService builds a new cadence-matching service
 func NewService(params *service.BootstrapParams) common.Daemon {
 	params.UpdateLoggerWithServiceName(common.MatchingServiceName)
+	config := NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, params.Logger))
+	params.ThrottledLogger = logging.NewThrottledLogger(params.Logger, config.ThrottledLogRPS)
 	return &Service{
 		params: params,
-		config: NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, params.Logger)),
+		config: config,
 		stopC:  make(chan struct{}),
 	}
 }

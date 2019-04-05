@@ -29,6 +29,10 @@ INTEG_TEST_DIR=host
 INTEG_TEST_XDC_ROOT=./hostxdc
 INTEG_TEST_XDC_DIR=hostxdc
 
+ifndef EVENTSV2
+override EVENTSV2 = false
+endif
+
 define thriftrwrule
 THRIFTRW_GEN_SRC += $(THRIFT_GENDIR)/go/$1/$1.go
 
@@ -79,7 +83,7 @@ clean_thrift:
 thriftc: yarpc-install $(THRIFTRW_GEN_SRC)
 
 copyright: cmd/tools/copyright/licensegen.go
-	go run ./cmd/tools/copyright/licensegen.go --verifyOnly
+	GOOS= GOARCH= go run ./cmd/tools/copyright/licensegen.go --verifyOnly
 
 cadence-cassandra-tool: dep-ensured $(TOOLS_SRC)
 	go build -i -o cadence-cassandra-tool cmd/tools/cassandra/main.go
@@ -140,9 +144,9 @@ cover_integration_profile: clean bins_nothrift
 	@mkdir -p $(BUILD)
 	@echo "mode: atomic" > $(BUILD)/cover.out
 
-	@echo Running integration test
+	@echo Running integration test with eventsV2 $(EVENTSV2)
 	@mkdir -p $(BUILD)/$(INTEG_TEST_DIR)
-	@time go test $(INTEG_TEST_ROOT) $(TEST_ARG) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_DIR)/coverage.out || exit 1;
+	@time go test $(INTEG_TEST_ROOT) $(TEST_ARG) -eventsV2=$(EVENTSV2) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_DIR)/coverage.out || exit 1;
 	@cat $(BUILD)/$(INTEG_TEST_DIR)/coverage.out | grep -v "mode: atomic" >> $(BUILD)/cover.out
 
 cover_xdc_profile: clean bins_nothrift
@@ -217,19 +221,8 @@ install-schema-cdc: bins
 	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_visibility_standby setup-schema -v 0.0
 	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_visibility_standby update-schema -d ./schema/cassandra/visibility/versioned
 
-	@echo Setting up cadence_other key space
-	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_other --rf 1
-	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_other setup-schema -v 0.0
-	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_other update-schema -d ./schema/cassandra/cadence/versioned
-	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_visibility_other --rf 1
-	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_visibility_other setup-schema -v 0.0
-	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_visibility_other update-schema -d ./schema/cassandra/visibility/versioned
-
 start-cdc-active: bins
 	./cadence-server --zone active start
 
 start-cdc-standby: bins
 	./cadence-server --zone standby start
-
-start-cdc-other: bins
-	./cadence-server --zone other start

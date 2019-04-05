@@ -530,3 +530,20 @@ func LogIndexProcessorShutDownTimedoutEvent(logger bark.Logger) {
 		TagWorkflowEventID: IndexProcessorShuttingDownTimedout,
 	}).Info("Index processor shut down timedout.")
 }
+
+// LogSkipArchivalUpload is used to log that archival upload is being skipped
+func LogSkipArchivalUpload(logger bark.Logger, reason string) {
+	logger.WithFields(bark.Fields{
+		TagArchivalUploadSkipReason: reason,
+	}).Warn("Archival upload request is being skipped, will not retry.")
+}
+
+// LogFailArchivalUploadAttempt is used to log that archival upload attempt has failed
+func LogFailArchivalUploadAttempt(logger bark.Logger, err error, reason, bucket, blobKey string) {
+	logger.WithFields(bark.Fields{
+		TagErr:                      err,
+		TagArchivalUploadFailReason: reason,
+		TagBucket:                   bucket,
+		TagBlobKey:                  blobKey,
+	}).Error("Archival upload attempt is giving up, possibly could retry.")
+}

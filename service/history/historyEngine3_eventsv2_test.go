@@ -22,7 +22,6 @@ package history
 
 import (
 	"context"
-	"github.com/uber/cadence/service/worker/sysworkflow"
 	"os"
 	"testing"
 
@@ -43,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/service/worker/archiver"
 )
 
 type (
@@ -66,7 +66,7 @@ type (
 		mockService         service.Service
 		mockDomainCache     *cache.DomainCacheMock
 		mockClientBean      *client.MockClientBean
-		mockArchivalClient  *sysworkflow.ArchivalClientMock
+		mockArchivalClient  *archiver.ClientMock
 		mockEventsCache     *MockEventsCache
 
 		shardClosedCh chan int
@@ -118,7 +118,7 @@ func (s *engine3Suite) SetupTest() {
 	s.mockClusterMetadata.On("GetAllClusterFailoverVersions").Return(cluster.TestSingleDCAllClusterFailoverVersions)
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
 	s.mockDomainCache = &cache.DomainCacheMock{}
-	s.mockArchivalClient = &sysworkflow.ArchivalClientMock{}
+	s.mockArchivalClient = &archiver.ClientMock{}
 	s.mockEventsCache = &MockEventsCache{}
 
 	mockShard := &shardContextImpl{
@@ -183,9 +183,8 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	stickyTl := "stickyTaskList"
 	identity := "testIdentity"
 
-	msBuilder := newMutableStateBuilder("test", s.historyEngine.shard, s.mockEventsCache,
-		bark.NewLoggerFromLogrus(log.New()))
-	msBuilder.SetHistoryTree(msBuilder.GetExecutionInfo().RunID)
+	msBuilder := newMutableStateBuilderWithEventV2("test", s.historyEngine.shard, s.mockEventsCache,
+		bark.NewLoggerFromLogrus(log.New()), we.GetRunId())
 	executionInfo := msBuilder.GetExecutionInfo()
 	executionInfo.StickyTaskList = stickyTl
 
@@ -322,9 +321,8 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 		},
 	}
 
-	msBuilder := newMutableStateBuilder(s.mockClusterMetadata.GetCurrentClusterName(), s.historyEngine.shard, s.mockEventsCache,
-		bark.NewLoggerFromLogrus(log.New()))
-	msBuilder.SetHistoryTree(msBuilder.GetExecutionInfo().RunID)
+	msBuilder := newMutableStateBuilderWithEventV2(s.mockClusterMetadata.GetCurrentClusterName(), s.historyEngine.shard, s.mockEventsCache,
+		bark.NewLoggerFromLogrus(log.New()), runID)
 	ms := createMutableState(msBuilder)
 	gwmsResponse := &p.GetWorkflowExecutionResponse{State: ms}
 	gceResponse := &p.GetCurrentExecutionResponse{RunID: runID}

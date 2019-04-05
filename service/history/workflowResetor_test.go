@@ -22,13 +22,10 @@ package history
 
 import (
 	"context"
-	"github.com/uber/cadence/service/worker/sysworkflow"
-	"os"
-	"testing"
-
 	"fmt"
 	"math"
-
+	"os"
+	"testing"
 	"time"
 
 	"github.com/google/uuid"
@@ -49,6 +46,7 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/service/worker/archiver"
 )
 
 type (
@@ -71,7 +69,7 @@ type (
 		mockMessagingClient messaging.Client
 		mockService         service.Service
 		mockDomainCache     *cache.DomainCacheMock
-		mockArchivalClient  *sysworkflow.ArchivalClientMock
+		mockArchivalClient  *archiver.ClientMock
 		mockClientBean      *client.MockClientBean
 		mockEventsCache     *MockEventsCache
 		resetor             workflowResetor
@@ -125,7 +123,7 @@ func (s *resetorSuite) SetupTest() {
 	s.mockClusterMetadata.On("GetAllClusterFailoverVersions").Return(cluster.TestSingleDCAllClusterFailoverVersions)
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
 	s.mockDomainCache = &cache.DomainCacheMock{}
-	s.mockArchivalClient = &sysworkflow.ArchivalClientMock{}
+	s.mockArchivalClient = &archiver.ClientMock{}
 	s.mockEventsCache = &MockEventsCache{}
 
 	mockShard := &shardContextImpl{
@@ -1447,7 +1445,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 					ClusterName: "standby",
 				},
 			},
-		}, cluster.GetTestClusterMetadata(true, true))
+		}, cluster.GetTestClusterMetadata(true, true, false))
 	// override domain cache
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(testDomainEntry, nil)
 	s.mockDomainCache.On("GetDomain", mock.Anything).Return(testDomainEntry, nil)
@@ -2119,9 +2117,10 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	s.Equal(2, len(resetReq.InsertActivityInfos))
 	s.assertActivityIDs([]string{actIDRetry, actIDNotStarted}, resetReq.InsertActivityInfos)
 
-	s.Equal(2, len(resetReq.InsertReplicationTasks))
+	s.Equal(1, len(resetReq.InsertReplicationTasks))
 	s.Equal(p.ReplicationTaskTypeHistory, resetReq.InsertReplicationTasks[0].GetType())
-	s.Equal(p.ReplicationTaskTypeHistory, resetReq.InsertReplicationTasks[1].GetType())
+	s.Equal(1, len(resetReq.CurrReplicationTasks))
+	s.Equal(p.ReplicationTaskTypeHistory, resetReq.CurrReplicationTasks[0].GetType())
 
 	compareRepState := copyReplicationState(forkRepState)
 	compareRepState.LastWriteEventID = 34
@@ -2149,7 +2148,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 					ClusterName: "standby",
 				},
 			},
-		}, cluster.GetTestClusterMetadata(true, true))
+		}, cluster.GetTestClusterMetadata(true, true, false))
 	// override domain cache
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(testDomainEntry, nil)
 	s.mockDomainCache.On("GetDomain", mock.Anything).Return(testDomainEntry, nil)
@@ -2745,7 +2744,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 					ClusterName: "standby",
 				},
 			},
-		}, cluster.GetTestClusterMetadata(true, true))
+		}, cluster.GetTestClusterMetadata(true, true, false))
 	// override domain cache
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(testDomainEntry, nil)
 	s.mockDomainCache.On("GetDomain", mock.Anything).Return(testDomainEntry, nil)
@@ -3431,7 +3430,7 @@ func (s *resetorSuite) TestApplyReset() {
 					ClusterName: "standby",
 				},
 			},
-		}, cluster.GetTestClusterMetadata(true, true))
+		}, cluster.GetTestClusterMetadata(true, true, false))
 	// override domain cache
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(testDomainEntry, nil)
 	s.mockDomainCache.On("GetDomain", mock.Anything).Return(testDomainEntry, nil)
@@ -4002,7 +4001,7 @@ func (s *resetorSuite) TestApplyReset() {
 		BranchToken:   newBranchToken,
 		Events:        historyAfterReset.Events,
 		TransactionID: 1,
-		Encoding:      common.EncodingTypeJSON,
+		Encoding:      common.EncodingType(s.config.EventEncodingType(domainID)),
 	}
 	appendV2Resp := &p.AppendHistoryNodesResponse{
 		Size: 200,

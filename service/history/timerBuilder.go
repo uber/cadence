@@ -29,6 +29,7 @@ import (
 	"github.com/uber-common/bark"
 	w "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -71,7 +72,7 @@ type (
 		config                 *Config
 		logger                 bark.Logger
 		localSeqNumGen         SequenceNumberGenerator // This one used to order in-memory list.
-		timeSource             common.TimeSource
+		timeSource             clock.TimeSource
 	}
 
 	// TimerSequenceID - Visibility timer stamp + Sequence Number.
@@ -94,12 +95,11 @@ func (s TimerSequenceID) String() string {
 	return fmt.Sprintf("timestamp: %v, seq: %v", s.VisibilityTimestamp.UTC(), s.TaskID)
 }
 
-// Len implements sort.Interace
+// Len implements sort.Interface
 func (t timers) Len() int {
 	return len(t)
 }
 
-// Swap implements sort.Interface.
 // Swap implements sort.Interface.
 func (t timers) Swap(i, j int) {
 	t[i], t[j] = t[j], t[i]
@@ -120,7 +120,7 @@ func (l *localSeqNumGenerator) NextSeq() int64 {
 }
 
 // newTimerBuilder creates a timer builder.
-func newTimerBuilder(config *Config, logger bark.Logger, timeSource common.TimeSource) *timerBuilder {
+func newTimerBuilder(config *Config, logger bark.Logger, timeSource clock.TimeSource) *timerBuilder {
 	return &timerBuilder{
 		userTimers:            timers{},
 		pendingUserTimers:     make(map[string]*persistence.TimerInfo),

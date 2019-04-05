@@ -133,7 +133,7 @@ func (s *server) startService() common.Daemon {
 		s.cfg.ClustersInfo.ClusterInitialFailoverVersions,
 		s.cfg.ClustersInfo.ClusterAddress,
 		archivalStatus,
-		s.cfg.Archival.Filestore.DefaultBucket.Name,
+		s.cfg.Archival.DefaultBucket,
 	)
 	params.DispatcherProvider = client.NewIPYarpcDispatcherProvider()
 	params.ESConfig = &s.cfg.ElasticSearch
@@ -161,7 +161,7 @@ func (s *server) startService() common.Daemon {
 	}
 
 	if params.ClusterMetadata.ArchivalConfig().ConfiguredForArchival() {
-		params.BlobstoreClient, err = filestore.NewClient(&s.cfg.Archival.Filestore, params.Logger)
+		params.BlobstoreClient, err = filestore.NewClient(&s.cfg.Archival.Filestore)
 		if err != nil {
 			log.Fatalf("error creating blobstore: %v", err)
 		}

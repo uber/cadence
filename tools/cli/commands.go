@@ -56,10 +56,13 @@ const (
 	defaultTimeFormat                = "15:04:05"   // used for converting UnixNano to string like 16:16:36 (only time)
 	defaultDateTimeFormat            = time.RFC3339 // used for converting UnixNano to string like 2018-02-15T16:16:36-08:00
 	defaultDomainRetentionDays       = 3
+	defaultContextTimeoutInSeconds   = 5
+	defaultContextTimeout            = defaultContextTimeoutInSeconds * time.Second
 	defaultContextTimeoutForLongPoll = 2 * time.Minute
-	defaultDecisionTimeoutInSeconds  = 10
-	defaultPageSizeForList           = 500
-	defaultWorkflowIDReusePolicy     = s.WorkflowIdReusePolicyAllowDuplicateFailedOnly
+
+	defaultDecisionTimeoutInSeconds = 10
+	defaultPageSizeForList          = 500
+	defaultWorkflowIDReusePolicy    = s.WorkflowIdReusePolicyAllowDuplicateFailedOnly
 
 	workflowStatusNotSet = -1
 	showErrorStackEnv    = `CADENCE_CLI_SHOW_STACKS`
@@ -183,7 +186,7 @@ func RegisterDomain(c *cli.Context) {
 		SecurityToken:                          common.StringPtr(securityToken),
 	}
 
-	ctx, cancel := newContext()
+	ctx, cancel := newContext(c)
 	defer cancel()
 	err = domainClient.Register(ctx, request)
 	if err != nil {
@@ -203,7 +206,7 @@ func UpdateDomain(c *cli.Context) {
 	domain := getRequiredGlobalOption(c, FlagDomain)
 
 	var updateRequest *s.UpdateDomainRequest
-	ctx, cancel := newContext()
+	ctx, cancel := newContext(c)
 	defer cancel()
 
 	if c.IsSet(FlagActiveClusterName) {
@@ -304,22 +307,30 @@ func UpdateDomain(c *cli.Context) {
 
 // DescribeDomain updates a domain
 func DescribeDomain(c *cli.Context) {
-	domainClient := getDomainClient(c)
-	domain := getRequiredGlobalOption(c, FlagDomain)
+	domainName := c.GlobalString(FlagDomain)
+	domainID := c.String(FlagDomainID)
 
-	ctx, cancel := newContext()
+	if domainID == "" && domainName == "" {
+		ErrorAndExit("At least domainID or domainName must be provided.", nil)
+	}
+	ctx, cancel := newContext(c)
 	defer cancel()
-	resp, err := domainClient.Describe(ctx, domain)
+	frontendClient := cFactory.ServerFrontendClient(c)
+	resp, err := frontendClient.DescribeDomain(ctx, &shared.DescribeDomainRequest{
+		Name: common.StringPtr(domainName),
+		UUID: common.StringPtr(domainID),
+	})
 	if err != nil {
 		if _, ok := err.(*s.EntityNotExistsError); !ok {
 			ErrorAndExit("Operation DescribeDomain failed.", err)
 		} else {
-			ErrorAndExit(fmt.Sprintf("Domain %s does not exist.", domain), err)
+			ErrorAndExit(fmt.Sprintf("Domain %s does not exist.", domainName), err)
 		}
 	} else {
-		fmt.Printf("Name: %v\nDescription: %v\nOwnerEmail: %v\nDomainData: %v\nStatus: %v\nRetentionInDays: %v\n"+
+		fmt.Printf("Name: %v\nUUID: %v\nDescription: %v\nOwnerEmail: %v\nDomainData: %v\nStatus: %v\nRetentionInDays: %v\n"+
 			"EmitMetrics: %v\nActiveClusterName: %v\nClusters: %v\n",
 			resp.DomainInfo.GetName(),
+			resp.DomainInfo.GetUUID(),
 			resp.DomainInfo.GetDescription(),
 			resp.DomainInfo.GetOwnerEmail(),
 			resp.DomainInfo.Data,
@@ -364,7 +375,7 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 		maxFieldLength = c.Int(FlagMaxFieldLength)
 	}
 
-	ctx, cancel := newContext()
+	ctx, cancel := newContext(c)
 	defer cancel()
 	history, err := GetHistory(ctx, wfClient, wid, rid)
 	if err != nil {
@@ -469,7 +480,7 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) {
 	}
 
 	startFn := func() {
-		tcCtx, cancel := newContext()
+		tcCtx, cancel := newContext(c)
 		defer cancel()
 		resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest)
 
@@ -481,11 +492,7 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) {
 	}
 
 	runFn := func() {
-		contextTimeout := defaultContextTimeoutForLongPoll
-		if c.IsSet(FlagContextTimeout) {
-			contextTimeout = time.Duration(c.Int(FlagContextTimeout)) * time.Second
-		}
-		tcCtx, cancel := newContextForLongPoll(contextTimeout)
+		tcCtx, cancel := newContextForLongPoll(c)
 		defer cancel()
 		resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest)
 
@@ -530,11 +537,7 @@ func printWorkflowProgress(c *cli.Context, wid, rid string) {
 	var lastEvent *s.HistoryEvent // used for print result of this run
 	ticker := time.NewTicker(time.Second).C
 
-	contextTimeout := defaultContextTimeoutForLongPoll
-	if c.IsSet(FlagContextTimeout) {
-		contextTimeout = time.Duration(c.Int(FlagContextTimeout)) * time.Second
-	}
-	tcCtx, cancel := newContextForLongPoll(contextTimeout)
+	tcCtx, cancel := newContextForLongPoll(c)
 	defer cancel()
 
 	showDetails := c.Bool(FlagShowDetail)
@@ -590,7 +593,7 @@ func TerminateWorkflow(c *cli.Context) {
 	rid := c.String(FlagRunID)
 	reason := c.String(FlagReason)
 
-	ctx, cancel := newContext()
+	ctx, cancel := newContext(c)
 	defer cancel()
 	err := wfClient.TerminateWorkflow(ctx, wid, rid, reason, nil)
 
@@ -608,7 +611,7 @@ func CancelWorkflow(c *cli.Context) {
 	wid := getRequiredOption(c, FlagWorkflowID)
 	rid := c.String(FlagRunID)
 
-	ctx, cancel := newContext()
+	ctx, cancel := newContext(c)
 	defer cancel()
 	err := wfClient.CancelWorkflow(ctx, wid, rid)
 
@@ -629,7 +632,7 @@ func SignalWorkflow(c *cli.Context) {
 	name := getRequiredOption(c, FlagName)
 	input := processJSONInput(c)
 
-	tcCtx, cancel := newContext()
+	tcCtx, cancel := newContext(c)
 	defer cancel()
 	err := serviceClient.SignalWorkflowExecution(tcCtx, &s.SignalWorkflowExecutionRequest{
 		Domain: common.StringPtr(domain),
@@ -671,7 +674,7 @@ func queryWorkflowHelper(c *cli.Context, queryType string) {
 	rid := c.String(FlagRunID)
 	input := processJSONInput(c)
 
-	tcCtx, cancel := newContext()
+	tcCtx, cancel := newContext(c)
 	defer cancel()
 	queryRequest := &s.QueryWorkflowRequest{
 		Domain: common.StringPtr(domain),
@@ -770,14 +773,21 @@ func DescribeWorkflowWithID(c *cli.Context) {
 }
 
 func describeWorkflowHelper(c *cli.Context, wid, rid string) {
-	wfClient := getWorkflowClient(c)
-
+	frontendClient := cFactory.ServerFrontendClient(c)
+	domain := getRequiredGlobalOption(c, FlagDomain)
 	printRawTime := c.Bool(FlagPrintRawTime) // default show datetime instead of raw time
 
-	ctx, cancel := newContext()
+	ctx, cancel := newContext(c)
 	defer cancel()
 
-	resp, err := wfClient.DescribeWorkflowExecution(ctx, wid, rid)
+	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &shared.DescribeWorkflowExecutionRequest{
+		Domain: common.StringPtr(domain),
+		Execution: &shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(wid),
+			RunId:      common.StringPtr(rid),
+		},
+	})
+
 	if err != nil {
 		ErrorAndExit("Describe workflow execution failed", err)
 	}
@@ -802,39 +812,48 @@ func prettyPrintJSONObject(o interface{}) {
 
 // describeWorkflowExecutionResponse is used to print datetime instead of print raw time
 type describeWorkflowExecutionResponse struct {
-	ExecutionConfiguration *s.WorkflowExecutionConfiguration
+	ExecutionConfiguration *shared.WorkflowExecutionConfiguration
 	WorkflowExecutionInfo  workflowExecutionInfo
 	PendingActivities      []*pendingActivityInfo
 }
 
 // workflowExecutionInfo has same fields as shared.WorkflowExecutionInfo, but has datetime instead of raw time
 type workflowExecutionInfo struct {
-	Execution     *s.WorkflowExecution
-	Type          *s.WorkflowType
-	StartTime     *string // change from *int64
-	CloseTime     *string // change from *int64
-	CloseStatus   *s.WorkflowExecutionCloseStatus
-	HistoryLength *int64
+	Execution       *shared.WorkflowExecution
+	Type            *shared.WorkflowType
+	StartTime       *string // change from *int64
+	CloseTime       *string // change from *int64
+	CloseStatus     *shared.WorkflowExecutionCloseStatus
+	HistoryLength   *int64
+	ParentDomainID  *string
+	ParentExecution *shared.WorkflowExecution
 }
 
 // pendingActivityInfo has same fields as shared.PendingActivityInfo, but different field type for better display
 type pendingActivityInfo struct {
 	ActivityID             *string
-	ActivityType           *s.ActivityType
-	State                  *s.PendingActivityState
-	HeartbeatDetails       *string // change from byte[]
-	LastHeartbeatTimestamp *string // change from *int64
+	ActivityType           *shared.ActivityType
+	State                  *shared.PendingActivityState
+	ScheduledTimestamp     *string `json:",omitempty"` // change from *int64
+	LastStartedTimestamp   *string `json:",omitempty"` // change from *int64
+	HeartbeatDetails       *string `json:",omitempty"` // change from byte[]
+	LastHeartbeatTimestamp *string `json:",omitempty"` // change from *int64
+	Attempt                *int32  `json:",omitempty"`
+	MaximumAttempts        *int32  `json:",omitempty"`
+	ExpirationTimestamp    *string `json:",omitempty"` // change from *int64
 }
 
-func convertDescribeWorkflowExecutionResponse(resp *s.DescribeWorkflowExecutionResponse) *describeWorkflowExecutionResponse {
+func convertDescribeWorkflowExecutionResponse(resp *shared.DescribeWorkflowExecutionResponse) *describeWorkflowExecutionResponse {
 	info := resp.WorkflowExecutionInfo
 	executionInfo := workflowExecutionInfo{
-		Execution:     info.Execution,
-		Type:          info.Type,
-		StartTime:     common.StringPtr(convertTime(info.GetStartTime(), false)),
-		CloseTime:     common.StringPtr(convertTime(info.GetCloseTime(), false)),
-		CloseStatus:   info.CloseStatus,
-		HistoryLength: info.HistoryLength,
+		Execution:       info.Execution,
+		Type:            info.Type,
+		StartTime:       common.StringPtr(convertTime(info.GetStartTime(), false)),
+		CloseTime:       common.StringPtr(convertTime(info.GetCloseTime(), false)),
+		CloseStatus:     info.CloseStatus,
+		HistoryLength:   info.HistoryLength,
+		ParentDomainID:  info.ParentDomainId,
+		ParentExecution: info.ParentExecution,
 	}
 	var pendingActs []*pendingActivityInfo
 	var tmpAct *pendingActivityInfo
@@ -843,8 +862,15 @@ func convertDescribeWorkflowExecutionResponse(resp *s.DescribeWorkflowExecutionR
 			ActivityID:             pa.ActivityID,
 			ActivityType:           pa.ActivityType,
 			State:                  pa.State,
-			HeartbeatDetails:       common.StringPtr(string(pa.HeartbeatDetails)),
-			LastHeartbeatTimestamp: common.StringPtr(convertTime(pa.GetLastHeartbeatTimestamp(), false)),
+			ScheduledTimestamp:     timestampPtrToStringPtr(pa.ScheduledTimestamp, false),
+			LastStartedTimestamp:   timestampPtrToStringPtr(pa.LastStartedTimestamp, false),
+			LastHeartbeatTimestamp: timestampPtrToStringPtr(pa.LastHeartbeatTimestamp, false),
+			Attempt:                pa.Attempt,
+			MaximumAttempts:        pa.MaximumAttempts,
+			ExpirationTimestamp:    timestampPtrToStringPtr(pa.ExpirationTimestamp, false),
+		}
+		if pa.HeartbeatDetails != nil {
+			tmpAct.HeartbeatDetails = common.StringPtr(string(pa.HeartbeatDetails))
 		}
 		pendingActs = append(pendingActs, tmpAct)
 	}
@@ -882,7 +908,6 @@ func listWorkflow(c *cli.Context, table *tablewriter.Table) func([]byte) ([]byte
 	if pageSize <= 0 {
 		pageSize = defaultPageSizeForList
 	}
-	timeout := time.Duration(c.Int(FlagContextTimeout)) * time.Second
 
 	var workflowStatus s.WorkflowExecutionCloseStatus
 	if c.IsSet(FlagWorkflowStatus) {
@@ -902,9 +927,9 @@ func listWorkflow(c *cli.Context, table *tablewriter.Table) func([]byte) ([]byte
 		var result []*s.WorkflowExecutionInfo
 		var nextPageToken []byte
 		if queryOpen {
-			result, nextPageToken = listOpenWorkflow(wfClient, pageSize, earliestTime, latestTime, workflowID, workflowType, next, timeout)
+			result, nextPageToken = listOpenWorkflow(wfClient, pageSize, earliestTime, latestTime, workflowID, workflowType, next, c)
 		} else {
-			result, nextPageToken = listClosedWorkflow(wfClient, pageSize, earliestTime, latestTime, workflowID, workflowType, workflowStatus, next, timeout)
+			result, nextPageToken = listClosedWorkflow(wfClient, pageSize, earliestTime, latestTime, workflowID, workflowType, workflowStatus, next, c)
 		}
 
 		for _, e := range result {
@@ -925,7 +950,7 @@ func listWorkflow(c *cli.Context, table *tablewriter.Table) func([]byte) ([]byte
 }
 
 func listOpenWorkflow(client client.Client, pageSize int, earliestTime, latestTime int64, workflowID, workflowType string,
-	nextPageToken []byte, timeout time.Duration) ([]*s.WorkflowExecutionInfo, []byte) {
+	nextPageToken []byte, c *cli.Context) ([]*s.WorkflowExecutionInfo, []byte) {
 
 	request := &s.ListOpenWorkflowExecutionsRequest{
 		MaximumPageSize: common.Int32Ptr(int32(pageSize)),
@@ -942,7 +967,7 @@ func listOpenWorkflow(client client.Client, pageSize int, earliestTime, latestTi
 		request.TypeFilter = &s.WorkflowTypeFilter{Name: common.StringPtr(workflowType)}
 	}
 
-	ctx, cancel := newContextForLongPoll(timeout)
+	ctx, cancel := newContextForLongPoll(c)
 	defer cancel()
 	response, err := client.ListOpenWorkflow(ctx, request)
 	if err != nil {
@@ -952,7 +977,7 @@ func listOpenWorkflow(client client.Client, pageSize int, earliestTime, latestTi
 }
 
 func listClosedWorkflow(client client.Client, pageSize int, earliestTime, latestTime int64, workflowID, workflowType string,
-	workflowStatus s.WorkflowExecutionCloseStatus, nextPageToken []byte, timeout time.Duration) ([]*s.WorkflowExecutionInfo, []byte) {
+	workflowStatus s.WorkflowExecutionCloseStatus, nextPageToken []byte, c *cli.Context) ([]*s.WorkflowExecutionInfo, []byte) {
 
 	request := &s.ListClosedWorkflowExecutionsRequest{
 		MaximumPageSize: common.Int32Ptr(int32(pageSize)),
@@ -972,7 +997,7 @@ func listClosedWorkflow(client client.Client, pageSize int, earliestTime, latest
 		request.StatusFilter = &workflowStatus
 	}
 
-	ctx, cancel := newContextForLongPoll(timeout)
+	ctx, cancel := newContextForLongPoll(c)
 	defer cancel()
 	response, err := client.ListClosedWorkflow(ctx, request)
 	if err != nil {
@@ -987,7 +1012,7 @@ func DescribeTaskList(c *cli.Context) {
 	taskList := getRequiredOption(c, FlagTaskList)
 	taskListType := strToTaskListType(c.String(FlagTaskListType)) // default type is decision
 
-	ctx, cancel := newContext()
+	ctx, cancel := newContext(c)
 	defer cancel()
 	response, err := wfClient.DescribeTaskList(ctx, taskList, taskListType)
 	if err != nil {
@@ -1036,7 +1061,7 @@ func ResetWorkflow(c *cli.Context) {
 	if eventID <= 0 {
 		ErrorAndExit("wrong eventID", fmt.Errorf("eventID must be greater than 0"))
 	}
-	ctx, cancel := newContext()
+	ctx, cancel := newContext(c)
 	defer cancel()
 
 	frontendClient := cFactory.ServerFrontendClient(c)
@@ -1054,6 +1079,68 @@ func ResetWorkflow(c *cli.Context) {
 		ErrorAndExit("reset failed", err)
 	}
 	prettyPrintJSONObject(resp)
+}
+
+// CompleteActivity completes an activity
+func CompleteActivity(c *cli.Context) {
+	domain := getRequiredGlobalOption(c, FlagDomain)
+	wid := getRequiredOption(c, FlagWorkflowID)
+	rid := getRequiredOption(c, FlagRunID)
+	activityID := getRequiredOption(c, FlagActivityID)
+	if len(activityID) == 0 {
+		ErrorAndExit("Invalid activityID", fmt.Errorf("activityID cannot be empty"))
+	}
+	result := getRequiredOption(c, FlagResult)
+	identity := getRequiredOption(c, FlagIdentity)
+	ctx, cancel := newContext(c)
+	defer cancel()
+
+	frontendClient := cFactory.ServerFrontendClient(c)
+	err := frontendClient.RespondActivityTaskCompletedByID(ctx, &shared.RespondActivityTaskCompletedByIDRequest{
+		Domain:     common.StringPtr(domain),
+		WorkflowID: common.StringPtr(wid),
+		RunID:      common.StringPtr(rid),
+		ActivityID: common.StringPtr(activityID),
+		Result:     []byte(result),
+		Identity:   common.StringPtr(identity),
+	})
+	if err != nil {
+		ErrorAndExit("Completing activity failed", err)
+	} else {
+		fmt.Println("Complete activity successfully.")
+	}
+}
+
+// FailActivity fails an activity
+func FailActivity(c *cli.Context) {
+	domain := getRequiredGlobalOption(c, FlagDomain)
+	wid := getRequiredOption(c, FlagWorkflowID)
+	rid := getRequiredOption(c, FlagRunID)
+	activityID := getRequiredOption(c, FlagActivityID)
+	if len(activityID) == 0 {
+		ErrorAndExit("Invalid activityID", fmt.Errorf("activityID cannot be empty"))
+	}
+	reason := getRequiredOption(c, FlagReason)
+	detail := getRequiredOption(c, FlagDetail)
+	identity := getRequiredOption(c, FlagIdentity)
+	ctx, cancel := newContext(c)
+	defer cancel()
+
+	frontendClient := cFactory.ServerFrontendClient(c)
+	err := frontendClient.RespondActivityTaskFailedByID(ctx, &shared.RespondActivityTaskFailedByIDRequest{
+		Domain:     common.StringPtr(domain),
+		WorkflowID: common.StringPtr(wid),
+		RunID:      common.StringPtr(rid),
+		ActivityID: common.StringPtr(activityID),
+		Reason:     common.StringPtr(reason),
+		Details:    []byte(detail),
+		Identity:   common.StringPtr(identity),
+	})
+	if err != nil {
+		ErrorAndExit("Failing activity failed", err)
+	} else {
+		fmt.Println("Fail activity successfully.")
+	}
 }
 
 // ObserveHistoryWithID show the process of running workflow
@@ -1093,6 +1180,13 @@ func getRequiredGlobalOption(c *cli.Context, optionName string) string {
 		ErrorAndExit(fmt.Sprintf("Global option %s is required", optionName), nil)
 	}
 	return value
+}
+
+func timestampPtrToStringPtr(unixNanoPtr *int64, onlyTime bool) *string {
+	if unixNanoPtr == nil {
+		return nil
+	}
+	return common.StringPtr(convertTime(*unixNanoPtr, onlyTime))
 }
 
 func convertTime(unixNano int64, onlyTime bool) string {
@@ -1148,12 +1242,20 @@ func getCliIdentity() string {
 	return fmt.Sprintf("cadence-cli@%s", hostName)
 }
 
-func newContext() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), time.Second*5)
+func newContext(c *cli.Context) (context.Context, context.CancelFunc) {
+	contextTimeout := defaultContextTimeout
+	if c.GlobalInt(FlagContextTimeout) > 0 {
+		contextTimeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
+	}
+	return context.WithTimeout(context.Background(), contextTimeout)
 }
 
-func newContextForLongPoll(timeout time.Duration) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), timeout)
+func newContextForLongPoll(c *cli.Context) (context.Context, context.CancelFunc) {
+	contextTimeout := defaultContextTimeoutForLongPoll
+	if c.GlobalIsSet(FlagContextTimeout) {
+		contextTimeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
+	}
+	return context.WithTimeout(context.Background(), contextTimeout)
 }
 
 // process and validate input provided through cmd or file
@@ -1241,7 +1343,7 @@ func trimWorkflowType(str string) string {
 	return res
 }
 
-func clustersToString(clusters []*s.ClusterReplicationConfiguration) string {
+func clustersToString(clusters []*shared.ClusterReplicationConfiguration) string {
 	var res string
 	for i, cluster := range clusters {
 		if i == 0 {

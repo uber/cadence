@@ -20,7 +20,11 @@
 
 package common
 
-import "time"
+import (
+	"time"
+
+	"github.com/uber/cadence/common/cron"
+)
 
 const (
 	// FirstEventID is the id of the first event in the history
@@ -63,7 +67,7 @@ const (
 )
 
 // NoRetryBackoff is used to represent backoff when no retry is needed
-const NoRetryBackoff = time.Duration(-1)
+const NoRetryBackoff = cron.NoBackoff
 
 type (
 	// EncodingType is an enum that represents various data encoding types
@@ -83,4 +87,18 @@ const (
 const (
 	// VisibilityAppName is used to find kafka topics and ES indexName for visibility
 	VisibilityAppName = "visibility"
+)
+
+const (
+	// SystemDomainName is domain name for all cadence system workflows
+	SystemDomainName = "cadence-system"
+)
+
+const (
+	// MinLongPollTimeout is the minimum context timeout for long poll API, below which
+	// the request won't be processed
+	MinLongPollTimeout = time.Second * 2
+	// CriticalLongPollTimeout is a threshold for the context timeout passed into long poll API,
+	// below which a warning will be logged
+	CriticalLongPollTimeout = time.Second * 20
 )

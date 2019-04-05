@@ -23,8 +23,8 @@ package history
 import (
 	"time"
 
-	"fmt"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
 	"github.com/uber/cadence/common/service"
@@ -138,11 +138,13 @@ type Config struct {
 	HistorySizeLimitWarn   dynamicconfig.IntPropertyFnWithDomainFilter
 	HistoryCountLimitError dynamicconfig.IntPropertyFnWithDomainFilter
 	HistoryCountLimitWarn  dynamicconfig.IntPropertyFnWithDomainFilter
+
+	ThrottledLogRPS dynamicconfig.IntPropertyFn
 }
 
 // NewConfig returns new service config with default values
-func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, enableVisibilityToKafka bool) *Config {
-	return &Config{
+func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, enableVisibilityToKafka bool, storeType string) *Config {
+	cfg := &Config{
 		NumberOfShards:                                        numberOfShards,
 		RPS:                                                   dc.GetIntProperty(dynamicconfig.HistoryRPS, 3000),
 		MaxIDLengthLimit:                                      dc.GetIntProperty(dynamicconfig.MaxIDLengthLimit, 1000),
@@ -208,8 +210,8 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, enableVisibilit
 
 		// history client: client/history/client.go set the client timeout 30s
 		LongPollExpirationInterval: dc.GetDurationPropertyFilteredByDomain(dynamicconfig.HistoryLongPollExpirationInterval, time.Second*20),
-		EventEncodingType:          dc.GetStringPropertyFnWithDomainFilter(dynamicconfig.DefaultEventEncoding, string(common.EncodingTypeJSON)),
-		EnableEventsV2:             dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableEventsV2, false),
+		EventEncodingType:          dc.GetStringPropertyFnWithDomainFilter(dynamicconfig.DefaultEventEncoding, string(common.EncodingTypeThriftRW)),
+		EnableEventsV2:             dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableEventsV2, true),
 
 		NumArchiveSystemWorkflows: dc.GetIntProperty(dynamicconfig.NumArchiveSystemWorkflows, 1000),
 
@@ -219,7 +221,16 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, enableVisibilit
 		HistorySizeLimitWarn:   dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistorySizeLimitWarn, 50*1024*1024),
 		HistoryCountLimitError: dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryCountLimitError, 200*1024),
 		HistoryCountLimitWarn:  dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryCountLimitWarn, 50*1024),
+
+		ThrottledLogRPS: dc.GetIntProperty(dynamicconfig.HistoryThrottledLogRPS, 20),
 	}
+
+	if storeType == config.StoreTypeSQL {
+		// SQL based stores don't have support for historyv2 yet, so set default to false
+		cfg.EnableEventsV2 = dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableEventsV2, false)
+	}
+
+	return cfg
 }
 
 // GetShardID return the corresponding shard ID for a given workflow ID
@@ -238,15 +249,15 @@ type Service struct {
 // NewService builds a new cadence-history service
 func NewService(params *service.BootstrapParams) common.Daemon {
 	params.UpdateLoggerWithServiceName(common.HistoryServiceName)
-	fmt.Println(params.ESConfig)
+	config := NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, params.Logger),
+		params.PersistenceConfig.NumHistoryShards,
+		params.ESConfig.Enable,
+		params.PersistenceConfig.DefaultStoreType())
+	params.ThrottledLogger = logging.NewThrottledLogger(params.Logger, config.ThrottledLogRPS)
 	return &Service{
 		params: params,
 		stopC:  make(chan struct{}),
-		config: NewConfig(
-			dynamicconfig.NewCollection(params.DynamicConfig, params.Logger),
-			params.PersistenceConfig.NumHistoryShards,
-			params.ESConfig.Enable,
-		),
+		config: config,
 	}
 }
 
@@ -256,6 +267,7 @@ func (s *Service) Start() {
 	var params = s.params
 	var log = params.Logger
 
+	log.Infof("elastic search config: %v", params.ESConfig)
 	log.Infof("%v starting", common.HistoryServiceName)
 
 	base := service.New(params)

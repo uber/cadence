@@ -27,26 +27,19 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/pborman/uuid"
-	log "github.com/sirupsen/logrus"
+	"go.uber.org/cadence/activity"
+
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
-	server "github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/mocks"
-	"github.com/uber/cadence/common/persistence"
-	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/.gen/go/shared"
-	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/client"
 	"go.uber.org/cadence/encoded"
 	cworker "go.uber.org/cadence/worker"
@@ -56,23 +49,6 @@ import (
 	"go.uber.org/zap"
 )
 
-type (
-	clientIntegrationSuite struct {
-		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
-		// not merely log an error
-		*require.Assertions
-		suite.Suite
-		IntegrationBase
-		domainName     string
-		domainID       string
-		wfService      workflowserviceclient.Interface
-		wfClient       client.Client
-		worker         cworker.Worker
-		taskList       string
-		enableEventsV2 bool
-	}
-)
-
 func init() {
 	workflow.Register(testDataConverterWorkflow)
 	activity.Register(testActivity)
@@ -80,63 +56,56 @@ func init() {
 	workflow.Register(testChildWorkflow)
 }
 
+type (
+	clientIntegrationSuite struct {
+		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
+		// not merely log an error
+		*require.Assertions
+		IntegrationBase
+		wfService workflowserviceclient.Interface
+		wfClient  client.Client
+		worker    cworker.Worker
+		taskList  string
+	}
+)
+
 func TestClientIntegrationSuite(t *testing.T) {
 	flag.Parse()
-	if *integration && !*testEventsV2 {
-		s := new(clientIntegrationSuite)
-		suite.Run(t, s)
-	} else {
-		t.Skip()
-	}
-}
-
-func TestClientIntegrationSuiteEventsV2(t *testing.T) {
-	flag.Parse()
-	if *integration && *testEventsV2 {
-		s := new(clientIntegrationSuite)
-		s.enableEventsV2 = true
-		suite.Run(t, s)
-	} else {
-		t.Skip()
-	}
+	suite.Run(t, new(clientIntegrationSuite))
 }
 
 func (s *clientIntegrationSuite) SetupSuite() {
-	if testing.Verbose() {
-		log.SetOutput(os.Stdout)
-	}
-
-	logger := log.New()
-	formatter := &log.TextFormatter{}
-	formatter.FullTimestamp = true
-	logger.Formatter = formatter
-	//logger.Level = log.DebugLevel
-	s.logger = bark.NewLoggerFromLogrus(logger)
-	s.setupSuite(false, false)
+	s.setupSuite("testdata/clientintegrationtestcluster.yaml")
 
 	var err error
 	s.wfService, err = s.buildServiceClient()
 	if err != nil {
-		s.logger.Fatalf("Error when build service client: %v", err)
+		s.Logger.Fatalf("Error when build service client: %v", err)
 	}
 	s.wfClient = client.NewClient(s.wfService, s.domainName, nil)
 
 	s.taskList = "client-integration-test-tasklist"
 	s.worker = cworker.New(s.wfService, s.domainName, s.taskList, cworker.Options{})
 	if err := s.worker.Start(); err != nil {
-		s.logger.Fatalf("Error when start worker: %v", err)
+		s.Logger.Fatalf("Error when start worker: %v", err)
 	}
+}
+
+func (s *clientIntegrationSuite) TearDownSuite() {
+	s.tearDownSuite()
 }
 
 func (s *clientIntegrationSuite) buildServiceClient() (workflowserviceclient.Interface, error) {
 	cadenceClientName := "cadence-client"
 	cadenceFrontendService := common.FrontendServiceName
 	hostPort := "127.0.0.1:7104"
+	if TestFlags.FrontendAddr != "" {
+		hostPort = TestFlags.FrontendAddr
+	}
 
-	ch, err := tchannel.NewChannelTransport(
-		tchannel.ServiceName(cadenceClientName), tchannel.ListenAddr("127.0.0.1:0"))
+	ch, err := tchannel.NewChannelTransport(tchannel.ServiceName(cadenceClientName))
 	if err != nil {
-		s.logger.Fatalf("Failed to create transport channel: %v", err)
+		s.Logger.Fatalf("Failed to create transport channel: %v", err)
 	}
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
@@ -146,68 +115,18 @@ func (s *clientIntegrationSuite) buildServiceClient() (workflowserviceclient.Int
 		},
 	})
 	if dispatcher == nil {
-		s.logger.Fatal("No RPC dispatcher provided to create a connection to Cadence Service")
+		s.Logger.Fatal("No RPC dispatcher provided to create a connection to Cadence Service")
 	}
 	if err := dispatcher.Start(); err != nil {
-		s.logger.Fatalf("Failed to create outbound transport channel: %v", err)
+		s.Logger.Fatalf("Failed to create outbound transport channel: %v", err)
 	}
 
 	return workflowserviceclient.New(dispatcher.ClientConfig(cadenceFrontendService)), nil
 }
 
-func (s *clientIntegrationSuite) TearDownSuite() {
-	s.host.Stop()
-	s.host = nil
-	s.worker.Stop()
-	s.TearDownWorkflowStore()
-}
-
 func (s *clientIntegrationSuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
-}
-
-func (s *clientIntegrationSuite) TearDownTest() {
-
-}
-
-func (s *clientIntegrationSuite) setupSuite(enableGlobalDomain bool, isMasterCluster bool) {
-	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
-	s.Assertions = require.New(s.T())
-	options := persistencetests.TestBaseOptions{
-		EnableGlobalDomain: enableGlobalDomain,
-		IsMasterCluster:    isMasterCluster,
-	}
-	s.TestBase = persistencetests.NewTestBaseWithCassandra(&options)
-	s.TestBase.Setup()
-
-	s.setupShards()
-
-	// TODO: Use mock messaging client until we support kafka setup onebox to write end-to-end integration test
-	s.mockProducer = &mocks.KafkaProducer{}
-	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
-
-	s.host = NewCadence(s.ClusterMetadata, server.NewIPYarpcDispatcherProvider(), s.mockMessagingClient, s.MetadataProxy, s.MetadataManagerV2, s.ShardMgr, s.HistoryMgr, s.HistoryV2Mgr, s.ExecutionMgrFactory, s.TaskMgr,
-		s.VisibilityMgr, testNumberOfHistoryShards, testNumberOfHistoryHosts, s.logger, 0, false, s.enableEventsV2, false)
-	s.host.Start()
-
-	s.engine = s.host.GetFrontendClient()
-	s.domainName = "integration-test-domain"
-	s.domainID = uuid.New()
-
-	s.MetadataManager.CreateDomain(&persistence.CreateDomainRequest{
-		Info: &persistence.DomainInfo{
-			ID:          s.domainID,
-			Name:        s.domainName,
-			Status:      persistence.DomainStatusRegistered,
-			Description: "Test domain for integration test",
-		},
-		Config: &persistence.DomainConfig{
-			Retention:  1,
-			EmitMetric: false,
-		},
-		ReplicationConfig: &persistence.DomainReplicationConfig{},
-	})
 }
 
 // testDataConverter implements encoded.DataConverter using gob
@@ -281,7 +200,7 @@ func (s *clientIntegrationSuite) startWorkerWithDataConverter(tl string, dataCon
 	}
 	worker := cworker.New(s.wfService, s.domainName, tl, opts)
 	if err := worker.Start(); err != nil {
-		s.logger.Fatalf("Error when start worker with data converter: %v", err)
+		s.Logger.Fatalf("Error when start worker with data converter: %v", err)
 	}
 	return worker
 }
@@ -302,7 +221,7 @@ func (s *clientIntegrationSuite) TestClientDataConverter() {
 	defer cancel()
 	we, err := s.wfClient.ExecuteWorkflow(ctx, workflowOptions, testDataConverterWorkflow, tl)
 	if err != nil {
-		s.logger.Fatalf("Start workflow with err: %v", err)
+		s.Logger.Fatalf("Start workflow with err: %v", err)
 	}
 	s.NotNil(we)
 	s.True(we.GetRunID() != "")
@@ -333,7 +252,7 @@ func (s *clientIntegrationSuite) TestClientDataConverter_Failed() {
 	defer cancel()
 	we, err := s.wfClient.ExecuteWorkflow(ctx, workflowOptions, testDataConverterWorkflow, tl)
 	if err != nil {
-		s.logger.Fatalf("Start workflow with err: %v", err)
+		s.Logger.Fatalf("Start workflow with err: %v", err)
 	}
 	s.NotNil(we)
 	s.True(we.GetRunID() != "")
@@ -436,7 +355,7 @@ func (s *clientIntegrationSuite) TestClientDataConverter_WithChild() {
 	defer cancel()
 	we, err := s.wfClient.ExecuteWorkflow(ctx, workflowOptions, testParentWorkflow)
 	if err != nil {
-		s.logger.Fatalf("Start workflow with err: %v", err)
+		s.Logger.Fatalf("Start workflow with err: %v", err)
 	}
 	s.NotNil(we)
 	s.True(we.GetRunID() != "")

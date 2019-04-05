@@ -28,6 +28,7 @@ import (
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
@@ -178,19 +179,12 @@ func (p *replicatorQueueProcessorImpl) processSyncActivityTask(task *persistence
 
 	var startedTime *int64
 	var heartbeatTime *int64
+	scheduledTime := common.Int64Ptr(activityInfo.ScheduledTime.UnixNano())
 	if activityInfo.StartedID != common.EmptyEventID {
 		startedTime = common.Int64Ptr(activityInfo.StartedTime.UnixNano())
-
-		// int64 can only represent several hundred years of time
-		// when activity is started, the hearbeat timestamp will be empty
-		// but due the in64 limitation, the actual timestamp got is
-		// roughly 17xx year.
-		// set the heartbeat timestamp to started time if empty
-		heartbeatTime = common.Int64Ptr(activityInfo.LastHeartBeatUpdatedTime.UnixNano())
-		if *heartbeatTime < *startedTime {
-			heartbeatTime = startedTime
-		}
 	}
+	// LastHeartBeatUpdatedTime must be valid when getting the sync activity replication task
+	heartbeatTime = common.Int64Ptr(activityInfo.LastHeartBeatUpdatedTime.UnixNano())
 
 	replicationTask := &replicator.ReplicationTask{
 		TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeSyncActivity),
@@ -200,7 +194,7 @@ func (p *replicatorQueueProcessorImpl) processSyncActivityTask(task *persistence
 			RunId:             common.StringPtr(task.RunID),
 			Version:           common.Int64Ptr(activityInfo.Version),
 			ScheduledId:       common.Int64Ptr(activityInfo.ScheduleID),
-			ScheduledTime:     common.Int64Ptr(activityInfo.ScheduledTime.UnixNano()),
+			ScheduledTime:     scheduledTime,
 			StartedId:         common.Int64Ptr(activityInfo.StartedID),
 			StartedTime:       startedTime,
 			LastHeartbeatTime: heartbeatTime,
@@ -309,7 +303,7 @@ func (p *replicatorQueueProcessorImpl) updateAckLevel(ackLevel int64) error {
 
 	// this is a hack, since there is not dedicated ticker on the queue processor
 	// to periodically send out sync shard message, put it here
-	now := common.NewRealTimeSource().Now()
+	now := clock.NewRealTimeSource().Now()
 	if p.lastShardSyncTimestamp.Add(p.shard.GetConfig().ShardSyncMinInterval()).Before(now) {
 		syncStatusTask := &replicator.ReplicationTask{
 			TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeSyncShardStatus),

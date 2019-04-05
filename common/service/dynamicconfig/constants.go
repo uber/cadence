@@ -48,13 +48,15 @@ var keys = map[Key]string{
 	testGetBoolPropertyFilteredByTaskListInfoKey:     "testGetBoolPropertyFilteredByTaskListInfoKey",
 
 	// system settings
-	EnableGlobalDomain:              "system.enableGlobalDomain",
-	EnableNewKafkaClient:            "system.enableNewKafkaClient",
-	EnableVisibilitySampling:        "system.enableVisibilitySampling",
-	EnableReadFromClosedExecutionV2: "system.enableReadFromClosedExecutionV2",
-	EnableVisibilityToKafka:         "system.enableVisibilityToKafka",
-	EnableReadVisibilityFromES:      "system.enableReadVisibilityFromES",
-	ArchivalStatus:                  "system.archivalStatus",
+	EnableGlobalDomain:                  "system.enableGlobalDomain",
+	EnableNewKafkaClient:                "system.enableNewKafkaClient",
+	EnableVisibilitySampling:            "system.enableVisibilitySampling",
+	EnableReadFromClosedExecutionV2:     "system.enableReadFromClosedExecutionV2",
+	EnableVisibilityToKafka:             "system.enableVisibilityToKafka",
+	EnableReadVisibilityFromES:          "system.enableReadVisibilityFromES",
+	ArchivalStatus:                      "system.archivalStatus",
+	EnableReadHistoryFromArchival:       "system.enableReadHistoryFromArchival",
+	EnableDomainNotActiveAutoForwarding: "system.enableDomainNotActiveAutoForwarding",
 
 	// size limit
 	BlobSizeLimitError:     "limit.blobSize.error",
@@ -70,11 +72,13 @@ var keys = map[Key]string{
 	FrontendVisibilityMaxPageSize:  "frontend.visibilityMaxPageSize",
 	FrontendVisibilityListMaxQPS:   "frontend.visibilityListMaxQPS",
 	FrontendESVisibilityListMaxQPS: "frontend.esVisibilityListMaxQPS",
+	FrontendESIndexMaxResultWindow: "frontend.esIndexMaxResultWindow",
 	FrontendHistoryMaxPageSize:     "frontend.historyMaxPageSize",
 	FrontendRPS:                    "frontend.rps",
 	FrontendHistoryMgrNumConns:     "frontend.historyMgrNumConns",
 	MaxDecisionStartToCloseTimeout: "frontend.maxDecisionStartToCloseTimeout",
 	DisableListVisibilityByFilter:  "frontend.disableListVisibilityByFilter",
+	FrontendThrottledLogRPS:        "frontend.throttledLogRPS",
 
 	// matching settings
 	MatchingRPS:                             "matching.rps",
@@ -88,6 +92,8 @@ var keys = map[Key]string{
 	MaxTasklistIdleTime:                     "matching.maxTasklistIdleTime",
 	MatchingOutstandingTaskAppendsThreshold: "matching.outstandingTaskAppendsThreshold",
 	MatchingMaxTaskBatchSize:                "matching.maxTaskBatchSize",
+	MatchingMaxTaskDeleteBatchSize:          "matching.maxTaskDeleteBatchSize",
+	MatchingThrottledLogRPS:                 "matching.throttledLogRPS",
 
 	// history settings
 	HistoryRPS:                                            "history.rps",
@@ -155,20 +161,26 @@ var keys = map[Key]string{
 	EnableEventsV2:                                        "history.enableEventsV2",
 	NumArchiveSystemWorkflows:                             "history.numArchiveSystemWorkflows",
 	EmitShardDiffLog:                                      "history.emitShardDiffLog",
+	HistoryThrottledLogRPS:                                "history.throttledLogRPS",
 
-	WorkerPersistenceMaxQPS:                  "worker.persistenceMaxQPS",
-	WorkerReplicatorConcurrency:              "worker.replicatorConcurrency",
-	WorkerReplicatorActivityBufferRetryCount: "worker.replicatorActivityBufferRetryCount",
-	WorkerReplicatorHistoryBufferRetryCount:  "worker.replicatorHistoryBufferRetryCount",
-	WorkerReplicationTaskMaxRetry:            "worker.replicationTaskMaxRetry",
-	WorkerIndexerConcurrency:                 "worker.indexerConcurrency",
-	WorkerESProcessorNumOfWorkers:            "worker.ESProcessorNumOfWorkers",
-	WorkerESProcessorBulkActions:             "worker.ESProcessorBulkActions",
-	WorkerESProcessorBulkSize:                "worker.ESProcessorBulkSize",
-	WorkerESProcessorFlushInterval:           "worker.ESProcessorFlushInterval",
-	EnableArchivalCompression:                "worker.EnableArchivalCompression",
-	WorkerHistoryPageSize:                    "worker.WorkerHistoryPageSize",
-	WorkerTargetArchivalBlobSize:             "worker.WorkerTargetArchivalBlobSize",
+	WorkerPersistenceMaxQPS:                         "worker.persistenceMaxQPS",
+	WorkerReplicatorMetaTaskConcurrency:             "worker.replicatorMetaTaskConcurrency",
+	WorkerReplicatorTaskConcurrency:                 "worker.replicatorTaskConcurrency",
+	WorkerReplicatorMessageConcurrency:              "worker.replicatorMessageConcurrency",
+	WorkerReplicatorHistoryBufferRetryCount:         "worker.replicatorHistoryBufferRetryCount",
+	WorkerReplicationTaskMaxRetry:                   "worker.replicationTaskMaxRetry",
+	WorkerIndexerConcurrency:                        "worker.indexerConcurrency",
+	WorkerESProcessorNumOfWorkers:                   "worker.ESProcessorNumOfWorkers",
+	WorkerESProcessorBulkActions:                    "worker.ESProcessorBulkActions",
+	WorkerESProcessorBulkSize:                       "worker.ESProcessorBulkSize",
+	WorkerESProcessorFlushInterval:                  "worker.ESProcessorFlushInterval",
+	EnableArchivalCompression:                       "worker.EnableArchivalCompression",
+	WorkerHistoryPageSize:                           "worker.WorkerHistoryPageSize",
+	WorkerTargetArchivalBlobSize:                    "worker.WorkerTargetArchivalBlobSize",
+	WorkerArchiverConcurrency:                       "worker.ArchiverConcurrency",
+	WorkerArchivalsPerIteration:                     "worker.ArchivalsPerIteration",
+	WorkerDeterministicConstructionCheckProbability: "worker.DeterministicConstructionCheckProbability",
+	WorkerThrottledLogRPS:                           "worker.throttledLogRPS",
 }
 
 const (
@@ -204,6 +216,11 @@ const (
 	DisableListVisibilityByFilter
 	// ArchivalStatus is key for the status of archival
 	ArchivalStatus
+	// EnableReadHistoryFromArchival is key for enabling reading history from archival store
+	EnableReadHistoryFromArchival
+	// EnableDomainNotActiveAutoForwarding whether enabling DC auto forwarding to active cluster
+	// for signal / start / signal with start API if domain is not active
+	EnableDomainNotActiveAutoForwarding
 
 	// BlobSizeLimitError is the per event blob size limit
 	BlobSizeLimitError
@@ -232,12 +249,16 @@ const (
 	FrontendVisibilityListMaxQPS
 	// FrontendESVisibilityListMaxQPS is max qps frontend can list open/close workflows from ElasticSearch
 	FrontendESVisibilityListMaxQPS
+	// FrontendESIndexMaxResultWindow is ElasticSearch index setting max_result_window
+	FrontendESIndexMaxResultWindow
 	// FrontendHistoryMaxPageSize is default max size for GetWorkflowExecutionHistory in one page
 	FrontendHistoryMaxPageSize
 	// FrontendRPS is workflow rate limit per second
 	FrontendRPS
 	// FrontendHistoryMgrNumConns is for persistence cluster.NumConns
 	FrontendHistoryMgrNumConns
+	// FrontendThrottledLogRPS is the rate limit on number of log messages emitted per second for throttled logger
+	FrontendThrottledLogRPS
 	// MaxDecisionStartToCloseTimeout is max decision timeout in seconds
 	MaxDecisionStartToCloseTimeout
 
@@ -265,6 +286,10 @@ const (
 	MatchingOutstandingTaskAppendsThreshold
 	// MatchingMaxTaskBatchSize is max batch size for task writer
 	MatchingMaxTaskBatchSize
+	// MatchingMaxTaskDeleteBatchSize is the max batch size for range deletion of tasks
+	MatchingMaxTaskDeleteBatchSize
+	// MatchingThrottledLogRPS is the rate limit on number of log messages emitted per second for throttled logger
+	MatchingThrottledLogRPS
 
 	// key for history
 
@@ -398,15 +423,19 @@ const (
 
 	// EnableEventsV2 is whether to use eventsV2
 	EnableEventsV2
+	// HistoryThrottledLogRPS is the rate limit on number of log messages emitted per second for throttled logger
+	HistoryThrottledLogRPS
 
 	// key for worker
 
 	// WorkerPersistenceMaxQPS is the max qps worker host can query DB
 	WorkerPersistenceMaxQPS
-	// WorkerReplicatorConcurrency is the max concurrent tasks to be processed at any given time
-	WorkerReplicatorConcurrency
-	// WorkerReplicatorActivityBufferRetryCount is the retry attempt when encounter retry error on activity
-	WorkerReplicatorActivityBufferRetryCount
+	// WorkerReplicatorMetaTaskConcurrency is the number of coroutine handling metadata related tasks
+	WorkerReplicatorMetaTaskConcurrency
+	// WorkerReplicatorTaskConcurrency is the number of coroutine handling non metadata related tasks
+	WorkerReplicatorTaskConcurrency
+	// WorkerReplicatorMessageConcurrency is the max concurrent tasks provided by messaging client
+	WorkerReplicatorMessageConcurrency
 	// WorkerReplicatorHistoryBufferRetryCount is the retry attempt when encounter retry error on history
 	WorkerReplicatorHistoryBufferRetryCount
 	// WorkerReplicationTaskMaxRetry is the max retry for any task
@@ -427,6 +456,14 @@ const (
 	WorkerHistoryPageSize
 	// WorkerTargetArchivalBlobSize indicates the target blob size in bytes for archival, actual blob size may vary
 	WorkerTargetArchivalBlobSize
+	// WorkerArchiverConcurrency controls the number of coroutines handling archival work per archival workflow
+	WorkerArchiverConcurrency
+	// WorkerArchivalsPerIteration controls the number of archivals handled in each iteration of archival workflow
+	WorkerArchivalsPerIteration
+	// WorkerDeterministicConstructionCheckProbability controls the probability of running a deterministic construction check for any given archival
+	WorkerDeterministicConstructionCheckProbability
+	// WorkerThrottledLogRPS is the rate limit on number of log messages emitted per second for throttled logger
+	WorkerThrottledLogRPS
 
 	// lastKeyForTest must be the last one in this const group for testing purpose
 	lastKeyForTest

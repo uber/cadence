@@ -24,7 +24,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/uber/cadence/common/cluster"
 	"log"
 	"os"
 	"testing"
@@ -36,20 +35,20 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
-
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/blobstore/blob"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	cs "github.com/uber/cadence/common/service"
 	dc "github.com/uber/cadence/common/service/dynamicconfig"
-	"github.com/uber/cadence/service/worker/sysworkflow"
+	"github.com/uber/cadence/service/worker/archiver"
 )
 
 type (
@@ -252,6 +251,33 @@ func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
 	_, err = wh.ListClosedWorkflowExecutions(context.Background(), listRequest2)
 	assert.Error(s.T(), err)
 	assert.Equal(s.T(), errNoPermission, err)
+}
+
+func (s *workflowHandlerSuite) TestPollForTask_Failed_ContextTimeoutTooShort() {
+	config := s.newConfig()
+	wh := s.getWorkflowHandler(config)
+	wh.metricsClient = wh.Service.GetMetricsClient()
+	wh.startWG.Done()
+
+	bgCtx := context.Background()
+	_, err := wh.PollForDecisionTask(bgCtx, &shared.PollForDecisionTaskRequest{})
+	assert.Error(s.T(), err)
+	assert.Equal(s.T(), common.ErrContextTimeoutNotSet, err)
+
+	_, err = wh.PollForActivityTask(bgCtx, &shared.PollForActivityTaskRequest{})
+	assert.Error(s.T(), err)
+	assert.Equal(s.T(), common.ErrContextTimeoutNotSet, err)
+
+	shortCtx, cancel := context.WithTimeout(bgCtx, common.MinLongPollTimeout-time.Millisecond)
+	defer cancel()
+
+	_, err = wh.PollForDecisionTask(shortCtx, &shared.PollForDecisionTaskRequest{})
+	assert.Error(s.T(), err)
+	assert.Equal(s.T(), common.ErrContextTimeoutTooShort, err)
+
+	_, err = wh.PollForActivityTask(shortCtx, &shared.PollForActivityTaskRequest{})
+	assert.Error(s.T(), err)
+	assert.Equal(s.T(), common.ErrContextTimeoutTooShort, err)
 }
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_RequestIdNotSet() {
@@ -946,7 +972,7 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Failure_InvalidPageToken()
 	resp, err := wh.getArchivedHistory(context.Background(), getHistoryRequest([]byte{3, 4, 5, 1}), "test-domain-id", 0)
 	s.Nil(resp)
 	s.Error(err)
-	s.Equal(errInvalidNextPageToken, err)
+	s.Equal(errInvalidNextArchivalPageToken, err)
 }
 
 func (s *workflowHandlerSuite) TestGetArchivedHistory_Failure_InvalidBlobKey() {
@@ -991,10 +1017,11 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Success_GetFirstPage() {
 	clusterMetadata.On("IsGlobalDomainEnabled").Return(false)
 	mService := cs.NewTestService(clusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.logger)
 	mBlobstore := &mocks.BlobstoreClient{}
-	unwrappedBlob := &sysworkflow.HistoryBlob{
-		Header: &sysworkflow.HistoryBlobHeader{
+	unwrappedBlob := &archiver.HistoryBlob{
+		Header: &archiver.HistoryBlobHeader{
 			CurrentPageToken: common.IntPtr(common.FirstBlobPageToken),
 			NextPageToken:    common.IntPtr(common.FirstBlobPageToken + 1),
+			IsLast:           common.BoolPtr(false),
 		},
 		Body: &shared.History{},
 	}
@@ -1010,6 +1037,7 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Success_GetFirstPage() {
 	s.NoError(err)
 	s.NotNil(resp)
 	s.NotNil(resp.History)
+	s.True(resp.GetArchived())
 	expectedNextPageToken := &getHistoryContinuationTokenArchival{
 		BlobstorePageToken: 2,
 	}
@@ -1026,10 +1054,11 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Success_GetLastPage() {
 	clusterMetadata.On("IsGlobalDomainEnabled").Return(false)
 	mService := cs.NewTestService(clusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, s.logger)
 	mBlobstore := &mocks.BlobstoreClient{}
-	unwrappedBlob := &sysworkflow.HistoryBlob{
-		Header: &sysworkflow.HistoryBlobHeader{
+	unwrappedBlob := &archiver.HistoryBlob{
+		Header: &archiver.HistoryBlobHeader{
 			CurrentPageToken: common.IntPtr(5),
 			NextPageToken:    common.IntPtr(common.LastBlobNextPageToken),
+			IsLast:           common.BoolPtr(true),
 		},
 		Body: &shared.History{},
 	}
@@ -1045,11 +1074,12 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Success_GetLastPage() {
 	s.NoError(err)
 	s.NotNil(resp)
 	s.NotNil(resp.History)
+	s.True(resp.GetArchived())
 	s.Nil(resp.NextPageToken)
 }
 
 func (s *workflowHandlerSuite) newConfig() *Config {
-	return NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger), false)
+	return NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger), false, true)
 }
 
 func bucketMetadataResponse(owner string, retentionDays int) *blobstore.BucketMetadataResponse {
