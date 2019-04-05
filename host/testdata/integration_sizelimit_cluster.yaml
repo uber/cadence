@@ -2,7 +2,7 @@ persistoptions:
   enableglobaldomain: false
   ismastercluster: false
   enablearchival: true
-enableworker: true
+enableworker: false
 enableeventsv2: false
 enablearchival: false
 clusterno: 0
