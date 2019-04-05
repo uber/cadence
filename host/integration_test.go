@@ -1703,7 +1703,7 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 
 	cronSchedule := "@every 3s"
 	targetBackoffDuration := time.Second * 3
-	backoffDurationTolerance := time.Millisecond * 500
+	backoffDurationTolerance := time.Second
 
 	parentWorkflowType := &workflow.WorkflowType{}
 	parentWorkflowType.Name = common.StringPtr(wtParent)
