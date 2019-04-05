@@ -101,8 +101,8 @@ func (s *integrationClustersTestSuite) SetupSuite() {
 	s.logger = bark.NewLoggerFromLogrus(logger)
 
 	fileName := defaultTestClustersConfig
-	if *host.TestClusterConfigFile != "" {
-		fileName = *host.TestClusterConfigFile
+	if host.TestFlags.TestClusterConfigFile != "" {
+		fileName = host.TestFlags.TestClusterConfigFile
 	}
 	environment.SetupEnv()
 

@@ -48,24 +48,15 @@ type TestCluster struct {
 }
 
 // NewTestCluster returns a new cassandra test cluster
-func NewTestCluster(addr string, port int, keyspace string, schemaDir string) *TestCluster {
-	if schemaDir == "" {
-		schemaDir = testSchemaDir
-	}
-	if addr == "" {
-		addr = environment.GetCassandraAddress()
-	}
-	if port == 0 {
-		port = environment.GetCassandraPort()
-	}
+func NewTestCluster(keyspace string) *TestCluster {
 	var result TestCluster
 	result.keyspace = keyspace
-	result.schemaDir = schemaDir
+	result.schemaDir = testSchemaDir
 	result.cfg = config.Cassandra{
 		User:     testUser,
 		Password: testPassword,
-		Hosts:    addr,
-		Port:     port,
+		Hosts:    environment.GetCassandraAddress(),
+		Port:     environment.GetCassandraPort(),
 		MaxConns: 2,
 		Keyspace: keyspace,
 	}
