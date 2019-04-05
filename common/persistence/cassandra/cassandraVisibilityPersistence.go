@@ -73,21 +73,21 @@ const (
 		`domain_id, domain_partition, workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo) ` +
 		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-	templateGetOpenWorkflowExecutions = `SELECT workflow_id, run_id, start_time, execution_time, workflow_type_name ` +
+	templateGetOpenWorkflowExecutions = `SELECT workflow_id, run_id, start_time, execution_time, workflow_type_name, memo ` +
 		`FROM open_executions ` +
 		`WHERE domain_id = ? ` +
 		`AND domain_partition IN (?) ` +
 		`AND start_time >= ? ` +
 		`AND start_time <= ? `
 
-	templateGetClosedWorkflowExecutions = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length ` +
+	templateGetClosedWorkflowExecutions = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo ` +
 		`FROM closed_executions ` +
 		`WHERE domain_id = ? ` +
 		`AND domain_partition IN (?) ` +
 		`AND start_time >= ? ` +
 		`AND start_time <= ? `
 
-	templateGetOpenWorkflowExecutionsByType = `SELECT workflow_id, run_id, start_time, execution_time, workflow_type_name ` +
+	templateGetOpenWorkflowExecutionsByType = `SELECT workflow_id, run_id, start_time, execution_time, workflow_type_name, memo ` +
 		`FROM open_executions ` +
 		`WHERE domain_id = ? ` +
 		`AND domain_partition = ? ` +
@@ -95,7 +95,7 @@ const (
 		`AND start_time <= ? ` +
 		`AND workflow_type_name = ? `
 
-	templateGetClosedWorkflowExecutionsByType = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length ` +
+	templateGetClosedWorkflowExecutionsByType = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo ` +
 		`FROM closed_executions ` +
 		`WHERE domain_id = ? ` +
 		`AND domain_partition = ? ` +
@@ -103,7 +103,7 @@ const (
 		`AND start_time <= ? ` +
 		`AND workflow_type_name = ? `
 
-	templateGetOpenWorkflowExecutionsByID = `SELECT workflow_id, run_id, start_time, execution_time, workflow_type_name ` +
+	templateGetOpenWorkflowExecutionsByID = `SELECT workflow_id, run_id, start_time, execution_time, workflow_type_name, memo ` +
 		`FROM open_executions ` +
 		`WHERE domain_id = ? ` +
 		`AND domain_partition = ? ` +
@@ -111,7 +111,7 @@ const (
 		`AND start_time <= ? ` +
 		`AND workflow_id = ? `
 
-	templateGetClosedWorkflowExecutionsByID = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length ` +
+	templateGetClosedWorkflowExecutionsByID = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo ` +
 		`FROM closed_executions ` +
 		`WHERE domain_id = ? ` +
 		`AND domain_partition = ? ` +
@@ -119,7 +119,7 @@ const (
 		`AND start_time <= ? ` +
 		`AND workflow_id = ? `
 
-	templateGetClosedWorkflowExecutionsByStatus = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length ` +
+	templateGetClosedWorkflowExecutionsByStatus = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo ` +
 		`FROM closed_executions ` +
 		`WHERE domain_id = ? ` +
 		`AND domain_partition = ? ` +
@@ -127,7 +127,7 @@ const (
 		`AND start_time <= ? ` +
 		`AND status = ? `
 
-	templateGetClosedWorkflowExecution = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length ` +
+	templateGetClosedWorkflowExecution = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo ` +
 		`FROM closed_executions ` +
 		`WHERE domain_id = ? ` +
 		`AND domain_partition = ? ` +
@@ -657,7 +657,8 @@ func readOpenWorkflowExecutionRecord(iter *gocql.Iter) (*workflow.WorkflowExecut
 	var typeName string
 	var startTime time.Time
 	var executionTime time.Time
-	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &typeName) {
+	var memo []byte
+	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &typeName, &memo) {
 		execution := &workflow.WorkflowExecution{}
 		execution.WorkflowId = common.StringPtr(workflowID)
 		execution.RunId = common.StringPtr(runID.String())
@@ -674,6 +675,7 @@ func readOpenWorkflowExecutionRecord(iter *gocql.Iter) (*workflow.WorkflowExecut
 		record.StartTime = common.Int64Ptr(startTime.UnixNano())
 		record.ExecutionTime = common.Int64Ptr(executionTime.UnixNano())
 		record.Type = wfType
+		json.Unmarshal(memo, &record.Memo)
 		return record, true
 	}
 	return nil, false
@@ -688,7 +690,8 @@ func readClosedWorkflowExecutionRecord(iter *gocql.Iter) (*workflow.WorkflowExec
 	var closeTime time.Time
 	var status workflow.WorkflowExecutionCloseStatus
 	var historyLength int64
-	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &closeTime, &typeName, &status, &historyLength) {
+	var memo []byte
+	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &closeTime, &typeName, &status, &historyLength, &memo) {
 		execution := &workflow.WorkflowExecution{}
 		execution.WorkflowId = common.StringPtr(workflowID)
 		execution.RunId = common.StringPtr(runID.String())
@@ -708,6 +711,7 @@ func readClosedWorkflowExecutionRecord(iter *gocql.Iter) (*workflow.WorkflowExec
 		record.Type = wfType
 		record.CloseStatus = &status
 		record.HistoryLength = common.Int64Ptr(historyLength)
+		json.Unmarshal(memo, &record.Memo)
 		return record, true
 	}
 	return nil, false

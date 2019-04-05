@@ -45863,6 +45863,7 @@ type WorkflowExecutionInfo struct {
 	ParentDomainId  *string                       `json:"parentDomainId,omitempty"`
 	ParentExecution *WorkflowExecution            `json:"parentExecution,omitempty"`
 	ExecutionTime   *int64                        `json:"executionTime,omitempty"`
+	Memo            map[string][]byte             `json:"memo,omitempty"`
 }
 
 // ToWire translates a WorkflowExecutionInfo struct into a Thrift-level intermediate
@@ -45882,7 +45883,7 @@ type WorkflowExecutionInfo struct {
 //   }
 func (v *WorkflowExecutionInfo) ToWire() (wire.Value, error) {
 	var (
-		fields [9]wire.Field
+		fields [10]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -45958,6 +45959,14 @@ func (v *WorkflowExecutionInfo) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 90, Value: w}
+		i++
+	}
+	if v.Memo != nil {
+		w, err = wire.NewValueMap(_Map_String_Binary_MapItemList(v.Memo)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 100, Value: w}
 		i++
 	}
 
@@ -46070,6 +46079,14 @@ func (v *WorkflowExecutionInfo) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 100:
+			if field.Value.Type() == wire.TMap {
+				v.Memo, err = _Map_String_Binary_Read(field.Value.GetMap())
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -46083,7 +46100,7 @@ func (v *WorkflowExecutionInfo) String() string {
 		return "<nil>"
 	}
 
-	var fields [9]string
+	var fields [10]string
 	i := 0
 	if v.Execution != nil {
 		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
@@ -46119,6 +46136,10 @@ func (v *WorkflowExecutionInfo) String() string {
 	}
 	if v.ExecutionTime != nil {
 		fields[i] = fmt.Sprintf("ExecutionTime: %v", *(v.ExecutionTime))
+		i++
+	}
+	if v.Memo != nil {
+		fields[i] = fmt.Sprintf("Memo: %v", v.Memo)
 		i++
 	}
 
@@ -46162,6 +46183,9 @@ func (v *WorkflowExecutionInfo) Equals(rhs *WorkflowExecutionInfo) bool {
 	if !_I64_EqualsPtr(v.ExecutionTime, rhs.ExecutionTime) {
 		return false
 	}
+	if !((v.Memo == nil && rhs.Memo == nil) || (v.Memo != nil && rhs.Memo != nil && _Map_String_Binary_Equals(v.Memo, rhs.Memo))) {
+		return false
+	}
 
 	return true
 }
@@ -46198,6 +46222,9 @@ func (v *WorkflowExecutionInfo) MarshalLogObject(enc zapcore.ObjectEncoder) (err
 	}
 	if v.ExecutionTime != nil {
 		enc.AddInt64("executionTime", *v.ExecutionTime)
+	}
+	if v.Memo != nil {
+		err = multierr.Append(err, enc.AddObject("memo", (_Map_String_Binary_Zapper)(v.Memo)))
 	}
 	return err
 }
@@ -46335,6 +46362,21 @@ func (v *WorkflowExecutionInfo) GetExecutionTime() (o int64) {
 // IsSetExecutionTime returns true if ExecutionTime is not nil.
 func (v *WorkflowExecutionInfo) IsSetExecutionTime() bool {
 	return v != nil && v.ExecutionTime != nil
+}
+
+// GetMemo returns the value of Memo if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionInfo) GetMemo() (o map[string][]byte) {
+	if v != nil && v.Memo != nil {
+		return v.Memo
+	}
+
+	return
+}
+
+// IsSetMemo returns true if Memo is not nil.
+func (v *WorkflowExecutionInfo) IsSetMemo() bool {
+	return v != nil && v.Memo != nil
 }
 
 type WorkflowExecutionSignaledEventAttributes struct {
