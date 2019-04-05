@@ -295,6 +295,12 @@ func (t *transferQueueStandbyProcessorImpl) processCloseExecution(transferTask *
 		workflowHistoryLength := msBuilder.GetNextEventID() - 1
 		workflowExecutionTimestamp := getWorkflowExecutionTimestamp(msBuilder).UnixNano()
 
+		startEvent, ok := msBuilder.GetStartEvent()
+		var visibilityMemo map[string][]byte
+		if ok {
+			visibilityMemo = startEvent.WorkflowExecutionStartedEventAttributes.Memo
+		}
+
 		ok, err := verifyTaskVersion(t.shard, t.logger, transferTask.DomainID, msBuilder.GetLastWriteVersion(), transferTask.Version, transferTask)
 		if err != nil {
 			return err
@@ -306,7 +312,8 @@ func (t *transferQueueStandbyProcessorImpl) processCloseExecution(transferTask *
 		// since event replication should be done by active cluster
 
 		return t.recordWorkflowClosed(
-			transferTask.DomainID, execution, workflowTypeName, workflowStartTimestamp, workflowExecutionTimestamp, workflowCloseTimestamp, workflowCloseStatus, workflowHistoryLength, transferTask.GetTaskID(),
+			transferTask.DomainID, execution, workflowTypeName, workflowStartTimestamp, workflowExecutionTimestamp,
+			workflowCloseTimestamp, workflowCloseStatus, workflowHistoryLength, transferTask.GetTaskID(), visibilityMemo,
 		)
 	}, standbyTaskPostActionNoOp) // no op post action, since the entire workflow is finished
 }
@@ -445,7 +452,14 @@ func (t *transferQueueStandbyProcessorImpl) processRecordWorkflowStarted(transfe
 		startTimestamp := executionInfo.StartTimestamp.UnixNano()
 		executionTimestamp := getWorkflowExecutionTimestamp(msBuilder).UnixNano()
 
-		return t.recordWorkflowStarted(transferTask.DomainID, execution, wfTypeName, startTimestamp, executionTimestamp, workflowTimeout, transferTask.GetTaskID())
+		var visibilityMemo map[string][]byte
+		startEvent, ok := msBuilder.GetStartEvent()
+		if ok {
+			visibilityMemo = startEvent.WorkflowExecutionStartedEventAttributes.Memo
+		}
+
+		return t.recordWorkflowStarted(transferTask.DomainID, execution, wfTypeName, startTimestamp, executionTimestamp,
+			workflowTimeout, transferTask.GetTaskID(), visibilityMemo)
 	}, standbyTaskPostActionNoOp)
 }
 

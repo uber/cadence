@@ -412,11 +412,22 @@ func (t *transferQueueActiveProcessorImpl) processCloseExecution(task *persisten
 	workflowHistoryLength := msBuilder.GetNextEventID() - 1
 	workflowExecutionTimestamp := getWorkflowExecutionTimestamp(msBuilder).UnixNano()
 
+	startEvent, ok := msBuilder.GetStartEvent()
+	var visibilityMemo map[string][]byte
+	if !ok {
+		if replyToParentWorkflow {
+			return &workflow.InternalServiceError{Message: "Unable to get workflow start event."}
+		}
+	} else {
+		visibilityMemo = startEvent.WorkflowExecutionStartedEventAttributes.Memo
+	}
+
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
 	release(nil)
 	err = t.recordWorkflowClosed(
-		domainID, execution, workflowTypeName, workflowStartTimestamp, workflowExecutionTimestamp, workflowCloseTimestamp, workflowCloseStatus, workflowHistoryLength, task.GetTaskID(),
+		domainID, execution, workflowTypeName, workflowStartTimestamp, workflowExecutionTimestamp,
+		workflowCloseTimestamp, workflowCloseStatus, workflowHistoryLength, task.GetTaskID(), visibilityMemo,
 	)
 	if err != nil {
 		return err
@@ -867,10 +878,16 @@ func (t *transferQueueActiveProcessorImpl) processRecordWorkflowStarted(task *pe
 	startTimestamp := executionInfo.StartTimestamp.UnixNano()
 	executionTimestamp := getWorkflowExecutionTimestamp(msBuilder).UnixNano()
 
+	var visibilityMemo map[string][]byte
+	startEvent, ok := msBuilder.GetStartEvent()
+	if ok {
+		visibilityMemo = startEvent.WorkflowExecutionStartedEventAttributes.Memo
+	}
+
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
 	release(nil)
-	return t.recordWorkflowStarted(task.DomainID, execution, wfTypeName, startTimestamp, executionTimestamp, workflowTimeout, task.GetTaskID())
+	return t.recordWorkflowStarted(task.DomainID, execution, wfTypeName, startTimestamp, executionTimestamp, workflowTimeout, task.GetTaskID(), visibilityMemo)
 }
 
 func (t *transferQueueActiveProcessorImpl) recordChildExecutionStarted(task *persistence.TransferTaskInfo,

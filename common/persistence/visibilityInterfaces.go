@@ -39,6 +39,7 @@ type (
 		StartTimestamp     int64
 		ExecutionTimestamp int64
 		WorkflowTimeout    int64
+		Memo               map[string][]byte
 	}
 
 	// RecordWorkflowExecutionClosedRequest is used to add a record of a newly
@@ -54,6 +55,7 @@ type (
 		Status             s.WorkflowExecutionCloseStatus
 		HistoryLength      int64
 		RetentionSeconds   int64
+		Memo               map[string][]byte
 	}
 
 	// ListWorkflowExecutionsRequest is used to list executions in a domain

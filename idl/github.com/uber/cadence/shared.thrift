@@ -446,6 +446,7 @@ struct WorkflowExecutionStartedEventAttributes {
   90: optional i64 (js.type = "Long") expirationTimestamp
   100: optional string cronSchedule
   110: optional i32 firstDecisionTaskBackoffSeconds
+  120: optional map<string,binary> memo
 }
 
 struct WorkflowExecutionCompletedEventAttributes {
@@ -942,6 +943,7 @@ struct StartWorkflowExecutionRequest {
   110: optional ChildPolicy childPolicy
   120: optional RetryPolicy retryPolicy
   130: optional string cronSchedule
+  140: optional map<string,binary> memo
 }
 
 struct StartWorkflowExecutionResponse {
