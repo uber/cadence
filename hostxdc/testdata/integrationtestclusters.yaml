@@ -18,7 +18,6 @@
   enablearchival: false
   enableworker: true
   enableeventsv2: false
-  enablearchival: false
   clusterno: 0
   historyconfig:
     numhistoryshards: 1
@@ -73,7 +72,6 @@
   enablearchival: false
   enableworker: true
   enableeventsv2: false
-  enablearchival: false
   clusterno: 1
   historyconfig:
     numhistoryshards: 1
