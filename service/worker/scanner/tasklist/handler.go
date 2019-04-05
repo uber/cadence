@@ -99,7 +99,7 @@ func (s *Scavenger) deleteHandler(key *taskListKey, state *taskListState) handle
 
 func (s *Scavenger) tryDeleteTaskList(key *taskListKey, state *taskListState) {
 	if strings.HasPrefix(key.Name, scannerTaskListPrefix) {
-		return // avoid deleting our own executorTask list
+		return // avoid deleting our own task list
 	}
 	delta := time.Now().Sub(state.lastUpdated)
 	if delta < taskListGracePeriod {

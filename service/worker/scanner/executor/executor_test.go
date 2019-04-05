@@ -21,13 +21,10 @@
 package executor
 
 import (
-	"testing"
-
-	"time"
-
-	"sync/atomic"
-
 	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"

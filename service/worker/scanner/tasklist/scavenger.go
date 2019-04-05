@@ -21,11 +21,9 @@
 package tasklist
 
 import (
-	"time"
-
 	"sync"
-
 	"sync/atomic"
+	"time"
 
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common"
