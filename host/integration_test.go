@@ -3108,7 +3108,7 @@ func (s *integrationSuite) TestStartWithMemo() {
 	taskList.Name = common.StringPtr(tl)
 
 	memoInfo, _ := json.Marshal(id)
-	memo := map[string][]byte {
+	memo := map[string][]byte{
 		"Info": memoInfo,
 	}
 
@@ -3122,7 +3122,7 @@ func (s *integrationSuite) TestStartWithMemo() {
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
-		Memo: memo,
+		Memo:                                memo,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -3180,10 +3180,10 @@ func (s *integrationSuite) TestStartWithMemo() {
 	// verify history
 	execution := &workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(id),
-		RunId: we.RunId,
+		RunId:      we.RunId,
 	}
 	historyResponse, historyErr := s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
-		Domain: request.Domain,
+		Domain:    request.Domain,
 		Execution: execution,
 	})
 	s.Nil(historyErr)
