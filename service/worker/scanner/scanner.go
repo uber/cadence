@@ -22,10 +22,8 @@ package scanner
 
 import (
 	"context"
-
-	"time"
-
 	"log"
+	"time"
 
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
@@ -129,7 +127,7 @@ func (s *Scanner) Start() error {
 		BackgroundActivityContext:              context.WithValue(context.Background(), scannerContextKey, s.context),
 	}
 	go s.startWorkflowWithRetry()
-	worker := worker.New(s.context.sdkClient, common.SystemDomainName, scannerWFTaskListName, workerOpts)
+	worker := worker.New(s.context.sdkClient, common.SystemDomainName, tlScannerTaskListName, workerOpts)
 	return worker.Start()
 }
 
@@ -147,15 +145,7 @@ func (s *Scanner) startWorkflowWithRetry() error {
 
 func (s *Scanner) startWorkflow(client cclient.Client) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	opts := cclient.StartWorkflowOptions{
-		ID:                           scannerWFID,
-		TaskList:                     scannerWFTaskListName,
-		ExecutionStartToCloseTimeout: scannerWFExecutionStartToCloseTimeout,
-		WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
-		CronSchedule:                 scannerWFCronSchedule,
-		RetryPolicy:                  &scannerWFRetryPolicy,
-	}
-	_, err := client.StartWorkflow(ctx, opts, scannerWFName)
+	_, err := client.StartWorkflow(ctx, tlScannerWFStartOptions, tlScannerWFTypeName)
 	cancel()
 	if err != nil {
 		if _, ok := err.(*shared.WorkflowExecutionAlreadyStartedError); ok {

@@ -52,7 +52,7 @@ func TestScannerWorkflowTestSuite(t *testing.T) {
 func (s *scannerWorkflowTestSuite) TestWorkflow() {
 	env := s.NewTestWorkflowEnvironment()
 	env.OnActivity(taskListScavengerActivityName, mock.Anything).Return(nil)
-	env.ExecuteWorkflow(scannerWFName)
+	env.ExecuteWorkflow(tlScannerWFTypeName)
 	s.True(env.IsWorkflowCompleted())
 }
 
@@ -71,7 +71,7 @@ func (s *scannerWorkflowTestSuite) TestScavengerActivity() {
 	env.SetWorkerOptions(worker.Options{
 		BackgroundActivityContext: context.WithValue(context.Background(), scannerContextKey, ctx),
 	})
-	scavengerHBInterval = time.Millisecond * 10
+	tlScavengerHBInterval = time.Millisecond * 10
 	_, err := env.ExecuteActivity(taskListScavengerActivityName)
 	s.NoError(err)
 }

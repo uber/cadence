@@ -26,6 +26,7 @@ import (
 
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
+	cclient "go.uber.org/cadence/client"
 	"go.uber.org/cadence/workflow"
 
 	"github.com/uber/cadence/service/worker/scanner/tasklist"
@@ -38,46 +39,47 @@ const (
 
 	maxConcurrentActivityExecutionSize     = 10
 	maxConcurrentDecisionTaskExecutionSize = 10
+	infiniteDuration                       = 20 * 365 * 24 * time.Hour
 
-	scannerWFCronSchedule                 = "0 7 * * *"
-	scannerWFExecutionStartToCloseTimeout = 23 * time.Hour
-
-	scannerWFTaskListName         = "cadence-sys-scanner-tasklist-0"
-	scannerWFName                 = "cadence-sys-scanner-workflow"
-	scannerWFID                   = "cadence-sys-scanner"
-	taskListScavengerActivityName = "cadence-sys-tasklist-scanner-activity"
+	tlScannerWFID                 = "cadence-sys-tl-scanner"
+	tlScannerWFTypeName           = "cadence-sys-tl-scanner-workflow"
+	tlScannerTaskListName         = "cadence-sys-tl-scanner-tasklist-0"
+	taskListScavengerActivityName = "cadence-sys-tl-scanner-scvg-activity"
 )
 
 var (
-	scavengerHBInterval = 10 * time.Second
-)
+	tlScavengerHBInterval = 10 * time.Second
 
-var (
-	scannerWFRetryPolicy = cadence.RetryPolicy{
+	tlScavengerActivityRetryPolicy = cadence.RetryPolicy{
 		InitialInterval:    10 * time.Second,
 		BackoffCoefficient: 1.7,
 		MaximumInterval:    5 * time.Minute,
-		ExpirationInterval: 20 * time.Hour, // after 20 hours, give up and wait for next run of cron
+		ExpirationInterval: infiniteDuration,
 	}
-	scannerActivityRetryPolicy = scannerWFRetryPolicy
+	tlScannerWFStartOptions = cclient.StartWorkflowOptions{
+		ID:                           tlScannerWFID,
+		TaskList:                     tlScannerTaskListName,
+		ExecutionStartToCloseTimeout: 5 * 24 * time.Hour,
+		WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
+		CronSchedule:                 "0 */12 * * *",
+	}
 )
 
 func init() {
-	workflow.RegisterWithOptions(Workflow, workflow.RegisterOptions{Name: scannerWFName})
+	workflow.RegisterWithOptions(TaskListScannerWorkflow, workflow.RegisterOptions{Name: tlScannerWFTypeName})
 	activity.RegisterWithOptions(TaskListScavengerActivity, activity.RegisterOptions{Name: taskListScavengerActivityName})
 }
 
-// Workflow is the workflow that runs the scanner background sub-system
-func Workflow(ctx workflow.Context) error {
+// TaskListScannerWorkflow is the workflow that runs the task-list scanner background daemon
+func TaskListScannerWorkflow(ctx workflow.Context) error {
 	opts := workflow.ActivityOptions{
 		ScheduleToStartTimeout: 5 * time.Minute,
-		StartToCloseTimeout:    23 * time.Hour,
+		StartToCloseTimeout:    infiniteDuration,
 		HeartbeatTimeout:       5 * time.Minute,
-		RetryPolicy:            &scannerActivityRetryPolicy,
+		RetryPolicy:            &tlScavengerActivityRetryPolicy,
 	}
 	future := workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, opts), taskListScavengerActivityName)
-	future.Get(ctx, nil)
-	return nil
+	return future.Get(ctx, nil)
 }
 
 // TaskListScavengerActivity is the activity that runs task list scavenger
@@ -93,7 +95,7 @@ func TaskListScavengerActivity(aCtx context.Context) error {
 			scavenger.Stop()
 			return aCtx.Err()
 		}
-		time.Sleep(scavengerHBInterval)
+		time.Sleep(tlScavengerHBInterval)
 	}
 	return nil
 }
