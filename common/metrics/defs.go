@@ -59,6 +59,7 @@ const (
 	History
 	Matching
 	Worker
+	Blobstore
 	NumServices
 )
 
@@ -723,6 +724,8 @@ const (
 	HistoryResetWorkflowExecutionScope
 	// HistoryProcessDeleteHistoryEventScope tracks ProcessDeleteHistoryEvent processing calls
 	HistoryProcessDeleteHistoryEventScope
+	// WorkflowCompletionStatsScope tracks workflow completion updates
+	WorkflowCompletionStatsScope
 
 	NumHistoryScopes
 )
@@ -783,6 +786,26 @@ const (
 	NumWorkerScopes
 )
 
+// Operation scopes for Blobstore
+const (
+	// BlobstoreUploadScope tracks Upload API calls received by blobstore
+	BlobstoreUploadScope = iota + NumCommonScopes
+	// BlobstoreDownloadScope tracks Download API calls received by blobstore
+	BlobstoreDownloadScope
+	// BlobstoreGetTagsScope tracks GetTags API calls received by blobstore
+	BlobstoreGetTagsScope
+	// BlobstoreExistsScope tracks Exists API calls received by blobstore
+	BlobstoreExistsScope
+	// BlobstoreDeleteScope tracks Delete API calls received by blobstore
+	BlobstoreDeleteScope
+	// BlobstoreListByPrefixScope tracks ListByPrefix API calls received by blobstore
+	BlobstoreListByPrefixScope
+	// BlobstoreBucketMetadataScope tracks BucketMetadata API calls received by blobstore
+	BlobstoreBucketMetadataScope
+
+	NumBlobstoreScopes
+)
+
 // ScopeDefs record the scopes for all services
 var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 	// common scope Names
@@ -840,13 +863,13 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceCompleteForkBranchScope:                       {operation: "CompleteForkBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceGetHistoryTreeScope:                           {operation: "GetHistoryTree", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 
-		BlobstoreClientUploadScope:         {operation: "Upload", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
-		BlobstoreClientDownloadScope:       {operation: "Download", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
-		BlobstoreClientGetTagsScope:        {operation: "GetTags", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
-		BlobstoreClientExistsScope:         {operation: "Exists", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
-		BlobstoreClientDeleteScope:         {operation: "Delete", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
-		BlobstoreClientListByPrefixScope:   {operation: "ListByPrefix", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
-		BlobstoreClientBucketMetadataScope: {operation: "BucketMetadata", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
+		BlobstoreClientUploadScope:         {operation: "BlobstoreClientUpload", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
+		BlobstoreClientDownloadScope:       {operation: "BlobstoreClientDownload", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
+		BlobstoreClientGetTagsScope:        {operation: "BlobstoreClientGetTags", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
+		BlobstoreClientExistsScope:         {operation: "BlobstoreClientExists", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
+		BlobstoreClientDeleteScope:         {operation: "BlobstoreClientDelete", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
+		BlobstoreClientListByPrefixScope:   {operation: "BlobstoreClientListByPrefix", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
+		BlobstoreClientBucketMetadataScope: {operation: "BlobstoreClientBucketMetadata", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
 
 		ClusterMetadataArchivalConfigScope: {operation: "ArchivalConfig"},
 
@@ -1086,6 +1109,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ExecutionCountStatsScope:                     {operation: "ExecutionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
 		SessionSizeStatsScope:                        {operation: "SessionStats", tags: map[string]string{StatsTypeTagName: SizeStatsTypeTagValue}},
 		SessionCountStatsScope:                       {operation: "SessionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
+		WorkflowCompletionStatsScope:                 {operation: "CompletionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
 	},
 	// Matching Scope Names
 	Matching: {
@@ -1114,6 +1138,16 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ArchiverPumpScope:                  {operation: "ArchiverPump"},
 		ArchiverArchivalWorkflowScope:      {operation: "ArchiverArchivalWorkflow"},
 		ArchiverClientScope:                {operation: "ArchiverClient"},
+	},
+	// Blobstore Scope Names
+	Blobstore: {
+		BlobstoreUploadScope:         {operation: "Upload"},
+		BlobstoreDownloadScope:       {operation: "Download"},
+		BlobstoreGetTagsScope:        {operation: "GetTags"},
+		BlobstoreExistsScope:         {operation: "Exists"},
+		BlobstoreDeleteScope:         {operation: "Delete"},
+		BlobstoreListByPrefixScope:   {operation: "ListByPrefix"},
+		BlobstoreBucketMetadataScope: {operation: "BucketMetadata"},
 	},
 }
 
@@ -1280,6 +1314,11 @@ const (
 	WorkflowCleanupDeleteCount
 	WorkflowCleanupArchiveCount
 	WorkflowCleanupNopCount
+	WorkflowSuccessCount
+	WorkflowCancelCount
+	WorkflowFailedCount
+	WorkflowTimeoutCount
+	WorkflowTerminateCount
 
 	NumHistoryMetrics
 )
@@ -1499,6 +1538,11 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		WorkflowCleanupDeleteCount:                   {metricName: "workflow_cleanup_delete", oldMetricName: "workflow-cleanup-delete", metricType: Counter},
 		WorkflowCleanupArchiveCount:                  {metricName: "workflow_cleanup_archive", oldMetricName: "workflow-cleanup-archive", metricType: Counter},
 		WorkflowCleanupNopCount:                      {metricName: "workflow_cleanup_nop", oldMetricName: "workflow-cleanup-nop", metricType: Counter},
+		WorkflowSuccessCount:                         {metricName: "workflow_success", metricType: Counter},
+		WorkflowCancelCount:                          {metricName: "workflow_cancel", metricType: Counter},
+		WorkflowFailedCount:                          {metricName: "workflow_failed", metricType: Counter},
+		WorkflowTimeoutCount:                         {metricName: "workflow_timeout", metricType: Counter},
+		WorkflowTerminateCount:                       {metricName: "workflow_terminate", metricType: Counter},
 	},
 	Matching: {
 		PollSuccessCounter:            {metricName: "poll_success", oldMetricName: "poll.success"},

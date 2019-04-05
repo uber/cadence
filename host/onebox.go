@@ -67,15 +67,9 @@ const maxRpJoinTimeout = 30 * time.Second
 
 var (
 	// EnableEventsV2 indicates whether events v2 is enabled for integration tests
-	EnableEventsV2     = flag.Bool("eventsV2", false, "run integration tests with eventsV2")
-	enableGlobalDomain = flag.Bool("enableGlobalDomain", false, "run integration tests with global domain")
-	enableArchival     = flag.Bool("enableArchival", false, "run integration tests with archival")
-	topicName          = []string{"active", "standby"}
-)
-
-const (
-	testNumberOfHistoryShards = 4
-	testNumberOfHistoryHosts  = 1
+	EnableEventsV2        = flag.Bool("eventsV2", false, "run integration tests with eventsV2")
+	frontendAddress       = flag.String("frontendAddress", "", "host:port for cadence frontend service")
+	TestClusterConfigFile = flag.String("TestClusterConfigFile", "", "test cluster config file location")
 )
 
 // Cadence hosts all of cadence services in one process
@@ -344,7 +338,7 @@ func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup) {
 	var kafkaProducer messaging.Producer
 	var err error
 	if c.enableWorker() {
-		kafkaProducer, err = c.messagingClient.NewProducerWithClusterName(topicName[c.clusterNo])
+		kafkaProducer, err = c.messagingClient.NewProducerWithClusterName(c.clusterMetadata.GetCurrentClusterName())
 		if err != nil {
 			c.logger.WithField("error", err).Fatal("Failed to create kafka producer when start frontend")
 		}
@@ -356,14 +350,16 @@ func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup) {
 	c.frontEndService = service.New(params)
 	c.adminHandler = frontend.NewAdminHandler(
 		c.frontEndService, c.numberOfHistoryShards, c.metadataMgr, c.historyMgr, c.historyV2Mgr)
+	frontendConfig := frontend.NewConfig(dynamicconfig.NewNopCollection(), false, c.enableReadHistoryFromArchival)
 	c.frontendHandler = frontend.NewWorkflowHandler(
-		c.frontEndService, frontend.NewConfig(dynamicconfig.NewNopCollection(), false, c.enableReadHistoryFromArchival),
-		c.metadataMgr, c.historyMgr, c.historyV2Mgr, c.visibilityMgr, kafkaProducer, params.BlobstoreClient)
+		c.frontEndService, frontendConfig, c.metadataMgr, c.historyMgr, c.historyV2Mgr,
+		c.visibilityMgr, kafkaProducer, params.BlobstoreClient)
 	err = c.frontendHandler.Start()
 	if err != nil {
 		c.logger.WithField("error", err).Fatal("Failed to start frontend")
 	}
-	c.frontEndService.GetDispatcher().Register(workflowserviceserver.New(c.frontendHandler))
+	dcRedirectionHandler := frontend.NewDCRedirectionHandler(c.frontendHandler, params.DCRedirectionPolicy)
+	c.frontEndService.GetDispatcher().Register(workflowserviceserver.New(dcRedirectionHandler))
 	err = c.adminHandler.Start()
 	if err != nil {
 		c.logger.WithField("error", err).Fatal("Failed to start admin")
@@ -485,7 +481,7 @@ func (c *cadenceImpl) startWorker(rpHosts []string, startWG *sync.WaitGroup) {
 func (c *cadenceImpl) startWorkerReplicator(params *service.BootstrapParams, service service.Service, domainCache cache.DomainCache) {
 	metadataManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgrV2, service.GetMetricsClient(), c.logger)
 	workerConfig := worker.NewConfig(dynamicconfig.NewNopCollection())
-	workerConfig.ReplicationCfg.ReplicatorConcurrency = dynamicconfig.GetIntPropertyFn(10)
+	workerConfig.ReplicationCfg.ReplicatorMessageConcurrency = dynamicconfig.GetIntPropertyFn(10)
 	c.replicator = replicator.NewReplicator(
 		c.clusterMetadata,
 		metadataManager,
