@@ -21,10 +21,8 @@
 package scanner
 
 import (
-	"testing"
-
 	"context"
-
+	"testing"
 	"time"
 
 	"github.com/sirupsen/logrus"
