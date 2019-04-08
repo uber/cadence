@@ -59,7 +59,7 @@ type (
 		Logger              bark.Logger
 		ThrottledLogger     bark.Logger
 		MetricScope         tally.Scope
-		MembershipFactory   MembershipFactory
+		MembershipFactory   MembershipMonitorFactory
 		RPCFactory          common.RPCFactory
 		PProfInitializer    common.PProfInitializer
 		PersistenceConfig   config.Persistence
@@ -75,12 +75,10 @@ type (
 		DCRedirectionPolicy config.DCRedirectionPolicy
 	}
 
-	// MembershipFactory provides a bootstrapped membership monitor
-	MembershipFactory interface {
-		// CreateMembershipMonitor vends a bootstrapped membership monitor
-		CreateMembershipMonitor(d *yarpc.Dispatcher) (membership.Monitor, error)
-
-		DestroyMembershipMonitor()
+	// MembershipMonitorFactory provides a bootstrapped membership monitor
+	MembershipMonitorFactory interface {
+		// Create vends a bootstrapped membership monitor
+		Create(d *yarpc.Dispatcher) (membership.Monitor, error)
 	}
 
 	// Service contains the objects specific to this service
@@ -90,7 +88,7 @@ type (
 		hostName               string
 		hostInfo               *membership.HostInfo
 		dispatcher             *yarpc.Dispatcher
-		membershipFactory      MembershipFactory
+		membershipFactory      MembershipMonitorFactory
 		membershipMonitor      membership.Monitor
 		rpcFactory             common.RPCFactory
 		pprofInitializer       common.PProfInitializer
@@ -172,7 +170,7 @@ func (h *serviceImpl) Start() {
 		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("Failed to start yarpc dispatcher")
 	}
 
-	h.membershipMonitor, err = h.membershipFactory.CreateMembershipMonitor(h.dispatcher)
+	h.membershipMonitor, err = h.membershipFactory.Create(h.dispatcher)
 	if err != nil {
 		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("Membership monitor creation failed")
 	}
@@ -212,10 +210,6 @@ func (h *serviceImpl) Stop() {
 
 	if h.membershipMonitor != nil {
 		h.membershipMonitor.Stop()
-	}
-
-	if h.membershipFactory != nil {
-		h.membershipFactory.DestroyMembershipMonitor()
 	}
 
 	if h.dispatcher != nil {

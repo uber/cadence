@@ -517,18 +517,15 @@ func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, s
 	}
 }
 
-func newMembershipFactory(serviceName string, hosts map[string][]string) service.MembershipFactory {
+func newMembershipFactory(serviceName string, hosts map[string][]string) service.MembershipMonitorFactory {
 	return &membershipFactoryImpl{
 		serviceName: serviceName,
 		hosts:       hosts,
 	}
 }
 
-func (p *membershipFactoryImpl) CreateMembershipMonitor(dispatcher *yarpc.Dispatcher) (membership.Monitor, error) {
+func (p *membershipFactoryImpl) Create(dispatcher *yarpc.Dispatcher) (membership.Monitor, error) {
 	return membership.NewSimpleMonitor(p.serviceName, p.hosts), nil
-}
-
-func (p *membershipFactoryImpl) DestroyMembershipMonitor() {
 }
 
 func newPProfInitializerImpl(logger bark.Logger, port int) common.PProfInitializer {

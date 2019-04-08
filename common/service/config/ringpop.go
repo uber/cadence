@@ -55,7 +55,8 @@ const (
 	defaultMaxJoinDuration = 10 * time.Second
 )
 
-var cadenceServices = []string{
+// CadenceServices indicate the list of cadence services
+var CadenceServices = []string{
 	common.FrontendServiceName,
 	common.HistoryServiceName,
 	common.MatchingServiceName,
@@ -64,7 +65,6 @@ var cadenceServices = []string{
 
 // RingpopFactory implements the RingpopFactory interface
 type RingpopFactory struct {
-	rp          *ringpop.Ringpop
 	config      *Ringpop
 	logger      bark.Logger
 	serviceName string
@@ -138,17 +138,15 @@ func newRingpopFactory(rpConfig *Ringpop, logger bark.Logger, serviceName string
 	return &RingpopFactory{config: rpConfig, logger: logger, serviceName: serviceName}, nil
 }
 
-// CreateMembershipMonitor is the implementation for MembershipFactory.CreateMembershipMonitor
-func (factory *RingpopFactory) CreateMembershipMonitor(dispatcher *yarpc.Dispatcher) (membership.Monitor, error) {
-	// TODO: needs to be gated behind an interface...
+// Create is the implementation for MembershipMonitorFactory.Create
+func (factory *RingpopFactory) Create(dispatcher *yarpc.Dispatcher) (membership.Monitor, error) {
 	// use actual listen port (in case service is bound to :0 or 0.0.0.0:0)
-	var err error
-	factory.rp, err = factory.createRingpop(dispatcher)
+	rp, err := factory.createRingpop(dispatcher)
 	if err != nil {
 		return nil, fmt.Errorf("ringpop creation failed: %v", err)
 	}
 
-	labels, err := factory.rp.Labels()
+	labels, err := rp.Labels()
 	if err != nil {
 		return nil, fmt.Errorf("ringpop get node labels failed: %v", err)
 	}
@@ -157,18 +155,11 @@ func (factory *RingpopFactory) CreateMembershipMonitor(dispatcher *yarpc.Dispatc
 		return nil, fmt.Errorf("ringpop setting role label failed: %v", err)
 	}
 
-	membershipMonitor := membership.NewRingpopMonitor(cadenceServices, factory.rp, factory.logger)
+	membershipMonitor := membership.NewRingpopMonitor(CadenceServices, rp, factory.logger)
 	if err = membershipMonitor.Start(); err != nil {
 		return nil, err
 	}
 	return membershipMonitor, nil
-}
-
-// DestroyMembershipMonitor the internal resources of a membership monitor
-func (factory *RingpopFactory) DestroyMembershipMonitor() {
-	if factory.rp != nil {
-		factory.rp.Destroy()
-	}
 }
 
 func (factory *RingpopFactory) createRingpop(dispatcher *yarpc.Dispatcher) (*ringpop.Ringpop, error) {
