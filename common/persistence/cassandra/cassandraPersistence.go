@@ -3045,6 +3045,9 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 		case p.TransferTaskTypeCloseExecution:
 			// No explicit property needs to be set
 
+		case p.TransferTaskTypeRecordWorkflowStarted:
+			// No explicit property needs to be set
+
 		default:
 			d.logger.Fatal("Unknown Transfer Task.")
 		}

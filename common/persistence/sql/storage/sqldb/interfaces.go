@@ -547,6 +547,7 @@ type (
 		WorkflowTypeName string
 		WorkflowID       string
 		StartTime        time.Time
+		ExecutionTime    time.Time
 		CloseStatus      *int32
 		CloseTime        *time.Time
 		HistoryLength    *int64

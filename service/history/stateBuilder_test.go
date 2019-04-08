@@ -220,7 +220,9 @@ func (s *stateBuilderSuite) applyWorkflowExecutionStartedEventTest(cronSchedule 
 		}
 	}
 
-	s.Empty(s.stateBuilder.transferTasks)
+	s.Equal(1, len(s.stateBuilder.transferTasks))
+	s.IsType(&persistence.RecordWorkflowStartedTask{}, s.stateBuilder.transferTasks[0])
+
 	s.Empty(s.stateBuilder.newRunTimerTasks)
 	s.Empty(s.stateBuilder.newRunTransferTasks)
 }
@@ -582,11 +584,14 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 	newRunTimerTask, ok := s.stateBuilder.newRunTimerTasks[0].(*persistence.WorkflowTimeoutTask)
 	s.True(ok)
 	s.True(newRunTimerTask.VisibilityTimestamp.Equal(now.Add(time.Duration(workflowTimeoutSecond) * time.Second)))
-	s.Equal([]persistence.Task{&persistence.DecisionTask{
-		DomainID:   domainID,
-		TaskList:   tasklist,
-		ScheduleID: newRunDecisionEvent.GetEventId(),
-	}}, s.stateBuilder.newRunTransferTasks)
+	s.Equal([]persistence.Task{
+		&persistence.RecordWorkflowStartedTask{},
+		&persistence.DecisionTask{
+			DomainID:   domainID,
+			TaskList:   tasklist,
+			ScheduleID: newRunDecisionEvent.GetEventId(),
+		},
+	}, s.stateBuilder.newRunTransferTasks)
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCompleted() {
@@ -912,11 +917,14 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 	newRunTimerTask, ok := stateBuilder.newRunTimerTasks[0].(*persistence.WorkflowTimeoutTask)
 	s.True(ok)
 	s.True(newRunTimerTask.VisibilityTimestamp.Equal(now.Add(time.Duration(workflowTimeoutSecond) * time.Second)))
-	s.Equal([]persistence.Task{&persistence.DecisionTask{
-		DomainID:   domainID,
-		TaskList:   tasklist,
-		ScheduleID: newRunDecisionEvent.GetEventId(),
-	}}, stateBuilder.newRunTransferTasks)
+	s.Equal([]persistence.Task{
+		&persistence.RecordWorkflowStartedTask{},
+		&persistence.DecisionTask{
+			DomainID:   domainID,
+			TaskList:   tasklist,
+			ScheduleID: newRunDecisionEvent.GetEventId(),
+		},
+	}, stateBuilder.newRunTransferTasks)
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeTimerStarted() {

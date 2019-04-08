@@ -814,10 +814,11 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	s.Equal(int64(34), resetReq.InsertExecutionInfo.DecisionScheduleID)
 	s.Equal(int64(35), resetReq.InsertExecutionInfo.NextEventID)
 
-	// one activity task and one decision task
-	s.Equal(2, len(resetReq.InsertTransferTasks))
+	// one activity task, one decision task and one record workflow started task
+	s.Equal(3, len(resetReq.InsertTransferTasks))
 	s.Equal(p.TransferTaskTypeActivityTask, resetReq.InsertTransferTasks[0].GetType())
 	s.Equal(p.TransferTaskTypeDecisionTask, resetReq.InsertTransferTasks[1].GetType())
+	s.Equal(p.TransferTaskTypeRecordWorkflowStarted, resetReq.InsertTransferTasks[2].GetType())
 
 	// WF timeout task, user timer, activity timeout timer, activity retry timer
 	s.Equal(3, len(resetReq.InsertTimerTasks))
@@ -2100,10 +2101,11 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	s.Equal(int64(34), resetReq.InsertExecutionInfo.DecisionScheduleID)
 	s.Equal(int64(35), resetReq.InsertExecutionInfo.NextEventID)
 
-	s.Equal(3, len(resetReq.InsertTransferTasks))
+	s.Equal(4, len(resetReq.InsertTransferTasks))
 	s.Equal(p.TransferTaskTypeActivityTask, resetReq.InsertTransferTasks[0].GetType())
 	s.Equal(p.TransferTaskTypeActivityTask, resetReq.InsertTransferTasks[1].GetType())
 	s.Equal(p.TransferTaskTypeDecisionTask, resetReq.InsertTransferTasks[2].GetType())
+	s.Equal(p.TransferTaskTypeRecordWorkflowStarted, resetReq.InsertTransferTasks[3].GetType())
 
 	// WF timeout task, user timer, activity timeout timer, activity retry timer
 	s.Equal(3, len(resetReq.InsertTimerTasks))
@@ -3384,10 +3386,11 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 	s.Equal(int64(34), resetReq.InsertExecutionInfo.DecisionScheduleID)
 	s.Equal(int64(35), resetReq.InsertExecutionInfo.NextEventID)
 
-	s.Equal(3, len(resetReq.InsertTransferTasks))
+	s.Equal(4, len(resetReq.InsertTransferTasks))
 	s.Equal(p.TransferTaskTypeActivityTask, resetReq.InsertTransferTasks[0].GetType())
 	s.Equal(p.TransferTaskTypeActivityTask, resetReq.InsertTransferTasks[1].GetType())
 	s.Equal(p.TransferTaskTypeDecisionTask, resetReq.InsertTransferTasks[2].GetType())
+	s.Equal(p.TransferTaskTypeRecordWorkflowStarted, resetReq.InsertTransferTasks[3].GetType())
 
 	// WF timeout task, user timer, activity timeout timer, activity retry timer
 	s.Equal(3, len(resetReq.InsertTimerTasks))

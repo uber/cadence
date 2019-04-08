@@ -134,6 +134,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			b.msBuilder.ReplicateWorkflowExecutionStartedEvent(domainID, parentDomainID, execution, requestID, attributes)
 
 			b.timerTasks = append(b.timerTasks, b.scheduleWorkflowTimerTask(event, b.msBuilder)...)
+			b.transferTasks = append(b.transferTasks, &persistence.RecordWorkflowStartedTask{})
 			if eventStoreVersion == persistence.EventStoreVersionV2 {
 				err := b.msBuilder.SetHistoryTree(execution.GetRunId())
 				if err != nil {

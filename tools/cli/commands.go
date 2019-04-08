@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/urfave/cli"
 
+	serverFrontend "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/.gen/go/shared"
 	s "go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/client"
@@ -83,24 +84,24 @@ var (
 	tableHeaderBlue         = tablewriter.Colors{tablewriter.FgHiBlueColor}
 	optionErr               = "there is something wrong with your command options"
 	osExit                  = os.Exit
-	workflowClosedStatusMap = map[string]s.WorkflowExecutionCloseStatus{
-		"completed":      s.WorkflowExecutionCloseStatusCompleted,
-		"failed":         s.WorkflowExecutionCloseStatusFailed,
-		"canceled":       s.WorkflowExecutionCloseStatusCanceled,
-		"terminated":     s.WorkflowExecutionCloseStatusTerminated,
-		"continuedasnew": s.WorkflowExecutionCloseStatusContinuedAsNew,
-		"timedout":       s.WorkflowExecutionCloseStatusTimedOut,
+	workflowClosedStatusMap = map[string]shared.WorkflowExecutionCloseStatus{
+		"completed":      shared.WorkflowExecutionCloseStatusCompleted,
+		"failed":         shared.WorkflowExecutionCloseStatusFailed,
+		"canceled":       shared.WorkflowExecutionCloseStatusCanceled,
+		"terminated":     shared.WorkflowExecutionCloseStatusTerminated,
+		"continuedasnew": shared.WorkflowExecutionCloseStatusContinuedAsNew,
+		"timedout":       shared.WorkflowExecutionCloseStatusTimedOut,
 		// below are some alias
-		"c":         s.WorkflowExecutionCloseStatusCompleted,
-		"complete":  s.WorkflowExecutionCloseStatusCompleted,
-		"f":         s.WorkflowExecutionCloseStatusFailed,
-		"fail":      s.WorkflowExecutionCloseStatusFailed,
-		"cancel":    s.WorkflowExecutionCloseStatusCanceled,
-		"terminate": s.WorkflowExecutionCloseStatusTerminated,
-		"term":      s.WorkflowExecutionCloseStatusTerminated,
-		"continue":  s.WorkflowExecutionCloseStatusContinuedAsNew,
-		"cont":      s.WorkflowExecutionCloseStatusContinuedAsNew,
-		"timeout":   s.WorkflowExecutionCloseStatusTimedOut,
+		"c":         shared.WorkflowExecutionCloseStatusCompleted,
+		"complete":  shared.WorkflowExecutionCloseStatusCompleted,
+		"f":         shared.WorkflowExecutionCloseStatusFailed,
+		"fail":      shared.WorkflowExecutionCloseStatusFailed,
+		"cancel":    shared.WorkflowExecutionCloseStatusCanceled,
+		"terminate": shared.WorkflowExecutionCloseStatusTerminated,
+		"term":      shared.WorkflowExecutionCloseStatusTerminated,
+		"continue":  shared.WorkflowExecutionCloseStatusContinuedAsNew,
+		"cont":      shared.WorkflowExecutionCloseStatusContinuedAsNew,
+		"timeout":   shared.WorkflowExecutionCloseStatusTimedOut,
 	}
 )
 
@@ -704,8 +705,9 @@ func ListWorkflow(c *cli.Context) {
 	more := c.Bool(FlagMore)
 	pageSize := c.Int(FlagPageSize)
 
-	table := createTableForListWorkflow(false)
-	prepareTable := listWorkflow(c, table)
+	queryOpen := c.Bool(FlagOpen)
+	table := createTableForListWorkflow(false, queryOpen)
+	prepareTable := listWorkflow(c, table, queryOpen)
 
 	if !more { // default mode only show one page items
 		prepareTable(nil)
@@ -737,8 +739,9 @@ func ListWorkflow(c *cli.Context) {
 
 // ListAllWorkflow list all workflow executions based on filters
 func ListAllWorkflow(c *cli.Context) {
-	table := createTableForListWorkflow(true)
-	prepareTable := listWorkflow(c, table)
+	queryOpen := c.Bool(FlagOpen)
+	table := createTableForListWorkflow(true, queryOpen)
+	prepareTable := listWorkflow(c, table, queryOpen)
 	var resultSize int
 	var nextPageToken []byte
 	for {
@@ -882,22 +885,27 @@ func convertDescribeWorkflowExecutionResponse(resp *shared.DescribeWorkflowExecu
 	}
 }
 
-func createTableForListWorkflow(listAll bool) *tablewriter.Table {
+func createTableForListWorkflow(listAll bool, queryOpen bool) *tablewriter.Table {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetBorder(false)
 	table.SetColumnSeparator("|")
-	table.SetHeader([]string{"Workflow Type", "Workflow ID", "Run ID", "Start Time", "End Time"})
+	header := []string{"Workflow Type", "Workflow ID", "Run ID", "Start Time", "Execution Time"}
+	headerColor := []tablewriter.Colors{tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue}
+	if !queryOpen {
+		header = append(header, "End Time")
+		headerColor = append(headerColor, tableHeaderBlue)
+	}
+	table.SetHeader(header)
 	if !listAll { // color is only friendly to ANSI terminal
-		table.SetHeaderColor(tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue)
+		table.SetHeaderColor(headerColor...)
 	}
 	table.SetHeaderLine(false)
 	return table
 }
 
-func listWorkflow(c *cli.Context, table *tablewriter.Table) func([]byte) ([]byte, int) {
-	wfClient := getWorkflowClient(c)
+func listWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) func([]byte) ([]byte, int) {
+	frontendClient := cFactory.ServerFrontendClient(c)
 
-	queryOpen := c.Bool(FlagOpen)
 	earliestTime := parseTime(c.String(FlagEarliestTime), 0)
 	latestTime := parseTime(c.String(FlagLatestTime), time.Now().UnixNano())
 	workflowID := c.String(FlagWorkflowID)
@@ -909,7 +917,7 @@ func listWorkflow(c *cli.Context, table *tablewriter.Table) func([]byte) ([]byte
 		pageSize = defaultPageSizeForList
 	}
 
-	var workflowStatus s.WorkflowExecutionCloseStatus
+	var workflowStatus shared.WorkflowExecutionCloseStatus
 	if c.IsSet(FlagWorkflowStatus) {
 		if queryOpen {
 			ErrorAndExit(optionErr, errors.New("you can only filter on status for closed workflow, not open workflow"))
@@ -924,24 +932,30 @@ func listWorkflow(c *cli.Context, table *tablewriter.Table) func([]byte) ([]byte
 	}
 
 	prepareTable := func(next []byte) ([]byte, int) {
-		var result []*s.WorkflowExecutionInfo
+		var result []*shared.WorkflowExecutionInfo
 		var nextPageToken []byte
 		if queryOpen {
-			result, nextPageToken = listOpenWorkflow(wfClient, pageSize, earliestTime, latestTime, workflowID, workflowType, next, c)
+			result, nextPageToken = listOpenWorkflow(frontendClient, pageSize, earliestTime, latestTime, workflowID, workflowType, next, c)
 		} else {
-			result, nextPageToken = listClosedWorkflow(wfClient, pageSize, earliestTime, latestTime, workflowID, workflowType, workflowStatus, next, c)
+			result, nextPageToken = listClosedWorkflow(frontendClient, pageSize, earliestTime, latestTime, workflowID, workflowType, workflowStatus, next, c)
 		}
 
 		for _, e := range result {
-			var startTime, closeTime string
+			var startTime, executionTime, closeTime string
 			if printRawTime {
 				startTime = fmt.Sprintf("%d", e.GetStartTime())
+				executionTime = fmt.Sprintf("%d", e.GetExecutionTime())
 				closeTime = fmt.Sprintf("%d", e.GetCloseTime())
 			} else {
 				startTime = convertTime(e.GetStartTime(), !printDateTime)
+				executionTime = convertTime(e.GetExecutionTime(), !printDateTime)
 				closeTime = convertTime(e.GetCloseTime(), !printDateTime)
 			}
-			table.Append([]string{trimWorkflowType(e.Type.GetName()), e.Execution.GetWorkflowId(), e.Execution.GetRunId(), startTime, closeTime})
+			row := []string{trimWorkflowType(e.Type.GetName()), e.Execution.GetWorkflowId(), e.Execution.GetRunId(), startTime, executionTime}
+			if !queryOpen {
+				row = append(row, closeTime)
+			}
+			table.Append(row)
 		}
 
 		return nextPageToken, len(result)
@@ -949,49 +963,51 @@ func listWorkflow(c *cli.Context, table *tablewriter.Table) func([]byte) ([]byte
 	return prepareTable
 }
 
-func listOpenWorkflow(client client.Client, pageSize int, earliestTime, latestTime int64, workflowID, workflowType string,
-	nextPageToken []byte, c *cli.Context) ([]*s.WorkflowExecutionInfo, []byte) {
+func listOpenWorkflow(client serverFrontend.Interface, pageSize int, earliestTime, latestTime int64, workflowID, workflowType string,
+	nextPageToken []byte, c *cli.Context) ([]*shared.WorkflowExecutionInfo, []byte) {
 
-	request := &s.ListOpenWorkflowExecutionsRequest{
+	request := &shared.ListOpenWorkflowExecutionsRequest{
+		Domain:          common.StringPtr(getRequiredGlobalOption(c, FlagDomain)),
 		MaximumPageSize: common.Int32Ptr(int32(pageSize)),
 		NextPageToken:   nextPageToken,
-		StartTimeFilter: &s.StartTimeFilter{
+		StartTimeFilter: &shared.StartTimeFilter{
 			EarliestTime: common.Int64Ptr(earliestTime),
 			LatestTime:   common.Int64Ptr(latestTime),
 		},
 	}
 	if len(workflowID) > 0 {
-		request.ExecutionFilter = &s.WorkflowExecutionFilter{WorkflowId: common.StringPtr(workflowID)}
+		request.ExecutionFilter = &shared.WorkflowExecutionFilter{WorkflowId: common.StringPtr(workflowID)}
 	}
 	if len(workflowType) > 0 {
-		request.TypeFilter = &s.WorkflowTypeFilter{Name: common.StringPtr(workflowType)}
+		request.TypeFilter = &shared.WorkflowTypeFilter{Name: common.StringPtr(workflowType)}
 	}
 
 	ctx, cancel := newContextForLongPoll(c)
 	defer cancel()
-	response, err := client.ListOpenWorkflow(ctx, request)
+	response, err := client.ListOpenWorkflowExecutions(ctx, request)
 	if err != nil {
 		ErrorAndExit("Failed to list open workflow.", err)
 	}
 	return response.Executions, response.NextPageToken
 }
 
-func listClosedWorkflow(client client.Client, pageSize int, earliestTime, latestTime int64, workflowID, workflowType string,
-	workflowStatus s.WorkflowExecutionCloseStatus, nextPageToken []byte, c *cli.Context) ([]*s.WorkflowExecutionInfo, []byte) {
+func listClosedWorkflow(client serverFrontend.Interface, pageSize int, earliestTime, latestTime int64, workflowID, workflowType string,
+	workflowStatus shared.WorkflowExecutionCloseStatus, nextPageToken []byte, c *cli.Context) ([]*shared.WorkflowExecutionInfo, []byte) {
 
-	request := &s.ListClosedWorkflowExecutionsRequest{
+	request := &shared.ListClosedWorkflowExecutionsRequest{
+		Domain:          common.StringPtr(getRequiredGlobalOption(c, FlagDomain)),
 		MaximumPageSize: common.Int32Ptr(int32(pageSize)),
 		NextPageToken:   nextPageToken,
-		StartTimeFilter: &s.StartTimeFilter{
+		StartTimeFilter: &shared.StartTimeFilter{
 			EarliestTime: common.Int64Ptr(earliestTime),
 			LatestTime:   common.Int64Ptr(latestTime),
 		},
 	}
 	if len(workflowID) > 0 {
-		request.ExecutionFilter = &s.WorkflowExecutionFilter{WorkflowId: common.StringPtr(workflowID)}
+		request.ExecutionFilter = &shared.WorkflowExecutionFilter{WorkflowId: common.StringPtr(workflowID)}
 	}
 	if len(workflowType) > 0 {
-		request.TypeFilter = &s.WorkflowTypeFilter{Name: common.StringPtr(workflowType)}
+		request.TypeFilter = &shared.WorkflowTypeFilter{Name: common.StringPtr(workflowType)}
 	}
 	if workflowStatus != workflowStatusNotSet {
 		request.StatusFilter = &workflowStatus
@@ -999,7 +1015,7 @@ func listClosedWorkflow(client client.Client, pageSize int, earliestTime, latest
 
 	ctx, cancel := newContextForLongPoll(c)
 	defer cancel()
-	response, err := client.ListClosedWorkflow(ctx, request)
+	response, err := client.ListClosedWorkflowExecutions(ctx, request)
 	if err != nil {
 		ErrorAndExit("Failed to list closed workflow.", err)
 	}
@@ -1355,7 +1371,7 @@ func clustersToString(clusters []*shared.ClusterReplicationConfiguration) string
 	return res
 }
 
-func getWorkflowStatus(statusStr string) s.WorkflowExecutionCloseStatus {
+func getWorkflowStatus(statusStr string) shared.WorkflowExecutionCloseStatus {
 	if status, ok := workflowClosedStatusMap[strings.ToLower(statusStr)]; ok {
 		return status
 	}
