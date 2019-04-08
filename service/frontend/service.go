@@ -110,7 +110,7 @@ type Service struct {
 // NewService builds a new cadence-frontend service
 func NewService(params *service.BootstrapParams) common.Daemon {
 	params.UpdateLoggerWithServiceName(common.FrontendServiceName)
-	config := NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, params.Logger), params.ESConfig.Enable, false)
+	config := NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, params.Logger), params.ESConfig.Enable, true)
 	params.ThrottledLogger = logging.NewThrottledLogger(params.Logger, config.ThrottledLogRPS)
 	return &Service{
 		params: params,
