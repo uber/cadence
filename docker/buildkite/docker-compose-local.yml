@@ -111,7 +111,7 @@ services:
       - -e
       - -c
       - |
-        make cover_integration_profile STORE_TYPE=sql
+        make cover_integration_profile
     ports:
       - "7933:7933"
       - "7934:7934"
@@ -119,6 +119,7 @@ services:
       - "7939:7939"
     environment:
       - "MYSQL_SEEDS=mysql"
+      - "PERSISTENCE_TYPE=sql"
     depends_on:
       - mysql
     volumes:
@@ -191,7 +192,7 @@ services:
       - -e
       - -c
       - |
-        make cover_xdc_profile STORE_TYPE=sql
+        make cover_xdc_profile
     ports:
       - "7933:7933"
       - "7934:7934"
@@ -200,6 +201,7 @@ services:
     environment:
       - "MYSQL_SEEDS=mysql"
       - "KAFKA_SEEDS=kafka"
+      - "PERSISTENCE_TYPE=sql"
     depends_on:
       - mysql
       - kafka

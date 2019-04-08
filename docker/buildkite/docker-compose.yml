@@ -111,6 +111,7 @@ services:
       - "7939:7939"
     environment:
       - "MYSQL_SEEDS=mysql"
+      - "PERSISTENCE_TYPE=sql"
       - BUILDKITE_AGENT_ACCESS_TOKEN
       - BUILDKITE_JOB_ID
       - BUILDKITE_BUILD_ID
@@ -164,6 +165,7 @@ services:
     environment:
       - "MYSQL_SEEDS=mysql"
       - "KAFKA_SEEDS=kafka"
+      - "PERSISTENCE_TYPE=sql"
       - BUILDKITE_AGENT_ACCESS_TOKEN
       - BUILDKITE_JOB_ID
       - BUILDKITE_BUILD_ID

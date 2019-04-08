@@ -43,7 +43,7 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "make cover_integration_ci STORE_TYPE=sql"
+    command: "make cover_integration_ci"
     plugins:
       - docker-compose#v3.0.0:
           run: integration-test-mysql
@@ -53,7 +53,7 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "make cover_xdc_ci STORE_TYPE=sql"
+    command: "make cover_xdc_ci"
     plugins:
       - docker-compose#v3.0.0:
           run: integration-test-xdc-mysql
