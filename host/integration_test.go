@@ -975,7 +975,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 
 	startFilter.LatestTime = common.Int64Ptr(time.Now().UnixNano())
 	var closedExecutions []*workflow.WorkflowExecutionInfo
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 20; i++ {
 		resp, err := s.engine.ListClosedWorkflowExecutions(createContext(), &workflow.ListClosedWorkflowExecutionsRequest{
 			Domain:          common.StringPtr(s.domainName),
 			MaximumPageSize: common.Int32Ptr(100),
