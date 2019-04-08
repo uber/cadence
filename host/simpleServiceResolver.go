@@ -18,34 +18,35 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package membership
+package host
 
 import (
 	"github.com/dgryski/go-farm"
+	"github.com/uber/cadence/common/membership"
 )
 
 type simpleResolver struct {
-	hosts    []*HostInfo
+	hosts    []*membership.HostInfo
 	hashfunc func([]byte) uint32
 }
 
 // newSimpleResolver returns a service resolver that maintains static mapping
 // between services and host info
-func newSimpleResolver(service string, hosts []string) ServiceResolver {
-	hostInfos := make([]*HostInfo, 0, len(hosts))
+func newSimpleResolver(service string, hosts []string) membership.ServiceResolver {
+	hostInfos := make([]*membership.HostInfo, 0, len(hosts))
 	for _, host := range hosts {
-		hostInfos = append(hostInfos, NewHostInfo(host, map[string]string{RoleKey: service}))
+		hostInfos = append(hostInfos, membership.NewHostInfo(host, map[string]string{membership.RoleKey: service}))
 	}
 	return &simpleResolver{hostInfos, farm.Fingerprint32}
 }
 
-func (s *simpleResolver) Lookup(key string) (*HostInfo, error) {
+func (s *simpleResolver) Lookup(key string) (*membership.HostInfo, error) {
 	hash := int(s.hashfunc([]byte(key)))
 	idx := hash % len(s.hosts)
 	return s.hosts[idx], nil
 }
 
-func (s *simpleResolver) AddListener(name string, notifyChannel chan<- *ChangedEvent) error {
+func (s *simpleResolver) AddListener(name string, notifyChannel chan<- *membership.ChangedEvent) error {
 	return nil
 }
 

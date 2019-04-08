@@ -525,7 +525,7 @@ func newMembershipFactory(serviceName string, hosts map[string][]string) service
 }
 
 func (p *membershipFactoryImpl) Create(dispatcher *yarpc.Dispatcher) (membership.Monitor, error) {
-	return membership.NewSimpleMonitor(p.serviceName, p.hosts), nil
+	return newSimpleMonitor(p.serviceName, p.hosts), nil
 }
 
 func newPProfInitializerImpl(logger bark.Logger, port int) common.PProfInitializer {
