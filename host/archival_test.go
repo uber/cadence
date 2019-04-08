@@ -192,7 +192,10 @@ func (s *integrationSuite) isMultiBlobHistory(domain, domainID string, execution
 		}
 		for len(resp.NextPageToken) != 0 {
 			resp, err = s.testCluster.testBase.HistoryMgr.GetWorkflowExecutionHistory(req)
-			s.Nil(err)
+			if err != nil {
+				// For mysql, the nextPageToken will not be empty, and last query will return an error since no history event is available.
+				break
+			}
 			historySize += resp.Size
 			req.NextPageToken = resp.NextPageToken
 		}
