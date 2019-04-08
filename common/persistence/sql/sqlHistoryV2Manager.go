@@ -24,15 +24,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/uber/cadence/common"
-
 	"database/sql"
+	"encoding/json"
 
-	"code.uber.internal/devexp/cadence-tools/.tmp/.go/goroot/src/encoding/json"
 	"github.com/go-sql-driver/mysql"
-	"github.com/uber/cadence/.gen/go/shared"
-
 	"github.com/uber-common/bark"
+	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/storage"
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
