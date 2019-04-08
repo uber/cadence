@@ -2489,6 +2489,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 	resp = &gen.ListOpenWorkflowExecutionsResponse{}
 	resp.Executions = persistenceResp.Executions
 	resp.NextPageToken = persistenceResp.NextPageToken
+	checkAndSetExecutionTime(resp.Executions)
 	return resp, nil
 }
 
@@ -2603,6 +2604,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 	resp = &gen.ListClosedWorkflowExecutionsResponse{}
 	resp.Executions = persistenceResp.Executions
 	resp.NextPageToken = persistenceResp.NextPageToken
+	checkAndSetExecutionTime(resp.Executions)
 	return resp, nil
 }
 
@@ -3284,4 +3286,12 @@ func (wh *WorkflowHandler) getArchivedHistory(
 		NextPageToken: nextToken,
 		Archived:      common.BoolPtr(true),
 	}, nil
+}
+
+func checkAndSetExecutionTime(executions []*gen.WorkflowExecutionInfo) {
+	for _, execution := range executions {
+		if execution.GetExecutionTime() == 0 {
+			execution.ExecutionTime = execution.StartTime
+		}
+	}
 }
