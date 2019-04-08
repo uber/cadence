@@ -23,8 +23,6 @@ package history
 import (
 	"time"
 
-	"github.com/uber/cadence/common/cron"
-
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
@@ -33,6 +31,7 @@ import (
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/cron"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
@@ -764,7 +763,6 @@ func (t *transferQueueActiveProcessorImpl) processStartChildExecution(task *pers
 		attributes := initiatedEvent.StartChildWorkflowExecutionInitiatedEventAttributes
 		// Found pending child execution and it is not marked as started
 		// Let's try and start the child execution
-
 		startRequest := &h.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(targetDomainID),
 			StartRequest: &workflow.StartWorkflowExecutionRequest{
@@ -856,7 +854,6 @@ func (t *transferQueueActiveProcessorImpl) processRecordWorkflowStarted(task *pe
 		return nil
 	}
 
-	// TODO: check the implementation
 	ok, err := verifyTaskVersion(t.shard, t.logger, task.DomainID, msBuilder.GetLastWriteVersion(), task.Version, task)
 	if err != nil {
 		return err

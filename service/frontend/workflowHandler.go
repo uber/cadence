@@ -3289,6 +3289,8 @@ func (wh *WorkflowHandler) getArchivedHistory(
 }
 
 func checkAndSetExecutionTime(executions []*gen.WorkflowExecutionInfo) {
+	// If execution time is zero, it means this workflow doesn't need backoff (due to cron or retry).
+	// Set execution time to start time before return the executionInfo to caller.
 	for _, execution := range executions {
 		if execution.GetExecutionTime() == 0 {
 			execution.ExecutionTime = execution.StartTime

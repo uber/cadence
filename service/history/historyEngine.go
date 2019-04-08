@@ -344,6 +344,7 @@ func (e *historyEngineImpl) generateFirstDecisionTask(domainID string, msBuilder
 	}
 	var transferTasks []persistence.Task
 	if parentInfo == nil {
+		// DecisionTask and RecordWorkflowStartedTask is only created when it is not a Child Workflow Execution and no backoff is needed
 		transferTasks = append(transferTasks, &persistence.RecordWorkflowStartedTask{})
 		if cronBackoffSeconds == 0 {
 			di = msBuilder.AddDecisionTaskScheduledEvent()

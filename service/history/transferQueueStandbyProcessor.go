@@ -432,7 +432,6 @@ func (t *transferQueueStandbyProcessorImpl) processRecordWorkflowStarted(transfe
 	}
 
 	return t.processTransfer(processTaskIfClosed, transferTask, func(msBuilder mutableState) error {
-		// TODO: check the implementation
 		ok, err := verifyTaskVersion(t.shard, t.logger, transferTask.DomainID, msBuilder.GetLastWriteVersion(), transferTask.Version, transferTask)
 		if err != nil {
 			return err
