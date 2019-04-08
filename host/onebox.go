@@ -63,6 +63,7 @@ import (
 
 const rpAppNamePrefix string = "cadence"
 const maxRpJoinTimeout = 30 * time.Second
+const archivalBlobSize = 5 * 1024 // 5KB
 
 // Cadence hosts all of cadence services in one process
 type Cadence interface {
@@ -507,6 +508,7 @@ func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, s
 		c.blobstoreClient.IsRetryableError)
 	workerConfig := worker.NewConfig(params)
 	workerConfig.ArchiverConfig.ArchiverConcurrency = dynamicconfig.GetIntPropertyFn(10)
+	workerConfig.ArchiverConfig.TargetArchivalBlobSize = dynamicconfig.GetIntPropertyFilteredByDomain(archivalBlobSize)
 	bc := &archiver.BootstrapContainer{
 		PublicClient:     publicClient,
 		MetricsClient:    service.GetMetricsClient(),
