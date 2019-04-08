@@ -750,6 +750,4 @@ func (s *integrationSuite) TestGetWorkflowExecutionRawHistory_InTheMiddle() {
 	resp, err = getHistory(s.domainName, execution, firstEventID, common.EndEventID, token)
 	s.Nil(err)
 	s.Equal(1, len(resp.HistoryBatches))
-	token = resp.NextPageToken
-	s.NotEmpty(token)
 }
