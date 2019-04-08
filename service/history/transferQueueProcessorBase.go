@@ -166,7 +166,8 @@ func (t *transferQueueProcessorBase) recordWorkflowStarted(
 
 	// publish to kafka
 	if t.visibilityProducer != nil {
-		msg := getVisibilityMessageForOpenExecution(domainID, execution, workflowTypeName, startTimeUnixNano, executionTimeUnixNano, taskID)
+		msg := getVisibilityMessageForOpenExecution(domainID, execution, workflowTypeName, startTimeUnixNano,
+			executionTimeUnixNano, taskID, visibilityMemo)
 		err := t.visibilityProducer.Publish(msg)
 		if err != nil {
 			return err
@@ -217,7 +218,7 @@ func (t *transferQueueProcessorBase) recordWorkflowClosed(
 	// publish to kafka
 	if t.visibilityProducer != nil {
 		msg := getVisibilityMessageForCloseExecution(domainID, execution, workflowTypeName,
-			startTimeUnixNano, executionTimeUnixNano, endTimeUnixNano, closeStatus, historyLength, taskID)
+			startTimeUnixNano, executionTimeUnixNano, endTimeUnixNano, closeStatus, historyLength, taskID, visibilityMemo)
 		err := t.visibilityProducer.Publish(msg)
 		if err != nil {
 			return err
@@ -240,7 +241,7 @@ func (t *transferQueueProcessorBase) recordWorkflowClosed(
 }
 
 func getVisibilityMessageForOpenExecution(domainID string, execution workflow.WorkflowExecution, workflowTypeName string,
-	startTimeUnixNano, executionTimeUnixNano int64, taskID int64) *indexer.Message {
+	startTimeUnixNano, executionTimeUnixNano int64, taskID int64, memo map[string][]byte) *indexer.Message {
 
 	msgType := indexer.MessageTypeIndex
 	fields := map[string]*indexer.Field{
@@ -248,26 +249,29 @@ func getVisibilityMessageForOpenExecution(domainID string, execution workflow.Wo
 		es.StartTime:     {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(startTimeUnixNano)},
 		es.ExecutionTime: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(executionTimeUnixNano)},
 	}
+	unIndexedFields := make(map[string]*indexer.Field)
+	for k, v := range memo {
+		unIndexedFields[k] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: v}
+	}
 
 	msg := &indexer.Message{
-		MessageType: &msgType,
-		DomainID:    common.StringPtr(domainID),
-		WorkflowID:  common.StringPtr(execution.GetWorkflowId()),
-		RunID:       common.StringPtr(execution.GetRunId()),
-		Version:     common.Int64Ptr(taskID),
-		IndexAttributes: &indexer.IndexAttributes{
-			Fields: fields,
-		},
+		MessageType:     &msgType,
+		DomainID:        common.StringPtr(domainID),
+		WorkflowID:      common.StringPtr(execution.GetWorkflowId()),
+		RunID:           common.StringPtr(execution.GetRunId()),
+		Version:         common.Int64Ptr(taskID),
+		IndexedFields:   &indexer.Fields{Fields: fields},
+		UnIndexedFields: &indexer.Fields{Fields: unIndexedFields},
 	}
 	return msg
 }
 
 func getVisibilityMessageForCloseExecution(domainID string, execution workflow.WorkflowExecution, workflowTypeName string,
 	startTimeUnixNano int64, executionTimeUnixNano int64, endTimeUnixNano int64, closeStatus workflow.WorkflowExecutionCloseStatus,
-	historyLength int64, taskID int64) *indexer.Message {
+	historyLength int64, taskID int64, memo map[string][]byte) *indexer.Message {
 
 	msgType := indexer.MessageTypeIndex
-	fields := map[string]*indexer.Field{
+	indexedFields := map[string]*indexer.Field{
 		es.WorkflowType:  {Type: &es.FieldTypeString, StringData: common.StringPtr(workflowTypeName)},
 		es.StartTime:     {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(startTimeUnixNano)},
 		es.ExecutionTime: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(executionTimeUnixNano)},
@@ -275,16 +279,19 @@ func getVisibilityMessageForCloseExecution(domainID string, execution workflow.W
 		es.CloseStatus:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(closeStatus))},
 		es.HistoryLength: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(historyLength)},
 	}
+	unIndexedFields := make(map[string]*indexer.Field)
+	for k, v := range memo {
+		unIndexedFields[k] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: v}
+	}
 
 	msg := &indexer.Message{
-		MessageType: &msgType,
-		DomainID:    common.StringPtr(domainID),
-		WorkflowID:  common.StringPtr(execution.GetWorkflowId()),
-		RunID:       common.StringPtr(execution.GetRunId()),
-		Version:     common.Int64Ptr(taskID),
-		IndexAttributes: &indexer.IndexAttributes{
-			Fields: fields,
-		},
+		MessageType:     &msgType,
+		DomainID:        common.StringPtr(domainID),
+		WorkflowID:      common.StringPtr(execution.GetWorkflowId()),
+		RunID:           common.StringPtr(execution.GetRunId()),
+		Version:         common.Int64Ptr(taskID),
+		IndexedFields:   &indexer.Fields{Fields: indexedFields},
+		UnIndexedFields: &indexer.Fields{Fields: unIndexedFields},
 	}
 	return msg
 }

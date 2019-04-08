@@ -215,7 +215,7 @@ func generateESDoc(msg *indexer.Message) map[string]interface{} {
 	doc[es.WorkflowID] = msg.GetWorkflowID()
 	doc[es.RunID] = msg.GetRunID()
 
-	fields := msg.IndexAttributes.Fields
+	fields := msg.IndexedFields.Fields
 	for k, v := range fields {
 		switch v.GetType() {
 		case indexer.FieldTypeString:
@@ -225,7 +225,7 @@ func generateESDoc(msg *indexer.Message) map[string]interface{} {
 		case indexer.FieldTypeBool:
 			doc[k] = v.GetBoolData()
 		default:
-			ErrorAndExit("Unknow field type", nil)
+			ErrorAndExit("Unknown field type", nil)
 		}
 	}
 	return doc

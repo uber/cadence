@@ -42,6 +42,7 @@ var (
 	FieldTypeString = indexer.FieldTypeString
 	FieldTypeInt    = indexer.FieldTypeInt
 	FieldTypeBool   = indexer.FieldTypeBool
+	FieldTypeBinary = indexer.FieldTypeBinary
 )
 
 var (

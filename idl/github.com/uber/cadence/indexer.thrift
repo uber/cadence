@@ -31,6 +31,7 @@ enum FieldType {
   String
   Int
   Bool
+  Binary
 }
 
 struct Field {
@@ -38,9 +39,10 @@ struct Field {
   20: optional string stringData
   30: optional i64 (js.type = "Long") intData
   40: optional bool boolData
+  50: optional binary binaryData
 }
 
-struct IndexAttributes {
+struct Fields {
   10: optional map<string,Field> fields
 }
 
@@ -50,5 +52,6 @@ struct Message {
   30: optional string workflowID
   40: optional string runID
   50: optional i64 (js.type = "Long") version
-  60: optional IndexAttributes indexAttributes
+  60: optional Fields indexedFields
+  70: optional Fields unIndexedFields
 }
