@@ -2855,7 +2855,12 @@ func (d *cassandraPersistence) CreateTasks(request *p.CreateTasksRequest) (*p.Cr
 
 // From TaskManager interface
 func (d *cassandraPersistence) GetTasks(request *p.GetTasksRequest) (*p.GetTasksResponse, error) {
-	if request.ReadLevel > request.MaxReadLevel {
+	if request.MaxReadLevel == nil {
+		return nil, &workflow.InternalServiceError{
+			Message: "getTasks: both readLevel and maxReadLevel MUST be specified for cassandra persistence",
+		}
+	}
+	if request.ReadLevel > *request.MaxReadLevel {
 		return &p.GetTasksResponse{}, nil
 	}
 
@@ -2866,7 +2871,7 @@ func (d *cassandraPersistence) GetTasks(request *p.GetTasksRequest) (*p.GetTasks
 		request.TaskType,
 		rowTypeTask,
 		request.ReadLevel,
-		request.MaxReadLevel,
+		*request.MaxReadLevel,
 	).PageSize(request.BatchSize)
 
 	iter := query.Iter()
