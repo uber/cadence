@@ -23,10 +23,12 @@ package host
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"strconv"
 	"time"
 
 	"github.com/pborman/uuid"
+	"github.com/uber/cadence/.gen/go/admin"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
@@ -172,7 +174,7 @@ func (s *integrationSuite) isMutableStateDeleted(domainID string, execution *wor
 	return false
 }
 
-func (s *integrationSuite) isMultiBlobHistory(domainID string, execution *workflow.WorkflowExecution) bool {
+func (s *integrationSuite) isMultiBlobHistory(domain, domainID string, execution *workflow.WorkflowExecution) bool {
 	historySize := 0
 	pageSize := 100
 	var err error
@@ -197,12 +199,20 @@ func (s *integrationSuite) isMultiBlobHistory(domainID string, execution *workfl
 		return historySize > archivalBlobSize
 	}
 
-	wfResp, err := s.testCluster.testBase.ExecutionManager.GetWorkflowExecution(&persistence.GetWorkflowExecutionRequest{
-		DomainID:  domainID,
-		Execution: *execution,
+	wfResp, err := s.adminClient.DescribeWorkflowExecution(createContext(), &admin.DescribeWorkflowExecutionRequest{
+		Domain:    common.StringPtr(domain),
+		Execution: execution,
 	})
 	s.Nil(err)
-	branchToken := wfResp.State.ExecutionInfo.BranchToken
+	s.NotNil(wfResp)
+	s.NotNil(wfResp.MutableStateInDatabase)
+
+	msStr := wfResp.GetMutableStateInDatabase()
+	ms := persistence.WorkflowMutableState{}
+	err = json.Unmarshal([]byte(msStr), &ms)
+	s.Nil(err)
+	s.NotNil(ms.ExecutionInfo)
+	branchToken := ms.ExecutionInfo.BranchToken
 
 	req := &persistence.ReadHistoryBranchRequest{
 		BranchToken: branchToken,
@@ -347,7 +357,7 @@ func (s *integrationSuite) startAndFinishWorkflow(id, wt, tl, domain, domainID s
 		}
 
 		if run == numRuns-1 && checkMultiBlob {
-			s.True(s.isMultiBlobHistory(domainID, &workflow.WorkflowExecution{
+			s.True(s.isMultiBlobHistory(domain, domainID, &workflow.WorkflowExecution{
 				WorkflowId: common.StringPtr(id),
 				RunId:      common.StringPtr(runIDs[run]),
 			}))
