@@ -43,6 +43,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:0a776e52fa4deb432e3c382436ed79c2e20fb6fd02061782c11e3e3a58b86d78"
+  name = "github.com/armon/go-metrics"
+  packages = ["."]
+  pruneopts = ""
+  revision = "f0300d1749da6fa982027e449ec0c7a145510c3c"
+
+[[projects]]
+  branch = "master"
   digest = "1:afaa6de27e2d86b66cf71d55096f00e32b2ef40ec3349b535555aa81c77bc7d3"
   name = "github.com/benbjohnson/clock"
   packages = ["."]
@@ -236,6 +244,14 @@
   version = "v0.0.1"
 
 [[projects]]
+  digest = "1:1e5b1e14524ed08301977b7b8e10c719ed853cbf3f24ecb66fae783a46f207a6"
+  name = "github.com/google/btree"
+  packages = ["."]
+  pruneopts = ""
+  revision = "4030bb1f1f0c35b30ca7009e9ebd06849dd45306"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:ad92aa49f34cbc3546063c7eb2cabb55ee2278b72842eda80e2a20a8a06a8d73"
   name = "github.com/google/uuid"
   packages = ["."]
@@ -258,6 +274,73 @@
   pruneopts = ""
   revision = "d40cf49b3a77bba84a7afdbd7f1dc295d114efb1"
   version = "v1.1.0"
+
+[[projects]]
+  digest = "1:8e3bd93036b4a925fe2250d3e4f38f21cadb8ef623561cd80c3c50c114b13201"
+  name = "github.com/hashicorp/errwrap"
+  packages = ["."]
+  pruneopts = ""
+  revision = "8a6fb523712970c966eefc6b39ed2c5e74880354"
+  version = "v1.0.0"
+
+[[projects]]
+  digest = "1:c5466dfad4c14bf8e52a34b0eb98f1301acc1e304e0f0ff2c51c356ca1b86747"
+  name = "github.com/hashicorp/go-immutable-radix"
+  packages = ["."]
+  pruneopts = ""
+  revision = "27df80928bb34bb1b0d6d0e01b9e679902e7a6b5"
+  version = "v1.0.0"
+
+[[projects]]
+  digest = "1:38ff18e424169f882a19a18f5b1dfcba69207359e52f1fbb1b1d9dc583efe356"
+  name = "github.com/hashicorp/go-msgpack"
+  packages = ["codec"]
+  pruneopts = ""
+  revision = "be3a5be7ee2202386d02936a19ae4fbde1c77800"
+  version = "v0.5.3"
+
+[[projects]]
+  digest = "1:72308fdd6d5ef61106a95be7ca72349a5565809042b6426a3cfb61d99483b824"
+  name = "github.com/hashicorp/go-multierror"
+  packages = ["."]
+  pruneopts = ""
+  revision = "886a7fbe3eb1c874d46f623bfa70af45f425b3d1"
+  version = "v1.0.0"
+
+[[projects]]
+  digest = "1:24ee99da0190535baad44a5df2710ca2e116d615fcaaffcf3b79b476450af917"
+  name = "github.com/hashicorp/go-sockaddr"
+  packages = ["."]
+  pruneopts = ""
+  revision = "c7188e74f6acae5a989bdc959aa779f8b9f42faf"
+  version = "v1.0.2"
+
+[[projects]]
+  digest = "1:85f8f8d390a03287a563e215ea6bd0610c858042731a8b42062435a0dcbc485f"
+  name = "github.com/hashicorp/golang-lru"
+  packages = ["simplelru"]
+  pruneopts = ""
+  revision = "7087cb70de9f7a8bc0a10c375cb0d2280a8edf9c"
+  version = "v0.5.1"
+
+[[projects]]
+  digest = "1:0201007a8e79174b6f28e3bcf9358893a442a66e4dbc2e09c54fb9cb46acb6d6"
+  name = "github.com/hashicorp/memberlist"
+  packages = ["."]
+  pruneopts = ""
+  revision = "a9da52f0668fc4321ec18e9e28dd8141621a808f"
+  version = "v0.1.3"
+
+[[projects]]
+  digest = "1:2dd628a226f3a5ff16360f868114731d2734924eef4a49cb64d0781c6c9c5e7e"
+  name = "github.com/hashicorp/serf"
+  packages = [
+    "coordinate",
+    "serf",
+  ]
+  pruneopts = ""
+  revision = "b89a09ebd4b1b570e0076d5097272e67c10ac4f6"
+  version = "v0.8.2"
 
 [[projects]]
   branch = "master"
@@ -352,6 +435,14 @@
   version = "v1.0.1"
 
 [[projects]]
+  digest = "1:bd95ada143d11b4711db3cfef17613a19002f3aac1e9740e3babdd10b57171f3"
+  name = "github.com/miekg/dns"
+  packages = ["."]
+  pruneopts = ""
+  revision = "73601d4aed9d844322611759d7f3619110b7c88e"
+  version = "v1.1.8"
+
+[[projects]]
   branch = "master"
   digest = "1:9901b471977536c9cd2c19212546aec5c3c0572bd768964020108d2d459f5283"
   name = "github.com/mmcloughlin/avo"
@@ -412,6 +503,14 @@
   pruneopts = ""
   revision = "adf5a7427709b9deb95d29d3fa8a2bf9cfd388f1"
   version = "v1.2"
+
+[[projects]]
+  branch = "master"
+  digest = "1:c24598ffeadd2762552269271b3b1510df2d83ee6696c1e543a0ff653af494bc"
+  name = "github.com/petar/GoLLRB"
+  packages = ["llrb"]
+  pruneopts = ""
+  revision = "53be0d36a84c2a886ca057d34b6aa4468df9ccb4"
 
 [[projects]]
   digest = "1:eea52fd418b317ff9afc060cd1697b841f3b22e30df465271c0b6049c479c3b4"
@@ -503,6 +602,14 @@
   packages = ["parser"]
   pruneopts = ""
   revision = "e8b6b52668fe9c972220addc130edf46a9b466b1"
+
+[[projects]]
+  branch = "master"
+  digest = "1:6ee36f2cea425916d81fdaaf983469fc18f91b3cf090cfe90fa0a9d85b8bfab7"
+  name = "github.com/sean-/seed"
+  packages = ["."]
+  pruneopts = ""
+  revision = "e2103e2c35297fb7e17febb81e49b312087a2372"
 
 [[projects]]
   branch = "master"
@@ -797,6 +904,17 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:79c9390c9986545f84bdf2600e380c5938c7b27067290514e964367cd4102476"
+  name = "golang.org/x/crypto"
+  packages = [
+    "ed25519",
+    "ed25519/internal/edwards25519",
+  ]
+  pruneopts = ""
+  revision = "38d8ce5564a5b71b2e3a00553993f1b9a7ae852f"
+
+[[projects]]
+  branch = "master"
   digest = "1:904a96f1b41dd718461284637f0c164a9cdc47aaf3026406de6cc139e19411b5"
   name = "golang.org/x/lint"
   packages = [
@@ -939,6 +1057,7 @@
     "github.com/golang/mock/gomock",
     "github.com/google/uuid",
     "github.com/hashicorp/go-version.git",
+    "github.com/hashicorp/serf/serf",
     "github.com/iancoleman/strcase",
     "github.com/jmoiron/sqlx",
     "github.com/olekukonko/tablewriter",
