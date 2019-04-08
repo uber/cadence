@@ -838,7 +838,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 	tl := "integration-wf-cron-tasklist"
 	identity := "worker1"
 
-	targetBackoffDuration := time.Second * 5
+	targetBackoffDuration := time.Second * 3
 	backoffDurationTolerance := time.Millisecond * 500
 
 	workflowType := &workflow.WorkflowType{}
@@ -857,7 +857,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
-		CronSchedule:                        common.StringPtr("@every 5s"), //minimum interval by standard spec is 1m (* * * * *), use non-standard descriptor for short interval for test
+		CronSchedule:                        common.StringPtr("@every 3s"), //minimum interval by standard spec is 1m (* * * * *), use non-standard descriptor for short interval for test
 	}
 
 	startWorkflowTS := time.Now()
@@ -908,7 +908,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 	startFilter.LatestTime = common.Int64Ptr(time.Now().UnixNano())
 
 	// Sleep some time before checking the open executions.
-	// This will not cost extra time as the polling for first decision task will be blocked for 5 seconds.
+	// This will not cost extra time as the polling for first decision task will be blocked for 3 seconds.
 	time.Sleep(2 * time.Second)
 	resp, err := s.engine.ListOpenWorkflowExecutions(createContext(), &workflow.ListOpenWorkflowExecutionsRequest{
 		Domain:          common.StringPtr(s.domainName),
@@ -926,7 +926,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.True(err == nil, err)
 
-	// Make sure the cron workflow start running at a proper time, in this case 5 second after the
+	// Make sure the cron workflow start running at a proper time, in this case 3 seconds after the
 	// startWorkflowExecution request
 	backoffDuration := time.Now().Sub(startWorkflowTS)
 	s.True(backoffDuration > targetBackoffDuration)
