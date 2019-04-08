@@ -156,6 +156,7 @@ func (m *historyManagerImpl) getWorkflowExecutionHistory(request *GetWorkflowExe
 				// We assume application layer want to read from MinEventID(inclusive)
 				// However, for getting history from remote cluster, there is scenario that we have to read from middle without knowing the firstEventID.
 				// In that case we don't validate history continuousness for the first page
+				// TODO: in this case, some events returned can be invalid(stale). application layer need to make sure it won't make any problems to XDC
 				logger := m.logger.WithFields(bark.Fields{
 					logging.TagWorkflowExecutionID: request.Execution.GetWorkflowId(),
 					logging.TagWorkflowRunID:       request.Execution.GetRunId(),
