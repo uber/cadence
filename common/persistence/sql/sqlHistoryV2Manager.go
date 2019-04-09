@@ -445,6 +445,7 @@ func (m *sqlHistoryV2Manager) CompleteForkBranch(request *p.InternalCompleteFork
 		if err != nil {
 			return err
 		}
+		// Note: we don't check result for DeleteFromHistoryNode because there can be deleting zero nodes.
 		result, err := tx.DeleteFromHistoryTree(treeFilter)
 		if err != nil {
 			return err
