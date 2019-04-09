@@ -975,7 +975,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 
 	startFilter.LatestTime = common.Int64Ptr(time.Now().UnixNano())
 	var closedExecutions []*workflow.WorkflowExecutionInfo
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 10; i++ {
 		resp, err := s.engine.ListClosedWorkflowExecutions(createContext(), &workflow.ListClosedWorkflowExecutionsRequest{
 			Domain:          common.StringPtr(s.domainName),
 			MaximumPageSize: common.Int32Ptr(100),
@@ -985,14 +985,14 @@ func (s *integrationSuite) TestCronWorkflow() {
 			},
 		})
 		s.Nil(err)
-		if len(resp.GetExecutions()) == 3 {
+		if len(resp.GetExecutions()) == 4 {
 			closedExecutions = resp.GetExecutions()
 			break
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
 	s.NotNil(closedExecutions)
-	for i := 0; i != 3; i++ {
+	for i := 0; i != 4; i++ {
 		executionInfo := closedExecutions[i]
 		s.Equal(targetBackoffDuration.Nanoseconds(), executionInfo.GetExecutionTime()-executionInfo.GetStartTime())
 	}
