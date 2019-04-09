@@ -3212,6 +3212,9 @@ func (s *integrationSuite) startWithMemoHelper(startFn startFunc, id string, tas
 				EarliestTime: common.Int64Ptr(0),
 				LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
 			},
+			ExecutionFilter: &workflow.WorkflowExecutionFilter{
+				WorkflowId: common.StringPtr(id),
+			},
 		})
 		s.Nil(err1)
 		if len(resp.Executions) == 1 {
