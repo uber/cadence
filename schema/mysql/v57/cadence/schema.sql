@@ -355,6 +355,27 @@ CREATE TABLE signals_requested_sets (
 	PRIMARY KEY (shard_id, domain_id, workflow_id, run_id, signal_id)
 );
 
+-- history eventsV2: history_node stores history event data
+CREATE TABLE history_node (
+	tree_id        BINARY(16) NOT NULL,
+	branch_id      BINARY(16) NOT NULL,
+	node_id        BIGINT NOT NULL,
+	txn_id         BIGINT NOT NULL,
+	data           MEDIUMBLOB NOT NULL,
+	data_encoding  VARCHAR(16) NOT NULL,
+	PRIMARY KEY (tree_id, branch_id, node_id, txn_id)
+);
+
+-- history eventsV2: history_tree stores branch metadata
+CREATE TABLE history_tree (
+	tree_id        BINARY(16) NOT NULL,
+	branch_id      BINARY(16) NOT NULL,
+	ancestors      BLOB NOT NULL,
+	in_progress    BOOLEAN NOT NULL, -- For fork operation to prevent race condition with deleting history
+	created_ts     DATETIME(6) NOT NULL, -- For fork operation to prevent race condition of leaking event data when forking branches fail. Also can be used for clean up leaked data.
+	info           VARCHAR(255) NOT NULL, -- For lookup back to workflow during debugging, also background cleanup when fork operation cannot finish self cleanup due to crash.
+	PRIMARY KEY (tree_id, branch_id)
+);
 
 insert into domains(
 id,
@@ -374,26 +395,3 @@ is_global_domain,
 active_cluster_name) values(
 UNHEX('32049b68787240948e63d0dd59896a83'),
 'cadence-system', 0, 'cadence system workflow domain', 'cadence-dev-group@uber.com', 3, 0, '', 0, 0, 0, 0, 0, 0, "");
-
--- history eventsV2: history_node stores history event data
-CREATE TABLE history_node (
-	tree_id      BINARY(16) NOT NULL,
-	branch_id      BINARY(16) NOT NULL,
-	node_id BIGINT NOT NULL,
-	txn_id BIGINT NOT NULL,
-	data MEDIUMBLOB NOT NULL,
-	data_encoding  VARCHAR(16) NOT NULL,
-	PRIMARY KEY (tree_id, branch_id, node_id, txn_id)
-);
-
--- history eventsV2: history_tree stores branch metadata
-CREATE TABLE history_tree (
-	tree_id        BINARY(16) NOT NULL,
-	branch_id      BINARY(16) NOT NULL,
-	ancestors      BLOB NOT NULL,
-	in_progress    BOOLEAN NOT NULL, -- For fork operation to prevent race condition to leak event data when forking branches
-	created_ts     DATETIME(6) NOT NULL, -- For fork operation to prevent race condition to leak event data when forking branches. Also can be used for clean up leaked data.
-	info           VARCHAR(255) NOT NULL, -- For lookup back to workflow during debugging, also background cleanup when fork operation cannot finish self cleanup due to crash.
-	PRIMARY KEY (tree_id, branch_id)
-);
-
