@@ -137,16 +137,15 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(request *p.InternalAppendHistor
 			}
 			return nil
 		})
-	} else {
-		_, err := m.db.InsertIntoHistoryNode(nodeRow)
-		if err != nil {
-			if sqlErr, ok := err.(*mysql.MySQLError); ok && sqlErr.Number == ErrDupEntry {
-				return &p.ConditionFailedError{Msg: fmt.Sprintf("AppendHistoryNodes: row already exist: %v", err)}
-			}
-			return &shared.InternalServiceError{Message: fmt.Sprintf("AppendHistoryEvents: %v", err)}
-		}
 	}
 
+	_, err := m.db.InsertIntoHistoryNode(nodeRow)
+	if err != nil {
+		if sqlErr, ok := err.(*mysql.MySQLError); ok && sqlErr.Number == ErrDupEntry {
+			return &p.ConditionFailedError{Msg: fmt.Sprintf("AppendHistoryNodes: row already exist: %v", err)}
+		}
+		return &shared.InternalServiceError{Message: fmt.Sprintf("AppendHistoryEvents: %v", err)}
+	}
 	return nil
 }
 
@@ -185,11 +184,12 @@ func (m *sqlHistoryV2Manager) ReadHistoryBranch(request *p.InternalReadHistoryBr
 	for _, row := range rows {
 		eventBlob.Data = row.Data
 		eventBlob.Encoding = common.EncodingType(row.DataEncoding)
-		if row.NodeID < lastNodeID {
+		switch {
+		case row.NodeID < lastNodeID:
 			return nil, &shared.InternalServiceError{
 				Message: fmt.Sprintf("corrupted data, nodeID cannot decrease"),
 			}
-		} else if row.NodeID == lastNodeID {
+		case row.NodeID == lastNodeID:
 			if *row.TxnID < lastTxnID {
 				// skip the nodes with smaller txn_id
 				continue
@@ -198,7 +198,7 @@ func (m *sqlHistoryV2Manager) ReadHistoryBranch(request *p.InternalReadHistoryBr
 					Message: fmt.Sprintf("corrupted data, same nodeID must have smaller txnID"),
 				}
 			}
-		} else {
+		default: // row.NodeID > lastNodeID:
 			// NOTE: when row.nodeID > lastNodeID, we expect the one with largest txnID comes first
 			lastTxnID = *row.TxnID
 			lastNodeID = row.NodeID
@@ -429,42 +429,35 @@ func (m *sqlHistoryV2Manager) CompleteForkBranch(request *p.InternalCompleteFork
 			return fmt.Errorf("expected 1 row to be affected for tree table, got %v", rowsAffected)
 		}
 		return nil
-	} else {
-		treeFilter := &sqldb.HistoryTreeFilter{
-			TreeID:   treeID,
-			BranchID: &branchID,
-		}
-		nodeFilter := &sqldb.HistoryNodeFilter{
-			TreeID:    treeID,
-			BranchID:  branchID,
-			MinNodeID: common.Int64Ptr(1),
-		}
-		return m.txExecute("CompleteForkBranch", func(tx sqldb.Tx) error {
-			result, err := tx.DeleteFromHistoryNode(nodeFilter)
-			if err != nil {
-				return err
-			}
-			rowsAffected, err := result.RowsAffected()
-			if err != nil {
-				return err
-			}
-			if rowsAffected <= 0 {
-				return fmt.Errorf("expected >=1 row to be affected for node table, got %v", rowsAffected)
-			}
-			result, err = tx.DeleteFromHistoryTree(treeFilter)
-			if err != nil {
-				return err
-			}
-			rowsAffected, err = result.RowsAffected()
-			if err != nil {
-				return err
-			}
-			if rowsAffected != 1 {
-				return fmt.Errorf("expected 1 row to be affected for tree table, got %v", rowsAffected)
-			}
-			return nil
-		})
 	}
+	// request.Success == false
+	treeFilter := &sqldb.HistoryTreeFilter{
+		TreeID:   treeID,
+		BranchID: &branchID,
+	}
+	nodeFilter := &sqldb.HistoryNodeFilter{
+		TreeID:    treeID,
+		BranchID:  branchID,
+		MinNodeID: common.Int64Ptr(1),
+	}
+	return m.txExecute("CompleteForkBranch", func(tx sqldb.Tx) error {
+		_, err := tx.DeleteFromHistoryNode(nodeFilter)
+		if err != nil {
+			return err
+		}
+		result, err := tx.DeleteFromHistoryTree(treeFilter)
+		if err != nil {
+			return err
+		}
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if rowsAffected != 1 {
+			return fmt.Errorf("expected 1 row to be affected for tree table, got %v", rowsAffected)
+		}
+		return nil
+	})
 }
 
 // GetHistoryTree returns all branch information of a tree
