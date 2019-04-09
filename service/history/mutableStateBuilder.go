@@ -527,8 +527,8 @@ func checkAndClearTimerFiredEvent(events []*workflow.HistoryEvent, timerID strin
 	// timerID, clear it
 	timerFiredIdx := -1
 	for idx, event := range events {
-		if *event.EventType == workflow.EventTypeTimerFired &&
-			*event.TimerFiredEventAttributes.TimerId == timerID {
+		if event.GetEventType() == workflow.EventTypeTimerFired &&
+			event.GetTimerFiredEventAttributes().GetTimerId() == timerID {
 			timerFiredIdx = idx
 			break
 		}
@@ -2302,7 +2302,7 @@ func (e *mutableStateBuilder) AddTimerCanceledEvent(
 	identity string,
 ) *workflow.HistoryEvent {
 	var timerStartedID int64
-	timerID := *attributes.TimerId
+	timerID := attributes.GetTimerId()
 	isTimerRunning, ti := e.GetUserTimer(timerID)
 	if !isTimerRunning {
 		// if timer is not running then check if it has fired in the mutable state.
@@ -2314,9 +2314,9 @@ func (e *mutableStateBuilder) AddTimerCanceledEvent(
 				"{IsTimerRunning: %v, timerID: %v}", isTimerRunning, timerID))
 			return nil
 		}
-		timerStartedID = *timerFiredEvent.TimerFiredEventAttributes.StartedEventId
+		timerStartedID = timerFiredEvent.TimerFiredEventAttributes.GetStartedEventId()
 	} else {
-		timerStartedID = ti.StartedID
+		timerStartedID = ti.GetStartedId()
 	}
 
 	// Timer is running.
