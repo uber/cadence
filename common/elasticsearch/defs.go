@@ -33,6 +33,7 @@ const (
 	CloseTime     = "CloseTime"
 	CloseStatus   = "CloseStatus"
 	HistoryLength = "HistoryLength"
+	Memo          = "Memo"
 
 	KafkaKey = "KafkaKey"
 )
@@ -57,6 +58,7 @@ var (
 		CloseStatus:   struct{}{},
 		HistoryLength: struct{}{},
 		KafkaKey:      struct{}{},
+		Memo:          struct{}{},
 	}
 )
 

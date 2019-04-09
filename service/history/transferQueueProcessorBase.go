@@ -22,7 +22,7 @@ package history
 
 import (
 	"time"
-
+	"encoding/json"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/indexer"
 	m "github.com/uber/cadence/.gen/go/matching"
@@ -249,19 +249,20 @@ func getVisibilityMessageForOpenExecution(domainID string, execution workflow.Wo
 		es.StartTime:     {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(startTimeUnixNano)},
 		es.ExecutionTime: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(executionTimeUnixNano)},
 	}
-	unIndexedFields := make(map[string]*indexer.Field)
-	for k, v := range memo {
-		unIndexedFields[k] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: v}
+	if len(memo) != 0 {
+		memoBytes, _ := json.Marshal(memo)
+		fields[es.Memo] = &indexer.Field{
+			Type: &es.FieldTypeBinary, BinaryData: memoBytes,
+		}
 	}
 
 	msg := &indexer.Message{
-		MessageType:     &msgType,
-		DomainID:        common.StringPtr(domainID),
-		WorkflowID:      common.StringPtr(execution.GetWorkflowId()),
-		RunID:           common.StringPtr(execution.GetRunId()),
-		Version:         common.Int64Ptr(taskID),
-		IndexedFields:   &indexer.Fields{Fields: fields},
-		UnIndexedFields: &indexer.Fields{Fields: unIndexedFields},
+		MessageType: &msgType,
+		DomainID:    common.StringPtr(domainID),
+		WorkflowID:  common.StringPtr(execution.GetWorkflowId()),
+		RunID:       common.StringPtr(execution.GetRunId()),
+		Version:     common.Int64Ptr(taskID),
+		Fields:      fields,
 	}
 	return msg
 }
@@ -271,7 +272,7 @@ func getVisibilityMessageForCloseExecution(domainID string, execution workflow.W
 	historyLength int64, taskID int64, memo map[string][]byte) *indexer.Message {
 
 	msgType := indexer.MessageTypeIndex
-	indexedFields := map[string]*indexer.Field{
+	fields := map[string]*indexer.Field{
 		es.WorkflowType:  {Type: &es.FieldTypeString, StringData: common.StringPtr(workflowTypeName)},
 		es.StartTime:     {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(startTimeUnixNano)},
 		es.ExecutionTime: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(executionTimeUnixNano)},
@@ -279,19 +280,20 @@ func getVisibilityMessageForCloseExecution(domainID string, execution workflow.W
 		es.CloseStatus:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(closeStatus))},
 		es.HistoryLength: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(historyLength)},
 	}
-	unIndexedFields := make(map[string]*indexer.Field)
-	for k, v := range memo {
-		unIndexedFields[k] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: v}
+	if len(memo) != 0 {
+		memoBytes, _ := json.Marshal(memo)
+		fields[es.Memo] = &indexer.Field{
+			Type: &es.FieldTypeBinary, BinaryData: memoBytes,
+		}
 	}
 
 	msg := &indexer.Message{
-		MessageType:     &msgType,
-		DomainID:        common.StringPtr(domainID),
-		WorkflowID:      common.StringPtr(execution.GetWorkflowId()),
-		RunID:           common.StringPtr(execution.GetRunId()),
-		Version:         common.Int64Ptr(taskID),
-		IndexedFields:   &indexer.Fields{Fields: indexedFields},
-		UnIndexedFields: &indexer.Fields{Fields: unIndexedFields},
+		MessageType: &msgType,
+		DomainID:    common.StringPtr(domainID),
+		WorkflowID:  common.StringPtr(execution.GetWorkflowId()),
+		RunID:       common.StringPtr(execution.GetRunId()),
+		Version:     common.Int64Ptr(taskID),
+		Fields:      fields,
 	}
 	return msg
 }

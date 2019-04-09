@@ -65,6 +65,7 @@ type (
 		CloseTime     int64
 		CloseStatus   workflow.WorkflowExecutionCloseStatus
 		HistoryLength int64
+		Memo          []byte
 	}
 )
 
@@ -421,6 +422,8 @@ func (v *esVisibilityManager) convertSearchResultToVisibilityRecord(hit *elastic
 	if source.ExecutionTime == 0 {
 		source.ExecutionTime = source.StartTime
 	}
+	var memo map[string][]byte
+	json.Unmarshal(source.Memo, &memo)
 
 	var record *workflow.WorkflowExecutionInfo
 	if isOpen {
@@ -429,6 +432,7 @@ func (v *esVisibilityManager) convertSearchResultToVisibilityRecord(hit *elastic
 			Type:          wfType,
 			StartTime:     common.Int64Ptr(source.StartTime),
 			ExecutionTime: common.Int64Ptr(source.ExecutionTime),
+			Memo:      memo,
 		}
 	} else {
 		record = &workflow.WorkflowExecutionInfo{
@@ -439,6 +443,7 @@ func (v *esVisibilityManager) convertSearchResultToVisibilityRecord(hit *elastic
 			CloseTime:     common.Int64Ptr(source.CloseTime),
 			CloseStatus:   &source.CloseStatus,
 			HistoryLength: common.Int64Ptr(source.HistoryLength),
+			Memo:          memo,
 		}
 	}
 	return record
