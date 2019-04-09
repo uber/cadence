@@ -397,20 +397,19 @@ func (s *cliAppSuite) TestQueryWorkflow_Failed() {
 }
 
 var (
-	closeStatus = serverShared.WorkflowExecutionCloseStatusCompleted
+	closeStatus = shared.WorkflowExecutionCloseStatusCompleted
 
-	listClosedWorkflowExecutionsResponse = &serverShared.ListClosedWorkflowExecutionsResponse{
-		Executions: []*serverShared.WorkflowExecutionInfo{
+	listClosedWorkflowExecutionsResponse = &shared.ListClosedWorkflowExecutionsResponse{
+		Executions: []*shared.WorkflowExecutionInfo{
 			{
-				Execution: &serverShared.WorkflowExecution{
+				Execution: &shared.WorkflowExecution{
 					WorkflowId: common.StringPtr("test-list-workflow-id"),
 					RunId:      common.StringPtr(uuid.New()),
 				},
-				Type: &serverShared.WorkflowType{
+				Type: &shared.WorkflowType{
 					Name: common.StringPtr("test-list-workflow-type"),
 				},
 				StartTime:     common.Int64Ptr(time.Now().UnixNano()),
-				ExecutionTime: common.Int64Ptr(time.Now().UnixNano()),
 				CloseTime:     common.Int64Ptr(time.Now().Add(time.Hour).UnixNano()),
 				CloseStatus:   &closeStatus,
 				HistoryLength: common.Int64Ptr(12),
@@ -418,18 +417,17 @@ var (
 		},
 	}
 
-	listOpenWorkflowExecutionsResponse = &serverShared.ListOpenWorkflowExecutionsResponse{
-		Executions: []*serverShared.WorkflowExecutionInfo{
+	listOpenWorkflowExecutionsResponse = &shared.ListOpenWorkflowExecutionsResponse{
+		Executions: []*shared.WorkflowExecutionInfo{
 			{
-				Execution: &serverShared.WorkflowExecution{
+				Execution: &shared.WorkflowExecution{
 					WorkflowId: common.StringPtr("test-list-open-workflow-id"),
 					RunId:      common.StringPtr(uuid.New()),
 				},
-				Type: &serverShared.WorkflowType{
+				Type: &shared.WorkflowType{
 					Name: common.StringPtr("test-list-open-workflow-type"),
 				},
 				StartTime:     common.Int64Ptr(time.Now().UnixNano()),
-				ExecutionTime: common.Int64Ptr(time.Now().UnixNano()),
 				CloseTime:     common.Int64Ptr(time.Now().Add(time.Hour).UnixNano()),
 				HistoryLength: common.Int64Ptr(12),
 			},
@@ -439,56 +437,56 @@ var (
 
 func (s *cliAppSuite) TestListWorkflow() {
 	resp := listClosedWorkflowExecutionsResponse
-	s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
+	s.clientFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "list"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestListWorkflow_WithWorkflowID() {
-	resp := &serverShared.ListClosedWorkflowExecutionsResponse{}
-	s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
+	resp := &shared.ListClosedWorkflowExecutionsResponse{}
+	s.clientFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "list", "-wid", "nothing"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestListWorkflow_WithWorkflowType() {
-	resp := &serverShared.ListClosedWorkflowExecutionsResponse{}
-	s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
+	resp := &shared.ListClosedWorkflowExecutionsResponse{}
+	s.clientFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "list", "-wt", "no-type"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestListWorkflow_PrintDateTime() {
 	resp := listClosedWorkflowExecutionsResponse
-	s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
+	s.clientFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "list", "-pdt"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestListWorkflow_PrintRawTime() {
 	resp := listClosedWorkflowExecutionsResponse
-	s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
+	s.clientFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "list", "-prt"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestListWorkflow_Open() {
 	resp := listOpenWorkflowExecutionsResponse
-	s.serverFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
+	s.clientFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "list", "-op"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestListWorkflow_Open_WithWorkflowID() {
-	resp := &serverShared.ListOpenWorkflowExecutionsResponse{}
-	s.serverFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
+	resp := &shared.ListOpenWorkflowExecutionsResponse{}
+	s.clientFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "list", "-op", "-wid", "nothing"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestListWorkflow_Open_WithWorkflowType() {
-	resp := &serverShared.ListOpenWorkflowExecutionsResponse{}
-	s.serverFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
+	resp := &shared.ListOpenWorkflowExecutionsResponse{}
+	s.clientFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "list", "-op", "-wt", "no-type"})
 	s.Nil(err)
 }

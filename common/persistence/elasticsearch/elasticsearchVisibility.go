@@ -414,6 +414,9 @@ func (v *esVisibilityManager) convertSearchResultToVisibilityRecord(hit *elastic
 	wfType := &workflow.WorkflowType{
 		Name: common.StringPtr(source.WorkflowType),
 	}
+	if source.ExecutionTime == 0 {
+		source.ExecutionTime = source.StartTime
+	}
 
 	var record *workflow.WorkflowExecutionInfo
 	if isOpen {

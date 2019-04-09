@@ -344,9 +344,10 @@ func (e *historyEngineImpl) generateFirstDecisionTask(domainID string, msBuilder
 	}
 	var transferTasks []persistence.Task
 	if parentInfo == nil {
-		// DecisionTask and RecordWorkflowStartedTask is only created when it is not a Child Workflow Execution and no backoff is needed
+		// RecordWorkflowStartedTask is only created when it is not a Child Workflow
 		transferTasks = append(transferTasks, &persistence.RecordWorkflowStartedTask{})
 		if cronBackoffSeconds == 0 {
+			// DecisionTask is only created when it is not a Child Workflow and no backoff is needed
 			di = msBuilder.AddDecisionTaskScheduledEvent()
 			if di == nil {
 				return nil, nil, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
@@ -2586,14 +2587,10 @@ func (e *historyEngineImpl) ScheduleDecisionTask(ctx context.Context, scheduleRe
 				transferTasks:  []persistence.Task{&persistence.RecordWorkflowStartedTask{}},
 			}
 
-			// ycyang TODO: the visibility timestamp should be calculated from start time + backoff time
-			// not using time.Now(). and only set the timer when the result is greater than time.Now()
 			executionTimestamp := getWorkflowExecutionTimestamp(msBuilder)
-
-			//cronBackoffDuration := msBuilder.GetCronBackoffDuration()
 			if scheduleRequest.GetIsFirstDecision() && executionTimestamp.After(time.Now()) {
 				postActions.timerTasks = append(postActions.timerTasks, &persistence.WorkflowBackoffTimerTask{
-					VisibilityTimestamp: executionTimestamp, //time.Now().Add(cronBackoffDuration),
+					VisibilityTimestamp: executionTimestamp,
 					TimeoutType:         persistence.WorkflowBackoffTimeoutTypeCron,
 				})
 				postActions.createDecision = false

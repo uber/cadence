@@ -641,8 +641,8 @@
   version = "v1.3.2"
 
 [[projects]]
-  branch = "master"
-  digest = "1:1ddc8d2f8084741b71efd15893d91b355571e6d15509ef413f5e65297050351a"
+  branch = "fix-open-record"
+  digest = "1:e1c1e369a870ddabf7aee6f4de9c3a62cd35aba750ead76c01da6a2aadaac0bc"
   name = "go.uber.org/cadence"
   packages = [
     ".",
@@ -664,7 +664,8 @@
     "workflow",
   ]
   pruneopts = ""
-  revision = "f2c8347c33bae7803fa81011294c05ff196cd30d"
+  revision = "4027d0024de6986ebaa3c9784d6b570a96c3f593"
+  source = "github.com/yycptt/cadence-client"
 
 [[projects]]
   digest = "1:22c7effcb4da0eacb2bb1940ee173fac010e9ef3c691f5de4b524d538bd980f5"

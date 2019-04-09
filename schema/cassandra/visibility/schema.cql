@@ -17,7 +17,6 @@ CREATE TABLE open_executions (
 
 CREATE INDEX open_by_workflow_id ON open_executions (workflow_id);
 CREATE INDEX open_by_type ON open_executions (workflow_type_name);
-CREATE INDEX open_by_execution_time ON open_executions (execution_time);
 
 CREATE TABLE closed_executions (
   domain_id            uuid,
@@ -41,7 +40,6 @@ CREATE INDEX closed_by_workflow_id ON closed_executions (workflow_id);
 CREATE INDEX closed_by_close_time ON closed_executions (close_time);
 CREATE INDEX closed_by_type ON closed_executions (workflow_type_name);
 CREATE INDEX closed_by_status ON closed_executions (status);
-CREATE INDEX closed_by_execution_time ON closed_executions (execution_time);
 
 -- same as closed_executions but order by close_time
 CREATE TABLE closed_executions_v2 (
@@ -66,4 +64,3 @@ CREATE INDEX closed_by_workflow_id_v2 ON closed_executions_v2 (workflow_id);
 CREATE INDEX closed_by_close_time_v2 ON closed_executions_v2 (close_time);
 CREATE INDEX closed_by_type_v2 ON closed_executions_v2 (workflow_type_name);
 CREATE INDEX closed_by_status_v2 ON closed_executions_v2 (status);
-CREATE INDEX closed_by_execution_time_v2 ON closed_executions_v2 (execution_time);

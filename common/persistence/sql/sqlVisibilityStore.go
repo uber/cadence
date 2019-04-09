@@ -230,6 +230,9 @@ func (s *sqlVisibilityStore) GetClosedWorkflowExecution(request *p.GetClosedWork
 }
 
 func rowToInfo(row *sqldb.VisibilityRow) *workflow.WorkflowExecutionInfo {
+	if row.ExecutionTime.UnixNano() == 0 {
+		row.ExecutionTime = row.StartTime
+	}
 	info := &workflow.WorkflowExecutionInfo{
 		Execution: &workflow.WorkflowExecution{
 			WorkflowId: common.StringPtr(row.WorkflowID),

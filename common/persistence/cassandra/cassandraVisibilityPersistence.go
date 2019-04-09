@@ -650,6 +650,10 @@ func readOpenWorkflowExecutionRecord(iter *gocql.Iter) (*workflow.WorkflowExecut
 		wfType := &workflow.WorkflowType{}
 		wfType.Name = common.StringPtr(typeName)
 
+		if executionTime.UnixNano() == 0 {
+			executionTime = startTime
+		}
+
 		record := &workflow.WorkflowExecutionInfo{}
 		record.Execution = execution
 		record.StartTime = common.Int64Ptr(startTime.UnixNano())
@@ -676,6 +680,10 @@ func readClosedWorkflowExecutionRecord(iter *gocql.Iter) (*workflow.WorkflowExec
 
 		wfType := &workflow.WorkflowType{}
 		wfType.Name = common.StringPtr(typeName)
+
+		if executionTime.UnixNano() == 0 {
+			executionTime = startTime
+		}
 
 		record := &workflow.WorkflowExecutionInfo{}
 		record.Execution = execution
