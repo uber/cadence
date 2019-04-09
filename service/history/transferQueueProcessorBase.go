@@ -21,7 +21,6 @@
 package history
 
 import (
-	"time"
 	"encoding/json"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/indexer"
@@ -33,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/persistence"
+	"time"
 )
 
 type (

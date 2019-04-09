@@ -432,7 +432,7 @@ func (v *esVisibilityManager) convertSearchResultToVisibilityRecord(hit *elastic
 			Type:          wfType,
 			StartTime:     common.Int64Ptr(source.StartTime),
 			ExecutionTime: common.Int64Ptr(source.ExecutionTime),
-			Memo:      memo,
+			Memo:          memo,
 		}
 	} else {
 		record = &workflow.WorkflowExecutionInfo{
