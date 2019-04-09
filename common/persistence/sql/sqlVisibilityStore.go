@@ -61,7 +61,7 @@ func NewSQLVisibilityStore(cfg config.SQL, logger bark.Logger) (p.VisibilityMana
 }
 
 func (s *sqlVisibilityStore) RecordWorkflowExecutionStarted(request *p.RecordWorkflowExecutionStartedRequest) error {
-	result, err := s.db.InsertIntoVisibility(&sqldb.VisibilityRow{
+	_, err := s.db.InsertIntoVisibility(&sqldb.VisibilityRow{
 		DomainID:         request.DomainUUID,
 		WorkflowID:       *request.Execution.WorkflowId,
 		RunID:            *request.Execution.RunId,
@@ -69,37 +69,31 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionStarted(request *p.RecordWor
 		ExecutionTime:    time.Unix(0, request.ExecutionTimestamp),
 		WorkflowTypeName: request.WorkflowTypeName,
 	})
-	if err != nil {
-		return err
-	}
-	noRowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("RecordWorkflowExecutionStarted rowsAffected error: %v", err)
-	}
-	if noRowsAffected != 1 {
-		return fmt.Errorf("RecordWorkflowExecutionStarted %v rows updated instead of one", noRowsAffected)
-	}
-	return nil
+	return err
 }
 
 func (s *sqlVisibilityStore) RecordWorkflowExecutionClosed(request *p.RecordWorkflowExecutionClosedRequest) error {
 	closeTime := time.Unix(0, request.CloseTimestamp)
-	result, err := s.db.UpdateVisibility(&sqldb.VisibilityRow{
-		CloseTime:     &closeTime,
-		CloseStatus:   common.Int32Ptr(int32(request.Status)),
-		HistoryLength: &request.HistoryLength,
-		DomainID:      request.DomainUUID,
-		RunID:         *request.Execution.RunId,
+	result, err := s.db.ReplaceIntoVisibility(&sqldb.VisibilityRow{
+		DomainID:         request.DomainUUID,
+		WorkflowID:       *request.Execution.WorkflowId,
+		RunID:            *request.Execution.RunId,
+		StartTime:        time.Unix(0, request.StartTimestamp),
+		ExecutionTime:    time.Unix(0, request.ExecutionTimestamp),
+		WorkflowTypeName: request.WorkflowTypeName,
+		CloseTime:        &closeTime,
+		CloseStatus:      common.Int32Ptr(int32(request.Status)),
+		HistoryLength:    &request.HistoryLength,
 	})
 	if err != nil {
 		return err
 	}
 	noRowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("RecordWorkflowExecutionStarted rowsAffected error: %v", err)
+		return fmt.Errorf("RecordWorkflowExecutionClosed rowsAffected error: %v", err)
 	}
-	if noRowsAffected != 1 {
-		return fmt.Errorf("RecordWorkflowExecutionStarted %v rows updated instead of one", noRowsAffected)
+	if noRowsAffected > 2 { // either adds a new row or deletes old row and adds new row
+		return fmt.Errorf("RecordWorkflowExecutionClosed unexpected numRows (%v) updated", noRowsAffected)
 	}
 	return nil
 }

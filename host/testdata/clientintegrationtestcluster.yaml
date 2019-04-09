@@ -2,7 +2,8 @@ enableworker: false
 enableeventsv2: false
 enablearchival: false
 clusterno: 0
-numhistoryshards: 4
-numhistoryhosts: 1
 messagingclientconfig:
   usemock: true
+historyconfig:
+  numhistoryshards: 4
+  numhistoryhosts: 1

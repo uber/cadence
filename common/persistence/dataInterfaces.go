@@ -721,10 +721,11 @@ type (
 
 	// GetCurrentExecutionResponse is the response to GetCurrentExecution
 	GetCurrentExecutionResponse struct {
-		StartRequestID string
-		RunID          string
-		State          int
-		CloseStatus    int
+		StartRequestID   string
+		RunID            string
+		State            int
+		CloseStatus      int
+		LastWriteVersion int64
 	}
 
 	// UpdateWorkflowExecutionRequest is used to update a workflow execution
@@ -947,8 +948,8 @@ type (
 		DomainID     string
 		TaskList     string
 		TaskType     int
-		ReadLevel    int64
-		MaxReadLevel int64 // inclusive
+		ReadLevel    int64  // range exclusive
+		MaxReadLevel *int64 // optional: range inclusive when specified
 		BatchSize    int
 	}
 

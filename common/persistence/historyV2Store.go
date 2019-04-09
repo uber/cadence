@@ -234,7 +234,8 @@ func (m *historyV2ManagerImpl) readHistoryBranch(byBatch bool, request *ReadHist
 		}
 	}
 
-	token, err := m.pagingTokenSerializer.Deserialize(request.NextPageToken, request.MinEventID-1, common.EmptyVersion)
+	defaultLastEventID := request.MinEventID - 1
+	token, err := m.pagingTokenSerializer.Deserialize(request.NextPageToken, defaultLastEventID, common.EmptyVersion)
 	if err != nil {
 		return nil, nil, nil, 0, 0, err
 	}
@@ -341,9 +342,15 @@ func (m *historyV2ManagerImpl) readHistoryBranch(byBatch bool, request *ReadHist
 			continue
 		}
 		if firstEvent.GetEventId() != token.LastEventID+1 {
-			logger.Errorf("Corrupted incontinouous event batch, %v, %v, %v, %v, %v, %v", firstEvent.GetVersion(), lastEvent.GetVersion(), firstEvent.GetEventId(), lastEvent.GetEventId(), eventCount, token.LastEventID)
-			return nil, nil, nil, 0, 0, &workflow.InternalServiceError{
-				Message: fmt.Sprintf("corrupted history event batch, eventID is not continouous"),
+			// We assume application layer want to read from MinEventID(inclusive)
+			// However, for getting history from remote cluster, there is scenario that we have to read from middle without knowing the firstEventID.
+			// In that case we don't validate history continuousness for the first page
+			// TODO: in this case, some events returned can be invalid(stale). application layer need to make sure it won't make any problems to XDC
+			if defaultLastEventID == 0 || token.LastEventID != defaultLastEventID {
+				logger.Errorf("Corrupted incontinouous event batch, %v, %v, %v, %v, %v, %v", firstEvent.GetVersion(), lastEvent.GetVersion(), firstEvent.GetEventId(), lastEvent.GetEventId(), eventCount, token.LastEventID)
+				return nil, nil, nil, 0, 0, &workflow.InternalServiceError{
+					Message: fmt.Sprintf("corrupted history event batch, eventID is not continouous"),
+				}
 			}
 		}
 

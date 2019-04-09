@@ -426,7 +426,7 @@ workflow_state = ? ` +
 		`and visibility_ts = ? ` +
 		`and task_id = ?`
 
-	templateGetCurrentExecutionQuery = `SELECT current_run_id, execution ` +
+	templateGetCurrentExecutionQuery = `SELECT current_run_id, execution, replication_state ` +
 		`FROM executions ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
@@ -2337,11 +2337,13 @@ func (d *cassandraPersistence) GetCurrentExecution(request *p.GetCurrentExecutio
 
 	currentRunID := result["current_run_id"].(gocql.UUID).String()
 	executionInfo := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
+	replicationState := createReplicationState(result["replication_state"].(map[string]interface{}))
 	return &p.GetCurrentExecutionResponse{
-		RunID:          currentRunID,
-		StartRequestID: executionInfo.CreateRequestID,
-		State:          executionInfo.State,
-		CloseStatus:    executionInfo.CloseStatus,
+		RunID:            currentRunID,
+		StartRequestID:   executionInfo.CreateRequestID,
+		State:            executionInfo.State,
+		CloseStatus:      executionInfo.CloseStatus,
+		LastWriteVersion: replicationState.LastWriteVersion,
 	}, nil
 }
 
@@ -2853,7 +2855,12 @@ func (d *cassandraPersistence) CreateTasks(request *p.CreateTasksRequest) (*p.Cr
 
 // From TaskManager interface
 func (d *cassandraPersistence) GetTasks(request *p.GetTasksRequest) (*p.GetTasksResponse, error) {
-	if request.ReadLevel > request.MaxReadLevel {
+	if request.MaxReadLevel == nil {
+		return nil, &workflow.InternalServiceError{
+			Message: "getTasks: both readLevel and maxReadLevel MUST be specified for cassandra persistence",
+		}
+	}
+	if request.ReadLevel > *request.MaxReadLevel {
 		return &p.GetTasksResponse{}, nil
 	}
 
@@ -2864,7 +2871,7 @@ func (d *cassandraPersistence) GetTasks(request *p.GetTasksRequest) (*p.GetTasks
 		request.TaskType,
 		rowTypeTask,
 		request.ReadLevel,
-		request.MaxReadLevel,
+		*request.MaxReadLevel,
 	).PageSize(request.BatchSize)
 
 	iter := query.Iter()

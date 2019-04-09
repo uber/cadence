@@ -55,7 +55,7 @@ var keys = map[Key]string{
 	EnableVisibilityToKafka:             "system.enableVisibilityToKafka",
 	EnableReadVisibilityFromES:          "system.enableReadVisibilityFromES",
 	ArchivalStatus:                      "system.archivalStatus",
-	EnableReadHistoryFromArchival:       "system.enableReadHistoryFromArchival",
+	EnableReadFromArchival:              "system.enableReadFromArchival",
 	EnableDomainNotActiveAutoForwarding: "system.enableDomainNotActiveAutoForwarding",
 
 	// size limit
@@ -181,6 +181,7 @@ var keys = map[Key]string{
 	WorkerArchivalsPerIteration:                     "worker.ArchivalsPerIteration",
 	WorkerDeterministicConstructionCheckProbability: "worker.DeterministicConstructionCheckProbability",
 	WorkerThrottledLogRPS:                           "worker.throttledLogRPS",
+	ScannerPersistenceMaxQPS:                        "worker.scannerPersistenceMaxQPS",
 }
 
 const (
@@ -216,8 +217,8 @@ const (
 	DisableListVisibilityByFilter
 	// ArchivalStatus is key for the status of archival
 	ArchivalStatus
-	// EnableReadHistoryFromArchival is key for enabling reading history from archival store
-	EnableReadHistoryFromArchival
+	// EnableReadFromArchival is key for enabling reading history from archival store
+	EnableReadFromArchival
 	// EnableDomainNotActiveAutoForwarding whether enabling DC auto forwarding to active cluster
 	// for signal / start / signal with start API if domain is not active
 	EnableDomainNotActiveAutoForwarding
@@ -464,6 +465,8 @@ const (
 	WorkerDeterministicConstructionCheckProbability
 	// WorkerThrottledLogRPS is the rate limit on number of log messages emitted per second for throttled logger
 	WorkerThrottledLogRPS
+	// ScannerPersistenceMaxQPS is the maximum rate of persistence calls from worker.Scanner
+	ScannerPersistenceMaxQPS
 
 	// lastKeyForTest must be the last one in this const group for testing purpose
 	lastKeyForTest
