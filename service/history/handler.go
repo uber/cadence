@@ -106,7 +106,7 @@ func NewHandler(sVice service.Service, config *Config, shardManager persistence.
 		visibilityMgr:       visibilityMgr,
 		executionMgrFactory: executionMgrFactory,
 		tokenSerializer:     common.NewJSONTaskTokenSerializer(),
-		rateLimiter:         tokenbucket.New(config.RPS(), clock.NewRealTimeSource()),
+		rateLimiter:         tokenbucket.NewWithService(sVice.GetLogger().WithField("serviceName", "historyHandler"), config.RPS(), clock.NewRealTimeSource()),
 	}
 
 	// prevent us from trying to serve requests before shard controller is started and ready

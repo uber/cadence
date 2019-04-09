@@ -158,7 +158,7 @@ func NewWorkflowHandler(sVice service.Service, config *Config, metadataMgr persi
 		visibilityMgr:    visibilityMgr,
 		tokenSerializer:  common.NewJSONTaskTokenSerializer(),
 		domainCache:      cache.NewDomainCache(metadataMgr, sVice.GetClusterMetadata(), sVice.GetMetricsClient(), sVice.GetLogger()),
-		rateLimiter:      tokenbucket.New(config.RPS(), clock.NewRealTimeSource()),
+		rateLimiter:      tokenbucket.NewWithService(sVice.GetLogger().WithField("serviceName", "workflowHandler"), config.RPS(), clock.NewRealTimeSource()),
 		domainReplicator: NewDomainReplicator(kafkaProducer, sVice.GetLogger()),
 		blobstoreClient:  blobstoreClient,
 	}

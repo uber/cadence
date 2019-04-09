@@ -124,7 +124,7 @@ func newTimerQueueProcessorBase(scope int, shard ShardContext, historyService *h
 		workerNotificationChans: workerNotificationChans,
 		newTimerCh:              make(chan struct{}, 1),
 		lastPollTime:            time.Time{},
-		rateLimiter:             tokenbucket.New(maxPollRPS(), clock.NewRealTimeSource()),
+		rateLimiter:             tokenbucket.NewWithService(log.WithField("serviceName", "timerQueueProcessor"), maxPollRPS(), clock.NewRealTimeSource()),
 		startDelay:              startDelay,
 		retryPolicy:             common.CreatePersistanceRetryPolicy(),
 		visibilityProducer:      visibilityProducer,
