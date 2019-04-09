@@ -3356,6 +3356,7 @@ func getStartRequest(domainID string,
 		WorkflowIdReusePolicy:               request.WorkflowIdReusePolicy,
 		RetryPolicy:                         request.RetryPolicy,
 		CronSchedule:                        request.CronSchedule,
+		Memo:                                request.Memo,
 	}
 
 	startRequest := common.CreateHistoryStartWorkflowRequest(domainID, req)
