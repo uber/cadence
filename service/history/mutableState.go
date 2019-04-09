@@ -194,7 +194,7 @@ type (
 		ReplicateWorkflowExecutionContinuedAsNewEvent(int64, string, string, *workflow.HistoryEvent, *workflow.HistoryEvent, *decisionInfo, mutableState, int32) error
 		ReplicateWorkflowExecutionFailedEvent(int64, *workflow.HistoryEvent)
 		ReplicateWorkflowExecutionSignaled(*workflow.HistoryEvent)
-		ReplicateWorkflowExecutionStartedEvent(string, *string, workflow.WorkflowExecution, string, *workflow.WorkflowExecutionStartedEventAttributes)
+		ReplicateWorkflowExecutionStartedEvent(string, *string, workflow.WorkflowExecution, string, *workflow.HistoryEvent)
 		ReplicateWorkflowExecutionTerminatedEvent(int64, *workflow.HistoryEvent)
 		ReplicateWorkflowExecutionTimedoutEvent(int64, *workflow.HistoryEvent)
 		ResetSnapshot(string) *persistence.ResetMutableStateRequest

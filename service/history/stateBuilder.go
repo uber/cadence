@@ -131,7 +131,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 				}
 				parentDomainID = &parentDomainEntry.GetInfo().ID
 			}
-			b.msBuilder.ReplicateWorkflowExecutionStartedEvent(domainID, parentDomainID, execution, requestID, attributes)
+			b.msBuilder.ReplicateWorkflowExecutionStartedEvent(domainID, parentDomainID, execution, requestID, event)
 
 			b.timerTasks = append(b.timerTasks, b.scheduleWorkflowTimerTask(event, b.msBuilder)...)
 			b.transferTasks = append(b.transferTasks, &persistence.RecordWorkflowStartedTask{})

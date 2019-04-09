@@ -1336,8 +1336,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(d
 
 	event := e.hBuilder.AddWorkflowExecutionStartedEvent(req, &previousExecutionInfo.RunID)
 	e.ReplicateWorkflowExecutionStartedEvent(domainID, parentDomainID, execution, createRequest.GetRequestId(),
-		event.WorkflowExecutionStartedEventAttributes)
-	e.writeEventToCache(event)
+		event)
 	return event
 }
 
@@ -1357,13 +1356,13 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(execution workflo
 		parentDomainID = startRequest.ParentExecutionInfo.DomainUUID
 	}
 	e.ReplicateWorkflowExecutionStartedEvent(startRequest.GetDomainUUID(), parentDomainID,
-		execution, request.GetRequestId(), event.WorkflowExecutionStartedEventAttributes)
-	e.writeEventToCache(event)
+		execution, request.GetRequestId(), event)
 	return event
 }
 
 func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(domainID string, parentDomainID *string,
-	execution workflow.WorkflowExecution, requestID string, event *workflow.WorkflowExecutionStartedEventAttributes) {
+	execution workflow.WorkflowExecution, requestID string, startEvent *workflow.HistoryEvent) {
+	event := startEvent.WorkflowExecutionStartedEventAttributes
 	e.executionInfo.DomainID = domainID
 	e.executionInfo.WorkflowID = execution.GetWorkflowId()
 	e.executionInfo.RunID = execution.GetRunId()
@@ -1408,6 +1407,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(domainID st
 	if event.CronSchedule != nil {
 		e.executionInfo.CronSchedule = event.GetCronSchedule()
 	}
+	e.writeEventToCache(startEvent)
 }
 
 func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent() *decisionInfo {
