@@ -345,7 +345,7 @@ func (m *sqlMetadataManagerV2) ListDomains(request *persistence.ListDomainsReque
 
 	resp := &persistence.ListDomainsResponse{Domains: domains}
 	if len(rows) >= request.PageSize {
-		resp.NextPageToken = rows[request.PageSize-1].ID
+		resp.NextPageToken = rows[len(rows)-1].ID
 	}
 
 	return resp, nil

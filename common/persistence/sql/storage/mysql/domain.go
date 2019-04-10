@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	shardID = 0
+	shardID = 54321
 
 	createDomainQry = `INSERT INTO domains (
 		id,
@@ -84,7 +84,7 @@ const (
 		notification_version = :notification_version,
 		failover_notification_version = :failover_notification_version,
 		data = :data
-		WHERE shard_id=0 AND name = :name AND id = :id`
+		WHERE shard_id=54321 AND name = :name AND id = :id`
 
 	getDomainPart = `SELECT
 		id,

@@ -1,5 +1,5 @@
 CREATE TABLE domains(
-  shard_id INT NOT NULL DEFAULT 0,
+  shard_id INT NOT NULL DEFAULT 54321,
 /* domain */
   id BINARY(16) NOT NULL,
   name VARCHAR(255) UNIQUE NOT NULL,

@@ -366,10 +366,6 @@ func (s *integrationCrossDCSuite) TestIntegrationRegisterGetDomain_GlobalDomainE
 }
 
 func (s *integrationCrossDCSuite) TestIntegrationRegisterListDomains() {
-	if TestFlags.PersistenceType == config.StoreTypeSQL {
-		//s.T().Skip("skipping until sql supports ListDomains pagination")
-		//return
-	}
 	// re-initialize to enable global domain
 	s.TearDownTest()
 	s.setupTest(true, true)
