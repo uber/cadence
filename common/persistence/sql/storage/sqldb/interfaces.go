@@ -350,6 +350,7 @@ type (
 
 	// HistoryNodeRow represents a row in history_node table
 	HistoryNodeRow struct {
+		ShardID  int
 		TreeID   UUID
 		BranchID UUID
 		NodeID   int64
@@ -362,6 +363,7 @@ type (
 	// HistoryNodeFilter contains the column names within history_node table that
 	// can be used to filter results through a WHERE clause
 	HistoryNodeFilter struct {
+		ShardID  int
 		TreeID   UUID
 		BranchID UUID
 		// Inclusive
@@ -373,6 +375,7 @@ type (
 
 	// HistoryTreeRow represents a row in history_tree table
 	HistoryTreeRow struct {
+		ShardID    int
 		TreeID     UUID
 		BranchID   UUID
 		InProgress bool
@@ -384,6 +387,7 @@ type (
 	// HistoryTreeFilter contains the column names within history_tree table that
 	// can be used to filter results through a WHERE clause
 	HistoryTreeFilter struct {
+		ShardID  int
 		TreeID   UUID
 		BranchID *UUID
 	}

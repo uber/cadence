@@ -1225,6 +1225,8 @@ type (
 		TransactionID int64
 		// It is to suggest a binary encoding type to serialize history events
 		Encoding common.EncodingType
+		// The shard to get history node data
+		ShardID int
 	}
 
 	// AppendHistoryNodesResponse is a response to AppendHistoryNodesRequest
@@ -1312,6 +1314,8 @@ type (
 	GetHistoryTreeRequest struct {
 		// A UUID of a tree
 		TreeID string
+		// Get data from this shard
+		ShardID int
 		// optional: can provide treeID via branchToken if treeID is empty
 		BranchToken []byte
 	}

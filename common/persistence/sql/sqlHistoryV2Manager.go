@@ -91,6 +91,7 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(request *p.InternalAppendHistor
 		TxnID:        &request.TransactionID,
 		Data:         request.Events.Data,
 		DataEncoding: string(request.Events.Encoding),
+		ShardID:      request.ShardID,
 	}
 
 	if request.IsNewBranch {
@@ -110,6 +111,7 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(request *p.InternalAppendHistor
 			CreatedTs:  time.Now(),
 			Ancestors:  ancestors,
 			Info:       request.Info,
+			ShardID:    request.ShardID,
 		}
 
 		return m.txExecute("AppendHistoryNodes", func(tx sqldb.Tx) error {
@@ -169,6 +171,7 @@ func (m *sqlHistoryV2Manager) ReadHistoryBranch(request *p.InternalReadHistoryBr
 		MinNodeID: &minNodeID,
 		MaxNodeID: &request.MaxNodeID,
 		PageSize:  &request.PageSize,
+		ShardID:   request.ShardID,
 	}
 
 	rows, err := m.db.SelectFromHistoryNode(filter)
@@ -312,6 +315,7 @@ func (m *sqlHistoryV2Manager) ForkHistoryBranch(request *p.InternalForkHistoryBr
 		CreatedTs:  time.Now(),
 		Ancestors:  ancestors,
 		Info:       request.Info,
+		ShardID:    request.ShardID,
 	}
 	result, err := m.db.InsertIntoHistoryTree(row)
 	if err != nil {
@@ -330,6 +334,7 @@ func (m *sqlHistoryV2Manager) ForkHistoryBranch(request *p.InternalForkHistoryBr
 // DeleteHistoryBranch removes a branch
 func (m *sqlHistoryV2Manager) DeleteHistoryBranch(request *p.InternalDeleteHistoryBranchRequest) error {
 	branch := request.BranchInfo
+	shardID := request.ShardID
 	treeID := *branch.TreeID
 	brsToDelete := branch.Ancestors
 	beginNodeID := p.GetBeginNodeID(branch)
@@ -339,7 +344,8 @@ func (m *sqlHistoryV2Manager) DeleteHistoryBranch(request *p.InternalDeleteHisto
 	})
 
 	rsp, err := m.GetHistoryTree(&p.GetHistoryTreeRequest{
-		TreeID: treeID,
+		TreeID:  treeID,
+		ShardID: shardID,
 	})
 	if err != nil {
 		return err
@@ -370,6 +376,7 @@ func (m *sqlHistoryV2Manager) DeleteHistoryBranch(request *p.InternalDeleteHisto
 		treeFilter := &sqldb.HistoryTreeFilter{
 			TreeID:   sqldb.MustParseUUID(treeID),
 			BranchID: &branchID,
+			ShardID:  shardID,
 		}
 		_, err := tx.DeleteFromHistoryTree(treeFilter)
 		if err != nil {
@@ -384,6 +391,7 @@ func (m *sqlHistoryV2Manager) DeleteHistoryBranch(request *p.InternalDeleteHisto
 			nodeFilter := &sqldb.HistoryNodeFilter{
 				TreeID:   sqldb.MustParseUUID(treeID),
 				BranchID: sqldb.MustParseUUID(*br.BranchID),
+				ShardID:  shardID,
 			}
 
 			if ok {
@@ -409,6 +417,7 @@ func (m *sqlHistoryV2Manager) DeleteHistoryBranch(request *p.InternalDeleteHisto
 // UpdateHistoryBranch update a branch
 func (m *sqlHistoryV2Manager) CompleteForkBranch(request *p.InternalCompleteForkBranchRequest) error {
 	branch := request.BranchInfo
+	shardID := request.ShardID
 	treeID := sqldb.MustParseUUID(*branch.TreeID)
 	branchID := sqldb.MustParseUUID(*branch.BranchID)
 	if request.Success {
@@ -416,6 +425,7 @@ func (m *sqlHistoryV2Manager) CompleteForkBranch(request *p.InternalCompleteFork
 			TreeID:     treeID,
 			BranchID:   branchID,
 			InProgress: false,
+			ShardID:    shardID,
 		}
 		result, err := m.db.UpdateHistoryTree(row)
 		if err != nil {
@@ -434,10 +444,12 @@ func (m *sqlHistoryV2Manager) CompleteForkBranch(request *p.InternalCompleteFork
 	treeFilter := &sqldb.HistoryTreeFilter{
 		TreeID:   treeID,
 		BranchID: &branchID,
+		ShardID:  shardID,
 	}
 	nodeFilter := &sqldb.HistoryNodeFilter{
 		TreeID:    treeID,
 		BranchID:  branchID,
+		ShardID:   shardID,
 		MinNodeID: common.Int64Ptr(1),
 	}
 	return m.txExecute("CompleteForkBranch", func(tx sqldb.Tx) error {
@@ -468,7 +480,8 @@ func (m *sqlHistoryV2Manager) GetHistoryTree(request *p.GetHistoryTreeRequest) (
 	forkingBranches := make([]p.ForkingInProgressBranch, 0)
 
 	treeFilter := &sqldb.HistoryTreeFilter{
-		TreeID: treeID,
+		TreeID:  treeID,
+		ShardID: request.ShardID,
 	}
 	rows, err := m.db.SelectFromHistoryTree(treeFilter)
 	if err == sql.ErrNoRows || (err == nil && len(rows) == 0) {

@@ -186,6 +186,7 @@ func (m *historyV2ManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReq
 		NodeID:        nodeID,
 		Events:        blob,
 		TransactionID: request.TransactionID,
+		ShardID:       request.ShardID,
 	}
 
 	err = m.persistence.AppendHistoryNodes(req)
