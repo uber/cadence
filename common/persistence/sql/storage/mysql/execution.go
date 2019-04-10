@@ -67,7 +67,9 @@ maximum_interval,
 maximum_attempts,
 expiration_seconds,
 expiration_time,
-non_retryable_errors
+non_retryable_errors,
+event_store_version,
+branch_token
 `
 
 	executionsColumnsTags = `:shard_id,
@@ -110,7 +112,9 @@ non_retryable_errors
 :maximum_attempts,
 :expiration_seconds,
 :expiration_time,
-:non_retryable_errors`
+:non_retryable_errors,
+:event_store_version,
+:branch_token`
 
 	executionsBlobColumns = `completion_event,
 execution_context`
@@ -208,7 +212,9 @@ maximum_interval = :maximum_interval,
 maximum_attempts = :maximum_attempts,
 expiration_seconds = :expiration_seconds,
 expiration_time = :expiration_time,
-non_retryable_errors = :non_retryable_errors
+non_retryable_errors = :non_retryable_errors,
+event_store_version = :event_store_version,
+branch_token = :branch_token
 
 WHERE
 shard_id = :shard_id AND
