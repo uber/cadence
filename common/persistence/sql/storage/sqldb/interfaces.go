@@ -672,7 +672,8 @@ type (
 		UpdateExecutions(row *ExecutionsRow) (sql.Result, error)
 		SelectFromExecutions(filter *ExecutionsFilter) (*ExecutionsRow, error)
 		DeleteFromExecutions(filter *ExecutionsFilter) (sql.Result, error)
-		LockExecutions(filter *ExecutionsFilter) (int, error)
+		ReadLockExecutions(filter *ExecutionsFilter) (int, error)
+		WriteLockExecutions(filter *ExecutionsFilter) (int, error)
 
 		LockCurrentExecutionsJoinExecutions(filter *CurrentExecutionsFilter) ([]CurrentExecutionsRow, error)
 
