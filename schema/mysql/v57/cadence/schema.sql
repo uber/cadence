@@ -194,9 +194,9 @@ CREATE TABLE replication_tasks (
     last_replication_info BLOB NOT NULL,
 	scheduled_id BIGINT NOT NULL,
     event_store_version INT NOT NULL, -- indiciates which version of event store to query
-    branch_token  BLOB NOT NULL, -- if eventV2, then query with this token
+    branch_token  BLOB, -- if eventV2, then query with this token
     new_run_event_store_version INT NOT NULL, -- indiciates which version of event store to query for new run(continueAsNew)
-    new_run_branch_token BLOB NOT NULL, -- if eventV2, then query with this token for new run(continueAsNew)
+    new_run_branch_token BLOB, -- if eventV2, then query with this token for new run(continueAsNew)
     reset_workflow BOOLEAN NOT NULL, -- whether the task is for resetWorkflowExecution
 	PRIMARY KEY (shard_id, task_id)
 );

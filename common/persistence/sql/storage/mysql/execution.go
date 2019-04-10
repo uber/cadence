@@ -346,7 +346,12 @@ first_event_id,
 next_event_id,
 version,
 last_replication_info,
-scheduled_id`
+scheduled_id,
+event_store_version,
+branch_token,
+new_run_event_store_version,
+new_run_branch_token,
+reset_workflow`
 
 	replicationTaskInfoColumnsTags = `:task_id,
 :domain_id,
@@ -357,7 +362,12 @@ scheduled_id`
 :next_event_id,
 :version,
 :last_replication_info,
-:scheduled_id`
+:scheduled_id,
+:event_store_version,
+:branch_token,
+:new_run_event_store_version,
+:new_run_branch_token,
+:reset_workflow`
 
 	replicationTasksColumns     = `shard_id, ` + replicationTaskInfoColumns
 	replicationTasksColumnsTags = `:shard_id, ` + replicationTaskInfoColumnsTags

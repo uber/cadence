@@ -1191,16 +1191,21 @@ func (m *sqlExecutionManager) GetReplicationTasks(request *p.GetReplicationTasks
 		}
 
 		tasks[i] = &p.ReplicationTaskInfo{
-			DomainID:            row.DomainID.String(),
-			WorkflowID:          row.WorkflowID,
-			RunID:               row.RunID.String(),
-			TaskID:              row.TaskID,
-			TaskType:            row.TaskType,
-			FirstEventID:        row.FirstEventID,
-			NextEventID:         row.NextEventID,
-			Version:             row.Version,
-			LastReplicationInfo: lastReplicationInfo,
-			ScheduledID:         row.ScheduledID,
+			DomainID:                row.DomainID.String(),
+			WorkflowID:              row.WorkflowID,
+			RunID:                   row.RunID.String(),
+			TaskID:                  row.TaskID,
+			TaskType:                row.TaskType,
+			FirstEventID:            row.FirstEventID,
+			NextEventID:             row.NextEventID,
+			Version:                 row.Version,
+			LastReplicationInfo:     lastReplicationInfo,
+			ScheduledID:             row.ScheduledID,
+			EventStoreVersion:       row.EventStoreVersion,
+			NewRunEventStoreVersion: row.NewRunEventStoreVersion,
+			BranchToken:             row.BranchToken,
+			NewRunBranchToken:       row.NewRunBranchToken,
+			ResetWorkflow:           row.ResetWorkflow,
 		}
 	}
 	var nextPageToken []byte
@@ -1664,6 +1669,10 @@ func createReplicationTasks(
 		var lastReplicationInfo []byte
 		var err error
 
+		var eventStoreVersion, newRunEventStoreVersion int32
+		var branchToken, newRunBranchToken []byte
+		var resetWorkflow bool
+
 		switch task.GetType() {
 		case p.ReplicationTaskTypeHistory:
 			historyReplicationTask, ok := task.(*p.HistoryReplicationTask)
@@ -1676,6 +1685,11 @@ func createReplicationTasks(
 			firstEventID = historyReplicationTask.FirstEventID
 			nextEventID = historyReplicationTask.NextEventID
 			version = task.GetVersion()
+			eventStoreVersion = historyReplicationTask.EventStoreVersion
+			newRunEventStoreVersion = historyReplicationTask.NewRunEventStoreVersion
+			branchToken = historyReplicationTask.BranchToken
+			newRunBranchToken = historyReplicationTask.NewRunBranchToken
+			resetWorkflow = historyReplicationTask.ResetWorkflow
 			lastReplicationInfo, err = gobSerialize(historyReplicationTask.LastReplicationInfo)
 			if err != nil {
 				return &workflow.InternalServiceError{
@@ -1699,6 +1713,11 @@ func createReplicationTasks(
 		replicationTasksRows[i].Version = version
 		replicationTasksRows[i].LastReplicationInfo = lastReplicationInfo
 		replicationTasksRows[i].ScheduledID = activityScheduleID
+		replicationTasksRows[i].EventStoreVersion = eventStoreVersion
+		replicationTasksRows[i].NewRunEventStoreVersion = newRunEventStoreVersion
+		replicationTasksRows[i].BranchToken = branchToken
+		replicationTasksRows[i].NewRunBranchToken = newRunBranchToken
+		replicationTasksRows[i].ResetWorkflow = resetWorkflow
 	}
 
 	result, err := tx.InsertIntoReplicationTasks(replicationTasksRows)
