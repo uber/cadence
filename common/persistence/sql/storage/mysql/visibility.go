@@ -30,12 +30,12 @@ import (
 
 const (
 	templateCreateWorkflowExecutionStarted = `INSERT IGNORE INTO executions_visibility (` +
-		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name) ` +
-		`VALUES (?, ?, ?, ?, ?, ?)`
+		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, memo) ` +
+		`VALUES (?, ?, ?, ?, ?, ?, ?)`
 
 	templateCreateWorkflowExecutionClosed = `REPLACE INTO executions_visibility (` +
-		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, close_time, close_status, history_length) ` +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, close_time, close_status, history_length, memo) ` +
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	// RunID condition is needed for correct pagination
 	templateConditions = ` AND domain_id = ?
@@ -85,7 +85,8 @@ func (mdb *DB) InsertIntoVisibility(row *sqldb.VisibilityRow) (sql.Result, error
 		row.RunID,
 		row.StartTime,
 		row.ExecutionTime,
-		row.WorkflowTypeName)
+		row.WorkflowTypeName,
+		row.Memo)
 }
 
 // ReplaceIntoVisibility replaces an existing row if it exist or creates a new row in visibility table
@@ -103,7 +104,8 @@ func (mdb *DB) ReplaceIntoVisibility(row *sqldb.VisibilityRow) (sql.Result, erro
 			row.WorkflowTypeName,
 			closeTime,
 			*row.CloseStatus,
-			*row.HistoryLength)
+			*row.HistoryLength,
+			row.Memo)
 	default:
 		return nil, errCloseParams
 	}

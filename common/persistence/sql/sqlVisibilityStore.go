@@ -61,6 +61,7 @@ func NewSQLVisibilityStore(cfg config.SQL, logger bark.Logger) (p.VisibilityMana
 }
 
 func (s *sqlVisibilityStore) RecordWorkflowExecutionStarted(request *p.RecordWorkflowExecutionStartedRequest) error {
+	memo, _ := json.Marshal(request.Memo)
 	_, err := s.db.InsertIntoVisibility(&sqldb.VisibilityRow{
 		DomainID:         request.DomainUUID,
 		WorkflowID:       *request.Execution.WorkflowId,
@@ -68,12 +69,14 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionStarted(request *p.RecordWor
 		StartTime:        time.Unix(0, request.StartTimestamp),
 		ExecutionTime:    time.Unix(0, request.ExecutionTimestamp),
 		WorkflowTypeName: request.WorkflowTypeName,
+		Memo:             memo,
 	})
 	return err
 }
 
 func (s *sqlVisibilityStore) RecordWorkflowExecutionClosed(request *p.RecordWorkflowExecutionClosedRequest) error {
 	closeTime := time.Unix(0, request.CloseTimestamp)
+	memo, _ := json.Marshal(request.Memo)
 	result, err := s.db.ReplaceIntoVisibility(&sqldb.VisibilityRow{
 		DomainID:         request.DomainUUID,
 		WorkflowID:       *request.Execution.WorkflowId,
@@ -84,6 +87,7 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionClosed(request *p.RecordWork
 		CloseTime:        &closeTime,
 		CloseStatus:      common.Int32Ptr(int32(request.Status)),
 		HistoryLength:    &request.HistoryLength,
+		Memo:             memo,
 	})
 	if err != nil {
 		return err
@@ -253,6 +257,7 @@ func rowToInfo(row *sqldb.VisibilityRow) *workflow.WorkflowExecutionInfo {
 		StartTime:     common.Int64Ptr(row.StartTime.UnixNano()),
 		ExecutionTime: common.Int64Ptr(row.ExecutionTime.UnixNano()),
 	}
+	json.Unmarshal(row.Memo, &info.Memo)
 	if row.CloseStatus != nil {
 		status := workflow.WorkflowExecutionCloseStatus(*row.CloseStatus)
 		info.CloseStatus = &status
