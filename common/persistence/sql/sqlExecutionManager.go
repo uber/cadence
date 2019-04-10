@@ -225,6 +225,8 @@ func (m *sqlExecutionManager) GetWorkflowExecution(request *p.GetWorkflowExecuti
 		MaximumAttempts:              int32(execution.MaximumAttempts),
 		ExpirationSeconds:            int32(execution.ExpirationSeconds),
 		ExpirationTime:               execution.ExpirationTime,
+		EventStoreVersion:            int32(execution.EventStoreVersion),
+		BranchToken:                  execution.BranchToken,
 	}
 
 	if execution.ExecutionContext != nil && len(*execution.ExecutionContext) > 0 {
@@ -1440,6 +1442,11 @@ func createExecutionFromRequest(
 		row.NonRetryableErrors = blob
 	}
 
+	if request.EventStoreVersion == p.EventStoreVersionV2 {
+		row.EventStoreVersion = p.EventStoreVersionV2
+		row.BranchToken = request.BranchToken
+	}
+
 	_, err := tx.InsertIntoExecutions(row)
 	if err != nil {
 		return &workflow.InternalServiceError{
@@ -1929,6 +1936,9 @@ func buildExecutionRow(executionInfo *p.InternalWorkflowExecutionInfo,
 		}
 		row.NonRetryableErrors = blob
 	}
+	row.EventStoreVersion = int(executionInfo.EventStoreVersion)
+	row.BranchToken = executionInfo.BranchToken
+
 	return row, err
 }
 

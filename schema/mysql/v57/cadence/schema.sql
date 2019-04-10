@@ -122,6 +122,8 @@ CREATE TABLE executions(
   expiration_seconds INT NOT NULL,
   expiration_time DATETIME(6) NOT NULL, -- retry expiration time
   non_retryable_errors BLOB,
+  event_store_version INT NOT NULL, -- to indicates which version of events persistence is using
+  branch_token BLOB,
 	PRIMARY KEY (shard_id, domain_id, workflow_id, run_id)
 );
 

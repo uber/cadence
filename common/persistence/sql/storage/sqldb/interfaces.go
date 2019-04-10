@@ -168,6 +168,8 @@ type (
 		ExpirationSeconds            int
 		ExpirationTime               time.Time
 		NonRetryableErrors           []byte
+		EventStoreVersion            int
+		BranchToken                  []byte
 	}
 
 	// ExecutionsFilter contains the column names within domain table that
