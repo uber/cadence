@@ -161,6 +161,8 @@ func (h *cassandraHistoryV2Persistence) ReadHistoryBranch(request *p.InternalRea
 			Message: "ReadHistoryBranch operation failed.  Not able to create query iterator.",
 		}
 	}
+
+	found := false
 	pagingToken := iter.PageState()
 
 	history := make([]*p.DataBlob, 0, int(request.PageSize))
@@ -171,6 +173,7 @@ func (h *cassandraHistoryV2Persistence) ReadHistoryBranch(request *p.InternalRea
 	txnID := int64(0)
 
 	for iter.Scan(&nodeID, &txnID, &eventBlob.Data, &eventBlob.Encoding) {
+		found = true
 		if nodeID == lastNodeID {
 			if txnID < lastTxnID {
 				// skip the nodes with smaller txn_id
@@ -191,6 +194,10 @@ func (h *cassandraHistoryV2Persistence) ReadHistoryBranch(request *p.InternalRea
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ReadHistoryBranch. Close operation failed. Error: %v", err),
 		}
+	}
+
+	if !found && len(request.NextPageToken) == 0 {
+		return nil, &workflow.EntityNotExistsError{Message: "Workflow execution history not found."}
 	}
 
 	response := &p.InternalReadHistoryBranchResponse{
