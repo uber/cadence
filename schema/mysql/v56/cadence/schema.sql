@@ -181,24 +181,24 @@ CREATE TABLE task_lists (
 );
 
 CREATE TABLE replication_tasks (
-  shard_id INT NOT NULL,
-	task_id BIGINT NOT NULL,
-	--
-	domain_id BINARY(16) NOT NULL,
-	workflow_id VARCHAR(255) NOT NULL,
-	run_id BINARY(16) NOT NULL,
-	task_type TINYINT NOT NULL,
-	first_event_id BIGINT NOT NULL,
-	next_event_id BIGINT NOT NULL,
-	version BIGINT NOT NULL,
+    shard_id INT NOT NULL,
+    task_id BIGINT NOT NULL,
+    --
+    domain_id BINARY(16) NOT NULL,
+    workflow_id VARCHAR(255) NOT NULL,
+    run_id BINARY(16) NOT NULL,
+    task_type TINYINT NOT NULL,
+    first_event_id BIGINT NOT NULL,
+    next_event_id BIGINT NOT NULL,
+    version BIGINT NOT NULL,
     last_replication_info BLOB NOT NULL,
-	scheduled_id BIGINT NOT NULL,
+    scheduled_id BIGINT NOT NULL,
     event_store_version INT NOT NULL, -- indiciates which version of event store to query
     branch_token  BLOB, -- if eventV2, then query with this token
     new_run_event_store_version INT NOT NULL, -- indiciates which version of event store to query for new run(continueAsNew)
     new_run_branch_token BLOB, -- if eventV2, then query with this token for new run(continueAsNew)
     reset_workflow BOOLEAN NOT NULL, -- whether the task is for resetWorkflowExecution
-	PRIMARY KEY (shard_id, task_id)
+    PRIMARY KEY (shard_id, task_id)
 );
 
 CREATE TABLE timer_tasks (
