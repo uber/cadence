@@ -22,14 +22,6 @@ type Logger interface {
 	Error(msg string, tags ...Fields)
 	Fatal(msg string, tags ...Fields)
 	WithFields(tags Fields) Logger
-
-	// We provide shortcuts for logging component lifecycle logs
-	SetComponent(component tagValueTypeSysComponent) Logger
-	DebugWithLifecycle(msg string, lifecycle tagValueTypeSysLifecycle, tags ...Fields)
-	InfoWithLifecycle(msg string, lifecycle tagValueTypeSysLifecycle, tags ...Fields)
-	WarnWithLifecycle(msg string, lifecycle tagValueTypeSysLifecycle, tags ...Fields)
-	ErrorWithLifecycle(msg string, lifecycle tagValueTypeSysLifecycle, tags ...Fields)
-	FatalWithLifecycle(msg string, lifecycle tagValueTypeSysLifecycle, tags ...Fields)
 }
 
 // we intentionally make tagType module-private to enforce using pre-defined tag keys
