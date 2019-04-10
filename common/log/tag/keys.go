@@ -171,7 +171,7 @@ func WorkflowTaskListName(taskListName string) Tag {
 // size limit
 // WorkflowSize returns tag for WorkflowSize
 func WorkflowSize(workflowSize int64) Tag {
-	return newTag("workflow-size", workflowSize, ValueTypeInteger)
+	return newTag("wf-size", workflowSize, ValueTypeInteger)
 }
 
 // WorkflowSignalCount returns tag for SignalCount
@@ -319,6 +319,11 @@ func ESKey(ESKey string) Tag {
 // ESField returns tag for ESField
 func ESField(ESField string) Tag {
 	return newTag("es-field", ESField, ValueTypeString)
+}
+
+// CallAt returns a tag for LoggingError
+func LoggingCallAt(position string) Tag {
+	return newTag("logging-call-at", position, ValueTypeString)
 }
 
 // LoggingError returns a tag for LoggingError
