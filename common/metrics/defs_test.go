@@ -25,6 +25,8 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/uber-go/tally"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -94,4 +96,11 @@ func TestMetricDefs(t *testing.T) {
 			assert.True(t, matched, fmt.Sprintf("Service: %v, metric_name: %v", service, metricDef.metricName))
 		}
 	}
+}
+
+func TestTaggedScope(t *testing.T) {
+	scope := newMetricsScope(tally.NewTestScope("test", map[string]string{}), map[int]metricDefinition{})
+	domainScope := scope.Tagged(DomainTag("test"))
+	allScope := domainScope.Tagged(DomainAllTag())
+	fmt.Printf("%v\n", allScope)
 }

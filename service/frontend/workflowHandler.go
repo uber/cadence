@@ -800,6 +800,9 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		return nil, wh.error(err, scope)
 	}
 
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(pollRequest.GetDomain()))
+
 	pollerID := uuid.New()
 	op := func() error {
 		var err error
@@ -877,6 +880,9 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
+
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(domainName))
 
 	wh.Service.GetLogger().Debugf("Poll for decision. DomainName: %v, DomainID: %v", domainName, domainID)
 
@@ -981,6 +987,9 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 		return nil, wh.error(err, scope)
 	}
 
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(domainEntry.GetInfo().Name))
+
 	sizeLimitError := wh.config.BlobSizeLimitError(domainEntry.GetInfo().Name)
 	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainEntry.GetInfo().Name)
 
@@ -1075,6 +1084,9 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 		return nil, wh.error(err, scope)
 	}
 
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(domainEntry.GetInfo().Name))
+
 	sizeLimitError := wh.config.BlobSizeLimitError(domainEntry.GetInfo().Name)
 	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainEntry.GetInfo().Name)
 
@@ -1157,6 +1169,9 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 	if len(completeRequest.GetIdentity()) > wh.config.MaxIDLengthLimit() {
 		return wh.error(errIdentityTooLong, scope)
 	}
+
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(domainEntry.GetInfo().Name))
 
 	sizeLimitError := wh.config.BlobSizeLimitError(domainEntry.GetInfo().Name)
 	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainEntry.GetInfo().Name)
@@ -1254,6 +1269,9 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 		return wh.error(err, scope)
 	}
 
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(domainEntry.GetInfo().Name))
+
 	sizeLimitError := wh.config.BlobSizeLimitError(domainEntry.GetInfo().Name)
 	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainEntry.GetInfo().Name)
 
@@ -1332,6 +1350,10 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 	if err != nil {
 		return wh.error(err, scope)
 	}
+
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(domainEntry.GetInfo().Name))
+
 	if len(failedRequest.GetIdentity()) > wh.config.MaxIDLengthLimit() {
 		return wh.error(errIdentityTooLong, scope)
 	}
@@ -1419,6 +1441,9 @@ func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 		return wh.error(err, scope)
 	}
 
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(domainEntry.GetInfo().Name))
+
 	sizeLimitError := wh.config.BlobSizeLimitError(domainEntry.GetInfo().Name)
 	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainEntry.GetInfo().Name)
 
@@ -1486,6 +1511,9 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 	if err != nil {
 		return wh.error(err, scope)
 	}
+
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(domainEntry.GetInfo().Name))
 
 	if len(cancelRequest.GetIdentity()) > wh.config.MaxIDLengthLimit() {
 		return wh.error(errIdentityTooLong, scope)
@@ -1586,6 +1614,9 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 		return wh.error(err, scope)
 	}
 
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(domainEntry.GetInfo().Name))
+
 	sizeLimitError := wh.config.BlobSizeLimitError(domainEntry.GetInfo().Name)
 	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainEntry.GetInfo().Name)
 
@@ -1660,6 +1691,14 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
+	domainEntry, err := wh.domainCache.GetDomainByID(taskToken.DomainID)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(domainEntry.GetInfo().Name))
+
 	histResp, err := wh.history.RespondDecisionTaskCompleted(ctx, &h.RespondDecisionTaskCompletedRequest{
 		DomainUUID:      common.StringPtr(taskToken.DomainID),
 		CompleteRequest: completeRequest},
@@ -1732,6 +1771,9 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 		return wh.error(err, scope)
 	}
 
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(domainEntry.GetInfo().Name))
+
 	if len(failedRequest.GetIdentity()) > wh.config.MaxIDLengthLimit() {
 		return wh.error(errIdentityTooLong, scope)
 	}
@@ -1790,6 +1832,14 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 	if queryTaskToken.DomainID == "" || queryTaskToken.TaskList == "" || queryTaskToken.TaskID == "" {
 		return wh.error(errInvalidTaskToken, scope)
 	}
+
+	domainEntry, err := wh.domainCache.GetDomainByID(queryTaskToken.DomainID)
+	if err != nil {
+		return wh.error(err, scope)
+	}
+
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(domainEntry.GetInfo().Name))
 
 	matchingRequest := &m.RespondQueryTaskCompletedRequest{
 		DomainUUID:       common.StringPtr(queryTaskToken.DomainID),
@@ -1912,6 +1962,9 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(err, scope)
 	}
 
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(domainName))
+
 	sizeLimitError := wh.config.BlobSizeLimitError(startRequest.GetDomain())
 	sizeLimitWarn := wh.config.BlobSizeLimitWarn(startRequest.GetDomain())
 	if err := common.CheckEventBlobSizeLimit(
@@ -1959,7 +2012,6 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	domainScope := scope.Tagged(metrics.DomainTag(getRequest.GetDomain()))
 	if err := wh.validateExecutionAndEmitMetrics(getRequest.Execution, scope); err != nil {
 		return nil, err
 	}
@@ -1972,6 +2024,8 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
+
+	scope = scope.Tagged(metrics.DomainTag(getRequest.GetDomain()))
 
 	// force limit page size if exceed
 	if getRequest.GetMaximumPageSize() > common.GetHistoryMaxPageSize {
@@ -2072,7 +2126,6 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		if !isWorkflowRunning {
 			history, _, err = wh.getHistory(
 				scope,
-				domainScope,
 				domainID,
 				*execution,
 				lastFirstEventID,
@@ -2106,7 +2159,6 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		} else {
 			history, token.PersistenceToken, err = wh.getHistory(
 				scope,
-				domainScope,
 				domainID,
 				*execution,
 				token.FirstEventID,
@@ -2187,6 +2239,9 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(ctx context.Context,
 	if err != nil {
 		return wh.error(err, scope)
 	}
+
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(signalRequest.GetDomain()))
 
 	sizeLimitError := wh.config.BlobSizeLimitError(signalRequest.GetDomain())
 	sizeLimitWarn := wh.config.BlobSizeLimitWarn(signalRequest.GetDomain())
@@ -2324,6 +2379,9 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(ctx context.Context,
 		return nil, wh.error(err, scope)
 	}
 
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(signalWithStartRequest.GetDomain()))
+
 	sizeLimitError := wh.config.BlobSizeLimitError(signalWithStartRequest.GetDomain())
 	sizeLimitWarn := wh.config.BlobSizeLimitWarn(signalWithStartRequest.GetDomain())
 	if err := common.CheckEventBlobSizeLimit(
@@ -2399,6 +2457,9 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(ctx context.Context,
 		return wh.error(err, scope)
 	}
 
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(terminateRequest.GetDomain()))
+
 	err = wh.history.TerminateWorkflowExecution(ctx, &h.TerminateWorkflowExecutionRequest{
 		DomainUUID:       common.StringPtr(domainID),
 		TerminateRequest: terminateRequest,
@@ -2441,6 +2502,9 @@ func (wh *WorkflowHandler) ResetWorkflowExecution(ctx context.Context,
 		return nil, wh.error(err, scope)
 	}
 
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(resetRequest.GetDomain()))
+
 	resp, err = wh.history.ResetWorkflowExecution(ctx, &h.ResetWorkflowExecutionRequest{
 		DomainUUID:   common.StringPtr(domainID),
 		ResetRequest: resetRequest,
@@ -2482,6 +2546,9 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 	if err != nil {
 		return wh.error(err, scope)
 	}
+
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(cancelRequest.GetDomain()))
 
 	err = wh.history.RequestCancelWorkflowExecution(ctx, &h.RequestCancelWorkflowExecutionRequest{
 		DomainUUID:    common.StringPtr(domainID),
@@ -2541,6 +2608,9 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
+
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(domain))
 
 	baseReq := persistence.ListWorkflowExecutionsRequest{
 		DomainUUID:        domainID,
@@ -2643,6 +2713,9 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 		return nil, wh.error(err, scope)
 	}
 
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(domain))
+
 	baseReq := persistence.ListWorkflowExecutionsRequest{
 		DomainUUID:        domainID,
 		Domain:            domain,
@@ -2723,6 +2796,9 @@ func (wh *WorkflowHandler) ResetStickyTaskList(ctx context.Context, resetRequest
 		return nil, wh.error(err, scope)
 	}
 
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(resetRequest.GetDomain()))
+
 	_, err = wh.history.ResetStickyTaskList(ctx, &h.ResetStickyTaskListRequest{
 		DomainUUID: common.StringPtr(domainID),
 		Execution:  resetRequest.Execution,
@@ -2766,6 +2842,9 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
+
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(queryRequest.GetDomain()))
 
 	matchingRequest := &m.QueryWorkflowRequest{
 		DomainUUID:   common.StringPtr(domainID),
@@ -2858,6 +2937,9 @@ func (wh *WorkflowHandler) DescribeWorkflowExecution(ctx context.Context, reques
 		return nil, wh.error(err, scope)
 	}
 
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(request.GetDomain()))
+
 	if err := wh.validateExecutionAndEmitMetrics(request.Execution, scope); err != nil {
 		return nil, err
 	}
@@ -2900,6 +2982,9 @@ func (wh *WorkflowHandler) DescribeTaskList(ctx context.Context, request *gen.De
 		return nil, wh.error(err, scope)
 	}
 
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(request.GetDomain()))
+
 	if err := wh.validateTaskList(request.TaskList, scope); err != nil {
 		return nil, err
 	}
@@ -2927,7 +3012,6 @@ func (wh *WorkflowHandler) DescribeTaskList(ctx context.Context, request *gen.De
 }
 
 func (wh *WorkflowHandler) getHistory(
-	scope metrics.Scope,
 	domainScope metrics.Scope,
 	domainID string,
 	execution gen.WorkflowExecution,
@@ -2974,7 +3058,7 @@ func (wh *WorkflowHandler) getHistory(
 	if len(historyEvents) > 0 {
 		// N.B. - Dual emit is required here so that we can see aggregate timer stats across all
 		// domains along with the individual domains stats
-		scope.Tagged(metrics.DomainAllTag()).RecordTimer(metrics.HistorySize, time.Duration(size))
+		domainScope.Tagged(metrics.DomainAllTag()).RecordTimer(metrics.HistorySize, time.Duration(size))
 		domainScope.RecordTimer(metrics.HistorySize, time.Duration(size))
 
 		if size > common.GetHistoryWarnSizeLimit {
@@ -3204,10 +3288,9 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 		if dErr != nil {
 			return nil, dErr
 		}
-		domainScope := scope.Tagged(metrics.DomainTag(domain.GetInfo().Name))
+		scope = scope.Tagged(metrics.DomainTag(domain.GetInfo().Name))
 		history, persistenceToken, err = wh.getHistory(
 			scope,
-			domainScope,
 			domainID,
 			*matchingResp.WorkflowExecution,
 			firstEventID,
