@@ -518,6 +518,10 @@ func (e *mutableStateBuilder) checkAndClearTimerFiredEvent(timerID string) *work
 	if timerEvent != nil {
 		return timerEvent
 	}
+	e.updateBufferedEvents, timerEvent = checkAndClearTimerFiredEvent(e.updateBufferedEvents, timerID)
+	if timerEvent != nil {
+		return timerEvent
+	}
 	e.hBuilder.history, timerEvent = checkAndClearTimerFiredEvent(e.hBuilder.history, timerID)
 	return timerEvent
 }
@@ -2316,7 +2320,7 @@ func (e *mutableStateBuilder) AddTimerCanceledEvent(
 		}
 		timerStartedID = timerFiredEvent.TimerFiredEventAttributes.GetStartedEventId()
 	} else {
-		timerStartedID = ti.GetStartedId()
+		timerStartedID = ti.StartedID
 	}
 
 	// Timer is running.

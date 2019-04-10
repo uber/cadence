@@ -4490,10 +4490,11 @@ func (s *engineSuite) TestCancelTimer_RespondDecisionTaskCompleted_TimerFired() 
 	s.Nil(err)
 
 	executionBuilder := s.getBuilder(domainID, we)
-	s.Equal(int64(11), executionBuilder.GetExecutionInfo().NextEventID)
+	s.Equal(int64(10), executionBuilder.GetExecutionInfo().NextEventID)
 	s.Equal(int64(7), executionBuilder.GetExecutionInfo().LastProcessedEvent)
 	s.Equal(persistence.WorkflowStateRunning, executionBuilder.GetExecutionInfo().State)
-	s.True(executionBuilder.HasPendingDecisionTask())
+	s.False(executionBuilder.HasPendingDecisionTask())
+	s.False(executionBuilder.HasBufferedEvents())
 }
 
 func (s *engineSuite) TestSignalWorkflowExecution() {
