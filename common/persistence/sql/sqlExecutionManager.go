@@ -732,41 +732,103 @@ func (m *sqlExecutionManager) ResetWorkflowExecution(request *p.InternalResetWor
 		}
 
 		if len(request.InsertActivityInfos) > 0 {
-			d.resetActivityInfos(batch, request.InsertActivityInfos, insertExecutionInfo.DomainID, insertExecutionInfo.WorkflowID,
-				insertExecutionInfo.RunID, false, 0)
+			if err := updateActivityInfos(tx,
+				request.InsertActivityInfos,
+				nil,
+				m.shardID,
+				domainID,
+				workflowID,
+				newRunID); err != nil {
+				return &workflow.InternalServiceError{
+					Message: fmt.Sprintf("ResetWorkflowExecution operation failed. Failed to insert into activity info map. Error: %v", err),
+				}
+			}
 		}
 
 		if len(request.InsertTimerInfos) > 0 {
-			d.resetTimerInfos(batch, request.InsertTimerInfos, insertExecutionInfo.DomainID, insertExecutionInfo.WorkflowID,
-				insertExecutionInfo.RunID, false, 0)
+			if err := updateTimerInfos(tx,
+				request.InsertTimerInfos,
+				nil,
+				m.shardID,
+				domainID,
+				workflowID,
+				newRunID); err != nil {
+				return &workflow.InternalServiceError{
+					Message: fmt.Sprintf("ResetWorkflowExecution operation failed. Failed to insert into timer info map. Error: %v", err),
+				}
+			}
 		}
 
 		if len(request.InsertRequestCancelInfos) > 0 {
-			d.resetRequestCancelInfos(batch, request.InsertRequestCancelInfos, insertExecutionInfo.DomainID, insertExecutionInfo.WorkflowID,
-				insertExecutionInfo.RunID, false, 0)
+			if err := updateRequestCancelInfos(tx,
+				request.InsertRequestCancelInfos,
+				nil,
+				m.shardID,
+				domainID,
+				workflowID,
+				newRunID); err != nil {
+				return &workflow.InternalServiceError{
+					Message: fmt.Sprintf("ResetWorkflowExecution operation failed. Failed to insert into request cancel info map. Error: %v", err),
+				}
+			}
 		}
 
 		if len(request.InsertChildExecutionInfos) > 0 {
-			d.resetChildExecutionInfos(batch, request.InsertChildExecutionInfos, insertExecutionInfo.DomainID, insertExecutionInfo.WorkflowID,
-				insertExecutionInfo.RunID, false, 0)
+			if err := updateChildExecutionInfos(tx,
+				request.InsertChildExecutionInfos,
+				nil,
+				m.shardID,
+				domainID,
+				workflowID,
+				newRunID); err != nil {
+				return &workflow.InternalServiceError{
+					Message: fmt.Sprintf("ResetWorkflowExecution operation failed. Failed to insert into child execution info map. Error: %v", err),
+				}
+			}
 		}
 
 		if len(request.InsertSignalInfos) > 0 {
-			d.resetSignalInfos(batch, request.InsertSignalInfos, insertExecutionInfo.DomainID, insertExecutionInfo.WorkflowID,
-				insertExecutionInfo.RunID, false, 0)
+			if err := updateSignalInfos(tx,
+				request.InsertSignalInfos,
+				nil,
+				m.shardID,
+				domainID,
+				workflowID,
+				newRunID); err != nil {
+				return &workflow.InternalServiceError{
+					Message: fmt.Sprintf("ResetWorkflowExecution operation failed. Failed to insert into signal info map. Error: %v", err),
+				}
+			}
 		}
 
 		if len(request.InsertSignalRequestedIDs) > 0 {
-			d.resetSignalRequested(batch, request.InsertSignalRequestedIDs, insertExecutionInfo.DomainID, insertExecutionInfo.WorkflowID,
-				insertExecutionInfo.RunID, false, 0)
+			if err := updateSignalsRequested(tx,
+				request.InsertSignalRequestedIDs,
+				"",
+				m.shardID,
+				domainID,
+				workflowID,
+				newRunID); err != nil {
+				return &workflow.InternalServiceError{
+					Message: fmt.Sprintf("ResetWorkflowExecution operation failed. Failed to insert into signal requested ID info map. Error: %v", err),
+				}
+			}
 		}
 
 		if len(request.InsertTimerTasks) > 0 {
-			d.createTimerTasks(batch, request.InsertTimerTasks, nil, insertExecutionInfo.DomainID, insertExecutionInfo.WorkflowID, insertExecutionInfo.RunID, cqlNowTimestamp)
+			if err := createTimerTasks(tx, request.InsertTimerTasks, nil, shardID, domainID, workflowID, newRunID); err != nil {
+				return &workflow.InternalServiceError{
+					Message: fmt.Sprintf("ResetWorkflowExecution operation failed. Failed to create timer tasks. Error: %v", err),
+				}
+			}
 		}
 
 		if len(request.InsertTransferTasks) > 0 {
-			d.createTransferTasks(batch, request.InsertTransferTasks, insertExecutionInfo.DomainID, insertExecutionInfo.WorkflowID, insertExecutionInfo.RunID)
+			if err := createTransferTasks(tx, request.InsertTransferTasks, shardID, domainID, workflowID, newRunID); err != nil {
+				return &workflow.InternalServiceError{
+					Message: fmt.Sprintf("ResetWorkflowExecution operation failed. Failed to create transfer tasks. Error: %v", err),
+				}
+			}
 		}
 
 		return nil
@@ -1301,14 +1363,14 @@ func createExecutionFromRequest(
 	request *p.CreateWorkflowExecutionRequest,
 	shardID int, domainID sqldb.UUID, runID sqldb.UUID, nowTimestamp time.Time) error {
 	row := &sqldb.ExecutionsRow{
-		ShardID:                    shardID,
-		DomainID:                   domainID,
-		WorkflowID:                 *request.Execution.WorkflowId,
-		RunID:                      runID,
-		TaskList:                   request.TaskList,
-		WorkflowTypeName:           request.WorkflowTypeName,
-		WorkflowTimeoutSeconds:     int64(request.WorkflowTimeout),
-		DecisionTaskTimeoutMinutes: int64(request.DecisionTimeoutValue),
+		ShardID:                      shardID,
+		DomainID:                     domainID,
+		WorkflowID:                   *request.Execution.WorkflowId,
+		RunID:                        runID,
+		TaskList:                     request.TaskList,
+		WorkflowTypeName:             request.WorkflowTypeName,
+		WorkflowTimeoutSeconds:       int64(request.WorkflowTimeout),
+		DecisionTaskTimeoutMinutes:   int64(request.DecisionTimeoutValue),
 		State:                        p.WorkflowStateCreated,
 		CloseStatus:                  p.WorkflowCloseStatusNone,
 		LastFirstEventID:             common.FirstEventID,
