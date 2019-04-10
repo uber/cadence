@@ -703,6 +703,9 @@ func (m *sqlExecutionManager) ResetWorkflowExecution(request *p.InternalResetWor
 				}
 			}
 		} else {
+			// even the current run is not running, we need to lock the current run:
+			// 1). in case it is changed by conflict resolution
+			// 2). in case delete history timer kicks in if the base is current
 			if err := lockAndCheckNextEventID(tx, shardID, domainID, workflowID, currRunID, request.Condition); err != nil {
 				switch err.(type) {
 				case *p.ConditionFailedError:
