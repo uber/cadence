@@ -3012,7 +3012,7 @@ func (wh *WorkflowHandler) DescribeTaskList(ctx context.Context, request *gen.De
 }
 
 func (wh *WorkflowHandler) getHistory(
-	domainScope metrics.Scope,
+	scope metrics.Scope,
 	domainID string,
 	execution gen.WorkflowExecution,
 	firstEventID, nextEventID int64,
@@ -3058,8 +3058,8 @@ func (wh *WorkflowHandler) getHistory(
 	if len(historyEvents) > 0 {
 		// N.B. - Dual emit is required here so that we can see aggregate timer stats across all
 		// domains along with the individual domains stats
-		domainScope.Tagged(metrics.DomainAllTag()).RecordTimer(metrics.HistorySize, time.Duration(size))
-		domainScope.RecordTimer(metrics.HistorySize, time.Duration(size))
+		scope.Tagged(metrics.DomainAllTag()).RecordTimer(metrics.HistorySize, time.Duration(size))
+		scope.RecordTimer(metrics.HistorySize, time.Duration(size))
 
 		if size > common.GetHistoryWarnSizeLimit {
 			wh.GetThrottledLogger().WithFields(bark.Fields{
