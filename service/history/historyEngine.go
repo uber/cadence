@@ -2600,7 +2600,7 @@ func (e *historyEngineImpl) ScheduleDecisionTask(ctx context.Context, scheduleRe
 				transferTasks:  []persistence.Task{&persistence.RecordWorkflowStartedTask{}},
 			}
 
-			executionTimestamp := getWorkflowExecutionTimestamp(msBuilder)
+			executionTimestamp, _, _ := getWorkflowExecutionTimestampAndMemo(msBuilder)
 			if scheduleRequest.GetIsFirstDecision() && executionTimestamp.After(time.Now()) {
 				postActions.timerTasks = append(postActions.timerTasks, &persistence.WorkflowBackoffTimerTask{
 					VisibilityTimestamp: executionTimestamp,

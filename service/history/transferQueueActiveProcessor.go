@@ -410,23 +410,17 @@ func (t *transferQueueActiveProcessorImpl) processCloseExecution(task *persisten
 	workflowCloseTimestamp := wfCloseTime
 	workflowCloseStatus := getWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
 	workflowHistoryLength := msBuilder.GetNextEventID() - 1
-	workflowExecutionTimestamp := getWorkflowExecutionTimestamp(msBuilder).UnixNano()
 
-	startEvent, ok := msBuilder.GetStartEvent()
-	var visibilityMemo map[string][]byte
-	if !ok {
-		if replyToParentWorkflow {
-			return &workflow.InternalServiceError{Message: "Unable to get workflow start event."}
-		}
-	} else {
-		visibilityMemo = startEvent.WorkflowExecutionStartedEventAttributes.Memo
+	workflowExecutionTimestamp, visibilityMemo, ok := getWorkflowExecutionTimestampAndMemo(msBuilder)
+	if !ok && replyToParentWorkflow {
+		return &workflow.InternalServiceError{Message: "Unable to get workflow start event."}
 	}
 
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
 	release(nil)
 	err = t.recordWorkflowClosed(
-		domainID, execution, workflowTypeName, workflowStartTimestamp, workflowExecutionTimestamp,
+		domainID, execution, workflowTypeName, workflowStartTimestamp, workflowExecutionTimestamp.UnixNano(),
 		workflowCloseTimestamp, workflowCloseStatus, workflowHistoryLength, task.GetTaskID(), visibilityMemo,
 	)
 	if err != nil {
@@ -876,18 +870,12 @@ func (t *transferQueueActiveProcessorImpl) processRecordWorkflowStarted(task *pe
 	workflowTimeout := executionInfo.WorkflowTimeout
 	wfTypeName := executionInfo.WorkflowTypeName
 	startTimestamp := executionInfo.StartTimestamp.UnixNano()
-	executionTimestamp := getWorkflowExecutionTimestamp(msBuilder).UnixNano()
-
-	var visibilityMemo map[string][]byte
-	startEvent, ok := msBuilder.GetStartEvent()
-	if ok {
-		visibilityMemo = startEvent.WorkflowExecutionStartedEventAttributes.Memo
-	}
+	executionTimestamp, visibilityMemo, _ := getWorkflowExecutionTimestampAndMemo(msBuilder)
 
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
 	release(nil)
-	return t.recordWorkflowStarted(task.DomainID, execution, wfTypeName, startTimestamp, executionTimestamp, workflowTimeout, task.GetTaskID(), visibilityMemo)
+	return t.recordWorkflowStarted(task.DomainID, execution, wfTypeName, startTimestamp, executionTimestamp.UnixNano(), workflowTimeout, task.GetTaskID(), visibilityMemo)
 }
 
 func (t *transferQueueActiveProcessorImpl) recordChildExecutionStarted(task *persistence.TransferTaskInfo,
