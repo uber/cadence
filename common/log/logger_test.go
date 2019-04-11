@@ -57,7 +57,7 @@ func TestDefaultLogger(t *testing.T) {
 
 	logger := NewLogger(zapLogger)
 	preCaller := caller(1)
-	logger.WithTags(tag.Error(fmt.Errorf("test error"))).Info("test info", tag.ValueActionActivityTaskCanceled)
+	logger.WithTags(tag.Error(fmt.Errorf("test error"))).Info("test info", tag.WorkflowActionWorkflowStarted)
 
 	// back to normal state
 	w.Close()
@@ -68,7 +68,7 @@ func TestDefaultLogger(t *testing.T) {
 	assert.Nil(t, err)
 	lineNum := fmt.Sprintf("%v", par+1)
 	fmt.Println(out, lineNum)
-	assert.Equal(t, out, `{"level":"info","msg":"test info","error":"test error","wf-action":"add-activitytask-canceled-event","logging-call-at":"logger_test.go:`+lineNum+`"}`+"\n")
+	assert.Equal(t, out, `{"level":"info","msg":"test info","error":"test error","wf-action":"add-workflowexecution-started-event","logging-call-at":"logger_test.go:`+lineNum+`"}`+"\n")
 
 }
 
@@ -91,7 +91,7 @@ func TestThrottleLogger(t *testing.T) {
 	cln := dynamicconfig.NewCollection(dc, bark.NewLoggerFromLogrus(logrus.New()))
 	logger := NewThrottledLogger(zapLogger, cln.GetIntProperty(dynamicconfig.FrontendRPS, 1))
 	preCaller := caller(1)
-	logger.WithTags(tag.Error(fmt.Errorf("test error"))).Info("test info", tag.ValueActionActivityTaskCanceled)
+	logger.WithTags(tag.Error(fmt.Errorf("test error"))).Info("test info", tag.WorkflowActionWorkflowStarted)
 
 	// back to normal state
 	w.Close()
@@ -102,5 +102,5 @@ func TestThrottleLogger(t *testing.T) {
 	assert.Nil(t, err)
 	lineNum := fmt.Sprintf("%v", par+1)
 	fmt.Println(out, lineNum)
-	assert.Equal(t, out, `{"level":"info","msg":"test info","error":"test error","wf-action":"add-activitytask-canceled-event","logging-call-at":"logger_test.go:`+lineNum+`"}`+"\n")
+	assert.Equal(t, out, `{"level":"info","msg":"test info","error":"test error","wf-action":"add-workflowexecution-started-event","logging-call-at":"logger_test.go:`+lineNum+`"}`+"\n")
 }
