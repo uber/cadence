@@ -766,6 +766,7 @@ func (s *HistoryV2PersistenceSuite) completeFork(forkBranch []byte, succ bool) {
 	err := s.HistoryV2Mgr.CompleteForkBranch(&p.CompleteForkBranchRequest{
 		BranchToken: forkBranch,
 		Success:     succ,
+		ShardID:     s.ShardInfo.ShardID,
 	})
 	s.Nil(err)
 }
