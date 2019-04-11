@@ -50,6 +50,11 @@ func Timestamp(timestamp time.Time) Tag {
 	return newTimeTag("timestamp", timestamp)
 }
 
+// LoggingCallAt returns a tag for caller position.
+func LoggingCallAt(position string) Tag {
+	return newStringTag("logging-call-at", position)
+}
+
 ///////////////////  Workflow tags defined here: ( wf is short for workflow) ///////////////////
 
 // WorkflowAction returns tag for WorkflowAction
