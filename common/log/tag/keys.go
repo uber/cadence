@@ -391,12 +391,12 @@ func KafkaOffset(offset int64) Tag {
 
 // SourceCluster returns tag for SourceCluster
 func SourceCluster(sourceCluster string) Tag {
-	return newStringTag("source-cluster", sourceCluster)
+	return newStringTag("xdc-source-cluster", sourceCluster)
 }
 
 // PrevActiveCluster returns tag for PrevActiveCluster
 func PrevActiveCluster(prevActiveCluster string) Tag {
-	return newStringTag("prev-active-cluster", prevActiveCluster)
+	return newStringTag("xdc-prev-active-cluster", prevActiveCluster)
 }
 
 // FailoverMsg returns tag for FailoverMsg
