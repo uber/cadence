@@ -23,6 +23,7 @@ package service
 import (
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
@@ -44,8 +45,9 @@ type (
 		clientBean        client.Bean
 		membershipMonitor membership.Monitor
 
-		metrics metrics.Client
-		logger  bark.Logger
+		metrics    metrics.Client
+		barkLogger bark.Logger
+		logger     log.Logger
 	}
 )
 
@@ -68,7 +70,8 @@ func NewTestService(clusterMetadata cluster.Metadata, messagingClient messaging.
 		messagingClient: messagingClient,
 		metrics:         metrics,
 		clientBean:      clientBean,
-		logger:          logger,
+		barkLogger:      logger,
+		// TODO pass in logger
 	}
 }
 
@@ -85,13 +88,21 @@ func (s *serviceTestBase) Start() {
 func (s *serviceTestBase) Stop() {
 }
 
-// GetLogger returns the logger for service
-func (s *serviceTestBase) GetLogger() bark.Logger {
+// GetBarkLogger returns the logger for service
+func (s *serviceTestBase) GetBarkLogger() bark.Logger {
+	return s.barkLogger
+}
+
+func (s *serviceTestBase) GetThrottledBarkLogger() bark.Logger {
+	return logging.NewThrottledLogger(s.barkLogger, func(opts ...dynamicconfig.FilterOption) int { return 10 })
+}
+
+func (s *serviceTestBase) GetLogger() log.Logger {
 	return s.logger
 }
 
-func (s *serviceTestBase) GetThrottledLogger() bark.Logger {
-	return logging.NewThrottledLogger(s.logger, func(opts ...dynamicconfig.FilterOption) int { return 10 })
+func (s *serviceTestBase) GetThrottledLogger() log.Logger {
+	return s.logger
 }
 
 // GetMetricsClient returns the metric client for service
