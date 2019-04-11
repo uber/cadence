@@ -17,7 +17,6 @@ type Tag interface {
 	GetDuration() time.Duration
 	GetTime() time.Time
 	GetObject() interface{}
-	GetPredefinedString() string
 }
 
 // the tag value types supported
@@ -38,16 +37,6 @@ const (
 	ValueTypeTime valueTypeEnum = 7
 	// ValueTypeObject will be converted into string by fmt.Sprintf("%+v")
 	ValueTypeObject valueTypeEnum = 8
-
-	// below are pre-defined value types(in values.go)
-	ValueTypeWorkflowAction         valueTypeEnum = 9
-	ValueTypeWorkflowListFilterType valueTypeEnum = 10
-	ValueTypeSysComponent           valueTypeEnum = 11
-	ValueTypeSysLifecycle           valueTypeEnum = 12
-	ValueTypeSysErrorType           valueTypeEnum = 13
-	ValueTypeSysShardUpdate         valueTypeEnum = 14
-	ValueTypeSysOperationResult     valueTypeEnum = 15
-	ValueTypeSysStoreOperation      valueTypeEnum = 16
 )
 
 // predefined tag values are using module private types, their values are public, defined in values.go
@@ -68,15 +57,14 @@ type tagImpl struct {
 	key       string
 	valueType valueTypeEnum
 
-	valueString           string        //1
-	valueInteger          int64         //2
-	valueDouble           float64       //3
-	valueBool             bool          //4
-	valueError            error         //5
-	valueDuration         time.Duration //6
-	valueTime             time.Time     //7
-	valueObject           interface{}   //8
-	valuePredefinedString string        //9-16
+	valueString   string        //1
+	valueInteger  int64         //2
+	valueDouble   float64       //3
+	valueBool     bool          //4
+	valueError    error         //5
+	valueDuration time.Duration //6
+	valueTime     time.Time     //7
+	valueObject   interface{}   //8
 }
 
 func (t *tagImpl) GetKey() string {
@@ -117,10 +105,6 @@ func (t *tagImpl) GetTime() time.Time {
 
 func (t *tagImpl) GetObject() interface{} {
 	return t.valueObject
-}
-
-func (t *tagImpl) GetPredefinedString() string {
-	return t.valuePredefinedString
 }
 
 func newStringTag(key string, value string) Tag {
@@ -189,8 +173,8 @@ func newObjectTag(key string, value interface{}) Tag {
 
 func newPredefinedStringTag(key string, value string) Tag {
 	return &tagImpl{
-		key:                   key,
-		valueType:             ValueTypeString,
-		valuePredefinedString: value,
+		key:         key,
+		valueType:   ValueTypeString,
+		valueString: value,
 	}
 }
