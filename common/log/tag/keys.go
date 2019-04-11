@@ -16,463 +16,453 @@ import (
 ///////////////////  Common tags defined here ///////////////////
 // Error returns tag for Error
 func Error(err error) Tag {
-	return newTag("error", err, ValueTypeError)
+	return newErrorTag("error", err)
 }
 
 // ClusterName returns tag for ClusterName
 func ClusterName(clusterName string) Tag {
-	return newTag("cluster-name", clusterName, ValueTypeString)
+	return newStringTag("cluster-name", clusterName)
 }
 
 // Timestamp returns tag for Timestamp
 func Timestamp(timestamp time.Time) Tag {
-	return newTag("timestamp", timestamp, ValueTypeTime)
+	return newTimeTag("timestamp", timestamp)
 }
 
 ///////////////////  Workflow tags defined here: ( wf is short for workflow) ///////////////////
 // WorkflowAction returns tag for WorkflowAction
 func WorkflowAction(action valueTypeWorkflowAction) Tag {
-	return newTag("wf-action", action, ValueTypeWorkflowAction)
+	return newPredefinedStringTag("wf-action", string(action))
 }
 
 // WorkflowListFilterType returns tag for WorkflowListFilterType
 func WorkflowListFilterType(listFilterType valueTypeWorkflowListFilterType) Tag {
-	return newTag("wf-list-filter-type", listFilterType, ValueTypeWorkflowListFilterType)
+	return newPredefinedStringTag("wf-list-filter-type", string(listFilterType))
 }
 
 // general
 // WorkflowError returns tag for WorkflowError
-func WorkflowError(error error) Tag { return newTag("wf-error", error, ValueTypeError) }
+func WorkflowError(error error) Tag { return newErrorTag("wf-error", error) }
 
 // WorkflowTimeoutType returns tag for WorkflowTimeoutType
 func WorkflowTimeoutType(timeoutType int64) Tag {
-	return newTag("wf-timeout-type", timeoutType, ValueTypeInteger)
+	return newIntegerTag("wf-timeout-type", timeoutType)
 }
 
 // WorkflowPollContextTimeout returns tag for WorkflowPollContextTimeout
 func WorkflowPollContextTimeout(pollContextTimeout time.Duration) Tag {
-	return newTag("wf-poll-context-timeout", pollContextTimeout, ValueTypeDuration)
+	return newDurationTag("wf-poll-context-timeout", pollContextTimeout)
 }
 
 // WorkflowHandlerName returns tag for WorkflowHandlerName
 func WorkflowHandlerName(handlerName string) Tag {
-	return newTag("wf-handler-name", handlerName, ValueTypeString)
+	return newStringTag("wf-handler-name", handlerName)
 }
 
 // WorkflowID returns tag for WorkflowID
 func WorkflowID(workflowID string) Tag {
-	return newTag("wf-id", workflowID, ValueTypeString)
+	return newStringTag("wf-id", workflowID)
 }
 
 // WorkflowType returns tag for WorkflowType
 func WorkflowType(wfType string) Tag {
-	return newTag("wf-type", wfType, ValueTypeString)
+	return newStringTag("wf-type", wfType)
 }
 
 // WorkflowRunID returns tag for WorkflowRunID
 func WorkflowRunID(runID string) Tag {
-	return newTag("wf-run-id", runID, ValueTypeString)
+	return newStringTag("wf-run-id", runID)
 }
 
 // WorkflowBeginningRunID returns tag for WorkflowBeginningRunID
 func WorkflowBeginningRunID(beginningRunID string) Tag {
-	return newTag("wf-beginning-run-id", beginningRunID, ValueTypeString)
+	return newStringTag("wf-beginning-run-id", beginningRunID)
 }
 
 // WorkflowEndingRunID returns tag for WorkflowEndingRunID
 func WorkflowEndingRunID(endingRunID string) Tag {
-	return newTag("wf-ending-run-id", endingRunID, ValueTypeString)
+	return newStringTag("wf-ending-run-id", endingRunID)
 }
 
 // domain related
 // WorkflowDomainID returns tag for WorkflowDomainID
 func WorkflowDomainID(domainID string) Tag {
-	return newTag("wf-domain-id", domainID, ValueTypeString)
+	return newStringTag("wf-domain-id", domainID)
 }
 
 // WorkflowDomainName returns tag for WorkflowDomainName
 func WorkflowDomainName(domainName string) Tag {
-	return newTag("wf-domain-name", domainName, ValueTypeString)
+	return newStringTag("wf-domain-name", domainName)
 }
 
 // WorkflowDomainIDs returns tag for WorkflowDomainIDs
 func WorkflowDomainIDs(domainIDs []string) Tag {
-	return newTag("wf-domain-ids", domainIDs, ValueTypeObject)
+	return newObjectTag("wf-domain-ids", domainIDs)
 }
 
 // history event ID related
 // WorkflowEventID returns tag for WorkflowEventID
 func WorkflowEventID(eventID int64) Tag {
-	return newTag("wf-history-event-id", eventID, ValueTypeInteger)
+	return newIntegerTag("wf-history-event-id", eventID)
 }
 
 // WorkflowScheduleID returns tag for WorkflowScheduleID
 func WorkflowScheduleID(scheduleID int64) Tag {
-	return newTag("wf-schedule-id", scheduleID, ValueTypeInteger)
+	return newIntegerTag("wf-schedule-id", scheduleID)
 }
 
 // WorkflowFirstEventID returns tag for WorkflowFirstEventID
 func WorkflowFirstEventID(firstEventID int64) Tag {
-	return newTag("wf-first-event-id", firstEventID, ValueTypeInteger)
+	return newIntegerTag("wf-first-event-id", firstEventID)
 }
 
 // WorkflowNextEventID returns tag for WorkflowNextEventID
 func WorkflowNextEventID(nextEventID int64) Tag {
-	return newTag("wf-next-event-id", nextEventID, ValueTypeInteger)
+	return newIntegerTag("wf-next-event-id", nextEventID)
 }
 
 // WorkflowBeginningFirstEventID returns tag for WorkflowBeginningFirstEventID
 func WorkflowBeginningFirstEventID(beginningFirstEventID int64) Tag {
-	return newTag("wf-begining-first-event-id", beginningFirstEventID, ValueTypeInteger)
+	return newIntegerTag("wf-begining-first-event-id", beginningFirstEventID)
 }
 
 // WorkflowEndingNextEventID returns tag for WorkflowEndingNextEventID
 func WorkflowEndingNextEventID(endingNextEventID int64) Tag {
-	return newTag("wf-ending-next-event-id", endingNextEventID, ValueTypeInteger)
+	return newIntegerTag("wf-ending-next-event-id", endingNextEventID)
 }
 
 // WorkflowResetNextEventID returns tag for WorkflowResetNextEventID
 func WorkflowResetNextEventID(resetNextEventID int64) Tag {
-	return newTag("wf-reset-next-event-id", resetNextEventID, ValueTypeInteger)
+	return newIntegerTag("wf-reset-next-event-id", resetNextEventID)
 }
 
 // history tree
 // WorkflowTreeID returns tag for WorkflowTreeID
 func WorkflowTreeID(treeID string) Tag {
-	return newTag("wf-tree-id", treeID, ValueTypeString)
+	return newStringTag("wf-tree-id", treeID)
 }
 
 // WorkflowBranchID returns tag for WorkflowBranchID
 func WorkflowBranchID(branchID string) Tag {
-	return newTag("wf-branch-id", branchID, ValueTypeString)
+	return newStringTag("wf-branch-id", branchID)
 }
 
 // workflow task
 // WorkflowDecisionType returns tag for WorkflowDecisionType
 func WorkflowDecisionType(decisionType int64) Tag {
-	return newTag("wf-decision-type", decisionType, ValueTypeInteger)
+	return newIntegerTag("wf-decision-type", decisionType)
 }
 
 // WorkflowDecisionFailCause returns tag for WorkflowDecisionFailCause
 func WorkflowDecisionFailCause(decisionFailCause int64) Tag {
-	return newTag("wf-decision-fail-cause", decisionFailCause, ValueTypeInteger)
+	return newIntegerTag("wf-decision-fail-cause", decisionFailCause)
 }
 
 // WorkflowTaskListType returns tag for WorkflowTaskListType
 func WorkflowTaskListType(taskListType int64) Tag {
-	return newTag("wf-task-list-type", taskListType, ValueTypeInteger)
+	return newIntegerTag("wf-task-list-type", taskListType)
 }
 
 // WorkflowTaskListName returns tag for WorkflowTaskListName
 func WorkflowTaskListName(taskListName string) Tag {
-	return newTag("wf-task-list-name", taskListName, ValueTypeString)
+	return newStringTag("wf-task-list-name", taskListName)
 }
 
 // size limit
 // WorkflowSize returns tag for WorkflowSize
 func WorkflowSize(workflowSize int64) Tag {
-	return newTag("wf-size", workflowSize, ValueTypeInteger)
+	return newIntegerTag("wf-size", workflowSize)
 }
 
 // WorkflowSignalCount returns tag for SignalCount
 func WorkflowSignalCount(signalCount int64) Tag {
-	return newTag("wf-signal-count", signalCount, ValueTypeInteger)
+	return newIntegerTag("wf-signal-count", signalCount)
 }
 
 // WorkflowHistorySize returns tag for HistorySize
 func WorkflowHistorySize(historySize int64) Tag {
-	return newTag("wf-history-size", historySize, ValueTypeInteger)
+	return newIntegerTag("wf-history-size", historySize)
 }
 
 // WorkflowHistorySizeBytes returns tag for HistorySizeBytes
 func WorkflowHistorySizeBytes(historySizeBytes int64) Tag {
-	return newTag("wf-history-size-bytes", historySizeBytes, ValueTypeInteger)
+	return newIntegerTag("wf-history-size-bytes", historySizeBytes)
 }
 
 // WorkflowEventCount returns tag for EventCount
 func WorkflowEventCount(eventCount int64) Tag {
-	return newTag("wf-event-count", eventCount, ValueTypeInteger)
+	return newIntegerTag("wf-event-count", eventCount)
 }
 
 ///////////////////  System tags defined here:  ///////////////////
 // Tags with pre-define values
 // Component returns tag for Component
 func Component(component valueTypeSysComponent) Tag {
-	return newTag("component", component, ValueTypeSysComponent)
+	return newPredefinedStringTag("component", string(component))
 }
 
 // Lifecycle returns tag for Lifecycle
 func Lifecycle(lifecycle valueTypeSysLifecycle) Tag {
-	return newTag("lifecycle", lifecycle, ValueTypeSysLifecycle)
+	return newPredefinedStringTag("lifecycle", string(lifecycle))
 }
 
 // StoreOperation returns tag for StoreOperation
 func StoreOperation(storeOperation valueTypeSysStoreOperation) Tag {
-	return newTag("store-operation", storeOperation, ValueTypeSysStoreOperation)
+	return newPredefinedStringTag("store-operation", string(storeOperation))
 }
 
 // OperationResult returns tag for OperationResult
 func OperationResult(operationResult valueTypeSysOperationResult) Tag {
-	return newTag("operation-result", operationResult, ValueTypeSysOperationResult)
+	return newPredefinedStringTag("operation-result", string(operationResult))
 }
 
 // ErrorType returns tag for ErrorType
 func ErrorType(errorType valueTypeSysErrorType) Tag {
-	return newTag("error", errorType, ValueTypeSysErrorType)
+	return newPredefinedStringTag("error", string(errorType))
 }
 
 // Shardupdate returns tag for Shardupdate
 func Shardupdate(shardupdate valueTypeSysShardUpdate) Tag {
-	return newTag("shard-update", shardupdate, ValueTypeSysShardUpdate)
+	return newPredefinedStringTag("shard-update", string(shardupdate))
 }
 
 // general
 // CursorTimestamp returns tag for CursorTimestamp
 func CursorTimestamp(timestamp time.Time) Tag {
-	return newTag("cursor-timestamp", timestamp, ValueTypeTime)
+	return newTimeTag("cursor-timestamp", timestamp)
 }
 
 // MetricScope returns tag for MetricScope
 func MetricScope(metricScope int64) Tag {
-	return newTag("metric-scope", metricScope, ValueTypeInteger)
+	return newIntegerTag("metric-scope", metricScope)
 }
 
 // history engine shard
 // ShardID returns tag for ShardID
 func ShardID(shardID int64) Tag {
-	return newTag("shard-id", shardID, ValueTypeInteger)
+	return newIntegerTag("shard-id", shardID)
 }
 
 // ShardTime returns tag for ShardTime
 func ShardTime(shardTime time.Time) Tag {
-	return newTag("shard-time", shardTime, ValueTypeTime)
+	return newTimeTag("shard-time", shardTime)
 }
 
 // ShardReplicationAck returns tag for ShardReplicationAck
 func ShardReplicationAck(shardReplicationAck int64) Tag {
-	return newTag("shard-replication-ack", shardReplicationAck, ValueTypeInteger)
+	return newIntegerTag("shard-replication-ack", shardReplicationAck)
 }
 
 // ShardTransferAcks returns tag for ShardTransferAcks
 func ShardTransferAcks(shardTransferAcks int64) Tag {
-	return newTag("shard-transfer-acks", shardTransferAcks, ValueTypeInteger)
+	return newIntegerTag("shard-transfer-acks", shardTransferAcks)
 }
 
 // ShardTimerAcks returns tag for ShardTimerAcks
 func ShardTimerAcks(shardTimerAcks int64) Tag {
-	return newTag("shard-timer-acks", shardTimerAcks, ValueTypeInteger)
+	return newIntegerTag("shard-timer-acks", shardTimerAcks)
 }
 
 // task queue processor
 // TaskID returns tag for TaskID
 func TaskID(taskID int64) Tag {
-	return newTag("queue-task-id", taskID, ValueTypeInteger)
+	return newIntegerTag("queue-task-id", taskID)
 }
 
 // TaskType returns tag for TaskType for queue processor
 func TaskType(taskType int64) Tag {
-	return newTag("queue-task-type", taskType, ValueTypeInteger)
+	return newIntegerTag("queue-task-type", taskType)
 }
 
 // TimerTaskStatus returns tag for TimerTaskStatus
 func TimerTaskStatus(timerTaskStatus int64) Tag {
-	return newTag("timer-task-status", timerTaskStatus, ValueTypeInteger)
+	return newIntegerTag("timer-task-status", timerTaskStatus)
 }
 
 // retry
 // Attempt returns tag for Attempt
 func Attempt(attempt int64) Tag {
-	return newTag("attempt", attempt, ValueTypeInteger)
+	return newIntegerTag("attempt", attempt)
 }
 
 // AttemptCount returns tag for AttemptCount
 func AttemptCount(attemptCount int64) Tag {
-	return newTag("attempt-count", attemptCount, ValueTypeInteger)
+	return newIntegerTag("attempt-count", attemptCount)
 }
 
 // AttemptStart returns tag for AttemptStart
 func AttemptStart(attemptStart time.Time) Tag {
-	return newTag("attempt-start", attemptStart, ValueTypeTime)
+	return newTimeTag("attempt-start", attemptStart)
 }
 
 // AttemptEnd returns tag for AttemptEnd
 func AttemptEnd(attemptEnd time.Time) Tag {
-	return newTag("attempt-end", attemptEnd, ValueTypeTime)
+	return newTimeTag("attempt-end", attemptEnd)
 }
 
 // ScheduleAttempt returns tag for ScheduleAttempt
 func ScheduleAttempt(scheduleAttempt int64) Tag {
-	return newTag("schedule-attempt", scheduleAttempt, ValueTypeInteger)
+	return newIntegerTag("schedule-attempt", scheduleAttempt)
 }
 
 // ElastiSearch
 // ESRequest returns tag for ESRequest
 func ESRequest(ESRequest string) Tag {
-	return newTag("es-request", ESRequest, ValueTypeString)
+	return newStringTag("es-request", ESRequest)
 }
 
 // ESKey returns tag for ESKey
 func ESKey(ESKey string) Tag {
-	return newTag("es-mapping-key", ESKey, ValueTypeString)
+	return newStringTag("es-mapping-key", ESKey)
 }
 
 // ESField returns tag for ESField
 func ESField(ESField string) Tag {
-	return newTag("es-field", ESField, ValueTypeString)
+	return newStringTag("es-field", ESField)
 }
 
 // CallAt returns a tag for LoggingError
 func LoggingCallAt(position string) Tag {
-	return newTag("logging-call-at", position, ValueTypeString)
-}
-
-// LoggingError returns a tag for LoggingError
-func LoggingError(err error) Tag {
-	return newTag("longging-err", err, ValueTypeError)
-}
-
-// LoggingErrorFields returns a tag for LoggingErrorFields
-func LoggingErrorFields(fields []string) Tag {
-	return newTag("longging-err-fields", fields, ValueTypeObject)
+	return newStringTag("logging-call-at", position)
 }
 
 // Kafka related
 // KafkaTopicName returns tag for TopicName
 func KafkaTopicName(topicName string) Tag {
-	return newTag("kafka-topic-name", topicName, ValueTypeString)
+	return newStringTag("kafka-topic-name", topicName)
 }
 
 // KafkaConsumerName returns tag for ConsumerName
 func ConsumerName(consumerName string) Tag {
-	return newTag("kafka-consumer-name", consumerName, ValueTypeString)
+	return newStringTag("kafka-consumer-name", consumerName)
 }
 
 // KafkaPartition returns tag for Partition
 func Partition(partition int64) Tag {
-	return newTag("kafka-partition", partition, ValueTypeInteger)
+	return newIntegerTag("kafka-partition", partition)
 }
 
 // KafkaPartitionKey returns tag for PartitionKey
 func PartitionKey(partitionKey interface{}) Tag {
-	return newTag("kafka-partition-key", partitionKey, ValueTypeObject)
+	return newObjectTag("kafka-partition-key", partitionKey)
 }
 
 // KafkaOffset returns tag for Offset
 func KafkaOffset(offset int64) Tag {
-	return newTag("kafka-offset", offset, ValueTypeInteger)
+	return newIntegerTag("kafka-offset", offset)
 }
 
 ///////////////////  XDC tags defined here: xdc- ///////////////////
 // SourceCluster returns tag for SourceCluster
 func SourceCluster(sourceCluster string) Tag {
-	return newTag("source-cluster", sourceCluster, ValueTypeString)
+	return newStringTag("source-cluster", sourceCluster)
 }
 
 // PrevActiveCluster returns tag for PrevActiveCluster
 func PrevActiveCluster(prevActiveCluster string) Tag {
-	return newTag("prev-active-cluster", prevActiveCluster, ValueTypeString)
+	return newStringTag("prev-active-cluster", prevActiveCluster)
 }
 
 // FailoverMsg returns tag for FailoverMsg
 func FailoverMsg(failoverMsg string) Tag {
-	return newTag("xdc-failover-msg", failoverMsg, ValueTypeString)
+	return newStringTag("xdc-failover-msg", failoverMsg)
 }
 
 // FailoverVersion returns tag for Version
 func FailoverVersion(version int64) Tag {
-	return newTag("xdc-failover-version", version, ValueTypeInteger)
+	return newIntegerTag("xdc-failover-version", version)
 }
 
 // CurrentVersion returns tag for CurrentVersion
 func CurrentVersion(currentVersion int64) Tag {
-	return newTag("xdc-current-version", currentVersion, ValueTypeInteger)
+	return newIntegerTag("xdc-current-version", currentVersion)
 }
 
 // IncomingVersion returns tag for IncomingVersion
 func IncomingVersion(incomingVersion int64) Tag {
-	return newTag("xdc-incoming-version", incomingVersion, ValueTypeInteger)
+	return newIntegerTag("xdc-incoming-version", incomingVersion)
 }
 
 // ReplicationInfo returns tag for ReplicationInfo
 func ReplicationInfo(replicationInfo *persistence.ReplicationInfo) Tag {
-	return newTag("xdc-replication-info", replicationInfo, ValueTypeObject)
+	return newObjectTag("xdc-replication-info", replicationInfo)
 }
 
 // ReplicationState returns tag for ReplicationState
 func ReplicationState(replicationState *persistence.ReplicationState) Tag {
-	return newTag("xdc-replication-state", replicationState, ValueTypeObject)
+	return newObjectTag("xdc-replication-state", replicationState)
 }
 
 ///////////////////  Archival tags defined here: archival- ///////////////////
 // archival request tags
 // ArchivalRequestDomainID returns tag for RequestDomainID
 func ArchivalRequestDomainID(requestDomainID string) Tag {
-	return newTag("archival-request-domain-id", requestDomainID, ValueTypeString)
+	return newStringTag("archival-request-domain-id", requestDomainID)
 }
 
 // ArchivalRequestWorkflowID returns tag for RequestWorkflowID
 func ArchivalRequestWorkflowID(requestWorkflowID string) Tag {
-	return newTag("archival-request-workflow-id", requestWorkflowID, ValueTypeString)
+	return newStringTag("archival-request-workflow-id", requestWorkflowID)
 }
 
 // ArchivalRequestRunID returns tag for RequestRunID
 func ArchivalRequestRunID(requestRunID string) Tag {
-	return newTag("archival-request-run-id", requestRunID, ValueTypeString)
+	return newStringTag("archival-request-run-id", requestRunID)
 }
 
 // ArchivalRequestEventStoreVersion returns tag for RequestEventStoreVersion
 func ArchivalRequestEventStoreVersion(requestEventStoreVersion int64) Tag {
-	return newTag("archival-request-event-store-version", requestEventStoreVersion, ValueTypeInteger)
+	return newIntegerTag("archival-request-event-store-version", requestEventStoreVersion)
 }
 
 // ArchivalRequestBranchToken returns tag for RequestBranchToken
 func ArchivalRequestBranchToken(requestBranchToken string) Tag {
-	return newTag("archival-request-branch-token", requestBranchToken, ValueTypeString)
+	return newStringTag("archival-request-branch-token", requestBranchToken)
 }
 
 // ArchivalRequestNextEventID returns tag for RequestNextEventID
 func ArchivalRequestNextEventID(requestNextEventID int64) Tag {
-	return newTag("archival-request-next-event-id", requestNextEventID, ValueTypeInteger)
+	return newIntegerTag("archival-request-next-event-id", requestNextEventID)
 }
 
 // ArchivalRequestCloseFailoverVersion returns tag for RequestCloseFailoverVersion
 func ArchivalRequestCloseFailoverVersion(requestCloseFailoverVersion int64) Tag {
-	return newTag("archival-request-close-failover-version", requestCloseFailoverVersion, ValueTypeInteger)
+	return newIntegerTag("archival-request-close-failover-version", requestCloseFailoverVersion)
 }
 
 // archival tags (blob tags)
 // ArchivalBucket returns tag for Bucket
 func ArchivalArchivalBucket(bucket string) Tag {
-	return newTag("archival-bucket", bucket, ValueTypeString)
+	return newStringTag("archival-bucket", bucket)
 }
 
 // ArchivalBlobKey returns tag for BlobKey
 func ArchivalBlobKey(blobKey string) Tag {
-	return newTag("archival-blob-key", blobKey, ValueTypeString)
+	return newStringTag("archival-blob-key", blobKey)
 }
 
 // archival tags (file blobstore tags)
 // ArchivalFileBlobstoreBlobPath returns tag for FileBlobstoreBlobPath
 func ArchivalArchivalFileBlobstoreBlobPath(fileBlobstoreBlobPath string) Tag {
-	return newTag("archival-file-blobstore-blob-path", fileBlobstoreBlobPath, ValueTypeString)
+	return newStringTag("archival-file-blobstore-blob-path", fileBlobstoreBlobPath)
 }
 
 // ArchivalFileBlobstoreMetadataPath returns tag for FileBlobstoreMetadataPath
 func ArchivalFileBlobstoreMetadataPath(fileBlobstoreMetadataPath string) Tag {
-	return newTag("archival-file-blobstore-metadata-path", fileBlobstoreMetadataPath, ValueTypeString)
+	return newStringTag("archival-file-blobstore-metadata-path", fileBlobstoreMetadataPath)
 }
 
 // ArchivalClusterArchivalStatus returns tag for ClusterArchivalStatus
 func ArchivalClusterArchivalStatus(clusterArchivalStatus interface{}) Tag {
-	return newTag("archival-cluster-archival-status", clusterArchivalStatus, ValueTypeObject)
+	return newObjectTag("archival-cluster-archival-status", clusterArchivalStatus)
 }
 
 // ArchivalUploadSkipReason returns tag for UploadSkipReason
 func ArchivalUploadSkipReason(uploadSkipReason string) Tag {
-	return newTag("archival-upload-skip-reason", uploadSkipReason, ValueTypeString)
+	return newStringTag("archival-upload-skip-reason", uploadSkipReason)
 }
 
 // UploadFailReason returns tag for UploadFailReason
 func UploadFailReason(uploadFailReason string) Tag {
-	return newTag("archival-upload-fail-reason", uploadFailReason, ValueTypeString)
+	return newStringTag("archival-upload-fail-reason", uploadFailReason)
 }

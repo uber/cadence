@@ -1,10 +1,13 @@
 package log
 
-import "github.com/uber/cadence/common/log/tag"
+import (
+	"github.com/uber/cadence/common/log/tag"
+	"go.uber.org/zap"
+)
 
 // Logger is our abstraction for logging
 // Usage examples:
-//  import ".../log/tag"
+//  import "github.com/uber/cadence/common/log/tag"
 //  1) logger = logger.WithFields(
 //          tag.TagWorkflowEventID( 123),
 //          tag.TagDomainID("test-domain-id"))
@@ -22,4 +25,8 @@ type Logger interface {
 	Error(msg string, tags ...tag.Tag)
 	Fatal(msg string, tags ...tag.Tag)
 	WithFields(tags ...tag.Tag) Logger
+}
+
+type loggerImpl struct {
+	zapLogger *zap.Logger
 }

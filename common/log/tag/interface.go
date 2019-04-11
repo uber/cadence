@@ -1,10 +1,23 @@
 package tag
 
+import (
+	"time"
+)
+
 // Tag is the interface for logging system
 type Tag interface {
 	GetKey() string
-	GetValue() interface{}
 	GetValueType() valueTypeEnum
+
+	GetString() string
+	GetInteger() int64
+	GetDouble() float64
+	GetBool() bool
+	GetError() error
+	GetDuration() time.Duration
+	GetTime() time.Time
+	GetObject() interface{}
+	GetPredefinedString() string
 }
 
 // the tag value types supported
@@ -53,26 +66,131 @@ type valueTypeEnum int
 // keep this module private
 type tagImpl struct {
 	key       string
-	value     interface{}
 	valueType valueTypeEnum
+
+	valueString           string        //1
+	valueInteger          int64         //2
+	valueDouble           float64       //3
+	valueBool             bool          //4
+	valueError            error         //5
+	valueDuration         time.Duration //6
+	valueTime             time.Time     //7
+	valueObject           interface{}   //8
+	valuePredefinedString string        //9-16
 }
 
 func (t *tagImpl) GetKey() string {
 	return t.key
 }
 
-func (t *tagImpl) GetValue() interface{} {
-	return t.value
-}
-
 func (t *tagImpl) GetValueType() valueTypeEnum {
 	return t.valueType
 }
 
-func newTag(key string, value interface{}, valueType valueTypeEnum) Tag {
+func (t *tagImpl) GetString() string {
+	return t.valueString
+}
+
+func (t *tagImpl) GetInteger() int64 {
+	return t.valueInteger
+}
+
+func (t *tagImpl) GetDouble() float64 {
+	return t.valueDouble
+}
+
+func (t *tagImpl) GetBool() bool {
+	return t.valueBool
+}
+
+func (t *tagImpl) GetError() error {
+	return t.valueError
+}
+
+func (t *tagImpl) GetDuration() time.Duration {
+	return t.valueDuration
+}
+
+func (t *tagImpl) GetTime() time.Time {
+	return t.valueTime
+}
+
+func (t *tagImpl) GetObject() interface{} {
+	return t.valueObject
+}
+
+func (t *tagImpl) GetPredefinedString() string {
+	return t.valuePredefinedString
+}
+
+func newStringTag(key string, value string) Tag {
+	return &tagImpl{
+		key:         key,
+		valueType:   ValueTypeString,
+		valueString: value,
+	}
+}
+
+func newIntegerTag(key string, value int64) Tag {
+	return &tagImpl{
+		key:          key,
+		valueType:    ValueTypeInteger,
+		valueInteger: value,
+	}
+}
+
+func newDoubleTag(key string, value float64) Tag {
+	return &tagImpl{
+		key:         key,
+		valueType:   ValueTypeDouble,
+		valueDouble: value,
+	}
+}
+
+func newBoolTag(key string, value bool) Tag {
 	return &tagImpl{
 		key:       key,
-		valueType: valueType,
-		value:     value,
+		valueType: ValueTypeBool,
+		valueBool: value,
+	}
+}
+
+func newErrorTag(key string, value error) Tag {
+	return &tagImpl{
+		key:        key,
+		valueType:  ValueTypeError,
+		valueError: value,
+	}
+}
+
+func newDurationTag(key string, value time.Duration) Tag {
+	return &tagImpl{
+		key:           key,
+		valueType:     ValueTypeDuration,
+		valueDuration: value,
+	}
+}
+
+func newTimeTag(key string, value time.Time) Tag {
+	return &tagImpl{
+		key:       key,
+		valueType: ValueTypeTime,
+		valueTime: value,
+	}
+}
+
+func newObjectTag(key string, value interface{}) Tag {
+	return &tagImpl{
+		key:         key,
+		valueType:   ValueTypeObject,
+		valueObject: value,
+	}
+}
+
+func newPredefinedStringTag(key string, value string) Tag {
+	return &tagImpl{
+		key:                   key,
+		valueType:             ValueTypeString,
+		valuePredefinedString: value,
 	}
 }
