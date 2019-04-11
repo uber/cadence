@@ -78,9 +78,14 @@ func caller(skip int) string {
 
 var callAtTag = tag.LoggingCallAt("").GetKey()
 
-func (lg *loggerImpl) buildFields(tags []tag.Tag) []zap.Field {
-	fs := make([]zap.Field, 0, len(tags)+1)
+func (lg *loggerImpl) buildFieldsWithCallat(tags []tag.Tag) []zap.Field {
+	fs := lg.buildFields(tags)
 	fs = append(fs, zap.String(callAtTag, caller(lg.skip)))
+	return fs
+}
+
+func (lg *loggerImpl) buildFields(tags []tag.Tag) []zap.Field {
+	fs := make([]zap.Field, 0, len(tags))
 	for _, t := range tags {
 		var f zap.Field
 		switch t.GetValueType() {
@@ -110,27 +115,27 @@ func (lg *loggerImpl) buildFields(tags []tag.Tag) []zap.Field {
 }
 
 func (lg *loggerImpl) Debug(msg string, tags ...tag.Tag) {
-	fields := lg.buildFields(tags)
+	fields := lg.buildFieldsWithCallat(tags)
 	lg.zapLogger.Debug(msg, fields...)
 }
 
 func (lg *loggerImpl) Info(msg string, tags ...tag.Tag) {
-	fields := lg.buildFields(tags)
+	fields := lg.buildFieldsWithCallat(tags)
 	lg.zapLogger.Info(msg, fields...)
 }
 
 func (lg *loggerImpl) Warn(msg string, tags ...tag.Tag) {
-	fields := lg.buildFields(tags)
+	fields := lg.buildFieldsWithCallat(tags)
 	lg.zapLogger.Warn(msg, fields...)
 }
 
 func (lg *loggerImpl) Error(msg string, tags ...tag.Tag) {
-	fields := lg.buildFields(tags)
+	fields := lg.buildFieldsWithCallat(tags)
 	lg.zapLogger.Error(msg, fields...)
 }
 
 func (lg *loggerImpl) Fatal(msg string, tags ...tag.Tag) {
-	fields := lg.buildFields(tags)
+	fields := lg.buildFieldsWithCallat(tags)
 	lg.zapLogger.Fatal(msg, fields...)
 }
 
