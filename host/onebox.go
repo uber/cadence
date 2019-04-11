@@ -338,7 +338,9 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	c.frontEndService = service.New(params)
 	c.adminHandler = frontend.NewAdminHandler(
 		c.frontEndService, c.historyConfig.NumHistoryShards, c.metadataMgr, c.historyMgr, c.historyV2Mgr)
-	frontendConfig := frontend.NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, c.logger), false)
+	frontendConfig := frontend.NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, c.logger), false) // ycyang TODO: the false here should be read from c.enablevisibilitytokafka
+	// ycyang TODO: set config for enable read from es
+	// ycyang TODO: don't use c.visibilityMgr here, use a wrapper. see frontend/service.go L166. need esclient, esconfig
 	c.frontendHandler = frontend.NewWorkflowHandler(
 		c.frontEndService, frontendConfig, c.metadataMgr, c.historyMgr, c.historyV2Mgr,
 		c.visibilityMgr, kafkaProducer, params.BlobstoreClient)
@@ -459,6 +461,8 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 	clientWorkerDomainCache := cache.NewDomainCache(metadataProxyManager, params.ClusterMetadata, service.GetMetricsClient(), service.GetLogger())
 	clientWorkerDomainCache.Start()
 	c.startWorkerClientWorker(params, service, clientWorkerDomainCache)
+
+	// TODO start indexer here
 	c.initLock.Unlock()
 
 	startWG.Done()

@@ -113,7 +113,7 @@ func NewCluster(options *TestClusterConfig, logger bark.Logger) (*TestCluster, e
 		ClusterNo:               options.ClusterNo,
 		EnableWorker:            options.EnableWorker,
 		EnableEventsV2:          options.EnableEventsV2,
-		EnableVisibilityToKafka: false,
+		EnableVisibilityToKafka: false, // ycyang TODO: read this option from yaml
 		Blobstore:               blobstore.client,
 		HistoryConfig:           options.HistoryConfig,
 	}
