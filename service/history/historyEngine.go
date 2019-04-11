@@ -64,6 +64,7 @@ type (
 		historyMgr           persistence.HistoryManager
 		historyV2Mgr         persistence.HistoryV2Manager
 		executionManager     persistence.ExecutionManager
+		visibilityMgr        persistence.VisibilityManager
 		txProcessor          transferQueueProcessor
 		timerProcessor       timerQueueProcessor
 		taskAllocator        taskAllocator
@@ -165,6 +166,7 @@ func NewEngineWithShardContext(
 		historyMgr:         historyManager,
 		historyV2Mgr:       historyV2Manager,
 		executionManager:   executionManager,
+		visibilityMgr:      visibilityMgr,
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
 		historyCache:       historyCache,
 		logger: logger.WithFields(bark.Fields{
@@ -1127,9 +1129,16 @@ type decisionBlobSizeChecker struct {
 }
 
 func (c *decisionBlobSizeChecker) failWorkflowIfBlobSizeExceedsLimit(blob []byte, message string) (bool, error) {
-	err := common.CheckEventBlobSizeLimit(len(blob), c.sizeLimitWarn, c.sizeLimitError,
-		c.domainID, c.workflowID, c.runID, c.metricsClient, metrics.HistoryRespondDecisionTaskCompletedScope, c.logger)
-
+	err := common.CheckEventBlobSizeLimit(
+		len(blob),
+		c.sizeLimitWarn,
+		c.sizeLimitError,
+		c.domainID,
+		c.workflowID,
+		c.runID,
+		c.metricsClient.Scope(metrics.HistoryRespondDecisionTaskCompletedScope),
+		c.logger,
+	)
 	if err == nil {
 		return false, nil
 	}
@@ -2684,6 +2693,13 @@ func (e *historyEngineImpl) SyncActivity(ctx context.Context, request *h.SyncAct
 
 func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetRequest *h.ResetWorkflowExecutionRequest) (response *workflow.ResetWorkflowExecutionResponse, retError error) {
 	return e.resetor.ResetWorkflowExecution(ctx, resetRequest)
+}
+
+func (e *historyEngineImpl) DeleteExecutionFromVisibility(domainID string, runID string) error {
+	return e.visibilityMgr.DeleteWorkflowExecution(&persistence.VisibilityDeleteWorkflowExecutionRequest{
+		DomainID: domainID,
+		RunID:    runID,
+	})
 }
 
 type updateWorkflowAction struct {
