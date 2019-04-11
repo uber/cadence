@@ -61,9 +61,10 @@ that zombie history segments can remain under some rare failure cases. Consider 
 Under this rare case the section of parent history which was assumed to be common to child will be a zombie history section.
 
 */
-func DeleteWorkflowExecutionHistoryV2(historyV2Mgr HistoryV2Manager, branchToken []byte, logger bark.Logger) error {
+func DeleteWorkflowExecutionHistoryV2(historyV2Mgr HistoryV2Manager, branchToken []byte, shardID int, logger bark.Logger) error {
 	err := historyV2Mgr.DeleteHistoryBranch(&DeleteHistoryBranchRequest{
 		BranchToken: branchToken,
+		ShardID:     shardID,
 	})
 	if err == nil {
 		return nil
@@ -78,6 +79,7 @@ func DeleteWorkflowExecutionHistoryV2(historyV2Mgr HistoryV2Manager, branchToken
 
 	resp, err := historyV2Mgr.GetHistoryTree(&GetHistoryTreeRequest{
 		BranchToken: branchToken,
+		ShardID:     shardID,
 	})
 	if err != nil {
 		return err
@@ -101,6 +103,7 @@ func DeleteWorkflowExecutionHistoryV2(historyV2Mgr HistoryV2Manager, branchToken
 					// the worst case is we may leak some data that will never deleted
 					Success:     true,
 					BranchToken: bt,
+					ShardID:     shardID,
 				})
 				if err != nil {
 					return err
@@ -115,6 +118,7 @@ func DeleteWorkflowExecutionHistoryV2(historyV2Mgr HistoryV2Manager, branchToken
 	}
 	err = historyV2Mgr.DeleteHistoryBranch(&DeleteHistoryBranchRequest{
 		BranchToken: branchToken,
+		ShardID:     shardID,
 	})
 	return err
 }
@@ -139,6 +143,7 @@ func ReadFullPageV2Events(historyV2Mgr HistoryV2Manager, req *ReadHistoryBranchR
 	}
 }
 
+// GetBeginNodeID gets node id from last ancestor
 func GetBeginNodeID(bi shared.HistoryBranch) int64 {
 	if len(bi.Ancestors) == 0 {
 		// root branch

@@ -79,6 +79,7 @@ func (m *historyV2ManagerImpl) ForkHistoryBranch(request *ForkHistoryBranchReque
 		ForkNodeID:     request.ForkNodeID,
 		NewBranchID:    uuid.New(),
 		Info:           request.Info,
+		ShardID:        request.ShardID,
 	}
 
 	resp, err := m.persistence.ForkHistoryBranch(req)
@@ -106,6 +107,7 @@ func (m *historyV2ManagerImpl) DeleteHistoryBranch(request *DeleteHistoryBranchR
 
 	req := &InternalDeleteHistoryBranchRequest{
 		BranchInfo: branch,
+		ShardID:    request.ShardID,
 	}
 
 	return m.persistence.DeleteHistoryBranch(req)
@@ -122,6 +124,7 @@ func (m *historyV2ManagerImpl) CompleteForkBranch(request *CompleteForkBranchReq
 	req := &InternalCompleteForkBranchRequest{
 		BranchInfo: branch,
 		Success:    request.Success,
+		ShardID:    request.ShardID,
 	}
 
 	return m.persistence.CompleteForkBranch(req)
@@ -289,6 +292,7 @@ func (m *historyV2ManagerImpl) readHistoryBranch(byBatch bool, request *ReadHist
 		MaxNodeID:     maxNodeID,
 		PageSize:      request.PageSize,
 		NextPageToken: token.StoreToken,
+		ShardID:       request.ShardID,
 	}
 
 	resp, err := m.persistence.ReadHistoryBranch(req)

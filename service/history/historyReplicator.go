@@ -916,6 +916,7 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 		if msBuilder.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
 			r.shard.GetHistoryV2Manager().DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
 				BranchToken: msBuilder.GetCurrentBranch(),
+				ShardID:     r.shard.GetShardID(),
 			})
 		} else {
 			r.shard.GetHistoryManager().DeleteWorkflowExecutionHistory(&persistence.DeleteWorkflowExecutionHistoryRequest{

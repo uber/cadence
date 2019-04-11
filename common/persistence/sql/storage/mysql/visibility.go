@@ -86,6 +86,7 @@ func (mdb *DB) InsertIntoVisibility(row *sqldb.VisibilityRow) (sql.Result, error
 		row.WorkflowTypeName)
 }
 
+//ReplaceIntoVisibility replace a row into visibility table.
 func (mdb *DB) ReplaceIntoVisibility(row *sqldb.VisibilityRow) (sql.Result, error) {
 	switch {
 	case row.CloseStatus != nil && row.CloseTime != nil && row.HistoryLength != nil:

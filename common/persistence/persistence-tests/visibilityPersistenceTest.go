@@ -528,7 +528,7 @@ func (s *VisibilityPersistenceSuite) TestGetClosedExecution() {
 	s.assertClosedExecutionEquals(closeReq, resp.Execution)
 }
 
-// TestClosedWithoutStarted
+// TestClosedWithoutStarted tests calling close without calling start
 func (s *VisibilityPersistenceSuite) TestClosedWithoutStarted() {
 	testDomainUUID := uuid.New()
 	workflowExecution := gen.WorkflowExecution{
@@ -565,7 +565,7 @@ func (s *VisibilityPersistenceSuite) TestClosedWithoutStarted() {
 	s.assertClosedExecutionEquals(closeReq, resp.Execution)
 }
 
-// TestMultipleUpserts
+// TestMultipleUpserts test multiple upserts
 func (s *VisibilityPersistenceSuite) TestMultipleUpserts() {
 	testDomainUUID := uuid.New()
 

@@ -131,7 +131,7 @@ func GetMySQLPort() int {
 	return p
 }
 
-// GetKafkaAddr return the kafka address
+// GetKafkaAddress return the kafka address
 func GetKafkaAddress() string {
 	addr := os.Getenv(KafkaSeeds)
 	if addr == "" {
