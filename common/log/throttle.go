@@ -45,7 +45,7 @@ var _ Logger = (*throttledLogger)(nil)
 
 const skipForThrottleLogger = 4
 
-// NewThrottledLogger returns an implementation of bark logger that throttles the
+// NewThrottledLogger returns an implementation of logger that throttles the
 // log messages being emitted. The underlying implementation uses a token bucket
 // ratelimiter and stops emitting logs once the bucket runs out of tokens
 //
