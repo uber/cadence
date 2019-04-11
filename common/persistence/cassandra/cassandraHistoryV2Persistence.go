@@ -161,7 +161,6 @@ func (h *cassandraHistoryV2Persistence) ReadHistoryBranch(request *p.InternalRea
 			Message: "ReadHistoryBranch operation failed.  Not able to create query iterator.",
 		}
 	}
-
 	pagingToken := iter.PageState()
 
 	history := make([]*p.DataBlob, 0, int(request.PageSize))
