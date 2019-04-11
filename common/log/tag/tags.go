@@ -53,12 +53,12 @@ func Timestamp(timestamp time.Time) Tag {
 ///////////////////  Workflow tags defined here: ( wf is short for workflow) ///////////////////
 
 // WorkflowAction returns tag for WorkflowAction
-func WorkflowAction(action valueTypeWorkflowAction) Tag {
+func workflowAction(action valueTypeWorkflowAction) Tag {
 	return newPredefinedStringTag("wf-action", string(action))
 }
 
 // WorkflowListFilterType returns tag for WorkflowListFilterType
-func WorkflowListFilterType(listFilterType valueTypeWorkflowListFilterType) Tag {
+func workflowListFilterType(listFilterType valueTypeWorkflowListFilterType) Tag {
 	return newPredefinedStringTag("wf-list-filter-type", string(listFilterType))
 }
 
@@ -226,32 +226,32 @@ func WorkflowEventCount(eventCount int64) Tag {
 // Tags with pre-define values
 
 // Component returns tag for Component
-func Component(component valueTypeSysComponent) Tag {
+func component(component valueTypeSysComponent) Tag {
 	return newPredefinedStringTag("component", string(component))
 }
 
 // Lifecycle returns tag for Lifecycle
-func Lifecycle(lifecycle valueTypeSysLifecycle) Tag {
+func lifecycle(lifecycle valueTypeSysLifecycle) Tag {
 	return newPredefinedStringTag("lifecycle", string(lifecycle))
 }
 
 // StoreOperation returns tag for StoreOperation
-func StoreOperation(storeOperation valueTypeSysStoreOperation) Tag {
+func storeOperation(storeOperation valueTypeSysStoreOperation) Tag {
 	return newPredefinedStringTag("store-operation", string(storeOperation))
 }
 
 // OperationResult returns tag for OperationResult
-func OperationResult(operationResult valueTypeSysOperationResult) Tag {
+func operationResult(operationResult valueTypeSysOperationResult) Tag {
 	return newPredefinedStringTag("operation-result", string(operationResult))
 }
 
 // ErrorType returns tag for ErrorType
-func ErrorType(errorType valueTypeSysErrorType) Tag {
+func errorType(errorType valueTypeSysErrorType) Tag {
 	return newPredefinedStringTag("error", string(errorType))
 }
 
 // Shardupdate returns tag for Shardupdate
-func Shardupdate(shardupdate valueTypeSysShardUpdate) Tag {
+func shardupdate(shardupdate valueTypeSysShardUpdate) Tag {
 	return newPredefinedStringTag("shard-update", string(shardupdate))
 }
 

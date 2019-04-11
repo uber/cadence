@@ -57,7 +57,7 @@ func TestDefaultLogger(t *testing.T) {
 
 	logger := NewLogger(zapLogger)
 	preCaller := caller(1)
-	logger.WithTags(tag.Error(fmt.Errorf("test error"))).Info("test info", tag.WorkflowAction(tag.ValueActionActivityTaskCanceled))
+	logger.WithTags(tag.Error(fmt.Errorf("test error"))).Info("test info", tag.ValueActionActivityTaskCanceled)
 
 	// back to normal state
 	w.Close()
@@ -91,7 +91,7 @@ func TestThrottleLogger(t *testing.T) {
 	cln := dynamicconfig.NewCollection(dc, bark.NewLoggerFromLogrus(logrus.New()))
 	logger := NewThrottledLogger(zapLogger, cln.GetIntProperty(dynamicconfig.FrontendRPS, 1))
 	preCaller := caller(1)
-	logger.WithTags(tag.Error(fmt.Errorf("test error"))).Info("test info", tag.WorkflowAction(tag.ValueActionActivityTaskCanceled))
+	logger.WithTags(tag.Error(fmt.Errorf("test error"))).Info("test info", tag.ValueActionActivityTaskCanceled)
 
 	// back to normal state
 	w.Close()

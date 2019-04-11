@@ -21,132 +21,132 @@
 package tag
 
 // Pre-defined values for TagWorkflowAction
-const (
-	ValueActionWorkflowStarted                 valueTypeWorkflowAction = "add-workflowexecution-started-event"
-	ValueActionDecisionTaskScheduled           valueTypeWorkflowAction = "add-decisiontask-scheduled-event"
-	ValueActionDecisionTaskStarted             valueTypeWorkflowAction = "add-decisiontask-started-event"
-	ValueActionDecisionTaskCompleted           valueTypeWorkflowAction = "add-decisiontask-completed-event"
-	ValueActionDecisionTaskTimedOut            valueTypeWorkflowAction = "add-decisiontask-timedout-event"
-	ValueActionDecisionTaskFailed              valueTypeWorkflowAction = "add-decisiontask-failed-event"
-	ValueActionActivityTaskScheduled           valueTypeWorkflowAction = "add-activitytask-scheduled-event"
-	ValueActionActivityTaskStarted             valueTypeWorkflowAction = "add-activitytask-started-event"
-	ValueActionActivityTaskCompleted           valueTypeWorkflowAction = "add-activitytask-completed-event"
-	ValueActionActivityTaskFailed              valueTypeWorkflowAction = "add-activitytask-failed-event"
-	ValueActionActivityTaskTimedOut            valueTypeWorkflowAction = "add-activitytask-timed-event"
-	ValueActionActivityTaskCanceled            valueTypeWorkflowAction = "add-activitytask-canceled-event"
-	ValueActionActivityTaskCancelRequest       valueTypeWorkflowAction = "add-activitytask-cancel-request-event"
-	ValueActionActivityTaskCancelRequestFailed valueTypeWorkflowAction = "add-activitytask-cancel-request-failed-event"
-	ValueActionCompleteWorkflow                valueTypeWorkflowAction = "add-complete-workflow-event"
-	ValueActionFailWorkflow                    valueTypeWorkflowAction = "add-fail-workflow-event"
-	ValueActionTimeoutWorkflow                 valueTypeWorkflowAction = "add-timeout-workflow-event"
-	ValueActionCancelWorkflow                  valueTypeWorkflowAction = "add-cancel-workflow-event"
-	ValueActionTimerStarted                    valueTypeWorkflowAction = "add-timer-started-event"
-	ValueActionTimerFired                      valueTypeWorkflowAction = "add-timer-fired-event"
-	ValueActionTimerCanceled                   valueTypeWorkflowAction = "add-timer-Canceled-event"
-	ValueActionWorkflowTerminated              valueTypeWorkflowAction = "add-workflowexecution-terminated-event"
-	ValueActionWorkflowSignaled                valueTypeWorkflowAction = "add-workflowexecution-signaled-event"
-	ValueActionContinueAsNew                   valueTypeWorkflowAction = "add-continue-as-new-event"
-	ValueActionWorkflowCanceled                valueTypeWorkflowAction = "add-workflowexecution-canceled-event"
-	ValueActionChildExecutionStarted           valueTypeWorkflowAction = "add-childexecution-started-event"
-	ValueActionStartChildExecutionFailed       valueTypeWorkflowAction = "add-start-childexecution-failed-event"
-	ValueActionChildExecutionCompleted         valueTypeWorkflowAction = "add-childexecution-completed-event"
-	ValueActionChildExecutionFailed            valueTypeWorkflowAction = "add-childexecution-failed-event"
-	ValueActionChildExecutionCanceled          valueTypeWorkflowAction = "add-childexecution-canceled-event"
-	ValueActionChildExecutionTerminated        valueTypeWorkflowAction = "add-childexecution-terminated-event"
-	ValueActionChildExecutionTimedOut          valueTypeWorkflowAction = "add-childexecution-timedout-event"
-	ValueActionRequestCancelWorkflow           valueTypeWorkflowAction = "add-request-cancel-workflow-event"
-	ValueActionWorkflowCancelRequested         valueTypeWorkflowAction = "add-workflow-execution-cancel-requested-event"
-	ValueActionWorkflowCancelFailed            valueTypeWorkflowAction = "add-workflow-execution-cancel-failed-event"
-	ValueActionWorkflowSignalRequested         valueTypeWorkflowAction = "add-workflow-execution-signal-requested-event"
-	ValueActionWorkflowSignalFailed            valueTypeWorkflowAction = "add-workflow-execution-signal-failed-event"
-	ValueActionUnknownEvent                    valueTypeWorkflowAction = "add-unknown-event"
+var (
+	ValueActionWorkflowStarted                 = workflowAction("add-workflowexecution-started-event")
+	ValueActionDecisionTaskScheduled           = workflowAction("add-decisiontask-scheduled-event")
+	ValueActionDecisionTaskStarted             = workflowAction("add-decisiontask-started-event")
+	ValueActionDecisionTaskCompleted           = workflowAction("add-decisiontask-completed-event")
+	ValueActionDecisionTaskTimedOut            = workflowAction("add-decisiontask-timedout-event")
+	ValueActionDecisionTaskFailed              = workflowAction("add-decisiontask-failed-event")
+	ValueActionActivityTaskScheduled           = workflowAction("add-activitytask-scheduled-event")
+	ValueActionActivityTaskStarted             = workflowAction("add-activitytask-started-event")
+	ValueActionActivityTaskCompleted           = workflowAction("add-activitytask-completed-event")
+	ValueActionActivityTaskFailed              = workflowAction("add-activitytask-failed-event")
+	ValueActionActivityTaskTimedOut            = workflowAction("add-activitytask-timed-event")
+	ValueActionActivityTaskCanceled            = workflowAction("add-activitytask-canceled-event")
+	ValueActionActivityTaskCancelRequest       = workflowAction("add-activitytask-cancel-request-event")
+	ValueActionActivityTaskCancelRequestFailed = workflowAction("add-activitytask-cancel-request-failed-event")
+	ValueActionCompleteWorkflow                = workflowAction("add-complete-workflow-event")
+	ValueActionFailWorkflow                    = workflowAction("add-fail-workflow-event")
+	ValueActionTimeoutWorkflow                 = workflowAction("add-timeout-workflow-event")
+	ValueActionCancelWorkflow                  = workflowAction("add-cancel-workflow-event")
+	ValueActionTimerStarted                    = workflowAction("add-timer-started-event")
+	ValueActionTimerFired                      = workflowAction("add-timer-fired-event")
+	ValueActionTimerCanceled                   = workflowAction("add-timer-Canceled-event")
+	ValueActionWorkflowTerminated              = workflowAction("add-workflowexecution-terminated-event")
+	ValueActionWorkflowSignaled                = workflowAction("add-workflowexecution-signaled-event")
+	ValueActionContinueAsNew                   = workflowAction("add-continue-as-new-event")
+	ValueActionWorkflowCanceled                = workflowAction("add-workflowexecution-canceled-event")
+	ValueActionChildExecutionStarted           = workflowAction("add-childexecution-started-event")
+	ValueActionStartChildExecutionFailed       = workflowAction("add-start-childexecution-failed-event")
+	ValueActionChildExecutionCompleted         = workflowAction("add-childexecution-completed-event")
+	ValueActionChildExecutionFailed            = workflowAction("add-childexecution-failed-event")
+	ValueActionChildExecutionCanceled          = workflowAction("add-childexecution-canceled-event")
+	ValueActionChildExecutionTerminated        = workflowAction("add-childexecution-terminated-event")
+	ValueActionChildExecutionTimedOut          = workflowAction("add-childexecution-timedout-event")
+	ValueActionRequestCancelWorkflow           = workflowAction("add-request-cancel-workflow-event")
+	ValueActionWorkflowCancelRequested         = workflowAction("add-workflow-execution-cancel-requested-event")
+	ValueActionWorkflowCancelFailed            = workflowAction("add-workflow-execution-cancel-failed-event")
+	ValueActionWorkflowSignalRequested         = workflowAction("add-workflow-execution-signal-requested-event")
+	ValueActionWorkflowSignalFailed            = workflowAction("add-workflow-execution-signal-failed-event")
+	ValueActionUnknownEvent                    = workflowAction("add-unknown-event")
 )
 
 // Pre-defined values for TagWorkflowListFilterType
-const (
-	ValueListWorkflowFilterByID     valueTypeWorkflowListFilterType = "WID"
-	ValueListWorkflowFilterByType   valueTypeWorkflowListFilterType = "WType"
-	ValueListWorkflowFilterByStatus valueTypeWorkflowListFilterType = "status"
+var (
+	ValueListWorkflowFilterByID     = workflowListFilterType("WID")
+	ValueListWorkflowFilterByType   = workflowListFilterType("WType")
+	ValueListWorkflowFilterByStatus = workflowListFilterType("status")
 )
 
 // Pre-defined values for TagSysComponent
-const (
-	ValueComponentTaskList                 valueTypeSysComponent = "tasklist"
-	ValueComponentHistoryBuilder           valueTypeSysComponent = "history-builder"
-	ValueComponentHistoryEngine            valueTypeSysComponent = "history-engine"
-	ValueComponentHistoryCache             valueTypeSysComponent = "history-cache"
-	ValueComponentEventsCache              valueTypeSysComponent = "events-cache"
-	ValueComponentTransferQueue            valueTypeSysComponent = "transfer-queue-processor"
-	ValueComponentTimerQueue               valueTypeSysComponent = "timer-queue-processor"
-	ValueComponentReplicatorQueue          valueTypeSysComponent = "replicator-queue-processor"
-	ValueComponentShardController          valueTypeSysComponent = "shard-controller"
-	ValueComponentShard                    valueTypeSysComponent = "shard"
-	ValueComponentShardItem                valueTypeSysComponent = "shard-item"
-	ValueComponentShardEngine              valueTypeSysComponent = "shard-engine"
-	ValueComponentMatchingEngine           valueTypeSysComponent = "matching-engine"
-	ValueComponentReplicator               valueTypeSysComponent = "replicator"
-	ValueComponentReplicationTaskProcessor valueTypeSysComponent = "replication-task-processor"
-	ValueComponentHistoryReplicator        valueTypeSysComponent = "history-replicator"
-	ValueComponentIndexer                  valueTypeSysComponent = "indexer"
-	ValueComponentIndexerProcessor         valueTypeSysComponent = "indexer-processor"
-	ValueComponentIndexerESProcessor       valueTypeSysComponent = "indexer-es-processor"
-	ValueComponentESVisibilityManager      valueTypeSysComponent = "es-visibility-manager"
-	ValueComponentArchiver                 valueTypeSysComponent = "archiver"
+var (
+	ValueComponentTaskList                 = component("tasklist")
+	ValueComponentHistoryBuilder           = component("history-builder")
+	ValueComponentHistoryEngine            = component("history-engine")
+	ValueComponentHistoryCache             = component("history-cache")
+	ValueComponentEventsCache              = component("events-cache")
+	ValueComponentTransferQueue            = component("transfer-queue-processor")
+	ValueComponentTimerQueue               = component("timer-queue-processor")
+	ValueComponentReplicatorQueue          = component("replicator-queue-processor")
+	ValueComponentShardController          = component("shard-controller")
+	ValueComponentShard                    = component("shard")
+	ValueComponentShardItem                = component("shard-item")
+	ValueComponentShardEngine              = component("shard-engine")
+	ValueComponentMatchingEngine           = component("matching-engine")
+	ValueComponentReplicator               = component("replicator")
+	ValueComponentReplicationTaskProcessor = component("replication-task-processor")
+	ValueComponentHistoryReplicator        = component("history-replicator")
+	ValueComponentIndexer                  = component("indexer")
+	ValueComponentIndexerProcessor         = component("indexer-processor")
+	ValueComponentIndexerESProcessor       = component("indexer-es-processor")
+	ValueComponentESVisibilityManager      = component("es-visibility-manager")
+	ValueComponentArchiver                 = component("archiver")
 )
 
 // Pre-defined values for TagSysLifecycle
-const (
-	ValueLifeCycleStarting         valueTypeSysLifecycle = "Starting"
-	ValueLifeCycleStarted          valueTypeSysLifecycle = "Started"
-	ValueLifeCycleStopping         valueTypeSysLifecycle = "Stopping"
-	ValueLifeCycleStopped          valueTypeSysLifecycle = "Stopped"
-	ValueLifeCycleStopTimedout     valueTypeSysLifecycle = "StopTimedout"
-	ValueLifeCycleStartFailed      valueTypeSysLifecycle = "StartFailed"
-	ValueLifeCycleStopFailed       valueTypeSysLifecycle = "StopFailed"
-	ValueLifeCycleProcessingFailed valueTypeSysLifecycle = "ProcessingFailed"
+var (
+	ValueLifeCycleStarting         = lifecycle("Starting")
+	ValueLifeCycleStarted          = lifecycle("Started")
+	ValueLifeCycleStopping         = lifecycle("Stopping")
+	ValueLifeCycleStopped          = lifecycle("Stopped")
+	ValueLifeCycleStopTimedout     = lifecycle("StopTimedout")
+	ValueLifeCycleStartFailed      = lifecycle("StartFailed")
+	ValueLifeCycleStopFailed       = lifecycle("StopFailed")
+	ValueLifeCycleProcessingFailed = lifecycle("ProcessingFailed")
 )
 
 // Pre-defined values for SysErrorType
-const (
-	ValueInvalidHistoryAction        valueTypeSysErrorType = "InvalidHistoryAction"
-	ValueInvalidQueryTask            valueTypeSysErrorType = "InvalidQueryTask"
-	ValueQueryTaskFailed             valueTypeSysErrorType = "QueryTaskFailed"
-	ValuePersistentStoreError        valueTypeSysErrorType = "PersistentStoreError"
-	ValueHistorySerializationError   valueTypeSysErrorType = "HistorySerializationError"
-	ValueHistoryDeserializationError valueTypeSysErrorType = "HistoryDeserializationError"
-	ValueDuplicateTask               valueTypeSysErrorType = "DuplicateTask"
-	ValueMultipleCompletionDecisions valueTypeSysErrorType = "MultipleCompletionDecisions"
-	ValueDuplicateTransferTask       valueTypeSysErrorType = "DuplicateTransferTask"
-	ValueDecisionFailed              valueTypeSysErrorType = "DecisionFailed"
-	ValueInvalidMutableStateAction   valueTypeSysErrorType = "InvalidMutableStateAction"
+var (
+	ValueInvalidHistoryAction        = errorType("InvalidHistoryAction")
+	ValueInvalidQueryTask            = errorType("InvalidQueryTask")
+	ValueQueryTaskFailed             = errorType("QueryTaskFailed")
+	ValuePersistentStoreError        = errorType("PersistentStoreError")
+	ValueHistorySerializationError   = errorType("HistorySerializationError")
+	ValueHistoryDeserializationError = errorType("HistoryDeserializationError")
+	ValueDuplicateTask               = errorType("DuplicateTask")
+	ValueMultipleCompletionDecisions = errorType("MultipleCompletionDecisions")
+	ValueDuplicateTransferTask       = errorType("DuplicateTransferTask")
+	ValueDecisionFailed              = errorType("DecisionFailed")
+	ValueInvalidMutableStateAction   = errorType("InvalidMutableStateAction")
 )
 
 // Pre-defined values for SysShardUpdate
-const (
+var (
 	// Shard context events
-	ValueShardRangeUpdated            valueTypeSysShardUpdate = "ShardRangeUpdated"
-	ValueShardAllocateTimerBeforeRead valueTypeSysShardUpdate = "ShardAllocateTimerBeforeRead"
-	ValueRingMembershipChangedEvent   valueTypeSysShardUpdate = "RingMembershipChangedEvent"
+	ValueShardRangeUpdated            = shardupdate("ShardRangeUpdated")
+	ValueShardAllocateTimerBeforeRead = shardupdate("ShardAllocateTimerBeforeRead")
+	ValueRingMembershipChangedEvent   = shardupdate("RingMembershipChangedEvent")
 )
 
 // Pre-defined values for OperationResult
-const (
-	ValueSysOperationFailed   valueTypeSysOperationResult = "OperationFailed"
-	ValueSysOperationStuck    valueTypeSysOperationResult = "OperationStuck"
-	ValueSysOperationCritical valueTypeSysOperationResult = "OperationCritical"
+var (
+	ValueSysOperationFailed   = operationResult("OperationFailed")
+	ValueSysOperationStuck    = operationResult("OperationStuck")
+	ValueSysOperationCritical = operationResult("OperationCritical")
 )
 
 // Pre-defined values for TagSysStoreOperation
-const (
-	ValueStoreOperationGetTasks                valueTypeSysStoreOperation = "get-tasks"
-	ValueStoreOperationCompleteTask            valueTypeSysStoreOperation = "complete-task"
-	ValueStoreOperationCompleteTasksLessThan   valueTypeSysStoreOperation = "complete-tasks-less-than"
-	ValueStoreOperationCreateWorkflowExecution valueTypeSysStoreOperation = "create-wf-execution"
-	ValueStoreOperationGetWorkflowExecution    valueTypeSysStoreOperation = "get-wf-execution"
-	ValueStoreOperationUpdateWorkflowExecution valueTypeSysStoreOperation = "update-wf-execution"
-	ValueStoreOperationDeleteWorkflowExecution valueTypeSysStoreOperation = "delete-wf-execution"
-	ValueStoreOperationUpdateShard             valueTypeSysStoreOperation = "update-shard"
-	ValueStoreOperationCreateTask              valueTypeSysStoreOperation = "create-task"
-	ValueStoreOperationUpdateTaskList          valueTypeSysStoreOperation = "update-task-list"
-	ValueStoreOperationStopTaskList            valueTypeSysStoreOperation = "stop-task-list"
+var (
+	ValueStoreOperationGetTasks                = storeOperation("get-tasks")
+	ValueStoreOperationCompleteTask            = storeOperation("complete-task")
+	ValueStoreOperationCompleteTasksLessThan   = storeOperation("complete-tasks-less-than")
+	ValueStoreOperationCreateWorkflowExecution = storeOperation("create-wf-execution")
+	ValueStoreOperationGetWorkflowExecution    = storeOperation("get-wf-execution")
+	ValueStoreOperationUpdateWorkflowExecution = storeOperation("update-wf-execution")
+	ValueStoreOperationDeleteWorkflowExecution = storeOperation("delete-wf-execution")
+	ValueStoreOperationUpdateShard             = storeOperation("update-shard")
+	ValueStoreOperationCreateTask              = storeOperation("create-task")
+	ValueStoreOperationUpdateTaskList          = storeOperation("update-task-list")
+	ValueStoreOperationStopTaskList            = storeOperation("stop-task-list")
 )
