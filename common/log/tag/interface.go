@@ -19,6 +19,8 @@ type Tag interface {
 	GetObject() interface{}
 }
 
+var _ Tag = (*tagImpl)(nil)
+
 // the tag value types supported
 const (
 	// ValueTypeString is string value type
