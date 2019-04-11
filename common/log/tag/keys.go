@@ -34,6 +34,7 @@ import (
 //   2. System : these tags are internal information which usually cannot be understood by our customers,
 
 ///////////////////  Common tags defined here ///////////////////
+
 // Error returns tag for Error
 func Error(err error) Tag {
 	return newErrorTag("error", err)
@@ -50,6 +51,7 @@ func Timestamp(timestamp time.Time) Tag {
 }
 
 ///////////////////  Workflow tags defined here: ( wf is short for workflow) ///////////////////
+
 // WorkflowAction returns tag for WorkflowAction
 func WorkflowAction(action valueTypeWorkflowAction) Tag {
 	return newPredefinedStringTag("wf-action", string(action))
@@ -61,6 +63,7 @@ func WorkflowListFilterType(listFilterType valueTypeWorkflowListFilterType) Tag 
 }
 
 // general
+
 // WorkflowError returns tag for WorkflowError
 func WorkflowError(error error) Tag { return newErrorTag("wf-error", error) }
 
@@ -105,6 +108,7 @@ func WorkflowEndingRunID(endingRunID string) Tag {
 }
 
 // domain related
+
 // WorkflowDomainID returns tag for WorkflowDomainID
 func WorkflowDomainID(domainID string) Tag {
 	return newStringTag("wf-domain-id", domainID)
@@ -121,6 +125,7 @@ func WorkflowDomainIDs(domainIDs []string) Tag {
 }
 
 // history event ID related
+
 // WorkflowEventID returns tag for WorkflowEventID
 func WorkflowEventID(eventID int64) Tag {
 	return newIntegerTag("wf-history-event-id", eventID)
@@ -157,6 +162,7 @@ func WorkflowResetNextEventID(resetNextEventID int64) Tag {
 }
 
 // history tree
+
 // WorkflowTreeID returns tag for WorkflowTreeID
 func WorkflowTreeID(treeID string) Tag {
 	return newStringTag("wf-tree-id", treeID)
@@ -168,6 +174,7 @@ func WorkflowBranchID(branchID string) Tag {
 }
 
 // workflow task
+
 // WorkflowDecisionType returns tag for WorkflowDecisionType
 func WorkflowDecisionType(decisionType int64) Tag {
 	return newIntegerTag("wf-decision-type", decisionType)
@@ -189,6 +196,7 @@ func WorkflowTaskListName(taskListName string) Tag {
 }
 
 // size limit
+
 // WorkflowSize returns tag for WorkflowSize
 func WorkflowSize(workflowSize int64) Tag {
 	return newIntegerTag("wf-size", workflowSize)
@@ -216,6 +224,7 @@ func WorkflowEventCount(eventCount int64) Tag {
 
 ///////////////////  System tags defined here:  ///////////////////
 // Tags with pre-define values
+
 // Component returns tag for Component
 func Component(component valueTypeSysComponent) Tag {
 	return newPredefinedStringTag("component", string(component))
@@ -247,6 +256,7 @@ func Shardupdate(shardupdate valueTypeSysShardUpdate) Tag {
 }
 
 // general
+
 // CursorTimestamp returns tag for CursorTimestamp
 func CursorTimestamp(timestamp time.Time) Tag {
 	return newTimeTag("cursor-timestamp", timestamp)
@@ -258,6 +268,7 @@ func MetricScope(metricScope int64) Tag {
 }
 
 // history engine shard
+
 // ShardID returns tag for ShardID
 func ShardID(shardID int64) Tag {
 	return newIntegerTag("shard-id", shardID)
@@ -284,6 +295,7 @@ func ShardTimerAcks(shardTimerAcks int64) Tag {
 }
 
 // task queue processor
+
 // TaskID returns tag for TaskID
 func TaskID(taskID int64) Tag {
 	return newIntegerTag("queue-task-id", taskID)
@@ -300,6 +312,7 @@ func TimerTaskStatus(timerTaskStatus int64) Tag {
 }
 
 // retry
+
 // Attempt returns tag for Attempt
 func Attempt(attempt int64) Tag {
 	return newIntegerTag("attempt", attempt)
@@ -326,6 +339,7 @@ func ScheduleAttempt(scheduleAttempt int64) Tag {
 }
 
 // ElastiSearch
+
 // ESRequest returns tag for ESRequest
 func ESRequest(ESRequest string) Tag {
 	return newStringTag("es-request", ESRequest)
@@ -341,29 +355,30 @@ func ESField(ESField string) Tag {
 	return newStringTag("es-field", ESField)
 }
 
-// CallAt returns a tag for LoggingError
+// LoggingCallAt returns a tag for LoggingError
 func LoggingCallAt(position string) Tag {
 	return newStringTag("logging-call-at", position)
 }
 
 // Kafka related
+
 // KafkaTopicName returns tag for TopicName
 func KafkaTopicName(topicName string) Tag {
 	return newStringTag("kafka-topic-name", topicName)
 }
 
 // KafkaConsumerName returns tag for ConsumerName
-func ConsumerName(consumerName string) Tag {
+func KafkaConsumerName(consumerName string) Tag {
 	return newStringTag("kafka-consumer-name", consumerName)
 }
 
 // KafkaPartition returns tag for Partition
-func Partition(partition int64) Tag {
+func KafkaPartition(partition int64) Tag {
 	return newIntegerTag("kafka-partition", partition)
 }
 
 // KafkaPartitionKey returns tag for PartitionKey
-func PartitionKey(partitionKey interface{}) Tag {
+func KafkaPartitionKey(partitionKey interface{}) Tag {
 	return newObjectTag("kafka-partition-key", partitionKey)
 }
 
@@ -373,6 +388,7 @@ func KafkaOffset(offset int64) Tag {
 }
 
 ///////////////////  XDC tags defined here: xdc- ///////////////////
+
 // SourceCluster returns tag for SourceCluster
 func SourceCluster(sourceCluster string) Tag {
 	return newStringTag("source-cluster", sourceCluster)
@@ -415,6 +431,7 @@ func ReplicationState(replicationState *persistence.ReplicationState) Tag {
 
 ///////////////////  Archival tags defined here: archival- ///////////////////
 // archival request tags
+
 // ArchivalRequestDomainID returns tag for RequestDomainID
 func ArchivalRequestDomainID(requestDomainID string) Tag {
 	return newStringTag("archival-request-domain-id", requestDomainID)
@@ -451,8 +468,9 @@ func ArchivalRequestCloseFailoverVersion(requestCloseFailoverVersion int64) Tag 
 }
 
 // archival tags (blob tags)
+
 // ArchivalBucket returns tag for Bucket
-func ArchivalArchivalBucket(bucket string) Tag {
+func ArchivalBucket(bucket string) Tag {
 	return newStringTag("archival-bucket", bucket)
 }
 
@@ -462,8 +480,9 @@ func ArchivalBlobKey(blobKey string) Tag {
 }
 
 // archival tags (file blobstore tags)
+
 // ArchivalFileBlobstoreBlobPath returns tag for FileBlobstoreBlobPath
-func ArchivalArchivalFileBlobstoreBlobPath(fileBlobstoreBlobPath string) Tag {
+func ArchivalFileBlobstoreBlobPath(fileBlobstoreBlobPath string) Tag {
 	return newStringTag("archival-file-blobstore-blob-path", fileBlobstoreBlobPath)
 }
 
