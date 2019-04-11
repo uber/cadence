@@ -53,13 +53,13 @@ func Timestamp(timestamp time.Time) Tag {
 ///////////////////  Workflow tags defined here: ( wf is short for workflow) ///////////////////
 
 // WorkflowAction returns tag for WorkflowAction
-func workflowAction(action valueTypeWorkflowAction) Tag {
-	return newPredefinedStringTag("wf-action", string(action))
+func workflowAction(action string) Tag {
+	return newPredefinedStringTag("wf-action", action)
 }
 
 // WorkflowListFilterType returns tag for WorkflowListFilterType
-func workflowListFilterType(listFilterType valueTypeWorkflowListFilterType) Tag {
-	return newPredefinedStringTag("wf-list-filter-type", string(listFilterType))
+func workflowListFilterType(listFilterType string) Tag {
+	return newPredefinedStringTag("wf-list-filter-type", listFilterType)
 }
 
 // general
@@ -226,33 +226,33 @@ func WorkflowEventCount(eventCount int64) Tag {
 // Tags with pre-define values
 
 // Component returns tag for Component
-func component(component valueTypeSysComponent) Tag {
-	return newPredefinedStringTag("component", string(component))
+func component(component string) Tag {
+	return newPredefinedStringTag("component", component)
 }
 
 // Lifecycle returns tag for Lifecycle
-func lifecycle(lifecycle valueTypeSysLifecycle) Tag {
-	return newPredefinedStringTag("lifecycle", string(lifecycle))
+func lifecycle(lifecycle string) Tag {
+	return newPredefinedStringTag("lifecycle", lifecycle)
 }
 
 // StoreOperation returns tag for StoreOperation
-func storeOperation(storeOperation valueTypeSysStoreOperation) Tag {
-	return newPredefinedStringTag("store-operation", string(storeOperation))
+func storeOperation(storeOperation string) Tag {
+	return newPredefinedStringTag("store-operation", storeOperation)
 }
 
 // OperationResult returns tag for OperationResult
-func operationResult(operationResult valueTypeSysOperationResult) Tag {
-	return newPredefinedStringTag("operation-result", string(operationResult))
+func operationResult(operationResult string) Tag {
+	return newPredefinedStringTag("operation-result", operationResult)
 }
 
 // ErrorType returns tag for ErrorType
-func errorType(errorType valueTypeSysErrorType) Tag {
-	return newPredefinedStringTag("error", string(errorType))
+func errorType(errorType string) Tag {
+	return newPredefinedStringTag("error", errorType)
 }
 
 // Shardupdate returns tag for Shardupdate
-func shardupdate(shardupdate valueTypeSysShardUpdate) Tag {
-	return newPredefinedStringTag("shard-update", string(shardupdate))
+func shardupdate(shardupdate string) Tag {
+	return newPredefinedStringTag("shard-update", shardupdate)
 }
 
 // general

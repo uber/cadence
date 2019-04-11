@@ -61,16 +61,6 @@ const (
 	ValueTypeObject valueTypeEnum = 8
 )
 
-// predefined tag values are using module private types, their values are public, defined in values.go
-type valueTypeWorkflowAction string
-type valueTypeWorkflowListFilterType string
-type valueTypeSysComponent string
-type valueTypeSysLifecycle string
-type valueTypeSysErrorType string
-type valueTypeSysShardUpdate string
-type valueTypeSysOperationResult string
-type valueTypeSysStoreOperation string
-
 // keep this module private
 type valueTypeEnum int
 
