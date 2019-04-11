@@ -97,7 +97,7 @@ func (tl *throttledLogger) Fatal(msg string, tags ...tag.Tag) {
 }
 
 // Return a logger with the specified key-value pairs set, to be included in a subsequent normal logging call
-func (tl *throttledLogger) WithFields(tags ...tag.Tag) Logger {
+func (tl *throttledLogger) WithTags(tags ...tag.Tag) Logger {
 	fields := tl.log.buildFields(tags)
 	zapLogger := tl.log.zapLogger.With(fields...)
 
