@@ -106,6 +106,7 @@ type (
 		taskListID    *taskListID
 		logger        bark.Logger
 		metricsClient metrics.Client
+		scope         metrics.Scope // domain tagged metric scope
 		engine        *matchingEngineImpl
 		config        *taskListConfig
 
@@ -241,6 +242,7 @@ func newTaskListManagerWithRateLimiter(
 	if taskListKind == nil {
 		taskListKind = common.TaskListKindPtr(s.TaskListKindNormal)
 	}
+
 	db := newTaskListDB(e.taskManager, taskList.domainID, taskList.taskListName, taskList.taskType, int(*taskListKind), e.logger)
 	tlMgr := &taskListManagerImpl{
 		domainCache:             domainCache,
@@ -257,6 +259,7 @@ func newTaskListManagerWithRateLimiter(
 			logging.TagTaskListName: taskList.taskListName,
 		}),
 		metricsClient:       e.metricsClient,
+		scope:               domainTaggedMetricScope(e.domainCache, taskList.domainID, e.metricsClient, metrics.MatchingTaskListMgrScope),
 		db:                  db,
 		taskAckManager:      newAckManager(e.logger),
 		taskGC:              newTaskGC(db, config),
@@ -461,16 +464,21 @@ func (c *taskListManagerImpl) getTask(ctx context.Context) (*getTaskResult, erro
 	case result := <-tasksForPoll:
 		if result.syncMatch {
 			c.metricsClient.IncCounter(scope, metrics.PollSuccessWithSyncCounter)
+			c.scope.IncCounter(metrics.PollSuccessWithSyncCounter)
 		}
+		c.scope.IncCounter(metrics.PollSuccessCounter)
 		c.metricsClient.IncCounter(scope, metrics.PollSuccessCounter)
 		return result, nil
 	case result := <-c.queryTasksForPoll:
 		if result.syncMatch {
+			c.scope.IncCounter(metrics.PollSuccessWithSyncCounter)
 			c.metricsClient.IncCounter(scope, metrics.PollSuccessWithSyncCounter)
 		}
+		c.scope.IncCounter(metrics.PollSuccessCounter)
 		c.metricsClient.IncCounter(scope, metrics.PollSuccessCounter)
 		return result, nil
 	case <-childCtx.Done():
+		c.scope.IncCounter(metrics.PollTimeoutCounter)
 		c.metricsClient.IncCounter(scope, metrics.PollTimeoutCounter)
 		return nil, ErrNoTasks
 	}
@@ -571,6 +579,7 @@ func (c *taskListManagerImpl) DescribeTaskList(includeTaskListStatus bool) *s.De
 		ReadLevel:        common.Int64Ptr(c.taskAckManager.getReadLevel()),
 		AckLevel:         common.Int64Ptr(c.taskAckManager.getAckLevel()),
 		BacklogCountHint: common.Int64Ptr(c.taskAckManager.getBacklogCountHint()),
+		RatePerSecond:    common.Float64Ptr(c.rateLimiter.Limit()),
 		TaskIDBlock: &s.TaskIDBlock{
 			StartID: common.Int64Ptr(taskIDBlock.start),
 			EndID:   common.Int64Ptr(taskIDBlock.end),
@@ -595,6 +604,10 @@ func (c *taskListManagerImpl) trySyncMatch(task *persistence.TaskInfo) (*persist
 	rsv := c.rateLimiter.Reserve()
 	// If we have to wait too long for reservation, better to store in task buffer and handle later.
 	if !rsv.OK() || rsv.Delay() > time.Second {
+		if rsv.OK() { // if we were indeed given a reservation, return it before we bail out
+			rsv.Cancel()
+		}
+		c.scope.IncCounter(metrics.SyncThrottleCounter)
 		c.metricsClient.IncCounter(metrics.MatchingTaskListMgrScope, metrics.SyncThrottleCounter)
 		return nil, errAddTasklistThrottled
 	}
@@ -628,6 +641,7 @@ func (c *taskListManagerImpl) executeWithRetry(
 	})
 
 	if _, ok := err.(*persistence.ConditionFailedError); ok {
+		c.scope.IncCounter(metrics.ConditionFailedErrorCounter)
 		c.metricsClient.IncCounter(metrics.MatchingTaskListMgrScope, metrics.ConditionFailedErrorCounter)
 		c.logger.Debugf("Stopping task list due to persistence condition failure. Err: %v", err)
 		c.Stop()
@@ -724,4 +738,14 @@ func createServiceBusyError(msg string) *s.ServiceBusyError {
 
 func (c *taskListManagerImpl) isTaskAddedRecently(lastAddTime time.Time) bool {
 	return time.Now().Sub(lastAddTime) <= c.config.MaxTasklistIdleTime()
+}
+
+func domainTaggedMetricScope(cache cache.DomainCache, domainID string, client metrics.Client, scope int) metrics.Scope {
+	entry, err := cache.GetDomainByID(domainID)
+	switch {
+	case err != nil:
+		return client.Scope(scope)
+	default:
+		return client.Scope(scope, metrics.DomainTag(entry.GetInfo().Name))
+	}
 }

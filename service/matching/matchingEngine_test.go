@@ -711,6 +711,23 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 	}
 	// Due to conflicts some ids are skipped and more real ranges are used.
 	s.True(expectedRange <= s.taskManager.getTaskListManager(tlID).rangeID)
+
+	// check the poller information
+	tlType := workflow.TaskListTypeActivity
+	descResp, err := s.matchingEngine.DescribeTaskList(s.callContext, &matching.DescribeTaskListRequest{
+		DomainUUID: common.StringPtr(domainID),
+		DescRequest: &workflow.DescribeTaskListRequest{
+			TaskList:              taskList,
+			TaskListType:          &tlType,
+			IncludeTaskListStatus: common.BoolPtr(true),
+		},
+	})
+	s.NoError(err)
+	s.Equal(1, len(descResp.Pollers))
+	s.Equal(identity, descResp.Pollers[0].GetIdentity())
+	s.NotEmpty(descResp.Pollers[0].GetLastAccessTime())
+	s.NotNil(descResp.GetTaskListStatus())
+	s.True(descResp.GetTaskListStatus().GetRatePerSecond() >= (_defaultTaskDispatchRPS - 1))
 }
 
 func (s *matchingEngineSuite) TestConcurrentPublishConsumeActivities() {
