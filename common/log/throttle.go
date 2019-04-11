@@ -35,13 +35,15 @@ import (
 type throttledLogger struct {
 	rps int32
 	tb  tokenbucket.TokenBucket
-	log Logger
+	log *loggerImpl
 	cfg struct {
 		rps dynamicconfig.IntPropertyFn
 	}
 }
 
 var _ Logger = (*throttledLogger)(nil)
+
+const skipForThrottleLogger = 4
 
 // NewThrottledLogger returns an implementation of bark logger that throttles the
 // log messages being emitted. The underlying implementation uses a token bucket
@@ -52,7 +54,7 @@ func NewThrottledLogger(zapLogger *zap.Logger, rps dynamicconfig.IntPropertyFn) 
 	rate := rps()
 	log := &loggerImpl{
 		zapLogger: zapLogger,
-		skip:      4,
+		skip:      skipForThrottleLogger,
 	}
 	tb := tokenbucket.New(rate, clock.NewRealTimeSource())
 	tl := &throttledLogger{
@@ -96,14 +98,16 @@ func (tl *throttledLogger) Fatal(msg string, tags ...tag.Tag) {
 
 // Return a logger with the specified key-value pairs set, to be included in a subsequent normal logging call
 func (tl *throttledLogger) WithFields(tags ...tag.Tag) Logger {
-	return tl.clone(tl.log.WithFields(tags...))
-}
+	fields := tl.log.buildFields(tags)
+	zapLogger := tl.log.zapLogger.With(fields...)
 
-func (tl *throttledLogger) clone(log Logger) Logger {
 	result := &throttledLogger{
 		rps: atomic.LoadInt32(&tl.rps),
 		tb:  tl.tb,
-		log: log,
+		log: &loggerImpl{
+			zapLogger: zapLogger,
+			skip:      skipForThrottleLogger,
+		},
 	}
 	result.cfg.rps = tl.cfg.rps
 	return result

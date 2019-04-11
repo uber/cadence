@@ -38,11 +38,13 @@ type loggerImpl struct {
 
 var _ Logger = (*loggerImpl)(nil)
 
+const skipForDefaultLogger = 3
+
 // NewLogger returns a new logger
 func NewLogger(zapLogger *zap.Logger) Logger {
 	return &loggerImpl{
 		zapLogger: zapLogger,
-		skip:      3,
+		skip:      skipForDefaultLogger,
 	}
 }
 
