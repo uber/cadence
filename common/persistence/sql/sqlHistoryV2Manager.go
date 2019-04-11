@@ -30,7 +30,6 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/shared"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/storage"
@@ -174,10 +173,7 @@ func (m *sqlHistoryV2Manager) ReadHistoryBranch(request *p.InternalReadHistoryBr
 
 	rows, err := m.db.SelectFromHistoryNode(filter)
 	if err == sql.ErrNoRows || (err == nil && len(rows) == 0) {
-		if len(request.NextPageToken) != 0 {
-			return &p.InternalReadHistoryBranchResponse{}, nil
-		}
-		return nil, &workflow.EntityNotExistsError{Message: "Workflow execution history not found."}
+		return &p.InternalReadHistoryBranchResponse{}, nil
 	}
 
 	history := make([]*p.DataBlob, 0, int(request.PageSize))

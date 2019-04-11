@@ -291,6 +291,9 @@ func (m *historyV2ManagerImpl) readHistoryBranch(byBatch bool, request *ReadHist
 	}
 
 	resp, err := m.persistence.ReadHistoryBranch(req)
+	if len(resp.History) == 0 && len(request.NextPageToken) == 0 {
+		err = &workflow.EntityNotExistsError{Message: "Workflow execution history not found."}
+	}
 	if err != nil {
 		return nil, nil, nil, 0, 0, err
 	}
