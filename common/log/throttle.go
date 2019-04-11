@@ -43,7 +43,7 @@ type throttledLogger struct {
 
 var _ Logger = (*throttledLogger)(nil)
 
-const skipForThrottleLogger = 4
+const skipForThrottleLogger = 6
 
 // NewThrottledLogger returns an implementation of logger that throttles the
 // log messages being emitted. The underlying implementation uses a token bucket
