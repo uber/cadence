@@ -280,8 +280,10 @@ func (s *HistoryV2PersistenceSuite) TestReadBranchByPagination() {
 	s.True(historyW.Equals(historyR))
 	s.Equal(0, len(resp.NextPageToken))
 
-	// MinEventID is in the middle of the last batch, the call should return an error.
+	// MinEventID is in the middle of the last batch and this is the first request (NextPageToken
+	// is empty), the call should return an error.
 	req.MinEventID = 19
+	req.NextPageToken = nil
 	resp, err = s.HistoryV2Mgr.ReadHistoryBranch(req)
 	s.IsType(&gen.EntityNotExistsError{}, err)
 }

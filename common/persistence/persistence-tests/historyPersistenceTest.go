@@ -124,7 +124,8 @@ func (s *HistoryPersistenceSuite) TestGetHistoryEvents() {
 		s.Equal(0, len(history.Events))
 	}
 
-	// firstEventID is 2, since there's only one page, the call should return an error.
+	// firstEventID is 2, since there's only one page and nextPageToken is empty,
+	// the call should return an error.
 	_, _, err2 := s.GetWorkflowExecutionHistory(domainID, workflowExecution, 2, 4, 1, nil)
 	s.IsType(&gen.EntityNotExistsError{}, err2)
 }
