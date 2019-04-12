@@ -128,6 +128,11 @@ func (s *HistoryPersistenceSuite) TestGetHistoryEvents() {
 	// the call should return an error.
 	_, _, err2 := s.GetWorkflowExecutionHistory(domainID, workflowExecution, 2, 4, 1, nil)
 	s.IsType(&gen.EntityNotExistsError{}, err2)
+
+	// Get history of a workflow that doesn't exist.
+	workflowExecution.WorkflowId = common.StringPtr("some-random-id")
+	_, _, err2 = s.GetWorkflowExecutionHistory(domainID, workflowExecution, 1, 2, 1, nil)
+	s.IsType(&gen.EntityNotExistsError{}, err2)
 }
 
 func newBatchEventForTest(eventIDs []int64, version int64) *gen.History {
