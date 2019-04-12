@@ -29,10 +29,11 @@ import (
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common/blobstore/filestore"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/messaging"
 	metricsmocks "github.com/uber/cadence/common/metrics/mocks"
 	"github.com/uber/cadence/common/mocks"
-	"github.com/uber/cadence/common/persistence/persistence-tests"
+	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"go.uber.org/zap"
@@ -48,22 +49,31 @@ type (
 
 	// TestClusterConfig are config for a test cluster
 	TestClusterConfig struct {
-		FrontendAddress       string
-		EnableWorker          bool
-		EnableEventsV2        bool
-		EnableArchival        bool
-		IsMasterCluster       bool
-		ClusterNo             int
-		ClusterInfo           config.ClustersInfo
-		MessagingClientConfig *MessagingClientConfig
-		Persistence           persistencetests.TestBaseOptions
-		HistoryConfig         *HistoryConfig
+		FrontendAddress            string
+		EnableEventsV2             bool
+		EnableArchival             bool
+		IsMasterCluster            bool
+		ClusterNo                  int
+		ClusterInfo                config.ClustersInfo
+		MessagingClientConfig      *MessagingClientConfig
+		Persistence                persistencetests.TestBaseOptions
+		HistoryConfig              *HistoryConfig
+		ESConfig                   elasticsearch.Config
+		EnableReadVisibilityFromES bool
+		WorkerConfig               *WorkerConfig
 	}
 
 	// MessagingClientConfig is the config for messaging config
 	MessagingClientConfig struct {
 		UseMock     bool
 		KafkaConfig *messaging.KafkaConfig
+	}
+
+	// WorkerConfig is the config for enabling/disabling cadence worker
+	WorkerConfig struct {
+		EnableArchiver   bool
+		EnableIndexer    bool
+		EnableReplicator bool
 	}
 )
 
@@ -97,25 +107,26 @@ func NewCluster(options *TestClusterConfig, logger bark.Logger) (*TestCluster, e
 	pConfig := testBase.Config()
 	pConfig.NumHistoryShards = options.HistoryConfig.NumHistoryShards
 	cadenceParams := &CadenceParams{
-		ClusterMetadata:         clusterMetadata,
-		PersistenceConfig:       pConfig,
-		DispatcherProvider:      client.NewIPYarpcDispatcherProvider(),
-		MessagingClient:         getMessagingClient(options.MessagingClientConfig, logger),
-		MetadataMgr:             testBase.MetadataProxy,
-		MetadataMgrV2:           testBase.MetadataManagerV2,
-		ShardMgr:                testBase.ShardMgr,
-		HistoryMgr:              testBase.HistoryMgr,
-		HistoryV2Mgr:            testBase.HistoryV2Mgr,
-		ExecutionMgrFactory:     testBase.ExecutionMgrFactory,
-		TaskMgr:                 testBase.TaskMgr,
-		VisibilityMgr:           testBase.VisibilityMgr,
-		Logger:                  logger,
-		ClusterNo:               options.ClusterNo,
-		EnableWorker:            options.EnableWorker,
-		EnableEventsV2:          options.EnableEventsV2,
-		EnableVisibilityToKafka: false, // ycyang TODO: read this option from yaml
-		Blobstore:               blobstore.client,
-		HistoryConfig:           options.HistoryConfig,
+		ClusterMetadata:            clusterMetadata,
+		PersistenceConfig:          pConfig,
+		DispatcherProvider:         client.NewIPYarpcDispatcherProvider(),
+		MessagingClient:            getMessagingClient(options.MessagingClientConfig, logger),
+		MetadataMgr:                testBase.MetadataProxy,
+		MetadataMgrV2:              testBase.MetadataManagerV2,
+		ShardMgr:                   testBase.ShardMgr,
+		HistoryMgr:                 testBase.HistoryMgr,
+		HistoryV2Mgr:               testBase.HistoryV2Mgr,
+		ExecutionMgrFactory:        testBase.ExecutionMgrFactory,
+		TaskMgr:                    testBase.TaskMgr,
+		VisibilityMgr:              testBase.VisibilityMgr,
+		Logger:                     logger,
+		ClusterNo:                  options.ClusterNo,
+		EnableEventsV2:             options.EnableEventsV2,
+		ESConfig:                   &options.ESConfig,
+		EnableReadVisibilityFromES: options.EnableReadVisibilityFromES,
+		Blobstore:                  blobstore.client,
+		HistoryConfig:              options.HistoryConfig,
+		WorkerConfig:               options.WorkerConfig,
 	}
 	cluster := NewCadence(cadenceParams)
 	if err := cluster.Start(); err != nil {
@@ -164,8 +175,9 @@ func getMessagingClient(config *MessagingClientConfig, logger bark.Logger) messa
 	if config == nil || config.UseMock {
 		return mocks.NewMockMessagingClient(&mocks.KafkaProducer{}, nil)
 	}
-
-	return messaging.NewKafkaClient(config.KafkaConfig, nil, zap.NewNop(), logger, tally.NoopScope, true, false)
+	checkCluster := len(config.KafkaConfig.ClusterToTopic) != 0
+	checkApp := len(config.KafkaConfig.Applications) != 0
+	return messaging.NewKafkaClient(config.KafkaConfig, nil, zap.NewNop(), logger, tally.NoopScope, checkCluster, checkApp)
 }
 
 // TearDownCluster tears down the test cluster

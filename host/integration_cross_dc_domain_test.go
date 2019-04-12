@@ -94,7 +94,10 @@ func (s *integrationCrossDCSuite) TearDownTest() {
 
 func (s *integrationCrossDCSuite) setupTest(enableGlobalDomain bool, isMasterCluster bool) {
 	c, err := NewCluster(&TestClusterConfig{
-		EnableWorker:    false,
+		WorkerConfig: &WorkerConfig{
+			EnableReplicator: false,
+			EnableArchiver:   false,
+		},
 		IsMasterCluster: isMasterCluster,
 		ClusterInfo: config.ClustersInfo{
 			EnableGlobalDomain: enableGlobalDomain,
