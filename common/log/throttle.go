@@ -25,9 +25,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/uber/cadence/common/log/tag"
-
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/tokenbucket"
 )

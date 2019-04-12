@@ -355,9 +355,11 @@ func ESField(ESField string) Tag {
 	return newStringTag("es-field", ESField)
 }
 
-// LoggingCallAt returns a tag for LoggingError
-func LoggingCallAt(position string) Tag {
-	return newStringTag("logging-call-at", position)
+// loggingCallAt is reserved
+const LoggingCallAtKey = "logging-call-at"
+
+func loggingCallAt(position string) Tag {
+	return newStringTag(LoggingCallAtKey, position)
 }
 
 // Kafka related

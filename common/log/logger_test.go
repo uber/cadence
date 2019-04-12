@@ -26,18 +26,16 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
-	"strings"
-
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"github.com/uber-common/bark"
+	"go.uber.org/zap"
+
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/service/dynamicconfig"
-
-	"go.uber.org/zap"
 )
 
 func TestDefaultLogger(t *testing.T) {

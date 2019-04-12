@@ -21,172 +21,75 @@
 package tag
 
 import (
+	"fmt"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 // Tag is the interface for logging system
-type Tag interface {
-	GetKey() string
-	GetValueType() valueTypeEnum
+type Tag tagImpl
 
-	GetString() string
-	GetInteger() int64
-	GetDouble() float64
-	GetBool() bool
-	GetError() error
-	GetDuration() time.Duration
-	GetTime() time.Time
-	GetObject() interface{}
+func (t *Tag) Field() zap.Field {
+	return t.field
 }
-
-var _ Tag = (*tagImpl)(nil)
-
-// the tag value types supported
-const (
-	// ValueTypeString is string value type
-	ValueTypeString valueTypeEnum = 1
-	// ValueTypeInteger is any value of the types(int8,int16,int32,unit8,uint32,uint64) will be converted into int64
-	ValueTypeInteger valueTypeEnum = 2
-	// ValueTypeDouble is for both float and double will be converted into double
-	ValueTypeDouble valueTypeEnum = 3
-	// ValueTypeBool is bool value type
-	ValueTypeBool valueTypeEnum = 4
-	// ValueTypeError is error type value
-	ValueTypeError valueTypeEnum = 5
-	// ValueTypeDuration is duration type value
-	ValueTypeDuration valueTypeEnum = 6
-	// ValueTypeTime is time type value
-	ValueTypeTime valueTypeEnum = 7
-	// ValueTypeObject will be converted into string by fmt.Sprintf("%+v")
-	ValueTypeObject valueTypeEnum = 8
-)
-
-// keep this module private
-type valueTypeEnum int
 
 // keep this module private
 type tagImpl struct {
-	key       string
-	valueType valueTypeEnum
-
-	valueString   string        //1
-	valueInteger  int64         //2
-	valueDouble   float64       //3
-	valueBool     bool          //4
-	valueError    error         //5
-	valueDuration time.Duration //6
-	valueTime     time.Time     //7
-	valueObject   interface{}   //8
-}
-
-func (t *tagImpl) GetKey() string {
-	return t.key
-}
-
-func (t *tagImpl) GetValueType() valueTypeEnum {
-	return t.valueType
-}
-
-func (t *tagImpl) GetString() string {
-	return t.valueString
-}
-
-func (t *tagImpl) GetInteger() int64 {
-	return t.valueInteger
-}
-
-func (t *tagImpl) GetDouble() float64 {
-	return t.valueDouble
-}
-
-func (t *tagImpl) GetBool() bool {
-	return t.valueBool
-}
-
-func (t *tagImpl) GetError() error {
-	return t.valueError
-}
-
-func (t *tagImpl) GetDuration() time.Duration {
-	return t.valueDuration
-}
-
-func (t *tagImpl) GetTime() time.Time {
-	return t.valueTime
-}
-
-func (t *tagImpl) GetObject() interface{} {
-	return t.valueObject
+	field zap.Field
 }
 
 func newStringTag(key string, value string) Tag {
-	return &tagImpl{
-		key:         key,
-		valueType:   ValueTypeString,
-		valueString: value,
+	return Tag{
+		field: zap.String(key, value),
 	}
 }
 
 func newIntegerTag(key string, value int64) Tag {
-	return &tagImpl{
-		key:          key,
-		valueType:    ValueTypeInteger,
-		valueInteger: value,
+	return Tag{
+		field: zap.Int64(key, value),
 	}
 }
 
 func newDoubleTag(key string, value float64) Tag {
-	return &tagImpl{
-		key:         key,
-		valueType:   ValueTypeDouble,
-		valueDouble: value,
+	return Tag{
+		field: zap.Float64(key, value),
 	}
 }
 
 func newBoolTag(key string, value bool) Tag {
-	return &tagImpl{
-		key:       key,
-		valueType: ValueTypeBool,
-		valueBool: value,
+	return Tag{
+		field: zap.Bool(key, value),
 	}
 }
 
 func newErrorTag(key string, value error) Tag {
-	return &tagImpl{
-		key:        key,
-		valueType:  ValueTypeError,
-		valueError: value,
+	//NOTE zap already chosen "error" as key
+	return Tag{
+		field: zap.Error(value),
 	}
 }
 
 func newDurationTag(key string, value time.Duration) Tag {
-	return &tagImpl{
-		key:           key,
-		valueType:     ValueTypeDuration,
-		valueDuration: value,
+	return Tag{
+		field: zap.Duration(key, value),
 	}
 }
 
 func newTimeTag(key string, value time.Time) Tag {
-	return &tagImpl{
-		key:       key,
-		valueType: ValueTypeTime,
-		valueTime: value,
+	return Tag{
+		field: zap.Time(key, value),
 	}
 }
 
 func newObjectTag(key string, value interface{}) Tag {
-	return &tagImpl{
-		key:         key,
-		valueType:   ValueTypeObject,
-		valueObject: value,
+	return Tag{
+		field: zap.String(key, fmt.Sprintf("%v", value)),
 	}
 }
 
 func newPredefinedStringTag(key string, value string) Tag {
-	return &tagImpl{
-		key:         key,
-		valueType:   ValueTypeString,
-		valueString: value,
+	return Tag{
+		field: zap.String(key, value),
 	}
 }
