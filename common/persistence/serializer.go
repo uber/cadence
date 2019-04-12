@@ -79,6 +79,9 @@ func (t *serializerImpl) SerializeBatchEvents(events []*workflow.HistoryEvent, e
 
 func (t *serializerImpl) DeserializeBatchEvents(data *DataBlob) ([]*workflow.HistoryEvent, error) {
 	var events []*workflow.HistoryEvent
+	if data != nil && len(data.Data) == 0 {
+		return events, nil
+	}
 	err := t.deserialize(data, &events)
 	return events, err
 }
@@ -115,6 +118,7 @@ func (t *serializerImpl) serialize(input interface{}, encodingType common.Encodi
 	case common.EncodingTypeThriftRW:
 		data, err = t.thriftrwEncode(input)
 	case common.EncodingTypeJSON, common.EncodingTypeUnknown, common.EncodingTypeEmpty: // For backward-compatibility
+		encodingType = common.EncodingTypeJSON
 		data, err = json.Marshal(input)
 	default:
 		return nil, NewUnknownEncodingTypeError(encodingType)
@@ -139,7 +143,7 @@ func (t *serializerImpl) thriftrwEncode(input interface{}) ([]byte, error) {
 	}
 }
 
-func (t *serializerImpl) deserialize(data *DataBlob, input interface{}) error {
+func (t *serializerImpl) deserialize(data *DataBlob, target interface{}) error {
 	if data == nil {
 		return nil
 	}
@@ -150,9 +154,9 @@ func (t *serializerImpl) deserialize(data *DataBlob, input interface{}) error {
 
 	switch data.GetEncoding() {
 	case common.EncodingTypeThriftRW:
-		err = t.thriftrwDecode(data.Data, input)
+		err = t.thriftrwDecode(data.Data, target)
 	case common.EncodingTypeJSON, common.EncodingTypeUnknown, common.EncodingTypeEmpty: // For backward-compatibility
-		err = json.Unmarshal(data.Data, input)
+		err = json.Unmarshal(data.Data, target)
 	default:
 		return NewUnknownEncodingTypeError(data.GetEncoding())
 	}
@@ -167,9 +171,11 @@ func (t *serializerImpl) thriftrwDecode(data []byte, target interface{}) error {
 	switch target.(type) {
 	case *[]*workflow.HistoryEvent:
 		history := workflow.History{Events: *target.(*[]*workflow.HistoryEvent)}
-		err := t.thriftrwEncoder.Decode(data, &history)
+		if err := t.thriftrwEncoder.Decode(data, &history); err != nil {
+			return err
+		}
 		*target.(*[]*workflow.HistoryEvent) = history.GetEvents()
-		return err
+		return nil
 	case *workflow.HistoryEvent:
 		event := target.(*workflow.HistoryEvent)
 		return t.thriftrwEncoder.Decode(data, event)
