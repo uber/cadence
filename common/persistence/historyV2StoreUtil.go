@@ -156,7 +156,7 @@ func GetBeginNodeID(bi shared.HistoryBranch) int64 {
 
 func getShardID(shardID *int) (int, error) {
 	if shardID == nil {
-		return 0, fmt.Errorf("shardID is not set for sql operation")
+		return 0, fmt.Errorf("shardID is not set for persistence operation")
 	}
 	return *shardID, nil
 }
