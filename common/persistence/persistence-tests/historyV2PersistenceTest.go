@@ -36,6 +36,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	gen "github.com/uber/cadence/.gen/go/shared"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -278,6 +279,14 @@ func (s *HistoryV2PersistenceSuite) TestReadBranchByPagination() {
 
 	s.True(historyW.Equals(historyR))
 	s.Equal(0, len(resp.NextPageToken))
+
+	req.BranchToken = bi2
+	req.NextPageToken = nil
+	req.MinEventID = 19
+	req.MaxEventID = 21
+	req.PageSize = 1
+	_, err = s.HistoryV2Mgr.ReadHistoryBranch(req)
+	s.IsType(&gen.EntityNotExistsError{}, err)
 }
 
 //TestConcurrentlyCreateAndAppendBranches test

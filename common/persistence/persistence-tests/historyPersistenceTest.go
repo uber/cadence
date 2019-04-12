@@ -123,6 +123,14 @@ func (s *HistoryPersistenceSuite) TestGetHistoryEvents() {
 		s.Equal(0, len(token))
 		s.Equal(0, len(history.Events))
 	}
+
+	// batchEvents = newBatchEventForTest([]int64{3, 4}, 1)
+	// err0 = s.AppendHistoryEvents(domainID, workflowExecution, 3, common.EmptyVersion, 1, 1, batchEvents, false)
+	// s.Nil(err0)
+
+	// Only have two events, but start at 5, should get an error.
+	_, _, err2 := s.GetWorkflowExecutionHistory(domainID, workflowExecution, 1, 4, 1, nil)
+	s.IsType(&gen.EntityNotExistsError{}, err2)
 }
 
 func newBatchEventForTest(eventIDs []int64, version int64) *gen.History {

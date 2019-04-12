@@ -104,13 +104,7 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.InternalGetWo
 
 	// TODO: Ensure that no last empty page is requested
 	if err == sql.ErrNoRows || (err == nil && len(rows) == 0) {
-		if len(request.NextPageToken) != 0 {
-			return &p.InternalGetWorkflowExecutionHistoryResponse{}, nil
-		}
-		return nil, &workflow.EntityNotExistsError{
-			Message: fmt.Sprintf("Workflow execution history not found.  WorkflowId: %v, RunId: %v",
-				*request.Execution.WorkflowId, *request.Execution.RunId),
-		}
+		return &p.InternalGetWorkflowExecutionHistoryResponse{}, nil
 	}
 
 	if err != nil {
