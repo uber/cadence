@@ -278,7 +278,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 		token.EventStoreVersion,
 		token.BranchToken,
 		pageSize,
-		shardID,
+		common.IntPtr(shardID),
 	)
 	if err != nil {
 		if _, ok := err.(*gen.EntityNotExistsError); ok {

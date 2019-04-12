@@ -1366,7 +1366,11 @@ Update_History_Loop:
 					}
 				} else {
 					// this is a cron workflow
-					startEvent, err := getWorkflowStartedEvent(e.historyMgr, e.historyV2Mgr, msBuilder.GetEventStoreVersion(), msBuilder.GetCurrentBranch(), e.logger, domainID, workflowExecution.GetWorkflowId(), workflowExecution.GetRunId(), e.shard.GetShardID())
+					var shardID *int
+					if e.shard != nil {
+						shardID = common.IntPtr(e.shard.GetShardID())
+					}
+					startEvent, err := getWorkflowStartedEvent(e.historyMgr, e.historyV2Mgr, msBuilder.GetEventStoreVersion(), msBuilder.GetCurrentBranch(), e.logger, domainID, workflowExecution.GetWorkflowId(), workflowExecution.GetRunId(), shardID)
 					if err != nil {
 						return nil, err
 					}
@@ -1438,8 +1442,12 @@ Update_History_Loop:
 						return nil, &workflow.InternalServiceError{Message: "Unable to add fail workflow event."}
 					}
 				} else {
+					var shardID *int
+					if e.shard != nil {
+						shardID = common.IntPtr(e.shard.GetShardID())
+					}
 					// retry or cron with backoff
-					startEvent, err := getWorkflowStartedEvent(e.historyMgr, e.historyV2Mgr, msBuilder.GetEventStoreVersion(), msBuilder.GetCurrentBranch(), e.logger, domainID, workflowExecution.GetWorkflowId(), workflowExecution.GetRunId(), e.shard.GetShardID())
+					startEvent, err := getWorkflowStartedEvent(e.historyMgr, e.historyV2Mgr, msBuilder.GetEventStoreVersion(), msBuilder.GetCurrentBranch(), e.logger, domainID, workflowExecution.GetWorkflowId(), workflowExecution.GetRunId(), shardID)
 					if err != nil {
 						return nil, err
 					}
@@ -2869,9 +2877,13 @@ func (e *historyEngineImpl) deleteEvents(domainID string, execution workflow.Wor
 	// are always created for a unique run_id which is not visible beyond this call yet.
 	// TODO: Handle error on deletion of execution history
 	if eventStoreVersion == persistence.EventStoreVersionV2 {
+		var shardID *int
+		if e.shard != nil {
+			shardID = common.IntPtr(e.shard.GetShardID())
+		}
 		e.historyV2Mgr.DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
 			BranchToken: branchToken,
-			ShardID:     e.shard.GetShardID(),
+			ShardID:     shardID,
 		})
 	} else {
 		e.historyMgr.DeleteWorkflowExecutionHistory(&persistence.DeleteWorkflowExecutionHistoryRequest{
@@ -3342,7 +3354,7 @@ func getStartRequest(domainID string,
 	return startRequest
 }
 
-func getWorkflowStartedEvent(historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager, eventStoreVersion int32, branchToken []byte, logger bark.Logger, domainID, workflowID, runID string, shardID int) (*workflow.HistoryEvent, error) {
+func getWorkflowStartedEvent(historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager, eventStoreVersion int32, branchToken []byte, logger bark.Logger, domainID, workflowID, runID string, shardID *int) (*workflow.HistoryEvent, error) {
 	var events []*workflow.HistoryEvent
 	if eventStoreVersion == persistence.EventStoreVersionV2 {
 		response, err := historyV2Mgr.ReadHistoryBranch(&persistence.ReadHistoryBranchRequest{

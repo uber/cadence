@@ -163,7 +163,7 @@ func (s *HistoryV2PersistenceSuite) TestReadBranchByPagination() {
 		MaxEventID:    10,
 		PageSize:      4,
 		NextPageToken: nil,
-		ShardID:       s.ShardInfo.ShardID,
+		ShardID:       common.IntPtr(s.ShardInfo.ShardID),
 	}
 	// first page
 	resp, err := s.HistoryV2Mgr.ReadHistoryBranch(req)
@@ -225,7 +225,7 @@ func (s *HistoryV2PersistenceSuite) TestReadBranchByPagination() {
 		MaxEventID:    21,
 		PageSize:      3,
 		NextPageToken: nil,
-		ShardID:       s.ShardInfo.ShardID,
+		ShardID:       common.IntPtr(s.ShardInfo.ShardID),
 	}
 	// first page
 	resp, err = s.HistoryV2Mgr.ReadHistoryBranch(req)
@@ -613,7 +613,7 @@ func (s *HistoryV2PersistenceSuite) deleteHistoryBranch(branch []byte) error {
 		var err error
 		err = s.HistoryV2Mgr.DeleteHistoryBranch(&p.DeleteHistoryBranchRequest{
 			BranchToken: branch,
-			ShardID:     s.ShardInfo.ShardID,
+			ShardID:     common.IntPtr(s.ShardInfo.ShardID),
 		})
 		return err
 	}
@@ -625,7 +625,7 @@ func (s *HistoryV2PersistenceSuite) deleteHistoryBranch(branch []byte) error {
 func (s *HistoryV2PersistenceSuite) descTreeByToken(br []byte) []*workflow.HistoryBranch {
 	resp, err := s.HistoryV2Mgr.GetHistoryTree(&p.GetHistoryTreeRequest{
 		BranchToken: br,
-		ShardID:     s.ShardInfo.ShardID,
+		ShardID:     common.IntPtr(s.ShardInfo.ShardID),
 	})
 	s.Nil(err)
 	return resp.Branches
@@ -634,7 +634,7 @@ func (s *HistoryV2PersistenceSuite) descTreeByToken(br []byte) []*workflow.Histo
 func (s *HistoryV2PersistenceSuite) descTree(treeID string) []*workflow.HistoryBranch {
 	resp, err := s.HistoryV2Mgr.GetHistoryTree(&p.GetHistoryTreeRequest{
 		TreeID:  treeID,
-		ShardID: s.ShardInfo.ShardID,
+		ShardID: common.IntPtr(s.ShardInfo.ShardID),
 	})
 	s.Nil(err)
 	s.True(len(resp.ForkingInProgressBranches) == 0)
@@ -645,7 +645,7 @@ func (s *HistoryV2PersistenceSuite) descTree(treeID string) []*workflow.HistoryB
 func (s *HistoryV2PersistenceSuite) descInProgress(treeID string) {
 	resp, err := s.HistoryV2Mgr.GetHistoryTree(&p.GetHistoryTreeRequest{
 		TreeID:  treeID,
-		ShardID: s.ShardInfo.ShardID,
+		ShardID: common.IntPtr(s.ShardInfo.ShardID),
 	})
 	s.Nil(err)
 	s.True(len(resp.ForkingInProgressBranches) > 0)
@@ -674,7 +674,7 @@ func (s *HistoryV2PersistenceSuite) readWithError(branch []byte, minID, maxID in
 			MaxEventID:    maxID,
 			PageSize:      randPageSize,
 			NextPageToken: token,
-			ShardID:       s.ShardInfo.ShardID,
+			ShardID:       common.IntPtr(s.ShardInfo.ShardID),
 		})
 		if err != nil {
 			return nil, err
@@ -716,6 +716,10 @@ func (s *HistoryV2PersistenceSuite) append(branch []byte, events []*workflow.His
 	var resp *p.AppendHistoryNodesResponse
 
 	op := func() error {
+		var shardID *int
+		if s.ShardInfo != nil {
+			shardID = common.IntPtr(s.ShardInfo.ShardID)
+		}
 		var err error
 		resp, err = s.HistoryV2Mgr.AppendHistoryNodes(&p.AppendHistoryNodesRequest{
 			IsNewBranch:   isNewBranch,
@@ -724,7 +728,7 @@ func (s *HistoryV2PersistenceSuite) append(branch []byte, events []*workflow.His
 			Events:        events,
 			TransactionID: txnID,
 			Encoding:      pickRandomEncoding(),
-			ShardID:       s.ShardInfo.ShardID,
+			ShardID:       shardID,
 		})
 		return err
 	}
@@ -745,11 +749,15 @@ func (s *HistoryV2PersistenceSuite) fork(forkBranch []byte, forkNodeID int64) ([
 
 	op := func() error {
 		var err error
+		var shardID *int
+		if s.ShardInfo != nil {
+			shardID = common.IntPtr(s.ShardInfo.ShardID)
+		}
 		resp, err := s.HistoryV2Mgr.ForkHistoryBranch(&p.ForkHistoryBranchRequest{
 			ForkBranchToken: forkBranch,
 			ForkNodeID:      forkNodeID,
 			Info:            testForkRunID,
-			ShardID:         s.ShardInfo.ShardID,
+			ShardID:         shardID,
 		})
 		if resp != nil {
 			bi = resp.NewBranchToken
@@ -766,7 +774,7 @@ func (s *HistoryV2PersistenceSuite) completeFork(forkBranch []byte, succ bool) {
 	err := s.HistoryV2Mgr.CompleteForkBranch(&p.CompleteForkBranchRequest{
 		BranchToken: forkBranch,
 		Success:     succ,
-		ShardID:     s.ShardInfo.ShardID,
+		ShardID:     common.IntPtr(s.ShardInfo.ShardID),
 	})
 	s.Nil(err)
 }

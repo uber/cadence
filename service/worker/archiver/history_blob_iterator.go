@@ -189,7 +189,7 @@ func (i *historyBlobIterator) readHistory(pageToken []byte) ([]*shared.HistoryEv
 			MaxEventID:    i.nextEventID,
 			PageSize:      i.config.HistoryPageSize(i.domain),
 			NextPageToken: pageToken,
-			ShardID:       i.shardID,
+			ShardID:       common.IntPtr(i.shardID),
 		}
 		return persistence.ReadFullPageV2Events(i.historyV2Manager, req)
 	}

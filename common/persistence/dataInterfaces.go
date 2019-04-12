@@ -1226,7 +1226,7 @@ type (
 		// It is to suggest a binary encoding type to serialize history events
 		Encoding common.EncodingType
 		// The shard to get history node data
-		ShardID int
+		ShardID *int
 	}
 
 	// AppendHistoryNodesResponse is a response to AppendHistoryNodesRequest
@@ -1249,7 +1249,7 @@ type (
 		// Token to continue reading next page of history append transactions.  Pass in empty slice for first page
 		NextPageToken []byte
 		// The shard to get history branch data
-		ShardID int
+		ShardID *int
 	}
 
 	// ReadHistoryBranchResponse is the response to ReadHistoryBranchRequest
@@ -1291,7 +1291,7 @@ type (
 		// the info for clean up data in background
 		Info string
 		// The shard to get history branch data
-		ShardID int
+		ShardID *int
 	}
 
 	// ForkHistoryBranchResponse is the response to ForkHistoryBranchRequest
@@ -1307,7 +1307,7 @@ type (
 		// true means the fork is success, will update the flag, otherwise will delete the new branch
 		Success bool
 		// The shard to update history branch data
-		ShardID int
+		ShardID *int
 	}
 
 	// DeleteHistoryBranchRequest is used to remove a history branch
@@ -1315,7 +1315,7 @@ type (
 		// branch to be deleted
 		BranchToken []byte
 		// The shard to delete history branch data
-		ShardID int
+		ShardID *int
 	}
 
 	// GetHistoryTreeRequest is used to retrieve branch info of a history tree
@@ -1323,7 +1323,7 @@ type (
 		// A UUID of a tree
 		TreeID string
 		// Get data from this shard
-		ShardID int
+		ShardID *int
 		// optional: can provide treeID via branchToken if treeID is empty
 		BranchToken []byte
 	}

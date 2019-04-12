@@ -21,6 +21,7 @@
 package persistence
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/uber-common/bark"
@@ -61,7 +62,7 @@ that zombie history segments can remain under some rare failure cases. Consider 
 Under this rare case the section of parent history which was assumed to be common to child will be a zombie history section.
 
 */
-func DeleteWorkflowExecutionHistoryV2(historyV2Mgr HistoryV2Manager, branchToken []byte, shardID int, logger bark.Logger) error {
+func DeleteWorkflowExecutionHistoryV2(historyV2Mgr HistoryV2Manager, branchToken []byte, shardID *int, logger bark.Logger) error {
 	err := historyV2Mgr.DeleteHistoryBranch(&DeleteHistoryBranchRequest{
 		BranchToken: branchToken,
 		ShardID:     shardID,
@@ -151,4 +152,11 @@ func GetBeginNodeID(bi shared.HistoryBranch) int64 {
 	}
 	idx := len(bi.Ancestors) - 1
 	return *bi.Ancestors[idx].EndNodeID
+}
+
+func getShardID(shardID *int) (int, error) {
+	if shardID == nil {
+		return 0, fmt.Errorf("shardID is not set for sql operation")
+	}
+	return *shardID, nil
 }

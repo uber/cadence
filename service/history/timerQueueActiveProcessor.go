@@ -747,8 +747,12 @@ Update_History_Loop:
 			return err
 		}
 
+		var shardID *int
+		if t.shard != nil {
+			shardID = common.IntPtr(t.shard.GetShardID())
+		}
 		// workflow timeout, but a retry or cron is needed, so we do continue as new to retry or cron
-		startEvent, err := getWorkflowStartedEvent(t.historyService.historyMgr, t.historyService.historyV2Mgr, msBuilder.GetEventStoreVersion(), msBuilder.GetCurrentBranch(), t.logger, domainID, workflowExecution.GetWorkflowId(), workflowExecution.GetRunId(), t.shard.GetShardID())
+		startEvent, err := getWorkflowStartedEvent(t.historyService.historyMgr, t.historyService.historyV2Mgr, msBuilder.GetEventStoreVersion(), msBuilder.GetCurrentBranch(), t.logger, domainID, workflowExecution.GetWorkflowId(), workflowExecution.GetRunId(), shardID)
 		if err != nil {
 			return err
 		}

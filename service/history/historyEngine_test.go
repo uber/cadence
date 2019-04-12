@@ -4660,13 +4660,13 @@ func (s *engineSuite) TestGetWorkflowStartedEvent() {
 		MaxEventID:    common.FirstEventID + 1,
 		PageSize:      defaultHistoryPageSize,
 		NextPageToken: nil,
-		ShardID:       0,
+		ShardID:       common.IntPtr(0),
 	}
 	events := []*workflow.HistoryEvent{
 		{EventId: common.Int64Ptr(int64(0))},
 	}
 	s.mockHistoryV2Mgr.On("ReadHistoryBranch", req).Return(&persistence.ReadHistoryBranchResponse{HistoryEvents: events}, nil)
-	event, err := getWorkflowStartedEvent(s.mockHistoryMgr, s.mockHistoryV2Mgr, p.EventStoreVersionV2, []byte{}, s.logger, "", "", "", 0)
+	event, err := getWorkflowStartedEvent(s.mockHistoryMgr, s.mockHistoryV2Mgr, p.EventStoreVersionV2, []byte{}, s.logger, "", "", "", common.IntPtr(0))
 	s.NoError(err)
 	s.NotNil(event)
 }

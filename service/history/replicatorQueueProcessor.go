@@ -217,7 +217,11 @@ func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persi
 		targetClusters = append(targetClusters, cluster.ClusterName)
 	}
 
-	replicationTask, err := GenerateReplicationTask(targetClusters, task, p.historyMgr, p.historyV2Mgr, p.metricsClient, p.logger, nil, p.shard.GetShardID())
+	var shardID *int
+	if p.shard != nil {
+		shardID = common.IntPtr(p.shard.GetShardID())
+	}
+	replicationTask, err := GenerateReplicationTask(targetClusters, task, p.historyMgr, p.historyV2Mgr, p.metricsClient, p.logger, nil, shardID)
 	if err != nil || replicationTask == nil {
 		return err
 	}
@@ -228,7 +232,7 @@ func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persi
 // GenerateReplicationTask generate replication task
 func GenerateReplicationTask(targetClusters []string, task *persistence.ReplicationTaskInfo,
 	historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
-	metricsClient metrics.Client, logger bark.Logger, history *shared.History, shardID int,
+	metricsClient metrics.Client, logger bark.Logger, history *shared.History, shardID *int,
 ) (*replicator.ReplicationTask, error) {
 	var err error
 	if history == nil {
@@ -325,7 +329,7 @@ func (p *replicatorQueueProcessorImpl) updateAckLevel(ackLevel int64) error {
 func GetAllHistory(historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
 	metricsClient metrics.Client, logger bark.Logger, byBatch bool,
 	domainID string, workflowID string, runID string, firstEventID int64,
-	nextEventID int64, eventStoreVersion int32, branchToken []byte, shardID int) (*shared.History, []*shared.History, error) {
+	nextEventID int64, eventStoreVersion int32, branchToken []byte, shardID *int) (*shared.History, []*shared.History, error) {
 
 	// overall result
 	historyEvents := []*shared.HistoryEvent{}
@@ -377,7 +381,7 @@ func GetAllHistory(historyMgr persistence.HistoryManager, historyV2Mgr persisten
 func PaginateHistory(historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
 	metricsClient metrics.Client, logger bark.Logger, byBatch bool,
 	domainID, workflowID, runID string, firstEventID,
-	nextEventID int64, tokenIn []byte, eventStoreVersion int32, branchToken []byte, pageSize, shardID int) ([]*shared.HistoryEvent, []*shared.History, []byte, int, error) {
+	nextEventID int64, tokenIn []byte, eventStoreVersion int32, branchToken []byte, pageSize int, shardID *int) ([]*shared.HistoryEvent, []*shared.History, []byte, int, error) {
 
 	historyEvents := []*shared.HistoryEvent{}
 	historyBatches := []*shared.History{}

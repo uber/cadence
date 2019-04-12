@@ -237,13 +237,17 @@ func (s *HistoryPerfSuite) newHistoryBranch(treeID string) ([]byte, error) {
 
 // persistence helper
 func (s *HistoryPerfSuite) readv2(branch []byte, minID, maxID int64, pageSize int, token []byte) ([]*workflow.HistoryEvent, []byte, error) {
+	var shardID *int
+	if s.ShardInfo != nil {
+		shardID = common.IntPtr(s.ShardInfo.ShardID)
+	}
 	resp, err := s.HistoryV2Mgr.ReadHistoryBranch(&p.ReadHistoryBranchRequest{
 		BranchToken:   branch,
 		MinEventID:    minID,
 		MaxEventID:    maxID,
 		PageSize:      pageSize,
 		NextPageToken: token,
-		ShardID:       s.ShardInfo.ShardID,
+		ShardID:       shardID,
 	})
 	if err != nil {
 		return nil, nil, err
@@ -265,7 +269,7 @@ func (s *HistoryPerfSuite) appendV2(br []byte, events []*workflow.HistoryEvent, 
 		Events:        events,
 		TransactionID: txnID,
 		Encoding:      common.EncodingTypeThriftRW,
-		ShardID:       shardID,
+		ShardID:       common.IntPtr(shardID),
 	})
 	if err != nil {
 		s.True(resp.Size > 0)

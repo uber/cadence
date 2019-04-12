@@ -2855,7 +2855,7 @@ func (wh *WorkflowHandler) getHistory(
 			MaxEventID:    nextEventID,
 			PageSize:      int(pageSize),
 			NextPageToken: nextPageToken,
-			ShardID:       shardID,
+			ShardID:       common.IntPtr(shardID),
 		})
 		if err != nil {
 			return nil, nil, err

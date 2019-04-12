@@ -125,7 +125,7 @@ func (s *integrationSuite) isHistoryDeleted(domainID string, execution *workflow
 
 	request := &persistence.GetHistoryTreeRequest{
 		TreeID:  execution.GetRunId(),
-		ShardID: s.testCluster.testBase.ShardInfo.ShardID,
+		ShardID: common.IntPtr(s.testCluster.testBase.ShardInfo.ShardID),
 	}
 	for i := 0; i < retryLimit; i++ {
 		resp, err := s.testCluster.testBase.HistoryV2Mgr.GetHistoryTree(request)
