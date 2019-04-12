@@ -355,7 +355,7 @@ func ESField(ESField string) Tag {
 	return newStringTag("es-field", ESField)
 }
 
-// loggingCallAt is reserved
+// LoggingCallAtKey is reserved tag
 const LoggingCallAtKey = "logging-call-at"
 
 func loggingCallAt(position string) Tag {

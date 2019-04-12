@@ -30,6 +30,7 @@ import (
 // Tag is the interface for logging system
 type Tag tagImpl
 
+// Field returns a zap field
 func (t *Tag) Field() zap.Field {
 	return t.field
 }
