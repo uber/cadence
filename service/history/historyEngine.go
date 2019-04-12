@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -142,7 +143,7 @@ func NewEngineWithShardContext(
 	visibilityMgr persistence.VisibilityManager,
 	matching matching.Client,
 	historyClient hc.Client,
-	publicClient public.Client,
+	publicClient workflowserviceclient.Interface,
 	historyEventNotifier historyEventNotifier,
 	publisher messaging.Producer,
 	visibilityProducer messaging.Producer,
