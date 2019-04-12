@@ -165,13 +165,26 @@ func (t *transferQueueProcessorBase) recordWorkflowStarted(
 		return nil
 	}
 
+	var memo []byte
 	encoding := t.shard.GetEncoding(domainEntry)
 	memoBlob, err := t.serializer.SerializeVisibilityMemo(visibilityMemo, encoding)
+	if err != nil {
+		t.logger.WithFields(bark.Fields{
+			logging.TagErr:                 err.Error(),
+			logging.TagDomainID:            domainID,
+			logging.TagWorkflowExecutionID: execution.GetWorkflowId(),
+			logging.TagWorkflowRunID:       execution.GetRunId(),
+		}).Error("error serialize visibility memo")
+	}
+	if memoBlob != nil {
+		memo = memoBlob.Data
+		encoding = memoBlob.GetEncoding()
+	}
 
 	// publish to kafka
 	if t.visibilityProducer != nil {
 		msg := getVisibilityMessageForOpenExecution(domainID, execution, workflowTypeName, startTimeUnixNano,
-			executionTimeUnixNano, taskID, memoBlob.Data, memoBlob.Encoding)
+			executionTimeUnixNano, taskID, memo, encoding)
 		err := t.visibilityProducer.Publish(msg)
 		if err != nil {
 			return err
@@ -186,8 +199,8 @@ func (t *transferQueueProcessorBase) recordWorkflowStarted(
 		StartTimestamp:     startTimeUnixNano,
 		ExecutionTimestamp: executionTimeUnixNano,
 		WorkflowTimeout:    int64(workflowTimeout),
-		Memo:               memoBlob.Data,
-		Encoding:           memoBlob.GetEncoding(),
+		Memo:               memo,
+		Encoding:           encoding,
 	})
 }
 
@@ -220,14 +233,27 @@ func (t *transferQueueProcessorBase) recordWorkflowClosed(
 		return nil
 	}
 
+	var memo []byte
 	encoding := t.shard.GetEncoding(domainEntry)
 	memoBlob, err := t.serializer.SerializeVisibilityMemo(visibilityMemo, encoding)
+	if err != nil {
+		t.logger.WithFields(bark.Fields{
+			logging.TagErr:                 err.Error(),
+			logging.TagDomainID:            domainID,
+			logging.TagWorkflowExecutionID: execution.GetWorkflowId(),
+			logging.TagWorkflowRunID:       execution.GetRunId(),
+		}).Error("error serialize visibility memo")
+	}
+	if memoBlob != nil {
+		memo = memoBlob.Data
+		encoding = memoBlob.GetEncoding()
+	}
 
 	// publish to kafka
 	if t.visibilityProducer != nil {
 		msg := getVisibilityMessageForCloseExecution(domainID, execution, workflowTypeName,
 			startTimeUnixNano, executionTimeUnixNano, endTimeUnixNano, closeStatus, historyLength, taskID,
-			memoBlob.Data, memoBlob.Encoding)
+			memo, encoding)
 		err := t.visibilityProducer.Publish(msg)
 		if err != nil {
 			return err
@@ -245,8 +271,8 @@ func (t *transferQueueProcessorBase) recordWorkflowClosed(
 		Status:             closeStatus,
 		HistoryLength:      historyLength,
 		RetentionSeconds:   retentionSeconds,
-		Memo:               memoBlob.Data,
-		Encoding:           memoBlob.GetEncoding(),
+		Memo:               memo,
+		Encoding:           encoding,
 	})
 }
 

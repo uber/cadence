@@ -183,6 +183,9 @@ func (t *serializerImpl) DeserializeEvent(data *DataBlob) (*workflow.HistoryEven
 }
 
 func (t *serializerImpl) SerializeVisibilityMemo(memo *workflow.Memo, encodingType common.EncodingType) (*DataBlob, error) {
+	if memo == nil {
+		return nil, nil
+	}
 	return t.serialize(memo, encodingType)
 }
 
