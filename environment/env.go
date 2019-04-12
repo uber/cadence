@@ -57,7 +57,6 @@ const (
 	ESPort = "ES_PORT"
 	// ESDefaultPort ES default port
 	ESDefaultPort = "9200"
-
 )
 
 // SetupEnv setup the necessary env
@@ -163,7 +162,7 @@ func GetMySQLPort() int {
 	return p
 }
 
-// GetKafkaAddr return the kafka address
+// GetKafkaAddress return the kafka address
 func GetKafkaAddress() string {
 	addr := os.Getenv(KafkaSeeds)
 	if addr == "" {
