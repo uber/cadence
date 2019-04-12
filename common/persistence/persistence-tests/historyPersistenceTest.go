@@ -124,12 +124,8 @@ func (s *HistoryPersistenceSuite) TestGetHistoryEvents() {
 		s.Equal(0, len(history.Events))
 	}
 
-	// batchEvents = newBatchEventForTest([]int64{3, 4}, 1)
-	// err0 = s.AppendHistoryEvents(domainID, workflowExecution, 3, common.EmptyVersion, 1, 1, batchEvents, false)
-	// s.Nil(err0)
-
-	// Only have two events, but start at 5, should get an error.
-	_, _, err2 := s.GetWorkflowExecutionHistory(domainID, workflowExecution, 1, 4, 1, nil)
+	// firstEventID is 2, since there's only one page, the call should return an error.
+	_, _, err2 := s.GetWorkflowExecutionHistory(domainID, workflowExecution, 2, 4, 1, nil)
 	s.IsType(&gen.EntityNotExistsError{}, err2)
 }
 

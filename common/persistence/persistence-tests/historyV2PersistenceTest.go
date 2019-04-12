@@ -280,12 +280,9 @@ func (s *HistoryV2PersistenceSuite) TestReadBranchByPagination() {
 	s.True(historyW.Equals(historyR))
 	s.Equal(0, len(resp.NextPageToken))
 
-	req.BranchToken = bi2
-	req.NextPageToken = nil
+	// MinEventID is in the middle of the last batch, the call should return an error.
 	req.MinEventID = 19
-	req.MaxEventID = 21
-	req.PageSize = 1
-	_, err = s.HistoryV2Mgr.ReadHistoryBranch(req)
+	resp, err = s.HistoryV2Mgr.ReadHistoryBranch(req)
 	s.IsType(&gen.EntityNotExistsError{}, err)
 }
 
