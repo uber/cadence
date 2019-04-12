@@ -161,7 +161,7 @@ func (s *Service) startScanner(base service.Service) {
 	}
 	params := &scanner.BootstrapParams{
 		Config:        *s.config.ScannerCfg,
-		SDKClient:     s.getPublicClient(base),
+		SDKClient:     s.params.PublicClient,
 		MetricsClient: s.metricsClient,
 		Logger:        s.logger,
 		TallyScope:    s.params.MetricScope,
@@ -210,7 +210,7 @@ func (s *Service) startIndexer(base service.Service) {
 }
 
 func (s *Service) startArchiver(base service.Service, pFactory persistencefactory.Factory) {
-	publicClient := s.getPublicClient(base)
+	publicClient := s.params.PublicClient
 	s.ensureSystemDomainExists(publicClient)
 
 	historyManager, err := pFactory.NewHistoryManager()
@@ -249,17 +249,6 @@ func (s *Service) startArchiver(base service.Service, pFactory persistencefactor
 		clientWorker.Stop()
 		s.logger.WithError(err).Fatal("failed to start archiver")
 	}
-}
-
-func (s *Service) getPublicClient(base service.Service) public.Client {
-	if s.params.PublicClient != nil {
-		return s.params.PublicClient
-	}
-	return public.NewRetryableClient(
-		base.GetClientBean().GetPublicClient(),
-		common.CreatePublicClientRetryPolicy(),
-		common.IsWhitelistServiceTransientError,
-	)
 }
 
 func (s *Service) ensureSystemDomainExists(publicClient public.Client) {
