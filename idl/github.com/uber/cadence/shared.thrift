@@ -1295,6 +1295,7 @@ struct PollerInfo {
   // Unix Nano
   10: optional i64 (js.type = "Long")  lastAccessTime
   20: optional string identity
+  30: optional double ratePerSecond
 }
 
 struct RetryPolicy {

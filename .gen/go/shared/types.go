@@ -29,13 +29,12 @@ import (
 	json "encoding/json"
 	errors "errors"
 	fmt "fmt"
-	math "math"
-	strconv "strconv"
-	strings "strings"
-
 	multierr "go.uber.org/multierr"
 	wire "go.uber.org/thriftrw/wire"
 	zapcore "go.uber.org/zap/zapcore"
+	math "math"
+	strconv "strconv"
+	strings "strings"
 )
 
 type AccessDeniedError struct {
@@ -24879,8 +24878,9 @@ func (v *PollForDecisionTaskResponse) IsSetWorkflowExecutionTaskList() bool {
 }
 
 type PollerInfo struct {
-	LastAccessTime *int64  `json:"lastAccessTime,omitempty"`
-	Identity       *string `json:"identity,omitempty"`
+	LastAccessTime *int64   `json:"lastAccessTime,omitempty"`
+	Identity       *string  `json:"identity,omitempty"`
+	RatePerSecond  *float64 `json:"ratePerSecond,omitempty"`
 }
 
 // ToWire translates a PollerInfo struct into a Thrift-level intermediate
@@ -24900,7 +24900,7 @@ type PollerInfo struct {
 //   }
 func (v *PollerInfo) ToWire() (wire.Value, error) {
 	var (
-		fields [2]wire.Field
+		fields [3]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -24920,6 +24920,14 @@ func (v *PollerInfo) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.RatePerSecond != nil {
+		w, err = wire.NewValueDouble(*(v.RatePerSecond)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
 		i++
 	}
 
@@ -24968,6 +24976,16 @@ func (v *PollerInfo) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 30:
+			if field.Value.Type() == wire.TDouble {
+				var x float64
+				x, err = field.Value.GetDouble(), error(nil)
+				v.RatePerSecond = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -24981,7 +24999,7 @@ func (v *PollerInfo) String() string {
 		return "<nil>"
 	}
 
-	var fields [2]string
+	var fields [3]string
 	i := 0
 	if v.LastAccessTime != nil {
 		fields[i] = fmt.Sprintf("LastAccessTime: %v", *(v.LastAccessTime))
@@ -24991,8 +25009,22 @@ func (v *PollerInfo) String() string {
 		fields[i] = fmt.Sprintf("Identity: %v", *(v.Identity))
 		i++
 	}
+	if v.RatePerSecond != nil {
+		fields[i] = fmt.Sprintf("RatePerSecond: %v", *(v.RatePerSecond))
+		i++
+	}
 
 	return fmt.Sprintf("PollerInfo{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _Double_EqualsPtr(lhs, rhs *float64) bool {
+	if lhs != nil && rhs != nil {
+
+		x := *lhs
+		y := *rhs
+		return (x == y)
+	}
+	return lhs == nil && rhs == nil
 }
 
 // Equals returns true if all the fields of this PollerInfo match the
@@ -25011,6 +25043,9 @@ func (v *PollerInfo) Equals(rhs *PollerInfo) bool {
 	if !_String_EqualsPtr(v.Identity, rhs.Identity) {
 		return false
 	}
+	if !_Double_EqualsPtr(v.RatePerSecond, rhs.RatePerSecond) {
+		return false
+	}
 
 	return true
 }
@@ -25026,6 +25061,9 @@ func (v *PollerInfo) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	}
 	if v.Identity != nil {
 		enc.AddString("identity", *v.Identity)
+	}
+	if v.RatePerSecond != nil {
+		enc.AddFloat64("ratePerSecond", *v.RatePerSecond)
 	}
 	return err
 }
@@ -25058,6 +25096,21 @@ func (v *PollerInfo) GetIdentity() (o string) {
 // IsSetIdentity returns true if Identity is not nil.
 func (v *PollerInfo) IsSetIdentity() bool {
 	return v != nil && v.Identity != nil
+}
+
+// GetRatePerSecond returns the value of RatePerSecond if it is set or its
+// zero value if it is unset.
+func (v *PollerInfo) GetRatePerSecond() (o float64) {
+	if v != nil && v.RatePerSecond != nil {
+		return *v.RatePerSecond
+	}
+
+	return
+}
+
+// IsSetRatePerSecond returns true if RatePerSecond is not nil.
+func (v *PollerInfo) IsSetRatePerSecond() bool {
+	return v != nil && v.RatePerSecond != nil
 }
 
 type QueryFailedError struct {
@@ -33045,16 +33098,6 @@ func (v *RetryPolicy) String() string {
 	}
 
 	return fmt.Sprintf("RetryPolicy{%v}", strings.Join(fields[:i], ", "))
-}
-
-func _Double_EqualsPtr(lhs, rhs *float64) bool {
-	if lhs != nil && rhs != nil {
-
-		x := *lhs
-		y := *rhs
-		return (x == y)
-	}
-	return lhs == nil && rhs == nil
 }
 
 func _List_String_Equals(lhs, rhs []string) bool {

@@ -726,6 +726,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 	s.Equal(1, len(descResp.Pollers))
 	s.Equal(identity, descResp.Pollers[0].GetIdentity())
 	s.NotEmpty(descResp.Pollers[0].GetLastAccessTime())
+	s.Equal(_defaultTaskDispatchRPS, descResp.Pollers[0].RatePerSecond)
 	s.NotNil(descResp.GetTaskListStatus())
 	s.True(descResp.GetTaskListStatus().GetRatePerSecond() >= (_defaultTaskDispatchRPS - 1))
 }
@@ -892,8 +893,8 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 	s.True(expectedRange <= s.taskManager.getTaskListManager(tlID).rangeID)
 	s.EqualValues(0, s.taskManager.getTaskCount(tlID))
 
-	syncCtr := scope.Snapshot().Counters()["test.sync.throttle.count+operation=TaskListMgr"]
-	bufCtr := scope.Snapshot().Counters()["test.buffer.throttle.count+operation=TaskListMgr"]
+	syncCtr := scope.Snapshot().Counters()["test.sync_throttle_count+domain=domainName,operation=TaskListMgr"]
+	bufCtr := scope.Snapshot().Counters()["test.buffer_throttle_count+domain=domainName,operation=TaskListMgr"]
 	total := int64(0)
 	if syncCtr != nil {
 		total += syncCtr.Value()
