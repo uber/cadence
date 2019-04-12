@@ -28,16 +28,14 @@ import (
 )
 
 // Tag is the interface for logging system
-type Tag tagImpl
+type Tag struct {
+	// keep this field private
+	field zap.Field
+}
 
 // Field returns a zap field
 func (t *Tag) Field() zap.Field {
 	return t.field
-}
-
-// keep this module private
-type tagImpl struct {
-	field zap.Field
 }
 
 func newStringTag(key string, value string) Tag {
