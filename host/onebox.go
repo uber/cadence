@@ -378,6 +378,11 @@ func (c *cadenceImpl) startHistory(hosts map[string][]string, startWG *sync.Wait
 		params.PersistenceConfig = c.persistenceConfig
 		params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 		params.DynamicConfig = dynamicconfig.NewNopClient()
+		dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, c.GetFrontendService().GetHostInfo().GetAddress())
+		if err != nil {
+			c.logger.WithField("error", err).Fatal("Failed to get dispatcher for frontend")
+		}
+		params.PublicClient = cwsc.New(dispatcher.ClientConfig(common.FrontendServiceName))
 
 		c.initLock.Lock()
 		service := service.New(params)
@@ -447,6 +452,11 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
 
+	dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, c.GetFrontendService().GetHostInfo().GetAddress())
+	if err != nil {
+		c.logger.WithField("error", err).Fatal("Failed to get dispatcher for frontend")
+	}
+	params.PublicClient = cwsc.New(dispatcher.ClientConfig(common.FrontendServiceName))
 	c.initLock.Lock()
 	service := service.New(params)
 	service.Start()
@@ -489,11 +499,6 @@ func (c *cadenceImpl) startWorkerReplicator(params *service.BootstrapParams, ser
 }
 
 func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, service service.Service, domainCache cache.DomainCache) {
-	dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, c.GetFrontendService().GetHostInfo().GetAddress())
-	if err != nil {
-		c.logger.WithField("error", err).Fatal("Failed to get dispatcher for frontend")
-	}
-	params.PublicClient = cwsc.New(dispatcher.ClientConfig(common.FrontendServiceName))
 	blobstoreClient := blobstore.NewRetryableClient(
 		blobstore.NewMetricClient(c.blobstoreClient, service.GetMetricsClient()),
 		c.blobstoreClient.GetRetryPolicy(),
