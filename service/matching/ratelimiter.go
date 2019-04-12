@@ -22,11 +22,10 @@ package matching
 
 import (
 	"context"
+	"math"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"math"
 
 	"golang.org/x/time/rate"
 )
