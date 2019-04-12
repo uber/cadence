@@ -1079,7 +1079,7 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Success_GetLastPage() {
 }
 
 func (s *workflowHandlerSuite) newConfig() *Config {
-	return NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger), false)
+	return NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger), 0, false)
 }
 
 func bucketMetadataResponse(owner string, retentionDays int) *blobstore.BucketMetadataResponse {

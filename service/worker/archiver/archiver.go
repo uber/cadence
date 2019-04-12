@@ -77,7 +77,6 @@ func (a *archiver) Start() {
 				if more := a.requestCh.Receive(ctx, &request); !more {
 					break
 				}
-
 				handleRequest(ctx, a.logger, a.metricsClient, request)
 				handledHashes = append(handledHashes, hashArchiveRequest(request))
 			}
