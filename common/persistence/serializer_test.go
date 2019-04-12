@@ -91,7 +91,13 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 			startWG.Wait()
 			defer doneWG.Done()
 
-			_, err := serializer.SerializeEvent(event0, common.EncodingTypeGob)
+			// serialize event
+
+			nilEvent, err := serializer.SerializeEvent(nil, common.EncodingTypeThriftRW)
+			s.Nil(err)
+			s.Nil(nilEvent)
+
+			_, err = serializer.SerializeEvent(event0, common.EncodingTypeGob)
 			s.NotNil(err)
 			_, ok := err.(*UnknownEncodingTypeError)
 			s.True(ok)
@@ -107,6 +113,12 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 			dEmpty, err := serializer.SerializeEvent(event0, common.EncodingType(""))
 			s.Nil(err)
 			s.NotNil(dEmpty)
+
+			// serialize batch events
+
+			nilEvents, err := serializer.SerializeBatchEvents(nil, common.EncodingTypeThriftRW)
+			s.Nil(err)
+			s.NotNil(nilEvents)
 
 			_, err = serializer.SerializeBatchEvents(history0.Events, common.EncodingTypeGob)
 			s.NotNil(err)
@@ -130,6 +142,12 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 			_, ok = err.(*UnknownEncodingTypeError)
 			s.True(ok)
 
+			// serialize visibility memo
+
+			nilMemo, err := serializer.SerializeVisibilityMemo(nil, common.EncodingTypeThriftRW)
+			s.Nil(err)
+			s.Nil(nilMemo)
+
 			mJSON, err := serializer.SerializeVisibilityMemo(memo0, common.EncodingTypeJSON)
 			s.Nil(err)
 			s.NotNil(mJSON)
@@ -142,6 +160,12 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 			s.Nil(err)
 			s.NotNil(mEmpty)
 
+			// deserialize event
+
+			dNilEvent, err := serializer.DeserializeEvent(nilEvent)
+			s.Nil(err)
+			s.Nil(dNilEvent)
+
 			event1, err := serializer.DeserializeEvent(dJSON)
 			s.Nil(err)
 			s.True(event0.Equals(event1))
@@ -153,6 +177,12 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 			event3, err := serializer.DeserializeEvent(dEmpty)
 			s.Nil(err)
 			s.True(event0.Equals(event3))
+
+			// deserialize batch events
+
+			dNilEvents, err := serializer.DeserializeBatchEvents(nilEvents)
+			s.Nil(err)
+			s.Nil(dNilEvents)
 
 			events, err := serializer.DeserializeBatchEvents(dsJSON)
 			history1 := &workflow.History{Events: events}
@@ -168,6 +198,12 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 			history3 := &workflow.History{Events: events}
 			s.Nil(err)
 			s.True(history0.Equals(history3))
+
+			// deserialize visibility memo
+
+			dNilMemo, err := serializer.DeserializeVisibilityMemo(nilMemo)
+			s.Nil(err)
+			s.Equal(&workflow.Memo{}, dNilMemo)
 
 			memo1, err := serializer.DeserializeVisibilityMemo(mJSON)
 			s.Nil(err)

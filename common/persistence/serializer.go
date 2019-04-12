@@ -74,116 +74,41 @@ func NewCadenceSerializer() CadenceSerializer {
 }
 
 func (t *serializerImpl) SerializeBatchEvents(events []*workflow.HistoryEvent, encodingType common.EncodingType) (*DataBlob, error) {
-	batch := &workflow.History{Events: events}
-
-	switch encodingType {
-	case common.EncodingTypeGob:
-		return nil, NewUnknownEncodingTypeError(encodingType)
-	case common.EncodingTypeThriftRW:
-		history := &workflow.History{
-			Events: batch.Events,
-		}
-		data, err := t.thriftrwEncoder.Encode(history)
-		if err != nil {
-			return nil, NewCadenceSerializationError(err.Error())
-		}
-		return NewDataBlob(data, encodingType), nil
-	default:
-		fallthrough
-	case common.EncodingTypeJSON:
-		data, err := json.Marshal(batch.Events)
-		if err != nil {
-			return nil, NewCadenceSerializationError(err.Error())
-		}
-		return NewDataBlob(data, common.EncodingTypeJSON), nil
-	}
+	return t.serialize(events, encodingType)
 }
 
 func (t *serializerImpl) DeserializeBatchEvents(data *DataBlob) ([]*workflow.HistoryEvent, error) {
 	if data == nil {
 		return nil, nil
 	}
-	switch data.GetEncoding() {
-	//As backward-compatibility, unknown should be json
-	case common.EncodingTypeUnknown:
-		fallthrough
-	case common.EncodingTypeJSON:
-		var events []*workflow.HistoryEvent
-		if len(data.Data) == 0 {
-			return events, nil
-		}
-		err := json.Unmarshal(data.Data, &events)
-		if err != nil {
-			return nil, NewCadenceDeserializationError(fmt.Sprintf("DeserializeBatchEvents encoding: \"%v\", error: %v", data.Encoding, err.Error()))
-		}
+	var events []*workflow.HistoryEvent
+	if data != nil && len(data.Data) == 0 {
 		return events, nil
-	case common.EncodingTypeThriftRW:
-		var history workflow.History
-		err := t.thriftrwEncoder.Decode(data.Data, &history)
-		if err != nil {
-			return nil, NewCadenceDeserializationError(fmt.Sprintf("DeserializeBatchEvents encoding: \"%v\", error: %v", data.Encoding, err.Error()))
-		}
-		return history.Events, nil
-	default:
-		return nil, NewUnknownEncodingTypeError(data.GetEncoding())
 	}
+	err := t.deserialize(data, &events)
+	return events, err
 }
 
 func (t *serializerImpl) SerializeEvent(event *workflow.HistoryEvent, encodingType common.EncodingType) (*DataBlob, error) {
 	if event == nil {
 		return nil, nil
 	}
-	switch encodingType {
-	case common.EncodingTypeGob:
-		return nil, NewUnknownEncodingTypeError(encodingType)
-	case common.EncodingTypeThriftRW:
-		data, err := t.thriftrwEncoder.Encode(event)
-		if err != nil {
-			return nil, NewCadenceSerializationError(err.Error())
-		}
-		return NewDataBlob(data, encodingType), nil
-	default:
-		fallthrough
-	case common.EncodingTypeJSON:
-		data, err := json.Marshal(event)
-		if err != nil {
-			return nil, NewCadenceSerializationError(err.Error())
-		}
-		return NewDataBlob(data, common.EncodingTypeJSON), nil
-	}
+	return t.serialize(event, encodingType)
 }
 
 func (t *serializerImpl) DeserializeEvent(data *DataBlob) (*workflow.HistoryEvent, error) {
 	if data == nil {
 		return nil, nil
 	}
-	if len(data.Data) == 0 {
-		return nil, NewCadenceDeserializationError("DeserializeEvent empty data")
-	}
 	var event workflow.HistoryEvent
-	switch data.GetEncoding() {
-	//As backward-compatibility, unknown should be json
-	case common.EncodingTypeUnknown:
-		fallthrough
-	case common.EncodingTypeJSON:
-		err := json.Unmarshal(data.Data, &event)
-		if err != nil {
-			return nil, NewCadenceDeserializationError(fmt.Sprintf("DeserializeEvent encoding: \"%v\", error: %v", data.Encoding, err.Error()))
-		}
-		return &event, nil
-	case common.EncodingTypeThriftRW:
-		err := t.thriftrwEncoder.Decode(data.Data, &event)
-		if err != nil {
-			return nil, NewCadenceDeserializationError(fmt.Sprintf("DeserializeEvent encoding: \"%v\", error: %v", data.Encoding, err.Error()))
-		}
-		return &event, nil
-	default:
-		return nil, NewUnknownEncodingTypeError(data.GetEncoding())
-	}
+	err := t.deserialize(data, &event)
+	return &event, err
 }
 
 func (t *serializerImpl) SerializeVisibilityMemo(memo *workflow.Memo, encodingType common.EncodingType) (*DataBlob, error) {
 	if memo == nil {
+		// Return nil here to be consistent with Event
+		// This check is not duplicate as check in following serialize
 		return nil, nil
 	}
 	return t.serialize(memo, encodingType)
