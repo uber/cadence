@@ -93,7 +93,7 @@ func TestElasticsearchIntegrationSuite(t *testing.T) {
 	suite.Run(t, new(elasticsearchIntegrationSuite))
 }
 
-func (s *elasticsearchIntegrationSuite) TestDummy() {
+func (s *elasticsearchIntegrationSuite) TestListOpenWorkflow() {
 	id := "es-integration-start-workflow-test"
 	wt := "es-integration-start-workflow-test-type"
 	tl := "es-integration-start-workflow-test-tasklist"

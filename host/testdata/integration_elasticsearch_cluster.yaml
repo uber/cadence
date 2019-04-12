@@ -7,7 +7,7 @@ messagingclientconfig:
     clusters:
       test:
         brokers:
-          - "127.0.0.1:9092"
+          - "${KAFKA_SEEDS}:9092"
     topics:
       test-visibility-topic:
         cluster: test
@@ -28,7 +28,7 @@ esconfig:
   enable: true
   url:
     scheme: "http"
-    host: "127.0.0.1:9200"
+    host: "${ES_SEEDS}:9200"
   indices:
     visibility: test-visibility-
 enablereadvisibilityfromes: true

@@ -187,8 +187,8 @@ func (c *cadenceImpl) Start() error {
 		hosts[common.WorkerServiceName] = []string{c.WorkerServiceAddress()}
 	}
 
-	var err error
 	if c.esConfig.Enable {
+		var err error
 		c.esClient, err = elasticsearch.NewClient(c.esConfig)
 		if err != nil {
 			return err
