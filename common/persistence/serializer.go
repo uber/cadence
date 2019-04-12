@@ -74,26 +74,112 @@ func NewCadenceSerializer() CadenceSerializer {
 }
 
 func (t *serializerImpl) SerializeBatchEvents(events []*workflow.HistoryEvent, encodingType common.EncodingType) (*DataBlob, error) {
-	return t.serialize(events, encodingType)
+	batch := &workflow.History{Events: events}
+
+	switch encodingType {
+	case common.EncodingTypeGob:
+		return nil, NewUnknownEncodingTypeError(encodingType)
+	case common.EncodingTypeThriftRW:
+		history := &workflow.History{
+			Events: batch.Events,
+		}
+		data, err := t.thriftrwEncoder.Encode(history)
+		if err != nil {
+			return nil, NewCadenceSerializationError(err.Error())
+		}
+		return NewDataBlob(data, encodingType), nil
+	default:
+		fallthrough
+	case common.EncodingTypeJSON:
+		data, err := json.Marshal(batch.Events)
+		if err != nil {
+			return nil, NewCadenceSerializationError(err.Error())
+		}
+		return NewDataBlob(data, common.EncodingTypeJSON), nil
+	}
 }
 
 func (t *serializerImpl) DeserializeBatchEvents(data *DataBlob) ([]*workflow.HistoryEvent, error) {
-	var events []*workflow.HistoryEvent
-	if data != nil && len(data.Data) == 0 {
-		return events, nil
+	if data == nil {
+		return nil, nil
 	}
-	err := t.deserialize(data, &events)
-	return events, err
+	switch data.GetEncoding() {
+	//As backward-compatibility, unknown should be json
+	case common.EncodingTypeUnknown:
+		fallthrough
+	case common.EncodingTypeJSON:
+		var events []*workflow.HistoryEvent
+		if len(data.Data) == 0 {
+			return events, nil
+		}
+		err := json.Unmarshal(data.Data, &events)
+		if err != nil {
+			return nil, NewCadenceDeserializationError(fmt.Sprintf("DeserializeBatchEvents encoding: \"%v\", error: %v", data.Encoding, err.Error()))
+		}
+		return events, nil
+	case common.EncodingTypeThriftRW:
+		var history workflow.History
+		err := t.thriftrwEncoder.Decode(data.Data, &history)
+		if err != nil {
+			return nil, NewCadenceDeserializationError(fmt.Sprintf("DeserializeBatchEvents encoding: \"%v\", error: %v", data.Encoding, err.Error()))
+		}
+		return history.Events, nil
+	default:
+		return nil, NewUnknownEncodingTypeError(data.GetEncoding())
+	}
 }
 
 func (t *serializerImpl) SerializeEvent(event *workflow.HistoryEvent, encodingType common.EncodingType) (*DataBlob, error) {
-	return t.serialize(event, encodingType)
+	if event == nil {
+		return nil, nil
+	}
+	switch encodingType {
+	case common.EncodingTypeGob:
+		return nil, NewUnknownEncodingTypeError(encodingType)
+	case common.EncodingTypeThriftRW:
+		data, err := t.thriftrwEncoder.Encode(event)
+		if err != nil {
+			return nil, NewCadenceSerializationError(err.Error())
+		}
+		return NewDataBlob(data, encodingType), nil
+	default:
+		fallthrough
+	case common.EncodingTypeJSON:
+		data, err := json.Marshal(event)
+		if err != nil {
+			return nil, NewCadenceSerializationError(err.Error())
+		}
+		return NewDataBlob(data, common.EncodingTypeJSON), nil
+	}
 }
 
 func (t *serializerImpl) DeserializeEvent(data *DataBlob) (*workflow.HistoryEvent, error) {
+	if data == nil {
+		return nil, nil
+	}
+	if len(data.Data) == 0 {
+		return nil, NewCadenceDeserializationError("DeserializeEvent empty data")
+	}
 	var event workflow.HistoryEvent
-	err := t.deserialize(data, &event)
-	return &event, err
+	switch data.GetEncoding() {
+	//As backward-compatibility, unknown should be json
+	case common.EncodingTypeUnknown:
+		fallthrough
+	case common.EncodingTypeJSON:
+		err := json.Unmarshal(data.Data, &event)
+		if err != nil {
+			return nil, NewCadenceDeserializationError(fmt.Sprintf("DeserializeEvent encoding: \"%v\", error: %v", data.Encoding, err.Error()))
+		}
+		return &event, nil
+	case common.EncodingTypeThriftRW:
+		err := t.thriftrwEncoder.Decode(data.Data, &event)
+		if err != nil {
+			return nil, NewCadenceDeserializationError(fmt.Sprintf("DeserializeEvent encoding: \"%v\", error: %v", data.Encoding, err.Error()))
+		}
+		return &event, nil
+	default:
+		return nil, NewUnknownEncodingTypeError(data.GetEncoding())
+	}
 }
 
 func (t *serializerImpl) SerializeVisibilityMemo(memo *workflow.Memo, encodingType common.EncodingType) (*DataBlob, error) {
