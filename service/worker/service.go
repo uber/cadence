@@ -22,11 +22,11 @@ package worker
 
 import (
 	"context"
+	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"sync/atomic"
 	"time"
 
 	"github.com/uber-common/bark"
-	"github.com/uber/cadence/client/public"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
@@ -251,7 +251,7 @@ func (s *Service) startArchiver(base service.Service, pFactory persistencefactor
 	}
 }
 
-func (s *Service) ensureSystemDomainExists(publicClient public.Client) {
+func (s *Service) ensureSystemDomainExists(publicClient workflowserviceclient.Interface) {
 	request := &shared.DescribeDomainRequest{
 		Name: common.StringPtr(common.SystemDomainName),
 	}

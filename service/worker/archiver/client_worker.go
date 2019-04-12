@@ -22,10 +22,10 @@ package archiver
 
 import (
 	"context"
+	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"time"
 
 	"github.com/uber-common/bark"
-	"github.com/uber/cadence/client/public"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
@@ -53,7 +53,7 @@ type (
 
 	// BootstrapContainer contains everything need for bootstrapping
 	BootstrapContainer struct {
-		PublicClient      public.Client
+		PublicClient      workflowserviceclient.Interface
 		MetricsClient     metrics.Client
 		Logger            bark.Logger
 		ClusterMetadata   cluster.Metadata

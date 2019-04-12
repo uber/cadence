@@ -23,10 +23,10 @@ package archiver
 import (
 	"context"
 	"fmt"
+	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"math/rand"
 
 	"github.com/uber-common/bark"
-	"github.com/uber/cadence/client/public"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
@@ -64,7 +64,7 @@ type (
 func NewClient(
 	metricsClient metrics.Client,
 	logger bark.Logger,
-	publicClient public.Client,
+	publicClient workflowserviceclient.Interface,
 	numWorkflows dynamicconfig.IntPropertyFn,
 ) Client {
 	return &client{
