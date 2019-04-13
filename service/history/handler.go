@@ -23,7 +23,6 @@ package history
 import (
 	"context"
 	"fmt"
-	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"sync"
 
 	"github.com/pborman/uuid"
@@ -45,6 +44,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/tokenbucket"
+	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 

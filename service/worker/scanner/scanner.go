@@ -22,7 +22,6 @@ package scanner
 
 import (
 	"context"
-	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"log"
 	"time"
 
@@ -37,6 +36,7 @@ import (
 	pfactory "github.com/uber/cadence/common/persistence/persistence-factory"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/.gen/go/shared"
 	cclient "go.uber.org/cadence/client"
 	"go.uber.org/cadence/worker"

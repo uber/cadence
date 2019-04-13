@@ -22,7 +22,6 @@ package worker
 
 import (
 	"context"
-	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"sync/atomic"
 	"time"
 
@@ -40,6 +39,7 @@ import (
 	"github.com/uber/cadence/service/worker/indexer"
 	"github.com/uber/cadence/service/worker/replicator"
 	"github.com/uber/cadence/service/worker/scanner"
+	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/.gen/go/shared"
 )
 

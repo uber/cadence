@@ -22,7 +22,6 @@ package archiver
 
 import (
 	"context"
-	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"time"
 
 	"github.com/uber-common/bark"
@@ -34,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/worker"
 	"go.uber.org/cadence/workflow"

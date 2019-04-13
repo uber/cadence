@@ -53,7 +53,7 @@ type (
 		// Archival is the config for archival
 		Archival Archival `yaml:"archival"`
 		// ElasticSearch is config for connecting to ElasticSearch
-		ElasticSearch elasticsearch.Config `yaml:"elasticsearch""`
+		ElasticSearch elasticsearch.Config `yaml:"elasticsearch"`
 		// PublicClient is config for connecting to cadence frontend
 		PublicClient PublicClient `yaml:"publicClient"`
 	}

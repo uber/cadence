@@ -23,7 +23,6 @@ package archiver
 import (
 	"context"
 	"fmt"
-	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"math/rand"
 
 	"github.com/uber-common/bark"
@@ -31,6 +30,7 @@ import (
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	cclient "go.uber.org/cadence/client"
 )
 

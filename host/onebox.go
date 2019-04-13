@@ -378,7 +378,7 @@ func (c *cadenceImpl) startHistory(hosts map[string][]string, startWG *sync.Wait
 		params.PersistenceConfig = c.persistenceConfig
 		params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 		params.DynamicConfig = dynamicconfig.NewNopClient()
-		dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, c.GetFrontendService().GetHostInfo().GetAddress())
+		dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, c.FrontendAddress())
 		if err != nil {
 			c.logger.WithField("error", err).Fatal("Failed to get dispatcher for frontend")
 		}
@@ -452,7 +452,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
 
-	dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, c.GetFrontendService().GetHostInfo().GetAddress())
+	dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, c.FrontendAddress())
 	if err != nil {
 		c.logger.WithField("error", err).Fatal("Failed to get dispatcher for frontend")
 	}
