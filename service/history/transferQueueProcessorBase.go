@@ -330,20 +330,26 @@ func getVisibilityMessageForCloseExecution(domainID string, execution workflow.W
 	return msg
 }
 
-func getWorkflowExecutionTimestampAndMemo(msBuilder mutableState) (time.Time, *workflow.Memo, bool) {
+// Argument startEvent is to save additional call of msBuilder.GetStartEvent
+func getWorkflowExecutionTimestamp(msBuilder mutableState, startEvent *workflow.HistoryEvent) time.Time {
 	// Use value 0 to represent workflows that don't need backoff. Since ES doesn't support
 	// comparison between two field, we need a value to differentiate them from cron workflows
 	// or later runs of a workflow that needs retry.
 	executionTimestamp := time.Unix(0, 0)
-	startEvent, ok := msBuilder.GetStartEvent()
-	if !ok {
-		return executionTimestamp, nil, ok
+	if startEvent == nil {
+		return executionTimestamp
 	}
 
-	startedEventAttributes := startEvent.WorkflowExecutionStartedEventAttributes
-	if backoffSeconds := startedEventAttributes.GetFirstDecisionTaskBackoffSeconds(); backoffSeconds != 0 {
+	if backoffSeconds := startEvent.WorkflowExecutionStartedEventAttributes.GetFirstDecisionTaskBackoffSeconds(); backoffSeconds != 0 {
 		startTimestamp := msBuilder.GetExecutionInfo().StartTimestamp
 		executionTimestamp = startTimestamp.Add(time.Duration(backoffSeconds) * time.Second)
 	}
-	return executionTimestamp, startedEventAttributes.Memo, ok
+	return executionTimestamp
+}
+
+func getVisibilityMemo(startEvent *workflow.HistoryEvent) *workflow.Memo {
+	if startEvent == nil {
+		return nil
+	}
+	return startEvent.WorkflowExecutionStartedEventAttributes.Memo
 }

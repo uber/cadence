@@ -293,7 +293,9 @@ func (t *transferQueueStandbyProcessorImpl) processCloseExecution(transferTask *
 		workflowCloseTimestamp := wfCloseTime
 		workflowCloseStatus := getWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
 		workflowHistoryLength := msBuilder.GetNextEventID() - 1
-		workflowExecutionTimestamp, visibilityMemo, _ := getWorkflowExecutionTimestampAndMemo(msBuilder)
+		startEvent, _ := msBuilder.GetStartEvent()
+		workflowExecutionTimestamp := getWorkflowExecutionTimestamp(msBuilder, startEvent)
+		visibilityMemo := getVisibilityMemo(startEvent)
 
 		ok, err := verifyTaskVersion(t.shard, t.logger, transferTask.DomainID, msBuilder.GetLastWriteVersion(), transferTask.Version, transferTask)
 		if err != nil {
@@ -444,7 +446,9 @@ func (t *transferQueueStandbyProcessorImpl) processRecordWorkflowStarted(transfe
 		workflowTimeout := executionInfo.WorkflowTimeout
 		wfTypeName := executionInfo.WorkflowTypeName
 		startTimestamp := executionInfo.StartTimestamp.UnixNano()
-		executionTimestamp, visibilityMemo, _ := getWorkflowExecutionTimestampAndMemo(msBuilder)
+		startEvent, _ := msBuilder.GetStartEvent()
+		executionTimestamp := getWorkflowExecutionTimestamp(msBuilder, startEvent)
+		visibilityMemo := getVisibilityMemo(startEvent)
 
 		return t.recordWorkflowStarted(transferTask.DomainID, execution, wfTypeName, startTimestamp, executionTimestamp.UnixNano(),
 			workflowTimeout, transferTask.GetTaskID(), visibilityMemo)

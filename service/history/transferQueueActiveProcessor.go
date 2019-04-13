@@ -411,10 +411,12 @@ func (t *transferQueueActiveProcessorImpl) processCloseExecution(task *persisten
 	workflowCloseStatus := getWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
 	workflowHistoryLength := msBuilder.GetNextEventID() - 1
 
-	workflowExecutionTimestamp, visibilityMemo, ok := getWorkflowExecutionTimestampAndMemo(msBuilder)
+	startEvent, ok := msBuilder.GetStartEvent()
 	if !ok && replyToParentWorkflow {
 		return &workflow.InternalServiceError{Message: "Unable to get workflow start event."}
 	}
+	workflowExecutionTimestamp := getWorkflowExecutionTimestamp(msBuilder, startEvent)
+	visibilityMemo := getVisibilityMemo(startEvent)
 
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
@@ -870,7 +872,9 @@ func (t *transferQueueActiveProcessorImpl) processRecordWorkflowStarted(task *pe
 	workflowTimeout := executionInfo.WorkflowTimeout
 	wfTypeName := executionInfo.WorkflowTypeName
 	startTimestamp := executionInfo.StartTimestamp.UnixNano()
-	executionTimestamp, visibilityMemo, _ := getWorkflowExecutionTimestampAndMemo(msBuilder)
+	startEvent, _ := msBuilder.GetStartEvent()
+	executionTimestamp := getWorkflowExecutionTimestamp(msBuilder, startEvent)
+	visibilityMemo := getVisibilityMemo(startEvent)
 
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
