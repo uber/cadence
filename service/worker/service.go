@@ -22,13 +22,15 @@ package worker
 
 import (
 	"context"
+	"github.com/uber-common/bark"
+	"github.com/uber/cadence/common/log/tag"
 	"sync/atomic"
 	"time"
 
-	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
@@ -53,7 +55,8 @@ type (
 		isStopped     int32
 		params        *service.BootstrapParams
 		config        *Config
-		logger        bark.Logger
+		logger        log.Logger
+		barkLogger    bark.Logger
 		metricsClient metrics.Client
 	}
 
@@ -119,13 +122,14 @@ func NewConfig(params *service.BootstrapParams) *Config {
 func (s *Service) Start() {
 	base := service.New(s.params)
 	base.Start()
-	s.logger = base.GetBarkLogger()
+	s.barkLogger = base.GetBarkLogger()
+	s.logger = base.GetLogger()
 	s.metricsClient = base.GetMetricsClient()
-	s.logger.Infof("%v starting", common.WorkerServiceName)
+	s.logger.Info("service starting", tag.ComponentWorker)
 
 	pConfig := s.params.PersistenceConfig
 	pConfig.SetMaxQPS(pConfig.DefaultStore, s.config.ReplicationCfg.PersistenceMaxQPS())
-	pFactory := persistencefactory.New(&pConfig, s.params.ClusterMetadata.GetCurrentClusterName(), s.metricsClient, s.logger)
+	pFactory := persistencefactory.New(&pConfig, s.params.ClusterMetadata.GetCurrentClusterName(), s.metricsClient, s.barkLogger)
 
 	if base.GetClusterMetadata().IsGlobalDomainEnabled() {
 		s.startReplicator(base, pFactory)
@@ -139,7 +143,7 @@ func (s *Service) Start() {
 
 	s.startScanner(base)
 
-	s.logger.Infof("%v started", common.WorkerServiceName)
+	s.logger.Info("service started", tag.ComponentWorker)
 	<-s.stopC
 	base.Stop()
 }
@@ -150,34 +154,34 @@ func (s *Service) Stop() {
 		return
 	}
 	close(s.stopC)
-	s.params.BarkLogger.Infof("%v stopped", common.WorkerServiceName)
+	s.params.Logger.Info("service stopped", tag.ComponentWorker)
 }
 
 func (s *Service) startScanner(base service.Service) {
 	storeType := s.config.ScannerCfg.Persistence.DefaultStoreType()
 	if storeType != config.StoreTypeSQL {
-		s.logger.Infof("Scanner not started: incompatible persistence store type %v", storeType)
+		s.logger.Info("Scanner not started: incompatible persistence store type", tag.StoreType(storeType))
 		return
 	}
 	params := &scanner.BootstrapParams{
 		Config:        *s.config.ScannerCfg,
 		SDKClient:     s.params.PublicClient,
 		MetricsClient: s.metricsClient,
-		Logger:        s.logger,
+		Logger:        s.barkLogger,
 		TallyScope:    s.params.MetricScope,
 	}
 	scanner := scanner.New(params)
 	if err := scanner.Start(); err != nil {
-		s.logger.Fatalf("error starting scanner:%v", err)
+		s.logger.Fatal("error starting scanner:%v", tag.Error(err))
 	}
 }
 
 func (s *Service) startReplicator(base service.Service, pFactory persistencefactory.Factory) {
 	metadataV2Mgr, err := pFactory.NewMetadataManager(persistencefactory.MetadataV2)
 	if err != nil {
-		s.logger.Fatalf("failed to start replicator, could not create MetadataManager: %v", err)
+		s.logger.Fatal("failed to start replicator, could not create MetadataManager", tag.Error(err))
 	}
-	domainCache := cache.NewDomainCache(metadataV2Mgr, base.GetClusterMetadata(), s.metricsClient, s.logger)
+	domainCache := cache.NewDomainCache(metadataV2Mgr, base.GetClusterMetadata(), s.metricsClient, s.barkLogger)
 	domainCache.Start()
 
 	replicator := replicator.NewReplicator(
@@ -187,11 +191,11 @@ func (s *Service) startReplicator(base service.Service, pFactory persistencefact
 		base.GetClientBean(),
 		s.config.ReplicationCfg,
 		base.GetMessagingClient(),
-		s.logger,
+		s.barkLogger,
 		s.metricsClient)
 	if err := replicator.Start(); err != nil {
 		replicator.Stop()
-		s.logger.Fatalf("fail to start replicator: %v", err)
+		s.logger.Fatal("fail to start replicator", tag.Error(err))
 	}
 }
 
@@ -201,11 +205,11 @@ func (s *Service) startIndexer(base service.Service) {
 		base.GetMessagingClient(),
 		s.params.ESClient,
 		s.params.ESConfig,
-		s.logger,
+		s.barkLogger,
 		s.metricsClient)
 	if err := indexer.Start(); err != nil {
 		indexer.Stop()
-		s.logger.Fatalf("fail to start indexer: %v", err)
+		s.logger.Fatal("fail to start indexer", tag.Error(err))
 	}
 }
 
@@ -215,17 +219,17 @@ func (s *Service) startArchiver(base service.Service, pFactory persistencefactor
 
 	historyManager, err := pFactory.NewHistoryManager()
 	if err != nil {
-		s.logger.WithError(err).Fatal("failed to start archiver, could not create HistoryManager")
+		s.logger.Fatal("failed to start archiver, could not create HistoryManager", tag.Error(err))
 	}
 	historyV2Manager, err := pFactory.NewHistoryV2Manager()
 	if err != nil {
-		s.logger.WithError(err).Fatal("failed to start archiver, could not create HistoryV2Manager")
+		s.logger.Fatal("failed to start archiver, could not create HistoryV2Manager", tag.Error(err))
 	}
 	metadataMgr, err := pFactory.NewMetadataManager(persistencefactory.MetadataV1V2)
 	if err != nil {
-		s.logger.WithError(err).Fatal("failed to start archiver, could not create MetadataManager")
+		s.logger.Fatal("failed to start archiver, could not create MetadataManager", tag.Error(err))
 	}
-	domainCache := cache.NewDomainCache(metadataMgr, s.params.ClusterMetadata, s.metricsClient, s.logger)
+	domainCache := cache.NewDomainCache(metadataMgr, s.params.ClusterMetadata, s.metricsClient, s.barkLogger)
 	domainCache.Start()
 
 	blobstoreClient := blobstore.NewRetryableClient(
@@ -236,7 +240,7 @@ func (s *Service) startArchiver(base service.Service, pFactory persistencefactor
 	bc := &archiver.BootstrapContainer{
 		PublicClient:     publicClient,
 		MetricsClient:    s.metricsClient,
-		Logger:           s.logger,
+		Logger:           s.barkLogger,
 		ClusterMetadata:  base.GetClusterMetadata(),
 		HistoryManager:   historyManager,
 		HistoryV2Manager: historyV2Manager,
@@ -247,7 +251,7 @@ func (s *Service) startArchiver(base service.Service, pFactory persistencefactor
 	clientWorker := archiver.NewClientWorker(bc)
 	if err := clientWorker.Start(); err != nil {
 		clientWorker.Stop()
-		s.logger.WithError(err).Fatal("failed to start archiver")
+		s.logger.Fatal("failed to start archiver", tag.Error(err))
 	}
 }
 
@@ -259,6 +263,6 @@ func (s *Service) ensureSystemDomainExists(publicClient workflowserviceclient.In
 	defer cancel()
 	_, err := publicClient.DescribeDomain(ctx, request)
 	if err != nil {
-		s.logger.WithError(err).Fatal("failed to verify that cadence system domain exists")
+		s.logger.Fatal("failed to verify that cadence system domain exists", tag.Error(err))
 	}
 }

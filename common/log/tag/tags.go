@@ -267,6 +267,11 @@ func MetricScope(metricScope int64) Tag {
 	return newIntegerTag("metric-scope", metricScope)
 }
 
+// StoreType returns tag for StoreType
+func StoreType(storeType string) Tag {
+	return newPredefinedStringTag("store-type", storeType)
+}
+
 // history engine shard
 
 // ShardID returns tag for ShardID
