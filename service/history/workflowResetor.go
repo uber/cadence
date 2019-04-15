@@ -328,7 +328,9 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(ctx context.Context, 
 	}
 
 	// set the new mutable state with the version in domain
-	newMutableState.UpdateReplicationStateVersion(domainEntry.GetFailoverVersion(), false)
+	if newMutableState.GetReplicationState() != nil {
+		newMutableState.UpdateReplicationStateVersion(domainEntry.GetFailoverVersion(), false)
+	}
 
 	// failed the in-flight decision(started).
 	// Note that we need to ensure DecisionTaskFailed event is appended right after DecisionTaskStarted event
