@@ -386,7 +386,7 @@ func (c *cadenceImpl) startHistory(hosts map[string][]string, startWG *sync.Wait
 		params.DynamicConfig = dynamicconfig.NewNopClient()
 		dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, c.FrontendAddress())
 		if err != nil {
-			c.logger.WithField("error", err).Fatal("Failed to get dispatcher for frontend")
+			c.barkLogger.WithField("error", err).Fatal("Failed to get dispatcher for frontend")
 		}
 		params.PublicClient = cwsc.New(dispatcher.ClientConfig(common.FrontendServiceName))
 
@@ -462,7 +462,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 
 	dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, c.FrontendAddress())
 	if err != nil {
-		c.logger.WithField("error", err).Fatal("Failed to get dispatcher for frontend")
+		c.barkLogger.WithField("error", err).Fatal("Failed to get dispatcher for frontend")
 	}
 	params.PublicClient = cwsc.New(dispatcher.ClientConfig(common.FrontendServiceName))
 	c.initLock.Lock()
