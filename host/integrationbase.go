@@ -121,7 +121,7 @@ func (s *IntegrationBase) setupLogger() {
 	logger.Formatter = formatter
 	s.BarkLogger = bark.NewLoggerFromLogrus(logger)
 	zapLogger, err := zap.NewDevelopment()
-	s.Nil(err)
+	s.Require().NoError(err)
 	s.Logger = log.NewLogger(zapLogger)
 }
 

@@ -75,7 +75,7 @@ func (s *integrationCrossDCSuite) SetupSuite() {
 	logger.Formatter = formatter
 	s.barkLogger = bark.NewLoggerFromLogrus(logger)
 	zapLogger, err := zap.NewDevelopment()
-	s.Nil(err)
+	s.Require().NoError(err)
 	s.logger = log.NewLogger(zapLogger)
 }
 
