@@ -146,3 +146,7 @@ ignored = ["github.com/uber/cadence/.gen"]
 [[constraint]]
   name = "github.com/hashicorp/serf"
   version = "0.8.2"
+
+[[constraint]]
+  name = "github.com/hashicorp/memberlist"
+  version = "0.1.3"

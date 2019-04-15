@@ -1,11 +1,15 @@
 package membership
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/hashicorp/serf/serf"
 	"github.com/uber-common/bark"
 )
 
 type serfMonitor struct {
+	service   string
 	logger    bark.Logger
 	serf      *serf.Serf
 	hosts     []string
@@ -14,18 +18,23 @@ type serfMonitor struct {
 
 // NewSerfMonitor returns a new serf based monitor
 func NewSerfMonitor(services []string, hosts []string, config *serf.Config, logger bark.Logger) Monitor {
+	fmt.Printf("%v\n", hosts)
 	serf, err := serf.Create(config)
 	if err != nil {
-		logger.Fatal("unable to create serf")
+		logger.Fatalf("unable to create serf %v", config.Tags[RoleKey])
 	}
 	resolvers := make(map[string]ServiceResolver, len(services))
 	for _, service := range services {
 		resolvers[service] = newSerfResolver(service, serf)
 	}
-	return &serfMonitor{logger: logger, hosts: hosts, serf: serf, resolvers: resolvers}
+	return &serfMonitor{service: config.Tags[RoleKey], logger: logger, hosts: hosts, serf: serf, resolvers: resolvers}
 }
 
 func (s *serfMonitor) Start() error {
+	s.logger.Infof("starting serf monitor for service %v", s.service)
+	if strings.Contains(s.service, "history") {
+		return nil
+	}
 	n, err := s.serf.Join(s.hosts, false)
 	if err != nil {
 		return err

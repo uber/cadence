@@ -1057,6 +1057,7 @@
     "github.com/golang/mock/gomock",
     "github.com/google/uuid",
     "github.com/hashicorp/go-version.git",
+    "github.com/hashicorp/memberlist",
     "github.com/hashicorp/serf/serf",
     "github.com/iancoleman/strcase",
     "github.com/jmoiron/sqlx",

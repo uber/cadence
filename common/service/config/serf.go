@@ -1,6 +1,11 @@
 package config
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
+
+	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/serf/serf"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common/membership"
@@ -24,8 +29,17 @@ func (serfConfig *Serf) NewFactory(logger bark.Logger, serviceName string) (*Ser
 func (s *SerfFactory) Create(dispatcher *yarpc.Dispatcher) (membership.Monitor, error) {
 	config := serf.DefaultConfig()
 
+	port, _ := strconv.ParseInt(strings.Split(s.config.Name, ":")[1], 0, 0)
+	port = port + 800
+
 	// set the hostname as identifier for serf
 	config.NodeName = s.config.Name
 	config.Tags = map[string]string{membership.RoleKey: s.serviceName}
+	config.MemberlistConfig = memberlist.DefaultLANConfig()
+	config.MemberlistConfig.BindAddr = "127.0.0.1"
+	config.MemberlistConfig.BindPort = int(port)
+	config.MemberlistConfig.AdvertiseAddr = "127.0.0.1"
+	config.MemberlistConfig.AdvertisePort = int(port)
+	fmt.Printf("creating serf monitor on port %v\n", port)
 	return membership.NewSerfMonitor(CadenceServices, s.config.BootstrapHosts, config, s.logger), nil
 }
