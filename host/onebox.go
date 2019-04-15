@@ -313,6 +313,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	params.DCRedirectionPolicy = config.DCRedirectionPolicy{}
 	params.Name = common.FrontendServiceName
 	params.BarkLogger = c.barkLogger
+	params.Logger = c.logger
 	params.ThrottledBarkLogger = logging.NewThrottledLogger(c.barkLogger, func(...dynamicconfig.FilterOption) int { return 10 })
 	params.PProfInitializer = newPProfInitializerImpl(c.barkLogger, c.FrontendPProfPort())
 	params.RPCFactory = newRPCFactoryImpl(common.FrontendServiceName, c.FrontendAddress(), c.barkLogger)
@@ -371,6 +372,7 @@ func (c *cadenceImpl) startHistory(hosts map[string][]string, startWG *sync.Wait
 		params := new(service.BootstrapParams)
 		params.Name = common.HistoryServiceName
 		params.BarkLogger = c.barkLogger
+		params.Logger = c.logger
 		params.ThrottledBarkLogger = logging.NewThrottledLogger(c.barkLogger, func(...dynamicconfig.FilterOption) int { return 10 })
 		params.PProfInitializer = newPProfInitializerImpl(c.barkLogger, pprofPorts[i])
 		params.RPCFactory = newRPCFactoryImpl(common.HistoryServiceName, hostport, c.barkLogger)
@@ -418,6 +420,7 @@ func (c *cadenceImpl) startMatching(hosts map[string][]string, startWG *sync.Wai
 	params := new(service.BootstrapParams)
 	params.Name = common.MatchingServiceName
 	params.BarkLogger = c.barkLogger
+	params.Logger = c.logger
 	params.ThrottledBarkLogger = logging.NewThrottledLogger(c.barkLogger, func(...dynamicconfig.FilterOption) int { return 10 })
 	params.PProfInitializer = newPProfInitializerImpl(c.barkLogger, c.MatchingPProfPort())
 	params.RPCFactory = newRPCFactoryImpl(common.MatchingServiceName, c.MatchingServiceAddress(), c.barkLogger)
@@ -446,6 +449,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 	params := new(service.BootstrapParams)
 	params.Name = common.WorkerServiceName
 	params.BarkLogger = c.barkLogger
+	params.Logger = c.logger
 	params.PProfInitializer = newPProfInitializerImpl(c.barkLogger, c.WorkerPProfPort())
 	params.RPCFactory = newRPCFactoryImpl(common.WorkerServiceName, c.WorkerServiceAddress(), c.barkLogger)
 	params.MetricScope = tally.NewTestScope(common.WorkerServiceName, make(map[string]string))
