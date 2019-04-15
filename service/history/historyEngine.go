@@ -33,7 +33,6 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
-	"github.com/uber/cadence/client/public"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
@@ -46,6 +45,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/worker/archiver"
+	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/yarpc"
 )
@@ -64,6 +64,7 @@ type (
 		historyMgr           persistence.HistoryManager
 		historyV2Mgr         persistence.HistoryV2Manager
 		executionManager     persistence.ExecutionManager
+		visibilityMgr        persistence.VisibilityManager
 		txProcessor          transferQueueProcessor
 		timerProcessor       timerQueueProcessor
 		taskAllocator        taskAllocator
@@ -141,7 +142,7 @@ func NewEngineWithShardContext(
 	visibilityMgr persistence.VisibilityManager,
 	matching matching.Client,
 	historyClient hc.Client,
-	publicClient public.Client,
+	publicClient workflowserviceclient.Interface,
 	historyEventNotifier historyEventNotifier,
 	publisher messaging.Producer,
 	visibilityProducer messaging.Producer,
@@ -165,6 +166,7 @@ func NewEngineWithShardContext(
 		historyMgr:         historyManager,
 		historyV2Mgr:       historyV2Manager,
 		executionManager:   executionManager,
+		visibilityMgr:      visibilityMgr,
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
 		historyCache:       historyCache,
 		logger: logger.WithFields(bark.Fields{
@@ -1127,9 +1129,16 @@ type decisionBlobSizeChecker struct {
 }
 
 func (c *decisionBlobSizeChecker) failWorkflowIfBlobSizeExceedsLimit(blob []byte, message string) (bool, error) {
-	err := common.CheckEventBlobSizeLimit(len(blob), c.sizeLimitWarn, c.sizeLimitError,
-		c.domainID, c.workflowID, c.runID, c.metricsClient, metrics.HistoryRespondDecisionTaskCompletedScope, c.logger)
-
+	err := common.CheckEventBlobSizeLimit(
+		len(blob),
+		c.sizeLimitWarn,
+		c.sizeLimitError,
+		c.domainID,
+		c.workflowID,
+		c.runID,
+		c.metricsClient.Scope(metrics.HistoryRespondDecisionTaskCompletedScope),
+		c.logger,
+	)
 	if err == nil {
 		return false, nil
 	}
@@ -1558,6 +1567,10 @@ Update_History_Loop:
 					// since timer builder has a local cached version of timers
 					tBuilder = e.getTimerBuilder(context.getExecution())
 					tBuilder.loadUserTimers(msBuilder)
+
+					// timer deletion is a success, we may have deleted a fired timer in
+					// which case we should reset hasBufferedEvents
+					hasUnhandledEvents = msBuilder.HasBufferedEvents()
 				}
 
 			case workflow.DecisionTypeRecordMarker:
@@ -2680,6 +2693,13 @@ func (e *historyEngineImpl) SyncActivity(ctx context.Context, request *h.SyncAct
 
 func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetRequest *h.ResetWorkflowExecutionRequest) (response *workflow.ResetWorkflowExecutionResponse, retError error) {
 	return e.resetor.ResetWorkflowExecution(ctx, resetRequest)
+}
+
+func (e *historyEngineImpl) DeleteExecutionFromVisibility(domainID string, runID string) error {
+	return e.visibilityMgr.DeleteWorkflowExecution(&persistence.VisibilityDeleteWorkflowExecutionRequest{
+		DomainID: domainID,
+		RunID:    runID,
+	})
 }
 
 type updateWorkflowAction struct {
