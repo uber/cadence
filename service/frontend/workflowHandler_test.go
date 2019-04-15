@@ -1119,7 +1119,7 @@ func (s *workflowHandlerSuite) TestGetHistory() {
 	wh := s.getWorkflowHandlerWithParams(mService, config, mMetadataManager, mBlobstore)
 	wh.metricsClient = wh.Service.GetMetricsClient()
 	scope := wh.metricsClient.Scope(0)
-	history, token, err := wh.getHistory(0, scope, domainID, we, firstEventID, nextEventID, 0, []byte{}, nil, persistence.EventStoreVersionV2, []byte{})
+	history, token, err := wh.getHistory(scope, domainID, we, firstEventID, nextEventID, 0, []byte{}, nil, persistence.EventStoreVersionV2, []byte{})
 	s.NotNil(history)
 	s.Equal([]byte{}, token)
 	s.NoError(err)
