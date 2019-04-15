@@ -28,12 +28,9 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore/filestore"
 	"github.com/uber/cadence/common/cluster"
-<<<<<<< HEAD
 	"github.com/uber/cadence/common/elasticsearch"
-	"github.com/uber/cadence/common/messaging"
-=======
 	cadenceLog "github.com/uber/cadence/common/log"
->>>>>>> pick log2
+	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
