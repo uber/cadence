@@ -300,7 +300,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 		if err != nil {
 			return wh.error(err, scope)
 		}
-		nextArchivalState, _, err = currentArchivalState.getNextState(archivalEvent)
+		nextArchivalState, _, err = currentArchivalState.getNextState(ctx, wh.blobstoreClient, archivalEvent)
 		if err != nil {
 			return wh.error(err, scope)
 		}
@@ -381,7 +381,7 @@ func (wh *WorkflowHandler) ListDomains(ctx context.Context,
 			IsGlobalDomain:  common.BoolPtr(d.IsGlobalDomain),
 			FailoverVersion: common.Int64Ptr(d.FailoverVersion),
 		}
-		desc.DomainInfo, desc.Configuration, desc.ReplicationConfiguration = wh.createDomainResponse(d.Info, d.Config, d.ReplicationConfig)
+		desc.DomainInfo, desc.Configuration, desc.ReplicationConfiguration = wh.createDomainResponse(ctx, d.Info, d.Config, d.ReplicationConfig)
 		domains = append(domains, desc)
 	}
 
@@ -423,9 +423,7 @@ func (wh *WorkflowHandler) DescribeDomain(ctx context.Context,
 		IsGlobalDomain:  common.BoolPtr(resp.IsGlobalDomain),
 		FailoverVersion: common.Int64Ptr(resp.FailoverVersion),
 	}
-	response.DomainInfo, response.Configuration, response.ReplicationConfiguration = wh.createDomainResponse(
-		resp.Info, resp.Config, resp.ReplicationConfig)
-
+	response.DomainInfo, response.Configuration, response.ReplicationConfiguration = wh.createDomainResponse(ctx, resp.Info, resp.Config, resp.ReplicationConfig)
 	return response, nil
 }
 
@@ -492,7 +490,7 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
-		nextArchivalState, archivalConfigChanged, err = currentArchivalState.getNextState(archivalEvent)
+		nextArchivalState, archivalConfigChanged, err = currentArchivalState.getNextState(ctx, wh.blobstoreClient, archivalEvent)
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
@@ -667,8 +665,7 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 		IsGlobalDomain:  common.BoolPtr(getResponse.IsGlobalDomain),
 		FailoverVersion: common.Int64Ptr(failoverVersion),
 	}
-	response.DomainInfo, response.Configuration, response.ReplicationConfiguration = wh.createDomainResponse(
-		info, config, replicationConfig)
+	response.DomainInfo, response.Configuration, response.ReplicationConfiguration = wh.createDomainResponse(ctx, info, config, replicationConfig)
 	return response, nil
 }
 
@@ -3206,9 +3203,12 @@ func getDomainStatus(info *persistence.DomainInfo) *gen.DomainStatus {
 	return nil
 }
 
-func (wh *WorkflowHandler) createDomainResponse(info *persistence.DomainInfo, config *persistence.DomainConfig,
-	replicationConfig *persistence.DomainReplicationConfig) (*gen.DomainInfo,
-	*gen.DomainConfiguration, *gen.DomainReplicationConfiguration) {
+func (wh *WorkflowHandler) createDomainResponse(
+	ctx context.Context,
+	info *persistence.DomainInfo,
+	config *persistence.DomainConfig,
+	replicationConfig *persistence.DomainReplicationConfig,
+) (*gen.DomainInfo, *gen.DomainConfiguration, *gen.DomainReplicationConfiguration) {
 
 	infoResult := &gen.DomainInfo{
 		Name:        common.StringPtr(info.Name),
@@ -3226,7 +3226,7 @@ func (wh *WorkflowHandler) createDomainResponse(info *persistence.DomainInfo, co
 		ArchivalBucketName:                     common.StringPtr(config.ArchivalBucket),
 	}
 	if wh.GetClusterMetadata().ArchivalConfig().ConfiguredForArchival() && config.ArchivalBucket != "" {
-		metadata, err := wh.blobstoreClient.BucketMetadata(context.Background(), config.ArchivalBucket)
+		metadata, err := wh.blobstoreClient.BucketMetadata(ctx, config.ArchivalBucket)
 		if err == nil {
 			configResult.ArchivalRetentionPeriodInDays = common.Int32Ptr(int32(metadata.RetentionDays))
 			configResult.ArchivalBucketOwner = common.StringPtr(metadata.Owner)
