@@ -27,8 +27,9 @@ func (s *serfResolver) Lookup(key string) (*HostInfo, error) {
 	//	fmt.Printf("list of members are %v\n", members)
 	hash := int(farm.Fingerprint32([]byte(key)))
 	idx := hash % len(members)
-	fmt.Printf("returning host %v\n", members[idx])
-	return NewHostInfo(members[idx], map[string]string{RoleKey: s.service}), nil
+	hostInfo := NewHostInfo(members[idx], map[string]string{RoleKey: s.service})
+	fmt.Printf("returning host %v\n", hostInfo)
+	return hostInfo, nil
 }
 
 func (s *serfResolver) AddListener(name string, notifyChannel chan<- *ChangedEvent) error {
