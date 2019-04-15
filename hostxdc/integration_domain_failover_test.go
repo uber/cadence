@@ -104,7 +104,8 @@ func (s *integrationClustersTestSuite) SetupSuite() {
 	s.barkLogger = bark.NewLoggerFromLogrus(logger)
 
 	zapLogger, err := zap.NewDevelopment()
-	s.Nil(err)
+	// cannot use s.Nil since it is not initialized
+	s.Require().NoError(err)
 	s.logger = log.NewLogger(zapLogger)
 
 	fileName := defaultTestClustersConfig
