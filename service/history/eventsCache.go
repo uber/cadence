@@ -66,11 +66,7 @@ var _ eventsCache = (*eventsCacheImpl)(nil)
 
 func newEventsCache(shardCtx ShardContext) eventsCache {
 	config := shardCtx.GetConfig()
-
-	var shardID *int
-	if shardCtx != nil {
-		shardID = common.IntPtr(shardCtx.GetShardID())
-	}
+	shardID := common.IntPtr(shardCtx.GetShardID())
 	return newEventsCacheWithOptions(config.EventsCacheInitialSize(), config.EventsCacheMaxSize(), config.EventsCacheTTL(),
 		shardCtx.GetHistoryManager(), shardCtx.GetHistoryV2Manager(), false, shardCtx.GetLogger(), shardCtx.GetMetricsClient(), shardID)
 }

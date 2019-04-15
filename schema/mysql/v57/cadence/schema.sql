@@ -357,7 +357,7 @@ CREATE TABLE signals_requested_sets (
 
 -- history eventsV2: history_node stores history event data
 CREATE TABLE history_node (
-	shard_id INT NOT NULL,
+	shard_id       INT NOT NULL,
 	tree_id        BINARY(16) NOT NULL,
 	branch_id      BINARY(16) NOT NULL,
 	node_id        BIGINT NOT NULL,
@@ -369,7 +369,7 @@ CREATE TABLE history_node (
 
 -- history eventsV2: history_tree stores branch metadata
 CREATE TABLE history_tree (
-	shard_id INT NOT NULL,
+	shard_id       INT NOT NULL,
 	tree_id        BINARY(16) NOT NULL,
 	branch_id      BINARY(16) NOT NULL,
 	ancestors      BLOB NOT NULL,

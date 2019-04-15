@@ -216,12 +216,7 @@ func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persi
 	for _, cluster := range domainEntry.GetReplicationConfig().Clusters {
 		targetClusters = append(targetClusters, cluster.ClusterName)
 	}
-
-	var shardID *int
-	if p.shard != nil {
-		shardID = common.IntPtr(p.shard.GetShardID())
-	}
-	replicationTask, err := GenerateReplicationTask(targetClusters, task, p.historyMgr, p.historyV2Mgr, p.metricsClient, p.logger, nil, shardID)
+	replicationTask, err := GenerateReplicationTask(targetClusters, task, p.historyMgr, p.historyV2Mgr, p.metricsClient, p.logger, nil, common.IntPtr(p.shard.GetShardID()))
 	if err != nil || replicationTask == nil {
 		return err
 	}

@@ -157,14 +157,10 @@ func (w *workflowResetorImpl) ResetWorkflowExecution(ctx context.Context, resetR
 	// complete the fork process at the end, it is OK even if this defer fails, because our timer task can still clean up correctly
 	defer func() {
 		if newMutableState != nil && len(newMutableState.GetExecutionInfo().GetCurrentBranch()) > 0 {
-			var shardID *int
-			if w.eng != nil && w.eng.shard != nil {
-				shardID = common.IntPtr(w.eng.shard.GetShardID())
-			}
 			w.eng.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
 				BranchToken: newMutableState.GetExecutionInfo().GetCurrentBranch(),
 				Success:     retError == nil,
-				ShardID:     shardID,
+				ShardID:     common.IntPtr(w.eng.shard.GetShardID()),
 			})
 		}
 	}()
@@ -385,15 +381,11 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(ctx context.Context, 
 	)
 
 	// fork a new history branch
-	var shardID *int
-	if w.eng != nil && w.eng.shard != nil {
-		shardID = common.IntPtr(w.eng.shard.GetShardID())
-	}
 	forkResp, retError := w.eng.historyV2Mgr.ForkHistoryBranch(&persistence.ForkHistoryBranchRequest{
 		ForkBranchToken: baseMutableState.GetCurrentBranch(),
 		ForkNodeID:      resetDecisionCompletedEventID,
 		Info:            historyGarbageCleanupInfo(domainID, workflowID, newRunID),
-		ShardID:         shardID,
+		ShardID:         common.IntPtr(w.eng.shard.GetShardID()),
 	})
 	if retError != nil {
 		return
@@ -511,10 +503,6 @@ func (w *workflowResetorImpl) replayReceivedSignals(ctx context.Context, receive
 		continueRunID = ""
 
 		var nextPageToken []byte
-		var shardID *int
-		if w.eng != nil && w.eng.shard != nil {
-			shardID = common.IntPtr(w.eng.shard.GetShardID())
-		}
 		readReq := &persistence.ReadHistoryBranchRequest{
 			BranchToken: continueMutableState.GetCurrentBranch(),
 			MinEventID:  common.FirstEventID,
@@ -522,7 +510,7 @@ func (w *workflowResetorImpl) replayReceivedSignals(ctx context.Context, receive
 			MaxEventID:    continueMutableState.GetNextEventID(),
 			PageSize:      defaultHistoryPageSize,
 			NextPageToken: nextPageToken,
-			ShardID:       shardID,
+			ShardID:       common.IntPtr(w.eng.shard.GetShardID()),
 		}
 		for {
 			var readResp *persistence.ReadHistoryBranchByBatchResponse
@@ -603,10 +591,6 @@ func (w *workflowResetorImpl) replayHistoryEvents(decisionFinishEventID int64, r
 		RunId:      common.StringPtr(prevMutableState.GetExecutionInfo().RunID),
 	}
 	domainID := prevMutableState.GetExecutionInfo().DomainID
-	var shardID *int
-	if w.eng != nil && w.eng.shard != nil {
-		shardID = common.IntPtr(w.eng.shard.GetShardID())
-	}
 	var nextPageToken []byte
 	readReq := &persistence.ReadHistoryBranchRequest{
 		BranchToken: prevMutableState.GetCurrentBranch(),
@@ -615,7 +599,7 @@ func (w *workflowResetorImpl) replayHistoryEvents(decisionFinishEventID int64, r
 		MaxEventID:    prevMutableState.GetNextEventID(),
 		PageSize:      defaultHistoryPageSize,
 		NextPageToken: nextPageToken,
-		ShardID:       shardID,
+		ShardID:       common.IntPtr(w.eng.shard.GetShardID()),
 	}
 	var resetMutableState *mutableStateBuilder
 	var lastBatch []*workflow.HistoryEvent
@@ -793,10 +777,7 @@ func (w *workflowResetorImpl) ApplyResetEvent(ctx context.Context, request *h.Re
 	}
 
 	// fork a new history branch
-	var shardID *int
-	if w.eng != nil && w.eng.shard != nil {
-		shardID = common.IntPtr(w.eng.shard.GetShardID())
-	}
+	shardID := common.IntPtr(w.eng.shard.GetShardID())
 	forkResp, retError := w.eng.historyV2Mgr.ForkHistoryBranch(&persistence.ForkHistoryBranchRequest{
 		ForkBranchToken: baseMutableState.GetCurrentBranch(),
 		ForkNodeID:      decisionFinishEventID,
@@ -845,17 +826,13 @@ func (w *workflowResetorImpl) replicateResetEvent(baseMutableState mutableState,
 	// replay old history from beginning of the baseRun upto decisionFinishEventID(exclusive)
 	var nextPageToken []byte
 	var lastEvent *workflow.HistoryEvent
-	var shardID *int
-	if w.eng != nil && w.eng.shard != nil {
-		shardID = common.IntPtr(w.eng.shard.GetShardID())
-	}
 	readReq := &persistence.ReadHistoryBranchRequest{
 		BranchToken:   baseMutableState.GetCurrentBranch(),
 		MinEventID:    common.FirstEventID,
 		MaxEventID:    decisionFinishEventID,
 		PageSize:      defaultHistoryPageSize,
 		NextPageToken: nextPageToken,
-		ShardID:       shardID,
+		ShardID:       common.IntPtr(w.eng.shard.GetShardID()),
 	}
 	for {
 		var readResp *persistence.ReadHistoryBranchByBatchResponse

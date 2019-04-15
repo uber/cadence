@@ -145,17 +145,13 @@ func (r *conflictResolverImpl) getHistory(domainID string, execution shared.Work
 	nextEventID int64, nextPageToken []byte, eventStoreVersion int32, branchToken []byte) ([]*shared.HistoryEvent, int, int64, []byte, error) {
 
 	if eventStoreVersion == persistence.EventStoreVersionV2 {
-		var shardID *int
-		if r.shard != nil {
-			shardID = common.IntPtr(r.shard.GetShardID())
-		}
 		response, err := r.historyV2Mgr.ReadHistoryBranch(&persistence.ReadHistoryBranchRequest{
 			BranchToken:   branchToken,
 			MinEventID:    firstEventID,
 			MaxEventID:    nextEventID,
 			PageSize:      defaultHistoryPageSize,
 			NextPageToken: nextPageToken,
-			ShardID:       shardID,
+			ShardID:       common.IntPtr(r.shard.GetShardID()),
 		})
 		if err != nil {
 			return nil, 0, 0, nil, err

@@ -716,10 +716,6 @@ func (s *HistoryV2PersistenceSuite) append(branch []byte, events []*workflow.His
 	var resp *p.AppendHistoryNodesResponse
 
 	op := func() error {
-		var shardID *int
-		if s.ShardInfo != nil {
-			shardID = common.IntPtr(s.ShardInfo.ShardID)
-		}
 		var err error
 		resp, err = s.HistoryV2Mgr.AppendHistoryNodes(&p.AppendHistoryNodesRequest{
 			IsNewBranch:   isNewBranch,
@@ -728,7 +724,7 @@ func (s *HistoryV2PersistenceSuite) append(branch []byte, events []*workflow.His
 			Events:        events,
 			TransactionID: txnID,
 			Encoding:      pickRandomEncoding(),
-			ShardID:       shardID,
+			ShardID:       common.IntPtr(s.ShardInfo.ShardID),
 		})
 		return err
 	}
@@ -749,15 +745,11 @@ func (s *HistoryV2PersistenceSuite) fork(forkBranch []byte, forkNodeID int64) ([
 
 	op := func() error {
 		var err error
-		var shardID *int
-		if s.ShardInfo != nil {
-			shardID = common.IntPtr(s.ShardInfo.ShardID)
-		}
 		resp, err := s.HistoryV2Mgr.ForkHistoryBranch(&p.ForkHistoryBranchRequest{
 			ForkBranchToken: forkBranch,
 			ForkNodeID:      forkNodeID,
 			Info:            testForkRunID,
-			ShardID:         shardID,
+			ShardID:         common.IntPtr(s.ShardInfo.ShardID),
 		})
 		if resp != nil {
 			bi = resp.NewBranchToken

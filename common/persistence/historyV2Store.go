@@ -75,7 +75,6 @@ func (m *historyV2ManagerImpl) ForkHistoryBranch(request *ForkHistoryBranchReque
 	}
 	shardID, err := getShardID(request.ShardID)
 	if err != nil {
-		m.logger.WithError(err).Error("shardID is not set in fork history branch operation")
 		return nil, &workflow.InternalServiceError{
 			Message: err.Error(),
 		}
