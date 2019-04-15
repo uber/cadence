@@ -187,10 +187,8 @@ func (s *integrationSuite) isMultiBlobHistory(domain, domainID string, execution
 			NextEventID:  common.EndEventID,
 			PageSize:     pageSize,
 		}
-		resp := &persistence.GetWorkflowExecutionHistoryResponse{
-			NextPageToken: []byte{'0'},
-		}
-		for len(resp.NextPageToken) != 0 {
+		resp := &persistence.GetWorkflowExecutionHistoryResponse{}
+		for historySize == 0 || len(resp.NextPageToken) != 0 {
 			resp, err = s.testCluster.testBase.HistoryMgr.GetWorkflowExecutionHistory(req)
 			s.Nil(err)
 			historySize += resp.Size
@@ -220,8 +218,8 @@ func (s *integrationSuite) isMultiBlobHistory(domain, domainID string, execution
 		MaxEventID:  common.EndEventID,
 		PageSize:    pageSize,
 	}
-	nextPageToken := []byte{'0'}
-	for len(nextPageToken) != 0 {
+	var nextPageToken []byte
+	for historySize == 0 || len(nextPageToken) != 0 {
 		_, pageSize, nextPageToken, err = persistence.ReadFullPageV2Events(s.testCluster.testBase.HistoryV2Mgr, req)
 		s.Nil(err)
 		historySize += pageSize
