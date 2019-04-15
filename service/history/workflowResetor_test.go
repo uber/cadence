@@ -77,6 +77,7 @@ type (
 		shardClosedCh chan int
 		config        *Config
 		logger        bark.Logger
+		shardID       int
 	}
 )
 
@@ -103,7 +104,8 @@ func (s *resetorSuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 
-	shardID := 0
+	shardID := 10
+	s.shardID = shardID
 	s.mockMatchingClient = &mocks.MatchingClient{}
 	s.mockHistoryClient = &mocks.HistoryClient{}
 	s.mockMetadataMgr = &mocks.MetadataManager{}
@@ -129,6 +131,7 @@ func (s *resetorSuite) SetupTest() {
 	mockShard := &shardContextImpl{
 		service:                   s.mockService,
 		shardInfo:                 &p.ShardInfo{ShardID: shardID, RangeID: 1, TransferAckLevel: 0},
+		shardID:                   shardID,
 		transferSequenceNumber:    1,
 		executionManager:          s.mockExecutionMgr,
 		historyMgr:                s.mockHistoryMgr,
@@ -184,6 +187,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	testDomainEntry := cache.NewDomainCacheEntryForTest(&p.DomainInfo{ID: validDomainID}, &p.DomainConfig{Retention: 1})
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(testDomainEntry, nil)
 	s.mockDomainCache.On("GetDomain", mock.Anything).Return(testDomainEntry, nil)
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
 
 	request := &h.ResetWorkflowExecutionRequest{}
 	_, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
@@ -277,6 +281,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 		MaxEventID:    int64(34),
 		PageSize:      defaultHistoryPageSize,
 		NextPageToken: nil,
+		ShardID:       common.IntPtr(s.shardID),
 	}
 
 	taskList := &workflow.TaskList{
@@ -728,10 +733,12 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	completeReq := &p.CompleteForkBranchRequest{
 		BranchToken: newBranchToken,
 		Success:     true,
+		ShardID:     common.IntPtr(s.shardID),
 	}
 	completeReqErr := &p.CompleteForkBranchRequest{
 		BranchToken: newBranchToken,
 		Success:     false,
+		ShardID:     common.IntPtr(s.shardID),
 	}
 
 	appendV1Resp := &p.AppendHistoryEventsResponse{
@@ -814,10 +821,11 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	s.Equal(int64(34), resetReq.InsertExecutionInfo.DecisionScheduleID)
 	s.Equal(int64(35), resetReq.InsertExecutionInfo.NextEventID)
 
-	// one activity task and one decision task
-	s.Equal(2, len(resetReq.InsertTransferTasks))
+	// one activity task, one decision task and one record workflow started task
+	s.Equal(3, len(resetReq.InsertTransferTasks))
 	s.Equal(p.TransferTaskTypeActivityTask, resetReq.InsertTransferTasks[0].GetType())
 	s.Equal(p.TransferTaskTypeDecisionTask, resetReq.InsertTransferTasks[1].GetType())
+	s.Equal(p.TransferTaskTypeRecordWorkflowStarted, resetReq.InsertTransferTasks[2].GetType())
 
 	// WF timeout task, user timer, activity timeout timer, activity retry timer
 	s.Equal(3, len(resetReq.InsertTimerTasks))
@@ -871,6 +879,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication_WithRequestCance
 	testDomainEntry := cache.NewDomainCacheEntryForTest(&p.DomainInfo{ID: validDomainID}, &p.DomainConfig{Retention: 1})
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(testDomainEntry, nil)
 	s.mockDomainCache.On("GetDomain", mock.Anything).Return(testDomainEntry, nil)
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
 
 	request := &h.ResetWorkflowExecutionRequest{}
 	_, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
@@ -966,6 +975,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication_WithRequestCance
 		MaxEventID:    int64(35),
 		PageSize:      defaultHistoryPageSize,
 		NextPageToken: nil,
+		ShardID:       common.IntPtr(s.shardID),
 	}
 
 	taskList := &workflow.TaskList{
@@ -1449,6 +1459,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	// override domain cache
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(testDomainEntry, nil)
 	s.mockDomainCache.On("GetDomain", mock.Anything).Return(testDomainEntry, nil)
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
 
 	request := &h.ResetWorkflowExecutionRequest{}
 	_, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
@@ -1554,6 +1565,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 		MaxEventID:    int64(35),
 		PageSize:      defaultHistoryPageSize,
 		NextPageToken: nil,
+		ShardID:       common.IntPtr(s.shardID),
 	}
 
 	taskList := &workflow.TaskList{
@@ -2013,10 +2025,12 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	completeReq := &p.CompleteForkBranchRequest{
 		BranchToken: newBranchToken,
 		Success:     true,
+		ShardID:     common.IntPtr(s.shardID),
 	}
 	completeReqErr := &p.CompleteForkBranchRequest{
 		BranchToken: newBranchToken,
 		Success:     false,
+		ShardID:     common.IntPtr(s.shardID),
 	}
 
 	appendV1Resp := &p.AppendHistoryEventsResponse{
@@ -2100,10 +2114,11 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	s.Equal(int64(34), resetReq.InsertExecutionInfo.DecisionScheduleID)
 	s.Equal(int64(35), resetReq.InsertExecutionInfo.NextEventID)
 
-	s.Equal(3, len(resetReq.InsertTransferTasks))
+	s.Equal(4, len(resetReq.InsertTransferTasks))
 	s.Equal(p.TransferTaskTypeActivityTask, resetReq.InsertTransferTasks[0].GetType())
 	s.Equal(p.TransferTaskTypeActivityTask, resetReq.InsertTransferTasks[1].GetType())
 	s.Equal(p.TransferTaskTypeDecisionTask, resetReq.InsertTransferTasks[2].GetType())
+	s.Equal(p.TransferTaskTypeRecordWorkflowStarted, resetReq.InsertTransferTasks[3].GetType())
 
 	// WF timeout task, user timer, activity timeout timer, activity retry timer
 	s.Equal(3, len(resetReq.InsertTimerTasks))
@@ -2152,6 +2167,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 	// override domain cache
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(testDomainEntry, nil)
 	s.mockDomainCache.On("GetDomain", mock.Anything).Return(testDomainEntry, nil)
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
 
 	request := &h.ResetWorkflowExecutionRequest{}
 	_, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
@@ -2256,6 +2272,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 		MaxEventID:    int64(35),
 		PageSize:      defaultHistoryPageSize,
 		NextPageToken: nil,
+		ShardID:       common.IntPtr(s.shardID),
 	}
 
 	taskList := &workflow.TaskList{
@@ -2715,6 +2732,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 	completeReqErr := &p.CompleteForkBranchRequest{
 		BranchToken: newBranchToken,
 		Success:     false,
+		ShardID:     common.IntPtr(s.shardID),
 	}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", forkGwmsRequest).Return(forkGwmsResponse, nil).Once()
@@ -2748,6 +2766,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 	// override domain cache
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(testDomainEntry, nil)
 	s.mockDomainCache.On("GetDomain", mock.Anything).Return(testDomainEntry, nil)
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
 
 	request := &h.ResetWorkflowExecutionRequest{}
 	_, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
@@ -2854,6 +2873,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 		MaxEventID:    int64(35),
 		PageSize:      defaultHistoryPageSize,
 		NextPageToken: nil,
+		ShardID:       common.IntPtr(s.shardID),
 	}
 
 	taskList := &workflow.TaskList{
@@ -3313,10 +3333,12 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 	completeReq := &p.CompleteForkBranchRequest{
 		BranchToken: newBranchToken,
 		Success:     true,
+		ShardID:     common.IntPtr(s.shardID),
 	}
 	completeReqErr := &p.CompleteForkBranchRequest{
 		BranchToken: newBranchToken,
 		Success:     false,
+		ShardID:     common.IntPtr(s.shardID),
 	}
 
 	appendV2Resp := &p.AppendHistoryNodesResponse{
@@ -3384,10 +3406,11 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 	s.Equal(int64(34), resetReq.InsertExecutionInfo.DecisionScheduleID)
 	s.Equal(int64(35), resetReq.InsertExecutionInfo.NextEventID)
 
-	s.Equal(3, len(resetReq.InsertTransferTasks))
+	s.Equal(4, len(resetReq.InsertTransferTasks))
 	s.Equal(p.TransferTaskTypeActivityTask, resetReq.InsertTransferTasks[0].GetType())
 	s.Equal(p.TransferTaskTypeActivityTask, resetReq.InsertTransferTasks[1].GetType())
 	s.Equal(p.TransferTaskTypeDecisionTask, resetReq.InsertTransferTasks[2].GetType())
+	s.Equal(p.TransferTaskTypeRecordWorkflowStarted, resetReq.InsertTransferTasks[3].GetType())
 
 	// WF timeout task, user timer, activity timeout timer, activity retry timer
 	s.Equal(3, len(resetReq.InsertTimerTasks))
@@ -3434,6 +3457,7 @@ func (s *resetorSuite) TestApplyReset() {
 	// override domain cache
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(testDomainEntry, nil)
 	s.mockDomainCache.On("GetDomain", mock.Anything).Return(testDomainEntry, nil)
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
 
 	mockTxProcessor := &MockTransferQueueProcessor{}
 	mockTimerProcessor := &MockTimerQueueProcessor{}
@@ -3526,6 +3550,7 @@ func (s *resetorSuite) TestApplyReset() {
 		MaxEventID:    int64(30),
 		PageSize:      defaultHistoryPageSize,
 		NextPageToken: nil,
+		ShardID:       common.IntPtr(s.shardID),
 	}
 
 	taskList := &workflow.TaskList{
@@ -3924,6 +3949,7 @@ func (s *resetorSuite) TestApplyReset() {
 		ForkBranchToken: forkBranchToken,
 		ForkNodeID:      30,
 		Info:            historyGarbageCleanupInfo(domainID, wid, newRunID),
+		ShardID:         common.IntPtr(s.shardID),
 	}
 	forkResp := &p.ForkHistoryBranchResponse{
 		NewBranchToken: newBranchToken,
@@ -3932,10 +3958,12 @@ func (s *resetorSuite) TestApplyReset() {
 	completeReq := &p.CompleteForkBranchRequest{
 		BranchToken: newBranchToken,
 		Success:     true,
+		ShardID:     common.IntPtr(s.shardID),
 	}
 	completeReqErr := &p.CompleteForkBranchRequest{
 		BranchToken: newBranchToken,
 		Success:     false,
+		ShardID:     common.IntPtr(s.shardID),
 	}
 
 	historyAfterReset := &workflow.History{
@@ -4002,6 +4030,7 @@ func (s *resetorSuite) TestApplyReset() {
 		Events:        historyAfterReset.Events,
 		TransactionID: 1,
 		Encoding:      common.EncodingType(s.config.EventEncodingType(domainID)),
+		ShardID:       common.IntPtr(s.shardID),
 	}
 	appendV2Resp := &p.AppendHistoryNodesResponse{
 		Size: 200,

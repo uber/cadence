@@ -22,7 +22,6 @@ package common
 
 import (
 	"encoding/json"
-	"math"
 	"math/rand"
 	"sync"
 	"time"
@@ -56,10 +55,6 @@ const (
 	frontendServiceOperationInitialInterval    = 200 * time.Millisecond
 	frontendServiceOperationMaxInterval        = 5 * time.Second
 	frontendServiceOperationExpirationInterval = 15 * time.Second
-
-	publicClientOperationInitialInterval    = 200 * time.Millisecond
-	publicClientOperationMaxInterval        = 5 * time.Second
-	publicClientOperationExpirationInterval = 15 * time.Second
 
 	adminServiceOperationInitialInterval    = 200 * time.Millisecond
 	adminServiceOperationMaxInterval        = 5 * time.Second
@@ -159,15 +154,6 @@ func CreateAdminServiceRetryPolicy() backoff.RetryPolicy {
 	policy := backoff.NewExponentialRetryPolicy(adminServiceOperationInitialInterval)
 	policy.SetMaximumInterval(adminServiceOperationMaxInterval)
 	policy.SetExpirationInterval(adminServiceOperationExpirationInterval)
-
-	return policy
-}
-
-// CreatePublicClientRetryPolicy creates a retry policy for calls to frontend service
-func CreatePublicClientRetryPolicy() backoff.RetryPolicy {
-	policy := backoff.NewExponentialRetryPolicy(publicClientOperationInitialInterval)
-	policy.SetMaximumInterval(publicClientOperationMaxInterval)
-	policy.SetExpirationInterval(publicClientOperationExpirationInterval)
 
 	return policy
 }
@@ -376,23 +362,14 @@ func CreateHistoryStartWorkflowRequest(domainID string, startRequest *workflow.S
 		deadline := time.Now().Add(time.Second * time.Duration(expirationInSeconds))
 		histRequest.ExpirationTimestamp = Int64Ptr(deadline.Round(time.Millisecond).UnixNano())
 	}
-	cronBackoff := cron.GetBackoffForNextSchedule(startRequest.GetCronSchedule(), time.Now())
-	if cronBackoff != NoRetryBackoff {
-		histRequest.FirstDecisionTaskBackoffSeconds = Int32Ptr(int32(math.Ceil(cronBackoff.Seconds())))
-	}
+	histRequest.FirstDecisionTaskBackoffSeconds = Int32Ptr(cron.GetBackoffForNextScheduleInSeconds(startRequest.GetCronSchedule(), time.Now()))
 	return histRequest
 }
 
 // CheckEventBlobSizeLimit checks if a blob data exceeds limits. It logs a warning if it exceeds warnLimit,
 // and return ErrBlobSizeExceedsLimit if it exceeds errorLimit.
-func CheckEventBlobSizeLimit(actualSize, warnLimit, errorLimit int, domainID, workflowID, runID string, metricsClient metrics.Client, scope int, logger bark.Logger) error {
-	if metricsClient != nil {
-		metricsClient.RecordTimer(
-			scope,
-			metrics.EventBlobSize,
-			time.Duration(actualSize),
-		)
-	}
+func CheckEventBlobSizeLimit(actualSize, warnLimit, errorLimit int, domainID, workflowID, runID string, scope metrics.Scope, logger bark.Logger) error {
+	scope.RecordTimer(metrics.EventBlobSize, time.Duration(actualSize))
 
 	if actualSize > warnLimit {
 		if logger != nil {

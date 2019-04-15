@@ -41,11 +41,13 @@ import (
 
 type (
 	workflowReplicationTask struct {
-		partitionID definition.WorkflowIdentifier
-		taskID      int64
-		attempt     int
-		kafkaMsg    messaging.Message
-		logger      bark.Logger
+		metricsScope int
+		startTime    time.Time
+		partitionID  definition.WorkflowIdentifier
+		taskID       int64
+		attempt      int
+		kafkaMsg     messaging.Message
+		logger       bark.Logger
 
 		config              *Config
 		historyClient       history.Client
@@ -76,6 +78,8 @@ func newActivityReplicationTask(task *replicator.ReplicationTask, msg messaging.
 	attr := task.SyncActicvityTaskAttributes
 	return &activityReplicationTask{
 		workflowReplicationTask: workflowReplicationTask{
+			metricsScope: metrics.SyncActivityTaskScope,
+			startTime:    time.Now(),
 			partitionID: definition.NewWorkflowIdentifier(
 				attr.GetDomainId(), attr.GetWorkflowId(), attr.GetRunId(),
 			),
@@ -117,6 +121,8 @@ func newHistoryReplicationTask(task *replicator.ReplicationTask, msg messaging.M
 	attr := task.HistoryTaskAttributes
 	return &historyReplicationTask{
 		workflowReplicationTask: workflowReplicationTask{
+			metricsScope: metrics.HistoryReplicationTaskScope,
+			startTime:    time.Now(),
 			partitionID: definition.NewWorkflowIdentifier(
 				attr.GetDomainId(), attr.GetWorkflowId(), attr.GetRunId(),
 			),
@@ -238,9 +244,6 @@ func (t *historyReplicationTask) HandleErr(err error) error {
 
 func (t *historyReplicationTask) RetryErr(err error) bool {
 	t.attempt++
-	if t.attempt >= t.config.ReplicatorHistoryBufferRetryCount() {
-		t.req.ForceBufferEvents = common.BoolPtr(true)
-	}
 
 	if t.attempt <= t.config.ReplicationTaskMaxRetry() && isTransientRetryableError(err) {
 		time.Sleep(replicationTaskRetryDelay)
@@ -262,6 +265,9 @@ func (t *workflowReplicationTask) HashCode() uint32 {
 }
 
 func (t *workflowReplicationTask) Ack() {
+	t.metricsClient.IncCounter(t.metricsScope, metrics.ReplicatorMessages)
+	t.metricsClient.RecordTimer(t.metricsScope, metrics.ReplicatorLatency, time.Now().Sub(t.startTime))
+
 	// the underlying implementation will not return anything other than nil
 	// do logging just in case
 	err := t.kafkaMsg.Ack()
@@ -271,6 +277,9 @@ func (t *workflowReplicationTask) Ack() {
 }
 
 func (t *workflowReplicationTask) Nack() {
+	t.metricsClient.IncCounter(t.metricsScope, metrics.ReplicatorMessages)
+	t.metricsClient.RecordTimer(t.metricsScope, metrics.ReplicatorLatency, time.Now().Sub(t.startTime))
+
 	// the underlying implementation will not return anything other than nil
 	// do logging just in case
 	err := t.kafkaMsg.Nack()

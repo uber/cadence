@@ -28,8 +28,6 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"fmt"
-
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/uber-common/bark"
@@ -160,7 +158,7 @@ func (s *TestBase) Config() config.Persistence {
 // Setup sets up the test base, must be called as part of SetupSuite
 func (s *TestBase) Setup() {
 	var err error
-	shardID := 0
+	shardID := 10
 	clusterName := s.ClusterMetadata.GetCurrentClusterName()
 	log := bark.NewLoggerFromLogrus(log.New())
 
@@ -188,10 +186,7 @@ func (s *TestBase) Setup() {
 	s.fatalOnError("NewHistoryManager", err)
 
 	s.HistoryV2Mgr, err = factory.NewHistoryV2Manager()
-	// TODO SQL currently doesn't have support for HistoryV2Mgr.
-	if err != nil {
-		log.Warnf(fmt.Sprintf("failed to initialize historyV2, it is expected for MySQL, %v", err))
-	}
+	s.fatalOnError("NewHistoryV2Manager", err)
 
 	s.ShardMgr, err = factory.NewShardManager()
 	s.fatalOnError("NewShardManager", err)
@@ -310,7 +305,7 @@ func (s *TestBase) CreateWorkflowExecutionWithReplication(domainID string, workf
 	var replicationTasks []p.Task
 	for _, task := range txTasks {
 		switch t := task.(type) {
-		case *p.DecisionTask, *p.ActivityTask, *p.CloseExecutionTask, *p.CancelExecutionTask, *p.StartChildExecutionTask, *p.SignalExecutionTask:
+		case *p.DecisionTask, *p.ActivityTask, *p.CloseExecutionTask, *p.CancelExecutionTask, *p.StartChildExecutionTask, *p.SignalExecutionTask, *p.RecordWorkflowStartedTask:
 			transferTasks = append(transferTasks, t)
 		case *p.HistoryReplicationTask:
 			replicationTasks = append(replicationTasks, t)
@@ -657,7 +652,7 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(updatedInfo *p.Workflo
 	var replicationTasks []p.Task
 	for _, task := range txTasks {
 		switch t := task.(type) {
-		case *p.DecisionTask, *p.ActivityTask, *p.CloseExecutionTask, *p.CancelExecutionTask, *p.StartChildExecutionTask, *p.SignalExecutionTask:
+		case *p.DecisionTask, *p.ActivityTask, *p.CloseExecutionTask, *p.CancelExecutionTask, *p.StartChildExecutionTask, *p.SignalExecutionTask, *p.RecordWorkflowStartedTask:
 			transferTasks = append(transferTasks, t)
 		case *p.HistoryReplicationTask, *p.SyncActivityTask:
 			replicationTasks = append(replicationTasks, t)

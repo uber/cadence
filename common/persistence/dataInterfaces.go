@@ -99,6 +99,7 @@ const (
 	TransferTaskTypeCancelExecution
 	TransferTaskTypeStartChildExecution
 	TransferTaskTypeSignalExecution
+	TransferTaskTypeRecordWorkflowStarted
 )
 
 // Types of replication tasks
@@ -387,6 +388,13 @@ type (
 		ScheduleID          int64
 		Version             int64
 		RecordVisibility    bool
+	}
+
+	// RecordWorkflowStartedTask identifites a transfer task for writing visibility open execution record
+	RecordWorkflowStartedTask struct {
+		VisibilityTimestamp time.Time
+		TaskID              int64
+		Version             int64
 	}
 
 	// CloseExecutionTask identifies a transfer task for deletion of execution
@@ -1217,6 +1225,8 @@ type (
 		TransactionID int64
 		// It is to suggest a binary encoding type to serialize history events
 		Encoding common.EncodingType
+		// The shard to get history node data
+		ShardID *int
 	}
 
 	// AppendHistoryNodesResponse is a response to AppendHistoryNodesRequest
@@ -1238,6 +1248,8 @@ type (
 		PageSize int
 		// Token to continue reading next page of history append transactions.  Pass in empty slice for first page
 		NextPageToken []byte
+		// The shard to get history branch data
+		ShardID *int
 	}
 
 	// ReadHistoryBranchResponse is the response to ReadHistoryBranchRequest
@@ -1270,14 +1282,16 @@ type (
 
 	// ForkHistoryBranchRequest is used to fork a history branch
 	ForkHistoryBranchRequest struct {
-		// The branch to be fork
+		// The base branch to fork from
 		ForkBranchToken []byte
-		// The nodeID to fork from, the new branch will start from ForkNodeID
+		// The nodeID to fork from, the new branch will start from ( inclusive ), the base branch will stop at(exclusive)
 		// Application must provide a void forking nodeID, it must be a valid nodeID in that branch. A valid nodeID is the firstEventID of a valid batch of events.
 		// And ForkNodeID > 1 because forking from 1 doesn't make any sense.
 		ForkNodeID int64
 		// the info for clean up data in background
 		Info string
+		// The shard to get history branch data
+		ShardID *int
 	}
 
 	// ForkHistoryBranchResponse is the response to ForkHistoryBranchRequest
@@ -1292,18 +1306,24 @@ type (
 		BranchToken []byte
 		// true means the fork is success, will update the flag, otherwise will delete the new branch
 		Success bool
+		// The shard to update history branch data
+		ShardID *int
 	}
 
 	// DeleteHistoryBranchRequest is used to remove a history branch
 	DeleteHistoryBranchRequest struct {
 		// branch to be deleted
 		BranchToken []byte
+		// The shard to delete history branch data
+		ShardID *int
 	}
 
 	// GetHistoryTreeRequest is used to retrieve branch info of a history tree
 	GetHistoryTreeRequest struct {
 		// A UUID of a tree
 		TreeID string
+		// Get data from this shard
+		ShardID *int
 		// optional: can provide treeID via branchToken if treeID is empty
 		BranchToken []byte
 	}
@@ -1426,7 +1446,7 @@ type (
 		// V2 regards history events growing as a tree, decoupled from workflow concepts
 		// For Cadence, treeID is new runID, except for fork(reset), treeID will be the runID that it forks from.
 
-		// AppendHistoryNodes add(or override) a batach of nodes to a history branch
+		// AppendHistoryNodes add(or override) a batch of nodes to a history branch
 		AppendHistoryNodes(request *AppendHistoryNodesRequest) (*AppendHistoryNodesResponse, error)
 		// ReadHistoryBranch returns history node data for a branch
 		ReadHistoryBranch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchResponse, error)
@@ -1553,6 +1573,41 @@ func (d *DecisionTask) GetVisibilityTimestamp() time.Time {
 // SetVisibilityTimestamp set the visibility timestamp
 func (d *DecisionTask) SetVisibilityTimestamp(timestamp time.Time) {
 	d.VisibilityTimestamp = timestamp
+}
+
+// GetType returns the type of the record workflow started task
+func (a *RecordWorkflowStartedTask) GetType() int {
+	return TransferTaskTypeRecordWorkflowStarted
+}
+
+// GetVersion returns the version of the record workflow started task
+func (a *RecordWorkflowStartedTask) GetVersion() int64 {
+	return a.Version
+}
+
+// SetVersion returns the version of the record workflow started task
+func (a *RecordWorkflowStartedTask) SetVersion(version int64) {
+	a.Version = version
+}
+
+// GetTaskID returns the sequence ID of the record workflow started task
+func (a *RecordWorkflowStartedTask) GetTaskID() int64 {
+	return a.TaskID
+}
+
+// SetTaskID sets the sequence ID of the record workflow started task
+func (a *RecordWorkflowStartedTask) SetTaskID(id int64) {
+	a.TaskID = id
+}
+
+// GetVisibilityTimestamp get the visibility timestamp
+func (a *RecordWorkflowStartedTask) GetVisibilityTimestamp() time.Time {
+	return a.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp set the visibility timestamp
+func (a *RecordWorkflowStartedTask) SetVisibilityTimestamp(timestamp time.Time) {
+	a.VisibilityTimestamp = timestamp
 }
 
 // GetType returns the type of the close execution task

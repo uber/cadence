@@ -53,8 +53,10 @@ type (
 	// Name will be used for WHERE condition. When both ID and Name are nil,
 	// no WHERE clause will be used
 	DomainFilter struct {
-		ID   *UUID
-		Name *string
+		ID            *UUID
+		Name          *string
+		GreaterThanID *UUID
+		PageSize      *int
 	}
 
 	// DomainMetadataRow represents a row in domain_metadata table
@@ -168,6 +170,8 @@ type (
 		ExpirationSeconds            int
 		ExpirationTime               time.Time
 		NonRetryableErrors           []byte
+		EventStoreVersion            int
+		BranchToken                  []byte
 	}
 
 	// ExecutionsFilter contains the column names within domain table that
@@ -275,17 +279,22 @@ type (
 
 	// ReplicationTasksRow represents a row in replication_tasks table
 	ReplicationTasksRow struct {
-		ShardID             int
-		TaskID              int64
-		DomainID            UUID
-		WorkflowID          string
-		RunID               UUID
-		TaskType            int
-		FirstEventID        int64
-		NextEventID         int64
-		Version             int64
-		LastReplicationInfo []byte
-		ScheduledID         int64
+		ShardID                 int
+		TaskID                  int64
+		DomainID                UUID
+		WorkflowID              string
+		RunID                   UUID
+		TaskType                int
+		FirstEventID            int64
+		NextEventID             int64
+		Version                 int64
+		LastReplicationInfo     []byte
+		ScheduledID             int64
+		EventStoreVersion       int32
+		BranchToken             []byte
+		NewRunEventStoreVersion int32
+		NewRunBranchToken       []byte
+		ResetWorkflow           bool
 	}
 
 	// ReplicationTasksFilter contains the column names within domain table that
@@ -346,6 +355,50 @@ type (
 		FirstEventID *int64
 		NextEventID  *int64
 		PageSize     *int
+	}
+
+	// HistoryNodeRow represents a row in history_node table
+	HistoryNodeRow struct {
+		ShardID  int
+		TreeID   UUID
+		BranchID UUID
+		NodeID   int64
+		// use pointer so that it's easier to multiple by -1
+		TxnID        *int64
+		Data         []byte
+		DataEncoding string
+	}
+
+	// HistoryNodeFilter contains the column names within history_node table that
+	// can be used to filter results through a WHERE clause
+	HistoryNodeFilter struct {
+		ShardID  int
+		TreeID   UUID
+		BranchID UUID
+		// Inclusive
+		MinNodeID *int64
+		// Exclusive
+		MaxNodeID *int64
+		PageSize  *int
+	}
+
+	// HistoryTreeRow represents a row in history_tree table
+	HistoryTreeRow struct {
+		ShardID    int
+		TreeID     UUID
+		BranchID   UUID
+		InProgress bool
+		CreatedTs  time.Time
+		Ancestors  []byte
+		Info       string
+	}
+
+	// HistoryTreeFilter contains the column names within history_tree table that
+	// can be used to filter results through a WHERE clause
+	HistoryTreeFilter struct {
+		ShardID  int
+		TreeID   UUID
+		BranchID *UUID
 	}
 
 	// ActivityInfoMapsRow represents a row in activity_info_maps table
@@ -498,17 +551,19 @@ type (
 
 	// BufferedReplicationTaskMapsRow represents a row in buffered_replication_task_maps table
 	BufferedReplicationTaskMapsRow struct {
-		ShardID               int64
-		DomainID              UUID
-		WorkflowID            string
-		RunID                 UUID
-		FirstEventID          int64
-		NextEventID           int64
-		Version               int64
-		History               *[]byte
-		HistoryEncoding       string
-		NewRunHistory         *[]byte
-		NewRunHistoryEncoding string
+		ShardID                 int64
+		DomainID                UUID
+		WorkflowID              string
+		RunID                   UUID
+		FirstEventID            int64
+		NextEventID             int64
+		Version                 int64
+		History                 *[]byte
+		HistoryEncoding         string
+		NewRunHistory           *[]byte
+		NewRunHistoryEncoding   string
+		EventStoreVersion       int32
+		NewRunEventStoreVersion int32
 	}
 
 	// BufferedReplicationTaskMapsFilter contains the column names within domain table that
@@ -547,6 +602,7 @@ type (
 		WorkflowTypeName string
 		WorkflowID       string
 		StartTime        time.Time
+		ExecutionTime    time.Time
 		CloseStatus      *int32
 		CloseTime        *time.Time
 		HistoryLength    *int64
@@ -611,17 +667,28 @@ type (
 		DeleteFromTaskLists(filter *TaskListsFilter) (sql.Result, error)
 		LockTaskLists(filter *TaskListsFilter) (int64, error)
 
+		// eventsV1: will be deprecated in favor of eventsV2
 		InsertIntoEvents(row *EventsRow) (sql.Result, error)
 		UpdateEvents(rows *EventsRow) (sql.Result, error)
 		SelectFromEvents(filter *EventsFilter) ([]EventsRow, error)
 		DeleteFromEvents(filter *EventsFilter) (sql.Result, error)
 		LockEvents(filter *EventsFilter) (*EventsRow, error)
 
+		// eventsV2
+		InsertIntoHistoryNode(row *HistoryNodeRow) (sql.Result, error)
+		SelectFromHistoryNode(filter *HistoryNodeFilter) ([]HistoryNodeRow, error)
+		DeleteFromHistoryNode(filter *HistoryNodeFilter) (sql.Result, error)
+		InsertIntoHistoryTree(row *HistoryTreeRow) (sql.Result, error)
+		SelectFromHistoryTree(filter *HistoryTreeFilter) ([]HistoryTreeRow, error)
+		UpdateHistoryTree(row *HistoryTreeRow) (sql.Result, error)
+		DeleteFromHistoryTree(filter *HistoryTreeFilter) (sql.Result, error)
+
 		InsertIntoExecutions(row *ExecutionsRow) (sql.Result, error)
 		UpdateExecutions(row *ExecutionsRow) (sql.Result, error)
 		SelectFromExecutions(filter *ExecutionsFilter) (*ExecutionsRow, error)
 		DeleteFromExecutions(filter *ExecutionsFilter) (sql.Result, error)
-		LockExecutions(filter *ExecutionsFilter) (int, error)
+		ReadLockExecutions(filter *ExecutionsFilter) (int, error)
+		WriteLockExecutions(filter *ExecutionsFilter) (int, error)
 
 		LockCurrentExecutionsJoinExecutions(filter *CurrentExecutionsFilter) ([]CurrentExecutionsRow, error)
 
@@ -753,6 +820,7 @@ type (
 		//   - OPTIONALLY specify one of following params
 		//     - workflowID, workflowTypeName, closeStatus (along with closed=true)
 		SelectFromVisibility(filter *VisibilityFilter) ([]VisibilityRow, error)
+		DeleteFromVisibility(filter *VisibilityFilter) (sql.Result, error)
 	}
 
 	// Tx defines the API for a SQL transaction

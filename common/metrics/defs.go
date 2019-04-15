@@ -85,7 +85,6 @@ const (
 	FrontendRoleTagValue  = "frontend"
 	AdminRoleTagValue     = "admin"
 	BlobstoreRoleTagValue = "blobstore"
-	PublicRoleTagValue    = "public"
 
 	SizeStatsTypeTagValue  = "size"
 	CountStatsTypeTagValue = "count"
@@ -222,6 +221,8 @@ const (
 	PersistenceListClosedWorkflowExecutionsByStatusScope
 	// PersistenceGetClosedWorkflowExecutionScope tracks GetClosedWorkflowExecution calls made by service to persistence layer
 	PersistenceGetClosedWorkflowExecutionScope
+	// PersistenceVisibilityDeleteWorkflowExecutionScope is the metrics scope for persistence.VisibilityManager.DeleteWorkflowExecution
+	PersistenceVisibilityDeleteWorkflowExecutionScope
 	// HistoryClientStartWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientStartWorkflowExecutionScope
 	// HistoryClientRecordActivityTaskHeartbeatScope tracks RPC calls to history service
@@ -354,68 +355,6 @@ const (
 	AdminClientDescribeWorkflowExecutionScope
 	// AdminClientGetWorkflowExecutionRawHistoryScope tracks RPC calls to admin service
 	AdminClientGetWorkflowExecutionRawHistoryScope
-	// PublicClientDeprecateDomainScope tracks RPC calls to frontend service
-	PublicClientDeprecateDomainScope
-	// PublicClientDescribeDomainScope tracks RPC calls to frontend service
-	PublicClientDescribeDomainScope
-	// PublicClientDescribeTaskListScope tracks RPC calls to frontend service
-	PublicClientDescribeTaskListScope
-	// PublicClientDescribeWorkflowExecutionScope tracks RPC calls to frontend service
-	PublicClientDescribeWorkflowExecutionScope
-	// PublicClientGetWorkflowExecutionHistoryScope tracks RPC calls to frontend service
-	PublicClientGetWorkflowExecutionHistoryScope
-	// PublicClientListClosedWorkflowExecutionsScope tracks RPC calls to frontend service
-	PublicClientListClosedWorkflowExecutionsScope
-	// PublicClientListDomainsScope tracks RPC calls to frontend service
-	PublicClientListDomainsScope
-	// PublicClientListOpenWorkflowExecutionsScope tracks RPC calls to frontend service
-	PublicClientListOpenWorkflowExecutionsScope
-	// PublicClientPollForActivityTaskScope tracks RPC calls to frontend service
-	PublicClientPollForActivityTaskScope
-	// PublicClientPollForDecisionTaskScope tracks RPC calls to frontend service
-	PublicClientPollForDecisionTaskScope
-	// PublicClientQueryWorkflowScope tracks RPC calls to frontend service
-	PublicClientQueryWorkflowScope
-	// PublicClientRecordActivityTaskHeartbeatScope tracks RPC calls to frontend service
-	PublicClientRecordActivityTaskHeartbeatScope
-	// PublicClientRecordActivityTaskHeartbeatByIDScope tracks RPC calls to frontend service
-	PublicClientRecordActivityTaskHeartbeatByIDScope
-	// PublicClientRegisterDomainScope tracks RPC calls to frontend service
-	PublicClientRegisterDomainScope
-	// PublicClientRequestCancelWorkflowExecutionScope tracks RPC calls to frontend service
-	PublicClientRequestCancelWorkflowExecutionScope
-	// PublicClientResetStickyTaskListScope tracks RPC calls to frontend service
-	PublicClientResetStickyTaskListScope
-	// PublicClientResetWorkflowExecutionScope tracks RPC calls to frontend service
-	PublicClientResetWorkflowExecutionScope
-	// PublicClientRespondActivityTaskCanceledScope tracks RPC calls to frontend service
-	PublicClientRespondActivityTaskCanceledScope
-	// PublicClientRespondActivityTaskCanceledByIDScope tracks RPC calls to frontend service
-	PublicClientRespondActivityTaskCanceledByIDScope
-	// PublicClientRespondActivityTaskCompletedScope tracks RPC calls to frontend service
-	PublicClientRespondActivityTaskCompletedScope
-	// PublicClientRespondActivityTaskCompletedByIDScope tracks RPC calls to frontend service
-	PublicClientRespondActivityTaskCompletedByIDScope
-	// PublicClientRespondActivityTaskFailedScope tracks RPC calls to frontend service
-	PublicClientRespondActivityTaskFailedScope
-	// PublicClientRespondActivityTaskFailedByIDScope tracks RPC calls to frontend service
-	PublicClientRespondActivityTaskFailedByIDScope
-	// PublicClientRespondDecisionTaskCompletedScope tracks RPC calls to frontend service
-	PublicClientRespondDecisionTaskCompletedScope
-	// PublicClientRespondDecisionTaskFailedScope tracks RPC calls to frontend service
-	PublicClientRespondDecisionTaskFailedScope
-	// PublicClientRespondQueryTaskCompletedScope tracks RPC calls to frontend service
-	PublicClientRespondQueryTaskCompletedScope
-	// PublicClientSignalWithStartWorkflowExecutionScope tracks RPC calls to frontend service
-	PublicClientSignalWithStartWorkflowExecutionScope
-	// PublicClientSignalWorkflowExecutionScope tracks RPC calls to frontend service
-	PublicClientSignalWorkflowExecutionScope
-	// PublicClientStartWorkflowExecutionScope tracks RPC calls to frontend service
-	PublicClientStartWorkflowExecutionScope
-	// PublicClientTerminateWorkflowExecutionScope tracks RPC calls to frontend service
-	PublicClientTerminateWorkflowExecutionScope
-	// PublicClientUpdateDomainScope tracks RPC calls to frontend service
-	PublicClientUpdateDomainScope
 
 	// MessagingPublishScope tracks Publish calls made by service to messaging layer
 	MessagingClientPublishScope
@@ -638,6 +577,8 @@ const (
 	TransferActiveTaskSignalExecutionScope
 	// TransferActiveTaskStartChildExecutionScope is the scope used for start child execution task processing by transfer queue processor
 	TransferActiveTaskStartChildExecutionScope
+	// TransferActiveTaskRecordWorkflowStartedScope is the scope used for record workflow started task processing by transfer queue processor
+	TransferActiveTaskRecordWorkflowStartedScope
 	// TransferStandbyTaskActivityScope is the scope used for activity task processing by transfer queue processor
 	TransferStandbyTaskActivityScope
 	// TransferStandbyTaskDecisionScope is the scope used for decision task processing by transfer queue processor
@@ -650,6 +591,8 @@ const (
 	TransferStandbyTaskSignalExecutionScope
 	// TransferStandbyTaskStartChildExecutionScope is the scope used for start child execution task processing by transfer queue processor
 	TransferStandbyTaskStartChildExecutionScope
+	// TransferStandbyTaskRecordWorkflowStartedScope is the scope used for record workflow started task processing by transfer queue processor
+	TransferStandbyTaskRecordWorkflowStartedScope
 	// TimerQueueProcessorScope is the scope used by all metric emitted by timer queue processor
 	TimerQueueProcessorScope
 	// TimerActiveQueueProcessorScope is the scope used by all metric emitted by timer queue processor
@@ -858,6 +801,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceListClosedWorkflowExecutionsByWorkflowIDScope: {operation: "ListClosedWorkflowExecutionsByWorkflowID"},
 		PersistenceListClosedWorkflowExecutionsByStatusScope:     {operation: "ListClosedWorkflowExecutionsByStatus"},
 		PersistenceGetClosedWorkflowExecutionScope:               {operation: "GetClosedWorkflowExecution"},
+		PersistenceVisibilityDeleteWorkflowExecutionScope:        {operation: "VisibilityDeleteWorkflowExecution"},
 		PersistenceAppendHistoryNodesScope:                       {operation: "AppendHistoryNodes", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceReadHistoryBranchScope:                        {operation: "ReadHistoryBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceForkHistoryBranchScope:                        {operation: "ForkHistoryBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
@@ -938,37 +882,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendClientStartWorkflowExecutionScope:           {operation: "FrontendClientStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
 		FrontendClientTerminateWorkflowExecutionScope:       {operation: "FrontendClientTerminateWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
 		FrontendClientUpdateDomainScope:                     {operation: "FrontendClientUpdateDomain", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
-		PublicClientDeprecateDomainScope:                    {operation: "PublicClientDeprecateDomain", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientDescribeDomainScope:                     {operation: "PublicClientDescribeDomain", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientDescribeTaskListScope:                   {operation: "PublicClientDescribeTaskList", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientDescribeWorkflowExecutionScope:          {operation: "PublicClientDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientGetWorkflowExecutionHistoryScope:        {operation: "PublicClientGetWorkflowExecutionHistory", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientListClosedWorkflowExecutionsScope:       {operation: "PublicClientListClosedWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientListDomainsScope:                        {operation: "PublicClientListDomains", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientListOpenWorkflowExecutionsScope:         {operation: "PublicClientListOpenWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientPollForActivityTaskScope:                {operation: "PublicClientPollForActivityTask", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientPollForDecisionTaskScope:                {operation: "PublicClientPollForDecisionTask", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientQueryWorkflowScope:                      {operation: "PublicClientQueryWorkflow", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientRecordActivityTaskHeartbeatScope:        {operation: "PublicClientRecordActivityTaskHeartbeat", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientRecordActivityTaskHeartbeatByIDScope:    {operation: "PublicClientRecordActivityTaskHeartbeatByID", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientRegisterDomainScope:                     {operation: "PublicClientRegisterDomain", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientRequestCancelWorkflowExecutionScope:     {operation: "PublicClientRequestCancelWorkflowExecution", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientResetStickyTaskListScope:                {operation: "PublicClientResetStickyTaskList", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientResetWorkflowExecutionScope:             {operation: "PublicClientResetWorkflowExecution", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientRespondActivityTaskCanceledScope:        {operation: "PublicClientRespondActivityTaskCanceled", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientRespondActivityTaskCanceledByIDScope:    {operation: "PublicClientRespondActivityTaskCanceledByID", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientRespondActivityTaskCompletedScope:       {operation: "PublicClientRespondActivityTaskCompleted", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientRespondActivityTaskCompletedByIDScope:   {operation: "PublicClientRespondActivityTaskCompletedByID", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientRespondActivityTaskFailedScope:          {operation: "PublicClientRespondActivityTaskFailed", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientRespondActivityTaskFailedByIDScope:      {operation: "PublicClientRespondActivityTaskFailedByID", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientRespondDecisionTaskCompletedScope:       {operation: "PublicClientRespondDecisionTaskCompleted", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientRespondDecisionTaskFailedScope:          {operation: "PublicClientRespondDecisionTaskFailed", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientRespondQueryTaskCompletedScope:          {operation: "PublicClientRespondQueryTaskCompleted", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientSignalWithStartWorkflowExecutionScope:   {operation: "PublicClientSignalWithStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientSignalWorkflowExecutionScope:            {operation: "PublicClientSignalWorkflowExecution", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientStartWorkflowExecutionScope:             {operation: "PublicClientStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientTerminateWorkflowExecutionScope:         {operation: "PublicClientTerminateWorkflowExecution", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
-		PublicClientUpdateDomainScope:                       {operation: "PublicClientUpdateDomain", tags: map[string]string{CadenceRoleTagName: PublicRoleTagValue}},
 		AdminClientDescribeHistoryHostScope:                 {operation: "AdminClientDescribeHistoryHost", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientDescribeWorkflowExecutionScope:           {operation: "AdminClientDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientGetWorkflowExecutionRawHistoryScope:      {operation: "AdminClientGetWorkflowExecutionRawHistory", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
@@ -1034,84 +947,86 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 	},
 	// History Scope Names
 	History: {
-		HistoryStartWorkflowExecutionScope:           {operation: "StartWorkflowExecution"},
-		HistoryRecordActivityTaskHeartbeatScope:      {operation: "RecordActivityTaskHeartbeat"},
-		HistoryRespondDecisionTaskCompletedScope:     {operation: "RespondDecisionTaskCompleted"},
-		HistoryRespondDecisionTaskFailedScope:        {operation: "RespondDecisionTaskFailed"},
-		HistoryRespondActivityTaskCompletedScope:     {operation: "RespondActivityTaskCompleted"},
-		HistoryRespondActivityTaskFailedScope:        {operation: "RespondActivityTaskFailed"},
-		HistoryRespondActivityTaskCanceledScope:      {operation: "RespondActivityTaskCanceled"},
-		HistoryGetMutableStateScope:                  {operation: "GetMutableState"},
-		HistoryResetStickyTaskListScope:              {operation: "ResetStickyTaskListScope"},
-		HistoryDescribeWorkflowExecutionScope:        {operation: "DescribeWorkflowExecution"},
-		HistoryRecordDecisionTaskStartedScope:        {operation: "RecordDecisionTaskStarted"},
-		HistoryRecordActivityTaskStartedScope:        {operation: "RecordActivityTaskStarted"},
-		HistorySignalWorkflowExecutionScope:          {operation: "SignalWorkflowExecution"},
-		HistorySignalWithStartWorkflowExecutionScope: {operation: "SignalWithStartWorkflowExecution"},
-		HistoryRemoveSignalMutableStateScope:         {operation: "RemoveSignalMutableState"},
-		HistoryTerminateWorkflowExecutionScope:       {operation: "TerminateWorkflowExecution"},
-		HistoryResetWorkflowExecutionScope:           {operation: "ResetWorkflowExecution"},
-		HistoryProcessDeleteHistoryEventScope:        {operation: "ProcessDeleteHistoryEvent"},
-		HistoryScheduleDecisionTaskScope:             {operation: "ScheduleDecisionTask"},
-		HistoryRecordChildExecutionCompletedScope:    {operation: "RecordChildExecutionCompleted"},
-		HistoryRequestCancelWorkflowExecutionScope:   {operation: "RequestCancelWorkflowExecution"},
-		HistoryReplicateEventsScope:                  {operation: "ReplicateEvents"},
-		HistoryReplicateRawEventsScope:               {operation: "ReplicateRawEvents"},
-		HistorySyncShardStatusScope:                  {operation: "SyncShardStatus"},
-		HistorySyncActivityScope:                     {operation: "SyncActivity"},
-		HistoryDescribeMutableStateScope:             {operation: "DescribeMutableState"},
-		HistoryShardControllerScope:                  {operation: "ShardController"},
-		TransferQueueProcessorScope:                  {operation: "TransferQueueProcessor"},
-		TransferActiveQueueProcessorScope:            {operation: "TransferActiveQueueProcessor"},
-		TransferStandbyQueueProcessorScope:           {operation: "TransferStandbyQueueProcessor"},
-		TransferActiveTaskActivityScope:              {operation: "TransferActiveTaskActivity"},
-		TransferActiveTaskDecisionScope:              {operation: "TransferActiveTaskDecision"},
-		TransferActiveTaskCloseExecutionScope:        {operation: "TransferActiveTaskCloseExecution"},
-		TransferActiveTaskCancelExecutionScope:       {operation: "TransferActiveTaskCancelExecution"},
-		TransferActiveTaskSignalExecutionScope:       {operation: "TransferActiveTaskSignalExecution"},
-		TransferActiveTaskStartChildExecutionScope:   {operation: "TransferActiveTaskStartChildExecution"},
-		TransferStandbyTaskActivityScope:             {operation: "TransferStandbyTaskActivity"},
-		TransferStandbyTaskDecisionScope:             {operation: "TransferStandbyTaskDecision"},
-		TransferStandbyTaskCloseExecutionScope:       {operation: "TransferStandbyTaskCloseExecution"},
-		TransferStandbyTaskCancelExecutionScope:      {operation: "TransferStandbyTaskCancelExecution"},
-		TransferStandbyTaskSignalExecutionScope:      {operation: "TransferStandbyTaskSignalExecution"},
-		TransferStandbyTaskStartChildExecutionScope:  {operation: "TransferStandbyTaskStartChildExecution"},
-		TimerQueueProcessorScope:                     {operation: "TimerQueueProcessor"},
-		TimerActiveQueueProcessorScope:               {operation: "TimerActiveQueueProcessor"},
-		TimerStandbyQueueProcessorScope:              {operation: "TimerStandbyQueueProcessor"},
-		TimerActiveTaskActivityTimeoutScope:          {operation: "TimerActiveTaskActivityTimeout"},
-		TimerActiveTaskDecisionTimeoutScope:          {operation: "TimerActiveTaskDecisionTimeout"},
-		TimerActiveTaskUserTimerScope:                {operation: "TimerActiveTaskUserTimer"},
-		TimerActiveTaskWorkflowTimeoutScope:          {operation: "TimerActiveTaskWorkflowTimeout"},
-		TimerActiveTaskActivityRetryTimerScope:       {operation: "TimerActiveTaskActivityRetryTimer"},
-		TimerActiveTaskWorkflowBackoffTimerScope:     {operation: "TimerActiveTaskWorkflowBackoffTimer"},
-		TimerActiveTaskDeleteHistoryEventScope:       {operation: "TimerActiveTaskDeleteHistoryEvent"},
-		TimerStandbyTaskActivityTimeoutScope:         {operation: "TimerStandbyTaskActivityTimeout"},
-		TimerStandbyTaskDecisionTimeoutScope:         {operation: "TimerStandbyTaskDecisionTimeout"},
-		TimerStandbyTaskUserTimerScope:               {operation: "TimerStandbyTaskUserTimer"},
-		TimerStandbyTaskWorkflowTimeoutScope:         {operation: "TimerStandbyTaskWorkflowTimeout"},
-		TimerStandbyTaskActivityRetryTimerScope:      {operation: "TimerStandbyTaskActivityRetryTimer"},
-		TimerStandbyTaskWorkflowBackoffTimerScope:    {operation: "TimerStandbyTaskWorkflowBackoffTimer"},
-		TimerStandbyTaskDeleteHistoryEventScope:      {operation: "TimerStandbyTaskDeleteHistoryEvent"},
-		HistoryEventNotificationScope:                {operation: "HistoryEventNotification"},
-		ReplicatorQueueProcessorScope:                {operation: "ReplicatorQueueProcessor"},
-		ReplicatorTaskHistoryScope:                   {operation: "ReplicatorTaskHistory"},
-		ReplicatorTaskSyncActivityScope:              {operation: "ReplicatorTaskSyncActivity"},
-		ReplicateHistoryEventsScope:                  {operation: "ReplicateHistoryEvents"},
-		ShardInfoScope:                               {operation: "ShardInfo"},
-		WorkflowContextScope:                         {operation: "WorkflowContext"},
-		HistoryCacheGetAndCreateScope:                {operation: "HistoryCacheGetAndCreate", tags: map[string]string{CacheTypeTagName: MutableStateCacheTypeTagValue}},
-		HistoryCacheGetOrCreateScope:                 {operation: "HistoryCacheGetOrCreate", tags: map[string]string{CacheTypeTagName: MutableStateCacheTypeTagValue}},
-		HistoryCacheGetCurrentExecutionScope:         {operation: "HistoryCacheGetCurrentExecution", tags: map[string]string{CacheTypeTagName: MutableStateCacheTypeTagValue}},
-		EventsCacheGetEventScope:                     {operation: "EventsCacheGetEvent", tags: map[string]string{CacheTypeTagName: EventsCacheTypeTagValue}},
-		EventsCachePutEventScope:                     {operation: "EventsCachePutEvent", tags: map[string]string{CacheTypeTagName: EventsCacheTypeTagValue}},
-		EventsCacheDeleteEventScope:                  {operation: "EventsCacheDeleteEvent", tags: map[string]string{CacheTypeTagName: EventsCacheTypeTagValue}},
-		EventsCacheGetFromStoreScope:                 {operation: "EventsCacheGetFromStore", tags: map[string]string{CacheTypeTagName: EventsCacheTypeTagValue}},
-		ExecutionSizeStatsScope:                      {operation: "ExecutionStats", tags: map[string]string{StatsTypeTagName: SizeStatsTypeTagValue}},
-		ExecutionCountStatsScope:                     {operation: "ExecutionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
-		SessionSizeStatsScope:                        {operation: "SessionStats", tags: map[string]string{StatsTypeTagName: SizeStatsTypeTagValue}},
-		SessionCountStatsScope:                       {operation: "SessionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
-		WorkflowCompletionStatsScope:                 {operation: "CompletionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
+		HistoryStartWorkflowExecutionScope:            {operation: "StartWorkflowExecution"},
+		HistoryRecordActivityTaskHeartbeatScope:       {operation: "RecordActivityTaskHeartbeat"},
+		HistoryRespondDecisionTaskCompletedScope:      {operation: "RespondDecisionTaskCompleted"},
+		HistoryRespondDecisionTaskFailedScope:         {operation: "RespondDecisionTaskFailed"},
+		HistoryRespondActivityTaskCompletedScope:      {operation: "RespondActivityTaskCompleted"},
+		HistoryRespondActivityTaskFailedScope:         {operation: "RespondActivityTaskFailed"},
+		HistoryRespondActivityTaskCanceledScope:       {operation: "RespondActivityTaskCanceled"},
+		HistoryGetMutableStateScope:                   {operation: "GetMutableState"},
+		HistoryResetStickyTaskListScope:               {operation: "ResetStickyTaskListScope"},
+		HistoryDescribeWorkflowExecutionScope:         {operation: "DescribeWorkflowExecution"},
+		HistoryRecordDecisionTaskStartedScope:         {operation: "RecordDecisionTaskStarted"},
+		HistoryRecordActivityTaskStartedScope:         {operation: "RecordActivityTaskStarted"},
+		HistorySignalWorkflowExecutionScope:           {operation: "SignalWorkflowExecution"},
+		HistorySignalWithStartWorkflowExecutionScope:  {operation: "SignalWithStartWorkflowExecution"},
+		HistoryRemoveSignalMutableStateScope:          {operation: "RemoveSignalMutableState"},
+		HistoryTerminateWorkflowExecutionScope:        {operation: "TerminateWorkflowExecution"},
+		HistoryResetWorkflowExecutionScope:            {operation: "ResetWorkflowExecution"},
+		HistoryProcessDeleteHistoryEventScope:         {operation: "ProcessDeleteHistoryEvent"},
+		HistoryScheduleDecisionTaskScope:              {operation: "ScheduleDecisionTask"},
+		HistoryRecordChildExecutionCompletedScope:     {operation: "RecordChildExecutionCompleted"},
+		HistoryRequestCancelWorkflowExecutionScope:    {operation: "RequestCancelWorkflowExecution"},
+		HistoryReplicateEventsScope:                   {operation: "ReplicateEvents"},
+		HistoryReplicateRawEventsScope:                {operation: "ReplicateRawEvents"},
+		HistorySyncShardStatusScope:                   {operation: "SyncShardStatus"},
+		HistorySyncActivityScope:                      {operation: "SyncActivity"},
+		HistoryDescribeMutableStateScope:              {operation: "DescribeMutableState"},
+		HistoryShardControllerScope:                   {operation: "ShardController"},
+		TransferQueueProcessorScope:                   {operation: "TransferQueueProcessor"},
+		TransferActiveQueueProcessorScope:             {operation: "TransferActiveQueueProcessor"},
+		TransferStandbyQueueProcessorScope:            {operation: "TransferStandbyQueueProcessor"},
+		TransferActiveTaskActivityScope:               {operation: "TransferActiveTaskActivity"},
+		TransferActiveTaskDecisionScope:               {operation: "TransferActiveTaskDecision"},
+		TransferActiveTaskCloseExecutionScope:         {operation: "TransferActiveTaskCloseExecution"},
+		TransferActiveTaskCancelExecutionScope:        {operation: "TransferActiveTaskCancelExecution"},
+		TransferActiveTaskSignalExecutionScope:        {operation: "TransferActiveTaskSignalExecution"},
+		TransferActiveTaskStartChildExecutionScope:    {operation: "TransferActiveTaskStartChildExecution"},
+		TransferActiveTaskRecordWorkflowStartedScope:  {operation: "TransferActiveTaskRecordWorkflowStarted"},
+		TransferStandbyTaskActivityScope:              {operation: "TransferStandbyTaskActivity"},
+		TransferStandbyTaskDecisionScope:              {operation: "TransferStandbyTaskDecision"},
+		TransferStandbyTaskCloseExecutionScope:        {operation: "TransferStandbyTaskCloseExecution"},
+		TransferStandbyTaskCancelExecutionScope:       {operation: "TransferStandbyTaskCancelExecution"},
+		TransferStandbyTaskSignalExecutionScope:       {operation: "TransferStandbyTaskSignalExecution"},
+		TransferStandbyTaskStartChildExecutionScope:   {operation: "TransferStandbyTaskStartChildExecution"},
+		TransferStandbyTaskRecordWorkflowStartedScope: {operation: "TransferStandbyTaskRecordWorkflowStarted"},
+		TimerQueueProcessorScope:                      {operation: "TimerQueueProcessor"},
+		TimerActiveQueueProcessorScope:                {operation: "TimerActiveQueueProcessor"},
+		TimerStandbyQueueProcessorScope:               {operation: "TimerStandbyQueueProcessor"},
+		TimerActiveTaskActivityTimeoutScope:           {operation: "TimerActiveTaskActivityTimeout"},
+		TimerActiveTaskDecisionTimeoutScope:           {operation: "TimerActiveTaskDecisionTimeout"},
+		TimerActiveTaskUserTimerScope:                 {operation: "TimerActiveTaskUserTimer"},
+		TimerActiveTaskWorkflowTimeoutScope:           {operation: "TimerActiveTaskWorkflowTimeout"},
+		TimerActiveTaskActivityRetryTimerScope:        {operation: "TimerActiveTaskActivityRetryTimer"},
+		TimerActiveTaskWorkflowBackoffTimerScope:      {operation: "TimerActiveTaskWorkflowBackoffTimer"},
+		TimerActiveTaskDeleteHistoryEventScope:        {operation: "TimerActiveTaskDeleteHistoryEvent"},
+		TimerStandbyTaskActivityTimeoutScope:          {operation: "TimerStandbyTaskActivityTimeout"},
+		TimerStandbyTaskDecisionTimeoutScope:          {operation: "TimerStandbyTaskDecisionTimeout"},
+		TimerStandbyTaskUserTimerScope:                {operation: "TimerStandbyTaskUserTimer"},
+		TimerStandbyTaskWorkflowTimeoutScope:          {operation: "TimerStandbyTaskWorkflowTimeout"},
+		TimerStandbyTaskActivityRetryTimerScope:       {operation: "TimerStandbyTaskActivityRetryTimer"},
+		TimerStandbyTaskWorkflowBackoffTimerScope:     {operation: "TimerStandbyTaskWorkflowBackoffTimer"},
+		TimerStandbyTaskDeleteHistoryEventScope:       {operation: "TimerStandbyTaskDeleteHistoryEvent"},
+		HistoryEventNotificationScope:                 {operation: "HistoryEventNotification"},
+		ReplicatorQueueProcessorScope:                 {operation: "ReplicatorQueueProcessor"},
+		ReplicatorTaskHistoryScope:                    {operation: "ReplicatorTaskHistory"},
+		ReplicatorTaskSyncActivityScope:               {operation: "ReplicatorTaskSyncActivity"},
+		ReplicateHistoryEventsScope:                   {operation: "ReplicateHistoryEvents"},
+		ShardInfoScope:                                {operation: "ShardInfo"},
+		WorkflowContextScope:                          {operation: "WorkflowContext"},
+		HistoryCacheGetAndCreateScope:                 {operation: "HistoryCacheGetAndCreate", tags: map[string]string{CacheTypeTagName: MutableStateCacheTypeTagValue}},
+		HistoryCacheGetOrCreateScope:                  {operation: "HistoryCacheGetOrCreate", tags: map[string]string{CacheTypeTagName: MutableStateCacheTypeTagValue}},
+		HistoryCacheGetCurrentExecutionScope:          {operation: "HistoryCacheGetCurrentExecution", tags: map[string]string{CacheTypeTagName: MutableStateCacheTypeTagValue}},
+		EventsCacheGetEventScope:                      {operation: "EventsCacheGetEvent", tags: map[string]string{CacheTypeTagName: EventsCacheTypeTagValue}},
+		EventsCachePutEventScope:                      {operation: "EventsCachePutEvent", tags: map[string]string{CacheTypeTagName: EventsCacheTypeTagValue}},
+		EventsCacheDeleteEventScope:                   {operation: "EventsCacheDeleteEvent", tags: map[string]string{CacheTypeTagName: EventsCacheTypeTagValue}},
+		EventsCacheGetFromStoreScope:                  {operation: "EventsCacheGetFromStore", tags: map[string]string{CacheTypeTagName: EventsCacheTypeTagValue}},
+		ExecutionSizeStatsScope:                       {operation: "ExecutionStats", tags: map[string]string{StatsTypeTagName: SizeStatsTypeTagValue}},
+		ExecutionCountStatsScope:                      {operation: "ExecutionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
+		SessionSizeStatsScope:                         {operation: "SessionStats", tags: map[string]string{StatsTypeTagName: SizeStatsTypeTagValue}},
+		SessionCountStatsScope:                        {operation: "SessionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
+		WorkflowCompletionStatsScope:                  {operation: "CompletionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
 	},
 	// Matching Scope Names
 	Matching: {

@@ -32,26 +32,28 @@ type (
 	// RecordWorkflowExecutionStartedRequest is used to add a record of a newly
 	// started execution
 	RecordWorkflowExecutionStartedRequest struct {
-		DomainUUID       string
-		Domain           string // domain name is not persisted, but used as config filter key
-		Execution        s.WorkflowExecution
-		WorkflowTypeName string
-		StartTimestamp   int64
-		WorkflowTimeout  int64
+		DomainUUID         string
+		Domain             string // domain name is not persisted, but used as config filter key
+		Execution          s.WorkflowExecution
+		WorkflowTypeName   string
+		StartTimestamp     int64
+		ExecutionTimestamp int64
+		WorkflowTimeout    int64
 	}
 
 	// RecordWorkflowExecutionClosedRequest is used to add a record of a newly
 	// closed execution
 	RecordWorkflowExecutionClosedRequest struct {
-		DomainUUID       string
-		Domain           string // domain name is not persisted, but used as config filter key
-		Execution        s.WorkflowExecution
-		WorkflowTypeName string
-		StartTimestamp   int64
-		CloseTimestamp   int64
-		Status           s.WorkflowExecutionCloseStatus
-		HistoryLength    int64
-		RetentionSeconds int64
+		DomainUUID         string
+		Domain             string // domain name is not persisted, but used as config filter key
+		Execution          s.WorkflowExecution
+		WorkflowTypeName   string
+		StartTimestamp     int64
+		ExecutionTimestamp int64
+		CloseTimestamp     int64
+		Status             s.WorkflowExecutionCloseStatus
+		HistoryLength      int64
+		RetentionSeconds   int64
 	}
 
 	// ListWorkflowExecutionsRequest is used to list executions in a domain
@@ -108,6 +110,12 @@ type (
 		Execution *s.WorkflowExecutionInfo
 	}
 
+	// VisibilityDeleteWorkflowExecutionRequest contains the request params for DeleteWorkflowExecution call
+	VisibilityDeleteWorkflowExecutionRequest struct {
+		DomainID string
+		RunID    string
+	}
+
 	// VisibilityManager is used to manage the visibility store
 	VisibilityManager interface {
 		Closeable
@@ -122,5 +130,6 @@ type (
 		ListClosedWorkflowExecutionsByWorkflowID(request *ListWorkflowExecutionsByWorkflowIDRequest) (*ListWorkflowExecutionsResponse, error)
 		ListClosedWorkflowExecutionsByStatus(request *ListClosedWorkflowExecutionsByStatusRequest) (*ListWorkflowExecutionsResponse, error)
 		GetClosedWorkflowExecution(request *GetClosedWorkflowExecutionRequest) (*GetClosedWorkflowExecutionResponse, error)
+		DeleteWorkflowExecution(request *VisibilityDeleteWorkflowExecutionRequest) error
 	}
 )

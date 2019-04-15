@@ -352,9 +352,9 @@ type (
 
 	// InternalAppendHistoryNodesRequest is used to append a batch of history nodes
 	InternalAppendHistoryNodesRequest struct {
-		// true if it is the first append request to the branch
+		// True if it is the first append request to the branch
 		IsNewBranch bool
-		// the info for clean up data in background
+		// The info for clean up data in background
 		Info string
 		// The branch to be appended
 		BranchInfo workflow.HistoryBranch
@@ -362,8 +362,10 @@ type (
 		NodeID int64
 		// The events to be appended
 		Events *DataBlob
-		// requested TransactionID for conditional update
+		// Requested TransactionID for conditional update
 		TransactionID int64
+		// Used in sharded data stores to identify which shard to use
+		ShardID int
 	}
 
 	// InternalGetWorkflowExecutionResponse is the response to GetworkflowExecutionRequest for Persistence Interface
@@ -400,14 +402,16 @@ type (
 
 	// InternalForkHistoryBranchRequest is used to fork a history branch
 	InternalForkHistoryBranchRequest struct {
-		// The branch to be fork
+		// The base branch to fork from
 		ForkBranchInfo workflow.HistoryBranch
-		// The nodeID to fork from, the new branch will start from ForkNodeID
+		// The nodeID to fork from, the new branch will start from ( inclusive ), the base branch will stop at(exclusive)
 		ForkNodeID int64
 		// branchID of the new branch
 		NewBranchID string
 		// the info for clean up data in background
 		Info string
+		// Used in sharded data stores to identify which shard to use
+		ShardID int
 	}
 
 	// InternalForkHistoryBranchResponse is the response to ForkHistoryBranchRequest
@@ -420,6 +424,8 @@ type (
 	InternalDeleteHistoryBranchRequest struct {
 		// branch to be deleted
 		BranchInfo workflow.HistoryBranch
+		// Used in sharded data stores to identify which shard to use
+		ShardID int
 	}
 
 	// InternalReadHistoryBranchRequest is used to read a history branch
@@ -436,6 +442,8 @@ type (
 		PageSize int
 		// Pagination token
 		NextPageToken []byte
+		// Used in sharded data stores to identify which shard to use
+		ShardID int
 	}
 
 	// InternalCompleteForkBranchRequest is used to update some tree/branch meta data for forking
@@ -444,6 +452,8 @@ type (
 		BranchInfo workflow.HistoryBranch
 		// whether fork is successful
 		Success bool
+		// Used in sharded data stores to identify which shard to use
+		ShardID int
 	}
 
 	// InternalReadHistoryBranchResponse is the response to ReadHistoryBranchRequest

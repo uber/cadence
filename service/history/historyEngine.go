@@ -33,7 +33,6 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
-	"github.com/uber/cadence/client/public"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
@@ -46,6 +45,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/worker/archiver"
+	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/yarpc"
 )
@@ -64,6 +64,7 @@ type (
 		historyMgr           persistence.HistoryManager
 		historyV2Mgr         persistence.HistoryV2Manager
 		executionManager     persistence.ExecutionManager
+		visibilityMgr        persistence.VisibilityManager
 		txProcessor          transferQueueProcessor
 		timerProcessor       timerQueueProcessor
 		taskAllocator        taskAllocator
@@ -141,7 +142,7 @@ func NewEngineWithShardContext(
 	visibilityMgr persistence.VisibilityManager,
 	matching matching.Client,
 	historyClient hc.Client,
-	publicClient public.Client,
+	publicClient workflowserviceclient.Interface,
 	historyEventNotifier historyEventNotifier,
 	publisher messaging.Producer,
 	visibilityProducer messaging.Producer,
@@ -165,6 +166,7 @@ func NewEngineWithShardContext(
 		historyMgr:         historyManager,
 		historyV2Mgr:       historyV2Manager,
 		executionManager:   executionManager,
+		visibilityMgr:      visibilityMgr,
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
 		historyCache:       historyCache,
 		logger: logger.WithFields(bark.Fields{
@@ -343,16 +345,20 @@ func (e *historyEngineImpl) generateFirstDecisionTask(domainID string, msBuilder
 		DecisionTimeout: int32(0),
 	}
 	var transferTasks []persistence.Task
-	if parentInfo == nil && cronBackoffSeconds == 0 {
-		// DecisionTask is only created when it is not a Child Workflow Execution and no backoff is needed
-		di = msBuilder.AddDecisionTaskScheduledEvent()
-		if di == nil {
-			return nil, nil, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
-		}
+	if parentInfo == nil {
+		// RecordWorkflowStartedTask is only created when it is not a Child Workflow
+		transferTasks = append(transferTasks, &persistence.RecordWorkflowStartedTask{})
+		if cronBackoffSeconds == 0 {
+			// DecisionTask is only created when it is not a Child Workflow and no backoff is needed
+			di = msBuilder.AddDecisionTaskScheduledEvent()
+			if di == nil {
+				return nil, nil, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
+			}
 
-		transferTasks = []persistence.Task{&persistence.DecisionTask{
-			DomainID: domainID, TaskList: taskListName, ScheduleID: di.ScheduleID,
-		}}
+			transferTasks = append(transferTasks, &persistence.DecisionTask{
+				DomainID: domainID, TaskList: taskListName, ScheduleID: di.ScheduleID,
+			})
+		}
 	}
 	return transferTasks, di, nil
 }
@@ -1123,9 +1129,16 @@ type decisionBlobSizeChecker struct {
 }
 
 func (c *decisionBlobSizeChecker) failWorkflowIfBlobSizeExceedsLimit(blob []byte, message string) (bool, error) {
-	err := common.CheckEventBlobSizeLimit(len(blob), c.sizeLimitWarn, c.sizeLimitError,
-		c.domainID, c.workflowID, c.runID, c.metricsClient, metrics.HistoryRespondDecisionTaskCompletedScope, c.logger)
-
+	err := common.CheckEventBlobSizeLimit(
+		len(blob),
+		c.sizeLimitWarn,
+		c.sizeLimitError,
+		c.domainID,
+		c.workflowID,
+		c.runID,
+		c.metricsClient.Scope(metrics.HistoryRespondDecisionTaskCompletedScope),
+		c.logger,
+	)
 	if err == nil {
 		return false, nil
 	}
@@ -1362,7 +1375,7 @@ Update_History_Loop:
 					}
 				} else {
 					// this is a cron workflow
-					startEvent, err := getWorkflowStartedEvent(e.historyMgr, e.historyV2Mgr, msBuilder.GetEventStoreVersion(), msBuilder.GetCurrentBranch(), e.logger, domainID, workflowExecution.GetWorkflowId(), workflowExecution.GetRunId())
+					startEvent, err := getWorkflowStartedEvent(e.historyMgr, e.historyV2Mgr, msBuilder.GetEventStoreVersion(), msBuilder.GetCurrentBranch(), e.logger, domainID, workflowExecution.GetWorkflowId(), workflowExecution.GetRunId(), common.IntPtr(e.shard.GetShardID()))
 					if err != nil {
 						return nil, err
 					}
@@ -1435,7 +1448,7 @@ Update_History_Loop:
 					}
 				} else {
 					// retry or cron with backoff
-					startEvent, err := getWorkflowStartedEvent(e.historyMgr, e.historyV2Mgr, msBuilder.GetEventStoreVersion(), msBuilder.GetCurrentBranch(), e.logger, domainID, workflowExecution.GetWorkflowId(), workflowExecution.GetRunId())
+					startEvent, err := getWorkflowStartedEvent(e.historyMgr, e.historyV2Mgr, msBuilder.GetEventStoreVersion(), msBuilder.GetCurrentBranch(), e.logger, domainID, workflowExecution.GetWorkflowId(), workflowExecution.GetRunId(), common.IntPtr(e.shard.GetShardID()))
 					if err != nil {
 						return nil, err
 					}
@@ -1554,6 +1567,10 @@ Update_History_Loop:
 					// since timer builder has a local cached version of timers
 					tBuilder = e.getTimerBuilder(context.getExecution())
 					tBuilder.loadUserTimers(msBuilder)
+
+					// timer deletion is a success, we may have deleted a fired timer in
+					// which case we should reset hasBufferedEvents
+					hasUnhandledEvents = msBuilder.HasBufferedEvents()
 				}
 
 			case workflow.DecisionTypeRecordMarker:
@@ -2438,9 +2455,12 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	if firstDecisionTask == nil {
 		return nil, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
 	}
-	transferTasks := []persistence.Task{&persistence.DecisionTask{
-		DomainID: domainID, TaskList: taskList, ScheduleID: firstDecisionTask.ScheduleID,
-	}}
+	transferTasks := []persistence.Task{
+		&persistence.DecisionTask{
+			DomainID: domainID, TaskList: taskList, ScheduleID: firstDecisionTask.ScheduleID,
+		},
+		&persistence.RecordWorkflowStartedTask{},
+	}
 	// first timer task
 	duration := time.Duration(*request.ExecutionStartToCloseTimeoutSeconds) * time.Second
 	timerTasks := []persistence.Task{&persistence.WorkflowTimeoutTask{
@@ -2577,12 +2597,13 @@ func (e *historyEngineImpl) ScheduleDecisionTask(ctx context.Context, scheduleRe
 
 			postActions := &updateWorkflowAction{
 				createDecision: true,
+				transferTasks:  []persistence.Task{&persistence.RecordWorkflowStartedTask{}},
 			}
 
-			cronBackoffDuration := msBuilder.GetCronBackoffDuration()
-			if scheduleRequest.GetIsFirstDecision() && cronBackoffDuration != cron.NoBackoff {
+			executionTimestamp := getWorkflowExecutionTimestamp(msBuilder)
+			if scheduleRequest.GetIsFirstDecision() && executionTimestamp.After(time.Now()) {
 				postActions.timerTasks = append(postActions.timerTasks, &persistence.WorkflowBackoffTimerTask{
-					VisibilityTimestamp: time.Now().Add(cronBackoffDuration),
+					VisibilityTimestamp: executionTimestamp,
 					TimeoutType:         persistence.WorkflowBackoffTimeoutTypeCron,
 				})
 				postActions.createDecision = false
@@ -2672,6 +2693,13 @@ func (e *historyEngineImpl) SyncActivity(ctx context.Context, request *h.SyncAct
 
 func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetRequest *h.ResetWorkflowExecutionRequest) (response *workflow.ResetWorkflowExecutionResponse, retError error) {
 	return e.resetor.ResetWorkflowExecution(ctx, resetRequest)
+}
+
+func (e *historyEngineImpl) DeleteExecutionFromVisibility(domainID string, runID string) error {
+	return e.visibilityMgr.DeleteWorkflowExecution(&persistence.VisibilityDeleteWorkflowExecutionRequest{
+		DomainID: domainID,
+		RunID:    runID,
+	})
 }
 
 type updateWorkflowAction struct {
@@ -2863,6 +2891,7 @@ func (e *historyEngineImpl) deleteEvents(domainID string, execution workflow.Wor
 	if eventStoreVersion == persistence.EventStoreVersionV2 {
 		e.historyV2Mgr.DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
 			BranchToken: branchToken,
+			ShardID:     common.IntPtr(e.shard.GetShardID()),
 		})
 	} else {
 		e.historyMgr.DeleteWorkflowExecutionHistory(&persistence.DeleteWorkflowExecutionHistoryRequest{
@@ -3333,7 +3362,7 @@ func getStartRequest(domainID string,
 	return startRequest
 }
 
-func getWorkflowStartedEvent(historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager, eventStoreVersion int32, branchToken []byte, logger bark.Logger, domainID, workflowID, runID string) (*workflow.HistoryEvent, error) {
+func getWorkflowStartedEvent(historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager, eventStoreVersion int32, branchToken []byte, logger bark.Logger, domainID, workflowID, runID string, shardID *int) (*workflow.HistoryEvent, error) {
 	var events []*workflow.HistoryEvent
 	if eventStoreVersion == persistence.EventStoreVersionV2 {
 		response, err := historyV2Mgr.ReadHistoryBranch(&persistence.ReadHistoryBranchRequest{
@@ -3342,6 +3371,7 @@ func getWorkflowStartedEvent(historyMgr persistence.HistoryManager, historyV2Mgr
 			MaxEventID:    common.FirstEventID + 1,
 			PageSize:      defaultHistoryPageSize,
 			NextPageToken: nil,
+			ShardID:       shardID,
 		})
 		if err != nil {
 			logger.WithFields(bark.Fields{

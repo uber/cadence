@@ -320,7 +320,6 @@ func (e *mutableStateBuilder) FlushBufferedEvents() error {
 
 	// no decision in-flight, flush all buffered events to committed bucket
 	if !e.HasInFlightDecisionTask() {
-
 		// flush persisted buffered events
 		reorderFunc(e.bufferedEvents)
 
@@ -511,6 +510,37 @@ func (e *mutableStateBuilder) CreateReplicationTask(newRunEventStoreVersion int3
 		NewRunBranchToken:       newRunBranchToken,
 	}
 	return t
+}
+
+func (e *mutableStateBuilder) checkAndClearTimerFiredEvent(timerID string) *workflow.HistoryEvent {
+	var timerEvent *workflow.HistoryEvent
+	e.bufferedEvents, timerEvent = checkAndClearTimerFiredEvent(e.bufferedEvents, timerID)
+	if timerEvent != nil {
+		return timerEvent
+	}
+	e.updateBufferedEvents, timerEvent = checkAndClearTimerFiredEvent(e.updateBufferedEvents, timerID)
+	if timerEvent != nil {
+		return timerEvent
+	}
+	e.hBuilder.history, timerEvent = checkAndClearTimerFiredEvent(e.hBuilder.history, timerID)
+	return timerEvent
+}
+
+func checkAndClearTimerFiredEvent(events []*workflow.HistoryEvent, timerID string) ([]*workflow.HistoryEvent, *workflow.HistoryEvent) {
+	// go over all history events. if we find a timer fired event for the given
+	// timerID, clear it
+	timerFiredIdx := -1
+	for idx, event := range events {
+		if event.GetEventType() == workflow.EventTypeTimerFired &&
+			event.GetTimerFiredEventAttributes().GetTimerId() == timerID {
+			timerFiredIdx = idx
+			break
+		}
+	}
+	if timerFiredIdx == -1 {
+		return events, nil
+	}
+	return append(events[:timerFiredIdx], events[timerFiredIdx+1:]...), events[timerFiredIdx]
 }
 
 func convertUpdateActivityInfos(inputs map[*persistence.ActivityInfo]struct{}) []*persistence.ActivityInfo {
@@ -957,6 +987,17 @@ func (e *mutableStateBuilder) GetCompletionEvent() (*workflow.HistoryEvent, bool
 	return completionEvent, true
 }
 
+// GetStartEvent retrieves the workflow start event from mutable state
+func (e *mutableStateBuilder) GetStartEvent() (*workflow.HistoryEvent, bool) {
+	startEvent, err := e.eventsCache.getEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID,
+		e.executionInfo.RunID, common.FirstEventID, common.FirstEventID, e.executionInfo.EventStoreVersion,
+		e.executionInfo.GetCurrentBranch())
+	if err != nil {
+		return nil, false
+	}
+	return startEvent, true
+}
+
 // DeletePendingChildExecution deletes details about a ChildExecutionInfo.
 func (e *mutableStateBuilder) DeletePendingChildExecution(initiatedEventID int64) {
 	delete(e.pendingChildExecutionInfoIDs, initiatedEventID)
@@ -975,11 +1016,13 @@ func (e *mutableStateBuilder) DeletePendingSignal(initiatedEventID int64) {
 	e.deleteSignalInfo = common.Int64Ptr(initiatedEventID)
 }
 
-func (e *mutableStateBuilder) writeCompletionEventToCache(completionEvent *workflow.HistoryEvent) {
-	// Store the completion result within events cache so we can communicate the result to parent execution
+func (e *mutableStateBuilder) writeEventToCache(event *workflow.HistoryEvent) {
+	// For start event: store it within events cache so the recordWorkflowStarted transfer task doesn't need to
+	// load it from database
+	// For completion event: store it within events cache so we can communicate the result to parent execution
 	// during the processing of DeleteTransferTask without loading this event from database
 	e.eventsCache.putEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID, e.executionInfo.RunID,
-		completionEvent.GetEventId(), completionEvent)
+		event.GetEventId(), event)
 }
 
 func (e *mutableStateBuilder) hasPendingTasks() bool {
@@ -1127,7 +1170,7 @@ func (e *mutableStateBuilder) GetInFlightDecisionTask() (*decisionInfo, bool) {
 }
 
 func (e *mutableStateBuilder) HasBufferedEvents() bool {
-	if len(e.bufferedEvents) > 0 || e.updateBufferedEvents != nil {
+	if len(e.bufferedEvents) > 0 || len(e.updateBufferedEvents) > 0 {
 		return true
 	}
 
@@ -1323,8 +1366,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(d
 
 	event := e.hBuilder.AddWorkflowExecutionStartedEvent(req, &previousExecutionInfo.RunID)
 	e.ReplicateWorkflowExecutionStartedEvent(domainID, parentDomainID, execution, createRequest.GetRequestId(),
-		event.WorkflowExecutionStartedEventAttributes)
-
+		event)
 	return event
 }
 
@@ -1344,13 +1386,13 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(execution workflo
 		parentDomainID = startRequest.ParentExecutionInfo.DomainUUID
 	}
 	e.ReplicateWorkflowExecutionStartedEvent(startRequest.GetDomainUUID(), parentDomainID,
-		execution, request.GetRequestId(), event.WorkflowExecutionStartedEventAttributes)
-
+		execution, request.GetRequestId(), event)
 	return event
 }
 
 func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(domainID string, parentDomainID *string,
-	execution workflow.WorkflowExecution, requestID string, event *workflow.WorkflowExecutionStartedEventAttributes) {
+	execution workflow.WorkflowExecution, requestID string, startEvent *workflow.HistoryEvent) {
+	event := startEvent.WorkflowExecutionStartedEventAttributes
 	e.executionInfo.DomainID = domainID
 	e.executionInfo.WorkflowID = execution.GetWorkflowId()
 	e.executionInfo.RunID = execution.GetRunId()
@@ -1395,6 +1437,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(domainID st
 	if event.CronSchedule != nil {
 		e.executionInfo.CronSchedule = event.GetCronSchedule()
 	}
+	e.writeEventToCache(startEvent)
 }
 
 func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent() *decisionInfo {
@@ -1964,7 +2007,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionCompletedEvent(firstEven
 	e.executionInfo.State = persistence.WorkflowStateCompleted
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusCompleted
 	e.executionInfo.CompletionEventBatchID = firstEventID // Used when completion event needs to be loaded from database
-	e.writeCompletionEventToCache(event)
+	e.writeEventToCache(event)
 }
 
 func (e *mutableStateBuilder) AddFailWorkflowEvent(decisionCompletedEventID int64,
@@ -1985,7 +2028,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionFailedEvent(firstEventID
 	e.executionInfo.State = persistence.WorkflowStateCompleted
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusFailed
 	e.executionInfo.CompletionEventBatchID = firstEventID // Used when completion event needs to be loaded from database
-	e.writeCompletionEventToCache(event)
+	e.writeEventToCache(event)
 }
 
 func (e *mutableStateBuilder) AddTimeoutWorkflowEvent() *workflow.HistoryEvent {
@@ -2005,7 +2048,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionTimedoutEvent(firstEvent
 	e.executionInfo.State = persistence.WorkflowStateCompleted
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusTimedOut
 	e.executionInfo.CompletionEventBatchID = firstEventID // Used when completion event needs to be loaded from database
-	e.writeCompletionEventToCache(event)
+	e.writeEventToCache(event)
 }
 
 func (e *mutableStateBuilder) AddWorkflowExecutionCancelRequestedEvent(cause string,
@@ -2047,7 +2090,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionCanceledEvent(firstEvent
 	e.executionInfo.State = persistence.WorkflowStateCompleted
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusCanceled
 	e.executionInfo.CompletionEventBatchID = firstEventID // Used when completion event needs to be loaded from database
-	e.writeCompletionEventToCache(event)
+	e.writeEventToCache(event)
 }
 
 func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionInitiatedEvent(
@@ -2257,18 +2300,31 @@ func (e *mutableStateBuilder) ReplicateTimerFiredEvent(event *workflow.HistoryEv
 	e.DeleteUserTimer(timerID)
 }
 
-func (e *mutableStateBuilder) AddTimerCanceledEvent(decisionCompletedEventID int64,
-	attributes *workflow.CancelTimerDecisionAttributes, identity string) *workflow.HistoryEvent {
-	timerID := *attributes.TimerId
+func (e *mutableStateBuilder) AddTimerCanceledEvent(
+	decisionCompletedEventID int64,
+	attributes *workflow.CancelTimerDecisionAttributes,
+	identity string,
+) *workflow.HistoryEvent {
+	var timerStartedID int64
+	timerID := attributes.GetTimerId()
 	isTimerRunning, ti := e.GetUserTimer(timerID)
 	if !isTimerRunning {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionTimerCanceled, e.GetNextEventID(), fmt.Sprintf(
-			"{IsTimerRunning: %v, timerID: %v}", isTimerRunning, timerID))
-		return nil
+		// if timer is not running then check if it has fired in the mutable state.
+		// If so clear the timer from the mutable state. We need to check both the
+		// bufferedEvents and the history builder
+		timerFiredEvent := e.checkAndClearTimerFiredEvent(timerID)
+		if timerFiredEvent == nil {
+			logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionTimerCanceled, e.GetNextEventID(), fmt.Sprintf(
+				"{IsTimerRunning: %v, timerID: %v}", isTimerRunning, timerID))
+			return nil
+		}
+		timerStartedID = timerFiredEvent.TimerFiredEventAttributes.GetStartedEventId()
+	} else {
+		timerStartedID = ti.StartedID
 	}
 
 	// Timer is running.
-	event := e.hBuilder.AddTimerCanceledEvent(ti.StartedID, decisionCompletedEventID, timerID, identity)
+	event := e.hBuilder.AddTimerCanceledEvent(timerStartedID, decisionCompletedEventID, timerID, identity)
 	e.ReplicateTimerCanceledEvent(event)
 
 	return event
@@ -2313,7 +2369,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionTerminatedEvent(firstEve
 	e.executionInfo.State = persistence.WorkflowStateCompleted
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusTerminated
 	e.executionInfo.CompletionEventBatchID = firstEventID // Used when completion event needs to be loaded from database
-	e.writeCompletionEventToCache(event)
+	e.writeEventToCache(event)
 }
 
 func (e *mutableStateBuilder) AddWorkflowExecutionSignaled(
@@ -2425,7 +2481,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(firs
 	e.executionInfo.State = persistence.WorkflowStateCompleted
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusContinuedAsNew
 	e.executionInfo.CompletionEventBatchID = firstEventID // Used when completion event needs to be loaded from database
-	e.writeCompletionEventToCache(continueAsNewEvent)
+	e.writeEventToCache(continueAsNewEvent)
 
 	parentDomainID := ""
 	var parentExecution *workflow.WorkflowExecution
@@ -2498,6 +2554,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(firs
 		// expire before timeout
 		timeoutDeadline = continueAsNew.ExpirationTime
 	}
+	continueAsNew.TransferTasks = []persistence.Task{&persistence.RecordWorkflowStartedTask{}}
 	continueAsNew.TimerTasks = []persistence.Task{&persistence.WorkflowTimeoutTask{
 		VisibilityTimestamp: timeoutDeadline,
 	}}
@@ -2516,12 +2573,11 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(firs
 			newStateBuilder.UpdateReplicationStateLastEventID(sourceClusterName, startedEvent.GetVersion(), di.ScheduleID)
 		}
 
-		newTransferTasks := []persistence.Task{&persistence.DecisionTask{
+		continueAsNew.TransferTasks = append(continueAsNew.TransferTasks, &persistence.DecisionTask{
 			DomainID:   domainID,
 			TaskList:   newExecutionInfo.TaskList,
 			ScheduleID: di.ScheduleID,
-		}}
-		continueAsNew.TransferTasks = newTransferTasks
+		})
 	} else {
 		// this need a backoff (for retry or cron)
 		continueAsNew.DecisionVersion = newStateBuilder.GetCurrentVersion()
