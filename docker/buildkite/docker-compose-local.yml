@@ -49,7 +49,7 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:6.7.1
+    image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.5.1
     ports:
       - "9200:9200"
     networks:

@@ -31,4 +31,3 @@ esconfig:
     host: "${ES_SEEDS}:9200"
   indices:
     visibility: test-visibility-
-enablereadvisibilityfromes: true

@@ -74,38 +74,37 @@ type Cadence interface {
 
 type (
 	cadenceImpl struct {
-		initLock                   sync.Mutex
-		adminHandler               *frontend.AdminHandler
-		frontendHandler            *frontend.WorkflowHandler
-		matchingHandler            *matching.Handler
-		historyHandlers            []*history.Handler
-		logger                     bark.Logger
-		clusterMetadata            cluster.Metadata
-		persistenceConfig          config.Persistence
-		dispatcherProvider         client.DispatcherProvider
-		messagingClient            messaging.Client
-		metadataMgr                persistence.MetadataManager
-		metadataMgrV2              persistence.MetadataManager
-		shardMgr                   persistence.ShardManager
-		historyMgr                 persistence.HistoryManager
-		historyV2Mgr               persistence.HistoryV2Manager
-		taskMgr                    persistence.TaskManager
-		visibilityMgr              persistence.VisibilityManager
-		executionMgrFactory        persistence.ExecutionManagerFactory
-		shutdownCh                 chan struct{}
-		shutdownWG                 sync.WaitGroup
-		frontEndService            service.Service
-		clusterNo                  int // cluster number
-		replicator                 *replicator.Replicator
-		clientWorker               archiver.ClientWorker
-		indexer                    *indexer.Indexer
-		enableEventsV2             bool
-		blobstoreClient            blobstore.Client
-		historyConfig              *HistoryConfig
-		esConfig                   *elasticsearch.Config
-		esClient                   elasticsearch.Client
-		enableReadVisibilityFromES bool
-		workerConfig               *WorkerConfig
+		initLock            sync.Mutex
+		adminHandler        *frontend.AdminHandler
+		frontendHandler     *frontend.WorkflowHandler
+		matchingHandler     *matching.Handler
+		historyHandlers     []*history.Handler
+		logger              bark.Logger
+		clusterMetadata     cluster.Metadata
+		persistenceConfig   config.Persistence
+		dispatcherProvider  client.DispatcherProvider
+		messagingClient     messaging.Client
+		metadataMgr         persistence.MetadataManager
+		metadataMgrV2       persistence.MetadataManager
+		shardMgr            persistence.ShardManager
+		historyMgr          persistence.HistoryManager
+		historyV2Mgr        persistence.HistoryV2Manager
+		taskMgr             persistence.TaskManager
+		visibilityMgr       persistence.VisibilityManager
+		executionMgrFactory persistence.ExecutionManagerFactory
+		shutdownCh          chan struct{}
+		shutdownWG          sync.WaitGroup
+		frontEndService     service.Service
+		clusterNo           int // cluster number
+		replicator          *replicator.Replicator
+		clientWorker        archiver.ClientWorker
+		indexer             *indexer.Indexer
+		enableEventsV2      bool
+		blobstoreClient     blobstore.Client
+		historyConfig       *HistoryConfig
+		esConfig            *elasticsearch.Config
+		esClient            elasticsearch.Client
+		workerConfig        *WorkerConfig
 	}
 
 	// HistoryConfig contains configs for history service
@@ -138,7 +137,6 @@ type (
 		HistoryConfig                 *HistoryConfig
 		ESConfig                      *elasticsearch.Config
 		ESClient                      elasticsearch.Client
-		EnableReadVisibilityFromES    bool
 		WorkerConfig                  *WorkerConfig
 	}
 
@@ -151,28 +149,27 @@ type (
 // NewCadence returns an instance that hosts full cadence in one process
 func NewCadence(params *CadenceParams) Cadence {
 	return &cadenceImpl{
-		logger:                     params.Logger,
-		clusterMetadata:            params.ClusterMetadata,
-		persistenceConfig:          params.PersistenceConfig,
-		dispatcherProvider:         params.DispatcherProvider,
-		messagingClient:            params.MessagingClient,
-		metadataMgr:                params.MetadataMgr,
-		metadataMgrV2:              params.MetadataMgrV2,
-		visibilityMgr:              params.VisibilityMgr,
-		shardMgr:                   params.ShardMgr,
-		historyMgr:                 params.HistoryMgr,
-		historyV2Mgr:               params.HistoryV2Mgr,
-		taskMgr:                    params.TaskMgr,
-		executionMgrFactory:        params.ExecutionMgrFactory,
-		shutdownCh:                 make(chan struct{}),
-		clusterNo:                  params.ClusterNo,
-		enableEventsV2:             params.EnableEventsV2,
-		esConfig:                   params.ESConfig,
-		esClient:                   params.ESClient,
-		enableReadVisibilityFromES: params.EnableReadVisibilityFromES,
-		blobstoreClient:            params.Blobstore,
-		historyConfig:              params.HistoryConfig,
-		workerConfig:               params.WorkerConfig,
+		logger:              params.Logger,
+		clusterMetadata:     params.ClusterMetadata,
+		persistenceConfig:   params.PersistenceConfig,
+		dispatcherProvider:  params.DispatcherProvider,
+		messagingClient:     params.MessagingClient,
+		metadataMgr:         params.MetadataMgr,
+		metadataMgrV2:       params.MetadataMgrV2,
+		visibilityMgr:       params.VisibilityMgr,
+		shardMgr:            params.ShardMgr,
+		historyMgr:          params.HistoryMgr,
+		historyV2Mgr:        params.HistoryV2Mgr,
+		taskMgr:             params.TaskMgr,
+		executionMgrFactory: params.ExecutionMgrFactory,
+		shutdownCh:          make(chan struct{}),
+		clusterNo:           params.ClusterNo,
+		enableEventsV2:      params.EnableEventsV2,
+		esConfig:            params.ESConfig,
+		esClient:            params.ESClient,
+		blobstoreClient:     params.Blobstore,
+		historyConfig:       params.HistoryConfig,
+		workerConfig:        params.WorkerConfig,
 	}
 }
 
@@ -353,8 +350,8 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	dc := dynamicconfig.NewCollection(params.DynamicConfig, c.logger)
 	frontendConfig := frontend.NewConfig(dc, c.esConfig.Enable)
 	visibilityMgr := c.visibilityMgr
-	if c.esConfig.Enable && c.enableReadVisibilityFromES {
-		frontendConfig.EnableReadVisibilityFromES = dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableReadVisibilityFromES, c.enableReadVisibilityFromES)
+	if c.esConfig.Enable {
+		frontendConfig.EnableReadVisibilityFromES = dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableReadVisibilityFromES, true)
 		visibilityIndexName := c.esConfig.Indices[common.VisibilityAppName]
 		visibilityConfigForES := &config.VisibilityConfig{
 			VisibilityListMaxQPS:   frontendConfig.ESVisibilityListMaxQPS,

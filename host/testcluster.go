@@ -49,18 +49,17 @@ type (
 
 	// TestClusterConfig are config for a test cluster
 	TestClusterConfig struct {
-		FrontendAddress            string
-		EnableEventsV2             bool
-		EnableArchival             bool
-		IsMasterCluster            bool
-		ClusterNo                  int
-		ClusterInfo                config.ClustersInfo
-		MessagingClientConfig      *MessagingClientConfig
-		Persistence                persistencetests.TestBaseOptions
-		HistoryConfig              *HistoryConfig
-		ESConfig                   elasticsearch.Config
-		EnableReadVisibilityFromES bool
-		WorkerConfig               *WorkerConfig
+		FrontendAddress       string
+		EnableEventsV2        bool
+		EnableArchival        bool
+		IsMasterCluster       bool
+		ClusterNo             int
+		ClusterInfo           config.ClustersInfo
+		MessagingClientConfig *MessagingClientConfig
+		Persistence           persistencetests.TestBaseOptions
+		HistoryConfig         *HistoryConfig
+		ESConfig              elasticsearch.Config
+		WorkerConfig          *WorkerConfig
 	}
 
 	// MessagingClientConfig is the config for messaging config
@@ -115,27 +114,26 @@ func NewCluster(options *TestClusterConfig, logger bark.Logger) (*TestCluster, e
 	pConfig := testBase.Config()
 	pConfig.NumHistoryShards = options.HistoryConfig.NumHistoryShards
 	cadenceParams := &CadenceParams{
-		ClusterMetadata:            clusterMetadata,
-		PersistenceConfig:          pConfig,
-		DispatcherProvider:         client.NewIPYarpcDispatcherProvider(),
-		MessagingClient:            getMessagingClient(options.MessagingClientConfig, logger),
-		MetadataMgr:                testBase.MetadataProxy,
-		MetadataMgrV2:              testBase.MetadataManagerV2,
-		ShardMgr:                   testBase.ShardMgr,
-		HistoryMgr:                 testBase.HistoryMgr,
-		HistoryV2Mgr:               testBase.HistoryV2Mgr,
-		ExecutionMgrFactory:        testBase.ExecutionMgrFactory,
-		TaskMgr:                    testBase.TaskMgr,
-		VisibilityMgr:              testBase.VisibilityMgr,
-		Logger:                     logger,
-		ClusterNo:                  options.ClusterNo,
-		EnableEventsV2:             options.EnableEventsV2,
-		ESConfig:                   &options.ESConfig,
-		ESClient:                   esClient,
-		EnableReadVisibilityFromES: options.EnableReadVisibilityFromES,
-		Blobstore:                  blobstore.client,
-		HistoryConfig:              options.HistoryConfig,
-		WorkerConfig:               options.WorkerConfig,
+		ClusterMetadata:     clusterMetadata,
+		PersistenceConfig:   pConfig,
+		DispatcherProvider:  client.NewIPYarpcDispatcherProvider(),
+		MessagingClient:     getMessagingClient(options.MessagingClientConfig, logger),
+		MetadataMgr:         testBase.MetadataProxy,
+		MetadataMgrV2:       testBase.MetadataManagerV2,
+		ShardMgr:            testBase.ShardMgr,
+		HistoryMgr:          testBase.HistoryMgr,
+		HistoryV2Mgr:        testBase.HistoryV2Mgr,
+		ExecutionMgrFactory: testBase.ExecutionMgrFactory,
+		TaskMgr:             testBase.TaskMgr,
+		VisibilityMgr:       testBase.VisibilityMgr,
+		Logger:              logger,
+		ClusterNo:           options.ClusterNo,
+		EnableEventsV2:      options.EnableEventsV2,
+		ESConfig:            &options.ESConfig,
+		ESClient:            esClient,
+		Blobstore:           blobstore.client,
+		HistoryConfig:       options.HistoryConfig,
+		WorkerConfig:        options.WorkerConfig,
 	}
 	cluster := NewCadence(cadenceParams)
 	if err := cluster.Start(); err != nil {
