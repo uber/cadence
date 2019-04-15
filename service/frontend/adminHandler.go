@@ -27,6 +27,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/log"
+
 	"github.com/pborman/uuid"
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/admin/adminserviceserver"
@@ -104,7 +106,7 @@ func (adh *AdminHandler) Stop() {
 
 // DescribeWorkflowExecution returns information about the specified workflow execution.
 func (adh *AdminHandler) DescribeWorkflowExecution(ctx context.Context, request *admin.DescribeWorkflowExecutionRequest) (resp *admin.DescribeWorkflowExecutionResponse, retError error) {
-	defer logging.CapturePanic(adh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(adh.GetLogger(), &retError)
 	scope := metrics.AdminDescribeWorkflowExecutionScope
 	if request == nil {
 		return nil, adh.error(errRequestNotSet, scope)
@@ -143,7 +145,7 @@ func (adh *AdminHandler) DescribeWorkflowExecution(ctx context.Context, request 
 
 // DescribeHistoryHost returns information about the internal states of a history host
 func (adh *AdminHandler) DescribeHistoryHost(ctx context.Context, request *gen.DescribeHistoryHostRequest) (resp *gen.DescribeHistoryHostResponse, retError error) {
-	defer logging.CapturePanic(adh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(adh.GetLogger(), &retError)
 	scope := metrics.AdminDescribeHistoryHostScope
 	if request == nil || (request.ShardIdForHost == nil && request.ExecutionForHost == nil && request.HostAddress == nil) {
 		return nil, adh.error(errRequestNotSet, scope)
@@ -162,7 +164,7 @@ func (adh *AdminHandler) DescribeHistoryHost(ctx context.Context, request *gen.D
 // GetWorkflowExecutionRawHistory - retrieves the history of workflow execution
 func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 	ctx context.Context, request *admin.GetWorkflowExecutionRawHistoryRequest) (resp *admin.GetWorkflowExecutionRawHistoryResponse, retError error) {
-	defer logging.CapturePanic(adh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(adh.GetLogger(), &retError)
 
 	scope := metrics.AdminGetWorkflowExecutionRawHistoryScope
 	sw := adh.startRequestProfile(scope)

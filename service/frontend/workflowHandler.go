@@ -49,6 +49,7 @@ import (
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cron"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
@@ -222,7 +223,7 @@ func (wh *WorkflowHandler) checkPermission(securityToken *string, scope metrics.
 // acts as a sandbox and provides isolation for all resources within the domain.  All resources belongs to exactly one
 // domain.
 func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *gen.RegisterDomainRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 	scope := wh.metricsClient.Scope(metrics.FrontendRegisterDomainScope)
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
@@ -351,7 +352,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 // ListDomains returns the information and configuration for a registered domain.
 func (wh *WorkflowHandler) ListDomains(ctx context.Context,
 	listRequest *gen.ListDomainsRequest) (response *gen.ListDomainsResponse, retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 	scope := wh.metricsClient.Scope(metrics.FrontendListDomainsScope)
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
@@ -395,7 +396,7 @@ func (wh *WorkflowHandler) ListDomains(ctx context.Context,
 // DescribeDomain returns the information and configuration for a registered domain.
 func (wh *WorkflowHandler) DescribeDomain(ctx context.Context,
 	describeRequest *gen.DescribeDomainRequest) (response *gen.DescribeDomainResponse, retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 	scope := wh.metricsClient.Scope(metrics.FrontendDescribeDomainScope)
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
@@ -431,7 +432,7 @@ func (wh *WorkflowHandler) DescribeDomain(ctx context.Context,
 // UpdateDomain is used to update the information and configuration for a registered domain.
 func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 	updateRequest *gen.UpdateDomainRequest) (resp *gen.UpdateDomainResponse, retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendUpdateDomainScope)
 	sw := wh.startRequestProfile(scope)
@@ -685,7 +686,7 @@ func (wh *WorkflowHandler) mergeDomainData(old map[string]string, new map[string
 // it cannot be used to start new workflow executions.  Existing workflow executions will continue to run on
 // deprecated domains.
 func (wh *WorkflowHandler) DeprecateDomain(ctx context.Context, deprecateRequest *gen.DeprecateDomainRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendDeprecateDomainScope)
 	sw := wh.startRequestProfile(scope)
@@ -759,7 +760,7 @@ func (wh *WorkflowHandler) DeprecateDomain(ctx context.Context, deprecateRequest
 func (wh *WorkflowHandler) PollForActivityTask(
 	ctx context.Context,
 	pollRequest *gen.PollForActivityTaskRequest) (resp *gen.PollForActivityTaskResponse, retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	callTime := time.Now()
 
@@ -839,7 +840,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 func (wh *WorkflowHandler) PollForDecisionTask(
 	ctx context.Context,
 	pollRequest *gen.PollForDecisionTaskRequest) (resp *gen.PollForDecisionTaskResponse, retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	callTime := time.Now()
 
@@ -1138,7 +1139,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 	ctx context.Context,
 	completeRequest *gen.RespondActivityTaskCompletedRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendRespondActivityTaskCompletedScope)
 	sw := wh.startRequestProfile(scope)
@@ -1217,7 +1218,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 	ctx context.Context,
 	completeRequest *gen.RespondActivityTaskCompletedByIDRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendRespondActivityTaskCompletedByIDScope)
 	sw := wh.startRequestProfile(scope)
@@ -1322,7 +1323,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 func (wh *WorkflowHandler) RespondActivityTaskFailed(
 	ctx context.Context,
 	failedRequest *gen.RespondActivityTaskFailedRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendRespondActivityTaskFailedScope)
 	sw := wh.startRequestProfile(scope)
@@ -1390,7 +1391,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 	ctx context.Context,
 	failedRequest *gen.RespondActivityTaskFailedByIDRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendRespondActivityTaskFailedByIDScope)
 	sw := wh.startRequestProfile(scope)
@@ -1483,7 +1484,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 	ctx context.Context,
 	cancelRequest *gen.RespondActivityTaskCanceledRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendRespondActivityTaskCanceledScope)
 	sw := wh.startRequestProfile(scope)
@@ -1563,7 +1564,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 	ctx context.Context,
 	cancelRequest *gen.RespondActivityTaskCanceledByIDRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendRespondActivityTaskCanceledScope)
 	sw := wh.startRequestProfile(scope)
@@ -1667,7 +1668,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 	ctx context.Context,
 	completeRequest *gen.RespondDecisionTaskCompletedRequest) (resp *gen.RespondDecisionTaskCompletedResponse, retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendRespondDecisionTaskCompletedScope)
 	sw := wh.startRequestProfile(scope)
@@ -1742,7 +1743,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 	ctx context.Context,
 	failedRequest *gen.RespondDecisionTaskFailedRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendRespondDecisionTaskFailedScope)
 	sw := wh.startRequestProfile(scope)
@@ -1809,7 +1810,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 	ctx context.Context,
 	completeRequest *gen.RespondQueryTaskCompletedRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendRespondQueryTaskCompletedScope)
 	sw := wh.startRequestProfile(scope)
@@ -1859,7 +1860,7 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 func (wh *WorkflowHandler) StartWorkflowExecution(
 	ctx context.Context,
 	startRequest *gen.StartWorkflowExecutionRequest) (resp *gen.StartWorkflowExecutionResponse, retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendStartWorkflowExecutionScope)
 	sw := wh.startRequestProfile(scope)
@@ -1994,7 +1995,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	ctx context.Context,
 	getRequest *gen.GetWorkflowExecutionHistoryRequest) (resp *gen.GetWorkflowExecutionHistoryResponse, retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendGetWorkflowExecutionHistoryScope)
 	sw := wh.startRequestProfile(scope)
@@ -2197,7 +2198,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 // WorkflowExecutionSignaled event recorded in the history and a decision task being created for the execution.
 func (wh *WorkflowHandler) SignalWorkflowExecution(ctx context.Context,
 	signalRequest *gen.SignalWorkflowExecutionRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendSignalWorkflowExecutionScope)
 	sw := wh.startRequestProfile(scope)
@@ -2276,7 +2277,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(ctx context.Context,
 // event recorded in history, and a decision task being created for the execution
 func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(ctx context.Context,
 	signalWithStartRequest *gen.SignalWithStartWorkflowExecutionRequest) (resp *gen.StartWorkflowExecutionResponse, retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendSignalWithStartWorkflowExecutionScope)
 	sw := wh.startRequestProfile(scope)
@@ -2430,7 +2431,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(ctx context.Context,
 // in the history and immediately terminating the execution instance.
 func (wh *WorkflowHandler) TerminateWorkflowExecution(ctx context.Context,
 	terminateRequest *gen.TerminateWorkflowExecutionRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendTerminateWorkflowExecutionScope)
 	sw := wh.startRequestProfile(scope)
@@ -2475,7 +2476,7 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(ctx context.Context,
 // in the history and immediately terminating the current execution instance.
 func (wh *WorkflowHandler) ResetWorkflowExecution(ctx context.Context,
 	resetRequest *gen.ResetWorkflowExecutionRequest) (resp *gen.ResetWorkflowExecutionResponse, retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendResetWorkflowExecutionScope)
 	sw := wh.startRequestProfile(scope)
@@ -2520,7 +2521,7 @@ func (wh *WorkflowHandler) ResetWorkflowExecution(ctx context.Context,
 func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 	ctx context.Context,
 	cancelRequest *gen.RequestCancelWorkflowExecutionRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendRequestCancelWorkflowExecutionScope)
 	sw := wh.startRequestProfile(scope)
@@ -2564,7 +2565,7 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 // ListOpenWorkflowExecutions - retrieves info for open workflow executions in a domain
 func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 	listRequest *gen.ListOpenWorkflowExecutionsRequest) (resp *gen.ListOpenWorkflowExecutionsResponse, retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendListOpenWorkflowExecutionsScope)
 	sw := wh.startRequestProfile(scope)
@@ -2660,7 +2661,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 // ListClosedWorkflowExecutions - retrieves info for closed workflow executions in a domain
 func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 	listRequest *gen.ListClosedWorkflowExecutionsRequest) (resp *gen.ListClosedWorkflowExecutionsResponse, retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendListClosedWorkflowExecutionsScope)
 	sw := wh.startRequestProfile(scope)
@@ -2773,7 +2774,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 
 // ResetStickyTaskList reset the volatile information in mutable state of a given workflow.
 func (wh *WorkflowHandler) ResetStickyTaskList(ctx context.Context, resetRequest *gen.ResetStickyTaskListRequest) (resp *gen.ResetStickyTaskListResponse, retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendResetStickyTaskListScope)
 	sw := wh.startRequestProfile(scope)
@@ -2812,7 +2813,7 @@ func (wh *WorkflowHandler) ResetStickyTaskList(ctx context.Context, resetRequest
 // QueryWorkflow returns query result for a specified workflow execution
 func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 	queryRequest *gen.QueryWorkflowRequest) (resp *gen.QueryWorkflowResponse, retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendQueryWorkflowScope)
 	sw := wh.startRequestProfile(scope)
@@ -2915,7 +2916,7 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 
 // DescribeWorkflowExecution returns information about the specified workflow execution.
 func (wh *WorkflowHandler) DescribeWorkflowExecution(ctx context.Context, request *gen.DescribeWorkflowExecutionRequest) (resp *gen.DescribeWorkflowExecutionResponse, retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendDescribeWorkflowExecutionScope)
 	sw := wh.startRequestProfile(scope)
@@ -2960,7 +2961,7 @@ func (wh *WorkflowHandler) DescribeWorkflowExecution(ctx context.Context, reques
 // pollers which polled this tasklist in last few minutes. If includeTaskListStatus field is true,
 // it will also return status of tasklist's ackManager (readLevel, ackLevel, backlogCountHint and taskIDBlock).
 func (wh *WorkflowHandler) DescribeTaskList(ctx context.Context, request *gen.DescribeTaskListRequest) (resp *gen.DescribeTaskListResponse, retError error) {
-	defer logging.CapturePanic(wh.GetBarkLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendDescribeTaskListScope)
 	sw := wh.startRequestProfile(scope)
