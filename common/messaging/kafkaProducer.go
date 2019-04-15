@@ -72,7 +72,7 @@ func (p *kafkaProducer) Publish(msg interface{}) error {
 			logging.TagOffset:       offset,
 			logging.TagErr:          err,
 		}).Warn("Failed to publish message to kafka")
-		return err
+		return p.convertErr(err)
 	}
 
 	return nil
@@ -94,7 +94,7 @@ func (p *kafkaProducer) PublishBatch(msgs []interface{}) error {
 		p.logger.WithFields(bark.Fields{
 			logging.TagErr: err,
 		}).Warn("Failed to publish batch of messages to kafka")
-		return err
+		return p.convertErr(err)
 	}
 
 	return nil
@@ -102,7 +102,7 @@ func (p *kafkaProducer) PublishBatch(msgs []interface{}) error {
 
 // Close is used to close Kafka publisher
 func (p *kafkaProducer) Close() error {
-	return p.producer.Close()
+	return p.convertErr(p.producer.Close())
 }
 
 func (p *kafkaProducer) serializeThrift(input codec.ThriftObject) ([]byte, error) {
@@ -170,5 +170,14 @@ func (p *kafkaProducer) getProducerMessage(message interface{}) (*sarama.Produce
 		return msg, nil
 	default:
 		return nil, errors.New("unknown producer message type")
+	}
+}
+
+func (p *kafkaProducer) convertErr(err error) error {
+	switch err {
+	case sarama.ErrMessageSizeTooLarge:
+		return ErrMessageSizeLimit
+	default:
+		return err
 	}
 }
