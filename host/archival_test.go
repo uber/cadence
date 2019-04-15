@@ -124,7 +124,8 @@ func (s *integrationSuite) isHistoryDeleted(domainID string, execution *workflow
 	}
 
 	request := &persistence.GetHistoryTreeRequest{
-		TreeID: execution.GetRunId(),
+		TreeID:  execution.GetRunId(),
+		ShardID: common.IntPtr(s.testCluster.testBase.ShardInfo.ShardID),
 	}
 	for i := 0; i < retryLimit; i++ {
 		resp, err := s.testCluster.testBase.HistoryV2Mgr.GetHistoryTree(request)
@@ -175,7 +176,7 @@ func (s *integrationSuite) startAndFinishWorkflow(id string, wt string, tl strin
 	}
 	we, err := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err)
-	s.Logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
+	s.BarkLogger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
 	var runIDs []string
 
 	workflowComplete := false
@@ -261,20 +262,20 @@ func (s *integrationSuite) startAndFinishWorkflow(id string, wt string, tl strin
 		Identity:        identity,
 		DecisionHandler: dtHandler,
 		ActivityHandler: atHandler,
-		Logger:          s.Logger,
+		Logger:          s.BarkLogger,
 		T:               s.T(),
 	}
 	for run := 0; run < numRuns; run++ {
 		for i := 0; i < numActivities; i++ {
 			_, err := poller.PollAndProcessDecisionTask(false, false)
-			s.Logger.Infof("PollAndProcessDecisionTask: %v", err)
+			s.BarkLogger.Infof("PollAndProcessDecisionTask: %v", err)
 			s.Nil(err)
 			if i%2 == 0 {
 				err = poller.PollAndProcessActivityTask(false)
 			} else { // just for testing respondActivityTaskCompleteByID
 				err = poller.PollAndProcessActivityTaskWithID(false)
 			}
-			s.Logger.Infof("PollAndProcessActivityTask: %v", err)
+			s.BarkLogger.Infof("PollAndProcessActivityTask: %v", err)
 			s.Nil(err)
 		}
 

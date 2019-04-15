@@ -49,6 +49,7 @@ import (
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cron"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
@@ -158,9 +159,9 @@ func NewWorkflowHandler(sVice service.Service, config *Config, metadataMgr persi
 		historyV2Mgr:     historyV2Mgr,
 		visibilityMgr:    visibilityMgr,
 		tokenSerializer:  common.NewJSONTaskTokenSerializer(),
-		domainCache:      cache.NewDomainCache(metadataMgr, sVice.GetClusterMetadata(), sVice.GetMetricsClient(), sVice.GetLogger()),
+		domainCache:      cache.NewDomainCache(metadataMgr, sVice.GetClusterMetadata(), sVice.GetMetricsClient(), sVice.GetBarkLogger()),
 		rateLimiter:      tokenbucket.New(config.RPS(), clock.NewRealTimeSource()),
-		domainReplicator: NewDomainReplicator(kafkaProducer, sVice.GetLogger()),
+		domainReplicator: NewDomainReplicator(kafkaProducer, sVice.GetBarkLogger()),
 		blobstoreClient:  blobstoreClient,
 	}
 	// prevent us from trying to serve requests before handler's Start() is complete
@@ -199,7 +200,7 @@ func (wh *WorkflowHandler) Stop() {
 // Health is for health check
 func (wh *WorkflowHandler) Health(ctx context.Context) (*health.HealthStatus, error) {
 	wh.startWG.Wait()
-	wh.GetLogger().Debug("Frontend health check endpoint reached.")
+	wh.GetBarkLogger().Debug("Frontend health check endpoint reached.")
 	hs := &health.HealthStatus{Ok: true, Msg: common.StringPtr("frontend good")}
 	return hs, nil
 }
@@ -222,7 +223,7 @@ func (wh *WorkflowHandler) checkPermission(securityToken *string, scope metrics.
 // acts as a sandbox and provides isolation for all resources within the domain.  All resources belongs to exactly one
 // domain.
 func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *gen.RegisterDomainRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 	scope := wh.metricsClient.Scope(metrics.FrontendRegisterDomainScope)
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
@@ -299,7 +300,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 		if err != nil {
 			return wh.error(err, scope)
 		}
-		nextArchivalState, _, err = currentArchivalState.getNextState(archivalEvent)
+		nextArchivalState, _, err = currentArchivalState.getNextState(ctx, wh.blobstoreClient, archivalEvent)
 		if err != nil {
 			return wh.error(err, scope)
 		}
@@ -343,7 +344,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 	}
 
 	// TODO: Log through logging framework.  We need to have good auditing of domain CRUD
-	wh.GetLogger().Debugf("Register domain succeeded for name: %v, Id: %v", registerRequest.GetName(), domainResponse.ID)
+	wh.GetBarkLogger().Debugf("Register domain succeeded for name: %v, Id: %v", registerRequest.GetName(), domainResponse.ID)
 
 	return nil
 }
@@ -351,7 +352,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 // ListDomains returns the information and configuration for a registered domain.
 func (wh *WorkflowHandler) ListDomains(ctx context.Context,
 	listRequest *gen.ListDomainsRequest) (response *gen.ListDomainsResponse, retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 	scope := wh.metricsClient.Scope(metrics.FrontendListDomainsScope)
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
@@ -380,7 +381,7 @@ func (wh *WorkflowHandler) ListDomains(ctx context.Context,
 			IsGlobalDomain:  common.BoolPtr(d.IsGlobalDomain),
 			FailoverVersion: common.Int64Ptr(d.FailoverVersion),
 		}
-		desc.DomainInfo, desc.Configuration, desc.ReplicationConfiguration = wh.createDomainResponse(d.Info, d.Config, d.ReplicationConfig)
+		desc.DomainInfo, desc.Configuration, desc.ReplicationConfiguration = wh.createDomainResponse(ctx, d.Info, d.Config, d.ReplicationConfig)
 		domains = append(domains, desc)
 	}
 
@@ -395,7 +396,7 @@ func (wh *WorkflowHandler) ListDomains(ctx context.Context,
 // DescribeDomain returns the information and configuration for a registered domain.
 func (wh *WorkflowHandler) DescribeDomain(ctx context.Context,
 	describeRequest *gen.DescribeDomainRequest) (response *gen.DescribeDomainResponse, retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 	scope := wh.metricsClient.Scope(metrics.FrontendDescribeDomainScope)
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
@@ -422,16 +423,14 @@ func (wh *WorkflowHandler) DescribeDomain(ctx context.Context,
 		IsGlobalDomain:  common.BoolPtr(resp.IsGlobalDomain),
 		FailoverVersion: common.Int64Ptr(resp.FailoverVersion),
 	}
-	response.DomainInfo, response.Configuration, response.ReplicationConfiguration = wh.createDomainResponse(
-		resp.Info, resp.Config, resp.ReplicationConfig)
-
+	response.DomainInfo, response.Configuration, response.ReplicationConfiguration = wh.createDomainResponse(ctx, resp.Info, resp.Config, resp.ReplicationConfig)
 	return response, nil
 }
 
 // UpdateDomain is used to update the information and configuration for a registered domain.
 func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 	updateRequest *gen.UpdateDomainRequest) (resp *gen.UpdateDomainResponse, retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendUpdateDomainScope)
 	sw := wh.startRequestProfile(scope)
@@ -491,7 +490,7 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
-		nextArchivalState, archivalConfigChanged, err = currentArchivalState.getNextState(archivalEvent)
+		nextArchivalState, archivalConfigChanged, err = currentArchivalState.getNextState(ctx, wh.blobstoreClient, archivalEvent)
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
@@ -666,8 +665,7 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 		IsGlobalDomain:  common.BoolPtr(getResponse.IsGlobalDomain),
 		FailoverVersion: common.Int64Ptr(failoverVersion),
 	}
-	response.DomainInfo, response.Configuration, response.ReplicationConfiguration = wh.createDomainResponse(
-		info, config, replicationConfig)
+	response.DomainInfo, response.Configuration, response.ReplicationConfiguration = wh.createDomainResponse(ctx, info, config, replicationConfig)
 	return response, nil
 }
 
@@ -685,7 +683,7 @@ func (wh *WorkflowHandler) mergeDomainData(old map[string]string, new map[string
 // it cannot be used to start new workflow executions.  Existing workflow executions will continue to run on
 // deprecated domains.
 func (wh *WorkflowHandler) DeprecateDomain(ctx context.Context, deprecateRequest *gen.DeprecateDomainRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendDeprecateDomainScope)
 	sw := wh.startRequestProfile(scope)
@@ -759,7 +757,7 @@ func (wh *WorkflowHandler) DeprecateDomain(ctx context.Context, deprecateRequest
 func (wh *WorkflowHandler) PollForActivityTask(
 	ctx context.Context,
 	pollRequest *gen.PollForActivityTaskRequest) (resp *gen.PollForActivityTaskResponse, retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	callTime := time.Now()
 
@@ -775,8 +773,8 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
-	wh.Service.GetLogger().Debug("Received PollForActivityTask")
-	if err := common.ValidateLongPollContextTimeout(ctx, "PollForActivityTask", wh.Service.GetLogger()); err != nil {
+	wh.Service.GetBarkLogger().Debug("Received PollForActivityTask")
+	if err := common.ValidateLongPollContextTimeout(ctx, "PollForActivityTask", wh.Service.GetBarkLogger()); err != nil {
 		return nil, wh.error(err, scope)
 	}
 
@@ -824,7 +822,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 			if ok {
 				ctxTimeout = ctxDeadline.Sub(callTime).String()
 			}
-			wh.Service.GetLogger().WithFields(bark.Fields{
+			wh.Service.GetBarkLogger().WithFields(bark.Fields{
 				logging.TagTaskListName:   pollRequest.GetTaskList().GetName(),
 				logging.TagContextTimeout: ctxTimeout,
 				logging.TagErr:            err,
@@ -839,7 +837,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 func (wh *WorkflowHandler) PollForDecisionTask(
 	ctx context.Context,
 	pollRequest *gen.PollForDecisionTaskRequest) (resp *gen.PollForDecisionTaskResponse, retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	callTime := time.Now()
 
@@ -855,8 +853,8 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
-	wh.Service.GetLogger().Debug("Received PollForDecisionTask")
-	if err := common.ValidateLongPollContextTimeout(ctx, "PollForDecisionTask", wh.Service.GetLogger()); err != nil {
+	wh.Service.GetBarkLogger().Debug("Received PollForDecisionTask")
+	if err := common.ValidateLongPollContextTimeout(ctx, "PollForDecisionTask", wh.Service.GetBarkLogger()); err != nil {
 		return nil, wh.error(err, scope)
 	}
 
@@ -884,7 +882,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	// add domain tag to scope, so further metrics will have the domain tag
 	scope = scope.Tagged(metrics.DomainTag(domainName))
 
-	wh.Service.GetLogger().Debugf("Poll for decision. DomainName: %v, DomainID: %v", domainName, domainID)
+	wh.Service.GetBarkLogger().Debugf("Poll for decision. DomainName: %v, DomainID: %v", domainName, domainID)
 
 	pollerID := uuid.New()
 	var matchingResp *m.PollForDecisionTaskResponse
@@ -908,7 +906,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 			if ok {
 				ctxTimeout = ctxDeadline.Sub(callTime).String()
 			}
-			wh.Service.GetLogger().WithFields(bark.Fields{
+			wh.Service.GetBarkLogger().WithFields(bark.Fields{
 				logging.TagTaskListName:   pollRequest.GetTaskList().GetName(),
 				logging.TagContextTimeout: ctxTimeout,
 				logging.TagErr:            err,
@@ -942,7 +940,7 @@ func (wh *WorkflowHandler) cancelOutstandingPoll(ctx context.Context, err error,
 		})
 		// We can not do much if this call fails.  Just log the error and move on
 		if err != nil {
-			wh.Service.GetLogger().Warnf("Failed to cancel outstanding poller.  Tasklist: %v, Error: %v,",
+			wh.Service.GetBarkLogger().Warnf("Failed to cancel outstanding poller.  Tasklist: %v, Error: %v,",
 				taskList.GetName(), err)
 		}
 
@@ -957,7 +955,7 @@ func (wh *WorkflowHandler) cancelOutstandingPoll(ctx context.Context, err error,
 func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 	ctx context.Context,
 	heartbeatRequest *gen.RecordActivityTaskHeartbeatRequest) (resp *gen.RecordActivityTaskHeartbeatResponse, err error) {
-	defer logging.CapturePanic(wh.GetLogger(), &err)
+	defer logging.CapturePanic(wh.GetBarkLogger(), &err)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendRecordActivityTaskHeartbeatScope)
 	sw := wh.startRequestProfile(scope)
@@ -970,7 +968,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 	// Count the request in the RPS, but we still accept it even if RPS is exceeded
 	wh.rateLimiter.TryConsume(1)
 
-	wh.Service.GetLogger().Debug("Received RecordActivityTaskHeartbeat")
+	wh.Service.GetBarkLogger().Debug("Received RecordActivityTaskHeartbeat")
 	if heartbeatRequest.TaskToken == nil {
 		return nil, wh.error(errTaskTokenNotSet, scope)
 	}
@@ -1001,7 +999,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 		taskToken.WorkflowID,
 		taskToken.RunID,
 		scope,
-		wh.GetThrottledLogger(),
+		wh.GetThrottledBarkLogger(),
 	); err != nil {
 		// heartbeat details exceed size limit, we would fail the activity immediately with explicit error reason
 		failRequest := &gen.RespondActivityTaskFailedRequest{
@@ -1035,7 +1033,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 	ctx context.Context,
 	heartbeatRequest *gen.RecordActivityTaskHeartbeatByIDRequest) (resp *gen.RecordActivityTaskHeartbeatResponse, err error) {
-	defer logging.CapturePanic(wh.GetLogger(), &err)
+	defer logging.CapturePanic(wh.GetBarkLogger(), &err)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendRecordActivityTaskHeartbeatByIDScope)
 	sw := wh.startRequestProfile(scope)
@@ -1048,7 +1046,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 	// Count the request in the RPS, but we still accept it even if RPS is exceeded
 	wh.rateLimiter.TryConsume(1)
 
-	wh.Service.GetLogger().Debug("Received RecordActivityTaskHeartbeatByID")
+	wh.Service.GetBarkLogger().Debug("Received RecordActivityTaskHeartbeatByID")
 	domainID, err := wh.domainCache.GetDomainID(heartbeatRequest.GetDomain())
 	if err != nil {
 		return nil, wh.error(err, scope)
@@ -1098,7 +1096,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 		taskToken.WorkflowID,
 		taskToken.RunID,
 		scope,
-		wh.GetThrottledLogger(),
+		wh.GetThrottledBarkLogger(),
 	); err != nil {
 		// heartbeat details exceed size limit, we would fail the activity immediately with explicit error reason
 		failRequest := &gen.RespondActivityTaskFailedRequest{
@@ -1138,7 +1136,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 	ctx context.Context,
 	completeRequest *gen.RespondActivityTaskCompletedRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendRespondActivityTaskCompletedScope)
 	sw := wh.startRequestProfile(scope)
@@ -1184,7 +1182,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 		taskToken.WorkflowID,
 		taskToken.RunID,
 		scope,
-		wh.GetThrottledLogger(),
+		wh.GetThrottledBarkLogger(),
 	); err != nil {
 		// result exceeds blob size limit, we would record it as failure
 		failRequest := &gen.RespondActivityTaskFailedRequest{
@@ -1217,7 +1215,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 	ctx context.Context,
 	completeRequest *gen.RespondActivityTaskCompletedByIDRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendRespondActivityTaskCompletedByIDScope)
 	sw := wh.startRequestProfile(scope)
@@ -1283,7 +1281,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 		taskToken.WorkflowID,
 		taskToken.RunID,
 		scope,
-		wh.GetThrottledLogger(),
+		wh.GetThrottledBarkLogger(),
 	); err != nil {
 		// result exceeds blob size limit, we would record it as failure
 		failRequest := &gen.RespondActivityTaskFailedRequest{
@@ -1322,7 +1320,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 func (wh *WorkflowHandler) RespondActivityTaskFailed(
 	ctx context.Context,
 	failedRequest *gen.RespondActivityTaskFailedRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendRespondActivityTaskFailedScope)
 	sw := wh.startRequestProfile(scope)
@@ -1369,7 +1367,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 		taskToken.WorkflowID,
 		taskToken.RunID,
 		scope,
-		wh.GetThrottledLogger(),
+		wh.GetThrottledBarkLogger(),
 	); err != nil {
 		// details exceeds blob size limit, we would truncate the details and put a specific error reason
 		failedRequest.Reason = common.StringPtr(common.FailureReasonFailureDetailsExceedsLimit)
@@ -1390,7 +1388,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 	ctx context.Context,
 	failedRequest *gen.RespondActivityTaskFailedByIDRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendRespondActivityTaskFailedByIDScope)
 	sw := wh.startRequestProfile(scope)
@@ -1455,7 +1453,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 		taskToken.WorkflowID,
 		taskToken.RunID,
 		scope,
-		wh.GetThrottledLogger(),
+		wh.GetThrottledBarkLogger(),
 	); err != nil {
 		// details exceeds blob size limit, we would truncate the details and put a specific error reason
 		failedRequest.Reason = common.StringPtr(common.FailureReasonFailureDetailsExceedsLimit)
@@ -1483,7 +1481,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 	ctx context.Context,
 	cancelRequest *gen.RespondActivityTaskCanceledRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendRespondActivityTaskCanceledScope)
 	sw := wh.startRequestProfile(scope)
@@ -1530,7 +1528,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 		taskToken.WorkflowID,
 		taskToken.RunID,
 		scope,
-		wh.GetThrottledLogger(),
+		wh.GetThrottledBarkLogger(),
 	); err != nil {
 		// details exceeds blob size limit, we would record it as failure
 		failRequest := &gen.RespondActivityTaskFailedRequest{
@@ -1563,7 +1561,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 	ctx context.Context,
 	cancelRequest *gen.RespondActivityTaskCanceledByIDRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendRespondActivityTaskCanceledScope)
 	sw := wh.startRequestProfile(scope)
@@ -1628,7 +1626,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 		taskToken.WorkflowID,
 		taskToken.RunID,
 		scope,
-		wh.GetThrottledLogger(),
+		wh.GetThrottledBarkLogger(),
 	); err != nil {
 		// details exceeds blob size limit, we would record it as failure
 		failRequest := &gen.RespondActivityTaskFailedRequest{
@@ -1667,7 +1665,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 	ctx context.Context,
 	completeRequest *gen.RespondDecisionTaskCompletedRequest) (resp *gen.RespondDecisionTaskCompletedResponse, retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendRespondDecisionTaskCompletedScope)
 	sw := wh.startRequestProfile(scope)
@@ -1742,7 +1740,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 	ctx context.Context,
 	failedRequest *gen.RespondDecisionTaskFailedRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendRespondDecisionTaskFailedScope)
 	sw := wh.startRequestProfile(scope)
@@ -1789,7 +1787,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 		taskToken.WorkflowID,
 		taskToken.RunID,
 		scope,
-		wh.GetThrottledLogger(),
+		wh.GetThrottledBarkLogger(),
 	); err != nil {
 		// details exceed, we would just truncate the size for decision task failed as the details is not used anywhere by client code
 		failedRequest.Details = failedRequest.Details[0:sizeLimitError]
@@ -1809,7 +1807,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 	ctx context.Context,
 	completeRequest *gen.RespondQueryTaskCompletedRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendRespondQueryTaskCompletedScope)
 	sw := wh.startRequestProfile(scope)
@@ -1859,7 +1857,7 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 func (wh *WorkflowHandler) StartWorkflowExecution(
 	ctx context.Context,
 	startRequest *gen.StartWorkflowExecutionRequest) (resp *gen.StartWorkflowExecutionResponse, retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendStartWorkflowExecutionScope)
 	sw := wh.startRequestProfile(scope)
@@ -1897,7 +1895,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(err, scope)
 	}
 
-	wh.Service.GetLogger().Debugf(
+	wh.Service.GetBarkLogger().Debugf(
 		"Received StartWorkflowExecution. WorkflowID: %v",
 		startRequest.GetWorkflowId())
 
@@ -1932,7 +1930,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	maxDecisionTimeout := int32(wh.config.MaxDecisionStartToCloseTimeout(startRequest.GetDomain()))
 	// TODO: remove this assignment and logging in future, so that frontend will just return bad request for large decision timeout
 	if startRequest.GetTaskStartToCloseTimeoutSeconds() > startRequest.GetExecutionStartToCloseTimeoutSeconds() {
-		logging.LogDecisionTimeoutLargerThanWorkflowTimeout(wh.Service.GetThrottledLogger(),
+		logging.LogDecisionTimeoutLargerThanWorkflowTimeout(wh.Service.GetThrottledBarkLogger(),
 			startRequest.GetTaskStartToCloseTimeoutSeconds(),
 			startRequest.GetDomain(),
 			startRequest.GetWorkflowId(),
@@ -1941,7 +1939,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		startRequest.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(startRequest.GetExecutionStartToCloseTimeoutSeconds())
 	}
 	if startRequest.GetTaskStartToCloseTimeoutSeconds() > maxDecisionTimeout {
-		logging.LogDecisionTimeoutTooLarge(wh.Service.GetLogger(),
+		logging.LogDecisionTimeoutTooLarge(wh.Service.GetBarkLogger(),
 			startRequest.GetTaskStartToCloseTimeoutSeconds(),
 			startRequest.GetDomain(),
 			startRequest.GetWorkflowId(),
@@ -1956,7 +1954,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	}
 
 	domainName := startRequest.GetDomain()
-	wh.Service.GetLogger().Debugf("Start workflow execution request domain: %v", domainName)
+	wh.Service.GetBarkLogger().Debugf("Start workflow execution request domain: %v", domainName)
 	domainID, err := wh.domainCache.GetDomainID(domainName)
 	if err != nil {
 		return nil, wh.error(err, scope)
@@ -1975,12 +1973,12 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		startRequest.GetWorkflowId(),
 		"",
 		scope,
-		wh.GetThrottledLogger(),
+		wh.GetThrottledBarkLogger(),
 	); err != nil {
 		return nil, wh.error(err, scope)
 	}
 
-	wh.Service.GetLogger().Debugf("Start workflow execution request domainID: %v", domainID)
+	wh.Service.GetBarkLogger().Debugf("Start workflow execution request domainID: %v", domainID)
 
 	resp, err = wh.history.StartWorkflowExecution(ctx, common.CreateHistoryStartWorkflowRequest(domainID, startRequest))
 
@@ -1994,7 +1992,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	ctx context.Context,
 	getRequest *gen.GetWorkflowExecutionHistoryRequest) (resp *gen.GetWorkflowExecutionHistoryResponse, retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendGetWorkflowExecutionHistoryScope)
 	sw := wh.startRequestProfile(scope)
@@ -2029,7 +2027,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 
 	// force limit page size if exceed
 	if getRequest.GetMaximumPageSize() > common.GetHistoryMaxPageSize {
-		wh.GetLogger().WithFields(bark.Fields{
+		wh.GetBarkLogger().WithFields(bark.Fields{
 			logging.TagWorkflowExecutionID: getRequest.Execution.GetWorkflowId(),
 			logging.TagWorkflowRunID:       getRequest.Execution.GetRunId(),
 			logging.TagDomainID:            domainID,
@@ -2197,7 +2195,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 // WorkflowExecutionSignaled event recorded in the history and a decision task being created for the execution.
 func (wh *WorkflowHandler) SignalWorkflowExecution(ctx context.Context,
 	signalRequest *gen.SignalWorkflowExecutionRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendSignalWorkflowExecutionScope)
 	sw := wh.startRequestProfile(scope)
@@ -2253,7 +2251,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(ctx context.Context,
 		signalRequest.GetWorkflowExecution().GetWorkflowId(),
 		signalRequest.GetWorkflowExecution().GetWorkflowId(),
 		scope,
-		wh.GetThrottledLogger(),
+		wh.GetThrottledBarkLogger(),
 	); err != nil {
 		return wh.error(err, scope)
 	}
@@ -2276,7 +2274,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(ctx context.Context,
 // event recorded in history, and a decision task being created for the execution
 func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(ctx context.Context,
 	signalWithStartRequest *gen.SignalWithStartWorkflowExecutionRequest) (resp *gen.StartWorkflowExecutionResponse, retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendSignalWithStartWorkflowExecutionScope)
 	sw := wh.startRequestProfile(scope)
@@ -2351,7 +2349,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(ctx context.Context,
 	maxDecisionTimeout := int32(wh.config.MaxDecisionStartToCloseTimeout(signalWithStartRequest.GetDomain()))
 	// TODO: remove this assignment and logging in future, so that frontend will just return bad request for large decision timeout
 	if signalWithStartRequest.GetTaskStartToCloseTimeoutSeconds() > signalWithStartRequest.GetExecutionStartToCloseTimeoutSeconds() {
-		logging.LogDecisionTimeoutLargerThanWorkflowTimeout(wh.Service.GetLogger(),
+		logging.LogDecisionTimeoutLargerThanWorkflowTimeout(wh.Service.GetBarkLogger(),
 			signalWithStartRequest.GetTaskStartToCloseTimeoutSeconds(),
 			signalWithStartRequest.GetDomain(),
 			signalWithStartRequest.GetWorkflowId(),
@@ -2360,7 +2358,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(ctx context.Context,
 		signalWithStartRequest.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(signalWithStartRequest.GetExecutionStartToCloseTimeoutSeconds())
 	}
 	if signalWithStartRequest.GetTaskStartToCloseTimeoutSeconds() > maxDecisionTimeout {
-		logging.LogDecisionTimeoutTooLarge(wh.Service.GetLogger(),
+		logging.LogDecisionTimeoutTooLarge(wh.Service.GetBarkLogger(),
 			signalWithStartRequest.GetTaskStartToCloseTimeoutSeconds(),
 			signalWithStartRequest.GetDomain(),
 			signalWithStartRequest.GetWorkflowId(),
@@ -2392,7 +2390,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(ctx context.Context,
 		signalWithStartRequest.GetWorkflowId(),
 		"",
 		scope,
-		wh.GetThrottledLogger(),
+		wh.GetThrottledBarkLogger(),
 	); err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -2404,7 +2402,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(ctx context.Context,
 		signalWithStartRequest.GetWorkflowId(),
 		"",
 		scope,
-		wh.GetThrottledLogger(),
+		wh.GetThrottledBarkLogger(),
 	); err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -2430,7 +2428,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(ctx context.Context,
 // in the history and immediately terminating the execution instance.
 func (wh *WorkflowHandler) TerminateWorkflowExecution(ctx context.Context,
 	terminateRequest *gen.TerminateWorkflowExecutionRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendTerminateWorkflowExecutionScope)
 	sw := wh.startRequestProfile(scope)
@@ -2475,7 +2473,7 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(ctx context.Context,
 // in the history and immediately terminating the current execution instance.
 func (wh *WorkflowHandler) ResetWorkflowExecution(ctx context.Context,
 	resetRequest *gen.ResetWorkflowExecutionRequest) (resp *gen.ResetWorkflowExecutionResponse, retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendResetWorkflowExecutionScope)
 	sw := wh.startRequestProfile(scope)
@@ -2520,7 +2518,7 @@ func (wh *WorkflowHandler) ResetWorkflowExecution(ctx context.Context,
 func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 	ctx context.Context,
 	cancelRequest *gen.RequestCancelWorkflowExecutionRequest) (retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendRequestCancelWorkflowExecutionScope)
 	sw := wh.startRequestProfile(scope)
@@ -2564,7 +2562,7 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 // ListOpenWorkflowExecutions - retrieves info for open workflow executions in a domain
 func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 	listRequest *gen.ListOpenWorkflowExecutionsRequest) (resp *gen.ListOpenWorkflowExecutionsResponse, retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendListOpenWorkflowExecutionsScope)
 	sw := wh.startRequestProfile(scope)
@@ -2632,7 +2630,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 					WorkflowID:                    listRequest.ExecutionFilter.GetWorkflowId(),
 				})
 		}
-		logging.LogListOpenWorkflowByFilter(wh.GetThrottledLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByID)
+		logging.LogListOpenWorkflowByFilter(wh.GetThrottledBarkLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByID)
 	} else if listRequest.TypeFilter != nil {
 		if wh.config.DisableListVisibilityByFilter(domain) {
 			err = errNoPermission
@@ -2642,7 +2640,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 				WorkflowTypeName:              listRequest.TypeFilter.GetName(),
 			})
 		}
-		logging.LogListOpenWorkflowByFilter(wh.GetThrottledLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByType)
+		logging.LogListOpenWorkflowByFilter(wh.GetThrottledBarkLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByType)
 	} else {
 		persistenceResp, err = wh.visibilityMgr.ListOpenWorkflowExecutions(&baseReq)
 	}
@@ -2660,7 +2658,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 // ListClosedWorkflowExecutions - retrieves info for closed workflow executions in a domain
 func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 	listRequest *gen.ListClosedWorkflowExecutionsRequest) (resp *gen.ListClosedWorkflowExecutionsResponse, retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendListClosedWorkflowExecutionsScope)
 	sw := wh.startRequestProfile(scope)
@@ -2736,7 +2734,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 					WorkflowID:                    listRequest.ExecutionFilter.GetWorkflowId(),
 				})
 		}
-		logging.LogListClosedWorkflowByFilter(wh.GetLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByID)
+		logging.LogListClosedWorkflowByFilter(wh.GetBarkLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByID)
 	} else if listRequest.TypeFilter != nil {
 		if wh.config.DisableListVisibilityByFilter(domain) {
 			err = errNoPermission
@@ -2746,7 +2744,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 				WorkflowTypeName:              listRequest.TypeFilter.GetName(),
 			})
 		}
-		logging.LogListClosedWorkflowByFilter(wh.GetLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByType)
+		logging.LogListClosedWorkflowByFilter(wh.GetBarkLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByType)
 	} else if listRequest.StatusFilter != nil {
 		if wh.config.DisableListVisibilityByFilter(domain) {
 			err = errNoPermission
@@ -2756,7 +2754,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 				Status:                        listRequest.GetStatusFilter(),
 			})
 		}
-		logging.LogListClosedWorkflowByFilter(wh.GetLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByStatus)
+		logging.LogListClosedWorkflowByFilter(wh.GetBarkLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByStatus)
 	} else {
 		persistenceResp, err = wh.visibilityMgr.ListClosedWorkflowExecutions(&baseReq)
 	}
@@ -2773,7 +2771,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 
 // ResetStickyTaskList reset the volatile information in mutable state of a given workflow.
 func (wh *WorkflowHandler) ResetStickyTaskList(ctx context.Context, resetRequest *gen.ResetStickyTaskListRequest) (resp *gen.ResetStickyTaskListResponse, retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendResetStickyTaskListScope)
 	sw := wh.startRequestProfile(scope)
@@ -2812,7 +2810,7 @@ func (wh *WorkflowHandler) ResetStickyTaskList(ctx context.Context, resetRequest
 // QueryWorkflow returns query result for a specified workflow execution
 func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 	queryRequest *gen.QueryWorkflowRequest) (resp *gen.QueryWorkflowResponse, retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendQueryWorkflowScope)
 	sw := wh.startRequestProfile(scope)
@@ -2879,7 +2877,7 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 		}
 		if yarpcError, ok := err.(*yarpcerrors.Status); !ok || yarpcError.Code() != yarpcerrors.CodeDeadlineExceeded {
 			// this means query failure
-			logging.LogQueryTaskFailedEvent(wh.GetLogger(),
+			logging.LogQueryTaskFailedEvent(wh.GetBarkLogger(),
 				queryRequest.GetDomain(),
 				queryRequest.Execution.GetWorkflowId(),
 				queryRequest.Execution.GetRunId(),
@@ -2902,7 +2900,7 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 	matchingRequest.TaskList = response.TaskList
 	matchingResp, err := wh.matching.QueryWorkflow(ctx, matchingRequest)
 	if err != nil {
-		logging.LogQueryTaskFailedEvent(wh.GetLogger(),
+		logging.LogQueryTaskFailedEvent(wh.GetBarkLogger(),
 			queryRequest.GetDomain(),
 			queryRequest.Execution.GetWorkflowId(),
 			queryRequest.Execution.GetRunId(),
@@ -2915,7 +2913,7 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 
 // DescribeWorkflowExecution returns information about the specified workflow execution.
 func (wh *WorkflowHandler) DescribeWorkflowExecution(ctx context.Context, request *gen.DescribeWorkflowExecutionRequest) (resp *gen.DescribeWorkflowExecutionResponse, retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendDescribeWorkflowExecutionScope)
 	sw := wh.startRequestProfile(scope)
@@ -2960,7 +2958,7 @@ func (wh *WorkflowHandler) DescribeWorkflowExecution(ctx context.Context, reques
 // pollers which polled this tasklist in last few minutes. If includeTaskListStatus field is true,
 // it will also return status of tasklist's ackManager (readLevel, ackLevel, backlogCountHint and taskIDBlock).
 func (wh *WorkflowHandler) DescribeTaskList(ctx context.Context, request *gen.DescribeTaskListRequest) (resp *gen.DescribeTaskListResponse, retError error) {
-	defer logging.CapturePanic(wh.GetLogger(), &retError)
+	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.metricsClient.Scope(metrics.FrontendDescribeTaskListScope)
 	sw := wh.startRequestProfile(scope)
@@ -3026,6 +3024,7 @@ func (wh *WorkflowHandler) getHistory(
 	historyEvents := []*gen.HistoryEvent{}
 	var size int
 	if eventStoreVersion == persistence.EventStoreVersionV2 {
+		shardID := common.WorkflowIDToHistoryShard(*execution.WorkflowId, wh.config.NumHistoryShards)
 		var err error
 		historyEvents, size, nextPageToken, err = persistence.ReadFullPageV2Events(wh.historyV2Mgr, &persistence.ReadHistoryBranchRequest{
 			BranchToken:   branchToken,
@@ -3033,6 +3032,7 @@ func (wh *WorkflowHandler) getHistory(
 			MaxEventID:    nextEventID,
 			PageSize:      int(pageSize),
 			NextPageToken: nextPageToken,
+			ShardID:       common.IntPtr(shardID),
 		})
 		if err != nil {
 			return nil, nil, err
@@ -3062,7 +3062,7 @@ func (wh *WorkflowHandler) getHistory(
 		scope.RecordTimer(metrics.HistorySize, time.Duration(size))
 
 		if size > common.GetHistoryWarnSizeLimit {
-			wh.GetThrottledLogger().WithFields(bark.Fields{
+			wh.GetThrottledBarkLogger().WithFields(bark.Fields{
 				logging.TagWorkflowExecutionID: execution.GetWorkflowId(),
 				logging.TagWorkflowRunID:       execution.GetRunId(),
 				logging.TagDomainID:            domainID,
@@ -3082,7 +3082,7 @@ func (wh *WorkflowHandler) getHistory(
 }
 
 func (wh *WorkflowHandler) getLoggerForTask(taskToken []byte) bark.Logger {
-	logger := wh.Service.GetLogger()
+	logger := wh.Service.GetBarkLogger()
 	task, err := wh.tokenSerializer.Deserialize(taskToken)
 	if err == nil {
 		logger = logger.WithFields(bark.Fields{
@@ -3105,7 +3105,7 @@ func (wh *WorkflowHandler) startRequestProfile(scope metrics.Scope) tally.Stopwa
 func (wh *WorkflowHandler) error(err error, scope metrics.Scope) error {
 	switch err := err.(type) {
 	case *gen.InternalServiceError:
-		logging.LogInternalServiceError(wh.Service.GetLogger(), err)
+		logging.LogInternalServiceError(wh.Service.GetBarkLogger(), err)
 		scope.IncCounter(metrics.CadenceFailures)
 		// NOTE: For internal error, we won't return thrift error from cadence-frontend.
 		// Because in uber internal metrics, thrift errors are counted as user errors
@@ -3144,7 +3144,7 @@ func (wh *WorkflowHandler) error(err error, scope metrics.Scope) error {
 		}
 	}
 
-	logging.LogUncategorizedError(wh.Service.GetLogger(), err)
+	logging.LogUncategorizedError(wh.Service.GetBarkLogger(), err)
 	scope.IncCounter(metrics.CadenceFailures)
 	return fmt.Errorf("Cadence internal uncategorized error, msg: %v", err.Error())
 }
@@ -3203,9 +3203,12 @@ func getDomainStatus(info *persistence.DomainInfo) *gen.DomainStatus {
 	return nil
 }
 
-func (wh *WorkflowHandler) createDomainResponse(info *persistence.DomainInfo, config *persistence.DomainConfig,
-	replicationConfig *persistence.DomainReplicationConfig) (*gen.DomainInfo,
-	*gen.DomainConfiguration, *gen.DomainReplicationConfiguration) {
+func (wh *WorkflowHandler) createDomainResponse(
+	ctx context.Context,
+	info *persistence.DomainInfo,
+	config *persistence.DomainConfig,
+	replicationConfig *persistence.DomainReplicationConfig,
+) (*gen.DomainInfo, *gen.DomainConfiguration, *gen.DomainReplicationConfiguration) {
 
 	infoResult := &gen.DomainInfo{
 		Name:        common.StringPtr(info.Name),
@@ -3223,7 +3226,7 @@ func (wh *WorkflowHandler) createDomainResponse(info *persistence.DomainInfo, co
 		ArchivalBucketName:                     common.StringPtr(config.ArchivalBucket),
 	}
 	if wh.GetClusterMetadata().ArchivalConfig().ConfiguredForArchival() && config.ArchivalBucket != "" {
-		metadata, err := wh.blobstoreClient.BucketMetadata(context.Background(), config.ArchivalBucket)
+		metadata, err := wh.blobstoreClient.BucketMetadata(ctx, config.ArchivalBucket)
 		if err == nil {
 			configResult.ArchivalRetentionPeriodInDays = common.Int32Ptr(int32(metadata.RetentionDays))
 			configResult.ArchivalBucketOwner = common.StringPtr(metadata.Owner)
