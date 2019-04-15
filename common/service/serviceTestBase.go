@@ -27,6 +27,7 @@ import (
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
+	"go.uber.org/zap"
 
 	"github.com/uber-common/bark"
 
@@ -63,15 +64,22 @@ var (
 
 // NewTestService is the new service instance created for testing
 func NewTestService(clusterMetadata cluster.Metadata, messagingClient messaging.Client, metrics metrics.Client,
-	clientBean client.Bean, logger bark.Logger) Service {
+	clientBean client.Bean, barkLogger bark.Logger) Service {
+
+	zapLogger, err := zap.NewDevelopment()
+	if err != nil {
+		panic(err)
+	}
+	logger := log.NewLogger(zapLogger)
+
 	return &serviceTestBase{
 		hostInfo:        testHostInfo,
 		clusterMetadata: clusterMetadata,
 		messagingClient: messagingClient,
 		metrics:         metrics,
 		clientBean:      clientBean,
-		barkLogger:      logger,
-		// TODO pass in logger
+		barkLogger:      barkLogger,
+		logger:          logger,
 	}
 }
 
