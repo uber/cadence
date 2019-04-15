@@ -53,10 +53,6 @@ func (s *elasticsearchIntegrationSuite) SetupSuite() {
 func (s *elasticsearchIntegrationSuite) TearDownSuite() {
 	s.tearDownSuite()
 	s.deleteIndex(s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName])
-
-	// deleteTemplate, err := s.esClient.IndexDeleteTemplate("test-visibility-template").Do(createContext())
-	// s.Nil(err)
-	// s.True(deleteTemplate.Acknowledged)
 }
 
 func (s *elasticsearchIntegrationSuite) SetupTest() {
