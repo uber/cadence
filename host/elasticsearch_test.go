@@ -45,42 +45,18 @@ type elasticsearchIntegrationSuite struct {
 // This cluster use customized threshold for history config
 func (s *elasticsearchIntegrationSuite) SetupSuite() {
 	s.setupSuite("testdata/integration_elasticsearch_cluster.yaml")
-	var err error
-	s.esClient, err = elastic.NewClient(
-		elastic.SetURL(s.testClusterConfig.ESConfig.URL.String()),
-		elastic.SetRetrier(elastic.NewBackoffRetrier(elastic.NewExponentialBackoff(128*time.Millisecond, 513*time.Millisecond))),
-	)
-	s.Require().NoError(err)
-
-	template, err := ioutil.ReadFile("testdata/es_index_template.json")
-	s.Require().NoError(err)
-	putTemplate, err := s.esClient.IndexPutTemplate("test-visibility-template").BodyString(string(template)).Do(createContext())
-	s.Require().NoError(err)
-	s.Require().True(putTemplate.Acknowledged)
-
-	index := s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName]
-	exists, err := s.esClient.IndexExists(index).Do(createContext())
-	s.Require().NoError(err)
-	if exists {
-		deleteTestIndex, err := s.esClient.DeleteIndex(index).Do(createContext())
-		s.Require().Nil(err)
-		s.Require().True(deleteTestIndex.Acknowledged)
-	}
-
-	createIndex, err := s.esClient.CreateIndex(index).Do(createContext())
-	s.Require().NoError(err)
-	s.Require().True(createIndex.Acknowledged)
+	s.createESClient()
+	s.putIndexTemplate("testdata/es_index_template.json", "test-visibility-template")
+	s.createIndex(s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName])
 }
 
 func (s *elasticsearchIntegrationSuite) TearDownSuite() {
 	s.tearDownSuite()
-	deleteTestIndex, err := s.esClient.DeleteIndex(s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName]).Do(createContext())
-	s.Nil(err)
-	s.True(deleteTestIndex.Acknowledged)
+	s.deleteIndex(s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName])
 
-	deleteTemplate, err := s.esClient.IndexDeleteTemplate("test-visibility-template").Do(createContext())
-	s.Nil(err)
-	s.True(deleteTemplate.Acknowledged)
+	// deleteTemplate, err := s.esClient.IndexDeleteTemplate("test-visibility-template").Do(createContext())
+	// s.Nil(err)
+	// s.True(deleteTemplate.Acknowledged)
 }
 
 func (s *elasticsearchIntegrationSuite) SetupTest() {
@@ -143,4 +119,41 @@ func (s *elasticsearchIntegrationSuite) TestListOpenWorkflow() {
 	}
 	s.NotNil(openExecution)
 	s.Equal(we.GetRunId(), openExecution.GetExecution().GetRunId())
+}
+
+func (s *elasticsearchIntegrationSuite) createESClient() {
+	var err error
+	s.esClient, err = elastic.NewClient(
+		elastic.SetURL(s.testClusterConfig.ESConfig.URL.String()),
+		elastic.SetRetrier(elastic.NewBackoffRetrier(elastic.NewExponentialBackoff(128*time.Millisecond, 513*time.Millisecond))),
+	)
+	s.Require().NoError(err)
+}
+
+func (s *elasticsearchIntegrationSuite) putIndexTemplate(templateConfigFile, templateName string) {
+	template, err := ioutil.ReadFile(templateConfigFile)
+	s.Require().NoError(err)
+	putTemplate, err := s.esClient.IndexPutTemplate(templateName).BodyString(string(template)).Do(createContext())
+	s.Require().NoError(err)
+	s.Require().True(putTemplate.Acknowledged)
+}
+
+func (s *elasticsearchIntegrationSuite) createIndex(indexName string) {
+	exists, err := s.esClient.IndexExists(indexName).Do(createContext())
+	s.Require().NoError(err)
+	if exists {
+		deleteTestIndex, err := s.esClient.DeleteIndex(indexName).Do(createContext())
+		s.Require().Nil(err)
+		s.Require().True(deleteTestIndex.Acknowledged)
+	}
+
+	createTestIndex, err := s.esClient.CreateIndex(indexName).Do(createContext())
+	s.Require().NoError(err)
+	s.Require().True(createTestIndex.Acknowledged)
+}
+
+func (s *elasticsearchIntegrationSuite) deleteIndex(indexName string) {
+	deleteTestIndex, err := s.esClient.DeleteIndex(indexName).Do(createContext())
+	s.Nil(err)
+	s.True(deleteTestIndex.Acknowledged)
 }

@@ -103,6 +103,14 @@ func NewCluster(options *TestClusterConfig, logger bark.Logger) (*TestCluster, e
 	testBase.Setup()
 	setupShards(testBase, options.HistoryConfig.NumHistoryShards, logger)
 	blobstore := setupBlobstore(logger)
+	var esClient elasticsearch.Client
+	if options.ESConfig.Enable {
+		var err error
+		esClient, err = elasticsearch.NewClient(&options.ESConfig)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	pConfig := testBase.Config()
 	pConfig.NumHistoryShards = options.HistoryConfig.NumHistoryShards
@@ -123,6 +131,7 @@ func NewCluster(options *TestClusterConfig, logger bark.Logger) (*TestCluster, e
 		ClusterNo:                  options.ClusterNo,
 		EnableEventsV2:             options.EnableEventsV2,
 		ESConfig:                   &options.ESConfig,
+		ESClient:                   esClient,
 		EnableReadVisibilityFromES: options.EnableReadVisibilityFromES,
 		Blobstore:                  blobstore.client,
 		HistoryConfig:              options.HistoryConfig,

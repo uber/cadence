@@ -97,6 +97,7 @@ func (s *integrationCrossDCSuite) setupTest(enableGlobalDomain bool, isMasterClu
 		WorkerConfig: &WorkerConfig{
 			EnableReplicator: false,
 			EnableArchiver:   false,
+			EnableIndexer:    false,
 		},
 		IsMasterCluster: isMasterCluster,
 		ClusterInfo: config.ClustersInfo{

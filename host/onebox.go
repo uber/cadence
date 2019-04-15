@@ -137,6 +137,7 @@ type (
 		EnableReadHistoryFromArchival bool
 		HistoryConfig                 *HistoryConfig
 		ESConfig                      *elasticsearch.Config
+		ESClient                      elasticsearch.Client
 		EnableReadVisibilityFromES    bool
 		WorkerConfig                  *WorkerConfig
 	}
@@ -167,6 +168,7 @@ func NewCadence(params *CadenceParams) Cadence {
 		clusterNo:                  params.ClusterNo,
 		enableEventsV2:             params.EnableEventsV2,
 		esConfig:                   params.ESConfig,
+		esClient:                   params.ESClient,
 		enableReadVisibilityFromES: params.EnableReadVisibilityFromES,
 		blobstoreClient:            params.Blobstore,
 		historyConfig:              params.HistoryConfig,
@@ -185,14 +187,6 @@ func (c *cadenceImpl) Start() error {
 	hosts[common.HistoryServiceName] = c.HistoryServiceAddress()
 	if c.enableWorker() {
 		hosts[common.WorkerServiceName] = []string{c.WorkerServiceAddress()}
-	}
-
-	if c.esConfig.Enable {
-		var err error
-		c.esClient, err = elasticsearch.NewClient(c.esConfig)
-		if err != nil {
-			return err
-		}
 	}
 
 	var startWG sync.WaitGroup
