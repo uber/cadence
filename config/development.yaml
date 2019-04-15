@@ -20,6 +20,10 @@ ringpop:
   bootstrapHosts: ["127.0.0.1:7933", "127.0.0.1:7934", "127.0.0.1:7935"]
   maxJoinDuration: 30s
 
+serf:
+  name: cadence
+  bootstrapHosts: ["127.0.0.1:7933", "127.0.0.1:7934", "127.0.0.1:7935"]
+
 services:
   frontend:
     rpc:

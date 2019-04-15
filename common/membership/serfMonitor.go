@@ -6,36 +6,49 @@ import (
 )
 
 type serfMonitor struct {
-	logger bark.Logger
-	serf   *serf.Serf
+	logger    bark.Logger
+	serf      *serf.Serf
+	hosts     []string
+	resolvers map[string]ServiceResolver
 }
 
 // NewSerfMonitor returns a new serf based monitor
-func NewSerfMonitor(logger bark.Logger) Monitor {
-	serf, err := serf.Create(nil)
+func NewSerfMonitor(services []string, hosts []string, config *serf.Config, logger bark.Logger) Monitor {
+	serf, err := serf.Create(config)
 	if err != nil {
 		logger.Fatal("unable to create serf")
 	}
-	return &serfMonitor{logger: logger, serf: serf}
+	resolvers := make(map[string]ServiceResolver, len(services))
+	for _, service := range services {
+		resolvers[service] = newSerfResolver(service, serf)
+	}
+	return &serfMonitor{logger: logger, hosts: hosts, serf: serf, resolvers: resolvers}
 }
 
 func (s *serfMonitor) Start() error {
+	n, err := s.serf.Join(s.hosts, false)
+	if err != nil {
+		return err
+	}
+	s.logger.Infof("serf join succeeded for hosts %v", n)
 	return nil
 }
 
 func (s *serfMonitor) Stop() {
+	s.serf.Leave()
 }
 
 func (s *serfMonitor) WhoAmI() (*HostInfo, error) {
-	return NewHostInfo("", nil), nil
+	member := s.serf.LocalMember()
+	return NewHostInfo(member.Addr.String(), member.Tags), nil
 }
 
 func (s *serfMonitor) GetResolver(service string) (ServiceResolver, error) {
-	return nil, nil
+	return s.resolvers[service], nil
 }
 
 func (s *serfMonitor) Lookup(service string, key string) (*HostInfo, error) {
-	return nil, nil
+	return s.resolvers[service].Lookup(key)
 }
 
 func (s *serfMonitor) AddListener(service string, name string, notifyChannel chan<- *ChangedEvent) error {

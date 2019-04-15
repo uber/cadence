@@ -1,10 +1,14 @@
 package membership
 
+import "github.com/hashicorp/serf/serf"
+
 type serfResolver struct {
+	service string
+	serf    *serf.Serf
 }
 
-func newSerfResolver() ServiceResolver {
-	return &serfResolver{}
+func newSerfResolver(service string, serf *serf.Serf) ServiceResolver {
+	return &serfResolver{service, serf}
 }
 
 func (s *serfResolver) Lookup(key string) (*HostInfo, error) {

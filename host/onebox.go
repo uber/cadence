@@ -328,7 +328,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.FrontendPProfPort())
 	params.RPCFactory = newRPCFactoryImpl(common.FrontendServiceName, c.FrontendAddress(), c.logger)
 	params.MetricScope = tally.NewTestScope(common.FrontendServiceName, make(map[string]string))
-	params.MembershipFactory = newMembershipFactory(params.Name, hosts)
+	params.MembershipFactory = newSerfMembershipFactory(c.logger, params.Name, c.FrontendAddress())
 	params.ClusterMetadata = c.clusterMetadata
 	params.DispatcherProvider = c.dispatcherProvider
 	params.MessagingClient = c.messagingClient
@@ -387,7 +387,7 @@ func (c *cadenceImpl) startHistory(hosts map[string][]string, startWG *sync.Wait
 		params.PProfInitializer = newPProfInitializerImpl(c.logger, pprofPorts[i])
 		params.RPCFactory = newRPCFactoryImpl(common.HistoryServiceName, hostport, c.logger)
 		params.MetricScope = tally.NewTestScope(common.HistoryServiceName, make(map[string]string))
-		params.MembershipFactory = newMembershipFactory(params.Name, hosts)
+		params.MembershipFactory = newSerfMembershipFactory(c.logger, params.Name, hostport)
 		params.ClusterMetadata = c.clusterMetadata
 		params.DispatcherProvider = c.dispatcherProvider
 		params.MessagingClient = c.messagingClient
@@ -434,7 +434,7 @@ func (c *cadenceImpl) startMatching(hosts map[string][]string, startWG *sync.Wai
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.MatchingPProfPort())
 	params.RPCFactory = newRPCFactoryImpl(common.MatchingServiceName, c.MatchingServiceAddress(), c.logger)
 	params.MetricScope = tally.NewTestScope(common.MatchingServiceName, make(map[string]string))
-	params.MembershipFactory = newMembershipFactory(params.Name, hosts)
+	params.MembershipFactory = newSerfMembershipFactory(c.logger, params.Name, c.MatchingServiceAddress())
 	params.ClusterMetadata = c.clusterMetadata
 	params.DispatcherProvider = c.dispatcherProvider
 	params.PersistenceConfig = c.persistenceConfig
@@ -462,7 +462,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.WorkerPProfPort())
 	params.RPCFactory = newRPCFactoryImpl(common.WorkerServiceName, c.WorkerServiceAddress(), c.logger)
 	params.MetricScope = tally.NewTestScope(common.WorkerServiceName, make(map[string]string))
-	params.MembershipFactory = newMembershipFactory(params.Name, hosts)
+	params.MembershipFactory = newSerfMembershipFactory(c.logger, params.Name, c.WorkerServiceAddress())
 	params.ClusterMetadata = c.clusterMetadata
 	params.DispatcherProvider = c.dispatcherProvider
 	params.PersistenceConfig = c.persistenceConfig
@@ -595,6 +595,17 @@ func (c *cadenceImpl) createSystemDomain() error {
 		return fmt.Errorf("failed to create cadence-system domain: %v", err)
 	}
 	return nil
+}
+
+func newSerfMembershipFactory(logger bark.Logger, serviceName string, host string) service.MembershipMonitorFactory {
+	conf := &config.Serf{
+		Name: host,
+	}
+	factory, err := conf.NewFactory(logger, serviceName)
+	if err != nil {
+		logger.Fatalf("failed to create serf membership factory %v", err)
+	}
+	return factory
 }
 
 func newMembershipFactory(serviceName string, hosts map[string][]string) service.MembershipMonitorFactory {

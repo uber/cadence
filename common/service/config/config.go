@@ -106,6 +106,14 @@ type (
 		DiscoveryProvider discovery.DiscoverProvider `yaml:"-"`
 	}
 
+	// Serf contains the serf configuration information
+	Serf struct {
+		// Name to be used in ringpop advertisement
+		Name string `yaml:"name" validate:"nonzero"`
+		// BootstrapHosts is a list of seed hosts to be used for ringpop bootstrap
+		BootstrapHosts []string `yaml:"bootstrapHosts"`
+	}
+
 	// Persistence contains the configuration for data store / persistence layer
 	Persistence struct {
 		// DefaultStore is the name of the default data store to use
