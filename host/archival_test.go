@@ -144,9 +144,10 @@ func (s *integrationSuite) isHistoryDeleted(domainID string, execution *workflow
 		return false
 	}
 
+	shardID := common.WorkflowIDToHistoryShard(*execution.WorkflowId, s.testClusterConfig.HistoryConfig.NumHistoryShards)
 	request := &persistence.GetHistoryTreeRequest{
 		TreeID:  execution.GetRunId(),
-		ShardID: common.IntPtr(s.testCluster.testBase.ShardInfo.ShardID),
+		ShardID: common.IntPtr(shardID),
 	}
 	for i := 0; i < retryLimit; i++ {
 		resp, err := s.testCluster.testBase.HistoryV2Mgr.GetHistoryTree(request)
@@ -213,12 +214,13 @@ func (s *integrationSuite) isMultiBlobHistory(domain, domainID string, execution
 	s.NotNil(ms.ExecutionInfo)
 	branchToken := ms.ExecutionInfo.BranchToken
 
+	shardID := common.WorkflowIDToHistoryShard(*execution.WorkflowId, s.testClusterConfig.HistoryConfig.NumHistoryShards)
 	req := &persistence.ReadHistoryBranchRequest{
 		BranchToken: branchToken,
 		MinEventID:  common.FirstEventID,
 		MaxEventID:  common.EndEventID,
 		PageSize:    pageSize,
-		ShardID:     common.IntPtr(s.testCluster.testBase.ShardInfo.ShardID),
+		ShardID:     common.IntPtr(shardID),
 	}
 	var nextPageToken []byte
 	for historySize == 0 || len(nextPageToken) != 0 {
