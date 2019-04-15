@@ -9,6 +9,7 @@ CREATE TABLE executions_visibility (
   close_time           DATETIME(6) NULL,
   history_length       BIGINT,
   memo                 BLOB,
+  encoding             VARCHAR(64) NOT NULL,
 
   PRIMARY KEY  (domain_id, run_id)
 );

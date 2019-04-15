@@ -31,14 +31,14 @@ import (
 )
 
 const (
-	templateGetClosedWorkflowExecutionsV2 = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length ` +
+	templateGetClosedWorkflowExecutionsV2 = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo, encoding ` +
 		`FROM closed_executions_v2 ` +
 		`WHERE domain_id = ? ` +
 		`AND domain_partition IN (?) ` +
 		`AND close_time >= ? ` +
 		`AND close_time <= ? `
 
-	templateGetClosedWorkflowExecutionsByTypeV2 = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length ` +
+	templateGetClosedWorkflowExecutionsByTypeV2 = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo, encoding ` +
 		`FROM closed_executions_v2 ` +
 		`WHERE domain_id = ? ` +
 		`AND domain_partition = ? ` +
@@ -46,7 +46,7 @@ const (
 		`AND close_time <= ? ` +
 		`AND workflow_type_name = ? `
 
-	templateGetClosedWorkflowExecutionsByIDV2 = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length ` +
+	templateGetClosedWorkflowExecutionsByIDV2 = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo, encoding ` +
 		`FROM closed_executions_v2 ` +
 		`WHERE domain_id = ? ` +
 		`AND domain_partition = ? ` +
@@ -54,7 +54,7 @@ const (
 		`AND close_time <= ? ` +
 		`AND workflow_id = ? `
 
-	templateGetClosedWorkflowExecutionsByStatusV2 = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length ` +
+	templateGetClosedWorkflowExecutionsByStatusV2 = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo, encoding ` +
 		`FROM closed_executions_v2 ` +
 		`WHERE domain_id = ? ` +
 		`AND domain_partition = ? ` +
@@ -68,6 +68,7 @@ type (
 		cassandraStore
 		lowConslevel gocql.Consistency
 		persistence  p.VisibilityManager
+		serializer   p.CadenceSerializer
 	}
 )
 
@@ -89,6 +90,7 @@ func NewVisibilityPersistenceV2(persistence p.VisibilityManager, cfg *config.Cas
 		cassandraStore: cassandraStore{session: session, logger: logger},
 		lowConslevel:   gocql.One,
 		persistence:    persistence,
+		serializer:     p.NewCadenceSerializer(),
 	}, nil
 }
 
@@ -151,10 +153,10 @@ func (v *cassandraVisibilityPersistenceV2) ListClosedWorkflowExecutions(
 
 	response := &p.ListWorkflowExecutionsResponse{}
 	response.Executions = make([]*workflow.WorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
+	wfexecution, has := v.readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
+		wfexecution, has = v.readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -192,10 +194,10 @@ func (v *cassandraVisibilityPersistenceV2) ListClosedWorkflowExecutionsByType(
 
 	response := &p.ListWorkflowExecutionsResponse{}
 	response.Executions = make([]*workflow.WorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
+	wfexecution, has := v.readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
+		wfexecution, has = v.readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -233,10 +235,10 @@ func (v *cassandraVisibilityPersistenceV2) ListClosedWorkflowExecutionsByWorkflo
 
 	response := &p.ListWorkflowExecutionsResponse{}
 	response.Executions = make([]*workflow.WorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
+	wfexecution, has := v.readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
+		wfexecution, has = v.readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -274,10 +276,10 @@ func (v *cassandraVisibilityPersistenceV2) ListClosedWorkflowExecutionsByStatus(
 
 	response := &p.ListWorkflowExecutionsResponse{}
 	response.Executions = make([]*workflow.WorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
+	wfexecution, has := v.readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
+		wfexecution, has = v.readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -300,4 +302,8 @@ func (v *cassandraVisibilityPersistenceV2) ListClosedWorkflowExecutionsByStatus(
 // DeleteWorkflowExecution is a no-op since deletes are auto-handled by cassandra TTLs
 func (v *cassandraVisibilityPersistenceV2) DeleteWorkflowExecution(request *p.VisibilityDeleteWorkflowExecutionRequest) error {
 	return nil
+}
+
+func (v *cassandraVisibilityPersistenceV2) readClosedWorkflowExecutionRecord(iter *gocql.Iter) (*workflow.WorkflowExecutionInfo, bool) {
+	return readClosedWorkflowExecutionRecord(iter, v.serializer)
 }

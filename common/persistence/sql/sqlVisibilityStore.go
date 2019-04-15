@@ -38,6 +38,7 @@ import (
 type (
 	sqlVisibilityStore struct {
 		sqlStore
+		serializer p.CadenceSerializer
 	}
 
 	visibilityPageToken struct {
@@ -57,11 +58,11 @@ func NewSQLVisibilityStore(cfg config.SQL, logger bark.Logger) (p.VisibilityMana
 			db:     db,
 			logger: logger,
 		},
+		serializer: p.NewCadenceSerializer(),
 	}, nil
 }
 
 func (s *sqlVisibilityStore) RecordWorkflowExecutionStarted(request *p.RecordWorkflowExecutionStartedRequest) error {
-	memo, _ := json.Marshal(request.Memo)
 	_, err := s.db.InsertIntoVisibility(&sqldb.VisibilityRow{
 		DomainID:         request.DomainUUID,
 		WorkflowID:       *request.Execution.WorkflowId,
@@ -69,14 +70,14 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionStarted(request *p.RecordWor
 		StartTime:        time.Unix(0, request.StartTimestamp),
 		ExecutionTime:    time.Unix(0, request.ExecutionTimestamp),
 		WorkflowTypeName: request.WorkflowTypeName,
-		Memo:             memo,
+		Memo:             request.Memo,
+		Encoding:         string(request.Encoding),
 	})
 	return err
 }
 
 func (s *sqlVisibilityStore) RecordWorkflowExecutionClosed(request *p.RecordWorkflowExecutionClosedRequest) error {
 	closeTime := time.Unix(0, request.CloseTimestamp)
-	memo, _ := json.Marshal(request.Memo)
 	result, err := s.db.ReplaceIntoVisibility(&sqldb.VisibilityRow{
 		DomainID:         request.DomainUUID,
 		WorkflowID:       *request.Execution.WorkflowId,
@@ -87,7 +88,8 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionClosed(request *p.RecordWork
 		CloseTime:        &closeTime,
 		CloseStatus:      common.Int32Ptr(int32(request.Status)),
 		HistoryLength:    &request.HistoryLength,
-		Memo:             memo,
+		Memo:             request.Memo,
+		Encoding:         string(request.Encoding),
 	})
 	if err != nil {
 		return err
@@ -230,7 +232,7 @@ func (s *sqlVisibilityStore) GetClosedWorkflowExecution(request *p.GetClosedWork
 	rows[0].DomainID = request.DomainUUID
 	rows[0].RunID = execution.GetRunId()
 	rows[0].WorkflowID = execution.GetWorkflowId()
-	return &p.GetClosedWorkflowExecutionResponse{Execution: rowToInfo(&rows[0])}, nil
+	return &p.GetClosedWorkflowExecutionResponse{Execution: s.rowToInfo(&rows[0])}, nil
 }
 
 func (s *sqlVisibilityStore) DeleteWorkflowExecution(request *p.VisibilityDeleteWorkflowExecutionRequest) error {
@@ -244,7 +246,7 @@ func (s *sqlVisibilityStore) DeleteWorkflowExecution(request *p.VisibilityDelete
 	return nil
 }
 
-func rowToInfo(row *sqldb.VisibilityRow) *workflow.WorkflowExecutionInfo {
+func (s *sqlVisibilityStore) rowToInfo(row *sqldb.VisibilityRow) *workflow.WorkflowExecutionInfo {
 	if row.ExecutionTime.UnixNano() == 0 {
 		row.ExecutionTime = row.StartTime
 	}
@@ -257,7 +259,7 @@ func rowToInfo(row *sqldb.VisibilityRow) *workflow.WorkflowExecutionInfo {
 		StartTime:     common.Int64Ptr(row.StartTime.UnixNano()),
 		ExecutionTime: common.Int64Ptr(row.ExecutionTime.UnixNano()),
 	}
-	json.Unmarshal(row.Memo, &info.Memo)
+	info.Memo, _ = s.serializer.DeserializeVisibilityMemo(p.NewDataBlob(row.Memo, common.EncodingType(row.Encoding)))
 	if row.CloseStatus != nil {
 		status := workflow.WorkflowExecutionCloseStatus(*row.CloseStatus)
 		info.CloseStatus = &status
@@ -291,7 +293,7 @@ func (s *sqlVisibilityStore) listWorkflowExecutions(opName string, pageToken []b
 
 	var infos = make([]*workflow.WorkflowExecutionInfo, len(rows))
 	for i, row := range rows {
-		infos[i] = rowToInfo(&row)
+		infos[i] = s.rowToInfo(&row)
 	}
 	var nextPageToken []byte
 	lastRow := rows[len(rows)-1]

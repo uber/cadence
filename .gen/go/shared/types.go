@@ -22545,6 +22545,142 @@ func (v *MarkerRecordedEventAttributes) IsSetHeader() bool {
 	return v != nil && v.Header != nil
 }
 
+type Memo struct {
+	Fields map[string][]byte `json:"fields,omitempty"`
+}
+
+// ToWire translates a Memo struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *Memo) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Fields != nil {
+		w, err = wire.NewValueMap(_Map_String_Binary_MapItemList(v.Fields)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a Memo struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a Memo struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v Memo
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *Memo) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TMap {
+				v.Fields, err = _Map_String_Binary_Read(field.Value.GetMap())
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a Memo
+// struct.
+func (v *Memo) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Fields != nil {
+		fields[i] = fmt.Sprintf("Fields: %v", v.Fields)
+		i++
+	}
+
+	return fmt.Sprintf("Memo{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this Memo match the
+// provided Memo.
+//
+// This function performs a deep comparison.
+func (v *Memo) Equals(rhs *Memo) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Fields == nil && rhs.Fields == nil) || (v.Fields != nil && rhs.Fields != nil && _Map_String_Binary_Equals(v.Fields, rhs.Fields))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of Memo.
+func (v *Memo) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Fields != nil {
+		err = multierr.Append(err, enc.AddObject("fields", (_Map_String_Binary_Zapper)(v.Fields)))
+	}
+	return err
+}
+
+// GetFields returns the value of Fields if it is set or its
+// zero value if it is unset.
+func (v *Memo) GetFields() (o map[string][]byte) {
+	if v != nil && v.Fields != nil {
+		return v.Fields
+	}
+
+	return
+}
+
+// IsSetFields returns true if Fields is not nil.
+func (v *Memo) IsSetFields() bool {
+	return v != nil && v.Fields != nil
+}
+
 type PendingActivityInfo struct {
 	ActivityID             *string               `json:"activityID,omitempty"`
 	ActivityType           *ActivityType         `json:"activityType,omitempty"`
@@ -35743,7 +35879,7 @@ type SignalWithStartWorkflowExecutionRequest struct {
 	Control                             []byte                 `json:"control,omitempty"`
 	RetryPolicy                         *RetryPolicy           `json:"retryPolicy,omitempty"`
 	CronSchedule                        *string                `json:"cronSchedule,omitempty"`
-	Memo                                map[string][]byte      `json:"memo,omitempty"`
+	Memo                                *Memo                  `json:"memo,omitempty"`
 }
 
 // ToWire translates a SignalWithStartWorkflowExecutionRequest struct into a Thrift-level intermediate
@@ -35890,7 +36026,7 @@ func (v *SignalWithStartWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 		i++
 	}
 	if v.Memo != nil {
-		w, err = wire.NewValueMap(_Map_String_Binary_MapItemList(v.Memo)), error(nil)
+		w, err = v.Memo.ToWire()
 		if err != nil {
 			return w, err
 		}
@@ -35905,6 +36041,12 @@ func _WorkflowIdReusePolicy_Read(w wire.Value) (WorkflowIdReusePolicy, error) {
 	var v WorkflowIdReusePolicy
 	err := v.FromWire(w)
 	return v, err
+}
+
+func _Memo_Read(w wire.Value) (*Memo, error) {
+	var v Memo
+	err := v.FromWire(w)
+	return &v, err
 }
 
 // FromWire deserializes a SignalWithStartWorkflowExecutionRequest struct from its Thrift-level
@@ -36068,8 +36210,8 @@ func (v *SignalWithStartWorkflowExecutionRequest) FromWire(w wire.Value) error {
 
 			}
 		case 160:
-			if field.Value.Type() == wire.TMap {
-				v.Memo, err = _Map_String_Binary_Read(field.Value.GetMap())
+			if field.Value.Type() == wire.TStruct {
+				v.Memo, err = _Memo_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -36223,7 +36365,7 @@ func (v *SignalWithStartWorkflowExecutionRequest) Equals(rhs *SignalWithStartWor
 	if !_String_EqualsPtr(v.CronSchedule, rhs.CronSchedule) {
 		return false
 	}
-	if !((v.Memo == nil && rhs.Memo == nil) || (v.Memo != nil && rhs.Memo != nil && _Map_String_Binary_Equals(v.Memo, rhs.Memo))) {
+	if !((v.Memo == nil && rhs.Memo == nil) || (v.Memo != nil && rhs.Memo != nil && v.Memo.Equals(rhs.Memo))) {
 		return false
 	}
 
@@ -36282,7 +36424,7 @@ func (v *SignalWithStartWorkflowExecutionRequest) MarshalLogObject(enc zapcore.O
 		enc.AddString("cronSchedule", *v.CronSchedule)
 	}
 	if v.Memo != nil {
-		err = multierr.Append(err, enc.AddObject("memo", (_Map_String_Binary_Zapper)(v.Memo)))
+		err = multierr.Append(err, enc.AddObject("memo", v.Memo))
 	}
 	return err
 }
@@ -36514,7 +36656,7 @@ func (v *SignalWithStartWorkflowExecutionRequest) IsSetCronSchedule() bool {
 
 // GetMemo returns the value of Memo if it is set or its
 // zero value if it is unset.
-func (v *SignalWithStartWorkflowExecutionRequest) GetMemo() (o map[string][]byte) {
+func (v *SignalWithStartWorkflowExecutionRequest) GetMemo() (o *Memo) {
 	if v != nil && v.Memo != nil {
 		return v.Memo
 	}
@@ -38999,7 +39141,7 @@ type StartWorkflowExecutionRequest struct {
 	ChildPolicy                         *ChildPolicy           `json:"childPolicy,omitempty"`
 	RetryPolicy                         *RetryPolicy           `json:"retryPolicy,omitempty"`
 	CronSchedule                        *string                `json:"cronSchedule,omitempty"`
-	Memo                                map[string][]byte      `json:"memo,omitempty"`
+	Memo                                *Memo                  `json:"memo,omitempty"`
 }
 
 // ToWire translates a StartWorkflowExecutionRequest struct into a Thrift-level intermediate
@@ -39130,7 +39272,7 @@ func (v *StartWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 		i++
 	}
 	if v.Memo != nil {
-		w, err = wire.NewValueMap(_Map_String_Binary_MapItemList(v.Memo)), error(nil)
+		w, err = v.Memo.ToWire()
 		if err != nil {
 			return w, err
 		}
@@ -39286,8 +39428,8 @@ func (v *StartWorkflowExecutionRequest) FromWire(w wire.Value) error {
 
 			}
 		case 140:
-			if field.Value.Type() == wire.TMap {
-				v.Memo, err = _Map_String_Binary_Read(field.Value.GetMap())
+			if field.Value.Type() == wire.TStruct {
+				v.Memo, err = _Memo_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -39417,7 +39559,7 @@ func (v *StartWorkflowExecutionRequest) Equals(rhs *StartWorkflowExecutionReques
 	if !_String_EqualsPtr(v.CronSchedule, rhs.CronSchedule) {
 		return false
 	}
-	if !((v.Memo == nil && rhs.Memo == nil) || (v.Memo != nil && rhs.Memo != nil && _Map_String_Binary_Equals(v.Memo, rhs.Memo))) {
+	if !((v.Memo == nil && rhs.Memo == nil) || (v.Memo != nil && rhs.Memo != nil && v.Memo.Equals(rhs.Memo))) {
 		return false
 	}
 
@@ -39470,7 +39612,7 @@ func (v *StartWorkflowExecutionRequest) MarshalLogObject(enc zapcore.ObjectEncod
 		enc.AddString("cronSchedule", *v.CronSchedule)
 	}
 	if v.Memo != nil {
-		err = multierr.Append(err, enc.AddObject("memo", (_Map_String_Binary_Zapper)(v.Memo)))
+		err = multierr.Append(err, enc.AddObject("memo", v.Memo))
 	}
 	return err
 }
@@ -39672,7 +39814,7 @@ func (v *StartWorkflowExecutionRequest) IsSetCronSchedule() bool {
 
 // GetMemo returns the value of Memo if it is set or its
 // zero value if it is unset.
-func (v *StartWorkflowExecutionRequest) GetMemo() (o map[string][]byte) {
+func (v *StartWorkflowExecutionRequest) GetMemo() (o *Memo) {
 	if v != nil && v.Memo != nil {
 		return v.Memo
 	}
@@ -45905,7 +46047,7 @@ type WorkflowExecutionInfo struct {
 	ParentDomainId  *string                       `json:"parentDomainId,omitempty"`
 	ParentExecution *WorkflowExecution            `json:"parentExecution,omitempty"`
 	ExecutionTime   *int64                        `json:"executionTime,omitempty"`
-	Memo            map[string][]byte             `json:"memo,omitempty"`
+	Memo            *Memo                         `json:"memo,omitempty"`
 }
 
 // ToWire translates a WorkflowExecutionInfo struct into a Thrift-level intermediate
@@ -46004,7 +46146,7 @@ func (v *WorkflowExecutionInfo) ToWire() (wire.Value, error) {
 		i++
 	}
 	if v.Memo != nil {
-		w, err = wire.NewValueMap(_Map_String_Binary_MapItemList(v.Memo)), error(nil)
+		w, err = v.Memo.ToWire()
 		if err != nil {
 			return w, err
 		}
@@ -46122,8 +46264,8 @@ func (v *WorkflowExecutionInfo) FromWire(w wire.Value) error {
 
 			}
 		case 100:
-			if field.Value.Type() == wire.TMap {
-				v.Memo, err = _Map_String_Binary_Read(field.Value.GetMap())
+			if field.Value.Type() == wire.TStruct {
+				v.Memo, err = _Memo_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -46225,7 +46367,7 @@ func (v *WorkflowExecutionInfo) Equals(rhs *WorkflowExecutionInfo) bool {
 	if !_I64_EqualsPtr(v.ExecutionTime, rhs.ExecutionTime) {
 		return false
 	}
-	if !((v.Memo == nil && rhs.Memo == nil) || (v.Memo != nil && rhs.Memo != nil && _Map_String_Binary_Equals(v.Memo, rhs.Memo))) {
+	if !((v.Memo == nil && rhs.Memo == nil) || (v.Memo != nil && rhs.Memo != nil && v.Memo.Equals(rhs.Memo))) {
 		return false
 	}
 
@@ -46266,7 +46408,7 @@ func (v *WorkflowExecutionInfo) MarshalLogObject(enc zapcore.ObjectEncoder) (err
 		enc.AddInt64("executionTime", *v.ExecutionTime)
 	}
 	if v.Memo != nil {
-		err = multierr.Append(err, enc.AddObject("memo", (_Map_String_Binary_Zapper)(v.Memo)))
+		err = multierr.Append(err, enc.AddObject("memo", v.Memo))
 	}
 	return err
 }
@@ -46408,7 +46550,7 @@ func (v *WorkflowExecutionInfo) IsSetExecutionTime() bool {
 
 // GetMemo returns the value of Memo if it is set or its
 // zero value if it is unset.
-func (v *WorkflowExecutionInfo) GetMemo() (o map[string][]byte) {
+func (v *WorkflowExecutionInfo) GetMemo() (o *Memo) {
 	if v != nil && v.Memo != nil {
 		return v.Memo
 	}
@@ -46666,7 +46808,7 @@ type WorkflowExecutionStartedEventAttributes struct {
 	ExpirationTimestamp                 *int64                  `json:"expirationTimestamp,omitempty"`
 	CronSchedule                        *string                 `json:"cronSchedule,omitempty"`
 	FirstDecisionTaskBackoffSeconds     *int32                  `json:"firstDecisionTaskBackoffSeconds,omitempty"`
-	Memo                                map[string][]byte       `json:"memo,omitempty"`
+	Memo                                *Memo                   `json:"memo,omitempty"`
 }
 
 // ToWire translates a WorkflowExecutionStartedEventAttributes struct into a Thrift-level intermediate
@@ -46853,7 +46995,7 @@ func (v *WorkflowExecutionStartedEventAttributes) ToWire() (wire.Value, error) {
 		i++
 	}
 	if v.Memo != nil {
-		w, err = wire.NewValueMap(_Map_String_Binary_MapItemList(v.Memo)), error(nil)
+		w, err = v.Memo.ToWire()
 		if err != nil {
 			return w, err
 		}
@@ -47073,8 +47215,8 @@ func (v *WorkflowExecutionStartedEventAttributes) FromWire(w wire.Value) error {
 
 			}
 		case 120:
-			if field.Value.Type() == wire.TMap {
-				v.Memo, err = _Map_String_Binary_Read(field.Value.GetMap())
+			if field.Value.Type() == wire.TStruct {
+				v.Memo, err = _Memo_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -47253,7 +47395,7 @@ func (v *WorkflowExecutionStartedEventAttributes) Equals(rhs *WorkflowExecutionS
 	if !_I32_EqualsPtr(v.FirstDecisionTaskBackoffSeconds, rhs.FirstDecisionTaskBackoffSeconds) {
 		return false
 	}
-	if !((v.Memo == nil && rhs.Memo == nil) || (v.Memo != nil && rhs.Memo != nil && _Map_String_Binary_Equals(v.Memo, rhs.Memo))) {
+	if !((v.Memo == nil && rhs.Memo == nil) || (v.Memo != nil && rhs.Memo != nil && v.Memo.Equals(rhs.Memo))) {
 		return false
 	}
 
@@ -47327,7 +47469,7 @@ func (v *WorkflowExecutionStartedEventAttributes) MarshalLogObject(enc zapcore.O
 		enc.AddInt32("firstDecisionTaskBackoffSeconds", *v.FirstDecisionTaskBackoffSeconds)
 	}
 	if v.Memo != nil {
-		err = multierr.Append(err, enc.AddObject("memo", (_Map_String_Binary_Zapper)(v.Memo)))
+		err = multierr.Append(err, enc.AddObject("memo", v.Memo))
 	}
 	return err
 }
@@ -47634,7 +47776,7 @@ func (v *WorkflowExecutionStartedEventAttributes) IsSetFirstDecisionTaskBackoffS
 
 // GetMemo returns the value of Memo if it is set or its
 // zero value if it is unset.
-func (v *WorkflowExecutionStartedEventAttributes) GetMemo() (o map[string][]byte) {
+func (v *WorkflowExecutionStartedEventAttributes) GetMemo() (o *Memo) {
 	if v != nil && v.Memo != nil {
 		return v.Memo
 	}

@@ -42,10 +42,11 @@ const (
 
 type (
 	esVisibilityManager struct {
-		esClient es.Client
-		index    string
-		logger   bark.Logger
-		config   *config.VisibilityConfig
+		esClient   es.Client
+		index      string
+		logger     bark.Logger
+		config     *config.VisibilityConfig
+		serializer p.CadenceSerializer
 	}
 
 	esVisibilityPageToken struct {
@@ -66,6 +67,7 @@ type (
 		CloseStatus   workflow.WorkflowExecutionCloseStatus
 		HistoryLength int64
 		Memo          []byte
+		Encoding      string
 	}
 )
 
@@ -80,10 +82,11 @@ var (
 // NewElasticSearchVisibilityManager create a visibility manager connecting to ElasticSearch
 func NewElasticSearchVisibilityManager(esClient es.Client, index string, config *config.VisibilityConfig, logger bark.Logger) p.VisibilityManager {
 	return &esVisibilityManager{
-		esClient: esClient,
-		index:    index,
-		logger:   logger.WithField(logging.TagWorkflowComponent, logging.TagValueESVisibilityManager),
-		config:   config,
+		esClient:   esClient,
+		index:      index,
+		logger:     logger.WithField(logging.TagWorkflowComponent, logging.TagValueESVisibilityManager),
+		config:     config,
+		serializer: p.NewCadenceSerializer(),
 	}
 }
 
@@ -422,8 +425,14 @@ func (v *esVisibilityManager) convertSearchResultToVisibilityRecord(hit *elastic
 	if source.ExecutionTime == 0 {
 		source.ExecutionTime = source.StartTime
 	}
-	var memo map[string][]byte
-	json.Unmarshal(source.Memo, &memo)
+
+	memo, err := v.serializer.DeserializeVisibilityMemo(p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)))
+	if err != nil {
+		v.logger.WithFields(bark.Fields{
+			"error": err.Error(),
+			"docID": hit.Id,
+		}).Error("unable to decode memo field")
+	}
 
 	var record *workflow.WorkflowExecutionInfo
 	if isOpen {

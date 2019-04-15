@@ -21,7 +21,6 @@
 package cassandra
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -44,12 +43,12 @@ const (
 
 const (
 	templateCreateWorkflowExecutionStartedWithTTL = `INSERT INTO open_executions (` +
-		`domain_id, domain_partition, workflow_id, run_id, start_time, execution_time, workflow_type_name, memo) ` +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?) using TTL ?`
+		`domain_id, domain_partition, workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding) ` +
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) using TTL ?`
 
 	templateCreateWorkflowExecutionStarted = `INSERT INTO open_executions (` +
-		`domain_id, domain_partition, workflow_id, run_id, start_time, execution_time, workflow_type_name, memo) ` +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+		`domain_id, domain_partition, workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding) ` +
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	templateDeleteWorkflowExecutionStarted = `DELETE FROM open_executions ` +
 		`WHERE domain_id = ? ` +
@@ -58,36 +57,36 @@ const (
 		`AND run_id = ?`
 
 	templateCreateWorkflowExecutionClosedWithTTL = `INSERT INTO closed_executions (` +
-		`domain_id, domain_partition, workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo) ` +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) using TTL ?`
+		`domain_id, domain_partition, workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo, encoding) ` +
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) using TTL ?`
 
 	templateCreateWorkflowExecutionClosed = `INSERT INTO closed_executions (` +
-		`domain_id, domain_partition, workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo) ` +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		`domain_id, domain_partition, workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo, encoding) ` +
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	templateCreateWorkflowExecutionClosedWithTTLV2 = `INSERT INTO closed_executions_v2 (` +
-		`domain_id, domain_partition, workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo) ` +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) using TTL ?`
+		`domain_id, domain_partition, workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo, encoding) ` +
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) using TTL ?`
 
 	templateCreateWorkflowExecutionClosedV2 = `INSERT INTO closed_executions_v2 (` +
-		`domain_id, domain_partition, workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo) ` +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		`domain_id, domain_partition, workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo, encoding) ` +
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-	templateGetOpenWorkflowExecutions = `SELECT workflow_id, run_id, start_time, execution_time, workflow_type_name, memo ` +
+	templateGetOpenWorkflowExecutions = `SELECT workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding ` +
 		`FROM open_executions ` +
 		`WHERE domain_id = ? ` +
 		`AND domain_partition IN (?) ` +
 		`AND start_time >= ? ` +
 		`AND start_time <= ? `
 
-	templateGetClosedWorkflowExecutions = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo ` +
+	templateGetClosedWorkflowExecutions = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo, encoding ` +
 		`FROM closed_executions ` +
 		`WHERE domain_id = ? ` +
 		`AND domain_partition IN (?) ` +
 		`AND start_time >= ? ` +
 		`AND start_time <= ? `
 
-	templateGetOpenWorkflowExecutionsByType = `SELECT workflow_id, run_id, start_time, execution_time, workflow_type_name, memo ` +
+	templateGetOpenWorkflowExecutionsByType = `SELECT workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding ` +
 		`FROM open_executions ` +
 		`WHERE domain_id = ? ` +
 		`AND domain_partition = ? ` +
@@ -95,7 +94,7 @@ const (
 		`AND start_time <= ? ` +
 		`AND workflow_type_name = ? `
 
-	templateGetClosedWorkflowExecutionsByType = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo ` +
+	templateGetClosedWorkflowExecutionsByType = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo, encoding ` +
 		`FROM closed_executions ` +
 		`WHERE domain_id = ? ` +
 		`AND domain_partition = ? ` +
@@ -103,7 +102,7 @@ const (
 		`AND start_time <= ? ` +
 		`AND workflow_type_name = ? `
 
-	templateGetOpenWorkflowExecutionsByID = `SELECT workflow_id, run_id, start_time, execution_time, workflow_type_name, memo ` +
+	templateGetOpenWorkflowExecutionsByID = `SELECT workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding ` +
 		`FROM open_executions ` +
 		`WHERE domain_id = ? ` +
 		`AND domain_partition = ? ` +
@@ -111,7 +110,7 @@ const (
 		`AND start_time <= ? ` +
 		`AND workflow_id = ? `
 
-	templateGetClosedWorkflowExecutionsByID = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo ` +
+	templateGetClosedWorkflowExecutionsByID = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo, encoding ` +
 		`FROM closed_executions ` +
 		`WHERE domain_id = ? ` +
 		`AND domain_partition = ? ` +
@@ -119,7 +118,7 @@ const (
 		`AND start_time <= ? ` +
 		`AND workflow_id = ? `
 
-	templateGetClosedWorkflowExecutionsByStatus = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo ` +
+	templateGetClosedWorkflowExecutionsByStatus = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo, encoding ` +
 		`FROM closed_executions ` +
 		`WHERE domain_id = ? ` +
 		`AND domain_partition = ? ` +
@@ -127,7 +126,7 @@ const (
 		`AND start_time <= ? ` +
 		`AND status = ? `
 
-	templateGetClosedWorkflowExecution = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo ` +
+	templateGetClosedWorkflowExecution = `SELECT workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo, encoding ` +
 		`FROM closed_executions ` +
 		`WHERE domain_id = ? ` +
 		`AND domain_partition = ? ` +
@@ -139,6 +138,7 @@ type (
 	cassandraVisibilityPersistence struct {
 		cassandraStore
 		lowConslevel gocql.Consistency
+		serializer   p.CadenceSerializer
 	}
 )
 
@@ -159,6 +159,7 @@ func newVisibilityPersistence(cfg config.Cassandra, logger bark.Logger) (p.Visib
 	return &cassandraVisibilityPersistence{
 		cassandraStore: cassandraStore{session: session, logger: logger},
 		lowConslevel:   gocql.One,
+		serializer:     p.NewCadenceSerializer(),
 	}, nil
 }
 
@@ -173,7 +174,6 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 	request *p.RecordWorkflowExecutionStartedRequest) error {
 	ttl := request.WorkflowTimeout + openExecutionTTLBuffer
 	var query *gocql.Query
-	memo, _ := json.Marshal(request.Memo)
 
 	if ttl > maxCassandraTTL {
 		query = v.session.Query(templateCreateWorkflowExecutionStarted,
@@ -184,7 +184,8 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 			p.UnixNanoToDBTimestamp(request.StartTimestamp),
 			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp),
 			request.WorkflowTypeName,
-			memo,
+			request.Memo,
+			string(request.Encoding),
 		)
 	} else {
 		query = v.session.Query(templateCreateWorkflowExecutionStartedWithTTL,
@@ -195,7 +196,8 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 			p.UnixNanoToDBTimestamp(request.StartTimestamp),
 			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp),
 			request.WorkflowTypeName,
-			memo,
+			request.Memo,
+			string(request.Encoding),
 			ttl,
 		)
 	}
@@ -218,7 +220,6 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 	request *p.RecordWorkflowExecutionClosedRequest) error {
 	batch := v.session.NewBatch(gocql.LoggedBatch)
-	memo, _ := json.Marshal(request.Memo)
 
 	// First, remove execution from the open table
 	batch.Query(templateDeleteWorkflowExecutionStarted,
@@ -248,7 +249,8 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 			request.WorkflowTypeName,
 			request.Status,
 			request.HistoryLength,
-			memo,
+			request.Memo,
+			string(request.Encoding),
 		)
 		// duplicate write to v2 to order by close time
 		batch.Query(templateCreateWorkflowExecutionClosedV2,
@@ -262,7 +264,8 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 			request.WorkflowTypeName,
 			request.Status,
 			request.HistoryLength,
-			memo,
+			request.Memo,
+			string(request.Encoding),
 		)
 	} else {
 		batch.Query(templateCreateWorkflowExecutionClosedWithTTL,
@@ -276,7 +279,8 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 			request.WorkflowTypeName,
 			request.Status,
 			request.HistoryLength,
-			memo,
+			request.Memo,
+			string(request.Encoding),
 			retention,
 		)
 		// duplicate write to v2 to order by close time
@@ -291,7 +295,8 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 			request.WorkflowTypeName,
 			request.Status,
 			request.HistoryLength,
-			memo,
+			request.Memo,
+			string(request.Encoding),
 			retention,
 		)
 	}
@@ -338,10 +343,10 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutions(
 
 	response := &p.ListWorkflowExecutionsResponse{}
 	response.Executions = make([]*workflow.WorkflowExecutionInfo, 0)
-	wfexecution, has := readOpenWorkflowExecutionRecord(iter)
+	wfexecution, has := v.readOpenWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readOpenWorkflowExecutionRecord(iter)
+		wfexecution, has = v.readOpenWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -378,10 +383,10 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutions(
 
 	response := &p.ListWorkflowExecutionsResponse{}
 	response.Executions = make([]*workflow.WorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
+	wfexecution, has := v.readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
+		wfexecution, has = v.readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -419,10 +424,10 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutionsByType(
 
 	response := &p.ListWorkflowExecutionsResponse{}
 	response.Executions = make([]*workflow.WorkflowExecutionInfo, 0)
-	wfexecution, has := readOpenWorkflowExecutionRecord(iter)
+	wfexecution, has := v.readOpenWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readOpenWorkflowExecutionRecord(iter)
+		wfexecution, has = v.readOpenWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -460,10 +465,10 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByType(
 
 	response := &p.ListWorkflowExecutionsResponse{}
 	response.Executions = make([]*workflow.WorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
+	wfexecution, has := v.readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
+		wfexecution, has = v.readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -501,10 +506,10 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutionsByWorkflowID(
 
 	response := &p.ListWorkflowExecutionsResponse{}
 	response.Executions = make([]*workflow.WorkflowExecutionInfo, 0)
-	wfexecution, has := readOpenWorkflowExecutionRecord(iter)
+	wfexecution, has := v.readOpenWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readOpenWorkflowExecutionRecord(iter)
+		wfexecution, has = v.readOpenWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -542,10 +547,10 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByWorkflowI
 
 	response := &p.ListWorkflowExecutionsResponse{}
 	response.Executions = make([]*workflow.WorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
+	wfexecution, has := v.readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
+		wfexecution, has = v.readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -583,10 +588,10 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByStatus(
 
 	response := &p.ListWorkflowExecutionsResponse{}
 	response.Executions = make([]*workflow.WorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
+	wfexecution, has := v.readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
+		wfexecution, has = v.readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -622,7 +627,7 @@ func (v *cassandraVisibilityPersistence) GetClosedWorkflowExecution(
 		}
 	}
 
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
+	wfexecution, has := v.readClosedWorkflowExecutionRecord(iter)
 	if !has {
 		return nil, &workflow.EntityNotExistsError{
 			Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v, RunId: %v",
@@ -651,14 +656,19 @@ func (v *cassandraVisibilityPersistence) DeleteWorkflowExecution(request *p.Visi
 	return nil
 }
 
-func readOpenWorkflowExecutionRecord(iter *gocql.Iter) (*workflow.WorkflowExecutionInfo, bool) {
+func (v *cassandraVisibilityPersistence) readOpenWorkflowExecutionRecord(iter *gocql.Iter) (*workflow.WorkflowExecutionInfo, bool) {
+	return readOpenWorkflowExecutionRecord(iter, v.serializer)
+}
+
+func readOpenWorkflowExecutionRecord(iter *gocql.Iter, serializer p.CadenceSerializer) (*workflow.WorkflowExecutionInfo, bool) {
 	var workflowID string
 	var runID gocql.UUID
 	var typeName string
 	var startTime time.Time
 	var executionTime time.Time
 	var memo []byte
-	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &typeName, &memo) {
+	var encoding string
+	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &typeName, &memo, &encoding) {
 		execution := &workflow.WorkflowExecution{}
 		execution.WorkflowId = common.StringPtr(workflowID)
 		execution.RunId = common.StringPtr(runID.String())
@@ -675,13 +685,17 @@ func readOpenWorkflowExecutionRecord(iter *gocql.Iter) (*workflow.WorkflowExecut
 		record.StartTime = common.Int64Ptr(startTime.UnixNano())
 		record.ExecutionTime = common.Int64Ptr(executionTime.UnixNano())
 		record.Type = wfType
-		json.Unmarshal(memo, &record.Memo)
+		record.Memo, _ = serializer.DeserializeVisibilityMemo(p.NewDataBlob(memo, common.EncodingType(encoding)))
 		return record, true
 	}
 	return nil, false
 }
 
-func readClosedWorkflowExecutionRecord(iter *gocql.Iter) (*workflow.WorkflowExecutionInfo, bool) {
+func (v *cassandraVisibilityPersistence) readClosedWorkflowExecutionRecord(iter *gocql.Iter) (*workflow.WorkflowExecutionInfo, bool) {
+	return readClosedWorkflowExecutionRecord(iter, v.serializer)
+}
+
+func readClosedWorkflowExecutionRecord(iter *gocql.Iter, serializer p.CadenceSerializer) (*workflow.WorkflowExecutionInfo, bool) {
 	var workflowID string
 	var runID gocql.UUID
 	var typeName string
@@ -691,7 +705,8 @@ func readClosedWorkflowExecutionRecord(iter *gocql.Iter) (*workflow.WorkflowExec
 	var status workflow.WorkflowExecutionCloseStatus
 	var historyLength int64
 	var memo []byte
-	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &closeTime, &typeName, &status, &historyLength, &memo) {
+	var encoding string
+	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &closeTime, &typeName, &status, &historyLength, &memo, &encoding) {
 		execution := &workflow.WorkflowExecution{}
 		execution.WorkflowId = common.StringPtr(workflowID)
 		execution.RunId = common.StringPtr(runID.String())
@@ -711,7 +726,11 @@ func readClosedWorkflowExecutionRecord(iter *gocql.Iter) (*workflow.WorkflowExec
 		record.Type = wfType
 		record.CloseStatus = &status
 		record.HistoryLength = common.Int64Ptr(historyLength)
-		json.Unmarshal(memo, &record.Memo)
+		record.Memo = &workflow.Memo{}
+		record.Memo, _ = serializer.DeserializeVisibilityMemo(&p.DataBlob{
+			Encoding: common.EncodingType(encoding),
+			Data:     memo,
+		})
 		return record, true
 	}
 	return nil, false

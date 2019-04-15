@@ -56,7 +56,7 @@ type (
 		historyEngine     *historyEngineImpl
 		historyCache      *historyCache
 		domainCache       cache.DomainCache
-		historySerializer persistence.HistorySerializer
+		historySerializer persistence.CadenceSerializer
 		historyMgr        persistence.HistoryManager
 		clusterMetadata   cluster.Metadata
 		metricsClient     metrics.Client
@@ -111,7 +111,7 @@ func newHistoryReplicator(shard ShardContext, historyEngine *historyEngineImpl, 
 		historyEngine:     historyEngine,
 		historyCache:      historyCache,
 		domainCache:       domainCache,
-		historySerializer: persistence.NewHistorySerializer(),
+		historySerializer: persistence.NewCadenceSerializer(),
 		historyMgr:        historyMgr,
 		clusterMetadata:   shard.GetService().GetClusterMetadata(),
 		metricsClient:     shard.GetMetricsClient(),

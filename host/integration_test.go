@@ -3110,8 +3110,10 @@ func (s *integrationSuite) TestStartWithMemo() {
 	taskList.Name = common.StringPtr(tl)
 
 	memoInfo, _ := json.Marshal(id)
-	memo := map[string][]byte{
-		"Info": memoInfo,
+	memo := &workflow.Memo{
+		Fields: map[string][]byte{
+			"Info": memoInfo,
+		},
 	}
 
 	request := &workflow.StartWorkflowExecutionRequest{
@@ -3146,8 +3148,10 @@ func (s *integrationSuite) TestSignalWithStartWithMemo() {
 	taskList.Name = common.StringPtr(tl)
 
 	memoInfo, _ := json.Marshal(id)
-	memo := map[string][]byte{
-		"Info": memoInfo,
+	memo := &workflow.Memo{
+		Fields: map[string][]byte{
+			"Info": memoInfo,
+		},
 	}
 
 	signalName := "my signal"
@@ -3174,7 +3178,7 @@ func (s *integrationSuite) TestSignalWithStartWithMemo() {
 }
 
 // helper function for TestStartWithMemo and TestSignalWithStartWithMemo to reduce duplicate code
-func (s *integrationSuite) startWithMemoHelper(startFn startFunc, id string, taskList *workflow.TaskList, memo map[string][]byte) {
+func (s *integrationSuite) startWithMemoHelper(startFn startFunc, id string, taskList *workflow.TaskList, memo *workflow.Memo) {
 	identity := "worker1"
 
 	we, err0 := startFn()

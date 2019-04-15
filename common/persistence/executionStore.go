@@ -27,9 +27,9 @@ import (
 )
 
 type (
-	// executionManagerImpl implements ExecutionManager based on ExecutionStore, statsComputer and HistorySerializer
+	// executionManagerImpl implements ExecutionManager based on ExecutionStore, statsComputer and CadenceSerializer
 	executionManagerImpl struct {
-		serializer    HistorySerializer
+		serializer    CadenceSerializer
 		persistence   ExecutionStore
 		statsComputer statsComputer
 		logger        bark.Logger
@@ -41,7 +41,7 @@ var _ ExecutionManager = (*executionManagerImpl)(nil)
 // NewExecutionManagerImpl returns new ExecutionManager
 func NewExecutionManagerImpl(persistence ExecutionStore, logger bark.Logger) ExecutionManager {
 	return &executionManagerImpl{
-		serializer:    NewHistorySerializer(),
+		serializer:    NewCadenceSerializer(),
 		persistence:   persistence,
 		statsComputer: statsComputer{},
 		logger:        logger,
