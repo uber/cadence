@@ -218,6 +218,7 @@ func (s *integrationSuite) isMultiBlobHistory(domain, domainID string, execution
 		MinEventID:  common.FirstEventID,
 		MaxEventID:  common.EndEventID,
 		PageSize:    pageSize,
+		ShardID:     common.IntPtr(s.testCluster.testBase.ShardInfo.ShardID),
 	}
 	var nextPageToken []byte
 	for historySize == 0 || len(nextPageToken) != 0 {
