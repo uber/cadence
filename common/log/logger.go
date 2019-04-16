@@ -51,6 +51,9 @@ type Logger interface {
 	Error(msg string, tags ...tag.Tag)
 	Fatal(msg string, tags ...tag.Tag)
 	WithTags(tags ...tag.Tag) Logger
+
+	// keep this private for internal(calculation of skips)
+	toZap() *zap.Logger
 }
 
 type loggerImpl struct {
@@ -126,4 +129,8 @@ func (lg *loggerImpl) WithTags(tags ...tag.Tag) Logger {
 	fields := lg.buildFields(tags)
 	zapLogger := lg.zapLogger.With(fields...)
 	return NewLogger(zapLogger)
+}
+
+func (lg *loggerImpl) toZap() *zap.Logger {
+	return lg.zapLogger
 }

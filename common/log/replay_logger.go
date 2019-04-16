@@ -23,6 +23,7 @@ package log
 import (
 	"github.com/uber/cadence/common/log/tag"
 	"go.uber.org/cadence/workflow"
+	"go.uber.org/zap"
 )
 
 type replayLogger struct {
@@ -37,14 +38,9 @@ const skipForReplayLogger = skipForDefaultLogger + 1
 
 // NewReplayLogger creates a logger which is aware of cadence's replay mode
 func NewReplayLogger(logger Logger, ctx workflow.Context, enableLogInReplay bool) Logger {
-	lg, ok := logger.(*loggerImpl)
-	if !ok {
-		logger.Fatal("Failed to initialize replay logger.")
-		return nil
-	}
 	return &replayLogger{
 		logger: &loggerImpl{
-			zapLogger: lg.zapLogger,
+			zapLogger: logger.toZap(),
 			skip:      skipForReplayLogger,
 		},
 		ctx:               ctx,
@@ -93,4 +89,8 @@ func (r *replayLogger) WithTags(tags ...tag.Tag) Logger {
 		ctx:               r.ctx,
 		enableLogInReplay: r.enableLogInReplay,
 	}
+}
+
+func (r *replayLogger) toZap() *zap.Logger {
+	return r.logger.toZap()
 }

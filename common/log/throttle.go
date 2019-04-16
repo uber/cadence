@@ -112,6 +112,10 @@ func (tl *throttledLogger) WithTags(tags ...tag.Tag) Logger {
 	return result
 }
 
+func (tl *throttledLogger) toZap() *zap.Logger {
+	return tl.log.zapLogger
+}
+
 func (tl *throttledLogger) rateLimit(f func()) {
 	tl.resetRateIfChanged()
 	ok, _ := tl.tb.TryConsume(1)
