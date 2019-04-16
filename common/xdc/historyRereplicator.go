@@ -22,10 +22,9 @@ package xdc
 
 import (
 	"context"
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 	"time"
 
+	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/shared"
@@ -33,6 +32,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/errors"
+	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -70,7 +70,7 @@ type (
 		historyReplicationFn historyReplicationFn
 		serializer           persistence.HistorySerializer
 		replicationTimeout   time.Duration
-		logger               log.Logger
+		logger               bark.Logger
 	}
 
 	historyRereplicationContext struct {
@@ -83,7 +83,7 @@ type (
 		endingRunID           string
 		endingNextEventID     int64
 		rereplicator          *HistoryRereplicatorImpl
-		logger                log.Logger
+		logger                bark.Logger
 	}
 )
 
@@ -91,10 +91,6 @@ func newHistoryRereplicationContext(domainID string, workflowID string,
 	beginningRunID string, beginningFirstEventID int64,
 	endingRunID string, endingNextEventID int64,
 	rereplicator *HistoryRereplicatorImpl) *historyRereplicationContext {
-	logger := rereplicator.logger.WithTags(
-		tag.WorkflowDomainID(domainID), tag.WorkflowID(workflowID), tag.WorkflowBeginningRunID(beginningRunID),
-		tag.WorkflowBeginningFirstEventID(beginningFirstEventID), tag.WorkflowEndingRunID(endingRunID),
-		tag.WorkflowEndingNextEventID(endingNextEventID))
 	return &historyRereplicationContext{
 		seenEmptyEvents:       false,
 		rpcCalls:              0,
@@ -105,13 +101,20 @@ func newHistoryRereplicationContext(domainID string, workflowID string,
 		endingRunID:           endingRunID,
 		endingNextEventID:     endingNextEventID,
 		rereplicator:          rereplicator,
-		logger:                logger,
+		logger: rereplicator.logger.WithFields(bark.Fields{
+			logging.TagDomainID:               domainID,
+			logging.TagWorkflowExecutionID:    workflowID,
+			logging.TagWorkflowBeginningRunID: beginningRunID,
+			logging.TagBeginningFirstEventID:  beginningFirstEventID,
+			logging.TagWorkflowEndingRunID:    endingRunID,
+			logging.TagEndingNextEventID:      endingNextEventID,
+		}),
 	}
 }
 
 // NewHistoryRereplicator create a new HistoryRereplicatorImpl
 func NewHistoryRereplicator(targetClusterName string, domainCache cache.DomainCache, adminClient a.Client, historyReplicationFn historyReplicationFn,
-	serializer persistence.HistorySerializer, replicationTimeout time.Duration, logger log.Logger) *HistoryRereplicatorImpl {
+	serializer persistence.HistorySerializer, replicationTimeout time.Duration, logger bark.Logger) *HistoryRereplicatorImpl {
 
 	return &HistoryRereplicatorImpl{
 		targetClusterName:    targetClusterName,
@@ -317,14 +320,16 @@ func (c *historyRereplicationContext) sendReplicationRawRequest(request *history
 		return nil
 	}
 
-	logger := c.logger.WithTags(tag.WorkflowEndingRunID(request.WorkflowExecution.GetRunId()))
+	logger := c.logger.WithFields(bark.Fields{
+		logging.TagWorkflowRunID: request.WorkflowExecution.GetRunId(),
+	})
 
 	// sometimes there can be case when the first re-replication call
 	// trigger an history reset and this reset can leave a hole in target
 	// workflow, we should amend that hole and continue
 	retryErr, ok := err.(*shared.RetryTaskError)
 	if !ok {
-		logger.Error("error sending history", tag.Error(err))
+		logger.WithField(logging.TagErr, err).Error("error sending history")
 		return err
 	}
 	if c.rpcCalls > 0 {
@@ -343,7 +348,7 @@ func (c *historyRereplicationContext) sendReplicationRawRequest(request *history
 	_, err = c.sendSingleWorkflowHistory(c.domainID, c.workflowID, retryErr.GetRunId(),
 		retryErr.GetNextEventId(), c.beginningFirstEventID)
 	if err != nil {
-		logger.Error("error sending history", tag.Error(err))
+		logger.WithField(logging.TagErr, err).Error("error sending history")
 		return err
 	}
 
@@ -357,7 +362,9 @@ func (c *historyRereplicationContext) handleEmptyHistory(domainID string, workfl
 	replicationInfo map[string]*shared.ReplicationInfo) error {
 
 	if c.seenEmptyEvents {
-		c.logger.Error("error, encounter empty history more than once", tag.WorkflowRunID(runID))
+		c.logger.WithFields(bark.Fields{
+			logging.TagWorkflowRunID: runID,
+		}).Error("error, encounter empty history more than once")
 		return ErrNoHistoryRawEventBatches
 	}
 
@@ -379,7 +386,12 @@ func (c *historyRereplicationContext) handleEmptyHistory(domainID string, workfl
 		nextEventID,
 	)
 	if err != nil {
-		c.logger.Error("error sending history", tag.WorkflowRunID(runID), tag.WorkflowFirstEventID(firstEventID), tag.WorkflowNextEventID(nextEventID), tag.Error(err))
+		c.logger.WithFields(bark.Fields{
+			logging.TagWorkflowRunID: runID,
+			logging.TagFirstEventID:  firstEventID,
+			logging.TagNextEventID:   nextEventID,
+			logging.TagErr:           err,
+		}).Error("error sending history")
 	}
 	return err
 }
@@ -387,11 +399,15 @@ func (c *historyRereplicationContext) handleEmptyHistory(domainID string, workfl
 func (c *historyRereplicationContext) getHistory(domainID string, workflowID string, runID string,
 	firstEventID int64, nextEventID int64, token []byte, pageSize int32) (*admin.GetWorkflowExecutionRawHistoryResponse, error) {
 
-	logger := c.logger.WithTags(tag.WorkflowRunID(runID), tag.WorkflowFirstEventID(firstEventID), tag.WorkflowNextEventID(nextEventID))
+	logger := c.logger.WithFields(bark.Fields{
+		logging.TagWorkflowRunID: runID,
+		logging.TagFirstEventID:  firstEventID,
+		logging.TagNextEventID:   nextEventID,
+	})
 
 	domainEntry, err := c.rereplicator.domainCache.GetDomainByID(domainID)
 	if err != nil {
-		logger.Error("error getting domain", tag.Error(err))
+		logger.WithField(logging.TagErr, err).Error("error getting domain")
 		return nil, err
 	}
 	domainName := domainEntry.GetInfo().Name
@@ -411,7 +427,7 @@ func (c *historyRereplicationContext) getHistory(domainID string, workflowID str
 	})
 
 	if err != nil {
-		logger.Error("error getting history", tag.Error(err))
+		logger.WithField(logging.TagErr, err).Error("error getting history")
 		return nil, err
 	}
 
