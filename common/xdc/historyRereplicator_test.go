@@ -102,7 +102,7 @@ func (s *historyRereplicatorSuite) SetupTest() {
 	s.mockHistoryClient = &mocks.HistoryClient{}
 	s.serializer = persistence.NewHistorySerializer()
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
-	domainCache := cache.NewDomainCache(s.mockMetadataMgr, s.mockClusterMetadata, metricsClient, s.logger)
+	domainCache := cache.NewDomainCache(s.mockMetadataMgr, s.mockClusterMetadata, metricsClient, bark.NewNopLogger())
 	s.rereplicator = NewHistoryRereplicator(
 		s.targetClusterName,
 		domainCache,
