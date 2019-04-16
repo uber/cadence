@@ -22,14 +22,15 @@ package replicator
 
 import (
 	"errors"
+	"github.com/uber/cadence/common/log"
+	"go.uber.org/zap"
+	log2 "log"
 	"os"
 	"testing"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/replicator"
@@ -51,7 +52,7 @@ type (
 		currentCluster string
 		sourceCluster  string
 		config         *Config
-		logger         bark.Logger
+		logger         log.Logger
 		metricsClient  metrics.Client
 		msgEncoder     codec.BinaryEncoder
 
@@ -72,7 +73,7 @@ func TestReplicationTaskProcessorSuite(t *testing.T) {
 
 func (s *replicationTaskProcessorSuite) SetupSuite() {
 	if testing.Verbose() {
-		log.SetOutput(os.Stdout)
+		log2.SetOutput(os.Stdout)
 	}
 }
 
@@ -81,9 +82,9 @@ func (s *replicationTaskProcessorSuite) TearDownSuite() {
 }
 
 func (s *replicationTaskProcessorSuite) SetupTest() {
-	log2 := log.New()
-	log2.Level = log.DebugLevel
-	s.logger = bark.NewLoggerFromLogrus(log2)
+	zapLogger, err := zap.NewDevelopment()
+	s.Require().NoError(err)
+	s.logger = log.NewLogger(zapLogger)
 	s.config = &Config{
 		ReplicatorTaskConcurrency: dynamicconfig.GetIntPropertyFn(10),
 	}

@@ -22,12 +22,12 @@ package xdc
 
 import (
 	"context"
-	"os"
+	"github.com/uber/cadence/common/log"
+	"go.uber.org/zap"
 	"testing"
 	"time"
 
 	"github.com/pborman/uuid"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
@@ -56,7 +56,7 @@ type (
 		mockAdminClient     *mocks.AdminClient
 		mockHistoryClient   *mocks.HistoryClient
 		serializer          persistence.HistorySerializer
-		logger              bark.Logger
+		logger              log.Logger
 
 		rereplicator *HistoryRereplicatorImpl
 	}
@@ -68,9 +68,6 @@ func TestHistoryRereplicatorSuite(t *testing.T) {
 }
 
 func (s *historyRereplicatorSuite) SetupSuite() {
-	if testing.Verbose() {
-		log.SetOutput(os.Stdout)
-	}
 }
 
 func (s *historyRereplicatorSuite) TearDownSuite() {
@@ -78,9 +75,9 @@ func (s *historyRereplicatorSuite) TearDownSuite() {
 }
 
 func (s *historyRereplicatorSuite) SetupTest() {
-	log2 := log.New()
-	log2.Level = log.DebugLevel
-	s.logger = bark.NewLoggerFromLogrus(log2)
+	zapLogger, err := zap.NewDevelopment()
+	s.Require().NoError(err)
+	s.logger = log.NewLogger(zapLogger)
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	s.mockMetadataMgr = &mocks.MetadataManager{}

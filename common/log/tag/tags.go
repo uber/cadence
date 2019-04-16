@@ -395,8 +395,8 @@ func KafkaConsumerName(consumerName string) Tag {
 }
 
 // KafkaPartition returns tag for Partition
-func KafkaPartition(partition int64) Tag {
-	return newIntegerTag("kafka-partition", partition)
+func KafkaPartition(partition int32) Tag {
+	return newIntegerTag("kafka-partition", int64(partition))
 }
 
 // KafkaPartitionKey returns tag for PartitionKey
