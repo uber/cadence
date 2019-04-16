@@ -18,53 +18,57 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package mocks
+package log
 
 import (
 	"github.com/stretchr/testify/mock"
-	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"go.uber.org/zap"
 )
 
-type Logger struct {
+type MockLogger struct {
 	mock.Mock
 }
 
 // Debug provides a mock function with given fields: msg, tags
-func (_m *Logger) Debug(msg string, tags ...tag.Tag) {
+func (_m *MockLogger) Debug(msg string, tags ...tag.Tag) {
 	_m.Called(msg, tags)
 }
 
 // Info provides a mock function with given fields: msg, tags
-func (_m *Logger) Info(msg string, tags ...tag.Tag) {
+func (_m *MockLogger) Info(msg string, tags ...tag.Tag) {
 	_m.Called(msg, tags)
 }
 
 // Warn provides a mock function with given fields: msg, tags
-func (_m *Logger) Warn(msg string, tags ...tag.Tag) {
+func (_m *MockLogger) Warn(msg string, tags ...tag.Tag) {
 	_m.Called(msg, tags)
 }
 
 // Error provides a mock function with given fields: msg, tags
-func (_m *Logger) Error(msg string, tags ...tag.Tag) {
+func (_m *MockLogger) Error(msg string, tags ...tag.Tag) {
 	_m.Called(msg, tags)
 }
 
 // Fatal provides a mock function with given fields: msg, tags
-func (_m *Logger) Fatal(msg string, tags ...tag.Tag) {
+func (_m *MockLogger) Fatal(msg string, tags ...tag.Tag) {
 	_m.Called(msg, tags)
 }
 
 // WithTags provides a mock function with given fields: tags
-func (_m *Logger) WithTags(tags ...tag.Tag) log.Logger {
+func (_m *MockLogger) WithTags(tags ...tag.Tag) Logger {
 	ret := _m.Called(tags)
 
-	var r0 log.Logger
-	if rf, ok := ret.Get(0).(func(...tag.Tag) log.Logger); ok {
+	var r0 Logger
+	if rf, ok := ret.Get(0).(func(...tag.Tag) Logger); ok {
 		r0 = rf(tags...)
 	} else {
-		r0 = ret.Get(0).(log.Logger)
+		r0 = ret.Get(0).(Logger)
 	}
 
 	return r0
+}
+
+func (_m *MockLogger) toZap() *zap.Logger {
+	return nil
 }
