@@ -26,6 +26,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// MockLogger returns a mock for Logger interface
 type MockLogger struct {
 	mock.Mock
 }
