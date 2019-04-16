@@ -1,7 +1,6 @@
 package membership
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/hashicorp/serf/serf"
@@ -18,7 +17,6 @@ type serfMonitor struct {
 
 // NewSerfMonitor returns a new serf based monitor
 func NewSerfMonitor(services []string, hosts []string, config *serf.Config, logger bark.Logger) Monitor {
-	fmt.Printf("%v\n", hosts)
 	serf, err := serf.Create(config)
 	if err != nil {
 		logger.Fatalf("unable to create serf %v", config.Tags[RoleKey])
@@ -31,15 +29,12 @@ func NewSerfMonitor(services []string, hosts []string, config *serf.Config, logg
 }
 
 func (s *serfMonitor) Start() error {
-	s.logger.Infof("starting serf monitor for service %v", s.service)
 	if strings.Contains(s.service, "history") {
 		return nil
 	}
-	n, err := s.serf.Join(s.hosts, false)
-	if err != nil {
+	if _, err := s.serf.Join(s.hosts, false); err != nil {
 		return err
 	}
-	s.logger.Infof("serf join succeeded for hosts %v", n)
 	return nil
 }
 
@@ -49,7 +44,7 @@ func (s *serfMonitor) Stop() {
 
 func (s *serfMonitor) WhoAmI() (*HostInfo, error) {
 	member := s.serf.LocalMember()
-	return NewHostInfo(member.Addr.String(), member.Tags), nil
+	return NewHostInfo(member.Name, member.Tags), nil
 }
 
 func (s *serfMonitor) GetResolver(service string) (ServiceResolver, error) {

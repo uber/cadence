@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -40,6 +39,6 @@ func (s *SerfFactory) Create(dispatcher *yarpc.Dispatcher) (membership.Monitor, 
 	config.MemberlistConfig.BindPort = int(port)
 	config.MemberlistConfig.AdvertiseAddr = "127.0.0.1"
 	config.MemberlistConfig.AdvertisePort = int(port)
-	fmt.Printf("creating serf monitor on port %v\n", port)
+	s.logger.Infof("creating serf monitor on port %v for service %v", port, s.serviceName)
 	return membership.NewSerfMonitor(CadenceServices, s.config.BootstrapHosts, config, s.logger), nil
 }
