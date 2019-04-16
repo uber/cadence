@@ -55,8 +55,9 @@ type Logger interface {
 	WithTags(tags ...tag.Tag) Logger
 }
 
-// keep this private for internal ONLY
+// keep this private for this logging module internally ONLY
 type internalLogger interface {
+	// we have to convert back to zap to make sure the skips is calculated correctly
 	toZap() *zap.Logger
 }
 
