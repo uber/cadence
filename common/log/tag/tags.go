@@ -307,8 +307,18 @@ func TaskID(taskID int64) Tag {
 }
 
 // TaskType returns tag for TaskType for queue processor
-func TaskType(taskType int64) Tag {
-	return newIntegerTag("queue-task-type", taskType)
+func TaskType(taskType int) Tag {
+	return newIntegerTag("queue-task-type", int64(taskType))
+}
+
+// NumberProcessed returns tag for NumberProcessed
+func NumberProcessed(n int) Tag {
+	return newIntegerTag("number-processed", int64(n))
+}
+
+// NumberDeleted returns tag for NumberDeleted
+func NumberDeleted(n int) Tag {
+	return newIntegerTag("number-deleted", int64(n))
 }
 
 // TimerTaskStatus returns tag for TimerTaskStatus

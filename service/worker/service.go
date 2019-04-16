@@ -22,15 +22,15 @@ package worker
 
 import (
 	"context"
-	"github.com/uber-common/bark"
-	"github.com/uber/cadence/common/log/tag"
 	"sync/atomic"
 	"time"
 
+	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
@@ -167,7 +167,7 @@ func (s *Service) startScanner(base service.Service) {
 		Config:        *s.config.ScannerCfg,
 		SDKClient:     s.params.PublicClient,
 		MetricsClient: s.metricsClient,
-		Logger:        s.barkLogger,
+		BarkLogger:    s.barkLogger,
 		TallyScope:    s.params.MetricScope,
 	}
 	scanner := scanner.New(params)
