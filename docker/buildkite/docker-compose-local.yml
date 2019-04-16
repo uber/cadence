@@ -106,6 +106,7 @@ services:
       - "CASSANDRA_SEEDS=cassandra"
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
+      - "TEST_TAG=esintegration"
     depends_on:
       - cassandra
       - elasticsearch
@@ -137,6 +138,7 @@ services:
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
       - "PERSISTENCE_TYPE=sql"
+      - "TEST_TAG=esintegration"
     depends_on:
       - mysql
       - elasticsearch
@@ -167,6 +169,7 @@ services:
       - "CASSANDRA_SEEDS=cassandra"
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
+      - "TEST_TAG=esintegration"
     depends_on:
       - cassandra
       - elasticsearch
