@@ -22,6 +22,7 @@ package host
 
 import (
 	"fmt"
+
 	"sync"
 	"time"
 
@@ -32,12 +33,12 @@ import (
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
 	"github.com/uber/cadence/client"
-	"github.com/uber/cadence/client/public"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/elasticsearch"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/messaging"
@@ -55,12 +56,14 @@ import (
 	"github.com/uber/cadence/service/worker/archiver"
 	"github.com/uber/cadence/service/worker/indexer"
 	"github.com/uber/cadence/service/worker/replicator"
+	cwsc "go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/tchannel"
 )
 
 const rpAppNamePrefix string = "cadence"
 const maxRpJoinTimeout = 30 * time.Second
+const archivalBlobSize = 5 * 1024 // 5KB
 
 // Cadence hosts all of cadence services in one process
 type Cadence interface {
@@ -79,7 +82,8 @@ type (
 		frontendHandler     *frontend.WorkflowHandler
 		matchingHandler     *matching.Handler
 		historyHandlers     []*history.Handler
-		logger              bark.Logger
+		barkLogger          bark.Logger
+		logger              log.Logger
 		clusterMetadata     cluster.Metadata
 		persistenceConfig   config.Persistence
 		dispatcherProvider  client.DispatcherProvider
@@ -129,7 +133,8 @@ type (
 		ExecutionMgrFactory           persistence.ExecutionManagerFactory
 		TaskMgr                       persistence.TaskManager
 		VisibilityMgr                 persistence.VisibilityManager
-		Logger                        bark.Logger
+		BarkLogger                    bark.Logger
+		Logger                        log.Logger
 		ClusterNo                     int
 		EnableEventsV2                bool
 		Blobstore                     blobstore.Client
@@ -149,6 +154,7 @@ type (
 // NewCadence returns an instance that hosts full cadence in one process
 func NewCadence(params *CadenceParams) Cadence {
 	return &cadenceImpl{
+		barkLogger:          params.BarkLogger,
 		logger:              params.Logger,
 		clusterMetadata:     params.ClusterMetadata,
 		persistenceConfig:   params.PersistenceConfig,
@@ -252,7 +258,7 @@ func (c *cadenceImpl) HistoryServiceAddress() []string {
 		hosts = append(hosts, fmt.Sprintf("127.0.0.1:%v", port))
 	}
 
-	c.logger.Infof("History hosts: %v", hosts)
+	c.barkLogger.Infof("History hosts: %v", hosts)
 	return hosts
 }
 
@@ -267,7 +273,7 @@ func (c *cadenceImpl) HistoryPProfPort() []int {
 		ports = append(ports, port)
 	}
 
-	c.logger.Infof("History pprof ports: %v", ports)
+	c.barkLogger.Infof("History pprof ports: %v", ports)
 	return ports
 }
 
@@ -316,10 +322,11 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	params := new(service.BootstrapParams)
 	params.DCRedirectionPolicy = config.DCRedirectionPolicy{}
 	params.Name = common.FrontendServiceName
+	params.BarkLogger = c.barkLogger
 	params.Logger = c.logger
-	params.ThrottledLogger = logging.NewThrottledLogger(c.logger, func(...dynamicconfig.FilterOption) int { return 10 })
-	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.FrontendPProfPort())
-	params.RPCFactory = newRPCFactoryImpl(common.FrontendServiceName, c.FrontendAddress(), c.logger)
+	params.ThrottledBarkLogger = logging.NewThrottledLogger(c.barkLogger, func(...dynamicconfig.FilterOption) int { return 10 })
+	params.PProfInitializer = newPProfInitializerImpl(c.barkLogger, c.FrontendPProfPort())
+	params.RPCFactory = newRPCFactoryImpl(common.FrontendServiceName, c.FrontendAddress(), c.barkLogger)
 	params.MetricScope = tally.NewTestScope(common.FrontendServiceName, make(map[string]string))
 	params.MembershipFactory = newMembershipFactory(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
@@ -327,7 +334,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	params.MessagingClient = c.messagingClient
 	params.BlobstoreClient = c.blobstoreClient
 	params.PersistenceConfig = c.persistenceConfig
-	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
+	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.BarkLogger))
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
 
 	// TODO when cross DC is public, remove this temporary override
@@ -336,7 +343,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	if c.workerConfig.EnableReplicator {
 		kafkaProducer, err = c.messagingClient.NewProducerWithClusterName(c.clusterMetadata.GetCurrentClusterName())
 		if err != nil {
-			c.logger.WithField("error", err).Fatal("Failed to create kafka producer when start frontend")
+			c.barkLogger.WithField("error", err).Fatal("Failed to create kafka producer when start frontend")
 		}
 	} else {
 		kafkaProducer = &mocks.KafkaProducer{}
@@ -347,8 +354,8 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	c.frontEndService = service.New(params)
 	c.adminHandler = frontend.NewAdminHandler(
 		c.frontEndService, c.historyConfig.NumHistoryShards, c.metadataMgr, c.historyMgr, c.historyV2Mgr)
-	dc := dynamicconfig.NewCollection(params.DynamicConfig, c.logger)
-	frontendConfig := frontend.NewConfig(dc, c.esConfig.Enable)
+	dc := dynamicconfig.NewCollection(params.DynamicConfig, c.barkLogger)
+	frontendConfig := frontend.NewConfig(dc, c.historyConfig.NumHistoryShards, c.esConfig.Enable)
 	visibilityMgr := c.visibilityMgr
 	if c.esConfig.Enable {
 		frontendConfig.EnableReadVisibilityFromES = dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableReadVisibilityFromES, true)
@@ -358,7 +365,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 			ESIndexMaxResultWindow: frontendConfig.ESIndexMaxResultWindow,
 		}
 
-		visibilityFromES := espersistence.NewElasticSearchVisibilityManager(c.esClient, visibilityIndexName, visibilityConfigForES, c.logger)
+		visibilityFromES := espersistence.NewElasticSearchVisibilityManager(c.esClient, visibilityIndexName, visibilityConfigForES, c.barkLogger)
 		visibilityMgr = persistence.NewVisibilityManagerWrapper(visibilityMgr, visibilityFromES, frontendConfig.EnableReadVisibilityFromES)
 	}
 	c.frontendHandler = frontend.NewWorkflowHandler(
@@ -366,13 +373,13 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 		visibilityMgr, kafkaProducer, params.BlobstoreClient)
 	err = c.frontendHandler.Start()
 	if err != nil {
-		c.logger.WithField("error", err).Fatal("Failed to start frontend")
+		c.barkLogger.WithField("error", err).Fatal("Failed to start frontend")
 	}
 	dcRedirectionHandler := frontend.NewDCRedirectionHandler(c.frontendHandler, params.DCRedirectionPolicy)
 	c.frontEndService.GetDispatcher().Register(workflowserviceserver.New(dcRedirectionHandler))
 	err = c.adminHandler.Start()
 	if err != nil {
-		c.logger.WithField("error", err).Fatal("Failed to start admin")
+		c.barkLogger.WithField("error", err).Fatal("Failed to start admin")
 	}
 	c.initLock.Unlock()
 
@@ -387,23 +394,29 @@ func (c *cadenceImpl) startHistory(hosts map[string][]string, startWG *sync.Wait
 	for i, hostport := range c.HistoryServiceAddress() {
 		params := new(service.BootstrapParams)
 		params.Name = common.HistoryServiceName
+		params.BarkLogger = c.barkLogger
 		params.Logger = c.logger
-		params.ThrottledLogger = logging.NewThrottledLogger(c.logger, func(...dynamicconfig.FilterOption) int { return 10 })
-		params.PProfInitializer = newPProfInitializerImpl(c.logger, pprofPorts[i])
-		params.RPCFactory = newRPCFactoryImpl(common.HistoryServiceName, hostport, c.logger)
+		params.ThrottledBarkLogger = logging.NewThrottledLogger(c.barkLogger, func(...dynamicconfig.FilterOption) int { return 10 })
+		params.PProfInitializer = newPProfInitializerImpl(c.barkLogger, pprofPorts[i])
+		params.RPCFactory = newRPCFactoryImpl(common.HistoryServiceName, hostport, c.barkLogger)
 		params.MetricScope = tally.NewTestScope(common.HistoryServiceName, make(map[string]string))
 		params.MembershipFactory = newMembershipFactory(params.Name, hosts)
 		params.ClusterMetadata = c.clusterMetadata
 		params.DispatcherProvider = c.dispatcherProvider
 		params.MessagingClient = c.messagingClient
 		params.PersistenceConfig = c.persistenceConfig
-		params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
+		params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.BarkLogger))
 		params.DynamicConfig = dynamicconfig.NewNopClient()
+		dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, c.FrontendAddress())
+		if err != nil {
+			c.barkLogger.WithField("error", err).Fatal("Failed to get dispatcher for frontend")
+		}
+		params.PublicClient = cwsc.New(dispatcher.ClientConfig(common.FrontendServiceName))
 
 		c.initLock.Lock()
 		service := service.New(params)
 		hConfig := c.historyConfig
-		historyConfig := history.NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, c.logger), hConfig.NumHistoryShards, c.esConfig.Enable, config.StoreTypeCassandra)
+		historyConfig := history.NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, c.barkLogger), hConfig.NumHistoryShards, c.esConfig.Enable, config.StoreTypeCassandra)
 		historyConfig.HistoryMgrNumConns = dynamicconfig.GetIntPropertyFn(hConfig.NumHistoryShards)
 		historyConfig.ExecutionMgrNumConns = dynamicconfig.GetIntPropertyFn(hConfig.NumHistoryShards)
 		historyConfig.EnableEventsV2 = dynamicconfig.GetBoolPropertyFnFilteredByDomain(enableEventsV2)
@@ -414,7 +427,7 @@ func (c *cadenceImpl) startHistory(hosts map[string][]string, startWG *sync.Wait
 			historyConfig.HistoryCountLimitError = dynamicconfig.GetIntPropertyFilteredByDomain(hConfig.HistoryCountLimitError)
 		}
 		handler := history.NewHandler(service, historyConfig, c.shardMgr, c.metadataMgr,
-			c.visibilityMgr, c.historyMgr, c.historyV2Mgr, c.executionMgrFactory)
+			c.visibilityMgr, c.historyMgr, c.historyV2Mgr, c.executionMgrFactory, params.PublicClient)
 		handler.Start()
 		c.initLock.Unlock()
 
@@ -429,22 +442,23 @@ func (c *cadenceImpl) startMatching(hosts map[string][]string, startWG *sync.Wai
 
 	params := new(service.BootstrapParams)
 	params.Name = common.MatchingServiceName
+	params.BarkLogger = c.barkLogger
 	params.Logger = c.logger
-	params.ThrottledLogger = logging.NewThrottledLogger(c.logger, func(...dynamicconfig.FilterOption) int { return 10 })
-	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.MatchingPProfPort())
-	params.RPCFactory = newRPCFactoryImpl(common.MatchingServiceName, c.MatchingServiceAddress(), c.logger)
+	params.ThrottledBarkLogger = logging.NewThrottledLogger(c.barkLogger, func(...dynamicconfig.FilterOption) int { return 10 })
+	params.PProfInitializer = newPProfInitializerImpl(c.barkLogger, c.MatchingPProfPort())
+	params.RPCFactory = newRPCFactoryImpl(common.MatchingServiceName, c.MatchingServiceAddress(), c.barkLogger)
 	params.MetricScope = tally.NewTestScope(common.MatchingServiceName, make(map[string]string))
 	params.MembershipFactory = newMembershipFactory(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
 	params.DispatcherProvider = c.dispatcherProvider
 	params.PersistenceConfig = c.persistenceConfig
-	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
+	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.BarkLogger))
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
 
 	c.initLock.Lock()
 	service := service.New(params)
 	c.matchingHandler = matching.NewHandler(
-		service, matching.NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, c.logger)), c.taskMgr, c.metadataMgr,
+		service, matching.NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, c.barkLogger)), c.taskMgr, c.metadataMgr,
 	)
 	c.matchingHandler.Start()
 	c.initLock.Unlock()
@@ -457,33 +471,39 @@ func (c *cadenceImpl) startMatching(hosts map[string][]string, startWG *sync.Wai
 func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitGroup) {
 	params := new(service.BootstrapParams)
 	params.Name = common.WorkerServiceName
+	params.BarkLogger = c.barkLogger
 	params.Logger = c.logger
-	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.WorkerPProfPort())
-	params.RPCFactory = newRPCFactoryImpl(common.WorkerServiceName, c.WorkerServiceAddress(), c.logger)
+	params.PProfInitializer = newPProfInitializerImpl(c.barkLogger, c.WorkerPProfPort())
+	params.RPCFactory = newRPCFactoryImpl(common.WorkerServiceName, c.WorkerServiceAddress(), c.barkLogger)
 	params.MetricScope = tally.NewTestScope(common.WorkerServiceName, make(map[string]string))
 	params.MembershipFactory = newMembershipFactory(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
 	params.DispatcherProvider = c.dispatcherProvider
 	params.PersistenceConfig = c.persistenceConfig
-	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
+	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.BarkLogger))
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
 
+	dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, c.FrontendAddress())
+	if err != nil {
+		c.barkLogger.WithField("error", err).Fatal("Failed to get dispatcher for frontend")
+	}
+	params.PublicClient = cwsc.New(dispatcher.ClientConfig(common.FrontendServiceName))
 	c.initLock.Lock()
 	service := service.New(params)
 	service.Start()
 
 	var replicatorDomainCache cache.DomainCache
 	if c.workerConfig.EnableReplicator {
-		metadataManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgrV2, service.GetMetricsClient(), c.logger)
-		replicatorDomainCache = cache.NewDomainCache(metadataManager, params.ClusterMetadata, service.GetMetricsClient(), service.GetLogger())
+		metadataManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgrV2, service.GetMetricsClient(), c.barkLogger)
+		replicatorDomainCache = cache.NewDomainCache(metadataManager, params.ClusterMetadata, service.GetMetricsClient(), service.GetBarkLogger())
 		replicatorDomainCache.Start()
 		c.startWorkerReplicator(params, service, replicatorDomainCache)
 	}
 
 	var clientWorkerDomainCache cache.DomainCache
 	if c.workerConfig.EnableArchiver {
-		metadataProxyManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgr, service.GetMetricsClient(), c.logger)
-		clientWorkerDomainCache = cache.NewDomainCache(metadataProxyManager, params.ClusterMetadata, service.GetMetricsClient(), service.GetLogger())
+		metadataProxyManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgr, service.GetMetricsClient(), c.barkLogger)
+		clientWorkerDomainCache = cache.NewDomainCache(metadataProxyManager, params.ClusterMetadata, service.GetMetricsClient(), service.GetBarkLogger())
 		clientWorkerDomainCache.Start()
 		c.startWorkerClientWorker(params, service, clientWorkerDomainCache)
 	}
@@ -506,7 +526,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 }
 
 func (c *cadenceImpl) startWorkerReplicator(params *service.BootstrapParams, service service.Service, domainCache cache.DomainCache) {
-	metadataManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgrV2, service.GetMetricsClient(), c.logger)
+	metadataManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgrV2, service.GetMetricsClient(), c.barkLogger)
 	workerConfig := worker.NewConfig(params)
 	workerConfig.ReplicationCfg.ReplicatorMessageConcurrency = dynamicconfig.GetIntPropertyFn(10)
 	c.replicator = replicator.NewReplicator(
@@ -516,30 +536,26 @@ func (c *cadenceImpl) startWorkerReplicator(params *service.BootstrapParams, ser
 		service.GetClientBean(),
 		workerConfig.ReplicationCfg,
 		c.messagingClient,
-		c.logger,
+		c.barkLogger,
 		service.GetMetricsClient())
 	if err := c.replicator.Start(); err != nil {
 		c.replicator.Stop()
-		c.logger.WithField("error", err).Fatal("Fail to start replicator when start worker")
+		c.barkLogger.WithField("error", err).Fatal("Fail to start replicator when start worker")
 	}
 }
 
 func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, service service.Service, domainCache cache.DomainCache) {
-	publicClient := public.NewRetryableClient(
-		service.GetClientBean().GetPublicClient(),
-		common.CreatePublicClientRetryPolicy(),
-		common.IsWhitelistServiceTransientError,
-	)
 	blobstoreClient := blobstore.NewRetryableClient(
 		blobstore.NewMetricClient(c.blobstoreClient, service.GetMetricsClient()),
 		c.blobstoreClient.GetRetryPolicy(),
 		c.blobstoreClient.IsRetryableError)
 	workerConfig := worker.NewConfig(params)
 	workerConfig.ArchiverConfig.ArchiverConcurrency = dynamicconfig.GetIntPropertyFn(10)
+	workerConfig.ArchiverConfig.TargetArchivalBlobSize = dynamicconfig.GetIntPropertyFilteredByDomain(archivalBlobSize)
 	bc := &archiver.BootstrapContainer{
-		PublicClient:     publicClient,
+		PublicClient:     params.PublicClient,
 		MetricsClient:    service.GetMetricsClient(),
-		Logger:           c.logger,
+		Logger:           c.barkLogger,
 		ClusterMetadata:  service.GetClusterMetadata(),
 		HistoryManager:   c.historyMgr,
 		HistoryV2Manager: c.historyV2Mgr,
@@ -550,7 +566,7 @@ func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, s
 	c.clientWorker = archiver.NewClientWorker(bc)
 	if err := c.clientWorker.Start(); err != nil {
 		c.clientWorker.Stop()
-		c.logger.WithField("error", err).Fatal("Fail to start archiver when start worker")
+		c.barkLogger.WithField("error", err).Fatal("Fail to start archiver when start worker")
 	}
 }
 
@@ -561,11 +577,11 @@ func (c *cadenceImpl) startWorkerIndexer(params *service.BootstrapParams, servic
 		c.messagingClient,
 		c.esClient,
 		c.esConfig,
-		c.logger,
+		c.barkLogger,
 		service.GetMetricsClient())
 	if err := c.indexer.Start(); err != nil {
 		c.indexer.Stop()
-		c.logger.WithField("error", err).Fatal("Fail to start indexer when start worker")
+		c.barkLogger.WithField("error", err).Fatal("Fail to start indexer when start worker")
 	}
 }
 

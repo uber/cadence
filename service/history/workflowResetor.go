@@ -153,13 +153,14 @@ func (w *workflowResetorImpl) ResetWorkflowExecution(ctx context.Context, resetR
 		return
 	}
 
-	newMutableState, transferTasks, timerTasks, retError := w.buildNewMutableStateForReset(ctx, baseMutableState, currMutableState, request.GetReason(), request.GetDecisionFinishEventId(), request.GetRequestId(), newRunID)
+	newMutableState, transferTasks, timerTasks, retError := w.buildNewMutableStateForReset(ctx, domainEntry, baseMutableState, currMutableState, request.GetReason(), request.GetDecisionFinishEventId(), request.GetRequestId(), newRunID)
 	// complete the fork process at the end, it is OK even if this defer fails, because our timer task can still clean up correctly
 	defer func() {
 		if newMutableState != nil && len(newMutableState.GetExecutionInfo().GetCurrentBranch()) > 0 {
 			w.eng.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
 				BranchToken: newMutableState.GetExecutionInfo().GetCurrentBranch(),
 				Success:     retError == nil,
+				ShardID:     common.IntPtr(w.eng.shard.GetShardID()),
 			})
 		}
 	}()
@@ -309,7 +310,7 @@ func (w *workflowResetorImpl) scheduleUnstartedActivities(msBuilder mutableState
 	return tasks, nil
 }
 
-func (w *workflowResetorImpl) buildNewMutableStateForReset(ctx context.Context, baseMutableState, currMutableState mutableState, resetReason string, resetDecisionCompletedEventID int64, requestedID, newRunID string) (newMutableState mutableState, transferTasks, timerTasks []persistence.Task, retError error) {
+func (w *workflowResetorImpl) buildNewMutableStateForReset(ctx context.Context, domainEntry *cache.DomainCacheEntry, baseMutableState, currMutableState mutableState, resetReason string, resetDecisionCompletedEventID int64, requestedID, newRunID string) (newMutableState mutableState, transferTasks, timerTasks []persistence.Task, retError error) {
 	domainID := baseMutableState.GetExecutionInfo().DomainID
 	workflowID := baseMutableState.GetExecutionInfo().WorkflowID
 	baseRunID := baseMutableState.GetExecutionInfo().RunID
@@ -324,6 +325,11 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(ctx context.Context, 
 	retError = validateResetWorkflowAfterReplay(newMutableState)
 	if retError != nil {
 		return
+	}
+
+	// set the new mutable state with the version in domain
+	if newMutableState.GetReplicationState() != nil {
+		newMutableState.UpdateReplicationStateVersion(domainEntry.GetFailoverVersion(), false)
 	}
 
 	// failed the in-flight decision(started).
@@ -384,6 +390,7 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(ctx context.Context, 
 		ForkBranchToken: baseMutableState.GetCurrentBranch(),
 		ForkNodeID:      resetDecisionCompletedEventID,
 		Info:            historyGarbageCleanupInfo(domainID, workflowID, newRunID),
+		ShardID:         common.IntPtr(w.eng.shard.GetShardID()),
 	})
 	if retError != nil {
 		return
@@ -508,6 +515,7 @@ func (w *workflowResetorImpl) replayReceivedSignals(ctx context.Context, receive
 			MaxEventID:    continueMutableState.GetNextEventID(),
 			PageSize:      defaultHistoryPageSize,
 			NextPageToken: nextPageToken,
+			ShardID:       common.IntPtr(w.eng.shard.GetShardID()),
 		}
 		for {
 			var readResp *persistence.ReadHistoryBranchByBatchResponse
@@ -596,6 +604,7 @@ func (w *workflowResetorImpl) replayHistoryEvents(decisionFinishEventID int64, r
 		MaxEventID:    prevMutableState.GetNextEventID(),
 		PageSize:      defaultHistoryPageSize,
 		NextPageToken: nextPageToken,
+		ShardID:       common.IntPtr(w.eng.shard.GetShardID()),
 	}
 	var resetMutableState *mutableStateBuilder
 	var lastBatch []*workflow.HistoryEvent
@@ -773,10 +782,12 @@ func (w *workflowResetorImpl) ApplyResetEvent(ctx context.Context, request *h.Re
 	}
 
 	// fork a new history branch
+	shardID := common.IntPtr(w.eng.shard.GetShardID())
 	forkResp, retError := w.eng.historyV2Mgr.ForkHistoryBranch(&persistence.ForkHistoryBranchRequest{
 		ForkBranchToken: baseMutableState.GetCurrentBranch(),
 		ForkNodeID:      decisionFinishEventID,
 		Info:            historyGarbageCleanupInfo(domainID, workflowID, resetAttr.GetNewRunId()),
+		ShardID:         shardID,
 	})
 	if retError != nil {
 		return
@@ -785,6 +796,7 @@ func (w *workflowResetorImpl) ApplyResetEvent(ctx context.Context, request *h.Re
 		w.eng.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
 			BranchToken: newMsBuilder.GetExecutionInfo().GetCurrentBranch(),
 			Success:     retError == nil,
+			ShardID:     shardID,
 		})
 	}()
 	newMsBuilder.GetExecutionInfo().BranchToken = forkResp.NewBranchToken
@@ -825,6 +837,7 @@ func (w *workflowResetorImpl) replicateResetEvent(baseMutableState mutableState,
 		MaxEventID:    decisionFinishEventID,
 		PageSize:      defaultHistoryPageSize,
 		NextPageToken: nextPageToken,
+		ShardID:       common.IntPtr(w.eng.shard.GetShardID()),
 	}
 	for {
 		var readResp *persistence.ReadHistoryBranchByBatchResponse

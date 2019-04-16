@@ -29,15 +29,17 @@ import (
 	"testing"
 
 	"github.com/pborman/uuid"
-	log "github.com/sirupsen/logrus"
+	log2 "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
+	"go.uber.org/zap"
 )
 
 type (
@@ -48,7 +50,8 @@ type (
 		suite.Suite
 
 		testCluster       *TestCluster
-		logger            bark.Logger
+		barkLogger        bark.Logger
+		logger            log.Logger
 		engine            FrontendClient
 		ClusterMetadata   cluster.Metadata
 		MetadataManager   persistence.MetadataManager
@@ -63,14 +66,17 @@ func TestIntegrationCrossDCSuite(t *testing.T) {
 
 func (s *integrationCrossDCSuite) SetupSuite() {
 	if testing.Verbose() {
-		log.SetOutput(os.Stdout)
+		log2.SetOutput(os.Stdout)
 	}
 
-	logger := log.New()
-	formatter := &log.TextFormatter{}
+	logger := log2.New()
+	formatter := &log2.TextFormatter{}
 	formatter.FullTimestamp = true
 	logger.Formatter = formatter
-	s.logger = bark.NewLoggerFromLogrus(logger)
+	s.barkLogger = bark.NewLoggerFromLogrus(logger)
+	zapLogger, err := zap.NewDevelopment()
+	s.Require().NoError(err)
+	s.logger = log.NewLogger(zapLogger)
 }
 
 func (s *integrationCrossDCSuite) TearDownSuite() {
@@ -107,7 +113,7 @@ func (s *integrationCrossDCSuite) setupTest(enableGlobalDomain bool, isMasterClu
 			NumHistoryHosts:  1,
 			NumHistoryShards: 1,
 		},
-	}, s.logger)
+	}, s.barkLogger, s.logger)
 	s.Require().NoError(err)
 	s.testCluster = c
 	s.engine = c.GetFrontendClient()
@@ -370,10 +376,6 @@ func (s *integrationCrossDCSuite) TestIntegrationRegisterGetDomain_GlobalDomainE
 }
 
 func (s *integrationCrossDCSuite) TestIntegrationRegisterListDomains() {
-	if TestFlags.PersistenceType == config.StoreTypeSQL {
-		s.T().Skip("skipping until sql supports ListDomains pagination")
-		return
-	}
 	// re-initialize to enable global domain
 	s.TearDownTest()
 	s.setupTest(true, true)
@@ -424,6 +426,9 @@ func (s *integrationCrossDCSuite) TestIntegrationRegisterListDomains() {
 	domains := append(resp1.Domains, resp2.Domains...)
 
 	for _, resp := range domains {
+		if resp.DomainInfo.GetName() == common.SystemDomainName {
+			continue // this domain is always created by schema file
+		}
 		s.True(strings.HasPrefix(resp.DomainInfo.GetName(), domainNamePrefix))
 		ss := strings.Split(*resp.DomainInfo.Name, "-")
 		s.Equal(2, len(ss))

@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/uber-common/bark"
-	"github.com/uber/cadence/client/public"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
@@ -40,12 +39,8 @@ import (
 	"github.com/uber/cadence/service/worker/indexer"
 	"github.com/uber/cadence/service/worker/replicator"
 	"github.com/uber/cadence/service/worker/scanner"
+	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/.gen/go/shared"
-)
-
-const (
-	publicClientRetryLimit   = 5
-	publicClientPollingDelay = time.Second
 )
 
 type (
@@ -76,7 +71,7 @@ type (
 func NewService(params *service.BootstrapParams) common.Daemon {
 	params.UpdateLoggerWithServiceName(common.WorkerServiceName)
 	config := NewConfig(params)
-	params.ThrottledLogger = logging.NewThrottledLogger(params.Logger, config.ThrottledLogRPS)
+	params.ThrottledBarkLogger = logging.NewThrottledLogger(params.BarkLogger, config.ThrottledLogRPS)
 	return &Service{
 		params: params,
 		config: config,
@@ -86,7 +81,7 @@ func NewService(params *service.BootstrapParams) common.Daemon {
 
 // NewConfig builds the new Config for cadence-worker service
 func NewConfig(params *service.BootstrapParams) *Config {
-	dc := dynamicconfig.NewCollection(params.DynamicConfig, params.Logger)
+	dc := dynamicconfig.NewCollection(params.DynamicConfig, params.BarkLogger)
 	return &Config{
 		ReplicationCfg: &replicator.Config{
 			PersistenceMaxQPS:                 dc.GetIntProperty(dynamicconfig.WorkerPersistenceMaxQPS, 500),
@@ -124,7 +119,7 @@ func NewConfig(params *service.BootstrapParams) *Config {
 func (s *Service) Start() {
 	base := service.New(s.params)
 	base.Start()
-	s.logger = base.GetLogger()
+	s.logger = base.GetBarkLogger()
 	s.metricsClient = base.GetMetricsClient()
 	s.logger.Infof("%v starting", common.WorkerServiceName)
 
@@ -155,7 +150,7 @@ func (s *Service) Stop() {
 		return
 	}
 	close(s.stopC)
-	s.params.Logger.Infof("%v stopped", common.WorkerServiceName)
+	s.params.BarkLogger.Infof("%v stopped", common.WorkerServiceName)
 }
 
 func (s *Service) startScanner(base service.Service) {
@@ -164,14 +159,9 @@ func (s *Service) startScanner(base service.Service) {
 		s.logger.Infof("Scanner not started: incompatible persistence store type %v", storeType)
 		return
 	}
-	sdkClient := public.NewRetryableClient(
-		base.GetClientBean().GetPublicClient(),
-		common.CreatePublicClientRetryPolicy(),
-		common.IsWhitelistServiceTransientError,
-	)
 	params := &scanner.BootstrapParams{
 		Config:        *s.config.ScannerCfg,
-		SDKClient:     sdkClient,
+		SDKClient:     s.params.PublicClient,
 		MetricsClient: s.metricsClient,
 		Logger:        s.logger,
 		TallyScope:    s.params.MetricScope,
@@ -220,12 +210,8 @@ func (s *Service) startIndexer(base service.Service) {
 }
 
 func (s *Service) startArchiver(base service.Service, pFactory persistencefactory.Factory) {
-	publicClient := public.NewRetryableClient(
-		base.GetClientBean().GetPublicClient(),
-		common.CreatePublicClientRetryPolicy(),
-		common.IsWhitelistServiceTransientError,
-	)
-	s.waitForFrontendStart(publicClient)
+	publicClient := s.params.PublicClient
+	s.ensureSystemDomainExists(publicClient)
 
 	historyManager, err := pFactory.NewHistoryManager()
 	if err != nil {
@@ -265,22 +251,14 @@ func (s *Service) startArchiver(base service.Service, pFactory persistencefactor
 	}
 }
 
-func (s *Service) waitForFrontendStart(publicClient public.Client) {
+func (s *Service) ensureSystemDomainExists(publicClient workflowserviceclient.Interface) {
 	request := &shared.DescribeDomainRequest{
 		Name: common.StringPtr(common.SystemDomainName),
 	}
-
-RetryLoop:
-	for i := 0; i < publicClientRetryLimit; i++ {
-		if _, err := publicClient.DescribeDomain(context.Background(), request); err == nil {
-			return
-		}
-		select {
-		case <-time.After(publicClientPollingDelay):
-			continue RetryLoop
-		case <-s.stopC:
-			return
-		}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_, err := publicClient.DescribeDomain(ctx, request)
+	if err != nil {
+		s.logger.WithError(err).Fatal("failed to verify that cadence system domain exists")
 	}
-	s.logger.Fatal("failed to connect to frontend client")
 }

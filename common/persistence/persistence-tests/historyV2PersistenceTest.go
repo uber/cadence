@@ -36,6 +36,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	gen "github.com/uber/cadence/.gen/go/shared"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -163,6 +164,7 @@ func (s *HistoryV2PersistenceSuite) TestReadBranchByPagination() {
 		MaxEventID:    10,
 		PageSize:      4,
 		NextPageToken: nil,
+		ShardID:       common.IntPtr(s.ShardInfo.ShardID),
 	}
 	// first page
 	resp, err := s.HistoryV2Mgr.ReadHistoryBranch(req)
@@ -224,6 +226,7 @@ func (s *HistoryV2PersistenceSuite) TestReadBranchByPagination() {
 		MaxEventID:    21,
 		PageSize:      3,
 		NextPageToken: nil,
+		ShardID:       common.IntPtr(s.ShardInfo.ShardID),
 	}
 	// first page
 	resp, err = s.HistoryV2Mgr.ReadHistoryBranch(req)
@@ -260,20 +263,36 @@ func (s *HistoryV2PersistenceSuite) TestReadBranchByPagination() {
 	req.NextPageToken = resp.NextPageToken
 
 	// last page: one batch of 18-20
+	// We have only one page left and the page size is set to one. In this case,
+	// persistence may or may not return a nextPageToken.
+	// If it does return a token, we need to ensure that if the token returned is used
+	// to get history again, no error and history events should be returned.
+	req.PageSize = 1
 	resp, err = s.HistoryV2Mgr.ReadHistoryBranch(req)
 	s.Nil(err)
 	s.Equal(3, len(resp.HistoryEvents))
 	historyR.Events = append(historyR.Events, resp.HistoryEvents...)
 	req.NextPageToken = resp.NextPageToken
+	if len(resp.NextPageToken) != 0 {
+		resp, err = s.HistoryV2Mgr.ReadHistoryBranch(req)
+		s.Nil(err)
+		s.Equal(0, len(resp.HistoryEvents))
+	}
 
 	s.True(historyW.Equals(historyR))
 	s.Equal(0, len(resp.NextPageToken))
+
+	// MinEventID is in the middle of the last batch and this is the first request (NextPageToken
+	// is empty), the call should return an error.
+	req.MinEventID = 19
+	req.NextPageToken = nil
+	resp, err = s.HistoryV2Mgr.ReadHistoryBranch(req)
+	s.IsType(&gen.EntityNotExistsError{}, err)
 }
 
 //TestConcurrentlyCreateAndAppendBranches test
 func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 	treeID := uuid.New()
-
 	wg := sync.WaitGroup{}
 	concurrency := 20
 	m := sync.Map{}
@@ -393,7 +412,6 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 // TestConcurrentlyForkAndAppendBranches test
 func (s *HistoryV2PersistenceSuite) TestConcurrentlyForkAndAppendBranches() {
 	treeID := uuid.New()
-
 	wg := sync.WaitGroup{}
 	concurrency := 10
 	masterBr, err := s.newHistoryBranch(treeID)
@@ -613,6 +631,7 @@ func (s *HistoryV2PersistenceSuite) deleteHistoryBranch(branch []byte) error {
 		var err error
 		err = s.HistoryV2Mgr.DeleteHistoryBranch(&p.DeleteHistoryBranchRequest{
 			BranchToken: branch,
+			ShardID:     common.IntPtr(s.ShardInfo.ShardID),
 		})
 		return err
 	}
@@ -624,6 +643,7 @@ func (s *HistoryV2PersistenceSuite) deleteHistoryBranch(branch []byte) error {
 func (s *HistoryV2PersistenceSuite) descTreeByToken(br []byte) []*workflow.HistoryBranch {
 	resp, err := s.HistoryV2Mgr.GetHistoryTree(&p.GetHistoryTreeRequest{
 		BranchToken: br,
+		ShardID:     common.IntPtr(s.ShardInfo.ShardID),
 	})
 	s.Nil(err)
 	return resp.Branches
@@ -631,7 +651,8 @@ func (s *HistoryV2PersistenceSuite) descTreeByToken(br []byte) []*workflow.Histo
 
 func (s *HistoryV2PersistenceSuite) descTree(treeID string) []*workflow.HistoryBranch {
 	resp, err := s.HistoryV2Mgr.GetHistoryTree(&p.GetHistoryTreeRequest{
-		TreeID: treeID,
+		TreeID:  treeID,
+		ShardID: common.IntPtr(s.ShardInfo.ShardID),
 	})
 	s.Nil(err)
 	s.True(len(resp.ForkingInProgressBranches) == 0)
@@ -641,7 +662,8 @@ func (s *HistoryV2PersistenceSuite) descTree(treeID string) []*workflow.HistoryB
 // persistence helper
 func (s *HistoryV2PersistenceSuite) descInProgress(treeID string) {
 	resp, err := s.HistoryV2Mgr.GetHistoryTree(&p.GetHistoryTreeRequest{
-		TreeID: treeID,
+		TreeID:  treeID,
+		ShardID: common.IntPtr(s.ShardInfo.ShardID),
 	})
 	s.Nil(err)
 	s.True(len(resp.ForkingInProgressBranches) > 0)
@@ -670,6 +692,7 @@ func (s *HistoryV2PersistenceSuite) readWithError(branch []byte, minID, maxID in
 			MaxEventID:    maxID,
 			PageSize:      randPageSize,
 			NextPageToken: token,
+			ShardID:       common.IntPtr(s.ShardInfo.ShardID),
 		})
 		if err != nil {
 			return nil, err
@@ -719,6 +742,7 @@ func (s *HistoryV2PersistenceSuite) append(branch []byte, events []*workflow.His
 			Events:        events,
 			TransactionID: txnID,
 			Encoding:      pickRandomEncoding(),
+			ShardID:       common.IntPtr(s.ShardInfo.ShardID),
 		})
 		return err
 	}
@@ -743,6 +767,7 @@ func (s *HistoryV2PersistenceSuite) fork(forkBranch []byte, forkNodeID int64) ([
 			ForkBranchToken: forkBranch,
 			ForkNodeID:      forkNodeID,
 			Info:            testForkRunID,
+			ShardID:         common.IntPtr(s.ShardInfo.ShardID),
 		})
 		if resp != nil {
 			bi = resp.NewBranchToken
@@ -759,6 +784,7 @@ func (s *HistoryV2PersistenceSuite) completeFork(forkBranch []byte, succ bool) {
 	err := s.HistoryV2Mgr.CompleteForkBranch(&p.CompleteForkBranchRequest{
 		BranchToken: forkBranch,
 		Success:     succ,
+		ShardID:     common.IntPtr(s.ShardInfo.ShardID),
 	})
 	s.Nil(err)
 }
