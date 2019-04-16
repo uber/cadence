@@ -517,7 +517,8 @@ func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, s
 	bc := &archiver.BootstrapContainer{
 		PublicClient:     params.PublicClient,
 		MetricsClient:    service.GetMetricsClient(),
-		Logger:           c.barkLogger,
+		BarkLogger:       c.barkLogger,
+		Logger:           c.logger,
 		ClusterMetadata:  service.GetClusterMetadata(),
 		HistoryManager:   c.historyMgr,
 		HistoryV2Manager: c.historyV2Mgr,
