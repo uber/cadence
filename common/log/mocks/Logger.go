@@ -20,10 +20,11 @@
 
 package mocks
 
-import "github.com/uber/cadence/common/log"
-import "github.com/stretchr/testify/mock"
-
-import "github.com/uber/cadence/common/log/tag"
+import (
+	"github.com/stretchr/testify/mock"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
+)
 
 type Logger struct {
 	mock.Mock
