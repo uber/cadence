@@ -30,8 +30,8 @@ import (
 )
 
 var versionSupported = map[string]version.Constraints{
-	"go":   mustNewConstraint("<1.1"),
-	"java": mustNewConstraint("<1.1"),
+	"uber-go":   mustNewConstraint("<1.1"),
+	"uber-java": mustNewConstraint("<1.1"),
 }
 
 type (
