@@ -50,7 +50,7 @@ func archivalWorkflowHelper(
 	sw := metricsClient.StartTimer(metrics.ArchiverArchivalWorkflowScope, metrics.CadenceLatency)
 	defer sw.Stop()
 	workflowInfo := workflow.GetInfo(ctx)
-	logger = NewReplayBarkLogger(logger.WithFields(bark.Fields{
+	logger = NewReplayLogger(logger.WithFields(bark.Fields{
 		logging.TagWorkflowExecutionID: workflowInfo.WorkflowExecution.ID,
 		logging.TagWorkflowRunID:       workflowInfo.WorkflowExecution.RunID,
 		logging.TagTaskListName:        workflowInfo.TaskListName,
