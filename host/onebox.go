@@ -539,6 +539,7 @@ func (c *cadenceImpl) startWorkerReplicator(params *service.BootstrapParams, ser
 		workerConfig.ReplicationCfg,
 		c.messagingClient,
 		c.barkLogger,
+		c.logger,
 		service.GetMetricsClient())
 	if err := c.replicator.Start(); err != nil {
 		c.replicator.Stop()

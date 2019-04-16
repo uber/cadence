@@ -192,6 +192,7 @@ func (s *Service) startReplicator(base service.Service, pFactory persistencefact
 		s.config.ReplicationCfg,
 		base.GetMessagingClient(),
 		s.barkLogger,
+		s.logger,
 		s.metricsClient)
 	if err := replicator.Start(); err != nil {
 		replicator.Stop()
@@ -205,7 +206,7 @@ func (s *Service) startIndexer(base service.Service) {
 		base.GetMessagingClient(),
 		s.params.ESClient,
 		s.params.ESConfig,
-		s.barkLogger,
+		s.logger,
 		s.metricsClient)
 	if err := indexer.Start(); err != nil {
 		indexer.Stop()
