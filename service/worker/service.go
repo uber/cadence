@@ -240,7 +240,8 @@ func (s *Service) startArchiver(base service.Service, pFactory persistencefactor
 	bc := &archiver.BootstrapContainer{
 		PublicClient:     publicClient,
 		MetricsClient:    s.metricsClient,
-		Logger:           s.barkLogger,
+		Logger:           s.logger,
+		BarkLogger:       s.barkLogger,
 		ClusterMetadata:  base.GetClusterMetadata(),
 		HistoryManager:   historyManager,
 		HistoryV2Manager: historyV2Manager,

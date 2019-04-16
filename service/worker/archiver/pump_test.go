@@ -27,9 +27,9 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
+	"github.com/uber/cadence/common/log/mocks"
 	"github.com/uber/cadence/common/metrics"
 	mmocks "github.com/uber/cadence/common/metrics/mocks"
-	"github.com/uber/cadence/common/mocks"
 	"go.uber.org/cadence/testsuite"
 	"go.uber.org/cadence/workflow"
 )

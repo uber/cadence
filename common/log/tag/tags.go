@@ -275,8 +275,8 @@ func StoreType(storeType string) Tag {
 // history engine shard
 
 // ShardID returns tag for ShardID
-func ShardID(shardID int64) Tag {
-	return newIntegerTag("shard-id", shardID)
+func ShardID(shardID int) Tag {
+	return newIntegerTag("shard-id", int64(shardID))
 }
 
 // ShardTime returns tag for ShardTime
@@ -329,8 +329,8 @@ func TimerTaskStatus(timerTaskStatus int64) Tag {
 // retry
 
 // Attempt returns tag for Attempt
-func Attempt(attempt int64) Tag {
-	return newIntegerTag("attempt", attempt)
+func Attempt(attempt int32) Tag {
+	return newIntegerTag("attempt", int64(attempt))
 }
 
 // AttemptCount returns tag for AttemptCount
@@ -470,13 +470,13 @@ func ArchivalRequestRunID(requestRunID string) Tag {
 }
 
 // ArchivalRequestEventStoreVersion returns tag for RequestEventStoreVersion
-func ArchivalRequestEventStoreVersion(requestEventStoreVersion int64) Tag {
-	return newIntegerTag("archival-request-event-store-version", requestEventStoreVersion)
+func ArchivalRequestEventStoreVersion(requestEventStoreVersion int32) Tag {
+	return newIntegerTag("archival-request-event-store-version", int64(requestEventStoreVersion))
 }
 
 // ArchivalRequestBranchToken returns tag for RequestBranchToken
-func ArchivalRequestBranchToken(requestBranchToken string) Tag {
-	return newStringTag("archival-request-branch-token", requestBranchToken)
+func ArchivalRequestBranchToken(requestBranchToken []byte) Tag {
+	return newObjectTag("archival-request-branch-token", requestBranchToken)
 }
 
 // ArchivalRequestNextEventID returns tag for RequestNextEventID
