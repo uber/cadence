@@ -23,8 +23,6 @@ package replicator
 import (
 	"github.com/uber/cadence/common/log"
 	"go.uber.org/zap"
-	log2 "log"
-	"os"
 	"testing"
 
 	"github.com/uber/cadence/common/persistence/persistence-tests"
@@ -51,9 +49,6 @@ func TestDomainReplicatorSuite(t *testing.T) {
 }
 
 func (s *domainReplicatorSuite) SetupSuite() {
-	if testing.Verbose() {
-		log2.SetOutput(os.Stdout)
-	}
 }
 
 func (s *domainReplicatorSuite) TearDownSuite() {

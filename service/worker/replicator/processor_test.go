@@ -24,8 +24,6 @@ import (
 	"errors"
 	"github.com/uber/cadence/common/log"
 	"go.uber.org/zap"
-	log2 "log"
-	"os"
 	"testing"
 	"time"
 
@@ -72,9 +70,6 @@ func TestReplicationTaskProcessorSuite(t *testing.T) {
 }
 
 func (s *replicationTaskProcessorSuite) SetupSuite() {
-	if testing.Verbose() {
-		log2.SetOutput(os.Stdout)
-	}
 }
 
 func (s *replicationTaskProcessorSuite) TearDownSuite() {
