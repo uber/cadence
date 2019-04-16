@@ -22,6 +22,7 @@ package scanner
 
 import (
 	"context"
+	"github.com/uber/cadence/common/log"
 	"testing"
 	"time"
 
@@ -64,6 +65,7 @@ func (s *scannerWorkflowTestSuite) TestScavengerActivity() {
 		metricsClient: metrics.NewClient(tally.NoopScope, metrics.Worker),
 		zapLogger:     zap.NewNop(),
 		barkLogger:    bark.NewLoggerFromLogrus(logrus.New()),
+		logger:        log.NewLogger(zap.NewNop()),
 	}
 	env.SetTestTimeout(time.Second * 5)
 	env.SetWorkerOptions(worker.Options{

@@ -168,6 +168,7 @@ func (s *Service) startScanner(base service.Service) {
 		SDKClient:     s.params.PublicClient,
 		MetricsClient: s.metricsClient,
 		BarkLogger:    s.barkLogger,
+		Logger:        s.logger,
 		TallyScope:    s.params.MetricScope,
 	}
 	scanner := scanner.New(params)
