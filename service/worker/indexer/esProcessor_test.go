@@ -36,8 +36,6 @@ import (
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/worker/indexer/mocks"
 	"go.uber.org/zap"
-	lg "log"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -63,9 +61,6 @@ func TestESProcessorSuite(t *testing.T) {
 }
 
 func (s *esProcessorSuite) SetupSuite() {
-	if testing.Verbose() {
-		lg.SetOutput(os.Stdout)
-	}
 }
 
 func (s *esProcessorSuite) SetupTest() {
