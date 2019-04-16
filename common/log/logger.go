@@ -45,14 +45,18 @@ import (
 //  Note: msg should be static, it is not recommended to use fmt.Sprintf() for msg.
 //        Anything dynamic should be tagged.
 type Logger interface {
+	internalLogger
+
 	Debug(msg string, tags ...tag.Tag)
 	Info(msg string, tags ...tag.Tag)
 	Warn(msg string, tags ...tag.Tag)
 	Error(msg string, tags ...tag.Tag)
 	Fatal(msg string, tags ...tag.Tag)
 	WithTags(tags ...tag.Tag) Logger
+}
 
-	// keep this private for internal(calculation of skips)
+// keep this private for internal ONLY
+type internalLogger interface {
 	toZap() *zap.Logger
 }
 
