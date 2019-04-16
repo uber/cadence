@@ -71,7 +71,7 @@ func (cvc *versionChecker) checkClientVersion(ctx context.Context) error {
 		return &gen.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl, SupportedVersions: versionSupported.String()}
 	}
 
-	if versionSupported.Check(clientVersion) {
+	if !versionSupported.Check(clientVersion) {
 		return &gen.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl, SupportedVersions: versionSupported.String()}
 	}
 
