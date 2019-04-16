@@ -63,7 +63,7 @@ func (s *scannerWorkflowTestSuite) TestScavengerActivity() {
 		domainDB:      &mocks.MetadataManager{},
 		metricsClient: metrics.NewClient(tally.NoopScope, metrics.Worker),
 		zapLogger:     zap.NewNop(),
-		logger:        bark.NewLoggerFromLogrus(logrus.New()),
+		barkLogger:    bark.NewLoggerFromLogrus(logrus.New()),
 	}
 	env.SetTestTimeout(time.Second * 5)
 	env.SetWorkerOptions(worker.Options{
