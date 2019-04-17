@@ -23,7 +23,6 @@ package log
 import (
 	"github.com/uber/cadence/common/log/tag"
 	"go.uber.org/cadence/workflow"
-	"go.uber.org/zap"
 )
 
 type replayLogger struct {
@@ -34,15 +33,14 @@ type replayLogger struct {
 
 var _ Logger = (*replayLogger)(nil)
 
-const skipForReplayLogger = skipForDefaultLogger + 1
-
 // NewReplayLogger creates a logger which is aware of cadence's replay mode
 func NewReplayLogger(logger Logger, ctx workflow.Context, enableLogInReplay bool) Logger {
+	if skipLevelAwareLogger, ok := logger.(SkipLevelAware); ok {
+		logger = skipLevelAwareLogger.WithIncreasedSkipLevel()
+	}
+
 	return &replayLogger{
-		logger: &loggerImpl{
-			zapLogger: logger.toZap(),
-			skip:      skipForReplayLogger,
-		},
+		logger:            logger,
 		ctx:               ctx,
 		enableLogInReplay: enableLogInReplay,
 	}
@@ -89,8 +87,4 @@ func (r *replayLogger) WithTags(tags ...tag.Tag) Logger {
 		ctx:               r.ctx,
 		enableLogInReplay: r.enableLogInReplay,
 	}
-}
-
-func (r *replayLogger) toZap() *zap.Logger {
-	return r.logger.toZap()
 }
