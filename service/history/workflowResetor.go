@@ -703,14 +703,14 @@ func validateLastBatchOfReset(lastBatch []*workflow.HistoryEvent, decisionFinish
 			Message: fmt.Sprintf("wrong DecisionFinishEventId, it must be DecisionTaskStarted + 1: %v", lastEvent.GetEventId()),
 		}
 	}
-	for _, event := range lastBatch {
-		if event.GetEventType() == workflow.EventTypeDecisionTaskStarted {
-			return nil
+
+	if lastEvent.GetEventType() != workflow.EventTypeDecisionTaskStarted {
+		return &workflow.BadRequestError{
+			Message: fmt.Sprintf("wrong DecisionFinishEventId, previous batch doesn't include EventTypeDecisionTaskStarted, lastFirstEventId: %v", firstEvent.GetEventId()),
 		}
 	}
-	return &workflow.BadRequestError{
-		Message: fmt.Sprintf("wrong DecisionFinishEventId, previous batch doesn't include EventTypeDecisionTaskStarted, lastFirstEventId: %v", firstEvent.GetEventId()),
-	}
+
+	return nil
 }
 
 func validateResetReplicationTask(request *h.ReplicateEventsRequest) (*workflow.DecisionTaskFailedEventAttributes, error) {
