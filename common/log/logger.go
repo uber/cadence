@@ -45,20 +45,12 @@ import (
 //  Note: msg should be static, it is not recommended to use fmt.Sprintf() for msg.
 //        Anything dynamic should be tagged.
 type Logger interface {
-	internalLogger
-
 	Debug(msg string, tags ...tag.Tag)
 	Info(msg string, tags ...tag.Tag)
 	Warn(msg string, tags ...tag.Tag)
 	Error(msg string, tags ...tag.Tag)
 	Fatal(msg string, tags ...tag.Tag)
 	WithTags(tags ...tag.Tag) Logger
-}
-
-// keep this private for this logging module internally ONLY
-type internalLogger interface {
-	// we have to convert back to zap to make sure the skips is calculated correctly
-	toZap() *zap.Logger
 }
 
 type loggerImpl struct {
@@ -133,9 +125,8 @@ func (lg *loggerImpl) Fatal(msg string, tags ...tag.Tag) {
 func (lg *loggerImpl) WithTags(tags ...tag.Tag) Logger {
 	fields := lg.buildFields(tags)
 	zapLogger := lg.zapLogger.With(fields...)
-	return NewLogger(zapLogger)
-}
-
-func (lg *loggerImpl) toZap() *zap.Logger {
-	return lg.zapLogger
+	return &loggerImpl{
+		zapLogger: zapLogger,
+		skip:      lg.skip,
+	}
 }

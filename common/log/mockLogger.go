@@ -23,7 +23,6 @@ package log
 import (
 	"github.com/stretchr/testify/mock"
 	"github.com/uber/cadence/common/log/tag"
-	"go.uber.org/zap"
 )
 
 // MockLogger returns a mock for Logger interface
@@ -68,8 +67,4 @@ func (_m *MockLogger) WithTags(tags ...tag.Tag) Logger {
 	}
 
 	return r0
-}
-
-func (_m *MockLogger) toZap() *zap.Logger {
-	return nil
 }
