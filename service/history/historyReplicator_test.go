@@ -2212,6 +2212,15 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	workflowType := "some random workflow type"
 	workflowTimeout := int32(3721)
 	decisionTimeout := int32(4411)
+	cronSchedule := "some random cron scredule"
+	retryPolicy := &workflow.RetryPolicy{
+		InitialIntervalInSeconds:    common.Int32Ptr(1),
+		MaximumAttempts:             common.Int32Ptr(3),
+		MaximumIntervalInSeconds:    common.Int32Ptr(1),
+		NonRetriableErrorReasons:    []string{"bad-bug"},
+		BackoffCoefficient:          common.Float64Ptr(1),
+		ExpirationIntervalInSeconds: common.Int32Ptr(100),
+	}
 
 	initiatedID := int64(4810)
 	parentDomainID := validDomainID
@@ -2265,6 +2274,14 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		WorkflowTimeout:      workflowTimeout,
 		DecisionTimeoutValue: decisionTimeout,
 		EventStoreVersion:    persistence.EventStoreVersionV2,
+		CronSchedule:         cronSchedule,
+		HasRetryPolicy:       true,
+		InitialInterval:      retryPolicy.GetInitialIntervalInSeconds(),
+		BackoffCoefficient:   retryPolicy.GetBackoffCoefficient(),
+		ExpirationSeconds:    retryPolicy.GetExpirationIntervalInSeconds(),
+		MaximumAttempts:      retryPolicy.GetMaximumAttempts(),
+		MaximumInterval:      retryPolicy.GetMaximumIntervalInSeconds(),
+		NonRetriableErrors:   retryPolicy.GetNonRetriableErrorReasons(),
 	})
 	msBuilder.On("UpdateReplicationStateLastEventID", sourceCluster, version, nextEventID-1).Once()
 	msBuilder.On("GetReplicationState").Return(replicationState)
@@ -2318,6 +2335,14 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 			PreviousRunID:               "",
 			ReplicationState:            replicationState,
 			EventStoreVersion:           persistence.EventStoreVersionV2,
+			CronSchedule:                cronSchedule,
+			HasRetryPolicy:              true,
+			InitialInterval:             retryPolicy.GetInitialIntervalInSeconds(),
+			BackoffCoefficient:          retryPolicy.GetBackoffCoefficient(),
+			MaximumInterval:             retryPolicy.GetMaximumIntervalInSeconds(),
+			ExpirationSeconds:           retryPolicy.GetExpirationIntervalInSeconds(),
+			MaximumAttempts:             retryPolicy.GetMaximumAttempts(),
+			NonRetriableErrors:          retryPolicy.GetNonRetriableErrorReasons(),
 		}, input)
 	})).Return(nil, errRet).Once()
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.MatchedBy(func(input *persistence.CreateWorkflowExecutionRequest) bool {
@@ -2353,6 +2378,14 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 			PreviousLastWriteVersion:    currentVersion,
 			ReplicationState:            replicationState,
 			EventStoreVersion:           persistence.EventStoreVersionV2,
+			CronSchedule:                cronSchedule,
+			HasRetryPolicy:              true,
+			InitialInterval:             retryPolicy.GetInitialIntervalInSeconds(),
+			BackoffCoefficient:          retryPolicy.GetBackoffCoefficient(),
+			MaximumInterval:             retryPolicy.GetMaximumIntervalInSeconds(),
+			ExpirationSeconds:           retryPolicy.GetExpirationIntervalInSeconds(),
+			MaximumAttempts:             retryPolicy.GetMaximumAttempts(),
+			NonRetriableErrors:          retryPolicy.GetNonRetriableErrorReasons(),
 		}, input)
 	})).Return(&persistence.CreateWorkflowExecutionResponse{}, nil).Once()
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(&persistence.GetDomainResponse{
@@ -3104,6 +3137,15 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	workflowType := "some random workflow type"
 	workflowTimeout := int32(3721)
 	decisionTimeout := int32(4411)
+	cronSchedule := "some random cron scredule"
+	retryPolicy := &workflow.RetryPolicy{
+		InitialIntervalInSeconds:    common.Int32Ptr(1),
+		MaximumAttempts:             common.Int32Ptr(3),
+		MaximumIntervalInSeconds:    common.Int32Ptr(1),
+		NonRetriableErrorReasons:    []string{"bad-bug"},
+		BackoffCoefficient:          common.Float64Ptr(1),
+		ExpirationIntervalInSeconds: common.Int32Ptr(100),
+	}
 
 	initiatedID := int64(4810)
 	parentDomainID := validDomainID
@@ -3157,6 +3199,14 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		WorkflowTimeout:      workflowTimeout,
 		DecisionTimeoutValue: decisionTimeout,
 		EventStoreVersion:    persistence.EventStoreVersionV2,
+		CronSchedule:         cronSchedule,
+		HasRetryPolicy:       true,
+		InitialInterval:      retryPolicy.GetInitialIntervalInSeconds(),
+		BackoffCoefficient:   retryPolicy.GetBackoffCoefficient(),
+		ExpirationSeconds:    retryPolicy.GetExpirationIntervalInSeconds(),
+		MaximumAttempts:      retryPolicy.GetMaximumAttempts(),
+		MaximumInterval:      retryPolicy.GetMaximumIntervalInSeconds(),
+		NonRetriableErrors:   retryPolicy.GetNonRetriableErrorReasons(),
 	})
 	msBuilder.On("UpdateReplicationStateLastEventID", sourceCluster, version, nextEventID-1).Once()
 	msBuilder.On("GetReplicationState").Return(replicationState)
@@ -3210,6 +3260,14 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 			PreviousRunID:               "",
 			ReplicationState:            replicationState,
 			EventStoreVersion:           persistence.EventStoreVersionV2,
+			CronSchedule:                cronSchedule,
+			HasRetryPolicy:              true,
+			InitialInterval:             retryPolicy.GetInitialIntervalInSeconds(),
+			BackoffCoefficient:          retryPolicy.GetBackoffCoefficient(),
+			MaximumInterval:             retryPolicy.GetMaximumIntervalInSeconds(),
+			ExpirationSeconds:           retryPolicy.GetExpirationIntervalInSeconds(),
+			MaximumAttempts:             retryPolicy.GetMaximumAttempts(),
+			NonRetriableErrors:          retryPolicy.GetNonRetriableErrorReasons(),
 		}, input)
 	})).Return(nil, errRet).Once()
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.MatchedBy(func(input *persistence.CreateWorkflowExecutionRequest) bool {
@@ -3245,6 +3303,14 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 			PreviousLastWriteVersion:    version,
 			ReplicationState:            replicationState,
 			EventStoreVersion:           persistence.EventStoreVersionV2,
+			CronSchedule:                cronSchedule,
+			HasRetryPolicy:              true,
+			InitialInterval:             retryPolicy.GetInitialIntervalInSeconds(),
+			BackoffCoefficient:          retryPolicy.GetBackoffCoefficient(),
+			MaximumInterval:             retryPolicy.GetMaximumIntervalInSeconds(),
+			ExpirationSeconds:           retryPolicy.GetExpirationIntervalInSeconds(),
+			MaximumAttempts:             retryPolicy.GetMaximumAttempts(),
+			NonRetriableErrors:          retryPolicy.GetNonRetriableErrorReasons(),
 		}, input)
 	})).Return(&persistence.CreateWorkflowExecutionResponse{}, nil).Once()
 
