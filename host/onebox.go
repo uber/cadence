@@ -581,7 +581,7 @@ func (c *cadenceImpl) startWorkerIndexer(params *service.BootstrapParams, servic
 		c.messagingClient,
 		c.esClient,
 		c.esConfig,
-		c.barkLogger,
+		c.logger,
 		service.GetMetricsClient())
 	if err := c.indexer.Start(); err != nil {
 		c.indexer.Stop()
