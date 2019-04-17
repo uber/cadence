@@ -138,12 +138,11 @@ type (
 	cassandraVisibilityPersistence struct {
 		cassandraStore
 		lowConslevel gocql.Consistency
-		serializer   p.PayloadSerializer
 	}
 )
 
 // newVisibilityPersistence is used to create an instance of VisibilityManager implementation
-func newVisibilityPersistence(cfg config.Cassandra, logger bark.Logger) (p.VisibilityManager, error) {
+func newVisibilityPersistence(cfg config.Cassandra, logger bark.Logger) (p.VisibilityStore, error) {
 	cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
 	cluster.Keyspace = cfg.Keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
@@ -159,7 +158,6 @@ func newVisibilityPersistence(cfg config.Cassandra, logger bark.Logger) (p.Visib
 	return &cassandraVisibilityPersistence{
 		cassandraStore: cassandraStore{session: session, logger: logger},
 		lowConslevel:   gocql.One,
-		serializer:     p.NewPayloadSerializer(),
 	}, nil
 }
 
@@ -327,7 +325,7 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 }
 
 func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutions(
-	request *p.ListWorkflowExecutionsRequest) (*p.ListWorkflowExecutionsResponse, error) {
+	request *p.ListWorkflowExecutionsRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	query := v.session.Query(templateGetOpenWorkflowExecutions,
 		request.DomainUUID,
 		domainPartition,
@@ -341,12 +339,12 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutions(
 		}
 	}
 
-	response := &p.ListWorkflowExecutionsResponse{}
-	response.Executions = make([]*workflow.WorkflowExecutionInfo, 0)
-	wfexecution, has := v.readOpenWorkflowExecutionRecord(iter)
+	response := &p.InternalListWorkflowExecutionsResponse{}
+	response.Executions = make([]*p.VisibilityWorkflowExecutionInfo, 0)
+	wfexecution, has := readOpenWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = v.readOpenWorkflowExecutionRecord(iter)
+		wfexecution, has = readOpenWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -367,7 +365,7 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutions(
 }
 
 func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutions(
-	request *p.ListWorkflowExecutionsRequest) (*p.ListWorkflowExecutionsResponse, error) {
+	request *p.ListWorkflowExecutionsRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	query := v.session.Query(templateGetClosedWorkflowExecutions,
 		request.DomainUUID,
 		domainPartition,
@@ -381,12 +379,12 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutions(
 		}
 	}
 
-	response := &p.ListWorkflowExecutionsResponse{}
-	response.Executions = make([]*workflow.WorkflowExecutionInfo, 0)
-	wfexecution, has := v.readClosedWorkflowExecutionRecord(iter)
+	response := &p.InternalListWorkflowExecutionsResponse{}
+	response.Executions = make([]*p.VisibilityWorkflowExecutionInfo, 0)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = v.readClosedWorkflowExecutionRecord(iter)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -407,7 +405,7 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutions(
 }
 
 func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutionsByType(
-	request *p.ListWorkflowExecutionsByTypeRequest) (*p.ListWorkflowExecutionsResponse, error) {
+	request *p.ListWorkflowExecutionsByTypeRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	query := v.session.Query(templateGetOpenWorkflowExecutionsByType,
 		request.DomainUUID,
 		domainPartition,
@@ -422,12 +420,12 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutionsByType(
 		}
 	}
 
-	response := &p.ListWorkflowExecutionsResponse{}
-	response.Executions = make([]*workflow.WorkflowExecutionInfo, 0)
-	wfexecution, has := v.readOpenWorkflowExecutionRecord(iter)
+	response := &p.InternalListWorkflowExecutionsResponse{}
+	response.Executions = make([]*p.VisibilityWorkflowExecutionInfo, 0)
+	wfexecution, has := readOpenWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = v.readOpenWorkflowExecutionRecord(iter)
+		wfexecution, has = readOpenWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -448,7 +446,7 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutionsByType(
 }
 
 func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByType(
-	request *p.ListWorkflowExecutionsByTypeRequest) (*p.ListWorkflowExecutionsResponse, error) {
+	request *p.ListWorkflowExecutionsByTypeRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	query := v.session.Query(templateGetClosedWorkflowExecutionsByType,
 		request.DomainUUID,
 		domainPartition,
@@ -463,12 +461,12 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByType(
 		}
 	}
 
-	response := &p.ListWorkflowExecutionsResponse{}
-	response.Executions = make([]*workflow.WorkflowExecutionInfo, 0)
-	wfexecution, has := v.readClosedWorkflowExecutionRecord(iter)
+	response := &p.InternalListWorkflowExecutionsResponse{}
+	response.Executions = make([]*p.VisibilityWorkflowExecutionInfo, 0)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = v.readClosedWorkflowExecutionRecord(iter)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -489,7 +487,7 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByType(
 }
 
 func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutionsByWorkflowID(
-	request *p.ListWorkflowExecutionsByWorkflowIDRequest) (*p.ListWorkflowExecutionsResponse, error) {
+	request *p.ListWorkflowExecutionsByWorkflowIDRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	query := v.session.Query(templateGetOpenWorkflowExecutionsByID,
 		request.DomainUUID,
 		domainPartition,
@@ -504,12 +502,12 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutionsByWorkflowID(
 		}
 	}
 
-	response := &p.ListWorkflowExecutionsResponse{}
-	response.Executions = make([]*workflow.WorkflowExecutionInfo, 0)
-	wfexecution, has := v.readOpenWorkflowExecutionRecord(iter)
+	response := &p.InternalListWorkflowExecutionsResponse{}
+	response.Executions = make([]*p.VisibilityWorkflowExecutionInfo, 0)
+	wfexecution, has := readOpenWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = v.readOpenWorkflowExecutionRecord(iter)
+		wfexecution, has = readOpenWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -530,7 +528,7 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutionsByWorkflowID(
 }
 
 func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByWorkflowID(
-	request *p.ListWorkflowExecutionsByWorkflowIDRequest) (*p.ListWorkflowExecutionsResponse, error) {
+	request *p.ListWorkflowExecutionsByWorkflowIDRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	query := v.session.Query(templateGetClosedWorkflowExecutionsByID,
 		request.DomainUUID,
 		domainPartition,
@@ -545,12 +543,12 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByWorkflowI
 		}
 	}
 
-	response := &p.ListWorkflowExecutionsResponse{}
-	response.Executions = make([]*workflow.WorkflowExecutionInfo, 0)
-	wfexecution, has := v.readClosedWorkflowExecutionRecord(iter)
+	response := &p.InternalListWorkflowExecutionsResponse{}
+	response.Executions = make([]*p.VisibilityWorkflowExecutionInfo, 0)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = v.readClosedWorkflowExecutionRecord(iter)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -571,7 +569,7 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByWorkflowI
 }
 
 func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByStatus(
-	request *p.ListClosedWorkflowExecutionsByStatusRequest) (*p.ListWorkflowExecutionsResponse, error) {
+	request *p.ListClosedWorkflowExecutionsByStatusRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	query := v.session.Query(templateGetClosedWorkflowExecutionsByStatus,
 		request.DomainUUID,
 		domainPartition,
@@ -586,12 +584,12 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByStatus(
 		}
 	}
 
-	response := &p.ListWorkflowExecutionsResponse{}
-	response.Executions = make([]*workflow.WorkflowExecutionInfo, 0)
-	wfexecution, has := v.readClosedWorkflowExecutionRecord(iter)
+	response := &p.InternalListWorkflowExecutionsResponse{}
+	response.Executions = make([]*p.VisibilityWorkflowExecutionInfo, 0)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = v.readClosedWorkflowExecutionRecord(iter)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -612,7 +610,7 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByStatus(
 }
 
 func (v *cassandraVisibilityPersistence) GetClosedWorkflowExecution(
-	request *p.GetClosedWorkflowExecutionRequest) (*p.GetClosedWorkflowExecutionResponse, error) {
+	request *p.GetClosedWorkflowExecutionRequest) (*p.InternalGetClosedWorkflowExecutionResponse, error) {
 	execution := request.Execution
 	query := v.session.Query(templateGetClosedWorkflowExecution,
 		request.DomainUUID,
@@ -627,7 +625,7 @@ func (v *cassandraVisibilityPersistence) GetClosedWorkflowExecution(
 		}
 	}
 
-	wfexecution, has := v.readClosedWorkflowExecutionRecord(iter)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
 	if !has {
 		return nil, &workflow.EntityNotExistsError{
 			Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v, RunId: %v",
@@ -646,7 +644,7 @@ func (v *cassandraVisibilityPersistence) GetClosedWorkflowExecution(
 		}
 	}
 
-	return &p.GetClosedWorkflowExecutionResponse{
+	return &p.InternalGetClosedWorkflowExecutionResponse{
 		Execution: wfexecution,
 	}, nil
 }
@@ -656,11 +654,7 @@ func (v *cassandraVisibilityPersistence) DeleteWorkflowExecution(request *p.Visi
 	return nil
 }
 
-func (v *cassandraVisibilityPersistence) readOpenWorkflowExecutionRecord(iter *gocql.Iter) (*workflow.WorkflowExecutionInfo, bool) {
-	return readOpenWorkflowExecutionRecord(iter, v.serializer)
-}
-
-func readOpenWorkflowExecutionRecord(iter *gocql.Iter, serializer p.PayloadSerializer) (*workflow.WorkflowExecutionInfo, bool) {
+func readOpenWorkflowExecutionRecord(iter *gocql.Iter) (*p.VisibilityWorkflowExecutionInfo, bool) {
 	var workflowID string
 	var runID gocql.UUID
 	var typeName string
@@ -669,33 +663,20 @@ func readOpenWorkflowExecutionRecord(iter *gocql.Iter, serializer p.PayloadSeria
 	var memo []byte
 	var encoding string
 	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &typeName, &memo, &encoding) {
-		execution := &workflow.WorkflowExecution{}
-		execution.WorkflowId = common.StringPtr(workflowID)
-		execution.RunId = common.StringPtr(runID.String())
-
-		wfType := &workflow.WorkflowType{}
-		wfType.Name = common.StringPtr(typeName)
-
-		if executionTime.UnixNano() == 0 {
-			executionTime = startTime
+		record := &p.VisibilityWorkflowExecutionInfo{
+			WorkflowID:    workflowID,
+			RunID:         runID.String(),
+			TypeName:      typeName,
+			StartTime:     startTime,
+			ExecutionTime: executionTime,
+			Memo:          p.NewDataBlob(memo, common.EncodingType(encoding)),
 		}
-
-		record := &workflow.WorkflowExecutionInfo{}
-		record.Execution = execution
-		record.StartTime = common.Int64Ptr(startTime.UnixNano())
-		record.ExecutionTime = common.Int64Ptr(executionTime.UnixNano())
-		record.Type = wfType
-		record.Memo, _ = serializer.DeserializeVisibilityMemo(p.NewDataBlob(memo, common.EncodingType(encoding)))
 		return record, true
 	}
 	return nil, false
 }
 
-func (v *cassandraVisibilityPersistence) readClosedWorkflowExecutionRecord(iter *gocql.Iter) (*workflow.WorkflowExecutionInfo, bool) {
-	return readClosedWorkflowExecutionRecord(iter, v.serializer)
-}
-
-func readClosedWorkflowExecutionRecord(iter *gocql.Iter, serializer p.PayloadSerializer) (*workflow.WorkflowExecutionInfo, bool) {
+func readClosedWorkflowExecutionRecord(iter *gocql.Iter) (*p.VisibilityWorkflowExecutionInfo, bool) {
 	var workflowID string
 	var runID gocql.UUID
 	var typeName string
@@ -707,30 +688,17 @@ func readClosedWorkflowExecutionRecord(iter *gocql.Iter, serializer p.PayloadSer
 	var memo []byte
 	var encoding string
 	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &closeTime, &typeName, &status, &historyLength, &memo, &encoding) {
-		execution := &workflow.WorkflowExecution{}
-		execution.WorkflowId = common.StringPtr(workflowID)
-		execution.RunId = common.StringPtr(runID.String())
-
-		wfType := &workflow.WorkflowType{}
-		wfType.Name = common.StringPtr(typeName)
-
-		if executionTime.UnixNano() == 0 {
-			executionTime = startTime
+		record := &p.VisibilityWorkflowExecutionInfo{
+			WorkflowID:    workflowID,
+			RunID:         runID.String(),
+			TypeName:      typeName,
+			StartTime:     startTime,
+			ExecutionTime: executionTime,
+			CloseTime:     closeTime,
+			Status:        &status,
+			HistoryLength: historyLength,
+			Memo:          p.NewDataBlob(memo, common.EncodingType(encoding)),
 		}
-
-		record := &workflow.WorkflowExecutionInfo{}
-		record.Execution = execution
-		record.StartTime = common.Int64Ptr(startTime.UnixNano())
-		record.ExecutionTime = common.Int64Ptr(executionTime.UnixNano())
-		record.CloseTime = common.Int64Ptr(closeTime.UnixNano())
-		record.Type = wfType
-		record.CloseStatus = &status
-		record.HistoryLength = common.Int64Ptr(historyLength)
-		record.Memo = &workflow.Memo{}
-		record.Memo, _ = serializer.DeserializeVisibilityMemo(&p.DataBlob{
-			Encoding: common.EncodingType(encoding),
-			Data:     memo,
-		})
 		return record, true
 	}
 	return nil, false
