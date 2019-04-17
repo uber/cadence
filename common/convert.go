@@ -30,6 +30,11 @@ func IntPtr(v int) *int {
 	return &v
 }
 
+// Int16Ptr makes a copy and returns the pointer to an int16.
+func Int16Ptr(v int16) *int16 {
+	return &v
+}
+
 // Int32Ptr makes a copy and returns the pointer to an int32.
 func Int32Ptr(v int32) *int32 {
 	return &v

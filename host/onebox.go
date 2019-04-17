@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore"
@@ -184,6 +185,12 @@ func (c *cadenceImpl) Start() error {
 	hosts[common.HistoryServiceName] = c.HistoryServiceAddress()
 	if c.enableWorker() {
 		hosts[common.WorkerServiceName] = []string{c.WorkerServiceAddress()}
+	}
+
+	// create cadence-system domain, this must be created before starting
+	// the services - so directly use the metadataManager to create this
+	if err := c.createSystemDomain(); err != nil {
+		return err
 	}
 
 	var startWG sync.WaitGroup
@@ -575,6 +582,30 @@ func (c *cadenceImpl) startWorkerIndexer(params *service.BootstrapParams, servic
 		c.indexer.Stop()
 		c.logger.Fatal("Fail to start indexer when start worker", tag.Error(err))
 	}
+}
+
+func (c *cadenceImpl) createSystemDomain() error {
+	if c.metadataMgrV2 == nil {
+		return nil
+	}
+	_, err := c.metadataMgrV2.CreateDomain(&persistence.CreateDomainRequest{
+		Info: &persistence.DomainInfo{
+			ID:   "32049b68787240948e63d0dd59896a83",
+			Name: "cadence-system",
+		},
+		Config: &persistence.DomainConfig{
+			Retention:      1,
+			ArchivalStatus: shared.ArchivalStatusDisabled,
+		},
+		ReplicationConfig: &persistence.DomainReplicationConfig{},
+	})
+	if err != nil {
+		if _, ok := err.(*shared.DomainAlreadyExistsError); ok {
+			return nil
+		}
+		return fmt.Errorf("failed to create cadence-system domain: %v", err)
+	}
+	return nil
 }
 
 func newMembershipFactory(serviceName string, hosts map[string][]string) service.MembershipMonitorFactory {

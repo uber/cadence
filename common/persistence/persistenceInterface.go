@@ -22,6 +22,7 @@ package persistence
 
 import (
 	"fmt"
+	"runtime/debug"
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -512,7 +513,8 @@ func NewDataBlob(data []byte, encodingType common.EncodingType) *DataBlob {
 		return nil
 	}
 	if encodingType != "thriftrw" && data[0] == 'Y' {
-		panic(fmt.Sprintf("Invlid incoding: \"%v\"", encodingType))
+		debug.PrintStack()
+		panic(fmt.Sprintf("Invalid incoding: \"%v\"", encodingType))
 	}
 	return &DataBlob{
 		Data:     data,
