@@ -680,7 +680,7 @@ func (w *workflowResetorImpl) replayHistoryEvents(decisionFinishEventID int64, r
 		}
 	}
 
-	retError = validateLastBatchOfReset(lastBatch)
+	retError = validateLastBatchOfReset(lastBatch, decisionFinishEventID)
 	if retError != nil {
 		return
 	}
@@ -695,8 +695,14 @@ func (w *workflowResetorImpl) replayHistoryEvents(decisionFinishEventID int64, r
 	return
 }
 
-func validateLastBatchOfReset(lastBatch []*workflow.HistoryEvent) error {
+func validateLastBatchOfReset(lastBatch []*workflow.HistoryEvent, decisionFinishEventID int64) error {
 	firstEvent := lastBatch[0]
+	lastEvent := lastBatch[len(lastBatch)-1]
+	if decisionFinishEventID != lastEvent.GetEventId()+1 {
+		return &workflow.BadRequestError{
+			Message: fmt.Sprintf("wrong DecisionFinishEventId, it must be DecisionTaskStarted + 1: %v", lastEvent.GetEventId()),
+		}
+	}
 	for _, event := range lastBatch {
 		if event.GetEventType() == workflow.EventTypeDecisionTaskStarted {
 			return nil
