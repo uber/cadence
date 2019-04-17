@@ -138,7 +138,7 @@ type (
 	cassandraVisibilityPersistence struct {
 		cassandraStore
 		lowConslevel gocql.Consistency
-		serializer   p.CadenceSerializer
+		serializer   p.PayloadSerializer
 	}
 )
 
@@ -159,7 +159,7 @@ func newVisibilityPersistence(cfg config.Cassandra, logger bark.Logger) (p.Visib
 	return &cassandraVisibilityPersistence{
 		cassandraStore: cassandraStore{session: session, logger: logger},
 		lowConslevel:   gocql.One,
-		serializer:     p.NewCadenceSerializer(),
+		serializer:     p.NewPayloadSerializer(),
 	}, nil
 }
 
@@ -660,7 +660,7 @@ func (v *cassandraVisibilityPersistence) readOpenWorkflowExecutionRecord(iter *g
 	return readOpenWorkflowExecutionRecord(iter, v.serializer)
 }
 
-func readOpenWorkflowExecutionRecord(iter *gocql.Iter, serializer p.CadenceSerializer) (*workflow.WorkflowExecutionInfo, bool) {
+func readOpenWorkflowExecutionRecord(iter *gocql.Iter, serializer p.PayloadSerializer) (*workflow.WorkflowExecutionInfo, bool) {
 	var workflowID string
 	var runID gocql.UUID
 	var typeName string
@@ -695,7 +695,7 @@ func (v *cassandraVisibilityPersistence) readClosedWorkflowExecutionRecord(iter 
 	return readClosedWorkflowExecutionRecord(iter, v.serializer)
 }
 
-func readClosedWorkflowExecutionRecord(iter *gocql.Iter, serializer p.CadenceSerializer) (*workflow.WorkflowExecutionInfo, bool) {
+func readClosedWorkflowExecutionRecord(iter *gocql.Iter, serializer p.PayloadSerializer) (*workflow.WorkflowExecutionInfo, bool) {
 	var workflowID string
 	var runID gocql.UUID
 	var typeName string

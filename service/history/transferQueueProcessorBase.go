@@ -51,7 +51,7 @@ type (
 		updateTransferAckLevel updateTransferAckLevel
 		transferQueueShutdown  transferQueueShutdown
 		logger                 bark.Logger
-		serializer             persistence.CadenceSerializer
+		serializer             persistence.PayloadSerializer
 	}
 )
 
@@ -72,7 +72,7 @@ func newTransferQueueProcessorBase(shard ShardContext, options *QueueProcessorOp
 		updateTransferAckLevel: updateTransferAckLevel,
 		transferQueueShutdown:  transferQueueShutdown,
 		logger:                 logger,
-		serializer:             persistence.NewCadenceSerializer(),
+		serializer:             persistence.NewPayloadSerializer(),
 	}
 }
 

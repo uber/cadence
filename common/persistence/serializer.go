@@ -30,9 +30,9 @@ import (
 )
 
 type (
-	// CadenceSerializer is used by persistence to serialize/deserialize history event(s) and others
+	// PayloadSerializer is used by persistence to serialize/deserialize history event(s) and others
 	// It will only be used inside persistence, so that serialize/deserialize is transparent for application
-	CadenceSerializer interface {
+	PayloadSerializer interface {
 		// serialize/deserialize history events
 		SerializeBatchEvents(batch []*workflow.HistoryEvent, encodingType common.EncodingType) (*DataBlob, error)
 		DeserializeBatchEvents(data *DataBlob) ([]*workflow.HistoryEvent, error)
@@ -66,8 +66,8 @@ type (
 	}
 )
 
-// NewCadenceSerializer returns a CadenceSerializer
-func NewCadenceSerializer() CadenceSerializer {
+// NewPayloadSerializer returns a PayloadSerializer
+func NewPayloadSerializer() PayloadSerializer {
 	return &serializerImpl{
 		thriftrwEncoder: codec.NewThriftRWEncoder(),
 	}

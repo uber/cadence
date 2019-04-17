@@ -46,7 +46,7 @@ type (
 		index      string
 		logger     bark.Logger
 		config     *config.VisibilityConfig
-		serializer p.CadenceSerializer
+		serializer p.PayloadSerializer
 	}
 
 	esVisibilityPageToken struct {
@@ -86,7 +86,7 @@ func NewElasticSearchVisibilityManager(esClient es.Client, index string, config 
 		index:      index,
 		logger:     logger.WithField(logging.TagWorkflowComponent, logging.TagValueESVisibilityManager),
 		config:     config,
-		serializer: p.NewCadenceSerializer(),
+		serializer: p.NewPayloadSerializer(),
 	}
 }
 

@@ -33,9 +33,9 @@ import (
 
 type (
 
-	// historyManagerImpl implements HistoryManager based on HistoryStore and CadenceSerializer
+	// historyManagerImpl implements HistoryManager based on HistoryStore and PayloadSerializer
 	historyManagerImpl struct {
-		serializer  CadenceSerializer
+		serializer  PayloadSerializer
 		persistence HistoryStore
 		logger      bark.Logger
 	}
@@ -53,7 +53,7 @@ var _ HistoryManager = (*historyManagerImpl)(nil)
 //NewHistoryManagerImpl returns new HistoryManager
 func NewHistoryManagerImpl(persistence HistoryStore, logger bark.Logger) HistoryManager {
 	return &historyManagerImpl{
-		serializer:  NewCadenceSerializer(),
+		serializer:  NewPayloadSerializer(),
 		persistence: persistence,
 		logger:      logger,
 	}

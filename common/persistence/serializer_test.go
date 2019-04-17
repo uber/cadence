@@ -63,7 +63,7 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 	startWG.Add(1)
 	doneWG.Add(concurrency)
 
-	serializer := NewCadenceSerializer()
+	serializer := NewPayloadSerializer()
 
 	event0 := &workflow.HistoryEvent{
 		EventId:   common.Int64Ptr(999),

@@ -38,7 +38,7 @@ import (
 type (
 	sqlVisibilityStore struct {
 		sqlStore
-		serializer p.CadenceSerializer
+		serializer p.PayloadSerializer
 	}
 
 	visibilityPageToken struct {
@@ -58,7 +58,7 @@ func NewSQLVisibilityStore(cfg config.SQL, logger bark.Logger) (p.VisibilityMana
 			db:     db,
 			logger: logger,
 		},
-		serializer: p.NewCadenceSerializer(),
+		serializer: p.NewPayloadSerializer(),
 	}, nil
 }
 

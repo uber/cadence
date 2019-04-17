@@ -68,7 +68,7 @@ type (
 		cassandraStore
 		lowConslevel gocql.Consistency
 		persistence  p.VisibilityManager
-		serializer   p.CadenceSerializer
+		serializer   p.PayloadSerializer
 	}
 )
 
@@ -90,7 +90,7 @@ func NewVisibilityPersistenceV2(persistence p.VisibilityManager, cfg *config.Cas
 		cassandraStore: cassandraStore{session: session, logger: logger},
 		lowConslevel:   gocql.One,
 		persistence:    persistence,
-		serializer:     p.NewCadenceSerializer(),
+		serializer:     p.NewPayloadSerializer(),
 	}, nil
 }
 
