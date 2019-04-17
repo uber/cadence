@@ -22,7 +22,7 @@ package task
 
 import (
 	"errors"
-	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"go.uber.org/zap"
 	"math/rand"
 	"sync"
@@ -57,7 +57,7 @@ func (s *SequentialTaskProcessorSuite) SetupTest() {
 	s.coroutineSize = 20
 	zapLogger, err := zap.NewDevelopment()
 	s.Require().NoError(err)
-	logger := log.NewLogger(zapLogger)
+	logger := loggerimpl.NewLogger(zapLogger)
 	s.processor = NewSequentialTaskProcessor(
 		s.coroutineSize,
 		1000,

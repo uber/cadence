@@ -20,6 +20,7 @@
 package log
 
 import (
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"testing"
 
 	"go.uber.org/zap"
@@ -59,7 +60,7 @@ func BenchmarkLoggerWithFields(b *testing.B) {
 	if err != nil {
 		b.Fail()
 	}
-	logger := NewLogger(zapLogger)
+	logger := loggerimpl.NewLogger(zapLogger)
 
 	for i := 0; i < b.N; i++ {
 		lg := logger.WithTags(tag.WorkflowScheduleID(int64(i)), tag.ClusterName("this is a very long value: 1234567890 1234567890 1234567890 1234567890"))
@@ -88,7 +89,7 @@ func BenchmarkLoggerWithoutFields(b *testing.B) {
 	if err != nil {
 		b.Fail()
 	}
-	logger := NewLogger(zapLogger)
+	logger := loggerimpl.NewLogger(zapLogger)
 
 	for i := 0; i < b.N; i++ {
 		logger.Info("msg to print log, 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890",

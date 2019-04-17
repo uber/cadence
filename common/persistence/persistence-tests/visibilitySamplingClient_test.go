@@ -21,12 +21,12 @@
 package persistencetests
 
 import (
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
@@ -71,7 +71,7 @@ func (s *VisibilitySamplingSuite) SetupTest() {
 		VisibilityListMaxQPS:   dynamicconfig.GetIntPropertyFilteredByDomain(1),
 	}
 	s.metricClient = &mmocks.Client{}
-	s.client = p.NewVisibilitySamplingClient(s.persistence, config, s.metricClient, bark.NewNopLogger())
+	s.client = p.NewVisibilitySamplingClient(s.persistence, config, s.metricClient, loggerimpl.NewNopLogger())
 }
 
 func (s *VisibilitySamplingSuite) TearDownTest() {

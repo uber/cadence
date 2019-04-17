@@ -24,8 +24,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/common/log"
+
 	"github.com/gocql/gocql"
-	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	p "github.com/uber/cadence/common/persistence"
@@ -142,7 +143,7 @@ type (
 )
 
 // newVisibilityPersistence is used to create an instance of VisibilityManager implementation
-func newVisibilityPersistence(cfg config.Cassandra, logger bark.Logger) (p.VisibilityStore, error) {
+func newVisibilityPersistence(cfg config.Cassandra, logger log.Logger) (p.VisibilityStore, error) {
 	cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
 	cluster.Keyspace = cfg.Keyspace
 	cluster.ProtoVersion = cassandraProtoVersion

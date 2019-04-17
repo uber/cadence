@@ -88,7 +88,7 @@ func (s *activityReplicationTaskSuite) TearDownSuite() {
 func (s *activityReplicationTaskSuite) SetupTest() {
 	zapLogger, err := zap.NewDevelopment()
 	s.Require().NoError(err)
-	s.logger = log.NewLogger(zapLogger)
+	s.logger = loggerimpl.NewLogger(zapLogger)
 	s.config = &Config{
 		ReplicationTaskMaxRetry: dynamicconfig.GetIntPropertyFn(10),
 	}
@@ -115,7 +115,7 @@ func (s *historyReplicationTaskSuite) TearDownSuite() {
 func (s *historyReplicationTaskSuite) SetupTest() {
 	zapLogger, err := zap.NewDevelopment()
 	s.Require().NoError(err)
-	s.logger = log.NewLogger(zapLogger)
+	s.logger = loggerimpl.NewLogger(zapLogger)
 	s.config = &Config{
 		ReplicatorHistoryBufferRetryCount: dynamicconfig.GetIntPropertyFn(2),
 		ReplicationTaskMaxRetry:           dynamicconfig.GetIntPropertyFn(10),

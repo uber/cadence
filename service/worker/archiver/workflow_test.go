@@ -26,6 +26,7 @@ import (
 
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"go.uber.org/zap"
 
 	"github.com/stretchr/testify/suite"
@@ -59,7 +60,7 @@ func TestWorkflowSuite(t *testing.T) {
 
 func (s *workflowSuite) SetupTest() {
 	workflowTestMetrics = &mmocks.Client{}
-	workflowTestLogger = log.NewLogger(zap.NewNop())
+	workflowTestLogger = loggerimpl.NewLogger(zap.NewNop())
 	workflowTestArchiver = &MockArchiver{}
 	workflowTestPump = &PumpMock{}
 	workflowTestConfig = &Config{

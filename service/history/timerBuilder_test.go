@@ -21,8 +21,10 @@
 package history
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/mock"
-	"os"
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/tag"
 	"testing"
 	"time"
 
@@ -35,10 +37,9 @@ import (
 	"encoding/json"
 
 	"github.com/pborman/uuid"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/log"
 )
 
 type (
@@ -48,7 +49,7 @@ type (
 		mockShard       *shardContextImpl
 		mockEventsCache *MockEventsCache
 		config          *Config
-		logger          bark.Logger
+		logger          log.Logger
 	}
 )
 
@@ -66,12 +67,7 @@ func TestTimerBuilderSuite(t *testing.T) {
 }
 
 func (s *timerBuilderProcessorSuite) SetupSuite() {
-	if testing.Verbose() {
-		log.SetOutput(os.Stdout)
-	}
-	logger := log.New()
-	//logger.Level = log.DebugLevel
-	s.logger = bark.NewLoggerFromLogrus(logger)
+	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.config = NewDynamicConfigForTest()
 }
 
@@ -225,7 +221,7 @@ func (s *timerBuilderProcessorSuite) TestDecodeHistory() {
 	var historyEvents []*workflow.HistoryEvent
 	err = json.Unmarshal(data, &historyEvents)
 	if err != nil {
-		s.logger.Errorf("DecodeString failed with error: %+v", err)
+		s.logger.Error("DecodeString failed with error: %+v", tag.Error(err))
 		panic("Failed deserialization of history")
 	}
 
@@ -237,5 +233,5 @@ func (s *timerBuilderProcessorSuite) TestDecodeHistory() {
 
 func (s *timerBuilderProcessorSuite) TestDecodeKey() {
 	taskID := TimerSequenceID{VisibilityTimestamp: time.Unix(0, 0), TaskID: 1}
-	s.logger.Infof("Timer: %s, expiry: %v", TimerSequenceID(taskID), taskID.VisibilityTimestamp)
+	s.logger.Info(fmt.Sprintf("Timer: %s, expiry: %v", TimerSequenceID(taskID), taskID.VisibilityTimestamp))
 }

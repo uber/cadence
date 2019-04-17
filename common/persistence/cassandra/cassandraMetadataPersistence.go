@@ -22,9 +22,10 @@ package cassandra
 
 import (
 	"fmt"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 
 	"github.com/gocql/gocql"
-	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
@@ -100,7 +101,7 @@ type (
 )
 
 // newMetadataPersistence is used to create an instance of HistoryManager implementation
-func newMetadataPersistence(cfg config.Cassandra, clusterName string, logger bark.Logger) (p.MetadataStore,
+func newMetadataPersistence(cfg config.Cassandra, clusterName string, logger log.Logger) (p.MetadataStore,
 	error) {
 	cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
 	cluster.Keyspace = cfg.Keyspace
@@ -176,7 +177,7 @@ func (m *cassandraMetadataPersistence) CreateDomain(request *p.CreateDomainReque
 	if !applied {
 		// Domain already exist.  Delete orphan domain record before returning back to user
 		if errDelete := m.session.Query(templateDeleteDomainQuery, request.Info.ID).Exec(); errDelete != nil {
-			m.logger.Warnf("Unable to delete orphan domain record. Error: %v", errDelete)
+			m.logger.Warn("Unable to delete orphan domain record", tag.Error(errDelete))
 		}
 
 		if domain, ok := previous["domain"].(map[string]interface{}); ok {

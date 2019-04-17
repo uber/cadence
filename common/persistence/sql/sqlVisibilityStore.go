@@ -26,7 +26,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/uber-common/bark"
+	"github.com/uber/cadence/common/log"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	p "github.com/uber/cadence/common/persistence"
@@ -47,7 +48,7 @@ type (
 )
 
 // NewSQLVisibilityStore creates an instance of ExecutionStore
-func NewSQLVisibilityStore(cfg config.SQL, logger bark.Logger) (p.VisibilityStore, error) {
+func NewSQLVisibilityStore(cfg config.SQL, logger log.Logger) (p.VisibilityStore, error) {
 	db, err := storage.NewSQLDB(&cfg)
 	if err != nil {
 		return nil, err

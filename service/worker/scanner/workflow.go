@@ -22,6 +22,7 @@ package scanner
 
 import (
 	"context"
+	"github.com/uber/cadence/common/log/tag"
 	"time"
 
 	"go.uber.org/cadence"
@@ -86,12 +87,12 @@ func TaskListScannerWorkflow(ctx workflow.Context) error {
 func TaskListScavengerActivity(aCtx context.Context) error {
 	ctx := aCtx.Value(scannerContextKey).(scannerContext)
 	scavenger := tasklist.NewScavenger(ctx.taskDB, ctx.metricsClient, ctx.logger)
-	ctx.barkLogger.Info("Starting task list scavenger")
+	ctx.logger.Info("Starting task list scavenger")
 	scavenger.Start()
 	for scavenger.Alive() {
 		activity.RecordHeartbeat(aCtx)
 		if aCtx.Err() != nil {
-			ctx.barkLogger.Infof("activity context error, stopping scavenger: %v", aCtx.Err())
+			ctx.logger.Info("activity context error, stopping scavenger", tag.Error(aCtx.Err()))
 			scavenger.Stop()
 			return aCtx.Err()
 		}

@@ -23,13 +23,13 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/uber/cadence/common/log/loggerimpl"
 
 	"io/ioutil"
 
 	"strconv"
 
 	"github.com/gocql/gocql"
-	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -56,7 +56,7 @@ func AdminShowWorkflow(c *cli.Context) {
 	serializer := persistence.NewPayloadSerializer()
 	var history []*persistence.DataBlob
 	if len(wid) != 0 {
-		histV1 := cassp.NewHistoryPersistenceFromSession(session, bark.NewNopLogger())
+		histV1 := cassp.NewHistoryPersistenceFromSession(session, loggerimpl.NewNopLogger())
 		resp, err := histV1.GetWorkflowExecutionHistory(&persistence.InternalGetWorkflowExecutionHistoryRequest{
 			LastEventBatchVersion: common.EmptyVersion,
 			DomainID:              domainID,
@@ -74,7 +74,7 @@ func AdminShowWorkflow(c *cli.Context) {
 
 		history = resp.History
 	} else if len(tid) != 0 {
-		histV2 := cassp.NewHistoryV2PersistenceFromSession(session, bark.NewNopLogger())
+		histV2 := cassp.NewHistoryV2PersistenceFromSession(session, loggerimpl.NewNopLogger())
 		resp, err := histV2.ReadHistoryBranch(&persistence.InternalReadHistoryBranchRequest{
 			TreeID:    tid,
 			BranchID:  bid,
@@ -204,7 +204,7 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		}
 		fmt.Println("deleting history events for ...")
 		prettyPrintJSONObject(branchInfo)
-		histV2 := cassp.NewHistoryV2PersistenceFromSession(session, bark.NewNopLogger())
+		histV2 := cassp.NewHistoryV2PersistenceFromSession(session, loggerimpl.NewNopLogger())
 		err = histV2.DeleteHistoryBranch(&persistence.InternalDeleteHistoryBranchRequest{
 			BranchInfo: branchInfo,
 			ShardID:    shardIDInt,
@@ -217,7 +217,7 @@ func AdminDeleteWorkflow(c *cli.Context) {
 			}
 		}
 	} else {
-		histV1 := cassp.NewHistoryPersistenceFromSession(session, bark.NewNopLogger())
+		histV1 := cassp.NewHistoryPersistenceFromSession(session, loggerimpl.NewNopLogger())
 		err = histV1.DeleteWorkflowExecutionHistory(&persistence.DeleteWorkflowExecutionHistoryRequest{
 			DomainID: domainID,
 			Execution: shared.WorkflowExecution{
@@ -234,7 +234,7 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		}
 	}
 
-	exeStore := cassp.NewWorkflowExecutionPersistenceFromSession(session, shardIDInt, bark.NewNopLogger())
+	exeStore := cassp.NewWorkflowExecutionPersistenceFromSession(session, shardIDInt, loggerimpl.NewNopLogger())
 	req := &persistence.DeleteWorkflowExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: wid,

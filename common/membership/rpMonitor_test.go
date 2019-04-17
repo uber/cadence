@@ -21,14 +21,12 @@
 package membership
 
 import (
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"testing"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
 )
 
 type RpoSuite struct {
@@ -50,7 +48,7 @@ func (s *RpoSuite) TestRingpopMonitor() {
 
 	services := []string{"rpm-test"}
 
-	logger := bark.NewLoggerFromLogrus(log.New())
+	logger := loggerimpl.NewNopLogger()
 	rpm := NewRingpopMonitor(services, testService.rings[0], logger)
 	err := rpm.Start()
 	s.Nil(err, "Failed to start ringpop monitor")

@@ -21,16 +21,16 @@
 package history
 
 import (
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/uber/cadence/common/log"
 
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
 
 	"github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -50,7 +50,7 @@ type (
 		builder         *historyBuilder
 		mockShard       *shardContextImpl
 		mockEventsCache *MockEventsCache
-		logger          bark.Logger
+		logger          log.Logger
 	}
 )
 
@@ -60,7 +60,7 @@ func TestHistoryBuilderSuite(t *testing.T) {
 }
 
 func (s *historyBuilderSuite) SetupTest() {
-	s.logger = bark.NewLoggerFromLogrus(log.New())
+	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 	s.domainID = "history-builder-test-domain"

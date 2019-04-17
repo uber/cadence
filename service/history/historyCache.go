@@ -22,19 +22,19 @@ package history
 
 import (
 	"context"
+	"github.com/uber/cadence/common/log/tag"
 	"sync/atomic"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/definition"
-	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 
 	"github.com/pborman/uuid"
-	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log"
 )
 
 type (
@@ -45,7 +45,7 @@ type (
 		shard            ShardContext
 		executionManager persistence.ExecutionManager
 		disabled         bool
-		logger           bark.Logger
+		logger           log.Logger
 		metricsClient    metrics.Client
 		config           *Config
 	}
@@ -67,11 +67,9 @@ func newHistoryCache(shard ShardContext) *historyCache {
 		Cache:            cache.New(config.HistoryCacheMaxSize(), opts),
 		shard:            shard,
 		executionManager: shard.GetExecutionManager(),
-		logger: shard.GetLogger().WithFields(bark.Fields{
-			logging.TagWorkflowComponent: logging.TagValueHistoryCacheComponent,
-		}),
-		metricsClient: shard.GetMetricsClient(),
-		config:        config,
+		logger:           shard.GetLogger().WithTags(tag.ComponentHistoryCache),
+		metricsClient:    shard.GetMetricsClient(),
+		config:           config,
 	}
 }
 

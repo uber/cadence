@@ -21,16 +21,15 @@
 package dynamicconfig
 
 import (
+	"github.com/uber/cadence/common/log"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"github.com/uber-common/bark"
 )
 
 func BenchmarkGetIntProperty(b *testing.B) {
 	client := newInMemoryClient()
-	cln := NewCollection(client, bark.NewLoggerFromLogrus(logrus.New()))
+	cln := NewCollection(client, log.NewNoop())
 	key := MatchingMaxTaskBatchSize
 	for i := 0; i < b.N; i++ {
 		size := cln.GetIntProperty(key, 10)

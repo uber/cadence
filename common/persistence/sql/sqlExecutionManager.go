@@ -22,13 +22,13 @@ package sql
 
 import (
 	"fmt"
+	"github.com/uber/cadence/common/log"
 	"math"
 	"time"
 
 	"database/sql"
 	"encoding/json"
 
-	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
@@ -1358,7 +1358,7 @@ func (m *sqlExecutionManager) RangeCompleteTimerTask(request *p.RangeCompleteTim
 }
 
 // NewSQLExecutionStore creates an instance of ExecutionStore
-func NewSQLExecutionStore(db sqldb.Interface, logger bark.Logger, shardID int) (p.ExecutionStore, error) {
+func NewSQLExecutionStore(db sqldb.Interface, logger log.Logger, shardID int) (p.ExecutionStore, error) {
 	return &sqlExecutionManager{
 		shardID: shardID,
 		sqlStore: sqlStore{

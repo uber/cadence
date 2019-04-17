@@ -25,9 +25,9 @@ import (
 	"encoding/binary"
 	"encoding/gob"
 	"fmt"
+	"github.com/uber/cadence/common/log"
 
 	"github.com/go-sql-driver/mysql"
-	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
@@ -36,7 +36,7 @@ import (
 // TODO: Rename all SQL Managers to Stores
 type sqlStore struct {
 	db     sqldb.Interface
-	logger bark.Logger
+	logger log.Logger
 }
 
 func (m *sqlStore) GetName() string {

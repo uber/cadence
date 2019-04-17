@@ -22,14 +22,13 @@ package dynamicconfig
 
 import (
 	"errors"
+	"github.com/uber/cadence/common/log"
 	"sync/atomic"
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
 )
 
 type inMemoryClient struct {
@@ -127,7 +126,8 @@ func TestConfigSuite(t *testing.T) {
 
 func (s *configSuite) SetupSuite() {
 	s.client = newInMemoryClient()
-	s.cln = NewCollection(s.client, bark.NewLoggerFromLogrus(logrus.New()))
+	logger := log.NewNoop()
+	s.cln = NewCollection(s.client, logger)
 }
 
 func (s *configSuite) TestGetProperty() {

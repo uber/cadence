@@ -22,6 +22,7 @@ package replicator
 
 import (
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"go.uber.org/zap"
 	"testing"
 
@@ -60,7 +61,7 @@ func (s *domainReplicatorSuite) SetupTest() {
 	s.TestBase.Setup()
 	zapLogger, err := zap.NewDevelopment()
 	s.Require().NoError(err)
-	logger := log.NewLogger(zapLogger)
+	logger := loggerimpl.NewLogger(zapLogger)
 	s.domainReplicator = NewDomainReplicator(
 		s.MetadataManagerV2,
 		logger,

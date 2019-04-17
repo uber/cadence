@@ -23,6 +23,7 @@ package replicator
 import (
 	"errors"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"go.uber.org/zap"
 	"testing"
 	"time"
@@ -79,7 +80,7 @@ func (s *replicationTaskProcessorSuite) TearDownSuite() {
 func (s *replicationTaskProcessorSuite) SetupTest() {
 	zapLogger, err := zap.NewDevelopment()
 	s.Require().NoError(err)
-	s.logger = log.NewLogger(zapLogger)
+	s.logger = loggerimpl.NewLogger(zapLogger)
 	s.config = &Config{
 		ReplicatorTaskConcurrency: dynamicconfig.GetIntPropertyFn(10),
 	}

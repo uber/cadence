@@ -21,13 +21,14 @@
 package matching
 
 import (
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/tag"
 	"time"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 
-	"github.com/uber/cadence/common/logging"
 	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
 )
 
@@ -85,8 +86,8 @@ type Service struct {
 // NewService builds a new cadence-matching service
 func NewService(params *service.BootstrapParams) common.Daemon {
 	params.UpdateLoggerWithServiceName(common.MatchingServiceName)
-	config := NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, params.BarkLogger))
-	params.ThrottledBarkLogger = logging.NewThrottledLogger(params.BarkLogger, config.ThrottledLogRPS)
+	config := NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, params.Logger))
+	params.ThrottledLogger = loggerimpl.NewThrottledLogger(params.Logger, config.ThrottledLogRPS)
 	return &Service{
 		params: params,
 		config: config,
@@ -98,9 +99,9 @@ func NewService(params *service.BootstrapParams) common.Daemon {
 func (s *Service) Start() {
 
 	var params = s.params
-	var log = params.BarkLogger
+	var log = params.Logger
 
-	log.Infof("%v starting", common.MatchingServiceName)
+	log.Info("starting", tag.Service(common.MatchingServiceName))
 
 	base := service.New(params)
 
@@ -110,18 +111,18 @@ func (s *Service) Start() {
 
 	taskPersistence, err := pFactory.NewTaskManager()
 	if err != nil {
-		log.Fatalf("failed to create task persistence: %v", err)
+		log.Fatal("failed to create task persistence", tag.Error(err))
 	}
 
 	metadata, err := pFactory.NewMetadataManager(persistencefactory.MetadataV1V2)
 	if err != nil {
-		log.Fatalf("failed to create metadata manager: %v", err)
+		log.Fatal("failed to create metadata manager", tag.Error(err))
 	}
 
 	handler := NewHandler(base, s.config, taskPersistence, metadata)
 	handler.Start()
 
-	log.Infof("%v started", common.MatchingServiceName)
+	log.Info("started", tag.Service(common.MatchingServiceName))
 	<-s.stopC
 	base.Stop()
 }
@@ -132,5 +133,5 @@ func (s *Service) Stop() {
 	case s.stopC <- struct{}{}:
 	default:
 	}
-	s.params.BarkLogger.Infof("%v stopped", common.MatchingServiceName)
+	s.params.Logger.Info("stopped", tag.Service(common.MatchingServiceName))
 }

@@ -22,16 +22,16 @@ package history
 
 import (
 	"fmt"
+	"github.com/uber/cadence/common/log/tag"
 	"time"
 
 	"github.com/uber/cadence/common/xdc"
 
-	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -48,7 +48,7 @@ type (
 		historyService          *historyEngineImpl
 		cache                   *historyCache
 		timerTaskFilter         timerTaskFilter
-		logger                  bark.Logger
+		logger                  log.Logger
 		metricsClient           metrics.Client
 		clusterName             string
 		timerGate               RemoteTimerGate
@@ -60,7 +60,7 @@ type (
 
 func newTimerQueueStandbyProcessor(shard ShardContext, historyService *historyEngineImpl, clusterName string,
 	taskAllocator taskAllocator, historyRereplicator xdc.HistoryRereplicator, visibilityProducer messaging.Producer,
-	logger bark.Logger) *timerQueueStandbyProcessorImpl {
+	logger log.Logger) *timerQueueStandbyProcessorImpl {
 
 	timeNow := func() time.Time {
 		return shard.GetCurrentTime(clusterName)
@@ -68,9 +68,7 @@ func newTimerQueueStandbyProcessor(shard ShardContext, historyService *historyEn
 	updateShardAckLevel := func(ackLevel TimerSequenceID) error {
 		return shard.UpdateTimerClusterAckLevel(clusterName, ackLevel.VisibilityTimestamp)
 	}
-	logger = logger.WithFields(bark.Fields{
-		logging.TagWorkflowCluster: clusterName,
-	})
+	logger = logger.WithTags(tag.ClusterName(clusterName))
 	timerTaskFilter := func(timer *persistence.TimerTaskInfo) (bool, error) {
 		return taskAllocator.verifyStandbyTask(clusterName, timer.DomainID, timer)
 	}
@@ -211,7 +209,7 @@ func (t *timerQueueStandbyProcessorImpl) processExpiredUserTimer(timerTask *pers
 		for _, td := range tBuilder.GetUserTimers(msBuilder) {
 			hasTimer, _ := tBuilder.GetUserTimer(td.TimerID)
 			if !hasTimer {
-				t.logger.Debugf("Failed to find in memory user timer: %s", td.TimerID)
+				t.logger.Debug(fmt.Sprintf("Failed to find in memory user timer: %s", td.TimerID))
 				return fmt.Errorf("Failed to find in memory user timer: %s", td.TimerID)
 			}
 
@@ -532,13 +530,13 @@ func (t *timerQueueStandbyProcessorImpl) fetchHistoryFromRemote(timerTask *persi
 		timerTask.RunID, common.EndEventID, // use common.EndEventID since we do not know where is the end
 	)
 	if err != nil {
-		t.logger.WithFields(bark.Fields{
-			logging.TagDomainID:            timerTask.DomainID,
-			logging.TagWorkflowExecutionID: timerTask.WorkflowID,
-			logging.TagWorkflowRunID:       timerTask.RunID,
-			logging.TagNextEventID:         nextEventID,
-			logging.TagSourceCluster:       t.clusterName,
-		}).Error("Error re-replicating history from remote.")
+		t.logger.Error("Error re-replicating history from remote.",
+			tag.WorkflowID(timerTask.RunID),
+			tag.WorkflowRunID(timerTask.WorkflowID),
+			tag.WorkflowDomainID(timerTask.DomainID),
+			tag.ShardID(t.shard.GetShardID()),
+			tag.WorkflowNextEventID(nextEventID),
+			tag.ClusterName(t.clusterName))
 	}
 	return err
 }

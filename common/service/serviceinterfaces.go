@@ -23,7 +23,6 @@ package service
 import (
 	"github.com/uber/cadence/common/log"
 
-	"github.com/uber-common/bark"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/membership"
@@ -44,12 +43,8 @@ type (
 		// Stop stops the service
 		Stop()
 
-		//Deprecated
-		GetBarkLogger() bark.Logger
-		//Deprecated
-		GetThrottledBarkLogger() bark.Logger
-
 		GetLogger() log.Logger
+
 		GetThrottledLogger() log.Logger
 
 		GetMetricsClient() metrics.Client

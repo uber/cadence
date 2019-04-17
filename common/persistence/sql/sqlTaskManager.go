@@ -22,8 +22,7 @@ package sql
 
 import (
 	"fmt"
-
-	"github.com/uber-common/bark"
+	"github.com/uber/cadence/common/log"
 
 	"database/sql"
 	"time"
@@ -49,7 +48,7 @@ var (
 )
 
 // newTaskPersistence creates a new instance of TaskManager
-func newTaskPersistence(cfg config.SQL, log bark.Logger) (persistence.TaskManager, error) {
+func newTaskPersistence(cfg config.SQL, log log.Logger) (persistence.TaskManager, error) {
 	var db, err = storage.NewSQLDB(&cfg)
 	if err != nil {
 		return nil, err

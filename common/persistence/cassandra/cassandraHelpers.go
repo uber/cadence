@@ -30,7 +30,6 @@ import (
 
 	"github.com/gocql/gocql"
 	log "github.com/sirupsen/logrus"
-	"github.com/uber/cadence/common/logging"
 )
 
 const cassandraPersistenceName = "cassandra"
@@ -71,7 +70,7 @@ func CreateCassandraKeyspace(s *gocql.Session, keyspace string, replicas int, ov
 	err = s.Query(fmt.Sprintf(`CREATE KEYSPACE IF NOT EXISTS %s WITH replication = {
 		'class' : 'SimpleStrategy', 'replication_factor' : %d}`, keyspace, replicas)).Exec()
 	if err != nil {
-		log.WithField(logging.TagErr, err).Error(`create keyspace error`)
+		log.Error(`create keyspace error`, err)
 		return
 	}
 	log.WithField(`keyspace`, keyspace).Debug(`created namespace`)
@@ -83,7 +82,7 @@ func CreateCassandraKeyspace(s *gocql.Session, keyspace string, replicas int, ov
 func DropCassandraKeyspace(s *gocql.Session, keyspace string) (err error) {
 	err = s.Query(fmt.Sprintf("DROP KEYSPACE IF EXISTS %s", keyspace)).Exec()
 	if err != nil {
-		log.WithField(logging.TagErr, err).Error(`drop keyspace error`)
+		log.Error(`drop keyspace error`, err)
 		return
 	}
 	log.WithField(`keyspace`, keyspace).Info(`dropped namespace`)

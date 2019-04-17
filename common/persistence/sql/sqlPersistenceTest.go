@@ -29,7 +29,6 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
-	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/service/config"
 )
 
@@ -115,7 +114,7 @@ func (s *TestCluster) CreateSession() {
 	var err error
 	s.db, err = newConnection(s.cfg)
 	if err != nil {
-		log.WithField(logging.TagErr, err).Fatal(`CreateSession`)
+		log.Fatal(`CreateSession`, err)
 	}
 }
 
