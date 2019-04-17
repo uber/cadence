@@ -56,7 +56,7 @@ func NewThrottledLogger(logger Logger, rps dynamicconfig.IntPropertyFn) Logger {
 			skip:      skipForThrottleLogger,
 		}
 	} else {
-		logger.Warn("ReplayLogger may not emit callat tag correctly")
+		logger.Warn("ReplayLogger may not emit callat tag correctly because the logger passed in is not loggerImpl")
 		log = logger
 	}
 

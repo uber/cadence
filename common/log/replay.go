@@ -44,7 +44,7 @@ func NewReplayLogger(logger Logger, ctx workflow.Context, enableLogInReplay bool
 			skip:      skipForReplayLogger,
 		}
 	} else {
-		logger.Warn("ReplayLogger may not emit callat tag correctly")
+		logger.Warn("ReplayLogger may not emit callat tag correctly because the logger passed in is not loggerImpl")
 	}
 	return &replayLogger{
 		logger:            logger,
