@@ -3274,7 +3274,7 @@ func validateStartChildExecutionAttributes(parentInfo *persistence.WorkflowExecu
 }
 
 func validateStartWorkflowExecutionRequest(request *workflow.StartWorkflowExecutionRequest, maxIDLengthLimit int) error {
-	if len(common.StringDefault(request.RequestId)) == 0 {
+	if len(request.GetRequestId()) == 0 {
 		return &workflow.BadRequestError{Message: "Missing request ID."}
 	}
 	if request.ExecutionStartToCloseTimeoutSeconds == nil || request.GetExecutionStartToCloseTimeoutSeconds() <= 0 {
