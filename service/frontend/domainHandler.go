@@ -25,18 +25,14 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/uber/cadence/common/log/tag"
-
-	"github.com/uber/cadence/common/log"
-
-	"github.com/uber/cadence/common/blobstore"
-	"github.com/uber/cadence/common/cluster"
-
 	"github.com/pborman/uuid"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
-	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -630,7 +626,7 @@ func (d *domainHandlerImpl) mergeDomainData(old map[string]string, new map[strin
 func (d *domainHandlerImpl) validateClusterName(clusterName string) error {
 	if _, ok := d.clusterMetadata.GetAllClusterFailoverVersions()[clusterName]; !ok {
 		errMsg := "Invalid cluster name: %s"
-		return &gen.BadRequestError{Message: fmt.Sprintf(errMsg, clusterName)}
+		return &shared.BadRequestError{Message: fmt.Sprintf(errMsg, clusterName)}
 	}
 	return nil
 }
