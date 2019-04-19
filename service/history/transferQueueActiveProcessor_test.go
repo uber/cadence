@@ -629,7 +629,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_HasParent(
 		CompletionEvent:    event,
 	}).Return(nil).Once()
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything).Return(nil).Once()
-	s.mockProducer.On("Publish", mock.Anything).Return(nil).Once()
 
 	_, err := s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
@@ -682,7 +681,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_NoParent()
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything).Return(nil).Once()
-	s.mockProducer.On("Publish", mock.Anything).Return(nil).Once()
 
 	_, err := s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
@@ -1498,7 +1496,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessRecordWorkflowStartedTask
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionStarted", s.createRecordWorkflowExecutionStartedRequest(transferTask, msBuilder, backoffSeconds)).Once().Return(nil)
-	s.mockProducer.On("Publish", mock.Anything).Return(nil).Once()
 
 	_, err := s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
@@ -1561,6 +1558,7 @@ func (s *transferQueueActiveProcessorSuite) createRecordWorkflowExecutionStarted
 		StartTimestamp:     executionInfo.StartTimestamp.UnixNano(),
 		ExecutionTimestamp: executionTimestamp.UnixNano(),
 		WorkflowTimeout:    int64(executionInfo.WorkflowTimeout),
+		TaskID:             task.TaskID,
 	}
 }
 

@@ -583,7 +583,6 @@ func (s *transferQueueStandbyProcessorSuite) TestProcessCloseExecution() {
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything).Return(nil).Once()
-	s.mockProducer.On("Publish", mock.Anything).Return(nil).Once()
 
 	_, err := s.transferQueueStandbyProcessor.process(transferTask, true)
 	s.Nil(err)
@@ -1052,8 +1051,8 @@ func (s *transferQueueStandbyProcessorSuite) TestProcessRecordWorkflowStartedTas
 		WorkflowTypeName: executionInfo.WorkflowTypeName,
 		StartTimestamp:   executionInfo.StartTimestamp.UnixNano(),
 		WorkflowTimeout:  int64(executionInfo.WorkflowTimeout),
+		TaskID:           taskID,
 	}).Return(nil).Once()
-	s.mockProducer.On("Publish", mock.Anything).Return(nil).Once()
 	_, err := s.transferQueueStandbyProcessor.process(transferTask, true)
 	s.Nil(err)
 }
