@@ -32,7 +32,6 @@ import (
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/xdc"
@@ -54,7 +53,7 @@ type (
 		metricsClient         metrics.Client
 		historyService        *historyEngineImpl
 		visibilityMgr         persistence.VisibilityManager
-		visibilityProducer    messaging.Producer
+		esVisibilityMgr       persistence.VisibilityManager
 		matchingClient        matching.Client
 		historyClient         history.Client
 		ackLevel              int64
@@ -68,7 +67,7 @@ type (
 )
 
 func newTransferQueueProcessor(shard ShardContext, historyService *historyEngineImpl,
-	visibilityMgr persistence.VisibilityManager, visibilityProducer messaging.Producer,
+	visibilityMgr persistence.VisibilityManager, esVisibilityMgr persistence.VisibilityManager,
 	matchingClient matching.Client, historyClient history.Client, logger log.Logger) *transferQueueProcessorImpl {
 	logger = logger.WithTags(tag.ComponentTransferQueue)
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
@@ -88,7 +87,7 @@ func newTransferQueueProcessor(shard ShardContext, historyService *historyEngine
 				logger,
 			)
 			standbyTaskProcessors[clusterName] = newTransferQueueStandbyProcessor(
-				clusterName, shard, historyService, visibilityMgr, visibilityProducer,
+				clusterName, shard, historyService, visibilityMgr, esVisibilityMgr,
 				matchingClient, taskAllocator, historyRereplicator, logger,
 			)
 		}
@@ -103,13 +102,13 @@ func newTransferQueueProcessor(shard ShardContext, historyService *historyEngine
 		metricsClient:         historyService.metricsClient,
 		historyService:        historyService,
 		visibilityMgr:         visibilityMgr,
-		visibilityProducer:    visibilityProducer,
+		esVisibilityMgr:       esVisibilityMgr,
 		matchingClient:        matchingClient,
 		historyClient:         historyClient,
 		ackLevel:              shard.GetTransferAckLevel(),
 		logger:                logger,
 		shutdownChan:          make(chan struct{}),
-		activeTaskProcessor:   newTransferQueueActiveProcessor(shard, historyService, visibilityMgr, visibilityProducer, matchingClient, historyClient, taskAllocator, logger),
+		activeTaskProcessor:   newTransferQueueActiveProcessor(shard, historyService, visibilityMgr, esVisibilityMgr, matchingClient, historyClient, taskAllocator, logger),
 		standbyTaskProcessors: standbyTaskProcessors,
 	}
 }
@@ -180,7 +179,7 @@ func (t *transferQueueProcessorImpl) FailoverDomain(domainIDs map[string]struct{
 		tag.MinLevel(minLevel),
 		tag.MaxLevel(maxLevel))
 	updateShardAckLevel, failoverTaskProcessor := newTransferQueueFailoverProcessor(
-		t.shard, t.historyService, t.visibilityMgr, t.visibilityProducer, t.matchingClient, t.historyClient,
+		t.shard, t.historyService, t.visibilityMgr, t.esVisibilityMgr, t.matchingClient, t.historyClient,
 		domainIDs, standbyClusterName, minLevel, maxLevel, t.taskAllocator, t.logger,
 	)
 

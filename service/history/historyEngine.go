@@ -65,6 +65,7 @@ type (
 		historyV2Mgr         persistence.HistoryV2Manager
 		executionManager     persistence.ExecutionManager
 		visibilityMgr        persistence.VisibilityManager
+		esVisibilityMgr      persistence.VisibilityManager
 		txProcessor          transferQueueProcessor
 		timerProcessor       timerQueueProcessor
 		taskAllocator        taskAllocator
@@ -145,7 +146,7 @@ func NewEngineWithShardContext(
 	publicClient workflowserviceclient.Interface,
 	historyEventNotifier historyEventNotifier,
 	publisher messaging.Producer,
-	visibilityProducer messaging.Producer,
+	esVisibilityMgr persistence.VisibilityManager,
 	config *Config,
 ) Engine {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
@@ -167,6 +168,7 @@ func NewEngineWithShardContext(
 		historyV2Mgr:         historyV2Manager,
 		executionManager:     executionManager,
 		visibilityMgr:        visibilityMgr,
+		esVisibilityMgr:      esVisibilityMgr,
 		tokenSerializer:      common.NewJSONTaskTokenSerializer(),
 		historyCache:         historyCache,
 		logger:               logger.WithTags(tag.ComponentMatchingEngine),
@@ -177,8 +179,8 @@ func NewEngineWithShardContext(
 		archivalClient:       archiver.NewClient(shard.GetMetricsClient(), shard.GetLogger(), publicClient, shard.GetConfig().NumArchiveSystemWorkflows),
 	}
 
-	txProcessor := newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, visibilityProducer, matching, historyClient, logger)
-	historyEngImpl.timerProcessor = newTimerQueueProcessor(shard, historyEngImpl, matching, visibilityProducer, logger)
+	txProcessor := newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, esVisibilityMgr, matching, historyClient, logger)
+	historyEngImpl.timerProcessor = newTimerQueueProcessor(shard, historyEngImpl, matching, logger)
 	historyEngImpl.txProcessor = txProcessor
 	shardWrapper.txProcessor = txProcessor
 
@@ -2682,11 +2684,19 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 	return e.resetor.ResetWorkflowExecution(ctx, resetRequest)
 }
 
-func (e *historyEngineImpl) DeleteExecutionFromVisibility(domainID string, runID string) error {
-	return e.visibilityMgr.DeleteWorkflowExecution(&persistence.VisibilityDeleteWorkflowExecutionRequest{
-		DomainID: domainID,
-		RunID:    runID,
-	})
+func (e *historyEngineImpl) DeleteExecutionFromVisibility(task *persistence.TimerTaskInfo) error {
+	request := &persistence.VisibilityDeleteWorkflowExecutionRequest{
+		DomainID:   task.DomainID,
+		WorkflowID: task.WorkflowID,
+		RunID:      task.RunID,
+		TaskID:     task.TaskID,
+	}
+	if e.esVisibilityMgr != nil { // delete from es
+		if err := e.esVisibilityMgr.DeleteWorkflowExecution(request); err != nil {
+			return err
+		}
+	}
+	return e.visibilityMgr.DeleteWorkflowExecution(request) // delete from db
 }
 
 type updateWorkflowAction struct {

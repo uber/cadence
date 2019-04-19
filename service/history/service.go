@@ -27,6 +27,8 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/elasticsearch"
 	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
@@ -296,6 +298,16 @@ func (s *Service) Start() {
 		log.Fatal("failed to create visibility manager", tag.Error(err))
 	}
 
+	var esVisibility persistence.VisibilityManager
+	if params.ESConfig.Enable {
+		visibilityProducer, err := s.params.MessagingClient.NewProducer(common.VisibilityAppName)
+		if err != nil {
+			log.Fatal("Creating visibility producer failed", tag.Error(err))
+		}
+		esVisibility = elasticsearch.NewESVisibilityManager("", nil, nil, visibilityProducer,
+			s.metricsClient, log)
+	}
+
 	history, err := pFactory.NewHistoryManager()
 	if err != nil {
 		log.Fatal("Creating history manager persistence failed", tag.Error(err))
@@ -306,7 +318,7 @@ func (s *Service) Start() {
 		log.Fatal("Creating historyV2 manager persistence failed", tag.Error(err))
 	}
 
-	handler := NewHandler(base, s.config, shardMgr, metadata, visibility, history, historyV2, pFactory, params.PublicClient)
+	handler := NewHandler(base, s.config, shardMgr, metadata, visibility, esVisibility, history, historyV2, pFactory, params.PublicClient)
 	handler.Start()
 
 	log.Info("started", tag.Service(common.HistoryServiceName))

@@ -26,7 +26,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/xdc"
@@ -51,7 +50,7 @@ type (
 )
 
 func newTransferQueueStandbyProcessor(clusterName string, shard ShardContext, historyService *historyEngineImpl,
-	visibilityMgr persistence.VisibilityManager, visibilityProducer messaging.Producer,
+	visibilityMgr persistence.VisibilityManager, esVisibilityMgr persistence.VisibilityManager,
 	matchingClient matching.Client, taskAllocator taskAllocator, historyRereplicator xdc.HistoryRereplicator,
 	logger log.Logger) *transferQueueStandbyProcessorImpl {
 	config := shard.GetConfig()
@@ -97,7 +96,7 @@ func newTransferQueueStandbyProcessor(clusterName string, shard ShardContext, hi
 		logger:             logger,
 		metricsClient:      historyService.metricsClient,
 		transferQueueProcessorBase: newTransferQueueProcessorBase(
-			shard, options, visibilityMgr, visibilityProducer, matchingClient,
+			shard, options, visibilityMgr, esVisibilityMgr, matchingClient,
 			maxReadAckLevel, updateClusterAckLevel, transferQueueShutdown, logger,
 		),
 		historyRereplicator: historyRereplicator,
