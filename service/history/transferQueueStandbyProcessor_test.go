@@ -150,7 +150,7 @@ func (s *transferQueueStandbyProcessorSuite) SetupTest() {
 	s.mockHistoryEngine = h
 	s.clusterName = cluster.TestAlternativeClusterName
 	s.transferQueueStandbyProcessor = newTransferQueueStandbyProcessor(
-		s.clusterName, s.mockShard, h, s.mockVisibilityMgr, s.mockProducer, s.mockMatchingClient,
+		s.clusterName, s.mockShard, h, s.mockVisibilityMgr, nil, s.mockMatchingClient,
 		newTaskAllocator(s.mockShard), s.mockHistoryRereplicator, s.logger,
 	)
 	s.mockQueueAckMgr = &MockQueueAckMgr{}
@@ -1042,8 +1042,6 @@ func (s *transferQueueStandbyProcessorSuite) TestProcessRecordWorkflowStartedTas
 
 	persistenceMutableState := createMutableState(msBuilder)
 	executionInfo := msBuilder.GetExecutionInfo()
-	domainEntry, _ := s.mockShard.GetDomainCache().GetDomainByID(domainID)
-	encoding := s.mockShard.GetEncoding(domainEntry)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionStarted", &persistence.RecordWorkflowExecutionStartedRequest{
 		DomainUUID: executionInfo.DomainID,
@@ -1054,7 +1052,6 @@ func (s *transferQueueStandbyProcessorSuite) TestProcessRecordWorkflowStartedTas
 		WorkflowTypeName: executionInfo.WorkflowTypeName,
 		StartTimestamp:   executionInfo.StartTimestamp.UnixNano(),
 		WorkflowTimeout:  int64(executionInfo.WorkflowTimeout),
-		Encoding:         encoding,
 	}).Return(nil).Once()
 	s.mockProducer.On("Publish", mock.Anything).Return(nil).Once()
 	_, err := s.transferQueueStandbyProcessor.process(transferTask, true)
