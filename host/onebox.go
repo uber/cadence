@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
@@ -590,8 +591,10 @@ func (c *cadenceImpl) createSystemDomain() error {
 	}
 	_, err := c.metadataMgrV2.CreateDomain(&persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
-			ID:   "32049b68787240948e63d0dd59896a83",
-			Name: "cadence-system",
+			ID:          uuid.New(),
+			Name:        "cadence-system",
+			Status:      persistence.DomainStatusRegistered,
+			Description: "Cadence system domain",
 		},
 		Config: &persistence.DomainConfig{
 			Retention:      1,

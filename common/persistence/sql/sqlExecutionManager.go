@@ -242,11 +242,10 @@ func (m *sqlExecutionManager) GetWorkflowExecution(request *p.GetWorkflowExecuti
 		state.ReplicationState.CurrentVersion = info.GetCurrentVersion()
 		state.ReplicationState.LastWriteVersion = execution.LastWriteVersion
 		state.ReplicationState.LastWriteEventID = info.GetLastWriteEventID()
-	}
-
-	state.ReplicationState.LastReplicationInfo = make(map[string]*p.ReplicationInfo, len(info.LastReplicationInfo))
-	for k, v := range info.LastReplicationInfo {
-		state.ReplicationState.LastReplicationInfo[k] = &p.ReplicationInfo{Version: v.GetVersion(), LastEventID: v.GetLastEventID()}
+		state.ReplicationState.LastReplicationInfo = make(map[string]*p.ReplicationInfo, len(info.LastReplicationInfo))
+		for k, v := range info.LastReplicationInfo {
+			state.ReplicationState.LastReplicationInfo[k] = &p.ReplicationInfo{Version: v.GetVersion(), LastEventID: v.GetLastEventID()}
+		}
 	}
 
 	if info.ParentDomainID != nil {
