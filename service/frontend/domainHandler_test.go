@@ -21,23 +21,33 @@
 package frontend
 
 import (
+	"context"
 	"log"
 	"os"
 	"testing"
 
+	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
+	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mocks"
+	"github.com/uber/cadence/common/persistence"
+	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	dc "github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
-	domainHandlerSuite struct {
+	domainHandlerCommonSuite struct {
 		suite.Suite
+		persistencetests.TestBase
+
 		config               *Config
 		logger               log.Logger
-		mockMetadataMgr      *mocks.MetadataManager
+		metadataMgr          persistence.MetadataManager
 		mockClusterMetadata  *mocks.ClusterMetadata
 		mockBlobstoreClient  *mocks.BlobstoreClient
 		mockProducer         *mocks.KafkaProducer
@@ -47,39 +57,44 @@ type (
 	}
 )
 
-func TestDomainHandlerSuite(t *testing.T) {
-	s := new(domainHandlerSuite)
+func TestDomainHandlerCommonSuite(t *testing.T) {
+	s := new(domainHandlerCommonSuite)
 	suite.Run(t, s)
 }
 
-func (s *domainHandlerSuite) SetupSuite() {
+func (s *domainHandlerCommonSuite) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
+
+	s.TestBase = persistencetests.NewTestBaseWithCassandra(&persistencetests.TestBaseOptions{
+		ClusterMetadata: cluster.GetTestClusterMetadata(true, true, false),
+	})
+	s.TestBase.Setup()
 }
 
-func (s *domainHandlerSuite) TearDownSuite() {
-
+func (s *domainHandlerCommonSuite) TearDownSuite() {
+	s.TestBase.TearDownWorkflowStore()
 }
 
-func (s *domainHandlerSuite) SetupTest() {
+func (s *domainHandlerCommonSuite) SetupTest() {
 	logger := loggerimpl.NewNopLogger()
 	s.config = NewConfig(dc.NewCollection(dc.NewNopClient(), logger), numHistoryShards, false, false)
-	s.mockMetadataMgr = &mocks.MetadataManager{}
-	s.mockClusterMetadata = &mocks.ClusterMetadata{}
+	s.metadataMgr = s.TestBase.MetadataProxy
 	s.mockBlobstoreClient = &mocks.BlobstoreClient{}
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.mockDomainReplicator = NewDomainReplicator(s.mockProducer, logger)
+
+	s.handler = newDomainHandler(s.config, logger, s.metadataMgr, s.ClusterMetadata,
+		s.mockBlobstoreClient, s.mockDomainReplicator)
 }
 
-func (s *domainHandlerSuite) TearDownTest() {
-	s.mockMetadataMgr.AssertExpectations(s.T())
+func (s *domainHandlerCommonSuite) TearDownTest() {
 	s.mockProducer.AssertExpectations(s.T())
 	s.mockBlobstoreClient.AssertExpectations(s.T())
-	s.mockProducer.AssertExpectations(s.T())
 }
 
-func (s *domainHandlerSuite) TestMergeDomainData_Overriding() {
+func (s *domainHandlerCommonSuite) TestMergeDomainData_Overriding() {
 	out := s.handler.mergeDomainData(
 		map[string]string{
 			"k0": "v0",
@@ -94,7 +109,7 @@ func (s *domainHandlerSuite) TestMergeDomainData_Overriding() {
 	}, out)
 }
 
-func (s *domainHandlerSuite) TestMergeDomainData_Adding() {
+func (s *domainHandlerCommonSuite) TestMergeDomainData_Adding() {
 	out := s.handler.mergeDomainData(
 		map[string]string{
 			"k0": "v0",
@@ -110,7 +125,7 @@ func (s *domainHandlerSuite) TestMergeDomainData_Adding() {
 	}, out)
 }
 
-func (s *domainHandlerSuite) TestMergeDomainData_Merging() {
+func (s *domainHandlerCommonSuite) TestMergeDomainData_Merging() {
 	out := s.handler.mergeDomainData(
 		map[string]string{
 			"k0": "v0",
@@ -127,7 +142,7 @@ func (s *domainHandlerSuite) TestMergeDomainData_Merging() {
 	}, out)
 }
 
-func (s *domainHandlerSuite) TestMergeDomainData_Nil() {
+func (s *domainHandlerCommonSuite) TestMergeDomainData_Nil() {
 	out := s.handler.mergeDomainData(
 		nil,
 		map[string]string{
@@ -140,4 +155,134 @@ func (s *domainHandlerSuite) TestMergeDomainData_Nil() {
 		"k0": "v1",
 		"k1": "v2",
 	}, out)
+}
+
+func (s *domainHandlerCommonSuite) TestListDomain() {
+	domainName1 := s.getRandomDomainName()
+	description1 := "some random description 1"
+	email1 := "some random email 1"
+	retention1 := int32(1)
+	emitMetric1 := true
+	data1 := map[string]string{"some random key 1": "some random value 1"}
+	isGlobalDomain1 := false
+	activeClusterName1 := s.ClusterMetadata.GetCurrentClusterName()
+	var cluster1 []*shared.ClusterReplicationConfiguration
+	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
+		cluster1 = append(cluster1, &shared.ClusterReplicationConfiguration{
+			ClusterName: common.StringPtr(replicationConfig.ClusterName),
+		})
+	}
+	err := s.handler.registerDomain(context.Background(), &shared.RegisterDomainRequest{
+		Name:                                   common.StringPtr(domainName1),
+		Description:                            common.StringPtr(description1),
+		OwnerEmail:                             common.StringPtr(email1),
+		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention1),
+		EmitMetric:                             common.BoolPtr(emitMetric1),
+		Data:                                   data1,
+		IsGlobalDomain:                         common.BoolPtr(isGlobalDomain1),
+	})
+	s.Nil(err)
+
+	domainName2 := s.getRandomDomainName()
+	description2 := "some random description 2"
+	email2 := "some random email 2"
+	retention2 := int32(2)
+	emitMetric2 := false
+	data2 := map[string]string{"some random key 2": "some random value 2"}
+	isGlobalDomain2 := true
+	activeClusterName2 := ""
+	var cluster2 []*shared.ClusterReplicationConfiguration
+	for clusterName := range s.ClusterMetadata.GetAllClusterFailoverVersions() {
+		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
+			activeClusterName2 = clusterName
+		}
+		cluster2 = append(cluster2, &shared.ClusterReplicationConfiguration{
+			ClusterName: common.StringPtr(clusterName),
+		})
+	}
+	s.mockProducer.On("Publish", mock.Anything).Return(nil).Once()
+	err = s.handler.registerDomain(context.Background(), &shared.RegisterDomainRequest{
+		Name:                                   common.StringPtr(domainName2),
+		Description:                            common.StringPtr(description2),
+		OwnerEmail:                             common.StringPtr(email2),
+		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention2),
+		EmitMetric:                             common.BoolPtr(emitMetric2),
+		Clusters:                               cluster2,
+		ActiveClusterName:                      common.StringPtr(activeClusterName2),
+		Data:                                   data2,
+		IsGlobalDomain:                         common.BoolPtr(isGlobalDomain2),
+	})
+	s.Nil(err)
+
+	domains := map[string]*shared.DescribeDomainResponse{}
+	pagesize := int32(1)
+	var token []byte
+	for doPaging := true; doPaging; doPaging = len(token) > 0 {
+		resp, err := s.handler.listDomains(context.Background(), &shared.ListDomainsRequest{
+			PageSize:      common.Int32Ptr(pagesize),
+			NextPageToken: token,
+		})
+		s.Nil(err)
+		token = resp.NextPageToken
+		s.True(len(resp.Domains) <= int(pagesize))
+		if len(resp.Domains) > 0 {
+			s.NotEmpty(resp.Domains[0].DomainInfo.GetUUID())
+			resp.Domains[0].DomainInfo.UUID = common.StringPtr("")
+			domains[resp.Domains[0].DomainInfo.GetName()] = resp.Domains[0]
+		}
+	}
+	s.Equal(map[string]*shared.DescribeDomainResponse{
+		domainName1: &shared.DescribeDomainResponse{
+			DomainInfo: &shared.DomainInfo{
+				Name:        common.StringPtr(domainName1),
+				Status:      shared.DomainStatusRegistered.Ptr(),
+				Description: common.StringPtr(description1),
+				OwnerEmail:  common.StringPtr(email1),
+				Data:        data1,
+				UUID:        common.StringPtr(""),
+			},
+			Configuration: &shared.DomainConfiguration{
+				WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention1),
+				EmitMetric:                             common.BoolPtr(emitMetric1),
+				ArchivalBucketName:                     common.StringPtr(""),
+				ArchivalRetentionPeriodInDays:          nil,
+				ArchivalStatus:                         shared.ArchivalStatusDisabled.Ptr(),
+				ArchivalBucketOwner:                    nil,
+			},
+			ReplicationConfiguration: &shared.DomainReplicationConfiguration{
+				ActiveClusterName: common.StringPtr(activeClusterName1),
+				Clusters:          cluster1,
+			},
+			FailoverVersion: common.Int64Ptr(common.EmptyVersion),
+			IsGlobalDomain:  common.BoolPtr(isGlobalDomain1),
+		},
+		domainName2: &shared.DescribeDomainResponse{
+			DomainInfo: &shared.DomainInfo{
+				Name:        common.StringPtr(domainName2),
+				Status:      shared.DomainStatusRegistered.Ptr(),
+				Description: common.StringPtr(description2),
+				OwnerEmail:  common.StringPtr(email2),
+				Data:        data2,
+				UUID:        common.StringPtr(""),
+			},
+			Configuration: &shared.DomainConfiguration{
+				WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention2),
+				EmitMetric:                             common.BoolPtr(emitMetric2),
+				ArchivalBucketName:                     common.StringPtr(""),
+				ArchivalRetentionPeriodInDays:          nil,
+				ArchivalStatus:                         shared.ArchivalStatusDisabled.Ptr(),
+				ArchivalBucketOwner:                    nil,
+			},
+			ReplicationConfiguration: &shared.DomainReplicationConfiguration{
+				ActiveClusterName: common.StringPtr(activeClusterName2),
+				Clusters:          cluster2,
+			},
+			FailoverVersion: common.Int64Ptr(s.ClusterMetadata.GetNextFailoverVersion(activeClusterName2, 0)),
+			IsGlobalDomain:  common.BoolPtr(isGlobalDomain2),
+		},
+	}, domains)
+}
+
+func (s *domainHandlerCommonSuite) getRandomDomainName() string {
+	return "domain" + uuid.New()
 }

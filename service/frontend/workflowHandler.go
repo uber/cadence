@@ -226,7 +226,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 		return wh.error(err, scope)
 	}
 
-	err := wh.domainHandler.registerDomain(ctx, registerRequest, scope)
+	err := wh.domainHandler.registerDomain(ctx, registerRequest)
 	if err != nil {
 		return wh.error(err, scope)
 	}
@@ -245,7 +245,7 @@ func (wh *WorkflowHandler) ListDomains(ctx context.Context,
 		return nil, wh.error(err, scope)
 	}
 
-	resp, err := wh.domainHandler.listDomains(ctx, listRequest, scope)
+	resp, err := wh.domainHandler.listDomains(ctx, listRequest)
 	if err != nil {
 		return resp, wh.error(err, scope)
 	}
@@ -264,7 +264,7 @@ func (wh *WorkflowHandler) DescribeDomain(ctx context.Context,
 		return nil, wh.error(err, scope)
 	}
 
-	resp, err := wh.domainHandler.describeDomain(ctx, describeRequest, scope)
+	resp, err := wh.domainHandler.describeDomain(ctx, describeRequest)
 	if err != nil {
 		return resp, wh.error(err, scope)
 	}
@@ -284,7 +284,7 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 		return nil, wh.error(err, scope)
 	}
 
-	resp, err := wh.domainHandler.updateDomain(ctx, updateRequest, scope)
+	resp, err := wh.domainHandler.updateDomain(ctx, updateRequest)
 	if err != nil {
 		return resp, wh.error(err, scope)
 	}
@@ -305,7 +305,7 @@ func (wh *WorkflowHandler) DeprecateDomain(ctx context.Context, deprecateRequest
 		return wh.error(err, scope)
 	}
 
-	err := wh.domainHandler.deprecateDomain(ctx, deprecateRequest, scope)
+	err := wh.domainHandler.deprecateDomain(ctx, deprecateRequest)
 	if err != nil {
 		return wh.error(err, scope)
 	}

@@ -265,6 +265,9 @@ func (m *cassandraMetadataPersistence) GetDomain(request *p.GetDomainRequest) (*
 		return nil, handleError(request.Name, request.ID, err)
 	}
 
+	if info.Data == nil {
+		info.Data = map[string]string{}
+	}
 	replicationConfig.ActiveClusterName = p.GetOrUseDefaultActiveCluster(m.currentClusterName, replicationConfig.ActiveClusterName)
 	replicationConfig.Clusters = p.DeserializeClusterConfigs(replicationClusters)
 	replicationConfig.Clusters = p.GetOrUseDefaultClusters(m.currentClusterName, replicationConfig.Clusters)

@@ -33,7 +33,6 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -67,7 +66,7 @@ func newDomainHandler(config *Config,
 }
 
 func (d *domainHandlerImpl) registerDomain(ctx context.Context,
-	registerRequest *shared.RegisterDomainRequest, scope metrics.Scope) (retError error) {
+	registerRequest *shared.RegisterDomainRequest) (retError error) {
 
 	if registerRequest == nil {
 		return errRequestNotSet
@@ -77,33 +76,40 @@ func (d *domainHandlerImpl) registerDomain(ctx context.Context,
 		return err
 	}
 
-	clusterMetadata := d.clusterMetadata
-	// TODO remove the IsGlobalDomainEnabled check once cross DC is public
-	if clusterMetadata.IsGlobalDomainEnabled() && !clusterMetadata.IsMasterCluster() {
-		return errNotMasterCluster
-	}
-	if !clusterMetadata.IsGlobalDomainEnabled() {
-		registerRequest.ActiveClusterName = nil
-		registerRequest.Clusters = nil
-	}
-
 	if registerRequest.GetName() == "" {
 		return errDomainNotSet
 	}
 
-	// first check if the name is already registered as the local domain
-	_, err := d.metadataMgr.GetDomain(&persistence.GetDomainRequest{Name: registerRequest.GetName()})
-	if err != nil {
-		if _, ok := err.(*shared.EntityNotExistsError); !ok {
-			return err
-		}
-		// entity not exists, we can proceed to create the domain
+	if !d.clusterMetadata.IsGlobalDomainEnabled() {
+		registerRequest.IsGlobalDomain = common.BoolPtr(false)
 	} else {
-		// domain already exists, cannot proceed
-		return &shared.DomainAlreadyExistsError{Message: "Domain already exists."}
+		// cluster global domain enabled
+		if registerRequest.IsGlobalDomain == nil {
+			return &shared.BadRequestError{Message: "Must specify whether domain is a global domain"}
+		}
+		if !d.clusterMetadata.IsMasterCluster() && registerRequest.GetIsGlobalDomain() {
+			return errNotMasterCluster
+		}
+	}
+	if !registerRequest.GetIsGlobalDomain() {
+		registerRequest.ActiveClusterName = nil
+		registerRequest.Clusters = nil
 	}
 
-	activeClusterName := clusterMetadata.GetCurrentClusterName()
+	// first check if the name is already registered as the local domain
+	_, err := d.metadataMgr.GetDomain(&persistence.GetDomainRequest{Name: registerRequest.GetName()})
+	switch err.(type) {
+	case nil:
+		// domain already exists, cannot proceed
+		return &shared.DomainAlreadyExistsError{Message: "Domain already exists."}
+	case *shared.EntityNotExistsError:
+		// domain does not exists, proceeds
+	default:
+		// other err
+		return err
+	}
+
+	activeClusterName := d.clusterMetadata.GetCurrentClusterName()
 	// input validation on cluster names
 	if registerRequest.ActiveClusterName != nil {
 		activeClusterName = registerRequest.GetActiveClusterName()
@@ -135,7 +141,7 @@ func (d *domainHandlerImpl) registerDomain(ctx context.Context,
 
 	currentArchivalState := neverEnabledState()
 	nextArchivalState := currentArchivalState
-	archivalClusterConfig := clusterMetadata.ArchivalConfig()
+	archivalClusterConfig := d.clusterMetadata.ArchivalConfig()
 	if archivalClusterConfig.ConfiguredForArchival() {
 		archivalEvent, err := d.toArchivalRegisterEvent(registerRequest, archivalClusterConfig.GetDefaultBucket())
 		if err != nil {
@@ -145,6 +151,11 @@ func (d *domainHandlerImpl) registerDomain(ctx context.Context,
 		if err != nil {
 			return err
 		}
+	}
+
+	failoverVersion := common.EmptyVersion
+	if registerRequest.GetIsGlobalDomain() {
+		failoverVersion = d.clusterMetadata.GetNextFailoverVersion(activeClusterName, 0)
 	}
 
 	domainRequest := &persistence.CreateDomainRequest{
@@ -166,8 +177,8 @@ func (d *domainHandlerImpl) registerDomain(ctx context.Context,
 			ActiveClusterName: activeClusterName,
 			Clusters:          clusters,
 		},
-		IsGlobalDomain:  clusterMetadata.IsGlobalDomainEnabled(),
-		FailoverVersion: clusterMetadata.GetNextFailoverVersion(activeClusterName, 0),
+		IsGlobalDomain:  registerRequest.GetIsGlobalDomain(),
+		FailoverVersion: failoverVersion,
 	}
 
 	domainResponse, err := d.metadataMgr.CreateDomain(domainRequest)
@@ -193,7 +204,7 @@ func (d *domainHandlerImpl) registerDomain(ctx context.Context,
 }
 
 func (d *domainHandlerImpl) listDomains(ctx context.Context,
-	listRequest *shared.ListDomainsRequest, scope metrics.Scope) (response *shared.ListDomainsResponse, retError error) {
+	listRequest *shared.ListDomainsRequest) (response *shared.ListDomainsResponse, retError error) {
 
 	if listRequest == nil {
 		return nil, errRequestNotSet
@@ -232,7 +243,7 @@ func (d *domainHandlerImpl) listDomains(ctx context.Context,
 }
 
 func (d *domainHandlerImpl) describeDomain(ctx context.Context,
-	describeRequest *shared.DescribeDomainRequest, scope metrics.Scope) (response *shared.DescribeDomainResponse, retError error) {
+	describeRequest *shared.DescribeDomainRequest) (response *shared.DescribeDomainResponse, retError error) {
 
 	if describeRequest == nil {
 		return nil, errRequestNotSet
@@ -261,23 +272,10 @@ func (d *domainHandlerImpl) describeDomain(ctx context.Context,
 }
 
 func (d *domainHandlerImpl) updateDomain(ctx context.Context,
-	updateRequest *shared.UpdateDomainRequest, scope metrics.Scope) (resp *shared.UpdateDomainResponse, retError error) {
+	updateRequest *shared.UpdateDomainRequest) (resp *shared.UpdateDomainResponse, retError error) {
 
 	if updateRequest == nil {
 		return nil, errRequestNotSet
-	}
-
-	// don't require permission for failover request
-	if !isFailoverRequest(updateRequest) {
-		if err := d.checkPermission(updateRequest.SecurityToken); err != nil {
-			return nil, err
-		}
-	}
-
-	clusterMetadata := d.clusterMetadata
-	// TODO remove the IsGlobalDomainEnabled check once cross DC is public
-	if !clusterMetadata.IsGlobalDomainEnabled() {
-		updateRequest.ReplicationConfiguration = nil
 	}
 
 	if updateRequest.GetName() == "" {
@@ -297,6 +295,16 @@ func (d *domainHandlerImpl) updateDomain(ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
+	if !getResponse.IsGlobalDomain {
+		updateRequest.ReplicationConfiguration = nil
+	}
+
+	// don't require permission for failover request
+	if !isFailoverRequest(updateRequest) {
+		if err := d.checkPermission(updateRequest.SecurityToken); err != nil {
+			return nil, err
+		}
+	}
 
 	info := getResponse.Info
 	config := getResponse.Config
@@ -311,7 +319,7 @@ func (d *domainHandlerImpl) updateDomain(ctx context.Context,
 	}
 	nextArchivalState := currentArchivalState
 	archivalConfigChanged := false
-	archivalClusterConfig := clusterMetadata.ArchivalConfig()
+	archivalClusterConfig := d.clusterMetadata.ArchivalConfig()
 	if archivalClusterConfig.ConfiguredForArchival() {
 		archivalEvent, err := d.toArchivalUpdateEvent(updateRequest, archivalClusterConfig.GetDefaultBucket())
 		if err != nil {
@@ -438,7 +446,7 @@ func (d *domainHandlerImpl) updateDomain(ctx context.Context,
 	if configurationChanged && activeClusterChanged {
 		return nil, errCannotDoDomainFailoverAndUpdate
 	} else if configurationChanged || activeClusterChanged {
-		if configurationChanged && getResponse.IsGlobalDomain && !clusterMetadata.IsMasterCluster() {
+		if configurationChanged && getResponse.IsGlobalDomain && !d.clusterMetadata.IsMasterCluster() {
 			return nil, errNotMasterCluster
 		}
 
@@ -447,7 +455,7 @@ func (d *domainHandlerImpl) updateDomain(ctx context.Context,
 			configVersion++
 		}
 		if activeClusterChanged {
-			failoverVersion = clusterMetadata.GetNextFailoverVersion(replicationConfig.ActiveClusterName, failoverVersion)
+			failoverVersion = d.clusterMetadata.GetNextFailoverVersion(replicationConfig.ActiveClusterName, failoverVersion)
 			failoverNotificationVersion = notificationVersion
 		}
 
@@ -474,18 +482,18 @@ func (d *domainHandlerImpl) updateDomain(ctx context.Context,
 		if err != nil {
 			return nil, err
 		}
-
-		if getResponse.IsGlobalDomain {
-			err = d.domainReplicator.HandleTransmissionTask(replicator.DomainOperationUpdate,
-				info, config, replicationConfig, configVersion, failoverVersion, getResponse.IsGlobalDomain)
-			if err != nil {
-				return nil, err
-			}
-		}
-	} else if clusterMetadata.IsGlobalDomainEnabled() && !clusterMetadata.IsMasterCluster() {
+	} else if getResponse.IsGlobalDomain && !d.clusterMetadata.IsMasterCluster() {
 		// although there is no attr updated, just prevent customer to use the non master cluster
 		// for update domain, ever (except if customer want to do a domain failover)
 		return nil, errNotMasterCluster
+	}
+
+	if getResponse.IsGlobalDomain {
+		err = d.domainReplicator.HandleTransmissionTask(replicator.DomainOperationUpdate,
+			info, config, replicationConfig, configVersion, failoverVersion, getResponse.IsGlobalDomain)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	response := &shared.UpdateDomainResponse{
@@ -502,7 +510,7 @@ func (d *domainHandlerImpl) updateDomain(ctx context.Context,
 }
 
 func (d *domainHandlerImpl) deprecateDomain(ctx context.Context,
-	deprecateRequest *shared.DeprecateDomainRequest, scope metrics.Scope) (retError error) {
+	deprecateRequest *shared.DeprecateDomainRequest) (retError error) {
 
 	if deprecateRequest == nil {
 		return errRequestNotSet
