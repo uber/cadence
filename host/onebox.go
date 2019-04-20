@@ -43,7 +43,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	espersistence "github.com/uber/cadence/common/persistence/elasticsearch"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
@@ -91,6 +90,7 @@ type (
 		historyV2Mgr        persistence.HistoryV2Manager
 		taskMgr             persistence.TaskManager
 		visibilityMgr       persistence.VisibilityManager
+		esVisibilityMgr     persistence.VisibilityManager
 		executionMgrFactory persistence.ExecutionManagerFactory
 		shutdownCh          chan struct{}
 		shutdownWG          sync.WaitGroup
@@ -129,6 +129,7 @@ type (
 		ExecutionMgrFactory           persistence.ExecutionManagerFactory
 		TaskMgr                       persistence.TaskManager
 		VisibilityMgr                 persistence.VisibilityManager
+		ESVisibilityMgr               persistence.VisibilityManager
 		Logger                        log.Logger
 		ClusterNo                     int
 		EnableEventsV2                bool
@@ -157,6 +158,7 @@ func NewCadence(params *CadenceParams) Cadence {
 		metadataMgr:         params.MetadataMgr,
 		metadataMgrV2:       params.MetadataMgrV2,
 		visibilityMgr:       params.VisibilityMgr,
+		esVisibilityMgr:     params.ESVisibilityMgr,
 		shardMgr:            params.ShardMgr,
 		historyMgr:          params.HistoryMgr,
 		historyV2Mgr:        params.HistoryV2Mgr,
@@ -348,19 +350,11 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	c.adminHandler = frontend.NewAdminHandler(
 		c.frontEndService, c.historyConfig.NumHistoryShards, c.metadataMgr, c.historyMgr, c.historyV2Mgr)
 	dc := dynamicconfig.NewCollection(params.DynamicConfig, c.logger)
-	frontendConfig := frontend.NewConfig(dc, c.historyConfig.NumHistoryShards, c.esConfig.Enable, true)
+	frontendConfig := frontend.NewConfig(dc, c.historyConfig.NumHistoryShards, c.workerConfig.EnableIndexer, true)
 	visibilityMgr := c.visibilityMgr
-	if c.esConfig.Enable {
-		frontendConfig.EnableReadVisibilityFromES = dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableReadVisibilityFromES, true)
-		visibilityIndexName := c.esConfig.Indices[common.VisibilityAppName]
-		visibilityConfigForES := &config.VisibilityConfig{
-			VisibilityListMaxQPS:   frontendConfig.ESVisibilityListMaxQPS,
-			ESIndexMaxResultWindow: frontendConfig.ESIndexMaxResultWindow,
-		}
-
-		visibilityFromESStore := espersistence.NewElasticSearchVisibilityStore(c.esClient, visibilityIndexName, visibilityConfigForES, c.logger)
-		visibilityFromES := persistence.NewVisibilityManagerImpl(visibilityFromESStore, c.logger)
-		visibilityMgr = persistence.NewVisibilityManagerWrapper(visibilityMgr, visibilityFromES, frontendConfig.EnableReadVisibilityFromES)
+	if c.esVisibilityMgr != nil {
+		enableReadFromES := dynamicconfig.GetBoolPropertyFnFilteredByDomain(true)
+		visibilityMgr = persistence.NewVisibilityManagerWrapper(visibilityMgr, c.esVisibilityMgr, enableReadFromES)
 	}
 	c.frontendHandler = frontend.NewWorkflowHandler(
 		c.frontEndService, frontendConfig, c.metadataMgr, c.historyMgr, c.historyV2Mgr,
@@ -409,7 +403,7 @@ func (c *cadenceImpl) startHistory(hosts map[string][]string, startWG *sync.Wait
 		c.initLock.Lock()
 		service := service.New(params)
 		hConfig := c.historyConfig
-		historyConfig := history.NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, c.logger), hConfig.NumHistoryShards, c.esConfig.Enable, config.StoreTypeCassandra)
+		historyConfig := history.NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, c.logger), hConfig.NumHistoryShards, c.workerConfig.EnableIndexer, config.StoreTypeCassandra)
 		historyConfig.HistoryMgrNumConns = dynamicconfig.GetIntPropertyFn(hConfig.NumHistoryShards)
 		historyConfig.ExecutionMgrNumConns = dynamicconfig.GetIntPropertyFn(hConfig.NumHistoryShards)
 		historyConfig.EnableEventsV2 = dynamicconfig.GetBoolPropertyFnFilteredByDomain(enableEventsV2)
@@ -420,7 +414,7 @@ func (c *cadenceImpl) startHistory(hosts map[string][]string, startWG *sync.Wait
 			historyConfig.HistoryCountLimitError = dynamicconfig.GetIntPropertyFilteredByDomain(hConfig.HistoryCountLimitError)
 		}
 		handler := history.NewHandler(service, historyConfig, c.shardMgr, c.metadataMgr,
-			c.visibilityMgr, c.historyMgr, c.historyV2Mgr, c.executionMgrFactory, params.PublicClient)
+			c.visibilityMgr, c.esVisibilityMgr, c.historyMgr, c.historyV2Mgr, c.executionMgrFactory, params.PublicClient)
 		handler.Start()
 		c.initLock.Unlock()
 

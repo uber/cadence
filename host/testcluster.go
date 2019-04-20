@@ -26,6 +26,7 @@ import (
 
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/client"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore/filestore"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/elasticsearch"
@@ -34,6 +35,8 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	metricsmocks "github.com/uber/cadence/common/metrics/mocks"
 	"github.com/uber/cadence/common/mocks"
+	"github.com/uber/cadence/common/persistence"
+	pes "github.com/uber/cadence/common/persistence/elasticsearch"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
@@ -103,13 +106,27 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 	testBase.Setup()
 	setupShards(testBase, options.HistoryConfig.NumHistoryShards, logger)
 	blobstore := setupBlobstore(logger)
+	messagingClient := getMessagingClient(options.MessagingClientConfig, logger)
 	var esClient elasticsearch.Client
-	if options.ESConfig.Enable {
+	var esVisibilityMgr persistence.VisibilityManager
+	if options.WorkerConfig.EnableIndexer {
 		var err error
 		esClient, err = elasticsearch.NewClient(&options.ESConfig)
 		if err != nil {
 			return nil, err
 		}
+
+		indexName := options.ESConfig.Indices[common.VisibilityAppName]
+		visProducer, err := messagingClient.NewProducer(common.VisibilityAppName)
+		visConfig := &config.VisibilityConfig{
+			VisibilityListMaxQPS:   dynamicconfig.GetIntPropertyFilteredByDomain(2000),
+			ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(100),
+		}
+		if err != nil {
+			return nil, err
+		}
+		esVisibilityStore := pes.NewElasticSearchVisibilityStore(esClient, indexName, visProducer, visConfig, logger)
+		esVisibilityMgr = persistence.NewVisibilityManagerImpl(esVisibilityStore, logger)
 	}
 
 	pConfig := testBase.Config()
@@ -118,7 +135,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 		ClusterMetadata:     clusterMetadata,
 		PersistenceConfig:   pConfig,
 		DispatcherProvider:  client.NewIPYarpcDispatcherProvider(),
-		MessagingClient:     getMessagingClient(options.MessagingClientConfig, logger),
+		MessagingClient:     messagingClient,
 		MetadataMgr:         testBase.MetadataProxy,
 		MetadataMgrV2:       testBase.MetadataManagerV2,
 		ShardMgr:            testBase.ShardMgr,
@@ -127,6 +144,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 		ExecutionMgrFactory: testBase.ExecutionMgrFactory,
 		TaskMgr:             testBase.TaskMgr,
 		VisibilityMgr:       testBase.VisibilityMgr,
+		ESVisibilityMgr:     esVisibilityMgr,
 		Logger:              logger,
 		ClusterNo:           options.ClusterNo,
 		EnableEventsV2:      options.EnableEventsV2,
