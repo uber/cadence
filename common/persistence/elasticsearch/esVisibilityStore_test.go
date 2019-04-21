@@ -246,7 +246,7 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByStatus() {
 
 	request := &p.ListClosedWorkflowExecutionsByStatusRequest{
 		ListWorkflowExecutionsRequest: *testRequest,
-		Status: workflow.WorkflowExecutionCloseStatus(testCloseStatus),
+		Status:                        workflow.WorkflowExecutionCloseStatus(testCloseStatus),
 	}
 	_, err := s.visibilityStore.ListClosedWorkflowExecutionsByStatus(request)
 	s.NoError(err)

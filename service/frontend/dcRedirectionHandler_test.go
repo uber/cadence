@@ -646,11 +646,11 @@ func (s *dcRedirectionHandlerSuite) getSignalWithStartRequest() *shared.SignalWi
 	workflowType := "some random workflow type"
 	taskList := "some random task list"
 	return &shared.SignalWithStartWorkflowExecutionRequest{
-		Domain:       common.StringPtr("some random domain name"),
-		WorkflowId:   common.StringPtr("some random workflow ID"),
-		WorkflowType: &shared.WorkflowType{Name: common.StringPtr(workflowType)},
-		TaskList:     &shared.TaskList{Name: common.StringPtr(taskList)},
-		Input:        []byte("some random workflow input"),
+		Domain:                              common.StringPtr("some random domain name"),
+		WorkflowId:                          common.StringPtr("some random workflow ID"),
+		WorkflowType:                        &shared.WorkflowType{Name: common.StringPtr(workflowType)},
+		TaskList:                            &shared.TaskList{Name: common.StringPtr(taskList)},
+		Input:                               []byte("some random workflow input"),
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(123),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(234),
 		Identity:                            common.StringPtr("some random signal identity"),
@@ -664,11 +664,11 @@ func (s *dcRedirectionHandlerSuite) getStartRequest() *shared.StartWorkflowExecu
 	workflowType := "some random workflow type"
 	taskList := "some random task list"
 	return &shared.StartWorkflowExecutionRequest{
-		Domain:       common.StringPtr("some random domain name"),
-		WorkflowId:   common.StringPtr("some random workflow ID"),
-		WorkflowType: &shared.WorkflowType{Name: common.StringPtr(workflowType)},
-		TaskList:     &shared.TaskList{Name: common.StringPtr(taskList)},
-		Input:        []byte("some random workflow input"),
+		Domain:                              common.StringPtr("some random domain name"),
+		WorkflowId:                          common.StringPtr("some random workflow ID"),
+		WorkflowType:                        &shared.WorkflowType{Name: common.StringPtr(workflowType)},
+		TaskList:                            &shared.TaskList{Name: common.StringPtr(taskList)},
+		Input:                               []byte("some random workflow input"),
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(123),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(234),
 		Identity:                            common.StringPtr("some random signal identity"),

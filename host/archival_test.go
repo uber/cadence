@@ -243,12 +243,12 @@ func (s *integrationSuite) startAndFinishWorkflow(id, wt, tl, domain, domainID s
 		Name: common.StringPtr(tl),
 	}
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(domain),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(domain),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
@@ -279,10 +279,10 @@ func (s *integrationSuite) startAndFinishWorkflow(id, wt, tl, domain, domainID s
 			return []byte(strconv.Itoa(int(activityCounter))), []*workflow.Decision{{
 				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
 				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
-					ActivityId:   common.StringPtr(strconv.Itoa(int(activityCounter))),
-					ActivityType: &workflow.ActivityType{Name: common.StringPtr(activityName)},
-					TaskList:     &workflow.TaskList{Name: &tl},
-					Input:        buf.Bytes(),
+					ActivityId:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
+					ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityName)},
+					TaskList:                      &workflow.TaskList{Name: &tl},
+					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(10),
 					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
@@ -298,9 +298,9 @@ func (s *integrationSuite) startAndFinishWorkflow(id, wt, tl, domain, domainID s
 			return []byte(strconv.Itoa(int(activityCounter))), []*workflow.Decision{{
 				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeContinueAsNewWorkflowExecution),
 				ContinueAsNewWorkflowExecutionDecisionAttributes: &workflow.ContinueAsNewWorkflowExecutionDecisionAttributes{
-					WorkflowType: workflowType,
-					TaskList:     &workflow.TaskList{Name: &tl},
-					Input:        nil,
+					WorkflowType:                        workflowType,
+					TaskList:                            &workflow.TaskList{Name: &tl},
+					Input:                               nil,
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 				},

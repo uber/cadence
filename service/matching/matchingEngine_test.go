@@ -515,10 +515,10 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 			resp := &gohistory.RecordActivityTaskStartedResponse{
 				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleId, 0,
 					&workflow.ScheduleActivityTaskDecisionAttributes{
-						ActivityId:   &activityID,
-						TaskList:     &workflow.TaskList{Name: taskList.Name},
-						ActivityType: activityType,
-						Input:        activityInput,
+						ActivityId:                    &activityID,
+						TaskList:                      &workflow.TaskList{Name: taskList.Name},
+						ActivityType:                  activityType,
+						Input:                         activityInput,
 						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 						ScheduleToStartTimeoutSeconds: common.Int32Ptr(50),
 						StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
@@ -625,10 +625,10 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 			return &gohistory.RecordActivityTaskStartedResponse{
 				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleId, 0,
 					&workflow.ScheduleActivityTaskDecisionAttributes{
-						ActivityId:   &activityID,
-						TaskList:     &workflow.TaskList{Name: taskList.Name},
-						ActivityType: activityType,
-						Input:        activityInput,
+						ActivityId:                    &activityID,
+						TaskList:                      &workflow.TaskList{Name: taskList.Name},
+						ActivityType:                  activityType,
+						Input:                         activityInput,
 						ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(2),
 						StartToCloseTimeoutSeconds:    common.Int32Ptr(1),
@@ -825,10 +825,10 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 			return &gohistory.RecordActivityTaskStartedResponse{
 				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleId, 0,
 					&workflow.ScheduleActivityTaskDecisionAttributes{
-						ActivityId:   &activityID,
-						TaskList:     &workflow.TaskList{Name: taskList.Name},
-						ActivityType: activityType,
-						Input:        activityInput,
+						ActivityId:                    &activityID,
+						TaskList:                      &workflow.TaskList{Name: taskList.Name},
+						ActivityType:                  activityType,
+						Input:                         activityInput,
 						ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(2),
 						StartToCloseTimeoutSeconds:    common.Int32Ptr(1),
@@ -1124,10 +1124,10 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 			return &gohistory.RecordActivityTaskStartedResponse{
 				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleId, 0,
 					&workflow.ScheduleActivityTaskDecisionAttributes{
-						ActivityId:   &activityID,
-						TaskList:     &workflow.TaskList{Name: taskList.Name},
-						ActivityType: activityType,
-						Input:        activityInput,
+						ActivityId:                    &activityID,
+						TaskList:                      &workflow.TaskList{Name: taskList.Name},
+						ActivityType:                  activityType,
+						Input:                         activityInput,
 						ScheduleToStartTimeoutSeconds: common.Int32Ptr(600),
 						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(2),
 						StartToCloseTimeoutSeconds:    common.Int32Ptr(1),
@@ -1610,10 +1610,10 @@ func (s *matchingEngineSuite) setupRecordActivityTaskStartedMock(tlName string) 
 			return &gohistory.RecordActivityTaskStartedResponse{
 				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleId, 0,
 					&workflow.ScheduleActivityTaskDecisionAttributes{
-						ActivityId:   &activityID,
-						TaskList:     &workflow.TaskList{Name: &tlName},
-						ActivityType: activityType,
-						Input:        activityInput,
+						ActivityId:                    &activityID,
+						TaskList:                      &workflow.TaskList{Name: &tlName},
+						ActivityType:                  activityType,
+						Input:                         activityInput,
 						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 						ScheduleToStartTimeoutSeconds: common.Int32Ptr(50),
 						StartToCloseTimeoutSeconds:    common.Int32Ptr(50),

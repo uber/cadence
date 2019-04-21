@@ -248,7 +248,7 @@ func (s *VisibilitySamplingSuite) TestListClosedWorkflowExecutionsByStatus() {
 	}
 	request := &p.ListClosedWorkflowExecutionsByStatusRequest{
 		ListWorkflowExecutionsRequest: req,
-		Status: gen.WorkflowExecutionCloseStatusFailed,
+		Status:                        gen.WorkflowExecutionCloseStatusFailed,
 	}
 	s.persistence.On("ListClosedWorkflowExecutionsByStatus", request).Return(nil, nil).Once()
 	_, err := s.client.ListClosedWorkflowExecutionsByStatus(request)

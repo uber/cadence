@@ -81,12 +81,12 @@ func (s *integrationSuite) TestStartWorkflowExecution() {
 	taskList.Name = common.StringPtr(tl)
 
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
@@ -100,12 +100,12 @@ func (s *integrationSuite) TestStartWorkflowExecution() {
 	s.Equal(we0.RunId, we1.RunId)
 
 	newRequest := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
@@ -131,12 +131,12 @@ func (s *integrationSuite) TestTerminateWorkflow() {
 	taskList.Name = common.StringPtr(tl)
 
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
@@ -159,10 +159,10 @@ func (s *integrationSuite) TestTerminateWorkflow() {
 			return []byte(strconv.Itoa(int(activityCounter))), []*workflow.Decision{{
 				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
 				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
-					ActivityId:   common.StringPtr(strconv.Itoa(int(activityCounter))),
-					ActivityType: &workflow.ActivityType{Name: common.StringPtr(activityName)},
-					TaskList:     &workflow.TaskList{Name: &tl},
-					Input:        buf.Bytes(),
+					ActivityId:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
+					ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityName)},
+					TaskList:                      &workflow.TaskList{Name: &tl},
+					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(10),
 					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
@@ -249,12 +249,12 @@ GetHistoryLoop:
 StartNewExecutionLoop:
 	for i := 0; i < 10; i++ {
 		request := &workflow.StartWorkflowExecutionRequest{
-			RequestId:    common.StringPtr(uuid.New()),
-			Domain:       common.StringPtr(s.domainName),
-			WorkflowId:   common.StringPtr(id),
-			WorkflowType: workflowType,
-			TaskList:     taskList,
-			Input:        nil,
+			RequestId:                           common.StringPtr(uuid.New()),
+			Domain:                              common.StringPtr(s.domainName),
+			WorkflowId:                          common.StringPtr(id),
+			WorkflowType:                        workflowType,
+			TaskList:                            taskList,
+			Input:                               nil,
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			Identity:                            common.StringPtr(identity),
@@ -290,12 +290,12 @@ func (s *integrationSuite) TestSequentialWorkflow() {
 	taskList.Name = common.StringPtr(tl)
 
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
@@ -319,10 +319,10 @@ func (s *integrationSuite) TestSequentialWorkflow() {
 			return []byte(strconv.Itoa(int(activityCounter))), []*workflow.Decision{{
 				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
 				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
-					ActivityId:   common.StringPtr(strconv.Itoa(int(activityCounter))),
-					ActivityType: &workflow.ActivityType{Name: common.StringPtr(activityName)},
-					TaskList:     &workflow.TaskList{Name: &tl},
-					Input:        buf.Bytes(),
+					ActivityId:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
+					ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityName)},
+					TaskList:                      &workflow.TaskList{Name: &tl},
+					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(10),
 					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
@@ -399,12 +399,12 @@ func (s *integrationSuite) TestCompleteDecisionTaskAndCreateNewOne() {
 	taskList.Name = common.StringPtr(tl)
 
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
@@ -476,12 +476,12 @@ func (s *integrationSuite) TestDecisionAndActivityTimeoutsWorkflow() {
 	taskList.Name = common.StringPtr(tl)
 
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
@@ -506,10 +506,10 @@ func (s *integrationSuite) TestDecisionAndActivityTimeoutsWorkflow() {
 			return []byte(strconv.Itoa(int(activityCounter))), []*workflow.Decision{{
 				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
 				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
-					ActivityId:   common.StringPtr(strconv.Itoa(int(activityCounter))),
-					ActivityType: &workflow.ActivityType{Name: common.StringPtr(activityName)},
-					TaskList:     &workflow.TaskList{Name: &tl},
-					Input:        buf.Bytes(),
+					ActivityId:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
+					ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityName)},
+					TaskList:                      &workflow.TaskList{Name: &tl},
+					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(1),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 					StartToCloseTimeoutSeconds:    common.Int32Ptr(1),
@@ -598,12 +598,12 @@ func (s *integrationSuite) TestWorkflowRetry() {
 	taskList.Name = common.StringPtr(tl)
 
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
@@ -734,12 +734,12 @@ func (s *integrationSuite) TestWorkflowRetryFailures() {
 
 	// Fail using attempt
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
@@ -790,12 +790,12 @@ func (s *integrationSuite) TestWorkflowRetryFailures() {
 
 	// Fail error reason
 	request = &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
@@ -850,12 +850,12 @@ func (s *integrationSuite) TestCronWorkflow() {
 	taskList.Name = common.StringPtr(tl)
 
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
@@ -1013,12 +1013,12 @@ func (s *integrationSuite) TestSequential_UserTimers() {
 	taskList.Name = common.StringPtr(tl)
 
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
@@ -1093,12 +1093,12 @@ func (s *integrationSuite) TestRateLimitBufferedEvents() {
 
 	// Start workflow execution
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 		Identity:                            common.StringPtr(identity),
@@ -1193,12 +1193,12 @@ func (s *integrationSuite) TestBufferedEvents() {
 
 	// Start workflow execution
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
@@ -1233,10 +1233,10 @@ func (s *integrationSuite) TestBufferedEvents() {
 			return nil, []*workflow.Decision{{
 				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
 				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
-					ActivityId:   common.StringPtr("1"),
-					ActivityType: &workflow.ActivityType{Name: common.StringPtr("test-activity-type")},
-					TaskList:     &workflow.TaskList{Name: &tl},
-					Input:        []byte("test-input"),
+					ActivityId:                    common.StringPtr("1"),
+					ActivityType:                  &workflow.ActivityType{Name: common.StringPtr("test-activity-type")},
+					TaskList:                      &workflow.TaskList{Name: &tl},
+					Input:                         []byte("test-input"),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(2),
 					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
@@ -1312,12 +1312,12 @@ func (s *integrationSuite) TestDescribeWorkflowExecution() {
 
 	// Start workflow execution
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
@@ -1354,10 +1354,10 @@ func (s *integrationSuite) TestDescribeWorkflowExecution() {
 			return nil, []*workflow.Decision{{
 				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
 				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
-					ActivityId:   common.StringPtr("1"),
-					ActivityType: &workflow.ActivityType{Name: common.StringPtr("test-activity-type")},
-					TaskList:     &workflow.TaskList{Name: &tl},
-					Input:        []byte("test-input"),
+					ActivityId:                    common.StringPtr("1"),
+					ActivityType:                  &workflow.ActivityType{Name: common.StringPtr("test-activity-type")},
+					TaskList:                      &workflow.TaskList{Name: &tl},
+					Input:                         []byte("test-input"),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(2),
 					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
@@ -1441,12 +1441,12 @@ func (s *integrationSuite) TestVisibility() {
 	taskList.Name = common.StringPtr(tl)
 
 	startRequest := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id1),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id1),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 		Identity:                            common.StringPtr(identity),
@@ -1503,12 +1503,12 @@ func (s *integrationSuite) TestVisibility() {
 	}
 
 	startRequest = &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id2),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id2),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 		Identity:                            common.StringPtr(identity),
@@ -1581,12 +1581,12 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 	taskListChild.Name = common.StringPtr(tlChild)
 
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(parentID),
-		WorkflowType: parentWorkflowType,
-		TaskList:     taskListParent,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(parentID),
+		WorkflowType:                        parentWorkflowType,
+		TaskList:                            taskListParent,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		ChildPolicy:                         common.ChildPolicyPtr(workflow.ChildPolicyRequestCancel),
@@ -1618,10 +1618,10 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 				return nil, []*workflow.Decision{{
 					DecisionType: common.DecisionTypePtr(workflow.DecisionTypeStartChildWorkflowExecution),
 					StartChildWorkflowExecutionDecisionAttributes: &workflow.StartChildWorkflowExecutionDecisionAttributes{
-						WorkflowId:   common.StringPtr(childID),
-						WorkflowType: childWorkflowType,
-						TaskList:     taskListChild,
-						Input:        []byte("child-workflow-input"),
+						WorkflowId:                          common.StringPtr(childID),
+						WorkflowType:                        childWorkflowType,
+						TaskList:                            taskListChild,
+						Input:                               []byte("child-workflow-input"),
 						ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(200),
 						TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 						ChildPolicy:                         common.ChildPolicyPtr(workflow.ChildPolicyRequestCancel),
@@ -1763,12 +1763,12 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 	taskListChild.Name = common.StringPtr(tlChild)
 
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(parentID),
-		WorkflowType: parentWorkflowType,
-		TaskList:     taskListParent,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(parentID),
+		WorkflowType:                        parentWorkflowType,
+		TaskList:                            taskListParent,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		ChildPolicy:                         common.ChildPolicyPtr(workflow.ChildPolicyRequestCancel),
@@ -1798,10 +1798,10 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 			return nil, []*workflow.Decision{{
 				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeStartChildWorkflowExecution),
 				StartChildWorkflowExecutionDecisionAttributes: &workflow.StartChildWorkflowExecutionDecisionAttributes{
-					WorkflowId:   common.StringPtr(childID),
-					WorkflowType: childWorkflowType,
-					TaskList:     taskListChild,
-					Input:        nil,
+					WorkflowId:                          common.StringPtr(childID),
+					WorkflowType:                        childWorkflowType,
+					TaskList:                            taskListChild,
+					Input:                               nil,
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(200),
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 					ChildPolicy:                         common.ChildPolicyPtr(workflow.ChildPolicyRequestCancel),
@@ -1830,7 +1830,7 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 
 		s.Logger.Info("Processing decision task for Child ", tag.WorkflowID(*execution.WorkflowId))
 		return nil, []*workflow.Decision{{
-			DecisionType:                                common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
+			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
 			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{},
 		}}, nil
 	}
@@ -1960,12 +1960,12 @@ func (s *integrationSuite) TestWorkflowTimeout() {
 	taskList.Name = common.StringPtr(tl)
 
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
@@ -2044,12 +2044,12 @@ func (s *integrationSuite) TestDecisionTaskFailed() {
 
 	// Start workflow execution
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 		Identity:                            common.StringPtr(identity),
@@ -2102,10 +2102,10 @@ func (s *integrationSuite) TestDecisionTaskFailed() {
 			return nil, []*workflow.Decision{{
 				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
 				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
-					ActivityId:   common.StringPtr(strconv.Itoa(int(1))),
-					ActivityType: &workflow.ActivityType{Name: common.StringPtr(activityName)},
-					TaskList:     &workflow.TaskList{Name: &tl},
-					Input:        buf.Bytes(),
+					ActivityId:                    common.StringPtr(strconv.Itoa(int(1))),
+					ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityName)},
+					TaskList:                      &workflow.TaskList{Name: &tl},
+					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(2),
 					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
@@ -2249,12 +2249,12 @@ func (s *integrationSuite) TestDescribeTaskList() {
 
 	// Start workflow execution
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(workflowID),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(workflowID),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
@@ -2280,10 +2280,10 @@ func (s *integrationSuite) TestDescribeTaskList() {
 			return nil, []*workflow.Decision{{
 				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
 				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
-					ActivityId:   common.StringPtr(strconv.Itoa(int(1))),
-					ActivityType: &workflow.ActivityType{Name: common.StringPtr(activityName)},
-					TaskList:     taskList,
-					Input:        buf.Bytes(),
+					ActivityId:                    common.StringPtr(strconv.Itoa(int(1))),
+					ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityName)},
+					TaskList:                      taskList,
+					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(25),
 					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
@@ -2374,12 +2374,12 @@ func (s *integrationSuite) TestTransientDecisionTimeout() {
 
 	// Start workflow execution
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 		Identity:                            common.StringPtr(identity),
@@ -2473,12 +2473,12 @@ func (s *integrationSuite) TestNoTransientDecisionAfterFlushBufferedEvents() {
 
 	// Start workflow execution
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(20),
 		Identity:                            common.StringPtr(identity),
@@ -2513,9 +2513,9 @@ func (s *integrationSuite) TestNoTransientDecisionAfterFlushBufferedEvents() {
 			return nil, []*workflow.Decision{{
 				DecisionType: workflow.DecisionTypeContinueAsNewWorkflowExecution.Ptr(),
 				ContinueAsNewWorkflowExecutionDecisionAttributes: &workflow.ContinueAsNewWorkflowExecutionDecisionAttributes{
-					WorkflowType: workflowType,
-					TaskList:     taskList,
-					Input:        nil,
+					WorkflowType:                        workflowType,
+					TaskList:                            taskList,
+					Input:                               nil,
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1000),
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(100),
 				},
@@ -2570,12 +2570,12 @@ func (s *integrationSuite) TestRelayDecisionTimeout() {
 
 	// Start workflow execution
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 		Identity:                            common.StringPtr(identity),
@@ -2604,7 +2604,7 @@ func (s *integrationSuite) TestRelayDecisionTimeout() {
 		}
 		workflowComplete = true
 		return nil, []*workflow.Decision{{
-			DecisionType:                                common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
+			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
 			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{},
 		}}, nil
 	}
@@ -2665,12 +2665,12 @@ func (s *integrationSuite) TestTaskProcessingProtectionForRateLimitError() {
 
 	// Start workflow execution
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(601),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(600),
 		Identity:                            common.StringPtr(identity),
@@ -2789,12 +2789,12 @@ func (s *integrationSuite) TestStickyTimeout_NonTransientDecision() {
 
 	// Start workflow execution
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
@@ -2956,12 +2956,12 @@ func (s *integrationSuite) TestBufferedEventsOutOfOrder() {
 
 	// Start workflow execution
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(20),
 		Identity:                            common.StringPtr(identity),
@@ -2996,11 +2996,11 @@ func (s *integrationSuite) TestBufferedEventsOutOfOrder() {
 			}, {
 				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
 				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
-					ActivityId:   common.StringPtr("Activity-1"),
-					ActivityType: &workflow.ActivityType{Name: common.StringPtr("ActivityType")},
-					Domain:       common.StringPtr(s.domainName),
-					TaskList:     taskList,
-					Input:        []byte("some random activity input"),
+					ActivityId:                    common.StringPtr("Activity-1"),
+					ActivityType:                  &workflow.ActivityType{Name: common.StringPtr("ActivityType")},
+					Domain:                        common.StringPtr(s.domainName),
+					TaskList:                      taskList,
+					Input:                         []byte("some random activity input"),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(100),
 					StartToCloseTimeoutSeconds:    common.Int32Ptr(100),
@@ -3118,12 +3118,12 @@ func (s *integrationSuite) TestStartWithMemo() {
 	}
 
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
@@ -3158,12 +3158,12 @@ func (s *integrationSuite) TestSignalWithStartWithMemo() {
 	signalName := "my signal"
 	signalInput := []byte("my signal input.")
 	request := &workflow.SignalWithStartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		SignalName:                          common.StringPtr(signalName),

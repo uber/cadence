@@ -142,33 +142,33 @@ func (s *eventsCacheSuite) TestEventsCacheMissMultiEventsBatchSuccess() {
 	workflowID := "events-cache-miss-success-workflow-id"
 	runID := "events-cache-miss-success-run-id"
 	event1 := &shared.HistoryEvent{
-		EventId:   common.Int64Ptr(11),
-		EventType: shared.EventTypeDecisionTaskCompleted.Ptr(),
+		EventId:                              common.Int64Ptr(11),
+		EventType:                            shared.EventTypeDecisionTaskCompleted.Ptr(),
 		DecisionTaskCompletedEventAttributes: &shared.DecisionTaskCompletedEventAttributes{},
 	}
 	event2 := &shared.HistoryEvent{
-		EventId:   common.Int64Ptr(12),
-		EventType: shared.EventTypeActivityTaskScheduled.Ptr(),
+		EventId:                              common.Int64Ptr(12),
+		EventType:                            shared.EventTypeActivityTaskScheduled.Ptr(),
 		ActivityTaskScheduledEventAttributes: &shared.ActivityTaskScheduledEventAttributes{},
 	}
 	event3 := &shared.HistoryEvent{
-		EventId:   common.Int64Ptr(13),
-		EventType: shared.EventTypeActivityTaskScheduled.Ptr(),
+		EventId:                              common.Int64Ptr(13),
+		EventType:                            shared.EventTypeActivityTaskScheduled.Ptr(),
 		ActivityTaskScheduledEventAttributes: &shared.ActivityTaskScheduledEventAttributes{},
 	}
 	event4 := &shared.HistoryEvent{
-		EventId:   common.Int64Ptr(14),
-		EventType: shared.EventTypeActivityTaskScheduled.Ptr(),
+		EventId:                              common.Int64Ptr(14),
+		EventType:                            shared.EventTypeActivityTaskScheduled.Ptr(),
 		ActivityTaskScheduledEventAttributes: &shared.ActivityTaskScheduledEventAttributes{},
 	}
 	event5 := &shared.HistoryEvent{
-		EventId:   common.Int64Ptr(15),
-		EventType: shared.EventTypeActivityTaskScheduled.Ptr(),
+		EventId:                              common.Int64Ptr(15),
+		EventType:                            shared.EventTypeActivityTaskScheduled.Ptr(),
 		ActivityTaskScheduledEventAttributes: &shared.ActivityTaskScheduledEventAttributes{},
 	}
 	event6 := &shared.HistoryEvent{
-		EventId:   common.Int64Ptr(16),
-		EventType: shared.EventTypeActivityTaskScheduled.Ptr(),
+		EventId:                              common.Int64Ptr(16),
+		EventType:                            shared.EventTypeActivityTaskScheduled.Ptr(),
 		ActivityTaskScheduledEventAttributes: &shared.ActivityTaskScheduledEventAttributes{},
 	}
 
@@ -196,33 +196,33 @@ func (s *eventsCacheSuite) TestEventsCacheMissMultiEventsBatchV2Success() {
 	workflowID := "events-cache-miss-multi-events-batch-v2-success-workflow-id"
 	runID := "events-cache-miss-multi-events-batch-v2-success-run-id"
 	event1 := &shared.HistoryEvent{
-		EventId:   common.Int64Ptr(11),
-		EventType: shared.EventTypeDecisionTaskCompleted.Ptr(),
+		EventId:                              common.Int64Ptr(11),
+		EventType:                            shared.EventTypeDecisionTaskCompleted.Ptr(),
 		DecisionTaskCompletedEventAttributes: &shared.DecisionTaskCompletedEventAttributes{},
 	}
 	event2 := &shared.HistoryEvent{
-		EventId:   common.Int64Ptr(12),
-		EventType: shared.EventTypeActivityTaskScheduled.Ptr(),
+		EventId:                              common.Int64Ptr(12),
+		EventType:                            shared.EventTypeActivityTaskScheduled.Ptr(),
 		ActivityTaskScheduledEventAttributes: &shared.ActivityTaskScheduledEventAttributes{},
 	}
 	event3 := &shared.HistoryEvent{
-		EventId:   common.Int64Ptr(13),
-		EventType: shared.EventTypeActivityTaskScheduled.Ptr(),
+		EventId:                              common.Int64Ptr(13),
+		EventType:                            shared.EventTypeActivityTaskScheduled.Ptr(),
 		ActivityTaskScheduledEventAttributes: &shared.ActivityTaskScheduledEventAttributes{},
 	}
 	event4 := &shared.HistoryEvent{
-		EventId:   common.Int64Ptr(14),
-		EventType: shared.EventTypeActivityTaskScheduled.Ptr(),
+		EventId:                              common.Int64Ptr(14),
+		EventType:                            shared.EventTypeActivityTaskScheduled.Ptr(),
 		ActivityTaskScheduledEventAttributes: &shared.ActivityTaskScheduledEventAttributes{},
 	}
 	event5 := &shared.HistoryEvent{
-		EventId:   common.Int64Ptr(15),
-		EventType: shared.EventTypeActivityTaskScheduled.Ptr(),
+		EventId:                              common.Int64Ptr(15),
+		EventType:                            shared.EventTypeActivityTaskScheduled.Ptr(),
 		ActivityTaskScheduledEventAttributes: &shared.ActivityTaskScheduledEventAttributes{},
 	}
 	event6 := &shared.HistoryEvent{
-		EventId:   common.Int64Ptr(16),
-		EventType: shared.EventTypeActivityTaskScheduled.Ptr(),
+		EventId:                              common.Int64Ptr(16),
+		EventType:                            shared.EventTypeActivityTaskScheduled.Ptr(),
 		ActivityTaskScheduledEventAttributes: &shared.ActivityTaskScheduledEventAttributes{},
 	}
 
