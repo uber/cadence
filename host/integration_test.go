@@ -3185,7 +3185,7 @@ func (s *integrationSuite) startWithMemoHelper(startFn startFunc, id string, tas
 	we, err0 := startFn()
 	s.Nil(err0)
 
-	s.BarkLogger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
+	s.Logger.Info("StartWorkflowExecution: response", tag.WorkflowRunID(*we.RunId))
 
 	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
@@ -3203,7 +3203,7 @@ func (s *integrationSuite) startWithMemoHelper(startFn startFunc, id string, tas
 		TaskList:        taskList,
 		Identity:        identity,
 		DecisionHandler: dtHandler,
-		Logger:          s.BarkLogger,
+		Logger:          s.Logger,
 		T:               s.T(),
 	}
 
@@ -3234,7 +3234,7 @@ func (s *integrationSuite) startWithMemoHelper(startFn startFunc, id string, tas
 
 	// make progress of workflow
 	_, err := poller.PollAndProcessDecisionTask(false, false)
-	s.BarkLogger.Infof("PollAndProcessDecisionTask: %v", err)
+	s.Logger.Info("PollAndProcessDecisionTask: %v", tag.Error(err))
 	s.Nil(err)
 
 	// verify history
