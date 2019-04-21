@@ -18,21 +18,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package log
+package loggerimpl
 
 import (
 	"bytes"
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"go.uber.org/zap"
@@ -53,7 +50,7 @@ func TestDefaultLogger(t *testing.T) {
 	var zapLogger *zap.Logger
 	zapLogger = zap.NewExample()
 
-	logger := loggerimpl.NewLogger(zapLogger)
+	logger := NewLogger(zapLogger)
 	preCaller := caller(1)
 	logger.WithTags(tag.Error(fmt.Errorf("test error"))).Info("test info", tag.WorkflowActionWorkflowStarted)
 
@@ -86,8 +83,8 @@ func TestThrottleLogger(t *testing.T) {
 	zapLogger = zap.NewExample()
 
 	dc := dynamicconfig.NewNopClient()
-	cln := dynamicconfig.NewCollection(dc, loggerimpl.NewNopLogger())
-	logger := loggerimpl.NewThrottledLogger(loggerimpl.NewLogger(zapLogger), cln.GetIntProperty(dynamicconfig.FrontendRPS, 1))
+	cln := dynamicconfig.NewCollection(dc, NewNopLogger())
+	logger := NewThrottledLogger(NewLogger(zapLogger), cln.GetIntProperty(dynamicconfig.FrontendRPS, 1))
 	preCaller := caller(1)
 	logger.WithTags(tag.Error(fmt.Errorf("test error"))).WithTags(tag.ComponentShard).Info("test info", tag.WorkflowActionWorkflowStarted)
 
@@ -101,12 +98,4 @@ func TestThrottleLogger(t *testing.T) {
 	lineNum := fmt.Sprintf("%v", par+1)
 	fmt.Println(out, lineNum)
 	assert.Equal(t, out, `{"level":"info","msg":"test info","error":"test error","component":"shard","wf-action":"add-workflowexecution-started-event","logging-call-at":"logger_test.go:`+lineNum+`"}`+"\n")
-}
-
-func caller(skip int) string {
-	_, path, lineno, ok := runtime.Caller(skip)
-	if !ok {
-		return ""
-	}
-	return fmt.Sprintf("%v:%v", filepath.Base(path), lineno)
 }
