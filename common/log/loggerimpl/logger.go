@@ -22,12 +22,13 @@ package loggerimpl
 
 import (
 	"fmt"
+	"path/filepath"
+	"runtime"
+
 	"github.com/stretchr/testify/suite"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"go.uber.org/zap"
-	"path/filepath"
-	"runtime"
 )
 
 type loggerImpl struct {
@@ -47,7 +48,9 @@ func NewNopLogger() log.Logger {
 // NewDevelopmentForTest is a helper to create new development logger in unit test
 func NewDevelopmentForTest(s suite.Suite) log.Logger {
 	logger, err := NewDevelopment()
-	s.Require().NoError(err)
+	if err != nil {
+		panic(err)
+	}
 	return logger
 }
 

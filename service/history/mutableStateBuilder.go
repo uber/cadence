@@ -1976,8 +1976,7 @@ func (e *mutableStateBuilder) AddActivityTaskCancelRequestedEvent(decisionComple
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.WorkflowActionActivityTaskCanceled,
 			tag.Bool(isRunning),
-			tag.WorkflowActivityID(activityID),
-			tag.WorkflowStartedID(ai.StartedID))
+			tag.WorkflowActivityID(activityID))
 
 		return nil, nil, false
 	}
