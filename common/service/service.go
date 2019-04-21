@@ -182,7 +182,6 @@ func (h *serviceImpl) Start() {
 		h.logger.WithTags(tag.Error(err)).Fatal("Membership monitor creation failed")
 	}
 
-	h.logger.Infof("create membership monitor for %v", h.sName)
 	err = h.membershipMonitor.Start()
 	if err != nil {
 		h.logger.WithTags(tag.Error(err)).Fatal("starting membership monitor failed")
