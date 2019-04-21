@@ -21,10 +21,10 @@
 package membership
 
 import (
-	"github.com/uber/cadence/common/log/tag"
 	"sync"
 
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	ringpop "github.com/uber/ringpop-go"
 )
 

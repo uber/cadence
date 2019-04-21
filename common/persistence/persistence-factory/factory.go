@@ -21,10 +21,10 @@
 package persistence
 
 import (
-	"github.com/uber/cadence/common/log"
 	"sync"
 
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"

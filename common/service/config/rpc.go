@@ -22,10 +22,10 @@ package config
 
 import (
 	"fmt"
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 	"net"
 
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/tchannel"
 )

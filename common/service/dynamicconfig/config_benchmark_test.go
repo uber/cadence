@@ -21,10 +21,10 @@
 package dynamicconfig
 
 import (
-	"github.com/uber/cadence/common/log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/uber/cadence/common/log"
 )
 
 func BenchmarkGetIntProperty(b *testing.B) {

@@ -21,10 +21,9 @@
 package service
 
 import (
-	"github.com/uber/cadence/common/log"
-
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"

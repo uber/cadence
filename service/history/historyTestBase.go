@@ -22,13 +22,9 @@ package history
 
 import (
 	"fmt"
-	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/log/tag"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/uber/cadence/common/log"
 
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/shared"
@@ -37,6 +33,9 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"

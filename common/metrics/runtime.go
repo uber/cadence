@@ -21,12 +21,12 @@
 package metrics
 
 import (
-	"github.com/uber/cadence/common/log"
 	"runtime"
 	"sync/atomic"
 	"time"
 
 	"github.com/uber-go/tally"
+	"github.com/uber/cadence/common/log"
 )
 
 // RuntimeMetricsReporter A struct containing the state of the RuntimeMetricsReporter.

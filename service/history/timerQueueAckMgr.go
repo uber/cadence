@@ -22,13 +22,13 @@ package history
 
 import (
 	"fmt"
-	"github.com/uber/cadence/common/log/tag"
 	"math"
 	"sort"
 	"sync"
 	"time"
 
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )

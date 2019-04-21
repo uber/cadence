@@ -22,15 +22,14 @@ package scanner
 
 import (
 	"context"
-	"github.com/uber/cadence/common/log/tag"
 	"time"
 
+	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/service/worker/scanner/tasklist"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
 	cclient "go.uber.org/cadence/client"
 	"go.uber.org/cadence/workflow"
-
-	"github.com/uber/cadence/service/worker/scanner/tasklist"
 )
 
 type contextKey int

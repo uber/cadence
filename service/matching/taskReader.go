@@ -22,13 +22,13 @@ package matching
 
 import (
 	"context"
-	"github.com/uber/cadence/common/log/tag"
+	"fmt"
 	"runtime"
 	"time"
 
-	"github.com/uber/cadence/common/persistence"
-
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
 )
 
 var epochStartTime = time.Unix(0, 0)

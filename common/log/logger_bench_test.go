@@ -20,13 +20,12 @@
 package log
 
 import (
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"testing"
 
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/tag"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-
-	"github.com/uber/cadence/common/log/tag"
 )
 
 /**

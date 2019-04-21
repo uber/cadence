@@ -21,7 +21,6 @@
 package main
 
 import (
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"log"
 	"time"
 
@@ -30,6 +29,7 @@ import (
 	"github.com/uber/cadence/common/blobstore/filestore"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/elasticsearch"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service"

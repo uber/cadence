@@ -22,8 +22,6 @@ package common
 
 import (
 	"encoding/json"
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 	"math/rand"
 	"sync"
 	"time"
@@ -34,6 +32,8 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cron"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"go.uber.org/yarpc/yarpcerrors"
 	"golang.org/x/net/context"

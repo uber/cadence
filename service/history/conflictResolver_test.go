@@ -21,7 +21,6 @@
 package history
 
 import (
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"testing"
 	"time"
 
@@ -35,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
@@ -134,23 +134,23 @@ func (s *conflictResolverSuite) TestGetHistory() {
 	nextEventID := int64(101)
 
 	event1 := &shared.HistoryEvent{
-		EventId:                                 common.Int64Ptr(1),
+		EventId: common.Int64Ptr(1),
 		WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{},
 	}
 	event2 := &shared.HistoryEvent{
-		EventId:                              common.Int64Ptr(2),
+		EventId: common.Int64Ptr(2),
 		DecisionTaskScheduledEventAttributes: &shared.DecisionTaskScheduledEventAttributes{},
 	}
 	event3 := &shared.HistoryEvent{
-		EventId:                            common.Int64Ptr(3),
+		EventId: common.Int64Ptr(3),
 		DecisionTaskStartedEventAttributes: &shared.DecisionTaskStartedEventAttributes{},
 	}
 	event4 := &shared.HistoryEvent{
-		EventId:                              common.Int64Ptr(4),
+		EventId: common.Int64Ptr(4),
 		DecisionTaskCompletedEventAttributes: &shared.DecisionTaskCompletedEventAttributes{},
 	}
 	event5 := &shared.HistoryEvent{
-		EventId:                              common.Int64Ptr(5),
+		EventId: common.Int64Ptr(5),
 		ActivityTaskScheduledEventAttributes: &shared.ActivityTaskScheduledEventAttributes{},
 	}
 
@@ -204,16 +204,16 @@ func (s *conflictResolverSuite) TestReset() {
 		EventId: common.Int64Ptr(1),
 		Version: common.Int64Ptr(12),
 		WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
-			WorkflowType:                        &shared.WorkflowType{Name: common.StringPtr("some random workflow type")},
-			TaskList:                            &shared.TaskList{Name: common.StringPtr("some random workflow type")},
-			Input:                               []byte("some random input"),
+			WorkflowType: &shared.WorkflowType{Name: common.StringPtr("some random workflow type")},
+			TaskList:     &shared.TaskList{Name: common.StringPtr("some random workflow type")},
+			Input:        []byte("some random input"),
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(123),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(233),
 			Identity:                            common.StringPtr("some random identity"),
 		},
 	}
 	event2 := &shared.HistoryEvent{
-		EventId:                              common.Int64Ptr(2),
+		EventId: common.Int64Ptr(2),
 		DecisionTaskScheduledEventAttributes: &shared.DecisionTaskScheduledEventAttributes{},
 	}
 

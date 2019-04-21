@@ -23,7 +23,6 @@ package history
 import (
 	ctx "context"
 	"errors"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"reflect"
 	"testing"
 	"time"
@@ -41,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"

@@ -21,15 +21,14 @@
 package matching
 
 import (
-	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/log/tag"
 	"time"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/tag"
+	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
-
-	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
 )
 
 // Config represents configuration for cadence-matching service

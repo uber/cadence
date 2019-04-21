@@ -23,10 +23,9 @@ package cassandra
 import (
 	"fmt"
 
-	"github.com/uber/cadence/common/log"
-
 	"github.com/gocql/gocql"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
 )

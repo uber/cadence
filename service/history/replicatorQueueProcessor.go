@@ -22,7 +22,6 @@ package history
 
 import (
 	"errors"
-	"github.com/uber/cadence/common/log/tag"
 	"time"
 
 	"github.com/uber/cadence/.gen/go/replicator"
@@ -30,6 +29,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"

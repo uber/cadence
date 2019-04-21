@@ -21,17 +21,16 @@
 package history
 
 import (
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/persistence"
-
 	"github.com/stretchr/testify/suite"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/persistence"
 )
 
 type (

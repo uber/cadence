@@ -22,13 +22,10 @@ package frontend
 
 import (
 	"context"
-	"github.com/uber/cadence/common/log/tag"
 	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/uber/cadence/common/log"
 
 	"github.com/pborman/uuid"
 	"github.com/uber-go/tally"
@@ -40,6 +37,8 @@ import (
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"

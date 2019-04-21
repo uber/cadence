@@ -21,10 +21,10 @@
 package matching
 
 import (
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 	"sync"
 
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"go.uber.org/atomic"
 )
 

@@ -21,14 +21,13 @@
 package membership
 
 import (
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 	"sync"
 	"time"
 
-	"github.com/uber/cadence/common"
-
 	"github.com/dgryski/go-farm"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/ringpop-go"
 	"github.com/uber/ringpop-go/events"
 	"github.com/uber/ringpop-go/hashring"

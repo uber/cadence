@@ -21,7 +21,6 @@
 package host
 
 import (
-	"github.com/uber/cadence/common/log/tag"
 	"io/ioutil"
 	"os"
 
@@ -31,6 +30,7 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	metricsmocks "github.com/uber/cadence/common/metrics/mocks"
 	"github.com/uber/cadence/common/mocks"

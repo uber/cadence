@@ -22,13 +22,13 @@ package dynamicconfig
 
 import (
 	"errors"
-	"github.com/uber/cadence/common/log"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/uber/cadence/common/log"
 )
 
 type inMemoryClient struct {

@@ -26,10 +26,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
-	"go.uber.org/zap"
-
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
@@ -39,6 +35,8 @@ import (
 	"github.com/uber/cadence/common/blobstore/blob"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	mmocks "github.com/uber/cadence/common/metrics/mocks"
 	"github.com/uber/cadence/common/mocks"
@@ -46,6 +44,7 @@ import (
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"go.uber.org/cadence/testsuite"
 	"go.uber.org/cadence/worker"
+	"go.uber.org/zap"
 )
 
 const (

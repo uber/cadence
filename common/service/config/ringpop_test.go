@@ -22,12 +22,12 @@ package config
 
 import (
 	"fmt"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/ringpop-go/discovery/statichosts"
 	"gopkg.in/yaml.v2"
 )

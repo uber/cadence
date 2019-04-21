@@ -22,7 +22,6 @@ package history
 
 import (
 	"errors"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"testing"
 	"time"
 
@@ -37,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
@@ -179,8 +179,8 @@ func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
 		mock.Anything).Return().Once()
 	startRequest := &workflow.StartWorkflowExecutionRequest{
-		WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr("wType")},
-		TaskList:                            common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
+		WorkflowType: &workflow.WorkflowType{Name: common.StringPtr("wType")},
+		TaskList:     common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 	}
@@ -253,8 +253,8 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout() {
 	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
 		mock.Anything).Return().Once()
 	startRequest := &workflow.StartWorkflowExecutionRequest{
-		WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr("wType")},
-		TaskList:                            common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
+		WorkflowType: &workflow.WorkflowType{Name: common.StringPtr("wType")},
+		TaskList:     common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 	}

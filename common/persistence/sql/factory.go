@@ -21,9 +21,9 @@
 package sql
 
 import (
-	"github.com/uber/cadence/common/log"
 	"sync"
 
+	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/storage"
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"

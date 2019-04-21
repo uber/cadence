@@ -23,7 +23,6 @@ package host
 import (
 	"flag"
 	"fmt"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"strconv"
 	"strings"
 	"testing"
@@ -35,6 +34,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
 	"go.uber.org/zap"

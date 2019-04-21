@@ -23,12 +23,12 @@ package config
 import (
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common/log"
 	"reflect"
 	"strings"
 	"time"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/ringpop-go"
 	"github.com/uber/ringpop-go/discovery"

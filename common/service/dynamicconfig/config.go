@@ -21,12 +21,12 @@
 package dynamicconfig
 
 import (
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
+	"fmt"
 	"sync"
 	"time"
 
-	"fmt"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 )
 
 // NewCollection creates a new collection

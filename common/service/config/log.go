@@ -26,10 +26,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"go.uber.org/zap/zapcore"
-
 	"github.com/sirupsen/logrus"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 const fileMode = os.FileMode(0644)

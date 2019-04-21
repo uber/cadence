@@ -23,13 +23,9 @@ package host
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/log/tag"
 	"io/ioutil"
 	"os"
 	"time"
-
-	"go.uber.org/zap"
 
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
@@ -37,9 +33,12 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/environment"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/tchannel"
+	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 )
 

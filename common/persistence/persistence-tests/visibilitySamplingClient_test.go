@@ -21,7 +21,6 @@
 package persistencetests
 
 import (
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"testing"
 	"time"
 
@@ -29,6 +28,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	mmocks "github.com/uber/cadence/common/metrics/mocks"
 	"github.com/uber/cadence/common/mocks"
@@ -248,7 +248,7 @@ func (s *VisibilitySamplingSuite) TestListClosedWorkflowExecutionsByStatus() {
 	}
 	request := &p.ListClosedWorkflowExecutionsByStatusRequest{
 		ListWorkflowExecutionsRequest: req,
-		Status:                        gen.WorkflowExecutionCloseStatusFailed,
+		Status: gen.WorkflowExecutionCloseStatusFailed,
 	}
 	s.persistence.On("ListClosedWorkflowExecutionsByStatus", request).Return(nil, nil).Once()
 	_, err := s.client.ListClosedWorkflowExecutionsByStatus(request)

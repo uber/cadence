@@ -24,8 +24,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/log/tag"
 	"net/http"
 	"sync"
 	"sync/atomic"
@@ -38,6 +36,8 @@ import (
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
@@ -515,10 +515,10 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 			resp := &gohistory.RecordActivityTaskStartedResponse{
 				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleId, 0,
 					&workflow.ScheduleActivityTaskDecisionAttributes{
-						ActivityId:                    &activityID,
-						TaskList:                      &workflow.TaskList{Name: taskList.Name},
-						ActivityType:                  activityType,
-						Input:                         activityInput,
+						ActivityId:   &activityID,
+						TaskList:     &workflow.TaskList{Name: taskList.Name},
+						ActivityType: activityType,
+						Input:        activityInput,
 						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 						ScheduleToStartTimeoutSeconds: common.Int32Ptr(50),
 						StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
@@ -625,10 +625,10 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 			return &gohistory.RecordActivityTaskStartedResponse{
 				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleId, 0,
 					&workflow.ScheduleActivityTaskDecisionAttributes{
-						ActivityId:                    &activityID,
-						TaskList:                      &workflow.TaskList{Name: taskList.Name},
-						ActivityType:                  activityType,
-						Input:                         activityInput,
+						ActivityId:   &activityID,
+						TaskList:     &workflow.TaskList{Name: taskList.Name},
+						ActivityType: activityType,
+						Input:        activityInput,
 						ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(2),
 						StartToCloseTimeoutSeconds:    common.Int32Ptr(1),
@@ -825,10 +825,10 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 			return &gohistory.RecordActivityTaskStartedResponse{
 				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleId, 0,
 					&workflow.ScheduleActivityTaskDecisionAttributes{
-						ActivityId:                    &activityID,
-						TaskList:                      &workflow.TaskList{Name: taskList.Name},
-						ActivityType:                  activityType,
-						Input:                         activityInput,
+						ActivityId:   &activityID,
+						TaskList:     &workflow.TaskList{Name: taskList.Name},
+						ActivityType: activityType,
+						Input:        activityInput,
 						ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(2),
 						StartToCloseTimeoutSeconds:    common.Int32Ptr(1),
@@ -1124,10 +1124,10 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 			return &gohistory.RecordActivityTaskStartedResponse{
 				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleId, 0,
 					&workflow.ScheduleActivityTaskDecisionAttributes{
-						ActivityId:                    &activityID,
-						TaskList:                      &workflow.TaskList{Name: taskList.Name},
-						ActivityType:                  activityType,
-						Input:                         activityInput,
+						ActivityId:   &activityID,
+						TaskList:     &workflow.TaskList{Name: taskList.Name},
+						ActivityType: activityType,
+						Input:        activityInput,
 						ScheduleToStartTimeoutSeconds: common.Int32Ptr(600),
 						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(2),
 						StartToCloseTimeoutSeconds:    common.Int32Ptr(1),
@@ -1610,10 +1610,10 @@ func (s *matchingEngineSuite) setupRecordActivityTaskStartedMock(tlName string) 
 			return &gohistory.RecordActivityTaskStartedResponse{
 				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleId, 0,
 					&workflow.ScheduleActivityTaskDecisionAttributes{
-						ActivityId:                    &activityID,
-						TaskList:                      &workflow.TaskList{Name: &tlName},
-						ActivityType:                  activityType,
-						Input:                         activityInput,
+						ActivityId:   &activityID,
+						TaskList:     &workflow.TaskList{Name: &tlName},
+						ActivityType: activityType,
+						Input:        activityInput,
 						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 						ScheduleToStartTimeoutSeconds: common.Int32Ptr(50),
 						StartToCloseTimeoutSeconds:    common.Int32Ptr(50),

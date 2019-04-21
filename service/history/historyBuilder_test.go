@@ -21,21 +21,18 @@
 package history
 
 import (
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"testing"
 
-	"github.com/stretchr/testify/mock"
-
-	"github.com/uber/cadence/common/log"
-
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-
 	"github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -672,10 +669,10 @@ func (s *historyBuilderSuite) addWorkflowExecutionStartedEvent(we workflow.Workf
 		mock.Anything).Return()
 
 	request := &workflow.StartWorkflowExecutionRequest{
-		WorkflowId:                          common.StringPtr(*we.WorkflowId),
-		WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-		TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
-		Input:                               input,
+		WorkflowId:   common.StringPtr(*we.WorkflowId),
+		WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+		TaskList:     &workflow.TaskList{Name: common.StringPtr(taskList)},
+		Input:        input,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionStartToCloseTimeout),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(taskStartToCloseTimeout),
 		Identity:                            common.StringPtr(identity),
@@ -720,10 +717,10 @@ func (s *historyBuilderSuite) addActivityTaskScheduledEvent(decisionCompletedID 
 		mock.Anything).Return()
 	return s.msBuilder.AddActivityTaskScheduledEvent(decisionCompletedID,
 		&workflow.ScheduleActivityTaskDecisionAttributes{
-			ActivityId:                    common.StringPtr(activityID),
-			ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityType)},
-			TaskList:                      &workflow.TaskList{Name: common.StringPtr(taskList)},
-			Input:                         input,
+			ActivityId:   common.StringPtr(activityID),
+			ActivityType: &workflow.ActivityType{Name: common.StringPtr(activityType)},
+			TaskList:     &workflow.TaskList{Name: common.StringPtr(taskList)},
+			Input:        input,
 			ScheduleToCloseTimeoutSeconds: common.Int32Ptr(timeout),
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(queueTimeout),
 			HeartbeatTimeoutSeconds:       common.Int32Ptr(hearbeatTimeout),

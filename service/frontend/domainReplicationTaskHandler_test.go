@@ -21,7 +21,6 @@
 package frontend
 
 import (
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"testing"
 
 	"github.com/pborman/uuid"
@@ -29,6 +28,7 @@ import (
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
 )

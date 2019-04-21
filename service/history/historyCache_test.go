@@ -22,19 +22,18 @@ package history
 
 import (
 	"errors"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"sync"
 	"testing"
 
 	"github.com/pborman/uuid"
-	"github.com/uber/cadence/common/log"
-
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"

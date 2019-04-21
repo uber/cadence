@@ -22,11 +22,11 @@ package matching
 
 import (
 	"errors"
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 	"sync/atomic"
 
 	s "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 )
 

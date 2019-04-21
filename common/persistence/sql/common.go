@@ -25,10 +25,10 @@ import (
 	"encoding/binary"
 	"encoding/gob"
 	"fmt"
-	"github.com/uber/cadence/common/log"
 
 	"github.com/go-sql-driver/mysql"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 )

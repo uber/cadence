@@ -23,7 +23,6 @@ package history
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common/log/tag"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -36,6 +35,7 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )

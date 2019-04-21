@@ -21,13 +21,13 @@
 package messaging
 
 import (
-	"github.com/uber/cadence/common/log"
 	"strings"
 
 	"github.com/Shopify/sarama"
 	uberKafkaClient "github.com/uber-go/kafka-client"
 	uberKafka "github.com/uber-go/kafka-client/kafka"
 	"github.com/uber-go/tally"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"go.uber.org/zap"
 )

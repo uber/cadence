@@ -22,9 +22,6 @@ package cassandra
 
 import (
 	"fmt"
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/log/tag"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -34,6 +31,9 @@ import (
 	"github.com/gocql/gocql"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/environment"
 )
 

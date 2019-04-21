@@ -23,10 +23,7 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/uber/cadence/common/log/loggerimpl"
-
 	"io/ioutil"
-
 	"strconv"
 
 	"github.com/gocql/gocql"
@@ -34,6 +31,7 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
 	cassp "github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/tools/cassandra"

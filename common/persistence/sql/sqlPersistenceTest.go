@@ -25,11 +25,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/uber/cadence/environment"
-
 	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/environment"
 )
 
 const (

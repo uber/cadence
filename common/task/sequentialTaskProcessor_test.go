@@ -22,13 +22,13 @@ package task
 
 import (
 	"errors"
-	"github.com/uber/cadence/common/log/loggerimpl"
-	"go.uber.org/zap"
 	"math/rand"
 	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"go.uber.org/zap"
 )
 
 type (

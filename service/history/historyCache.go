@@ -22,19 +22,18 @@ package history
 
 import (
 	"context"
-	"github.com/uber/cadence/common/log/tag"
 	"sync/atomic"
 
+	"github.com/pborman/uuid"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/definition"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-
-	"github.com/pborman/uuid"
-	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/log"
 )
 
 type (

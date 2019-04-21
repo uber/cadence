@@ -21,17 +21,16 @@
 package history
 
 import (
+	"encoding/hex"
 	"fmt"
-	"github.com/stretchr/testify/mock"
-	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/log/tag"
 	"testing"
 	"time"
 
-	"encoding/hex"
-
+	"github.com/stretchr/testify/mock"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 
 	"encoding/json"

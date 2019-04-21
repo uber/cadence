@@ -22,14 +22,14 @@ package messaging
 
 import (
 	"errors"
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 
 	"github.com/Shopify/sarama"
 	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/codec/gob"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 )
 
 type (
