@@ -143,7 +143,9 @@ func newTestBase(options *TestBaseOptions, testCluster PersistenceTestCluster) T
 		ClusterMetadata:       metadata,
 	}
 	logger, err := loggerimpl.NewDevelopment()
-	base.Require().NoError(err)
+	if err != nil {
+		panic(err)
+	}
 	base.logger = logger
 	return base
 }
