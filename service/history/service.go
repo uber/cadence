@@ -28,7 +28,6 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/elasticsearch"
 	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
@@ -304,7 +303,7 @@ func (s *Service) Start() {
 		if err != nil {
 			log.Fatal("Creating visibility producer failed", tag.Error(err))
 		}
-		esVisibility = elasticsearch.NewESVisibilityManager("", nil, nil, visibilityProducer,
+		esVisibility = persistence.NewESVisibilityManager("", nil, nil, visibilityProducer,
 			s.metricsClient, log)
 	}
 

@@ -23,8 +23,15 @@ package persistence
 import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/clock"
+	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/metrics"
+	espersistence "github.com/uber/cadence/common/persistence/elasticsearch"
+	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/tokenbucket"
 )
 
 type (
@@ -49,6 +56,32 @@ func NewVisibilityManagerImpl(persistence VisibilityStore, logger log.Logger) Vi
 	}
 }
 
+// NewESVisibilityManager create a visibility manager for ElasticSearch
+// In history, it only needs kafka producer for writing data;
+// In frontend, it only needs ES client and related config for reading data
+func NewESVisibilityManager(indexName string, esClient es.Client, config *config.VisibilityConfig,
+	producer messaging.Producer, metricsClient metrics.Client, log log.Logger) VisibilityManager {
+
+	visibilityFromESStore := espersistence.NewElasticSearchVisibilityStore(esClient, indexName, producer, config, log)
+	visibilityFromES := NewVisibilityManagerImpl(visibilityFromESStore, log)
+
+	if config != nil {
+		// wrap with rate limiter
+		if config.MaxQPS() != 0 {
+			esRateLimiter := tokenbucket.New(config.MaxQPS(), clock.NewRealTimeSource())
+			visibilityFromES = NewVisibilityPersistenceRateLimitedClient(visibilityFromES, esRateLimiter, log)
+		}
+		// wrap with advanced rate limit for list
+		visibilityFromES = NewVisibilitySamplingClient(visibilityFromES, config, metricsClient, log)
+	}
+	if metricsClient != nil {
+		// wrap with metrics
+		visibilityFromES = espersistence.NewVisibilityMetricsClient(visibilityFromES, metricsClient, log)
+	}
+
+	return visibilityFromES
+}
+
 func (v *visibilityManagerImpl) Close() {
 	v.persistence.Close()
 }
@@ -67,7 +100,7 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionStarted(request *RecordWo
 		ExecutionTimestamp: request.ExecutionTimestamp,
 		WorkflowTimeout:    request.WorkflowTimeout,
 		TaskID:             request.TaskID,
-		Memo:               v.getMemo(request.Memo, request.DomainUUID, request.Execution.GetWorkflowId(), request.Execution.GetRunId()),
+		Memo:               v.serializeMemo(request.Memo, request.DomainUUID, request.Execution.GetWorkflowId(), request.Execution.GetRunId()),
 	}
 	return v.persistence.RecordWorkflowExecutionStarted(req)
 }
@@ -81,7 +114,7 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionClosed(request *RecordWor
 		StartTimestamp:     request.StartTimestamp,
 		ExecutionTimestamp: request.ExecutionTimestamp,
 		TaskID:             request.TaskID,
-		Memo:               v.getMemo(request.Memo, request.DomainUUID, request.Execution.GetWorkflowId(), request.Execution.GetRunId()),
+		Memo:               v.serializeMemo(request.Memo, request.DomainUUID, request.Execution.GetWorkflowId(), request.Execution.GetRunId()),
 		CloseTimestamp:     request.CloseTimestamp,
 		Status:             request.Status,
 		HistoryLength:      request.HistoryLength,
@@ -220,7 +253,7 @@ func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution
 	return convertedExecution
 }
 
-func (v *visibilityManagerImpl) getMemo(visibilityMemo *shared.Memo, domainID, wID, rID string) *DataBlob {
+func (v *visibilityManagerImpl) serializeMemo(visibilityMemo *shared.Memo, domainID, wID, rID string) *DataBlob {
 	memo, err := v.serializer.SerializeVisibilityMemo(visibilityMemo, VisibilityEncoding)
 	if err != nil {
 		v.logger.WithTags(
