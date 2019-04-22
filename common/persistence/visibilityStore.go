@@ -23,15 +23,8 @@ package persistence
 import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/clock"
-	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/messaging"
-	"github.com/uber/cadence/common/metrics"
-	espersistence "github.com/uber/cadence/common/persistence/elasticsearch"
-	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/common/tokenbucket"
 )
 
 type (
@@ -54,32 +47,6 @@ func NewVisibilityManagerImpl(persistence VisibilityStore, logger log.Logger) Vi
 		persistence: persistence,
 		logger:      logger,
 	}
-}
-
-// NewESVisibilityManager create a visibility manager for ElasticSearch
-// In history, it only needs kafka producer for writing data;
-// In frontend, it only needs ES client and related config for reading data
-func NewESVisibilityManager(indexName string, esClient es.Client, config *config.VisibilityConfig,
-	producer messaging.Producer, metricsClient metrics.Client, log log.Logger) VisibilityManager {
-
-	visibilityFromESStore := espersistence.NewElasticSearchVisibilityStore(esClient, indexName, producer, config, log)
-	visibilityFromES := NewVisibilityManagerImpl(visibilityFromESStore, log)
-
-	if config != nil {
-		// wrap with rate limiter
-		if config.MaxQPS() != 0 {
-			esRateLimiter := tokenbucket.New(config.MaxQPS(), clock.NewRealTimeSource())
-			visibilityFromES = NewVisibilityPersistenceRateLimitedClient(visibilityFromES, esRateLimiter, log)
-		}
-		// wrap with advanced rate limit for list
-		visibilityFromES = NewVisibilitySamplingClient(visibilityFromES, config, metricsClient, log)
-	}
-	if metricsClient != nil {
-		// wrap with metrics
-		visibilityFromES = espersistence.NewVisibilityMetricsClient(visibilityFromES, metricsClient, log)
-	}
-
-	return visibilityFromES
 }
 
 func (v *visibilityManagerImpl) Close() {

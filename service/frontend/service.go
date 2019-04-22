@@ -28,6 +28,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	espersistence "github.com/uber/cadence/common/persistence/elasticsearch"
 	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
@@ -157,7 +158,7 @@ func (s *Service) Start() {
 			VisibilityListMaxQPS:   s.config.ESVisibilityListMaxQPS,
 			ESIndexMaxResultWindow: s.config.ESIndexMaxResultWindow,
 		}
-		visibilityFromES = persistence.NewESVisibilityManager(visibilityIndexName, params.ESClient, visibilityConfigForES,
+		visibilityFromES = espersistence.NewESVisibilityManager(visibilityIndexName, params.ESClient, visibilityConfigForES,
 			nil, base.GetMetricsClient(), log)
 	}
 	visibility := persistence.NewVisibilityManagerWrapper(visibilityFromDB, visibilityFromES, s.config.EnableReadVisibilityFromES)
