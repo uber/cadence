@@ -707,6 +707,12 @@ Update_History_Loop:
 			}
 		}
 
+		// compare binaryChecksum and auto-reset workflow if it has decision completed by bad binary(defined by domain userResetBinaries)
+		err = t.historyService.resetor.AutoResetWorkflow(context, msBuilder)
+		if err != nil {
+			return err
+		}
+
 		err = failInFlightDecisionToClearBufferedEvents(msBuilder)
 		if err != nil {
 			return err

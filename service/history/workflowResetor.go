@@ -25,6 +25,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/common/log/tag"
+
 	"github.com/pborman/uuid"
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -36,10 +38,14 @@ import (
 
 type (
 	workflowResetor interface {
+		// Reset a workflow
 		ResetWorkflowExecution(ctx context.Context, resetRequest *workflow.ResetWorkflowExecutionRequest,
 			baseContext workflowExecutionContext, baseMutableState mutableState,
 			currContext workflowExecutionContext, currMutableState mutableState) (response *workflow.ResetWorkflowExecutionResponse, retError error)
+		// Apply reset event to workflow
 		ApplyResetEvent(ctx context.Context, request *h.ReplicateEventsRequest, domainID, workflowID, currentRunID string) (retError error)
+		//AutoResetWorkflow will compare all binaryChecksum in mutableState with bad binary defined by domain userResetBinaries. If intersects, then reset workflow
+		AutoResetWorkflow(currContext workflowExecutionContext, currMutableState mutableState) (retError error)
 	}
 
 	workflowResetorImpl struct {
@@ -880,4 +886,137 @@ func (w *workflowResetorImpl) replicateResetEvent(baseMutableState mutableState,
 	newMsBuilder.GetExecutionInfo().SetLastFirstEventID(firstEvent.GetEventId())
 	newMsBuilder.UpdateReplicationStateLastEventID(clusterMetadata.GetCurrentClusterName(), lastEvent.GetVersion(), lastEvent.GetEventId())
 	return
+}
+
+func (w *workflowResetorImpl) AutoResetWorkflow(currWorkflowContext workflowExecutionContext, currMutableState mutableState) (retError error) {
+	domainEntry, retError := w.eng.getActiveDomainEntry(&currMutableState.GetExecutionInfo().DomainID)
+	if retError != nil {
+		return
+	}
+
+	resetBinaries := domainEntry.GetConfig().UserResetBinaries.Infos
+	var resetPoints map[string]*workflow.ResetPointInfo
+	if currMutableState.GetExecutionInfo().FeasibleAutoResetPoints != nil {
+		resetPoints = currMutableState.GetExecutionInfo().FeasibleAutoResetPoints.ResetPoints
+	}
+
+	if len(resetPoints) == 0 || len(resetBinaries) == 0 {
+		return
+	}
+
+	var minResetPoint *workflow.ResetPointInfo
+	var minBinaryChecksum string
+	// to find reset point, we have to compare of two maps. We iterate the smaller map to find intersection.
+	if len(resetPoints) < len(resetBinaries) {
+		for currBC, currP := range resetPoints {
+			_, ok := resetBinaries[currBC]
+			findOldestResetPoint(ok, minResetPoint, currP, &minBinaryChecksum, &currBC)
+		}
+	} else {
+		for currBC := range resetBinaries {
+			currP, ok := resetPoints[currBC]
+			findOldestResetPoint(ok, minResetPoint, currP, &minBinaryChecksum, &currBC)
+		}
+	}
+	if minResetPoint == nil {
+		return
+	}
+
+	var newRunID string
+	defer func() {
+		w.eng.logger.Info("Auto-Resetting workflow",
+			tag.WorkflowDomainName(domainEntry.GetInfo().Name),
+			tag.WorkflowID(currMutableState.GetExecutionInfo().WorkflowID),
+			tag.WorkflowRunID(currMutableState.GetExecutionInfo().RunID),
+			tag.Error(retError),
+			tag.WorkflowResetBaseRunID(minResetPoint.GetRunId()),
+			tag.WorkflowResetNewRunID(newRunID),
+			tag.WorkflowBinaryChecksum(minBinaryChecksum),
+			tag.WorkflowEventID(minResetPoint.GetFirstDecisionCompletedId()))
+	}()
+
+	// this indicate that whether we should try resetting again if this reset doesn't succeed
+	nonResettable := false
+
+	baseExecution := workflow.WorkflowExecution{
+		WorkflowId: &currMutableState.GetExecutionInfo().WorkflowID,
+		RunId:      &currMutableState.GetExecutionInfo().RunID,
+	}
+
+	baseContext, baseRelease, retError := w.eng.historyCache.getOrCreateWorkflowExecution(domainEntry.GetInfo().ID, baseExecution)
+	if retError != nil {
+		return w.processAutoResetError(nonResettable, retError, currWorkflowContext, currMutableState, minBinaryChecksum)
+	}
+	defer func() { baseRelease(retError) }()
+	baseMutableState, retError := baseContext.loadWorkflowExecution()
+	if retError != nil {
+		return w.processAutoResetError(nonResettable, retError, currWorkflowContext, currMutableState, minBinaryChecksum)
+	}
+
+	// waiting for https://github.com/uber/cadence/pull/1700 to land
+	//newRunID, retryable, retError = w.resetWorkflowWithMutableStates(&workflow.ResetWorkflowExecutionRequest{}, baseContext, baseMutableState, currWorkflowContext, currMutableState)
+	// nonResettable = resp.NonResettable
+	resp, retError := w.ResetWorkflowExecution(context.Background(), &h.ResetWorkflowExecutionRequest{
+		DomainUUID: &domainEntry.GetInfo().ID,
+		ResetRequest: &workflow.ResetWorkflowExecutionRequest{
+			Domain:                &domainEntry.GetInfo().Name,
+			WorkflowExecution:     &baseExecution,
+			Reason:                common.StringPtr(fmt.Sprintf("auto reset due to bad binary %v, baseRunID: %v", minBinaryChecksum, baseMutableState.GetExecutionInfo().RunID)),
+			DecisionFinishEventId: minResetPoint.FirstDecisionCompletedId,
+			RequestId:             common.StringPtr(uuid.New()),
+		},
+	})
+	if retError != nil {
+		w.processAutoResetError(nonResettable, retError, currWorkflowContext, currMutableState, minBinaryChecksum)
+	}
+	newRunID = resp.GetRunId()
+	return
+}
+
+// if there are more than one reset points, find the oldest one to avoid multiple resets
+func findOldestResetPoint(intersects bool, minP, currP *workflow.ResetPointInfo, minBC, currBC *string) {
+	if intersects && !currP.GetNotResettable() {
+		if minP == nil {
+			minP = currP
+			minBC = currBC
+		} else {
+			if minP.GetRunId() == currP.GetRunId() {
+				if currP.GetFirstDecisionCompletedId() < minP.GetFirstDecisionCompletedId() {
+					minP = currP
+					minBC = currBC
+				}
+			} else {
+				// When the two points have different runID, we rely on timestamp to find the older one.
+				// This can be incorrect when:
+				//    1) timeskew when we generate timestamp
+				//    2) in very short period within the skew window: user deploy a bad code and WF does continueAsNew, then deploy another bad code and also does another continueAsNew
+				// In this rare case, we might reset to the later point instead of the older one.
+				// But then it will trigger another reset for this later run. So it is still acceptable except that it cost one more reset operation.
+				if currP.GetCreatedTimestamp() < minP.GetCreatedTimestamp() {
+					minP = currP
+					minBC = currBC
+				}
+			}
+		}
+	}
+}
+
+func (w *workflowResetorImpl) processAutoResetError(nonResettable bool, prevError error, currWorkflowContext workflowExecutionContext, currMutableState mutableState, resetBinaryChecksum string) (retError error) {
+	if _, ok := prevError.(*workflow.EntityNotExistsError); ok {
+		// this means the reset base run has been deleted
+		nonResettable = true
+	}
+	if nonResettable {
+		// for nonResettable error, we have to mark this reset point as nonResettable, so that next time we don't try resetting to here again
+		currMutableState.GetExecutionInfo().FeasibleAutoResetPoints.ResetPoints[resetBinaryChecksum].NotResettable = common.BoolPtr(true)
+		transactionID, err := w.eng.shard.GetNextTransferTaskID()
+		if err != nil {
+			return err
+		}
+		retError = currWorkflowContext.updateWorkflowExecution(nil, nil, transactionID)
+		if retError != nil {
+			return retError
+		}
+	}
+	return prevError
 }

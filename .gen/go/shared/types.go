@@ -13165,6 +13165,7 @@ type DomainConfiguration struct {
 	ArchivalRetentionPeriodInDays          *int32          `json:"archivalRetentionPeriodInDays,omitempty"`
 	ArchivalStatus                         *ArchivalStatus `json:"archivalStatus,omitempty"`
 	ArchivalBucketOwner                    *string         `json:"archivalBucketOwner,omitempty"`
+	UserResetBinaries                      *ResetBinaries  `json:"userResetBinaries,omitempty"`
 }
 
 // ToWire translates a DomainConfiguration struct into a Thrift-level intermediate
@@ -13184,7 +13185,7 @@ type DomainConfiguration struct {
 //   }
 func (v *DomainConfiguration) ToWire() (wire.Value, error) {
 	var (
-		fields [6]wire.Field
+		fields [7]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -13238,6 +13239,14 @@ func (v *DomainConfiguration) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 60, Value: w}
 		i++
 	}
+	if v.UserResetBinaries != nil {
+		w, err = v.UserResetBinaries.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 70, Value: w}
+		i++
+	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
@@ -13246,6 +13255,12 @@ func _ArchivalStatus_Read(w wire.Value) (ArchivalStatus, error) {
 	var v ArchivalStatus
 	err := v.FromWire(w)
 	return v, err
+}
+
+func _ResetBinaries_Read(w wire.Value) (*ResetBinaries, error) {
+	var v ResetBinaries
+	err := v.FromWire(w)
+	return &v, err
 }
 
 // FromWire deserializes a DomainConfiguration struct from its Thrift-level
@@ -13330,6 +13345,14 @@ func (v *DomainConfiguration) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 70:
+			if field.Value.Type() == wire.TStruct {
+				v.UserResetBinaries, err = _ResetBinaries_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -13343,7 +13366,7 @@ func (v *DomainConfiguration) String() string {
 		return "<nil>"
 	}
 
-	var fields [6]string
+	var fields [7]string
 	i := 0
 	if v.WorkflowExecutionRetentionPeriodInDays != nil {
 		fields[i] = fmt.Sprintf("WorkflowExecutionRetentionPeriodInDays: %v", *(v.WorkflowExecutionRetentionPeriodInDays))
@@ -13367,6 +13390,10 @@ func (v *DomainConfiguration) String() string {
 	}
 	if v.ArchivalBucketOwner != nil {
 		fields[i] = fmt.Sprintf("ArchivalBucketOwner: %v", *(v.ArchivalBucketOwner))
+		i++
+	}
+	if v.UserResetBinaries != nil {
+		fields[i] = fmt.Sprintf("UserResetBinaries: %v", v.UserResetBinaries)
 		i++
 	}
 
@@ -13411,6 +13438,9 @@ func (v *DomainConfiguration) Equals(rhs *DomainConfiguration) bool {
 	if !_String_EqualsPtr(v.ArchivalBucketOwner, rhs.ArchivalBucketOwner) {
 		return false
 	}
+	if !((v.UserResetBinaries == nil && rhs.UserResetBinaries == nil) || (v.UserResetBinaries != nil && rhs.UserResetBinaries != nil && v.UserResetBinaries.Equals(rhs.UserResetBinaries))) {
+		return false
+	}
 
 	return true
 }
@@ -13438,6 +13468,9 @@ func (v *DomainConfiguration) MarshalLogObject(enc zapcore.ObjectEncoder) (err e
 	}
 	if v.ArchivalBucketOwner != nil {
 		enc.AddString("archivalBucketOwner", *v.ArchivalBucketOwner)
+	}
+	if v.UserResetBinaries != nil {
+		err = multierr.Append(err, enc.AddObject("userResetBinaries", v.UserResetBinaries))
 	}
 	return err
 }
@@ -13530,6 +13563,21 @@ func (v *DomainConfiguration) GetArchivalBucketOwner() (o string) {
 // IsSetArchivalBucketOwner returns true if ArchivalBucketOwner is not nil.
 func (v *DomainConfiguration) IsSetArchivalBucketOwner() bool {
 	return v != nil && v.ArchivalBucketOwner != nil
+}
+
+// GetUserResetBinaries returns the value of UserResetBinaries if it is set or its
+// zero value if it is unset.
+func (v *DomainConfiguration) GetUserResetBinaries() (o *ResetBinaries) {
+	if v != nil && v.UserResetBinaries != nil {
+		return v.UserResetBinaries
+	}
+
+	return
+}
+
+// IsSetUserResetBinaries returns true if UserResetBinaries is not nil.
+func (v *DomainConfiguration) IsSetUserResetBinaries() bool {
+	return v != nil && v.UserResetBinaries != nil
 }
 
 type DomainInfo struct {
@@ -24426,9 +24474,10 @@ func (v *PollForActivityTaskResponse) IsSetWorkflowDomain() bool {
 }
 
 type PollForDecisionTaskRequest struct {
-	Domain   *string   `json:"domain,omitempty"`
-	TaskList *TaskList `json:"taskList,omitempty"`
-	Identity *string   `json:"identity,omitempty"`
+	Domain         *string   `json:"domain,omitempty"`
+	TaskList       *TaskList `json:"taskList,omitempty"`
+	Identity       *string   `json:"identity,omitempty"`
+	BinaryChecksum *string   `json:"binaryChecksum,omitempty"`
 }
 
 // ToWire translates a PollForDecisionTaskRequest struct into a Thrift-level intermediate
@@ -24448,7 +24497,7 @@ type PollForDecisionTaskRequest struct {
 //   }
 func (v *PollForDecisionTaskRequest) ToWire() (wire.Value, error) {
 	var (
-		fields [3]wire.Field
+		fields [4]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -24476,6 +24525,14 @@ func (v *PollForDecisionTaskRequest) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+	if v.BinaryChecksum != nil {
+		w, err = wire.NewValueString(*(v.BinaryChecksum)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 40, Value: w}
 		i++
 	}
 
@@ -24532,6 +24589,16 @@ func (v *PollForDecisionTaskRequest) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 40:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.BinaryChecksum = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -24545,7 +24612,7 @@ func (v *PollForDecisionTaskRequest) String() string {
 		return "<nil>"
 	}
 
-	var fields [3]string
+	var fields [4]string
 	i := 0
 	if v.Domain != nil {
 		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
@@ -24557,6 +24624,10 @@ func (v *PollForDecisionTaskRequest) String() string {
 	}
 	if v.Identity != nil {
 		fields[i] = fmt.Sprintf("Identity: %v", *(v.Identity))
+		i++
+	}
+	if v.BinaryChecksum != nil {
+		fields[i] = fmt.Sprintf("BinaryChecksum: %v", *(v.BinaryChecksum))
 		i++
 	}
 
@@ -24582,6 +24653,9 @@ func (v *PollForDecisionTaskRequest) Equals(rhs *PollForDecisionTaskRequest) boo
 	if !_String_EqualsPtr(v.Identity, rhs.Identity) {
 		return false
 	}
+	if !_String_EqualsPtr(v.BinaryChecksum, rhs.BinaryChecksum) {
+		return false
+	}
 
 	return true
 }
@@ -24600,6 +24674,9 @@ func (v *PollForDecisionTaskRequest) MarshalLogObject(enc zapcore.ObjectEncoder)
 	}
 	if v.Identity != nil {
 		enc.AddString("identity", *v.Identity)
+	}
+	if v.BinaryChecksum != nil {
+		enc.AddString("binaryChecksum", *v.BinaryChecksum)
 	}
 	return err
 }
@@ -24647,6 +24724,21 @@ func (v *PollForDecisionTaskRequest) GetIdentity() (o string) {
 // IsSetIdentity returns true if Identity is not nil.
 func (v *PollForDecisionTaskRequest) IsSetIdentity() bool {
 	return v != nil && v.Identity != nil
+}
+
+// GetBinaryChecksum returns the value of BinaryChecksum if it is set or its
+// zero value if it is unset.
+func (v *PollForDecisionTaskRequest) GetBinaryChecksum() (o string) {
+	if v != nil && v.BinaryChecksum != nil {
+		return *v.BinaryChecksum
+	}
+
+	return
+}
+
+// IsSetBinaryChecksum returns true if BinaryChecksum is not nil.
+func (v *PollForDecisionTaskRequest) IsSetBinaryChecksum() bool {
+	return v != nil && v.BinaryChecksum != nil
 }
 
 type PollForDecisionTaskResponse struct {
@@ -29434,6 +29526,974 @@ func (v *RequestCancelWorkflowExecutionRequest) GetRequestId() (o string) {
 // IsSetRequestId returns true if RequestId is not nil.
 func (v *RequestCancelWorkflowExecutionRequest) IsSetRequestId() bool {
 	return v != nil && v.RequestId != nil
+}
+
+type ResetBinaries struct {
+	Infos map[string]*ResetBinaryInfo `json:"infos,omitempty"`
+}
+
+type _Map_String_ResetBinaryInfo_MapItemList map[string]*ResetBinaryInfo
+
+func (m _Map_String_ResetBinaryInfo_MapItemList) ForEach(f func(wire.MapItem) error) error {
+	for k, v := range m {
+		if v == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", k)
+		}
+		kw, err := wire.NewValueString(k), error(nil)
+		if err != nil {
+			return err
+		}
+
+		vw, err := v.ToWire()
+		if err != nil {
+			return err
+		}
+		err = f(wire.MapItem{Key: kw, Value: vw})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m _Map_String_ResetBinaryInfo_MapItemList) Size() int {
+	return len(m)
+}
+
+func (_Map_String_ResetBinaryInfo_MapItemList) KeyType() wire.Type {
+	return wire.TBinary
+}
+
+func (_Map_String_ResetBinaryInfo_MapItemList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_Map_String_ResetBinaryInfo_MapItemList) Close() {}
+
+// ToWire translates a ResetBinaries struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *ResetBinaries) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Infos != nil {
+		w, err = wire.NewValueMap(_Map_String_ResetBinaryInfo_MapItemList(v.Infos)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _ResetBinaryInfo_Read(w wire.Value) (*ResetBinaryInfo, error) {
+	var v ResetBinaryInfo
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _Map_String_ResetBinaryInfo_Read(m wire.MapItemList) (map[string]*ResetBinaryInfo, error) {
+	if m.KeyType() != wire.TBinary {
+		return nil, nil
+	}
+
+	if m.ValueType() != wire.TStruct {
+		return nil, nil
+	}
+
+	o := make(map[string]*ResetBinaryInfo, m.Size())
+	err := m.ForEach(func(x wire.MapItem) error {
+		k, err := x.Key.GetString(), error(nil)
+		if err != nil {
+			return err
+		}
+
+		v, err := _ResetBinaryInfo_Read(x.Value)
+		if err != nil {
+			return err
+		}
+
+		o[k] = v
+		return nil
+	})
+	m.Close()
+	return o, err
+}
+
+// FromWire deserializes a ResetBinaries struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a ResetBinaries struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v ResetBinaries
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *ResetBinaries) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TMap {
+				v.Infos, err = _Map_String_ResetBinaryInfo_Read(field.Value.GetMap())
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a ResetBinaries
+// struct.
+func (v *ResetBinaries) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Infos != nil {
+		fields[i] = fmt.Sprintf("Infos: %v", v.Infos)
+		i++
+	}
+
+	return fmt.Sprintf("ResetBinaries{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _Map_String_ResetBinaryInfo_Equals(lhs, rhs map[string]*ResetBinaryInfo) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for lk, lv := range lhs {
+		rv, ok := rhs[lk]
+		if !ok {
+			return false
+		}
+		if !lv.Equals(rv) {
+			return false
+		}
+	}
+	return true
+}
+
+// Equals returns true if all the fields of this ResetBinaries match the
+// provided ResetBinaries.
+//
+// This function performs a deep comparison.
+func (v *ResetBinaries) Equals(rhs *ResetBinaries) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Infos == nil && rhs.Infos == nil) || (v.Infos != nil && rhs.Infos != nil && _Map_String_ResetBinaryInfo_Equals(v.Infos, rhs.Infos))) {
+		return false
+	}
+
+	return true
+}
+
+type _Map_String_ResetBinaryInfo_Zapper map[string]*ResetBinaryInfo
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of _Map_String_ResetBinaryInfo_Zapper.
+func (m _Map_String_ResetBinaryInfo_Zapper) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	for k, v := range m {
+		err = multierr.Append(err, enc.AddObject((string)(k), v))
+	}
+	return err
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of ResetBinaries.
+func (v *ResetBinaries) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Infos != nil {
+		err = multierr.Append(err, enc.AddObject("infos", (_Map_String_ResetBinaryInfo_Zapper)(v.Infos)))
+	}
+	return err
+}
+
+// GetInfos returns the value of Infos if it is set or its
+// zero value if it is unset.
+func (v *ResetBinaries) GetInfos() (o map[string]*ResetBinaryInfo) {
+	if v != nil && v.Infos != nil {
+		return v.Infos
+	}
+
+	return
+}
+
+// IsSetInfos returns true if Infos is not nil.
+func (v *ResetBinaries) IsSetInfos() bool {
+	return v != nil && v.Infos != nil
+}
+
+type ResetBinaryInfo struct {
+	Reason           *string `json:"reason,omitempty"`
+	Operator         *string `json:"operator,omitempty"`
+	CreatedTimestamp *int64  `json:"createdTimestamp,omitempty"`
+}
+
+// ToWire translates a ResetBinaryInfo struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *ResetBinaryInfo) ToWire() (wire.Value, error) {
+	var (
+		fields [3]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Reason != nil {
+		w, err = wire.NewValueString(*(v.Reason)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.Operator != nil {
+		w, err = wire.NewValueString(*(v.Operator)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.CreatedTimestamp != nil {
+		w, err = wire.NewValueI64(*(v.CreatedTimestamp)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a ResetBinaryInfo struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a ResetBinaryInfo struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v ResetBinaryInfo
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *ResetBinaryInfo) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Reason = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Operator = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 30:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.CreatedTimestamp = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a ResetBinaryInfo
+// struct.
+func (v *ResetBinaryInfo) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [3]string
+	i := 0
+	if v.Reason != nil {
+		fields[i] = fmt.Sprintf("Reason: %v", *(v.Reason))
+		i++
+	}
+	if v.Operator != nil {
+		fields[i] = fmt.Sprintf("Operator: %v", *(v.Operator))
+		i++
+	}
+	if v.CreatedTimestamp != nil {
+		fields[i] = fmt.Sprintf("CreatedTimestamp: %v", *(v.CreatedTimestamp))
+		i++
+	}
+
+	return fmt.Sprintf("ResetBinaryInfo{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this ResetBinaryInfo match the
+// provided ResetBinaryInfo.
+//
+// This function performs a deep comparison.
+func (v *ResetBinaryInfo) Equals(rhs *ResetBinaryInfo) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.Reason, rhs.Reason) {
+		return false
+	}
+	if !_String_EqualsPtr(v.Operator, rhs.Operator) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.CreatedTimestamp, rhs.CreatedTimestamp) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of ResetBinaryInfo.
+func (v *ResetBinaryInfo) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Reason != nil {
+		enc.AddString("reason", *v.Reason)
+	}
+	if v.Operator != nil {
+		enc.AddString("operator", *v.Operator)
+	}
+	if v.CreatedTimestamp != nil {
+		enc.AddInt64("createdTimestamp", *v.CreatedTimestamp)
+	}
+	return err
+}
+
+// GetReason returns the value of Reason if it is set or its
+// zero value if it is unset.
+func (v *ResetBinaryInfo) GetReason() (o string) {
+	if v != nil && v.Reason != nil {
+		return *v.Reason
+	}
+
+	return
+}
+
+// IsSetReason returns true if Reason is not nil.
+func (v *ResetBinaryInfo) IsSetReason() bool {
+	return v != nil && v.Reason != nil
+}
+
+// GetOperator returns the value of Operator if it is set or its
+// zero value if it is unset.
+func (v *ResetBinaryInfo) GetOperator() (o string) {
+	if v != nil && v.Operator != nil {
+		return *v.Operator
+	}
+
+	return
+}
+
+// IsSetOperator returns true if Operator is not nil.
+func (v *ResetBinaryInfo) IsSetOperator() bool {
+	return v != nil && v.Operator != nil
+}
+
+// GetCreatedTimestamp returns the value of CreatedTimestamp if it is set or its
+// zero value if it is unset.
+func (v *ResetBinaryInfo) GetCreatedTimestamp() (o int64) {
+	if v != nil && v.CreatedTimestamp != nil {
+		return *v.CreatedTimestamp
+	}
+
+	return
+}
+
+// IsSetCreatedTimestamp returns true if CreatedTimestamp is not nil.
+func (v *ResetBinaryInfo) IsSetCreatedTimestamp() bool {
+	return v != nil && v.CreatedTimestamp != nil
+}
+
+type ResetPointInfo struct {
+	RunId                    *string `json:"runId,omitempty"`
+	FirstDecisionCompletedId *int64  `json:"firstDecisionCompletedId,omitempty"`
+	CreatedTimestamp         *int64  `json:"createdTimestamp,omitempty"`
+	NotResettable            *bool   `json:"not_resettable,omitempty"`
+}
+
+// ToWire translates a ResetPointInfo struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *ResetPointInfo) ToWire() (wire.Value, error) {
+	var (
+		fields [4]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.RunId != nil {
+		w, err = wire.NewValueString(*(v.RunId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.FirstDecisionCompletedId != nil {
+		w, err = wire.NewValueI64(*(v.FirstDecisionCompletedId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.CreatedTimestamp != nil {
+		w, err = wire.NewValueI64(*(v.CreatedTimestamp)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+	if v.NotResettable != nil {
+		w, err = wire.NewValueBool(*(v.NotResettable)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 40, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a ResetPointInfo struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a ResetPointInfo struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v ResetPointInfo
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *ResetPointInfo) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.RunId = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.FirstDecisionCompletedId = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 30:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.CreatedTimestamp = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 40:
+			if field.Value.Type() == wire.TBool {
+				var x bool
+				x, err = field.Value.GetBool(), error(nil)
+				v.NotResettable = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a ResetPointInfo
+// struct.
+func (v *ResetPointInfo) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [4]string
+	i := 0
+	if v.RunId != nil {
+		fields[i] = fmt.Sprintf("RunId: %v", *(v.RunId))
+		i++
+	}
+	if v.FirstDecisionCompletedId != nil {
+		fields[i] = fmt.Sprintf("FirstDecisionCompletedId: %v", *(v.FirstDecisionCompletedId))
+		i++
+	}
+	if v.CreatedTimestamp != nil {
+		fields[i] = fmt.Sprintf("CreatedTimestamp: %v", *(v.CreatedTimestamp))
+		i++
+	}
+	if v.NotResettable != nil {
+		fields[i] = fmt.Sprintf("NotResettable: %v", *(v.NotResettable))
+		i++
+	}
+
+	return fmt.Sprintf("ResetPointInfo{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this ResetPointInfo match the
+// provided ResetPointInfo.
+//
+// This function performs a deep comparison.
+func (v *ResetPointInfo) Equals(rhs *ResetPointInfo) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.RunId, rhs.RunId) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.FirstDecisionCompletedId, rhs.FirstDecisionCompletedId) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.CreatedTimestamp, rhs.CreatedTimestamp) {
+		return false
+	}
+	if !_Bool_EqualsPtr(v.NotResettable, rhs.NotResettable) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of ResetPointInfo.
+func (v *ResetPointInfo) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.RunId != nil {
+		enc.AddString("runId", *v.RunId)
+	}
+	if v.FirstDecisionCompletedId != nil {
+		enc.AddInt64("firstDecisionCompletedId", *v.FirstDecisionCompletedId)
+	}
+	if v.CreatedTimestamp != nil {
+		enc.AddInt64("createdTimestamp", *v.CreatedTimestamp)
+	}
+	if v.NotResettable != nil {
+		enc.AddBool("not_resettable", *v.NotResettable)
+	}
+	return err
+}
+
+// GetRunId returns the value of RunId if it is set or its
+// zero value if it is unset.
+func (v *ResetPointInfo) GetRunId() (o string) {
+	if v != nil && v.RunId != nil {
+		return *v.RunId
+	}
+
+	return
+}
+
+// IsSetRunId returns true if RunId is not nil.
+func (v *ResetPointInfo) IsSetRunId() bool {
+	return v != nil && v.RunId != nil
+}
+
+// GetFirstDecisionCompletedId returns the value of FirstDecisionCompletedId if it is set or its
+// zero value if it is unset.
+func (v *ResetPointInfo) GetFirstDecisionCompletedId() (o int64) {
+	if v != nil && v.FirstDecisionCompletedId != nil {
+		return *v.FirstDecisionCompletedId
+	}
+
+	return
+}
+
+// IsSetFirstDecisionCompletedId returns true if FirstDecisionCompletedId is not nil.
+func (v *ResetPointInfo) IsSetFirstDecisionCompletedId() bool {
+	return v != nil && v.FirstDecisionCompletedId != nil
+}
+
+// GetCreatedTimestamp returns the value of CreatedTimestamp if it is set or its
+// zero value if it is unset.
+func (v *ResetPointInfo) GetCreatedTimestamp() (o int64) {
+	if v != nil && v.CreatedTimestamp != nil {
+		return *v.CreatedTimestamp
+	}
+
+	return
+}
+
+// IsSetCreatedTimestamp returns true if CreatedTimestamp is not nil.
+func (v *ResetPointInfo) IsSetCreatedTimestamp() bool {
+	return v != nil && v.CreatedTimestamp != nil
+}
+
+// GetNotResettable returns the value of NotResettable if it is set or its
+// zero value if it is unset.
+func (v *ResetPointInfo) GetNotResettable() (o bool) {
+	if v != nil && v.NotResettable != nil {
+		return *v.NotResettable
+	}
+
+	return
+}
+
+// IsSetNotResettable returns true if NotResettable is not nil.
+func (v *ResetPointInfo) IsSetNotResettable() bool {
+	return v != nil && v.NotResettable != nil
+}
+
+type ResetPoints struct {
+	ResetPoints map[string]*ResetPointInfo `json:"resetPoints,omitempty"`
+}
+
+type _Map_String_ResetPointInfo_MapItemList map[string]*ResetPointInfo
+
+func (m _Map_String_ResetPointInfo_MapItemList) ForEach(f func(wire.MapItem) error) error {
+	for k, v := range m {
+		if v == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", k)
+		}
+		kw, err := wire.NewValueString(k), error(nil)
+		if err != nil {
+			return err
+		}
+
+		vw, err := v.ToWire()
+		if err != nil {
+			return err
+		}
+		err = f(wire.MapItem{Key: kw, Value: vw})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m _Map_String_ResetPointInfo_MapItemList) Size() int {
+	return len(m)
+}
+
+func (_Map_String_ResetPointInfo_MapItemList) KeyType() wire.Type {
+	return wire.TBinary
+}
+
+func (_Map_String_ResetPointInfo_MapItemList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_Map_String_ResetPointInfo_MapItemList) Close() {}
+
+// ToWire translates a ResetPoints struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *ResetPoints) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.ResetPoints != nil {
+		w, err = wire.NewValueMap(_Map_String_ResetPointInfo_MapItemList(v.ResetPoints)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _ResetPointInfo_Read(w wire.Value) (*ResetPointInfo, error) {
+	var v ResetPointInfo
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _Map_String_ResetPointInfo_Read(m wire.MapItemList) (map[string]*ResetPointInfo, error) {
+	if m.KeyType() != wire.TBinary {
+		return nil, nil
+	}
+
+	if m.ValueType() != wire.TStruct {
+		return nil, nil
+	}
+
+	o := make(map[string]*ResetPointInfo, m.Size())
+	err := m.ForEach(func(x wire.MapItem) error {
+		k, err := x.Key.GetString(), error(nil)
+		if err != nil {
+			return err
+		}
+
+		v, err := _ResetPointInfo_Read(x.Value)
+		if err != nil {
+			return err
+		}
+
+		o[k] = v
+		return nil
+	})
+	m.Close()
+	return o, err
+}
+
+// FromWire deserializes a ResetPoints struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a ResetPoints struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v ResetPoints
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *ResetPoints) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TMap {
+				v.ResetPoints, err = _Map_String_ResetPointInfo_Read(field.Value.GetMap())
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a ResetPoints
+// struct.
+func (v *ResetPoints) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.ResetPoints != nil {
+		fields[i] = fmt.Sprintf("ResetPoints: %v", v.ResetPoints)
+		i++
+	}
+
+	return fmt.Sprintf("ResetPoints{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _Map_String_ResetPointInfo_Equals(lhs, rhs map[string]*ResetPointInfo) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for lk, lv := range lhs {
+		rv, ok := rhs[lk]
+		if !ok {
+			return false
+		}
+		if !lv.Equals(rv) {
+			return false
+		}
+	}
+	return true
+}
+
+// Equals returns true if all the fields of this ResetPoints match the
+// provided ResetPoints.
+//
+// This function performs a deep comparison.
+func (v *ResetPoints) Equals(rhs *ResetPoints) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.ResetPoints == nil && rhs.ResetPoints == nil) || (v.ResetPoints != nil && rhs.ResetPoints != nil && _Map_String_ResetPointInfo_Equals(v.ResetPoints, rhs.ResetPoints))) {
+		return false
+	}
+
+	return true
+}
+
+type _Map_String_ResetPointInfo_Zapper map[string]*ResetPointInfo
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of _Map_String_ResetPointInfo_Zapper.
+func (m _Map_String_ResetPointInfo_Zapper) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	for k, v := range m {
+		err = multierr.Append(err, enc.AddObject((string)(k), v))
+	}
+	return err
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of ResetPoints.
+func (v *ResetPoints) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.ResetPoints != nil {
+		err = multierr.Append(err, enc.AddObject("resetPoints", (_Map_String_ResetPointInfo_Zapper)(v.ResetPoints)))
+	}
+	return err
+}
+
+// GetResetPoints returns the value of ResetPoints if it is set or its
+// zero value if it is unset.
+func (v *ResetPoints) GetResetPoints() (o map[string]*ResetPointInfo) {
+	if v != nil && v.ResetPoints != nil {
+		return v.ResetPoints
+	}
+
+	return
+}
+
+// IsSetResetPoints returns true if ResetPoints is not nil.
+func (v *ResetPoints) IsSetResetPoints() bool {
+	return v != nil && v.ResetPoints != nil
 }
 
 type ResetStickyTaskListRequest struct {
@@ -42916,6 +43976,7 @@ type UpdateDomainRequest struct {
 	Configuration            *DomainConfiguration            `json:"configuration,omitempty"`
 	ReplicationConfiguration *DomainReplicationConfiguration `json:"replicationConfiguration,omitempty"`
 	SecurityToken            *string                         `json:"securityToken,omitempty"`
+	DeleteResetBinary        *string                         `json:"deleteResetBinary,omitempty"`
 }
 
 // ToWire translates a UpdateDomainRequest struct into a Thrift-level intermediate
@@ -42935,7 +43996,7 @@ type UpdateDomainRequest struct {
 //   }
 func (v *UpdateDomainRequest) ToWire() (wire.Value, error) {
 	var (
-		fields [5]wire.Field
+		fields [6]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -42979,6 +44040,14 @@ func (v *UpdateDomainRequest) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 50, Value: w}
+		i++
+	}
+	if v.DeleteResetBinary != nil {
+		w, err = wire.NewValueString(*(v.DeleteResetBinary)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 70, Value: w}
 		i++
 	}
 
@@ -43057,6 +44126,16 @@ func (v *UpdateDomainRequest) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 70:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.DeleteResetBinary = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -43070,7 +44149,7 @@ func (v *UpdateDomainRequest) String() string {
 		return "<nil>"
 	}
 
-	var fields [5]string
+	var fields [6]string
 	i := 0
 	if v.Name != nil {
 		fields[i] = fmt.Sprintf("Name: %v", *(v.Name))
@@ -43090,6 +44169,10 @@ func (v *UpdateDomainRequest) String() string {
 	}
 	if v.SecurityToken != nil {
 		fields[i] = fmt.Sprintf("SecurityToken: %v", *(v.SecurityToken))
+		i++
+	}
+	if v.DeleteResetBinary != nil {
+		fields[i] = fmt.Sprintf("DeleteResetBinary: %v", *(v.DeleteResetBinary))
 		i++
 	}
 
@@ -43121,6 +44204,9 @@ func (v *UpdateDomainRequest) Equals(rhs *UpdateDomainRequest) bool {
 	if !_String_EqualsPtr(v.SecurityToken, rhs.SecurityToken) {
 		return false
 	}
+	if !_String_EqualsPtr(v.DeleteResetBinary, rhs.DeleteResetBinary) {
+		return false
+	}
 
 	return true
 }
@@ -43145,6 +44231,9 @@ func (v *UpdateDomainRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err e
 	}
 	if v.SecurityToken != nil {
 		enc.AddString("securityToken", *v.SecurityToken)
+	}
+	if v.DeleteResetBinary != nil {
+		enc.AddString("deleteResetBinary", *v.DeleteResetBinary)
 	}
 	return err
 }
@@ -43222,6 +44311,21 @@ func (v *UpdateDomainRequest) GetSecurityToken() (o string) {
 // IsSetSecurityToken returns true if SecurityToken is not nil.
 func (v *UpdateDomainRequest) IsSetSecurityToken() bool {
 	return v != nil && v.SecurityToken != nil
+}
+
+// GetDeleteResetBinary returns the value of DeleteResetBinary if it is set or its
+// zero value if it is unset.
+func (v *UpdateDomainRequest) GetDeleteResetBinary() (o string) {
+	if v != nil && v.DeleteResetBinary != nil {
+		return *v.DeleteResetBinary
+	}
+
+	return
+}
+
+// IsSetDeleteResetBinary returns true if DeleteResetBinary is not nil.
+func (v *UpdateDomainRequest) IsSetDeleteResetBinary() bool {
+	return v != nil && v.DeleteResetBinary != nil
 }
 
 type UpdateDomainResponse struct {
@@ -46809,6 +47913,7 @@ type WorkflowExecutionStartedEventAttributes struct {
 	CronSchedule                        *string                 `json:"cronSchedule,omitempty"`
 	FirstDecisionTaskBackoffSeconds     *int32                  `json:"firstDecisionTaskBackoffSeconds,omitempty"`
 	Memo                                *Memo                   `json:"memo,omitempty"`
+	PrevFeasibleAutoResetPoints         *ResetPoints            `json:"prevFeasibleAutoResetPoints,omitempty"`
 }
 
 // ToWire translates a WorkflowExecutionStartedEventAttributes struct into a Thrift-level intermediate
@@ -46828,7 +47933,7 @@ type WorkflowExecutionStartedEventAttributes struct {
 //   }
 func (v *WorkflowExecutionStartedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [21]wire.Field
+		fields [22]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -47002,8 +48107,22 @@ func (v *WorkflowExecutionStartedEventAttributes) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 120, Value: w}
 		i++
 	}
+	if v.PrevFeasibleAutoResetPoints != nil {
+		w, err = v.PrevFeasibleAutoResetPoints.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 130, Value: w}
+		i++
+	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _ResetPoints_Read(w wire.Value) (*ResetPoints, error) {
+	var v ResetPoints
+	err := v.FromWire(w)
+	return &v, err
 }
 
 // FromWire deserializes a WorkflowExecutionStartedEventAttributes struct from its Thrift-level
@@ -47222,6 +48341,14 @@ func (v *WorkflowExecutionStartedEventAttributes) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 130:
+			if field.Value.Type() == wire.TStruct {
+				v.PrevFeasibleAutoResetPoints, err = _ResetPoints_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -47235,7 +48362,7 @@ func (v *WorkflowExecutionStartedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [21]string
+	var fields [22]string
 	i := 0
 	if v.WorkflowType != nil {
 		fields[i] = fmt.Sprintf("WorkflowType: %v", v.WorkflowType)
@@ -47321,6 +48448,10 @@ func (v *WorkflowExecutionStartedEventAttributes) String() string {
 		fields[i] = fmt.Sprintf("Memo: %v", v.Memo)
 		i++
 	}
+	if v.PrevFeasibleAutoResetPoints != nil {
+		fields[i] = fmt.Sprintf("PrevFeasibleAutoResetPoints: %v", v.PrevFeasibleAutoResetPoints)
+		i++
+	}
 
 	return fmt.Sprintf("WorkflowExecutionStartedEventAttributes{%v}", strings.Join(fields[:i], ", "))
 }
@@ -47398,6 +48529,9 @@ func (v *WorkflowExecutionStartedEventAttributes) Equals(rhs *WorkflowExecutionS
 	if !((v.Memo == nil && rhs.Memo == nil) || (v.Memo != nil && rhs.Memo != nil && v.Memo.Equals(rhs.Memo))) {
 		return false
 	}
+	if !((v.PrevFeasibleAutoResetPoints == nil && rhs.PrevFeasibleAutoResetPoints == nil) || (v.PrevFeasibleAutoResetPoints != nil && rhs.PrevFeasibleAutoResetPoints != nil && v.PrevFeasibleAutoResetPoints.Equals(rhs.PrevFeasibleAutoResetPoints))) {
+		return false
+	}
 
 	return true
 }
@@ -47470,6 +48604,9 @@ func (v *WorkflowExecutionStartedEventAttributes) MarshalLogObject(enc zapcore.O
 	}
 	if v.Memo != nil {
 		err = multierr.Append(err, enc.AddObject("memo", v.Memo))
+	}
+	if v.PrevFeasibleAutoResetPoints != nil {
+		err = multierr.Append(err, enc.AddObject("prevFeasibleAutoResetPoints", v.PrevFeasibleAutoResetPoints))
 	}
 	return err
 }
@@ -47787,6 +48924,21 @@ func (v *WorkflowExecutionStartedEventAttributes) GetMemo() (o *Memo) {
 // IsSetMemo returns true if Memo is not nil.
 func (v *WorkflowExecutionStartedEventAttributes) IsSetMemo() bool {
 	return v != nil && v.Memo != nil
+}
+
+// GetPrevFeasibleAutoResetPoints returns the value of PrevFeasibleAutoResetPoints if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionStartedEventAttributes) GetPrevFeasibleAutoResetPoints() (o *ResetPoints) {
+	if v != nil && v.PrevFeasibleAutoResetPoints != nil {
+		return v.PrevFeasibleAutoResetPoints
+	}
+
+	return
+}
+
+// IsSetPrevFeasibleAutoResetPoints returns true if PrevFeasibleAutoResetPoints is not nil.
+func (v *WorkflowExecutionStartedEventAttributes) IsSetPrevFeasibleAutoResetPoints() bool {
+	return v != nil && v.PrevFeasibleAutoResetPoints != nil
 }
 
 type WorkflowExecutionTerminatedEventAttributes struct {

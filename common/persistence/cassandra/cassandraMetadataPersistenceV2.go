@@ -23,6 +23,8 @@ package cassandra
 import (
 	"fmt"
 
+	"github.com/uber/cadence/common/codec"
+
 	"github.com/gocql/gocql"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
@@ -41,7 +43,7 @@ const (
 
 	templateGetDomainByNameQueryV2 = `SELECT domain.id, domain.name, domain.status, domain.description, ` +
 		`domain.owner_email, domain.data, config.retention, config.emit_metric, ` +
-		`config.archival_bucket, config.archival_status, ` +
+		`config.archival_bucket, config.archival_status, config.reset_binaries, ` +
 		`replication_config.active_cluster_name, replication_config.clusters, ` +
 		`is_global_domain, ` +
 		`config_version, ` +
@@ -80,7 +82,7 @@ const (
 
 	templateListDomainQueryV2 = `SELECT name, domain.id, domain.name, domain.status, domain.description, ` +
 		`domain.owner_email, domain.data, config.retention, config.emit_metric, ` +
-		`config.archival_bucket, config.archival_status, ` +
+		`config.archival_bucket, config.archival_status, config.reset_binaries, ` +
 		`replication_config.active_cluster_name, replication_config.clusters, ` +
 		`is_global_domain, ` +
 		`config_version, ` +
@@ -95,6 +97,7 @@ type (
 	cassandraMetadataPersistenceV2 struct {
 		cassandraStore
 		currentClusterName string
+		thriftEncoder      codec.BinaryEncoder
 	}
 )
 
@@ -115,6 +118,7 @@ func newMetadataPersistenceV2(cfg config.Cassandra, currentClusterName string, l
 	return &cassandraMetadataPersistenceV2{
 		cassandraStore:     cassandraStore{session: session, logger: logger},
 		currentClusterName: currentClusterName,
+		thriftEncoder:      codec.NewThriftRWEncoder(),
 	}, nil
 }
 
@@ -147,6 +151,10 @@ func (m *cassandraMetadataPersistenceV2) CreateDomain(request *p.CreateDomainReq
 	if err != nil {
 		return nil, err
 	}
+	userResetBinariesBlob, err := m.thriftEncoder.Encode(&request.Config.UserResetBinaries)
+	if err != nil {
+		return nil, err
+	}
 
 	batch := m.session.NewBatch(gocql.LoggedBatch)
 	batch.Query(templateCreateDomainByNameQueryWithinBatchV2,
@@ -162,6 +170,7 @@ func (m *cassandraMetadataPersistenceV2) CreateDomain(request *p.CreateDomainReq
 		request.Config.EmitMetric,
 		request.Config.ArchivalBucket,
 		request.Config.ArchivalStatus,
+		userResetBinariesBlob,
 		request.ReplicationConfig.ActiveClusterName,
 		p.SerializeClusterConfigs(request.ReplicationConfig.Clusters),
 		request.IsGlobalDomain,
@@ -208,6 +217,11 @@ func (m *cassandraMetadataPersistenceV2) CreateDomain(request *p.CreateDomainReq
 }
 
 func (m *cassandraMetadataPersistenceV2) UpdateDomain(request *p.UpdateDomainRequest) error {
+	userResetBinariesBlob, err := m.thriftEncoder.Encode(&request.Config.UserResetBinaries)
+	if err != nil {
+		return err
+	}
+
 	batch := m.session.NewBatch(gocql.LoggedBatch)
 	batch.Query(templateUpdateDomainByNameQueryWithinBatchV2,
 		request.Info.ID,
@@ -220,6 +234,7 @@ func (m *cassandraMetadataPersistenceV2) UpdateDomain(request *p.UpdateDomainReq
 		request.Config.EmitMetric,
 		request.Config.ArchivalBucket,
 		request.Config.ArchivalStatus,
+		userResetBinariesBlob,
 		request.ReplicationConfig.ActiveClusterName,
 		p.SerializeClusterConfigs(request.ReplicationConfig.Clusters),
 		request.ConfigVersion,
@@ -265,6 +280,7 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(request *p.GetDomainRequest) 
 	var failoverVersion int64
 	var configVersion int64
 	var isGlobalDomain bool
+	var userResetBinariesBlob []byte
 
 	if len(request.ID) > 0 && len(request.Name) > 0 {
 		return nil, &workflow.BadRequestError{
@@ -312,6 +328,7 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(request *p.GetDomainRequest) 
 		&config.EmitMetric,
 		&config.ArchivalBucket,
 		&config.ArchivalStatus,
+		&userResetBinariesBlob,
 		&replicationConfig.ActiveClusterName,
 		&replicationClusters,
 		&isGlobalDomain,
@@ -321,6 +338,10 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(request *p.GetDomainRequest) 
 		&notificationVersion,
 	)
 
+	if err != nil {
+		return nil, handleError(request.Name, request.ID, err)
+	}
+	err = m.thriftEncoder.Decode(userResetBinariesBlob, &config.UserResetBinaries)
 	if err != nil {
 		return nil, handleError(request.Name, request.ID, err)
 	}
@@ -365,11 +386,12 @@ func (m *cassandraMetadataPersistenceV2) ListDomains(request *p.ListDomainsReque
 	}
 	var replicationClusters []map[string]interface{}
 	response := &p.ListDomainsResponse{}
+	var userResetBinariesBlob []byte
 	for iter.Scan(
 		&name,
 		&domain.Info.ID, &domain.Info.Name, &domain.Info.Status, &domain.Info.Description, &domain.Info.OwnerEmail, &domain.Info.Data,
 		&domain.Config.Retention, &domain.Config.EmitMetric,
-		&domain.Config.ArchivalBucket, &domain.Config.ArchivalStatus,
+		&domain.Config.ArchivalBucket, &domain.Config.ArchivalStatus, &userResetBinariesBlob,
 		&domain.ReplicationConfig.ActiveClusterName, &replicationClusters,
 		&domain.IsGlobalDomain, &domain.ConfigVersion, &domain.FailoverVersion,
 		&domain.FailoverNotificationVersion, &domain.NotificationVersion,
@@ -378,6 +400,10 @@ func (m *cassandraMetadataPersistenceV2) ListDomains(request *p.ListDomainsReque
 			// do not include the metadata record
 			if domain.Info.Data == nil {
 				domain.Info.Data = map[string]string{}
+			}
+			err := m.thriftEncoder.Decode(userResetBinariesBlob, &domain.Config.UserResetBinaries)
+			if err != nil {
+				return nil, err
 			}
 			domain.ReplicationConfig.ActiveClusterName = p.GetOrUseDefaultActiveCluster(m.currentClusterName, domain.ReplicationConfig.ActiveClusterName)
 			domain.ReplicationConfig.Clusters = p.DeserializeClusterConfigs(replicationClusters)
@@ -421,7 +447,7 @@ func (m *cassandraMetadataPersistenceV2) DeleteDomain(request *p.DeleteDomainReq
 func (m *cassandraMetadataPersistenceV2) DeleteDomainByName(request *p.DeleteDomainByNameRequest) error {
 	var ID string
 	query := m.session.Query(templateGetDomainByNameQueryV2, constDomainPartition, request.Name)
-	err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	if err != nil {
 		if err == gocql.ErrNotFound {
 			return nil

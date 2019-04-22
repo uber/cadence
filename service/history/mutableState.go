@@ -63,7 +63,7 @@ type (
 		AddChildWorkflowExecutionTimedOutEvent(int64, *workflow.WorkflowExecution, *workflow.WorkflowExecutionTimedOutEventAttributes) *workflow.HistoryEvent
 		AddCompletedWorkflowEvent(int64, *workflow.CompleteWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent
 		AddContinueAsNewEvent(int64, int64, *cache.DomainCacheEntry, string, *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes, int32) (*workflow.HistoryEvent, mutableState, error)
-		AddDecisionTaskCompletedEvent(int64, int64, *workflow.RespondDecisionTaskCompletedRequest) *workflow.HistoryEvent
+		AddDecisionTaskCompletedEvent(int64, int64, *workflow.RespondDecisionTaskCompletedRequest, int) *workflow.HistoryEvent
 		AddDecisionTaskFailedEvent(scheduleEventID int64, startedEventID int64, cause workflow.DecisionTaskFailedCause, details []byte, identity, reason, baseRunID, newRunID string, forkEventVersion int64) *workflow.HistoryEvent
 		AddDecisionTaskScheduleToStartTimeoutEvent(int64) *workflow.HistoryEvent
 		AddDecisionTaskScheduledEvent() *decisionInfo
@@ -90,8 +90,6 @@ type (
 		AddWorkflowExecutionSignaled(signalName string, input []byte, identity string) *workflow.HistoryEvent
 		AddWorkflowExecutionStartedEvent(workflow.WorkflowExecution, *h.StartWorkflowExecutionRequest) *workflow.HistoryEvent
 		AddWorkflowExecutionTerminatedEvent(*workflow.TerminateWorkflowExecutionRequest) *workflow.HistoryEvent
-		AfterAddDecisionTaskCompletedEvent(int64)
-		BeforeAddDecisionTaskCompletedEvent()
 		BufferReplicationTask(*h.ReplicateEventsRequest) error
 		ClearStickyness()
 		CloseUpdateSession() (*mutableStateSessionUpdates, error)
@@ -171,7 +169,7 @@ type (
 		ReplicateChildWorkflowExecutionStartedEvent(*workflow.HistoryEvent) error
 		ReplicateChildWorkflowExecutionTerminatedEvent(*workflow.HistoryEvent)
 		ReplicateChildWorkflowExecutionTimedOutEvent(*workflow.HistoryEvent)
-		ReplicateDecisionTaskCompletedEvent(int64, int64)
+		ReplicateDecisionTaskCompletedEvent(*workflow.HistoryEvent)
 		ReplicateDecisionTaskFailedEvent()
 		ReplicateDecisionTaskScheduledEvent(int64, int64, string, int32, int64) *decisionInfo
 		ReplicateDecisionTaskStartedEvent(*decisionInfo, int64, int64, int64, string, int64) *decisionInfo

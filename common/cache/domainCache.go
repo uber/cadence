@@ -540,6 +540,16 @@ func (c *domainCache) buildEntryFromRecord(record *persistence.GetDomainResponse
 	return newEntry
 }
 
+func copyResetBinary(bins workflow.ResetBinaries) workflow.ResetBinaries {
+	newbins := make(map[string]*workflow.ResetBinaryInfo, len(bins.Infos))
+	for k, v := range bins.Infos {
+		newbins[k] = v
+	}
+	return workflow.ResetBinaries{
+		Infos: newbins,
+	}
+}
+
 func (entry *DomainCacheEntry) duplicate() *DomainCacheEntry {
 	// this is a deep copy
 	result := newDomainCacheEntry(entry.clusterMetadata)
@@ -555,10 +565,11 @@ func (entry *DomainCacheEntry) duplicate() *DomainCacheEntry {
 		result.info.Data[k] = v
 	}
 	result.config = &persistence.DomainConfig{
-		Retention:      entry.config.Retention,
-		EmitMetric:     entry.config.EmitMetric,
-		ArchivalBucket: entry.config.ArchivalBucket,
-		ArchivalStatus: entry.config.ArchivalStatus,
+		Retention:         entry.config.Retention,
+		EmitMetric:        entry.config.EmitMetric,
+		ArchivalBucket:    entry.config.ArchivalBucket,
+		ArchivalStatus:    entry.config.ArchivalStatus,
+		UserResetBinaries: copyResetBinary(entry.config.UserResetBinaries),
 	}
 	result.replicationConfig = &persistence.DomainReplicationConfig{
 		ActiveClusterName: entry.replicationConfig.ActiveClusterName,

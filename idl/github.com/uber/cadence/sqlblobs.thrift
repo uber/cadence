@@ -50,6 +50,7 @@ struct DomainInfo {
   34: optional string activeClusterName
   36: optional list<string> clusters
   38: optional map<string, string> data
+  39: optional shared.ResetBinaries userResetBinaries
 }
 
 struct HistoryTreeInfo {
@@ -116,6 +117,7 @@ struct WorkflowExecutionInfo {
   110: optional string clientLibraryVersion
   112: optional string clientFeatureVersion
   114: optional string clientImpl
+  115: optional shared.ResetPoints feasibleAutoResetPoints
 }
 
 struct ActivityInfo {

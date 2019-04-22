@@ -176,6 +176,7 @@ type (
 		ClientLibraryVersion         string
 		ClientFeatureVersion         string
 		ClientImpl                   string
+		FeasibleAutoResetPoints      *workflow.ResetPoints
 		// for retry
 		Attempt            int32
 		HasRetryPolicy     bool

@@ -331,6 +331,12 @@ func (t *transferQueueActiveProcessorImpl) processDecisionTask(task *persistence
 		return nil
 	}
 
+	// compare binaryChecksum and auto-reset workflow if it has decision completed by bad binary(defined by domain userResetBinaries)
+	err = t.historyService.resetor.AutoResetWorkflow(context, msBuilder)
+	if err != nil {
+		return err
+	}
+
 	executionInfo := msBuilder.GetExecutionInfo()
 	workflowTimeout := executionInfo.WorkflowTimeout
 	decisionTimeout := common.MinInt32(workflowTimeout, common.MaxTaskTimeout)

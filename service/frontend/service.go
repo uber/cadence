@@ -51,6 +51,7 @@ type Config struct {
 	RPS                             dynamicconfig.IntPropertyFn
 	MaxIDLengthLimit                dynamicconfig.IntPropertyFn
 	EnableClientVersionCheck        dynamicconfig.BoolPropertyFn
+	MaxUserResetBinaries            dynamicconfig.IntPropertyFnWithDomainFilter
 
 	// Persistence settings
 	HistoryMgrNumConns dynamicconfig.IntPropertyFn
@@ -84,6 +85,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableVisibil
 		EnableVisibilityToKafka:             dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, enableVisibilityToKafka),
 		EnableReadVisibilityFromES:          dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableReadVisibilityFromES, false),
 		ESVisibilityListMaxQPS:              dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendESVisibilityListMaxQPS, 3),
+		MaxUserResetBinaries:                dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxUserResetBinaries, 10),
 		ESIndexMaxResultWindow:              dc.GetIntProperty(dynamicconfig.FrontendESIndexMaxResultWindow, 10000),
 		HistoryMaxPageSize:                  dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendHistoryMaxPageSize, common.GetHistoryMaxPageSize),
 		RPS:                                 dc.GetIntProperty(dynamicconfig.FrontendRPS, 1200),

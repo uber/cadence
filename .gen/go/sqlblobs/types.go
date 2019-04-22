@@ -2091,21 +2091,22 @@ func (v *ChildExecutionInfo) IsSetWorkflowTypeName() bool {
 }
 
 type DomainInfo struct {
-	Name                        *string           `json:"name,omitempty"`
-	Description                 *string           `json:"description,omitempty"`
-	Owner                       *string           `json:"owner,omitempty"`
-	Status                      *int32            `json:"status,omitempty"`
-	RetentionDays               *int16            `json:"retentionDays,omitempty"`
-	EmitMetric                  *bool             `json:"emitMetric,omitempty"`
-	ArchivalBucket              *string           `json:"archivalBucket,omitempty"`
-	ArchivalStatus              *int16            `json:"archivalStatus,omitempty"`
-	ConfigVersion               *int64            `json:"configVersion,omitempty"`
-	NotificationVersion         *int64            `json:"notificationVersion,omitempty"`
-	FailoverNotificationVersion *int64            `json:"failoverNotificationVersion,omitempty"`
-	FailoverVersion             *int64            `json:"failoverVersion,omitempty"`
-	ActiveClusterName           *string           `json:"activeClusterName,omitempty"`
-	Clusters                    []string          `json:"clusters,omitempty"`
-	Data                        map[string]string `json:"data,omitempty"`
+	Name                        *string               `json:"name,omitempty"`
+	Description                 *string               `json:"description,omitempty"`
+	Owner                       *string               `json:"owner,omitempty"`
+	Status                      *int32                `json:"status,omitempty"`
+	RetentionDays               *int16                `json:"retentionDays,omitempty"`
+	EmitMetric                  *bool                 `json:"emitMetric,omitempty"`
+	ArchivalBucket              *string               `json:"archivalBucket,omitempty"`
+	ArchivalStatus              *int16                `json:"archivalStatus,omitempty"`
+	ConfigVersion               *int64                `json:"configVersion,omitempty"`
+	NotificationVersion         *int64                `json:"notificationVersion,omitempty"`
+	FailoverNotificationVersion *int64                `json:"failoverNotificationVersion,omitempty"`
+	FailoverVersion             *int64                `json:"failoverVersion,omitempty"`
+	ActiveClusterName           *string               `json:"activeClusterName,omitempty"`
+	Clusters                    []string              `json:"clusters,omitempty"`
+	Data                        map[string]string     `json:"data,omitempty"`
+	UserResetBinaries           *shared.ResetBinaries `json:"userResetBinaries,omitempty"`
 }
 
 type _Map_String_String_MapItemList map[string]string
@@ -2160,7 +2161,7 @@ func (_Map_String_String_MapItemList) Close() {}
 //   }
 func (v *DomainInfo) ToWire() (wire.Value, error) {
 	var (
-		fields [15]wire.Field
+		fields [16]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -2286,6 +2287,14 @@ func (v *DomainInfo) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 38, Value: w}
 		i++
 	}
+	if v.UserResetBinaries != nil {
+		w, err = v.UserResetBinaries.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 39, Value: w}
+		i++
+	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
@@ -2316,6 +2325,12 @@ func _Map_String_String_Read(m wire.MapItemList) (map[string]string, error) {
 	})
 	m.Close()
 	return o, err
+}
+
+func _ResetBinaries_Read(w wire.Value) (*shared.ResetBinaries, error) {
+	var v shared.ResetBinaries
+	err := v.FromWire(w)
+	return &v, err
 }
 
 // FromWire deserializes a DomainInfo struct from its Thrift-level
@@ -2486,6 +2501,14 @@ func (v *DomainInfo) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 39:
+			if field.Value.Type() == wire.TStruct {
+				v.UserResetBinaries, err = _ResetBinaries_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -2499,7 +2522,7 @@ func (v *DomainInfo) String() string {
 		return "<nil>"
 	}
 
-	var fields [15]string
+	var fields [16]string
 	i := 0
 	if v.Name != nil {
 		fields[i] = fmt.Sprintf("Name: %v", *(v.Name))
@@ -2559,6 +2582,10 @@ func (v *DomainInfo) String() string {
 	}
 	if v.Data != nil {
 		fields[i] = fmt.Sprintf("Data: %v", v.Data)
+		i++
+	}
+	if v.UserResetBinaries != nil {
+		fields[i] = fmt.Sprintf("UserResetBinaries: %v", v.UserResetBinaries)
 		i++
 	}
 
@@ -2647,6 +2674,9 @@ func (v *DomainInfo) Equals(rhs *DomainInfo) bool {
 	if !((v.Data == nil && rhs.Data == nil) || (v.Data != nil && rhs.Data != nil && _Map_String_String_Equals(v.Data, rhs.Data))) {
 		return false
 	}
+	if !((v.UserResetBinaries == nil && rhs.UserResetBinaries == nil) || (v.UserResetBinaries != nil && rhs.UserResetBinaries != nil && v.UserResetBinaries.Equals(rhs.UserResetBinaries))) {
+		return false
+	}
 
 	return true
 }
@@ -2712,6 +2742,9 @@ func (v *DomainInfo) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	}
 	if v.Data != nil {
 		err = multierr.Append(err, enc.AddObject("data", (_Map_String_String_Zapper)(v.Data)))
+	}
+	if v.UserResetBinaries != nil {
+		err = multierr.Append(err, enc.AddObject("userResetBinaries", v.UserResetBinaries))
 	}
 	return err
 }
@@ -2939,6 +2972,21 @@ func (v *DomainInfo) GetData() (o map[string]string) {
 // IsSetData returns true if Data is not nil.
 func (v *DomainInfo) IsSetData() bool {
 	return v != nil && v.Data != nil
+}
+
+// GetUserResetBinaries returns the value of UserResetBinaries if it is set or its
+// zero value if it is unset.
+func (v *DomainInfo) GetUserResetBinaries() (o *shared.ResetBinaries) {
+	if v != nil && v.UserResetBinaries != nil {
+		return v.UserResetBinaries
+	}
+
+	return
+}
+
+// IsSetUserResetBinaries returns true if UserResetBinaries is not nil.
+func (v *DomainInfo) IsSetUserResetBinaries() bool {
+	return v != nil && v.UserResetBinaries != nil
 }
 
 type HistoryTreeInfo struct {
@@ -7212,6 +7260,7 @@ type WorkflowExecutionInfo struct {
 	ClientLibraryVersion         *string                     `json:"clientLibraryVersion,omitempty"`
 	ClientFeatureVersion         *string                     `json:"clientFeatureVersion,omitempty"`
 	ClientImpl                   *string                     `json:"clientImpl,omitempty"`
+	FeasibleAutoResetPoints      *shared.ResetPoints         `json:"feasibleAutoResetPoints,omitempty"`
 }
 
 // ToWire translates a WorkflowExecutionInfo struct into a Thrift-level intermediate
@@ -7231,7 +7280,7 @@ type WorkflowExecutionInfo struct {
 //   }
 func (v *WorkflowExecutionInfo) ToWire() (wire.Value, error) {
 	var (
-		fields [52]wire.Field
+		fields [53]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -7653,8 +7702,22 @@ func (v *WorkflowExecutionInfo) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 114, Value: w}
 		i++
 	}
+	if v.FeasibleAutoResetPoints != nil {
+		w, err = v.FeasibleAutoResetPoints.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 115, Value: w}
+		i++
+	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _ResetPoints_Read(w wire.Value) (*shared.ResetPoints, error) {
+	var v shared.ResetPoints
+	err := v.FromWire(w)
+	return &v, err
 }
 
 // FromWire deserializes a WorkflowExecutionInfo struct from its Thrift-level
@@ -8185,6 +8248,14 @@ func (v *WorkflowExecutionInfo) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 115:
+			if field.Value.Type() == wire.TStruct {
+				v.FeasibleAutoResetPoints, err = _ResetPoints_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -8198,7 +8269,7 @@ func (v *WorkflowExecutionInfo) String() string {
 		return "<nil>"
 	}
 
-	var fields [52]string
+	var fields [53]string
 	i := 0
 	if v.ParentDomainID != nil {
 		fields[i] = fmt.Sprintf("ParentDomainID: %v", v.ParentDomainID)
@@ -8408,6 +8479,10 @@ func (v *WorkflowExecutionInfo) String() string {
 		fields[i] = fmt.Sprintf("ClientImpl: %v", *(v.ClientImpl))
 		i++
 	}
+	if v.FeasibleAutoResetPoints != nil {
+		fields[i] = fmt.Sprintf("FeasibleAutoResetPoints: %v", v.FeasibleAutoResetPoints)
+		i++
+	}
 
 	return fmt.Sprintf("WorkflowExecutionInfo{%v}", strings.Join(fields[:i], ", "))
 }
@@ -8578,6 +8653,9 @@ func (v *WorkflowExecutionInfo) Equals(rhs *WorkflowExecutionInfo) bool {
 	if !_String_EqualsPtr(v.ClientImpl, rhs.ClientImpl) {
 		return false
 	}
+	if !((v.FeasibleAutoResetPoints == nil && rhs.FeasibleAutoResetPoints == nil) || (v.FeasibleAutoResetPoints != nil && rhs.FeasibleAutoResetPoints != nil && v.FeasibleAutoResetPoints.Equals(rhs.FeasibleAutoResetPoints))) {
+		return false
+	}
 
 	return true
 }
@@ -8743,6 +8821,9 @@ func (v *WorkflowExecutionInfo) MarshalLogObject(enc zapcore.ObjectEncoder) (err
 	}
 	if v.ClientImpl != nil {
 		enc.AddString("clientImpl", *v.ClientImpl)
+	}
+	if v.FeasibleAutoResetPoints != nil {
+		err = multierr.Append(err, enc.AddObject("feasibleAutoResetPoints", v.FeasibleAutoResetPoints))
 	}
 	return err
 }
@@ -9525,4 +9606,19 @@ func (v *WorkflowExecutionInfo) GetClientImpl() (o string) {
 // IsSetClientImpl returns true if ClientImpl is not nil.
 func (v *WorkflowExecutionInfo) IsSetClientImpl() bool {
 	return v != nil && v.ClientImpl != nil
+}
+
+// GetFeasibleAutoResetPoints returns the value of FeasibleAutoResetPoints if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionInfo) GetFeasibleAutoResetPoints() (o *shared.ResetPoints) {
+	if v != nil && v.FeasibleAutoResetPoints != nil {
+		return v.FeasibleAutoResetPoints
+	}
+
+	return
+}
+
+// IsSetFeasibleAutoResetPoints returns true if FeasibleAutoResetPoints is not nil.
+func (v *WorkflowExecutionInfo) IsSetFeasibleAutoResetPoints() bool {
+	return v != nil && v.FeasibleAutoResetPoints != nil
 }

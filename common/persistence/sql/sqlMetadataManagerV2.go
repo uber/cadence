@@ -114,6 +114,7 @@ func (m *sqlMetadataManagerV2) CreateDomain(request *persistence.CreateDomainReq
 		FailoverVersion:             common.Int64Ptr(request.FailoverVersion),
 		NotificationVersion:         common.Int64Ptr(metadata.NotificationVersion),
 		FailoverNotificationVersion: common.Int64Ptr(persistence.InitialFailoverNotificationVersion),
+		UserResetBinaries:           &request.Config.UserResetBinaries,
 	}
 
 	blob, err := domainInfoToBlob(domainInfo)
@@ -205,6 +206,10 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqldb.DomainRow
 		clusters[i] = &persistence.ClusterReplicationConfig{ClusterName: domainInfo.Clusters[i]}
 	}
 
+	var userResetBinary workflow.ResetBinaries
+	if domainInfo.GetUserResetBinaries() != nil {
+		userResetBinary = *domainInfo.GetUserResetBinaries()
+	}
 	return &persistence.GetDomainResponse{
 		TableVersion: persistence.DomainTableVersionV2,
 		Info: &persistence.DomainInfo{
@@ -216,10 +221,11 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqldb.DomainRow
 			Data:        domainInfo.GetData(),
 		},
 		Config: &persistence.DomainConfig{
-			Retention:      int32(domainInfo.GetRetentionDays()),
-			EmitMetric:     domainInfo.GetEmitMetric(),
-			ArchivalBucket: domainInfo.GetArchivalBucket(),
-			ArchivalStatus: workflow.ArchivalStatus(domainInfo.GetArchivalStatus()),
+			Retention:         int32(domainInfo.GetRetentionDays()),
+			EmitMetric:        domainInfo.GetEmitMetric(),
+			ArchivalBucket:    domainInfo.GetArchivalBucket(),
+			ArchivalStatus:    workflow.ArchivalStatus(domainInfo.GetArchivalStatus()),
+			UserResetBinaries: userResetBinary,
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: persistence.GetOrUseDefaultActiveCluster(m.activeClusterName, domainInfo.GetActiveClusterName()),
@@ -254,6 +260,7 @@ func (m *sqlMetadataManagerV2) UpdateDomain(request *persistence.UpdateDomainReq
 		FailoverVersion:             common.Int64Ptr(request.FailoverVersion),
 		NotificationVersion:         common.Int64Ptr(request.NotificationVersion),
 		FailoverNotificationVersion: common.Int64Ptr(request.FailoverNotificationVersion),
+		UserResetBinaries:           &request.Config.UserResetBinaries,
 	}
 
 	blob, err := domainInfoToBlob(domainInfo)

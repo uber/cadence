@@ -452,6 +452,18 @@ struct WorkflowExecutionStartedEventAttributes {
   100: optional string cronSchedule
   110: optional i32 firstDecisionTaskBackoffSeconds
   120: optional Memo memo
+  130: optional ResetPoints prevFeasibleAutoResetPoints
+}
+
+struct ResetPoints{
+  10: optional map<string, ResetPointInfo> resetPoints
+}
+
+struct ResetPointInfo{
+  10: optional string runId
+  20: optional i64 firstDecisionCompletedId
+  30: optional i64 (js.type = "Long") createdTimestamp
+  40: optional bool not_resettable
 }
 
 struct WorkflowExecutionCompletedEventAttributes {
@@ -857,6 +869,17 @@ struct DomainConfiguration {
   40: optional i32 archivalRetentionPeriodInDays
   50: optional ArchivalStatus archivalStatus
   60: optional string archivalBucketOwner
+  70: optional ResetBinaries userResetBinaries
+}
+
+struct ResetBinaries{
+  10: optional map<string, ResetBinaryInfo> infos
+}
+
+struct ResetBinaryInfo{
+  10: optional string reason
+  20: optional string operator
+  30: optional i64 (js.type = "Long") createdTimestamp
 }
 
 struct UpdateDomainInfo {
@@ -919,6 +942,7 @@ struct UpdateDomainRequest {
  30: optional DomainConfiguration configuration
  40: optional DomainReplicationConfiguration replicationConfiguration
  50: optional string securityToken
+ 70: optional string deleteResetBinary
 }
 
 struct UpdateDomainResponse {
@@ -959,6 +983,7 @@ struct PollForDecisionTaskRequest {
   10: optional string domain
   20: optional TaskList taskList
   30: optional string identity
+  40: optional string binaryChecksum
 }
 
 struct PollForDecisionTaskResponse {

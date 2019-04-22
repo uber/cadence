@@ -21,8 +21,9 @@
 package history
 
 import (
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"time"
+
+	"github.com/uber/cadence/common/log/loggerimpl"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/tag"
@@ -48,6 +49,7 @@ type Config struct {
 	VisibilityClosedMaxQPS          dynamicconfig.IntPropertyFnWithDomainFilter
 	EnableVisibilityToKafka         dynamicconfig.BoolPropertyFn
 	EmitShardDiffLog                dynamicconfig.BoolPropertyFn
+	MaxAutoResetPoints              dynamicconfig.IntPropertyFnWithDomainFilter
 
 	// HistoryCache settings
 	// Change of these configs require shard restart
@@ -145,6 +147,10 @@ type Config struct {
 	ThrottledLogRPS dynamicconfig.IntPropertyFn
 }
 
+const (
+	defaultHistoryMaxAutoResetPoints = 20
+)
+
 // NewConfig returns new service config with default values
 func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, enableVisibilityToKafka bool, storeType string) *Config {
 	cfg := &Config{
@@ -156,6 +162,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, enableVisibilit
 		EnableReadFromClosedExecutionV2:                       dc.GetBoolProperty(dynamicconfig.EnableReadFromClosedExecutionV2, false),
 		VisibilityOpenMaxQPS:                                  dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryVisibilityOpenMaxQPS, 300),
 		VisibilityClosedMaxQPS:                                dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryVisibilityClosedMaxQPS, 300),
+		MaxAutoResetPoints:                                    dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryMaxAutoResetPoints, defaultHistoryMaxAutoResetPoints),
 		EnableVisibilityToKafka:                               dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, enableVisibilityToKafka),
 		EmitShardDiffLog:                                      dc.GetBoolProperty(dynamicconfig.EmitShardDiffLog, false),
 		HistoryCacheInitialSize:                               dc.GetIntProperty(dynamicconfig.HistoryCacheInitialSize, 128),

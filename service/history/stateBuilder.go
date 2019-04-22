@@ -164,9 +164,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			lastDecision = di
 
 		case shared.EventTypeDecisionTaskCompleted:
-			attributes := event.DecisionTaskCompletedEventAttributes
-			b.msBuilder.ReplicateDecisionTaskCompletedEvent(attributes.GetScheduledEventId(),
-				attributes.GetStartedEventId())
+			b.msBuilder.ReplicateDecisionTaskCompletedEvent(event)
 
 		case shared.EventTypeDecisionTaskTimedOut:
 			attributes := event.DecisionTaskTimedOutEventAttributes

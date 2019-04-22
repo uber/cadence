@@ -164,11 +164,23 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionRunIDReuseWithReplica
 	info, err := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.NoError(err)
 
+	testResetPoints := gen.ResetPoints{
+		ResetPoints: map[string]*gen.ResetPointInfo{
+			"abc": &gen.ResetPointInfo{
+				RunId:                    common.StringPtr("test-runID"),
+				FirstDecisionCompletedId: common.Int64Ptr(123),
+				CreatedTimestamp:         common.Int64Ptr(456),
+				NotResettable:            common.BoolPtr(true),
+			},
+		},
+	}
+
 	updatedInfo := copyWorkflowExecutionInfo(info.ExecutionInfo)
 	updatedInfo.State = p.WorkflowStateCompleted
 	updatedInfo.CloseStatus = p.WorkflowCloseStatusCompleted
 	updatedInfo.NextEventID = int64(6)
 	updatedInfo.LastProcessedEvent = int64(2)
+	updatedInfo.FeasibleAutoResetPoints = &testResetPoints
 	updateReplicationState := &p.ReplicationState{
 		StartVersion:     version,
 		CurrentVersion:   version,
@@ -191,6 +203,11 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionRunIDReuseWithReplica
 		ReplicationState:     updateReplicationState,
 	})
 	s.NoError(err)
+
+	state, err := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
+	s.NoError(err)
+	s.NotNil(state.ExecutionInfo, "Valid Workflow response expected.")
+	s.Equal(testResetPoints.String(), state.ExecutionInfo.FeasibleAutoResetPoints.String())
 
 	// try to create a workflow while the current workflow is complete but run ID is wrong
 	_, err = s.ExecutionManager.CreateWorkflowExecution(&p.CreateWorkflowExecutionRequest{
@@ -350,7 +367,7 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionConcurrentCreate() {
 			continueAsNewInfo.NextEventID = int64(5)
 			continueAsNewInfo.LastProcessedEvent = int64(2)
 
-			err2 := s.ContinueAsNewExecution(continueAsNewInfo, info0.NextEventID, newExecution, int64(3), int64(2))
+			err2 := s.ContinueAsNewExecution(continueAsNewInfo, info0.NextEventID, newExecution, int64(3), int64(2), nil)
 			if err2 != nil {
 				errCount := atomic.AddInt32(&numOfErr, 1)
 				if errCount > 1 {
@@ -485,6 +502,17 @@ func (s *ExecutionManagerSuite) TestPersistenceStartWorkflowWithReplicationState
 
 // TestGetWorkflow test
 func (s *ExecutionManagerSuite) TestGetWorkflow() {
+	testResetPoints := gen.ResetPoints{
+		ResetPoints: map[string]*gen.ResetPointInfo{
+			"abc": &gen.ResetPointInfo{
+				RunId:                    common.StringPtr("test-runID"),
+				FirstDecisionCompletedId: common.Int64Ptr(123),
+				CreatedTimestamp:         common.Int64Ptr(456),
+				NotResettable:            common.BoolPtr(true),
+			},
+		},
+	}
+
 	createReq := &p.CreateWorkflowExecutionRequest{
 		RequestID: uuid.New(),
 		DomainID:  uuid.New(),
@@ -521,16 +549,17 @@ func (s *ExecutionManagerSuite) TestGetWorkflow() {
 				"r2": &p.ReplicationInfo{Version: math.MaxInt32, LastEventID: math.MaxInt32},
 			},
 		},
-		Attempt:            rand.Int31(),
-		HasRetryPolicy:     true,
-		InitialInterval:    rand.Int31(),
-		BackoffCoefficient: 7.78,
-		MaximumInterval:    rand.Int31(),
-		ExpirationTime:     time.Now(),
-		MaximumAttempts:    rand.Int31(),
-		NonRetriableErrors: []string{"badRequestError", "accessDeniedError"},
-		CronSchedule:       "* * * * *",
-		ExpirationSeconds:  rand.Int31(),
+		Attempt:                 rand.Int31(),
+		HasRetryPolicy:          true,
+		InitialInterval:         rand.Int31(),
+		BackoffCoefficient:      7.78,
+		MaximumInterval:         rand.Int31(),
+		ExpirationTime:          time.Now(),
+		MaximumAttempts:         rand.Int31(),
+		NonRetriableErrors:      []string{"badRequestError", "accessDeniedError"},
+		CronSchedule:            "* * * * *",
+		ExpirationSeconds:       rand.Int31(),
+		FeasibleAutoResetPoints: &testResetPoints,
 	}
 
 	createResp, err := s.ExecutionManager.CreateWorkflowExecution(createReq)
@@ -574,6 +603,7 @@ func (s *ExecutionManagerSuite) TestGetWorkflow() {
 	s.EqualTimes(createReq.ExpirationTime, info.ExpirationTime)
 	s.Equal(createReq.CronSchedule, info.CronSchedule)
 	s.Equal(createReq.NonRetriableErrors, info.NonRetriableErrors)
+	s.Equal(testResetPoints.String(), info.FeasibleAutoResetPoints.String())
 
 	s.Equal(createReq.ReplicationState.LastWriteEventID, state.ReplicationState.LastWriteEventID)
 	s.Equal(createReq.ReplicationState.LastWriteVersion, state.ReplicationState.LastWriteVersion)
@@ -628,6 +658,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Empty(info0.ClientFeatureVersion)
 	s.Empty(info0.ClientImpl)
 	s.Equal(int32(0), info0.SignalCount)
+	s.Nil(info0.FeasibleAutoResetPoints)
 
 	log.Infof("Workflow execution last updated: %v", info0.LastUpdatedTimestamp)
 
@@ -2293,7 +2324,19 @@ func (s *ExecutionManagerSuite) TestContinueAsNew() {
 		WorkflowId: common.StringPtr("continue-as-new-workflow-test"),
 		RunId:      common.StringPtr("64c7e15a-3fd7-4182-9c6f-6f25a4fa2614"),
 	}
-	err2 := s.ContinueAsNewExecution(continueAsNewInfo, info0.NextEventID, newWorkflowExecution, int64(3), int64(2))
+
+	testResetPoints := gen.ResetPoints{
+		ResetPoints: map[string]*gen.ResetPointInfo{
+			"abc": &gen.ResetPointInfo{
+				RunId:                    common.StringPtr("test-runID"),
+				FirstDecisionCompletedId: common.Int64Ptr(123),
+				CreatedTimestamp:         common.Int64Ptr(456),
+				NotResettable:            common.BoolPtr(true),
+			},
+		},
+	}
+
+	err2 := s.ContinueAsNewExecution(continueAsNewInfo, info0.NextEventID, newWorkflowExecution, int64(3), int64(2), &testResetPoints)
 
 	s.NoError(err2)
 
@@ -2303,6 +2346,7 @@ func (s *ExecutionManagerSuite) TestContinueAsNew() {
 	s.Equal(p.WorkflowStateCompleted, prevExecutionInfo.State)
 	s.Equal(int64(5), prevExecutionInfo.NextEventID)
 	s.Equal(int64(2), prevExecutionInfo.LastProcessedEvent)
+	s.Nil(prevExecutionInfo.FeasibleAutoResetPoints)
 
 	newExecutionState, err4 := s.GetWorkflowExecutionInfo(domainID, newWorkflowExecution)
 	s.NoError(err4)
@@ -2311,6 +2355,7 @@ func (s *ExecutionManagerSuite) TestContinueAsNew() {
 	s.Equal(int64(3), newExecutionInfo.NextEventID)
 	s.Equal(common.EmptyEventID, newExecutionInfo.LastProcessedEvent)
 	s.Equal(int64(2), newExecutionInfo.DecisionScheduleID)
+	s.Equal(testResetPoints.String(), newExecutionInfo.FeasibleAutoResetPoints.String())
 
 	newRunID, err5 := s.GetCurrentWorkflowRunID(domainID, *workflowExecution.WorkflowId)
 	s.NoError(err5)
@@ -3211,7 +3256,7 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsNotSelf() {
 		WorkflowId: common.StringPtr(workflowID),
 		RunId:      common.StringPtr("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1"),
 	}
-	err = s.ContinueAsNewExecution(continueAsNewInfo, info.NextEventID, workflowExecutionCurrent1, int64(3), int64(2))
+	err = s.ContinueAsNewExecution(continueAsNewInfo, info.NextEventID, workflowExecutionCurrent1, int64(3), int64(2), nil)
 	s.NoError(err)
 
 	runID1, err := s.GetCurrentWorkflowRunID(domainID, workflowID)
@@ -3279,7 +3324,7 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsNotSelf() {
 		WorkflowId: common.StringPtr(workflowID),
 		RunId:      common.StringPtr("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2"),
 	}
-	err = s.ContinueAsNewExecution(continueAsNewInfo, info.NextEventID, workflowExecutionCurrent2, int64(3), int64(2))
+	err = s.ContinueAsNewExecution(continueAsNewInfo, info.NextEventID, workflowExecutionCurrent2, int64(3), int64(2), nil)
 	s.NoError(err)
 
 	runID2, err := s.GetCurrentWorkflowRunID(domainID, workflowID)

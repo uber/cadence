@@ -72,6 +72,7 @@ var keys = map[Key]string{
 	FrontendVisibilityMaxPageSize:  "frontend.visibilityMaxPageSize",
 	FrontendVisibilityListMaxQPS:   "frontend.visibilityListMaxQPS",
 	FrontendESVisibilityListMaxQPS: "frontend.esVisibilityListMaxQPS",
+	MaxUserResetBinaries:           "frontend.maxUserResetBinaries",
 	FrontendESIndexMaxResultWindow: "frontend.esIndexMaxResultWindow",
 	FrontendHistoryMaxPageSize:     "frontend.historyMaxPageSize",
 	FrontendRPS:                    "frontend.rps",
@@ -101,6 +102,7 @@ var keys = map[Key]string{
 	HistoryPersistenceMaxQPS:                              "history.persistenceMaxQPS",
 	HistoryVisibilityOpenMaxQPS:                           "history.historyVisibilityOpenMaxQPS",
 	HistoryVisibilityClosedMaxQPS:                         "history.historyVisibilityClosedMaxQPS",
+	HistoryMaxAutoResetPoints:                             "history.historyMaxAutoResetPoints",
 	HistoryLongPollExpirationInterval:                     "history.longPollExpirationInterval",
 	HistoryCacheInitialSize:                               "history.cacheInitialSize",
 	HistoryCacheMaxSize:                                   "history.cacheMaxSize",
@@ -265,6 +267,8 @@ const (
 	MaxDecisionStartToCloseTimeout
 	// EnableClientVersionCheck enables client version check for frontend
 	EnableClientVersionCheck
+	// MaxUserResetBinaries is max length of UserResetBinaries a domain can store
+	MaxUserResetBinaries
 
 	// key for matching
 
@@ -419,6 +423,8 @@ const (
 	DefaultEventEncoding
 	// NumArchiveSystemWorkflows is key for number of archive system workflows running in total
 	NumArchiveSystemWorkflows
+	// HistoryMaxAutoResetPoints is the key for max number of auto reset points stored in mutableState
+	HistoryMaxAutoResetPoints
 
 	// EnableAdminProtection is whether to enable admin checking
 	EnableAdminProtection

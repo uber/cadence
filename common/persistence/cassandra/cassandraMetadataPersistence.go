@@ -23,6 +23,8 @@ package cassandra
 import (
 	"fmt"
 
+	"github.com/uber/cadence/common/codec"
+
 	"github.com/gocql/gocql"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
@@ -45,7 +47,8 @@ const (
 		`retention: ?, ` +
 		`emit_metric: ?, ` +
 		`archival_bucket: ?, ` +
-		`archival_status: ?` +
+		`archival_status: ?,` +
+		`reset_binaries: ?` +
 		`}`
 
 	templateDomainReplicationConfigType = `{` +
@@ -67,7 +70,7 @@ const (
 
 	templateGetDomainByNameQuery = `SELECT domain.id, domain.name, domain.status, domain.description, ` +
 		`domain.owner_email, domain.data, config.retention, config.emit_metric, ` +
-		`config.archival_bucket, config.archival_status, ` +
+		`config.archival_bucket, config.archival_status, config.reset_binaries, ` +
 		`replication_config.active_cluster_name, replication_config.clusters, ` +
 		`is_global_domain, ` +
 		`config_version, ` +
@@ -97,6 +100,7 @@ type (
 	cassandraMetadataPersistence struct {
 		cassandraStore
 		currentClusterName string
+		thriftEncoder      codec.BinaryEncoder
 	}
 )
 
@@ -118,6 +122,7 @@ func newMetadataPersistence(cfg config.Cassandra, clusterName string, logger log
 	return &cassandraMetadataPersistence{
 		cassandraStore:     cassandraStore{session: session, logger: logger},
 		currentClusterName: clusterName,
+		thriftEncoder:      codec.NewThriftRWEncoder(),
 	}, nil
 }
 
@@ -145,7 +150,10 @@ func (m *cassandraMetadataPersistence) CreateDomain(request *p.CreateDomainReque
 			Message: fmt.Sprintf("CreateDomain operation failed because of uuid collision."),
 		}
 	}
-
+	userResetBinariesBlob, err := m.thriftEncoder.Encode(&request.Config.UserResetBinaries)
+	if err != nil {
+		return nil, err
+	}
 	query = m.session.Query(templateCreateDomainByNameQuery,
 		request.Info.Name,
 		request.Info.ID,
@@ -158,6 +166,7 @@ func (m *cassandraMetadataPersistence) CreateDomain(request *p.CreateDomainReque
 		request.Config.EmitMetric,
 		request.Config.ArchivalBucket,
 		request.Config.ArchivalStatus,
+		userResetBinariesBlob,
 		request.ReplicationConfig.ActiveClusterName,
 		p.SerializeClusterConfigs(request.ReplicationConfig.Clusters),
 		request.IsGlobalDomain,
@@ -206,6 +215,7 @@ func (m *cassandraMetadataPersistence) GetDomain(request *p.GetDomainRequest) (*
 	var failoverVersion int64
 	var configVersion int64
 	var isGlobalDomain bool
+	var userResetBinariesBlob []byte
 
 	if len(request.ID) > 0 && len(request.Name) > 0 {
 		return nil, &workflow.BadRequestError{
@@ -253,6 +263,7 @@ func (m *cassandraMetadataPersistence) GetDomain(request *p.GetDomainRequest) (*
 		&config.EmitMetric,
 		&config.ArchivalBucket,
 		&config.ArchivalStatus,
+		&userResetBinariesBlob,
 		&replicationConfig.ActiveClusterName,
 		&replicationClusters,
 		&isGlobalDomain,
@@ -265,6 +276,10 @@ func (m *cassandraMetadataPersistence) GetDomain(request *p.GetDomainRequest) (*
 		return nil, handleError(request.Name, request.ID, err)
 	}
 
+	err = m.thriftEncoder.Decode(userResetBinariesBlob, &config.UserResetBinaries)
+	if err != nil {
+		return nil, handleError(request.Name, request.ID, err)
+	}
 	replicationConfig.ActiveClusterName = p.GetOrUseDefaultActiveCluster(m.currentClusterName, replicationConfig.ActiveClusterName)
 	replicationConfig.Clusters = p.DeserializeClusterConfigs(replicationClusters)
 	replicationConfig.Clusters = p.GetOrUseDefaultClusters(m.currentClusterName, replicationConfig.Clusters)
@@ -288,6 +303,11 @@ func (m *cassandraMetadataPersistence) UpdateDomain(request *p.UpdateDomainReque
 		nextVersion = request.NotificationVersion + 1
 		currentVersion = &request.NotificationVersion
 	}
+
+	userResetBinariesBlob, err := m.thriftEncoder.Encode(&request.Config.UserResetBinaries)
+	if err != nil {
+		return err
+	}
 	query := m.session.Query(templateUpdateDomainByNameQuery,
 		request.Info.ID,
 		request.Info.Name,
@@ -299,6 +319,7 @@ func (m *cassandraMetadataPersistence) UpdateDomain(request *p.UpdateDomainReque
 		request.Config.EmitMetric,
 		request.Config.ArchivalBucket,
 		request.Config.ArchivalStatus,
+		userResetBinariesBlob,
 		request.ReplicationConfig.ActiveClusterName,
 		p.SerializeClusterConfigs(request.ReplicationConfig.Clusters),
 		request.ConfigVersion,
@@ -340,7 +361,7 @@ func (m *cassandraMetadataPersistence) DeleteDomain(request *p.DeleteDomainReque
 func (m *cassandraMetadataPersistence) DeleteDomainByName(request *p.DeleteDomainByNameRequest) error {
 	var ID string
 	query := m.session.Query(templateGetDomainByNameQuery, request.Name)
-	err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	if err != nil {
 		if err == gocql.ErrNotFound {
 			return nil

@@ -408,6 +408,7 @@ func (d *domainHandlerImpl) updateDomain(ctx context.Context,
 		}
 		if updatedInfo.Data != nil {
 			configurationChanged = true
+			// only do merging
 			info.Data = d.mergeDomainData(info.Data, updatedInfo.Data)
 		}
 	}
@@ -426,7 +427,22 @@ func (d *domainHandlerImpl) updateDomain(ctx context.Context,
 			config.ArchivalBucket = nextArchivalState.bucket
 			config.ArchivalStatus = nextArchivalState.status
 		}
+		// only do merging
+		if updatedConfig.UserResetBinaries != nil {
+			maxLength := d.config.MaxUserResetBinaries(updateRequest.GetName())
+			config.UserResetBinaries = d.mergeResetBinaries(config.UserResetBinaries.Infos, updatedConfig.UserResetBinaries.Infos)
+			if len(config.UserResetBinaries.Infos) > maxLength {
+				return nil, &shared.BadRequestError{
+					Message: fmt.Sprintf("total resetBinaries cannot exceed the max limit: %v", maxLength),
+				}
+			}
+		}
 	}
+	if updateRequest.DeleteResetBinary != nil {
+		configurationChanged = true
+		delete(config.UserResetBinaries.Infos, updateRequest.GetDeleteResetBinary())
+	}
+
 	if updateRequest.ReplicationConfiguration != nil {
 		updateReplicationConfig := updateRequest.ReplicationConfiguration
 		if err := validateReplicationConfig(getResponse,
@@ -611,6 +627,18 @@ func (d *domainHandlerImpl) createResponse(
 	}
 
 	return infoResult, configResult, replicationConfigResult
+}
+
+func (d *domainHandlerImpl) mergeResetBinaries(old map[string]*shared.ResetBinaryInfo, new map[string]*shared.ResetBinaryInfo) shared.ResetBinaries {
+	if old == nil {
+		old = map[string]*shared.ResetBinaryInfo{}
+	}
+	for k, v := range new {
+		old[k] = v
+	}
+	return shared.ResetBinaries{
+		Infos: new,
+	}
 }
 
 func (d *domainHandlerImpl) mergeDomainData(old map[string]string, new map[string]string) map[string]string {

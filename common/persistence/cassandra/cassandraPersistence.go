@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/uber/cadence/common/codec"
+
 	"github.com/gocql/gocql"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -151,6 +153,7 @@ const (
 		`client_library_version: ?, ` +
 		`client_feature_version: ?, ` +
 		`client_impl: ?, ` +
+		`feasible_auto_reset_points: ?, ` +
 		`attempt: ?, ` +
 		`has_retry_policy: ?, ` +
 		`init_interval: ?, ` +
@@ -902,6 +905,7 @@ type (
 		cassandraStore
 		shardID            int
 		currentClusterName string
+		thriftEncoder      codec.BinaryEncoder
 	}
 )
 
@@ -909,7 +913,14 @@ var _ p.ExecutionStore = (*cassandraPersistence)(nil)
 
 //NewWorkflowExecutionPersistenceFromSession returns new ExecutionStore
 func NewWorkflowExecutionPersistenceFromSession(session *gocql.Session, shardID int, logger log.Logger) *cassandraPersistence {
-	return &cassandraPersistence{cassandraStore: cassandraStore{session: session, logger: logger}, shardID: shardID}
+	return &cassandraPersistence{
+		cassandraStore: cassandraStore{
+			session: session,
+			logger:  logger,
+		},
+		shardID:       shardID,
+		thriftEncoder: codec.NewThriftRWEncoder(),
+	}
 }
 
 // newShardPersistence is used to create an instance of ShardManager implementation
@@ -930,13 +941,18 @@ func newShardPersistence(cfg config.Cassandra, clusterName string, logger log.Lo
 		cassandraStore:     cassandraStore{session: session, logger: logger},
 		shardID:            -1,
 		currentClusterName: clusterName,
+		thriftEncoder:      codec.NewThriftRWEncoder(),
 	}, nil
 }
 
 // NewWorkflowExecutionPersistence is used to create an instance of workflowExecutionManager implementation
 func NewWorkflowExecutionPersistence(shardID int, session *gocql.Session,
 	logger log.Logger) (p.ExecutionStore, error) {
-	return &cassandraPersistence{cassandraStore: cassandraStore{session: session, logger: logger}, shardID: shardID}, nil
+	return &cassandraPersistence{
+		cassandraStore: cassandraStore{session: session, logger: logger},
+		shardID:        shardID,
+		thriftEncoder:  codec.NewThriftRWEncoder(),
+	}, nil
 }
 
 // newTaskPersistence is used to create an instance of TaskManager implementation
@@ -1110,7 +1126,10 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *p.CreateWorkflow
 	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	batch := d.session.NewBatch(gocql.LoggedBatch)
 
-	d.CreateWorkflowExecutionWithinBatch(request, batch, cqlNowTimestamp)
+	err := d.CreateWorkflowExecutionWithinBatch(request, batch, cqlNowTimestamp)
+	if err != nil {
+		return nil, err
+	}
 
 	d.createTransferTasks(batch, request.TransferTasks, request.DomainID, *request.Execution.WorkflowId,
 		*request.Execution.RunId)
@@ -1185,7 +1204,10 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *p.CreateWorkflow
 
 				if execution, ok := previous["execution"].(map[string]interface{}); ok {
 					// CreateWorkflowExecution failed because it already exists
-					executionInfo := createWorkflowExecutionInfo(execution)
+					executionInfo, err := d.createWorkflowExecutionInfo(execution)
+					if err != nil {
+						return nil, err
+					}
 
 					lastWriteVersion := common.EmptyVersion
 					if request.ReplicationState != nil {
@@ -1243,7 +1265,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *p.CreateWorkflow
 }
 
 func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.CreateWorkflowExecutionRequest,
-	batch *gocql.Batch, cqlNowTimestamp int64) {
+	batch *gocql.Batch, cqlNowTimestamp int64) error {
 
 	parentDomainID := emptyDomainID
 	parentWorkflowID := ""
@@ -1339,6 +1361,15 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Cre
 		panic(fmt.Errorf("Unknown CreateWorkflowMode: %v", request.CreateWorkflowMode))
 	}
 
+	var resetPointsBlob []byte
+	var err error
+	if request.FeasibleAutoResetPoints != nil {
+		resetPointsBlob, err = d.thriftEncoder.Encode(request.FeasibleAutoResetPoints)
+		if err != nil {
+			return err
+		}
+	}
+
 	// TODO use updateMutableState() with useCondition=false to make code much cleaner
 	if request.ReplicationState == nil {
 		// Cross DC feature is currently disabled so we will be creating workflow executions without replication state
@@ -1388,6 +1419,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Cre
 			"", // client_library_version
 			"", // client_feature_version
 			"", // client_impl
+			resetPointsBlob,
 			request.Attempt,
 			request.HasRetryPolicy,
 			request.InitialInterval,
@@ -1455,6 +1487,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Cre
 			"", // client_library_version
 			"", // client_feature_version
 			"", // client_impl
+			resetPointsBlob,
 			request.Attempt,
 			request.HasRetryPolicy,
 			request.InitialInterval,
@@ -1476,6 +1509,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Cre
 			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID)
 	}
+	return nil
 }
 
 func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecutionRequest) (
@@ -1509,7 +1543,10 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecut
 	}
 
 	state := &p.InternalWorkflowMutableState{}
-	info := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
+	info, err := d.createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
+	if err != nil {
+		return nil, err
+	}
 	state.ExecutionInfo = info
 
 	replicationState := createReplicationState(result["replication_state"].(map[string]interface{}))
@@ -1591,12 +1628,21 @@ func batchQueryHelper(batch *gocql.Batch, stmt string, useCondition bool, condit
 }
 
 func (d *cassandraPersistence) updateMutableState(batch *gocql.Batch, executionInfo *p.InternalWorkflowExecutionInfo,
-	replicationState *p.ReplicationState, cqlNowTimestamp int64, useCondition bool, condition int64) {
+	replicationState *p.ReplicationState, cqlNowTimestamp int64, useCondition bool, condition int64) error {
 	if executionInfo.ParentDomainID == "" {
 		executionInfo.ParentDomainID = emptyDomainID
 	}
 	if executionInfo.ParentRunID == "" {
 		executionInfo.ParentRunID = emptyRunID
+	}
+
+	var resetPointsBlob []byte
+	if executionInfo.FeasibleAutoResetPoints != nil {
+		var err error
+		resetPointsBlob, err = d.thriftEncoder.Encode(executionInfo.FeasibleAutoResetPoints)
+		if err != nil {
+			return err
+		}
 	}
 
 	completionData, completionEncoding := p.FromDataBlob(executionInfo.CompletionEvent)
@@ -1643,6 +1689,7 @@ func (d *cassandraPersistence) updateMutableState(batch *gocql.Batch, executionI
 			executionInfo.ClientLibraryVersion,
 			executionInfo.ClientFeatureVersion,
 			executionInfo.ClientImpl,
+			resetPointsBlob,
 			executionInfo.Attempt,
 			executionInfo.HasRetryPolicy,
 			executionInfo.InitialInterval,
@@ -1710,6 +1757,7 @@ func (d *cassandraPersistence) updateMutableState(batch *gocql.Batch, executionI
 			executionInfo.ClientLibraryVersion,
 			executionInfo.ClientFeatureVersion,
 			executionInfo.ClientImpl,
+			resetPointsBlob,
 			executionInfo.Attempt,
 			executionInfo.HasRetryPolicy,
 			executionInfo.InitialInterval,
@@ -1736,6 +1784,7 @@ func (d *cassandraPersistence) updateMutableState(batch *gocql.Batch, executionI
 			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID)
 	}
+	return nil
 }
 
 func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.InternalUpdateWorkflowExecutionRequest) error {
@@ -1744,7 +1793,10 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.InternalUpdate
 	executionInfo := request.ExecutionInfo
 	replicationState := request.ReplicationState
 
-	d.updateMutableState(batch, executionInfo, replicationState, cqlNowTimestamp, true, request.Condition)
+	err := d.updateMutableState(batch, executionInfo, replicationState, cqlNowTimestamp, true, request.Condition)
+	if err != nil {
+		return err
+	}
 
 	d.createTransferTasks(batch, request.TransferTasks, executionInfo.DomainID, executionInfo.WorkflowID,
 		executionInfo.RunID)
@@ -1755,7 +1807,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.InternalUpdate
 	d.createTimerTasks(batch, request.TimerTasks, request.DeleteTimerTask, request.ExecutionInfo.DomainID,
 		executionInfo.WorkflowID, executionInfo.RunID, cqlNowTimestamp)
 
-	err := d.updateActivityInfos(batch, request.UpsertActivityInfos, request.DeleteActivityInfos, executionInfo.DomainID,
+	err = d.updateActivityInfos(batch, request.UpsertActivityInfos, request.DeleteActivityInfos, executionInfo.DomainID,
 		executionInfo.WorkflowID, executionInfo.RunID, request.Condition, request.RangeID)
 	if err != nil {
 		return err
@@ -1787,7 +1839,10 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.InternalUpdate
 
 	if request.ContinueAsNew != nil {
 		startReq := request.ContinueAsNew
-		d.CreateWorkflowExecutionWithinBatch(startReq, batch, cqlNowTimestamp)
+		err := d.CreateWorkflowExecutionWithinBatch(startReq, batch, cqlNowTimestamp)
+		if err != nil {
+			return err
+		}
 		d.createTransferTasks(batch, startReq.TransferTasks, startReq.DomainID, startReq.Execution.GetWorkflowId(),
 			startReq.Execution.GetRunId())
 		d.createTimerTasks(batch, startReq.TimerTasks, nil, startReq.DomainID, startReq.Execution.GetWorkflowId(),
@@ -1969,7 +2024,10 @@ func (d *cassandraPersistence) ResetWorkflowExecution(request *p.InternalResetWo
 	}
 
 	if request.UpdateCurr {
-		d.updateMutableState(batch, currExecutionInfo, currReplicationState, cqlNowTimestamp, true, request.Condition)
+		err := d.updateMutableState(batch, currExecutionInfo, currReplicationState, cqlNowTimestamp, true, request.Condition)
+		if err != nil {
+			return err
+		}
 		d.createTimerTasks(batch, request.CurrTimerTasks, nil, currExecutionInfo.DomainID, currExecutionInfo.WorkflowID, currExecutionInfo.RunID, cqlNowTimestamp)
 		d.createTransferTasks(batch, request.CurrTransferTasks, currExecutionInfo.DomainID, currExecutionInfo.WorkflowID, currExecutionInfo.RunID)
 	} else {
@@ -1995,7 +2053,10 @@ func (d *cassandraPersistence) ResetWorkflowExecution(request *p.InternalResetWo
 	}
 
 	// we need to insert new mutableState, there is no condition to check. We use update without condition as insert
-	d.updateMutableState(batch, insertExecutionInfo, insertReplicationState, cqlNowTimestamp, false, 0)
+	err := d.updateMutableState(batch, insertExecutionInfo, insertReplicationState, cqlNowTimestamp, false, 0)
+	if err != nil {
+		return err
+	}
 
 	if len(request.InsertActivityInfos) > 0 {
 		d.resetActivityInfos(batch, request.InsertActivityInfos, insertExecutionInfo.DomainID, insertExecutionInfo.WorkflowID,
@@ -2104,7 +2165,10 @@ func (d *cassandraPersistence) ResetMutableState(request *p.InternalResetMutable
 		request.PrevRunID,
 	)
 
-	d.updateMutableState(batch, executionInfo, replicationState, cqlNowTimestamp, true, request.Condition)
+	err := d.updateMutableState(batch, executionInfo, replicationState, cqlNowTimestamp, true, request.Condition)
+	if err != nil {
+		return err
+	}
 
 	d.resetActivityInfos(batch, request.InsertActivityInfos, executionInfo.DomainID, executionInfo.WorkflowID,
 		executionInfo.RunID, true, request.Condition)
@@ -2335,7 +2399,10 @@ func (d *cassandraPersistence) GetCurrentExecution(request *p.GetCurrentExecutio
 	}
 
 	currentRunID := result["current_run_id"].(gocql.UUID).String()
-	executionInfo := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
+	executionInfo, err := d.createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
+	if err != nil {
+		return nil, err
+	}
 	replicationState := createReplicationState(result["replication_state"].(map[string]interface{}))
 	return &p.GetCurrentExecutionResponse{
 		RunID:            currentRunID,
@@ -3728,7 +3795,7 @@ func createShardInfo(currentCluster string, result map[string]interface{}) *p.Sh
 	return info
 }
 
-func createWorkflowExecutionInfo(result map[string]interface{}) *p.InternalWorkflowExecutionInfo {
+func (d *cassandraPersistence) createWorkflowExecutionInfo(result map[string]interface{}) (*p.InternalWorkflowExecutionInfo, error) {
 	info := &p.InternalWorkflowExecutionInfo{}
 	var completionEventData []byte
 	var completionEventEncoding common.EncodingType
@@ -3814,6 +3881,16 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *p.InternalWorkf
 			info.ClientFeatureVersion = v.(string)
 		case "client_impl":
 			info.ClientImpl = v.(string)
+		case "feasible_auto_reset_points":
+			var resetPoints workflow.ResetPoints
+			if len(v.([]byte)) > 0 {
+				err := d.thriftEncoder.Decode(v.([]byte), &resetPoints)
+				if err != nil {
+					return nil, err
+				}
+				info.FeasibleAutoResetPoints = &resetPoints
+			}
+
 		case "attempt":
 			info.Attempt = int32(v.(int))
 		case "has_retry_policy":
@@ -3841,7 +3918,7 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *p.InternalWorkf
 		}
 	}
 	info.CompletionEvent = p.NewDataBlob(completionEventData, completionEventEncoding)
-	return info
+	return info, nil
 }
 
 func createReplicationState(result map[string]interface{}) *p.ReplicationState {
