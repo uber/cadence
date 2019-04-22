@@ -306,6 +306,7 @@ func (s *Service) Start() {
 		esVisibility = persistence.NewESVisibilityManager("", nil, nil, visibilityProducer,
 			s.metricsClient, log)
 	}
+	visibility = persistence.NewVisibilityManagerWrapper(visibility, esVisibility, dynamicconfig.GetBoolPropertyFnFilteredByDomain(false))
 
 	history, err := pFactory.NewHistoryManager()
 	if err != nil {
@@ -317,7 +318,7 @@ func (s *Service) Start() {
 		log.Fatal("Creating historyV2 manager persistence failed", tag.Error(err))
 	}
 
-	handler := NewHandler(base, s.config, shardMgr, metadata, visibility, esVisibility, history, historyV2, pFactory, params.PublicClient)
+	handler := NewHandler(base, s.config, shardMgr, metadata, visibility, history, historyV2, pFactory, params.PublicClient)
 	handler.Start()
 
 	log.Info("started", tag.Service(common.HistoryServiceName))

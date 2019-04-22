@@ -118,16 +118,18 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 
 		indexName := options.ESConfig.Indices[common.VisibilityAppName]
 		visProducer, err := messagingClient.NewProducer(common.VisibilityAppName)
+		if err != nil {
+			return nil, err
+		}
 		visConfig := &config.VisibilityConfig{
 			VisibilityListMaxQPS:   dynamicconfig.GetIntPropertyFilteredByDomain(2000),
 			ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(100),
 		}
-		if err != nil {
-			return nil, err
-		}
 		esVisibilityStore := pes.NewElasticSearchVisibilityStore(esClient, indexName, visProducer, visConfig, logger)
 		esVisibilityMgr = persistence.NewVisibilityManagerImpl(esVisibilityStore, logger)
 	}
+	visibilityMgr := persistence.NewVisibilityManagerWrapper(testBase.VisibilityMgr, esVisibilityMgr,
+		dynamicconfig.GetBoolPropertyFnFilteredByDomain(options.WorkerConfig.EnableIndexer))
 
 	pConfig := testBase.Config()
 	pConfig.NumHistoryShards = options.HistoryConfig.NumHistoryShards
@@ -143,8 +145,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 		HistoryV2Mgr:        testBase.HistoryV2Mgr,
 		ExecutionMgrFactory: testBase.ExecutionMgrFactory,
 		TaskMgr:             testBase.TaskMgr,
-		VisibilityMgr:       testBase.VisibilityMgr,
-		ESVisibilityMgr:     esVisibilityMgr,
+		VisibilityMgr:       visibilityMgr,
 		Logger:              logger,
 		ClusterNo:           options.ClusterNo,
 		EnableEventsV2:      options.EnableEventsV2,

@@ -90,7 +90,6 @@ type (
 		historyV2Mgr        persistence.HistoryV2Manager
 		taskMgr             persistence.TaskManager
 		visibilityMgr       persistence.VisibilityManager
-		esVisibilityMgr     persistence.VisibilityManager
 		executionMgrFactory persistence.ExecutionManagerFactory
 		shutdownCh          chan struct{}
 		shutdownWG          sync.WaitGroup
@@ -129,7 +128,6 @@ type (
 		ExecutionMgrFactory           persistence.ExecutionManagerFactory
 		TaskMgr                       persistence.TaskManager
 		VisibilityMgr                 persistence.VisibilityManager
-		ESVisibilityMgr               persistence.VisibilityManager
 		Logger                        log.Logger
 		ClusterNo                     int
 		EnableEventsV2                bool
@@ -158,7 +156,6 @@ func NewCadence(params *CadenceParams) Cadence {
 		metadataMgr:         params.MetadataMgr,
 		metadataMgrV2:       params.MetadataMgrV2,
 		visibilityMgr:       params.VisibilityMgr,
-		esVisibilityMgr:     params.ESVisibilityMgr,
 		shardMgr:            params.ShardMgr,
 		historyMgr:          params.HistoryMgr,
 		historyV2Mgr:        params.HistoryV2Mgr,
@@ -351,14 +348,9 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 		c.frontEndService, c.historyConfig.NumHistoryShards, c.metadataMgr, c.historyMgr, c.historyV2Mgr)
 	dc := dynamicconfig.NewCollection(params.DynamicConfig, c.logger)
 	frontendConfig := frontend.NewConfig(dc, c.historyConfig.NumHistoryShards, c.workerConfig.EnableIndexer, true)
-	visibilityMgr := c.visibilityMgr
-	if c.esVisibilityMgr != nil {
-		enableReadFromES := dynamicconfig.GetBoolPropertyFnFilteredByDomain(true)
-		visibilityMgr = persistence.NewVisibilityManagerWrapper(visibilityMgr, c.esVisibilityMgr, enableReadFromES)
-	}
 	c.frontendHandler = frontend.NewWorkflowHandler(
 		c.frontEndService, frontendConfig, c.metadataMgr, c.historyMgr, c.historyV2Mgr,
-		visibilityMgr, kafkaProducer, params.BlobstoreClient)
+		c.visibilityMgr, kafkaProducer, params.BlobstoreClient)
 	err = c.frontendHandler.Start()
 	if err != nil {
 		c.logger.Fatal("Failed to start frontend", tag.Error(err))
@@ -414,7 +406,7 @@ func (c *cadenceImpl) startHistory(hosts map[string][]string, startWG *sync.Wait
 			historyConfig.HistoryCountLimitError = dynamicconfig.GetIntPropertyFilteredByDomain(hConfig.HistoryCountLimitError)
 		}
 		handler := history.NewHandler(service, historyConfig, c.shardMgr, c.metadataMgr,
-			c.visibilityMgr, c.esVisibilityMgr, c.historyMgr, c.historyV2Mgr, c.executionMgrFactory, params.PublicClient)
+			c.visibilityMgr, c.historyMgr, c.historyV2Mgr, c.executionMgrFactory, params.PublicClient)
 		handler.Start()
 		c.initLock.Unlock()
 

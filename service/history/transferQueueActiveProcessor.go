@@ -58,7 +58,7 @@ type (
 	}
 )
 
-func newTransferQueueActiveProcessor(shard ShardContext, historyService *historyEngineImpl, visibilityMgr persistence.VisibilityManager, esVisibilityMgr persistence.VisibilityManager,
+func newTransferQueueActiveProcessor(shard ShardContext, historyService *historyEngineImpl, visibilityMgr persistence.VisibilityManager,
 	matchingClient matching.Client, historyClient history.Client, taskAllocator taskAllocator, logger log.Logger) *transferQueueActiveProcessorImpl {
 	config := shard.GetConfig()
 	options := &QueueProcessorOptions{
@@ -104,7 +104,7 @@ func newTransferQueueActiveProcessor(shard ShardContext, historyService *history
 		cache:              historyService.historyCache,
 		transferTaskFilter: transferTaskFilter,
 		transferQueueProcessorBase: newTransferQueueProcessorBase(
-			shard, options, visibilityMgr, esVisibilityMgr, matchingClient, maxReadAckLevel, updateTransferAckLevel, transferQueueShutdown, logger,
+			shard, options, visibilityMgr, matchingClient, maxReadAckLevel, updateTransferAckLevel, transferQueueShutdown, logger,
 		),
 	}
 
@@ -117,8 +117,8 @@ func newTransferQueueActiveProcessor(shard ShardContext, historyService *history
 }
 
 func newTransferQueueFailoverProcessor(shard ShardContext, historyService *historyEngineImpl,
-	visibilityMgr persistence.VisibilityManager, esVisibilityMgr persistence.VisibilityManager,
-	matchingClient matching.Client, historyClient history.Client, domainIDs map[string]struct{}, standbyClusterName string,
+	visibilityMgr persistence.VisibilityManager, matchingClient matching.Client,
+	historyClient history.Client, domainIDs map[string]struct{}, standbyClusterName string,
 	minLevel int64, maxLevel int64, taskAllocator taskAllocator, logger log.Logger) (func(ackLevel int64) error, *transferQueueActiveProcessorImpl) {
 	config := shard.GetConfig()
 	options := &QueueProcessorOptions{
@@ -179,7 +179,7 @@ func newTransferQueueFailoverProcessor(shard ShardContext, historyService *histo
 		cache:              historyService.historyCache,
 		transferTaskFilter: transferTaskFilter,
 		transferQueueProcessorBase: newTransferQueueProcessorBase(
-			shard, options, visibilityMgr, esVisibilityMgr, matchingClient,
+			shard, options, visibilityMgr, matchingClient,
 			maxReadAckLevel, updateTransferAckLevel, transferQueueShutdown, logger,
 		),
 	}

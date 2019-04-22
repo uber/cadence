@@ -42,7 +42,6 @@ type (
 		options                *QueueProcessorOptions
 		executionManager       persistence.ExecutionManager
 		visibilityMgr          persistence.VisibilityManager
-		esVisibilityMgr        persistence.VisibilityManager
 		matchingClient         matching.Client
 		maxReadAckLevel        maxReadAckLevel
 		updateTransferAckLevel updateTransferAckLevel
@@ -54,7 +53,7 @@ type (
 const defaultDomainName = "defaultDomainName"
 
 func newTransferQueueProcessorBase(shard ShardContext, options *QueueProcessorOptions,
-	visibilityMgr persistence.VisibilityManager, esVisibilityMgr persistence.VisibilityManager, matchingClient matching.Client,
+	visibilityMgr persistence.VisibilityManager, matchingClient matching.Client,
 	maxReadAckLevel maxReadAckLevel, updateTransferAckLevel updateTransferAckLevel,
 	transferQueueShutdown transferQueueShutdown, logger log.Logger) *transferQueueProcessorBase {
 	return &transferQueueProcessorBase{
@@ -62,7 +61,6 @@ func newTransferQueueProcessorBase(shard ShardContext, options *QueueProcessorOp
 		options:                options,
 		executionManager:       shard.GetExecutionManager(),
 		visibilityMgr:          visibilityMgr,
-		esVisibilityMgr:        esVisibilityMgr,
 		matchingClient:         matchingClient,
 		maxReadAckLevel:        maxReadAckLevel,
 		updateTransferAckLevel: updateTransferAckLevel,
@@ -172,14 +170,6 @@ func (t *transferQueueProcessorBase) recordWorkflowStarted(
 		Memo:               visibilityMemo,
 	}
 
-	if t.esVisibilityMgr != nil {
-		// publish to kafka
-		err := t.esVisibilityMgr.RecordWorkflowExecutionStarted(request)
-		if err != nil {
-			return err
-		}
-	}
-
 	return t.visibilityMgr.RecordWorkflowExecutionStarted(request)
 }
 
@@ -225,14 +215,6 @@ func (t *transferQueueProcessorBase) recordWorkflowClosed(
 		RetentionSeconds:   retentionSeconds,
 		TaskID:             taskID,
 		Memo:               visibilityMemo,
-	}
-
-	if t.esVisibilityMgr != nil {
-		// publish to kafka
-		err := t.esVisibilityMgr.RecordWorkflowExecutionClosed(request)
-		if err != nil {
-			return err
-		}
 	}
 
 	return t.visibilityMgr.RecordWorkflowExecutionClosed(request)

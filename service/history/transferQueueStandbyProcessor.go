@@ -50,9 +50,8 @@ type (
 )
 
 func newTransferQueueStandbyProcessor(clusterName string, shard ShardContext, historyService *historyEngineImpl,
-	visibilityMgr persistence.VisibilityManager, esVisibilityMgr persistence.VisibilityManager,
-	matchingClient matching.Client, taskAllocator taskAllocator, historyRereplicator xdc.HistoryRereplicator,
-	logger log.Logger) *transferQueueStandbyProcessorImpl {
+	visibilityMgr persistence.VisibilityManager, matchingClient matching.Client, taskAllocator taskAllocator,
+	historyRereplicator xdc.HistoryRereplicator, logger log.Logger) *transferQueueStandbyProcessorImpl {
 	config := shard.GetConfig()
 	options := &QueueProcessorOptions{
 		StartDelay:                         config.TransferProcessorStartDelay,
@@ -96,7 +95,7 @@ func newTransferQueueStandbyProcessor(clusterName string, shard ShardContext, hi
 		logger:             logger,
 		metricsClient:      historyService.metricsClient,
 		transferQueueProcessorBase: newTransferQueueProcessorBase(
-			shard, options, visibilityMgr, esVisibilityMgr, matchingClient,
+			shard, options, visibilityMgr, matchingClient,
 			maxReadAckLevel, updateClusterAckLevel, transferQueueShutdown, logger,
 		),
 		historyRereplicator: historyRereplicator,

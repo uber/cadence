@@ -53,7 +53,6 @@ type (
 		metricsClient         metrics.Client
 		historyService        *historyEngineImpl
 		visibilityMgr         persistence.VisibilityManager
-		esVisibilityMgr       persistence.VisibilityManager
 		matchingClient        matching.Client
 		historyClient         history.Client
 		ackLevel              int64
@@ -67,8 +66,8 @@ type (
 )
 
 func newTransferQueueProcessor(shard ShardContext, historyService *historyEngineImpl,
-	visibilityMgr persistence.VisibilityManager, esVisibilityMgr persistence.VisibilityManager,
-	matchingClient matching.Client, historyClient history.Client, logger log.Logger) *transferQueueProcessorImpl {
+	visibilityMgr persistence.VisibilityManager, matchingClient matching.Client,
+	historyClient history.Client, logger log.Logger) *transferQueueProcessorImpl {
 	logger = logger.WithTags(tag.ComponentTransferQueue)
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 	taskAllocator := newTaskAllocator(shard)
@@ -87,7 +86,7 @@ func newTransferQueueProcessor(shard ShardContext, historyService *historyEngine
 				logger,
 			)
 			standbyTaskProcessors[clusterName] = newTransferQueueStandbyProcessor(
-				clusterName, shard, historyService, visibilityMgr, esVisibilityMgr,
+				clusterName, shard, historyService, visibilityMgr,
 				matchingClient, taskAllocator, historyRereplicator, logger,
 			)
 		}
@@ -102,13 +101,12 @@ func newTransferQueueProcessor(shard ShardContext, historyService *historyEngine
 		metricsClient:         historyService.metricsClient,
 		historyService:        historyService,
 		visibilityMgr:         visibilityMgr,
-		esVisibilityMgr:       esVisibilityMgr,
 		matchingClient:        matchingClient,
 		historyClient:         historyClient,
 		ackLevel:              shard.GetTransferAckLevel(),
 		logger:                logger,
 		shutdownChan:          make(chan struct{}),
-		activeTaskProcessor:   newTransferQueueActiveProcessor(shard, historyService, visibilityMgr, esVisibilityMgr, matchingClient, historyClient, taskAllocator, logger),
+		activeTaskProcessor:   newTransferQueueActiveProcessor(shard, historyService, visibilityMgr, matchingClient, historyClient, taskAllocator, logger),
 		standbyTaskProcessors: standbyTaskProcessors,
 	}
 }
@@ -179,7 +177,7 @@ func (t *transferQueueProcessorImpl) FailoverDomain(domainIDs map[string]struct{
 		tag.MinLevel(minLevel),
 		tag.MaxLevel(maxLevel))
 	updateShardAckLevel, failoverTaskProcessor := newTransferQueueFailoverProcessor(
-		t.shard, t.historyService, t.visibilityMgr, t.esVisibilityMgr, t.matchingClient, t.historyClient,
+		t.shard, t.historyService, t.visibilityMgr, t.matchingClient, t.historyClient,
 		domainIDs, standbyClusterName, minLevel, maxLevel, t.taskAllocator, t.logger,
 	)
 

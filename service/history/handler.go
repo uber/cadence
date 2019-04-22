@@ -55,7 +55,6 @@ type (
 		shardManager          persistence.ShardManager
 		metadataMgr           persistence.MetadataManager
 		visibilityMgr         persistence.VisibilityManager
-		esVisibilityMgr       persistence.VisibilityManager
 		historyMgr            persistence.HistoryManager
 		historyV2Mgr          persistence.HistoryV2Manager
 		executionMgrFactory   persistence.ExecutionManagerFactory
@@ -94,7 +93,7 @@ var (
 // NewHandler creates a thrift handler for the history service
 func NewHandler(sVice service.Service, config *Config, shardManager persistence.ShardManager,
 	metadataMgr persistence.MetadataManager, visibilityMgr persistence.VisibilityManager,
-	esVisibilityMgr persistence.VisibilityManager, historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
+	historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
 	executionMgrFactory persistence.ExecutionManagerFactory, publicClient workflowserviceclient.Interface) *Handler {
 	handler := &Handler{
 		Service:             sVice,
@@ -104,7 +103,6 @@ func NewHandler(sVice service.Service, config *Config, shardManager persistence.
 		historyMgr:          historyMgr,
 		historyV2Mgr:        historyV2Mgr,
 		visibilityMgr:       visibilityMgr,
-		esVisibilityMgr:     esVisibilityMgr,
 		executionMgrFactory: executionMgrFactory,
 		tokenSerializer:     common.NewJSONTaskTokenSerializer(),
 		rateLimiter:         tokenbucket.New(config.RPS(), clock.NewRealTimeSource()),
@@ -181,7 +179,7 @@ func (h *Handler) Stop() {
 // CreateEngine is implementation for HistoryEngineFactory used for creating the engine instance for shard
 func (h *Handler) CreateEngine(context ShardContext) Engine {
 	return NewEngineWithShardContext(context, h.visibilityMgr, h.matchingServiceClient, h.historyServiceClient,
-		h.publicClient, h.historyEventNotifier, h.publisher, h.esVisibilityMgr, h.config)
+		h.publicClient, h.historyEventNotifier, h.publisher, h.config)
 }
 
 // Health is for health check
