@@ -150,7 +150,7 @@ func (s *transferQueueStandbyProcessorSuite) SetupTest() {
 	s.mockHistoryEngine = h
 	s.clusterName = cluster.TestAlternativeClusterName
 	s.transferQueueStandbyProcessor = newTransferQueueStandbyProcessor(
-		s.clusterName, s.mockShard, h, s.mockVisibilityMgr, nil, s.mockMatchingClient,
+		s.clusterName, s.mockShard, h, s.mockVisibilityMgr, s.mockMatchingClient,
 		newTaskAllocator(s.mockShard), s.mockHistoryRereplicator, s.logger,
 	)
 	s.mockQueueAckMgr = &MockQueueAckMgr{}
