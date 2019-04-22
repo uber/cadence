@@ -148,7 +148,7 @@ func (s *engine3Suite) SetupTest() {
 		config:             s.config,
 		archivalClient:     s.mockArchivalClient,
 	}
-	h.txProcessor = newTransferQueueProcessor(mockShard, h, s.mockVisibilityMgr, nil, s.mockMatchingClient, s.mockHistoryClient, s.logger)
+	h.txProcessor = newTransferQueueProcessor(mockShard, h, s.mockVisibilityMgr, s.mockMatchingClient, s.mockHistoryClient, s.logger)
 	h.timerProcessor = newTimerQueueProcessor(mockShard, h, s.mockMatchingClient, s.logger)
 	s.historyEngine = h
 }

@@ -155,7 +155,7 @@ func (s *resetorSuite) SetupTest() {
 		config:             s.config,
 		archivalClient:     s.mockArchivalClient,
 	}
-	h.txProcessor = newTransferQueueProcessor(mockShard, h, s.mockVisibilityMgr, nil, s.mockMatchingClient, s.mockHistoryClient, s.logger)
+	h.txProcessor = newTransferQueueProcessor(mockShard, h, s.mockVisibilityMgr, s.mockMatchingClient, s.mockHistoryClient, s.logger)
 	h.timerProcessor = newTimerQueueProcessor(mockShard, h, s.mockMatchingClient, s.logger)
 	repl := newHistoryReplicator(mockShard, h, historyCache, s.mockDomainCache, s.mockHistoryMgr, s.mockHistoryV2Mgr, s.logger)
 	s.resetor = newWorkflowResetor(h, repl)

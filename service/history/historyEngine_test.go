@@ -172,7 +172,7 @@ func (s *engineSuite) SetupTest() {
 		config:               NewDynamicConfigForTest(),
 		archivalClient:       s.mockArchivalClient,
 	}
-	h.txProcessor = newTransferQueueProcessor(shardContextWrapper, h, s.mockVisibilityMgr, nil, s.mockMatchingClient, s.mockHistoryClient, s.logger)
+	h.txProcessor = newTransferQueueProcessor(shardContextWrapper, h, s.mockVisibilityMgr, s.mockMatchingClient, s.mockHistoryClient, s.logger)
 	h.timerProcessor = newTimerQueueProcessor(shardContextWrapper, h, s.mockMatchingClient, s.logger)
 	h.historyEventNotifier.Start()
 	shardContextWrapper.txProcessor = h.txProcessor
