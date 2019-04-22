@@ -174,7 +174,7 @@ func (m *sqlTaskManager) UpdateTaskList(request *persistence.UpdateTaskListReque
 		AckLevel:         common.Int64Ptr(request.TaskListInfo.AckLevel),
 		Kind:             common.Int16Ptr(int16(request.TaskListInfo.Kind)),
 		ExpiryTimeNanos:  common.Int64Ptr(0),
-		LastUpdatedNanos: common.Int64Ptr(time.Now().UnixNano()),
+		LastUpdatedNanos: common.TimeNowNanosPtr(),
 	}
 	if request.TaskListInfo.Kind == persistence.TaskListKindSticky {
 		tlInfo.ExpiryTimeNanos = common.Int64Ptr(stickyTaskListTTL().UnixNano())

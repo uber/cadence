@@ -103,7 +103,7 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(request *p.InternalAppendHistor
 		treeInfo := &sqlblobs.HistoryTreeInfo{
 			Ancestors:        ancestors,
 			Info:             &request.Info,
-			CreatedTimeNanos: common.Int64Ptr(time.Now().UnixNano()),
+			CreatedTimeNanos: common.TimeNowNanosPtr(),
 		}
 
 		blob, err := historyTreeInfoToBlob(treeInfo)
@@ -312,7 +312,7 @@ func (m *sqlHistoryV2Manager) ForkHistoryBranch(request *p.InternalForkHistoryBr
 	treeInfo := &sqlblobs.HistoryTreeInfo{
 		Ancestors:        newAncestors,
 		Info:             &request.Info,
-		CreatedTimeNanos: common.Int64Ptr(time.Now().UnixNano()),
+		CreatedTimeNanos: common.TimeNowNanosPtr(),
 	}
 
 	blob, err := historyTreeInfoToBlob(treeInfo)

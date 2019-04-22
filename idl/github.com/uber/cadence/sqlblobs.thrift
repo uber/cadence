@@ -74,7 +74,7 @@ struct WorkflowExecutionInfo {
   24: optional string taskList
   26: optional string workflowTypeName
   28: optional i32 workflowTimeoutSeconds
-  30: optional i32 decisionTaskTimeoutMinutes
+  30: optional i32 decisionTaskTimeoutSeconds
   32: optional binary executionContext
   34: optional i32 state
   36: optional i32 closeStatus

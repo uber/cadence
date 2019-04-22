@@ -27,11 +27,12 @@ import (
 	bytes "bytes"
 	base64 "encoding/base64"
 	fmt "fmt"
+	strings "strings"
+
 	shared "github.com/uber/cadence/.gen/go/shared"
 	multierr "go.uber.org/multierr"
 	wire "go.uber.org/thriftrw/wire"
 	zapcore "go.uber.org/zap/zapcore"
-	strings "strings"
 )
 
 type ActivityInfo struct {
@@ -7170,7 +7171,7 @@ type WorkflowExecutionInfo struct {
 	TaskList                     *string                     `json:"taskList,omitempty"`
 	WorkflowTypeName             *string                     `json:"workflowTypeName,omitempty"`
 	WorkflowTimeoutSeconds       *int32                      `json:"workflowTimeoutSeconds,omitempty"`
-	DecisionTaskTimeoutMinutes   *int32                      `json:"decisionTaskTimeoutMinutes,omitempty"`
+	DecisionTaskTimeoutSeconds   *int32                      `json:"decisionTaskTimeoutSeconds,omitempty"`
 	ExecutionContext             []byte                      `json:"executionContext,omitempty"`
 	State                        *int32                      `json:"state,omitempty"`
 	CloseStatus                  *int32                      `json:"closeStatus,omitempty"`
@@ -7317,8 +7318,8 @@ func (v *WorkflowExecutionInfo) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 28, Value: w}
 		i++
 	}
-	if v.DecisionTaskTimeoutMinutes != nil {
-		w, err = wire.NewValueI32(*(v.DecisionTaskTimeoutMinutes)), error(nil)
+	if v.DecisionTaskTimeoutSeconds != nil {
+		w, err = wire.NewValueI32(*(v.DecisionTaskTimeoutSeconds)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -7777,7 +7778,7 @@ func (v *WorkflowExecutionInfo) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TI32 {
 				var x int32
 				x, err = field.Value.GetI32(), error(nil)
-				v.DecisionTaskTimeoutMinutes = &x
+				v.DecisionTaskTimeoutSeconds = &x
 				if err != nil {
 					return err
 				}
@@ -8240,8 +8241,8 @@ func (v *WorkflowExecutionInfo) String() string {
 		fields[i] = fmt.Sprintf("WorkflowTimeoutSeconds: %v", *(v.WorkflowTimeoutSeconds))
 		i++
 	}
-	if v.DecisionTaskTimeoutMinutes != nil {
-		fields[i] = fmt.Sprintf("DecisionTaskTimeoutMinutes: %v", *(v.DecisionTaskTimeoutMinutes))
+	if v.DecisionTaskTimeoutSeconds != nil {
+		fields[i] = fmt.Sprintf("DecisionTaskTimeoutSeconds: %v", *(v.DecisionTaskTimeoutSeconds))
 		i++
 	}
 	if v.ExecutionContext != nil {
@@ -8452,7 +8453,7 @@ func (v *WorkflowExecutionInfo) Equals(rhs *WorkflowExecutionInfo) bool {
 	if !_I32_EqualsPtr(v.WorkflowTimeoutSeconds, rhs.WorkflowTimeoutSeconds) {
 		return false
 	}
-	if !_I32_EqualsPtr(v.DecisionTaskTimeoutMinutes, rhs.DecisionTaskTimeoutMinutes) {
+	if !_I32_EqualsPtr(v.DecisionTaskTimeoutSeconds, rhs.DecisionTaskTimeoutSeconds) {
 		return false
 	}
 	if !((v.ExecutionContext == nil && rhs.ExecutionContext == nil) || (v.ExecutionContext != nil && rhs.ExecutionContext != nil && bytes.Equal(v.ExecutionContext, rhs.ExecutionContext))) {
@@ -8618,8 +8619,8 @@ func (v *WorkflowExecutionInfo) MarshalLogObject(enc zapcore.ObjectEncoder) (err
 	if v.WorkflowTimeoutSeconds != nil {
 		enc.AddInt32("workflowTimeoutSeconds", *v.WorkflowTimeoutSeconds)
 	}
-	if v.DecisionTaskTimeoutMinutes != nil {
-		enc.AddInt32("decisionTaskTimeoutMinutes", *v.DecisionTaskTimeoutMinutes)
+	if v.DecisionTaskTimeoutSeconds != nil {
+		enc.AddInt32("decisionTaskTimeoutSeconds", *v.DecisionTaskTimeoutSeconds)
 	}
 	if v.ExecutionContext != nil {
 		enc.AddString("executionContext", base64.StdEncoding.EncodeToString(v.ExecutionContext))
@@ -8897,19 +8898,19 @@ func (v *WorkflowExecutionInfo) IsSetWorkflowTimeoutSeconds() bool {
 	return v != nil && v.WorkflowTimeoutSeconds != nil
 }
 
-// GetDecisionTaskTimeoutMinutes returns the value of DecisionTaskTimeoutMinutes if it is set or its
+// GetDecisionTaskTimeoutSeconds returns the value of DecisionTaskTimeoutSeconds if it is set or its
 // zero value if it is unset.
-func (v *WorkflowExecutionInfo) GetDecisionTaskTimeoutMinutes() (o int32) {
-	if v != nil && v.DecisionTaskTimeoutMinutes != nil {
-		return *v.DecisionTaskTimeoutMinutes
+func (v *WorkflowExecutionInfo) GetDecisionTaskTimeoutSeconds() (o int32) {
+	if v != nil && v.DecisionTaskTimeoutSeconds != nil {
+		return *v.DecisionTaskTimeoutSeconds
 	}
 
 	return
 }
 
-// IsSetDecisionTaskTimeoutMinutes returns true if DecisionTaskTimeoutMinutes is not nil.
-func (v *WorkflowExecutionInfo) IsSetDecisionTaskTimeoutMinutes() bool {
-	return v != nil && v.DecisionTaskTimeoutMinutes != nil
+// IsSetDecisionTaskTimeoutSeconds returns true if DecisionTaskTimeoutSeconds is not nil.
+func (v *WorkflowExecutionInfo) IsSetDecisionTaskTimeoutSeconds() bool {
+	return v != nil && v.DecisionTaskTimeoutSeconds != nil
 }
 
 // GetExecutionContext returns the value of ExecutionContext if it is set or its
