@@ -779,7 +779,7 @@ func ListWorkflow(c *cli.Context) {
 // ListAllWorkflow list all workflow executions based on filters
 func ListAllWorkflow(c *cli.Context) {
 	queryOpen := c.Bool(FlagOpen)
-	table := createTableForListWorkflow(c,true, queryOpen)
+	table := createTableForListWorkflow(c, true, queryOpen)
 	prepareTable := listWorkflow(c, table, queryOpen)
 	var resultSize int
 	var nextPageToken []byte
