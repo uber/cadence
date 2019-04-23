@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/urfave/cli"
+	"github.com/valyala/fastjson"
 	s "go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/client"
 )
@@ -510,10 +511,10 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) {
 	if c.IsSet(FlagCronSchedule) {
 		startRequest.CronSchedule = common.StringPtr(c.String(FlagCronSchedule))
 	}
-	memoStr := processJSONMemo(c)
-	if len(memoStr) != 0 {
-		fields := map[string][]byte{memoKeyForCLI: []byte(processJSONMemo(c))}
-		startRequest.Memo = &s.Memo{Fields: fields}
+
+	memoFields := processMemo(c)
+	if len(memoFields) != 0 {
+		startRequest.Memo = &s.Memo{Fields: memoFields}
 	}
 
 	startFn := func() {
@@ -547,9 +548,6 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) {
 			{"Domain", domain},
 			{"Task List", taskList},
 			{"Args", truncate(input)}, // in case of large input
-		}
-		if len(memoStr) != 0 {
-			executionData = append(executionData, []string{"Memo", truncate(memoStr)})
 		}
 		table.SetBorder(false)
 		table.SetColumnSeparator(":")
@@ -1000,7 +998,7 @@ func listWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) func
 				row = append(row, closeTime)
 			}
 			if printMemo {
-				row = append(row, string(e.Memo.Fields[memoKeyForCLI]))
+				row = append(row, getPrintableMemo(e.Memo))
 			}
 			table.Append(row)
 		}
@@ -1324,11 +1322,6 @@ func processJSONInput(c *cli.Context) string {
 	return processJSONInputHelper(c, jsonTypeInput)
 }
 
-// process and validate memo provided through cmd or file
-func processJSONMemo(c *cli.Context) string {
-	return processJSONInputHelper(c, jsonTypeMemo)
-}
-
 // process and validate json
 func processJSONInputHelper(c *cli.Context, jType jsonType) string {
 	var flagNameOfRawInput string
@@ -1377,6 +1370,40 @@ func validateJSONs(str string) error {
 			return err // Invalid input
 		}
 	}
+}
+
+func processMemo(c *cli.Context) map[string][]byte {
+	rawMemoKey := c.String(FlagMemoKey)
+	memoKeys := strings.Split(rawMemoKey, " ")
+
+	rawMemoValue := processJSONInputHelper(c, jsonTypeMemo)
+	var memoValues []string
+
+	var sc fastjson.Scanner
+	sc.Init(rawMemoValue)
+	for sc.Next() {
+		memoValues = append(memoValues, sc.Value().String())
+	}
+	if err := sc.Error(); err != nil {
+		ErrorAndExit("Parse json error.", err)
+	}
+	if len(memoKeys) != len(memoValues) {
+		ErrorAndExit("Number of memo keys and values are not equal.", nil)
+	}
+
+	fields := map[string][]byte{}
+	for i, key := range memoKeys {
+		fields[key] = []byte(memoValues[i])
+	}
+	return fields
+}
+
+func getPrintableMemo(memo *s.Memo) string {
+	buf := new(bytes.Buffer)
+	for k, v := range memo.Fields {
+		fmt.Fprintf(buf, "%s=%s\n", k, string(v))
+	}
+	return buf.String()
 }
 
 func truncate(str string) string {

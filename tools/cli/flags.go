@@ -147,6 +147,7 @@ const (
 	FlagIndex                       = "index"
 	FlagBatchSize                   = "batch_size"
 	FlagBatchSizeWithAlias          = FlagBatchSize + ", bs"
+	FlagMemoKey                     = "memo_key"
 	FlagMemo                        = "memo"
 	FlagMemoFile                    = "memo_file"
 )
@@ -249,12 +250,18 @@ func getFlagsForStart() []cli.Flag {
 				"Input from file will be overwrite by input from command line",
 		},
 		cli.StringFlag{
-			Name:  FlagMemo,
-			Usage: "Optional info that can be showed when list workflow, in JSON format.",
+			Name:  FlagMemoKey,
+			Usage: "Optional key of memo. If there are multiple keys, concatenate them and separate by space",
 		},
 		cli.StringFlag{
-			Name:  FlagMemoFile,
-			Usage: "Optional info that can be listed in list workflow, from JSON format file.",
+			Name: FlagMemo,
+			Usage: "Optional info that can be showed when list workflow, in JSON format. If there are multiple JSON, concatenate them and separate by space. " +
+				"The order must be same as memo_key",
+		},
+		cli.StringFlag{
+			Name: FlagMemoFile,
+			Usage: "Optional info that can be listed in list workflow, from JSON format file. If there are multiple JSON, concatenate them and separate by space or newline. " +
+				"The order must be same as memo_key",
 		},
 	}
 }
