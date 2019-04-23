@@ -65,6 +65,15 @@ const (
 
 	workflowStatusNotSet = -1
 	showErrorStackEnv    = `CADENCE_CLI_SHOW_STACKS`
+
+	memoKeyForCLI = "CLI"
+)
+
+type jsonType int
+
+const (
+	jsonTypeInput jsonType = iota
+	jsonTypeMemo
 )
 
 // SetFactory is used to set the ClientFactory global
@@ -88,6 +97,7 @@ var (
 		"canceled":       s.WorkflowExecutionCloseStatusCanceled,
 		"terminated":     s.WorkflowExecutionCloseStatusTerminated,
 		"continuedasnew": s.WorkflowExecutionCloseStatusContinuedAsNew,
+		"continueasnew":  s.WorkflowExecutionCloseStatusContinuedAsNew,
 		"timedout":       s.WorkflowExecutionCloseStatusTimedOut,
 		// below are some alias
 		"c":         s.WorkflowExecutionCloseStatusCompleted,
@@ -500,6 +510,11 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) {
 	if c.IsSet(FlagCronSchedule) {
 		startRequest.CronSchedule = common.StringPtr(c.String(FlagCronSchedule))
 	}
+	memoStr := processJSONMemo(c)
+	if len(memoStr) != 0 {
+		fields := map[string][]byte{memoKeyForCLI: []byte(processJSONMemo(c))}
+		startRequest.Memo = &s.Memo{Fields: fields}
+	}
 
 	startFn := func() {
 		tcCtx, cancel := newContext(c)
@@ -532,6 +547,9 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) {
 			{"Domain", domain},
 			{"Task List", taskList},
 			{"Args", truncate(input)}, // in case of large input
+		}
+		if len(memoStr) != 0 {
+			executionData = append(executionData, []string{"Memo", truncate(memoStr)})
 		}
 		table.SetBorder(false)
 		table.SetColumnSeparator(":")
@@ -916,6 +934,8 @@ func createTableForListWorkflow(listAll bool, queryOpen bool) *tablewriter.Table
 		header = append(header, "End Time")
 		headerColor = append(headerColor, tableHeaderBlue)
 	}
+	header = append(header, "Memo")
+	headerColor = append(headerColor, tableHeaderBlue)
 	table.SetHeader(header)
 	if !listAll { // color is only friendly to ANSI terminal
 		table.SetHeaderColor(headerColor...)
@@ -976,6 +996,7 @@ func listWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) func
 			if !queryOpen {
 				row = append(row, closeTime)
 			}
+			row = append(row, string(e.Memo.Fields[memoKeyForCLI]))
 			table.Append(row)
 		}
 
@@ -1295,11 +1316,35 @@ func newContextForLongPoll(c *cli.Context) (context.Context, context.CancelFunc)
 
 // process and validate input provided through cmd or file
 func processJSONInput(c *cli.Context) string {
+	return processJSONInputHelper(c, jsonTypeInput)
+}
+
+// process and validate memo provided through cmd or file
+func processJSONMemo(c *cli.Context) string {
+	return processJSONInputHelper(c, jsonTypeMemo)
+}
+
+// process and validate json
+func processJSONInputHelper(c *cli.Context, jType jsonType) string {
+	var flagNameOfRawInput string
+	var flagNameOfInputFileName string
+
+	switch jType {
+	case jsonTypeInput:
+		flagNameOfRawInput = FlagInput
+		flagNameOfInputFileName = FlagInputFile
+	case jsonTypeMemo:
+		flagNameOfRawInput = FlagMemo
+		flagNameOfInputFileName = FlagMemoFile
+	default:
+		return ""
+	}
+
 	var input string
-	if c.IsSet(FlagInput) {
-		input = c.String(FlagInput)
-	} else if c.IsSet(FlagInputFile) {
-		inputFile := c.String(FlagInputFile)
+	if c.IsSet(flagNameOfRawInput) {
+		input = c.String(flagNameOfRawInput)
+	} else if c.IsSet(flagNameOfInputFileName) {
+		inputFile := c.String(flagNameOfInputFileName)
 		data, err := ioutil.ReadFile(inputFile)
 		if err != nil {
 			ErrorAndExit("Error reading input file", err)

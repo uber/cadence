@@ -145,6 +145,8 @@ const (
 	FlagIndex                       = "index"
 	FlagBatchSize                   = "batch_size"
 	FlagBatchSizeWithAlias          = FlagBatchSize + ", bs"
+	FlagMemo                        = "memo"
+	FlagMemoFile                    = "memo_file"
 )
 
 var flagsForExecution = []cli.Flag{
@@ -244,6 +246,14 @@ func getFlagsForStart() []cli.Flag {
 			Usage: "Optional input for the workflow from JSON file. If there are multiple JSON, concatenate them and separate by space or newline. " +
 				"Input from file will be overwrite by input from command line",
 		},
+		cli.StringFlag{
+			Name:  FlagMemo,
+			Usage: "Optional info that can be showed when list workflow, in JSON format.",
+		},
+		cli.StringFlag{
+			Name:  FlagMemoFile,
+			Usage: "Optional info that can be listed in list workflow, from JSON format file.",
+		},
 	}
 }
 
@@ -310,7 +320,7 @@ func getFlagsForListAll() []cli.Flag {
 		},
 		cli.StringFlag{
 			Name:  FlagWorkflowStatusWithAlias,
-			Usage: "Closed workflow status [completed, failed, canceled, terminated, continueasnew, timedout]",
+			Usage: "Closed workflow status [completed, failed, canceled, terminated, continuedasnew, timedout]",
 		},
 	}
 }
