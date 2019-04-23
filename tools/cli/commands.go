@@ -66,8 +66,6 @@ const (
 
 	workflowStatusNotSet = -1
 	showErrorStackEnv    = `CADENCE_CLI_SHOW_STACKS`
-
-	memoKeyForCLI = "CLI"
 )
 
 type jsonType int
