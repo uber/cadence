@@ -745,7 +745,7 @@ func ListWorkflow(c *cli.Context) {
 	pageSize := c.Int(FlagPageSize)
 
 	queryOpen := c.Bool(FlagOpen)
-	table := createTableForListWorkflow(false, queryOpen)
+	table := createTableForListWorkflow(c, false, queryOpen)
 	prepareTable := listWorkflow(c, table, queryOpen)
 
 	if !more { // default mode only show one page items
@@ -779,7 +779,7 @@ func ListWorkflow(c *cli.Context) {
 // ListAllWorkflow list all workflow executions based on filters
 func ListAllWorkflow(c *cli.Context) {
 	queryOpen := c.Bool(FlagOpen)
-	table := createTableForListWorkflow(true, queryOpen)
+	table := createTableForListWorkflow(c,true, queryOpen)
 	prepareTable := listWorkflow(c, table, queryOpen)
 	var resultSize int
 	var nextPageToken []byte
@@ -924,7 +924,7 @@ func convertDescribeWorkflowExecutionResponse(resp *shared.DescribeWorkflowExecu
 	}
 }
 
-func createTableForListWorkflow(listAll bool, queryOpen bool) *tablewriter.Table {
+func createTableForListWorkflow(c *cli.Context, listAll bool, queryOpen bool) *tablewriter.Table {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetBorder(false)
 	table.SetColumnSeparator("|")
@@ -934,8 +934,10 @@ func createTableForListWorkflow(listAll bool, queryOpen bool) *tablewriter.Table
 		header = append(header, "End Time")
 		headerColor = append(headerColor, tableHeaderBlue)
 	}
-	header = append(header, "Memo")
-	headerColor = append(headerColor, tableHeaderBlue)
+	if printMemo := c.Bool(FlagPrintMemo); printMemo {
+		header = append(header, "Memo")
+		headerColor = append(headerColor, tableHeaderBlue)
+	}
 	table.SetHeader(header)
 	if !listAll { // color is only friendly to ANSI terminal
 		table.SetHeaderColor(headerColor...)
@@ -953,6 +955,7 @@ func listWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) func
 	workflowType := c.String(FlagWorkflowType)
 	printRawTime := c.Bool(FlagPrintRawTime)
 	printDateTime := c.Bool(FlagPrintDateTime)
+	printMemo := c.Bool(FlagPrintMemo)
 	pageSize := c.Int(FlagPageSize)
 	if pageSize <= 0 {
 		pageSize = defaultPageSizeForList
@@ -996,7 +999,9 @@ func listWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) func
 			if !queryOpen {
 				row = append(row, closeTime)
 			}
-			row = append(row, string(e.Memo.Fields[memoKeyForCLI]))
+			if printMemo {
+				row = append(row, string(e.Memo.Fields[memoKeyForCLI]))
+			}
 			table.Append(row)
 		}
 

@@ -99,6 +99,8 @@ const (
 	FlagPrintRawTimeWithAlias       = FlagPrintRawTime + ", prt"
 	FlagPrintDateTime               = "print_datetime"
 	FlagPrintDateTimeWithAlias      = FlagPrintDateTime + ", pdt"
+	FlagPrintMemo                   = "print_memo"
+	FlagPrintMemoWithAlias          = FlagPrintMemo + ", pme"
 	FlagDescription                 = "description"
 	FlagDescriptionWithAlias        = FlagDescription + ", desc"
 	FlagOwnerEmail                  = "owner_email"
@@ -317,6 +319,10 @@ func getFlagsForListAll() []cli.Flag {
 		cli.BoolFlag{
 			Name:  FlagPrintDateTimeWithAlias,
 			Usage: "Print full date time in '2006-01-02T15:04:05Z07:00' format",
+		},
+		cli.BoolFlag{
+			Name:  FlagPrintMemoWithAlias,
+			Usage: "Print memo",
 		},
 		cli.StringFlag{
 			Name:  FlagWorkflowStatusWithAlias,
