@@ -1372,7 +1372,10 @@ func validateJSONs(str string) error {
 
 func processMemo(c *cli.Context) map[string][]byte {
 	rawMemoKey := c.String(FlagMemoKey)
-	memoKeys := strings.Split(rawMemoKey, " ")
+	var memoKeys []string
+	if strings.TrimSpace(rawMemoKey) != "" {
+		memoKeys = strings.Split(rawMemoKey, " ")
+	}
 
 	rawMemoValue := processJSONInputHelper(c, jsonTypeMemo)
 	var memoValues []string
