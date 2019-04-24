@@ -22,15 +22,12 @@ package xdc
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/pborman/uuid"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/history"
@@ -38,9 +35,12 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"go.uber.org/zap"
 )
 
 type (
@@ -55,8 +55,8 @@ type (
 		mockMetadataMgr     *mocks.MetadataManager
 		mockAdminClient     *mocks.AdminClient
 		mockHistoryClient   *mocks.HistoryClient
-		serializer          persistence.HistorySerializer
-		logger              bark.Logger
+		serializer          persistence.PayloadSerializer
+		logger              log.Logger
 
 		rereplicator *HistoryRereplicatorImpl
 	}
@@ -68,9 +68,6 @@ func TestHistoryRereplicatorSuite(t *testing.T) {
 }
 
 func (s *historyRereplicatorSuite) SetupSuite() {
-	if testing.Verbose() {
-		log.SetOutput(os.Stdout)
-	}
 }
 
 func (s *historyRereplicatorSuite) TearDownSuite() {
@@ -78,9 +75,9 @@ func (s *historyRereplicatorSuite) TearDownSuite() {
 }
 
 func (s *historyRereplicatorSuite) SetupTest() {
-	log2 := log.New()
-	log2.Level = log.DebugLevel
-	s.logger = bark.NewLoggerFromLogrus(log2)
+	zapLogger, err := zap.NewDevelopment()
+	s.Require().NoError(err)
+	s.logger = loggerimpl.NewLogger(zapLogger)
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	s.mockMetadataMgr = &mocks.MetadataManager{}
@@ -103,9 +100,9 @@ func (s *historyRereplicatorSuite) SetupTest() {
 	)
 	s.mockAdminClient = &mocks.AdminClient{}
 	s.mockHistoryClient = &mocks.HistoryClient{}
-	s.serializer = persistence.NewHistorySerializer()
+	s.serializer = persistence.NewPayloadSerializer()
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
-	domainCache := cache.NewDomainCache(s.mockMetadataMgr, s.mockClusterMetadata, metricsClient, s.logger)
+	domainCache := cache.NewDomainCache(s.mockMetadataMgr, s.mockClusterMetadata, metricsClient, loggerimpl.NewNopLogger())
 	s.rereplicator = NewHistoryRereplicator(
 		s.targetClusterName,
 		domainCache,
@@ -113,7 +110,7 @@ func (s *historyRereplicatorSuite) SetupTest() {
 		func(ctx context.Context, request *history.ReplicateRawEventsRequest) error {
 			return s.mockHistoryClient.ReplicateRawEvents(ctx, request)
 		},
-		persistence.NewHistorySerializer(),
+		persistence.NewPayloadSerializer(),
 		30*time.Second,
 		s.logger,
 	)

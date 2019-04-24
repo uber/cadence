@@ -26,10 +26,9 @@ import (
 	"time"
 
 	"github.com/gocql/gocql"
-	"github.com/uber-common/bark"
-
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
 )
@@ -895,7 +894,7 @@ var (
 type (
 	cassandraStore struct {
 		session *gocql.Session
-		logger  bark.Logger
+		logger  log.Logger
 	}
 
 	// Implements ExecutionManager, ShardManager and TaskManager
@@ -909,12 +908,12 @@ type (
 var _ p.ExecutionStore = (*cassandraPersistence)(nil)
 
 //NewWorkflowExecutionPersistenceFromSession returns new ExecutionStore
-func NewWorkflowExecutionPersistenceFromSession(session *gocql.Session, shardID int, logger bark.Logger) *cassandraPersistence {
+func NewWorkflowExecutionPersistenceFromSession(session *gocql.Session, shardID int, logger log.Logger) *cassandraPersistence {
 	return &cassandraPersistence{cassandraStore: cassandraStore{session: session, logger: logger}, shardID: shardID}
 }
 
 // newShardPersistence is used to create an instance of ShardManager implementation
-func newShardPersistence(cfg config.Cassandra, clusterName string, logger bark.Logger) (p.ShardStore, error) {
+func newShardPersistence(cfg config.Cassandra, clusterName string, logger log.Logger) (p.ShardStore, error) {
 	cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
 	cluster.Keyspace = cfg.Keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
@@ -936,12 +935,12 @@ func newShardPersistence(cfg config.Cassandra, clusterName string, logger bark.L
 
 // NewWorkflowExecutionPersistence is used to create an instance of workflowExecutionManager implementation
 func NewWorkflowExecutionPersistence(shardID int, session *gocql.Session,
-	logger bark.Logger) (p.ExecutionStore, error) {
+	logger log.Logger) (p.ExecutionStore, error) {
 	return &cassandraPersistence{cassandraStore: cassandraStore{session: session, logger: logger}, shardID: shardID}, nil
 }
 
 // newTaskPersistence is used to create an instance of TaskManager implementation
-func newTaskPersistence(cfg config.Cassandra, logger bark.Logger) (p.TaskStore, error) {
+func newTaskPersistence(cfg config.Cassandra, logger log.Logger) (p.TaskStore, error) {
 	cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
 	cluster.Keyspace = cfg.Keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
@@ -1337,7 +1336,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Cre
 			state,
 		)
 	default:
-		d.logger.Panic(fmt.Sprintf("Unknown CreateWorkflowMode: %v", request.CreateWorkflowMode))
+		panic(fmt.Errorf("Unknown CreateWorkflowMode: %v", request.CreateWorkflowMode))
 	}
 
 	// TODO use updateMutableState() with useCondition=false to make code much cleaner
@@ -3225,7 +3224,7 @@ func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityI
 		scheduledEventData, _ := p.FromDataBlob(a.ScheduledEvent)
 		startedEventData, _ := p.FromDataBlob(a.StartedEvent)
 		if a.ScheduledEvent != nil && a.StartedEvent != nil && a.StartedEvent.Encoding != a.ScheduledEvent.Encoding {
-			return p.NewHistorySerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", a.ScheduledEvent.Encoding, a.StartedEvent.Encoding))
+			return p.NewCadenceSerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", a.ScheduledEvent.Encoding, a.StartedEvent.Encoding))
 		}
 
 		batch.Query(templateUpdateActivityInfoQuery,
@@ -3386,7 +3385,7 @@ func (d *cassandraPersistence) updateChildExecutionInfos(batch *gocql.Batch, chi
 		if c.StartedEvent != nil {
 			startedEventData = c.StartedEvent.Data
 			if string(c.StartedEvent.GetEncoding()) != encoding {
-				return p.NewHistorySerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", encoding, c.StartedEvent.GetEncoding()))
+				return p.NewCadenceSerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", encoding, c.StartedEvent.GetEncoding()))
 			}
 		}
 		startedRunID := emptyRunID
@@ -4052,7 +4051,7 @@ func createTimerInfo(result map[string]interface{}) *p.TimerInfo {
 	return info
 }
 
-func createChildExecutionInfo(result map[string]interface{}, logger bark.Logger) *p.InternalChildExecutionInfo {
+func createChildExecutionInfo(result map[string]interface{}, logger log.Logger) *p.InternalChildExecutionInfo {
 	info := &p.InternalChildExecutionInfo{}
 	var encoding common.EncodingType
 	var initiatedData []byte
@@ -4162,7 +4161,7 @@ func resetActivityInfoMap(activityInfos []*p.InternalActivityInfo) (map[int64]ma
 	aMap := make(map[int64]map[string]interface{})
 	for _, a := range activityInfos {
 		if a.StartedEvent != nil && a.ScheduledEvent.Encoding != a.StartedEvent.Encoding {
-			return nil, p.NewHistorySerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", a.ScheduledEvent.Encoding, a.StartedEvent.Encoding))
+			return nil, p.NewCadenceSerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", a.ScheduledEvent.Encoding, a.StartedEvent.Encoding))
 		}
 		scheduledEventData, encoding := p.FromDataBlob(a.ScheduledEvent)
 		startedEventData, _ := p.FromDataBlob(a.StartedEvent)
@@ -4220,14 +4219,14 @@ func resetTimerInfoMap(timerInfos []*p.TimerInfo) map[string]map[string]interfac
 	return tMap
 }
 
-func resetChildExecutionInfoMap(childExecutionInfos []*p.InternalChildExecutionInfo, logger bark.Logger) (map[int64]map[string]interface{}, error) {
+func resetChildExecutionInfoMap(childExecutionInfos []*p.InternalChildExecutionInfo, logger log.Logger) (map[int64]map[string]interface{}, error) {
 	cMap := make(map[int64]map[string]interface{})
 	for _, c := range childExecutionInfos {
 		cInfo := make(map[string]interface{})
 		startedEvent := c.StartedEvent
 		if startedEvent != nil {
 			if startedEvent.Encoding != c.InitiatedEvent.Encoding {
-				return nil, p.NewHistorySerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", c.InitiatedEvent.Encoding, startedEvent.Encoding))
+				return nil, p.NewCadenceSerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", c.InitiatedEvent.Encoding, startedEvent.Encoding))
 			}
 			cInfo["started_event"] = startedEvent.Data
 		} else {

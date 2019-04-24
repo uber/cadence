@@ -23,17 +23,16 @@ package frontend
 import (
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/clock"
-	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/elasticsearch"
+	espersistence "github.com/uber/cadence/common/persistence/elasticsearch"
 	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
-	"github.com/uber/cadence/common/tokenbucket"
 )
 
 // Config represents configuration for cadence-frontend service
@@ -51,6 +50,7 @@ type Config struct {
 	HistoryMaxPageSize              dynamicconfig.IntPropertyFnWithDomainFilter
 	RPS                             dynamicconfig.IntPropertyFn
 	MaxIDLengthLimit                dynamicconfig.IntPropertyFn
+	EnableClientVersionCheck        dynamicconfig.BoolPropertyFn
 
 	// Persistence settings
 	HistoryMgrNumConns dynamicconfig.IntPropertyFn
@@ -73,7 +73,7 @@ type Config struct {
 }
 
 // NewConfig returns new service config with default values
-func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableVisibilityToKafka bool) *Config {
+func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableVisibilityToKafka bool, enableClientVersionCheck bool) *Config {
 	return &Config{
 		NumHistoryShards:                    numHistoryShards,
 		PersistenceMaxQPS:                   dc.GetIntProperty(dynamicconfig.FrontendPersistenceMaxQPS, 2000),
@@ -97,6 +97,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableVisibil
 		BlobSizeLimitWarn:                   dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitWarn, 256*1204),
 		ThrottledLogRPS:                     dc.GetIntProperty(dynamicconfig.FrontendThrottledLogRPS, 20),
 		EnableDomainNotActiveAutoForwarding: dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableDomainNotActiveAutoForwarding, false),
+		EnableClientVersionCheck:            dc.GetBoolProperty(dynamicconfig.EnableClientVersionCheck, enableClientVersionCheck),
 	}
 }
 
@@ -109,9 +110,9 @@ type Service struct {
 
 // NewService builds a new cadence-frontend service
 func NewService(params *service.BootstrapParams) common.Daemon {
+	config := NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, params.Logger), params.PersistenceConfig.NumHistoryShards, params.ESConfig.Enable, true)
+	params.ThrottledLogger = loggerimpl.NewThrottledLogger(params.Logger, config.ThrottledLogRPS)
 	params.UpdateLoggerWithServiceName(common.FrontendServiceName)
-	config := NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, params.BarkLogger), params.PersistenceConfig.NumHistoryShards, params.ESConfig.Enable)
-	params.ThrottledBarkLogger = logging.NewThrottledLogger(params.BarkLogger, config.ThrottledLogRPS)
 	return &Service{
 		params: params,
 		config: config,
@@ -123,9 +124,9 @@ func NewService(params *service.BootstrapParams) common.Daemon {
 func (s *Service) Start() {
 
 	var params = s.params
-	var log = params.BarkLogger
+	var log = params.Logger
 
-	log.Infof("%v starting", common.FrontendServiceName)
+	log.Info("starting", tag.Service(common.FrontendServiceName))
 
 	base := service.New(params)
 
@@ -141,39 +142,34 @@ func (s *Service) Start() {
 
 	metadata, err := pFactory.NewMetadataManager(persistencefactory.MetadataV1V2)
 	if err != nil {
-		log.Fatalf("failed to create metadata manager: %v", err)
+		log.Fatal("failed to create metadata manager", tag.Error(err))
 	}
 
 	visibilityFromDB, err := pFactory.NewVisibilityManager()
 	if err != nil {
-		log.Fatalf("failed to create visibility manager: %v", err)
+		log.Fatal("failed to create visibility manager", tag.Error(err))
 	}
+
 	var visibilityFromES persistence.VisibilityManager
 	if s.config.EnableVisibilityToKafka() {
 		visibilityIndexName := params.ESConfig.Indices[common.VisibilityAppName]
 		visibilityConfigForES := &config.VisibilityConfig{
+			MaxQPS:                 s.config.PersistenceMaxQPS,
 			VisibilityListMaxQPS:   s.config.ESVisibilityListMaxQPS,
 			ESIndexMaxResultWindow: s.config.ESIndexMaxResultWindow,
 		}
-
-		visibilityFromES = elasticsearch.NewElasticSearchVisibilityManager(params.ESClient, visibilityIndexName, visibilityConfigForES, log)
-		// wrap with rate limiter
-		esRateLimiter := tokenbucket.New(s.config.PersistenceMaxQPS(), clock.NewRealTimeSource())
-		visibilityFromES = persistence.NewVisibilityPersistenceRateLimitedClient(visibilityFromES, esRateLimiter, log)
-		// wrap with advanced rate limit for list
-		visibilityFromES = persistence.NewVisibilitySamplingClient(visibilityFromES, visibilityConfigForES, base.GetMetricsClient(), log)
-		// wrap with metrics
-		visibilityFromES = elasticsearch.NewVisibilityMetricsClient(visibilityFromES, base.GetMetricsClient(), log)
+		visibilityFromES = espersistence.NewESVisibilityManager(visibilityIndexName, params.ESClient, visibilityConfigForES,
+			nil, base.GetMetricsClient(), log)
 	}
 	visibility := persistence.NewVisibilityManagerWrapper(visibilityFromDB, visibilityFromES, s.config.EnableReadVisibilityFromES)
 
 	history, err := pFactory.NewHistoryManager()
 	if err != nil {
-		log.Fatalf("Creating history manager persistence failed: %v", err)
+		log.Fatal("Creating history manager persistence failed", tag.Error(err))
 	}
 	historyV2, err := pFactory.NewHistoryV2Manager()
 	if err != nil {
-		log.Fatalf("Creating historyV2 manager persistence failed: %v", err)
+		log.Fatal("Creating historyV2 manager persistence failed", tag.Error(err))
 	}
 
 	// TODO when global domain is enabled, uncomment the line below and remove the line after
@@ -181,7 +177,7 @@ func (s *Service) Start() {
 	if base.GetClusterMetadata().IsGlobalDomainEnabled() {
 		kafkaProducer, err = base.GetMessagingClient().NewProducerWithClusterName(base.GetClusterMetadata().GetCurrentClusterName())
 		if err != nil {
-			log.Fatalf("Creating kafka producer failed: %v", err)
+			log.Fatal("Creating kafka producer failed", tag.Error(err))
 		}
 	} else {
 		kafkaProducer = &mocks.KafkaProducer{}
@@ -195,7 +191,7 @@ func (s *Service) Start() {
 	adminHandler := NewAdminHandler(base, pConfig.NumHistoryShards, metadata, history, historyV2)
 	adminHandler.Start()
 
-	log.Infof("%v started", common.FrontendServiceName)
+	log.Info("started", tag.Service(common.FrontendServiceName))
 
 	<-s.stopC
 
@@ -208,5 +204,5 @@ func (s *Service) Stop() {
 	case s.stopC <- struct{}{}:
 	default:
 	}
-	s.params.BarkLogger.Infof("%v stopped", common.FrontendServiceName)
+	s.params.Logger.Info("stopped", tag.Service(common.FrontendServiceName))
 }

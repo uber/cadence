@@ -26,14 +26,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
+	"go.uber.org/zap"
 )
 
 type (
@@ -56,7 +56,12 @@ func (s *ScavengerTestSuite) SetupTest() {
 	s.taskMgr = &mocks.TaskManager{}
 	s.taskListTable = &mockTaskListTable{}
 	s.taskTables = make(map[string]*mockTaskTable)
-	s.scvgr = NewScavenger(s.taskMgr, metrics.NewClient(tally.NoopScope, metrics.Worker), bark.NewLoggerFromLogrus(logrus.New()))
+	zapLogger, err := zap.NewDevelopment()
+	if err != nil {
+		s.Require().NoError(err)
+	}
+	logger := loggerimpl.NewLogger(zapLogger)
+	s.scvgr = NewScavenger(s.taskMgr, metrics.NewClient(tally.NoopScope, metrics.Worker), logger)
 	maxTasksPerJob = 4
 	nWorkers = 4
 	executorPollInterval = time.Millisecond * 50

@@ -21,15 +21,12 @@
 package history
 
 import (
-	"os"
 	"testing"
 	"time"
 
 	"github.com/pborman/uuid"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/matching"
@@ -39,6 +36,8 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/cron"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
@@ -52,7 +51,7 @@ type (
 		suite.Suite
 
 		mockShardManager *mocks.ShardManager
-		logger           bark.Logger
+		logger           log.Logger
 
 		mockHistoryEngine          *historyEngineImpl
 		mockMetadataMgr            *mocks.MetadataManager
@@ -83,9 +82,7 @@ func TestTransferQueueActiveProcessorSuite(t *testing.T) {
 }
 
 func (s *transferQueueActiveProcessorSuite) SetupSuite() {
-	if testing.Verbose() {
-		log.SetOutput(os.Stdout)
-	}
+
 }
 
 func (s *transferQueueActiveProcessorSuite) TearDownSuite() {
@@ -94,9 +91,7 @@ func (s *transferQueueActiveProcessorSuite) TearDownSuite() {
 
 func (s *transferQueueActiveProcessorSuite) SetupTest() {
 	shardID := 0
-	log2 := log.New()
-	log2.Level = log.DebugLevel
-	s.logger = bark.NewLoggerFromLogrus(log2)
+	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.mockShardManager = &mocks.ShardManager{}
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
 	s.mockHistoryMgr = &mocks.HistoryManager{}
@@ -127,7 +122,7 @@ func (s *transferQueueActiveProcessorSuite) SetupTest() {
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
 	s.mockClientBean = &client.MockClientBean{}
-	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean, s.logger)
+	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean)
 
 	shardContext := &shardContextImpl{
 		service:                   s.mockService,
@@ -163,7 +158,7 @@ func (s *transferQueueActiveProcessorSuite) SetupTest() {
 		timerProcessor:     s.mockTimerQueueProcessor,
 	}
 	s.mockHistoryEngine = h
-	s.transferQueueActiveProcessor = newTransferQueueActiveProcessor(s.mockShard, h, s.mockVisibilityMgr, s.mockProducer, s.mockMatchingClient, s.mockHistoryClient, newTaskAllocator(s.mockShard), s.logger)
+	s.transferQueueActiveProcessor = newTransferQueueActiveProcessor(s.mockShard, h, s.mockVisibilityMgr, s.mockMatchingClient, s.mockHistoryClient, newTaskAllocator(s.mockShard), s.logger)
 	s.mockQueueAckMgr = &MockQueueAckMgr{}
 	s.transferQueueActiveProcessor.queueAckMgr = s.mockQueueAckMgr
 	s.transferQueueActiveProcessor.queueProcessorBase.ackMgr = s.mockQueueAckMgr
@@ -634,7 +629,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_HasParent(
 		CompletionEvent:    event,
 	}).Return(nil).Once()
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything).Return(nil).Once()
-	s.mockProducer.On("Publish", mock.Anything).Return(nil).Once()
 
 	_, err := s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
@@ -687,7 +681,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_NoParent()
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything).Return(nil).Once()
-	s.mockProducer.On("Publish", mock.Anything).Return(nil).Once()
 
 	_, err := s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
@@ -943,7 +936,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessSignalExecution_Success()
 
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-	s.mockHistoryClient.On("SignalWorkflowExecution", nil, s.createSignallWorkflowExecutionRequest(transferTask, si)).Return(nil).Once()
+	s.mockHistoryClient.On("SignalWorkflowExecution", nil, s.createSignalWorkflowExecutionRequest(transferTask, si)).Return(nil).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", s.version).Return(cluster.TestCurrentClusterName)
@@ -1020,7 +1013,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessSignalExecution_Failure()
 
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-	s.mockHistoryClient.On("SignalWorkflowExecution", nil, s.createSignallWorkflowExecutionRequest(transferTask, si)).Return(&workflow.EntityNotExistsError{}).Once()
+	s.mockHistoryClient.On("SignalWorkflowExecution", nil, s.createSignalWorkflowExecutionRequest(transferTask, si)).Return(&workflow.EntityNotExistsError{}).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", s.version).Return(cluster.TestCurrentClusterName)
@@ -1503,7 +1496,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessRecordWorkflowStartedTask
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionStarted", s.createRecordWorkflowExecutionStartedRequest(transferTask, msBuilder, backoffSeconds)).Once().Return(nil)
-	s.mockProducer.On("Publish", mock.Anything).Return(nil).Once()
 
 	_, err := s.transferQueueActiveProcessor.process(transferTask, true)
 	s.Nil(err)
@@ -1566,6 +1558,7 @@ func (s *transferQueueActiveProcessorSuite) createRecordWorkflowExecutionStarted
 		StartTimestamp:     executionInfo.StartTimestamp.UnixNano(),
 		ExecutionTimestamp: executionTimestamp.UnixNano(),
 		WorkflowTimeout:    int64(executionInfo.WorkflowTimeout),
+		TaskID:             task.TaskID,
 	}
 }
 
@@ -1595,7 +1588,7 @@ func (s *transferQueueActiveProcessorSuite) createRequetCancelWorkflowExecutionR
 	}
 }
 
-func (s *transferQueueActiveProcessorSuite) createSignallWorkflowExecutionRequest(task *persistence.TransferTaskInfo,
+func (s *transferQueueActiveProcessorSuite) createSignalWorkflowExecutionRequest(task *persistence.TransferTaskInfo,
 	si *persistence.SignalInfo) *history.SignalWorkflowExecutionRequest {
 
 	sourceExecution := workflow.WorkflowExecution{

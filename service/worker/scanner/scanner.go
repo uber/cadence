@@ -22,15 +22,14 @@ package scanner
 
 import (
 	"context"
-	"log"
 	"time"
 
-	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
 	pfactory "github.com/uber/cadence/common/persistence/persistence-factory"
@@ -63,8 +62,7 @@ type (
 		SDKClient workflowserviceclient.Interface
 		// MetricsClient is an instance of metrics object for emitting stats
 		MetricsClient metrics.Client
-		// Logger is an instance of bark logger
-		Logger bark.Logger
+		Logger        log.Logger
 		// TallyScope is an instance of tally metrics scope
 		TallyScope tally.Scope
 	}
@@ -78,7 +76,7 @@ type (
 		sdkClient     workflowserviceclient.Interface
 		metricsClient metrics.Client
 		tallyScope    tally.Scope
-		logger        bark.Logger
+		logger        log.Logger
 		zapLogger     *zap.Logger
 	}
 
@@ -100,16 +98,16 @@ func New(params *BootstrapParams) *Scanner {
 	cfg.Persistence.SetMaxQPS(cfg.Persistence.DefaultStore, cfg.PersistenceMaxQPS())
 	zapLogger, err := zap.NewProduction()
 	if err != nil {
-		log.Fatalf("failed to initialize zap logger: %v", err)
+		params.Logger.Fatal("failed to initialize zap logger", tag.Error(err))
 	}
 	return &Scanner{
 		context: scannerContext{
 			cfg:           cfg,
 			sdkClient:     params.SDKClient,
 			metricsClient: params.MetricsClient,
-			logger:        params.Logger,
 			tallyScope:    params.TallyScope,
 			zapLogger:     zapLogger,
+			logger:        params.Logger,
 		},
 	}
 }
@@ -151,7 +149,7 @@ func (s *Scanner) startWorkflow(client cclient.Client) error {
 		if _, ok := err.(*shared.WorkflowExecutionAlreadyStartedError); ok {
 			return nil
 		}
-		s.context.logger.WithFields(bark.Fields{logging.TagErr: err}).Error("error starting scanner workflow")
+		s.context.logger.Error("error starting scanner workflow", tag.Error(err))
 		return err
 	}
 	s.context.logger.Info("Scanner workflow successfully started")

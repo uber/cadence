@@ -26,9 +26,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/uber-common/bark"
-
 	"github.com/stretchr/testify/suite"
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"go.uber.org/zap"
 )
 
 type (
@@ -55,10 +55,13 @@ func TestSequentialTaskProcessorSuite(t *testing.T) {
 
 func (s *SequentialTaskProcessorSuite) SetupTest() {
 	s.coroutineSize = 20
+	zapLogger, err := zap.NewDevelopment()
+	s.Require().NoError(err)
+	logger := loggerimpl.NewLogger(zapLogger)
 	s.processor = NewSequentialTaskProcessor(
 		s.coroutineSize,
 		1000,
-		bark.NewNopLogger(),
+		logger,
 	)
 }
 

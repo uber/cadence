@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
@@ -33,7 +32,8 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -53,9 +53,9 @@ type (
 		config            *Config
 		client            messaging.Client
 		processors        []*replicationTaskProcessor
-		logger            bark.Logger
+		logger            log.Logger
 		metricsClient     metrics.Client
-		historySerializer persistence.HistorySerializer
+		historySerializer persistence.PayloadSerializer
 	}
 
 	// Config contains all the replication config for worker
@@ -76,12 +76,9 @@ const (
 // NewReplicator creates a new replicator for processing replication tasks
 func NewReplicator(clusterMetadata cluster.Metadata, metadataManagerV2 persistence.MetadataManager,
 	domainCache cache.DomainCache, clientBean client.Bean, config *Config,
-	client messaging.Client, logger bark.Logger, metricsClient metrics.Client) *Replicator {
+	client messaging.Client, logger log.Logger, metricsClient metrics.Client) *Replicator {
 
-	logger = logger.WithFields(bark.Fields{
-		logging.TagWorkflowComponent: logging.TagValueReplicatorComponent,
-	})
-
+	logger = logger.WithTags(tag.ComponentReplicator)
 	return &Replicator{
 		domainCache:       domainCache,
 		clusterMetadata:   clusterMetadata,
@@ -92,7 +89,7 @@ func NewReplicator(clusterMetadata cluster.Metadata, metadataManagerV2 persisten
 		client:            client,
 		logger:            logger,
 		metricsClient:     metricsClient,
-		historySerializer: persistence.NewHistorySerializer(),
+		historySerializer: persistence.NewPayloadSerializer(),
 	}
 }
 
@@ -112,11 +109,7 @@ func (r *Replicator) Start() error {
 				common.CreateHistoryServiceRetryPolicy(),
 				common.IsWhitelistServiceTransientError,
 			)
-			logger := r.logger.WithFields(bark.Fields{
-				logging.TagWorkflowComponent: logging.TagValueReplicationTaskProcessorComponent,
-				logging.TagSourceCluster:     cluster,
-				logging.TagConsumerName:      consumerName,
-			})
+			logger := r.logger.WithTags(tag.ComponentReplicationTaskProcessor, tag.SourceCluster(cluster), tag.KafkaConsumerName(consumerName))
 			historyRereplicator := xdc.NewHistoryRereplicator(
 				currentClusterName,
 				r.domainCache,
@@ -126,7 +119,7 @@ func (r *Replicator) Start() error {
 				},
 				r.historySerializer,
 				replicationTimeout,
-				logger,
+				r.logger,
 			)
 			r.processors = append(r.processors, newReplicationTaskProcessor(
 				currentClusterName, cluster, consumerName, r.client,

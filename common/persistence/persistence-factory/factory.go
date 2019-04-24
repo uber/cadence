@@ -23,8 +23,8 @@ package persistence
 import (
 	"sync"
 
-	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
@@ -89,7 +89,7 @@ type (
 		sync.RWMutex
 		config        *config.Persistence
 		metricsClient metrics.Client
-		logger        bark.Logger
+		logger        log.Logger
 		datastores    map[storeType]Datastore
 	}
 
@@ -131,7 +131,7 @@ func New(
 	cfg *config.Persistence,
 	clusterName string,
 	metricsClient metrics.Client,
-	logger bark.Logger) Factory {
+	logger log.Logger) Factory {
 	factory := &factoryImpl{
 		config:        cfg,
 		metricsClient: metricsClient,
@@ -266,14 +266,16 @@ func (f *factoryImpl) NewExecutionManager(shardID int) (p.ExecutionManager, erro
 // NewVisibilityManager returns a new visibility manager
 func (f *factoryImpl) NewVisibilityManager() (p.VisibilityManager, error) {
 	ds := f.datastores[storeTypeVisibility]
-	result, err := ds.factory.NewVisibilityStore()
+	store, err := ds.factory.NewVisibilityStore()
 	if err != nil {
 		return nil, err
 	}
 	visConfig := f.config.VisibilityConfig
 	if visConfig != nil && visConfig.EnableReadFromClosedExecutionV2() && f.isCassandra() {
-		result, err = cassandra.NewVisibilityPersistenceV2(result, f.getCassandraConfig(), f.logger)
+		store, err = cassandra.NewVisibilityPersistenceV2(store, f.getCassandraConfig(), f.logger)
 	}
+
+	result := p.NewVisibilityManagerImpl(store, f.logger)
 	if ds.ratelimit != nil {
 		result = p.NewVisibilityPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
@@ -283,6 +285,7 @@ func (f *factoryImpl) NewVisibilityManager() (p.VisibilityManager, error) {
 	if f.metricsClient != nil {
 		result = p.NewVisibilityPersistenceMetricsClient(result, f.metricsClient, f.logger)
 	}
+
 	return result, nil
 }
 
@@ -302,7 +305,7 @@ func (f *factoryImpl) getCassandraConfig() *config.Cassandra {
 	return cfg.DataStores[cfg.VisibilityStore].Cassandra
 }
 
-func newStore(cfg config.DataStore, tb tokenbucket.TokenBucket, clusterName string, maxConnsOverride int, logger bark.Logger) Datastore {
+func newStore(cfg config.DataStore, tb tokenbucket.TokenBucket, clusterName string, maxConnsOverride int, logger log.Logger) Datastore {
 	var ds Datastore
 	ds.ratelimit = tb
 	if cfg.SQL != nil {
@@ -313,14 +316,14 @@ func newStore(cfg config.DataStore, tb tokenbucket.TokenBucket, clusterName stri
 	return ds
 }
 
-func newSQLStore(cfg config.SQL, clusterName string, maxConnsOverride int, logger bark.Logger) DataStoreFactory {
+func newSQLStore(cfg config.SQL, clusterName string, maxConnsOverride int, logger log.Logger) DataStoreFactory {
 	if maxConnsOverride > 0 {
 		cfg.MaxConns = maxConnsOverride
 	}
 	return sql.NewFactory(cfg, clusterName, logger)
 }
 
-func newCassandraStore(cfg config.Cassandra, clusterName string, maxConnsOverride int, logger bark.Logger) DataStoreFactory {
+func newCassandraStore(cfg config.Cassandra, clusterName string, maxConnsOverride int, logger log.Logger) DataStoreFactory {
 	if maxConnsOverride > 0 {
 		cfg.MaxConns = maxConnsOverride
 	}

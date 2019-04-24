@@ -22,14 +22,11 @@ package replicator
 
 import (
 	"errors"
-	"os"
 	"testing"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/replicator"
@@ -37,18 +34,21 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/definition"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	messageMocks "github.com/uber/cadence/common/messaging/mocks"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/xdc"
+	"go.uber.org/zap"
 )
 
 type (
 	activityReplicationTaskSuite struct {
 		suite.Suite
 		config        *Config
-		logger        bark.Logger
+		logger        log.Logger
 		metricsClient metrics.Client
 
 		mockMsg           *messageMocks.Message
@@ -59,7 +59,7 @@ type (
 	historyReplicationTaskSuite struct {
 		suite.Suite
 		config        *Config
-		logger        bark.Logger
+		logger        log.Logger
 		metricsClient metrics.Client
 		sourceCluster string
 
@@ -97,9 +97,6 @@ func TestHistoryMetadataReplicationTaskSuite(t *testing.T) {
 }
 
 func (s *activityReplicationTaskSuite) SetupSuite() {
-	if testing.Verbose() {
-		log.SetOutput(os.Stdout)
-	}
 }
 
 func (s *activityReplicationTaskSuite) TearDownSuite() {
@@ -107,9 +104,9 @@ func (s *activityReplicationTaskSuite) TearDownSuite() {
 }
 
 func (s *activityReplicationTaskSuite) SetupTest() {
-	log2 := log.New()
-	log2.Level = log.DebugLevel
-	s.logger = bark.NewLoggerFromLogrus(log2)
+	zapLogger, err := zap.NewDevelopment()
+	s.Require().NoError(err)
+	s.logger = loggerimpl.NewLogger(zapLogger)
 	s.config = &Config{
 		ReplicationTaskMaxRetry: dynamicconfig.GetIntPropertyFn(10),
 	}
@@ -127,9 +124,6 @@ func (s *activityReplicationTaskSuite) TearDownTest() {
 }
 
 func (s *historyReplicationTaskSuite) SetupSuite() {
-	if testing.Verbose() {
-		log.SetOutput(os.Stdout)
-	}
 }
 
 func (s *historyReplicationTaskSuite) TearDownSuite() {
@@ -137,9 +131,9 @@ func (s *historyReplicationTaskSuite) TearDownSuite() {
 }
 
 func (s *historyReplicationTaskSuite) SetupTest() {
-	log2 := log.New()
-	log2.Level = log.DebugLevel
-	s.logger = bark.NewLoggerFromLogrus(log2)
+	zapLogger, err := zap.NewDevelopment()
+	s.Require().NoError(err)
+	s.logger = loggerimpl.NewLogger(zapLogger)
 	s.config = &Config{
 		ReplicatorHistoryBufferRetryCount: dynamicconfig.GetIntPropertyFn(2),
 		ReplicationTaskMaxRetry:           dynamicconfig.GetIntPropertyFn(10),

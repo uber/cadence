@@ -27,8 +27,8 @@ import (
 	"fmt"
 
 	"github.com/go-sql-driver/mysql"
-	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 )
@@ -36,7 +36,7 @@ import (
 // TODO: Rename all SQL Managers to Stores
 type sqlStore struct {
 	db     sqldb.Interface
-	logger bark.Logger
+	logger log.Logger
 }
 
 func (m *sqlStore) GetName() string {
@@ -114,10 +114,6 @@ func gobDeserialize(a []byte, x interface{}) error {
 	}
 	return nil
 }
-
-const (
-	dataSourceName = "%s:%s@%v(%v)/%s?multiStatements=true&tx_isolation=%%27READ-COMMITTED%%27&parseTime=true&clientFoundRows=true"
-)
 
 func boolToInt64(b bool) int64 {
 	if b {

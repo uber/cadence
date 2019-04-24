@@ -25,11 +25,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
 	"github.com/uber/cadence/common/service"
@@ -40,7 +41,7 @@ import (
 	"github.com/uber/cadence/service/worker/replicator"
 	"github.com/uber/cadence/service/worker/scanner"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
-	"go.uber.org/cadence/.gen/go/shared"
+	"go.uber.org/cadence/client"
 )
 
 type (
@@ -53,7 +54,7 @@ type (
 		isStopped     int32
 		params        *service.BootstrapParams
 		config        *Config
-		logger        bark.Logger
+		logger        log.Logger
 		metricsClient metrics.Client
 	}
 
@@ -69,9 +70,9 @@ type (
 
 // NewService builds a new cadence-worker service
 func NewService(params *service.BootstrapParams) common.Daemon {
-	params.UpdateLoggerWithServiceName(common.WorkerServiceName)
 	config := NewConfig(params)
-	params.ThrottledBarkLogger = logging.NewThrottledLogger(params.BarkLogger, config.ThrottledLogRPS)
+	params.ThrottledLogger = loggerimpl.NewThrottledLogger(params.Logger, config.ThrottledLogRPS)
+	params.UpdateLoggerWithServiceName(common.WorkerServiceName)
 	return &Service{
 		params: params,
 		config: config,
@@ -81,7 +82,7 @@ func NewService(params *service.BootstrapParams) common.Daemon {
 
 // NewConfig builds the new Config for cadence-worker service
 func NewConfig(params *service.BootstrapParams) *Config {
-	dc := dynamicconfig.NewCollection(params.DynamicConfig, params.BarkLogger)
+	dc := dynamicconfig.NewCollection(params.DynamicConfig, params.Logger)
 	return &Config{
 		ReplicationCfg: &replicator.Config{
 			PersistenceMaxQPS:                 dc.GetIntProperty(dynamicconfig.WorkerPersistenceMaxQPS, 500),
@@ -119,9 +120,9 @@ func NewConfig(params *service.BootstrapParams) *Config {
 func (s *Service) Start() {
 	base := service.New(s.params)
 	base.Start()
-	s.logger = base.GetBarkLogger()
+	s.logger = base.GetLogger()
 	s.metricsClient = base.GetMetricsClient()
-	s.logger.Infof("%v starting", common.WorkerServiceName)
+	s.logger.Info("service starting", tag.ComponentWorker)
 
 	pConfig := s.params.PersistenceConfig
 	pConfig.SetMaxQPS(pConfig.DefaultStore, s.config.ReplicationCfg.PersistenceMaxQPS())
@@ -139,7 +140,7 @@ func (s *Service) Start() {
 
 	s.startScanner(base)
 
-	s.logger.Infof("%v started", common.WorkerServiceName)
+	s.logger.Info("service started", tag.ComponentWorker)
 	<-s.stopC
 	base.Stop()
 }
@@ -150,13 +151,13 @@ func (s *Service) Stop() {
 		return
 	}
 	close(s.stopC)
-	s.params.BarkLogger.Infof("%v stopped", common.WorkerServiceName)
+	s.params.Logger.Info("service stopped", tag.ComponentWorker)
 }
 
 func (s *Service) startScanner(base service.Service) {
 	storeType := s.config.ScannerCfg.Persistence.DefaultStoreType()
 	if storeType != config.StoreTypeSQL {
-		s.logger.Infof("Scanner not started: incompatible persistence store type %v", storeType)
+		s.logger.Info("Scanner not started: incompatible persistence store type", tag.StoreType(storeType))
 		return
 	}
 	params := &scanner.BootstrapParams{
@@ -168,14 +169,14 @@ func (s *Service) startScanner(base service.Service) {
 	}
 	scanner := scanner.New(params)
 	if err := scanner.Start(); err != nil {
-		s.logger.Fatalf("error starting scanner:%v", err)
+		s.logger.Fatal("error starting scanner:%v", tag.Error(err))
 	}
 }
 
 func (s *Service) startReplicator(base service.Service, pFactory persistencefactory.Factory) {
 	metadataV2Mgr, err := pFactory.NewMetadataManager(persistencefactory.MetadataV2)
 	if err != nil {
-		s.logger.Fatalf("failed to start replicator, could not create MetadataManager: %v", err)
+		s.logger.Fatal("failed to start replicator, could not create MetadataManager", tag.Error(err))
 	}
 	domainCache := cache.NewDomainCache(metadataV2Mgr, base.GetClusterMetadata(), s.metricsClient, s.logger)
 	domainCache.Start()
@@ -191,7 +192,7 @@ func (s *Service) startReplicator(base service.Service, pFactory persistencefact
 		s.metricsClient)
 	if err := replicator.Start(); err != nil {
 		replicator.Stop()
-		s.logger.Fatalf("fail to start replicator: %v", err)
+		s.logger.Fatal("fail to start replicator", tag.Error(err))
 	}
 }
 
@@ -205,7 +206,7 @@ func (s *Service) startIndexer(base service.Service) {
 		s.metricsClient)
 	if err := indexer.Start(); err != nil {
 		indexer.Stop()
-		s.logger.Fatalf("fail to start indexer: %v", err)
+		s.logger.Fatal("fail to start indexer", tag.Error(err))
 	}
 }
 
@@ -215,15 +216,15 @@ func (s *Service) startArchiver(base service.Service, pFactory persistencefactor
 
 	historyManager, err := pFactory.NewHistoryManager()
 	if err != nil {
-		s.logger.WithError(err).Fatal("failed to start archiver, could not create HistoryManager")
+		s.logger.Fatal("failed to start archiver, could not create HistoryManager", tag.Error(err))
 	}
 	historyV2Manager, err := pFactory.NewHistoryV2Manager()
 	if err != nil {
-		s.logger.WithError(err).Fatal("failed to start archiver, could not create HistoryV2Manager")
+		s.logger.Fatal("failed to start archiver, could not create HistoryV2Manager", tag.Error(err))
 	}
 	metadataMgr, err := pFactory.NewMetadataManager(persistencefactory.MetadataV1V2)
 	if err != nil {
-		s.logger.WithError(err).Fatal("failed to start archiver, could not create MetadataManager")
+		s.logger.Fatal("failed to start archiver, could not create MetadataManager", tag.Error(err))
 	}
 	domainCache := cache.NewDomainCache(metadataMgr, s.params.ClusterMetadata, s.metricsClient, s.logger)
 	domainCache.Start()
@@ -247,18 +248,16 @@ func (s *Service) startArchiver(base service.Service, pFactory persistencefactor
 	clientWorker := archiver.NewClientWorker(bc)
 	if err := clientWorker.Start(); err != nil {
 		clientWorker.Stop()
-		s.logger.WithError(err).Fatal("failed to start archiver")
+		s.logger.Fatal("failed to start archiver", tag.Error(err))
 	}
 }
 
 func (s *Service) ensureSystemDomainExists(publicClient workflowserviceclient.Interface) {
-	request := &shared.DescribeDomainRequest{
-		Name: common.StringPtr(common.SystemDomainName),
-	}
+	domainClient := client.NewDomainClient(publicClient, nil)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	_, err := publicClient.DescribeDomain(ctx, request)
+	_, err := domainClient.Describe(ctx, common.SystemDomainName)
 	if err != nil {
-		s.logger.WithError(err).Fatal("failed to verify that cadence system domain exists")
+		s.logger.Fatal("failed to verify that cadence system domain exists", tag.Error(err))
 	}
 }

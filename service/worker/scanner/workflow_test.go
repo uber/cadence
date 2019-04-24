@@ -25,11 +25,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
@@ -63,7 +62,7 @@ func (s *scannerWorkflowTestSuite) TestScavengerActivity() {
 		domainDB:      &mocks.MetadataManager{},
 		metricsClient: metrics.NewClient(tally.NoopScope, metrics.Worker),
 		zapLogger:     zap.NewNop(),
-		logger:        bark.NewLoggerFromLogrus(logrus.New()),
+		logger:        loggerimpl.NewLogger(zap.NewNop()),
 	}
 	env.SetTestTimeout(time.Second * 5)
 	env.SetWorkerOptions(worker.Options{

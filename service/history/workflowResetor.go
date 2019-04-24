@@ -26,13 +26,12 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
-	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	ce "github.com/uber/cadence/common/errors"
-	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -132,11 +131,10 @@ func (w *workflowResetorImpl) ResetWorkflowExecution(ctx context.Context, resetR
 	// dedup by requestID
 	if currMutableState.GetExecutionInfo().CreateRequestID == request.GetRequestId() {
 		response.RunId = currExecution.RunId
-		w.eng.logger.WithFields(bark.Fields{
-			logging.TagDomainID:            domainID,
-			logging.TagWorkflowExecutionID: currExecution.GetWorkflowId(),
-			logging.TagWorkflowRunID:       currExecution.GetRunId(),
-		}).Info("Duplicated reset request")
+		w.eng.logger.Info("Duplicated reset request",
+			tag.WorkflowID(currExecution.GetWorkflowId()),
+			tag.WorkflowRunID(currExecution.GetRunId()),
+			tag.WorkflowDomainID(domainID))
 		return
 	}
 
@@ -680,7 +678,7 @@ func (w *workflowResetorImpl) replayHistoryEvents(decisionFinishEventID int64, r
 		}
 	}
 
-	retError = validateLastBatchOfReset(lastBatch)
+	retError = validateLastBatchOfReset(lastBatch, decisionFinishEventID)
 	if retError != nil {
 		return
 	}
@@ -695,16 +693,22 @@ func (w *workflowResetorImpl) replayHistoryEvents(decisionFinishEventID int64, r
 	return
 }
 
-func validateLastBatchOfReset(lastBatch []*workflow.HistoryEvent) error {
+func validateLastBatchOfReset(lastBatch []*workflow.HistoryEvent, decisionFinishEventID int64) error {
 	firstEvent := lastBatch[0]
-	for _, event := range lastBatch {
-		if event.GetEventType() == workflow.EventTypeDecisionTaskStarted {
-			return nil
+	lastEvent := lastBatch[len(lastBatch)-1]
+	if decisionFinishEventID != lastEvent.GetEventId()+1 {
+		return &workflow.BadRequestError{
+			Message: fmt.Sprintf("wrong DecisionFinishEventId, it must be DecisionTaskStarted + 1: %v", lastEvent.GetEventId()),
 		}
 	}
-	return &workflow.BadRequestError{
-		Message: fmt.Sprintf("wrong DecisionFinishEventId, previous batch doesn't include EventTypeDecisionTaskStarted, lastFirstEventId: %v", firstEvent.GetEventId()),
+
+	if lastEvent.GetEventType() != workflow.EventTypeDecisionTaskStarted {
+		return &workflow.BadRequestError{
+			Message: fmt.Sprintf("wrong DecisionFinishEventId, previous batch doesn't include EventTypeDecisionTaskStarted, lastFirstEventId: %v", firstEvent.GetEventId()),
+		}
 	}
+
+	return nil
 }
 
 func validateResetReplicationTask(request *h.ReplicateEventsRequest) (*workflow.DecisionTaskFailedEventAttributes, error) {

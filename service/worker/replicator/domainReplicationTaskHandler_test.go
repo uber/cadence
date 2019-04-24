@@ -21,20 +21,17 @@
 package replicator
 
 import (
-	"log"
-	"os"
 	"testing"
 
-	"github.com/uber/cadence/common/persistence/persistence-tests"
-
 	"github.com/pborman/uuid"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/persistence-tests"
+	"go.uber.org/zap"
 )
 
 type (
@@ -51,9 +48,6 @@ func TestDomainReplicatorSuite(t *testing.T) {
 }
 
 func (s *domainReplicatorSuite) SetupSuite() {
-	if testing.Verbose() {
-		log.SetOutput(os.Stdout)
-	}
 }
 
 func (s *domainReplicatorSuite) TearDownSuite() {
@@ -63,9 +57,12 @@ func (s *domainReplicatorSuite) TearDownSuite() {
 func (s *domainReplicatorSuite) SetupTest() {
 	s.TestBase = persistencetests.NewTestBaseWithCassandra(&persistencetests.TestBaseOptions{})
 	s.TestBase.Setup()
+	zapLogger, err := zap.NewDevelopment()
+	s.Require().NoError(err)
+	logger := loggerimpl.NewLogger(zapLogger)
 	s.domainReplicator = NewDomainReplicator(
 		s.MetadataManagerV2,
-		bark.NewLoggerFromLogrus(logrus.New()),
+		logger,
 	).(*domainReplicatorImpl)
 }
 

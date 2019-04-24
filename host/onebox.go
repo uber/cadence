@@ -21,17 +21,17 @@
 package host
 
 import (
+	"context"
 	"fmt"
-
 	"sync"
-	"time"
 
+	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
-	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore"
@@ -39,13 +39,12 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	espersistence "github.com/uber/cadence/common/persistence/elasticsearch"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
@@ -58,11 +57,10 @@ import (
 	"github.com/uber/cadence/service/worker/replicator"
 	cwsc "go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/tchannel"
 )
 
-const rpAppNamePrefix string = "cadence"
-const maxRpJoinTimeout = 30 * time.Second
 const archivalBlobSize = 5 * 1024 // 5KB
 
 // Cadence hosts all of cadence services in one process
@@ -82,7 +80,6 @@ type (
 		frontendHandler     *frontend.WorkflowHandler
 		matchingHandler     *matching.Handler
 		historyHandlers     []*history.Handler
-		barkLogger          bark.Logger
 		logger              log.Logger
 		clusterMetadata     cluster.Metadata
 		persistenceConfig   config.Persistence
@@ -133,7 +130,6 @@ type (
 		ExecutionMgrFactory           persistence.ExecutionManagerFactory
 		TaskMgr                       persistence.TaskManager
 		VisibilityMgr                 persistence.VisibilityManager
-		BarkLogger                    bark.Logger
 		Logger                        log.Logger
 		ClusterNo                     int
 		EnableEventsV2                bool
@@ -154,7 +150,6 @@ type (
 // NewCadence returns an instance that hosts full cadence in one process
 func NewCadence(params *CadenceParams) Cadence {
 	return &cadenceImpl{
-		barkLogger:          params.BarkLogger,
 		logger:              params.Logger,
 		clusterMetadata:     params.ClusterMetadata,
 		persistenceConfig:   params.PersistenceConfig,
@@ -190,6 +185,12 @@ func (c *cadenceImpl) Start() error {
 	hosts[common.HistoryServiceName] = c.HistoryServiceAddress()
 	if c.enableWorker() {
 		hosts[common.WorkerServiceName] = []string{c.WorkerServiceAddress()}
+	}
+
+	// create cadence-system domain, this must be created before starting
+	// the services - so directly use the metadataManager to create this
+	if err := c.createSystemDomain(); err != nil {
+		return err
 	}
 
 	var startWG sync.WaitGroup
@@ -258,7 +259,7 @@ func (c *cadenceImpl) HistoryServiceAddress() []string {
 		hosts = append(hosts, fmt.Sprintf("127.0.0.1:%v", port))
 	}
 
-	c.barkLogger.Infof("History hosts: %v", hosts)
+	c.logger.Info("History hosts", tag.Addresses(hosts))
 	return hosts
 }
 
@@ -273,7 +274,7 @@ func (c *cadenceImpl) HistoryPProfPort() []int {
 		ports = append(ports, port)
 	}
 
-	c.barkLogger.Infof("History pprof ports: %v", ports)
+	c.logger.Info("History pprof ports", tag.Value(ports))
 	return ports
 }
 
@@ -322,11 +323,10 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	params := new(service.BootstrapParams)
 	params.DCRedirectionPolicy = config.DCRedirectionPolicy{}
 	params.Name = common.FrontendServiceName
-	params.BarkLogger = c.barkLogger
 	params.Logger = c.logger
-	params.ThrottledBarkLogger = logging.NewThrottledLogger(c.barkLogger, func(...dynamicconfig.FilterOption) int { return 10 })
-	params.PProfInitializer = newPProfInitializerImpl(c.barkLogger, c.FrontendPProfPort())
-	params.RPCFactory = newRPCFactoryImpl(common.FrontendServiceName, c.FrontendAddress(), c.barkLogger)
+	params.ThrottledLogger = c.logger
+	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.FrontendPProfPort())
+	params.RPCFactory = newRPCFactoryImpl(common.FrontendServiceName, c.FrontendAddress(), c.logger)
 	params.MetricScope = tally.NewTestScope(common.FrontendServiceName, make(map[string]string))
 	params.MembershipFactory = newMembershipFactory(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
@@ -334,7 +334,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	params.MessagingClient = c.messagingClient
 	params.BlobstoreClient = c.blobstoreClient
 	params.PersistenceConfig = c.persistenceConfig
-	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.BarkLogger))
+	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
 
 	// TODO when cross DC is public, remove this temporary override
@@ -343,7 +343,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	if c.workerConfig.EnableReplicator {
 		kafkaProducer, err = c.messagingClient.NewProducerWithClusterName(c.clusterMetadata.GetCurrentClusterName())
 		if err != nil {
-			c.barkLogger.WithField("error", err).Fatal("Failed to create kafka producer when start frontend")
+			c.logger.Fatal("Failed to create kafka producer when start frontend", tag.Error(err))
 		}
 	} else {
 		kafkaProducer = &mocks.KafkaProducer{}
@@ -354,32 +354,20 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	c.frontEndService = service.New(params)
 	c.adminHandler = frontend.NewAdminHandler(
 		c.frontEndService, c.historyConfig.NumHistoryShards, c.metadataMgr, c.historyMgr, c.historyV2Mgr)
-	dc := dynamicconfig.NewCollection(params.DynamicConfig, c.barkLogger)
-	frontendConfig := frontend.NewConfig(dc, c.historyConfig.NumHistoryShards, c.esConfig.Enable)
-	visibilityMgr := c.visibilityMgr
-	if c.esConfig.Enable {
-		frontendConfig.EnableReadVisibilityFromES = dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableReadVisibilityFromES, true)
-		visibilityIndexName := c.esConfig.Indices[common.VisibilityAppName]
-		visibilityConfigForES := &config.VisibilityConfig{
-			VisibilityListMaxQPS:   frontendConfig.ESVisibilityListMaxQPS,
-			ESIndexMaxResultWindow: frontendConfig.ESIndexMaxResultWindow,
-		}
-
-		visibilityFromES := espersistence.NewElasticSearchVisibilityManager(c.esClient, visibilityIndexName, visibilityConfigForES, c.barkLogger)
-		visibilityMgr = persistence.NewVisibilityManagerWrapper(visibilityMgr, visibilityFromES, frontendConfig.EnableReadVisibilityFromES)
-	}
+	dc := dynamicconfig.NewCollection(params.DynamicConfig, c.logger)
+	frontendConfig := frontend.NewConfig(dc, c.historyConfig.NumHistoryShards, c.workerConfig.EnableIndexer, true)
 	c.frontendHandler = frontend.NewWorkflowHandler(
 		c.frontEndService, frontendConfig, c.metadataMgr, c.historyMgr, c.historyV2Mgr,
-		visibilityMgr, kafkaProducer, params.BlobstoreClient)
+		c.visibilityMgr, kafkaProducer, params.BlobstoreClient)
 	err = c.frontendHandler.Start()
 	if err != nil {
-		c.barkLogger.WithField("error", err).Fatal("Failed to start frontend")
+		c.logger.Fatal("Failed to start frontend", tag.Error(err))
 	}
 	dcRedirectionHandler := frontend.NewDCRedirectionHandler(c.frontendHandler, params.DCRedirectionPolicy)
 	c.frontEndService.GetDispatcher().Register(workflowserviceserver.New(dcRedirectionHandler))
 	err = c.adminHandler.Start()
 	if err != nil {
-		c.barkLogger.WithField("error", err).Fatal("Failed to start admin")
+		c.logger.Fatal("Failed to start admin", tag.Error(err))
 	}
 	c.initLock.Unlock()
 
@@ -394,29 +382,28 @@ func (c *cadenceImpl) startHistory(hosts map[string][]string, startWG *sync.Wait
 	for i, hostport := range c.HistoryServiceAddress() {
 		params := new(service.BootstrapParams)
 		params.Name = common.HistoryServiceName
-		params.BarkLogger = c.barkLogger
 		params.Logger = c.logger
-		params.ThrottledBarkLogger = logging.NewThrottledLogger(c.barkLogger, func(...dynamicconfig.FilterOption) int { return 10 })
-		params.PProfInitializer = newPProfInitializerImpl(c.barkLogger, pprofPorts[i])
-		params.RPCFactory = newRPCFactoryImpl(common.HistoryServiceName, hostport, c.barkLogger)
+		params.ThrottledLogger = c.logger
+		params.PProfInitializer = newPProfInitializerImpl(c.logger, pprofPorts[i])
+		params.RPCFactory = newRPCFactoryImpl(common.HistoryServiceName, hostport, c.logger)
 		params.MetricScope = tally.NewTestScope(common.HistoryServiceName, make(map[string]string))
 		params.MembershipFactory = newMembershipFactory(params.Name, hosts)
 		params.ClusterMetadata = c.clusterMetadata
 		params.DispatcherProvider = c.dispatcherProvider
 		params.MessagingClient = c.messagingClient
 		params.PersistenceConfig = c.persistenceConfig
-		params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.BarkLogger))
+		params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
 		params.DynamicConfig = dynamicconfig.NewNopClient()
 		dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, c.FrontendAddress())
 		if err != nil {
-			c.barkLogger.WithField("error", err).Fatal("Failed to get dispatcher for frontend")
+			c.logger.Fatal("Failed to get dispatcher for frontend", tag.Error(err))
 		}
 		params.PublicClient = cwsc.New(dispatcher.ClientConfig(common.FrontendServiceName))
 
 		c.initLock.Lock()
 		service := service.New(params)
 		hConfig := c.historyConfig
-		historyConfig := history.NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, c.barkLogger), hConfig.NumHistoryShards, c.esConfig.Enable, config.StoreTypeCassandra)
+		historyConfig := history.NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, c.logger), hConfig.NumHistoryShards, c.workerConfig.EnableIndexer, config.StoreTypeCassandra)
 		historyConfig.HistoryMgrNumConns = dynamicconfig.GetIntPropertyFn(hConfig.NumHistoryShards)
 		historyConfig.ExecutionMgrNumConns = dynamicconfig.GetIntPropertyFn(hConfig.NumHistoryShards)
 		historyConfig.EnableEventsV2 = dynamicconfig.GetBoolPropertyFnFilteredByDomain(enableEventsV2)
@@ -442,23 +429,22 @@ func (c *cadenceImpl) startMatching(hosts map[string][]string, startWG *sync.Wai
 
 	params := new(service.BootstrapParams)
 	params.Name = common.MatchingServiceName
-	params.BarkLogger = c.barkLogger
 	params.Logger = c.logger
-	params.ThrottledBarkLogger = logging.NewThrottledLogger(c.barkLogger, func(...dynamicconfig.FilterOption) int { return 10 })
-	params.PProfInitializer = newPProfInitializerImpl(c.barkLogger, c.MatchingPProfPort())
-	params.RPCFactory = newRPCFactoryImpl(common.MatchingServiceName, c.MatchingServiceAddress(), c.barkLogger)
+	params.ThrottledLogger = c.logger
+	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.MatchingPProfPort())
+	params.RPCFactory = newRPCFactoryImpl(common.MatchingServiceName, c.MatchingServiceAddress(), c.logger)
 	params.MetricScope = tally.NewTestScope(common.MatchingServiceName, make(map[string]string))
 	params.MembershipFactory = newMembershipFactory(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
 	params.DispatcherProvider = c.dispatcherProvider
 	params.PersistenceConfig = c.persistenceConfig
-	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.BarkLogger))
+	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
 
 	c.initLock.Lock()
 	service := service.New(params)
 	c.matchingHandler = matching.NewHandler(
-		service, matching.NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, c.barkLogger)), c.taskMgr, c.metadataMgr,
+		service, matching.NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, c.logger)), c.taskMgr, c.metadataMgr,
 	)
 	c.matchingHandler.Start()
 	c.initLock.Unlock()
@@ -471,21 +457,21 @@ func (c *cadenceImpl) startMatching(hosts map[string][]string, startWG *sync.Wai
 func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitGroup) {
 	params := new(service.BootstrapParams)
 	params.Name = common.WorkerServiceName
-	params.BarkLogger = c.barkLogger
 	params.Logger = c.logger
-	params.PProfInitializer = newPProfInitializerImpl(c.barkLogger, c.WorkerPProfPort())
-	params.RPCFactory = newRPCFactoryImpl(common.WorkerServiceName, c.WorkerServiceAddress(), c.barkLogger)
+	params.ThrottledLogger = c.logger
+	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.WorkerPProfPort())
+	params.RPCFactory = newRPCFactoryImpl(common.WorkerServiceName, c.WorkerServiceAddress(), c.logger)
 	params.MetricScope = tally.NewTestScope(common.WorkerServiceName, make(map[string]string))
 	params.MembershipFactory = newMembershipFactory(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
 	params.DispatcherProvider = c.dispatcherProvider
 	params.PersistenceConfig = c.persistenceConfig
-	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.BarkLogger))
+	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
 
 	dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, c.FrontendAddress())
 	if err != nil {
-		c.barkLogger.WithField("error", err).Fatal("Failed to get dispatcher for frontend")
+		c.logger.Fatal("Failed to get dispatcher for frontend", tag.Error(err))
 	}
 	params.PublicClient = cwsc.New(dispatcher.ClientConfig(common.FrontendServiceName))
 	c.initLock.Lock()
@@ -494,16 +480,16 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 
 	var replicatorDomainCache cache.DomainCache
 	if c.workerConfig.EnableReplicator {
-		metadataManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgrV2, service.GetMetricsClient(), c.barkLogger)
-		replicatorDomainCache = cache.NewDomainCache(metadataManager, params.ClusterMetadata, service.GetMetricsClient(), service.GetBarkLogger())
+		metadataManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgrV2, service.GetMetricsClient(), c.logger)
+		replicatorDomainCache = cache.NewDomainCache(metadataManager, params.ClusterMetadata, service.GetMetricsClient(), service.GetLogger())
 		replicatorDomainCache.Start()
 		c.startWorkerReplicator(params, service, replicatorDomainCache)
 	}
 
 	var clientWorkerDomainCache cache.DomainCache
 	if c.workerConfig.EnableArchiver {
-		metadataProxyManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgr, service.GetMetricsClient(), c.barkLogger)
-		clientWorkerDomainCache = cache.NewDomainCache(metadataProxyManager, params.ClusterMetadata, service.GetMetricsClient(), service.GetBarkLogger())
+		metadataProxyManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgr, service.GetMetricsClient(), c.logger)
+		clientWorkerDomainCache = cache.NewDomainCache(metadataProxyManager, params.ClusterMetadata, service.GetMetricsClient(), service.GetLogger())
 		clientWorkerDomainCache.Start()
 		c.startWorkerClientWorker(params, service, clientWorkerDomainCache)
 	}
@@ -526,7 +512,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 }
 
 func (c *cadenceImpl) startWorkerReplicator(params *service.BootstrapParams, service service.Service, domainCache cache.DomainCache) {
-	metadataManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgrV2, service.GetMetricsClient(), c.barkLogger)
+	metadataManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgrV2, service.GetMetricsClient(), c.logger)
 	workerConfig := worker.NewConfig(params)
 	workerConfig.ReplicationCfg.ReplicatorMessageConcurrency = dynamicconfig.GetIntPropertyFn(10)
 	c.replicator = replicator.NewReplicator(
@@ -536,11 +522,11 @@ func (c *cadenceImpl) startWorkerReplicator(params *service.BootstrapParams, ser
 		service.GetClientBean(),
 		workerConfig.ReplicationCfg,
 		c.messagingClient,
-		c.barkLogger,
+		c.logger,
 		service.GetMetricsClient())
 	if err := c.replicator.Start(); err != nil {
 		c.replicator.Stop()
-		c.barkLogger.WithField("error", err).Fatal("Fail to start replicator when start worker")
+		c.logger.Fatal("Fail to start replicator when start worker", tag.Error(err))
 	}
 }
 
@@ -555,7 +541,7 @@ func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, s
 	bc := &archiver.BootstrapContainer{
 		PublicClient:     params.PublicClient,
 		MetricsClient:    service.GetMetricsClient(),
-		Logger:           c.barkLogger,
+		Logger:           c.logger,
 		ClusterMetadata:  service.GetClusterMetadata(),
 		HistoryManager:   c.historyMgr,
 		HistoryV2Manager: c.historyV2Mgr,
@@ -566,7 +552,7 @@ func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, s
 	c.clientWorker = archiver.NewClientWorker(bc)
 	if err := c.clientWorker.Start(); err != nil {
 		c.clientWorker.Stop()
-		c.barkLogger.WithField("error", err).Fatal("Fail to start archiver when start worker")
+		c.logger.Fatal("Fail to start archiver when start worker", tag.Error(err))
 	}
 }
 
@@ -577,12 +563,38 @@ func (c *cadenceImpl) startWorkerIndexer(params *service.BootstrapParams, servic
 		c.messagingClient,
 		c.esClient,
 		c.esConfig,
-		c.barkLogger,
+		c.logger,
 		service.GetMetricsClient())
 	if err := c.indexer.Start(); err != nil {
 		c.indexer.Stop()
-		c.barkLogger.WithField("error", err).Fatal("Fail to start indexer when start worker")
+		c.logger.Fatal("Fail to start indexer when start worker", tag.Error(err))
 	}
+}
+
+func (c *cadenceImpl) createSystemDomain() error {
+	if c.metadataMgrV2 == nil {
+		return nil
+	}
+	_, err := c.metadataMgrV2.CreateDomain(&persistence.CreateDomainRequest{
+		Info: &persistence.DomainInfo{
+			ID:          uuid.New(),
+			Name:        "cadence-system",
+			Status:      persistence.DomainStatusRegistered,
+			Description: "Cadence system domain",
+		},
+		Config: &persistence.DomainConfig{
+			Retention:      1,
+			ArchivalStatus: shared.ArchivalStatusDisabled,
+		},
+		ReplicationConfig: &persistence.DomainReplicationConfig{},
+	})
+	if err != nil {
+		if _, ok := err.(*shared.DomainAlreadyExistsError); ok {
+			return nil
+		}
+		return fmt.Errorf("failed to create cadence-system domain: %v", err)
+	}
+	return nil
 }
 
 func newMembershipFactory(serviceName string, hosts map[string][]string) service.MembershipMonitorFactory {
@@ -596,7 +608,7 @@ func (p *membershipFactoryImpl) Create(dispatcher *yarpc.Dispatcher) (membership
 	return newSimpleMonitor(p.serviceName, p.hosts), nil
 }
 
-func newPProfInitializerImpl(logger bark.Logger, port int) common.PProfInitializer {
+func newPProfInitializerImpl(logger log.Logger, port int) common.PProfInitializer {
 	return &config.PProfInitializerImpl{
 		PProf: &config.PProf{
 			Port: port,
@@ -609,10 +621,10 @@ type rpcFactoryImpl struct {
 	ch          *tchannel.ChannelTransport
 	serviceName string
 	hostPort    string
-	logger      bark.Logger
+	logger      log.Logger
 }
 
-func newRPCFactoryImpl(sName string, hostPort string, logger bark.Logger) common.RPCFactory {
+func newRPCFactoryImpl(sName string, hostPort string, logger log.Logger) common.RPCFactory {
 	return &rpcFactoryImpl{
 		serviceName: sName,
 		hostPort:    hostPort,
@@ -626,7 +638,7 @@ func (c *rpcFactoryImpl) CreateDispatcher() *yarpc.Dispatcher {
 	c.ch, err = tchannel.NewChannelTransport(
 		tchannel.ServiceName(c.serviceName), tchannel.ListenAddr(c.hostPort))
 	if err != nil {
-		c.logger.WithField("error", err).Fatal("Failed to create transport channel")
+		c.logger.Fatal("Failed to create transport channel", tag.Error(err))
 	}
 	return yarpc.NewDispatcher(yarpc.Config{
 		Name:     c.serviceName,
@@ -635,7 +647,18 @@ func (c *rpcFactoryImpl) CreateDispatcher() *yarpc.Dispatcher {
 		Outbounds: yarpc.Outbounds{
 			c.serviceName: {Unary: c.ch.NewSingleOutbound(c.hostPort)},
 		},
+		InboundMiddleware: yarpc.InboundMiddleware{
+			Unary: &versionMiddleware{},
+		},
 	})
+}
+
+type versionMiddleware struct {
+}
+
+func (vm *versionMiddleware) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
+	req.Headers = req.Headers.With(common.LibraryVersionHeaderName, "1.0.0").With(common.FeatureVersionHeaderName, "1.0.0").With(common.ClientImplHeaderName, "uber-go")
+	return h.Handle(ctx, req, resw)
 }
 
 func (c *rpcFactoryImpl) CreateDispatcherForOutbound(
@@ -648,7 +671,7 @@ func (c *rpcFactoryImpl) CreateDispatcherForOutbound(
 		},
 	})
 	if err := d.Start(); err != nil {
-		c.logger.WithField("error", err).Fatal("Failed to create outbound transport channel")
+		c.logger.Fatal("Failed to create outbound transport channel", tag.Error(err))
 	}
 	return d
 }

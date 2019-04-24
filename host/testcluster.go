@@ -24,16 +24,19 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/client"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore/filestore"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	metricsmocks "github.com/uber/cadence/common/metrics/mocks"
 	"github.com/uber/cadence/common/mocks"
+	"github.com/uber/cadence/common/persistence"
+	pes "github.com/uber/cadence/common/persistence/elasticsearch"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
@@ -78,12 +81,12 @@ type (
 )
 
 // NewCluster creates and sets up the test cluster
-func NewCluster(options *TestClusterConfig, barkLogger bark.Logger, logger log.Logger) (*TestCluster, error) {
+func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, error) {
 	clusterInfo := options.ClusterInfo
 	clusterMetadata := cluster.GetTestClusterMetadata(clusterInfo.EnableGlobalDomain, options.IsMasterCluster, options.EnableArchival)
 	if !options.IsMasterCluster && options.ClusterInfo.MasterClusterName != "" { // xdc cluster metadata setup
 		clusterMetadata = cluster.NewMetadata(
-			barkLogger,
+			logger,
 			&metricsmocks.Client{},
 			dynamicconfig.GetBoolPropertyFn(clusterInfo.EnableGlobalDomain),
 			clusterInfo.FailoverVersionIncrement,
@@ -101,16 +104,32 @@ func NewCluster(options *TestClusterConfig, barkLogger bark.Logger, logger log.L
 	options.Persistence.ClusterMetadata = clusterMetadata
 	testBase := persistencetests.NewTestBase(&options.Persistence)
 	testBase.Setup()
-	setupShards(testBase, options.HistoryConfig.NumHistoryShards, barkLogger)
-	blobstore := setupBlobstore(barkLogger)
+	setupShards(testBase, options.HistoryConfig.NumHistoryShards, logger)
+	blobstore := setupBlobstore(logger)
+	messagingClient := getMessagingClient(options.MessagingClientConfig, logger)
 	var esClient elasticsearch.Client
-	if options.ESConfig.Enable {
+	var esVisibilityMgr persistence.VisibilityManager
+	if options.WorkerConfig.EnableIndexer {
 		var err error
 		esClient, err = elasticsearch.NewClient(&options.ESConfig)
 		if err != nil {
 			return nil, err
 		}
+
+		indexName := options.ESConfig.Indices[common.VisibilityAppName]
+		visProducer, err := messagingClient.NewProducer(common.VisibilityAppName)
+		if err != nil {
+			return nil, err
+		}
+		visConfig := &config.VisibilityConfig{
+			VisibilityListMaxQPS:   dynamicconfig.GetIntPropertyFilteredByDomain(2000),
+			ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(100),
+		}
+		esVisibilityStore := pes.NewElasticSearchVisibilityStore(esClient, indexName, visProducer, visConfig, logger)
+		esVisibilityMgr = persistence.NewVisibilityManagerImpl(esVisibilityStore, logger)
 	}
+	visibilityMgr := persistence.NewVisibilityManagerWrapper(testBase.VisibilityMgr, esVisibilityMgr,
+		dynamicconfig.GetBoolPropertyFnFilteredByDomain(options.WorkerConfig.EnableIndexer))
 
 	pConfig := testBase.Config()
 	pConfig.NumHistoryShards = options.HistoryConfig.NumHistoryShards
@@ -118,7 +137,7 @@ func NewCluster(options *TestClusterConfig, barkLogger bark.Logger, logger log.L
 		ClusterMetadata:     clusterMetadata,
 		PersistenceConfig:   pConfig,
 		DispatcherProvider:  client.NewIPYarpcDispatcherProvider(),
-		MessagingClient:     getMessagingClient(options.MessagingClientConfig, barkLogger),
+		MessagingClient:     messagingClient,
 		MetadataMgr:         testBase.MetadataProxy,
 		MetadataMgrV2:       testBase.MetadataManagerV2,
 		ShardMgr:            testBase.ShardMgr,
@@ -126,8 +145,7 @@ func NewCluster(options *TestClusterConfig, barkLogger bark.Logger, logger log.L
 		HistoryV2Mgr:        testBase.HistoryV2Mgr,
 		ExecutionMgrFactory: testBase.ExecutionMgrFactory,
 		TaskMgr:             testBase.TaskMgr,
-		VisibilityMgr:       testBase.VisibilityMgr,
-		BarkLogger:          barkLogger,
+		VisibilityMgr:       visibilityMgr,
 		Logger:              logger,
 		ClusterNo:           options.ClusterNo,
 		EnableEventsV2:      options.EnableEventsV2,
@@ -145,21 +163,21 @@ func NewCluster(options *TestClusterConfig, barkLogger bark.Logger, logger log.L
 	return &TestCluster{testBase: testBase, blobstore: blobstore, host: cluster}, nil
 }
 
-func setupShards(testBase persistencetests.TestBase, numHistoryShards int, logger bark.Logger) {
+func setupShards(testBase persistencetests.TestBase, numHistoryShards int, logger log.Logger) {
 	// shard 0 is always created, we create additional shards if needed
 	for shardID := 1; shardID < numHistoryShards; shardID++ {
 		err := testBase.CreateShard(shardID, "", 0)
 		if err != nil {
-			logger.WithField("error", err).Fatal("Failed to create shard")
+			logger.Fatal("Failed to create shard", tag.Error(err))
 		}
 	}
 }
 
-func setupBlobstore(logger bark.Logger) *BlobstoreBase {
+func setupBlobstore(logger log.Logger) *BlobstoreBase {
 	bucketName := "default-test-bucket"
 	storeDirectory, err := ioutil.TempDir("", "test-blobstore")
 	if err != nil {
-		logger.WithField("error", err).Fatal("Failed to create temp dir for blobstore")
+		logger.Fatal("Failed to create temp dir for blobstore", tag.Error(err))
 	}
 	cfg := &filestore.Config{
 		StoreDirectory: storeDirectory,
@@ -171,7 +189,7 @@ func setupBlobstore(logger bark.Logger) *BlobstoreBase {
 	}
 	client, err := filestore.NewClient(cfg)
 	if err != nil {
-		logger.WithField("error", err).Fatal("Failed to construct blobstore client")
+		logger.Fatal("Failed to construct blobstore client", tag.Error(err))
 	}
 	return &BlobstoreBase{
 		client:         client,
@@ -180,7 +198,7 @@ func setupBlobstore(logger bark.Logger) *BlobstoreBase {
 	}
 }
 
-func getMessagingClient(config *MessagingClientConfig, logger bark.Logger) messaging.Client {
+func getMessagingClient(config *MessagingClientConfig, logger log.Logger) messaging.Client {
 	if config == nil || config.UseMock {
 		return mocks.NewMockMessagingClient(&mocks.KafkaProducer{}, nil)
 	}

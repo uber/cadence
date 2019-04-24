@@ -27,9 +27,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/common/log"
-
 	"github.com/pborman/uuid"
+	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/admin/adminserviceserver"
 	h "github.com/uber/cadence/.gen/go/history"
@@ -38,7 +37,8 @@ import (
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
@@ -70,7 +70,7 @@ func NewAdminHandler(
 		status:                common.DaemonStatusInitialized,
 		numberOfHistoryShards: numberOfHistoryShards,
 		Service:               sVice,
-		domainCache:           cache.NewDomainCache(metadataMgr, sVice.GetClusterMetadata(), sVice.GetMetricsClient(), sVice.GetBarkLogger()),
+		domainCache:           cache.NewDomainCache(metadataMgr, sVice.GetClusterMetadata(), sVice.GetMetricsClient(), sVice.GetLogger()),
 		historyMgr:            historyMgr,
 		historyV2Mgr:          historyV2Mgr,
 	}
@@ -269,7 +269,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 		adh.historyMgr,
 		adh.historyV2Mgr,
 		adh.metricsClient,
-		adh.GetBarkLogger(),
+		adh.GetLogger(),
 		true, // this means that we are getting history by batch
 		domainID,
 		execution.GetWorkflowId(),
@@ -301,7 +301,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 	adh.metricsClient.RecordTimer(scope, metrics.HistorySize, time.Duration(size))
 	domainScope.RecordTimer(metrics.HistorySize, time.Duration(size))
 
-	serializer := persistence.NewHistorySerializer()
+	serializer := persistence.NewPayloadSerializer()
 	blobs := []*gen.DataBlob{}
 	for _, historyBatch := range historyBatches {
 		blob, err := serializer.SerializeBatchEvents(historyBatch.Events, common.EncodingTypeThriftRW)
@@ -332,7 +332,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 }
 
 // startRequestProfile initiates recording of request metrics
-func (adh *AdminHandler) startRequestProfile(scope int) metrics.Stopwatch {
+func (adh *AdminHandler) startRequestProfile(scope int) tally.Stopwatch {
 	adh.startWG.Wait()
 	sw := adh.metricsClient.StartTimer(scope, metrics.CadenceLatency)
 	adh.metricsClient.IncCounter(scope, metrics.CadenceRequests)
@@ -342,7 +342,7 @@ func (adh *AdminHandler) startRequestProfile(scope int) metrics.Stopwatch {
 func (adh *AdminHandler) error(err error, scope int) error {
 	switch err.(type) {
 	case *gen.InternalServiceError:
-		logging.LogInternalServiceError(adh.Service.GetBarkLogger(), err)
+		adh.Service.GetLogger().Error("Internal service error", tag.Error(err))
 		return err
 	case *gen.BadRequestError:
 		return err
@@ -351,7 +351,7 @@ func (adh *AdminHandler) error(err error, scope int) error {
 	case *gen.EntityNotExistsError:
 		return err
 	default:
-		logging.LogUncategorizedError(adh.Service.GetBarkLogger(), err)
+		adh.Service.GetLogger().Error("Uncategorized error", tag.Error(err))
 		return &gen.InternalServiceError{Message: err.Error()}
 	}
 }

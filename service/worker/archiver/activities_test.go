@@ -24,16 +24,19 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
+	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/blobstore/blob"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	mmocks "github.com/uber/cadence/common/metrics/mocks"
 	"github.com/uber/cadence/common/mocks"
@@ -41,6 +44,7 @@ import (
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"go.uber.org/cadence/testsuite"
 	"go.uber.org/cadence/worker"
+	"go.uber.org/zap"
 )
 
 const (
@@ -57,7 +61,7 @@ type activitiesSuite struct {
 	suite.Suite
 	testsuite.WorkflowTestSuite
 
-	logger        bark.Logger
+	logger        log.Logger
 	metricsClient *mmocks.Client
 }
 
@@ -66,9 +70,10 @@ func TestActivitiesSuite(t *testing.T) {
 }
 
 func (s *activitiesSuite) SetupTest() {
-	s.logger = bark.NewNopLogger()
+	zapLogger := zap.NewNop()
+	s.logger = loggerimpl.NewLogger(zapLogger)
 	s.metricsClient = &mmocks.Client{}
-	s.metricsClient.On("StartTimer", mock.Anything, metrics.CadenceLatency).Return(metrics.NewTestStopwatch()).Once()
+	s.metricsClient.On("StartTimer", mock.Anything, metrics.CadenceLatency).Return(tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{})).Once()
 }
 
 func (s *activitiesSuite) TearDownTest() {
@@ -793,7 +798,7 @@ func (s *activitiesSuite) archivalConfig(
 		},
 		nil,
 	)
-	return cache.NewDomainCache(mockMetadataMgr, mockClusterMetadata, s.metricsClient, s.logger), mockClusterMetadata
+	return cache.NewDomainCache(mockMetadataMgr, mockClusterMetadata, s.metricsClient, loggerimpl.NewNopLogger()), mockClusterMetadata
 }
 
 func getConfig(constCheck bool) *Config {

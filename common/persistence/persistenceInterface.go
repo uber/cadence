@@ -42,8 +42,6 @@ type (
 	TaskStore = TaskManager
 	// MetadataStore is a lower level of MetadataManager
 	MetadataStore = MetadataManager
-	// VisibilityStore is the store interface for visibility
-	VisibilityStore = VisibilityManager
 
 	// ExecutionStore is used to manage workflow executions for Persistence layer
 	ExecutionStore interface {
@@ -110,6 +108,23 @@ type (
 		CompleteForkBranch(request *InternalCompleteForkBranchRequest) error
 		// GetHistoryTree returns all branch information of a tree
 		GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error)
+	}
+
+	// VisibilityStore is the store interface for visibility
+	VisibilityStore interface {
+		Closeable
+		GetName() string
+		RecordWorkflowExecutionStarted(request *InternalRecordWorkflowExecutionStartedRequest) error
+		RecordWorkflowExecutionClosed(request *InternalRecordWorkflowExecutionClosedRequest) error
+		ListOpenWorkflowExecutions(request *ListWorkflowExecutionsRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListClosedWorkflowExecutions(request *ListWorkflowExecutionsRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListOpenWorkflowExecutionsByType(request *ListWorkflowExecutionsByTypeRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListClosedWorkflowExecutionsByType(request *ListWorkflowExecutionsByTypeRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListOpenWorkflowExecutionsByWorkflowID(request *ListWorkflowExecutionsByWorkflowIDRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListClosedWorkflowExecutionsByWorkflowID(request *ListWorkflowExecutionsByWorkflowIDRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListClosedWorkflowExecutionsByStatus(request *ListClosedWorkflowExecutionsByStatusRequest) (*InternalListWorkflowExecutionsResponse, error)
+		GetClosedWorkflowExecution(request *GetClosedWorkflowExecutionRequest) (*InternalGetClosedWorkflowExecutionResponse, error)
+		DeleteWorkflowExecution(request *VisibilityDeleteWorkflowExecutionRequest) error
 	}
 
 	// DataBlob represents a blob for any binary data.
@@ -463,6 +478,61 @@ type (
 		// Pagination token
 		NextPageToken []byte
 	}
+
+	// VisibilityWorkflowExecutionInfo is visibility info for internal response
+	VisibilityWorkflowExecutionInfo struct {
+		WorkflowID    string
+		RunID         string
+		TypeName      string
+		StartTime     time.Time
+		ExecutionTime time.Time
+		CloseTime     time.Time
+		Status        *workflow.WorkflowExecutionCloseStatus
+		HistoryLength int64
+		Memo          *DataBlob
+	}
+
+	// InternalListWorkflowExecutionsResponse is response from ListWorkflowExecutions
+	InternalListWorkflowExecutionsResponse struct {
+		Executions []*VisibilityWorkflowExecutionInfo
+		// Token to read next page if there are more workflow executions beyond page size.
+		// Use this to set NextPageToken on ListWorkflowExecutionsRequest to read the next page.
+		NextPageToken []byte
+	}
+
+	// InternalGetClosedWorkflowExecutionResponse is response from GetWorkflowExecution
+	InternalGetClosedWorkflowExecutionResponse struct {
+		Execution *VisibilityWorkflowExecutionInfo
+	}
+
+	// InternalRecordWorkflowExecutionStartedRequest request to RecordWorkflowExecutionStarted
+	InternalRecordWorkflowExecutionStartedRequest struct {
+		DomainUUID         string
+		WorkflowID         string
+		RunID              string
+		WorkflowTypeName   string
+		StartTimestamp     int64
+		ExecutionTimestamp int64
+		WorkflowTimeout    int64
+		TaskID             int64
+		Memo               *DataBlob
+	}
+
+	// InternalRecordWorkflowExecutionClosedRequest is request to RecordWorkflowExecutionClosed
+	InternalRecordWorkflowExecutionClosedRequest struct {
+		DomainUUID         string
+		WorkflowID         string
+		RunID              string
+		WorkflowTypeName   string
+		StartTimestamp     int64
+		ExecutionTimestamp int64
+		TaskID             int64
+		Memo               *DataBlob
+		CloseTimestamp     int64
+		Status             workflow.WorkflowExecutionCloseStatus
+		HistoryLength      int64
+		RetentionSeconds   int64
+	}
 )
 
 // NewDataBlob returns a new DataBlob
@@ -471,7 +541,7 @@ func NewDataBlob(data []byte, encodingType common.EncodingType) *DataBlob {
 		return nil
 	}
 	if encodingType != "thriftrw" && data[0] == 'Y' {
-		panic(fmt.Sprintf("Invlid incoding: \"%v\"", encodingType))
+		panic(fmt.Sprintf("Invalid incoding: \"%v\"", encodingType))
 	}
 	return &DataBlob{
 		Data:     data,
@@ -498,6 +568,8 @@ func (d *DataBlob) GetEncoding() common.EncodingType {
 		return common.EncodingTypeJSON
 	case common.EncodingTypeThriftRW:
 		return common.EncodingTypeThriftRW
+	case common.EncodingTypeEmpty:
+		return common.EncodingTypeEmpty
 	default:
 		return common.EncodingTypeUnknown
 	}

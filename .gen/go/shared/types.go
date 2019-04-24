@@ -6080,6 +6080,212 @@ func (v *ChildWorkflowExecutionTimedOutEventAttributes) IsSetStartedEventId() bo
 	return v != nil && v.StartedEventId != nil
 }
 
+type ClientVersionNotSupportedError struct {
+	FeatureVersion    string `json:"featureVersion,required"`
+	ClientImpl        string `json:"clientImpl,required"`
+	SupportedVersions string `json:"supportedVersions,required"`
+}
+
+// ToWire translates a ClientVersionNotSupportedError struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *ClientVersionNotSupportedError) ToWire() (wire.Value, error) {
+	var (
+		fields [3]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	w, err = wire.NewValueString(v.FeatureVersion), error(nil)
+	if err != nil {
+		return w, err
+	}
+	fields[i] = wire.Field{ID: 1, Value: w}
+	i++
+
+	w, err = wire.NewValueString(v.ClientImpl), error(nil)
+	if err != nil {
+		return w, err
+	}
+	fields[i] = wire.Field{ID: 2, Value: w}
+	i++
+
+	w, err = wire.NewValueString(v.SupportedVersions), error(nil)
+	if err != nil {
+		return w, err
+	}
+	fields[i] = wire.Field{ID: 3, Value: w}
+	i++
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a ClientVersionNotSupportedError struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a ClientVersionNotSupportedError struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v ClientVersionNotSupportedError
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *ClientVersionNotSupportedError) FromWire(w wire.Value) error {
+	var err error
+
+	featureVersionIsSet := false
+	clientImplIsSet := false
+	supportedVersionsIsSet := false
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TBinary {
+				v.FeatureVersion, err = field.Value.GetString(), error(nil)
+				if err != nil {
+					return err
+				}
+				featureVersionIsSet = true
+			}
+		case 2:
+			if field.Value.Type() == wire.TBinary {
+				v.ClientImpl, err = field.Value.GetString(), error(nil)
+				if err != nil {
+					return err
+				}
+				clientImplIsSet = true
+			}
+		case 3:
+			if field.Value.Type() == wire.TBinary {
+				v.SupportedVersions, err = field.Value.GetString(), error(nil)
+				if err != nil {
+					return err
+				}
+				supportedVersionsIsSet = true
+			}
+		}
+	}
+
+	if !featureVersionIsSet {
+		return errors.New("field FeatureVersion of ClientVersionNotSupportedError is required")
+	}
+
+	if !clientImplIsSet {
+		return errors.New("field ClientImpl of ClientVersionNotSupportedError is required")
+	}
+
+	if !supportedVersionsIsSet {
+		return errors.New("field SupportedVersions of ClientVersionNotSupportedError is required")
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a ClientVersionNotSupportedError
+// struct.
+func (v *ClientVersionNotSupportedError) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [3]string
+	i := 0
+	fields[i] = fmt.Sprintf("FeatureVersion: %v", v.FeatureVersion)
+	i++
+	fields[i] = fmt.Sprintf("ClientImpl: %v", v.ClientImpl)
+	i++
+	fields[i] = fmt.Sprintf("SupportedVersions: %v", v.SupportedVersions)
+	i++
+
+	return fmt.Sprintf("ClientVersionNotSupportedError{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this ClientVersionNotSupportedError match the
+// provided ClientVersionNotSupportedError.
+//
+// This function performs a deep comparison.
+func (v *ClientVersionNotSupportedError) Equals(rhs *ClientVersionNotSupportedError) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !(v.FeatureVersion == rhs.FeatureVersion) {
+		return false
+	}
+	if !(v.ClientImpl == rhs.ClientImpl) {
+		return false
+	}
+	if !(v.SupportedVersions == rhs.SupportedVersions) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of ClientVersionNotSupportedError.
+func (v *ClientVersionNotSupportedError) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	enc.AddString("featureVersion", v.FeatureVersion)
+	enc.AddString("clientImpl", v.ClientImpl)
+	enc.AddString("supportedVersions", v.SupportedVersions)
+	return err
+}
+
+// GetFeatureVersion returns the value of FeatureVersion if it is set or its
+// zero value if it is unset.
+func (v *ClientVersionNotSupportedError) GetFeatureVersion() (o string) {
+	if v != nil {
+		o = v.FeatureVersion
+	}
+	return
+}
+
+// GetClientImpl returns the value of ClientImpl if it is set or its
+// zero value if it is unset.
+func (v *ClientVersionNotSupportedError) GetClientImpl() (o string) {
+	if v != nil {
+		o = v.ClientImpl
+	}
+	return
+}
+
+// GetSupportedVersions returns the value of SupportedVersions if it is set or its
+// zero value if it is unset.
+func (v *ClientVersionNotSupportedError) GetSupportedVersions() (o string) {
+	if v != nil {
+		o = v.SupportedVersions
+	}
+	return
+}
+
+func (v *ClientVersionNotSupportedError) Error() string {
+	return v.String()
+}
+
 type ClusterReplicationConfiguration struct {
 	ClusterName *string `json:"clusterName,omitempty"`
 }
@@ -22339,6 +22545,142 @@ func (v *MarkerRecordedEventAttributes) IsSetHeader() bool {
 	return v != nil && v.Header != nil
 }
 
+type Memo struct {
+	Fields map[string][]byte `json:"fields,omitempty"`
+}
+
+// ToWire translates a Memo struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *Memo) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Fields != nil {
+		w, err = wire.NewValueMap(_Map_String_Binary_MapItemList(v.Fields)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a Memo struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a Memo struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v Memo
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *Memo) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TMap {
+				v.Fields, err = _Map_String_Binary_Read(field.Value.GetMap())
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a Memo
+// struct.
+func (v *Memo) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Fields != nil {
+		fields[i] = fmt.Sprintf("Fields: %v", v.Fields)
+		i++
+	}
+
+	return fmt.Sprintf("Memo{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this Memo match the
+// provided Memo.
+//
+// This function performs a deep comparison.
+func (v *Memo) Equals(rhs *Memo) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Fields == nil && rhs.Fields == nil) || (v.Fields != nil && rhs.Fields != nil && _Map_String_Binary_Equals(v.Fields, rhs.Fields))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of Memo.
+func (v *Memo) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Fields != nil {
+		err = multierr.Append(err, enc.AddObject("fields", (_Map_String_Binary_Zapper)(v.Fields)))
+	}
+	return err
+}
+
+// GetFields returns the value of Fields if it is set or its
+// zero value if it is unset.
+func (v *Memo) GetFields() (o map[string][]byte) {
+	if v != nil && v.Fields != nil {
+		return v.Fields
+	}
+
+	return
+}
+
+// IsSetFields returns true if Fields is not nil.
+func (v *Memo) IsSetFields() bool {
+	return v != nil && v.Fields != nil
+}
+
 type PendingActivityInfo struct {
 	ActivityID             *string               `json:"activityID,omitempty"`
 	ActivityType           *ActivityType         `json:"activityType,omitempty"`
@@ -35537,6 +35879,7 @@ type SignalWithStartWorkflowExecutionRequest struct {
 	Control                             []byte                 `json:"control,omitempty"`
 	RetryPolicy                         *RetryPolicy           `json:"retryPolicy,omitempty"`
 	CronSchedule                        *string                `json:"cronSchedule,omitempty"`
+	Memo                                *Memo                  `json:"memo,omitempty"`
 }
 
 // ToWire translates a SignalWithStartWorkflowExecutionRequest struct into a Thrift-level intermediate
@@ -35556,7 +35899,7 @@ type SignalWithStartWorkflowExecutionRequest struct {
 //   }
 func (v *SignalWithStartWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 	var (
-		fields [15]wire.Field
+		fields [16]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -35682,6 +36025,14 @@ func (v *SignalWithStartWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 150, Value: w}
 		i++
 	}
+	if v.Memo != nil {
+		w, err = v.Memo.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 160, Value: w}
+		i++
+	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
@@ -35690,6 +36041,12 @@ func _WorkflowIdReusePolicy_Read(w wire.Value) (WorkflowIdReusePolicy, error) {
 	var v WorkflowIdReusePolicy
 	err := v.FromWire(w)
 	return v, err
+}
+
+func _Memo_Read(w wire.Value) (*Memo, error) {
+	var v Memo
+	err := v.FromWire(w)
+	return &v, err
 }
 
 // FromWire deserializes a SignalWithStartWorkflowExecutionRequest struct from its Thrift-level
@@ -35852,6 +36209,14 @@ func (v *SignalWithStartWorkflowExecutionRequest) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 160:
+			if field.Value.Type() == wire.TStruct {
+				v.Memo, err = _Memo_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -35865,7 +36230,7 @@ func (v *SignalWithStartWorkflowExecutionRequest) String() string {
 		return "<nil>"
 	}
 
-	var fields [15]string
+	var fields [16]string
 	i := 0
 	if v.Domain != nil {
 		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
@@ -35925,6 +36290,10 @@ func (v *SignalWithStartWorkflowExecutionRequest) String() string {
 	}
 	if v.CronSchedule != nil {
 		fields[i] = fmt.Sprintf("CronSchedule: %v", *(v.CronSchedule))
+		i++
+	}
+	if v.Memo != nil {
+		fields[i] = fmt.Sprintf("Memo: %v", v.Memo)
 		i++
 	}
 
@@ -35996,6 +36365,9 @@ func (v *SignalWithStartWorkflowExecutionRequest) Equals(rhs *SignalWithStartWor
 	if !_String_EqualsPtr(v.CronSchedule, rhs.CronSchedule) {
 		return false
 	}
+	if !((v.Memo == nil && rhs.Memo == nil) || (v.Memo != nil && rhs.Memo != nil && v.Memo.Equals(rhs.Memo))) {
+		return false
+	}
 
 	return true
 }
@@ -36050,6 +36422,9 @@ func (v *SignalWithStartWorkflowExecutionRequest) MarshalLogObject(enc zapcore.O
 	}
 	if v.CronSchedule != nil {
 		enc.AddString("cronSchedule", *v.CronSchedule)
+	}
+	if v.Memo != nil {
+		err = multierr.Append(err, enc.AddObject("memo", v.Memo))
 	}
 	return err
 }
@@ -36277,6 +36652,21 @@ func (v *SignalWithStartWorkflowExecutionRequest) GetCronSchedule() (o string) {
 // IsSetCronSchedule returns true if CronSchedule is not nil.
 func (v *SignalWithStartWorkflowExecutionRequest) IsSetCronSchedule() bool {
 	return v != nil && v.CronSchedule != nil
+}
+
+// GetMemo returns the value of Memo if it is set or its
+// zero value if it is unset.
+func (v *SignalWithStartWorkflowExecutionRequest) GetMemo() (o *Memo) {
+	if v != nil && v.Memo != nil {
+		return v.Memo
+	}
+
+	return
+}
+
+// IsSetMemo returns true if Memo is not nil.
+func (v *SignalWithStartWorkflowExecutionRequest) IsSetMemo() bool {
+	return v != nil && v.Memo != nil
 }
 
 type SignalWorkflowExecutionRequest struct {
@@ -38751,6 +39141,7 @@ type StartWorkflowExecutionRequest struct {
 	ChildPolicy                         *ChildPolicy           `json:"childPolicy,omitempty"`
 	RetryPolicy                         *RetryPolicy           `json:"retryPolicy,omitempty"`
 	CronSchedule                        *string                `json:"cronSchedule,omitempty"`
+	Memo                                *Memo                  `json:"memo,omitempty"`
 }
 
 // ToWire translates a StartWorkflowExecutionRequest struct into a Thrift-level intermediate
@@ -38770,7 +39161,7 @@ type StartWorkflowExecutionRequest struct {
 //   }
 func (v *StartWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 	var (
-		fields [13]wire.Field
+		fields [14]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -38878,6 +39269,14 @@ func (v *StartWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 130, Value: w}
+		i++
+	}
+	if v.Memo != nil {
+		w, err = v.Memo.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 140, Value: w}
 		i++
 	}
 
@@ -39028,6 +39427,14 @@ func (v *StartWorkflowExecutionRequest) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 140:
+			if field.Value.Type() == wire.TStruct {
+				v.Memo, err = _Memo_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -39041,7 +39448,7 @@ func (v *StartWorkflowExecutionRequest) String() string {
 		return "<nil>"
 	}
 
-	var fields [13]string
+	var fields [14]string
 	i := 0
 	if v.Domain != nil {
 		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
@@ -39093,6 +39500,10 @@ func (v *StartWorkflowExecutionRequest) String() string {
 	}
 	if v.CronSchedule != nil {
 		fields[i] = fmt.Sprintf("CronSchedule: %v", *(v.CronSchedule))
+		i++
+	}
+	if v.Memo != nil {
+		fields[i] = fmt.Sprintf("Memo: %v", v.Memo)
 		i++
 	}
 
@@ -39148,6 +39559,9 @@ func (v *StartWorkflowExecutionRequest) Equals(rhs *StartWorkflowExecutionReques
 	if !_String_EqualsPtr(v.CronSchedule, rhs.CronSchedule) {
 		return false
 	}
+	if !((v.Memo == nil && rhs.Memo == nil) || (v.Memo != nil && rhs.Memo != nil && v.Memo.Equals(rhs.Memo))) {
+		return false
+	}
 
 	return true
 }
@@ -39196,6 +39610,9 @@ func (v *StartWorkflowExecutionRequest) MarshalLogObject(enc zapcore.ObjectEncod
 	}
 	if v.CronSchedule != nil {
 		enc.AddString("cronSchedule", *v.CronSchedule)
+	}
+	if v.Memo != nil {
+		err = multierr.Append(err, enc.AddObject("memo", v.Memo))
 	}
 	return err
 }
@@ -39393,6 +39810,21 @@ func (v *StartWorkflowExecutionRequest) GetCronSchedule() (o string) {
 // IsSetCronSchedule returns true if CronSchedule is not nil.
 func (v *StartWorkflowExecutionRequest) IsSetCronSchedule() bool {
 	return v != nil && v.CronSchedule != nil
+}
+
+// GetMemo returns the value of Memo if it is set or its
+// zero value if it is unset.
+func (v *StartWorkflowExecutionRequest) GetMemo() (o *Memo) {
+	if v != nil && v.Memo != nil {
+		return v.Memo
+	}
+
+	return
+}
+
+// IsSetMemo returns true if Memo is not nil.
+func (v *StartWorkflowExecutionRequest) IsSetMemo() bool {
+	return v != nil && v.Memo != nil
 }
 
 type StartWorkflowExecutionResponse struct {
@@ -45615,6 +46047,7 @@ type WorkflowExecutionInfo struct {
 	ParentDomainId  *string                       `json:"parentDomainId,omitempty"`
 	ParentExecution *WorkflowExecution            `json:"parentExecution,omitempty"`
 	ExecutionTime   *int64                        `json:"executionTime,omitempty"`
+	Memo            *Memo                         `json:"memo,omitempty"`
 }
 
 // ToWire translates a WorkflowExecutionInfo struct into a Thrift-level intermediate
@@ -45634,7 +46067,7 @@ type WorkflowExecutionInfo struct {
 //   }
 func (v *WorkflowExecutionInfo) ToWire() (wire.Value, error) {
 	var (
-		fields [9]wire.Field
+		fields [10]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -45710,6 +46143,14 @@ func (v *WorkflowExecutionInfo) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 90, Value: w}
+		i++
+	}
+	if v.Memo != nil {
+		w, err = v.Memo.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 100, Value: w}
 		i++
 	}
 
@@ -45822,6 +46263,14 @@ func (v *WorkflowExecutionInfo) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 100:
+			if field.Value.Type() == wire.TStruct {
+				v.Memo, err = _Memo_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -45835,7 +46284,7 @@ func (v *WorkflowExecutionInfo) String() string {
 		return "<nil>"
 	}
 
-	var fields [9]string
+	var fields [10]string
 	i := 0
 	if v.Execution != nil {
 		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
@@ -45871,6 +46320,10 @@ func (v *WorkflowExecutionInfo) String() string {
 	}
 	if v.ExecutionTime != nil {
 		fields[i] = fmt.Sprintf("ExecutionTime: %v", *(v.ExecutionTime))
+		i++
+	}
+	if v.Memo != nil {
+		fields[i] = fmt.Sprintf("Memo: %v", v.Memo)
 		i++
 	}
 
@@ -45914,6 +46367,9 @@ func (v *WorkflowExecutionInfo) Equals(rhs *WorkflowExecutionInfo) bool {
 	if !_I64_EqualsPtr(v.ExecutionTime, rhs.ExecutionTime) {
 		return false
 	}
+	if !((v.Memo == nil && rhs.Memo == nil) || (v.Memo != nil && rhs.Memo != nil && v.Memo.Equals(rhs.Memo))) {
+		return false
+	}
 
 	return true
 }
@@ -45950,6 +46406,9 @@ func (v *WorkflowExecutionInfo) MarshalLogObject(enc zapcore.ObjectEncoder) (err
 	}
 	if v.ExecutionTime != nil {
 		enc.AddInt64("executionTime", *v.ExecutionTime)
+	}
+	if v.Memo != nil {
+		err = multierr.Append(err, enc.AddObject("memo", v.Memo))
 	}
 	return err
 }
@@ -46087,6 +46546,21 @@ func (v *WorkflowExecutionInfo) GetExecutionTime() (o int64) {
 // IsSetExecutionTime returns true if ExecutionTime is not nil.
 func (v *WorkflowExecutionInfo) IsSetExecutionTime() bool {
 	return v != nil && v.ExecutionTime != nil
+}
+
+// GetMemo returns the value of Memo if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionInfo) GetMemo() (o *Memo) {
+	if v != nil && v.Memo != nil {
+		return v.Memo
+	}
+
+	return
+}
+
+// IsSetMemo returns true if Memo is not nil.
+func (v *WorkflowExecutionInfo) IsSetMemo() bool {
+	return v != nil && v.Memo != nil
 }
 
 type WorkflowExecutionSignaledEventAttributes struct {
@@ -46334,6 +46808,7 @@ type WorkflowExecutionStartedEventAttributes struct {
 	ExpirationTimestamp                 *int64                  `json:"expirationTimestamp,omitempty"`
 	CronSchedule                        *string                 `json:"cronSchedule,omitempty"`
 	FirstDecisionTaskBackoffSeconds     *int32                  `json:"firstDecisionTaskBackoffSeconds,omitempty"`
+	Memo                                *Memo                   `json:"memo,omitempty"`
 }
 
 // ToWire translates a WorkflowExecutionStartedEventAttributes struct into a Thrift-level intermediate
@@ -46353,7 +46828,7 @@ type WorkflowExecutionStartedEventAttributes struct {
 //   }
 func (v *WorkflowExecutionStartedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [20]wire.Field
+		fields [21]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -46517,6 +46992,14 @@ func (v *WorkflowExecutionStartedEventAttributes) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 110, Value: w}
+		i++
+	}
+	if v.Memo != nil {
+		w, err = v.Memo.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 120, Value: w}
 		i++
 	}
 
@@ -46731,6 +47214,14 @@ func (v *WorkflowExecutionStartedEventAttributes) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 120:
+			if field.Value.Type() == wire.TStruct {
+				v.Memo, err = _Memo_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -46744,7 +47235,7 @@ func (v *WorkflowExecutionStartedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [20]string
+	var fields [21]string
 	i := 0
 	if v.WorkflowType != nil {
 		fields[i] = fmt.Sprintf("WorkflowType: %v", v.WorkflowType)
@@ -46826,6 +47317,10 @@ func (v *WorkflowExecutionStartedEventAttributes) String() string {
 		fields[i] = fmt.Sprintf("FirstDecisionTaskBackoffSeconds: %v", *(v.FirstDecisionTaskBackoffSeconds))
 		i++
 	}
+	if v.Memo != nil {
+		fields[i] = fmt.Sprintf("Memo: %v", v.Memo)
+		i++
+	}
 
 	return fmt.Sprintf("WorkflowExecutionStartedEventAttributes{%v}", strings.Join(fields[:i], ", "))
 }
@@ -46900,6 +47395,9 @@ func (v *WorkflowExecutionStartedEventAttributes) Equals(rhs *WorkflowExecutionS
 	if !_I32_EqualsPtr(v.FirstDecisionTaskBackoffSeconds, rhs.FirstDecisionTaskBackoffSeconds) {
 		return false
 	}
+	if !((v.Memo == nil && rhs.Memo == nil) || (v.Memo != nil && rhs.Memo != nil && v.Memo.Equals(rhs.Memo))) {
+		return false
+	}
 
 	return true
 }
@@ -46969,6 +47467,9 @@ func (v *WorkflowExecutionStartedEventAttributes) MarshalLogObject(enc zapcore.O
 	}
 	if v.FirstDecisionTaskBackoffSeconds != nil {
 		enc.AddInt32("firstDecisionTaskBackoffSeconds", *v.FirstDecisionTaskBackoffSeconds)
+	}
+	if v.Memo != nil {
+		err = multierr.Append(err, enc.AddObject("memo", v.Memo))
 	}
 	return err
 }
@@ -47271,6 +47772,21 @@ func (v *WorkflowExecutionStartedEventAttributes) GetFirstDecisionTaskBackoffSec
 // IsSetFirstDecisionTaskBackoffSeconds returns true if FirstDecisionTaskBackoffSeconds is not nil.
 func (v *WorkflowExecutionStartedEventAttributes) IsSetFirstDecisionTaskBackoffSeconds() bool {
 	return v != nil && v.FirstDecisionTaskBackoffSeconds != nil
+}
+
+// GetMemo returns the value of Memo if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionStartedEventAttributes) GetMemo() (o *Memo) {
+	if v != nil && v.Memo != nil {
+		return v.Memo
+	}
+
+	return
+}
+
+// IsSetMemo returns true if Memo is not nil.
+func (v *WorkflowExecutionStartedEventAttributes) IsSetMemo() bool {
+	return v != nil && v.Memo != nil
 }
 
 type WorkflowExecutionTerminatedEventAttributes struct {
