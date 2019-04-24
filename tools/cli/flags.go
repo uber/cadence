@@ -331,6 +331,10 @@ func getFlagsForListAll() []cli.Flag {
 			Name:  FlagPrintMemoWithAlias,
 			Usage: "Print memo",
 		},
+		cli.BoolFlag{
+			Name:  FlagPrintFullyDetailWithAlias,
+			Usage: "Print in raw json format",
+		},
 		cli.StringFlag{
 			Name:  FlagWorkflowStatusWithAlias,
 			Usage: "Closed workflow status [completed, failed, canceled, terminated, continuedasnew, timedout]",

@@ -739,8 +739,37 @@ func queryWorkflowHelper(c *cli.Context, queryType string) {
 func ListWorkflow(c *cli.Context) {
 	more := c.Bool(FlagMore)
 	pageSize := c.Int(FlagPageSize)
-
 	queryOpen := c.Bool(FlagOpen)
+
+	if printRaw := c.Bool(FlagPrintFullyDetail); printRaw {
+		if !more {
+			results, _ := getListResultInRaw(c, queryOpen, nil)
+			printListResults(results)
+		} else {
+			var results []*s.WorkflowExecutionInfo
+			var nextPageToken []byte
+			for {
+				results, nextPageToken = getListResultInRaw(c, queryOpen, nextPageToken)
+				printListResults(results)
+
+				if len(results) < pageSize {
+					break
+				}
+
+				fmt.Printf("Press %s to show next page, press %s to quit: ",
+					color.GreenString("Enter"), color.RedString("any other key then Enter"))
+				var input string
+				fmt.Scanln(&input)
+				if strings.Trim(input, " ") == "" {
+					continue
+				} else {
+					break
+				}
+			}
+		}
+		return
+	}
+
 	table := createTableForListWorkflow(c, false, queryOpen)
 	prepareTable := listWorkflow(c, table, queryOpen)
 
@@ -775,6 +804,20 @@ func ListWorkflow(c *cli.Context) {
 // ListAllWorkflow list all workflow executions based on filters
 func ListAllWorkflow(c *cli.Context) {
 	queryOpen := c.Bool(FlagOpen)
+
+	if printRaw := c.Bool(FlagPrintFullyDetail); printRaw {
+		var results []*s.WorkflowExecutionInfo
+		var nextPageToken []byte
+		for {
+			results, nextPageToken = getListResultInRaw(c, queryOpen, nextPageToken)
+			printListResults(results)
+			if len(results) < defaultPageSizeForList {
+				break
+			}
+		}
+		return
+	}
+
 	table := createTableForListWorkflow(c, true, queryOpen)
 	prepareTable := listWorkflow(c, table, queryOpen)
 	var resultSize int
@@ -1061,6 +1104,48 @@ func listClosedWorkflow(client client.Client, pageSize int, earliestTime, latest
 		ErrorAndExit("Failed to list closed workflow.", err)
 	}
 	return response.Executions, response.NextPageToken
+}
+
+func getListResultInRaw(c *cli.Context, queryOpen bool, nextPageToken []byte) ([]*s.WorkflowExecutionInfo, []byte) {
+	wfClient := getWorkflowClient(c)
+
+	earliestTime := parseTime(c.String(FlagEarliestTime), 0)
+	latestTime := parseTime(c.String(FlagLatestTime), time.Now().UnixNano())
+	workflowID := c.String(FlagWorkflowID)
+	workflowType := c.String(FlagWorkflowType)
+	pageSize := c.Int(FlagPageSize)
+	if pageSize <= 0 {
+		pageSize = defaultPageSizeForList
+	}
+
+	var workflowStatus s.WorkflowExecutionCloseStatus
+	if c.IsSet(FlagWorkflowStatus) {
+		if queryOpen {
+			ErrorAndExit(optionErr, errors.New("you can only filter on status for closed workflow, not open workflow"))
+		}
+		workflowStatus = getWorkflowStatus(c.String(FlagWorkflowStatus))
+	} else {
+		workflowStatus = workflowStatusNotSet
+	}
+
+	if len(workflowID) > 0 && len(workflowType) > 0 {
+		ErrorAndExit(optionErr, errors.New("you can filter on workflow_id or workflow_type, but not on both"))
+	}
+
+	var result []*s.WorkflowExecutionInfo
+	if queryOpen {
+		result, nextPageToken = listOpenWorkflow(wfClient, pageSize, earliestTime, latestTime, workflowID, workflowType, nextPageToken, c)
+	} else {
+		result, nextPageToken = listClosedWorkflow(wfClient, pageSize, earliestTime, latestTime, workflowID, workflowType, workflowStatus, nextPageToken, c)
+	}
+
+	return result, nextPageToken
+}
+
+func printListResults(executions []*s.WorkflowExecutionInfo) {
+	for _, execution := range executions {
+		fmt.Println(anyToString(execution, true, 0))
+	}
 }
 
 // DescribeTaskList show pollers info of a given tasklist
