@@ -324,7 +324,7 @@ func (p *replicationTaskProcessor) handleHistoryReplicationTask(task *replicator
 	return p.sequentialTaskProcessor.Submit(historyReplicationTask)
 }
 
-func (p *replicationTaskProcessor) handleHistoryMetadataReplicationTask(task *replicator.ReplicationTask, msg messaging.Message, logger bark.Logger) error {
+func (p *replicationTaskProcessor) handleHistoryMetadataReplicationTask(task *replicator.ReplicationTask, msg messaging.Message, logger log.Logger) error {
 	historyMetadataReplicationTask := newHistoryMetadataReplicationTask(task, msg, p.sourceCluster, logger,
 		p.config, p.historyClient, p.metricsClient, p.historyRereplicator)
 	return p.sequentialTaskProcessor.Submit(historyMetadataReplicationTask)

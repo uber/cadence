@@ -169,11 +169,16 @@ func newHistoryReplicationTask(task *replicator.ReplicationTask, msg messaging.M
 	}
 }
 
-func newHistoryMetadataReplicationTask(task *replicator.ReplicationTask, msg messaging.Message, sourceCluster string, logger bark.Logger,
+func newHistoryMetadataReplicationTask(task *replicator.ReplicationTask, msg messaging.Message, sourceCluster string, logger log.Logger,
 	config *Config, historyClient history.Client, metricsClient metrics.Client,
 	historyRereplicator xdc.HistoryRereplicator) *historyMetadataReplicationTask {
 
 	attr := task.HistoryMetadataTaskAttributes
+	logger = logger.WithTags(tag.WorkflowDomainID(attr.GetDomainId()),
+		tag.WorkflowID(attr.GetWorkflowId()),
+		tag.WorkflowRunID(attr.GetRunId()),
+		tag.WorkflowFirstEventID(attr.GetFirstEventId()),
+		tag.WorkflowNextEventID(attr.GetNextEventId()))
 	return &historyMetadataReplicationTask{
 		workflowReplicationTask: workflowReplicationTask{
 			metricsScope: metrics.HistoryReplicationTaskScope,
@@ -181,16 +186,10 @@ func newHistoryMetadataReplicationTask(task *replicator.ReplicationTask, msg mes
 			partitionID: definition.NewWorkflowIdentifier(
 				attr.GetDomainId(), attr.GetWorkflowId(), attr.GetRunId(),
 			),
-			taskID:   attr.GetFirstEventId(),
-			attempt:  0,
-			kafkaMsg: msg,
-			logger: logger.WithFields(bark.Fields{
-				logging.TagDomainID:            attr.GetDomainId(),
-				logging.TagWorkflowExecutionID: attr.GetWorkflowId(),
-				logging.TagWorkflowRunID:       attr.GetRunId(),
-				logging.TagFirstEventID:        attr.GetFirstEventId(),
-				logging.TagNextEventID:         attr.GetNextEventId(),
-			}),
+			taskID:              attr.GetFirstEventId(),
+			attempt:             0,
+			kafkaMsg:            msg,
+			logger:              logger,
 			config:              config,
 			historyClient:       historyClient,
 			metricsClient:       metricsClient,
@@ -323,7 +322,7 @@ func (t *historyMetadataReplicationTask) HandleErr(err error) error {
 		beginRunID, beginEventID, endRunID, endEventID,
 	)
 	if resendErr != nil {
-		t.logger.WithField(logging.TagErr, resendErr).Error("error resend history")
+		t.logger.Error("error resend history", tag.Error(resendErr))
 		// should return the replication error, not the resending error
 		return err
 	}
