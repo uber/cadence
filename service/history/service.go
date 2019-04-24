@@ -21,12 +21,14 @@
 package history
 
 import (
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"time"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
+	espersistence "github.com/uber/cadence/common/persistence/elasticsearch"
 	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
@@ -244,12 +246,12 @@ type Service struct {
 
 // NewService builds a new cadence-history service
 func NewService(params *service.BootstrapParams) common.Daemon {
-	params.UpdateLoggerWithServiceName(common.HistoryServiceName)
 	config := NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, params.Logger),
 		params.PersistenceConfig.NumHistoryShards,
 		params.ESConfig.Enable,
 		params.PersistenceConfig.DefaultStoreType())
 	params.ThrottledLogger = loggerimpl.NewThrottledLogger(params.Logger, config.ThrottledLogRPS)
+	params.UpdateLoggerWithServiceName(common.HistoryServiceName)
 	return &Service{
 		params: params,
 		stopC:  make(chan struct{}),
@@ -295,6 +297,17 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatal("failed to create visibility manager", tag.Error(err))
 	}
+
+	var esVisibility persistence.VisibilityManager
+	if params.ESConfig.Enable {
+		visibilityProducer, err := s.params.MessagingClient.NewProducer(common.VisibilityAppName)
+		if err != nil {
+			log.Fatal("Creating visibility producer failed", tag.Error(err))
+		}
+		esVisibility = espersistence.NewESVisibilityManager("", nil, nil, visibilityProducer,
+			s.metricsClient, log)
+	}
+	visibility = persistence.NewVisibilityManagerWrapper(visibility, esVisibility, dynamicconfig.GetBoolPropertyFnFilteredByDomain(false))
 
 	history, err := pFactory.NewHistoryManager()
 	if err != nil {
