@@ -71,7 +71,7 @@ type (
 	historyMetadataReplicationTaskSuite struct {
 		suite.Suite
 		config        *Config
-		logger        bark.Logger
+		logger        log.Logger
 		metricsClient metrics.Client
 		sourceCluster string
 
@@ -153,9 +153,6 @@ func (s *historyReplicationTaskSuite) TearDownTest() {
 }
 
 func (s *historyMetadataReplicationTaskSuite) SetupSuite() {
-	if testing.Verbose() {
-		log.SetOutput(os.Stdout)
-	}
 }
 
 func (s *historyMetadataReplicationTaskSuite) TearDownSuite() {
@@ -163,9 +160,9 @@ func (s *historyMetadataReplicationTaskSuite) TearDownSuite() {
 }
 
 func (s *historyMetadataReplicationTaskSuite) SetupTest() {
-	log2 := log.New()
-	log2.Level = log.DebugLevel
-	s.logger = bark.NewLoggerFromLogrus(log2)
+	zapLogger, err := zap.NewDevelopment()
+	s.Require().NoError(err)
+	s.logger = loggerimpl.NewLogger(zapLogger)
 	s.config = &Config{
 		ReplicationTaskMaxRetry: dynamicconfig.GetIntPropertyFn(10),
 	}
