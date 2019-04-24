@@ -82,7 +82,7 @@ func anyToString(d interface{}, printFully bool, maxFieldLength int) string {
 	case reflect.Struct:
 		var buf bytes.Buffer
 		t := reflect.TypeOf(d)
-		buf.WriteString("(")
+		buf.WriteString("{")
 		for i := 0; i < v.NumField(); i++ {
 			f := v.Field(i)
 			if f.Kind() == reflect.Invalid {
@@ -109,7 +109,7 @@ func anyToString(d interface{}, printFully bool, maxFieldLength int) string {
 				buf.WriteString(fmt.Sprintf("%s:%s", fieldName, fieldValue))
 			}
 		}
-		buf.WriteString(")")
+		buf.WriteString("}")
 		return buf.String()
 	default:
 		return fmt.Sprint(d)
