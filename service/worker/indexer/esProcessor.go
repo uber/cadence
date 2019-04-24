@@ -152,8 +152,11 @@ func (p *esProcessorImpl) bulkAfterAction(id int64, requests []elastic.BulkableR
 			case isResponseSuccess(resp.Status):
 				p.ackKafkaMsg(key)
 			case !isResponseRetriable(resp.Status):
+				p.logger.Error("ES request failed.",
+					tag.ESResponseStatus(resp.Status), tag.ESResponseError(getErrorMsgFromESResp(resp)))
 				p.nackKafkaMsg(key)
 			default: // bulk processor will retry
+				p.logger.Info("ES request retried.", tag.ESResponseStatus(resp.Status))
 				p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorRetries)
 			}
 		}
@@ -266,4 +269,12 @@ func isResponseRetriable(status int) bool {
 		return true
 	}
 	return false
+}
+
+func getErrorMsgFromESResp(resp *elastic.BulkResponseItem) string {
+	var errMsg string
+	if resp.Error != nil {
+		errMsg = resp.Error.Reason
+	}
+	return errMsg
 }
