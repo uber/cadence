@@ -2978,7 +2978,7 @@ func (s *integrationSuite) TestStickyTasklistResetThenTimeout() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.BarkLogger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunId))
 	workflowExecution := &workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(id),
 		RunId:      we.RunId,
@@ -3021,14 +3021,14 @@ func (s *integrationSuite) TestStickyTasklistResetThenTimeout() {
 		TaskList:                            taskList,
 		Identity:                            identity,
 		DecisionHandler:                     dtHandler,
-		Logger:                              s.BarkLogger,
+		Logger:                              s.Logger,
 		T:                                   s.T(),
 		StickyTaskList:                      stickyTaskList,
 		StickyScheduleToStartTimeoutSeconds: stickyScheduleToStartTimeoutSeconds,
 	}
 
 	_, err := poller.PollAndProcessDecisionTaskWithAttempt(false, false, false, true, int64(0))
-	s.BarkLogger.Infof("PollAndProcessDecisionTask: %v", err)
+	s.Logger.Info("PollAndProcessDecisionTask: %v", tag.Error(err))
 	s.Nil(err)
 
 	err = s.engine.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
@@ -3062,7 +3062,7 @@ WaitForStickyTimeoutLoop:
 
 	for i := 0; i < 3; i++ {
 		_, err = poller.PollAndProcessDecisionTaskWithAttempt(true, false, false, true, int64(i))
-		s.BarkLogger.Infof("PollAndProcessDecisionTask: %v", err)
+		s.Logger.Info("PollAndProcessDecisionTask: %v", tag.Error(err))
 		s.Nil(err)
 	}
 
@@ -3078,7 +3078,7 @@ WaitForStickyTimeoutLoop:
 
 	for i := 0; i < 2; i++ {
 		_, err = poller.PollAndProcessDecisionTaskWithAttempt(true, false, false, true, int64(i))
-		s.BarkLogger.Infof("PollAndProcessDecisionTask: %v", err)
+		s.Logger.Info("PollAndProcessDecisionTask: %v", tag.Error(err))
 		s.Nil(err)
 	}
 
