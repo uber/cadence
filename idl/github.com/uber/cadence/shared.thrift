@@ -748,6 +748,7 @@ struct ChildWorkflowExecutionStartedEventAttributes {
   20: optional i64 (js.type = "Long") initiatedEventId
   30: optional WorkflowExecution workflowExecution
   40: optional WorkflowType workflowType
+  50: optional Header header
 }
 
 struct ChildWorkflowExecutionCompletedEventAttributes {

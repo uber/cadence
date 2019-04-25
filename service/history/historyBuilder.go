@@ -376,9 +376,14 @@ func (b *historyBuilder) AddStartChildWorkflowExecutionInitiatedEvent(decisionCo
 	return b.addEventToHistory(event)
 }
 
-func (b *historyBuilder) AddChildWorkflowExecutionStartedEvent(domain *string, execution *workflow.WorkflowExecution,
-	workflowType *workflow.WorkflowType, initiatedID int64) *workflow.HistoryEvent {
-	event := b.newChildWorkflowExecutionStartedEvent(domain, execution, workflowType, initiatedID)
+func (b *historyBuilder) AddChildWorkflowExecutionStartedEvent(
+	domain *string,
+	execution *workflow.WorkflowExecution,
+	workflowType *workflow.WorkflowType,
+	initiatedID int64,
+	header *workflow.Header,
+) *workflow.HistoryEvent {
+	event := b.newChildWorkflowExecutionStartedEvent(domain, execution, workflowType, initiatedID, header)
 
 	return b.addEventToHistory(event)
 }
@@ -861,14 +866,20 @@ func (b *historyBuilder) newStartChildWorkflowExecutionInitiatedEvent(decisionTa
 	return historyEvent
 }
 
-func (b *historyBuilder) newChildWorkflowExecutionStartedEvent(domain *string, execution *workflow.WorkflowExecution,
-	workflowType *workflow.WorkflowType, initiatedID int64) *workflow.HistoryEvent {
+func (b *historyBuilder) newChildWorkflowExecutionStartedEvent(
+	domain *string,
+	execution *workflow.WorkflowExecution,
+	workflowType *workflow.WorkflowType,
+	initiatedID int64,
+	header *workflow.Header,
+) *workflow.HistoryEvent {
 	historyEvent := b.msBuilder.CreateNewHistoryEvent(workflow.EventTypeChildWorkflowExecutionStarted)
 	attributes := &workflow.ChildWorkflowExecutionStartedEventAttributes{}
 	attributes.Domain = domain
 	attributes.WorkflowExecution = execution
 	attributes.WorkflowType = workflowType
 	attributes.InitiatedEventId = common.Int64Ptr(initiatedID)
+	attributes.Header = header
 	historyEvent.ChildWorkflowExecutionStartedEventAttributes = attributes
 
 	return historyEvent
