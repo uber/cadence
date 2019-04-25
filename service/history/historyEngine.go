@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gocql/gocql"
 	"github.com/pborman/uuid"
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -621,6 +622,8 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 		return &workflow.StartWorkflowExecutionResponse{
 			RunId: execution.RunId,
 		}, nil
+	} else if retError == gocql.ErrTimeoutNoResponse {
+		shouldDeleteHistory = false
 	}
 	return
 }
@@ -2497,6 +2500,8 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 		return &workflow.StartWorkflowExecutionResponse{
 			RunId: execution.RunId,
 		}, nil
+	} else if retError == gocql.ErrTimeoutNoResponse {
+		shouldDeleteHistory = false
 	}
 	return
 }
