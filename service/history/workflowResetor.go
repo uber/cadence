@@ -893,6 +893,10 @@ func (w *workflowResetorImpl) AutoResetWorkflow(currWorkflowContext workflowExec
 	if retError != nil {
 		return
 	}
+	enabledEventsV2 := w.eng.config.EnableEventsV2(domainEntry.GetInfo().Name)
+	if !enabledEventsV2 {
+		return
+	}
 
 	resetBinaries := domainEntry.GetConfig().UserResetBinaries.Infos
 	var resetPoints map[string]*workflow.ResetPointInfo
@@ -904,21 +908,22 @@ func (w *workflowResetorImpl) AutoResetWorkflow(currWorkflowContext workflowExec
 		return
 	}
 
-	var minResetPoint *workflow.ResetPointInfo
+	var minResetPoint workflow.ResetPointInfo
 	var minBinaryChecksum string
+	var found bool
 	// to find reset point, we have to compare of two maps. We iterate the smaller map to find intersection.
 	if len(resetPoints) < len(resetBinaries) {
 		for currBC, currP := range resetPoints {
 			_, ok := resetBinaries[currBC]
-			findOldestResetPoint(ok, minResetPoint, currP, &minBinaryChecksum, &currBC)
+			found = findOldestResetPoint(ok, &minResetPoint, currP, &minBinaryChecksum, &currBC)
 		}
 	} else {
 		for currBC := range resetBinaries {
 			currP, ok := resetPoints[currBC]
-			findOldestResetPoint(ok, minResetPoint, currP, &minBinaryChecksum, &currBC)
+			found = findOldestResetPoint(ok, &minResetPoint, currP, &minBinaryChecksum, &currBC)
 		}
 	}
-	if minResetPoint == nil {
+	if !found {
 		return
 	}
 
@@ -935,9 +940,6 @@ func (w *workflowResetorImpl) AutoResetWorkflow(currWorkflowContext workflowExec
 			tag.WorkflowEventID(minResetPoint.GetFirstDecisionCompletedId()))
 	}()
 
-	// this indicate that whether we should try resetting again if this reset doesn't succeed
-	nonResettable := false
-
 	baseExecution := workflow.WorkflowExecution{
 		WorkflowId: &currMutableState.GetExecutionInfo().WorkflowID,
 		RunId:      &currMutableState.GetExecutionInfo().RunID,
@@ -945,45 +947,41 @@ func (w *workflowResetorImpl) AutoResetWorkflow(currWorkflowContext workflowExec
 
 	baseContext, baseRelease, retError := w.eng.historyCache.getOrCreateWorkflowExecution(domainEntry.GetInfo().ID, baseExecution)
 	if retError != nil {
-		return w.processAutoResetError(nonResettable, retError, currWorkflowContext, currMutableState, minBinaryChecksum)
+		return w.processAutoResetError(retError, currWorkflowContext, currMutableState, minBinaryChecksum)
 	}
 	defer func() { baseRelease(retError) }()
 	baseMutableState, retError := baseContext.loadWorkflowExecution()
 	if retError != nil {
-		return w.processAutoResetError(nonResettable, retError, currWorkflowContext, currMutableState, minBinaryChecksum)
+		return w.processAutoResetError(retError, currWorkflowContext, currMutableState, minBinaryChecksum)
 	}
 
-	// waiting for https://github.com/uber/cadence/pull/1700 to land
-	//newRunID, retryable, retError = w.resetWorkflowWithMutableStates(&workflow.ResetWorkflowExecutionRequest{}, baseContext, baseMutableState, currWorkflowContext, currMutableState)
-	// nonResettable = resp.NonResettable
-	resp, retError := w.ResetWorkflowExecution(context.Background(), &h.ResetWorkflowExecutionRequest{
-		DomainUUID: &domainEntry.GetInfo().ID,
-		ResetRequest: &workflow.ResetWorkflowExecutionRequest{
-			Domain:                &domainEntry.GetInfo().Name,
-			WorkflowExecution:     &baseExecution,
-			Reason:                common.StringPtr(fmt.Sprintf("auto reset due to bad binary %v, baseRunID: %v", minBinaryChecksum, baseMutableState.GetExecutionInfo().RunID)),
-			DecisionFinishEventId: minResetPoint.FirstDecisionCompletedId,
-			RequestId:             common.StringPtr(uuid.New()),
-		},
-	})
+	resp, retError := w.ResetWorkflowExecution(context.Background(), &workflow.ResetWorkflowExecutionRequest{
+		Domain:                &domainEntry.GetInfo().Name,
+		WorkflowExecution:     &baseExecution,
+		Reason:                common.StringPtr(fmt.Sprintf("auto reset due to bad binary %v, baseRunID: %v", minBinaryChecksum, baseMutableState.GetExecutionInfo().RunID)),
+		DecisionFinishEventId: minResetPoint.FirstDecisionCompletedId,
+		RequestId:             common.StringPtr(uuid.New()),
+	}, baseContext, baseMutableState, currWorkflowContext, currMutableState)
 	if retError != nil {
-		w.processAutoResetError(nonResettable, retError, currWorkflowContext, currMutableState, minBinaryChecksum)
+		return w.processAutoResetError(retError, currWorkflowContext, currMutableState, minBinaryChecksum)
 	}
 	newRunID = resp.GetRunId()
 	return
 }
 
 // if there are more than one reset points, find the oldest one to avoid multiple resets
-func findOldestResetPoint(intersects bool, minP, currP *workflow.ResetPointInfo, minBC, currBC *string) {
+func findOldestResetPoint(intersects bool, minP, currP *workflow.ResetPointInfo, minBC, currBC *string) bool {
 	if intersects && !currP.GetNotResettable() {
 		if minP == nil {
 			minP = currP
 			minBC = currBC
+			return true
 		} else {
 			if minP.GetRunId() == currP.GetRunId() {
 				if currP.GetFirstDecisionCompletedId() < minP.GetFirstDecisionCompletedId() {
 					minP = currP
 					minBC = currBC
+					return true
 				}
 			} else {
 				// When the two points have different runID, we rely on timestamp to find the older one.
@@ -995,15 +993,22 @@ func findOldestResetPoint(intersects bool, minP, currP *workflow.ResetPointInfo,
 				if currP.GetCreatedTimestamp() < minP.GetCreatedTimestamp() {
 					minP = currP
 					minBC = currBC
+					return true
 				}
 			}
 		}
 	}
+	return false
 }
 
-func (w *workflowResetorImpl) processAutoResetError(nonResettable bool, prevError error, currWorkflowContext workflowExecutionContext, currMutableState mutableState, resetBinaryChecksum string) (retError error) {
+func (w *workflowResetorImpl) processAutoResetError(prevError error, currWorkflowContext workflowExecutionContext, currMutableState mutableState, resetBinaryChecksum string) (retError error) {
+	nonResettable := false
 	if _, ok := prevError.(*workflow.EntityNotExistsError); ok {
 		// this means the reset base run has been deleted
+		nonResettable = true
+	}
+	if _, ok := prevError.(*workflow.BadRequestError); ok {
+		// this means the reset point has som pending ChildWFs/requestCancels/etc which cannot be reset
 		nonResettable = true
 	}
 	if nonResettable {
