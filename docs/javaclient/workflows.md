@@ -6,11 +6,14 @@ It can also answer to synchronous queries and receive external events (also know
 ## Workflow Interface
 
 A workflow must define an interface class. All of its methods must have one of the following annotations:
+
 - @WorkflowMethod indicates an entry point to a workflow. It contains parameters such as timeouts and a task list. Required
 parameters (like executionStartToCloseTimeoutSeconds) that are not specified through the annotation must be provided at runtime.
 - @Signal indicates a method that reacts to external signals. It must have a `void` return type.
 - @Query indicates a method that reacts to synchronous query requests.
+
 You can have more than one method with the same annotation.
+
 ```java
 public interface FileProcessingWorkflow {
 
@@ -27,6 +30,10 @@ public interface FileProcessingWorkflow {
     void retryNow();
 }
 ```
+
+It is recommended to use a single value type argument for workflow methods. This way, adding new arguments as fields to 
+the value type is a backwards-compatible change.
+
 ## Starting workflow executions
 
 Given a workflow interface executing a workflow requires initializing a `WorkflowClient` instance, creating
@@ -51,7 +58,7 @@ String result = workflow.processFile(workflowArgs);
 Asynchronous:
 ```java
 // Returns as soon as the workflow starts.
-WorkflowExecution workflowExecution = WorkflowClient.asyncStart(workflow::processFile, workflowArgs);
+WorkflowExecution workflowExecution = WorkflowClient.start(workflow::processFile, workflowArgs);
 
 System.out.println("Started process file workflow with workflowId=\"" + workflowExecution.getWorkflowId()
                     + "\" and runId=\"" + workflowExecution.getRunId() + "\"");
@@ -160,10 +167,12 @@ public void processFile(Arguments args) {
     try {
         // Download all files in parallel.
         for (String sourceFilename : args.getSourceFilenames()) {
-            Promise<String> localName = Workflow.async(activities::download, args.getSourceBucketName(), sourceFilename);
+            Promise<String> localName = Workflow.async(activities::download, 
+                args.getSourceBucketName(), sourceFilename);
             localNamePromises.add(localName);
         }
-        // allOf converts a list of promises to a single promise that contains a list of each promise value.
+        // allOf converts a list of promises to a single promise that contains a list of each 
+        // promise value.
         Promise<List<String>> localNamesPromise = Promise.allOf(localNamePromises);
 
         // All code until the next line wasn't blocking.
@@ -174,7 +183,8 @@ public void processFile(Arguments args) {
         // Upload all results in parallel.
         List<Promise<Void>> uploadedList = new ArrayList<>();
         for (String processedName : processedNames) {
-            Promise<Void> uploaded = Workflow.async(activities::upload, args.getTargetBucketName(), args.getTargetFilename(), processedName);
+            Promise<Void> uploaded = Workflow.async(activities::upload, 
+                args.getTargetBucketName(), args.getTargetFilename(), processedName);
             uploadedList.add(uploaded);
         }
         // Wait for all uploads to complete.
