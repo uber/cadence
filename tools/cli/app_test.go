@@ -124,9 +124,15 @@ func (s *cliAppSuite) TestAppCommands() {
 	}
 }
 
-func (s *cliAppSuite) TestDomainRegister() {
+func (s *cliAppSuite) TestDomainRegister_LocalDomain() {
 	s.clientFrontendClient.EXPECT().RegisterDomain(gomock.Any(), gomock.Any(), callOptions...).Return(nil)
-	err := s.app.Run([]string{"", "--do", domainName, "domain", "register"})
+	err := s.app.Run([]string{"", "--do", domainName, "domain", "register", "--global_domain", "false"})
+	s.Nil(err)
+}
+
+func (s *cliAppSuite) TestDomainRegister_GlobalDomain() {
+	s.clientFrontendClient.EXPECT().RegisterDomain(gomock.Any(), gomock.Any(), callOptions...).Return(nil)
+	err := s.app.Run([]string{"", "--do", domainName, "domain", "register", "--global_domain", "true"})
 	s.Nil(err)
 }
 
