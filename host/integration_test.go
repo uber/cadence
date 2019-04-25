@@ -2946,10 +2946,10 @@ WaitForStickyTimeoutLoop:
 }
 
 func (s *integrationSuite) TestStickyTasklistResetThenTimeout() {
-	id := "interation-sticky-reset-schedule-to-start-timeout"
-	wt := "interation-sticky-timeout-non-transient-decision-type"
-	tl := "interation-sticky-timeout-non-transient-decision-tasklist"
-	stl := "interation-sticky-timeout-non-transient-decision-tasklist-sticky"
+	id := "interation-reset-sticky-fire-schedule-to-start-timeout"
+	wt := "interation-reset-sticky-fire-schedule-to-start-timeout-type"
+	tl := "interation-reset-sticky-fire-schedule-to-start-timeout-tasklist"
+	stl := "interation-reset-sticky-fire-schedule-to-start-timeout-tasklist-sticky"
 	identity := "worker1"
 
 	workflowType := &workflow.WorkflowType{}
@@ -3040,10 +3040,12 @@ func (s *integrationSuite) TestStickyTasklistResetThenTimeout() {
 		RequestId:         common.StringPtr(uuid.New()),
 	})
 
+	//Reset sticky tasklist before sticky decision task starts
 	s.engine.ResetStickyTaskList(createContext(), &workflow.ResetStickyTaskListRequest{
 		Domain:    common.StringPtr(s.domainName),
 		Execution: workflowExecution,
 	})
+
 	// Wait for decision timeout
 	stickyTimeout := false
 WaitForStickyTimeoutLoop:
