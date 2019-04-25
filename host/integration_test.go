@@ -2946,7 +2946,7 @@ WaitForStickyTimeoutLoop:
 }
 
 func (s *integrationSuite) TestStickyTasklistResetThenTimeout() {
-	id := "interation-sticky-timeout-non-transient-decision"
+	id := "interation-sticky-reset-schedule-to-start-timeout"
 	wt := "interation-sticky-timeout-non-transient-decision-type"
 	tl := "interation-sticky-timeout-non-transient-decision-tasklist"
 	stl := "interation-sticky-timeout-non-transient-decision-tasklist-sticky"
