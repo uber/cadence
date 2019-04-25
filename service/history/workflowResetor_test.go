@@ -29,8 +29,6 @@ import (
 
 	"go.uber.org/cadence/.gen/go/shared"
 
-	"github.com/uber/cadence/common/clock"
-
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -161,7 +159,7 @@ func (s *resetorSuite) SetupTest() {
 	}
 	h.txProcessor = newTransferQueueProcessor(mockShard, h, s.mockVisibilityMgr, s.mockMatchingClient, s.mockHistoryClient, s.logger)
 	h.timerProcessor = newTimerQueueProcessor(mockShard, h, s.mockMatchingClient, s.logger)
-	repl := newHistoryReplicator(mockShard, clock.NewEventTimeSource(), h, historyCache, s.mockDomainCache, s.mockHistoryMgr, s.mockHistoryV2Mgr, s.logger)
+	repl := newHistoryReplicator(mockShard, h, historyCache, s.mockDomainCache, s.mockHistoryMgr, s.mockHistoryV2Mgr, s.logger)
 	s.resetor = newWorkflowResetor(h, repl)
 	h.resetor = s.resetor
 	s.historyEngine = h
