@@ -452,6 +452,19 @@ struct WorkflowExecutionStartedEventAttributes {
   100: optional string cronSchedule
   110: optional i32 firstDecisionTaskBackoffSeconds
   120: optional Memo memo
+  130: optional ResetPoints prevAutoResetPoints
+}
+
+struct ResetPoints{
+  10: optional map<string, ResetPointInfo> resetPoints
+}
+
+ struct ResetPointInfo{
+  10: optional string runId
+  20: optional i64 firstDecisionCompletedId
+  30: optional i64 (js.type = "Long") createdTimeNano
+  40: optional i64 (js.type = "Long") expiringTimeNano //the time that the run is deleted due to retention
+  50: optional bool resettable                         // false if the resset point has pending childWFs/reqCancels/signalExternals.
 }
 
 struct WorkflowExecutionCompletedEventAttributes {
@@ -857,6 +870,17 @@ struct DomainConfiguration {
   40: optional i32 archivalRetentionPeriodInDays
   50: optional ArchivalStatus archivalStatus
   60: optional string archivalBucketOwner
+  70: optional BadBinaries badBinaries
+}
+
+struct BadBinaries{
+  10: optional map<string, BadBinaryInfo> infos
+}
+
+struct BadBinaryInfo{
+  10: optional string reason
+  20: optional string operator
+  30: optional i64 (js.type = "Long") createdTimeNano
 }
 
 struct UpdateDomainInfo {
@@ -919,6 +943,7 @@ struct UpdateDomainRequest {
  30: optional DomainConfiguration configuration
  40: optional DomainReplicationConfiguration replicationConfiguration
  50: optional string securityToken
+ 60: optional string deleteBadBinary
 }
 
 struct UpdateDomainResponse {
