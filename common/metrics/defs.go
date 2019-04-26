@@ -370,6 +370,8 @@ const (
 	HistoryRereplicationByTimerTaskScope
 	// HistoryRereplicationByHistoryReplicationScope tracks history replication calls made by history replication
 	HistoryRereplicationByHistoryReplicationScope
+	// HistoryRereplicationByHistoryMetadataReplicationScope tracks history replication calls made by history replication
+	HistoryRereplicationByHistoryMetadataReplicationScope
 	// HistoryRereplicationByActivityReplicationScope tracks history replication calls made by activity replication
 	HistoryRereplicationByActivityReplicationScope
 
@@ -712,6 +714,8 @@ const (
 	DomainReplicationTaskScope
 	// HistoryReplicationTaskScope is the scope used by history task replication processing
 	HistoryReplicationTaskScope
+	// HistoryMetadataReplicationTaskScope is the scope used by history metadata task replication processing
+	HistoryMetadataReplicationTaskScope
 	// SyncShardTaskScope is the scope used by sync shrad information processing
 	SyncShardTaskScope
 	// SyncActivityTaskScope is the scope used by sync activity information processing
@@ -898,11 +902,12 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		MessagingClientPublishScope:      {operation: "MessagingClientPublish"},
 		MessagingClientPublishBatchScope: {operation: "MessagingClientPublishBatch"},
 
-		DomainCacheScope:                               {operation: "DomainCache"},
-		HistoryRereplicationByTransferTaskScope:        {operation: "HistoryRereplicationByTransferTask"},
-		HistoryRereplicationByTimerTaskScope:           {operation: "HistoryRereplicationByTimerTask"},
-		HistoryRereplicationByHistoryReplicationScope:  {operation: "HistoryRereplicationByHistoryReplication"},
-		HistoryRereplicationByActivityReplicationScope: {operation: "HistoryRereplicationByActivityReplication"},
+		DomainCacheScope:                                      {operation: "DomainCache"},
+		HistoryRereplicationByTransferTaskScope:               {operation: "HistoryRereplicationByTransferTask"},
+		HistoryRereplicationByTimerTaskScope:                  {operation: "HistoryRereplicationByTimerTask"},
+		HistoryRereplicationByHistoryReplicationScope:         {operation: "HistoryRereplicationByHistoryReplication"},
+		HistoryRereplicationByHistoryMetadataReplicationScope: {operation: "HistoryRereplicationByHistoryMetadataReplication"},
+		HistoryRereplicationByActivityReplicationScope:        {operation: "HistoryRereplicationByActivityReplication"},
 
 		ElasticsearchRecordWorkflowExecutionStartedScope:           {operation: "RecordWorkflowExecutionStarted"},
 		ElasticsearchRecordWorkflowExecutionClosedScope:            {operation: "RecordWorkflowExecutionClosed"},
@@ -1053,20 +1058,21 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 	},
 	// Worker Scope Names
 	Worker: {
-		ReplicatorScope:                    {operation: "Replicator"},
-		DomainReplicationTaskScope:         {operation: "DomainReplicationTask"},
-		HistoryReplicationTaskScope:        {operation: "HistoryReplicationTask"},
-		SyncShardTaskScope:                 {operation: "SyncShardTask"},
-		SyncActivityTaskScope:              {operation: "SyncActivityTask"},
-		ESProcessorScope:                   {operation: "ESProcessor"},
-		IndexProcessorScope:                {operation: "IndexProcessor"},
-		ArchiverUploadHistoryActivityScope: {operation: "ArchiverUploadHistoryActivity"},
-		ArchiverDeleteHistoryActivityScope: {operation: "ArchiverDeleteHistoryActivity"},
-		ArchiverScope:                      {operation: "Archiver"},
-		ArchiverPumpScope:                  {operation: "ArchiverPump"},
-		ArchiverArchivalWorkflowScope:      {operation: "ArchiverArchivalWorkflow"},
-		ArchiverClientScope:                {operation: "ArchiverClient"},
-		TaskListScavengerScope:             {operation: "tasklistscavenger"},
+		ReplicatorScope:                     {operation: "Replicator"},
+		DomainReplicationTaskScope:          {operation: "DomainReplicationTask"},
+		HistoryReplicationTaskScope:         {operation: "HistoryReplicationTask"},
+		HistoryMetadataReplicationTaskScope: {operation: "HistoryMetadataReplicationTask"},
+		SyncShardTaskScope:                  {operation: "SyncShardTask"},
+		SyncActivityTaskScope:               {operation: "SyncActivityTask"},
+		ESProcessorScope:                    {operation: "ESProcessor"},
+		IndexProcessorScope:                 {operation: "IndexProcessor"},
+		ArchiverUploadHistoryActivityScope:  {operation: "ArchiverUploadHistoryActivity"},
+		ArchiverDeleteHistoryActivityScope:  {operation: "ArchiverDeleteHistoryActivity"},
+		ArchiverScope:                       {operation: "Archiver"},
+		ArchiverPumpScope:                   {operation: "ArchiverPump"},
+		ArchiverArchivalWorkflowScope:       {operation: "ArchiverArchivalWorkflow"},
+		ArchiverClientScope:                 {operation: "ArchiverClient"},
+		TaskListScavengerScope:              {operation: "tasklistscavenger"},
 	},
 	// Blobstore Scope Names
 	Blobstore: {
@@ -1276,6 +1282,8 @@ const (
 	ReplicatorFailures
 	ReplicatorMessagesDropped
 	ReplicatorLatency
+	ESProcessorRequests
+	ESProcessorRetries
 	ESProcessorFailures
 	ESProcessorCorruptedData
 	IndexProcessorCorruptedData
@@ -1501,6 +1509,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ReplicatorFailures:                                     {metricName: "replicator_errors"},
 		ReplicatorMessagesDropped:                              {metricName: "replicator_messages_dropped"},
 		ReplicatorLatency:                                      {metricName: "replicator_latency"},
+		ESProcessorRequests:                                    {metricName: "es_processor_requests"},
+		ESProcessorRetries:                                     {metricName: "es_processor_retries"},
 		ESProcessorFailures:                                    {metricName: "es_processor_errors"},
 		ESProcessorCorruptedData:                               {metricName: "es_processor_corrupted_data"},
 		IndexProcessorCorruptedData:                            {metricName: "index_processor_corrupted_data"},
