@@ -103,6 +103,11 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(info *InternalWorkflowEx
 		return nil, err
 	}
 
+	autoResetPoints, err := m.serializer.DeserializeResetPoints(info.AutoResetPoints)
+	if err != nil {
+		return nil, err
+	}
+
 	newInfo := &WorkflowExecutionInfo{
 		CompletionEvent: completionEvent,
 
@@ -156,6 +161,7 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(info *InternalWorkflowEx
 		BranchToken:                  info.BranchToken,
 		CronSchedule:                 info.CronSchedule,
 		ExpirationSeconds:            info.ExpirationSeconds,
+		AutoResetPoints:              autoResetPoints,
 	}
 	return newInfo, nil
 }
@@ -627,6 +633,9 @@ func (m *executionManagerImpl) CreateWorkflowExecution(request *CreateWorkflowEx
 }
 
 func (m *executionManagerImpl) SerializeCreateWorkflowExecutionRequest(request *CreateWorkflowExecutionRequest) (*InternalCreateWorkflowExecutionRequest, error) {
+	if request == nil {
+		return nil, nil
+	}
 	autoResetPointsBlob, err := m.serializer.SerializeResetPoints(request.PreviousAutoResetPoints, common.EncodingTypeThriftRW)
 	if err != nil {
 		return nil, err
