@@ -456,7 +456,7 @@ struct WorkflowExecutionStartedEventAttributes {
 }
 
 struct ResetPoints{
-  10: optional list<ResetPointInfo> resetPoints
+  10: optional list<ResetPointInfo> points
 }
 
  struct ResetPointInfo{

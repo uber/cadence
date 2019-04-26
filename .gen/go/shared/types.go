@@ -30751,7 +30751,7 @@ func (v *ResetPointInfo) IsSetResettable() bool {
 }
 
 type ResetPoints struct {
-	ResetPoints []*ResetPointInfo `json:"resetPoints,omitempty"`
+	Points []*ResetPointInfo `json:"points,omitempty"`
 }
 
 type _List_ResetPointInfo_ValueList []*ResetPointInfo
@@ -30806,8 +30806,8 @@ func (v *ResetPoints) ToWire() (wire.Value, error) {
 		err    error
 	)
 
-	if v.ResetPoints != nil {
-		w, err = wire.NewValueList(_List_ResetPointInfo_ValueList(v.ResetPoints)), error(nil)
+	if v.Points != nil {
+		w, err = wire.NewValueList(_List_ResetPointInfo_ValueList(v.Points)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -30866,7 +30866,7 @@ func (v *ResetPoints) FromWire(w wire.Value) error {
 		switch field.ID {
 		case 10:
 			if field.Value.Type() == wire.TList {
-				v.ResetPoints, err = _List_ResetPointInfo_Read(field.Value.GetList())
+				v.Points, err = _List_ResetPointInfo_Read(field.Value.GetList())
 				if err != nil {
 					return err
 				}
@@ -30887,8 +30887,8 @@ func (v *ResetPoints) String() string {
 
 	var fields [1]string
 	i := 0
-	if v.ResetPoints != nil {
-		fields[i] = fmt.Sprintf("ResetPoints: %v", v.ResetPoints)
+	if v.Points != nil {
+		fields[i] = fmt.Sprintf("Points: %v", v.Points)
 		i++
 	}
 
@@ -30920,7 +30920,7 @@ func (v *ResetPoints) Equals(rhs *ResetPoints) bool {
 	} else if rhs == nil {
 		return false
 	}
-	if !((v.ResetPoints == nil && rhs.ResetPoints == nil) || (v.ResetPoints != nil && rhs.ResetPoints != nil && _List_ResetPointInfo_Equals(v.ResetPoints, rhs.ResetPoints))) {
+	if !((v.Points == nil && rhs.Points == nil) || (v.Points != nil && rhs.Points != nil && _List_ResetPointInfo_Equals(v.Points, rhs.Points))) {
 		return false
 	}
 
@@ -30944,25 +30944,25 @@ func (v *ResetPoints) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	if v == nil {
 		return nil
 	}
-	if v.ResetPoints != nil {
-		err = multierr.Append(err, enc.AddArray("resetPoints", (_List_ResetPointInfo_Zapper)(v.ResetPoints)))
+	if v.Points != nil {
+		err = multierr.Append(err, enc.AddArray("points", (_List_ResetPointInfo_Zapper)(v.Points)))
 	}
 	return err
 }
 
-// GetResetPoints returns the value of ResetPoints if it is set or its
+// GetPoints returns the value of Points if it is set or its
 // zero value if it is unset.
-func (v *ResetPoints) GetResetPoints() (o []*ResetPointInfo) {
-	if v != nil && v.ResetPoints != nil {
-		return v.ResetPoints
+func (v *ResetPoints) GetPoints() (o []*ResetPointInfo) {
+	if v != nil && v.Points != nil {
+		return v.Points
 	}
 
 	return
 }
 
-// IsSetResetPoints returns true if ResetPoints is not nil.
-func (v *ResetPoints) IsSetResetPoints() bool {
-	return v != nil && v.ResetPoints != nil
+// IsSetPoints returns true if Points is not nil.
+func (v *ResetPoints) IsSetPoints() bool {
+	return v != nil && v.Points != nil
 }
 
 type ResetStickyTaskListRequest struct {
