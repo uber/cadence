@@ -116,8 +116,8 @@ struct WorkflowExecutionInfo {
   110: optional string clientLibraryVersion
   112: optional string clientFeatureVersion
   114: optional string clientImpl
-  115: optional binary autoResetPointsData
-  116: optional string autoResetPointsDataEncoding
+  115: optional binary autoResetPoints
+  116: optional string autoResetPointsEncoding
 }
 
 struct ActivityInfo {
