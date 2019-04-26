@@ -456,15 +456,16 @@ struct WorkflowExecutionStartedEventAttributes {
 }
 
 struct ResetPoints{
-  10: optional map<string, ResetPointInfo> resetPoints
+  10: optional list<ResetPointInfo> resetPoints
 }
 
  struct ResetPointInfo{
-  10: optional string runId
-  20: optional i64 firstDecisionCompletedId
-  30: optional i64 (js.type = "Long") createdTimeNano
-  40: optional i64 (js.type = "Long") expiringTimeNano //the time that the run is deleted due to retention
-  50: optional bool resettable                         // false if the resset point has pending childWFs/reqCancels/signalExternals.
+  10: optional string binaryChecksum
+  20: optional string runId
+  30: optional i64 firstDecisionCompletedId
+  40: optional i64 (js.type = "Long") createdTimeNano
+  50: optional i64 (js.type = "Long") expiringTimeNano //the time that the run is deleted due to retention
+  60: optional bool resettable                         // false if the resset point has pending childWFs/reqCancels/signalExternals.
 }
 
 struct WorkflowExecutionCompletedEventAttributes {
@@ -874,7 +875,7 @@ struct DomainConfiguration {
 }
 
 struct BadBinaries{
-  10: optional map<string, BadBinaryInfo> infos
+  10: optional map<string, BadBinaryInfo> binaries
 }
 
 struct BadBinaryInfo{
