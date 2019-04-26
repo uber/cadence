@@ -61,6 +61,7 @@ func (s *serfMonitor) Start() error {
 
 func (s *serfMonitor) Stop() {
 	s.serf.Leave()
+	s.serf.Shutdown()
 }
 
 func (s *serfMonitor) WhoAmI() (*HostInfo, error) {
