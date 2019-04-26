@@ -90,8 +90,8 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 	resetPoints0 := &workflow.ResetPoints{
 		Points: []*workflow.ResetPointInfo{
 			{
-				BinaryChecksum:           common.StringPtr("bad-binary-cs"),
-				RunId:                    common.StringPtr("test-run-id"),
+				BinaryChecksum: common.StringPtr("bad-binary-cs"),
+				RunId:          common.StringPtr("test-run-id"),
 				FirstDecisionCompletedId: common.Int64Ptr(123),
 				CreatedTimeNano:          common.Int64Ptr(456),
 				ExpiringTimeNano:         common.Int64Ptr(789),
@@ -246,7 +246,7 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 
 			nilResetPoints, err := serializer.SerializeResetPoints(nil, common.EncodingTypeThriftRW)
 			s.Nil(err)
-			s.Nil(nilResetPoints)
+			s.NotNil(nilResetPoints)
 
 			_, err = serializer.SerializeResetPoints(resetPoints0, common.EncodingTypeGob)
 			s.NotNil(err)
@@ -267,9 +267,13 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 
 			// deserialize reset points
 
-			dNilResetPoints, err := serializer.DeserializeResetPoints(nil)
+			dNilResetPoints1, err := serializer.DeserializeResetPoints(nil)
 			s.Nil(err)
-			s.Equal(&workflow.ResetPoints{}, dNilResetPoints)
+			s.Equal(&workflow.ResetPoints{}, dNilResetPoints1)
+
+			dNilResetPoints2, err := serializer.DeserializeResetPoints(nilResetPoints)
+			s.Nil(err)
+			s.Equal(&workflow.ResetPoints{}, dNilResetPoints2)
 
 			resetPoints1, err := serializer.DeserializeResetPoints(resetPointsJson)
 			s.Nil(err)
@@ -287,7 +291,7 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 
 			nilBadBinaries, err := serializer.SerializeBadBinaries(nil, common.EncodingTypeThriftRW)
 			s.Nil(err)
-			s.Nil(nilBadBinaries)
+			s.NotNil(nilBadBinaries)
 
 			_, err = serializer.SerializeBadBinaries(badBinaries0, common.EncodingTypeGob)
 			s.NotNil(err)
@@ -308,9 +312,13 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 
 			// deserialize bad binaries
 
-			dNilBadBinaries, err := serializer.DeserializeBadBinaries(nil)
+			dNilBadBinaries1, err := serializer.DeserializeBadBinaries(nil)
 			s.Nil(err)
-			s.Equal(&workflow.BadBinaries{}, dNilBadBinaries)
+			s.Equal(&workflow.BadBinaries{}, dNilBadBinaries1)
+
+			dNilBadBinaries2, err := serializer.DeserializeBadBinaries(nilBadBinaries)
+			s.Nil(err)
+			s.Equal(&workflow.BadBinaries{}, dNilBadBinaries2)
 
 			badBinaries1, err := serializer.DeserializeBadBinaries(badBinariesJson)
 			s.Nil(err)

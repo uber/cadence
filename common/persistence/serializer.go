@@ -115,7 +115,7 @@ func (t *serializerImpl) DeserializeEvent(data *DataBlob) (*workflow.HistoryEven
 
 func (t *serializerImpl) SerializeResetPoints(rp *workflow.ResetPoints, encodingType common.EncodingType) (*DataBlob, error) {
 	if rp == nil {
-		return nil, nil
+		rp = &workflow.ResetPoints{}
 	}
 	return t.serialize(rp, encodingType)
 }
@@ -128,7 +128,7 @@ func (t *serializerImpl) DeserializeResetPoints(data *DataBlob) (*workflow.Reset
 
 func (t *serializerImpl) SerializeBadBinaries(bb *workflow.BadBinaries, encodingType common.EncodingType) (*DataBlob, error) {
 	if bb == nil {
-		return nil, nil
+		bb = &workflow.BadBinaries{}
 	}
 	return t.serialize(bb, encodingType)
 }
