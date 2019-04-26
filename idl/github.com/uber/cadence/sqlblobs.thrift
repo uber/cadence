@@ -50,6 +50,8 @@ struct DomainInfo {
   34: optional string activeClusterName
   36: optional list<string> clusters
   38: optional map<string, string> data
+  39: optional binary badBinaries
+  40: optional string badBinariesEncoding
 }
 
 struct HistoryTreeInfo {
