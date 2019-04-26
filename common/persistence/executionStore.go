@@ -475,6 +475,11 @@ func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInf
 		return nil, err
 	}
 
+	resetPoints, err := m.serializer.SerializeResetPoints(info.AutoResetPoints, encoding)
+	if err != nil {
+		return nil, err
+	}
+
 	return &InternalWorkflowExecutionInfo{
 		DomainID:                     info.DomainID,
 		WorkflowID:                   info.WorkflowID,
@@ -515,6 +520,7 @@ func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInf
 		ClientLibraryVersion:         info.ClientLibraryVersion,
 		ClientFeatureVersion:         info.ClientFeatureVersion,
 		ClientImpl:                   info.ClientImpl,
+		AutoResetPoints:              resetPoints,
 		Attempt:                      info.Attempt,
 		HasRetryPolicy:               info.HasRetryPolicy,
 		InitialInterval:              info.InitialInterval,
