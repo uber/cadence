@@ -7212,8 +7212,8 @@ type WorkflowExecutionInfo struct {
 	ClientLibraryVersion         *string                     `json:"clientLibraryVersion,omitempty"`
 	ClientFeatureVersion         *string                     `json:"clientFeatureVersion,omitempty"`
 	ClientImpl                   *string                     `json:"clientImpl,omitempty"`
-	AutoResetPointsData          []byte                      `json:"autoResetPointsData,omitempty"`
-	AutoResetPointsDataEncoding  *string                     `json:"autoResetPointsDataEncoding,omitempty"`
+	AutoResetPoints              []byte                      `json:"autoResetPoints,omitempty"`
+	AutoResetPointsEncoding      *string                     `json:"autoResetPointsEncoding,omitempty"`
 }
 
 // ToWire translates a WorkflowExecutionInfo struct into a Thrift-level intermediate
@@ -7655,16 +7655,16 @@ func (v *WorkflowExecutionInfo) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 114, Value: w}
 		i++
 	}
-	if v.AutoResetPointsData != nil {
-		w, err = wire.NewValueBinary(v.AutoResetPointsData), error(nil)
+	if v.AutoResetPoints != nil {
+		w, err = wire.NewValueBinary(v.AutoResetPoints), error(nil)
 		if err != nil {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 115, Value: w}
 		i++
 	}
-	if v.AutoResetPointsDataEncoding != nil {
-		w, err = wire.NewValueString(*(v.AutoResetPointsDataEncoding)), error(nil)
+	if v.AutoResetPointsEncoding != nil {
+		w, err = wire.NewValueString(*(v.AutoResetPointsEncoding)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -8205,7 +8205,7 @@ func (v *WorkflowExecutionInfo) FromWire(w wire.Value) error {
 			}
 		case 115:
 			if field.Value.Type() == wire.TBinary {
-				v.AutoResetPointsData, err = field.Value.GetBinary(), error(nil)
+				v.AutoResetPoints, err = field.Value.GetBinary(), error(nil)
 				if err != nil {
 					return err
 				}
@@ -8215,7 +8215,7 @@ func (v *WorkflowExecutionInfo) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TBinary {
 				var x string
 				x, err = field.Value.GetString(), error(nil)
-				v.AutoResetPointsDataEncoding = &x
+				v.AutoResetPointsEncoding = &x
 				if err != nil {
 					return err
 				}
@@ -8444,12 +8444,12 @@ func (v *WorkflowExecutionInfo) String() string {
 		fields[i] = fmt.Sprintf("ClientImpl: %v", *(v.ClientImpl))
 		i++
 	}
-	if v.AutoResetPointsData != nil {
-		fields[i] = fmt.Sprintf("AutoResetPointsData: %v", v.AutoResetPointsData)
+	if v.AutoResetPoints != nil {
+		fields[i] = fmt.Sprintf("AutoResetPoints: %v", v.AutoResetPoints)
 		i++
 	}
-	if v.AutoResetPointsDataEncoding != nil {
-		fields[i] = fmt.Sprintf("AutoResetPointsDataEncoding: %v", *(v.AutoResetPointsDataEncoding))
+	if v.AutoResetPointsEncoding != nil {
+		fields[i] = fmt.Sprintf("AutoResetPointsEncoding: %v", *(v.AutoResetPointsEncoding))
 		i++
 	}
 
@@ -8622,10 +8622,10 @@ func (v *WorkflowExecutionInfo) Equals(rhs *WorkflowExecutionInfo) bool {
 	if !_String_EqualsPtr(v.ClientImpl, rhs.ClientImpl) {
 		return false
 	}
-	if !((v.AutoResetPointsData == nil && rhs.AutoResetPointsData == nil) || (v.AutoResetPointsData != nil && rhs.AutoResetPointsData != nil && bytes.Equal(v.AutoResetPointsData, rhs.AutoResetPointsData))) {
+	if !((v.AutoResetPoints == nil && rhs.AutoResetPoints == nil) || (v.AutoResetPoints != nil && rhs.AutoResetPoints != nil && bytes.Equal(v.AutoResetPoints, rhs.AutoResetPoints))) {
 		return false
 	}
-	if !_String_EqualsPtr(v.AutoResetPointsDataEncoding, rhs.AutoResetPointsDataEncoding) {
+	if !_String_EqualsPtr(v.AutoResetPointsEncoding, rhs.AutoResetPointsEncoding) {
 		return false
 	}
 
@@ -8794,11 +8794,11 @@ func (v *WorkflowExecutionInfo) MarshalLogObject(enc zapcore.ObjectEncoder) (err
 	if v.ClientImpl != nil {
 		enc.AddString("clientImpl", *v.ClientImpl)
 	}
-	if v.AutoResetPointsData != nil {
-		enc.AddString("autoResetPointsData", base64.StdEncoding.EncodeToString(v.AutoResetPointsData))
+	if v.AutoResetPoints != nil {
+		enc.AddString("autoResetPoints", base64.StdEncoding.EncodeToString(v.AutoResetPoints))
 	}
-	if v.AutoResetPointsDataEncoding != nil {
-		enc.AddString("autoResetPointsDataEncoding", *v.AutoResetPointsDataEncoding)
+	if v.AutoResetPointsEncoding != nil {
+		enc.AddString("autoResetPointsEncoding", *v.AutoResetPointsEncoding)
 	}
 	return err
 }
@@ -9583,32 +9583,32 @@ func (v *WorkflowExecutionInfo) IsSetClientImpl() bool {
 	return v != nil && v.ClientImpl != nil
 }
 
-// GetAutoResetPointsData returns the value of AutoResetPointsData if it is set or its
+// GetAutoResetPoints returns the value of AutoResetPoints if it is set or its
 // zero value if it is unset.
-func (v *WorkflowExecutionInfo) GetAutoResetPointsData() (o []byte) {
-	if v != nil && v.AutoResetPointsData != nil {
-		return v.AutoResetPointsData
+func (v *WorkflowExecutionInfo) GetAutoResetPoints() (o []byte) {
+	if v != nil && v.AutoResetPoints != nil {
+		return v.AutoResetPoints
 	}
 
 	return
 }
 
-// IsSetAutoResetPointsData returns true if AutoResetPointsData is not nil.
-func (v *WorkflowExecutionInfo) IsSetAutoResetPointsData() bool {
-	return v != nil && v.AutoResetPointsData != nil
+// IsSetAutoResetPoints returns true if AutoResetPoints is not nil.
+func (v *WorkflowExecutionInfo) IsSetAutoResetPoints() bool {
+	return v != nil && v.AutoResetPoints != nil
 }
 
-// GetAutoResetPointsDataEncoding returns the value of AutoResetPointsDataEncoding if it is set or its
+// GetAutoResetPointsEncoding returns the value of AutoResetPointsEncoding if it is set or its
 // zero value if it is unset.
-func (v *WorkflowExecutionInfo) GetAutoResetPointsDataEncoding() (o string) {
-	if v != nil && v.AutoResetPointsDataEncoding != nil {
-		return *v.AutoResetPointsDataEncoding
+func (v *WorkflowExecutionInfo) GetAutoResetPointsEncoding() (o string) {
+	if v != nil && v.AutoResetPointsEncoding != nil {
+		return *v.AutoResetPointsEncoding
 	}
 
 	return
 }
 
-// IsSetAutoResetPointsDataEncoding returns true if AutoResetPointsDataEncoding is not nil.
-func (v *WorkflowExecutionInfo) IsSetAutoResetPointsDataEncoding() bool {
-	return v != nil && v.AutoResetPointsDataEncoding != nil
+// IsSetAutoResetPointsEncoding returns true if AutoResetPointsEncoding is not nil.
+func (v *WorkflowExecutionInfo) IsSetAutoResetPointsEncoding() bool {
+	return v != nil && v.AutoResetPointsEncoding != nil
 }

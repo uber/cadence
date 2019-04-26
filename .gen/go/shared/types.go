@@ -2727,7 +2727,7 @@ func (v *ArchivalStatus) UnmarshalJSON(text []byte) error {
 }
 
 type BadBinaries struct {
-	Infos map[string]*BadBinaryInfo `json:"infos,omitempty"`
+	Binaries map[string]*BadBinaryInfo `json:"binaries,omitempty"`
 }
 
 type _Map_String_BadBinaryInfo_MapItemList map[string]*BadBinaryInfo
@@ -2791,8 +2791,8 @@ func (v *BadBinaries) ToWire() (wire.Value, error) {
 		err    error
 	)
 
-	if v.Infos != nil {
-		w, err = wire.NewValueMap(_Map_String_BadBinaryInfo_MapItemList(v.Infos)), error(nil)
+	if v.Binaries != nil {
+		w, err = wire.NewValueMap(_Map_String_BadBinaryInfo_MapItemList(v.Binaries)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -2861,7 +2861,7 @@ func (v *BadBinaries) FromWire(w wire.Value) error {
 		switch field.ID {
 		case 10:
 			if field.Value.Type() == wire.TMap {
-				v.Infos, err = _Map_String_BadBinaryInfo_Read(field.Value.GetMap())
+				v.Binaries, err = _Map_String_BadBinaryInfo_Read(field.Value.GetMap())
 				if err != nil {
 					return err
 				}
@@ -2882,8 +2882,8 @@ func (v *BadBinaries) String() string {
 
 	var fields [1]string
 	i := 0
-	if v.Infos != nil {
-		fields[i] = fmt.Sprintf("Infos: %v", v.Infos)
+	if v.Binaries != nil {
+		fields[i] = fmt.Sprintf("Binaries: %v", v.Binaries)
 		i++
 	}
 
@@ -2917,7 +2917,7 @@ func (v *BadBinaries) Equals(rhs *BadBinaries) bool {
 	} else if rhs == nil {
 		return false
 	}
-	if !((v.Infos == nil && rhs.Infos == nil) || (v.Infos != nil && rhs.Infos != nil && _Map_String_BadBinaryInfo_Equals(v.Infos, rhs.Infos))) {
+	if !((v.Binaries == nil && rhs.Binaries == nil) || (v.Binaries != nil && rhs.Binaries != nil && _Map_String_BadBinaryInfo_Equals(v.Binaries, rhs.Binaries))) {
 		return false
 	}
 
@@ -2941,25 +2941,25 @@ func (v *BadBinaries) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	if v == nil {
 		return nil
 	}
-	if v.Infos != nil {
-		err = multierr.Append(err, enc.AddObject("infos", (_Map_String_BadBinaryInfo_Zapper)(v.Infos)))
+	if v.Binaries != nil {
+		err = multierr.Append(err, enc.AddObject("binaries", (_Map_String_BadBinaryInfo_Zapper)(v.Binaries)))
 	}
 	return err
 }
 
-// GetInfos returns the value of Infos if it is set or its
+// GetBinaries returns the value of Binaries if it is set or its
 // zero value if it is unset.
-func (v *BadBinaries) GetInfos() (o map[string]*BadBinaryInfo) {
-	if v != nil && v.Infos != nil {
-		return v.Infos
+func (v *BadBinaries) GetBinaries() (o map[string]*BadBinaryInfo) {
+	if v != nil && v.Binaries != nil {
+		return v.Binaries
 	}
 
 	return
 }
 
-// IsSetInfos returns true if Infos is not nil.
-func (v *BadBinaries) IsSetInfos() bool {
-	return v != nil && v.Infos != nil
+// IsSetBinaries returns true if Binaries is not nil.
+func (v *BadBinaries) IsSetBinaries() bool {
+	return v != nil && v.Binaries != nil
 }
 
 type BadBinaryInfo struct {
@@ -30393,6 +30393,7 @@ func (v *RequestCancelWorkflowExecutionRequest) IsSetRequestId() bool {
 }
 
 type ResetPointInfo struct {
+	BinaryChecksum           *string `json:"binaryChecksum,omitempty"`
 	RunId                    *string `json:"runId,omitempty"`
 	FirstDecisionCompletedId *int64  `json:"firstDecisionCompletedId,omitempty"`
 	CreatedTimeNano          *int64  `json:"createdTimeNano,omitempty"`
@@ -30417,18 +30418,26 @@ type ResetPointInfo struct {
 //   }
 func (v *ResetPointInfo) ToWire() (wire.Value, error) {
 	var (
-		fields [5]wire.Field
+		fields [6]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.BinaryChecksum != nil {
+		w, err = wire.NewValueString(*(v.BinaryChecksum)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
 	if v.RunId != nil {
 		w, err = wire.NewValueString(*(v.RunId)), error(nil)
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 10, Value: w}
+		fields[i] = wire.Field{ID: 20, Value: w}
 		i++
 	}
 	if v.FirstDecisionCompletedId != nil {
@@ -30436,7 +30445,7 @@ func (v *ResetPointInfo) ToWire() (wire.Value, error) {
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 20, Value: w}
+		fields[i] = wire.Field{ID: 30, Value: w}
 		i++
 	}
 	if v.CreatedTimeNano != nil {
@@ -30444,7 +30453,7 @@ func (v *ResetPointInfo) ToWire() (wire.Value, error) {
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 30, Value: w}
+		fields[i] = wire.Field{ID: 40, Value: w}
 		i++
 	}
 	if v.ExpiringTimeNano != nil {
@@ -30452,7 +30461,7 @@ func (v *ResetPointInfo) ToWire() (wire.Value, error) {
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 40, Value: w}
+		fields[i] = wire.Field{ID: 50, Value: w}
 		i++
 	}
 	if v.Resettable != nil {
@@ -30460,7 +30469,7 @@ func (v *ResetPointInfo) ToWire() (wire.Value, error) {
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 50, Value: w}
+		fields[i] = wire.Field{ID: 60, Value: w}
 		i++
 	}
 
@@ -30493,17 +30502,17 @@ func (v *ResetPointInfo) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TBinary {
 				var x string
 				x, err = field.Value.GetString(), error(nil)
-				v.RunId = &x
+				v.BinaryChecksum = &x
 				if err != nil {
 					return err
 				}
 
 			}
 		case 20:
-			if field.Value.Type() == wire.TI64 {
-				var x int64
-				x, err = field.Value.GetI64(), error(nil)
-				v.FirstDecisionCompletedId = &x
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.RunId = &x
 				if err != nil {
 					return err
 				}
@@ -30513,7 +30522,7 @@ func (v *ResetPointInfo) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TI64 {
 				var x int64
 				x, err = field.Value.GetI64(), error(nil)
-				v.CreatedTimeNano = &x
+				v.FirstDecisionCompletedId = &x
 				if err != nil {
 					return err
 				}
@@ -30523,13 +30532,23 @@ func (v *ResetPointInfo) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TI64 {
 				var x int64
 				x, err = field.Value.GetI64(), error(nil)
-				v.ExpiringTimeNano = &x
+				v.CreatedTimeNano = &x
 				if err != nil {
 					return err
 				}
 
 			}
 		case 50:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.ExpiringTimeNano = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 60:
 			if field.Value.Type() == wire.TBool {
 				var x bool
 				x, err = field.Value.GetBool(), error(nil)
@@ -30552,8 +30571,12 @@ func (v *ResetPointInfo) String() string {
 		return "<nil>"
 	}
 
-	var fields [5]string
+	var fields [6]string
 	i := 0
+	if v.BinaryChecksum != nil {
+		fields[i] = fmt.Sprintf("BinaryChecksum: %v", *(v.BinaryChecksum))
+		i++
+	}
 	if v.RunId != nil {
 		fields[i] = fmt.Sprintf("RunId: %v", *(v.RunId))
 		i++
@@ -30588,6 +30611,9 @@ func (v *ResetPointInfo) Equals(rhs *ResetPointInfo) bool {
 	} else if rhs == nil {
 		return false
 	}
+	if !_String_EqualsPtr(v.BinaryChecksum, rhs.BinaryChecksum) {
+		return false
+	}
 	if !_String_EqualsPtr(v.RunId, rhs.RunId) {
 		return false
 	}
@@ -30613,6 +30639,9 @@ func (v *ResetPointInfo) MarshalLogObject(enc zapcore.ObjectEncoder) (err error)
 	if v == nil {
 		return nil
 	}
+	if v.BinaryChecksum != nil {
+		enc.AddString("binaryChecksum", *v.BinaryChecksum)
+	}
 	if v.RunId != nil {
 		enc.AddString("runId", *v.RunId)
 	}
@@ -30629,6 +30658,21 @@ func (v *ResetPointInfo) MarshalLogObject(enc zapcore.ObjectEncoder) (err error)
 		enc.AddBool("resettable", *v.Resettable)
 	}
 	return err
+}
+
+// GetBinaryChecksum returns the value of BinaryChecksum if it is set or its
+// zero value if it is unset.
+func (v *ResetPointInfo) GetBinaryChecksum() (o string) {
+	if v != nil && v.BinaryChecksum != nil {
+		return *v.BinaryChecksum
+	}
+
+	return
+}
+
+// IsSetBinaryChecksum returns true if BinaryChecksum is not nil.
+func (v *ResetPointInfo) IsSetBinaryChecksum() bool {
+	return v != nil && v.BinaryChecksum != nil
 }
 
 // GetRunId returns the value of RunId if it is set or its
@@ -30707,26 +30751,21 @@ func (v *ResetPointInfo) IsSetResettable() bool {
 }
 
 type ResetPoints struct {
-	ResetPoints map[string]*ResetPointInfo `json:"resetPoints,omitempty"`
+	ResetPoints []*ResetPointInfo `json:"resetPoints,omitempty"`
 }
 
-type _Map_String_ResetPointInfo_MapItemList map[string]*ResetPointInfo
+type _List_ResetPointInfo_ValueList []*ResetPointInfo
 
-func (m _Map_String_ResetPointInfo_MapItemList) ForEach(f func(wire.MapItem) error) error {
-	for k, v := range m {
-		if v == nil {
-			return fmt.Errorf("invalid [%v]: value is nil", k)
+func (v _List_ResetPointInfo_ValueList) ForEach(f func(wire.Value) error) error {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
 		}
-		kw, err := wire.NewValueString(k), error(nil)
+		w, err := x.ToWire()
 		if err != nil {
 			return err
 		}
-
-		vw, err := v.ToWire()
-		if err != nil {
-			return err
-		}
-		err = f(wire.MapItem{Key: kw, Value: vw})
+		err = f(w)
 		if err != nil {
 			return err
 		}
@@ -30734,19 +30773,15 @@ func (m _Map_String_ResetPointInfo_MapItemList) ForEach(f func(wire.MapItem) err
 	return nil
 }
 
-func (m _Map_String_ResetPointInfo_MapItemList) Size() int {
-	return len(m)
+func (v _List_ResetPointInfo_ValueList) Size() int {
+	return len(v)
 }
 
-func (_Map_String_ResetPointInfo_MapItemList) KeyType() wire.Type {
-	return wire.TBinary
-}
-
-func (_Map_String_ResetPointInfo_MapItemList) ValueType() wire.Type {
+func (_List_ResetPointInfo_ValueList) ValueType() wire.Type {
 	return wire.TStruct
 }
 
-func (_Map_String_ResetPointInfo_MapItemList) Close() {}
+func (_List_ResetPointInfo_ValueList) Close() {}
 
 // ToWire translates a ResetPoints struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
@@ -30772,7 +30807,7 @@ func (v *ResetPoints) ToWire() (wire.Value, error) {
 	)
 
 	if v.ResetPoints != nil {
-		w, err = wire.NewValueMap(_Map_String_ResetPointInfo_MapItemList(v.ResetPoints)), error(nil)
+		w, err = wire.NewValueList(_List_ResetPointInfo_ValueList(v.ResetPoints)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -30789,31 +30824,21 @@ func _ResetPointInfo_Read(w wire.Value) (*ResetPointInfo, error) {
 	return &v, err
 }
 
-func _Map_String_ResetPointInfo_Read(m wire.MapItemList) (map[string]*ResetPointInfo, error) {
-	if m.KeyType() != wire.TBinary {
+func _List_ResetPointInfo_Read(l wire.ValueList) ([]*ResetPointInfo, error) {
+	if l.ValueType() != wire.TStruct {
 		return nil, nil
 	}
 
-	if m.ValueType() != wire.TStruct {
-		return nil, nil
-	}
-
-	o := make(map[string]*ResetPointInfo, m.Size())
-	err := m.ForEach(func(x wire.MapItem) error {
-		k, err := x.Key.GetString(), error(nil)
+	o := make([]*ResetPointInfo, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
+		i, err := _ResetPointInfo_Read(x)
 		if err != nil {
 			return err
 		}
-
-		v, err := _ResetPointInfo_Read(x.Value)
-		if err != nil {
-			return err
-		}
-
-		o[k] = v
+		o = append(o, i)
 		return nil
 	})
-	m.Close()
+	l.Close()
 	return o, err
 }
 
@@ -30840,8 +30865,8 @@ func (v *ResetPoints) FromWire(w wire.Value) error {
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 10:
-			if field.Value.Type() == wire.TMap {
-				v.ResetPoints, err = _Map_String_ResetPointInfo_Read(field.Value.GetMap())
+			if field.Value.Type() == wire.TList {
+				v.ResetPoints, err = _List_ResetPointInfo_Read(field.Value.GetList())
 				if err != nil {
 					return err
 				}
@@ -30870,20 +30895,18 @@ func (v *ResetPoints) String() string {
 	return fmt.Sprintf("ResetPoints{%v}", strings.Join(fields[:i], ", "))
 }
 
-func _Map_String_ResetPointInfo_Equals(lhs, rhs map[string]*ResetPointInfo) bool {
+func _List_ResetPointInfo_Equals(lhs, rhs []*ResetPointInfo) bool {
 	if len(lhs) != len(rhs) {
 		return false
 	}
 
-	for lk, lv := range lhs {
-		rv, ok := rhs[lk]
-		if !ok {
-			return false
-		}
+	for i, lv := range lhs {
+		rv := rhs[i]
 		if !lv.Equals(rv) {
 			return false
 		}
 	}
+
 	return true
 }
 
@@ -30897,20 +30920,20 @@ func (v *ResetPoints) Equals(rhs *ResetPoints) bool {
 	} else if rhs == nil {
 		return false
 	}
-	if !((v.ResetPoints == nil && rhs.ResetPoints == nil) || (v.ResetPoints != nil && rhs.ResetPoints != nil && _Map_String_ResetPointInfo_Equals(v.ResetPoints, rhs.ResetPoints))) {
+	if !((v.ResetPoints == nil && rhs.ResetPoints == nil) || (v.ResetPoints != nil && rhs.ResetPoints != nil && _List_ResetPointInfo_Equals(v.ResetPoints, rhs.ResetPoints))) {
 		return false
 	}
 
 	return true
 }
 
-type _Map_String_ResetPointInfo_Zapper map[string]*ResetPointInfo
+type _List_ResetPointInfo_Zapper []*ResetPointInfo
 
-// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
-// fast logging of _Map_String_ResetPointInfo_Zapper.
-func (m _Map_String_ResetPointInfo_Zapper) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
-	for k, v := range m {
-		err = multierr.Append(err, enc.AddObject((string)(k), v))
+// MarshalLogArray implements zapcore.ArrayMarshaler, enabling
+// fast logging of _List_ResetPointInfo_Zapper.
+func (l _List_ResetPointInfo_Zapper) MarshalLogArray(enc zapcore.ArrayEncoder) (err error) {
+	for _, v := range l {
+		err = multierr.Append(err, enc.AppendObject(v))
 	}
 	return err
 }
@@ -30922,14 +30945,14 @@ func (v *ResetPoints) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 		return nil
 	}
 	if v.ResetPoints != nil {
-		err = multierr.Append(err, enc.AddObject("resetPoints", (_Map_String_ResetPointInfo_Zapper)(v.ResetPoints)))
+		err = multierr.Append(err, enc.AddArray("resetPoints", (_List_ResetPointInfo_Zapper)(v.ResetPoints)))
 	}
 	return err
 }
 
 // GetResetPoints returns the value of ResetPoints if it is set or its
 // zero value if it is unset.
-func (v *ResetPoints) GetResetPoints() (o map[string]*ResetPointInfo) {
+func (v *ResetPoints) GetResetPoints() (o []*ResetPointInfo) {
 	if v != nil && v.ResetPoints != nil {
 		return v.ResetPoints
 	}
