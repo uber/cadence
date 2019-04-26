@@ -93,7 +93,7 @@ func newDomainCommands() []cli.Command {
 					Name:  FlagClustersWithAlias,
 					Usage: "Clusters",
 				},
-				cli.StringFlag{
+				cli.BoolFlag{
 					Name:  FlagIsGlobalDomainWithAlias,
 					Usage: "Flag to indicate whether domain is a global domain",
 				},
