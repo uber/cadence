@@ -220,7 +220,7 @@ install-schema-mysql: bins
 	./cadence-sql-tool --ep 127.0.0.1 --db cadence update-schema -d ./schema/mysql/v57/cadence/versioned
 	./cadence-sql-tool --ep 127.0.0.1 create --db cadence_visibility
 	./cadence-sql-tool --ep 127.0.0.1 --db cadence_visibility setup-schema -v 0.0
-	./cadence-sql-tool --ep 127.0.0.1 --db cadence_visibility update-schema -d ./schema/mysql/v57/cadence/versioned
+	./cadence-sql-tool --ep 127.0.0.1 --db cadence_visibility update-schema -d ./schema/mysql/v57/visibility/versioned
 
 start: bins
 	./cadence-server start
