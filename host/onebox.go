@@ -250,6 +250,10 @@ func (c *cadenceImpl) FrontendPProfPort() int {
 	return 7105
 }
 
+func (c *cadenceImpl) FrontendSerfPort() int {
+	return 7905
+}
+
 func (c *cadenceImpl) HistoryServiceAddress() []string {
 	hosts := []string{}
 	startPort := 7200
@@ -280,6 +284,10 @@ func (c *cadenceImpl) HistoryPProfPort() []int {
 	return ports
 }
 
+func (c *cadenceImpl) HistorySerfPort() int {
+	return 8000
+}
+
 func (c *cadenceImpl) MatchingServiceAddress() string {
 	if c.clusterNo != 0 {
 		return "127.0.0.1:8106"
@@ -294,6 +302,10 @@ func (c *cadenceImpl) MatchingPProfPort() int {
 	return 7107
 }
 
+func (c *cadenceImpl) MatchingSerfPort() int {
+	return 7907
+}
+
 func (c *cadenceImpl) WorkerServiceAddress() string {
 	if c.clusterNo != 0 {
 		return "127.0.0.1:8108"
@@ -306,6 +318,10 @@ func (c *cadenceImpl) WorkerPProfPort() int {
 		return 8109
 	}
 	return 7109
+}
+
+func (c *cadenceImpl) WorkerSerfPort() int {
+	return 7909
 }
 
 func (c *cadenceImpl) GetAdminClient() adminserviceclient.Interface {
@@ -330,7 +346,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.FrontendPProfPort())
 	params.RPCFactory = newRPCFactoryImpl(common.FrontendServiceName, c.FrontendAddress(), c.logger)
 	params.MetricScope = tally.NewTestScope(common.FrontendServiceName, make(map[string]string))
-	params.MembershipFactory = newSerfMembershipFactory(c.logger, params.Name, c.FrontendAddress(), hosts)
+	params.MembershipFactory = newSerfMembershipFactory(c.logger, params.Name, c.FrontendAddress(), c.FrontendSerfPort())
 	params.ClusterMetadata = c.clusterMetadata
 	params.DispatcherProvider = c.dispatcherProvider
 	params.MessagingClient = c.messagingClient
@@ -389,7 +405,7 @@ func (c *cadenceImpl) startHistory(hosts map[string][]string, startWG *sync.Wait
 		params.PProfInitializer = newPProfInitializerImpl(c.logger, pprofPorts[i])
 		params.RPCFactory = newRPCFactoryImpl(common.HistoryServiceName, hostport, c.logger)
 		params.MetricScope = tally.NewTestScope(common.HistoryServiceName, make(map[string]string))
-		params.MembershipFactory = newSerfMembershipFactory(c.logger, params.Name, hostport, hosts)
+		params.MembershipFactory = newSerfMembershipFactory(c.logger, params.Name, hostport, c.HistorySerfPort())
 		params.ClusterMetadata = c.clusterMetadata
 		params.DispatcherProvider = c.dispatcherProvider
 		params.MessagingClient = c.messagingClient
@@ -436,7 +452,7 @@ func (c *cadenceImpl) startMatching(hosts map[string][]string, startWG *sync.Wai
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.MatchingPProfPort())
 	params.RPCFactory = newRPCFactoryImpl(common.MatchingServiceName, c.MatchingServiceAddress(), c.logger)
 	params.MetricScope = tally.NewTestScope(common.MatchingServiceName, make(map[string]string))
-	params.MembershipFactory = newSerfMembershipFactory(c.logger, params.Name, c.MatchingServiceAddress(), hosts)
+	params.MembershipFactory = newSerfMembershipFactory(c.logger, params.Name, c.MatchingServiceAddress(), c.MatchingSerfPort())
 	params.ClusterMetadata = c.clusterMetadata
 	params.DispatcherProvider = c.dispatcherProvider
 	params.PersistenceConfig = c.persistenceConfig
@@ -464,7 +480,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.WorkerPProfPort())
 	params.RPCFactory = newRPCFactoryImpl(common.WorkerServiceName, c.WorkerServiceAddress(), c.logger)
 	params.MetricScope = tally.NewTestScope(common.WorkerServiceName, make(map[string]string))
-	params.MembershipFactory = newSerfMembershipFactory(c.logger, params.Name, c.WorkerServiceAddress(), hosts)
+	params.MembershipFactory = newSerfMembershipFactory(c.logger, params.Name, c.WorkerServiceAddress(), c.WorkerSerfPort())
 	params.ClusterMetadata = c.clusterMetadata
 	params.DispatcherProvider = c.dispatcherProvider
 	params.PersistenceConfig = c.persistenceConfig
@@ -599,9 +615,10 @@ func (c *cadenceImpl) createSystemDomain() error {
 	return nil
 }
 
-func newSerfMembershipFactory(logger log.Logger, serviceName string, host string, hostMap map[string][]string) service.MembershipMonitorFactory {
+func newSerfMembershipFactory(logger log.Logger, serviceName string, host string, port int) service.MembershipMonitorFactory {
 	conf := &config.Serf{
 		Name:           host,
+		Port:           port,
 		BootstrapHosts: []string{"127.0.0.1:8000"},
 	}
 	factory, err := conf.NewFactory(logger, serviceName)

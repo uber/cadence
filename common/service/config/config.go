@@ -110,6 +110,8 @@ type (
 	Serf struct {
 		// Name to be used in ringpop advertisement
 		Name string `yaml:"name" validate:"nonzero"`
+		// Port to be used for serf binding
+		Port int `yaml:"port"`
 		// BootstrapHosts is a list of seed hosts to be used for ringpop bootstrap
 		BootstrapHosts []string `yaml:"bootstrapHosts"`
 	}
