@@ -38,6 +38,10 @@ func TestUpdateTaskTestSuite(t *testing.T) {
 	suite.Run(t, new(UpdateTaskTestSuite))
 }
 
+func (s *UpdateTaskTestSuite) SetupSuite() {
+	s.Assertions = require.New(s.T())
+}
+
 func (s *UpdateTaskTestSuite) TestReadSchemaDir() {
 
 	tmpDir, err := ioutil.TempDir("", "update_schema_test")
