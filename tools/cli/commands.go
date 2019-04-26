@@ -741,19 +741,19 @@ func ListWorkflow(c *cli.Context) {
 	pageSize := c.Int(FlagPageSize)
 	queryOpen := c.Bool(FlagOpen)
 
-	printJson := c.Bool(FlagPrintJson)
+	printJSON := c.Bool(FlagPrintJSON)
 	printDecodedRaw := c.Bool(FlagPrintFullyDetail)
 
-	if printJson || printDecodedRaw {
+	if printJSON || printDecodedRaw {
 		if !more {
 			results, _ := getListResultInRaw(c, queryOpen, nil)
-			printListResults(results, printJson)
+			printListResults(results, printJSON)
 		} else {
 			var results []*s.WorkflowExecutionInfo
 			var nextPageToken []byte
 			for {
 				results, nextPageToken = getListResultInRaw(c, queryOpen, nextPageToken)
-				printListResults(results, printJson)
+				printListResults(results, printJSON)
 
 				if len(results) < pageSize {
 					break
@@ -808,15 +808,15 @@ func ListWorkflow(c *cli.Context) {
 func ListAllWorkflow(c *cli.Context) {
 	queryOpen := c.Bool(FlagOpen)
 
-	printJson := c.Bool(FlagPrintJson)
+	printJSON := c.Bool(FlagPrintJSON)
 	printDecodedRaw := c.Bool(FlagPrintFullyDetail)
 
-	if printJson || printDecodedRaw {
+	if printJSON || printDecodedRaw {
 		var results []*s.WorkflowExecutionInfo
 		var nextPageToken []byte
 		for {
 			results, nextPageToken = getListResultInRaw(c, queryOpen, nextPageToken)
-			printListResults(results, printJson)
+			printListResults(results, printJSON)
 			if len(results) < defaultPageSizeForList {
 				break
 			}
@@ -1149,9 +1149,9 @@ func getListResultInRaw(c *cli.Context, queryOpen bool, nextPageToken []byte) ([
 }
 
 // default will print decoded raw
-func printListResults(executions []*s.WorkflowExecutionInfo, inJson bool) {
+func printListResults(executions []*s.WorkflowExecutionInfo, inJSON bool) {
 	for _, execution := range executions {
-		if inJson {
+		if inJSON {
 			j, _ := json.Marshal(execution)
 			fmt.Println(string(j))
 		} else {
