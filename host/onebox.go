@@ -599,14 +599,14 @@ func (c *cadenceImpl) createSystemDomain() error {
 	return nil
 }
 
-func newSerfMembershipFactory(logger bark.Logger, serviceName string, host string, hostMap map[string][]string) service.MembershipMonitorFactory {
+func newSerfMembershipFactory(logger log.Logger, serviceName string, host string, hostMap map[string][]string) service.MembershipMonitorFactory {
 	conf := &config.Serf{
 		Name:           host,
 		BootstrapHosts: []string{"127.0.0.1:8000"},
 	}
 	factory, err := conf.NewFactory(logger, serviceName)
 	if err != nil {
-		logger.Fatalf("failed to create serf membership factory %v", err)
+		logger.Fatal(fmt.Sprintf("failed to create serf membership factory %v", err))
 	}
 	return factory
 }

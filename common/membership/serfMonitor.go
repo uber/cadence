@@ -21,25 +21,26 @@
 package membership
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/hashicorp/serf/serf"
-	"github.com/uber-common/bark"
+	"github.com/uber/cadence/common/log"
 )
 
 type serfMonitor struct {
 	service   string
-	logger    bark.Logger
+	logger    log.Logger
 	serf      *serf.Serf
 	hosts     []string
 	resolvers map[string]ServiceResolver
 }
 
 // NewSerfMonitor returns a new serf based monitor
-func NewSerfMonitor(services []string, hosts []string, config *serf.Config, logger bark.Logger) Monitor {
+func NewSerfMonitor(services []string, hosts []string, config *serf.Config, logger log.Logger) Monitor {
 	serf, err := serf.Create(config)
 	if err != nil {
-		logger.Fatalf("unable to create serf %v", config.Tags[RoleKey])
+		logger.Fatal(fmt.Sprintf("unable to create serf %v", config.Tags[RoleKey]))
 	}
 	resolvers := make(map[string]ServiceResolver, len(services))
 	for _, service := range services {

@@ -1,12 +1,13 @@
 package config
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/serf/serf"
-	"github.com/uber-common/bark"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/membership"
 	"go.uber.org/yarpc"
 )
@@ -14,13 +15,13 @@ import (
 // SerfFactory implements the SerfFactory interface
 type SerfFactory struct {
 	config      *Serf
-	logger      bark.Logger
+	logger      log.Logger
 	serviceName string
 }
 
 // NewFactory builds a ringpop factory conforming
 // to the underlying configuration
-func (serfConfig *Serf) NewFactory(logger bark.Logger, serviceName string) (*SerfFactory, error) {
+func (serfConfig *Serf) NewFactory(logger log.Logger, serviceName string) (*SerfFactory, error) {
 	return &SerfFactory{serfConfig, logger, serviceName}, nil
 }
 
@@ -39,6 +40,6 @@ func (s *SerfFactory) Create(dispatcher *yarpc.Dispatcher) (membership.Monitor, 
 	config.MemberlistConfig.BindPort = int(port)
 	config.MemberlistConfig.AdvertiseAddr = "127.0.0.1"
 	config.MemberlistConfig.AdvertisePort = int(port)
-	s.logger.Infof("creating serf monitor on port %v for service %v", port, s.serviceName)
+	s.logger.Info(fmt.Sprintf("creating serf monitor on port %v for service %v", port, s.serviceName))
 	return membership.NewSerfMonitor(CadenceServices, s.config.BootstrapHosts, config, s.logger), nil
 }
