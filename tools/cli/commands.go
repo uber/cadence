@@ -747,28 +747,11 @@ func ListWorkflow(c *cli.Context) {
 	if printJSON || printDecodedRaw {
 		if !more {
 			results, _ := getListResultInRaw(c, queryOpen, nil)
+			fmt.Println("[")
 			printListResults(results, printJSON)
+			fmt.Println("]")
 		} else {
-			var results []*s.WorkflowExecutionInfo
-			var nextPageToken []byte
-			for {
-				results, nextPageToken = getListResultInRaw(c, queryOpen, nextPageToken)
-				printListResults(results, printJSON)
-
-				if len(results) < pageSize {
-					break
-				}
-
-				fmt.Printf("Press %s to show next page, press %s to quit: ",
-					color.GreenString("Enter"), color.RedString("any other key then Enter"))
-				var input string
-				fmt.Scanln(&input)
-				if strings.Trim(input, " ") == "" {
-					continue
-				} else {
-					break
-				}
-			}
+			ErrorAndExit("Not support printJSON in more mode", nil)
 		}
 		return
 	}
@@ -814,13 +797,16 @@ func ListAllWorkflow(c *cli.Context) {
 	if printJSON || printDecodedRaw {
 		var results []*s.WorkflowExecutionInfo
 		var nextPageToken []byte
+		fmt.Println("[")
 		for {
 			results, nextPageToken = getListResultInRaw(c, queryOpen, nextPageToken)
 			printListResults(results, printJSON)
+			//printListResultsInJson(results)
 			if len(results) < defaultPageSizeForList {
 				break
 			}
 		}
+		fmt.Println("]")
 		return
 	}
 
@@ -1150,12 +1136,20 @@ func getListResultInRaw(c *cli.Context, queryOpen bool, nextPageToken []byte) ([
 
 // default will print decoded raw
 func printListResults(executions []*s.WorkflowExecutionInfo, inJSON bool) {
-	for _, execution := range executions {
+	for i, execution := range executions {
 		if inJSON {
 			j, _ := json.Marshal(execution)
-			fmt.Println(string(j))
+			if i < len(executions)-1 {
+				fmt.Println(string(j) + ",")
+			} else {
+				fmt.Println(string(j))
+			}
 		} else {
-			fmt.Println(anyToString(execution, true, 0))
+			if i < len(executions)-1 {
+				fmt.Println(anyToString(execution, true, 0) + ",")
+			} else {
+				fmt.Println(anyToString(execution, true, 0))
+			}
 		}
 	}
 }
