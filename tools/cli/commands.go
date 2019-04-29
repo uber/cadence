@@ -371,6 +371,24 @@ func DescribeDomain(c *cli.Context) {
 		descValues = append(descValues, resp.Configuration.GetArchivalBucketOwner())
 	}
 	fmt.Printf(formatStr, descValues...)
+	if resp.Configuration.BadBinaries != nil {
+		fmt.Println("Bad binaries to reset:")
+		table := tablewriter.NewWriter(os.Stdout)
+		table.SetBorder(true)
+		table.SetColumnSeparator("|")
+		header := []string{"Binary Checksum", "Operator", "Start Time", "Reason"}
+		headerColor := []tablewriter.Colors{tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue}
+		table.SetHeader(header)
+		table.SetHeaderColor(headerColor...)
+		for cs, bin := range resp.Configuration.BadBinaries.Binaries {
+			row := []string{cs}
+			row = append(row, bin.GetOperator())
+			row = append(row, time.Unix(0, bin.GetCreatedTimeNano()).String())
+			row = append(row, bin.GetReason())
+			table.Append(row)
+		}
+		table.Render()
+	}
 }
 
 // ShowHistory shows the history of given workflow execution based on workflowID and runID.
