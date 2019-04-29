@@ -72,9 +72,9 @@ type (
 		// NewMetadataStore returns a new metadata store
 		NewMetadataStore() (p.MetadataStore, error)
 		// NewMetadataStoreV1 returns a metadata store that can talk v1
-		NewMetadataStoreV1() (p.MetadataManager, error)
+		NewMetadataStoreV1() (p.MetadataStore, error)
 		// NewMetadataStoreV2 returns a metadata store that can talk v2
-		NewMetadataStoreV2() (p.MetadataManager, error)
+		NewMetadataStoreV2() (p.MetadataStore, error)
 		// NewExecutionStore returns an execution store for given shardID
 		NewExecutionStore(shardID int) (p.ExecutionStore, error)
 		// NewVisibilityStore returns a new visibility store
