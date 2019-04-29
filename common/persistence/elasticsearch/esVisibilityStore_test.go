@@ -702,6 +702,25 @@ func (s *ESVisibilitySuite) TestGetESQueryDSL() {
 	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"WorkflowID":{"query":"wid"}}}]}},"from":0,"size":10,"sort":[{"CloseTime":"desc"},{"WorkflowID":"desc"}],"search_after":[1,"a"]}`, dsl)
 }
 
+func (s *ESVisibilitySuite) TestGetESQueryDSLForScan() {
+	request := &p.ListWorkflowExecutionsRequestV2{
+		PageSize: 10,
+	}
+	token := &esVisibilityPageToken{}
+
+	request.Query = `WorkflowID = 'wid' order by StartTime desc`
+	dsl, isOpen, err := getESQueryDSLForScan(request, token)
+	s.Nil(err)
+	s.False(isOpen)
+	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"WorkflowID":{"query":"wid"}}}]}},"from":0,"size":10}`, dsl)
+
+	request.Query = `WorkflowID = 'wid'`
+	dsl, isOpen, err = getESQueryDSLForScan(request, token)
+	s.Nil(err)
+	s.False(isOpen)
+	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"WorkflowID":{"query":"wid"}}}]}},"from":0,"size":10}`, dsl)
+}
+
 func (s *ESVisibilitySuite) TestListWorkflowExecutions() {
 	s.mockESClient.On("SearchWithDSL", mock.Anything, mock.Anything, mock.MatchedBy(func(input string) bool {
 		s.True(strings.Contains(input, `{"match_phrase":{"CloseStatus":{"query":"5"}}}`))

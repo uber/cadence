@@ -420,6 +420,7 @@ func getESQueryDSLHelper(request *p.ListWorkflowExecutionsRequestV2, token *esVi
 	}
 
 	if isScan { // no need to sort for scan
+		dsl.Del(dslFieldSort)
 		return dsl.String(), isOpen, nil
 	}
 
