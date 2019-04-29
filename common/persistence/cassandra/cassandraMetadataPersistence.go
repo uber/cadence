@@ -132,7 +132,7 @@ func (m *cassandraMetadataPersistence) Close() {
 // 'Domains' table and then do a conditional insert into domains_by_name table.  If the conditional write fails we
 // delete the orphaned entry from domains table.  There is a chance delete entry could fail and we never delete the
 // orphaned entry from domains table.  We might need a background job to delete those orphaned record.
-func (m *cassandraMetadataPersistence) CreateDomain(request *p.CreateDomainRequest) (*p.CreateDomainResponse, error) {
+func (m *cassandraMetadataPersistence) CreateDomain(request *p.InternalCreateDomainRequest) (*p.CreateDomainResponse, error) {
 	query := m.session.Query(templateCreateDomainQuery, request.Info.ID, request.Info.Name)
 	applied, err := query.ScanCAS()
 	if err != nil {
@@ -195,11 +195,11 @@ func (m *cassandraMetadataPersistence) CreateDomain(request *p.CreateDomainReque
 	return &p.CreateDomainResponse{ID: request.Info.ID}, nil
 }
 
-func (m *cassandraMetadataPersistence) GetDomain(request *p.GetDomainRequest) (*p.GetDomainResponse, error) {
+func (m *cassandraMetadataPersistence) GetDomain(request *p.GetDomainRequest) (*p.InternalGetDomainResponse, error) {
 	var query *gocql.Query
 	var err error
 	info := &p.DomainInfo{}
-	config := &p.DomainConfig{}
+	config := &p.InternalDomainConfig{}
 	replicationConfig := &p.DomainReplicationConfig{}
 	var replicationClusters []map[string]interface{}
 	var dbVersion int64
@@ -269,7 +269,7 @@ func (m *cassandraMetadataPersistence) GetDomain(request *p.GetDomainRequest) (*
 	replicationConfig.Clusters = p.DeserializeClusterConfigs(replicationClusters)
 	replicationConfig.Clusters = p.GetOrUseDefaultClusters(m.currentClusterName, replicationConfig.Clusters)
 
-	return &p.GetDomainResponse{
+	return &p.InternalGetDomainResponse{
 		Info:                info,
 		Config:              config,
 		ReplicationConfig:   replicationConfig,
@@ -281,7 +281,7 @@ func (m *cassandraMetadataPersistence) GetDomain(request *p.GetDomainRequest) (*
 	}, nil
 }
 
-func (m *cassandraMetadataPersistence) UpdateDomain(request *p.UpdateDomainRequest) error {
+func (m *cassandraMetadataPersistence) UpdateDomain(request *p.InternalUpdateDomainRequest) error {
 	var nextVersion int64 = 1
 	var currentVersion *int64
 	if request.NotificationVersion > 0 {
@@ -350,7 +350,7 @@ func (m *cassandraMetadataPersistence) DeleteDomainByName(request *p.DeleteDomai
 	return m.deleteDomain(request.Name, ID)
 }
 
-func (m *cassandraMetadataPersistence) ListDomains(request *p.ListDomainsRequest) (*p.ListDomainsResponse, error) {
+func (m *cassandraMetadataPersistence) ListDomains(request *p.ListDomainsRequest) (*p.InternalListDomainsResponse, error) {
 	panic("cassandraMetadataPersistence do not support list domain operation.")
 }
 

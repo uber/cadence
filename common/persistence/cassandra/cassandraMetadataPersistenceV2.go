@@ -129,7 +129,7 @@ func (m *cassandraMetadataPersistenceV2) Close() {
 // 'Domains' table and then do a conditional insert into domains_by_name table.  If the conditional write fails we
 // delete the orphaned entry from domains table.  There is a chance delete entry could fail and we never delete the
 // orphaned entry from domains table.  We might need a background job to delete those orphaned record.
-func (m *cassandraMetadataPersistenceV2) CreateDomain(request *p.CreateDomainRequest) (*p.CreateDomainResponse, error) {
+func (m *cassandraMetadataPersistenceV2) CreateDomain(request *p.InternalCreateDomainRequest) (*p.CreateDomainResponse, error) {
 	query := m.session.Query(templateCreateDomainQuery, request.Info.ID, request.Info.Name)
 	applied, err := query.ScanCAS()
 	if err != nil {
@@ -207,7 +207,7 @@ func (m *cassandraMetadataPersistenceV2) CreateDomain(request *p.CreateDomainReq
 	return &p.CreateDomainResponse{ID: request.Info.ID}, nil
 }
 
-func (m *cassandraMetadataPersistenceV2) UpdateDomain(request *p.UpdateDomainRequest) error {
+func (m *cassandraMetadataPersistenceV2) UpdateDomain(request *p.InternalUpdateDomainRequest) error {
 	batch := m.session.NewBatch(gocql.LoggedBatch)
 	batch.Query(templateUpdateDomainByNameQueryWithinBatchV2,
 		request.Info.ID,
@@ -253,11 +253,11 @@ func (m *cassandraMetadataPersistenceV2) UpdateDomain(request *p.UpdateDomainReq
 	return nil
 }
 
-func (m *cassandraMetadataPersistenceV2) GetDomain(request *p.GetDomainRequest) (*p.GetDomainResponse, error) {
+func (m *cassandraMetadataPersistenceV2) GetDomain(request *p.GetDomainRequest) (*p.InternalGetDomainResponse, error) {
 	var query *gocql.Query
 	var err error
 	info := &p.DomainInfo{}
-	config := &p.DomainConfig{}
+	config := &p.InternalDomainConfig{}
 	replicationConfig := &p.DomainReplicationConfig{}
 	var replicationClusters []map[string]interface{}
 	var failoverNotificationVersion int64
@@ -332,7 +332,7 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(request *p.GetDomainRequest) 
 	replicationConfig.Clusters = p.DeserializeClusterConfigs(replicationClusters)
 	replicationConfig.Clusters = p.GetOrUseDefaultClusters(m.currentClusterName, replicationConfig.Clusters)
 
-	return &p.GetDomainResponse{
+	return &p.InternalGetDomainResponse{
 		Info:                        info,
 		Config:                      config,
 		ReplicationConfig:           replicationConfig,
@@ -345,7 +345,7 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(request *p.GetDomainRequest) 
 	}, nil
 }
 
-func (m *cassandraMetadataPersistenceV2) ListDomains(request *p.ListDomainsRequest) (*p.ListDomainsResponse, error) {
+func (m *cassandraMetadataPersistenceV2) ListDomains(request *p.ListDomainsRequest) (*p.InternalListDomainsResponse, error) {
 	var query *gocql.Query
 
 	query = m.session.Query(templateListDomainQueryV2, constDomainPartition)
@@ -357,14 +357,14 @@ func (m *cassandraMetadataPersistenceV2) ListDomains(request *p.ListDomainsReque
 	}
 
 	var name string
-	domain := &p.GetDomainResponse{
+	domain := &p.InternalGetDomainResponse{
 		Info:              &p.DomainInfo{},
-		Config:            &p.DomainConfig{},
+		Config:            &p.InternalDomainConfig{},
 		ReplicationConfig: &p.DomainReplicationConfig{},
 		TableVersion:      p.DomainTableVersionV2,
 	}
 	var replicationClusters []map[string]interface{}
-	response := &p.ListDomainsResponse{}
+	response := &p.InternalListDomainsResponse{}
 	for iter.Scan(
 		&name,
 		&domain.Info.ID, &domain.Info.Name, &domain.Info.Status, &domain.Info.Description, &domain.Info.OwnerEmail, &domain.Info.Data,
@@ -384,9 +384,9 @@ func (m *cassandraMetadataPersistenceV2) ListDomains(request *p.ListDomainsReque
 			domain.ReplicationConfig.Clusters = p.GetOrUseDefaultClusters(m.currentClusterName, domain.ReplicationConfig.Clusters)
 			response.Domains = append(response.Domains, domain)
 		}
-		domain = &p.GetDomainResponse{
+		domain = &p.InternalGetDomainResponse{
 			Info:              &p.DomainInfo{},
-			Config:            &p.DomainConfig{},
+			Config:            &p.InternalDomainConfig{},
 			ReplicationConfig: &p.DomainReplicationConfig{},
 			TableVersion:      p.DomainTableVersionV2,
 		}
