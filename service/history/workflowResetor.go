@@ -97,7 +97,7 @@ func (w *workflowResetorImpl) ResetWorkflowExecution(ctx context.Context, reques
 		if newMutableState != nil && len(newMutableState.GetExecutionInfo().GetCurrentBranch()) > 0 {
 			w.eng.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
 				BranchToken: newMutableState.GetExecutionInfo().GetCurrentBranch(),
-				Success:     retError == nil || retError == gocql.ErrTimeoutNoResponse,
+				Success:     retError == nil || persistence.IsTimeoutError(retError),
 				ShardID:     common.IntPtr(w.eng.shard.GetShardID()),
 			})
 		}
