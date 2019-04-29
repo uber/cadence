@@ -13,14 +13,14 @@ import (
 	strings "strings"
 )
 
-// WorkflowService_ListWorkflowExecutions_Args represents the arguments for the WorkflowService.ListWorkflowExecutions function.
+// WorkflowService_ScanWorkflowExecutions_Args represents the arguments for the WorkflowService.ScanWorkflowExecutions function.
 //
-// The arguments for ListWorkflowExecutions are sent and received over the wire as this struct.
-type WorkflowService_ListWorkflowExecutions_Args struct {
+// The arguments for ScanWorkflowExecutions are sent and received over the wire as this struct.
+type WorkflowService_ScanWorkflowExecutions_Args struct {
 	ListRequest *shared.ListWorkflowExecutionsRequest `json:"listRequest,omitempty"`
 }
 
-// ToWire translates a WorkflowService_ListWorkflowExecutions_Args struct into a Thrift-level intermediate
+// ToWire translates a WorkflowService_ScanWorkflowExecutions_Args struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -35,7 +35,7 @@ type WorkflowService_ListWorkflowExecutions_Args struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *WorkflowService_ListWorkflowExecutions_Args) ToWire() (wire.Value, error) {
+func (v *WorkflowService_ScanWorkflowExecutions_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
 		i      int = 0
@@ -55,17 +55,11 @@ func (v *WorkflowService_ListWorkflowExecutions_Args) ToWire() (wire.Value, erro
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _ListWorkflowExecutionsRequest_Read(w wire.Value) (*shared.ListWorkflowExecutionsRequest, error) {
-	var v shared.ListWorkflowExecutionsRequest
-	err := v.FromWire(w)
-	return &v, err
-}
-
-// FromWire deserializes a WorkflowService_ListWorkflowExecutions_Args struct from its Thrift-level
+// FromWire deserializes a WorkflowService_ScanWorkflowExecutions_Args struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a WorkflowService_ListWorkflowExecutions_Args struct
+// An error is returned if we were unable to build a WorkflowService_ScanWorkflowExecutions_Args struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -73,12 +67,12 @@ func _ListWorkflowExecutionsRequest_Read(w wire.Value) (*shared.ListWorkflowExec
 //     return nil, err
 //   }
 //
-//   var v WorkflowService_ListWorkflowExecutions_Args
+//   var v WorkflowService_ScanWorkflowExecutions_Args
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *WorkflowService_ListWorkflowExecutions_Args) FromWire(w wire.Value) error {
+func (v *WorkflowService_ScanWorkflowExecutions_Args) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
@@ -97,9 +91,9 @@ func (v *WorkflowService_ListWorkflowExecutions_Args) FromWire(w wire.Value) err
 	return nil
 }
 
-// String returns a readable string representation of a WorkflowService_ListWorkflowExecutions_Args
+// String returns a readable string representation of a WorkflowService_ScanWorkflowExecutions_Args
 // struct.
-func (v *WorkflowService_ListWorkflowExecutions_Args) String() string {
+func (v *WorkflowService_ScanWorkflowExecutions_Args) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -111,14 +105,14 @@ func (v *WorkflowService_ListWorkflowExecutions_Args) String() string {
 		i++
 	}
 
-	return fmt.Sprintf("WorkflowService_ListWorkflowExecutions_Args{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("WorkflowService_ScanWorkflowExecutions_Args{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this WorkflowService_ListWorkflowExecutions_Args match the
-// provided WorkflowService_ListWorkflowExecutions_Args.
+// Equals returns true if all the fields of this WorkflowService_ScanWorkflowExecutions_Args match the
+// provided WorkflowService_ScanWorkflowExecutions_Args.
 //
 // This function performs a deep comparison.
-func (v *WorkflowService_ListWorkflowExecutions_Args) Equals(rhs *WorkflowService_ListWorkflowExecutions_Args) bool {
+func (v *WorkflowService_ScanWorkflowExecutions_Args) Equals(rhs *WorkflowService_ScanWorkflowExecutions_Args) bool {
 	if v == nil {
 		return rhs == nil
 	} else if rhs == nil {
@@ -132,8 +126,8 @@ func (v *WorkflowService_ListWorkflowExecutions_Args) Equals(rhs *WorkflowServic
 }
 
 // MarshalLogObject implements zapcore.ObjectMarshaler, enabling
-// fast logging of WorkflowService_ListWorkflowExecutions_Args.
-func (v *WorkflowService_ListWorkflowExecutions_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+// fast logging of WorkflowService_ScanWorkflowExecutions_Args.
+func (v *WorkflowService_ScanWorkflowExecutions_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	if v == nil {
 		return nil
 	}
@@ -145,7 +139,7 @@ func (v *WorkflowService_ListWorkflowExecutions_Args) MarshalLogObject(enc zapco
 
 // GetListRequest returns the value of ListRequest if it is set or its
 // zero value if it is unset.
-func (v *WorkflowService_ListWorkflowExecutions_Args) GetListRequest() (o *shared.ListWorkflowExecutionsRequest) {
+func (v *WorkflowService_ScanWorkflowExecutions_Args) GetListRequest() (o *shared.ListWorkflowExecutionsRequest) {
 	if v != nil && v.ListRequest != nil {
 		return v.ListRequest
 	}
@@ -154,80 +148,80 @@ func (v *WorkflowService_ListWorkflowExecutions_Args) GetListRequest() (o *share
 }
 
 // IsSetListRequest returns true if ListRequest is not nil.
-func (v *WorkflowService_ListWorkflowExecutions_Args) IsSetListRequest() bool {
+func (v *WorkflowService_ScanWorkflowExecutions_Args) IsSetListRequest() bool {
 	return v != nil && v.ListRequest != nil
 }
 
 // MethodName returns the name of the Thrift function as specified in
 // the IDL, for which this struct represent the arguments.
 //
-// This will always be "ListWorkflowExecutions" for this struct.
-func (v *WorkflowService_ListWorkflowExecutions_Args) MethodName() string {
-	return "ListWorkflowExecutions"
+// This will always be "ScanWorkflowExecutions" for this struct.
+func (v *WorkflowService_ScanWorkflowExecutions_Args) MethodName() string {
+	return "ScanWorkflowExecutions"
 }
 
 // EnvelopeType returns the kind of value inside this struct.
 //
 // This will always be Call for this struct.
-func (v *WorkflowService_ListWorkflowExecutions_Args) EnvelopeType() wire.EnvelopeType {
+func (v *WorkflowService_ScanWorkflowExecutions_Args) EnvelopeType() wire.EnvelopeType {
 	return wire.Call
 }
 
-// WorkflowService_ListWorkflowExecutions_Helper provides functions that aid in handling the
-// parameters and return values of the WorkflowService.ListWorkflowExecutions
+// WorkflowService_ScanWorkflowExecutions_Helper provides functions that aid in handling the
+// parameters and return values of the WorkflowService.ScanWorkflowExecutions
 // function.
-var WorkflowService_ListWorkflowExecutions_Helper = struct {
-	// Args accepts the parameters of ListWorkflowExecutions in-order and returns
+var WorkflowService_ScanWorkflowExecutions_Helper = struct {
+	// Args accepts the parameters of ScanWorkflowExecutions in-order and returns
 	// the arguments struct for the function.
 	Args func(
 		listRequest *shared.ListWorkflowExecutionsRequest,
-	) *WorkflowService_ListWorkflowExecutions_Args
+	) *WorkflowService_ScanWorkflowExecutions_Args
 
 	// IsException returns true if the given error can be thrown
-	// by ListWorkflowExecutions.
+	// by ScanWorkflowExecutions.
 	//
-	// An error can be thrown by ListWorkflowExecutions only if the
+	// An error can be thrown by ScanWorkflowExecutions only if the
 	// corresponding exception type was mentioned in the 'throws'
 	// section for it in the Thrift file.
 	IsException func(error) bool
 
-	// WrapResponse returns the result struct for ListWorkflowExecutions
+	// WrapResponse returns the result struct for ScanWorkflowExecutions
 	// given its return value and error.
 	//
 	// This allows mapping values and errors returned by
-	// ListWorkflowExecutions into a serializable result struct.
+	// ScanWorkflowExecutions into a serializable result struct.
 	// WrapResponse returns a non-nil error if the provided
-	// error cannot be thrown by ListWorkflowExecutions
+	// error cannot be thrown by ScanWorkflowExecutions
 	//
-	//   value, err := ListWorkflowExecutions(args)
-	//   result, err := WorkflowService_ListWorkflowExecutions_Helper.WrapResponse(value, err)
+	//   value, err := ScanWorkflowExecutions(args)
+	//   result, err := WorkflowService_ScanWorkflowExecutions_Helper.WrapResponse(value, err)
 	//   if err != nil {
-	//     return fmt.Errorf("unexpected error from ListWorkflowExecutions: %v", err)
+	//     return fmt.Errorf("unexpected error from ScanWorkflowExecutions: %v", err)
 	//   }
 	//   serialize(result)
-	WrapResponse func(*shared.ListWorkflowExecutionsResponse, error) (*WorkflowService_ListWorkflowExecutions_Result, error)
+	WrapResponse func(*shared.ListWorkflowExecutionsResponse, error) (*WorkflowService_ScanWorkflowExecutions_Result, error)
 
-	// UnwrapResponse takes the result struct for ListWorkflowExecutions
+	// UnwrapResponse takes the result struct for ScanWorkflowExecutions
 	// and returns the value or error returned by it.
 	//
-	// The error is non-nil only if ListWorkflowExecutions threw an
+	// The error is non-nil only if ScanWorkflowExecutions threw an
 	// exception.
 	//
 	//   result := deserialize(bytes)
-	//   value, err := WorkflowService_ListWorkflowExecutions_Helper.UnwrapResponse(result)
-	UnwrapResponse func(*WorkflowService_ListWorkflowExecutions_Result) (*shared.ListWorkflowExecutionsResponse, error)
+	//   value, err := WorkflowService_ScanWorkflowExecutions_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*WorkflowService_ScanWorkflowExecutions_Result) (*shared.ListWorkflowExecutionsResponse, error)
 }{}
 
 func init() {
-	WorkflowService_ListWorkflowExecutions_Helper.Args = func(
+	WorkflowService_ScanWorkflowExecutions_Helper.Args = func(
 		listRequest *shared.ListWorkflowExecutionsRequest,
-	) *WorkflowService_ListWorkflowExecutions_Args {
-		return &WorkflowService_ListWorkflowExecutions_Args{
+	) *WorkflowService_ScanWorkflowExecutions_Args {
+		return &WorkflowService_ScanWorkflowExecutions_Args{
 			ListRequest: listRequest,
 		}
 	}
 
-	WorkflowService_ListWorkflowExecutions_Helper.IsException = func(err error) bool {
+	WorkflowService_ScanWorkflowExecutions_Helper.IsException = func(err error) bool {
 		switch err.(type) {
 		case *shared.BadRequestError:
 			return true
@@ -244,42 +238,42 @@ func init() {
 		}
 	}
 
-	WorkflowService_ListWorkflowExecutions_Helper.WrapResponse = func(success *shared.ListWorkflowExecutionsResponse, err error) (*WorkflowService_ListWorkflowExecutions_Result, error) {
+	WorkflowService_ScanWorkflowExecutions_Helper.WrapResponse = func(success *shared.ListWorkflowExecutionsResponse, err error) (*WorkflowService_ScanWorkflowExecutions_Result, error) {
 		if err == nil {
-			return &WorkflowService_ListWorkflowExecutions_Result{Success: success}, nil
+			return &WorkflowService_ScanWorkflowExecutions_Result{Success: success}, nil
 		}
 
 		switch e := err.(type) {
 		case *shared.BadRequestError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ListWorkflowExecutions_Result.BadRequestError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ScanWorkflowExecutions_Result.BadRequestError")
 			}
-			return &WorkflowService_ListWorkflowExecutions_Result{BadRequestError: e}, nil
+			return &WorkflowService_ScanWorkflowExecutions_Result{BadRequestError: e}, nil
 		case *shared.InternalServiceError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ListWorkflowExecutions_Result.InternalServiceError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ScanWorkflowExecutions_Result.InternalServiceError")
 			}
-			return &WorkflowService_ListWorkflowExecutions_Result{InternalServiceError: e}, nil
+			return &WorkflowService_ScanWorkflowExecutions_Result{InternalServiceError: e}, nil
 		case *shared.EntityNotExistsError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ListWorkflowExecutions_Result.EntityNotExistError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ScanWorkflowExecutions_Result.EntityNotExistError")
 			}
-			return &WorkflowService_ListWorkflowExecutions_Result{EntityNotExistError: e}, nil
+			return &WorkflowService_ScanWorkflowExecutions_Result{EntityNotExistError: e}, nil
 		case *shared.ServiceBusyError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ListWorkflowExecutions_Result.ServiceBusyError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ScanWorkflowExecutions_Result.ServiceBusyError")
 			}
-			return &WorkflowService_ListWorkflowExecutions_Result{ServiceBusyError: e}, nil
+			return &WorkflowService_ScanWorkflowExecutions_Result{ServiceBusyError: e}, nil
 		case *shared.ClientVersionNotSupportedError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ListWorkflowExecutions_Result.ClientVersionNotSupportedError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ScanWorkflowExecutions_Result.ClientVersionNotSupportedError")
 			}
-			return &WorkflowService_ListWorkflowExecutions_Result{ClientVersionNotSupportedError: e}, nil
+			return &WorkflowService_ScanWorkflowExecutions_Result{ClientVersionNotSupportedError: e}, nil
 		}
 
 		return nil, err
 	}
-	WorkflowService_ListWorkflowExecutions_Helper.UnwrapResponse = func(result *WorkflowService_ListWorkflowExecutions_Result) (success *shared.ListWorkflowExecutionsResponse, err error) {
+	WorkflowService_ScanWorkflowExecutions_Helper.UnwrapResponse = func(result *WorkflowService_ScanWorkflowExecutions_Result) (success *shared.ListWorkflowExecutionsResponse, err error) {
 		if result.BadRequestError != nil {
 			err = result.BadRequestError
 			return
@@ -312,13 +306,13 @@ func init() {
 
 }
 
-// WorkflowService_ListWorkflowExecutions_Result represents the result of a WorkflowService.ListWorkflowExecutions function call.
+// WorkflowService_ScanWorkflowExecutions_Result represents the result of a WorkflowService.ScanWorkflowExecutions function call.
 //
-// The result of a ListWorkflowExecutions execution is sent and received over the wire as this struct.
+// The result of a ScanWorkflowExecutions execution is sent and received over the wire as this struct.
 //
 // Success is set only if the function did not throw an exception.
-type WorkflowService_ListWorkflowExecutions_Result struct {
-	// Value returned by ListWorkflowExecutions after a successful execution.
+type WorkflowService_ScanWorkflowExecutions_Result struct {
+	// Value returned by ScanWorkflowExecutions after a successful execution.
 	Success                        *shared.ListWorkflowExecutionsResponse `json:"success,omitempty"`
 	BadRequestError                *shared.BadRequestError                `json:"badRequestError,omitempty"`
 	InternalServiceError           *shared.InternalServiceError           `json:"internalServiceError,omitempty"`
@@ -327,7 +321,7 @@ type WorkflowService_ListWorkflowExecutions_Result struct {
 	ClientVersionNotSupportedError *shared.ClientVersionNotSupportedError `json:"clientVersionNotSupportedError,omitempty"`
 }
 
-// ToWire translates a WorkflowService_ListWorkflowExecutions_Result struct into a Thrift-level intermediate
+// ToWire translates a WorkflowService_ScanWorkflowExecutions_Result struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -342,7 +336,7 @@ type WorkflowService_ListWorkflowExecutions_Result struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *WorkflowService_ListWorkflowExecutions_Result) ToWire() (wire.Value, error) {
+func (v *WorkflowService_ScanWorkflowExecutions_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [6]wire.Field
 		i      int = 0
@@ -400,23 +394,17 @@ func (v *WorkflowService_ListWorkflowExecutions_Result) ToWire() (wire.Value, er
 	}
 
 	if i != 1 {
-		return wire.Value{}, fmt.Errorf("WorkflowService_ListWorkflowExecutions_Result should have exactly one field: got %v fields", i)
+		return wire.Value{}, fmt.Errorf("WorkflowService_ScanWorkflowExecutions_Result should have exactly one field: got %v fields", i)
 	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _ListWorkflowExecutionsResponse_Read(w wire.Value) (*shared.ListWorkflowExecutionsResponse, error) {
-	var v shared.ListWorkflowExecutionsResponse
-	err := v.FromWire(w)
-	return &v, err
-}
-
-// FromWire deserializes a WorkflowService_ListWorkflowExecutions_Result struct from its Thrift-level
+// FromWire deserializes a WorkflowService_ScanWorkflowExecutions_Result struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a WorkflowService_ListWorkflowExecutions_Result struct
+// An error is returned if we were unable to build a WorkflowService_ScanWorkflowExecutions_Result struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -424,12 +412,12 @@ func _ListWorkflowExecutionsResponse_Read(w wire.Value) (*shared.ListWorkflowExe
 //     return nil, err
 //   }
 //
-//   var v WorkflowService_ListWorkflowExecutions_Result
+//   var v WorkflowService_ScanWorkflowExecutions_Result
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *WorkflowService_ListWorkflowExecutions_Result) FromWire(w wire.Value) error {
+func (v *WorkflowService_ScanWorkflowExecutions_Result) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
@@ -505,15 +493,15 @@ func (v *WorkflowService_ListWorkflowExecutions_Result) FromWire(w wire.Value) e
 		count++
 	}
 	if count != 1 {
-		return fmt.Errorf("WorkflowService_ListWorkflowExecutions_Result should have exactly one field: got %v fields", count)
+		return fmt.Errorf("WorkflowService_ScanWorkflowExecutions_Result should have exactly one field: got %v fields", count)
 	}
 
 	return nil
 }
 
-// String returns a readable string representation of a WorkflowService_ListWorkflowExecutions_Result
+// String returns a readable string representation of a WorkflowService_ScanWorkflowExecutions_Result
 // struct.
-func (v *WorkflowService_ListWorkflowExecutions_Result) String() string {
+func (v *WorkflowService_ScanWorkflowExecutions_Result) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -545,14 +533,14 @@ func (v *WorkflowService_ListWorkflowExecutions_Result) String() string {
 		i++
 	}
 
-	return fmt.Sprintf("WorkflowService_ListWorkflowExecutions_Result{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("WorkflowService_ScanWorkflowExecutions_Result{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this WorkflowService_ListWorkflowExecutions_Result match the
-// provided WorkflowService_ListWorkflowExecutions_Result.
+// Equals returns true if all the fields of this WorkflowService_ScanWorkflowExecutions_Result match the
+// provided WorkflowService_ScanWorkflowExecutions_Result.
 //
 // This function performs a deep comparison.
-func (v *WorkflowService_ListWorkflowExecutions_Result) Equals(rhs *WorkflowService_ListWorkflowExecutions_Result) bool {
+func (v *WorkflowService_ScanWorkflowExecutions_Result) Equals(rhs *WorkflowService_ScanWorkflowExecutions_Result) bool {
 	if v == nil {
 		return rhs == nil
 	} else if rhs == nil {
@@ -581,8 +569,8 @@ func (v *WorkflowService_ListWorkflowExecutions_Result) Equals(rhs *WorkflowServ
 }
 
 // MarshalLogObject implements zapcore.ObjectMarshaler, enabling
-// fast logging of WorkflowService_ListWorkflowExecutions_Result.
-func (v *WorkflowService_ListWorkflowExecutions_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+// fast logging of WorkflowService_ScanWorkflowExecutions_Result.
+func (v *WorkflowService_ScanWorkflowExecutions_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	if v == nil {
 		return nil
 	}
@@ -609,7 +597,7 @@ func (v *WorkflowService_ListWorkflowExecutions_Result) MarshalLogObject(enc zap
 
 // GetSuccess returns the value of Success if it is set or its
 // zero value if it is unset.
-func (v *WorkflowService_ListWorkflowExecutions_Result) GetSuccess() (o *shared.ListWorkflowExecutionsResponse) {
+func (v *WorkflowService_ScanWorkflowExecutions_Result) GetSuccess() (o *shared.ListWorkflowExecutionsResponse) {
 	if v != nil && v.Success != nil {
 		return v.Success
 	}
@@ -618,13 +606,13 @@ func (v *WorkflowService_ListWorkflowExecutions_Result) GetSuccess() (o *shared.
 }
 
 // IsSetSuccess returns true if Success is not nil.
-func (v *WorkflowService_ListWorkflowExecutions_Result) IsSetSuccess() bool {
+func (v *WorkflowService_ScanWorkflowExecutions_Result) IsSetSuccess() bool {
 	return v != nil && v.Success != nil
 }
 
 // GetBadRequestError returns the value of BadRequestError if it is set or its
 // zero value if it is unset.
-func (v *WorkflowService_ListWorkflowExecutions_Result) GetBadRequestError() (o *shared.BadRequestError) {
+func (v *WorkflowService_ScanWorkflowExecutions_Result) GetBadRequestError() (o *shared.BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -633,13 +621,13 @@ func (v *WorkflowService_ListWorkflowExecutions_Result) GetBadRequestError() (o 
 }
 
 // IsSetBadRequestError returns true if BadRequestError is not nil.
-func (v *WorkflowService_ListWorkflowExecutions_Result) IsSetBadRequestError() bool {
+func (v *WorkflowService_ScanWorkflowExecutions_Result) IsSetBadRequestError() bool {
 	return v != nil && v.BadRequestError != nil
 }
 
 // GetInternalServiceError returns the value of InternalServiceError if it is set or its
 // zero value if it is unset.
-func (v *WorkflowService_ListWorkflowExecutions_Result) GetInternalServiceError() (o *shared.InternalServiceError) {
+func (v *WorkflowService_ScanWorkflowExecutions_Result) GetInternalServiceError() (o *shared.InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -648,13 +636,13 @@ func (v *WorkflowService_ListWorkflowExecutions_Result) GetInternalServiceError(
 }
 
 // IsSetInternalServiceError returns true if InternalServiceError is not nil.
-func (v *WorkflowService_ListWorkflowExecutions_Result) IsSetInternalServiceError() bool {
+func (v *WorkflowService_ScanWorkflowExecutions_Result) IsSetInternalServiceError() bool {
 	return v != nil && v.InternalServiceError != nil
 }
 
 // GetEntityNotExistError returns the value of EntityNotExistError if it is set or its
 // zero value if it is unset.
-func (v *WorkflowService_ListWorkflowExecutions_Result) GetEntityNotExistError() (o *shared.EntityNotExistsError) {
+func (v *WorkflowService_ScanWorkflowExecutions_Result) GetEntityNotExistError() (o *shared.EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -663,13 +651,13 @@ func (v *WorkflowService_ListWorkflowExecutions_Result) GetEntityNotExistError()
 }
 
 // IsSetEntityNotExistError returns true if EntityNotExistError is not nil.
-func (v *WorkflowService_ListWorkflowExecutions_Result) IsSetEntityNotExistError() bool {
+func (v *WorkflowService_ScanWorkflowExecutions_Result) IsSetEntityNotExistError() bool {
 	return v != nil && v.EntityNotExistError != nil
 }
 
 // GetServiceBusyError returns the value of ServiceBusyError if it is set or its
 // zero value if it is unset.
-func (v *WorkflowService_ListWorkflowExecutions_Result) GetServiceBusyError() (o *shared.ServiceBusyError) {
+func (v *WorkflowService_ScanWorkflowExecutions_Result) GetServiceBusyError() (o *shared.ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
@@ -678,13 +666,13 @@ func (v *WorkflowService_ListWorkflowExecutions_Result) GetServiceBusyError() (o
 }
 
 // IsSetServiceBusyError returns true if ServiceBusyError is not nil.
-func (v *WorkflowService_ListWorkflowExecutions_Result) IsSetServiceBusyError() bool {
+func (v *WorkflowService_ScanWorkflowExecutions_Result) IsSetServiceBusyError() bool {
 	return v != nil && v.ServiceBusyError != nil
 }
 
 // GetClientVersionNotSupportedError returns the value of ClientVersionNotSupportedError if it is set or its
 // zero value if it is unset.
-func (v *WorkflowService_ListWorkflowExecutions_Result) GetClientVersionNotSupportedError() (o *shared.ClientVersionNotSupportedError) {
+func (v *WorkflowService_ScanWorkflowExecutions_Result) GetClientVersionNotSupportedError() (o *shared.ClientVersionNotSupportedError) {
 	if v != nil && v.ClientVersionNotSupportedError != nil {
 		return v.ClientVersionNotSupportedError
 	}
@@ -693,21 +681,21 @@ func (v *WorkflowService_ListWorkflowExecutions_Result) GetClientVersionNotSuppo
 }
 
 // IsSetClientVersionNotSupportedError returns true if ClientVersionNotSupportedError is not nil.
-func (v *WorkflowService_ListWorkflowExecutions_Result) IsSetClientVersionNotSupportedError() bool {
+func (v *WorkflowService_ScanWorkflowExecutions_Result) IsSetClientVersionNotSupportedError() bool {
 	return v != nil && v.ClientVersionNotSupportedError != nil
 }
 
 // MethodName returns the name of the Thrift function as specified in
 // the IDL, for which this struct represent the result.
 //
-// This will always be "ListWorkflowExecutions" for this struct.
-func (v *WorkflowService_ListWorkflowExecutions_Result) MethodName() string {
-	return "ListWorkflowExecutions"
+// This will always be "ScanWorkflowExecutions" for this struct.
+func (v *WorkflowService_ScanWorkflowExecutions_Result) MethodName() string {
+	return "ScanWorkflowExecutions"
 }
 
 // EnvelopeType returns the kind of value inside this struct.
 //
 // This will always be Reply for this struct.
-func (v *WorkflowService_ListWorkflowExecutions_Result) EnvelopeType() wire.EnvelopeType {
+func (v *WorkflowService_ScanWorkflowExecutions_Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }

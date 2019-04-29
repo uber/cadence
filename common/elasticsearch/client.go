@@ -33,6 +33,7 @@ type (
 	Client interface {
 		Search(ctx context.Context, p *SearchParameters) (*elastic.SearchResult, error)
 		SearchWithDSL(ctx context.Context, index, query string) (*elastic.SearchResult, error)
+		NewScrollService() *elastic.ScrollService
 		RunBulkProcessor(ctx context.Context, p *BulkProcessorParameters) (*elastic.BulkProcessor, error)
 	}
 
@@ -102,6 +103,10 @@ func (c *elasticWrapper) Search(ctx context.Context, p *SearchParameters) (*elas
 
 func (c *elasticWrapper) SearchWithDSL(ctx context.Context, index, query string) (*elastic.SearchResult, error) {
 	return c.client.Search(index).Source(query).Do(ctx)
+}
+
+func (c *elasticWrapper) NewScrollService() *elastic.ScrollService {
+	return elastic.NewScrollService(c.client)
 }
 
 func (c *elasticWrapper) RunBulkProcessor(ctx context.Context, p *BulkProcessorParameters) (*elastic.BulkProcessor, error) {

@@ -31,6 +31,22 @@ type Client struct {
 	mock.Mock
 }
 
+// NewScrollService provides a mock function with given fields:
+func (_m *Client) NewScrollService() *elastic.ScrollService {
+	ret := _m.Called()
+
+	var r0 *elastic.ScrollService
+	if rf, ok := ret.Get(0).(func() *elastic.ScrollService); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*elastic.ScrollService)
+		}
+	}
+
+	return r0
+}
+
 // RunBulkProcessor provides a mock function with given fields: ctx, p
 func (_m *Client) RunBulkProcessor(ctx context.Context, p *elasticsearch.BulkProcessorParameters) (*elastic.BulkProcessor, error) {
 	ret := _m.Called(ctx, p)
@@ -78,7 +94,7 @@ func (_m *Client) Search(ctx context.Context, p *elasticsearch.SearchParameters)
 }
 
 // SearchWithDSL provides a mock function with given fields: ctx, index, query
-func (_m *Client) SearchWithDSL(ctx context.Context, index, query string) (*elastic.SearchResult, error) {
+func (_m *Client) SearchWithDSL(ctx context.Context, index string, query string) (*elastic.SearchResult, error) {
 	ret := _m.Called(ctx, index, query)
 
 	var r0 *elastic.SearchResult
