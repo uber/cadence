@@ -25,8 +25,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gocql/gocql"
-
 	"github.com/pborman/uuid"
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -757,7 +755,7 @@ func (w *workflowResetorImpl) ApplyResetEvent(ctx context.Context, request *h.Re
 	defer func() {
 		w.eng.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
 			BranchToken: newMsBuilder.GetExecutionInfo().GetCurrentBranch(),
-			Success:     retError == nil || retError == gocql.ErrTimeoutNoResponse,
+			Success:     retError == nil || persistence.IsTimeoutError(retError),
 			ShardID:     shardID,
 		})
 	}()
