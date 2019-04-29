@@ -140,10 +140,15 @@ func RegisterDomain(c *cli.Context) {
 			ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagEmitMetric), err)
 		}
 	}
+	isGlobalDomain := false
 	if !c.IsSet(FlagIsGlobalDomain) {
 		ErrorAndExit(fmt.Sprintf("Option %s must be provided.", FlagIsGlobalDomain), err)
+	} else {
+		isGlobalDomain, err = strconv.ParseBool(c.String(FlagIsGlobalDomain))
+		if err != nil {
+			ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagIsGlobalDomain), err)
+		}
 	}
-	isGlobalDomain := c.Bool(FlagIsGlobalDomain)
 
 	domainData := map[string]string{}
 	if c.IsSet(FlagDomainData) {
