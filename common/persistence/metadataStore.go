@@ -119,13 +119,13 @@ func (m *metadataManagerImpl) ListDomains(request *ListDomainsRequest) (*ListDom
 	if err != nil {
 		return nil, err
 	}
-	var domians []*GetDomainResponse
+	domains := make([]*GetDomainResponse, 0, len(resp.Domains))
 	for _, d := range resp.Domains {
 		dc, err := m.deserializeDomainConfig(d.Config)
 		if err != nil {
 			return nil, err
 		}
-		domians = append(domians, &GetDomainResponse{
+		domains = append(domains, &GetDomainResponse{
 			Info:                        d.Info,
 			Config:                      &dc,
 			ReplicationConfig:           d.ReplicationConfig,
@@ -138,7 +138,8 @@ func (m *metadataManagerImpl) ListDomains(request *ListDomainsRequest) (*ListDom
 		})
 	}
 	return &ListDomainsResponse{
-		Domains: domians,
+		Domains:       domains,
+		NextPageToken: resp.NextPageToken,
 	}, nil
 }
 
