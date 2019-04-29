@@ -26,6 +26,9 @@ public interface FileProcessingActivities {
 }
 
 ```
+It is recommended to use a single value type argument for activity methods. This way, adding new arguments as fields 
+to the value type is a backwards-compatible change.
+
 An optional @ActivityMethod annotation can be used to specify activity options like timeouts or a task list. Required options
 that are not specified through the annotation must be specified at run time.
 
