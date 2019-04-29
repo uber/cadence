@@ -227,7 +227,7 @@ func (f *factoryImpl) NewMetadataManager(version MetadataVersion) (p.MetadataMan
 		return nil, err
 	}
 
-	result := p.MetadataManager(store)
+	result := p.NewMetadataManagerImpl(store, f.logger)
 	if ds.ratelimit != nil {
 		result = p.NewMetadataPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
