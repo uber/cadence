@@ -93,6 +93,12 @@ func (m *sqlMetadataManagerV2) CreateDomain(request *persistence.InternalCreateD
 		clusters[i] = request.ReplicationConfig.Clusters[i].ClusterName
 	}
 
+	var badBinaries []byte
+	var badBinariesEncoding *string
+	if request.Config.BadBinaries != nil {
+		badBinaries = request.Config.BadBinaries.Data
+		badBinariesEncoding = common.StringPtr(string(request.Config.BadBinaries.GetEncoding()))
+	}
 	domainInfo := &sqlblobs.DomainInfo{
 		Status:                      common.Int32Ptr(int32(request.Info.Status)),
 		Description:                 &request.Info.Description,
@@ -108,6 +114,8 @@ func (m *sqlMetadataManagerV2) CreateDomain(request *persistence.InternalCreateD
 		FailoverVersion:             common.Int64Ptr(request.FailoverVersion),
 		NotificationVersion:         common.Int64Ptr(metadata.NotificationVersion),
 		FailoverNotificationVersion: common.Int64Ptr(persistence.InitialFailoverNotificationVersion),
+		BadBinaries:                 badBinaries,
+		BadBinariesEncoding:         badBinariesEncoding,
 	}
 
 	blob, err := domainInfoToBlob(domainInfo)
@@ -199,6 +207,11 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqldb.DomainRow
 		clusters[i] = &persistence.ClusterReplicationConfig{ClusterName: domainInfo.Clusters[i]}
 	}
 
+	var badBinaries *persistence.DataBlob
+	if domainInfo.BadBinaries != nil {
+		badBinaries = persistence.NewDataBlob(domainInfo.BadBinaries, common.EncodingType(*domainInfo.BadBinariesEncoding))
+	}
+
 	return &persistence.InternalGetDomainResponse{
 		TableVersion: persistence.DomainTableVersionV2,
 		Info: &persistence.DomainInfo{
@@ -214,6 +227,7 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqldb.DomainRow
 			EmitMetric:     domainInfo.GetEmitMetric(),
 			ArchivalBucket: domainInfo.GetArchivalBucket(),
 			ArchivalStatus: workflow.ArchivalStatus(domainInfo.GetArchivalStatus()),
+			BadBinaries:    badBinaries,
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: persistence.GetOrUseDefaultActiveCluster(m.activeClusterName, domainInfo.GetActiveClusterName()),
@@ -233,6 +247,12 @@ func (m *sqlMetadataManagerV2) UpdateDomain(request *persistence.InternalUpdateD
 		clusters[i] = request.ReplicationConfig.Clusters[i].ClusterName
 	}
 
+	var badBinaries []byte
+	var badBinariesEncoding *string
+	if request.Config.BadBinaries != nil {
+		badBinaries = request.Config.BadBinaries.Data
+		badBinariesEncoding = common.StringPtr(string(request.Config.BadBinaries.GetEncoding()))
+	}
 	domainInfo := &sqlblobs.DomainInfo{
 		Status:                      common.Int32Ptr(int32(request.Info.Status)),
 		Description:                 &request.Info.Description,
@@ -248,6 +268,8 @@ func (m *sqlMetadataManagerV2) UpdateDomain(request *persistence.InternalUpdateD
 		FailoverVersion:             common.Int64Ptr(request.FailoverVersion),
 		NotificationVersion:         common.Int64Ptr(request.NotificationVersion),
 		FailoverNotificationVersion: common.Int64Ptr(request.FailoverNotificationVersion),
+		BadBinaries:                 badBinaries,
+		BadBinariesEncoding:         badBinariesEncoding,
 	}
 
 	blob, err := domainInfoToBlob(domainInfo)
