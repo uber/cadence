@@ -1248,7 +1248,7 @@ Update_History_Loop:
 		maxResetPoints := e.config.MaxAutoResetPoints(domainEntry.GetInfo().Name)
 		if msBuilder.GetExecutionInfo().AutoResetPoints != nil && maxResetPoints == len(msBuilder.GetExecutionInfo().AutoResetPoints.Points) {
 			e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.AutoResetPointsLimitExceededCounter)
-			e.logger.Warn("the number of auto-reset points is exceeding the limit, will do rotating.",
+			e.throttledLogger.Warn("the number of auto-reset points is exceeding the limit, will do rotating.",
 				tag.WorkflowDomainName(domainEntry.GetInfo().Name),
 				tag.WorkflowID(workflowExecution.GetWorkflowId()),
 				tag.WorkflowDomainName(workflowExecution.GetRunId()),
