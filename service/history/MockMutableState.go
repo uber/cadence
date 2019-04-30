@@ -870,12 +870,12 @@ func (_m *mockMutableState) CloseUpdateSession() (*mutableStateSessionUpdates, e
 }
 
 // CloseUpdateSession provides a mock function with given fields:
-func (_m *mockMutableState) CheckResettable(b bool) error {
-	ret := _m.Called(b)
+func (_m *mockMutableState) CheckResettable() error {
+	ret := _m.Called()
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(bool) error); ok {
-		r0 = rf(b)
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(error)

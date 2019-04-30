@@ -93,7 +93,7 @@ type (
 		BufferReplicationTask(*h.ReplicateEventsRequest) error
 		ClearStickyness()
 		CloseUpdateSession() (*mutableStateSessionUpdates, error)
-		CheckResettable(bool) error
+		CheckResettable() error
 		CopyToPersistence() *persistence.WorkflowMutableState
 		CreateActivityRetryTimer(*persistence.ActivityInfo, string) persistence.Task
 		CreateNewHistoryEvent(eventType workflow.EventType) *workflow.HistoryEvent

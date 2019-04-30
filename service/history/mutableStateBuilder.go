@@ -1650,7 +1650,7 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(event *workflow.Histo
 	}
 
 	resettable := true
-	err := e.CheckResettable(false)
+	err := e.CheckResettable()
 	if err != nil {
 		resettable = false
 	}
@@ -1667,8 +1667,8 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(event *workflow.Histo
 }
 
 // TODO: we will release the restriction when reset API allow those pending
-func (e *mutableStateBuilder) CheckResettable(curr bool) (retError error) {
-	if e.GetEventStoreVersion() != persistence.EventStoreVersionV2 && !curr {
+func (e *mutableStateBuilder) CheckResettable() (retError error) {
+	if e.GetEventStoreVersion() != persistence.EventStoreVersionV2 {
 		retError = &workflow.BadRequestError{
 			Message: fmt.Sprintf("reset API is not supported for V1 history events, runID"),
 		}

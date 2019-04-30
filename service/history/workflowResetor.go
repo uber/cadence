@@ -173,7 +173,7 @@ func (w *workflowResetorImpl) validateResetWorkflowBeforeReplay(baseMutableState
 }
 
 func (w *workflowResetorImpl) validateResetWorkflowAfterReplay(newMutableState mutableState) (retError error) {
-	retError = newMutableState.CheckResettable(false)
+	retError = newMutableState.CheckResettable()
 	if retError != nil {
 		return
 	}
