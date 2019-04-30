@@ -859,7 +859,9 @@ func (w *workflowResetorImpl) replicateResetEvent(baseMutableState mutableState,
 	return
 }
 
-// In
+// TODO:
+// remove checking for eventsV2 after we totally get rid of eventsV1
+// remove checking for pending ChildWFs after we implement reset with childWFs
 func (w *workflowResetorImpl) CheckResettable(ms mutableState, curr bool) (retError error) {
 	runID := ms.GetExecutionInfo().RunID
 	if ms.GetEventStoreVersion() != persistence.EventStoreVersionV2 && !curr {
