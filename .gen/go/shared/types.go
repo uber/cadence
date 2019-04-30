@@ -48760,11 +48760,8 @@ type WorkflowExecutionStartedEventAttributes struct {
 	CronSchedule                        *string                 `json:"cronSchedule,omitempty"`
 	FirstDecisionTaskBackoffSeconds     *int32                  `json:"firstDecisionTaskBackoffSeconds,omitempty"`
 	Memo                                *Memo                   `json:"memo,omitempty"`
-<<<<<<< HEAD
 	PrevAutoResetPoints                 *ResetPoints            `json:"prevAutoResetPoints,omitempty"`
-=======
 	Header                              *Header                 `json:"header,omitempty"`
->>>>>>> Add header parameter to start workflow/activity methods
 }
 
 // ToWire translates a WorkflowExecutionStartedEventAttributes struct into a Thrift-level intermediate
@@ -48784,7 +48781,7 @@ type WorkflowExecutionStartedEventAttributes struct {
 //   }
 func (v *WorkflowExecutionStartedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [22]wire.Field
+		fields [23]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -48958,17 +48955,20 @@ func (v *WorkflowExecutionStartedEventAttributes) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 120, Value: w}
 		i++
 	}
-<<<<<<< HEAD
 	if v.PrevAutoResetPoints != nil {
 		w, err = v.PrevAutoResetPoints.ToWire()
-=======
-	if v.Header != nil {
-		w, err = v.Header.ToWire()
->>>>>>> Add header parameter to start workflow/activity methods
 		if err != nil {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 130, Value: w}
+		i++
+	}
+	if v.Header != nil {
+		w, err = v.Header.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 140, Value: w}
 		i++
 	}
 
@@ -49199,11 +49199,15 @@ func (v *WorkflowExecutionStartedEventAttributes) FromWire(w wire.Value) error {
 			}
 		case 130:
 			if field.Value.Type() == wire.TStruct {
-<<<<<<< HEAD
 				v.PrevAutoResetPoints, err = _ResetPoints_Read(field.Value)
-=======
+				if err != nil {
+					return err
+				}
+
+			}
+		case 140:
+			if field.Value.Type() == wire.TStruct {
 				v.Header, err = _Header_Read(field.Value)
->>>>>>> Add header parameter to start workflow/activity methods
 				if err != nil {
 					return err
 				}
@@ -49222,7 +49226,7 @@ func (v *WorkflowExecutionStartedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [22]string
+	var fields [23]string
 	i := 0
 	if v.WorkflowType != nil {
 		fields[i] = fmt.Sprintf("WorkflowType: %v", v.WorkflowType)
@@ -49308,13 +49312,12 @@ func (v *WorkflowExecutionStartedEventAttributes) String() string {
 		fields[i] = fmt.Sprintf("Memo: %v", v.Memo)
 		i++
 	}
-<<<<<<< HEAD
 	if v.PrevAutoResetPoints != nil {
 		fields[i] = fmt.Sprintf("PrevAutoResetPoints: %v", v.PrevAutoResetPoints)
-=======
+		i++
+	}
 	if v.Header != nil {
 		fields[i] = fmt.Sprintf("Header: %v", v.Header)
->>>>>>> Add header parameter to start workflow/activity methods
 		i++
 	}
 
@@ -49394,11 +49397,10 @@ func (v *WorkflowExecutionStartedEventAttributes) Equals(rhs *WorkflowExecutionS
 	if !((v.Memo == nil && rhs.Memo == nil) || (v.Memo != nil && rhs.Memo != nil && v.Memo.Equals(rhs.Memo))) {
 		return false
 	}
-<<<<<<< HEAD
 	if !((v.PrevAutoResetPoints == nil && rhs.PrevAutoResetPoints == nil) || (v.PrevAutoResetPoints != nil && rhs.PrevAutoResetPoints != nil && v.PrevAutoResetPoints.Equals(rhs.PrevAutoResetPoints))) {
-=======
+		return false
+	}
 	if !((v.Header == nil && rhs.Header == nil) || (v.Header != nil && rhs.Header != nil && v.Header.Equals(rhs.Header))) {
->>>>>>> Add header parameter to start workflow/activity methods
 		return false
 	}
 
@@ -49474,13 +49476,11 @@ func (v *WorkflowExecutionStartedEventAttributes) MarshalLogObject(enc zapcore.O
 	if v.Memo != nil {
 		err = multierr.Append(err, enc.AddObject("memo", v.Memo))
 	}
-<<<<<<< HEAD
 	if v.PrevAutoResetPoints != nil {
 		err = multierr.Append(err, enc.AddObject("prevAutoResetPoints", v.PrevAutoResetPoints))
-=======
+	}
 	if v.Header != nil {
 		err = multierr.Append(err, enc.AddObject("header", v.Header))
->>>>>>> Add header parameter to start workflow/activity methods
 	}
 	return err
 }
@@ -49800,33 +49800,34 @@ func (v *WorkflowExecutionStartedEventAttributes) IsSetMemo() bool {
 	return v != nil && v.Memo != nil
 }
 
-<<<<<<< HEAD
 // GetPrevAutoResetPoints returns the value of PrevAutoResetPoints if it is set or its
 // zero value if it is unset.
 func (v *WorkflowExecutionStartedEventAttributes) GetPrevAutoResetPoints() (o *ResetPoints) {
 	if v != nil && v.PrevAutoResetPoints != nil {
 		return v.PrevAutoResetPoints
-=======
-// GetHeader returns the value of Header if it is set or its
-// zero value if it is unset.
-func (v *WorkflowExecutionStartedEventAttributes) GetHeader() (o *Header) {
-	if v != nil && v.Header != nil {
-		return v.Header
->>>>>>> Add header parameter to start workflow/activity methods
 	}
 
 	return
 }
 
-<<<<<<< HEAD
 // IsSetPrevAutoResetPoints returns true if PrevAutoResetPoints is not nil.
 func (v *WorkflowExecutionStartedEventAttributes) IsSetPrevAutoResetPoints() bool {
 	return v != nil && v.PrevAutoResetPoints != nil
-=======
+}
+
+// GetHeader returns the value of Header if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionStartedEventAttributes) GetHeader() (o *Header) {
+	if v != nil && v.Header != nil {
+		return v.Header
+	}
+
+	return
+}
+
 // IsSetHeader returns true if Header is not nil.
 func (v *WorkflowExecutionStartedEventAttributes) IsSetHeader() bool {
 	return v != nil && v.Header != nil
->>>>>>> Add header parameter to start workflow/activity methods
 }
 
 type WorkflowExecutionTerminatedEventAttributes struct {
