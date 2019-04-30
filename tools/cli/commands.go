@@ -68,6 +68,12 @@ const (
 	showErrorStackEnv    = `CADENCE_CLI_SHOW_STACKS`
 )
 
+var envKeysForUserName = []string{
+	"USER",
+	"LOGNAME",
+	"HOME",
+}
+
 type jsonType int
 
 const (
@@ -130,7 +136,7 @@ func ErrorAndExit(msg string, err error) {
 
 // RegisterDomain register a domain
 func RegisterDomain(c *cli.Context) {
-	domainClient := getDomainClient(c)
+	frontendClient := cFactory.ServerFrontendClient(c)
 	domain := getRequiredGlobalOption(c, FlagDomain)
 
 	description := c.String(FlagDescription)
@@ -169,20 +175,20 @@ func RegisterDomain(c *cli.Context) {
 	if c.IsSet(FlagActiveClusterName) {
 		activeClusterName = c.String(FlagActiveClusterName)
 	}
-	var clusters []*s.ClusterReplicationConfiguration
+	var clusters []*shared.ClusterReplicationConfiguration
 	if c.IsSet(FlagClusters) {
 		clusterStr := c.String(FlagClusters)
-		clusters = append(clusters, &s.ClusterReplicationConfiguration{
+		clusters = append(clusters, &shared.ClusterReplicationConfiguration{
 			ClusterName: common.StringPtr(clusterStr),
 		})
 		for _, clusterStr := range c.Args() {
-			clusters = append(clusters, &s.ClusterReplicationConfiguration{
+			clusters = append(clusters, &shared.ClusterReplicationConfiguration{
 				ClusterName: common.StringPtr(clusterStr),
 			})
 		}
 	}
 
-	request := &s.RegisterDomainRequest{
+	request := &shared.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domain),
 		Description:                            common.StringPtr(description),
 		OwnerEmail:                             common.StringPtr(ownerEmail),
@@ -198,7 +204,7 @@ func RegisterDomain(c *cli.Context) {
 
 	ctx, cancel := newContext(c)
 	defer cancel()
-	err = domainClient.Register(ctx, request)
+	err = frontendClient.RegisterDomain(ctx, request)
 	if err != nil {
 		if _, ok := err.(*s.DomainAlreadyExistsError); !ok {
 			ErrorAndExit("Register Domain operation failed.", err)
@@ -212,27 +218,29 @@ func RegisterDomain(c *cli.Context) {
 
 // UpdateDomain updates a domain
 func UpdateDomain(c *cli.Context) {
-	domainClient := getDomainClient(c)
+	frontendClient := cFactory.ServerFrontendClient(c)
 	domain := getRequiredGlobalOption(c, FlagDomain)
 
-	var updateRequest *s.UpdateDomainRequest
+	var updateRequest *shared.UpdateDomainRequest
 	ctx, cancel := newContext(c)
 	defer cancel()
 
 	if c.IsSet(FlagActiveClusterName) {
 		activeCluster := c.String(FlagActiveClusterName)
 		fmt.Printf("Will set active cluster name to: %s, other flag will be omitted.\n", activeCluster)
-		replicationConfig := &s.DomainReplicationConfiguration{
+		replicationConfig := &shared.DomainReplicationConfiguration{
 			ActiveClusterName: common.StringPtr(activeCluster),
 		}
-		updateRequest = &s.UpdateDomainRequest{
+		updateRequest = &shared.UpdateDomainRequest{
 			Name:                     common.StringPtr(domain),
 			ReplicationConfiguration: replicationConfig,
 		}
 	} else {
-		resp, err := domainClient.Describe(ctx, domain)
+		resp, err := frontendClient.DescribeDomain(ctx, &shared.DescribeDomainRequest{
+			Name: common.StringPtr(domain),
+		})
 		if err != nil {
-			if _, ok := err.(*s.EntityNotExistsError); !ok {
+			if _, ok := err.(*shared.EntityNotExistsError); !ok {
 				ErrorAndExit("Operation UpdateDomain failed.", err)
 			} else {
 				ErrorAndExit(fmt.Sprintf("Domain %s does not exist.", domain), err)
@@ -244,7 +252,7 @@ func UpdateDomain(c *cli.Context) {
 		ownerEmail := resp.DomainInfo.GetOwnerEmail()
 		retentionDays := resp.Configuration.GetWorkflowExecutionRetentionPeriodInDays()
 		emitMetric := resp.Configuration.GetEmitMetric()
-		var clusters []*s.ClusterReplicationConfiguration
+		var clusters []*shared.ClusterReplicationConfiguration
 
 		if c.IsSet(FlagDescription) {
 			description = c.String(FlagDescription)
@@ -271,41 +279,66 @@ func UpdateDomain(c *cli.Context) {
 		}
 		if c.IsSet(FlagClusters) {
 			clusterStr := c.String(FlagClusters)
-			clusters = append(clusters, &s.ClusterReplicationConfiguration{
+			clusters = append(clusters, &shared.ClusterReplicationConfiguration{
 				ClusterName: common.StringPtr(clusterStr),
 			})
 			for _, clusterStr := range c.Args() {
-				clusters = append(clusters, &s.ClusterReplicationConfiguration{
+				clusters = append(clusters, &shared.ClusterReplicationConfiguration{
 					ClusterName: common.StringPtr(clusterStr),
 				})
 			}
 		}
 
-		updateInfo := &s.UpdateDomainInfo{
+		var binBinaries *shared.BadBinaries
+		if c.IsSet(FlagAddBadBinary) {
+			if !c.IsSet(FlagReason) {
+				ErrorAndExit("Must provide a reason.", nil)
+			}
+			binChecksum := c.String(FlagAddBadBinary)
+			reason := c.String(FlagReason)
+			operator := getCurrentUserFromEnv()
+			binBinaries = &shared.BadBinaries{
+				Binaries: map[string]*shared.BadBinaryInfo{
+					binChecksum: {
+						Reason:   common.StringPtr(reason),
+						Operator: common.StringPtr(operator),
+					},
+				},
+			}
+		}
+
+		var badBinaryToDelete *string
+		if c.IsSet(FlagRemoveBadBinary) {
+			badBinaryToDelete = common.StringPtr(c.String(FlagRemoveBadBinary))
+		}
+
+		updateInfo := &shared.UpdateDomainInfo{
 			Description: common.StringPtr(description),
 			OwnerEmail:  common.StringPtr(ownerEmail),
 			Data:        domainData,
 		}
-		updateConfig := &s.DomainConfiguration{
+		updateConfig := &shared.DomainConfiguration{
 			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(int32(retentionDays)),
 			EmitMetric:                             common.BoolPtr(emitMetric),
 			ArchivalStatus:                         archivalStatus(c),
 			ArchivalBucketName:                     common.StringPtr(c.String(FlagArchivalBucketName)),
+			BadBinaries:                            binBinaries,
 		}
-		replicationConfig := &s.DomainReplicationConfiguration{
+		replicationConfig := &shared.DomainReplicationConfiguration{
 			Clusters: clusters,
 		}
-		updateRequest = &s.UpdateDomainRequest{
+		updateRequest = &shared.UpdateDomainRequest{
 			Name:                     common.StringPtr(domain),
 			UpdatedInfo:              updateInfo,
 			Configuration:            updateConfig,
 			ReplicationConfiguration: replicationConfig,
+			DeleteBadBinary:          badBinaryToDelete,
 		}
 	}
 
 	securityToken := c.String(FlagSecurityToken)
 	updateRequest.SecurityToken = common.StringPtr(securityToken)
-	err := domainClient.Update(ctx, updateRequest)
+	_, err := frontendClient.UpdateDomain(ctx, updateRequest)
 	if err != nil {
 		if _, ok := err.(*s.EntityNotExistsError); !ok {
 			ErrorAndExit("Operation UpdateDomain failed.", err)
@@ -315,6 +348,15 @@ func UpdateDomain(c *cli.Context) {
 	} else {
 		fmt.Printf("Domain %s successfully updated.\n", domain)
 	}
+}
+
+func getCurrentUserFromEnv() string {
+	for _, n := range envKeysForUserName {
+		if len(os.Getenv(n)) > 0 {
+			return os.Getenv(n)
+		}
+	}
+	return "unkown"
 }
 
 // DescribeDomain updates a domain
@@ -371,6 +413,24 @@ func DescribeDomain(c *cli.Context) {
 		descValues = append(descValues, resp.Configuration.GetArchivalBucketOwner())
 	}
 	fmt.Printf(formatStr, descValues...)
+	if resp.Configuration.BadBinaries != nil {
+		fmt.Println("Bad binaries to reset:")
+		table := tablewriter.NewWriter(os.Stdout)
+		table.SetBorder(true)
+		table.SetColumnSeparator("|")
+		header := []string{"Binary Checksum", "Operator", "Start Time", "Reason"}
+		headerColor := []tablewriter.Colors{tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue}
+		table.SetHeader(header)
+		table.SetHeaderColor(headerColor...)
+		for cs, bin := range resp.Configuration.BadBinaries.Binaries {
+			row := []string{cs}
+			row = append(row, bin.GetOperator())
+			row = append(row, time.Unix(0, bin.GetCreatedTimeNano()).String())
+			row = append(row, bin.GetReason())
+			table.Append(row)
+		}
+		table.Render()
+	}
 }
 
 // ShowHistory shows the history of given workflow execution based on workflowID and runID.
@@ -739,8 +799,23 @@ func queryWorkflowHelper(c *cli.Context, queryType string) {
 func ListWorkflow(c *cli.Context) {
 	more := c.Bool(FlagMore)
 	pageSize := c.Int(FlagPageSize)
-
 	queryOpen := c.Bool(FlagOpen)
+
+	printJSON := c.Bool(FlagPrintJSON)
+	printDecodedRaw := c.Bool(FlagPrintFullyDetail)
+
+	if printJSON || printDecodedRaw {
+		if !more {
+			results, _ := getListResultInRaw(c, queryOpen, nil)
+			fmt.Println("[")
+			printListResults(results, printJSON)
+			fmt.Println("]")
+		} else {
+			ErrorAndExit("Not support printJSON in more mode", nil)
+		}
+		return
+	}
+
 	table := createTableForListWorkflow(c, false, queryOpen)
 	prepareTable := listWorkflow(c, table, queryOpen)
 
@@ -775,6 +850,26 @@ func ListWorkflow(c *cli.Context) {
 // ListAllWorkflow list all workflow executions based on filters
 func ListAllWorkflow(c *cli.Context) {
 	queryOpen := c.Bool(FlagOpen)
+
+	printJSON := c.Bool(FlagPrintJSON)
+	printDecodedRaw := c.Bool(FlagPrintFullyDetail)
+
+	if printJSON || printDecodedRaw {
+		var results []*s.WorkflowExecutionInfo
+		var nextPageToken []byte
+		fmt.Println("[")
+		for {
+			results, nextPageToken = getListResultInRaw(c, queryOpen, nextPageToken)
+			printListResults(results, printJSON)
+			//printListResultsInJson(results)
+			if len(results) < defaultPageSizeForList {
+				break
+			}
+		}
+		fmt.Println("]")
+		return
+	}
+
 	table := createTableForListWorkflow(c, true, queryOpen)
 	prepareTable := listWorkflow(c, table, queryOpen)
 	var resultSize int
@@ -1063,6 +1158,62 @@ func listClosedWorkflow(client client.Client, pageSize int, earliestTime, latest
 	return response.Executions, response.NextPageToken
 }
 
+func getListResultInRaw(c *cli.Context, queryOpen bool, nextPageToken []byte) ([]*s.WorkflowExecutionInfo, []byte) {
+	wfClient := getWorkflowClient(c)
+
+	earliestTime := parseTime(c.String(FlagEarliestTime), 0)
+	latestTime := parseTime(c.String(FlagLatestTime), time.Now().UnixNano())
+	workflowID := c.String(FlagWorkflowID)
+	workflowType := c.String(FlagWorkflowType)
+	pageSize := c.Int(FlagPageSize)
+	if pageSize <= 0 {
+		pageSize = defaultPageSizeForList
+	}
+
+	var workflowStatus s.WorkflowExecutionCloseStatus
+	if c.IsSet(FlagWorkflowStatus) {
+		if queryOpen {
+			ErrorAndExit(optionErr, errors.New("you can only filter on status for closed workflow, not open workflow"))
+		}
+		workflowStatus = getWorkflowStatus(c.String(FlagWorkflowStatus))
+	} else {
+		workflowStatus = workflowStatusNotSet
+	}
+
+	if len(workflowID) > 0 && len(workflowType) > 0 {
+		ErrorAndExit(optionErr, errors.New("you can filter on workflow_id or workflow_type, but not on both"))
+	}
+
+	var result []*s.WorkflowExecutionInfo
+	if queryOpen {
+		result, nextPageToken = listOpenWorkflow(wfClient, pageSize, earliestTime, latestTime, workflowID, workflowType, nextPageToken, c)
+	} else {
+		result, nextPageToken = listClosedWorkflow(wfClient, pageSize, earliestTime, latestTime, workflowID, workflowType, workflowStatus, nextPageToken, c)
+	}
+
+	return result, nextPageToken
+}
+
+// default will print decoded raw
+func printListResults(executions []*s.WorkflowExecutionInfo, inJSON bool) {
+	for i, execution := range executions {
+		if inJSON {
+			j, _ := json.Marshal(execution)
+			if i < len(executions)-1 {
+				fmt.Println(string(j) + ",")
+			} else {
+				fmt.Println(string(j))
+			}
+		} else {
+			if i < len(executions)-1 {
+				fmt.Println(anyToString(execution, true, 0) + ",")
+			} else {
+				fmt.Println(anyToString(execution, true, 0))
+			}
+		}
+	}
+}
+
 // DescribeTaskList show pollers info of a given tasklist
 func DescribeTaskList(c *cli.Context) {
 	wfClient := getWorkflowClient(c)
@@ -1212,10 +1363,6 @@ func ObserveHistoryWithID(c *cli.Context) {
 	}
 
 	printWorkflowProgress(c, wid, rid)
-}
-
-func getDomainClient(c *cli.Context) client.DomainClient {
-	return client.NewDomainClient(cFactory.ClientFrontendClient(c), &client.Options{})
 }
 
 func getWorkflowClient(c *cli.Context) client.Client {
@@ -1486,13 +1633,13 @@ func getWorkflowIDReusePolicy(value int) *s.WorkflowIdReusePolicy {
 	return nil
 }
 
-func archivalStatus(c *cli.Context) *s.ArchivalStatus {
+func archivalStatus(c *cli.Context) *shared.ArchivalStatus {
 	if c.IsSet(FlagArchivalStatus) {
 		switch c.String(FlagArchivalStatus) {
 		case "disabled":
-			return common.ClientArchivalStatusPtr(s.ArchivalStatusDisabled)
+			return common.ArchivalStatusPtr(shared.ArchivalStatusDisabled)
 		case "enabled":
-			return common.ClientArchivalStatusPtr(s.ArchivalStatusEnabled)
+			return common.ArchivalStatusPtr(shared.ArchivalStatusEnabled)
 		default:
 			ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagArchivalStatus), errors.New("invalid status, valid values are \"disabled\" and \"enabled\""))
 		}
