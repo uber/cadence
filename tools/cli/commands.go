@@ -68,6 +68,12 @@ const (
 	showErrorStackEnv    = `CADENCE_CLI_SHOW_STACKS`
 )
 
+var envKeysForUserName = []string{
+	"USER",
+	"LOGNAME",
+	"HOME",
+}
+
 type jsonType int
 
 const (
@@ -345,12 +351,7 @@ func UpdateDomain(c *cli.Context) {
 }
 
 func getCurrentUserFromEnv() string {
-	varNames := []string{
-		"USER",
-		"LOGNAME",
-		"HOME",
-	}
-	for _, n := range varNames {
+	for _, n := range envKeysForUserName {
 		if len(os.Getenv(n)) > 0 {
 			return os.Getenv(n)
 		}
