@@ -1636,7 +1636,7 @@ func archivalStatus(c *cli.Context) *shared.ArchivalStatus {
 	if c.IsSet(FlagArchivalStatus) {
 		switch c.String(FlagArchivalStatus) {
 		case "disabled":
-			common.ArchivalStatusPtr(shared.ArchivalStatusDisabled)
+			return common.ArchivalStatusPtr(shared.ArchivalStatusDisabled)
 		case "enabled":
 			return common.ArchivalStatusPtr(shared.ArchivalStatusEnabled)
 		default:
