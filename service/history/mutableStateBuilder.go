@@ -2644,7 +2644,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(firstEventID, decisionComple
 	return continueAsNewEvent, newStateBuilder, nil
 }
 
-func addAutoResetPointsWithExpiringTime(resetPoints *workflow.ResetPoints, prevRunID string, domainRetentionDays int32) *workflow.ResetPoints {
+func rolloverAutoResetPointsWithExpiringTime(resetPoints *workflow.ResetPoints, prevRunID string, domainRetentionDays int32) *workflow.ResetPoints {
 	if resetPoints == nil || resetPoints.Points == nil {
 		return resetPoints
 	}
@@ -2723,7 +2723,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(firs
 		CronSchedule:            startedAttributes.GetCronSchedule(),
 		EventStoreVersion:       newStateBuilder.GetEventStoreVersion(),
 		BranchToken:             newStateBuilder.GetCurrentBranch(),
-		PreviousAutoResetPoints: addAutoResetPointsWithExpiringTime(startedAttributes.GetPrevAutoResetPoints(), prevRunID, domainRetentionDays),
+		PreviousAutoResetPoints: rolloverAutoResetPointsWithExpiringTime(startedAttributes.GetPrevAutoResetPoints(), prevRunID, domainRetentionDays),
 	}
 
 	if continueAsNew.HasRetryPolicy {
