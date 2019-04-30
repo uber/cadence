@@ -303,7 +303,7 @@ func UpdateDomain(c *cli.Context) {
 
 		var badBinaryToDelete *string
 		if c.IsSet(FlagRemoveBadBinary) {
-			badBinaryToDelete = common.StringPtr(c.String(FlagAddBadBinary))
+			badBinaryToDelete = common.StringPtr(c.String(FlagRemoveBadBinary))
 		}
 
 		updateInfo := &shared.UpdateDomainInfo{

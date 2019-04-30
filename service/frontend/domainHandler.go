@@ -24,6 +24,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/pborman/uuid"
 	"github.com/uber/cadence/.gen/go/replicator"
@@ -444,7 +445,7 @@ func (d *domainHandlerImpl) updateDomain(ctx context.Context,
 		_, ok := config.BadBinaries.Binaries[binChecksum]
 		if !ok {
 			return nil, &shared.BadRequestError{
-				Message: fmt.Sprintf("Bad binary checksum doesn't exists."),
+				Message: fmt.Sprintf("Bad binary checksum %v doesn't exists.", binChecksum),
 			}
 		}
 		configurationChanged = true
@@ -613,6 +614,7 @@ func (d *domainHandlerImpl) createResponse(
 		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(config.Retention),
 		ArchivalStatus:                         common.ArchivalStatusPtr(config.ArchivalStatus),
 		ArchivalBucketName:                     common.StringPtr(config.ArchivalBucket),
+		BadBinaries:                            &config.BadBinaries,
 	}
 	if d.clusterMetadata.ArchivalConfig().ConfiguredForArchival() && config.ArchivalBucket != "" {
 		metadata, err := d.blobstoreClient.BucketMetadata(ctx, config.ArchivalBucket)
@@ -642,10 +644,11 @@ func (d *domainHandlerImpl) mergeBadBinaries(old map[string]*shared.BadBinaryInf
 		old = map[string]*shared.BadBinaryInfo{}
 	}
 	for k, v := range new {
+		v.CreatedTimeNano = common.Int64Ptr(time.Now().UnixNano())
 		old[k] = v
 	}
 	return shared.BadBinaries{
-		Binaries: new,
+		Binaries: old,
 	}
 }
 
