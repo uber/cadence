@@ -40,6 +40,7 @@ type (
 			baseContext workflowExecutionContext, baseMutableState mutableState,
 			currContext workflowExecutionContext, currMutableState mutableState) (response *workflow.ResetWorkflowExecutionResponse, retError error)
 		ApplyResetEvent(ctx context.Context, request *h.ReplicateEventsRequest, domainID, workflowID, currentRunID string) (retError error)
+		CheckResettable(mutableState) error
 	}
 
 	workflowResetorImpl struct {
@@ -880,4 +881,8 @@ func (w *workflowResetorImpl) replicateResetEvent(baseMutableState mutableState,
 	newMsBuilder.GetExecutionInfo().SetLastFirstEventID(firstEvent.GetEventId())
 	newMsBuilder.UpdateReplicationStateLastEventID(clusterMetadata.GetCurrentClusterName(), lastEvent.GetVersion(), lastEvent.GetEventId())
 	return
+}
+
+func (w *workflowResetorImpl) CheckResettable(mutableState) error {
+
 }
