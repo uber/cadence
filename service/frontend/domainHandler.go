@@ -408,6 +408,7 @@ func (d *domainHandlerImpl) updateDomain(ctx context.Context,
 		}
 		if updatedInfo.Data != nil {
 			configurationChanged = true
+			// only do merging
 			info.Data = d.mergeDomainData(info.Data, updatedInfo.Data)
 		}
 	}
@@ -426,7 +427,30 @@ func (d *domainHandlerImpl) updateDomain(ctx context.Context,
 			config.ArchivalBucket = nextArchivalState.bucket
 			config.ArchivalStatus = nextArchivalState.status
 		}
+		if updatedConfig.BadBinaries != nil {
+			maxLength := d.config.MaxBadBinaries(updateRequest.GetName())
+			// only do merging
+			config.BadBinaries = d.mergeBadBinaries(config.BadBinaries.Binaries, updatedConfig.BadBinaries.Binaries)
+			if len(config.BadBinaries.Binaries) > maxLength {
+				return nil, &shared.BadRequestError{
+					Message: fmt.Sprintf("Total resetBinaries cannot exceed the max limit: %v", maxLength),
+				}
+			}
+		}
 	}
+
+	if updateRequest.DeleteBadBinary != nil {
+		binChecksum := updateRequest.GetDeleteBadBinary()
+		_, ok := config.BadBinaries.Binaries[binChecksum]
+		if !ok {
+			return nil, &shared.BadRequestError{
+				Message: fmt.Sprintf("Bad binary checksum doesn't exists."),
+			}
+		}
+		configurationChanged = true
+		delete(config.BadBinaries.Binaries, binChecksum)
+	}
+
 	if updateRequest.ReplicationConfiguration != nil {
 		updateReplicationConfig := updateRequest.ReplicationConfiguration
 		if err := validateReplicationConfig(getResponse,
@@ -611,6 +635,18 @@ func (d *domainHandlerImpl) createResponse(
 	}
 
 	return infoResult, configResult, replicationConfigResult
+}
+
+func (d *domainHandlerImpl) mergeBadBinaries(old map[string]*shared.BadBinaryInfo, new map[string]*shared.BadBinaryInfo) shared.BadBinaries {
+	if old == nil {
+		old = map[string]*shared.BadBinaryInfo{}
+	}
+	for k, v := range new {
+		old[k] = v
+	}
+	return shared.BadBinaries{
+		Binaries: new,
+	}
 }
 
 func (d *domainHandlerImpl) mergeDomainData(old map[string]string, new map[string]string) map[string]string {
