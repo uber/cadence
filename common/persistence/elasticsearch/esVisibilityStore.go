@@ -361,19 +361,19 @@ func (v *esVisibilityStore) ScanWorkflowExecutions(
 		return nil, err
 	}
 
-	scrollService := v.esClient.NewScrollService()
+	ctx := context.Background()
+	var searchResult *elastic.SearchResult
+	var scrollService es.ScrollService
 	if len(token.ScrollID) == 0 { // first call
 		queryDSL, _, err := getESQueryDSLForScan(request, token)
 		if err != nil {
 			return nil, &workflow.BadRequestError{Message: fmt.Sprintf("Error when parse query: %v", err)}
 		}
-		scrollService = scrollService.Index(v.index).Body(queryDSL)
+		searchResult, scrollService, err = v.esClient.ScrollFirstPage(ctx, v.index, queryDSL)
 	} else {
-		scrollService = scrollService.ScrollId(token.ScrollID)
+		searchResult, scrollService, err = v.esClient.Scroll(ctx, token.ScrollID)
 	}
 
-	ctx := context.Background()
-	searchResult, err := scrollService.Do(ctx)
 	isLastPage := false
 	if err == io.EOF { // no more result
 		isLastPage = true
