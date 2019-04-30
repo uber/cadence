@@ -869,6 +869,22 @@ func (_m *mockMutableState) CloseUpdateSession() (*mutableStateSessionUpdates, e
 	return r0, r1
 }
 
+// CloseUpdateSession provides a mock function with given fields:
+func (_m *mockMutableState) CheckResettable(b bool) error {
+	ret := _m.Called(b)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(bool) error); ok {
+		r0 = rf(b)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(error)
+		}
+	}
+
+	return r0
+}
+
 // CopyToPersistence provides a mock function with given fields:
 func (_m *mockMutableState) CopyToPersistence() *persistence.WorkflowMutableState {
 	ret := _m.Called()

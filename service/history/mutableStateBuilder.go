@@ -1649,16 +1649,43 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(event *workflow.Histo
 		currResetPoints = currResetPoints[1:]
 	}
 
+	resettable := true
+	err := e.CheckResettable(false)
+	if err != nil {
+		resettable = false
+	}
 	info := &workflow.ResetPointInfo{
 		RunId:                    common.StringPtr(exeInfo.RunID),
 		FirstDecisionCompletedId: common.Int64Ptr(event.GetEventId()),
 		CreatedTimeNano:          common.Int64Ptr(time.Now().UnixNano()),
-		Resettable:               common.BoolPtr(false),
+		Resettable:               common.BoolPtr(resettable),
 	}
 	currResetPoints = append(currResetPoints, info)
 	exeInfo.AutoResetPoints = &workflow.ResetPoints{
 		Points: currResetPoints,
 	}
+}
+
+// TODO:
+// remove checking for eventsV2 after we totally get rid of eventsV1
+// remove checking for pending ChildWFs after we implement reset with childWFs
+func (e *mutableStateBuilder) CheckResettable(curr bool) (retError error) {
+	runID := e.GetExecutionInfo().RunID
+	if e.GetEventStoreVersion() != persistence.EventStoreVersionV2 && !curr {
+		retError = &workflow.BadRequestError{
+			Message: fmt.Sprintf("reset API is not supported for V1 history events, runID: %v .", runID),
+		}
+		return
+	}
+	if len(e.GetPendingChildExecutionInfos()) > 0 {
+		retError = &workflow.BadRequestError{
+			Message: fmt.Sprintf("it is not allowed resetting with workflow has pending child workflow, runID: %v .", runID),
+		}
+		return
+	}
+	// For pending signalExternalWFs, it is OK because we always use a different requestedID during replay, which means it will never fail.
+	// For pending requestCancels, it is also OK because we will use the same requestedID and it won't return error.
+	return nil
 }
 
 func (e *mutableStateBuilder) AddDecisionTaskCompletedEvent(scheduleEventID, startedEventID int64,
