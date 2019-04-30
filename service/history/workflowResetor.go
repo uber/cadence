@@ -40,7 +40,7 @@ type (
 			baseContext workflowExecutionContext, baseMutableState mutableState,
 			currContext workflowExecutionContext, currMutableState mutableState) (response *workflow.ResetWorkflowExecutionResponse, retError error)
 		ApplyResetEvent(ctx context.Context, request *h.ReplicateEventsRequest, domainID, workflowID, currentRunID string) (retError error)
-		CheckResettable(mutableState) error
+		CheckResettable(mutableState, bool) error
 	}
 
 	workflowResetorImpl struct {
@@ -82,7 +82,7 @@ func (w *workflowResetorImpl) ResetWorkflowExecution(ctx context.Context, reques
 		return
 	}
 
-	retError = validateResetWorkflowBeforeReplay(baseMutableState, currMutableState)
+	retError = w.validateResetWorkflowBeforeReplay(baseMutableState, currMutableState)
 	if retError != nil {
 		return
 	}
@@ -153,23 +153,13 @@ func (w *workflowResetorImpl) checkDomainStatus(newMutableState mutableState, pr
 	return nil
 }
 
-func validateResetWorkflowBeforeReplay(baseMutableState, currMutableState mutableState) (retError error) {
-	if baseMutableState.GetEventStoreVersion() != persistence.EventStoreVersionV2 {
-		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("reset API is not supported for V1 history events"),
-		}
+func (w *workflowResetorImpl) validateResetWorkflowBeforeReplay(baseMutableState, currMutableState mutableState) (retError error) {
+	retError = w.CheckResettable(baseMutableState, false)
+	if retError != nil {
 		return
 	}
-	if len(baseMutableState.GetPendingChildExecutionInfos()) > 0 {
-		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("reset is not allowed when workflow has pending child workflow. RunID: %v", baseMutableState.GetExecutionInfo().RunID),
-		}
-		return
-	}
-	if len(currMutableState.GetPendingChildExecutionInfos()) > 0 {
-		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("reset is not allowed when workflow has pending child workflow. RunID: %v", currMutableState.GetExecutionInfo().RunID),
-		}
+	retError = w.CheckResettable(currMutableState, true)
+	if retError != nil {
 		return
 	}
 	if currMutableState.IsWorkflowExecutionRunning() {
@@ -180,27 +170,13 @@ func validateResetWorkflowBeforeReplay(baseMutableState, currMutableState mutabl
 	return
 }
 
-func validateResetWorkflowAfterReplay(newMutableState mutableState) (retError error) {
-	if len(newMutableState.GetAllRequestCancels()) > 0 {
-		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending request cancel "),
-		}
-		return
-	}
-	if len(newMutableState.GetPendingChildExecutionInfos()) > 0 {
-		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending child workflow "),
-		}
-		return
-	}
-	if len(newMutableState.GetAllSignalsToSend()) > 0 {
-		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending signals to send, pending signal: %+v ", newMutableState.GetAllSignalsToSend()),
-		}
+func (w *workflowResetorImpl) validateResetWorkflowAfterReplay(newMutableState mutableState) (retError error) {
+	retError = w.CheckResettable(newMutableState, false)
+	if retError != nil {
 		return
 	}
 	if !newMutableState.HasInFlightDecisionTask() {
-		retError = &workflow.BadRequestError{
+		retError = &workflow.InternalServiceError{
 			Message: fmt.Sprintf("can't find the last started decision"),
 		}
 		return
@@ -272,7 +248,7 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(
 	}
 	newMutableState = newStateBuilder.getMutableState()
 
-	retError = validateResetWorkflowAfterReplay(newMutableState)
+	retError = w.validateResetWorkflowAfterReplay(newMutableState)
 	if retError != nil {
 		return
 	}
@@ -883,6 +859,22 @@ func (w *workflowResetorImpl) replicateResetEvent(baseMutableState mutableState,
 	return
 }
 
-func (w *workflowResetorImpl) CheckResettable(mutableState) error {
-
+// In
+func (w *workflowResetorImpl) CheckResettable(ms mutableState, curr bool) (retError error) {
+	runID := ms.GetExecutionInfo().RunID
+	if ms.GetEventStoreVersion() != persistence.EventStoreVersionV2 && !curr {
+		retError = &workflow.BadRequestError{
+			Message: fmt.Sprintf("reset API is not supported for V1 history events, runID: %v .", runID),
+		}
+		return
+	}
+	if len(ms.GetPendingChildExecutionInfos()) > 0 {
+		retError = &workflow.BadRequestError{
+			Message: fmt.Sprintf("it is not allowed resetting with workflow has pending child workflow, runID: %v .", runID),
+		}
+		return
+	}
+	// For pending signalExternalWFs, it is OK because we always use a different requestedID during replay, which means it will never fail.
+	// For pending requestCancels, it is also OK because we will use the same requestedID and it won't return error.
+	return nil
 }
