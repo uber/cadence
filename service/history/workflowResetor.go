@@ -153,8 +153,10 @@ func (w *workflowResetorImpl) checkDomainStatus(newMutableState mutableState, pr
 }
 
 func (w *workflowResetorImpl) validateResetWorkflowBeforeReplay(baseMutableState, currMutableState mutableState) (retError error) {
-	retError = baseMutableState.CheckResettable(false)
-	if retError != nil {
+	if baseMutableState.GetEventStoreVersion() != persistence.EventStoreVersionV2 {
+		retError = &workflow.BadRequestError{
+			Message: fmt.Sprintf("reset API is not supported for V1 history events"),
+		}
 		return
 	}
 	retError = currMutableState.CheckResettable(true)
