@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/valyala/fastjson"
 	"io"
 	"strings"
 	"testing"
@@ -652,7 +653,8 @@ func (s *ESVisibilitySuite) TestShouldSearchAfter() {
 
 func (s *ESVisibilitySuite) TestGetESQueryDSL() {
 	request := &p.ListWorkflowExecutionsRequestV2{
-		PageSize: 10,
+		DomainUUID: testDomainID,
+		PageSize:   10,
 	}
 	token := &esVisibilityPageToken{}
 
@@ -660,7 +662,7 @@ func (s *ESVisibilitySuite) TestGetESQueryDSL() {
 	dsl, isOpen, err := getESQueryDSL(request, token)
 	s.Nil(err)
 	s.False(isOpen)
-	s.Equal(`{"query":{"bool":{"must":[{"match_all":{}}]}},"from":0,"size":10,"sort":[{"CloseTime":"desc"},{"WorkflowID":"desc"}]}`, dsl)
+	s.Equal(`{"query":{"bool":{"must":[{"match_all":{}},{"match_phrase":{"DomainID":{"query":"bfd5c907-f899-4baf-a7b2-2ab85e623ebd"}}}]}},"from":0,"size":10,"sort":[{"CloseTime":"desc"},{"WorkflowID":"desc"}]}`, dsl)
 
 	request.Query = "invaild query"
 	dsl, isOpen, err = getESQueryDSL(request, token)
@@ -672,25 +674,25 @@ func (s *ESVisibilitySuite) TestGetESQueryDSL() {
 	dsl, isOpen, err = getESQueryDSL(request, token)
 	s.Nil(err)
 	s.False(isOpen)
-	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"WorkflowID":{"query":"wid"}}}]}},"from":0,"size":10,"sort":[{"CloseTime":"desc"},{"WorkflowID":"desc"}]}`, dsl)
+	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"WorkflowID":{"query":"wid"}}},{"match_phrase":{"DomainID":{"query":"bfd5c907-f899-4baf-a7b2-2ab85e623ebd"}}}]}},"from":0,"size":10,"sort":[{"CloseTime":"desc"},{"WorkflowID":"desc"}]}`, dsl)
 
 	request.Query = `WorkflowID = 'wid' order by StartTime desc`
 	dsl, isOpen, err = getESQueryDSL(request, token)
 	s.Nil(err)
 	s.False(isOpen)
-	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"WorkflowID":{"query":"wid"}}}]}},"from":0,"size":10,"sort":[{"StartTime":"desc"},{"WorkflowID":"desc"}]}`, dsl)
+	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"WorkflowID":{"query":"wid"}}},{"match_phrase":{"DomainID":{"query":"bfd5c907-f899-4baf-a7b2-2ab85e623ebd"}}}]}},"from":0,"size":10,"sort":[{"StartTime":"desc"},{"WorkflowID":"desc"}]}`, dsl)
 
 	request.Query = `WorkflowID = 'wid' and CloseTime = missing`
 	dsl, isOpen, err = getESQueryDSL(request, token)
 	s.Nil(err)
 	s.True(isOpen)
-	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"WorkflowID":{"query":"wid"}}}],"must_not":{"exists":{"field":"CloseTime"}}}},"from":0,"size":10,"sort":[{"StartTime":"desc"},{"WorkflowID":"desc"}]}`, dsl)
+	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"WorkflowID":{"query":"wid"}}},{"match_phrase":{"DomainID":{"query":"bfd5c907-f899-4baf-a7b2-2ab85e623ebd"}}}],"must_not":{"exists":{"field":"CloseTime"}}}},"from":0,"size":10,"sort":[{"StartTime":"desc"},{"WorkflowID":"desc"}]}`, dsl)
 
 	request.Query = `CloseTime = missing order by CloseTime desc`
 	dsl, isOpen, err = getESQueryDSL(request, token)
 	s.Nil(err)
 	s.True(isOpen)
-	s.Equal(`{"query":{"bool":{"must":[],"must_not":{"exists":{"field":"CloseTime"}}}},"from":0,"size":10,"sort":[{"CloseTime":"desc"},{"WorkflowID":"desc"}]}`, dsl)
+	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"DomainID":{"query":"bfd5c907-f899-4baf-a7b2-2ab85e623ebd"}}}],"must_not":{"exists":{"field":"CloseTime"}}}},"from":0,"size":10,"sort":[{"CloseTime":"desc"},{"WorkflowID":"desc"}]}`, dsl)
 
 	token = &esVisibilityPageToken{
 		SortTime:   1,
@@ -700,12 +702,13 @@ func (s *ESVisibilitySuite) TestGetESQueryDSL() {
 	dsl, isOpen, err = getESQueryDSL(request, token)
 	s.Nil(err)
 	s.False(isOpen)
-	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"WorkflowID":{"query":"wid"}}}]}},"from":0,"size":10,"sort":[{"CloseTime":"desc"},{"WorkflowID":"desc"}],"search_after":[1,"a"]}`, dsl)
+	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"WorkflowID":{"query":"wid"}}},{"match_phrase":{"DomainID":{"query":"bfd5c907-f899-4baf-a7b2-2ab85e623ebd"}}}]}},"from":0,"size":10,"sort":[{"CloseTime":"desc"},{"WorkflowID":"desc"}],"search_after":[1,"a"]}`, dsl)
 }
 
 func (s *ESVisibilitySuite) TestGetESQueryDSLForScan() {
 	request := &p.ListWorkflowExecutionsRequestV2{
-		PageSize: 10,
+		DomainUUID: testDomainID,
+		PageSize:   10,
 	}
 	token := &esVisibilityPageToken{}
 
@@ -713,22 +716,40 @@ func (s *ESVisibilitySuite) TestGetESQueryDSLForScan() {
 	dsl, isOpen, err := getESQueryDSLForScan(request, token)
 	s.Nil(err)
 	s.False(isOpen)
-	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"WorkflowID":{"query":"wid"}}}]}},"from":0,"size":10}`, dsl)
+	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"WorkflowID":{"query":"wid"}}},{"match_phrase":{"DomainID":{"query":"bfd5c907-f899-4baf-a7b2-2ab85e623ebd"}}}]}},"from":0,"size":10}`, dsl)
 
 	request.Query = `WorkflowID = 'wid'`
 	dsl, isOpen, err = getESQueryDSLForScan(request, token)
 	s.Nil(err)
 	s.False(isOpen)
-	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"WorkflowID":{"query":"wid"}}}]}},"from":0,"size":10}`, dsl)
+	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"WorkflowID":{"query":"wid"}}},{"match_phrase":{"DomainID":{"query":"bfd5c907-f899-4baf-a7b2-2ab85e623ebd"}}}]}},"from":0,"size":10}`, dsl)
 }
 
 func (s *ESVisibilitySuite) TestGetESQueryDSLForCount() {
-	request := &p.CountWorkflowExecutionsRequest{}
+	request := &p.CountWorkflowExecutionsRequest{
+		DomainUUID: testDomainID,
+	}
 
-	request.Query = `WorkflowID = 'wid' order by StartTime desc`
+	// empty query
 	dsl, err := getESQueryDSLForCount(request)
 	s.Nil(err)
-	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"WorkflowID":{"query":"wid"}}}]}}}`, dsl)
+	s.Equal(`{"query":{"bool":{"must":[{"match_all":{}},{"match_phrase":{"DomainID":{"query":"bfd5c907-f899-4baf-a7b2-2ab85e623ebd"}}}]}}}`, dsl)
+
+	request.Query = `WorkflowID = 'wid' order by StartTime desc`
+	dsl, err = getESQueryDSLForCount(request)
+	s.Nil(err)
+	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"WorkflowID":{"query":"wid"}}},{"match_phrase":{"DomainID":{"query":"bfd5c907-f899-4baf-a7b2-2ab85e623ebd"}}}]}}}`, dsl)
+}
+
+func (s *ESVisibilitySuite) TestAddDomainToQuery() {
+	dsl := fastjson.MustParse(`{}`)
+	dslStr := dsl.String()
+	addDomainToQuery(dsl, "")
+	s.Equal(dslStr, dsl.String())
+
+	dsl = fastjson.MustParse(`{"query":{"bool":{"must":[{"match_all":{}}]}}}`)
+	addDomainToQuery(dsl, testDomainID)
+	s.Equal(`{"query":{"bool":{"must":[{"match_all":{}},{"match_phrase":{"DomainID":{"query":"bfd5c907-f899-4baf-a7b2-2ab85e623ebd"}}}]}}}`, dsl.String())
 }
 
 func (s *ESVisibilitySuite) TestListWorkflowExecutions() {

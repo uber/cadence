@@ -417,6 +417,7 @@ const (
 	dslFieldSearchAfter = "search_after"
 	dslFieldFrom        = "from"
 	dslFieldSize        = "size"
+	dslFieldMust        = "must"
 )
 
 func getESQueryDSLForScan(request *p.ListWorkflowExecutionsRequestV2, token *esVisibilityPageToken) (string, bool, error) {
@@ -439,6 +440,9 @@ func getESQueryDSLForCount(request *p.CountWorkflowExecutionsRequest) (string, e
 	if isOpen {
 		dsl = replaceQueryForOpen(dsl)
 	}
+
+	addDomainToQuery(dsl, request.DomainUUID)
+
 	// remove not needed fields
 	dsl.Del(dslFieldFrom)
 	dsl.Del(dslFieldSize)
@@ -459,6 +463,8 @@ func getESQueryDSLHelper(request *p.ListWorkflowExecutionsRequestV2, token *esVi
 	if isOpen {
 		dsl = replaceQueryForOpen(dsl)
 	}
+
+	addDomainToQuery(dsl, request.DomainUUID)
 
 	if isScan { // no need to sort for scan
 		dsl.Del(dslFieldSort)
@@ -514,6 +520,15 @@ func replaceQueryForOpen(dsl *fastjson.Value) *fastjson.Value {
 	dsl = fastjson.MustParse(newDslStr)
 	dsl.Get("query").Get("bool").Set("must_not", fastjson.MustParse(`{"exists": {"field": "CloseTime"}}`))
 	return dsl
+}
+
+func addDomainToQuery(dsl *fastjson.Value, domainID string) {
+	if len(domainID) == 0 {
+		return
+	}
+	valOfBool := dsl.Get("query").Get("bool")
+	lenOfMust := len(valOfBool.GetArray(dslFieldMust))
+	valOfBool.Get(dslFieldMust).SetArrayItem(lenOfMust, fastjson.MustParse(fmt.Sprintf(`{"match_phrase":{"DomainID":{"query":"%s"}}}`, domainID)))
 }
 
 func shouldSearchAfter(token *esVisibilityPageToken) bool {
