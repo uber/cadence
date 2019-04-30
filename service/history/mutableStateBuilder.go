@@ -1682,7 +1682,7 @@ func (e *mutableStateBuilder) CheckResettable(curr bool) (retError error) {
 	}
 	if len(e.GetAllRequestCancels()) > 0 {
 		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending request cancel"),
+			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending request cancel."),
 		}
 		return
 	}
