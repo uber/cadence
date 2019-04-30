@@ -431,7 +431,7 @@ func (d *domainHandlerImpl) updateDomain(ctx context.Context,
 		if updatedConfig.BadBinaries != nil {
 			maxLength := d.config.MaxBadBinaries(updateRequest.GetName())
 			// only do merging
-			config.BadBinaries = d.mergeBadBinaries(config.BadBinaries.Binaries, updatedConfig.BadBinaries.Binaries)
+			config.BadBinaries = d.mergeBadBinaries(config.BadBinaries.Binaries, updatedConfig.BadBinaries.Binaries, time.Now().UnixNano())
 			if len(config.BadBinaries.Binaries) > maxLength {
 				return nil, &shared.BadRequestError{
 					Message: fmt.Sprintf("Total resetBinaries cannot exceed the max limit: %v", maxLength),
@@ -639,12 +639,12 @@ func (d *domainHandlerImpl) createResponse(
 	return infoResult, configResult, replicationConfigResult
 }
 
-func (d *domainHandlerImpl) mergeBadBinaries(old map[string]*shared.BadBinaryInfo, new map[string]*shared.BadBinaryInfo) shared.BadBinaries {
+func (d *domainHandlerImpl) mergeBadBinaries(old map[string]*shared.BadBinaryInfo, new map[string]*shared.BadBinaryInfo, createTimeNano int64) shared.BadBinaries {
 	if old == nil {
 		old = map[string]*shared.BadBinaryInfo{}
 	}
 	for k, v := range new {
-		v.CreatedTimeNano = common.Int64Ptr(time.Now().UnixNano())
+		v.CreatedTimeNano = common.Int64Ptr(createTimeNano)
 		old[k] = v
 	}
 	return shared.BadBinaries{
