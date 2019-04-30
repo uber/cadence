@@ -722,6 +722,15 @@ func (s *ESVisibilitySuite) TestGetESQueryDSLForScan() {
 	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"WorkflowID":{"query":"wid"}}}]}},"from":0,"size":10}`, dsl)
 }
 
+func (s *ESVisibilitySuite) TestGetESQueryDSLForCount() {
+	request := &p.CountWorkflowExecutionsRequest{}
+
+	request.Query = `WorkflowID = 'wid' order by StartTime desc`
+	dsl, err := getESQueryDSLForCount(request)
+	s.Nil(err)
+	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"WorkflowID":{"query":"wid"}}}]}}}`, dsl)
+}
+
 func (s *ESVisibilitySuite) TestListWorkflowExecutions() {
 	s.mockESClient.On("SearchWithDSL", mock.Anything, mock.Anything, mock.MatchedBy(func(input string) bool {
 		s.True(strings.Contains(input, `{"match_phrase":{"CloseStatus":{"query":"5"}}}`))
