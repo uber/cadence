@@ -2637,6 +2637,23 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(firstEventID, decisionComple
 	return continueAsNewEvent, newStateBuilder, nil
 }
 
+func addAutoResetPointsWithExpiringTime(resetPoints *workflow.ResetPoints, prevRunID string, domainRetentionDays int32) *workflow.ResetPoints {
+	if resetPoints == nil || resetPoints.Points == nil {
+		return resetPoints
+	}
+	newPoints := make([]*workflow.ResetPointInfo, 0, len(resetPoints.Points))
+	expiringTimeNano := time.Now().Add(time.Duration(domainRetentionDays) * time.Hour * 24).UnixNano()
+	for _, rp := range resetPoints.Points {
+		if rp.GetRunId() == prevRunID {
+			rp.ExpiringTimeNano = common.Int64Ptr(expiringTimeNano)
+		}
+		newPoints = append(newPoints, rp)
+	}
+	return &workflow.ResetPoints{
+		Points: newPoints,
+	}
+}
+
 func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(firstEventID int64, sourceClusterName string, domainID string,
 	continueAsNewEvent *workflow.HistoryEvent, startedEvent *workflow.HistoryEvent, di *decisionInfo,
 	newStateBuilder mutableState, eventStoreVersion int32, domainRetentionDays int32) error {
@@ -2678,27 +2695,28 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(firs
 	continueAsNew := &persistence.CreateWorkflowExecutionRequest{
 		// NOTE: there is no replication task for the start / decision scheduled event,
 		// the above 2 events will be replicated along with previous continue as new event.
-		RequestID:            uuid.New(),
-		DomainID:             domainID,
-		Execution:            newExecution,
-		ParentDomainID:       parentDomainID,
-		ParentExecution:      parentExecution,
-		InitiatedID:          initiatedID,
-		TaskList:             newExecutionInfo.TaskList,
-		WorkflowTypeName:     newExecutionInfo.WorkflowTypeName,
-		WorkflowTimeout:      newExecutionInfo.WorkflowTimeout,
-		DecisionTimeoutValue: newExecutionInfo.DecisionTimeoutValue,
-		ExecutionContext:     nil,
-		LastEventTaskID:      newExecutionInfo.LastEventTaskID,
-		NextEventID:          newStateBuilder.GetNextEventID(),
-		LastProcessedEvent:   common.EmptyEventID,
-		CreateWorkflowMode:   persistence.CreateWorkflowModeContinueAsNew,
-		PreviousRunID:        prevRunID,
-		ReplicationState:     newStateBuilder.GetReplicationState(),
-		HasRetryPolicy:       startedAttributes.RetryPolicy != nil,
-		CronSchedule:         startedAttributes.GetCronSchedule(),
-		EventStoreVersion:    newStateBuilder.GetEventStoreVersion(),
-		BranchToken:          newStateBuilder.GetCurrentBranch(),
+		RequestID:               uuid.New(),
+		DomainID:                domainID,
+		Execution:               newExecution,
+		ParentDomainID:          parentDomainID,
+		ParentExecution:         parentExecution,
+		InitiatedID:             initiatedID,
+		TaskList:                newExecutionInfo.TaskList,
+		WorkflowTypeName:        newExecutionInfo.WorkflowTypeName,
+		WorkflowTimeout:         newExecutionInfo.WorkflowTimeout,
+		DecisionTimeoutValue:    newExecutionInfo.DecisionTimeoutValue,
+		ExecutionContext:        nil,
+		LastEventTaskID:         newExecutionInfo.LastEventTaskID,
+		NextEventID:             newStateBuilder.GetNextEventID(),
+		LastProcessedEvent:      common.EmptyEventID,
+		CreateWorkflowMode:      persistence.CreateWorkflowModeContinueAsNew,
+		PreviousRunID:           prevRunID,
+		ReplicationState:        newStateBuilder.GetReplicationState(),
+		HasRetryPolicy:          startedAttributes.RetryPolicy != nil,
+		CronSchedule:            startedAttributes.GetCronSchedule(),
+		EventStoreVersion:       newStateBuilder.GetEventStoreVersion(),
+		BranchToken:             newStateBuilder.GetCurrentBranch(),
+		PreviousAutoResetPoints: addAutoResetPointsWithExpiringTime(startedAttributes.GetPrevAutoResetPoints(), prevRunID, domainRetentionDays),
 	}
 
 	if continueAsNew.HasRetryPolicy {
