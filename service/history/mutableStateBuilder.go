@@ -1655,6 +1655,7 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(event *workflow.Histo
 		resettable = false
 	}
 	info := &workflow.ResetPointInfo{
+		BinaryChecksum:           common.StringPtr(binChecksum),
 		RunId:                    common.StringPtr(exeInfo.RunID),
 		FirstDecisionCompletedId: common.Int64Ptr(event.GetEventId()),
 		CreatedTimeNano:          common.Int64Ptr(time.Now().UnixNano()),
