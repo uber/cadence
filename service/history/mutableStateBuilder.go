@@ -1666,25 +1666,31 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(event *workflow.Histo
 	}
 }
 
-// TODO:
-// remove checking for eventsV2 after we totally get rid of eventsV1
-// remove checking for pending ChildWFs after we implement reset with childWFs
+// TODO: we will release the restriction when reset API allow those pending
 func (e *mutableStateBuilder) CheckResettable(curr bool) (retError error) {
-	runID := e.GetExecutionInfo().RunID
 	if e.GetEventStoreVersion() != persistence.EventStoreVersionV2 && !curr {
 		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("reset API is not supported for V1 history events, runID: %v .", runID),
+			Message: fmt.Sprintf("reset API is not supported for V1 history events, runID"),
 		}
 		return
 	}
 	if len(e.GetPendingChildExecutionInfos()) > 0 {
 		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("it is not allowed resetting with workflow has pending child workflow, runID: %v .", runID),
+			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending child workflow."),
 		}
 		return
 	}
-	// For pending signalExternalWFs, it is OK because we always use a different requestedID during replay, which means it will never fail.
-	// For pending requestCancels, it is also OK because we will use the same requestedID and it won't return error.
+	if len(e.GetAllRequestCancels()) > 0 {
+		retError = &workflow.BadRequestError{
+			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending request cancel"),
+		}
+		return
+	}
+	if len(e.GetAllSignalsToSend()) > 0 {
+		retError = &workflow.BadRequestError{
+			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending signals to send, pending signal: %+v ", e.GetAllSignalsToSend()),
+		}
+	}
 	return nil
 }
 

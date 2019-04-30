@@ -159,9 +159,10 @@ func (w *workflowResetorImpl) validateResetWorkflowBeforeReplay(baseMutableState
 		}
 		return
 	}
-	retError = currMutableState.CheckResettable(true)
-	if retError != nil {
-		return
+	if len(currMutableState.GetPendingChildExecutionInfos()) > 0 {
+		retError = &workflow.BadRequestError{
+			Message: fmt.Sprintf("reset is not allowed when current workflow has pending child workflow."),
+		}
 	}
 	if currMutableState.IsWorkflowExecutionRunning() {
 		retError = &workflow.InternalServiceError{
