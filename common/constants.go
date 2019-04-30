@@ -92,7 +92,8 @@ const (
 
 const (
 	// SystemDomainName is domain name for all cadence system workflows
-	SystemDomainName = "cadence-system"
+	SystemDomainName          = "cadence-system"
+	SystemDomainRetentionDays = 7
 )
 
 const (
