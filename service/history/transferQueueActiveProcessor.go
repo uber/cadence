@@ -910,8 +910,8 @@ func (t *transferQueueActiveProcessorImpl) processResetWorkflow(task *persistenc
 	currMutableState, err = loadMutableStateForTransferTask(currContext, task, t.metricsClient, t.logger)
 	if err != nil {
 		return err
-	} else if currMutableState == nil || !currMutableState.IsWorkflowExecutionRunning() {
-		logger.Warn("Auto-Reset is skipped, because current run is not running.")
+	} else if currMutableState == nil {
+		logger.Warn("Auto-Reset is skipped, because current run is deleted.")
 		return nil
 	}
 	// TODO: current reset doesn't allow childWFs, in the future we will release this restriction
@@ -957,7 +957,7 @@ func (t *transferQueueActiveProcessorImpl) processResetWorkflow(task *persistenc
 			return err
 		}
 		defer func() { baseRelease(retError) }()
-		baseMutableState, err = loadMutableStateForTransferTask(currContext, task, t.metricsClient, t.logger)
+		baseMutableState, err = loadMutableStateForTransferTask(baseContext, task, t.metricsClient, t.logger)
 		if err != nil {
 			return err
 		}
