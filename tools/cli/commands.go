@@ -37,6 +37,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
+
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pborman/uuid"
@@ -1292,7 +1294,7 @@ func ResetWorkflow(c *cli.Context) {
 	prettyPrintJSONObject(resp)
 }
 
-func processReset(c *cli.Context, domain string, wes chan shared.WorkflowExecution, done chan bool, wg *sync.WaitGroup) {
+func processResets(c *cli.Context, domain string, wes chan shared.WorkflowExecution, done chan bool, wg *sync.WaitGroup) {
 	for {
 		select {
 		case we := <-wes:
@@ -1323,6 +1325,11 @@ func ResetInBatch(c *cli.Context) {
 	inFileName := getRequiredOption(c, FlagInputFile)
 	excFileName := getRequiredOption(c, FlagExcludeFile)
 	separator := getRequiredOption(c, FlagInputSeparator)
+	getRequiredOption(c, FlagReason)
+	resetType := getRequiredOption(c, FlagResetType)
+	if resetType != "LastDecisionCompleted" && resetType != "LastContinuedAsNew" {
+		ErrorAndExit("Not supported reset type", nil)
+	}
 	parallel := c.Int(FlagParallism)
 	wg := &sync.WaitGroup{}
 
@@ -1330,7 +1337,7 @@ func ResetInBatch(c *cli.Context) {
 	done := make(chan bool)
 	for i := 0; i < parallel; i++ {
 		wg.Add(1)
-		go processReset(c, domain, wes, done, wg)
+		go processResets(c, domain, wes, done, wg)
 	}
 
 	// read exclude
@@ -1351,7 +1358,7 @@ func ResetInBatch(c *cli.Context) {
 		}
 		cols := strings.Split(line, separator)
 		if len(cols) < 1 {
-			ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 2 cols separated by comma, only %v ", idx, len(cols)))
+			ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 1 cols separated by comma, only %v ", idx, len(cols)))
 		}
 		wid := strings.TrimSpace(cols[0])
 		rid := "not-needed"
@@ -1375,12 +1382,15 @@ func ResetInBatch(c *cli.Context) {
 			continue
 		}
 		cols := strings.Split(line, separator)
-		if len(cols) < 2 {
-			ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 2 cols separated by comma, only %v ", idx, len(cols)))
+		if len(cols) < 1 {
+			ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 1 cols separated by comma, only %v ", idx, len(cols)))
 		}
 		fmt.Printf("Start processing line %v ...\n", idx)
 		wid := strings.TrimSpace(cols[0])
-		rid := strings.TrimSpace(cols[1])
+		rid := ""
+		if len(cols) > 1 {
+			rid = strings.TrimSpace(cols[1])
+		}
 
 		_, ok := excludes[wid]
 		if ok {
@@ -1424,33 +1434,58 @@ func doReset(c *cli.Context, domain, wid, rid string) error {
 		fmt.Println("current run is the reset run: ", wid, rid)
 		//return nil
 	}
+	if rid == "" {
+		rid = currentRunID
+	}
 
+	reason := c.String(FlagReason)
 	skipOpen := c.Bool(FlagSkipCurrent)
 	if resp.WorkflowExecutionInfo.CloseStatus == nil || resp.WorkflowExecutionInfo.CloseTime == nil {
 		if skipOpen {
-			fmt.Println("current run is open: ", wid, rid)
+			fmt.Println("skip because current run is open: ", wid, rid, currentRunID)
 			//skip and not terminate current if open
 			return nil
-		} else {
-			// terminate current
-			err := frontendClient.TerminateWorkflowExecution(ctx, &shared.TerminateWorkflowExecutionRequest{
-				Domain: common.StringPtr(domain),
-				WorkflowExecution: &shared.WorkflowExecution{
-					WorkflowId: common.StringPtr(wid),
-					RunId:      common.StringPtr(currentRunID),
-				},
-				Reason:   common.StringPtr("fix bad deployment"),
-				Identity: common.StringPtr("longer"),
-			})
-			if err != nil {
-				return printErrorAndReturn("TerminateWorkflowExecution failed, need retry...", err)
-			} else {
-				fmt.Println("terminate wid, rid,", wid, currentRunID)
-				time.Sleep(time.Second * 10)
-			}
 		}
 	}
 
+	lastDecisionFinishID := int64(0)
+	resetType := c.String(FlagResetType)
+	switch resetType {
+	case "LastDecisionCompleted":
+		lastDecisionFinishID, err = getLastDecisionCompletedID(domain, wid, rid, ctx, frontendClient)
+		if err != nil {
+			return err
+		}
+	case "LastContinuedAsNew":
+		lastDecisionFinishID, err = getLastContinueAsNewID(domain, wid, rid, ctx, frontendClient)
+		if err != nil {
+			return err
+		}
+	default:
+		panic("not supported resetType")
+	}
+
+	fmt.Println("DecisionFinishEventId for reset:", wid, rid, lastDecisionFinishID)
+
+	resp2, err := frontendClient.ResetWorkflowExecution(ctx, &shared.ResetWorkflowExecutionRequest{
+		Domain: common.StringPtr(domain),
+		WorkflowExecution: &shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(wid),
+			RunId:      common.StringPtr(rid),
+		},
+		DecisionFinishEventId: common.Int64Ptr(lastDecisionFinishID),
+		RequestId:             common.StringPtr(uuid.New()),
+		Reason:                common.StringPtr(fmt.Sprintf("%v:%v", getCurrentUserFromEnv(), reason)),
+	})
+
+	if err != nil {
+		return printErrorAndReturn("ResetWorkflowExecution failed", err)
+	}
+	fmt.Println("new runID for wid/rid is ,", wid, rid, resp2.GetRunId())
+	return nil
+}
+
+func getLastDecisionCompletedID(domain, wid, rid string, ctx context.Context, frontendClient workflowserviceclient.Interface) (lastDecisionFinishID int64, err error) {
 	req := &shared.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(domain),
 		Execution: &shared.WorkflowExecution{
@@ -1461,11 +1496,10 @@ func doReset(c *cli.Context, domain, wid, rid string) error {
 		NextPageToken:   nil,
 	}
 
-	lastDecisionFinishID := int64(0)
 	for {
 		resp, err := frontendClient.GetWorkflowExecutionHistory(ctx, req)
 		if err != nil {
-			return printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
+			return 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
 		}
 		for _, e := range resp.GetHistory().GetEvents() {
 			if e.GetEventType() == shared.EventTypeDecisionTaskCompleted {
@@ -1478,24 +1512,56 @@ func doReset(c *cli.Context, domain, wid, rid string) error {
 			break
 		}
 	}
-	fmt.Println("lastDecisionFinishID:", wid, rid, lastDecisionFinishID)
+	return
+}
 
-	resp2, err := frontendClient.ResetWorkflowExecution(ctx, &shared.ResetWorkflowExecutionRequest{
+func getLastContinueAsNewID(domain, wid, rid string, ctx context.Context, frontendClient workflowserviceclient.Interface) (lastDecisionFinishID int64, err error) {
+	// get first event
+	req := &shared.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(domain),
-		WorkflowExecution: &shared.WorkflowExecution{
+		Execution: &shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(wid),
 			RunId:      common.StringPtr(rid),
 		},
-		DecisionFinishEventId: common.Int64Ptr(lastDecisionFinishID),
-		RequestId:             common.StringPtr(uuid.New()),
-		Reason:                common.StringPtr("reset to fix bad deployment"),
-	})
-
-	if err != nil {
-		return printErrorAndReturn("ResetWorkflowExecution failed", err)
+		MaximumPageSize: common.Int32Ptr(1),
+		NextPageToken:   nil,
 	}
-	fmt.Println("new runID for wid/rid is ,", wid, rid, resp2.GetRunId())
-	return nil
+	resp, err := frontendClient.GetWorkflowExecutionHistory(ctx, req)
+	if err != nil {
+		return 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
+	}
+	firstEvent := resp.History.Events[0]
+	lastRunID := firstEvent.GetWorkflowExecutionStartedEventAttributes().GetContinuedExecutionRunId()
+	if lastRunID == "" {
+		return 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", fmt.Errorf("cannot get lastRunID"))
+	}
+
+	req = &shared.GetWorkflowExecutionHistoryRequest{
+		Domain: common.StringPtr(domain),
+		Execution: &shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(wid),
+			RunId:      common.StringPtr(lastRunID),
+		},
+		MaximumPageSize: common.Int32Ptr(1000),
+		NextPageToken:   nil,
+	}
+	for {
+		resp, err := frontendClient.GetWorkflowExecutionHistory(ctx, req)
+		if err != nil {
+			return 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
+		}
+		for _, e := range resp.GetHistory().GetEvents() {
+			if e.GetEventType() == shared.EventTypeDecisionTaskCompleted {
+				lastDecisionFinishID = e.GetEventId()
+			}
+		}
+		if len(resp.NextPageToken) != 0 {
+			req.NextPageToken = resp.NextPageToken
+		} else {
+			break
+		}
+	}
+	return
 }
 
 // CompleteActivity completes an activity

@@ -238,6 +238,10 @@ func newWorkflowCommands() []cli.Command {
 					Name:  FlagInputSeparator,
 					Usage: "Separator for input file",
 				},
+				cli.StringFlag{
+					Name:  FlagReason,
+					Usage: "Reason for reset",
+				},
 				cli.IntFlag{
 					Name:  FlagParallism,
 					Value: 1,
@@ -246,6 +250,11 @@ func newWorkflowCommands() []cli.Command {
 				cli.BoolFlag{
 					Name:  FlagSkipCurrent,
 					Usage: "skip current open",
+				},
+				cli.StringFlag{
+					Name:  FlagResetType,
+					Value: "LastDecisionCompleted",
+					Usage: "where to reset. Support one of these: LastDecisionCompleted,LastContinuedAsNew",
 				},
 			},
 			Action: func(c *cli.Context) {

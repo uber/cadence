@@ -158,6 +158,7 @@ const (
 	FlagMemoFile                    = "memo_file"
 	FlagAddBadBinary                = "add_bad_binary"
 	FlagRemoveBadBinary             = "remove_bad_binary"
+	FlagResetType                   = "reset_type"
 )
 
 var flagsForExecution = []cli.Flag{
