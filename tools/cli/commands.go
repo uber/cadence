@@ -34,6 +34,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/fatih/color"
@@ -1291,17 +1292,16 @@ func ResetWorkflow(c *cli.Context) {
 	prettyPrintJSONObject(resp)
 }
 
-func processFixLuna(c *cli.Context, domain string, wes chan shared.WorkflowExecution) {
+func processReset(c *cli.Context, domain string, wes chan shared.WorkflowExecution, done chan bool, wg *sync.WaitGroup) {
 	for {
 		select {
 		case we := <-wes:
 			fmt.Println("received: ", we.GetWorkflowId(), we.GetRunId())
-			//doFixLuna(c, domain, we.GetWorkflowId(), we.GetRunId())
 			wid := we.GetWorkflowId()
 			rid := we.GetRunId()
 			var err error
 			for i := 0; i < 3; i++ {
-				err = doFixLuna(c, domain, wid, rid)
+				err = doReset(c, domain, wid, rid)
 				if err == nil {
 					break
 				}
@@ -1311,80 +1311,35 @@ func processFixLuna(c *cli.Context, domain string, wes chan shared.WorkflowExecu
 			if err != nil {
 				fmt.Println("[ERROR] failed processing: ", wid, rid)
 			}
+		case <-done:
+			wg.Done()
+			return
 		}
 	}
 }
 
-func VerifyLunaInBatch(c *cli.Context) {
+func ResetInBatch(c *cli.Context) {
 	domain := getRequiredGlobalOption(c, FlagDomain)
-	inFile := getRequiredOption(c, FlagInputFile)
-	separator := getRequiredOption(c, FlagInputSeparator)
-
-	file, err := os.Open(inFile)
-	if err != nil {
-		ErrorAndExit("Open failed", err)
-	}
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	idx := 0
-	for scanner.Scan() {
-		idx++
-		line := strings.TrimSpace(scanner.Text())
-		if len(line) == 0 {
-			fmt.Printf("line %v is empty, skipped\n", idx)
-			continue
-		}
-		cols := strings.Split(line, separator)
-		if len(cols) < 2 {
-			ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 2 cols separated by comma, only %v ", idx, len(cols)))
-		}
-		fmt.Printf("Start processing line %v ...\n", idx)
-		wid := strings.TrimSpace(cols[0])
-		rid := strings.TrimSpace(cols[1])
-
-		ctx, cancel := newContext(c)
-		defer cancel()
-
-		frontendClient := cFactory.ServerFrontendClient(c)
-		resp, err := frontendClient.DescribeWorkflowExecution(ctx, &shared.DescribeWorkflowExecutionRequest{
-			Domain: common.StringPtr(domain),
-			Execution: &shared.WorkflowExecution{
-				WorkflowId: common.StringPtr(wid),
-				RunId:      common.StringPtr(rid),
-			},
-		})
-		if err != nil {
-			fmt.Println("failed to desc, ", wid, rid, err)
-		} else {
-			if resp.WorkflowExecutionInfo.CloseStatus != nil && resp.WorkflowExecutionInfo.CloseTime != nil {
-				fmt.Println("terminate succ, ", wid, rid)
-			} else {
-				fmt.Println("terminate fail, ", wid, rid)
-			}
-		}
-		time.Sleep(time.Millisecond * 10)
-	}
-}
-
-func FixLunaInBatch(c *cli.Context) {
-	domain := getRequiredGlobalOption(c, FlagDomain)
-	inFile := getRequiredOption(c, FlagInputFile)
-	inFile2 := getRequiredOption(c, FlagInputFile2)
+	inFileName := getRequiredOption(c, FlagInputFile)
+	excFileName := getRequiredOption(c, FlagExcludeFile)
 	separator := getRequiredOption(c, FlagInputSeparator)
 	parallel := c.Int(FlagParallism)
+	wg := &sync.WaitGroup{}
 
 	wes := make(chan shared.WorkflowExecution)
+	done := make(chan bool)
 	for i := 0; i < parallel; i++ {
-		go processFixLuna(c, domain, wes)
+		wg.Add(1)
+		go processReset(c, domain, wes, done, wg)
 	}
 
 	// read exclude
-	file2, err := os.Open(inFile2)
+	excFile, err := os.Open(excFileName)
 	if err != nil {
 		ErrorAndExit("Open failed2", err)
 	}
-	defer file2.Close()
-	scanner := bufio.NewScanner(file2)
+	defer excFile.Close()
+	scanner := bufio.NewScanner(excFile)
 	idx := 0
 	excludes := map[string]string{}
 	for scanner.Scan() {
@@ -1405,12 +1360,12 @@ func FixLunaInBatch(c *cli.Context) {
 
 	fmt.Println("num of excludes:", len(excludes))
 
-	file, err := os.Open(inFile)
+	inFile, err := os.Open(inFileName)
 	if err != nil {
 		ErrorAndExit("Open failed", err)
 	}
-	defer file.Close()
-	scanner = bufio.NewScanner(file)
+	defer inFile.Close()
+	scanner = bufio.NewScanner(inFile)
 	idx = 0
 	for scanner.Scan() {
 		idx++
@@ -1439,17 +1394,9 @@ func FixLunaInBatch(c *cli.Context) {
 		}
 	}
 
-	fmt.Println("sleep wait for all goroutines...")
-	time.Sleep(time.Second * 60 * 50)
-}
-
-// CompleteActivity completes an activity
-func FixLuna(c *cli.Context) {
-	domain := getRequiredGlobalOption(c, FlagDomain)
-	wid := getRequiredOption(c, FlagWorkflowID)
-	rid := getRequiredOption(c, FlagRunID)
-
-	doFixLuna(c, domain, wid, rid)
+	close(done)
+	fmt.Println("wait for all goroutines...")
+	wg.Wait()
 }
 
 func printErrorAndReturn(msg string, err error) error {
@@ -1457,7 +1404,7 @@ func printErrorAndReturn(msg string, err error) error {
 	return err
 }
 
-func doFixLuna(c *cli.Context, domain, wid, rid string) error {
+func doReset(c *cli.Context, domain, wid, rid string) error {
 	ctx, cancel := newContext(c)
 	defer cancel()
 

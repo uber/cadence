@@ -68,7 +68,7 @@ const (
 	FlagInputWithAlias              = FlagInput + ", i"
 	FlagInputFile                   = "input_file"
 	FlagInputFileWithAlias          = FlagInputFile + ", if"
-	FlagInputFile2                  = "input_file2"
+	FlagExcludeFile                 = "exclude_file"
 	FlagInputSeparator              = "input_separator"
 	FlagParallism                   = "input_parallism"
 	FlagSkipCurrent                 = "skip_current_open"
