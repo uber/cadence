@@ -60,7 +60,7 @@ type (
 		resetWorkflowExecution(currMutableState mutableState, updateCurr bool, closeTask, cleanupTask persistence.Task, newMutableState mutableState, transferTasks, timerTasks, currReplicationTasks, insertReplicationTasks []persistence.Task, baseRunID string, forkRunNextEventID, prevRunVersion int64) (retError error)
 		scheduleNewDecision(transferTasks []persistence.Task, timerTasks []persistence.Task) ([]persistence.Task, []persistence.Task, error)
 		unlock()
-		updateHelper(transferTasks []persistence.Task, timerTasks []persistence.Task, transactionID int64, now time.Time, createReplicationTask bool, standbyHistoryBuilder *historyBuilder, sourceCluster string) error
+		updateWorkflowForStandby(transferTasks []persistence.Task, timerTasks []persistence.Task, transactionID int64, now time.Time, createReplicationTask bool, standbyHistoryBuilder *historyBuilder, sourceCluster string) error
 		updateWorkflowExecution(transferTasks []persistence.Task, timerTasks []persistence.Task, transactionID int64) error
 		updateWorkflowExecutionWithContext(context []byte, transferTasks []persistence.Task, timerTasks []persistence.Task, transactionID int64) error
 	}
@@ -326,7 +326,7 @@ func (c *workflowExecutionContextImpl) replicateWorkflowExecution(request *h.Rep
 	c.msBuilder.GetExecutionInfo().SetNextEventID(nextEventID)
 
 	standbyHistoryBuilder := newHistoryBuilderFromEvents(request.History.Events, c.logger)
-	return c.updateHelper(transferTasks, timerTasks, transactionID, now, false, standbyHistoryBuilder, request.GetSourceCluster())
+	return c.updateWorkflowForStandby(transferTasks, timerTasks, transactionID, now, false, standbyHistoryBuilder, request.GetSourceCluster())
 }
 
 func (c *workflowExecutionContextImpl) updateVersion() error {
@@ -386,6 +386,7 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNewRun(transfe
 	}
 
 	now := time.Now()
+	// insert reset task here
 	return c.update(transferTasks, timerTasks, transactionID, now, c.createReplicationTask, nil, "", newStateBuilder)
 }
 
@@ -394,7 +395,7 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecution(transferTasks []p
 	return c.updateWorkflowExecutionWithNewRun(transferTasks, timerTasks, transactionID, nil)
 }
 
-func (c *workflowExecutionContextImpl) updateHelper(transferTasks []persistence.Task, timerTasks []persistence.Task,
+func (c *workflowExecutionContextImpl) updateWorkflowForStandby(transferTasks []persistence.Task, timerTasks []persistence.Task,
 	transactionID int64, now time.Time,
 	createReplicationTask bool, standbyHistoryBuilder *historyBuilder, sourceCluster string) (errRet error) {
 	return c.update(transferTasks, timerTasks, transactionID, now, createReplicationTask, standbyHistoryBuilder, sourceCluster, nil)
