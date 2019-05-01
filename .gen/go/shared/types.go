@@ -29,13 +29,12 @@ import (
 	json "encoding/json"
 	errors "errors"
 	fmt "fmt"
-	math "math"
-	strconv "strconv"
-	strings "strings"
-
 	multierr "go.uber.org/multierr"
 	wire "go.uber.org/thriftrw/wire"
 	zapcore "go.uber.org/zap/zapcore"
+	math "math"
+	strconv "strconv"
+	strings "strings"
 )
 
 type AccessDeniedError struct {
@@ -7950,6 +7949,21 @@ func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) IsSetCronSchedule() b
 	return v != nil && v.CronSchedule != nil
 }
 
+// GetHeader returns the value of Header if it is set or its
+// zero value if it is unset.
+func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetHeader() (o *Header) {
+	if v != nil && v.Header != nil {
+		return v.Header
+	}
+
+	return
+}
+
+// IsSetHeader returns true if Header is not nil.
+func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) IsSetHeader() bool {
+	return v != nil && v.Header != nil
+}
+
 type CountWorkflowExecutionsRequest struct {
 	Domain *string `json:"domain,omitempty"`
 	Query  *string `json:"query,omitempty"`
@@ -8261,21 +8275,8 @@ func (v *CountWorkflowExecutionsResponse) GetCount() (o int64) {
 	if v != nil && v.Count != nil {
 		return *v.Count
 	}
-	return
-}
 
-// GetHeader returns the value of Header if it is set or its
-// zero value if it is unset.
-func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetHeader() (o *Header) {
-	if v != nil && v.Header != nil {
-		return v.Header
-	}
 	return
-}
-
-// IsSetHeader returns true if Header is not nil.
-func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) IsSetHeader() bool {
-	return v != nil && v.Header != nil
 }
 
 // IsSetCount returns true if Count is not nil.
