@@ -1475,21 +1475,21 @@ func doReset(c *cli.Context, domain, wid, rid string, reason, resetType string, 
 
 	fmt.Println("DecisionFinishEventId for reset:", wid, rid, resetBaseRunID, lastDecisionFinishID)
 
-	//resp2, err := frontendClient.ResetWorkflowExecution(ctx, &shared.ResetWorkflowExecutionRequest{
-	//	Domain: common.StringPtr(domain),
-	//	WorkflowExecution: &shared.WorkflowExecution{
-	//		WorkflowId: common.StringPtr(wid),
-	//		RunId:      common.StringPtr(resetBaseRunID),
-	//	},
-	//	DecisionFinishEventId: common.Int64Ptr(lastDecisionFinishID),
-	//	RequestId:             common.StringPtr(uuid.New()),
-	//	Reason:                common.StringPtr(fmt.Sprintf("%v:%v", getCurrentUserFromEnv(), reason)),
-	//})
+	resp2, err := frontendClient.ResetWorkflowExecution(ctx, &shared.ResetWorkflowExecutionRequest{
+		Domain: common.StringPtr(domain),
+		WorkflowExecution: &shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(wid),
+			RunId:      common.StringPtr(resetBaseRunID),
+		},
+		DecisionFinishEventId: common.Int64Ptr(lastDecisionFinishID),
+		RequestId:             common.StringPtr(uuid.New()),
+		Reason:                common.StringPtr(fmt.Sprintf("%v:%v", getCurrentUserFromEnv(), reason)),
+	})
 
-	//if err != nil {
-	//	return printErrorAndReturn("ResetWorkflowExecution failed", err)
-	//}
-	//fmt.Println("new runID for wid/rid is ,", wid, rid, resp2.GetRunId())
+	if err != nil {
+		return printErrorAndReturn("ResetWorkflowExecution failed", err)
+	}
+	fmt.Println("new runID for wid/rid is ,", wid, rid, resp2.GetRunId())
 	return nil
 }
 
@@ -1545,7 +1545,6 @@ func getLastContinueAsNewID(domain, wid, rid string, ctx context.Context, fronte
 		return "", 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", fmt.Errorf("cannot get resetBaseRunID"))
 	}
 
-	fmt.Println("debug getLastContinueAsNewID,", rid, resetBaseRunID)
 	req = &shared.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(domain),
 		Execution: &shared.WorkflowExecution{
