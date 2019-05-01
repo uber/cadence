@@ -1451,6 +1451,7 @@ func doReset(c *cli.Context, domain, wid, rid string) error {
 	lastDecisionFinishID := int64(0)
 	resetType := c.String(FlagResetType)
 	resetBaseRunID := ""
+	fmt.Println("switch", resetType)
 	switch resetType {
 	case "LastDecisionCompleted":
 		resetBaseRunID, lastDecisionFinishID, err = getLastDecisionCompletedID(domain, wid, rid, ctx, frontendClient)

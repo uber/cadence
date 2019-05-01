@@ -253,7 +253,6 @@ func newWorkflowCommands() []cli.Command {
 				},
 				cli.StringFlag{
 					Name:  FlagResetType,
-					Value: "LastDecisionCompleted",
 					Usage: "where to reset. Support one of these: LastDecisionCompleted,LastContinuedAsNew",
 				},
 			},
