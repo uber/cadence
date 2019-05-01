@@ -1688,6 +1688,9 @@ func (s *ExecutionManagerSuite) TestTimerTasksRangeComplete() {
 	err2 = s.UpdateWorkflowExecution(updatedInfo, nil, nil, int64(5), nil, nil, nil, nil, nil)
 	s.NoError(err2)
 
+	err2 = s.CompleteTimerTask(timerTasks[0].VisibilityTimestamp, timerTasks[0].TaskID)
+	s.NoError(err2)
+
 	err2 = s.CompleteTimerTask(timerTasks[1].VisibilityTimestamp, timerTasks[1].TaskID)
 	s.NoError(err2)
 
