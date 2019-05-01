@@ -1538,6 +1538,7 @@ func getLastContinueAsNewID(domain, wid, rid string, ctx context.Context, fronte
 		return "", 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", fmt.Errorf("cannot get resetBaseRunID"))
 	}
 
+	fmt.Println("debug getLastContinueAsNewID,", rid, resetBaseRunID)
 	req = &shared.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(domain),
 		Execution: &shared.WorkflowExecution{
