@@ -1450,14 +1450,15 @@ func doReset(c *cli.Context, domain, wid, rid string) error {
 
 	lastDecisionFinishID := int64(0)
 	resetType := c.String(FlagResetType)
+	resetBaseRunID := ""
 	switch resetType {
 	case "LastDecisionCompleted":
-		lastDecisionFinishID, err = getLastDecisionCompletedID(domain, wid, rid, ctx, frontendClient)
+		resetBaseRunID, lastDecisionFinishID, err = getLastDecisionCompletedID(domain, wid, rid, ctx, frontendClient)
 		if err != nil {
 			return err
 		}
 	case "LastContinuedAsNew":
-		lastDecisionFinishID, err = getLastContinueAsNewID(domain, wid, rid, ctx, frontendClient)
+		resetBaseRunID, lastDecisionFinishID, err = getLastContinueAsNewID(domain, wid, rid, ctx, frontendClient)
 		if err != nil {
 			return err
 		}
@@ -1471,7 +1472,7 @@ func doReset(c *cli.Context, domain, wid, rid string) error {
 		Domain: common.StringPtr(domain),
 		WorkflowExecution: &shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(wid),
-			RunId:      common.StringPtr(rid),
+			RunId:      common.StringPtr(resetBaseRunID),
 		},
 		DecisionFinishEventId: common.Int64Ptr(lastDecisionFinishID),
 		RequestId:             common.StringPtr(uuid.New()),
@@ -1485,7 +1486,8 @@ func doReset(c *cli.Context, domain, wid, rid string) error {
 	return nil
 }
 
-func getLastDecisionCompletedID(domain, wid, rid string, ctx context.Context, frontendClient workflowserviceclient.Interface) (lastDecisionFinishID int64, err error) {
+func getLastDecisionCompletedID(domain, wid, rid string, ctx context.Context, frontendClient workflowserviceclient.Interface) (resetBaseRunID string, lastDecisionFinishID int64, err error) {
+	resetBaseRunID = rid
 	req := &shared.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(domain),
 		Execution: &shared.WorkflowExecution{
@@ -1499,7 +1501,7 @@ func getLastDecisionCompletedID(domain, wid, rid string, ctx context.Context, fr
 	for {
 		resp, err := frontendClient.GetWorkflowExecutionHistory(ctx, req)
 		if err != nil {
-			return 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
+			return "", 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
 		}
 		for _, e := range resp.GetHistory().GetEvents() {
 			if e.GetEventType() == shared.EventTypeDecisionTaskCompleted {
@@ -1515,7 +1517,7 @@ func getLastDecisionCompletedID(domain, wid, rid string, ctx context.Context, fr
 	return
 }
 
-func getLastContinueAsNewID(domain, wid, rid string, ctx context.Context, frontendClient workflowserviceclient.Interface) (lastDecisionFinishID int64, err error) {
+func getLastContinueAsNewID(domain, wid, rid string, ctx context.Context, frontendClient workflowserviceclient.Interface) (resetBaseRunID string, lastDecisionFinishID int64, err error) {
 	// get first event
 	req := &shared.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(domain),
@@ -1528,19 +1530,19 @@ func getLastContinueAsNewID(domain, wid, rid string, ctx context.Context, fronte
 	}
 	resp, err := frontendClient.GetWorkflowExecutionHistory(ctx, req)
 	if err != nil {
-		return 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
+		return "", 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
 	}
 	firstEvent := resp.History.Events[0]
-	lastRunID := firstEvent.GetWorkflowExecutionStartedEventAttributes().GetContinuedExecutionRunId()
-	if lastRunID == "" {
-		return 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", fmt.Errorf("cannot get lastRunID"))
+	resetBaseRunID = firstEvent.GetWorkflowExecutionStartedEventAttributes().GetContinuedExecutionRunId()
+	if resetBaseRunID == "" {
+		return "", 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", fmt.Errorf("cannot get resetBaseRunID"))
 	}
 
 	req = &shared.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(domain),
 		Execution: &shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(wid),
-			RunId:      common.StringPtr(lastRunID),
+			RunId:      common.StringPtr(resetBaseRunID),
 		},
 		MaximumPageSize: common.Int32Ptr(1000),
 		NextPageToken:   nil,
@@ -1548,7 +1550,7 @@ func getLastContinueAsNewID(domain, wid, rid string, ctx context.Context, fronte
 	for {
 		resp, err := frontendClient.GetWorkflowExecutionHistory(ctx, req)
 		if err != nil {
-			return 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
+			return "", 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
 		}
 		for _, e := range resp.GetHistory().GetEvents() {
 			if e.GetEventType() == shared.EventTypeDecisionTaskCompleted {
