@@ -60,7 +60,7 @@ type (
 		resetWorkflowExecution(currMutableState mutableState, updateCurr bool, closeTask, cleanupTask persistence.Task, newMutableState mutableState, transferTasks, timerTasks, currReplicationTasks, insertReplicationTasks []persistence.Task, baseRunID string, forkRunNextEventID, prevRunVersion int64) (retError error)
 		scheduleNewDecision(transferTasks []persistence.Task, timerTasks []persistence.Task) ([]persistence.Task, []persistence.Task, error)
 		unlock()
-		updateWorkflowForStandby(transferTasks []persistence.Task, timerTasks []persistence.Task, transactionID int64, now time.Time, createReplicationTask bool, standbyHistoryBuilder *historyBuilder, sourceCluster string) error
+		updateWorkflowExecutionForStandby(transferTasks []persistence.Task, timerTasks []persistence.Task, transactionID int64, now time.Time, createReplicationTask bool, standbyHistoryBuilder *historyBuilder, sourceCluster string) error
 		updateWorkflowExecution(transferTasks []persistence.Task, timerTasks []persistence.Task, transactionID int64) error
 		updateWorkflowExecutionWithContext(context []byte, transferTasks []persistence.Task, timerTasks []persistence.Task, transactionID int64) error
 	}
@@ -317,7 +317,7 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNewRunAndConte
 	timerTasks []persistence.Task, transactionID int64, newStateBuilder mutableState) error {
 	c.msBuilder.GetExecutionInfo().ExecutionContext = context
 
-	return c.updateWorkflowExecutionWithNewRun(transferTasks, timerTasks, transactionID, newStateBuilder)
+	return c.updateWorkflowExecutionForActive(transferTasks, timerTasks, transactionID, newStateBuilder)
 }
 
 func (c *workflowExecutionContextImpl) replicateWorkflowExecution(request *h.ReplicateEventsRequest,
@@ -326,7 +326,7 @@ func (c *workflowExecutionContextImpl) replicateWorkflowExecution(request *h.Rep
 	c.msBuilder.GetExecutionInfo().SetNextEventID(nextEventID)
 
 	standbyHistoryBuilder := newHistoryBuilderFromEvents(request.History.Events, c.logger)
-	return c.updateWorkflowForStandby(transferTasks, timerTasks, transactionID, now, false, standbyHistoryBuilder, request.GetSourceCluster())
+	return c.updateWorkflowExecutionForStandby(transferTasks, timerTasks, transactionID, now, false, standbyHistoryBuilder, request.GetSourceCluster())
 }
 
 func (c *workflowExecutionContextImpl) updateVersion() error {
@@ -348,7 +348,7 @@ func (c *workflowExecutionContextImpl) updateVersion() error {
 	return nil
 }
 
-func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNewRun(transferTasks []persistence.Task,
+func (c *workflowExecutionContextImpl) updateWorkflowExecutionForActive(transferTasks []persistence.Task,
 	timerTasks []persistence.Task, transactionID int64, newStateBuilder mutableState) error {
 	if c.msBuilder.GetReplicationState() != nil {
 		currentVersion := c.msBuilder.GetCurrentVersion()
@@ -385,17 +385,18 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNewRun(transfe
 			c.msBuilder.GetExecutionInfo().LastFirstEventID, c.msBuilder.GetExecutionInfo().NextEventID))
 	}
 
+	// schedule a reset task if workflow is still open
+
 	now := time.Now()
-	// insert reset task here
 	return c.update(transferTasks, timerTasks, transactionID, now, c.createReplicationTask, nil, "", newStateBuilder)
 }
 
 func (c *workflowExecutionContextImpl) updateWorkflowExecution(transferTasks []persistence.Task,
 	timerTasks []persistence.Task, transactionID int64) error {
-	return c.updateWorkflowExecutionWithNewRun(transferTasks, timerTasks, transactionID, nil)
+	return c.updateWorkflowExecutionForActive(transferTasks, timerTasks, transactionID, nil)
 }
 
-func (c *workflowExecutionContextImpl) updateWorkflowForStandby(transferTasks []persistence.Task, timerTasks []persistence.Task,
+func (c *workflowExecutionContextImpl) updateWorkflowExecutionForStandby(transferTasks []persistence.Task, timerTasks []persistence.Task,
 	transactionID int64, now time.Time,
 	createReplicationTask bool, standbyHistoryBuilder *historyBuilder, sourceCluster string) (errRet error) {
 	return c.update(transferTasks, timerTasks, transactionID, now, createReplicationTask, standbyHistoryBuilder, sourceCluster, nil)
