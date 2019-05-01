@@ -978,7 +978,7 @@ func (t *transferQueueActiveProcessorImpl) processResetWorkflow(task *persistenc
 	resp, err := t.historyService.resetor.ResetWorkflowExecution(context.Background(), &workflow.ResetWorkflowExecutionRequest{
 		Domain:                common.StringPtr(domainEntry.GetInfo().Name),
 		WorkflowExecution:     &baseExecution,
-		Reason:                common.StringPtr("auto-reset:" + reason),
+		Reason:                common.StringPtr(fmt.Sprintf("auto-reset reason:%v, binaryChecksum:%v ", reason, resetPt.GetBinaryChecksum())),
 		DecisionFinishEventId: common.Int64Ptr(resetPt.GetFirstDecisionCompletedId()),
 		RequestId:             common.StringPtr(uuid.New()),
 	}, baseContext, baseMutableState, currContext, currMutableState)
