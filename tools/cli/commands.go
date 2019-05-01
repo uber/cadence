@@ -1294,7 +1294,7 @@ func ResetWorkflow(c *cli.Context) {
 	prettyPrintJSONObject(resp)
 }
 
-func processResets(c *cli.Context, domain string, wes chan shared.WorkflowExecution, done chan bool, wg *sync.WaitGroup) {
+func processResets(c *cli.Context, domain string, wes chan shared.WorkflowExecution, done chan bool, wg *sync.WaitGroup, reason, resetType string, skipOpen bool) {
 	for {
 		select {
 		case we := <-wes:
@@ -1303,7 +1303,7 @@ func processResets(c *cli.Context, domain string, wes chan shared.WorkflowExecut
 			rid := we.GetRunId()
 			var err error
 			for i := 0; i < 3; i++ {
-				err = doReset(c, domain, wid, rid)
+				err = doReset(c, domain, wid, rid, reason, resetType, skipOpen)
 				if err == nil {
 					break
 				}
@@ -1325,11 +1325,17 @@ func ResetInBatch(c *cli.Context) {
 	inFileName := getRequiredOption(c, FlagInputFile)
 	excFileName := getRequiredOption(c, FlagExcludeFile)
 	separator := getRequiredOption(c, FlagInputSeparator)
-	getRequiredOption(c, FlagReason)
+	reason := getRequiredOption(c, FlagReason)
 	resetType := getRequiredOption(c, FlagResetType)
 	if resetType != "LastDecisionCompleted" && resetType != "LastContinuedAsNew" {
 		ErrorAndExit("Not supported reset type", nil)
 	}
+
+	if !c.IsSet(FlagSkipCurrent) {
+		ErrorAndExit("need to specify whether skip on current is open", nil)
+	}
+	skipOpen := c.Bool(FlagSkipCurrent)
+
 	parallel := c.Int(FlagParallism)
 	wg := &sync.WaitGroup{}
 
@@ -1337,7 +1343,7 @@ func ResetInBatch(c *cli.Context) {
 	done := make(chan bool)
 	for i := 0; i < parallel; i++ {
 		wg.Add(1)
-		go processResets(c, domain, wes, done, wg)
+		go processResets(c, domain, wes, done, wg, reason, resetType, skipOpen)
 	}
 
 	// read exclude
@@ -1414,7 +1420,7 @@ func printErrorAndReturn(msg string, err error) error {
 	return err
 }
 
-func doReset(c *cli.Context, domain, wid, rid string) error {
+func doReset(c *cli.Context, domain, wid, rid string, reason, resetType string, skipOpen bool) error {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
@@ -1439,7 +1445,7 @@ func doReset(c *cli.Context, domain, wid, rid string) error {
 	}
 
 	//reason := c.String(FlagReason)
-	skipOpen := c.Bool(FlagSkipCurrent)
+
 	if resp.WorkflowExecutionInfo.CloseStatus == nil || resp.WorkflowExecutionInfo.CloseTime == nil {
 		if skipOpen {
 			fmt.Println("skip because current run is open: ", wid, rid, currentRunID)
@@ -1449,7 +1455,7 @@ func doReset(c *cli.Context, domain, wid, rid string) error {
 	}
 
 	lastDecisionFinishID := int64(0)
-	resetType := c.String(FlagResetType)
+
 	resetBaseRunID := ""
 	fmt.Println("switch", resetType)
 	switch resetType {
