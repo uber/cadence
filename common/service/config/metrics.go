@@ -21,12 +21,14 @@
 package config
 
 import (
-	"github.com/cactus/go-statsd-client/statsd"
-	"github.com/uber-go/tally"
-	tallystatsdreporter "github.com/uber-go/tally/statsd"
-	statsdreporter "github.com/uber/cadence/common/metrics/tally/statsd"
 	"log"
 	"time"
+
+	"github.com/cactus/go-statsd-client/statsd"
+	"github.com/uber-go/tally"
+	"github.com/uber-go/tally/prometheus"
+	tallystatsdreporter "github.com/uber-go/tally/statsd"
+	statsdreporter "github.com/uber/cadence/common/metrics/tally/statsd"
 )
 
 // NewScope builds a new tally scope
@@ -43,6 +45,9 @@ func (c *Metrics) NewScope() tally.Scope {
 	}
 	if c.Statsd != nil {
 		return c.newStatsdScope()
+	}
+	if c.Prometheus != nil {
+		return c.newPrometheusScope()
 	}
 	return tally.NoopScope
 }
@@ -79,6 +84,22 @@ func (c *Metrics) newStatsdScope() tally.Scope {
 	scopeOpts := tally.ScopeOptions{
 		Tags:     c.Tags,
 		Reporter: reporter,
+	}
+	scope, _ := tally.NewRootScope(scopeOpts, time.Second)
+	return scope
+}
+
+// newPrometheusScope returns a new prometheus scope with
+// a default reporting interval of a second
+func (c *Metrics) newPrometheusScope() tally.Scope {
+	reporter, err := c.Prometheus.NewReporter(prometheus.ConfigurationOptions{})
+	if err != nil {
+		log.Fatalf("error creating prometheus reporter, err=%v", err)
+	}
+	scopeOpts := tally.ScopeOptions{
+		Tags:           c.Tags,
+		CachedReporter: reporter,
+		Separator:      prometheus.DefaultSeparator,
 	}
 	scope, _ := tally.NewRootScope(scopeOpts, time.Second)
 	return scope
