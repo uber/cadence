@@ -1438,7 +1438,7 @@ func doReset(c *cli.Context, domain, wid, rid string) error {
 		rid = currentRunID
 	}
 
-	reason := c.String(FlagReason)
+	//reason := c.String(FlagReason)
 	skipOpen := c.Bool(FlagSkipCurrent)
 	if resp.WorkflowExecutionInfo.CloseStatus == nil || resp.WorkflowExecutionInfo.CloseTime == nil {
 		if skipOpen {
