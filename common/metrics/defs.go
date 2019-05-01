@@ -594,6 +594,8 @@ const (
 	TransferActiveTaskStartChildExecutionScope
 	// TransferActiveTaskRecordWorkflowStartedScope is the scope used for record workflow started task processing by transfer queue processor
 	TransferActiveTaskRecordWorkflowStartedScope
+	// TransferActiveTaskResetWorkflowScope is the scope used for record workflow started task processing by transfer queue processor
+	TransferActiveTaskResetWorkflowScope
 	// TransferStandbyTaskActivityScope is the scope used for activity task processing by transfer queue processor
 	TransferStandbyTaskActivityScope
 	// TransferStandbyTaskDecisionScope is the scope used for decision task processing by transfer queue processor
@@ -1009,6 +1011,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		TransferActiveTaskSignalExecutionScope:        {operation: "TransferActiveTaskSignalExecution"},
 		TransferActiveTaskStartChildExecutionScope:    {operation: "TransferActiveTaskStartChildExecution"},
 		TransferActiveTaskRecordWorkflowStartedScope:  {operation: "TransferActiveTaskRecordWorkflowStarted"},
+		TransferActiveTaskResetWorkflowScope:          {operation: "TransferActiveTaskResetWorkflow"},
 		TransferStandbyTaskActivityScope:              {operation: "TransferStandbyTaskActivity"},
 		TransferStandbyTaskDecisionScope:              {operation: "TransferStandbyTaskDecision"},
 		TransferStandbyTaskCloseExecutionScope:        {operation: "TransferStandbyTaskCloseExecution"},
