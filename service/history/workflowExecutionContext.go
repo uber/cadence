@@ -635,7 +635,6 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 		ReplicationTasks:              replicationTasks,
 		TimerTasks:                    timerTasks,
 		Condition:                     c.updateCondition,
-		DeleteTimerTask:               nil, // no where is this attr used
 		UpsertActivityInfos:           updates.updateActivityInfos,
 		DeleteActivityInfos:           updates.deleteActivityInfos,
 		UpserTimerInfos:               updates.updateTimerInfos,
