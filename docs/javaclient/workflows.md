@@ -164,10 +164,12 @@ public void processFile(Arguments args) {
     try {
         // Download all files in parallel.
         for (String sourceFilename : args.getSourceFilenames()) {
-            Promise<String> localName = Async.function(activities::download, args.getSourceBucketName(), sourceFilename);
+            Promise<String> localName = Async.function(activities::download, 
+                args.getSourceBucketName(), sourceFilename);
             localNamePromises.add(localName);
         }
-        // allOf converts a list of promises to a single promise that contains a list of each promise value.
+        // allOf converts a list of promises to a single promise that contains a list 
+        // of each promise value.
         Promise<List<String>> localNamesPromise = Promise.allOf(localNamePromises);
 
         // All code until the next line wasn't blocking.
@@ -178,14 +180,15 @@ public void processFile(Arguments args) {
         // Upload all results in parallel.
         List<Promise<Void>> uploadedList = new ArrayList<>();
         for (String processedName : processedNames) {
-            Promise<Void> uploaded = Async.procedure(activities::upload, args.getTargetBucketName(), args.getTargetFilename(), processedName);
+            Promise<Void> uploaded = Async.procedure(activities::upload, 
+                args.getTargetBucketName(), args.getTargetFilename(), processedName);
             uploadedList.add(uploaded);
         }
         // Wait for all uploads to complete.
         Promise<?> allUploaded = Promise.allOf(uploadedList);
         allUploaded.get(); // blocks until all promises are ready.
     } finally {
-        for (Promise<Sting> localNamePromise : localNamePromises) {
+        for (Promise<String> localNamePromise : localNamePromises) {
             // Skip files that haven't completed downloading.
             if (localNamePromise.isCompleted()) {
                 activities.deleteLocalFile(localNamePromise.get());
@@ -246,7 +249,7 @@ public static class GreetingWorkflowImpl implements GreetingWorkflow {
 
         // Do something else here.
         ...
-        return "First: " + greeting1.get() + ", second=" + greeting2.get();
+        return "First: " + greeting1.get() + ", second: " + greeting2.get();
     }
 }
 ```
@@ -378,7 +381,7 @@ public void processFile(Arguments args) {
         localName = activities.download(args.getSourceBucketName(), args.getSourceFilename());
         processedName = activities.processFile(localName);
         // getVersion call is left here to ensure that any attempt to replay history
-        // for a different version fails. It can be removed later when there is no possiblity
+        // for a different version fails. It can be removed later when there is no possibility
         // of this happening.
         Workflow.getVersion("checksumAdded", 1, 1);
         long checksum = activities.calculateChecksum(processedName);
