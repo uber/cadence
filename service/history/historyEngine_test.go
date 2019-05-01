@@ -4832,7 +4832,7 @@ func addDecisionTaskCompletedEvent(builder mutableState, scheduleID, startedID i
 	e := builder.AddDecisionTaskCompletedEvent(scheduleID, startedID, &workflow.RespondDecisionTaskCompletedRequest{
 		ExecutionContext: context,
 		Identity:         common.StringPtr(identity),
-	})
+	}, defaultHistoryMaxAutoResetPoints)
 
 	builder.FlushBufferedEvents()
 
@@ -4962,6 +4962,7 @@ func addChildWorkflowExecutionStartedEvent(builder mutableState, initiatedID int
 		},
 		&workflow.WorkflowType{Name: common.StringPtr(workflowType)},
 		initiatedID,
+		&workflow.Header{},
 	)
 	return event
 }
