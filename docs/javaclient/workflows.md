@@ -28,7 +28,7 @@ public interface FileProcessingWorkflow {
     void retryNow();
 }
 ```
-It is recommended to use a single value type argument for workflow methods. This way adding new arguments as fields to the value type is a backwards compatible change.
+It is recommended to use a single value type argument for workflow methods. This way, adding new arguments as fields to the value type is a backwards-compatible change.
 
 ## Starting workflow executions
 
@@ -282,7 +282,7 @@ effects (such as activity invocations) are ignored because they are already reco
 When writing workflow logic, the replay is not visible, so the code should be written as it executes only once.
 This design puts the following constraints on the workflow implementation:
 - Do not use any mutable global variables because multiple instances of workflows are executed in parallel.
-- Do not call any non deterministic functions like non seeded random or UUID.randomUUID() directly form the workflow code.
+- Do not call any non deterministic functions like non seeded random or UUID.randomUUID() directly from the workflow code.
 Always do this in activities.
 - Don’t perform any IO or service calls as they are not usually deterministic. Use activities for this.
 - Only use `Workflow.currentTimeMillis()` to get the current time inside a workflow.
