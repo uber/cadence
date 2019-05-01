@@ -24,7 +24,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/pborman/uuid"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore"
@@ -285,7 +284,7 @@ func (s *Service) registerSystemDomain(pFactory persistencefactory.Factory, clus
 	defer metadataV2.Close()
 	_, err = metadataV2.CreateDomain(&persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
-			ID:          uuid.New(),
+			ID:          common.SystemDomainID,
 			Name:        common.SystemDomainName,
 			Description: "Cadence internal system domain",
 		},
