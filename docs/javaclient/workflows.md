@@ -297,7 +297,7 @@ executed one thread at a time and under a global lock.
   - Call `WorkflowThread.sleep` instead of `Thread.sleep`.
   - Use `Promise` and `CompletablePromise` instead of `Future` and `CompletableFuture`.
   - Use `WorkflowQueue` instead of `BlockingQueue`.
-- Use `Workflow.getVersion` when doing any changes to the workflow code. Without this, any deployment of an updated workfow code 
+- Use `Workflow.getVersion` when doing any changes to the workflow code. Without this, any deployment of an updated workflow code 
 might break already open workflows.  
 - Don’t access configuration APIs directly from a workflow because changes in the configuration might affect a workflow execution path.
 Pass it as an argument to a workflow function or use an activity to load it.
