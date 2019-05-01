@@ -833,3 +833,36 @@ func (s *ESVisibilitySuite) TestScanWorkflowExecutions() {
 	s.True(ok)
 	s.True(strings.Contains(err.Error(), "ScanWorkflowExecutions failed"))
 }
+
+func (s *ESVisibilitySuite) TestCountWorkflowExecutions() {
+	s.mockESClient.On("Count", mock.Anything, testIndex, mock.MatchedBy(func(input string) bool {
+		s.True(strings.Contains(input, `{"match_phrase":{"CloseStatus":{"query":"5"}}}`))
+		return true
+	})).Return(int64(1), nil).Once()
+
+	request := &p.CountWorkflowExecutionsRequest{
+		DomainUUID: testDomainID,
+		Domain:     testDomain,
+		Query:      `CloseStatus = 5`,
+	}
+	resp, err := s.visibilityStore.CountWorkflowExecutions(request)
+	s.NoError(err)
+	s.Equal(int64(1), resp.Count)
+
+	// test internal error
+	s.mockESClient.On("Count", mock.Anything, testIndex, mock.Anything).Return(int64(0), errTestESSearch).Once()
+
+	_, err = s.visibilityStore.CountWorkflowExecutions(request)
+	s.Error(err)
+	_, ok := err.(*workflow.InternalServiceError)
+	s.True(ok)
+	s.True(strings.Contains(err.Error(), "CountWorkflowExecutions failed"))
+
+	// test bad request
+	request.Query = `invalid query`
+	_, err = s.visibilityStore.CountWorkflowExecutions(request)
+	s.Error(err)
+	_, ok = err.(*workflow.BadRequestError)
+	s.True(ok)
+	s.True(strings.Contains(err.Error(), "Error when parse query"))
+}
