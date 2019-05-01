@@ -935,19 +935,21 @@ func (t *transferQueueActiveProcessorImpl) processResetWorkflow(task *persistenc
 	}
 	logger = logger.WithTags(tag.WorkflowDomainName(domainEntry.GetInfo().Name))
 
-	resetPt := FindAutoResetPoint(&domainEntry.GetConfig().BadBinaries, executionInfo.AutoResetPoints)
+	reason, resetPt := FindAutoResetPoint(&domainEntry.GetConfig().BadBinaries, executionInfo.AutoResetPoints)
 	if resetPt == nil {
 		logger.Warn("Auto-Reset is skipped, because reset point is not found.")
 		return nil
 	}
 
+	var baseExecution workflow.WorkflowExecution
 	var baseContext workflowExecutionContext
 	var baseMutableState mutableState
 	if resetPt.GetRunId() == executionInfo.RunID {
 		baseMutableState = currMutableState
 		baseContext = currContext
+		baseExecution = execution
 	} else {
-		baseExecution := workflow.WorkflowExecution{
+		baseExecution = workflow.WorkflowExecution{
 			WorkflowId: common.StringPtr(task.WorkflowID),
 			RunId:      common.StringPtr(resetPt.GetRunId()),
 		}
@@ -973,7 +975,13 @@ func (t *transferQueueActiveProcessorImpl) processResetWorkflow(task *persistenc
 		tag.WorkflowBinaryChecksum(resetPt.GetBinaryChecksum()),
 		tag.WorkflowEventID(resetPt.GetFirstDecisionCompletedId()))
 
-	resp, err := t.historyService.resetor.ResetWorkflowExecution(context.Background(), &workflow.ResetWorkflowExecutionRequest{}, baseContext, baseMutableState, currContext, currMutableState)
+	resp, err := t.historyService.resetor.ResetWorkflowExecution(context.Background(), &workflow.ResetWorkflowExecutionRequest{
+		Domain:                common.StringPtr(domainEntry.GetInfo().Name),
+		WorkflowExecution:     &baseExecution,
+		Reason:                common.StringPtr("auto-reset:" + reason),
+		DecisionFinishEventId: common.Int64Ptr(resetPt.GetFirstDecisionCompletedId()),
+		RequestId:             common.StringPtr(uuid.New()),
+	}, baseContext, baseMutableState, currContext, currMutableState)
 	if err != nil {
 		logger.Error("Auto-Reset workflow failed", tag.Error(err))
 		return err

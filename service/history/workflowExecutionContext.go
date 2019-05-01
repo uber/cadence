@@ -394,7 +394,7 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionForActive(transfer
 		if err != nil {
 			return err
 		}
-		pt := FindAutoResetPoint(&domainEntry.GetConfig().BadBinaries, c.msBuilder.GetExecutionInfo().AutoResetPoints)
+		_, pt := FindAutoResetPoint(&domainEntry.GetConfig().BadBinaries, c.msBuilder.GetExecutionInfo().AutoResetPoints)
 		if pt != nil {
 			transferTasks = append(transferTasks, &persistence.ResetWorkflowTask{})
 			c.logger.Info("Auto-Reset task is scheduled",

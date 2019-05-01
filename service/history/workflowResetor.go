@@ -861,15 +861,15 @@ func (w *workflowResetorImpl) replicateResetEvent(baseMutableState mutableState,
 	return
 }
 
-func FindAutoResetPoint(badBinaries *workflow.BadBinaries, autoResetPoints *workflow.ResetPoints) *workflow.ResetPointInfo {
+func FindAutoResetPoint(badBinaries *workflow.BadBinaries, autoResetPoints *workflow.ResetPoints) (reason string, pt *workflow.ResetPointInfo) {
 	if badBinaries == nil || badBinaries.Binaries == nil || autoResetPoints == nil || autoResetPoints.Points == nil {
-		return nil
+		return
 	}
 	for _, p := range autoResetPoints.Points {
-		_, ok := badBinaries.Binaries[p.GetBinaryChecksum()]
+		bin, ok := badBinaries.Binaries[p.GetBinaryChecksum()]
 		if ok && p.GetResettable() {
-			return p
+			return bin.GetReason(), p
 		}
 	}
-	return nil
+	return
 }

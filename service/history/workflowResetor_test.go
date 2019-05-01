@@ -4133,11 +4133,11 @@ func (s *resetorSuite) TestApplyReset() {
 
 func TestFindAutoResetPoint(t *testing.T) {
 	// case 1
-	pt := FindAutoResetPoint(nil, nil)
+	_, pt := FindAutoResetPoint(nil, nil)
 	assert.Nil(t, pt)
 
 	// case 2
-	pt = FindAutoResetPoint(&workflow.BadBinaries{}, &workflow.ResetPoints{})
+	_, pt = FindAutoResetPoint(&workflow.BadBinaries{}, &workflow.ResetPoints{})
 	assert.Nil(t, pt)
 
 	pt0 := &workflow.ResetPointInfo{
@@ -4154,7 +4154,7 @@ func TestFindAutoResetPoint(t *testing.T) {
 	}
 
 	// case 3
-	pt = FindAutoResetPoint(&workflow.BadBinaries{
+	_, pt = FindAutoResetPoint(&workflow.BadBinaries{
 		Binaries: map[string]*workflow.BadBinaryInfo{
 			"abc": {},
 			"def": {},
@@ -4167,7 +4167,7 @@ func TestFindAutoResetPoint(t *testing.T) {
 	assert.Equal(t, pt.String(), pt0.String())
 
 	// case 4
-	pt = FindAutoResetPoint(&workflow.BadBinaries{
+	_, pt = FindAutoResetPoint(&workflow.BadBinaries{
 		Binaries: map[string]*workflow.BadBinaryInfo{
 			"none": {},
 			"def":  {},
@@ -4180,7 +4180,7 @@ func TestFindAutoResetPoint(t *testing.T) {
 	assert.Equal(t, pt.String(), pt1.String())
 
 	// case 4
-	pt = FindAutoResetPoint(&workflow.BadBinaries{
+	_, pt = FindAutoResetPoint(&workflow.BadBinaries{
 		Binaries: map[string]*workflow.BadBinaryInfo{
 			"none1": {},
 			"none2": {},
@@ -4193,7 +4193,7 @@ func TestFindAutoResetPoint(t *testing.T) {
 	assert.Nil(t, pt)
 
 	// case 5
-	pt = FindAutoResetPoint(&workflow.BadBinaries{
+	_, pt = FindAutoResetPoint(&workflow.BadBinaries{
 		Binaries: map[string]*workflow.BadBinaryInfo{
 			"none1": {},
 			"ghi":   {},
