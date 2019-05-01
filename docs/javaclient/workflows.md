@@ -28,7 +28,7 @@ public interface FileProcessingWorkflow {
     void retryNow();
 }
 ```
-It is recommended to use a single value type argument for workflow methods. This way, adding new arguments as fields to the value type is a backwards-compatible change.
+We recommended that you use a single value type argument for workflow methods. This way, adding new arguments as fields to the value type is a backwards-compatible change.
 
 ## Starting workflow executions
 
@@ -297,7 +297,7 @@ executed one thread at a time and under a global lock.
   - Call `WorkflowThread.sleep` instead of `Thread.sleep`.
   - Use `Promise` and `CompletablePromise` instead of `Future` and `CompletableFuture`.
   - Use `WorkflowQueue` instead of `BlockingQueue`.
-- Use `Workflow.getVersion` when doing any changes to the workflow code. Without this, any deployment of an updated workflow code 
+- Use `Workflow.getVersion` when making any changes to the workflow code. Without this, any deployment of an updated workflow code 
 might break already open workflows.  
 - Don’t access configuration APIs directly from a workflow because changes in the configuration might affect a workflow execution path.
 Pass it as an argument to a workflow function or use an activity to load it.
@@ -314,7 +314,7 @@ Other than that, no additional limitations exist on activity implementations.
 
 # Updating Workflow Definition Deterministically
 
-As outlined in the _Workflow Implementation Constraints_ section the workflow code has to be deterministic by taking the same
+As outlined in the _Workflow Implementation Constraints_ section, the workflow code has to be deterministic by taking the same
 code path when replaying history events. Any workflow code change that affects the order in which decisions are generated breaks
 this assumption. The solution that allows updating code of already running workflows is to keep both the old and new code.
 When replaying, use the code version that the events were generated with and when executing a new code path always take the 
