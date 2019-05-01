@@ -385,29 +385,26 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionForActive(transfer
 			c.msBuilder.GetExecutionInfo().LastFirstEventID, c.msBuilder.GetExecutionInfo().NextEventID))
 	}
 
-	// if workflow is still open, compare with bad binaries and schedule a reset task
-	if c.msBuilder.IsWorkflowExecutionRunning() {
-		if len(c.msBuilder.GetPendingChildExecutionInfos()) > 0 {
-			// only schedule reset task if current doesn't have childWFs.
-			// TODO: This will be removed once our reset allows childWFs
+	// compare with bad binaries and schedule a reset task
+	if len(c.msBuilder.GetPendingChildExecutionInfos()) > 0 {
+		// only schedule reset task if current doesn't have childWFs.
+		// TODO: This will be removed once our reset allows childWFs
 
-			domainEntry, err := c.shard.GetDomainCache().GetDomainByID(c.domainID)
-			if err != nil {
-				return err
-			}
-			pt := FindAutoResetPoint(&domainEntry.GetConfig().BadBinaries, c.msBuilder.GetExecutionInfo().AutoResetPoints)
-			if pt != nil {
-				transferTasks = append(transferTasks, &persistence.ResetWorkflowTask{})
-				c.logger.Info("Auto-Reset task is scheduled",
-					tag.WorkflowDomainName(domainEntry.GetInfo().Name),
-					tag.WorkflowID(c.msBuilder.GetExecutionInfo().WorkflowID),
-					tag.WorkflowRunID(c.msBuilder.GetExecutionInfo().RunID),
-					tag.WorkflowResetBaseRunID(pt.GetRunId()),
-					tag.WorkflowEventID(pt.GetFirstDecisionCompletedId()),
-					tag.WorkflowBinaryChecksum(pt.GetBinaryChecksum()))
-			}
+		domainEntry, err := c.shard.GetDomainCache().GetDomainByID(c.domainID)
+		if err != nil {
+			return err
 		}
-
+		pt := FindAutoResetPoint(&domainEntry.GetConfig().BadBinaries, c.msBuilder.GetExecutionInfo().AutoResetPoints)
+		if pt != nil {
+			transferTasks = append(transferTasks, &persistence.ResetWorkflowTask{})
+			c.logger.Info("Auto-Reset task is scheduled",
+				tag.WorkflowDomainName(domainEntry.GetInfo().Name),
+				tag.WorkflowID(c.msBuilder.GetExecutionInfo().WorkflowID),
+				tag.WorkflowRunID(c.msBuilder.GetExecutionInfo().RunID),
+				tag.WorkflowResetBaseRunID(pt.GetRunId()),
+				tag.WorkflowEventID(pt.GetFirstDecisionCompletedId()),
+				tag.WorkflowBinaryChecksum(pt.GetBinaryChecksum()))
+		}
 	}
 
 	now := time.Now()
