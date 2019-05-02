@@ -72,7 +72,7 @@ func (s *MetricsSuite) TestPrometheus() {
 	prom := &prometheus.Configuration{
 		OnError:       "panic",
 		TimerType:     "histogram",
-		ListenAddress: "127.0.0.1:8002",
+		ListenAddress: "127.0.0.1:0",
 	}
 	config := new(Metrics)
 	config.Prometheus = prom

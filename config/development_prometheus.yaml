@@ -27,7 +27,6 @@ services:
       bindOnLocalHost: true
     metrics:
       prometheus:
-        onError: "panic"
         timerType: "histogram"
         listenAddress: "127.0.0.1:8000"
     pprof:
@@ -39,7 +38,6 @@ services:
       bindOnLocalHost: true
     metrics:
       prometheus:
-        onError: "panic"
         timerType: "histogram"
         listenAddress: "127.0.0.1:8001"
     pprof:
@@ -51,7 +49,6 @@ services:
       bindOnLocalHost: true
     metrics:
       prometheus:
-        onError: "panic"
         timerType: "histogram"
         listenAddress: "127.0.0.1:8002"
     pprof:
@@ -63,7 +60,6 @@ services:
       bindOnLocalHost: true
     metrics:
       prometheus:
-        onError: "panic"
         timerType: "histogram"
         listenAddress: "127.0.0.1:8003"
     pprof:

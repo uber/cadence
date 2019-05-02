@@ -119,6 +119,9 @@ func (c *Metrics) newPrometheusScope(logger log.Logger) tally.Scope {
 }
 
 // NewPrometheusReporter - creates a prometheus reporter
+// N.B - copy of the NewReporter method in tally - https://github.com/uber-go/tally/blob/master/prometheus/config.go#L77
+// as the above method does not allow setting a separate registry per root
+// which is necessary when we are running multiple roles within a same process
 func NewPrometheusReporter(
 	config *prometheus.Configuration,
 	configOpts prometheus.ConfigurationOptions,
