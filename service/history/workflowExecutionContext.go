@@ -49,6 +49,10 @@ type (
 		appendHistoryEvents(history []*workflow.HistoryEvent, transactionID int64, doLastEventValidation bool) (int, error)
 		clear()
 		continueAsNewWorkflowExecution(context []byte, newStateBuilder mutableState, transferTasks []persistence.Task, timerTasks []persistence.Task, transactionID int64) error
+		createWorkflowExecution(
+			msBuilder mutableState, createReplicationTask bool, now time.Time,
+			transferTasks []persistence.Task, timerTasks []persistence.Task,
+			createMode int, prevRunID string, prevLastWriteVersion int64) error
 		getDomainID() string
 		getExecution() *workflow.WorkflowExecution
 		getLogger() log.Logger
@@ -177,6 +181,87 @@ func (c *workflowExecutionContextImpl) loadWorkflowExecutionInternal() error {
 	// finally emit execution and session stats
 	c.emitWorkflowExecutionStats(response.MutableStateStats, c.msBuilder.GetHistorySize())
 	return nil
+}
+
+func (c *workflowExecutionContextImpl) createWorkflowExecution(
+	msBuilder mutableState, createReplicationTask bool, now time.Time,
+	transferTasks []persistence.Task, timerTasks []persistence.Task,
+	createMode int, prevRunID string, prevLastWriteVersion int64) error {
+
+	c.msBuilder = msBuilder
+	if c.msBuilder.GetReplicationState() != nil {
+		c.msBuilder.UpdateReplicationStateLastEventID(
+			c.clusterMetadata.GetCurrentClusterName(),
+			c.msBuilder.GetCurrentVersion(),
+			c.msBuilder.GetNextEventID()-1,
+		)
+	}
+
+	executionInfo := c.msBuilder.GetExecutionInfo()
+	replicationState := c.msBuilder.GetReplicationState()
+
+	var replicationTasks []persistence.Task
+	if createReplicationTask {
+		// since this one is creating workflow at the very beginning, use 0, nil for continue as new
+		replicationTasks = c.msBuilder.CreateReplicationTask(replicationTasks, 0, nil)
+	}
+	setTaskInfo(c.msBuilder.GetCurrentVersion(), now, transferTasks, timerTasks)
+
+	createRequest := &persistence.CreateWorkflowExecutionRequest{
+		RequestID: executionInfo.CreateRequestID,
+		DomainID:  executionInfo.DomainID,
+		Execution: workflow.WorkflowExecution{
+			WorkflowId: &executionInfo.WorkflowID,
+			RunId:      &executionInfo.RunID,
+		},
+
+		// parent execution
+		ParentDomainID: executionInfo.ParentDomainID,
+		ParentExecution: workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(executionInfo.ParentWorkflowID),
+			RunId:      common.StringPtr(executionInfo.ParentRunID),
+		},
+		InitiatedID: executionInfo.InitiatedID,
+
+		TaskList:                    executionInfo.TaskList,
+		WorkflowTypeName:            executionInfo.WorkflowTypeName,
+		WorkflowTimeout:             executionInfo.WorkflowTimeout,
+		DecisionTimeoutValue:        executionInfo.DecisionTimeoutValue,
+		ExecutionContext:            nil,
+		LastEventTaskID:             executionInfo.LastEventTaskID,
+		NextEventID:                 executionInfo.NextEventID,
+		LastProcessedEvent:          common.EmptyEventID,
+		HistorySize:                 executionInfo.HistorySize,
+		TransferTasks:               transferTasks,
+		ReplicationTasks:            replicationTasks,
+		TimerTasks:                  timerTasks,
+		DecisionVersion:             executionInfo.DecisionVersion,
+		DecisionScheduleID:          executionInfo.DecisionScheduleID,
+		DecisionStartedID:           executionInfo.DecisionStartedID,
+		DecisionStartToCloseTimeout: executionInfo.DecisionTimeout,
+		EventStoreVersion:           executionInfo.EventStoreVersion,
+		BranchToken:                 executionInfo.BranchToken,
+		CronSchedule:                executionInfo.CronSchedule,
+		ReplicationState:            replicationState,
+
+		// retry policy
+		HasRetryPolicy:     executionInfo.HasRetryPolicy,
+		BackoffCoefficient: executionInfo.BackoffCoefficient,
+		ExpirationSeconds:  executionInfo.ExpirationSeconds,
+		InitialInterval:    executionInfo.InitialInterval,
+		MaximumAttempts:    executionInfo.MaximumAttempts,
+		MaximumInterval:    executionInfo.MaximumInterval,
+		NonRetriableErrors: executionInfo.NonRetriableErrors,
+		ExpirationTime:     executionInfo.ExpirationTime,
+
+		// workflow create mode & prev run ID & version
+		CreateWorkflowMode:       createMode,
+		PreviousRunID:            prevRunID,
+		PreviousLastWriteVersion: prevLastWriteVersion,
+	}
+
+	_, err := c.shard.CreateWorkflowExecution(createRequest)
+	return err
 }
 
 func (c *workflowExecutionContextImpl) resetMutableState(prevRunID string, resetBuilder mutableState) (mutableState,
@@ -635,9 +720,9 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 		// Let's create a replication task as part of this update
 		if hasNewActiveHistoryEvents {
 			if newStateBuilder != nil && newStateBuilder.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
-				replicationTasks = append(replicationTasks, c.msBuilder.CreateReplicationTask(persistence.EventStoreVersionV2, newStateBuilder.GetCurrentBranch()))
+				replicationTasks = c.msBuilder.CreateReplicationTask(replicationTasks, persistence.EventStoreVersionV2, newStateBuilder.GetCurrentBranch())
 			} else {
-				replicationTasks = append(replicationTasks, c.msBuilder.CreateReplicationTask(0, nil))
+				replicationTasks = c.msBuilder.CreateReplicationTask(replicationTasks, 0, nil)
 			}
 		}
 		replicationTasks = append(replicationTasks, updates.syncActivityTasks...)

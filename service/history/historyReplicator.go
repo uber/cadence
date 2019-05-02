@@ -678,13 +678,17 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 		WorkflowId: common.StringPtr(executionInfo.WorkflowID),
 		RunId:      common.StringPtr(executionInfo.RunID),
 	}
-	var parentExecution *shared.WorkflowExecution
-	initiatedID := common.EmptyEventID
+
 	parentDomainID := ""
+	parentExecution := shared.WorkflowExecution{
+		WorkflowId: common.StringPtr(""),
+		RunId:      common.StringPtr(""),
+	}
+	initiatedID := common.EmptyEventID
 	if executionInfo.ParentDomainID != "" {
 		initiatedID = executionInfo.InitiatedID
 		parentDomainID = executionInfo.ParentDomainID
-		parentExecution = &shared.WorkflowExecution{
+		parentExecution = shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(executionInfo.ParentWorkflowID),
 			RunId:      common.StringPtr(executionInfo.ParentRunID),
 		}

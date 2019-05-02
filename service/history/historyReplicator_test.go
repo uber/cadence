@@ -1794,7 +1794,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_BrandNew() {
 				RunId:      common.StringPtr(runID),
 			},
 			ParentDomainID: parentDomainID,
-			ParentExecution: &shared.WorkflowExecution{
+			ParentExecution: shared.WorkflowExecution{
 				WorkflowId: common.StringPtr(parentWorkflowID),
 				RunId:      common.StringPtr(parentRunID),
 			},
@@ -2141,7 +2141,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 				RunId:      common.StringPtr(runID),
 			},
 			ParentDomainID: parentDomainID,
-			ParentExecution: &shared.WorkflowExecution{
+			ParentExecution: shared.WorkflowExecution{
 				WorkflowId: common.StringPtr(parentWorkflowID),
 				RunId:      common.StringPtr(parentRunID),
 			},
@@ -2183,7 +2183,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 				RunId:      common.StringPtr(runID),
 			},
 			ParentDomainID: parentDomainID,
-			ParentExecution: &shared.WorkflowExecution{
+			ParentExecution: shared.WorkflowExecution{
 				WorkflowId: common.StringPtr(parentWorkflowID),
 				RunId:      common.StringPtr(parentRunID),
 			},
@@ -2327,7 +2327,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 				RunId:      common.StringPtr(runID),
 			},
 			ParentDomainID: parentDomainID,
-			ParentExecution: &shared.WorkflowExecution{
+			ParentExecution: shared.WorkflowExecution{
 				WorkflowId: common.StringPtr(parentWorkflowID),
 				RunId:      common.StringPtr(parentRunID),
 			},
@@ -2361,7 +2361,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 				RunId:      common.StringPtr(runID),
 			},
 			ParentDomainID: parentDomainID,
-			ParentExecution: &shared.WorkflowExecution{
+			ParentExecution: shared.WorkflowExecution{
 				WorkflowId: common.StringPtr(parentWorkflowID),
 				RunId:      common.StringPtr(parentRunID),
 			},
@@ -2497,7 +2497,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 				RunId:      common.StringPtr(runID),
 			},
 			ParentDomainID: parentDomainID,
-			ParentExecution: &shared.WorkflowExecution{
+			ParentExecution: shared.WorkflowExecution{
 				WorkflowId: common.StringPtr(parentWorkflowID),
 				RunId:      common.StringPtr(parentRunID),
 			},
@@ -2531,7 +2531,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 				RunId:      common.StringPtr(runID),
 			},
 			ParentDomainID: parentDomainID,
-			ParentExecution: &shared.WorkflowExecution{
+			ParentExecution: shared.WorkflowExecution{
 				WorkflowId: common.StringPtr(parentWorkflowID),
 				RunId:      common.StringPtr(parentRunID),
 			},
@@ -3056,7 +3056,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 				RunId:      common.StringPtr(runID),
 			},
 			ParentDomainID: parentDomainID,
-			ParentExecution: &shared.WorkflowExecution{
+			ParentExecution: shared.WorkflowExecution{
 				WorkflowId: common.StringPtr(parentWorkflowID),
 				RunId:      common.StringPtr(parentRunID),
 			},
@@ -3098,7 +3098,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 				RunId:      common.StringPtr(runID),
 			},
 			ParentDomainID: parentDomainID,
-			ParentExecution: &shared.WorkflowExecution{
+			ParentExecution: shared.WorkflowExecution{
 				WorkflowId: common.StringPtr(parentWorkflowID),
 				RunId:      common.StringPtr(parentRunID),
 			},
