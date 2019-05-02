@@ -199,7 +199,7 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionRunIDReuseWithReplica
 		DeleteActivityInfos: nil,
 		UpserTimerInfos:     nil,
 		DeleteTimerInfos:    nil,
-		FinishExecution:     false,
+		FinishExecution:     true,
 		ReplicationState:    updateReplicationState,
 	})
 	s.NoError(err)

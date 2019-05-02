@@ -1809,27 +1809,25 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.InternalUpdate
 			startVersion = request.ReplicationState.StartVersion
 			lastWriteVersion = request.ReplicationState.LastWriteVersion
 		}
-		if !request.FinishExecution {
-			batch.Query(templateUpdateCurrentWorkflowExecutionQuery,
-				executionInfo.RunID,
-				executionInfo.RunID,
-				executionInfo.CreateRequestID,
-				executionInfo.State,
-				executionInfo.CloseStatus,
-				startVersion,
-				lastWriteVersion,
-				lastWriteVersion,
-				executionInfo.State,
-				d.shardID,
-				rowTypeExecution,
-				executionInfo.DomainID,
-				executionInfo.WorkflowID,
-				permanentRunID,
-				defaultVisibilityTimestamp,
-				rowTypeExecutionTaskID,
-				executionInfo.RunID,
-			)
-		}
+		batch.Query(templateUpdateCurrentWorkflowExecutionQuery,
+			executionInfo.RunID,
+			executionInfo.RunID,
+			executionInfo.CreateRequestID,
+			executionInfo.State,
+			executionInfo.CloseStatus,
+			startVersion,
+			lastWriteVersion,
+			lastWriteVersion,
+			executionInfo.State,
+			d.shardID,
+			rowTypeExecution,
+			executionInfo.DomainID,
+			executionInfo.WorkflowID,
+			permanentRunID,
+			defaultVisibilityTimestamp,
+			rowTypeExecutionTaskID,
+			executionInfo.RunID,
+		)
 	}
 
 	// Verifies that the RangeID has not changed
