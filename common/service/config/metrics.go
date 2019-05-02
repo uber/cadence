@@ -35,8 +35,6 @@ import (
 	statsdreporter "github.com/uber/cadence/common/metrics/tally/statsd"
 )
 
-var prometheusScope tally.Scope
-
 // NewScope builds a new tally scope
 // for this metrics configuration
 //
