@@ -302,6 +302,20 @@ func (p *workflowExecutionPersistenceClient) DeleteWorkflowExecution(request *De
 	return err
 }
 
+func (p *workflowExecutionPersistenceClient) DeleteWorkflowCurrentExecution(request *DeleteWorkflowExecutionRequest) error {
+	p.metricClient.IncCounter(metrics.PersistenceDeleteWorkflowCurrentExecutionScope, metrics.PersistenceRequests)
+
+	sw := p.metricClient.StartTimer(metrics.PersistenceDeleteWorkflowCurrentExecutionScope, metrics.PersistenceLatency)
+	err := p.persistence.DeleteWorkflowCurrentExecution(request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceDeleteWorkflowCurrentExecutionScope, err)
+	}
+
+	return err
+}
+
 func (p *workflowExecutionPersistenceClient) GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceGetCurrentExecutionScope, metrics.PersistenceRequests)
 

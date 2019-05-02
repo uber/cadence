@@ -342,7 +342,6 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		RangeID:                       request.RangeID,
 		ContinueAsNew:                 continueAsNew,
 		FinishExecution:               request.FinishExecution,
-		FinishedExecutionTTL:          request.FinishedExecutionTTL,
 		DeleteActivityInfos:           request.DeleteActivityInfos,
 		UpserTimerInfos:               request.UpserTimerInfos,
 		DeleteTimerInfos:              request.DeleteTimerInfos,
@@ -688,6 +687,10 @@ func (m *executionManagerImpl) SerializeCreateWorkflowExecutionRequest(request *
 
 func (m *executionManagerImpl) DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error {
 	return m.persistence.DeleteWorkflowExecution(request)
+}
+
+func (m *executionManagerImpl) DeleteWorkflowCurrentExecution(request *DeleteWorkflowExecutionRequest) error {
+	return m.persistence.DeleteWorkflowCurrentExecution(request)
 }
 
 func (m *executionManagerImpl) GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error) {

@@ -589,7 +589,6 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Multiple_Ca
 			DeleteBufferedReplicationTask: nil,
 			ContinueAsNew:                 nil,
 			FinishExecution:               false,
-			FinishedExecutionTTL:          0,
 			Encoding:                      common.EncodingType(s.mockShard.GetConfig().EventEncodingType(domainID)),
 		}, input)
 		return true

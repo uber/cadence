@@ -530,23 +530,22 @@ func (s *TestBase) UpdateWorkflowExecution(updatedInfo *p.WorkflowExecutionInfo,
 }
 
 // UpdateWorkflowExecutionAndFinish is a utility method to update workflow execution
-func (s *TestBase) UpdateWorkflowExecutionAndFinish(updatedInfo *p.WorkflowExecutionInfo, condition int64, retentionSecond int32) error {
+func (s *TestBase) UpdateWorkflowExecutionAndFinish(updatedInfo *p.WorkflowExecutionInfo, condition int64) error {
 	transferTasks := []p.Task{}
 	transferTasks = append(transferTasks, &p.CloseExecutionTask{TaskID: s.GetNextSequenceNumber()})
 	_, err := s.ExecutionManager.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
-		ExecutionInfo:        updatedInfo,
-		TransferTasks:        transferTasks,
-		TimerTasks:           nil,
-		Condition:            condition,
-		DeleteTimerTask:      nil,
-		RangeID:              s.ShardInfo.RangeID,
-		UpsertActivityInfos:  nil,
-		DeleteActivityInfos:  nil,
-		UpserTimerInfos:      nil,
-		DeleteTimerInfos:     nil,
-		FinishedExecutionTTL: retentionSecond,
-		FinishExecution:      true,
-		Encoding:             pickRandomEncoding(),
+		ExecutionInfo:       updatedInfo,
+		TransferTasks:       transferTasks,
+		TimerTasks:          nil,
+		Condition:           condition,
+		DeleteTimerTask:     nil,
+		RangeID:             s.ShardInfo.RangeID,
+		UpsertActivityInfos: nil,
+		DeleteActivityInfos: nil,
+		UpserTimerInfos:     nil,
+		DeleteTimerInfos:    nil,
+		FinishExecution:     true,
+		Encoding:            pickRandomEncoding(),
 	})
 	return err
 }
@@ -899,6 +898,15 @@ func (s *TestBase) ResetWorkflowExecution(condition int64, info *p.WorkflowExecu
 // DeleteWorkflowExecution is a utility method to delete a workflow execution
 func (s *TestBase) DeleteWorkflowExecution(info *p.WorkflowExecutionInfo) error {
 	return s.ExecutionManager.DeleteWorkflowExecution(&p.DeleteWorkflowExecutionRequest{
+		DomainID:   info.DomainID,
+		WorkflowID: info.WorkflowID,
+		RunID:      info.RunID,
+	})
+}
+
+// DeleteWorkflowCurrentExecution is a utility method to delete the workflow current execution
+func (s *TestBase) DeleteWorkflowCurrentExecution(info *p.WorkflowExecutionInfo) error {
+	return s.ExecutionManager.DeleteWorkflowCurrentExecution(&p.DeleteWorkflowExecutionRequest{
 		DomainID:   info.DomainID,
 		WorkflowID: info.WorkflowID,
 		RunID:      info.RunID,

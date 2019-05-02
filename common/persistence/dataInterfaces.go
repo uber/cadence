@@ -733,17 +733,16 @@ type (
 
 	// UpdateWorkflowExecutionRequest is used to update a workflow execution
 	UpdateWorkflowExecutionRequest struct {
-		ExecutionInfo        *WorkflowExecutionInfo
-		ReplicationState     *ReplicationState
-		TransferTasks        []Task
-		TimerTasks           []Task
-		ReplicationTasks     []Task
-		DeleteTimerTask      Task
-		Condition            int64
-		RangeID              int64
-		ContinueAsNew        *CreateWorkflowExecutionRequest
-		FinishExecution      bool
-		FinishedExecutionTTL int32
+		ExecutionInfo    *WorkflowExecutionInfo
+		ReplicationState *ReplicationState
+		TransferTasks    []Task
+		TimerTasks       []Task
+		ReplicationTasks []Task
+		DeleteTimerTask  Task
+		Condition        int64
+		RangeID          int64
+		ContinueAsNew    *CreateWorkflowExecutionRequest
+		FinishExecution  bool
 
 		// Mutable state
 		UpsertActivityInfos           []*ActivityInfo
@@ -1374,6 +1373,7 @@ type (
 		ResetMutableState(request *ResetMutableStateRequest) error
 		ResetWorkflowExecution(request *ResetWorkflowExecutionRequest) error
 		DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error
+		DeleteWorkflowCurrentExecution(request *DeleteWorkflowExecutionRequest) error
 		GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)
 
 		// Transfer task related methods
@@ -1505,6 +1505,7 @@ func (e *TimeoutError) Error() string {
 	return e.Msg
 }
 
+// IsTimeoutError determines if the error is a timeout error
 func IsTimeoutError(err error) bool {
 	_, ok := err.(*TimeoutError)
 	return ok

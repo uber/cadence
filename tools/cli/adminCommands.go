@@ -258,7 +258,7 @@ func AdminDeleteWorkflow(c *cli.Context) {
 	}
 	fmt.Println("delete mutableState row successfully")
 
-	err = exeStore.DeleteWorkflowCurrentRow(req)
+	err = exeStore.DeleteWorkflowCurrentExecution(req)
 	if err != nil {
 		if skipError {
 			fmt.Println("delete current row failed, ", err)

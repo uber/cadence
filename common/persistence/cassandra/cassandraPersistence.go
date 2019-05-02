@@ -1809,33 +1809,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.InternalUpdate
 			startVersion = request.ReplicationState.StartVersion
 			lastWriteVersion = request.ReplicationState.LastWriteVersion
 		}
-		if request.FinishExecution {
-			retentionInSeconds := request.FinishedExecutionTTL
-			if retentionInSeconds <= 0 {
-				retentionInSeconds = minCurrentExecutionRetentionTTL
-			}
-
-			// Delete WorkflowExecution row representing current execution, by using a TTL
-			batch.Query(templateDeleteCurrentWorkflowExecutionQueryWithTTL,
-				d.shardID,
-				rowTypeExecution,
-				executionInfo.DomainID,
-				executionInfo.WorkflowID,
-				permanentRunID,
-				defaultVisibilityTimestamp,
-				rowTypeExecutionTaskID,
-				executionInfo.RunID,
-				executionInfo.RunID,
-				executionInfo.CreateRequestID,
-				executionInfo.State,
-				executionInfo.CloseStatus,
-				startVersion,
-				lastWriteVersion,
-				lastWriteVersion,
-				executionInfo.State,
-				retentionInSeconds,
-			)
-		} else {
+		if !request.FinishExecution {
 			batch.Query(templateUpdateCurrentWorkflowExecutionQuery,
 				executionInfo.RunID,
 				executionInfo.RunID,
@@ -2289,7 +2263,7 @@ func (d *cassandraPersistence) DeleteWorkflowExecution(request *p.DeleteWorkflow
 	return nil
 }
 
-func (d *cassandraPersistence) DeleteWorkflowCurrentRow(request *p.DeleteWorkflowExecutionRequest) error {
+func (d *cassandraPersistence) DeleteWorkflowCurrentExecution(request *p.DeleteWorkflowExecutionRequest) error {
 	query := d.session.Query(templateDeleteWorkflowExecutionCurrentRowQuery,
 		d.shardID,
 		rowTypeExecution,
