@@ -994,6 +994,7 @@ struct PollForDecisionTaskRequest {
   10: optional string domain
   20: optional TaskList taskList
   30: optional string identity
+  40: optional string binaryChecksum
 }
 
 struct PollForDecisionTaskResponse {
