@@ -916,7 +916,8 @@ func (t *transferQueueActiveProcessorImpl) processResetWorkflow(task *persistenc
 	}
 	if !currMutableState.IsWorkflowExecutionRunning() {
 		//it means this this might not be current anymore, we need to check
-		resp, retError := t.executionManager.GetCurrentExecution(&persistence.GetCurrentExecutionRequest{
+		var resp *persistence.GetCurrentExecutionResponse
+		resp, retError = t.executionManager.GetCurrentExecution(&persistence.GetCurrentExecutionRequest{
 			DomainID:   task.DomainID,
 			WorkflowID: task.WorkflowID,
 		})
