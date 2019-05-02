@@ -22,8 +22,9 @@ package history
 
 import (
 	"context"
-	"github.com/uber/cadence/common/log"
 	"time"
+
+	"github.com/uber/cadence/common/log"
 
 	"github.com/stretchr/testify/mock"
 	h "github.com/uber/cadence/.gen/go/history"
@@ -250,7 +251,7 @@ func (_m *mockWorkflowExecutionContext) unlock() {
 	_m.Called()
 }
 
-func (_m *mockWorkflowExecutionContext) updateHelper(_a0 []persistence.Task, _a1 []persistence.Task, _a2 int64, _a3 time.Time, _a4 bool, _a5 *historyBuilder, _a6 string) error {
+func (_m *mockWorkflowExecutionContext) updateWorkflowExecutionForStandby(_a0 []persistence.Task, _a1 []persistence.Task, _a2 int64, _a3 time.Time, _a4 bool, _a5 *historyBuilder, _a6 string) error {
 	ret := _m.Called(_a0, _a1, _a2, _a3, _a4, _a5, _a6)
 
 	var r0 error
@@ -281,19 +282,6 @@ func (_m *mockWorkflowExecutionContext) updateWorkflowExecutionWithContext(_a0 [
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func([]byte, []persistence.Task, []persistence.Task, int64) error); ok {
-		r0 = rf(_a0, _a1, _a2, _a3)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-func (_m *mockWorkflowExecutionContext) updateWorkflowExecutionWithDeleteTask(_a0 []persistence.Task, _a1 []persistence.Task, _a2 persistence.Task, _a3 int64) error {
-	ret := _m.Called(_a0, _a1, _a2, _a3)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func([]persistence.Task, []persistence.Task, persistence.Task, int64) error); ok {
 		r0 = rf(_a0, _a1, _a2, _a3)
 	} else {
 		r0 = ret.Error(0)

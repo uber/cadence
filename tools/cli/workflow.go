@@ -20,7 +20,11 @@
 
 package cli
 
-import "github.com/urfave/cli"
+import (
+	"strings"
+
+	"github.com/urfave/cli"
+)
 
 func newWorkflowCommands() []cli.Command {
 	return []cli.Command{
@@ -199,7 +203,7 @@ func newWorkflowCommands() []cli.Command {
 		{
 			Name:    "reset",
 			Aliases: []string{"rs"},
-			Usage:   "reset the workflow",
+			Usage:   "reset the workflow, by either eventID or resetType.",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagWorkflowIDWithAlias,
@@ -217,9 +221,52 @@ func newWorkflowCommands() []cli.Command {
 					Name:  FlagReason,
 					Usage: "reason to do the reset",
 				},
+				cli.StringFlag{
+					Name:  FlagResetType,
+					Usage: "where to reset. Support one of these: " + strings.Join(mapKeysToArray(resetTypesMap), ","),
+				},
 			},
 			Action: func(c *cli.Context) {
 				ResetWorkflow(c)
+			},
+		},
+		{
+			Name:  "reset-batch",
+			Usage: "reset workflow in batch by resetType: " + strings.Join(mapKeysToArray(resetTypesMap), ","),
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagInputFileWithAlias,
+					Usage: "Input file to use for resetting, one workflow per line of WorkflowID and RunID. RunID is optional, default to current runID if not specified. ",
+				},
+				cli.StringFlag{
+					Name:  FlagExcludeFile,
+					Usage: "Another input file to use for excluding from resetting, only workflowID is needed.",
+				},
+				cli.StringFlag{
+					Name:  FlagInputSeparator,
+					Value: ",",
+					Usage: "Separator for input file",
+				},
+				cli.StringFlag{
+					Name:  FlagReason,
+					Usage: "Reason for reset",
+				},
+				cli.IntFlag{
+					Name:  FlagParallism,
+					Value: 1,
+					Usage: "Number of goroutines to run in parallel. Each goroutine would process one line for every second.",
+				},
+				cli.BoolFlag{
+					Name:  FlagSkipCurrent,
+					Usage: "Skip the workflow if the current run is open.",
+				},
+				cli.StringFlag{
+					Name:  FlagResetType,
+					Usage: "where to reset. Support one of these: " + strings.Join(mapKeysToArray(resetTypesMap), ","),
+				},
+			},
+			Action: func(c *cli.Context) {
+				ResetInBatch(c)
 			},
 		},
 	}

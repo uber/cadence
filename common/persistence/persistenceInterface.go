@@ -337,7 +337,6 @@ type (
 		TransferTasks    []Task
 		TimerTasks       []Task
 		ReplicationTasks []Task
-		DeleteTimerTask  Task
 		Condition        int64
 		RangeID          int64
 		ContinueAsNew    *InternalCreateWorkflowExecutionRequest
