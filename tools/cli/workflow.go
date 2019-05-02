@@ -20,7 +20,11 @@
 
 package cli
 
-import "github.com/urfave/cli"
+import (
+	"strings"
+
+	"github.com/urfave/cli"
+)
 
 func newWorkflowCommands() []cli.Command {
 	return []cli.Command{
@@ -199,7 +203,7 @@ func newWorkflowCommands() []cli.Command {
 		{
 			Name:    "reset",
 			Aliases: []string{"rs"},
-			Usage:   "reset the workflow, by eventID or resetType.",
+			Usage:   "reset the workflow, by either eventID or resetType.",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagWorkflowIDWithAlias,
@@ -219,7 +223,7 @@ func newWorkflowCommands() []cli.Command {
 				},
 				cli.StringFlag{
 					Name:  FlagResetType,
-					Usage: "where to reset. Support one of these: LastDecisionCompleted,LastContinuedAsNew",
+					Usage: "where to reset. Support one of these: " + strings.Join(mapKeysToArray(resetTypesMap), ","),
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -228,7 +232,7 @@ func newWorkflowCommands() []cli.Command {
 		},
 		{
 			Name:  "reset-batch",
-			Usage: "reset workflow in batch",
+			Usage: "reset workflow in batch by resetType: " + strings.Join(mapKeysToArray(resetTypesMap), ","),
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagInputFileWithAlias,
@@ -258,7 +262,7 @@ func newWorkflowCommands() []cli.Command {
 				},
 				cli.StringFlag{
 					Name:  FlagResetType,
-					Usage: "How to reset, currently support: LastDecisionCompleted,LastContinuedAsNew",
+					Usage: "where to reset. Support one of these: " + strings.Join(mapKeysToArray(resetTypesMap), ","),
 				},
 			},
 			Action: func(c *cli.Context) {
