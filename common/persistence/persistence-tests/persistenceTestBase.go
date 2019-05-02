@@ -542,7 +542,6 @@ func (s *TestBase) UpdateWorkflowExecutionAndFinish(updatedInfo *p.WorkflowExecu
 		DeleteActivityInfos: nil,
 		UpserTimerInfos:     nil,
 		DeleteTimerInfos:    nil,
-		FinishExecution:     true,
 		Encoding:            pickRandomEncoding(),
 	})
 	return err

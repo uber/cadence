@@ -340,7 +340,6 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		Condition:                     request.Condition,
 		RangeID:                       request.RangeID,
 		ContinueAsNew:                 continueAsNew,
-		FinishExecution:               request.FinishExecution,
 		DeleteActivityInfos:           request.DeleteActivityInfos,
 		UpserTimerInfos:               request.UpserTimerInfos,
 		DeleteTimerInfos:              request.DeleteTimerInfos,
