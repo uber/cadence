@@ -470,6 +470,7 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 	if c.IsSet(FlagMaxFieldLength) || !printFully {
 		maxFieldLength = c.Int(FlagMaxFieldLength)
 	}
+	resetPointsOnly := c.Bool(FlagResetPointsOnly)
 
 	ctx, cancel := newContext(c)
 	defer cancel()
@@ -478,8 +479,16 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 		ErrorAndExit(fmt.Sprintf("Failed to get history on workflow id: %s, run id: %s.", wid, rid), err)
 	}
 
+	prevEvent := s.HistoryEvent{}
 	if printFully { // dump everything
 		for _, e := range history.Events {
+			if resetPointsOnly {
+				if prevEvent.GetEventType() != s.EventTypeDecisionTaskStarted {
+					prevEvent = *e
+					continue
+				}
+				prevEvent = *e
+			}
 			fmt.Println(anyToString(e, true, maxFieldLength))
 		}
 	} else if c.IsSet(FlagEventID) { // only dump that event
@@ -494,6 +503,14 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 		table.SetBorder(false)
 		table.SetColumnSeparator("")
 		for _, e := range history.Events {
+			if resetPointsOnly {
+				if prevEvent.GetEventType() != s.EventTypeDecisionTaskStarted {
+					prevEvent = *e
+					continue
+				}
+				prevEvent = *e
+			}
+
 			columns := []string{}
 			columns = append(columns, strconv.FormatInt(e.GetEventId(), 10))
 

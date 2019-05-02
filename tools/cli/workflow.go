@@ -199,7 +199,7 @@ func newWorkflowCommands() []cli.Command {
 		{
 			Name:    "reset",
 			Aliases: []string{"rs"},
-			Usage:   "reset the workflow",
+			Usage:   "reset the workflow, by eventID or resetType.",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagWorkflowIDWithAlias,
@@ -216,6 +216,10 @@ func newWorkflowCommands() []cli.Command {
 				cli.StringFlag{
 					Name:  FlagReason,
 					Usage: "reason to do the reset",
+				},
+				cli.StringFlag{
+					Name:  FlagResetType,
+					Usage: "where to reset. Support one of these: LastDecisionCompleted,LastContinuedAsNew",
 				},
 			},
 			Action: func(c *cli.Context) {
