@@ -114,7 +114,7 @@ func (fc *fileBasedClient) GetFloatValue(name Key, filters map[Filter]interface{
 	if floatVal, ok := val.(float64); ok {
 		return floatVal, nil
 	}
-	return defaultValue, errors.New("value type is not float")
+	return defaultValue, errors.New("value type is not float64")
 }
 
 func (fc *fileBasedClient) GetBoolValue(name Key, filters map[Filter]interface{}, defaultValue bool) (bool, error) {
