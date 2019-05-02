@@ -102,7 +102,7 @@ func (c *Metrics) newPrometheusScope(logger log.Logger) tally.Scope {
 		c.Prometheus,
 		prometheus.ConfigurationOptions{
 			OnError: func(err error) {
-				logger.Warn("error creating prometheus reporter", tag.Error(err))
+				logger.Warn("error in prometheus reporter", tag.Error(err))
 			},
 		},
 	)
