@@ -1594,7 +1594,7 @@ func getFirstDecisionCompletedID(domain, wid, rid string, ctx context.Context, f
 		for _, e := range resp.GetHistory().GetEvents() {
 			if e.GetEventType() == shared.EventTypeDecisionTaskCompleted {
 				decisionFinishID = e.GetEventId()
-				return
+				return resetBaseRunID, decisionFinishID, nil
 			}
 		}
 		if len(resp.NextPageToken) != 0 {
