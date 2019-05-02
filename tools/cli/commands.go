@@ -1571,6 +1571,9 @@ func getLastDecisionCompletedID(domain, wid, rid string, ctx context.Context, fr
 			break
 		}
 	}
+	if decisionFinishID == 0 {
+		return "", 0, printErrorAndReturn("Get DecisionFinishID failed", fmt.Errorf("no DecisionFinishID"))
+	}
 	return
 }
 
@@ -1603,10 +1606,13 @@ func getFirstDecisionCompletedID(domain, wid, rid string, ctx context.Context, f
 			break
 		}
 	}
+	if decisionFinishID == 0 {
+		return "", 0, printErrorAndReturn("Get DecisionFinishID failed", fmt.Errorf("no DecisionFinishID"))
+	}
 	return
 }
 
-func getLastContinueAsNewID(domain, wid, rid string, ctx context.Context, frontendClient workflowserviceclient.Interface) (resetBaseRunID string, lastDecisionFinishID int64, err error) {
+func getLastContinueAsNewID(domain, wid, rid string, ctx context.Context, frontendClient workflowserviceclient.Interface) (resetBaseRunID string, decisionFinishID int64, err error) {
 	// get first event
 	req := &shared.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(domain),
@@ -1643,7 +1649,7 @@ func getLastContinueAsNewID(domain, wid, rid string, ctx context.Context, fronte
 		}
 		for _, e := range resp.GetHistory().GetEvents() {
 			if e.GetEventType() == shared.EventTypeDecisionTaskCompleted {
-				lastDecisionFinishID = e.GetEventId()
+				decisionFinishID = e.GetEventId()
 			}
 		}
 		if len(resp.NextPageToken) != 0 {
@@ -1651,6 +1657,9 @@ func getLastContinueAsNewID(domain, wid, rid string, ctx context.Context, fronte
 		} else {
 			break
 		}
+	}
+	if decisionFinishID == 0 {
+		return "", 0, printErrorAndReturn("Get DecisionFinishID failed", fmt.Errorf("no DecisionFinishID"))
 	}
 	return
 }
