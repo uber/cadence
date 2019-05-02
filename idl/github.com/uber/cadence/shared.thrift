@@ -198,6 +198,7 @@ enum DecisionTaskFailedCause {
   FAILOVER_CLOSE_DECISION,
   BAD_SIGNAL_INPUT_SIZE,
   RESET_WORKFLOW,
+  BAD_BINARY,
 }
 
 enum CancelExternalWorkflowExecutionFailedCause {

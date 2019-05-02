@@ -1289,6 +1289,13 @@ Update_History_Loop:
 		sizeChecker.completedID = completedID
 		sizeChecker.msBuilder = msBuilder
 
+		binChecksum := request.GetBinaryChecksum()
+		if _, ok := domainEntry.GetConfig().BadBinaries.Binaries[binChecksum]; ok {
+			failDecision = true
+			failCause = workflow.DecisionTaskFailedCauseBadBinary
+			failMessage = fmt.Sprintf("binary %v is already marked as bad deployment", binChecksum)
+			goto End_Of_Process_Decision_Loop
+		}
 	Process_Decision_Loop:
 		for _, d := range request.Decisions {
 			switch *d.DecisionType {
@@ -1764,6 +1771,7 @@ Update_History_Loop:
 			}
 		}
 
+	End_Of_Process_Decision_Loop:
 		if err != nil {
 			return nil, err
 		}

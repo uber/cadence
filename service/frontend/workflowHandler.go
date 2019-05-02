@@ -1314,9 +1314,6 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 
 	// add domain tag to scope, so further metrics will have the domain tag
 	scope = scope.Tagged(metrics.DomainTag(domainEntry.GetInfo().Name))
-	if err := wh.checkBadBinary(domainEntry, completeRequest.GetBinaryChecksum()); err != nil {
-		return nil, wh.error(err, scope)
-	}
 
 	histResp, err := wh.history.RespondDecisionTaskCompleted(ctx, &h.RespondDecisionTaskCompletedRequest{
 		DomainUUID:      common.StringPtr(taskToken.DomainID),
