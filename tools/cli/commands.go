@@ -967,6 +967,26 @@ func describeWorkflowHelper(c *cli.Context, wid, rid string) {
 		o = convertDescribeWorkflowExecutionResponse(resp)
 	}
 	prettyPrintJSONObject(o)
+	if resp.WorkflowExecutionInfo.AutoResetPoints != nil && len(resp.WorkflowExecutionInfo.AutoResetPoints.Points) > 0 {
+		fmt.Println("Auto Reset Points:")
+		table := tablewriter.NewWriter(os.Stdout)
+		table.SetBorder(true)
+		table.SetColumnSeparator("|")
+		header := []string{"Binary Checksum", "Create Time", "RunID", "FirstDecisionCompletedID", "Resettable"}
+		headerColor := []tablewriter.Colors{tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue}
+		table.SetHeader(header)
+		table.SetHeaderColor(headerColor...)
+		for _, pt := range resp.WorkflowExecutionInfo.AutoResetPoints.Points {
+			var row []string
+			row = append(row, pt.GetBinaryChecksum())
+			row = append(row, time.Unix(0, pt.GetCreatedTimeNano()).String())
+			row = append(row, pt.GetRunId())
+			row = append(row, strconv.FormatInt(pt.GetFirstDecisionCompletedId(), 10))
+			row = append(row, strconv.FormatBool(pt.GetResettable()))
+			table.Append(row)
+		}
+		table.Render()
+	}
 }
 
 func prettyPrintJSONObject(o interface{}) {
@@ -996,6 +1016,7 @@ type workflowExecutionInfo struct {
 	HistoryLength   *int64
 	ParentDomainID  *string
 	ParentExecution *shared.WorkflowExecution
+	AutoResetPoints *shared.ResetPoints
 }
 
 // pendingActivityInfo has same fields as shared.PendingActivityInfo, but different field type for better display
@@ -1023,6 +1044,7 @@ func convertDescribeWorkflowExecutionResponse(resp *shared.DescribeWorkflowExecu
 		HistoryLength:   info.HistoryLength,
 		ParentDomainID:  info.ParentDomainId,
 		ParentExecution: info.ParentExecution,
+		AutoResetPoints: info.AutoResetPoints,
 	}
 	var pendingActs []*pendingActivityInfo
 	var tmpAct *pendingActivityInfo
