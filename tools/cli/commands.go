@@ -975,8 +975,8 @@ func describeWorkflowHelper(c *cli.Context, wid, rid string) {
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetBorder(true)
 		table.SetColumnSeparator("|")
-		header := []string{"Binary Checksum", "Create Time", "Resettable", "RunID", "EventID"}
-		headerColor := []tablewriter.Colors{tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue}
+		header := []string{"Binary Checksum", "Create Time", "RunID", "EventID"}
+		headerColor := []tablewriter.Colors{tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue}
 		table.SetHeader(header)
 		table.SetHeaderColor(headerColor...)
 		if resp.WorkflowExecutionInfo.AutoResetPoints != nil && len(resp.WorkflowExecutionInfo.AutoResetPoints.Points) > 0 {
@@ -984,7 +984,6 @@ func describeWorkflowHelper(c *cli.Context, wid, rid string) {
 				var row []string
 				row = append(row, pt.GetBinaryChecksum())
 				row = append(row, time.Unix(0, pt.GetCreatedTimeNano()).String())
-				row = append(row, strconv.FormatBool(pt.GetResettable()))
 				row = append(row, pt.GetRunId())
 				row = append(row, strconv.FormatInt(pt.GetFirstDecisionCompletedId(), 10))
 				table.Append(row)
