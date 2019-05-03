@@ -189,24 +189,23 @@ func (c *workflowExecutionContextImpl) createWorkflowExecution(
 	transferTasks []persistence.Task, timerTasks []persistence.Task,
 	createMode int, prevRunID string, prevLastWriteVersion int64) error {
 
-	c.msBuilder = msBuilder
-	if c.msBuilder.GetReplicationState() != nil {
-		c.msBuilder.UpdateReplicationStateLastEventID(
+	if msBuilder.GetReplicationState() != nil {
+		msBuilder.UpdateReplicationStateLastEventID(
 			sourceCluster,
-			c.msBuilder.GetCurrentVersion(),
-			c.msBuilder.GetNextEventID()-1,
+			msBuilder.GetCurrentVersion(),
+			msBuilder.GetNextEventID()-1,
 		)
 	}
 
-	executionInfo := c.msBuilder.GetExecutionInfo()
-	replicationState := c.msBuilder.GetReplicationState()
+	executionInfo := msBuilder.GetExecutionInfo()
+	replicationState := msBuilder.GetReplicationState()
 
 	var replicationTasks []persistence.Task
 	if createReplicationTask {
 		// since this one is creating workflow at the very beginning, use 0, nil for continue as new
-		replicationTasks = c.msBuilder.CreateReplicationTask(replicationTasks, 0, nil)
+		replicationTasks = msBuilder.CreateReplicationTask(replicationTasks, 0, nil)
 	}
-	setTaskInfo(c.msBuilder.GetCurrentVersion(), now, transferTasks, timerTasks)
+	setTaskInfo(msBuilder.GetCurrentVersion(), now, transferTasks, timerTasks)
 
 	createRequest := &persistence.CreateWorkflowExecutionRequest{
 		RequestID: executionInfo.CreateRequestID,
