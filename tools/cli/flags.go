@@ -409,7 +409,7 @@ func getFlagsForDescribeID() []cli.Flag {
 		},
 		cli.BoolFlag{
 			Name:  FlagResetPointsOnly,
-			Usage: "Only show events that are eligible for reset",
+			Usage: "Only show auto-reset points",
 		},
 	}
 }
