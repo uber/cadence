@@ -1290,7 +1290,11 @@ Update_History_Loop:
 		sizeChecker.msBuilder = msBuilder
 
 		binChecksum := request.GetBinaryChecksum()
-		if _, ok := domainEntry.GetConfig().BadBinaries.Binaries[binChecksum]; !ok {
+		if _, ok := domainEntry.GetConfig().BadBinaries.Binaries[binChecksum]; ok {
+			failDecision = true
+			failCause = workflow.DecisionTaskFailedCauseBadBinary
+			failMessage = fmt.Sprintf("binary %v is already marked as bad deployment", binChecksum)
+		} else {
 		Process_Decision_Loop:
 			for _, d := range request.Decisions {
 				switch *d.DecisionType {
@@ -1765,10 +1769,6 @@ Update_History_Loop:
 					return nil, &workflow.BadRequestError{Message: fmt.Sprintf("Unknown decision type: %v", *d.DecisionType)}
 				}
 			}
-		} else {
-			failDecision = true
-			failCause = workflow.DecisionTaskFailedCauseBadBinary
-			failMessage = fmt.Sprintf("binary %v is already marked as bad deployment", binChecksum)
 		}
 
 		if err != nil {
