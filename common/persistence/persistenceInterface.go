@@ -137,6 +137,7 @@ type (
 		DeleteWorkflowExecution(request *VisibilityDeleteWorkflowExecutionRequest) error
 		ListWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*InternalListWorkflowExecutionsResponse, error)
 		ScanWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*InternalListWorkflowExecutionsResponse, error)
+		CountWorkflowExecutions(request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error)
 	}
 
 	// DataBlob represents a blob for any binary data.
@@ -336,7 +337,6 @@ type (
 		TransferTasks        []Task
 		TimerTasks           []Task
 		ReplicationTasks     []Task
-		DeleteTimerTask      Task
 		Condition            int64
 		RangeID              int64
 		ContinueAsNew        *InternalCreateWorkflowExecutionRequest
