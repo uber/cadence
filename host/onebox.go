@@ -359,16 +359,17 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	c.frontendHandler = frontend.NewWorkflowHandler(
 		c.frontEndService, frontendConfig, c.metadataMgr, c.historyMgr, c.historyV2Mgr,
 		c.visibilityMgr, kafkaProducer, params.BlobstoreClient)
-	err = c.frontendHandler.Start()
+	dcRedirectionHandler := frontend.NewDCRedirectionHandler(c.frontendHandler, params.DCRedirectionPolicy)
+	c.frontEndService.GetDispatcher().Register(workflowserviceserver.New(dcRedirectionHandler))
+	err = dcRedirectionHandler.Start()
 	if err != nil {
 		c.logger.Fatal("Failed to start frontend", tag.Error(err))
 	}
-	dcRedirectionHandler := frontend.NewDCRedirectionHandler(c.frontendHandler, params.DCRedirectionPolicy)
-	c.frontEndService.GetDispatcher().Register(workflowserviceserver.New(dcRedirectionHandler))
 	err = c.adminHandler.Start()
 	if err != nil {
 		c.logger.Fatal("Failed to start admin", tag.Error(err))
 	}
+	c.frontEndService.Start()
 	c.initLock.Unlock()
 
 	startWG.Done()

@@ -87,7 +87,6 @@ func (adh *AdminHandler) Start() error {
 
 	adh.domainCache.Start()
 	adh.Service.GetDispatcher().Register(adminserviceserver.New(adh))
-	adh.Service.Start()
 
 	adh.history = adh.GetClientBean().GetHistoryClient()
 	adh.metricsClient = adh.Service.GetMetricsClient()
