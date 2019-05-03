@@ -21,6 +21,7 @@
 package dynamicconfig
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -200,4 +201,20 @@ func (s *fileBasedClientSuite) TestGetDurationValue_ParseFailed() {
 	v, err := s.client.GetDurationValue(testGetDurationPropertyKey, filters, time.Second)
 	s.Error(err)
 	s.Equal(time.Second, v)
+}
+
+func (s *fileBasedClientSuite) TestValidateConfig_FileNotExist() {
+	_, err := NewFileBasedClient(&FileBasedClientConfig{
+		Filepath:     "file/not/exist.yaml",
+		PollInterval: time.Second * 10,
+	}, nil, nil)
+	s.True(os.IsNotExist(err))
+}
+
+func (s *fileBasedClientSuite) TestValidateConfig_ShortPollInterval() {
+	_, err := NewFileBasedClient(&FileBasedClientConfig{
+		Filepath:     "config/testConfig.yaml",
+		PollInterval: time.Second,
+	}, nil, nil)
+	s.Error(err)
 }

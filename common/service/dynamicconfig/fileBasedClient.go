@@ -35,6 +35,8 @@ import (
 
 var _ Client = (*fileBasedClient)(nil)
 
+const minPollInterval = time.Second * 5
+
 type constrainedValue struct {
 	Value       interface{}
 	Constraints map[string]interface{}
@@ -58,6 +60,10 @@ type fileBasedClient struct {
 
 // NewFileBasedClient creates a file based client.
 func NewFileBasedClient(config *FileBasedClientConfig, logger log.Logger, doneCh chan struct{}) (Client, error) {
+	if err := validateConfig(config); err != nil {
+		return nil, err
+	}
+
 	client := &fileBasedClient{
 		config: config,
 		doneCh: doneCh,
@@ -74,8 +80,9 @@ func NewFileBasedClient(config *FileBasedClientConfig, logger log.Logger, doneCh
 				err := client.update()
 				if err != nil {
 					client.logger.Error("Failed to update dynamic config", tag.Timestamp(time.Now()))
+				} else {
+					client.logger.Info("Updated dynamic config", tag.Timestamp(time.Now()))
 				}
-				client.logger.Info("Updated dynamic config", tag.Timestamp(time.Now()))
 			case <-client.doneCh:
 				ticker.Stop()
 				return
@@ -277,4 +284,14 @@ func convertKeyTypeToStringSlice(s []interface{}) ([]interface{}, error) {
 		stringKeySlice[idx] = convertedValue
 	}
 	return stringKeySlice, nil
+}
+
+func validateConfig(config *FileBasedClientConfig) error {
+	if _, err := os.Stat(config.Filepath); os.IsNotExist(err) {
+		return err
+	}
+	if config.PollInterval < minPollInterval {
+		return fmt.Errorf("poll interval should be at least %v", minPollInterval)
+	}
+	return nil
 }
