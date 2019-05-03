@@ -356,41 +356,6 @@ func (e *historyEngineImpl) generateFirstDecisionTask(domainID string, msBuilder
 	return transferTasks, di, nil
 }
 
-func (e *historyEngineImpl) appendFirstBatchHistoryEvents(msBuilder mutableState, domainID string, execution workflow.WorkflowExecution) (historySize int, err error) {
-	// call FlushBufferedEvents to assign task id to event
-	// as well as update last event task id in new state builder
-	err = msBuilder.FlushBufferedEvents()
-	if err != nil {
-		return 0, err
-	}
-	events := msBuilder.GetHistoryBuilder().GetHistory().Events
-	startedEvent := events[0]
-	if msBuilder.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
-		branchToken := msBuilder.GetCurrentBranch()
-		historySize, err = e.shard.AppendHistoryV2Events(&persistence.AppendHistoryNodesRequest{
-			IsNewBranch: true,
-			Info:        historyGarbageCleanupInfo(domainID, execution.GetWorkflowId(), execution.GetRunId()),
-			BranchToken: branchToken,
-			Events:      events,
-			// It is ok to use 0 for TransactionID because RunID is unique so there are
-			// no potential duplicates to override.
-			TransactionID: 0,
-		}, domainID, execution)
-	} else {
-		historySize, err = e.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
-			DomainID:  domainID,
-			Execution: execution,
-			// It is ok to use 0 for TransactionID because RunID is unique so there are
-			// no potential duplicates to override.
-			TransactionID:     0,
-			FirstEventID:      startedEvent.GetEventId(),
-			EventBatchVersion: startedEvent.GetVersion(),
-			Events:            events,
-		})
-	}
-	return
-}
-
 // StartWorkflowExecution starts a workflow execution
 func (e *historyEngineImpl) StartWorkflowExecution(ctx ctx.Context, startRequest *h.StartWorkflowExecutionRequest) (
 	resp *workflow.StartWorkflowExecutionResponse, retError error) {
@@ -452,11 +417,12 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx ctx.Context, startRequest
 		})
 	}
 
-	historySize, retError := e.appendFirstBatchHistoryEvents(msBuilder, domainID, execution)
+	context := newWorkflowExecutionContext(domainID, execution, e.shard, e.executionManager, e.logger)
+	createReplicationTask := domainEntry.CanReplicateEvent()
+	_, retError = context.appendFirstBatchEventsForActive(msBuilder)
 	if retError != nil {
 		return
 	}
-	msBuilder.IncrementHistorySize(historySize)
 
 	// delete history if createWorkflow failed, otherwise history will leak
 	shouldDeleteHistory := true
@@ -466,15 +432,12 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx ctx.Context, startRequest
 		}
 	}()
 
-	context := newWorkflowExecutionContext(domainID, execution, e.shard, e.executionManager, e.logger)
-	createReplicationTask := domainEntry.CanReplicateEvent()
-
 	// create as brand new
 	createMode := persistence.CreateWorkflowModeBrandNew
 	prevRunID := ""
 	prevLastWriteVersion := int64(0)
 	retError = context.createWorkflowExecution(
-		msBuilder, createReplicationTask, time.Now(),
+		msBuilder, e.currentClusterName, createReplicationTask, time.Now(),
 		transferTasks, timerTasks,
 		createMode, prevRunID, prevLastWriteVersion,
 	)
@@ -506,7 +469,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx ctx.Context, startRequest
 				return
 			}
 			retError = context.createWorkflowExecution(
-				msBuilder, createReplicationTask, time.Now(),
+				msBuilder, e.currentClusterName, createReplicationTask, time.Now(),
 				transferTasks, timerTasks,
 				createMode, prevRunID, prevLastWriteVersion,
 			)
@@ -2355,11 +2318,12 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx ctx.Context, si
 		VisibilityTimestamp: e.shard.GetTimeSource().Now().Add(duration),
 	}}
 
-	historySize, retError := e.appendFirstBatchHistoryEvents(msBuilder, domainID, execution)
+	context = newWorkflowExecutionContext(domainID, execution, e.shard, e.executionManager, e.logger)
+	createReplicationTask := domainEntry.CanReplicateEvent()
+	_, retError = context.appendFirstBatchEventsForActive(msBuilder)
 	if retError != nil {
 		return
 	}
-	msBuilder.IncrementHistorySize(historySize)
 
 	// delete history if createWorkflow failed, otherwise history will leak
 	shouldDeleteHistory := true
@@ -2368,9 +2332,6 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx ctx.Context, si
 			e.deleteEvents(domainID, execution, eventStoreVersion, msBuilder.GetCurrentBranch())
 		}
 	}()
-
-	context = newWorkflowExecutionContext(domainID, execution, e.shard, e.executionManager, e.logger)
-	createReplicationTask := domainEntry.CanReplicateEvent()
 
 	createMode := persistence.CreateWorkflowModeBrandNew
 	prevRunID := ""
@@ -2381,7 +2342,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx ctx.Context, si
 		prevLastWriteVersion = prevMutableState.GetLastWriteVersion()
 	}
 	retError = context.createWorkflowExecution(
-		msBuilder, createReplicationTask, time.Now(),
+		msBuilder, e.currentClusterName, createReplicationTask, time.Now(),
 		transferTasks, timerTasks,
 		createMode, prevRunID, prevLastWriteVersion,
 	)

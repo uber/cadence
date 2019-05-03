@@ -46,11 +46,13 @@ const (
 
 type (
 	workflowExecutionContext interface {
-		appendHistoryEvents(history []*workflow.HistoryEvent, transactionID int64, doLastEventValidation bool) (int, error)
+		appendFirstBatchHistoryForContinueAsNew(newStateBuilder mutableState, transactionID int64) error
+		appendFirstBatchEventsForActive(msBuilder mutableState) (int, error)
+		appendFirstBatchEventsForStandby(msBuilder mutableState, history []*workflow.HistoryEvent) (int, error)
 		clear()
 		continueAsNewWorkflowExecution(context []byte, newStateBuilder mutableState, transferTasks []persistence.Task, timerTasks []persistence.Task, transactionID int64) error
 		createWorkflowExecution(
-			msBuilder mutableState, createReplicationTask bool, now time.Time,
+			msBuilder mutableState, sourceCluster string, createReplicationTask bool, now time.Time,
 			transferTasks []persistence.Task, timerTasks []persistence.Task,
 			createMode int, prevRunID string, prevLastWriteVersion int64) error
 		getDomainID() string
@@ -58,7 +60,6 @@ type (
 		getLogger() log.Logger
 		loadWorkflowExecution() (mutableState, error)
 		lock(context.Context) error
-		appendFirstBatchHistoryForContinueAsNew(newStateBuilder mutableState, transactionID int64) error
 		replicateWorkflowExecution(request *h.ReplicateEventsRequest, transferTasks []persistence.Task, timerTasks []persistence.Task, lastEventID, transactionID int64, now time.Time) error
 		resetMutableState(prevRunID string, resetBuilder mutableState) (mutableState, error)
 		resetWorkflowExecution(currMutableState mutableState, updateCurr bool, closeTask, cleanupTask persistence.Task, newMutableState mutableState, transferTasks, timerTasks, currReplicationTasks, insertReplicationTasks []persistence.Task, baseRunID string, forkRunNextEventID, prevRunVersion int64) (retError error)
@@ -184,14 +185,14 @@ func (c *workflowExecutionContextImpl) loadWorkflowExecutionInternal() error {
 }
 
 func (c *workflowExecutionContextImpl) createWorkflowExecution(
-	msBuilder mutableState, createReplicationTask bool, now time.Time,
+	msBuilder mutableState, sourceCluster string, createReplicationTask bool, now time.Time,
 	transferTasks []persistence.Task, timerTasks []persistence.Task,
 	createMode int, prevRunID string, prevLastWriteVersion int64) error {
 
 	c.msBuilder = msBuilder
 	if c.msBuilder.GetReplicationState() != nil {
 		c.msBuilder.UpdateReplicationStateLastEventID(
-			c.clusterMetadata.GetCurrentClusterName(),
+			sourceCluster,
 			c.msBuilder.GetCurrentVersion(),
 			c.msBuilder.GetNextEventID()-1,
 		)
@@ -800,6 +801,50 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 	}
 
 	return nil
+}
+
+func (c *workflowExecutionContextImpl) appendFirstBatchEventsForActive(msBuilder mutableState) (int, error) {
+	// call FlushBufferedEvents to assign task id to event
+	// as well as update last event task id in mutable state builder
+	err := msBuilder.FlushBufferedEvents()
+	if err != nil {
+		return 0, err
+	}
+	events := msBuilder.GetHistoryBuilder().GetHistory().Events
+	return c.appendFirstBatchEventsForStandby(msBuilder, events)
+}
+
+func (c *workflowExecutionContextImpl) appendFirstBatchEventsForStandby(msBuilder mutableState, history []*workflow.HistoryEvent) (int, error) {
+
+	firstEvent := history[0]
+	var historySize int
+	var err error
+	if msBuilder.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
+		historySize, err = c.shard.AppendHistoryV2Events(&persistence.AppendHistoryNodesRequest{
+			IsNewBranch: true,
+			Info:        historyGarbageCleanupInfo(c.domainID, c.workflowExecution.GetWorkflowId(), c.workflowExecution.GetRunId()),
+			BranchToken: msBuilder.GetCurrentBranch(),
+			Events:      history,
+			// It is ok to use 0 for TransactionID because RunID is unique so there are
+			// no potential duplicates to override.
+			TransactionID: 0,
+		}, c.domainID, c.workflowExecution)
+	} else {
+		historySize, err = c.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
+			DomainID:  c.domainID,
+			Execution: c.workflowExecution,
+			// It is ok to use 0 for TransactionID because RunID is unique so there are
+			// no potential duplicates to override.
+			TransactionID:     0,
+			FirstEventID:      firstEvent.GetEventId(),
+			EventBatchVersion: firstEvent.GetVersion(),
+			Events:            history,
+		})
+	}
+	if err == nil {
+		msBuilder.IncrementHistorySize(historySize)
+	}
+	return historySize, err
 }
 
 func (c *workflowExecutionContextImpl) appendHistoryEvents(history []*workflow.HistoryEvent,
