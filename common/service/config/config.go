@@ -263,9 +263,9 @@ type (
 	// Statsd contains the config items for statsd metrics reporter
 	Statsd struct {
 		// The host and port of the statsd server
-		HostPort string `yaml:"hostPort" validate:"nonzero"`
+		HostPort string `yaml:"hostPort"`
 		// The prefix to use in reporting to statsd
-		Prefix string `yaml:"prefix" validate:"nonzero"`
+		Prefix string `yaml:"prefix"`
 		// FlushInterval is the maximum interval for sending packets.
 		// If it is not specified, it defaults to 1 second.
 		FlushInterval time.Duration `yaml:"flushInterval"`
