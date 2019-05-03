@@ -225,6 +225,10 @@ func newWorkflowCommands() []cli.Command {
 					Name:  FlagResetType,
 					Usage: "where to reset. Support one of these: " + strings.Join(mapKeysToArray(resetTypesMap), ","),
 				},
+				cli.StringFlag{
+					Name:  FlagResetBadBinaryChecksum,
+					Usage: "Binary checksum for resetType of BadBinary",
+				},
 			},
 			Action: func(c *cli.Context) {
 				ResetWorkflow(c)
@@ -263,6 +267,10 @@ func newWorkflowCommands() []cli.Command {
 				cli.StringFlag{
 					Name:  FlagResetType,
 					Usage: "where to reset. Support one of these: " + strings.Join(mapKeysToArray(resetTypesMap), ","),
+				},
+				cli.StringFlag{
+					Name:  FlagResetBadBinaryChecksum,
+					Usage: "Binary checksum for resetType of BadBinary",
 				},
 			},
 			Action: func(c *cli.Context) {
