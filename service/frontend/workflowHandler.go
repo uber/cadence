@@ -440,15 +440,19 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	}
 
 	domainName := pollRequest.GetDomain()
-	domainID, err := wh.domainCache.GetDomainID(domainName)
+	domainEntry, err := wh.domainCache.GetDomain(domainName)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
+	domainID := domainEntry.GetInfo().ID
 
 	// add domain tag to scope, so further metrics will have the domain tag
 	scope = scope.Tagged(metrics.DomainTag(domainName))
 
 	wh.Service.GetLogger().Debug("Poll for decision.", tag.WorkflowDomainName(domainName), tag.WorkflowDomainID(domainID))
+	if err := wh.checkBadBinary(domainEntry, pollRequest.GetBinaryChecksum()); err != nil {
+		return nil, wh.error(err, scope)
+	}
 
 	pollerID := uuid.New()
 	var matchingResp *m.PollForDecisionTaskResponse
@@ -489,6 +493,19 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		return nil, wh.error(err, scope)
 	}
 	return resp, nil
+}
+
+func (wh *WorkflowHandler) checkBadBinary(domainEntry *cache.DomainCacheEntry, binaryChecksum string) error {
+	if domainEntry.GetConfig().BadBinaries.Binaries != nil {
+		badBinaries := domainEntry.GetConfig().BadBinaries.Binaries
+		_, ok := badBinaries[binaryChecksum]
+		if ok {
+			return &gen.BadRequestError{
+				Message: fmt.Sprintf("binary %v already marked as bad deployment", binaryChecksum),
+			}
+		}
+	}
+	return nil
 }
 
 func (wh *WorkflowHandler) cancelOutstandingPoll(ctx context.Context, err error, domainID string, taskListType int32,
@@ -2522,6 +2539,55 @@ func (wh *WorkflowHandler) ScanWorkflowExecutions(ctx context.Context, listReque
 	resp = &gen.ListWorkflowExecutionsResponse{}
 	resp.Executions = persistenceResp.Executions
 	resp.NextPageToken = persistenceResp.NextPageToken
+	return resp, nil
+}
+
+// CountWorkflowExecutions - count number of workflow executions in a domain
+func (wh *WorkflowHandler) CountWorkflowExecutions(ctx context.Context, countRequest *gen.CountWorkflowExecutionsRequest) (resp *gen.CountWorkflowExecutionsResponse, retError error) {
+	defer log.CapturePanic(wh.GetLogger(), &retError)
+
+	scope := wh.metricsClient.Scope(metrics.FrontendCountWorkflowExecutionsScope)
+	sw := wh.startRequestProfile(scope)
+	defer sw.Stop()
+
+	if err := wh.versionChecker.checkClientVersion(ctx); err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	if countRequest == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
+
+	if ok, _ := wh.rateLimiter.TryConsume(1); !ok {
+		return nil, wh.error(createServiceBusyError(), scope)
+	}
+
+	if countRequest.GetDomain() == "" {
+		return nil, wh.error(errDomainNotSet, scope)
+	}
+
+	domain := countRequest.GetDomain()
+	domainID, err := wh.domainCache.GetDomainID(domain)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	// add domain tag to scope, so further metrics will have the domain tag
+	scope = scope.Tagged(metrics.DomainTag(domain))
+
+	req := &persistence.CountWorkflowExecutionsRequest{
+		DomainUUID: domainID,
+		Domain:     domain,
+		Query:      countRequest.GetQuery(),
+	}
+	persistenceResp, err := wh.visibilityMgr.CountWorkflowExecutions(req)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	resp = &gen.CountWorkflowExecutionsResponse{
+		Count: common.Int64Ptr(persistenceResp.Count),
+	}
 	return resp, nil
 }
 

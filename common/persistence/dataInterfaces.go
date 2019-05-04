@@ -667,7 +667,7 @@ type (
 		DomainID                    string
 		Execution                   workflow.WorkflowExecution
 		ParentDomainID              string
-		ParentExecution             *workflow.WorkflowExecution
+		ParentExecution             workflow.WorkflowExecution
 		InitiatedID                 int64
 		TaskList                    string
 		WorkflowTypeName            string
@@ -1518,7 +1518,7 @@ func (e *TimeoutError) Error() string {
 	return e.Msg
 }
 
-// IsTimeoutError determines if the error is a timeout error
+// IsTimeoutError check whether error is TimeoutError
 func IsTimeoutError(err error) bool {
 	_, ok := err.(*TimeoutError)
 	return ok

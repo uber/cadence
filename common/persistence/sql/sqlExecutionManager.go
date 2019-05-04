@@ -1434,7 +1434,7 @@ func createExecutionFromRequest(
 			info.LastReplicationInfo[k] = &sqlblobs.ReplicationInfo{Version: &v.Version, LastEventID: &v.LastEventID}
 		}
 	}
-	if request.ParentExecution != nil {
+	if request.ParentDomainID != "" {
 		info.InitiatedID = &request.InitiatedID
 		info.ParentDomainID = sqldb.MustParseUUID(request.ParentDomainID)
 		info.ParentWorkflowID = request.ParentExecution.WorkflowId
@@ -1486,7 +1486,7 @@ func createOrUpdateCurrentExecution(
 		row.StartVersion = replicationState.StartVersion
 		row.LastWriteVersion = replicationState.LastWriteVersion
 	}
-	if request.ParentExecution != nil {
+	if request.ParentDomainID != "" {
 		row.State = p.WorkflowStateCreated
 	}
 
@@ -1616,10 +1616,9 @@ func createTransferTasks(tx sqldb.Tx, transferTasks []p.Task, shardID int, domai
 			info.TargetWorkflowID = &task.(*p.StartChildExecutionTask).TargetWorkflowID
 			info.ScheduleID = &task.(*p.StartChildExecutionTask).InitiatedID
 
-		case p.TransferTaskTypeCloseExecution:
-			// No explicit property needs to be set
-
-		case p.TransferTaskTypeRecordWorkflowStarted:
+		case p.TransferTaskTypeCloseExecution,
+			p.TransferTaskTypeRecordWorkflowStarted,
+			p.TransferTaskTypeResetWorkflow:
 			// No explicit property needs to be set
 
 		default:

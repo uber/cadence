@@ -198,6 +198,7 @@ enum DecisionTaskFailedCause {
   FAILOVER_CLOSE_DECISION,
   BAD_SIGNAL_INPUT_SIZE,
   RESET_WORKFLOW,
+  BAD_BINARY,
 }
 
 enum CancelExternalWorkflowExecutionFailedCause {
@@ -308,6 +309,7 @@ struct WorkflowExecutionInfo {
   80: optional WorkflowExecution parentExecution
   90: optional i64 (js.type = "Long") executionTime
   100: optional Memo memo
+  110: optional ResetPoints autoResetPoints
 }
 
 struct WorkflowExecutionConfiguration {
@@ -994,6 +996,7 @@ struct PollForDecisionTaskRequest {
   10: optional string domain
   20: optional TaskList taskList
   30: optional string identity
+  40: optional string binaryChecksum
 }
 
 struct PollForDecisionTaskResponse {
@@ -1239,6 +1242,15 @@ struct ListWorkflowExecutionsRequest {
 struct ListWorkflowExecutionsResponse {
   10: optional list<WorkflowExecutionInfo> executions
   20: optional binary nextPageToken
+}
+
+struct CountWorkflowExecutionsRequest {
+  10: optional string domain
+  20: optional string query
+}
+
+struct CountWorkflowExecutionsResponse {
+  10: optional i64 count
 }
 
 struct QueryWorkflowRequest {
