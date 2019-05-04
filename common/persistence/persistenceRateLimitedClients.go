@@ -254,12 +254,12 @@ func (p *workflowExecutionRateLimitedPersistenceClient) DeleteWorkflowExecution(
 	return err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) DeleteWorkflowCurrentExecution(request *DeleteWorkflowExecutionRequest) error {
+func (p *workflowExecutionRateLimitedPersistenceClient) DeleteCurrentWorkflowExecution(request *DeleteCurrentWorkflowExecutionRequest) error {
 	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	err := p.persistence.DeleteWorkflowCurrentExecution(request)
+	err := p.persistence.DeleteCurrentWorkflowExecution(request)
 	return err
 }
 

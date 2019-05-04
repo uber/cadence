@@ -1057,7 +1057,7 @@ func (m *sqlExecutionManager) DeleteWorkflowExecution(request *p.DeleteWorkflowE
 // here was finished. In that case, current_executions table will have the same workflowID but different
 // runID. The following code will delete the row from current_executions if and only if the runID is
 // same as the one we are trying to delete here
-func (m *sqlExecutionManager) DeleteWorkflowCurrentExecution(request *p.DeleteWorkflowExecutionRequest) error {
+func (m *sqlExecutionManager) DeleteCurrentWorkflowExecution(request *p.DeleteCurrentWorkflowExecutionRequest) error {
 	domainID := sqldb.MustParseUUID(request.DomainID)
 	runID := sqldb.MustParseUUID(request.RunID)
 	_, err := m.db.DeleteFromCurrentExecutions(&sqldb.CurrentExecutionsFilter{

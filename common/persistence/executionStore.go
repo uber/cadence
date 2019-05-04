@@ -687,8 +687,8 @@ func (m *executionManagerImpl) DeleteWorkflowExecution(request *DeleteWorkflowEx
 	return m.persistence.DeleteWorkflowExecution(request)
 }
 
-func (m *executionManagerImpl) DeleteWorkflowCurrentExecution(request *DeleteWorkflowExecutionRequest) error {
-	return m.persistence.DeleteWorkflowCurrentExecution(request)
+func (m *executionManagerImpl) DeleteCurrentWorkflowExecution(request *DeleteCurrentWorkflowExecutionRequest) error {
+	return m.persistence.DeleteCurrentWorkflowExecution(request)
 }
 
 func (m *executionManagerImpl) GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error) {

@@ -900,9 +900,9 @@ func (s *TestBase) DeleteWorkflowExecution(info *p.WorkflowExecutionInfo) error 
 	})
 }
 
-// DeleteWorkflowCurrentExecution is a utility method to delete the workflow current execution
-func (s *TestBase) DeleteWorkflowCurrentExecution(info *p.WorkflowExecutionInfo) error {
-	return s.ExecutionManager.DeleteWorkflowCurrentExecution(&p.DeleteWorkflowExecutionRequest{
+// DeleteCurrentWorkflowExecution is a utility method to delete the workflow current execution
+func (s *TestBase) DeleteCurrentWorkflowExecution(info *p.WorkflowExecutionInfo) error {
+	return s.ExecutionManager.DeleteCurrentWorkflowExecution(&p.DeleteCurrentWorkflowExecutionRequest{
 		DomainID:   info.DomainID,
 		WorkflowID: info.WorkflowID,
 		RunID:      info.RunID,

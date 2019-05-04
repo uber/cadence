@@ -681,7 +681,7 @@ func (t *timerQueueProcessorBase) deleteWorkflowExecution(task *persistence.Time
 
 func (t *timerQueueProcessorBase) deleteCurrentWorkflowExecution(task *persistence.TimerTaskInfo) error {
 	op := func() error {
-		return t.executionManager.DeleteWorkflowCurrentExecution(&persistence.DeleteWorkflowExecutionRequest{
+		return t.executionManager.DeleteCurrentWorkflowExecution(&persistence.DeleteCurrentWorkflowExecutionRequest{
 			DomainID:   task.DomainID,
 			WorkflowID: task.WorkflowID,
 			RunID:      task.RunID,

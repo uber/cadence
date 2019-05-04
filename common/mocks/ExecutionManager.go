@@ -167,12 +167,12 @@ func (_m *ExecutionManager) DeleteWorkflowExecution(request *persistence.DeleteW
 	return r0
 }
 
-// DeleteWorkflowCurrentExecution provides a mock function with given fields: request
-func (_m *ExecutionManager) DeleteWorkflowCurrentExecution(request *persistence.DeleteWorkflowExecutionRequest) error {
+// DeleteCurrentWorkflowExecution provides a mock function with given fields: request
+func (_m *ExecutionManager) DeleteCurrentWorkflowExecution(request *persistence.DeleteCurrentWorkflowExecutionRequest) error {
 	ret := _m.Called(request)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*persistence.DeleteWorkflowExecutionRequest) error); ok {
+	if rf, ok := ret.Get(0).(func(*persistence.DeleteCurrentWorkflowExecutionRequest) error); ok {
 		r0 = rf(request)
 	} else {
 		r0 = ret.Error(0)

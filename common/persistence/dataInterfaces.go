@@ -832,6 +832,13 @@ type (
 		RunID      string
 	}
 
+	// DeleteCurrentWorkflowExecutionRequest is used to delete the current workflow execution
+	DeleteCurrentWorkflowExecutionRequest struct {
+		DomainID   string
+		WorkflowID string
+		RunID      string
+	}
+
 	// GetTransferTasksRequest is used to read tasks from the transfer task queue
 	GetTransferTasksRequest struct {
 		ReadLevel     int64
@@ -1379,7 +1386,7 @@ type (
 		ResetMutableState(request *ResetMutableStateRequest) error
 		ResetWorkflowExecution(request *ResetWorkflowExecutionRequest) error
 		DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error
-		DeleteWorkflowCurrentExecution(request *DeleteWorkflowExecutionRequest) error
+		DeleteCurrentWorkflowExecution(request *DeleteCurrentWorkflowExecutionRequest) error
 		GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)
 
 		// Transfer task related methods
