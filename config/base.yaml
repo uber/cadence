@@ -1,7 +1,3 @@
 log:
   stdout: true
   level: info
-
-dcClientConfig:
-  filepath: "config/dynamicconfig.yaml"
-  pollInterval: "10s"

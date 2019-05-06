@@ -112,9 +112,9 @@ func (s *server) startService() common.Daemon {
 		log.Fatalf("error creating ringpop factory: %v", err)
 	}
 
-	params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DCClientConfig, params.Logger.WithTags(tag.Service(params.Name)), s.doneC)
+	params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DynamicConfigClient, params.Logger.WithTags(tag.Service(params.Name)), s.doneC)
 	if err != nil {
-		log.Printf("error creating file based dynamic config client: %v", err)
+		log.Printf("error creating file based dynamic config client, use no-op config client instead. error: %v", err)
 		params.DynamicConfig = dynamicconfig.NewNopClient()
 	}
 	dc := dynamicconfig.NewCollection(params.DynamicConfig, params.Logger)

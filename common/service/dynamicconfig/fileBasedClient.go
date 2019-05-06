@@ -79,7 +79,7 @@ func NewFileBasedClient(config *FileBasedClientConfig, logger log.Logger, doneCh
 			case <-ticker.C:
 				err := client.update()
 				if err != nil {
-					client.logger.Error("Failed to update dynamic config", tag.Timestamp(time.Now()))
+					client.logger.Error("Failed to update dynamic config", tag.Error(err))
 				}
 			case <-client.doneCh:
 				ticker.Stop()
@@ -218,7 +218,7 @@ func (fc *fileBasedClient) update() error {
 	}
 
 	fc.values.Store(newValues)
-	fc.logger.Info("Updated dynamic config", tag.Timestamp(time.Now()))
+	fc.logger.Info("Updated dynamic config")
 	return nil
 }
 
