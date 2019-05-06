@@ -57,6 +57,9 @@ type (
 		ElasticSearch elasticsearch.Config `yaml:"elasticsearch"`
 		// PublicClient is config for connecting to cadence frontend
 		PublicClient PublicClient `yaml:"publicClient"`
+		// DCClientConfig is the config for setting up the file based dynamic config client
+		// Filepath should be relative to the root directory
+		DCClientConfig dynamicconfig.FileBasedClientConfig `yaml:"dcClientConfig"`
 	}
 
 	// Service contains the service specific config items
