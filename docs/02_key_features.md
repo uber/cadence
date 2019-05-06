@@ -1,4 +1,4 @@
-# Key features
+# Key Features
 
 ### Dynamic workflow execution graphs
 Determine the workflow execution graphs at runtime based on the data you are processing. Cadence
