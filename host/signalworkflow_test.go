@@ -1060,113 +1060,6 @@ CheckHistoryLoopForCancelSent:
 
 }
 
-func (s *integrationSuite) TestSignalWithStartWorkflow_StartOnly() {
-	id := "integration-signal-with-start-workflow-test"
-	wt := "integration-signal-with-start-workflow-test-type"
-	tl := "integration-signal-with-start-workflow-test-tasklist"
-	identity := "worker1"
-
-	workflowType := &workflow.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
-
-	taskList := &workflow.TaskList{}
-	taskList.Name = common.StringPtr(tl)
-
-	header := &workflow.Header{
-		Fields: map[string][]byte{
-			"": []byte(""),
-		},
-	}
-
-	// Start a workflow
-	signalName := "my signal"
-	signalInput := []byte("my signal input.")
-	wfIDReusePolicy := workflow.WorkflowIdReusePolicyAllowDuplicate
-	sRequest := &workflow.SignalWithStartWorkflowExecutionRequest{
-		RequestId:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
-		WorkflowId:                          common.StringPtr(id),
-		WorkflowType:                        workflowType,
-		TaskList:                            taskList,
-		Input:                               nil,
-		Header:                              header,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		SignalName:                          common.StringPtr(signalName),
-		SignalInput:                         signalInput,
-		Identity:                            common.StringPtr(identity),
-		WorkflowIdReusePolicy:               &wfIDReusePolicy,
-	}
-	we, err := s.engine.SignalWithStartWorkflowExecution(createContext(), sRequest)
-	s.Nil(err)
-
-	s.Logger.Info("SignalWithStartWorkflowExecution", tag.WorkflowRunID(*we.RunId))
-
-	// decider logic
-	workflowComplete := false
-	var signalEvent *workflow.HistoryEvent
-	var startedEvent *workflow.HistoryEvent
-	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
-		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
-
-		var foundStarted, foundSignal bool
-		for _, event := range history.Events[previousStartedEventID:] {
-			if *event.EventType == workflow.EventTypeWorkflowExecutionSignaled {
-				signalEvent = event
-				foundSignal = true
-			}
-			if *event.EventType == workflow.EventTypeWorkflowExecutionStarted {
-				startedEvent = event
-				foundStarted = true
-			}
-		}
-		if foundStarted && foundSignal {
-			return nil, []*workflow.Decision{}, nil
-		}
-		workflowComplete = true
-		return nil, []*workflow.Decision{{
-			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
-			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
-				Result: []byte("Done."),
-			},
-		}}, nil
-	}
-
-	poller := &TaskPoller{
-		Engine:          s.engine,
-		Domain:          s.domainName,
-		TaskList:        taskList,
-		Identity:        identity,
-		DecisionHandler: dtHandler,
-		Logger:          s.Logger,
-		T:               s.T(),
-	}
-
-	// Process signal in decider
-	_, err = poller.PollAndProcessDecisionTask(true, false)
-	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
-	s.Nil(err)
-
-	s.False(workflowComplete)
-	s.True(signalEvent != nil)
-	s.Equal(signalName, *signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
-	s.Equal(signalInput, signalEvent.WorkflowExecutionSignaledEventAttributes.Input)
-	s.Equal(identity, *signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
-	s.Equal(header, startedEvent.WorkflowExecutionStartedEventAttributes.Header)
-
-	// Terminate workflow execution
-	err = s.engine.TerminateWorkflowExecution(createContext(), &workflow.TerminateWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
-		WorkflowExecution: &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(id),
-		},
-		Reason:   common.StringPtr("test signal"),
-		Details:  nil,
-		Identity: common.StringPtr(identity),
-	})
-	s.Nil(err)
-}
-
 func (s *integrationSuite) TestSignalWithStartWorkflow() {
 	id := "integration-signal-with-start-workflow-test"
 	wt := "integration-signal-with-start-workflow-test-type"
@@ -1181,9 +1074,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 	taskList.Name = common.StringPtr(tl)
 
 	header := &workflow.Header{
-		Fields: map[string][]byte{
-			"": []byte(""),
-		},
+		Fields: map[string][]byte{"tracing": []byte("sample data")},
 	}
 
 	// Start a workflow
@@ -1209,7 +1100,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 	activityScheduled := false
 	activityData := int32(1)
 	newWorkflowStarted := false
-	var signalEvent *workflow.HistoryEvent
+	var signalEvent, startedEvent *workflow.HistoryEvent
 	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
 
@@ -1240,11 +1131,18 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 			}
 		} else if newWorkflowStarted {
 			newWorkflowStarted = false
-			for _, event := range history.Events {
+			signalEvent = nil
+			startedEvent = nil
+			for _, event := range history.Events[previousStartedEventID:] {
 				if *event.EventType == workflow.EventTypeWorkflowExecutionSignaled {
 					signalEvent = event
-					return nil, []*workflow.Decision{}, nil
 				}
+				if *event.EventType == workflow.EventTypeWorkflowExecutionStarted {
+					startedEvent = event
+				}
+			}
+			if signalEvent != nil && startedEvent != nil {
+				return nil, []*workflow.Decision{}, nil
 			}
 		}
 
@@ -1349,6 +1247,8 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 	s.Equal(signalName, *signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
 	s.Equal(signalInput, signalEvent.WorkflowExecutionSignaledEventAttributes.Input)
 	s.Equal(identity, *signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
+	s.True(startedEvent != nil)
+	s.Equal(header, startedEvent.WorkflowExecutionStartedEventAttributes.Header)
 
 	// Send signal to not existed workflow
 	id = "integration-signal-with-start-workflow-test-non-exist"
