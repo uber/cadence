@@ -244,6 +244,7 @@ func newWorkflowCommands() []cli.Command {
 				},
 				cli.StringFlag{
 					Name:  FlagExcludeFile,
+					Value: "",
 					Usage: "Another input file to use for excluding from resetting, only workflowID is needed.",
 				},
 				cli.StringFlag{

@@ -1429,30 +1429,31 @@ func ResetInBatch(c *cli.Context) {
 	}
 
 	// read exclude
-	excFile, err := os.Open(excFileName)
-	if err != nil {
-		ErrorAndExit("Open failed2", err)
-	}
-	defer excFile.Close()
-	scanner := bufio.NewScanner(excFile)
-	idx := 0
 	excludes := map[string]string{}
-	for scanner.Scan() {
-		idx++
-		line := strings.TrimSpace(scanner.Text())
-		if len(line) == 0 {
-			fmt.Printf("line %v is empty, skipped\n", idx)
-			continue
+	if len(excFileName) > 0 {
+		excFile, err := os.Open(excFileName)
+		if err != nil {
+			ErrorAndExit("Open failed2", err)
 		}
-		cols := strings.Split(line, separator)
-		if len(cols) < 1 {
-			ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 1 cols separated by comma, only %v ", idx, len(cols)))
+		defer excFile.Close()
+		scanner := bufio.NewScanner(excFile)
+		idx := 0
+		for scanner.Scan() {
+			idx++
+			line := strings.TrimSpace(scanner.Text())
+			if len(line) == 0 {
+				fmt.Printf("line %v is empty, skipped\n", idx)
+				continue
+			}
+			cols := strings.Split(line, separator)
+			if len(cols) < 1 {
+				ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 1 cols separated by comma, only %v ", idx, len(cols)))
+			}
+			wid := strings.TrimSpace(cols[0])
+			rid := "not-needed"
+			excludes[wid] = rid
 		}
-		wid := strings.TrimSpace(cols[0])
-		rid := "not-needed"
-		excludes[wid] = rid
 	}
-
 	fmt.Println("num of excludes:", len(excludes))
 
 	inFile, err := os.Open(inFileName)
@@ -1460,8 +1461,8 @@ func ResetInBatch(c *cli.Context) {
 		ErrorAndExit("Open failed", err)
 	}
 	defer inFile.Close()
-	scanner = bufio.NewScanner(inFile)
-	idx = 0
+	scanner := bufio.NewScanner(inFile)
+	idx := 0
 	for scanner.Scan() {
 		idx++
 		line := strings.TrimSpace(scanner.Text())
