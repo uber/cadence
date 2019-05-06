@@ -40,3 +40,11 @@ if len(signalVal) > 0 && signalVal != "SOME_VALUE" {
 In the example above, the workflow code uses **workflow.GetSignalChannel** to open a 
 **workflow.Channel** for the named signal. We then use a **workflow.Selector** to wait on this 
 channel and process the payload received with the signal.
+
+## SignalWithStart
+
+You may not know if a workflow is running and can accept a signal. The 
+[client.SignalWithStartWorkflow](https://godoc.org/go.uber.org/cadence/client#Client) API 
+allows you to send a signal to the current workflow instance if one exists or to create a new 
+run and then send the signal. SignalWithStartWorkflow therefore doesn't take a run ID as a 
+parameter.
