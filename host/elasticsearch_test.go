@@ -39,6 +39,11 @@ import (
 	"github.com/uber/cadence/common"
 )
 
+const (
+	numOfRetry   = 50
+	waitTimeInMs = 400
+)
+
 type elasticsearchIntegrationSuite struct {
 	// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
 	// not merely log an error
@@ -101,7 +106,7 @@ func (s *elasticsearchIntegrationSuite) TestListOpenWorkflow() {
 	startFilter := &workflow.StartTimeFilter{}
 	startFilter.EarliestTime = common.Int64Ptr(startTime)
 	var openExecution *workflow.WorkflowExecutionInfo
-	for i := 0; i < 20; i++ {
+	for i := 0; i < numOfRetry; i++ {
 		startFilter.LatestTime = common.Int64Ptr(time.Now().UnixNano())
 		resp, err := s.engine.ListOpenWorkflowExecutions(createContext(), &workflow.ListOpenWorkflowExecutionsRequest{
 			Domain:          common.StringPtr(s.domainName),
@@ -116,7 +121,7 @@ func (s *elasticsearchIntegrationSuite) TestListOpenWorkflow() {
 			openExecution = resp.GetExecutions()[0]
 			break
 		}
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(waitTimeInMs * time.Millisecond)
 	}
 	s.NotNil(openExecution)
 	s.Equal(we.GetRunId(), openExecution.GetExecution().GetRunId())
@@ -269,7 +274,7 @@ func (s *elasticsearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, p
 		Query:         common.StringPtr(fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing`, wType)),
 	}
 	// test first page
-	for i := 0; i < 20; i++ {
+	for i := 0; i < numOfRetry; i++ {
 		var resp *workflow.ListWorkflowExecutionsResponse
 		var err error
 
@@ -284,7 +289,7 @@ func (s *elasticsearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, p
 			nextPageToken = resp.NextPageToken
 			break
 		}
-		time.Sleep(400 * time.Millisecond)
+		time.Sleep(waitTimeInMs * time.Millisecond)
 	}
 	s.NotNil(openExecutions)
 	s.NotNil(nextPageToken)
@@ -293,7 +298,7 @@ func (s *elasticsearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, p
 	// test last page
 	listRequest.NextPageToken = nextPageToken
 	inIf := false
-	for i := 0; i < 20; i++ {
+	for i := 0; i < numOfRetry; i++ {
 		var resp *workflow.ListWorkflowExecutionsResponse
 		var err error
 
@@ -309,7 +314,7 @@ func (s *elasticsearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, p
 			nextPageToken = resp.NextPageToken
 			break
 		}
-		time.Sleep(400 * time.Millisecond)
+		time.Sleep(waitTimeInMs * time.Millisecond)
 	}
 	s.True(inIf)
 	s.NotNil(openExecutions)
@@ -323,7 +328,7 @@ func (s *elasticsearchIntegrationSuite) testHelperForReadOnce(runID, query strin
 		PageSize: common.Int32Ptr(100),
 		Query:    common.StringPtr(query),
 	}
-	for i := 0; i < 20; i++ {
+	for i := 0; i < numOfRetry; i++ {
 		var resp *workflow.ListWorkflowExecutionsResponse
 		var err error
 
@@ -338,7 +343,7 @@ func (s *elasticsearchIntegrationSuite) testHelperForReadOnce(runID, query strin
 			openExecution = resp.GetExecutions()[0]
 			break
 		}
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(waitTimeInMs * time.Millisecond)
 	}
 	s.NotNil(openExecution)
 	s.Equal(runID, openExecution.GetExecution().GetRunId())
@@ -435,13 +440,13 @@ func (s *elasticsearchIntegrationSuite) TestCountWorkflow() {
 		Query:  common.StringPtr(fmt.Sprintf(`WorkflowID = "%s"`, request.GetWorkflowId())),
 	}
 	var resp *workflow.CountWorkflowExecutionsResponse
-	for i := 0; i < 20; i++ {
+	for i := 0; i < numOfRetry; i++ {
 		resp, err = s.engine.CountWorkflowExecutions(createContext(), countRequest)
 		s.Nil(err)
 		if resp.GetCount() == int64(1) {
 			break
 		}
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(waitTimeInMs * time.Millisecond)
 	}
 	s.Equal(int64(1), resp.GetCount())
 }

@@ -66,6 +66,7 @@ type (
 
 		CreateWorkflowExecution(request *InternalCreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error)
 		DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error
+		DeleteCurrentWorkflowExecution(request *DeleteCurrentWorkflowExecutionRequest) error
 		GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)
 
 		// Transfer task related methods
@@ -154,7 +155,7 @@ type (
 		DomainID                    string
 		Execution                   workflow.WorkflowExecution
 		ParentDomainID              string
-		ParentExecution             *workflow.WorkflowExecution
+		ParentExecution             workflow.WorkflowExecution
 		InitiatedID                 int64
 		TaskList                    string
 		WorkflowTypeName            string
@@ -332,16 +333,14 @@ type (
 
 	// InternalUpdateWorkflowExecutionRequest is used to update a workflow execution  for Persistence Interface
 	InternalUpdateWorkflowExecutionRequest struct {
-		ExecutionInfo        *InternalWorkflowExecutionInfo
-		ReplicationState     *ReplicationState
-		TransferTasks        []Task
-		TimerTasks           []Task
-		ReplicationTasks     []Task
-		Condition            int64
-		RangeID              int64
-		ContinueAsNew        *InternalCreateWorkflowExecutionRequest
-		FinishExecution      bool
-		FinishedExecutionTTL int32
+		ExecutionInfo    *InternalWorkflowExecutionInfo
+		ReplicationState *ReplicationState
+		TransferTasks    []Task
+		TimerTasks       []Task
+		ReplicationTasks []Task
+		Condition        int64
+		RangeID          int64
+		ContinueAsNew    *InternalCreateWorkflowExecutionRequest
 
 		// Mutable state
 		UpsertActivityInfos           []*InternalActivityInfo
