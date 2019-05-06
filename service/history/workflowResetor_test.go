@@ -4231,7 +4231,6 @@ func TestFindAutoResetPoint(t *testing.T) {
 			pt0, pt1, pt3, pt4, pt5,
 		},
 	})
-	fmt.Println(pt.GetBinaryChecksum())
 	assert.Nil(t, pt)
 
 	// case 7: one intersection of not expred
