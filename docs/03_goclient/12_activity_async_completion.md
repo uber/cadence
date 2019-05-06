@@ -1,4 +1,4 @@
-# Completing an activity asynchronously
+# Async Activity Completion
 
 There are certain scenarios when completing an activity upon completion of its function is not possible
 or desirable. For example, you might have an application that requires user input in order to complete

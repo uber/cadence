@@ -1,38 +1,4 @@
-# Activities
-
-An activity is a manifestation of a particular task in the business logic.
-
-## Activity Interface
-
-Activities are defined as methods of a plain Java interface. Each method defines a single activity type. A single
-workflow can use more than one activity interface and call more that one activity method from the same interface.
-The only requirement is that activity method arguments and return values are serializable to a byte array using the provided
-[DataConverter](src/main/java/com/uber/cadence/converter/DataConverter.java) interface. The default implementation uses
-JSON serializer, but an alternative implementation can be easily configured.
-
-Example of an interface that defines four activities:
-
-```java
-public interface FileProcessingActivities {
-
-    void upload(String bucketName, String localName, String targetName);
-
-    String download(String bucketName, String remoteName);
-
-    @ActivityMethod(scheduleToCloseTimeoutSeconds = 2)
-    String processFile(String localName);
-
-    void deleteLocalFile(String fileName);
-}
-
-```
-It is recommended to use a single value type argument for activity methods. This way, adding new arguments as fields 
-to the value type is a backwards-compatible change.
-
-An optional @ActivityMethod annotation can be used to specify activity options like timeouts or a task list. Required options
-that are not specified through the annotation must be specified at run time.
-
-## Activity Implementation
+# Implementing activities
 
 Activity implementation is an implementation of an activity interface. A single instance of the activities implementation
 is shared across multiple simultaneous activity invocations. Therefore, the activity implementation code must be *thread safe*.
@@ -71,9 +37,11 @@ public class FileProcessingActivitiesImpl implements FileProcessingActivities {
     }
 }
 ```
-### Accessing Activity Info
 
-The [Activity](src/main/java/com/uber/cadence/activity/Activity.java) class provides static getters to access information about the workflow that invoked it.
+## Accessing Activity Info
+
+The [Activity](https://static.javadoc.io/com.uber.cadence/cadence-client/2.4.1/index.html?com/uber/cadence/activity/Activity.html) 
+class provides static getters to access information about the workflow that invoked it.
 Note that this information is stored in a thread local variable. Therefore, calls to Activity accessors succeed only in the thread that invoked the activity function.
 
 ```java
@@ -94,7 +62,7 @@ public class FileProcessingActivitiesImpl implements FileProcessingActivities {
  }
 ```
 
-### Asynchronous Activity Completion
+## Asynchronous Activity Completion
 
 Sometimes an activity lifecycle goes beyond a synchronous method invocation. For example, a request can be put in a queue
 and later a reply comes and is picked up by a different worker process. The whole request-reply interaction can be modeled
@@ -102,7 +70,7 @@ as a single Cadence activity.
 
 To indicate that an activity should not be completed upon its method return, call Activity.doNotCompleteOnReturn() from the
 original activity thread.
-Then later, when replies come, complete the activity using [ActivityCompletionClient](src/main/java/com/uber/cadence/client/ActivityCompletionClient.java).
+Then later, when replies come, complete the activity using [ActivityCompletionClient](https://static.javadoc.io/com.uber.cadence/cadence-client/2.4.1/index.html?com/uber/cadence/client/ActivityCompletionClient.html).
 To correlate activity invocation with completion use either `TaskToken` or workflow and activity IDs.
 
 ```java
@@ -128,7 +96,7 @@ When download is complete, the download service potentially calls back from a di
     }
 ```
 
-### Activity Heartbeating
+## Activity Heartbeating
 
 Some activities are long running. To react to their crashes quickly, use a heartbeat mechanism.
 Use the `Activity.heartbeat` function to let the Cadence service know that the activity is still alive. You can piggyback

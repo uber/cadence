@@ -1,4 +1,4 @@
-# Activities
+# Activity Overview
 
 An activity is the implementation of a particular task in the business logic.
 

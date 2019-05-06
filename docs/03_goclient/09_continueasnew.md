@@ -1,4 +1,4 @@
-# “ContinueAsNew” Workflow Completion
+# ContinueAsNew
 
 Workflows that need to rerun periodically could naively be implemented as a big **for** loop with 
 a sleep where the entire logic of the workflow is inside the body of the **for** loop. The problem 
