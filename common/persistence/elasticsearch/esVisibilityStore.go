@@ -418,6 +418,22 @@ const (
 	dslFieldFrom        = "from"
 	dslFieldSize        = "size"
 	dslFieldMust        = "must"
+
+	defaultDateTimeFormat = time.RFC3339 // used for converting UnixNano to string like 2018-02-15T16:16:36-08:00
+)
+
+var (
+	timeKeys = map[string]bool{
+		"StartTime":     true,
+		"CloseTime":     true,
+		"ExecutionTime": true,
+	}
+	rangeKeys = map[string]bool{
+		"from": true,
+		"to":   true,
+		"gt":   true,
+		"lt":   true,
+	}
 )
 
 func getESQueryDSLForScan(request *p.ListWorkflowExecutionsRequestV2, token *esVisibilityPageToken) (string, bool, error) {
@@ -442,6 +458,7 @@ func getESQueryDSLForCount(request *p.CountWorkflowExecutionsRequest) (string, e
 	}
 
 	addDomainToQuery(dsl, request.DomainUUID)
+	processAllValuesForKey(dsl, timeKeyFilter, timeProcessFunc)
 
 	// remove not needed fields
 	dsl.Del(dslFieldFrom)
@@ -465,6 +482,7 @@ func getESQueryDSLHelper(request *p.ListWorkflowExecutionsRequestV2, token *esVi
 	}
 
 	addDomainToQuery(dsl, request.DomainUUID)
+	processAllValuesForKey(dsl, timeKeyFilter, timeProcessFunc)
 
 	if isScan { // no need to sort for scan
 		dsl.Del(dslFieldSort)
@@ -792,4 +810,47 @@ func checkPageSize(request *p.ListWorkflowExecutionsRequestV2) {
 	if request.PageSize == 0 {
 		request.PageSize = 1000
 	}
+}
+
+func processAllValuesForKey(dsl *fastjson.Value, keyFilter func(k string) bool,
+	processFunc func(obj *fastjson.Object, key string, v *fastjson.Value),
+) {
+	switch dsl.Type() {
+	case fastjson.TypeArray:
+		for _, val := range dsl.GetArray() {
+			processAllValuesForKey(val, keyFilter, processFunc)
+		}
+	case fastjson.TypeObject:
+		objectVal := dsl.GetObject()
+		objectVal.Visit(func(key []byte, val *fastjson.Value) {
+			keyString := string(key)
+			if keyFilter(keyString) {
+				processFunc(objectVal, keyString, val)
+			} else {
+				processAllValuesForKey(val, keyFilter, processFunc)
+			}
+		})
+	default:
+		// do nothing, since there's no key
+	}
+}
+
+func timeKeyFilter(key string) bool {
+	return timeKeys[key]
+}
+
+func timeProcessFunc(obj *fastjson.Object, key string, value *fastjson.Value) {
+	processAllValuesForKey(value, func(key string) bool {
+		return rangeKeys[key]
+	}, func(obj *fastjson.Object, key string, v *fastjson.Value) {
+		timeStr := string(v.GetStringBytes())
+
+		// try to parse time
+		parsedTime, err := time.Parse(defaultDateTimeFormat, timeStr)
+		if err == nil {
+			obj.Set(key, fastjson.MustParse(fmt.Sprintf(`"%v"`, parsedTime.UnixNano())))
+		}
+
+		// do nothing if failed to parse
+	})
 }
