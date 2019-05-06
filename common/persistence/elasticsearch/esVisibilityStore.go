@@ -528,7 +528,9 @@ func getCustomizedDSLFromSQL(sql string, domainID string) (*fastjson.Value, bool
 		addQueryForExecutionTime(dsl)
 	}
 	addDomainToQuery(dsl, domainID)
-	processAllValuesForKey(dsl, timeKeyFilter, timeProcessFunc)
+	if err := processAllValuesForKey(dsl, timeKeyFilter, timeProcessFunc); err != nil {
+		return nil, false, err
+	}
 	return dsl, isOpen, nil
 }
 
@@ -830,25 +832,31 @@ func checkPageSize(request *p.ListWorkflowExecutionsRequestV2) {
 }
 
 func processAllValuesForKey(dsl *fastjson.Value, keyFilter func(k string) bool,
-	processFunc func(obj *fastjson.Object, key string, v *fastjson.Value),
-) {
+	processFunc func(obj *fastjson.Object, key string, v *fastjson.Value) error,
+) error {
 	switch dsl.Type() {
 	case fastjson.TypeArray:
 		for _, val := range dsl.GetArray() {
-			processAllValuesForKey(val, keyFilter, processFunc)
+			if err := processAllValuesForKey(val, keyFilter, processFunc); err != nil {
+				return err
+			}
 		}
+		return nil
 	case fastjson.TypeObject:
 		objectVal := dsl.GetObject()
+		var err error
 		objectVal.Visit(func(key []byte, val *fastjson.Value) {
 			keyString := string(key)
 			if keyFilter(keyString) {
-				processFunc(objectVal, keyString, val)
+				err = processFunc(objectVal, keyString, val)
 			} else {
-				processAllValuesForKey(val, keyFilter, processFunc)
+				err = processAllValuesForKey(val, keyFilter, processFunc)
 			}
 		})
+		return err
 	default:
 		// do nothing, since there's no key
+		return nil
 	}
 }
 
@@ -856,18 +864,24 @@ func timeKeyFilter(key string) bool {
 	return timeKeys[key]
 }
 
-func timeProcessFunc(obj *fastjson.Object, key string, value *fastjson.Value) {
-	processAllValuesForKey(value, func(key string) bool {
+func timeProcessFunc(obj *fastjson.Object, key string, value *fastjson.Value) error {
+	return processAllValuesForKey(value, func(key string) bool {
 		return rangeKeys[key]
-	}, func(obj *fastjson.Object, key string, v *fastjson.Value) {
+	}, func(obj *fastjson.Object, key string, v *fastjson.Value) error {
 		timeStr := string(v.GetStringBytes())
+
+		// first check if already in int64 format
+		if _, err := strconv.ParseInt(timeStr, 10, 64); err == nil {
+			return nil
+		}
 
 		// try to parse time
 		parsedTime, err := time.Parse(defaultDateTimeFormat, timeStr)
-		if err == nil {
-			obj.Set(key, fastjson.MustParse(fmt.Sprintf(`"%v"`, parsedTime.UnixNano())))
+		if err != nil {
+			return fmt.Errorf(`unable to parse %s %s, error: %v`, key, timeStr, err)
 		}
 
-		// do nothing if failed to parse
+		obj.Set(key, fastjson.MustParse(fmt.Sprintf(`"%v"`, parsedTime.UnixNano())))
+		return nil
 	})
 }
