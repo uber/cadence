@@ -9,7 +9,7 @@ where:
 * HS: History service
 * MS: Matching service
 
-![Cadence overview diagram](/assets/overview.png)
+![Cadence overview diagram]({{ '/assets/overview.png' | relative_url }})
 
    **Figure 1**
 

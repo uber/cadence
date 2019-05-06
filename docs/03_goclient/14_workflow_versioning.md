@@ -1,4 +1,4 @@
-# Workflow versioning
+# Versioning
 
 The definition code of a Cadence workflow must be deterministic because Cadence uses event sourcing
 to reconstruct the workflow state by replaying the saved history event data on the workflow

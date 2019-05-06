@@ -1,4 +1,4 @@
-# Execute an activity
+# Executing activities
 
 The primary responsibility of a workflow implementation is to schedule activities for execution. The
 most straightforward way to do this is via the library method workflow.ExecuteActivity. The following

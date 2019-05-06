@@ -1,4 +1,4 @@
-# Child workflows
+# Child Workflows
 
 `workflow.ExecuteChildWorkflow` enables the scheduling of other workflows from within a workflow's
 implementation. The parent workflow has the ability to monitor and impact the lifecycle of the child

@@ -1,4 +1,3 @@
-
 # Signals
 
 **Signals** provide a mechanism to send data directly to a running workflow. Previously, you had 

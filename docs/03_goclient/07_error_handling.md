@@ -1,4 +1,4 @@
-# Error handling
+# Error Handling
 
 An activity, or child workflow, might fail and you could handle errors differently based on different
 error cases. If the activity returns an error as `errors.New()` or `fmt.Errorf()`, those errors will

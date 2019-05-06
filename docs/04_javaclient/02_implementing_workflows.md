@@ -1,76 +1,4 @@
-# Workflows
-
-Workflow encapsulates the orchestration of activities and child workflows.
-It can also answer to synchronous queries and receive external events (also known as signals).
-
-## Workflow Interface
-
-A workflow must define an interface class. All of its methods must have one of the following annotations:
-- @WorkflowMethod indicates an entry point to a workflow. It contains parameters such as timeouts and a task list. Required
-parameters (like executionStartToCloseTimeoutSeconds) that are not specified through the annotation must be provided at runtime.
-- @SignalMethod indicates a method that reacts to external signals. It must have a `void` return 
-type.
-- @QueryMethod indicates a method that reacts to synchronous query requests.
-You can have more than one method with the same annotation.
-```java
-public interface FileProcessingWorkflow {
-
-    @WorkflowMethod(executionStartToCloseTimeoutSeconds = 10, taskList = "file-processing")
-    String processFile(Arguments args);
-
-    @QueryMethod(name="history")
-    List<String> getHistory();
-
-    @QueryMethod(name="status")
-    String getStatus();
-
-    @SignalMethod
-    void retryNow();
-}
-```
-We recommended that you use a single value type argument for workflow methods. This way, adding new arguments as fields to the value type is a backwards-compatible change.
-
-## Starting workflow executions
-
-Given a workflow interface executing a workflow requires initializing a `WorkflowClient` instance, creating
-a client side stub to the workflow, and then calling a method annotated with @WorkflowMethod.
-```java
-WorkflowClient workflowClient = WorkflowClient.newClient(cadenceServiceHost, cadenceServicePort, domain);
-// Create a workflow stub.
-FileProcessingWorkflow workflow = workflowClient.newWorkflowStub(FileProcessingWorkflow.class);
-```
-There are two ways to start workflow execution: synchronously and asynchronously. Synchronous invocation starts a workflow
-and then waits for its completion. If the process that started the workflow crashes or stops the waiting, the workflow continues executing.
-Because workflows are potentially long running, and crashes of clients happen, it is not very commonly found in production use.
-Asynchronous start initiates workflow execution and immediately returns to the caller. This is the most common way to start
-workflows in production code.
-
-Synchronous start:
-```java
-// Start a workflow and the wait for a result.
-// Note that if the waiting process is killed, the workflow will continue execution.
-String result = workflow.processFile(workflowArgs);
-```
-Asynchronous:
-```java
-// Returns as soon as the workflow starts.
-WorkflowExecution workflowExecution = WorkflowClient.start(workflow::processFile, workflowArgs);
-
-System.out.println("Started process file workflow with workflowId=\"" + workflowExecution.getWorkflowId()
-                    + "\" and runId=\"" + workflowExecution.getRunId() + "\"");
-```
-If you need to wait for a workflow completion after an asynchronous start, the simplest way
-is to call the blocking version again. If `WorkflowOptions.WorkflowIdReusePolicy` is not `AllowDuplicate` then instead
-of throwing `DuplicateWorkflowException`, it reconnects to an existing workflow and waits for its completion.
-The following example shows how to do this from a different process than the one that started the workflow. All this process
-needs is a `WorkflowID`.
-```java
-WorkflowExecution execution = new WorkflowExecution().setWorkflowId(workflowId);
-FileProcessingWorkflow workflow = workflowClient.newWorkflowStub(execution);
-// Returns result potentially waiting for workflow to complete.
-String result = workflow.processFile(workflowArgs);
-```
-## Implementing Workflows
+# Implementing Workflows
 
 A workflow implementation implements a workflow interface. Each time a new workflow execution is started,
 a new instance of the workflow implementation object is created. Then, one of the methods
@@ -79,7 +7,7 @@ returns the workflow, execution is closed. While workflow execution is open, it 
 No additional calls to workflow methods are allowed. The workflow object is stateful, so query and signal methods
 can communicate with the other parts of the workflow through workflow object fields.
 
-### Calling Activities
+## Calling Activities
 
 `Workflow.newActivityStub` returns a client-side stub that implements an activity interface.
 It takes activity type and activity options as arguments. Activity options are needed only if some of the required
@@ -136,7 +64,7 @@ public FileProcessingWorkflowImpl() {
 }
 ```
 
-### Calling Activities Asynchronously
+## Calling Activities Asynchronously
 
 Sometimes workflows need to perform certain operations in parallel.
 The `Async` class static methods allow you to invoke any activity asynchronously. The calls return a `Promise` result immediately.
@@ -202,7 +130,8 @@ public void processFile(Arguments args) {
     }
 }
 ```
-### Child Workflows
+
+## Child Workflows
 Besides activities, a workflow can also orchestrate other workflows.
 
 `Workflow.newChildWorkflowStub` returns a client-side stub that implements a child workflow interface.
@@ -276,7 +205,7 @@ public static class GreetingWorkflowImpl implements GreetingWorkflow {
 ```
 Calling methods annotated with @QueryMethod is not allowed from within a workflow code.
 
-### Workflow Implementation Constraints
+## Workflow Implementation Constraints
 
 Cadence uses [event sourcing](https://docs.microsoft.com/en-us/azure/architecture/patterns/event-sourcing) to recover
 the state of a workflow object including its threads and local variable values.
@@ -303,102 +232,11 @@ might break already open workflows.
 Pass it as an argument to a workflow function or use an activity to load it.
 
 Workflow method arguments and return values are serializable to a byte array using the provided
-[DataConverter](src/main/java/com/uber/cadence/converter/DataConverter.java) interface. The default implementation uses
-JSON serializer, but any alternative serialization mechanism is pluggable.
+[DataConverter](https://static.javadoc.io/com.uber.cadence/cadence-client/2.4.1/index.html?com/uber/cadence/converter/DataConverter.html) 
+interface. The default implementation uses JSON serializer, but any alternative serialization mechanism is pluggable.
 
 The values passed to workflows through invocation parameters or returned through a result value are recorded in the execution history.
 The entire execution history is transferred from the Cadence service to workflow workers with every event that the workflow logic needs to process.
 A large execution history can thus adversely impact the performance of your workflow.
 Therefore, be mindful of the amount of data that you transfer via activity invocation parameters or return values.
 Other than that, no additional limitations exist on activity implementations.
-
-# Updating Workflow Definition Deterministically
-
-As outlined in the _Workflow Implementation Constraints_ section, the workflow code has to be deterministic by taking the same
-code path when replaying history events. Any workflow code change that affects the order in which decisions are generated breaks
-this assumption. The solution that allows updating code of already running workflows is to keep both the old and new code.
-When replaying, use the code version that the events were generated with and when executing a new code path always take the 
-new code.
-
-Use the `Workflow.getVersion` function to return a version of the code that should be executed and then use the returned 
-value to pick a correct branch. Let's look at an example.
-
-```java
-public void processFile(Arguments args) {
-    String localName = null;
-    String processedName = null;
-    try {
-        localName = activities.download(args.getSourceBucketName(), args.getSourceFilename());
-        processedName = activities.processFile(localName);
-        activities.upload(args.getTargetBucketName(), args.getTargetFilename(), processedName);
-    } finally {
-        if (localName != null) { // File was downloaded.
-            activities.deleteLocalFile(localName);
-        }
-        if (processedName != null) { // File was processed.
-            activities.deleteLocalFile(processedName);
-        }
-    }
-}
-```
-
-Now we decide to calculate the processed file checksum and pass it to upload.
-The correct way to implement this change is:
-
-```java
-public void processFile(Arguments args) {
-    String localName = null;
-    String processedName = null;
-    try {
-        localName = activities.download(args.getSourceBucketName(), args.getSourceFilename());
-        processedName = activities.processFile(localName);
-        int version = Workflow.getVersion("checksumAdded", Workflow.DEFAULT_VERSION, 1);
-        if (version == Workflow.DEFAULT_VERSION) {
-            activities.upload(args.getTargetBucketName(), args.getTargetFilename(), processedName);
-        } else {
-            long checksum = activities.calculateChecksum(processedName);
-            activities.uploadWithChecksum(
-                args.getTargetBucketName(), args.getTargetFilename(), processedName, checksum);
-        }
-    } finally {
-        if (localName != null) { // File was downloaded.
-            activities.deleteLocalFile(localName);
-        }
-        if (processedName != null) { // File was processed.
-            activities.deleteLocalFile(processedName);
-        }
-    }
-}
-```
- 
-Later, when all workflows that use the old version are completed, the old branch can be removed.
-
-```java
-public void processFile(Arguments args) {
-    String localName = null;
-    String processedName = null;
-    try {
-        localName = activities.download(args.getSourceBucketName(), args.getSourceFilename());
-        processedName = activities.processFile(localName);
-        // getVersion call is left here to ensure that any attempt to replay history
-        // for a different version fails. It can be removed later when there is no possibility
-        // of this happening.
-        Workflow.getVersion("checksumAdded", 1, 1);
-        long checksum = activities.calculateChecksum(processedName);
-        activities.uploadWithChecksum(
-            args.getTargetBucketName(), args.getTargetFilename(), processedName, checksum);
-    } finally {
-        if (localName != null) { // File was downloaded.
-            activities.deleteLocalFile(localName);
-        }
-        if (processedName != null) { // File was processed.
-            activities.deleteLocalFile(processedName);
-        }
-    }
-}
-```
- 
-The ID that is passed to the `getVersion` call identifies the change. Each change is expected to have its own ID. But if 
-a change spawns multiple places in the workflow code and the new code should be either executed in all of them or 
-in none of them, then they have to share the ID.
- 

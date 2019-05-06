@@ -1,4 +1,4 @@
-# Test your workflow
+# Testing
 
 The Cadence Go client library provides a test framework to facilitate testing workflow implementations.
 The framework is suited for implementing unit tests as well as functional tests of the workflow logic.
