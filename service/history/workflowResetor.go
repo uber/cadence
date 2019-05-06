@@ -332,12 +332,6 @@ func (w *workflowResetorImpl) terminateIfCurrIsRunning(currMutableState mutableS
 
 	if currMutableState.IsWorkflowExecutionRunning() {
 		terminateCurr = true
-
-		retError = failInFlightDecisionToClearBufferedEvents(currMutableState)
-		if retError != nil {
-			return
-		}
-
 		currMutableState.AddWorkflowExecutionTerminatedEvent(&workflow.TerminateWorkflowExecutionRequest{
 			Reason:   common.StringPtr(reason),
 			Details:  nil,
@@ -861,6 +855,7 @@ func (w *workflowResetorImpl) replicateResetEvent(baseMutableState mutableState,
 	return
 }
 
+// FindAutoResetPoint returns the auto reset point
 func FindAutoResetPoint(badBinaries *workflow.BadBinaries, autoResetPoints *workflow.ResetPoints) (reason string, pt *workflow.ResetPointInfo) {
 	if badBinaries == nil || badBinaries.Binaries == nil || autoResetPoints == nil || autoResetPoints.Points == nil {
 		return
