@@ -1,3 +1,23 @@
+// Copyright (c) 2017 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 package xdc
 
 import (
@@ -7,6 +27,7 @@ import (
 const (
 	emptyCommonAncestor = -1
 )
+
 type (
 	eventNode struct {
 		eventID int64
@@ -14,19 +35,19 @@ type (
 	}
 
 	eventBranch struct {
-		branchToken []byte
+		branchToken    []byte
 		versionHistory []eventNode
 	}
 
 	eventReplicationMetadata struct {
-		eventsBranches [] eventBranch
+		eventsBranches []eventBranch
 	}
 )
 
 //Not thread-safe
 func newEventBranch(token []byte, eventNodes ...eventNode) *eventBranch {
 	return &eventBranch{
-		branchToken: token,
+		branchToken:    token,
 		versionHistory: eventNodes,
 	}
 }
@@ -63,12 +84,12 @@ func (e *eventBranch) append(node eventNode) {
 	}
 }
 
-func (e *eventBranch) getLastNode() eventNode {
-	return e.versionHistory[len(e.versionHistory)-1]
+func (e *eventBranch) getLastNode() *eventNode {
+	return &e.versionHistory[len(e.versionHistory)-1]
 }
 
 func newEventReplicationMetadata(branches ...eventBranch) *eventReplicationMetadata {
-	return &eventReplicationMetadata {
+	return &eventReplicationMetadata{
 		eventsBranches: branches,
 	}
 }
@@ -76,7 +97,7 @@ func newEventReplicationMetadata(branches ...eventBranch) *eventReplicationMetad
 func (m *eventReplicationMetadata) merge(branch eventBranch) {
 	eventID, branchIdx := m.findBranchWithMaxEventID(branch)
 
-	if m.eventsBranches[branchIdx].versionHistory[len(m.eventsBranches[branchIdx].versionHistory) - 1].eventID == eventID {
+	if m.eventsBranches[branchIdx].versionHistory[len(m.eventsBranches[branchIdx].versionHistory)-1].eventID == eventID {
 		for _, event := range branch.versionHistory {
 			if event.eventID > eventID {
 				m.eventsBranches[branchIdx].append(event)
@@ -86,7 +107,6 @@ func (m *eventReplicationMetadata) merge(branch eventBranch) {
 		m.eventsBranches = append(m.eventsBranches, branch)
 	}
 }
-
 
 //Lowest common ancestor among all branches
 func (m *eventReplicationMetadata) findBranchWithMaxEventID(branch eventBranch) (eventID int64, branchIndex int) {
@@ -120,9 +140,3 @@ func (m *eventReplicationMetadata) findMinEventIDWithMaxSameVersion(local, remot
 	}
 	return emptyCommonAncestor
 }
-
-
-
-
-
-
