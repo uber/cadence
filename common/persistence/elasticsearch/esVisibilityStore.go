@@ -884,7 +884,7 @@ func timeProcessFunc(obj *fastjson.Object, key string, value *fastjson.Value) er
 		// try to parse time
 		parsedTime, err := time.Parse(defaultDateTimeFormat, timeStr)
 		if err != nil {
-			return fmt.Errorf(`unable to parse %s %s, error: %v`, key, timeStr, err)
+			return err
 		}
 
 		obj.Set(key, fastjson.MustParse(fmt.Sprintf(`"%v"`, parsedTime.UnixNano())))
