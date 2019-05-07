@@ -912,3 +912,72 @@ func (s *ESVisibilitySuite) TestCountWorkflowExecutions() {
 	s.True(ok)
 	s.True(strings.Contains(err.Error(), "Error when parse query"))
 }
+
+func (s *ESVisibilitySuite) TestTimeProcessFunc() {
+	cases := []struct {
+		key   string
+		value string
+	}{
+		{key: "from", value: "1528358645000000000"},
+		{key: "to", value: "2018-06-07T15:04:05+07:00"},
+		{key: "gt", value: "some invalid time string"},
+		{key: "unrelatedKey", value: "should not be modified"},
+	}
+	expected := []struct {
+		value     string
+		returnErr bool
+	}{
+		{value: `"1528358645000000000"`, returnErr: false},
+		{value: `"1528358645000000000"`},
+		{value: "", returnErr: true},
+		{value: `"should not be modified"`, returnErr: false},
+	}
+
+	for i, testCase := range cases {
+		value := fastjson.MustParse(fmt.Sprintf(`{"%s": "%s"}`, testCase.key, testCase.value))
+		err := timeProcessFunc(nil, "", value)
+		if expected[i].returnErr {
+			s.Error(err)
+			continue
+		}
+		s.Equal(expected[i].value, value.Get(testCase.key).String())
+	}
+}
+
+func (s *ESVisibilitySuite) TestProcessAllValuesForKey() {
+	testJSONStr := `{
+		"arrayKey": [
+			{"testKey1": "value1"},
+			{"testKey2": "value2"},
+			{"key3": "value3"}
+		],
+		"key4": {
+			"testKey5": "value5",
+			"key6": "value6"
+		},
+		"testArrayKey": [
+			{"testKey7": "should not be processed"}
+		],
+		"testKey8": "value8"
+	}`
+	dsl := fastjson.MustParse(testJSONStr)
+	testKeyFilter := func(key string) bool {
+		return strings.HasPrefix(key, "test")
+	}
+	processedValue := make(map[string]struct{})
+	testProcessFunc := func(obj *fastjson.Object, key string, value *fastjson.Value) error {
+		s.Equal(obj.Get(key), value)
+		processedValue[value.String()] = struct{}{}
+		return nil
+	}
+	processAllValuesForKey(dsl, testKeyFilter, testProcessFunc)
+
+	expectedProcessedValue := map[string]struct{}{
+		`"value1"`: struct{}{},
+		`"value2"`: struct{}{},
+		`"value5"`: struct{}{},
+		`[{"testKey7":"should not be processed"}]`: struct{}{},
+		`"value8"`: struct{}{},
+	}
+	s.Equal(expectedProcessedValue, processedValue)
+}
