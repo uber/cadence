@@ -718,6 +718,10 @@ func (s *ESVisibilitySuite) TestGetESQueryDSL() {
 	s.False(isOpen)
 	s.Equal(`{"query":{"bool":{"should":[{"range":{"ExecutionTime":{"lt":"1000"}}},{"range":{"ExecutionTime":{"gt":"2000"}}}],"must":[{"range":{"ExecutionTime":{"gt":"0"}}},{"match_phrase":{"DomainID":{"query":"bfd5c907-f899-4baf-a7b2-2ab85e623ebd"}}}]}},"from":0,"size":10,"sort":[{"CloseTime":"desc"},{"WorkflowID":"desc"}]}`, dsl)
 
+	request.Query = `ExecutionTime < "unable to parse"`
+	dsl, isOpen, err = getESQueryDSL(request, token)
+	s.Error(err)
+
 	token = &esVisibilityPageToken{
 		SortTime:   1,
 		TieBreaker: "a",

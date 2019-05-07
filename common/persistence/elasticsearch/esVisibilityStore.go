@@ -841,23 +841,29 @@ func processAllValuesForKey(dsl *fastjson.Value, keyFilter func(k string) bool,
 				return err
 			}
 		}
-		return nil
 	case fastjson.TypeObject:
 		objectVal := dsl.GetObject()
-		var err error
+		keys := []string{}
 		objectVal.Visit(func(key []byte, val *fastjson.Value) {
-			keyString := string(key)
-			if keyFilter(keyString) {
-				err = processFunc(objectVal, keyString, val)
+			keys = append(keys, string(key))
+		})
+
+		for _, key := range keys {
+			var err error
+			val := objectVal.Get(key)
+			if keyFilter(key) {
+				err = processFunc(objectVal, key, val)
 			} else {
 				err = processAllValuesForKey(val, keyFilter, processFunc)
 			}
-		})
-		return err
+			if err != nil {
+				return err
+			}
+		}
 	default:
 		// do nothing, since there's no key
-		return nil
 	}
+	return nil
 }
 
 func timeKeyFilter(key string) bool {
