@@ -124,9 +124,9 @@ func (p *visibilitySamplingClient) RecordWorkflowExecutionClosed(request *Record
 
 	p.logger.Info("Request for closed workflow is sampled",
 		tag.WorkflowDomainID(domain),
-		tag.WorkflowType(request.Execution.GetRunId()),
+		tag.WorkflowType(request.WorkflowTypeName),
 		tag.WorkflowID(request.Execution.GetWorkflowId()),
-		tag.WorkflowRunID(request.WorkflowTypeName),
+		tag.WorkflowRunID(request.Execution.GetRunId()),
 	)
 	p.metricClient.IncCounter(metrics.PersistenceRecordWorkflowExecutionClosedScope, metrics.PersistenceSampledCounter)
 	return nil
