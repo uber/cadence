@@ -408,16 +408,33 @@ func (v *esVisibilityStore) CountWorkflowExecutions(request *p.CountWorkflowExec
 }
 
 const (
-	jsonMissingCloseTime   = `{"missing":{"field":"CloseTime"}}`
-	jsonSortForOpen        = `[{"StartTime":"desc"},{"WorkflowID":"desc"}]`
-	jsonSortForClose       = `[{"CloseTime":"desc"},{"WorkflowID":"desc"}]`
-	jsonSortWithTieBreaker = `{"WorkflowID":"desc"}`
+	jsonMissingCloseTime     = `{"missing":{"field":"CloseTime"}}`
+	jsonRangeOnExecutionTime = `{"range":{"ExecutionTime":`
+	jsonSortForOpen          = `[{"StartTime":"desc"},{"WorkflowID":"desc"}]`
+	jsonSortForClose         = `[{"CloseTime":"desc"},{"WorkflowID":"desc"}]`
+	jsonSortWithTieBreaker   = `{"WorkflowID":"desc"}`
 
 	dslFieldSort        = "sort"
 	dslFieldSearchAfter = "search_after"
 	dslFieldFrom        = "from"
 	dslFieldSize        = "size"
 	dslFieldMust        = "must"
+
+	defaultDateTimeFormat = time.RFC3339 // used for converting UnixNano to string like 2018-02-15T16:16:36-08:00
+)
+
+var (
+	timeKeys = map[string]bool{
+		"StartTime":     true,
+		"CloseTime":     true,
+		"ExecutionTime": true,
+	}
+	rangeKeys = map[string]bool{
+		"from": true,
+		"to":   true,
+		"gt":   true,
+		"lt":   true,
+	}
 )
 
 func getESQueryDSLForScan(request *p.ListWorkflowExecutionsRequestV2, token *esVisibilityPageToken) (string, bool, error) {
@@ -430,18 +447,10 @@ func getESQueryDSL(request *p.ListWorkflowExecutionsRequestV2, token *esVisibili
 
 func getESQueryDSLForCount(request *p.CountWorkflowExecutionsRequest) (string, error) {
 	sql := getSQLFromCountRequest(request)
-	dslStr, _, err := elasticsql.Convert(sql)
+	dsl, _, err := getCustomizedDSLFromSQL(sql, request.DomainUUID)
 	if err != nil {
 		return "", err
 	}
-
-	dsl := fastjson.MustParse(dslStr) // dsl.String() will be a compact json without spaces
-	isOpen := strings.Contains(dsl.String(), jsonMissingCloseTime)
-	if isOpen {
-		dsl = replaceQueryForOpen(dsl)
-	}
-
-	addDomainToQuery(dsl, request.DomainUUID)
 
 	// remove not needed fields
 	dsl.Del(dslFieldFrom)
@@ -453,18 +462,10 @@ func getESQueryDSLForCount(request *p.CountWorkflowExecutionsRequest) (string, e
 
 func getESQueryDSLHelper(request *p.ListWorkflowExecutionsRequestV2, token *esVisibilityPageToken, isScan bool) (string, bool, error) {
 	sql := getSQLFromListRequest(request)
-	dslStr, _, err := elasticsql.Convert(sql)
+	dsl, isOpen, err := getCustomizedDSLFromSQL(sql, request.DomainUUID)
 	if err != nil {
 		return "", false, err
 	}
-
-	dsl := fastjson.MustParse(dslStr) // dsl.String() will be a compact json without spaces
-	isOpen := strings.Contains(dsl.String(), jsonMissingCloseTime)
-	if isOpen {
-		dsl = replaceQueryForOpen(dsl)
-	}
-
-	addDomainToQuery(dsl, request.DomainUUID)
 
 	if isScan { // no need to sort for scan
 		dsl.Del(dslFieldSort)
@@ -511,6 +512,28 @@ func getSQLFromCountRequest(request *p.CountWorkflowExecutionsRequest) string {
 	return sql
 }
 
+func getCustomizedDSLFromSQL(sql string, domainID string) (*fastjson.Value, bool, error) {
+	dslStr, _, err := elasticsql.Convert(sql)
+	if err != nil {
+		return nil, false, err
+	}
+	dsl := fastjson.MustParse(dslStr) // dsl.String() will be a compact json without spaces
+
+	dslStr = dsl.String()
+	isOpen := strings.Contains(dslStr, jsonMissingCloseTime)
+	if isOpen {
+		dsl = replaceQueryForOpen(dsl)
+	}
+	if strings.Contains(dslStr, jsonRangeOnExecutionTime) {
+		addQueryForExecutionTime(dsl)
+	}
+	addDomainToQuery(dsl, domainID)
+	if err := processAllValuesForKey(dsl, timeKeyFilter, timeProcessFunc); err != nil {
+		return nil, false, err
+	}
+	return dsl, isOpen, nil
+}
+
 // ES v6 only accepts "must_not exists" query instead of "missing" query, but elasticsql will produce "missing",
 // so use this func to replace.
 // Note it also means a temp limitation that we cannot support field missing search
@@ -522,13 +545,27 @@ func replaceQueryForOpen(dsl *fastjson.Value) *fastjson.Value {
 	return dsl
 }
 
+func addQueryForExecutionTime(dsl *fastjson.Value) {
+	executionTimeQueryString := `{"range" : {"ExecutionTime" : {"gt" : "0"}}}`
+	addMustQuery(dsl, executionTimeQueryString)
+}
+
 func addDomainToQuery(dsl *fastjson.Value, domainID string) {
 	if len(domainID) == 0 {
 		return
 	}
-	valOfBool := dsl.Get("query").Get("bool")
-	lenOfMust := len(valOfBool.GetArray(dslFieldMust))
-	valOfBool.Get(dslFieldMust).SetArrayItem(lenOfMust, fastjson.MustParse(fmt.Sprintf(`{"match_phrase":{"DomainID":{"query":"%s"}}}`, domainID)))
+
+	domainQueryString := fmt.Sprintf(`{"match_phrase":{"DomainID":{"query":"%s"}}}`, domainID)
+	addMustQuery(dsl, domainQueryString)
+}
+
+func addMustQuery(dsl *fastjson.Value, queryString string) {
+	valOfBool := dsl.Get("query", "bool")
+	if valOfMust := valOfBool.Get(dslFieldMust); valOfMust == nil {
+		valOfBool.Set(dslFieldMust, fastjson.MustParse(fmt.Sprintf("[%s]", queryString)))
+	} else {
+		valOfMust.SetArrayItem(len(valOfMust.GetArray()), fastjson.MustParse(queryString))
+	}
 }
 
 func shouldSearchAfter(token *esVisibilityPageToken) bool {
@@ -792,4 +829,65 @@ func checkPageSize(request *p.ListWorkflowExecutionsRequestV2) {
 	if request.PageSize == 0 {
 		request.PageSize = 1000
 	}
+}
+
+func processAllValuesForKey(dsl *fastjson.Value, keyFilter func(k string) bool,
+	processFunc func(obj *fastjson.Object, key string, v *fastjson.Value) error,
+) error {
+	switch dsl.Type() {
+	case fastjson.TypeArray:
+		for _, val := range dsl.GetArray() {
+			if err := processAllValuesForKey(val, keyFilter, processFunc); err != nil {
+				return err
+			}
+		}
+	case fastjson.TypeObject:
+		objectVal := dsl.GetObject()
+		keys := []string{}
+		objectVal.Visit(func(key []byte, val *fastjson.Value) {
+			keys = append(keys, string(key))
+		})
+
+		for _, key := range keys {
+			var err error
+			val := objectVal.Get(key)
+			if keyFilter(key) {
+				err = processFunc(objectVal, key, val)
+			} else {
+				err = processAllValuesForKey(val, keyFilter, processFunc)
+			}
+			if err != nil {
+				return err
+			}
+		}
+	default:
+		// do nothing, since there's no key
+	}
+	return nil
+}
+
+func timeKeyFilter(key string) bool {
+	return timeKeys[key]
+}
+
+func timeProcessFunc(obj *fastjson.Object, key string, value *fastjson.Value) error {
+	return processAllValuesForKey(value, func(key string) bool {
+		return rangeKeys[key]
+	}, func(obj *fastjson.Object, key string, v *fastjson.Value) error {
+		timeStr := string(v.GetStringBytes())
+
+		// first check if already in int64 format
+		if _, err := strconv.ParseInt(timeStr, 10, 64); err == nil {
+			return nil
+		}
+
+		// try to parse time
+		parsedTime, err := time.Parse(defaultDateTimeFormat, timeStr)
+		if err != nil {
+			return err
+		}
+
+		obj.Set(key, fastjson.MustParse(fmt.Sprintf(`"%v"`, parsedTime.UnixNano())))
+		return nil
+	})
 }
