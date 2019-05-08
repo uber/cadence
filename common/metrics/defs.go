@@ -942,7 +942,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ElasticsearchListWorkflowExecutionsScope:                   {operation: "ListWorkflowExecutions"},
 		ElasticsearchScanWorkflowExecutionsScope:                   {operation: "ScanWorkflowExecutions"},
 		ElasticsearchCountWorkflowExecutionsScope:                  {operation: "CountWorkflowExecutions"},
-    SequentialTaskProcessingScope:                              {operation: "SequentialTaskProcessing"},
+		SequentialTaskProcessingScope:                              {operation: "SequentialTaskProcessing"},
 	},
 	// Frontend Scope Names
 	Frontend: {
