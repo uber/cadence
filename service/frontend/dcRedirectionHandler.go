@@ -338,6 +338,14 @@ func (handler *DCRedirectionHandlerImpl) CountWorkflowExecutions(
 	return resp, err
 }
 
+// GetIndexedKeys API call
+func (handler *DCRedirectionHandlerImpl) GetIndexedKeys(
+	ctx context.Context,
+) (*shared.GetIndexedKeysResponse, error) {
+
+	return handler.service.GetClientBean().GetFrontendClient().GetIndexedKeys(ctx)
+}
+
 // PollForActivityTask API call
 func (handler *DCRedirectionHandlerImpl) PollForActivityTask(
 	ctx context.Context,

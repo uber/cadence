@@ -240,6 +240,23 @@ func (c *metricClient) CountWorkflowExecutions(
 	return resp, err
 }
 
+func (c *metricClient) GetIndexedKeys(
+	ctx context.Context,
+	opts ...yarpc.CallOption,
+) (*shared.GetIndexedKeysResponse, error) {
+
+	c.metricsClient.IncCounter(metrics.FrontendGetIndexedKeysScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendGetIndexedKeysScope, metrics.CadenceClientLatency)
+	resp, err := c.client.GetIndexedKeys(ctx, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendGetIndexedKeysScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
+}
+
 func (c *metricClient) PollForActivityTask(
 	ctx context.Context,
 	request *shared.PollForActivityTaskRequest,

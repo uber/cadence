@@ -83,6 +83,7 @@ var keys = map[Key]string{
 	DisableListVisibilityByFilter:  "frontend.disableListVisibilityByFilter",
 	FrontendThrottledLogRPS:        "frontend.throttledLogRPS",
 	EnableClientVersionCheck:       "frontend.enableClientVersionCheck",
+	IndexedKeys:                    "frontend.indexedKeys",
 
 	// matching settings
 	MatchingRPS:                             "matching.rps",
@@ -275,8 +276,10 @@ const (
 	MaxDecisionStartToCloseTimeout
 	// EnableClientVersionCheck enables client version check for frontend
 	EnableClientVersionCheck
-	// FrontendMaxBadBinaries is the max number of bad banaries in domain config
+	// FrontendMaxBadBinaries is the max number of bad binaries in domain config
 	FrontendMaxBadBinaries
+	// IndexedKeys is legal indexed keys that can be used in list APIs
+	IndexedKeys
 
 	// key for matching
 

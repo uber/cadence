@@ -1111,6 +1111,18 @@ func (s *workflowHandlerSuite) TestGetHistory() {
 	s.NoError(err)
 }
 
+func (s *workflowHandlerSuite) TestGetIndexedKeys() {
+	config := s.newConfig()
+	wh := s.getWorkflowHandler(config)
+	wh.metricsClient = wh.Service.GetMetricsClient()
+	wh.startWG.Done()
+
+	ctx := context.Background()
+	resp, err := wh.GetIndexedKeys(ctx)
+	s.NoError(err)
+	s.NotNil(resp)
+}
+
 func (s *workflowHandlerSuite) newConfig() *Config {
 	return NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger), numHistoryShards, false, false)
 }

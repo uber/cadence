@@ -2565,6 +2565,24 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(ctx context.Context, countReq
 	return resp, nil
 }
 
+func (wh *WorkflowHandler) GetIndexedKeys(ctx context.Context) (resp *gen.GetIndexedKeysResponse, retError error) {
+	defer log.CapturePanic(wh.GetLogger(), &retError)
+
+	scope := wh.metricsClient.Scope(metrics.FrontendGetIndexedKeysScope)
+	sw := wh.startRequestProfile(scope)
+	defer sw.Stop()
+
+	if err := wh.versionChecker.checkClientVersion(ctx); err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	keys := wh.config.IndexedKeys()
+	resp = &gen.GetIndexedKeysResponse{
+		Keys: wh.convertIndexedKeys(keys),
+	}
+	return resp, nil
+}
+
 // ResetStickyTaskList reset the volatile information in mutable state of a given workflow.
 func (wh *WorkflowHandler) ResetStickyTaskList(ctx context.Context, resetRequest *gen.ResetStickyTaskListRequest) (resp *gen.ResetStickyTaskListResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
@@ -3226,4 +3244,27 @@ func (wh *WorkflowHandler) getArchivedHistory(
 		NextPageToken: nextToken,
 		Archived:      common.BoolPtr(true),
 	}, nil
+}
+
+func (wh *WorkflowHandler) convertIndexedKeys(keys map[string]interface{}) map[string]gen.IndexedValueType {
+	converted := make(map[string]gen.IndexedValueType)
+	for k, v := range keys {
+		switch v {
+		case gen.IndexedValueTypeString:
+			converted[k] = gen.IndexedValueTypeString
+		case gen.IndexedValueTypeKeyword:
+			converted[k] = gen.IndexedValueTypeKeyword
+		case gen.IndexedValueTypeInt:
+			converted[k] = gen.IndexedValueTypeInt
+		case gen.IndexedValueTypeDouble:
+			converted[k] = gen.IndexedValueTypeDouble
+		case gen.IndexedValueTypeBool:
+			converted[k] = gen.IndexedValueTypeBool
+		case gen.IndexedValueTypeDatetime:
+			converted[k] = gen.IndexedValueTypeDatetime
+		default:
+			wh.GetLogger().Fatal("unknown index value type", tag.Value(v))
+		}
+	}
+	return converted
 }

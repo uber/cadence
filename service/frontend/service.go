@@ -23,6 +23,7 @@ package frontend
 import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
@@ -71,6 +72,9 @@ type Config struct {
 
 	// Domain specific config
 	EnableDomainNotActiveAutoForwarding dynamicconfig.BoolPropertyFnWithDomainFilter
+
+	// IndexedKeys is legal indexed keys that can be used in list APIs
+	IndexedKeys dynamicconfig.MapPropertyFn
 }
 
 // NewConfig returns new service config with default values
@@ -100,6 +104,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableVisibil
 		ThrottledLogRPS:                     dc.GetIntProperty(dynamicconfig.FrontendThrottledLogRPS, 20),
 		EnableDomainNotActiveAutoForwarding: dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableDomainNotActiveAutoForwarding, false),
 		EnableClientVersionCheck:            dc.GetBoolProperty(dynamicconfig.EnableClientVersionCheck, enableClientVersionCheck),
+		IndexedKeys:                         dc.GetMapProperty(dynamicconfig.IndexedKeys, definition.GetDefaultIndexedKeys()),
 	}
 }
 

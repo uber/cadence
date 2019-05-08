@@ -236,6 +236,21 @@ func (c *clientImpl) CountWorkflowExecutions(
 	return client.CountWorkflowExecutions(ctx, request, opts...)
 }
 
+func (c *clientImpl) GetIndexedKeys(
+	ctx context.Context,
+	opts ...yarpc.CallOption,
+) (*shared.GetIndexedKeysResponse, error) {
+
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return client.GetIndexedKeys(ctx, opts...)
+}
+
 func (c *clientImpl) PollForActivityTask(
 	ctx context.Context,
 	request *shared.PollForActivityTaskRequest,

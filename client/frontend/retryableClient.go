@@ -218,6 +218,21 @@ func (c *retryableClient) CountWorkflowExecutions(
 	return resp, err
 }
 
+func (c *retryableClient) GetIndexedKeys(
+	ctx context.Context,
+	opts ...yarpc.CallOption,
+) (*shared.GetIndexedKeysResponse, error) {
+
+	var resp *shared.GetIndexedKeysResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.GetIndexedKeys(ctx, opts...)
+		return err
+	}
+	err := backoff.Retry(op, c.policy, c.isRetryable)
+	return resp, err
+}
+
 func (c *retryableClient) PollForActivityTask(
 	ctx context.Context,
 	request *shared.PollForActivityTaskRequest,

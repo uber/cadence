@@ -254,6 +254,15 @@ enum ArchivalStatus {
   ENABLED,
 }
 
+enum IndexedValueType {
+  STRING,
+  KEYWORD,
+  INT,
+  DOUBLE,
+  BOOL,
+  DATETIME,
+}
+
 struct Header {
     10: optional map<string, binary> fields
 }
@@ -1255,6 +1264,10 @@ struct CountWorkflowExecutionsRequest {
 
 struct CountWorkflowExecutionsResponse {
   10: optional i64 count
+}
+
+struct GetIndexedKeysResponse {
+  10: optional map<string, IndexedValueType> keys
 }
 
 struct QueryWorkflowRequest {
