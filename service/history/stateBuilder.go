@@ -122,6 +122,8 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			// this function must be called within the for loop, in case
 			// history event version changed during for loop
 			b.msBuilder.UpdateReplicationStateVersion(event.GetVersion(), true)
+			sourceClusterName := b.clusterMetadata.ClusterNameForFailoverVersion(lastEvent.GetVersion())
+			b.msBuilder.UpdateReplicationStateLastEventID(sourceClusterName, lastEvent.GetVersion(), lastEvent.GetEventId())
 		}
 		b.msBuilder.GetExecutionInfo().LastEventTaskID = event.GetTaskId()
 
