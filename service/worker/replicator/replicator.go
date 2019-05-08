@@ -131,6 +131,7 @@ func (r *Replicator) Start() error {
 					r.config.ReplicatorTaskConcurrency(),
 					replicationSequentialTaskQueueHashFn,
 					newReplicationSequentialTaskQueue,
+					r.metricsClient,
 					logger,
 				),
 			))

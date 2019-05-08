@@ -25,6 +25,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/metrics"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
@@ -40,22 +42,28 @@ type (
 		taskqueues       collection.ConcurrentTxMap
 		taskQueueFactory SequentialTaskQueueFactory
 		taskqueueChan    chan SequentialTaskQueue
-		logger           log.Logger
+
+		metricsScope  int
+		metricsClient metrics.Client
+		logger        log.Logger
 	}
 )
 
 // NewSequentialTaskProcessor create a new sequential tasks processor
-func NewSequentialTaskProcessor(coroutineSize int, hashFn collection.HashFunc,
-	taskQueueFactory SequentialTaskQueueFactory, logger log.Logger) SequentialTaskProcessor {
+func NewSequentialTaskProcessor(coroutineSize int, taskQueueHashFn collection.HashFunc, taskQueueFactory SequentialTaskQueueFactory,
+	metricsClient metrics.Client, logger log.Logger) SequentialTaskProcessor {
 
 	return &sequentialTaskProcessorImpl{
 		status:           common.DaemonStatusInitialized,
 		shutdownChan:     make(chan struct{}),
 		coroutineSize:    coroutineSize,
-		taskqueues:       collection.NewShardedConcurrentTxMap(1024, hashFn),
+		taskqueues:       collection.NewShardedConcurrentTxMap(1024, taskQueueHashFn),
 		taskQueueFactory: taskQueueFactory,
 		taskqueueChan:    make(chan SequentialTaskQueue, coroutineSize),
-		logger:           logger,
+
+		metricsScope:  metrics.SequentialTaskProcessingScope,
+		metricsClient: metricsClient,
+		logger:        logger,
 	}
 }
 
@@ -85,6 +93,10 @@ func (t *sequentialTaskProcessorImpl) Stop() {
 
 func (t *sequentialTaskProcessorImpl) Submit(task SequentialTask) error {
 
+	t.metricsClient.IncCounter(t.metricsScope, metrics.SequentialTaskSubmitRequest)
+	metricsTimer := t.metricsClient.StartTimer(t.metricsScope, metrics.SequentialTaskSubmitLatency)
+	defer metricsTimer.Stop()
+
 	taskqueue := t.taskQueueFactory(task)
 	taskqueue.Add(task)
 
@@ -103,10 +115,12 @@ func (t *sequentialTaskProcessorImpl) Submit(task SequentialTask) error {
 	// if function evaluated, meaning that the task set is
 	// already dispatched
 	if fnEvaluated {
+		t.metricsClient.IncCounter(t.metricsScope, metrics.SequentialTaskSubmitRequestTaskQueueExist)
 		return nil
 	}
 
 	// need to dispatch this task set
+	t.metricsClient.IncCounter(t.metricsScope, metrics.SequentialTaskSubmitRequestTaskQueueMissing)
 	select {
 	case <-t.shutdownChan:
 	case t.taskqueueChan <- taskqueue:
@@ -123,7 +137,9 @@ func (t *sequentialTaskProcessorImpl) pollAndProcessTaskQueue() {
 		case <-t.shutdownChan:
 			return
 		case taskqueue := <-t.taskqueueChan:
+			metricsTimer := t.metricsClient.StartTimer(t.metricsScope, metrics.SequentialTaskQueueProcessingLatency)
 			t.processTaskQueue(taskqueue)
+			metricsTimer.Stop()
 		}
 	}
 }
@@ -134,7 +150,9 @@ func (t *sequentialTaskProcessorImpl) processTaskQueue(taskqueue SequentialTaskQ
 		case <-t.shutdownChan:
 			return
 		default:
-			if !taskqueue.IsEmpty() {
+			queueSize := taskqueue.Len()
+			t.metricsClient.RecordTimer(t.metricsScope, metrics.SequentialTaskQueueSize, time.Duration(queueSize))
+			if queueSize > 0 {
 				t.processTaskOnce(taskqueue)
 			} else {
 				deleted := t.taskqueues.RemoveIf(taskqueue.QueueID(), func(key interface{}, value interface{}) bool {
@@ -152,6 +170,9 @@ func (t *sequentialTaskProcessorImpl) processTaskQueue(taskqueue SequentialTaskQ
 }
 
 func (t *sequentialTaskProcessorImpl) processTaskOnce(taskqueue SequentialTaskQueue) {
+	metricsTimer := t.metricsClient.StartTimer(t.metricsScope, metrics.SequentialTaskTaskProcessingLatency)
+	defer metricsTimer.Stop()
+
 	task := taskqueue.Remove()
 	err := task.Execute()
 	err = task.HandleErr(err)
