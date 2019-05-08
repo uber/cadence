@@ -65,9 +65,9 @@ services:
     pprof:
       port: 7941
 
-clustersInformation:
+clusterMetadata:
   enableGlobalDomain: true
-  versionIncrement: 10
+  failoverVersionIncrement: 10
   masterClusterName: "active"
   currentClusterName: "active"
   clusterInformation:

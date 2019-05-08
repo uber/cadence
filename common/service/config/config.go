@@ -44,10 +44,10 @@ type (
 		// Log is the logging config
 		Log Logger `yaml:"log"`
 		// ClustersInfo is the config containing all valid clusters and active cluster
-		// Deprecated: please use ClusterInformation instead
+		// Deprecated: please use ClusterMetadata instead
 		ClustersInfo ClustersInfo `yaml:"clustersInfo"`
-		// ClustersInformation is the config containing all valid clusters and active cluster
-		ClustersInformation ClustersInformation `yaml:"clustersInformation"`
+		// ClusterMetadata is the config containing all valid clusters and active cluster
+		ClusterMetadata ClusterMetadata `yaml:"clusterMetadata"`
 		// DCRedirectionPolicy contains the frontend datacenter redirection policy
 		DCRedirectionPolicy DCRedirectionPolicy `yaml:"dcRedirectionPolicy"`
 		// Services is a map of service name to service config items
@@ -223,7 +223,7 @@ type (
 
 	// ClustersInfo contains the all cluster names and active cluster
 	//
-	// Deprecated: please use ClusterInformation instead
+	// Deprecated: please use ClustersMetadata instead
 	ClustersInfo struct {
 		// EnableGlobalDomain whether the global domain is enabled, this attr should be discarded when
 		// cross DC is made public
@@ -251,11 +251,11 @@ type (
 		RPCAddress string `yaml:"rpcAddress"`
 	}
 
-	// ClustersInformation contains the all cluster which participated in cross DC
-	ClustersInformation struct {
+	// ClusterMetadata contains the all cluster which participated in cross DC
+	ClusterMetadata struct {
 		EnableGlobalDomain bool `yaml:"enableGlobalDomain"`
-		// VersionIncrement is the increment of each cluster version when failover happens
-		VersionIncrement int64 `yaml:"versionIncrement"`
+		// FailoverVersionIncrement is the increment of each cluster version when failover happens
+		FailoverVersionIncrement int64 `yaml:"failoverVersionIncrement"`
 		// MasterClusterName is the master cluster name, only the master cluster can register / update domain
 		// all clusters can do domain failover
 		MasterClusterName string `yaml:"masterClusterName"`

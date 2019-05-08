@@ -61,9 +61,9 @@ services:
         hostPort: "${STATSD_ENDPOINT}"
         prefix: "cadence-worker"
 
-clustersInformation:
+clusterMetadata:
   enableGlobalDomain: false
-  versionIncrement: 10
+  failoverVersionIncrement: 10
   masterClusterName: "active"
   currentClusterName: "active"
   clusterInformation:

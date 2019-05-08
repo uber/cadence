@@ -94,7 +94,7 @@ func (s *integrationCrossDCSuite) setupTest(enableGlobalDomain bool, isMasterClu
 			EnableIndexer:    false,
 		},
 		IsMasterCluster: isMasterCluster,
-		ClustersInformation: config.ClustersInformation{
+		ClusterMetadata: config.ClusterMetadata{
 			EnableGlobalDomain: enableGlobalDomain,
 		},
 		HistoryConfig: &HistoryConfig{

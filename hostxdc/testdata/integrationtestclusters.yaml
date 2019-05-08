@@ -1,8 +1,8 @@
 - persisence:
     dbname: integration_active
-  clustersinformation:
+  clustermetadata:
     enableGlobalDomain: true
-    versionIncrement: 10
+    failoverVersionIncrement: 10
     masterClusterName: "active"
     currentClusterName: "active"
     clusterInformation:
@@ -52,9 +52,9 @@
       applications: {}
 - persistence:
     dbname: integration_standby
-  clustersinformation:
+  clustermetadata:
     enableGlobalDomain: true
-    versionIncrement: 10
+    failoverVersionIncrement: 10
     masterClusterName: "active"
     currentClusterName: "standby"
     clusterInformation:

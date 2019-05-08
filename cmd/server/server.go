@@ -132,22 +132,22 @@ func (s *server) startService() common.Daemon {
 
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 
-	clustersInformation := s.cfg.ClustersInformation
+	clusterMetadata := s.cfg.ClusterMetadata
 	// TODO remove when ClustersInfo is fully deprecated
-	if len(s.cfg.ClustersInfo.CurrentClusterName) != 0 && len(s.cfg.ClustersInformation.CurrentClusterName) != 0 {
-		log.Fatalf("cannot config both clustersInfo and clustersInformation")
+	if len(s.cfg.ClustersInfo.CurrentClusterName) != 0 && len(s.cfg.ClusterMetadata.CurrentClusterName) != 0 {
+		log.Fatalf("cannot config both clustersInfo and clusterMetadata")
 	}
 	if len(s.cfg.ClustersInfo.CurrentClusterName) != 0 {
-		clustersInformation = s.cfg.ClustersInfo.ToClusterInformation()
+		clusterMetadata = s.cfg.ClustersInfo.ToClusterMetadata()
 	}
 	params.ClusterMetadata = cluster.NewMetadata(
 		params.Logger,
 		params.MetricsClient,
-		dc.GetBoolProperty(dynamicconfig.EnableGlobalDomain, clustersInformation.EnableGlobalDomain),
-		clustersInformation.VersionIncrement,
-		clustersInformation.MasterClusterName,
-		clustersInformation.CurrentClusterName,
-		clustersInformation.ClusterInformation,
+		dc.GetBoolProperty(dynamicconfig.EnableGlobalDomain, clusterMetadata.EnableGlobalDomain),
+		clusterMetadata.FailoverVersionIncrement,
+		clusterMetadata.MasterClusterName,
+		clusterMetadata.CurrentClusterName,
+		clusterMetadata.ClusterInformation,
 		archivalStatus,
 		s.cfg.Archival.DefaultBucket,
 		enableReadFromArchival,

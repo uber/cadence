@@ -21,8 +21,6 @@
 package host
 
 import (
-	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 
@@ -60,7 +58,7 @@ type (
 		EnableArchival        bool
 		IsMasterCluster       bool
 		ClusterNo             int
-		ClustersInformation   config.ClustersInformation
+		ClusterMetadata       config.ClusterMetadata
 		MessagingClientConfig *MessagingClientConfig
 		Persistence           persistencetests.TestBaseOptions
 		HistoryConfig         *HistoryConfig
@@ -86,26 +84,21 @@ const defaultTestValueOfESIndexMaxResultWindow = 5
 
 // NewCluster creates and sets up the test cluster
 func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, error) {
-	clustersInformation := options.ClustersInformation
 
-	print := func(value interface{}) string {
-		bytes, _ := json.MarshalIndent(value, "", "  ")
-		return string(bytes)
-	}
-	fmt.Printf("++++++++++\n")
-	fmt.Printf("## WHAT:\n%v\n.", print(clustersInformation))
-	fmt.Printf("++++++++++\n")
-
-	clusterMetadata := cluster.GetTestClusterMetadata(clustersInformation.EnableGlobalDomain, options.IsMasterCluster, options.EnableArchival)
-	if !options.IsMasterCluster && clustersInformation.MasterClusterName != "" { // xdc cluster metadata setup
+	clusterMetadata := cluster.GetTestClusterMetadata(
+		options.ClusterMetadata.EnableGlobalDomain,
+		options.IsMasterCluster,
+		options.EnableArchival,
+	)
+	if !options.IsMasterCluster && options.ClusterMetadata.MasterClusterName != "" { // xdc cluster metadata setup
 		clusterMetadata = cluster.NewMetadata(
 			logger,
 			&metricsmocks.Client{},
-			dynamicconfig.GetBoolPropertyFn(clustersInformation.EnableGlobalDomain),
-			clustersInformation.VersionIncrement,
-			clustersInformation.MasterClusterName,
-			clustersInformation.CurrentClusterName,
-			clustersInformation.ClusterInformation,
+			dynamicconfig.GetBoolPropertyFn(options.ClusterMetadata.EnableGlobalDomain),
+			options.ClusterMetadata.FailoverVersionIncrement,
+			options.ClusterMetadata.MasterClusterName,
+			options.ClusterMetadata.CurrentClusterName,
+			options.ClusterMetadata.ClusterInformation,
 			dynamicconfig.GetStringPropertyFn("disabled"),
 			"",
 			dynamicconfig.GetBoolPropertyFn(false),

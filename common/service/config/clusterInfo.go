@@ -22,15 +22,15 @@ package config
 
 import "fmt"
 
-// ToClusterInformation convert deprecated ClustersInfo to ClustersInformation
-// Deprecated: pleasee use ClustersInformation
-func (c ClustersInfo) ToClusterInformation() ClustersInformation {
-	clustersInfo := ClustersInformation{}
-	clustersInfo.EnableGlobalDomain = c.EnableGlobalDomain
-	clustersInfo.VersionIncrement = c.FailoverVersionIncrement
-	clustersInfo.MasterClusterName = c.MasterClusterName
-	clustersInfo.CurrentClusterName = c.CurrentClusterName
-	clustersInfo.ClusterInformation = map[string]ClusterInformation{}
+// ToClusterInformation convert deprecated ClustersInfo to ClusterMetadata
+// Deprecated: pleasee use ClusterMetadata
+func (c ClustersInfo) ToClusterMetadata() ClusterMetadata {
+	clusterMetadata := ClusterMetadata{}
+	clusterMetadata.EnableGlobalDomain = c.EnableGlobalDomain
+	clusterMetadata.FailoverVersionIncrement = c.FailoverVersionIncrement
+	clusterMetadata.MasterClusterName = c.MasterClusterName
+	clusterMetadata.CurrentClusterName = c.CurrentClusterName
+	clusterMetadata.ClusterInformation = map[string]ClusterInformation{}
 	for k, v := range c.ClusterInitialFailoverVersions {
 		address, ok := c.ClusterAddress[k]
 		if !ok {
@@ -42,8 +42,8 @@ func (c ClustersInfo) ToClusterInformation() ClustersInformation {
 		clusterInfo.InitialFailoverVersion = v
 		clusterInfo.RPCName = address.RPCName
 		clusterInfo.RPCAddress = address.RPCAddress
-		clustersInfo.ClusterInformation[k] = clusterInfo
+		clusterMetadata.ClusterInformation[k] = clusterInfo
 	}
 
-	return clustersInfo
+	return clusterMetadata
 }

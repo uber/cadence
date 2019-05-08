@@ -66,7 +66,7 @@ services:
       port: 7940
 
 # use clustersInfo for testing compatibility
-# NOTE: clustersInfo is deprecated, plz use clustersInformation below
+# NOTE: clustersInfo is deprecated, plz use clusterMetadata below
 #clustersInfo:
 #  enableGlobalDomain: false
 #  failoverVersionIncrement: 10
@@ -79,9 +79,9 @@ services:
 #      rpcName: "cadence-frontend"
 #      rpcAddress: "127.0.0.1:7933"
 
-clustersInformation:
+clusterMetadata:
   enableGlobalDomain: false
-  versionIncrement: 10
+  failoverVersionIncrement: 10
   masterClusterName: "active"
   currentClusterName: "active"
   clusterInformation:
