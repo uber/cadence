@@ -258,7 +258,7 @@ func PrettyPrintHistory(history *workflow.History, logger log.Logger) {
 	}
 
 	fmt.Println("******************************************")
-	fmt.Println("History", tag.DetailInfo(string(data)))
+	fmt.Println("History", string(data))
 	fmt.Println("******************************************")
 }
 
