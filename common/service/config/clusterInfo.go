@@ -22,7 +22,7 @@ package config
 
 import "fmt"
 
-// ToClusterInformation convert deprecated ClustersInfo to ClusterMetadata
+// ToClusterMetadata convert deprecated ClustersInfo to ClusterMetadata
 // Deprecated: pleasee use ClusterMetadata
 func (c ClustersInfo) ToClusterMetadata() ClusterMetadata {
 	clusterMetadata := ClusterMetadata{}
