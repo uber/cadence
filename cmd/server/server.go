@@ -24,10 +24,11 @@ import (
 	"log"
 	"time"
 
+	"github.com/uber/cadence/common/cluster"
+
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore/filestore"
-	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
@@ -123,22 +124,30 @@ func (s *server) startService() common.Daemon {
 	params.MetricScope = svcCfg.Metrics.NewScope(params.Logger)
 	params.RPCFactory = svcCfg.RPC.NewFactory(params.Name, params.Logger)
 	params.PProfInitializer = svcCfg.PProf.NewInitializer(params.Logger)
-	enableGlobalDomain := dc.GetBoolProperty(dynamicconfig.EnableGlobalDomain, s.cfg.ClustersInfo.EnableGlobalDomain)
+
 	archivalStatus := dc.GetStringProperty(dynamicconfig.ArchivalStatus, s.cfg.Archival.Status)
 	enableReadFromArchival := dc.GetBoolProperty(dynamicconfig.EnableReadFromArchival, s.cfg.Archival.EnableReadFromArchival)
 
 	params.DCRedirectionPolicy = s.cfg.DCRedirectionPolicy
 
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
+
+	clustersInformation := s.cfg.ClustersInformation
+	// TODO remove when ClustersInfo is fully deprecated
+	if len(s.cfg.ClustersInfo.CurrentClusterName) != 0 && len(s.cfg.ClustersInformation.CurrentClusterName) != 0 {
+		log.Fatalf("cannot config both clustersInfo and clustersInformation")
+	}
+	if len(s.cfg.ClustersInfo.CurrentClusterName) != 0 {
+		clustersInformation = s.cfg.ClustersInfo.ToClusterInformation()
+	}
 	params.ClusterMetadata = cluster.NewMetadata(
 		params.Logger,
 		params.MetricsClient,
-		enableGlobalDomain,
-		s.cfg.ClustersInfo.FailoverVersionIncrement,
-		s.cfg.ClustersInfo.MasterClusterName,
-		s.cfg.ClustersInfo.CurrentClusterName,
-		s.cfg.ClustersInfo.ClusterInitialFailoverVersions,
-		s.cfg.ClustersInfo.ClusterAddress,
+		dc.GetBoolProperty(dynamicconfig.EnableGlobalDomain, clustersInformation.EnableGlobalDomain),
+		clustersInformation.VersionIncrement,
+		clustersInformation.MasterClusterName,
+		clustersInformation.CurrentClusterName,
+		clustersInformation.ClusterInformation,
 		archivalStatus,
 		s.cfg.Archival.DefaultBucket,
 		enableReadFromArchival,
