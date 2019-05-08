@@ -123,7 +123,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			// history event version changed during for loop
 			b.msBuilder.UpdateReplicationStateVersion(event.GetVersion(), true)
 		}
-		b.msBuilder.GetExecutionInfo().LastEventTaskID = lastEvent.GetTaskId()
+		b.msBuilder.GetExecutionInfo().LastEventTaskID = event.GetTaskId()
 
 		switch event.GetEventType() {
 		case shared.EventTypeWorkflowExecutionStarted:
