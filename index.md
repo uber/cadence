@@ -7,7 +7,7 @@ callout_description: Develop resilient long-running business applications with s
 
 <section class="features">
   <div class="feature dynamic-execution">
-    <a href="{{ '/docs/02_key_features#dynamic-workflow-execution-graphs' | relative_url }}">
+    <a href="{{ 'docs/02_key_features#dynamic-workflow-execution-graphs' | relative_url }}">
       <div class="icon">
         <svg class="icon-arrow-divert">
           <use xlink:href="#icon-arrow-divert"></use>
