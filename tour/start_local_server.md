@@ -6,7 +6,8 @@ codecontent: startlocalserver
 The exercises in this tour assume that you have a Cadence server running. 
 Fortunately, the entire Cadence server can be run locally using Docker. 
 
-Use the steps below based on your OS. Then run the commands from the right side in a terminal.
+Use the steps below based on your OS. Then run the commands from the right side in a terminal
+to download and start the Cadence server.
 
 ## Mac requirements
 
