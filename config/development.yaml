@@ -28,7 +28,7 @@ services:
     metrics:
       statsd:
         hostPort: "127.0.0.1:8125"
-        prefix: "cadence_standby"
+        prefix: "cadence"
     pprof:
       port: 7936
 
@@ -39,7 +39,7 @@ services:
     metrics:
       statsd:
         hostPort: "127.0.0.1:8125"
-        prefix: "cadence_standby"
+        prefix: "cadence"
     pprof:
       port: 7938
 
@@ -50,7 +50,7 @@ services:
     metrics:
       statsd:
         hostPort: "127.0.0.1:8125"
-        prefix: "cadence_standby"
+        prefix: "cadence"
     pprof:
       port: 7937
 
@@ -61,7 +61,7 @@ services:
     metrics:
       statsd:
         hostPort: "127.0.0.1:8125"
-        prefix: "cadence_standby"
+        prefix: "cadence"
     pprof:
       port: 7940
 
