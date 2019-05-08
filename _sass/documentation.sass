@@ -1,8 +1,5 @@
 @import "./definitions.sass"
 
-li
-  list-style: initial
-
 main.documentation
   display: flex
   & > nav
@@ -46,6 +43,8 @@ main.documentation
       font-family: $header-font-family
       font-size: 1.2em
       line-height: 1.5em
+    pre, code
+      overflow-x: scroll
 
   @media (max-width: 1200px)
     flex-direction: column
