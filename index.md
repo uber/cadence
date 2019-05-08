@@ -7,24 +7,28 @@ callout_description: Develop resilient long-running business applications with s
 
 <section class="features">
   <div class="feature dynamic-execution">
-    <a href="{{ '/docs/02_key_features#dynamic-workflow-execution-graphs' | relative_url }}">
-      <div class="icon">
+    <div class="icon">
+      <a href="{{ '/docs/02_key_features#dynamic-workflow-execution-graphs' | relative_url }}">
         <svg class="icon-arrow-divert">
           <use xlink:href="#icon-arrow-divert"></use>
         </svg>
-      </div>
+      </a>
+    </div>
+    <a href="{{ '/docs/02_key_features#dynamic-workflow-execution-graphs' | relative_url }}">
       <span class="description">Dynamic Workflow Execution Graphs</span>
     </a>
     <p>Determine the workflow execution graphs at runtime based on the data you are processing</p>
   </div>
 
   <div class="feature child-workflows">
-    <a href="{{ 'docs/03_goclient/05_child_workflows' | relative_url }}">
-      <div class="icon">
+    <div class="icon">
+      <a href="{{ 'docs/03_goclient/05_child_workflows' | relative_url }}">
         <svg class="icon-person-unaccompanied-minor">
           <use xlink:href="#icon-person-unaccompanied-minor"></use>
         </svg>
-      </div>
+      </a>
+    </div>
+    <a href="{{ 'docs/03_goclient/05_child_workflows' | relative_url }}">
       <span class="description">Child Workflows</span>
     </a>
     <p>Execute other workflows and receive results upon completion</p>
