@@ -22,6 +22,7 @@ package host
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"strconv"
 	"strings"
@@ -1435,7 +1436,8 @@ func (s *integrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 		Identity:                            common.StringPtr(identity),
 		WorkflowIdReusePolicy:               &wfIDReusePolicy,
 	}
-	resp, err := s.engine.SignalWithStartWorkflowExecution(createContext(), sRequest)
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	resp, err := s.engine.SignalWithStartWorkflowExecution(ctx, sRequest)
 	s.Nil(resp)
 	s.Error(err)
 	errMsg := err.(*workflow.WorkflowExecutionAlreadyStartedError).GetMessage()
@@ -1443,7 +1445,8 @@ func (s *integrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 
 	// test policy WorkflowIdReusePolicyAllowDuplicateFailedOnly
 	wfIDReusePolicy = workflow.WorkflowIdReusePolicyAllowDuplicateFailedOnly
-	resp, err = s.engine.SignalWithStartWorkflowExecution(createContext(), sRequest)
+	ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
+	resp, err = s.engine.SignalWithStartWorkflowExecution(ctx, sRequest)
 	s.Nil(resp)
 	s.Error(err)
 	errMsg = err.(*workflow.WorkflowExecutionAlreadyStartedError).GetMessage()
@@ -1451,7 +1454,8 @@ func (s *integrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 
 	// test policy WorkflowIdReusePolicyAllowDuplicate
 	wfIDReusePolicy = workflow.WorkflowIdReusePolicyAllowDuplicate
-	resp, err = s.engine.SignalWithStartWorkflowExecution(createContext(), sRequest)
+	ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
+	resp, err = s.engine.SignalWithStartWorkflowExecution(ctx, sRequest)
 	s.Nil(err)
 	s.NotEmpty(resp.GetRunId())
 
