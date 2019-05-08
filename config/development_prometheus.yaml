@@ -73,7 +73,7 @@ clustersInformation:
   clusterInformation:
     active:
       enabled: true
-      initialVersion: 0
+      initialFailoverVersion: 0
       rpcName: "cadence-frontend"
       rpcAddress: "127.0.0.1:7933"
 

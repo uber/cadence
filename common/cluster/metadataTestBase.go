@@ -51,16 +51,16 @@ var (
 	// TestAllClusterInfo is the same as above, just convenient for test mocking
 	TestAllClusterInfo = map[string]config.ClusterInformation{
 		TestCurrentClusterName: config.ClusterInformation{
-			Enabled:        true,
-			InitialVersion: TestCurrentClusterInitialFailoverVersion,
-			RPCName:        common.FrontendServiceName,
-			RPCAddress:     TestCurrentClusterFrontendAddress,
+			Enabled:                true,
+			InitialFailoverVersion: TestCurrentClusterInitialFailoverVersion,
+			RPCName:                common.FrontendServiceName,
+			RPCAddress:             TestCurrentClusterFrontendAddress,
 		},
 		TestAlternativeClusterName: config.ClusterInformation{
-			Enabled:        true,
-			InitialVersion: TestAlternativeClusterInitialFailoverVersion,
-			RPCName:        common.FrontendServiceName,
-			RPCAddress:     TestAlternativeClusterFrontendAddress,
+			Enabled:                true,
+			InitialFailoverVersion: TestAlternativeClusterInitialFailoverVersion,
+			RPCName:                common.FrontendServiceName,
+			RPCAddress:             TestAlternativeClusterFrontendAddress,
 		},
 	}
 
@@ -69,10 +69,10 @@ var (
 	// TestSingleDCClusterInfo is the same as above, just convenient for test mocking
 	TestSingleDCClusterInfo = map[string]config.ClusterInformation{
 		TestCurrentClusterName: config.ClusterInformation{
-			Enabled:        true,
-			InitialVersion: TestCurrentClusterInitialFailoverVersion,
-			RPCName:        common.FrontendServiceName,
-			RPCAddress:     TestCurrentClusterFrontendAddress,
+			Enabled:                true,
+			InitialFailoverVersion: TestCurrentClusterInitialFailoverVersion,
+			RPCName:                common.FrontendServiceName,
+			RPCAddress:             TestCurrentClusterFrontendAddress,
 		},
 	}
 )

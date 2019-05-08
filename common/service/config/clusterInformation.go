@@ -39,7 +39,7 @@ func (c ClustersInfo) ToClusterInformation() ClustersInformation {
 
 		clusterInfo := ClusterInformation{}
 		clusterInfo.Enabled = true
-		clusterInfo.InitialVersion = v
+		clusterInfo.InitialFailoverVersion = v
 		clusterInfo.RPCName = address.RPCName
 		clusterInfo.RPCAddress = address.RPCAddress
 		clustersInfo.ClusterInformation[k] = clusterInfo

@@ -267,8 +267,8 @@ type (
 
 	// ClusterInformation contains the information about each cluster which participated in cross DC
 	ClusterInformation struct {
-		Enabled        bool  `yaml:"enabled"`
-		InitialVersion int64 `yaml:"initialVersion"`
+		Enabled                bool  `yaml:"enabled"`
+		InitialFailoverVersion int64 `yaml:"initialFailoverVersion"`
 		// RPCName indicate the remote service name
 		RPCName string `yaml:"rpcName"`
 		// Address indicate the remote service IP address

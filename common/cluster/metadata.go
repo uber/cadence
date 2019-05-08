@@ -110,17 +110,17 @@ func NewMetadata(
 
 	versionToClusterName := make(map[int64]string)
 	for clusterName, info := range clusterInfo {
-		if versionIncrement <= info.InitialVersion || info.InitialVersion < 0 {
+		if versionIncrement <= info.InitialFailoverVersion || info.InitialFailoverVersion < 0 {
 			panic(fmt.Sprintf(
 				"Version increment %v is smaller than initial version: %v.",
 				versionIncrement,
-				info.InitialVersion,
+				info.InitialFailoverVersion,
 			))
 		}
 		if len(clusterName) == 0 {
 			panic("Cluster name in all cluster names is empty")
 		}
-		versionToClusterName[info.InitialVersion] = clusterName
+		versionToClusterName[info.InitialFailoverVersion] = clusterName
 
 		if info.Enabled && (len(info.RPCName) == 0 || len(info.RPCAddress) == 0) {
 			panic(fmt.Sprintf("Cluster %v: rpc name / address is empty", clusterName))
@@ -177,7 +177,7 @@ func (metadata *metadataImpl) GetNextFailoverVersion(cluster string, currentFail
 			metadata.clusterInfo,
 		))
 	}
-	failoverVersion := currentFailoverVersion/metadata.versionIncrement*metadata.versionIncrement + info.InitialVersion
+	failoverVersion := currentFailoverVersion/metadata.versionIncrement*metadata.versionIncrement + info.InitialFailoverVersion
 	if failoverVersion < currentFailoverVersion {
 		return failoverVersion + metadata.versionIncrement
 	}
@@ -210,12 +210,12 @@ func (metadata *metadataImpl) GetAllClusterInfo() map[string]config.ClusterInfor
 
 // ClusterNameForFailoverVersion return the corresponding cluster name for a given failover version
 func (metadata *metadataImpl) ClusterNameForFailoverVersion(failoverVersion int64) string {
-	initialVersion := failoverVersion % metadata.versionIncrement
-	clusterName, ok := metadata.versionToClusterName[initialVersion]
+	initialFailoverVersion := failoverVersion % metadata.versionIncrement
+	clusterName, ok := metadata.versionToClusterName[initialFailoverVersion]
 	if !ok {
 		panic(fmt.Sprintf(
 			"Unknown initial failover version %v with given cluster initial failover version map: %v and failover version increment %v.",
-			initialVersion,
+			initialFailoverVersion,
 			metadata.clusterInfo,
 			metadata.versionIncrement,
 		))
