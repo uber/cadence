@@ -23,6 +23,10 @@ package indexer
 import (
 	"encoding/json"
 	"errors"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/olivere/elastic"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
@@ -36,9 +40,6 @@ import (
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/worker/indexer/mocks"
 	"go.uber.org/zap"
-	"sync"
-	"testing"
-	"time"
 )
 
 type esProcessorSuite struct {
@@ -68,7 +69,7 @@ func (s *esProcessorSuite) SetupTest() {
 		IndexerConcurrency:       dynamicconfig.GetIntPropertyFn(32),
 		ESProcessorNumOfWorkers:  dynamicconfig.GetIntPropertyFn(1),
 		ESProcessorBulkActions:   dynamicconfig.GetIntPropertyFn(10),
-		ESProcessorBulkSize:      dynamicconfig.GetIntPropertyFn(2 << 20),
+		ESProcessorBulkLen:       dynamicconfig.GetIntPropertyFn(2 << 20),
 		ESProcessorFlushInterval: dynamicconfig.GetDurationPropertyFn(1 * time.Minute),
 	}
 	s.mockMetricClient = &mmocks.Client{}
@@ -100,7 +101,7 @@ func (s *esProcessorSuite) TestNewESProcessorAndStart() {
 	config := &Config{
 		ESProcessorNumOfWorkers:  dynamicconfig.GetIntPropertyFn(1),
 		ESProcessorBulkActions:   dynamicconfig.GetIntPropertyFn(10),
-		ESProcessorBulkSize:      dynamicconfig.GetIntPropertyFn(2 << 20),
+		ESProcessorBulkLen:       dynamicconfig.GetIntPropertyFn(2 << 20),
 		ESProcessorFlushInterval: dynamicconfig.GetDurationPropertyFn(1 * time.Minute),
 	}
 	processorName := "test-processor"
@@ -109,7 +110,7 @@ func (s *esProcessorSuite) TestNewESProcessorAndStart() {
 		s.Equal(processorName, input.Name)
 		s.Equal(config.ESProcessorNumOfWorkers(), input.NumOfWorkers)
 		s.Equal(config.ESProcessorBulkActions(), input.BulkActions)
-		s.Equal(config.ESProcessorBulkSize(), input.BulkSize)
+		s.Equal(config.ESProcessorBulkLen(), input.BulkLen)
 		s.Equal(config.ESProcessorFlushInterval(), input.FlushInterval)
 		s.NotNil(input.Backoff)
 		s.NotNil(input.AfterFunc)
@@ -135,17 +136,17 @@ func (s *esProcessorSuite) TestAdd() {
 	request := elastic.NewBulkIndexRequest()
 	mockKafkaMsg := &msgMocks.Message{}
 	key := "test-key"
-	s.Equal(0, s.esProcessor.mapToKafkaMsg.Size())
+	s.Equal(0, s.esProcessor.mapToKafkaMsg.Len())
 
 	s.mockBulkProcessor.On("Add", request).Return().Once()
 	s.esProcessor.Add(request, key, mockKafkaMsg)
-	s.Equal(1, s.esProcessor.mapToKafkaMsg.Size())
+	s.Equal(1, s.esProcessor.mapToKafkaMsg.Len())
 	mockKafkaMsg.AssertExpectations(s.T())
 
 	// handle duplicate
 	mockKafkaMsg.On("Ack").Return(nil).Once()
 	s.esProcessor.Add(request, key, mockKafkaMsg)
-	s.Equal(1, s.esProcessor.mapToKafkaMsg.Size())
+	s.Equal(1, s.esProcessor.mapToKafkaMsg.Len())
 	mockKafkaMsg.AssertExpectations(s.T())
 }
 
@@ -276,12 +277,12 @@ func (s *esProcessorSuite) TestAckKafkaMsg() {
 	mockKafkaMsg := &msgMocks.Message{}
 	s.mockBulkProcessor.On("Add", request).Return().Once()
 	s.esProcessor.Add(request, key, mockKafkaMsg)
-	s.Equal(1, s.esProcessor.mapToKafkaMsg.Size())
+	s.Equal(1, s.esProcessor.mapToKafkaMsg.Len())
 
 	mockKafkaMsg.On("Ack").Return(nil).Once()
 	s.esProcessor.ackKafkaMsg(key)
 	mockKafkaMsg.AssertExpectations(s.T())
-	s.Equal(0, s.esProcessor.mapToKafkaMsg.Size())
+	s.Equal(0, s.esProcessor.mapToKafkaMsg.Len())
 }
 
 func (s *esProcessorSuite) TestNackKafkaMsg() {
@@ -293,12 +294,12 @@ func (s *esProcessorSuite) TestNackKafkaMsg() {
 	mockKafkaMsg := &msgMocks.Message{}
 	s.mockBulkProcessor.On("Add", request).Return().Once()
 	s.esProcessor.Add(request, key, mockKafkaMsg)
-	s.Equal(1, s.esProcessor.mapToKafkaMsg.Size())
+	s.Equal(1, s.esProcessor.mapToKafkaMsg.Len())
 
 	mockKafkaMsg.On("Nack").Return(nil).Once()
 	s.esProcessor.nackKafkaMsg(key)
 	mockKafkaMsg.AssertExpectations(s.T())
-	s.Equal(0, s.esProcessor.mapToKafkaMsg.Size())
+	s.Equal(0, s.esProcessor.mapToKafkaMsg.Len())
 }
 
 func (s *esProcessorSuite) TestHashFn() {
