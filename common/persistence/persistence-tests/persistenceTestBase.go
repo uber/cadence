@@ -26,16 +26,14 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/stretchr/testify/suite"
-
-	"fmt"
-
 	"github.com/pborman/uuid"
-	log "github.com/sirupsen/logrus"
-	"github.com/uber-common/bark"
+	"github.com/stretchr/testify/suite"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
 	pfactory "github.com/uber/cadence/common/persistence/persistence-factory"
@@ -51,21 +49,11 @@ type (
 
 	// TestBaseOptions options to configure workflow test base.
 	TestBaseOptions struct {
-		DBName    string
-		Cassandra struct {
-			DBPort    int
-			SchemaDir string
-		}
-		SQL struct {
-			DBPort     int
-			SchemaDir  string
-			DriverName string
-		}
-		// TODO this is used for global domain test
-		// when cross DC is public, remove EnableGlobalDomain
-		EnableGlobalDomain bool // is global domain enabled
-		IsMasterCluster    bool // is master cluster
-		ClusterMetadata    cluster.Metadata
+		DBName          string
+		DBPort          int              `yaml:"-"`
+		StoreType       string           `yaml:"-"`
+		SchemaDir       string           `yaml:"-"`
+		ClusterMetadata cluster.Metadata `yaml:"-"`
 	}
 
 	// TestBase wraps the base setup needed to create workflows over persistence layer.
@@ -88,6 +76,7 @@ type (
 		ReplicationReadLevel  int64
 		DefaultTestCluster    PersistenceTestCluster
 		VisibilityTestCluster PersistenceTestCluster
+		logger                log.Logger
 	}
 
 	// PersistenceTestCluster exposes management operations on a database
@@ -108,12 +97,16 @@ type (
 	}
 )
 
+const (
+	defaultScheduleToStartTimeout = 111
+)
+
 // NewTestBaseWithCassandra returns a persistence test base backed by cassandra datastore
 func NewTestBaseWithCassandra(options *TestBaseOptions) TestBase {
 	if options.DBName == "" {
 		options.DBName = "test_" + GenerateRandomDBName(10)
 	}
-	testCluster := cassandra.NewTestCluster(options.Cassandra.DBPort, options.DBName, options.Cassandra.SchemaDir)
+	testCluster := cassandra.NewTestCluster(options.DBName, options.DBPort, options.SchemaDir)
 	return newTestBase(options, testCluster)
 }
 
@@ -122,30 +115,58 @@ func NewTestBaseWithSQL(options *TestBaseOptions) TestBase {
 	if options.DBName == "" {
 		options.DBName = GenerateRandomDBName(10)
 	}
-	sqlOpts := options.SQL
-	testCluster := sql.NewTestCluster(sqlOpts.DBPort, options.DBName, sqlOpts.SchemaDir, sqlOpts.DriverName)
+	testCluster := sql.NewTestCluster(options.DBName, options.DBPort, options.SchemaDir)
 	return newTestBase(options, testCluster)
+}
+
+// NewTestBase returns a persistence test base backed by either cassandra or sql
+func NewTestBase(options *TestBaseOptions) TestBase {
+	switch options.StoreType {
+	case config.StoreTypeSQL:
+		return NewTestBaseWithSQL(options)
+	case config.StoreTypeCassandra:
+		return NewTestBaseWithCassandra(options)
+	default:
+		panic("invalid storeType " + options.StoreType)
+	}
 }
 
 func newTestBase(options *TestBaseOptions, testCluster PersistenceTestCluster) TestBase {
 	metadata := options.ClusterMetadata
 	if metadata == nil {
-		metadata = cluster.GetTestClusterMetadata(options.EnableGlobalDomain, options.IsMasterCluster)
+		metadata = cluster.GetTestClusterMetadata(false, false, false)
 	}
 	options.ClusterMetadata = metadata
-	return TestBase{
+	base := TestBase{
 		DefaultTestCluster:    testCluster,
 		VisibilityTestCluster: testCluster,
 		ClusterMetadata:       metadata,
 	}
+	logger, err := loggerimpl.NewDevelopment()
+	if err != nil {
+		panic(err)
+	}
+	base.logger = logger
+	return base
+}
+
+// Config returns the persistence configuration for this test
+func (s *TestBase) Config() config.Persistence {
+	cfg := s.DefaultTestCluster.Config()
+	if s.DefaultTestCluster == s.VisibilityTestCluster {
+		return cfg
+	}
+	vCfg := s.VisibilityTestCluster.Config()
+	cfg.VisibilityStore = "visibility_ " + vCfg.VisibilityStore
+	cfg.DataStores[cfg.VisibilityStore] = vCfg.DataStores[vCfg.VisibilityStore]
+	return cfg
 }
 
 // Setup sets up the test base, must be called as part of SetupSuite
 func (s *TestBase) Setup() {
 	var err error
-	shardID := 0
+	shardID := 10
 	clusterName := s.ClusterMetadata.GetCurrentClusterName()
-	log := bark.NewLoggerFromLogrus(log.New())
 
 	s.DefaultTestCluster.SetupTestDatabase()
 	if s.VisibilityTestCluster != s.DefaultTestCluster {
@@ -153,7 +174,7 @@ func (s *TestBase) Setup() {
 	}
 
 	cfg := s.DefaultTestCluster.Config()
-	factory := pfactory.New(&cfg, clusterName, nil, log)
+	factory := pfactory.New(&cfg, clusterName, nil, s.logger)
 
 	s.TaskMgr, err = factory.NewTaskManager()
 	s.fatalOnError("NewTaskManager", err)
@@ -171,10 +192,7 @@ func (s *TestBase) Setup() {
 	s.fatalOnError("NewHistoryManager", err)
 
 	s.HistoryV2Mgr, err = factory.NewHistoryV2Manager()
-	// TODO SQL currently doesn't have support for HistoryV2Mgr.
-	if err != nil {
-		log.Warnf(fmt.Sprintf("failed to initialize historyV2, it is expected for MySQL, %v", err))
-	}
+	s.fatalOnError("NewHistoryV2Manager", err)
 
 	s.ShardMgr, err = factory.NewShardManager()
 	s.fatalOnError("NewShardManager", err)
@@ -186,10 +204,10 @@ func (s *TestBase) Setup() {
 	visibilityFactory := factory
 	if s.VisibilityTestCluster != s.DefaultTestCluster {
 		vCfg := s.VisibilityTestCluster.Config()
-		visibilityFactory = pfactory.New(&vCfg, clusterName, nil, log)
+		visibilityFactory = pfactory.New(&vCfg, clusterName, nil, s.logger)
 	}
 	// SQL currently doesn't have support for visibility manager
-	s.VisibilityMgr, err = visibilityFactory.NewVisibilityManager(false)
+	s.VisibilityMgr, err = visibilityFactory.NewVisibilityManager()
 	if err != nil {
 		s.fatalOnError("NewVisibilityManager", err)
 	}
@@ -213,7 +231,7 @@ func (s *TestBase) Setup() {
 
 func (s *TestBase) fatalOnError(msg string, err error) {
 	if err != nil {
-		log.Fatalf("%v:%v", msg, err)
+		s.logger.Fatal(msg, tag.Error(err))
 	}
 }
 
@@ -293,7 +311,7 @@ func (s *TestBase) CreateWorkflowExecutionWithReplication(domainID string, workf
 	var replicationTasks []p.Task
 	for _, task := range txTasks {
 		switch t := task.(type) {
-		case *p.DecisionTask, *p.ActivityTask, *p.CloseExecutionTask, *p.CancelExecutionTask, *p.StartChildExecutionTask, *p.SignalExecutionTask:
+		case *p.DecisionTask, *p.ActivityTask, *p.CloseExecutionTask, *p.CancelExecutionTask, *p.StartChildExecutionTask, *p.SignalExecutionTask, *p.RecordWorkflowStartedTask:
 			transferTasks = append(transferTasks, t)
 		case *p.HistoryReplicationTask:
 			replicationTasks = append(replicationTasks, t)
@@ -376,7 +394,7 @@ func (s *TestBase) CreateWorkflowExecutionManyTasks(domainID string, workflowExe
 
 // CreateChildWorkflowExecution is a utility method to create child workflow executions
 func (s *TestBase) CreateChildWorkflowExecution(domainID string, workflowExecution workflow.WorkflowExecution,
-	parentDomainID string, parentExecution *workflow.WorkflowExecution, initiatedID int64, taskList, wType string,
+	parentDomainID string, parentExecution workflow.WorkflowExecution, initiatedID int64, taskList, wType string,
 	wTimeout int32, decisionTimeout int32, executionContext []byte, nextEventID int64, lastProcessedEventID int64,
 	decisionScheduleID int64, timerTasks []p.Task) (*p.CreateWorkflowExecutionResponse, error) {
 	response, err := s.ExecutionManager.CreateWorkflowExecution(&p.CreateWorkflowExecutionRequest{
@@ -455,7 +473,7 @@ func (s *TestBase) GetCurrentWorkflowRunID(domainID, workflowID string) (string,
 
 // ContinueAsNewExecution is a utility method to create workflow executions
 func (s *TestBase) ContinueAsNewExecution(updatedInfo *p.WorkflowExecutionInfo, condition int64,
-	newExecution workflow.WorkflowExecution, nextEventID, decisionScheduleID int64) error {
+	newExecution workflow.WorkflowExecution, nextEventID, decisionScheduleID int64, prevResetPoints *workflow.ResetPoints) error {
 	newdecisionTask := &p.DecisionTask{
 		TaskID:     s.GetNextSequenceNumber(),
 		DomainID:   updatedInfo.DomainID,
@@ -468,7 +486,6 @@ func (s *TestBase) ContinueAsNewExecution(updatedInfo *p.WorkflowExecutionInfo, 
 		TransferTasks:       []p.Task{newdecisionTask},
 		TimerTasks:          nil,
 		Condition:           condition,
-		DeleteTimerTask:     nil,
 		RangeID:             s.ShardInfo.RangeID,
 		UpsertActivityInfos: nil,
 		DeleteActivityInfos: nil,
@@ -493,6 +510,7 @@ func (s *TestBase) ContinueAsNewExecution(updatedInfo *p.WorkflowExecutionInfo, 
 			DecisionStartToCloseTimeout: 1,
 			CreateWorkflowMode:          p.CreateWorkflowModeContinueAsNew,
 			PreviousRunID:               updatedInfo.RunID,
+			PreviousAutoResetPoints:     prevResetPoints,
 		},
 		Encoding: pickRandomEncoding(),
 	})
@@ -501,33 +519,30 @@ func (s *TestBase) ContinueAsNewExecution(updatedInfo *p.WorkflowExecutionInfo, 
 
 // UpdateWorkflowExecution is a utility method to update workflow execution
 func (s *TestBase) UpdateWorkflowExecution(updatedInfo *p.WorkflowExecutionInfo, decisionScheduleIDs []int64,
-	activityScheduleIDs []int64, condition int64, timerTasks []p.Task, deleteTimerTask p.Task,
+	activityScheduleIDs []int64, condition int64, timerTasks []p.Task,
 	upsertActivityInfos []*p.ActivityInfo, deleteActivityInfos []int64,
 	upsertTimerInfos []*p.TimerInfo, deleteTimerInfos []string) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, decisionScheduleIDs, activityScheduleIDs,
-		s.ShardInfo.RangeID, condition, timerTasks, deleteTimerTask, upsertActivityInfos, deleteActivityInfos,
+		s.ShardInfo.RangeID, condition, timerTasks, upsertActivityInfos, deleteActivityInfos,
 		upsertTimerInfos, deleteTimerInfos, nil, nil, nil, nil,
 		nil, nil, nil, "")
 }
 
 // UpdateWorkflowExecutionAndFinish is a utility method to update workflow execution
-func (s *TestBase) UpdateWorkflowExecutionAndFinish(updatedInfo *p.WorkflowExecutionInfo, condition int64, retentionSecond int32) error {
+func (s *TestBase) UpdateWorkflowExecutionAndFinish(updatedInfo *p.WorkflowExecutionInfo, condition int64) error {
 	transferTasks := []p.Task{}
 	transferTasks = append(transferTasks, &p.CloseExecutionTask{TaskID: s.GetNextSequenceNumber()})
 	_, err := s.ExecutionManager.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
-		ExecutionInfo:        updatedInfo,
-		TransferTasks:        transferTasks,
-		TimerTasks:           nil,
-		Condition:            condition,
-		DeleteTimerTask:      nil,
-		RangeID:              s.ShardInfo.RangeID,
-		UpsertActivityInfos:  nil,
-		DeleteActivityInfos:  nil,
-		UpserTimerInfos:      nil,
-		DeleteTimerInfos:     nil,
-		FinishedExecutionTTL: retentionSecond,
-		FinishExecution:      true,
-		Encoding:             pickRandomEncoding(),
+		ExecutionInfo:       updatedInfo,
+		TransferTasks:       transferTasks,
+		TimerTasks:          nil,
+		Condition:           condition,
+		RangeID:             s.ShardInfo.RangeID,
+		UpsertActivityInfos: nil,
+		DeleteActivityInfos: nil,
+		UpserTimerInfos:     nil,
+		DeleteTimerInfos:    nil,
+		Encoding:            pickRandomEncoding(),
 	})
 	return err
 }
@@ -536,7 +551,7 @@ func (s *TestBase) UpdateWorkflowExecutionAndFinish(updatedInfo *p.WorkflowExecu
 func (s *TestBase) UpsertChildExecutionsState(updatedInfo *p.WorkflowExecutionInfo, condition int64,
 	upsertChildInfos []*p.ChildExecutionInfo) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
-		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
+		s.ShardInfo.RangeID, condition, nil, nil, nil,
 		nil, nil, upsertChildInfos, nil, nil, nil,
 		nil, nil, nil, "")
 }
@@ -545,7 +560,7 @@ func (s *TestBase) UpsertChildExecutionsState(updatedInfo *p.WorkflowExecutionIn
 func (s *TestBase) UpsertRequestCancelState(updatedInfo *p.WorkflowExecutionInfo, condition int64,
 	upsertCancelInfos []*p.RequestCancelInfo) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
-		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
+		s.ShardInfo.RangeID, condition, nil, nil, nil,
 		nil, nil, nil, nil, upsertCancelInfos, nil,
 		nil, nil, nil, "")
 }
@@ -554,7 +569,7 @@ func (s *TestBase) UpsertRequestCancelState(updatedInfo *p.WorkflowExecutionInfo
 func (s *TestBase) UpsertSignalInfoState(updatedInfo *p.WorkflowExecutionInfo, condition int64,
 	upsertSignalInfos []*p.SignalInfo) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
-		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
+		s.ShardInfo.RangeID, condition, nil, nil, nil,
 		nil, nil, nil, nil, nil, nil,
 		upsertSignalInfos, nil, nil, "")
 }
@@ -563,7 +578,7 @@ func (s *TestBase) UpsertSignalInfoState(updatedInfo *p.WorkflowExecutionInfo, c
 func (s *TestBase) UpsertSignalsRequestedState(updatedInfo *p.WorkflowExecutionInfo, condition int64,
 	upsertSignalsRequested []string) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
-		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
+		s.ShardInfo.RangeID, condition, nil, nil, nil,
 		nil, nil, nil, nil, nil, nil,
 		nil, nil, upsertSignalsRequested, "")
 }
@@ -572,7 +587,7 @@ func (s *TestBase) UpsertSignalsRequestedState(updatedInfo *p.WorkflowExecutionI
 func (s *TestBase) DeleteChildExecutionsState(updatedInfo *p.WorkflowExecutionInfo, condition int64,
 	deleteChildInfo int64) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
-		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
+		s.ShardInfo.RangeID, condition, nil, nil, nil,
 		nil, nil, nil, &deleteChildInfo, nil, nil,
 		nil, nil, nil, "")
 }
@@ -581,7 +596,7 @@ func (s *TestBase) DeleteChildExecutionsState(updatedInfo *p.WorkflowExecutionIn
 func (s *TestBase) DeleteCancelState(updatedInfo *p.WorkflowExecutionInfo, condition int64,
 	deleteCancelInfo int64) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
-		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
+		s.ShardInfo.RangeID, condition, nil, nil, nil,
 		nil, nil, nil, nil, nil, &deleteCancelInfo,
 		nil, nil, nil, "")
 }
@@ -590,7 +605,7 @@ func (s *TestBase) DeleteCancelState(updatedInfo *p.WorkflowExecutionInfo, condi
 func (s *TestBase) DeleteSignalState(updatedInfo *p.WorkflowExecutionInfo, condition int64,
 	deleteSignalInfo int64) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
-		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
+		s.ShardInfo.RangeID, condition, nil, nil, nil,
 		nil, nil, nil, nil, nil, nil,
 		nil, &deleteSignalInfo, nil, "")
 }
@@ -599,7 +614,7 @@ func (s *TestBase) DeleteSignalState(updatedInfo *p.WorkflowExecutionInfo, condi
 func (s *TestBase) DeleteSignalsRequestedState(updatedInfo *p.WorkflowExecutionInfo, condition int64,
 	deleteSignalsRequestedID string) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
-		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
+		s.ShardInfo.RangeID, condition, nil, nil, nil,
 		nil, nil, nil, nil, nil, nil,
 		nil, nil, nil, deleteSignalsRequestedID)
 }
@@ -609,20 +624,20 @@ func (s *TestBase) UpdateWorklowStateAndReplication(updatedInfo *p.WorkflowExecu
 	updatedReplicationState *p.ReplicationState, newBufferedReplicationTask *p.BufferedReplicationTask,
 	deleteBufferedReplicationTask *int64, condition int64, txTasks []p.Task) error {
 	return s.UpdateWorkflowExecutionWithReplication(updatedInfo, updatedReplicationState, nil, nil,
-		s.ShardInfo.RangeID, condition, nil, txTasks, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "",
+		s.ShardInfo.RangeID, condition, nil, txTasks, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "",
 		newBufferedReplicationTask, deleteBufferedReplicationTask)
 }
 
 // UpdateWorkflowExecutionWithRangeID is a utility method to update workflow execution
 func (s *TestBase) UpdateWorkflowExecutionWithRangeID(updatedInfo *p.WorkflowExecutionInfo, decisionScheduleIDs []int64,
-	activityScheduleIDs []int64, rangeID, condition int64, timerTasks []p.Task, deleteTimerTask p.Task,
+	activityScheduleIDs []int64, rangeID, condition int64, timerTasks []p.Task,
 	upsertActivityInfos []*p.ActivityInfo, deleteActivityInfos []int64, upsertTimerInfos []*p.TimerInfo,
 	deleteTimerInfos []string, upsertChildInfos []*p.ChildExecutionInfo, deleteChildInfo *int64,
 	upsertCancelInfos []*p.RequestCancelInfo, deleteCancelInfo *int64,
 	upsertSignalInfos []*p.SignalInfo, deleteSignalInfo *int64,
 	upsertSignalRequestedIDs []string, deleteSignalRequestedID string) error {
 	return s.UpdateWorkflowExecutionWithReplication(updatedInfo, nil, decisionScheduleIDs, activityScheduleIDs, rangeID,
-		condition, timerTasks, []p.Task{}, deleteTimerTask, upsertActivityInfos, deleteActivityInfos, upsertTimerInfos, deleteTimerInfos,
+		condition, timerTasks, []p.Task{}, upsertActivityInfos, deleteActivityInfos, upsertTimerInfos, deleteTimerInfos,
 		upsertChildInfos, deleteChildInfo, upsertCancelInfos, deleteCancelInfo, upsertSignalInfos, deleteSignalInfo,
 		upsertSignalRequestedIDs, deleteSignalRequestedID, nil, nil)
 }
@@ -630,7 +645,7 @@ func (s *TestBase) UpdateWorkflowExecutionWithRangeID(updatedInfo *p.WorkflowExe
 // UpdateWorkflowExecutionWithReplication is a utility method to update workflow execution
 func (s *TestBase) UpdateWorkflowExecutionWithReplication(updatedInfo *p.WorkflowExecutionInfo,
 	updatedReplicationState *p.ReplicationState, decisionScheduleIDs []int64, activityScheduleIDs []int64, rangeID,
-	condition int64, timerTasks []p.Task, txTasks []p.Task, deleteTimerTask p.Task, upsertActivityInfos []*p.ActivityInfo,
+	condition int64, timerTasks []p.Task, txTasks []p.Task, upsertActivityInfos []*p.ActivityInfo,
 	deleteActivityInfos []int64, upsertTimerInfos []*p.TimerInfo, deleteTimerInfos []string,
 	upsertChildInfos []*p.ChildExecutionInfo, deleteChildInfo *int64, upsertCancelInfos []*p.RequestCancelInfo,
 	deleteCancelInfo *int64, upsertSignalInfos []*p.SignalInfo, deleteSignalInfo *int64, upsertSignalRequestedIDs []string,
@@ -640,7 +655,7 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(updatedInfo *p.Workflo
 	var replicationTasks []p.Task
 	for _, task := range txTasks {
 		switch t := task.(type) {
-		case *p.DecisionTask, *p.ActivityTask, *p.CloseExecutionTask, *p.CancelExecutionTask, *p.StartChildExecutionTask, *p.SignalExecutionTask:
+		case *p.DecisionTask, *p.ActivityTask, *p.CloseExecutionTask, *p.CancelExecutionTask, *p.StartChildExecutionTask, *p.SignalExecutionTask, *p.RecordWorkflowStartedTask:
 			transferTasks = append(transferTasks, t)
 		case *p.HistoryReplicationTask, *p.SyncActivityTask:
 			replicationTasks = append(replicationTasks, t)
@@ -671,7 +686,6 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(updatedInfo *p.Workflo
 		ReplicationTasks:              replicationTasks,
 		TimerTasks:                    timerTasks,
 		Condition:                     condition,
-		DeleteTimerTask:               deleteTimerTask,
 		RangeID:                       rangeID,
 		UpsertActivityInfos:           upsertActivityInfos,
 		DeleteActivityInfos:           deleteActivityInfos,
@@ -886,6 +900,15 @@ func (s *TestBase) DeleteWorkflowExecution(info *p.WorkflowExecutionInfo) error 
 	})
 }
 
+// DeleteCurrentWorkflowExecution is a utility method to delete the workflow current execution
+func (s *TestBase) DeleteCurrentWorkflowExecution(info *p.WorkflowExecutionInfo) error {
+	return s.ExecutionManager.DeleteCurrentWorkflowExecution(&p.DeleteCurrentWorkflowExecutionRequest{
+		DomainID:   info.DomainID,
+		WorkflowID: info.WorkflowID,
+		RunID:      info.RunID,
+	})
+}
+
 // GetTransferTasks is a utility method to get tasks from transfer task queue
 func (s *TestBase) GetTransferTasks(batchSize int, getAll bool) ([]*p.TransferTaskInfo, error) {
 	result := []*p.TransferTaskInfo{}
@@ -1058,39 +1081,43 @@ func (s *TestBase) CreateDecisionTask(domainID string, workflowExecution workflo
 func (s *TestBase) CreateActivityTasks(domainID string, workflowExecution workflow.WorkflowExecution,
 	activities map[int64]string) ([]int64, error) {
 
-	var taskIDs []int64
-	var leaseResponse *p.LeaseTaskListResponse
-	var err error
-	for activityScheduleID, taskList := range activities {
-
-		leaseResponse, err = s.TaskMgr.LeaseTaskList(
-			&p.LeaseTaskListRequest{DomainID: domainID, TaskList: taskList, TaskType: p.TaskListTypeActivity})
-		if err != nil {
-			return []int64{}, err
+	taskLists := make(map[string]*p.TaskListInfo)
+	for _, tl := range activities {
+		_, ok := taskLists[tl]
+		if !ok {
+			resp, err := s.TaskMgr.LeaseTaskList(
+				&p.LeaseTaskListRequest{DomainID: domainID, TaskList: tl, TaskType: p.TaskListTypeActivity})
+			if err != nil {
+				return []int64{}, err
+			}
+			taskLists[tl] = resp.TaskListInfo
 		}
+	}
+
+	var taskIDs []int64
+	for activityScheduleID, taskList := range activities {
 		taskID := s.GetNextSequenceNumber()
 		tasks := []*p.CreateTaskInfo{
 			{
 				TaskID:    taskID,
 				Execution: workflowExecution,
 				Data: &p.TaskInfo{
-					DomainID:   domainID,
-					WorkflowID: *workflowExecution.WorkflowId,
-					RunID:      *workflowExecution.RunId,
-					TaskID:     taskID,
-					ScheduleID: activityScheduleID,
+					DomainID:               domainID,
+					WorkflowID:             *workflowExecution.WorkflowId,
+					RunID:                  *workflowExecution.RunId,
+					TaskID:                 taskID,
+					ScheduleID:             activityScheduleID,
+					ScheduleToStartTimeout: defaultScheduleToStartTimeout,
 				},
 			},
 		}
 		_, err := s.TaskMgr.CreateTasks(&p.CreateTasksRequest{
-			TaskListInfo: leaseResponse.TaskListInfo,
+			TaskListInfo: taskLists[taskList],
 			Tasks:        tasks,
 		})
-
 		if err != nil {
 			return nil, err
 		}
-
 		taskIDs = append(taskIDs, taskID)
 	}
 
@@ -1099,22 +1126,12 @@ func (s *TestBase) CreateActivityTasks(domainID string, workflowExecution workfl
 
 // GetTasks is a utility method to get tasks from persistence
 func (s *TestBase) GetTasks(domainID, taskList string, taskType int, batchSize int) (*p.GetTasksResponse, error) {
-	leaseResponse, err := s.TaskMgr.LeaseTaskList(&p.LeaseTaskListRequest{
-		DomainID: domainID,
-		TaskList: taskList,
-		TaskType: taskType,
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	response, err := s.TaskMgr.GetTasks(&p.GetTasksRequest{
 		DomainID:     domainID,
 		TaskList:     taskList,
 		TaskType:     taskType,
 		BatchSize:    batchSize,
-		RangeID:      leaseResponse.TaskListInfo.RangeID,
-		MaxReadLevel: math.MaxInt64,
+		MaxReadLevel: common.Int64Ptr(math.MaxInt64),
 	})
 
 	if err != nil {
@@ -1126,22 +1143,12 @@ func (s *TestBase) GetTasks(domainID, taskList string, taskType int, batchSize i
 
 // CompleteTask is a utility method to complete a task
 func (s *TestBase) CompleteTask(domainID, taskList string, taskType int, taskID int64, ackLevel int64) error {
-	leaseResponse, err := s.TaskMgr.LeaseTaskList(&p.LeaseTaskListRequest{
-		DomainID: domainID,
-		TaskList: taskList,
-		TaskType: taskType,
-	})
-	if err != nil {
-		return err
-	}
-
 	return s.TaskMgr.CompleteTask(&p.CompleteTaskRequest{
 		TaskList: &p.TaskListInfo{
 			DomainID: domainID,
 			AckLevel: ackLevel,
 			TaskType: taskType,
 			Name:     taskList,
-			RangeID:  leaseResponse.TaskListInfo.RangeID,
 		},
 		TaskID: taskID,
 	})
@@ -1176,41 +1183,39 @@ func (s *TestBase) ClearTasks() {
 
 // ClearTransferQueue completes all tasks in transfer queue
 func (s *TestBase) ClearTransferQueue() {
-	log.Infof("Clearing transfer tasks (RangeID: %v, ReadLevel: %v)",
-		s.ShardInfo.RangeID, s.GetTransferReadLevel())
+	s.logger.Info("Clearing transfer tasks", tag.ShardRangeID(s.ShardInfo.RangeID), tag.ReadLevel(s.GetTransferReadLevel()))
 	tasks, err := s.GetTransferTasks(100, true)
 	if err != nil {
-		log.Fatalf("Error during cleanup: %v", err)
+		s.logger.Fatal("Error during cleanup", tag.Error(err))
 	}
 
 	counter := 0
 	for _, t := range tasks {
-		log.Infof("Deleting transfer task with ID: %v", t.TaskID)
+		s.logger.Info("Deleting transfer task with ID", tag.TaskID(t.TaskID))
 		s.CompleteTransferTask(t.TaskID)
 		counter++
 	}
 
-	log.Infof("Deleted '%v' transfer tasks.", counter)
+	s.logger.Info("Deleted transfer tasks.", tag.Counter(counter))
 	atomic.StoreInt64(&s.ReadLevel, 0)
 }
 
 // ClearReplicationQueue completes all tasks in replication queue
 func (s *TestBase) ClearReplicationQueue() {
-	log.Infof("Clearing replication tasks (RangeID: %v, ReadLevel: %v)",
-		s.ShardInfo.RangeID, s.GetReplicationReadLevel())
+	s.logger.Info("Clearing replication tasks", tag.ShardRangeID(s.ShardInfo.RangeID), tag.ReadLevel(s.GetReplicationReadLevel()))
 	tasks, err := s.GetReplicationTasks(100, true)
 	if err != nil {
-		log.Fatalf("Error during cleanup: %v", err)
+		s.logger.Fatal("Error during cleanup", tag.Error(err))
 	}
 
 	counter := 0
 	for _, t := range tasks {
-		log.Infof("Deleting replication task with ID: %v", t.TaskID)
+		s.logger.Info("Deleting replication task with ID", tag.TaskID(t.TaskID))
 		s.CompleteReplicationTask(t.TaskID)
 		counter++
 	}
 
-	log.Infof("Deleted '%v' replication tasks.", counter)
+	s.logger.Info("Deleted replication tasks.", tag.Counter(counter))
 	atomic.StoreInt64(&s.ReplicationReadLevel, 0)
 }
 
@@ -1228,11 +1233,11 @@ func (s *TestBase) EqualTimes(t1, t2 time.Time) {
 	s.EqualTimesWithPrecision(t1, t2, TimePrecision)
 }
 
-func validateTimeRange(t time.Time, expectedDuration time.Duration) bool {
+func (s *TestBase) validateTimeRange(t time.Time, expectedDuration time.Duration) bool {
 	currentTime := time.Now()
 	diff := time.Duration(currentTime.UnixNano() - t.UnixNano())
 	if diff > expectedDuration {
-		log.Infof("Current time: %v, Application time: %v, Differenrce: %v", currentTime, t, diff)
+		s.logger.Info("Check Current time, Application time, Differenrce", tag.Timestamp(t), tag.CursorTimestamp(currentTime), tag.Number(int64(diff)))
 		return false
 	}
 	return true
@@ -1241,6 +1246,19 @@ func validateTimeRange(t time.Time, expectedDuration time.Duration) bool {
 // GetNextTransferTaskID helper
 func (g *TestTransferTaskIDGenerator) GetNextTransferTaskID() (int64, error) {
 	return atomic.AddInt64(&g.seqNum, 1), nil
+}
+
+// GetTransferTaskIDs helper
+func (g *TestTransferTaskIDGenerator) GetTransferTaskIDs(number int) ([]int64, error) {
+	result := []int64{}
+	for i := 0; i < number; i++ {
+		id, err := g.GetNextTransferTaskID()
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, id)
+	}
+	return result, nil
 }
 
 // GenerateRandomDBName helper

@@ -22,15 +22,12 @@ package history
 
 import (
 	"errors"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/pborman/uuid"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -38,6 +35,8 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
@@ -52,7 +51,7 @@ type (
 		mockShardManager *mocks.ShardManager
 		shardClosedCh    chan int
 		config           *Config
-		logger           bark.Logger
+		logger           log.Logger
 
 		mockHistoryEngine   *historyEngineImpl
 		mockMatchingClient  *mocks.MatchingClient
@@ -60,6 +59,7 @@ type (
 		mockVisibilityMgr   *mocks.VisibilityManager
 		mockExecutionMgr    *mocks.ExecutionManager
 		mockHistoryMgr      *mocks.HistoryManager
+		mockHistoryV2Mgr    *mocks.HistoryV2Manager
 		mockShard           ShardContext
 		mockClusterMetadata *mocks.ClusterMetadata
 		mockProducer        *mocks.KafkaProducer
@@ -76,13 +76,8 @@ func TestTimerQueueProcessor2Suite(t *testing.T) {
 }
 
 func (s *timerQueueProcessor2Suite) SetupSuite() {
-	if testing.Verbose() {
-		log.SetOutput(os.Stdout)
-	}
 
-	log2 := log.New()
-	log2.Level = log.DebugLevel
-	s.logger = bark.NewLoggerFromLogrus(log2)
+	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 
 	s.config = NewDynamicConfigForTest()
 }
@@ -93,6 +88,7 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
 	s.mockShardManager = &mocks.ShardManager{}
 	s.mockHistoryMgr = &mocks.HistoryManager{}
+	s.mockHistoryV2Mgr = &mocks.HistoryV2Manager{}
 	s.mockVisibilityMgr = &mocks.VisibilityManager{}
 	s.mockMetadataMgr = &mocks.MetadataManager{}
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
@@ -116,7 +112,7 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
 	s.mockClientBean = &client.MockClientBean{}
-	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean, s.logger)
+	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean)
 	s.mockEventsCache = &MockEventsCache{}
 
 	domainCache := cache.NewDomainCache(s.mockMetadataMgr, s.mockClusterMetadata, metricsClient, s.logger)
@@ -127,6 +123,7 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 		executionManager:          s.mockExecutionMgr,
 		shardManager:              s.mockShardManager,
 		historyMgr:                s.mockHistoryMgr,
+		historyV2Mgr:              s.mockHistoryV2Mgr,
 		maxTransferSequenceNumber: 100000,
 		closeCh:                   s.shardClosedCh,
 		config:                    s.config,
@@ -147,14 +144,15 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 		currentClusterName: s.mockShard.GetService().GetClusterMetadata().GetCurrentClusterName(),
 		shard:              s.mockShard,
 		historyMgr:         s.mockHistoryMgr,
+		historyV2Mgr:       s.mockHistoryV2Mgr,
 		executionManager:   s.mockExecutionMgr,
 		historyCache:       historyCache,
 		logger:             s.logger,
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
 		metricsClient:      s.mockShard.GetMetricsClient(),
 	}
-	h.txProcessor = newTransferQueueProcessor(s.mockShard, h, s.mockVisibilityMgr, s.mockProducer, s.mockMatchingClient, &mocks.HistoryClient{}, s.logger)
-	h.timerProcessor = newTimerQueueProcessor(s.mockShard, h, s.mockMatchingClient, s.mockProducer, s.logger)
+	h.txProcessor = newTransferQueueProcessor(s.mockShard, h, s.mockVisibilityMgr, s.mockMatchingClient, &mocks.HistoryClient{}, s.logger)
+	h.timerProcessor = newTimerQueueProcessor(s.mockShard, h, s.mockMatchingClient, s.logger)
 	s.mockHistoryEngine = h
 }
 
@@ -163,9 +161,11 @@ func (s *timerQueueProcessor2Suite) TearDownTest() {
 	s.mockMatchingClient.AssertExpectations(s.T())
 	s.mockExecutionMgr.AssertExpectations(s.T())
 	s.mockHistoryMgr.AssertExpectations(s.T())
+	s.mockHistoryV2Mgr.AssertExpectations(s.T())
 	s.mockVisibilityMgr.AssertExpectations(s.T())
 	s.mockProducer.AssertExpectations(s.T())
 	s.mockClientBean.AssertExpectations(s.T())
+	s.mockEventsCache.AssertExpectations(s.T())
 }
 
 func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
@@ -175,7 +175,9 @@ func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 
 	taskList := "user-timer-update-times-out"
 
-	builder := newMutableStateBuilder(cluster.TestCurrentClusterName, s.config, s.mockEventsCache, s.logger)
+	builder := newMutableStateBuilderWithEventV2(cluster.TestCurrentClusterName, s.mockShard, s.mockEventsCache, s.logger, we.GetRunId())
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything).Return().Once()
 	startRequest := &workflow.StartWorkflowExecutionRequest{
 		WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr("wType")},
 		TaskList:                            common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
@@ -216,11 +218,11 @@ func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 	s.mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything).Return(
 		&persistence.GetTimerIndexTasksResponse{Timers: []*persistence.TimerTaskInfo{}}, nil)
 
-	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: 0}, nil).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, errors.New("FAILED")).Once()
 	s.mockShardManager.On("UpdateShard", mock.Anything).Return(nil)
 
-	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: 0}, nil).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Run(func(arguments mock.Arguments) {
 		// Done.
 		waitCh <- struct{}{}
@@ -247,7 +249,9 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout() {
 		RunId: common.StringPtr(validRunID)}
 	taskList := "task-workflow-times-out"
 
-	builder := newMutableStateBuilder(cluster.TestCurrentClusterName, s.config, s.mockEventsCache, s.logger)
+	builder := newMutableStateBuilderWithEventV2(cluster.TestCurrentClusterName, s.mockShard, s.mockEventsCache, s.logger, we.GetRunId())
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything).Return().Once()
 	startRequest := &workflow.StartWorkflowExecutionRequest{
 		WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr("wType")},
 		TaskList:                            common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
@@ -281,11 +285,13 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout() {
 	wfResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(wfResponse, nil).Once()
 
-	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: 0}, nil).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Run(func(arguments mock.Arguments) {
 		// Done.
 		waitCh <- struct{}{}
 	}).Once()
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
+	s.mockEventsCache.On("getEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&workflow.HistoryEvent{}, nil).Once()
 
 	// Start timer Processor.
 	emptyResponse := &persistence.GetTimerIndexTasksResponse{Timers: []*persistence.TimerTaskInfo{}}

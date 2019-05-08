@@ -77,6 +77,12 @@ func newAdminWorkflowCommands() []cli.Command {
 					Name:  FlagKeyspace,
 					Usage: "cassandra keyspace",
 				},
+
+				// support mysql query
+				cli.IntFlag{
+					Name:  FlagShardIDWithAlias,
+					Usage: "ShardID",
+				},
 			},
 			Action: func(c *cli.Context) {
 				AdminShowWorkflow(c)
@@ -113,13 +119,9 @@ func newAdminWorkflowCommands() []cli.Command {
 					Name:  FlagRunIDWithAlias,
 					Usage: "RunID",
 				},
-				cli.StringFlag{
-					Name:  FlagDomainID,
-					Usage: "DomainID",
-				},
-				cli.IntFlag{
-					Name:  FlagShardID,
-					Usage: "ShardID",
+				cli.BoolFlag{
+					Name:  FlagSkipErrorModeWithAlias,
+					Usage: "skip errors when deleting history",
 				},
 
 				// for cassandra connection
@@ -129,7 +131,8 @@ func newAdminWorkflowCommands() []cli.Command {
 				},
 				cli.IntFlag{
 					Name:  FlagPort,
-					Usage: "cassandra port for the host (default is 9042)",
+					Value: 9042,
+					Usage: "cassandra port for the host",
 				},
 				cli.StringFlag{
 					Name:  FlagUsername,
@@ -240,117 +243,6 @@ func newAdminDomainCommands() []cli.Command {
 			},
 			Action: func(c *cli.Context) {
 				AdminGetDomainIDOrName(c)
-			},
-		},
-		// TODO: remove this command and add archival config options to domains.go once archival is finished
-		{
-			Name:    "register",
-			Aliases: []string{"re"},
-			Usage:   "Register workflow domain",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  FlagDescriptionWithAlias,
-					Usage: "Domain description",
-				},
-				cli.StringFlag{
-					Name:  FlagOwnerEmailWithAlias,
-					Usage: "Owner email",
-				},
-				cli.StringFlag{
-					Name:  FlagRetentionDaysWithAlias,
-					Usage: "Workflow execution retention in days",
-				},
-				cli.StringFlag{
-					Name:  FlagEmitMetricWithAlias,
-					Usage: "Flag to emit metric",
-				},
-				cli.StringFlag{
-					Name:  FlagActiveClusterNameWithAlias,
-					Usage: "Active cluster name",
-				},
-				cli.StringFlag{ // use StringFlag instead of buggy StringSliceFlag
-					Name:  FlagClustersWithAlias,
-					Usage: "Clusters",
-				},
-				cli.StringFlag{
-					Name:  FlagDomainDataWithAlias,
-					Usage: "Domain data of key value pairs, in format of k1:v1,k2:v2,k3:v3",
-				},
-				cli.StringFlag{
-					Name:  FlagSecurityTokenWithAlias,
-					Usage: "Security token with permission",
-				},
-				cli.StringFlag{
-					Name:  FlagArchivalStatusWithAlias,
-					Usage: "Flag to set archival status, valid values are: {never_enabled, disabled, enabled}",
-				},
-				cli.StringFlag{
-					Name:  FlagArchivalBucketNameWithAlias,
-					Usage: "Optionally specify bucket (cannot be changed after first time status is set to disabled or enabled)",
-				},
-			},
-			Action: func(c *cli.Context) {
-				AdminRegisterDomain(c)
-			},
-		},
-		// TODO: remove this command and add archival config options to domains.go once archival is finished
-		{
-			Name:    "update",
-			Aliases: []string{"up", "u"},
-			Usage:   "Update existing workflow domain",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  FlagDescriptionWithAlias,
-					Usage: "Domain description",
-				},
-				cli.StringFlag{
-					Name:  FlagOwnerEmailWithAlias,
-					Usage: "Owner email",
-				},
-				cli.StringFlag{
-					Name:  FlagRetentionDaysWithAlias,
-					Usage: "Workflow execution retention in days",
-				},
-				cli.StringFlag{
-					Name:  FlagEmitMetricWithAlias,
-					Usage: "Flag to emit metric",
-				},
-				cli.StringFlag{
-					Name:  FlagActiveClusterNameWithAlias,
-					Usage: "Active cluster name",
-				},
-				cli.StringFlag{ // use StringFlag instead of buggy StringSliceFlag
-					Name:  FlagClustersWithAlias,
-					Usage: "Clusters",
-				},
-				cli.StringFlag{
-					Name:  FlagDomainDataWithAlias,
-					Usage: "Domain data of key value pairs, in format of k1:v1,k2:v2,k3:v3 ",
-				},
-				cli.StringFlag{
-					Name:  FlagSecurityTokenWithAlias,
-					Usage: "Security token with permission ",
-				},
-				cli.StringFlag{
-					Name:  FlagArchivalStatusWithAlias,
-					Usage: "Flag to set archival status, valid values are: {never_enabled, disabled, enabled}",
-				},
-				cli.StringFlag{
-					Name:  FlagArchivalBucketNameWithAlias,
-					Usage: "Optionally specify bucket (cannot be changed after first time status is set to disabled or enabled)",
-				},
-			},
-			Action: func(c *cli.Context) {
-				AdminUpdateDomain(c)
-			},
-		},
-		// TODO: remove this command and add archival config options to domains.go once archival is finished
-		{
-			Name:    "describe",
-			Aliases: []string{"desc"},
-			Usage:   "Describe existing workflow domain",
-			Action: func(c *cli.Context) {
-				AdminDescribeDomain(c)
 			},
 		},
 	}
@@ -561,6 +453,80 @@ clusters:
 			},
 			Action: func(c *cli.Context) {
 				AdminRereplicate(c)
+			},
+		},
+	}
+}
+
+func newAdminElasticSearchCommands() []cli.Command {
+	return []cli.Command{
+		{
+			Name:    "catIndex",
+			Aliases: []string{"cind"},
+			Usage:   "Cat Indices on ElasticSearch",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagURL,
+					Usage: "URL of ElasticSearch cluster",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminCatIndices(c)
+			},
+		},
+		{
+			Name:    "index",
+			Aliases: []string{"ind"},
+			Usage:   "Index docs on ElasticSearch",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagURL,
+					Usage: "URL of ElasticSearch cluster",
+				},
+				cli.StringFlag{
+					Name:  FlagMuttleyDestinationWithAlias,
+					Usage: "Optional muttely destination to ElasticSearch cluster",
+				},
+				cli.StringFlag{
+					Name:  FlagIndex,
+					Usage: "ElasticSearch target index",
+				},
+				cli.StringFlag{
+					Name:  FlagInputFileWithAlias,
+					Usage: "Input file of indexer.Message in json format, separated by newline",
+				},
+				cli.IntFlag{
+					Name:  FlagBatchSizeWithAlias,
+					Usage: "Optional batch size of actions for bulk operations",
+					Value: 1000,
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminIndex(c)
+			},
+		},
+	}
+}
+
+func newAdminTaskListCommands() []cli.Command {
+	return []cli.Command{
+		{
+			Name:    "describe",
+			Aliases: []string{"desc"},
+			Usage:   "Describe pollers and status information of tasklist",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagTaskListWithAlias,
+					Usage: "TaskList description",
+				},
+				cli.StringFlag{
+					Name:  FlagTaskListTypeWithAlias,
+					Value: "decision",
+					Usage: "Optional TaskList type [decision|activity]",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminDescribeTaskList(c)
 			},
 		},
 	}

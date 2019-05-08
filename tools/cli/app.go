@@ -20,12 +20,14 @@
 
 package cli
 
-import "github.com/urfave/cli"
+import (
+	"github.com/urfave/cli"
+)
 
 const (
 	// Version is the controlled version string. It should be updated every time
 	// before we release a new version.
-	Version = "0.5.8"
+	Version = "0.6.0"
 )
 
 // NewCliApp instantiates a new instance of the CLI application.
@@ -45,6 +47,12 @@ func NewCliApp() *cli.App {
 			Name:   FlagDomainWithAlias,
 			Usage:  "cadence workflow domain",
 			EnvVar: "CADENCE_CLI_DOMAIN",
+		},
+		cli.IntFlag{
+			Name:   FlagContextTimeoutWithAlias,
+			Value:  defaultContextTimeoutInSeconds,
+			Usage:  "Optional timeout for context of RPC call in seconds",
+			EnvVar: "CADENCE_CONTEXT_TIMEOUT",
 		},
 	}
 	app.Commands = []cli.Command{
@@ -94,6 +102,18 @@ func NewCliApp() *cli.App {
 					Aliases:     []string{"d"},
 					Usage:       "Run admin operation on domain",
 					Subcommands: newAdminDomainCommands(),
+				},
+				{
+					Name:        "elasticsearch",
+					Aliases:     []string{"es"},
+					Usage:       "Run admin operation on ElasticSearch",
+					Subcommands: newAdminElasticSearchCommands(),
+				},
+				{
+					Name:        "tasklist",
+					Aliases:     []string{"tl"},
+					Usage:       "Run admin operation on taskList",
+					Subcommands: newAdminTaskListCommands(),
 				},
 			},
 		},

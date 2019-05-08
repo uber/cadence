@@ -24,11 +24,14 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
-	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/cron"
+	"github.com/uber/cadence/common/errors"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -49,7 +52,7 @@ type (
 		clusterMetadata cluster.Metadata
 		msBuilder       mutableState
 		domainCache     cache.DomainCache
-		logger          bark.Logger
+		logger          log.Logger
 
 		transferTasks       []persistence.Task
 		timerTasks          []persistence.Task
@@ -58,9 +61,14 @@ type (
 	}
 )
 
+const (
+	// ErrMessageNewRunHistorySizeZero indicate that new run history is empty
+	ErrMessageNewRunHistorySizeZero = "encounter new run history size being zero"
+)
+
 var _ stateBuilder = (*stateBuilderImpl)(nil)
 
-func newStateBuilder(shard ShardContext, msBuilder mutableState, logger bark.Logger) *stateBuilderImpl {
+func newStateBuilder(shard ShardContext, msBuilder mutableState, logger log.Logger) *stateBuilderImpl {
 
 	return &stateBuilderImpl{
 		shard:           shard,
@@ -102,7 +110,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 		firstEvent = history[0]
 	}
 
-	// need to clear the stickness since workflow turned to passive
+	// need to clear the stickiness since workflow turned to passive
 	b.msBuilder.ClearStickyness()
 	for _, event := range history {
 		lastEvent = event
@@ -110,6 +118,8 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 		if b.msBuilder.GetReplicationState() != nil {
 			b.msBuilder.UpdateReplicationStateVersion(event.GetVersion(), true)
 		}
+		b.msBuilder.GetExecutionInfo().LastEventTaskID = event.GetTaskId()
+
 		switch event.GetEventType() {
 		case shared.EventTypeWorkflowExecutionStarted:
 			attributes := event.WorkflowExecutionStartedEventAttributes
@@ -121,9 +131,10 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 				}
 				parentDomainID = &parentDomainEntry.GetInfo().ID
 			}
-			b.msBuilder.ReplicateWorkflowExecutionStartedEvent(domainID, parentDomainID, execution, requestID, attributes)
+			b.msBuilder.ReplicateWorkflowExecutionStartedEvent(domainID, parentDomainID, execution, requestID, event)
 
-			b.timerTasks = append(b.timerTasks, b.scheduleWorkflowTimerTask(event, b.msBuilder))
+			b.timerTasks = append(b.timerTasks, b.scheduleWorkflowTimerTask(event, b.msBuilder)...)
+			b.transferTasks = append(b.transferTasks, &persistence.RecordWorkflowStartedTask{})
 			if eventStoreVersion == persistence.EventStoreVersionV2 {
 				err := b.msBuilder.SetHistoryTree(execution.GetRunId())
 				if err != nil {
@@ -138,7 +149,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 
 			b.transferTasks = append(b.transferTasks, b.scheduleDecisionTransferTask(domainID, b.getTaskList(b.msBuilder),
 				di.ScheduleID))
-			// since we do not use stickyness on the standby side, there shall be no decision schedule to start timeout
+			// since we do not use stickiness on the standby side, there shall be no decision schedule to start timeout
 
 			lastDecision = di
 
@@ -153,9 +164,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			lastDecision = di
 
 		case shared.EventTypeDecisionTaskCompleted:
-			attributes := event.DecisionTaskCompletedEventAttributes
-			b.msBuilder.ReplicateDecisionTaskCompletedEvent(attributes.GetScheduledEventId(),
-				attributes.GetStartedEventId())
+			b.msBuilder.ReplicateDecisionTaskCompletedEvent(event)
 
 		case shared.EventTypeDecisionTaskTimedOut:
 			attributes := event.DecisionTaskTimedOutEventAttributes
@@ -165,7 +174,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			if di := b.msBuilder.ReplicateTransientDecisionTaskScheduled(); di != nil {
 				b.transferTasks = append(b.transferTasks, b.scheduleDecisionTransferTask(domainID, b.getTaskList(b.msBuilder),
 					di.ScheduleID))
-				// since we do not use stickyness on the standby side, there shall be no decision schedule to start timeout
+				// since we do not use stickiness on the standby side, there shall be no decision schedule to start timeout
 				lastDecision = di
 			}
 
@@ -176,7 +185,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			if di := b.msBuilder.ReplicateTransientDecisionTaskScheduled(); di != nil {
 				b.transferTasks = append(b.transferTasks, b.scheduleDecisionTransferTask(domainID, b.getTaskList(b.msBuilder),
 					di.ScheduleID))
-				// since we do not use stickyness on the standby side, there shall be no decision schedule to start timeout
+				// since we do not use stickiness on the standby side, there shall be no decision schedule to start timeout
 				lastDecision = di
 			}
 
@@ -384,11 +393,14 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			}
 
 		case shared.EventTypeWorkflowExecutionContinuedAsNew:
+			if len(newRunHistory) == 0 {
+				return nil, nil, nil, errors.NewInternalFailureError(ErrMessageNewRunHistorySizeZero)
+			}
 			newRunStartedEvent := newRunHistory[0]
 			// Create mutable state updates for the new run
 			newRunMutableStateBuilder = newMutableStateBuilderWithReplicationState(
 				b.clusterMetadata.GetCurrentClusterName(),
-				b.shard.GetConfig(),
+				b.shard,
 				b.shard.GetEventsCache(),
 				b.logger,
 				newRunStartedEvent.GetVersion(),
@@ -428,8 +440,13 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			b.newRunTransferTasks = append(b.newRunTransferTasks, newRunStateBuilder.getTransferTasks()...)
 			b.newRunTimerTasks = append(b.newRunTimerTasks, newRunStateBuilder.getTimerTasks()...)
 
-			err = b.msBuilder.ReplicateWorkflowExecutionContinuedAsNewEvent(sourceClusterName, domainID, event,
-				newRunStartedEvent, newRunDecisionInfo, newRunMutableStateBuilder, newRunEventStoreVersion)
+			domainEntry, err := b.domainCache.GetDomainByID(domainID)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+
+			err = b.msBuilder.ReplicateWorkflowExecutionContinuedAsNewEvent(firstEvent.GetEventId(), sourceClusterName, domainID, event,
+				newRunStartedEvent, newRunDecisionInfo, newRunMutableStateBuilder, newRunEventStoreVersion, domainEntry.GetRetentionDays(execution.GetWorkflowId()))
 			if err != nil {
 				return nil, nil, nil, err
 			}
@@ -525,10 +542,23 @@ func (b *stateBuilderImpl) scheduleActivityTimerTask(event *shared.HistoryEvent,
 }
 
 func (b *stateBuilderImpl) scheduleWorkflowTimerTask(event *shared.HistoryEvent,
-	msBuilder mutableState) persistence.Task {
+	msBuilder mutableState) []persistence.Task {
+	timerTasks := []persistence.Task{}
 	now := time.Unix(0, event.GetTimestamp())
 	timeout := now.Add(time.Duration(msBuilder.GetExecutionInfo().WorkflowTimeout) * time.Second)
-	return &persistence.WorkflowTimeoutTask{VisibilityTimestamp: timeout}
+
+	cronSchedule := b.msBuilder.GetExecutionInfo().CronSchedule
+	cronBackoffDuration := cron.GetBackoffForNextSchedule(cronSchedule, now)
+	if cronBackoffDuration != cron.NoBackoff {
+		timeout = timeout.Add(cronBackoffDuration)
+		timerTasks = append(timerTasks, &persistence.WorkflowBackoffTimerTask{
+			VisibilityTimestamp: now.Add(cronBackoffDuration),
+			TimeoutType:         persistence.WorkflowBackoffTimeoutTypeCron,
+		})
+	}
+
+	timerTasks = append(timerTasks, &persistence.WorkflowTimeoutTask{VisibilityTimestamp: timeout})
+	return timerTasks
 }
 
 func (b *stateBuilderImpl) scheduleDeleteHistoryTimerTask(event *shared.HistoryEvent, domainID, workflowID string) (persistence.Task, error) {
@@ -550,7 +580,7 @@ func (b *stateBuilderImpl) getTaskList(msBuilder mutableState) string {
 }
 
 func (b *stateBuilderImpl) getTimerBuilder(event *shared.HistoryEvent) *timerBuilder {
-	timeSource := common.NewEventTimeSource()
+	timeSource := clock.NewEventTimeSource()
 	now := time.Unix(0, event.GetTimestamp())
 	timeSource.Update(now)
 

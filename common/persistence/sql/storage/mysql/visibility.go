@@ -22,21 +22,20 @@ package mysql
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
 )
 
 const (
-	templateCreateWorkflowExecutionStarted = `INSERT INTO executions_visibility (` +
-		`domain_id, workflow_id, run_id, start_time, workflow_type_name) ` +
-		`VALUES (?, ?, ?, ?, ?)`
+	templateCreateWorkflowExecutionStarted = `INSERT IGNORE INTO executions_visibility (` +
+		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding) ` +
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 
-	templateUpdateWorkflowExecutionClosed = `UPDATE executions_visibility SET
-		close_time = ?, 
-        close_status = ?, 
-        history_length = ?
-        WHERE domain_id = ? AND run_id = ?`
+	templateCreateWorkflowExecutionClosed = `REPLACE INTO executions_visibility (` +
+		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, close_time, close_status, history_length, memo, encoding) ` +
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	// RunID condition is needed for correct pagination
 	templateConditions = ` AND domain_id = ?
@@ -46,7 +45,7 @@ const (
          ORDER BY start_time DESC, run_id
          LIMIT ?`
 
-	templateOpenFieldNames = `workflow_id, run_id, start_time, workflow_type_name`
+	templateOpenFieldNames = `workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding`
 	templateOpenSelect     = `SELECT ` + templateOpenFieldNames + ` FROM executions_visibility WHERE close_status IS NULL `
 
 	templateClosedSelect = `SELECT ` + templateOpenFieldNames + `, close_time, close_status, history_length
@@ -66,13 +65,18 @@ const (
 
 	templateGetClosedWorkflowExecutionsByStatus = templateClosedSelect + `AND close_status = ?` + templateConditions
 
-	templateGetClosedWorkflowExecution = `SELECT workflow_id, run_id, start_time, close_time, workflow_type_name, close_status, history_length
+	templateGetClosedWorkflowExecution = `SELECT workflow_id, run_id, start_time, execution_time, memo, encoding, close_time, workflow_type_name, close_status, history_length 
 		 FROM executions_visibility
 		 WHERE domain_id = ? AND close_status IS NOT NULL
 		 AND run_id = ?`
+
+	templateDeleteWorkflowExecution = "DELETE FROM executions_visibility WHERE domain_id=? AND run_id=?"
 )
 
-// InsertIntoVisibility inserts a row into executions_visibility table
+var errCloseParams = errors.New("missing one of {closeStatus, closeTime, historyLength} params")
+
+// InsertIntoVisibility inserts a row into visibility table. If an row already exist,
+// its left as such and no update will be made
 func (mdb *DB) InsertIntoVisibility(row *sqldb.VisibilityRow) (sql.Result, error) {
 	row.StartTime = mdb.converter.ToMySQLDateTime(row.StartTime)
 	return mdb.conn.Exec(templateCreateWorkflowExecutionStarted,
@@ -80,18 +84,38 @@ func (mdb *DB) InsertIntoVisibility(row *sqldb.VisibilityRow) (sql.Result, error
 		row.WorkflowID,
 		row.RunID,
 		row.StartTime,
-		row.WorkflowTypeName)
+		row.ExecutionTime,
+		row.WorkflowTypeName,
+		row.Memo,
+		row.Encoding)
 }
 
-// UpdateVisibility updates a row in executions_visibility table
-func (mdb *DB) UpdateVisibility(row *sqldb.VisibilityRow) (sql.Result, error) {
-	closeTime := mdb.converter.ToMySQLDateTime(*row.CloseTime)
-	return mdb.conn.Exec(templateUpdateWorkflowExecutionClosed,
-		closeTime,
-		*row.CloseStatus,
-		*row.HistoryLength,
-		row.DomainID,
-		row.RunID)
+// ReplaceIntoVisibility replaces an existing row if it exist or creates a new row in visibility table
+func (mdb *DB) ReplaceIntoVisibility(row *sqldb.VisibilityRow) (sql.Result, error) {
+	switch {
+	case row.CloseStatus != nil && row.CloseTime != nil && row.HistoryLength != nil:
+		row.StartTime = mdb.converter.ToMySQLDateTime(row.StartTime)
+		closeTime := mdb.converter.ToMySQLDateTime(*row.CloseTime)
+		return mdb.conn.Exec(templateCreateWorkflowExecutionClosed,
+			row.DomainID,
+			row.WorkflowID,
+			row.RunID,
+			row.StartTime,
+			row.ExecutionTime,
+			row.WorkflowTypeName,
+			closeTime,
+			*row.CloseStatus,
+			*row.HistoryLength,
+			row.Memo,
+			row.Encoding)
+	default:
+		return nil, errCloseParams
+	}
+}
+
+// DeleteFromVisibility deletes a row from visibility table if it exist
+func (mdb *DB) DeleteFromVisibility(filter *sqldb.VisibilityFilter) (sql.Result, error) {
+	return mdb.conn.Exec(templateDeleteWorkflowExecution, filter.DomainID, filter.RunID)
 }
 
 // SelectFromVisibility reads one or more rows from visibility table
@@ -170,6 +194,7 @@ func (mdb *DB) SelectFromVisibility(filter *sqldb.VisibilityFilter) ([]sqldb.Vis
 	}
 	for i := range rows {
 		rows[i].StartTime = mdb.converter.FromMySQLDateTime(rows[i].StartTime)
+		rows[i].ExecutionTime = mdb.converter.FromMySQLDateTime(rows[i].ExecutionTime)
 		if rows[i].CloseTime != nil {
 			closeTime := mdb.converter.FromMySQLDateTime(*rows[i].CloseTime)
 			rows[i].CloseTime = &closeTime

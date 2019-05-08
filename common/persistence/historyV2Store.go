@@ -23,22 +23,23 @@ package persistence
 import (
 	"fmt"
 
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
+
 	"github.com/pborman/uuid"
-	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
-	"github.com/uber/cadence/common/logging"
 )
 
 type (
 
-	// historyManagerImpl implements HistoryManager based on HistoryStore and HistorySerializer
+	// historyManagerImpl implements HistoryManager based on HistoryStore and PayloadSerializer
 	historyV2ManagerImpl struct {
-		historySerializer     HistorySerializer
+		historySerializer     PayloadSerializer
 		persistence           HistoryV2Store
-		logger                bark.Logger
-		thrifteEncoder        codec.BinaryEncoder
+		logger                log.Logger
+		thriftEncoder         codec.BinaryEncoder
 		pagingTokenSerializer *jsonHistoryTokenSerializer
 	}
 )
@@ -46,12 +47,12 @@ type (
 var _ HistoryV2Manager = (*historyV2ManagerImpl)(nil)
 
 //NewHistoryV2ManagerImpl returns new HistoryManager
-func NewHistoryV2ManagerImpl(persistence HistoryV2Store, logger bark.Logger) HistoryV2Manager {
+func NewHistoryV2ManagerImpl(persistence HistoryV2Store, logger log.Logger) HistoryV2Manager {
 	return &historyV2ManagerImpl{
-		historySerializer:     NewHistorySerializer(),
+		historySerializer:     NewPayloadSerializer(),
 		persistence:           persistence,
 		logger:                logger,
-		thrifteEncoder:        codec.NewThriftRWEncoder(),
+		thriftEncoder:         codec.NewThriftRWEncoder(),
 		pagingTokenSerializer: newJSONHistoryTokenSerializer(),
 	}
 }
@@ -69,16 +70,22 @@ func (m *historyV2ManagerImpl) ForkHistoryBranch(request *ForkHistoryBranchReque
 	}
 
 	var forkBranch workflow.HistoryBranch
-	err := m.thrifteEncoder.Decode(request.ForkBranchToken, &forkBranch)
+	err := m.thriftEncoder.Decode(request.ForkBranchToken, &forkBranch)
 	if err != nil {
 		return nil, err
 	}
-
+	shardID, err := getShardID(request.ShardID)
+	if err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: err.Error(),
+		}
+	}
 	req := &InternalForkHistoryBranchRequest{
 		ForkBranchInfo: forkBranch,
 		ForkNodeID:     request.ForkNodeID,
 		NewBranchID:    uuid.New(),
 		Info:           request.Info,
+		ShardID:        shardID,
 	}
 
 	resp, err := m.persistence.ForkHistoryBranch(req)
@@ -86,7 +93,7 @@ func (m *historyV2ManagerImpl) ForkHistoryBranch(request *ForkHistoryBranchReque
 		return nil, err
 	}
 
-	token, err := m.thrifteEncoder.Encode(&resp.NewBranchInfo)
+	token, err := m.thriftEncoder.Encode(&resp.NewBranchInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -99,13 +106,21 @@ func (m *historyV2ManagerImpl) ForkHistoryBranch(request *ForkHistoryBranchReque
 // DeleteHistoryBranch removes a branch
 func (m *historyV2ManagerImpl) DeleteHistoryBranch(request *DeleteHistoryBranchRequest) error {
 	var branch workflow.HistoryBranch
-	err := m.thrifteEncoder.Decode(request.BranchToken, &branch)
+	err := m.thriftEncoder.Decode(request.BranchToken, &branch)
 	if err != nil {
 		return err
 	}
 
+	shardID, err := getShardID(request.ShardID)
+	if err != nil {
+		m.logger.Error("shardID is not set in delete history operation", tag.Error(err))
+		return &workflow.InternalServiceError{
+			Message: err.Error(),
+		}
+	}
 	req := &InternalDeleteHistoryBranchRequest{
 		BranchInfo: branch,
+		ShardID:    shardID,
 	}
 
 	return m.persistence.DeleteHistoryBranch(req)
@@ -114,14 +129,22 @@ func (m *historyV2ManagerImpl) DeleteHistoryBranch(request *DeleteHistoryBranchR
 // CompleteForkBranch complete the forking process
 func (m *historyV2ManagerImpl) CompleteForkBranch(request *CompleteForkBranchRequest) error {
 	var branch workflow.HistoryBranch
-	err := m.thrifteEncoder.Decode(request.BranchToken, &branch)
+	err := m.thriftEncoder.Decode(request.BranchToken, &branch)
 	if err != nil {
 		return err
 	}
 
+	shardID, err := getShardID(request.ShardID)
+	if err != nil {
+		m.logger.Error("shardID is not set in complete fork branch operation", tag.Error(err))
+		return &workflow.InternalServiceError{
+			Message: err.Error(),
+		}
+	}
 	req := &InternalCompleteForkBranchRequest{
 		BranchInfo: branch,
 		Success:    request.Success,
+		ShardID:    shardID,
 	}
 
 	return m.persistence.CompleteForkBranch(req)
@@ -131,7 +154,7 @@ func (m *historyV2ManagerImpl) CompleteForkBranch(request *CompleteForkBranchReq
 func (m *historyV2ManagerImpl) GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error) {
 	if len(request.TreeID) == 0 {
 		var branch workflow.HistoryBranch
-		err := m.thrifteEncoder.Decode(request.BranchToken, &branch)
+		err := m.thriftEncoder.Decode(request.BranchToken, &branch)
 		if err != nil {
 			return nil, err
 		}
@@ -143,7 +166,7 @@ func (m *historyV2ManagerImpl) GetHistoryTree(request *GetHistoryTreeRequest) (*
 // AppendHistoryNodes add(or override) a node to a history branch
 func (m *historyV2ManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesRequest) (*AppendHistoryNodesResponse, error) {
 	var branch workflow.HistoryBranch
-	err := m.thrifteEncoder.Decode(request.BranchToken, &branch)
+	err := m.thriftEncoder.Decode(request.BranchToken, &branch)
 	if err != nil {
 		return nil, err
 	}
@@ -179,6 +202,13 @@ func (m *historyV2ManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReq
 	blob, err := m.historySerializer.SerializeBatchEvents(request.Events, request.Encoding)
 	size := len(blob.Data)
 
+	shardID, err := getShardID(request.ShardID)
+	if err != nil {
+		m.logger.Error("shardID is not set in append history nodes operation", tag.Error(err))
+		return nil, &workflow.InternalServiceError{
+			Message: err.Error(),
+		}
+	}
 	req := &InternalAppendHistoryNodesRequest{
 		IsNewBranch:   request.IsNewBranch,
 		Info:          request.Info,
@@ -186,6 +216,7 @@ func (m *historyV2ManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReq
 		NodeID:        nodeID,
 		Events:        blob,
 		TransactionID: request.TransactionID,
+		ShardID:       shardID,
 	}
 
 	err = m.persistence.AppendHistoryNodes(req)
@@ -221,7 +252,7 @@ func (m *historyV2ManagerImpl) ReadHistoryBranch(request *ReadHistoryBranchReque
 
 func (m *historyV2ManagerImpl) readHistoryBranch(byBatch bool, request *ReadHistoryBranchRequest) ([]*workflow.HistoryEvent, []*workflow.History, []byte, int, int64, error) {
 	var branch workflow.HistoryBranch
-	err := m.thrifteEncoder.Decode(request.BranchToken, &branch)
+	err := m.thriftEncoder.Decode(request.BranchToken, &branch)
 	if err != nil {
 		return nil, nil, nil, 0, 0, err
 	}
@@ -234,7 +265,8 @@ func (m *historyV2ManagerImpl) readHistoryBranch(byBatch bool, request *ReadHist
 		}
 	}
 
-	token, err := m.pagingTokenSerializer.Deserialize(request.NextPageToken, request.MinEventID-1, common.EmptyVersion)
+	defaultLastEventID := request.MinEventID - 1
+	token, err := m.pagingTokenSerializer.Deserialize(request.NextPageToken, defaultLastEventID, common.EmptyVersion)
 	if err != nil {
 		return nil, nil, nil, 0, 0, err
 	}
@@ -275,24 +307,34 @@ func (m *historyV2ManagerImpl) readHistoryBranch(byBatch bool, request *ReadHist
 		}
 	}
 
-	minNodeID := token.LastEventID + 1
 	maxNodeID := *allBRs[token.CurrentRangeIndex].EndNodeID
 	if request.MaxEventID < maxNodeID {
 		maxNodeID = request.MaxEventID
 	}
 
+	shardID, err := getShardID(request.ShardID)
+	if err != nil {
+		m.logger.Error("shardID is not set in read history branch operation", tag.Error(err))
+		return nil, nil, nil, 0, 0, &workflow.InternalServiceError{
+			Message: err.Error(),
+		}
+	}
 	req := &InternalReadHistoryBranchRequest{
 		TreeID:        treeID,
 		BranchID:      *allBRs[token.CurrentRangeIndex].BranchID,
-		MinNodeID:     minNodeID,
+		MinNodeID:     request.MinEventID,
 		MaxNodeID:     maxNodeID,
 		PageSize:      request.PageSize,
 		NextPageToken: token.StoreToken,
+		ShardID:       shardID,
 	}
 
 	resp, err := m.persistence.ReadHistoryBranch(req)
 	if err != nil {
 		return nil, nil, nil, 0, 0, err
+	}
+	if len(resp.History) == 0 && len(request.NextPageToken) == 0 {
+		return nil, nil, nil, 0, 0, &workflow.EntityNotExistsError{Message: "Workflow execution history not found."}
 	}
 
 	events := make([]*workflow.HistoryEvent, 0, request.PageSize)
@@ -302,10 +344,7 @@ func (m *historyV2ManagerImpl) readHistoryBranch(byBatch bool, request *ReadHist
 	lastFirstEventID := common.EmptyEventID
 
 	//NOTE: in this method, we need to make sure eventVersion is NOT decreasing(otherwise we skip the events), eventID should be continuous(otherwise return error)
-	logger := m.logger.WithFields(bark.Fields{
-		logging.TagBranchID: *branch.BranchID,
-		logging.TagTreeID:   *branch.TreeID,
-	})
+	logger := m.logger.WithTags(tag.WorkflowBranchID(*branch.BranchID), tag.WorkflowTreeID(*branch.TreeID))
 
 	for _, b := range resp.History {
 		es, err := m.historySerializer.DeserializeBatchEvents(b)
@@ -319,49 +358,61 @@ func (m *historyV2ManagerImpl) readHistoryBranch(byBatch bool, request *ReadHist
 			}
 		}
 
-		fe := es[0]    // first
-		el := len(es)  // length
-		le := es[el-1] // last
+		firstEvent := es[0]           // first
+		eventCount := len(es)         // length
+		lastEvent := es[eventCount-1] // last
 
-		if *fe.Version != *le.Version || *fe.EventId+int64(el-1) != *le.EventId {
+		if firstEvent.GetVersion() != lastEvent.GetVersion() || firstEvent.GetEventId()+int64(eventCount-1) != lastEvent.GetEventId() {
 			// in a single batch, version should be the same, and ID should be continous
-			logger.Errorf("Corrupted event batch, %v, %v, %v, %v, %v", *fe.Version, *le.Version, *fe.EventId, *le.EventId, el)
+			logger.Error("Corrupted event batch",
+				tag.FirstEventVersion(firstEvent.GetVersion()), tag.WorkflowFirstEventID(firstEvent.GetEventId()),
+				tag.LastEventVersion(lastEvent.GetVersion()), tag.WorkflowNextEventID(lastEvent.GetEventId()),
+				tag.Counter(eventCount))
 			return nil, nil, nil, 0, 0, &workflow.InternalServiceError{
 				Message: fmt.Sprintf("corrupted history event batch, wrong version and IDs"),
 			}
 		}
 
-		if *fe.Version < token.LastEventVersion {
+		if firstEvent.GetVersion() < token.LastEventVersion {
 			// version decrease means the this batch are all stale events, we should skip
-			logger.Infof("Stale event batch with version: %v", *fe.Version)
+			logger.Info("Stale event batch with smaller version", tag.FirstEventVersion(firstEvent.GetVersion()), tag.TokenLastEventVersion(token.LastEventVersion))
 			continue
 		}
-
-		if *fe.EventId == token.LastEventID {
-			// we could see it because of batch with smaller txn_id
-			logger.Infof("Stale event batch with eventID: %v", *fe.EventId)
+		if firstEvent.GetEventId() <= token.LastEventID {
+			// we could see it because first batch of next page has a smaller txn_id
+			logger.Info("Stale event batch with eventID", tag.WorkflowFirstEventID(firstEvent.GetEventId()), tag.TokenLastEventID(token.LastEventID))
 			continue
 		}
-		if *fe.EventId != token.LastEventID+1 {
-			logger.Errorf("Corrupted incontinouous event batch, %v, %v, %v, %v, %v", *fe.Version, *le.Version, *fe.EventId, *le.EventId, el)
-			return nil, nil, nil, 0, 0, &workflow.InternalServiceError{
-				Message: fmt.Sprintf("corrupted history event batch, eventID is not continouous"),
+		if firstEvent.GetEventId() != token.LastEventID+1 {
+			// We assume application layer want to read from MinEventID(inclusive)
+			// However, for getting history from remote cluster, there is scenario that we have to read from middle without knowing the firstEventID.
+			// In that case we don't validate history continuousness for the first page
+			// TODO: in this case, some events returned can be invalid(stale). application layer need to make sure it won't make any problems to XDC
+			if defaultLastEventID == 0 || token.LastEventID != defaultLastEventID {
+				logger.Error("Corrupted incontinouous event batch",
+					tag.FirstEventVersion(firstEvent.GetVersion()), tag.WorkflowFirstEventID(firstEvent.GetEventId()),
+					tag.LastEventVersion(lastEvent.GetVersion()), tag.WorkflowNextEventID(lastEvent.GetEventId()),
+					tag.TokenLastEventVersion(token.LastEventVersion), tag.TokenLastEventID(token.LastEventID),
+					tag.Counter(eventCount))
+				return nil, nil, nil, 0, 0, &workflow.InternalServiceError{
+					Message: fmt.Sprintf("corrupted history event batch, eventID is not continouous"),
+				}
 			}
 		}
 
-		token.LastEventVersion = *fe.Version
-		token.LastEventID = *le.EventId
+		token.LastEventVersion = firstEvent.GetVersion()
+		token.LastEventID = lastEvent.GetEventId()
 		if byBatch {
 			historyBatches = append(historyBatches, &workflow.History{Events: es})
 		} else {
 			events = append(events, es...)
 		}
 		dataSize += len(b.Data)
-		lastFirstEventID = *fe.EventId
+		lastFirstEventID = firstEvent.GetEventId()
 	}
 
 	var nextToken []byte
-	if len(token.StoreToken) == 0 {
+	if len(resp.NextPageToken) == 0 {
 		if token.CurrentRangeIndex == token.FinalRangeIndex {
 			// this means that we have reached the final page of final branchRange
 			nextToken = nil

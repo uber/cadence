@@ -28,23 +28,11 @@ import (
 type (
 	// DomainRow represents a row in domain table
 	DomainRow struct {
-		ID                          UUID
-		Name                        string
-		Status                      int
-		Description                 string
-		OwnerEmail                  string
-		Data                        []byte
-		Retention                   int
-		EmitMetric                  bool
-		ArchivalBucket              string
-		ArchivalStatus              int
-		ConfigVersion               int64
-		NotificationVersion         int64
-		FailoverNotificationVersion int64
-		FailoverVersion             int64
-		IsGlobalDomain              bool
-		ActiveClusterName           string
-		Clusters                    []byte
+		ID           UUID
+		Name         string
+		Data         []byte
+		DataEncoding string
+		IsGlobal     bool
 	}
 
 	// DomainFilter contains the column names within domain table that
@@ -53,8 +41,10 @@ type (
 	// Name will be used for WHERE condition. When both ID and Name are nil,
 	// no WHERE clause will be used
 	DomainFilter struct {
-		ID   *UUID
-		Name *string
+		ID            *UUID
+		Name          *string
+		GreaterThanID *UUID
+		PageSize      *int
 	}
 
 	// DomainMetadataRow represents a row in domain_metadata table
@@ -64,17 +54,10 @@ type (
 
 	// ShardsRow represents a row in shards table
 	ShardsRow struct {
-		ShardID                   int64
-		Owner                     string
-		RangeID                   int64
-		StolenSinceRenew          int64
-		UpdatedAt                 time.Time
-		ReplicationAckLevel       int64
-		TransferAckLevel          int64
-		TimerAckLevel             time.Time
-		ClusterTransferAckLevel   []byte
-		ClusterTimerAckLevel      []byte
-		DomainNotificationVersion int64
+		ShardID      int64
+		RangeID      int64
+		Data         []byte
+		DataEncoding string
 	}
 
 	// ShardsFilter contains the column names within shards table that
@@ -85,20 +68,10 @@ type (
 
 	// TransferTasksRow represents a row in transfer_tasks table
 	TransferTasksRow struct {
-		ShardID                 int
-		TaskID                  int64
-		DomainID                UUID
-		WorkflowID              string
-		RunID                   UUID
-		TaskType                int
-		TargetDomainID          UUID
-		TargetWorkflowID        string
-		TargetRunID             UUID
-		TargetChildWorkflowOnly bool
-		TaskList                string
-		ScheduleID              int64
-		Version                 int64
-		VisibilityTimestamp     time.Time
+		ShardID      int
+		TaskID       int64
+		Data         []byte
+		DataEncoding string
 	}
 
 	// TransferTasksFilter contains the column names within transfer_tasks table that
@@ -112,61 +85,14 @@ type (
 
 	// ExecutionsRow represents a row in executions table
 	ExecutionsRow struct {
-		ShardID                      int
-		DomainID                     UUID
-		WorkflowID                   string
-		RunID                        UUID
-		ParentDomainID               *UUID
-		ParentWorkflowID             *string
-		ParentRunID                  *UUID
-		InitiatedID                  *int64
-		CompletionEventBatchID       *int64
-		CompletionEvent              *[]byte
-		CompletionEventEncoding      *string
-		TaskList                     string
-		WorkflowTypeName             string
-		WorkflowTimeoutSeconds       int64
-		DecisionTaskTimeoutMinutes   int64
-		ExecutionContext             *[]byte
-		State                        int64
-		CloseStatus                  int64
-		StartVersion                 int64
-		CurrentVersion               int64
-		LastWriteVersion             int64
-		LastWriteEventID             *int64
-		LastReplicationInfo          *[]byte
-		LastFirstEventID             int64
-		NextEventID                  int64
-		LastProcessedEvent           int64
-		StartTime                    time.Time
-		LastUpdatedTime              time.Time
-		CreateRequestID              string
-		DecisionVersion              int64
-		DecisionScheduleID           int64
-		DecisionStartedID            int64
-		DecisionRequestID            string
-		DecisionTimeout              int64
-		DecisionAttempt              int64
-		DecisionTimestamp            int64
-		CancelRequested              *int64
-		CancelRequestID              *string
-		StickyTaskList               string
-		StickyScheduleToStartTimeout int64
-		ClientLibraryVersion         string
-		ClientFeatureVersion         string
-		ClientImpl                   string
-		SignalCount                  int
-		HistorySize                  int64
-		CronSchedule                 string
-		HasRetryPolicy               bool
-		Attempt                      int
-		InitialInterval              int
-		BackoffCoefficient           float64
-		MaximumInterval              int
-		MaximumAttempts              int
-		ExpirationSeconds            int
-		ExpirationTime               time.Time
-		NonRetryableErrors           []byte
+		ShardID          int
+		DomainID         UUID
+		WorkflowID       string
+		RunID            UUID
+		NextEventID      int64
+		LastWriteVersion int64
+		Data             []byte
+		DataEncoding     string
 	}
 
 	// ExecutionsFilter contains the column names within domain table that
@@ -225,56 +151,55 @@ type (
 		TaskType     int64
 		TaskID       int64
 		TaskListName string
-		WorkflowID   string
-		RunID        UUID
-		ScheduleID   int64
-		ExpiryTs     time.Time
+		Data         []byte
+		DataEncoding string
 	}
 
 	// TasksFilter contains the column names within domain table that
 	// can be used to filter results through a WHERE clause
 	TasksFilter struct {
-		DomainID     UUID
-		TaskListName string
-		TaskType     int64
-		TaskID       *int64
-		MinTaskID    *int64
-		MaxTaskID    *int64
-		PageSize     *int
+		DomainID             UUID
+		TaskListName         string
+		TaskType             int64
+		TaskID               *int64
+		MinTaskID            *int64
+		MaxTaskID            *int64
+		TaskIDLessThanEquals *int64
+		Limit                *int
+		PageSize             *int
 	}
 
 	// TaskListsRow represents a row in task_lists table
 	TaskListsRow struct {
-		DomainID UUID
-		Name     string
-		TaskType int64
-		RangeID  int64
-		AckLevel int64
-		Kind     int64
-		ExpiryTs time.Time
+		ShardID      int
+		DomainID     UUID
+		Name         string
+		TaskType     int64
+		RangeID      int64
+		Data         []byte
+		DataEncoding string
 	}
 
 	// TaskListsFilter contains the column names within domain table that
 	// can be used to filter results through a WHERE clause
 	TaskListsFilter struct {
-		DomainID UUID
-		Name     string
-		TaskType int64
+		ShardID             int
+		DomainID            *UUID
+		Name                *string
+		TaskType            *int64
+		DomainIDGreaterThan *UUID
+		NameGreaterThan     *string
+		TaskTypeGreaterThan *int64
+		RangeID             *int64
+		PageSize            *int
 	}
 
 	// ReplicationTasksRow represents a row in replication_tasks table
 	ReplicationTasksRow struct {
-		ShardID             int
-		TaskID              int64
-		DomainID            UUID
-		WorkflowID          string
-		RunID               UUID
-		TaskType            int
-		FirstEventID        int64
-		NextEventID         int64
-		Version             int64
-		LastReplicationInfo []byte
-		ScheduledID         int64
+		ShardID      int
+		TaskID       int64
+		Data         []byte
+		DataEncoding string
 	}
 
 	// ReplicationTasksFilter contains the column names within domain table that
@@ -292,14 +217,8 @@ type (
 		ShardID             int
 		VisibilityTimestamp time.Time
 		TaskID              int64
-		DomainID            UUID
-		WorkflowID          string
-		RunID               UUID
-		TaskType            int
-		TimeoutType         int
-		EventID             int64
-		ScheduleAttempt     int64
-		Version             int64
+		Data                []byte
+		DataEncoding        string
 	}
 
 	// TimerTasksFilter contains the column names within domain table that
@@ -337,6 +256,49 @@ type (
 		PageSize     *int
 	}
 
+	// HistoryNodeRow represents a row in history_node table
+	HistoryNodeRow struct {
+		ShardID  int
+		TreeID   UUID
+		BranchID UUID
+		NodeID   int64
+		// use pointer so that it's easier to multiple by -1
+		TxnID        *int64
+		Data         []byte
+		DataEncoding string
+	}
+
+	// HistoryNodeFilter contains the column names within history_node table that
+	// can be used to filter results through a WHERE clause
+	HistoryNodeFilter struct {
+		ShardID  int
+		TreeID   UUID
+		BranchID UUID
+		// Inclusive
+		MinNodeID *int64
+		// Exclusive
+		MaxNodeID *int64
+		PageSize  *int
+	}
+
+	// HistoryTreeRow represents a row in history_tree table
+	HistoryTreeRow struct {
+		ShardID      int
+		TreeID       UUID
+		BranchID     UUID
+		InProgress   bool
+		Data         []byte
+		DataEncoding string
+	}
+
+	// HistoryTreeFilter contains the column names within history_tree table that
+	// can be used to filter results through a WHERE clause
+	HistoryTreeFilter struct {
+		ShardID  int
+		TreeID   UUID
+		BranchID *UUID
+	}
+
 	// ActivityInfoMapsRow represents a row in activity_info_maps table
 	ActivityInfoMapsRow struct {
 		ShardID                  int64
@@ -344,36 +306,10 @@ type (
 		WorkflowID               string
 		RunID                    UUID
 		ScheduleID               int64
-		Version                  int64
-		ScheduledEventBatchID    int64
-		ScheduledEvent           []byte
-		ScheduledEventEncoding   string
-		ScheduledTime            time.Time
-		StartedID                int64
-		StartedEvent             *[]byte
-		StartedEventEncoding     string
-		StartedTime              time.Time
-		ActivityID               string
-		RequestID                string
-		Details                  *[]byte
-		ScheduleToStartTimeout   int64
-		ScheduleToCloseTimeout   int64
-		StartToCloseTimeout      int64
-		HeartbeatTimeout         int64
-		CancelRequested          int64
-		CancelRequestID          int64
+		Data                     []byte
+		DataEncoding             string
+		LastHeartbeatDetails     []byte
 		LastHeartbeatUpdatedTime time.Time
-		TimerTaskStatus          int64
-		Attempt                  int64
-		TaskList                 string
-		StartedIdentity          string
-		HasRetryPolicy           int64
-		InitInterval             int64
-		BackoffCoefficient       float64
-		MaxInterval              int64
-		ExpirationTime           time.Time
-		MaxAttempts              int64
-		NonRetriableErrors       *[]byte
 	}
 
 	// ActivityInfoMapsFilter contains the column names within domain table that
@@ -388,15 +324,13 @@ type (
 
 	// TimerInfoMapsRow represents a row in timer_info_maps table
 	TimerInfoMapsRow struct {
-		ShardID    int64
-		DomainID   UUID
-		WorkflowID string
-		RunID      UUID
-		TimerID    string
-		Version    int64
-		StartedID  int64
-		ExpiryTime time.Time
-		TaskID     int64
+		ShardID      int64
+		DomainID     UUID
+		WorkflowID   string
+		RunID        UUID
+		TimerID      string
+		Data         []byte
+		DataEncoding string
 	}
 
 	// TimerInfoMapsFilter contains the column names within domain table that
@@ -411,23 +345,13 @@ type (
 
 	// ChildExecutionInfoMapsRow represents a row in child_execution_info_maps table
 	ChildExecutionInfoMapsRow struct {
-		ShardID                int64
-		DomainID               UUID
-		WorkflowID             string
-		RunID                  UUID
-		InitiatedID            int64
-		Version                int64
-		InitiatedEventBatchID  int64
-		InitiatedEvent         *[]byte
-		InitiatedEventEncoding string
-		StartedID              int64
-		StartedWorkflowID      string
-		StartedRunID           string
-		StartedEvent           *[]byte
-		StartedEventEncoding   string
-		CreateRequestID        string
-		DomainName             string
-		WorkflowTypeName       string
+		ShardID      int64
+		DomainID     UUID
+		WorkflowID   string
+		RunID        UUID
+		InitiatedID  int64
+		Data         []byte
+		DataEncoding string
 	}
 
 	// ChildExecutionInfoMapsFilter contains the column names within domain table that
@@ -442,13 +366,13 @@ type (
 
 	// RequestCancelInfoMapsRow represents a row in request_cancel_info_maps table
 	RequestCancelInfoMapsRow struct {
-		ShardID         int64
-		DomainID        UUID
-		WorkflowID      string
-		RunID           UUID
-		InitiatedID     int64
-		Version         int64
-		CancelRequestID string
+		ShardID      int64
+		DomainID     UUID
+		WorkflowID   string
+		RunID        UUID
+		InitiatedID  int64
+		Data         []byte
+		DataEncoding string
 	}
 
 	// RequestCancelInfoMapsFilter contains the column names within domain table that
@@ -463,16 +387,13 @@ type (
 
 	// SignalInfoMapsRow represents a row in signal_info_maps table
 	SignalInfoMapsRow struct {
-		ShardID         int64
-		DomainID        UUID
-		WorkflowID      string
-		RunID           UUID
-		InitiatedID     int64
-		Version         int64
-		SignalRequestID string
-		SignalName      string
-		Input           *[]byte
-		Control         *[]byte
+		ShardID      int64
+		DomainID     UUID
+		WorkflowID   string
+		RunID        UUID
+		InitiatedID  int64
+		Data         []byte
+		DataEncoding string
 	}
 
 	// SignalInfoMapsFilter contains the column names within domain table that
@@ -487,17 +408,19 @@ type (
 
 	// BufferedReplicationTaskMapsRow represents a row in buffered_replication_task_maps table
 	BufferedReplicationTaskMapsRow struct {
-		ShardID               int64
-		DomainID              UUID
-		WorkflowID            string
-		RunID                 UUID
-		FirstEventID          int64
-		NextEventID           int64
-		Version               int64
-		History               *[]byte
-		HistoryEncoding       string
-		NewRunHistory         *[]byte
-		NewRunHistoryEncoding string
+		ShardID                 int64
+		DomainID                UUID
+		WorkflowID              string
+		RunID                   UUID
+		FirstEventID            int64
+		NextEventID             int64
+		Version                 int64
+		History                 *[]byte
+		HistoryEncoding         string
+		NewRunHistory           *[]byte
+		NewRunHistoryEncoding   string
+		EventStoreVersion       int32
+		NewRunEventStoreVersion int32
 	}
 
 	// BufferedReplicationTaskMapsFilter contains the column names within domain table that
@@ -536,9 +459,12 @@ type (
 		WorkflowTypeName string
 		WorkflowID       string
 		StartTime        time.Time
+		ExecutionTime    time.Time
 		CloseStatus      *int32
 		CloseTime        *time.Time
 		HistoryLength    *int64
+		Memo             []byte
+		Encoding         string
 	}
 
 	// VisibilityFilter contains the column names within domain table that
@@ -581,27 +507,47 @@ type (
 		// Required filter params - {domainID, tasklistName, taskType, minTaskID, maxTaskID, pageSize}
 		SelectFromTasks(filter *TasksFilter) ([]TasksRow, error)
 		// DeleteFromTasks deletes a row from tasks table
-		// Required filter params - {domainID, tasklistName, taskType, taskID}
+		// Required filter params:
+		//  to delete single row
+		//     - {domainID, tasklistName, taskType, taskID}
+		//  to delete multiple rows
+		//    - {domainID, tasklistName, taskType, taskIDLessThanEquals, limit }
+		//    - this will delete upto limit number of tasks less than or equal to the given task id
 		DeleteFromTasks(filter *TasksFilter) (sql.Result, error)
 
 		InsertIntoTaskLists(row *TaskListsRow) (sql.Result, error)
 		ReplaceIntoTaskLists(row *TaskListsRow) (sql.Result, error)
 		UpdateTaskLists(row *TaskListsRow) (sql.Result, error)
-		SelectFromTaskLists(filter *TaskListsFilter) (*TaskListsRow, error)
+		// SelectFromTaskLists returns one or more rows from task_lists table
+		// Required Filter params:
+		//  to read a single row: {shardID, domainID, name, taskType}
+		//  to range read multiple rows: {shardID, domainIDGreaterThan, nameGreaterThan, taskTypeGreaterThan, pageSize}
+		SelectFromTaskLists(filter *TaskListsFilter) ([]TaskListsRow, error)
 		DeleteFromTaskLists(filter *TaskListsFilter) (sql.Result, error)
 		LockTaskLists(filter *TaskListsFilter) (int64, error)
 
+		// eventsV1: will be deprecated in favor of eventsV2
 		InsertIntoEvents(row *EventsRow) (sql.Result, error)
 		UpdateEvents(rows *EventsRow) (sql.Result, error)
 		SelectFromEvents(filter *EventsFilter) ([]EventsRow, error)
 		DeleteFromEvents(filter *EventsFilter) (sql.Result, error)
 		LockEvents(filter *EventsFilter) (*EventsRow, error)
 
+		// eventsV2
+		InsertIntoHistoryNode(row *HistoryNodeRow) (sql.Result, error)
+		SelectFromHistoryNode(filter *HistoryNodeFilter) ([]HistoryNodeRow, error)
+		DeleteFromHistoryNode(filter *HistoryNodeFilter) (sql.Result, error)
+		InsertIntoHistoryTree(row *HistoryTreeRow) (sql.Result, error)
+		SelectFromHistoryTree(filter *HistoryTreeFilter) ([]HistoryTreeRow, error)
+		UpdateHistoryTree(row *HistoryTreeRow) (sql.Result, error)
+		DeleteFromHistoryTree(filter *HistoryTreeFilter) (sql.Result, error)
+
 		InsertIntoExecutions(row *ExecutionsRow) (sql.Result, error)
 		UpdateExecutions(row *ExecutionsRow) (sql.Result, error)
 		SelectFromExecutions(filter *ExecutionsFilter) (*ExecutionsRow, error)
 		DeleteFromExecutions(filter *ExecutionsFilter) (sql.Result, error)
-		LockExecutions(filter *ExecutionsFilter) (int, error)
+		ReadLockExecutions(filter *ExecutionsFilter) (int, error)
+		WriteLockExecutions(filter *ExecutionsFilter) (int, error)
 
 		LockCurrentExecutionsJoinExecutions(filter *CurrentExecutionsFilter) ([]CurrentExecutionsRow, error)
 
@@ -719,8 +665,11 @@ type (
 		// - multiple rows - {shardID, domainID, workflowID, runID}
 		DeleteFromSignalsRequestedSets(filter *SignalsRequestedSetsFilter) (sql.Result, error)
 
+		// InsertIntoVisibility inserts a row into visibility table. If a row already exist,
+		// no changes will be made by this API
 		InsertIntoVisibility(row *VisibilityRow) (sql.Result, error)
-		UpdateVisibility(row *VisibilityRow) (sql.Result, error)
+		// ReplaceIntoVisibility deletes old row (if it exist) and inserts new row into visibility table
+		ReplaceIntoVisibility(row *VisibilityRow) (sql.Result, error)
 		// SelectFromVisibility returns one or more rows from visibility table
 		// Required filter params:
 		// - getClosedWorkflowExecution - retrieves single row - {domainID, runID, closed=true}
@@ -730,6 +679,7 @@ type (
 		//   - OPTIONALLY specify one of following params
 		//     - workflowID, workflowTypeName, closeStatus (along with closed=true)
 		SelectFromVisibility(filter *VisibilityFilter) ([]VisibilityRow, error)
+		DeleteFromVisibility(filter *VisibilityFilter) (sql.Result, error)
 	}
 
 	// Tx defines the API for a SQL transaction

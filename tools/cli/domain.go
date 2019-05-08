@@ -101,6 +101,14 @@ func newDomainCommands() []cli.Command {
 					Name:  FlagSecurityTokenWithAlias,
 					Usage: "Security token with permission",
 				},
+				cli.StringFlag{
+					Name:  FlagArchivalStatusWithAlias,
+					Usage: "Flag to set archival status, valid values are \"disabled\" and \"enabled\"",
+				},
+				cli.StringFlag{
+					Name:  FlagArchivalBucketNameWithAlias,
+					Usage: "Optionally specify bucket (cannot be changed after first time archival is enabled)",
+				},
 			},
 			Action: func(c *cli.Context) {
 				RegisterDomain(c)
@@ -143,6 +151,26 @@ func newDomainCommands() []cli.Command {
 					Name:  FlagSecurityTokenWithAlias,
 					Usage: "Security token with permission ",
 				},
+				cli.StringFlag{
+					Name:  FlagArchivalStatusWithAlias,
+					Usage: "Flag to set archival status, valid values are \"disabled\" and \"enabled\"",
+				},
+				cli.StringFlag{
+					Name:  FlagArchivalBucketNameWithAlias,
+					Usage: "Optionally specify bucket (cannot be changed after first time archival is enabled)",
+				},
+				cli.StringFlag{
+					Name:  FlagAddBadBinary,
+					Usage: "Binary checksum to add for resetting workflow",
+				},
+				cli.StringFlag{
+					Name:  FlagRemoveBadBinary,
+					Usage: "Binary checksum to remove for resetting workflow",
+				},
+				cli.StringFlag{
+					Name:  FlagReason,
+					Usage: "Reason for the operation",
+				},
 			},
 			Action: func(c *cli.Context) {
 				UpdateDomain(c)
@@ -152,6 +180,12 @@ func newDomainCommands() []cli.Command {
 			Name:    "describe",
 			Aliases: []string{"desc"},
 			Usage:   "Describe existing workflow domain",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagDomainID,
+					Usage: "Domain UUID (required if not specify domainName)",
+				},
+			},
 			Action: func(c *cli.Context) {
 				DescribeDomain(c)
 			},

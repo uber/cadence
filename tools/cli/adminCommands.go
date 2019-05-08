@@ -23,15 +23,16 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
-
 	"io/ioutil"
+	"strconv"
+	"time"
 
 	"github.com/gocql/gocql"
-	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
 	cassp "github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/tools/cassandra"
@@ -47,13 +48,14 @@ func AdminShowWorkflow(c *cli.Context) {
 	rid := c.String(FlagRunID)
 	tid := c.String(FlagTreeID)
 	bid := c.String(FlagBranchID)
+	sid := c.Int(FlagShardID)
 	outputFileName := c.String(FlagOutputFilename)
 
 	session := connectToCassandra(c)
-	serializer := persistence.NewHistorySerializer()
+	serializer := persistence.NewPayloadSerializer()
 	var history []*persistence.DataBlob
 	if len(wid) != 0 {
-		histV1 := cassp.NewHistoryPersistenceFromSession(session, bark.NewNopLogger())
+		histV1 := cassp.NewHistoryPersistenceFromSession(session, loggerimpl.NewNopLogger())
 		resp, err := histV1.GetWorkflowExecutionHistory(&persistence.InternalGetWorkflowExecutionHistoryRequest{
 			LastEventBatchVersion: common.EmptyVersion,
 			DomainID:              domainID,
@@ -70,16 +72,15 @@ func AdminShowWorkflow(c *cli.Context) {
 		}
 
 		history = resp.History
-
 	} else if len(tid) != 0 {
-		histV2 := cassp.NewHistoryV2PersistenceFromSession(session, bark.NewNopLogger())
-
+		histV2 := cassp.NewHistoryV2PersistenceFromSession(session, loggerimpl.NewNopLogger())
 		resp, err := histV2.ReadHistoryBranch(&persistence.InternalReadHistoryBranchRequest{
 			TreeID:    tid,
 			BranchID:  bid,
 			MinNodeID: 1,
 			MaxNodeID: maxEventID,
 			PageSize:  maxEventID,
+			ShardID:   sid,
 		})
 		if err != nil {
 			ErrorAndExit("ReadHistoryBranch err", err)
@@ -87,7 +88,7 @@ func AdminShowWorkflow(c *cli.Context) {
 
 		history = resp.History
 	} else {
-		ErrorAndExit("need to specify either WorkflowId/RunID for v1, or TreeID/BranchID for v2", nil)
+		ErrorAndExit("need to specify either WorkflowId/RunID for v1, or TreeID/BranchID/ShardID for v2", nil)
 	}
 
 	if len(history) == 0 {
@@ -126,32 +127,15 @@ func AdminShowWorkflow(c *cli.Context) {
 
 // AdminDescribeWorkflow describe a new workflow execution for admin
 func AdminDescribeWorkflow(c *cli.Context) {
-	adminClient := cFactory.ServerAdminClient(c)
 
-	domain := getRequiredGlobalOption(c, FlagDomain)
-	wid := getRequiredOption(c, FlagWorkflowID)
-	rid := c.String(FlagRunID)
-
-	ctx, cancel := newContext()
-	defer cancel()
-
-	resp, err := adminClient.DescribeWorkflowExecution(ctx, &admin.DescribeWorkflowExecutionRequest{
-		Domain: common.StringPtr(domain),
-		Execution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(wid),
-			RunId:      common.StringPtr(rid),
-		},
-	})
-	if err != nil {
-		ErrorAndExit("Describe workflow execution failed", err)
-	}
+	resp := describeMutableState(c)
 
 	prettyPrintJSONObject(resp)
 
 	if resp != nil {
 		msStr := resp.GetMutableStateInDatabase()
 		ms := persistence.WorkflowMutableState{}
-		err = json.Unmarshal([]byte(msStr), &ms)
+		err := json.Unmarshal([]byte(msStr), &ms)
 		if err != nil {
 			ErrorAndExit("json.Unmarshal err", err)
 		}
@@ -163,54 +147,132 @@ func AdminDescribeWorkflow(c *cli.Context) {
 				ErrorAndExit("thriftrwEncoder.Decode err", err)
 			}
 			prettyPrintJSONObject(branchInfo)
+			if ms.ExecutionInfo.AutoResetPoints != nil {
+				fmt.Println("auto-reset-points:")
+				for _, p := range ms.ExecutionInfo.AutoResetPoints.Points {
+					createT := time.Unix(0, p.GetCreatedTimeNano())
+					expireT := time.Unix(0, p.GetExpiringTimeNano())
+					fmt.Println(p.GetBinaryChecksum(), p.GetRunId(), p.GetFirstDecisionCompletedId(), p.GetResettable(), createT, expireT)
+				}
+			}
 		}
 	}
 }
 
+func describeMutableState(c *cli.Context) *admin.DescribeWorkflowExecutionResponse {
+	adminClient := cFactory.ServerAdminClient(c)
+
+	domain := getRequiredGlobalOption(c, FlagDomain)
+	wid := getRequiredOption(c, FlagWorkflowID)
+	rid := c.String(FlagRunID)
+
+	ctx, cancel := newContext(c)
+	defer cancel()
+
+	resp, err := adminClient.DescribeWorkflowExecution(ctx, &admin.DescribeWorkflowExecutionRequest{
+		Domain: common.StringPtr(domain),
+		Execution: &shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(wid),
+			RunId:      common.StringPtr(rid),
+		},
+	})
+	if err != nil {
+		ErrorAndExit("Get workflow mutableState failed", err)
+	}
+	return resp
+}
+
 // AdminDeleteWorkflow describe a new workflow execution for admin
 func AdminDeleteWorkflow(c *cli.Context) {
-	domainID := getRequiredOption(c, FlagDomainID)
 	wid := getRequiredOption(c, FlagWorkflowID)
-	rid := getRequiredOption(c, FlagRunID)
-	if !c.IsSet(FlagShardID) {
-		ErrorAndExit("shardID is required", nil)
-	}
-	shardID := c.Int(FlagShardID)
+	rid := c.String(FlagRunID)
 
+	resp := describeMutableState(c)
+	msStr := resp.GetMutableStateInDatabase()
+	ms := persistence.WorkflowMutableState{}
+	err := json.Unmarshal([]byte(msStr), &ms)
+	if err != nil {
+		ErrorAndExit("json.Unmarshal err", err)
+	}
+	domainID := ms.ExecutionInfo.DomainID
+	skipError := c.Bool(FlagSkipErrorMode)
 	session := connectToCassandra(c)
-
-	var err error
-	permanentRunID := "30000000-0000-f000-f000-000000000001"
-	selectTmpl := "select execution from executions where shard_id = ? and type = 1 and domain_id = ? and workflow_id = ? and run_id = ? "
-	deleteTmpl := "delete from executions where shard_id = ? and type = 1 and domain_id = ? and workflow_id = ? and run_id = ? "
-
-	query := session.Query(selectTmpl, shardID, domainID, wid, permanentRunID)
-	_, err = readOneRow(query)
+	shardID := resp.GetShardId()
+	shardIDInt, err := strconv.Atoi(shardID)
 	if err != nil {
-		fmt.Printf("readOneRow for permanentRunID, %v, skip \n", err)
-	} else {
-
-		query := session.Query(deleteTmpl, shardID, domainID, wid, permanentRunID)
-		err := query.Exec()
+		ErrorAndExit("strconv.Atoi(shardID) err", err)
+	}
+	if ms.ExecutionInfo.EventStoreVersion == persistence.EventStoreVersionV2 {
+		branchInfo := shared.HistoryBranch{}
+		thriftrwEncoder := codec.NewThriftRWEncoder()
+		err := thriftrwEncoder.Decode(ms.ExecutionInfo.BranchToken, &branchInfo)
 		if err != nil {
-			ErrorAndExit("delete row failed", err)
+			ErrorAndExit("thriftrwEncoder.Decode err", err)
 		}
-		fmt.Println("delete row successfully")
+		fmt.Println("deleting history events for ...")
+		prettyPrintJSONObject(branchInfo)
+		histV2 := cassp.NewHistoryV2PersistenceFromSession(session, loggerimpl.NewNopLogger())
+		err = histV2.DeleteHistoryBranch(&persistence.InternalDeleteHistoryBranchRequest{
+			BranchInfo: branchInfo,
+			ShardID:    shardIDInt,
+		})
+		if err != nil {
+			if skipError {
+				fmt.Println("failed to delete history, ", err)
+			} else {
+				ErrorAndExit("DeleteHistoryBranch err", err)
+			}
+		}
+	} else {
+		histV1 := cassp.NewHistoryPersistenceFromSession(session, loggerimpl.NewNopLogger())
+		err = histV1.DeleteWorkflowExecutionHistory(&persistence.DeleteWorkflowExecutionHistoryRequest{
+			DomainID: domainID,
+			Execution: shared.WorkflowExecution{
+				WorkflowId: common.StringPtr(wid),
+				RunId:      common.StringPtr(rid),
+			},
+		})
+		if err != nil {
+			if skipError {
+				fmt.Println("failed to delete history, ", err)
+			} else {
+				ErrorAndExit("DeleteWorkflowExecutionHistory err", err)
+			}
+		}
 	}
 
-	query = session.Query(selectTmpl, shardID, domainID, wid, rid)
-	_, err = readOneRow(query)
-	if err != nil {
-		fmt.Printf("readOneRow for rid %v, %v, skip \n", rid, err)
-	} else {
-
-		query := session.Query(deleteTmpl, shardID, domainID, wid, rid)
-		err := query.Exec()
-		if err != nil {
-			ErrorAndExit("delete row failed", err)
-		}
-		fmt.Println("delete row successfully")
+	exeStore := cassp.NewWorkflowExecutionPersistenceFromSession(session, shardIDInt, loggerimpl.NewNopLogger())
+	req := &persistence.DeleteWorkflowExecutionRequest{
+		DomainID:   domainID,
+		WorkflowID: wid,
+		RunID:      rid,
 	}
+
+	err = exeStore.DeleteWorkflowExecution(req)
+	if err != nil {
+		if skipError {
+			fmt.Println("delete mutableState row failed, ", err)
+		} else {
+			ErrorAndExit("delete mutableState row failed", err)
+		}
+	}
+	fmt.Println("delete mutableState row successfully")
+
+	deleteCurrentReq := &persistence.DeleteCurrentWorkflowExecutionRequest{
+		DomainID:   domainID,
+		WorkflowID: wid,
+		RunID:      rid,
+	}
+
+	err = exeStore.DeleteCurrentWorkflowExecution(deleteCurrentReq)
+	if err != nil {
+		if skipError {
+			fmt.Println("delete current row failed, ", err)
+		} else {
+			ErrorAndExit("delete current row failed", err)
+		}
+	}
+	fmt.Println("delete current row successfully")
 }
 
 func readOneRow(query *gocql.Query) (map[string]interface{}, error) {
@@ -314,7 +376,7 @@ func AdminDescribeHistoryHost(c *cli.Context) {
 		return
 	}
 
-	ctx, cancel := newContext()
+	ctx, cancel := newContext(c)
 	defer cancel()
 
 	req := &shared.DescribeHistoryHostRequest{}

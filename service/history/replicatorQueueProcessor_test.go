@@ -21,21 +21,21 @@
 package history
 
 import (
-	"os"
 	"testing"
 	"time"
 
 	"github.com/pborman/uuid"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
+	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
@@ -46,7 +46,7 @@ import (
 type (
 	replicatorQueueProcessorSuite struct {
 		currentClusterNamer string
-		logger              bark.Logger
+		logger              log.Logger
 		mockShard           ShardContext
 		mockExecutionMgr    *mocks.ExecutionManager
 		mockHistoryMgr      *mocks.HistoryManager
@@ -69,9 +69,6 @@ func TestReplicatorQueueProcessorSuite(t *testing.T) {
 }
 
 func (s *replicatorQueueProcessorSuite) SetupSuite() {
-	if testing.Verbose() {
-		log.SetOutput(os.Stdout)
-	}
 
 }
 
@@ -82,9 +79,7 @@ func (s *replicatorQueueProcessorSuite) TearDownSuite() {
 func (s *replicatorQueueProcessorSuite) SetupTest() {
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.currentClusterNamer = cluster.TestCurrentClusterName
-	log2 := log.New()
-	log2.Level = log.DebugLevel
-	s.logger = bark.NewLoggerFromLogrus(log2)
+	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
 	s.mockHistoryMgr = &mocks.HistoryManager{}
 	s.mockHistoryV2Mgr = &mocks.HistoryV2Manager{}
@@ -93,7 +88,7 @@ func (s *replicatorQueueProcessorSuite) SetupTest() {
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
 	s.mockClientBean = &client.MockClientBean{}
-	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean, s.logger)
+	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean)
 	s.mockShard = &shardContextImpl{
 		service:                   s.mockService,
 		shardInfo:                 &persistence.ShardInfo{ShardID: 0, RangeID: 1, TransferAckLevel: 0},
@@ -335,7 +330,7 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_ActivityRetry() {
 			ScheduledTime:     common.Int64Ptr(activityScheduledTime.UnixNano()),
 			StartedId:         common.Int64Ptr(activityStartedID),
 			StartedTime:       nil,
-			LastHeartbeatTime: nil,
+			LastHeartbeatTime: common.Int64Ptr(activityHeartbeatTime.UnixNano()),
 			Details:           activityDetails,
 			Attempt:           common.Int32Ptr(activityAttempt),
 		},
@@ -437,4 +432,41 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_ActivityRunning() {
 
 	_, err := s.replicatorQueueProcessor.process(task, true)
 	s.Nil(err)
+}
+
+func (s *replicatorQueueProcessorSuite) TestPaginateHistoryWithShardID() {
+	domainID := validDomainID
+	workflowID := "some random workflow ID"
+	runID := uuid.New()
+	firstEventID := int64(133)
+	nextEventID := int64(134)
+	pageSize := 1
+	shardID := common.IntPtr(1)
+
+	req := &persistence.ReadHistoryBranchRequest{
+		BranchToken:   []byte{},
+		MinEventID:    firstEventID,
+		MaxEventID:    nextEventID,
+		PageSize:      pageSize,
+		NextPageToken: []byte{},
+		ShardID:       shardID,
+	}
+	s.mockHistoryV2Mgr.On("ReadHistoryBranch", req).Return(&persistence.ReadHistoryBranchResponse{
+		HistoryEvents: []*workflow.HistoryEvent{
+			{
+				EventId: common.Int64Ptr(int64(1)),
+			},
+		},
+		NextPageToken:    []byte{},
+		Size:             1,
+		LastFirstEventID: nextEventID,
+	}, nil).Once()
+	hEvents, bEvents, token, size, err := PaginateHistory(s.mockHistoryMgr, s.mockHistoryV2Mgr, nil, nil,
+		false, domainID, workflowID, runID, firstEventID, nextEventID, []byte{},
+		persistence.EventStoreVersionV2, []byte{}, pageSize, shardID)
+	s.NotNil(hEvents)
+	s.NotNil(bEvents)
+	s.NotNil(token)
+	s.Equal(1, size)
+	s.NoError(err)
 }

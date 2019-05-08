@@ -22,13 +22,14 @@ package messaging
 
 import (
 	"errors"
+
 	"github.com/Shopify/sarama"
-	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/codec/gob"
-	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 )
 
 type (
@@ -37,22 +38,20 @@ type (
 		producer   sarama.SyncProducer
 		msgEncoder codec.BinaryEncoder
 		gobEncoder *gob.Encoder
-		logger     bark.Logger
+		logger     log.Logger
 	}
 )
 
 var _ Producer = (*kafkaProducer)(nil)
 
 // NewKafkaProducer is used to create the Kafka based producer implementation
-func NewKafkaProducer(topic string, producer sarama.SyncProducer, logger bark.Logger) Producer {
+func NewKafkaProducer(topic string, producer sarama.SyncProducer, logger log.Logger) Producer {
 	return &kafkaProducer{
 		topic:      topic,
 		producer:   producer,
 		msgEncoder: codec.NewThriftRWEncoder(),
 		gobEncoder: gob.NewGobEncoder(),
-		logger: logger.WithFields(bark.Fields{
-			logging.TagTopicName: topic,
-		}),
+		logger:     logger.WithTags(tag.KafkaTopicName(topic)),
 	}
 }
 
@@ -65,13 +64,12 @@ func (p *kafkaProducer) Publish(msg interface{}) error {
 
 	partition, offset, err := p.producer.SendMessage(message)
 	if err != nil {
-		p.logger.WithFields(bark.Fields{
-			logging.TagPartition:    partition,
-			logging.TagPartitionKey: message.Key,
-			logging.TagOffset:       offset,
-			logging.TagErr:          err,
-		}).Warn("Failed to publish message to kafka")
-		return err
+		p.logger.Warn("Failed to publish message to kafka",
+			tag.KafkaPartition(partition),
+			tag.KafkaPartitionKey(message.Key),
+			tag.KafkaOffset(offset),
+			tag.Error(err))
+		return p.convertErr(err)
 	}
 
 	return nil
@@ -90,10 +88,8 @@ func (p *kafkaProducer) PublishBatch(msgs []interface{}) error {
 
 	err := p.producer.SendMessages(producerMsgs)
 	if err != nil {
-		p.logger.WithFields(bark.Fields{
-			logging.TagErr: err,
-		}).Warn("Failed to publish batch of messages to kafka")
-		return err
+		p.logger.Warn("Failed to publish batch of messages to kafka", tag.Error(err))
+		return p.convertErr(err)
 	}
 
 	return nil
@@ -101,15 +97,13 @@ func (p *kafkaProducer) PublishBatch(msgs []interface{}) error {
 
 // Close is used to close Kafka publisher
 func (p *kafkaProducer) Close() error {
-	return p.producer.Close()
+	return p.convertErr(p.producer.Close())
 }
 
 func (p *kafkaProducer) serializeThrift(input codec.ThriftObject) ([]byte, error) {
 	payload, err := p.msgEncoder.Encode(input)
 	if err != nil {
-		p.logger.WithFields(bark.Fields{
-			logging.TagErr: err,
-		}).Error("Failed to serialize thrift object")
+		p.logger.Error("Failed to serialize thrift object", tag.Error(err))
 
 		return nil, err
 	}
@@ -169,5 +163,14 @@ func (p *kafkaProducer) getProducerMessage(message interface{}) (*sarama.Produce
 		return msg, nil
 	default:
 		return nil, errors.New("unknown producer message type")
+	}
+}
+
+func (p *kafkaProducer) convertErr(err error) error {
+	switch err {
+	case sarama.ErrMessageSizeTooLarge:
+		return ErrMessageSizeLimit
+	default:
+		return err
 	}
 }

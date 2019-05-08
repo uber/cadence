@@ -24,11 +24,11 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/olivere/elastic"
-	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
 	es "github.com/uber/cadence/common/elasticsearch"
-	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"time"
@@ -60,7 +60,7 @@ type (
 		processor     ElasticBulkProcessor
 		mapToKafkaMsg collection.ConcurrentTxMap // used to map ES request to kafka message
 		config        *Config
-		logger        bark.Logger
+		logger        log.Logger
 		metricsClient metrics.Client
 	}
 )
@@ -76,12 +76,10 @@ const (
 
 // NewESProcessorAndStart create new ESProcessor and start
 func NewESProcessorAndStart(config *Config, client es.Client, processorName string,
-	logger bark.Logger, metricsClient metrics.Client) (ESProcessor, error) {
+	logger log.Logger, metricsClient metrics.Client) (ESProcessor, error) {
 	p := &esProcessorImpl{
-		config: config,
-		logger: logger.WithFields(bark.Fields{
-			logging.TagWorkflowComponent: logging.TagValueIndexerESProcessorComponent,
-		}),
+		config:        config,
+		logger:        logger.WithTags(tag.ComponentIndexerESProcessor),
 		metricsClient: metricsClient,
 	}
 
@@ -92,6 +90,7 @@ func NewESProcessorAndStart(config *Config, client es.Client, processorName stri
 		BulkSize:      config.ESProcessorBulkSize(),
 		FlushInterval: config.ESProcessorFlushInterval(),
 		Backoff:       elastic.NewExponentialBackoff(esProcessorInitialRetryInterval, esProcessorMaxRetryInterval),
+		BeforeFunc:    p.bulkBeforeAction,
 		AfterFunc:     p.bulkAfterAction,
 	}
 	processor, err := client.RunBulkProcessor(context.Background(), params)
@@ -111,11 +110,20 @@ func (p *esProcessorImpl) Stop() {
 
 // Add an ES request, and an map item for kafka message
 func (p *esProcessorImpl) Add(request elastic.BulkableRequest, key string, kafkaMsg messaging.Message) {
-	if p.mapToKafkaMsg.Contains(key) { // handle duplicate delete message
-		p.ackKafkaMsg(key)
+	actionWhenFoundDuplicates := func(key interface{}, value interface{}) error {
+		kafkaMsg.Ack()
+		return nil
 	}
-	p.mapToKafkaMsg.Put(key, kafkaMsg)
+	_, isDup, _ := p.mapToKafkaMsg.PutOrDo(key, kafkaMsg, actionWhenFoundDuplicates)
+	if isDup {
+		return
+	}
 	p.processor.Add(request)
+}
+
+// bulkBeforeAction is triggered before bulk processor commit
+func (p *esProcessorImpl) bulkBeforeAction(executionID int64, requests []elastic.BulkableRequest) {
+	p.metricsClient.AddCounter(metrics.ESProcessorScope, metrics.ESProcessorRequests, int64(len(requests)))
 }
 
 // bulkAfterAction is triggered after bulk processor commit
@@ -123,15 +131,10 @@ func (p *esProcessorImpl) bulkAfterAction(id int64, requests []elastic.BulkableR
 	if err != nil {
 		// This happens after configured retry, which means something bad happens on cluster or index
 		// When cluster back to live, processor will re-commit those failure requests
-		p.logger.WithFields(bark.Fields{
-			logging.TagErr: err,
-		}).Error("Error commit bulk request.")
+		p.logger.Error("Error commit bulk request.", tag.Error(err))
 
 		for _, request := range requests {
-			p.logger.WithFields(bark.Fields{
-				logging.TagESRequest: request.String(),
-			}).Error("ES request failed.")
-
+			p.logger.Error("ES request failed.", tag.ESRequest(request.String()))
 			p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorFailures)
 		}
 		return
@@ -149,9 +152,12 @@ func (p *esProcessorImpl) bulkAfterAction(id int64, requests []elastic.BulkableR
 			case isResponseSuccess(resp.Status):
 				p.ackKafkaMsg(key)
 			case !isResponseRetriable(resp.Status):
+				p.logger.Error("ES request failed.",
+					tag.ESResponseStatus(resp.Status), tag.ESResponseError(getErrorMsgFromESResp(resp)))
 				p.nackKafkaMsg(key)
-			default:
-				// do nothing, bulk processor will retry
+			default: // bulk processor will retry
+				p.logger.Info("ES request retried.", tag.ESResponseStatus(resp.Status))
+				p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorRetries)
 			}
 		}
 	}
@@ -172,9 +178,7 @@ func (p *esProcessorImpl) ackKafkaMsgHelper(key string, nack bool) {
 	}
 	kafkaMsg, ok := msg.(messaging.Message)
 	if !ok { // must be bug in code and bad deployment
-		p.logger.WithFields(bark.Fields{
-			logging.TagESKey: key,
-		}).Fatal("Message is not kafka message.")
+		p.logger.Fatal("Message is not kafka message.", tag.ESKey(key))
 	}
 
 	if nack {
@@ -197,10 +201,7 @@ func (p *esProcessorImpl) hashFn(key interface{}) uint32 {
 func (p *esProcessorImpl) getKeyForKafkaMsg(request elastic.BulkableRequest) string {
 	req, err := request.Source()
 	if err != nil {
-		p.logger.WithFields(bark.Fields{
-			logging.TagErr:       err,
-			logging.TagESRequest: request.String(),
-		}).Error("Get request source err.")
+		p.logger.Error("Get request source err.", tag.Error(err), tag.ESRequest(request.String()))
 		p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
 		return ""
 	}
@@ -209,9 +210,7 @@ func (p *esProcessorImpl) getKeyForKafkaMsg(request elastic.BulkableRequest) str
 	if len(req) == 2 { // index or update requests
 		var body map[string]interface{}
 		if err := json.Unmarshal([]byte(req[1]), &body); err != nil {
-			p.logger.WithFields(bark.Fields{
-				logging.TagErr: err,
-			}).Error("Unmarshal index request body err.")
+			p.logger.Error("Unmarshal index request body err.", tag.Error(err))
 			p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
 			return ""
 		}
@@ -229,9 +228,7 @@ func (p *esProcessorImpl) getKeyForKafkaMsg(request elastic.BulkableRequest) str
 	} else { // delete requests
 		var body map[string]map[string]interface{}
 		if err := json.Unmarshal([]byte(req[0]), &body); err != nil {
-			p.logger.WithFields(bark.Fields{
-				logging.TagErr: err,
-			}).Error("Unmarshal delete request body err.")
+			p.logger.Error("Unmarshal delete request body err.", tag.Error(err))
 			p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
 			return ""
 		}
@@ -272,4 +269,12 @@ func isResponseRetriable(status int) bool {
 		return true
 	}
 	return false
+}
+
+func getErrorMsgFromESResp(resp *elastic.BulkResponseItem) string {
+	var errMsg string
+	if resp.Error != nil {
+		errMsg = resp.Error.Reason
+	}
+	return errMsg
 }

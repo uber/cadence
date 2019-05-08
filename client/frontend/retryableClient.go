@@ -170,6 +170,54 @@ func (c *retryableClient) ListOpenWorkflowExecutions(
 	return resp, err
 }
 
+func (c *retryableClient) ListWorkflowExecutions(
+	ctx context.Context,
+	request *shared.ListWorkflowExecutionsRequest,
+	opts ...yarpc.CallOption,
+) (*shared.ListWorkflowExecutionsResponse, error) {
+
+	var resp *shared.ListWorkflowExecutionsResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.ListWorkflowExecutions(ctx, request, opts...)
+		return err
+	}
+	err := backoff.Retry(op, c.policy, c.isRetryable)
+	return resp, err
+}
+
+func (c *retryableClient) ScanWorkflowExecutions(
+	ctx context.Context,
+	request *shared.ListWorkflowExecutionsRequest,
+	opts ...yarpc.CallOption,
+) (*shared.ListWorkflowExecutionsResponse, error) {
+
+	var resp *shared.ListWorkflowExecutionsResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.ScanWorkflowExecutions(ctx, request, opts...)
+		return err
+	}
+	err := backoff.Retry(op, c.policy, c.isRetryable)
+	return resp, err
+}
+
+func (c *retryableClient) CountWorkflowExecutions(
+	ctx context.Context,
+	request *shared.CountWorkflowExecutionsRequest,
+	opts ...yarpc.CallOption,
+) (*shared.CountWorkflowExecutionsResponse, error) {
+
+	var resp *shared.CountWorkflowExecutionsResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.CountWorkflowExecutions(ctx, request, opts...)
+		return err
+	}
+	err := backoff.Retry(op, c.policy, c.isRetryable)
+	return resp, err
+}
+
 func (c *retryableClient) PollForActivityTask(
 	ctx context.Context,
 	request *shared.PollForActivityTaskRequest,

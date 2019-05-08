@@ -23,11 +23,15 @@ package history
 import (
 	"time"
 
-	"fmt"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
+	espersistence "github.com/uber/cadence/common/persistence/elasticsearch"
 	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
 	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
@@ -35,13 +39,16 @@ import (
 type Config struct {
 	NumberOfShards int
 
-	RPS                      dynamicconfig.IntPropertyFn
-	MaxIDLengthLimit         dynamicconfig.IntPropertyFn
-	PersistenceMaxQPS        dynamicconfig.IntPropertyFn
-	EnableVisibilitySampling dynamicconfig.BoolPropertyFn
-	VisibilityOpenMaxQPS     dynamicconfig.IntPropertyFnWithDomainFilter
-	VisibilityClosedMaxQPS   dynamicconfig.IntPropertyFnWithDomainFilter
-	EnableVisibilityToKafka  dynamicconfig.BoolPropertyFn
+	RPS                             dynamicconfig.IntPropertyFn
+	MaxIDLengthLimit                dynamicconfig.IntPropertyFn
+	PersistenceMaxQPS               dynamicconfig.IntPropertyFn
+	EnableVisibilitySampling        dynamicconfig.BoolPropertyFn
+	EnableReadFromClosedExecutionV2 dynamicconfig.BoolPropertyFn
+	VisibilityOpenMaxQPS            dynamicconfig.IntPropertyFnWithDomainFilter
+	VisibilityClosedMaxQPS          dynamicconfig.IntPropertyFnWithDomainFilter
+	EnableVisibilityToKafka         dynamicconfig.BoolPropertyFn
+	EmitShardDiffLog                dynamicconfig.BoolPropertyFn
+	MaxAutoResetPoints              dynamicconfig.IntPropertyFnWithDomainFilter
 
 	// HistoryCache settings
 	// Change of these configs require shard restart
@@ -127,7 +134,7 @@ type Config struct {
 	// whether or not using eventsV2
 	EnableEventsV2 dynamicconfig.BoolPropertyFnWithDomainFilter
 
-	NumSysWorkflows dynamicconfig.IntPropertyFn
+	NumArchiveSystemWorkflows dynamicconfig.IntPropertyFn
 
 	BlobSizeLimitError     dynamicconfig.IntPropertyFnWithDomainFilter
 	BlobSizeLimitWarn      dynamicconfig.IntPropertyFnWithDomainFilter
@@ -135,19 +142,28 @@ type Config struct {
 	HistorySizeLimitWarn   dynamicconfig.IntPropertyFnWithDomainFilter
 	HistoryCountLimitError dynamicconfig.IntPropertyFnWithDomainFilter
 	HistoryCountLimitWarn  dynamicconfig.IntPropertyFnWithDomainFilter
+
+	ThrottledLogRPS dynamicconfig.IntPropertyFn
 }
 
+const (
+	defaultHistoryMaxAutoResetPoints = 20
+)
+
 // NewConfig returns new service config with default values
-func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, enableVisibilityToKafka bool) *Config {
-	return &Config{
+func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, enableVisibilityToKafka bool, storeType string) *Config {
+	cfg := &Config{
 		NumberOfShards:                                        numberOfShards,
 		RPS:                                                   dc.GetIntProperty(dynamicconfig.HistoryRPS, 3000),
 		MaxIDLengthLimit:                                      dc.GetIntProperty(dynamicconfig.MaxIDLengthLimit, 1000),
 		PersistenceMaxQPS:                                     dc.GetIntProperty(dynamicconfig.HistoryPersistenceMaxQPS, 9000),
 		EnableVisibilitySampling:                              dc.GetBoolProperty(dynamicconfig.EnableVisibilitySampling, true),
+		EnableReadFromClosedExecutionV2:                       dc.GetBoolProperty(dynamicconfig.EnableReadFromClosedExecutionV2, false),
 		VisibilityOpenMaxQPS:                                  dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryVisibilityOpenMaxQPS, 300),
 		VisibilityClosedMaxQPS:                                dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryVisibilityClosedMaxQPS, 300),
+		MaxAutoResetPoints:                                    dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryMaxAutoResetPoints, defaultHistoryMaxAutoResetPoints),
 		EnableVisibilityToKafka:                               dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, enableVisibilityToKafka),
+		EmitShardDiffLog:                                      dc.GetBoolProperty(dynamicconfig.EmitShardDiffLog, false),
 		HistoryCacheInitialSize:                               dc.GetIntProperty(dynamicconfig.HistoryCacheInitialSize, 128),
 		HistoryCacheMaxSize:                                   dc.GetIntProperty(dynamicconfig.HistoryCacheMaxSize, 512),
 		HistoryCacheTTL:                                       dc.GetDurationProperty(dynamicconfig.HistoryCacheTTL, time.Hour),
@@ -203,10 +219,10 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, enableVisibilit
 
 		// history client: client/history/client.go set the client timeout 30s
 		LongPollExpirationInterval: dc.GetDurationPropertyFilteredByDomain(dynamicconfig.HistoryLongPollExpirationInterval, time.Second*20),
-		EventEncodingType:          dc.GetStringPropertyFnWithDomainFilter(dynamicconfig.DefaultEventEncoding, string(common.EncodingTypeJSON)),
-		EnableEventsV2:             dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableEventsV2, false),
+		EventEncodingType:          dc.GetStringPropertyFnWithDomainFilter(dynamicconfig.DefaultEventEncoding, string(common.EncodingTypeThriftRW)),
+		EnableEventsV2:             dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableEventsV2, true),
 
-		NumSysWorkflows: dc.GetIntProperty(dynamicconfig.NumSystemWorkflows, 1000),
+		NumArchiveSystemWorkflows: dc.GetIntProperty(dynamicconfig.NumArchiveSystemWorkflows, 1000),
 
 		BlobSizeLimitError:     dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitError, 2*1024*1024),
 		BlobSizeLimitWarn:      dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitError, 256*1024),
@@ -214,7 +230,11 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, enableVisibilit
 		HistorySizeLimitWarn:   dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistorySizeLimitWarn, 50*1024*1024),
 		HistoryCountLimitError: dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryCountLimitError, 200*1024),
 		HistoryCountLimitWarn:  dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryCountLimitWarn, 50*1024),
+
+		ThrottledLogRPS: dc.GetIntProperty(dynamicconfig.HistoryThrottledLogRPS, 20),
 	}
+
+	return cfg
 }
 
 // GetShardID return the corresponding shard ID for a given workflow ID
@@ -232,16 +252,16 @@ type Service struct {
 
 // NewService builds a new cadence-history service
 func NewService(params *service.BootstrapParams) common.Daemon {
+	config := NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, params.Logger),
+		params.PersistenceConfig.NumHistoryShards,
+		params.ESConfig.Enable,
+		params.PersistenceConfig.DefaultStoreType())
+	params.ThrottledLogger = loggerimpl.NewThrottledLogger(params.Logger, config.ThrottledLogRPS)
 	params.UpdateLoggerWithServiceName(common.HistoryServiceName)
-	fmt.Println(params.ESConfig)
 	return &Service{
 		params: params,
 		stopC:  make(chan struct{}),
-		config: NewConfig(
-			dynamicconfig.NewCollection(params.DynamicConfig, params.Logger),
-			params.PersistenceConfig.NumHistoryShards,
-			params.ESConfig.Enable,
-		),
+		config: config,
 	}
 }
 
@@ -251,7 +271,8 @@ func (s *Service) Start() {
 	var params = s.params
 	var log = params.Logger
 
-	log.Infof("%v starting", common.HistoryServiceName)
+	log.Info("elastic search config", tag.ESConfig(params.ESConfig))
+	log.Info("starting", tag.Service(common.HistoryServiceName))
 
 	base := service.New(params)
 
@@ -260,48 +281,54 @@ func (s *Service) Start() {
 	pConfig := params.PersistenceConfig
 	pConfig.HistoryMaxConns = s.config.HistoryMgrNumConns()
 	pConfig.SetMaxQPS(pConfig.DefaultStore, s.config.PersistenceMaxQPS())
-	pConfig.SamplingConfig.VisibilityOpenMaxQPS = s.config.VisibilityOpenMaxQPS
-	pConfig.SamplingConfig.VisibilityClosedMaxQPS = s.config.VisibilityClosedMaxQPS
+	pConfig.VisibilityConfig = &config.VisibilityConfig{
+		VisibilityOpenMaxQPS:            s.config.VisibilityOpenMaxQPS,
+		VisibilityClosedMaxQPS:          s.config.VisibilityClosedMaxQPS,
+		EnableSampling:                  s.config.EnableVisibilitySampling,
+		EnableReadFromClosedExecutionV2: s.config.EnableReadFromClosedExecutionV2,
+	}
 	pFactory := persistencefactory.New(&pConfig, params.ClusterMetadata.GetCurrentClusterName(), s.metricsClient, log)
 
 	shardMgr, err := pFactory.NewShardManager()
 	if err != nil {
-		log.Fatalf("failed to create shard manager: %v", err)
+		log.Fatal("failed to create shard manager", tag.Error(err))
 	}
 
 	metadata, err := pFactory.NewMetadataManager(persistencefactory.MetadataV1V2)
 	if err != nil {
-		log.Fatalf("failed to create metadata manager: %v", err)
+		log.Fatal("failed to create metadata manager", tag.Error(err))
 	}
 
-	visibility, err := pFactory.NewVisibilityManager(s.config.EnableVisibilitySampling())
+	visibility, err := pFactory.NewVisibilityManager()
 	if err != nil {
-		log.Fatalf("failed to create visibility manager: %v", err)
+		log.Fatal("failed to create visibility manager", tag.Error(err))
 	}
+
+	var esVisibility persistence.VisibilityManager
+	if params.ESConfig.Enable {
+		visibilityProducer, err := s.params.MessagingClient.NewProducer(common.VisibilityAppName)
+		if err != nil {
+			log.Fatal("Creating visibility producer failed", tag.Error(err))
+		}
+		esVisibility = espersistence.NewESVisibilityManager("", nil, nil, visibilityProducer,
+			s.metricsClient, log)
+	}
+	visibility = persistence.NewVisibilityManagerWrapper(visibility, esVisibility, dynamicconfig.GetBoolPropertyFnFilteredByDomain(false))
 
 	history, err := pFactory.NewHistoryManager()
 	if err != nil {
-		log.Fatalf("Creating Cassandra history manager persistence failed: %v", err)
+		log.Fatal("Creating history manager persistence failed", tag.Error(err))
 	}
 
 	historyV2, err := pFactory.NewHistoryV2Manager()
 	if err != nil {
-		// TODO change this to Fatalf when SQL also support eventsV2
-		log.Warnf("Creating Cassandra historyV2 manager persistence failed: %v, cannot use eventsV2 features", err)
+		log.Fatal("Creating historyV2 manager persistence failed", tag.Error(err))
 	}
 
-	handler := NewHandler(base,
-		s.config,
-		shardMgr,
-		metadata,
-		visibility,
-		history,
-		historyV2,
-		pFactory)
-
+	handler := NewHandler(base, s.config, shardMgr, metadata, visibility, history, historyV2, pFactory, params.PublicClient)
 	handler.Start()
 
-	log.Infof("%v started", common.HistoryServiceName)
+	log.Info("started", tag.Service(common.HistoryServiceName))
 
 	<-s.stopC
 	base.Stop()
@@ -313,5 +340,5 @@ func (s *Service) Stop() {
 	case s.stopC <- struct{}{}:
 	default:
 	}
-	s.params.Logger.Infof("%v stopped", common.HistoryServiceName)
+	s.params.Logger.Info("stopped", tag.Service(common.HistoryServiceName))
 }

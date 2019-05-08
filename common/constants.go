@@ -20,7 +20,11 @@
 
 package common
 
-import "time"
+import (
+	"time"
+
+	"github.com/uber/cadence/common/cron"
+)
 
 const (
 	// FirstEventID is the id of the first event in the history
@@ -33,8 +37,14 @@ const (
 	EndEventID int64 = 1<<63 - 1
 	// BufferedEventID is the id of the buffered event
 	BufferedEventID int64 = -123
+	// EmptyEventTaskID is uninitialized id of the task id within event
+	EmptyEventTaskID int64 = -1234
 	// TransientEventID is the id of the transient event
 	TransientEventID int64 = -124
+	// FirstBlobPageToken is the page token identifying the first blob for each history archival
+	FirstBlobPageToken = 1
+	// LastBlobNextPageToken is the next page token on the last blob for each history archival
+	LastBlobNextPageToken = -1
 )
 
 const (
@@ -54,10 +64,11 @@ const (
 	EncodingTypeThriftRW              = "thriftrw"
 	EncodingTypeGob                   = "gob"
 	EncodingTypeUnknown               = "unknow"
+	EncodingTypeEmpty                 = ""
 )
 
 // NoRetryBackoff is used to represent backoff when no retry is needed
-const NoRetryBackoff = time.Duration(-1)
+const NoRetryBackoff = cron.NoBackoff
 
 type (
 	// EncodingType is an enum that represents various data encoding types
@@ -77,4 +88,22 @@ const (
 const (
 	// VisibilityAppName is used to find kafka topics and ES indexName for visibility
 	VisibilityAppName = "visibility"
+)
+
+const (
+	// SystemDomainName is domain name for all cadence system workflows
+	SystemDomainName = "cadence-system"
+	// SystemDomainID is domain id for all cadence system workflows
+	SystemDomainID = "32049b68-7872-4094-8e63-d0dd59896a83"
+	// SystemDomainRetentionDays is retention config for all cadence system workflows
+	SystemDomainRetentionDays = 7
+)
+
+const (
+	// MinLongPollTimeout is the minimum context timeout for long poll API, below which
+	// the request won't be processed
+	MinLongPollTimeout = time.Second * 2
+	// CriticalLongPollTimeout is a threshold for the context timeout passed into long poll API,
+	// below which a warning will be logged
+	CriticalLongPollTimeout = time.Second * 20
 )

@@ -82,7 +82,9 @@ dcRedirectionPolicy:
   toDC: ""
 
 archival:
-  enabled: true
+  status: "enabled"
+  enableReadFromArchival: true
+  defaultBucket: "cadence-development"
   filestore:
     storeDirectory: "/tmp/development/blobstore/"
     defaultBucket:
@@ -119,4 +121,11 @@ elasticsearch:
     host: "127.0.0.1:9200"
   indices:
     visibility: cadence-visibility-dev
+
+publicClient:
+  hostPort: "127.0.0.1:7933"
+
+dynamicConfigClient:
+  filepath: "config/dynamicconfig/development.yaml"
+  pollInterval: "10s"
 

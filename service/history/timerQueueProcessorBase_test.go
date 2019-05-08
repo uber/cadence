@@ -22,19 +22,19 @@ package history
 
 import (
 	"errors"
-	"os"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/mock"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/suite"
+	"github.com/uber-go/tally"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
-
-	log "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
-	"github.com/uber-go/tally"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
@@ -45,17 +45,17 @@ import (
 
 type (
 	timerQueueProcessorBaseSuite struct {
-		clusterName         string
-		logger              bark.Logger
-		mockService         service.Service
-		mockShard           ShardContext
-		mockMetadataMgr     *mocks.MetadataManager
-		mockClusterMetadata *mocks.ClusterMetadata
-		mockMessagingClient messaging.Client
-		mockProcessor       *MockTimerProcessor
-		mockQueueAckMgr     *MockTimerQueueAckMgr
-		mockClientBean      *client.MockClientBean
-		mockProducer        messaging.Producer
+		clusterName          string
+		logger               log.Logger
+		mockService          service.Service
+		mockShard            ShardContext
+		mockMetadataMgr      *mocks.MetadataManager
+		mockClusterMetadata  *mocks.ClusterMetadata
+		mockMessagingClient  messaging.Client
+		mockProcessor        *MockTimerProcessor
+		mockQueueAckMgr      *MockTimerQueueAckMgr
+		mockClientBean       *client.MockClientBean
+		mockExecutionManager *mocks.ExecutionManager
 
 		scope            int
 		notificationChan chan struct{}
@@ -71,9 +71,6 @@ func TestTimerQueueProcessorBaseSuite(t *testing.T) {
 }
 
 func (s *timerQueueProcessorBaseSuite) SetupSuite() {
-	if testing.Verbose() {
-		log.SetOutput(os.Stdout)
-	}
 
 }
 
@@ -85,15 +82,13 @@ func (s *timerQueueProcessorBaseSuite) SetupTest() {
 	shardID := 0
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.clusterName = cluster.TestAlternativeClusterName
-	log2 := log.New()
-	log2.Level = log.DebugLevel
-	s.logger = bark.NewLoggerFromLogrus(log2)
+	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.mockProcessor = &MockTimerProcessor{}
 	s.mockQueueAckMgr = &MockTimerQueueAckMgr{}
 	s.mockMetadataMgr = &mocks.MetadataManager{}
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockClientBean = &client.MockClientBean{}
-	s.mockService = service.NewTestService(s.mockClusterMetadata, nil, metricsClient, s.mockClientBean, s.logger)
+	s.mockService = service.NewTestService(s.mockClusterMetadata, nil, metricsClient, s.mockClientBean)
 	s.mockShard = &shardContextImpl{
 		service:                   s.mockService,
 		shardInfo:                 &persistence.ShardInfo{ShardID: shardID, RangeID: 1, TransferAckLevel: 0},
@@ -106,7 +101,7 @@ func (s *timerQueueProcessorBaseSuite) SetupTest() {
 		metricsClient:             metricsClient,
 		standbyClusterCurrentTime: make(map[string]time.Time),
 	}
-	s.mockProducer = &mocks.KafkaProducer{}
+	s.mockExecutionManager = &mocks.ExecutionManager{}
 
 	s.scope = 0
 	s.notificationChan = make(chan struct{})
@@ -123,7 +118,6 @@ func (s *timerQueueProcessorBaseSuite) SetupTest() {
 		NewLocalTimerGate(),
 		dynamicconfig.GetIntPropertyFn(10),
 		dynamicconfig.GetDurationPropertyFn(0*time.Second),
-		s.mockProducer,
 		s.logger,
 	)
 	s.timerQueueProcessor.timerProcessor = s.mockProcessor
@@ -189,6 +183,30 @@ func (s *timerQueueProcessorBaseSuite) TestProcessTaskAndAck_DomainTrue_ProcessE
 	s.mockProcessor.On("process", task).Return(s.scope, nil).Once()
 	s.mockQueueAckMgr.On("completeQueueTask", task.GetTaskID()).Once()
 	s.timerQueueProcessor.processTaskAndAck(s.notificationChan, task)
+}
+
+func (s *timerQueueProcessorBaseSuite) TestDeleteWorkflow_NoErr() {
+	task := &persistence.TimerTaskInfo{
+		DomainID:            uuid.New().String(),
+		WorkflowID:          uuid.New().String(),
+		RunID:               uuid.New().String(),
+		TaskID:              12345,
+		VisibilityTimestamp: time.Now()}
+	executionInfo := workflow.WorkflowExecution{
+		WorkflowId: &task.WorkflowID,
+		RunId:      &task.RunID,
+	}
+	ctx := newWorkflowExecutionContext(task.DomainID, executionInfo, s.mockShard, s.mockExecutionManager, log.NewNoop())
+	ms := &mockMutableState{}
+	s.mockExecutionManager.On("DeleteCurrentWorkflowExecution", mock.Anything).Return(nil).Once()
+	s.mockExecutionManager.On("DeleteWorkflowExecution", mock.Anything).Return(nil).Once()
+	s.mockExecutionManager.On("DeleteWorkflowExecutionHistoryV2", mock.Anything, mock.Anything).Return(nil).Once()
+	s.mockExecutionManager.On("DeleteExecutionFromVisibility", mock.Anything).Return(nil).Once()
+	ms.On("GetEventStoreVersion").Return(persistence.EventStoreVersionV2).Once()
+	ms.On("GetCurrentBranch").Return([]byte{}).Once()
+
+	err := s.timerQueueProcessor.deleteWorkflow(task, ms, ctx)
+	s.NoError(err)
 }
 
 func (s *timerQueueProcessorBaseSuite) TestHandleTaskError_EntiryNotExists() {

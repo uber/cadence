@@ -26,15 +26,17 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/tokenbucket"
 )
 
 type (
@@ -57,9 +59,9 @@ type (
 		shard         ShardContext
 		options       *QueueProcessorOptions
 		processor     processor
-		logger        bark.Logger
+		logger        log.Logger
 		metricsClient metrics.Client
-		rateLimiter   common.TokenBucket // Read rate limiter
+		rateLimiter   tokenbucket.TokenBucket // Read rate limiter
 		ackMgr        queueAckMgr
 		retryPolicy   backoff.RetryPolicy
 
@@ -78,10 +80,11 @@ type (
 var (
 	errUnexpectedQueueTask = errors.New("unexpected queue task")
 
-	loadQueueTaskThrottleRetryDelay = 5 * time.Second
+	loadDomainEntryForQueueTaskRetryDelay = 100 * time.Millisecond
+	loadQueueTaskThrottleRetryDelay       = 5 * time.Second
 )
 
-func newQueueProcessorBase(clusterName string, shard ShardContext, options *QueueProcessorOptions, processor processor, queueAckMgr queueAckMgr, logger bark.Logger) *queueProcessorBase {
+func newQueueProcessorBase(clusterName string, shard ShardContext, options *QueueProcessorOptions, processor processor, queueAckMgr queueAckMgr, logger log.Logger) *queueProcessorBase {
 	workerNotificationChans := []chan struct{}{}
 	for index := 0; index < options.WorkerCount(); index++ {
 		workerNotificationChans = append(workerNotificationChans, make(chan struct{}, 1))
@@ -92,7 +95,7 @@ func newQueueProcessorBase(clusterName string, shard ShardContext, options *Queu
 		shard:                   shard,
 		options:                 options,
 		processor:               processor,
-		rateLimiter:             common.NewTokenBucket(options.MaxPollRPS(), common.NewRealTimeSource()),
+		rateLimiter:             tokenbucket.New(options.MaxPollRPS(), clock.NewRealTimeSource()),
 		workerNotificationChans: workerNotificationChans,
 		status:                  common.DaemonStatusInitialized,
 		notifyCh:                make(chan struct{}, 1),
@@ -112,8 +115,8 @@ func (p *queueProcessorBase) Start() {
 		return
 	}
 
-	logging.LogQueueProcesorStartingEvent(p.logger)
-	defer logging.LogQueueProcesorStartedEvent(p.logger)
+	p.logger.Info("", tag.LifeCycleStarting, tag.ComponentTransferQueue)
+	defer p.logger.Info("", tag.LifeCycleStarted, tag.ComponentTransferQueue)
 
 	p.shutdownWG.Add(1)
 	p.notifyNewTask()
@@ -125,14 +128,14 @@ func (p *queueProcessorBase) Stop() {
 		return
 	}
 
-	logging.LogQueueProcesorShuttingDownEvent(p.logger)
-	defer logging.LogQueueProcesorShutdownEvent(p.logger)
+	p.logger.Info("", tag.LifeCycleStopping, tag.ComponentTransferQueue)
+	defer p.logger.Info("", tag.LifeCycleStopped, tag.ComponentTransferQueue)
 
 	close(p.shutdownCh)
 	p.retryTasks()
 
 	if success := common.AwaitWaitGroup(&p.shutdownWG, time.Minute); !success {
-		logging.LogQueueProcesorShutdownTimedoutEvent(p.logger)
+		p.logger.Warn("", tag.LifeCycleStopTimedout, tag.ComponentTransferQueue)
 	}
 }
 
@@ -217,7 +220,7 @@ func (p *queueProcessorBase) processBatch(tasksCh chan<- queueTaskInfo) {
 	tasks, more, err := p.ackMgr.readQueueTasks()
 
 	if err != nil {
-		p.logger.Warnf("Processor unable to retrieve tasks: %v", err)
+		p.logger.Warn("Processor unable to retrieve tasks", tag.Error(err))
 		p.notifyNewTask() // re-enqueue the event
 		return
 	}
@@ -282,9 +285,9 @@ func (p *queueProcessorBase) processTaskAndAck(notificationChan <-chan struct{},
 			p.metricsClient.RecordTimer(scope, metrics.TaskAttemptTimer, time.Duration(attempt))
 			switch task.(type) {
 			case *persistence.TransferTaskInfo:
-				logging.LogCriticalErrorEvent(logger, "Critical error processing transfer task, retrying.", err)
+				logger.Error("Critical error processing transfer task, retrying.", tag.Error(err), tag.OperationCritical)
 			case *persistence.ReplicationTaskInfo:
-				logging.LogCriticalErrorEvent(logger, "Critical error processing replication task, retrying.", err)
+				logger.Error("Critical error processing replication task, retrying.", tag.Error(err), tag.OperationCritical)
 			}
 		}
 	}
@@ -301,7 +304,7 @@ FilterLoop:
 				break FilterLoop
 			}
 			incAttempt()
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(loadDomainEntryForQueueTaskRetryDelay)
 		}
 	}
 
@@ -317,7 +320,6 @@ FilterLoop:
 			return true
 		}
 	}
-	defer func() { p.metricsClient.RecordTimer(scope, metrics.TaskLatency, time.Since(startTime)) }()
 
 	for {
 		select {
@@ -327,8 +329,7 @@ FilterLoop:
 		default:
 			err = backoff.Retry(op, p.retryPolicy, retryCondition)
 			if err == nil {
-				p.metricsClient.RecordTimer(scope, metrics.TaskAttemptTimer, time.Duration(attempt))
-				p.ackTaskOnce(task, scope)
+				p.ackTaskOnce(task, scope, shouldProcessTask, startTime, attempt)
 				return
 			}
 			incAttempt()
@@ -336,7 +337,7 @@ FilterLoop:
 	}
 }
 
-func (p *queueProcessorBase) processTaskOnce(notificationChan <-chan struct{}, task queueTaskInfo, shouldProcessTask bool, logger bark.Logger) (int, error) {
+func (p *queueProcessorBase) processTaskOnce(notificationChan <-chan struct{}, task queueTaskInfo, shouldProcessTask bool, logger log.Logger) (int, error) {
 	select {
 	case <-notificationChan:
 	default:
@@ -344,14 +345,15 @@ func (p *queueProcessorBase) processTaskOnce(notificationChan <-chan struct{}, t
 
 	startTime := time.Now()
 	scope, err := p.processor.process(task, shouldProcessTask)
-	p.metricsClient.IncCounter(scope, metrics.TaskRequests)
-	p.metricsClient.RecordTimer(scope, metrics.TaskProcessingLatency, time.Since(startTime))
-
+	if shouldProcessTask {
+		p.metricsClient.IncCounter(scope, metrics.TaskRequests)
+		p.metricsClient.RecordTimer(scope, metrics.TaskProcessingLatency, time.Since(startTime))
+	}
 	return scope, err
 }
 
 func (p *queueProcessorBase) handleTaskError(scope int, startTime time.Time,
-	notificationChan <-chan struct{}, err error, logger bark.Logger) error {
+	notificationChan <-chan struct{}, err error, logger log.Logger) error {
 
 	if err == nil {
 		return nil
@@ -386,52 +388,53 @@ func (p *queueProcessorBase) handleTaskError(scope int, startTime time.Time,
 	p.metricsClient.IncCounter(scope, metrics.TaskFailures)
 
 	if _, ok := err.(*persistence.CurrentWorkflowConditionFailedError); ok {
-		logging.LogTaskProcessingFailedEvent(logger, "More than 2 workflow are running.", err)
+		logger.Error("More than 2 workflow are running.", tag.Error(err), tag.LifeCycleProcessingFailed)
 		return nil
 	}
 
 	if _, ok := err.(*workflow.LimitExceededError); ok {
 		p.metricsClient.IncCounter(scope, metrics.TaskLimitExceededCounter)
-		logging.LogTaskProcessingFailedEvent(logger, "Task encounter limit exceeded error.", err)
+		logger.Error("Task encounter limit exceeded error.", tag.Error(err), tag.LifeCycleProcessingFailed)
 		return err
 	}
 
-	logging.LogTaskProcessingFailedEvent(logger, "Fail to process task", err)
+	logger.Error("Fail to process task", tag.Error(err), tag.LifeCycleProcessingFailed)
 	return err
 }
 
-func (p *queueProcessorBase) ackTaskOnce(task queueTaskInfo, scope int) {
+func (p *queueProcessorBase) ackTaskOnce(task queueTaskInfo, scope int, reportMetrics bool, startTime time.Time, attempt int) {
 	p.ackMgr.completeQueueTask(task.GetTaskID())
-	p.metricsClient.RecordTimer(
-		scope,
-		metrics.TaskQueueLatency,
-		time.Since(task.GetVisibilityTimestamp()),
-	)
+	if reportMetrics {
+		p.metricsClient.RecordTimer(scope, metrics.TaskAttemptTimer, time.Duration(attempt))
+		p.metricsClient.RecordTimer(scope, metrics.TaskLatency, time.Since(startTime))
+		p.metricsClient.RecordTimer(
+			scope,
+			metrics.TaskQueueLatency,
+			time.Since(task.GetVisibilityTimestamp()),
+		)
+	}
 }
 
-func (p *queueProcessorBase) initializeLoggerForTask(task queueTaskInfo) bark.Logger {
-	logger := p.logger.WithFields(bark.Fields{
-		logging.TagHistoryShardID: p.shard.GetShardID(),
-		logging.TagTaskID:         task.GetTaskID(),
-		logging.TagTaskType:       task.GetTaskType(),
-		logging.TagVersion:        task.GetVersion(),
-	})
+func (p *queueProcessorBase) initializeLoggerForTask(task queueTaskInfo) log.Logger {
+	logger := p.logger.WithTags(
+		tag.ShardID(p.shard.GetShardID()),
+		tag.TaskID(task.GetTaskID()),
+		tag.FailoverVersion(task.GetVersion()),
+		tag.TaskType(task.GetTaskType()))
 
 	switch task := task.(type) {
 	case *persistence.TransferTaskInfo:
-		logger = logger.WithFields(bark.Fields{
-			logging.TagDomainID:            task.DomainID,
-			logging.TagWorkflowExecutionID: task.WorkflowID,
-			logging.TagWorkflowRunID:       task.RunID,
-		})
+		logger = logger.WithTags(
+			tag.WorkflowID(task.WorkflowID),
+			tag.WorkflowRunID(task.RunID),
+			tag.WorkflowDomainID(task.DomainID))
 
 		logger.Debug("Processing transfer task")
 	case *persistence.ReplicationTaskInfo:
-		logger = logger.WithFields(bark.Fields{
-			logging.TagDomainID:            task.DomainID,
-			logging.TagWorkflowExecutionID: task.WorkflowID,
-			logging.TagWorkflowRunID:       task.RunID,
-		})
+		logger = logger.WithTags(
+			tag.WorkflowID(task.WorkflowID),
+			tag.WorkflowRunID(task.RunID),
+			tag.WorkflowDomainID(task.DomainID))
 
 		logger.Debug("Processing replication task")
 	}

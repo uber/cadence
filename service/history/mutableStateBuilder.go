@@ -22,16 +22,18 @@ package history
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/pborman/uuid"
-	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/cron"
 	"github.com/uber/cadence/common/errors"
-	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -82,15 +84,16 @@ type (
 		currentCluster   string
 		historySize      int
 		eventsCache      eventsCache
+		shard            ShardContext
 		config           *Config
-		logger           bark.Logger
+		logger           log.Logger
 	}
 )
 
 var _ mutableState = (*mutableStateBuilder)(nil)
 
-func newMutableStateBuilder(currentCluster string, config *Config, eventsCache eventsCache,
-	logger bark.Logger) *mutableStateBuilder {
+func newMutableStateBuilder(currentCluster string, shard ShardContext, eventsCache eventsCache,
+	logger log.Logger) *mutableStateBuilder {
 	s := &mutableStateBuilder{
 		updateActivityInfos:             make(map[*persistence.ActivityInfo]struct{}),
 		pendingActivityInfoIDs:          make(map[int64]*persistence.ActivityInfo),
@@ -120,7 +123,8 @@ func newMutableStateBuilder(currentCluster string, config *Config, eventsCache e
 
 		currentCluster: currentCluster,
 		eventsCache:    eventsCache,
-		config:         config,
+		shard:          shard,
+		config:         shard.GetConfig(),
 		logger:         logger,
 	}
 	s.executionInfo = &persistence.WorkflowExecutionInfo{
@@ -134,9 +138,9 @@ func newMutableStateBuilder(currentCluster string, config *Config, eventsCache e
 	return s
 }
 
-func newMutableStateBuilderWithReplicationState(currentCluster string, config *Config, eventsCache eventsCache,
-	logger bark.Logger, version int64) *mutableStateBuilder {
-	s := newMutableStateBuilder(currentCluster, config, eventsCache, logger)
+func newMutableStateBuilderWithReplicationState(currentCluster string, shard ShardContext, eventsCache eventsCache,
+	logger log.Logger, version int64) *mutableStateBuilder {
+	s := newMutableStateBuilder(currentCluster, shard, eventsCache, logger)
 	s.replicationState = &persistence.ReplicationState{
 		StartVersion:        version,
 		CurrentVersion:      version,
@@ -317,7 +321,6 @@ func (e *mutableStateBuilder) FlushBufferedEvents() error {
 
 	// no decision in-flight, flush all buffered events to committed bucket
 	if !e.HasInFlightDecisionTask() {
-
 		// flush persisted buffered events
 		reorderFunc(e.bufferedEvents)
 
@@ -342,9 +345,14 @@ func (e *mutableStateBuilder) FlushBufferedEvents() error {
 		e.updateBufferedEvents = nil
 	}
 
+	newCommittedEvents = e.trimEventsAfterWorkflowClose(newCommittedEvents)
 	e.hBuilder.history = newCommittedEvents
 	// make sure all new committed events have correct EventID
 	e.assignEventIDToBufferedEvents()
+	err := e.assignTaskIDToEvents()
+	if err != nil {
+		return err
+	}
 
 	// if decision is not closed yet, and there are new buffered events, then put those to the pending buffer
 	if e.HasInFlightDecisionTask() && len(newBufferedEvents) > 0 {
@@ -491,8 +499,12 @@ func (e *mutableStateBuilder) DeleteBufferedReplicationTask(firstEventID int64) 
 	e.deleteBufferedReplicationEvent = common.Int64Ptr(firstEventID)
 }
 
-func (e *mutableStateBuilder) CreateReplicationTask(newRunEventStoreVersion int32, newRunBranchToken []byte) *persistence.HistoryReplicationTask {
-	t := &persistence.HistoryReplicationTask{
+func (e *mutableStateBuilder) CreateReplicationTask(replicationTask []persistence.Task, newRunEventStoreVersion int32, newRunBranchToken []byte) []persistence.Task {
+	if e.replicationState == nil {
+		return replicationTask
+	}
+
+	return append(replicationTask, &persistence.HistoryReplicationTask{
 		FirstEventID:            e.GetLastFirstEventID(),
 		NextEventID:             e.GetNextEventID(),
 		Version:                 e.replicationState.CurrentVersion,
@@ -501,8 +513,38 @@ func (e *mutableStateBuilder) CreateReplicationTask(newRunEventStoreVersion int3
 		BranchToken:             e.GetCurrentBranch(),
 		NewRunEventStoreVersion: newRunEventStoreVersion,
 		NewRunBranchToken:       newRunBranchToken,
+	})
+}
+
+func (e *mutableStateBuilder) checkAndClearTimerFiredEvent(timerID string) *workflow.HistoryEvent {
+	var timerEvent *workflow.HistoryEvent
+	e.bufferedEvents, timerEvent = checkAndClearTimerFiredEvent(e.bufferedEvents, timerID)
+	if timerEvent != nil {
+		return timerEvent
 	}
-	return t
+	e.updateBufferedEvents, timerEvent = checkAndClearTimerFiredEvent(e.updateBufferedEvents, timerID)
+	if timerEvent != nil {
+		return timerEvent
+	}
+	e.hBuilder.history, timerEvent = checkAndClearTimerFiredEvent(e.hBuilder.history, timerID)
+	return timerEvent
+}
+
+func checkAndClearTimerFiredEvent(events []*workflow.HistoryEvent, timerID string) ([]*workflow.HistoryEvent, *workflow.HistoryEvent) {
+	// go over all history events. if we find a timer fired event for the given
+	// timerID, clear it
+	timerFiredIdx := -1
+	for idx, event := range events {
+		if event.GetEventType() == workflow.EventTypeTimerFired &&
+			event.GetTimerFiredEventAttributes().GetTimerId() == timerID {
+			timerFiredIdx = idx
+			break
+		}
+	}
+	if timerFiredIdx == -1 {
+		return events, nil
+	}
+	return append(events[:timerFiredIdx], events[timerFiredIdx+1:]...), events[timerFiredIdx]
 }
 
 func convertUpdateActivityInfos(inputs map[*persistence.ActivityInfo]struct{}) []*persistence.ActivityInfo {
@@ -578,6 +620,32 @@ func convertSignalRequestedIDs(inputs map[string]struct{}) []string {
 		outputs = append(outputs, item)
 	}
 	return outputs
+}
+
+func (e *mutableStateBuilder) trimEventsAfterWorkflowClose(input []*workflow.HistoryEvent) []*workflow.HistoryEvent {
+	if len(input) == 0 {
+		return input
+	}
+
+	nextIndex := 0
+
+loop:
+	for _, event := range input {
+		nextIndex++
+
+		switch event.GetEventType() {
+		case workflow.EventTypeWorkflowExecutionCompleted,
+			workflow.EventTypeWorkflowExecutionFailed,
+			workflow.EventTypeWorkflowExecutionTimedOut,
+			workflow.EventTypeWorkflowExecutionTerminated,
+			workflow.EventTypeWorkflowExecutionContinuedAsNew,
+			workflow.EventTypeWorkflowExecutionCanceled:
+
+			break loop
+		}
+	}
+
+	return input[0:nextIndex]
 }
 
 func (e *mutableStateBuilder) assignEventIDToBufferedEvents() {
@@ -659,6 +727,46 @@ func (e *mutableStateBuilder) assignEventIDToBufferedEvents() {
 	}
 }
 
+func (e *mutableStateBuilder) assignTaskIDToEvents() error {
+
+	// assign task IDs to all history events
+	// first transient events
+	numTaskIDs := len(e.hBuilder.transientHistory)
+	if numTaskIDs > 0 {
+		taskIDs, err := e.shard.GetTransferTaskIDs(numTaskIDs)
+		if err != nil {
+			return err
+		}
+
+		for index, event := range e.hBuilder.transientHistory {
+			if event.GetTaskId() == common.EmptyEventTaskID {
+				taskID := taskIDs[index]
+				event.TaskId = common.Int64Ptr(taskID)
+				e.executionInfo.LastEventTaskID = taskID
+			}
+		}
+	}
+
+	// then normal events
+	numTaskIDs = len(e.hBuilder.history)
+	if numTaskIDs > 0 {
+		taskIDs, err := e.shard.GetTransferTaskIDs(numTaskIDs)
+		if err != nil {
+			return err
+		}
+
+		for index, event := range e.hBuilder.history {
+			if event.GetTaskId() == common.EmptyEventTaskID {
+				taskID := taskIDs[index]
+				event.TaskId = common.Int64Ptr(taskID)
+				e.executionInfo.LastEventTaskID = taskID
+			}
+		}
+	}
+
+	return nil
+}
+
 func (e *mutableStateBuilder) IsStickyTaskListEnabled() bool {
 	return len(e.executionInfo.StickyTaskList) > 0
 }
@@ -683,6 +791,7 @@ func (e *mutableStateBuilder) CreateNewHistoryEventWithTimestamp(eventType workf
 	historyEvent.Timestamp = ts
 	historyEvent.EventType = common.EventTypePtr(eventType)
 	historyEvent.Version = common.Int64Ptr(e.GetCurrentVersion())
+	historyEvent.TaskId = common.Int64Ptr(common.EmptyEventTaskID)
 
 	return historyEvent
 }
@@ -743,17 +852,6 @@ func (e *mutableStateBuilder) GetWorkflowType() *workflow.WorkflowType {
 	wType.Name = common.StringPtr(e.executionInfo.WorkflowTypeName)
 
 	return wType
-}
-
-func (e *mutableStateBuilder) GetLastUpdatedTimestamp() int64 {
-	lastUpdated := e.executionInfo.LastUpdatedTimestamp.UnixNano()
-	if e.executionInfo.StartTimestamp.UnixNano() >= lastUpdated {
-		// This could happen due to clock skews
-		// ensure that the lastUpdatedTimestamp is always greater than the StartTimestamp
-		lastUpdated = e.executionInfo.StartTimestamp.UnixNano() + 1
-	}
-
-	return lastUpdated
 }
 
 func (e *mutableStateBuilder) GetActivityScheduledEvent(scheduleEventID int64) (*workflow.HistoryEvent, bool) {
@@ -845,9 +943,9 @@ func (e *mutableStateBuilder) GetRetryBackoffDuration(errReason string) time.Dur
 func (e *mutableStateBuilder) GetCronBackoffDuration() time.Duration {
 	info := e.executionInfo
 	if len(info.CronSchedule) == 0 {
-		return common.NoRetryBackoff
+		return cron.NoBackoff
 	}
-	return getBackoffForNextCronSchedule(info.CronSchedule, time.Now())
+	return cron.GetBackoffForNextSchedule(info.CronSchedule, time.Now())
 }
 
 // GetSignalInfo get details about a signal request that is currently in progress.
@@ -875,6 +973,11 @@ func (e *mutableStateBuilder) GetCompletionEvent() (*workflow.HistoryEvent, bool
 		return e.executionInfo.CompletionEvent, true
 	}
 
+	// Needed for backward compatibility reason
+	if e.executionInfo.CompletionEventBatchID == common.EmptyEventID {
+		return nil, false
+	}
+
 	// Completion EventID is always one less than NextEventID after workflow is completed
 	completionEventID := e.executionInfo.NextEventID - 1
 	firstEventID := e.executionInfo.CompletionEventBatchID
@@ -886,6 +989,17 @@ func (e *mutableStateBuilder) GetCompletionEvent() (*workflow.HistoryEvent, bool
 	}
 
 	return completionEvent, true
+}
+
+// GetStartEvent retrieves the workflow start event from mutable state
+func (e *mutableStateBuilder) GetStartEvent() (*workflow.HistoryEvent, bool) {
+	startEvent, err := e.eventsCache.getEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID,
+		e.executionInfo.RunID, common.FirstEventID, common.FirstEventID, e.executionInfo.EventStoreVersion,
+		e.executionInfo.GetCurrentBranch())
+	if err != nil {
+		return nil, false
+	}
+	return startEvent, true
 }
 
 // DeletePendingChildExecution deletes details about a ChildExecutionInfo.
@@ -906,16 +1020,13 @@ func (e *mutableStateBuilder) DeletePendingSignal(initiatedEventID int64) {
 	e.deleteSignalInfo = common.Int64Ptr(initiatedEventID)
 }
 
-func (e *mutableStateBuilder) writeCompletionEventToCache(completionEvent *workflow.HistoryEvent) error {
-	// First check to see if this is a Child Workflow
-	if e.HasParentExecution() {
-		// Store the completion result within events cache so we can communicate the result to parent execution
-		// during the processing of DeleteTransferTask without loading this event from database
-		e.eventsCache.putEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID, e.executionInfo.RunID,
-			completionEvent.GetEventId(), completionEvent)
-	}
-
-	return nil
+func (e *mutableStateBuilder) writeEventToCache(event *workflow.HistoryEvent) {
+	// For start event: store it within events cache so the recordWorkflowStarted transfer task doesn't need to
+	// load it from database
+	// For completion event: store it within events cache so we can communicate the result to parent execution
+	// during the processing of DeleteTransferTask without loading this event from database
+	e.eventsCache.putEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID, e.executionInfo.RunID,
+		event.GetEventId(), event)
 }
 
 func (e *mutableStateBuilder) hasPendingTasks() bool {
@@ -945,12 +1056,11 @@ func (e *mutableStateBuilder) ReplicateActivityInfo(request *h.SyncActivityReque
 	ai.Version = request.GetVersion()
 	ai.ScheduledTime = time.Unix(0, request.GetScheduledTime())
 	ai.StartedID = request.GetStartedId()
+	ai.LastHeartBeatUpdatedTime = time.Unix(0, request.GetLastHeartbeatTime())
 	if ai.StartedID == common.EmptyEventID {
 		ai.StartedTime = time.Time{}
-		ai.LastHeartBeatUpdatedTime = time.Time{}
 	} else {
 		ai.StartedTime = time.Unix(0, request.GetStartedTime())
-		ai.LastHeartBeatUpdatedTime = time.Unix(0, request.GetLastHeartbeatTime())
 	}
 	ai.Details = request.GetDetails()
 	ai.Attempt = request.GetAttempt()
@@ -977,7 +1087,7 @@ func (e *mutableStateBuilder) DeleteActivity(scheduleEventID int64) error {
 	a, ok := e.pendingActivityInfoIDs[scheduleEventID]
 	if !ok {
 		errorMsg := fmt.Sprintf("Unable to find activity with schedule event id: %v in mutable state", scheduleEventID)
-		logging.LogMutableStateInvalidAction(e.logger, errorMsg)
+		e.logger.Error(errorMsg, tag.ErrorTypeInvalidMutableStateAction)
 		return errors.NewInternalFailureError(errorMsg)
 	}
 	delete(e.pendingActivityInfoIDs, scheduleEventID)
@@ -985,7 +1095,7 @@ func (e *mutableStateBuilder) DeleteActivity(scheduleEventID int64) error {
 	_, ok = e.pendingActivityInfoByActivityID[a.ActivityID]
 	if !ok {
 		errorMsg := fmt.Sprintf("Unable to find activity: %v in mutable state", a.ActivityID)
-		logging.LogMutableStateInvalidAction(e.logger, errorMsg)
+		e.logger.Error(errorMsg, tag.ErrorTypeInvalidMutableStateAction)
 		return errors.NewInternalFailureError(errorMsg)
 	}
 	delete(e.pendingActivityInfoByActivityID, a.ActivityID)
@@ -1064,7 +1174,7 @@ func (e *mutableStateBuilder) GetInFlightDecisionTask() (*decisionInfo, bool) {
 }
 
 func (e *mutableStateBuilder) HasBufferedEvents() bool {
-	if len(e.bufferedEvents) > 0 || e.updateBufferedEvents != nil {
+	if len(e.bufferedEvents) > 0 || len(e.updateBufferedEvents) > 0 {
 		return true
 	}
 
@@ -1095,8 +1205,8 @@ func (e *mutableStateBuilder) UpdateDecision(di *decisionInfo) {
 	e.executionInfo.DecisionAttempt = di.Attempt
 	e.executionInfo.DecisionTimestamp = di.Timestamp
 
-	e.logger.Debugf("Decision Updated: {Schedule: %v, Started: %v, ID: %v, Timeout: %v, Attempt: %v, Timestamp: %v}",
-		di.ScheduleID, di.StartedID, di.RequestID, di.DecisionTimeout, di.Attempt, di.Timestamp)
+	e.logger.Debug(fmt.Sprintf("Decision Updated: {Schedule: %v, Started: %v, ID: %v, Timeout: %v, Attempt: %v, Timestamp: %v}",
+		di.ScheduleID, di.StartedID, di.RequestID, di.DecisionTimeout, di.Attempt, di.Timestamp))
 }
 
 // DeleteDecision deletes a decision task.
@@ -1221,6 +1331,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(d
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(decisionTimeout),
 		ExecutionStartToCloseTimeoutSeconds: attributes.ExecutionStartToCloseTimeoutSeconds,
 		Input:                               attributes.Input,
+		Header:                              attributes.Header,
 		RetryPolicy:                         attributes.RetryPolicy,
 		CronSchedule:                        attributes.CronSchedule,
 	}
@@ -1258,9 +1369,8 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(d
 		parentDomainID = parentExecutionInfo.DomainUUID
 	}
 
-	event := e.hBuilder.AddWorkflowExecutionStartedEvent(req, &previousExecutionInfo.RunID)
-	e.ReplicateWorkflowExecutionStartedEvent(domainID, parentDomainID, execution, createRequest.GetRequestId(),
-		event.WorkflowExecutionStartedEventAttributes)
+	event := e.hBuilder.AddWorkflowExecutionStartedEvent(req, previousExecutionInfo)
+	e.ReplicateWorkflowExecutionStartedEvent(domainID, parentDomainID, execution, createRequest.GetRequestId(), event)
 
 	return event
 }
@@ -1270,7 +1380,10 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(execution workflo
 	request := startRequest.StartRequest
 	eventID := e.GetNextEventID()
 	if eventID != common.FirstEventID {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowStarted, eventID, "")
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(eventID),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionWorkflowStarted)
 		return nil
 	}
 
@@ -1281,13 +1394,15 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(execution workflo
 		parentDomainID = startRequest.ParentExecutionInfo.DomainUUID
 	}
 	e.ReplicateWorkflowExecutionStartedEvent(startRequest.GetDomainUUID(), parentDomainID,
-		execution, request.GetRequestId(), event.WorkflowExecutionStartedEventAttributes)
+		execution, request.GetRequestId(), event)
 
 	return event
 }
 
 func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(domainID string, parentDomainID *string,
-	execution workflow.WorkflowExecution, requestID string, event *workflow.WorkflowExecutionStartedEventAttributes) {
+	execution workflow.WorkflowExecution, requestID string, startEvent *workflow.HistoryEvent) {
+
+	event := startEvent.WorkflowExecutionStartedEventAttributes
 	e.executionInfo.DomainID = domainID
 	e.executionInfo.WorkflowID = execution.GetWorkflowId()
 	e.executionInfo.RunID = execution.GetRunId()
@@ -1299,12 +1414,15 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(domainID st
 	e.executionInfo.State = persistence.WorkflowStateCreated
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusNone
 	e.executionInfo.LastProcessedEvent = common.EmptyEventID
+	e.executionInfo.LastFirstEventID = startEvent.GetEventId()
 	e.executionInfo.CreateRequestID = requestID
 	e.executionInfo.DecisionVersion = common.EmptyVersion
 	e.executionInfo.DecisionScheduleID = common.EmptyEventID
 	e.executionInfo.DecisionStartedID = common.EmptyEventID
 	e.executionInfo.DecisionRequestID = emptyUUID
 	e.executionInfo.DecisionTimeout = 0
+
+	e.executionInfo.CronSchedule = event.GetCronSchedule()
 
 	if parentDomainID != nil {
 		e.executionInfo.ParentDomainID = *parentDomainID
@@ -1315,29 +1433,34 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(domainID st
 	}
 	if event.ParentInitiatedEventId != nil {
 		e.executionInfo.InitiatedID = event.GetParentInitiatedEventId()
+	} else {
+		e.executionInfo.InitiatedID = common.EmptyEventID
 	}
 
 	if event.RetryPolicy != nil {
 		e.executionInfo.HasRetryPolicy = true
-		e.executionInfo.InitialInterval = event.RetryPolicy.GetInitialIntervalInSeconds()
 		e.executionInfo.BackoffCoefficient = event.RetryPolicy.GetBackoffCoefficient()
-		e.executionInfo.MaximumInterval = event.RetryPolicy.GetMaximumIntervalInSeconds()
+		e.executionInfo.ExpirationSeconds = event.RetryPolicy.GetExpirationIntervalInSeconds()
+		e.executionInfo.InitialInterval = event.RetryPolicy.GetInitialIntervalInSeconds()
 		e.executionInfo.MaximumAttempts = event.RetryPolicy.GetMaximumAttempts()
+		e.executionInfo.MaximumInterval = event.RetryPolicy.GetMaximumIntervalInSeconds()
 		e.executionInfo.NonRetriableErrors = event.RetryPolicy.NonRetriableErrorReasons
+
 		if event.RetryPolicy.GetExpirationIntervalInSeconds() > 0 && event.GetExpirationTimestamp() > 0 {
 			e.executionInfo.ExpirationTime = time.Unix(0, event.GetExpirationTimestamp())
 		}
 	}
 
-	if event.CronSchedule != nil {
-		e.executionInfo.CronSchedule = event.GetCronSchedule()
-	}
+	e.writeEventToCache(startEvent)
 }
 
 func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent() *decisionInfo {
 	if e.HasPendingDecisionTask() {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionDecisionTaskScheduled, e.GetNextEventID(),
-			fmt.Sprintf("{Pending Decision ScheduleID: %v}", e.executionInfo.DecisionScheduleID))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionDecisionTaskScheduled,
+			tag.WorkflowScheduleID(e.executionInfo.DecisionScheduleID))
 		return nil
 	}
 
@@ -1386,11 +1509,11 @@ func (e *mutableStateBuilder) ReplicateTransientDecisionTaskScheduled() *decisio
 	// since the next event ID is assigned at the very end of when
 	// all events are applied for replication.
 	// this is OK
-	// 1. if a failover happen just after this transient decisioon,
+	// 1. if a failover happen just after this transient decision,
 	// AddDecisionTaskStartedEvent will handle the correction of schedule ID
 	// and set the attempt to 0
 	// 2. if no failover happen during the life time of this transient decision
-	// then ReplicateDecisionTaskScheduledEvent will overwrite evenything
+	// then ReplicateDecisionTaskScheduledEvent will overwrite everything
 	// including the decision schedule ID
 	di := &decisionInfo{
 		Version:         e.GetCurrentVersion(),
@@ -1427,8 +1550,12 @@ func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(scheduleEventID int64,
 	hasPendingDecision := e.HasPendingDecisionTask()
 	di, ok := e.GetPendingDecision(scheduleEventID)
 	if !hasPendingDecision || !ok || di.StartedID != common.EmptyEventID {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionDecisionTaskStarted, e.GetNextEventID(), fmt.Sprintf(
-			"{HasPending: %v, ScheduleID: %v, Exist: %v, Value: %v}", hasPendingDecision, scheduleEventID, ok, e))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionDecisionTaskStarted,
+			tag.Bool(hasPendingDecision),
+			tag.WorkflowScheduleID(scheduleEventID))
 		return nil, nil
 	}
 
@@ -1492,27 +1619,105 @@ func (e *mutableStateBuilder) CreateTransientDecisionEvents(di *decisionInfo, id
 	return scheduledEvent, startedEvent
 }
 
-func (e *mutableStateBuilder) BeforeAddDecisionTaskCompletedEvent() {
+func (e *mutableStateBuilder) beforeAddDecisionTaskCompletedEvent() {
 	// Make sure to delete decision before adding events.  Otherwise they are buffered rather than getting appended
 	e.DeleteDecision()
 }
 
-func (e *mutableStateBuilder) AfterAddDecisionTaskCompletedEvent(startedID int64) {
-	e.executionInfo.LastProcessedEvent = startedID
+func (e *mutableStateBuilder) afterAddDecisionTaskCompletedEvent(event *workflow.HistoryEvent, maxResetPoints int) {
+	e.executionInfo.LastProcessedEvent = event.GetDecisionTaskCompletedEventAttributes().GetStartedEventId()
+	e.addBinaryCheckSumIfNotExists(event, maxResetPoints)
+}
+
+// add BinaryCheckSum for the first decisionTaskCompletedID for auto-reset
+func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(event *workflow.HistoryEvent, maxResetPoints int) {
+	binChecksum := event.GetDecisionTaskCompletedEventAttributes().GetBinaryChecksum()
+	if len(binChecksum) == 0 {
+		return
+	}
+	exeInfo := e.executionInfo
+	var currResetPoints []*workflow.ResetPointInfo
+	if exeInfo.AutoResetPoints != nil && exeInfo.AutoResetPoints.Points != nil {
+		currResetPoints = e.executionInfo.AutoResetPoints.Points
+	} else {
+		currResetPoints = make([]*workflow.ResetPointInfo, 0, 1)
+	}
+
+	for _, rp := range currResetPoints {
+		if rp.GetBinaryChecksum() == binChecksum {
+			// this checksum already exists
+			return
+		}
+	}
+
+	if len(currResetPoints) == maxResetPoints {
+		// if exceeding the max limit, do rotation by taking the oldest one out
+		currResetPoints = currResetPoints[1:]
+	}
+
+	resettable := true
+	err := e.CheckResettable()
+	if err != nil {
+		resettable = false
+	}
+	info := &workflow.ResetPointInfo{
+		BinaryChecksum:           common.StringPtr(binChecksum),
+		RunId:                    common.StringPtr(exeInfo.RunID),
+		FirstDecisionCompletedId: common.Int64Ptr(event.GetEventId()),
+		CreatedTimeNano:          common.Int64Ptr(time.Now().UnixNano()),
+		Resettable:               common.BoolPtr(resettable),
+	}
+	currResetPoints = append(currResetPoints, info)
+	exeInfo.AutoResetPoints = &workflow.ResetPoints{
+		Points: currResetPoints,
+	}
+}
+
+// TODO: we will release the restriction when reset API allow those pending
+func (e *mutableStateBuilder) CheckResettable() (retError error) {
+	if e.GetEventStoreVersion() != persistence.EventStoreVersionV2 {
+		retError = &workflow.BadRequestError{
+			Message: fmt.Sprintf("reset API is not supported for V1 history events, runID"),
+		}
+		return
+	}
+	if len(e.GetPendingChildExecutionInfos()) > 0 {
+		retError = &workflow.BadRequestError{
+			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending child workflow."),
+		}
+		return
+	}
+	if len(e.GetAllRequestCancels()) > 0 {
+		retError = &workflow.BadRequestError{
+			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending request cancel."),
+		}
+		return
+	}
+	if len(e.GetAllSignalsToSend()) > 0 {
+		retError = &workflow.BadRequestError{
+			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending signals to send, pending signal: %+v ", e.GetAllSignalsToSend()),
+		}
+	}
+	return nil
 }
 
 func (e *mutableStateBuilder) AddDecisionTaskCompletedEvent(scheduleEventID, startedEventID int64,
-	request *workflow.RespondDecisionTaskCompletedRequest) *workflow.HistoryEvent {
+	request *workflow.RespondDecisionTaskCompletedRequest, maxResetPoints int) *workflow.HistoryEvent {
 	hasPendingDecision := e.HasPendingDecisionTask()
 	di, ok := e.GetPendingDecision(scheduleEventID)
 	if !hasPendingDecision || !ok || di.StartedID != startedEventID {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionDecisionTaskCompleted, e.GetNextEventID(), fmt.Sprintf(
-			"{HasPending: %v, ScheduleID: %v, StartedID: %v, Exist: %v}", hasPendingDecision, scheduleEventID,
-			startedEventID, ok))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionDecisionTaskCompleted,
+			tag.Bool(hasPendingDecision),
+			tag.WorkflowScheduleID(scheduleEventID),
+			tag.WorkflowStartedID(startedEventID))
+
 		return nil
 	}
 
-	e.BeforeAddDecisionTaskCompletedEvent()
+	e.beforeAddDecisionTaskCompletedEvent()
 	if di.Attempt > 0 {
 		// Create corresponding DecisionTaskSchedule and DecisionTaskStarted events for decisions we have been retrying
 		scheduledEvent := e.hBuilder.AddTransientDecisionTaskScheduledEvent(e.executionInfo.TaskList, di.DecisionTimeout,
@@ -1524,13 +1729,13 @@ func (e *mutableStateBuilder) AddDecisionTaskCompletedEvent(scheduleEventID, sta
 	// Now write the completed event
 	event := e.hBuilder.AddDecisionTaskCompletedEvent(scheduleEventID, startedEventID, request)
 
-	e.AfterAddDecisionTaskCompletedEvent(startedEventID)
+	e.afterAddDecisionTaskCompletedEvent(event, maxResetPoints)
 	return event
 }
 
-func (e *mutableStateBuilder) ReplicateDecisionTaskCompletedEvent(scheduleEventID, startedEventID int64) {
-	e.BeforeAddDecisionTaskCompletedEvent()
-	e.AfterAddDecisionTaskCompletedEvent(startedEventID)
+func (e *mutableStateBuilder) ReplicateDecisionTaskCompletedEvent(event *workflow.HistoryEvent) {
+	e.beforeAddDecisionTaskCompletedEvent()
+	e.afterAddDecisionTaskCompletedEvent(event, math.MaxInt32)
 }
 
 func (e *mutableStateBuilder) AddDecisionTaskTimedOutEvent(scheduleEventID int64,
@@ -1538,9 +1743,13 @@ func (e *mutableStateBuilder) AddDecisionTaskTimedOutEvent(scheduleEventID int64
 	hasPendingDecision := e.HasPendingDecisionTask()
 	dt, ok := e.GetPendingDecision(scheduleEventID)
 	if !hasPendingDecision || !ok || dt.StartedID != startedEventID {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionDecisionTaskTimedOut, e.GetNextEventID(),
-			fmt.Sprintf("{HasPending: %v, ScheduleID: %v, StartedID: %v, Exist: %v}", hasPendingDecision, scheduleEventID,
-				startedEventID, ok))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionDecisionTaskTimedOut,
+			tag.Bool(hasPendingDecision),
+			tag.WorkflowScheduleID(scheduleEventID),
+			tag.WorkflowStartedID(startedEventID))
 		return nil
 	}
 
@@ -1565,9 +1774,11 @@ func (e *mutableStateBuilder) ReplicateDecisionTaskTimedOutEvent(timeoutType wor
 
 func (e *mutableStateBuilder) AddDecisionTaskScheduleToStartTimeoutEvent(scheduleEventID int64) *workflow.HistoryEvent {
 	if e.executionInfo.DecisionScheduleID != scheduleEventID || e.executionInfo.DecisionStartedID > 0 {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionDecisionTaskTimedOut, e.GetNextEventID(),
-			fmt.Sprintf("{DecisionScheduleID: %v, DecisionStartedID: %v, ScheduleEventID: %v}",
-				e.executionInfo.DecisionScheduleID, e.executionInfo.DecisionStartedID, scheduleEventID))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionDecisionTaskTimedOut,
+			tag.WorkflowScheduleID(scheduleEventID))
 		return nil
 	}
 
@@ -1598,9 +1809,12 @@ func (e *mutableStateBuilder) AddDecisionTaskFailedEvent(scheduleEventID int64, 
 
 	dt, ok := e.GetPendingDecision(scheduleEventID)
 	if !hasPendingDecision || !ok || dt.StartedID != startedEventID {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionDecisionTaskFailed, e.GetNextEventID(), fmt.Sprintf(
-			"{HasPending: %v, ScheduleID: %v, StartedID: %v, Exist: %v}", hasPendingDecision, scheduleEventID,
-			startedEventID, ok))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionDecisionTaskFailed,
+			tag.WorkflowScheduleID(scheduleEventID),
+			tag.WorkflowStartedID(startedEventID))
 		return nil
 	}
 
@@ -1626,8 +1840,13 @@ func (e *mutableStateBuilder) ReplicateDecisionTaskFailedEvent() {
 func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(decisionCompletedEventID int64,
 	attributes *workflow.ScheduleActivityTaskDecisionAttributes) (*workflow.HistoryEvent, *persistence.ActivityInfo) {
 	if ai, ok := e.GetActivityInfo(e.GetNextEventID()); ok {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionActivityTaskScheduled, ai.ScheduleID, fmt.Sprintf(
-			"{Exist: %v, Value: %v}", ok, ai.StartedID))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionActivityTaskScheduled,
+			tag.Bool(ok),
+			tag.WorkflowScheduleID(ai.ScheduleID),
+			tag.WorkflowStartedID(ai.StartedID))
 		return nil, nil
 	}
 
@@ -1717,6 +1936,7 @@ func (e *mutableStateBuilder) AddActivityTaskStartedEvent(ai *persistence.Activi
 	ai.StartedID = common.TransientEventID
 	ai.RequestID = requestID
 	ai.StartedTime = time.Now()
+	ai.LastHeartBeatUpdatedTime = ai.StartedTime
 	ai.StartedIdentity = identity
 	e.UpdateActivity(ai)
 	e.syncActivityTasks[ai.ScheduleID] = struct{}{}
@@ -1732,14 +1952,20 @@ func (e *mutableStateBuilder) ReplicateActivityTaskStartedEvent(event *workflow.
 	ai.StartedID = event.GetEventId()
 	ai.RequestID = attributes.GetRequestId()
 	ai.StartedTime = time.Unix(0, event.GetTimestamp())
+	ai.LastHeartBeatUpdatedTime = ai.StartedTime
 	e.updateActivityInfos[ai] = struct{}{}
 }
 
 func (e *mutableStateBuilder) AddActivityTaskCompletedEvent(scheduleEventID, startedEventID int64,
 	request *workflow.RespondActivityTaskCompletedRequest) *workflow.HistoryEvent {
 	if ai, ok := e.GetActivityInfo(scheduleEventID); !ok || ai.StartedID != startedEventID {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionActivityTaskCompleted, e.GetNextEventID(), fmt.Sprintf(
-			"{ScheduleID: %v, StartedID: %v, Exist: %v}", scheduleEventID, startedEventID, ok))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionActivityTaskCompleted,
+			tag.Bool(ok),
+			tag.WorkflowScheduleID(scheduleEventID),
+			tag.WorkflowStartedID(startedEventID))
 		return nil
 	}
 
@@ -1762,8 +1988,13 @@ func (e *mutableStateBuilder) ReplicateActivityTaskCompletedEvent(event *workflo
 func (e *mutableStateBuilder) AddActivityTaskFailedEvent(scheduleEventID, startedEventID int64,
 	request *workflow.RespondActivityTaskFailedRequest) *workflow.HistoryEvent {
 	if ai, ok := e.GetActivityInfo(scheduleEventID); !ok || ai.StartedID != startedEventID {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionActivityTaskFailed, e.GetNextEventID(), fmt.Sprintf(
-			"{ScheduleID: %v, StartedID: %v, Exist: %v}", scheduleEventID, startedEventID, ok))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionActivityTaskFailed,
+			tag.Bool(ok),
+			tag.WorkflowScheduleID(scheduleEventID),
+			tag.WorkflowStartedID(startedEventID))
 		return nil
 	}
 
@@ -1788,9 +2019,14 @@ func (e *mutableStateBuilder) AddActivityTaskTimedOutEvent(scheduleEventID, star
 	if ai, ok := e.GetActivityInfo(scheduleEventID); !ok || ai.StartedID != startedEventID ||
 		((timeoutType == workflow.TimeoutTypeStartToClose || timeoutType == workflow.TimeoutTypeHeartbeat) &&
 			ai.StartedID == common.EmptyEventID) {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionActivityTaskTimedOut, e.GetNextEventID(), fmt.Sprintf(
-			"{ScheduleID: %v, StartedID: %v, TimeOutType: %v, Exist: %v}", scheduleEventID, startedEventID,
-			timeoutType, ok))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionActivityTaskTimedOut,
+			tag.Bool(ok),
+			tag.WorkflowScheduleID(ai.ScheduleID),
+			tag.WorkflowStartedID(ai.StartedID),
+			tag.WorkflowTimeoutType(int64(timeoutType)))
 		return nil
 	}
 
@@ -1816,8 +2052,13 @@ func (e *mutableStateBuilder) AddActivityTaskCancelRequestedEvent(decisionComple
 
 	ai, isRunning := e.GetActivityByActivityID(activityID)
 	if !isRunning || ai.CancelRequested {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionActivityTaskCancelRequest, e.GetNextEventID(), fmt.Sprintf(
-			"{isRunning: %v, ActivityID: %v}", isRunning, activityID))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionActivityTaskCanceled,
+			tag.Bool(isRunning),
+			tag.WorkflowActivityID(activityID))
+
 		return nil, nil, false
 	}
 
@@ -1851,16 +2092,23 @@ func (e *mutableStateBuilder) AddActivityTaskCanceledEvent(scheduleEventID, star
 	latestCancelRequestedEventID int64, details []byte, identity string) *workflow.HistoryEvent {
 	ai, ok := e.GetActivityInfo(scheduleEventID)
 	if !ok || ai.StartedID != startedEventID {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionActivityTaskCanceled, e.GetNextEventID(), fmt.Sprintf(
-			"{ScheduleID: %v, StartedID: %v, Exist: %v}", scheduleEventID, startedEventID, ok))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionActivityTaskCanceled,
+			tag.WorkflowScheduleID(scheduleEventID))
 		return nil
 	}
 
 	// Verify cancel request as well.
 	if !ai.CancelRequested {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionActivityTaskCanceled, e.GetNextEventID(), fmt.Sprintf(
-			"{No outstanding cancel request. ScheduleID: %v, ActivityID: %v, Exist: %v, Value: %v}",
-			scheduleEventID, ai.ActivityID, ok, ai.StartedID))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionActivityTaskCanceled,
+			tag.WorkflowScheduleID(scheduleEventID),
+			tag.WorkflowActivityID(ai.ActivityID),
+			tag.WorkflowStartedID(ai.StartedID))
 		return nil
 	}
 
@@ -1884,16 +2132,17 @@ func (e *mutableStateBuilder) ReplicateActivityTaskCanceledEvent(event *workflow
 func (e *mutableStateBuilder) AddCompletedWorkflowEvent(decisionCompletedEventID int64,
 	attributes *workflow.CompleteWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent {
 	if e.executionInfo.State == persistence.WorkflowStateCompleted {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionCompleteWorkflow, e.GetNextEventID(), fmt.Sprintf(
-			"{State: %v}", e.executionInfo.State))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionCompleteWorkflow,
+			tag.WorkflowState(e.executionInfo.State))
 		return nil
 	}
 
 	event := e.hBuilder.AddCompletedWorkflowEvent(decisionCompletedEventID, attributes)
-	// Write the event to cache only on active cluster
-	e.writeCompletionEventToCache(event)
-
 	e.ReplicateWorkflowExecutionCompletedEvent(decisionCompletedEventID, event)
+
 	return event
 }
 
@@ -1901,20 +2150,22 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionCompletedEvent(firstEven
 	e.executionInfo.State = persistence.WorkflowStateCompleted
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusCompleted
 	e.executionInfo.CompletionEventBatchID = firstEventID // Used when completion event needs to be loaded from database
+	e.writeEventToCache(event)
 }
 
 func (e *mutableStateBuilder) AddFailWorkflowEvent(decisionCompletedEventID int64,
 	attributes *workflow.FailWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent {
 	if e.executionInfo.State == persistence.WorkflowStateCompleted {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionFailWorkflow, e.GetNextEventID(), fmt.Sprintf(
-			"{State: %v}", e.executionInfo.State))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionFailWorkflow,
+			tag.WorkflowState(e.executionInfo.State))
+
 		return nil
 	}
 
 	event := e.hBuilder.AddFailWorkflowEvent(decisionCompletedEventID, attributes)
-	// Write the event to cache only on active cluster
-	e.writeCompletionEventToCache(event)
-
 	e.ReplicateWorkflowExecutionFailedEvent(decisionCompletedEventID, event)
 
 	return event
@@ -1924,19 +2175,20 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionFailedEvent(firstEventID
 	e.executionInfo.State = persistence.WorkflowStateCompleted
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusFailed
 	e.executionInfo.CompletionEventBatchID = firstEventID // Used when completion event needs to be loaded from database
+	e.writeEventToCache(event)
 }
 
 func (e *mutableStateBuilder) AddTimeoutWorkflowEvent() *workflow.HistoryEvent {
 	if e.executionInfo.State == persistence.WorkflowStateCompleted {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionTimeoutWorkflow, e.GetNextEventID(), fmt.Sprintf(
-			"{State: %v}", e.executionInfo.State))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionTimeoutWorkflow,
+			tag.WorkflowState(e.executionInfo.State))
 		return nil
 	}
 
 	event := e.hBuilder.AddTimeoutWorkflowEvent()
-	// Write the event to cache only on active cluster
-	e.writeCompletionEventToCache(event)
-
 	e.ReplicateWorkflowExecutionTimedoutEvent(event.GetEventId(), event)
 
 	return event
@@ -1946,15 +2198,19 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionTimedoutEvent(firstEvent
 	e.executionInfo.State = persistence.WorkflowStateCompleted
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusTimedOut
 	e.executionInfo.CompletionEventBatchID = firstEventID // Used when completion event needs to be loaded from database
+	e.writeEventToCache(event)
 }
 
 func (e *mutableStateBuilder) AddWorkflowExecutionCancelRequestedEvent(cause string,
 	request *h.RequestCancelWorkflowExecutionRequest) *workflow.HistoryEvent {
 	if e.executionInfo.State == persistence.WorkflowStateCompleted || e.executionInfo.CancelRequested {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionRequestCancelWorkflow, e.GetNextEventID(),
-			fmt.Sprintf("{State: %v, CancelRequested: %v, RequestID: %v}", e.executionInfo.State,
-				e.executionInfo.CancelRequested, e.executionInfo.CancelRequestID))
-
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionWorkflowCancelRequested,
+			tag.WorkflowState(e.executionInfo.State),
+			tag.Bool(e.executionInfo.CancelRequested),
+			tag.Key(e.executionInfo.CancelRequestID))
 		return nil
 	}
 
@@ -1973,13 +2229,14 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionCancelRequestedEvent(eve
 func (e *mutableStateBuilder) AddWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID int64,
 	attributes *workflow.CancelWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent {
 	if e.executionInfo.State == persistence.WorkflowStateCompleted {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowCanceled, e.GetNextEventID(), fmt.Sprintf(
-			"{State: %v}", e.executionInfo.State))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionCancelWorkflow,
+			tag.WorkflowState(e.executionInfo.State))
 	}
 
 	event := e.hBuilder.AddWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID, attributes)
-	// Write the event to cache only on active cluster
-	e.writeCompletionEventToCache(event)
 	e.ReplicateWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID, event)
 
 	return event
@@ -1989,6 +2246,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionCanceledEvent(firstEvent
 	e.executionInfo.State = persistence.WorkflowStateCompleted
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusCanceled
 	e.executionInfo.CompletionEventBatchID = firstEventID // Used when completion event needs to be loaded from database
+	e.writeEventToCache(event)
 }
 
 func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionInitiatedEvent(
@@ -2023,9 +2281,12 @@ func (e *mutableStateBuilder) AddExternalWorkflowExecutionCancelRequested(initia
 	domain, workflowID, runID string) *workflow.HistoryEvent {
 	_, ok := e.GetRequestCancelInfo(initiatedID)
 	if !ok {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowCancelRequested, e.GetNextEventID(),
-			fmt.Sprintf("{InitiatedID: %v, Exist: %v}", initiatedID, ok))
-
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionWorkflowCancelRequested,
+			tag.WorkflowInitiatedID(initiatedID),
+			tag.Bool(ok))
 		return nil
 	}
 
@@ -2045,8 +2306,12 @@ func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionFailedEve
 	domain, workflowID, runID string, cause workflow.CancelExternalWorkflowExecutionFailedCause) *workflow.HistoryEvent {
 	_, ok := e.GetRequestCancelInfo(initiatedID)
 	if !ok {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowCancelFailed, e.GetNextEventID(),
-			fmt.Sprintf("{InitiatedID: %v, Exist: %v}", initiatedID, ok))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionWorkflowCancelFailed,
+			tag.WorkflowInitiatedID(initiatedID),
+			tag.Bool(ok))
 
 		return nil
 	}
@@ -2099,8 +2364,12 @@ func (e *mutableStateBuilder) AddExternalWorkflowExecutionSignaled(initiatedID i
 	domain, workflowID, runID string, control []byte) *workflow.HistoryEvent {
 	_, ok := e.GetSignalInfo(initiatedID)
 	if !ok {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowSignalRequested, e.GetNextEventID(),
-			fmt.Sprintf("{InitiatedID: %v, Exist: %v}", initiatedID, ok))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionWorkflowSignaled,
+			tag.WorkflowInitiatedID(initiatedID),
+			tag.Bool(ok))
 		return nil
 	}
 
@@ -2120,8 +2389,12 @@ func (e *mutableStateBuilder) AddSignalExternalWorkflowExecutionFailedEvent(
 	control []byte, cause workflow.SignalExternalWorkflowExecutionFailedCause) *workflow.HistoryEvent {
 	_, ok := e.GetSignalInfo(initiatedID)
 	if !ok {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowSignalFailed, e.GetNextEventID(),
-			fmt.Sprintf("{InitiatedID: %v, Exist: %v}", initiatedID, ok))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionWorkflowSignalFailed,
+			tag.WorkflowInitiatedID(initiatedID),
+			tag.Bool(ok))
 
 		return nil
 	}
@@ -2143,8 +2416,12 @@ func (e *mutableStateBuilder) AddTimerStartedEvent(decisionCompletedEventID int6
 	timerID := request.GetTimerId()
 	isTimerRunning, ti := e.GetUserTimer(timerID)
 	if isTimerRunning {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionTimerStarted, e.GetNextEventID(), fmt.Sprintf(
-			"{IsTimerRunning: %v, TimerID: %v, StartedID: %v}", isTimerRunning, timerID, ti.StartedID))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionTimerStarted,
+			tag.WorkflowStartedID(ti.StartedID),
+			tag.Bool(isTimerRunning))
 		return nil, nil
 	}
 
@@ -2179,8 +2456,13 @@ func (e *mutableStateBuilder) ReplicateTimerStartedEvent(event *workflow.History
 func (e *mutableStateBuilder) AddTimerFiredEvent(startedEventID int64, timerID string) *workflow.HistoryEvent {
 	isTimerRunning, _ := e.GetUserTimer(timerID)
 	if !isTimerRunning {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionTimerFired, e.GetNextEventID(), fmt.Sprintf(
-			"{startedEventID: %v, Exist: %v, TimerID: %v}", startedEventID, isTimerRunning, timerID))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionTimerFired,
+			tag.WorkflowStartedID(startedEventID),
+			tag.Bool(isTimerRunning),
+			tag.WorkflowTimerID(timerID))
 		return nil
 	}
 
@@ -2198,18 +2480,35 @@ func (e *mutableStateBuilder) ReplicateTimerFiredEvent(event *workflow.HistoryEv
 	e.DeleteUserTimer(timerID)
 }
 
-func (e *mutableStateBuilder) AddTimerCanceledEvent(decisionCompletedEventID int64,
-	attributes *workflow.CancelTimerDecisionAttributes, identity string) *workflow.HistoryEvent {
-	timerID := *attributes.TimerId
+func (e *mutableStateBuilder) AddTimerCanceledEvent(
+	decisionCompletedEventID int64,
+	attributes *workflow.CancelTimerDecisionAttributes,
+	identity string,
+) *workflow.HistoryEvent {
+	var timerStartedID int64
+	timerID := attributes.GetTimerId()
 	isTimerRunning, ti := e.GetUserTimer(timerID)
 	if !isTimerRunning {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionTimerCanceled, e.GetNextEventID(), fmt.Sprintf(
-			"{IsTimerRunning: %v, timerID: %v}", isTimerRunning, timerID))
-		return nil
+		// if timer is not running then check if it has fired in the mutable state.
+		// If so clear the timer from the mutable state. We need to check both the
+		// bufferedEvents and the history builder
+		timerFiredEvent := e.checkAndClearTimerFiredEvent(timerID)
+		if timerFiredEvent == nil {
+			e.logger.Warn("Invalid history builder state for action",
+				tag.WorkflowEventID(e.GetNextEventID()),
+				tag.ErrorTypeInvalidHistoryAction,
+				tag.WorkflowActionTimerCanceled,
+				tag.Bool(isTimerRunning),
+				tag.WorkflowTimerID(timerID))
+			return nil
+		}
+		timerStartedID = timerFiredEvent.TimerFiredEventAttributes.GetStartedEventId()
+	} else {
+		timerStartedID = ti.StartedID
 	}
 
 	// Timer is running.
-	event := e.hBuilder.AddTimerCanceledEvent(ti.StartedID, decisionCompletedEventID, timerID, identity)
+	event := e.hBuilder.AddTimerCanceledEvent(timerStartedID, decisionCompletedEventID, timerID, identity)
 	e.ReplicateTimerCanceledEvent(event)
 
 	return event
@@ -2227,7 +2526,7 @@ func (e *mutableStateBuilder) AddCancelTimerFailedEvent(decisionCompletedEventID
 	// No Operation: We couldn't cancel it probably TIMER_ID_UNKNOWN
 	timerID := attributes.GetTimerId()
 	return e.hBuilder.AddCancelTimerFailedEvent(timerID, decisionCompletedEventID,
-		timerCancelationMsgTimerIDUnknown, identity)
+		timerCancellationMsgTimerIDUnknown, identity)
 }
 
 func (e *mutableStateBuilder) AddRecordMarkerEvent(decisionCompletedEventID int64,
@@ -2239,15 +2538,15 @@ func (e *mutableStateBuilder) AddRecordMarkerEvent(decisionCompletedEventID int6
 func (e *mutableStateBuilder) AddWorkflowExecutionTerminatedEvent(
 	request *workflow.TerminateWorkflowExecutionRequest) *workflow.HistoryEvent {
 	if e.executionInfo.State == persistence.WorkflowStateCompleted {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowTerminated, e.GetNextEventID(), fmt.Sprintf(
-			"{State: %v}", e.executionInfo.State))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionWorkflowTerminated,
+			tag.WorkflowState(e.executionInfo.State))
 		return nil
 	}
 
 	event := e.hBuilder.AddWorkflowExecutionTerminatedEvent(request)
-	// Write the event to cache only on active cluster
-	e.writeCompletionEventToCache(event)
-
 	e.ReplicateWorkflowExecutionTerminatedEvent(event.GetEventId(), event)
 
 	return event
@@ -2257,13 +2556,17 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionTerminatedEvent(firstEve
 	e.executionInfo.State = persistence.WorkflowStateCompleted
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusTerminated
 	e.executionInfo.CompletionEventBatchID = firstEventID // Used when completion event needs to be loaded from database
+	e.writeEventToCache(event)
 }
 
 func (e *mutableStateBuilder) AddWorkflowExecutionSignaled(
 	signalName string, input []byte, identity string) *workflow.HistoryEvent {
 	if e.executionInfo.State == persistence.WorkflowStateCompleted {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowSignaled, e.GetNextEventID(), fmt.Sprintf(
-			"{State: %v}", e.executionInfo.State))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionWorkflowSignaled,
+			tag.WorkflowState(e.executionInfo.State))
 		return nil
 	}
 
@@ -2277,7 +2580,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionSignaled(event *workflow
 	e.executionInfo.SignalCount++
 }
 
-func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int64, domainEntry *cache.DomainCacheEntry,
+func (e *mutableStateBuilder) AddContinueAsNewEvent(firstEventID, decisionCompletedEventID int64, domainEntry *cache.DomainCacheEntry,
 	parentDomainName string, attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes, eventStoreVersion int32) (*workflow.HistoryEvent, mutableState,
 	error) {
 
@@ -2307,10 +2610,10 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 	if domainEntry.IsGlobalDomain() {
 		// all workflows within a global domain should have replication state, no matter whether it will be replicated to multiple
 		// target clusters or not
-		newStateBuilder = newMutableStateBuilderWithReplicationState(e.currentCluster, e.config, e.eventsCache, e.logger,
+		newStateBuilder = newMutableStateBuilderWithReplicationState(e.currentCluster, e.shard, e.eventsCache, e.logger,
 			domainEntry.GetFailoverVersion())
 	} else {
-		newStateBuilder = newMutableStateBuilder(e.currentCluster, e.config, e.eventsCache, e.logger)
+		newStateBuilder = newMutableStateBuilder(e.currentCluster, e.shard, e.eventsCache, e.logger)
 	}
 	domainID := domainEntry.GetInfo().ID
 	startedEvent := newStateBuilder.addWorkflowExecutionStartedEventForContinueAsNew(domainID, parentInfo, newExecution, e, attributes)
@@ -2327,16 +2630,47 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 		}
 	}
 
-	err := e.ReplicateWorkflowExecutionContinuedAsNewEvent("", domainID, continueAsNewEvent, startedEvent, di, newStateBuilder, eventStoreVersion)
+	// call FlushBufferedEvents to assign task id to event
+	// as well as update last event task id in new state builder
+	// NOTE: must flush current mutable state first
+	// so the task IDs assigned can be used for comparison for cross DC
+	err := e.FlushBufferedEvents()
+	if err != nil {
+		return nil, nil, err
+	}
+	err = newStateBuilder.FlushBufferedEvents()
+	if err != nil {
+		return nil, nil, err
+	}
+	err = e.ReplicateWorkflowExecutionContinuedAsNewEvent(firstEventID, "", domainID, continueAsNewEvent,
+		startedEvent, di, newStateBuilder, eventStoreVersion, domainEntry.GetRetentionDays(e.executionInfo.WorkflowID))
 	if err != nil {
 		return nil, nil, err
 	}
 	return continueAsNewEvent, newStateBuilder, nil
 }
 
-func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(sourceClusterName string, domainID string,
+func rolloverAutoResetPointsWithExpiringTime(resetPoints *workflow.ResetPoints, prevRunID string, domainRetentionDays int32) *workflow.ResetPoints {
+	if resetPoints == nil || resetPoints.Points == nil {
+		return resetPoints
+	}
+	newPoints := make([]*workflow.ResetPointInfo, 0, len(resetPoints.Points))
+	expiringTimeNano := time.Now().Add(time.Duration(domainRetentionDays) * time.Hour * 24).UnixNano()
+	for _, rp := range resetPoints.Points {
+		if rp.GetRunId() == prevRunID {
+			rp.ExpiringTimeNano = common.Int64Ptr(expiringTimeNano)
+		}
+		newPoints = append(newPoints, rp)
+	}
+	return &workflow.ResetPoints{
+		Points: newPoints,
+	}
+}
+
+func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(firstEventID int64, sourceClusterName string, domainID string,
 	continueAsNewEvent *workflow.HistoryEvent, startedEvent *workflow.HistoryEvent, di *decisionInfo,
-	newStateBuilder mutableState, eventStoreVersion int32) error {
+	newStateBuilder mutableState, eventStoreVersion int32, domainRetentionDays int32) error {
+
 	continueAsNewAttributes := continueAsNewEvent.WorkflowExecutionContinuedAsNewEventAttributes
 	startedAttributes := startedEvent.WorkflowExecutionStartedEventAttributes
 	newRunID := continueAsNewAttributes.GetNewExecutionRunId()
@@ -2354,15 +2688,19 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(sour
 
 	e.executionInfo.State = persistence.WorkflowStateCompleted
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusContinuedAsNew
+	e.executionInfo.CompletionEventBatchID = firstEventID // Used when completion event needs to be loaded from database
+	e.writeEventToCache(continueAsNewEvent)
 
 	parentDomainID := ""
-	var parentExecution *workflow.WorkflowExecution
+	parentExecution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(""),
+		RunId:      common.StringPtr(""),
+	}
 	initiatedID := common.EmptyEventID
-
 	newExecutionInfo := newStateBuilder.GetExecutionInfo()
 	if newStateBuilder.HasParentExecution() {
 		parentDomainID = newExecutionInfo.ParentDomainID
-		parentExecution = &workflow.WorkflowExecution{
+		parentExecution = workflow.WorkflowExecution{
 			WorkflowId: common.StringPtr(newExecutionInfo.ParentWorkflowID),
 			RunId:      common.StringPtr(newExecutionInfo.ParentRunID),
 		}
@@ -2372,26 +2710,28 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(sour
 	continueAsNew := &persistence.CreateWorkflowExecutionRequest{
 		// NOTE: there is no replication task for the start / decision scheduled event,
 		// the above 2 events will be replicated along with previous continue as new event.
-		RequestID:            uuid.New(),
-		DomainID:             domainID,
-		Execution:            newExecution,
-		ParentDomainID:       parentDomainID,
-		ParentExecution:      parentExecution,
-		InitiatedID:          initiatedID,
-		TaskList:             newExecutionInfo.TaskList,
-		WorkflowTypeName:     newExecutionInfo.WorkflowTypeName,
-		WorkflowTimeout:      newExecutionInfo.WorkflowTimeout,
-		DecisionTimeoutValue: newExecutionInfo.DecisionTimeoutValue,
-		ExecutionContext:     nil,
-		NextEventID:          newStateBuilder.GetNextEventID(),
-		LastProcessedEvent:   common.EmptyEventID,
-		CreateWorkflowMode:   persistence.CreateWorkflowModeContinueAsNew,
-		PreviousRunID:        prevRunID,
-		ReplicationState:     newStateBuilder.GetReplicationState(),
-		HasRetryPolicy:       startedAttributes.RetryPolicy != nil,
-		CronSchedule:         startedAttributes.GetCronSchedule(),
-		EventStoreVersion:    newStateBuilder.GetEventStoreVersion(),
-		BranchToken:          newStateBuilder.GetCurrentBranch(),
+		RequestID:               uuid.New(),
+		DomainID:                domainID,
+		Execution:               newExecution,
+		ParentDomainID:          parentDomainID,
+		ParentExecution:         parentExecution,
+		InitiatedID:             initiatedID,
+		TaskList:                newExecutionInfo.TaskList,
+		WorkflowTypeName:        newExecutionInfo.WorkflowTypeName,
+		WorkflowTimeout:         newExecutionInfo.WorkflowTimeout,
+		DecisionTimeoutValue:    newExecutionInfo.DecisionTimeoutValue,
+		ExecutionContext:        nil,
+		LastEventTaskID:         newExecutionInfo.LastEventTaskID,
+		NextEventID:             newStateBuilder.GetNextEventID(),
+		LastProcessedEvent:      common.EmptyEventID,
+		CreateWorkflowMode:      persistence.CreateWorkflowModeContinueAsNew,
+		PreviousRunID:           prevRunID,
+		ReplicationState:        newStateBuilder.GetReplicationState(),
+		HasRetryPolicy:          startedAttributes.RetryPolicy != nil,
+		CronSchedule:            startedAttributes.GetCronSchedule(),
+		EventStoreVersion:       newStateBuilder.GetEventStoreVersion(),
+		BranchToken:             newStateBuilder.GetCurrentBranch(),
+		PreviousAutoResetPoints: rolloverAutoResetPointsWithExpiringTime(startedAttributes.GetPrevAutoResetPoints(), prevRunID, domainRetentionDays),
 	}
 
 	if continueAsNew.HasRetryPolicy {
@@ -2405,7 +2745,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(sour
 
 	if continueAsNewAttributes.GetInitiator() == workflow.ContinueAsNewInitiatorRetryPolicy {
 		// retry
-		continueAsNew.Attempt = continueAsNew.Attempt + 1
+		continueAsNew.Attempt = startedAttributes.GetAttempt()
 		continueAsNew.ExpirationTime = e.executionInfo.ExpirationTime
 	} else {
 		// by cron or decider
@@ -2425,6 +2765,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(sour
 		// expire before timeout
 		timeoutDeadline = continueAsNew.ExpirationTime
 	}
+	continueAsNew.TransferTasks = []persistence.Task{&persistence.RecordWorkflowStartedTask{}}
 	continueAsNew.TimerTasks = []persistence.Task{&persistence.WorkflowTimeoutTask{
 		VisibilityTimestamp: timeoutDeadline,
 	}}
@@ -2443,12 +2784,11 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(sour
 			newStateBuilder.UpdateReplicationStateLastEventID(sourceClusterName, startedEvent.GetVersion(), di.ScheduleID)
 		}
 
-		newTransferTasks := []persistence.Task{&persistence.DecisionTask{
+		continueAsNew.TransferTasks = append(continueAsNew.TransferTasks, &persistence.DecisionTask{
 			DomainID:   domainID,
 			TaskList:   newExecutionInfo.TaskList,
 			ScheduleID: di.ScheduleID,
-		}}
-		continueAsNew.TransferTasks = newTransferTasks
+		})
 	} else {
 		// this need a backoff (for retry or cron)
 		continueAsNew.DecisionVersion = newStateBuilder.GetCurrentVersion()
@@ -2516,16 +2856,25 @@ func (e *mutableStateBuilder) ReplicateStartChildWorkflowExecutionInitiatedEvent
 	return ci
 }
 
-func (e *mutableStateBuilder) AddChildWorkflowExecutionStartedEvent(domain *string, execution *workflow.WorkflowExecution,
-	workflowType *workflow.WorkflowType, initiatedID int64) *workflow.HistoryEvent {
+func (e *mutableStateBuilder) AddChildWorkflowExecutionStartedEvent(
+	domain *string,
+	execution *workflow.WorkflowExecution,
+	workflowType *workflow.WorkflowType,
+	initiatedID int64,
+	header *workflow.Header,
+) *workflow.HistoryEvent {
 	ci, ok := e.GetChildExecutionInfo(initiatedID)
 	if !ok || ci.StartedID != common.EmptyEventID {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionChildExecutionStarted, e.GetNextEventID(), fmt.Sprintf(
-			"{InitiatedID: %v, Exist: %v}", initiatedID, ok))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionChildExecutionStarted,
+			tag.Bool(ok),
+			tag.WorkflowInitiatedID(ci.InitiatedID))
 		return nil
 	}
 
-	event := e.hBuilder.AddChildWorkflowExecutionStartedEvent(domain, execution, workflowType, initiatedID)
+	event := e.hBuilder.AddChildWorkflowExecutionStartedEvent(domain, execution, workflowType, initiatedID, header)
 	if err := e.ReplicateChildWorkflowExecutionStartedEvent(event); err != nil {
 		return nil
 	}
@@ -2550,8 +2899,12 @@ func (e *mutableStateBuilder) AddStartChildWorkflowExecutionFailedEvent(initiate
 	initiatedEventAttributes *workflow.StartChildWorkflowExecutionInitiatedEventAttributes) *workflow.HistoryEvent {
 	ci, ok := e.GetChildExecutionInfo(initiatedID)
 	if !ok || ci.StartedID != common.EmptyEventID {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionStartChildExecutionFailed, e.GetNextEventID(), fmt.Sprintf(
-			"{InitiatedID: %v, Exist: %v}", initiatedID, ok))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionStartChildExecutionFailed,
+			tag.Bool(ok),
+			tag.WorkflowInitiatedID(initiatedID))
 		return nil
 	}
 
@@ -2573,8 +2926,12 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCompletedEvent(initiatedI
 	attributes *workflow.WorkflowExecutionCompletedEventAttributes) *workflow.HistoryEvent {
 	ci, ok := e.GetChildExecutionInfo(initiatedID)
 	if !ok || ci.StartedID == common.EmptyEventID {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionChildExecutionCompleted, e.GetNextEventID(), fmt.Sprintf(
-			"{InitiatedID: %v, Exist: %v}", initiatedID, ok))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionChildExecutionCompleted,
+			tag.Bool(ok),
+			tag.WorkflowInitiatedID(ci.InitiatedID))
 		return nil
 	}
 
@@ -2605,8 +2962,12 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionFailedEvent(initiatedID i
 	attributes *workflow.WorkflowExecutionFailedEventAttributes) *workflow.HistoryEvent {
 	ci, ok := e.GetChildExecutionInfo(initiatedID)
 	if !ok || ci.StartedID == common.EmptyEventID {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionChildExecutionFailed, e.GetNextEventID(), fmt.Sprintf(
-			"{InitiatedID: %v, Exist: %v}", initiatedID, ok))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionChildExecutionFailed,
+			tag.Bool(ok),
+			tag.WorkflowInitiatedID(ci.InitiatedID))
 		return nil
 	}
 
@@ -2637,8 +2998,12 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCanceledEvent(initiatedID
 	attributes *workflow.WorkflowExecutionCanceledEventAttributes) *workflow.HistoryEvent {
 	ci, ok := e.GetChildExecutionInfo(initiatedID)
 	if !ok || ci.StartedID == common.EmptyEventID {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionChildExecutionCanceled, e.GetNextEventID(), fmt.Sprintf(
-			"{InitiatedID: %v, Exist: %v}", initiatedID, ok))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionChildExecutionCanceled,
+			tag.Bool(ok),
+			tag.WorkflowInitiatedID(ci.InitiatedID))
 		return nil
 	}
 
@@ -2669,8 +3034,12 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTerminatedEvent(initiated
 	attributes *workflow.WorkflowExecutionTerminatedEventAttributes) *workflow.HistoryEvent {
 	ci, ok := e.GetChildExecutionInfo(initiatedID)
 	if !ok || ci.StartedID == common.EmptyEventID {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionChildExecutionTerminated, e.GetNextEventID(), fmt.Sprintf(
-			"{InitiatedID: %v, Exist: %v}", initiatedID, ok))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionChildExecutionTerminated,
+			tag.Bool(ok),
+			tag.WorkflowInitiatedID(ci.InitiatedID))
 		return nil
 	}
 
@@ -2701,8 +3070,12 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTimedOutEvent(initiatedID
 	attributes *workflow.WorkflowExecutionTimedOutEventAttributes) *workflow.HistoryEvent {
 	ci, ok := e.GetChildExecutionInfo(initiatedID)
 	if !ok || ci.StartedID == common.EmptyEventID {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionChildExecutionTimedOut, e.GetNextEventID(),
-			fmt.Sprintf("{InitiatedID: %v, Exist: %v}", initiatedID, ok))
+		e.logger.Warn("Invalid history builder state for action",
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowActionChildExecutionTimedOut,
+			tag.Bool(ok),
+			tag.WorkflowInitiatedID(ci.InitiatedID))
 		return nil
 	}
 

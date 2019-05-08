@@ -21,22 +21,22 @@
 package history
 
 import (
-	"os"
 	"testing"
 	"time"
 
 	"github.com/pborman/uuid"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
@@ -50,7 +50,7 @@ type (
 		suite.Suite
 
 		mockShardManager *mocks.ShardManager
-		logger           bark.Logger
+		logger           log.Logger
 
 		mockHistoryEngine       *historyEngineImpl
 		mockMetadataMgr         *mocks.MetadataManager
@@ -59,7 +59,6 @@ type (
 		mockHistoryMgr          *mocks.HistoryManager
 		mockShard               ShardContext
 		mockClusterMetadata     *mocks.ClusterMetadata
-		mockProducer            *mocks.KafkaProducer
 		mockMessagingClient     messaging.Client
 		mocktimerQueueAckMgr    *MockTimerQueueAckMgr
 		mockService             service.Service
@@ -77,16 +76,12 @@ func TestTimerQueueStandbyProcessorSuite(t *testing.T) {
 }
 
 func (s *timerQueueStandbyProcessorSuite) SetupSuite() {
-	if testing.Verbose() {
-		log.SetOutput(os.Stdout)
-	}
+
 }
 
 func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 	shardID := 0
-	log2 := log.New()
-	log2.Level = log.DebugLevel
-	s.logger = bark.NewLoggerFromLogrus(log2)
+	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.mockShardManager = &mocks.ShardManager{}
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
 	s.mockHistoryMgr = &mocks.HistoryManager{}
@@ -113,11 +108,9 @@ func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 	)
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
-	s.mockProducer = &mocks.KafkaProducer{}
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
-	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
 	s.mockClientBean = &client.MockClientBean{}
-	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean, s.logger)
+	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean)
 
 	config := NewDynamicConfigForTest()
 	shardContext := &shardContextImpl{
@@ -152,7 +145,7 @@ func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 	}
 	s.mockHistoryEngine = h
 	s.clusterName = cluster.TestAlternativeClusterName
-	s.timerQueueStandbyProcessor = newTimerQueueStandbyProcessor(s.mockShard, h, s.clusterName, newTaskAllocator(s.mockShard), s.mockHistoryRereplicator, s.mockProducer, s.logger)
+	s.timerQueueStandbyProcessor = newTimerQueueStandbyProcessor(s.mockShard, h, s.clusterName, newTaskAllocator(s.mockShard), s.mockHistoryRereplicator, s.logger)
 	s.mocktimerQueueAckMgr = &MockTimerQueueAckMgr{}
 	s.timerQueueStandbyProcessor.timerQueueAckMgr = s.mocktimerQueueAckMgr
 }
@@ -162,7 +155,6 @@ func (s *timerQueueStandbyProcessorSuite) TearDownTest() {
 	s.mockExecutionMgr.AssertExpectations(s.T())
 	s.mockHistoryMgr.AssertExpectations(s.T())
 	s.mockVisibilityMgr.AssertExpectations(s.T())
-	s.mockProducer.AssertExpectations(s.T())
 	s.mocktimerQueueAckMgr.AssertExpectations(s.T())
 	s.mockHistoryRereplicator.AssertExpectations(s.T())
 	s.mockClientBean.AssertExpectations(s.T())
@@ -178,12 +170,13 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Pending() 
 	taskListName := "some random task list"
 
 	version := int64(4096)
-	msBuilder := newMutableStateBuilderWithReplicationState(
+	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(
 		s.mockClusterMetadata.GetCurrentClusterName(),
-		s.mockShard.GetConfig(),
+		s.mockShard,
 		s.mockShard.GetEventsCache(),
 		s.logger,
 		version,
+		execution.GetRunId(),
 	)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
@@ -208,7 +201,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Pending() 
 	event, timerInfo := addTimerStartedEvent(msBuilder, event.GetEventId(), timerID, int64(timerTimeout.Seconds()))
 	nextEventID := event.GetEventId() + 1
 
-	tBuilder := newTimerBuilder(s.mockShard.GetConfig(), s.logger, common.NewRealTimeSource())
+	tBuilder := newTimerBuilder(s.mockShard.GetConfig(), s.logger, clock.NewRealTimeSource())
 	tBuilder.AddUserTimer(timerInfo, msBuilder)
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             version,
@@ -248,8 +241,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Success() 
 	taskListName := "some random task list"
 
 	version := int64(4096)
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
-		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, version)
+	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard, s.mockShard.GetEventsCache(), s.logger, version, execution.GetRunId())
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -272,7 +265,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Success() 
 	timerTimeout := 2 * time.Second
 	event, timerInfo := addTimerStartedEvent(msBuilder, event.GetEventId(), timerID, int64(timerTimeout.Seconds()))
 
-	tBuilder := newTimerBuilder(s.mockShard.GetConfig(), s.logger, common.NewRealTimeSource())
+	tBuilder := newTimerBuilder(s.mockShard.GetConfig(), s.logger, clock.NewRealTimeSource())
 	tBuilder.AddUserTimer(timerInfo, msBuilder)
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             version,
@@ -305,8 +298,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Multiple()
 	taskListName := "some random task list"
 
 	version := int64(4096)
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
-		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, version)
+	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard, s.mockShard.GetEventsCache(), s.logger, version, execution.GetRunId())
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -333,7 +326,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Multiple()
 	timerTimeout2 := 50 * time.Second
 	_, timerInfo2 := addTimerStartedEvent(msBuilder, event.GetEventId(), timerID2, int64(timerTimeout2.Seconds()))
 
-	tBuilder := newTimerBuilder(s.mockShard.GetConfig(), s.logger, common.NewRealTimeSource())
+	tBuilder := newTimerBuilder(s.mockShard.GetConfig(), s.logger, clock.NewRealTimeSource())
 	tBuilder.AddUserTimer(timerInfo1, msBuilder)
 	tBuilder.AddUserTimer(timerInfo2, msBuilder)
 
@@ -368,8 +361,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Pending() {
 	taskListName := "some random task list"
 
 	version := int64(4096)
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
-		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, version)
+	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard, s.mockShard.GetEventsCache(), s.logger, version, execution.GetRunId())
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -396,7 +389,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Pending() {
 		int32(timerTimeout.Seconds()), int32(timerTimeout.Seconds()), int32(timerTimeout.Seconds()))
 	nextEventID := scheduledEvent.GetEventId() + 1
 
-	tBuilder := newTimerBuilder(s.mockShard.GetConfig(), s.logger, common.NewRealTimeSource())
+	tBuilder := newTimerBuilder(s.mockShard.GetConfig(), s.logger, clock.NewRealTimeSource())
 
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             version,
@@ -436,8 +429,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Success() {
 	taskListName := "some random task list"
 
 	version := int64(4096)
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
-		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, version)
+	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard, s.mockShard.GetEventsCache(), s.logger, version, execution.GetRunId())
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -465,7 +458,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Success() {
 		int32(timerTimeout.Seconds()), int32(timerTimeout.Seconds()), int32(timerTimeout.Seconds()))
 	startedEvent := addActivityTaskStartedEvent(msBuilder, scheduleEvent.GetEventId(), tasklist, identity)
 
-	tBuilder := newTimerBuilder(s.mockShard.GetConfig(), s.logger, common.NewRealTimeSource())
+	tBuilder := newTimerBuilder(s.mockShard.GetConfig(), s.logger, clock.NewRealTimeSource())
 	tBuilder.AddStartToCloseActivityTimeout(timerInfo)
 
 	timerTask := &persistence.TimerTaskInfo{
@@ -501,8 +494,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Multiple_Ca
 	taskListName := "some random task list"
 
 	version := int64(4096)
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
-		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, version)
+	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard, s.mockShard.GetEventsCache(), s.logger, version, execution.GetRunId())
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -540,7 +533,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Multiple_Ca
 	activityInfo2.TimerTaskStatus |= TimerTaskStatusCreatedHeartbeat
 	activityInfo2.LastHeartBeatUpdatedTime = time.Now()
 
-	tBuilder := newTimerBuilder(s.mockShard.GetConfig(), s.logger, common.NewRealTimeSource())
+	tBuilder := newTimerBuilder(s.mockShard.GetConfig(), s.logger, clock.NewRealTimeSource())
 	tBuilder.AddStartToCloseActivityTimeout(timerInfo1)
 	tBuilder.AddScheduleToCloseActivityTimeout(timerInfo2)
 
@@ -568,6 +561,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Multiple_Ca
 		s.Equal(1, len(input.UpsertActivityInfos))
 		msBuilder.executionInfo.LastUpdatedTimestamp = input.ExecutionInfo.LastUpdatedTimestamp
 		input.RangeID = 0
+		input.ExecutionInfo.LastEventTaskID = 0
+		msBuilder.executionInfo.LastEventTaskID = 0
 		s.Equal(&persistence.UpdateWorkflowExecutionRequest{
 			ExecutionInfo:                 msBuilder.executionInfo,
 			ReplicationState:              msBuilder.replicationState,
@@ -575,7 +570,6 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Multiple_Ca
 			ReplicationTasks:              nil,
 			TimerTasks:                    input.TimerTasks,
 			Condition:                     msBuilder.GetNextEventID(),
-			DeleteTimerTask:               nil,
 			UpsertActivityInfos:           input.UpsertActivityInfos,
 			DeleteActivityInfos:           []int64{},
 			UpserTimerInfos:               []*persistence.TimerInfo{},
@@ -593,9 +587,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Multiple_Ca
 			NewBufferedReplicationTask:    nil,
 			DeleteBufferedReplicationTask: nil,
 			ContinueAsNew:                 nil,
-			FinishExecution:               false,
-			FinishedExecutionTTL:          0,
-			Encoding:                      common.EncodingType("json"),
+			Encoding:                      common.EncodingType(s.mockShard.GetConfig().EventEncodingType(domainID)),
 		}, input)
 		return true
 	})).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
@@ -614,8 +606,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessDecisionTimeout_Pending() {
 	taskListName := "some random task list"
 
 	version := int64(4096)
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
-		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, version)
+	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard, s.mockShard.GetEventsCache(), s.logger, version, execution.GetRunId())
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -671,8 +663,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessDecisionTimeout_Success() {
 	taskListName := "some random task list"
 
 	version := int64(4096)
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
-		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, version)
+	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard, s.mockShard.GetEventsCache(), s.logger, version, execution.GetRunId())
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -720,8 +712,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowBackoffTimer_Pendin
 	taskListName := "some random task list"
 
 	version := int64(4096)
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
-		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, version)
+	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard, s.mockShard.GetEventsCache(), s.logger, version, execution.GetRunId())
 	event := msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -772,8 +764,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowBackoffTimer_Succes
 	taskListName := "some random task list"
 
 	version := int64(4096)
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
-		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, version)
+	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard, s.mockShard.GetEventsCache(), s.logger, version, execution.GetRunId())
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -816,8 +808,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowTimeout_Pending() {
 	taskListName := "some random task list"
 
 	version := int64(4096)
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
-		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, version)
+	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard, s.mockShard.GetEventsCache(), s.logger, version, execution.GetRunId())
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -874,8 +866,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowTimeout_Success() {
 	taskListName := "some random task list"
 
 	version := int64(4096)
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
-		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, version)
+	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard, s.mockShard.GetEventsCache(), s.logger, version, execution.GetRunId())
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -923,8 +915,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessRetryTimeout() {
 	taskListName := "some random task list"
 
 	version := int64(4096)
-	msBuilder := newMutableStateBuilderWithReplicationState(s.mockClusterMetadata.GetCurrentClusterName(),
-		s.mockShard.GetConfig(), s.mockShard.GetEventsCache(), s.logger, version)
+	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard, s.mockShard.GetEventsCache(), s.logger, version, execution.GetRunId())
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{

@@ -22,11 +22,10 @@ package frontend
 
 import (
 	"context"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"strconv"
 
 	"github.com/pborman/uuid"
 	"github.com/uber-go/tally"
@@ -38,7 +37,8 @@ import (
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
@@ -105,7 +105,8 @@ func (adh *AdminHandler) Stop() {
 }
 
 // DescribeWorkflowExecution returns information about the specified workflow execution.
-func (adh *AdminHandler) DescribeWorkflowExecution(ctx context.Context, request *admin.DescribeWorkflowExecutionRequest) (*admin.DescribeWorkflowExecutionResponse, error) {
+func (adh *AdminHandler) DescribeWorkflowExecution(ctx context.Context, request *admin.DescribeWorkflowExecutionRequest) (resp *admin.DescribeWorkflowExecutionResponse, retError error) {
+	defer log.CapturePanic(adh.GetLogger(), &retError)
 	scope := metrics.AdminDescribeWorkflowExecutionScope
 	if request == nil {
 		return nil, adh.error(errRequestNotSet, scope)
@@ -127,7 +128,7 @@ func (adh *AdminHandler) DescribeWorkflowExecution(ctx context.Context, request 
 	domainID, err := adh.domainCache.GetDomainID(request.GetDomain())
 
 	historyAddr := historyHost.GetAddress()
-	resp, err := adh.history.DescribeMutableState(ctx, &hist.DescribeMutableStateRequest{
+	resp2, err := adh.history.DescribeMutableState(ctx, &hist.DescribeMutableStateRequest{
 		DomainUUID: &domainID,
 		Execution:  request.Execution,
 	})
@@ -137,13 +138,14 @@ func (adh *AdminHandler) DescribeWorkflowExecution(ctx context.Context, request 
 	return &admin.DescribeWorkflowExecutionResponse{
 		ShardId:                common.StringPtr(shardIDForOutput),
 		HistoryAddr:            common.StringPtr(historyAddr),
-		MutableStateInDatabase: resp.MutableStateInDatabase,
-		MutableStateInCache:    resp.MutableStateInCache,
+		MutableStateInDatabase: resp2.MutableStateInDatabase,
+		MutableStateInCache:    resp2.MutableStateInCache,
 	}, err
 }
 
 // DescribeHistoryHost returns information about the internal states of a history host
-func (adh *AdminHandler) DescribeHistoryHost(ctx context.Context, request *gen.DescribeHistoryHostRequest) (*gen.DescribeHistoryHostResponse, error) {
+func (adh *AdminHandler) DescribeHistoryHost(ctx context.Context, request *gen.DescribeHistoryHostRequest) (resp *gen.DescribeHistoryHostResponse, retError error) {
+	defer log.CapturePanic(adh.GetLogger(), &retError)
 	scope := metrics.AdminDescribeHistoryHostScope
 	if request == nil || (request.ShardIdForHost == nil && request.ExecutionForHost == nil && request.HostAddress == nil) {
 		return nil, adh.error(errRequestNotSet, scope)
@@ -161,7 +163,8 @@ func (adh *AdminHandler) DescribeHistoryHost(ctx context.Context, request *gen.D
 
 // GetWorkflowExecutionRawHistory - retrieves the history of workflow execution
 func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
-	ctx context.Context, request *admin.GetWorkflowExecutionRawHistoryRequest) (*admin.GetWorkflowExecutionRawHistoryResponse, error) {
+	ctx context.Context, request *admin.GetWorkflowExecutionRawHistoryRequest) (resp *admin.GetWorkflowExecutionRawHistoryResponse, retError error) {
+	defer log.CapturePanic(adh.GetLogger(), &retError)
 
 	scope := metrics.AdminGetWorkflowExecutionRawHistoryScope
 	sw := adh.startRequestProfile(scope)
@@ -173,6 +176,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
+	domainScope := adh.metricsClient.Scope(scope, metrics.DomainTag(request.GetDomain()))
 
 	execution := request.Execution
 	if len(execution.GetWorkflowId()) == 0 {
@@ -260,6 +264,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 
 	// TODO need to deal with transient decision if to be used by client getting history
 	var historyBatches []*gen.History
+	shardID := common.WorkflowIDToHistoryShard(execution.GetWorkflowId(), adh.numberOfHistoryShards)
 	_, historyBatches, token.PersistenceToken, size, err = historyService.PaginateHistory(
 		adh.historyMgr,
 		adh.historyV2Mgr,
@@ -275,6 +280,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 		token.EventStoreVersion,
 		token.BranchToken,
 		pageSize,
+		common.IntPtr(shardID),
 	)
 	if err != nil {
 		if _, ok := err.(*gen.EntityNotExistsError); ok {
@@ -290,9 +296,12 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 		return nil, err
 	}
 
+	// N.B. - Dual emit is required here so that we can see aggregate timer stats across all
+	// domains along with the individual domains stats
 	adh.metricsClient.RecordTimer(scope, metrics.HistorySize, time.Duration(size))
+	domainScope.RecordTimer(metrics.HistorySize, time.Duration(size))
 
-	serializer := persistence.NewHistorySerializer()
+	serializer := persistence.NewPayloadSerializer()
 	blobs := []*gen.DataBlob{}
 	for _, historyBatch := range historyBatches {
 		blob, err := serializer.SerializeBatchEvents(historyBatch.Events, common.EncodingTypeThriftRW)
@@ -333,7 +342,7 @@ func (adh *AdminHandler) startRequestProfile(scope int) tally.Stopwatch {
 func (adh *AdminHandler) error(err error, scope int) error {
 	switch err.(type) {
 	case *gen.InternalServiceError:
-		logging.LogInternalServiceError(adh.Service.GetLogger(), err)
+		adh.Service.GetLogger().Error("Internal service error", tag.Error(err))
 		return err
 	case *gen.BadRequestError:
 		return err
@@ -342,7 +351,7 @@ func (adh *AdminHandler) error(err error, scope int) error {
 	case *gen.EntityNotExistsError:
 		return err
 	default:
-		logging.LogUncategorizedError(adh.Service.GetLogger(), err)
+		adh.Service.GetLogger().Error("Uncategorized error", tag.Error(err))
 		return &gen.InternalServiceError{Message: err.Error()}
 	}
 }

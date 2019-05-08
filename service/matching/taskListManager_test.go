@@ -27,19 +27,17 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/time/rate"
-
-	"github.com/uber/cadence/common/mocks"
-
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"golang.org/x/time/rate"
 )
 
 const _minBurst = 10000
@@ -90,7 +88,10 @@ func createTestTaskListManager() *taskListManagerImpl {
 }
 
 func createTestTaskListManagerWithConfig(cfg *Config) *taskListManagerImpl {
-	logger := bark.NewLoggerFromLogrus(log.New())
+	logger, err := loggerimpl.NewDevelopment()
+	if err != nil {
+		panic(err)
+	}
 	tm := newTestTaskManager(logger)
 	mockDomainCache := &cache.DomainCacheMock{}
 	mockDomainCache.On("GetDomainByID", mock.Anything).Return(cache.CreateDomainCacheEntry("domainName"), nil)
@@ -103,7 +104,7 @@ func createTestTaskListManagerWithConfig(cfg *Config) *taskListManagerImpl {
 	tlKind := common.TaskListKindPtr(workflow.TaskListKindNormal)
 	tlMgr, err := newTaskListManager(me, tlID, tlKind, cfg)
 	if err != nil {
-		logger.Fatalf("error when createTestTaskListManager: %v", err)
+		logger.Fatal("error when createTestTaskListManager", tag.Error(err))
 	}
 	return tlMgr.(*taskListManagerImpl)
 }
@@ -114,6 +115,63 @@ func TestIsTaskAddedRecently(t *testing.T) {
 	require.False(t, tlm.isTaskAddedRecently(time.Now().Add(-tlm.config.MaxTasklistIdleTime())))
 	require.True(t, tlm.isTaskAddedRecently(time.Now().Add(1*time.Second)))
 	require.False(t, tlm.isTaskAddedRecently(time.Time{}))
+}
+
+func TestDescribeTaskList(t *testing.T) {
+	startTaskID := int64(1)
+	taskCount := int64(3)
+	PollerIdentity := "test-poll"
+
+	// Create taskList Manager and set taskList state
+	tlm := createTestTaskListManager()
+	tlm.db.rangeID = int64(1)
+	tlm.db.ackLevel = int64(0)
+	tlm.taskAckManager.setAckLevel(tlm.db.ackLevel)
+
+	for i := int64(0); i < taskCount; i++ {
+		tlm.taskAckManager.addTask(startTaskID + i)
+	}
+
+	includeTaskStatus := false
+	descResp := tlm.DescribeTaskList(includeTaskStatus)
+	require.Equal(t, 0, len(descResp.GetPollers()))
+	require.Nil(t, descResp.GetTaskListStatus())
+
+	includeTaskStatus = true
+	taskListStatus := tlm.DescribeTaskList(includeTaskStatus).GetTaskListStatus()
+	require.NotNil(t, taskListStatus)
+	require.Zero(t, taskListStatus.GetAckLevel())
+	require.Equal(t, taskCount, taskListStatus.GetReadLevel())
+	require.Equal(t, taskCount, taskListStatus.GetBacklogCountHint())
+	require.True(t, taskListStatus.GetRatePerSecond() > (_defaultTaskDispatchRPS-1))
+	require.True(t, taskListStatus.GetRatePerSecond() < (_defaultTaskDispatchRPS+1))
+	taskIDBlock := taskListStatus.GetTaskIDBlock()
+	require.Equal(t, int64(1), taskIDBlock.GetStartID())
+	require.Equal(t, tlm.config.RangeSize, taskIDBlock.GetEndID())
+
+	// Add a poller and complete all tasks
+	tlm.pollerHistory.updatePollerInfo(pollerIdentity(PollerIdentity), nil)
+	for i := int64(0); i < taskCount; i++ {
+		tlm.taskAckManager.completeTask(startTaskID + i)
+	}
+
+	descResp = tlm.DescribeTaskList(includeTaskStatus)
+	require.Equal(t, 1, len(descResp.GetPollers()))
+	require.Equal(t, PollerIdentity, descResp.Pollers[0].GetIdentity())
+	require.NotEmpty(t, descResp.Pollers[0].GetLastAccessTime())
+	require.True(t, descResp.Pollers[0].GetRatePerSecond() > (_defaultTaskDispatchRPS-1))
+
+	rps := 5.0
+	tlm.pollerHistory.updatePollerInfo(pollerIdentity(PollerIdentity), &rps)
+	descResp = tlm.DescribeTaskList(includeTaskStatus)
+	require.Equal(t, 1, len(descResp.GetPollers()))
+	require.Equal(t, PollerIdentity, descResp.Pollers[0].GetIdentity())
+	require.True(t, descResp.Pollers[0].GetRatePerSecond() > 4.0 && descResp.Pollers[0].GetRatePerSecond() < 6.0)
+
+	taskListStatus = descResp.GetTaskListStatus()
+	require.NotNil(t, taskListStatus)
+	require.Equal(t, taskCount, taskListStatus.GetAckLevel())
+	require.Zero(t, taskListStatus.GetBacklogCountHint())
 }
 
 func tlMgrStartWithoutNotifyEvent(tlm *taskListManagerImpl) {
@@ -134,7 +192,7 @@ func TestCheckIdleTaskList(t *testing.T) {
 
 	// Active poll-er
 	tlm = createTestTaskListManagerWithConfig(cfg)
-	tlm.updatePollerInfo(pollerIdentity{identity: "test-poll"})
+	tlm.pollerHistory.updatePollerInfo(pollerIdentity("test-poll"), nil)
 	require.Equal(t, 1, len(tlm.GetAllPollerInfo()))
 	tlMgrStartWithoutNotifyEvent(tlm)
 	time.Sleep(20 * time.Millisecond)

@@ -23,13 +23,14 @@ package persistence
 import (
 	"sync"
 
-	"github.com/uber-common/bark"
-	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/tokenbucket"
 )
 
 type (
@@ -53,7 +54,7 @@ type (
 		// NewExecutionManager returns a new execution manager for a given shardID
 		NewExecutionManager(shardID int) (p.ExecutionManager, error)
 		// NewVisibilityManager returns a new visibility manager
-		NewVisibilityManager(enableSampling bool) (p.VisibilityManager, error)
+		NewVisibilityManager() (p.VisibilityManager, error)
 	}
 	// DataStoreFactory is a low level interface to be implemented by a datastore
 	// Examples of datastores are cassandra, mysql etc
@@ -71,9 +72,9 @@ type (
 		// NewMetadataStore returns a new metadata store
 		NewMetadataStore() (p.MetadataStore, error)
 		// NewMetadataStoreV1 returns a metadata store that can talk v1
-		NewMetadataStoreV1() (p.MetadataManager, error)
+		NewMetadataStoreV1() (p.MetadataStore, error)
 		// NewMetadataStoreV2 returns a metadata store that can talk v2
-		NewMetadataStoreV2() (p.MetadataManager, error)
+		NewMetadataStoreV2() (p.MetadataStore, error)
 		// NewExecutionStore returns an execution store for given shardID
 		NewExecutionStore(shardID int) (p.ExecutionStore, error)
 		// NewVisibilityStore returns a new visibility store
@@ -82,13 +83,13 @@ type (
 	// Datastore represents a datastore
 	Datastore struct {
 		factory   DataStoreFactory
-		ratelimit common.TokenBucket
+		ratelimit tokenbucket.TokenBucket
 	}
 	factoryImpl struct {
 		sync.RWMutex
 		config        *config.Persistence
 		metricsClient metrics.Client
-		logger        bark.Logger
+		logger        log.Logger
 		datastores    map[storeType]Datastore
 	}
 
@@ -130,23 +131,14 @@ func New(
 	cfg *config.Persistence,
 	clusterName string,
 	metricsClient metrics.Client,
-	logger bark.Logger) Factory {
+	logger log.Logger) Factory {
 	factory := &factoryImpl{
 		config:        cfg,
 		metricsClient: metricsClient,
 		logger:        logger,
 	}
-	defaultCfg := cfg.DataStores[cfg.DefaultStore]
-	visibilityCfg := cfg.DataStores[cfg.VisibilityStore]
 	limiters := buildRatelimiters(cfg)
-	factory.datastores = map[storeType]Datastore{
-		storeTypeTask:       newStore(defaultCfg, limiters[cfg.DefaultStore], clusterName, 0, logger),
-		storeTypeShard:      newStore(defaultCfg, limiters[cfg.DefaultStore], clusterName, 0, logger),
-		storeTypeMetadata:   newStore(defaultCfg, limiters[cfg.DefaultStore], clusterName, 0, logger),
-		storeTypeExecution:  newStore(defaultCfg, limiters[cfg.DefaultStore], clusterName, 0, logger),
-		storeTypeHistory:    newStore(defaultCfg, limiters[cfg.DefaultStore], clusterName, cfg.HistoryMaxConns, logger),
-		storeTypeVisibility: newStore(visibilityCfg, limiters[cfg.VisibilityStore], clusterName, 0, logger),
-	}
+	factory.init(clusterName, limiters)
 	return factory
 }
 
@@ -235,7 +227,7 @@ func (f *factoryImpl) NewMetadataManager(version MetadataVersion) (p.MetadataMan
 		return nil, err
 	}
 
-	result := p.MetadataManager(store)
+	result := p.NewMetadataManagerImpl(store, f.logger)
 	if ds.ratelimit != nil {
 		result = p.NewMetadataPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
@@ -263,21 +255,28 @@ func (f *factoryImpl) NewExecutionManager(shardID int) (p.ExecutionManager, erro
 }
 
 // NewVisibilityManager returns a new visibility manager
-func (f *factoryImpl) NewVisibilityManager(enableSampling bool) (p.VisibilityManager, error) {
+func (f *factoryImpl) NewVisibilityManager() (p.VisibilityManager, error) {
 	ds := f.datastores[storeTypeVisibility]
-	result, err := ds.factory.NewVisibilityStore()
+	store, err := ds.factory.NewVisibilityStore()
 	if err != nil {
 		return nil, err
 	}
+	visConfig := f.config.VisibilityConfig
+	if visConfig != nil && visConfig.EnableReadFromClosedExecutionV2() && f.isCassandra() {
+		store, err = cassandra.NewVisibilityPersistenceV2(store, f.getCassandraConfig(), f.logger)
+	}
+
+	result := p.NewVisibilityManagerImpl(store, f.logger)
 	if ds.ratelimit != nil {
 		result = p.NewVisibilityPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
-	if enableSampling {
-		result = p.NewVisibilitySamplingClient(result, &f.config.SamplingConfig, f.metricsClient, f.logger)
+	if visConfig != nil && visConfig.EnableSampling() {
+		result = p.NewVisibilitySamplingClient(result, visConfig, f.metricsClient, f.logger)
 	}
 	if f.metricsClient != nil {
 		result = p.NewVisibilityPersistenceMetricsClient(result, f.metricsClient, f.logger)
 	}
+
 	return result, nil
 }
 
@@ -287,33 +286,51 @@ func (f *factoryImpl) Close() {
 	ds.factory.Close()
 }
 
-func newStore(cfg config.DataStore, tb common.TokenBucket, clusterName string, maxConnsOverride int, logger bark.Logger) Datastore {
-	var ds Datastore
-	ds.ratelimit = tb
-	if cfg.SQL != nil {
-		ds.factory = newSQLStore(*cfg.SQL, clusterName, maxConnsOverride, logger)
-		return ds
-	}
-	ds.factory = newCassandraStore(*cfg.Cassandra, clusterName, maxConnsOverride, logger)
-	return ds
+func (f *factoryImpl) isCassandra() bool {
+	cfg := f.config
+	return cfg.DataStores[cfg.VisibilityStore].SQL == nil
 }
 
-func newSQLStore(cfg config.SQL, clusterName string, maxConnsOverride int, logger bark.Logger) DataStoreFactory {
-	if maxConnsOverride > 0 {
-		cfg.MaxConns = maxConnsOverride
-	}
-	return sql.NewFactory(cfg, clusterName, logger)
+func (f *factoryImpl) getCassandraConfig() *config.Cassandra {
+	cfg := f.config
+	return cfg.DataStores[cfg.VisibilityStore].Cassandra
 }
 
-func newCassandraStore(cfg config.Cassandra, clusterName string, maxConnsOverride int, logger bark.Logger) DataStoreFactory {
-	if maxConnsOverride > 0 {
-		cfg.MaxConns = maxConnsOverride
+func (f *factoryImpl) init(clusterName string, limiters map[string]tokenbucket.TokenBucket) {
+	f.datastores = make(map[storeType]Datastore, len(storeTypes))
+	defaultCfg := f.config.DataStores[f.config.DefaultStore]
+	defaultDataStore := Datastore{ratelimit: limiters[f.config.DefaultStore]}
+	switch {
+	case defaultCfg.Cassandra != nil:
+		defaultDataStore.factory = cassandra.NewFactory(*defaultCfg.Cassandra, clusterName, f.logger)
+	case defaultCfg.SQL != nil:
+		defaultDataStore.factory = sql.NewFactory(*defaultCfg.SQL, clusterName, f.logger)
+	default:
+		f.logger.Fatal("invalid config: one of cassandra or sql params must be specified")
 	}
-	return cassandra.NewFactory(cfg, clusterName, logger)
+
+	for _, st := range storeTypes {
+		if st != storeTypeVisibility {
+			f.datastores[st] = defaultDataStore
+		}
+	}
+
+	visibilityCfg := f.config.DataStores[f.config.VisibilityStore]
+	visibilityDataStore := Datastore{ratelimit: limiters[f.config.VisibilityStore]}
+	switch {
+	case defaultCfg.Cassandra != nil:
+		visibilityDataStore.factory = cassandra.NewFactory(*visibilityCfg.Cassandra, clusterName, f.logger)
+	case visibilityCfg.SQL != nil:
+		visibilityDataStore.factory = sql.NewFactory(*visibilityCfg.SQL, clusterName, f.logger)
+	default:
+		f.logger.Fatal("invalid config: one of cassandra or sql params must be specified")
+	}
+
+	f.datastores[storeTypeVisibility] = visibilityDataStore
 }
 
-func buildRatelimiters(cfg *config.Persistence) map[string]common.TokenBucket {
-	result := make(map[string]common.TokenBucket, len(cfg.DataStores))
+func buildRatelimiters(cfg *config.Persistence) map[string]tokenbucket.TokenBucket {
+	result := make(map[string]tokenbucket.TokenBucket, len(cfg.DataStores))
 	for dsName, ds := range cfg.DataStores {
 		qps := 0
 		if ds.Cassandra != nil {
@@ -323,7 +340,7 @@ func buildRatelimiters(cfg *config.Persistence) map[string]common.TokenBucket {
 			qps = ds.SQL.MaxQPS
 		}
 		if qps > 0 {
-			result[dsName] = common.NewTokenBucket(qps, common.NewRealTimeSource())
+			result[dsName] = tokenbucket.New(qps, clock.NewRealTimeSource())
 		}
 	}
 	return result

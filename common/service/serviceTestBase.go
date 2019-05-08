@@ -23,11 +23,12 @@ package service
 import (
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
-
-	"github.com/uber-common/bark"
+	"go.uber.org/zap"
 
 	"go.uber.org/yarpc"
 )
@@ -43,7 +44,7 @@ type (
 		membershipMonitor membership.Monitor
 
 		metrics metrics.Client
-		logger  bark.Logger
+		logger  log.Logger
 	}
 )
 
@@ -59,7 +60,14 @@ var (
 
 // NewTestService is the new service instance created for testing
 func NewTestService(clusterMetadata cluster.Metadata, messagingClient messaging.Client, metrics metrics.Client,
-	clientBean client.Bean, logger bark.Logger) Service {
+	clientBean client.Bean) Service {
+
+	zapLogger, err := zap.NewDevelopment()
+	if err != nil {
+		panic(err)
+	}
+	logger := loggerimpl.NewLogger(zapLogger)
+
 	return &serviceTestBase{
 		hostInfo:        testHostInfo,
 		clusterMetadata: clusterMetadata,
@@ -83,8 +91,11 @@ func (s *serviceTestBase) Start() {
 func (s *serviceTestBase) Stop() {
 }
 
-// GetLogger returns the logger for service
-func (s *serviceTestBase) GetLogger() bark.Logger {
+func (s *serviceTestBase) GetLogger() log.Logger {
+	return s.logger
+}
+
+func (s *serviceTestBase) GetThrottledLogger() log.Logger {
 	return s.logger
 }
 

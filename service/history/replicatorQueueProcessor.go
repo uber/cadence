@@ -24,11 +24,12 @@ import (
 	"errors"
 	"time"
 
-	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -46,7 +47,7 @@ type (
 		replicator            messaging.Producer
 		metricsClient         metrics.Client
 		options               *QueueProcessorOptions
-		logger                bark.Logger
+		logger                log.Logger
 		*queueProcessorBase
 		queueAckMgr
 
@@ -61,7 +62,7 @@ var (
 )
 
 func newReplicatorQueueProcessor(shard ShardContext, historyCache *historyCache, replicator messaging.Producer,
-	executionMgr persistence.ExecutionManager, historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager, logger bark.Logger) queueProcessor {
+	executionMgr persistence.ExecutionManager, historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager, logger log.Logger) queueProcessor {
 
 	currentClusterNamer := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 
@@ -79,9 +80,7 @@ func newReplicatorQueueProcessor(shard ShardContext, historyCache *historyCache,
 		MetricScope:                        metrics.ReplicatorQueueProcessorScope,
 	}
 
-	logger = logger.WithFields(bark.Fields{
-		logging.TagWorkflowComponent: logging.TagValueReplicatorQueueComponent,
-	})
+	logger = logger.WithTags(tag.ComponentReplicatorQueue)
 
 	replicationTaskFilter := func(qTask queueTaskInfo) (bool, error) {
 		return true, nil
@@ -178,19 +177,12 @@ func (p *replicatorQueueProcessorImpl) processSyncActivityTask(task *persistence
 
 	var startedTime *int64
 	var heartbeatTime *int64
+	scheduledTime := common.Int64Ptr(activityInfo.ScheduledTime.UnixNano())
 	if activityInfo.StartedID != common.EmptyEventID {
 		startedTime = common.Int64Ptr(activityInfo.StartedTime.UnixNano())
-
-		// int64 can only represent several hundred years of time
-		// when activity is started, the hearbeat timestamp will be empty
-		// but due the in64 limitation, the actual timestamp got is
-		// roughly 17xx year.
-		// set the heartbeat timestamp to started time if empty
-		heartbeatTime = common.Int64Ptr(activityInfo.LastHeartBeatUpdatedTime.UnixNano())
-		if *heartbeatTime < *startedTime {
-			heartbeatTime = startedTime
-		}
 	}
+	// LastHeartBeatUpdatedTime must be valid when getting the sync activity replication task
+	heartbeatTime = common.Int64Ptr(activityInfo.LastHeartBeatUpdatedTime.UnixNano())
 
 	replicationTask := &replicator.ReplicationTask{
 		TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeSyncActivity),
@@ -200,7 +192,7 @@ func (p *replicatorQueueProcessorImpl) processSyncActivityTask(task *persistence
 			RunId:             common.StringPtr(task.RunID),
 			Version:           common.Int64Ptr(activityInfo.Version),
 			ScheduledId:       common.Int64Ptr(activityInfo.ScheduleID),
-			ScheduledTime:     common.Int64Ptr(activityInfo.ScheduledTime.UnixNano()),
+			ScheduledTime:     scheduledTime,
 			StartedId:         common.Int64Ptr(activityInfo.StartedID),
 			StartedTime:       startedTime,
 			LastHeartbeatTime: heartbeatTime,
@@ -222,24 +214,44 @@ func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persi
 	for _, cluster := range domainEntry.GetReplicationConfig().Clusters {
 		targetClusters = append(targetClusters, cluster.ClusterName)
 	}
-
-	replicationTask, err := GenerateReplicationTask(targetClusters, task, p.historyMgr, p.historyV2Mgr, p.metricsClient, p.logger, nil)
+	replicationTask, err := GenerateReplicationTask(targetClusters, task, p.historyMgr, p.historyV2Mgr, p.metricsClient, p.logger, nil, common.IntPtr(p.shard.GetShardID()))
 	if err != nil || replicationTask == nil {
 		return err
 	}
 
-	return p.replicator.Publish(replicationTask)
+	err = p.replicator.Publish(replicationTask)
+	if err == messaging.ErrMessageSizeLimit {
+		// message size exceeds the server messaging size limit
+		// for this specific case, just send out a metadata message and
+		// let receiver fetch from source (for the concrete history events)
+		err = p.replicator.Publish(p.generateHistoryMetadataTask(targetClusters, task))
+	}
+	return err
+}
+
+func (p *replicatorQueueProcessorImpl) generateHistoryMetadataTask(targetClusters []string, task *persistence.ReplicationTaskInfo) *replicator.ReplicationTask {
+	return &replicator.ReplicationTask{
+		TaskType: replicator.ReplicationTaskTypeHistoryMetadata.Ptr(),
+		HistoryMetadataTaskAttributes: &replicator.HistoryMetadataTaskAttributes{
+			TargetClusters: targetClusters,
+			DomainId:       common.StringPtr(task.DomainID),
+			WorkflowId:     common.StringPtr(task.WorkflowID),
+			RunId:          common.StringPtr(task.RunID),
+			FirstEventId:   common.Int64Ptr(task.FirstEventID),
+			NextEventId:    common.Int64Ptr(task.NextEventID),
+		},
+	}
 }
 
 // GenerateReplicationTask generate replication task
 func GenerateReplicationTask(targetClusters []string, task *persistence.ReplicationTaskInfo,
 	historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
-	metricsClient metrics.Client, logger bark.Logger, history *shared.History,
+	metricsClient metrics.Client, logger log.Logger, history *shared.History, shardID *int,
 ) (*replicator.ReplicationTask, error) {
 	var err error
 	if history == nil {
 		history, _, err = GetAllHistory(historyMgr, historyV2Mgr, metricsClient, logger, false,
-			task.DomainID, task.WorkflowID, task.RunID, task.FirstEventID, task.NextEventID, task.EventStoreVersion, task.BranchToken)
+			task.DomainID, task.WorkflowID, task.RunID, task.FirstEventID, task.NextEventID, task.EventStoreVersion, task.BranchToken, shardID)
 		if err != nil {
 			return nil, err
 		}
@@ -258,7 +270,7 @@ func GenerateReplicationTask(targetClusters []string, task *persistence.Replicat
 			// Check if this is replication task for ContinueAsNew event, then retrieve the history for new execution
 			newRunID := lastEvent.WorkflowExecutionContinuedAsNewEventAttributes.GetNewExecutionRunId()
 			newRunHistory, _, err = GetAllHistory(historyMgr, historyV2Mgr, metricsClient, logger, false,
-				task.DomainID, task.WorkflowID, newRunID, common.FirstEventID, int64(3), task.NewRunEventStoreVersion, task.NewRunBranchToken)
+				task.DomainID, task.WorkflowID, newRunID, common.FirstEventID, int64(3), task.NewRunEventStoreVersion, task.NewRunBranchToken, shardID)
 			if err != nil {
 				return nil, err
 			}
@@ -285,6 +297,7 @@ func GenerateReplicationTask(targetClusters []string, task *persistence.Replicat
 	}
 	return ret, nil
 }
+
 func (p *replicatorQueueProcessorImpl) readTasks(readLevel int64) ([]queueTaskInfo, bool, error) {
 	response, err := p.executionMgr.GetReplicationTasks(&persistence.GetReplicationTasksRequest{
 		ReadLevel:    readLevel,
@@ -309,7 +322,7 @@ func (p *replicatorQueueProcessorImpl) updateAckLevel(ackLevel int64) error {
 
 	// this is a hack, since there is not dedicated ticker on the queue processor
 	// to periodically send out sync shard message, put it here
-	now := common.NewRealTimeSource().Now()
+	now := clock.NewRealTimeSource().Now()
 	if p.lastShardSyncTimestamp.Add(p.shard.GetConfig().ShardSyncMinInterval()).Before(now) {
 		syncStatusTask := &replicator.ReplicationTask{
 			TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeSyncShardStatus),
@@ -329,9 +342,9 @@ func (p *replicatorQueueProcessorImpl) updateAckLevel(ackLevel int64) error {
 
 // GetAllHistory return history
 func GetAllHistory(historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
-	metricsClient metrics.Client, logger bark.Logger, byBatch bool,
+	metricsClient metrics.Client, logger log.Logger, byBatch bool,
 	domainID string, workflowID string, runID string, firstEventID int64,
-	nextEventID int64, eventStoreVersion int32, branchToken []byte) (*shared.History, []*shared.History, error) {
+	nextEventID int64, eventStoreVersion int32, branchToken []byte, shardID *int) (*shared.History, []*shared.History, error) {
 
 	// overall result
 	historyEvents := []*shared.HistoryEvent{}
@@ -349,7 +362,7 @@ func GetAllHistory(historyMgr persistence.HistoryManager, historyV2Mgr persisten
 		pageHistoryEvents, pageHistoryBatches, pageToken, pageHistorySize, err = PaginateHistory(
 			historyMgr, historyV2Mgr, metricsClient, logger, byBatch,
 			domainID, workflowID, runID, firstEventID, nextEventID, pageToken,
-			eventStoreVersion, branchToken, defaultHistoryPageSize,
+			eventStoreVersion, branchToken, defaultHistoryPageSize, shardID,
 		)
 		if err != nil {
 			return nil, nil, err
@@ -365,12 +378,11 @@ func GetAllHistory(historyMgr persistence.HistoryManager, historyV2Mgr persisten
 		metricsClient.RecordTimer(metrics.ReplicatorQueueProcessorScope, metrics.HistorySize, time.Duration(historySize))
 	}
 	if historySize > common.GetHistoryWarnSizeLimit {
-		logger.WithFields(bark.Fields{
-			logging.TagWorkflowExecutionID: workflowID,
-			logging.TagWorkflowRunID:       runID,
-			logging.TagDomainID:            domainID,
-			logging.TagSize:                historySize,
-		}).Warn("GetHistory size threshold breached")
+		logger.Warn("GetHistory size threshold breached",
+			tag.WorkflowID(workflowID),
+			tag.WorkflowRunID(runID),
+			tag.WorkflowDomainID(domainID),
+			tag.WorkflowSize(int64(historySize)))
 	}
 
 	history := &shared.History{
@@ -381,9 +393,9 @@ func GetAllHistory(historyMgr persistence.HistoryManager, historyV2Mgr persisten
 
 // PaginateHistory return paged history
 func PaginateHistory(historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
-	metricsClient metrics.Client, logger bark.Logger, byBatch bool,
+	metricsClient metrics.Client, logger log.Logger, byBatch bool,
 	domainID, workflowID, runID string, firstEventID,
-	nextEventID int64, tokenIn []byte, eventStoreVersion int32, branchToken []byte, pageSize int) ([]*shared.HistoryEvent, []*shared.History, []byte, int, error) {
+	nextEventID int64, tokenIn []byte, eventStoreVersion int32, branchToken []byte, pageSize int, shardID *int) ([]*shared.HistoryEvent, []*shared.History, []byte, int, error) {
 
 	historyEvents := []*shared.HistoryEvent{}
 	historyBatches := []*shared.History{}
@@ -397,6 +409,7 @@ func PaginateHistory(historyMgr persistence.HistoryManager, historyV2Mgr persist
 			MaxEventID:    nextEventID,
 			PageSize:      pageSize,
 			NextPageToken: tokenIn,
+			ShardID:       shardID,
 		}
 		if byBatch {
 			response, err := historyV2Mgr.ReadHistoryBranchByBatch(req)

@@ -21,35 +21,35 @@
 package frontend
 
 import (
-	log "github.com/sirupsen/logrus"
+	"testing"
+
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	"os"
-	"testing"
 )
 
 type (
 	noopDCRedirectionPolicySuite struct {
 		suite.Suite
-		currentClusteName       string
-		noopDCRedirectionPolicy *NoopRedirectionPolicy
+		currentClusterName string
+		policy             *NoopRedirectionPolicy
 	}
 
 	forwardingDCRedirectionPolicySuite struct {
-		logger bark.Logger
+		logger log.Logger
 		suite.Suite
-		fromDC                        string
-		toDC                          string
-		mockMetadataMgr               *mocks.MetadataManager
-		mockClusterMetadata           *mocks.ClusterMetadata
-		forwardingDCRedirectionPolicy *ForwardingDCRedirectionPolicy
+		fromDC              string
+		toDC                string
+		mockMetadataMgr     *mocks.MetadataManager
+		mockClusterMetadata *mocks.ClusterMetadata
+		policy              *ForwardingDCRedirectionPolicy
 	}
 )
 
@@ -59,9 +59,6 @@ func TestNoopDCRedirectionPolicySuite(t *testing.T) {
 }
 
 func (s *noopDCRedirectionPolicySuite) SetupSuite() {
-	if testing.Verbose() {
-		log.SetOutput(os.Stdout)
-	}
 }
 
 func (s *noopDCRedirectionPolicySuite) TearDownSuite() {
@@ -69,25 +66,25 @@ func (s *noopDCRedirectionPolicySuite) TearDownSuite() {
 }
 
 func (s *noopDCRedirectionPolicySuite) SetupTest() {
-	s.currentClusteName = cluster.TestCurrentClusterName
-	s.noopDCRedirectionPolicy = NewNoopRedirectionPolicy(s.currentClusteName)
+	s.currentClusterName = cluster.TestCurrentClusterName
+	s.policy = NewNoopRedirectionPolicy(s.currentClusterName)
 }
 
 func (s *noopDCRedirectionPolicySuite) TearDownTest() {
 
 }
 
-func (s *noopDCRedirectionPolicySuite) TestGetTargetDatacenter() {
+func (s *noopDCRedirectionPolicySuite) TestGetTargetDataCenter() {
 	domainName := "some random domain name"
 	domainID := "some random domain ID"
 
-	targetCluster, err := s.noopDCRedirectionPolicy.GetTargetDatacenterByID(domainID)
+	targetCluster, err := s.policy.GetTargetDataCenterByID(domainID)
 	s.Nil(err)
-	s.Equal(s.currentClusteName, targetCluster)
+	s.Equal(s.currentClusterName, targetCluster)
 
-	targetCluster, err = s.noopDCRedirectionPolicy.GetTargetDatacenterByName(domainName)
+	targetCluster, err = s.policy.GetTargetDataCenterByName(domainName)
 	s.Nil(err)
-	s.Equal(s.currentClusteName, targetCluster)
+	s.Equal(s.currentClusterName, targetCluster)
 }
 
 func TestForwardingDCRedirectionPolicySuite(t *testing.T) {
@@ -96,9 +93,6 @@ func TestForwardingDCRedirectionPolicySuite(t *testing.T) {
 }
 
 func (s *forwardingDCRedirectionPolicySuite) SetupSuite() {
-	if testing.Verbose() {
-		log.SetOutput(os.Stdout)
-	}
 }
 
 func (s *forwardingDCRedirectionPolicySuite) TearDownSuite() {
@@ -108,9 +102,9 @@ func (s *forwardingDCRedirectionPolicySuite) TearDownSuite() {
 func (s *forwardingDCRedirectionPolicySuite) SetupTest() {
 	s.fromDC = cluster.TestCurrentClusterName
 	s.toDC = cluster.TestAlternativeClusterName
-	log2 := log.New()
-	log2.Level = log.DebugLevel
-	s.logger = bark.NewLoggerFromLogrus(log2)
+	var err error
+	s.logger, err = loggerimpl.NewDevelopment()
+	s.Require().NoError(err)
 	s.mockMetadataMgr = &mocks.MetadataManager{}
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
@@ -120,7 +114,7 @@ func (s *forwardingDCRedirectionPolicySuite) SetupTest() {
 		metrics.NewClient(tally.NoopScope, metrics.Frontend),
 		s.logger,
 	)
-	s.forwardingDCRedirectionPolicy = NewForwardingDCRedirectionPolicy(
+	s.policy = NewForwardingDCRedirectionPolicy(
 		s.fromDC, s.toDC, domainCache,
 	)
 }
@@ -129,7 +123,7 @@ func (s *forwardingDCRedirectionPolicySuite) TearDownTest() {
 
 }
 
-func (s *forwardingDCRedirectionPolicySuite) TestGetTargetDatacenter_LocalDomain() {
+func (s *forwardingDCRedirectionPolicySuite) TestGetTargetDataCenter_LocalDomain() {
 	domainName := "some random domain name"
 	domainID := "some random domain ID"
 	domainRecord := &persistence.GetDomainResponse{
@@ -147,16 +141,16 @@ func (s *forwardingDCRedirectionPolicySuite) TestGetTargetDatacenter_LocalDomain
 
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(domainRecord, nil)
 
-	targetCluster, err := s.forwardingDCRedirectionPolicy.GetTargetDatacenterByID(domainID)
+	targetCluster, err := s.policy.GetTargetDataCenterByID(domainID)
 	s.Nil(err)
 	s.Equal(s.fromDC, targetCluster)
 
-	targetCluster, err = s.forwardingDCRedirectionPolicy.GetTargetDatacenterByName(domainName)
+	targetCluster, err = s.policy.GetTargetDataCenterByName(domainName)
 	s.Nil(err)
 	s.Equal(s.fromDC, targetCluster)
 }
 
-func (s *forwardingDCRedirectionPolicySuite) TestGetTargetDatacenter_GlobalDomain_OneReplicationCluster() {
+func (s *forwardingDCRedirectionPolicySuite) TestGetTargetDataCenter_GlobalDomain_OneReplicationCluster() {
 	domainName := "some random domain name"
 	domainID := "some random domain ID"
 	domainRecord := &persistence.GetDomainResponse{
@@ -174,16 +168,16 @@ func (s *forwardingDCRedirectionPolicySuite) TestGetTargetDatacenter_GlobalDomai
 
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(domainRecord, nil)
 
-	targetCluster, err := s.forwardingDCRedirectionPolicy.GetTargetDatacenterByID(domainID)
+	targetCluster, err := s.policy.GetTargetDataCenterByID(domainID)
 	s.Nil(err)
 	s.Equal(s.fromDC, targetCluster)
 
-	targetCluster, err = s.forwardingDCRedirectionPolicy.GetTargetDatacenterByName(domainName)
+	targetCluster, err = s.policy.GetTargetDataCenterByName(domainName)
 	s.Nil(err)
 	s.Equal(s.fromDC, targetCluster)
 }
 
-func (s *forwardingDCRedirectionPolicySuite) TestGetTargetDatacenter_GlobalDomain_NoFowarding() {
+func (s *forwardingDCRedirectionPolicySuite) TestGetTargetDataCenter_GlobalDomain_NoForwarding() {
 	domainName := "some random domain name"
 	domainID := "some random domain ID"
 	domainRecord := &persistence.GetDomainResponse{
@@ -202,16 +196,16 @@ func (s *forwardingDCRedirectionPolicySuite) TestGetTargetDatacenter_GlobalDomai
 
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(domainRecord, nil)
 
-	targetCluster, err := s.forwardingDCRedirectionPolicy.GetTargetDatacenterByID(domainID)
+	targetCluster, err := s.policy.GetTargetDataCenterByID(domainID)
 	s.Nil(err)
 	s.Equal(s.fromDC, targetCluster)
 
-	targetCluster, err = s.forwardingDCRedirectionPolicy.GetTargetDatacenterByName(domainName)
+	targetCluster, err = s.policy.GetTargetDataCenterByName(domainName)
 	s.Nil(err)
 	s.Equal(s.fromDC, targetCluster)
 }
 
-func (s *forwardingDCRedirectionPolicySuite) TestGetTargetDatacenter_GlobalDomain_Fowarding() {
+func (s *forwardingDCRedirectionPolicySuite) TestGetTargetDataCenter_GlobalDomain_Forwarding() {
 	domainName := "some random domain name"
 	domainID := "some random domain ID"
 	domainRecord := &persistence.GetDomainResponse{
@@ -230,11 +224,11 @@ func (s *forwardingDCRedirectionPolicySuite) TestGetTargetDatacenter_GlobalDomai
 
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(domainRecord, nil)
 
-	targetCluster, err := s.forwardingDCRedirectionPolicy.GetTargetDatacenterByID(domainID)
+	targetCluster, err := s.policy.GetTargetDataCenterByID(domainID)
 	s.Nil(err)
 	s.Equal(s.toDC, targetCluster)
 
-	targetCluster, err = s.forwardingDCRedirectionPolicy.GetTargetDatacenterByName(domainName)
+	targetCluster, err = s.policy.GetTargetDataCenterByName(domainName)
 	s.Nil(err)
 	s.Equal(s.toDC, targetCluster)
 }

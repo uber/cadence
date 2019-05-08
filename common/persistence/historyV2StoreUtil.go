@@ -21,9 +21,12 @@
 package persistence
 
 import (
-	"github.com/uber-common/bark"
-	"github.com/uber/cadence/.gen/go/shared"
+	"fmt"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"time"
+
+	"github.com/uber/cadence/.gen/go/shared"
 )
 
 /*
@@ -60,9 +63,10 @@ that zombie history segments can remain under some rare failure cases. Consider 
 Under this rare case the section of parent history which was assumed to be common to child will be a zombie history section.
 
 */
-func DeleteWorkflowExecutionHistoryV2(historyV2Mgr HistoryV2Manager, branchToken []byte, logger bark.Logger) error {
+func DeleteWorkflowExecutionHistoryV2(historyV2Mgr HistoryV2Manager, branchToken []byte, shardID *int, logger log.Logger) error {
 	err := historyV2Mgr.DeleteHistoryBranch(&DeleteHistoryBranchRequest{
 		BranchToken: branchToken,
+		ShardID:     shardID,
 	})
 	if err == nil {
 		return nil
@@ -77,6 +81,7 @@ func DeleteWorkflowExecutionHistoryV2(historyV2Mgr HistoryV2Manager, branchToken
 
 	resp, err := historyV2Mgr.GetHistoryTree(&GetHistoryTreeRequest{
 		BranchToken: branchToken,
+		ShardID:     shardID,
 	})
 	if err != nil {
 		return err
@@ -85,7 +90,7 @@ func DeleteWorkflowExecutionHistoryV2(historyV2Mgr HistoryV2Manager, branchToken
 	if len(resp.ForkingInProgressBranches) > 0 {
 		logInfo := ""
 		defer func() {
-			logger.Warnf("seeing incomplete forking branches when deleting branch, details: %v", logInfo)
+			logger.Warn("seeing incomplete forking branches when deleting branch", tag.DetailInfo(logInfo))
 		}()
 		for _, br := range resp.ForkingInProgressBranches {
 			if time.Now().After(br.ForkTime.Add(time.Minute)) {
@@ -100,6 +105,7 @@ func DeleteWorkflowExecutionHistoryV2(historyV2Mgr HistoryV2Manager, branchToken
 					// the worst case is we may leak some data that will never deleted
 					Success:     true,
 					BranchToken: bt,
+					ShardID:     shardID,
 				})
 				if err != nil {
 					return err
@@ -114,6 +120,44 @@ func DeleteWorkflowExecutionHistoryV2(historyV2Mgr HistoryV2Manager, branchToken
 	}
 	err = historyV2Mgr.DeleteHistoryBranch(&DeleteHistoryBranchRequest{
 		BranchToken: branchToken,
+		ShardID:     shardID,
 	})
 	return err
+}
+
+// ReadFullPageV2Events reads a full page of history events from HistoryV2Manager. Due to storage format of V2 History
+// it is not guaranteed that pageSize amount of data is returned. Function returns the list of history events, the size
+// of data read, the next page token, and an error if present. Next page token will be empty when there are no more events to read.
+func ReadFullPageV2Events(historyV2Mgr HistoryV2Manager, req *ReadHistoryBranchRequest) ([]*shared.HistoryEvent, int, []byte, error) {
+	historyEvents := []*shared.HistoryEvent{}
+	size := int(0)
+	for {
+		response, err := historyV2Mgr.ReadHistoryBranch(req)
+		if err != nil {
+			return nil, 0, nil, err
+		}
+		historyEvents = append(historyEvents, response.HistoryEvents...)
+		size += response.Size
+		if len(historyEvents) >= req.PageSize || len(response.NextPageToken) == 0 {
+			return historyEvents, size, response.NextPageToken, nil
+		}
+		req.NextPageToken = response.NextPageToken
+	}
+}
+
+// GetBeginNodeID gets node id from last ancestor
+func GetBeginNodeID(bi shared.HistoryBranch) int64 {
+	if len(bi.Ancestors) == 0 {
+		// root branch
+		return 1
+	}
+	idx := len(bi.Ancestors) - 1
+	return *bi.Ancestors[idx].EndNodeID
+}
+
+func getShardID(shardID *int) (int, error) {
+	if shardID == nil {
+		return 0, fmt.Errorf("shardID is not set for persistence operation")
+	}
+	return *shardID, nil
 }

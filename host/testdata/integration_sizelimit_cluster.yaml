@@ -1,0 +1,14 @@
+enableeventsv2: false
+enablearchival: false
+clusterno: 0
+messagingclientconfig:
+  usemock: true
+historyconfig:
+  numhistoryshards: 4
+  numhistoryhosts: 1
+  historycountlimiterror: 20
+  historycountlimitwarn: 10
+workerconfig:
+  enablearchiver: false
+  enablereplicator: false
+  enableindexer: false

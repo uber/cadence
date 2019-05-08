@@ -21,29 +21,27 @@
 package history
 
 import (
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
-	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/service"
+	cconfig "github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
-)
-
-const (
-	testWorkflowClusterHosts = "127.0.0.1"
-	testDatacenter           = ""
-	testSchemaDir            = "../.."
 )
 
 var (
@@ -77,7 +75,7 @@ type (
 		eventsCache            eventsCache
 
 		config                    *Config
-		logger                    bark.Logger
+		logger                    log.Logger
 		metricsClient             metrics.Client
 		standbyClusterCurrentTime map[string]time.Time
 		timerMaxReadLevelMap      map[string]time.Time
@@ -95,7 +93,7 @@ var _ ShardContext = (*TestShardContext)(nil)
 func newTestShardContext(shardInfo *persistence.ShardInfo, transferSequenceNumber int64,
 	historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager, executionMgr persistence.ExecutionManager,
 	metadataMgr persistence.MetadataManager, metadataMgrV2 persistence.MetadataManager, clusterMetadata cluster.Metadata,
-	clientBean client.Bean, config *Config, logger bark.Logger) *TestShardContext {
+	clientBean client.Bean, config *Config, logger log.Logger) *TestShardContext {
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	domainCache := cache.NewDomainCache(metadataMgr, clusterMetadata, metricsClient, logger)
 
@@ -118,7 +116,7 @@ func newTestShardContext(shardInfo *persistence.ShardInfo, transferSequenceNumbe
 
 	shardCtx := &TestShardContext{
 		shardID:                   0,
-		service:                   service.NewTestService(clusterMetadata, nil, metricsClient, clientBean, logger),
+		service:                   service.NewTestService(clusterMetadata, nil, metricsClient, clientBean),
 		shardInfo:                 shardInfo,
 		transferSequenceNumber:    transferSequenceNumber,
 		historyMgr:                historyMgr,
@@ -174,6 +172,19 @@ func (s *TestShardContext) GetEventsCache() eventsCache {
 // GetNextTransferTaskID test implementation
 func (s *TestShardContext) GetNextTransferTaskID() (int64, error) {
 	return atomic.AddInt64(&s.transferSequenceNumber, 1), nil
+}
+
+// GetTransferTaskIDs test implementation
+func (s *TestShardContext) GetTransferTaskIDs(number int) ([]int64, error) {
+	result := []int64{}
+	for i := 0; i < number; i++ {
+		id, err := s.GetNextTransferTaskID()
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, id)
+	}
+	return result, nil
 }
 
 // GetTransferMaxReadLevel test implementation
@@ -368,8 +379,8 @@ func (s *TestShardContext) UpdateWorkflowExecution(request *persistence.UpdateWo
 		if ts.Before(s.timerMaxReadLevelMap[clusterName]) {
 			// This can happen if shard move and new host have a time SKU, or there is db write delay.
 			// We generate a new timer ID using timerMaxReadLevel.
-			s.logger.WithField("Cluster", clusterName).Warnf("%v: New timer generated is less than read level. timestamp: %v, timerMaxReadLevel: %v",
-				time.Now(), ts, s.timerMaxReadLevelMap[clusterName])
+			s.logger.Warn(fmt.Sprintf("%v: New timer generated is less than read level. timestamp: %v, timerMaxReadLevel: %v",
+				time.Now(), ts, s.timerMaxReadLevelMap[clusterName]), tag.ClusterName(clusterName))
 			task.SetVisibilityTimestamp(s.timerMaxReadLevelMap[clusterName].Add(time.Millisecond))
 		}
 		seqID, err := s.GetNextTransferTaskID()
@@ -378,8 +389,8 @@ func (s *TestShardContext) UpdateWorkflowExecution(request *persistence.UpdateWo
 		}
 		task.SetTaskID(seqID)
 		visibilityTs := task.GetVisibilityTimestamp()
-		s.logger.Infof("%v: TestShardContext: Assigning timer (timestamp: %v, seq: %v)",
-			time.Now().UTC(), visibilityTs, task.GetTaskID())
+		s.logger.Info(fmt.Sprintf("%v: TestShardContext: Assigning timer (timestamp: %v, seq: %v)",
+			time.Now().UTC(), visibilityTs, task.GetTaskID()))
 	}
 	resp, err := s.executionMgr.UpdateWorkflowExecution(request)
 	return resp, err
@@ -422,7 +433,9 @@ func (s *TestShardContext) AppendHistoryEvents(request *persistence.AppendHistor
 }
 
 // AppendHistoryV2Events append history V2 events
-func (s *TestShardContext) AppendHistoryV2Events(request *persistence.AppendHistoryNodesRequest, domainID string) (int, error) {
+func (s *TestShardContext) AppendHistoryV2Events(
+	request *persistence.AppendHistoryNodesRequest, domainID string, execution shared.WorkflowExecution) (int, error) {
+	request.ShardID = common.IntPtr(s.shardID)
 	resp, err := s.historyV2Mgr.AppendHistoryNodes(request)
 	return resp.Size, err
 }
@@ -438,7 +451,12 @@ func (s *TestShardContext) GetConfig() *Config {
 }
 
 // GetLogger test implementation
-func (s *TestShardContext) GetLogger() bark.Logger {
+func (s *TestShardContext) GetLogger() log.Logger {
+	return s.logger
+}
+
+// GetThrottledLogger returns a throttled logger
+func (s *TestShardContext) GetThrottledLogger() log.Logger {
 	return s.logger
 }
 
@@ -459,8 +477,8 @@ func (s *TestShardContext) GetRangeID() int64 {
 }
 
 // GetTimeSource test implementation
-func (s *TestShardContext) GetTimeSource() common.TimeSource {
-	return common.NewRealTimeSource()
+func (s *TestShardContext) GetTimeSource() clock.TimeSource {
+	return clock.NewRealTimeSource()
 }
 
 // SetCurrentTime test implementation
@@ -490,37 +508,25 @@ func (s *TestShardContext) GetCurrentTime(cluster string) time.Time {
 // NewDynamicConfigForTest return dc for test
 func NewDynamicConfigForTest() *Config {
 	dc := dynamicconfig.NewNopCollection()
-	config := NewConfig(dc, 1, false)
+	config := NewConfig(dc, 1, false, cconfig.StoreTypeCassandra)
 	return config
 }
 
 // NewDynamicConfigForEventsV2Test with enableEventsV2 = true
 func NewDynamicConfigForEventsV2Test() *Config {
 	dc := dynamicconfig.NewNopCollection()
-	config := NewConfig(dc, 1, false)
+	config := NewConfig(dc, 1, false, cconfig.StoreTypeCassandra)
 	config.EnableEventsV2 = dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableEventsV2, true)
 	return config
-}
-
-// SetupWorkflowStoreWithOptions to setup workflow test base
-func (s *TestBase) SetupWorkflowStoreWithOptions(options persistencetests.TestBaseOptions) {
-	s.TestBase = persistencetests.NewTestBaseWithCassandra(&persistencetests.TestBaseOptions{})
-	s.TestBase.Setup()
-	log := bark.NewLoggerFromLogrus(log.New())
-	config := NewDynamicConfigForTest()
-	clusterMetadata := cluster.GetTestClusterMetadata(options.EnableGlobalDomain, options.IsMasterCluster)
-	s.ShardContext = newTestShardContext(s.ShardInfo, 0, s.HistoryMgr, s.HistoryV2Mgr, s.ExecutionManager, s.MetadataManager, s.MetadataManagerV2,
-		clusterMetadata, nil, config, log)
-	s.TestBase.TaskIDGenerator = s.ShardContext
 }
 
 // SetupWorkflowStore to setup workflow test base
 func (s *TestBase) SetupWorkflowStore() {
 	s.TestBase = persistencetests.NewTestBaseWithCassandra(&persistencetests.TestBaseOptions{})
 	s.TestBase.Setup()
-	log := bark.NewLoggerFromLogrus(log.New())
+	log := loggerimpl.NewDevelopmentForTest(s.Suite)
 	config := NewDynamicConfigForTest()
-	clusterMetadata := cluster.GetTestClusterMetadata(false, false)
+	clusterMetadata := cluster.GetTestClusterMetadata(false, false, false)
 	s.ShardContext = newTestShardContext(s.ShardInfo, 0, s.HistoryMgr, s.HistoryV2Mgr, s.ExecutionManager, s.MetadataManager, s.MetadataManagerV2,
 		clusterMetadata, nil, config, log)
 	s.TestBase.TaskIDGenerator = s.ShardContext

@@ -21,21 +21,18 @@
 package persistencetests
 
 import (
-	"os"
-	"testing"
-
-	"time"
-
-	"sync/atomic"
-
-	"sync"
-
 	"math/rand"
+	"os"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
 
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	gen "github.com/uber/cadence/.gen/go/shared"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -116,10 +113,182 @@ func (s *HistoryV2PersistenceSuite) TestGenUUIDs() {
 	s.Equal(concurrency, cnt)
 }
 
+//TestReadBranchByPagination test
+func (s *HistoryV2PersistenceSuite) TestReadBranchByPagination() {
+	treeID := uuid.New()
+	bi, err := s.newHistoryBranch(treeID)
+	s.Nil(err)
+
+	historyW := &workflow.History{}
+	events := s.genRandomEvents([]int64{1, 2, 3}, 1)
+	err = s.appendNewBranchAndFirstNode(bi, events, 1, "branchInfo")
+	s.Nil(err)
+	historyW.Events = events
+
+	events = s.genRandomEvents([]int64{4}, 1)
+	err = s.appendNewNode(bi, events, 1)
+	s.Nil(err)
+	historyW.Events = append(historyW.Events, events...)
+
+	events = s.genRandomEvents([]int64{5, 6, 7, 8}, 1)
+	err = s.appendNewNode(bi, events, 1)
+	s.Nil(err)
+	historyW.Events = append(historyW.Events, events...)
+
+	// stale event batch
+	events = s.genRandomEvents([]int64{6, 7, 8}, 0)
+	err = s.appendNewNode(bi, events, 1)
+	s.Nil(err)
+	// stale event batch
+	events = s.genRandomEvents([]int64{6, 7, 8}, 0)
+	err = s.appendNewNode(bi, events, 2)
+	s.Nil(err)
+	// stale event batch
+	events = s.genRandomEvents([]int64{6, 7, 8}, 1)
+	err = s.appendNewNode(bi, events, 3)
+	s.Nil(err)
+
+	events = s.genRandomEvents([]int64{9}, 1)
+	err = s.appendNewNode(bi, events, 1)
+	s.Nil(err)
+	historyW.Events = append(historyW.Events, events...)
+
+	// Start to read from middle, should not return error, but the first batch should be ignored by application layer
+	req := &p.ReadHistoryBranchRequest{
+		BranchToken:   bi,
+		MinEventID:    6,
+		MaxEventID:    10,
+		PageSize:      4,
+		NextPageToken: nil,
+		ShardID:       common.IntPtr(s.ShardInfo.ShardID),
+	}
+	// first page
+	resp, err := s.HistoryV2Mgr.ReadHistoryBranch(req)
+	s.Nil(err)
+	s.Equal(4, len(resp.HistoryEvents))
+	s.Equal(int64(6), resp.HistoryEvents[0].GetEventId())
+
+	events = s.genRandomEvents([]int64{10}, 1)
+	err = s.appendNewNode(bi, events, 1)
+	s.Nil(err)
+	historyW.Events = append(historyW.Events, events...)
+
+	events = s.genRandomEvents([]int64{11}, 1)
+	err = s.appendNewNode(bi, events, 1)
+	s.Nil(err)
+	historyW.Events = append(historyW.Events, events...)
+
+	events = s.genRandomEvents([]int64{12}, 1)
+	err = s.appendNewNode(bi, events, 1)
+	s.Nil(err)
+	historyW.Events = append(historyW.Events, events...)
+
+	events = s.genRandomEvents([]int64{13, 14, 15}, 1)
+	err = s.appendNewNode(bi, events, 1)
+	s.Nil(err)
+	// we don't append this batch because we will fork from 13
+	//historyW.Events = append(historyW.Events, events...)
+
+	// fork from here
+	bi2, err := s.fork(bi, 13)
+	s.Nil(err)
+
+	events = s.genRandomEvents([]int64{13}, 1)
+	err = s.appendNewNode(bi2, events, 1)
+	s.Nil(err)
+	historyW.Events = append(historyW.Events, events...)
+
+	events = s.genRandomEvents([]int64{14}, 1)
+	err = s.appendNewNode(bi2, events, 1)
+	s.Nil(err)
+	historyW.Events = append(historyW.Events, events...)
+
+	events = s.genRandomEvents([]int64{15, 16, 17}, 1)
+	err = s.appendNewNode(bi2, events, 1)
+	s.Nil(err)
+	historyW.Events = append(historyW.Events, events...)
+
+	events = s.genRandomEvents([]int64{18, 19, 20}, 1)
+	err = s.appendNewNode(bi2, events, 1)
+	s.Nil(err)
+	historyW.Events = append(historyW.Events, events...)
+
+	//read branch to verify
+	historyR := &workflow.History{}
+
+	req = &p.ReadHistoryBranchRequest{
+		BranchToken:   bi2,
+		MinEventID:    1,
+		MaxEventID:    21,
+		PageSize:      3,
+		NextPageToken: nil,
+		ShardID:       common.IntPtr(s.ShardInfo.ShardID),
+	}
+	// first page
+	resp, err = s.HistoryV2Mgr.ReadHistoryBranch(req)
+	s.Nil(err)
+	s.Equal(8, len(resp.HistoryEvents))
+	historyR.Events = append(historyR.Events, resp.HistoryEvents...)
+	req.NextPageToken = resp.NextPageToken
+
+	// this page is all stale batches
+	resp, err = s.HistoryV2Mgr.ReadHistoryBranch(req)
+	s.Nil(err)
+	s.Equal(0, len(resp.HistoryEvents))
+	historyR.Events = append(historyR.Events, resp.HistoryEvents...)
+	req.NextPageToken = resp.NextPageToken
+	// second page
+	resp, err = s.HistoryV2Mgr.ReadHistoryBranch(req)
+	s.Nil(err)
+	s.Equal(3, len(resp.HistoryEvents))
+	historyR.Events = append(historyR.Events, resp.HistoryEvents...)
+	req.NextPageToken = resp.NextPageToken
+
+	// 3rd page, since we fork from nodeID=13, we can only see one batch of 12 here
+	resp, err = s.HistoryV2Mgr.ReadHistoryBranch(req)
+	s.Nil(err)
+	s.Equal(1, len(resp.HistoryEvents))
+	historyR.Events = append(historyR.Events, resp.HistoryEvents...)
+	req.NextPageToken = resp.NextPageToken
+
+	// 4th page, 13~17
+	resp, err = s.HistoryV2Mgr.ReadHistoryBranch(req)
+	s.Nil(err)
+	s.Equal(5, len(resp.HistoryEvents))
+	historyR.Events = append(historyR.Events, resp.HistoryEvents...)
+	req.NextPageToken = resp.NextPageToken
+
+	// last page: one batch of 18-20
+	// We have only one page left and the page size is set to one. In this case,
+	// persistence may or may not return a nextPageToken.
+	// If it does return a token, we need to ensure that if the token returned is used
+	// to get history again, no error and history events should be returned.
+	req.PageSize = 1
+	resp, err = s.HistoryV2Mgr.ReadHistoryBranch(req)
+	s.Nil(err)
+	s.Equal(3, len(resp.HistoryEvents))
+	historyR.Events = append(historyR.Events, resp.HistoryEvents...)
+	req.NextPageToken = resp.NextPageToken
+	if len(resp.NextPageToken) != 0 {
+		resp, err = s.HistoryV2Mgr.ReadHistoryBranch(req)
+		s.Nil(err)
+		s.Equal(0, len(resp.HistoryEvents))
+	}
+
+	s.True(historyW.Equals(historyR))
+	s.Equal(0, len(resp.NextPageToken))
+
+	// MinEventID is in the middle of the last batch and this is the first request (NextPageToken
+	// is empty), the call should return an error.
+	req.MinEventID = 19
+	req.NextPageToken = nil
+	resp, err = s.HistoryV2Mgr.ReadHistoryBranch(req)
+	s.IsType(&gen.EntityNotExistsError{}, err)
+}
+
 //TestConcurrentlyCreateAndAppendBranches test
 func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 	treeID := uuid.New()
-
 	wg := sync.WaitGroup{}
 	concurrency := 20
 	m := sync.Map{}
@@ -185,18 +354,18 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 			events = s.read(branch, 1, 25)
 			s.Equal(20, len(events))
 
-			// override with same txn_id but greater version
+			// override with greater txn_id but greater version
 			events = s.genRandomEvents([]int64{5}, 2)
-			err = s.appendNewNode(branch, events, 1)
+			err = s.appendNewNode(branch, events, 2)
 			s.Nil(err)
 
 			// read to verify override success
 			events = s.read(branch, 1, 25)
 			s.Equal(5, len(events))
 
-			// override with larger txn_id and same version
+			// override with even larger txn_id and same version
 			events = s.genRandomEvents([]int64{5, 6}, 1)
-			err = s.appendNewNode(branch, events, 2)
+			err = s.appendNewNode(branch, events, 3)
 			s.Nil(err)
 
 			// read to verify override success, at this point history is corrupted, missing 7/8, so we should only see 6 events
@@ -211,15 +380,12 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 			events = s.genRandomEvents([]int64{7, 8}, 1)
 			err = s.appendNewNode(branch, events, 2)
 			s.Nil(err)
-
 			// read to verify override
 			events = s.read(branch, 1, 25)
 			s.Equal(20, len(events))
-
 			events = s.genRandomEvents([]int64{9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23}, 1)
 			err = s.appendNewNode(branch, events, 2)
 			s.Nil(err)
-
 			events = s.read(branch, 1, 25)
 			s.Equal(23, len(events))
 		}(i)
@@ -232,19 +398,16 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 		// delete old branches along with create new branches
 		err := s.deleteHistoryBranch(br)
 		s.Nil(err)
-
 		return true
 	})
 
 	branches = s.descTree(treeID)
 	s.Equal(0, len(branches))
-
 }
 
 // TestConcurrentlyForkAndAppendBranches test
 func (s *HistoryV2PersistenceSuite) TestConcurrentlyForkAndAppendBranches() {
 	treeID := uuid.New()
-
 	wg := sync.WaitGroup{}
 	concurrency := 10
 	masterBr, err := s.newHistoryBranch(treeID)
@@ -464,6 +627,7 @@ func (s *HistoryV2PersistenceSuite) deleteHistoryBranch(branch []byte) error {
 		var err error
 		err = s.HistoryV2Mgr.DeleteHistoryBranch(&p.DeleteHistoryBranchRequest{
 			BranchToken: branch,
+			ShardID:     common.IntPtr(s.ShardInfo.ShardID),
 		})
 		return err
 	}
@@ -475,6 +639,7 @@ func (s *HistoryV2PersistenceSuite) deleteHistoryBranch(branch []byte) error {
 func (s *HistoryV2PersistenceSuite) descTreeByToken(br []byte) []*workflow.HistoryBranch {
 	resp, err := s.HistoryV2Mgr.GetHistoryTree(&p.GetHistoryTreeRequest{
 		BranchToken: br,
+		ShardID:     common.IntPtr(s.ShardInfo.ShardID),
 	})
 	s.Nil(err)
 	return resp.Branches
@@ -482,7 +647,8 @@ func (s *HistoryV2PersistenceSuite) descTreeByToken(br []byte) []*workflow.Histo
 
 func (s *HistoryV2PersistenceSuite) descTree(treeID string) []*workflow.HistoryBranch {
 	resp, err := s.HistoryV2Mgr.GetHistoryTree(&p.GetHistoryTreeRequest{
-		TreeID: treeID,
+		TreeID:  treeID,
+		ShardID: common.IntPtr(s.ShardInfo.ShardID),
 	})
 	s.Nil(err)
 	s.True(len(resp.ForkingInProgressBranches) == 0)
@@ -492,7 +658,8 @@ func (s *HistoryV2PersistenceSuite) descTree(treeID string) []*workflow.HistoryB
 // persistence helper
 func (s *HistoryV2PersistenceSuite) descInProgress(treeID string) {
 	resp, err := s.HistoryV2Mgr.GetHistoryTree(&p.GetHistoryTreeRequest{
-		TreeID: treeID,
+		TreeID:  treeID,
+		ShardID: common.IntPtr(s.ShardInfo.ShardID),
 	})
 	s.Nil(err)
 	s.True(len(resp.ForkingInProgressBranches) > 0)
@@ -510,12 +677,8 @@ func (s *HistoryV2PersistenceSuite) read(branch []byte, minID, maxID int64) []*w
 
 func (s *HistoryV2PersistenceSuite) readWithError(branch []byte, minID, maxID int64) ([]*workflow.HistoryEvent, error) {
 
-	// 0 or 1, randomly use small page size or large page size
-	ri := rand.Intn(2)
+	// use small page size to enforce pagination
 	randPageSize := 2
-	if ri == 0 {
-		randPageSize = 100
-	}
 	res := make([]*workflow.HistoryEvent, 0)
 	token := []byte{}
 	for {
@@ -525,6 +688,7 @@ func (s *HistoryV2PersistenceSuite) readWithError(branch []byte, minID, maxID in
 			MaxEventID:    maxID,
 			PageSize:      randPageSize,
 			NextPageToken: token,
+			ShardID:       common.IntPtr(s.ShardInfo.ShardID),
 		})
 		if err != nil {
 			return nil, err
@@ -574,6 +738,7 @@ func (s *HistoryV2PersistenceSuite) append(branch []byte, events []*workflow.His
 			Events:        events,
 			TransactionID: txnID,
 			Encoding:      pickRandomEncoding(),
+			ShardID:       common.IntPtr(s.ShardInfo.ShardID),
 		})
 		return err
 	}
@@ -598,6 +763,7 @@ func (s *HistoryV2PersistenceSuite) fork(forkBranch []byte, forkNodeID int64) ([
 			ForkBranchToken: forkBranch,
 			ForkNodeID:      forkNodeID,
 			Info:            testForkRunID,
+			ShardID:         common.IntPtr(s.ShardInfo.ShardID),
 		})
 		if resp != nil {
 			bi = resp.NewBranchToken
@@ -614,6 +780,7 @@ func (s *HistoryV2PersistenceSuite) completeFork(forkBranch []byte, succ bool) {
 	err := s.HistoryV2Mgr.CompleteForkBranch(&p.CompleteForkBranchRequest{
 		BranchToken: forkBranch,
 		Success:     succ,
+		ShardID:     common.IntPtr(s.ShardInfo.ShardID),
 	})
 	s.Nil(err)
 }

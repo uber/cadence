@@ -29,9 +29,12 @@ const (
 	RunID         = "RunID"
 	WorkflowType  = "WorkflowType"
 	StartTime     = "StartTime"
+	ExecutionTime = "ExecutionTime"
 	CloseTime     = "CloseTime"
 	CloseStatus   = "CloseStatus"
 	HistoryLength = "HistoryLength"
+	Memo          = "Memo"
+	Encoding      = "Encoding"
 
 	KafkaKey = "KafkaKey"
 )
@@ -41,6 +44,7 @@ var (
 	FieldTypeString = indexer.FieldTypeString
 	FieldTypeInt    = indexer.FieldTypeInt
 	FieldTypeBool   = indexer.FieldTypeBool
+	FieldTypeBinary = indexer.FieldTypeBinary
 )
 
 var (
@@ -50,10 +54,13 @@ var (
 		RunID:         struct{}{},
 		WorkflowType:  struct{}{},
 		StartTime:     struct{}{},
+		ExecutionTime: struct{}{},
 		CloseTime:     struct{}{},
 		CloseStatus:   struct{}{},
 		HistoryLength: struct{}{},
 		KafkaKey:      struct{}{},
+		Memo:          struct{}{},
+		Encoding:      struct{}{},
 	}
 )
 

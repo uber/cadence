@@ -23,20 +23,19 @@ package persistence
 import (
 	"encoding/json"
 	"fmt"
-
-	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 )
 
 type (
 
-	// historyManagerImpl implements HistoryManager based on HistoryStore and HistorySerializer
+	// historyManagerImpl implements HistoryManager based on HistoryStore and PayloadSerializer
 	historyManagerImpl struct {
-		serializer  HistorySerializer
+		serializer  PayloadSerializer
 		persistence HistoryStore
-		logger      bark.Logger
+		logger      log.Logger
 	}
 
 	// historyToken is used to serialize/deserialize pagination token for GetWorkflowExecutionHistory
@@ -50,9 +49,9 @@ type (
 var _ HistoryManager = (*historyManagerImpl)(nil)
 
 //NewHistoryManagerImpl returns new HistoryManager
-func NewHistoryManagerImpl(persistence HistoryStore, logger bark.Logger) HistoryManager {
+func NewHistoryManagerImpl(persistence HistoryStore, logger log.Logger) HistoryManager {
 	return &historyManagerImpl{
-		serializer:  NewHistorySerializer(),
+		serializer:  NewPayloadSerializer(),
 		persistence: persistence,
 		logger:      logger,
 	}
@@ -109,7 +108,8 @@ func (m *historyManagerImpl) GetWorkflowExecutionHistory(request *GetWorkflowExe
 
 // GetWorkflowExecutionHistory retrieves the paginated list of history events for given execution
 func (m *historyManagerImpl) getWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest, byBatch bool) ([]*workflow.History, *workflow.History, []byte, int64, int, error) {
-	token, err := m.deserializeToken(request)
+	defaultLastEventID := request.FirstEventID - 1
+	token, err := m.deserializeToken(request, defaultLastEventID)
 	if err != nil {
 		return nil, nil, nil, 0, 0, err
 	}
@@ -129,6 +129,13 @@ func (m *historyManagerImpl) getWorkflowExecutionHistory(request *GetWorkflowExe
 	if err != nil {
 		return nil, nil, nil, 0, 0, err
 	}
+	if len(response.History) == 0 && len(request.NextPageToken) == 0 {
+		return nil, nil, nil, 0, 0, &workflow.EntityNotExistsError{
+			Message: fmt.Sprintf("Workflow execution history not found.  WorkflowId: %v, RunId: %v",
+				request.Execution.GetWorkflowId(), request.Execution.GetRunId()),
+		}
+	}
+
 	// we store LastEventBatchVersion in the token. The reason we do it here is for historic reason.
 	token.LastEventBatchVersion = response.LastEventBatchVersion
 	token.Data = response.NextPageToken
@@ -150,13 +157,16 @@ func (m *historyManagerImpl) getWorkflowExecutionHistory(request *GetWorkflowExe
 		}
 
 		if len(historyBatch) == 0 || historyBatch[0].GetEventId() > token.LastEventID+1 {
-			logger := m.logger.WithFields(bark.Fields{
-				logging.TagWorkflowExecutionID: request.Execution.GetWorkflowId(),
-				logging.TagWorkflowRunID:       request.Execution.GetRunId(),
-				logging.TagDomainID:            request.DomainID,
-			})
-			logger.Error("Unexpected event batch")
-			return nil, nil, nil, 0, 0, fmt.Errorf("corrupted history event batch")
+			if defaultLastEventID == 0 || token.LastEventID != defaultLastEventID {
+				// We assume application layer want to read from MinEventID(inclusive)
+				// However, for getting history from remote cluster, there is scenario that we have to read from middle without knowing the firstEventID.
+				// In that case we don't validate history continuousness for the first page
+				// TODO: in this case, some events returned can be invalid(stale). application layer need to make sure it won't make any problems to XDC
+				m.logger.Error("Unexpected event batch",
+					tag.WorkflowID(request.Execution.GetWorkflowId()), tag.WorkflowRunID(request.Execution.GetRunId()), tag.WorkflowDomainID(request.DomainID))
+				return nil, nil, nil, 0, 0, fmt.Errorf("corrupted history event batch")
+			}
+			token.LastEventID = historyBatch[0].GetEventId() - 1
 		}
 
 		if historyBatch[0].GetEventId() != token.LastEventID+1 {
@@ -183,10 +193,10 @@ func (m *historyManagerImpl) getWorkflowExecutionHistory(request *GetWorkflowExe
 	return historyBatches, history, nextToken, lastFirstEventID, size, nil
 }
 
-func (m *historyManagerImpl) deserializeToken(request *GetWorkflowExecutionHistoryRequest) (*historyToken, error) {
+func (m *historyManagerImpl) deserializeToken(request *GetWorkflowExecutionHistoryRequest, defaultLastEventID int64) (*historyToken, error) {
 	token := &historyToken{
 		LastEventBatchVersion: common.EmptyVersion,
-		LastEventID:           request.FirstEventID - 1,
+		LastEventID:           defaultLastEventID,
 	}
 
 	if len(request.NextPageToken) == 0 {

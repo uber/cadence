@@ -2,11 +2,14 @@ CREATE TABLE executions_visibility (
   domain_id            CHAR(64) NOT NULL,
   run_id               CHAR(64) NOT NULL,
   start_time           DATETIME(6) NOT NULL,
+  execution_time       DATETIME(6) NOT NULL,
   workflow_id          VARCHAR(255) NOT NULL,
   workflow_type_name   VARCHAR(255) NOT NULL,
   close_status         INT,  -- enum WorkflowExecutionCloseStatus {COMPLETED, FAILED, CANCELED, TERMINATED, CONTINUED_AS_NEW, TIMED_OUT}
   close_time           DATETIME(6) NULL,
   history_length       BIGINT,
+  memo                 BLOB,
+  encoding             VARCHAR(64) NOT NULL,
 
   PRIMARY KEY  (domain_id, run_id)
 );

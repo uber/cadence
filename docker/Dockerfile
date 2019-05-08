@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 # Build cadence binaries
-FROM golang:1.11.1 as builder
+FROM golang:1.12.1 as builder
 
 # Specify the cadence version to be built into this docker image
 # See https://github.com/uber/cadence/tags
@@ -27,7 +27,7 @@ ARG git_branch
 RUN if [ -z "$git_branch" ]; then echo "ERROR: git_branch NOT SET. Usage: docker build . --build-arg git_branch=YOUR_CHECKOUT_BRANCH"; exit 1; else : ; fi
 
 RUN go get -u github.com/golang/dep/cmd/dep
-RUN go get -u github.com/golang/lint/golint
+RUN go get -u golang.org/x/lint/golint
 
 # get and compile cadence-server
 RUN git clone https://github.com/uber/cadence.git /go/src/github.com/uber/cadence
@@ -44,6 +44,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 		tcpdump \
 		netcat \
 		python-pip \
+		mysql-client \
 	&& rm -rf /var/lib/apt/lists/*
 
 RUN pip install cqlsh
@@ -54,12 +55,14 @@ ENV CADENCE_HOME /cadence
 EXPOSE 7933 7934 7935 7939
 
 COPY ./start.sh $CADENCE_HOME/start.sh
-COPY ./config_template.yaml $CADENCE_HOME/config/docker_template.yaml
+COPY ./config_template.yaml $CADENCE_HOME/config/docker_template_cassandra.yaml
+COPY ./config_template_mysql.yaml $CADENCE_HOME/config/docker_template_mysql.yaml
 RUN chmod a+x $CADENCE_HOME/start.sh
 
 COPY --from=builder /go/src/github.com/uber/cadence/cadence-cassandra-tool /cadence
 COPY --from=builder /go/src/github.com/uber/cadence/cadence /cadence
 COPY --from=builder /go/src/github.com/uber/cadence/cadence-server /cadence
+COPY --from=builder /go/src/github.com/uber/cadence/schema/ /cadence/schema/
 
 WORKDIR $CADENCE_HOME
 CMD ./start.sh $CADENCE_HOME

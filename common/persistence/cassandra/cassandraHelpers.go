@@ -22,14 +22,14 @@ package cassandra
 
 import (
 	"fmt"
-	"github.com/uber/cadence/tools/cassandra"
 	"io/ioutil"
 	"os"
 	"strings"
 
 	"github.com/gocql/gocql"
 	log "github.com/sirupsen/logrus"
-	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/tools/cassandra"
+	"github.com/uber/cadence/tools/common/schema"
 )
 
 const cassandraPersistenceName = "cassandra"
@@ -70,7 +70,7 @@ func CreateCassandraKeyspace(s *gocql.Session, keyspace string, replicas int, ov
 	err = s.Query(fmt.Sprintf(`CREATE KEYSPACE IF NOT EXISTS %s WITH replication = {
 		'class' : 'SimpleStrategy', 'replication_factor' : %d}`, keyspace, replicas)).Exec()
 	if err != nil {
-		log.WithField(logging.TagErr, err).Error(`create keyspace error`)
+		log.Error(`create keyspace error`, err)
 		return
 	}
 	log.WithField(`keyspace`, keyspace).Debug(`created namespace`)
@@ -82,7 +82,7 @@ func CreateCassandraKeyspace(s *gocql.Session, keyspace string, replicas int, ov
 func DropCassandraKeyspace(s *gocql.Session, keyspace string) (err error) {
 	err = s.Query(fmt.Sprintf("DROP KEYSPACE IF EXISTS %s", keyspace)).Exec()
 	if err != nil {
-		log.WithField(logging.TagErr, err).Error(`drop keyspace error`)
+		log.Error(`drop keyspace error`, err)
 		return
 	}
 	log.WithField(`keyspace`, keyspace).Info(`dropped namespace`)
@@ -91,7 +91,7 @@ func DropCassandraKeyspace(s *gocql.Session, keyspace string) (err error) {
 
 // LoadCassandraSchema loads the schema from the given .cql files on this keyspace
 func LoadCassandraSchema(
-	dir string, fileNames []string, port int, keyspace string, override bool,
+	dir string, fileNames []string, hosts []string, port int, keyspace string, override bool,
 ) (err error) {
 
 	tmpFile, err := ioutil.TempFile("", "_cadence_")
@@ -112,14 +112,16 @@ func LoadCassandraSchema(
 	tmpFile.Close()
 
 	config := &cassandra.SetupSchemaConfig{
-		BaseConfig: cassandra.BaseConfig{
-			CassHosts:    "127.0.0.1",
-			CassPort:     port,
-			CassKeyspace: keyspace,
+		CQLClientConfig: cassandra.CQLClientConfig{
+			Hosts:    strings.Join(hosts, ","),
+			Port:     port,
+			Keyspace: keyspace,
 		},
-		SchemaFilePath:    tmpFile.Name(),
-		Overwrite:         override,
-		DisableVersioning: true,
+		SetupConfig: schema.SetupConfig{
+			SchemaFilePath:    tmpFile.Name(),
+			Overwrite:         override,
+			DisableVersioning: true,
+		},
 	}
 
 	err = cassandra.SetupSchema(config)

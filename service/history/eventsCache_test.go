@@ -22,23 +22,19 @@ package history
 
 import (
 	"errors"
-	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/persistence"
-	"os"
 	"testing"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
-	"github.com/uber-go/tally"
-
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
+	"github.com/uber-go/tally"
+	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
-
-	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/persistence"
 )
 
 type (
@@ -47,7 +43,7 @@ type (
 		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
 		// not merely log an error
 		*require.Assertions
-		logger bark.Logger
+		logger log.Logger
 
 		mockEventsMgr   *mocks.HistoryManager
 		mockEventsV2Mgr *mocks.HistoryV2Manager
@@ -62,9 +58,7 @@ func TestEventsCacheSuite(t *testing.T) {
 }
 
 func (s *eventsCacheSuite) SetupSuite() {
-	if testing.Verbose() {
-		log.SetOutput(os.Stdout)
-	}
+
 }
 
 func (s *eventsCacheSuite) TearDownSuite() {
@@ -72,7 +66,7 @@ func (s *eventsCacheSuite) TearDownSuite() {
 }
 
 func (s *eventsCacheSuite) SetupTest() {
-	s.logger = bark.NewLoggerFromLogrus(log.New())
+	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 	s.mockEventsMgr = &mocks.HistoryManager{}
@@ -87,7 +81,7 @@ func (s *eventsCacheSuite) TearDownTest() {
 
 func (s *eventsCacheSuite) newTestEventsCache() *eventsCacheImpl {
 	return newEventsCacheWithOptions(16, 32, time.Minute, s.mockEventsMgr, s.mockEventsV2Mgr, false, s.logger,
-		metrics.NewClient(tally.NoopScope, metrics.History))
+		metrics.NewClient(tally.NoopScope, metrics.History), common.IntPtr(10))
 }
 
 func (s *eventsCacheSuite) TestEventsCacheHitSuccess() {
@@ -238,6 +232,7 @@ func (s *eventsCacheSuite) TestEventsCacheMissMultiEventsBatchV2Success() {
 		MaxEventID:    event6.GetEventId() + 1,
 		PageSize:      1,
 		NextPageToken: nil,
+		ShardID:       common.IntPtr(10),
 	}).Return(&persistence.ReadHistoryBranchResponse{
 		HistoryEvents:    []*shared.HistoryEvent{event1, event2, event3, event4, event5, event6},
 		NextPageToken:    nil,
@@ -283,6 +278,7 @@ func (s *eventsCacheSuite) TestEventsCacheMissV2Failure() {
 		MaxEventID:    int64(15),
 		PageSize:      1,
 		NextPageToken: nil,
+		ShardID:       common.IntPtr(10),
 	}).Return(nil, expectedErr)
 
 	actualEvent, err := s.cache.getEvent(domainID, workflowID, runID, int64(11), int64(14),
@@ -312,6 +308,7 @@ func (s *eventsCacheSuite) TestEventsCacheDisableSuccess() {
 		MaxEventID:    event2.GetEventId() + 1,
 		PageSize:      1,
 		NextPageToken: nil,
+		ShardID:       common.IntPtr(10),
 	}).Return(&persistence.ReadHistoryBranchResponse{
 		HistoryEvents:    []*shared.HistoryEvent{event2},
 		NextPageToken:    nil,

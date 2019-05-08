@@ -41,6 +41,8 @@ var keys = map[Key]string{
 	testGetFloat64PropertyKey:                        "testGetFloat64PropertyKey",
 	testGetDurationPropertyKey:                       "testGetDurationPropertyKey",
 	testGetBoolPropertyKey:                           "testGetBoolPropertyKey",
+	testGetStringPropertyKey:                         "testGetStringPropertyKey",
+	testGetMapPropertyKey:                            "testGetMapPropertyKey",
 	testGetIntPropertyFilteredByDomainKey:            "testGetIntPropertyFilteredByDomainKey",
 	testGetDurationPropertyFilteredByDomainKey:       "testGetDurationPropertyFilteredByDomainKey",
 	testGetIntPropertyFilteredByTaskListInfoKey:      "testGetIntPropertyFilteredByTaskListInfoKey",
@@ -48,12 +50,15 @@ var keys = map[Key]string{
 	testGetBoolPropertyFilteredByTaskListInfoKey:     "testGetBoolPropertyFilteredByTaskListInfoKey",
 
 	// system settings
-	EnableGlobalDomain:         "system.enableGlobalDomain",
-	EnableNewKafkaClient:       "system.enableNewKafkaClient",
-	EnableVisibilitySampling:   "system.enableVisibilitySampling",
-	EnableVisibilityToKafka:    "system.enableVisibilityToKafka",
-	EnableReadVisibilityFromES: "system.enableReadVisibilityFromES",
-	EnableArchival:             "system.enableArchival",
+	EnableGlobalDomain:                  "system.enableGlobalDomain",
+	EnableNewKafkaClient:                "system.enableNewKafkaClient",
+	EnableVisibilitySampling:            "system.enableVisibilitySampling",
+	EnableReadFromClosedExecutionV2:     "system.enableReadFromClosedExecutionV2",
+	EnableVisibilityToKafka:             "system.enableVisibilityToKafka",
+	EnableReadVisibilityFromES:          "system.enableReadVisibilityFromES",
+	ArchivalStatus:                      "system.archivalStatus",
+	EnableReadFromArchival:              "system.enableReadFromArchival",
+	EnableDomainNotActiveAutoForwarding: "system.enableDomainNotActiveAutoForwarding",
 
 	// size limit
 	BlobSizeLimitError:     "limit.blobSize.error",
@@ -68,11 +73,16 @@ var keys = map[Key]string{
 	FrontendPersistenceMaxQPS:      "frontend.persistenceMaxQPS",
 	FrontendVisibilityMaxPageSize:  "frontend.visibilityMaxPageSize",
 	FrontendVisibilityListMaxQPS:   "frontend.visibilityListMaxQPS",
+	FrontendESVisibilityListMaxQPS: "frontend.esVisibilityListMaxQPS",
+	FrontendMaxBadBinaries:         "frontend.maxBadBinaries",
+	FrontendESIndexMaxResultWindow: "frontend.esIndexMaxResultWindow",
 	FrontendHistoryMaxPageSize:     "frontend.historyMaxPageSize",
 	FrontendRPS:                    "frontend.rps",
 	FrontendHistoryMgrNumConns:     "frontend.historyMgrNumConns",
 	MaxDecisionStartToCloseTimeout: "frontend.maxDecisionStartToCloseTimeout",
 	DisableListVisibilityByFilter:  "frontend.disableListVisibilityByFilter",
+	FrontendThrottledLogRPS:        "frontend.throttledLogRPS",
+	EnableClientVersionCheck:       "frontend.enableClientVersionCheck",
 
 	// matching settings
 	MatchingRPS:                             "matching.rps",
@@ -86,6 +96,8 @@ var keys = map[Key]string{
 	MaxTasklistIdleTime:                     "matching.maxTasklistIdleTime",
 	MatchingOutstandingTaskAppendsThreshold: "matching.outstandingTaskAppendsThreshold",
 	MatchingMaxTaskBatchSize:                "matching.maxTaskBatchSize",
+	MatchingMaxTaskDeleteBatchSize:          "matching.maxTaskDeleteBatchSize",
+	MatchingThrottledLogRPS:                 "matching.throttledLogRPS",
 
 	// history settings
 	HistoryRPS:                                            "history.rps",
@@ -94,6 +106,7 @@ var keys = map[Key]string{
 	HistoryVisibilityClosedMaxQPS:                         "history.historyVisibilityClosedMaxQPS",
 	HistoryLongPollExpirationInterval:                     "history.longPollExpirationInterval",
 	HistoryCacheInitialSize:                               "history.cacheInitialSize",
+	HistoryMaxAutoResetPoints:                             "history.historyMaxAutoResetPoints",
 	HistoryCacheMaxSize:                                   "history.cacheMaxSize",
 	HistoryCacheTTL:                                       "history.cacheTTL",
 	EventsCacheInitialSize:                                "history.eventsCacheInitialSize",
@@ -151,18 +164,29 @@ var keys = map[Key]string{
 	EnableAdminProtection:                                 "history.enableAdminProtection",
 	AdminOperationToken:                                   "history.adminOperationToken",
 	EnableEventsV2:                                        "history.enableEventsV2",
-	NumSystemWorkflows:                                    "history.numSystemWorkflows",
+	NumArchiveSystemWorkflows:                             "history.numArchiveSystemWorkflows",
+	EmitShardDiffLog:                                      "history.emitShardDiffLog",
+	HistoryThrottledLogRPS:                                "history.throttledLogRPS",
 
-	WorkerPersistenceMaxQPS:                  "worker.persistenceMaxQPS",
-	WorkerReplicatorConcurrency:              "worker.replicatorConcurrency",
-	WorkerReplicatorActivityBufferRetryCount: "worker.replicatorActivityBufferRetryCount",
-	WorkerReplicatorHistoryBufferRetryCount:  "worker.replicatorHistoryBufferRetryCount",
-	WorkerReplicationTaskMaxRetry:            "worker.replicationTaskMaxRetry",
-	WorkerIndexerConcurrency:                 "worker.indexerConcurrency",
-	WorkerESProcessorNumOfWorkers:            "worker.ESProcessorNumOfWorkers",
-	WorkerESProcessorBulkActions:             "worker.ESProcessorBulkActions",
-	WorkerESProcessorBulkSize:                "worker.ESProcessorBulkSize",
-	WorkerESProcessorFlushInterval:           "worker.ESProcessorFlushInterval",
+	WorkerPersistenceMaxQPS:                         "worker.persistenceMaxQPS",
+	WorkerReplicatorMetaTaskConcurrency:             "worker.replicatorMetaTaskConcurrency",
+	WorkerReplicatorTaskConcurrency:                 "worker.replicatorTaskConcurrency",
+	WorkerReplicatorMessageConcurrency:              "worker.replicatorMessageConcurrency",
+	WorkerReplicatorHistoryBufferRetryCount:         "worker.replicatorHistoryBufferRetryCount",
+	WorkerReplicationTaskMaxRetry:                   "worker.replicationTaskMaxRetry",
+	WorkerIndexerConcurrency:                        "worker.indexerConcurrency",
+	WorkerESProcessorNumOfWorkers:                   "worker.ESProcessorNumOfWorkers",
+	WorkerESProcessorBulkActions:                    "worker.ESProcessorBulkActions",
+	WorkerESProcessorBulkSize:                       "worker.ESProcessorBulkSize",
+	WorkerESProcessorFlushInterval:                  "worker.ESProcessorFlushInterval",
+	EnableArchivalCompression:                       "worker.EnableArchivalCompression",
+	WorkerHistoryPageSize:                           "worker.WorkerHistoryPageSize",
+	WorkerTargetArchivalBlobSize:                    "worker.WorkerTargetArchivalBlobSize",
+	WorkerArchiverConcurrency:                       "worker.ArchiverConcurrency",
+	WorkerArchivalsPerIteration:                     "worker.ArchivalsPerIteration",
+	WorkerDeterministicConstructionCheckProbability: "worker.DeterministicConstructionCheckProbability",
+	WorkerThrottledLogRPS:                           "worker.throttledLogRPS",
+	ScannerPersistenceMaxQPS:                        "worker.scannerPersistenceMaxQPS",
 }
 
 const (
@@ -174,6 +198,8 @@ const (
 	testGetFloat64PropertyKey
 	testGetDurationPropertyKey
 	testGetBoolPropertyKey
+	testGetStringPropertyKey
+	testGetMapPropertyKey
 	testGetIntPropertyFilteredByDomainKey
 	testGetDurationPropertyFilteredByDomainKey
 	testGetIntPropertyFilteredByTaskListInfoKey
@@ -186,14 +212,23 @@ const (
 	EnableNewKafkaClient
 	// EnableVisibilitySampling is key for enable visibility sampling
 	EnableVisibilitySampling
+	// EnableReadFromClosedExecutionV2 is key for enable read from cadence_visibility.closed_executions_v2
+	EnableReadFromClosedExecutionV2
 	// EnableVisibilityToKafka is key for enable kafka
 	EnableVisibilityToKafka
+	// EmitShardDiffLog whether emit the shard diff log
+	EmitShardDiffLog
 	// EnableReadVisibilityFromES is key for enable read from elastic search
 	EnableReadVisibilityFromES
 	// DisableListVisibilityByFilter is config to disable list open/close workflow using filter
 	DisableListVisibilityByFilter
-	// EnableArchival is key for enable archival
-	EnableArchival
+	// ArchivalStatus is key for the status of archival
+	ArchivalStatus
+	// EnableReadFromArchival is key for enabling reading history from archival store
+	EnableReadFromArchival
+	// EnableDomainNotActiveAutoForwarding whether enabling DC auto forwarding to active cluster
+	// for signal / start / signal with start API if domain is not active
+	EnableDomainNotActiveAutoForwarding
 
 	// BlobSizeLimitError is the per event blob size limit
 	BlobSizeLimitError
@@ -220,14 +255,24 @@ const (
 	FrontendVisibilityMaxPageSize
 	// FrontendVisibilityListMaxQPS is max qps frontend can list open/close workflows
 	FrontendVisibilityListMaxQPS
+	// FrontendESVisibilityListMaxQPS is max qps frontend can list open/close workflows from ElasticSearch
+	FrontendESVisibilityListMaxQPS
+	// FrontendESIndexMaxResultWindow is ElasticSearch index setting max_result_window
+	FrontendESIndexMaxResultWindow
 	// FrontendHistoryMaxPageSize is default max size for GetWorkflowExecutionHistory in one page
 	FrontendHistoryMaxPageSize
 	// FrontendRPS is workflow rate limit per second
 	FrontendRPS
 	// FrontendHistoryMgrNumConns is for persistence cluster.NumConns
 	FrontendHistoryMgrNumConns
+	// FrontendThrottledLogRPS is the rate limit on number of log messages emitted per second for throttled logger
+	FrontendThrottledLogRPS
 	// MaxDecisionStartToCloseTimeout is max decision timeout in seconds
 	MaxDecisionStartToCloseTimeout
+	// EnableClientVersionCheck enables client version check for frontend
+	EnableClientVersionCheck
+	// FrontendMaxBadBinaries is the max number of bad banaries in domain config
+	FrontendMaxBadBinaries
 
 	// key for matching
 
@@ -253,6 +298,10 @@ const (
 	MatchingOutstandingTaskAppendsThreshold
 	// MatchingMaxTaskBatchSize is max batch size for task writer
 	MatchingMaxTaskBatchSize
+	// MatchingMaxTaskDeleteBatchSize is the max batch size for range deletion of tasks
+	MatchingMaxTaskDeleteBatchSize
+	// MatchingThrottledLogRPS is the rate limit on number of log messages emitted per second for throttled logger
+	MatchingThrottledLogRPS
 
 	// key for history
 
@@ -260,9 +309,9 @@ const (
 	HistoryRPS
 	// HistoryPersistenceMaxQPS is the max qps history host can query DB
 	HistoryPersistenceMaxQPS
-	// HistoryVisibilityOpenMaxQPS is max qps one history host can query visibility open_executions
+	// HistoryVisibilityOpenMaxQPS is max qps one history host can write visibility open_executions
 	HistoryVisibilityOpenMaxQPS
-	// HistoryVisibilityClosedMaxQPS is max qps one history host can query visibility closed_executions
+	// HistoryVisibilityClosedMaxQPS is max qps one history host can write visibility closed_executions
 	HistoryVisibilityClosedMaxQPS
 	// HistoryLongPollExpirationInterval is the long poll expiration interval in the history service
 	HistoryLongPollExpirationInterval
@@ -376,25 +425,31 @@ const (
 	ShardSyncMinInterval
 	// DefaultEventEncoding is the encoding type for history events
 	DefaultEventEncoding
-	// NumSystemWorkflows is key for number of system workflows running in total
-	NumSystemWorkflows
+	// NumArchiveSystemWorkflows is key for number of archive system workflows running in total
+	NumArchiveSystemWorkflows
 
 	// EnableAdminProtection is whether to enable admin checking
 	EnableAdminProtection
 	// AdminOperationToken is the token to pass admin checking
 	AdminOperationToken
+	// HistoryMaxAutoResetPoints is the key for max number of auto reset points stored in mutableState
+	HistoryMaxAutoResetPoints
 
 	// EnableEventsV2 is whether to use eventsV2
 	EnableEventsV2
+	// HistoryThrottledLogRPS is the rate limit on number of log messages emitted per second for throttled logger
+	HistoryThrottledLogRPS
 
 	// key for worker
 
 	// WorkerPersistenceMaxQPS is the max qps worker host can query DB
 	WorkerPersistenceMaxQPS
-	// WorkerReplicatorConcurrency is the max concurrent tasks to be processed at any given time
-	WorkerReplicatorConcurrency
-	// WorkerReplicatorActivityBufferRetryCount is the retry attempt when encounter retry error on activity
-	WorkerReplicatorActivityBufferRetryCount
+	// WorkerReplicatorMetaTaskConcurrency is the number of coroutine handling metadata related tasks
+	WorkerReplicatorMetaTaskConcurrency
+	// WorkerReplicatorTaskConcurrency is the number of coroutine handling non metadata related tasks
+	WorkerReplicatorTaskConcurrency
+	// WorkerReplicatorMessageConcurrency is the max concurrent tasks provided by messaging client
+	WorkerReplicatorMessageConcurrency
 	// WorkerReplicatorHistoryBufferRetryCount is the retry attempt when encounter retry error on history
 	WorkerReplicatorHistoryBufferRetryCount
 	// WorkerReplicationTaskMaxRetry is the max retry for any task
@@ -409,6 +464,22 @@ const (
 	WorkerESProcessorBulkSize
 	// WorkerESProcessorFlushInterval is flush interval for esProcessor
 	WorkerESProcessorFlushInterval
+	// EnableArchivalCompression indicates whether blobs are compressed before they are archived
+	EnableArchivalCompression
+	// WorkerHistoryPageSize indicates the page size of history fetched from persistence for archival
+	WorkerHistoryPageSize
+	// WorkerTargetArchivalBlobSize indicates the target blob size in bytes for archival, actual blob size may vary
+	WorkerTargetArchivalBlobSize
+	// WorkerArchiverConcurrency controls the number of coroutines handling archival work per archival workflow
+	WorkerArchiverConcurrency
+	// WorkerArchivalsPerIteration controls the number of archivals handled in each iteration of archival workflow
+	WorkerArchivalsPerIteration
+	// WorkerDeterministicConstructionCheckProbability controls the probability of running a deterministic construction check for any given archival
+	WorkerDeterministicConstructionCheckProbability
+	// WorkerThrottledLogRPS is the rate limit on number of log messages emitted per second for throttled logger
+	WorkerThrottledLogRPS
+	// ScannerPersistenceMaxQPS is the maximum rate of persistence calls from worker.Scanner
+	ScannerPersistenceMaxQPS
 
 	// lastKeyForTest must be the last one in this const group for testing purpose
 	lastKeyForTest
@@ -418,7 +489,7 @@ const (
 type Filter int
 
 func (f Filter) String() string {
-	if f <= unknownFilter || f > TaskListName {
+	if f <= unknownFilter || f > TaskType {
 		return filters[unknownFilter]
 	}
 	return filters[f]

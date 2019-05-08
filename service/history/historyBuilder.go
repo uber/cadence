@@ -21,11 +21,12 @@
 package history
 
 import (
-	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/persistence"
 )
 
 type (
@@ -33,23 +34,23 @@ type (
 		transientHistory []*workflow.HistoryEvent
 		history          []*workflow.HistoryEvent
 		msBuilder        mutableState
-		logger           bark.Logger
+		logger           log.Logger
 	}
 )
 
-func newHistoryBuilder(msBuilder mutableState, logger bark.Logger) *historyBuilder {
+func newHistoryBuilder(msBuilder mutableState, logger log.Logger) *historyBuilder {
 	return &historyBuilder{
 		transientHistory: []*workflow.HistoryEvent{},
 		history:          []*workflow.HistoryEvent{},
 		msBuilder:        msBuilder,
-		logger:           logger.WithField(logging.TagWorkflowComponent, logging.TagValueHistoryBuilderComponent),
+		logger:           logger.WithTags(tag.ComponentHistoryBuilder),
 	}
 }
 
-func newHistoryBuilderFromEvents(history []*workflow.HistoryEvent, logger bark.Logger) *historyBuilder {
+func newHistoryBuilderFromEvents(history []*workflow.HistoryEvent, logger log.Logger) *historyBuilder {
 	return &historyBuilder{
 		history: history,
-		logger:  logger.WithField(logging.TagWorkflowComponent, logging.TagValueHistoryBuilderComponent),
+		logger:  logger.WithTags(tag.ComponentHistoryBuilder),
 	}
 }
 
@@ -71,8 +72,8 @@ func (b *historyBuilder) HasTransientEvents() bool {
 }
 
 func (b *historyBuilder) AddWorkflowExecutionStartedEvent(request *h.StartWorkflowExecutionRequest,
-	previousRunID *string) *workflow.HistoryEvent {
-	event := b.newWorkflowExecutionStartedEvent(request, previousRunID)
+	previousExecution *persistence.WorkflowExecutionInfo) *workflow.HistoryEvent {
+	event := b.newWorkflowExecutionStartedEvent(request, previousExecution)
 
 	return b.addEventToHistory(event)
 }
@@ -207,8 +208,10 @@ func (b *historyBuilder) AddTimerStartedEvent(decisionCompletedEventID int64,
 	return b.addEventToHistory(event)
 }
 
-func (b *historyBuilder) AddTimerFiredEvent(startedEventID int64,
-	timerID string) *workflow.HistoryEvent {
+func (b *historyBuilder) AddTimerFiredEvent(
+	startedEventID int64,
+	timerID string,
+) *workflow.HistoryEvent {
 
 	attributes := &workflow.TimerFiredEventAttributes{}
 	attributes.TimerId = common.StringPtr(timerID)
@@ -374,9 +377,14 @@ func (b *historyBuilder) AddStartChildWorkflowExecutionInitiatedEvent(decisionCo
 	return b.addEventToHistory(event)
 }
 
-func (b *historyBuilder) AddChildWorkflowExecutionStartedEvent(domain *string, execution *workflow.WorkflowExecution,
-	workflowType *workflow.WorkflowType, initiatedID int64) *workflow.HistoryEvent {
-	event := b.newChildWorkflowExecutionStartedEvent(domain, execution, workflowType, initiatedID)
+func (b *historyBuilder) AddChildWorkflowExecutionStartedEvent(
+	domain *string,
+	execution *workflow.WorkflowExecution,
+	workflowType *workflow.WorkflowType,
+	initiatedID int64,
+	header *workflow.Header,
+) *workflow.HistoryEvent {
+	event := b.newChildWorkflowExecutionStartedEvent(domain, execution, workflowType, initiatedID, header)
 
 	return b.addEventToHistory(event)
 }
@@ -445,17 +453,25 @@ func (b *historyBuilder) addTransientEvent(event *workflow.HistoryEvent) *workfl
 }
 
 func (b *historyBuilder) newWorkflowExecutionStartedEvent(
-	startRequest *h.StartWorkflowExecutionRequest, previousRunID *string) *workflow.HistoryEvent {
+	startRequest *h.StartWorkflowExecutionRequest, previousExecution *persistence.WorkflowExecutionInfo) *workflow.HistoryEvent {
+	var prevRunID *string
+	var resetPoints *workflow.ResetPoints
+	if previousExecution != nil {
+		prevRunID = common.StringPtr(previousExecution.RunID)
+		resetPoints = previousExecution.AutoResetPoints
+	}
 	request := startRequest.StartRequest
 	historyEvent := b.msBuilder.CreateNewHistoryEvent(workflow.EventTypeWorkflowExecutionStarted)
 	attributes := &workflow.WorkflowExecutionStartedEventAttributes{}
 	attributes.WorkflowType = request.WorkflowType
 	attributes.TaskList = request.TaskList
+	attributes.Header = request.Header
 	attributes.Input = request.Input
 	attributes.ExecutionStartToCloseTimeoutSeconds = common.Int32Ptr(*request.ExecutionStartToCloseTimeoutSeconds)
 	attributes.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(*request.TaskStartToCloseTimeoutSeconds)
 	attributes.ChildPolicy = request.ChildPolicy
-	attributes.ContinuedExecutionRunId = previousRunID
+	attributes.ContinuedExecutionRunId = prevRunID
+	attributes.PrevAutoResetPoints = resetPoints
 	attributes.Identity = common.StringPtr(common.StringDefault(request.Identity))
 	attributes.RetryPolicy = request.RetryPolicy
 	attributes.Attempt = common.Int32Ptr(startRequest.GetAttempt())
@@ -466,6 +482,7 @@ func (b *historyBuilder) newWorkflowExecutionStartedEvent(
 	attributes.ContinuedFailureDetails = startRequest.ContinuedFailureDetails
 	attributes.Initiator = startRequest.ContinueAsNewInitiator
 	attributes.FirstDecisionTaskBackoffSeconds = startRequest.FirstDecisionTaskBackoffSeconds
+	attributes.Memo = request.Memo
 
 	parentInfo := startRequest.ParentExecutionInfo
 	if parentInfo != nil {
@@ -544,6 +561,7 @@ func (b *historyBuilder) newActivityTaskScheduledEvent(decisionTaskCompletedEven
 	attributes.ActivityId = common.StringPtr(common.StringDefault(scheduleAttributes.ActivityId))
 	attributes.ActivityType = scheduleAttributes.ActivityType
 	attributes.TaskList = scheduleAttributes.TaskList
+	attributes.Header = scheduleAttributes.Header
 	attributes.Input = scheduleAttributes.Input
 	attributes.ScheduleToCloseTimeoutSeconds = common.Int32Ptr(common.Int32Default(scheduleAttributes.ScheduleToCloseTimeoutSeconds))
 	attributes.ScheduleToStartTimeoutSeconds = common.Int32Ptr(common.Int32Default(scheduleAttributes.ScheduleToStartTimeoutSeconds))
@@ -815,6 +833,7 @@ func (b *historyBuilder) newWorkflowExecutionContinuedAsNewEvent(decisionTaskCom
 	attributes.NewExecutionRunId = common.StringPtr(newRunID)
 	attributes.WorkflowType = request.WorkflowType
 	attributes.TaskList = request.TaskList
+	attributes.Header = request.Header
 	attributes.Input = request.Input
 	attributes.ExecutionStartToCloseTimeoutSeconds = common.Int32Ptr(*request.ExecutionStartToCloseTimeoutSeconds)
 	attributes.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(*request.TaskStartToCloseTimeoutSeconds)
@@ -840,6 +859,7 @@ func (b *historyBuilder) newStartChildWorkflowExecutionInitiatedEvent(decisionTa
 	attributes.WorkflowId = startAttributes.WorkflowId
 	attributes.WorkflowType = startAttributes.WorkflowType
 	attributes.TaskList = startAttributes.TaskList
+	attributes.Header = startAttributes.Header
 	attributes.Input = startAttributes.Input
 	attributes.ExecutionStartToCloseTimeoutSeconds = startAttributes.ExecutionStartToCloseTimeoutSeconds
 	attributes.TaskStartToCloseTimeoutSeconds = startAttributes.TaskStartToCloseTimeoutSeconds
@@ -848,19 +868,26 @@ func (b *historyBuilder) newStartChildWorkflowExecutionInitiatedEvent(decisionTa
 	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
 	attributes.WorkflowIdReusePolicy = startAttributes.WorkflowIdReusePolicy
 	attributes.RetryPolicy = startAttributes.RetryPolicy
+	attributes.CronSchedule = startAttributes.CronSchedule
 	historyEvent.StartChildWorkflowExecutionInitiatedEventAttributes = attributes
 
 	return historyEvent
 }
 
-func (b *historyBuilder) newChildWorkflowExecutionStartedEvent(domain *string, execution *workflow.WorkflowExecution,
-	workflowType *workflow.WorkflowType, initiatedID int64) *workflow.HistoryEvent {
+func (b *historyBuilder) newChildWorkflowExecutionStartedEvent(
+	domain *string,
+	execution *workflow.WorkflowExecution,
+	workflowType *workflow.WorkflowType,
+	initiatedID int64,
+	header *workflow.Header,
+) *workflow.HistoryEvent {
 	historyEvent := b.msBuilder.CreateNewHistoryEvent(workflow.EventTypeChildWorkflowExecutionStarted)
 	attributes := &workflow.ChildWorkflowExecutionStartedEventAttributes{}
 	attributes.Domain = domain
 	attributes.WorkflowExecution = execution
 	attributes.WorkflowType = workflowType
 	attributes.InitiatedEventId = common.Int64Ptr(initiatedID)
+	attributes.Header = header
 	historyEvent.ChildWorkflowExecutionStartedEventAttributes = attributes
 
 	return historyEvent

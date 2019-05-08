@@ -23,12 +23,13 @@ package persistence
 import (
 	"sync"
 
-	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/tokenbucket"
 )
 
 const (
@@ -43,15 +44,15 @@ type visibilitySamplingClient struct {
 	rateLimitersForClosed *domainToBucketMap
 	rateLimitersForList   *domainToBucketMap
 	persistence           VisibilityManager
-	config                *config.SamplingConfig
+	config                *config.VisibilityConfig
 	metricClient          metrics.Client
-	logger                bark.Logger
+	logger                log.Logger
 }
 
 var _ VisibilityManager = (*visibilitySamplingClient)(nil)
 
 // NewVisibilitySamplingClient creates a client to manage visibility with sampling
-func NewVisibilitySamplingClient(persistence VisibilityManager, config *config.SamplingConfig, metricClient metrics.Client, logger bark.Logger) VisibilityManager {
+func NewVisibilitySamplingClient(persistence VisibilityManager, config *config.VisibilityConfig, metricClient metrics.Client, logger log.Logger) VisibilityManager {
 	return &visibilitySamplingClient{
 		persistence:           persistence,
 		rateLimitersForOpen:   newDomainToBucketMap(),
@@ -65,16 +66,16 @@ func NewVisibilitySamplingClient(persistence VisibilityManager, config *config.S
 
 type domainToBucketMap struct {
 	sync.RWMutex
-	mappings map[string]common.PriorityTokenBucket
+	mappings map[string]tokenbucket.PriorityTokenBucket
 }
 
 func newDomainToBucketMap() *domainToBucketMap {
 	return &domainToBucketMap{
-		mappings: make(map[string]common.PriorityTokenBucket),
+		mappings: make(map[string]tokenbucket.PriorityTokenBucket),
 	}
 }
 
-func (m *domainToBucketMap) getRateLimiter(domain string, numOfPriority, qps int) common.PriorityTokenBucket {
+func (m *domainToBucketMap) getRateLimiter(domain string, numOfPriority, qps int) tokenbucket.PriorityTokenBucket {
 	m.RLock()
 	rateLimiter, exist := m.mappings[domain]
 	m.RUnlock()
@@ -88,7 +89,7 @@ func (m *domainToBucketMap) getRateLimiter(domain string, numOfPriority, qps int
 		m.Unlock()
 		return rateLimiter
 	}
-	rateLimiter = common.NewFullPriorityTokenBucket(numOfPriority, qps, common.NewRealTimeSource())
+	rateLimiter = tokenbucket.NewFullPriorityTokenBucket(numOfPriority, qps, clock.NewRealTimeSource())
 	m.mappings[domain] = rateLimiter
 	m.Unlock()
 	return rateLimiter
@@ -102,7 +103,12 @@ func (p *visibilitySamplingClient) RecordWorkflowExecutionStarted(request *Recor
 		return p.persistence.RecordWorkflowExecutionStarted(request)
 	}
 
-	logging.LogOpenWorkflowSampled(p.logger, domain, request.Execution.GetWorkflowId(), request.Execution.GetRunId(), request.WorkflowTypeName)
+	p.logger.Info("Request for open workflow is sampled",
+		tag.WorkflowDomainID(domain),
+		tag.WorkflowType(request.WorkflowTypeName),
+		tag.WorkflowID(request.Execution.GetWorkflowId()),
+		tag.WorkflowRunID(request.Execution.GetRunId()),
+	)
 	p.metricClient.IncCounter(metrics.PersistenceRecordWorkflowExecutionStartedScope, metrics.PersistenceSampledCounter)
 	return nil
 }
@@ -116,7 +122,12 @@ func (p *visibilitySamplingClient) RecordWorkflowExecutionClosed(request *Record
 		return p.persistence.RecordWorkflowExecutionClosed(request)
 	}
 
-	logging.LogClosedWorkflowSampled(p.logger, domain, request.Execution.GetWorkflowId(), request.Execution.GetRunId(), request.WorkflowTypeName)
+	p.logger.Info("Request for closed workflow is sampled",
+		tag.WorkflowDomainID(domain),
+		tag.WorkflowType(request.WorkflowTypeName),
+		tag.WorkflowID(request.Execution.GetWorkflowId()),
+		tag.WorkflowRunID(request.Execution.GetRunId()),
+	)
 	p.metricClient.IncCounter(metrics.PersistenceRecordWorkflowExecutionClosedScope, metrics.PersistenceSampledCounter)
 	return nil
 }
@@ -200,6 +211,22 @@ func (p *visibilitySamplingClient) ListClosedWorkflowExecutionsByStatus(request 
 
 func (p *visibilitySamplingClient) GetClosedWorkflowExecution(request *GetClosedWorkflowExecutionRequest) (*GetClosedWorkflowExecutionResponse, error) {
 	return p.persistence.GetClosedWorkflowExecution(request)
+}
+
+func (p *visibilitySamplingClient) DeleteWorkflowExecution(request *VisibilityDeleteWorkflowExecutionRequest) error {
+	return p.persistence.DeleteWorkflowExecution(request)
+}
+
+func (p *visibilitySamplingClient) ListWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*ListWorkflowExecutionsResponse, error) {
+	return p.persistence.ListWorkflowExecutions(request)
+}
+
+func (p *visibilitySamplingClient) ScanWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*ListWorkflowExecutionsResponse, error) {
+	return p.persistence.ScanWorkflowExecutions(request)
+}
+
+func (p *visibilitySamplingClient) CountWorkflowExecutions(request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error) {
+	return p.persistence.CountWorkflowExecutions(request)
 }
 
 func (p *visibilitySamplingClient) Close() {

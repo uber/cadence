@@ -20,52 +20,24 @@
 
 package cli
 
-import "github.com/urfave/cli"
+import (
+	"strings"
+
+	"github.com/urfave/cli"
+)
 
 func newWorkflowCommands() []cli.Command {
 	return []cli.Command{
 		{
+			Name:        "activity",
+			Aliases:     []string{"act"},
+			Usage:       "Operate activities of workflow",
+			Subcommands: newActivityCommands(),
+		},
+		{
 			Name:  "show",
 			Usage: "show workflow history",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  FlagWorkflowIDWithAlias,
-					Usage: "WorkflowID",
-				},
-				cli.StringFlag{
-					Name:  FlagRunIDWithAlias,
-					Usage: "RunID",
-				},
-				cli.BoolFlag{
-					Name:  FlagPrintDateTimeWithAlias,
-					Usage: "Print time stamp",
-				},
-				cli.BoolFlag{
-					Name:  FlagPrintEventVersionWithAlias,
-					Usage: "Print event version",
-				},
-				cli.BoolFlag{
-					Name:  FlagPrintFullyDetailWithAlias,
-					Usage: "Print fully event detail",
-				},
-				cli.BoolFlag{
-					Name:  FlagPrintRawTimeWithAlias,
-					Usage: "Print raw time stamp",
-				},
-				cli.StringFlag{
-					Name:  FlagOutputFilenameWithAlias,
-					Usage: "Serialize history event to a file",
-				},
-				cli.IntFlag{
-					Name:  FlagEventIDWithAlias,
-					Usage: "Print specific event details",
-				},
-				cli.IntFlag{
-					Name:  FlagMaxFieldLengthWithAlias,
-					Usage: "Maximum length for each attribute field",
-					Value: defaultMaxFieldLength,
-				},
-			},
+			Flags: getFlagsForShow(),
 			Action: func(c *cli.Context) {
 				ShowHistory(c)
 			},
@@ -74,37 +46,7 @@ func newWorkflowCommands() []cli.Command {
 			Name:        "showid",
 			Usage:       "show workflow history with given workflow_id and optional run_id (a shortcut of `show -w <wid> -r <rid>`)",
 			Description: "cadence workflow showid <workflow_id> <run_id>. workflow_id is required; run_id is optional",
-			Flags: []cli.Flag{
-				cli.BoolFlag{
-					Name:  FlagPrintDateTimeWithAlias,
-					Usage: "Print time stamp",
-				},
-				cli.BoolFlag{
-					Name:  FlagPrintRawTimeWithAlias,
-					Usage: "Print raw time stamp",
-				},
-				cli.StringFlag{
-					Name:  FlagOutputFilenameWithAlias,
-					Usage: "Serialize history event to a file",
-				},
-				cli.BoolFlag{
-					Name:  FlagPrintFullyDetailWithAlias,
-					Usage: "Print fully event detail",
-				},
-				cli.BoolFlag{
-					Name:  FlagPrintEventVersionWithAlias,
-					Usage: "Print event version",
-				},
-				cli.IntFlag{
-					Name:  FlagEventIDWithAlias,
-					Usage: "Print specific event details",
-				},
-				cli.IntFlag{
-					Name:  FlagMaxFieldLengthWithAlias,
-					Usage: "Maximum length for each attribute field",
-					Value: defaultMaxFieldLength,
-				},
-			},
+			Flags:       getFlagsForShowID(),
 			Action: func(c *cli.Context) {
 				ShowHistoryWithWID(c)
 			},
@@ -112,54 +54,7 @@ func newWorkflowCommands() []cli.Command {
 		{
 			Name:  "start",
 			Usage: "start a new workflow execution",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  FlagTaskListWithAlias,
-					Usage: "TaskList",
-				},
-				cli.StringFlag{
-					Name:  FlagWorkflowIDWithAlias,
-					Usage: "WorkflowID",
-				},
-				cli.StringFlag{
-					Name:  FlagWorkflowTypeWithAlias,
-					Usage: "WorkflowTypeName",
-				},
-				cli.IntFlag{
-					Name:  FlagExecutionTimeoutWithAlias,
-					Usage: "Execution start to close timeout in seconds",
-				},
-				cli.IntFlag{
-					Name:  FlagDecisionTimeoutWithAlias,
-					Value: defaultDecisionTimeoutInSeconds,
-					Usage: "Decision task start to close timeout in seconds",
-				},
-				cli.StringFlag{
-					Name: FlagCronSchedule,
-					Usage: "Optional cron schedule for the workflow. Cron spec is as following: \n" +
-						"\t┌───────────── minute (0 - 59) \n" +
-						"\t│ ┌───────────── hour (0 - 23) \n" +
-						"\t│ │ ┌───────────── day of the month (1 - 31) \n" +
-						"\t│ │ │ ┌───────────── month (1 - 12) \n" +
-						"\t│ │ │ │ ┌───────────── day of the week (0 - 6) (Sunday to Saturday) \n" +
-						"\t│ │ │ │ │ \n" +
-						"\t* * * * *",
-				},
-				cli.IntFlag{
-					Name: FlagWorkflowIDReusePolicyAlias,
-					Usage: "Optional input to configure if the same workflow ID is allow to use for new workflow execution. " +
-						"Available options: 0: AllowDuplicateFailedOnly, 1: AllowDuplicate, 2: RejectDuplicate",
-				},
-				cli.StringFlag{
-					Name:  FlagInputWithAlias,
-					Usage: "Optional input for the workflow, in JSON format. If there are multiple parameters, concatenate them and separate by space.",
-				},
-				cli.StringFlag{
-					Name: FlagInputFileWithAlias,
-					Usage: "Optional input for the workflow from JSON file. If there are multiple JSON, concatenate them and separate by space or newline. " +
-						"Input from file will be overwrite by input from command line",
-				},
-			},
+			Flags: getFlagsForStart(),
 			Action: func(c *cli.Context) {
 				StartWorkflow(c)
 			},
@@ -167,66 +62,7 @@ func newWorkflowCommands() []cli.Command {
 		{
 			Name:  "run",
 			Usage: "start a new workflow execution and get workflow progress",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  FlagTaskListWithAlias,
-					Usage: "TaskList",
-				},
-				cli.StringFlag{
-					Name:  FlagWorkflowIDWithAlias,
-					Usage: "WorkflowID",
-				},
-				cli.StringFlag{
-					Name:  FlagWorkflowTypeWithAlias,
-					Usage: "WorkflowTypeName",
-				},
-				cli.IntFlag{
-					Name:  FlagExecutionTimeoutWithAlias,
-					Usage: "Execution start to close timeout in seconds",
-				},
-				cli.IntFlag{
-					Name:  FlagDecisionTimeoutWithAlias,
-					Value: defaultDecisionTimeoutInSeconds,
-					Usage: "Decision task start to close timeout in seconds",
-				},
-				cli.IntFlag{
-					Name:  FlagContextTimeoutWithAlias,
-					Usage: "Optional timeout for start command context in seconds, default value is 120",
-				},
-				cli.StringFlag{
-					Name: FlagCronSchedule,
-					Usage: "Optional cron schedule for the workflow. Cron spec is as following: \n" +
-						"\t┌───────────── minute (0 - 59) \n" +
-						"\t│ ┌───────────── hour (0 - 23) \n" +
-						"\t│ │ ┌───────────── day of the month (1 - 31) \n" +
-						"\t│ │ │ ┌───────────── month (1 - 12) \n" +
-						"\t│ │ │ │ ┌───────────── day of the week (0 - 6) (Sunday to Saturday) \n" +
-						"\t│ │ │ │ │ \n" +
-						"\t* * * * *",
-				},
-				cli.IntFlag{
-					Name: FlagWorkflowIDReusePolicyAlias,
-					Usage: "Optional input to configure if the same workflow ID is allow to use for new workflow execution. " +
-						"Available options: 0: AllowDuplicateFailedOnly, 1: AllowDuplicate, 2: RejectDuplicate",
-				},
-				cli.StringFlag{
-					Name:  FlagInputWithAlias,
-					Usage: "Optional input for the workflow, in JSON format. If there are multiple parameters, concatenate them and separate by space.",
-				},
-				cli.StringFlag{
-					Name: FlagInputFileWithAlias,
-					Usage: "Optional input for the workflow from JSON file. If there are multiple JSON, concatenate them and separate by space or newline. " +
-						"Input from file will be overwrite by input from command line",
-				},
-				cli.BoolFlag{
-					Name:  FlagShowDetailWithAlias,
-					Usage: "Show event details",
-				},
-				cli.IntFlag{
-					Name:  FlagMaxFieldLengthWithAlias,
-					Usage: "Maximum length for each attribute field",
-				},
-			},
+			Flags: getFlagsForRun(),
 			Action: func(c *cli.Context) {
 				RunWorkflow(c)
 			},
@@ -235,16 +71,7 @@ func newWorkflowCommands() []cli.Command {
 			Name:    "cancel",
 			Aliases: []string{"c"},
 			Usage:   "cancel a workflow execution",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  FlagWorkflowIDWithAlias,
-					Usage: "WorkflowID",
-				},
-				cli.StringFlag{
-					Name:  FlagRunIDWithAlias,
-					Usage: "RunID",
-				},
-			},
+			Flags:   flagsForExecution,
 			Action: func(c *cli.Context) {
 				CancelWorkflow(c)
 			},
@@ -306,54 +133,7 @@ func newWorkflowCommands() []cli.Command {
 			Aliases:     []string{"l"},
 			Usage:       "list open or closed workflow executions",
 			Description: "list one page (default size 10 items) by default, use flag --pagesize to change page size",
-			Flags: []cli.Flag{
-				cli.BoolFlag{
-					Name:  FlagOpenWithAlias,
-					Usage: "List for open workflow executions, default is to list for closed ones",
-				},
-				cli.BoolFlag{
-					Name:  FlagMoreWithAlias,
-					Usage: "List more pages, default is to list one page of default page size 10",
-				},
-				cli.IntFlag{
-					Name:  FlagPageSizeWithAlias,
-					Value: 10,
-					Usage: "Result page size",
-				},
-				cli.StringFlag{
-					Name:  FlagEarliestTimeWithAlias,
-					Usage: "EarliestTime of start time, supported formats are '2006-01-02T15:04:05Z07:00' and raw UnixNano",
-				},
-				cli.StringFlag{
-					Name:  FlagLatestTimeWithAlias,
-					Usage: "LatestTime of start time, supported formats are '2006-01-02T15:04:05Z07:00' and raw UnixNano",
-				},
-				cli.StringFlag{
-					Name:  FlagWorkflowIDWithAlias,
-					Usage: "WorkflowID",
-				},
-				cli.StringFlag{
-					Name:  FlagWorkflowTypeWithAlias,
-					Usage: "WorkflowTypeName",
-				},
-				cli.BoolFlag{
-					Name:  FlagPrintRawTimeWithAlias,
-					Usage: "Print raw time stamp",
-				},
-				cli.BoolFlag{
-					Name:  FlagPrintDateTimeWithAlias,
-					Usage: "Print full date time in '2006-01-02T15:04:05Z07:00' format",
-				},
-				cli.IntFlag{
-					Name:  FlagContextTimeoutWithAlias,
-					Value: 30,
-					Usage: "Optional timeout for list command context in seconds",
-				},
-				cli.StringFlag{
-					Name:  FlagWorkflowStatusWithAlias,
-					Usage: "Closed workflow status [completed, failed, canceled, terminated, continueasnew, timedout]",
-				},
-			},
+			Flags:       getFlagsForList(),
 			Action: func(c *cli.Context) {
 				ListWorkflow(c)
 			},
@@ -362,45 +142,7 @@ func newWorkflowCommands() []cli.Command {
 			Name:    "listall",
 			Aliases: []string{"la"},
 			Usage:   "list all open or closed workflow executions",
-			Flags: []cli.Flag{
-				cli.BoolFlag{
-					Name:  FlagOpenWithAlias,
-					Usage: "List for open workflow executions, default is to list for closed ones",
-				},
-				cli.StringFlag{
-					Name:  FlagEarliestTimeWithAlias,
-					Usage: "EarliestTime of start time, supported formats are '2006-01-02T15:04:05Z07:00' and raw UnixNano",
-				},
-				cli.StringFlag{
-					Name:  FlagLatestTimeWithAlias,
-					Usage: "LatestTime of start time, supported formats are '2006-01-02T15:04:05Z07:00' and raw UnixNano",
-				},
-				cli.StringFlag{
-					Name:  FlagWorkflowIDWithAlias,
-					Usage: "WorkflowID",
-				},
-				cli.StringFlag{
-					Name:  FlagWorkflowTypeWithAlias,
-					Usage: "WorkflowTypeName",
-				},
-				cli.BoolFlag{
-					Name:  FlagPrintRawTimeWithAlias,
-					Usage: "Print raw time stamp",
-				},
-				cli.BoolFlag{
-					Name:  FlagPrintDateTimeWithAlias,
-					Usage: "Print full date time in '2006-01-02T15:04:05Z07:00' format",
-				},
-				cli.IntFlag{
-					Name:  FlagContextTimeoutWithAlias,
-					Value: 30,
-					Usage: "Optional timeout for list command context in seconds",
-				},
-				cli.StringFlag{
-					Name:  FlagWorkflowStatusWithAlias,
-					Usage: "Closed workflow status [completed, failed, canceled, terminated, continueasnew, timedout]",
-				},
-			},
+			Flags:   getFlagsForListAll(),
 			Action: func(c *cli.Context) {
 				ListAllWorkflow(c)
 			},
@@ -408,29 +150,7 @@ func newWorkflowCommands() []cli.Command {
 		{
 			Name:  "query",
 			Usage: "query workflow execution",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  FlagWorkflowIDWithAlias,
-					Usage: "WorkflowID",
-				},
-				cli.StringFlag{
-					Name:  FlagRunIDWithAlias,
-					Usage: "RunID",
-				},
-				cli.StringFlag{
-					Name:  FlagQueryTypeWithAlias,
-					Usage: "The query type you want to run",
-				},
-				cli.StringFlag{
-					Name:  FlagInputWithAlias,
-					Usage: "Optional input for the query, in JSON format. If there are multiple parameters, concatenate them and separate by space.",
-				},
-				cli.StringFlag{
-					Name: FlagInputFileWithAlias,
-					Usage: "Optional input for the query from JSON file. If there are multiple JSON, concatenate them and separate by space or newline. " +
-						"Input from file will be overwrite by input from command line",
-				},
-			},
+			Flags: getFlagsForQuery(),
 			Action: func(c *cli.Context) {
 				QueryWorkflow(c)
 			},
@@ -438,25 +158,7 @@ func newWorkflowCommands() []cli.Command {
 		{
 			Name:  "stack",
 			Usage: "query workflow execution with __stack_trace as query type",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  FlagWorkflowIDWithAlias,
-					Usage: "WorkflowID",
-				},
-				cli.StringFlag{
-					Name:  FlagRunIDWithAlias,
-					Usage: "RunID",
-				},
-				cli.StringFlag{
-					Name:  FlagInputWithAlias,
-					Usage: "Optional input for the query, in JSON format. If there are multiple parameters, concatenate them and separate by space.",
-				},
-				cli.StringFlag{
-					Name: FlagInputFileWithAlias,
-					Usage: "Optional input for the query from JSON file. If there are multiple JSON, concatenate them and separate by space or newline. " +
-						"Input from file will be overwrite by input from command line",
-				},
-			},
+			Flags: getFlagsForStack(),
 			Action: func(c *cli.Context) {
 				QueryWorkflowUsingStackTrace(c)
 			},
@@ -465,20 +167,7 @@ func newWorkflowCommands() []cli.Command {
 			Name:    "describe",
 			Aliases: []string{"desc"},
 			Usage:   "show information of workflow execution",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  FlagWorkflowIDWithAlias,
-					Usage: "WorkflowID",
-				},
-				cli.StringFlag{
-					Name:  FlagRunIDWithAlias,
-					Usage: "RunID",
-				},
-				cli.BoolFlag{
-					Name:  FlagPrintRawTimeWithAlias,
-					Usage: "Print raw time stamp",
-				},
-			},
+			Flags:   getFlagsForDescribe(),
 			Action: func(c *cli.Context) {
 				DescribeWorkflow(c)
 			},
@@ -488,12 +177,7 @@ func newWorkflowCommands() []cli.Command {
 			Aliases:     []string{"descid"},
 			Usage:       "show information of workflow execution with given workflow_id and optional run_id (a shortcut of `describe -w <wid> -r <rid>`)",
 			Description: "cadence workflow describeid <workflow_id> <run_id>. workflow_id is required; run_id is optional",
-			Flags: []cli.Flag{
-				cli.BoolFlag{
-					Name:  FlagPrintRawTimeWithAlias,
-					Usage: "Print raw time stamp",
-				},
-			},
+			Flags:       getFlagsForDescribeID(),
 			Action: func(c *cli.Context) {
 				DescribeWorkflowWithID(c)
 			},
@@ -502,28 +186,7 @@ func newWorkflowCommands() []cli.Command {
 			Name:    "observe",
 			Aliases: []string{"ob"},
 			Usage:   "show the progress of workflow history",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  FlagWorkflowIDWithAlias,
-					Usage: "WorkflowID",
-				},
-				cli.StringFlag{
-					Name:  FlagRunIDWithAlias,
-					Usage: "RunID",
-				},
-				cli.IntFlag{
-					Name:  FlagContextTimeoutWithAlias,
-					Usage: "Optional timeout for start command context in seconds, default value is 120",
-				},
-				cli.BoolFlag{
-					Name:  FlagShowDetailWithAlias,
-					Usage: "Optional show event details",
-				},
-				cli.IntFlag{
-					Name:  FlagMaxFieldLengthWithAlias,
-					Usage: "Optional maximum length for each attribute field when show details",
-				},
-			},
+			Flags:   getFlagsForObserve(),
 			Action: func(c *cli.Context) {
 				ObserveHistory(c)
 			},
@@ -532,20 +195,7 @@ func newWorkflowCommands() []cli.Command {
 			Name:    "observeid",
 			Aliases: []string{"obid"},
 			Usage:   "show the progress of workflow history with given workflow_id and optional run_id (a shortcut of `observe -w <wid> -r <rid>`)",
-			Flags: []cli.Flag{
-				cli.IntFlag{
-					Name:  FlagContextTimeoutWithAlias,
-					Usage: "Optional timeout for start command context in seconds, default value is 120",
-				},
-				cli.BoolFlag{
-					Name:  FlagShowDetailWithAlias,
-					Usage: "Optional show event details",
-				},
-				cli.IntFlag{
-					Name:  FlagMaxFieldLengthWithAlias,
-					Usage: "Optional maximum length for each attribute field when show details",
-				},
-			},
+			Flags:   getFlagsForObserveID(),
 			Action: func(c *cli.Context) {
 				ObserveHistoryWithID(c)
 			},
@@ -553,7 +203,7 @@ func newWorkflowCommands() []cli.Command {
 		{
 			Name:    "reset",
 			Aliases: []string{"rs"},
-			Usage:   "reset the workflow",
+			Usage:   "reset the workflow, by either eventID or resetType.",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagWorkflowIDWithAlias,
@@ -571,9 +221,120 @@ func newWorkflowCommands() []cli.Command {
 					Name:  FlagReason,
 					Usage: "reason to do the reset",
 				},
+				cli.StringFlag{
+					Name:  FlagResetType,
+					Usage: "where to reset. Support one of these: " + strings.Join(mapKeysToArray(resetTypesMap), ","),
+				},
 			},
 			Action: func(c *cli.Context) {
 				ResetWorkflow(c)
+			},
+		},
+		{
+			Name:  "reset-batch",
+			Usage: "reset workflow in batch by resetType: " + strings.Join(mapKeysToArray(resetTypesMap), ","),
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagInputFileWithAlias,
+					Usage: "Input file to use for resetting, one workflow per line of WorkflowID and RunID. RunID is optional, default to current runID if not specified. ",
+				},
+				cli.StringFlag{
+					Name:  FlagExcludeFile,
+					Usage: "Another input file to use for excluding from resetting, only workflowID is needed.",
+				},
+				cli.StringFlag{
+					Name:  FlagInputSeparator,
+					Value: ",",
+					Usage: "Separator for input file",
+				},
+				cli.StringFlag{
+					Name:  FlagReason,
+					Usage: "Reason for reset",
+				},
+				cli.IntFlag{
+					Name:  FlagParallism,
+					Value: 1,
+					Usage: "Number of goroutines to run in parallel. Each goroutine would process one line for every second.",
+				},
+				cli.BoolFlag{
+					Name:  FlagSkipCurrent,
+					Usage: "Skip the workflow if the current run is open.",
+				},
+				cli.StringFlag{
+					Name:  FlagResetType,
+					Usage: "where to reset. Support one of these: " + strings.Join(mapKeysToArray(resetTypesMap), ","),
+				},
+			},
+			Action: func(c *cli.Context) {
+				ResetInBatch(c)
+			},
+		},
+	}
+}
+
+func newActivityCommands() []cli.Command {
+	return []cli.Command{
+		{
+			Name:    "complete",
+			Aliases: []string{"comp"},
+			Usage:   "Complete an activity",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagWorkflowIDWithAlias,
+					Usage: "WorkflowID",
+				},
+				cli.StringFlag{
+					Name:  FlagRunIDWithAlias,
+					Usage: "RunID",
+				},
+				cli.StringFlag{
+					Name:  FlagActivityIDWithAlias,
+					Usage: "The activityID to operate on",
+				},
+				cli.StringFlag{
+					Name:  FlagResult,
+					Usage: "Result of the activity",
+				},
+				cli.StringFlag{
+					Name:  FlagIdentity,
+					Usage: "Identity of the operator",
+				},
+			},
+			Action: func(c *cli.Context) {
+				CompleteActivity(c)
+			},
+		},
+		{
+			Name:  "fail",
+			Usage: "fail an activity",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagWorkflowIDWithAlias,
+					Usage: "WorkflowID",
+				},
+				cli.StringFlag{
+					Name:  FlagRunIDWithAlias,
+					Usage: "RunID",
+				},
+				cli.StringFlag{
+					Name:  FlagActivityIDWithAlias,
+					Usage: "The activityID to operate on",
+				},
+				cli.StringFlag{
+					Name:  FlagReason,
+					Usage: "Reason to fail the activity",
+				},
+				cli.StringFlag{
+					Name:  FlagDetail,
+					Usage: "Detail to fail the activity",
+				},
+				cli.StringFlag{
+					Name:  FlagIdentity,
+					Usage: "Identity of the operator",
+				},
+			},
+			Action: func(c *cli.Context) {
+				FailActivity(c)
 			},
 		},
 	}

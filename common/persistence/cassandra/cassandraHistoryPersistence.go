@@ -24,9 +24,9 @@ import (
 	"fmt"
 
 	"github.com/gocql/gocql"
-	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
 )
@@ -61,12 +61,12 @@ type (
 )
 
 // NewHistoryPersistenceFromSession return HistoryStore
-func NewHistoryPersistenceFromSession(session *gocql.Session, logger bark.Logger) p.HistoryStore {
+func NewHistoryPersistenceFromSession(session *gocql.Session, logger log.Logger) p.HistoryStore {
 	return &cassandraHistoryPersistence{cassandraStore: cassandraStore{session: session, logger: logger}}
 }
 
 // newHistoryPersistence is used to create an instance of HistoryManager implementation
-func newHistoryPersistence(cfg config.Cassandra, logger bark.Logger) (p.HistoryStore,
+func newHistoryPersistence(cfg config.Cassandra, logger log.Logger) (p.HistoryStore,
 	error) {
 	cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
 	cluster.Keyspace = cfg.Keyspace
@@ -164,7 +164,6 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *p.Int
 		}
 	}
 
-	found := false
 	nextPageToken := iter.PageState()
 
 	//NOTE: in this method, we need to make sure is NOT decreasing(otherwise we skip the events)
@@ -177,8 +176,6 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *p.Int
 	history := make([]*p.DataBlob, 0, request.PageSize)
 
 	for iter.Scan(nil, &eventBatchVersionPointer, &eventBatch.Data, &eventBatch.Encoding) {
-		found = true
-
 		if eventBatchVersionPointer != nil {
 			eventBatchVersion = *eventBatchVersionPointer
 		}
@@ -195,15 +192,6 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *p.Int
 	if err := iter.Close(); err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("GetWorkflowExecutionHistory operation failed. Error: %v", err),
-		}
-	}
-
-	if !found && len(request.NextPageToken) == 0 {
-		// adding the check of request next token being not nil, since
-		// there can be case when found == false at the very end of pagination.
-		return nil, &workflow.EntityNotExistsError{
-			Message: fmt.Sprintf("Workflow execution history not found.  WorkflowId: %v, RunId: %v",
-				*execution.WorkflowId, *execution.RunId),
 		}
 	}
 

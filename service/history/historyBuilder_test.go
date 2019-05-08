@@ -21,20 +21,18 @@
 package history
 
 import (
-	"github.com/stretchr/testify/mock"
 	"testing"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
-
 	"github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -47,8 +45,9 @@ type (
 		domainID        string
 		msBuilder       mutableState
 		builder         *historyBuilder
+		mockShard       *shardContextImpl
 		mockEventsCache *MockEventsCache
-		logger          bark.Logger
+		logger          log.Logger
 	}
 )
 
@@ -58,12 +57,20 @@ func TestHistoryBuilderSuite(t *testing.T) {
 }
 
 func (s *historyBuilderSuite) SetupTest() {
-	s.logger = bark.NewLoggerFromLogrus(log.New())
+	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 	s.domainID = "history-builder-test-domain"
+	s.mockShard = &shardContextImpl{
+		shardInfo:                 &persistence.ShardInfo{ShardID: 0, RangeID: 1, TransferAckLevel: 0},
+		transferSequenceNumber:    1,
+		maxTransferSequenceNumber: 100000,
+		closeCh:                   make(chan int, 100),
+		config:                    NewDynamicConfigForTest(),
+		logger:                    s.logger,
+	}
 	s.mockEventsCache = &MockEventsCache{}
-	s.msBuilder = newMutableStateBuilder(cluster.TestCurrentClusterName, NewDynamicConfigForTest(), s.mockEventsCache,
+	s.msBuilder = newMutableStateBuilder(cluster.TestCurrentClusterName, s.mockShard, s.mockEventsCache,
 		s.logger)
 	s.builder = newHistoryBuilder(s.msBuilder, s.logger)
 }
@@ -658,6 +665,8 @@ func (s *historyBuilderSuite) getPreviousDecisionStartedEventID() int64 {
 func (s *historyBuilderSuite) addWorkflowExecutionStartedEvent(we workflow.WorkflowExecution, workflowType,
 	taskList string, input []byte, executionStartToCloseTimeout, taskStartToCloseTimeout int32,
 	identity string) *workflow.HistoryEvent {
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything).Return()
 
 	request := &workflow.StartWorkflowExecutionRequest{
 		WorkflowId:                          common.StringPtr(*we.WorkflowId),
@@ -696,7 +705,7 @@ func (s *historyBuilderSuite) addDecisionTaskCompletedEvent(scheduleID, startedI
 	e := s.msBuilder.AddDecisionTaskCompletedEvent(scheduleID, startedID, &workflow.RespondDecisionTaskCompletedRequest{
 		ExecutionContext: context,
 		Identity:         common.StringPtr(identity),
-	})
+	}, defaultHistoryMaxAutoResetPoints)
 
 	return e
 }

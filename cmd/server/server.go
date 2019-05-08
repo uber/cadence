@@ -26,7 +26,12 @@ import (
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/blobstore/filestore"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/elasticsearch"
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
@@ -35,10 +40,7 @@ import (
 	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
 	"github.com/uber/cadence/service/worker"
-
-	"github.com/uber/cadence/common/blobstore/filestore"
-	"github.com/uber/cadence/common/elasticsearch"
-	"github.com/uber/cadence/common/messaging"
+	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/zap"
 )
 
@@ -102,40 +104,46 @@ func (s *server) startService() common.Daemon {
 
 	params := service.BootstrapParams{}
 	params.Name = "cadence-" + s.name
-	params.Logger = s.cfg.Log.NewBarkLogger()
+	params.Logger = loggerimpl.NewLogger(s.cfg.Log.NewZapLogger())
 	params.PersistenceConfig = s.cfg.Persistence
 
-	params.RingpopFactory, err = s.cfg.Ringpop.NewFactory()
+	params.MembershipFactory, err = s.cfg.Ringpop.NewFactory(params.Logger, params.Name)
 	if err != nil {
 		log.Fatalf("error creating ringpop factory: %v", err)
 	}
 
-	params.DynamicConfig = dynamicconfig.NewNopClient()
+	params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DynamicConfigClient, params.Logger.WithTags(tag.Service(params.Name)), s.doneC)
+	if err != nil {
+		log.Printf("error creating file based dynamic config client, use no-op config client instead. error: %v", err)
+		params.DynamicConfig = dynamicconfig.NewNopClient()
+	}
 	dc := dynamicconfig.NewCollection(params.DynamicConfig, params.Logger)
 
 	svcCfg := s.cfg.Services[s.name]
-	params.MetricScope = svcCfg.Metrics.NewScope()
+	params.MetricScope = svcCfg.Metrics.NewScope(params.Logger)
 	params.RPCFactory = svcCfg.RPC.NewFactory(params.Name, params.Logger)
 	params.PProfInitializer = svcCfg.PProf.NewInitializer(params.Logger)
 	enableGlobalDomain := dc.GetBoolProperty(dynamicconfig.EnableGlobalDomain, s.cfg.ClustersInfo.EnableGlobalDomain)
-	enableArchival := dc.GetBoolProperty(dynamicconfig.EnableArchival, s.cfg.Archival.Enabled)
+	archivalStatus := dc.GetStringProperty(dynamicconfig.ArchivalStatus, s.cfg.Archival.Status)
+	enableReadFromArchival := dc.GetBoolProperty(dynamicconfig.EnableReadFromArchival, s.cfg.Archival.EnableReadFromArchival)
 
 	params.DCRedirectionPolicy = s.cfg.DCRedirectionPolicy
 
+	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 	params.ClusterMetadata = cluster.NewMetadata(
+		params.Logger,
+		params.MetricsClient,
 		enableGlobalDomain,
 		s.cfg.ClustersInfo.FailoverVersionIncrement,
 		s.cfg.ClustersInfo.MasterClusterName,
 		s.cfg.ClustersInfo.CurrentClusterName,
 		s.cfg.ClustersInfo.ClusterInitialFailoverVersions,
 		s.cfg.ClustersInfo.ClusterAddress,
-		enableArchival,
-		s.cfg.Archival.Filestore.DefaultBucket.Name,
+		archivalStatus,
+		s.cfg.Archival.DefaultBucket,
+		enableReadFromArchival,
 	)
 	params.DispatcherProvider = client.NewIPYarpcDispatcherProvider()
-	// TODO: We need to switch Cadence to use zap logger, until then just pass zap.NewNop
-
-	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 	params.ESConfig = &s.cfg.ElasticSearch
 	params.ESConfig.Enable = dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, params.ESConfig.Enable)() // force override with dynamic config
 	if params.ClusterMetadata.IsGlobalDomainEnabled() {
@@ -160,8 +168,14 @@ func (s *server) startService() common.Daemon {
 		}
 	}
 
-	if params.ClusterMetadata.IsArchivalEnabled() {
-		params.BlobstoreClient, err = filestore.NewClient(&s.cfg.Archival.Filestore, params.Logger)
+	dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, s.cfg.PublicClient.HostPort)
+	if err != nil {
+		log.Fatalf("failed to construct dispatcher: %v", err)
+	}
+	params.PublicClient = workflowserviceclient.New(dispatcher.ClientConfig(common.FrontendServiceName))
+
+	if params.ClusterMetadata.ArchivalConfig().ConfiguredForArchival() {
+		params.BlobstoreClient, err = filestore.NewClient(&s.cfg.Archival.Filestore)
 		if err != nil {
 			log.Fatalf("error creating blobstore: %v", err)
 		}
@@ -190,5 +204,5 @@ func (s *server) startService() common.Daemon {
 // execute runs the daemon in a separate go routine
 func execute(d common.Daemon, doneC chan struct{}) {
 	d.Start()
-	doneC <- struct{}{}
+	close(doneC)
 }

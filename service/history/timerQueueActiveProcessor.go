@@ -25,13 +25,13 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
-	"github.com/uber-common/bark"
 	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/logging"
-	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/cron"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -43,7 +43,7 @@ type (
 		cache                   *historyCache
 		timerTaskFilter         timerTaskFilter
 		now                     timeNow
-		logger                  bark.Logger
+		logger                  log.Logger
 		metricsClient           metrics.Client
 		currentClusterName      string
 		matchingClient          matching.Client
@@ -54,7 +54,7 @@ type (
 )
 
 func newTimerQueueActiveProcessor(shard ShardContext, historyService *historyEngineImpl, matchingClient matching.Client,
-	taskAllocator taskAllocator, visibilityProducer messaging.Producer, logger bark.Logger) *timerQueueActiveProcessorImpl {
+	taskAllocator taskAllocator, logger log.Logger) *timerQueueActiveProcessorImpl {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 	timeNow := func() time.Time {
 		return shard.GetCurrentTime(currentClusterName)
@@ -62,9 +62,7 @@ func newTimerQueueActiveProcessor(shard ShardContext, historyService *historyEng
 	updateShardAckLevel := func(ackLevel TimerSequenceID) error {
 		return shard.UpdateTimerClusterAckLevel(currentClusterName, ackLevel.VisibilityTimestamp)
 	}
-	logger = logger.WithFields(bark.Fields{
-		logging.TagWorkflowCluster: currentClusterName,
-	})
+	logger = logger.WithTags(tag.ClusterName(currentClusterName))
 	timerTaskFilter := func(timer *persistence.TimerTaskInfo) (bool, error) {
 		return taskAllocator.verifyActiveTask(timer.DomainID, timer)
 	}
@@ -99,7 +97,6 @@ func newTimerQueueActiveProcessor(shard ShardContext, historyService *historyEng
 			timerGate,
 			shard.GetConfig().TimerProcessorMaxPollRPS,
 			shard.GetConfig().TimerProcessorStartDelay,
-			visibilityProducer,
 			logger,
 		),
 		timerQueueAckMgr: timerQueueAckMgr,
@@ -111,8 +108,7 @@ func newTimerQueueActiveProcessor(shard ShardContext, historyService *historyEng
 
 func newTimerQueueFailoverProcessor(shard ShardContext, historyService *historyEngineImpl, domainIDs map[string]struct{},
 	standbyClusterName string, minLevel time.Time, maxLevel time.Time, matchingClient matching.Client,
-	taskAllocator taskAllocator, visibilityProducer messaging.Producer,
-	logger bark.Logger) (func(ackLevel TimerSequenceID) error, *timerQueueActiveProcessorImpl) {
+	taskAllocator taskAllocator, logger log.Logger) (func(ackLevel TimerSequenceID) error, *timerQueueActiveProcessorImpl) {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 	timeNow := func() time.Time {
 		// should use current cluster's time when doing domain failover
@@ -137,11 +133,11 @@ func newTimerQueueFailoverProcessor(shard ShardContext, historyService *historyE
 		return shard.DeleteTimerFailoverLevel(failoverUUID)
 	}
 
-	logger = logger.WithFields(bark.Fields{
-		logging.TagWorkflowCluster: currentClusterName,
-		logging.TagDomainIDs:       domainIDs,
-		logging.TagFailover:        "from: " + standbyClusterName,
-	})
+	logger = logger.WithTags(
+		tag.ClusterName(currentClusterName),
+		tag.WorkflowDomainIDs(domainIDs),
+		tag.FailoverMsg("from: "+standbyClusterName),
+	)
 	timerTaskFilter := func(timer *persistence.TimerTaskInfo) (bool, error) {
 		return taskAllocator.verifyFailoverActiveTask(domainIDs, timer.DomainID, timer)
 	}
@@ -176,7 +172,6 @@ func newTimerQueueFailoverProcessor(shard ShardContext, historyService *historyE
 			timerGate,
 			shard.GetConfig().TimerProcessorFailoverMaxPollRPS,
 			shard.GetConfig().TimerProcessorFailoverStartDelay,
-			visibilityProducer,
 			logger,
 		),
 		timerQueueAckMgr: timerQueueAckMgr,
@@ -253,19 +248,12 @@ func (t *timerQueueActiveProcessorImpl) process(timerTask *persistence.TimerTask
 		}
 		return metrics.TimerActiveTaskDeleteHistoryEventScope, err
 
-	case persistence.TaskTypeArchiveHistoryEvent:
-		if shouldProcessTask {
-			err = t.timerQueueProcessorBase.processArchiveHistoryEvent(timerTask)
-		}
-		return metrics.TimerActiveTaskArchiveHistoryEventScope, err
-
 	default:
 		return metrics.TimerActiveQueueProcessorScope, errUnknownTimerTask
 	}
 }
 
 func (t *timerQueueActiveProcessorImpl) processExpiredUserTimer(task *persistence.TimerTaskInfo) (retError error) {
-
 	context, release, err0 := t.cache.getOrCreateWorkflowExecution(t.timerQueueProcessorBase.getDomainIDAndWorkflowExecution(task))
 	if err0 != nil {
 		return err0
@@ -289,7 +277,7 @@ Update_History_Loop:
 		for _, td := range tBuilder.GetUserTimers(msBuilder) {
 			hasTimer, ti := tBuilder.GetUserTimer(td.TimerID)
 			if !hasTimer {
-				t.logger.Debugf("Failed to find in memory user timer: %s", td.TimerID)
+				t.logger.Debug(fmt.Sprintf("Failed to find in memory user timer: %s", td.TimerID))
 				return fmt.Errorf("Failed to find in memory user timer: %s", td.TimerID)
 			}
 
@@ -318,7 +306,7 @@ Update_History_Loop:
 
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.
-		err = t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, false, timerTasks, nil)
+		err = t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, false, timerTasks)
 		if err != nil {
 			if err == ErrConflict {
 				continue Update_History_Loop
@@ -382,21 +370,20 @@ Update_History_Loop:
 			}
 
 			timeoutType := td.TimeoutType
-			t.logger.Debugf("Activity TimeoutType: %v, scheduledID: %v, startedId: %v. \n",
-				timeoutType, ai.ScheduleID, ai.StartedID)
+			t.logger.Debug(fmt.Sprintf("Activity TimeoutType: %v, scheduledID: %v, startedId: %v. \n",
+				timeoutType, ai.ScheduleID, ai.StartedID))
 
 			if td.Attempt < ai.Attempt {
 				// retry could update ai.Attempt, and we should ignore further timeouts for previous attempt
-				t.logger.WithFields(bark.Fields{
-					logging.TagDomainID:            msBuilder.GetExecutionInfo().DomainID,
-					logging.TagWorkflowExecutionID: msBuilder.GetExecutionInfo().WorkflowID,
-					logging.TagWorkflowRunID:       msBuilder.GetExecutionInfo().RunID,
-					logging.TagScheduleID:          ai.ScheduleID,
-					logging.TagAttempt:             ai.Attempt,
-					logging.TagVersion:             ai.Version,
-					logging.TagTimerTaskStatus:     ai.TimerTaskStatus,
-					logging.TagTimeoutType:         timeoutType,
-				}).Info("Retry attempt mismatch, skip activity timeout processing")
+				t.logger.Info("Retry attempt mismatch, skip activity timeout processing",
+					tag.WorkflowID(msBuilder.GetExecutionInfo().WorkflowID),
+					tag.WorkflowRunID(msBuilder.GetExecutionInfo().RunID),
+					tag.WorkflowDomainID(msBuilder.GetExecutionInfo().DomainID),
+					tag.WorkflowScheduleID(ai.ScheduleID),
+					tag.Attempt(ai.Attempt),
+					tag.FailoverVersion(ai.Version),
+					tag.TimerTaskStatus(ai.TimerTaskStatus),
+					tag.WorkflowTimeoutType(int64(timeoutType)))
 				continue
 			}
 
@@ -408,16 +395,15 @@ Update_History_Loop:
 					timerTasks = append(timerTasks, retryTask)
 					updateState = true
 
-					t.logger.WithFields(bark.Fields{
-						logging.TagDomainID:            msBuilder.GetExecutionInfo().DomainID,
-						logging.TagWorkflowExecutionID: msBuilder.GetExecutionInfo().WorkflowID,
-						logging.TagWorkflowRunID:       msBuilder.GetExecutionInfo().RunID,
-						logging.TagScheduleID:          ai.ScheduleID,
-						logging.TagAttempt:             ai.Attempt,
-						logging.TagVersion:             ai.Version,
-						logging.TagTimerTaskStatus:     ai.TimerTaskStatus,
-						logging.TagTimeoutType:         timeoutType,
-					}).Info("Ignore activity timeout due to retry")
+					t.logger.Info("Ignore activity timeout due to retry",
+						tag.WorkflowID(msBuilder.GetExecutionInfo().WorkflowID),
+						tag.WorkflowRunID(msBuilder.GetExecutionInfo().RunID),
+						tag.WorkflowDomainID(msBuilder.GetExecutionInfo().DomainID),
+						tag.WorkflowScheduleID(ai.ScheduleID),
+						tag.Attempt(ai.Attempt),
+						tag.FailoverVersion(ai.Version),
+						tag.TimerTaskStatus(ai.TimerTaskStatus),
+						tag.WorkflowTimeoutType(int64(timeoutType)))
 
 					continue
 				}
@@ -476,7 +462,7 @@ Update_History_Loop:
 			// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 			// the history and try the operation again.
 			scheduleNewDecision := updateHistory && !msBuilder.HasPendingDecisionTask()
-			err := t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, false, timerTasks, nil)
+			err := t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, false, timerTasks)
 			if err != nil {
 				if err == ErrConflict {
 					continue Update_History_Loop
@@ -512,7 +498,7 @@ Update_History_Loop:
 		scheduleID := task.EventID
 		di, found := msBuilder.GetPendingDecision(scheduleID)
 		if !found {
-			logging.LogDuplicateTransferTaskEvent(t.logger, persistence.TaskTypeDecisionTimeout, task.TaskID, scheduleID)
+			t.logger.Debug("Potentially duplicate task.", tag.TaskID(task.TaskID), tag.WorkflowScheduleID(scheduleID), tag.TaskType(persistence.TaskTypeDecisionTimeout))
 			return nil
 		}
 		ok, err := verifyTaskVersion(t.shard, t.logger, task.DomainID, di.Version, task.Version, task)
@@ -533,12 +519,11 @@ Update_History_Loop:
 			}
 		case int(workflow.TimeoutTypeScheduleToStart):
 			t.metricsClient.IncCounter(metrics.TimerActiveTaskDecisionTimeoutScope, metrics.ScheduleToStartTimeoutCounter)
-			// decision schedule to start timeout only apply to sticky decision
 			// check if scheduled decision still pending and not started yet
-			if di.Attempt == task.ScheduleAttempt && di.StartedID == common.EmptyEventID && msBuilder.IsStickyTaskListEnabled() {
+			if di.Attempt == task.ScheduleAttempt && di.StartedID == common.EmptyEventID {
 				timeoutEvent := msBuilder.AddDecisionTaskScheduleToStartTimeoutEvent(scheduleID)
 				if timeoutEvent == nil {
-					// Unable to add DecisionTaskTimedout event to history
+					// Unable to add DecisionTaskTimeout event to history
 					return &workflow.InternalServiceError{Message: "Unable to add DecisionTaskScheduleToStartTimeout event to history."}
 				}
 
@@ -550,7 +535,7 @@ Update_History_Loop:
 		if scheduleNewDecision {
 			// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 			// the history and try the operation again.
-			err := t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, false, nil, nil)
+			err := t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, false, nil)
 			if err != nil {
 				if err == ErrConflict {
 					continue Update_History_Loop
@@ -595,7 +580,7 @@ Update_History_Loop:
 		}
 
 		// schedule first decision task
-		err = t.updateWorkflowExecution(context, msBuilder, true, false, nil, nil)
+		err = t.updateWorkflowExecution(context, msBuilder, true, false, nil)
 		if err != nil {
 			if err == ErrConflict {
 				continue Update_History_Loop
@@ -627,16 +612,15 @@ func (t *timerQueueActiveProcessorImpl) processActivityRetryTimer(task *persiste
 		ai, running := msBuilder.GetActivityInfo(scheduledID)
 		if !running || task.ScheduleAttempt < int64(ai.Attempt) {
 			if running && ai != nil {
-				t.logger.WithFields(bark.Fields{
-					logging.TagDomainID:            msBuilder.GetExecutionInfo().DomainID,
-					logging.TagWorkflowExecutionID: msBuilder.GetExecutionInfo().WorkflowID,
-					logging.TagWorkflowRunID:       msBuilder.GetExecutionInfo().RunID,
-					logging.TagScheduleID:          scheduledID,
-					logging.TagAttempt:             ai.Attempt,
-					logging.TagScheduleAttempt:     task.ScheduleAttempt,
-					logging.TagVersion:             ai.Version,
-					logging.TagTimerTaskStatus:     ai.TimerTaskStatus,
-				}).Info("Duplicate activity retry timer task")
+				t.logger.Info("Duplicate activity retry timer task",
+					tag.WorkflowID(msBuilder.GetExecutionInfo().WorkflowID),
+					tag.WorkflowRunID(msBuilder.GetExecutionInfo().RunID),
+					tag.WorkflowDomainID(msBuilder.GetExecutionInfo().DomainID),
+					tag.WorkflowScheduleID(ai.ScheduleID),
+					tag.Attempt(ai.Attempt),
+					tag.FailoverVersion(ai.Version),
+					tag.TimerTaskStatus(ai.TimerTaskStatus),
+					tag.ScheduleAttempt(task.ScheduleAttempt))
 			}
 			return nil
 		}
@@ -679,8 +663,8 @@ func (t *timerQueueActiveProcessorImpl) processActivityRetryTimer(task *persiste
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(scheduleToStartTimeout),
 		})
 
-		t.logger.Debugf("Adding ActivityTask for retry, WorkflowID: %v, RunID: %v, ScheduledID: %v, TaskList: %v, Attempt: %v, Err: %v",
-			task.WorkflowID, task.RunID, scheduledID, taskList.GetName(), task.ScheduleAttempt, err)
+		t.logger.Debug(fmt.Sprintf("Adding ActivityTask for retry, WorkflowID: %v, RunID: %v, ScheduledID: %v, TaskList: %v, Attempt: %v, Err: %v",
+			task.WorkflowID, task.RunID, scheduledID, taskList.GetName(), task.ScheduleAttempt, err))
 
 		return err
 	}
@@ -730,7 +714,7 @@ Update_History_Loop:
 			backoffInterval = msBuilder.GetCronBackoffDuration()
 			continueAsNewInitiator = workflow.ContinueAsNewInitiatorCronSchedule
 		}
-		if backoffInterval == common.NoRetryBackoff {
+		if backoffInterval == cron.NoBackoff {
 			if e := msBuilder.AddTimeoutWorkflowEvent(); e == nil {
 				// If we failed to add the event that means the workflow is already completed.
 				// we drop this timeout event.
@@ -739,7 +723,7 @@ Update_History_Loop:
 
 			// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 			// the history and try the operation again.
-			err = t.updateWorkflowExecution(context, msBuilder, false, true, nil, nil)
+			err = t.updateWorkflowExecution(context, msBuilder, false, true, nil)
 			if err != nil {
 				if err == ErrConflict {
 					continue Update_History_Loop
@@ -749,7 +733,7 @@ Update_History_Loop:
 		}
 
 		// workflow timeout, but a retry or cron is needed, so we do continue as new to retry or cron
-		startEvent, err := getWorkflowStartedEvent(t.historyService.historyMgr, t.historyService.historyV2Mgr, msBuilder.GetEventStoreVersion(), msBuilder.GetCurrentBranch(), t.logger, domainID, workflowExecution.GetWorkflowId(), workflowExecution.GetRunId())
+		startEvent, err := getWorkflowStartedEvent(t.historyService.historyMgr, t.historyService.historyV2Mgr, msBuilder.GetEventStoreVersion(), msBuilder.GetCurrentBranch(), t.logger, domainID, workflowExecution.GetWorkflowId(), workflowExecution.GetRunId(), common.IntPtr(t.shard.GetShardID()))
 		if err != nil {
 			return err
 		}
@@ -775,7 +759,7 @@ Update_History_Loop:
 		if t.config.EnableEventsV2(domainEntry.GetInfo().Name) {
 			eventStoreVersion = persistence.EventStoreVersionV2
 		}
-		_, continueAsNewBuilder, err := msBuilder.AddContinueAsNewEvent(common.EmptyEventID, domainEntry, startAttributes.GetParentWorkflowDomain(), continueAsnewAttributes, eventStoreVersion)
+		_, continueAsNewBuilder, err := msBuilder.AddContinueAsNewEvent(msBuilder.GetNextEventID(), common.EmptyEventID, domainEntry, startAttributes.GetParentWorkflowDomain(), continueAsnewAttributes, eventStoreVersion)
 		if err != nil {
 			return err
 		}
@@ -821,7 +805,6 @@ func (t *timerQueueActiveProcessorImpl) updateWorkflowExecution(
 	scheduleNewDecision bool,
 	createDeletionTask bool,
 	timerTasks []persistence.Task,
-	clearTimerTask persistence.Task,
 ) error {
 	executionInfo := msBuilder.GetExecutionInfo()
 	var transferTasks []persistence.Task
@@ -853,7 +836,7 @@ func (t *timerQueueActiveProcessorImpl) updateWorkflowExecution(
 		return err1
 	}
 
-	err = context.updateWorkflowExecutionWithDeleteTask(transferTasks, timerTasks, clearTimerTask, transactionID)
+	err = context.updateWorkflowExecution(transferTasks, timerTasks, transactionID)
 	if err != nil {
 		if isShardOwnershiptLostError(err) {
 			// Shard is stolen.  Stop timer processing to reduce duplicates

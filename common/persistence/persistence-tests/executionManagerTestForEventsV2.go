@@ -28,7 +28,6 @@ import (
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
-
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	p "github.com/uber/cadence/common/persistence"
@@ -123,7 +122,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 	}}
 	updatedInfo.BranchToken = []byte("branchToken2")
 
-	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), nil, nil, nil, nil, timerInfos, nil)
+	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), nil, nil, nil, timerInfos, nil)
 	s.NoError(err2)
 
 	state, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
@@ -136,7 +135,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 	s.Equal(int64(2), state.TimerInfos[timerID].TaskID)
 	s.Equal(int64(5), state.TimerInfos[timerID].StartedID)
 
-	err2 = s.UpdateWorkflowExecution(updatedInfo, nil, nil, int64(5), nil, nil, nil, nil, nil, []string{timerID})
+	err2 = s.UpdateWorkflowExecution(updatedInfo, nil, nil, int64(5), nil, nil, nil, nil, []string{timerID})
 	s.NoError(err2)
 
 	state, err1 = s.GetWorkflowExecutionInfo(domainID, workflowExecution)
@@ -184,7 +183,6 @@ func (s *ExecutionManagerSuiteForEventsV2) TestContinueAsNew() {
 		TransferTasks:       []p.Task{newdecisionTask},
 		TimerTasks:          nil,
 		Condition:           info0.NextEventID,
-		DeleteTimerTask:     nil,
 		RangeID:             s.ShardInfo.RangeID,
 		UpsertActivityInfos: nil,
 		DeleteActivityInfos: nil,
@@ -470,7 +468,7 @@ func (s *ExecutionManagerSuiteForEventsV2) createWorkflowExecutionWithReplicatio
 	var timerTasks []p.Task
 	for _, task := range txTasks {
 		switch t := task.(type) {
-		case *p.DecisionTask, *p.ActivityTask, *p.CloseExecutionTask, *p.CancelExecutionTask, *p.StartChildExecutionTask, *p.SignalExecutionTask:
+		case *p.DecisionTask, *p.ActivityTask, *p.CloseExecutionTask, *p.CancelExecutionTask, *p.StartChildExecutionTask, *p.SignalExecutionTask, *p.RecordWorkflowStartedTask:
 			transferTasks = append(transferTasks, t)
 		case *p.HistoryReplicationTask:
 			replicationTasks = append(replicationTasks, t)
@@ -1019,7 +1017,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetWithCurrWithReplicat
 	s.Equal(p.ReplicationTaskTypeHistory, tsk.TaskType)
 	s.Equal(domainID, tsk.DomainID)
 	s.Equal(*workflowExecution.WorkflowId, tsk.WorkflowID)
-	s.Equal(updatedInfo.RunID, tsk.RunID)
+	s.Equal(insertInfo.RunID, tsk.RunID)
 	s.Equal(int64(10), tsk.FirstEventID)
 	s.Equal(int64(30), tsk.NextEventID)
 	s.Equal(true, tsk.ResetWorkflow)
@@ -1430,7 +1428,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 	s.Equal(p.ReplicationTaskTypeHistory, tsk.TaskType)
 	s.Equal(domainID, tsk.DomainID)
 	s.Equal(*workflowExecution.WorkflowId, tsk.WorkflowID)
-	s.Equal(updatedInfo.RunID, tsk.RunID)
+	s.Equal(insertInfo.RunID, tsk.RunID)
 	s.Equal(int64(10), tsk.FirstEventID)
 	s.Equal(int64(30), tsk.NextEventID)
 	s.Equal(int64(90), tsk.Version)

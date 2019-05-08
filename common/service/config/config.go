@@ -22,10 +22,12 @@ package config
 
 import (
 	"encoding/json"
-	"github.com/uber/cadence/common/blobstore/filestore"
 	"time"
 
+	"github.com/uber/cadence/common/blobstore/filestore"
+
 	"github.com/uber-go/tally/m3"
+	"github.com/uber-go/tally/prometheus"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/service/dynamicconfig"
@@ -51,8 +53,13 @@ type (
 		Kafka messaging.KafkaConfig `yaml:"kafka"`
 		// Archival is the config for archival
 		Archival Archival `yaml:"archival"`
-		// ElasticSearch if config for connecting to ElasticSearch
-		ElasticSearch elasticsearch.Config `yaml:elasticsearch`
+		// ElasticSearch is config for connecting to ElasticSearch
+		ElasticSearch elasticsearch.Config `yaml:"elasticsearch"`
+		// PublicClient is config for connecting to cadence frontend
+		PublicClient PublicClient `yaml:"publicClient"`
+		// DynamicConfigClient is the config for setting up the file based dynamic config client
+		// Filepath should be relative to the root directory
+		DynamicConfigClient dynamicconfig.FileBasedClientConfig `yaml:"dynamicConfigClient"`
 	}
 
 	// Service contains the service specific config items
@@ -77,6 +84,10 @@ type (
 		Port int `yaml:"port"`
 		// BindOnLocalHost is true if localhost is the bind address
 		BindOnLocalHost bool `yaml:"bindOnLocalHost"`
+		// BindOnIP can be used to bind service on specific ip (eg. `0.0.0.0`) -
+		// check net.ParseIP for supported syntax, only IPv4 is supported,
+		// mutually exclusive with `BindOnLocalHost` option
+		BindOnIP string `yaml:"bindOnIP"`
 		// DisableLogging disables all logging for rpc
 		DisableLogging bool `yaml:"disableLogging"`
 		// LogLevel is the desired log level
@@ -113,8 +124,8 @@ type (
 		NumHistoryShards int `yaml:"numHistoryShards" validate:"nonzero"`
 		// DataStores contains the configuration for all datastores
 		DataStores map[string]DataStore `yaml:"datastores"`
-		// SamplingConfig is config for visibility sampling
-		SamplingConfig SamplingConfig
+		// VisibilityConfig is config for visibility sampling
+		VisibilityConfig *VisibilityConfig
 	}
 
 	// DataStore is the configuration for a single datastore
@@ -125,14 +136,22 @@ type (
 		SQL *SQL `yaml:"sql"`
 	}
 
-	// SamplingConfig is config for visibility sampling
-	SamplingConfig struct {
+	// VisibilityConfig is config for visibility sampling
+	VisibilityConfig struct {
+		// EnableSampling for visibility
+		EnableSampling dynamicconfig.BoolPropertyFn
+		// EnableReadFromClosedExecutionV2 read closed from v2 table
+		EnableReadFromClosedExecutionV2 dynamicconfig.BoolPropertyFn
 		// VisibilityOpenMaxQPS max QPS for record open workflows
 		VisibilityOpenMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter
 		// VisibilityClosedMaxQPS max QPS for record closed workflows
 		VisibilityClosedMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter
 		// VisibilityListMaxQPS max QPS for list workflow
 		VisibilityListMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter
+		// ESIndexMaxResultWindow ElasticSearch index setting max_result_window
+		ESIndexMaxResultWindow dynamicconfig.IntPropertyFn
+		// MaxQPS is overall max QPS
+		MaxQPS dynamicconfig.IntPropertyFn
 	}
 
 	// Cassandra contains configuration to connect to Cassandra cluster
@@ -171,10 +190,19 @@ type (
 		ConnectAddr string `yaml:"connectAddr" validate:"nonzero"`
 		// ConnectProtocol is the protocol that goes with the ConnectAddr ex - tcp, unix
 		ConnectProtocol string `yaml:"connectProtocol" validate:"nonzero"`
+		// ConnectAttributes is a set of key-value attributes to be sent as part of connect data_source_name url
+		ConnectAttributes map[string]string `yaml:"connectAttributes"`
 		// MaxQPS the max request rate on this datastore
 		MaxQPS int `yaml:"maxQPS"`
 		// MaxConns the max number of connections to this datastore
 		MaxConns int `yaml:"maxConns"`
+		// MaxIdleConns is the max number of idle connections to this datastore
+		MaxIdleConns int `yaml:"maxIdleConns"`
+		// MaxConnLifetime is the maximum time a connection can be alive
+		MaxConnLifetime time.Duration `yaml:"maxConnLifetime"`
+		// NumShards is the number of storage shards to use for tables
+		// in a sharded sql database. The default value for this param is 1
+		NumShards int `yaml:"nShards"`
 	}
 
 	// Replicator describes the configuration of replicator
@@ -228,6 +256,8 @@ type (
 		M3 *m3.Configuration `yaml:"m3"`
 		// Statsd is the configuration for statsd reporter
 		Statsd *Statsd `yaml:"statsd"`
+		// Prometheus is the configuration for prometheus reporter
+		Prometheus *prometheus.Configuration `yaml:"prometheus"`
 		// Tags is the set of key-value pairs to be reported
 		// as part of every metric
 		Tags map[string]string `yaml:"tags"`
@@ -250,10 +280,20 @@ type (
 
 	// Archival contains the config for archival
 	Archival struct {
-		// Enabled whether archival is enabled
-		Enabled bool `yaml:"enabled"`
+		// Status is the status of archival either: enabled, disabled, or paused
+		Status string `yaml:"status"`
+		// EnableReadFromArchival whether history can be read from archival
+		EnableReadFromArchival bool `yaml:"enableReadFromArchival"`
+		// DefaultBucket is the default bucket used for archival in case domain does not specify override
+		DefaultBucket string `yaml:"defaultBucket"`
 		// Filestore the configuration for file based blobstore
 		Filestore filestore.Config `yaml:"filestore"`
+	}
+
+	// PublicClient is config for connecting to cadence frontend
+	PublicClient struct {
+		// HostPort is the host port to connect on
+		HostPort string `yaml:"hostPort" validate:"nonzero"`
 	}
 
 	// BootstrapMode is an enum type for ringpop bootstrap mode

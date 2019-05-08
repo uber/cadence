@@ -21,21 +21,20 @@
 package history
 
 import (
-	"os"
 	"testing"
 	"time"
 
 	"github.com/pborman/uuid"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
@@ -46,7 +45,7 @@ import (
 type (
 	conflictResolverSuite struct {
 		suite.Suite
-		logger              bark.Logger
+		logger              log.Logger
 		mockExecutionMgr    *mocks.ExecutionManager
 		mockHistoryMgr      *mocks.HistoryManager
 		mockHistoryV2Mgr    *mocks.HistoryV2Manager
@@ -60,6 +59,7 @@ type (
 		mockContext         *workflowExecutionContextImpl
 		mockDomainCache     *cache.DomainCacheMock
 		mockClientBean      *client.MockClientBean
+		mockEventsCache     *MockEventsCache
 
 		conflictResolver *conflictResolverImpl
 	}
@@ -71,10 +71,6 @@ func TestConflictResolverSuite(t *testing.T) {
 }
 
 func (s *conflictResolverSuite) SetupSuite() {
-	if testing.Verbose() {
-		log.SetOutput(os.Stdout)
-	}
-
 }
 
 func (s *conflictResolverSuite) TearDownSuite() {
@@ -82,9 +78,7 @@ func (s *conflictResolverSuite) TearDownSuite() {
 }
 
 func (s *conflictResolverSuite) SetupTest() {
-	log2 := log.New()
-	log2.Level = log.DebugLevel
-	s.logger = bark.NewLoggerFromLogrus(log2)
+	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.mockHistoryMgr = &mocks.HistoryManager{}
 	s.mockHistoryV2Mgr = &mocks.HistoryV2Manager{}
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
@@ -95,12 +89,13 @@ func (s *conflictResolverSuite) SetupTest() {
 	s.mockMetadataMgr = &mocks.MetadataManager{}
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockClientBean = &client.MockClientBean{}
-	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean, s.logger)
+	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean)
 	s.mockDomainCache = &cache.DomainCacheMock{}
+	s.mockEventsCache = &MockEventsCache{}
 
 	s.mockShard = &shardContextImpl{
 		service:                   s.mockService,
-		shardInfo:                 &persistence.ShardInfo{ShardID: 0, RangeID: 1, TransferAckLevel: 0},
+		shardInfo:                 &persistence.ShardInfo{ShardID: 10, RangeID: 1, TransferAckLevel: 0},
 		transferSequenceNumber:    1,
 		executionManager:          s.mockExecutionMgr,
 		shardManager:              s.mockShardManager,
@@ -111,6 +106,7 @@ func (s *conflictResolverSuite) SetupTest() {
 		logger:                    s.logger,
 		domainCache:               s.mockDomainCache,
 		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
+		eventsCache:               s.mockEventsCache,
 	}
 	s.mockContext = newWorkflowExecutionContext(validDomainID, shared.WorkflowExecution{
 		WorkflowId: common.StringPtr("some random workflow ID"),
@@ -129,6 +125,7 @@ func (s *conflictResolverSuite) TearDownTest() {
 	s.mockMetadataMgr.AssertExpectations(s.T())
 	s.mockClientBean.AssertExpectations(s.T())
 	s.mockDomainCache.AssertExpectations(s.T())
+	s.mockEventsCache.AssertExpectations(s.T())
 }
 
 func (s *conflictResolverSuite) TestGetHistory() {
@@ -241,6 +238,10 @@ func (s *conflictResolverSuite) TestReset() {
 		DomainID:             domainID,
 		WorkflowID:           execution.GetWorkflowId(),
 		RunID:                execution.GetRunId(),
+		ParentDomainID:       "",
+		ParentWorkflowID:     "",
+		ParentRunID:          "",
+		InitiatedID:          common.EmptyEventID,
 		TaskList:             event1.WorkflowExecutionStartedEventAttributes.TaskList.GetName(),
 		WorkflowTypeName:     event1.WorkflowExecutionStartedEventAttributes.WorkflowType.GetName(),
 		WorkflowTimeout:      *event1.WorkflowExecutionStartedEventAttributes.ExecutionStartToCloseTimeoutSeconds,
@@ -287,7 +288,7 @@ func (s *conflictResolverSuite) TestReset() {
 		InsertRequestCancelInfos:  []*persistence.RequestCancelInfo{},
 		InsertSignalInfos:         []*persistence.SignalInfo{},
 		InsertSignalRequestedIDs:  []string{},
-		Encoding:                  common.EncodingType("json"),
+		Encoding:                  common.EncodingType(s.mockShard.GetConfig().EventEncodingType(domainID)),
 	}).Return(nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", &persistence.GetWorkflowExecutionRequest{
 		DomainID:  domainID,
@@ -295,6 +296,7 @@ func (s *conflictResolverSuite) TestReset() {
 	}).Return(&persistence.GetWorkflowExecutionResponse{}, nil).Once() // return empty resoonse since we are not testing the load
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{}, nil), nil)
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return()
 
 	_, err := s.conflictResolver.reset(prevRunID, createRequestID, nextEventID-1, executionInfo)
 	s.Nil(err)

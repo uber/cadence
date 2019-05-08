@@ -102,11 +102,37 @@ func (s *HistoryPersistenceSuite) TestGetHistoryEvents() {
 	err0 := s.AppendHistoryEvents(domainID, workflowExecution, 1, common.EmptyVersion, 1, 1, batchEvents, false)
 	s.Nil(err0)
 
-	history, token, err1 := s.GetWorkflowExecutionHistory(domainID, workflowExecution, 1, 2, 10, nil)
+	// Here the nextEventID is set to 4 to make sure that if NextPageToken is set by persistence, we can get it here.
+	// Otherwise the middle layer will clear it. In this way, we can test that if the # of rows got from DB is less than
+	// page size, NextPageToken is empty.
+	history, token, err1 := s.GetWorkflowExecutionHistory(domainID, workflowExecution, 1, 4, 10, nil)
 	s.Nil(err1)
 	s.Equal(0, len(token))
 	s.Equal(2, len(history.Events))
 	s.Equal(int64(1), history.Events[0].GetVersion())
+
+	// We have only one page and the page size is set to one. In this case, persistence may or may not return a nextPageToken.
+	// If it does return a token, we need to ensure that if the token returned is used to get history again, no error and history
+	// events should be returned.
+	history, token, err1 = s.GetWorkflowExecutionHistory(domainID, workflowExecution, 1, 4, 1, nil)
+	s.Nil(err1)
+	s.Equal(2, len(history.Events))
+	if len(token) != 0 {
+		history, token, err1 = s.GetWorkflowExecutionHistory(domainID, workflowExecution, 1, 4, 1, token)
+		s.Nil(err1)
+		s.Equal(0, len(token))
+		s.Equal(0, len(history.Events))
+	}
+
+	// firstEventID is 2, since there's only one page and nextPageToken is empty,
+	// the call should return an error.
+	_, _, err2 := s.GetWorkflowExecutionHistory(domainID, workflowExecution, 2, 4, 1, nil)
+	s.IsType(&gen.EntityNotExistsError{}, err2)
+
+	// Get history of a workflow that doesn't exist.
+	workflowExecution.WorkflowId = common.StringPtr("some-random-id")
+	_, _, err2 = s.GetWorkflowExecutionHistory(domainID, workflowExecution, 1, 2, 1, nil)
+	s.IsType(&gen.EntityNotExistsError{}, err2)
 }
 
 func newBatchEventForTest(eventIDs []int64, version int64) *gen.History {
@@ -130,9 +156,9 @@ func (s *HistoryPersistenceSuite) TestGetHistoryEventsCompatibility() {
 	batches := []*gen.History{
 		newBatchEventForTest([]int64{1, 2}, 1),
 		newBatchEventForTest([]int64{3}, 1),
-		newBatchEventForTest([]int64{4, 5}, 1),
-		newBatchEventForTest([]int64{5}, 1), // staled batch, should be ignored
-		newBatchEventForTest([]int64{6, 7}, 1),
+		newBatchEventForTest([]int64{4, 5, 6}, 1),
+		newBatchEventForTest([]int64{6}, 1), // staled batch, should be ignored
+		newBatchEventForTest([]int64{7, 8}, 1),
 	}
 
 	for i, be := range batches {
@@ -144,7 +170,7 @@ func (s *HistoryPersistenceSuite) TestGetHistoryEventsCompatibility() {
 	history, token, err := s.GetWorkflowExecutionHistory(domainID, workflowExecution, 1, 8, 3, nil)
 	s.Nil(err)
 	s.NotNil(token)
-	s.Equal(5, len(history.Events))
+	s.Equal(6, len(history.Events))
 	for i, e := range history.Events {
 		s.Equal(int64(i+1), e.GetEventId())
 	}
@@ -154,8 +180,18 @@ func (s *HistoryPersistenceSuite) TestGetHistoryEventsCompatibility() {
 	s.Nil(err)
 	s.Nil(token)
 	s.Equal(2, len(history.Events))
+	s.Equal(int64(7), history.Events[0].GetEventId())
+	s.Equal(int64(8), history.Events[1].GetEventId())
+
+	// Start over, but read from middle, should not return error, but the first batch should be ignored by application layer
+	token = nil
+	history, token, err = s.GetWorkflowExecutionHistory(domainID, workflowExecution, 5, 8, 3, token)
+	s.Nil(err)
+	s.Nil(token)
+	s.Equal(3, len(history.Events))
 	s.Equal(int64(6), history.Events[0].GetEventId())
 	s.Equal(int64(7), history.Events[1].GetEventId())
+	s.Equal(int64(8), history.Events[2].GetEventId())
 }
 
 // TestDeleteHistoryEvents test

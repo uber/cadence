@@ -22,6 +22,8 @@ package cluster
 
 import (
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/metrics/mocks"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
@@ -70,33 +72,45 @@ var (
 )
 
 // GetTestClusterMetadata return an cluster metadata instance, which is initialized
-func GetTestClusterMetadata(enableGlobalDomain bool, isMasterCluster bool) Metadata {
+func GetTestClusterMetadata(enableGlobalDomain bool, isMasterCluster bool, enableArchival bool) Metadata {
 	masterClusterName := TestCurrentClusterName
 	if !isMasterCluster {
 		masterClusterName = TestAlternativeClusterName
 	}
 
+	archivalStatus := "disabled"
+	clusterDefaultBucket := ""
+	if enableArchival {
+		archivalStatus = "enabled"
+		clusterDefaultBucket = "default_bucket"
+	}
 	if enableGlobalDomain {
 		return NewMetadata(
+			loggerimpl.NewNopLogger(),
+			&mocks.Client{},
 			dynamicconfig.GetBoolPropertyFn(true),
 			TestFailoverVersionIncrement,
 			masterClusterName,
 			TestCurrentClusterName,
 			TestAllClusterFailoverVersions,
 			TestAllClusterAddress,
-			dynamicconfig.GetBoolPropertyFn(false),
-			"",
+			dynamicconfig.GetStringPropertyFn(archivalStatus),
+			clusterDefaultBucket,
+			dynamicconfig.GetBoolPropertyFn(enableArchival),
 		)
 	}
 
 	return NewMetadata(
+		loggerimpl.NewNopLogger(),
+		&mocks.Client{},
 		dynamicconfig.GetBoolPropertyFn(false),
 		TestFailoverVersionIncrement,
 		TestCurrentClusterName,
 		TestCurrentClusterName,
 		TestSingleDCAllClusterFailoverVersions,
 		TestSingleDCAllClusterAddress,
-		dynamicconfig.GetBoolPropertyFn(false),
-		"",
+		dynamicconfig.GetStringPropertyFn(archivalStatus),
+		clusterDefaultBucket,
+		dynamicconfig.GetBoolPropertyFn(enableArchival),
 	)
 }

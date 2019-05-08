@@ -21,33 +21,34 @@
 package history
 
 import (
-	"github.com/stretchr/testify/mock"
-	"os"
+	"encoding/hex"
+	"fmt"
 	"testing"
 	"time"
 
-	"encoding/hex"
-
+	"github.com/stretchr/testify/mock"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 
 	"encoding/json"
 
 	"github.com/pborman/uuid"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/log"
 )
 
 type (
 	timerBuilderProcessorSuite struct {
 		suite.Suite
 		tb              *timerBuilder
+		mockShard       *shardContextImpl
 		mockEventsCache *MockEventsCache
 		config          *Config
-		logger          bark.Logger
+		logger          log.Logger
 	}
 )
 
@@ -65,16 +66,19 @@ func TestTimerBuilderSuite(t *testing.T) {
 }
 
 func (s *timerBuilderProcessorSuite) SetupSuite() {
-	if testing.Verbose() {
-		log.SetOutput(os.Stdout)
-	}
-	logger := log.New()
-	//logger.Level = log.DebugLevel
-	s.logger = bark.NewLoggerFromLogrus(logger)
+	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.config = NewDynamicConfigForTest()
 }
 
 func (s *timerBuilderProcessorSuite) SetupTest() {
+	s.mockShard = &shardContextImpl{
+		shardInfo:                 &persistence.ShardInfo{ShardID: 0, RangeID: 1, TransferAckLevel: 0},
+		transferSequenceNumber:    1,
+		maxTransferSequenceNumber: 100000,
+		closeCh:                   make(chan int, 100),
+		config:                    NewDynamicConfigForTest(),
+		logger:                    s.logger,
+	}
 	s.mockEventsCache = &MockEventsCache{}
 	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return()
 }
@@ -83,7 +87,7 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilderSingleUserTimer() {
 	tb := newTimerBuilder(s.config, s.logger, &mockTimeSource{currTime: time.Now()})
 
 	// Add one timer.
-	msb := newMutableStateBuilder(cluster.TestCurrentClusterName, s.config, s.mockEventsCache, s.logger)
+	msb := newMutableStateBuilder(cluster.TestCurrentClusterName, s.mockShard, s.mockEventsCache, s.logger)
 	msb.Load(&persistence.WorkflowMutableState{
 		ExecutionInfo: &persistence.WorkflowExecutionInfo{NextEventID: int64(201)},
 		TimerInfos:    make(map[string]*persistence.TimerInfo),
@@ -115,7 +119,7 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilderMulitpleUserTimer() {
 	// Add two timers. (before and after)
 	tp := &persistence.TimerInfo{TimerID: "tid1", StartedID: 201, TaskID: 101, ExpiryTime: time.Now().Add(10 * time.Second)}
 	timerInfos := map[string]*persistence.TimerInfo{"tid1": tp}
-	msb := newMutableStateBuilder(cluster.TestCurrentClusterName, s.config, s.mockEventsCache, s.logger)
+	msb := newMutableStateBuilder(cluster.TestCurrentClusterName, s.mockShard, s.mockEventsCache, s.logger)
 	msb.Load(&persistence.WorkflowMutableState{
 		ExecutionInfo: &persistence.WorkflowExecutionInfo{NextEventID: int64(202)},
 		TimerInfos:    timerInfos,
@@ -142,7 +146,7 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilderMulitpleUserTimer() {
 	tb = newTimerBuilder(s.config, s.logger, &mockTimeSource{currTime: time.Now()})
 	tp2 := &persistence.TimerInfo{TimerID: "tid1", StartedID: 201, TaskID: TimerTaskStatusNone, ExpiryTime: time.Now().Add(10 * time.Second)}
 	timerInfos = map[string]*persistence.TimerInfo{"tid1": tp2}
-	msb = newMutableStateBuilder(cluster.TestCurrentClusterName, s.config, s.mockEventsCache, s.logger)
+	msb = newMutableStateBuilder(cluster.TestCurrentClusterName, s.mockShard, s.mockEventsCache, s.logger)
 	msb.Load(&persistence.WorkflowMutableState{
 		ExecutionInfo: &persistence.WorkflowExecutionInfo{NextEventID: int64(203)},
 		TimerInfos:    timerInfos,
@@ -169,7 +173,7 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilderMulitpleUserTimer() {
 func (s *timerBuilderProcessorSuite) TestTimerBuilderDuplicateTimerID() {
 	tp := &persistence.TimerInfo{TimerID: "tid-exist", StartedID: 201, TaskID: 101, ExpiryTime: time.Now().Add(10 * time.Second)}
 	timerInfos := map[string]*persistence.TimerInfo{"tid-exist": tp}
-	msb := newMutableStateBuilder(cluster.TestCurrentClusterName, s.config, s.mockEventsCache, s.logger)
+	msb := newMutableStateBuilder(cluster.TestCurrentClusterName, s.mockShard, s.mockEventsCache, s.logger)
 	msb.Load(&persistence.WorkflowMutableState{
 		ExecutionInfo: &persistence.WorkflowExecutionInfo{NextEventID: int64(203)},
 		TimerInfos:    timerInfos,
@@ -185,7 +189,7 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilderDuplicateTimerID() {
 
 func (s *timerBuilderProcessorSuite) TestTimerBuilder_GetActivityTimer() {
 	// ScheduleToStart being more than HB.
-	builder := newMutableStateBuilder(cluster.TestCurrentClusterName, s.config, s.mockEventsCache, s.logger)
+	builder := newMutableStateBuilder(cluster.TestCurrentClusterName, s.mockShard, s.mockEventsCache, s.logger)
 	ase, ai := builder.AddActivityTaskScheduledEvent(common.EmptyEventID,
 		&workflow.ScheduleActivityTaskDecisionAttributes{
 			ActivityId:                    common.StringPtr("test-id"),
@@ -216,7 +220,7 @@ func (s *timerBuilderProcessorSuite) TestDecodeHistory() {
 	var historyEvents []*workflow.HistoryEvent
 	err = json.Unmarshal(data, &historyEvents)
 	if err != nil {
-		s.logger.Errorf("DecodeString failed with error: %+v", err)
+		s.logger.Error("DecodeString failed with error: %+v", tag.Error(err))
 		panic("Failed deserialization of history")
 	}
 
@@ -228,5 +232,5 @@ func (s *timerBuilderProcessorSuite) TestDecodeHistory() {
 
 func (s *timerBuilderProcessorSuite) TestDecodeKey() {
 	taskID := TimerSequenceID{VisibilityTimestamp: time.Unix(0, 0), TaskID: 1}
-	s.logger.Infof("Timer: %s, expiry: %v", TimerSequenceID(taskID), taskID.VisibilityTimestamp)
+	s.logger.Info(fmt.Sprintf("Timer: %s, expiry: %v", TimerSequenceID(taskID), taskID.VisibilityTimestamp))
 }

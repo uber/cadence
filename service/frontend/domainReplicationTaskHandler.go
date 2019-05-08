@@ -23,12 +23,11 @@ package frontend
 import (
 	"errors"
 
-	"github.com/uber/cadence/common/logging"
-
-	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -50,12 +49,12 @@ type (
 
 	domainReplicatorImpl struct {
 		kafka  messaging.Producer
-		logger bark.Logger
+		logger log.Logger
 	}
 )
 
 // NewDomainReplicator create a new instance odf domain replicator
-func NewDomainReplicator(kafka messaging.Producer, logger bark.Logger) DomainReplicator {
+func NewDomainReplicator(kafka messaging.Producer, logger log.Logger) DomainReplicator {
 	return &domainReplicatorImpl{
 		kafka:  kafka,
 		logger: logger,
@@ -68,7 +67,7 @@ func (domainReplicator *domainReplicatorImpl) HandleTransmissionTask(domainOpera
 	configVersion int64, failoverVersion int64, isGlobalDomainEnabled bool) error {
 
 	if !isGlobalDomainEnabled {
-		domainReplicator.logger.WithField(logging.TagDomainID, info.ID).Warn("Should not replicate non global domain")
+		domainReplicator.logger.Warn("Should not replicate non global domain", tag.WorkflowDomainID(info.ID))
 		return nil
 	}
 
@@ -93,6 +92,7 @@ func (domainReplicator *domainReplicatorImpl) HandleTransmissionTask(domainOpera
 			EmitMetric:                             common.BoolPtr(config.EmitMetric),
 			ArchivalBucketName:                     common.StringPtr(config.ArchivalBucket),
 			ArchivalStatus:                         common.ArchivalStatusPtr(config.ArchivalStatus),
+			BadBinaries:                            &config.BadBinaries,
 		},
 		ReplicationConfig: &shared.DomainReplicationConfiguration{
 			ActiveClusterName: common.StringPtr(replicationConfig.ActiveClusterName),

@@ -21,40 +21,54 @@
 package config
 
 import (
-	"github.com/sirupsen/logrus"
-	"github.com/uber-common/bark"
-	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 const fileMode = os.FileMode(0644)
 
-// NewBarkLogger builds and returns a new bark
+// NewZapLogger builds and returns a new zap
 // logger for this logging configuration
-func (cfg *Logger) NewBarkLogger() bark.Logger {
-
-	logger := logrus.New()
-	logger.Out = ioutil.Discard
-	logger.Level = parseLogrusLevel(cfg.Level)
-	logger.Formatter = getFormatter()
-
-	if cfg.Stdout {
-		logger.Out = os.Stdout
+func (cfg *Logger) NewZapLogger() *zap.Logger {
+	encodeConfig := zapcore.EncoderConfig{
+		TimeKey:        "ts",
+		LevelKey:       "level",
+		NameKey:        "logger",
+		CallerKey:      "", // we use our own caller, check common/log/logger.go
+		MessageKey:     "msg",
+		StacktraceKey:  "stacktrace",
+		LineEnding:     zapcore.DefaultLineEnding,
+		EncodeLevel:    zapcore.LowercaseLevelEncoder,
+		EncodeTime:     zapcore.ISO8601TimeEncoder,
+		EncodeDuration: zapcore.SecondsDurationEncoder,
+		EncodeCaller:   nil,
 	}
 
+	outputPath := "stderr"
 	if len(cfg.OutputFile) > 0 {
-		outFile := createLogFile(cfg.OutputFile)
-		logger.Out = outFile
+		outputPath = cfg.OutputFile
 		if cfg.Stdout {
-			logger.Out = io.MultiWriter(os.Stdout, outFile)
+			outputPath = "stdout"
 		}
 	}
 
-	return bark.NewLoggerFromLogrus(logger)
+	config := zap.Config{
+		Level:            zap.NewAtomicLevelAt(parseZapLevel(cfg.Level)),
+		Development:      false,
+		Sampling:         nil, // consider exposing this to config for our external customer
+		Encoding:         "json",
+		EncoderConfig:    encodeConfig,
+		OutputPaths:      []string{outputPath},
+		ErrorOutputPaths: []string{outputPath},
+	}
+	logger, _ := config.Build()
+	return logger
 }
 
 func getFormatter() logrus.Formatter {
@@ -77,21 +91,19 @@ func createLogFile(path string) *os.File {
 	return file
 }
 
-// parseLogrusLevel converts the string log
-// level into a logrus level
-func parseLogrusLevel(level string) logrus.Level {
+func parseZapLevel(level string) zapcore.Level {
 	switch strings.ToLower(level) {
 	case "debug":
-		return logrus.DebugLevel
+		return zap.DebugLevel
 	case "info":
-		return logrus.InfoLevel
+		return zap.InfoLevel
 	case "warn":
-		return logrus.WarnLevel
+		return zap.WarnLevel
 	case "error":
-		return logrus.ErrorLevel
+		return zap.ErrorLevel
 	case "fatal":
-		return logrus.FatalLevel
+		return zap.FatalLevel
 	default:
-		return logrus.InfoLevel
+		return zap.InfoLevel
 	}
 }

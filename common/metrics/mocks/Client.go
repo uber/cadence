@@ -22,9 +22,8 @@ package mocks
 
 import (
 	mock "github.com/stretchr/testify/mock"
-	metrics "github.com/uber/cadence/common/metrics"
-
 	tally "github.com/uber-go/tally"
+	metrics "github.com/uber/cadence/common/metrics"
 
 	time "time"
 )
@@ -63,23 +62,21 @@ func (_m *Client) StartTimer(scope int, timer int) tally.Stopwatch {
 	return r0
 }
 
-// Tagged provides a mock function with given fields: tags
-func (_m *Client) Tagged(tags map[string]string) metrics.Client {
-	ret := _m.Called(tags)
-
-	var r0 metrics.Client
-	if rf, ok := ret.Get(0).(func(map[string]string) metrics.Client); ok {
-		r0 = rf(tags)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(metrics.Client)
-		}
-	}
-
-	return r0
-}
-
 // UpdateGauge provides a mock function with given fields: scope, gauge, value
 func (_m *Client) UpdateGauge(scope int, gauge int, value float64) {
 	_m.Called(scope, gauge, value)
+}
+
+// Scope provides a mock function with given fields: scope
+func (_m *Client) Scope(scope int, tags ...metrics.Tag) metrics.Scope {
+	ret := _m.Called(scope, tags)
+
+	var r0 metrics.Scope
+	if rf, ok := ret.Get(0).(func(int, ...metrics.Tag) metrics.Scope); ok {
+		r0 = rf(scope, tags...)
+	} else {
+		r0 = ret.Get(0).(metrics.Scope)
+	}
+
+	return r0
 }

@@ -23,22 +23,22 @@ package matching
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"sync"
 
+	"github.com/pborman/uuid"
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/client"
-	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-
-	"github.com/pborman/uuid"
-	"github.com/uber-common/bark"
-	"github.com/uber/cadence/common/cache"
 )
 
 // Implements matching.Engine
@@ -48,7 +48,7 @@ type matchingEngineImpl struct {
 	taskManager     persistence.TaskManager
 	historyService  history.Client
 	tokenSerializer common.TaskTokenSerializer
-	logger          bark.Logger
+	logger          log.Logger
 	metricsClient   metrics.Client
 	taskListsLock   sync.RWMutex                   // locks mutation of taskLists
 	taskLists       map[taskListID]taskListManager // Convert to LRU cache
@@ -110,7 +110,7 @@ var _ Engine = (*matchingEngineImpl)(nil) // Asserts that interface is indeed im
 func NewEngine(taskManager persistence.TaskManager,
 	historyService history.Client,
 	config *Config,
-	logger bark.Logger,
+	logger log.Logger,
 	metricsClient metrics.Client,
 	domainCache cache.DomainCache,
 ) Engine {
@@ -120,13 +120,11 @@ func NewEngine(taskManager persistence.TaskManager,
 		historyService:  historyService,
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		taskLists:       make(map[taskListID]taskListManager),
-		logger: logger.WithFields(bark.Fields{
-			logging.TagWorkflowComponent: logging.TagValueMatchingEngineComponent,
-		}),
-		metricsClient: metricsClient,
-		config:        config,
-		queryTaskMap:  make(map[string]chan *queryResult),
-		domainCache:   domainCache,
+		logger:          logger.WithTags(tag.ComponentMatchingEngine),
+		metricsClient:   metricsClient,
+		config:          config,
+		queryTaskMap:    make(map[string]chan *queryResult),
+		domainCache:     domainCache,
 	}
 }
 
@@ -184,21 +182,21 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID,
 		e.taskListsLock.Unlock()
 		return result, nil
 	}
-	logging.LogTaskListLoadingEvent(e.logger, taskList.taskListName, taskList.taskType)
+	e.logger.Info("", tag.LifeCycleStarting, tag.WorkflowTaskListName(taskList.taskListName), tag.WorkflowTaskListType(taskList.taskType))
 	mgr, err := newTaskListManager(e, taskList, taskListKind, e.config)
 	if err != nil {
 		e.taskListsLock.Unlock()
-		logging.LogTaskListLoadingFailedEvent(e.logger, taskList.taskListName, taskList.taskType, err)
+		e.logger.Info("", tag.LifeCycleStartFailed, tag.WorkflowTaskListName(taskList.taskListName), tag.WorkflowTaskListType(taskList.taskType), tag.Error(err))
 		return nil, err
 	}
 	e.taskLists[*taskList] = mgr
 	e.taskListsLock.Unlock()
 	err = mgr.Start()
 	if err != nil {
-		logging.LogTaskListLoadingFailedEvent(e.logger, taskList.taskListName, taskList.taskType, err)
+		e.logger.Info("", tag.LifeCycleStartFailed, tag.WorkflowTaskListName(taskList.taskListName), tag.WorkflowTaskListType(taskList.taskType), tag.Error(err))
 		return nil, err
 	}
-	logging.LogTaskListLoadedEvent(e.logger, taskList.taskListName, taskList.taskType)
+	e.logger.Info("", tag.LifeCycleStarted, tag.WorkflowTaskListName(taskList.taskListName), tag.WorkflowTaskListType(taskList.taskType))
 	return mgr, nil
 }
 
@@ -220,9 +218,9 @@ func (e *matchingEngineImpl) AddDecisionTask(addRequest *m.AddDecisionTaskReques
 	domainID := addRequest.GetDomainUUID()
 	taskListName := addRequest.TaskList.GetName()
 	taskListKind := common.TaskListKindPtr(addRequest.TaskList.GetKind())
-	e.logger.Debugf("Received AddDecisionTask for taskList=%v, WorkflowID=%v, RunID=%v, ScheduleToStartTimeout=%v",
+	e.logger.Debug(fmt.Sprintf("Received AddDecisionTask for taskList=%v, WorkflowID=%v, RunID=%v, ScheduleToStartTimeout=%v",
 		addRequest.TaskList.GetName(), addRequest.Execution.GetWorkflowId(), addRequest.Execution.GetRunId(),
-		addRequest.GetScheduleToStartTimeoutSeconds())
+		addRequest.GetScheduleToStartTimeoutSeconds()))
 	taskList := newTaskListID(domainID, taskListName, persistence.TaskListTypeDecision)
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
 	if err != nil {
@@ -244,8 +242,8 @@ func (e *matchingEngineImpl) AddActivityTask(addRequest *m.AddActivityTaskReques
 	sourceDomainID := addRequest.GetSourceDomainUUID()
 	taskListName := addRequest.TaskList.GetName()
 	taskListKind := common.TaskListKindPtr(addRequest.TaskList.GetKind())
-	e.logger.Debugf("Received AddActivityTask for taskList=%v WorkflowID=%v, RunID=%v",
-		taskListName, addRequest.Execution.WorkflowId, addRequest.Execution.RunId)
+	e.logger.Debug(fmt.Sprintf("Received AddActivityTask for taskList=%v WorkflowID=%v, RunID=%v",
+		taskListName, addRequest.Execution.WorkflowId, addRequest.Execution.RunId))
 	taskList := newTaskListID(domainID, taskListName, persistence.TaskListTypeActivity)
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
 	if err != nil {
@@ -270,7 +268,7 @@ func (e *matchingEngineImpl) PollForDecisionTask(ctx context.Context, req *m.Pol
 	pollerID := req.GetPollerID()
 	request := req.PollRequest
 	taskListName := request.TaskList.GetName()
-	e.logger.Debugf("Received PollForDecisionTask for taskList=%v", taskListName)
+	e.logger.Debug("Received PollForDecisionTask for taskList", tag.WorkflowTaskListName(taskListName))
 pollLoop:
 	for {
 		err := common.IsValidContext(ctx)
@@ -349,8 +347,8 @@ pollLoop:
 		if err != nil {
 			switch err.(type) {
 			case *workflow.EntityNotExistsError, *h.EventAlreadyStartedError:
-				e.logger.Debugf("Duplicated decision task taskList=%v, taskID=%v",
-					taskListName, tCtx.info.TaskID)
+				e.logger.Debug(fmt.Sprintf("Duplicated decision task taskList=%v, taskID=%v",
+					taskListName, tCtx.info.TaskID))
 				tCtx.completeTask(nil)
 			default:
 				tCtx.completeTask(err)
@@ -372,7 +370,7 @@ func (e *matchingEngineImpl) PollForActivityTask(ctx context.Context, req *m.Pol
 	pollerID := req.GetPollerID()
 	request := req.PollRequest
 	taskListName := request.TaskList.GetName()
-	e.logger.Debugf("Received PollForActivityTask for taskList=%v", taskListName)
+	e.logger.Debug(fmt.Sprintf("Received PollForActivityTask for taskList=%v", taskListName))
 pollLoop:
 	for {
 		err := common.IsValidContext(ctx)
@@ -411,8 +409,8 @@ pollLoop:
 		if err != nil {
 			switch err.(type) {
 			case *workflow.EntityNotExistsError, *h.EventAlreadyStartedError:
-				e.logger.Debugf("Duplicated activity task taskList=%v, taskID=%v",
-					taskListName, tCtx.info.TaskID)
+				e.logger.Debug(fmt.Sprintf("Duplicated activity task taskList=%v, taskID=%v",
+					taskListName, tCtx.info.TaskID))
 				tCtx.completeTask(nil)
 			default:
 				tCtx.completeTask(err)
@@ -570,14 +568,7 @@ func (e *matchingEngineImpl) DescribeTaskList(ctx context.Context, request *m.De
 		return nil, err
 	}
 
-	pollers := []*workflow.PollerInfo{}
-	for _, poller := range tlMgr.GetAllPollerInfo() {
-		pollers = append(pollers, &workflow.PollerInfo{
-			Identity:       common.StringPtr(poller.identity),
-			LastAccessTime: common.Int64Ptr(poller.lastAccessTime.UnixNano()),
-		})
-	}
-	return &workflow.DescribeTaskListResponse{Pollers: pollers}, nil
+	return tlMgr.DescribeTaskList(request.DescRequest.GetIncludeTaskListStatus()), nil
 }
 
 // Loads a task from persistence and wraps it in a task context
@@ -655,6 +646,7 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(context *taskCont
 	response := &workflow.PollForActivityTaskResponse{}
 	response.ActivityId = attributes.ActivityId
 	response.ActivityType = attributes.ActivityType
+	response.Header = attributes.Header
 	response.Input = attributes.Input
 	response.WorkflowExecution = workflowExecutionPtr(context.workflowExecution)
 	response.ScheduledTimestampOfThisAttempt = historyResponse.ScheduledTimestampOfThisAttempt

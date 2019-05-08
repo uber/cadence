@@ -22,7 +22,9 @@ package blobstore
 
 import (
 	"context"
+
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/blobstore/blob"
 )
 
@@ -47,8 +49,13 @@ type BucketMetadataResponse struct {
 type Client interface {
 	Upload(ctx context.Context, bucket string, key blob.Key, blob *blob.Blob) error
 	Download(ctx context.Context, bucket string, key blob.Key) (*blob.Blob, error)
+	GetTags(ctx context.Context, bucket string, key blob.Key) (map[string]string, error)
 	Exists(ctx context.Context, bucket string, key blob.Key) (bool, error)
 	Delete(ctx context.Context, bucket string, key blob.Key) (bool, error)
 	ListByPrefix(ctx context.Context, bucket string, prefix string) ([]blob.Key, error)
 	BucketMetadata(ctx context.Context, bucket string) (*BucketMetadataResponse, error)
+	BucketExists(ctx context.Context, bucket string) (bool, error)
+
+	IsRetryableError(err error) bool
+	GetRetryPolicy() backoff.RetryPolicy
 }

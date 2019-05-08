@@ -99,6 +99,8 @@ const (
 	TransferTaskTypeCancelExecution
 	TransferTaskTypeStartChildExecution
 	TransferTaskTypeSignalExecution
+	TransferTaskTypeRecordWorkflowStarted
+	TransferTaskTypeResetWorkflow
 )
 
 // Types of replication tasks
@@ -116,8 +118,10 @@ const (
 	TaskTypeDeleteHistoryEvent
 	TaskTypeActivityRetryTimer
 	TaskTypeWorkflowBackoffTimer
-	TaskTypeArchiveHistoryEvent
 )
+
+// UnknownNumRowsAffected is returned when the number of rows that an API affected cannot be determined
+const UnknownNumRowsAffected = -1
 
 // Types of workflow backoff timeout
 const (
@@ -233,6 +237,7 @@ type (
 		State                        int
 		CloseStatus                  int
 		LastFirstEventID             int64
+		LastEventTaskID              int64
 		NextEventID                  int64
 		LastProcessedEvent           int64
 		StartTimestamp               time.Time
@@ -254,6 +259,7 @@ type (
 		ClientLibraryVersion         string
 		ClientFeatureVersion         string
 		ClientImpl                   string
+		AutoResetPoints              *workflow.ResetPoints
 		// for retry
 		Attempt            int32
 		HasRetryPolicy     bool
@@ -266,6 +272,7 @@ type (
 		// events V2 related
 		EventStoreVersion int32
 		BranchToken       []byte
+		// Cron
 		CronSchedule      string
 		ExpirationSeconds int32
 	}
@@ -333,12 +340,14 @@ type (
 
 	// TaskListInfo describes a state of a task list implementation.
 	TaskListInfo struct {
-		DomainID string
-		Name     string
-		TaskType int
-		RangeID  int64
-		AckLevel int64
-		Kind     int
+		DomainID    string
+		Name        string
+		TaskType    int
+		RangeID     int64
+		AckLevel    int64
+		Kind        int
+		Expiry      time.Time
+		LastUpdated time.Time
 	}
 
 	// TaskInfo describes either activity or decision task
@@ -349,6 +358,7 @@ type (
 		TaskID                 int64
 		ScheduleID             int64
 		ScheduleToStartTimeout int32
+		Expiry                 time.Time
 	}
 
 	// Task is the generic interface for workflow tasks
@@ -383,6 +393,20 @@ type (
 		RecordVisibility    bool
 	}
 
+	// RecordWorkflowStartedTask identifites a transfer task for writing visibility open execution record
+	RecordWorkflowStartedTask struct {
+		VisibilityTimestamp time.Time
+		TaskID              int64
+		Version             int64
+	}
+
+	// ResetWorkflowTask identifites a transfer task to reset workflow
+	ResetWorkflowTask struct {
+		VisibilityTimestamp time.Time
+		TaskID              int64
+		Version             int64
+	}
+
 	// CloseExecutionTask identifies a transfer task for deletion of execution
 	CloseExecutionTask struct {
 		VisibilityTimestamp time.Time
@@ -392,13 +416,6 @@ type (
 
 	// DeleteHistoryEventTask identifies a timer task for deletion of history events of completed execution.
 	DeleteHistoryEventTask struct {
-		VisibilityTimestamp time.Time
-		TaskID              int64
-		Version             int64
-	}
-
-	// ArchiveHistoryEventTask identifies a timer task for archival of history events of completed execution.
-	ArchiveHistoryEventTask struct {
 		VisibilityTimestamp time.Time
 		TaskID              int64
 		Version             int64
@@ -650,13 +667,14 @@ type (
 		DomainID                    string
 		Execution                   workflow.WorkflowExecution
 		ParentDomainID              string
-		ParentExecution             *workflow.WorkflowExecution
+		ParentExecution             workflow.WorkflowExecution
 		InitiatedID                 int64
 		TaskList                    string
 		WorkflowTypeName            string
 		WorkflowTimeout             int32
 		DecisionTimeoutValue        int32
 		ExecutionContext            []byte
+		LastEventTaskID             int64
 		NextEventID                 int64
 		LastProcessedEvent          int64
 		SignalCount                 int32
@@ -681,6 +699,7 @@ type (
 		ExpirationTime              time.Time
 		MaximumAttempts             int32
 		NonRetriableErrors          []string
+		PreviousAutoResetPoints     *workflow.ResetPoints
 		// 2 means using eventsV2, empty/0/1 means using events(V1)
 		EventStoreVersion int32
 		// for eventsV2: branchToken from historyPersistence
@@ -713,25 +732,23 @@ type (
 
 	// GetCurrentExecutionResponse is the response to GetCurrentExecution
 	GetCurrentExecutionResponse struct {
-		StartRequestID string
-		RunID          string
-		State          int
-		CloseStatus    int
+		StartRequestID   string
+		RunID            string
+		State            int
+		CloseStatus      int
+		LastWriteVersion int64
 	}
 
 	// UpdateWorkflowExecutionRequest is used to update a workflow execution
 	UpdateWorkflowExecutionRequest struct {
-		ExecutionInfo        *WorkflowExecutionInfo
-		ReplicationState     *ReplicationState
-		TransferTasks        []Task
-		TimerTasks           []Task
-		ReplicationTasks     []Task
-		DeleteTimerTask      Task
-		Condition            int64
-		RangeID              int64
-		ContinueAsNew        *CreateWorkflowExecutionRequest
-		FinishExecution      bool
-		FinishedExecutionTTL int32
+		ExecutionInfo    *WorkflowExecutionInfo
+		ReplicationState *ReplicationState
+		TransferTasks    []Task
+		TimerTasks       []Task
+		ReplicationTasks []Task
+		Condition        int64
+		RangeID          int64
+		ContinueAsNew    *CreateWorkflowExecutionRequest
 
 		// Mutable state
 		UpsertActivityInfos           []*ActivityInfo
@@ -750,8 +767,7 @@ type (
 		ClearBufferedEvents           bool
 		NewBufferedReplicationTask    *BufferedReplicationTask
 		DeleteBufferedReplicationTask *int64
-		//Optional. It is to suggest a binary encoding type to serialize history events
-		Encoding common.EncodingType
+		Encoding                      common.EncodingType // optional binary encoding type
 	}
 
 	// ResetMutableStateRequest is used to reset workflow execution state for a single run
@@ -769,8 +785,7 @@ type (
 		InsertRequestCancelInfos  []*RequestCancelInfo
 		InsertSignalInfos         []*SignalInfo
 		InsertSignalRequestedIDs  []string
-		//Optional. It is to suggest a binary encoding type to serialize history events
-		Encoding common.EncodingType
+		Encoding                  common.EncodingType // optional binary encoding type
 	}
 
 	// ResetWorkflowExecutionRequest is used to reset workflow execution state for current run and create new run
@@ -791,6 +806,7 @@ type (
 		UpdateCurr           bool
 		CurrExecutionInfo    *WorkflowExecutionInfo
 		CurrReplicationState *ReplicationState
+		CurrReplicationTasks []Task
 		CurrTransferTasks    []Task
 		CurrTimerTasks       []Task
 
@@ -806,12 +822,18 @@ type (
 		InsertRequestCancelInfos  []*RequestCancelInfo
 		InsertSignalInfos         []*SignalInfo
 		InsertSignalRequestedIDs  []string
-		//Optional. It is to suggest a binary encoding type to serialize history events
-		Encoding common.EncodingType
+		Encoding                  common.EncodingType // optional binary encoding type
 	}
 
 	// DeleteWorkflowExecutionRequest is used to delete a workflow execution
 	DeleteWorkflowExecutionRequest struct {
+		DomainID   string
+		WorkflowID string
+		RunID      string
+	}
+
+	// DeleteCurrentWorkflowExecutionRequest is used to delete the current workflow execution
+	DeleteCurrentWorkflowExecutionRequest struct {
 		DomainID   string
 		WorkflowID string
 		RunID      string
@@ -879,6 +901,7 @@ type (
 		TaskList     string
 		TaskType     int
 		TaskListKind int
+		RangeID      int64
 	}
 
 	// LeaseTaskListResponse is response to LeaseTaskListRequest
@@ -893,6 +916,26 @@ type (
 
 	// UpdateTaskListResponse is the response to UpdateTaskList
 	UpdateTaskListResponse struct {
+	}
+
+	// ListTaskListRequest contains the request params needed to invoke ListTaskList API
+	ListTaskListRequest struct {
+		PageSize  int
+		PageToken []byte
+	}
+
+	// ListTaskListResponse is the response from ListTaskList API
+	ListTaskListResponse struct {
+		Items         []TaskListInfo
+		NextPageToken []byte
+	}
+
+	// DeleteTaskListRequest contains the request params needed to invoke DeleteTaskList API
+	DeleteTaskListRequest struct {
+		DomainID     string
+		TaskListName string
+		TaskListType int
+		RangeID      int64
 	}
 
 	// CreateTasksRequest is used to create a new task for a workflow exectution
@@ -917,10 +960,9 @@ type (
 		DomainID     string
 		TaskList     string
 		TaskType     int
-		ReadLevel    int64
-		MaxReadLevel int64 // inclusive
+		ReadLevel    int64  // range exclusive
+		MaxReadLevel *int64 // optional: range inclusive when specified
 		BatchSize    int
-		RangeID      int64
 	}
 
 	// GetTasksResponse is the response to GetTasksRequests
@@ -932,6 +974,15 @@ type (
 	CompleteTaskRequest struct {
 		TaskList *TaskListInfo
 		TaskID   int64
+	}
+
+	// CompleteTasksLessThanRequest contains the request params needed to invoke CompleteTasksLessThan API
+	CompleteTasksLessThanRequest struct {
+		DomainID     string
+		TaskListName string
+		TaskType     int
+		TaskID       int64 // Tasks less than or equal to this ID will be completed
+		Limit        int   // Limit on the max number of tasks that can be completed. Required param
 	}
 
 	// GetTimerIndexTasksRequest is the request for GetTimerIndexTasks
@@ -960,8 +1011,7 @@ type (
 		TransactionID     int64
 		Events            []*workflow.HistoryEvent
 		Overwrite         bool
-		//Optional. It is to suggest a binary encoding type to serialize history events
-		Encoding common.EncodingType
+		Encoding          common.EncodingType // optional binary encoding type
 	}
 
 	// GetWorkflowExecutionHistoryRequest is used to retrieve history of a workflow execution
@@ -984,7 +1034,7 @@ type (
 	GetWorkflowExecutionHistoryResponse struct {
 		History *workflow.History
 		// Token to read next page if there are more events beyond page size.
-		// Use this to set NextPageToken on GetworkflowExecutionHistoryRequest to read the next page.
+		// Use this to set NextPageToken on GetWorkflowExecutionHistoryRequest to read the next page.
 		NextPageToken []byte
 		// the first_event_id of last loaded batch
 		LastFirstEventID int64
@@ -997,7 +1047,7 @@ type (
 	GetWorkflowExecutionHistoryByBatchResponse struct {
 		History []*workflow.History
 		// Token to read next page if there are more events beyond page size.
-		// Use this to set NextPageToken on GetworkflowExecutionHistoryRequest to read the next page.
+		// Use this to set NextPageToken on GetWorkflowExecutionHistoryRequest to read the next page.
 		NextPageToken []byte
 		// the first_event_id of last loaded batch
 		LastFirstEventID int64
@@ -1029,6 +1079,7 @@ type (
 		EmitMetric     bool
 		ArchivalBucket string
 		ArchivalStatus workflow.ArchivalStatus
+		BadBinaries    workflow.BadBinaries
 	}
 
 	// DomainReplicationConfig describes the cross DC domain replication configuration
@@ -1184,8 +1235,10 @@ type (
 		Events []*workflow.HistoryEvent
 		// requested TransactionID for this write operation. For the same eventID, the node with larger TransactionID always wins
 		TransactionID int64
-		// It is to suggest a binary encoding type to serialize history events
+		// optional binary encoding type
 		Encoding common.EncodingType
+		// The shard to get history node data
+		ShardID *int
 	}
 
 	// AppendHistoryNodesResponse is a response to AppendHistoryNodesRequest
@@ -1207,6 +1260,8 @@ type (
 		PageSize int
 		// Token to continue reading next page of history append transactions.  Pass in empty slice for first page
 		NextPageToken []byte
+		// The shard to get history branch data
+		ShardID *int
 	}
 
 	// ReadHistoryBranchResponse is the response to ReadHistoryBranchRequest
@@ -1239,14 +1294,16 @@ type (
 
 	// ForkHistoryBranchRequest is used to fork a history branch
 	ForkHistoryBranchRequest struct {
-		// The branch to be fork
+		// The base branch to fork from
 		ForkBranchToken []byte
-		// The nodeID to fork from, the new branch will start from ForkNodeID
+		// The nodeID to fork from, the new branch will start from ( inclusive ), the base branch will stop at(exclusive)
 		// Application must provide a void forking nodeID, it must be a valid nodeID in that branch. A valid nodeID is the firstEventID of a valid batch of events.
 		// And ForkNodeID > 1 because forking from 1 doesn't make any sense.
 		ForkNodeID int64
 		// the info for clean up data in background
 		Info string
+		// The shard to get history branch data
+		ShardID *int
 	}
 
 	// ForkHistoryBranchResponse is the response to ForkHistoryBranchRequest
@@ -1261,18 +1318,24 @@ type (
 		BranchToken []byte
 		// true means the fork is success, will update the flag, otherwise will delete the new branch
 		Success bool
+		// The shard to update history branch data
+		ShardID *int
 	}
 
 	// DeleteHistoryBranchRequest is used to remove a history branch
 	DeleteHistoryBranchRequest struct {
 		// branch to be deleted
 		BranchToken []byte
+		// The shard to delete history branch data
+		ShardID *int
 	}
 
 	// GetHistoryTreeRequest is used to retrieve branch info of a history tree
 	GetHistoryTreeRequest struct {
 		// A UUID of a tree
 		TreeID string
+		// Get data from this shard
+		ShardID *int
 		// optional: can provide treeID via branchToken if treeID is empty
 		BranchToken []byte
 	}
@@ -1323,6 +1386,7 @@ type (
 		ResetMutableState(request *ResetMutableStateRequest) error
 		ResetWorkflowExecution(request *ResetWorkflowExecutionRequest) error
 		DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error
+		DeleteCurrentWorkflowExecution(request *DeleteCurrentWorkflowExecutionRequest) error
 		GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)
 
 		// Transfer task related methods
@@ -1352,9 +1416,21 @@ type (
 		GetName() string
 		LeaseTaskList(request *LeaseTaskListRequest) (*LeaseTaskListResponse, error)
 		UpdateTaskList(request *UpdateTaskListRequest) (*UpdateTaskListResponse, error)
+		ListTaskList(request *ListTaskListRequest) (*ListTaskListResponse, error)
+		DeleteTaskList(request *DeleteTaskListRequest) error
 		CreateTasks(request *CreateTasksRequest) (*CreateTasksResponse, error)
 		GetTasks(request *GetTasksRequest) (*GetTasksResponse, error)
 		CompleteTask(request *CompleteTaskRequest) error
+		// CompleteTasksLessThan completes tasks less than or equal to the given task id
+		// This API takes a limit parameter which specifies the count of maxRows that
+		// can be deleted. This parameter may be ignored by the underlying storage, but
+		// its mandatory to specify it. On success this method returns the number of rows
+		// actually deleted. If the underlying storage doesn't support "limit", all rows
+		// less than or equal to taskID will be deleted.
+		// On success, this method returns:
+		//  - number of rows actually deleted, if limit is honored
+		//  - UnknownNumRowsDeleted, when all rows below value are deleted
+		CompleteTasksLessThan(request *CompleteTasksLessThanRequest) (int, error)
 	}
 
 	// HistoryManager is used to manage Workflow Execution HistoryEventBatch
@@ -1383,7 +1459,7 @@ type (
 		// V2 regards history events growing as a tree, decoupled from workflow concepts
 		// For Cadence, treeID is new runID, except for fork(reset), treeID will be the runID that it forks from.
 
-		// AppendHistoryNodes add(or override) a batach of nodes to a history branch
+		// AppendHistoryNodes add(or override) a batch of nodes to a history branch
 		AppendHistoryNodes(request *AppendHistoryNodesRequest) (*AppendHistoryNodesResponse, error)
 		// ReadHistoryBranch returns history node data for a branch
 		ReadHistoryBranch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchResponse, error)
@@ -1440,6 +1516,12 @@ func (e *WorkflowExecutionAlreadyStartedError) Error() string {
 
 func (e *TimeoutError) Error() string {
 	return e.Msg
+}
+
+// IsTimeoutError check whether error is TimeoutError
+func IsTimeoutError(err error) bool {
+	_, ok := err.(*TimeoutError)
+	return ok
 }
 
 // GetType returns the type of the activity task
@@ -1512,6 +1594,76 @@ func (d *DecisionTask) SetVisibilityTimestamp(timestamp time.Time) {
 	d.VisibilityTimestamp = timestamp
 }
 
+// GetType returns the type of the record workflow started task
+func (a *RecordWorkflowStartedTask) GetType() int {
+	return TransferTaskTypeRecordWorkflowStarted
+}
+
+// GetVersion returns the version of the record workflow started task
+func (a *RecordWorkflowStartedTask) GetVersion() int64 {
+	return a.Version
+}
+
+// SetVersion returns the version of the record workflow started task
+func (a *RecordWorkflowStartedTask) SetVersion(version int64) {
+	a.Version = version
+}
+
+// GetTaskID returns the sequence ID of the record workflow started task
+func (a *RecordWorkflowStartedTask) GetTaskID() int64 {
+	return a.TaskID
+}
+
+// SetTaskID sets the sequence ID of the record workflow started task
+func (a *RecordWorkflowStartedTask) SetTaskID(id int64) {
+	a.TaskID = id
+}
+
+// GetVisibilityTimestamp get the visibility timestamp
+func (a *RecordWorkflowStartedTask) GetVisibilityTimestamp() time.Time {
+	return a.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp set the visibility timestamp
+func (a *RecordWorkflowStartedTask) SetVisibilityTimestamp(timestamp time.Time) {
+	a.VisibilityTimestamp = timestamp
+}
+
+// GetType returns the type of the ResetWorkflowTask
+func (a *ResetWorkflowTask) GetType() int {
+	return TransferTaskTypeResetWorkflow
+}
+
+// GetVersion returns the version of the ResetWorkflowTask
+func (a *ResetWorkflowTask) GetVersion() int64 {
+	return a.Version
+}
+
+// SetVersion returns the version of the ResetWorkflowTask
+func (a *ResetWorkflowTask) SetVersion(version int64) {
+	a.Version = version
+}
+
+// GetTaskID returns the sequence ID of the ResetWorkflowTask
+func (a *ResetWorkflowTask) GetTaskID() int64 {
+	return a.TaskID
+}
+
+// SetTaskID sets the sequence ID of the ResetWorkflowTask
+func (a *ResetWorkflowTask) SetTaskID(id int64) {
+	a.TaskID = id
+}
+
+// GetVisibilityTimestamp get the visibility timestamp
+func (a *ResetWorkflowTask) GetVisibilityTimestamp() time.Time {
+	return a.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp set the visibility timestamp
+func (a *ResetWorkflowTask) SetVisibilityTimestamp(timestamp time.Time) {
+	a.VisibilityTimestamp = timestamp
+}
+
 // GetType returns the type of the close execution task
 func (a *CloseExecutionTask) GetType() int {
 	return TransferTaskTypeCloseExecution
@@ -1579,41 +1731,6 @@ func (a *DeleteHistoryEventTask) GetVisibilityTimestamp() time.Time {
 
 // SetVisibilityTimestamp set the visibility timestamp
 func (a *DeleteHistoryEventTask) SetVisibilityTimestamp(timestamp time.Time) {
-	a.VisibilityTimestamp = timestamp
-}
-
-// GetType returns the type of the archive execution task
-func (a *ArchiveHistoryEventTask) GetType() int {
-	return TaskTypeArchiveHistoryEvent
-}
-
-// GetVersion returns the version of the archive execution task
-func (a *ArchiveHistoryEventTask) GetVersion() int64 {
-	return a.Version
-}
-
-// SetVersion sets the version of the archive execution task
-func (a *ArchiveHistoryEventTask) SetVersion(version int64) {
-	a.Version = version
-}
-
-// GetTaskID returns the sequence ID of the archive execution task
-func (a *ArchiveHistoryEventTask) GetTaskID() int64 {
-	return a.TaskID
-}
-
-// SetTaskID sets the sequence ID of the archive execution task
-func (a *ArchiveHistoryEventTask) SetTaskID(id int64) {
-	a.TaskID = id
-}
-
-// GetVisibilityTimestamp get the visibility timestamp
-func (a *ArchiveHistoryEventTask) GetVisibilityTimestamp() time.Time {
-	return a.VisibilityTimestamp
-}
-
-// SetVisibilityTimestamp set the visibility timestamp
-func (a *ArchiveHistoryEventTask) SetVisibilityTimestamp(timestamp time.Time) {
 	a.VisibilityTimestamp = timestamp
 }
 

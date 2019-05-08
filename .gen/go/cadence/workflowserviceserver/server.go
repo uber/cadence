@@ -24,16 +24,21 @@
 package workflowserviceserver
 
 import (
-	"context"
-	"github.com/uber/cadence/.gen/go/cadence"
-	"github.com/uber/cadence/.gen/go/shared"
-	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift"
+	context "context"
+	cadence "github.com/uber/cadence/.gen/go/cadence"
+	shared "github.com/uber/cadence/.gen/go/shared"
+	wire "go.uber.org/thriftrw/wire"
+	transport "go.uber.org/yarpc/api/transport"
+	thrift "go.uber.org/yarpc/encoding/thrift"
 )
 
 // Interface is the server-side interface for the WorkflowService service.
 type Interface interface {
+	CountWorkflowExecutions(
+		ctx context.Context,
+		CountRequest *shared.CountWorkflowExecutionsRequest,
+	) (*shared.CountWorkflowExecutionsResponse, error)
+
 	DeprecateDomain(
 		ctx context.Context,
 		DeprecateRequest *shared.DeprecateDomainRequest,
@@ -73,6 +78,11 @@ type Interface interface {
 		ctx context.Context,
 		ListRequest *shared.ListOpenWorkflowExecutionsRequest,
 	) (*shared.ListOpenWorkflowExecutionsResponse, error)
+
+	ListWorkflowExecutions(
+		ctx context.Context,
+		ListRequest *shared.ListWorkflowExecutionsRequest,
+	) (*shared.ListWorkflowExecutionsResponse, error)
 
 	PollForActivityTask(
 		ctx context.Context,
@@ -164,6 +174,11 @@ type Interface interface {
 		CompleteRequest *shared.RespondQueryTaskCompletedRequest,
 	) error
 
+	ScanWorkflowExecutions(
+		ctx context.Context,
+		ListRequest *shared.ListWorkflowExecutionsRequest,
+	) (*shared.ListWorkflowExecutionsResponse, error)
+
 	SignalWithStartWorkflowExecution(
 		ctx context.Context,
 		SignalWithStartRequest *shared.SignalWithStartWorkflowExecutionRequest,
@@ -200,6 +215,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	service := thrift.Service{
 		Name: "WorkflowService",
 		Methods: []thrift.Method{
+
+			thrift.Method{
+				Name: "CountWorkflowExecutions",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.CountWorkflowExecutions),
+				},
+				Signature:    "CountWorkflowExecutions(CountRequest *shared.CountWorkflowExecutionsRequest) (*shared.CountWorkflowExecutionsResponse)",
+				ThriftModule: cadence.ThriftModule,
+			},
 
 			thrift.Method{
 				Name: "DeprecateDomain",
@@ -286,6 +312,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.ListOpenWorkflowExecutions),
 				},
 				Signature:    "ListOpenWorkflowExecutions(ListRequest *shared.ListOpenWorkflowExecutionsRequest) (*shared.ListOpenWorkflowExecutionsResponse)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "ListWorkflowExecutions",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.ListWorkflowExecutions),
+				},
+				Signature:    "ListWorkflowExecutions(ListRequest *shared.ListWorkflowExecutionsRequest) (*shared.ListWorkflowExecutionsResponse)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -488,6 +525,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "ScanWorkflowExecutions",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.ScanWorkflowExecutions),
+				},
+				Signature:    "ScanWorkflowExecutions(ListRequest *shared.ListWorkflowExecutionsRequest) (*shared.ListWorkflowExecutionsResponse)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "SignalWithStartWorkflowExecution",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -544,12 +592,31 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 31)
+	procedures := make([]transport.Procedure, 0, 34)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
 
 type handler struct{ impl Interface }
+
+func (h handler) CountWorkflowExecutions(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_CountWorkflowExecutions_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.CountWorkflowExecutions(ctx, args.CountRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_CountWorkflowExecutions_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
 
 func (h handler) DeprecateDomain(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args cadence.WorkflowService_DeprecateDomain_Args
@@ -694,6 +761,25 @@ func (h handler) ListOpenWorkflowExecutions(ctx context.Context, body wire.Value
 
 	hadError := err != nil
 	result, err := cadence.WorkflowService_ListOpenWorkflowExecutions_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) ListWorkflowExecutions(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_ListWorkflowExecutions_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.ListWorkflowExecutions(ctx, args.ListRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_ListWorkflowExecutions_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {
@@ -1036,6 +1122,25 @@ func (h handler) RespondQueryTaskCompleted(ctx context.Context, body wire.Value)
 
 	hadError := err != nil
 	result, err := cadence.WorkflowService_RespondQueryTaskCompleted_Helper.WrapResponse(err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) ScanWorkflowExecutions(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_ScanWorkflowExecutions_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.ScanWorkflowExecutions(ctx, args.ListRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_ScanWorkflowExecutions_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {

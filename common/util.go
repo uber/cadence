@@ -22,27 +22,26 @@ package common
 
 import (
 	"encoding/json"
+	"math/rand"
 	"sync"
 	"time"
 
-	"github.com/robfig/cron"
-	"github.com/uber/cadence/common/logging"
-	"github.com/uber/cadence/common/metrics"
-	"go.uber.org/yarpc/yarpcerrors"
-	"golang.org/x/net/context"
-
 	farm "github.com/dgryski/go-farm"
-	"github.com/uber-common/bark"
-
-	"math/rand"
-
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/cron"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
+	"go.uber.org/yarpc/yarpcerrors"
+	"golang.org/x/net/context"
 )
 
 const (
+	golandMapReserverNumberOfBytes = 48
+
 	retryPersistenceOperationInitialInterval    = 50 * time.Millisecond
 	retryPersistenceOperationMaxInterval        = 10 * time.Second
 	retryPersistenceOperationExpirationInterval = 30 * time.Second
@@ -59,10 +58,6 @@ const (
 	frontendServiceOperationMaxInterval        = 5 * time.Second
 	frontendServiceOperationExpirationInterval = 15 * time.Second
 
-	publicClientOperationInitialInterval    = 200 * time.Millisecond
-	publicClientOperationMaxInterval        = 5 * time.Second
-	publicClientOperationExpirationInterval = 15 * time.Second
-
 	adminServiceOperationInitialInterval    = 200 * time.Millisecond
 	adminServiceOperationMaxInterval        = 5 * time.Second
 	adminServiceOperationExpirationInterval = 15 * time.Second
@@ -70,10 +65,6 @@ const (
 	retryKafkaOperationInitialInterval    = 50 * time.Millisecond
 	retryKafkaOperationMaxInterval        = 10 * time.Second
 	retryKafkaOperationExpirationInterval = 30 * time.Second
-
-	retryBlobstoreClientInitialInterval    = time.Second
-	retryBlobstoreClientMaxInterval        = 10 * time.Second
-	retryBlobstoreClientExpirationInterval = time.Minute
 
 	// FailureReasonCompleteResultExceedsLimit is failureReason for complete result exceeds limit
 	FailureReasonCompleteResultExceedsLimit = "COMPLETE_RESULT_EXCEEDS_LIMIT"
@@ -85,13 +76,17 @@ const (
 	FailureReasonHeartbeatExceedsLimit = "HEARTBEAT_EXCEEDS_LIMIT"
 	// FailureReasonDecisionBlobSizeExceedsLimit is the failureReason for decision blob exceeds size limit
 	FailureReasonDecisionBlobSizeExceedsLimit = "DECISION_BLOB_SIZE_EXCEEDS_LIMIT"
-	// TerminateReasonSizeExceedsLimit is reason to terminate workflow when history size exceed limit
-	TerminateReasonSizeExceedsLimit = "HISTORY_SIZE_EXCEEDS_LIMIT"
+	// TerminateReasonSizeExceedsLimit is reason to terminate workflow when history size or count exceed limit
+	TerminateReasonSizeExceedsLimit = "HISTORY_EXCEEDS_LIMIT"
 )
 
 var (
 	// ErrBlobSizeExceedsLimit is error for event blob size exceeds limit
 	ErrBlobSizeExceedsLimit = &workflow.BadRequestError{Message: "Blob data size exceeds limit."}
+	// ErrContextTimeoutTooShort is error for setting a very short context timeout when calling a long poll API
+	ErrContextTimeoutTooShort = &workflow.BadRequestError{Message: "Context timeout is too short."}
+	// ErrContextTimeoutNotSet is error for not setting a context timeout when calling a long poll API
+	ErrContextTimeoutNotSet = &workflow.BadRequestError{Message: "Context timeout is not set."}
 )
 
 // AwaitWaitGroup calls Wait on the given wait
@@ -165,29 +160,11 @@ func CreateAdminServiceRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
-// CreatePublicClientRetryPolicy creates a retry policy for calls to frontend service
-func CreatePublicClientRetryPolicy() backoff.RetryPolicy {
-	policy := backoff.NewExponentialRetryPolicy(publicClientOperationInitialInterval)
-	policy.SetMaximumInterval(publicClientOperationMaxInterval)
-	policy.SetExpirationInterval(publicClientOperationExpirationInterval)
-
-	return policy
-}
-
 // CreateKafkaOperationRetryPolicy creates a retry policy for kafka operation
 func CreateKafkaOperationRetryPolicy() backoff.RetryPolicy {
 	policy := backoff.NewExponentialRetryPolicy(retryKafkaOperationInitialInterval)
 	policy.SetMaximumInterval(retryKafkaOperationMaxInterval)
 	policy.SetExpirationInterval(retryKafkaOperationExpirationInterval)
-
-	return policy
-}
-
-// CreateBlobstoreClientRetryPolicy creates a retry policy for blobstore client
-func CreateBlobstoreClientRetryPolicy() backoff.RetryPolicy {
-	policy := backoff.NewExponentialRetryPolicy(retryBlobstoreClientInitialInterval)
-	policy.SetMaximumInterval(retryBlobstoreClientMaxInterval)
-	policy.SetExpirationInterval(retryBlobstoreClientExpirationInterval)
 
 	return policy
 }
@@ -205,22 +182,6 @@ func IsPersistenceTransientError(err error) bool {
 // IsKafkaTransientError check if the error is a transient kafka error
 func IsKafkaTransientError(err error) bool {
 	return true
-}
-
-// IsBlobstoreTransientError checks if the error is a retryable error.
-func IsBlobstoreTransientError(err error) bool {
-	return !IsBlobstoreNonRetryableError(err)
-}
-
-// IsBlobstoreNonRetryableError checks if the error is a non retryable error.
-func IsBlobstoreNonRetryableError(err error) bool {
-	switch err.(type) {
-	case *workflow.BadRequestError:
-		return true
-	case *workflow.EntityNotExistsError:
-		return true
-	}
-	return false
 }
 
 // IsServiceTransientError checks if the error is a retryable error.
@@ -286,15 +247,15 @@ func WorkflowIDToHistoryShard(workflowID string, numberOfShards int) int {
 }
 
 // PrettyPrintHistory prints history in human readable format
-func PrettyPrintHistory(history *workflow.History, logger bark.Logger) {
+func PrettyPrintHistory(history *workflow.History, logger log.Logger) {
 	data, err := json.MarshalIndent(history, "", "    ")
 
 	if err != nil {
-		logger.Errorf("Error serializing history: %v\n", err)
+		logger.Error("Error serializing history: %v\n", tag.Error(err))
 	}
 
 	logger.Info("******************************************")
-	logger.Infof("History: %v", string(data))
+	logger.Info("History", tag.DetailInfo(string(data)))
 	logger.Info("******************************************")
 }
 
@@ -354,6 +315,14 @@ func MinInt32(a, b int32) int32 {
 	return b
 }
 
+// MinInt returns the smaller of two given integers
+func MinInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 // ValidateRetryPolicy validates a retry policy
 func ValidateRetryPolicy(policy *workflow.RetryPolicy) error {
 	if policy == nil {
@@ -384,17 +353,6 @@ func ValidateRetryPolicy(policy *workflow.RetryPolicy) error {
 	return nil
 }
 
-// ValidateCronSchedule validates a cron schedule spec
-func ValidateCronSchedule(cronSchedule string) error {
-	if cronSchedule == "" {
-		return nil
-	}
-	if _, err := cron.Parse(cronSchedule); err != nil {
-		return &workflow.BadRequestError{Message: "Invalid CronSchedule."}
-	}
-	return nil
-}
-
 // CreateHistoryStartWorkflowRequest create a start workflow request for history
 func CreateHistoryStartWorkflowRequest(domainID string, startRequest *workflow.StartWorkflowExecutionRequest) *h.StartWorkflowExecutionRequest {
 	histRequest := &h.StartWorkflowExecutionRequest{
@@ -406,28 +364,19 @@ func CreateHistoryStartWorkflowRequest(domainID string, startRequest *workflow.S
 		deadline := time.Now().Add(time.Second * time.Duration(expirationInSeconds))
 		histRequest.ExpirationTimestamp = Int64Ptr(deadline.Round(time.Millisecond).UnixNano())
 	}
+	histRequest.FirstDecisionTaskBackoffSeconds = Int32Ptr(cron.GetBackoffForNextScheduleInSeconds(startRequest.GetCronSchedule(), time.Now()))
 	return histRequest
 }
 
 // CheckEventBlobSizeLimit checks if a blob data exceeds limits. It logs a warning if it exceeds warnLimit,
 // and return ErrBlobSizeExceedsLimit if it exceeds errorLimit.
-func CheckEventBlobSizeLimit(actualSize, warnLimit, errorLimit int, domainID, workflowID, runID string, metricsClient metrics.Client, scope int, logger bark.Logger) error {
-	if metricsClient != nil {
-		metricsClient.RecordTimer(
-			scope,
-			metrics.EventBlobSize,
-			time.Duration(actualSize),
-		)
-	}
+func CheckEventBlobSizeLimit(actualSize, warnLimit, errorLimit int, domainID, workflowID, runID string, scope metrics.Scope, logger log.Logger) error {
+	scope.RecordTimer(metrics.EventBlobSize, time.Duration(actualSize))
 
 	if actualSize > warnLimit {
 		if logger != nil {
-			logger.WithFields(bark.Fields{
-				logging.TagDomainID:            domainID,
-				logging.TagWorkflowExecutionID: workflowID,
-				logging.TagWorkflowRunID:       runID,
-				logging.TagSize:                actualSize,
-			}).Warn("Blob size exceeds limit.")
+			logger.Warn("Blob size exceeds limit.",
+				tag.WorkflowDomainID(domainID), tag.WorkflowID(workflowID), tag.WorkflowRunID(runID), tag.WorkflowSize(int64(actualSize)))
 		}
 
 		if actualSize > errorLimit {
@@ -435,4 +384,43 @@ func CheckEventBlobSizeLimit(actualSize, warnLimit, errorLimit int, domainID, wo
 		}
 	}
 	return nil
+}
+
+// ValidateLongPollContextTimeout check if the context timeout for a long poll handler is too short or below a normal value.
+// If the timeout is not set or too short, it logs an error, and return ErrContextTimeoutNotSet or ErrContextTimeoutTooShort
+// accordingly. If the timeout is only below a normal value, it just logs an info and return nil.
+func ValidateLongPollContextTimeout(ctx context.Context, handlerName string, logger log.Logger) error {
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		err := ErrContextTimeoutNotSet
+		logger.Error("Context timeout not set for long poll API.",
+			tag.WorkflowHandlerName(handlerName), tag.Error(err))
+		return err
+	}
+
+	timeout := deadline.Sub(time.Now())
+	if timeout < MinLongPollTimeout {
+		err := ErrContextTimeoutTooShort
+		logger.Error("Context timeout is too short for long poll API.",
+			tag.WorkflowHandlerName(handlerName), tag.Error(err), tag.WorkflowPollContextTimeout(timeout))
+		return err
+	}
+	if timeout < CriticalLongPollTimeout {
+		logger.Warn("Context timeout is lower than critical value for long poll API.",
+			tag.WorkflowHandlerName(handlerName), tag.WorkflowPollContextTimeout(timeout))
+	}
+	return nil
+}
+
+// GetSizeOfMapStringToByteArray get size of map[string][]byte
+func GetSizeOfMapStringToByteArray(input map[string][]byte) int {
+	if input == nil {
+		return 0
+	}
+
+	res := 0
+	for k, v := range input {
+		res += len(k) + len(v)
+	}
+	return res + golandMapReserverNumberOfBytes
 }

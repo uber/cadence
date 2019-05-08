@@ -22,20 +22,19 @@ package history
 
 import (
 	"context"
-	"os"
-	"testing"
-
 	"fmt"
 	"math"
-
+	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
+	"go.uber.org/cadence/.gen/go/shared"
+
 	"github.com/google/uuid"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -43,11 +42,14 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/service/worker/archiver"
 )
 
 type (
@@ -70,13 +72,15 @@ type (
 		mockMessagingClient messaging.Client
 		mockService         service.Service
 		mockDomainCache     *cache.DomainCacheMock
-		mockArchivalClient  *mocks.ArchivalClient
+		mockArchivalClient  *archiver.ClientMock
 		mockClientBean      *client.MockClientBean
+		mockEventsCache     *MockEventsCache
 		resetor             workflowResetor
 
 		shardClosedCh chan int
 		config        *Config
-		logger        bark.Logger
+		logger        log.Logger
+		shardID       int
 	}
 )
 
@@ -86,13 +90,8 @@ func TestWorkflowResetorSuite(t *testing.T) {
 }
 
 func (s *resetorSuite) SetupSuite() {
-	if testing.Verbose() {
-		log.SetOutput(os.Stdout)
-	}
 
-	l := log.New()
-	l.Level = log.DebugLevel
-	s.logger = bark.NewLoggerFromLogrus(l)
+	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.config = NewDynamicConfigForEventsV2Test()
 }
 
@@ -103,7 +102,8 @@ func (s *resetorSuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 
-	shardID := 0
+	shardID := 10
+	s.shardID = shardID
 	s.mockMatchingClient = &mocks.MatchingClient{}
 	s.mockHistoryClient = &mocks.HistoryClient{}
 	s.mockMetadataMgr = &mocks.MetadataManager{}
@@ -118,21 +118,24 @@ func (s *resetorSuite) SetupTest() {
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
 	s.mockClientBean = &client.MockClientBean{}
-	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean, s.logger)
+	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean)
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockClusterMetadata.On("GetAllClusterFailoverVersions").Return(cluster.TestSingleDCAllClusterFailoverVersions)
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
 	s.mockDomainCache = &cache.DomainCacheMock{}
-	s.mockArchivalClient = &mocks.ArchivalClient{}
+	s.mockArchivalClient = &archiver.ClientMock{}
+	s.mockEventsCache = &MockEventsCache{}
 
 	mockShard := &shardContextImpl{
 		service:                   s.mockService,
 		shardInfo:                 &p.ShardInfo{ShardID: shardID, RangeID: 1, TransferAckLevel: 0},
+		shardID:                   shardID,
 		transferSequenceNumber:    1,
 		executionManager:          s.mockExecutionMgr,
 		historyMgr:                s.mockHistoryMgr,
 		historyV2Mgr:              s.mockHistoryV2Mgr,
 		domainCache:               s.mockDomainCache,
+		eventsCache:               s.mockEventsCache,
 		shardManager:              s.mockShardManager,
 		maxTransferSequenceNumber: 100000,
 		closeCh:                   s.shardClosedCh,
@@ -156,8 +159,8 @@ func (s *resetorSuite) SetupTest() {
 		config:             s.config,
 		archivalClient:     s.mockArchivalClient,
 	}
-	h.txProcessor = newTransferQueueProcessor(mockShard, h, s.mockVisibilityMgr, s.mockProducer, s.mockMatchingClient, s.mockHistoryClient, s.logger)
-	h.timerProcessor = newTimerQueueProcessor(mockShard, h, s.mockMatchingClient, s.mockProducer, s.logger)
+	h.txProcessor = newTransferQueueProcessor(mockShard, h, s.mockVisibilityMgr, s.mockMatchingClient, s.mockHistoryClient, s.logger)
+	h.timerProcessor = newTimerQueueProcessor(mockShard, h, s.mockMatchingClient, s.logger)
 	repl := newHistoryReplicator(mockShard, h, historyCache, s.mockDomainCache, s.mockHistoryMgr, s.mockHistoryV2Mgr, s.logger)
 	s.resetor = newWorkflowResetor(h, repl)
 	h.resetor = s.resetor
@@ -175,12 +178,14 @@ func (s *resetorSuite) TearDownTest() {
 	s.mockProducer.AssertExpectations(s.T())
 	s.mockClientBean.AssertExpectations(s.T())
 	s.mockArchivalClient.AssertExpectations(s.T())
+	s.mockEventsCache.AssertExpectations(s.T())
 }
 
 func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	testDomainEntry := cache.NewDomainCacheEntryForTest(&p.DomainInfo{ID: validDomainID}, &p.DomainConfig{Retention: 1})
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(testDomainEntry, nil)
 	s.mockDomainCache.On("GetDomain", mock.Anything).Return(testDomainEntry, nil)
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
 
 	request := &h.ResetWorkflowExecutionRequest{}
 	_, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
@@ -274,6 +279,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 		MaxEventID:    int64(34),
 		PageSize:      defaultHistoryPageSize,
 		NextPageToken: nil,
+		ShardID:       common.IntPtr(s.shardID),
 	}
 
 	taskList := &workflow.TaskList{
@@ -725,10 +731,12 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	completeReq := &p.CompleteForkBranchRequest{
 		BranchToken: newBranchToken,
 		Success:     true,
+		ShardID:     common.IntPtr(s.shardID),
 	}
 	completeReqErr := &p.CompleteForkBranchRequest{
 		BranchToken: newBranchToken,
 		Success:     false,
+		ShardID:     common.IntPtr(s.shardID),
 	}
 
 	appendV1Resp := &p.AppendHistoryEventsResponse{
@@ -747,8 +755,9 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	s.mockHistoryV2Mgr.On("CompleteForkBranch", completeReqErr).Return(nil).Maybe()
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(appendV1Resp, nil).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(appendV2Resp, nil).Once()
-	s.mockClusterMetadata.On("IsArchivalEnabled").Return(false)
 	s.mockExecutionMgr.On("ResetWorkflowExecution", mock.Anything).Return(nil).Once()
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
+
 	response, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
 	s.Nil(err)
 	s.NotNil(response.RunId)
@@ -788,6 +797,8 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	resetCall := calls[3]
 	s.Equal("ResetWorkflowExecution", resetCall.Method)
 	resetReq, ok := resetCall.Arguments[0].(*p.ResetWorkflowExecutionRequest)
+	s.True(resetReq.CurrExecutionInfo.LastEventTaskID > 0)
+	resetReq.CurrExecutionInfo.LastEventTaskID = 0
 	s.Equal(true, ok)
 	s.Equal(true, resetReq.UpdateCurr)
 	compareCurrExeInfo.State = p.WorkflowStateCompleted
@@ -808,10 +819,11 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	s.Equal(int64(34), resetReq.InsertExecutionInfo.DecisionScheduleID)
 	s.Equal(int64(35), resetReq.InsertExecutionInfo.NextEventID)
 
-	// one activity task and one decision task
-	s.Equal(2, len(resetReq.InsertTransferTasks))
+	// one activity task, one decision task and one record workflow started task
+	s.Equal(3, len(resetReq.InsertTransferTasks))
 	s.Equal(p.TransferTaskTypeActivityTask, resetReq.InsertTransferTasks[0].GetType())
 	s.Equal(p.TransferTaskTypeDecisionTask, resetReq.InsertTransferTasks[1].GetType())
+	s.Equal(p.TransferTaskTypeRecordWorkflowStarted, resetReq.InsertTransferTasks[2].GetType())
 
 	// WF timeout task, user timer, activity timeout timer, activity retry timer
 	s.Equal(3, len(resetReq.InsertTimerTasks))
@@ -865,6 +877,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication_WithRequestCance
 	testDomainEntry := cache.NewDomainCacheEntryForTest(&p.DomainInfo{ID: validDomainID}, &p.DomainConfig{Retention: 1})
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(testDomainEntry, nil)
 	s.mockDomainCache.On("GetDomain", mock.Anything).Return(testDomainEntry, nil)
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
 
 	request := &h.ResetWorkflowExecutionRequest{}
 	_, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
@@ -960,6 +973,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication_WithRequestCance
 		MaxEventID:    int64(35),
 		PageSize:      defaultHistoryPageSize,
 		NextPageToken: nil,
+		ShardID:       common.IntPtr(s.shardID),
 	}
 
 	taskList := &workflow.TaskList{
@@ -1419,9 +1433,10 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication_WithRequestCance
 	s.mockExecutionMgr.On("GetWorkflowExecution", currGwmsRequest).Return(currGwmsResponse, nil).Once()
 	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", readHistoryReq).Return(readHistoryResp, nil).Once()
 	s.mockHistoryV2Mgr.On("CompleteForkBranch", mock.Anything).Return(nil).Maybe()
-	s.mockClusterMetadata.On("IsArchivalEnabled").Return(false)
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
+
 	_, err = s.historyEngine.ResetWorkflowExecution(context.Background(), request)
-	s.EqualError(err, "BadRequestError{Message: it is not allowed resetting to a point that workflow has pending request cancel }")
+	s.EqualError(err, "BadRequestError{Message: it is not allowed resetting to a point that workflow has pending request cancel.}")
 }
 
 func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCurrent() {
@@ -1438,10 +1453,11 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 					ClusterName: "standby",
 				},
 			},
-		}, cluster.GetTestClusterMetadata(true, true))
+		}, cluster.GetTestClusterMetadata(true, true, false))
 	// override domain cache
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(testDomainEntry, nil)
 	s.mockDomainCache.On("GetDomain", mock.Anything).Return(testDomainEntry, nil)
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
 
 	request := &h.ResetWorkflowExecutionRequest{}
 	_, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
@@ -1547,6 +1563,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 		MaxEventID:    int64(35),
 		PageSize:      defaultHistoryPageSize,
 		NextPageToken: nil,
+		ShardID:       common.IntPtr(s.shardID),
 	}
 
 	taskList := &workflow.TaskList{
@@ -2006,10 +2023,12 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	completeReq := &p.CompleteForkBranchRequest{
 		BranchToken: newBranchToken,
 		Success:     true,
+		ShardID:     common.IntPtr(s.shardID),
 	}
 	completeReqErr := &p.CompleteForkBranchRequest{
 		BranchToken: newBranchToken,
 		Success:     false,
+		ShardID:     common.IntPtr(s.shardID),
 	}
 
 	appendV1Resp := &p.AppendHistoryEventsResponse{
@@ -2029,8 +2048,9 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(appendV1Resp, nil).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(appendV2Resp, nil).Once()
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", mock.Anything).Return("active")
-	s.mockClusterMetadata.On("IsArchivalEnabled").Return(false)
 	s.mockExecutionMgr.On("ResetWorkflowExecution", mock.Anything).Return(nil).Once()
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
+
 	response, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
 	s.Nil(err)
 	s.NotNil(response.RunId)
@@ -2068,6 +2088,8 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	resetCall := calls[3]
 	s.Equal("ResetWorkflowExecution", resetCall.Method)
 	resetReq, ok := resetCall.Arguments[0].(*p.ResetWorkflowExecutionRequest)
+	s.True(resetReq.CurrExecutionInfo.LastEventTaskID > 0)
+	resetReq.CurrExecutionInfo.LastEventTaskID = 0
 	s.Equal(true, ok)
 	s.Equal(true, resetReq.UpdateCurr)
 	s.Equal(p.WorkflowStateRunning, resetReq.PrevRunState)
@@ -2090,10 +2112,11 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	s.Equal(int64(34), resetReq.InsertExecutionInfo.DecisionScheduleID)
 	s.Equal(int64(35), resetReq.InsertExecutionInfo.NextEventID)
 
-	s.Equal(3, len(resetReq.InsertTransferTasks))
+	s.Equal(4, len(resetReq.InsertTransferTasks))
 	s.Equal(p.TransferTaskTypeActivityTask, resetReq.InsertTransferTasks[0].GetType())
 	s.Equal(p.TransferTaskTypeActivityTask, resetReq.InsertTransferTasks[1].GetType())
 	s.Equal(p.TransferTaskTypeDecisionTask, resetReq.InsertTransferTasks[2].GetType())
+	s.Equal(p.TransferTaskTypeRecordWorkflowStarted, resetReq.InsertTransferTasks[3].GetType())
 
 	// WF timeout task, user timer, activity timeout timer, activity retry timer
 	s.Equal(3, len(resetReq.InsertTimerTasks))
@@ -2107,9 +2130,10 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	s.Equal(2, len(resetReq.InsertActivityInfos))
 	s.assertActivityIDs([]string{actIDRetry, actIDNotStarted}, resetReq.InsertActivityInfos)
 
-	s.Equal(2, len(resetReq.InsertReplicationTasks))
+	s.Equal(1, len(resetReq.InsertReplicationTasks))
 	s.Equal(p.ReplicationTaskTypeHistory, resetReq.InsertReplicationTasks[0].GetType())
-	s.Equal(p.ReplicationTaskTypeHistory, resetReq.InsertReplicationTasks[1].GetType())
+	s.Equal(1, len(resetReq.CurrReplicationTasks))
+	s.Equal(p.ReplicationTaskTypeHistory, resetReq.CurrReplicationTasks[0].GetType())
 
 	compareRepState := copyReplicationState(forkRepState)
 	compareRepState.LastWriteEventID = 34
@@ -2137,10 +2161,11 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 					ClusterName: "standby",
 				},
 			},
-		}, cluster.GetTestClusterMetadata(true, true))
+		}, cluster.GetTestClusterMetadata(true, true, false))
 	// override domain cache
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(testDomainEntry, nil)
 	s.mockDomainCache.On("GetDomain", mock.Anything).Return(testDomainEntry, nil)
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
 
 	request := &h.ResetWorkflowExecutionRequest{}
 	_, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
@@ -2245,6 +2270,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 		MaxEventID:    int64(35),
 		PageSize:      defaultHistoryPageSize,
 		NextPageToken: nil,
+		ShardID:       common.IntPtr(s.shardID),
 	}
 
 	taskList := &workflow.TaskList{
@@ -2704,6 +2730,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 	completeReqErr := &p.CompleteForkBranchRequest{
 		BranchToken: newBranchToken,
 		Success:     false,
+		ShardID:     common.IntPtr(s.shardID),
 	}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", forkGwmsRequest).Return(forkGwmsResponse, nil).Once()
@@ -2713,9 +2740,10 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 	s.mockHistoryV2Mgr.On("ForkHistoryBranch", mock.Anything).Return(forkResp, nil).Once()
 	s.mockHistoryV2Mgr.On("CompleteForkBranch", completeReqErr).Return(nil).Once()
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", mock.Anything).Return("standby")
-	s.mockClusterMetadata.On("IsArchivalEnabled").Return(false)
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
+
 	_, err = s.historyEngine.ResetWorkflowExecution(context.Background(), request)
-	s.EqualError(err, "DomainNotActiveError{Message: Domain: testDomainName is active in cluster: standby, while current cluster active is a standby cluster., DomainName: testDomainName, CurrentCluster: active, ActiveCluster: standby}")
+	s.IsType(&shared.DomainNotActiveError{}, err)
 }
 
 func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurrent() {
@@ -2732,10 +2760,11 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 					ClusterName: "standby",
 				},
 			},
-		}, cluster.GetTestClusterMetadata(true, true))
+		}, cluster.GetTestClusterMetadata(true, true, false))
 	// override domain cache
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(testDomainEntry, nil)
 	s.mockDomainCache.On("GetDomain", mock.Anything).Return(testDomainEntry, nil)
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
 
 	request := &h.ResetWorkflowExecutionRequest{}
 	_, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
@@ -2842,6 +2871,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 		MaxEventID:    int64(35),
 		PageSize:      defaultHistoryPageSize,
 		NextPageToken: nil,
+		ShardID:       common.IntPtr(s.shardID),
 	}
 
 	taskList := &workflow.TaskList{
@@ -3301,10 +3331,12 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 	completeReq := &p.CompleteForkBranchRequest{
 		BranchToken: newBranchToken,
 		Success:     true,
+		ShardID:     common.IntPtr(s.shardID),
 	}
 	completeReqErr := &p.CompleteForkBranchRequest{
 		BranchToken: newBranchToken,
 		Success:     false,
+		ShardID:     common.IntPtr(s.shardID),
 	}
 
 	appendV2Resp := &p.AppendHistoryNodesResponse{
@@ -3372,10 +3404,11 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 	s.Equal(int64(34), resetReq.InsertExecutionInfo.DecisionScheduleID)
 	s.Equal(int64(35), resetReq.InsertExecutionInfo.NextEventID)
 
-	s.Equal(3, len(resetReq.InsertTransferTasks))
+	s.Equal(4, len(resetReq.InsertTransferTasks))
 	s.Equal(p.TransferTaskTypeActivityTask, resetReq.InsertTransferTasks[0].GetType())
 	s.Equal(p.TransferTaskTypeActivityTask, resetReq.InsertTransferTasks[1].GetType())
 	s.Equal(p.TransferTaskTypeDecisionTask, resetReq.InsertTransferTasks[2].GetType())
+	s.Equal(p.TransferTaskTypeRecordWorkflowStarted, resetReq.InsertTransferTasks[3].GetType())
 
 	// WF timeout task, user timer, activity timeout timer, activity retry timer
 	s.Equal(3, len(resetReq.InsertTimerTasks))
@@ -3418,10 +3451,11 @@ func (s *resetorSuite) TestApplyReset() {
 					ClusterName: "standby",
 				},
 			},
-		}, cluster.GetTestClusterMetadata(true, true))
+		}, cluster.GetTestClusterMetadata(true, true, false))
 	// override domain cache
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(testDomainEntry, nil)
 	s.mockDomainCache.On("GetDomain", mock.Anything).Return(testDomainEntry, nil)
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
 
 	mockTxProcessor := &MockTransferQueueProcessor{}
 	mockTimerProcessor := &MockTimerQueueProcessor{}
@@ -3514,6 +3548,7 @@ func (s *resetorSuite) TestApplyReset() {
 		MaxEventID:    int64(30),
 		PageSize:      defaultHistoryPageSize,
 		NextPageToken: nil,
+		ShardID:       common.IntPtr(s.shardID),
 	}
 
 	taskList := &workflow.TaskList{
@@ -3912,6 +3947,7 @@ func (s *resetorSuite) TestApplyReset() {
 		ForkBranchToken: forkBranchToken,
 		ForkNodeID:      30,
 		Info:            historyGarbageCleanupInfo(domainID, wid, newRunID),
+		ShardID:         common.IntPtr(s.shardID),
 	}
 	forkResp := &p.ForkHistoryBranchResponse{
 		NewBranchToken: newBranchToken,
@@ -3920,10 +3956,12 @@ func (s *resetorSuite) TestApplyReset() {
 	completeReq := &p.CompleteForkBranchRequest{
 		BranchToken: newBranchToken,
 		Success:     true,
+		ShardID:     common.IntPtr(s.shardID),
 	}
 	completeReqErr := &p.CompleteForkBranchRequest{
 		BranchToken: newBranchToken,
 		Success:     false,
+		ShardID:     common.IntPtr(s.shardID),
 	}
 
 	historyAfterReset := &workflow.History{
@@ -3989,7 +4027,8 @@ func (s *resetorSuite) TestApplyReset() {
 		BranchToken:   newBranchToken,
 		Events:        historyAfterReset.Events,
 		TransactionID: 1,
-		Encoding:      common.EncodingTypeJSON,
+		Encoding:      common.EncodingType(s.config.EventEncodingType(domainID)),
+		ShardID:       common.IntPtr(s.shardID),
 	}
 	appendV2Resp := &p.AppendHistoryNodesResponse{
 		Size: 200,
@@ -4011,7 +4050,6 @@ func (s *resetorSuite) TestApplyReset() {
 	s.mockHistoryV2Mgr.On("CompleteForkBranch", completeReq).Return(nil).Once()
 	s.mockHistoryV2Mgr.On("CompleteForkBranch", completeReqErr).Return(nil).Maybe()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", appendV2Req).Return(appendV2Resp, nil).Once()
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", mock.Anything).Return("standby")
 	s.mockExecutionMgr.On("ResetWorkflowExecution", mock.Anything).Return(nil).Once()
 	err := s.resetor.ApplyResetEvent(context.Background(), request, domainID, wid, currRunID)
 	s.Nil(err)
@@ -4091,4 +4129,120 @@ func (s *resetorSuite) TestApplyReset() {
 	s.Nil(resetReq.InsertSignalInfos)
 	s.Nil(resetReq.InsertSignalRequestedIDs)
 	s.Equal(0, len(resetReq.InsertRequestCancelInfos))
+}
+
+func TestFindAutoResetPoint(t *testing.T) {
+	// case 1: nil
+	_, pt := FindAutoResetPoint(nil, nil)
+	assert.Nil(t, pt)
+
+	// case 2: empty
+	_, pt = FindAutoResetPoint(&workflow.BadBinaries{}, &workflow.ResetPoints{})
+	assert.Nil(t, pt)
+
+	pt0 := &workflow.ResetPointInfo{
+		BinaryChecksum: common.StringPtr("abc"),
+		Resettable:     common.BoolPtr(true),
+	}
+	pt1 := &workflow.ResetPointInfo{
+		BinaryChecksum: common.StringPtr("def"),
+		Resettable:     common.BoolPtr(true),
+	}
+	pt3 := &workflow.ResetPointInfo{
+		BinaryChecksum: common.StringPtr("ghi"),
+		Resettable:     common.BoolPtr(false),
+	}
+
+	expiredNowNano := time.Now().UnixNano() - int64(time.Hour)
+	notExpiredNowNano := time.Now().UnixNano() + int64(time.Hour)
+	pt4 := &workflow.ResetPointInfo{
+		BinaryChecksum:   common.StringPtr("expired"),
+		Resettable:       common.BoolPtr(true),
+		ExpiringTimeNano: common.Int64Ptr(expiredNowNano),
+	}
+
+	pt5 := &workflow.ResetPointInfo{
+		BinaryChecksum:   common.StringPtr("notExpired"),
+		Resettable:       common.BoolPtr(true),
+		ExpiringTimeNano: common.Int64Ptr(notExpiredNowNano),
+	}
+
+	// case 3: two intersection
+	_, pt = FindAutoResetPoint(&workflow.BadBinaries{
+		Binaries: map[string]*workflow.BadBinaryInfo{
+			"abc": {},
+			"def": {},
+		},
+	}, &workflow.ResetPoints{
+		Points: []*workflow.ResetPointInfo{
+			pt0, pt1, pt3,
+		},
+	})
+	assert.Equal(t, pt.String(), pt0.String())
+
+	// case 4: one intersection
+	_, pt = FindAutoResetPoint(&workflow.BadBinaries{
+		Binaries: map[string]*workflow.BadBinaryInfo{
+			"none":    {},
+			"def":     {},
+			"expired": {},
+		},
+	}, &workflow.ResetPoints{
+		Points: []*workflow.ResetPointInfo{
+			pt4, pt0, pt1, pt3,
+		},
+	})
+	assert.Equal(t, pt.String(), pt1.String())
+
+	// case 4: no intersection
+	_, pt = FindAutoResetPoint(&workflow.BadBinaries{
+		Binaries: map[string]*workflow.BadBinaryInfo{
+			"none1": {},
+			"none2": {},
+		},
+	}, &workflow.ResetPoints{
+		Points: []*workflow.ResetPointInfo{
+			pt0, pt1, pt3,
+		},
+	})
+	assert.Nil(t, pt)
+
+	// case 5: not resettable
+	_, pt = FindAutoResetPoint(&workflow.BadBinaries{
+		Binaries: map[string]*workflow.BadBinaryInfo{
+			"none1": {},
+			"ghi":   {},
+		},
+	}, &workflow.ResetPoints{
+		Points: []*workflow.ResetPointInfo{
+			pt0, pt1, pt3,
+		},
+	})
+	assert.Nil(t, pt)
+
+	// case 6: one intersection of expired
+	_, pt = FindAutoResetPoint(&workflow.BadBinaries{
+		Binaries: map[string]*workflow.BadBinaryInfo{
+			"none":    {},
+			"expired": {},
+		},
+	}, &workflow.ResetPoints{
+		Points: []*workflow.ResetPointInfo{
+			pt0, pt1, pt3, pt4, pt5,
+		},
+	})
+	assert.Nil(t, pt)
+
+	// case 7: one intersection of not expred
+	_, pt = FindAutoResetPoint(&workflow.BadBinaries{
+		Binaries: map[string]*workflow.BadBinaryInfo{
+			"none":       {},
+			"notExpired": {},
+		},
+	}, &workflow.ResetPoints{
+		Points: []*workflow.ResetPointInfo{
+			pt0, pt1, pt3, pt4, pt5,
+		},
+	})
+	assert.Equal(t, pt.String(), pt5.String())
 }

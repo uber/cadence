@@ -21,13 +21,13 @@
 package history
 
 import (
-	"github.com/uber-common/bark"
 	"time"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -45,8 +45,9 @@ type (
 		eventsMgr     persistence.HistoryManager
 		eventsV2Mgr   persistence.HistoryV2Manager
 		disabled      bool
-		logger        bark.Logger
+		logger        log.Logger
 		metricsClient metrics.Client
+		shardID       *int
 	}
 
 	eventKey struct {
@@ -65,26 +66,25 @@ var _ eventsCache = (*eventsCacheImpl)(nil)
 
 func newEventsCache(shardCtx ShardContext) eventsCache {
 	config := shardCtx.GetConfig()
-
+	shardID := common.IntPtr(shardCtx.GetShardID())
 	return newEventsCacheWithOptions(config.EventsCacheInitialSize(), config.EventsCacheMaxSize(), config.EventsCacheTTL(),
-		shardCtx.GetHistoryManager(), shardCtx.GetHistoryV2Manager(), false, shardCtx.GetLogger(), shardCtx.GetMetricsClient())
+		shardCtx.GetHistoryManager(), shardCtx.GetHistoryV2Manager(), false, shardCtx.GetLogger(), shardCtx.GetMetricsClient(), shardID)
 }
 
 func newEventsCacheWithOptions(initialSize, maxSize int, ttl time.Duration, eventsMgr persistence.HistoryManager,
-	eventsV2Mgr persistence.HistoryV2Manager, disabled bool, logger bark.Logger, metrics metrics.Client) *eventsCacheImpl {
+	eventsV2Mgr persistence.HistoryV2Manager, disabled bool, logger log.Logger, metrics metrics.Client, shardID *int) *eventsCacheImpl {
 	opts := &cache.Options{}
 	opts.InitialCapacity = initialSize
 	opts.TTL = ttl
 
 	return &eventsCacheImpl{
-		Cache:       cache.New(maxSize, opts),
-		eventsMgr:   eventsMgr,
-		eventsV2Mgr: eventsV2Mgr,
-		disabled:    disabled,
-		logger: logger.WithFields(bark.Fields{
-			logging.TagWorkflowComponent: logging.TagValueEventsCacheComponent,
-		}),
+		Cache:         cache.New(maxSize, opts),
+		eventsMgr:     eventsMgr,
+		eventsV2Mgr:   eventsV2Mgr,
+		disabled:      disabled,
+		logger:        logger.WithTags(tag.ComponentEventsCache),
 		metricsClient: metrics,
+		shardID:       shardID,
 	}
 }
 
@@ -116,13 +116,12 @@ func (e *eventsCacheImpl) getEvent(domainID, workflowID, runID string, firstEven
 	event, err := e.getHistoryEventFromStore(domainID, workflowID, runID, firstEventID, eventID, eventStoreVersion, branchToken)
 	if err != nil {
 		e.metricsClient.IncCounter(metrics.EventsCacheGetEventScope, metrics.CacheFailures)
-		e.logger.WithFields(bark.Fields{
-			logging.TagDomainID:            domainID,
-			logging.TagWorkflowExecutionID: workflowID,
-			logging.TagWorkflowRunID:       runID,
-			logging.TagEventID:             eventID,
-			logging.TagErr:                 err,
-		}).Error("EventsCache unable to retrieve event from store")
+		e.logger.Error("EventsCache unable to retrieve event from store",
+			tag.Error(err),
+			tag.WorkflowID(workflowID),
+			tag.WorkflowRunID(runID),
+			tag.WorkflowDomainID(domainID),
+			tag.WorkflowEventID(eventID))
 		return nil, err
 	}
 
@@ -162,6 +161,7 @@ func (e *eventsCacheImpl) getHistoryEventFromStore(domainID, workflowID, runID s
 			MaxEventID:    eventID + 1,
 			PageSize:      1,
 			NextPageToken: nil,
+			ShardID:       e.shardID,
 		})
 
 		if err != nil {

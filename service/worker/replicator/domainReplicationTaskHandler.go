@@ -23,9 +23,9 @@ package replicator
 import (
 	"errors"
 
-	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -53,14 +53,19 @@ var (
 // NOTE: the counterpart of domain replication transmission logic is in service/fropntend package
 
 type (
+	// DomainReplicator is the interface which can replicate the domain
+	DomainReplicator interface {
+		HandleReceivingTask(task *replicator.DomainTaskAttributes) error
+	}
+
 	domainReplicatorImpl struct {
 		metadataManagerV2 persistence.MetadataManager
-		logger            bark.Logger
+		logger            log.Logger
 	}
 )
 
 // NewDomainReplicator create a new instance odf domain replicator
-func NewDomainReplicator(metadataManagerV2 persistence.MetadataManager, logger bark.Logger) DomainReplicator {
+func NewDomainReplicator(metadataManagerV2 persistence.MetadataManager, logger log.Logger) DomainReplicator {
 	return &domainReplicatorImpl{
 		metadataManagerV2: metadataManagerV2,
 		logger:            logger,
@@ -174,6 +179,9 @@ func (domainReplicator *domainReplicatorImpl) handleDomainUpdateReplicationTask(
 			EmitMetric:     task.Config.GetEmitMetric(),
 			ArchivalBucket: task.Config.GetArchivalBucketName(),
 			ArchivalStatus: task.Config.GetArchivalStatus(),
+		}
+		if task.Config.GetBadBinaries() != nil {
+			request.Config.BadBinaries = *task.Config.GetBadBinaries()
 		}
 		request.ReplicationConfig.Clusters = domainReplicator.convertClusterReplicationConfigFromThrift(task.ReplicationConfig.Clusters)
 		request.ConfigVersion = task.GetConfigVersion()

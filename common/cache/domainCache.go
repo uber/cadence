@@ -29,11 +29,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/errors"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -87,9 +89,9 @@ type (
 		cacheByID       *atomic.Value
 		metadataMgr     persistence.MetadataManager
 		clusterMetadata cluster.Metadata
-		timeSource      common.TimeSource
+		timeSource      clock.TimeSource
 		metricsClient   metrics.Client
-		logger          bark.Logger
+		logger          log.Logger
 
 		callbackLock     sync.Mutex
 		prepareCallbacks map[int]PrepareCallbackFn
@@ -116,7 +118,7 @@ type (
 )
 
 // NewDomainCache creates a new instance of cache for holding onto domain information to reduce the load on persistence
-func NewDomainCache(metadataMgr persistence.MetadataManager, clusterMetadata cluster.Metadata, metricsClient metrics.Client, logger bark.Logger) DomainCache {
+func NewDomainCache(metadataMgr persistence.MetadataManager, clusterMetadata cluster.Metadata, metricsClient metrics.Client, logger log.Logger) DomainCache {
 	cache := &domainCache{
 		status:           domainCacheInitialized,
 		shutdownChan:     make(chan struct{}),
@@ -124,7 +126,7 @@ func NewDomainCache(metadataMgr persistence.MetadataManager, clusterMetadata clu
 		cacheByID:        &atomic.Value{},
 		metadataMgr:      metadataMgr,
 		clusterMetadata:  clusterMetadata,
-		timeSource:       common.NewRealTimeSource(),
+		timeSource:       clock.NewRealTimeSource(),
 		metricsClient:    metricsClient,
 		logger:           logger,
 		prepareCallbacks: make(map[int]PrepareCallbackFn),
@@ -288,7 +290,7 @@ func (c *domainCache) refreshLoop() {
 			timer.Reset(DomainCacheRefreshInterval)
 			err := c.refreshDomains()
 			if err != nil {
-				c.logger.Errorf("Error refreshing domain cache: %v", err)
+				c.logger.Error("Error refreshing domain cache", tag.Error(err))
 			}
 		}
 	}
@@ -354,13 +356,15 @@ UpdateLoop:
 			return err
 		}
 		c.updateNameToIDCache(newCacheNameToID, nextEntry.info.Name, nextEntry.info.ID)
-		if prevEntry != nil {
 
+		if prevEntry != nil {
 			prevEntries = append(prevEntries, prevEntry)
 			nextEntries = append(nextEntries, nextEntry)
 		}
 	}
 
+	// NOTE: READ REF BEFORE MODIFICATION
+	// ref: historyEngine.go registerDomainFailoverCallback function
 	c.callbackLock.Lock()
 	defer c.callbackLock.Unlock()
 	c.triggerDomainChangePrepareCallbackLocked()
@@ -536,6 +540,16 @@ func (c *domainCache) buildEntryFromRecord(record *persistence.GetDomainResponse
 	return newEntry
 }
 
+func copyResetBinary(bins workflow.BadBinaries) workflow.BadBinaries {
+	newbins := make(map[string]*workflow.BadBinaryInfo, len(bins.Binaries))
+	for k, v := range bins.Binaries {
+		newbins[k] = v
+	}
+	return workflow.BadBinaries{
+		Binaries: newbins,
+	}
+}
+
 func (entry *DomainCacheEntry) duplicate() *DomainCacheEntry {
 	// this is a deep copy
 	result := newDomainCacheEntry(entry.clusterMetadata)
@@ -555,6 +569,7 @@ func (entry *DomainCacheEntry) duplicate() *DomainCacheEntry {
 		EmitMetric:     entry.config.EmitMetric,
 		ArchivalBucket: entry.config.ArchivalBucket,
 		ArchivalStatus: entry.config.ArchivalStatus,
+		BadBinaries:    copyResetBinary(entry.config.BadBinaries),
 	}
 	result.replicationConfig = &persistence.DomainReplicationConfig{
 		ActiveClusterName: entry.replicationConfig.ActiveClusterName,

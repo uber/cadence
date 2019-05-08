@@ -62,7 +62,7 @@ CREATE TYPE workflow_execution (
   expiration_time                  timestamp, -- retry expiration time
   max_attempts                     int,    -- max number of attempts including initial non-retry attempt
   non_retriable_errors             list<text>,
-  event_store_version              int, -- to indicates which version of events persistence is using
+  event_store_version              int, -- indicates which version of events persistence is using
   signal_count                     int,
   branch_token                     blob,
   history_size                     bigint,
@@ -70,6 +70,9 @@ CREATE TYPE workflow_execution (
   next_event_id                    bigint,
   cron_schedule                    text,
   expiration_seconds               int,    -- retry expiration duration in seconds
+  last_event_task_id               bigint,
+  auto_reset_points                blob, -- the resetting points for auto-reset feature
+  auto_reset_points_encoding       text, -- encoding for auto_reset_points_data
 );
 
 -- Replication information for each cluster
@@ -116,9 +119,9 @@ CREATE TYPE replication_task (
   version                    bigint,  -- Used by ReplicationTask to set the failover version of the applied transaction
   last_replication_info      map<text, frozen<replication_info>>, -- Used by replication task to snapshot replication information when the transaction was applied
   scheduled_id               bigint, -- Used by ReplicationTask to sync activity info
-  event_store_version        int, -- indiciates which version of event store to query
+  event_store_version        int, -- indicates which version of event store to query
   branch_token               blob, -- if eventV2, then query with this token
-  new_run_event_store_version        int, -- indiciates which version of event store to query for new run(continueAsNew)
+  new_run_event_store_version        int, -- indicates which version of event store to query for new run(continueAsNew)
   new_run_branch_token               blob, -- if eventV2, then query with this token for new run(continueAsNew)
   reset_workflow             boolean, -- whether the task is for resetWorkflowExecution
 );
@@ -226,6 +229,7 @@ CREATE TYPE task_list (
   type             int, -- enum TaskRowType {ActivityTask, DecisionTask}
   ack_level        bigint, -- task_id of the last acknowledged message
   kind             int, -- enum TaskListKind {Normal, Sticky}
+  last_updated     timestamp
 );
 
 CREATE TYPE domain (
@@ -241,7 +245,9 @@ CREATE TYPE domain_config (
   retention   int,
   emit_metric boolean,
   archival_bucket text,
-  archival_status int
+  archival_status int,
+  bad_binaries    blob,
+  bad_binaries_encoding blob,
 );
 
 CREATE TYPE cluster_replication_config (
@@ -266,8 +272,8 @@ CREATE TYPE buffered_replication_task_info (
   version         bigint,
   history         frozen<serialized_event_batch>,
   new_run_history frozen<serialized_event_batch>,
-  event_store_version                int, -- indiciates which version of event store to query
-  new_run_event_store_version        int, -- indiciates which version of event store to query for new run(continueAsNew)
+  event_store_version                int, -- indicates which version of event store to query
+  new_run_event_store_version        int, -- indicates which version of event store to query for new run(continueAsNew)
 );
 
 -- for history v2 events
@@ -308,7 +314,7 @@ CREATE TABLE executions (
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
   };
 
--- events table is deprecated in favor of v2 talbes: history_node/history_tree
+-- events table is deprecated in favor of v2 tables: history_node/history_tree
 CREATE TABLE events (
   domain_id           uuid,
   workflow_id         text,

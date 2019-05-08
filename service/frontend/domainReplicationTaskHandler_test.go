@@ -21,17 +21,14 @@
 package frontend
 
 import (
-	"log"
-	"os"
 	"testing"
 
 	"github.com/pborman/uuid"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
 )
@@ -50,9 +47,6 @@ func TestDomainReplicatorSuite(t *testing.T) {
 }
 
 func (s *domainReplicatorSuite) SetupSuite() {
-	if testing.Verbose() {
-		log.SetOutput(os.Stdout)
-	}
 }
 
 func (s *domainReplicatorSuite) TearDownSuite() {
@@ -63,9 +57,8 @@ func (s *domainReplicatorSuite) SetupTest() {
 	s.kafkaProducer = &mocks.KafkaProducer{}
 	s.domainReplicator = NewDomainReplicator(
 		s.kafkaProducer,
-		bark.NewLoggerFromLogrus(logrus.New()),
+		loggerimpl.NewDevelopmentForTest(s.Suite),
 	).(*domainReplicatorImpl)
-
 }
 
 func (s *domainReplicatorSuite) TearDownTest() {
@@ -111,6 +104,7 @@ func (s *domainReplicatorSuite) TestHandleTransmissionTask_RegisterDomainTask_Is
 		EmitMetric:     emitMetric,
 		ArchivalBucket: archivalBucket,
 		ArchivalStatus: archivalStatus,
+		BadBinaries:    shared.BadBinaries{},
 	}
 	replicationConfig := &p.DomainReplicationConfig{
 		ActiveClusterName: clusterActive,
@@ -135,6 +129,7 @@ func (s *domainReplicatorSuite) TestHandleTransmissionTask_RegisterDomainTask_Is
 				EmitMetric:                             common.BoolPtr(emitMetric),
 				ArchivalBucketName:                     common.StringPtr(archivalBucket),
 				ArchivalStatus:                         common.ArchivalStatusPtr(archivalStatus),
+				BadBinaries:                            &shared.BadBinaries{},
 			},
 			ReplicationConfig: &shared.DomainReplicationConfiguration{
 				ActiveClusterName: common.StringPtr(clusterActive),
@@ -186,6 +181,7 @@ func (s *domainReplicatorSuite) TestHandleTransmissionTask_RegisterDomainTask_No
 		EmitMetric:     emitMetric,
 		ArchivalBucket: archivalBucket,
 		ArchivalStatus: archivalStatus,
+		BadBinaries:    shared.BadBinaries{},
 	}
 	replicationConfig := &p.DomainReplicationConfig{
 		ActiveClusterName: clusterActive,
@@ -236,6 +232,7 @@ func (s *domainReplicatorSuite) TestHandleTransmissionTask_UpdateDomainTask_IsGl
 		EmitMetric:     emitMetric,
 		ArchivalBucket: archivalBucket,
 		ArchivalStatus: archivalStatus,
+		BadBinaries:    shared.BadBinaries{},
 	}
 	replicationConfig := &p.DomainReplicationConfig{
 		ActiveClusterName: clusterActive,
@@ -260,6 +257,7 @@ func (s *domainReplicatorSuite) TestHandleTransmissionTask_UpdateDomainTask_IsGl
 				EmitMetric:                             common.BoolPtr(emitMetric),
 				ArchivalBucketName:                     common.StringPtr(archivalBucket),
 				ArchivalStatus:                         common.ArchivalStatusPtr(archivalStatus),
+				BadBinaries:                            &shared.BadBinaries{},
 			},
 			ReplicationConfig: &shared.DomainReplicationConfiguration{
 				ActiveClusterName: common.StringPtr(clusterActive),

@@ -26,18 +26,15 @@ import (
 	"strings"
 
 	"github.com/jmoiron/sqlx"
-
 	log "github.com/sirupsen/logrus"
-	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/environment"
 )
 
 const (
-	testWorkflowClusterHosts = "127.0.0.1"
-	testPort                 = 3306
-	testUser                 = "uber"
-	testPassword             = "uber"
-	testSchemaDir            = "schema/mysql/v56"
+	testUser      = "uber"
+	testPassword  = "uber"
+	testSchemaDir = "schema/mysql/v57"
 )
 
 // TestCluster allows executing cassandra operations in testing.
@@ -49,26 +46,24 @@ type TestCluster struct {
 }
 
 // NewTestCluster returns a new SQL test cluster
-func NewTestCluster(port int, dbName string, schemaDir string, driverName string) *TestCluster {
+func NewTestCluster(dbName string, port int, schemaDir string) *TestCluster {
+	var result TestCluster
+	result.dbName = dbName
+	if port == 0 {
+		port = environment.GetMySQLPort()
+	}
 	if schemaDir == "" {
 		schemaDir = testSchemaDir
 	}
-	if port == 0 {
-		port = testPort
-	}
-	if driverName == "" {
-		driverName = defaultDriverName
-	}
-	var result TestCluster
-	result.dbName = dbName
 	result.schemaDir = schemaDir
 	result.cfg = config.SQL{
 		User:            testUser,
 		Password:        testPassword,
-		ConnectAddr:     fmt.Sprintf("%v:%v", testWorkflowClusterHosts, port),
+		ConnectAddr:     fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), port),
 		ConnectProtocol: "tcp",
-		DriverName:      driverName,
+		DriverName:      defaultDriverName,
 		DatabaseName:    dbName,
+		NumShards:       4,
 	}
 	return &result
 }
@@ -118,7 +113,7 @@ func (s *TestCluster) CreateSession() {
 	var err error
 	s.db, err = newConnection(s.cfg)
 	if err != nil {
-		log.WithField(logging.TagErr, err).Fatal(`CreateSession`)
+		log.Fatal(`CreateSession`, err)
 	}
 }
 

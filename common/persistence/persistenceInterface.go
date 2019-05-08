@@ -41,9 +41,17 @@ type (
 	// TaskStore is a lower level of TaskManager
 	TaskStore = TaskManager
 	// MetadataStore is a lower level of MetadataManager
-	MetadataStore = MetadataManager
-	// VisibilityStore is the store interface for visibility
-	VisibilityStore = VisibilityManager
+	MetadataStore interface {
+		Closeable
+		GetName() string
+		CreateDomain(request *InternalCreateDomainRequest) (*CreateDomainResponse, error)
+		GetDomain(request *GetDomainRequest) (*InternalGetDomainResponse, error)
+		UpdateDomain(request *InternalUpdateDomainRequest) error
+		DeleteDomain(request *DeleteDomainRequest) error
+		DeleteDomainByName(request *DeleteDomainByNameRequest) error
+		ListDomains(request *ListDomainsRequest) (*InternalListDomainsResponse, error)
+		GetMetadata() (*GetMetadataResponse, error)
+	}
 
 	// ExecutionStore is used to manage workflow executions for Persistence layer
 	ExecutionStore interface {
@@ -56,8 +64,9 @@ type (
 		ResetMutableState(request *InternalResetMutableStateRequest) error
 		ResetWorkflowExecution(request *InternalResetWorkflowExecutionRequest) error
 
-		CreateWorkflowExecution(request *CreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error)
+		CreateWorkflowExecution(request *InternalCreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error)
 		DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error
+		DeleteCurrentWorkflowExecution(request *DeleteCurrentWorkflowExecutionRequest) error
 		GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)
 
 		// Transfer task related methods
@@ -112,12 +121,79 @@ type (
 		GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error)
 	}
 
+	// VisibilityStore is the store interface for visibility
+	VisibilityStore interface {
+		Closeable
+		GetName() string
+		RecordWorkflowExecutionStarted(request *InternalRecordWorkflowExecutionStartedRequest) error
+		RecordWorkflowExecutionClosed(request *InternalRecordWorkflowExecutionClosedRequest) error
+		ListOpenWorkflowExecutions(request *ListWorkflowExecutionsRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListClosedWorkflowExecutions(request *ListWorkflowExecutionsRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListOpenWorkflowExecutionsByType(request *ListWorkflowExecutionsByTypeRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListClosedWorkflowExecutionsByType(request *ListWorkflowExecutionsByTypeRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListOpenWorkflowExecutionsByWorkflowID(request *ListWorkflowExecutionsByWorkflowIDRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListClosedWorkflowExecutionsByWorkflowID(request *ListWorkflowExecutionsByWorkflowIDRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListClosedWorkflowExecutionsByStatus(request *ListClosedWorkflowExecutionsByStatusRequest) (*InternalListWorkflowExecutionsResponse, error)
+		GetClosedWorkflowExecution(request *GetClosedWorkflowExecutionRequest) (*InternalGetClosedWorkflowExecutionResponse, error)
+		DeleteWorkflowExecution(request *VisibilityDeleteWorkflowExecutionRequest) error
+		ListWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*InternalListWorkflowExecutionsResponse, error)
+		ScanWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*InternalListWorkflowExecutionsResponse, error)
+		CountWorkflowExecutions(request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error)
+	}
+
 	// DataBlob represents a blob for any binary data.
 	// It contains raw data, and metadata(right now only encoding) in other field
 	// Note that it should be only used for Persistence layer, below dataInterface and application(historyEngine/etc)
 	DataBlob struct {
 		Encoding common.EncodingType
 		Data     []byte
+	}
+
+	// InternalCreateWorkflowExecutionRequest is used to write a new workflow execution
+	InternalCreateWorkflowExecutionRequest struct {
+		RequestID                   string
+		DomainID                    string
+		Execution                   workflow.WorkflowExecution
+		ParentDomainID              string
+		ParentExecution             workflow.WorkflowExecution
+		InitiatedID                 int64
+		TaskList                    string
+		WorkflowTypeName            string
+		WorkflowTimeout             int32
+		DecisionTimeoutValue        int32
+		ExecutionContext            []byte
+		LastEventTaskID             int64
+		NextEventID                 int64
+		LastProcessedEvent          int64
+		SignalCount                 int32
+		HistorySize                 int64
+		TransferTasks               []Task
+		ReplicationTasks            []Task
+		TimerTasks                  []Task
+		RangeID                     int64
+		DecisionVersion             int64
+		DecisionScheduleID          int64
+		DecisionStartedID           int64
+		DecisionStartToCloseTimeout int32
+		CreateWorkflowMode          int
+		PreviousRunID               string
+		PreviousLastWriteVersion    int64
+		ReplicationState            *ReplicationState
+		Attempt                     int32
+		HasRetryPolicy              bool
+		InitialInterval             int32
+		BackoffCoefficient          float64
+		MaximumInterval             int32
+		ExpirationTime              time.Time
+		MaximumAttempts             int32
+		NonRetriableErrors          []string
+		PreviousAutoResetPoints     *DataBlob
+		// 2 means using eventsV2, empty/0/1 means using events(V1)
+		EventStoreVersion int32
+		// for eventsV2: branchToken from historyPersistence
+		BranchToken       []byte
+		CronSchedule      string
+		ExpirationSeconds int32
 	}
 
 	// InternalWorkflowExecutionInfo describes a workflow execution for Persistence Interface
@@ -139,6 +215,7 @@ type (
 		State                        int
 		CloseStatus                  int
 		LastFirstEventID             int64
+		LastEventTaskID              int64
 		NextEventID                  int64
 		LastProcessedEvent           int64
 		StartTimestamp               time.Time
@@ -160,6 +237,7 @@ type (
 		ClientLibraryVersion         string
 		ClientFeatureVersion         string
 		ClientImpl                   string
+		AutoResetPoints              *DataBlob
 		// for retry
 		Attempt            int32
 		HasRetryPolicy     bool
@@ -255,17 +333,14 @@ type (
 
 	// InternalUpdateWorkflowExecutionRequest is used to update a workflow execution  for Persistence Interface
 	InternalUpdateWorkflowExecutionRequest struct {
-		ExecutionInfo        *InternalWorkflowExecutionInfo
-		ReplicationState     *ReplicationState
-		TransferTasks        []Task
-		TimerTasks           []Task
-		ReplicationTasks     []Task
-		DeleteTimerTask      Task
-		Condition            int64
-		RangeID              int64
-		ContinueAsNew        *CreateWorkflowExecutionRequest
-		FinishExecution      bool
-		FinishedExecutionTTL int32
+		ExecutionInfo    *InternalWorkflowExecutionInfo
+		ReplicationState *ReplicationState
+		TransferTasks    []Task
+		TimerTasks       []Task
+		ReplicationTasks []Task
+		Condition        int64
+		RangeID          int64
+		ContinueAsNew    *InternalCreateWorkflowExecutionRequest
 
 		// Mutable state
 		UpsertActivityInfos           []*InternalActivityInfo
@@ -319,6 +394,7 @@ type (
 		UpdateCurr           bool
 		CurrExecutionInfo    *InternalWorkflowExecutionInfo
 		CurrReplicationState *ReplicationState
+		CurrReplicationTasks []Task
 		CurrTransferTasks    []Task
 		CurrTimerTasks       []Task
 
@@ -350,9 +426,9 @@ type (
 
 	// InternalAppendHistoryNodesRequest is used to append a batch of history nodes
 	InternalAppendHistoryNodesRequest struct {
-		// true if it is the first append request to the branch
+		// True if it is the first append request to the branch
 		IsNewBranch bool
-		// the info for clean up data in background
+		// The info for clean up data in background
 		Info string
 		// The branch to be appended
 		BranchInfo workflow.HistoryBranch
@@ -360,8 +436,10 @@ type (
 		NodeID int64
 		// The events to be appended
 		Events *DataBlob
-		// requested TransactionID for conditional update
+		// Requested TransactionID for conditional update
 		TransactionID int64
+		// Used in sharded data stores to identify which shard to use
+		ShardID int
 	}
 
 	// InternalGetWorkflowExecutionResponse is the response to GetworkflowExecutionRequest for Persistence Interface
@@ -398,14 +476,16 @@ type (
 
 	// InternalForkHistoryBranchRequest is used to fork a history branch
 	InternalForkHistoryBranchRequest struct {
-		// The branch to be fork
+		// The base branch to fork from
 		ForkBranchInfo workflow.HistoryBranch
-		// The nodeID to fork from, the new branch will start from ForkNodeID
+		// The nodeID to fork from, the new branch will start from ( inclusive ), the base branch will stop at(exclusive)
 		ForkNodeID int64
 		// branchID of the new branch
 		NewBranchID string
 		// the info for clean up data in background
 		Info string
+		// Used in sharded data stores to identify which shard to use
+		ShardID int
 	}
 
 	// InternalForkHistoryBranchResponse is the response to ForkHistoryBranchRequest
@@ -418,6 +498,8 @@ type (
 	InternalDeleteHistoryBranchRequest struct {
 		// branch to be deleted
 		BranchInfo workflow.HistoryBranch
+		// Used in sharded data stores to identify which shard to use
+		ShardID int
 	}
 
 	// InternalReadHistoryBranchRequest is used to read a history branch
@@ -434,6 +516,8 @@ type (
 		PageSize int
 		// Pagination token
 		NextPageToken []byte
+		// Used in sharded data stores to identify which shard to use
+		ShardID int
 	}
 
 	// InternalCompleteForkBranchRequest is used to update some tree/branch meta data for forking
@@ -442,6 +526,8 @@ type (
 		BranchInfo workflow.HistoryBranch
 		// whether fork is successful
 		Success bool
+		// Used in sharded data stores to identify which shard to use
+		ShardID int
 	}
 
 	// InternalReadHistoryBranchResponse is the response to ReadHistoryBranchRequest
@@ -449,6 +535,112 @@ type (
 		// History events
 		History []*DataBlob
 		// Pagination token
+		NextPageToken []byte
+	}
+
+	// VisibilityWorkflowExecutionInfo is visibility info for internal response
+	VisibilityWorkflowExecutionInfo struct {
+		WorkflowID    string
+		RunID         string
+		TypeName      string
+		StartTime     time.Time
+		ExecutionTime time.Time
+		CloseTime     time.Time
+		Status        *workflow.WorkflowExecutionCloseStatus
+		HistoryLength int64
+		Memo          *DataBlob
+	}
+
+	// InternalListWorkflowExecutionsResponse is response from ListWorkflowExecutions
+	InternalListWorkflowExecutionsResponse struct {
+		Executions []*VisibilityWorkflowExecutionInfo
+		// Token to read next page if there are more workflow executions beyond page size.
+		// Use this to set NextPageToken on ListWorkflowExecutionsRequest to read the next page.
+		NextPageToken []byte
+	}
+
+	// InternalGetClosedWorkflowExecutionResponse is response from GetWorkflowExecution
+	InternalGetClosedWorkflowExecutionResponse struct {
+		Execution *VisibilityWorkflowExecutionInfo
+	}
+
+	// InternalRecordWorkflowExecutionStartedRequest request to RecordWorkflowExecutionStarted
+	InternalRecordWorkflowExecutionStartedRequest struct {
+		DomainUUID         string
+		WorkflowID         string
+		RunID              string
+		WorkflowTypeName   string
+		StartTimestamp     int64
+		ExecutionTimestamp int64
+		WorkflowTimeout    int64
+		TaskID             int64
+		Memo               *DataBlob
+	}
+
+	// InternalRecordWorkflowExecutionClosedRequest is request to RecordWorkflowExecutionClosed
+	InternalRecordWorkflowExecutionClosedRequest struct {
+		DomainUUID         string
+		WorkflowID         string
+		RunID              string
+		WorkflowTypeName   string
+		StartTimestamp     int64
+		ExecutionTimestamp int64
+		TaskID             int64
+		Memo               *DataBlob
+		CloseTimestamp     int64
+		Status             workflow.WorkflowExecutionCloseStatus
+		HistoryLength      int64
+		RetentionSeconds   int64
+	}
+
+	// InternalDomainConfig describes the domain configuration
+	InternalDomainConfig struct {
+		// NOTE: this retention is in days, not in seconds
+		Retention      int32
+		EmitMetric     bool
+		ArchivalBucket string
+		ArchivalStatus workflow.ArchivalStatus
+		BadBinaries    *DataBlob
+	}
+
+	// InternalCreateDomainRequest is used to create the domain
+	InternalCreateDomainRequest struct {
+		Info              *DomainInfo
+		Config            *InternalDomainConfig
+		ReplicationConfig *DomainReplicationConfig
+		IsGlobalDomain    bool
+		ConfigVersion     int64
+		FailoverVersion   int64
+	}
+
+	// InternalGetDomainResponse is the response for GetDomain
+	InternalGetDomainResponse struct {
+		Info                        *DomainInfo
+		Config                      *InternalDomainConfig
+		ReplicationConfig           *DomainReplicationConfig
+		IsGlobalDomain              bool
+		ConfigVersion               int64
+		FailoverVersion             int64
+		FailoverNotificationVersion int64
+		NotificationVersion         int64
+		TableVersion                int
+	}
+
+	// InternalUpdateDomainRequest is used to update domain
+	InternalUpdateDomainRequest struct {
+		Info                        *DomainInfo
+		Config                      *InternalDomainConfig
+		ReplicationConfig           *DomainReplicationConfig
+		ConfigVersion               int64
+		FailoverVersion             int64
+		FailoverNotificationVersion int64
+		NotificationVersion         int64
+		TableVersion                int
+	}
+
+	// InternalListDomainsResponse is the response for GetDomain
+	InternalListDomainsResponse struct {
+		Domains       []*InternalGetDomainResponse
 		NextPageToken []byte
 	}
 )
@@ -459,7 +651,7 @@ func NewDataBlob(data []byte, encodingType common.EncodingType) *DataBlob {
 		return nil
 	}
 	if encodingType != "thriftrw" && data[0] == 'Y' {
-		panic(fmt.Sprintf("Invlid incoding: \"%v\"", encodingType))
+		panic(fmt.Sprintf("Invalid incoding: \"%v\"", encodingType))
 	}
 	return &DataBlob{
 		Data:     data,
@@ -486,6 +678,8 @@ func (d *DataBlob) GetEncoding() common.EncodingType {
 		return common.EncodingTypeJSON
 	case common.EncodingTypeThriftRW:
 		return common.EncodingTypeThriftRW
+	case common.EncodingTypeEmpty:
+		return common.EncodingTypeEmpty
 	default:
 		return common.EncodingTypeUnknown
 	}

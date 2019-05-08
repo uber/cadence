@@ -21,22 +21,21 @@
 package history
 
 import (
-	"os"
 	"testing"
 	"time"
 
 	"github.com/pborman/uuid"
-
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/cron"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
@@ -47,7 +46,7 @@ import (
 type (
 	stateBuilderSuite struct {
 		suite.Suite
-		logger              bark.Logger
+		logger              log.Logger
 		mockExecutionMgr    *mocks.ExecutionManager
 		mockHistoryMgr      *mocks.HistoryManager
 		mockShardManager    *mocks.ShardManager
@@ -59,6 +58,7 @@ type (
 		mockShard           *shardContextImpl
 		mockMutableState    *mockMutableState
 		mockClientBean      *client.MockClientBean
+		mockEventsCache     *MockEventsCache
 
 		stateBuilder *stateBuilderImpl
 	}
@@ -70,9 +70,6 @@ func TestStateBuilderSuite(t *testing.T) {
 }
 
 func (s *stateBuilderSuite) SetupSuite() {
-	if testing.Verbose() {
-		log.SetOutput(os.Stdout)
-	}
 
 }
 
@@ -81,9 +78,7 @@ func (s *stateBuilderSuite) TearDownSuite() {
 }
 
 func (s *stateBuilderSuite) SetupTest() {
-	log2 := log.New()
-	log2.Level = log.DebugLevel
-	s.logger = bark.NewLoggerFromLogrus(log2)
+	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
 	s.mockHistoryMgr = &mocks.HistoryManager{}
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
@@ -93,7 +88,8 @@ func (s *stateBuilderSuite) SetupTest() {
 	s.mockMetadataMgr = &mocks.MetadataManager{}
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockClientBean = &client.MockClientBean{}
-	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean, s.logger)
+	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean)
+	s.mockEventsCache = &MockEventsCache{}
 
 	s.mockShard = &shardContextImpl{
 		service:                   s.mockService,
@@ -107,6 +103,7 @@ func (s *stateBuilderSuite) SetupTest() {
 		config:                    NewDynamicConfigForTest(),
 		logger:                    s.logger,
 		domainCache:               cache.NewDomainCache(s.mockMetadataMgr, s.mockClusterMetadata, metricsClient, s.logger),
+		eventsCache:               s.mockEventsCache,
 		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
 	}
 	s.mockMutableState = &mockMutableState{}
@@ -124,6 +121,7 @@ func (s *stateBuilderSuite) TearDownTest() {
 	s.mockProducer.AssertExpectations(s.T())
 	s.mockMetadataMgr.AssertExpectations(s.T())
 	s.mockClientBean.AssertExpectations(s.T())
+	s.mockEventsCache.AssertExpectations(s.T())
 }
 
 func (s *stateBuilderSuite) mockUpdateVersion(events ...*shared.HistoryEvent) {
@@ -136,7 +134,15 @@ func (s *stateBuilderSuite) toHistory(events ...*shared.HistoryEvent) []*shared.
 	return events
 }
 
-func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted() {
+func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted_NoCronSchedule() {
+	s.applyWorkflowExecutionStartedEventTest("")
+}
+
+func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted_WithCronSchedule() {
+	s.applyWorkflowExecutionStartedEventTest("* * * * *")
+}
+
+func (s *stateBuilderSuite) applyWorkflowExecutionStartedEventTest(cronSchedule string) {
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -149,6 +155,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted() 
 
 	executionInfo := &persistence.WorkflowExecutionInfo{
 		WorkflowTimeout: 100,
+		CronSchedule:    cronSchedule,
 	}
 
 	now := time.Now()
@@ -178,18 +185,37 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted() 
 		}, nil,
 	).Once()
 	s.mockMutableState.On("ReplicateWorkflowExecutionStartedEvent",
-		domainID, &parentDomainID, execution, requestID, event.WorkflowExecutionStartedEventAttributes).Once()
+		domainID, &parentDomainID, execution, requestID, event).Once()
 	s.mockUpdateVersion(event)
 	s.mockMutableState.On("GetExecutionInfo").Return(executionInfo)
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
-	s.Equal(1, len(s.stateBuilder.timerTasks))
-	timerTask, ok := s.stateBuilder.timerTasks[0].(*persistence.WorkflowTimeoutTask)
-	s.True(ok)
-	s.True(timerTask.VisibilityTimestamp.Equal(now.Add(time.Duration(executionInfo.WorkflowTimeout) * time.Second)))
 
-	s.Empty(s.stateBuilder.transferTasks)
+	expectedTimerTasksLength := 1
+	timeout := now.Add(time.Duration(executionInfo.WorkflowTimeout) * time.Second)
+	backoffDuration := cron.GetBackoffForNextSchedule(cronSchedule, now)
+	if backoffDuration != cron.NoBackoff {
+		expectedTimerTasksLength = 2
+		timeout = timeout.Add(backoffDuration)
+	}
+
+	s.Equal(expectedTimerTasksLength, len(s.stateBuilder.timerTasks))
+	for i := 0; i < expectedTimerTasksLength; i++ {
+		switch timerTask := s.stateBuilder.timerTasks[i].(type) {
+		case *persistence.WorkflowTimeoutTask:
+			s.True(timerTask.VisibilityTimestamp.Equal(timeout))
+		case *persistence.WorkflowBackoffTimerTask:
+			s.NotEqual(cron.NoBackoff, backoffDuration)
+			s.True(timerTask.VisibilityTimestamp.Equal(now.Add(backoffDuration)))
+		default:
+			s.FailNow("Unexpected timer task type.")
+		}
+	}
+
+	s.Equal(1, len(s.stateBuilder.transferTasks))
+	s.IsType(&persistence.RecordWorkflowStartedTask{}, s.stateBuilder.transferTasks[0])
+
 	s.Empty(s.stateBuilder.newRunTimerTasks)
 	s.Empty(s.stateBuilder.newRunTransferTasks)
 }
@@ -231,6 +257,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionTimedOut()
 	).Once()
 	s.mockMutableState.On("ReplicateWorkflowExecutionTimedoutEvent", event.GetEventId(), event).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -281,6 +308,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionTerminated
 	).Once()
 	s.mockMutableState.On("ReplicateWorkflowExecutionTerminatedEvent", event.GetEventId(), event).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -313,6 +341,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionSignaled()
 		WorkflowExecutionSignaledEventAttributes: &shared.WorkflowExecutionSignaledEventAttributes{},
 	}
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 	s.mockMutableState.On("ReplicateWorkflowExecutionSignaled", event).Once()
 
 	s.mockMutableState.On("ClearStickyness").Once()
@@ -361,6 +390,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionFailed() {
 	).Once()
 	s.mockMutableState.On("ReplicateWorkflowExecutionFailedEvent", event.GetEventId(), event).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -482,6 +512,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 	).Once()
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", continueAsNewEvent.GetVersion()).Return(sourceCluster).Once()
 	s.mockMutableState.On("ReplicateWorkflowExecutionContinuedAsNewEvent",
+		continueAsNewEvent.GetEventId(),
 		sourceCluster,
 		domainID,
 		continueAsNewEvent,
@@ -496,17 +527,19 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 			Attempt:         newRunDecisionAttempt,
 		},
 		mock.Anything,
-		int32(0),
+		int32(0), mock.Anything,
 	).Return(nil)
 	s.mockUpdateVersion(continueAsNewEvent)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	newRunHistory := &shared.History{Events: []*shared.HistoryEvent{newRunStartedEvent, newRunSignalEvent, newRunDecisionEvent}}
 	s.mockMutableState.On("ClearStickyness").Once()
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Twice()
 	_, _, newRunStateBuilder, err := s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(continueAsNewEvent), newRunHistory.Events, 0, 0)
 	s.Nil(err)
 	expectedNewRunStateBuilder := newMutableStateBuilderWithReplicationState(
 		s.mockClusterMetadata.GetCurrentClusterName(),
-		s.mockShard.GetConfig(),
+		s.mockShard,
 		s.mockShard.GetEventsCache(),
 		s.logger,
 		newRunStartedEvent.GetVersion(),
@@ -519,7 +552,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 			RunId:      common.StringPtr(newRunID),
 		},
 		newRunStateBuilder.GetExecutionInfo().CreateRequestID,
-		newRunStartedEvent.WorkflowExecutionStartedEventAttributes,
+		newRunStartedEvent,
 	)
 	expectedNewRunStateBuilder.ReplicateWorkflowExecutionSignaled(newRunSignalEvent)
 	expectedNewRunStateBuilder.ReplicateDecisionTaskScheduledEvent(
@@ -545,11 +578,14 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 	newRunTimerTask, ok := s.stateBuilder.newRunTimerTasks[0].(*persistence.WorkflowTimeoutTask)
 	s.True(ok)
 	s.True(newRunTimerTask.VisibilityTimestamp.Equal(now.Add(time.Duration(workflowTimeoutSecond) * time.Second)))
-	s.Equal([]persistence.Task{&persistence.DecisionTask{
-		DomainID:   domainID,
-		TaskList:   tasklist,
-		ScheduleID: newRunDecisionEvent.GetEventId(),
-	}}, s.stateBuilder.newRunTransferTasks)
+	s.Equal([]persistence.Task{
+		&persistence.RecordWorkflowStartedTask{},
+		&persistence.DecisionTask{
+			DomainID:   domainID,
+			TaskList:   tasklist,
+			ScheduleID: newRunDecisionEvent.GetEventId(),
+		},
+	}, s.stateBuilder.newRunTransferTasks)
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCompleted() {
@@ -589,6 +625,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCompleted(
 	).Once()
 	s.mockMutableState.On("ReplicateWorkflowExecutionCompletedEvent", event.GetEventId(), event).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -639,6 +676,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCanceled()
 	).Once()
 	s.mockMutableState.On("ReplicateWorkflowExecutionCanceledEvent", event.GetEventId(), event).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -672,6 +710,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCancelRequ
 
 	s.mockMutableState.On("ReplicateWorkflowExecutionCancelRequestedEvent", event).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -702,7 +741,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 
 	msBuilder := newMutableStateBuilderWithReplicationState(
 		"currentCluster",
-		s.mockShard.GetConfig(),
+		s.mockShard,
 		s.mockShard.GetEventsCache(),
 		s.logger,
 		version,
@@ -801,6 +840,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 	).Once()
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", continueAsNewEvent.GetVersion()).Return(sourceCluster).Once()
 	s.mockMutableState.On("ReplicateWorkflowExecutionContinuedAsNewEvent",
+		continueAsNewEvent.GetEventId(),
 		sourceCluster,
 		domainID,
 		continueAsNewEvent,
@@ -815,17 +855,21 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 			Attempt:         newRunDecisionAttempt,
 		},
 		mock.Anything,
-		int32(persistence.EventStoreVersionV2),
+		int32(persistence.EventStoreVersionV2), mock.Anything,
 	).Return(nil)
 	s.mockUpdateVersion(continueAsNewEvent)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	newRunHistory := &shared.History{Events: []*shared.HistoryEvent{newRunStartedEvent, newRunSignalEvent, newRunDecisionEvent}}
 	s.mockMutableState.On("ClearStickyness").Once()
-	_, _, newRunStateBuilder, err := stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(continueAsNewEvent), newRunHistory.Events, 0, persistence.EventStoreVersionV2)
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
+
+	_, _, newRunStateBuilder, err := stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(continueAsNewEvent), newRunHistory.Events,
+		0, persistence.EventStoreVersionV2)
 	s.Nil(err)
 	expectedNewRunStateBuilder := newMutableStateBuilderWithReplicationState(
 		s.mockClusterMetadata.GetCurrentClusterName(),
-		s.mockShard.GetConfig(),
+		s.mockShard,
 		s.mockShard.GetEventsCache(),
 		s.logger,
 		newRunStartedEvent.GetVersion(),
@@ -838,7 +882,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 			RunId:      common.StringPtr(newRunID),
 		},
 		newRunStateBuilder.GetExecutionInfo().CreateRequestID,
-		newRunStartedEvent.WorkflowExecutionStartedEventAttributes,
+		newRunStartedEvent,
 	)
 	expectedNewRunStateBuilder.ReplicateWorkflowExecutionSignaled(newRunSignalEvent)
 	expectedNewRunStateBuilder.ReplicateDecisionTaskScheduledEvent(
@@ -867,11 +911,14 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 	newRunTimerTask, ok := stateBuilder.newRunTimerTasks[0].(*persistence.WorkflowTimeoutTask)
 	s.True(ok)
 	s.True(newRunTimerTask.VisibilityTimestamp.Equal(now.Add(time.Duration(workflowTimeoutSecond) * time.Second)))
-	s.Equal([]persistence.Task{&persistence.DecisionTask{
-		DomainID:   domainID,
-		TaskList:   tasklist,
-		ScheduleID: newRunDecisionEvent.GetEventId(),
-	}}, stateBuilder.newRunTransferTasks)
+	s.Equal([]persistence.Task{
+		&persistence.RecordWorkflowStartedTask{},
+		&persistence.DecisionTask{
+			DomainID:   domainID,
+			TaskList:   tasklist,
+			ScheduleID: newRunDecisionEvent.GetEventId(),
+		},
+	}, stateBuilder.newRunTransferTasks)
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeTimerStarted() {
@@ -908,6 +955,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeTimerStarted() {
 	s.mockMutableState.On("UpdateUserTimer", ti.TimerID, ti).Once()
 	s.mockMutableState.On("ReplicateTimerStartedEvent", event).Return(ti).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -955,6 +1003,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeTimerFired() {
 	s.mockMutableState.On("UpdateUserTimer", ti.TimerID, ti).Once()
 	s.mockMutableState.On("ReplicateTimerFiredEvent", event).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -1001,6 +1050,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeTimerCanceled() {
 	}
 	s.mockMutableState.On("ReplicateTimerCanceledEvent", event).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -1068,6 +1118,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeStartChildWorkflowExecution
 		}, nil,
 	).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -1102,6 +1153,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeStartChildWorkflowExecution
 	}
 	s.mockMutableState.On("ReplicateStartChildWorkflowExecutionFailedEvent", event).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -1174,6 +1226,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeSignalExternalWorkflowExecu
 		}, nil,
 	).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -1211,6 +1264,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeSignalExternalWorkflowExecu
 	}
 	s.mockMutableState.On("ReplicateSignalExternalWorkflowExecutionFailedEvent", event).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -1277,6 +1331,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeRequestCancelExternalWorkfl
 		}, nil,
 	).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -1314,6 +1369,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeRequestCancelExternalWorkfl
 	}
 	s.mockMutableState.On("ReplicateRequestCancelExternalWorkflowExecutionFailedEvent", event).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -1343,6 +1399,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeRequestCancelActivityTaskFa
 		RequestCancelActivityTaskFailedEventAttributes: &shared.RequestCancelActivityTaskFailedEventAttributes{},
 	}
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -1372,6 +1429,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeMarkerRecorded() {
 		MarkerRecordedEventAttributes: &shared.MarkerRecordedEventAttributes{},
 	}
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -1402,6 +1460,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeExternalWorkflowExecutionSi
 	}
 	s.mockMutableState.On("ReplicateExternalWorkflowExecutionSignaled", event).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -1432,6 +1491,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeExternalWorkflowExecutionCa
 	}
 	s.mockMutableState.On("ReplicateExternalWorkflowExecutionCancelRequested", event).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -1532,6 +1592,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskStarted() {
 		(*decisionInfo)(nil), event.GetVersion(), scheduleID, event.GetEventId(), decisionRequestID, event.GetTimestamp()).Return(di).Once()
 	s.mockMutableState.On("UpdateDecision", di).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -1679,8 +1740,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskCompleted() {
 			StartedEventId:   common.Int64Ptr(startedID),
 		},
 	}
-	s.mockMutableState.On("ReplicateDecisionTaskCompletedEvent", scheduleID, startedID).Once()
+	s.mockMutableState.On("ReplicateDecisionTaskCompletedEvent", event).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -1711,6 +1773,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionTimed
 	}
 	s.mockMutableState.On("ReplicateChildWorkflowExecutionTimedOutEvent", event).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -1741,6 +1804,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionTermi
 	}
 	s.mockMutableState.On("ReplicateChildWorkflowExecutionTerminatedEvent", event).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -1771,6 +1835,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionStart
 	}
 	s.mockMutableState.On("ReplicateChildWorkflowExecutionStartedEvent", event).Return(nil).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -1801,6 +1866,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionFaile
 	}
 	s.mockMutableState.On("ReplicateChildWorkflowExecutionFailedEvent", event).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -1831,6 +1897,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionCompl
 	}
 	s.mockMutableState.On("ReplicateChildWorkflowExecutionCompletedEvent", event).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -1861,6 +1928,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionCance
 	}
 	s.mockMutableState.On("ReplicateChildWorkflowExecutionCanceledEvent", event).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -1890,6 +1958,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeCancelTimerFailed() {
 		CancelTimerFailedEventAttributes: &shared.CancelTimerFailedEventAttributes{},
 	}
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -1945,6 +2014,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskTimedOut() {
 	s.mockMutableState.On("UpdateActivity", ai).Return(nil).Once()
 	s.mockMutableState.On("ReplicateActivityTaskTimedOutEvent", event).Return(nil).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -2142,6 +2212,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskFailed() {
 	s.mockMutableState.On("UpdateActivity", ai).Return(nil).Once()
 	s.mockMutableState.On("ReplicateActivityTaskFailedEvent", event).Return(nil).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -2200,6 +2271,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskCompleted() {
 	s.mockMutableState.On("UpdateActivity", ai).Return(nil).Once()
 	s.mockMutableState.On("ReplicateActivityTaskCompletedEvent", event).Return(nil).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -2258,6 +2330,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskCanceled() {
 	s.mockMutableState.On("UpdateActivity", ai).Return(nil).Once()
 	s.mockMutableState.On("ReplicateActivityTaskCanceledEvent", event).Return(nil).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)
@@ -2291,6 +2364,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskCancelRequested
 	}
 	s.mockMutableState.On("ReplicateActivityTaskCancelRequestedEvent", event).Once()
 	s.mockUpdateVersion(event)
+	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil, 0, 0)

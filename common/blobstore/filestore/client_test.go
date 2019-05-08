@@ -23,16 +23,16 @@ package filestore
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
-	"github.com/uber-common/bark"
-	"github.com/uber/cadence/common/blobstore"
-	"github.com/uber/cadence/common/blobstore/blob"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/blobstore/blob"
 )
 
 const (
@@ -66,19 +66,7 @@ func (s *ClientSuite) TestNewClient_Fail_InvalidConfig() {
 		},
 	}
 
-	client, err := NewClient(invalidCfg, bark.NewNopLogger())
-	s.Error(err)
-	s.Nil(client)
-}
-
-func (s *ClientSuite) TestNewClient_Fail_SetupDirectoryFailure() {
-	dir, err := ioutil.TempDir("", "TestNewClient_Fail_SetupDirectoryFailure")
-	s.NoError(err)
-	defer os.RemoveAll(dir)
-	os.Chmod(dir, os.FileMode(0600))
-
-	cfg := s.constructConfig(dir)
-	client, err := NewClient(cfg, bark.NewNopLogger())
+	client, err := NewClient(invalidCfg)
 	s.Error(err)
 	s.Nil(client)
 }
@@ -90,7 +78,7 @@ func (s *ClientSuite) TestNewClient_Fail_WriteMetadataFilesFailure() {
 	s.NoError(mkdirAll(filepath.Join(dir, defaultBucketName, metadataFilename, "foo")))
 
 	cfg := s.constructConfig(dir)
-	client, err := NewClient(cfg, bark.NewNopLogger())
+	client, err := NewClient(cfg)
 	s.Error(err)
 	s.Nil(client)
 }
@@ -144,23 +132,6 @@ func (s *ClientSuite) TestDownload_Fail_BlobNotExists() {
 	s.NoError(err)
 	b, err := client.Download(context.Background(), defaultBucketName, key)
 	s.Equal(blobstore.ErrBlobNotExists, err)
-	s.Nil(b)
-}
-
-func (s *ClientSuite) TestDownload_Fail_NoPermissions() {
-	dir, err := ioutil.TempDir("", "TestDownload_Fail_NoPermissions")
-	s.NoError(err)
-	defer os.RemoveAll(dir)
-	client := s.constructClient(dir)
-
-	b := blob.NewBlob([]byte("blob body"), map[string]string{"tagKey": "tagValue"})
-	key, err := blob.NewKeyFromString("blob.blob")
-	s.NoError(err)
-	s.NoError(client.Upload(context.Background(), defaultBucketName, key, b))
-	os.Chmod(bucketItemPath(dir, defaultBucketName, key.String()), os.FileMode(0000))
-
-	b, err = client.Download(context.Background(), defaultBucketName, key)
-	s.Equal(ErrReadFile, err)
 	s.Nil(b)
 }
 
@@ -367,9 +338,24 @@ func (s *ClientSuite) TestBucketMetadata_Success() {
 	s.Equal(defaultBucketOwner, metadata.Owner)
 }
 
+func (s *ClientSuite) TestBucketExists() {
+	dir, err := ioutil.TempDir("", "TestBucketExists")
+	s.NoError(err)
+	defer os.RemoveAll(dir)
+	client := s.constructClient(dir)
+
+	exists, err := client.BucketExists(context.Background(), "bucket-not-exists")
+	s.NoError(err)
+	s.False(exists)
+
+	exists, err = client.BucketExists(context.Background(), defaultBucketName)
+	s.NoError(err)
+	s.True(exists)
+}
+
 func (s *ClientSuite) constructClient(storeDir string) blobstore.Client {
 	cfg := s.constructConfig(storeDir)
-	client, err := NewClient(cfg, bark.NewNopLogger())
+	client, err := NewClient(cfg)
 	s.NoError(err)
 	s.NotNil(client)
 	return client

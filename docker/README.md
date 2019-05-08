@@ -14,7 +14,10 @@ docker-compose up
 
 View metrics at localhost:8080/dashboard    
 View Cadence-Web at localhost:8088  
-Use Cadence-CLI with `docker run --rm ubercadence/cli:master`
+Use Cadence-CLI with `docker run --network=host --rm ubercadence/cli:master`
+
+For example to register new domain 'test-domain' with 1 retention day
+`docker run --network=host --rm ubercadence/cli:master --do test-domain domain register -rd 1`
 
 
 Using a pre-built image
@@ -47,6 +50,18 @@ docker-compose down
 docker-compose up
 ```
 
+Running cadence service with MySQL
+-----------------------------------------
+
+Run cadence with MySQL instead of cassandra, use following commads:
+
+```
+docker-compose -f docker-compose-mysql.yml up
+docker-compose -f docker-compose-mysql.yml down
+```
+
+Please note that SQL support is still in active developement and it is not production ready yet.
+
 Quickstart for production
 =========================
 In a typical production setting, dependencies (cassandra / statsd server) are
@@ -69,10 +84,11 @@ docker run -e CASSANDRA_CONSISTENCY=Quorum \            -- Default cassandra con
 ```
 Update docker-compose.yml when releasing new version
 =========================
-0. Creat new version tag in the repo
+0. Create new version tag in the repo
 1. Build the new docker image and push into docker hub
 ```bash
 docker build . -t ubercadence/server:THE.LATEST.VERSION  --build-arg git_branch=vTHE.LATEST.VERSION 
+docker login
 docker push ubercadence/server:THE.LATEST.VERSION
 ```
 2. Remember to update the docker-compose.yml to use latest version and check in to master

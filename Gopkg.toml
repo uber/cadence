@@ -55,8 +55,8 @@ ignored = ["github.com/uber/cadence/.gen"]
   name = "github.com/fatih/color"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/gocql/gocql"
+  revision = "56a164ee9f3135e9cfe725a6d25939f24cb2d044"
 
 [[constraint]]
   name = "github.com/golang/mock"
@@ -81,10 +81,6 @@ ignored = ["github.com/uber/cadence/.gen"]
 [[constraint]]
   name = "github.com/stretchr/testify"
   version = "1.2.2"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/uber-common/bark"
 
 [[constraint]]
   name = "github.com/uber-go/kafka-client"
@@ -142,3 +138,15 @@ ignored = ["github.com/uber/cadence/.gen"]
 [[constraint]]
   name = "github.com/robfig/cron"
   version = "1.1.0"
+
+[[constraint]]
+  name = "github.com/hashicorp/go-version.git"
+  version = "1.1.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/cch123/elasticsql"
+
+[[constraint]]
+  name = "github.com/valyala/fastjson"
+  version = "1.4.1"

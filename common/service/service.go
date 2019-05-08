@@ -26,22 +26,21 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/logging"
+	es "github.com/uber/cadence/common/elasticsearch"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
-
-	"github.com/uber-common/bark"
-	"github.com/uber-go/tally"
-	es "github.com/uber/cadence/common/elasticsearch"
-	"github.com/uber/ringpop-go"
+	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc"
 )
 
@@ -56,10 +55,12 @@ type (
 	// BootstrapParams holds the set of parameters
 	// needed to bootstrap a service
 	BootstrapParams struct {
-		Name                string
-		Logger              bark.Logger
+		Name            string
+		Logger          log.Logger
+		ThrottledLogger log.Logger
+
 		MetricScope         tally.Scope
-		RingpopFactory      RingpopFactory
+		MembershipFactory   MembershipMonitorFactory
 		RPCFactory          common.RPCFactory
 		PProfInitializer    common.PProfInitializer
 		PersistenceConfig   config.Persistence
@@ -73,29 +74,32 @@ type (
 		DispatcherProvider  client.DispatcherProvider
 		BlobstoreClient     blobstore.Client
 		DCRedirectionPolicy config.DCRedirectionPolicy
+		PublicClient        workflowserviceclient.Interface
 	}
 
-	// RingpopFactory provides a bootstrapped ringpop
-	RingpopFactory interface {
-		// CreateRingpop vends a bootstrapped ringpop object
-		CreateRingpop(d *yarpc.Dispatcher) (*ringpop.Ringpop, error)
+	// MembershipMonitorFactory provides a bootstrapped membership monitor
+	MembershipMonitorFactory interface {
+		// Create vends a bootstrapped membership monitor
+		Create(d *yarpc.Dispatcher) (membership.Monitor, error)
 	}
 
 	// Service contains the objects specific to this service
 	serviceImpl struct {
-		status                 int32
-		sName                  string
-		hostName               string
-		hostInfo               *membership.HostInfo
-		dispatcher             *yarpc.Dispatcher
-		rp                     *ringpop.Ringpop
-		rpFactory              RingpopFactory
-		membershipMonitor      membership.Monitor
-		rpcFactory             common.RPCFactory
-		pprofInitializer       common.PProfInitializer
-		clientBean             client.Bean
-		numberOfHistoryShards  int
-		logger                 bark.Logger
+		status                int32
+		sName                 string
+		hostName              string
+		hostInfo              *membership.HostInfo
+		dispatcher            *yarpc.Dispatcher
+		membershipFactory     MembershipMonitorFactory
+		membershipMonitor     membership.Monitor
+		rpcFactory            common.RPCFactory
+		pprofInitializer      common.PProfInitializer
+		clientBean            client.Bean
+		numberOfHistoryShards int
+		//New logger we are in favor of
+		logger          log.Logger
+		throttledLogger log.Logger
+
 		metricsScope           tally.Scope
 		runtimeMetricsReporter *metrics.RuntimeMetricsReporter
 		metricsClient          metrics.Client
@@ -106,6 +110,8 @@ type (
 	}
 )
 
+var _ Service = (*serviceImpl)(nil)
+
 // New instantiates a Service Instance
 // TODO: have a better name for Service.
 func New(params *BootstrapParams) Service {
@@ -113,8 +119,9 @@ func New(params *BootstrapParams) Service {
 		status:                common.DaemonStatusInitialized,
 		sName:                 params.Name,
 		logger:                params.Logger,
+		throttledLogger:       params.ThrottledLogger,
 		rpcFactory:            params.RPCFactory,
-		rpFactory:             params.RingpopFactory,
+		membershipFactory:     params.MembershipFactory,
 		pprofInitializer:      params.PProfInitializer,
 		metricsScope:          params.MetricScope,
 		numberOfHistoryShards: params.PersistenceConfig.NumHistoryShards,
@@ -124,7 +131,8 @@ func New(params *BootstrapParams) Service {
 		dispatcherProvider:    params.DispatcherProvider,
 		dynamicCollection:     dynamicconfig.NewCollection(params.DynamicConfig, params.Logger),
 	}
-	sVice.runtimeMetricsReporter = metrics.NewRuntimeMetricsReporter(params.MetricScope, time.Minute, sVice.logger)
+
+	sVice.runtimeMetricsReporter = metrics.NewRuntimeMetricsReporter(params.MetricScope, time.Minute, sVice.GetLogger())
 	sVice.dispatcher = sVice.rpcFactory.CreateDispatcher()
 	if sVice.dispatcher == nil {
 		sVice.logger.Fatal("Unable to create yarpc dispatcher")
@@ -132,7 +140,7 @@ func New(params *BootstrapParams) Service {
 
 	// Get the host name and set it on the service.  This is used for emitting metric with a tag for hostname
 	if hostName, err := os.Hostname(); err != nil {
-		sVice.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("Error getting hostname")
+		sVice.logger.WithTags(tag.Error(err)).Fatal("Error getting hostname")
 	} else {
 		sVice.hostName = hostName
 	}
@@ -141,7 +149,8 @@ func New(params *BootstrapParams) Service {
 
 // UpdateLoggerWithServiceName tag logging with service name from the top level
 func (params *BootstrapParams) UpdateLoggerWithServiceName(name string) {
-	params.Logger = params.Logger.WithField("Service", name)
+	params.Logger = params.Logger.WithTags(tag.Service(name))
+	params.ThrottledLogger = params.ThrottledLogger.WithTags(tag.Service(name))
 }
 
 // GetHostName returns the name of host running the service
@@ -161,37 +170,26 @@ func (h *serviceImpl) Start() {
 	h.runtimeMetricsReporter.Start()
 
 	if err := h.pprofInitializer.Start(); err != nil {
-		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("Failed to start pprof")
+		h.logger.WithTags(tag.Error(err)).Fatal("Failed to start pprof")
 	}
 
 	if err := h.dispatcher.Start(); err != nil {
-		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("Failed to start yarpc dispatcher")
+		h.logger.WithTags(tag.Error(err)).Fatal("Failed to start yarpc dispatcher")
 	}
 
-	// use actual listen port (in case service is bound to :0 or 0.0.0.0:0)
-	h.rp, err = h.rpFactory.CreateRingpop(h.dispatcher)
+	h.membershipMonitor, err = h.membershipFactory.Create(h.dispatcher)
 	if err != nil {
-		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("Ringpop creation failed")
+		h.logger.WithTags(tag.Error(err)).Fatal("Membership monitor creation failed")
 	}
 
-	labels, err := h.rp.Labels()
-	if err != nil {
-		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("Ringpop get node labels failed")
-	}
-	err = labels.Set(membership.RoleKey, h.sName)
-	if err != nil {
-		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("Ringpop setting role label failed")
-	}
-
-	h.membershipMonitor = membership.NewRingpopMonitor(cadenceServices, h.rp, h.logger)
 	err = h.membershipMonitor.Start()
 	if err != nil {
-		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("starting membership monitor failed")
+		h.logger.WithTags(tag.Error(err)).Fatal("starting membership monitor failed")
 	}
 
 	hostInfo, err := h.membershipMonitor.WhoAmI()
 	if err != nil {
-		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("failed to get host info from membership monitor")
+		h.logger.WithTags(tag.Error(err)).Fatal("failed to get host info from membership monitor")
 	}
 	h.hostInfo = hostInfo
 
@@ -201,12 +199,11 @@ func (h *serviceImpl) Start() {
 		h.clusterMetadata,
 	)
 	if err != nil {
-		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("fail to initialize client bean")
+		h.logger.WithTags(tag.Error(err)).Fatal("fail to initialize client bean")
 	}
 
 	// The service is now started up
 	h.logger.Info("service started")
-
 	// seed the random generator once for this service
 	rand.Seed(time.Now().UTC().UnixNano())
 }
@@ -221,10 +218,6 @@ func (h *serviceImpl) Stop() {
 		h.membershipMonitor.Stop()
 	}
 
-	if h.rp != nil {
-		h.rp.Destroy()
-	}
-
 	if h.dispatcher != nil {
 		h.dispatcher.Stop()
 	}
@@ -232,9 +225,12 @@ func (h *serviceImpl) Stop() {
 	h.runtimeMetricsReporter.Stop()
 }
 
-// GetLogger returns the service logger
-func (h *serviceImpl) GetLogger() bark.Logger {
+func (h *serviceImpl) GetLogger() log.Logger {
 	return h.logger
+}
+
+func (h *serviceImpl) GetThrottledLogger() log.Logger {
+	return h.throttledLogger
 }
 
 func (h *serviceImpl) GetMetricsClient() metrics.Client {
@@ -268,7 +264,7 @@ func (h *serviceImpl) GetMessagingClient() messaging.Client {
 }
 
 // GetMetricsServiceIdx returns the metrics name
-func GetMetricsServiceIdx(serviceName string, logger bark.Logger) metrics.ServiceIdx {
+func GetMetricsServiceIdx(serviceName string, logger log.Logger) metrics.ServiceIdx {
 	switch serviceName {
 	case common.FrontendServiceName:
 		return metrics.Frontend
@@ -279,7 +275,7 @@ func GetMetricsServiceIdx(serviceName string, logger bark.Logger) metrics.Servic
 	case common.WorkerServiceName:
 		return metrics.Worker
 	default:
-		logger.Fatalf("Unknown service name '%v' for metrics!", serviceName)
+		logger.Fatal("Unknown service name '%v' for metrics!", tag.Service(serviceName))
 	}
 
 	// this should never happen!

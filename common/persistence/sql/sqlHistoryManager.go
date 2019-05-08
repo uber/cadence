@@ -21,18 +21,15 @@
 package sql
 
 import (
+	"database/sql"
 	"fmt"
 
-	"database/sql"
-
 	"github.com/go-sql-driver/mysql"
-	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/sql/storage"
 	"github.com/uber/cadence/common/persistence/sql/storage/sqldb"
-	"github.com/uber/cadence/common/service/config"
 )
 
 type sqlHistoryManager struct {
@@ -41,11 +38,7 @@ type sqlHistoryManager struct {
 }
 
 // newHistoryPersistence creates an instance of HistoryManager
-func newHistoryPersistence(cfg config.SQL, logger bark.Logger) (p.HistoryStore, error) {
-	var db, err = storage.NewSQLDB(&cfg)
-	if err != nil {
-		return nil, err
-	}
+func newHistoryPersistence(db sqldb.Interface, logger log.Logger) (p.HistoryStore, error) {
 	return &sqlHistoryManager{
 		sqlStore: sqlStore{
 			db:     db,
@@ -104,10 +97,7 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.InternalGetWo
 
 	// TODO: Ensure that no last empty page is requested
 	if err == sql.ErrNoRows || (err == nil && len(rows) == 0) {
-		return nil, &workflow.EntityNotExistsError{
-			Message: fmt.Sprintf("Workflow execution history not found.  WorkflowId: %v, RunId: %v",
-				*request.Execution.WorkflowId, *request.Execution.RunId),
-		}
+		return &p.InternalGetWorkflowExecutionHistoryResponse{}, nil
 	}
 
 	if err != nil {
@@ -134,7 +124,10 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.InternalGetWo
 		offset = v.FirstEventID
 	}
 
-	nextPageToken := serializePageToken(offset)
+	var nextPageToken []byte
+	if len(rows) >= request.PageSize {
+		nextPageToken = serializePageToken(offset)
+	}
 	return &p.InternalGetWorkflowExecutionHistoryResponse{
 		History:               history,
 		LastEventBatchVersion: lastEventBatchVersion,

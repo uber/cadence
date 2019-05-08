@@ -21,9 +21,9 @@
 package persistence
 
 import (
-	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/tokenbucket"
 )
 
 var (
@@ -35,45 +35,45 @@ var (
 
 type (
 	shardRateLimitedPersistenceClient struct {
-		rateLimiter common.TokenBucket
+		rateLimiter tokenbucket.TokenBucket
 		persistence ShardManager
-		logger      bark.Logger
+		logger      log.Logger
 	}
 
 	workflowExecutionRateLimitedPersistenceClient struct {
-		rateLimiter common.TokenBucket
+		rateLimiter tokenbucket.TokenBucket
 		persistence ExecutionManager
-		logger      bark.Logger
+		logger      log.Logger
 	}
 
 	taskRateLimitedPersistenceClient struct {
-		rateLimiter common.TokenBucket
+		rateLimiter tokenbucket.TokenBucket
 		persistence TaskManager
-		logger      bark.Logger
+		logger      log.Logger
 	}
 
 	historyRateLimitedPersistenceClient struct {
-		rateLimiter common.TokenBucket
+		rateLimiter tokenbucket.TokenBucket
 		persistence HistoryManager
-		logger      bark.Logger
+		logger      log.Logger
 	}
 
 	historyV2RateLimitedPersistenceClient struct {
-		rateLimiter common.TokenBucket
+		rateLimiter tokenbucket.TokenBucket
 		persistence HistoryV2Manager
-		logger      bark.Logger
+		logger      log.Logger
 	}
 
 	metadataRateLimitedPersistenceClient struct {
-		rateLimiter common.TokenBucket
+		rateLimiter tokenbucket.TokenBucket
 		persistence MetadataManager
-		logger      bark.Logger
+		logger      log.Logger
 	}
 
 	visibilityRateLimitedPersistenceClient struct {
-		rateLimiter common.TokenBucket
+		rateLimiter tokenbucket.TokenBucket
 		persistence VisibilityManager
-		logger      bark.Logger
+		logger      log.Logger
 	}
 )
 
@@ -86,7 +86,7 @@ var _ MetadataManager = (*metadataRateLimitedPersistenceClient)(nil)
 var _ VisibilityManager = (*visibilityRateLimitedPersistenceClient)(nil)
 
 // NewShardPersistenceRateLimitedClient creates a client to manage shards
-func NewShardPersistenceRateLimitedClient(persistence ShardManager, rateLimiter common.TokenBucket, logger bark.Logger) ShardManager {
+func NewShardPersistenceRateLimitedClient(persistence ShardManager, rateLimiter tokenbucket.TokenBucket, logger log.Logger) ShardManager {
 	return &shardRateLimitedPersistenceClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
@@ -95,7 +95,7 @@ func NewShardPersistenceRateLimitedClient(persistence ShardManager, rateLimiter 
 }
 
 // NewWorkflowExecutionPersistenceRateLimitedClient creates a client to manage executions
-func NewWorkflowExecutionPersistenceRateLimitedClient(persistence ExecutionManager, rateLimiter common.TokenBucket, logger bark.Logger) ExecutionManager {
+func NewWorkflowExecutionPersistenceRateLimitedClient(persistence ExecutionManager, rateLimiter tokenbucket.TokenBucket, logger log.Logger) ExecutionManager {
 	return &workflowExecutionRateLimitedPersistenceClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
@@ -104,7 +104,7 @@ func NewWorkflowExecutionPersistenceRateLimitedClient(persistence ExecutionManag
 }
 
 // NewTaskPersistenceRateLimitedClient creates a client to manage tasks
-func NewTaskPersistenceRateLimitedClient(persistence TaskManager, rateLimiter common.TokenBucket, logger bark.Logger) TaskManager {
+func NewTaskPersistenceRateLimitedClient(persistence TaskManager, rateLimiter tokenbucket.TokenBucket, logger log.Logger) TaskManager {
 	return &taskRateLimitedPersistenceClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
@@ -113,7 +113,7 @@ func NewTaskPersistenceRateLimitedClient(persistence TaskManager, rateLimiter co
 }
 
 // NewHistoryPersistenceRateLimitedClient creates a HistoryManager client to manage workflow execution history
-func NewHistoryPersistenceRateLimitedClient(persistence HistoryManager, rateLimiter common.TokenBucket, logger bark.Logger) HistoryManager {
+func NewHistoryPersistenceRateLimitedClient(persistence HistoryManager, rateLimiter tokenbucket.TokenBucket, logger log.Logger) HistoryManager {
 	return &historyRateLimitedPersistenceClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
@@ -122,7 +122,7 @@ func NewHistoryPersistenceRateLimitedClient(persistence HistoryManager, rateLimi
 }
 
 // NewHistoryV2PersistenceRateLimitedClient creates a HistoryManager client to manage workflow execution history
-func NewHistoryV2PersistenceRateLimitedClient(persistence HistoryV2Manager, rateLimiter common.TokenBucket, logger bark.Logger) HistoryV2Manager {
+func NewHistoryV2PersistenceRateLimitedClient(persistence HistoryV2Manager, rateLimiter tokenbucket.TokenBucket, logger log.Logger) HistoryV2Manager {
 	return &historyV2RateLimitedPersistenceClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
@@ -131,7 +131,7 @@ func NewHistoryV2PersistenceRateLimitedClient(persistence HistoryV2Manager, rate
 }
 
 // NewMetadataPersistenceRateLimitedClient creates a MetadataManager client to manage metadata
-func NewMetadataPersistenceRateLimitedClient(persistence MetadataManager, rateLimiter common.TokenBucket, logger bark.Logger) MetadataManager {
+func NewMetadataPersistenceRateLimitedClient(persistence MetadataManager, rateLimiter tokenbucket.TokenBucket, logger log.Logger) MetadataManager {
 	return &metadataRateLimitedPersistenceClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
@@ -140,7 +140,7 @@ func NewMetadataPersistenceRateLimitedClient(persistence MetadataManager, rateLi
 }
 
 // NewVisibilityPersistenceRateLimitedClient creates a client to manage visibility
-func NewVisibilityPersistenceRateLimitedClient(persistence VisibilityManager, rateLimiter common.TokenBucket, logger bark.Logger) VisibilityManager {
+func NewVisibilityPersistenceRateLimitedClient(persistence VisibilityManager, rateLimiter tokenbucket.TokenBucket, logger log.Logger) VisibilityManager {
 	return &visibilityRateLimitedPersistenceClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
@@ -251,6 +251,15 @@ func (p *workflowExecutionRateLimitedPersistenceClient) DeleteWorkflowExecution(
 	}
 
 	err := p.persistence.DeleteWorkflowExecution(request)
+	return err
+}
+
+func (p *workflowExecutionRateLimitedPersistenceClient) DeleteCurrentWorkflowExecution(request *DeleteCurrentWorkflowExecutionRequest) error {
+	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
+		return ErrPersistenceLimitExceeded
+	}
+
+	err := p.persistence.DeleteCurrentWorkflowExecution(request)
 	return err
 }
 
@@ -370,6 +379,13 @@ func (p *taskRateLimitedPersistenceClient) CompleteTask(request *CompleteTaskReq
 	return err
 }
 
+func (p *taskRateLimitedPersistenceClient) CompleteTasksLessThan(request *CompleteTasksLessThanRequest) (int, error) {
+	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
+		return 0, ErrPersistenceLimitExceeded
+	}
+	return p.persistence.CompleteTasksLessThan(request)
+}
+
 func (p *taskRateLimitedPersistenceClient) LeaseTaskList(request *LeaseTaskListRequest) (*LeaseTaskListResponse, error) {
 	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
 		return nil, ErrPersistenceLimitExceeded
@@ -386,6 +402,20 @@ func (p *taskRateLimitedPersistenceClient) UpdateTaskList(request *UpdateTaskLis
 
 	response, err := p.persistence.UpdateTaskList(request)
 	return response, err
+}
+
+func (p *taskRateLimitedPersistenceClient) ListTaskList(request *ListTaskListRequest) (*ListTaskListResponse, error) {
+	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
+		return nil, ErrPersistenceLimitExceeded
+	}
+	return p.persistence.ListTaskList(request)
+}
+
+func (p *taskRateLimitedPersistenceClient) DeleteTaskList(request *DeleteTaskListRequest) error {
+	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
+		return ErrPersistenceLimitExceeded
+	}
+	return p.persistence.DeleteTaskList(request)
 }
 
 func (p *taskRateLimitedPersistenceClient) Close() {
@@ -599,6 +629,34 @@ func (p *visibilityRateLimitedPersistenceClient) GetClosedWorkflowExecution(requ
 
 	response, err := p.persistence.GetClosedWorkflowExecution(request)
 	return response, err
+}
+
+func (p *visibilityRateLimitedPersistenceClient) DeleteWorkflowExecution(request *VisibilityDeleteWorkflowExecutionRequest) error {
+	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
+		return ErrPersistenceLimitExceeded
+	}
+	return p.persistence.DeleteWorkflowExecution(request)
+}
+
+func (p *visibilityRateLimitedPersistenceClient) ListWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*ListWorkflowExecutionsResponse, error) {
+	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
+		return nil, ErrPersistenceLimitExceeded
+	}
+	return p.persistence.ListWorkflowExecutions(request)
+}
+
+func (p *visibilityRateLimitedPersistenceClient) ScanWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*ListWorkflowExecutionsResponse, error) {
+	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
+		return nil, ErrPersistenceLimitExceeded
+	}
+	return p.persistence.ScanWorkflowExecutions(request)
+}
+
+func (p *visibilityRateLimitedPersistenceClient) CountWorkflowExecutions(request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error) {
+	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
+		return nil, ErrPersistenceLimitExceeded
+	}
+	return p.persistence.CountWorkflowExecutions(request)
 }
 
 func (p *visibilityRateLimitedPersistenceClient) Close() {
