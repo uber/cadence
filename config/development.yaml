@@ -26,9 +26,9 @@ services:
       port: 7933
       bindOnLocalHost: true
     metrics:
-      statsd:
-        hostPort: "127.0.0.1:8125"
-        prefix: "cadence"
+      prometheus:
+        timerType: "histogram"
+        listenAddress: "127.0.0.1:8000"
     pprof:
       port: 7936
 
@@ -37,9 +37,9 @@ services:
       port: 7935
       bindOnLocalHost: true
     metrics:
-      statsd:
-        hostPort: "127.0.0.1:8125"
-        prefix: "cadence"
+      prometheus:
+        timerType: "histogram"
+        listenAddress: "127.0.0.1:8001"
     pprof:
       port: 7938
 
@@ -48,9 +48,9 @@ services:
       port: 7934
       bindOnLocalHost: true
     metrics:
-      statsd:
-        hostPort: "127.0.0.1:8125"
-        prefix: "cadence"
+      prometheus:
+        timerType: "histogram"
+        listenAddress: "127.0.0.1:8002"
     pprof:
       port: 7937
 
@@ -59,9 +59,9 @@ services:
       port: 7939
       bindOnLocalHost: true
     metrics:
-      statsd:
-        hostPort: "127.0.0.1:8125"
-        prefix: "cadence"
+      prometheus:
+        timerType: "histogram"
+        listenAddress: "127.0.0.1:8003"
     pprof:
       port: 7940
 
