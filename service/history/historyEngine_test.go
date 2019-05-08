@@ -1265,6 +1265,76 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledAtt
 	}
 }
 
+func (s *engineSuite) TestRespondDecisionTaskCompletedBadBinary() {
+	domainID := validDomainID
+	we := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr("wId"),
+		RunId:      common.StringPtr(validRunID),
+	}
+	tl := "testTaskList"
+	taskToken, _ := json.Marshal(&common.TaskToken{
+		WorkflowID: "wId",
+		RunID:      we.GetRunId(),
+		ScheduleID: 2,
+	})
+	identity := "testIdentity"
+	executionContext := []byte("context")
+
+	msBuilder := newMutableStateBuilderWithEventV2(s.mockClusterMetadata.GetCurrentClusterName(), s.mockHistoryEngine.shard, s.eventsCache,
+		loggerimpl.NewDevelopmentForTest(s.Suite), we.GetRunId())
+	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
+	di := addDecisionTaskScheduledEvent(msBuilder)
+	addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
+
+	var decisions []*workflow.Decision
+
+	ms := createMutableState(msBuilder)
+	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
+
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil)
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
+	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
+
+	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
+		&persistence.GetDomainResponse{
+			Info: &persistence.DomainInfo{ID: domainID},
+			Config: &persistence.DomainConfig{
+				Retention: 1,
+				BadBinaries: workflow.BadBinaries{
+					Binaries: map[string]*workflow.BadBinaryInfo{
+						"test-bad-binary": {},
+					},
+				},
+			},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
+			TableVersion: persistence.DomainTableVersionV1,
+		},
+		nil,
+	)
+	_, err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &history.RespondDecisionTaskCompletedRequest{
+		DomainUUID: common.StringPtr(domainID),
+		CompleteRequest: &workflow.RespondDecisionTaskCompletedRequest{
+			TaskToken:        taskToken,
+			Decisions:        decisions,
+			ExecutionContext: executionContext,
+			Identity:         &identity,
+			BinaryChecksum:   common.StringPtr("test-bad-binary"),
+		},
+	})
+	s.Nil(err, s.printHistory(msBuilder))
+	executionBuilder := s.getBuilder(domainID, we)
+	s.Equal(int64(6), executionBuilder.GetExecutionInfo().NextEventID)
+	s.Equal(int64(3), executionBuilder.GetExecutionInfo().LastProcessedEvent)
+	s.Equal(executionContext, executionBuilder.GetExecutionInfo().ExecutionContext)
+	s.Equal(persistence.WorkflowStateRunning, executionBuilder.GetExecutionInfo().State)
+	s.True(executionBuilder.HasPendingDecisionTask())
+}
+
 func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledDecision() {
 	domainID := validDomainID
 	we := workflow.WorkflowExecution{
@@ -5070,34 +5140,82 @@ func copyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *p
 		ExecutionContext:             sourceInfo.ExecutionContext,
 		State:                        sourceInfo.State,
 		CloseStatus:                  sourceInfo.CloseStatus,
+		LastFirstEventID:             sourceInfo.LastFirstEventID,
 		LastEventTaskID:              sourceInfo.LastEventTaskID,
 		NextEventID:                  sourceInfo.NextEventID,
 		LastProcessedEvent:           sourceInfo.LastProcessedEvent,
+		StartTimestamp:               sourceInfo.StartTimestamp,
 		LastUpdatedTimestamp:         sourceInfo.LastUpdatedTimestamp,
 		CreateRequestID:              sourceInfo.CreateRequestID,
+		SignalCount:                  sourceInfo.SignalCount,
+		HistorySize:                  sourceInfo.HistorySize,
 		DecisionVersion:              sourceInfo.DecisionVersion,
 		DecisionScheduleID:           sourceInfo.DecisionScheduleID,
 		DecisionStartedID:            sourceInfo.DecisionStartedID,
 		DecisionRequestID:            sourceInfo.DecisionRequestID,
 		DecisionTimeout:              sourceInfo.DecisionTimeout,
+		DecisionAttempt:              sourceInfo.DecisionAttempt,
+		DecisionTimestamp:            sourceInfo.DecisionTimestamp,
+		CancelRequested:              sourceInfo.CancelRequested,
+		CancelRequestID:              sourceInfo.CancelRequestID,
+		CronSchedule:                 sourceInfo.CronSchedule,
+		ClientLibraryVersion:         sourceInfo.ClientLibraryVersion,
+		ClientFeatureVersion:         sourceInfo.ClientFeatureVersion,
+		ClientImpl:                   sourceInfo.ClientImpl,
+		AutoResetPoints:              sourceInfo.AutoResetPoints,
+		Attempt:                      sourceInfo.Attempt,
+		HasRetryPolicy:               sourceInfo.HasRetryPolicy,
+		InitialInterval:              sourceInfo.InitialInterval,
+		BackoffCoefficient:           sourceInfo.BackoffCoefficient,
+		MaximumInterval:              sourceInfo.MaximumInterval,
+		ExpirationTime:               sourceInfo.ExpirationTime,
+		MaximumAttempts:              sourceInfo.MaximumAttempts,
+		NonRetriableErrors:           sourceInfo.NonRetriableErrors,
 		EventStoreVersion:            sourceInfo.EventStoreVersion,
 		BranchToken:                  sourceInfo.BranchToken,
-		HasRetryPolicy:               sourceInfo.HasRetryPolicy,
-		CronSchedule:                 sourceInfo.CronSchedule,
+		ExpirationSeconds:            sourceInfo.ExpirationSeconds,
 	}
 }
 
 func copyActivityInfo(sourceInfo *persistence.ActivityInfo) *persistence.ActivityInfo {
+	details := make([]byte, len(sourceInfo.Details))
+	copy(details, sourceInfo.Details)
+
+	var scheduledEvent *workflow.HistoryEvent
+	var startedEvent *workflow.HistoryEvent
+	if sourceInfo.ScheduledEvent != nil {
+		scheduledEvent = &workflow.HistoryEvent{}
+		wv, err := sourceInfo.ScheduledEvent.ToWire()
+		if err != nil {
+			panic(err)
+		}
+		err = scheduledEvent.FromWire(wv)
+		if err != nil {
+			panic(err)
+		}
+	}
+	if sourceInfo.StartedEvent != nil {
+		startedEvent = &workflow.HistoryEvent{}
+		wv, err := sourceInfo.StartedEvent.ToWire()
+		if err != nil {
+			panic(err)
+		}
+		err = startedEvent.FromWire(wv)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	return &persistence.ActivityInfo{
 		Version:                  sourceInfo.Version,
 		ScheduleID:               sourceInfo.ScheduleID,
 		ScheduledEventBatchID:    sourceInfo.ScheduledEventBatchID,
-		ScheduledEvent:           sourceInfo.ScheduledEvent,
+		ScheduledEvent:           scheduledEvent,
 		StartedID:                sourceInfo.StartedID,
-		StartedEvent:             sourceInfo.StartedEvent,
+		StartedEvent:             startedEvent,
 		ActivityID:               sourceInfo.ActivityID,
 		RequestID:                sourceInfo.RequestID,
-		Details:                  sourceInfo.Details,
+		Details:                  details,
 		ScheduledTime:            sourceInfo.ScheduledTime,
 		StartedTime:              sourceInfo.StartedTime,
 		ScheduleToStartTimeout:   sourceInfo.ScheduleToStartTimeout,
@@ -5109,6 +5227,7 @@ func copyActivityInfo(sourceInfo *persistence.ActivityInfo) *persistence.Activit
 		CancelRequestID:          sourceInfo.CancelRequestID,
 		TimerTaskStatus:          sourceInfo.TimerTaskStatus,
 		Attempt:                  sourceInfo.Attempt,
+		DomainID:                 sourceInfo.DomainID,
 		StartedIdentity:          sourceInfo.StartedIdentity,
 		TaskList:                 sourceInfo.TaskList,
 		HasRetryPolicy:           sourceInfo.HasRetryPolicy,
@@ -5117,6 +5236,9 @@ func copyActivityInfo(sourceInfo *persistence.ActivityInfo) *persistence.Activit
 		MaximumInterval:          sourceInfo.MaximumInterval,
 		ExpirationTime:           sourceInfo.ExpirationTime,
 		MaximumAttempts:          sourceInfo.MaximumAttempts,
+		NonRetriableErrors:       sourceInfo.NonRetriableErrors,
+		//// Not written to database - This is used only for deduping heartbeat timer creation
+		// LastHeartbeatTimeoutVisibility: sourceInfo.LastHeartbeatTimeoutVisibility,
 	}
 }
 
@@ -5191,11 +5313,22 @@ func copyChildInfo(sourceInfo *persistence.ChildExecutionInfo) *persistence.Chil
 }
 
 func copyReplicationState(source *persistence.ReplicationState) *persistence.ReplicationState {
+	var lastReplicationInfo map[string]*persistence.ReplicationInfo
+	if source.LastReplicationInfo != nil {
+		lastReplicationInfo = map[string]*persistence.ReplicationInfo{}
+		for k, v := range source.LastReplicationInfo {
+			lastReplicationInfo[k] = &persistence.ReplicationInfo{
+				Version:     v.Version,
+				LastEventID: v.LastEventID,
+			}
+		}
+	}
+
 	return &persistence.ReplicationState{
 		CurrentVersion:      source.CurrentVersion,
 		StartVersion:        source.StartVersion,
 		LastWriteVersion:    source.LastWriteVersion,
 		LastWriteEventID:    source.LastWriteEventID,
-		LastReplicationInfo: source.LastReplicationInfo,
+		LastReplicationInfo: lastReplicationInfo,
 	}
 }

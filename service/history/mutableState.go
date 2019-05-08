@@ -29,10 +29,6 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
-const (
-	decisionFailureForBuffered = "FailDecisionToClearBufferedEvents"
-)
-
 type (
 	// TODO: This should be part of persistence layer
 	decisionInfo struct {
@@ -98,7 +94,7 @@ type (
 		CreateActivityRetryTimer(*persistence.ActivityInfo, string) persistence.Task
 		CreateNewHistoryEvent(eventType workflow.EventType) *workflow.HistoryEvent
 		CreateNewHistoryEventWithTimestamp(eventType workflow.EventType, timestamp int64) *workflow.HistoryEvent
-		CreateReplicationTask(int32, []byte) *persistence.HistoryReplicationTask
+		CreateReplicationTask([]persistence.Task, int32, []byte) []persistence.Task
 		CreateTransientDecisionEvents(di *decisionInfo, identity string) (*workflow.HistoryEvent, *workflow.HistoryEvent)
 		DeleteActivity(int64) error
 		DeleteBufferedReplicationTask(int64)

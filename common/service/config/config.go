@@ -27,6 +27,7 @@ import (
 	"github.com/uber/cadence/common/blobstore/filestore"
 
 	"github.com/uber-go/tally/m3"
+	"github.com/uber-go/tally/prometheus"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/service/dynamicconfig"
@@ -56,6 +57,9 @@ type (
 		ElasticSearch elasticsearch.Config `yaml:"elasticsearch"`
 		// PublicClient is config for connecting to cadence frontend
 		PublicClient PublicClient `yaml:"publicClient"`
+		// DynamicConfigClient is the config for setting up the file based dynamic config client
+		// Filepath should be relative to the root directory
+		DynamicConfigClient dynamicconfig.FileBasedClientConfig `yaml:"dynamicConfigClient"`
 	}
 
 	// Service contains the service specific config items
@@ -252,6 +256,8 @@ type (
 		M3 *m3.Configuration `yaml:"m3"`
 		// Statsd is the configuration for statsd reporter
 		Statsd *Statsd `yaml:"statsd"`
+		// Prometheus is the configuration for prometheus reporter
+		Prometheus *prometheus.Configuration `yaml:"prometheus"`
 		// Tags is the set of key-value pairs to be reported
 		// as part of every metric
 		Tags map[string]string `yaml:"tags"`

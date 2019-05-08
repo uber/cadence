@@ -21,6 +21,7 @@
 package history
 
 import (
+	ctx "context"
 	"fmt"
 	"time"
 
@@ -248,7 +249,11 @@ func (t *transferQueueActiveProcessorImpl) process(qTask queueTaskInfo, shouldPr
 			err = t.processRecordWorkflowStarted(task)
 		}
 		return metrics.TransferActiveTaskRecordWorkflowStartedScope, err
-
+	case persistence.TransferTaskTypeResetWorkflow:
+		if shouldProcessTask {
+			err = t.processResetWorkflow(task)
+		}
+		return metrics.TransferActiveTaskResetWorkflowScope, err
 	default:
 		return metrics.TransferActiveQueueProcessorScope, errUnknownTransferTask
 	}
@@ -389,13 +394,7 @@ func (t *transferQueueActiveProcessorImpl) processCloseExecution(task *persisten
 	completionEvent, ok := msBuilder.GetCompletionEvent()
 	var wfCloseTime int64
 	if !ok {
-		if replyToParentWorkflow {
-			return &workflow.InternalServiceError{Message: "Unable to get workflow completion event."}
-		}
-
-		// This is need for backwards compatibility
-		// TODO: remove usage of getLastUpdatedTimestamp after release 0.5.4, only use completionEvent timestamp
-		wfCloseTime = getLastUpdatedTimestamp(msBuilder)
+		return &workflow.InternalServiceError{Message: "Unable to get workflow completion event."}
 	} else {
 		wfCloseTime = completionEvent.GetTimestamp()
 	}
@@ -411,7 +410,7 @@ func (t *transferQueueActiveProcessorImpl) processCloseExecution(task *persisten
 	workflowHistoryLength := msBuilder.GetNextEventID() - 1
 
 	startEvent, ok := msBuilder.GetStartEvent()
-	if !ok && replyToParentWorkflow {
+	if !ok {
 		return &workflow.InternalServiceError{Message: "Unable to get workflow start event."}
 	}
 	workflowExecutionTimestamp := getWorkflowExecutionTimestamp(msBuilder, startEvent)
@@ -882,6 +881,124 @@ func (t *transferQueueActiveProcessorImpl) processRecordWorkflowStarted(task *pe
 	return t.recordWorkflowStarted(task.DomainID, execution, wfTypeName, startTimestamp, executionTimestamp.UnixNano(), workflowTimeout, task.GetTaskID(), visibilityMemo)
 }
 
+func (t *transferQueueActiveProcessorImpl) processResetWorkflow(task *persistence.TransferTaskInfo) (retError error) {
+	var err error
+	execution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(task.WorkflowID),
+		RunId:      common.StringPtr(task.RunID),
+	}
+
+	logger := t.logger.WithTags(
+		tag.WorkflowDomainID(task.DomainID),
+		tag.WorkflowID(execution.GetWorkflowId()),
+		tag.WorkflowRunID(execution.GetRunId()),
+	)
+	// get workflow timeout
+	currContext, currRelease, err := t.cache.getOrCreateWorkflowExecution(task.DomainID, execution)
+	if err != nil {
+		return err
+	}
+	defer func() { currRelease(retError) }()
+
+	var currMutableState mutableState
+	currMutableState, err = loadMutableStateForTransferTask(currContext, task, t.metricsClient, t.logger)
+	if err != nil {
+		return err
+	} else if currMutableState == nil {
+		logger.Warn("Auto-Reset is skipped, because current run is deleted.")
+		return nil
+	}
+	if !currMutableState.IsWorkflowExecutionRunning() {
+		//it means this this might not be current anymore, we need to check
+		var resp *persistence.GetCurrentExecutionResponse
+		resp, retError = t.executionManager.GetCurrentExecution(&persistence.GetCurrentExecutionRequest{
+			DomainID:   task.DomainID,
+			WorkflowID: task.WorkflowID,
+		})
+		if retError != nil {
+			return
+		}
+		if resp.RunID != task.RunID {
+			logger.Warn("Auto-Reset is skipped, because current run is stale.")
+			return nil
+		}
+	}
+	// TODO: current reset doesn't allow childWFs, in the future we will release this restriction
+	if len(currMutableState.GetPendingChildExecutionInfos()) > 0 {
+		logger.Warn("Auto-Reset is skipped, because current run has pending child executions.")
+		return nil
+	}
+
+	ok, err := verifyTaskVersion(t.shard, t.logger, task.DomainID, currMutableState.GetStartVersion(), task.Version, task)
+	if err != nil {
+		return err
+	} else if !ok {
+		return nil
+	}
+
+	executionInfo := currMutableState.GetExecutionInfo()
+
+	domainEntry, err := t.shard.GetDomainCache().GetDomainByID(executionInfo.DomainID)
+	if err != nil {
+		return err
+	}
+	logger = logger.WithTags(tag.WorkflowDomainName(domainEntry.GetInfo().Name))
+
+	reason, resetPt := FindAutoResetPoint(&domainEntry.GetConfig().BadBinaries, executionInfo.AutoResetPoints)
+	if resetPt == nil {
+		logger.Warn("Auto-Reset is skipped, because reset point is not found.")
+		return nil
+	}
+
+	var baseExecution workflow.WorkflowExecution
+	var baseContext workflowExecutionContext
+	var baseMutableState mutableState
+	if resetPt.GetRunId() == executionInfo.RunID {
+		baseMutableState = currMutableState
+		baseContext = currContext
+		baseExecution = execution
+	} else {
+		baseExecution = workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(task.WorkflowID),
+			RunId:      common.StringPtr(resetPt.GetRunId()),
+		}
+		var baseRelease func(err error)
+		baseContext, baseRelease, err = t.cache.getOrCreateWorkflowExecution(task.DomainID, baseExecution)
+		if err != nil {
+			return err
+		}
+		defer func() { baseRelease(retError) }()
+		baseMutableState, err = loadMutableStateForTransferTask(baseContext, task, t.metricsClient, t.logger)
+		if err != nil {
+			return err
+		}
+		// in case of base already deleted, we skip the reset task
+		// TODO in the future we may allow reset with archival history
+		if baseMutableState == nil {
+			logger.Warn("Auto-Reset is skipped, because the base run has been deleted.", tag.WorkflowResetBaseRunID(resetPt.GetRunId()))
+			return nil
+		}
+	}
+	logger = logger.WithTags(
+		tag.WorkflowResetBaseRunID(resetPt.GetRunId()),
+		tag.WorkflowBinaryChecksum(resetPt.GetBinaryChecksum()),
+		tag.WorkflowEventID(resetPt.GetFirstDecisionCompletedId()))
+
+	resp, err := t.historyService.resetor.ResetWorkflowExecution(ctx.Background(), &workflow.ResetWorkflowExecutionRequest{
+		Domain:                common.StringPtr(domainEntry.GetInfo().Name),
+		WorkflowExecution:     &baseExecution,
+		Reason:                common.StringPtr(fmt.Sprintf("auto-reset reason:%v, binaryChecksum:%v ", reason, resetPt.GetBinaryChecksum())),
+		DecisionFinishEventId: common.Int64Ptr(resetPt.GetFirstDecisionCompletedId()),
+		RequestId:             common.StringPtr(uuid.New()),
+	}, baseContext, baseMutableState, currContext, currMutableState)
+	if err != nil {
+		logger.Error("Auto-Reset workflow failed", tag.Error(err))
+		return err
+	}
+	logger.Info("Auto-Reset workflow finished", tag.WorkflowResetNewRunID(resp.GetRunId()))
+	return nil
+}
+
 func (t *transferQueueActiveProcessorImpl) recordChildExecutionStarted(task *persistence.TransferTaskInfo,
 	context workflowExecutionContext, initiatedAttributes *workflow.StartChildWorkflowExecutionInitiatedEventAttributes,
 	runID string) error {
@@ -1139,18 +1256,4 @@ func getWorkflowExecutionCloseStatus(status int) workflow.WorkflowExecutionClose
 	default:
 		panic("Invalid value for enum WorkflowExecutionCloseStatus")
 	}
-}
-
-// TODO: remove this after release 0.5.4
-func getLastUpdatedTimestamp(msBuilder mutableState) int64 {
-	executionInfo := msBuilder.GetExecutionInfo()
-
-	lastUpdated := executionInfo.LastUpdatedTimestamp.UnixNano()
-	if executionInfo.StartTimestamp.UnixNano() >= lastUpdated {
-		// This could happen due to clock skews
-		// ensure that the lastUpdatedTimestamp is always greater than the StartTimestamp
-		lastUpdated = executionInfo.StartTimestamp.UnixNano() + 1
-	}
-
-	return lastUpdated
 }

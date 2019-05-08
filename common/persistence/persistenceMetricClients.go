@@ -302,6 +302,20 @@ func (p *workflowExecutionPersistenceClient) DeleteWorkflowExecution(request *De
 	return err
 }
 
+func (p *workflowExecutionPersistenceClient) DeleteCurrentWorkflowExecution(request *DeleteCurrentWorkflowExecutionRequest) error {
+	p.metricClient.IncCounter(metrics.PersistenceDeleteCurrentWorkflowExecutionScope, metrics.PersistenceRequests)
+
+	sw := p.metricClient.StartTimer(metrics.PersistenceDeleteCurrentWorkflowExecutionScope, metrics.PersistenceLatency)
+	err := p.persistence.DeleteCurrentWorkflowExecution(request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceDeleteCurrentWorkflowExecutionScope, err)
+	}
+
+	return err
+}
+
 func (p *workflowExecutionPersistenceClient) GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceGetCurrentExecutionScope, metrics.PersistenceRequests)
 
@@ -976,6 +990,20 @@ func (p *visibilityPersistenceClient) ScanWorkflowExecutions(request *ListWorkfl
 
 	if err != nil {
 		p.updateErrorMetric(metrics.PersistenceScanWorkflowExecutionsScope, err)
+	}
+
+	return response, err
+}
+
+func (p *visibilityPersistenceClient) CountWorkflowExecutions(request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error) {
+	p.metricClient.IncCounter(metrics.PersistenceCountWorkflowExecutionsScope, metrics.PersistenceRequests)
+
+	sw := p.metricClient.StartTimer(metrics.PersistenceCountWorkflowExecutionsScope, metrics.PersistenceLatency)
+	response, err := p.persistence.CountWorkflowExecutions(request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceCountWorkflowExecutionsScope, err)
 	}
 
 	return response, err

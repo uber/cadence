@@ -100,6 +100,7 @@ const (
 	TransferTaskTypeStartChildExecution
 	TransferTaskTypeSignalExecution
 	TransferTaskTypeRecordWorkflowStarted
+	TransferTaskTypeResetWorkflow
 )
 
 // Types of replication tasks
@@ -399,6 +400,13 @@ type (
 		Version             int64
 	}
 
+	// ResetWorkflowTask identifites a transfer task to reset workflow
+	ResetWorkflowTask struct {
+		VisibilityTimestamp time.Time
+		TaskID              int64
+		Version             int64
+	}
+
 	// CloseExecutionTask identifies a transfer task for deletion of execution
 	CloseExecutionTask struct {
 		VisibilityTimestamp time.Time
@@ -659,7 +667,7 @@ type (
 		DomainID                    string
 		Execution                   workflow.WorkflowExecution
 		ParentDomainID              string
-		ParentExecution             *workflow.WorkflowExecution
+		ParentExecution             workflow.WorkflowExecution
 		InitiatedID                 int64
 		TaskList                    string
 		WorkflowTypeName            string
@@ -733,17 +741,14 @@ type (
 
 	// UpdateWorkflowExecutionRequest is used to update a workflow execution
 	UpdateWorkflowExecutionRequest struct {
-		ExecutionInfo        *WorkflowExecutionInfo
-		ReplicationState     *ReplicationState
-		TransferTasks        []Task
-		TimerTasks           []Task
-		ReplicationTasks     []Task
-		DeleteTimerTask      Task
-		Condition            int64
-		RangeID              int64
-		ContinueAsNew        *CreateWorkflowExecutionRequest
-		FinishExecution      bool
-		FinishedExecutionTTL int32
+		ExecutionInfo    *WorkflowExecutionInfo
+		ReplicationState *ReplicationState
+		TransferTasks    []Task
+		TimerTasks       []Task
+		ReplicationTasks []Task
+		Condition        int64
+		RangeID          int64
+		ContinueAsNew    *CreateWorkflowExecutionRequest
 
 		// Mutable state
 		UpsertActivityInfos           []*ActivityInfo
@@ -822,6 +827,13 @@ type (
 
 	// DeleteWorkflowExecutionRequest is used to delete a workflow execution
 	DeleteWorkflowExecutionRequest struct {
+		DomainID   string
+		WorkflowID string
+		RunID      string
+	}
+
+	// DeleteCurrentWorkflowExecutionRequest is used to delete the current workflow execution
+	DeleteCurrentWorkflowExecutionRequest struct {
 		DomainID   string
 		WorkflowID string
 		RunID      string
@@ -1374,6 +1386,7 @@ type (
 		ResetMutableState(request *ResetMutableStateRequest) error
 		ResetWorkflowExecution(request *ResetWorkflowExecutionRequest) error
 		DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error
+		DeleteCurrentWorkflowExecution(request *DeleteCurrentWorkflowExecutionRequest) error
 		GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)
 
 		// Transfer task related methods
@@ -1505,6 +1518,7 @@ func (e *TimeoutError) Error() string {
 	return e.Msg
 }
 
+// IsTimeoutError check whether error is TimeoutError
 func IsTimeoutError(err error) bool {
 	_, ok := err.(*TimeoutError)
 	return ok
@@ -1612,6 +1626,41 @@ func (a *RecordWorkflowStartedTask) GetVisibilityTimestamp() time.Time {
 
 // SetVisibilityTimestamp set the visibility timestamp
 func (a *RecordWorkflowStartedTask) SetVisibilityTimestamp(timestamp time.Time) {
+	a.VisibilityTimestamp = timestamp
+}
+
+// GetType returns the type of the ResetWorkflowTask
+func (a *ResetWorkflowTask) GetType() int {
+	return TransferTaskTypeResetWorkflow
+}
+
+// GetVersion returns the version of the ResetWorkflowTask
+func (a *ResetWorkflowTask) GetVersion() int64 {
+	return a.Version
+}
+
+// SetVersion returns the version of the ResetWorkflowTask
+func (a *ResetWorkflowTask) SetVersion(version int64) {
+	a.Version = version
+}
+
+// GetTaskID returns the sequence ID of the ResetWorkflowTask
+func (a *ResetWorkflowTask) GetTaskID() int64 {
+	return a.TaskID
+}
+
+// SetTaskID sets the sequence ID of the ResetWorkflowTask
+func (a *ResetWorkflowTask) SetTaskID(id int64) {
+	a.TaskID = id
+}
+
+// GetVisibilityTimestamp get the visibility timestamp
+func (a *ResetWorkflowTask) GetVisibilityTimestamp() time.Time {
+	return a.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp set the visibility timestamp
+func (a *ResetWorkflowTask) SetVisibilityTimestamp(timestamp time.Time) {
 	a.VisibilityTimestamp = timestamp
 }
 

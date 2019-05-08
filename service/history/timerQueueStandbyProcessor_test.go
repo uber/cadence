@@ -570,7 +570,6 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Multiple_Ca
 			ReplicationTasks:              nil,
 			TimerTasks:                    input.TimerTasks,
 			Condition:                     msBuilder.GetNextEventID(),
-			DeleteTimerTask:               nil,
 			UpsertActivityInfos:           input.UpsertActivityInfos,
 			DeleteActivityInfos:           []int64{},
 			UpserTimerInfos:               []*persistence.TimerInfo{},
@@ -588,8 +587,6 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Multiple_Ca
 			NewBufferedReplicationTask:    nil,
 			DeleteBufferedReplicationTask: nil,
 			ContinueAsNew:                 nil,
-			FinishExecution:               false,
-			FinishedExecutionTTL:          0,
 			Encoding:                      common.EncodingType(s.mockShard.GetConfig().EventEncodingType(domainID)),
 		}, input)
 		return true

@@ -39,6 +39,11 @@ import (
 	"github.com/uber/cadence/common"
 )
 
+const (
+	numOfRetry   = 50
+	waitTimeInMs = 400
+)
+
 type elasticsearchIntegrationSuite struct {
 	// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
 	// not merely log an error
@@ -101,7 +106,7 @@ func (s *elasticsearchIntegrationSuite) TestListOpenWorkflow() {
 	startFilter := &workflow.StartTimeFilter{}
 	startFilter.EarliestTime = common.Int64Ptr(startTime)
 	var openExecution *workflow.WorkflowExecutionInfo
-	for i := 0; i < 20; i++ {
+	for i := 0; i < numOfRetry; i++ {
 		startFilter.LatestTime = common.Int64Ptr(time.Now().UnixNano())
 		resp, err := s.engine.ListOpenWorkflowExecutions(createContext(), &workflow.ListOpenWorkflowExecutionsRequest{
 			Domain:          common.StringPtr(s.domainName),
@@ -116,7 +121,7 @@ func (s *elasticsearchIntegrationSuite) TestListOpenWorkflow() {
 			openExecution = resp.GetExecutions()[0]
 			break
 		}
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(waitTimeInMs * time.Millisecond)
 	}
 	s.NotNil(openExecution)
 	s.Equal(we.GetRunId(), openExecution.GetExecution().GetRunId())
@@ -146,7 +151,50 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow() {
 		Identity:                            common.StringPtr(identity),
 	}
 
-	s.testHelperForReadOnce(request, false)
+	we, err := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err)
+	query := fmt.Sprintf(`WorkflowID = "%s"`, id)
+	s.testHelperForReadOnce(we.GetRunId(), query, false)
+}
+
+func (s *elasticsearchIntegrationSuite) TestListWorkflow_ExecutionTime() {
+	id := "es-integration-list-workflow-execution-time-test"
+	wt := "es-integration-list-workflow-execution-time-test-type"
+	tl := "es-integration-list-workflow-execution-time-test-tasklist"
+	identity := "worker1"
+
+	workflowType := &workflow.WorkflowType{}
+	workflowType.Name = common.StringPtr(wt)
+
+	taskList := &workflow.TaskList{}
+	taskList.Name = common.StringPtr(tl)
+
+	request := &workflow.StartWorkflowExecutionRequest{
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		Identity:                            common.StringPtr(identity),
+	}
+	we, err := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err)
+
+	cronID := id + "-cron"
+	request.CronSchedule = common.StringPtr("@every 1m")
+	request.WorkflowId = common.StringPtr(cronID)
+
+	weCron, err := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err)
+
+	query := fmt.Sprintf(`(WorkflowID = "%s" or WorkflowID = "%s") and ExecutionTime < %v`, id, cronID, time.Now().UnixNano()+int64(time.Minute))
+	s.testHelperForReadOnce(weCron.GetRunId(), query, false)
+
+	query = fmt.Sprintf(`WorkflowID = "%s"`, id)
+	s.testHelperForReadOnce(we.GetRunId(), query, false)
 }
 
 func (s *elasticsearchIntegrationSuite) TestListWorkflow_PageToken() {
@@ -226,7 +274,7 @@ func (s *elasticsearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, p
 		Query:         common.StringPtr(fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing`, wType)),
 	}
 	// test first page
-	for i := 0; i < 20; i++ {
+	for i := 0; i < numOfRetry; i++ {
 		var resp *workflow.ListWorkflowExecutionsResponse
 		var err error
 
@@ -241,7 +289,7 @@ func (s *elasticsearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, p
 			nextPageToken = resp.NextPageToken
 			break
 		}
-		time.Sleep(400 * time.Millisecond)
+		time.Sleep(waitTimeInMs * time.Millisecond)
 	}
 	s.NotNil(openExecutions)
 	s.NotNil(nextPageToken)
@@ -250,7 +298,7 @@ func (s *elasticsearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, p
 	// test last page
 	listRequest.NextPageToken = nextPageToken
 	inIf := false
-	for i := 0; i < 20; i++ {
+	for i := 0; i < numOfRetry; i++ {
 		var resp *workflow.ListWorkflowExecutionsResponse
 		var err error
 
@@ -266,24 +314,21 @@ func (s *elasticsearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, p
 			nextPageToken = resp.NextPageToken
 			break
 		}
-		time.Sleep(400 * time.Millisecond)
+		time.Sleep(waitTimeInMs * time.Millisecond)
 	}
 	s.True(inIf)
 	s.NotNil(openExecutions)
 	s.Nil(nextPageToken)
 }
 
-func (s *elasticsearchIntegrationSuite) testHelperForReadOnce(request *workflow.StartWorkflowExecutionRequest, isScan bool) {
-	we, err := s.engine.StartWorkflowExecution(createContext(), request)
-	s.Nil(err)
-
+func (s *elasticsearchIntegrationSuite) testHelperForReadOnce(runID, query string, isScan bool) {
 	var openExecution *workflow.WorkflowExecutionInfo
 	listRequest := &workflow.ListWorkflowExecutionsRequest{
 		Domain:   common.StringPtr(s.domainName),
 		PageSize: common.Int32Ptr(100),
-		Query:    common.StringPtr(fmt.Sprintf(`WorkflowID = "%s"`, request.GetWorkflowId())),
+		Query:    common.StringPtr(query),
 	}
-	for i := 0; i < 20; i++ {
+	for i := 0; i < numOfRetry; i++ {
 		var resp *workflow.ListWorkflowExecutionsResponse
 		var err error
 
@@ -298,10 +343,11 @@ func (s *elasticsearchIntegrationSuite) testHelperForReadOnce(request *workflow.
 			openExecution = resp.GetExecutions()[0]
 			break
 		}
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(waitTimeInMs * time.Millisecond)
 	}
 	s.NotNil(openExecution)
-	s.Equal(we.GetRunId(), openExecution.GetExecution().GetRunId())
+	s.Equal(runID, openExecution.GetExecution().GetRunId())
+	s.True(openExecution.GetExecutionTime() >= openExecution.GetStartTime())
 }
 
 func (s *elasticsearchIntegrationSuite) TestScanWorkflow() {
@@ -328,7 +374,10 @@ func (s *elasticsearchIntegrationSuite) TestScanWorkflow() {
 		Identity:                            common.StringPtr(identity),
 	}
 
-	s.testHelperForReadOnce(request, true)
+	we, err := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err)
+	query := fmt.Sprintf(`WorkflowID = "%s"`, id)
+	s.testHelperForReadOnce(we.GetRunId(), query, true)
 }
 
 func (s *elasticsearchIntegrationSuite) TestScanWorkflow_PageToken() {
@@ -357,6 +406,49 @@ func (s *elasticsearchIntegrationSuite) TestScanWorkflow_PageToken() {
 	pageSize := 3
 
 	s.testListWorkflowHelper(numOfWorkflows, pageSize, request, id, wt, true)
+}
+
+func (s *elasticsearchIntegrationSuite) TestCountWorkflow() {
+	id := "es-integration-count-workflow-test"
+	wt := "es-integration-count-workflow-test-type"
+	tl := "es-integration-count-workflow-test-tasklist"
+	identity := "worker1"
+
+	workflowType := &workflow.WorkflowType{}
+	workflowType.Name = common.StringPtr(wt)
+
+	taskList := &workflow.TaskList{}
+	taskList.Name = common.StringPtr(tl)
+
+	request := &workflow.StartWorkflowExecutionRequest{
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		Identity:                            common.StringPtr(identity),
+	}
+
+	_, err := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err)
+
+	countRequest := &workflow.CountWorkflowExecutionsRequest{
+		Domain: common.StringPtr(s.domainName),
+		Query:  common.StringPtr(fmt.Sprintf(`WorkflowID = "%s"`, request.GetWorkflowId())),
+	}
+	var resp *workflow.CountWorkflowExecutionsResponse
+	for i := 0; i < numOfRetry; i++ {
+		resp, err = s.engine.CountWorkflowExecutions(createContext(), countRequest)
+		s.Nil(err)
+		if resp.GetCount() == int64(1) {
+			break
+		}
+		time.Sleep(waitTimeInMs * time.Millisecond)
+	}
+	s.Equal(int64(1), resp.GetCount())
 }
 
 func (s *elasticsearchIntegrationSuite) createESClient() {

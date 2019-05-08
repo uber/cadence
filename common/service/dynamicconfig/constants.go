@@ -41,6 +41,8 @@ var keys = map[Key]string{
 	testGetFloat64PropertyKey:                        "testGetFloat64PropertyKey",
 	testGetDurationPropertyKey:                       "testGetDurationPropertyKey",
 	testGetBoolPropertyKey:                           "testGetBoolPropertyKey",
+	testGetStringPropertyKey:                         "testGetStringPropertyKey",
+	testGetMapPropertyKey:                            "testGetMapPropertyKey",
 	testGetIntPropertyFilteredByDomainKey:            "testGetIntPropertyFilteredByDomainKey",
 	testGetDurationPropertyFilteredByDomainKey:       "testGetDurationPropertyFilteredByDomainKey",
 	testGetIntPropertyFilteredByTaskListInfoKey:      "testGetIntPropertyFilteredByTaskListInfoKey",
@@ -198,6 +200,8 @@ const (
 	testGetFloat64PropertyKey
 	testGetDurationPropertyKey
 	testGetBoolPropertyKey
+	testGetStringPropertyKey
+	testGetMapPropertyKey
 	testGetIntPropertyFilteredByDomainKey
 	testGetDurationPropertyFilteredByDomainKey
 	testGetIntPropertyFilteredByTaskListInfoKey
@@ -491,7 +495,7 @@ const (
 type Filter int
 
 func (f Filter) String() string {
-	if f <= unknownFilter || f > TaskListName {
+	if f <= unknownFilter || f > TaskType {
 		return filters[unknownFilter]
 	}
 	return filters[f]

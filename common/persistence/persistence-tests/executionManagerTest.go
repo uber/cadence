@@ -137,7 +137,7 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionRunIDReuseWithReplica
 	s.NotNil(task0, "Expected non empty task identifier.")
 
 	newExecution := gen.WorkflowExecution{
-		WorkflowId: workflowExecution.WorkflowId,
+		WorkflowId: common.StringPtr(workflowExecution.GetWorkflowId()),
 		RunId:      common.StringPtr(uuid.New()),
 	}
 
@@ -190,19 +190,16 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionRunIDReuseWithReplica
 		LastWriteEventID: updatedInfo.NextEventID - 1,
 	}
 	_, err = s.ExecutionManager.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
-		ExecutionInfo:        updatedInfo,
-		TransferTasks:        nil,
-		TimerTasks:           nil,
-		Condition:            nextEventID,
-		DeleteTimerTask:      nil,
-		RangeID:              s.ShardInfo.RangeID,
-		UpsertActivityInfos:  nil,
-		DeleteActivityInfos:  nil,
-		UpserTimerInfos:      nil,
-		DeleteTimerInfos:     nil,
-		FinishedExecutionTTL: 10,
-		FinishExecution:      true,
-		ReplicationState:     updateReplicationState,
+		ExecutionInfo:       updatedInfo,
+		TransferTasks:       nil,
+		TimerTasks:          nil,
+		Condition:           nextEventID,
+		RangeID:             s.ShardInfo.RangeID,
+		UpsertActivityInfos: nil,
+		DeleteActivityInfos: nil,
+		UpserTimerInfos:     nil,
+		DeleteTimerInfos:    nil,
+		ReplicationState:    updateReplicationState,
 	})
 	s.NoError(err)
 
@@ -301,11 +298,11 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionRunIDReuseWithoutRepl
 	closeInfo.LastProcessedEvent = int64(2)
 
 	err2 := s.UpdateWorkflowExecution(closeInfo, nil, nil, nextEventID,
-		nil, nil, nil, nil, nil, nil)
+		nil, nil, nil, nil, nil)
 	s.NoError(err2)
 
 	newExecution := gen.WorkflowExecution{
-		WorkflowId: workflowExecution.WorkflowId,
+		WorkflowId: common.StringPtr(workflowExecution.GetWorkflowId()),
 		RunId:      common.StringPtr(uuid.New()),
 	}
 	// this create should work since we are relying the business logic in history engine
@@ -357,7 +354,7 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionConcurrentCreate() {
 	for i := 0; i < times; i++ {
 		go func() {
 			newExecution := gen.WorkflowExecution{
-				WorkflowId: workflowExecution.WorkflowId,
+				WorkflowId: common.StringPtr(workflowExecution.GetWorkflowId()),
 				RunId:      common.StringPtr(uuid.New()),
 			}
 
@@ -525,7 +522,7 @@ func (s *ExecutionManagerSuite) TestGetWorkflow() {
 			RunId:      common.StringPtr(uuid.New()),
 		},
 		ParentDomainID: uuid.New(),
-		ParentExecution: &gen.WorkflowExecution{
+		ParentExecution: gen.WorkflowExecution{
 			WorkflowId: common.StringPtr("get-workflow-test-parent"),
 			RunId:      common.StringPtr(uuid.New()),
 		},
@@ -576,11 +573,11 @@ func (s *ExecutionManagerSuite) TestGetWorkflow() {
 	s.NotNil(info, "Valid Workflow response expected.")
 	s.Equal(createReq.RequestID, info.CreateRequestID)
 	s.Equal(createReq.DomainID, info.DomainID)
-	s.Equal(*createReq.Execution.WorkflowId, info.WorkflowID)
-	s.Equal(*createReq.Execution.RunId, info.RunID)
+	s.Equal(createReq.Execution.GetWorkflowId(), info.WorkflowID)
+	s.Equal(createReq.Execution.GetRunId(), info.RunID)
 	s.Equal(createReq.ParentDomainID, info.ParentDomainID)
-	s.Equal(*createReq.ParentExecution.WorkflowId, info.ParentWorkflowID)
-	s.Equal(*createReq.ParentExecution.RunId, info.ParentRunID)
+	s.Equal(createReq.ParentExecution.GetWorkflowId(), info.ParentWorkflowID)
+	s.Equal(createReq.ParentExecution.GetRunId(), info.ParentRunID)
 	s.Equal(createReq.InitiatedID, info.InitiatedID)
 	s.Equal(createReq.TaskList, info.TaskList)
 	s.Equal(createReq.WorkflowTypeName, info.WorkflowTypeName)
@@ -688,7 +685,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	updatedInfo.ExpirationTime = time.Now()
 	updatedInfo.NonRetriableErrors = []string{"accessDenied", "badRequest"}
 
-	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), nil, nil, nil, nil, nil, nil)
+	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), nil, nil, nil, nil, nil)
 	s.NoError(err2)
 
 	state1, err3 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
@@ -732,7 +729,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	log.Infof("Workflow execution last updated: %v", info1.LastUpdatedTimestamp)
 
 	failedUpdateInfo := copyWorkflowExecutionInfo(updatedInfo)
-	err4 := s.UpdateWorkflowExecution(failedUpdateInfo, []int64{int64(5)}, nil, int64(3), nil, nil, nil, nil, nil, nil)
+	err4 := s.UpdateWorkflowExecution(failedUpdateInfo, []int64{int64(5)}, nil, int64(3), nil, nil, nil, nil, nil)
 	s.Error(err4, "expected non nil error.")
 	s.IsType(&p.ConditionFailedError{}, err4)
 	log.Errorf("Conditional update failed with error: %v", err4)
@@ -771,7 +768,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 
 	log.Infof("Workflow execution last updated: %v", info2.LastUpdatedTimestamp)
 
-	err5 := s.UpdateWorkflowExecutionWithRangeID(failedUpdateInfo, []int64{int64(5)}, nil, int64(12345), int64(5), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "")
+	err5 := s.UpdateWorkflowExecutionWithRangeID(failedUpdateInfo, []int64{int64(5)}, nil, int64(12345), int64(5), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "")
 	s.Error(err5, "expected non nil error.")
 	s.IsType(&p.ShardOwnershipLostError{}, err5)
 	log.Errorf("Conditional update failed with error: %v", err5)
@@ -811,7 +808,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	log.Infof("Workflow execution last updated: %v", info3.LastUpdatedTimestamp)
 
 	//update with incorrect rangeID and condition(next_event_id)
-	err7 := s.UpdateWorkflowExecutionWithRangeID(failedUpdateInfo, []int64{int64(5)}, nil, int64(12345), int64(3), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "")
+	err7 := s.UpdateWorkflowExecutionWithRangeID(failedUpdateInfo, []int64{int64(5)}, nil, int64(12345), int64(3), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "")
 	s.Error(err7, "expected non nil error.")
 	s.IsType(&p.ShardOwnershipLostError{}, err7)
 	log.Errorf("Conditional update failed with error: %v", err7)
@@ -900,7 +897,6 @@ func (s *ExecutionManagerSuite) TestDeleteCurrentWorkflow() {
 	if s.ExecutionManager.GetName() != "cassandra" {
 		s.T().Skip("this test is only applicable for cassandra (uses TTL based deletes)")
 	}
-	finishedCurrentExecutionRetentionTTL := int32(3) // 3 seconds
 	domainID := "54d15308-e20e-4b91-a00f-a518a3892790"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("get-current-workflow-test"),
@@ -911,9 +907,9 @@ func (s *ExecutionManagerSuite) TestDeleteCurrentWorkflow() {
 	s.NoError(err0)
 	s.NotNil(task0, "Expected non empty task identifier.")
 
-	runID0, err1 := s.GetCurrentWorkflowRunID(domainID, *workflowExecution.WorkflowId)
+	runID0, err1 := s.GetCurrentWorkflowRunID(domainID, workflowExecution.GetWorkflowId())
 	s.NoError(err1)
-	s.Equal(*workflowExecution.RunId, runID0)
+	s.Equal(workflowExecution.GetRunId(), runID0)
 
 	info0, err2 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.NoError(err2)
@@ -921,16 +917,30 @@ func (s *ExecutionManagerSuite) TestDeleteCurrentWorkflow() {
 	updatedInfo1 := copyWorkflowExecutionInfo(info0.ExecutionInfo)
 	updatedInfo1.NextEventID = int64(6)
 	updatedInfo1.LastProcessedEvent = int64(2)
-	err3 := s.UpdateWorkflowExecutionAndFinish(updatedInfo1, int64(3), finishedCurrentExecutionRetentionTTL)
+	err3 := s.UpdateWorkflowExecutionAndFinish(updatedInfo1, int64(3))
 	s.NoError(err3)
 
-	runID4, err4 := s.GetCurrentWorkflowRunID(domainID, *workflowExecution.WorkflowId)
+	runID4, err4 := s.GetCurrentWorkflowRunID(domainID, workflowExecution.GetWorkflowId())
 	s.NoError(err4)
-	s.Equal(*workflowExecution.RunId, runID4)
+	s.Equal(workflowExecution.GetRunId(), runID4)
 
-	time.Sleep(time.Duration(finishedCurrentExecutionRetentionTTL*2) * time.Second)
+	fakeInfo := &p.WorkflowExecutionInfo{
+		DomainID:   info0.ExecutionInfo.DomainID,
+		WorkflowID: info0.ExecutionInfo.WorkflowID,
+		RunID:      uuid.New(),
+	}
 
-	runID0, err1 = s.GetCurrentWorkflowRunID(domainID, *workflowExecution.WorkflowId)
+	// test wrong run id with conditional delete
+	s.DeleteCurrentWorkflowExecution(fakeInfo)
+
+	runID5, err5 := s.GetCurrentWorkflowRunID(domainID, workflowExecution.GetWorkflowId())
+	s.NoError(err5)
+	s.Equal(workflowExecution.GetRunId(), runID5)
+
+	// simulate a timer_task deleting execution after retention
+	s.DeleteCurrentWorkflowExecution(info0.ExecutionInfo)
+
+	runID0, err1 = s.GetCurrentWorkflowRunID(domainID, workflowExecution.GetWorkflowId())
 	s.Error(err1)
 	s.Empty(runID0)
 	_, ok := err1.(*gen.EntityNotExistsError)
@@ -941,12 +951,7 @@ func (s *ExecutionManagerSuite) TestDeleteCurrentWorkflow() {
 	s.NoError(err2)
 }
 
-// TestUpdateDeleteWorkflow verifies that an update workflow (with FinishExecution set to true)
-// followed by DeleteWorkflowExecution  clears all state associated with the workflow. The
-// reason for having this test is because cassandra deletes current_executions row with TTL
-// as part of the UpdateWFExecution API whereas SQL deletes current_executions entry as part of
-// timer task / DeleteWorkflowExecution API - so, an update followed by delete should clear
-// all state in both sql/cassandra
+// TestUpdateDeleteWorkflow mocks the timer behavoir to clean up workflow.
 func (s *ExecutionManagerSuite) TestUpdateDeleteWorkflow() {
 	finishedCurrentExecutionRetentionTTL := int32(2)
 	domainID := "54d15308-e20e-4b91-a00f-a518a3892790"
@@ -959,9 +964,9 @@ func (s *ExecutionManagerSuite) TestUpdateDeleteWorkflow() {
 	s.NoError(err0)
 	s.NotNil(task0, "Expected non empty task identifier.")
 
-	runID0, err1 := s.GetCurrentWorkflowRunID(domainID, *workflowExecution.WorkflowId)
+	runID0, err1 := s.GetCurrentWorkflowRunID(domainID, workflowExecution.GetWorkflowId())
 	s.NoError(err1)
-	s.Equal(*workflowExecution.RunId, runID0)
+	s.Equal(workflowExecution.GetRunId(), runID0)
 
 	info0, err2 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.NoError(err2)
@@ -969,20 +974,22 @@ func (s *ExecutionManagerSuite) TestUpdateDeleteWorkflow() {
 	updatedInfo1 := copyWorkflowExecutionInfo(info0.ExecutionInfo)
 	updatedInfo1.NextEventID = int64(6)
 	updatedInfo1.LastProcessedEvent = int64(2)
-	err3 := s.UpdateWorkflowExecutionAndFinish(updatedInfo1, int64(3), finishedCurrentExecutionRetentionTTL)
+	err3 := s.UpdateWorkflowExecutionAndFinish(updatedInfo1, int64(3))
 	s.NoError(err3)
 
-	runID4, err4 := s.GetCurrentWorkflowRunID(domainID, *workflowExecution.WorkflowId)
+	runID4, err4 := s.GetCurrentWorkflowRunID(domainID, workflowExecution.GetWorkflowId())
 	s.NoError(err4)
-	s.Equal(*workflowExecution.RunId, runID4)
+	s.Equal(workflowExecution.GetRunId(), runID4)
 
 	// simulate a timer_task deleting execution after retention
-	err5 := s.DeleteWorkflowExecution(info0.ExecutionInfo)
+	err5 := s.DeleteCurrentWorkflowExecution(info0.ExecutionInfo)
 	s.NoError(err5)
+	err6 := s.DeleteWorkflowExecution(info0.ExecutionInfo)
+	s.NoError(err6)
 
 	time.Sleep(time.Duration(finishedCurrentExecutionRetentionTTL*2) * time.Second)
 
-	runID0, err1 = s.GetCurrentWorkflowRunID(domainID, *workflowExecution.WorkflowId)
+	runID0, err1 = s.GetCurrentWorkflowRunID(domainID, workflowExecution.GetWorkflowId())
 	s.Error(err1)
 	s.Empty(runID0)
 	_, ok := err1.(*gen.EntityNotExistsError)
@@ -1012,7 +1019,7 @@ func (s *ExecutionManagerSuite) TestGetCurrentWorkflow() {
 		WorkflowID: workflowExecution.GetWorkflowId(),
 	})
 	s.NoError(err)
-	s.Equal(*workflowExecution.RunId, response.RunID)
+	s.Equal(workflowExecution.GetRunId(), response.RunID)
 	s.Equal(common.EmptyVersion, response.LastWriteVersion)
 
 	info0, err2 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
@@ -1021,12 +1028,12 @@ func (s *ExecutionManagerSuite) TestGetCurrentWorkflow() {
 	updatedInfo1 := copyWorkflowExecutionInfo(info0.ExecutionInfo)
 	updatedInfo1.NextEventID = int64(6)
 	updatedInfo1.LastProcessedEvent = int64(2)
-	err3 := s.UpdateWorkflowExecutionAndFinish(updatedInfo1, int64(3), 10)
+	err3 := s.UpdateWorkflowExecutionAndFinish(updatedInfo1, int64(3))
 	s.NoError(err3)
 
-	runID4, err4 := s.GetCurrentWorkflowRunID(domainID, *workflowExecution.WorkflowId)
+	runID4, err4 := s.GetCurrentWorkflowRunID(domainID, workflowExecution.GetWorkflowId())
 	s.NoError(err4)
-	s.Equal(*workflowExecution.RunId, runID4)
+	s.Equal(workflowExecution.GetRunId(), runID4)
 
 	workflowExecution2 := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("get-current-workflow-test"),
@@ -1056,8 +1063,8 @@ func (s *ExecutionManagerSuite) TestTransferTasksThroughUpdate() {
 	s.Equal(1, len(tasks1), "Expected 1 decision task.")
 	task1 := tasks1[0]
 	s.Equal(domainID, task1.DomainID)
-	s.Equal(*workflowExecution.WorkflowId, task1.WorkflowID)
-	s.Equal(*workflowExecution.RunId, task1.RunID)
+	s.Equal(workflowExecution.GetWorkflowId(), task1.WorkflowID)
+	s.Equal(workflowExecution.GetRunId(), task1.RunID)
 	s.Equal("queue1", task1.TaskList)
 	s.Equal(p.TransferTaskTypeDecisionTask, task1.TaskType)
 	s.Equal(int64(2), task1.ScheduleID)
@@ -1072,7 +1079,7 @@ func (s *ExecutionManagerSuite) TestTransferTasksThroughUpdate() {
 	updatedInfo := copyWorkflowExecutionInfo(info0)
 	updatedInfo.NextEventID = int64(5)
 	updatedInfo.LastProcessedEvent = int64(2)
-	err2 := s.UpdateWorkflowExecution(updatedInfo, nil, []int64{int64(4)}, int64(3), nil, nil, nil, nil, nil, nil)
+	err2 := s.UpdateWorkflowExecution(updatedInfo, nil, []int64{int64(4)}, int64(3), nil, nil, nil, nil, nil)
 	s.NoError(err2)
 
 	tasks2, err1 := s.GetTransferTasks(1, false)
@@ -1081,8 +1088,8 @@ func (s *ExecutionManagerSuite) TestTransferTasksThroughUpdate() {
 	s.Equal(1, len(tasks2), "Expected 1 decision task.")
 	task2 := tasks2[0]
 	s.Equal(domainID, task2.DomainID)
-	s.Equal(*workflowExecution.WorkflowId, task2.WorkflowID)
-	s.Equal(*workflowExecution.RunId, task2.RunID)
+	s.Equal(workflowExecution.GetWorkflowId(), task2.WorkflowID)
+	s.Equal(workflowExecution.GetRunId(), task2.RunID)
 	s.Equal("queue1", task2.TaskList)
 	s.Equal(p.TransferTaskTypeActivityTask, task2.TaskType)
 	s.Equal(int64(4), task2.ScheduleID)
@@ -1096,16 +1103,16 @@ func (s *ExecutionManagerSuite) TestTransferTasksThroughUpdate() {
 	updatedInfo1 := copyWorkflowExecutionInfo(info1)
 	updatedInfo1.NextEventID = int64(6)
 	updatedInfo1.LastProcessedEvent = int64(2)
-	err5 := s.UpdateWorkflowExecutionAndFinish(updatedInfo1, int64(5), 10)
+	err5 := s.UpdateWorkflowExecutionAndFinish(updatedInfo1, int64(5))
 	s.NoError(err5)
 
 	newExecution := gen.WorkflowExecution{
-		WorkflowId: workflowExecution.WorkflowId,
+		WorkflowId: common.StringPtr(workflowExecution.GetWorkflowId()),
 		RunId:      common.StringPtr("2a038c8f-b575-4151-8d2c-d443e999ab5a"),
 	}
 	runID6, err6 := s.GetCurrentWorkflowRunID(domainID, newExecution.GetWorkflowId())
 	s.NoError(err6)
-	s.Equal(*workflowExecution.RunId, runID6)
+	s.Equal(workflowExecution.GetRunId(), runID6)
 
 	tasks3, err7 := s.GetTransferTasks(1, false)
 	s.NoError(err7)
@@ -1113,8 +1120,8 @@ func (s *ExecutionManagerSuite) TestTransferTasksThroughUpdate() {
 	s.Equal(1, len(tasks3), "Expected 1 decision task.")
 	task3 := tasks3[0]
 	s.Equal(domainID, task3.DomainID)
-	s.Equal(*workflowExecution.WorkflowId, task3.WorkflowID)
-	s.Equal(*workflowExecution.RunId, task3.RunID)
+	s.Equal(workflowExecution.GetWorkflowId(), task3.WorkflowID)
+	s.Equal(workflowExecution.GetRunId(), task3.RunID)
 	s.Equal(p.TransferTaskTypeCloseExecution, task3.TaskType)
 	s.Equal("", task3.TargetRunID)
 
@@ -1173,8 +1180,8 @@ func (s *ExecutionManagerSuite) TestCancelTransferTaskTasks() {
 	task1 := tasks1[0]
 	s.Equal(p.TransferTaskTypeCancelExecution, task1.TaskType)
 	s.Equal(domainID, task1.DomainID)
-	s.Equal(*workflowExecution.WorkflowId, task1.WorkflowID)
-	s.Equal(*workflowExecution.RunId, task1.RunID)
+	s.Equal(workflowExecution.GetWorkflowId(), task1.WorkflowID)
+	s.Equal(workflowExecution.GetRunId(), task1.RunID)
 	s.Equal(targetDomainID, task1.TargetDomainID)
 	s.Equal(targetWorkflowID, task1.TargetWorkflowID)
 	s.Equal(targetRunID, task1.TargetRunID)
@@ -1212,8 +1219,8 @@ func (s *ExecutionManagerSuite) TestCancelTransferTaskTasks() {
 	task2 := tasks2[0]
 	s.Equal(p.TransferTaskTypeCancelExecution, task2.TaskType)
 	s.Equal(domainID, task2.DomainID)
-	s.Equal(*workflowExecution.WorkflowId, task2.WorkflowID)
-	s.Equal(*workflowExecution.RunId, task2.RunID)
+	s.Equal(workflowExecution.GetWorkflowId(), task2.WorkflowID)
+	s.Equal(workflowExecution.GetRunId(), task2.RunID)
 	s.Equal(targetDomainID, task2.TargetDomainID)
 	s.Equal(targetWorkflowID, task2.TargetWorkflowID)
 	s.Equal(targetRunID, task2.TargetRunID)
@@ -1268,8 +1275,8 @@ func (s *ExecutionManagerSuite) TestSignalTransferTaskTasks() {
 	task1 := tasks1[0]
 	s.Equal(p.TransferTaskTypeSignalExecution, task1.TaskType)
 	s.Equal(domainID, task1.DomainID)
-	s.Equal(*workflowExecution.WorkflowId, task1.WorkflowID)
-	s.Equal(*workflowExecution.RunId, task1.RunID)
+	s.Equal(workflowExecution.GetWorkflowId(), task1.WorkflowID)
+	s.Equal(workflowExecution.GetRunId(), task1.RunID)
 	s.Equal(targetDomainID, task1.TargetDomainID)
 	s.Equal(targetWorkflowID, task1.TargetWorkflowID)
 	s.Equal(targetRunID, task1.TargetRunID)
@@ -1307,8 +1314,8 @@ func (s *ExecutionManagerSuite) TestSignalTransferTaskTasks() {
 	task2 := tasks2[0]
 	s.Equal(p.TransferTaskTypeSignalExecution, task2.TaskType)
 	s.Equal(domainID, task2.DomainID)
-	s.Equal(*workflowExecution.WorkflowId, task2.WorkflowID)
-	s.Equal(*workflowExecution.RunId, task2.RunID)
+	s.Equal(workflowExecution.GetWorkflowId(), task2.WorkflowID)
+	s.Equal(workflowExecution.GetRunId(), task2.RunID)
 	s.Equal(targetDomainID, task2.TargetDomainID)
 	s.Equal(targetWorkflowID, task2.TargetWorkflowID)
 	s.Equal(targetRunID, task2.TargetRunID)
@@ -1615,7 +1622,7 @@ func (s *ExecutionManagerSuite) TestTimerTasksComplete() {
 		&p.ActivityTimeoutTask{now.Add(3 * time.Second), 4, int(gen.TimeoutTypeStartToClose), 7, 0, 14},
 		&p.UserTimerTask{now.Add(3 * time.Second), 5, 7, 15},
 	}
-	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), tasks, nil, nil, nil, nil, nil)
+	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), tasks, nil, nil, nil, nil)
 	s.NoError(err2)
 
 	timerTasks, err1 := s.GetTimerIndexTasks(1, true) // use page size one to force pagination
@@ -1668,7 +1675,7 @@ func (s *ExecutionManagerSuite) TestTimerTasksRangeComplete() {
 		&p.ActivityTimeoutTask{time.Now(), 4, int(gen.TimeoutTypeStartToClose), 7, 0, 14},
 		&p.UserTimerTask{time.Now(), 5, 7, 15},
 	}
-	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), tasks, nil, nil, nil, nil, nil)
+	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), tasks, nil, nil, nil, nil)
 	s.NoError(err2)
 
 	timerTasks, err1 := s.GetTimerIndexTasks(1, true) // use page size one to force pagination
@@ -1686,8 +1693,10 @@ func (s *ExecutionManagerSuite) TestTimerTasksRangeComplete() {
 	s.Equal(int64(14), timerTasks[3].Version)
 	s.Equal(int64(15), timerTasks[4].Version)
 
-	deleteTimerTask := &p.DecisionTimeoutTask{VisibilityTimestamp: timerTasks[0].VisibilityTimestamp, TaskID: timerTasks[0].TaskID}
-	err2 = s.UpdateWorkflowExecution(updatedInfo, nil, nil, int64(5), nil, deleteTimerTask, nil, nil, nil, nil)
+	err2 = s.UpdateWorkflowExecution(updatedInfo, nil, nil, int64(5), nil, nil, nil, nil, nil)
+	s.NoError(err2)
+
+	err2 = s.CompleteTimerTask(timerTasks[0].VisibilityTimestamp, timerTasks[0].TaskID)
 	s.NoError(err2)
 
 	err2 = s.CompleteTimerTask(timerTasks[1].VisibilityTimestamp, timerTasks[1].TaskID)
@@ -1760,7 +1769,7 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateActivities() {
 		ExpirationTime:           currentTime,
 		NonRetriableErrors:       []string{"accessDenied", "badRequest"},
 	}}
-	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), nil, nil, activityInfos, nil, nil, nil)
+	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), nil, activityInfos, nil, nil, nil)
 	s.NoError(err2)
 
 	state, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
@@ -1802,7 +1811,7 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateActivities() {
 	s.EqualTimes(activityInfos[0].ExpirationTime, ai.ExpirationTime)
 	s.Equal(activityInfos[0].NonRetriableErrors, ai.NonRetriableErrors)
 
-	err2 = s.UpdateWorkflowExecution(updatedInfo, nil, nil, int64(5), nil, nil, nil, []int64{1}, nil, nil)
+	err2 = s.UpdateWorkflowExecution(updatedInfo, nil, nil, int64(5), nil, nil, []int64{1}, nil, nil)
 	s.NoError(err2)
 
 	state, err1 = s.GetWorkflowExecutionInfo(domainID, workflowExecution)
@@ -1840,7 +1849,7 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateTimers() {
 		TaskID:     2,
 		StartedID:  5,
 	}}
-	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), nil, nil, nil, nil, timerInfos, nil)
+	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), nil, nil, nil, timerInfos, nil)
 	s.NoError(err2)
 
 	state, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
@@ -1853,7 +1862,7 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateTimers() {
 	s.Equal(int64(2), state.TimerInfos[timerID].TaskID)
 	s.Equal(int64(5), state.TimerInfos[timerID].StartedID)
 
-	err2 = s.UpdateWorkflowExecution(updatedInfo, nil, nil, int64(5), nil, nil, nil, nil, nil, []string{timerID})
+	err2 = s.UpdateWorkflowExecution(updatedInfo, nil, nil, int64(5), nil, nil, nil, nil, []string{timerID})
 	s.NoError(err2)
 
 	state, err1 = s.GetWorkflowExecutionInfo(domainID, workflowExecution)
@@ -1871,7 +1880,7 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateChildExecutions() {
 	}
 
 	parentDomainID := "6036ded3-e541-42c9-8f69-3d9354dad081"
-	parentExecution := &gen.WorkflowExecution{
+	parentExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-workflow-mutable-child-executions-child-test"),
 		RunId:      common.StringPtr("73e89362-25ec-4305-bcb8-d9448b90856c"),
 	}
@@ -1885,8 +1894,8 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateChildExecutions() {
 	info0 := state0.ExecutionInfo
 	s.NotNil(info0, "Valid Workflow info expected.")
 	s.Equal(parentDomainID, info0.ParentDomainID)
-	s.Equal(*parentExecution.WorkflowId, info0.ParentWorkflowID)
-	s.Equal(*parentExecution.RunId, info0.ParentRunID)
+	s.Equal(parentExecution.GetWorkflowId(), info0.ParentWorkflowID)
+	s.Equal(parentExecution.GetRunId(), info0.ParentRunID)
 	s.Equal(int64(1), info0.InitiatedID)
 
 	updatedInfo := copyWorkflowExecutionInfo(info0)
@@ -2294,7 +2303,7 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateInfo() {
 	updatedInfo.NextEventID = int64(5)
 	updatedInfo.LastProcessedEvent = int64(2)
 
-	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), nil, nil, nil, nil, nil, nil)
+	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), nil, nil, nil, nil, nil)
 	s.NoError(err2)
 
 	state, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
@@ -2363,9 +2372,9 @@ func (s *ExecutionManagerSuite) TestContinueAsNew() {
 	s.Equal(int64(2), newExecutionInfo.DecisionScheduleID)
 	s.Equal(testResetPoints.String(), newExecutionInfo.AutoResetPoints.String())
 
-	newRunID, err5 := s.GetCurrentWorkflowRunID(domainID, *workflowExecution.WorkflowId)
+	newRunID, err5 := s.GetCurrentWorkflowRunID(domainID, workflowExecution.GetWorkflowId())
 	s.NoError(err5)
-	s.Equal(*newWorkflowExecution.RunId, newRunID)
+	s.Equal(newWorkflowExecution.GetRunId(), newRunID)
 }
 
 // TestReplicationTransferTaskTasks test
@@ -2417,8 +2426,8 @@ func (s *ExecutionManagerSuite) TestReplicationTransferTaskTasks() {
 	task1 := tasks1[0]
 	s.Equal(p.ReplicationTaskTypeHistory, task1.TaskType)
 	s.Equal(domainID, task1.DomainID)
-	s.Equal(*workflowExecution.WorkflowId, task1.WorkflowID)
-	s.Equal(*workflowExecution.RunId, task1.RunID)
+	s.Equal(workflowExecution.GetWorkflowId(), task1.WorkflowID)
+	s.Equal(workflowExecution.GetRunId(), task1.RunID)
 	s.Equal(int64(1), task1.FirstEventID)
 	s.Equal(int64(3), task1.NextEventID)
 	s.Equal(int64(9), task1.Version)
@@ -2498,8 +2507,8 @@ func (s *ExecutionManagerSuite) TestWorkflowReplicationState() {
 	tsk := taskR[0]
 	s.Equal(p.ReplicationTaskTypeHistory, tsk.TaskType)
 	s.Equal(domainID, tsk.DomainID)
-	s.Equal(*workflowExecution.WorkflowId, tsk.WorkflowID)
-	s.Equal(*workflowExecution.RunId, tsk.RunID)
+	s.Equal(workflowExecution.GetWorkflowId(), tsk.WorkflowID)
+	s.Equal(workflowExecution.GetRunId(), tsk.RunID)
 	s.Equal(int64(1), tsk.FirstEventID)
 	s.Equal(int64(3), tsk.NextEventID)
 	s.Equal(int64(9), tsk.Version)
@@ -2588,8 +2597,8 @@ func (s *ExecutionManagerSuite) TestWorkflowReplicationState() {
 	tsk1 := taskR1[0]
 	s.Equal(p.ReplicationTaskTypeHistory, tsk1.TaskType)
 	s.Equal(domainID, tsk1.DomainID)
-	s.Equal(*workflowExecution.WorkflowId, tsk1.WorkflowID)
-	s.Equal(*workflowExecution.RunId, tsk1.RunID)
+	s.Equal(workflowExecution.GetWorkflowId(), tsk1.WorkflowID)
+	s.Equal(workflowExecution.GetRunId(), tsk1.RunID)
 	s.Equal(int64(3), tsk1.FirstEventID)
 	s.Equal(int64(5), tsk1.NextEventID)
 	s.Equal(int64(10), tsk1.Version)
@@ -3274,7 +3283,7 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsNotSelf() {
 	updatedInfo1.CloseStatus = p.WorkflowCloseStatusCompleted
 	updatedInfo1.NextEventID = int64(6)
 	updatedInfo1.LastProcessedEvent = int64(2)
-	err3 := s.UpdateWorkflowExecutionAndFinish(updatedInfo1, int64(3), 123)
+	err3 := s.UpdateWorkflowExecutionAndFinish(updatedInfo1, int64(3))
 	s.NoError(err3)
 	runID1, err = s.GetCurrentWorkflowRunID(domainID, workflowID)
 	s.Equal(workflowExecutionCurrent1.GetRunId(), runID1)

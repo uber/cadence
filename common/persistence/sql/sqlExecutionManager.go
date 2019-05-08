@@ -154,7 +154,6 @@ func (m *sqlExecutionManager) createWorkflowExecutionTx(tx sqldb.Tx, request *p.
 
 	if err := createTimerTasks(tx,
 		request.TimerTasks,
-		nil,
 		m.shardID,
 		domainID,
 		workflowID,
@@ -438,7 +437,7 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(tx sqldb.Tx, request *p.
 		}
 	}
 
-	if err := createTimerTasks(tx, request.TimerTasks, request.DeleteTimerTask, shardID, domainID, workflowID, runID); err != nil {
+	if err := createTimerTasks(tx, request.TimerTasks, shardID, domainID, workflowID, runID); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("UpdateWorkflowExecution operation failed. Failed to create timer tasks. Error: %v", err),
 		}
@@ -550,7 +549,6 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(tx sqldb.Tx, request *p.
 
 		if err := createTimerTasks(tx,
 			request.ContinueAsNew.TimerTasks,
-			nil,
 			shardID,
 			newDomainID,
 			request.ContinueAsNew.Execution.GetWorkflowId(),
@@ -677,7 +675,7 @@ func (m *sqlExecutionManager) ResetWorkflowExecution(request *p.InternalResetWor
 					Message: fmt.Sprintf("ResetWorkflowExecution operation failed. Failed to create transfer tasks. Error: %v", err),
 				}
 			}
-			if err := createTimerTasks(tx, request.CurrTimerTasks, nil, shardID, domainID, workflowID, currRunID); err != nil {
+			if err := createTimerTasks(tx, request.CurrTimerTasks, shardID, domainID, workflowID, currRunID); err != nil {
 				return &workflow.InternalServiceError{
 					Message: fmt.Sprintf("ResetWorkflowExecution operation failed. Failed to create timer tasks. Error: %v", err),
 				}
@@ -818,7 +816,7 @@ func (m *sqlExecutionManager) ResetWorkflowExecution(request *p.InternalResetWor
 		}
 
 		if len(request.InsertTimerTasks) > 0 {
-			if err := createTimerTasks(tx, request.InsertTimerTasks, nil, shardID, domainID, workflowID, newRunID); err != nil {
+			if err := createTimerTasks(tx, request.InsertTimerTasks, shardID, domainID, workflowID, newRunID); err != nil {
 				return &workflow.InternalServiceError{
 					Message: fmt.Sprintf("ResetWorkflowExecution operation failed. Failed to create timer tasks. Error: %v", err),
 				}
@@ -1046,27 +1044,29 @@ func (m *sqlExecutionManager) resetMutableStateTx(tx sqldb.Tx, request *p.Intern
 func (m *sqlExecutionManager) DeleteWorkflowExecution(request *p.DeleteWorkflowExecutionRequest) error {
 	domainID := sqldb.MustParseUUID(request.DomainID)
 	runID := sqldb.MustParseUUID(request.RunID)
-	return m.txExecute("deleteWorkflowExecution", func(tx sqldb.Tx) error {
-		if _, err := tx.DeleteFromExecutions(&sqldb.ExecutionsFilter{
-			ShardID:    m.shardID,
-			DomainID:   domainID,
-			WorkflowID: request.WorkflowID,
-			RunID:      runID,
-		}); err != nil {
-			return err
-		}
-		// its possible for a new run of the same workflow to have started after the run we are deleting
-		// here was finished. In that case, current_executions table will have the same workflowID but different
-		// runID. The following code will delete the row from current_executions if and only if the runID is
-		// same as the one we are trying to delete here
-		_, err := tx.DeleteFromCurrentExecutions(&sqldb.CurrentExecutionsFilter{
-			ShardID:    int64(m.shardID),
-			DomainID:   domainID,
-			WorkflowID: request.WorkflowID,
-			RunID:      runID,
-		})
-		return err
+	_, err := m.db.DeleteFromExecutions(&sqldb.ExecutionsFilter{
+		ShardID:    m.shardID,
+		DomainID:   domainID,
+		WorkflowID: request.WorkflowID,
+		RunID:      runID,
 	})
+	return err
+}
+
+// its possible for a new run of the same workflow to have started after the run we are deleting
+// here was finished. In that case, current_executions table will have the same workflowID but different
+// runID. The following code will delete the row from current_executions if and only if the runID is
+// same as the one we are trying to delete here
+func (m *sqlExecutionManager) DeleteCurrentWorkflowExecution(request *p.DeleteCurrentWorkflowExecutionRequest) error {
+	domainID := sqldb.MustParseUUID(request.DomainID)
+	runID := sqldb.MustParseUUID(request.RunID)
+	_, err := m.db.DeleteFromCurrentExecutions(&sqldb.CurrentExecutionsFilter{
+		ShardID:    int64(m.shardID),
+		DomainID:   domainID,
+		WorkflowID: request.WorkflowID,
+		RunID:      runID,
+	})
+	return err
 }
 
 func (m *sqlExecutionManager) GetCurrentExecution(request *p.GetCurrentExecutionRequest) (*p.GetCurrentExecutionResponse, error) {
@@ -1434,7 +1434,7 @@ func createExecutionFromRequest(
 			info.LastReplicationInfo[k] = &sqlblobs.ReplicationInfo{Version: &v.Version, LastEventID: &v.LastEventID}
 		}
 	}
-	if request.ParentExecution != nil {
+	if request.ParentDomainID != "" {
 		info.InitiatedID = &request.InitiatedID
 		info.ParentDomainID = sqldb.MustParseUUID(request.ParentDomainID)
 		info.ParentWorkflowID = request.ParentExecution.WorkflowId
@@ -1486,7 +1486,7 @@ func createOrUpdateCurrentExecution(
 		row.StartVersion = replicationState.StartVersion
 		row.LastWriteVersion = replicationState.LastWriteVersion
 	}
-	if request.ParentExecution != nil {
+	if request.ParentDomainID != "" {
 		row.State = p.WorkflowStateCreated
 	}
 
@@ -1616,10 +1616,9 @@ func createTransferTasks(tx sqldb.Tx, transferTasks []p.Task, shardID int, domai
 			info.TargetWorkflowID = &task.(*p.StartChildExecutionTask).TargetWorkflowID
 			info.ScheduleID = &task.(*p.StartChildExecutionTask).InitiatedID
 
-		case p.TransferTaskTypeCloseExecution:
-			// No explicit property needs to be set
-
-		case p.TransferTaskTypeRecordWorkflowStarted:
+		case p.TransferTaskTypeCloseExecution,
+			p.TransferTaskTypeRecordWorkflowStarted,
+			p.TransferTaskTypeResetWorkflow:
 			// No explicit property needs to be set
 
 		default:
@@ -1761,7 +1760,7 @@ func createReplicationTasks(
 }
 
 func createTimerTasks(
-	tx sqldb.Tx, timerTasks []p.Task, deleteTimerTask p.Task, shardID int, domainID sqldb.UUID, workflowID string, runID sqldb.UUID) error {
+	tx sqldb.Tx, timerTasks []p.Task, shardID int, domainID sqldb.UUID, workflowID string, runID sqldb.UUID) error {
 	if len(timerTasks) > 0 {
 		timerTasksRows := make([]sqldb.TimerTasksRow, len(timerTasks))
 
@@ -1820,16 +1819,6 @@ func createTimerTasks(
 		if int(rowsAffected) != len(timerTasks) {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Failed to create timer tasks. Inserted %v instead of %v rows into timer_tasks. Error: %v", rowsAffected, len(timerTasks), err),
-			}
-		}
-	}
-
-	if deleteTimerTask != nil {
-		ts := deleteTimerTask.GetVisibilityTimestamp()
-		_, err := tx.DeleteFromTimerTasks(&sqldb.TimerTasksFilter{ShardID: shardID, VisibilityTimestamp: &ts, TaskID: deleteTimerTask.GetTaskID()})
-		if err != nil {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("Failed to delete timer task. Task: %v. Error: %v", deleteTimerTask, err),
 			}
 		}
 	}

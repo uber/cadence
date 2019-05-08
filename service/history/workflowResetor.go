@@ -70,7 +70,7 @@ func (w *workflowResetorImpl) ResetWorkflowExecution(ctx context.Context, reques
 
 	resetNewRunID := uuid.New()
 	response = &workflow.ResetWorkflowExecutionResponse{
-		RunId: common.StringPtr(uuid.New()),
+		RunId: common.StringPtr(resetNewRunID),
 	}
 
 	// before changing mutable state
@@ -332,12 +332,6 @@ func (w *workflowResetorImpl) terminateIfCurrIsRunning(currMutableState mutableS
 
 	if currMutableState.IsWorkflowExecutionRunning() {
 		terminateCurr = true
-
-		retError = failInFlightDecisionToClearBufferedEvents(currMutableState)
-		if retError != nil {
-			return
-		}
-
 		currMutableState.AddWorkflowExecutionTerminatedEvent(&workflow.TerminateWorkflowExecutionRequest{
 			Reason:   common.StringPtr(reason),
 			Details:  nil,
@@ -858,5 +852,24 @@ func (w *workflowResetorImpl) replicateResetEvent(baseMutableState mutableState,
 
 	newMsBuilder.GetExecutionInfo().SetLastFirstEventID(firstEvent.GetEventId())
 	newMsBuilder.UpdateReplicationStateLastEventID(clusterMetadata.GetCurrentClusterName(), lastEvent.GetVersion(), lastEvent.GetEventId())
+	return
+}
+
+// FindAutoResetPoint returns the auto reset point
+func FindAutoResetPoint(badBinaries *workflow.BadBinaries, autoResetPoints *workflow.ResetPoints) (reason string, pt *workflow.ResetPointInfo) {
+	if badBinaries == nil || badBinaries.Binaries == nil || autoResetPoints == nil || autoResetPoints.Points == nil {
+		return
+	}
+	nowNano := time.Now().UnixNano()
+	for _, p := range autoResetPoints.Points {
+		bin, ok := badBinaries.Binaries[p.GetBinaryChecksum()]
+		if ok && p.GetResettable() {
+			if p.GetExpiringTimeNano() > 0 && nowNano > p.GetExpiringTimeNano() {
+				// reset point has expired and we may already deleted the history
+				continue
+			}
+			return bin.GetReason(), p
+		}
+	}
 	return
 }

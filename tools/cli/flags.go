@@ -68,6 +68,10 @@ const (
 	FlagInputWithAlias              = FlagInput + ", i"
 	FlagInputFile                   = "input_file"
 	FlagInputFileWithAlias          = FlagInputFile + ", if"
+	FlagExcludeFile                 = "exclude_file"
+	FlagInputSeparator              = "input_separator"
+	FlagParallism                   = "input_parallism"
+	FlagSkipCurrent                 = "skip_current_open"
 	FlagInputTopic                  = "input_topic"
 	FlagInputTopicWithAlias         = FlagInputTopic + ", it"
 	FlagHostFile                    = "host_file"
@@ -154,6 +158,9 @@ const (
 	FlagMemoFile                    = "memo_file"
 	FlagAddBadBinary                = "add_bad_binary"
 	FlagRemoveBadBinary             = "remove_bad_binary"
+	FlagResetType                   = "reset_type"
+	FlagResetPointsOnly             = "reset_points_only"
+	FlagResetBadBinaryChecksum      = "reset_bad_binary_checksum"
 )
 
 var flagsForExecution = []cli.Flag{
@@ -201,6 +208,10 @@ func getFlagsForShowID() []cli.Flag {
 			Name:  FlagMaxFieldLengthWithAlias,
 			Usage: "Maximum length for each attribute field",
 			Value: defaultMaxFieldLength,
+		},
+		cli.BoolFlag{
+			Name:  FlagResetPointsOnly,
+			Usage: "Only show events that are eligible for reset",
 		},
 	}
 }
@@ -396,6 +407,10 @@ func getFlagsForDescribeID() []cli.Flag {
 		cli.BoolFlag{
 			Name:  FlagPrintRawTimeWithAlias,
 			Usage: "Print raw time stamp",
+		},
+		cli.BoolFlag{
+			Name:  FlagResetPointsOnly,
+			Usage: "Only show auto-reset points",
 		},
 	}
 }
