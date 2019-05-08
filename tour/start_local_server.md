@@ -1,6 +1,6 @@
 ---
 title: Start Cadence Server Locally
-codecontent: startlocalservercode
+codecontent: startlocalserver
 ---
 
 The exercises in this tour assume that you have a Cadence server running. 
