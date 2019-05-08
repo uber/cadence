@@ -69,7 +69,7 @@ func (s *esProcessorSuite) SetupTest() {
 		IndexerConcurrency:       dynamicconfig.GetIntPropertyFn(32),
 		ESProcessorNumOfWorkers:  dynamicconfig.GetIntPropertyFn(1),
 		ESProcessorBulkActions:   dynamicconfig.GetIntPropertyFn(10),
-		ESProcessorBulkLen:       dynamicconfig.GetIntPropertyFn(2 << 20),
+		ESProcessorBulkSize:      dynamicconfig.GetIntPropertyFn(2 << 20),
 		ESProcessorFlushInterval: dynamicconfig.GetDurationPropertyFn(1 * time.Minute),
 	}
 	s.mockMetricClient = &mmocks.Client{}
@@ -101,7 +101,7 @@ func (s *esProcessorSuite) TestNewESProcessorAndStart() {
 	config := &Config{
 		ESProcessorNumOfWorkers:  dynamicconfig.GetIntPropertyFn(1),
 		ESProcessorBulkActions:   dynamicconfig.GetIntPropertyFn(10),
-		ESProcessorBulkLen:       dynamicconfig.GetIntPropertyFn(2 << 20),
+		ESProcessorBulkSize:      dynamicconfig.GetIntPropertyFn(2 << 20),
 		ESProcessorFlushInterval: dynamicconfig.GetDurationPropertyFn(1 * time.Minute),
 	}
 	processorName := "test-processor"
@@ -110,7 +110,7 @@ func (s *esProcessorSuite) TestNewESProcessorAndStart() {
 		s.Equal(processorName, input.Name)
 		s.Equal(config.ESProcessorNumOfWorkers(), input.NumOfWorkers)
 		s.Equal(config.ESProcessorBulkActions(), input.BulkActions)
-		s.Equal(config.ESProcessorBulkLen(), input.BulkLen)
+		s.Equal(config.ESProcessorBulkSize(), input.BulkSize)
 		s.Equal(config.ESProcessorFlushInterval(), input.FlushInterval)
 		s.NotNil(input.Backoff)
 		s.NotNil(input.AfterFunc)
