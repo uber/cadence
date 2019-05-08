@@ -341,11 +341,6 @@ func (t *workflowReplicationTask) RetryErr(err error) bool {
 	return false
 }
 
-func (t *workflowReplicationTask) NewTaskQueue() task.SequentialTaskQueue {
-	taskQueue := newReplicationSequentialTaskQueue(t.queueID)
-	return taskQueue
-}
-
 func (t *workflowReplicationTask) Ack() {
 	t.metricsClient.IncCounter(t.metricsScope, metrics.ReplicatorMessages)
 	t.metricsClient.RecordTimer(t.metricsScope, metrics.ReplicatorLatency, t.timeSource.Now().Sub(t.startTime))

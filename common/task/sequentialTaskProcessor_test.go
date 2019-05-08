@@ -65,6 +65,16 @@ func (s *SequentialTaskProcessorSuite) SetupTest() {
 		func(key interface{}) uint32 {
 			return key.(uint32)
 		},
+		func(task SequentialTask) SequentialTaskQueue {
+			taskQueue := collection.NewConcurrentPriorityQueue(func(this interface{}, other interface{}) bool {
+				return this.(*testSequentialTaskImpl).taskID < other.(*testSequentialTaskImpl).taskID
+			})
+
+			return &testSequentialTaskQueueImpl{
+				id:        task.(*testSequentialTaskImpl).queueID,
+				taskQueue: taskQueue,
+			}
+		},
 		logger,
 	)
 }
@@ -77,7 +87,7 @@ func (s *SequentialTaskProcessorSuite) TestSubmit_NoPriorTask() {
 	// do not start the processor
 	s.Nil(s.processor.Submit(task))
 	sequentialTaskQueue := <-s.processor.(*sequentialTaskProcessorImpl).taskqueueChan
-	sequentialTask := sequentialTaskQueue.Poll()
+	sequentialTask := sequentialTaskQueue.Remove()
 	s.True(sequentialTaskQueue.IsEmpty())
 	s.Equal(task, sequentialTask)
 }
@@ -91,8 +101,8 @@ func (s *SequentialTaskProcessorSuite) TestSubmit_HasPriorTask() {
 	s.Nil(s.processor.Submit(task1))
 	s.Nil(s.processor.Submit(task2))
 	sequentialTaskQueue := <-s.processor.(*sequentialTaskProcessorImpl).taskqueueChan
-	sequentialTask1 := sequentialTaskQueue.Poll()
-	sequentialTask2 := sequentialTaskQueue.Poll()
+	sequentialTask1 := sequentialTaskQueue.Remove()
+	sequentialTask2 := sequentialTaskQueue.Remove()
 	s.True(sequentialTaskQueue.IsEmpty())
 	s.Equal(task1, sequentialTask1)
 	s.Equal(task2, sequentialTask2)
@@ -117,8 +127,8 @@ func (s *SequentialTaskProcessorSuite) TestProcessTaskQueue_ShutDown() {
 	s.Equal(0, task1.NumNcked())
 	s.Equal(0, task2.NumAcked())
 	s.Equal(0, task2.NumNcked())
-	s.Equal(1, s.processor.(*sequentialTaskProcessorImpl).taskqueues.Size())
-	s.Equal(2, sequentialTaskQueue.Size())
+	s.Equal(1, s.processor.(*sequentialTaskProcessorImpl).taskqueues.Len())
+	s.Equal(2, sequentialTaskQueue.Len())
 }
 
 func (s *SequentialTaskProcessorSuite) TestProcessTaskQueue() {
@@ -139,8 +149,8 @@ func (s *SequentialTaskProcessorSuite) TestProcessTaskQueue() {
 	s.Equal(0, task1.NumNcked())
 	s.Equal(1, task2.NumAcked())
 	s.Equal(0, task2.NumNcked())
-	s.Equal(0, s.processor.(*sequentialTaskProcessorImpl).taskqueues.Size())
-	s.Equal(0, sequentialTaskQueue.Size())
+	s.Equal(0, s.processor.(*sequentialTaskProcessorImpl).taskqueues.Len())
+	s.Equal(0, sequentialTaskQueue.Len())
 }
 
 func (s *SequentialTaskProcessorSuite) TestSequentialTaskProcessing() {
@@ -164,7 +174,7 @@ func (s *SequentialTaskProcessorSuite) TestSequentialTaskProcessing() {
 		s.Equal(1, task.NumAcked())
 		s.Equal(0, task.NumNcked())
 	}
-	s.Equal(0, s.processor.(*sequentialTaskProcessorImpl).taskqueues.Size())
+	s.Equal(0, s.processor.(*sequentialTaskProcessorImpl).taskqueues.Len())
 }
 
 func (s *SequentialTaskProcessorSuite) TestRandomizedTaskProcessing() {
@@ -206,7 +216,7 @@ func (s *SequentialTaskProcessorSuite) TestRandomizedTaskProcessing() {
 			s.Equal(0, task.NumNcked())
 		}
 	}
-	s.Equal(0, s.processor.(*sequentialTaskProcessorImpl).taskqueues.Size())
+	s.Equal(0, s.processor.(*sequentialTaskProcessorImpl).taskqueues.Len())
 }
 
 func randomize(array []*testSequentialTaskImpl) {
@@ -270,34 +280,22 @@ func (t *testSequentialTaskImpl) NumNcked() int {
 	return t.nacked
 }
 
-func (t *testSequentialTaskImpl) NewTaskQueue() SequentialTaskQueue {
-
-	taskQueue := collection.NewConcurrentPriorityQueue(func(this interface{}, other interface{}) bool {
-		return this.(*testSequentialTaskImpl).taskID < other.(*testSequentialTaskImpl).taskID
-	})
-
-	return &testSequentialTaskQueueImpl{
-		id:        t.queueID,
-		taskQueue: taskQueue,
-	}
-}
-
 func (t *testSequentialTaskQueueImpl) QueueID() interface{} {
 	return t.id
 }
 
-func (t *testSequentialTaskQueueImpl) Offer(task SequentialTask) {
-	t.taskQueue.Offer(task)
+func (t *testSequentialTaskQueueImpl) Add(task SequentialTask) {
+	t.taskQueue.Add(task)
 }
 
-func (t *testSequentialTaskQueueImpl) Poll() SequentialTask {
-	return t.taskQueue.Poll().(SequentialTask)
+func (t *testSequentialTaskQueueImpl) Remove() SequentialTask {
+	return t.taskQueue.Remove().(SequentialTask)
 }
 
 func (t *testSequentialTaskQueueImpl) IsEmpty() bool {
 	return t.taskQueue.IsEmpty()
 }
 
-func (t *testSequentialTaskQueueImpl) Size() int {
-	return t.taskQueue.Size()
+func (t *testSequentialTaskQueueImpl) Len() int {
+	return t.taskQueue.Len()
 }

@@ -344,15 +344,6 @@ func (s *activityReplicationTaskSuite) TestNack() {
 	task.Nack()
 }
 
-func (s *activityReplicationTaskSuite) TestNewTaskQueue() {
-	task := newActivityReplicationTask(s.getActivityReplicationTask(), s.mockMsg, s.logger,
-		s.config, s.mockTimeSource, s.mockHistoryClient, s.metricsClient, s.mockRereplicator)
-
-	taskQueue := task.NewTaskQueue()
-	s.Equal(0, taskQueue.Size())
-	s.Equal(task.queueID, taskQueue.QueueID())
-}
-
 func (s *historyReplicationTaskSuite) TestNewHistoryReplicationTask() {
 	replicationTask := s.getHistoryReplicationTask()
 	replicationAttr := replicationTask.HistoryTaskAttributes
@@ -510,15 +501,6 @@ func (s *historyReplicationTaskSuite) TestNack() {
 	task.Nack()
 }
 
-func (s *historyReplicationTaskSuite) TestNewTaskQueue() {
-	task := newHistoryReplicationTask(s.getHistoryReplicationTask(), s.mockMsg, s.sourceCluster, s.logger,
-		s.config, s.mockTimeSource, s.mockHistoryClient, s.metricsClient, s.mockRereplicator)
-
-	taskQueue := task.NewTaskQueue()
-	s.Equal(0, taskQueue.Size())
-	s.Equal(task.queueID, taskQueue.QueueID())
-}
-
 func (s *historyMetadataReplicationTaskSuite) TestNewHistoryMetadataReplicationTask() {
 	replicationTask := s.getHistoryMetadataReplicationTask()
 	replicationAttr := replicationTask.HistoryMetadataTaskAttributes
@@ -656,15 +638,6 @@ func (s *historyMetadataReplicationTaskSuite) TestNack() {
 
 	s.mockMsg.On("Nack").Return(nil).Once()
 	task.Nack()
-}
-
-func (s *historyMetadataReplicationTaskSuite) TestNewTaskQueue() {
-	task := newHistoryMetadataReplicationTask(s.getHistoryMetadataReplicationTask(), s.mockMsg, s.sourceCluster, s.logger,
-		s.config, s.mockTimeSource, s.mockHistoryClient, s.metricsClient, s.mockRereplicator)
-
-	taskQueue := task.NewTaskQueue()
-	s.Equal(0, taskQueue.Size())
-	s.Equal(task.queueID, taskQueue.QueueID())
 }
 
 func (s *activityReplicationTaskSuite) getActivityReplicationTask() *replicator.ReplicationTask {

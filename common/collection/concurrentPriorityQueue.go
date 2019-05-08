@@ -46,20 +46,20 @@ func (pq *concurrentPriorityQueueImpl) Peek() interface{} {
 	return pq.priorityQueue.Peek()
 }
 
-// Offer push an item to priority queue
-func (pq *concurrentPriorityQueueImpl) Offer(item interface{}) {
+// Add push an item to priority queue
+func (pq *concurrentPriorityQueueImpl) Add(item interface{}) {
 	pq.lock.Lock()
 	defer pq.lock.Unlock()
 
-	pq.priorityQueue.Offer(item)
+	pq.priorityQueue.Add(item)
 }
 
-// Poll pop an item from priority queue
-func (pq *concurrentPriorityQueueImpl) Poll() interface{} {
+// Remove pop an item from priority queue
+func (pq *concurrentPriorityQueueImpl) Remove() interface{} {
 	pq.lock.Lock()
 	defer pq.lock.Unlock()
 
-	return pq.priorityQueue.Poll()
+	return pq.priorityQueue.Remove()
 }
 
 // IsEmpty indicate if the priority queue is empty
@@ -70,10 +70,10 @@ func (pq *concurrentPriorityQueueImpl) IsEmpty() bool {
 	return pq.priorityQueue.IsEmpty()
 }
 
-// Size size of the queue
-func (pq *concurrentPriorityQueueImpl) Size() int {
+// Len return the size of the queue
+func (pq *concurrentPriorityQueueImpl) Len() int {
 	pq.lock.Lock()
 	defer pq.lock.Unlock()
 
-	return pq.priorityQueue.Size()
+	return pq.priorityQueue.Len()
 }

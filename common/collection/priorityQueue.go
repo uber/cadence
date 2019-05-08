@@ -46,24 +46,19 @@ func (pq *priorityQueueImpl) Peek() interface{} {
 	return pq.items[0]
 }
 
-// Offer push an item to priority queue
-func (pq *priorityQueueImpl) Offer(item interface{}) {
+// Add push an item to priority queue
+func (pq *priorityQueueImpl) Add(item interface{}) {
 	heap.Push(pq, item)
 }
 
-// Poll pop an item from priority queue
-func (pq *priorityQueueImpl) Poll() interface{} {
+// Remove pop an item from priority queue
+func (pq *priorityQueueImpl) Remove() interface{} {
 	return heap.Pop(pq)
 }
 
 // IsEmpty indicate if the priority queue is empty
 func (pq *priorityQueueImpl) IsEmpty() bool {
 	return pq.Len() == 0
-}
-
-// Size size of the queue
-func (pq *priorityQueueImpl) Size() int {
-	return pq.Len()
 }
 
 // below are the functions used by heap.Interface and go internal heap implementation

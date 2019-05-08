@@ -34,7 +34,19 @@ type (
 	}
 )
 
-func newReplicationSequentialTaskQueue(id definition.WorkflowIdentifier) *replicationSequentialTaskQueue {
+func newReplicationSequentialTaskQueue(task task.SequentialTask) task.SequentialTaskQueue {
+	var id definition.WorkflowIdentifier
+	switch t := task.(type) {
+	case *historyMetadataReplicationTask:
+		id = t.queueID
+	case *historyReplicationTask:
+		id = t.queueID
+	case *activityReplicationTask:
+		id = t.queueID
+	default:
+		panic("Unknown replication task type")
+	}
+
 	return &replicationSequentialTaskQueue{
 		id: id,
 		taskQueue: collection.NewConcurrentPriorityQueue(
@@ -47,20 +59,20 @@ func (q *replicationSequentialTaskQueue) QueueID() interface{} {
 	return q.id
 }
 
-func (q *replicationSequentialTaskQueue) Offer(task task.SequentialTask) {
-	q.taskQueue.Offer(task)
+func (q *replicationSequentialTaskQueue) Add(task task.SequentialTask) {
+	q.taskQueue.Add(task)
 }
 
-func (q *replicationSequentialTaskQueue) Poll() task.SequentialTask {
-	return q.taskQueue.Poll().(task.SequentialTask)
+func (q *replicationSequentialTaskQueue) Remove() task.SequentialTask {
+	return q.taskQueue.Remove().(task.SequentialTask)
 }
 
 func (q *replicationSequentialTaskQueue) IsEmpty() bool {
 	return q.taskQueue.IsEmpty()
 }
 
-func (q *replicationSequentialTaskQueue) Size() int {
-	return q.taskQueue.Size()
+func (q *replicationSequentialTaskQueue) Len() int {
+	return q.taskQueue.Len()
 }
 
 func replicationSequentialTaskQueueHashFn(key interface{}) uint32 {

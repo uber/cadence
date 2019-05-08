@@ -233,8 +233,8 @@ func (cmap *ShardedConcurrentTxMap) Iter() MapIterator {
 	return iterator
 }
 
-// Size returns the number of items in the map
-func (cmap *ShardedConcurrentTxMap) Size() int {
+// Len returns the number of items in the map
+func (cmap *ShardedConcurrentTxMap) Len() int {
 	return int(atomic.LoadInt32(&cmap.size))
 }
 

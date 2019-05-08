@@ -36,23 +36,26 @@ type (
 		shutdownChan chan struct{}
 		waitGroup    sync.WaitGroup
 
-		coroutineSize int
-		taskqueues    collection.ConcurrentTxMap
-		taskqueueChan chan SequentialTaskQueue
-		logger        log.Logger
+		coroutineSize    int
+		taskqueues       collection.ConcurrentTxMap
+		taskQueueFactory SequentialTaskQueueFactory
+		taskqueueChan    chan SequentialTaskQueue
+		logger           log.Logger
 	}
 )
 
 // NewSequentialTaskProcessor create a new sequential tasks processor
-func NewSequentialTaskProcessor(coroutineSize int, hashFn collection.HashFunc, logger log.Logger) SequentialTaskProcessor {
+func NewSequentialTaskProcessor(coroutineSize int, hashFn collection.HashFunc,
+	taskQueueFactory SequentialTaskQueueFactory, logger log.Logger) SequentialTaskProcessor {
 
 	return &sequentialTaskProcessorImpl{
-		status:        common.DaemonStatusInitialized,
-		shutdownChan:  make(chan struct{}),
-		coroutineSize: coroutineSize,
-		taskqueues:    collection.NewShardedConcurrentTxMap(1024, hashFn),
-		taskqueueChan: make(chan SequentialTaskQueue, coroutineSize),
-		logger:        logger,
+		status:           common.DaemonStatusInitialized,
+		shutdownChan:     make(chan struct{}),
+		coroutineSize:    coroutineSize,
+		taskqueues:       collection.NewShardedConcurrentTxMap(1024, hashFn),
+		taskQueueFactory: taskQueueFactory,
+		taskqueueChan:    make(chan SequentialTaskQueue, coroutineSize),
+		logger:           logger,
 	}
 }
 
@@ -82,14 +85,14 @@ func (t *sequentialTaskProcessorImpl) Stop() {
 
 func (t *sequentialTaskProcessorImpl) Submit(task SequentialTask) error {
 
-	taskqueue := task.NewTaskQueue()
-	taskqueue.Offer(task)
+	taskqueue := t.taskQueueFactory(task)
+	taskqueue.Add(task)
 
 	_, fnEvaluated, err := t.taskqueues.PutOrDo(
 		taskqueue.QueueID(),
 		taskqueue,
 		func(key interface{}, value interface{}) error {
-			value.(SequentialTaskQueue).Offer(task)
+			value.(SequentialTaskQueue).Add(task)
 			return nil
 		},
 	)
@@ -149,13 +152,13 @@ func (t *sequentialTaskProcessorImpl) processTaskQueue(taskqueue SequentialTaskQ
 }
 
 func (t *sequentialTaskProcessorImpl) processTaskOnce(taskqueue SequentialTaskQueue) {
-	task := taskqueue.Poll()
+	task := taskqueue.Remove()
 	err := task.Execute()
 	err = task.HandleErr(err)
 
 	if err != nil {
 		if task.RetryErr(err) {
-			taskqueue.Offer(task)
+			taskqueue.Add(task)
 		} else {
 			task.Nack()
 		}

@@ -32,8 +32,8 @@ type (
 		Submit(task SequentialTask) error
 	}
 
-	// Task is the generic task representation
-	Task interface {
+	// SequentialTask is the interface for tasks which should be executed sequentially
+	SequentialTask interface {
 		// Execute process this task
 		Execute() error
 		// HandleErr handle the error returned by Execute
@@ -46,14 +46,9 @@ type (
 		Nack()
 	}
 
-	// SequentialTask is the interface for tasks which should be executed sequentially
-	SequentialTask interface {
-		// NewTaskQueue return a new SequentialTaskQueue which this task belongs to
-		// this function can be called if SequentialTaskProcessor does not have any
-		// task queue for this task
-		NewTaskQueue() SequentialTaskQueue
-		Task
-	}
+	// SequentialTaskQueueFactory is the function which generate a new SequentialTaskQueue
+	// for a give SequentialTask
+	SequentialTaskQueueFactory func(task SequentialTask) SequentialTaskQueue
 
 	// SequentialTaskQueue is the generic task queue interface which group
 	// sequential tasks to be executed one by one
@@ -61,12 +56,12 @@ type (
 		// QueueID return the ID of the queue, as well as the tasks inside (same)
 		QueueID() interface{}
 		// Offer push an task to the task set
-		Offer(task SequentialTask)
+		Add(task SequentialTask)
 		// Poll pop an task from the task set
-		Poll() SequentialTask
+		Remove() SequentialTask
 		// IsEmpty indicate if the task set is empty
 		IsEmpty() bool
-		// Size return the size of the queue
-		Size() int
+		// Len return the size of the queue
+		Len() int
 	}
 )

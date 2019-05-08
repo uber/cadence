@@ -52,39 +52,39 @@ func (s *PriorityQueueSuite) SetupTest() {
 }
 
 func (s *PriorityQueueSuite) TestInsertAndPop() {
-	s.pq.Offer(&testPriorityQueueItem{10})
-	s.pq.Offer(&testPriorityQueueItem{3})
-	s.pq.Offer(&testPriorityQueueItem{5})
-	s.pq.Offer(&testPriorityQueueItem{4})
-	s.pq.Offer(&testPriorityQueueItem{1})
-	s.pq.Offer(&testPriorityQueueItem{16})
-	s.pq.Offer(&testPriorityQueueItem{-10})
+	s.pq.Add(&testPriorityQueueItem{10})
+	s.pq.Add(&testPriorityQueueItem{3})
+	s.pq.Add(&testPriorityQueueItem{5})
+	s.pq.Add(&testPriorityQueueItem{4})
+	s.pq.Add(&testPriorityQueueItem{1})
+	s.pq.Add(&testPriorityQueueItem{16})
+	s.pq.Add(&testPriorityQueueItem{-10})
 
 	expected := []int{-10, 1, 3, 4, 5, 10, 16}
 	result := []int{}
 
 	for !s.pq.IsEmpty() {
-		result = append(result, s.pq.Poll().(*testPriorityQueueItem).value)
+		result = append(result, s.pq.Remove().(*testPriorityQueueItem).value)
 	}
 	s.Equal(expected, result)
 
-	s.pq.Offer(&testPriorityQueueItem{1000})
-	s.pq.Offer(&testPriorityQueueItem{1233})
-	s.pq.Poll() // remove 1000
-	s.pq.Offer(&testPriorityQueueItem{4})
-	s.pq.Offer(&testPriorityQueueItem{18})
-	s.pq.Offer(&testPriorityQueueItem{192})
-	s.pq.Offer(&testPriorityQueueItem{255})
-	s.pq.Poll() // remove 4
-	s.pq.Poll() // remove 18
-	s.pq.Offer(&testPriorityQueueItem{59})
-	s.pq.Offer(&testPriorityQueueItem{727})
+	s.pq.Add(&testPriorityQueueItem{1000})
+	s.pq.Add(&testPriorityQueueItem{1233})
+	s.pq.Remove() // remove 1000
+	s.pq.Add(&testPriorityQueueItem{4})
+	s.pq.Add(&testPriorityQueueItem{18})
+	s.pq.Add(&testPriorityQueueItem{192})
+	s.pq.Add(&testPriorityQueueItem{255})
+	s.pq.Remove() // remove 4
+	s.pq.Remove() // remove 18
+	s.pq.Add(&testPriorityQueueItem{59})
+	s.pq.Add(&testPriorityQueueItem{727})
 
 	expected = []int{59, 192, 255, 727, 1233}
 	result = []int{}
 
 	for !s.pq.IsEmpty() {
-		result = append(result, s.pq.Poll().(*testPriorityQueueItem).value)
+		result = append(result, s.pq.Remove().(*testPriorityQueueItem).value)
 	}
 	s.Equal(expected, result)
 }
@@ -96,13 +96,13 @@ func (s *PriorityQueueSuite) TestRandomNumber() {
 		result := []int{}
 		for i := 0; i < 1000; i++ {
 			num := rand.Int()
-			s.pq.Offer(&testPriorityQueueItem{num})
+			s.pq.Add(&testPriorityQueueItem{num})
 			expected = append(expected, num)
 		}
 		sort.Ints(expected)
 
 		for !s.pq.IsEmpty() {
-			result = append(result, s.pq.Poll().(*testPriorityQueueItem).value)
+			result = append(result, s.pq.Remove().(*testPriorityQueueItem).value)
 		}
 		s.Equal(expected, result)
 	}

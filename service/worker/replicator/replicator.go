@@ -130,6 +130,7 @@ func (r *Replicator) Start() error {
 				task.NewSequentialTaskProcessor(
 					r.config.ReplicatorTaskConcurrency(),
 					replicationSequentialTaskQueueHashFn,
+					newReplicationSequentialTaskQueue,
 					logger,
 				),
 			))

@@ -23,6 +23,8 @@ package replicator
 import (
 	"testing"
 
+	"github.com/uber/cadence/common/collection"
+
 	"github.com/dgryski/go-farm"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber/cadence/common/definition"
@@ -56,68 +58,90 @@ func (s *replicationSequentialTaskQueueSuite) SetupTest() {
 		"some random workflow ID",
 		"some random run ID",
 	)
-	s.queue = newReplicationSequentialTaskQueue(s.queueID)
+	s.queue = &replicationSequentialTaskQueue{
+		id: s.queueID,
+		taskQueue: collection.NewConcurrentPriorityQueue(
+			replicationSequentialTaskQueueCompareLess,
+		),
+	}
 }
 
 func (s *replicationSequentialTaskQueueSuite) TearDownTest() {
 
 }
 
+func (s *replicationSequentialTaskQueueSuite) TestNewTaskQueue() {
+	activityTask := s.generateActivityTask(0)
+	activityTaskQueue := newReplicationSequentialTaskQueue(s.generateActivityTask(0))
+	s.Equal(0, activityTaskQueue.Len())
+	s.Equal(activityTask.queueID, activityTaskQueue.QueueID())
+
+	historyTask := s.generateHistoryTask(0)
+	historyTaskQueue := newReplicationSequentialTaskQueue(s.generateActivityTask(0))
+	s.Equal(0, historyTaskQueue.Len())
+	s.Equal(historyTask.queueID, historyTaskQueue.QueueID())
+
+	historyMetadataTask := s.generateHistoryMetadataTask(0)
+	historyMetadataTaskQueue := newReplicationSequentialTaskQueue(s.generateActivityTask(0))
+	s.Equal(0, historyMetadataTaskQueue.Len())
+	s.Equal(historyMetadataTask.queueID, historyMetadataTaskQueue.QueueID())
+}
+
 func (s *replicationSequentialTaskQueueSuite) TestQueueID() {
 	s.Equal(s.queueID, s.queue.QueueID())
 }
 
-func (s *replicationSequentialTaskQueueSuite) TestOfferPollIsEmptySize() {
+func (s *replicationSequentialTaskQueueSuite) TestAddRemoveIsEmptyLen() {
 	taskID := int64(0)
 
-	s.Equal(0, s.queue.Size())
+	s.Equal(0, s.queue.Len())
 	s.True(s.queue.IsEmpty())
 
 	testTask1 := s.generateActivityTask(taskID)
 	taskID++
 
-	s.queue.Offer(testTask1)
-	s.Equal(1, s.queue.Size())
+	s.queue.Add(testTask1)
+	s.Equal(1, s.queue.Len())
 	s.False(s.queue.IsEmpty())
 
 	testTask2 := s.generateHistoryTask(taskID)
 	taskID++
 
-	s.queue.Offer(testTask2)
-	s.Equal(2, s.queue.Size())
+	s.queue.Add(testTask2)
+	s.Equal(2, s.queue.Len())
 	s.False(s.queue.IsEmpty())
 
-	testTask := s.queue.Poll()
-	s.Equal(1, s.queue.Size())
+	testTask := s.queue.Remove()
+	s.Equal(1, s.queue.Len())
 	s.False(s.queue.IsEmpty())
 	s.Equal(testTask1, testTask)
 
 	testTask3 := s.generateHistoryTask(taskID)
 	taskID++
 
-	s.queue.Offer(testTask3)
-	s.Equal(2, s.queue.Size())
+	s.queue.Add(testTask3)
+	s.Equal(2, s.queue.Len())
 	s.False(s.queue.IsEmpty())
 
-	testTask = s.queue.Poll()
-	s.Equal(1, s.queue.Size())
+	testTask = s.queue.Remove()
+	s.Equal(1, s.queue.Len())
 	s.False(s.queue.IsEmpty())
 	s.Equal(testTask2, testTask)
 
-	testTask = s.queue.Poll()
-	s.Equal(0, s.queue.Size())
+	testTask = s.queue.Remove()
+	s.Equal(0, s.queue.Len())
 	s.True(s.queue.IsEmpty())
 	s.Equal(testTask3, testTask)
 
 	testTask4 := s.generateActivityTask(taskID)
 	taskID++
 
-	s.queue.Offer(testTask4)
-	s.Equal(1, s.queue.Size())
+	s.queue.Add(testTask4)
+	s.Equal(1, s.queue.Len())
 	s.False(s.queue.IsEmpty())
 
-	testTask = s.queue.Poll()
-	s.Equal(0, s.queue.Size())
+	testTask = s.queue.Remove()
+	s.Equal(0, s.queue.Len())
 	s.True(s.queue.IsEmpty())
 	s.Equal(testTask4, testTask)
 }
@@ -223,24 +247,27 @@ func (s *replicationSequentialTaskQueueSuite) TestCompareLess() {
 
 func (s *replicationSequentialTaskQueueSuite) generateActivityTask(taskID int64) *activityReplicationTask {
 	return &activityReplicationTask{
-		workflowReplicationTask: workflowReplicationTask{queueID: s.queueID,
-			taskID: taskID,
+		workflowReplicationTask: workflowReplicationTask{
+			queueID: s.queueID,
+			taskID:  taskID,
 		},
 	}
 }
 
 func (s *replicationSequentialTaskQueueSuite) generateHistoryTask(taskID int64) *historyReplicationTask {
 	return &historyReplicationTask{
-		workflowReplicationTask: workflowReplicationTask{queueID: s.queueID,
-			taskID: taskID,
+		workflowReplicationTask: workflowReplicationTask{
+			queueID: s.queueID,
+			taskID:  taskID,
 		},
 	}
 }
 
 func (s *replicationSequentialTaskQueueSuite) generateHistoryMetadataTask(taskID int64) *historyMetadataReplicationTask {
 	return &historyMetadataReplicationTask{
-		workflowReplicationTask: workflowReplicationTask{queueID: s.queueID,
-			taskID: taskID,
+		workflowReplicationTask: workflowReplicationTask{
+			queueID: s.queueID,
+			taskID:  taskID,
 		},
 	}
 }
