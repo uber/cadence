@@ -118,7 +118,7 @@ func (v *VersionHistory) IsAppendable(item VersionHistoryItem) bool {
 
 // NewVersionHistories initialize new version histories
 func NewVersionHistories(histories []VersionHistory) VersionHistories {
-	if histories == nil || len(histories) == 0 {
+	if len(histories) == 0 {
 		panic("version histories cannot be empty")
 	}
 	return VersionHistories{
