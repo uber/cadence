@@ -288,7 +288,7 @@ func (s *versionHistoryStoreSuite) TestFindLowestCommonVersionHistoryItem_Error_
 }
 
 func (s *versionHistoryStoreSuite) TestNewVersionHistories_Panic() {
-	expectedPanic := func() {NewVersionHistories([]VersionHistory{})}
+	expectedPanic := func() { NewVersionHistories([]VersionHistory{}) }
 	s.Panics(expectedPanic)
 }
 
