@@ -33,25 +33,12 @@ type (
 	}
 
 	// VersionHistory provides operations on version history
-	VersionHistory interface {
-		GetHistory() []VersionHistoryItem
-		Update(VersionHistoryItem) error
-		FindLowestCommonVersionHistoryItem(VersionHistory) (VersionHistoryItem, error)
-		IsAppendable(VersionHistoryItem) bool
-	}
-
-	versionHistoryImpl struct {
+	VersionHistory struct {
 		history []VersionHistoryItem
 	}
 
 	// VersionHistories contains a set of VersionHistory
-	VersionHistories interface {
-		GetHistories() []VersionHistory
-		AddHistory(VersionHistoryItem, VersionHistory, VersionHistory) error
-		FindLowestCommonVersionHistory(VersionHistory) (VersionHistoryItem, VersionHistory, error)
-	}
-
-	versionHistoriesImpl struct {
+	VersionHistories struct {
 		versionHistories []VersionHistory
 	}
 )
@@ -64,13 +51,13 @@ func NewVersionHistory(items []VersionHistoryItem) VersionHistory {
 
 	history := make([]VersionHistoryItem, len(items))
 	copy(history, items)
-	return &versionHistoryImpl{
+	return VersionHistory{
 		history: history,
 	}
 }
 
 // Update updates the versionHistory slice
-func (v *versionHistoryImpl) Update(item VersionHistoryItem) error {
+func (v *VersionHistory) Update(item VersionHistoryItem) error {
 	currentItem := item
 	lastItem := &v.history[len(v.history)-1]
 	if currentItem.version < lastItem.version {
@@ -101,20 +88,13 @@ func (v *versionHistoryImpl) Update(item VersionHistoryItem) error {
 }
 
 // FindLowestCommonVersionHistoryItem returns the lowest version history item with the same version
-func (v *versionHistoryImpl) FindLowestCommonVersionHistoryItem(remote VersionHistory) (VersionHistoryItem, error) {
-	if remote == nil {
-		return VersionHistoryItem{}, &shared.BadRequestError{
-			Message: fmt.Sprintf("version history cannot be nil"),
-		}
-	}
-	localHistory := v.GetHistory()
-	remoteHistory := remote.GetHistory()
-	localIdx := len(localHistory) - 1
-	remoteIdx := len(remoteHistory) - 1
+func (v *VersionHistory) FindLowestCommonVersionHistoryItem(remote VersionHistory) (VersionHistoryItem, error) {
+	localIdx := len(v.history) - 1
+	remoteIdx := len(remote.history) - 1
 
 	for localIdx >= 0 && remoteIdx >= 0 {
-		localVersionItem := localHistory[localIdx]
-		remoteVersionItem := remoteHistory[remoteIdx]
+		localVersionItem := v.history[localIdx]
+		remoteVersionItem := remote.history[remoteIdx]
 		if localVersionItem.version == remoteVersionItem.version {
 			if localVersionItem.eventID > remoteVersionItem.eventID {
 				return remoteVersionItem, nil
@@ -133,15 +113,8 @@ func (v *versionHistoryImpl) FindLowestCommonVersionHistoryItem(remote VersionHi
 }
 
 // IsAppendable checks if a version history item is appendable
-func (v *versionHistoryImpl) IsAppendable(item VersionHistoryItem) bool {
+func (v *VersionHistory) IsAppendable(item VersionHistoryItem) bool {
 	return v.history[len(v.history)-1] == item
-}
-
-// GetHistory returns version history
-func (v *versionHistoryImpl) GetHistory() []VersionHistoryItem {
-	history := make([]VersionHistoryItem, len(v.history))
-	copy(history, v.history)
-	return history
 }
 
 // NewVersionHistories initialize new version histories
@@ -149,13 +122,13 @@ func NewVersionHistories(histories []VersionHistory) VersionHistories {
 	if histories == nil || len(histories) == 0 {
 		panic("version histories cannot be empty")
 	}
-	return &versionHistoriesImpl{
+	return VersionHistories{
 		versionHistories: histories,
 	}
 }
 
 // FindLowestCommonVersionHistory finds the lowest common version history item among all version histories
-func (h *versionHistoriesImpl) FindLowestCommonVersionHistory(history VersionHistory) (VersionHistoryItem, VersionHistory, error) {
+func (h *VersionHistories) FindLowestCommonVersionHistory(history VersionHistory) (VersionHistoryItem, VersionHistory, error) {
 	var versionHistoryItem VersionHistoryItem
 	var versionHistory VersionHistory
 	for _, localHistory := range h.versionHistories {
@@ -172,17 +145,12 @@ func (h *versionHistoriesImpl) FindLowestCommonVersionHistory(history VersionHis
 	return versionHistoryItem, versionHistory, nil
 }
 
-// GetHistories returns a collection of version history
-func (h *versionHistoriesImpl) GetHistories() []VersionHistory {
-	return h.versionHistories
-}
-
 // AddHistory add new history into version histories
 // Sample
-func (h *versionHistoriesImpl) AddHistory(item VersionHistoryItem, local VersionHistory, remote VersionHistory) error {
+func (h *VersionHistories) AddHistory(item VersionHistoryItem, local VersionHistory, remote VersionHistory) error {
 	commonItem := item
 	if local.IsAppendable(commonItem) {
-		for _, historyItem := range remote.GetHistory() {
+		for _, historyItem := range remote.history {
 			if historyItem.version < commonItem.version {
 				continue
 			}
