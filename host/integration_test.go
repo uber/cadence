@@ -3353,7 +3353,7 @@ func (s *integrationSuite) TestSignalWithStartWithMemo() {
 	s.startWithMemoHelper(fn, id, taskList, memo)
 }
 
-func (s *integrationSuite2) TestWorkflowTransientDecision() {
+func (s *integrationSuite2) TestWorkflowTerminationWithBufferedEvents() {
 	id := "interation-workflow-transient-decision-test"
 	wt := "interation-workflow-transient-decision-test-type"
 	tl := "interation-workflow-transient-decision-test-tasklist"
@@ -3372,8 +3372,8 @@ func (s *integrationSuite2) TestWorkflowTransientDecision() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(3),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 		Identity:                            common.StringPtr(identity),
 	}
 
@@ -3407,71 +3407,46 @@ func (s *integrationSuite2) TestWorkflowTransientDecision() {
 
 	s.countHistory(we, "debug after transient decision")
 
-	for i := 0; i < 4; i++ {
-		fmt.Println("!!!!!!!!!!!!debug in round i:", i)
-		err0 = s.engine.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
-			Domain:            common.StringPtr(s.domainName),
-			WorkflowExecution: we,
-			SignalName:        common.StringPtr("sig#1"),
-			Input:             []byte(""),
-			Identity:          common.StringPtr("integ test"),
-			RequestId:         common.StringPtr(uuid.New()),
-		})
-		s.Nil(err0)
-		s.countHistory(we, "debug 1: signal before decision started")
+	//err0 = s.engine.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
+	//	Domain:            common.StringPtr(s.domainName),
+	//	WorkflowExecution: we,
+	//	SignalName:        common.StringPtr("sig#1"),
+	//	Input:             []byte(""),
+	//	Identity:          common.StringPtr("integ test"),
+	//	RequestId:         common.StringPtr(uuid.New()),
+	//})
+	//s.Nil(err0)
+	//s.countHistory(we, "debug 1: signal before decision started")
 
-		err0 = s.engine.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
-			Domain:            common.StringPtr(s.domainName),
-			WorkflowExecution: we,
-			SignalName:        common.StringPtr("sig#1-2"),
-			Input:             []byte(""),
-			Identity:          common.StringPtr("integ test"),
-			RequestId:         common.StringPtr(uuid.New()),
-		})
-		s.Nil(err0)
-		s.countHistory(we, "debug 1-2: another signal before decision started")
+	// start decision to make signals into bufferedEvents
+	_, err1 := s.engine.PollForDecisionTask(createContext(), &workflow.PollForDecisionTaskRequest{
+		Domain:   common.StringPtr(s.domainName),
+		TaskList: taskList,
+		Identity: common.StringPtr(identity),
+	})
+	s.Nil(err1)
 
-		resp1, err1 := s.engine.PollForDecisionTask(createContext(), &workflow.PollForDecisionTaskRequest{
-			Domain:   common.StringPtr(s.domainName),
-			TaskList: taskList,
-			Identity: common.StringPtr(identity),
-		})
-		s.Nil(err1)
+	s.countHistory(we, "debug 2: after decision started")
 
-		s.countHistory(we, "debug 2: after decision started")
+	// this signal should be buffered
+	err0 = s.engine.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
+		Domain:            common.StringPtr(s.domainName),
+		WorkflowExecution: we,
+		SignalName:        common.StringPtr("sig#2"),
+		Input:             []byte(""),
+		Identity:          common.StringPtr("integ test"),
+		RequestId:         common.StringPtr(uuid.New()),
+	})
+	s.Nil(err0)
+	s.countHistory(we, "debug 3: signal after decision started")
 
-		err0 = s.engine.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
-			Domain:            common.StringPtr(s.domainName),
-			WorkflowExecution: we,
-			SignalName:        common.StringPtr("sig#2"),
-			Input:             []byte(""),
-			Identity:          common.StringPtr("integ test"),
-			RequestId:         common.StringPtr(uuid.New()),
-		})
-		s.Nil(err0)
-		s.countHistory(we, "debug 3: signal after decision started")
-
-		fmt.Println(fmt.Sprintf("Got decision: %v, %v, %v, %v", resp1.GetWorkflowExecution().GetWorkflowId(), resp1.GetWorkflowExecution().GetRunId(), resp1.GetAttempt(), resp1.GetStartedEventId()))
-		err2 := s.engine.RespondDecisionTaskFailed(createContext(), &workflow.RespondDecisionTaskFailedRequest{
-			TaskToken: resp1.GetTaskToken(),
-			Cause:     &cause,
-			Identity:  common.StringPtr("integ test"),
-		})
-		s.Nil(err2)
-
-		s.countHistory(we, "debug 4: after decision failed")
-
-		err0 = s.engine.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
-			Domain:            common.StringPtr(s.domainName),
-			WorkflowExecution: we,
-			SignalName:        common.StringPtr("sig#3"),
-			Input:             []byte(""),
-			Identity:          common.StringPtr("integ test"),
-			RequestId:         common.StringPtr(uuid.New()),
-		})
-		s.Nil(err0)
-		s.countHistory(we, "debug 5: signal after decision failed")
-	}
+	// then terminate the worklfow
+	err := s.engine.TerminateWorkflowExecution(createContext(), &workflow.TerminateWorkflowExecutionRequest{
+		Domain:            common.StringPtr(s.domainName),
+		WorkflowExecution: we,
+		Reason:            common.StringPtr("test-reason"),
+	})
+	s.Nil(err)
 
 	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
 		Domain:    common.StringPtr(s.domainName),
@@ -3481,6 +3456,234 @@ func (s *integrationSuite2) TestWorkflowTransientDecision() {
 	history := historyResponse.History
 	common.PrettyPrintHistory(history, s.Logger)
 }
+
+//func (s *integrationSuite2) TestWorkflowTimeoutWithBufferedEvents() {
+//	id := "interation-workflow-transient-decision-test"
+//	wt := "interation-workflow-transient-decision-test-type"
+//	tl := "interation-workflow-transient-decision-test-tasklist"
+//	identity := "worker1"
+//
+//	workflowType := &workflow.WorkflowType{}
+//	workflowType.Name = common.StringPtr(wt)
+//
+//	taskList := &workflow.TaskList{}
+//	taskList.Name = common.StringPtr(tl)
+//
+//	request := &workflow.StartWorkflowExecutionRequest{
+//		RequestId:                           common.StringPtr(uuid.New()),
+//		Domain:                              common.StringPtr(s.domainName),
+//		WorkflowId:                          common.StringPtr(id),
+//		WorkflowType:                        workflowType,
+//		TaskList:                            taskList,
+//		Input:                               nil,
+//		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(3),
+//		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+//		Identity:                            common.StringPtr(identity),
+//	}
+//
+//	resp0, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+//	s.Nil(err0)
+//
+//	we := &workflow.WorkflowExecution{
+//		WorkflowId: common.StringPtr(id),
+//		RunId:      resp0.RunId,
+//	}
+//
+//	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*resp0.RunId))
+//	s.countHistory(we, "debug before transient decision")
+//
+//	cause := workflow.DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure
+//	for i := 0; i < 10; i++ {
+//		resp1, err1 := s.engine.PollForDecisionTask(createContext(), &workflow.PollForDecisionTaskRequest{
+//			Domain:   common.StringPtr(s.domainName),
+//			TaskList: taskList,
+//			Identity: common.StringPtr(identity),
+//		})
+//		s.Nil(err1)
+//		fmt.Println(fmt.Sprintf("Got decision: %v, %v, %v, %v", resp1.GetWorkflowExecution().GetWorkflowId(), resp1.GetWorkflowExecution().GetRunId(), resp1.GetAttempt(), resp1.GetStartedEventId()))
+//		err2 := s.engine.RespondDecisionTaskFailed(createContext(), &workflow.RespondDecisionTaskFailedRequest{
+//			TaskToken: resp1.GetTaskToken(),
+//			Cause:     &cause,
+//			Identity:  common.StringPtr("integ test"),
+//		})
+//		s.Nil(err2)
+//	}
+//
+//	s.countHistory(we, "debug after transient decision")
+//
+//	err0 = s.engine.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
+//		Domain:            common.StringPtr(s.domainName),
+//		WorkflowExecution: we,
+//		SignalName:        common.StringPtr("sig#1"),
+//		Input:             []byte(""),
+//		Identity:          common.StringPtr("integ test"),
+//		RequestId:         common.StringPtr(uuid.New()),
+//	})
+//	s.Nil(err0)
+//	s.countHistory(we, "debug 1: signal before decision started")
+//
+//	// start decision to make signals into bufferedEvents
+//	_, err1 := s.engine.PollForDecisionTask(createContext(), &workflow.PollForDecisionTaskRequest{
+//		Domain:   common.StringPtr(s.domainName),
+//		TaskList: taskList,
+//		Identity: common.StringPtr(identity),
+//	})
+//	s.Nil(err1)
+//
+//	s.countHistory(we, "debug 2: after decision started")
+//
+//	// this signal should be buffered
+//	err0 = s.engine.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
+//		Domain:            common.StringPtr(s.domainName),
+//		WorkflowExecution: we,
+//		SignalName:        common.StringPtr("sig#2"),
+//		Input:             []byte(""),
+//		Identity:          common.StringPtr("integ test"),
+//		RequestId:         common.StringPtr(uuid.New()),
+//	})
+//	s.Nil(err0)
+//	s.countHistory(we, "debug 3: signal after decision started")
+//
+//	// wait for workflow timeout
+//	time.Sleep(time.Second * 4)
+//
+//	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
+//		Domain:    common.StringPtr(s.domainName),
+//		Execution: we,
+//	})
+//	s.Nil(err)
+//	history := historyResponse.History
+//	common.PrettyPrintHistory(history, s.Logger)
+//}
+
+//func (s *integrationSuite2) TestWorkflowTransientDecision() {
+//	id := "interation-workflow-transient-decision-test"
+//	wt := "interation-workflow-transient-decision-test-type"
+//	tl := "interation-workflow-transient-decision-test-tasklist"
+//	identity := "worker1"
+//
+//	workflowType := &workflow.WorkflowType{}
+//	workflowType.Name = common.StringPtr(wt)
+//
+//	taskList := &workflow.TaskList{}
+//	taskList.Name = common.StringPtr(tl)
+//
+//	request := &workflow.StartWorkflowExecutionRequest{
+//		RequestId:                           common.StringPtr(uuid.New()),
+//		Domain:                              common.StringPtr(s.domainName),
+//		WorkflowId:                          common.StringPtr(id),
+//		WorkflowType:                        workflowType,
+//		TaskList:                            taskList,
+//		Input:                               nil,
+//		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+//		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+//		Identity:                            common.StringPtr(identity),
+//	}
+//
+//	resp0, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+//	s.Nil(err0)
+//
+//	we := &workflow.WorkflowExecution{
+//		WorkflowId: common.StringPtr(id),
+//		RunId:      resp0.RunId,
+//	}
+//
+//	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*resp0.RunId))
+//	s.countHistory(we, "debug before transient decision")
+//
+//	cause := workflow.DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure
+//	for i := 0; i < 10; i++ {
+//		resp1, err1 := s.engine.PollForDecisionTask(createContext(), &workflow.PollForDecisionTaskRequest{
+//			Domain:   common.StringPtr(s.domainName),
+//			TaskList: taskList,
+//			Identity: common.StringPtr(identity),
+//		})
+//		s.Nil(err1)
+//		fmt.Println(fmt.Sprintf("Got decision: %v, %v, %v, %v", resp1.GetWorkflowExecution().GetWorkflowId(), resp1.GetWorkflowExecution().GetRunId(), resp1.GetAttempt(), resp1.GetStartedEventId()))
+//		err2 := s.engine.RespondDecisionTaskFailed(createContext(), &workflow.RespondDecisionTaskFailedRequest{
+//			TaskToken: resp1.GetTaskToken(),
+//			Cause:     &cause,
+//			Identity:  common.StringPtr("integ test"),
+//		})
+//		s.Nil(err2)
+//	}
+//
+//	s.countHistory(we, "debug after transient decision")
+//
+//	for i := 0; i < 4; i++ {
+//		fmt.Println("!!!!!!!!!!!!debug in round i:", i)
+//		err0 = s.engine.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
+//			Domain:            common.StringPtr(s.domainName),
+//			WorkflowExecution: we,
+//			SignalName:        common.StringPtr("sig#1"),
+//			Input:             []byte(""),
+//			Identity:          common.StringPtr("integ test"),
+//			RequestId:         common.StringPtr(uuid.New()),
+//		})
+//		s.Nil(err0)
+//		s.countHistory(we, "debug 1: signal before decision started")
+//
+//		err0 = s.engine.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
+//			Domain:            common.StringPtr(s.domainName),
+//			WorkflowExecution: we,
+//			SignalName:        common.StringPtr("sig#1-2"),
+//			Input:             []byte(""),
+//			Identity:          common.StringPtr("integ test"),
+//			RequestId:         common.StringPtr(uuid.New()),
+//		})
+//		s.Nil(err0)
+//		s.countHistory(we, "debug 1-2: another signal before decision started")
+//
+//		resp1, err1 := s.engine.PollForDecisionTask(createContext(), &workflow.PollForDecisionTaskRequest{
+//			Domain:   common.StringPtr(s.domainName),
+//			TaskList: taskList,
+//			Identity: common.StringPtr(identity),
+//		})
+//		s.Nil(err1)
+//
+//		s.countHistory(we, "debug 2: after decision started")
+//
+//		err0 = s.engine.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
+//			Domain:            common.StringPtr(s.domainName),
+//			WorkflowExecution: we,
+//			SignalName:        common.StringPtr("sig#2"),
+//			Input:             []byte(""),
+//			Identity:          common.StringPtr("integ test"),
+//			RequestId:         common.StringPtr(uuid.New()),
+//		})
+//		s.Nil(err0)
+//		s.countHistory(we, "debug 3: signal after decision started")
+//
+//		fmt.Println(fmt.Sprintf("Got decision: %v, %v, %v, %v", resp1.GetWorkflowExecution().GetWorkflowId(), resp1.GetWorkflowExecution().GetRunId(), resp1.GetAttempt(), resp1.GetStartedEventId()))
+//		err2 := s.engine.RespondDecisionTaskFailed(createContext(), &workflow.RespondDecisionTaskFailedRequest{
+//			TaskToken: resp1.GetTaskToken(),
+//			Cause:     &cause,
+//			Identity:  common.StringPtr("integ test"),
+//		})
+//		s.Nil(err2)
+//
+//		s.countHistory(we, "debug 4: after decision failed")
+//
+//		err0 = s.engine.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
+//			Domain:            common.StringPtr(s.domainName),
+//			WorkflowExecution: we,
+//			SignalName:        common.StringPtr("sig#3"),
+//			Input:             []byte(""),
+//			Identity:          common.StringPtr("integ test"),
+//			RequestId:         common.StringPtr(uuid.New()),
+//		})
+//		s.Nil(err0)
+//		s.countHistory(we, "debug 5: signal after decision failed")
+//	}
+//
+//	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
+//		Domain:    common.StringPtr(s.domainName),
+//		Execution: we,
+//	})
+//	s.Nil(err)
+//	history := historyResponse.History
+//	common.PrettyPrintHistory(history, s.Logger)
+//}
 
 func (s *integrationSuite2) countHistory(we *workflow.WorkflowExecution, prefix string) {
 	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
