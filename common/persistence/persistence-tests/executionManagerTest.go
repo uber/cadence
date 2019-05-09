@@ -21,6 +21,7 @@
 package persistencetests
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/rand"
@@ -713,6 +714,11 @@ func (s *ExecutionManagerSuite) TestGetWorkflow() {
 			},
 		},
 	}
+	testSearchAttrKey := "env"
+	testSearchAttrVal, _ := json.Marshal("test")
+	testSearchAttr := map[string][]byte{
+		testSearchAttrKey: testSearchAttrVal,
+	}
 
 	createReq := &p.CreateWorkflowExecutionRequest{
 		RequestID: uuid.New(),
@@ -763,6 +769,7 @@ func (s *ExecutionManagerSuite) TestGetWorkflow() {
 		CronSchedule:            "* * * * *",
 		ExpirationSeconds:       rand.Int31(),
 		PreviousAutoResetPoints: &testResetPoints,
+		SearchAttributes:        testSearchAttr,
 	}
 
 	createResp, err := s.ExecutionManager.CreateWorkflowExecution(createReq)
@@ -808,6 +815,9 @@ func (s *ExecutionManagerSuite) TestGetWorkflow() {
 	s.Equal(createReq.CronSchedule, info.CronSchedule)
 	s.Equal(createReq.NonRetriableErrors, info.NonRetriableErrors)
 	s.Equal(testResetPoints.String(), info.AutoResetPoints.String())
+	val, ok := info.SearchAttributes[testSearchAttrKey]
+	s.True(ok)
+	s.Equal(testSearchAttrVal, val)
 
 	s.Equal(createReq.ReplicationState.LastWriteEventID, state.ReplicationState.LastWriteEventID)
 	s.Equal(createReq.ReplicationState.LastWriteVersion, state.ReplicationState.LastWriteVersion)
@@ -865,6 +875,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Empty(info0.ClientImpl)
 	s.Equal(int32(0), info0.SignalCount)
 	s.True(info0.AutoResetPoints.Equals(&gen.ResetPoints{}))
+	s.True(len(info0.SearchAttributes) == 0)
 
 	log.Infof("Workflow execution last updated: %v", info0.LastUpdatedTimestamp)
 
@@ -890,6 +901,9 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	updatedInfo.ExpirationSeconds = math.MaxInt32
 	updatedInfo.ExpirationTime = time.Now()
 	updatedInfo.NonRetriableErrors = []string{"accessDenied", "badRequest"}
+	searchAttrKey := "env"
+	searchAttrVal := []byte("test")
+	updatedInfo.SearchAttributes = map[string][]byte{searchAttrKey: searchAttrVal}
 
 	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), nil, nil, nil, nil, nil)
 	s.NoError(err2)
@@ -933,6 +947,9 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Equal(updatedInfo.ExpirationSeconds, info1.ExpirationSeconds)
 	s.EqualTimes(updatedInfo.ExpirationTime, info1.ExpirationTime)
 	s.Equal(updatedInfo.NonRetriableErrors, info1.NonRetriableErrors)
+	searchAttrVal1, ok := info1.SearchAttributes[searchAttrKey]
+	s.True(ok)
+	s.Equal(searchAttrVal, searchAttrVal1)
 
 	log.Infof("Workflow execution last updated: %v", info1.LastUpdatedTimestamp)
 
@@ -975,6 +992,9 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Equal(updatedInfo.ExpirationSeconds, info2.ExpirationSeconds)
 	s.EqualTimes(updatedInfo.ExpirationTime, info2.ExpirationTime)
 	s.Equal(updatedInfo.NonRetriableErrors, info2.NonRetriableErrors)
+	searchAttrVal2, ok := info2.SearchAttributes[searchAttrKey]
+	s.True(ok)
+	s.Equal(searchAttrVal, searchAttrVal2)
 
 	log.Infof("Workflow execution last updated: %v", info2.LastUpdatedTimestamp)
 
@@ -1016,6 +1036,9 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Equal(updatedInfo.ExpirationSeconds, info2.ExpirationSeconds)
 	s.EqualTimes(updatedInfo.ExpirationTime, info2.ExpirationTime)
 	s.Equal(updatedInfo.NonRetriableErrors, info2.NonRetriableErrors)
+	searchAttrVal3, ok := info3.SearchAttributes[searchAttrKey]
+	s.True(ok)
+	s.Equal(searchAttrVal, searchAttrVal3)
 
 	log.Infof("Workflow execution last updated: %v", info3.LastUpdatedTimestamp)
 
@@ -1057,6 +1080,9 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Equal(updatedInfo.ExpirationSeconds, info2.ExpirationSeconds)
 	s.EqualTimes(updatedInfo.ExpirationTime, info2.ExpirationTime)
 	s.Equal(updatedInfo.NonRetriableErrors, info2.NonRetriableErrors)
+	searchAttrVal4, ok := info4.SearchAttributes[searchAttrKey]
+	s.True(ok)
+	s.Equal(searchAttrVal, searchAttrVal4)
 
 	log.Infof("Workflow execution last updated: %v", info4.LastUpdatedTimestamp)
 }

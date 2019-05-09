@@ -307,6 +307,10 @@ struct Memo {
   10: optional map<string,binary> fields
 }
 
+struct SearchAttributes {
+  10: optional map<string,binary> indexedFields
+}
+
 struct WorkflowExecutionInfo {
   10: optional WorkflowExecution execution
   20: optional WorkflowType type
@@ -467,6 +471,7 @@ struct WorkflowExecutionStartedEventAttributes {
   100: optional string cronSchedule
   110: optional i32 firstDecisionTaskBackoffSeconds
   120: optional Memo memo
+  121: optional SearchAttributes searchAttributes
   130: optional ResetPoints prevAutoResetPoints
   140: optional Header header
 }
@@ -995,6 +1000,7 @@ struct StartWorkflowExecutionRequest {
   120: optional RetryPolicy retryPolicy
   130: optional string cronSchedule
   140: optional Memo memo
+  141: optional SearchAttributes searchAttributes
   150: optional Header header
 }
 

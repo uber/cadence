@@ -22,16 +22,51 @@ package definition
 
 import "github.com/uber/cadence/.gen/go/shared"
 
+// valid indexed fields on ES
+const (
+	DomainID      = "DomainID"
+	WorkflowID    = "WorkflowID"
+	RunID         = "RunID"
+	WorkflowType  = "WorkflowType"
+	StartTime     = "StartTime"
+	ExecutionTime = "ExecutionTime"
+	CloseTime     = "CloseTime"
+	CloseStatus   = "CloseStatus"
+	HistoryLength = "HistoryLength"
+	Encoding      = "Encoding"
+	KafkaKey      = "KafkaKey"
+
+	CustomStringField   = "CustomStringField"
+	CustomKeywordField  = "CustomKeywordField"
+	CustomIntField      = "CustomIntField"
+	CustomBoolField     = "CustomBoolField"
+	CustomDoubleField   = "CustomDoubleField"
+	CustomDatetimeField = "CustomDatetimeField"
+)
+
+// valid non-indexed fields on ES
+const (
+	Memo = "Memo"
+)
+
+// defaultIndexedKeys defines all searchable keys
 var defaultIndexedKeys = map[string]interface{}{
-	"DomainID":      shared.IndexedValueTypeKeyword,
-	"WorkflowID":    shared.IndexedValueTypeKeyword,
-	"RunID":         shared.IndexedValueTypeKeyword,
-	"WorkflowType":  shared.IndexedValueTypeKeyword,
-	"StartTime":     shared.IndexedValueTypeInt,
-	"ExecutionTime": shared.IndexedValueTypeInt,
-	"CloseTime":     shared.IndexedValueTypeInt,
-	"CloseStatus":   shared.IndexedValueTypeInt,
-	"HistoryLength": shared.IndexedValueTypeInt,
+	DomainID:      shared.IndexedValueTypeKeyword,
+	WorkflowID:    shared.IndexedValueTypeKeyword,
+	RunID:         shared.IndexedValueTypeKeyword,
+	WorkflowType:  shared.IndexedValueTypeKeyword,
+	StartTime:     shared.IndexedValueTypeInt,
+	ExecutionTime: shared.IndexedValueTypeInt,
+	CloseTime:     shared.IndexedValueTypeInt,
+	CloseStatus:   shared.IndexedValueTypeInt,
+	HistoryLength: shared.IndexedValueTypeInt,
+
+	CustomStringField:   shared.IndexedValueTypeString,
+	CustomKeywordField:  shared.IndexedValueTypeKeyword,
+	CustomIntField:      shared.IndexedValueTypeInt,
+	CustomBoolField:     shared.IndexedValueTypeBool,
+	CustomDoubleField:   shared.IndexedValueTypeDouble,
+	CustomDatetimeField: shared.IndexedValueTypeDatetime,
 }
 
 // GetDefaultIndexedKeys return default valid indexed keys

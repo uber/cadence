@@ -1,0 +1,8 @@
+{
+  "CurrVersion": "0.16",
+  "MinCompatibleVersion": "0.16",
+  "Description": "Added search attributes to execution",
+  "SchemaUpdateCqlFiles": [
+    "search_attr.cql"
+  ]
+}

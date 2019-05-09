@@ -119,6 +119,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(request *p.InternalRe
 		request.TaskID,
 		request.Memo.Data,
 		request.Memo.GetEncoding(),
+		request.SearchAttributes,
 	)
 	return v.producer.Publish(msg)
 }
@@ -138,6 +139,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionClosed(request *p.InternalRec
 		request.TaskID,
 		request.Memo.Data,
 		request.Memo.GetEncoding(),
+		request.SearchAttributes,
 	)
 	return v.producer.Publish(msg)
 }
@@ -760,7 +762,8 @@ func (v *esVisibilityStore) convertSearchResultToVisibilityRecord(hit *elastic.S
 }
 
 func getVisibilityMessageForOpenExecution(domainID string, wid, rid string, workflowTypeName string,
-	startTimeUnixNano, executionTimeUnixNano int64, taskID int64, memo []byte, encoding common.EncodingType) *indexer.Message {
+	startTimeUnixNano, executionTimeUnixNano int64, taskID int64, memo []byte, encoding common.EncodingType,
+	searchAttributes map[string][]byte) *indexer.Message {
 
 	msgType := indexer.MessageTypeIndex
 	fields := map[string]*indexer.Field{
@@ -771,6 +774,9 @@ func getVisibilityMessageForOpenExecution(domainID string, wid, rid string, work
 	if len(memo) != 0 {
 		fields[es.Memo] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: memo}
 		fields[es.Encoding] = &indexer.Field{Type: &es.FieldTypeString, StringData: common.StringPtr(string(encoding))}
+	}
+	for k, v := range searchAttributes {
+		fields[k] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: v}
 	}
 
 	msg := &indexer.Message{
@@ -786,7 +792,8 @@ func getVisibilityMessageForOpenExecution(domainID string, wid, rid string, work
 
 func getVisibilityMessageForCloseExecution(domainID string, wid, rid string, workflowTypeName string,
 	startTimeUnixNano int64, executionTimeUnixNano int64, endTimeUnixNano int64, closeStatus workflow.WorkflowExecutionCloseStatus,
-	historyLength int64, taskID int64, memo []byte, encoding common.EncodingType) *indexer.Message {
+	historyLength int64, taskID int64, memo []byte, encoding common.EncodingType,
+	searchAttributes map[string][]byte) *indexer.Message {
 
 	msgType := indexer.MessageTypeIndex
 	fields := map[string]*indexer.Field{
@@ -800,6 +807,9 @@ func getVisibilityMessageForCloseExecution(domainID string, wid, rid string, wor
 	if len(memo) != 0 {
 		fields[es.Memo] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: memo}
 		fields[es.Encoding] = &indexer.Field{Type: &es.FieldTypeString, StringData: common.StringPtr(string(encoding))}
+	}
+	for k, v := range searchAttributes {
+		fields[k] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: v}
 	}
 
 	msg := &indexer.Message{

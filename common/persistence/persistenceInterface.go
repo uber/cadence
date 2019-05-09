@@ -196,6 +196,7 @@ type (
 		BranchToken       []byte
 		CronSchedule      string
 		ExpirationSeconds int32
+		SearchAttributes  map[string][]byte
 	}
 
 	// InternalWorkflowExecutionInfo describes a workflow execution for Persistence Interface
@@ -255,6 +256,7 @@ type (
 		BranchToken       []byte
 		CronSchedule      string
 		ExpirationSeconds int32
+		SearchAttributes  map[string][]byte
 	}
 
 	// InternalWorkflowMutableState indicates workflow related state for Persistence Interface
@@ -578,6 +580,7 @@ type (
 		WorkflowTimeout    int64
 		TaskID             int64
 		Memo               *DataBlob
+		SearchAttributes   map[string][]byte
 	}
 
 	// InternalRecordWorkflowExecutionClosedRequest is request to RecordWorkflowExecutionClosed
@@ -590,6 +593,7 @@ type (
 		ExecutionTimestamp int64
 		TaskID             int64
 		Memo               *DataBlob
+		SearchAttributes   map[string][]byte
 		CloseTimestamp     int64
 		Status             workflow.WorkflowExecutionCloseStatus
 		HistoryLength      int64

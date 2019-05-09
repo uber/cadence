@@ -1594,6 +1594,14 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 
 	wh.Service.GetLogger().Debug("Start workflow execution request domainID", tag.WorkflowDomainID(domainID))
 
+	bytes, _ := json.Marshal("Prod")
+	attr := &shared.SearchAttributes{
+		IndexedFields: map[string][]byte{
+			"CustomStringField": bytes,
+		},
+	}
+	startRequest.SearchAttributes = attr
+
 	resp, err = wh.history.StartWorkflowExecution(ctx, common.CreateHistoryStartWorkflowRequest(domainID, startRequest))
 
 	if err != nil {
@@ -2565,6 +2573,7 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(ctx context.Context, countReq
 	return resp, nil
 }
 
+// GetIndexedKeys return valid indexed keys
 func (wh *WorkflowHandler) GetIndexedKeys(ctx context.Context) (resp *gen.GetIndexedKeysResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 

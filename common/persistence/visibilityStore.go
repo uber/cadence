@@ -68,6 +68,7 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionStarted(request *RecordWo
 		WorkflowTimeout:    request.WorkflowTimeout,
 		TaskID:             request.TaskID,
 		Memo:               v.serializeMemo(request.Memo, request.DomainUUID, request.Execution.GetWorkflowId(), request.Execution.GetRunId()),
+		SearchAttributes:   request.SearchAttributes,
 	}
 	return v.persistence.RecordWorkflowExecutionStarted(req)
 }
@@ -82,6 +83,7 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionClosed(request *RecordWor
 		ExecutionTimestamp: request.ExecutionTimestamp,
 		TaskID:             request.TaskID,
 		Memo:               v.serializeMemo(request.Memo, request.DomainUUID, request.Execution.GetWorkflowId(), request.Execution.GetRunId()),
+		SearchAttributes:   request.SearchAttributes,
 		CloseTimestamp:     request.CloseTimestamp,
 		Status:             request.Status,
 		HistoryLength:      request.HistoryLength,
