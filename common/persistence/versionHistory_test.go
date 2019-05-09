@@ -56,21 +56,6 @@ func (s *versionHistoryStoreSuite) TestNewVersionHistory_Panic() {
 	s.Panics(expectedPanic)
 }
 
-func (s *versionHistoryStoreSuite) TestNewVersionHistory_ValueUpdate() {
-	items := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 6, version: 4},
-	}
-
-	history := NewVersionHistory(items)
-	result := history.history
-	s.Equal(items, result)
-
-	items[0].eventID = 0
-	s.Equal(int64(3), result[0].eventID)
-	s.Equal(int64(0), result[0].version)
-}
-
 func (s *versionHistoryStoreSuite) TestUpdateVersionHistory_CreateNewItem() {
 	items := []VersionHistoryItem{
 		{eventID: 3, version: 0},
@@ -334,7 +319,7 @@ func (s *versionHistoryStoreSuite) TestFindLowestCommonVersionHistory_UpdateExis
 
 	err = histories.AddHistory(item, history, remote)
 	s.NoError(err)
-	s.Equal(history, local2)
+	s.Equal(histories.versionHistories[1], remote)
 }
 
 func (s *versionHistoryStoreSuite) TestFindLowestCommonVersionHistory_ForkNewHistory() {

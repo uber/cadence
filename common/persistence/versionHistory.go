@@ -23,6 +23,7 @@ package persistence
 import (
 	"fmt"
 	"github.com/uber/cadence/.gen/go/shared"
+	"reflect"
 )
 
 type (
@@ -49,10 +50,8 @@ func NewVersionHistory(items []VersionHistoryItem) VersionHistory {
 		panic("version history items cannot be empty")
 	}
 
-	history := make([]VersionHistoryItem, len(items))
-	copy(history, items)
 	return VersionHistory{
-		history: history,
+		history: items,
 	}
 }
 
@@ -146,16 +145,14 @@ func (h *VersionHistories) FindLowestCommonVersionHistory(history VersionHistory
 }
 
 // AddHistory add new history into version histories
-// Sample
+// TODO: merge this func with FindLowestCommonVersionHistory
 func (h *VersionHistories) AddHistory(item VersionHistoryItem, local VersionHistory, remote VersionHistory) error {
 	commonItem := item
 	if local.IsAppendable(commonItem) {
-		for _, historyItem := range remote.history {
-			if historyItem.version < commonItem.version {
-				continue
-			}
-			if err := local.Update(historyItem); err != nil {
-				return err
+		//it won't update h.versionHistories
+		for idx, history := range h.versionHistories {
+			if reflect.DeepEqual(history, local) {
+				h.versionHistories[idx] = remote
 			}
 		}
 	} else {
