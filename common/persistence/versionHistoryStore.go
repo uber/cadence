@@ -32,7 +32,7 @@ type (
 		version int64
 	}
 
-	// VersionHistory provides operations on version histroy
+	// VersionHistory provides operations on version history
 	VersionHistory interface {
 		GetHistory() []VersionHistoryItem
 		Update(VersionHistoryItem) error
@@ -46,8 +46,9 @@ type (
 
 	// VersionHistories contains a set of VersionHistory
 	VersionHistories interface {
-		AddHistory(VersionHistoryItem, *VersionHistory, VersionHistory) error
-		FindLowestCommonVersionHistory(VersionHistory) (VersionHistoryItem, *VersionHistory, error)
+		GetHistories() []VersionHistory
+		AddHistory(VersionHistoryItem, VersionHistory, VersionHistory) error
+		FindLowestCommonVersionHistory(VersionHistory) (VersionHistoryItem, VersionHistory, error)
 	}
 
 	versionHistoriesImpl struct {
@@ -56,48 +57,64 @@ type (
 )
 
 // NewVersionHistory initializes new version history
-func NewVersionHistory(items ...VersionHistoryItem) VersionHistory {
+func NewVersionHistory(items []VersionHistoryItem) VersionHistory {
+	if len(items) == 0 {
+		panic("version history items cannot be empty")
+	}
+
+	history := make([]VersionHistoryItem, len(items))
+	copy(history, items)
 	return &versionHistoryImpl{
-		history: items,
+		history: history,
 	}
 }
 
 // Update updates the versionHistory slice
 func (v *versionHistoryImpl) Update(item VersionHistoryItem) error {
-	if item.version < v.getLastItem().version {
+	currentItem := item
+	lastItem := &v.history[len(v.history)-1]
+	if currentItem.version < lastItem.version {
 		return &shared.BadRequestError{
-			Message: fmt.Sprintf("cannot update version history with a lower version %v. Current version: %v",
-				item.version,
-				v.getLastItem().version),
+			Message: fmt.Sprintf("cannot update version history with a lower version %v. Last version: %v",
+				currentItem.version,
+				lastItem.version),
 		}
 	}
 
-	if item.eventID < v.getLastItem().eventID {
+	if currentItem.eventID <= lastItem.eventID {
 		return &shared.BadRequestError{
-			Message: fmt.Sprintf("cannot add version history with a lower event id %v. Latest event id: %v",
-				item.eventID,
-				v.getLastItem().eventID),
+			Message: fmt.Sprintf("cannot add version history with a lower event id %v. Last event id: %v",
+				currentItem.eventID,
+				lastItem.eventID),
 		}
 	}
 
-	if item.version > v.getLastItem().version {
+	if currentItem.version > lastItem.version {
 		// Add a new history
-		v.history = append(v.history, item)
+		v.history = append(v.history, currentItem)
 	} else {
-		// Update event id
-		v.getLastItem().eventID = item.eventID
+		// item.version == lastItem.version && item.eventID > lastItem.eventID
+		// Update event  id
+		lastItem.eventID = currentItem.eventID
 	}
 	return nil
 }
 
 // FindLowestCommonVersionHistoryItem returns the lowest version history item with the same version
 func (v *versionHistoryImpl) FindLowestCommonVersionHistoryItem(remote VersionHistory) (VersionHistoryItem, error) {
-	localIdx := len(v.GetHistory()) - 1
-	remoteIdx := len(remote.GetHistory()) - 1
+	if remote == nil {
+		return VersionHistoryItem{}, &shared.BadRequestError{
+			Message: fmt.Sprintf("version history cannot be nil"),
+		}
+	}
+	localHistory := v.GetHistory()
+	remoteHistory := remote.GetHistory()
+	localIdx := len(localHistory) - 1
+	remoteIdx := len(remoteHistory) - 1
 
 	for localIdx >= 0 && remoteIdx >= 0 {
-		localVersionItem := v.GetHistory()[localIdx]
-		remoteVersionItem := remote.GetHistory()[remoteIdx]
+		localVersionItem := localHistory[localIdx]
+		remoteVersionItem := remoteHistory[remoteIdx]
 		if localVersionItem.version == remoteVersionItem.version {
 			if localVersionItem.eventID > remoteVersionItem.eventID {
 				return remoteVersionItem, nil
@@ -106,6 +123,7 @@ func (v *versionHistoryImpl) FindLowestCommonVersionHistoryItem(remote VersionHi
 		} else if localVersionItem.version > remoteVersionItem.version {
 			localIdx--
 		} else {
+			// localVersionItem.version < remoteVersionItem.version
 			remoteIdx--
 		}
 	}
@@ -116,56 +134,64 @@ func (v *versionHistoryImpl) FindLowestCommonVersionHistoryItem(remote VersionHi
 
 // IsAppendable checks if a version history item is appendable
 func (v *versionHistoryImpl) IsAppendable(item VersionHistoryItem) bool {
-	return v.getLastItem().eventID == item.eventID && v.getLastItem().version == item.version
+	return v.history[len(v.history)-1] == item
 }
 
+// GetHistory returns version history
 func (v *versionHistoryImpl) GetHistory() []VersionHistoryItem {
-	return v.history
-}
-
-func (v *versionHistoryImpl) getLastItem() *VersionHistoryItem {
-	return &v.history[len(v.history)-1]
+	history := make([]VersionHistoryItem, len(v.history))
+	copy(history, v.history)
+	return history
 }
 
 // NewVersionHistories initialize new version histories
-func NewVersionHistories(histories ...VersionHistory) VersionHistories {
+func NewVersionHistories(histories []VersionHistory) VersionHistories {
+	if histories == nil || len(histories) == 0 {
+		panic("version histories cannot be empty")
+	}
 	return &versionHistoriesImpl{
 		versionHistories: histories,
 	}
 }
 
 // FindLowestCommonVersionHistory finds the lowest common version history item among all version histories
-func (h *versionHistoriesImpl) FindLowestCommonVersionHistory(history VersionHistory) (VersionHistoryItem, *VersionHistory, error) {
-	var hItem VersionHistoryItem
-	var vHistory *VersionHistory
-	for i := 0; i < len(h.versionHistories); i++ {
-		item, err := h.versionHistories[i].FindLowestCommonVersionHistoryItem(history)
+func (h *versionHistoriesImpl) FindLowestCommonVersionHistory(history VersionHistory) (VersionHistoryItem, VersionHistory, error) {
+	var versionHistoryItem VersionHistoryItem
+	var versionHistory VersionHistory
+	for _, localHistory := range h.versionHistories {
+		item, err := localHistory.FindLowestCommonVersionHistoryItem(history)
 		if err != nil {
-			return hItem, vHistory, err
+			return versionHistoryItem, versionHistory, err
 		}
 
-		if item.eventID > hItem.eventID {
-			hItem = item
-			vHistory = &h.versionHistories[i]
-
+		if item.eventID > versionHistoryItem.eventID {
+			versionHistoryItem = item
+			versionHistory = localHistory
 		}
 	}
-	return hItem, vHistory, nil
+	return versionHistoryItem, versionHistory, nil
+}
+
+// GetHistories returns a collection of version history
+func (h *versionHistoriesImpl) GetHistories() []VersionHistory {
+	return h.versionHistories
 }
 
 // AddHistory add new history into version histories
 // Sample
-func (h *versionHistoriesImpl) AddHistory(item VersionHistoryItem, local *VersionHistory, remote VersionHistory) error {
-	if (*local).IsAppendable(item) {
+func (h *versionHistoriesImpl) AddHistory(item VersionHistoryItem, local VersionHistory, remote VersionHistory) error {
+	commonItem := item
+	if local.IsAppendable(commonItem) {
 		for _, historyItem := range remote.GetHistory() {
-			if historyItem.version < item.version {
+			if historyItem.version < commonItem.version {
 				continue
 			}
-			if err := (*local).Update(historyItem); err != nil {
+			if err := local.Update(historyItem); err != nil {
 				return err
 			}
 		}
+	} else {
+		h.versionHistories = append(h.versionHistories, remote)
 	}
-	h.versionHistories = append(h.versionHistories, remote)
 	return nil
 }
