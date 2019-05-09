@@ -22,45 +22,14 @@ package host
 
 import (
 	"encoding/json"
-	"flag"
 	"strconv"
-	"testing"
 
 	"github.com/pborman/uuid"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 )
 
-type (
-	decisionIntegrationSuite struct {
-		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
-		// not merely log an error
-		*require.Assertions
-		IntegrationBase
-	}
-)
-
-func (s *decisionIntegrationSuite) SetupSuite() {
-	s.setupSuite("testdata/integrationtestcluster.yaml")
-}
-
-func (s *decisionIntegrationSuite) TearDownSuite() {
-	s.tearDownSuite()
-}
-
-func (s *decisionIntegrationSuite) SetupTest() {
-	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
-	s.Assertions = require.New(s.T())
-}
-
-func TestDecisionIntegrationSuite(t *testing.T) {
-	flag.Parse()
-	suite.Run(t, new(decisionIntegrationSuite))
-}
-
-func (s *decisionIntegrationSuite) TestWorkflowTerminationSignalBeforeRegularDecisionStarted() {
+func (s *integrationSuite) TestWorkflowTerminationSignalBeforeRegularDecisionStarted() {
 	id := uuid.New()
 	wt := "interation-workflow-transient-decision-test-type"
 	tl := id
@@ -135,7 +104,7 @@ func (s *decisionIntegrationSuite) TestWorkflowTerminationSignalBeforeRegularDec
 }
 
 // TODO signals are left in buffer in this case, which will make reset losing signal
-func (s *decisionIntegrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStarted() {
+func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStarted() {
 	id := uuid.New()
 	wt := "interation-workflow-transient-decision-test-type"
 	tl := id
@@ -208,7 +177,7 @@ func (s *decisionIntegrationSuite) TestWorkflowTerminationSignalAfterRegularDeci
 	s.assertHistory(we, expectedHistory)
 }
 
-func (s *decisionIntegrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStartedAndFailDecision() {
+func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStartedAndFailDecision() {
 	id := uuid.New()
 	wt := "interation-workflow-transient-decision-test-type"
 	tl := id
@@ -295,7 +264,7 @@ func (s *decisionIntegrationSuite) TestWorkflowTerminationSignalAfterRegularDeci
 	s.assertHistory(we, expectedHistory)
 }
 
-func (s *decisionIntegrationSuite) TestWorkflowTerminationSignalBeforeTransientDecisionStarted() {
+func (s *integrationSuite) TestWorkflowTerminationSignalBeforeTransientDecisionStarted() {
 	id := uuid.New()
 	wt := "interation-workflow-transient-decision-test-type"
 	tl := id
@@ -400,7 +369,7 @@ func (s *decisionIntegrationSuite) TestWorkflowTerminationSignalBeforeTransientD
 }
 
 // TODO signals are left in buffer in this case, which will make reset losing signal
-func (s *decisionIntegrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionStarted() {
+func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionStarted() {
 	id := uuid.New()
 	wt := "interation-workflow-transient-decision-test-type"
 	tl := id
@@ -501,7 +470,7 @@ func (s *decisionIntegrationSuite) TestWorkflowTerminationSignalAfterTransientDe
 	s.assertHistory(we, expectedHistory)
 }
 
-func (s *decisionIntegrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionStartedAndFailDecision() {
+func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionStartedAndFailDecision() {
 	id := uuid.New()
 	wt := "interation-workflow-transient-decision-test-type"
 	tl := id
@@ -613,7 +582,7 @@ func (s *decisionIntegrationSuite) TestWorkflowTerminationSignalAfterTransientDe
 	s.assertHistory(we, expectedHistory)
 }
 
-func (s *decisionIntegrationSuite) assertHistory(we *workflow.WorkflowExecution, expectedHistory []workflow.EventType) {
+func (s *integrationSuite) assertHistory(we *workflow.WorkflowExecution, expectedHistory []workflow.EventType) {
 	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
 		Domain:    common.StringPtr(s.domainName),
 		Execution: we,
@@ -628,7 +597,7 @@ func (s *decisionIntegrationSuite) assertHistory(we *workflow.WorkflowExecution,
 	}
 }
 
-func (s *decisionIntegrationSuite) assertLastHistoryEvent(we *workflow.WorkflowExecution, count int, eventType workflow.EventType) {
+func (s *integrationSuite) assertLastHistoryEvent(we *workflow.WorkflowExecution, count int, eventType workflow.EventType) {
 	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
 		Domain:    common.StringPtr(s.domainName),
 		Execution: we,
