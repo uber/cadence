@@ -1,7 +1,8 @@
 ---
-title: Start Cadence Server Locally
 codecontent: startlocalserver
 ---
+
+# Start Cadence Server Locally
 
 The exercises in this tour assume that you have a Cadence server running. 
 Fortunately, the entire Cadence server can be run locally using Docker. 
