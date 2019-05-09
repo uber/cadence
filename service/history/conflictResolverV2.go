@@ -150,7 +150,23 @@ func (r *conflictResolverV2Impl) reset(prevRunID string, requestID string, repla
 		r.logger.Error("conflict resolution err reset workflow.", tag.Error(err))
 	}
 	//TODO: use LCA on the msBuilder.getVersionHistories() vs localVersionHistories
+	//r.resolveVersionHistoryConflict(localVersionHistories, msBuilder.GetVersionHistories())
 	return msBuilder, err
+}
+
+func (r *conflictResolverV2Impl) resolveVersionHistoryConflict(local persistence.VersionHistories, remote persistence.VersionHistories) error {
+
+	for _, newHistory := range remote.GetHistories() {
+		commonEventId, history, err := local.FindLowestCommonVersionHistory(newHistory)
+		if err != nil {
+			return err
+		}
+
+		if err := local.AddHistory(commonEventId, history, newHistory); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *conflictResolverV2Impl) getHistoryBatch(domainID string, execution shared.WorkflowExecution, firstEventID,
