@@ -22,12 +22,11 @@ package common
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/rand"
 	"sync"
 	"time"
 
-	farm "github.com/dgryski/go-farm"
+	"github.com/dgryski/go-farm"
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -257,9 +256,9 @@ func PrettyPrintHistory(history *workflow.History, logger log.Logger) {
 		logger.Error("Error serializing history: %v\n", tag.Error(err))
 	}
 
-	fmt.Println("******************************************")
-	fmt.Println("History", string(data))
-	fmt.Println("******************************************")
+	logger.Info("******************************************")
+	logger.Info("History", tag.DetailInfo(string(data)))
+	logger.Info("******************************************")
 }
 
 // IsValidContext checks that the thrift context is not expired on cancelled.
