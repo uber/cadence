@@ -55,7 +55,7 @@ func (s *decisionIntegrationSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 }
 
-func TestIntegrationSuite2(t *testing.T) {
+func TestDecisionIntegrationSuite(t *testing.T) {
 	flag.Parse()
 	suite.Run(t, new(decisionIntegrationSuite))
 }
