@@ -1,7 +1,15 @@
 @import "./definitions.sass"
 
+body.tour-body
+  position: fixed
+  left: 0px
+  right: 0px
+  top: 0px
+  bottom: 0px
 
 main.tour
+  position: absolute
+  height: 100%
   li
     list-style: initial
   ol
@@ -9,5 +17,3 @@ main.tour
       list-style-type: decimal
   pre, code
     overflow-x: scroll
-  div.split
-    height: 100%
