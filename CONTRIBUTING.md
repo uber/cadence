@@ -99,7 +99,7 @@ go test -v github.com/uber/cadence/common/persistence -run TestCassandraPersiste
 ## Release Process 
 
 1. Create new version branch in the repo (use a branch instead of tag in favor of cherry-picking patches)
-2. Deploy and run stress/canary test(see the internal instruction)
+2. Deploy and run stress/canary test(Go to the internal release wiki for instruction)
 3. Go to Release page, click on "Draft a new release" to publish a new release. Follow the format of the previous release for release notes. 
 4. Build the new docker image and push into docker hub
 ```bash
