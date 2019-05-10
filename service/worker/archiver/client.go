@@ -89,7 +89,7 @@ func (c *client) Archive(request *ArchiveRequest) error {
 	_, err := c.cadenceClient.SignalWithStartWorkflow(context.Background(), workflowID, signalName, *request, workflowOptions, archivalWorkflowFnName, nil)
 	if err != nil {
 		taggedLogger := tagLoggerWithRequest(c.logger, *request).WithTags(tag.Error(err))
-		taggedLogger.Error("failed to SignalWithStartWorkflow to archival system workflow")
+		taggedLogger.Error("failed to send signal to archival system workflow")
 		c.metricsClient.IncCounter(metrics.ArchiverClientScope, metrics.CadenceFailures)
 	}
 	return err
