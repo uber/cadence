@@ -45,20 +45,18 @@ type (
 		shard           ShardContext
 		clusterMetadata cluster.Metadata
 		context         workflowExecutionContext
-		historyMgr      persistence.HistoryManager
 		historyV2Mgr    persistence.HistoryV2Manager
 		logger          log.Logger
 	}
 )
 
-func newConflictResolverV2(shard ShardContext, context workflowExecutionContext, historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
-	logger log.Logger) *conflictResolverImpl {
+func newConflictResolverV2(shard ShardContext, context workflowExecutionContext, historyV2Mgr persistence.HistoryV2Manager,
+	logger log.Logger) *conflictResolverV2Impl {
 
-	return &conflictResolverImpl{
+	return &conflictResolverV2Impl{
 		shard:           shard,
 		clusterMetadata: shard.GetService().GetClusterMetadata(),
 		context:         context,
-		historyMgr:      historyMgr,
 		historyV2Mgr:    historyV2Mgr,
 		logger:          logger,
 	}
@@ -114,7 +112,7 @@ func (r *conflictResolverV2Impl) getHistoryBatch(domainID string, execution shar
 	return func(paginationToken []byte) ([]interface{}, []byte, error) {
 		var paginateItems []interface{}
 		_, historyBatches, token, _, err := PaginateHistory(
-			r.historyMgr,
+			nil,
 			r.historyV2Mgr,
 			nil,
 			r.logger,
