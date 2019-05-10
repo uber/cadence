@@ -172,7 +172,7 @@ func (r *conflictResolverV2Impl) resetMutableState(msBuilder *mutableStateBuilde
 	replayEventID int64,
 	prevRunID string) (mutableState, error) {
 	// reset branchToken to the original one(it has been set to a wrong branchToken in applyEvents for startEvent)
-	msBuilder.executionInfo.BranchToken = msBuilder.GetCurrentBranch()
+	msBuilder.executionInfo.BranchToken = execution.GetCurrentBranch()
 	// similarly, in case of resetWF, the runID in startEvent is incorrect
 	msBuilder.executionInfo.RunID = execution.RunID
 	msBuilder.executionInfo.StartTimestamp = execution.StartTimestamp
