@@ -32,8 +32,8 @@ import (
 )
 
 const (
-	defaultPageSize   = 100
-	eventStoreVersion = persistence.EventStoreVersionV2
+	conflictResolverDefaultPageSize   = 100
+	conflictResolverEventStoreVersion = persistence.EventStoreVersionV2
 )
 
 type (
@@ -64,17 +64,17 @@ func newConflictResolverV2(shard ShardContext, context workflowExecutionContext,
 	}
 }
 
-func (r *conflictResolverV2Impl) reset(prevRunID string, requestID string, replayEventID int64, info *persistence.WorkflowExecutionInfo, localVersionHistories persistence.VersionHistories) (mutableState, error) {
+//TODO: the branchToken is the LCA branch between existing versionhistories and new version history
+func (r *conflictResolverV2Impl) reset(prevRunID string, requestID string, replayEventID int64, info *persistence.WorkflowExecutionInfo, branchToken []byte) (mutableState, error) {
 	domainID := r.context.getDomainID()
 	execution := *r.context.getExecution()
-	branchToken := info.GetCurrentBranch()
 	replayNextEventID := replayEventID + 1
 
 	var resetMutableStateBuilder *mutableStateBuilder
 	var sBuilder stateBuilder
 	var lastEvent *shared.HistoryEvent
 
-	iter := collection.NewPagingIterator(r.getHistoryBatch(domainID, execution, common.FirstEventID, replayNextEventID, nil, eventStoreVersion, branchToken))
+	iter := collection.NewPagingIterator(r.getHistoryBatch(domainID, execution, common.FirstEventID, replayNextEventID, nil, conflictResolverEventStoreVersion, branchToken))
 	for iter.HasNext() {
 		batch, err := iter.Next()
 		if err != nil {
@@ -88,7 +88,7 @@ func (r *conflictResolverV2Impl) reset(prevRunID string, requestID string, repla
 		if firstEvent.GetEventId() == common.FirstEventID {
 			resetMutableStateBuilder, sBuilder = r.initializeBuilders(firstEvent)
 		}
-		_, _, _, err = sBuilder.applyEvents(domainID, requestID, execution, history, nil, eventStoreVersion, eventStoreVersion)
+		_, _, _, err = sBuilder.applyEvents(domainID, requestID, execution, history, nil, conflictResolverEventStoreVersion, conflictResolverEventStoreVersion)
 		if err != nil {
 			r.logger.Error("conflict resolution err applying events.", tag.Error(err))
 			return nil, err
@@ -96,7 +96,7 @@ func (r *conflictResolverV2Impl) reset(prevRunID string, requestID string, repla
 		resetMutableStateBuilder.IncrementHistorySize(len(history))
 	}
 	//Sanity check on last event id of the last history batch
-	if *lastEvent.EventId != replayEventID {
+	if lastEvent.GetEventId() != replayEventID {
 		return resetMutableStateBuilder, &shared.BadRequestError{
 			Message: fmt.Sprintf("failed to resolve conflict as the last even id %v and replay event id %v are not matched", lastEvent, replayNextEventID),
 		}
@@ -106,24 +106,7 @@ func (r *conflictResolverV2Impl) reset(prevRunID string, requestID string, repla
 	if err != nil {
 		r.logger.Error("conflict resolution err reset workflow.", tag.Error(err))
 	}
-	//TODO: use LCA on the msBuilder.getVersionHistories() vs localVersionHistories
-	//r.resolveVersionHistoryConflict(localVersionHistories, msBuilder.GetVersionHistories())
 	return msBuilder, err
-}
-
-func (r *conflictResolverV2Impl) resolveVersionHistoryConflict(local persistence.VersionHistories, remote persistence.VersionHistories) error {
-
-	for _, newHistory := range remote.GetHistories() {
-		commonEventId, history, err := local.FindLowestCommonVersionHistory(newHistory)
-		if err != nil {
-			return err
-		}
-
-		if err := local.AddHistory(commonEventId, history, newHistory); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (r *conflictResolverV2Impl) getHistoryBatch(domainID string, execution shared.WorkflowExecution, firstEventID,
@@ -144,7 +127,7 @@ func (r *conflictResolverV2Impl) getHistoryBatch(domainID string, execution shar
 			nextPageToken,
 			eventStoreVersion,
 			branchToken,
-			defaultPageSize,
+			conflictResolverDefaultPageSize,
 			common.IntPtr(r.shard.GetShardID()))
 		for _, history := range historyBatches {
 			paginateItems = append(paginateItems, history)
@@ -161,7 +144,7 @@ func (r *conflictResolverV2Impl) initializeBuilders(firstEvent *shared.HistoryEv
 		r.logger,
 		firstEvent.GetVersion(),
 	)
-	resetMutableStateBuilder.executionInfo.EventStoreVersion = eventStoreVersion
+	resetMutableStateBuilder.executionInfo.EventStoreVersion = conflictResolverEventStoreVersion
 	sBuilder := newStateBuilder(r.shard, resetMutableStateBuilder, r.logger)
 	return resetMutableStateBuilder, sBuilder
 }
@@ -172,15 +155,13 @@ func (r *conflictResolverV2Impl) resetMutableState(msBuilder *mutableStateBuilde
 	replayEventID int64,
 	prevRunID string) (mutableState, error) {
 	// reset branchToken to the original one(it has been set to a wrong branchToken in applyEvents for startEvent)
-	msBuilder.executionInfo.BranchToken = execution.GetCurrentBranch()
+	// TODO: Get this branch token from state builder or historyv2 manager ForkHistoryBranch
+	msBuilder.executionInfo.BranchToken = []byte{}
 	// similarly, in case of resetWF, the runID in startEvent is incorrect
 	msBuilder.executionInfo.RunID = execution.RunID
 	msBuilder.executionInfo.StartTimestamp = execution.StartTimestamp
 	// the last updated time is not important here, since this should be updated with event time afterwards
 	msBuilder.executionInfo.LastUpdatedTimestamp = execution.StartTimestamp
-	sourceCluster := r.clusterMetadata.ClusterNameForFailoverVersion(lastEvent.GetVersion())
-	msBuilder.UpdateReplicationStateLastEventID(sourceCluster, lastEvent.GetVersion(), replayEventID)
-
 	r.logger.Info("All events applied for execution.", tag.WorkflowResetNextEventID(msBuilder.GetNextEventID()))
 	return r.context.resetMutableState(prevRunID, msBuilder)
 }
