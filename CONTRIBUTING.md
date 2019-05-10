@@ -100,20 +100,21 @@ go test -v github.com/uber/cadence/common/persistence -run TestCassandraPersiste
 
 1. Create new release branch in the repo, which froks from the release commit on master branch. The branch name should be "0.x.y_release" ( we use a branch instead of tag in favor of cherry-picking patches for hot fixes from master)
 2. Run all stress/canary test(for both Cassandra/SQL) and deploy to staging/production. For detailed instructions go to our internal release process wiki)
-3. Go to Release page, click on "Draft a new release" to publish a new release. Follow the format of the previous release for release notes. This will create a tag named "v0.x.y" 
-4. Build the new docker image and push into docker hub.
+3. Verify metrics/logging during testing/deployment. If everything looks good, then go to next step.  
+4. Go to Release page, click on "Draft a new release" to publish a new release. Follow the format of the previous release for release notes. This will create a tag named "v0.x.y" 
+5. Build the new docker image and push into docker hub.
 ```bash
 docker build . -t ubercadence/server:THE.LATEST.VERSION  --build-arg git_branch=vTHE.LATEST.VERSION 
 docker login
 docker push ubercadence/server:THE.LATEST.VERSION
 ```
-5. Update "docker-compose.yml" and "docker-compose-mysql.yml" to use latest version and check in to master
+6. Update "docker-compose.yml" and "docker-compose-mysql.yml" to use latest version and check in to master
 ```yaml
   cadence:
     image: ubercadence/server:THE.LATEST.VERSION 
     ports
 ```
-6. Create the tar.gz file and upload to release page
+7. Create the tar.gz file and upload to release page
 ```bash
 cd github.com/uber/cadence/docker
 tar -cvf docker.tar.gz *
