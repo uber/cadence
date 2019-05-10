@@ -66,10 +66,10 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*shared.DescribeWorkflowExecutionResponse, error)
 
-	GetIndexedKeys(
+	GetSearchAttributes(
 		ctx context.Context,
 		opts ...yarpc.CallOption,
-	) (*shared.GetIndexedKeysResponse, error)
+	) (*shared.GetSearchAttributesResponse, error)
 
 	GetWorkflowExecutionHistory(
 		ctx context.Context,
@@ -385,12 +385,12 @@ func (c client) DescribeWorkflowExecution(
 	return
 }
 
-func (c client) GetIndexedKeys(
+func (c client) GetSearchAttributes(
 	ctx context.Context,
 	opts ...yarpc.CallOption,
-) (success *shared.GetIndexedKeysResponse, err error) {
+) (success *shared.GetSearchAttributesResponse, err error) {
 
-	args := cadence.WorkflowService_GetIndexedKeys_Helper.Args()
+	args := cadence.WorkflowService_GetSearchAttributes_Helper.Args()
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -398,12 +398,12 @@ func (c client) GetIndexedKeys(
 		return
 	}
 
-	var result cadence.WorkflowService_GetIndexedKeys_Result
+	var result cadence.WorkflowService_GetSearchAttributes_Result
 	if err = result.FromWire(body); err != nil {
 		return
 	}
 
-	success, err = cadence.WorkflowService_GetIndexedKeys_Helper.UnwrapResponse(&result)
+	success, err = cadence.WorkflowService_GetSearchAttributes_Helper.UnwrapResponse(&result)
 	return
 }
 

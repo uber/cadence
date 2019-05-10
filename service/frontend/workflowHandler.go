@@ -2573,11 +2573,11 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(ctx context.Context, countReq
 	return resp, nil
 }
 
-// GetIndexedKeys return valid indexed keys
-func (wh *WorkflowHandler) GetIndexedKeys(ctx context.Context) (resp *gen.GetIndexedKeysResponse, retError error) {
+// GetSearchAttributes return valid indexed keys
+func (wh *WorkflowHandler) GetSearchAttributes(ctx context.Context) (resp *gen.GetSearchAttributesResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope := wh.metricsClient.Scope(metrics.FrontendGetIndexedKeysScope)
+	scope := wh.metricsClient.Scope(metrics.FrontendGetSearchAttributesScope)
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
@@ -2585,8 +2585,8 @@ func (wh *WorkflowHandler) GetIndexedKeys(ctx context.Context) (resp *gen.GetInd
 		return nil, wh.error(err, scope)
 	}
 
-	keys := wh.config.IndexedKeys()
-	resp = &gen.GetIndexedKeysResponse{
+	keys := wh.config.ValidSearchAttributes()
+	resp = &gen.GetSearchAttributesResponse{
 		Keys: wh.convertIndexedKeys(keys),
 	}
 	return resp, nil

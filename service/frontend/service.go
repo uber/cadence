@@ -73,8 +73,8 @@ type Config struct {
 	// Domain specific config
 	EnableDomainNotActiveAutoForwarding dynamicconfig.BoolPropertyFnWithDomainFilter
 
-	// IndexedKeys is legal indexed keys that can be used in list APIs
-	IndexedKeys dynamicconfig.MapPropertyFn
+	// ValidSearchAttributes is legal indexed keys that can be used in list APIs
+	ValidSearchAttributes dynamicconfig.MapPropertyFn
 }
 
 // NewConfig returns new service config with default values
@@ -104,7 +104,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableVisibil
 		ThrottledLogRPS:                     dc.GetIntProperty(dynamicconfig.FrontendThrottledLogRPS, 20),
 		EnableDomainNotActiveAutoForwarding: dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableDomainNotActiveAutoForwarding, false),
 		EnableClientVersionCheck:            dc.GetBoolProperty(dynamicconfig.EnableClientVersionCheck, enableClientVersionCheck),
-		IndexedKeys:                         dc.GetMapProperty(dynamicconfig.IndexedKeys, definition.GetDefaultIndexedKeys()),
+		ValidSearchAttributes:               dc.GetMapProperty(dynamicconfig.ValidSearchAttributes, definition.GetDefaultIndexedKeys()),
 	}
 }
 

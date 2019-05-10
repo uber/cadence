@@ -59,9 +59,9 @@ type Interface interface {
 		DescribeRequest *shared.DescribeWorkflowExecutionRequest,
 	) (*shared.DescribeWorkflowExecutionResponse, error)
 
-	GetIndexedKeys(
+	GetSearchAttributes(
 		ctx context.Context,
-	) (*shared.GetIndexedKeysResponse, error)
+	) (*shared.GetSearchAttributesResponse, error)
 
 	GetWorkflowExecutionHistory(
 		ctx context.Context,
@@ -276,13 +276,13 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
-				Name: "GetIndexedKeys",
+				Name: "GetSearchAttributes",
 				HandlerSpec: thrift.HandlerSpec{
 
 					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetIndexedKeys),
+					Unary: thrift.UnaryHandler(h.GetSearchAttributes),
 				},
-				Signature:    "GetIndexedKeys() (*shared.GetIndexedKeysResponse)",
+				Signature:    "GetSearchAttributes() (*shared.GetSearchAttributesResponse)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -709,16 +709,16 @@ func (h handler) DescribeWorkflowExecution(ctx context.Context, body wire.Value)
 	return response, err
 }
 
-func (h handler) GetIndexedKeys(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args cadence.WorkflowService_GetIndexedKeys_Args
+func (h handler) GetSearchAttributes(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_GetSearchAttributes_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, err := h.impl.GetIndexedKeys(ctx)
+	success, err := h.impl.GetSearchAttributes(ctx)
 
 	hadError := err != nil
-	result, err := cadence.WorkflowService_GetIndexedKeys_Helper.WrapResponse(success, err)
+	result, err := cadence.WorkflowService_GetSearchAttributes_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {

@@ -33,13 +33,13 @@ import (
 	strings "strings"
 )
 
-// WorkflowService_GetIndexedKeys_Args represents the arguments for the WorkflowService.GetIndexedKeys function.
+// WorkflowService_GetSearchAttributes_Args represents the arguments for the WorkflowService.GetSearchAttributes function.
 //
-// The arguments for GetIndexedKeys are sent and received over the wire as this struct.
-type WorkflowService_GetIndexedKeys_Args struct {
+// The arguments for GetSearchAttributes are sent and received over the wire as this struct.
+type WorkflowService_GetSearchAttributes_Args struct {
 }
 
-// ToWire translates a WorkflowService_GetIndexedKeys_Args struct into a Thrift-level intermediate
+// ToWire translates a WorkflowService_GetSearchAttributes_Args struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -54,7 +54,7 @@ type WorkflowService_GetIndexedKeys_Args struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *WorkflowService_GetIndexedKeys_Args) ToWire() (wire.Value, error) {
+func (v *WorkflowService_GetSearchAttributes_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [0]wire.Field
 		i      int = 0
@@ -63,11 +63,11 @@ func (v *WorkflowService_GetIndexedKeys_Args) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-// FromWire deserializes a WorkflowService_GetIndexedKeys_Args struct from its Thrift-level
+// FromWire deserializes a WorkflowService_GetSearchAttributes_Args struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a WorkflowService_GetIndexedKeys_Args struct
+// An error is returned if we were unable to build a WorkflowService_GetSearchAttributes_Args struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -75,12 +75,12 @@ func (v *WorkflowService_GetIndexedKeys_Args) ToWire() (wire.Value, error) {
 //     return nil, err
 //   }
 //
-//   var v WorkflowService_GetIndexedKeys_Args
+//   var v WorkflowService_GetSearchAttributes_Args
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *WorkflowService_GetIndexedKeys_Args) FromWire(w wire.Value) error {
+func (v *WorkflowService_GetSearchAttributes_Args) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
@@ -90,9 +90,9 @@ func (v *WorkflowService_GetIndexedKeys_Args) FromWire(w wire.Value) error {
 	return nil
 }
 
-// String returns a readable string representation of a WorkflowService_GetIndexedKeys_Args
+// String returns a readable string representation of a WorkflowService_GetSearchAttributes_Args
 // struct.
-func (v *WorkflowService_GetIndexedKeys_Args) String() string {
+func (v *WorkflowService_GetSearchAttributes_Args) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -100,14 +100,14 @@ func (v *WorkflowService_GetIndexedKeys_Args) String() string {
 	var fields [0]string
 	i := 0
 
-	return fmt.Sprintf("WorkflowService_GetIndexedKeys_Args{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("WorkflowService_GetSearchAttributes_Args{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this WorkflowService_GetIndexedKeys_Args match the
-// provided WorkflowService_GetIndexedKeys_Args.
+// Equals returns true if all the fields of this WorkflowService_GetSearchAttributes_Args match the
+// provided WorkflowService_GetSearchAttributes_Args.
 //
 // This function performs a deep comparison.
-func (v *WorkflowService_GetIndexedKeys_Args) Equals(rhs *WorkflowService_GetIndexedKeys_Args) bool {
+func (v *WorkflowService_GetSearchAttributes_Args) Equals(rhs *WorkflowService_GetSearchAttributes_Args) bool {
 	if v == nil {
 		return rhs == nil
 	} else if rhs == nil {
@@ -118,8 +118,8 @@ func (v *WorkflowService_GetIndexedKeys_Args) Equals(rhs *WorkflowService_GetInd
 }
 
 // MarshalLogObject implements zapcore.ObjectMarshaler, enabling
-// fast logging of WorkflowService_GetIndexedKeys_Args.
-func (v *WorkflowService_GetIndexedKeys_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+// fast logging of WorkflowService_GetSearchAttributes_Args.
+func (v *WorkflowService_GetSearchAttributes_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	if v == nil {
 		return nil
 	}
@@ -129,67 +129,67 @@ func (v *WorkflowService_GetIndexedKeys_Args) MarshalLogObject(enc zapcore.Objec
 // MethodName returns the name of the Thrift function as specified in
 // the IDL, for which this struct represent the arguments.
 //
-// This will always be "GetIndexedKeys" for this struct.
-func (v *WorkflowService_GetIndexedKeys_Args) MethodName() string {
-	return "GetIndexedKeys"
+// This will always be "GetSearchAttributes" for this struct.
+func (v *WorkflowService_GetSearchAttributes_Args) MethodName() string {
+	return "GetSearchAttributes"
 }
 
 // EnvelopeType returns the kind of value inside this struct.
 //
 // This will always be Call for this struct.
-func (v *WorkflowService_GetIndexedKeys_Args) EnvelopeType() wire.EnvelopeType {
+func (v *WorkflowService_GetSearchAttributes_Args) EnvelopeType() wire.EnvelopeType {
 	return wire.Call
 }
 
-// WorkflowService_GetIndexedKeys_Helper provides functions that aid in handling the
-// parameters and return values of the WorkflowService.GetIndexedKeys
+// WorkflowService_GetSearchAttributes_Helper provides functions that aid in handling the
+// parameters and return values of the WorkflowService.GetSearchAttributes
 // function.
-var WorkflowService_GetIndexedKeys_Helper = struct {
-	// Args accepts the parameters of GetIndexedKeys in-order and returns
+var WorkflowService_GetSearchAttributes_Helper = struct {
+	// Args accepts the parameters of GetSearchAttributes in-order and returns
 	// the arguments struct for the function.
-	Args func() *WorkflowService_GetIndexedKeys_Args
+	Args func() *WorkflowService_GetSearchAttributes_Args
 
 	// IsException returns true if the given error can be thrown
-	// by GetIndexedKeys.
+	// by GetSearchAttributes.
 	//
-	// An error can be thrown by GetIndexedKeys only if the
+	// An error can be thrown by GetSearchAttributes only if the
 	// corresponding exception type was mentioned in the 'throws'
 	// section for it in the Thrift file.
 	IsException func(error) bool
 
-	// WrapResponse returns the result struct for GetIndexedKeys
+	// WrapResponse returns the result struct for GetSearchAttributes
 	// given its return value and error.
 	//
 	// This allows mapping values and errors returned by
-	// GetIndexedKeys into a serializable result struct.
+	// GetSearchAttributes into a serializable result struct.
 	// WrapResponse returns a non-nil error if the provided
-	// error cannot be thrown by GetIndexedKeys
+	// error cannot be thrown by GetSearchAttributes
 	//
-	//   value, err := GetIndexedKeys(args)
-	//   result, err := WorkflowService_GetIndexedKeys_Helper.WrapResponse(value, err)
+	//   value, err := GetSearchAttributes(args)
+	//   result, err := WorkflowService_GetSearchAttributes_Helper.WrapResponse(value, err)
 	//   if err != nil {
-	//     return fmt.Errorf("unexpected error from GetIndexedKeys: %v", err)
+	//     return fmt.Errorf("unexpected error from GetSearchAttributes: %v", err)
 	//   }
 	//   serialize(result)
-	WrapResponse func(*shared.GetIndexedKeysResponse, error) (*WorkflowService_GetIndexedKeys_Result, error)
+	WrapResponse func(*shared.GetSearchAttributesResponse, error) (*WorkflowService_GetSearchAttributes_Result, error)
 
-	// UnwrapResponse takes the result struct for GetIndexedKeys
+	// UnwrapResponse takes the result struct for GetSearchAttributes
 	// and returns the value or error returned by it.
 	//
-	// The error is non-nil only if GetIndexedKeys threw an
+	// The error is non-nil only if GetSearchAttributes threw an
 	// exception.
 	//
 	//   result := deserialize(bytes)
-	//   value, err := WorkflowService_GetIndexedKeys_Helper.UnwrapResponse(result)
-	UnwrapResponse func(*WorkflowService_GetIndexedKeys_Result) (*shared.GetIndexedKeysResponse, error)
+	//   value, err := WorkflowService_GetSearchAttributes_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*WorkflowService_GetSearchAttributes_Result) (*shared.GetSearchAttributesResponse, error)
 }{}
 
 func init() {
-	WorkflowService_GetIndexedKeys_Helper.Args = func() *WorkflowService_GetIndexedKeys_Args {
-		return &WorkflowService_GetIndexedKeys_Args{}
+	WorkflowService_GetSearchAttributes_Helper.Args = func() *WorkflowService_GetSearchAttributes_Args {
+		return &WorkflowService_GetSearchAttributes_Args{}
 	}
 
-	WorkflowService_GetIndexedKeys_Helper.IsException = func(err error) bool {
+	WorkflowService_GetSearchAttributes_Helper.IsException = func(err error) bool {
 		switch err.(type) {
 		case *shared.InternalServiceError:
 			return true
@@ -202,32 +202,32 @@ func init() {
 		}
 	}
 
-	WorkflowService_GetIndexedKeys_Helper.WrapResponse = func(success *shared.GetIndexedKeysResponse, err error) (*WorkflowService_GetIndexedKeys_Result, error) {
+	WorkflowService_GetSearchAttributes_Helper.WrapResponse = func(success *shared.GetSearchAttributesResponse, err error) (*WorkflowService_GetSearchAttributes_Result, error) {
 		if err == nil {
-			return &WorkflowService_GetIndexedKeys_Result{Success: success}, nil
+			return &WorkflowService_GetSearchAttributes_Result{Success: success}, nil
 		}
 
 		switch e := err.(type) {
 		case *shared.InternalServiceError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_GetIndexedKeys_Result.InternalServiceError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_GetSearchAttributes_Result.InternalServiceError")
 			}
-			return &WorkflowService_GetIndexedKeys_Result{InternalServiceError: e}, nil
+			return &WorkflowService_GetSearchAttributes_Result{InternalServiceError: e}, nil
 		case *shared.ServiceBusyError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_GetIndexedKeys_Result.ServiceBusyError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_GetSearchAttributes_Result.ServiceBusyError")
 			}
-			return &WorkflowService_GetIndexedKeys_Result{ServiceBusyError: e}, nil
+			return &WorkflowService_GetSearchAttributes_Result{ServiceBusyError: e}, nil
 		case *shared.ClientVersionNotSupportedError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_GetIndexedKeys_Result.ClientVersionNotSupportedError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_GetSearchAttributes_Result.ClientVersionNotSupportedError")
 			}
-			return &WorkflowService_GetIndexedKeys_Result{ClientVersionNotSupportedError: e}, nil
+			return &WorkflowService_GetSearchAttributes_Result{ClientVersionNotSupportedError: e}, nil
 		}
 
 		return nil, err
 	}
-	WorkflowService_GetIndexedKeys_Helper.UnwrapResponse = func(result *WorkflowService_GetIndexedKeys_Result) (success *shared.GetIndexedKeysResponse, err error) {
+	WorkflowService_GetSearchAttributes_Helper.UnwrapResponse = func(result *WorkflowService_GetSearchAttributes_Result) (success *shared.GetSearchAttributesResponse, err error) {
 		if result.InternalServiceError != nil {
 			err = result.InternalServiceError
 			return
@@ -252,20 +252,20 @@ func init() {
 
 }
 
-// WorkflowService_GetIndexedKeys_Result represents the result of a WorkflowService.GetIndexedKeys function call.
+// WorkflowService_GetSearchAttributes_Result represents the result of a WorkflowService.GetSearchAttributes function call.
 //
-// The result of a GetIndexedKeys execution is sent and received over the wire as this struct.
+// The result of a GetSearchAttributes execution is sent and received over the wire as this struct.
 //
 // Success is set only if the function did not throw an exception.
-type WorkflowService_GetIndexedKeys_Result struct {
-	// Value returned by GetIndexedKeys after a successful execution.
-	Success                        *shared.GetIndexedKeysResponse         `json:"success,omitempty"`
+type WorkflowService_GetSearchAttributes_Result struct {
+	// Value returned by GetSearchAttributes after a successful execution.
+	Success                        *shared.GetSearchAttributesResponse    `json:"success,omitempty"`
 	InternalServiceError           *shared.InternalServiceError           `json:"internalServiceError,omitempty"`
 	ServiceBusyError               *shared.ServiceBusyError               `json:"serviceBusyError,omitempty"`
 	ClientVersionNotSupportedError *shared.ClientVersionNotSupportedError `json:"clientVersionNotSupportedError,omitempty"`
 }
 
-// ToWire translates a WorkflowService_GetIndexedKeys_Result struct into a Thrift-level intermediate
+// ToWire translates a WorkflowService_GetSearchAttributes_Result struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -280,7 +280,7 @@ type WorkflowService_GetIndexedKeys_Result struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *WorkflowService_GetIndexedKeys_Result) ToWire() (wire.Value, error) {
+func (v *WorkflowService_GetSearchAttributes_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [4]wire.Field
 		i      int = 0
@@ -322,23 +322,23 @@ func (v *WorkflowService_GetIndexedKeys_Result) ToWire() (wire.Value, error) {
 	}
 
 	if i != 1 {
-		return wire.Value{}, fmt.Errorf("WorkflowService_GetIndexedKeys_Result should have exactly one field: got %v fields", i)
+		return wire.Value{}, fmt.Errorf("WorkflowService_GetSearchAttributes_Result should have exactly one field: got %v fields", i)
 	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _GetIndexedKeysResponse_Read(w wire.Value) (*shared.GetIndexedKeysResponse, error) {
-	var v shared.GetIndexedKeysResponse
+func _GetSearchAttributesResponse_Read(w wire.Value) (*shared.GetSearchAttributesResponse, error) {
+	var v shared.GetSearchAttributesResponse
 	err := v.FromWire(w)
 	return &v, err
 }
 
-// FromWire deserializes a WorkflowService_GetIndexedKeys_Result struct from its Thrift-level
+// FromWire deserializes a WorkflowService_GetSearchAttributes_Result struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a WorkflowService_GetIndexedKeys_Result struct
+// An error is returned if we were unable to build a WorkflowService_GetSearchAttributes_Result struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -346,19 +346,19 @@ func _GetIndexedKeysResponse_Read(w wire.Value) (*shared.GetIndexedKeysResponse,
 //     return nil, err
 //   }
 //
-//   var v WorkflowService_GetIndexedKeys_Result
+//   var v WorkflowService_GetSearchAttributes_Result
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *WorkflowService_GetIndexedKeys_Result) FromWire(w wire.Value) error {
+func (v *WorkflowService_GetSearchAttributes_Result) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 0:
 			if field.Value.Type() == wire.TStruct {
-				v.Success, err = _GetIndexedKeysResponse_Read(field.Value)
+				v.Success, err = _GetSearchAttributesResponse_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -405,15 +405,15 @@ func (v *WorkflowService_GetIndexedKeys_Result) FromWire(w wire.Value) error {
 		count++
 	}
 	if count != 1 {
-		return fmt.Errorf("WorkflowService_GetIndexedKeys_Result should have exactly one field: got %v fields", count)
+		return fmt.Errorf("WorkflowService_GetSearchAttributes_Result should have exactly one field: got %v fields", count)
 	}
 
 	return nil
 }
 
-// String returns a readable string representation of a WorkflowService_GetIndexedKeys_Result
+// String returns a readable string representation of a WorkflowService_GetSearchAttributes_Result
 // struct.
-func (v *WorkflowService_GetIndexedKeys_Result) String() string {
+func (v *WorkflowService_GetSearchAttributes_Result) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -437,14 +437,14 @@ func (v *WorkflowService_GetIndexedKeys_Result) String() string {
 		i++
 	}
 
-	return fmt.Sprintf("WorkflowService_GetIndexedKeys_Result{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("WorkflowService_GetSearchAttributes_Result{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this WorkflowService_GetIndexedKeys_Result match the
-// provided WorkflowService_GetIndexedKeys_Result.
+// Equals returns true if all the fields of this WorkflowService_GetSearchAttributes_Result match the
+// provided WorkflowService_GetSearchAttributes_Result.
 //
 // This function performs a deep comparison.
-func (v *WorkflowService_GetIndexedKeys_Result) Equals(rhs *WorkflowService_GetIndexedKeys_Result) bool {
+func (v *WorkflowService_GetSearchAttributes_Result) Equals(rhs *WorkflowService_GetSearchAttributes_Result) bool {
 	if v == nil {
 		return rhs == nil
 	} else if rhs == nil {
@@ -467,8 +467,8 @@ func (v *WorkflowService_GetIndexedKeys_Result) Equals(rhs *WorkflowService_GetI
 }
 
 // MarshalLogObject implements zapcore.ObjectMarshaler, enabling
-// fast logging of WorkflowService_GetIndexedKeys_Result.
-func (v *WorkflowService_GetIndexedKeys_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+// fast logging of WorkflowService_GetSearchAttributes_Result.
+func (v *WorkflowService_GetSearchAttributes_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	if v == nil {
 		return nil
 	}
@@ -489,7 +489,7 @@ func (v *WorkflowService_GetIndexedKeys_Result) MarshalLogObject(enc zapcore.Obj
 
 // GetSuccess returns the value of Success if it is set or its
 // zero value if it is unset.
-func (v *WorkflowService_GetIndexedKeys_Result) GetSuccess() (o *shared.GetIndexedKeysResponse) {
+func (v *WorkflowService_GetSearchAttributes_Result) GetSuccess() (o *shared.GetSearchAttributesResponse) {
 	if v != nil && v.Success != nil {
 		return v.Success
 	}
@@ -498,13 +498,13 @@ func (v *WorkflowService_GetIndexedKeys_Result) GetSuccess() (o *shared.GetIndex
 }
 
 // IsSetSuccess returns true if Success is not nil.
-func (v *WorkflowService_GetIndexedKeys_Result) IsSetSuccess() bool {
+func (v *WorkflowService_GetSearchAttributes_Result) IsSetSuccess() bool {
 	return v != nil && v.Success != nil
 }
 
 // GetInternalServiceError returns the value of InternalServiceError if it is set or its
 // zero value if it is unset.
-func (v *WorkflowService_GetIndexedKeys_Result) GetInternalServiceError() (o *shared.InternalServiceError) {
+func (v *WorkflowService_GetSearchAttributes_Result) GetInternalServiceError() (o *shared.InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -513,13 +513,13 @@ func (v *WorkflowService_GetIndexedKeys_Result) GetInternalServiceError() (o *sh
 }
 
 // IsSetInternalServiceError returns true if InternalServiceError is not nil.
-func (v *WorkflowService_GetIndexedKeys_Result) IsSetInternalServiceError() bool {
+func (v *WorkflowService_GetSearchAttributes_Result) IsSetInternalServiceError() bool {
 	return v != nil && v.InternalServiceError != nil
 }
 
 // GetServiceBusyError returns the value of ServiceBusyError if it is set or its
 // zero value if it is unset.
-func (v *WorkflowService_GetIndexedKeys_Result) GetServiceBusyError() (o *shared.ServiceBusyError) {
+func (v *WorkflowService_GetSearchAttributes_Result) GetServiceBusyError() (o *shared.ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
@@ -528,13 +528,13 @@ func (v *WorkflowService_GetIndexedKeys_Result) GetServiceBusyError() (o *shared
 }
 
 // IsSetServiceBusyError returns true if ServiceBusyError is not nil.
-func (v *WorkflowService_GetIndexedKeys_Result) IsSetServiceBusyError() bool {
+func (v *WorkflowService_GetSearchAttributes_Result) IsSetServiceBusyError() bool {
 	return v != nil && v.ServiceBusyError != nil
 }
 
 // GetClientVersionNotSupportedError returns the value of ClientVersionNotSupportedError if it is set or its
 // zero value if it is unset.
-func (v *WorkflowService_GetIndexedKeys_Result) GetClientVersionNotSupportedError() (o *shared.ClientVersionNotSupportedError) {
+func (v *WorkflowService_GetSearchAttributes_Result) GetClientVersionNotSupportedError() (o *shared.ClientVersionNotSupportedError) {
 	if v != nil && v.ClientVersionNotSupportedError != nil {
 		return v.ClientVersionNotSupportedError
 	}
@@ -543,21 +543,21 @@ func (v *WorkflowService_GetIndexedKeys_Result) GetClientVersionNotSupportedErro
 }
 
 // IsSetClientVersionNotSupportedError returns true if ClientVersionNotSupportedError is not nil.
-func (v *WorkflowService_GetIndexedKeys_Result) IsSetClientVersionNotSupportedError() bool {
+func (v *WorkflowService_GetSearchAttributes_Result) IsSetClientVersionNotSupportedError() bool {
 	return v != nil && v.ClientVersionNotSupportedError != nil
 }
 
 // MethodName returns the name of the Thrift function as specified in
 // the IDL, for which this struct represent the result.
 //
-// This will always be "GetIndexedKeys" for this struct.
-func (v *WorkflowService_GetIndexedKeys_Result) MethodName() string {
-	return "GetIndexedKeys"
+// This will always be "GetSearchAttributes" for this struct.
+func (v *WorkflowService_GetSearchAttributes_Result) MethodName() string {
+	return "GetSearchAttributes"
 }
 
 // EnvelopeType returns the kind of value inside this struct.
 //
 // This will always be Reply for this struct.
-func (v *WorkflowService_GetIndexedKeys_Result) EnvelopeType() wire.EnvelopeType {
+func (v *WorkflowService_GetSearchAttributes_Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }

@@ -338,12 +338,12 @@ func (handler *DCRedirectionHandlerImpl) CountWorkflowExecutions(
 	return resp, err
 }
 
-// GetIndexedKeys API call
-func (handler *DCRedirectionHandlerImpl) GetIndexedKeys(
+// GetSearchAttributes API call
+func (handler *DCRedirectionHandlerImpl) GetSearchAttributes(
 	ctx context.Context,
-) (*shared.GetIndexedKeysResponse, error) {
+) (*shared.GetSearchAttributesResponse, error) {
 
-	return handler.service.GetClientBean().GetFrontendClient().GetIndexedKeys(ctx)
+	return handler.service.GetClientBean().GetFrontendClient().GetSearchAttributes(ctx)
 }
 
 // PollForActivityTask API call

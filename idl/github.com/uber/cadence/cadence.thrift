@@ -491,9 +491,9 @@ service WorkflowService {
     )
 
   /**
-  * GetIndexedKeys is a visibility API to get all legal keys that could be used in list APIs
+  * GetSearchAttributes is a visibility API to get all legal keys that could be used in list APIs
   **/
-  shared.GetIndexedKeysResponse GetIndexedKeys()
+  shared.GetSearchAttributesResponse GetSearchAttributes()
     throws (
       1: shared.InternalServiceError internalServiceError,
       2: shared.ServiceBusyError serviceBusyError,

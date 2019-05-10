@@ -236,10 +236,10 @@ func (c *clientImpl) CountWorkflowExecutions(
 	return client.CountWorkflowExecutions(ctx, request, opts...)
 }
 
-func (c *clientImpl) GetIndexedKeys(
+func (c *clientImpl) GetSearchAttributes(
 	ctx context.Context,
 	opts ...yarpc.CallOption,
-) (*shared.GetIndexedKeysResponse, error) {
+) (*shared.GetSearchAttributesResponse, error) {
 
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getRandomClient()
@@ -248,7 +248,7 @@ func (c *clientImpl) GetIndexedKeys(
 	}
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
-	return client.GetIndexedKeys(ctx, opts...)
+	return client.GetSearchAttributes(ctx, opts...)
 }
 
 func (c *clientImpl) PollForActivityTask(

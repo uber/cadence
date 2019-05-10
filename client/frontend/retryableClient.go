@@ -218,15 +218,15 @@ func (c *retryableClient) CountWorkflowExecutions(
 	return resp, err
 }
 
-func (c *retryableClient) GetIndexedKeys(
+func (c *retryableClient) GetSearchAttributes(
 	ctx context.Context,
 	opts ...yarpc.CallOption,
-) (*shared.GetIndexedKeysResponse, error) {
+) (*shared.GetSearchAttributesResponse, error) {
 
-	var resp *shared.GetIndexedKeysResponse
+	var resp *shared.GetSearchAttributesResponse
 	op := func() error {
 		var err error
-		resp, err = c.client.GetIndexedKeys(ctx, opts...)
+		resp, err = c.client.GetSearchAttributes(ctx, opts...)
 		return err
 	}
 	err := backoff.Retry(op, c.policy, c.isRetryable)

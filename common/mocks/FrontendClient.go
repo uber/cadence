@@ -359,8 +359,8 @@ func (_m *FrontendClient) CountWorkflowExecutions(ctx context.Context, CountRequ
 	return r0, r1
 }
 
-// GetIndexedKeys provides a mock function with given fields: ctx, opts
-func (_m *FrontendClient) GetIndexedKeys(ctx context.Context, opts ...yarpc.CallOption) (*shared.GetIndexedKeysResponse, error) {
+// GetSearchAttributes provides a mock function with given fields: ctx, opts
+func (_m *FrontendClient) GetSearchAttributes(ctx context.Context, opts ...yarpc.CallOption) (*shared.GetSearchAttributesResponse, error) {
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
@@ -370,12 +370,12 @@ func (_m *FrontendClient) GetIndexedKeys(ctx context.Context, opts ...yarpc.Call
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *shared.GetIndexedKeysResponse
-	if rf, ok := ret.Get(0).(func(context.Context, ...yarpc.CallOption) *shared.GetIndexedKeysResponse); ok {
+	var r0 *shared.GetSearchAttributesResponse
+	if rf, ok := ret.Get(0).(func(context.Context, ...yarpc.CallOption) *shared.GetSearchAttributesResponse); ok {
 		r0 = rf(ctx, opts...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*shared.GetIndexedKeysResponse)
+			r0 = ret.Get(0).(*shared.GetSearchAttributesResponse)
 		}
 	}
 

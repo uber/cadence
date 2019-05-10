@@ -17295,7 +17295,7 @@ func (v *FailWorkflowExecutionDecisionAttributes) IsSetDetails() bool {
 	return v != nil && v.Details != nil
 }
 
-type GetIndexedKeysResponse struct {
+type GetSearchAttributesResponse struct {
 	Keys map[string]IndexedValueType `json:"keys,omitempty"`
 }
 
@@ -17334,7 +17334,7 @@ func (_Map_String_IndexedValueType_MapItemList) ValueType() wire.Type {
 
 func (_Map_String_IndexedValueType_MapItemList) Close() {}
 
-// ToWire translates a GetIndexedKeysResponse struct into a Thrift-level intermediate
+// ToWire translates a GetSearchAttributesResponse struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -17349,7 +17349,7 @@ func (_Map_String_IndexedValueType_MapItemList) Close() {}
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *GetIndexedKeysResponse) ToWire() (wire.Value, error) {
+func (v *GetSearchAttributesResponse) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
 		i      int = 0
@@ -17403,11 +17403,11 @@ func _Map_String_IndexedValueType_Read(m wire.MapItemList) (map[string]IndexedVa
 	return o, err
 }
 
-// FromWire deserializes a GetIndexedKeysResponse struct from its Thrift-level
+// FromWire deserializes a GetSearchAttributesResponse struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a GetIndexedKeysResponse struct
+// An error is returned if we were unable to build a GetSearchAttributesResponse struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -17415,12 +17415,12 @@ func _Map_String_IndexedValueType_Read(m wire.MapItemList) (map[string]IndexedVa
 //     return nil, err
 //   }
 //
-//   var v GetIndexedKeysResponse
+//   var v GetSearchAttributesResponse
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *GetIndexedKeysResponse) FromWire(w wire.Value) error {
+func (v *GetSearchAttributesResponse) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
@@ -17439,9 +17439,9 @@ func (v *GetIndexedKeysResponse) FromWire(w wire.Value) error {
 	return nil
 }
 
-// String returns a readable string representation of a GetIndexedKeysResponse
+// String returns a readable string representation of a GetSearchAttributesResponse
 // struct.
-func (v *GetIndexedKeysResponse) String() string {
+func (v *GetSearchAttributesResponse) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -17453,7 +17453,7 @@ func (v *GetIndexedKeysResponse) String() string {
 		i++
 	}
 
-	return fmt.Sprintf("GetIndexedKeysResponse{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("GetSearchAttributesResponse{%v}", strings.Join(fields[:i], ", "))
 }
 
 func _Map_String_IndexedValueType_Equals(lhs, rhs map[string]IndexedValueType) bool {
@@ -17473,11 +17473,11 @@ func _Map_String_IndexedValueType_Equals(lhs, rhs map[string]IndexedValueType) b
 	return true
 }
 
-// Equals returns true if all the fields of this GetIndexedKeysResponse match the
-// provided GetIndexedKeysResponse.
+// Equals returns true if all the fields of this GetSearchAttributesResponse match the
+// provided GetSearchAttributesResponse.
 //
 // This function performs a deep comparison.
-func (v *GetIndexedKeysResponse) Equals(rhs *GetIndexedKeysResponse) bool {
+func (v *GetSearchAttributesResponse) Equals(rhs *GetSearchAttributesResponse) bool {
 	if v == nil {
 		return rhs == nil
 	} else if rhs == nil {
@@ -17502,8 +17502,8 @@ func (m _Map_String_IndexedValueType_Zapper) MarshalLogObject(enc zapcore.Object
 }
 
 // MarshalLogObject implements zapcore.ObjectMarshaler, enabling
-// fast logging of GetIndexedKeysResponse.
-func (v *GetIndexedKeysResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+// fast logging of GetSearchAttributesResponse.
+func (v *GetSearchAttributesResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	if v == nil {
 		return nil
 	}
@@ -17515,7 +17515,7 @@ func (v *GetIndexedKeysResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (er
 
 // GetKeys returns the value of Keys if it is set or its
 // zero value if it is unset.
-func (v *GetIndexedKeysResponse) GetKeys() (o map[string]IndexedValueType) {
+func (v *GetSearchAttributesResponse) GetKeys() (o map[string]IndexedValueType) {
 	if v != nil && v.Keys != nil {
 		return v.Keys
 	}
@@ -17524,7 +17524,7 @@ func (v *GetIndexedKeysResponse) GetKeys() (o map[string]IndexedValueType) {
 }
 
 // IsSetKeys returns true if Keys is not nil.
-func (v *GetIndexedKeysResponse) IsSetKeys() bool {
+func (v *GetSearchAttributesResponse) IsSetKeys() bool {
 	return v != nil && v.Keys != nil
 }
 
