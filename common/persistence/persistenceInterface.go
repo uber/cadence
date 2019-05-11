@@ -545,15 +545,16 @@ type (
 
 	// VisibilityWorkflowExecutionInfo is visibility info for internal response
 	VisibilityWorkflowExecutionInfo struct {
-		WorkflowID    string
-		RunID         string
-		TypeName      string
-		StartTime     time.Time
-		ExecutionTime time.Time
-		CloseTime     time.Time
-		Status        *workflow.WorkflowExecutionCloseStatus
-		HistoryLength int64
-		Memo          *DataBlob
+		WorkflowID       string
+		RunID            string
+		TypeName         string
+		StartTime        time.Time
+		ExecutionTime    time.Time
+		CloseTime        time.Time
+		Status           *workflow.WorkflowExecutionCloseStatus
+		HistoryLength    int64
+		Memo             *DataBlob
+		SearchAttributes map[string]interface{}
 	}
 
 	// InternalListWorkflowExecutionsResponse is response from ListWorkflowExecutions

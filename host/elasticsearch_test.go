@@ -24,6 +24,7 @@
 package host
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -37,6 +38,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/definition"
 )
 
 const (
@@ -87,6 +89,15 @@ func (s *elasticsearchIntegrationSuite) TestListOpenWorkflow() {
 	taskList := &workflow.TaskList{}
 	taskList.Name = common.StringPtr(tl)
 
+	attrKey := definition.CustomStringField
+	attrVal := "test value"
+	attrValBytes, _ := json.Marshal(attrVal)
+	searchAttr := &workflow.SearchAttributes{
+		IndexedFields: map[string][]byte{
+			attrKey: attrValBytes,
+		},
+	}
+
 	request := &workflow.StartWorkflowExecutionRequest{
 		RequestId:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
@@ -97,6 +108,7 @@ func (s *elasticsearchIntegrationSuite) TestListOpenWorkflow() {
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
+		SearchAttributes:                    searchAttr,
 	}
 
 	startTime := time.Now().UnixNano()
@@ -125,6 +137,7 @@ func (s *elasticsearchIntegrationSuite) TestListOpenWorkflow() {
 	}
 	s.NotNil(openExecution)
 	s.Equal(we.GetRunId(), openExecution.GetExecution().GetRunId())
+	s.Equal(attrValBytes, openExecution.SearchAttributes.GetIndexedFields()[attrKey])
 }
 
 func (s *elasticsearchIntegrationSuite) TestListWorkflow() {

@@ -49136,17 +49136,18 @@ func (v *WorkflowExecutionFilter) IsSetWorkflowId() bool {
 }
 
 type WorkflowExecutionInfo struct {
-	Execution       *WorkflowExecution            `json:"execution,omitempty"`
-	Type            *WorkflowType                 `json:"type,omitempty"`
-	StartTime       *int64                        `json:"startTime,omitempty"`
-	CloseTime       *int64                        `json:"closeTime,omitempty"`
-	CloseStatus     *WorkflowExecutionCloseStatus `json:"closeStatus,omitempty"`
-	HistoryLength   *int64                        `json:"historyLength,omitempty"`
-	ParentDomainId  *string                       `json:"parentDomainId,omitempty"`
-	ParentExecution *WorkflowExecution            `json:"parentExecution,omitempty"`
-	ExecutionTime   *int64                        `json:"executionTime,omitempty"`
-	Memo            *Memo                         `json:"memo,omitempty"`
-	AutoResetPoints *ResetPoints                  `json:"autoResetPoints,omitempty"`
+	Execution        *WorkflowExecution            `json:"execution,omitempty"`
+	Type             *WorkflowType                 `json:"type,omitempty"`
+	StartTime        *int64                        `json:"startTime,omitempty"`
+	CloseTime        *int64                        `json:"closeTime,omitempty"`
+	CloseStatus      *WorkflowExecutionCloseStatus `json:"closeStatus,omitempty"`
+	HistoryLength    *int64                        `json:"historyLength,omitempty"`
+	ParentDomainId   *string                       `json:"parentDomainId,omitempty"`
+	ParentExecution  *WorkflowExecution            `json:"parentExecution,omitempty"`
+	ExecutionTime    *int64                        `json:"executionTime,omitempty"`
+	Memo             *Memo                         `json:"memo,omitempty"`
+	SearchAttributes *SearchAttributes             `json:"searchAttributes,omitempty"`
+	AutoResetPoints  *ResetPoints                  `json:"autoResetPoints,omitempty"`
 }
 
 // ToWire translates a WorkflowExecutionInfo struct into a Thrift-level intermediate
@@ -49166,7 +49167,7 @@ type WorkflowExecutionInfo struct {
 //   }
 func (v *WorkflowExecutionInfo) ToWire() (wire.Value, error) {
 	var (
-		fields [11]wire.Field
+		fields [12]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -49250,6 +49251,14 @@ func (v *WorkflowExecutionInfo) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 100, Value: w}
+		i++
+	}
+	if v.SearchAttributes != nil {
+		w, err = v.SearchAttributes.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 101, Value: w}
 		i++
 	}
 	if v.AutoResetPoints != nil {
@@ -49384,6 +49393,14 @@ func (v *WorkflowExecutionInfo) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 101:
+			if field.Value.Type() == wire.TStruct {
+				v.SearchAttributes, err = _SearchAttributes_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		case 110:
 			if field.Value.Type() == wire.TStruct {
 				v.AutoResetPoints, err = _ResetPoints_Read(field.Value)
@@ -49405,7 +49422,7 @@ func (v *WorkflowExecutionInfo) String() string {
 		return "<nil>"
 	}
 
-	var fields [11]string
+	var fields [12]string
 	i := 0
 	if v.Execution != nil {
 		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
@@ -49445,6 +49462,10 @@ func (v *WorkflowExecutionInfo) String() string {
 	}
 	if v.Memo != nil {
 		fields[i] = fmt.Sprintf("Memo: %v", v.Memo)
+		i++
+	}
+	if v.SearchAttributes != nil {
+		fields[i] = fmt.Sprintf("SearchAttributes: %v", v.SearchAttributes)
 		i++
 	}
 	if v.AutoResetPoints != nil {
@@ -49495,6 +49516,9 @@ func (v *WorkflowExecutionInfo) Equals(rhs *WorkflowExecutionInfo) bool {
 	if !((v.Memo == nil && rhs.Memo == nil) || (v.Memo != nil && rhs.Memo != nil && v.Memo.Equals(rhs.Memo))) {
 		return false
 	}
+	if !((v.SearchAttributes == nil && rhs.SearchAttributes == nil) || (v.SearchAttributes != nil && rhs.SearchAttributes != nil && v.SearchAttributes.Equals(rhs.SearchAttributes))) {
+		return false
+	}
 	if !((v.AutoResetPoints == nil && rhs.AutoResetPoints == nil) || (v.AutoResetPoints != nil && rhs.AutoResetPoints != nil && v.AutoResetPoints.Equals(rhs.AutoResetPoints))) {
 		return false
 	}
@@ -49537,6 +49561,9 @@ func (v *WorkflowExecutionInfo) MarshalLogObject(enc zapcore.ObjectEncoder) (err
 	}
 	if v.Memo != nil {
 		err = multierr.Append(err, enc.AddObject("memo", v.Memo))
+	}
+	if v.SearchAttributes != nil {
+		err = multierr.Append(err, enc.AddObject("searchAttributes", v.SearchAttributes))
 	}
 	if v.AutoResetPoints != nil {
 		err = multierr.Append(err, enc.AddObject("autoResetPoints", v.AutoResetPoints))
@@ -49692,6 +49719,21 @@ func (v *WorkflowExecutionInfo) GetMemo() (o *Memo) {
 // IsSetMemo returns true if Memo is not nil.
 func (v *WorkflowExecutionInfo) IsSetMemo() bool {
 	return v != nil && v.Memo != nil
+}
+
+// GetSearchAttributes returns the value of SearchAttributes if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionInfo) GetSearchAttributes() (o *SearchAttributes) {
+	if v != nil && v.SearchAttributes != nil {
+		return v.SearchAttributes
+	}
+
+	return
+}
+
+// IsSetSearchAttributes returns true if SearchAttributes is not nil.
+func (v *WorkflowExecutionInfo) IsSetSearchAttributes() bool {
+	return v != nil && v.SearchAttributes != nil
 }
 
 // GetAutoResetPoints returns the value of AutoResetPoints if it is set or its

@@ -248,6 +248,7 @@ func (p *indexProcessor) decodeSearchAttrBinary(bytes []byte, key string) interf
 
 func (p *indexProcessor) dumpFieldsToMap(fields map[string]*indexer.Field) map[string]interface{} {
 	doc := make(map[string]interface{})
+	attr := make(map[string]interface{})
 	for k, v := range fields {
 		if !p.isValidFieldToES(k) {
 			p.logger.Error("Unregistered field.", tag.ESField(k))
@@ -266,13 +267,14 @@ func (p *indexProcessor) dumpFieldsToMap(fields map[string]*indexer.Field) map[s
 			if k == definition.Memo {
 				doc[k] = v.GetBinaryData()
 			} else { // custom search attributes
-				doc[k] = p.decodeSearchAttrBinary(v.GetBinaryData(), k)
+				attr[k] = p.decodeSearchAttrBinary(v.GetBinaryData(), k)
 			}
 		default:
 			// must be bug in code and bad deployment, check data sent from producer
 			p.logger.Fatal("Unknown field type")
 		}
 	}
+	doc[definition.Attr] = attr
 	return doc
 }
 

@@ -79,6 +79,7 @@ type (
 		HistoryLength int64
 		Memo          []byte
 		Encoding      string
+		Attr          map[string]interface{}
 	}
 )
 
@@ -745,12 +746,13 @@ func (v *esVisibilityStore) convertSearchResultToVisibilityRecord(hit *elastic.S
 	}
 
 	record := &p.VisibilityWorkflowExecutionInfo{
-		WorkflowID:    source.WorkflowID,
-		RunID:         source.RunID,
-		TypeName:      source.WorkflowType,
-		StartTime:     time.Unix(0, source.StartTime),
-		ExecutionTime: time.Unix(0, source.ExecutionTime),
-		Memo:          p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)),
+		WorkflowID:       source.WorkflowID,
+		RunID:            source.RunID,
+		TypeName:         source.WorkflowType,
+		StartTime:        time.Unix(0, source.StartTime),
+		ExecutionTime:    time.Unix(0, source.ExecutionTime),
+		Memo:             p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)),
+		SearchAttributes: source.Attr,
 	}
 	if !isOpen {
 		record.CloseTime = time.Unix(0, source.CloseTime)

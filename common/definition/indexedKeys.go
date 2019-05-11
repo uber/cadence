@@ -49,6 +49,9 @@ const (
 	Memo = "Memo"
 )
 
+// Attr is prefix of custom search attributes
+const Attr = "Attr"
+
 // defaultIndexedKeys defines all searchable keys
 var defaultIndexedKeys = map[string]interface{}{
 	DomainID:      shared.IndexedValueTypeKeyword,

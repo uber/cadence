@@ -1594,13 +1594,18 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 
 	wh.Service.GetLogger().Debug("Start workflow execution request domainID", tag.WorkflowDomainID(domainID))
 
-	bytes, _ := json.Marshal("Prod")
-	attr := &shared.SearchAttributes{
-		IndexedFields: map[string][]byte{
-			"CustomStringField": bytes,
-		},
-	}
-	startRequest.SearchAttributes = attr
+	//bytes1, _ := json.Marshal("Prod")
+	//bytes2, _ := json.Marshal("cadence team")
+	//bytes3, _ := json.Marshal(123)
+	//
+	//attr := &shared.Attr{
+	//	IndexedFields: map[string][]byte{
+	//		"CustomKeywordField": bytes1,
+	//		"CustomStringField":  bytes2,
+	//		"CustomIntField":     bytes3,
+	//	},
+	//}
+	//startRequest.Attr = attr
 
 	resp, err = wh.history.StartWorkflowExecution(ctx, common.CreateHistoryStartWorkflowRequest(domainID, startRequest))
 

@@ -322,6 +322,7 @@ struct WorkflowExecutionInfo {
   80: optional WorkflowExecution parentExecution
   90: optional i64 (js.type = "Long") executionTime
   100: optional Memo memo
+  101: optional SearchAttributes searchAttributes
   110: optional ResetPoints autoResetPoints
 }
 
