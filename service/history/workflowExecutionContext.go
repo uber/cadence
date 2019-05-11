@@ -584,14 +584,42 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 	newHistorySize := 0
 	// always standby history first
 	if hasNewStandbyHistoryEvents {
-		firstEvent := standbyHistoryBuilder.GetFirstEvent()
-		// Note: standby events has no transient decision events
-		newHistorySize, err = c.appendHistoryEvents(standbyHistoryBuilder.history, transactionID, true)
-		if err != nil {
-			return err
+		isTransientDecision := false
+		standbyEvents := standbyHistoryBuilder.history
+		if len(standbyEvents) >= 3 {
+			isDecisionTaskScheduled := standbyEvents[0].GetEventType() == shared.EventTypeDecisionTaskScheduled
+			isDecisionTaskStarted := standbyEvents[1].GetEventType() == shared.EventTypeDecisionTaskStarted
+			isDecisionTaskCompleted := standbyEvents[2].GetEventType() == shared.EventTypeDecisionTaskScheduled
+
+			isTransientDecision = isDecisionTaskScheduled && isDecisionTaskStarted
+			if isTransientDecision && !isDecisionTaskCompleted {
+				// emit warning
+				c.logger.Warn("encounter transient decision batch which does not contain decision task completed.",
+					tag.WorkflowID(executionInfo.WorkflowID),
+					tag.WorkflowRunID(executionInfo.RunID),
+					tag.WorkflowDomainID(executionInfo.DomainID),
+					tag.WorkflowEventID(standbyEvents[0].GetEventId()),
+				)
+			}
 		}
 
-		executionInfo.SetLastFirstEventID(firstEvent.GetEventId())
+		if isTransientDecision {
+			transientDecisionHistorySize, err := c.appendHistoryEvents(standbyEvents[0:2], transactionID, true)
+			if err != nil {
+				return err
+			}
+			remainingHistorySize, err := c.appendHistoryEvents(standbyEvents[2:], transactionID, true)
+			if err != nil {
+				return err
+			}
+			newHistorySize = transientDecisionHistorySize + remainingHistorySize
+		} else {
+			newHistorySize, err = c.appendHistoryEvents(standbyEvents, transactionID, true)
+			if err != nil {
+				return err
+			}
+		}
+		executionInfo.SetLastFirstEventID(standbyEvents[0].GetEventId())
 	}
 
 	// Some operations only update the mutable state. For example RecordActivityTaskHeartbeat.
