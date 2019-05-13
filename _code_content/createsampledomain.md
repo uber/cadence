@@ -8,7 +8,7 @@ export CADENCE_CLI_DOMAIN=samples-domain
 ```
 
 Setup environment variables on Windows:
-```cmd
+```bat
 set USER=someusername
 set CADENCE_CLI_DOMAIN=samples-domain
 ```
