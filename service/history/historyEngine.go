@@ -2098,11 +2098,22 @@ func (e *historyEngineImpl) SignalWorkflowExecution(ctx ctx.Context, signalReque
 	}
 
 	return e.updateWorkflowExecutionWithAction(ctx, domainID, execution, func(msBuilder mutableState, tBuilder *timerBuilder) (*updateWorkflowAction, error) {
+		executionInfo := msBuilder.GetExecutionInfo()
+		createDecisionTask := true
+		// Do not create decision task when the workflow is cron and the cron has not been started yet
+		if msBuilder.GetExecutionInfo().CronSchedule != "" && !msBuilder.HasProcessedOrPendingDecisionTask() {
+			createDecisionTask = false
+		}
+		postActions := &updateWorkflowAction{
+			deleteWorkflow: false,
+			createDecision: createDecisionTask,
+			timerTasks:     nil,
+		}
+
 		if !msBuilder.IsWorkflowExecutionRunning() {
 			return nil, ErrWorkflowCompleted
 		}
 
-		executionInfo := msBuilder.GetExecutionInfo()
 		maxAllowedSignals := e.config.MaximumSignalsPerExecution(domainEntry.GetInfo().Name)
 		if maxAllowedSignals > 0 && int(executionInfo.SignalCount) >= maxAllowedSignals {
 			e.logger.Info("Execution limit reached for maximum signals", tag.WorkflowSignalCount(executionInfo.SignalCount),
@@ -2124,7 +2135,7 @@ func (e *historyEngineImpl) SignalWorkflowExecution(ctx ctx.Context, signalReque
 		// deduplicate by request id for signal decision
 		if requestID := request.GetRequestId(); requestID != "" {
 			if msBuilder.IsSignalRequested(requestID) {
-				return nil, nil
+				return postActions, nil
 			}
 			msBuilder.AddSignalRequested(requestID)
 		}
@@ -2133,16 +2144,6 @@ func (e *historyEngineImpl) SignalWorkflowExecution(ctx ctx.Context, signalReque
 			return nil, &workflow.InternalServiceError{Message: "Unable to signal workflow execution."}
 		}
 
-		createDecisionTask := true
-		// Do not create decision task when the workflow is cron and the cron has not been started yet
-		if executionInfo.CronSchedule != "" && !msBuilder.HasProcessedOrPendingDecisionTask() {
-			createDecisionTask = false
-		}
-		postActions := &updateWorkflowAction{
-			deleteWorkflow: false,
-			createDecision: createDecisionTask,
-			timerTasks:     nil,
-		}
 		return postActions, nil
 	})
 }
@@ -2681,7 +2682,6 @@ Update_History_Loop:
 			timerTasks = append(timerTasks, timerT)
 		}
 
-		msBuilder.GetCronBackoffDuration()
 		if postActions.createDecision {
 			// Create a transfer task to schedule a decision task
 			if !msBuilder.HasPendingDecisionTask() {
