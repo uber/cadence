@@ -163,11 +163,13 @@ func (w *workflowResetorImpl) validateResetWorkflowBeforeReplay(baseMutableState
 		retError = &workflow.BadRequestError{
 			Message: fmt.Sprintf("reset is not allowed when current workflow has pending child workflow."),
 		}
+		return
 	}
 	if currMutableState.IsWorkflowExecutionRunning() {
 		retError = &workflow.InternalServiceError{
 			Message: fmt.Sprintf("current workflow should already been terminated"),
 		}
+		return
 	}
 	return
 }
@@ -187,11 +189,13 @@ func (w *workflowResetorImpl) validateResetWorkflowAfterReplay(newMutableState m
 		retError = &workflow.InternalServiceError{
 			Message: fmt.Sprintf("replay history shouldn't see any bufferred events"),
 		}
+		return
 	}
 	if newMutableState.IsStickyTaskListEnabled() {
 		retError = &workflow.InternalServiceError{
 			Message: fmt.Sprintf("replay history shouldn't have stikyness"),
 		}
+		return
 	}
 	return
 }
@@ -268,6 +272,7 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(
 		identityHistoryService, resetReason, baseRunID, newRunID, forkEventVersion)
 	if event == nil {
 		retError = &workflow.InternalServiceError{Message: "Failed to add decision failed event."}
+		return
 	}
 
 	retError = w.failStartedActivities(newMutableState)
@@ -593,6 +598,7 @@ func (w *workflowResetorImpl) replayHistoryEvents(decisionFinishEventID int64, r
 				retError = &workflow.BadRequestError{
 					Message: fmt.Sprintf("wrong DecisionFinishEventId, cannot replay history to continueAsNew"),
 				}
+				return
 			}
 
 			_, _, _, retError = sBuilder.applyEvents(domainID, requestID, prevExecution, history, nil, persistence.EventStoreVersionV2, persistence.EventStoreVersionV2)
