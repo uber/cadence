@@ -1,5 +1,6 @@
 ---
 codecontent: startlocalserver
+weight: 10
 ---
 
 # Start Cadence Server Locally
