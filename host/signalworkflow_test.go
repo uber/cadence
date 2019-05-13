@@ -586,6 +586,66 @@ CheckHistoryLoopForSignalSent:
 	s.Equal("history-service", *signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
 }
 
+func (s *integrationSuite) TestSignalWorkflow_Cron_NoDecisionTaskCreated() {
+	id := "integration-signal-workflow-test-cron"
+	wt := "integration-signal-workflow-test-cron-type"
+	tl := "integration-signal-workflow-test-cron-tasklist"
+	identity := "worker1"
+	cronSpec := "@yearly"
+
+	workflowType := &workflow.WorkflowType{}
+	workflowType.Name = common.StringPtr(wt)
+
+	taskList := &workflow.TaskList{}
+	taskList.Name = common.StringPtr(tl)
+
+	// Start workflow execution
+	request := &workflow.StartWorkflowExecutionRequest{
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		Identity:                            common.StringPtr(identity),
+		CronSchedule:                        &cronSpec,
+	}
+
+	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err0)
+
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunId))
+
+	// Send first signal using RunID
+	signalName := "my signal"
+	signalInput := []byte("my signal input.")
+	err := s.engine.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
+		Domain: common.StringPtr(s.domainName),
+		WorkflowExecution: &workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(id),
+			RunId:      common.StringPtr(*we.RunId),
+		},
+		SignalName: common.StringPtr(signalName),
+		Input:      signalInput,
+		Identity:   common.StringPtr(identity),
+	})
+	s.Nil(err)
+	resp, err := s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
+		Domain: common.StringPtr(s.domainName),
+		Execution: &workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(id),
+			RunId:      common.StringPtr(*we.RunId),
+		},
+		MaximumPageSize: common.Int32Ptr(1000),
+		WaitForNewEvent: common.BoolPtr(false),
+	})
+	for _, event := range resp.History.Events {
+		s.Nil(event.DecisionTaskScheduledEventAttributes)
+	}
+}
+
 func (s *integrationSuite) TestSignalExternalWorkflowDecision_WithoutRunID() {
 	id := "integration-signal-external-workflow-test-without-run-id"
 	wt := "integration-signal-external-workflow-test-without-run-id-type"
