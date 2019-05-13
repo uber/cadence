@@ -641,9 +641,14 @@ func (s *integrationSuite) TestSignalWorkflow_Cron_NoDecisionTaskCreated() {
 		MaximumPageSize: common.Int32Ptr(1000),
 		WaitForNewEvent: common.BoolPtr(false),
 	})
+	isSignalEventZCreated := false
 	for _, event := range resp.History.Events {
+		if event.WorkflowExecutionSignaledEventAttributes != nil {
+			isSignalEventZCreated = true
+		}
 		s.Nil(event.DecisionTaskScheduledEventAttributes)
 	}
+	s.True(isSignalEventZCreated)
 }
 
 func (s *integrationSuite) TestSignalExternalWorkflowDecision_WithoutRunID() {
