@@ -998,8 +998,8 @@ func (t *transferQueueActiveProcessorImpl) processResetWorkflow(task *persistenc
 			logger.Error("Auto-Reset workflow failed and not retryable. The reset point is corrupted.", tag.Error(err))
 			return nil
 		}
-		logger.Error("Auto-Reset workflow failed", tag.Error(err))
 		// log this error and retry
+		logger.Error("Auto-Reset workflow failed", tag.Error(err))
 		return err
 	}
 	logger.Info("Auto-Reset workflow finished", tag.WorkflowResetNewRunID(resp.GetRunId()))
