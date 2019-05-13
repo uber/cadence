@@ -135,18 +135,16 @@ func (w *workflowResetorImpl) checkDomainStatus(newMutableState mutableState, pr
 		clusterMetadata := w.eng.shard.GetService().GetClusterMetadata()
 		currentVersion := newMutableState.GetCurrentVersion()
 		if currentVersion < prevRunVersion {
-			retError = ce.NewDomainNotActiveError(
+			return ce.NewDomainNotActiveError(
 				domain,
 				clusterMetadata.GetCurrentClusterName(),
 				clusterMetadata.ClusterNameForFailoverVersion(prevRunVersion),
 			)
-			return
 		}
 		activeCluster := clusterMetadata.ClusterNameForFailoverVersion(currentVersion)
 		currentCluster := clusterMetadata.GetCurrentClusterName()
 		if activeCluster != currentCluster {
-			retError = ce.NewDomainNotActiveError(domain, currentCluster, activeCluster)
-			return
+			return ce.NewDomainNotActiveError(domain, currentCluster, activeCluster)
 		}
 	}
 	return nil
@@ -154,22 +152,19 @@ func (w *workflowResetorImpl) checkDomainStatus(newMutableState mutableState, pr
 
 func (w *workflowResetorImpl) validateResetWorkflowBeforeReplay(baseMutableState, currMutableState mutableState) (retError error) {
 	if baseMutableState.GetEventStoreVersion() != persistence.EventStoreVersionV2 {
-		retError = &workflow.BadRequestError{
+		return &workflow.BadRequestError{
 			Message: fmt.Sprintf("reset API is not supported for V1 history events"),
 		}
-		return
 	}
 	if len(currMutableState.GetPendingChildExecutionInfos()) > 0 {
-		retError = &workflow.BadRequestError{
+		return &workflow.BadRequestError{
 			Message: fmt.Sprintf("reset is not allowed when current workflow has pending child workflow."),
 		}
-		return
 	}
 	if currMutableState.IsWorkflowExecutionRunning() {
-		retError = &workflow.InternalServiceError{
+		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("current workflow should already been terminated"),
 		}
-		return
 	}
 	return
 }
@@ -180,22 +175,19 @@ func (w *workflowResetorImpl) validateResetWorkflowAfterReplay(newMutableState m
 		return
 	}
 	if !newMutableState.HasInFlightDecisionTask() {
-		retError = &workflow.InternalServiceError{
+		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("can't find the last started decision"),
 		}
-		return
 	}
 	if newMutableState.HasBufferedEvents() {
-		retError = &workflow.InternalServiceError{
+		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("replay history shouldn't see any bufferred events"),
 		}
-		return
 	}
 	if newMutableState.IsStickyTaskListEnabled() {
-		retError = &workflow.InternalServiceError{
+		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("replay history shouldn't have stikyness"),
 		}
-		return
 	}
 	return
 }
