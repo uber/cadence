@@ -21,6 +21,8 @@ url: "https://dmetzgar.github.io" # the base hostname & protocol for your site, 
 safe: false
 whitelist:
   - jekyll-redirect-from
+include:
+  - docs
 
 # Build settings
 markdown: kramdown
