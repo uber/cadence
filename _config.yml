@@ -18,6 +18,12 @@ email: cadence-group@uber.com
 baseurl: "cadence" # the subpath of your site, e.g. /blog
 url: "https://dmetzgar.github.io" # the base hostname & protocol for your site, e.g. http://example.com
 
+safe: false
+whitelist:
+  - jekyll-redirect-from
+include:
+  - docs/01_how_cadence_works.md
+
 # Defaults
 defaults:
   -
@@ -34,14 +40,7 @@ defaults:
     scope:
       path: "docs/01_how_cadence_works.md"
     values:
-      title: what did you say?
       redirect_from: docs/how_cadence_works
-
-safe: false
-whitelist:
-  - jekyll-redirect-from
-include:
-  - docs/01_how_cadence_works.md
 
 # Build settings
 markdown: kramdown
