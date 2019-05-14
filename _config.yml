@@ -18,11 +18,39 @@ email: cadence-group@uber.com
 baseurl: "cadence" # the subpath of your site, e.g. /blog
 url: "https://dmetzgar.github.io" # the base hostname & protocol for your site, e.g. http://example.com
 
-safe: false
-whitelist:
+# Build settings
+markdown: kramdown
+theme: minima
+plugins:
+  - jekyll-feed
   - jekyll-redirect-from
-include:
-  - docs/01_how_cadence_works.md
+sass:
+  style: compact
+permalink: /:path/:title
+
+# GitHub changable settings
+encoding: UTF-8
+future: true
+jailed: false
+gfm_quirks: paragraph_end
+safe: true
+
+# GitHub unchangable setings
+lsi: false
+incremental: false
+highlighter: rouge
+gist:
+  noscript: false
+kramdown:
+  input: GFM
+  hard_wrap: false
+  math_engine: mathjax
+  syntax_highlighter: rouge
+
+# Code content collection
+collections:
+  code_content:
+    output: true
 
 # Defaults
 defaults:
@@ -41,39 +69,6 @@ defaults:
       path: "docs/01_how_cadence_works.md"
     values:
       redirect_from: docs/how_cadence_works
-
-# Build settings
-markdown: kramdown
-theme: minima
-plugins:
-  - jekyll-feed
-  - jekyll-redirect-from
-sass:
-  style: compact
-permalink: /:path/:title
-
-# GitHub changable settings
-encoding: UTF-8
-future: true
-jailed: false
-gfm_quirks: paragraph_end
-
-# GitHub unchangable setings
-lsi: false
-incremental: false
-highlighter: rouge
-gist:
-  noscript: false
-kramdown:
-  input: GFM
-  hard_wrap: false
-  math_engine: mathjax
-  syntax_highlighter: rouge
-
-# Code content collection
-collections:
-  code_content:
-    output: true
 
 
 # Exclude from processing.
