@@ -22,7 +22,7 @@ safe: false
 whitelist:
   - jekyll-redirect-from
 include:
-  - docs
+  - docs/01_how_cadence_works.md
 
 # Build settings
 markdown: kramdown
