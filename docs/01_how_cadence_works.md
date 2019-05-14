@@ -1,4 +1,4 @@
-<!--
+<!---
 ---
 title: What?
 redirect_from: "docs/how_cadence_works"
