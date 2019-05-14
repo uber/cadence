@@ -18,6 +18,10 @@ email: cadence-group@uber.com
 baseurl: "cadence" # the subpath of your site, e.g. /blog
 url: "https://dmetzgar.github.io" # the base hostname & protocol for your site, e.g. http://example.com
 
+safe: false
+whitelist:
+  - jekyll-redirect-from
+
 # Build settings
 markdown: kramdown
 theme: minima
@@ -33,12 +37,9 @@ encoding: UTF-8
 future: true
 jailed: false
 gfm_quirks: paragraph_end
-whitelist:
-  - jekyll-redirect-from
 
 # GitHub unchangable setings
 lsi: false
-safe: false
 incremental: false
 highlighter: rouge
 gist:
