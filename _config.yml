@@ -33,6 +33,8 @@ encoding: UTF-8
 future: true
 jailed: false
 gfm_quirks: paragraph_end
+whitelist:
+  - jekyll-redirect-from
 
 # GitHub unchangable setings
 lsi: false
