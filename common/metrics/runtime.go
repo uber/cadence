@@ -96,11 +96,11 @@ func NewRuntimeMetricsReporter(
 	}
 	rReporter.buildInfoScope = scope.Tagged(
 		map[string]string{
-			"revision":      Revision,
-			"branch":        Branch,
-			"build-date":    BuildDate,
-			"build-version": Version,
-			"go-version":    goVersion,
+			revisionTag:     Revision,
+			branchTag:       Branch,
+			buildDateTag:    BuildDate,
+			buildVersionTag: Version,
+			goVersionTag:    goVersion,
 		},
 	)
 	sec, err := strconv.ParseInt(BuildTimeUnix, base, bitSize)
