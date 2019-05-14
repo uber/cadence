@@ -59,6 +59,11 @@ defaults:
       path: "tour"
     values:
       layout: "tour"
+  -
+    scope:
+      path: "docs/01_how_cadence_works"
+    values:
+      redirect_from: "docs/how_cadence_works"
 
 # Code content collection
 collections:
