@@ -51,7 +51,9 @@ var (
 
 	// goVersion is the current runtime version.
 	goVersion = runtime.Version()
+)
 
+const (
 	// buildInfoMetricName is the emitted build information metric's name.
 	buildInfoMetricName = "build_information"
 
