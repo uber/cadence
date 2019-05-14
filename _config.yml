@@ -66,16 +66,9 @@ defaults:
     scope:
       path: "docs/01_how_cadence_works.md"
     values:
-      title: what?
+      title: what did you say?
       redirect_from: 
         - docs/how_cadence_works
-#        - /docs/how_cadence_works
-#        - /cadence/docs/how_cadence_works
-#        - docs/how_cadence_works/
-#        - /docs/how_cadence_works/
-#        - cadence/docs/how_cadence_works
-#        - cadence/docs/how_cadence_works/
-#        - /cadence/docs/how_cadence_works/
 
 # Code content collection
 collections:
