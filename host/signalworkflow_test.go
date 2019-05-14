@@ -648,19 +648,12 @@ func (s *integrationSuite) TestSignalWorkflow_Cron_NoDecisionTaskCreated() {
 		}}, nil
 	}
 
-	// activity handler
-	atHandler := func(execution *workflow.WorkflowExecution, activityType *workflow.ActivityType,
-		activityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
-		return []byte("Activity Result."), false, nil
-	}
-
 	poller := &TaskPoller{
 		Engine:          s.engine,
 		Domain:          s.domainName,
 		TaskList:        taskList,
 		Identity:        identity,
 		DecisionHandler: dtHandler,
-		ActivityHandler: atHandler,
 		Logger:          s.Logger,
 		T:               s.T(),
 	}
