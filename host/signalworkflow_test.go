@@ -592,7 +592,6 @@ func (s *integrationSuite) TestSignalWorkflow_Cron_NoDecisionTaskCreated() {
 	tl := "integration-signal-workflow-test-cron-tasklist"
 	identity := "worker1"
 	cronSpec := "@every 2s"
-	activityName := "activity_type1"
 
 	workflowType := &workflow.WorkflowType{}
 	workflowType.Name = common.StringPtr(wt)
@@ -636,37 +635,10 @@ func (s *integrationSuite) TestSignalWorkflow_Cron_NoDecisionTaskCreated() {
 	s.Nil(err)
 
 	// decider logic
-	activityScheduled := false
-	activityData := int32(1)
 	var decisionTaskDelay time.Duration
 	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
 		decisionTaskDelay = time.Now().Sub(now)
-		if !activityScheduled {
-			activityScheduled = true
-			buf := new(bytes.Buffer)
-			s.Nil(binary.Write(buf, binary.LittleEndian, activityData))
-
-			return nil, []*workflow.Decision{{
-				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
-				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
-					ActivityId:                    common.StringPtr(strconv.Itoa(int(1))),
-					ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityName)},
-					TaskList:                      &workflow.TaskList{Name: &tl},
-					Input:                         buf.Bytes(),
-					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(2),
-					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
-					HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
-				},
-			}}, nil
-		} else if previousStartedEventID > 0 {
-			for _, event := range history.Events[previousStartedEventID:] {
-				if *event.EventType == workflow.EventTypeWorkflowExecutionSignaled {
-					return nil, []*workflow.Decision{}, nil
-				}
-			}
-		}
 
 		return nil, []*workflow.Decision{{
 			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
@@ -679,7 +651,6 @@ func (s *integrationSuite) TestSignalWorkflow_Cron_NoDecisionTaskCreated() {
 	// activity handler
 	atHandler := func(execution *workflow.WorkflowExecution, activityType *workflow.ActivityType,
 		activityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
-
 		return []byte("Activity Result."), false, nil
 	}
 
