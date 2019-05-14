@@ -33,11 +33,10 @@ import (
 	statsdreporter "github.com/uber/cadence/common/metrics/tally/statsd"
 )
 
-/*
-// N.B - if we ever need a sanitizer these can be used to create M3 and prom
-// compatible metrics. Keeping this around for emergencies, but ideally we
-// ensure our base metrics are emitted correctly.
-// tally sanitizer options that satisfy both Prometheus and M3 restrictions
+// tally sanitizer options that satisfy both Prometheus and M3 restrictions.
+// We should still ensure that the base metrics are prometheus compatible,
+// but this is necessary as the same prom client initialization is used by
+// our system workflows.
 var (
 	_safeCharacters = []rune{'_'}
 
@@ -57,7 +56,6 @@ var (
 		ReplacementCharacter: tally.DefaultReplacementCharacter,
 	}
 )
-*/
 
 // NewScope builds a new tally scope
 // for this metrics configuration
@@ -132,9 +130,10 @@ func (c *Metrics) newPrometheusScope(logger log.Logger) tally.Scope {
 		logger.Fatal("error creating prometheus reporter", tag.Error(err))
 	}
 	scopeOpts := tally.ScopeOptions{
-		Tags:           c.Tags,
-		CachedReporter: reporter,
-		Separator:      prometheus.DefaultSeparator,
+		Tags:            c.Tags,
+		CachedReporter:  reporter,
+		Separator:       prometheus.DefaultSeparator,
+		SanitizeOptions: &_sanitizeOptions,
 	}
 	scope, _ := tally.NewRootScope(scopeOpts, time.Second)
 	return scope
