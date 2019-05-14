@@ -1,13 +1,9 @@
 ---
 redirect_from: 
    - /docs/how_cadence_works
-   - /cadence/docs/how_cadence_works
    - docs/how_cadence_works
    - docs/how_cadence_works/
    - /docs/how_cadence_works/
-   - cadence/docs/how_cadence_works
-   - cadence/docs/how_cadence_works/
-   - /cadence/docs/how_cadence_works/
 ---
 
 # How Cadence works
