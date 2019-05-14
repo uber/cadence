@@ -1669,6 +1669,7 @@ type PollForDecisionTaskResponse struct {
 	WorkflowExecutionTaskList *shared.TaskList              `json:"WorkflowExecutionTaskList,omitempty"`
 	EventStoreVersion         *int32                        `json:"eventStoreVersion,omitempty"`
 	BranchToken               []byte                        `json:"branchToken,omitempty"`
+	ScheduledTimestamp        *int64                        `json:"scheduledTimestamp,omitempty"`
 }
 
 // ToWire translates a PollForDecisionTaskResponse struct into a Thrift-level intermediate
@@ -1688,7 +1689,7 @@ type PollForDecisionTaskResponse struct {
 //   }
 func (v *PollForDecisionTaskResponse) ToWire() (wire.Value, error) {
 	var (
-		fields [14]wire.Field
+		fields [15]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -1804,6 +1805,14 @@ func (v *PollForDecisionTaskResponse) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 120, Value: w}
+		i++
+	}
+	if v.ScheduledTimestamp != nil {
+		w, err = wire.NewValueI64(*(v.ScheduledTimestamp)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 130, Value: w}
 		i++
 	}
 
@@ -1976,6 +1985,16 @@ func (v *PollForDecisionTaskResponse) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 130:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.ScheduledTimestamp = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -1989,7 +2008,7 @@ func (v *PollForDecisionTaskResponse) String() string {
 		return "<nil>"
 	}
 
-	var fields [14]string
+	var fields [15]string
 	i := 0
 	if v.TaskToken != nil {
 		fields[i] = fmt.Sprintf("TaskToken: %v", v.TaskToken)
@@ -2045,6 +2064,10 @@ func (v *PollForDecisionTaskResponse) String() string {
 	}
 	if v.BranchToken != nil {
 		fields[i] = fmt.Sprintf("BranchToken: %v", v.BranchToken)
+		i++
+	}
+	if v.ScheduledTimestamp != nil {
+		fields[i] = fmt.Sprintf("ScheduledTimestamp: %v", *(v.ScheduledTimestamp))
 		i++
 	}
 
@@ -2113,6 +2136,9 @@ func (v *PollForDecisionTaskResponse) Equals(rhs *PollForDecisionTaskResponse) b
 	if !((v.BranchToken == nil && rhs.BranchToken == nil) || (v.BranchToken != nil && rhs.BranchToken != nil && bytes.Equal(v.BranchToken, rhs.BranchToken))) {
 		return false
 	}
+	if !_I64_EqualsPtr(v.ScheduledTimestamp, rhs.ScheduledTimestamp) {
+		return false
+	}
 
 	return true
 }
@@ -2164,6 +2190,9 @@ func (v *PollForDecisionTaskResponse) MarshalLogObject(enc zapcore.ObjectEncoder
 	}
 	if v.BranchToken != nil {
 		enc.AddString("branchToken", base64.StdEncoding.EncodeToString(v.BranchToken))
+	}
+	if v.ScheduledTimestamp != nil {
+		enc.AddInt64("scheduledTimestamp", *v.ScheduledTimestamp)
 	}
 	return err
 }
@@ -2376,6 +2405,21 @@ func (v *PollForDecisionTaskResponse) GetBranchToken() (o []byte) {
 // IsSetBranchToken returns true if BranchToken is not nil.
 func (v *PollForDecisionTaskResponse) IsSetBranchToken() bool {
 	return v != nil && v.BranchToken != nil
+}
+
+// GetScheduledTimestamp returns the value of ScheduledTimestamp if it is set or its
+// zero value if it is unset.
+func (v *PollForDecisionTaskResponse) GetScheduledTimestamp() (o int64) {
+	if v != nil && v.ScheduledTimestamp != nil {
+		return *v.ScheduledTimestamp
+	}
+
+	return
+}
+
+// IsSetScheduledTimestamp returns true if ScheduledTimestamp is not nil.
+func (v *PollForDecisionTaskResponse) IsSetScheduledTimestamp() bool {
+	return v != nil && v.ScheduledTimestamp != nil
 }
 
 type QueryWorkflowRequest struct {

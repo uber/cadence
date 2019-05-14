@@ -1011,6 +1011,7 @@ struct PollForDecisionTaskResponse {
   70: optional binary nextPageToken
   80: optional WorkflowQuery query
   90: optional TaskList WorkflowExecutionTaskList
+  100:  optional i64 (js.type = "Long") scheduledTimestamp
 }
 
 struct StickyExecutionAttributes {
