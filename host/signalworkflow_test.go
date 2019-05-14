@@ -698,7 +698,7 @@ func (s *integrationSuite) TestSignalWorkflow_Cron_NoDecisionTaskCreated() {
 	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
-	s.True(decisionTaskDelay > time.Second * 2)
+	s.True(decisionTaskDelay > time.Second*2)
 }
 
 func (s *integrationSuite) TestSignalExternalWorkflowDecision_WithoutRunID() {
