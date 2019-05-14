@@ -3382,11 +3382,7 @@ func (wh *WorkflowHandler) validateAndOrExpr(expr sqlparser.Expr) error {
 	if err := wh.validateWhereExpr(leftExpr); err != nil {
 		return err
 	}
-	if err := wh.validateWhereExpr(rightExpr); err != nil {
-		return err
-	}
-
-	return nil
+	return wh.validateWhereExpr(rightExpr)
 }
 
 func (wh *WorkflowHandler) validateComparisonExpr(expr sqlparser.Expr) error {
