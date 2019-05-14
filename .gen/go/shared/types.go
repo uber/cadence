@@ -38676,6 +38676,7 @@ type SignalWithStartWorkflowExecutionRequest struct {
 	RetryPolicy                         *RetryPolicy           `json:"retryPolicy,omitempty"`
 	CronSchedule                        *string                `json:"cronSchedule,omitempty"`
 	Memo                                *Memo                  `json:"memo,omitempty"`
+	SearchAttributes                    *SearchAttributes      `json:"searchAttributes,omitempty"`
 	Header                              *Header                `json:"header,omitempty"`
 }
 
@@ -38696,7 +38697,7 @@ type SignalWithStartWorkflowExecutionRequest struct {
 //   }
 func (v *SignalWithStartWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 	var (
-		fields [17]wire.Field
+		fields [18]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -38830,6 +38831,14 @@ func (v *SignalWithStartWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 160, Value: w}
 		i++
 	}
+	if v.SearchAttributes != nil {
+		w, err = v.SearchAttributes.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 161, Value: w}
+		i++
+	}
 	if v.Header != nil {
 		w, err = v.Header.ToWire()
 		if err != nil {
@@ -38850,6 +38859,12 @@ func _WorkflowIdReusePolicy_Read(w wire.Value) (WorkflowIdReusePolicy, error) {
 
 func _Memo_Read(w wire.Value) (*Memo, error) {
 	var v Memo
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _SearchAttributes_Read(w wire.Value) (*SearchAttributes, error) {
+	var v SearchAttributes
 	err := v.FromWire(w)
 	return &v, err
 }
@@ -39022,6 +39037,14 @@ func (v *SignalWithStartWorkflowExecutionRequest) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 161:
+			if field.Value.Type() == wire.TStruct {
+				v.SearchAttributes, err = _SearchAttributes_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		case 170:
 			if field.Value.Type() == wire.TStruct {
 				v.Header, err = _Header_Read(field.Value)
@@ -39043,7 +39066,7 @@ func (v *SignalWithStartWorkflowExecutionRequest) String() string {
 		return "<nil>"
 	}
 
-	var fields [17]string
+	var fields [18]string
 	i := 0
 	if v.Domain != nil {
 		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
@@ -39107,6 +39130,10 @@ func (v *SignalWithStartWorkflowExecutionRequest) String() string {
 	}
 	if v.Memo != nil {
 		fields[i] = fmt.Sprintf("Memo: %v", v.Memo)
+		i++
+	}
+	if v.SearchAttributes != nil {
+		fields[i] = fmt.Sprintf("SearchAttributes: %v", v.SearchAttributes)
 		i++
 	}
 	if v.Header != nil {
@@ -39185,6 +39212,9 @@ func (v *SignalWithStartWorkflowExecutionRequest) Equals(rhs *SignalWithStartWor
 	if !((v.Memo == nil && rhs.Memo == nil) || (v.Memo != nil && rhs.Memo != nil && v.Memo.Equals(rhs.Memo))) {
 		return false
 	}
+	if !((v.SearchAttributes == nil && rhs.SearchAttributes == nil) || (v.SearchAttributes != nil && rhs.SearchAttributes != nil && v.SearchAttributes.Equals(rhs.SearchAttributes))) {
+		return false
+	}
 	if !((v.Header == nil && rhs.Header == nil) || (v.Header != nil && rhs.Header != nil && v.Header.Equals(rhs.Header))) {
 		return false
 	}
@@ -39245,6 +39275,9 @@ func (v *SignalWithStartWorkflowExecutionRequest) MarshalLogObject(enc zapcore.O
 	}
 	if v.Memo != nil {
 		err = multierr.Append(err, enc.AddObject("memo", v.Memo))
+	}
+	if v.SearchAttributes != nil {
+		err = multierr.Append(err, enc.AddObject("searchAttributes", v.SearchAttributes))
 	}
 	if v.Header != nil {
 		err = multierr.Append(err, enc.AddObject("header", v.Header))
@@ -39490,6 +39523,21 @@ func (v *SignalWithStartWorkflowExecutionRequest) GetMemo() (o *Memo) {
 // IsSetMemo returns true if Memo is not nil.
 func (v *SignalWithStartWorkflowExecutionRequest) IsSetMemo() bool {
 	return v != nil && v.Memo != nil
+}
+
+// GetSearchAttributes returns the value of SearchAttributes if it is set or its
+// zero value if it is unset.
+func (v *SignalWithStartWorkflowExecutionRequest) GetSearchAttributes() (o *SearchAttributes) {
+	if v != nil && v.SearchAttributes != nil {
+		return v.SearchAttributes
+	}
+
+	return
+}
+
+// IsSetSearchAttributes returns true if SearchAttributes is not nil.
+func (v *SignalWithStartWorkflowExecutionRequest) IsSetSearchAttributes() bool {
+	return v != nil && v.SearchAttributes != nil
 }
 
 // GetHeader returns the value of Header if it is set or its
@@ -42221,12 +42269,6 @@ func (v *StartWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
-}
-
-func _SearchAttributes_Read(w wire.Value) (*SearchAttributes, error) {
-	var v SearchAttributes
-	err := v.FromWire(w)
-	return &v, err
 }
 
 // FromWire deserializes a StartWorkflowExecutionRequest struct from its Thrift-level
