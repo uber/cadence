@@ -61,7 +61,7 @@ defaults:
       layout: "tour"
   -
     scope:
-      path: "docs/01_how_cadence_works"
+      path: "docs/01_how_cadence_works.md"
     values:
       title: "what?"
       redirect_from: "docs/how_cadence_works"
