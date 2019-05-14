@@ -76,3 +76,22 @@ var defaultIndexedKeys = map[string]interface{}{
 func GetDefaultIndexedKeys() map[string]interface{} {
 	return defaultIndexedKeys
 }
+
+// systemIndexedKeys is Cadence created visibility keys
+var systemIndexedKeys = map[string]interface{}{
+	DomainID:      shared.IndexedValueTypeKeyword,
+	WorkflowID:    shared.IndexedValueTypeKeyword,
+	RunID:         shared.IndexedValueTypeKeyword,
+	WorkflowType:  shared.IndexedValueTypeKeyword,
+	StartTime:     shared.IndexedValueTypeInt,
+	ExecutionTime: shared.IndexedValueTypeInt,
+	CloseTime:     shared.IndexedValueTypeInt,
+	CloseStatus:   shared.IndexedValueTypeInt,
+	HistoryLength: shared.IndexedValueTypeInt,
+}
+
+// IsSystemIndexedKey return true is key is system added
+func IsSystemIndexedKey(key string) bool {
+	_, ok := systemIndexedKeys[key]
+	return ok
+}

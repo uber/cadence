@@ -59,6 +59,8 @@ const (
 type (
 	workflowHandlerSuite struct {
 		suite.Suite
+		testDomain          string
+		testDomainID        string
 		logger              log.Logger
 		mockClusterMetadata *mocks.ClusterMetadata
 		mockProducer        *mocks.KafkaProducer
@@ -88,6 +90,8 @@ func (s *workflowHandlerSuite) TearDownSuite() {
 }
 
 func (s *workflowHandlerSuite) SetupTest() {
+	s.testDomain = "test-domain"
+	s.testDomainID = "e4f90ec0-1313-45be-9877-8aa41f72a45a"
 	s.logger = loggerimpl.NewNopLogger()
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockProducer = &mocks.KafkaProducer{}
@@ -97,6 +101,7 @@ func (s *workflowHandlerSuite) SetupTest() {
 	s.mockHistoryMgr = &mocks.HistoryManager{}
 	s.mockHistoryV2Mgr = &mocks.HistoryV2Manager{}
 	s.mockVisibilityMgr = &mocks.VisibilityManager{}
+	s.mockDomainCache = &cache.DomainCacheMock{}
 	s.mockClientBean = &client.MockClientBean{}
 	s.mockService = cs.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean)
 	s.mockBlobstoreClient = &mocks.BlobstoreClient{}
@@ -108,6 +113,7 @@ func (s *workflowHandlerSuite) TearDownTest() {
 	s.mockHistoryMgr.AssertExpectations(s.T())
 	s.mockHistoryV2Mgr.AssertExpectations(s.T())
 	s.mockVisibilityMgr.AssertExpectations(s.T())
+	s.mockDomainCache.AssertExpectations(s.T())
 	s.mockClientBean.AssertExpectations(s.T())
 	s.mockBlobstoreClient.AssertExpectations(s.T())
 }
@@ -115,6 +121,16 @@ func (s *workflowHandlerSuite) TearDownTest() {
 func (s *workflowHandlerSuite) getWorkflowHandler(config *Config) *WorkflowHandler {
 	return NewWorkflowHandler(s.mockService, config, s.mockMetadataMgr, s.mockHistoryMgr,
 		s.mockHistoryV2Mgr, s.mockVisibilityMgr, s.mockProducer, s.mockBlobstoreClient)
+}
+
+func (s *workflowHandlerSuite) getWorkflowHandlerHelper() *WorkflowHandler {
+	config := s.newConfig()
+	wh := s.getWorkflowHandler(config)
+	wh.metricsClient = wh.Service.GetMetricsClient()
+	wh.domainCache = s.mockDomainCache
+	wh.visibilityMgr = s.mockVisibilityMgr
+	wh.startWG.Done()
+	return wh
 }
 
 func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
@@ -1111,16 +1127,136 @@ func (s *workflowHandlerSuite) TestGetHistory() {
 	s.NoError(err)
 }
 
-func (s *workflowHandlerSuite) TestGetIndexedKeys() {
-	config := s.newConfig()
-	wh := s.getWorkflowHandler(config)
-	wh.metricsClient = wh.Service.GetMetricsClient()
-	wh.startWG.Done()
+func (s *workflowHandlerSuite) TestGetSearchAttributes() {
+	wh := s.getWorkflowHandlerHelper()
 
 	ctx := context.Background()
-	resp, err := wh.GetIndexedKeys(ctx)
+	resp, err := wh.GetSearchAttributes(ctx)
 	s.NoError(err)
 	s.NotNil(resp)
+}
+
+func (s *workflowHandlerSuite) TestListWorkflowExecutions() {
+	wh := s.getWorkflowHandlerHelper()
+
+	s.mockDomainCache.On("GetDomainID", mock.Anything).Return(s.testDomainID, nil)
+	s.mockVisibilityMgr.On("ListWorkflowExecutions", mock.Anything).Return(&persistence.ListWorkflowExecutionsResponse{}, nil).Once()
+
+	listRequest := &shared.ListWorkflowExecutionsRequest{
+		Domain:   common.StringPtr(s.testDomain),
+		PageSize: common.Int32Ptr(10),
+	}
+	ctx := context.Background()
+
+	query := "WorkflowID = 'wid'"
+	listRequest.Query = common.StringPtr(query)
+	_, err := wh.ListWorkflowExecutions(ctx, listRequest)
+	s.NoError(err)
+	s.Equal(query, listRequest.GetQuery())
+
+	query = "InvalidKey = 'a'"
+	listRequest.Query = common.StringPtr(query)
+	_, err = wh.ListWorkflowExecutions(ctx, listRequest)
+	s.NotNil(err)
+}
+
+func (s *workflowHandlerSuite) TestScantWorkflowExecutions() {
+	wh := s.getWorkflowHandlerHelper()
+
+	s.mockDomainCache.On("GetDomainID", mock.Anything).Return(s.testDomainID, nil)
+	s.mockVisibilityMgr.On("ScanWorkflowExecutions", mock.Anything).Return(&persistence.ListWorkflowExecutionsResponse{}, nil).Once()
+
+	listRequest := &shared.ListWorkflowExecutionsRequest{
+		Domain:   common.StringPtr(s.testDomain),
+		PageSize: common.Int32Ptr(10),
+	}
+	ctx := context.Background()
+
+	query := "WorkflowID = 'wid'"
+	listRequest.Query = common.StringPtr(query)
+	_, err := wh.ScanWorkflowExecutions(ctx, listRequest)
+	s.NoError(err)
+	s.Equal(query, listRequest.GetQuery())
+
+	query = "InvalidKey = 'a'"
+	listRequest.Query = common.StringPtr(query)
+	_, err = wh.ScanWorkflowExecutions(ctx, listRequest)
+	s.NotNil(err)
+}
+
+func (s *workflowHandlerSuite) TestCountWorkflowExecutions() {
+	wh := s.getWorkflowHandlerHelper()
+
+	s.mockDomainCache.On("GetDomainID", mock.Anything).Return(s.testDomainID, nil)
+	s.mockVisibilityMgr.On("CountWorkflowExecutions", mock.Anything).Return(&persistence.CountWorkflowExecutionsResponse{}, nil).Once()
+
+	countRequest := &shared.CountWorkflowExecutionsRequest{
+		Domain: common.StringPtr(s.testDomain),
+	}
+	ctx := context.Background()
+
+	query := "WorkflowID = 'wid'"
+	countRequest.Query = common.StringPtr(query)
+	_, err := wh.CountWorkflowExecutions(ctx, countRequest)
+	s.NoError(err)
+	s.Equal(query, countRequest.GetQuery())
+
+	query = "InvalidKey = 'a'"
+	countRequest.Query = common.StringPtr(query)
+	_, err = wh.CountWorkflowExecutions(ctx, countRequest)
+	s.NotNil(err)
+}
+
+func (s *workflowHandlerSuite) TestValidateListRequestForQuery() {
+	config := s.newConfig()
+	wh := s.getWorkflowHandler(config)
+
+	listRequest := &shared.ListWorkflowExecutionsRequest{}
+	s.Nil(wh.validateListRequestForQuery(listRequest))
+	s.Equal("", listRequest.GetQuery())
+
+	query := "WorkflowID = 'wid'"
+	listRequest.Query = common.StringPtr(query)
+	s.Nil(wh.validateListRequestForQuery(listRequest))
+	s.Equal(query, listRequest.GetQuery())
+
+	query = "CustomStringField = 'custom'"
+	listRequest.Query = common.StringPtr(query)
+	s.Nil(wh.validateListRequestForQuery(listRequest))
+	s.Equal("`Attr.CustomStringField` = 'custom'", listRequest.GetQuery())
+
+	query = "WorkflowID = 'wid' and ((CustomStringField = 'custom') or CustomIntField between 1 and 10)"
+	listRequest.Query = common.StringPtr(query)
+	s.Nil(wh.validateListRequestForQuery(listRequest))
+	s.Equal("WorkflowID = 'wid' and ((`Attr.CustomStringField` = 'custom') or `Attr.CustomIntField` between 1 and 10)", listRequest.GetQuery())
+
+	query = "Invalid SQL"
+	listRequest.Query = common.StringPtr(query)
+	s.Equal(errInvalidQuery, wh.validateListRequestForQuery(listRequest))
+
+	query = "InvalidWhereExpr"
+	listRequest.Query = common.StringPtr(query)
+	s.Equal("BadRequestError{Message: invalid where clause}", wh.validateListRequestForQuery(listRequest).Error())
+
+	// Invalid comparison
+	query = "WorkflowID = 'wid' and 1 < 2"
+	listRequest.Query = common.StringPtr(query)
+	s.Equal("BadRequestError{Message: invalid comparison expression}", wh.validateListRequestForQuery(listRequest).Error())
+
+	// Invalid range
+	query = "1 between 1 and 2 or WorkflowID = 'wid'"
+	listRequest.Query = common.StringPtr(query)
+	s.Equal("BadRequestError{Message: invalid range expression}", wh.validateListRequestForQuery(listRequest).Error())
+
+	// Invalid search attribute in comparison
+	query = "Invalid = 'a' and 1 < 2"
+	listRequest.Query = common.StringPtr(query)
+	s.Equal("BadRequestError{Message: invalid search attribute}", wh.validateListRequestForQuery(listRequest).Error())
+
+	// Invalid search attribute in range
+	query = "Invalid between 1 and 2 or WorkflowID = 'wid'"
+	listRequest.Query = common.StringPtr(query)
+	s.Equal("BadRequestError{Message: invalid search attribute}", wh.validateListRequestForQuery(listRequest).Error())
 }
 
 func (s *workflowHandlerSuite) newConfig() *Config {
