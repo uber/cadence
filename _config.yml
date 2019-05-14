@@ -64,7 +64,7 @@ defaults:
       path: "docs/01_how_cadence_works.md"
     values:
       title: "what?"
-      redirect_from: "docs/how_cadence_works"
+      redirect_from: "/docs/how_cadence_works"
 
 # Code content collection
 collections:
