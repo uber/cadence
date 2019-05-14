@@ -68,14 +68,14 @@ defaults:
     values:
       title: what?
       redirect_from: 
-        - /docs/how_cadence_works
-        - /cadence/docs/how_cadence_works
-        - docs/how_cadence_works
-        - docs/how_cadence_works/
-        - /docs/how_cadence_works/
-        - cadence/docs/how_cadence_works
-        - cadence/docs/how_cadence_works/
-        - /cadence/docs/how_cadence_works/
+#        - docs/how_cadence_works
+#        - /docs/how_cadence_works
+#        - /cadence/docs/how_cadence_works
+#        - docs/how_cadence_works/
+#        - /docs/how_cadence_works/
+#        - cadence/docs/how_cadence_works
+#        - cadence/docs/how_cadence_works/
+#        - /cadence/docs/how_cadence_works/
 
 # Code content collection
 collections:
