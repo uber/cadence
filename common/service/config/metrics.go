@@ -38,20 +38,20 @@ import (
 // but this is necessary as the same prom client initialization is used by
 // our system workflows.
 var (
-	_safeCharacters = []rune{'_'}
+	safeCharacters = []rune{'_'}
 
-	_sanitizeOptions = tally.SanitizeOptions{
+	sanitizeOptions = tally.SanitizeOptions{
 		NameCharacters: tally.ValidCharacters{
 			Ranges:     tally.AlphanumericRange,
-			Characters: _safeCharacters,
+			Characters: safeCharacters,
 		},
 		KeyCharacters: tally.ValidCharacters{
 			Ranges:     tally.AlphanumericRange,
-			Characters: _safeCharacters,
+			Characters: safeCharacters,
 		},
 		ValueCharacters: tally.ValidCharacters{
 			Ranges:     tally.AlphanumericRange,
-			Characters: _safeCharacters,
+			Characters: safeCharacters,
 		},
 		ReplacementCharacter: tally.DefaultReplacementCharacter,
 	}
@@ -133,7 +133,7 @@ func (c *Metrics) newPrometheusScope(logger log.Logger) tally.Scope {
 		Tags:            c.Tags,
 		CachedReporter:  reporter,
 		Separator:       prometheus.DefaultSeparator,
-		SanitizeOptions: &_sanitizeOptions,
+		SanitizeOptions: &sanitizeOptions,
 	}
 	scope, _ := tally.NewRootScope(scopeOpts, time.Second)
 	return scope
