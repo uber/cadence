@@ -38,7 +38,7 @@ whitelist:
 
 # GitHub unchangable setings
 lsi: false
-safe: true
+safe: false
 incremental: false
 highlighter: rouge
 gist:
