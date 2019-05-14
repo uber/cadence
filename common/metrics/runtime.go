@@ -44,7 +44,7 @@ func NewRuntimeMetricsReporter(
 	scope tally.Scope,
 	reportInterval time.Duration,
 	logger log.Logger,
-	instance string,
+	instanceID string,
 ) *RuntimeMetricsReporter {
 	var memstats runtime.MemStats
 	runtime.ReadMemStats(&memstats)
@@ -55,8 +55,8 @@ func NewRuntimeMetricsReporter(
 		lastNumGC:      memstats.NumGC,
 		quit:           make(chan struct{}),
 	}
-	if len(instance) > 0 {
-		rReporter.scope = scope.Tagged(map[string]string{instanceTag: instance})
+	if len(instanceID) > 0 {
+		rReporter.scope = scope.Tagged(map[string]string{instance: instanceID})
 	}
 	return rReporter
 }
