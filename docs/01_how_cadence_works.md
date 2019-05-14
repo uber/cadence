@@ -1,3 +1,7 @@
+<!---
+redirect_from: "/docs/how_cadence_works"
+--->
+
 # How Cadence works
 
 The Cadence hosted service brokers and persists events generated during workflow execution. Worker
