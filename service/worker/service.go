@@ -21,7 +21,6 @@
 package worker
 
 import (
-	"github.com/uber/cadence/common/definition"
 	"sync/atomic"
 	"time"
 
@@ -29,6 +28,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
