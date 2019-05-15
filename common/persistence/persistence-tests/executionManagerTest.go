@@ -90,6 +90,8 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionBrandNew() {
 		WorkflowTypeName:     workflowType,
 		WorkflowTimeout:      workflowTimeout,
 		DecisionTimeoutValue: decisionTimeout,
+		State:                p.WorkflowStateRunning,
+		CloseStatus:          p.WorkflowCloseStatusNone,
 		NextEventID:          nextEventID,
 		LastProcessedEvent:   lastProcessedEventID,
 		RangeID:              s.ShardInfo.RangeID,
@@ -150,6 +152,8 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionRunIDReuseWithReplica
 		WorkflowTypeName:         workflowType,
 		WorkflowTimeout:          workflowTimeout,
 		DecisionTimeoutValue:     decisionTimeout,
+		State:                    p.WorkflowStateRunning,
+		CloseStatus:              p.WorkflowCloseStatusNone,
 		NextEventID:              nextEventID,
 		LastProcessedEvent:       lastProcessedEventID,
 		RangeID:                  s.ShardInfo.RangeID,
@@ -217,6 +221,8 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionRunIDReuseWithReplica
 		WorkflowTypeName:         workflowType,
 		WorkflowTimeout:          workflowTimeout,
 		DecisionTimeoutValue:     decisionTimeout,
+		State:                    p.WorkflowStateRunning,
+		CloseStatus:              p.WorkflowCloseStatusNone,
 		NextEventID:              nextEventID,
 		LastProcessedEvent:       lastProcessedEventID,
 		RangeID:                  s.ShardInfo.RangeID,
@@ -237,6 +243,8 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionRunIDReuseWithReplica
 		WorkflowTypeName:         workflowType,
 		WorkflowTimeout:          workflowTimeout,
 		DecisionTimeoutValue:     decisionTimeout,
+		State:                    p.WorkflowStateRunning,
+		CloseStatus:              p.WorkflowCloseStatusNone,
 		NextEventID:              nextEventID,
 		LastProcessedEvent:       lastProcessedEventID,
 		RangeID:                  s.ShardInfo.RangeID,
@@ -257,6 +265,8 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionRunIDReuseWithReplica
 		WorkflowTypeName:         workflowType,
 		WorkflowTimeout:          workflowTimeout,
 		DecisionTimeoutValue:     decisionTimeout,
+		State:                    p.WorkflowStateRunning,
+		CloseStatus:              p.WorkflowCloseStatusNone,
 		NextEventID:              nextEventID,
 		LastProcessedEvent:       lastProcessedEventID,
 		RangeID:                  s.ShardInfo.RangeID,
@@ -315,6 +325,8 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionRunIDReuseWithoutRepl
 		WorkflowTypeName:         workflowType,
 		WorkflowTimeout:          workflowTimeout,
 		DecisionTimeoutValue:     decisionTimeout,
+		State:                    p.WorkflowStateRunning,
+		CloseStatus:              p.WorkflowCloseStatusNone,
 		NextEventID:              nextEventID,
 		LastProcessedEvent:       lastProcessedEventID,
 		RangeID:                  s.ShardInfo.RangeID,
@@ -415,6 +427,8 @@ func (s *ExecutionManagerSuite) TestPersistenceStartWorkflow() {
 		WorkflowTimeout:      20,
 		DecisionTimeoutValue: 13,
 		ExecutionContext:     nil,
+		State:                p.WorkflowStateRunning,
+		CloseStatus:          p.WorkflowCloseStatusNone,
 		NextEventID:          int64(3),
 		LastProcessedEvent:   0,
 		RangeID:              s.ShardInfo.RangeID - 1,
@@ -475,6 +489,8 @@ func (s *ExecutionManagerSuite) TestPersistenceStartWorkflowWithReplicationState
 		WorkflowTypeName:     "workflow_type_test",
 		WorkflowTimeout:      20,
 		DecisionTimeoutValue: 13,
+		State:                p.WorkflowStateRunning,
+		CloseStatus:          p.WorkflowCloseStatusNone,
 		ExecutionContext:     nil,
 		NextEventID:          int64(3),
 		LastProcessedEvent:   0,
@@ -532,6 +548,8 @@ func (s *ExecutionManagerSuite) TestGetWorkflow() {
 		WorkflowTimeout:             rand.Int31(),
 		DecisionTimeoutValue:        rand.Int31(),
 		ExecutionContext:            []byte("test-execution-context"),
+		State:                       p.WorkflowStateRunning,
+		CloseStatus:                 p.WorkflowCloseStatusNone,
 		NextEventID:                 rand.Int63(),
 		LastProcessedEvent:          int64(rand.Int31()),
 		SignalCount:                 rand.Int31(),
@@ -584,7 +602,8 @@ func (s *ExecutionManagerSuite) TestGetWorkflow() {
 	s.Equal(createReq.WorkflowTimeout, info.WorkflowTimeout)
 	s.Equal(createReq.DecisionTimeoutValue, info.DecisionTimeoutValue)
 	s.Equal(createReq.ExecutionContext, info.ExecutionContext)
-	s.Equal(p.WorkflowStateCreated, info.State)
+	s.Equal(p.WorkflowStateRunning, info.State)
+	s.Equal(p.WorkflowCloseStatusNone, info.CloseStatus)
 	s.Equal(createReq.NextEventID, info.NextEventID)
 	s.Equal(createReq.LastProcessedEvent, info.LastProcessedEvent)
 	s.Equal(true, s.validateTimeRange(info.LastUpdatedTimestamp, time.Hour))
@@ -642,7 +661,8 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Equal(int32(20), info0.WorkflowTimeout)
 	s.Equal(int32(13), info0.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info0.ExecutionContext)
-	s.Equal(p.WorkflowStateCreated, info0.State)
+	s.Equal(p.WorkflowStateRunning, info0.State)
+	s.Equal(p.WorkflowCloseStatusNone, info0.CloseStatus)
 	s.Equal(int64(1), info0.LastFirstEventID)
 	s.Equal(int64(3), info0.NextEventID)
 	s.Equal(int64(0), info0.LastProcessedEvent)
@@ -700,7 +720,8 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Equal(int32(20), info1.WorkflowTimeout)
 	s.Equal(int32(13), info1.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info1.ExecutionContext)
-	s.Equal(p.WorkflowStateCreated, info1.State)
+	s.Equal(p.WorkflowStateRunning, info1.State)
+	s.Equal(p.WorkflowCloseStatusNone, info0.CloseStatus)
 	s.Equal(int64(3), info1.LastFirstEventID)
 	s.Equal(int64(5), info1.NextEventID)
 	s.Equal(int64(2), info1.LastProcessedEvent)
@@ -746,7 +767,8 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Equal(int32(20), info2.WorkflowTimeout)
 	s.Equal(int32(13), info2.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info2.ExecutionContext)
-	s.Equal(p.WorkflowStateCreated, info2.State)
+	s.Equal(p.WorkflowStateRunning, info2.State)
+	s.Equal(p.WorkflowCloseStatusNone, info0.CloseStatus)
 	s.Equal(int64(5), info2.NextEventID)
 	s.Equal(int64(2), info2.LastProcessedEvent)
 	s.Equal(true, s.validateTimeRange(info2.LastUpdatedTimestamp, time.Hour))
@@ -785,7 +807,8 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Equal(int32(20), info3.WorkflowTimeout)
 	s.Equal(int32(13), info3.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info3.ExecutionContext)
-	s.Equal(p.WorkflowStateCreated, info3.State)
+	s.Equal(p.WorkflowStateRunning, info2.State)
+	s.Equal(p.WorkflowCloseStatusNone, info0.CloseStatus)
 	s.Equal(int64(5), info3.NextEventID)
 	s.Equal(int64(2), info3.LastProcessedEvent)
 	s.Equal(true, s.validateTimeRange(info3.LastUpdatedTimestamp, time.Hour))
@@ -825,7 +848,8 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Equal(int32(20), info4.WorkflowTimeout)
 	s.Equal(int32(13), info4.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info4.ExecutionContext)
-	s.Equal(p.WorkflowStateCreated, info4.State)
+	s.Equal(p.WorkflowStateRunning, info2.State)
+	s.Equal(p.WorkflowCloseStatusNone, info0.CloseStatus)
 	s.Equal(int64(5), info4.NextEventID)
 	s.Equal(int64(2), info4.LastProcessedEvent)
 	s.Equal(true, s.validateTimeRange(info4.LastUpdatedTimestamp, time.Hour))
@@ -871,7 +895,8 @@ func (s *ExecutionManagerSuite) TestDeleteWorkflow() {
 	s.Equal(int32(20), info0.WorkflowTimeout)
 	s.Equal(int32(13), info0.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info0.ExecutionContext)
-	s.Equal(p.WorkflowStateCreated, info0.State)
+	s.Equal(p.WorkflowStateRunning, info0.State)
+	s.Equal(p.WorkflowCloseStatusNone, info0.CloseStatus)
 	s.Equal(int64(3), info0.NextEventID)
 	s.Equal(int64(0), info0.LastProcessedEvent)
 	s.Equal(true, s.validateTimeRange(info0.LastUpdatedTimestamp, time.Hour))
@@ -2329,7 +2354,8 @@ func (s *ExecutionManagerSuite) TestContinueAsNew() {
 	s.NoError(err1)
 	info0 := state0.ExecutionInfo
 	continueAsNewInfo := copyWorkflowExecutionInfo(info0)
-	continueAsNewInfo.State = p.WorkflowStateCompleted
+	continueAsNewInfo.State = p.WorkflowStateCreated
+	continueAsNewInfo.CloseStatus = p.WorkflowCloseStatusNone
 	continueAsNewInfo.NextEventID = int64(5)
 	continueAsNewInfo.LastProcessedEvent = int64(2)
 
@@ -2352,13 +2378,13 @@ func (s *ExecutionManagerSuite) TestContinueAsNew() {
 	}
 
 	err2 := s.ContinueAsNewExecution(continueAsNewInfo, info0.NextEventID, newWorkflowExecution, int64(3), int64(2), &testResetPoints)
-
 	s.NoError(err2)
 
 	prevExecutionState, err3 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.NoError(err3)
 	prevExecutionInfo := prevExecutionState.ExecutionInfo
-	s.Equal(p.WorkflowStateCompleted, prevExecutionInfo.State)
+	s.Equal(p.WorkflowStateCreated, prevExecutionInfo.State)
+	s.Equal(p.WorkflowCloseStatusNone, prevExecutionInfo.CloseStatus)
 	s.Equal(int64(5), prevExecutionInfo.NextEventID)
 	s.Equal(int64(2), prevExecutionInfo.LastProcessedEvent)
 	s.True(prevExecutionInfo.AutoResetPoints.Equals(&gen.ResetPoints{}))
@@ -2367,6 +2393,7 @@ func (s *ExecutionManagerSuite) TestContinueAsNew() {
 	s.NoError(err4)
 	newExecutionInfo := newExecutionState.ExecutionInfo
 	s.Equal(p.WorkflowStateCreated, newExecutionInfo.State)
+	s.Equal(p.WorkflowCloseStatusNone, newExecutionInfo.CloseStatus)
 	s.Equal(int64(3), newExecutionInfo.NextEventID)
 	s.Equal(common.EmptyEventID, newExecutionInfo.LastProcessedEvent)
 	s.Equal(int64(2), newExecutionInfo.DecisionScheduleID)
@@ -3502,6 +3529,7 @@ func copyWorkflowExecutionInfo(sourceInfo *p.WorkflowExecutionInfo) *p.WorkflowE
 		DecisionTimeoutValue: sourceInfo.DecisionTimeoutValue,
 		ExecutionContext:     sourceInfo.ExecutionContext,
 		State:                sourceInfo.State,
+		CloseStatus:          sourceInfo.CloseStatus,
 		NextEventID:          sourceInfo.NextEventID,
 		LastProcessedEvent:   sourceInfo.LastProcessedEvent,
 		LastUpdatedTimestamp: sourceInfo.LastUpdatedTimestamp,

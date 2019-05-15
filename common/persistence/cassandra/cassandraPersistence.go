@@ -1247,14 +1247,11 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Int
 	parentWorkflowID := ""
 	parentRunID := emptyRunID
 	initiatedID := emptyInitiatedID
-	state := p.WorkflowStateRunning
-	closeStatus := p.WorkflowCloseStatusNone
 	if request.ParentDomainID != "" {
 		parentDomainID = request.ParentDomainID
 		parentWorkflowID = request.ParentExecution.GetWorkflowId()
 		parentRunID = request.ParentExecution.GetRunId()
 		initiatedID = request.InitiatedID
-		state = p.WorkflowStateCreated
 	}
 
 	startVersion := common.EmptyVersion
@@ -1274,15 +1271,15 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Int
 	switch request.CreateWorkflowMode {
 	case p.CreateWorkflowModeContinueAsNew:
 		batch.Query(templateUpdateCurrentWorkflowExecutionQuery,
-			*request.Execution.RunId,
-			*request.Execution.RunId,
+			request.Execution.GetRunId(),
+			request.Execution.GetRunId(),
 			request.RequestID,
-			state,
-			closeStatus,
+			request.State,
+			request.CloseStatus,
 			startVersion,
 			lastWriteVersion,
 			lastWriteVersion,
-			state,
+			request.State,
 			d.shardID,
 			rowTypeExecution,
 			request.DomainID,
@@ -1297,12 +1294,12 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Int
 			*request.Execution.RunId,
 			*request.Execution.RunId,
 			request.RequestID,
-			state,
-			closeStatus,
+			request.State,
+			request.CloseStatus,
 			startVersion,
 			lastWriteVersion,
 			lastWriteVersion,
-			state,
+			request.State,
 			d.shardID,
 			rowTypeExecution,
 			request.DomainID,
@@ -1326,12 +1323,12 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Int
 			*request.Execution.RunId,
 			*request.Execution.RunId,
 			request.RequestID,
-			state,
-			closeStatus,
+			request.State,
+			request.CloseStatus,
 			startVersion,
 			lastWriteVersion,
 			lastWriteVersion,
-			state,
+			request.State,
 		)
 	default:
 		panic(fmt.Errorf("Unknown CreateWorkflowMode: %v", request.CreateWorkflowMode))
@@ -1361,8 +1358,8 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Int
 			request.WorkflowTimeout,
 			request.DecisionTimeoutValue,
 			request.ExecutionContext,
-			p.WorkflowStateCreated,
-			p.WorkflowCloseStatusNone,
+			request.State,
+			request.CloseStatus,
 			common.FirstEventID,
 			request.LastEventTaskID,
 			request.NextEventID,
@@ -1430,8 +1427,8 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Int
 			request.WorkflowTimeout,
 			request.DecisionTimeoutValue,
 			request.ExecutionContext,
-			p.WorkflowStateCreated,
-			p.WorkflowCloseStatusNone,
+			request.State,
+			request.CloseStatus,
 			common.FirstEventID,
 			request.LastEventTaskID,
 			request.NextEventID,

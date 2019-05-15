@@ -129,7 +129,8 @@ func (m *sqlExecutionManager) createWorkflowExecutionTx(tx sqldb.Tx, request *p.
 	}
 
 	runID := sqldb.MustParseUUID(*request.Execution.RunId)
-	if err := createOrUpdateCurrentExecution(tx, request, m.shardID, domainID, runID); err != nil {
+	if err := createOrUpdateCurrentExecution(tx, request, m.shardID, domainID, runID,
+		request.State, request.CloseStatus); err != nil {
 		return nil, err
 	}
 
@@ -532,7 +533,8 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(tx sqldb.Tx, request *p.
 	if request.ContinueAsNew != nil {
 		newDomainID := sqldb.MustParseUUID(request.ContinueAsNew.DomainID)
 		newRunID := sqldb.MustParseUUID(request.ContinueAsNew.Execution.GetRunId())
-		if err := createOrUpdateCurrentExecution(tx, request.ContinueAsNew, shardID, newDomainID, newRunID); err != nil {
+		if err := createOrUpdateCurrentExecution(tx, request.ContinueAsNew, shardID, newDomainID, newRunID,
+			request.ContinueAsNew.State, request.ContinueAsNew.CloseStatus); err != nil {
 			return err
 		}
 
@@ -1391,8 +1393,8 @@ func createExecutionFromRequest(
 		WorkflowTypeName:             &request.WorkflowTypeName,
 		WorkflowTimeoutSeconds:       &request.WorkflowTimeout,
 		DecisionTaskTimeoutSeconds:   &request.DecisionTimeoutValue,
-		State:                        common.Int32Ptr(int32(p.WorkflowStateCreated)),
-		CloseStatus:                  common.Int32Ptr(int32(p.WorkflowCloseStatusNone)),
+		State:                        common.Int32Ptr(int32(request.State)),
+		CloseStatus:                  common.Int32Ptr(int32(request.CloseStatus)),
 		LastFirstEventID:             common.Int64Ptr(common.FirstEventID),
 		LastEventTaskID:              &request.LastEventTaskID,
 		LastProcessedEvent:           &request.LastProcessedEvent,
@@ -1471,15 +1473,16 @@ func createExecutionFromRequest(
 }
 
 func createOrUpdateCurrentExecution(
-	tx sqldb.Tx, request *p.InternalCreateWorkflowExecutionRequest, shardID int, domainID sqldb.UUID, runID sqldb.UUID) error {
+	tx sqldb.Tx, request *p.InternalCreateWorkflowExecutionRequest, shardID int, domainID sqldb.UUID, runID sqldb.UUID,
+	state int, closeStatus int) error {
 	row := sqldb.CurrentExecutionsRow{
 		ShardID:          int64(shardID),
 		DomainID:         domainID,
 		WorkflowID:       *request.Execution.WorkflowId,
 		RunID:            runID,
 		CreateRequestID:  request.RequestID,
-		State:            p.WorkflowStateRunning,
-		CloseStatus:      p.WorkflowCloseStatusNone,
+		State:            state,
+		CloseStatus:      closeStatus,
 		StartVersion:     common.EmptyVersion,
 		LastWriteVersion: common.EmptyVersion,
 	}
@@ -1487,9 +1490,6 @@ func createOrUpdateCurrentExecution(
 	if replicationState != nil {
 		row.StartVersion = replicationState.StartVersion
 		row.LastWriteVersion = replicationState.LastWriteVersion
-	}
-	if request.ParentDomainID != "" {
-		row.State = p.WorkflowStateCreated
 	}
 
 	switch request.CreateWorkflowMode {
@@ -1500,8 +1500,8 @@ func createOrUpdateCurrentExecution(
 			*request.Execution.WorkflowId,
 			runID,
 			request.RequestID,
-			p.WorkflowStateRunning,
-			p.WorkflowCloseStatusNone,
+			state,
+			closeStatus,
 			row.StartVersion,
 			row.LastWriteVersion); err != nil {
 			return &workflow.InternalServiceError{
@@ -1515,8 +1515,8 @@ func createOrUpdateCurrentExecution(
 			*request.Execution.WorkflowId,
 			runID,
 			request.RequestID,
-			p.WorkflowStateRunning,
-			p.WorkflowCloseStatusNone,
+			state,
+			closeStatus,
 			row.StartVersion,
 			row.LastWriteVersion); err != nil {
 			return &workflow.InternalServiceError{
