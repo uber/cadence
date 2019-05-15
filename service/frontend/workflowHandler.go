@@ -3299,25 +3299,36 @@ func (wh *WorkflowHandler) validateSearchAttributes(input *gen.SearchAttributes,
 	}
 
 	fields := input.GetIndexedFields()
-	if len(fields) > wh.config.SearchAttributesNumberOfKeysLimit(domain) {
-		return fmt.Errorf("number of keys %d exceed limit", len(fields))
+	lengthOfFields := len(fields)
+	if lengthOfFields > wh.config.SearchAttributesNumberOfKeysLimit(domain) {
+		wh.GetLogger().WithTags(tag.Number(int64(lengthOfFields)), tag.WorkflowDomainName(domain)).
+			Error("number of keys in search attributes exceed limit")
+		return fmt.Errorf("number of keys %d exceed limit", lengthOfFields)
 	}
 
 	totalSize := 0
 	for key, val := range fields {
 		if !wh.isValidSearchAttributes(key) {
+			wh.GetLogger().WithTags(tag.ESKey(key), tag.WorkflowDomainName(domain)).
+				Error("invalid search attribute")
 			return fmt.Errorf("%s is not valid search attribute", key)
 		}
 		if definition.IsSystemIndexedKey(key) {
+			wh.GetLogger().WithTags(tag.ESKey(key), tag.WorkflowDomainName(domain)).
+				Error("illegal update of system reserved attribute")
 			return fmt.Errorf("%s is read-only Cadence reservered attribute", key)
 		}
 		if len(val) > wh.config.SearchAttributesSizeOfValueLimit(domain) {
+			wh.GetLogger().WithTags(tag.ESKey(key), tag.Number(int64(len(val))), tag.WorkflowDomainName(domain)).
+				Error("value size of search attribute exceed limit")
 			return fmt.Errorf("size limit exceed for key %s", key)
 		}
 		totalSize += len(key) + len(val)
 	}
 
 	if totalSize > wh.config.SearchAttributesTotalSizeLimit(domain) {
+		wh.GetLogger().WithTags(tag.Number(int64(totalSize)), tag.WorkflowDomainName(domain)).
+			Error("total size of search attributes exceed limit")
 		return fmt.Errorf("total size %d exceed limit", totalSize)
 	}
 
