@@ -33,10 +33,10 @@ encoding: UTF-8
 future: true
 jailed: false
 gfm_quirks: paragraph_end
-safe: true
 
 # GitHub unchangable setings
 lsi: false
+safe: true
 incremental: false
 highlighter: rouge
 gist:
@@ -64,11 +64,11 @@ defaults:
       path: "tour"
     values:
       layout: "tour"
-  -
-    scope:
-      path: "docs/01_how_cadence_works.md"
-    values:
-      redirect_from: docs/how_cadence_works
+  # -
+  #   scope:
+  #     path: "docs/01_how_cadence_works.md"
+  #   values:
+  #     redirect_from: docs/how_cadence_works
 
 
 # Exclude from processing.
