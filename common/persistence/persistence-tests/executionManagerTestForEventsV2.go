@@ -165,6 +165,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestContinueAsNew() {
 	info0 := state0.ExecutionInfo
 	updatedInfo := copyWorkflowExecutionInfo(info0)
 	updatedInfo.State = p.WorkflowStateCompleted
+	updatedInfo.CloseStatus = p.WorkflowCloseStatusCompleted
 	updatedInfo.NextEventID = int64(5)
 	updatedInfo.LastProcessedEvent = int64(2)
 
@@ -1297,6 +1298,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 	}
 
 	info0.State = p.WorkflowStateCompleted
+	info0.CloseStatus = p.WorkflowCloseStatusCompleted
 	err = s.UpdateWorklowStateAndReplication(info0, replicationState0, nil, nil, info0.NextEventID, nil)
 	s.Nil(err)
 

@@ -1108,7 +1108,9 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *p.InternalCreate
 	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	batch := d.session.NewBatch(gocql.LoggedBatch)
 
-	d.CreateWorkflowExecutionWithinBatch(request, batch, cqlNowTimestamp)
+	if err := d.CreateWorkflowExecutionWithinBatch(request, batch, cqlNowTimestamp); err != nil {
+		return nil, err
+	}
 
 	d.createTransferTasks(batch, request.TransferTasks, request.DomainID, *request.Execution.WorkflowId,
 		*request.Execution.RunId)
@@ -1241,7 +1243,13 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *p.InternalCreate
 }
 
 func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.InternalCreateWorkflowExecutionRequest,
-	batch *gocql.Batch, cqlNowTimestamp int64) {
+	batch *gocql.Batch, cqlNowTimestamp int64) error {
+	// validate workflow state & close status
+	if err := p.ValidateCreateWorkflowStateCloseStatus(
+		request.State,
+		request.CloseStatus); err != nil {
+		return err
+	}
 
 	parentDomainID := emptyDomainID
 	parentWorkflowID := ""
@@ -1475,6 +1483,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Int
 			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID)
 	}
+	return nil
 }
 
 func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecutionRequest) (
@@ -1744,6 +1753,14 @@ func (d *cassandraPersistence) updateMutableState(batch *gocql.Batch, executionI
 func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.InternalUpdateWorkflowExecutionRequest) error {
 	batch := d.session.NewBatch(gocql.LoggedBatch)
 	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
+
+	// validate workflow state & close status
+	if err := p.ValidateUpdateWorkflowStateCloseStatus(
+		request.ExecutionInfo.State,
+		request.ExecutionInfo.CloseStatus); err != nil {
+		return err
+	}
+
 	executionInfo := request.ExecutionInfo
 	replicationState := request.ReplicationState
 
@@ -1790,7 +1807,9 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.InternalUpdate
 
 	if request.ContinueAsNew != nil {
 		startReq := request.ContinueAsNew
-		d.CreateWorkflowExecutionWithinBatch(startReq, batch, cqlNowTimestamp)
+		if err := d.CreateWorkflowExecutionWithinBatch(startReq, batch, cqlNowTimestamp); err != nil {
+			return err
+		}
 		d.createTransferTasks(batch, startReq.TransferTasks, startReq.DomainID, startReq.Execution.GetWorkflowId(),
 			startReq.Execution.GetRunId())
 		d.createTimerTasks(batch, startReq.TimerTasks, startReq.DomainID, startReq.Execution.GetWorkflowId(),

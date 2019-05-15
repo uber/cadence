@@ -70,6 +70,12 @@ func (m *sqlExecutionManager) CreateWorkflowExecution(request *p.InternalCreateW
 }
 
 func (m *sqlExecutionManager) createWorkflowExecutionTx(tx sqldb.Tx, request *p.InternalCreateWorkflowExecutionRequest) (*p.CreateWorkflowExecutionResponse, error) {
+	// validate workflow state & close status
+	if err := p.ValidateCreateWorkflowStateCloseStatus(
+		request.State,
+		request.CloseStatus); err != nil {
+		return nil, err
+	}
 	if request.CreateWorkflowMode == p.CreateWorkflowModeContinueAsNew {
 		return nil, &workflow.InternalServiceError{
 			Message: "CreateWorkflowExecution operation failed. Invalid CreateWorkflowModeContinueAsNew is used",
@@ -423,6 +429,13 @@ func (m *sqlExecutionManager) UpdateWorkflowExecution(request *p.InternalUpdateW
 }
 
 func (m *sqlExecutionManager) updateWorkflowExecutionTx(tx sqldb.Tx, request *p.InternalUpdateWorkflowExecutionRequest) error {
+	// validate workflow state & close status
+	if err := p.ValidateUpdateWorkflowStateCloseStatus(
+		request.ExecutionInfo.State,
+		request.ExecutionInfo.CloseStatus); err != nil {
+		return err
+	}
+
 	executionInfo := request.ExecutionInfo
 	domainID := sqldb.MustParseUUID(executionInfo.DomainID)
 	workflowID := executionInfo.WorkflowID
