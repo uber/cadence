@@ -1490,11 +1490,12 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
-	if startRequest.GetDomain() == "" {
+	domainName := startRequest.GetDomain()
+	if domainName == "" {
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if len(startRequest.GetDomain()) > wh.config.MaxIDLengthLimit() {
+	if len(domainName) > wh.config.MaxIDLengthLimit() {
 		return nil, wh.error(errDomainTooLong, scope)
 	}
 
@@ -1546,16 +1547,16 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(errRequestIDTooLong, scope)
 	}
 
-	if err := wh.validateSearchAttributes(startRequest.SearchAttributes); err != nil {
+	if err := wh.validateSearchAttributes(startRequest.SearchAttributes, domainName); err != nil {
 		return nil, wh.error(&gen.BadRequestError{Message: err.Error()}, scope)
 	}
 
-	maxDecisionTimeout := int32(wh.config.MaxDecisionStartToCloseTimeout(startRequest.GetDomain()))
+	maxDecisionTimeout := int32(wh.config.MaxDecisionStartToCloseTimeout(domainName))
 	// TODO: remove this assignment and logging in future, so that frontend will just return bad request for large decision timeout
 	if startRequest.GetTaskStartToCloseTimeoutSeconds() > startRequest.GetExecutionStartToCloseTimeoutSeconds() {
 		wh.Service.GetThrottledLogger().Warn("Decision timeout is larger than workflow timeout",
 			tag.WorkflowDecisionTimeoutSeconds(startRequest.GetTaskStartToCloseTimeoutSeconds()),
-			tag.WorkflowDomainName(startRequest.GetDomain()),
+			tag.WorkflowDomainName(domainName),
 			tag.WorkflowID(startRequest.GetWorkflowId()),
 			tag.WorkflowType(startRequest.GetWorkflowType().GetName()))
 		startRequest.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(startRequest.GetExecutionStartToCloseTimeoutSeconds())
@@ -1563,7 +1564,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	if startRequest.GetTaskStartToCloseTimeoutSeconds() > maxDecisionTimeout {
 		wh.Service.GetThrottledLogger().Warn("Decision timeout is too large",
 			tag.WorkflowDecisionTimeoutSeconds(startRequest.GetTaskStartToCloseTimeoutSeconds()),
-			tag.WorkflowDomainName(startRequest.GetDomain()),
+			tag.WorkflowDomainName(domainName),
 			tag.WorkflowID(startRequest.GetWorkflowId()),
 			tag.WorkflowType(startRequest.GetWorkflowType().GetName()))
 		startRequest.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(maxDecisionTimeout)
@@ -1574,7 +1575,6 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 			Message: fmt.Sprintf("TaskStartToCloseTimeoutSeconds is larger than ExecutionStartToCloseTimeout or MaxDecisionStartToCloseTimeout (%ds).", maxDecisionTimeout)}, scope)
 	}
 
-	domainName := startRequest.GetDomain()
 	wh.Service.GetLogger().Debug("Start workflow execution request domain", tag.WorkflowDomainName(domainName))
 	domainID, err := wh.domainCache.GetDomainID(domainName)
 	if err != nil {
@@ -1584,8 +1584,8 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	// add domain tag to scope, so further metrics will have the domain tag
 	scope = scope.Tagged(metrics.DomainTag(domainName))
 
-	sizeLimitError := wh.config.BlobSizeLimitError(startRequest.GetDomain())
-	sizeLimitWarn := wh.config.BlobSizeLimitWarn(startRequest.GetDomain())
+	sizeLimitError := wh.config.BlobSizeLimitError(domainName)
+	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainName)
 	actualSize := len(startRequest.Input) + common.GetSizeOfMapStringToByteArray(startRequest.Memo.GetFields())
 	if err := common.CheckEventBlobSizeLimit(
 		actualSize,
@@ -1916,11 +1916,12 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(ctx context.Context,
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
-	if signalWithStartRequest.GetDomain() == "" {
+	domainName := signalWithStartRequest.GetDomain()
+	if domainName == "" {
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if len(signalWithStartRequest.GetDomain()) > wh.config.MaxIDLengthLimit() {
+	if len(domainName) > wh.config.MaxIDLengthLimit() {
 		return nil, wh.error(errDomainTooLong, scope)
 	}
 
@@ -1974,16 +1975,16 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(ctx context.Context,
 		return nil, wh.error(err, scope)
 	}
 
-	if err := wh.validateSearchAttributes(signalWithStartRequest.SearchAttributes); err != nil {
+	if err := wh.validateSearchAttributes(signalWithStartRequest.SearchAttributes, domainName); err != nil {
 		return nil, wh.error(&gen.BadRequestError{Message: err.Error()}, scope)
 	}
 
-	maxDecisionTimeout := int32(wh.config.MaxDecisionStartToCloseTimeout(signalWithStartRequest.GetDomain()))
+	maxDecisionTimeout := int32(wh.config.MaxDecisionStartToCloseTimeout(domainName))
 	// TODO: remove this assignment and logging in future, so that frontend will just return bad request for large decision timeout
 	if signalWithStartRequest.GetTaskStartToCloseTimeoutSeconds() > signalWithStartRequest.GetExecutionStartToCloseTimeoutSeconds() {
 		wh.Service.GetThrottledLogger().Warn("Decision timeout is larger than workflow timeout",
 			tag.WorkflowDecisionTimeoutSeconds(signalWithStartRequest.GetTaskStartToCloseTimeoutSeconds()),
-			tag.WorkflowDomainName(signalWithStartRequest.GetDomain()),
+			tag.WorkflowDomainName(domainName),
 			tag.WorkflowID(signalWithStartRequest.GetWorkflowId()),
 			tag.WorkflowType(signalWithStartRequest.GetWorkflowType().GetName()))
 		signalWithStartRequest.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(signalWithStartRequest.GetExecutionStartToCloseTimeoutSeconds())
@@ -1991,7 +1992,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(ctx context.Context,
 	if signalWithStartRequest.GetTaskStartToCloseTimeoutSeconds() > maxDecisionTimeout {
 		wh.Service.GetThrottledLogger().Warn("Decision timeout is too large",
 			tag.WorkflowDecisionTimeoutSeconds(signalWithStartRequest.GetTaskStartToCloseTimeoutSeconds()),
-			tag.WorkflowDomainName(signalWithStartRequest.GetDomain()),
+			tag.WorkflowDomainName(domainName),
 			tag.WorkflowID(signalWithStartRequest.GetWorkflowId()),
 			tag.WorkflowType(signalWithStartRequest.GetWorkflowType().GetName()))
 		signalWithStartRequest.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(maxDecisionTimeout)
@@ -2002,16 +2003,16 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(ctx context.Context,
 			Message: fmt.Sprintf("TaskStartToCloseTimeoutSeconds is larger than ExecutionStartToCloseTimeout or MaxDecisionStartToCloseTimeout (%ds).", maxDecisionTimeout)}, scope)
 	}
 
-	domainID, err := wh.domainCache.GetDomainID(signalWithStartRequest.GetDomain())
+	domainID, err := wh.domainCache.GetDomainID(domainName)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
 
 	// add domain tag to scope, so further metrics will have the domain tag
-	scope = scope.Tagged(metrics.DomainTag(signalWithStartRequest.GetDomain()))
+	scope = scope.Tagged(metrics.DomainTag(domainName))
 
-	sizeLimitError := wh.config.BlobSizeLimitError(signalWithStartRequest.GetDomain())
-	sizeLimitWarn := wh.config.BlobSizeLimitWarn(signalWithStartRequest.GetDomain())
+	sizeLimitError := wh.config.BlobSizeLimitError(domainName)
+	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainName)
 	if err := common.CheckEventBlobSizeLimit(
 		len(signalWithStartRequest.SignalInput),
 		sizeLimitWarn,
@@ -3293,18 +3294,34 @@ func (wh *WorkflowHandler) convertIndexedKeys(keys map[string]interface{}) map[s
 	return converted
 }
 
-func (wh *WorkflowHandler) validateSearchAttributes(input *gen.SearchAttributes) error {
+func (wh *WorkflowHandler) validateSearchAttributes(input *gen.SearchAttributes, domain string) error {
 	if input == nil {
 		return nil
 	}
-	for key := range input.GetIndexedFields() {
+
+	fields := input.GetIndexedFields()
+	if len(fields) > wh.config.SearchAttributesNumberOfKeysLimit(domain) {
+		return fmt.Errorf("number of keys %d exceed limit", len(fields))
+	}
+
+	totalSize := 0
+	for key, val := range fields {
 		if !wh.isValidSearchAttributes(key) {
 			return fmt.Errorf("%s is not valid search attribute", key)
 		}
 		if definition.IsSystemIndexedKey(key) {
 			return fmt.Errorf("%s is read-only Cadence reservered attribute", key)
 		}
+		if len(val) > wh.config.SearchAttributesSizeOfValueLimit(domain) {
+			return fmt.Errorf("size limit exceed for key %s", key)
+		}
+		totalSize += len(key) + len(val)
 	}
+
+	if totalSize > wh.config.SearchAttributesTotalSizeLimit(domain) {
+		return fmt.Errorf("total size %d exceed limit", totalSize)
+	}
+
 	return nil
 }
 

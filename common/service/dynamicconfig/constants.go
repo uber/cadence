@@ -70,20 +70,23 @@ var keys = map[Key]string{
 	MaxIDLengthLimit:       "limit.maxIDLength",
 
 	// frontend settings
-	FrontendPersistenceMaxQPS:      "frontend.persistenceMaxQPS",
-	FrontendVisibilityMaxPageSize:  "frontend.visibilityMaxPageSize",
-	FrontendVisibilityListMaxQPS:   "frontend.visibilityListMaxQPS",
-	FrontendESVisibilityListMaxQPS: "frontend.esVisibilityListMaxQPS",
-	FrontendMaxBadBinaries:         "frontend.maxBadBinaries",
-	FrontendESIndexMaxResultWindow: "frontend.esIndexMaxResultWindow",
-	FrontendHistoryMaxPageSize:     "frontend.historyMaxPageSize",
-	FrontendRPS:                    "frontend.rps",
-	FrontendHistoryMgrNumConns:     "frontend.historyMgrNumConns",
-	MaxDecisionStartToCloseTimeout: "frontend.maxDecisionStartToCloseTimeout",
-	DisableListVisibilityByFilter:  "frontend.disableListVisibilityByFilter",
-	FrontendThrottledLogRPS:        "frontend.throttledLogRPS",
-	EnableClientVersionCheck:       "frontend.enableClientVersionCheck",
-	ValidSearchAttributes:          "frontend.validSearchAttributes",
+	FrontendPersistenceMaxQPS:         "frontend.persistenceMaxQPS",
+	FrontendVisibilityMaxPageSize:     "frontend.visibilityMaxPageSize",
+	FrontendVisibilityListMaxQPS:      "frontend.visibilityListMaxQPS",
+	FrontendESVisibilityListMaxQPS:    "frontend.esVisibilityListMaxQPS",
+	FrontendMaxBadBinaries:            "frontend.maxBadBinaries",
+	FrontendESIndexMaxResultWindow:    "frontend.esIndexMaxResultWindow",
+	FrontendHistoryMaxPageSize:        "frontend.historyMaxPageSize",
+	FrontendRPS:                       "frontend.rps",
+	FrontendHistoryMgrNumConns:        "frontend.historyMgrNumConns",
+	MaxDecisionStartToCloseTimeout:    "frontend.maxDecisionStartToCloseTimeout",
+	DisableListVisibilityByFilter:     "frontend.disableListVisibilityByFilter",
+	FrontendThrottledLogRPS:           "frontend.throttledLogRPS",
+	EnableClientVersionCheck:          "frontend.enableClientVersionCheck",
+	ValidSearchAttributes:             "frontend.validSearchAttributes",
+	SearchAttributesNumberOfKeysLimit: "frontend.searchAttributesNumberOfKeysLimit",
+	SearchAttributesSizeOfValueLimit:  "frontend.searchAttributesSizeOfValueLimit",
+	SearchAttributesTotalSizeLimit:    "frontend.searchAttributesTotalSizeLimit",
 
 	// matching settings
 	MatchingRPS:                             "matching.rps",
@@ -280,6 +283,12 @@ const (
 	FrontendMaxBadBinaries
 	// ValidSearchAttributes is legal indexed keys that can be used in list APIs
 	ValidSearchAttributes
+	// SearchAttributesNumberOfKeysLimit is the limit of number of keys
+	SearchAttributesNumberOfKeysLimit
+	// SearchAttributesSizeOfValueLimit is the size limit of each value
+	SearchAttributesSizeOfValueLimit
+	// SearchAttributesTotalSizeLimit is the size limit of the whole map
+	SearchAttributesTotalSizeLimit
 
 	// key for matching
 
