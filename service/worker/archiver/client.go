@@ -88,7 +88,7 @@ func (c *client) Archive(request *ArchiveRequest) error {
 	if ok, _ := c.rateLimiter.TryConsume(1); !ok {
 		errMsg := "Too many archive requests to archival workflow"
 		c.logger.Error(errMsg)
-		c.metricsClient.IncCounter(metrics.ArchiverClientScope, metrics.CadenceFailures)
+		c.metricsClient.IncCounter(metrics.ArchiverClientScope, metrics.CadenceErrServiceBusyCounter)
 		return errors.New(errMsg)
 	}
 
