@@ -118,6 +118,9 @@ func (c *client) Download(ctx context.Context, bucket string, key blob.Key) (*bl
 	}()
 
 	body, err := ioutil.ReadAll(result.Body)
+	if err != nil {
+		return nil, err
+	}
 
 	tags, err := s3gettags(ctx, c.s3cli, bucket, key.String())
 	if err != nil {
