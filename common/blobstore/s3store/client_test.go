@@ -390,6 +390,7 @@ func (m *mockS3Client) GetBucketLifecycleWithContext(_ aws.Context, input *s3.Ge
 	days := int64(defaultBucketRetentionDays)
 	rules := make([]*s3.Rule, 0, 1)
 	rules = append(rules, &s3.Rule{
+		Status: aws.String("Enabled"),
 		Expiration: &s3.LifecycleExpiration{
 			Days: &days,
 		},

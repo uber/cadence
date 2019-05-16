@@ -25,7 +25,7 @@ import (
 )
 
 type (
-	// Config describes the configuration needed to construct a blobstore client backed by file system
+	// Config describes the configuration needed to construct a blobstore client backed by S3
 	Config struct {
 		Region        string         `yaml:"region"`
 		DefaultBucket BucketConfig   `yaml:"defaultBucket"`
@@ -41,8 +41,8 @@ type (
 // Validate validates config
 func (c *Config) Validate() error {
 	validateBucketConfig := func(b BucketConfig) error {
-		// s3 buckets must be between 3 and 63 charachters long
-		if len(b.Name) < 3 {
+		// S3 buckets must be between 3 and 63 charachters long
+		if len(b.Name) < 3 ||len(b.Name) > 63  {
 			return errors.New("empty or invalid bucket name")
 		}
 		return nil

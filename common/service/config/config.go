@@ -22,10 +22,10 @@ package config
 
 import (
 	"encoding/json"
-	"github.com/uber/cadence/common/blobstore/s3store"
 	"time"
 
 	"github.com/uber/cadence/common/blobstore/filestore"
+	"github.com/uber/cadence/common/blobstore/s3store"
 
 	"github.com/uber-go/tally/m3"
 	"github.com/uber-go/tally/prometheus"
