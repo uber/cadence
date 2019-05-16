@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -721,6 +722,18 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(ctx ctx.Context,
 			AutoResetPoints: executionInfo.AutoResetPoints,
 		},
 	}
+
+	// TODO: we need to consider adding execution time to mutable state
+	// For now execution time will be calculated based on start time and cron schedule/retry policy
+	// each time DescribeWorkflowExecution is called.
+	backoff := time.Duration(0)
+	if executionInfo.HasRetryPolicy && (executionInfo.Attempt > 0) {
+		backoff = time.Duration(float64(executionInfo.InitialInterval)*math.Pow(executionInfo.BackoffCoefficient, float64(executionInfo.Attempt-1))) * time.Second
+	} else if len(executionInfo.CronSchedule) != 0 {
+		backoff = cron.GetBackoffForNextSchedule(executionInfo.CronSchedule, executionInfo.StartTimestamp)
+	}
+	result.WorkflowExecutionInfo.ExecutionTime = common.Int64Ptr(result.WorkflowExecutionInfo.GetStartTime() + backoff.Nanoseconds())
+
 	if executionInfo.ParentRunID != "" {
 		result.WorkflowExecutionInfo.ParentExecution = &workflow.WorkflowExecution{
 			WorkflowId: common.StringPtr(executionInfo.ParentWorkflowID),
@@ -2102,45 +2115,55 @@ func (e *historyEngineImpl) SignalWorkflowExecution(ctx ctx.Context, signalReque
 		RunId:      request.WorkflowExecution.RunId,
 	}
 
-	return e.updateWorkflowExecution(ctx, domainID, execution, false, true,
-		func(msBuilder mutableState, tBuilder *timerBuilder) ([]persistence.Task, error) {
-			if !msBuilder.IsWorkflowExecutionRunning() {
-				return nil, ErrWorkflowCompleted
-			}
+	return e.updateWorkflowExecutionWithAction(ctx, domainID, execution, func(msBuilder mutableState, tBuilder *timerBuilder) (*updateWorkflowAction, error) {
+		executionInfo := msBuilder.GetExecutionInfo()
+		createDecisionTask := true
+		// Do not create decision task when the workflow is cron and the cron has not been started yet
+		if msBuilder.GetExecutionInfo().CronSchedule != "" && !msBuilder.HasProcessedOrPendingDecisionTask() {
+			createDecisionTask = false
+		}
+		postActions := &updateWorkflowAction{
+			deleteWorkflow: false,
+			createDecision: createDecisionTask,
+			timerTasks:     nil,
+		}
 
-			executionInfo := msBuilder.GetExecutionInfo()
-			maxAllowedSignals := e.config.MaximumSignalsPerExecution(domainEntry.GetInfo().Name)
-			if maxAllowedSignals > 0 && int(executionInfo.SignalCount) >= maxAllowedSignals {
-				e.logger.Info("Execution limit reached for maximum signals", tag.WorkflowSignalCount(executionInfo.SignalCount),
-					tag.WorkflowID(execution.GetWorkflowId()),
-					tag.WorkflowRunID(execution.GetRunId()),
-					tag.WorkflowDomainID(domainID))
-				return nil, ErrSignalsLimitExceeded
-			}
+		if !msBuilder.IsWorkflowExecutionRunning() {
+			return nil, ErrWorkflowCompleted
+		}
 
-			if childWorkflowOnly {
-				parentWorkflowID := executionInfo.ParentWorkflowID
-				parentRunID := executionInfo.ParentRunID
-				if parentExecution.GetWorkflowId() != parentWorkflowID ||
-					parentExecution.GetRunId() != parentRunID {
-					return nil, ErrWorkflowParent
-				}
-			}
+		maxAllowedSignals := e.config.MaximumSignalsPerExecution(domainEntry.GetInfo().Name)
+		if maxAllowedSignals > 0 && int(executionInfo.SignalCount) >= maxAllowedSignals {
+			e.logger.Info("Execution limit reached for maximum signals", tag.WorkflowSignalCount(executionInfo.SignalCount),
+				tag.WorkflowID(execution.GetWorkflowId()),
+				tag.WorkflowRunID(execution.GetRunId()),
+				tag.WorkflowDomainID(domainID))
+			return nil, ErrSignalsLimitExceeded
+		}
 
-			// deduplicate by request id for signal decision
-			if requestID := request.GetRequestId(); requestID != "" {
-				if msBuilder.IsSignalRequested(requestID) {
-					return nil, nil
-				}
-				msBuilder.AddSignalRequested(requestID)
+		if childWorkflowOnly {
+			parentWorkflowID := executionInfo.ParentWorkflowID
+			parentRunID := executionInfo.ParentRunID
+			if parentExecution.GetWorkflowId() != parentWorkflowID ||
+				parentExecution.GetRunId() != parentRunID {
+				return nil, ErrWorkflowParent
 			}
+		}
 
-			if msBuilder.AddWorkflowExecutionSignaled(request.GetSignalName(), request.GetInput(), request.GetIdentity()) == nil {
-				return nil, &workflow.InternalServiceError{Message: "Unable to signal workflow execution."}
+		// deduplicate by request id for signal decision
+		if requestID := request.GetRequestId(); requestID != "" {
+			if msBuilder.IsSignalRequested(requestID) {
+				return postActions, nil
 			}
+			msBuilder.AddSignalRequested(requestID)
+		}
 
-			return nil, nil
-		})
+		if msBuilder.AddWorkflowExecutionSignaled(request.GetSignalName(), request.GetInput(), request.GetIdentity()) == nil {
+			return nil, &workflow.InternalServiceError{Message: "Unable to signal workflow execution."}
+		}
+
+		return postActions, nil
+	})
 }
 
 func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx ctx.Context, signalWithStartRequest *h.SignalWithStartWorkflowExecutionRequest) (
