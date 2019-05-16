@@ -501,23 +501,6 @@ func (e *mutableStateBuilder) DeleteBufferedReplicationTask(firstEventID int64) 
 	e.deleteBufferedReplicationEvent = common.Int64Ptr(firstEventID)
 }
 
-func (e *mutableStateBuilder) CreateReplicationTask(replicationTask []persistence.Task, newRunEventStoreVersion int32, newRunBranchToken []byte) []persistence.Task {
-	if e.replicationState == nil {
-		return replicationTask
-	}
-
-	return append(replicationTask, &persistence.HistoryReplicationTask{
-		FirstEventID:            e.GetLastFirstEventID(),
-		NextEventID:             e.GetNextEventID(),
-		Version:                 e.replicationState.CurrentVersion,
-		LastReplicationInfo:     e.replicationState.LastReplicationInfo,
-		EventStoreVersion:       e.GetEventStoreVersion(),
-		BranchToken:             e.GetCurrentBranch(),
-		NewRunEventStoreVersion: newRunEventStoreVersion,
-		NewRunBranchToken:       newRunBranchToken,
-	})
-}
-
 func (e *mutableStateBuilder) checkAndClearTimerFiredEvent(timerID string) *workflow.HistoryEvent {
 	var timerEvent *workflow.HistoryEvent
 	e.bufferedEvents, timerEvent = checkAndClearTimerFiredEvent(e.bufferedEvents, timerID)
@@ -1472,6 +1455,10 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent() *decisionInfo {
 		return nil
 	}
 
+	// set workflow state to running
+	// since decision is scheduled
+	e.executionInfo.State = persistence.WorkflowStateRunning
+
 	// Tasklist and decision timeout should already be set from workflow execution started event
 	taskList := e.executionInfo.TaskList
 	if e.IsStickyTaskListEnabled() {
@@ -1599,6 +1586,15 @@ func (e *mutableStateBuilder) ReplicateDecisionTaskStartedEvent(di *decisionInfo
 	// does not have to deal with transient decision case.
 	if di == nil {
 		di, _ = e.GetPendingDecision(scheduleID)
+		// setting decision attempt to 0 for decision task replication
+		// this mainly handles transient decision completion
+		// for transient decision, active side will write 2 batch in a "transaction"
+		// 1. decision task scheduled & decision task started
+		// 2. decision task completed & other events
+		// since we need to treat each individual event batch as one transaction
+		// certain "magic" needs to be done, i.e. setting attempt to 0 so
+		// if first batch is replicated, but not the second one, decision can be correctly timed out
+		di.Attempt = 0
 	}
 
 	e.executionInfo.State = persistence.WorkflowStateRunning
@@ -2827,6 +2823,8 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(firs
 		DecisionTimeoutValue:    newExecutionInfo.DecisionTimeoutValue,
 		ExecutionContext:        nil,
 		LastEventTaskID:         newExecutionInfo.LastEventTaskID,
+		State:                   newExecutionInfo.State,
+		CloseStatus:             newExecutionInfo.CloseStatus,
 		NextEventID:             newStateBuilder.GetNextEventID(),
 		LastProcessedEvent:      common.EmptyEventID,
 		CreateWorkflowMode:      persistence.CreateWorkflowModeContinueAsNew,
