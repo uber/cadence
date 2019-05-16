@@ -64,6 +64,7 @@ func (s *ConfigSuite) TestValidate() {
 		},
 		{
 			config: &Config{
+				Region: "eu-west-1",
 				DefaultBucket: BucketConfig{
 					Name: "test-default-bucket-name",
 				},
@@ -80,6 +81,7 @@ func (s *ConfigSuite) TestValidate() {
 		},
 		{
 			config: &Config{
+				Region: "eu-west-1",
 				DefaultBucket: BucketConfig{
 					Name: "test-default-bucket-name",
 				},
@@ -88,6 +90,7 @@ func (s *ConfigSuite) TestValidate() {
 		},
 		{
 			config: &Config{
+				Region: "eu-west-1",
 				DefaultBucket: BucketConfig{
 					Name: "test-default-bucket-name",
 				},
@@ -99,6 +102,7 @@ func (s *ConfigSuite) TestValidate() {
 		},
 		{
 			config: &Config{
+				Region: "eu-west-1",
 				DefaultBucket: BucketConfig{
 					Name: "test-default-bucket-name",
 				},
