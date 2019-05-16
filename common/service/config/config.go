@@ -22,6 +22,7 @@ package config
 
 import (
 	"encoding/json"
+	"github.com/uber/cadence/common/blobstore/s3store"
 	"time"
 
 	"github.com/uber/cadence/common/blobstore/filestore"
@@ -318,7 +319,9 @@ type (
 		// DefaultBucket is the default bucket used for archival in case domain does not specify override
 		DefaultBucket string `yaml:"defaultBucket"`
 		// Filestore the configuration for file based blobstore
-		Filestore filestore.Config `yaml:"filestore"`
+		Filestore *filestore.Config `yaml:"filestore"`
+		// S3store the configuration for amazon s3 based blobstore
+		S3store *s3store.Config `yaml:"s3store"`
 	}
 
 	// PublicClient is config for connecting to cadence frontend
