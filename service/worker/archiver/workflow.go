@@ -26,11 +26,13 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"go.uber.org/cadence/workflow"
+	"time"
 )
 
 type dynamicConfigResult struct {
 	ArchiverConcurrency   int
 	ArchivalsPerIteration int
+	TimelimitPerIteration time.Duration
 }
 
 func archivalWorkflow(ctx workflow.Context, carryover []ArchiveRequest) error {
@@ -62,9 +64,15 @@ func archivalWorkflowHelper(
 	_ = workflow.SideEffect(
 		ctx,
 		func(ctx workflow.Context) interface{} {
+			timeLimit := config.TimeLimitPerArchivalIteration()
+			maxTimeLimit := MaxArchivalIterationTimeout()
+			if timeLimit > maxTimeLimit {
+				timeLimit = maxTimeLimit
+			}
 			return dynamicConfigResult{
 				ArchiverConcurrency:   config.ArchiverConcurrency(),
 				ArchivalsPerIteration: config.ArchivalsPerIteration(),
+				TimelimitPerIteration: timeLimit,
 			}
 		}).Get(&dcResult)
 	requestCh := workflow.NewBufferedChannel(ctx, dcResult.ArchivalsPerIteration)
@@ -75,7 +83,7 @@ func archivalWorkflowHelper(
 	archiver.Start()
 	signalCh := workflow.GetSignalChannel(ctx, signalName)
 	if pump == nil {
-		pump = NewPump(ctx, logger, metricsClient, carryover, workflowStartToCloseTimeout/2, dcResult.ArchivalsPerIteration, requestCh, signalCh)
+		pump = NewPump(ctx, logger, metricsClient, carryover, dcResult.TimelimitPerIteration, dcResult.ArchivalsPerIteration, requestCh, signalCh)
 	}
 	pumpResult := pump.Run()
 	metricsClient.AddCounter(metrics.ArchiverArchivalWorkflowScope, metrics.ArchiverNumPumpedRequestsCount, int64(len(pumpResult.PumpedHashes)))
