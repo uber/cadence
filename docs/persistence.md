@@ -1,6 +1,6 @@
 # Overview
 Cadence has a well defined API interface at the persistence layer. Any database that supports multi-row transactions on
-a single shard or partition can be used as persistence for cadence. This includes cassandra, dynamoDB, auroraDB, MySQL,
+a single shard or partition can be made to work with cadence. This includes cassandra, dynamoDB, auroraDB, MySQL,
 Postgres and may others. There are currently two supported database implementations at the persistence layer - 
 cassandra and MySQL. This doc shows how to run cadence with cassandra and mysql. It also describes the steps involved
 in adding support for a new database at the persistence layer.
