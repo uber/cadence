@@ -21,13 +21,10 @@
 package config
 
 import (
-	"net/http"
-	"strings"
 	"time"
 
 	"github.com/cactus/go-statsd-client/statsd"
 	prom "github.com/m3db/prometheus_client_golang/prometheus"
-	"github.com/m3db/prometheus_client_golang/prometheus/promhttp"
 	"github.com/uber-go/tally"
 	"github.com/uber-go/tally/prometheus"
 	tallystatsdreporter "github.com/uber-go/tally/statsd"
@@ -36,31 +33,32 @@ import (
 	statsdreporter "github.com/uber/cadence/common/metrics/tally/statsd"
 )
 
-/*
-// N.B - if we ever need a sanitizer these can be used to create M3 and prom
-// compatible metrics. Keeping this around for emergencies, but ideally we
-// ensure our base metrics are emitted correctly.
-// tally sanitizer options that satisfy both Prometheus and M3 restrictions
+// tally sanitizer options that satisfy both Prometheus and M3 restrictions.
+// This will rename metrics at the tally emission level, so metrics name we
+// use maybe different from what gets emitted. In the current implementation
+// it will replace - and . with _
+// We should still ensure that the base metrics are prometheus compatible,
+// but this is necessary as the same prom client initialization is used by
+// our system workflows.
 var (
-	_safeCharacters = []rune{'_'}
+	safeCharacters = []rune{'_'}
 
-	_sanitizeOptions = tally.SanitizeOptions{
+	sanitizeOptions = tally.SanitizeOptions{
 		NameCharacters: tally.ValidCharacters{
 			Ranges:     tally.AlphanumericRange,
-			Characters: _safeCharacters,
+			Characters: safeCharacters,
 		},
 		KeyCharacters: tally.ValidCharacters{
 			Ranges:     tally.AlphanumericRange,
-			Characters: _safeCharacters,
+			Characters: safeCharacters,
 		},
 		ValueCharacters: tally.ValidCharacters{
 			Ranges:     tally.AlphanumericRange,
-			Characters: _safeCharacters,
+			Characters: safeCharacters,
 		},
 		ReplacementCharacter: tally.DefaultReplacementCharacter,
 	}
 )
-*/
 
 // NewScope builds a new tally scope
 // for this metrics configuration
@@ -123,9 +121,9 @@ func (c *Metrics) newStatsdScope(logger log.Logger) tally.Scope {
 // newPrometheusScope returns a new prometheus scope with
 // a default reporting interval of a second
 func (c *Metrics) newPrometheusScope(logger log.Logger) tally.Scope {
-	reporter, err := NewPrometheusReporter(
-		c.Prometheus,
+	reporter, err := c.Prometheus.NewReporter(
 		prometheus.ConfigurationOptions{
+			Registry: prom.NewRegistry(),
 			OnError: func(err error) {
 				logger.Warn("error in prometheus reporter", tag.Error(err))
 			},
@@ -135,69 +133,11 @@ func (c *Metrics) newPrometheusScope(logger log.Logger) tally.Scope {
 		logger.Fatal("error creating prometheus reporter", tag.Error(err))
 	}
 	scopeOpts := tally.ScopeOptions{
-		Tags:           c.Tags,
-		CachedReporter: reporter,
-		Separator:      prometheus.DefaultSeparator,
+		Tags:            c.Tags,
+		CachedReporter:  reporter,
+		Separator:       prometheus.DefaultSeparator,
+		SanitizeOptions: &sanitizeOptions,
 	}
 	scope, _ := tally.NewRootScope(scopeOpts, time.Second)
 	return scope
-}
-
-// NewPrometheusReporter - creates a prometheus reporter
-// N.B - copy of the NewReporter method in tally - https://github.com/uber-go/tally/blob/master/prometheus/config.go#L77
-// as the above method does not allow setting a separate registry per root
-// which is necessary when we are running multiple roles within a same process
-func NewPrometheusReporter(
-	config *prometheus.Configuration,
-	configOpts prometheus.ConfigurationOptions,
-) (prometheus.Reporter, error) {
-	var opts prometheus.Options
-	opts.OnRegisterError = configOpts.OnError
-
-	switch config.TimerType {
-	case "summary":
-		opts.DefaultTimerType = prometheus.SummaryTimerType
-	case "histogram":
-		opts.DefaultTimerType = prometheus.HistogramTimerType
-	}
-
-	if len(config.DefaultHistogramBuckets) > 0 {
-		var values []float64
-		for _, value := range config.DefaultHistogramBuckets {
-			values = append(values, value.Upper)
-		}
-		opts.DefaultHistogramBuckets = values
-	}
-
-	if len(config.DefaultSummaryObjectives) > 0 {
-		values := make(map[float64]float64)
-		for _, value := range config.DefaultSummaryObjectives {
-			values[value.Percentile] = value.AllowedError
-		}
-		opts.DefaultSummaryObjectives = values
-	}
-
-	registry := prom.NewRegistry()
-	opts.Registerer = registry
-
-	reporter := prometheus.NewReporter(opts)
-
-	path := "/metrics"
-	if handlerPath := strings.TrimSpace(config.HandlerPath); handlerPath != "" {
-		path = handlerPath
-	}
-
-	if addr := strings.TrimSpace(config.ListenAddress); addr == "" {
-		http.Handle(path, promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
-	} else {
-		mux := http.NewServeMux()
-		mux.Handle(path, promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
-		go func() {
-			if err := http.ListenAndServe(addr, mux); err != nil {
-				configOpts.OnError(err)
-			}
-		}()
-	}
-
-	return reporter, nil
 }
