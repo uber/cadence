@@ -47,9 +47,6 @@ const (
 	defaultBucketOwner         = "default-bucket-owner"
 	defaultBucketRetentionDays = 10
 	customBucketNamePrefix     = "default-bucket-name-custom"
-	customBucketOwner          = "custom-bucket-owner"
-	customBucketRetentionDays  = 100
-	numberOfCustomBuckets      = 5
 )
 
 type ClientSuite struct {
@@ -66,7 +63,6 @@ func (s *ClientSuite) SetupTest() {
 }
 
 func (s *ClientSuite) TestUploadDownload_Success() {
-
 	client := s.constructClient()
 	b := blob.NewBlob([]byte("body version 1"), map[string]string{})
 	key, err := blob.NewKeyFromString("blob.blob")
@@ -95,21 +91,6 @@ func (s *ClientSuite) TestUpload_Fail_BucketNotExists() {
 	s.Equal(blobstore.ErrBucketNotExists, client.Upload(context.Background(), "bucket-not-exists", key, b))
 }
 
-/*
-Not sure how an error would fail
-func (s *ClientSuite) TestUpload_Fail_ErrorOnWrite() {
-
-	key, err := blob.NewKeyFromString("blob.blob")
-	s.NoError(err)
-	//	s.NoError(mkdirAll(path.Join(dir, defaultBucketName, key.String(), "foo")))
-	client := s.constructClient()
-
-	b := blob.NewBlob([]byte("blob body"), map[string]string{"tagKey": "tagValue"})
-	s.Equal(ErrWriteFile, client.Upload(context.Background(), defaultBucketName, key, b))
-}
-
-*/
-
 func (s *ClientSuite) TestDownload_Fail_BucketNotExists() {
 	client := s.constructClient()
 
@@ -130,22 +111,6 @@ func (s *ClientSuite) TestDownload_Fail_BlobNotExists() {
 	s.Nil(b)
 }
 
-/*
-There is no invalid blob format
-func (s *ClientSuite) TestDownload_Fail_BlobFormatInvalid() {
-
-	client := s.constructClient()
-	key, err := blob.NewKeyFromString("blob.blob")
-	s.NoError(err)
-
-	//	s.NoError(writeFile(filepath.Join(dir, defaultBucketName, key.String()), []byte("invalid")))
-
-	b, err := client.Download(context.Background(), defaultBucketName, key)
-	s.Equal(blobstore.ErrBlobDeserialization, err)
-	s.Nil(b)
-}
-*/
-
 func (s *ClientSuite) TestUploadDownload_Success_CustomBucket() {
 
 	client := s.constructClient()
@@ -165,8 +130,8 @@ func (s *ClientSuite) TestExists_Fail_BucketNotExists() {
 
 	key, err := blob.NewKeyFromString("blob.blob")
 	s.NoError(err)
-	exists, err := client.Exists(context.Background(), "bucket-not-exists", key)
-	s.Equal(blobstore.ErrBucketNotExists, err)
+	exists, err := client.Exists(context.Background(), "bucket1-not-exists", key)
+	s.NoError(err)
 	s.False(exists)
 }
 
@@ -203,7 +168,7 @@ func (s *ClientSuite) TestDelete_Success() {
 	s.NoError(err)
 	deleted, err := client.Delete(context.Background(), defaultBucketName, key)
 	s.NoError(err)
-	s.False(deleted)
+	s.True(deleted)
 
 	b := blob.NewBlob([]byte("body"), map[string]string{})
 	s.NoError(client.Upload(context.Background(), defaultBucketName, key, b))
@@ -250,27 +215,6 @@ func (s *ClientSuite) TestBucketMetadata_Fail_BucketNotExists() {
 	s.Nil(metadata)
 }
 
-/*
-
-Note: bucket metadata always exists as long as the bucket exists and is in the correct format
-func (s *ClientSuite) TestBucketMetadata_Fail_FileNotExistsError() {
-	client := s.constructClient()
-	//	s.NoError(os.Remove(bucketItemPath(dir, defaultBucketName, metadataFilename)))
-
-	metadata, err := client.BucketMetadata(context.Background(), bucketNoMetadata)
-	s.Equal(ErrReadFile, err)
-	s.Nil(metadata)
-}
-func (s *ClientSuite) TestBucketMetadata_Fail_InvalidFileFormat() {
-
-	client := s.constructClient()
-
-	metadata, err := client.BucketMetadata(context.Background(), bucketInvalidMetadata)
-	s.Equal(ErrBucketConfigDeserialization, err)
-	s.Nil(metadata)
-}
-*/
-
 func (s *ClientSuite) TestBucketMetadata_Success() {
 	client := s.constructClient()
 
@@ -300,31 +244,26 @@ type mockS3Client struct {
 }
 
 func (m *mockS3Client) HeadBucketWithContext(_ aws.Context, input *s3.HeadBucketInput, _ ...request.Option) (*s3.HeadBucketOutput, error) {
-
 	if !strings.HasPrefix(*input.Bucket, defaultBucketName) {
 		return nil, awserr.New(s3.ErrCodeNoSuchBucket, "", nil)
 	}
 
 	return &s3.HeadBucketOutput{}, nil
-
 }
 
 func (m *mockS3Client) DeleteObjectWithContext(_ aws.Context, input *s3.DeleteObjectInput, _ ...request.Option) (*s3.DeleteObjectOutput, error) {
-
 	if !strings.HasPrefix(*input.Bucket, defaultBucketName) {
 		return nil, awserr.New(s3.ErrCodeNoSuchBucket, "", nil)
 	}
 
 	c := m.fs[*input.Bucket+*input.Key]
 	if c == "" {
-		return nil, awserr.New(s3.ErrCodeNoSuchKey, "", nil)
-
+		return &s3.DeleteObjectOutput{}, nil
 	}
 	delete(m.fs, *input.Bucket+*input.Key)
 	return &s3.DeleteObjectOutput{}, nil
 }
 func (m *mockS3Client) ListObjectsV2WithContext(_ aws.Context, input *s3.ListObjectsV2Input, _ ...request.Option) (*s3.ListObjectsV2Output, error) {
-
 	if !strings.HasPrefix(*input.Bucket, defaultBucketName) {
 		return nil, awserr.New(s3.ErrCodeNoSuchBucket, "", nil)
 	}
@@ -352,7 +291,6 @@ func (m *mockS3Client) ListObjectsV2WithContext(_ aws.Context, input *s3.ListObj
 
 func (m *mockS3Client) GetObjectTaggingWithContext(_ aws.Context, input *s3.GetObjectTaggingInput, _ ...request.Option) (*s3.GetObjectTaggingOutput, error) {
 	t := m.tags[*input.Bucket+*input.Key]
-
 	ql, _ := url.ParseQuery(t)
 
 	tags := make([]*s3.Tag, 0, len(ql))
@@ -371,7 +309,6 @@ func (m *mockS3Client) GetObjectTaggingWithContext(_ aws.Context, input *s3.GetO
 }
 
 func (m *mockS3Client) GetBucketAclWithContext(_ aws.Context, input *s3.GetBucketAclInput, _ ...request.Option) (*s3.GetBucketAclOutput, error) {
-
 	if !strings.HasPrefix(*input.Bucket, defaultBucketName) {
 		return nil, awserr.New(s3.ErrCodeNoSuchBucket, "", nil)
 	}
@@ -382,27 +319,25 @@ func (m *mockS3Client) GetBucketAclWithContext(_ aws.Context, input *s3.GetBucke
 	}, nil
 }
 
-func (m *mockS3Client) GetBucketLifecycleWithContext(_ aws.Context, input *s3.GetBucketLifecycleInput, _ ...request.Option) (*s3.GetBucketLifecycleOutput, error) {
-
+func (m *mockS3Client) GetBucketLifecycleConfigurationWithContext(_ aws.Context, input *s3.GetBucketLifecycleConfigurationInput, _ ...request.Option) (*s3.GetBucketLifecycleConfigurationOutput, error) {
 	if !strings.HasPrefix(*input.Bucket, defaultBucketName) {
 		return nil, awserr.New(s3.ErrCodeNoSuchBucket, "", nil)
 	}
 
 	days := int64(defaultBucketRetentionDays)
-	rules := make([]*s3.Rule, 0, 1)
-	rules = append(rules, &s3.Rule{
+	rules := make([]*s3.LifecycleRule, 0, 1)
+	rules = append(rules, &s3.LifecycleRule{
 		Status: aws.String("Enabled"),
 		Expiration: &s3.LifecycleExpiration{
 			Days: &days,
 		},
 	})
 
-	return &s3.GetBucketLifecycleOutput{
+	return &s3.GetBucketLifecycleConfigurationOutput{
 		Rules: rules,
 	}, nil
 }
 func (m *mockS3Client) PutObjectWithContext(_ aws.Context, input *s3.PutObjectInput, _ ...request.Option) (*s3.PutObjectOutput, error) {
-
 	if !strings.HasPrefix(*input.Bucket, defaultBucketName) {
 		return nil, awserr.New(s3.ErrCodeNoSuchBucket, "", nil)
 	}
@@ -417,21 +352,15 @@ func (m *mockS3Client) PutObjectWithContext(_ aws.Context, input *s3.PutObjectIn
 }
 
 func (m *mockS3Client) HeadObjectWithContext(_ aws.Context, input *s3.HeadObjectInput, _ ...request.Option) (*s3.HeadObjectOutput, error) {
-
-	if !strings.HasPrefix(*input.Bucket, defaultBucketName) {
-		return nil, awserr.New(s3.ErrCodeNoSuchBucket, "", nil)
-	}
-
 	c := m.fs[*input.Bucket+*input.Key]
 	if c == "" {
-		return nil, awserr.New(s3.ErrCodeNoSuchKey, "", nil)
+		return nil, awserr.New("NotFound", "", nil)
 
 	}
 	return &s3.HeadObjectOutput{}, nil
 }
 
 func (m *mockS3Client) GetObjectWithContext(_ aws.Context, input *s3.GetObjectInput, _ ...request.Option) (*s3.GetObjectOutput, error) {
-
 	if *input.Bucket == *aws.String(bucketInvalidMetadata) {
 		return &s3.GetObjectOutput{
 			Body: ioutil.NopCloser(bytes.NewReader([]byte(
@@ -457,7 +386,6 @@ func (m *mockS3Client) GetObjectWithContext(_ aws.Context, input *s3.GetObjectIn
 }
 
 func NewMockClient() (blobstore.Client, error) {
-
 	return &client{
 		s3cli: &mockS3Client{
 			fs:   make(map[string]string),
