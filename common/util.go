@@ -303,6 +303,7 @@ func CreateMatchingPollForDecisionTaskResponse(historyResponse *h.RecordDecision
 		WorkflowExecutionTaskList: historyResponse.WorkflowExecutionTaskList,
 		EventStoreVersion:         historyResponse.EventStoreVersion,
 		BranchToken:               historyResponse.BranchToken,
+		//ScheduledTimestamp:        historyResponse.DecisionInfo.
 	}
 	if historyResponse.GetPreviousStartedEventId() != EmptyEventID {
 		matchingResp.PreviousStartedEventId = historyResponse.PreviousStartedEventId
