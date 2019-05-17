@@ -260,6 +260,7 @@ type (
 		ClientFeatureVersion         string
 		ClientImpl                   string
 		AutoResetPoints              *workflow.ResetPoints
+		VersionHistories             *workflow.VersionHistories
 		// for retry
 		Attempt            int32
 		HasRetryPolicy     bool
@@ -537,6 +538,23 @@ type (
 		LastEventID int64
 	}
 
+	// VersionHistoryItem contains the event id and the associated version
+	VersionHistoryItem struct {
+		EventID int64
+		Version int64
+	}
+
+	// VersionHistory provides operations on version history
+	VersionHistory struct {
+		BranchToken []byte
+		History     []VersionHistoryItem
+	}
+
+	// VersionHistories contains a set of VersionHistory
+	VersionHistories struct {
+		Histories []VersionHistory
+	}
+
 	// WorkflowMutableState indicates workflow related state
 	WorkflowMutableState struct {
 		ActivityInfos            map[int64]*ActivityInfo
@@ -700,6 +718,7 @@ type (
 		MaximumAttempts             int32
 		NonRetriableErrors          []string
 		PreviousAutoResetPoints     *workflow.ResetPoints
+		VersionHistories            *workflow.VersionHistories
 		// 2 means using eventsV2, empty/0/1 means using events(V1)
 		EventStoreVersion int32
 		// for eventsV2: branchToken from historyPersistence
@@ -786,6 +805,7 @@ type (
 		InsertSignalInfos         []*SignalInfo
 		InsertSignalRequestedIDs  []string
 		Encoding                  common.EncodingType // optional binary encoding type
+		VersionHistories          *workflow.VersionHistories
 	}
 
 	// ResetWorkflowExecutionRequest is used to reset workflow execution state for current run and create new run
@@ -809,6 +829,7 @@ type (
 		CurrReplicationTasks []Task
 		CurrTransferTasks    []Task
 		CurrTimerTasks       []Task
+		VersionHistories     *workflow.VersionHistories
 
 		// For new mutable state
 		InsertExecutionInfo       *WorkflowExecutionInfo

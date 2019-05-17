@@ -1,0 +1,1 @@
+ALTER TYPE workflow_execution ADD version_histories blob;

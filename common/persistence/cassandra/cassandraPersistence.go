@@ -153,6 +153,8 @@ const (
 		`client_impl: ?, ` +
 		`auto_reset_points: ?, ` +
 		`auto_reset_points_encoding: ?, ` +
+		`version_histories: ?, ` +
+		`version_histories_encoding: ?, ` +
 		`attempt: ?, ` +
 		`has_retry_policy: ?, ` +
 		`init_interval: ?, ` +
@@ -1388,6 +1390,8 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Int
 			"", // client_impl
 			request.PreviousAutoResetPoints.Data,
 			request.PreviousAutoResetPoints.GetEncoding(),
+			request.VersionHistories.Data,
+			request.VersionHistories.GetEncoding(),
 			request.Attempt,
 			request.HasRetryPolicy,
 			request.InitialInterval,
@@ -1457,6 +1461,8 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Int
 			"", // client_impl
 			request.PreviousAutoResetPoints.Data,
 			request.PreviousAutoResetPoints.GetEncoding(),
+			request.VersionHistories.Data,
+			request.VersionHistories.GetEncoding(),
 			request.Attempt,
 			request.HasRetryPolicy,
 			request.InitialInterval,
@@ -1523,7 +1529,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecut
 		info := createActivityInfo(request.DomainID, value)
 		activityInfos[key] = info
 	}
-	state.ActivitInfos = activityInfos
+	state.ActivityInfos = activityInfos
 
 	timerInfos := make(map[string]*p.TimerInfo)
 	tMap := result["timer_map"].(map[string]map[string]interface{})
@@ -1647,6 +1653,8 @@ func (d *cassandraPersistence) updateMutableState(batch *gocql.Batch, executionI
 			executionInfo.ClientImpl,
 			executionInfo.AutoResetPoints.Data,
 			executionInfo.AutoResetPoints.GetEncoding(),
+			executionInfo.VersionHistories.Data,
+			executionInfo.VersionHistories.GetEncoding(),
 			executionInfo.Attempt,
 			executionInfo.HasRetryPolicy,
 			executionInfo.InitialInterval,
@@ -1716,6 +1724,8 @@ func (d *cassandraPersistence) updateMutableState(batch *gocql.Batch, executionI
 			executionInfo.ClientImpl,
 			executionInfo.AutoResetPoints.Data,
 			executionInfo.AutoResetPoints.GetEncoding(),
+			executionInfo.VersionHistories.Data,
+			executionInfo.VersionHistories.GetEncoding(),
 			executionInfo.Attempt,
 			executionInfo.HasRetryPolicy,
 			executionInfo.InitialInterval,
@@ -3697,6 +3707,8 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *p.InternalWorkf
 	var completionEventEncoding common.EncodingType
 	var autoResetPoints []byte
 	var autoResetPointsEncoding common.EncodingType
+	var versionHistories []byte
+	var versionHistoriesEncoding common.EncodingType
 
 	for k, v := range result {
 		switch k {
@@ -3814,10 +3826,15 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *p.InternalWorkf
 			info.CronSchedule = v.(string)
 		case "expiration_seconds":
 			info.ExpirationSeconds = int32(v.(int))
+		case "version_histories":
+			versionHistories = v.([]byte)
+		case "version_histories_encoding":
+			versionHistoriesEncoding = common.EncodingType(v.(string))
 		}
 	}
 	info.CompletionEvent = p.NewDataBlob(completionEventData, completionEventEncoding)
 	info.AutoResetPoints = p.NewDataBlob(autoResetPoints, autoResetPointsEncoding)
+	info.VersionHistories = p.NewDataBlob(versionHistories, versionHistoriesEncoding)
 	return info
 }
 

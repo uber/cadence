@@ -188,6 +188,7 @@ type (
 		MaximumAttempts             int32
 		NonRetriableErrors          []string
 		PreviousAutoResetPoints     *DataBlob
+		VersionHistories            *DataBlob
 		// 2 means using eventsV2, empty/0/1 means using events(V1)
 		EventStoreVersion int32
 		// for eventsV2: branchToken from historyPersistence
@@ -238,6 +239,7 @@ type (
 		ClientFeatureVersion         string
 		ClientImpl                   string
 		AutoResetPoints              *DataBlob
+		VersionHistories             *DataBlob
 		// for retry
 		Attempt            int32
 		HasRetryPolicy     bool
@@ -256,7 +258,7 @@ type (
 
 	// InternalWorkflowMutableState indicates workflow related state for Persistence Interface
 	InternalWorkflowMutableState struct {
-		ActivitInfos             map[int64]*InternalActivityInfo
+		ActivityInfos            map[int64]*InternalActivityInfo
 		TimerInfos               map[string]*TimerInfo
 		ChildExecutionInfos      map[int64]*InternalChildExecutionInfo
 		RequestCancelInfos       map[int64]*RequestCancelInfo
@@ -266,6 +268,7 @@ type (
 		ReplicationState         *ReplicationState
 		BufferedEvents           []*DataBlob
 		BufferedReplicationTasks map[int64]*InternalBufferedReplicationTask
+		//VersionHistories         *DataBlob
 	}
 
 	// InternalActivityInfo details  for Persistence Interface

@@ -22,6 +22,7 @@ package persistencetests
 
 import (
 	"os"
+	"runtime/debug"
 	"testing"
 	"time"
 
@@ -43,8 +44,17 @@ type (
 	}
 )
 
+func failOnPanic(t *testing.T) {
+	r := recover()
+	if r != nil {
+		t.Errorf("test panicked: %v %s", r, debug.Stack())
+		t.FailNow()
+	}
+}
+
 // SetupSuite implementation
 func (s *ExecutionManagerSuiteForEventsV2) SetupSuite() {
+	defer failOnPanic(s.T())
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
@@ -52,11 +62,13 @@ func (s *ExecutionManagerSuiteForEventsV2) SetupSuite() {
 
 // TearDownSuite implementation
 func (s *ExecutionManagerSuiteForEventsV2) TearDownSuite() {
+	defer failOnPanic(s.T())
 	s.TearDownWorkflowStore()
 }
 
 // SetupTest implementation
 func (s *ExecutionManagerSuiteForEventsV2) SetupTest() {
+	defer failOnPanic(s.T())
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 	s.ClearTasks()
@@ -64,10 +76,24 @@ func (s *ExecutionManagerSuiteForEventsV2) SetupTest() {
 
 // TestWorkflowCreation test
 func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
+	defer failOnPanic(s.T())
 	domainID := uuid.New()
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-eventsv2-workflow"),
 		RunId:      common.StringPtr("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+	}
+	versionHistories := &gen.VersionHistories{
+		Histories: []*gen.VersionHistory{
+			{
+				BranchToken: []byte{1},
+				History: []*gen.VersionHistoryItem{
+					{
+						EventID: common.Int64Ptr(1),
+						Version: common.Int64Ptr(0),
+					},
+				},
+			},
+		},
 	}
 
 	_, err0 := s.ExecutionManager.CreateWorkflowExecution(&p.CreateWorkflowExecutionRequest{
@@ -97,6 +123,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 		DecisionStartToCloseTimeout: 1,
 		EventStoreVersion:           p.EventStoreVersionV2,
 		BranchToken:                 []byte("branchToken1"),
+		VersionHistories:            versionHistories,
 	})
 
 	s.NoError(err0)
@@ -107,6 +134,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 	s.NotNil(info0, "Valid Workflow info expected.")
 	s.Equal(int32(p.EventStoreVersionV2), info0.EventStoreVersion)
 	s.Equal([]byte("branchToken1"), info0.BranchToken)
+	s.True(info0.VersionHistories.Equals(versionHistories))
 
 	updatedInfo := copyWorkflowExecutionInfo(info0)
 	updatedInfo.NextEventID = int64(5)
@@ -121,6 +149,8 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 		StartedID:  5,
 	}}
 	updatedInfo.BranchToken = []byte("branchToken2")
+	versionHistories.Histories[0].History[0].EventID = common.Int64Ptr(2)
+	updatedInfo.VersionHistories = versionHistories
 
 	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), nil, nil, nil, timerInfos, nil)
 	s.NoError(err2)
@@ -134,6 +164,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 	s.EqualTimesWithPrecision(currentTime, state.TimerInfos[timerID].ExpiryTime, time.Millisecond*500)
 	s.Equal(int64(2), state.TimerInfos[timerID].TaskID)
 	s.Equal(int64(5), state.TimerInfos[timerID].StartedID)
+	s.True(state.ExecutionInfo.VersionHistories.Equals(versionHistories))
 
 	err2 = s.UpdateWorkflowExecution(updatedInfo, nil, nil, int64(5), nil, nil, nil, nil, []string{timerID})
 	s.NoError(err2)

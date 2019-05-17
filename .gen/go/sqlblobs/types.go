@@ -7300,6 +7300,8 @@ type WorkflowExecutionInfo struct {
 	ClientImpl                   *string                     `json:"clientImpl,omitempty"`
 	AutoResetPoints              []byte                      `json:"autoResetPoints,omitempty"`
 	AutoResetPointsEncoding      *string                     `json:"autoResetPointsEncoding,omitempty"`
+	VersionHistories             []byte                      `json:"versionHistories,omitempty"`
+	VersionHistoriesEncoding     *string                     `json:"versionHistoriesEncoding,omitempty"`
 }
 
 // ToWire translates a WorkflowExecutionInfo struct into a Thrift-level intermediate
@@ -7319,7 +7321,7 @@ type WorkflowExecutionInfo struct {
 //   }
 func (v *WorkflowExecutionInfo) ToWire() (wire.Value, error) {
 	var (
-		fields [54]wire.Field
+		fields [56]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -7755,6 +7757,22 @@ func (v *WorkflowExecutionInfo) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 116, Value: w}
+		i++
+	}
+	if v.VersionHistories != nil {
+		w, err = wire.NewValueBinary(v.VersionHistories), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 118, Value: w}
+		i++
+	}
+	if v.VersionHistoriesEncoding != nil {
+		w, err = wire.NewValueString(*(v.VersionHistoriesEncoding)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 120, Value: w}
 		i++
 	}
 
@@ -8307,6 +8325,24 @@ func (v *WorkflowExecutionInfo) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 118:
+			if field.Value.Type() == wire.TBinary {
+				v.VersionHistories, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 120:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.VersionHistoriesEncoding = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -8320,7 +8356,7 @@ func (v *WorkflowExecutionInfo) String() string {
 		return "<nil>"
 	}
 
-	var fields [54]string
+	var fields [56]string
 	i := 0
 	if v.ParentDomainID != nil {
 		fields[i] = fmt.Sprintf("ParentDomainID: %v", v.ParentDomainID)
@@ -8538,6 +8574,14 @@ func (v *WorkflowExecutionInfo) String() string {
 		fields[i] = fmt.Sprintf("AutoResetPointsEncoding: %v", *(v.AutoResetPointsEncoding))
 		i++
 	}
+	if v.VersionHistories != nil {
+		fields[i] = fmt.Sprintf("VersionHistories: %v", v.VersionHistories)
+		i++
+	}
+	if v.VersionHistoriesEncoding != nil {
+		fields[i] = fmt.Sprintf("VersionHistoriesEncoding: %v", *(v.VersionHistoriesEncoding))
+		i++
+	}
 
 	return fmt.Sprintf("WorkflowExecutionInfo{%v}", strings.Join(fields[:i], ", "))
 }
@@ -8714,6 +8758,12 @@ func (v *WorkflowExecutionInfo) Equals(rhs *WorkflowExecutionInfo) bool {
 	if !_String_EqualsPtr(v.AutoResetPointsEncoding, rhs.AutoResetPointsEncoding) {
 		return false
 	}
+	if !((v.VersionHistories == nil && rhs.VersionHistories == nil) || (v.VersionHistories != nil && rhs.VersionHistories != nil && bytes.Equal(v.VersionHistories, rhs.VersionHistories))) {
+		return false
+	}
+	if !_String_EqualsPtr(v.VersionHistoriesEncoding, rhs.VersionHistoriesEncoding) {
+		return false
+	}
 
 	return true
 }
@@ -8885,6 +8935,12 @@ func (v *WorkflowExecutionInfo) MarshalLogObject(enc zapcore.ObjectEncoder) (err
 	}
 	if v.AutoResetPointsEncoding != nil {
 		enc.AddString("autoResetPointsEncoding", *v.AutoResetPointsEncoding)
+	}
+	if v.VersionHistories != nil {
+		enc.AddString("versionHistories", base64.StdEncoding.EncodeToString(v.VersionHistories))
+	}
+	if v.VersionHistoriesEncoding != nil {
+		enc.AddString("versionHistoriesEncoding", *v.VersionHistoriesEncoding)
 	}
 	return err
 }
@@ -9697,4 +9753,34 @@ func (v *WorkflowExecutionInfo) GetAutoResetPointsEncoding() (o string) {
 // IsSetAutoResetPointsEncoding returns true if AutoResetPointsEncoding is not nil.
 func (v *WorkflowExecutionInfo) IsSetAutoResetPointsEncoding() bool {
 	return v != nil && v.AutoResetPointsEncoding != nil
+}
+
+// GetVersionHistories returns the value of VersionHistories if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionInfo) GetVersionHistories() (o []byte) {
+	if v != nil && v.VersionHistories != nil {
+		return v.VersionHistories
+	}
+
+	return
+}
+
+// IsSetVersionHistories returns true if VersionHistories is not nil.
+func (v *WorkflowExecutionInfo) IsSetVersionHistories() bool {
+	return v != nil && v.VersionHistories != nil
+}
+
+// GetVersionHistoriesEncoding returns the value of VersionHistoriesEncoding if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionInfo) GetVersionHistoriesEncoding() (o string) {
+	if v != nil && v.VersionHistoriesEncoding != nil {
+		return *v.VersionHistoriesEncoding
+	}
+
+	return
+}
+
+// IsSetVersionHistoriesEncoding returns true if VersionHistoriesEncoding is not nil.
+func (v *WorkflowExecutionInfo) IsSetVersionHistoriesEncoding() bool {
+	return v != nil && v.VersionHistoriesEncoding != nil
 }

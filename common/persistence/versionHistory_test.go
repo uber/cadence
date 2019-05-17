@@ -22,6 +22,8 @@ package persistence
 
 import (
 	"github.com/stretchr/testify/suite"
+	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"testing"
 )
 
@@ -37,18 +39,18 @@ func TestVersionHistoryStore(t *testing.T) {
 }
 
 func (s *versionHistoryStoreSuite) TestNewVersionHistory() {
-	items := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 6, version: 4},
+	items := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(0)},
+		{EventID: common.Int64Ptr(6), Version: common.Int64Ptr(4)},
 	}
 
 	history := NewVersionHistory(items)
-	result := history.history
+	result := history.History
 	s.Equal(items, result)
 }
 
 func (s *versionHistoryStoreSuite) TestNewVersionHistory_Panic() {
-	items := []VersionHistoryItem{}
+	items := []*shared.VersionHistoryItem{}
 
 	expectedPanic := func() {
 		NewVersionHistory(items)
@@ -57,323 +59,324 @@ func (s *versionHistoryStoreSuite) TestNewVersionHistory_Panic() {
 }
 
 func (s *versionHistoryStoreSuite) TestUpdateVersionHistory_CreateNewItem() {
-	items := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 6, version: 4},
+	items := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(0)},
+		{EventID: common.Int64Ptr(6), Version: common.Int64Ptr(4)},
 	}
 
 	history := NewVersionHistory(items)
-	err := history.Update(VersionHistoryItem{
-		eventID: 8,
-		version: 5,
+	err := UpdateVersionHistory(history, shared.VersionHistoryItem{
+		EventID: common.Int64Ptr(8),
+		Version: common.Int64Ptr(5),
 	})
 
 	s.NoError(err)
-	s.Equal(len(history.history), len(items)+1)
-	s.Equal(int64(8), history.history[2].eventID)
-	s.Equal(int64(5), history.history[2].version)
+	s.Equal(len(history.History), len(items)+1)
+	s.Equal(int64(8), history.History[2].EventID)
+	s.Equal(int64(5), history.History[2].Version)
 }
 
 func (s *versionHistoryStoreSuite) TestUpdateVersionHistory_UpdateEventID() {
-	items := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 6, version: 4},
+	items := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(0)},
+		{EventID: common.Int64Ptr(6), Version: common.Int64Ptr(4)},
 	}
 
 	history := NewVersionHistory(items)
-	err := history.Update(VersionHistoryItem{
-		eventID: 8,
-		version: 4,
+	err := UpdateVersionHistory(history, shared.VersionHistoryItem{
+		EventID: common.Int64Ptr(8),
+		Version: common.Int64Ptr(4),
 	})
 
 	s.NoError(err)
-	s.Equal(len(history.history), len(items))
-	s.Equal(int64(8), history.history[1].eventID)
-	s.Equal(int64(4), history.history[1].version)
+	s.Equal(len(history.History), len(items))
+	s.Equal(int64(8), history.History[1].EventID)
+	s.Equal(int64(4), history.History[1].Version)
 }
 
 func (s *versionHistoryStoreSuite) TestUpdateVersionHistory_Failed_LowerVersion() {
-	items := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 6, version: 4},
+	items := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(0)},
+		{EventID: common.Int64Ptr(6), Version: common.Int64Ptr(4)},
 	}
 
 	history := NewVersionHistory(items)
-	err := history.Update(VersionHistoryItem{
-		eventID: 8,
-		version: 3,
+	err := UpdateVersionHistory(history, shared.VersionHistoryItem{
+		EventID: common.Int64Ptr(8),
+		Version: common.Int64Ptr(3),
 	})
 
 	s.Error(err)
 }
 
 func (s *versionHistoryStoreSuite) TestUpdateVersionHistory_Failed_EventIDNotIncrease() {
-	items := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 6, version: 4},
+	items := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(0)},
+		{EventID: common.Int64Ptr(6), Version: common.Int64Ptr(4)},
 	}
 
 	history := NewVersionHistory(items)
-	err := history.Update(VersionHistoryItem{
-		eventID: 5,
-		version: 4,
+	err := UpdateVersionHistory(history, shared.VersionHistoryItem{
+		EventID: common.Int64Ptr(5),
+		Version: common.Int64Ptr(4),
 	})
 
 	s.Error(err)
 }
 
 func (s *versionHistoryStoreSuite) TestUpdateVersionHistory_Failed_EventIDMatch_VersionNotMatch() {
-	items := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 6, version: 4},
+	items := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(0)},
+		{EventID: common.Int64Ptr(6), Version: common.Int64Ptr(4)},
 	}
 
 	history := NewVersionHistory(items)
-	err := history.Update(VersionHistoryItem{
-		eventID: 6,
-		version: 7,
+	err := UpdateVersionHistory(history, shared.VersionHistoryItem{
+		EventID: common.Int64Ptr(6),
+		Version: common.Int64Ptr(7),
 	})
 
 	s.Error(err)
 }
 
 func (s *versionHistoryStoreSuite) TestIsAppendable_True() {
-	items := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 6, version: 4},
+	items := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(0)},
+		{EventID: common.Int64Ptr(6), Version: common.Int64Ptr(4)},
 	}
 
 	history := NewVersionHistory(items)
-	appendItem := VersionHistoryItem{
-		eventID: 6,
-		version: 4,
+	appendItem := shared.VersionHistoryItem{
+		EventID: common.Int64Ptr(6),
+		Version: common.Int64Ptr(4),
 	}
 
-	s.True(history.IsAppendable(appendItem))
+	s.True(IsAppendable(history, appendItem))
 }
 
 func (s *versionHistoryStoreSuite) TestIsAppendable_False_VersionNotMatch() {
-	items := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 6, version: 4},
+	items := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(0)},
+		{EventID: common.Int64Ptr(6), Version: common.Int64Ptr(4)},
 	}
 
 	history := NewVersionHistory(items)
-	appendItem := VersionHistoryItem{
-		eventID: 6,
-		version: 7,
+	appendItem := shared.VersionHistoryItem{
+		EventID: common.Int64Ptr(6),
+		Version: common.Int64Ptr(7),
 	}
 
-	s.False(history.IsAppendable(appendItem))
+	s.False(IsAppendable(history, appendItem))
 }
 
 func (s *versionHistoryStoreSuite) TestIsAppendable_False_EventIDNotMatch() {
-	items := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 6, version: 4},
+	items := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(0)},
+		{EventID: common.Int64Ptr(6), Version: common.Int64Ptr(4)},
 	}
 
 	history := NewVersionHistory(items)
-	appendItem := VersionHistoryItem{
-		eventID: 7,
-		version: 4,
+	appendItem := shared.VersionHistoryItem{
+		EventID: common.Int64Ptr(7),
+		Version: common.Int64Ptr(4),
 	}
 
-	s.False(history.IsAppendable(appendItem))
+	s.False(IsAppendable(history, appendItem))
 }
 
 func (s *versionHistoryStoreSuite) TestFindLowestCommonVersionHistoryItem_ReturnLocal() {
-	localItems := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 5, version: 4},
-		{eventID: 7, version: 6},
-		{eventID: 9, version: 10},
+	localItems := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(0)},
+		{EventID: common.Int64Ptr(5), Version: common.Int64Ptr(4)},
+		{EventID: common.Int64Ptr(7), Version: common.Int64Ptr(6)},
+		{EventID: common.Int64Ptr(9), Version: common.Int64Ptr(10)},
 	}
-	remoteItems := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 7, version: 4},
-		{eventID: 8, version: 8},
-		{eventID: 11, version: 12},
+	remoteItems := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(0)},
+		{EventID: common.Int64Ptr(7), Version: common.Int64Ptr(4)},
+		{EventID: common.Int64Ptr(8), Version: common.Int64Ptr(8)},
+		{EventID: common.Int64Ptr(11), Version: common.Int64Ptr(12)},
 	}
 	local := NewVersionHistory(localItems)
 	remote := NewVersionHistory(remoteItems)
-	item, err := local.FindLowestCommonVersionHistoryItem(remote)
+	item, err := FindLowestCommonVersionHistoryItem(local, remote)
 	s.NoError(err)
-	s.Equal(int64(5), item.eventID)
-	s.Equal(int64(4), item.version)
+	s.Equal(int64(5), item.EventID)
+	s.Equal(int64(4), item.Version)
 }
 
 func (s *versionHistoryStoreSuite) TestFindLowestCommonVersionHistoryItem_ReturnRemote() {
-	localItems := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 5, version: 4},
-		{eventID: 7, version: 6},
-		{eventID: 9, version: 10},
+	localItems := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(0)},
+		{EventID: common.Int64Ptr(5), Version: common.Int64Ptr(4)},
+		{EventID: common.Int64Ptr(7), Version: common.Int64Ptr(6)},
+		{EventID: common.Int64Ptr(9), Version: common.Int64Ptr(10)},
 	}
-	remoteItems := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 5, version: 4},
-		{eventID: 6, version: 6},
-		{eventID: 11, version: 12},
+	remoteItems := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(0)},
+		{EventID: common.Int64Ptr(5), Version: common.Int64Ptr(4)},
+		{EventID: common.Int64Ptr(6), Version: common.Int64Ptr(6)},
+		{EventID: common.Int64Ptr(11), Version: common.Int64Ptr(12)},
 	}
 	local := NewVersionHistory(localItems)
 	remote := NewVersionHistory(remoteItems)
-	item, err := local.FindLowestCommonVersionHistoryItem(remote)
+	item, err := FindLowestCommonVersionHistoryItem(local, remote)
 	s.NoError(err)
-	s.Equal(int64(6), item.eventID)
-	s.Equal(int64(6), item.version)
+	s.Equal(int64(6), item.EventID)
+	s.Equal(int64(6), item.Version)
 }
 
 func (s *versionHistoryStoreSuite) TestFindLowestCommonVersionHistoryItem_Error_NoLCA() {
-	localItems := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 5, version: 4},
-		{eventID: 7, version: 6},
-		{eventID: 9, version: 10},
+	localItems := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(0)},
+		{EventID: common.Int64Ptr(5), Version: common.Int64Ptr(4)},
+		{EventID: common.Int64Ptr(7), Version: common.Int64Ptr(6)},
+		{EventID: common.Int64Ptr(9), Version: common.Int64Ptr(10)},
 	}
-	remoteItems := []VersionHistoryItem{
-		{eventID: 3, version: 1},
-		{eventID: 7, version: 2},
-		{eventID: 8, version: 3},
+	remoteItems := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(1)},
+		{EventID: common.Int64Ptr(7), Version: common.Int64Ptr(2)},
+		{EventID: common.Int64Ptr(8), Version: common.Int64Ptr(3)},
 	}
 	local := NewVersionHistory(localItems)
 	remote := NewVersionHistory(remoteItems)
-	_, err := local.FindLowestCommonVersionHistoryItem(remote)
+	_, err := FindLowestCommonVersionHistoryItem(local, remote)
 	s.Error(err)
 }
 
 func (s *versionHistoryStoreSuite) TestFindLowestCommonVersionHistoryItem_Error_InvalidInput() {
-	localItems := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 5, version: 4},
-		{eventID: 7, version: 6},
-		{eventID: 9, version: 10},
+	localItems := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(0)},
+		{EventID: common.Int64Ptr(5), Version: common.Int64Ptr(4)},
+		{EventID: common.Int64Ptr(7), Version: common.Int64Ptr(6)},
+		{EventID: common.Int64Ptr(9), Version: common.Int64Ptr(10)},
 	}
-	remoteItems := []VersionHistoryItem{
-		{eventID: 3, version: 1},
-		{eventID: 7, version: 2},
-		{eventID: 6, version: 3},
+	remoteItems := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(1)},
+		{EventID: common.Int64Ptr(7), Version: common.Int64Ptr(2)},
+		{EventID: common.Int64Ptr(6), Version: common.Int64Ptr(3)},
 	}
 	local := NewVersionHistory(localItems)
 	remote := NewVersionHistory(remoteItems)
-	_, err := local.FindLowestCommonVersionHistoryItem(remote)
+	_, err := FindLowestCommonVersionHistoryItem(local, remote)
 	s.Error(err)
 }
 
 func (s *versionHistoryStoreSuite) TestFindLowestCommonVersionHistoryItem_Error_NilInput() {
-	localItems := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 5, version: 4},
-		{eventID: 7, version: 6},
-		{eventID: 9, version: 10},
+	localItems := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(0)},
+		{EventID: common.Int64Ptr(5), Version: common.Int64Ptr(4)},
+		{EventID: common.Int64Ptr(7), Version: common.Int64Ptr(6)},
+		{EventID: common.Int64Ptr(9), Version: common.Int64Ptr(10)},
 	}
 	local := NewVersionHistory(localItems)
-	_, err := local.FindLowestCommonVersionHistoryItem(VersionHistory{})
+	remote := NewVersionHistory([]*shared.VersionHistoryItem{})
+	_, err := FindLowestCommonVersionHistoryItem(local, remote)
 	s.Error(err)
 }
 
 func (s *versionHistoryStoreSuite) TestNewVersionHistories_Panic() {
-	expectedPanic := func() { NewVersionHistories([]VersionHistory{}) }
+	expectedPanic := func() { NewVersionHistories([]*shared.VersionHistory{}) }
 	s.Panics(expectedPanic)
 }
 
 func (s *versionHistoryStoreSuite) TestNewVersionHistories() {
-	localItems := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 5, version: 4},
-		{eventID: 7, version: 6},
-		{eventID: 9, version: 10},
+	localItems := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(0)},
+		{EventID: common.Int64Ptr(5), Version: common.Int64Ptr(4)},
+		{EventID: common.Int64Ptr(7), Version: common.Int64Ptr(6)},
+		{EventID: common.Int64Ptr(9), Version: common.Int64Ptr(10)},
 	}
 	local := NewVersionHistory(localItems)
-	histories := NewVersionHistories([]VersionHistory{local})
+	histories := NewVersionHistories([]*shared.VersionHistory{&local})
 	s.NotNil(histories)
 }
 
 func (s *versionHistoryStoreSuite) TestFindLowestCommonVersionHistory_UpdateExistingHistory() {
-	localItems1 := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 5, version: 4},
-		{eventID: 7, version: 6},
-		{eventID: 9, version: 10},
+	localItems1 := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(0)},
+		{EventID: common.Int64Ptr(5), Version: common.Int64Ptr(4)},
+		{EventID: common.Int64Ptr(7), Version: common.Int64Ptr(6)},
+		{EventID: common.Int64Ptr(9), Version: common.Int64Ptr(10)},
 	}
-	localItems2 := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 8, version: 4},
-		{eventID: 9, version: 6},
+	localItems2 := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(0)},
+		{EventID: common.Int64Ptr(8), Version: common.Int64Ptr(4)},
+		{EventID: common.Int64Ptr(9), Version: common.Int64Ptr(6)},
 	}
-	remoteItems := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 8, version: 4},
-		{eventID: 10, version: 6},
-		{eventID: 11, version: 12},
+	remoteItems := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(0)},
+		{EventID: common.Int64Ptr(8), Version: common.Int64Ptr(4)},
+		{EventID: common.Int64Ptr(10), Version: common.Int64Ptr(6)},
+		{EventID: common.Int64Ptr(11), Version: common.Int64Ptr(12)},
 	}
 	local1 := NewVersionHistory(localItems1)
 	local2 := NewVersionHistory(localItems2)
 	remote := NewVersionHistory(remoteItems)
-	histories := NewVersionHistories([]VersionHistory{local1, local2})
-	item, history, err := histories.FindLowestCommonVersionHistory(remote)
+	histories := NewVersionHistories([]*shared.VersionHistory{&local1, &local2})
+	item, history, err := FindLowestCommonVersionHistory(histories, remote)
 	s.NoError(err)
 	s.Equal(history, local2)
-	s.Equal(int64(9), item.eventID)
-	s.Equal(int64(6), item.version)
+	s.Equal(int64(9), item.EventID)
+	s.Equal(int64(6), item.Version)
 
-	err = histories.AddHistory(item, history, remote)
+	err = AddHistory(histories, *item, *history, remote)
 	s.NoError(err)
-	s.Equal(histories.versionHistories[1], remote)
+	s.Equal(histories.Histories[1], remote)
 }
 
 func (s *versionHistoryStoreSuite) TestFindLowestCommonVersionHistory_ForkNewHistory() {
-	localItems1 := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 5, version: 4},
-		{eventID: 7, version: 6},
-		{eventID: 9, version: 10},
+	localItems1 := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(0)},
+		{EventID: common.Int64Ptr(5), Version: common.Int64Ptr(4)},
+		{EventID: common.Int64Ptr(7), Version: common.Int64Ptr(6)},
+		{EventID: common.Int64Ptr(9), Version: common.Int64Ptr(10)},
 	}
-	localItems2 := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 8, version: 4},
-		{eventID: 9, version: 6},
+	localItems2 := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(0)},
+		{EventID: common.Int64Ptr(8), Version: common.Int64Ptr(4)},
+		{EventID: common.Int64Ptr(9), Version: common.Int64Ptr(6)},
 	}
-	remoteItems := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 6, version: 7},
-		{eventID: 10, version: 12},
+	remoteItems := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(0)},
+		{EventID: common.Int64Ptr(6), Version: common.Int64Ptr(7)},
+		{EventID: common.Int64Ptr(10), Version: common.Int64Ptr(12)},
 	}
 	local1 := NewVersionHistory(localItems1)
 	local2 := NewVersionHistory(localItems2)
 	remote := NewVersionHistory(remoteItems)
-	histories := NewVersionHistories([]VersionHistory{local1, local2})
-	item, history, err := histories.FindLowestCommonVersionHistory(remote)
+	histories := NewVersionHistories([]*shared.VersionHistory{&local1, &local2})
+	item, history, err := FindLowestCommonVersionHistory(histories, remote)
 	s.NoError(err)
-	s.Equal(int64(3), item.eventID)
-	s.Equal(int64(0), item.version)
+	s.Equal(int64(3), item.EventID)
+	s.Equal(int64(0), item.Version)
 
-	err = histories.AddHistory(item, history, remote)
+	err = AddHistory(histories, *item, *history, remote)
 	s.NoError(err)
-	s.Equal(3, len(histories.versionHistories))
+	s.Equal(3, len(histories.Histories))
 }
 
 func (s *versionHistoryStoreSuite) TestFindLowestCommonVersionHistory_Error() {
-	localItems1 := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 5, version: 4},
-		{eventID: 7, version: 6},
-		{eventID: 9, version: 10},
+	localItems1 := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(0)},
+		{EventID: common.Int64Ptr(5), Version: common.Int64Ptr(4)},
+		{EventID: common.Int64Ptr(7), Version: common.Int64Ptr(6)},
+		{EventID: common.Int64Ptr(9), Version: common.Int64Ptr(10)},
 	}
-	localItems2 := []VersionHistoryItem{
-		{eventID: 3, version: 0},
-		{eventID: 8, version: 4},
-		{eventID: 9, version: 6},
+	localItems2 := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(0)},
+		{EventID: common.Int64Ptr(8), Version: common.Int64Ptr(4)},
+		{EventID: common.Int64Ptr(9), Version: common.Int64Ptr(6)},
 	}
-	remoteItems := []VersionHistoryItem{
-		{eventID: 3, version: 1},
-		{eventID: 6, version: 7},
-		{eventID: 10, version: 12},
+	remoteItems := []*shared.VersionHistoryItem{
+		{EventID: common.Int64Ptr(3), Version: common.Int64Ptr(1)},
+		{EventID: common.Int64Ptr(6), Version: common.Int64Ptr(7)},
+		{EventID: common.Int64Ptr(10), Version: common.Int64Ptr(12)},
 	}
 	local1 := NewVersionHistory(localItems1)
 	local2 := NewVersionHistory(localItems2)
 	remote := NewVersionHistory(remoteItems)
-	histories := NewVersionHistories([]VersionHistory{local1, local2})
-	_, _, err := histories.FindLowestCommonVersionHistory(remote)
+	histories := NewVersionHistories([]*shared.VersionHistory{&local1, &local2})
+	_, _, err := FindLowestCommonVersionHistory(histories, remote)
 	s.Error(err)
 }

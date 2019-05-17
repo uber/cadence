@@ -72,7 +72,7 @@ func (m *executionManagerImpl) GetWorkflowExecution(request *GetWorkflowExecutio
 		},
 	}
 
-	newResponse.State.ActivityInfos, err = m.DeserializeActivityInfos(response.State.ActivitInfos)
+	newResponse.State.ActivityInfos, err = m.DeserializeActivityInfos(response.State.ActivityInfos)
 	if err != nil {
 		return nil, err
 	}
@@ -104,6 +104,11 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(info *InternalWorkflowEx
 	}
 
 	autoResetPoints, err := m.serializer.DeserializeResetPoints(info.AutoResetPoints)
+	if err != nil {
+		return nil, err
+	}
+
+	versionHistories, err := m.serializer.DeserializeVersionHistories(info.VersionHistories)
 	if err != nil {
 		return nil, err
 	}
@@ -162,6 +167,7 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(info *InternalWorkflowEx
 		CronSchedule:                 info.CronSchedule,
 		ExpirationSeconds:            info.ExpirationSeconds,
 		AutoResetPoints:              autoResetPoints,
+		VersionHistories:             versionHistories,
 	}
 	return newInfo, nil
 }
@@ -483,6 +489,11 @@ func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInf
 		return nil, err
 	}
 
+	versionHistories, err := m.serializer.SerializeVersionHistories(info.VersionHistories, encoding)
+	if err != nil {
+		return nil, err
+	}
+
 	return &InternalWorkflowExecutionInfo{
 		DomainID:                     info.DomainID,
 		WorkflowID:                   info.WorkflowID,
@@ -536,6 +547,7 @@ func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInf
 		BranchToken:                  info.BranchToken,
 		CronSchedule:                 info.CronSchedule,
 		ExpirationSeconds:            info.ExpirationSeconds,
+		VersionHistories:             versionHistories,
 	}, nil
 }
 
@@ -637,6 +649,10 @@ func (m *executionManagerImpl) SerializeCreateWorkflowExecutionRequest(request *
 	if err != nil {
 		return nil, err
 	}
+	versionHistories, err := m.serializer.SerializeVersionHistories(request.VersionHistories, common.EncodingTypeThriftRW)
+	if err != nil {
+		return nil, err
+	}
 
 	return &InternalCreateWorkflowExecutionRequest{
 		RequestID:                   request.RequestID,
@@ -680,6 +696,7 @@ func (m *executionManagerImpl) SerializeCreateWorkflowExecutionRequest(request *
 		BranchToken:                 request.BranchToken,
 		CronSchedule:                request.CronSchedule,
 		ExpirationSeconds:           request.ExpirationSeconds,
+		VersionHistories:            versionHistories,
 	}, nil
 }
 
