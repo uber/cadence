@@ -25,9 +25,11 @@ import (
 	"context"
 	"io/ioutil"
 	"net/url"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
@@ -38,9 +40,11 @@ import (
 	"go.uber.org/multierr"
 )
 
+const (
+	defaultBlobstoreTimeout = 10 * time.Second
+)
+
 var (
-	// ErrListFiles could not list files
-	ErrListFiles = &shared.BadRequestError{Message: "could not list files"}
 	// ErrConstructKey could not construct key
 	ErrConstructKey = &shared.BadRequestError{Message: "could not construct key"}
 )
@@ -72,6 +76,8 @@ func NewClient(cfg *Config) (blobstore.Client, error) {
 }
 
 func (c *client) Upload(ctx context.Context, bucket string, key blob.Key, blob *blob.Blob) error {
+	ctx, cancel := c.ensureContextTimeout(ctx)
+	defer cancel()
 	params := url.Values{}
 	for k, v := range blob.Tags {
 		params.Add(k, v)
@@ -83,7 +89,6 @@ func (c *client) Upload(ctx context.Context, bucket string, key blob.Key, blob *
 		Body:    bytes.NewReader(blob.Body),
 		Tagging: aws.String(params.Encode()),
 	})
-
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			if aerr.Code() == s3.ErrCodeNoSuchBucket {
@@ -96,6 +101,8 @@ func (c *client) Upload(ctx context.Context, bucket string, key blob.Key, blob *
 }
 
 func (c *client) Download(ctx context.Context, bucket string, key blob.Key) (*blob.Blob, error) {
+	ctx, cancel := c.ensureContextTimeout(ctx)
+	defer cancel()
 	result, err := c.s3cli.GetObjectWithContext(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key.String()),
@@ -125,7 +132,7 @@ func (c *client) Download(ctx context.Context, bucket string, key blob.Key) (*bl
 		return nil, err
 	}
 
-	tags, err := s3gettags(ctx, c.s3cli, bucket, key.String())
+	tags, err := gettags(ctx, c.s3cli, bucket, key.String())
 	if err != nil {
 		return nil, err
 	}
@@ -133,25 +140,26 @@ func (c *client) Download(ctx context.Context, bucket string, key blob.Key) (*bl
 }
 
 func (c *client) GetTags(ctx context.Context, bucket string, key blob.Key) (map[string]string, error) {
-	tags, err := s3gettags(ctx, c.s3cli, bucket, key.String())
+	ctx, cancel := c.ensureContextTimeout(ctx)
+	defer cancel()
+	tags, err := gettags(ctx, c.s3cli, bucket, key.String())
 	if err != nil {
 		return nil, err
 	}
 	return tags, nil
 }
-
+// Exists returns false when the bucket does not exist or the bucket and key does not exist
 func (c *client) Exists(ctx context.Context, bucket string, key blob.Key) (bool, error) {
+	ctx, cancel := c.ensureContextTimeout(ctx)
+	defer cancel()
 	_, err := c.s3cli.HeadObjectWithContext(ctx, &s3.HeadObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key.String()),
 	})
 	if err != nil {
 		aerr, ok := err.(awserr.Error)
-		if ok && (aerr.Code() == s3.ErrCodeNoSuchKey || aerr.Code() == "NotFound") {
+		if ok && (aerr.Code() == "NotFound") {
 			return false, nil
-		}
-		if ok && aerr.Code() == s3.ErrCodeNoSuchBucket {
-			return false, blobstore.ErrBucketNotExists
 		}
 
 		return false, err
@@ -159,9 +167,11 @@ func (c *client) Exists(ctx context.Context, bucket string, key blob.Key) (bool,
 	return true, nil
 }
 
-// Note Delete will always return true whether or not the specific key exists
+// Delete will always return true whether or not the specific key exists
 // S3 DeleteObject gives no indication if the key exists
 func (c *client) Delete(ctx context.Context, bucket string, key blob.Key) (bool, error) {
+	ctx, cancel := c.ensureContextTimeout(ctx)
+	defer cancel()
 	_, err := c.s3cli.DeleteObjectWithContext(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key.String()),
@@ -179,6 +189,8 @@ func (c *client) Delete(ctx context.Context, bucket string, key blob.Key) (bool,
 }
 
 func (c *client) ListByPrefix(ctx context.Context, bucket string, prefix string) ([]blob.Key, error) {
+	ctx, cancel := c.ensureContextTimeout(ctx)
+	defer cancel()
 	results, err := c.s3cli.ListObjectsV2WithContext(ctx, &s3.ListObjectsV2Input{
 		Bucket: aws.String(bucket),
 		Prefix: aws.String(prefix),
@@ -187,7 +199,7 @@ func (c *client) ListByPrefix(ctx context.Context, bucket string, prefix string)
 		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == s3.ErrCodeNoSuchBucket {
 			return nil, blobstore.ErrBucketNotExists
 		}
-		return nil, ErrListFiles
+		return nil, err
 	}
 	var keys = make([]blob.Key, len(results.Contents), len(results.Contents))
 	for i, v := range results.Contents {
@@ -201,6 +213,8 @@ func (c *client) ListByPrefix(ctx context.Context, bucket string, prefix string)
 }
 
 func (c *client) BucketMetadata(ctx context.Context, bucket string) (*blobstore.BucketMetadataResponse, error) {
+	ctx, cancel := c.ensureContextTimeout(ctx)
+	defer cancel()
 	results, err := c.s3cli.GetBucketAclWithContext(ctx, &s3.GetBucketAclInput{
 		Bucket: aws.String(bucket),
 	})
@@ -211,7 +225,7 @@ func (c *client) BucketMetadata(ctx context.Context, bucket string) (*blobstore.
 		return nil, err
 	}
 
-	lifecycleResults, err := c.s3cli.GetBucketLifecycleWithContext(ctx, &s3.GetBucketLifecycleInput{
+	lifecycleResults, err := c.s3cli.GetBucketLifecycleConfigurationWithContext(ctx, &s3.GetBucketLifecycleConfigurationInput{
 		Bucket: aws.String(bucket),
 	})
 	if err != nil {
@@ -233,6 +247,8 @@ func (c *client) BucketMetadata(ctx context.Context, bucket string) (*blobstore.
 }
 
 func (c *client) BucketExists(ctx context.Context, bucket string) (bool, error) {
+	ctx, cancel := c.ensureContextTimeout(ctx)
+	defer cancel()
 	_, err := c.s3cli.HeadBucketWithContext(ctx, &s3.HeadBucketInput{
 		Bucket: aws.String(bucket),
 	})
@@ -247,16 +263,23 @@ func (c *client) BucketExists(ctx context.Context, bucket string) (bool, error) 
 }
 
 func (c *client) IsRetryableError(err error) bool {
-	return false
+	return request.IsErrorRetryable(err)
 }
 
 func (c *client) GetRetryPolicy() backoff.RetryPolicy {
-	policy := backoff.NewExponentialRetryPolicy(0)
-	policy.SetMaximumAttempts(1)
+	policy := backoff.NewExponentialRetryPolicy(30 )
+	policy.SetMaximumAttempts(3)
 	return policy
 }
 
-func s3gettags(ctx context.Context, s3api s3iface.S3API, bucket string, key string) (map[string]string, error) {
+func (c *client) ensureContextTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
+	if _, ok := ctx.Deadline(); ok {
+		return ctx, func() {}
+	}
+	return context.WithTimeout(ctx, defaultBlobstoreTimeout)
+}
+
+func gettags(ctx context.Context, s3api s3iface.S3API, bucket string, key string) (map[string]string, error) {
 	result, err := s3api.GetObjectTaggingWithContext(ctx, &s3.GetObjectTaggingInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),

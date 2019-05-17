@@ -4,7 +4,7 @@
 1. Install awscli from [here][https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html]
 2. Install localstack from [here][https://github.com/localstack/localstack#installing]
 3. Launch localstack with `SERVICES=s3 localstack start`
-4. Create a bucket using `aws --endpoint-url=http://localhost:4572 s3 s3://cadence-development` 
+4. Create a bucket using `aws --endpoint-url=http://localhost:4572 s3 mb s3://cadence-development` 
 5. Configure archival with the following configuration
 ```
 archival:
