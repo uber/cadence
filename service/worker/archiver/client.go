@@ -64,6 +64,8 @@ type (
 	}
 )
 
+const tooManyRequestsErrMsg = "Too many requests to archival workflow"
+
 // NewClient creates a new Client
 func NewClient(
 	metricsClient metrics.Client,
@@ -86,10 +88,9 @@ func (c *client) Archive(request *ArchiveRequest) error {
 	c.metricsClient.IncCounter(metrics.ArchiverClientScope, metrics.CadenceRequests)
 
 	if ok, _ := c.rateLimiter.TryConsume(1); !ok {
-		errMsg := "Too many archive requests to archival workflow"
-		c.logger.Error(errMsg)
+		c.logger.Error(tooManyRequestsErrMsg)
 		c.metricsClient.IncCounter(metrics.ArchiverClientScope, metrics.CadenceErrServiceBusyCounter)
-		return errors.New(errMsg)
+		return errors.New(tooManyRequestsErrMsg)
 	}
 
 	workflowID := fmt.Sprintf("%v-%v", workflowIDPrefix, rand.Intn(c.numWorkflows()))
