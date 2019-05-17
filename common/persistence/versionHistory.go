@@ -38,9 +38,9 @@ func NewVersionHistory(items []*shared.VersionHistoryItem) shared.VersionHistory
 }
 
 // UpdateVersionHistory updates the versionHistory slice
-func UpdateVersionHistory(current shared.VersionHistory, item shared.VersionHistoryItem) error {
+func UpdateVersionHistory(current *shared.VersionHistory, item shared.VersionHistoryItem) error {
 	currentItem := item
-	lastItem := current.History[len(current.History)-1]
+	lastItem := current.GetHistory()[len(current.History)-1]
 	if *currentItem.Version < *lastItem.Version {
 		return &shared.BadRequestError{
 			Message: fmt.Sprintf("cannot update version history with a lower version %v. Last version: %v",
@@ -74,9 +74,9 @@ func FindLowestCommonVersionHistoryItem(current shared.VersionHistory, remote sh
 	remoteIdx := len(remote.History) - 1
 
 	for localIdx >= 0 && remoteIdx >= 0 {
-		localVersionItem := current.History[localIdx]
-		remoteVersionItem := remote.History[remoteIdx]
-		if localVersionItem.Version == remoteVersionItem.Version {
+		localVersionItem := current.GetHistory()[localIdx]
+		remoteVersionItem := remote.GetHistory()[remoteIdx]
+		if *localVersionItem.Version == *remoteVersionItem.Version {
 			if *localVersionItem.EventID > *remoteVersionItem.EventID {
 				return remoteVersionItem, nil
 			}
@@ -118,7 +118,7 @@ func FindLowestCommonVersionHistory(current shared.VersionHistories, history sha
 			return versionHistoryItem, versionHistory, err
 		}
 
-		if *item.EventID > *versionHistoryItem.EventID {
+		if versionHistoryItem == nil || *item.EventID > *versionHistoryItem.EventID {
 			versionHistoryItem = item
 			versionHistory = localHistory
 		}
@@ -128,7 +128,7 @@ func FindLowestCommonVersionHistory(current shared.VersionHistories, history sha
 
 // AddHistory add new history into version histories
 // TODO: merge this func with FindLowestCommonVersionHistory
-func AddHistory(current shared.VersionHistories, item shared.VersionHistoryItem, local shared.VersionHistory, remote shared.VersionHistory) error {
+func AddHistory(current *shared.VersionHistories, item shared.VersionHistoryItem, local shared.VersionHistory, remote shared.VersionHistory) error {
 	commonItem := item
 	if IsAppendable(local, commonItem) {
 		//it won't update h.versionHistories
