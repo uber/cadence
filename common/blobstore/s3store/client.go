@@ -234,14 +234,22 @@ func (c *client) BucketMetadata(ctx context.Context, bucket string) (*blobstore.
 		}
 		return nil, err
 	}
-	var retentionDays = 0
+	retentionDays := 0
 	for _, v := range lifecycleResults.Rules {
 		if *v.Status == "Enabled" && retentionDays < int(*v.Expiration.Days) {
 			retentionDays = int(*v.Expiration.Days)
 		}
 	}
+	owner := ""
+	if results.Owner != nil {
+		if results.Owner.DisplayName != nil {
+			owner = *results.Owner.DisplayName
+		} else if results.Owner.ID != nil {
+			owner = *results.Owner.ID
+		}
+	}
 	return &blobstore.BucketMetadataResponse{
-		Owner:         *results.Owner.DisplayName,
+		Owner: owner,
 		RetentionDays: retentionDays,
 	}, nil
 }
