@@ -34,6 +34,9 @@ import (
 )
 
 // tally sanitizer options that satisfy both Prometheus and M3 restrictions.
+// This will rename metrics at the tally emission level, so metrics name we
+// use maybe different from what gets emitted. In the current implementation
+// it will replace - and . with _
 // We should still ensure that the base metrics are prometheus compatible,
 // but this is necessary as the same prom client initialization is used by
 // our system workflows.
