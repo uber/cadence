@@ -221,7 +221,7 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 
 			nilHistories, err := serializer.SerializeVersionHistories(nil, common.EncodingTypeThriftRW)
 			s.Nil(err)
-			s.Nil(nilHistories)
+			s.NotNil(nilHistories)
 
 			historiesJSON, err := serializer.SerializeVersionHistories(histories, common.EncodingTypeJSON)
 			s.Nil(err)
