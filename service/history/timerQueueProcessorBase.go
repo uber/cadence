@@ -702,7 +702,18 @@ func (t *timerQueueProcessorBase) deleteWorkflowHistory(task *persistence.TimerT
 				tag.TaskID(task.GetTaskID()),
 				tag.FailoverVersion(task.GetVersion()),
 				tag.TaskType(task.GetTaskType()))
-			return persistence.DeleteWorkflowExecutionHistoryV2(t.historyService.historyV2Mgr, msBuilder.GetCurrentBranch(), common.IntPtr(t.shard.GetShardID()), logger)
+			versionHistories := msBuilder.GetAllBranches()
+
+			for _, versionHistory := range versionHistories.Histories {
+				if err := persistence.DeleteWorkflowExecutionHistoryV2(
+					t.historyService.historyV2Mgr,
+					versionHistory.BranchToken,
+					common.IntPtr(t.shard.GetShardID()),
+					logger); err != nil {
+						return err
+				}
+				//TODO: remove deleted version histories from mutable state
+			}
 		}
 		return t.historyService.historyMgr.DeleteWorkflowExecutionHistory(
 			&persistence.DeleteWorkflowExecutionHistoryRequest{

@@ -80,7 +80,7 @@ type (
 		deleteBufferedReplicationEvent *int64
 
 		executionInfo    *persistence.WorkflowExecutionInfo // Workflow mutable state info.
-		versionHistories *workflow.VersionHistories
+		versionHistories *persistence.VersionHistories
 		replicationState *persistence.ReplicationState
 		continueAsNew    *persistence.CreateWorkflowExecutionRequest
 		hBuilder         *historyBuilder
@@ -136,9 +136,7 @@ func newMutableStateBuilder(currentCluster string, shard ShardContext, eventsCac
 		CloseStatus:        persistence.WorkflowCloseStatusNone,
 		LastProcessedEvent: common.EmptyEventID,
 	}
-	s.versionHistories = &workflow.VersionHistories{
-		Histories: []*workflow.VersionHistory{},
-	}
+	s.versionHistories = &persistence.VersionHistories{}
 	s.hBuilder = newHistoryBuilder(s, logger)
 
 	return s
@@ -197,6 +195,9 @@ func (e *mutableStateBuilder) GetEventStoreVersion() int32 {
 
 func (e *mutableStateBuilder) GetCurrentBranch() []byte {
 	return e.executionInfo.GetCurrentBranch()
+}
+func (e *mutableStateBuilder) GetAllBranches() *persistence.VersionHistories {
+	return e.versionHistories
 }
 
 // set eventStoreVersion/treeID/historyBranches
