@@ -290,10 +290,14 @@ func (m *sqlExecutionManager) GetWorkflowExecution(request *p.GetWorkflowExecuti
 		state.ExecutionInfo.AutoResetPoints = p.NewDataBlob(info.AutoResetPoints,
 			common.EncodingType(info.GetAutoResetPointsEncoding()))
 	}
+	if info.GetVersionHistories() != nil {
+		state.ExecutionInfo.VersionHistories = p.NewDataBlob(info.GetVersionHistories(),
+			common.EncodingType(info.GetVersionHistoriesEncoding()))
+	}
 
 	{
 		var err error
-		state.ActivitInfos, err = getActivityInfoMap(m.db,
+		state.ActivityInfos, err = getActivityInfoMap(m.db,
 			m.shardID,
 			domainID,
 			wfID,
@@ -1474,6 +1478,8 @@ func createExecutionFromRequest(
 		ExecutionContext:             request.ExecutionContext,
 		AutoResetPoints:              request.PreviousAutoResetPoints.Data,
 		AutoResetPointsEncoding:      common.StringPtr(string(request.PreviousAutoResetPoints.GetEncoding())),
+		VersionHistories:             request.VersionHistories.Data,
+		VersionHistoriesEncoding:     common.StringPtr(string(request.VersionHistories.GetEncoding())),
 	}
 	if request.ReplicationState != nil {
 		lastWriteVersion = request.ReplicationState.LastWriteVersion
@@ -1971,6 +1977,8 @@ func buildExecutionRow(executionInfo *p.InternalWorkflowExecutionInfo,
 		EventBranchToken:             executionInfo.BranchToken,
 		AutoResetPoints:              executionInfo.AutoResetPoints.Data,
 		AutoResetPointsEncoding:      common.StringPtr(string(executionInfo.AutoResetPoints.GetEncoding())),
+		VersionHistories:             executionInfo.VersionHistories.Data,
+		VersionHistoriesEncoding:     common.StringPtr(string(executionInfo.VersionHistories.GetEncoding())),
 	}
 
 	completionEvent := executionInfo.CompletionEvent

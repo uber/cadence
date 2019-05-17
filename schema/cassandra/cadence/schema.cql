@@ -73,6 +73,8 @@ CREATE TYPE workflow_execution (
   last_event_task_id               bigint,
   auto_reset_points                blob, -- the resetting points for auto-reset feature
   auto_reset_points_encoding       text, -- encoding for auto_reset_points_data
+  version_histories                blob, -- the metadata of history branching
+  version_histories_encoding       text, -- encoding for version histories
 );
 
 -- Replication information for each cluster
