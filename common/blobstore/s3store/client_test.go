@@ -76,7 +76,8 @@ func (s *ClientSuite) TestUploadDownload_Success() {
 	s.NoError(err)
 	s.NotNil(downloadBlob)
 	s.assertBlobEquals(map[string]string{}, "body version 1", downloadBlob)
-
+	_, err = client.Delete(context.Background(), defaultBucketName, key)
+	s.NoError(err)
 	b = blob.NewBlob([]byte("body version 2"), map[string]string{"key": "value"})
 	s.NoError(client.Upload(context.Background(), defaultBucketName, key, b))
 	downloadBlob, err = client.Download(context.Background(), defaultBucketName, key)
@@ -172,7 +173,7 @@ func (s *ClientSuite) TestExists_Fail_BucketNotExists() {
 func (s *ClientSuite) TestExists_Success() {
 	client := s.constructClient()
 
-	key, err := blob.NewKeyFromString("blob.blob")
+	key, err := blob.NewKeyFromString("TestExistsSuccess.blob")
 	s.NoError(err)
 	exists, err := client.Exists(context.Background(), defaultBucketName, key)
 	s.NoError(err)
@@ -198,7 +199,7 @@ func (s *ClientSuite) TestDelete_Fail_BucketNotExists() {
 func (s *ClientSuite) TestDelete_Success() {
 	client := s.constructClient()
 
-	key, err := blob.NewKeyFromString("blob.blob")
+	key, err := blob.NewKeyFromString("blobnonexistent.blob")
 	s.NoError(err)
 	deleted, err := client.Delete(context.Background(), defaultBucketName, key)
 	s.NoError(err)

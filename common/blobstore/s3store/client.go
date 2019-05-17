@@ -55,9 +55,12 @@ func NewClient(cfg *Config) (blobstore.Client, error) {
 		return nil, err
 	}
 
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(cfg.Region),
-	})
+	s3Config := &aws.Config{
+		Endpoint:         cfg.Endpoint,
+		Region:           aws.String(cfg.Region),
+		S3ForcePathStyle: aws.Bool(cfg.S3ForcePathStyle),
+	}
+	sess, err := session.NewSession(s3Config)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +147,7 @@ func (c *client) Exists(ctx context.Context, bucket string, key blob.Key) (bool,
 	})
 	if err != nil {
 		aerr, ok := err.(awserr.Error)
-		if ok && aerr.Code() == s3.ErrCodeNoSuchKey {
+		if ok && (aerr.Code() == s3.ErrCodeNoSuchKey || aerr.Code() == "NotFound") {
 			return false, nil
 		}
 		if ok && aerr.Code() == s3.ErrCodeNoSuchBucket {
@@ -156,6 +159,8 @@ func (c *client) Exists(ctx context.Context, bucket string, key blob.Key) (bool,
 	return true, nil
 }
 
+// Note Delete will always return true whether or not the specific key exists
+// S3 DeleteObject gives no indication if the key exists
 func (c *client) Delete(ctx context.Context, bucket string, key blob.Key) (bool, error) {
 	_, err := c.s3cli.DeleteObjectWithContext(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(bucket),
@@ -166,11 +171,6 @@ func (c *client) Delete(ctx context.Context, bucket string, key blob.Key) (bool,
 			if aerr.Code() == s3.ErrCodeNoSuchBucket {
 				return false, blobstore.ErrBucketNotExists
 			}
-
-			if aerr.Code() == s3.ErrCodeNoSuchKey {
-				return false, nil
-			}
-
 		}
 		return false, err
 
@@ -238,7 +238,7 @@ func (c *client) BucketExists(ctx context.Context, bucket string) (bool, error) 
 	})
 
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == s3.ErrCodeNoSuchBucket {
+		if aerr, ok := err.(awserr.Error); ok && (aerr.Code() == s3.ErrCodeNoSuchBucket || aerr.Code() == "NotFound") {
 			return false, nil
 		}
 		return false, err
@@ -267,7 +267,9 @@ func s3gettags(ctx context.Context, s3api s3iface.S3API, bucket string, key stri
 
 	tags := make(map[string]string)
 	for _, e := range result.TagSet {
-		tags[*e.Key] = *e.Value
+		if len(*e.Key) > 0 {
+			tags[*e.Key] = *e.Value
+		}
 	}
 	return tags, err
 }

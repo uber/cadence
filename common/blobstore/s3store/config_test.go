@@ -50,67 +50,7 @@ func (s *ConfigSuite) TestValidate() {
 		},
 		{
 			config: &Config{
-				DefaultBucket: BucketConfig{},
-			},
-			isValid: false,
-		},
-		{
-			config: &Config{
-				DefaultBucket: BucketConfig{
-					Name: "test-default-bucket-name",
-				},
-			},
-			isValid: false,
-		},
-		{
-			config: &Config{
 				Region: "eu-west-1",
-				DefaultBucket: BucketConfig{
-					Name: "test-default-bucket-name",
-				},
-			},
-			isValid: true,
-		},
-		{
-			config: &Config{
-				DefaultBucket: BucketConfig{
-					Name: "test-default-bucket-name",
-				},
-			},
-			isValid: false,
-		},
-		{
-			config: &Config{
-				Region: "eu-west-1",
-				DefaultBucket: BucketConfig{
-					Name: "test-default-bucket-name",
-				},
-			},
-			isValid: true,
-		},
-		{
-			config: &Config{
-				Region: "eu-west-1",
-				DefaultBucket: BucketConfig{
-					Name: "test-default-bucket-name",
-				},
-				CustomBuckets: []BucketConfig{
-					{},
-				},
-			},
-			isValid: false,
-		},
-		{
-			config: &Config{
-				Region: "eu-west-1",
-				DefaultBucket: BucketConfig{
-					Name: "test-default-bucket-name",
-				},
-				CustomBuckets: []BucketConfig{
-					{
-						Name: "test-custom-bucket-name",
-					},
-				},
 			},
 			isValid: true,
 		},
