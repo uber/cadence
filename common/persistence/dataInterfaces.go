@@ -252,6 +252,7 @@ type (
 		DecisionTimeout              int32
 		DecisionAttempt              int64
 		DecisionTimestamp            int64
+		DecisionScheduledTimestamp   int64
 		CancelRequested              bool
 		CancelRequestID              string
 		StickyTaskList               string

@@ -32,14 +32,15 @@ import (
 type (
 	// TODO: This should be part of persistence layer
 	decisionInfo struct {
-		Version         int64
-		ScheduleID      int64
-		StartedID       int64
-		RequestID       string
-		DecisionTimeout int32
-		TaskList        string // This is only needed to communicate tasklist used after AddDecisionTaskScheduledEvent
-		Attempt         int64
-		Timestamp       int64
+		Version            int64
+		ScheduleID         int64
+		StartedID          int64
+		RequestID          string
+		DecisionTimeout    int32
+		TaskList           string // This is only needed to communicate tasklist used after AddDecisionTaskScheduledEvent
+		Attempt            int64
+		StartedTimestamp   int64
+		ScheduledTimestamp int64
 	}
 
 	mutableState interface {

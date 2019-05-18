@@ -2821,7 +2821,7 @@ func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(domainID str
 		Name: &executionInfo.TaskList,
 		Kind: common.TaskListKindPtr(workflow.TaskListKindNormal),
 	})
-	//response.ScheduledTimestamp =
+	response.ScheduledTimestamp = msBuilder.event
 
 	if di.Attempt > 0 {
 		// This decision is retried from mutable state

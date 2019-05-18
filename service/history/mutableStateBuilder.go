@@ -1109,13 +1109,14 @@ func (e *mutableStateBuilder) DeleteUserTimer(timerID string) {
 
 func (e *mutableStateBuilder) getDecisionInfo() *decisionInfo {
 	return &decisionInfo{
-		Version:         e.executionInfo.DecisionVersion,
-		ScheduleID:      e.executionInfo.DecisionScheduleID,
-		StartedID:       e.executionInfo.DecisionStartedID,
-		RequestID:       e.executionInfo.DecisionRequestID,
-		DecisionTimeout: e.executionInfo.DecisionTimeout,
-		Attempt:         e.executionInfo.DecisionAttempt,
-		Timestamp:       e.executionInfo.DecisionTimestamp,
+		Version:            e.executionInfo.DecisionVersion,
+		ScheduleID:         e.executionInfo.DecisionScheduleID,
+		StartedID:          e.executionInfo.DecisionStartedID,
+		RequestID:          e.executionInfo.DecisionRequestID,
+		DecisionTimeout:    e.executionInfo.DecisionTimeout,
+		Attempt:            e.executionInfo.DecisionAttempt,
+		StartedTimestamp:   e.executionInfo.DecisionTimestamp,
+		ScheduledTimestamp: e.executionInfo.DecisionScheduledTimestamp,
 	}
 }
 
@@ -1192,22 +1193,24 @@ func (e *mutableStateBuilder) UpdateDecision(di *decisionInfo) {
 	e.executionInfo.DecisionRequestID = di.RequestID
 	e.executionInfo.DecisionTimeout = di.DecisionTimeout
 	e.executionInfo.DecisionAttempt = di.Attempt
-	e.executionInfo.DecisionTimestamp = di.Timestamp
+	e.executionInfo.DecisionTimestamp = di.StartedTimestamp
+	e.executionInfo.DecisionScheduledTimestamp = di.ScheduledTimestamp
 
 	e.logger.Debug(fmt.Sprintf("Decision Updated: {Schedule: %v, Started: %v, ID: %v, Timeout: %v, Attempt: %v, Timestamp: %v}",
-		di.ScheduleID, di.StartedID, di.RequestID, di.DecisionTimeout, di.Attempt, di.Timestamp))
+		di.ScheduleID, di.StartedID, di.RequestID, di.DecisionTimeout, di.Attempt, di.StartedTimestamp))
 }
 
 // DeleteDecision deletes a decision task.
 func (e *mutableStateBuilder) DeleteDecision() {
 	emptyDecisionInfo := &decisionInfo{
-		Version:         common.EmptyVersion,
-		ScheduleID:      common.EmptyEventID,
-		StartedID:       common.EmptyEventID,
-		RequestID:       emptyUUID,
-		DecisionTimeout: 0,
-		Attempt:         0,
-		Timestamp:       0,
+		Version:            common.EmptyVersion,
+		ScheduleID:         common.EmptyEventID,
+		StartedID:          common.EmptyEventID,
+		RequestID:          emptyUUID,
+		DecisionTimeout:    0,
+		Attempt:            0,
+		StartedTimestamp:   0,
+		ScheduledTimestamp: 0,
 	}
 	e.UpdateDecision(emptyDecisionInfo)
 }
@@ -1600,13 +1603,14 @@ func (e *mutableStateBuilder) ReplicateDecisionTaskStartedEvent(di *decisionInfo
 	e.executionInfo.State = persistence.WorkflowStateRunning
 	// Update mutable decision state
 	di = &decisionInfo{
-		Version:         version,
-		ScheduleID:      scheduleID,
-		StartedID:       startedID,
-		RequestID:       requestID,
-		DecisionTimeout: di.DecisionTimeout,
-		Attempt:         di.Attempt,
-		Timestamp:       timestamp,
+		Version:            version,
+		ScheduleID:         scheduleID,
+		StartedID:          startedID,
+		RequestID:          requestID,
+		DecisionTimeout:    di.DecisionTimeout,
+		Attempt:            di.Attempt,
+		StartedTimestamp:   timestamp,
+		ScheduledTimestamp: di.ScheduledTimestamp,
 	}
 
 	e.UpdateDecision(di)
@@ -1616,9 +1620,9 @@ func (e *mutableStateBuilder) ReplicateDecisionTaskStartedEvent(di *decisionInfo
 func (e *mutableStateBuilder) CreateTransientDecisionEvents(di *decisionInfo, identity string) (*workflow.HistoryEvent,
 	*workflow.HistoryEvent) {
 	tasklist := e.executionInfo.TaskList
-	scheduledEvent := newDecisionTaskScheduledEventWithInfo(di.ScheduleID, di.Timestamp, tasklist, di.DecisionTimeout,
+	scheduledEvent := newDecisionTaskScheduledEventWithInfo(di.ScheduleID, di.StartedTimestamp, tasklist, di.DecisionTimeout,
 		di.Attempt)
-	startedEvent := newDecisionTaskStartedEventWithInfo(di.StartedID, di.Timestamp, di.ScheduleID, di.RequestID,
+	startedEvent := newDecisionTaskStartedEventWithInfo(di.StartedID, di.StartedTimestamp, di.ScheduleID, di.RequestID,
 		identity)
 
 	return scheduledEvent, startedEvent
@@ -1727,9 +1731,9 @@ func (e *mutableStateBuilder) AddDecisionTaskCompletedEvent(scheduleEventID, sta
 	if di.Attempt > 0 {
 		// Create corresponding DecisionTaskSchedule and DecisionTaskStarted events for decisions we have been retrying
 		scheduledEvent := e.hBuilder.AddTransientDecisionTaskScheduledEvent(e.executionInfo.TaskList, di.DecisionTimeout,
-			di.Attempt, di.Timestamp)
+			di.Attempt, di.StartedTimestamp)
 		startedEvent := e.hBuilder.AddTransientDecisionTaskStartedEvent(scheduledEvent.GetEventId(), di.RequestID,
-			request.GetIdentity(), di.Timestamp)
+			request.GetIdentity(), di.StartedTimestamp)
 		startedEventID = startedEvent.GetEventId()
 	}
 	// Now write the completed event
