@@ -100,6 +100,7 @@ func (a *archiver) Finished() []uint64 {
 }
 
 func handleRequest(ctx workflow.Context, logger log.Logger, metricsClient metrics.Client, request ArchiveRequest) {
+	metricsClient.IncCounter(metrics.ArchiverScope, metrics.CadenceRequests)
 	sw := metricsClient.StartTimer(metrics.ArchiverScope, metrics.ArchiverHandleRequestLatency)
 	logger = tagLoggerWithRequest(logger, request)
 	ao := workflow.ActivityOptions{
@@ -113,6 +114,7 @@ func handleRequest(ctx workflow.Context, logger log.Logger, metricsClient metric
 		},
 	}
 	actCtx := workflow.WithActivityOptions(ctx, ao)
+	metricsClient.IncCounter(metrics.ArchiverScope, metrics.ArchiverUploadWithRetriesCount)
 	uploadSW := metricsClient.StartTimer(metrics.ArchiverScope, metrics.ArchiverUploadWithRetriesLatency)
 	if err := workflow.ExecuteActivity(actCtx, uploadHistoryActivityFnName, request).Get(actCtx, nil); err != nil {
 		logger.Error("failed to upload history, moving on to deleting history without archiving", tag.Error(err))
@@ -131,6 +133,7 @@ func handleRequest(ctx workflow.Context, logger log.Logger, metricsClient metric
 			NonRetriableErrorReasons: deleteHistoryActivityNonRetryableErrors,
 		},
 	}
+	metricsClient.IncCounter(metrics.ArchiverScope, metrics.ArchiverDeleteWithRetriesCount)
 	deleteSW := metricsClient.StartTimer(metrics.ArchiverScope, metrics.ArchiverDeleteWithRetriesLatency)
 	localActCtx := workflow.WithLocalActivityOptions(ctx, lao)
 	err := workflow.ExecuteLocalActivity(localActCtx, deleteHistoryActivity, request).Get(localActCtx, nil)

@@ -1335,7 +1335,9 @@ const (
 	ArchiverCoroutineStoppedCount
 	ArchiverHandleRequestLatency
 	ArchiverUploadWithRetriesLatency
+	ArchiverUploadWithRetriesCount
 	ArchiverDeleteWithRetriesLatency
+	ArchiverDeleteWithRetriesCount
 	ArchiverUploadFailedAllRetriesCount
 	ArchiverUploadSuccessCount
 	ArchiverDeleteLocalFailedAllRetriesCount
@@ -1571,7 +1573,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ArchiverCoroutineStoppedCount:                          {metricName: "archiver_coroutine_stopped"},
 		ArchiverHandleRequestLatency:                           {metricName: "archiver_handle_request_latency"},
 		ArchiverUploadWithRetriesLatency:                       {metricName: "archiver_upload_with_retries_latency"},
+		ArchiverUploadWithRetriesCount:                         {metricName: "archiver_upload_with_retries"},
 		ArchiverDeleteWithRetriesLatency:                       {metricName: "archiver_delete_with_retries_latency"},
+		ArchiverDeleteWithRetriesCount:                         {metricName: "archiver_delete_with_retries"},
 		ArchiverUploadFailedAllRetriesCount:                    {metricName: "archiver_upload_failed_all_retries"},
 		ArchiverUploadSuccessCount:                             {metricName: "archiver_upload_success"},
 		ArchiverDeleteLocalFailedAllRetriesCount:               {metricName: "archiver_delete_local_failed_all_retries"},
