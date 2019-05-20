@@ -33,7 +33,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/blobstore/blob"
@@ -42,11 +41,6 @@ import (
 
 const (
 	defaultBlobstoreTimeout = 10 * time.Second
-)
-
-var (
-	// ErrConstructKey could not construct key
-	ErrConstructKey = &shared.BadRequestError{Message: "could not construct key"}
 )
 
 type client struct {
