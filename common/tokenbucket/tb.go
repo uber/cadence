@@ -46,8 +46,6 @@ type (
 		// tokens were acquired before timeout, false
 		// otherwise
 		Consume(count int, timeout time.Duration) bool
-		// Reset resets the token bucket rps limit to the given value
-		//Reset(rps int)
 	}
 
 	// PriorityTokenBucket is the interface for rate limiter with priority
