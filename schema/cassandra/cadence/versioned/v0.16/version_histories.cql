@@ -1,1 +1,1 @@
-ALTER TYPE workflow_execution ADD version_histories blob;
+ALTER TABLE executions ADD version_histories blob;

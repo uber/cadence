@@ -73,8 +73,6 @@ CREATE TYPE workflow_execution (
   last_event_task_id               bigint,
   auto_reset_points                blob, -- the resetting points for auto-reset feature
   auto_reset_points_encoding       text, -- encoding for auto_reset_points_data
-  version_histories                blob, -- the metadata of history branching
-  version_histories_encoding       text, -- encoding for version histories
 );
 
 -- Replication information for each cluster
@@ -311,6 +309,8 @@ CREATE TABLE executions (
   buffered_replication_tasks_map map<bigint, frozen<buffered_replication_task_info>>,
   workflow_last_write_version    bigint,
   workflow_state                 int,
+  version_histories              blob, -- the metadata of history branching
+  version_histories_encoding     text,
   PRIMARY KEY  (shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id)
 ) WITH COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'

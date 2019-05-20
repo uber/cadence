@@ -92,8 +92,13 @@ func (m *executionManagerImpl) GetWorkflowExecution(request *GetWorkflowExecutio
 	if err != nil {
 		return nil, err
 	}
-
+	versionHistories, err := m.DeserializeVersionHistories(response.State.VersionHistories)
+	if err != nil {
+		return nil, err
+	}
+	newResponse.State.VersionHistories = *versionHistories
 	newResponse.MutableStateStats = m.statsComputer.computeMutableStateStats(response)
+
 	return newResponse, nil
 }
 
@@ -107,12 +112,6 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(info *InternalWorkflowEx
 	if err != nil {
 		return nil, err
 	}
-
-	tVersionHistories, err := m.serializer.DeserializeVersionHistories(info.VersionHistories)
-	if err != nil {
-		return nil, err
-	}
-	versionHistories := NewVersionHistoriesFromThrift(tVersionHistories)
 
 	newInfo := &WorkflowExecutionInfo{
 		CompletionEvent: completionEvent,
@@ -168,7 +167,6 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(info *InternalWorkflowEx
 		CronSchedule:                 info.CronSchedule,
 		ExpirationSeconds:            info.ExpirationSeconds,
 		AutoResetPoints:              autoResetPoints,
-		VersionHistories:             versionHistories,
 	}
 	return newInfo, nil
 }
@@ -303,6 +301,14 @@ func (m *executionManagerImpl) DeserializeActivityInfos(infos map[int64]*Interna
 	return newInfos, nil
 }
 
+func (m *executionManagerImpl) DeserializeVersionHistories(blob *DataBlob) (*VersionHistories, error) {
+	tVersionHistoroes, err := m.serializer.DeserializeVersionHistories(blob)
+	if err != nil {
+		return nil, err
+	}
+	return NewVersionHistoriesFromThrift(tVersionHistoroes), nil
+}
+
 func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) (*UpdateWorkflowExecutionResponse, error) {
 	executionInfo, err := m.SerializeExecutionInfo(request.ExecutionInfo, request.Encoding)
 	if err != nil {
@@ -327,8 +333,12 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowEx
 	if err != nil {
 		return nil, err
 	}
-
 	continueAsNew, err := m.SerializeCreateWorkflowExecutionRequest(request.ContinueAsNew)
+	if err != nil {
+		return nil, err
+	}
+	tVersionHistories := request.VersionHistories.ToThrift()
+	versionHistories, err := m.serializer.SerializeVersionHistories(tVersionHistories, request.Encoding)
 	if err != nil {
 		return nil, err
 	}
@@ -341,6 +351,7 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		NewBufferedReplicationTask: newBufferedReplicationTask,
 
 		ReplicationState:              request.ReplicationState,
+		VersionHistories:              versionHistories,
 		TransferTasks:                 request.TransferTasks,
 		TimerTasks:                    request.TimerTasks,
 		ReplicationTasks:              request.ReplicationTasks,
@@ -489,11 +500,6 @@ func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInf
 	if err != nil {
 		return nil, err
 	}
-	tVersionHistory := info.VersionHistories.ToThrift()
-	versionHistories, err := m.serializer.SerializeVersionHistories(tVersionHistory, encoding)
-	if err != nil {
-		return nil, err
-	}
 
 	return &InternalWorkflowExecutionInfo{
 		DomainID:                     info.DomainID,
@@ -548,8 +554,11 @@ func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInf
 		BranchToken:                  info.BranchToken,
 		CronSchedule:                 info.CronSchedule,
 		ExpirationSeconds:            info.ExpirationSeconds,
-		VersionHistories:             versionHistories,
 	}, nil
+}
+
+func (m *executionManagerImpl) SerializeVersionHistories(versionHistories VersionHistories, encoding common.EncodingType) (*DataBlob, error) {
+	return m.serializer.SerializeVersionHistories(versionHistories.ToThrift(), encoding)
 }
 
 func (m *executionManagerImpl) ResetMutableState(request *ResetMutableStateRequest) error {
@@ -565,11 +574,16 @@ func (m *executionManagerImpl) ResetMutableState(request *ResetMutableStateReque
 	if err != nil {
 		return err
 	}
+	versionHistories, err := m.SerializeVersionHistories(request.VersionHistories, request.Encoding)
+	if err != nil {
+		return err
+	}
 
 	newRequest := &InternalResetMutableStateRequest{
 		PrevRunID:                 request.PrevRunID,
 		ExecutionInfo:             executionInfo,
 		ReplicationState:          request.ReplicationState,
+		VersionHistories:          versionHistories,
 		Condition:                 request.Condition,
 		RangeID:                   request.RangeID,
 		InsertActivityInfos:       insertActivityInfos,
@@ -601,6 +615,14 @@ func (m *executionManagerImpl) ResetWorkflowExecution(request *ResetWorkflowExec
 	if err != nil {
 		return err
 	}
+	currVersionHistories, err := m.SerializeVersionHistories(request.CurrVersionHistories, request.Encoding)
+	if err != nil {
+		return err
+	}
+	insertVersionHistories, err := m.SerializeVersionHistories(request.InsertVersionHistories, request.Encoding)
+	if err != nil {
+		return err
+	}
 
 	newRequest := &InternalResetWorkflowExecutionRequest{
 		PrevRunVersion: request.PrevRunVersion,
@@ -618,6 +640,7 @@ func (m *executionManagerImpl) ResetWorkflowExecution(request *ResetWorkflowExec
 		CurrReplicationTasks: request.CurrReplicationTasks,
 		CurrTimerTasks:       request.CurrTimerTasks,
 		CurrTransferTasks:    request.CurrTransferTasks,
+		CurrVersionHistories: currVersionHistories,
 
 		InsertExecutionInfo:       executionInfo,
 		InsertReplicationState:    request.InsertReplicationState,
@@ -630,6 +653,7 @@ func (m *executionManagerImpl) ResetWorkflowExecution(request *ResetWorkflowExec
 		InsertRequestCancelInfos:  request.InsertRequestCancelInfos,
 		InsertSignalInfos:         request.InsertSignalInfos,
 		InsertSignalRequestedIDs:  request.InsertSignalRequestedIDs,
+		InsertVersionHistories:    insertVersionHistories,
 	}
 	return m.persistence.ResetWorkflowExecution(newRequest)
 }
@@ -650,8 +674,7 @@ func (m *executionManagerImpl) SerializeCreateWorkflowExecutionRequest(request *
 	if err != nil {
 		return nil, err
 	}
-	tVersionHistories := request.VersionHistories.ToThrift()
-	versionHistories, err := m.serializer.SerializeVersionHistories(tVersionHistories, common.EncodingTypeThriftRW)
+	versionHistories, err := m.SerializeVersionHistories(request.VersionHistories, common.EncodingTypeThriftRW)
 	if err != nil {
 		return nil, err
 	}

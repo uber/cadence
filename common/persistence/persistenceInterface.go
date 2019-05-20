@@ -241,7 +241,6 @@ type (
 		ClientFeatureVersion         string
 		ClientImpl                   string
 		AutoResetPoints              *DataBlob
-		VersionHistories             *DataBlob
 		// for retry
 		Attempt            int32
 		HasRetryPolicy     bool
@@ -270,6 +269,7 @@ type (
 		ReplicationState         *ReplicationState
 		BufferedEvents           []*DataBlob
 		BufferedReplicationTasks map[int64]*InternalBufferedReplicationTask
+		VersionHistories         *DataBlob
 	}
 
 	// InternalActivityInfo details  for Persistence Interface
@@ -339,6 +339,7 @@ type (
 	InternalUpdateWorkflowExecutionRequest struct {
 		ExecutionInfo    *InternalWorkflowExecutionInfo
 		ReplicationState *ReplicationState
+		VersionHistories *DataBlob
 		TransferTasks    []Task
 		TimerTasks       []Task
 		ReplicationTasks []Task
@@ -370,6 +371,7 @@ type (
 		PrevRunID        string
 		ExecutionInfo    *InternalWorkflowExecutionInfo
 		ReplicationState *ReplicationState
+		VersionHistories *DataBlob
 		Condition        int64
 		RangeID          int64
 

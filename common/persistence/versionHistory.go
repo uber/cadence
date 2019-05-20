@@ -117,7 +117,7 @@ func NewVersionHistories(histories []VersionHistory) VersionHistories {
 }
 
 // NewVersionHistoriesFromThrift initialize VersionHistories from thrift format
-func NewVersionHistoriesFromThrift(thrift *shared.VersionHistories) VersionHistories {
+func NewVersionHistoriesFromThrift(thrift *shared.VersionHistories) *VersionHistories {
 	histories := VersionHistories{}
 	for _, tHistory := range thrift.Histories {
 		history := VersionHistory{BranchToken: tHistory.GetBranchToken()}
@@ -126,7 +126,7 @@ func NewVersionHistoriesFromThrift(thrift *shared.VersionHistories) VersionHisto
 		}
 		histories.Histories = append(histories.Histories, history)
 	}
-	return histories
+	return &histories
 }
 
 // FindLowestCommonVersionHistory finds the lowest common version history item among all version histories

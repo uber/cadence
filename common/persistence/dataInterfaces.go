@@ -260,7 +260,6 @@ type (
 		ClientFeatureVersion         string
 		ClientImpl                   string
 		AutoResetPoints              *workflow.ResetPoints
-		VersionHistories             VersionHistories
 		// for retry
 		Attempt            int32
 		HasRetryPolicy     bool
@@ -567,6 +566,7 @@ type (
 		ReplicationState         *ReplicationState
 		BufferedEvents           []*workflow.HistoryEvent
 		BufferedReplicationTasks map[int64]*BufferedReplicationTask
+		VersionHistories         VersionHistories
 	}
 
 	// ActivityInfo details.
@@ -764,6 +764,7 @@ type (
 	UpdateWorkflowExecutionRequest struct {
 		ExecutionInfo    *WorkflowExecutionInfo
 		ReplicationState *ReplicationState
+		VersionHistories VersionHistories
 		TransferTasks    []Task
 		TimerTasks       []Task
 		ReplicationTasks []Task
@@ -796,6 +797,7 @@ type (
 		PrevRunID        string
 		ExecutionInfo    *WorkflowExecutionInfo
 		ReplicationState *ReplicationState
+		VersionHistories VersionHistories
 		Condition        int64
 		RangeID          int64
 
@@ -827,6 +829,7 @@ type (
 		UpdateCurr           bool
 		CurrExecutionInfo    *WorkflowExecutionInfo
 		CurrReplicationState *ReplicationState
+		CurrVersionHistories VersionHistories
 		CurrReplicationTasks []Task
 		CurrTransferTasks    []Task
 		CurrTimerTasks       []Task
@@ -834,6 +837,7 @@ type (
 		// For new mutable state
 		InsertExecutionInfo       *WorkflowExecutionInfo
 		InsertReplicationState    *ReplicationState
+		InsertVersionHistories    VersionHistories
 		InsertTransferTasks       []Task
 		InsertTimerTasks          []Task
 		InsertReplicationTasks    []Task
