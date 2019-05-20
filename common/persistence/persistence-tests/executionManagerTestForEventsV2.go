@@ -82,14 +82,14 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 		WorkflowId: common.StringPtr("test-eventsv2-workflow"),
 		RunId:      common.StringPtr("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
 	}
-	versionHistories := &gen.VersionHistories{
-		Histories: []*gen.VersionHistory{
+	versionHistories := p.VersionHistories{
+		Histories: []p.VersionHistory{
 			{
 				BranchToken: []byte{1},
-				History: []*gen.VersionHistoryItem{
+				History: []p.VersionHistoryItem{
 					{
-						EventID: common.Int64Ptr(1),
-						Version: common.Int64Ptr(0),
+						EventID: 1,
+						Version: 0,
 					},
 				},
 			},
@@ -136,7 +136,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 	s.NotNil(info0, "Valid Workflow info expected.")
 	s.Equal(int32(p.EventStoreVersionV2), info0.EventStoreVersion)
 	s.Equal([]byte("branchToken1"), info0.BranchToken)
-	s.True(info0.VersionHistories.Equals(versionHistories))
+	s.Equal(info0.VersionHistories, versionHistories)
 
 	updatedInfo := copyWorkflowExecutionInfo(info0)
 	updatedInfo.NextEventID = int64(5)
@@ -151,7 +151,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 		StartedID:  5,
 	}}
 	updatedInfo.BranchToken = []byte("branchToken2")
-	versionHistories.Histories[0].History[0].EventID = common.Int64Ptr(2)
+	versionHistories.Histories[0].History[0].EventID = 2
 	updatedInfo.VersionHistories = versionHistories
 
 	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), nil, nil, nil, timerInfos, nil)
@@ -166,7 +166,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 	s.EqualTimesWithPrecision(currentTime, state.TimerInfos[timerID].ExpiryTime, time.Millisecond*500)
 	s.Equal(int64(2), state.TimerInfos[timerID].TaskID)
 	s.Equal(int64(5), state.TimerInfos[timerID].StartedID)
-	s.True(state.ExecutionInfo.VersionHistories.Equals(versionHistories))
+	s.Equal(state.ExecutionInfo.VersionHistories, versionHistories)
 
 	err2 = s.UpdateWorkflowExecution(updatedInfo, nil, nil, int64(5), nil, nil, nil, nil, []string{timerID})
 	s.NoError(err2)

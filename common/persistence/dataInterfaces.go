@@ -260,7 +260,7 @@ type (
 		ClientFeatureVersion         string
 		ClientImpl                   string
 		AutoResetPoints              *workflow.ResetPoints
-		VersionHistories             *workflow.VersionHistories
+		VersionHistories             VersionHistories
 		// for retry
 		Attempt            int32
 		HasRetryPolicy     bool
@@ -720,7 +720,7 @@ type (
 		MaximumAttempts             int32
 		NonRetriableErrors          []string
 		PreviousAutoResetPoints     *workflow.ResetPoints
-		VersionHistories            *workflow.VersionHistories
+		VersionHistories            VersionHistories
 		// 2 means using eventsV2, empty/0/1 means using events(V1)
 		EventStoreVersion int32
 		// for eventsV2: branchToken from historyPersistence
@@ -807,7 +807,6 @@ type (
 		InsertSignalInfos         []*SignalInfo
 		InsertSignalRequestedIDs  []string
 		Encoding                  common.EncodingType // optional binary encoding type
-		VersionHistories          *workflow.VersionHistories
 	}
 
 	// ResetWorkflowExecutionRequest is used to reset workflow execution state for current run and create new run
@@ -831,7 +830,6 @@ type (
 		CurrReplicationTasks []Task
 		CurrTransferTasks    []Task
 		CurrTimerTasks       []Task
-		VersionHistories     *workflow.VersionHistories
 
 		// For new mutable state
 		InsertExecutionInfo       *WorkflowExecutionInfo

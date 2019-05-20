@@ -108,10 +108,11 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(info *InternalWorkflowEx
 		return nil, err
 	}
 
-	versionHistories, err := m.serializer.DeserializeVersionHistories(info.VersionHistories)
+	tVersionHistories, err := m.serializer.DeserializeVersionHistories(info.VersionHistories)
 	if err != nil {
 		return nil, err
 	}
+	versionHistories := NewVersionHistoriesFromThrift(tVersionHistories)
 
 	newInfo := &WorkflowExecutionInfo{
 		CompletionEvent: completionEvent,
@@ -488,8 +489,8 @@ func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInf
 	if err != nil {
 		return nil, err
 	}
-
-	versionHistories, err := m.serializer.SerializeVersionHistories(info.VersionHistories, encoding)
+	tVersionHistory := info.VersionHistories.ToThrift()
+	versionHistories, err := m.serializer.SerializeVersionHistories(tVersionHistory, encoding)
 	if err != nil {
 		return nil, err
 	}
@@ -649,7 +650,8 @@ func (m *executionManagerImpl) SerializeCreateWorkflowExecutionRequest(request *
 	if err != nil {
 		return nil, err
 	}
-	versionHistories, err := m.serializer.SerializeVersionHistories(request.VersionHistories, common.EncodingTypeThriftRW)
+	tVersionHistories := request.VersionHistories.ToThrift()
+	versionHistories, err := m.serializer.SerializeVersionHistories(tVersionHistories, common.EncodingTypeThriftRW)
 	if err != nil {
 		return nil, err
 	}

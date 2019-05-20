@@ -270,7 +270,6 @@ type (
 		ReplicationState         *ReplicationState
 		BufferedEvents           []*DataBlob
 		BufferedReplicationTasks map[int64]*InternalBufferedReplicationTask
-		//VersionHistories         *DataBlob
 	}
 
 	// InternalActivityInfo details  for Persistence Interface
@@ -402,6 +401,7 @@ type (
 		CurrReplicationTasks []Task
 		CurrTransferTasks    []Task
 		CurrTimerTasks       []Task
+		CurrVersionHistories *DataBlob
 
 		// For new mutable state
 		InsertExecutionInfo       *InternalWorkflowExecutionInfo
@@ -415,6 +415,7 @@ type (
 		InsertRequestCancelInfos  []*RequestCancelInfo
 		InsertSignalInfos         []*SignalInfo
 		InsertSignalRequestedIDs  []string
+		InsertVersionHistories    *DataBlob
 	}
 
 	// InternalAppendHistoryEventsRequest is used to append new events to workflow execution history  for Persistence Interface

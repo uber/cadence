@@ -1894,6 +1894,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.InternalUpdate
 	return nil
 }
 
+//TODO: update query with version histories
 func (d *cassandraPersistence) ResetWorkflowExecution(request *p.InternalResetWorkflowExecutionRequest) error {
 	batch := d.session.NewBatch(gocql.LoggedBatch)
 	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
