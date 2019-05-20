@@ -68,6 +68,7 @@ func ClientFromConfig(cfg *Config) (s3iface.S3API, error) {
 		Endpoint:         cfg.Endpoint,
 		Region:           aws.String(cfg.Region),
 		S3ForcePathStyle: aws.Bool(cfg.S3ForcePathStyle),
+		MaxRetries:       aws.Int(0),
 	}
 	sess, err := session.NewSession(s3Config)
 	if err != nil {
@@ -133,7 +134,7 @@ func (c *client) Download(ctx context.Context, bucket string, key blob.Key) (*bl
 		return nil, err
 	}
 
-	tags, err := gettags(ctx, c.s3cli, bucket, key.String())
+	tags, err := getTags(ctx, c.s3cli, bucket, key.String())
 	if err != nil {
 		return nil, err
 	}
@@ -143,12 +144,13 @@ func (c *client) Download(ctx context.Context, bucket string, key blob.Key) (*bl
 func (c *client) GetTags(ctx context.Context, bucket string, key blob.Key) (map[string]string, error) {
 	ctx, cancel := c.ensureContextTimeout(ctx)
 	defer cancel()
-	tags, err := gettags(ctx, c.s3cli, bucket, key.String())
+	tags, err := getTags(ctx, c.s3cli, bucket, key.String())
 	if err != nil {
 		return nil, err
 	}
 	return tags, nil
 }
+
 // Exists returns false when the bucket does not exist or the bucket and key does not exist
 func (c *client) Exists(ctx context.Context, bucket string, key blob.Key) (bool, error) {
 	ctx, cancel := c.ensureContextTimeout(ctx)
@@ -250,7 +252,7 @@ func (c *client) BucketMetadata(ctx context.Context, bucket string) (*blobstore.
 		}
 	}
 	return &blobstore.BucketMetadataResponse{
-		Owner: owner,
+		Owner:         owner,
 		RetentionDays: retentionDays,
 	}, nil
 }
@@ -272,11 +274,11 @@ func (c *client) BucketExists(ctx context.Context, bucket string) (bool, error) 
 }
 
 func (c *client) IsRetryableError(err error) bool {
-	return request.IsErrorRetryable(err)
+	return c.isStatusCodeRetryable(err) || request.IsErrorRetryable(err) || request.IsErrorThrottle(err)
 }
 
 func (c *client) GetRetryPolicy() backoff.RetryPolicy {
-	policy := backoff.NewExponentialRetryPolicy(30 )
+	policy := backoff.NewExponentialRetryPolicy(30)
 	policy.SetMaximumAttempts(3)
 	return policy
 }
@@ -288,7 +290,25 @@ func (c *client) ensureContextTimeout(ctx context.Context) (context.Context, con
 	return context.WithTimeout(ctx, defaultBlobstoreTimeout)
 }
 
-func gettags(ctx context.Context, s3api s3iface.S3API, bucket string, key string) (map[string]string, error) {
+func (c *client) isStatusCodeRetryable(err error) bool {
+	if err == nil {
+		return false
+	}
+	if aerr, ok := err.(awserr.Error); ok {
+		if rerr, ok := err.(awserr.RequestFailure); ok {
+			if rerr.StatusCode() == 429 {
+				return true
+			}
+			if rerr.StatusCode() >= 500 && rerr.StatusCode() != 501 {
+				return true
+			}
+		}
+		return c.isStatusCodeRetryable(aerr.OrigErr())
+	}
+	return false
+}
+
+func getTags(ctx context.Context, s3api s3iface.S3API, bucket string, key string) (map[string]string, error) {
 	result, err := s3api.GetObjectTaggingWithContext(ctx, &s3.GetObjectTaggingInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
