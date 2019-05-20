@@ -214,22 +214,22 @@ func (s *ClientSuite) TestListByPrefix_Success() {
 	s.s3cli.On("PutObjectWithContext", mock.Anything, mock.Anything).Return(nil, nil)
 	s.s3cli.On("ListObjectsV2WithContext", mock.Anything, mock.Anything).
 		Return(func(_ context.Context, input *s3.ListObjectsV2Input, opts ...request.Option) *s3.ListObjectsV2Output {
-		objects := make([]*s3.Object, 0)
-		for _, k := range allFiles {
-			if strings.HasPrefix(k, *input.Prefix) {
-				objects = append(objects, &s3.Object{
-					Key: aws.String(k),
-				})
+			objects := make([]*s3.Object, 0)
+			for _, k := range allFiles {
+				if strings.HasPrefix(k, *input.Prefix) {
+					objects = append(objects, &s3.Object{
+						Key: aws.String(k),
+					})
+				}
 			}
-		}
-		sort.SliceStable(objects, func(i, j int) bool {
-			return *objects[i].Key < *objects[j].Key
+			sort.SliceStable(objects, func(i, j int) bool {
+				return *objects[i].Key < *objects[j].Key
 
-		})
-		return &s3.ListObjectsV2Output{
-			Contents: objects,
-		}
-	}, nil)
+			})
+			return &s3.ListObjectsV2Output{
+				Contents: objects,
+			}
+		}, nil)
 
 	for _, f := range allFiles {
 		key, err := blob.NewKeyFromString(f)
@@ -309,10 +309,10 @@ func (s *ClientSuite) assertBlobEquals(expectedTags map[string]string, expectedB
 }
 
 func (s *ClientSuite) setupFsEmulation() {
-	fs  := make(map[string]string)
+	fs := make(map[string]string)
 	tags := make(map[string]string)
 
-	putObjectFn := func (_ aws.Context, input *s3.PutObjectInput, _ ...request.Option) (*s3.PutObjectOutput) {
+	putObjectFn := func(_ aws.Context, input *s3.PutObjectInput, _ ...request.Option) *s3.PutObjectOutput {
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(input.Body)
 
@@ -322,14 +322,14 @@ func (s *ClientSuite) setupFsEmulation() {
 		}
 		return &s3.PutObjectOutput{}
 	}
-	getObjectFn := func(_ aws.Context, input *s3.GetObjectInput, _ ...request.Option) (*s3.GetObjectOutput) {
+	getObjectFn := func(_ aws.Context, input *s3.GetObjectInput, _ ...request.Option) *s3.GetObjectOutput {
 		c := fs[*input.Bucket+*input.Key]
 		return &s3.GetObjectOutput{
 			Body: ioutil.NopCloser(bytes.NewReader([]byte(c))),
 		}
 
 	}
-	getTagsFn := func(_ aws.Context, input *s3.GetObjectTaggingInput, _ ...request.Option) (*s3.GetObjectTaggingOutput) {
+	getTagsFn := func(_ aws.Context, input *s3.GetObjectTaggingInput, _ ...request.Option) *s3.GetObjectTaggingOutput {
 		t := tags[*input.Bucket+*input.Key]
 		ql, _ := url.ParseQuery(t)
 
