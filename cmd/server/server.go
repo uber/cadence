@@ -185,9 +185,13 @@ func (s *server) startService() common.Daemon {
 	params.PublicClient = workflowserviceclient.New(dispatcher.ClientConfig(common.FrontendServiceName))
 
 	if params.ClusterMetadata.ArchivalConfig().ConfiguredForArchival() {
+		if s.cfg.Archival.Filestore != nil && s.cfg.Archival.S3store != nil {
+			log.Fatalf("cannot config both filestore and s3store")
+		}
 		if s.cfg.Archival.Filestore != nil {
 			params.BlobstoreClient, err = filestore.NewClient(s.cfg.Archival.Filestore)
-		} else if s.cfg.Archival.S3store != nil {
+		}
+		if s.cfg.Archival.S3store != nil {
 			params.BlobstoreClient, err = s3store.NewClient(s.cfg.Archival.S3store)
 		}
 		if err != nil {
