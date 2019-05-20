@@ -24,10 +24,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/common/service/dynamicconfig"
-
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
@@ -62,20 +61,6 @@ func (s *TokenBucketSuite) TestRpsEnforced() {
 	tb := New(99, ts)
 	for i := 0; i < 2; i++ {
 		total, attempts := s.testRpsEnforcedHelper(tb, ts, 11, 90, 10)
-		// total := 0
-		// attempts := 1
-		// for ; attempts < 11; attempts++ {
-		// 	for c := 0; c < 2; c++ {
-		// 		if ok, _ := tb.TryConsume(10); ok {
-		// 			total += 10
-		// 		}
-		// 	}
-
-		// 	if total >= 90 {
-		// 		break
-		// 	}
-		// 	ts.advance(time.Millisecond * 101)
-		// }
 		s.Equal(90, total, "Token bucket failed to enforce limit")
 		s.Equal(9, attempts, "Token bucket gave out tokens too quickly")
 		ts.advance(time.Millisecond * 101)
@@ -92,19 +77,6 @@ func (s *TokenBucketSuite) TestLowRpsEnforced() {
 	tb := New(3, ts)
 
 	total, attempts := s.testRpsEnforcedHelper(tb, ts, 10, 3, 1)
-	// total := 0
-	// attempts := 1
-	// for ; attempts < 10; attempts++ {
-	// 	for c := 0; c < 2; c++ {
-	// 		if ok, _ := tb.TryConsume(1); ok {
-	// 			total++
-	// 		}
-	// 	}
-	// 	if total >= 3 {
-	// 		break
-	// 	}
-	// 	ts.advance(time.Millisecond * 101)
-	// }
 	s.Equal(3, total, "Token bucket failed to enforce limit")
 	s.Equal(3, attempts, "Token bucket gave out tokens too quickly")
 }
