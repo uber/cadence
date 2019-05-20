@@ -565,6 +565,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 		tasklist,
 		decisionTimeoutSecond,
 		newRunDecisionAttempt,
+		time.Now().UnixNano(),
 	)
 	expectedNewRunStateBuilder.GetExecutionInfo().LastFirstEventID = newRunStartedEvent.GetEventId()
 	expectedNewRunStateBuilder.GetExecutionInfo().NextEventID = newRunDecisionEvent.GetEventId() + 1
@@ -894,6 +895,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 		tasklist,
 		decisionTimeoutSecond,
 		newRunDecisionAttempt,
+		time.Now().UnixNano(),
 	)
 	expectedNewRunStateBuilder.GetExecutionInfo().LastFirstEventID = newRunStartedEvent.GetEventId()
 	expectedNewRunStateBuilder.GetExecutionInfo().NextEventID = newRunDecisionEvent.GetEventId() + 1

@@ -169,7 +169,7 @@ type (
 		ReplicateChildWorkflowExecutionTimedOutEvent(*workflow.HistoryEvent)
 		ReplicateDecisionTaskCompletedEvent(*workflow.HistoryEvent)
 		ReplicateDecisionTaskFailedEvent()
-		ReplicateDecisionTaskScheduledEvent(int64, int64, string, int32, int64) *decisionInfo
+		ReplicateDecisionTaskScheduledEvent(int64, int64, string, int32, int64, int64) *decisionInfo
 		ReplicateDecisionTaskStartedEvent(*decisionInfo, int64, int64, int64, string, int64) *decisionInfo
 		ReplicateDecisionTaskTimedOutEvent(workflow.TimeoutType)
 		ReplicateExternalWorkflowExecutionCancelRequested(*workflow.HistoryEvent)
