@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -173,7 +174,7 @@ func NewEngineWithShardContext(
 		metricsClient:        shard.GetMetricsClient(),
 		historyEventNotifier: historyEventNotifier,
 		config:               config,
-		archivalClient:       archiver.NewClient(shard.GetMetricsClient(), shard.GetLogger(), publicClient, shard.GetConfig().NumArchiveSystemWorkflows),
+		archivalClient:       archiver.NewClient(shard.GetMetricsClient(), shard.GetLogger(), publicClient, shard.GetConfig().NumArchiveSystemWorkflows, shard.GetConfig().ArchiveRequestRPS()),
 	}
 
 	txProcessor := newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, matching, historyClient, logger)
@@ -189,7 +190,7 @@ func NewEngineWithShardContext(
 		historyEngImpl.replicator = newHistoryReplicator(shard, historyEngImpl, historyCache, shard.GetDomainCache(), historyManager, historyV2Manager,
 			logger)
 	}
-	historyEngImpl.resetor = newWorkflowResetor(historyEngImpl, historyEngImpl.replicator)
+	historyEngImpl.resetor = newWorkflowResetor(historyEngImpl)
 
 	return historyEngImpl
 }
@@ -419,9 +420,14 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx ctx.Context, startRequest
 
 	context := newWorkflowExecutionContext(domainID, execution, e.shard, e.executionManager, e.logger)
 	createReplicationTask := domainEntry.CanReplicateEvent()
-	_, retError = context.appendFirstBatchEventsForActive(msBuilder)
+	replicationTasks := []persistence.Task{}
+	var replicationTask persistence.Task
+	_, replicationTask, retError = context.appendFirstBatchEventsForActive(msBuilder, createReplicationTask)
 	if retError != nil {
 		return
+	}
+	if replicationTask != nil {
+		replicationTasks = append(replicationTasks, replicationTask)
 	}
 
 	// delete history if createWorkflow failed, otherwise history will leak
@@ -438,7 +444,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx ctx.Context, startRequest
 	prevLastWriteVersion := int64(0)
 	retError = context.createWorkflowExecution(
 		msBuilder, e.currentClusterName, createReplicationTask, time.Now(),
-		transferTasks, timerTasks,
+		transferTasks, replicationTasks, timerTasks,
 		createMode, prevRunID, prevLastWriteVersion,
 	)
 	if retError != nil {
@@ -470,7 +476,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx ctx.Context, startRequest
 			}
 			retError = context.createWorkflowExecution(
 				msBuilder, e.currentClusterName, createReplicationTask, time.Now(),
-				transferTasks, timerTasks,
+				transferTasks, replicationTasks, timerTasks,
 				createMode, prevRunID, prevLastWriteVersion,
 			)
 		}
@@ -716,6 +722,18 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(ctx ctx.Context,
 			AutoResetPoints: executionInfo.AutoResetPoints,
 		},
 	}
+
+	// TODO: we need to consider adding execution time to mutable state
+	// For now execution time will be calculated based on start time and cron schedule/retry policy
+	// each time DescribeWorkflowExecution is called.
+	backoff := time.Duration(0)
+	if executionInfo.HasRetryPolicy && (executionInfo.Attempt > 0) {
+		backoff = time.Duration(float64(executionInfo.InitialInterval)*math.Pow(executionInfo.BackoffCoefficient, float64(executionInfo.Attempt-1))) * time.Second
+	} else if len(executionInfo.CronSchedule) != 0 {
+		backoff = cron.GetBackoffForNextSchedule(executionInfo.CronSchedule, executionInfo.StartTimestamp)
+	}
+	result.WorkflowExecutionInfo.ExecutionTime = common.Int64Ptr(result.WorkflowExecutionInfo.GetStartTime() + backoff.Nanoseconds())
+
 	if executionInfo.ParentRunID != "" {
 		result.WorkflowExecutionInfo.ParentExecution = &workflow.WorkflowExecution{
 			WorkflowId: common.StringPtr(executionInfo.ParentWorkflowID),
@@ -2317,9 +2335,14 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx ctx.Context, si
 
 	context = newWorkflowExecutionContext(domainID, execution, e.shard, e.executionManager, e.logger)
 	createReplicationTask := domainEntry.CanReplicateEvent()
-	_, retError = context.appendFirstBatchEventsForActive(msBuilder)
+	replicationTasks := []persistence.Task{}
+	var replicationTask persistence.Task
+	_, replicationTask, retError = context.appendFirstBatchEventsForActive(msBuilder, createReplicationTask)
 	if retError != nil {
 		return
+	}
+	if replicationTask != nil {
+		replicationTasks = append(replicationTasks, replicationTask)
 	}
 
 	// delete history if createWorkflow failed, otherwise history will leak
@@ -2340,7 +2363,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx ctx.Context, si
 	}
 	retError = context.createWorkflowExecution(
 		msBuilder, e.currentClusterName, createReplicationTask, time.Now(),
-		transferTasks, timerTasks,
+		transferTasks, replicationTasks, timerTasks,
 		createMode, prevRunID, prevLastWriteVersion,
 	)
 
