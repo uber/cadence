@@ -21,9 +21,10 @@
 package s3store
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"testing"
 )
 
 type ConfigSuite struct {

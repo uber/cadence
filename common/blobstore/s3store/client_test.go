@@ -24,6 +24,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
+	"net/url"
+	"sort"
+	"strings"
+	"testing"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -34,11 +40,6 @@ import (
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/blobstore/blob"
 	"github.com/uber/cadence/common/blobstore/s3store/mocks"
-	"io/ioutil"
-	"net/url"
-	"sort"
-	"strings"
-	"testing"
 )
 
 const (
