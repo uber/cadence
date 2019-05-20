@@ -40,6 +40,10 @@ func NewVersionHistory(items []VersionHistoryItem) VersionHistory {
 
 // Update updates the versionHistory slice
 func (v *VersionHistory) Update(item VersionHistoryItem) error {
+	if len(v.History) == 0 {
+		panic("version history cannot be empty")
+	}
+
 	currentItem := item
 	lastItem := &v.History[len(v.History)-1]
 	if currentItem.Version < lastItem.Version {
@@ -96,6 +100,9 @@ func (v *VersionHistory) FindLowestCommonVersionHistoryItem(remote VersionHistor
 
 // IsAppendable checks if a version history item is appendable
 func (v *VersionHistory) IsAppendable(item VersionHistoryItem) bool {
+	if len(v.History) == 0 {
+		panic("version history cannot be empty")
+	}
 	return v.History[len(v.History)-1] == item
 }
 
@@ -115,9 +122,7 @@ func NewVersionHistoriesFromThrift(thrift *shared.VersionHistories) VersionHisto
 	for _, tHistory := range thrift.Histories {
 		history := VersionHistory{BranchToken: tHistory.GetBranchToken()}
 		for _, item := range tHistory.GetHistory() {
-			if err := history.Update(VersionHistoryItem{EventID: item.GetEventID(), Version: item.GetVersion()}); err != nil {
-				panic("version histories from thrift is malformed")
-			}
+			history.History = append(history.History, VersionHistoryItem{EventID: item.GetEventID(), Version: item.GetVersion()})
 		}
 		histories.Histories = append(histories.Histories, history)
 	}
