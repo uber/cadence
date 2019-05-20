@@ -42,8 +42,6 @@ import (
 )
 
 const (
-	bucketInvalidMetadata      = "invalid-metadata"
-	bucketNoMetadata           = "bucket-no-metadata"
 	defaultBucketName          = "default-bucket-name"
 	defaultBucketOwner         = "default-bucket-owner"
 	defaultBucketRetentionDays = 10
@@ -130,11 +128,18 @@ func (s *ClientSuite) TestUploadDownload_Success_CustomBucket() {
 	s.NoError(err)
 	s.NotNil(downloadBlob)
 	s.assertBlobEquals(map[string]string{}, "blob body", downloadBlob)
+	b = blob.NewBlob([]byte("body version 2"), map[string]string{"key": "value"})
+	s.NoError(client.Upload(context.Background(), customBucketName, key, b))
+	downloadBlob, err = client.Download(context.Background(), customBucketName, key)
+	s.NoError(err)
+	s.NotNil(downloadBlob)
+	s.assertBlobEquals(map[string]string{"key": "value"}, "body version 2", downloadBlob)
 }
 
 func (s *ClientSuite) TestExists_Fail_BucketNotExists() {
 	client := s.constructClient()
 	s.s3cli.On("HeadObjectWithContext", mock.Anything, mock.Anything).Return(nil, awserr.New("NotFound", "", nil))
+
 	key, err := blob.NewKeyFromString("blob.blob")
 	s.NoError(err)
 	exists, err := client.Exists(context.Background(), "bucket-not-exists", key)
