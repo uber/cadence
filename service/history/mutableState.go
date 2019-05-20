@@ -32,15 +32,17 @@ import (
 type (
 	// TODO: This should be part of persistence layer
 	decisionInfo struct {
-		Version            int64
-		ScheduleID         int64
-		StartedID          int64
-		RequestID          string
-		DecisionTimeout    int32
-		TaskList           string // This is only needed to communicate tasklist used after AddDecisionTaskScheduledEvent
-		Attempt            int64
-		StartedTimestamp   int64
+		Version         int64
+		ScheduleID      int64
+		StartedID       int64
+		RequestID       string
+		DecisionTimeout int32
+		TaskList        string // This is only needed to communicate tasklist used after AddDecisionTaskScheduledEvent
+		Attempt         int64
+		// They are useful for transient decision: when transient decision finally completes, use these timestamp to create scheduled/started events.
+		// Also used for recording latency metrics
 		ScheduledTimestamp int64
+		StartedTimestamp   int64
 	}
 
 	mutableState interface {
