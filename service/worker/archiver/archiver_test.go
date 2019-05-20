@@ -62,6 +62,9 @@ func (s *archiverSuite) SetupSuite() {
 func (s *archiverSuite) SetupTest() {
 	archiverTestMetrics = &mmocks.Client{}
 	archiverTestMetrics.On("StartTimer", mock.Anything, mock.Anything).Return(tally.NewStopwatch(time.Now(), &nopStopwatchRecorder{}))
+	archiverTestMetrics.On("IncCounter", metrics.ArchiverScope, metrics.CadenceRequests)
+	archiverTestMetrics.On("IncCounter", metrics.ArchiverScope, metrics.ArchiverUploadWithRetriesCount)
+	archiverTestMetrics.On("IncCounter", metrics.ArchiverScope, metrics.ArchiverDeleteWithRetriesCount)
 	archiverTestLogger = &log.MockLogger{}
 	archiverTestLogger.On("WithTags", mock.Anything).Return(archiverTestLogger)
 }
@@ -72,6 +75,7 @@ func (s *archiverSuite) TearDownTest() {
 }
 
 func (s *archiverSuite) TestHandleRequest_UploadFails_NonRetryableError() {
+
 	archiverTestMetrics.On("IncCounter", metrics.ArchiverScope, metrics.ArchiverUploadFailedAllRetriesCount).Once()
 	archiverTestMetrics.On("IncCounter", metrics.ArchiverScope, metrics.ArchiverDeleteLocalSuccessCount).Once()
 	archiverTestLogger.On("Error", mock.Anything, mock.Anything).Once()
