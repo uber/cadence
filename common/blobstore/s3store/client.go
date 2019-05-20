@@ -202,7 +202,7 @@ func (c *client) ListByPrefix(ctx context.Context, bucket string, prefix string)
 	for i, v := range results.Contents {
 		key, err := blob.NewKeyFromString(*v.Key)
 		if err != nil {
-			return nil, ErrConstructKey
+			return nil, blobstore.ErrConstructKey
 		}
 		keys[i] = key
 	}
