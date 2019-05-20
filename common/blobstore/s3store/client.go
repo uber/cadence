@@ -54,7 +54,12 @@ type client struct {
 }
 
 // NewClient returns a new Client backed by S3
-func NewClient(cfg *Config) (blobstore.Client, error) {
+func NewClient(s3cli s3iface.S3API) blobstore.Client {
+	return &client{
+		s3cli: s3cli,
+	}
+}
+func ClientFromConfig(cfg *Config) (s3iface.S3API, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
@@ -68,11 +73,7 @@ func NewClient(cfg *Config) (blobstore.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	s3cli := s3.New(sess)
-	return &client{
-		s3cli: s3cli,
-	}, nil
+	return s3.New(sess), nil
 }
 
 func (c *client) Upload(ctx context.Context, bucket string, key blob.Key, blob *blob.Blob) error {

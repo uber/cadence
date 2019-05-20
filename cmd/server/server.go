@@ -192,7 +192,10 @@ func (s *server) startService() common.Daemon {
 			params.BlobstoreClient, err = filestore.NewClient(s.cfg.Archival.Filestore)
 		}
 		if s.cfg.Archival.S3store != nil {
-			params.BlobstoreClient, err = s3store.NewClient(s.cfg.Archival.S3store)
+			s3cli, err := s3store.ClientFromConfig(s.cfg.Archival.S3store)
+			if err != nil {
+				params.BlobstoreClient = s3store.NewClient(s3cli)
+			}
 		}
 		if err != nil {
 			log.Fatalf("error creating blobstore: %v", err)
