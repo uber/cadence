@@ -81,6 +81,7 @@ type (
 
 		executionInfo    *persistence.WorkflowExecutionInfo // Workflow mutable state info.
 		replicationState *persistence.ReplicationState
+		versionHistories persistence.VersionHistories
 		continueAsNew    *persistence.CreateWorkflowExecutionRequest
 		hBuilder         *historyBuilder
 		currentCluster   string
@@ -3232,4 +3233,8 @@ func (e *mutableStateBuilder) CreateActivityRetryTimer(ai *persistence.ActivityI
 
 func (e *mutableStateBuilder) GetContinueAsNew() *persistence.CreateWorkflowExecutionRequest {
 	return e.continueAsNew
+}
+
+func (e *mutableStateBuilder) GetAllBranch() persistence.VersionHistories {
+	return e.versionHistories
 }

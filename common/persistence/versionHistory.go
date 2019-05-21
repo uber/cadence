@@ -23,6 +23,7 @@ package persistence
 import (
 	"fmt"
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"reflect"
 )
 
@@ -35,6 +36,7 @@ type (
 
 	// VersionHistory provides operations on version history
 	VersionHistory struct {
+		branchToken []byte
 		history []VersionHistoryItem
 	}
 
@@ -165,3 +167,17 @@ func (h *VersionHistories) AddHistory(item VersionHistoryItem, local VersionHist
 func (h *VersionHistories) GetHistories() []VersionHistory {
 	return h.versionHistories
 }
+
+// ToThrift return thrift format of version histories
+func (h *VersionHistories) ToThrift() *shared.VersionHistories {
+	tHistories := &shared.VersionHistories{}
+	for _, history := range h.versionHistories {
+	tHistory := &shared.VersionHistory{BranchToken: history.branchToken}
+	for _, item := range history.history {
+	tHistory.History = append(tHistory.History,
+	&shared.VersionHistoryItem{EventID: common.Int64Ptr(item.eventID), Version: common.Int64Ptr(item.version)})
+}
+	tHistories.Histories = append(tHistories.Histories, tHistory)
+}
+	return tHistories
+}	}

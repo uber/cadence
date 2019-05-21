@@ -581,6 +581,7 @@ func (e *historyEngineImpl) getMutableState(ctx ctx.Context,
 
 	executionInfo := msBuilder.GetExecutionInfo()
 	execution.RunId = context.getExecution().RunId
+	versionHistories := msBuilder.GetAllBranch()
 	retResp = &h.GetMutableStateResponse{
 		Execution:                            &execution,
 		WorkflowType:                         &workflow.WorkflowType{Name: common.StringPtr(executionInfo.WorkflowTypeName)},
@@ -596,7 +597,7 @@ func (e *historyEngineImpl) getMutableState(ctx ctx.Context,
 		StickyTaskListScheduleToStartTimeout: common.Int32Ptr(executionInfo.StickyScheduleToStartTimeout),
 		EventStoreVersion:                    common.Int32Ptr(msBuilder.GetEventStoreVersion()),
 		BranchToken:                          msBuilder.GetCurrentBranch(),
-		//VersionHistories:                     msBuilder.
+		VersionHistories:                     versionHistories.ToThrift(),
 	}
 
 	replicationState := msBuilder.GetReplicationState()
