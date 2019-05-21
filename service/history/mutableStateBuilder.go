@@ -3238,3 +3238,10 @@ func (e *mutableStateBuilder) CreateActivityRetryTimer(ai *persistence.ActivityI
 func (e *mutableStateBuilder) GetContinueAsNew() *persistence.CreateWorkflowExecutionRequest {
 	return e.continueAsNew
 }
+
+func (e *mutableStateBuilder) DeleteVersionHistory(index int) {
+	if index < 0 || index >= len(e.versionHistories.Histories) {
+		panic("delete version history index is out of boundary")
+	}
+	e.versionHistories.Histories = append(e.versionHistories.Histories[:index], e.versionHistories.Histories[index+1:]...)
+}

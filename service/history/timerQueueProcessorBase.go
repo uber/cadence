@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"reflect"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -704,15 +705,20 @@ func (t *timerQueueProcessorBase) deleteWorkflowHistory(task *persistence.TimerT
 				tag.TaskType(task.GetTaskType()))
 			versionHistories := msBuilder.GetAllBranches()
 
-			for _, versionHistory := range versionHistories.Histories {
+		CleanupLoop:
+			for idx, versionHistory := range versionHistories.Histories {
+				if reflect.DeepEqual(versionHistory.BranchToken, msBuilder.GetCurrentBranch()) {
+					continue CleanupLoop
+				}
+
 				if err := persistence.DeleteWorkflowExecutionHistoryV2(
 					t.historyService.historyV2Mgr,
 					versionHistory.BranchToken,
 					common.IntPtr(t.shard.GetShardID()),
 					logger); err != nil {
-						return err
+					return err
 				}
-				//TODO: remove deleted version histories from mutable state
+				msBuilder.DeleteVersionHistory(idx)
 			}
 		}
 		return t.historyService.historyMgr.DeleteWorkflowExecutionHistory(
