@@ -174,7 +174,7 @@ func NewEngineWithShardContext(
 		metricsClient:        shard.GetMetricsClient(),
 		historyEventNotifier: historyEventNotifier,
 		config:               config,
-		archivalClient:       archiver.NewClient(shard.GetMetricsClient(), shard.GetLogger(), publicClient, shard.GetConfig().NumArchiveSystemWorkflows, shard.GetConfig().ArchiveRequestRPS()),
+		archivalClient:       archiver.NewClient(shard.GetMetricsClient(), shard.GetLogger(), publicClient, shard.GetConfig().NumArchiveSystemWorkflows, shard.GetConfig().ArchiveRequestRPS),
 	}
 
 	txProcessor := newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, matching, historyClient, logger)
@@ -2821,6 +2821,8 @@ func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(domainID str
 		Name: &executionInfo.TaskList,
 		Kind: common.TaskListKindPtr(workflow.TaskListKindNormal),
 	})
+	response.ScheduledTimestamp = common.Int64Ptr(di.ScheduledTimestamp)
+	response.StartedTimestamp = common.Int64Ptr(di.StartedTimestamp)
 
 	if di.Attempt > 0 {
 		// This decision is retried from mutable state
