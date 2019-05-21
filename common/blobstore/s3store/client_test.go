@@ -23,7 +23,6 @@ package s3store
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
 	"net/url"
 	"sort"
@@ -46,7 +45,6 @@ const (
 	defaultBucketName          = "default-bucket-name"
 	defaultBucketOwner         = "default-bucket-owner"
 	defaultBucketRetentionDays = 10
-	customBucketNamePrefix     = "default-bucket-name-custom"
 )
 
 type ClientSuite struct {
@@ -115,26 +113,6 @@ func (s *ClientSuite) TestDownload_Fail_BlobNotExists() {
 	b, err := client.Download(context.Background(), defaultBucketName, key)
 	s.Equal(blobstore.ErrBlobNotExists, err)
 	s.Nil(b)
-}
-
-func (s *ClientSuite) TestUploadDownload_Success_CustomBucket() {
-	client := s.constructClient()
-	s.setupFsEmulation()
-	b := blob.NewBlob([]byte("blob body"), map[string]string{})
-	key, err := blob.NewKeyFromString("blob.blob")
-	s.NoError(err)
-	customBucketName := fmt.Sprintf("%v-%v", customBucketNamePrefix, 3)
-	s.NoError(client.Upload(context.Background(), customBucketName, key, b))
-	downloadBlob, err := client.Download(context.Background(), customBucketName, key)
-	s.NoError(err)
-	s.NotNil(downloadBlob)
-	s.assertBlobEquals(map[string]string{}, "blob body", downloadBlob)
-	b = blob.NewBlob([]byte("body version 2"), map[string]string{"key": "value"})
-	s.NoError(client.Upload(context.Background(), customBucketName, key, b))
-	downloadBlob, err = client.Download(context.Background(), customBucketName, key)
-	s.NoError(err)
-	s.NotNil(downloadBlob)
-	s.assertBlobEquals(map[string]string{"key": "value"}, "body version 2", downloadBlob)
 }
 
 func (s *ClientSuite) TestExists_Fail_BucketNotExists() {

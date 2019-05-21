@@ -233,7 +233,7 @@ func (c *client) BucketMetadata(ctx context.Context, bucket string) (*blobstore.
 	}
 	retentionDays := 0
 	for _, v := range lifecycleResults.Rules {
-		if *v.Status == "Enabled" && retentionDays < int(*v.Expiration.Days) {
+		if *v.Status == s3.ExpirationStatusEnabled && retentionDays < int(*v.Expiration.Days) {
 			retentionDays = int(*v.Expiration.Days)
 		}
 	}
