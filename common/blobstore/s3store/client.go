@@ -165,6 +165,16 @@ func (c *client) Exists(ctx context.Context, bucket string, key blob.Key) (bool,
 	if err != nil {
 		aerr, ok := err.(awserr.Error)
 		if ok && (aerr.Code() == "NotFound") {
+			_, err = c.s3cli.HeadBucketWithContext(ctx, &s3.HeadBucketInput{
+				Bucket: aws.String(bucket),
+			})
+			if err != nil {
+				aerr, ok := err.(awserr.Error)
+				if ok && (aerr.Code() == "NotFound") {
+					return false, blobstore.ErrBucketNotExists
+				}
+				return false, err
+			}
 			return false, nil
 		}
 
@@ -268,7 +278,7 @@ func (c *client) BucketExists(ctx context.Context, bucket string) (bool, error) 
 	})
 
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok && (aerr.Code() == s3.ErrCodeNoSuchBucket || aerr.Code() == "NotFound") {
+		if aerr, ok := err.(awserr.Error); ok && (aerr.Code() == "NotFound") {
 			return false, nil
 		}
 		return false, err
