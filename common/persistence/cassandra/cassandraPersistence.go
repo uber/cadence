@@ -1349,6 +1349,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Int
 		panic(fmt.Errorf("Unknown CreateWorkflowMode: %v", request.CreateWorkflowMode))
 	}
 
+	versionHistoriesData, versionHistoriesEncoding := p.FromDataBlob(request.VersionHistories)
 	// TODO use updateMutableState() with useCondition=false to make code much cleaner
 	if request.ReplicationState == nil {
 		// Cross DC feature is currently disabled so we will be creating workflow executions without replication state
@@ -1415,8 +1416,8 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Int
 			request.NextEventID,
 			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID,
-			request.VersionHistories.Data,
-			request.VersionHistories.GetEncoding())
+			versionHistoriesData,
+			versionHistoriesEncoding)
 	} else {
 		lastReplicationInfo := make(map[string]map[string]interface{})
 		for k, v := range request.ReplicationState.LastReplicationInfo {
@@ -1491,8 +1492,8 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Int
 			request.NextEventID,
 			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID,
-			request.VersionHistories.Data,
-			request.VersionHistories.GetEncoding())
+			versionHistoriesData,
+			versionHistoriesEncoding)
 	}
 	return nil
 }
@@ -1619,6 +1620,7 @@ func (d *cassandraPersistence) updateMutableState(batch *gocql.Batch, executionI
 	}
 
 	completionData, completionEncoding := p.FromDataBlob(executionInfo.CompletionEvent)
+	versionHistoriesData, versionHistoriesEncoding := p.FromDataBlob(versionHistories)
 	if replicationState == nil {
 		// Updates will be called with null ReplicationState while the feature is disabled
 		batchQueryHelper(batch, templateUpdateWorkflowExecutionQuery, useCondition, condition,
@@ -1677,8 +1679,8 @@ func (d *cassandraPersistence) updateMutableState(batch *gocql.Batch, executionI
 			executionInfo.CronSchedule,
 			executionInfo.ExpirationSeconds,
 			executionInfo.NextEventID,
-			versionHistories.Data,
-			versionHistories.GetEncoding(),
+			versionHistoriesData,
+			versionHistoriesEncoding,
 			d.shardID,
 			rowTypeExecution,
 			executionInfo.DomainID,
@@ -1753,8 +1755,8 @@ func (d *cassandraPersistence) updateMutableState(batch *gocql.Batch, executionI
 			replicationState.LastWriteEventID,
 			lastReplicationInfo,
 			executionInfo.NextEventID,
-			versionHistories.Data,
-			versionHistories.GetEncoding(),
+			versionHistoriesData,
+			versionHistoriesEncoding,
 			d.shardID,
 			rowTypeExecution,
 			executionInfo.DomainID,

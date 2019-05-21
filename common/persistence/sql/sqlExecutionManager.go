@@ -1978,8 +1978,6 @@ func buildExecutionRow(executionInfo *p.InternalWorkflowExecutionInfo,
 		EventBranchToken:             executionInfo.BranchToken,
 		AutoResetPoints:              executionInfo.AutoResetPoints.Data,
 		AutoResetPointsEncoding:      common.StringPtr(string(executionInfo.AutoResetPoints.GetEncoding())),
-		VersionHistories:             versionHistories.Data,
-		VersionHistoriesEncoding:     common.StringPtr(string(versionHistories.GetEncoding())),
 	}
 
 	completionEvent := executionInfo.CompletionEvent
@@ -1996,6 +1994,10 @@ func buildExecutionRow(executionInfo *p.InternalWorkflowExecutionInfo,
 		for k, v := range replicationState.LastReplicationInfo {
 			info.LastReplicationInfo[k] = &sqlblobs.ReplicationInfo{Version: &v.Version, LastEventID: &v.LastEventID}
 		}
+	}
+	if versionHistories != nil {
+		info.VersionHistories = versionHistories.Data
+		info.VersionHistoriesEncoding = common.StringPtr(string(versionHistories.GetEncoding()))
 	}
 
 	if executionInfo.ParentDomainID != "" {
