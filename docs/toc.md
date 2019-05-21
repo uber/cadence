@@ -1,2 +1,2 @@
-#Table of Contents
+# Table of Contents
 - [Persistence](persistence.md)
