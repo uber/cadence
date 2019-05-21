@@ -140,6 +140,15 @@ func (c *client) GetTags(ctx context.Context, bucket string, key blob.Key) (map[
 	defer cancel()
 	tags, err := getTags(ctx, c.s3cli, bucket, key.String())
 	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			if aerr.Code() == s3.ErrCodeNoSuchBucket {
+				return nil, blobstore.ErrBucketNotExists
+			}
+
+			if aerr.Code() == s3.ErrCodeNoSuchKey {
+				return nil, blobstore.ErrBlobNotExists
+			}
+		}
 		return nil, err
 	}
 	return tags, nil

@@ -104,6 +104,28 @@ func (s *ClientSuite) TestDownload_Fail_BucketNotExists() {
 	s.Nil(b)
 }
 
+func (s *ClientSuite) TestGetTags_Fail_BucketNotExists() {
+	client := s.constructClient()
+	s.s3cli.On("GetObjectTaggingWithContext", mock.Anything, mock.Anything).Return(nil, awserr.New(s3.ErrCodeNoSuchBucket, "", nil))
+
+	key, err := blob.NewKeyFromString("blobname.ext")
+	s.NoError(err)
+	b, err := client.GetTags(context.Background(), "bucket-not-exists", key)
+	s.Equal(blobstore.ErrBucketNotExists, err)
+	s.Nil(b)
+}
+
+func (s *ClientSuite) TestGetTags_Fail_BlobNotExists() {
+	client := s.constructClient()
+	s.s3cli.On("GetObjectTaggingWithContext", mock.Anything, mock.Anything).Return(nil, awserr.New(s3.ErrCodeNoSuchKey, "", nil))
+
+	key, err := blob.NewKeyFromString("blobname.ext")
+	s.NoError(err)
+	b, err := client.GetTags(context.Background(), defaultBucketName, key)
+	s.Equal(blobstore.ErrBlobNotExists, err)
+	s.Nil(b)
+}
+
 func (s *ClientSuite) TestDownload_Fail_BlobNotExists() {
 	client := s.constructClient()
 	s.s3cli.On("GetObjectWithContext", mock.Anything, mock.Anything).Return(nil, awserr.New(s3.ErrCodeNoSuchKey, "", nil))
