@@ -581,7 +581,7 @@ func (e *historyEngineImpl) getMutableState(ctx ctx.Context,
 
 	executionInfo := msBuilder.GetExecutionInfo()
 	execution.RunId = context.getExecution().RunId
-	versionHistories := msBuilder.GetAllBranch()
+	versionHistories := msBuilder.GetAllBranches()
 	retResp = &h.GetMutableStateResponse{
 		Execution:                            &execution,
 		WorkflowType:                         &workflow.WorkflowType{Name: common.StringPtr(executionInfo.WorkflowTypeName)},

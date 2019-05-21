@@ -2226,3 +2226,19 @@ func (_m *mockMutableState) UpdateReplicationStateVersion(version int64, forceUp
 func (_m *mockMutableState) UpdateUserTimer(_a0 string, _a1 *persistence.TimerInfo) {
 	_m.Called(_a0, _a1)
 }
+
+// GetAllBranches provides a mock function with given fields:
+func (_m *mockMutableState) GetAllBranches() persistence.VersionHistories {
+	ret := _m.Called()
+
+	var r0 persistence.VersionHistories
+	if rf, ok := ret.Get(0).(func() persistence.VersionHistories); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(persistence.VersionHistories)
+		}
+	}
+
+	return r0
+}

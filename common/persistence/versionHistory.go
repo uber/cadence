@@ -37,7 +37,7 @@ type (
 	// VersionHistory provides operations on version history
 	VersionHistory struct {
 		branchToken []byte
-		history []VersionHistoryItem
+		history     []VersionHistoryItem
 	}
 
 	// VersionHistories contains a set of VersionHistory
@@ -172,12 +172,12 @@ func (h *VersionHistories) GetHistories() []VersionHistory {
 func (h *VersionHistories) ToThrift() *shared.VersionHistories {
 	tHistories := &shared.VersionHistories{}
 	for _, history := range h.versionHistories {
-	tHistory := &shared.VersionHistory{BranchToken: history.branchToken}
-	for _, item := range history.history {
-	tHistory.History = append(tHistory.History,
-	&shared.VersionHistoryItem{EventID: common.Int64Ptr(item.eventID), Version: common.Int64Ptr(item.version)})
-}
-	tHistories.Histories = append(tHistories.Histories, tHistory)
-}
+		tHistory := &shared.VersionHistory{BranchToken: history.branchToken}
+		for _, item := range history.history {
+			tHistory.History = append(tHistory.History,
+				&shared.VersionHistoryItem{EventID: common.Int64Ptr(item.eventID), Version: common.Int64Ptr(item.version)})
+		}
+		tHistories.Histories = append(tHistories.Histories, tHistory)
+	}
 	return tHistories
-}	}
+}

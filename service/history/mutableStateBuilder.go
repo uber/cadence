@@ -3235,6 +3235,6 @@ func (e *mutableStateBuilder) GetContinueAsNew() *persistence.CreateWorkflowExec
 	return e.continueAsNew
 }
 
-func (e *mutableStateBuilder) GetAllBranch() persistence.VersionHistories {
+func (e *mutableStateBuilder) GetAllBranches() persistence.VersionHistories {
 	return e.versionHistories
 }
