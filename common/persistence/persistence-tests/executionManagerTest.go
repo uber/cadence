@@ -857,6 +857,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Equal(int32(1), info0.DecisionTimeout)
 	s.Equal(int64(0), info0.DecisionAttempt)
 	s.Equal(int64(0), info0.DecisionStartedTimestamp)
+	s.Equal(int64(0), info0.DecisionScheduledTimestamp)
 	s.Empty(info0.StickyTaskList)
 	s.Equal(int32(0), info0.StickyScheduleToStartTimeout)
 	s.Empty(info0.ClientLibraryVersion)
@@ -874,6 +875,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	updatedInfo.DecisionVersion = int64(666)
 	updatedInfo.DecisionAttempt = int64(123)
 	updatedInfo.DecisionStartedTimestamp = int64(321)
+	updatedInfo.DecisionScheduledTimestamp = int64(654)
 	updatedInfo.StickyTaskList = "random sticky tasklist"
 	updatedInfo.StickyScheduleToStartTimeout = 876
 	updatedInfo.ClientLibraryVersion = "random client library version"
@@ -916,6 +918,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Equal(int32(1), info1.DecisionTimeout)
 	s.Equal(int64(123), info1.DecisionAttempt)
 	s.Equal(int64(321), info1.DecisionStartedTimestamp)
+	s.Equal(int64(654), info1.DecisionScheduledTimestamp)
 	s.Equal(updatedInfo.StickyTaskList, info1.StickyTaskList)
 	s.Equal(updatedInfo.StickyScheduleToStartTimeout, info1.StickyScheduleToStartTimeout)
 	s.Equal(updatedInfo.ClientLibraryVersion, info1.ClientLibraryVersion)
@@ -962,6 +965,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Equal(int32(1), info2.DecisionTimeout)
 	s.Equal(int64(123), info2.DecisionAttempt)
 	s.Equal(int64(321), info2.DecisionStartedTimestamp)
+	s.Equal(int64(654), info2.DecisionScheduledTimestamp)
 	s.Equal(updatedInfo.SignalCount, info2.SignalCount)
 	s.EqualValues(updatedInfo.HistorySize, info2.HistorySize)
 	s.Equal(updatedInfo.InitialInterval, info2.InitialInterval)
@@ -1002,6 +1006,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Equal(int32(1), info3.DecisionTimeout)
 	s.Equal(int64(123), info3.DecisionAttempt)
 	s.Equal(int64(321), info3.DecisionStartedTimestamp)
+	s.Equal(int64(654), info3.DecisionScheduledTimestamp)
 	s.Equal(updatedInfo.SignalCount, info2.SignalCount)
 	s.EqualValues(updatedInfo.HistorySize, info2.HistorySize)
 	s.Equal(updatedInfo.InitialInterval, info2.InitialInterval)
