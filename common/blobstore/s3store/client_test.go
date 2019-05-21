@@ -45,6 +45,7 @@ const (
 	defaultBucketName          = "default-bucket-name"
 	defaultBucketOwner         = "default-bucket-owner"
 	defaultBucketRetentionDays = 10
+	errNotFound                = "NotFound"
 )
 
 type ClientSuite struct {
@@ -141,8 +142,8 @@ func (s *ClientSuite) TestExists_Fail_BucketNotExists() {
 	client := s.constructClient()
 	s.s3cli.On("HeadBucketWithContext", mock.Anything, mock.MatchedBy(func(input *s3.HeadBucketInput) bool {
 		return *input.Bucket == "bucket-not-exists"
-	})).Return(nil, awserr.New("NotFound", "", nil))
-	s.s3cli.On("HeadObjectWithContext", mock.Anything, mock.Anything).Return(nil, awserr.New("NotFound", "", nil))
+	})).Return(nil, awserr.New(errNotFound, "", nil))
+	s.s3cli.On("HeadObjectWithContext", mock.Anything, mock.Anything).Return(nil, awserr.New(errNotFound, "", nil))
 
 	key, err := blob.NewKeyFromString("blob.blob")
 	s.NoError(err)
@@ -154,7 +155,7 @@ func (s *ClientSuite) TestExists_Fail_BucketNotExists() {
 func (s *ClientSuite) TestExists_Success() {
 	client := s.constructClient()
 	s.s3cli.On("HeadBucketWithContext", mock.Anything, mock.Anything).Return(nil, nil)
-	s.s3cli.On("HeadObjectWithContext", mock.Anything, mock.Anything).Return(nil, awserr.New("NotFound", "", nil)).Once()
+	s.s3cli.On("HeadObjectWithContext", mock.Anything, mock.Anything).Return(nil, awserr.New(errNotFound, "", nil)).Once()
 	s.s3cli.On("HeadObjectWithContext", mock.Anything, mock.Anything).Return(&s3.HeadObjectOutput{}, nil)
 	s.s3cli.On("PutObjectWithContext", mock.Anything, mock.Anything).Return(nil, nil)
 
@@ -187,7 +188,7 @@ func (s *ClientSuite) TestDelete_Success() {
 	s.s3cli.On("HeadBucketWithContext", mock.Anything, mock.Anything).Return(nil, nil)
 	s.s3cli.On("DeleteObjectWithContext", mock.Anything, mock.Anything).Return(nil, nil)
 	s.s3cli.On("PutObjectWithContext", mock.Anything, mock.Anything).Return(nil, nil)
-	s.s3cli.On("HeadObjectWithContext", mock.Anything, mock.Anything).Return(nil, awserr.New("NotFound", "", nil))
+	s.s3cli.On("HeadObjectWithContext", mock.Anything, mock.Anything).Return(nil, awserr.New(errNotFound, "", nil))
 
 	key, err := blob.NewKeyFromString("blobnonexistent.blob")
 	s.NoError(err)
@@ -293,7 +294,7 @@ func (s *ClientSuite) TestBucketExists() {
 	client := s.constructClient()
 	s.s3cli.On("HeadBucketWithContext", mock.Anything, mock.MatchedBy(func(input *s3.HeadBucketInput) bool {
 		return *input.Bucket == "bucket-not-exists"
-	})).Return(nil, awserr.New("NotFound", "", nil))
+	})).Return(nil, awserr.New(errNotFound, "", nil))
 	s.s3cli.On("HeadBucketWithContext", mock.Anything, mock.Anything).Return(nil, nil)
 
 	exists, err := client.BucketExists(context.Background(), "bucket-not-exists")

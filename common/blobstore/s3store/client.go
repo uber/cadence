@@ -163,14 +163,12 @@ func (c *client) Exists(ctx context.Context, bucket string, key blob.Key) (bool,
 		Key:    aws.String(key.String()),
 	})
 	if err != nil {
-		aerr, ok := err.(awserr.Error)
-		if ok && (aerr.Code() == "NotFound") {
+		if isNotFoundError(err) {
 			_, err = c.s3cli.HeadBucketWithContext(ctx, &s3.HeadBucketInput{
 				Bucket: aws.String(bucket),
 			})
 			if err != nil {
-				aerr, ok := err.(awserr.Error)
-				if ok && (aerr.Code() == "NotFound") {
+				if isNotFoundError(err) {
 					return false, blobstore.ErrBucketNotExists
 				}
 				return false, err
@@ -278,7 +276,7 @@ func (c *client) BucketExists(ctx context.Context, bucket string) (bool, error) 
 	})
 
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok && (aerr.Code() == "NotFound") {
+		if isNotFoundError(err) {
 			return false, nil
 		}
 		return false, err
@@ -337,4 +335,9 @@ func getTags(ctx context.Context, s3api s3iface.S3API, bucket string, key string
 		}
 	}
 	return tags, err
+}
+
+func isNotFoundError(err error) bool {
+	aerr, ok := err.(awserr.Error)
+	return ok && (aerr.Code() == "NotFound")
 }
