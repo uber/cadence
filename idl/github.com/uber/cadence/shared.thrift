@@ -1413,3 +1413,20 @@ struct HistoryBranch{
   20: optional string branchID
   30: optional list<HistoryBranchRange>  ancestors
 }
+
+// VersionHistoryItem contains signal eventID and the corresponding version
+struct VersionHistoryItem{
+  10: optional i64 eventID
+  20: optional i64 version
+}
+
+ // VersionHistory contains the version history of a branch
+struct VersionHistory{
+  10: optional binary branchToken
+  20: optional list<VersionHistoryItem> history
+}
+
+ // VersionHistories contains all version histories from all branches
+struct VersionHistories{
+  10: optional list<VersionHistory> histories
+}

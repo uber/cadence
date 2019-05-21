@@ -596,6 +596,7 @@ func (e *historyEngineImpl) getMutableState(ctx ctx.Context,
 		StickyTaskListScheduleToStartTimeout: common.Int32Ptr(executionInfo.StickyScheduleToStartTimeout),
 		EventStoreVersion:                    common.Int32Ptr(msBuilder.GetEventStoreVersion()),
 		BranchToken:                          msBuilder.GetCurrentBranch(),
+		//VersionHistories:                     msBuilder.
 	}
 
 	replicationState := msBuilder.GetReplicationState()
