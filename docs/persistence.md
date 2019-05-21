@@ -50,9 +50,11 @@ the workflow engine that uses persistence to store state tied to domains, workfl
 etc. cadence-core powers almost all of the cadence APIs. cadence-core could be further broken down into multiple 
 subs-systems that have slightly different persistence workload characteristics. But for the purpose of simplicity, we 
 don't expose these sub-systems today but this may change in future. Visibility is the sub-system that powers workflow 
-search. This includes APIs such as ListOpenWorkflows, ListClosedWorkflows or ListWorkflowsWithTag etc. Today, it is 
-possible to run a cadence server with cadence-core backed by one database and cadence-visibility backed by another kind 
-of database. The top level persistence configuration looks like the following:
+search. This includes APIs such as ListOpenWorkflows and ListClosedWorkflows. Today, it is possible to run a cadence 
+server with cadence-core backed by one database and cadence-visibility backed by another kind of database.To get the full 
+feature set of visibility, the recommendation is to use elastic search as the persistence layer. However, it is also possible 
+to run visiblity with limited feature set against cassandra or mysql today.  The top level persistence configuration looks 
+like the following:
  
 
 ```
@@ -95,6 +97,9 @@ persistence:
 ```
 
 ## MySQL
+The default isolation level for MySQL is READ-COMMITTED. For MySQL 5.6 and below only, the isolation level needs to be 
+specified explicitly in the config via connectAttributes.
+ 
 ```
 persistence:
   ...
@@ -111,6 +116,8 @@ persistence:
         maxIdleConns: 20               -- max number of idle conns to sql server from one host (optional)
         maxConnLifetime: "1h"          -- max connection lifetime before it is discarded (optional)
         maxQPS: 1000                   -- max qps to sql server from one host (optional)
+        connectAttributes:             -- custom dsn attributes, map of key-value pairs
+          tx_isolation: "READ-COMMITTED"   -- required only for mysql 5.6 and below, optional otherwise
 ```
 
 # Adding support for new database
