@@ -3,7 +3,7 @@ codecontent: workerscaffoldgo02
 weight: 25
 ---
 
-# Building a Cadence Worker Scaffold in Go Part 2
+# Add Dependencies to Go Project
 
 Start by creating the *Gopkg.toml* file that lists the dependencies.
 

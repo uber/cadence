@@ -3,7 +3,7 @@ codecontent: workerscaffoldgo01
 weight: 20
 ---
 
-# Building a Cadence Worker Scaffold in Go Part 1
+# Building a Cadence Worker Scaffold in Go
 
 The worker is responsible for running workflows and activities. It uses the Cadence client library 
 to register with the Cadence server and poll for work. In this part of the tour, you'll build a 
