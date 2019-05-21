@@ -196,6 +196,19 @@ func (s *timerQueueProcessorBaseSuite) TestDeleteWorkflow_NoErr() {
 		WorkflowId: &task.WorkflowID,
 		RunId:      &task.RunID,
 	}
+	versionHistories := &persistence.VersionHistories{
+		Histories: []persistence.VersionHistory{
+			{
+				BranchToken: []byte{123},
+				History: []persistence.VersionHistoryItem{
+					{
+						EventID: 1,
+						Version: 0,
+					},
+				},
+			},
+		},
+	}
 	ctx := newWorkflowExecutionContext(task.DomainID, executionInfo, s.mockShard, s.mockExecutionManager, log.NewNoop())
 	ms := &mockMutableState{}
 	s.mockExecutionManager.On("DeleteCurrentWorkflowExecution", mock.Anything).Return(nil).Once()
@@ -204,6 +217,47 @@ func (s *timerQueueProcessorBaseSuite) TestDeleteWorkflow_NoErr() {
 	s.mockExecutionManager.On("DeleteExecutionFromVisibility", mock.Anything).Return(nil).Once()
 	ms.On("GetEventStoreVersion").Return(persistence.EventStoreVersionV2).Once()
 	ms.On("GetCurrentBranch").Return([]byte{}).Once()
+	ms.On("GetAllBranches").Return(versionHistories).Once()
+	ms.On("DeleteVersionHistory").Once()
+
+	err := s.timerQueueProcessor.deleteWorkflow(task, ms, ctx)
+	s.NoError(err)
+}
+
+func (s *timerQueueProcessorBaseSuite) TestDeleteWorkflow_NotDeleteCurrentBranch() {
+	task := &persistence.TimerTaskInfo{
+		DomainID:            uuid.New().String(),
+		WorkflowID:          uuid.New().String(),
+		RunID:               uuid.New().String(),
+		TaskID:              12345,
+		VisibilityTimestamp: time.Now()}
+	executionInfo := workflow.WorkflowExecution{
+		WorkflowId: &task.WorkflowID,
+		RunId:      &task.RunID,
+	}
+	versionHistories := &persistence.VersionHistories{
+		Histories: []persistence.VersionHistory{
+			{
+				BranchToken: []byte{},
+				History: []persistence.VersionHistoryItem{
+					{
+						EventID: 1,
+						Version: 0,
+					},
+				},
+			},
+		},
+	}
+	ctx := newWorkflowExecutionContext(task.DomainID, executionInfo, s.mockShard, s.mockExecutionManager, log.NewNoop())
+	ms := &mockMutableState{}
+	s.mockExecutionManager.On("DeleteCurrentWorkflowExecution", mock.Anything).Return(nil).Once()
+	s.mockExecutionManager.On("DeleteWorkflowExecution", mock.Anything).Return(nil).Once()
+	s.mockExecutionManager.On("DeleteWorkflowExecutionHistoryV2", mock.Anything, mock.Anything).Return(nil).Times(0)
+	s.mockExecutionManager.On("DeleteExecutionFromVisibility", mock.Anything).Return(nil).Once()
+	ms.On("GetEventStoreVersion").Return(persistence.EventStoreVersionV2).Once()
+	ms.On("GetCurrentBranch").Return([]byte{}).Once()
+	ms.On("GetAllBranches").Return(versionHistories).Once()
+	ms.On("DeleteVersionHistory").Times(0)
 
 	err := s.timerQueueProcessor.deleteWorkflow(task, ms, ctx)
 	s.NoError(err)
