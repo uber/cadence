@@ -119,7 +119,7 @@ func NewSelectedAPIsForwardingPolicy(currentClusterName string, config *Config, 
 
 // WithDomainIDRedirect redirect the API call based on domain ID
 func (policy *SelectedAPIsForwardingRedirectionPolicy) WithDomainIDRedirect(domainID string, apiName string, call func(string) error) error {
-	domainEntry, err := policy.domainCache.GetDomain(domainID)
+	domainEntry, err := policy.domainCache.GetDomainByID(domainID)
 	if err != nil {
 		return err
 	}

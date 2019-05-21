@@ -28,7 +28,6 @@ import (
 
 	"github.com/uber/cadence/common/service/dynamicconfig"
 
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/common/cache"
@@ -345,7 +344,8 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) setupLocalDomain() {
 		TableVersion:   persistence.DomainTableVersionV1,
 	}
 
-	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(domainRecord, nil)
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: s.domainID}).Return(domainRecord, nil)
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{Name: s.domainName}).Return(domainRecord, nil)
 }
 
 func (s *selectedAPIsForwardingRedirectionPolicySuite) setupGlobalDomainWithOneReplicationCluster() {
@@ -362,7 +362,8 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) setupGlobalDomainWithOneR
 		TableVersion:   persistence.DomainTableVersionV1,
 	}
 
-	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(domainRecord, nil)
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: s.domainID}).Return(domainRecord, nil)
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{Name: s.domainName}).Return(domainRecord, nil)
 }
 
 func (s *selectedAPIsForwardingRedirectionPolicySuite) setupGlobalDomainWithTwoReplicationCluster(forwardingEnabled bool, isRecordActive bool) {
@@ -384,6 +385,7 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) setupGlobalDomainWithTwoR
 		TableVersion:   persistence.DomainTableVersionV1,
 	}
 
-	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(domainRecord, nil)
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: s.domainID}).Return(domainRecord, nil)
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{Name: s.domainName}).Return(domainRecord, nil)
 	s.mockConfig.EnableDomainNotActiveAutoForwarding = dynamicconfig.GetBoolPropertyFnFilteredByDomain(forwardingEnabled)
 }
