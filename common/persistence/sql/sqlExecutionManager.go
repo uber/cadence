@@ -226,7 +226,7 @@ func (m *sqlExecutionManager) GetWorkflowExecution(request *p.GetWorkflowExecuti
 		DecisionRequestID:            info.GetDecisionRequestID(),
 		DecisionTimeout:              info.GetDecisionTimeout(),
 		DecisionAttempt:              info.GetDecisionAttempt(),
-		DecisionStartedTimestamp:     info.GetDecisionTimestampNanos(),
+		DecisionStartedTimestamp:     info.GetDecisionStartedTimestampNanos(),
 		DecisionScheduledTimestamp:   info.GetDecisionScheduledTimestampNanos(),
 		StickyTaskList:               info.GetStickyTaskList(),
 		StickyScheduleToStartTimeout: int32(info.GetStickyScheduleToStartTimeout()),
