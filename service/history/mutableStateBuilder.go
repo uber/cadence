@@ -159,18 +159,9 @@ func newMutableStateBuilderWithReplicationState(currentCluster string, shard Sha
 
 //TODO: revisit this method to make sure versionHistories initializes in a correct way
 func newMutableStateBuilderWithVersionHistories(currentCluster string, shard ShardContext, eventsCache eventsCache,
-	logger log.Logger, branchToken []byte, version int64) *mutableStateBuilder {
+	logger log.Logger, versionHistories persistence.VersionHistories) *mutableStateBuilder {
 	s := newMutableStateBuilder(currentCluster, shard, eventsCache, logger)
-	s.versionHistories = &persistence.VersionHistories{
-		Histories: []persistence.VersionHistory{{
-
-			BranchToken: branchToken,
-			History: []persistence.VersionHistoryItem{{
-				EventID: common.EmptyEventID,
-				Version: version,
-			}},
-		}},
-	}
+	s.versionHistories = &versionHistories
 	return s
 }
 

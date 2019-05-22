@@ -22,6 +22,8 @@ package persistence
 
 import (
 	"github.com/stretchr/testify/suite"
+	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"testing"
 )
 
@@ -376,4 +378,42 @@ func (s *versionHistoryStoreSuite) TestFindLowestCommonVersionHistory_Error() {
 	histories := NewVersionHistories([]VersionHistory{local1, local2})
 	_, _, err := histories.FindLowestCommonVersionHistory(remote)
 	s.Error(err)
+}
+
+func (s *versionHistoryStoreSuite) TestNewVersionHistoriesFromThrift() {
+	tHistories := shared.VersionHistories{
+		Histories: []*shared.VersionHistory {
+			{
+				BranchToken: []byte{},
+				History: []*shared.VersionHistoryItem {
+					{
+						EventID: common.Int64Ptr(1),
+						Version: common.Int64Ptr(1),
+					},
+				},
+			},
+		},
+	}
+
+	histories := NewVersionHistoriesFromThrift(&tHistories)
+	s.NotNil(histories)
+	s.Equal(tHistories.GetHistories()[0].GetHistory()[0].GetEventID(), histories.Histories[0].History[0].EventID)
+	s.Equal(tHistories.GetHistories()[0].GetHistory()[0].GetVersion(), histories.Histories[0].History[0].Version)
+}
+
+func (s *versionHistoryStoreSuite) TestToThrift() {
+	items := []VersionHistoryItem{
+		{EventID: 3, Version: 0},
+		{EventID: 5, Version: 4},
+		{EventID: 7, Version: 6},
+		{EventID: 9, Version: 10},
+	}
+	history := NewVersionHistory(items)
+	histories := NewVersionHistories([]VersionHistory{history})
+	tHistories := histories.ToThrift()
+	s.NotNil(tHistories)
+	for idx, item := range items {
+		s.Equal(tHistories.GetHistories()[0].GetHistory()[idx].GetEventID(), item.EventID)
+		s.Equal(tHistories.GetHistories()[0].GetHistory()[idx].GetVersion(), item.Version)
+	}
 }
