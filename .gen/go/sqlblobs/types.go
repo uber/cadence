@@ -7301,6 +7301,7 @@ type WorkflowExecutionInfo struct {
 	ClientImpl                      *string                     `json:"clientImpl,omitempty"`
 	AutoResetPoints                 []byte                      `json:"autoResetPoints,omitempty"`
 	AutoResetPointsEncoding         *string                     `json:"autoResetPointsEncoding,omitempty"`
+	SearchAttributes                map[string][]byte           `json:"searchAttributes,omitempty"`
 }
 
 type _Map_String_Binary_MapItemList map[string][]byte
@@ -7358,7 +7359,7 @@ func (_Map_String_Binary_MapItemList) Close() {}
 //   }
 func (v *WorkflowExecutionInfo) ToWire() (wire.Value, error) {
 	var (
-		fields [55]wire.Field
+		fields [56]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -8421,7 +8422,7 @@ func (v *WorkflowExecutionInfo) String() string {
 		return "<nil>"
 	}
 
-	var fields [55]string
+	var fields [56]string
 	i := 0
 	if v.ParentDomainID != nil {
 		fields[i] = fmt.Sprintf("ParentDomainID: %v", v.ParentDomainID)
