@@ -23,7 +23,6 @@ package frontend
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -56,7 +55,6 @@ import (
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/tokenbucket"
 	"github.com/uber/cadence/service/worker/archiver"
-	"github.com/xwb1989/sqlparser"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -65,22 +63,23 @@ var _ workflowserviceserver.Interface = (*WorkflowHandler)(nil)
 type (
 	// WorkflowHandler - Thrift handler interface for workflow service
 	WorkflowHandler struct {
-		domainCache       cache.DomainCache
-		metadataMgr       persistence.MetadataManager
-		historyMgr        persistence.HistoryManager
-		historyV2Mgr      persistence.HistoryV2Manager
-		visibilityMgr     persistence.VisibilityManager
-		history           history.Client
-		matching          matching.Client
-		matchingRawClient matching.Client
-		tokenSerializer   common.TaskTokenSerializer
-		metricsClient     metrics.Client
-		startWG           sync.WaitGroup
-		rateLimiter       tokenbucket.TokenBucket
-		config            *Config
-		blobstoreClient   blobstore.Client
-		versionChecker    *versionChecker
-		domainHandler     *domainHandlerImpl
+		domainCache              cache.DomainCache
+		metadataMgr              persistence.MetadataManager
+		historyMgr               persistence.HistoryManager
+		historyV2Mgr             persistence.HistoryV2Manager
+		visibilityMgr            persistence.VisibilityManager
+		history                  history.Client
+		matching                 matching.Client
+		matchingRawClient        matching.Client
+		tokenSerializer          common.TaskTokenSerializer
+		metricsClient            metrics.Client
+		startWG                  sync.WaitGroup
+		rateLimiter              tokenbucket.TokenBucket
+		config                   *Config
+		blobstoreClient          blobstore.Client
+		versionChecker           *versionChecker
+		domainHandler            *domainHandlerImpl
+		visibilityQueryValidator *common.VisibilityQueryValidator
 		service.Service
 	}
 
@@ -124,7 +123,6 @@ var (
 	errInvalidExecutionStartToCloseTimeoutSeconds = &gen.BadRequestError{Message: "A valid ExecutionStartToCloseTimeoutSeconds is not set on request."}
 	errInvalidTaskStartToCloseTimeoutSeconds      = &gen.BadRequestError{Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}
 	errClientVersionNotSet                        = &gen.BadRequestError{Message: "Client version is not set on request."}
-	errInvalidQuery                               = &gen.BadRequestError{Message: "Invalid query."}
 
 	// err for archival
 	errDomainHasNeverBeenEnabledForArchival = &gen.BadRequestError{Message: "Attempted to fetch history from archival, but domain has never been enabled for archival."}
@@ -174,6 +172,7 @@ func NewWorkflowHandler(sVice service.Service, config *Config, metadataMgr persi
 			blobstoreClient,
 			NewDomainReplicator(kafkaProducer, sVice.GetLogger()),
 		),
+		visibilityQueryValidator: common.NewQueryValidator(config.ValidSearchAttributes),
 	}
 	// prevent us from trying to serve requests before handler's Start() is complete
 	handler.startWG.Add(1)
@@ -2448,7 +2447,7 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(ctx context.Context, listReque
 		listRequest.PageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize(listRequest.GetDomain())))
 	}
 
-	if err := wh.validateListRequestForQuery(listRequest); err != nil {
+	if err := wh.visibilityQueryValidator.ValidateListRequestForQuery(listRequest); err != nil {
 		return nil, wh.error(err, scope)
 	}
 
@@ -2506,7 +2505,7 @@ func (wh *WorkflowHandler) ScanWorkflowExecutions(ctx context.Context, listReque
 		listRequest.PageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize(listRequest.GetDomain())))
 	}
 
-	if err := wh.validateListRequestForQuery(listRequest); err != nil {
+	if err := wh.visibilityQueryValidator.ValidateListRequestForQuery(listRequest); err != nil {
 		return nil, wh.error(err, scope)
 	}
 
@@ -2560,7 +2559,7 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(ctx context.Context, countReq
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if err := wh.validateCountRequestForQuery(countRequest); err != nil {
+	if err := wh.visibilityQueryValidator.ValidateCountRequestForQuery(countRequest); err != nil {
 		return nil, wh.error(err, scope)
 	}
 
@@ -2602,7 +2601,7 @@ func (wh *WorkflowHandler) GetSearchAttributes(ctx context.Context) (resp *gen.G
 
 	keys := wh.config.ValidSearchAttributes()
 	resp = &gen.GetSearchAttributesResponse{
-		Keys: wh.convertIndexedKeys(keys),
+		Keys: wh.convertIndexedKeyToThrift(keys),
 	}
 	return resp, nil
 }
@@ -3270,7 +3269,7 @@ func (wh *WorkflowHandler) getArchivedHistory(
 	}, nil
 }
 
-func (wh *WorkflowHandler) convertIndexedKeys(keys map[string]interface{}) map[string]gen.IndexedValueType {
+func (wh *WorkflowHandler) convertIndexedKeyToThrift(keys map[string]interface{}) map[string]gen.IndexedValueType {
 	converted := make(map[string]gen.IndexedValueType)
 	for k, v := range keys {
 		switch v {
@@ -3287,7 +3286,7 @@ func (wh *WorkflowHandler) convertIndexedKeys(keys map[string]interface{}) map[s
 		case gen.IndexedValueTypeDatetime:
 			converted[k] = gen.IndexedValueTypeDatetime
 		default:
-			wh.GetLogger().Fatal("unknown index value type", tag.Value(v))
+			wh.GetLogger().Error("unknown index value type", tag.Value(v))
 		}
 	}
 	return converted
@@ -3308,7 +3307,7 @@ func (wh *WorkflowHandler) validateSearchAttributes(input *gen.SearchAttributes,
 
 	totalSize := 0
 	for key, val := range fields {
-		if !wh.isValidSearchAttributes(key) {
+		if !wh.visibilityQueryValidator.IsValidSearchAttributes(key) {
 			wh.GetLogger().WithTags(tag.ESKey(key), tag.WorkflowDomainName(domain)).
 				Error("invalid search attribute")
 			return fmt.Errorf("%s is not valid search attribute", key)
@@ -3333,137 +3332,4 @@ func (wh *WorkflowHandler) validateSearchAttributes(input *gen.SearchAttributes,
 	}
 
 	return nil
-}
-
-// validateListRequestForQuery validate that search attributes in listRequest query is legal,
-// and add prefix for custom keys
-func (wh *WorkflowHandler) validateListRequestForQuery(listRequest *gen.ListWorkflowExecutionsRequest) error {
-	whereClause := listRequest.GetQuery()
-	newQuery, err := wh.validateListOrCountRequestForQuery(whereClause)
-	if err != nil {
-		return err
-	}
-	listRequest.Query = common.StringPtr(newQuery)
-	return nil
-}
-
-func (wh *WorkflowHandler) validateCountRequestForQuery(countRequest *gen.CountWorkflowExecutionsRequest) error {
-	whereClause := countRequest.GetQuery()
-	newQuery, err := wh.validateListOrCountRequestForQuery(whereClause)
-	if err != nil {
-		return err
-	}
-	countRequest.Query = common.StringPtr(newQuery)
-	return nil
-}
-
-func (wh *WorkflowHandler) validateListOrCountRequestForQuery(whereClause string) (string, error) {
-	if len(whereClause) != 0 {
-		sqlQuery := "SELECT * FROM dummy WHERE " + whereClause
-		stmt, err := sqlparser.Parse(sqlQuery)
-		if err != nil {
-			return "", errInvalidQuery
-		}
-
-		sel := stmt.(*sqlparser.Select)
-		err = wh.validateWhereExpr(sel.Where.Expr)
-		if err != nil {
-			return "", &gen.BadRequestError{Message: err.Error()}
-		}
-
-		buf := sqlparser.NewTrackedBuffer(nil)
-		sel.Where.Expr.Format(buf)
-		return buf.String(), nil
-	}
-	return whereClause, nil
-}
-
-func (wh *WorkflowHandler) validateWhereExpr(expr sqlparser.Expr) error {
-	if expr == nil {
-		return nil
-	}
-
-	switch expr.(type) {
-	case *sqlparser.AndExpr, *sqlparser.OrExpr:
-		return wh.validateAndOrExpr(expr)
-	case *sqlparser.ComparisonExpr:
-		return wh.validateComparisonExpr(expr)
-	case *sqlparser.RangeCond:
-		return wh.validateRangeExpr(expr)
-	case *sqlparser.ParenExpr:
-		parentExpr := expr.(*sqlparser.ParenExpr)
-		return wh.validateWhereExpr(parentExpr.Expr)
-	default:
-		return errors.New("invalid where clause")
-	}
-
-	return nil
-}
-
-func (wh *WorkflowHandler) validateAndOrExpr(expr sqlparser.Expr) error {
-	var leftExpr sqlparser.Expr
-	var rightExpr sqlparser.Expr
-
-	switch expr.(type) {
-	case *sqlparser.AndExpr:
-		andExpr := expr.(*sqlparser.AndExpr)
-		leftExpr = andExpr.Left
-		rightExpr = andExpr.Right
-	case *sqlparser.OrExpr:
-		orExpr := expr.(*sqlparser.OrExpr)
-		leftExpr = orExpr.Left
-		rightExpr = orExpr.Right
-	}
-
-	if err := wh.validateWhereExpr(leftExpr); err != nil {
-		return err
-	}
-	return wh.validateWhereExpr(rightExpr)
-}
-
-func (wh *WorkflowHandler) validateComparisonExpr(expr sqlparser.Expr) error {
-	comparisonExpr := expr.(*sqlparser.ComparisonExpr)
-	colName, ok := comparisonExpr.Left.(*sqlparser.ColName)
-	if !ok {
-		return errors.New("invalid comparison expression")
-	}
-	colNameStr := colName.Name.String()
-	if wh.isValidSearchAttributes(colNameStr) {
-		if !definition.IsSystemIndexedKey(colNameStr) { // add search attribute prefix
-			comparisonExpr.Left = &sqlparser.ColName{
-				Metadata:  colName.Metadata,
-				Name:      sqlparser.NewColIdent(definition.Attr + "." + colNameStr),
-				Qualifier: colName.Qualifier,
-			}
-		}
-		return nil
-	}
-	return errors.New("invalid search attribute")
-}
-
-func (wh *WorkflowHandler) validateRangeExpr(expr sqlparser.Expr) error {
-	rangeCond := expr.(*sqlparser.RangeCond)
-	colName, ok := rangeCond.Left.(*sqlparser.ColName)
-	if !ok {
-		return errors.New("invalid range expression")
-	}
-	colNameStr := colName.Name.String()
-	if wh.isValidSearchAttributes(colNameStr) {
-		if !definition.IsSystemIndexedKey(colNameStr) { // add search attribute prefix
-			rangeCond.Left = &sqlparser.ColName{
-				Metadata:  colName.Metadata,
-				Name:      sqlparser.NewColIdent(definition.Attr + "." + colNameStr),
-				Qualifier: colName.Qualifier,
-			}
-		}
-		return nil
-	}
-	return errors.New("invalid search attribute")
-}
-
-// isValidSearchAttributes return true if key is registered
-func (wh *WorkflowHandler) isValidSearchAttributes(key string) bool {
-	validAttr := wh.config.ValidSearchAttributes()
-	_, isValidKey := validAttr[key]
-	return isValidKey
 }

@@ -53,23 +53,21 @@ const (
 const Attr = "Attr"
 
 // defaultIndexedKeys defines all searchable keys
-var defaultIndexedKeys = map[string]interface{}{
-	DomainID:      shared.IndexedValueTypeKeyword,
-	WorkflowID:    shared.IndexedValueTypeKeyword,
-	RunID:         shared.IndexedValueTypeKeyword,
-	WorkflowType:  shared.IndexedValueTypeKeyword,
-	StartTime:     shared.IndexedValueTypeInt,
-	ExecutionTime: shared.IndexedValueTypeInt,
-	CloseTime:     shared.IndexedValueTypeInt,
-	CloseStatus:   shared.IndexedValueTypeInt,
-	HistoryLength: shared.IndexedValueTypeInt,
+var defaultIndexedKeys = createDefaultIndexedKeys()
 
-	CustomStringField:   shared.IndexedValueTypeString,
-	CustomKeywordField:  shared.IndexedValueTypeKeyword,
-	CustomIntField:      shared.IndexedValueTypeInt,
-	CustomBoolField:     shared.IndexedValueTypeBool,
-	CustomDoubleField:   shared.IndexedValueTypeDouble,
-	CustomDatetimeField: shared.IndexedValueTypeDatetime,
+func createDefaultIndexedKeys() map[string]interface{} {
+	defaultIndexedKeys := map[string]interface{}{
+		CustomStringField:   shared.IndexedValueTypeString,
+		CustomKeywordField:  shared.IndexedValueTypeKeyword,
+		CustomIntField:      shared.IndexedValueTypeInt,
+		CustomBoolField:     shared.IndexedValueTypeBool,
+		CustomDoubleField:   shared.IndexedValueTypeDouble,
+		CustomDatetimeField: shared.IndexedValueTypeDatetime,
+	}
+	for k, v := range systemIndexedKeys {
+		defaultIndexedKeys[k] = v
+	}
+	return defaultIndexedKeys
 }
 
 // GetDefaultIndexedKeys return default valid indexed keys

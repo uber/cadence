@@ -1207,58 +1207,6 @@ func (s *workflowHandlerSuite) TestCountWorkflowExecutions() {
 	s.NotNil(err)
 }
 
-func (s *workflowHandlerSuite) TestValidateListRequestForQuery() {
-	config := s.newConfig()
-	wh := s.getWorkflowHandler(config)
-
-	listRequest := &shared.ListWorkflowExecutionsRequest{}
-	s.Nil(wh.validateListRequestForQuery(listRequest))
-	s.Equal("", listRequest.GetQuery())
-
-	query := "WorkflowID = 'wid'"
-	listRequest.Query = common.StringPtr(query)
-	s.Nil(wh.validateListRequestForQuery(listRequest))
-	s.Equal(query, listRequest.GetQuery())
-
-	query = "CustomStringField = 'custom'"
-	listRequest.Query = common.StringPtr(query)
-	s.Nil(wh.validateListRequestForQuery(listRequest))
-	s.Equal("`Attr.CustomStringField` = 'custom'", listRequest.GetQuery())
-
-	query = "WorkflowID = 'wid' and ((CustomStringField = 'custom') or CustomIntField between 1 and 10)"
-	listRequest.Query = common.StringPtr(query)
-	s.Nil(wh.validateListRequestForQuery(listRequest))
-	s.Equal("WorkflowID = 'wid' and ((`Attr.CustomStringField` = 'custom') or `Attr.CustomIntField` between 1 and 10)", listRequest.GetQuery())
-
-	query = "Invalid SQL"
-	listRequest.Query = common.StringPtr(query)
-	s.Equal(errInvalidQuery, wh.validateListRequestForQuery(listRequest))
-
-	query = "InvalidWhereExpr"
-	listRequest.Query = common.StringPtr(query)
-	s.Equal("BadRequestError{Message: invalid where clause}", wh.validateListRequestForQuery(listRequest).Error())
-
-	// Invalid comparison
-	query = "WorkflowID = 'wid' and 1 < 2"
-	listRequest.Query = common.StringPtr(query)
-	s.Equal("BadRequestError{Message: invalid comparison expression}", wh.validateListRequestForQuery(listRequest).Error())
-
-	// Invalid range
-	query = "1 between 1 and 2 or WorkflowID = 'wid'"
-	listRequest.Query = common.StringPtr(query)
-	s.Equal("BadRequestError{Message: invalid range expression}", wh.validateListRequestForQuery(listRequest).Error())
-
-	// Invalid search attribute in comparison
-	query = "Invalid = 'a' and 1 < 2"
-	listRequest.Query = common.StringPtr(query)
-	s.Equal("BadRequestError{Message: invalid search attribute}", wh.validateListRequestForQuery(listRequest).Error())
-
-	// Invalid search attribute in range
-	query = "Invalid between 1 and 2 or WorkflowID = 'wid'"
-	listRequest.Query = common.StringPtr(query)
-	s.Equal("BadRequestError{Message: invalid search attribute}", wh.validateListRequestForQuery(listRequest).Error())
-}
-
 func (s *workflowHandlerSuite) newConfig() *Config {
 	return NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger), numHistoryShards, false, false)
 }
