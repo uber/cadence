@@ -28,6 +28,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dgryski/go-farm"
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
