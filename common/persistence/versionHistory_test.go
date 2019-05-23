@@ -382,10 +382,10 @@ func (s *versionHistoryStoreSuite) TestFindLowestCommonVersionHistory_Error() {
 
 func (s *versionHistoryStoreSuite) TestNewVersionHistoriesFromThrift() {
 	tHistories := shared.VersionHistories{
-		Histories: []*shared.VersionHistory {
+		Histories: []*shared.VersionHistory{
 			{
 				BranchToken: []byte{},
-				History: []*shared.VersionHistoryItem {
+				History: []*shared.VersionHistoryItem{
 					{
 						EventID: common.Int64Ptr(1),
 						Version: common.Int64Ptr(1),
