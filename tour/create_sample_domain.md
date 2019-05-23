@@ -1,6 +1,7 @@
 ---
 codecontent: createsampledomain
 weight: 15
+categories: [tour]
 ---
 
 # Create the Sample Domain

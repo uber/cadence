@@ -1,6 +1,7 @@
 ---
 codecontent: workerscaffoldgo02
 weight: 25
+categories: [tour]
 ---
 
 # Add Dependencies to Go Project

@@ -1,6 +1,7 @@
 ---
 codecontent: startlocalserver
 weight: 10
+categories: [tour]
 ---
 
 # Start Cadence Server Locally

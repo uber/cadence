@@ -1,6 +1,7 @@
 ---
 codecontent: workerscaffoldgo01
 weight: 20
+categories: [tour]
 ---
 
 # Building a Cadence Worker Scaffold in Go

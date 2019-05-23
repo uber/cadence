@@ -1,6 +1,7 @@
 ---
 codecontent: workerscaffoldgo03
 weight: 30
+categories: [tour]
 ---
 
 # Create a Helper for Building Samples

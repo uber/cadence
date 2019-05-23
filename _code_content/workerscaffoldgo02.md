@@ -19,4 +19,7 @@ name: workerscaffoldgo02
 [[constraint]]
   name = "go.uber.org/zap"
   version = "1.4.0"
+
+[prune]
+  go-tests = true
 ```

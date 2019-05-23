@@ -1,6 +1,7 @@
 ---
 codecontent: workerscaffoldgo04
 weight: 35
+categories: [tour]
 ---
 
 # Building the Cadence Workflow Service Client
