@@ -1109,6 +1109,7 @@ Update_History_Loop:
 			e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.AutoResetPointsLimitExceededCounter)
 			e.throttledLogger.Warn("the number of auto-reset points is exceeding the limit, will do rotating.",
 				tag.WorkflowDomainName(domainEntry.GetInfo().Name),
+				tag.WorkflowDomainID(domainEntry.GetInfo().ID),
 				tag.WorkflowID(workflowExecution.GetWorkflowId()),
 				tag.WorkflowRunID(workflowExecution.GetRunId()),
 				tag.Number(int64(maxResetPoints)))
