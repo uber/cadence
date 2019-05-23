@@ -77,6 +77,8 @@ const (
 	FailureReasonHeartbeatExceedsLimit = "HEARTBEAT_EXCEEDS_LIMIT"
 	// FailureReasonDecisionBlobSizeExceedsLimit is the failureReason for decision blob exceeds size limit
 	FailureReasonDecisionBlobSizeExceedsLimit = "DECISION_BLOB_SIZE_EXCEEDS_LIMIT"
+	// FailureReasonDecisionBlobSizeExceedsLimit is the failureReason for sum decision blob exceeds size limit
+	FailureReasonSumDecisionBlobSizeExceedsLimit = "SUM_DECISION_BLOB_SIZE_EXCEEDS_LIMIT"
 	// TerminateReasonSizeExceedsLimit is reason to terminate workflow when history size or count exceed limit
 	TerminateReasonSizeExceedsLimit = "HISTORY_EXCEEDS_LIMIT"
 )

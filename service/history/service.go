@@ -137,12 +137,14 @@ type Config struct {
 	NumArchiveSystemWorkflows dynamicconfig.IntPropertyFn
 	ArchiveRequestRPS         dynamicconfig.IntPropertyFn
 
-	BlobSizeLimitError     dynamicconfig.IntPropertyFnWithDomainFilter
-	BlobSizeLimitWarn      dynamicconfig.IntPropertyFnWithDomainFilter
-	HistorySizeLimitError  dynamicconfig.IntPropertyFnWithDomainFilter
-	HistorySizeLimitWarn   dynamicconfig.IntPropertyFnWithDomainFilter
-	HistoryCountLimitError dynamicconfig.IntPropertyFnWithDomainFilter
-	HistoryCountLimitWarn  dynamicconfig.IntPropertyFnWithDomainFilter
+	BlobSizeLimitError      dynamicconfig.IntPropertyFnWithDomainFilter
+	BlobSizeLimitWarn       dynamicconfig.IntPropertyFnWithDomainFilter
+	TotalBlobSizeLimitError dynamicconfig.IntPropertyFnWithDomainFilter
+	TotalBlobSizeLimitWarn  dynamicconfig.IntPropertyFnWithDomainFilter
+	HistorySizeLimitError   dynamicconfig.IntPropertyFnWithDomainFilter
+	HistorySizeLimitWarn    dynamicconfig.IntPropertyFnWithDomainFilter
+	HistoryCountLimitError  dynamicconfig.IntPropertyFnWithDomainFilter
+	HistoryCountLimitWarn   dynamicconfig.IntPropertyFnWithDomainFilter
 
 	ThrottledLogRPS dynamicconfig.IntPropertyFn
 }
@@ -226,12 +228,14 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, enableVisibilit
 		NumArchiveSystemWorkflows: dc.GetIntProperty(dynamicconfig.NumArchiveSystemWorkflows, 1000),
 		ArchiveRequestRPS:         dc.GetIntProperty(dynamicconfig.ArchiveRequestRPS, 300), // should be much smaller than frontend RPS
 
-		BlobSizeLimitError:     dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitError, 2*1024*1024),
-		BlobSizeLimitWarn:      dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitError, 256*1024),
-		HistorySizeLimitError:  dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistorySizeLimitError, 200*1024*1024),
-		HistorySizeLimitWarn:   dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistorySizeLimitWarn, 50*1024*1024),
-		HistoryCountLimitError: dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryCountLimitError, 200*1024),
-		HistoryCountLimitWarn:  dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryCountLimitWarn, 50*1024),
+		BlobSizeLimitError:      dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitError, 2*1024*1024),
+		BlobSizeLimitWarn:       dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitError, 256*1024),
+		TotalBlobSizeLimitError: dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitError, 2*1024*1024),
+		TotalBlobSizeLimitWarn:  dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitError, 256*1024),
+		HistorySizeLimitError:   dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistorySizeLimitError, 200*1024*1024),
+		HistorySizeLimitWarn:    dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistorySizeLimitWarn, 50*1024*1024),
+		HistoryCountLimitError:  dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryCountLimitError, 200*1024),
+		HistoryCountLimitWarn:   dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryCountLimitWarn, 50*1024),
 
 		ThrottledLogRPS: dc.GetIntProperty(dynamicconfig.HistoryThrottledLogRPS, 20),
 	}

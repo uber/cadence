@@ -983,20 +983,25 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(ctx ctx.Context,
 }
 
 type decisionBlobSizeChecker struct {
-	sizeLimitWarn  int
-	sizeLimitError int
-	domainID       string
-	workflowID     string
-	runID          string
-	metricsClient  metrics.Client
-	logger         log.Logger
-	msBuilder      mutableState
-	completedID    int64
+	sizeLimitWarn       int
+	sizeLimitError      int
+	totalSizeLimitWarn  int
+	totalSizeLimitError int
+	totalSize           int
+	domainID            string
+	workflowID          string
+	runID               string
+	metricsClient       metrics.Client
+	logger              log.Logger
+	msBuilder           mutableState
+	completedID         int64
 }
 
 func (c *decisionBlobSizeChecker) failWorkflowIfBlobSizeExceedsLimit(blob []byte, message string) (bool, error) {
+	blobSize := len(blob)
+	c.totalSize = c.totalSize + blobSize
 	err := common.CheckEventBlobSizeLimit(
-		len(blob),
+		blobSize,
 		c.sizeLimitWarn,
 		c.sizeLimitError,
 		c.domainID,
@@ -1019,6 +1024,32 @@ func (c *decisionBlobSizeChecker) failWorkflowIfBlobSizeExceedsLimit(blob []byte
 	}
 
 	return true, nil
+}
+
+func (c *decisionBlobSizeChecker) failWorkflowIfTotalSizeExceedsLimit() error {
+	err := common.CheckEventBlobSizeLimit(
+		c.totalSize,
+		c.totalSizeLimitWarn,
+		c.totalSizeLimitError,
+		c.domainID,
+		c.workflowID,
+		c.runID,
+		c.metricsClient.Scope(metrics.HistoryRespondDecisionTaskCompletedScope),
+		c.logger,
+	)
+	if err == nil {
+		return nil
+	}
+
+	attributes := &workflow.FailWorkflowExecutionDecisionAttributes{
+		Reason: common.StringPtr(common.FailureReasonSumDecisionBlobSizeExceedsLimit),
+	}
+
+	if evt := c.msBuilder.AddFailWorkflowEvent(c.completedID, attributes); evt == nil {
+		return &workflow.InternalServiceError{Message: "Unable to add fail workflow event."}
+	}
+
+	return nil
 }
 
 // RespondDecisionTaskCompleted completes a decision task
@@ -1059,18 +1090,18 @@ func (e *historyEngineImpl) RespondDecisionTaskCompleted(
 	}
 	defer func() { release(retError) }()
 
-	sizeLimitError := e.config.BlobSizeLimitError(domainEntry.GetInfo().Name)
-	sizeLimitWarn := e.config.BlobSizeLimitWarn(domainEntry.GetInfo().Name)
 	maxIDLengthLimit := e.config.MaxIDLengthLimit()
 
 	sizeChecker := &decisionBlobSizeChecker{
-		sizeLimitWarn:  sizeLimitWarn,
-		sizeLimitError: sizeLimitError,
-		domainID:       domainID,
-		workflowID:     token.WorkflowID,
-		runID:          token.RunID,
-		metricsClient:  e.metricsClient,
-		logger:         e.throttledLogger,
+		sizeLimitWarn:       e.config.BlobSizeLimitWarn(domainEntry.GetInfo().Name),
+		sizeLimitError:      e.config.BlobSizeLimitError(domainEntry.GetInfo().Name),
+		totalSizeLimitWarn:  e.config.TotalBlobSizeLimitWarn(domainEntry.GetInfo().Name),
+		totalSizeLimitError: e.config.TotalBlobSizeLimitError(domainEntry.GetInfo().Name),
+		domainID:            domainID,
+		workflowID:          token.WorkflowID,
+		runID:               token.RunID,
+		metricsClient:       e.metricsClient,
+		logger:              e.throttledLogger,
 	}
 
 Update_History_Loop:
@@ -1627,6 +1658,9 @@ Update_History_Loop:
 				default:
 					return nil, &workflow.BadRequestError{Message: fmt.Sprintf("Unknown decision type: %v", *d.DecisionType)}
 				}
+			}
+			if err := sizeChecker.failWorkflowIfTotalSizeExceedsLimit(); err != nil {
+				return nil, err
 			}
 		}
 
