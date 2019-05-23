@@ -8,14 +8,17 @@
 #flex {
     display: flex;
     flex-direction: row;
+    height: 100%;
 }
 
 #left-side {
     border: 1px solid darkgray;
     padding: 4px;
+    overflow-y: auto;
 }
 
 #right-side {
     border: 1px solid darkgray;
     padding: 4px;
+    overflow-y: auto;
 }

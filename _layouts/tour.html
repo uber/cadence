@@ -3,21 +3,25 @@
 <html lang="en-us">
 {% include head.html %}
 
-<body>
+<body class="tour-body">
+  {% include icons.html %}
   {% include top_bar.html %}
 
-  <div id="flex">
-    <div id="left-side" class="split">
-      {{ content }}
+  <main class="tour">
+    <div id="flex">
+      <div id="left-side" class="split">
+        {{ content }}
+        {% include prev_next_links.html %}
+      </div>
+      <div id="right-side" class="split">
+        {% for code_content in site.code_content %}
+          {% if page.codecontent == code_content.name %}
+            {{ code_content.content | markdownify }}
+          {% endif %}
+        {% endfor %}
+      </div>
     </div>
-    <div id="right-side" class="split">
-      {% for code_content in site.code_content %}
-        {% if page.codecontent == code_content.name %}
-          {{ code_content.content | markdownify }}
-        {% endif %}
-      {% endfor %}
-    </div>
-  </div>
+  </main>
 
   {% include scripts.html %}
   <script>

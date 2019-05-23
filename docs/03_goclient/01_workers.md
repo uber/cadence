@@ -2,7 +2,7 @@
 
 A worker or *worker service* is a service that hosts the workflow and activity implementations. The worker polls the *Cadence service* for tasks, performs those tasks and communicates task execution results back to the *Cadence service*. Worker services are developed, deployed and operated by Cadence customers.
 
-You can run a Cadence worker in a new or an exiting service. Use the framework APIs to start the Cadence worker and link in all activity and workflow implementations that you require the service to execute.
+You can run a Cadence worker in a new or an existing service. Use the framework APIs to start the Cadence worker and link in all activity and workflow implementations that you require the service to execute.
 
 ```go
 package main

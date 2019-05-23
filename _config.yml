@@ -46,6 +46,11 @@ kramdown:
   math_engine: mathjax
   syntax_highlighter: rouge
 
+# Code content collection
+collections:
+  code_content:
+    output: true
+
 # Defaults
 defaults:
   -
@@ -58,11 +63,11 @@ defaults:
       path: "tour"
     values:
       layout: "tour"
-
-# Code content collection
-collections:
-  code_content:
-    output: true
+  # -
+  #   scope:
+  #     path: "docs/01_how_cadence_works.md"
+  #   values:
+  #     redirect_from: docs/how_cadence_works
 
 
 # Exclude from processing.

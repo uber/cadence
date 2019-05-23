@@ -1,0 +1,27 @@
+<br />
+<hr />
+
+<div style="align-content: center; width: 100%">
+{% assign sorted_pages = (site.pages | where_exp:"item", "item.categories contains 'tour'" | sort: 'weight') %}
+{% assign prevpage = "empty" %}
+{% for mypage in sorted_pages %}
+    {% if mypage.url == page.url %}
+        {% assign nextpage = "empty" %}
+    {% elsif nextpage and nextpage == "empty" %}
+        {% assign nextpage = mypage %}
+        {% break %}
+    {% else %}
+        {% assign prevpage = mypage %}
+    {% endif %}
+{% endfor %}
+
+{% if prevpage != "empty" %} 
+    <a rel="prev" href="{{ prevpage.url | relative_url }}">&larr; Prev</a>
+{% endif %}
+{% if prevpage != "empty" and nextpage and nextpage != "empty" %}
+    | 
+{% endif %}
+{% if nextpage and nextpage != "empty" %} 
+    <a rel="next" href="{{ nextpage.url | relative_url }}">Next &rarr;</a>
+{% endif %}
+</div>
