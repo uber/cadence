@@ -28,16 +28,16 @@ import (
 	"testing"
 )
 
-type utilSuite struct {
+type queryValidatorSuite struct {
 	suite.Suite
 }
 
-func TestUtilSuite(t *testing.T) {
-	s := new(utilSuite)
+func TestQueryValidatorSuite(t *testing.T) {
+	s := new(queryValidatorSuite)
 	suite.Run(t, s)
 }
 
-func (s *utilSuite) TestValidateListRequestForQuery() {
+func (s *queryValidatorSuite) TestValidateListRequestForQuery() {
 	validSearchAttr := dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys())
 	qv := NewQueryValidator(validSearchAttr)
 
