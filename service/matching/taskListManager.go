@@ -379,15 +379,7 @@ func (c *taskListManagerImpl) GetTaskContext(
 		RunId:      common.StringPtr(task.RunID),
 	}
 
-	// reload from domainCache in case it got empty result during construction
-	if len(c.domainName) == 0 {
-		domainName, scope := domainNameAndMetricScope(c.domainCache, c.taskListID.domainID, c.metricsClient, metrics.MatchingTaskListMgrScope)
-		if len(domainName) > 0 {
-			c.Lock()
-			c.domainName, c.domainScope = domainName, scope
-			c.Unlock()
-		}
-	}
+	c.tryInitDomainNameAndScope()
 	tCtx := &taskContext{
 		info:              task,
 		workflowExecution: workflowExecution,
@@ -398,6 +390,18 @@ func (c *taskListManagerImpl) GetTaskContext(
 		domainName:        c.domainName,
 	}
 	return tCtx, nil
+}
+
+// reload from domainCache in case it got empty result during construction
+func (c *taskListManagerImpl) tryInitDomainNameAndScope() {
+	if len(c.domainName) == 0 {
+		domainName, scope := domainNameAndMetricScope(c.domainCache, c.taskListID.domainID, c.metricsClient, metrics.MatchingTaskListMgrScope)
+		if len(domainName) > 0 {
+			c.Lock()
+			c.domainName, c.domainScope = domainName, scope
+			c.Unlock()
+		}
+	}
 }
 
 func (c *taskListManagerImpl) persistAckLevel() error {
