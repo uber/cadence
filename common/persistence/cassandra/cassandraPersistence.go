@@ -807,14 +807,14 @@ workflow_state = ? ` +
 		`and visibility_ts < ?`
 
 	templateCreateTaskQuery = `INSERT INTO tasks (` +
-		`domain_id, task_list_name, task_list_type, type, task_id, task) ` +
+		`domain_id, task_list_name, task_list_type, type, task_id, task, created_time) ` +
 		`VALUES(?, ?, ?, ?, ?, ` + templateTaskType + `)`
 
 	templateCreateTaskWithTTLQuery = `INSERT INTO tasks (` +
-		`domain_id, task_list_name, task_list_type, type, task_id, task) ` +
+		`domain_id, task_list_name, task_list_type, type, task_id, task, created_time) ` +
 		`VALUES(?, ?, ?, ?, ?, ` + templateTaskType + `) USING TTL ?`
 
-	templateGetTasksQuery = `SELECT task_id, task ` +
+	templateGetTasksQuery = `SELECT task_id, task, created_time ` +
 		`FROM tasks ` +
 		`WHERE domain_id = ? ` +
 		`and task_list_name = ? ` +
@@ -2782,6 +2782,7 @@ func (d *cassandraPersistence) CreateTasks(request *p.CreateTasksRequest) (*p.Cr
 	taskListType := request.TaskListInfo.TaskType
 	taskListKind := request.TaskListInfo.Kind
 	ackLevel := request.TaskListInfo.AckLevel
+	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 
 	for _, task := range request.Tasks {
 		scheduleID := task.Data.ScheduleID
@@ -2795,7 +2796,8 @@ func (d *cassandraPersistence) CreateTasks(request *p.CreateTasksRequest) (*p.Cr
 				domainID,
 				task.Execution.GetWorkflowId(),
 				task.Execution.GetRunId(),
-				scheduleID)
+				scheduleID,
+				cqlNowTimestamp)
 		} else {
 			batch.Query(templateCreateTaskWithTTLQuery,
 				domainID,
@@ -2807,6 +2809,7 @@ func (d *cassandraPersistence) CreateTasks(request *p.CreateTasksRequest) (*p.Cr
 				task.Execution.GetWorkflowId(),
 				task.Execution.GetRunId(),
 				scheduleID,
+				cqlNowTimestamp,
 				task.Data.ScheduleToStartTimeout)
 		}
 	}
@@ -2889,6 +2892,7 @@ PopulateTasks:
 		}
 		t := createTaskInfo(task["task"].(map[string]interface{}))
 		t.TaskID = taskID.(int64)
+		t.CreatedTime = task["created_time"].(time.Time)
 		response.Tasks = append(response.Tasks, t)
 		if len(response.Tasks) == request.BatchSize {
 			break PopulateTasks
