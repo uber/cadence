@@ -1502,9 +1502,9 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 	client2 := s.cluster2.GetFrontendClient() // standby
 
 	// Start a workflow
-	id := "integration-activity-hearbeat-workflow-failover-test"
-	wt := "integration-activity-hearbeat-workflow-failover-test-type"
-	tl := "integration-activity-hearbeat-workflow-failover-test-tasklist"
+	id := "integration-activity-heartbeat-workflow-failover-test"
+	wt := "integration-activity-heartbeat-workflow-failover-test-type"
+	tl := "integration-activity-heartbeat-workflow-failover-test-tasklist"
 	identity := "worker1"
 	workflowType := &workflow.WorkflowType{Name: common.StringPtr(wt)}
 	taskList := &workflow.TaskList{Name: common.StringPtr(tl)}
@@ -1639,6 +1639,9 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 	s.Equal(clusterName[1], updateResp.ReplicationConfiguration.GetActiveClusterName())
 	s.Equal(int64(1), updateResp.GetFailoverVersion())
 
+	// Wait for domain cache to pick the change
+	time.Sleep(cacheRefreshInterval)
+
 	// Make sure the heartbeat details are sent to cluster2 even when the activity at cluster1
 	// has heartbeat timeout. Also make sure the information is recorded when the activity state
 	// is "Scheduled"
@@ -1649,8 +1652,6 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 	s.Equal(workflow.PendingActivityStateScheduled, pendingActivities[0].GetState())
 	s.Equal(heartbeatDetails, pendingActivities[0].GetHeartbeatDetails())
 
-	// Wait for domain cache to pick the change
-	time.Sleep(cacheRefreshInterval)
 	for i := 0; i < 10; i++ {
 		poller2.PollAndProcessActivityTask(false)
 		if activity2Called {
