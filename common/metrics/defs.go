@@ -1311,6 +1311,7 @@ const (
 	SyncThrottleCounter
 	BufferThrottleCounter
 	SyncMatchLatency
+	UnsyncMatchLatency
 	ExpiredTasksCounter
 
 	NumMatchingMetrics
@@ -1552,6 +1553,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		BufferThrottleCounter:         {metricName: "buffer_throttle_count"},
 		ExpiredTasksCounter:           {metricName: "tasks_expired"},
 		SyncMatchLatency:              {metricName: "syncmatch_latency", metricType: Timer},
+		UnsyncMatchLatency:            {metricName: "unsyncmatch_latency", metricType: Timer},
 	},
 	Worker: {
 		ReplicatorMessages:                                     {metricName: "replicator_messages"},
