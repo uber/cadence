@@ -622,7 +622,9 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(context *taskCont
 		}
 		token, _ = e.tokenSerializer.Serialize(taskoken)
 		if context.syncResponseCh == nil {
-			e.metricsClient.RecordTimer(metrics.MatchingPollForDecisionTaskScope, metrics.AsyncMatchLatency, time.Since(task.CreatedTime))
+			scope := domainTaggedMetricScope(e.domainCache, task.DomainID, e.metricsClient, metrics.MatchingPollForDecisionTaskScope)
+			scope.RecordTimer(metrics.AsyncMatchLatency, time.Since(task.CreatedTime))
+			scope.Tagged(metrics.DomainAllTag()).RecordTimer(metrics.AsyncMatchLatency, time.Since(task.CreatedTime))
 		}
 	}
 
@@ -648,7 +650,9 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(context *taskCont
 		panic("ActivityTaskScheduledEventAttributes.ActivityID is not set")
 	}
 	if context.syncResponseCh == nil {
-		e.metricsClient.RecordTimer(metrics.MatchingPollForActivityTaskScope, metrics.AsyncMatchLatency, time.Since(task.CreatedTime))
+		scope := domainTaggedMetricScope(e.domainCache, task.DomainID, e.metricsClient, metrics.MatchingPollForActivityTaskScope)
+		scope.RecordTimer(metrics.AsyncMatchLatency, time.Since(task.CreatedTime))
+		scope.Tagged(metrics.DomainAllTag()).RecordTimer(metrics.AsyncMatchLatency, time.Since(task.CreatedTime))
 	}
 
 	response := &workflow.PollForActivityTaskResponse{}
