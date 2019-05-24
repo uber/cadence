@@ -622,7 +622,7 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(context *taskCont
 		}
 		token, _ = e.tokenSerializer.Serialize(taskoken)
 		if context.syncResponseCh == nil {
-			e.metricsClient.RecordTimer(metrics.MatchingPollForDecisionTaskScope, metrics.UnsyncMatchLatency, time.Since(task.CreatedTime))
+			e.metricsClient.RecordTimer(metrics.MatchingPollForDecisionTaskScope, metrics.AsyncMatchLatency, time.Since(task.CreatedTime))
 		}
 	}
 
@@ -648,7 +648,7 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(context *taskCont
 		panic("ActivityTaskScheduledEventAttributes.ActivityID is not set")
 	}
 	if context.syncResponseCh == nil {
-		e.metricsClient.RecordTimer(metrics.MatchingPollForActivityTaskScope, metrics.UnsyncMatchLatency, time.Since(task.CreatedTime))
+		e.metricsClient.RecordTimer(metrics.MatchingPollForActivityTaskScope, metrics.AsyncMatchLatency, time.Since(task.CreatedTime))
 	}
 
 	response := &workflow.PollForActivityTaskResponse{}
