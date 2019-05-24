@@ -10,12 +10,12 @@
         enabled: true
         initialFailoverVersion: 0
         rpcName: "cadence-frontend"
-        rpcAddress: "127.0.0.1:7104"
+        rpcAddress: "127.0.0.1:9104"
       standby:
         enabled: true
         initialFailoverVersion: 1
         rpcName: "cadence-frontend"
-        rpcAddress: "127.0.0.1:8104"
+        rpcAddress: "127.0.0.1:10104"
   enablearchival: false
   workerconfig:
     enablearchiver: false
@@ -34,13 +34,13 @@
           brokers:
             - "${KAFKA_SEEDS}:9092"
       topics:
-        active:
+        active-es:
           cluster: test
-        active-dlq:
+        active-es-dlq:
           cluster: test
-        standby:
+        standby-es:
           cluster: test
-        standby-dlq:
+        standby-es-dlq:
           cluster: test
         test-visibility-topic-0:
           cluster: test
@@ -48,11 +48,11 @@
           cluster: test
       cadence-cluster-topics:
         active:
-          topic: active
-          dlq-topic: active-dlq
+          topic: active-es
+          dlq-topic: active-es-dlq
         standby:
-          topic: standby
-          dlq-topic: standby-dlq
+          topic: standby-es
+          dlq-topic: standby-es-dlq
       applications:
         visibility:
           topic: test-visibility-topic-0
@@ -76,12 +76,12 @@
         enabled: true
         initialFailoverVersion: 0
         rpcName: "cadence-frontend"
-        rpcAddress: "127.0.0.1:7104"
+        rpcAddress: "127.0.0.1:9104"
       standby:
         enabled: true
         initialFailoverVersion: 1
         rpcName: "cadence-frontend"
-        rpcAddress: "127.0.0.1:8104"
+        rpcAddress: "127.0.0.1:10104"
   enablearchival: false
   workerconfig:
     enablearchiver: false
@@ -100,13 +100,13 @@
           brokers:
             - "${KAFKA_SEEDS}:9092"
       topics:
-        active:
+        active-es:
           cluster: test
-        active-dlq:
+        active-es-dlq:
           cluster: test
-        standby:
+        standby-es:
           cluster: test
-        standby-dlq:
+        standby-es-dlq:
           cluster: test
         test-visibility-topic-1:
           cluster: test
@@ -114,11 +114,11 @@
           cluster: test
       cadence-cluster-topics:
         active:
-          topic: active
-          dlq-topic: active-dlq
+          topic: active-es
+          dlq-topic: active-es-dlq
         standby:
-          topic: standby
-          dlq-topic: standby-dlq
+          topic: standby-es
+          dlq-topic: standby-es-dlq
       applications:
         visibility:
           topic: test-visibility-topic-1
