@@ -28,7 +28,6 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
-	"flag"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -65,8 +64,7 @@ type (
 )
 
 const (
-	defaultTestClustersConfig = "testdata/integrationtestclusters.yaml"
-	cacheRefreshInterval      = cache.DomainCacheRefreshInterval + time.Second
+	cacheRefreshInterval = cache.DomainCacheRefreshInterval + time.Second
 )
 
 var (
@@ -87,7 +85,6 @@ func createContext() context.Context {
 }
 
 func TestIntegrationClustersTestSuite(t *testing.T) {
-	flag.Parse()
 	suite.Run(t, new(integrationClustersTestSuite))
 }
 
@@ -97,7 +94,7 @@ func (s *integrationClustersTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 	s.logger = loggerimpl.NewLogger(zapLogger)
 
-	fileName := defaultTestClustersConfig
+	fileName := "../testdata/xdc_integration_test_clusters.yaml"
 	if host.TestFlags.TestClusterConfigFile != "" {
 		fileName = host.TestFlags.TestClusterConfigFile
 	}
