@@ -21,7 +21,7 @@
 // +build !race
 // need to run xdc tests with race detector off because of ringpop bug causing data race issue
 
-package hostxdc
+package xdc
 
 import (
 	"bytes"

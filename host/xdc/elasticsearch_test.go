@@ -22,8 +22,8 @@
 // +build esintegration
 
 // to run locally, make sure kafka and es is running,
-// then run cmd `go test -v ./host/hostxdc -run TestESCrossDCTestSuite -tags esintegration`
-package hostxdc
+// then run cmd `go test -v ./host/xdc -run TestESCrossDCTestSuite -tags esintegration`
+package xdc
 
 import (
 	"encoding/json"

@@ -27,7 +27,7 @@ BUILD := ./build
 TOOLS_CMD_ROOT=./cmd/tools
 INTEG_TEST_ROOT=./host
 INTEG_TEST_DIR=host
-INTEG_TEST_XDC_ROOT=./host/hostxdc
+INTEG_TEST_XDC_ROOT=./host/xdc
 INTEG_TEST_XDC_DIR=hostxdc
 
 GO_BUILD_LDFLAGS_CMD      := $(abspath ./scripts/go-build-ldflags.sh)
@@ -67,7 +67,7 @@ ALL_SRC := $(shell find . -name "*.go" | grep -v -e Godeps -e vendor \
 TOOLS_SRC := $(shell find ./tools -name "*.go")
 TOOLS_SRC += $(TOOLS_CMD_ROOT)
 
-# all directories with *_test.go files in them (exclude hostxdc)
+# all directories with *_test.go files in them (exclude host/xdc)
 TEST_DIRS := $(filter-out $(INTEG_TEST_XDC_ROOT)%, $(sort $(dir $(filter %_test.go,$(ALL_SRC)))))
 
 # all tests other than integration test fall into the pkg_test category
