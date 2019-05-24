@@ -165,7 +165,8 @@ const (
 		`event_store_version: ?, ` +
 		`branch_token: ?, ` +
 		`cron_schedule: ?, ` +
-		`expiration_seconds: ? ` +
+		`expiration_seconds: ?, ` +
+		`search_attributes: ? ` +
 		`}`
 
 	templateReplicationStateType = `{` +
@@ -332,7 +333,8 @@ const (
 		`domain_id: ?, ` +
 		`workflow_id: ?, ` +
 		`run_id: ?, ` +
-		`schedule_id: ?` +
+		`schedule_id: ?,` +
+		`created_time: ? ` +
 		`}`
 
 	templateCreateShardQuery = `INSERT INTO executions (` +
@@ -906,11 +908,6 @@ type (
 
 var _ p.ExecutionStore = (*cassandraPersistence)(nil)
 
-//NewWorkflowExecutionPersistenceFromSession returns new ExecutionStore
-func NewWorkflowExecutionPersistenceFromSession(session *gocql.Session, shardID int, logger log.Logger) *cassandraPersistence {
-	return &cassandraPersistence{cassandraStore: cassandraStore{session: session, logger: logger}, shardID: shardID}
-}
-
 // newShardPersistence is used to create an instance of ShardManager implementation
 func newShardPersistence(cfg config.Cassandra, clusterName string, logger log.Logger) (p.ShardStore, error) {
 	cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
@@ -1407,6 +1404,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Int
 			request.BranchToken,
 			request.CronSchedule,
 			request.ExpirationSeconds,
+			request.SearchAttributes,
 			request.NextEventID,
 			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID)
@@ -1477,6 +1475,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Int
 			request.BranchToken,
 			request.CronSchedule,
 			request.ExpirationSeconds,
+			request.SearchAttributes,
 			request.ReplicationState.CurrentVersion,
 			request.ReplicationState.StartVersion,
 			request.ReplicationState.LastWriteVersion,
@@ -1669,6 +1668,7 @@ func (d *cassandraPersistence) updateMutableState(batch *gocql.Batch, executionI
 			executionInfo.BranchToken,
 			executionInfo.CronSchedule,
 			executionInfo.ExpirationSeconds,
+			executionInfo.SearchAttributes,
 			executionInfo.NextEventID,
 			d.shardID,
 			rowTypeExecution,
@@ -1739,6 +1739,7 @@ func (d *cassandraPersistence) updateMutableState(batch *gocql.Batch, executionI
 			executionInfo.BranchToken,
 			executionInfo.CronSchedule,
 			executionInfo.ExpirationSeconds,
+			executionInfo.SearchAttributes,
 			replicationState.CurrentVersion,
 			replicationState.StartVersion,
 			replicationState.LastWriteVersion,
@@ -2782,6 +2783,7 @@ func (d *cassandraPersistence) CreateTasks(request *p.CreateTasksRequest) (*p.Cr
 	taskListType := request.TaskListInfo.TaskType
 	taskListKind := request.TaskListInfo.Kind
 	ackLevel := request.TaskListInfo.AckLevel
+	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 
 	for _, task := range request.Tasks {
 		scheduleID := task.Data.ScheduleID
@@ -2795,7 +2797,8 @@ func (d *cassandraPersistence) CreateTasks(request *p.CreateTasksRequest) (*p.Cr
 				domainID,
 				task.Execution.GetWorkflowId(),
 				task.Execution.GetRunId(),
-				scheduleID)
+				scheduleID,
+				cqlNowTimestamp)
 		} else {
 			batch.Query(templateCreateTaskWithTTLQuery,
 				domainID,
@@ -2807,6 +2810,7 @@ func (d *cassandraPersistence) CreateTasks(request *p.CreateTasksRequest) (*p.Cr
 				task.Execution.GetWorkflowId(),
 				task.Execution.GetRunId(),
 				scheduleID,
+				cqlNowTimestamp,
 				task.Data.ScheduleToStartTimeout)
 		}
 	}
@@ -3837,6 +3841,8 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *p.InternalWorkf
 			info.CronSchedule = v.(string)
 		case "expiration_seconds":
 			info.ExpirationSeconds = int32(v.(int))
+		case "search_attributes":
+			info.SearchAttributes = v.(map[string][]byte)
 		}
 	}
 	info.CompletionEvent = p.NewDataBlob(completionEventData, completionEventEncoding)
@@ -4311,6 +4317,8 @@ func createTaskInfo(result map[string]interface{}) *p.TaskInfo {
 			info.RunID = v.(gocql.UUID).String()
 		case "schedule_id":
 			info.ScheduleID = v.(int64)
+		case "created_time":
+			info.CreatedTime = v.(time.Time)
 		}
 	}
 
