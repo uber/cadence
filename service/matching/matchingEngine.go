@@ -622,7 +622,7 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(context *taskCont
 		}
 		token, _ = e.tokenSerializer.Serialize(taskoken)
 		if context.syncResponseCh == nil {
-			scope := e.metricsClient.Scope(metrics.MatchingPollForActivityTaskScope)
+			scope := e.metricsClient.Scope(metrics.MatchingPollForDecisionTaskScope)
 			scope.Tagged(metrics.DomainTag(context.domainName)).RecordTimer(metrics.AsyncMatchLatency, time.Since(task.CreatedTime))
 			scope.Tagged(metrics.DomainAllTag()).RecordTimer(metrics.AsyncMatchLatency, time.Since(task.CreatedTime))
 		}
