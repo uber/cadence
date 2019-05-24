@@ -93,6 +93,7 @@ type (
 		workflowExecution s.WorkflowExecution
 		queryTaskInfo     *queryTaskInfo
 		backlogCountHint  int64
+		domainName        string
 	}
 
 	queryTaskInfo struct {
@@ -106,6 +107,7 @@ type (
 		taskListID    *taskListID
 		logger        log.Logger
 		metricsClient metrics.Client
+		domainName    string
 		domainScope   metrics.Scope // domain tagged metric scope
 		engine        *matchingEngineImpl
 		config        *taskListConfig
@@ -243,6 +245,7 @@ func newTaskListManagerWithRateLimiter(
 		taskListKind = common.TaskListKindPtr(s.TaskListKindNormal)
 	}
 
+	domainName, domainScope := domainNameAndMetricScope(e.domainCache, taskList.domainID, e.metricsClient, metrics.MatchingTaskListMgrScope)
 	db := newTaskListDB(e.taskManager, taskList.domainID, taskList.taskListName, taskList.taskType, int(*taskListKind), e.logger)
 	tlMgr := &taskListManagerImpl{
 		domainCache:             domainCache,
@@ -256,7 +259,8 @@ func newTaskListManagerWithRateLimiter(
 		taskListID:              taskList,
 		logger: e.logger.WithTags(tag.WorkflowTaskListName(taskList.taskListName),
 			tag.WorkflowTaskListType(taskList.taskType)),
-		domainScope:         domainTaggedMetricScope(e.domainCache, taskList.domainID, e.metricsClient, metrics.MatchingTaskListMgrScope),
+		domainScope:         domainScope,
+		domainName:          domainName,
 		db:                  db,
 		taskAckManager:      newAckManager(e.logger),
 		taskGC:              newTaskGC(db, config),
@@ -372,6 +376,11 @@ func (c *taskListManagerImpl) GetTaskContext(
 		WorkflowId: common.StringPtr(task.WorkflowID),
 		RunId:      common.StringPtr(task.RunID),
 	}
+
+	// reload from domainCache in case it got empty result during construction
+	if len(c.domainName) == 0 {
+		c.domainName, c.domainScope = domainNameAndMetricScope(c.domainCache, c.taskListID.domainID, c.metricsClient, metrics.MatchingTaskListMgrScope)
+	}
 	tCtx := &taskContext{
 		info:              task,
 		workflowExecution: workflowExecution,
@@ -379,6 +388,7 @@ func (c *taskListManagerImpl) GetTaskContext(
 		syncResponseCh:    result.C,         // nil if task is loaded from persistence
 		queryTaskInfo:     result.queryTask, // non-nil for query task
 		backlogCountHint:  c.taskAckManager.getBacklogCountHint(),
+		domainName:        c.domainName,
 	}
 	return tCtx, nil
 }
@@ -720,10 +730,11 @@ func (c *taskListManagerImpl) isTaskAddedRecently(lastAddTime time.Time) bool {
 	return time.Now().Sub(lastAddTime) <= c.config.MaxTasklistIdleTime()
 }
 
-func domainTaggedMetricScope(cache cache.DomainCache, domainID string, client metrics.Client, scope int) metrics.Scope {
+// if domainCache return error, it will return "" as domainNamne and a scope without domainName tagged
+func domainNameAndMetricScope(cache cache.DomainCache, domainID string, client metrics.Client, scope int) (string, metrics.Scope) {
 	entry, err := cache.GetDomainByID(domainID)
 	if err != nil {
-		return client.Scope(scope)
+		return "", client.Scope(scope)
 	}
-	return client.Scope(scope, metrics.DomainTag(entry.GetInfo().Name))
+	return entry.GetInfo().Name, client.Scope(scope, metrics.DomainTag(entry.GetInfo().Name))
 }
