@@ -83,12 +83,16 @@ type (
 		replicationState *persistence.ReplicationState
 		continueAsNew    *persistence.CreateWorkflowExecutionRequest
 		hBuilder         *historyBuilder
-		currentCluster   string
-		historySize      int
-		eventsCache      eventsCache
-		shard            ShardContext
-		config           *Config
-		logger           log.Logger
+
+		// in memory only attribute which indicates whether there are
+		// buffered events in persistence
+		hasBufferedEventsInPersistence bool
+
+		currentCluster string
+		eventsCache    eventsCache
+		shard          ShardContext
+		config         *Config
+		logger         log.Logger
 	}
 )
 
@@ -122,6 +126,8 @@ func newMutableStateBuilder(currentCluster string, shard ShardContext, eventsCac
 		updateSignalRequestedIDs:  make(map[string]struct{}),
 		pendingSignalRequestedIDs: make(map[string]struct{}),
 		deleteSignalRequestedID:   "",
+
+		hasBufferedEventsInPersistence: false,
 
 		currentCluster: currentCluster,
 		eventsCache:    eventsCache,
@@ -185,6 +191,8 @@ func (e *mutableStateBuilder) Load(state *persistence.WorkflowMutableState) {
 	for _, ai := range state.ActivityInfos {
 		e.pendingActivityInfoByActivityID[ai.ActivityID] = ai.ScheduleID
 	}
+
+	e.hasBufferedEventsInPersistence = len(e.bufferedEvents) > 0
 }
 
 func (e *mutableStateBuilder) GetEventStoreVersion() int32 {
@@ -325,10 +333,11 @@ func (e *mutableStateBuilder) FlushBufferedEvents() error {
 	if !e.HasInFlightDecisionTask() {
 		// flush persisted buffered events
 		if len(e.bufferedEvents) > 0 {
-			// buffered events are changed, need to be removed from persistence
-			e.clearBufferedEvents = true
 			reorderFunc(e.bufferedEvents)
 			e.bufferedEvents = nil
+		}
+		if e.hasBufferedEventsInPersistence {
+			e.clearBufferedEvents = true
 		}
 
 		// flush pending buffered events
@@ -465,6 +474,8 @@ func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates,
 	e.updateBufferedReplicationTasks = nil
 	e.deleteBufferedReplicationEvent = nil
 
+	e.hasBufferedEventsInPersistence = len(e.bufferedEvents) > 0
+
 	return updates, nil
 }
 
@@ -505,10 +516,6 @@ func (e *mutableStateBuilder) checkAndClearTimerFiredEvent(timerID string) *work
 
 	e.bufferedEvents, timerEvent = checkAndClearTimerFiredEvent(e.bufferedEvents, timerID)
 	if timerEvent != nil {
-		// this function (checkAndClearTimerFiredEvent) should only be called during
-		// a decision task completed, meaning that buffer will be flushed
-		// so it is ok to set clearBufferedEvents to true
-		e.clearBufferedEvents = true
 		return timerEvent
 	}
 	e.updateBufferedEvents, timerEvent = checkAndClearTimerFiredEvent(e.updateBufferedEvents, timerID)
