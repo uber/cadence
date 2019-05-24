@@ -1,1 +1,1 @@
-ALTER TABLE tasks ADD created_time timestamp;
+ALTER TYPE task ADD created_time timestamp;

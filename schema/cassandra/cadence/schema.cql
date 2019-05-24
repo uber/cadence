@@ -223,6 +223,7 @@ CREATE TYPE task (
   workflow_id      text,
   run_id           uuid,
   schedule_id      bigint,
+  created_time     timestamp
 );
 
 CREATE TYPE task_list (
@@ -370,7 +371,6 @@ CREATE TABLE tasks (
   range_id         bigint, -- Used to ensure that only one process can write to the table
   task             frozen<task>,
   task_list        frozen<task_list>,
-  created_time     timestamp,
   PRIMARY KEY ((domain_id, task_list_name, task_list_type), type, task_id)
 ) WITH COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'

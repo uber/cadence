@@ -333,7 +333,8 @@ const (
 		`domain_id: ?, ` +
 		`workflow_id: ?, ` +
 		`run_id: ?, ` +
-		`schedule_id: ?` +
+		`schedule_id: ?,` +
+		`created_time: ? ` +
 		`}`
 
 	templateCreateShardQuery = `INSERT INTO executions (` +
@@ -807,14 +808,14 @@ workflow_state = ? ` +
 		`and visibility_ts < ?`
 
 	templateCreateTaskQuery = `INSERT INTO tasks (` +
-		`domain_id, task_list_name, task_list_type, type, task_id, task, created_time) ` +
+		`domain_id, task_list_name, task_list_type, type, task_id, task) ` +
 		`VALUES(?, ?, ?, ?, ?, ` + templateTaskType + `)`
 
 	templateCreateTaskWithTTLQuery = `INSERT INTO tasks (` +
-		`domain_id, task_list_name, task_list_type, type, task_id, task, created_time) ` +
+		`domain_id, task_list_name, task_list_type, type, task_id, task) ` +
 		`VALUES(?, ?, ?, ?, ?, ` + templateTaskType + `) USING TTL ?`
 
-	templateGetTasksQuery = `SELECT task_id, task, created_time ` +
+	templateGetTasksQuery = `SELECT task_id, task ` +
 		`FROM tasks ` +
 		`WHERE domain_id = ? ` +
 		`and task_list_name = ? ` +
@@ -2892,7 +2893,6 @@ PopulateTasks:
 		}
 		t := createTaskInfo(task["task"].(map[string]interface{}))
 		t.TaskID = taskID.(int64)
-		t.CreatedTime = task["created_time"].(time.Time)
 		response.Tasks = append(response.Tasks, t)
 		if len(response.Tasks) == request.BatchSize {
 			break PopulateTasks
@@ -4317,6 +4317,8 @@ func createTaskInfo(result map[string]interface{}) *p.TaskInfo {
 			info.RunID = v.(gocql.UUID).String()
 		case "schedule_id":
 			info.ScheduleID = v.(int64)
+		case "created_time":
+			info.CreatedTime = v.(time.Time)
 		}
 	}
 
