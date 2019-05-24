@@ -1,5 +1,5 @@
 - persisence:
-    dbname: integration_active
+    dbname: integration_active_es
   clustermetadata:
     enableGlobalDomain: true
     failoverVersionIncrement: 10
@@ -65,7 +65,7 @@
       visibility: test-visibility-0-
 
 - persistence:
-    dbname: integration_standby
+    dbname: integration_standby_es
   clustermetadata:
     enableGlobalDomain: true
     failoverVersionIncrement: 10
