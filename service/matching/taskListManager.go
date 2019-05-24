@@ -103,6 +103,8 @@ type (
 
 	// Single task list in memory state
 	taskListManagerImpl struct {
+		sync.RWMutex
+
 		domainCache   cache.DomainCache
 		taskListID    *taskListID
 		logger        log.Logger
@@ -379,7 +381,12 @@ func (c *taskListManagerImpl) GetTaskContext(
 
 	// reload from domainCache in case it got empty result during construction
 	if len(c.domainName) == 0 {
-		c.domainName, c.domainScope = domainNameAndMetricScope(c.domainCache, c.taskListID.domainID, c.metricsClient, metrics.MatchingTaskListMgrScope)
+		domainName, scope := domainNameAndMetricScope(c.domainCache, c.taskListID.domainID, c.metricsClient, metrics.MatchingTaskListMgrScope)
+		if len(domainName) > 0 {
+			c.Lock()
+			c.domainName, c.domainScope = domainName, scope
+			c.Unlock()
+		}
 	}
 	tCtx := &taskContext{
 		info:              task,
