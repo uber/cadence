@@ -27,6 +27,7 @@ package xdc
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"github.com/olivere/elastic"
 	"github.com/pborman/uuid"
@@ -70,6 +71,7 @@ type esCrossDCTestSuite struct {
 }
 
 func TestESCrossDCTestSuite(t *testing.T) {
+	flag.Parse()
 	suite.Run(t, new(esCrossDCTestSuite))
 }
 

@@ -28,6 +28,7 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"flag"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -85,6 +86,7 @@ func createContext() context.Context {
 }
 
 func TestIntegrationClustersTestSuite(t *testing.T) {
+	flag.Parse()
 	suite.Run(t, new(integrationClustersTestSuite))
 }
 
@@ -1500,6 +1502,10 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 	time.Sleep(cacheRefreshInterval)
 
 	client2 := s.cluster2.GetFrontendClient() // standby
+	resp2, err := client2.DescribeDomain(createContext(), descReq)
+	s.NoError(err)
+	s.NotNil(resp2)
+	s.Equal(resp, resp2)
 
 	// Start a workflow
 	id := "integration-activity-heartbeat-workflow-failover-test"
