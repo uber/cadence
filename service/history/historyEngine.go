@@ -1185,6 +1185,7 @@ Update_History_Loop:
 						return nil, err
 					}
 					if failWorkflow {
+						isComplete = true
 						break Process_Decision_Loop
 					}
 
@@ -1224,6 +1225,7 @@ Update_History_Loop:
 						return nil, err
 					}
 					if failWorkflow {
+						isComplete = true
 						break Process_Decision_Loop
 					}
 
@@ -1292,6 +1294,7 @@ Update_History_Loop:
 						return nil, err
 					}
 					if failWorkflow {
+						isComplete = true
 						break Process_Decision_Loop
 					}
 
@@ -1449,6 +1452,7 @@ Update_History_Loop:
 						return nil, err
 					}
 					if failWorkflow {
+						isComplete = true
 						break Process_Decision_Loop
 					}
 
@@ -1508,6 +1512,7 @@ Update_History_Loop:
 						return nil, err
 					}
 					if failWorkflow {
+						isComplete = true
 						break Process_Decision_Loop
 					}
 
@@ -1566,6 +1571,7 @@ Update_History_Loop:
 						return nil, err
 					}
 					if failWorkflow {
+						isComplete = true
 						break Process_Decision_Loop
 					}
 
@@ -1604,6 +1610,7 @@ Update_History_Loop:
 						return nil, err
 					}
 					if failWorkflow {
+						isComplete = true
 						break Process_Decision_Loop
 					}
 
@@ -1697,10 +1704,7 @@ Update_History_Loop:
 		}
 
 		if isComplete {
-			tranT, timerT, err := e.getWorkflowHistoryCleanupTasks(
-				domainID,
-				workflowExecution.GetWorkflowId(),
-				tBuilder)
+			tranT, timerT, err := e.getWorkflowHistoryCleanupTasks(domainID, workflowExecution.GetWorkflowId(), tBuilder)
 			if err != nil {
 				return nil, err
 			}
@@ -1719,18 +1723,40 @@ Update_History_Loop:
 		var updateErr error
 		if continueAsNewBuilder != nil {
 			continueAsNewTimerTasks = msBuilder.GetContinueAsNew().TimerTasks
-			updateErr = context.continueAsNewWorkflowExecution(request.ExecutionContext, continueAsNewBuilder,
-				transferTasks, timerTasks, transactionID)
+			updateErr = context.continueAsNewWorkflowExecution(request.ExecutionContext, continueAsNewBuilder, transferTasks, timerTasks, transactionID)
 		} else {
-			updateErr = context.updateWorkflowExecutionWithContext(request.ExecutionContext, transferTasks, timerTasks,
-				transactionID)
+			updateErr = context.updateWorkflowExecutionWithContext(request.ExecutionContext, transferTasks, timerTasks, transactionID)
 		}
 
 		if updateErr != nil {
 			if updateErr == ErrConflict {
-				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
-					metrics.ConcurrencyUpdateFailureCounter)
+				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.ConcurrencyUpdateFailureCounter)
 				continue Update_History_Loop
+			}
+
+			switch updateErr.(type) {
+			case *persistence.TransactionSizeLimitError:
+				tranT, timerT, err := e.getWorkflowHistoryCleanupTasks(domainID, workflowExecution.GetWorkflowId(), tBuilder)
+				if err != nil {
+					return nil, err
+				}
+				var updateErr2 error
+				if continueAsNewBuilder != nil {
+					continueAsNewTimerTasks = msBuilder.GetContinueAsNew().TimerTasks
+					updateErr2 = context.continueAsNewWorkflowExecution(request.ExecutionContext, continueAsNewBuilder, []persistence.Task{tranT}, []persistence.Task{timerT}, transactionID)
+				} else {
+					updateErr2 = context.updateWorkflowExecutionWithContext(request.ExecutionContext, []persistence.Task{tranT}, []persistence.Task{timerT}, transactionID)
+				}
+				if updateErr2 != nil {
+					return nil, updateErr2
+				}
+				attributes := &workflow.FailWorkflowExecutionDecisionAttributes{
+					Reason: common.StringPtr(common.FailureReasonHistoryTransactionSizeExceedsLimit),
+				}
+				if evt := msBuilder.AddFailWorkflowEvent(completedID, attributes); evt == nil {
+					return nil, &workflow.InternalServiceError{Message: "Unable to add fail workflow event."}
+				}
+				return nil, &workflow.BadRequestError{Message: updateErr.Error()}
 			}
 
 			return nil, updateErr

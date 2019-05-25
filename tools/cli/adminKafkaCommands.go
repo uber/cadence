@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 	"io"
 	"io/ioutil"
 	"os"
@@ -467,10 +468,10 @@ func doRereplicate(shardID int, domainID, wid, rid string, minID, maxID int64, t
 	}
 
 	histV1 := cassandra.NewHistoryPersistenceFromSession(session, loggerimpl.NewNopLogger())
-	historyMgr := persistence.NewHistoryManagerImpl(histV1, loggerimpl.NewNopLogger())
+	historyMgr := persistence.NewHistoryManagerImpl(histV1, loggerimpl.NewNopLogger(), dynamicconfig.GetIntPropertyFn(common.DefaultTransactionSizeLimit))
 
 	histV2 := cassandra.NewHistoryV2PersistenceFromSession(session, loggerimpl.NewNopLogger())
-	historyV2Mgr := persistence.NewHistoryV2ManagerImpl(histV2, loggerimpl.NewNopLogger())
+	historyV2Mgr := persistence.NewHistoryV2ManagerImpl(histV2, loggerimpl.NewNopLogger(), dynamicconfig.GetIntPropertyFn(common.DefaultTransactionSizeLimit))
 
 	exeM, _ := cassandra.NewWorkflowExecutionPersistence(shardID, session, loggerimpl.NewNopLogger())
 	exeMgr := persistence.NewExecutionManagerImpl(exeM, loggerimpl.NewNopLogger())
