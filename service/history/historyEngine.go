@@ -1699,8 +1699,16 @@ Update_History_Loop:
 				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.ConcurrencyUpdateFailureCounter)
 				continue Update_History_Loop
 			}
+
+			// if updateErr resulted in TransactionSizeLimitError then fail workflow
 			switch updateErr.(type) {
 			case *persistence.TransactionSizeLimitError:
+				// must reload mutable state because the first call to updateWorkflowExecutionWithContext or continueAsNewWorkflowExecution
+				// clears mutable state if error is returned
+				msBuilder, err = context.loadWorkflowExecution()
+				if err != nil {
+					return nil, err
+				}
 				attributes := &workflow.FailWorkflowExecutionDecisionAttributes{
 					Reason:  common.StringPtr(common.FailureReasonTransactionSizeExceedsLimit),
 					Details: []byte(updateErr.Error()),
