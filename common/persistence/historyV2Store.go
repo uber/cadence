@@ -42,7 +42,7 @@ type (
 		logger                log.Logger
 		thriftEncoder         codec.BinaryEncoder
 		pagingTokenSerializer *jsonHistoryTokenSerializer
-		transactionSizeLimit dynamicconfig.IntPropertyFn
+		transactionSizeLimit  dynamicconfig.IntPropertyFn
 	}
 )
 
@@ -56,7 +56,7 @@ func NewHistoryV2ManagerImpl(persistence HistoryV2Store, logger log.Logger, tran
 		logger:                logger,
 		thriftEncoder:         codec.NewThriftRWEncoder(),
 		pagingTokenSerializer: newJSONHistoryTokenSerializer(),
-		transactionSizeLimit: transactionSizeLimit,
+		transactionSizeLimit:  transactionSizeLimit,
 	}
 }
 

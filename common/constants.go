@@ -110,5 +110,5 @@ const (
 
 const (
 	// DefaultTransactionSizeLimit is the largest allowed transaction size to persistence
-	DefaultTransactionSizeLimit = 14*1024*1024
+	DefaultTransactionSizeLimit = 14 * 1024 * 1024
 )

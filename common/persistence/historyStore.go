@@ -34,9 +34,9 @@ type (
 
 	// historyManagerImpl implements HistoryManager based on HistoryStore and PayloadSerializer
 	historyManagerImpl struct {
-		serializer  PayloadSerializer
-		persistence HistoryStore
-		logger      log.Logger
+		serializer           PayloadSerializer
+		persistence          HistoryStore
+		logger               log.Logger
 		transactionSizeLimit dynamicconfig.IntPropertyFn
 	}
 
@@ -53,9 +53,9 @@ var _ HistoryManager = (*historyManagerImpl)(nil)
 //NewHistoryManagerImpl returns new HistoryManager
 func NewHistoryManagerImpl(persistence HistoryStore, logger log.Logger, transactionSizeLimit dynamicconfig.IntPropertyFn) HistoryManager {
 	return &historyManagerImpl{
-		serializer:  NewPayloadSerializer(),
-		persistence: persistence,
-		logger:      logger,
+		serializer:           NewPayloadSerializer(),
+		persistence:          persistence,
+		logger:               logger,
 		transactionSizeLimit: transactionSizeLimit,
 	}
 }
