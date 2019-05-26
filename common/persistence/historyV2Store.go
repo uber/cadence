@@ -22,15 +22,14 @@ package persistence
 
 import (
 	"fmt"
-	"github.com/uber/cadence/common/service/dynamicconfig"
-
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 
 	"github.com/pborman/uuid"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (

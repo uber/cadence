@@ -26,7 +26,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common/service/dynamicconfig"
+
 	"io"
 	"io/ioutil"
 	"os"
@@ -48,6 +48,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/history"
 	"github.com/urfave/cli"
 	"go.uber.org/thriftrw/protocol"
