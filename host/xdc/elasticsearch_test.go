@@ -27,7 +27,6 @@ package xdc
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"github.com/olivere/elastic"
 	"github.com/pborman/uuid"
@@ -45,7 +44,6 @@ import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
-	"testing"
 	"time"
 )
 
@@ -70,10 +68,12 @@ type esCrossDCTestSuite struct {
 	testSearchAttributeVal string
 }
 
+/*
 func TestESCrossDCTestSuite(t *testing.T) {
 	flag.Parse()
 	suite.Run(t, new(esCrossDCTestSuite))
 }
+*/
 
 func (s *esCrossDCTestSuite) SetupSuite() {
 	zapLogger, err := zap.NewDevelopment()
