@@ -1501,6 +1501,8 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 	// Wait for domain cache to pick the change
 	time.Sleep(cacheRefreshInterval)
 
+	client2 := s.cluster2.GetFrontendClient() // standby
+
 	// Start a workflow
 	id := "integration-activity-heartbeat-workflow-failover-test"
 	wt := "integration-activity-heartbeat-workflow-failover-test-type"
