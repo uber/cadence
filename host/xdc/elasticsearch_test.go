@@ -27,6 +27,7 @@ package xdc
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"github.com/olivere/elastic"
 	"github.com/pborman/uuid"
@@ -44,6 +45,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
+	"testing"
 	"time"
 )
 
@@ -68,12 +70,22 @@ type esCrossDCTestSuite struct {
 	testSearchAttributeVal string
 }
 
-/*
 func TestESCrossDCTestSuite(t *testing.T) {
 	flag.Parse()
 	suite.Run(t, new(esCrossDCTestSuite))
 }
-*/
+
+var (
+	clusterNameES              = []string{"active-es", "standby-es"}
+	clusterReplicationConfigES = []*workflow.ClusterReplicationConfiguration{
+		{
+			ClusterName: common.StringPtr(clusterNameES[0]),
+		},
+		{
+			ClusterName: common.StringPtr(clusterNameES[1]),
+		},
+	}
+)
 
 func (s *esCrossDCTestSuite) SetupSuite() {
 	zapLogger, err := zap.NewDevelopment()
@@ -95,11 +107,11 @@ func (s *esCrossDCTestSuite) SetupSuite() {
 	s.Require().NoError(yaml.Unmarshal(confContent, &clusterConfigs))
 	s.clusterConfigs = clusterConfigs
 
-	c, err := host.NewCluster(clusterConfigs[0], s.logger.WithTags(tag.ClusterName(clusterName[0])))
+	c, err := host.NewCluster(clusterConfigs[0], s.logger.WithTags(tag.ClusterName(clusterNameES[0])))
 	s.Require().NoError(err)
 	s.cluster1 = c
 
-	c, err = host.NewCluster(clusterConfigs[1], s.logger.WithTags(tag.ClusterName(clusterName[1])))
+	c, err = host.NewCluster(clusterConfigs[1], s.logger.WithTags(tag.ClusterName(clusterNameES[1])))
 	s.Require().NoError(err)
 	s.cluster2 = c
 
@@ -129,8 +141,8 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &workflow.RegisterDomainRequest{
 		Name:              common.StringPtr(domainName),
-		Clusters:          clusterReplicationConfig,
-		ActiveClusterName: common.StringPtr(clusterName[0]),
+		Clusters:          clusterReplicationConfigES,
+		ActiveClusterName: common.StringPtr(clusterNameES[0]),
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)

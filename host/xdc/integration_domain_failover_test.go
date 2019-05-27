@@ -1481,7 +1481,7 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 }
 
 func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
-	domainName := "test-activity-hearbeat-workflow-failover-" + common.GenerateRandomString(5)
+	domainName := "test-activity-heartbeat-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &workflow.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),
@@ -1500,12 +1500,6 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 	s.NotNil(resp)
 	// Wait for domain cache to pick the change
 	time.Sleep(cacheRefreshInterval)
-
-	client2 := s.cluster2.GetFrontendClient() // standby
-	resp2, err := client2.DescribeDomain(createContext(), descReq)
-	s.NoError(err)
-	s.NotNil(resp2)
-	s.Equal(resp, resp2)
 
 	// Start a workflow
 	id := "integration-activity-heartbeat-workflow-failover-test"
