@@ -3236,7 +3236,19 @@ func (wh *WorkflowHandler) getArchivedHistory(
 			BlobstorePageToken: common.FirstBlobPageToken,
 		}
 	}
-	key, err := archiver.NewHistoryBlobKey(domainID, request.Execution.GetWorkflowId(), request.Execution.GetRunId(), token.BlobstorePageToken)
+	indexKey, err := archiver.NewHistoryIndexBlobKey(domainID, request.Execution.GetWorkflowId(), request.Execution.GetRunId())
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+	indexTags, err := wh.blobstoreClient.GetTags(ctx, archivalBucket, indexKey)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+	highestVersion, err := archiver.GetHighestVersion(indexTags)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+	key, err := archiver.NewHistoryBlobKey(domainID, request.Execution.GetWorkflowId(), request.Execution.GetRunId(), *highestVersion, token.BlobstorePageToken)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}

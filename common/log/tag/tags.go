@@ -642,6 +642,10 @@ func ArchivalRequestDomainID(requestDomainID string) Tag {
 	return newStringTag("archival-request-domain-id", requestDomainID)
 }
 
+func ArchivalRequestDomainName(requestDomainName string) Tag {
+	return newStringTag("archival-request-domain-name", requestDomainName)
+}
+
 // ArchivalRequestWorkflowID returns tag for RequestWorkflowID
 func ArchivalRequestWorkflowID(requestWorkflowID string) Tag {
 	return newStringTag("archival-request-workflow-id", requestWorkflowID)
