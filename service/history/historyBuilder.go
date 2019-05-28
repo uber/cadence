@@ -72,8 +72,8 @@ func (b *historyBuilder) HasTransientEvents() bool {
 }
 
 func (b *historyBuilder) AddWorkflowExecutionStartedEvent(request *h.StartWorkflowExecutionRequest,
-	previousExecution *persistence.WorkflowExecutionInfo) *workflow.HistoryEvent {
-	event := b.newWorkflowExecutionStartedEvent(request, previousExecution)
+	previousExecution *persistence.WorkflowExecutionInfo, originalRunID string) *workflow.HistoryEvent {
+	event := b.newWorkflowExecutionStartedEvent(request, previousExecution, originalRunID)
 
 	return b.addEventToHistory(event)
 }
@@ -453,7 +453,7 @@ func (b *historyBuilder) addTransientEvent(event *workflow.HistoryEvent) *workfl
 }
 
 func (b *historyBuilder) newWorkflowExecutionStartedEvent(
-	startRequest *h.StartWorkflowExecutionRequest, previousExecution *persistence.WorkflowExecutionInfo) *workflow.HistoryEvent {
+	startRequest *h.StartWorkflowExecutionRequest, previousExecution *persistence.WorkflowExecutionInfo, originalRunID string) *workflow.HistoryEvent {
 	var prevRunID *string
 	var resetPoints *workflow.ResetPoints
 	if previousExecution != nil {
@@ -482,7 +482,9 @@ func (b *historyBuilder) newWorkflowExecutionStartedEvent(
 	attributes.ContinuedFailureDetails = startRequest.ContinuedFailureDetails
 	attributes.Initiator = startRequest.ContinueAsNewInitiator
 	attributes.FirstDecisionTaskBackoffSeconds = startRequest.FirstDecisionTaskBackoffSeconds
+	attributes.OriginalExecutionRunId = common.StringPtr(originalRunID)
 	attributes.Memo = request.Memo
+	attributes.SearchAttributes = request.SearchAttributes
 
 	parentInfo := startRequest.ParentExecutionInfo
 	if parentInfo != nil {

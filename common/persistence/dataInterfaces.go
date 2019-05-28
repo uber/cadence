@@ -261,6 +261,7 @@ type (
 		ClientFeatureVersion         string
 		ClientImpl                   string
 		AutoResetPoints              *workflow.ResetPoints
+		SearchAttributes             map[string][]byte
 		// for retry
 		Attempt            int32
 		HasRetryPolicy     bool
@@ -360,6 +361,7 @@ type (
 		ScheduleID             int64
 		ScheduleToStartTimeout int32
 		Expiry                 time.Time
+		CreatedTime            time.Time
 	}
 
 	// Task is the generic interface for workflow tasks
@@ -709,6 +711,7 @@ type (
 		BranchToken       []byte
 		CronSchedule      string
 		ExpirationSeconds int32
+		SearchAttributes  map[string][]byte
 	}
 
 	// CreateWorkflowExecutionResponse is the response to CreateWorkflowExecutionRequest

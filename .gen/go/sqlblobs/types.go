@@ -5382,10 +5382,11 @@ func (v *SignalInfo) IsSetControl() bool {
 }
 
 type TaskInfo struct {
-	WorkflowID      *string `json:"workflowID,omitempty"`
-	RunID           []byte  `json:"runID,omitempty"`
-	ScheduleID      *int64  `json:"scheduleID,omitempty"`
-	ExpiryTimeNanos *int64  `json:"expiryTimeNanos,omitempty"`
+	WorkflowID       *string `json:"workflowID,omitempty"`
+	RunID            []byte  `json:"runID,omitempty"`
+	ScheduleID       *int64  `json:"scheduleID,omitempty"`
+	ExpiryTimeNanos  *int64  `json:"expiryTimeNanos,omitempty"`
+	CreatedTimeNanos *int64  `json:"createdTimeNanos,omitempty"`
 }
 
 // ToWire translates a TaskInfo struct into a Thrift-level intermediate
@@ -5405,7 +5406,7 @@ type TaskInfo struct {
 //   }
 func (v *TaskInfo) ToWire() (wire.Value, error) {
 	var (
-		fields [4]wire.Field
+		fields [5]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -5441,6 +5442,14 @@ func (v *TaskInfo) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 14, Value: w}
+		i++
+	}
+	if v.CreatedTimeNanos != nil {
+		w, err = wire.NewValueI64(*(v.CreatedTimeNanos)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 15, Value: w}
 		i++
 	}
 
@@ -5507,6 +5516,16 @@ func (v *TaskInfo) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 15:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.CreatedTimeNanos = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -5520,7 +5539,7 @@ func (v *TaskInfo) String() string {
 		return "<nil>"
 	}
 
-	var fields [4]string
+	var fields [5]string
 	i := 0
 	if v.WorkflowID != nil {
 		fields[i] = fmt.Sprintf("WorkflowID: %v", *(v.WorkflowID))
@@ -5536,6 +5555,10 @@ func (v *TaskInfo) String() string {
 	}
 	if v.ExpiryTimeNanos != nil {
 		fields[i] = fmt.Sprintf("ExpiryTimeNanos: %v", *(v.ExpiryTimeNanos))
+		i++
+	}
+	if v.CreatedTimeNanos != nil {
+		fields[i] = fmt.Sprintf("CreatedTimeNanos: %v", *(v.CreatedTimeNanos))
 		i++
 	}
 
@@ -5564,6 +5587,9 @@ func (v *TaskInfo) Equals(rhs *TaskInfo) bool {
 	if !_I64_EqualsPtr(v.ExpiryTimeNanos, rhs.ExpiryTimeNanos) {
 		return false
 	}
+	if !_I64_EqualsPtr(v.CreatedTimeNanos, rhs.CreatedTimeNanos) {
+		return false
+	}
 
 	return true
 }
@@ -5585,6 +5611,9 @@ func (v *TaskInfo) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	}
 	if v.ExpiryTimeNanos != nil {
 		enc.AddInt64("expiryTimeNanos", *v.ExpiryTimeNanos)
+	}
+	if v.CreatedTimeNanos != nil {
+		enc.AddInt64("createdTimeNanos", *v.CreatedTimeNanos)
 	}
 	return err
 }
@@ -5647,6 +5676,21 @@ func (v *TaskInfo) GetExpiryTimeNanos() (o int64) {
 // IsSetExpiryTimeNanos returns true if ExpiryTimeNanos is not nil.
 func (v *TaskInfo) IsSetExpiryTimeNanos() bool {
 	return v != nil && v.ExpiryTimeNanos != nil
+}
+
+// GetCreatedTimeNanos returns the value of CreatedTimeNanos if it is set or its
+// zero value if it is unset.
+func (v *TaskInfo) GetCreatedTimeNanos() (o int64) {
+	if v != nil && v.CreatedTimeNanos != nil {
+		return *v.CreatedTimeNanos
+	}
+
+	return
+}
+
+// IsSetCreatedTimeNanos returns true if CreatedTimeNanos is not nil.
+func (v *TaskInfo) IsSetCreatedTimeNanos() bool {
+	return v != nil && v.CreatedTimeNanos != nil
 }
 
 type TaskListInfo struct {
@@ -7274,7 +7318,7 @@ type WorkflowExecutionInfo struct {
 	DecisionStartedID               *int64                      `json:"decisionStartedID,omitempty"`
 	DecisionTimeout                 *int32                      `json:"decisionTimeout,omitempty"`
 	DecisionAttempt                 *int64                      `json:"decisionAttempt,omitempty"`
-	DecisionTimestampNanos          *int64                      `json:"decisionTimestampNanos,omitempty"`
+	DecisionStartedTimestampNanos   *int64                      `json:"decisionStartedTimestampNanos,omitempty"`
 	DecisionScheduledTimestampNanos *int64                      `json:"decisionScheduledTimestampNanos,omitempty"`
 	CancelRequested                 *bool                       `json:"cancelRequested,omitempty"`
 	CreateRequestID                 *string                     `json:"createRequestID,omitempty"`
@@ -7301,7 +7345,46 @@ type WorkflowExecutionInfo struct {
 	ClientImpl                      *string                     `json:"clientImpl,omitempty"`
 	AutoResetPoints                 []byte                      `json:"autoResetPoints,omitempty"`
 	AutoResetPointsEncoding         *string                     `json:"autoResetPointsEncoding,omitempty"`
+	SearchAttributes                map[string][]byte           `json:"searchAttributes,omitempty"`
 }
+
+type _Map_String_Binary_MapItemList map[string][]byte
+
+func (m _Map_String_Binary_MapItemList) ForEach(f func(wire.MapItem) error) error {
+	for k, v := range m {
+		if v == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", k)
+		}
+		kw, err := wire.NewValueString(k), error(nil)
+		if err != nil {
+			return err
+		}
+
+		vw, err := wire.NewValueBinary(v), error(nil)
+		if err != nil {
+			return err
+		}
+		err = f(wire.MapItem{Key: kw, Value: vw})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m _Map_String_Binary_MapItemList) Size() int {
+	return len(m)
+}
+
+func (_Map_String_Binary_MapItemList) KeyType() wire.Type {
+	return wire.TBinary
+}
+
+func (_Map_String_Binary_MapItemList) ValueType() wire.Type {
+	return wire.TBinary
+}
+
+func (_Map_String_Binary_MapItemList) Close() {}
 
 // ToWire translates a WorkflowExecutionInfo struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
@@ -7320,7 +7403,7 @@ type WorkflowExecutionInfo struct {
 //   }
 func (v *WorkflowExecutionInfo) ToWire() (wire.Value, error) {
 	var (
-		fields [55]wire.Field
+		fields [56]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -7550,8 +7633,8 @@ func (v *WorkflowExecutionInfo) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 66, Value: w}
 		i++
 	}
-	if v.DecisionTimestampNanos != nil {
-		w, err = wire.NewValueI64(*(v.DecisionTimestampNanos)), error(nil)
+	if v.DecisionStartedTimestampNanos != nil {
+		w, err = wire.NewValueI64(*(v.DecisionStartedTimestampNanos)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -7766,8 +7849,44 @@ func (v *WorkflowExecutionInfo) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 116, Value: w}
 		i++
 	}
+	if v.SearchAttributes != nil {
+		w, err = wire.NewValueMap(_Map_String_Binary_MapItemList(v.SearchAttributes)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 118, Value: w}
+		i++
+	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _Map_String_Binary_Read(m wire.MapItemList) (map[string][]byte, error) {
+	if m.KeyType() != wire.TBinary {
+		return nil, nil
+	}
+
+	if m.ValueType() != wire.TBinary {
+		return nil, nil
+	}
+
+	o := make(map[string][]byte, m.Size())
+	err := m.ForEach(func(x wire.MapItem) error {
+		k, err := x.Key.GetString(), error(nil)
+		if err != nil {
+			return err
+		}
+
+		v, err := x.Value.GetBinary(), error(nil)
+		if err != nil {
+			return err
+		}
+
+		o[k] = v
+		return nil
+	})
+	m.Close()
+	return o, err
 }
 
 // FromWire deserializes a WorkflowExecutionInfo struct from its Thrift-level
@@ -8066,7 +8185,7 @@ func (v *WorkflowExecutionInfo) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TI64 {
 				var x int64
 				x, err = field.Value.GetI64(), error(nil)
-				v.DecisionTimestampNanos = &x
+				v.DecisionStartedTimestampNanos = &x
 				if err != nil {
 					return err
 				}
@@ -8326,6 +8445,14 @@ func (v *WorkflowExecutionInfo) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 118:
+			if field.Value.Type() == wire.TMap {
+				v.SearchAttributes, err = _Map_String_Binary_Read(field.Value.GetMap())
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -8339,7 +8466,7 @@ func (v *WorkflowExecutionInfo) String() string {
 		return "<nil>"
 	}
 
-	var fields [55]string
+	var fields [56]string
 	i := 0
 	if v.ParentDomainID != nil {
 		fields[i] = fmt.Sprintf("ParentDomainID: %v", v.ParentDomainID)
@@ -8453,8 +8580,8 @@ func (v *WorkflowExecutionInfo) String() string {
 		fields[i] = fmt.Sprintf("DecisionAttempt: %v", *(v.DecisionAttempt))
 		i++
 	}
-	if v.DecisionTimestampNanos != nil {
-		fields[i] = fmt.Sprintf("DecisionTimestampNanos: %v", *(v.DecisionTimestampNanos))
+	if v.DecisionStartedTimestampNanos != nil {
+		fields[i] = fmt.Sprintf("DecisionStartedTimestampNanos: %v", *(v.DecisionStartedTimestampNanos))
 		i++
 	}
 	if v.DecisionScheduledTimestampNanos != nil {
@@ -8561,8 +8688,29 @@ func (v *WorkflowExecutionInfo) String() string {
 		fields[i] = fmt.Sprintf("AutoResetPointsEncoding: %v", *(v.AutoResetPointsEncoding))
 		i++
 	}
+	if v.SearchAttributes != nil {
+		fields[i] = fmt.Sprintf("SearchAttributes: %v", v.SearchAttributes)
+		i++
+	}
 
 	return fmt.Sprintf("WorkflowExecutionInfo{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _Map_String_Binary_Equals(lhs, rhs map[string][]byte) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for lk, lv := range lhs {
+		rv, ok := rhs[lk]
+		if !ok {
+			return false
+		}
+		if !bytes.Equal(lv, rv) {
+			return false
+		}
+	}
+	return true
 }
 
 // Equals returns true if all the fields of this WorkflowExecutionInfo match the
@@ -8659,7 +8807,7 @@ func (v *WorkflowExecutionInfo) Equals(rhs *WorkflowExecutionInfo) bool {
 	if !_I64_EqualsPtr(v.DecisionAttempt, rhs.DecisionAttempt) {
 		return false
 	}
-	if !_I64_EqualsPtr(v.DecisionTimestampNanos, rhs.DecisionTimestampNanos) {
+	if !_I64_EqualsPtr(v.DecisionStartedTimestampNanos, rhs.DecisionStartedTimestampNanos) {
 		return false
 	}
 	if !_I64_EqualsPtr(v.DecisionScheduledTimestampNanos, rhs.DecisionScheduledTimestampNanos) {
@@ -8740,8 +8888,22 @@ func (v *WorkflowExecutionInfo) Equals(rhs *WorkflowExecutionInfo) bool {
 	if !_String_EqualsPtr(v.AutoResetPointsEncoding, rhs.AutoResetPointsEncoding) {
 		return false
 	}
+	if !((v.SearchAttributes == nil && rhs.SearchAttributes == nil) || (v.SearchAttributes != nil && rhs.SearchAttributes != nil && _Map_String_Binary_Equals(v.SearchAttributes, rhs.SearchAttributes))) {
+		return false
+	}
 
 	return true
+}
+
+type _Map_String_Binary_Zapper map[string][]byte
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of _Map_String_Binary_Zapper.
+func (m _Map_String_Binary_Zapper) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	for k, v := range m {
+		enc.AddString((string)(k), base64.StdEncoding.EncodeToString(v))
+	}
+	return err
 }
 
 // MarshalLogObject implements zapcore.ObjectMarshaler, enabling
@@ -8834,8 +8996,8 @@ func (v *WorkflowExecutionInfo) MarshalLogObject(enc zapcore.ObjectEncoder) (err
 	if v.DecisionAttempt != nil {
 		enc.AddInt64("decisionAttempt", *v.DecisionAttempt)
 	}
-	if v.DecisionTimestampNanos != nil {
-		enc.AddInt64("decisionTimestampNanos", *v.DecisionTimestampNanos)
+	if v.DecisionStartedTimestampNanos != nil {
+		enc.AddInt64("decisionStartedTimestampNanos", *v.DecisionStartedTimestampNanos)
 	}
 	if v.DecisionScheduledTimestampNanos != nil {
 		enc.AddInt64("decisionScheduledTimestampNanos", *v.DecisionScheduledTimestampNanos)
@@ -8914,6 +9076,9 @@ func (v *WorkflowExecutionInfo) MarshalLogObject(enc zapcore.ObjectEncoder) (err
 	}
 	if v.AutoResetPointsEncoding != nil {
 		enc.AddString("autoResetPointsEncoding", *v.AutoResetPointsEncoding)
+	}
+	if v.SearchAttributes != nil {
+		err = multierr.Append(err, enc.AddObject("searchAttributes", (_Map_String_Binary_Zapper)(v.SearchAttributes)))
 	}
 	return err
 }
@@ -9338,19 +9503,19 @@ func (v *WorkflowExecutionInfo) IsSetDecisionAttempt() bool {
 	return v != nil && v.DecisionAttempt != nil
 }
 
-// GetDecisionTimestampNanos returns the value of DecisionTimestampNanos if it is set or its
+// GetDecisionStartedTimestampNanos returns the value of DecisionStartedTimestampNanos if it is set or its
 // zero value if it is unset.
-func (v *WorkflowExecutionInfo) GetDecisionTimestampNanos() (o int64) {
-	if v != nil && v.DecisionTimestampNanos != nil {
-		return *v.DecisionTimestampNanos
+func (v *WorkflowExecutionInfo) GetDecisionStartedTimestampNanos() (o int64) {
+	if v != nil && v.DecisionStartedTimestampNanos != nil {
+		return *v.DecisionStartedTimestampNanos
 	}
 
 	return
 }
 
-// IsSetDecisionTimestampNanos returns true if DecisionTimestampNanos is not nil.
-func (v *WorkflowExecutionInfo) IsSetDecisionTimestampNanos() bool {
-	return v != nil && v.DecisionTimestampNanos != nil
+// IsSetDecisionStartedTimestampNanos returns true if DecisionStartedTimestampNanos is not nil.
+func (v *WorkflowExecutionInfo) IsSetDecisionStartedTimestampNanos() bool {
+	return v != nil && v.DecisionStartedTimestampNanos != nil
 }
 
 // GetDecisionScheduledTimestampNanos returns the value of DecisionScheduledTimestampNanos if it is set or its
@@ -9741,4 +9906,19 @@ func (v *WorkflowExecutionInfo) GetAutoResetPointsEncoding() (o string) {
 // IsSetAutoResetPointsEncoding returns true if AutoResetPointsEncoding is not nil.
 func (v *WorkflowExecutionInfo) IsSetAutoResetPointsEncoding() bool {
 	return v != nil && v.AutoResetPointsEncoding != nil
+}
+
+// GetSearchAttributes returns the value of SearchAttributes if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionInfo) GetSearchAttributes() (o map[string][]byte) {
+	if v != nil && v.SearchAttributes != nil {
+		return v.SearchAttributes
+	}
+
+	return
+}
+
+// IsSetSearchAttributes returns true if SearchAttributes is not nil.
+func (v *WorkflowExecutionInfo) IsSetSearchAttributes() bool {
+	return v != nil && v.SearchAttributes != nil
 }
