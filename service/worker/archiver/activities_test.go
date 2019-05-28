@@ -23,8 +23,6 @@ package archiver
 import (
 	"context"
 	"errors"
-	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/blobstore/blob"
 	"strconv"
 	"testing"
 	"time"
@@ -33,7 +31,9 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/blobstore/blob"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
