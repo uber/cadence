@@ -23,9 +23,9 @@ package archiver
 import (
 	"testing"
 
-	"github.com/uber/cadence/common/blobstore/blob"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/uber/cadence/common/blobstore/blob"
 )
 
 type HistoryIndexBlobSuite struct {
@@ -77,24 +77,24 @@ func (s *HistoryIndexBlobSuite) TestNewHistoryIndexBlobKey() {
 
 func (s *HistoryIndexBlobSuite) TestAddVersion() {
 	testCases := []struct {
-		existingVersions map[string]string
+		existingVersions     map[string]string
 		closeFailoverVersion int64
-		expectedBlob *blob.Blob
+		expectedBlob         *blob.Blob
 	}{
 		{
-			existingVersions: nil,
+			existingVersions:     nil,
 			closeFailoverVersion: 10,
-			expectedBlob: blob.NewBlob(nil, map[string]string{"10": ""}),
+			expectedBlob:         blob.NewBlob(nil, map[string]string{"10": ""}),
 		},
 		{
-			existingVersions: map[string]string{"10": ""},
+			existingVersions:     map[string]string{"10": ""},
 			closeFailoverVersion: 10,
-			expectedBlob: nil,
+			expectedBlob:         nil,
 		},
 		{
-			existingVersions: map[string]string{"1": ""},
+			existingVersions:     map[string]string{"1": ""},
 			closeFailoverVersion: 10,
-			expectedBlob: blob.NewBlob(nil, map[string]string{"1": "", "10": ""}),
+			expectedBlob:         blob.NewBlob(nil, map[string]string{"1": "", "10": ""}),
 		},
 	}
 	for _, tc := range testCases {
@@ -105,31 +105,31 @@ func (s *HistoryIndexBlobSuite) TestAddVersion() {
 
 func (s *HistoryIndexBlobSuite) TestGetHighestVersion() {
 	testCases := []struct {
-		tags map[string]string
-		expectError bool
+		tags            map[string]string
+		expectError     bool
 		expectedVersion int64
 	}{
 		{
-			tags: nil,
+			tags:        nil,
 			expectError: true,
 		},
 		{
-			tags: map[string]string{"foo": "bar"},
+			tags:        map[string]string{"foo": "bar"},
 			expectError: true,
 		},
 		{
-			tags: map[string]string{"1": ""},
-			expectError: false,
+			tags:            map[string]string{"1": ""},
+			expectError:     false,
 			expectedVersion: 1,
 		},
 		{
-			tags: map[string]string{"1": "", "foo":""},
-			expectError: false,
+			tags:            map[string]string{"1": "", "foo": ""},
+			expectError:     false,
 			expectedVersion: 1,
 		},
 		{
-			tags: map[string]string{"1": "", "foo":"", "10": "", "7": ""},
-			expectError: false,
+			tags:            map[string]string{"1": "", "foo": "", "10": "", "7": ""},
+			expectError:     false,
 			expectedVersion: 10,
 		},
 	}

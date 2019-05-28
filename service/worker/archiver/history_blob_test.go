@@ -26,7 +26,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber/cadence/common"
-
 )
 
 type HistoryBlobSuite struct {
@@ -44,26 +43,26 @@ func (s *HistoryBlobSuite) SetupTest() {
 
 func (s *HistoryBlobSuite) TestNewHistoryBlobKey() {
 	testCases := []struct {
-		domainID       string
-		workflowID     string
-		runID          string
+		domainID             string
+		workflowID           string
+		runID                string
 		closeFailoverVersion int64
-		pageToken      int
-		expectError    bool
-		expectBuiltKey string
+		pageToken            int
+		expectError          bool
+		expectBuiltKey       string
 	}{
 		{
 			domainID:    "",
 			expectError: true,
 		},
 		{
-			domainID:       "testDomainID",
-			workflowID:     "testWorkflowID",
-			runID:          "testRunID",
+			domainID:             "testDomainID",
+			workflowID:           "testWorkflowID",
+			runID:                "testRunID",
 			closeFailoverVersion: 5,
-			pageToken:      common.FirstBlobPageToken,
-			expectError:    false,
-			expectBuiltKey: "17971674567288329890367046253745284795510285995943906173973_5_1.history",
+			pageToken:            common.FirstBlobPageToken,
+			expectError:          false,
+			expectBuiltKey:       "17971674567288329890367046253745284795510285995943906173973_5_1.history",
 		},
 		{
 			domainID:    "testDomainID",

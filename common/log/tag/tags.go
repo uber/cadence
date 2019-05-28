@@ -642,6 +642,7 @@ func ArchivalRequestDomainID(requestDomainID string) Tag {
 	return newStringTag("archival-request-domain-id", requestDomainID)
 }
 
+// ArchivalRequestDomainName returns tag for RequestDomainName
 func ArchivalRequestDomainName(requestDomainName string) Tag {
 	return newStringTag("archival-request-domain-name", requestDomainName)
 }
