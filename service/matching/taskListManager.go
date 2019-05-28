@@ -245,7 +245,6 @@ func newTaskListManagerWithRateLimiter(
 		taskListKind = common.TaskListKindPtr(s.TaskListKindNormal)
 	}
 
-	domainName, domainScope := domainNameAndMetricScope(domainCache, taskList.domainID, e.metricsClient, metrics.MatchingTaskListMgrScope)
 	db := newTaskListDB(e.taskManager, taskList.domainID, taskList.taskListName, taskList.taskType, int(*taskListKind), e.logger)
 	tlMgr := &taskListManagerImpl{
 		domainCache:             domainCache,
@@ -271,8 +270,9 @@ func newTaskListManagerWithRateLimiter(
 		rateLimiter:         rl,
 		taskListKind:        int(*taskListKind),
 	}
-	tlMgr.domainNameValue.Store(domainName)
-	tlMgr.domainScopeValue.Store(domainScope)
+	tlMgr.domainNameValue.Store("")
+	tlMgr.domainScopeValue.Store(e.metricsClient.Scope(metrics.MatchingTaskListMgrScope))
+	tlMgr.tryInitDomainNameAndScope()
 	tlMgr.taskWriter = newTaskWriter(tlMgr)
 	tlMgr.startWG.Add(1)
 	return tlMgr
@@ -761,7 +761,7 @@ func (c *taskListManagerImpl) tryInitDomainNameAndScope() {
 func domainNameAndMetricScope(cache cache.DomainCache, domainID string, client metrics.Client, scope int) (string, metrics.Scope) {
 	entry, err := cache.GetDomainByID(domainID)
 	if err != nil {
-		return "", client.Scope(scope)
+		return "", nil
 	}
 	return entry.GetInfo().Name, client.Scope(scope, metrics.DomainTag(entry.GetInfo().Name))
 }
