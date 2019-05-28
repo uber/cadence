@@ -311,6 +311,9 @@ func (m *executionManagerImpl) DeserializeVersionHistories(blob *DataBlob) (*Ver
 }
 
 func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) (*UpdateWorkflowExecutionResponse, error) {
+	if err := m.ValidateUpdateWorkflowExecutionRequest(request); err != nil {
+		return nil, err
+	}
 	executionInfo, err := m.SerializeExecutionInfo(request.ExecutionInfo, request.Encoding)
 	if err != nil {
 		return nil, err

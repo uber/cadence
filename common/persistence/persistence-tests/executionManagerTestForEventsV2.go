@@ -302,19 +302,6 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowWithReplicationState() {
 		NewRunEventStoreVersion: p.EventStoreVersionV2,
 		NewRunBranchToken:       []byte("branchToken2"),
 	}}
-	versionHistories := &p.VersionHistories{
-		Histories: []p.VersionHistory{
-			{
-				BranchToken: []byte{1},
-				History: []p.VersionHistoryItem{
-					{
-						EventID: 1,
-						Version: 0,
-					},
-				},
-			},
-		},
-	}
 
 	task0, err0 := s.createWorkflowExecutionWithReplication(domainID, workflowExecution, "taskList", "wType", 20, 13, 3,
 		0, 2, &p.ReplicationState{
@@ -440,7 +427,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowWithReplicationState() {
 		NewRunEventStoreVersion: p.EventStoreVersionV2,
 		NewRunBranchToken:       []byte("branchToken4"),
 	}}
-	err2 := s.UpdateWorklowStateAndReplication(updatedInfo, versionHistories, updatedReplicationState, nil, nil, int64(3), replicationTasks1)
+	err2 := s.UpdateWorklowStateAndReplication(updatedInfo, nil, updatedReplicationState, nil, nil, int64(3), replicationTasks1)
 	s.NoError(err2)
 
 	taskR1, err := s.GetReplicationTasks(1, false)
@@ -1246,19 +1233,6 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 			TaskID:              s.GetNextSequenceNumber(),
 			VisibilityTimestamp: currentTime,
 		}}
-	versionHistories := &p.VersionHistories{
-		Histories: []p.VersionHistory{
-			{
-				BranchToken: []byte{1},
-				History: []p.VersionHistoryItem{
-					{
-						EventID: 1,
-						Version: 0,
-					},
-				},
-			},
-		},
-	}
 
 	task0, err0 := s.createWorkflowExecutionWithReplication(domainID, workflowExecution, "taskList", "wType", 20, 13, 3,
 		0, 2, &p.ReplicationState{
@@ -1369,7 +1343,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 
 	info0.State = p.WorkflowStateCompleted
 	info0.CloseStatus = p.WorkflowCloseStatusCompleted
-	err = s.UpdateWorklowStateAndReplication(info0, versionHistories, replicationState0, nil, nil, info0.NextEventID, nil)
+	err = s.UpdateWorklowStateAndReplication(info0, nil, replicationState0, nil, nil, info0.NextEventID, nil)
 	s.Nil(err)
 
 	updatedInfo := copyWorkflowExecutionInfo(info0)

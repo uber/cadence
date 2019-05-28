@@ -689,9 +689,6 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(updatedInfo *p.Workflo
 			TaskList:   updatedInfo.TaskList,
 			ScheduleID: int64(activityScheduleID)})
 	}
-	if versionHistories == nil {
-		versionHistories = &p.VersionHistories{}
-	}
 	_, err := s.ExecutionManager.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:                 updatedInfo,
 		ReplicationState:              updatedReplicationState,
