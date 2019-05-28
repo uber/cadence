@@ -1609,7 +1609,7 @@ func createOrUpdateCurrentExecution(
 	case p.CreateWorkflowModeZombie:
 		if request.State != p.WorkflowStateZombie || request.CloseStatus != p.WorkflowCloseStatusNone {
 			return &workflow.InternalServiceError{Message: fmt.Sprintf(
-				"Cannot create zombie workflow with state: %v, close sataus: %v",
+				"Cannot create zombie workflow with state: %v, close status: %v",
 				request.State,
 				request.CloseStatus,
 			)}
