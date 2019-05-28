@@ -31,7 +31,7 @@ func newWorkflowCommands() []cli.Command {
 		{
 			Name:        "activity",
 			Aliases:     []string{"act"},
-			Usage:       "Operate activities of workflow",
+			Usage:       "operate activities of workflow",
 			Subcommands: newActivityCommands(),
 		},
 		{
@@ -286,7 +286,7 @@ func newActivityCommands() []cli.Command {
 		{
 			Name:    "complete",
 			Aliases: []string{"comp"},
-			Usage:   "Complete an activity",
+			Usage:   "complete an activity",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagWorkflowIDWithAlias,
