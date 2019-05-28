@@ -610,3 +610,10 @@ func (s *cliAppSuite) TestGetWorkflowIdReusePolicy_Failed_Negative() {
 	getWorkflowIDReusePolicy(-1)
 	s.Equal(1, errorCode)
 }
+
+func (s *cliAppSuite) TestGetSearchAttributes() {
+	resp := &shared.GetSearchAttributesResponse{}
+	s.clientFrontendClient.EXPECT().GetSearchAttributes(gomock.Any(), callOptions...).Return(resp, nil).Times(1)
+	err := s.app.Run([]string{"", "--do", domainName, "workflow", "get-search-attr"})
+	s.Nil(err)
+}
