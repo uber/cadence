@@ -245,10 +245,11 @@ func newTaskListManagerWithRateLimiter(
 		taskListKind = common.TaskListKindPtr(s.TaskListKindNormal)
 	}
 
-	domainName, domainScope := domainNameAndMetricScope(e.domainCache, taskList.domainID, e.metricsClient, metrics.MatchingTaskListMgrScope)
+	domainName, domainScope := domainNameAndMetricScope(domainCache, taskList.domainID, e.metricsClient, metrics.MatchingTaskListMgrScope)
 	db := newTaskListDB(e.taskManager, taskList.domainID, taskList.taskListName, taskList.taskType, int(*taskListKind), e.logger)
 	tlMgr := &taskListManagerImpl{
 		domainCache:             domainCache,
+		metricsClient:           e.metricsClient,
 		engine:                  e,
 		taskBuffer:              make(chan *persistence.TaskInfo, taskBufferSize),
 		notifyCh:                make(chan struct{}, 1),
@@ -377,7 +378,6 @@ func (c *taskListManagerImpl) GetTaskContext(
 		RunId:      common.StringPtr(task.RunID),
 	}
 
-	c.tryInitDomainNameAndScope()
 	tCtx := &taskContext{
 		info:              task,
 		workflowExecution: workflowExecution,
@@ -728,10 +728,20 @@ func (c *taskListManagerImpl) isTaskAddedRecently(lastAddTime time.Time) bool {
 }
 
 func (c *taskListManagerImpl) domainScope() metrics.Scope {
+	scope := c.domainScopeValue.Load().(metrics.Scope)
+	if scope != nil {
+		return scope
+	}
+	c.tryInitDomainNameAndScope()
 	return c.domainScopeValue.Load().(metrics.Scope)
 }
 
 func (c *taskListManagerImpl) domainName() string {
+	name := c.domainNameValue.Load().(string)
+	if len(name) > 0 {
+		return name
+	}
+	c.tryInitDomainNameAndScope()
 	return c.domainNameValue.Load().(string)
 }
 
