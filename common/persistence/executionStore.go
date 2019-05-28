@@ -21,6 +21,7 @@
 package persistence
 
 import (
+	"fmt"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -96,7 +97,7 @@ func (m *executionManagerImpl) GetWorkflowExecution(request *GetWorkflowExecutio
 	if err != nil {
 		return nil, err
 	}
-	newResponse.State.VersionHistories = *versionHistories
+	newResponse.State.VersionHistories = versionHistories
 	newResponse.MutableStateStats = m.statsComputer.computeMutableStateStats(response)
 
 	return newResponse, nil
@@ -337,8 +338,7 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowEx
 	if err != nil {
 		return nil, err
 	}
-	tVersionHistories := request.VersionHistories.ToThrift()
-	versionHistories, err := m.serializer.SerializeVersionHistories(tVersionHistories, request.Encoding)
+	versionHistories, err := m.SerializeVersionHistories(request.VersionHistories, request.Encoding)
 	if err != nil {
 		return nil, err
 	}
@@ -374,6 +374,16 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowEx
 	msuss := m.statsComputer.computeMutableStateUpdateStats(newRequest)
 	err1 := m.persistence.UpdateWorkflowExecution(newRequest)
 	return &UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: msuss}, err1
+}
+
+func (m *executionManagerImpl) ValidateUpdateWorkflowExecutionRequest(request *UpdateWorkflowExecutionRequest) error {
+	if request.VersionHistories != nil && request.ReplicationState != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("Update workflow with invalid request:" +
+				"replication state and version histories cannot both be set."),
+		}
+	}
+	return nil
 }
 
 func (m *executionManagerImpl) SerializeNewBufferedReplicationTask(task *BufferedReplicationTask, encoding common.EncodingType) (*InternalBufferedReplicationTask, error) {
@@ -557,11 +567,18 @@ func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInf
 	}, nil
 }
 
-func (m *executionManagerImpl) SerializeVersionHistories(versionHistories VersionHistories, encoding common.EncodingType) (*DataBlob, error) {
-	return m.serializer.SerializeVersionHistories(versionHistories.ToThrift(), encoding)
+func (m *executionManagerImpl) SerializeVersionHistories(versionHistories *VersionHistories, encoding common.EncodingType) (*DataBlob, error) {
+	var tVersionHistories *workflow.VersionHistories
+	if versionHistories != nil {
+		tVersionHistories = versionHistories.ToThrift()
+	}
+	return m.serializer.SerializeVersionHistories(tVersionHistories, encoding)
 }
 
 func (m *executionManagerImpl) ResetMutableState(request *ResetMutableStateRequest) error {
+	if err := m.ValidateResetMutableStateRequest(request); err != nil {
+		return err
+	}
 	executionInfo, err := m.SerializeExecutionInfo(request.ExecutionInfo, request.Encoding)
 	if err != nil {
 		return err
@@ -596,8 +613,20 @@ func (m *executionManagerImpl) ResetMutableState(request *ResetMutableStateReque
 	return m.persistence.ResetMutableState(newRequest)
 }
 
-func (m *executionManagerImpl) ResetWorkflowExecution(request *ResetWorkflowExecutionRequest) error {
+func (m *executionManagerImpl) ValidateResetMutableStateRequest(request *ResetMutableStateRequest) error {
+	if request.VersionHistories != nil && request.ReplicationState != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("Reset mutable state with invalid request:" +
+				"replication state and version histories cannot both be set."),
+		}
+	}
+	return nil
+}
 
+func (m *executionManagerImpl) ResetWorkflowExecution(request *ResetWorkflowExecutionRequest) error {
+	if err := m.ValidateResetWorkflowExecutionRequest(request); err != nil {
+		return err
+	}
 	currExecution, err := m.SerializeExecutionInfo(request.CurrExecutionInfo, request.Encoding)
 	if err != nil {
 		return err
@@ -658,12 +687,41 @@ func (m *executionManagerImpl) ResetWorkflowExecution(request *ResetWorkflowExec
 	return m.persistence.ResetWorkflowExecution(newRequest)
 }
 
+func (m *executionManagerImpl) ValidateResetWorkflowExecutionRequest(request *ResetWorkflowExecutionRequest) error {
+	if request.CurrVersionHistories != nil && request.CurrReplicationState != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("Reset workflow execution with invalid request:" +
+				"current replication state and current version histories cannot both be set."),
+		}
+	}
+	if request.InsertVersionHistories != nil && request.InsertReplicationState != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("Reset workflow execution with invalid request:" +
+				"insert replication state and insert version histories cannot both be set."),
+		}
+	}
+	return nil
+}
+
 func (m *executionManagerImpl) CreateWorkflowExecution(request *CreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error) {
+	if err := m.ValidateCreateWorkflowExecutionRequest(request); err != nil {
+		return nil, err
+	}
 	intReq, err := m.SerializeCreateWorkflowExecutionRequest(request)
 	if err != nil {
 		return nil, err
 	}
 	return m.persistence.CreateWorkflowExecution(intReq)
+}
+
+func (m *executionManagerImpl) ValidateCreateWorkflowExecutionRequest(request *CreateWorkflowExecutionRequest) error {
+	if request.ReplicationState != nil && request.VersionHistories != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("Create workflow with invalid request:" +
+				"replication state and version histories cannot both be set."),
+		}
+	}
+	return nil
 }
 
 func (m *executionManagerImpl) SerializeCreateWorkflowExecutionRequest(request *CreateWorkflowExecutionRequest) (*InternalCreateWorkflowExecutionRequest, error) {

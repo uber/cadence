@@ -551,7 +551,8 @@ type (
 
 	// VersionHistories contains a set of VersionHistory
 	VersionHistories struct {
-		Histories []VersionHistory
+		CurrentBranch int
+		Histories     []VersionHistory
 	}
 
 	// WorkflowMutableState indicates workflow related state
@@ -566,7 +567,7 @@ type (
 		ReplicationState         *ReplicationState
 		BufferedEvents           []*workflow.HistoryEvent
 		BufferedReplicationTasks map[int64]*BufferedReplicationTask
-		VersionHistories         VersionHistories
+		VersionHistories         *VersionHistories
 	}
 
 	// ActivityInfo details.
@@ -720,7 +721,7 @@ type (
 		MaximumAttempts             int32
 		NonRetriableErrors          []string
 		PreviousAutoResetPoints     *workflow.ResetPoints
-		VersionHistories            VersionHistories
+		VersionHistories            *VersionHistories
 		// 2 means using eventsV2, empty/0/1 means using events(V1)
 		EventStoreVersion int32
 		// for eventsV2: branchToken from historyPersistence
@@ -764,7 +765,7 @@ type (
 	UpdateWorkflowExecutionRequest struct {
 		ExecutionInfo    *WorkflowExecutionInfo
 		ReplicationState *ReplicationState
-		VersionHistories VersionHistories
+		VersionHistories *VersionHistories
 		TransferTasks    []Task
 		TimerTasks       []Task
 		ReplicationTasks []Task
@@ -797,7 +798,7 @@ type (
 		PrevRunID        string
 		ExecutionInfo    *WorkflowExecutionInfo
 		ReplicationState *ReplicationState
-		VersionHistories VersionHistories
+		VersionHistories *VersionHistories
 		Condition        int64
 		RangeID          int64
 
@@ -829,7 +830,7 @@ type (
 		UpdateCurr           bool
 		CurrExecutionInfo    *WorkflowExecutionInfo
 		CurrReplicationState *ReplicationState
-		CurrVersionHistories VersionHistories
+		CurrVersionHistories *VersionHistories
 		CurrReplicationTasks []Task
 		CurrTransferTasks    []Task
 		CurrTimerTasks       []Task
@@ -837,7 +838,7 @@ type (
 		// For new mutable state
 		InsertExecutionInfo       *WorkflowExecutionInfo
 		InsertReplicationState    *ReplicationState
-		InsertVersionHistories    VersionHistories
+		InsertVersionHistories    *VersionHistories
 		InsertTransferTasks       []Task
 		InsertTimerTasks          []Task
 		InsertReplicationTasks    []Task

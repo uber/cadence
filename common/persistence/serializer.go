@@ -160,7 +160,7 @@ func (t *serializerImpl) DeserializeVisibilityMemo(data *DataBlob) (*workflow.Me
 
 func (t *serializerImpl) SerializeVersionHistories(histories *workflow.VersionHistories, encodingType common.EncodingType) (*DataBlob, error) {
 	if histories == nil {
-		histories = &workflow.VersionHistories{}
+		return nil, nil
 	}
 	return t.serialize(histories, encodingType)
 }

@@ -697,7 +697,7 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(updatedInfo *p.Workflo
 		ReplicationState:              updatedReplicationState,
 		TransferTasks:                 transferTasks,
 		ReplicationTasks:              replicationTasks,
-		VersionHistories:              *versionHistories,
+		VersionHistories:              versionHistories,
 		TimerTasks:                    timerTasks,
 		Condition:                     condition,
 		RangeID:                       rangeID,

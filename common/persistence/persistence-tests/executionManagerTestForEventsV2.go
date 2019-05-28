@@ -125,7 +125,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 		DecisionStartToCloseTimeout: 1,
 		EventStoreVersion:           p.EventStoreVersionV2,
 		BranchToken:                 []byte("branchToken1"),
-		VersionHistories:            *versionHistories,
+		VersionHistories:            versionHistories,
 	})
 
 	s.NoError(err0)
@@ -136,7 +136,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 	s.NotNil(info0, "Valid Workflow info expected.")
 	s.Equal(int32(p.EventStoreVersionV2), info0.EventStoreVersion)
 	s.Equal([]byte("branchToken1"), info0.BranchToken)
-	s.Equal(state0.VersionHistories, *versionHistories)
+	s.Equal(state0.VersionHistories, versionHistories)
 
 	updatedInfo := copyWorkflowExecutionInfo(info0)
 	updatedInfo.NextEventID = int64(5)
@@ -165,7 +165,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 	s.EqualTimesWithPrecision(currentTime, state.TimerInfos[timerID].ExpiryTime, time.Millisecond*500)
 	s.Equal(int64(2), state.TimerInfos[timerID].TaskID)
 	s.Equal(int64(5), state.TimerInfos[timerID].StartedID)
-	s.Equal(state.VersionHistories, *versionHistories)
+	s.Equal(state.VersionHistories, versionHistories)
 
 	err2 = s.UpdateWorkflowExecution(updatedInfo, versionHistories, nil, nil, int64(5), nil, nil, nil, nil, []string{timerID})
 	s.NoError(err2)

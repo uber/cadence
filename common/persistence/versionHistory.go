@@ -118,6 +118,9 @@ func NewVersionHistories(histories []VersionHistory) VersionHistories {
 
 // NewVersionHistoriesFromThrift initialize VersionHistories from thrift format
 func NewVersionHistoriesFromThrift(thrift *shared.VersionHistories) *VersionHistories {
+	if thrift == nil {
+		return nil
+	}
 	histories := VersionHistories{}
 	for _, tHistory := range thrift.Histories {
 		history := VersionHistory{BranchToken: tHistory.GetBranchToken()}
