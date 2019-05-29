@@ -78,10 +78,14 @@ func (m *metricsScope) Tagged(tags ...Tag) Scope {
 	isDomain := false
 	tagMap := make(map[string]string, len(tags))
 	for _, tag := range tags {
-		if tag.Key() == domain {
+		if isDomainTag(tag) {
 			isDomain = true
 		}
 		tagMap[tag.Key()] = tag.Value()
 	}
 	return newMetricsScope(m.scope.Tagged(tagMap), m.defs, isDomain)
+}
+
+func isDomainTag(tag Tag) bool {
+	return tag.Key() == domain && tag.Value() != domainAllValue
 }

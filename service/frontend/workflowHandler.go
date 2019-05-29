@@ -2899,8 +2899,9 @@ func (wh *WorkflowHandler) getLoggerForTask(taskToken []byte) log.Logger {
 func (wh *WorkflowHandler) startRequestProfile(scope int) (metrics.Scope, metrics.Stopwatch) {
 	wh.startWG.Wait()
 
-	metricsScope := wh.metricsClient.Scope(scope).Tagged(metrics.DomainAllTag())
-	sw := metricsScope.StartTimer(metrics.CadenceLatency)
+	metricsScope := wh.metricsClient.Scope(scope)
+	// timer should be emitted with the all tag
+	sw := metricsScope.Tagged(metrics.DomainAllTag()).StartTimer(metrics.CadenceLatency)
 	metricsScope.IncCounter(metrics.CadenceRequests)
 	return metricsScope, sw
 }
