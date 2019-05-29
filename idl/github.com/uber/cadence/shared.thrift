@@ -1428,5 +1428,6 @@ struct VersionHistory{
 
 // VersionHistories contains all version histories from all branches
 struct VersionHistories{
-  10: optional list<VersionHistory> histories
+  10: optional i32 currentBranch
+  20: optional list<VersionHistory> histories
 }

@@ -122,6 +122,7 @@ func NewVersionHistoriesFromThrift(thrift *shared.VersionHistories) *VersionHist
 		return nil
 	}
 	histories := VersionHistories{}
+	histories.CurrentBranch = thrift.GetCurrentBranch()
 	for _, tHistory := range thrift.Histories {
 		history := VersionHistory{BranchToken: tHistory.GetBranchToken()}
 		for _, item := range tHistory.GetHistory() {
@@ -170,6 +171,7 @@ func (h *VersionHistories) AddHistory(item VersionHistoryItem, local VersionHist
 // ToThrift return thrift format of version histories
 func (h *VersionHistories) ToThrift() *shared.VersionHistories {
 	tHistories := &shared.VersionHistories{}
+	tHistories.CurrentBranch = common.Int32Ptr(h.CurrentBranch)
 	for _, history := range h.Histories {
 		tHistory := &shared.VersionHistory{BranchToken: history.BranchToken}
 		for _, item := range history.History {
@@ -178,5 +180,6 @@ func (h *VersionHistories) ToThrift() *shared.VersionHistories {
 		}
 		tHistories.Histories = append(tHistories.Histories, tHistory)
 	}
+
 	return tHistories
 }

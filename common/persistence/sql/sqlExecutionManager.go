@@ -1439,6 +1439,12 @@ func createExecutionFromRequest(
 	emptyStr := ""
 	zeroPtr := common.Int64Ptr(0)
 	lastWriteVersion := common.EmptyVersion
+	var versionHistoriesData []byte
+	var versionHistoriesEncoding *string
+	if request.VersionHistories != nil {
+		versionHistoriesData = request.VersionHistories.Data
+		versionHistoriesEncoding = common.StringPtr(string(request.VersionHistories.GetEncoding()))
+	}
 	info := &sqlblobs.WorkflowExecutionInfo{
 		TaskList:                     &request.TaskList,
 		WorkflowTypeName:             &request.WorkflowTypeName,
@@ -1478,8 +1484,8 @@ func createExecutionFromRequest(
 		ExecutionContext:             request.ExecutionContext,
 		AutoResetPoints:              request.PreviousAutoResetPoints.Data,
 		AutoResetPointsEncoding:      common.StringPtr(string(request.PreviousAutoResetPoints.GetEncoding())),
-		VersionHistories:             request.VersionHistories.Data,
-		VersionHistoriesEncoding:     common.StringPtr(string(request.VersionHistories.GetEncoding())),
+		VersionHistories:             versionHistoriesData,
+		VersionHistoriesEncoding:     versionHistoriesEncoding,
 	}
 	if request.ReplicationState != nil {
 		lastWriteVersion = request.ReplicationState.LastWriteVersion

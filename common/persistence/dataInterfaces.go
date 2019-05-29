@@ -551,7 +551,7 @@ type (
 
 	// VersionHistories contains a set of VersionHistory
 	VersionHistories struct {
-		CurrentBranch int
+		CurrentBranch int32
 		Histories     []VersionHistory
 	}
 
