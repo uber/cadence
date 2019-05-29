@@ -137,7 +137,7 @@ func (domainReplicator *domainReplicatorImpl) handleDomainCreationReplicationTas
 		}
 
 		resp, getErr = domainReplicator.metadataManagerV2.GetDomain(&persistence.GetDomainRequest{
-			Name: task.GetID(),
+			ID: task.GetID(),
 		})
 		if getErr != nil {
 			// return the original err
