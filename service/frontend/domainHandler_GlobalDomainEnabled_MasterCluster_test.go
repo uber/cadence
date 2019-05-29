@@ -133,6 +133,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestRegisterGetDoma
 		ArchivalRetentionPeriodInDays:          nil,
 		ArchivalStatus:                         shared.ArchivalStatusDisabled.Ptr(),
 		ArchivalBucketOwner:                    nil,
+		BadBinaries:                            &shared.BadBinaries{Binaries: map[string]*shared.BadBinaryInfo{}},
 	}, resp.Configuration)
 	s.Equal(&shared.DomainReplicationConfiguration{
 		ActiveClusterName: common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
@@ -199,6 +200,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestRegisterGetDoma
 		ArchivalRetentionPeriodInDays:          nil,
 		ArchivalStatus:                         shared.ArchivalStatusDisabled.Ptr(),
 		ArchivalBucketOwner:                    nil,
+		BadBinaries:                            &shared.BadBinaries{Binaries: map[string]*shared.BadBinaryInfo{}},
 	}, resp.Configuration)
 	s.Equal(&shared.DomainReplicationConfiguration{
 		ActiveClusterName: common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
@@ -255,6 +257,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain
 			ArchivalRetentionPeriodInDays:          nil,
 			ArchivalStatus:                         shared.ArchivalStatusDisabled.Ptr(),
 			ArchivalBucketOwner:                    nil,
+			BadBinaries:                            &shared.BadBinaries{Binaries: map[string]*shared.BadBinaryInfo{}},
 		}, config)
 		s.Equal(&shared.DomainReplicationConfiguration{
 			ActiveClusterName: common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
@@ -317,6 +320,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain
 			ArchivalRetentionPeriodInDays:          nil,
 			ArchivalStatus:                         shared.ArchivalStatusDisabled.Ptr(),
 			ArchivalBucketOwner:                    nil,
+			BadBinaries:                            &shared.BadBinaries{Binaries: map[string]*shared.BadBinaryInfo{}},
 		}, config)
 		s.Equal(&shared.DomainReplicationConfiguration{
 			ActiveClusterName: common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
@@ -340,6 +344,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain
 			ArchivalRetentionPeriodInDays:          nil,
 			ArchivalStatus:                         shared.ArchivalStatusDisabled.Ptr(),
 			ArchivalBucketOwner:                    nil,
+			BadBinaries:                            &shared.BadBinaries{Binaries: map[string]*shared.BadBinaryInfo{}},
 		},
 		ReplicationConfiguration: &shared.DomainReplicationConfiguration{
 			ActiveClusterName: common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
@@ -396,6 +401,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestRegisterGetDoma
 		ArchivalRetentionPeriodInDays:          nil,
 		ArchivalStatus:                         shared.ArchivalStatusDisabled.Ptr(),
 		ArchivalBucketOwner:                    nil,
+		BadBinaries:                            &shared.BadBinaries{Binaries: map[string]*shared.BadBinaryInfo{}},
 	}, resp.Configuration)
 	s.Equal(&shared.DomainReplicationConfiguration{
 		ActiveClusterName: common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
@@ -413,7 +419,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestRegisterGetDoma
 	emitMetric := true
 	activeClusterName := ""
 	clusters := []*shared.ClusterReplicationConfiguration{}
-	for clusterName := range s.ClusterMetadata.GetAllClusterFailoverVersions() {
+	for clusterName := range s.ClusterMetadata.GetAllClusterInfo() {
 		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
 			activeClusterName = clusterName
 		}
@@ -463,6 +469,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestRegisterGetDoma
 		ArchivalRetentionPeriodInDays:          nil,
 		ArchivalStatus:                         shared.ArchivalStatusDisabled.Ptr(),
 		ArchivalBucketOwner:                    nil,
+		BadBinaries:                            &shared.BadBinaries{Binaries: map[string]*shared.BadBinaryInfo{}},
 	}, resp.Configuration)
 	s.Equal(&shared.DomainReplicationConfiguration{
 		ActiveClusterName: common.StringPtr(activeClusterName),
@@ -481,7 +488,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain
 	data := map[string]string{"some random key": "some random value"}
 	activeClusterName := ""
 	clusters := []*shared.ClusterReplicationConfiguration{}
-	for clusterName := range s.ClusterMetadata.GetAllClusterFailoverVersions() {
+	for clusterName := range s.ClusterMetadata.GetAllClusterInfo() {
 		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
 			activeClusterName = clusterName
 		}
@@ -527,6 +534,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain
 			ArchivalRetentionPeriodInDays:          nil,
 			ArchivalStatus:                         shared.ArchivalStatusDisabled.Ptr(),
 			ArchivalBucketOwner:                    nil,
+			BadBinaries:                            &shared.BadBinaries{Binaries: map[string]*shared.BadBinaryInfo{}},
 		}, config)
 		s.Equal(&shared.DomainReplicationConfiguration{
 			ActiveClusterName: common.StringPtr(activeClusterName),
@@ -553,7 +561,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain
 	domainName := s.getRandomDomainName()
 	activeClusterName := ""
 	clusters := []*shared.ClusterReplicationConfiguration{}
-	for clusterName := range s.ClusterMetadata.GetAllClusterFailoverVersions() {
+	for clusterName := range s.ClusterMetadata.GetAllClusterInfo() {
 		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
 			activeClusterName = clusterName
 		}
@@ -600,6 +608,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain
 			ArchivalRetentionPeriodInDays:          nil,
 			ArchivalStatus:                         shared.ArchivalStatusDisabled.Ptr(),
 			ArchivalBucketOwner:                    nil,
+			BadBinaries:                            &shared.BadBinaries{Binaries: map[string]*shared.BadBinaryInfo{}},
 		}, config)
 		s.Equal(&shared.DomainReplicationConfiguration{
 			ActiveClusterName: common.StringPtr(activeClusterName),
@@ -623,6 +632,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain
 			ArchivalRetentionPeriodInDays:          nil,
 			ArchivalStatus:                         shared.ArchivalStatusDisabled.Ptr(),
 			ArchivalBucketOwner:                    nil,
+			BadBinaries:                            &shared.BadBinaries{Binaries: map[string]*shared.BadBinaryInfo{}},
 		},
 		ReplicationConfiguration: &shared.DomainReplicationConfiguration{
 			ActiveClusterName: nil,
@@ -649,7 +659,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain
 	prevActiveClusterName := ""
 	nextActiveClusterName := s.ClusterMetadata.GetCurrentClusterName()
 	clusters := []*shared.ClusterReplicationConfiguration{}
-	for clusterName := range s.ClusterMetadata.GetAllClusterFailoverVersions() {
+	for clusterName := range s.ClusterMetadata.GetAllClusterInfo() {
 		if clusterName != nextActiveClusterName {
 			prevActiveClusterName = clusterName
 		}
@@ -695,6 +705,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain
 			ArchivalRetentionPeriodInDays:          nil,
 			ArchivalStatus:                         shared.ArchivalStatusDisabled.Ptr(),
 			ArchivalBucketOwner:                    nil,
+			BadBinaries:                            &shared.BadBinaries{Binaries: map[string]*shared.BadBinaryInfo{}},
 		}, config)
 		s.Equal(&shared.DomainReplicationConfiguration{
 			ActiveClusterName: common.StringPtr(nextActiveClusterName),

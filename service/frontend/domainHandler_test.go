@@ -27,9 +27,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
-
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -164,7 +161,7 @@ func (s *domainHandlerCommonSuite) TestMergeDomainData_Nil() {
 }
 
 // test merging bad binaries
-func (s *domainHandlerSuite) TestMergeBadBinaries_Overriding() {
+func (s *domainHandlerCommonSuite) TestMergeBadBinaries_Overriding() {
 	out := s.handler.mergeBadBinaries(
 		map[string]*shared.BadBinaryInfo{
 			"k0": {Reason: common.StringPtr("reason0")},
@@ -181,7 +178,7 @@ func (s *domainHandlerSuite) TestMergeBadBinaries_Overriding() {
 	}))
 }
 
-func (s *domainHandlerSuite) TestMergeBadBinaries_Adding() {
+func (s *domainHandlerCommonSuite) TestMergeBadBinaries_Adding() {
 	out := s.handler.mergeBadBinaries(
 		map[string]*shared.BadBinaryInfo{
 			"k0": {Reason: common.StringPtr("reason0")},
@@ -200,7 +197,7 @@ func (s *domainHandlerSuite) TestMergeBadBinaries_Adding() {
 	assert.Equal(s.T(), out.String(), expected.String())
 }
 
-func (s *domainHandlerSuite) TestMergeBadBinaries_Merging() {
+func (s *domainHandlerCommonSuite) TestMergeBadBinaries_Merging() {
 	out := s.handler.mergeBadBinaries(
 		map[string]*shared.BadBinaryInfo{
 			"k0": {Reason: common.StringPtr("reason0")},
@@ -219,7 +216,7 @@ func (s *domainHandlerSuite) TestMergeBadBinaries_Merging() {
 	}))
 }
 
-func (s *domainHandlerSuite) TestMergeBadBinaries_Nil() {
+func (s *domainHandlerCommonSuite) TestMergeBadBinaries_Nil() {
 	out := s.handler.mergeBadBinaries(
 		nil,
 		map[string]*shared.BadBinaryInfo{
@@ -271,7 +268,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 	isGlobalDomain2 := true
 	activeClusterName2 := ""
 	var cluster2 []*shared.ClusterReplicationConfiguration
-	for clusterName := range s.ClusterMetadata.GetAllClusterFailoverVersions() {
+	for clusterName := range s.ClusterMetadata.GetAllClusterInfo() {
 		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
 			activeClusterName2 = clusterName
 		}
@@ -327,6 +324,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 				ArchivalRetentionPeriodInDays:          nil,
 				ArchivalStatus:                         shared.ArchivalStatusDisabled.Ptr(),
 				ArchivalBucketOwner:                    nil,
+				BadBinaries:                            &shared.BadBinaries{Binaries: map[string]*shared.BadBinaryInfo{}},
 			},
 			ReplicationConfiguration: &shared.DomainReplicationConfiguration{
 				ActiveClusterName: common.StringPtr(activeClusterName1),
@@ -351,6 +349,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 				ArchivalRetentionPeriodInDays:          nil,
 				ArchivalStatus:                         shared.ArchivalStatusDisabled.Ptr(),
 				ArchivalBucketOwner:                    nil,
+				BadBinaries:                            &shared.BadBinaries{Binaries: map[string]*shared.BadBinaryInfo{}},
 			},
 			ReplicationConfiguration: &shared.DomainReplicationConfiguration{
 				ActiveClusterName: common.StringPtr(activeClusterName2),

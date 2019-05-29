@@ -82,6 +82,10 @@ func (d *domainHandlerImpl) registerDomain(ctx context.Context,
 	}
 
 	if !d.clusterMetadata.IsGlobalDomainEnabled() {
+		if registerRequest.GetIsGlobalDomain() {
+			return &shared.BadRequestError{Message: "Cannot register global domain when not enabled"}
+		}
+
 		registerRequest.IsGlobalDomain = common.BoolPtr(false)
 	} else {
 		// cluster global domain enabled
@@ -173,6 +177,7 @@ func (d *domainHandlerImpl) registerDomain(ctx context.Context,
 			EmitMetric:     registerRequest.GetEmitMetric(),
 			ArchivalBucket: nextArchivalState.bucket,
 			ArchivalStatus: nextArchivalState.status,
+			BadBinaries:    shared.BadBinaries{Binaries: map[string]*shared.BadBinaryInfo{}},
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: activeClusterName,

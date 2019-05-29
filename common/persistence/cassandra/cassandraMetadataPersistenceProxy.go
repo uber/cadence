@@ -91,7 +91,7 @@ func (m *metadataManagerProxy) Close() {
 	m.metadataMgrV2.Close()
 }
 
-func (m *metadataManagerProxy) CreateDomain(request *p.CreateDomainRequest) (*p.CreateDomainResponse, error) {
+func (m *metadataManagerProxy) CreateDomain(request *p.InternalCreateDomainRequest) (*p.CreateDomainResponse, error) {
 	return m.metadataMgrV2.CreateDomain(request)
 }
 
