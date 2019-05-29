@@ -133,6 +133,7 @@ func (s *cliAppSuite) TestDomainRegister_LocalDomain() {
 func (s *cliAppSuite) TestDomainRegister_GlobalDomain() {
 	s.clientFrontendClient.EXPECT().RegisterDomain(gomock.Any(), gomock.Any(), callOptions...).Return(nil)
 	err := s.app.Run([]string{"", "--do", domainName, "domain", "register", "--global_domain", "true"})
+	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestDomainRegister_DomainExist() {
