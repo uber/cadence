@@ -46,8 +46,8 @@ var (
 	ErrInvalidDomainFailoverVersion = &shared.BadRequestError{Message: "invalid domain failover version attribute"}
 	// ErrInvalidDomainStatus is the error to indicate invalid domain status
 	ErrInvalidDomainStatus = &shared.BadRequestError{Message: "invalid domain status attribute"}
-	// ErrUUIDCollision is the error to indicate domain UUID collision
-	ErrUUIDCollision = &shared.BadRequestError{Message: "domain replication encounter UUID collision"}
+	// ErrNameUUIDCollision is the error to indicate domain name / UUID collision
+	ErrNameUUIDCollision = &shared.BadRequestError{Message: "domain replication encounter name / UUID collision"}
 )
 
 // NOTE: the counterpart of domain replication transmission logic is in service/fropntend package
@@ -124,7 +124,7 @@ func (domainReplicator *domainReplicatorImpl) handleDomainCreationReplicationTas
 	if err != nil {
 		// SQL and Cassandra handle domain UUID collision differently
 		// here, whenever seeing a error replicating a domain
-		// do a check if there is a UUID collision
+		// do a check if there is a name / UUID collision
 		resp, getErr := domainReplicator.metadataManagerV2.GetDomain(&persistence.GetDomainRequest{
 			Name: task.Info.GetName(),
 		})
@@ -133,9 +133,21 @@ func (domainReplicator *domainReplicatorImpl) handleDomainCreationReplicationTas
 			return err
 		}
 		if resp.Info.ID != task.GetID() {
-			return ErrUUIDCollision
+			return ErrNameUUIDCollision
 		}
-		// duplication request
+
+		resp, getErr = domainReplicator.metadataManagerV2.GetDomain(&persistence.GetDomainRequest{
+			Name: task.GetID(),
+		})
+		if getErr != nil {
+			// return the original err
+			return err
+		}
+		if resp.Info.Name != task.Info.GetName() {
+			return ErrNameUUIDCollision
+		}
+
+		// name -> id & id -> name check pass, this is duplication request
 		return nil
 	}
 
