@@ -143,6 +143,7 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 		Name:              common.StringPtr(domainName),
 		Clusters:          clusterReplicationConfigES,
 		ActiveClusterName: common.StringPtr(clusterNameES[0]),
+		IsGlobalDomain:    common.BoolPtr(false),
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
