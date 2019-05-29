@@ -46,7 +46,8 @@ CREATE TYPE workflow_execution (
   decision_request_id              text,    -- Identifier used by matching engine for retrying history service calls for recording task is started
   decision_timeout                 int,
   decision_attempt                 bigint,
-  decision_timestamp               bigint,
+  decision_timestamp               bigint,  -- this is decision started time
+  decision_scheduled_timestamp     bigint,   -- this is decision scheduled time
   cancel_requested                 boolean,
   cancel_request_id                text,
   sticky_task_list                 text,   -- sticky worker task list
@@ -73,6 +74,7 @@ CREATE TYPE workflow_execution (
   last_event_task_id               bigint,
   auto_reset_points                blob, -- the resetting points for auto-reset feature
   auto_reset_points_encoding       text, -- encoding for auto_reset_points_data
+  search_attributes                map<text, blob>
 );
 
 -- Replication information for each cluster
@@ -221,6 +223,7 @@ CREATE TYPE task (
   workflow_id      text,
   run_id           uuid,
   schedule_id      bigint,
+  created_time     timestamp
 );
 
 CREATE TYPE task_list (

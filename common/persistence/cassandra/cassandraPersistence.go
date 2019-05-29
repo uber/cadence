@@ -144,6 +144,7 @@ const (
 		`decision_timeout: ?, ` +
 		`decision_attempt: ?, ` +
 		`decision_timestamp: ?, ` +
+		`decision_scheduled_timestamp: ?, ` +
 		`cancel_requested: ?, ` +
 		`cancel_request_id: ?, ` +
 		`sticky_task_list: ?, ` +
@@ -164,7 +165,8 @@ const (
 		`event_store_version: ?, ` +
 		`branch_token: ?, ` +
 		`cron_schedule: ?, ` +
-		`expiration_seconds: ? ` +
+		`expiration_seconds: ?, ` +
+		`search_attributes: ? ` +
 		`}`
 
 	templateReplicationStateType = `{` +
@@ -331,7 +333,8 @@ const (
 		`domain_id: ?, ` +
 		`workflow_id: ?, ` +
 		`run_id: ?, ` +
-		`schedule_id: ?` +
+		`schedule_id: ?,` +
+		`created_time: ? ` +
 		`}`
 
 	templateCreateShardQuery = `INSERT INTO executions (` +
@@ -925,11 +928,6 @@ type (
 
 var _ p.ExecutionStore = (*cassandraPersistence)(nil)
 
-//NewWorkflowExecutionPersistenceFromSession returns new ExecutionStore
-func NewWorkflowExecutionPersistenceFromSession(session *gocql.Session, shardID int, logger log.Logger) *cassandraPersistence {
-	return &cassandraPersistence{cassandraStore: cassandraStore{session: session, logger: logger}, shardID: shardID}
-}
-
 // newShardPersistence is used to create an instance of ShardManager implementation
 func newShardPersistence(cfg config.Cassandra, clusterName string, logger log.Logger) (p.ShardStore, error) {
 	cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
@@ -1407,15 +1405,16 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Int
 			request.DecisionStartedID,
 			"", // Decision Start Request ID
 			request.DecisionStartToCloseTimeout,
-			0,
-			0,
-			false,
-			"",
-			"", // sticky_task_list (no sticky tasklist for new workflow execution)
-			0,  // sticky_schedule_to_start_timeout
-			"", // client_library_version
-			"", // client_feature_version
-			"", // client_impl
+			0,     // decision attempts
+			0,     // decision timestamp(started time)
+			0,     // decision scheduled timestamp
+			false, // cancel_requested
+			"",    // cancel_request_id
+			"",    // sticky_task_list (no sticky tasklist for new workflow execution)
+			0,     // sticky_schedule_to_start_timeout
+			"",    // client_library_version
+			"",    // client_feature_version
+			"",    // client_impl
 			request.PreviousAutoResetPoints.Data,
 			request.PreviousAutoResetPoints.GetEncoding(),
 			request.Attempt,
@@ -1430,6 +1429,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Int
 			request.BranchToken,
 			request.CronSchedule,
 			request.ExpirationSeconds,
+			request.SearchAttributes,
 			request.ReplicationState.CurrentVersion,
 			request.ReplicationState.StartVersion,
 			request.ReplicationState.LastWriteVersion,
@@ -1476,15 +1476,16 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Int
 			request.DecisionStartedID,
 			"", // Decision Start Request ID
 			request.DecisionStartToCloseTimeout,
-			0,
-			0,
-			false,
-			"",
-			"", // sticky_task_list (no sticky tasklist for new workflow execution)
-			0,  // sticky_schedule_to_start_timeout
-			"", // client_library_version
-			"", // client_feature_version
-			"", // client_impl
+			0,     // decision attempts
+			0,     // decision timestamp(started time)
+			0,     // decision scheduled timestamp
+			false, // cancel_requested
+			"",    // cancel_request_id
+			"",    // sticky_task_list (no sticky tasklist for new workflow execution)
+			0,     // sticky_schedule_to_start_timeout
+			"",    // client_library_version
+			"",    // client_feature_version
+			"",    // client_impl
 			request.PreviousAutoResetPoints.Data,
 			request.PreviousAutoResetPoints.GetEncoding(),
 			request.Attempt,
@@ -1499,6 +1500,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Int
 			request.BranchToken,
 			request.CronSchedule,
 			request.ExpirationSeconds,
+			request.SearchAttributes,
 			request.NextEventID,
 			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID,
@@ -1543,15 +1545,16 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Int
 			request.DecisionStartedID,
 			"", // Decision Start Request ID
 			request.DecisionStartToCloseTimeout,
-			0,
-			0,
-			false,
-			"",
-			"", // sticky_task_list (no sticky tasklist for new workflow execution)
-			0,  // sticky_schedule_to_start_timeout
-			"", // client_library_version
-			"", // client_feature_version
-			"", // client_impl
+			0,     // decision attempts
+			0,     // decision timestamp(started time)
+			0,     // decision scheduled timestamp
+			false, // cancel_requested
+			"",    // cancel_request_id
+			"",    // sticky_task_list (no sticky tasklist for new workflow execution)
+			0,     // sticky_schedule_to_start_timeout
+			"",    // client_library_version
+			"",    // client_feature_version
+			"",    // client_impl
 			request.PreviousAutoResetPoints.Data,
 			request.PreviousAutoResetPoints.GetEncoding(),
 			request.Attempt,
@@ -1566,6 +1569,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Int
 			request.BranchToken,
 			request.CronSchedule,
 			request.ExpirationSeconds,
+			request.SearchAttributes,
 			request.NextEventID,
 			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID)
@@ -1741,7 +1745,8 @@ func (d *cassandraPersistence) updateMutableState(batch *gocql.Batch, executionI
 			executionInfo.DecisionRequestID,
 			executionInfo.DecisionTimeout,
 			executionInfo.DecisionAttempt,
-			executionInfo.DecisionTimestamp,
+			executionInfo.DecisionStartedTimestamp,
+			executionInfo.DecisionScheduledTimestamp,
 			executionInfo.CancelRequested,
 			executionInfo.CancelRequestID,
 			executionInfo.StickyTaskList,
@@ -1763,6 +1768,7 @@ func (d *cassandraPersistence) updateMutableState(batch *gocql.Batch, executionI
 			executionInfo.BranchToken,
 			executionInfo.CronSchedule,
 			executionInfo.ExpirationSeconds,
+			executionInfo.SearchAttributes,
 			replicationState.CurrentVersion,
 			replicationState.StartVersion,
 			replicationState.LastWriteVersion,
@@ -1810,7 +1816,8 @@ func (d *cassandraPersistence) updateMutableState(batch *gocql.Batch, executionI
 			executionInfo.DecisionRequestID,
 			executionInfo.DecisionTimeout,
 			executionInfo.DecisionAttempt,
-			executionInfo.DecisionTimestamp,
+			executionInfo.DecisionStartedTimestamp,
+			executionInfo.DecisionScheduledTimestamp,
 			executionInfo.CancelRequested,
 			executionInfo.CancelRequestID,
 			executionInfo.StickyTaskList,
@@ -1832,6 +1839,7 @@ func (d *cassandraPersistence) updateMutableState(batch *gocql.Batch, executionI
 			executionInfo.BranchToken,
 			executionInfo.CronSchedule,
 			executionInfo.ExpirationSeconds,
+			executionInfo.SearchAttributes,
 			executionInfo.NextEventID,
 			versionHistoriesData,
 			versionHistoriesEncoding,
@@ -1877,7 +1885,8 @@ func (d *cassandraPersistence) updateMutableState(batch *gocql.Batch, executionI
 			executionInfo.DecisionRequestID,
 			executionInfo.DecisionTimeout,
 			executionInfo.DecisionAttempt,
-			executionInfo.DecisionTimestamp,
+			executionInfo.DecisionStartedTimestamp,
+			executionInfo.DecisionScheduledTimestamp,
 			executionInfo.CancelRequested,
 			executionInfo.CancelRequestID,
 			executionInfo.StickyTaskList,
@@ -1899,6 +1908,7 @@ func (d *cassandraPersistence) updateMutableState(batch *gocql.Batch, executionI
 			executionInfo.BranchToken,
 			executionInfo.CronSchedule,
 			executionInfo.ExpirationSeconds,
+			executionInfo.SearchAttributes,
 			executionInfo.NextEventID,
 			d.shardID,
 			rowTypeExecution,
@@ -2938,6 +2948,7 @@ func (d *cassandraPersistence) CreateTasks(request *p.CreateTasksRequest) (*p.Cr
 	taskListType := request.TaskListInfo.TaskType
 	taskListKind := request.TaskListInfo.Kind
 	ackLevel := request.TaskListInfo.AckLevel
+	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 
 	for _, task := range request.Tasks {
 		scheduleID := task.Data.ScheduleID
@@ -2951,7 +2962,8 @@ func (d *cassandraPersistence) CreateTasks(request *p.CreateTasksRequest) (*p.Cr
 				domainID,
 				task.Execution.GetWorkflowId(),
 				task.Execution.GetRunId(),
-				scheduleID)
+				scheduleID,
+				cqlNowTimestamp)
 		} else {
 			batch.Query(templateCreateTaskWithTTLQuery,
 				domainID,
@@ -2963,6 +2975,7 @@ func (d *cassandraPersistence) CreateTasks(request *p.CreateTasksRequest) (*p.Cr
 				task.Execution.GetWorkflowId(),
 				task.Execution.GetRunId(),
 				scheduleID,
+				cqlNowTimestamp,
 				task.Data.ScheduleToStartTimeout)
 		}
 	}
@@ -3952,7 +3965,9 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *p.InternalWorkf
 		case "decision_attempt":
 			info.DecisionAttempt = v.(int64)
 		case "decision_timestamp":
-			info.DecisionTimestamp = v.(int64)
+			info.DecisionStartedTimestamp = v.(int64)
+		case "decision_scheduled_timestamp":
+			info.DecisionScheduledTimestamp = v.(int64)
 		case "cancel_requested":
 			info.CancelRequested = v.(bool)
 		case "cancel_request_id":
@@ -3991,6 +4006,8 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *p.InternalWorkf
 			info.CronSchedule = v.(string)
 		case "expiration_seconds":
 			info.ExpirationSeconds = int32(v.(int))
+		case "search_attributes":
+			info.SearchAttributes = v.(map[string][]byte)
 		}
 	}
 	info.CompletionEvent = p.NewDataBlob(completionEventData, completionEventEncoding)
@@ -4465,6 +4482,8 @@ func createTaskInfo(result map[string]interface{}) *p.TaskInfo {
 			info.RunID = v.(gocql.UUID).String()
 		case "schedule_id":
 			info.ScheduleID = v.(int64)
+		case "created_time":
+			info.CreatedTime = v.(time.Time)
 		}
 	}
 

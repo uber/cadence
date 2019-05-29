@@ -197,6 +197,7 @@ type (
 		BranchToken       []byte
 		CronSchedule      string
 		ExpirationSeconds int32
+		SearchAttributes  map[string][]byte
 	}
 
 	// InternalWorkflowExecutionInfo describes a workflow execution for Persistence Interface
@@ -232,7 +233,8 @@ type (
 		DecisionRequestID            string
 		DecisionTimeout              int32
 		DecisionAttempt              int64
-		DecisionTimestamp            int64
+		DecisionStartedTimestamp     int64
+		DecisionScheduledTimestamp   int64
 		CancelRequested              bool
 		CancelRequestID              string
 		StickyTaskList               string
@@ -255,6 +257,7 @@ type (
 		BranchToken       []byte
 		CronSchedule      string
 		ExpirationSeconds int32
+		SearchAttributes  map[string][]byte
 	}
 
 	// InternalWorkflowMutableState indicates workflow related state for Persistence Interface
@@ -548,15 +551,16 @@ type (
 
 	// VisibilityWorkflowExecutionInfo is visibility info for internal response
 	VisibilityWorkflowExecutionInfo struct {
-		WorkflowID    string
-		RunID         string
-		TypeName      string
-		StartTime     time.Time
-		ExecutionTime time.Time
-		CloseTime     time.Time
-		Status        *workflow.WorkflowExecutionCloseStatus
-		HistoryLength int64
-		Memo          *DataBlob
+		WorkflowID       string
+		RunID            string
+		TypeName         string
+		StartTime        time.Time
+		ExecutionTime    time.Time
+		CloseTime        time.Time
+		Status           *workflow.WorkflowExecutionCloseStatus
+		HistoryLength    int64
+		Memo             *DataBlob
+		SearchAttributes map[string]interface{}
 	}
 
 	// InternalListWorkflowExecutionsResponse is response from ListWorkflowExecutions
@@ -583,6 +587,7 @@ type (
 		WorkflowTimeout    int64
 		TaskID             int64
 		Memo               *DataBlob
+		SearchAttributes   map[string][]byte
 	}
 
 	// InternalRecordWorkflowExecutionClosedRequest is request to RecordWorkflowExecutionClosed
@@ -595,6 +600,7 @@ type (
 		ExecutionTimestamp int64
 		TaskID             int64
 		Memo               *DataBlob
+		SearchAttributes   map[string][]byte
 		CloseTimestamp     int64
 		Status             workflow.WorkflowExecutionCloseStatus
 		HistoryLength      int64

@@ -525,6 +525,8 @@ const (
 	FrontendListDomainsScope
 	// FrontendResetWorkflowExecutionScope is the metric scope for frontend.ResetWorkflowExecution
 	FrontendResetWorkflowExecutionScope
+	// FrontendGetSearchAttributesScope is the metric scope for frontend.GetSearchAttributes
+	FrontendGetSearchAttributesScope
 
 	NumFrontendScopes
 )
@@ -985,6 +987,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendDescribeWorkflowExecutionScope:        {operation: "DescribeWorkflowExecution"},
 		FrontendDescribeTaskListScope:                 {operation: "DescribeTaskList"},
 		FrontendResetStickyTaskListScope:              {operation: "ResetStickyTaskList"},
+		FrontendGetSearchAttributesScope:              {operation: "GetSearchAttributes"},
 	},
 	// History Scope Names
 	History: {
@@ -1308,6 +1311,7 @@ const (
 	SyncThrottleCounter
 	BufferThrottleCounter
 	SyncMatchLatency
+	AsyncMatchLatency
 	ExpiredTasksCounter
 
 	NumMatchingMetrics
@@ -1549,6 +1553,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		BufferThrottleCounter:         {metricName: "buffer_throttle_count"},
 		ExpiredTasksCounter:           {metricName: "tasks_expired"},
 		SyncMatchLatency:              {metricName: "syncmatch_latency", metricType: Timer},
+		AsyncMatchLatency:             {metricName: "asyncmatch_latency", metricType: Timer},
 	},
 	Worker: {
 		ReplicatorMessages:                                     {metricName: "replicator_messages"},

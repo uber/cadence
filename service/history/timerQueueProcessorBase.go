@@ -119,7 +119,7 @@ func newTimerQueueProcessorBase(scope int, shard ShardContext, historyService *h
 		workerNotificationChans: workerNotificationChans,
 		newTimerCh:              make(chan struct{}, 1),
 		lastPollTime:            time.Time{},
-		rateLimiter:             tokenbucket.New(maxPollRPS(), clock.NewRealTimeSource()),
+		rateLimiter:             tokenbucket.NewDynamicTokenBucket(maxPollRPS, clock.NewRealTimeSource()),
 		startDelay:              startDelay,
 		retryPolicy:             common.CreatePersistanceRetryPolicy(),
 	}
@@ -631,9 +631,15 @@ func (t *timerQueueProcessorBase) deleteWorkflow(task *persistence.TimerTaskInfo
 }
 
 func (t *timerQueueProcessorBase) archiveWorkflow(task *persistence.TimerTaskInfo, msBuilder mutableState, context workflowExecutionContext) error {
+	domainCacheEntry, err := t.historyService.shard.GetDomainCache().GetDomainByID(task.DomainID)
+	if err != nil {
+		return err
+	}
+
 	req := &archiver.ArchiveRequest{
 		ShardID:              t.shard.GetShardID(),
 		DomainID:             task.DomainID,
+		DomainName:           domainCacheEntry.GetInfo().Name,
 		WorkflowID:           task.WorkflowID,
 		RunID:                task.RunID,
 		EventStoreVersion:    msBuilder.GetEventStoreVersion(),

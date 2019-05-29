@@ -147,7 +147,8 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(info *InternalWorkflowEx
 		DecisionRequestID:            info.DecisionRequestID,
 		DecisionTimeout:              info.DecisionTimeout,
 		DecisionAttempt:              info.DecisionAttempt,
-		DecisionTimestamp:            info.DecisionTimestamp,
+		DecisionStartedTimestamp:     info.DecisionStartedTimestamp,
+		DecisionScheduledTimestamp:   info.DecisionScheduledTimestamp,
 		CancelRequested:              info.CancelRequested,
 		CancelRequestID:              info.CancelRequestID,
 		StickyTaskList:               info.StickyTaskList,
@@ -168,6 +169,7 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(info *InternalWorkflowEx
 		CronSchedule:                 info.CronSchedule,
 		ExpirationSeconds:            info.ExpirationSeconds,
 		AutoResetPoints:              autoResetPoints,
+		SearchAttributes:             info.SearchAttributes,
 	}
 	return newInfo, nil
 }
@@ -552,7 +554,8 @@ func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInf
 		DecisionRequestID:            info.DecisionRequestID,
 		DecisionTimeout:              info.DecisionTimeout,
 		DecisionAttempt:              info.DecisionAttempt,
-		DecisionTimestamp:            info.DecisionTimestamp,
+		DecisionStartedTimestamp:     info.DecisionStartedTimestamp,
+		DecisionScheduledTimestamp:   info.DecisionScheduledTimestamp,
 		CancelRequested:              info.CancelRequested,
 		CancelRequestID:              info.CancelRequestID,
 		StickyTaskList:               info.StickyTaskList,
@@ -573,6 +576,7 @@ func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInf
 		BranchToken:                  info.BranchToken,
 		CronSchedule:                 info.CronSchedule,
 		ExpirationSeconds:            info.ExpirationSeconds,
+		SearchAttributes:             info.SearchAttributes,
 	}, nil
 }
 
@@ -815,6 +819,7 @@ func (m *executionManagerImpl) SerializeCreateWorkflowExecutionRequest(request *
 		CronSchedule:                request.CronSchedule,
 		ExpirationSeconds:           request.ExpirationSeconds,
 		VersionHistories:            versionHistories,
+		SearchAttributes:            request.SearchAttributes,
 	}, nil
 }
 

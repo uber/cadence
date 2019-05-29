@@ -21,6 +21,7 @@
 package persistencetests
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/rand"
@@ -713,6 +714,11 @@ func (s *ExecutionManagerSuite) TestGetWorkflow() {
 			},
 		},
 	}
+	testSearchAttrKey := "env"
+	testSearchAttrVal, _ := json.Marshal("test")
+	testSearchAttr := map[string][]byte{
+		testSearchAttrKey: testSearchAttrVal,
+	}
 
 	createReq := &p.CreateWorkflowExecutionRequest{
 		RequestID: uuid.New(),
@@ -763,6 +769,7 @@ func (s *ExecutionManagerSuite) TestGetWorkflow() {
 		CronSchedule:            "* * * * *",
 		ExpirationSeconds:       rand.Int31(),
 		PreviousAutoResetPoints: &testResetPoints,
+		SearchAttributes:        testSearchAttr,
 	}
 
 	createResp, err := s.ExecutionManager.CreateWorkflowExecution(createReq)
@@ -808,6 +815,9 @@ func (s *ExecutionManagerSuite) TestGetWorkflow() {
 	s.Equal(createReq.CronSchedule, info.CronSchedule)
 	s.Equal(createReq.NonRetriableErrors, info.NonRetriableErrors)
 	s.Equal(testResetPoints.String(), info.AutoResetPoints.String())
+	val, ok := info.SearchAttributes[testSearchAttrKey]
+	s.True(ok)
+	s.Equal(testSearchAttrVal, val)
 
 	s.Equal(createReq.ReplicationState.LastWriteEventID, state.ReplicationState.LastWriteEventID)
 	s.Equal(createReq.ReplicationState.LastWriteVersion, state.ReplicationState.LastWriteVersion)
@@ -856,7 +866,8 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Equal(common.EmptyEventID, info0.DecisionStartedID)
 	s.Equal(int32(1), info0.DecisionTimeout)
 	s.Equal(int64(0), info0.DecisionAttempt)
-	s.Equal(int64(0), info0.DecisionTimestamp)
+	s.Equal(int64(0), info0.DecisionStartedTimestamp)
+	s.Equal(int64(0), info0.DecisionScheduledTimestamp)
 	s.Empty(info0.StickyTaskList)
 	s.Equal(int32(0), info0.StickyScheduleToStartTimeout)
 	s.Empty(info0.ClientLibraryVersion)
@@ -864,6 +875,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Empty(info0.ClientImpl)
 	s.Equal(int32(0), info0.SignalCount)
 	s.True(info0.AutoResetPoints.Equals(&gen.ResetPoints{}))
+	s.True(len(info0.SearchAttributes) == 0)
 
 	log.Infof("Workflow execution last updated: %v", info0.LastUpdatedTimestamp)
 
@@ -873,7 +885,8 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	updatedInfo.LastProcessedEvent = int64(2)
 	updatedInfo.DecisionVersion = int64(666)
 	updatedInfo.DecisionAttempt = int64(123)
-	updatedInfo.DecisionTimestamp = int64(321)
+	updatedInfo.DecisionStartedTimestamp = int64(321)
+	updatedInfo.DecisionScheduledTimestamp = int64(654)
 	updatedInfo.StickyTaskList = "random sticky tasklist"
 	updatedInfo.StickyScheduleToStartTimeout = 876
 	updatedInfo.ClientLibraryVersion = "random client library version"
@@ -888,6 +901,9 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	updatedInfo.ExpirationSeconds = math.MaxInt32
 	updatedInfo.ExpirationTime = time.Now()
 	updatedInfo.NonRetriableErrors = []string{"accessDenied", "badRequest"}
+	searchAttrKey := "env"
+	searchAttrVal := []byte("test")
+	updatedInfo.SearchAttributes = map[string][]byte{searchAttrKey: searchAttrVal}
 
 	err2 := s.UpdateWorkflowExecution(updatedInfo, nil, []int64{int64(4)}, nil, int64(3), nil, nil, nil, nil, nil)
 	s.NoError(err2)
@@ -915,7 +931,8 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Equal(common.EmptyEventID, info1.DecisionStartedID)
 	s.Equal(int32(1), info1.DecisionTimeout)
 	s.Equal(int64(123), info1.DecisionAttempt)
-	s.Equal(int64(321), info1.DecisionTimestamp)
+	s.Equal(int64(321), info1.DecisionStartedTimestamp)
+	s.Equal(int64(654), info1.DecisionScheduledTimestamp)
 	s.Equal(updatedInfo.StickyTaskList, info1.StickyTaskList)
 	s.Equal(updatedInfo.StickyScheduleToStartTimeout, info1.StickyScheduleToStartTimeout)
 	s.Equal(updatedInfo.ClientLibraryVersion, info1.ClientLibraryVersion)
@@ -930,6 +947,9 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Equal(updatedInfo.ExpirationSeconds, info1.ExpirationSeconds)
 	s.EqualTimes(updatedInfo.ExpirationTime, info1.ExpirationTime)
 	s.Equal(updatedInfo.NonRetriableErrors, info1.NonRetriableErrors)
+	searchAttrVal1, ok := info1.SearchAttributes[searchAttrKey]
+	s.True(ok)
+	s.Equal(searchAttrVal, searchAttrVal1)
 
 	log.Infof("Workflow execution last updated: %v", info1.LastUpdatedTimestamp)
 
@@ -961,7 +981,8 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Equal(common.EmptyEventID, info2.DecisionStartedID)
 	s.Equal(int32(1), info2.DecisionTimeout)
 	s.Equal(int64(123), info2.DecisionAttempt)
-	s.Equal(int64(321), info2.DecisionTimestamp)
+	s.Equal(int64(321), info2.DecisionStartedTimestamp)
+	s.Equal(int64(654), info2.DecisionScheduledTimestamp)
 	s.Equal(updatedInfo.SignalCount, info2.SignalCount)
 	s.EqualValues(updatedInfo.HistorySize, info2.HistorySize)
 	s.Equal(updatedInfo.InitialInterval, info2.InitialInterval)
@@ -971,6 +992,9 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Equal(updatedInfo.ExpirationSeconds, info2.ExpirationSeconds)
 	s.EqualTimes(updatedInfo.ExpirationTime, info2.ExpirationTime)
 	s.Equal(updatedInfo.NonRetriableErrors, info2.NonRetriableErrors)
+	searchAttrVal2, ok := info2.SearchAttributes[searchAttrKey]
+	s.True(ok)
+	s.Equal(searchAttrVal, searchAttrVal2)
 
 	log.Infof("Workflow execution last updated: %v", info2.LastUpdatedTimestamp)
 
@@ -1001,16 +1025,20 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Equal(common.EmptyEventID, info3.DecisionStartedID)
 	s.Equal(int32(1), info3.DecisionTimeout)
 	s.Equal(int64(123), info3.DecisionAttempt)
-	s.Equal(int64(321), info3.DecisionTimestamp)
-	s.Equal(updatedInfo.SignalCount, info2.SignalCount)
-	s.EqualValues(updatedInfo.HistorySize, info2.HistorySize)
-	s.Equal(updatedInfo.InitialInterval, info2.InitialInterval)
-	s.Equal(updatedInfo.BackoffCoefficient, info2.BackoffCoefficient)
-	s.Equal(updatedInfo.MaximumInterval, info2.MaximumInterval)
-	s.Equal(updatedInfo.MaximumAttempts, info2.MaximumAttempts)
-	s.Equal(updatedInfo.ExpirationSeconds, info2.ExpirationSeconds)
-	s.EqualTimes(updatedInfo.ExpirationTime, info2.ExpirationTime)
-	s.Equal(updatedInfo.NonRetriableErrors, info2.NonRetriableErrors)
+	s.Equal(int64(321), info3.DecisionStartedTimestamp)
+	s.Equal(int64(654), info3.DecisionScheduledTimestamp)
+	s.Equal(updatedInfo.SignalCount, info3.SignalCount)
+	s.EqualValues(updatedInfo.HistorySize, info3.HistorySize)
+	s.Equal(updatedInfo.InitialInterval, info3.InitialInterval)
+	s.Equal(updatedInfo.BackoffCoefficient, info3.BackoffCoefficient)
+	s.Equal(updatedInfo.MaximumInterval, info3.MaximumInterval)
+	s.Equal(updatedInfo.MaximumAttempts, info3.MaximumAttempts)
+	s.Equal(updatedInfo.ExpirationSeconds, info3.ExpirationSeconds)
+	s.EqualTimes(updatedInfo.ExpirationTime, info3.ExpirationTime)
+	s.Equal(updatedInfo.NonRetriableErrors, info3.NonRetriableErrors)
+	searchAttrVal3, ok := info3.SearchAttributes[searchAttrKey]
+	s.True(ok)
+	s.Equal(searchAttrVal, searchAttrVal3)
 
 	log.Infof("Workflow execution last updated: %v", info3.LastUpdatedTimestamp)
 
@@ -1042,16 +1070,19 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Equal(common.EmptyEventID, info4.DecisionStartedID)
 	s.Equal(int32(1), info4.DecisionTimeout)
 	s.Equal(int64(123), info4.DecisionAttempt)
-	s.Equal(int64(321), info4.DecisionTimestamp)
-	s.Equal(updatedInfo.SignalCount, info2.SignalCount)
-	s.EqualValues(updatedInfo.HistorySize, info2.HistorySize)
-	s.Equal(updatedInfo.InitialInterval, info2.InitialInterval)
-	s.Equal(updatedInfo.BackoffCoefficient, info2.BackoffCoefficient)
-	s.Equal(updatedInfo.MaximumInterval, info2.MaximumInterval)
-	s.Equal(updatedInfo.MaximumAttempts, info2.MaximumAttempts)
-	s.Equal(updatedInfo.ExpirationSeconds, info2.ExpirationSeconds)
-	s.EqualTimes(updatedInfo.ExpirationTime, info2.ExpirationTime)
-	s.Equal(updatedInfo.NonRetriableErrors, info2.NonRetriableErrors)
+	s.Equal(int64(321), info4.DecisionStartedTimestamp)
+	s.Equal(updatedInfo.SignalCount, info4.SignalCount)
+	s.EqualValues(updatedInfo.HistorySize, info4.HistorySize)
+	s.Equal(updatedInfo.InitialInterval, info4.InitialInterval)
+	s.Equal(updatedInfo.BackoffCoefficient, info4.BackoffCoefficient)
+	s.Equal(updatedInfo.MaximumInterval, info4.MaximumInterval)
+	s.Equal(updatedInfo.MaximumAttempts, info4.MaximumAttempts)
+	s.Equal(updatedInfo.ExpirationSeconds, info4.ExpirationSeconds)
+	s.EqualTimes(updatedInfo.ExpirationTime, info4.ExpirationTime)
+	s.Equal(updatedInfo.NonRetriableErrors, info4.NonRetriableErrors)
+	searchAttrVal4, ok := info4.SearchAttributes[searchAttrKey]
+	s.True(ok)
+	s.Equal(searchAttrVal, searchAttrVal4)
 
 	log.Infof("Workflow execution last updated: %v", info4.LastUpdatedTimestamp)
 }
@@ -3478,16 +3509,16 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsNotSelf() {
 	continueAsNewInfo.NextEventID = int64(5)
 	continueAsNewInfo.LastProcessedEvent = int64(2)
 
-	workflowExecutionCurrent1 := gen.WorkflowExecution{
+	workflowExecutionCurrent := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr(workflowID),
 		RunId:      common.StringPtr("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1"),
 	}
-	err = s.ContinueAsNewExecution(continueAsNewInfo, info.NextEventID, workflowExecutionCurrent1, int64(3), int64(2), nil)
+	err = s.ContinueAsNewExecution(continueAsNewInfo, info.NextEventID, workflowExecutionCurrent, int64(3), int64(2), nil)
 	s.NoError(err)
 
 	runID1, err := s.GetCurrentWorkflowRunID(domainID, workflowID)
-	s.Equal(workflowExecutionCurrent1.GetRunId(), runID1)
-	state, err = s.GetWorkflowExecutionInfo(domainID, workflowExecutionCurrent1)
+	s.Equal(workflowExecutionCurrent.GetRunId(), runID1)
+	state, err = s.GetWorkflowExecutionInfo(domainID, workflowExecutionCurrent)
 	s.NoError(err)
 	updatedInfo1 := copyWorkflowExecutionInfo(state.ExecutionInfo)
 	updatedInfo1.State = p.WorkflowStateCompleted
@@ -3497,7 +3528,7 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsNotSelf() {
 	err3 := s.UpdateWorkflowExecutionAndFinish(updatedInfo1, int64(3))
 	s.NoError(err3)
 	runID1, err = s.GetCurrentWorkflowRunID(domainID, workflowID)
-	s.Equal(workflowExecutionCurrent1.GetRunId(), runID1)
+	s.Equal(workflowExecutionCurrent.GetRunId(), runID1)
 
 	resetExecutionInfo := &p.WorkflowExecutionInfo{
 		DomainID:             domainID,
@@ -3530,7 +3561,7 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsNotSelf() {
 		StartVersion:   int64(8780),
 	}
 
-	err = s.ResetMutableState(workflowExecutionCurrent1.GetRunId(), resetExecutionInfo, rState, continueAsNewInfo.NextEventID, resetActivityInfos, resetTimerInfos,
+	err = s.ResetMutableState(workflowExecutionCurrent.GetRunId(), resetExecutionInfo, rState, continueAsNewInfo.NextEventID, resetActivityInfos, resetTimerInfos,
 		resetChildExecutionInfos, resetRequestCancelInfos, resetSignalInfos, nil)
 	s.NoError(err)
 
@@ -3563,6 +3594,91 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsNotSelf() {
 	// this test only assert whether the current workflow execution record is reseted
 	runID, err = s.GetCurrentWorkflowRunID(domainID, workflowID)
 	s.Equal(workflowExecutionReset.GetRunId(), runID)
+}
+
+// TestResetMutableStateMismatch test
+func (s *ExecutionManagerSuite) TestResetMutableStateMismatch() {
+	domainID := "4ca1faac-1a3a-47af-8e51-fdaa2b3d45b9"
+	workflowID := "test-reset-mutable-state-test-mismatch"
+
+	// first create a workflow and continue as new it
+	workflowExecutionReset := gen.WorkflowExecution{
+		WorkflowId: common.StringPtr(workflowID),
+		RunId:      common.StringPtr("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa0"),
+	}
+	task, err := s.CreateWorkflowExecution(domainID, workflowExecutionReset, "taskList", "wType", 20, 13, nil, 3, 0, 2, nil)
+	s.NoError(err)
+	s.NotNil(task, "Expected non empty task identifier.")
+
+	state, err := s.GetWorkflowExecutionInfo(domainID, workflowExecutionReset)
+	s.NoError(err)
+
+	info := state.ExecutionInfo
+	continueAsNewInfo := copyWorkflowExecutionInfo(info)
+	continueAsNewInfo.State = p.WorkflowStateRunning
+	continueAsNewInfo.NextEventID = int64(5)
+	continueAsNewInfo.LastProcessedEvent = int64(2)
+
+	workflowExecutionCurrent := gen.WorkflowExecution{
+		WorkflowId: common.StringPtr(workflowID),
+		RunId:      common.StringPtr("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1"),
+	}
+	err = s.ContinueAsNewExecution(continueAsNewInfo, info.NextEventID, workflowExecutionCurrent, int64(3), int64(2), nil)
+	s.NoError(err)
+
+	runID1, err := s.GetCurrentWorkflowRunID(domainID, workflowID)
+	s.Equal(workflowExecutionCurrent.GetRunId(), runID1)
+	state, err = s.GetWorkflowExecutionInfo(domainID, workflowExecutionCurrent)
+	s.NoError(err)
+	updatedInfo1 := copyWorkflowExecutionInfo(state.ExecutionInfo)
+	updatedInfo1.State = p.WorkflowStateCompleted
+	updatedInfo1.CloseStatus = p.WorkflowCloseStatusCompleted
+	updatedInfo1.NextEventID = int64(6)
+	updatedInfo1.LastProcessedEvent = int64(2)
+	err3 := s.UpdateWorkflowExecutionAndFinish(updatedInfo1, int64(3))
+	s.NoError(err3)
+	runID1, err = s.GetCurrentWorkflowRunID(domainID, workflowID)
+	s.Equal(workflowExecutionCurrent.GetRunId(), runID1)
+
+	resetExecutionInfo := &p.WorkflowExecutionInfo{
+		DomainID:             domainID,
+		WorkflowID:           workflowExecutionReset.GetWorkflowId(),
+		RunID:                workflowExecutionReset.GetRunId(),
+		ParentDomainID:       uuid.New(),
+		ParentWorkflowID:     "some random parent workflow ID",
+		ParentRunID:          uuid.New(),
+		InitiatedID:          12345,
+		TaskList:             "some random tasklist",
+		WorkflowTypeName:     "some random workflow type name",
+		WorkflowTimeout:      1112,
+		DecisionTimeoutValue: 14,
+		State:                p.WorkflowStateRunning,
+		NextEventID:          123,
+		CreateRequestID:      uuid.New(),
+		DecisionVersion:      common.EmptyVersion,
+		DecisionScheduleID:   111,
+		DecisionStartedID:    222,
+		DecisionRequestID:    uuid.New(),
+		DecisionTimeout:      0,
+	}
+	resetActivityInfos := []*p.ActivityInfo{}
+	resetTimerInfos := []*p.TimerInfo{}
+	resetChildExecutionInfos := []*p.ChildExecutionInfo{}
+	resetRequestCancelInfos := []*p.RequestCancelInfo{}
+	resetSignalInfos := []*p.SignalInfo{}
+	rState := &p.ReplicationState{
+		CurrentVersion: int64(8789),
+		StartVersion:   int64(8780),
+	}
+
+	wrongPrevRunID := uuid.New()
+	err = s.ResetMutableState(wrongPrevRunID, resetExecutionInfo, rState, continueAsNewInfo.NextEventID, resetActivityInfos, resetTimerInfos,
+		resetChildExecutionInfos, resetRequestCancelInfos, resetSignalInfos, nil)
+	s.NotNil(err)
+
+	// this test only assert whether the current workflow execution record is reset
+	runID, err := s.GetCurrentWorkflowRunID(domainID, workflowID)
+	s.Equal(workflowExecutionCurrent.GetRunId(), runID)
 }
 
 // TestCreateGetShardBackfill test
