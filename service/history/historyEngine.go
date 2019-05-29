@@ -1709,13 +1709,12 @@ Update_History_Loop:
 				if err != nil {
 					return nil, err
 				}
-				attributes := &workflow.FailWorkflowExecutionDecisionAttributes{
-					Reason:  common.StringPtr(common.FailureReasonTransactionSizeExceedsLimit),
-					Details: []byte(updateErr.Error()),
-				}
-				if evt := msBuilder.AddFailWorkflowEvent(completedID, attributes); evt == nil {
-					return nil, &workflow.InternalServiceError{Message: "Unable to add fail workflow event."}
-				}
+
+				msBuilder.AddWorkflowExecutionTerminatedEvent(&workflow.TerminateWorkflowExecutionRequest{
+					Reason:   common.StringPtr(common.FailureReasonTransactionSizeExceedsLimit),
+					Identity: common.StringPtr("cadence-history-server"),
+					Details:  []byte(updateErr.Error()),
+				})
 				tranT, timerT, err := e.getWorkflowHistoryCleanupTasks(domainID, workflowExecution.GetWorkflowId(), tBuilder)
 				if err != nil {
 					return nil, err
@@ -1726,15 +1725,8 @@ Update_History_Loop:
 				if err3 != nil {
 					return nil, err3
 				}
-				if continueAsNewBuilder != nil {
-					continueAsNewTimerTasks = msBuilder.GetContinueAsNew().TimerTasks
-					if err := context.continueAsNewWorkflowExecution(request.ExecutionContext, continueAsNewBuilder, transferTasks, timerTasks, transactionID); err != nil {
-						return nil, err
-					}
-				} else {
-					if err := context.updateWorkflowExecutionWithContext(request.ExecutionContext, transferTasks, timerTasks, transactionID); err != nil {
-						return nil, err
-					}
+				if err := context.updateWorkflowExecutionWithContext(request.ExecutionContext, transferTasks, timerTasks, transactionID); err != nil {
+					return nil, err
 				}
 				e.timerProcessor.NotifyNewTimers(e.currentClusterName, e.shard.GetCurrentTime(e.currentClusterName), timerTasks)
 			}
