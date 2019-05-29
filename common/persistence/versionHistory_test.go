@@ -51,7 +51,7 @@ func (s *versionHistoryStoreSuite) TestNewVersionHistory() {
 }
 
 func (s *versionHistoryStoreSuite) TestNewVersionHistory_Panic() {
-	items := []*shared.VersionHistoryItem{}
+	items := []VersionHistoryItem{}
 
 	expectedPanic := func() {
 		NewVersionHistory(items)
@@ -152,7 +152,7 @@ func (s *versionHistoryStoreSuite) TestIsAppendable_True() {
 		Version: 4,
 	}
 
-	s.True(IsAppendable(history, appendItem))
+	s.True(history.IsAppendable(appendItem))
 }
 
 func (s *versionHistoryStoreSuite) TestIsAppendable_False_VersionNotMatch() {
@@ -167,7 +167,7 @@ func (s *versionHistoryStoreSuite) TestIsAppendable_False_VersionNotMatch() {
 		Version: 7,
 	}
 
-	s.False(IsAppendable(history, appendItem))
+	s.False(history.IsAppendable(appendItem))
 }
 
 func (s *versionHistoryStoreSuite) TestIsAppendable_False_EventIDNotMatch() {
@@ -182,7 +182,7 @@ func (s *versionHistoryStoreSuite) TestIsAppendable_False_EventIDNotMatch() {
 		Version: 4,
 	}
 
-	s.False(IsAppendable(history, appendItem))
+	s.False(history.IsAppendable(appendItem))
 }
 
 func (s *versionHistoryStoreSuite) TestFindLowestCommonVersionHistoryItem_ReturnLocal() {
@@ -200,7 +200,7 @@ func (s *versionHistoryStoreSuite) TestFindLowestCommonVersionHistoryItem_Return
 	}
 	local := NewVersionHistory(localItems)
 	remote := NewVersionHistory(remoteItems)
-	item, err := FindLowestCommonVersionHistoryItem(local, remote)
+	item, err := local.FindLowestCommonVersionHistoryItem(remote)
 	s.NoError(err)
 	s.Equal(int64(5), item.EventID)
 	s.Equal(int64(4), item.Version)
@@ -221,7 +221,7 @@ func (s *versionHistoryStoreSuite) TestFindLowestCommonVersionHistoryItem_Return
 	}
 	local := NewVersionHistory(localItems)
 	remote := NewVersionHistory(remoteItems)
-	item, err := FindLowestCommonVersionHistoryItem(local, remote)
+	item, err := local.FindLowestCommonVersionHistoryItem(remote)
 	s.NoError(err)
 	s.Equal(int64(6), item.EventID)
 	s.Equal(int64(6), item.Version)
@@ -241,7 +241,7 @@ func (s *versionHistoryStoreSuite) TestFindLowestCommonVersionHistoryItem_Error_
 	}
 	local := NewVersionHistory(localItems)
 	remote := NewVersionHistory(remoteItems)
-	_, err := FindLowestCommonVersionHistoryItem(local, remote)
+	_, err := local.FindLowestCommonVersionHistoryItem(remote)
 	s.Error(err)
 }
 
@@ -259,7 +259,7 @@ func (s *versionHistoryStoreSuite) TestFindLowestCommonVersionHistoryItem_Error_
 	}
 	local := NewVersionHistory(localItems)
 	remote := NewVersionHistory(remoteItems)
-	_, err := FindLowestCommonVersionHistoryItem(local, remote)
+	_, err := local.FindLowestCommonVersionHistoryItem(remote)
 	s.Error(err)
 }
 
@@ -271,13 +271,13 @@ func (s *versionHistoryStoreSuite) TestFindLowestCommonVersionHistoryItem_Error_
 		{EventID: 9, Version: 10},
 	}
 	local := NewVersionHistory(localItems)
-	remote := NewVersionHistory([]*shared.VersionHistoryItem{{common.Int64Ptr(-1), common.Int64Ptr(-1)}})
-	_, err := FindLowestCommonVersionHistoryItem(local, remote)
+	remote := NewVersionHistory([]VersionHistoryItem{{-1, -1}})
+	_, err := local.FindLowestCommonVersionHistoryItem(remote)
 	s.Error(err)
 }
 
 func (s *versionHistoryStoreSuite) TestNewVersionHistories_Panic() {
-	expectedPanic := func() { NewVersionHistories([]*shared.VersionHistory{}) }
+	expectedPanic := func() { NewVersionHistories([]VersionHistory{}) }
 	s.Panics(expectedPanic)
 }
 
@@ -289,7 +289,7 @@ func (s *versionHistoryStoreSuite) TestNewVersionHistories() {
 		{EventID: 9, Version: 10},
 	}
 	local := NewVersionHistory(localItems)
-	histories := NewVersionHistories([]*shared.VersionHistory{&local})
+	histories := NewVersionHistories([]VersionHistory{local})
 	s.NotNil(histories)
 }
 
@@ -314,14 +314,14 @@ func (s *versionHistoryStoreSuite) TestFindLowestCommonVersionHistory_UpdateExis
 	local1 := NewVersionHistory(localItems1)
 	local2 := NewVersionHistory(localItems2)
 	remote := NewVersionHistory(remoteItems)
-	histories := NewVersionHistories([]*shared.VersionHistory{&local1, &local2})
-	item, history, err := FindLowestCommonVersionHistory(histories, remote)
+	histories := NewVersionHistories([]VersionHistory{local1, local2})
+	item, history, err := histories.FindLowestCommonVersionHistory(remote)
 	s.NoError(err)
 	s.Equal(history, local2)
 	s.Equal(int64(9), item.EventID)
 	s.Equal(int64(6), item.Version)
 
-	err = AddHistory(&histories, *item, *history, remote)
+	err = histories.AddHistory(item, history, remote)
 	s.NoError(err)
 	s.Equal(histories.Histories[1], remote)
 }
@@ -346,13 +346,13 @@ func (s *versionHistoryStoreSuite) TestFindLowestCommonVersionHistory_ForkNewHis
 	local1 := NewVersionHistory(localItems1)
 	local2 := NewVersionHistory(localItems2)
 	remote := NewVersionHistory(remoteItems)
-	histories := NewVersionHistories([]*shared.VersionHistory{&local1, &local2})
-	item, history, err := FindLowestCommonVersionHistory(histories, remote)
+	histories := NewVersionHistories([]VersionHistory{local1, local2})
+	item, history, err := histories.FindLowestCommonVersionHistory(remote)
 	s.NoError(err)
 	s.Equal(int64(3), item.EventID)
 	s.Equal(int64(0), item.Version)
 
-	err = AddHistory(&histories, *item, *history, remote)
+	err = histories.AddHistory(item, history, remote)
 	s.NoError(err)
 	s.Equal(3, len(histories.Histories))
 }
@@ -377,8 +377,8 @@ func (s *versionHistoryStoreSuite) TestFindLowestCommonVersionHistory_Error() {
 	local1 := NewVersionHistory(localItems1)
 	local2 := NewVersionHistory(localItems2)
 	remote := NewVersionHistory(remoteItems)
-	histories := NewVersionHistories([]*shared.VersionHistory{&local1, &local2})
-	_, _, err := FindLowestCommonVersionHistory(histories, remote)
+	histories := NewVersionHistories([]VersionHistory{local1, local2})
+	_, _, err := histories.FindLowestCommonVersionHistory(remote)
 	s.Error(err)
 }
 
