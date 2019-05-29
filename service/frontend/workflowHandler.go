@@ -2864,9 +2864,6 @@ func (wh *WorkflowHandler) getHistory(
 	}
 
 	if len(historyEvents) > 0 {
-		// N.B. - Dual emit is required here so that we can see aggregate timer stats across all
-		// domains along with the individual domains stats
-		scope.Tagged(metrics.DomainAllTag()).RecordTimer(metrics.HistorySize, time.Duration(size))
 		scope.RecordTimer(metrics.HistorySize, time.Duration(size))
 
 		if size > common.GetHistoryWarnSizeLimit {
