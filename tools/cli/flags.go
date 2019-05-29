@@ -155,6 +155,7 @@ const (
 	FlagIndex                       = "index"
 	FlagBatchSize                   = "batch_size"
 	FlagBatchSizeWithAlias          = FlagBatchSize + ", bs"
+	FlagCurrentClusterName          = "current_cluster"
 	FlagMemoKey                     = "memo_key"
 	FlagMemo                        = "memo"
 	FlagMemoFile                    = "memo_file"

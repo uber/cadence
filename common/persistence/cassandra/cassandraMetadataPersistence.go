@@ -104,8 +104,16 @@ type (
 	}
 )
 
-// newMetadataPersistence is used to create an instance of HistoryManager implementation
-func newMetadataPersistence(cfg config.Cassandra, clusterName string, logger log.Logger) (p.MetadataStore,
+// NewMetadataPersistenceWithSession is used to create an instance of HistoryManager implementation
+func NewMetadataPersistenceWithSession(session *gocql.Session, clusterName string, logger log.Logger) p.MetadataStore {
+	return &cassandraMetadataPersistence{
+		cassandraStore:     cassandraStore{session: session, logger: logger},
+		currentClusterName: clusterName,
+	}
+}
+
+// NewMetadataPersistence is used to create an instance of HistoryManager implementation
+func NewMetadataPersistence(cfg config.Cassandra, clusterName string, logger log.Logger) (p.MetadataStore,
 	error) {
 	cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
 	cluster.Keyspace = cfg.Keyspace

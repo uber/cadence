@@ -94,14 +94,24 @@ const (
 )
 
 type (
-	cassandraMetadataPersistenceV2 struct {
+	// CassandraMetadataPersistenceV2 domain metadata v2 impl
+	// TODO make this struct private, once domain migration admin command is finished
+	CassandraMetadataPersistenceV2 struct {
 		cassandraStore
 		currentClusterName string
 	}
 )
 
-// newMetadataPersistenceV2 is used to create an instance of HistoryManager implementation
-func newMetadataPersistenceV2(cfg config.Cassandra, currentClusterName string, logger log.Logger) (p.MetadataStore, error) {
+// NewMetadataPersistenceV2WithSession is used to create an instance of HistoryManager implementation
+func NewMetadataPersistenceV2WithSession(session *gocql.Session, currentClusterName string, logger log.Logger) p.MetadataStore {
+	return &CassandraMetadataPersistenceV2{
+		cassandraStore:     cassandraStore{session: session, logger: logger},
+		currentClusterName: currentClusterName,
+	}
+}
+
+// NewMetadataPersistenceV2 is used to create an instance of HistoryManager implementation
+func NewMetadataPersistenceV2(cfg config.Cassandra, currentClusterName string, logger log.Logger) (p.MetadataStore, error) {
 	cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
 	cluster.Keyspace = cfg.Keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
@@ -114,19 +124,20 @@ func newMetadataPersistenceV2(cfg config.Cassandra, currentClusterName string, l
 		return nil, err
 	}
 
-	return &cassandraMetadataPersistenceV2{
+	return &CassandraMetadataPersistenceV2{
 		cassandraStore:     cassandraStore{session: session, logger: logger},
 		currentClusterName: currentClusterName,
 	}, nil
 }
 
 // Close releases the resources held by this object
-func (m *cassandraMetadataPersistenceV2) Close() {
+func (m *CassandraMetadataPersistenceV2) Close() {
 	if m.session != nil {
 		m.session.Close()
 	}
 }
 
+// CreateDomain create a domain
 // Cassandra does not support conditional updates across multiple tables.  For this reason we have to first insert into
 // 'Domains' table and then do a conditional insert into domains_by_name table.  If the conditional write fails we
 // delete the orphaned entry from domains table.  There is a chance delete entry could fail and we never delete the
@@ -144,6 +155,13 @@ func (m *cassandraMetadataPersistenceV2) CreateDomain(request *p.InternalCreateD
 			Message: fmt.Sprintf("CreateDomain operation failed because of uuid collision."),
 		}
 	}
+
+	return m.CreateDomainInV2Table(request)
+}
+
+// CreateDomainInV2Table is the temporary function used by domain v1 -> v2 migration
+// TODO remove when domain migration admin command is removed
+func (m *CassandraMetadataPersistenceV2) CreateDomainInV2Table(request *p.CreateDomainRequest) (*p.CreateDomainResponse, error) {
 
 	metadata, err := m.GetMetadata()
 	if err != nil {
@@ -421,7 +439,8 @@ func (m *cassandraMetadataPersistenceV2) ListDomains(request *p.ListDomainsReque
 	return response, nil
 }
 
-func (m *cassandraMetadataPersistenceV2) DeleteDomain(request *p.DeleteDomainRequest) error {
+// DeleteDomain delete a domain
+func (m *CassandraMetadataPersistenceV2) DeleteDomain(request *p.DeleteDomainRequest) error {
 	var name string
 	query := m.session.Query(templateGetDomainQuery, request.ID)
 	err := query.Scan(&name)
@@ -435,7 +454,8 @@ func (m *cassandraMetadataPersistenceV2) DeleteDomain(request *p.DeleteDomainReq
 	return m.deleteDomain(name, request.ID)
 }
 
-func (m *cassandraMetadataPersistenceV2) DeleteDomainByName(request *p.DeleteDomainByNameRequest) error {
+// DeleteDomainByName delete a domain by name
+func (m *CassandraMetadataPersistenceV2) DeleteDomainByName(request *p.DeleteDomainByNameRequest) error {
 	var ID string
 	query := m.session.Query(templateGetDomainByNameQueryV2, constDomainPartition, request.Name)
 	err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
@@ -448,7 +468,8 @@ func (m *cassandraMetadataPersistenceV2) DeleteDomainByName(request *p.DeleteDom
 	return m.deleteDomain(request.Name, ID)
 }
 
-func (m *cassandraMetadataPersistenceV2) GetMetadata() (*p.GetMetadataResponse, error) {
+// GetMetadata get the domain metadata record
+func (m *CassandraMetadataPersistenceV2) GetMetadata() (*p.GetMetadataResponse, error) {
 	var notificationVersion int64
 	query := m.session.Query(templateGetMetadataQueryV2, constDomainPartition, domainMetadataRecordName)
 	err := query.Scan(&notificationVersion)
@@ -463,7 +484,7 @@ func (m *cassandraMetadataPersistenceV2) GetMetadata() (*p.GetMetadataResponse, 
 	return &p.GetMetadataResponse{NotificationVersion: notificationVersion}, nil
 }
 
-func (m *cassandraMetadataPersistenceV2) updateMetadataBatch(batch *gocql.Batch, notificationVersion int64) {
+func (m *CassandraMetadataPersistenceV2) updateMetadataBatch(batch *gocql.Batch, notificationVersion int64) {
 	var nextVersion int64 = 1
 	var currentVersion *int64
 	if notificationVersion > 0 {
@@ -478,7 +499,7 @@ func (m *cassandraMetadataPersistenceV2) updateMetadataBatch(batch *gocql.Batch,
 	)
 }
 
-func (m *cassandraMetadataPersistenceV2) deleteDomain(name, ID string) error {
+func (m *CassandraMetadataPersistenceV2) deleteDomain(name, ID string) error {
 	query := m.session.Query(templateDeleteDomainByNameQueryV2, constDomainPartition, name)
 	if err := query.Exec(); err != nil {
 		return &workflow.InternalServiceError{

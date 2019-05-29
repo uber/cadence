@@ -81,12 +81,12 @@ func (f *Factory) NewMetadataStore() (p.MetadataStore, error) {
 
 // NewMetadataStoreV1 returns a metadatastore that understands only v1
 func (f *Factory) NewMetadataStoreV1() (p.MetadataStore, error) {
-	return newMetadataPersistence(f.cfg, f.clusterName, f.logger)
+	return NewMetadataPersistence(f.cfg, f.clusterName, f.logger)
 }
 
 // NewMetadataStoreV2 returns a metadatastore that understands only v2
 func (f *Factory) NewMetadataStoreV2() (p.MetadataStore, error) {
-	return newMetadataPersistenceV2(f.cfg, f.clusterName, f.logger)
+	return NewMetadataPersistenceV2(f.cfg, f.clusterName, f.logger)
 }
 
 // NewExecutionStore returns an ExecutionStore for a given shardID

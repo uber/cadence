@@ -245,6 +245,40 @@ func newAdminDomainCommands() []cli.Command {
 				AdminGetDomainIDOrName(c)
 			},
 		},
+		{
+			Name:  "migrate",
+			Usage: "Migrate domain from Cassandra V1 table to V2 table",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagAddress,
+					Usage: "cassandra host address",
+				},
+				cli.IntFlag{
+					Name:  FlagPort,
+					Value: 9042,
+					Usage: "cassandra port for the host (default is 9042)",
+				},
+				cli.StringFlag{
+					Name:  FlagUsername,
+					Usage: "cassandra username",
+				},
+				cli.StringFlag{
+					Name:  FlagPassword,
+					Usage: "cassandra password",
+				},
+				cli.StringFlag{
+					Name:  FlagKeyspace,
+					Usage: "cassandra keyspace",
+				},
+				cli.StringFlag{
+					Name:  FlagCurrentClusterName,
+					Usage: "name of the current cluster",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminDomainMigration(c)
+			},
+		},
 	}
 }
 
