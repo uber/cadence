@@ -638,16 +638,17 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 		// historySize and historyCount metric for execution on each update explicitly.
 		// N.B. - Dual emit is required here so that we can see aggregate timer stats across all
 		// domains along with the individual domains stats
-		allDomainSizeScope := c.metricsClient.Scope(metrics.ExecutionSizeStatsScope, metrics.DomainAllTag())
-		allDomainCountScope := c.metricsClient.Scope(metrics.ExecutionCountStatsScope, metrics.DomainAllTag())
-		allDomainSizeScope.RecordTimer(metrics.HistorySize, time.Duration(historySize))
-		allDomainCountScope.RecordTimer(metrics.HistoryCount, time.Duration(historyCount))
 		if entry, err := c.shard.GetDomainCache().GetDomainByID(executionInfo.DomainID); err == nil && entry != nil && entry.GetInfo() != nil {
 			domain := entry.GetInfo().Name
 			domainSizeScope := c.metricsClient.Scope(metrics.ExecutionSizeStatsScope, metrics.DomainTag(domain))
 			domainCountScope := c.metricsClient.Scope(metrics.ExecutionCountStatsScope, metrics.DomainTag(domain))
 			domainSizeScope.RecordTimer(metrics.HistorySize, time.Duration(historySize))
 			domainCountScope.RecordTimer(metrics.HistoryCount, time.Duration(historyCount))
+		} else {
+			allDomainSizeScope := c.metricsClient.Scope(metrics.ExecutionSizeStatsScope, metrics.DomainAllTag())
+			allDomainCountScope := c.metricsClient.Scope(metrics.ExecutionCountStatsScope, metrics.DomainAllTag())
+			allDomainSizeScope.RecordTimer(metrics.HistorySize, time.Duration(historySize))
+			allDomainCountScope.RecordTimer(metrics.HistoryCount, time.Duration(historyCount))
 		}
 
 		if historySize > sizeLimitWarn || historyCount > countLimitWarn {
@@ -1102,13 +1103,12 @@ func (c *workflowExecutionContextImpl) emitWorkflowExecutionStats(stats *persist
 		domainSizeScope := c.metricsClient.Scope(metrics.ExecutionSizeStatsScope, metrics.DomainTag(domain))
 		domainCountScope := c.metricsClient.Scope(metrics.ExecutionCountStatsScope, metrics.DomainTag(domain))
 		emitWorkflowExecutionStats(domainSizeScope, domainCountScope, stats, executionInfoHistorySize)
+	} else {
+		// emit domain all metrics if domain does not exist
+		allSizeScope := c.metricsClient.Scope(metrics.ExecutionSizeStatsScope, metrics.DomainAllTag())
+		allCountScope := c.metricsClient.Scope(metrics.ExecutionCountStatsScope, metrics.DomainAllTag())
+		emitWorkflowExecutionStats(allSizeScope, allCountScope, stats, executionInfoHistorySize)
 	}
-
-	// N.B - always emit domain "all" metrics for aggregate information as we
-	// need a way to look at aggregate stats across all domain
-	allSizeScope := c.metricsClient.Scope(metrics.ExecutionSizeStatsScope, metrics.DomainAllTag())
-	allCountScope := c.metricsClient.Scope(metrics.ExecutionCountStatsScope, metrics.DomainAllTag())
-	emitWorkflowExecutionStats(allSizeScope, allCountScope, stats, executionInfoHistorySize)
 }
 
 func (c *workflowExecutionContextImpl) emitSessionUpdateStats(stats *persistence.MutableStateUpdateSessionStats) {
@@ -1126,13 +1126,15 @@ func (c *workflowExecutionContextImpl) emitSessionUpdateStats(stats *persistence
 		domainSizeScope := c.metricsClient.Scope(metrics.SessionSizeStatsScope, metrics.DomainTag(domain))
 		domainCountScope := c.metricsClient.Scope(metrics.SessionCountStatsScope, metrics.DomainTag(domain))
 		emitSessionUpdateStats(domainSizeScope, domainCountScope, stats)
+	} else {
+		// emit domain all metrics if domain does not exist
+		allSizeScope := c.metricsClient.Scope(metrics.SessionSizeStatsScope, metrics.DomainAllTag())
+		allCountScope := c.metricsClient.Scope(metrics.SessionCountStatsScope, metrics.DomainAllTag())
+		emitSessionUpdateStats(allSizeScope, allCountScope, stats)
 	}
 
 	// N.B - always emit domain "all" metrics for aggregate information as we
 	// need a way to look at aggregate stats across all domain
-	allSizeScope := c.metricsClient.Scope(metrics.SessionSizeStatsScope, metrics.DomainAllTag())
-	allCountScope := c.metricsClient.Scope(metrics.SessionCountStatsScope, metrics.DomainAllTag())
-	emitSessionUpdateStats(allSizeScope, allCountScope, stats)
 }
 
 func (c *workflowExecutionContextImpl) emitWorkflowCompletionStats(event *workflow.HistoryEvent) {
@@ -1144,9 +1146,11 @@ func (c *workflowExecutionContextImpl) emitWorkflowCompletionStats(event *workfl
 	if len(domain) > 0 {
 		domainScope := c.metricsClient.Scope(metrics.WorkflowCompletionStatsScope, metrics.DomainTag(domain))
 		emitWorkflowCompletionStats(domainScope, event)
+	} else {
+		// emit domain all metrics if domain information does not exist
+		scope := c.metricsClient.Scope(metrics.WorkflowCompletionStatsScope, metrics.DomainAllTag())
+		emitWorkflowCompletionStats(scope, event)
 	}
-	scope := c.metricsClient.Scope(metrics.WorkflowCompletionStatsScope, metrics.DomainAllTag())
-	emitWorkflowCompletionStats(scope, event)
 }
 
 func emitWorkflowExecutionStats(sizeScope, countScope metrics.Scope, stats *persistence.MutableStateStats, executionInfoHistorySize int64) {

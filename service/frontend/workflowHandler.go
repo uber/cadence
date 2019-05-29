@@ -2899,7 +2899,7 @@ func (wh *WorkflowHandler) getLoggerForTask(taskToken []byte) log.Logger {
 func (wh *WorkflowHandler) startRequestProfile(scope int) (metrics.Scope, metrics.Stopwatch) {
 	wh.startWG.Wait()
 
-	metricsScope := wh.metricsClient.Scope(scope)
+	metricsScope := wh.metricsClient.Scope(scope).Tagged(metrics.DomainAllTag())
 	sw := metricsScope.StartTimer(metrics.CadenceLatency)
 	metricsScope.IncCounter(metrics.CadenceRequests)
 	return metricsScope, sw
@@ -2913,7 +2913,7 @@ func (wh *WorkflowHandler) startRequestProfileWithDomain(scope int, domain *stri
 	if domain != nil && len(*domain) > 0 {
 		metricsScope = wh.metricsClient.Scope(scope).Tagged(metrics.DomainTag(*domain))
 	} else {
-		metricsScope = wh.metricsClient.Scope(scope)
+		metricsScope = wh.metricsClient.Scope(scope).Tagged(metrics.DomainAllTag())
 	}
 	sw := metricsScope.StartTimer(metrics.CadenceLatency)
 	metricsScope.IncCounter(metrics.CadenceRequests)
