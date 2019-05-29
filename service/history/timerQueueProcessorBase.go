@@ -727,6 +727,7 @@ func (t *timerQueueProcessorBase) deleteWorkflowHistory(task *persistence.TimerT
 						return err
 					}
 					msBuilder.DeleteVersionHistory(idx)
+					//TODO: update mutable state with deleted version histories
 				}
 			}
 		}
