@@ -1644,8 +1644,6 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		return nil, wh.error(err, scope)
 	}
 
-	scope = scope.Tagged(metrics.DomainTag(getRequest.GetDomain()))
-
 	// force limit page size if exceed
 	if getRequest.GetMaximumPageSize() > common.GetHistoryMaxPageSize {
 		wh.GetThrottledLogger().Warn("GetHistory page size is larger than threshold",
@@ -1860,9 +1858,6 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(ctx context.Context,
 		return wh.error(err, scope)
 	}
 
-	// add domain tag to scope, so further metrics will have the domain tag
-	scope = scope.Tagged(metrics.DomainTag(signalRequest.GetDomain()))
-
 	sizeLimitError := wh.config.BlobSizeLimitError(signalRequest.GetDomain())
 	sizeLimitWarn := wh.config.BlobSizeLimitWarn(signalRequest.GetDomain())
 	if err := common.CheckEventBlobSizeLimit(
@@ -2005,9 +2000,6 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(ctx context.Context,
 		return nil, wh.error(err, scope)
 	}
 
-	// add domain tag to scope, so further metrics will have the domain tag
-	scope = scope.Tagged(metrics.DomainTag(domainName))
-
 	sizeLimitError := wh.config.BlobSizeLimitError(domainName)
 	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainName)
 	if err := common.CheckEventBlobSizeLimit(
@@ -2087,9 +2079,6 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(ctx context.Context,
 		return wh.error(err, scope)
 	}
 
-	// add domain tag to scope, so further metrics will have the domain tag
-	scope = scope.Tagged(metrics.DomainTag(terminateRequest.GetDomain()))
-
 	err = wh.history.TerminateWorkflowExecution(ctx, &h.TerminateWorkflowExecutionRequest{
 		DomainUUID:       common.StringPtr(domainID),
 		TerminateRequest: terminateRequest,
@@ -2135,9 +2124,6 @@ func (wh *WorkflowHandler) ResetWorkflowExecution(ctx context.Context,
 		return nil, wh.error(err, scope)
 	}
 
-	// add domain tag to scope, so further metrics will have the domain tag
-	scope = scope.Tagged(metrics.DomainTag(resetRequest.GetDomain()))
-
 	resp, err = wh.history.ResetWorkflowExecution(ctx, &h.ResetWorkflowExecutionRequest{
 		DomainUUID:   common.StringPtr(domainID),
 		ResetRequest: resetRequest,
@@ -2182,9 +2168,6 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 	if err != nil {
 		return wh.error(err, scope)
 	}
-
-	// add domain tag to scope, so further metrics will have the domain tag
-	scope = scope.Tagged(metrics.DomainTag(cancelRequest.GetDomain()))
 
 	err = wh.history.RequestCancelWorkflowExecution(ctx, &h.RequestCancelWorkflowExecutionRequest{
 		DomainUUID:    common.StringPtr(domainID),
@@ -2247,9 +2230,6 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
-
-	// add domain tag to scope, so further metrics will have the domain tag
-	scope = scope.Tagged(metrics.DomainTag(domain))
 
 	baseReq := persistence.ListWorkflowExecutionsRequest{
 		DomainUUID:        domainID,
@@ -2357,9 +2337,6 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 		return nil, wh.error(err, scope)
 	}
 
-	// add domain tag to scope, so further metrics will have the domain tag
-	scope = scope.Tagged(metrics.DomainTag(domain))
-
 	baseReq := persistence.ListWorkflowExecutionsRequest{
 		DomainUUID:        domainID,
 		Domain:            domain,
@@ -2455,9 +2432,6 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(ctx context.Context, listReque
 		return nil, wh.error(err, scope)
 	}
 
-	// add domain tag to scope, so further metrics will have the domain tag
-	scope = scope.Tagged(metrics.DomainTag(domain))
-
 	req := &persistence.ListWorkflowExecutionsRequestV2{
 		DomainUUID:    domainID,
 		Domain:        domain,
@@ -2513,9 +2487,6 @@ func (wh *WorkflowHandler) ScanWorkflowExecutions(ctx context.Context, listReque
 		return nil, wh.error(err, scope)
 	}
 
-	// add domain tag to scope, so further metrics will have the domain tag
-	scope = scope.Tagged(metrics.DomainTag(domain))
-
 	req := &persistence.ListWorkflowExecutionsRequestV2{
 		DomainUUID:    domainID,
 		Domain:        domain,
@@ -2566,9 +2537,6 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(ctx context.Context, countReq
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
-
-	// add domain tag to scope, so further metrics will have the domain tag
-	scope = scope.Tagged(metrics.DomainTag(domain))
 
 	req := &persistence.CountWorkflowExecutionsRequest{
 		DomainUUID: domainID,
@@ -2682,9 +2650,6 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 		return nil, wh.error(err, scope)
 	}
 
-	// add domain tag to scope, so further metrics will have the domain tag
-	scope = scope.Tagged(metrics.DomainTag(queryRequest.GetDomain()))
-
 	matchingRequest := &m.QueryWorkflowRequest{
 		DomainUUID:   common.StringPtr(domainID),
 		QueryRequest: queryRequest,
@@ -2778,9 +2743,6 @@ func (wh *WorkflowHandler) DescribeWorkflowExecution(ctx context.Context, reques
 		return nil, wh.error(err, scope)
 	}
 
-	// add domain tag to scope, so further metrics will have the domain tag
-	scope = scope.Tagged(metrics.DomainTag(request.GetDomain()))
-
 	if err := wh.validateExecutionAndEmitMetrics(request.Execution, scope); err != nil {
 		return nil, err
 	}
@@ -2825,9 +2787,6 @@ func (wh *WorkflowHandler) DescribeTaskList(ctx context.Context, request *gen.De
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
-
-	// add domain tag to scope, so further metrics will have the domain tag
-	scope = scope.Tagged(metrics.DomainTag(request.GetDomain()))
 
 	if err := wh.validateTaskList(request.TaskList, scope); err != nil {
 		return nil, err
