@@ -297,6 +297,18 @@ func (v *cassandraVisibilityPersistenceV2) ListClosedWorkflowExecutionsByStatus(
 	return response, nil
 }
 
+func (v *cassandraVisibilityPersistenceV2) ListWorkflowExecutions(request *p.ListWorkflowExecutionsRequestV2) (*p.InternalListWorkflowExecutionsResponse, error) {
+	return v.persistence.ListWorkflowExecutions(request)
+}
+
+func (v *cassandraVisibilityPersistenceV2) ScanWorkflowExecutions(request *p.ListWorkflowExecutionsRequestV2) (*p.InternalListWorkflowExecutionsResponse, error) {
+	return v.persistence.ScanWorkflowExecutions(request)
+}
+
+func (v *cassandraVisibilityPersistenceV2) CountWorkflowExecutions(request *p.CountWorkflowExecutionsRequest) (*p.CountWorkflowExecutionsResponse, error) {
+	return v.persistence.CountWorkflowExecutions(request)
+}
+
 // DeleteWorkflowExecution is a no-op since deletes are auto-handled by cassandra TTLs
 func (v *cassandraVisibilityPersistenceV2) DeleteWorkflowExecution(request *p.VisibilityDeleteWorkflowExecutionRequest) error {
 	return nil

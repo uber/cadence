@@ -56,7 +56,7 @@ ignored = ["github.com/uber/cadence/.gen"]
 
 [[constraint]]
   name = "github.com/gocql/gocql"
-  revision = "70385f88b28b43805bd83d212169ab2d38810b15"
+  revision = "56a164ee9f3135e9cfe725a6d25939f24cb2d044"
 
 [[constraint]]
   name = "github.com/golang/mock"
@@ -88,7 +88,7 @@ ignored = ["github.com/uber/cadence/.gen"]
 
 [[constraint]]
   name = "github.com/uber-go/tally"
-  version = "3.3.7"
+  version = "3.3.9"
 
 [[constraint]]
   name = "github.com/uber/ringpop-go"
@@ -142,3 +142,15 @@ ignored = ["github.com/uber/cadence/.gen"]
 [[constraint]]
   name = "github.com/hashicorp/go-version.git"
   version = "1.1.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/cch123/elasticsql"
+
+[[constraint]]
+  name = "github.com/valyala/fastjson"
+  version = "1.4.1"
+
+[[constraint]]
+  name = "github.com/aws/aws-sdk-go"
+  version = "1.19.31"

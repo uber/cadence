@@ -31,13 +31,14 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	ce "github.com/uber/cadence/common/errors"
-	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 )
 
 type (
 	workflowResetor interface {
-		ResetWorkflowExecution(ctx context.Context, resetRequest *h.ResetWorkflowExecutionRequest) (response *workflow.ResetWorkflowExecutionResponse, retError error)
+		ResetWorkflowExecution(ctx context.Context, resetRequest *workflow.ResetWorkflowExecutionRequest,
+			baseContext workflowExecutionContext, baseMutableState mutableState,
+			currContext workflowExecutionContext, currMutableState mutableState) (response *workflow.ResetWorkflowExecutionResponse, retError error)
 		ApplyResetEvent(ctx context.Context, request *h.ReplicateEventsRequest, domainID, workflowID, currentRunID string) (retError error)
 	}
 
@@ -49,115 +50,49 @@ type (
 
 var _ workflowResetor = (*workflowResetorImpl)(nil)
 
-func newWorkflowResetor(historyEngine *historyEngineImpl, repl *historyReplicator) *workflowResetorImpl {
-	return &workflowResetorImpl{
-		eng:        historyEngine,
-		replicator: repl,
-	}
+func newWorkflowResetor(historyEngine *historyEngineImpl) *workflowResetorImpl {
+	return &workflowResetorImpl{eng: historyEngine}
 }
 
 // ResetWorkflowExecution only allows resetting to decisionTaskCompleted, but exclude that batch of decisionTaskCompleted/decisionTaskFailed/decisionTaskTimeout.
 // It will then fail the decision with cause of "reset_workflow"
-func (w *workflowResetorImpl) ResetWorkflowExecution(ctx context.Context, resetRequest *h.ResetWorkflowExecutionRequest) (response *workflow.ResetWorkflowExecutionResponse, retError error) {
-	domainEntry, retError := w.eng.getActiveDomainEntry(resetRequest.DomainUUID)
+func (w *workflowResetorImpl) ResetWorkflowExecution(ctx context.Context, request *workflow.ResetWorkflowExecutionRequest,
+	baseContext workflowExecutionContext, baseMutableState mutableState,
+	currContext workflowExecutionContext, currMutableState mutableState) (response *workflow.ResetWorkflowExecutionResponse, retError error) {
+
+	domainEntry, retError := w.eng.shard.GetDomainCache().GetDomain(request.GetDomain())
 	if retError != nil {
 		return
 	}
-	domainID := domainEntry.GetInfo().ID
 
-	request := resetRequest.ResetRequest
-	if request == nil || request.WorkflowExecution == nil || len(request.WorkflowExecution.GetRunId()) == 0 || len(request.WorkflowExecution.GetWorkflowId()) == 0 {
-		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("Require workflowId and runId."),
-		}
-		return
-	}
-	if request.GetDecisionFinishEventId() <= common.FirstEventID {
-		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("Decision finish ID must be > 1."),
-		}
-		return
-	}
-	baseExecution := workflow.WorkflowExecution{
-		WorkflowId: request.WorkflowExecution.WorkflowId,
-		RunId:      request.WorkflowExecution.RunId,
-	}
-	newRunID := uuid.New()
+	resetNewRunID := uuid.New()
 	response = &workflow.ResetWorkflowExecutionResponse{
-		RunId: common.StringPtr(newRunID),
-	}
-
-	baseContext, baseRelease, retError := w.eng.historyCache.getOrCreateWorkflowExecutionWithTimeout(ctx, domainID, baseExecution)
-	if retError != nil {
-		return
-	}
-	defer func() { baseRelease(retError) }()
-	baseMutableState, retError := baseContext.loadWorkflowExecution()
-	if retError != nil {
-		return
-	}
-
-	// also load the current run of the workflow, it can be different from the base runID
-	resp, retError := w.eng.shard.GetExecutionManager().GetCurrentExecution(&persistence.GetCurrentExecutionRequest{
-		DomainID:   domainID,
-		WorkflowID: request.WorkflowExecution.GetWorkflowId(),
-	})
-	if retError != nil {
-		return
-	}
-	var currMutableState mutableState
-	var currContext workflowExecutionContext
-	var currExecution workflow.WorkflowExecution
-	if resp.RunID == baseExecution.GetRunId() {
-		currContext = baseContext
-		currMutableState = baseMutableState
-		currExecution = baseExecution
-	} else {
-		currExecution = workflow.WorkflowExecution{
-			WorkflowId: request.WorkflowExecution.WorkflowId,
-			RunId:      common.StringPtr(resp.RunID),
-		}
-		var currRelease func(err error)
-		currContext, currRelease, retError = w.eng.historyCache.getOrCreateWorkflowExecutionWithTimeout(ctx, domainID, currExecution)
-		if retError != nil {
-			return
-		}
-		defer func() { currRelease(retError) }()
-		currMutableState, retError = currContext.loadWorkflowExecution()
-		if retError != nil {
-			return
-		}
-	}
-	// dedup by requestID
-	if currMutableState.GetExecutionInfo().CreateRequestID == request.GetRequestId() {
-		response.RunId = currExecution.RunId
-		w.eng.logger.Info("Duplicated reset request",
-			tag.WorkflowID(currExecution.GetWorkflowId()),
-			tag.WorkflowRunID(currExecution.GetRunId()),
-			tag.WorkflowDomainID(domainID))
-		return
+		RunId: common.StringPtr(resetNewRunID),
 	}
 
 	// before changing mutable state
-	prevRunVersion := currMutableState.GetLastWriteVersion()
+	currPrevRunVersion := currMutableState.GetLastWriteVersion()
 	// terminate the current run if it is running
-	terminateCurr, closeTask, cleanupTask, retError := w.terminateIfCurrIsRunning(currMutableState, request.GetReason(), currExecution)
+	currTerminated, currCloseTask, currCleanupTask, retError := w.terminateIfCurrIsRunning(currMutableState, request.GetReason())
 	if retError != nil {
 		return
 	}
 
-	retError = validateResetWorkflowBeforeReplay(baseMutableState, currMutableState)
+	retError = w.validateResetWorkflowBeforeReplay(baseMutableState, currMutableState)
 	if retError != nil {
 		return
 	}
 
-	newMutableState, transferTasks, timerTasks, retError := w.buildNewMutableStateForReset(ctx, domainEntry, baseMutableState, currMutableState, request.GetReason(), request.GetDecisionFinishEventId(), request.GetRequestId(), newRunID)
+	newMutableState, newTransferTasks, newTimerTasks, retError := w.buildNewMutableStateForReset(
+		ctx, domainEntry, baseMutableState, currMutableState,
+		request.GetReason(), request.GetDecisionFinishEventId(), request.GetRequestId(), resetNewRunID,
+	)
 	// complete the fork process at the end, it is OK even if this defer fails, because our timer task can still clean up correctly
 	defer func() {
 		if newMutableState != nil && len(newMutableState.GetExecutionInfo().GetCurrentBranch()) > 0 {
 			w.eng.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
 				BranchToken: newMutableState.GetExecutionInfo().GetCurrentBranch(),
-				Success:     retError == nil,
+				Success:     retError == nil || persistence.IsTimeoutError(retError),
 				ShardID:     common.IntPtr(w.eng.shard.GetShardID()),
 			})
 		}
@@ -166,20 +101,27 @@ func (w *workflowResetorImpl) ResetWorkflowExecution(ctx context.Context, resetR
 		return
 	}
 
-	retError = w.checkDomainStatus(newMutableState, prevRunVersion, request.GetDomain())
+	retError = w.checkDomainStatus(newMutableState, currPrevRunVersion, domainEntry.GetInfo().Name)
 	if retError != nil {
 		return
 	}
 
 	// update replication and generate replication task
-	currReplicationTasks, insertReplicationTasks := w.generateReplicationTasksForReset(terminateCurr, currMutableState, newMutableState, domainEntry)
+	currReplicationTasks, newReplicationTasks := w.generateReplicationTasksForReset(
+		currTerminated, currMutableState, newMutableState, domainEntry,
+	)
 
 	// finally, write to persistence
-	retError = currContext.resetWorkflowExecution(currMutableState, terminateCurr, closeTask, cleanupTask, newMutableState, transferTasks, timerTasks, currReplicationTasks, insertReplicationTasks, baseExecution.GetRunId(), baseMutableState.GetNextEventID(), prevRunVersion)
+	retError = currContext.resetWorkflowExecution(
+		currMutableState, currTerminated, currCloseTask, currCleanupTask,
+		newMutableState, newTransferTasks, newTimerTasks,
+		currReplicationTasks, newReplicationTasks, baseMutableState.GetExecutionInfo().RunID,
+		baseMutableState.GetNextEventID(), currPrevRunVersion,
+	)
 
 	if retError == nil {
-		w.eng.txProcessor.NotifyNewTask(w.eng.currentClusterName, transferTasks)
-		w.eng.timerProcessor.NotifyNewTimers(w.eng.currentClusterName, w.eng.shard.GetCurrentTime(w.eng.currentClusterName), timerTasks)
+		w.eng.txProcessor.NotifyNewTask(w.eng.currentClusterName, newTransferTasks)
+		w.eng.timerProcessor.NotifyNewTimers(w.eng.currentClusterName, w.eng.shard.GetCurrentTime(w.eng.currentClusterName), newTimerTasks)
 	}
 
 	return
@@ -190,82 +132,57 @@ func (w *workflowResetorImpl) checkDomainStatus(newMutableState mutableState, pr
 		clusterMetadata := w.eng.shard.GetService().GetClusterMetadata()
 		currentVersion := newMutableState.GetCurrentVersion()
 		if currentVersion < prevRunVersion {
-			retError = ce.NewDomainNotActiveError(
+			return ce.NewDomainNotActiveError(
 				domain,
 				clusterMetadata.GetCurrentClusterName(),
 				clusterMetadata.ClusterNameForFailoverVersion(prevRunVersion),
 			)
-			return
 		}
 		activeCluster := clusterMetadata.ClusterNameForFailoverVersion(currentVersion)
 		currentCluster := clusterMetadata.GetCurrentClusterName()
 		if activeCluster != currentCluster {
-			retError = ce.NewDomainNotActiveError(domain, currentCluster, activeCluster)
-			return
+			return ce.NewDomainNotActiveError(domain, currentCluster, activeCluster)
 		}
 	}
 	return nil
 }
 
-func validateResetWorkflowBeforeReplay(baseMutableState, currMutableState mutableState) (retError error) {
+func (w *workflowResetorImpl) validateResetWorkflowBeforeReplay(baseMutableState, currMutableState mutableState) (retError error) {
 	if baseMutableState.GetEventStoreVersion() != persistence.EventStoreVersionV2 {
-		retError = &workflow.BadRequestError{
+		return &workflow.BadRequestError{
 			Message: fmt.Sprintf("reset API is not supported for V1 history events"),
 		}
-		return
-	}
-	if len(baseMutableState.GetPendingChildExecutionInfos()) > 0 {
-		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("reset is not allowed when workflow has pending child workflow. RunID: %v", baseMutableState.GetExecutionInfo().RunID),
-		}
-		return
 	}
 	if len(currMutableState.GetPendingChildExecutionInfos()) > 0 {
-		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("reset is not allowed when workflow has pending child workflow. RunID: %v", currMutableState.GetExecutionInfo().RunID),
+		return &workflow.BadRequestError{
+			Message: fmt.Sprintf("reset is not allowed when current workflow has pending child workflow."),
 		}
-		return
 	}
 	if currMutableState.IsWorkflowExecutionRunning() {
-		retError = &workflow.InternalServiceError{
+		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("current workflow should already been terminated"),
 		}
 	}
 	return
 }
 
-func validateResetWorkflowAfterReplay(newMutableState mutableState) (retError error) {
-	if len(newMutableState.GetAllRequestCancels()) > 0 {
-		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending request cancel "),
-		}
-		return
-	}
-	if len(newMutableState.GetPendingChildExecutionInfos()) > 0 {
-		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending child workflow "),
-		}
-		return
-	}
-	if len(newMutableState.GetAllSignalsToSend()) > 0 {
-		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending signals to send, pending signal: %+v ", newMutableState.GetAllSignalsToSend()),
-		}
+func (w *workflowResetorImpl) validateResetWorkflowAfterReplay(newMutableState mutableState) (retError error) {
+	retError = newMutableState.CheckResettable()
+	if retError != nil {
 		return
 	}
 	if !newMutableState.HasInFlightDecisionTask() {
-		retError = &workflow.BadRequestError{
+		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("can't find the last started decision"),
 		}
-		return
 	}
 	if newMutableState.HasBufferedEvents() {
-		retError = &workflow.InternalServiceError{
+		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("replay history shouldn't see any bufferred events"),
 		}
 	}
 	if newMutableState.IsStickyTaskListEnabled() {
-		retError = &workflow.InternalServiceError{
+		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("replay history shouldn't have stikyness"),
 		}
 	}
@@ -308,19 +225,25 @@ func (w *workflowResetorImpl) scheduleUnstartedActivities(msBuilder mutableState
 	return tasks, nil
 }
 
-func (w *workflowResetorImpl) buildNewMutableStateForReset(ctx context.Context, domainEntry *cache.DomainCacheEntry, baseMutableState, currMutableState mutableState, resetReason string, resetDecisionCompletedEventID int64, requestedID, newRunID string) (newMutableState mutableState, transferTasks, timerTasks []persistence.Task, retError error) {
+func (w *workflowResetorImpl) buildNewMutableStateForReset(
+	ctx context.Context, domainEntry *cache.DomainCacheEntry, baseMutableState, currMutableState mutableState,
+	resetReason string, resetDecisionCompletedEventID int64, requestedID, newRunID string,
+) (newMutableState mutableState, newTransferTasks, newTimerTasks []persistence.Task, retError error) {
+
 	domainID := baseMutableState.GetExecutionInfo().DomainID
 	workflowID := baseMutableState.GetExecutionInfo().WorkflowID
 	baseRunID := baseMutableState.GetExecutionInfo().RunID
 
 	// replay history to reset point(exclusive) to rebuild mutableState
-	forkEventVersion, wfTimeoutSecs, receivedSignals, continueRunID, newStateBuilder, retError := w.replayHistoryEvents(resetDecisionCompletedEventID, requestedID, baseMutableState, newRunID)
+	forkEventVersion, wfTimeoutSecs, receivedSignals, continueRunID, newStateBuilder, retError := w.replayHistoryEvents(
+		resetDecisionCompletedEventID, requestedID, baseMutableState, newRunID,
+	)
 	if retError != nil {
 		return
 	}
 	newMutableState = newStateBuilder.getMutableState()
 
-	retError = validateResetWorkflowAfterReplay(newMutableState)
+	retError = w.validateResetWorkflowAfterReplay(newMutableState)
 	if retError != nil {
 		return
 	}
@@ -338,6 +261,7 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(ctx context.Context, 
 		identityHistoryService, resetReason, baseRunID, newRunID, forkEventVersion)
 	if event == nil {
 		retError = &workflow.InternalServiceError{Message: "Failed to add decision failed event."}
+		return
 	}
 
 	retError = w.failStartedActivities(newMutableState)
@@ -345,19 +269,19 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(ctx context.Context, 
 		return
 	}
 
-	transferTasks, retError = w.scheduleUnstartedActivities(newMutableState)
+	newTransferTasks, retError = w.scheduleUnstartedActivities(newMutableState)
 	if retError != nil {
 		return
 	}
 
 	// we will need a timer for the scheduled activities
-	needActivityTimer := len(transferTasks) > 0
+	needActivityTimer := len(newTransferTasks) > 0
 
 	// generate new timer tasks: we need 4 timers:
 	// 1. WF timeout,
 	// 2. user timers for timers started but not fired by reset
 	// 3. activity timeout for scheduled but not started activities
-	timerTasks, retError = w.generateTimerTasksForReset(newMutableState, wfTimeoutSecs, needActivityTimer)
+	newTimerTasks, retError = w.generateTimerTasksForReset(newMutableState, wfTimeoutSecs, needActivityTimer)
 	if retError != nil {
 		return
 	}
@@ -374,7 +298,7 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(ctx context.Context, 
 		return
 	}
 
-	transferTasks = append(transferTasks,
+	newTransferTasks = append(newTransferTasks,
 		&persistence.DecisionTask{
 			DomainID:   domainID,
 			TaskList:   di.TaskList,
@@ -397,15 +321,11 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(ctx context.Context, 
 	return
 }
 
-func (w *workflowResetorImpl) terminateIfCurrIsRunning(currMutableState mutableState, reason string, currExecution workflow.WorkflowExecution) (terminateCurr bool, closeTask, cleanupTask persistence.Task, retError error) {
+func (w *workflowResetorImpl) terminateIfCurrIsRunning(currMutableState mutableState,
+	reason string) (terminateCurr bool, closeTask, cleanupTask persistence.Task, retError error) {
+
 	if currMutableState.IsWorkflowExecutionRunning() {
 		terminateCurr = true
-
-		retError = failInFlightDecisionToClearBufferedEvents(currMutableState)
-		if retError != nil {
-			return
-		}
-
 		currMutableState.AddWorkflowExecutionTerminatedEvent(&workflow.TerminateWorkflowExecutionRequest{
 			Reason:   common.StringPtr(reason),
 			Details:  nil,
@@ -413,8 +333,11 @@ func (w *workflowResetorImpl) terminateIfCurrIsRunning(currMutableState mutableS
 		})
 		closeTask, cleanupTask, retError = w.eng.getWorkflowHistoryCleanupTasks(
 			currMutableState.GetExecutionInfo().DomainID,
-			currExecution.GetWorkflowId(),
-			w.eng.getTimerBuilder(&currExecution))
+			currMutableState.GetExecutionInfo().WorkflowID,
+			w.eng.getTimerBuilder(&workflow.WorkflowExecution{
+				WorkflowId: common.StringPtr(currMutableState.GetExecutionInfo().WorkflowID),
+				RunId:      common.StringPtr(currMutableState.GetExecutionInfo().RunID),
+			}))
 		if retError != nil {
 			return
 		}
@@ -616,6 +539,7 @@ func (w *workflowResetorImpl) replayHistoryEvents(decisionFinishEventID int64, r
 		for _, batch := range readResp.History {
 			history := batch.Events
 			firstEvent := history[0]
+			lastEvent := history[len(history)-1]
 
 			// for saving received signals only
 			if firstEvent.GetEventId() >= decisionFinishEventID {
@@ -659,10 +583,11 @@ func (w *workflowResetorImpl) replayHistoryEvents(decisionFinishEventID int64, r
 			}
 
 			// avoid replay this event in stateBuilder which will run into NPE if WF doesn't enable XDC
-			if firstEvent.GetEventType() == workflow.EventTypeWorkflowExecutionContinuedAsNew {
+			if lastEvent.GetEventType() == workflow.EventTypeWorkflowExecutionContinuedAsNew {
 				retError = &workflow.BadRequestError{
 					Message: fmt.Sprintf("wrong DecisionFinishEventId, cannot replay history to continueAsNew"),
 				}
+				return
 			}
 
 			_, _, _, retError = sBuilder.applyEvents(domainID, requestID, prevExecution, history, nil, persistence.EventStoreVersionV2, persistence.EventStoreVersionV2)
@@ -799,14 +724,14 @@ func (w *workflowResetorImpl) ApplyResetEvent(ctx context.Context, request *h.Re
 	defer func() {
 		w.eng.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
 			BranchToken: newMsBuilder.GetExecutionInfo().GetCurrentBranch(),
-			Success:     retError == nil,
+			Success:     retError == nil || persistence.IsTimeoutError(retError),
 			ShardID:     shardID,
 		})
 	}()
 	newMsBuilder.GetExecutionInfo().BranchToken = forkResp.NewBranchToken
 
 	// prepare to append history to new branch
-	hBuilder := newHistoryBuilder(newMsBuilder, w.replicator.logger)
+	hBuilder := newHistoryBuilder(newMsBuilder, w.eng.logger)
 	hBuilder.history = historyAfterReset
 	newMsBuilder.SetHistoryBuilder(hBuilder)
 
@@ -815,7 +740,7 @@ func (w *workflowResetorImpl) ApplyResetEvent(ctx context.Context, request *h.Re
 		return
 	}
 	now := time.Unix(0, lastEvent.GetTimestamp())
-	w.replicator.notify(request.GetSourceCluster(), now, newRunTransferTasks, newRunTimerTasks)
+	notify(w.eng.shard, w.eng, request.GetSourceCluster(), now, newRunTransferTasks, newRunTimerTasks)
 	return nil
 }
 
@@ -923,5 +848,24 @@ func (w *workflowResetorImpl) replicateResetEvent(baseMutableState mutableState,
 
 	newMsBuilder.GetExecutionInfo().SetLastFirstEventID(firstEvent.GetEventId())
 	newMsBuilder.UpdateReplicationStateLastEventID(clusterMetadata.GetCurrentClusterName(), lastEvent.GetVersion(), lastEvent.GetEventId())
+	return
+}
+
+// FindAutoResetPoint returns the auto reset point
+func FindAutoResetPoint(badBinaries *workflow.BadBinaries, autoResetPoints *workflow.ResetPoints) (reason string, pt *workflow.ResetPointInfo) {
+	if badBinaries == nil || badBinaries.Binaries == nil || autoResetPoints == nil || autoResetPoints.Points == nil {
+		return
+	}
+	nowNano := time.Now().UnixNano()
+	for _, p := range autoResetPoints.Points {
+		bin, ok := badBinaries.Binaries[p.GetBinaryChecksum()]
+		if ok && p.GetResettable() {
+			if p.GetExpiringTimeNano() > 0 && nowNano > p.GetExpiringTimeNano() {
+				// reset point has expired and we may already deleted the history
+				continue
+			}
+			return bin.GetReason(), p
+		}
+	}
 	return
 }

@@ -306,7 +306,7 @@ Update_History_Loop:
 
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.
-		err = t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, false, timerTasks, nil)
+		err = t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, false, timerTasks)
 		if err != nil {
 			if err == ErrConflict {
 				continue Update_History_Loop
@@ -462,7 +462,7 @@ Update_History_Loop:
 			// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 			// the history and try the operation again.
 			scheduleNewDecision := updateHistory && !msBuilder.HasPendingDecisionTask()
-			err := t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, false, timerTasks, nil)
+			err := t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, false, timerTasks)
 			if err != nil {
 				if err == ErrConflict {
 					continue Update_History_Loop
@@ -519,12 +519,11 @@ Update_History_Loop:
 			}
 		case int(workflow.TimeoutTypeScheduleToStart):
 			t.metricsClient.IncCounter(metrics.TimerActiveTaskDecisionTimeoutScope, metrics.ScheduleToStartTimeoutCounter)
-			// decision schedule to start timeout only apply to sticky decision
 			// check if scheduled decision still pending and not started yet
-			if di.Attempt == task.ScheduleAttempt && di.StartedID == common.EmptyEventID && msBuilder.IsStickyTaskListEnabled() {
+			if di.Attempt == task.ScheduleAttempt && di.StartedID == common.EmptyEventID {
 				timeoutEvent := msBuilder.AddDecisionTaskScheduleToStartTimeoutEvent(scheduleID)
 				if timeoutEvent == nil {
-					// Unable to add DecisionTaskTimedout event to history
+					// Unable to add DecisionTaskTimeout event to history
 					return &workflow.InternalServiceError{Message: "Unable to add DecisionTaskScheduleToStartTimeout event to history."}
 				}
 
@@ -536,7 +535,7 @@ Update_History_Loop:
 		if scheduleNewDecision {
 			// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 			// the history and try the operation again.
-			err := t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, false, nil, nil)
+			err := t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, false, nil)
 			if err != nil {
 				if err == ErrConflict {
 					continue Update_History_Loop
@@ -574,14 +573,13 @@ Update_History_Loop:
 			return nil
 		}
 
-		if msBuilder.GetPreviousStartedEventID() != common.EmptyEventID ||
-			msBuilder.HasPendingDecisionTask() {
+		if msBuilder.HasProcessedOrPendingDecisionTask() {
 			// already has decision task
 			return nil
 		}
 
 		// schedule first decision task
-		err = t.updateWorkflowExecution(context, msBuilder, true, false, nil, nil)
+		err = t.updateWorkflowExecution(context, msBuilder, true, false, nil)
 		if err != nil {
 			if err == ErrConflict {
 				continue Update_History_Loop
@@ -707,11 +705,6 @@ Update_History_Loop:
 			}
 		}
 
-		err = failInFlightDecisionToClearBufferedEvents(msBuilder)
-		if err != nil {
-			return err
-		}
-
 		timeoutReason := getTimeoutErrorReason(workflow.TimeoutTypeStartToClose)
 		backoffInterval := msBuilder.GetRetryBackoffDuration(timeoutReason)
 		continueAsNewInitiator := workflow.ContinueAsNewInitiatorRetryPolicy
@@ -729,7 +722,7 @@ Update_History_Loop:
 
 			// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 			// the history and try the operation again.
-			err = t.updateWorkflowExecution(context, msBuilder, false, true, nil, nil)
+			err = t.updateWorkflowExecution(context, msBuilder, false, true, nil)
 			if err != nil {
 				if err == ErrConflict {
 					continue Update_History_Loop
@@ -811,7 +804,6 @@ func (t *timerQueueActiveProcessorImpl) updateWorkflowExecution(
 	scheduleNewDecision bool,
 	createDeletionTask bool,
 	timerTasks []persistence.Task,
-	clearTimerTask persistence.Task,
 ) error {
 	executionInfo := msBuilder.GetExecutionInfo()
 	var transferTasks []persistence.Task
@@ -843,7 +835,7 @@ func (t *timerQueueActiveProcessorImpl) updateWorkflowExecution(
 		return err1
 	}
 
-	err = context.updateWorkflowExecutionWithDeleteTask(transferTasks, timerTasks, clearTimerTask, transactionID)
+	err = context.updateWorkflowExecution(transferTasks, timerTasks, transactionID)
 	if err != nil {
 		if isShardOwnershiptLostError(err) {
 			// Shard is stolen.  Stop timer processing to reduce duplicates

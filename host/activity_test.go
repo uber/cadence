@@ -49,6 +49,10 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Success() {
 	taskList := &workflow.TaskList{}
 	taskList.Name = common.StringPtr(tl)
 
+	header := &workflow.Header{
+		Fields: map[string][]byte{"tracing": []byte("sample data")},
+	}
+
 	request := &workflow.StartWorkflowExecutionRequest{
 		RequestId:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
@@ -56,6 +60,7 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Success() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
+		Header:                              header,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
@@ -84,6 +89,7 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Success() {
 					ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityName)},
 					TaskList:                      &workflow.TaskList{Name: &tl},
 					Input:                         buf.Bytes(),
+					Header:                        header,
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(15),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 					StartToCloseTimeoutSeconds:    common.Int32Ptr(15),
@@ -143,6 +149,17 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Success() {
 	s.Nil(err)
 	s.True(workflowComplete)
 	s.True(activityExecutedCount == 1)
+
+	// go over history and verify that the activity task scheduled event has header on it
+	events := s.getHistory(s.domainName, &workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(id),
+		RunId:      common.StringPtr(we.GetRunId()),
+	})
+	for _, event := range events {
+		if *event.EventType == workflow.EventTypeActivityTaskScheduled {
+			s.Equal(header, event.ActivityTaskScheduledEventAttributes.Header)
+		}
+	}
 }
 
 func (s *integrationSuite) TestActivityHeartbeatDetailsDuringRetry() {
@@ -477,10 +494,6 @@ func (s *integrationSuite) TestActivityRetry() {
 		}
 	}
 
-	s.printWorkflowHistory(s.domainName, &workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(id),
-		RunId:      common.StringPtr(we.GetRunId()),
-	})
 	s.True(workflowComplete)
 	s.True(activityExecutedCount == 2)
 }
@@ -819,10 +832,6 @@ func (s *integrationSuite) TestActivityTimeouts() {
 		}
 	}
 
-	s.printWorkflowHistory(s.domainName, &workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(id),
-		RunId:      common.StringPtr(we.GetRunId()),
-	})
 	s.True(workflowComplete)
 }
 
@@ -1007,10 +1016,6 @@ func (s *integrationSuite) TestActivityHeartbeatTimeouts() {
 		}
 	}
 
-	s.printWorkflowHistory(s.domainName, &workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(id),
-		RunId:      common.StringPtr(we.GetRunId()),
-	})
 	s.True(workflowComplete)
 	s.False(failWorkflow, failReason)
 	s.Equal(activityCount, activitiesTimedout)
@@ -1269,9 +1274,4 @@ func (s *integrationSuite) TestActivityCancellationNotStarted() {
 	requestCancellation = false
 	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.True(err == nil || err == matching.ErrNoTasks)
-
-	s.printWorkflowHistory(s.domainName, &workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(id),
-		RunId:      common.StringPtr(we.GetRunId()),
-	})
 }

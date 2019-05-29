@@ -64,20 +64,16 @@ const (
 
 // Common tags for all services
 const (
-	HostnameTagName  = "hostname"
-	OperationTagName = "operation"
-	// ShardTagName is temporary until we can get all metric data removed for the service
-	ShardTagName       = "shard"
-	CadenceRoleTagName = "cadence-role"
-	StatsTypeTagName   = "stats-type"
-	CacheTypeTagName   = "cache-type"
+	HostnameTagName    = "hostname"
+	OperationTagName   = "operation"
+	CadenceRoleTagName = "cadence_role"
+	StatsTypeTagName   = "stats_type"
+	CacheTypeTagName   = "cache_type"
 )
 
 // This package should hold all the metrics and tags for cadence
 const (
 	UnknownDirectoryTagValue = "Unknown"
-	AllShardsTagValue        = "ALL"
-	NoneShardsTagValue       = "NONE"
 
 	HistoryRoleTagValue   = "history"
 	MatchingRoleTagValue  = "matching"
@@ -95,15 +91,15 @@ const (
 // Common service base metrics
 const (
 	RestartCount         = "restarts"
-	NumGoRoutinesGauge   = "num-goroutines"
+	NumGoRoutinesGauge   = "num_goroutines"
 	GoMaxProcsGauge      = "gomaxprocs"
-	MemoryAllocatedGauge = "memory.allocated"
-	MemoryHeapGauge      = "memory.heap"
-	MemoryHeapIdleGauge  = "memory.heapidle"
-	MemoryHeapInuseGauge = "memory.heapinuse"
-	MemoryStackGauge     = "memory.stack"
-	NumGCCounter         = "memory.num-gc"
-	GcPauseMsTimer       = "memory.gc-pause-ms"
+	MemoryAllocatedGauge = "memory_allocated"
+	MemoryHeapGauge      = "memory_heap"
+	MemoryHeapIdleGauge  = "memory_heapidle"
+	MemoryHeapInuseGauge = "memory_heapinuse"
+	MemoryStackGauge     = "memory_stack"
+	NumGCCounter         = "memory_num_gc"
+	GcPauseMsTimer       = "memory_gc_pause_ms"
 )
 
 // ServiceMetrics are types for common service base metrics
@@ -146,6 +142,8 @@ const (
 	PersistenceResetWorkflowExecutionScope
 	// PersistenceDeleteWorkflowExecutionScope tracks DeleteWorkflowExecution calls made by service to persistence layer
 	PersistenceDeleteWorkflowExecutionScope
+	// PersistenceDeleteCurrentWorkflowExecutionScope tracks DeleteCurrentWorkflowExecution calls made by service to persistence layer
+	PersistenceDeleteCurrentWorkflowExecutionScope
 	// PersistenceGetCurrentExecutionScope tracks GetCurrentExecution calls made by service to persistence layer
 	PersistenceGetCurrentExecutionScope
 	// PersistenceGetTransferTasksScope tracks GetTransferTasks calls made by service to persistence layer
@@ -222,6 +220,12 @@ const (
 	PersistenceGetClosedWorkflowExecutionScope
 	// PersistenceVisibilityDeleteWorkflowExecutionScope is the metrics scope for persistence.VisibilityManager.DeleteWorkflowExecution
 	PersistenceVisibilityDeleteWorkflowExecutionScope
+	// PersistenceListWorkflowExecutionsScope tracks ListWorkflowExecutions calls made by service to persistence layer
+	PersistenceListWorkflowExecutionsScope
+	// PersistenceScanWorkflowExecutionsScope tracks ScanWorkflowExecutions calls made by service to persistence layer
+	PersistenceScanWorkflowExecutionsScope
+	// PersistenceCountWorkflowExecutionsScope tracks CountWorkflowExecutions calls made by service to persistence layer
+	PersistenceCountWorkflowExecutionsScope
 	// HistoryClientStartWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientStartWorkflowExecutionScope
 	// HistoryClientRecordActivityTaskHeartbeatScope tracks RPC calls to history service
@@ -368,6 +372,8 @@ const (
 	HistoryRereplicationByTimerTaskScope
 	// HistoryRereplicationByHistoryReplicationScope tracks history replication calls made by history replication
 	HistoryRereplicationByHistoryReplicationScope
+	// HistoryRereplicationByHistoryMetadataReplicationScope tracks history replication calls made by history replication
+	HistoryRereplicationByHistoryMetadataReplicationScope
 	// HistoryRereplicationByActivityReplicationScope tracks history replication calls made by activity replication
 	HistoryRereplicationByActivityReplicationScope
 
@@ -424,6 +430,15 @@ const (
 	ElasticsearchListClosedWorkflowExecutionsByStatusScope
 	// ElasticsearchGetClosedWorkflowExecutionScope tracks GetClosedWorkflowExecution calls made by service to persistence layer
 	ElasticsearchGetClosedWorkflowExecutionScope
+	// ElasticsearchListWorkflowExecutionsScope tracks ListWorkflowExecutions calls made by service to persistence layer
+	ElasticsearchListWorkflowExecutionsScope
+	// ElasticsearchScanWorkflowExecutionsScope tracks ScanWorkflowExecutions calls made by service to persistence layer
+	ElasticsearchScanWorkflowExecutionsScope
+	// ElasticsearchCountWorkflowExecutionsScope tracks CountWorkflowExecutions calls made by service to persistence layer
+	ElasticsearchCountWorkflowExecutionsScope
+
+	// SequentialTaskProcessingScope is used by sequential task processing logic
+	SequentialTaskProcessingScope
 
 	NumCommonScopes
 )
@@ -484,6 +499,12 @@ const (
 	FrontendListOpenWorkflowExecutionsScope
 	// FrontendListClosedWorkflowExecutionsScope is the metric scope for frontend.ListClosedWorkflowExecutions
 	FrontendListClosedWorkflowExecutionsScope
+	// FrontendListWorkflowExecutionsScope is the metric scope for frontend.ListWorkflowExecutions
+	FrontendListWorkflowExecutionsScope
+	// FrontendScanWorkflowExecutionsScope is the metric scope for frontend.ListWorkflowExecutions
+	FrontendScanWorkflowExecutionsScope
+	// FrontendCountWorkflowExecutionsScope is the metric scope for frontend.CountWorkflowExecutions
+	FrontendCountWorkflowExecutionsScope
 	// FrontendRegisterDomainScope is the metric scope for frontend.RegisterDomain
 	FrontendRegisterDomainScope
 	// FrontendDescribeDomainScope is the metric scope for frontend.DescribeDomain
@@ -504,6 +525,8 @@ const (
 	FrontendListDomainsScope
 	// FrontendResetWorkflowExecutionScope is the metric scope for frontend.ResetWorkflowExecution
 	FrontendResetWorkflowExecutionScope
+	// FrontendGetSearchAttributesScope is the metric scope for frontend.GetSearchAttributes
+	FrontendGetSearchAttributesScope
 
 	NumFrontendScopes
 )
@@ -580,6 +603,10 @@ const (
 	TransferActiveTaskStartChildExecutionScope
 	// TransferActiveTaskRecordWorkflowStartedScope is the scope used for record workflow started task processing by transfer queue processor
 	TransferActiveTaskRecordWorkflowStartedScope
+	// TransferActiveTaskResetWorkflowScope is the scope used for record workflow started task processing by transfer queue processor
+	TransferActiveTaskResetWorkflowScope
+	// TransferStandbyTaskResetWorkflowScope is the scope used for record workflow started task processing by transfer queue processor
+	TransferStandbyTaskResetWorkflowScope
 	// TransferStandbyTaskActivityScope is the scope used for activity task processing by transfer queue processor
 	TransferStandbyTaskActivityScope
 	// TransferStandbyTaskDecisionScope is the scope used for decision task processing by transfer queue processor
@@ -670,6 +697,8 @@ const (
 	HistoryProcessDeleteHistoryEventScope
 	// WorkflowCompletionStatsScope tracks workflow completion updates
 	WorkflowCompletionStatsScope
+	// ArchiverClientScope is scope used by all metrics emitted by archiver.Client
+	ArchiverClientScope
 
 	NumHistoryScopes
 )
@@ -706,6 +735,8 @@ const (
 	DomainReplicationTaskScope
 	// HistoryReplicationTaskScope is the scope used by history task replication processing
 	HistoryReplicationTaskScope
+	// HistoryMetadataReplicationTaskScope is the scope used by history metadata task replication processing
+	HistoryMetadataReplicationTaskScope
 	// SyncShardTaskScope is the scope used by sync shrad information processing
 	SyncShardTaskScope
 	// SyncActivityTaskScope is the scope used by sync activity information processing
@@ -724,8 +755,6 @@ const (
 	ArchiverPumpScope
 	// ArchiverArchivalWorkflowScope is scope used by all metrics emitted by archiver.ArchivalWorkflow
 	ArchiverArchivalWorkflowScope
-	// ArchiverClientScope is scope used by all metrics emitted by archiver.Client
-	ArchiverClientScope
 	// TaskListScavengerScope is scope used by all metrics emitted by worker.tasklist.Scavenger module
 	TaskListScavengerScope
 
@@ -756,15 +785,16 @@ const (
 var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 	// common scope Names
 	Common: {
-		PersistenceCreateShardScope:                              {operation: "CreateShard", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceGetShardScope:                                 {operation: "GetShard", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceUpdateShardScope:                              {operation: "UpdateShard", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceCreateShardScope:                              {operation: "CreateShard"},
+		PersistenceGetShardScope:                                 {operation: "GetShard"},
+		PersistenceUpdateShardScope:                              {operation: "UpdateShard"},
 		PersistenceCreateWorkflowExecutionScope:                  {operation: "CreateWorkflowExecution"},
 		PersistenceGetWorkflowExecutionScope:                     {operation: "GetWorkflowExecution"},
 		PersistenceUpdateWorkflowExecutionScope:                  {operation: "UpdateWorkflowExecution"},
 		PersistenceResetMutableStateScope:                        {operation: "ResetMutableState"},
 		PersistenceResetWorkflowExecutionScope:                   {operation: "ResetWorkflowExecution"},
 		PersistenceDeleteWorkflowExecutionScope:                  {operation: "DeleteWorkflowExecution"},
+		PersistenceDeleteCurrentWorkflowExecutionScope:           {operation: "DeleteCurrentWorkflowExecution"},
 		PersistenceGetCurrentExecutionScope:                      {operation: "GetCurrentExecution"},
 		PersistenceGetTransferTasksScope:                         {operation: "GetTransferTasks"},
 		PersistenceGetReplicationTasksScope:                      {operation: "GetReplicationTasks"},
@@ -774,24 +804,24 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceGetTimerIndexTasksScope:                       {operation: "GetTimerIndexTasks"},
 		PersistenceCompleteTimerTaskScope:                        {operation: "CompleteTimerTask"},
 		PersistenceRangeCompleteTimerTaskScope:                   {operation: "RangeCompleteTimerTask"},
-		PersistenceCreateTaskScope:                               {operation: "CreateTask", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceGetTasksScope:                                 {operation: "GetTasks", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceCompleteTaskScope:                             {operation: "CompleteTask", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceCompleteTasksLessThanScope:                    {operation: "CompleteTasksLessThan", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceLeaseTaskListScope:                            {operation: "LeaseTaskList", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceUpdateTaskListScope:                           {operation: "UpdateTaskList", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceListTaskListScope:                             {operation: "ListTaskList", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceDeleteTaskListScope:                           {operation: "DeleteTaskList", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceAppendHistoryEventsScope:                      {operation: "AppendHistoryEvents", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceGetWorkflowExecutionHistoryScope:              {operation: "GetWorkflowExecutionHistory", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceDeleteWorkflowExecutionHistoryScope:           {operation: "DeleteWorkflowExecutionHistory", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceCreateDomainScope:                             {operation: "CreateDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceGetDomainScope:                                {operation: "GetDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceUpdateDomainScope:                             {operation: "UpdateDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceDeleteDomainScope:                             {operation: "DeleteDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceDeleteDomainByNameScope:                       {operation: "DeleteDomainByName", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceListDomainScope:                               {operation: "ListDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceGetMetadataScope:                              {operation: "GetMetadata", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceCreateTaskScope:                               {operation: "CreateTask"},
+		PersistenceGetTasksScope:                                 {operation: "GetTasks"},
+		PersistenceCompleteTaskScope:                             {operation: "CompleteTask"},
+		PersistenceCompleteTasksLessThanScope:                    {operation: "CompleteTasksLessThan"},
+		PersistenceLeaseTaskListScope:                            {operation: "LeaseTaskList"},
+		PersistenceUpdateTaskListScope:                           {operation: "UpdateTaskList"},
+		PersistenceListTaskListScope:                             {operation: "ListTaskList"},
+		PersistenceDeleteTaskListScope:                           {operation: "DeleteTaskList"},
+		PersistenceAppendHistoryEventsScope:                      {operation: "AppendHistoryEvents"},
+		PersistenceGetWorkflowExecutionHistoryScope:              {operation: "GetWorkflowExecutionHistory"},
+		PersistenceDeleteWorkflowExecutionHistoryScope:           {operation: "DeleteWorkflowExecutionHistory"},
+		PersistenceCreateDomainScope:                             {operation: "CreateDomain"},
+		PersistenceGetDomainScope:                                {operation: "GetDomain"},
+		PersistenceUpdateDomainScope:                             {operation: "UpdateDomain"},
+		PersistenceDeleteDomainScope:                             {operation: "DeleteDomain"},
+		PersistenceDeleteDomainByNameScope:                       {operation: "DeleteDomainByName"},
+		PersistenceListDomainScope:                               {operation: "ListDomain"},
+		PersistenceGetMetadataScope:                              {operation: "GetMetadata"},
 		PersistenceRecordWorkflowExecutionStartedScope:           {operation: "RecordWorkflowExecutionStarted"},
 		PersistenceRecordWorkflowExecutionClosedScope:            {operation: "RecordWorkflowExecutionClosed"},
 		PersistenceListOpenWorkflowExecutionsScope:               {operation: "ListOpenWorkflowExecutions"},
@@ -803,12 +833,15 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceListClosedWorkflowExecutionsByStatusScope:     {operation: "ListClosedWorkflowExecutionsByStatus"},
 		PersistenceGetClosedWorkflowExecutionScope:               {operation: "GetClosedWorkflowExecution"},
 		PersistenceVisibilityDeleteWorkflowExecutionScope:        {operation: "VisibilityDeleteWorkflowExecution"},
-		PersistenceAppendHistoryNodesScope:                       {operation: "AppendHistoryNodes", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceReadHistoryBranchScope:                        {operation: "ReadHistoryBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceForkHistoryBranchScope:                        {operation: "ForkHistoryBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceDeleteHistoryBranchScope:                      {operation: "DeleteHistoryBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceCompleteForkBranchScope:                       {operation: "CompleteForkBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceGetHistoryTreeScope:                           {operation: "GetHistoryTree", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceListWorkflowExecutionsScope:                   {operation: "ListWorkflowExecutions"},
+		PersistenceScanWorkflowExecutionsScope:                   {operation: "ScanWorkflowExecutions"},
+		PersistenceCountWorkflowExecutionsScope:                  {operation: "CountWorkflowExecutions"},
+		PersistenceAppendHistoryNodesScope:                       {operation: "AppendHistoryNodes"},
+		PersistenceReadHistoryBranchScope:                        {operation: "ReadHistoryBranch"},
+		PersistenceForkHistoryBranchScope:                        {operation: "ForkHistoryBranch"},
+		PersistenceDeleteHistoryBranchScope:                      {operation: "DeleteHistoryBranch"},
+		PersistenceCompleteForkBranchScope:                       {operation: "CompleteForkBranch"},
+		PersistenceGetHistoryTreeScope:                           {operation: "GetHistoryTree"},
 
 		BlobstoreClientUploadScope:         {operation: "BlobstoreClientUpload", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
 		BlobstoreClientDownloadScope:       {operation: "BlobstoreClientDownload", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
@@ -891,11 +924,12 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		MessagingClientPublishScope:      {operation: "MessagingClientPublish"},
 		MessagingClientPublishBatchScope: {operation: "MessagingClientPublishBatch"},
 
-		DomainCacheScope:                               {operation: "DomainCache"},
-		HistoryRereplicationByTransferTaskScope:        {operation: "HistoryRereplicationByTransferTask"},
-		HistoryRereplicationByTimerTaskScope:           {operation: "HistoryRereplicationByTimerTask"},
-		HistoryRereplicationByHistoryReplicationScope:  {operation: "HistoryRereplicationByHistoryReplication"},
-		HistoryRereplicationByActivityReplicationScope: {operation: "HistoryRereplicationByActivityReplication"},
+		DomainCacheScope:                                      {operation: "DomainCache"},
+		HistoryRereplicationByTransferTaskScope:               {operation: "HistoryRereplicationByTransferTask"},
+		HistoryRereplicationByTimerTaskScope:                  {operation: "HistoryRereplicationByTimerTask"},
+		HistoryRereplicationByHistoryReplicationScope:         {operation: "HistoryRereplicationByHistoryReplication"},
+		HistoryRereplicationByHistoryMetadataReplicationScope: {operation: "HistoryRereplicationByHistoryMetadataReplication"},
+		HistoryRereplicationByActivityReplicationScope:        {operation: "HistoryRereplicationByActivityReplication"},
 
 		ElasticsearchRecordWorkflowExecutionStartedScope:           {operation: "RecordWorkflowExecutionStarted"},
 		ElasticsearchRecordWorkflowExecutionClosedScope:            {operation: "RecordWorkflowExecutionClosed"},
@@ -907,6 +941,10 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ElasticsearchListClosedWorkflowExecutionsByWorkflowIDScope: {operation: "ListClosedWorkflowExecutionsByWorkflowID"},
 		ElasticsearchListClosedWorkflowExecutionsByStatusScope:     {operation: "ListClosedWorkflowExecutionsByStatus"},
 		ElasticsearchGetClosedWorkflowExecutionScope:               {operation: "GetClosedWorkflowExecution"},
+		ElasticsearchListWorkflowExecutionsScope:                   {operation: "ListWorkflowExecutions"},
+		ElasticsearchScanWorkflowExecutionsScope:                   {operation: "ScanWorkflowExecutions"},
+		ElasticsearchCountWorkflowExecutionsScope:                  {operation: "CountWorkflowExecutions"},
+		SequentialTaskProcessingScope:                              {operation: "SequentialTaskProcessing"},
 	},
 	// Frontend Scope Names
 	Frontend: {
@@ -937,6 +975,9 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendRequestCancelWorkflowExecutionScope:   {operation: "RequestCancelWorkflowExecution"},
 		FrontendListOpenWorkflowExecutionsScope:       {operation: "ListOpenWorkflowExecutions"},
 		FrontendListClosedWorkflowExecutionsScope:     {operation: "ListClosedWorkflowExecutions"},
+		FrontendListWorkflowExecutionsScope:           {operation: "ListWorkflowExecutions"},
+		FrontendScanWorkflowExecutionsScope:           {operation: "ScanWorkflowExecutions"},
+		FrontendCountWorkflowExecutionsScope:          {operation: "CountWorkflowExecutions"},
 		FrontendRegisterDomainScope:                   {operation: "RegisterDomain"},
 		FrontendDescribeDomainScope:                   {operation: "DescribeDomain"},
 		FrontendListDomainsScope:                      {operation: "ListDomain"},
@@ -946,6 +987,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendDescribeWorkflowExecutionScope:        {operation: "DescribeWorkflowExecution"},
 		FrontendDescribeTaskListScope:                 {operation: "DescribeTaskList"},
 		FrontendResetStickyTaskListScope:              {operation: "ResetStickyTaskList"},
+		FrontendGetSearchAttributesScope:              {operation: "GetSearchAttributes"},
 	},
 	// History Scope Names
 	History: {
@@ -986,6 +1028,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		TransferActiveTaskSignalExecutionScope:        {operation: "TransferActiveTaskSignalExecution"},
 		TransferActiveTaskStartChildExecutionScope:    {operation: "TransferActiveTaskStartChildExecution"},
 		TransferActiveTaskRecordWorkflowStartedScope:  {operation: "TransferActiveTaskRecordWorkflowStarted"},
+		TransferActiveTaskResetWorkflowScope:          {operation: "TransferActiveTaskResetWorkflow"},
 		TransferStandbyTaskActivityScope:              {operation: "TransferStandbyTaskActivity"},
 		TransferStandbyTaskDecisionScope:              {operation: "TransferStandbyTaskDecision"},
 		TransferStandbyTaskCloseExecutionScope:        {operation: "TransferStandbyTaskCloseExecution"},
@@ -993,6 +1036,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		TransferStandbyTaskSignalExecutionScope:       {operation: "TransferStandbyTaskSignalExecution"},
 		TransferStandbyTaskStartChildExecutionScope:   {operation: "TransferStandbyTaskStartChildExecution"},
 		TransferStandbyTaskRecordWorkflowStartedScope: {operation: "TransferStandbyTaskRecordWorkflowStarted"},
+		TransferStandbyTaskResetWorkflowScope:         {operation: "TransferStandbyTaskResetWorkflow"},
 		TimerQueueProcessorScope:                      {operation: "TimerQueueProcessor"},
 		TimerActiveQueueProcessorScope:                {operation: "TimerActiveQueueProcessor"},
 		TimerStandbyQueueProcessorScope:               {operation: "TimerStandbyQueueProcessor"},
@@ -1029,6 +1073,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		SessionSizeStatsScope:                         {operation: "SessionStats", tags: map[string]string{StatsTypeTagName: SizeStatsTypeTagValue}},
 		SessionCountStatsScope:                        {operation: "SessionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
 		WorkflowCompletionStatsScope:                  {operation: "CompletionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
+		ArchiverClientScope:                           {operation: "ArchiverClient"},
 	},
 	// Matching Scope Names
 	Matching: {
@@ -1044,20 +1089,20 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 	},
 	// Worker Scope Names
 	Worker: {
-		ReplicatorScope:                    {operation: "Replicator"},
-		DomainReplicationTaskScope:         {operation: "DomainReplicationTask"},
-		HistoryReplicationTaskScope:        {operation: "HistoryReplicationTask"},
-		SyncShardTaskScope:                 {operation: "SyncShardTask"},
-		SyncActivityTaskScope:              {operation: "SyncActivityTask"},
-		ESProcessorScope:                   {operation: "ESProcessor"},
-		IndexProcessorScope:                {operation: "IndexProcessor"},
-		ArchiverUploadHistoryActivityScope: {operation: "ArchiverUploadHistoryActivity"},
-		ArchiverDeleteHistoryActivityScope: {operation: "ArchiverDeleteHistoryActivity"},
-		ArchiverScope:                      {operation: "Archiver"},
-		ArchiverPumpScope:                  {operation: "ArchiverPump"},
-		ArchiverArchivalWorkflowScope:      {operation: "ArchiverArchivalWorkflow"},
-		ArchiverClientScope:                {operation: "ArchiverClient"},
-		TaskListScavengerScope:             {operation: "tasklistscavenger"},
+		ReplicatorScope:                     {operation: "Replicator"},
+		DomainReplicationTaskScope:          {operation: "DomainReplicationTask"},
+		HistoryReplicationTaskScope:         {operation: "HistoryReplicationTask"},
+		HistoryMetadataReplicationTaskScope: {operation: "HistoryMetadataReplicationTask"},
+		SyncShardTaskScope:                  {operation: "SyncShardTask"},
+		SyncActivityTaskScope:               {operation: "SyncActivityTask"},
+		ESProcessorScope:                    {operation: "ESProcessor"},
+		IndexProcessorScope:                 {operation: "IndexProcessor"},
+		ArchiverUploadHistoryActivityScope:  {operation: "ArchiverUploadHistoryActivity"},
+		ArchiverDeleteHistoryActivityScope:  {operation: "ArchiverDeleteHistoryActivity"},
+		ArchiverScope:                       {operation: "Archiver"},
+		ArchiverPumpScope:                   {operation: "ArchiverPump"},
+		ArchiverArchivalWorkflowScope:       {operation: "ArchiverArchivalWorkflow"},
+		TaskListScavengerScope:              {operation: "tasklistscavenger"},
 	},
 	// Blobstore Scope Names
 	Blobstore: {
@@ -1123,6 +1168,14 @@ const (
 	ElasticsearchErrBadRequestCounter
 	ElasticsearchErrBusyCounter
 
+	SequentialTaskSubmitRequest
+	SequentialTaskSubmitRequestTaskQueueExist
+	SequentialTaskSubmitRequestTaskQueueMissing
+	SequentialTaskSubmitLatency
+	SequentialTaskQueueSize
+	SequentialTaskQueueProcessingLatency
+	SequentialTaskTaskProcessingLatency
+
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
 
@@ -1157,6 +1210,8 @@ const (
 	MultipleCompletionDecisionsCounter
 	FailedDecisionsCounter
 	StaleMutableStateCounter
+	AutoResetPointsLimitExceededCounter
+	AutoResetPointCorruptionCounter
 	ConcurrencyUpdateFailureCounter
 	CadenceErrEventAlreadyStartedCounter
 	CadenceErrShardOwnershipLostCounter
@@ -1256,6 +1311,7 @@ const (
 	SyncThrottleCounter
 	BufferThrottleCounter
 	SyncMatchLatency
+	AsyncMatchLatency
 	ExpiredTasksCounter
 
 	NumMatchingMetrics
@@ -1267,6 +1323,8 @@ const (
 	ReplicatorFailures
 	ReplicatorMessagesDropped
 	ReplicatorLatency
+	ESProcessorRequests
+	ESProcessorRetries
 	ESProcessorFailures
 	ESProcessorCorruptedData
 	IndexProcessorCorruptedData
@@ -1359,6 +1417,13 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ElasticsearchLatency:                                {metricName: "elasticsearch_latency", metricType: Timer},
 		ElasticsearchErrBadRequestCounter:                   {metricName: "elasticsearch_errors_bad_request", metricType: Counter},
 		ElasticsearchErrBusyCounter:                         {metricName: "elasticsearch_errors_busy", metricType: Counter},
+		SequentialTaskSubmitRequest:                         {metricName: "sequentialtask_submit_request", metricType: Counter},
+		SequentialTaskSubmitRequestTaskQueueExist:           {metricName: "sequentialtask_submit_request_taskqueue_exist", metricType: Counter},
+		SequentialTaskSubmitRequestTaskQueueMissing:         {metricName: "sequentialtask_submit_request_taskqueue_missing", metricType: Counter},
+		SequentialTaskSubmitLatency:                         {metricName: "sequentialtask_submit_latency", metricType: Timer},
+		SequentialTaskQueueSize:                             {metricName: "sequentialtask_queue_size", metricType: Timer},
+		SequentialTaskQueueProcessingLatency:                {metricName: "sequentialtask_queue_processing_latency", metricType: Timer},
+		SequentialTaskTaskProcessingLatency:                 {metricName: "sequentialtask_task_processing_latency", metricType: Timer},
 	},
 	Frontend: {},
 	History: {
@@ -1390,6 +1455,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		MultipleCompletionDecisionsCounter:           {metricName: "multiple_completion_decisions", metricType: Counter},
 		FailedDecisionsCounter:                       {metricName: "failed_decisions", metricType: Counter},
 		StaleMutableStateCounter:                     {metricName: "stale_mutable_state", metricType: Counter},
+		AutoResetPointsLimitExceededCounter:          {metricName: "auto_reset_points_exceed_limit", metricType: Counter},
+		AutoResetPointCorruptionCounter:              {metricName: "auto_reset_point_corruption", metricType: Counter},
 		ConcurrencyUpdateFailureCounter:              {metricName: "concurrency_update_failure", metricType: Counter},
 		CadenceErrShardOwnershipLostCounter:          {metricName: "cadence_errors_shard_ownership_lost", metricType: Counter},
 		CadenceErrEventAlreadyStartedCounter:         {metricName: "cadence_errors_event_already_started", metricType: Counter},
@@ -1486,12 +1553,15 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		BufferThrottleCounter:         {metricName: "buffer_throttle_count"},
 		ExpiredTasksCounter:           {metricName: "tasks_expired"},
 		SyncMatchLatency:              {metricName: "syncmatch_latency", metricType: Timer},
+		AsyncMatchLatency:             {metricName: "asyncmatch_latency", metricType: Timer},
 	},
 	Worker: {
 		ReplicatorMessages:                                     {metricName: "replicator_messages"},
 		ReplicatorFailures:                                     {metricName: "replicator_errors"},
 		ReplicatorMessagesDropped:                              {metricName: "replicator_messages_dropped"},
 		ReplicatorLatency:                                      {metricName: "replicator_latency"},
+		ESProcessorRequests:                                    {metricName: "es_processor_requests"},
+		ESProcessorRetries:                                     {metricName: "es_processor_retries"},
 		ESProcessorFailures:                                    {metricName: "es_processor_errors"},
 		ESProcessorCorruptedData:                               {metricName: "es_processor_corrupted_data"},
 		IndexProcessorCorruptedData:                            {metricName: "index_processor_corrupted_data"},

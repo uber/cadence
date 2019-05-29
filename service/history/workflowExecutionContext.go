@@ -46,24 +46,28 @@ const (
 
 type (
 	workflowExecutionContext interface {
-		appendHistoryEvents(history []*workflow.HistoryEvent, transactionID int64, doLastEventValidation bool) (int, error)
+		appendFirstBatchHistoryForContinueAsNew(newStateBuilder mutableState, transactionID int64) error
+		appendFirstBatchEventsForActive(msBuilder mutableState, createReplicationTask bool) (int, persistence.Task, error)
+		appendFirstBatchEventsForStandby(msBuilder mutableState, history []*workflow.HistoryEvent) (int, persistence.Task, error)
 		clear()
 		continueAsNewWorkflowExecution(context []byte, newStateBuilder mutableState, transferTasks []persistence.Task, timerTasks []persistence.Task, transactionID int64) error
+		createWorkflowExecution(
+			msBuilder mutableState, sourceCluster string, createReplicationTask bool, now time.Time,
+			transferTasks []persistence.Task, replicationTasks []persistence.Task, timerTasks []persistence.Task,
+			createMode int, prevRunID string, prevLastWriteVersion int64) error
 		getDomainID() string
 		getExecution() *workflow.WorkflowExecution
 		getLogger() log.Logger
 		loadWorkflowExecution() (mutableState, error)
 		lock(context.Context) error
-		appendFirstBatchHistoryForContinueAsNew(newStateBuilder mutableState, transactionID int64) error
-		replicateWorkflowExecution(request *h.ReplicateEventsRequest, transferTasks []persistence.Task, timerTasks []persistence.Task, lastEventID, transactionID int64, now time.Time) error
+		replicateWorkflowExecution(request *h.ReplicateEventsRequest, transferTasks []persistence.Task, timerTasks []persistence.Task, lastEventID int64, now time.Time) error
 		resetMutableState(prevRunID string, resetBuilder mutableState) (mutableState, error)
 		resetWorkflowExecution(currMutableState mutableState, updateCurr bool, closeTask, cleanupTask persistence.Task, newMutableState mutableState, transferTasks, timerTasks, currReplicationTasks, insertReplicationTasks []persistence.Task, baseRunID string, forkRunNextEventID, prevRunVersion int64) (retError error)
 		scheduleNewDecision(transferTasks []persistence.Task, timerTasks []persistence.Task) ([]persistence.Task, []persistence.Task, error)
 		unlock()
-		updateHelper(transferTasks []persistence.Task, timerTasks []persistence.Task, transactionID int64, now time.Time, createReplicationTask bool, standbyHistoryBuilder *historyBuilder, sourceCluster string) error
+		updateWorkflowExecutionForStandby(transferTasks []persistence.Task, timerTasks []persistence.Task, transactionID int64, now time.Time, createReplicationTask bool, standbyHistoryBuilder *historyBuilder, sourceCluster string) error
 		updateWorkflowExecution(transferTasks []persistence.Task, timerTasks []persistence.Task, transactionID int64) error
 		updateWorkflowExecutionWithContext(context []byte, transferTasks []persistence.Task, timerTasks []persistence.Task, transactionID int64) error
-		updateWorkflowExecutionWithDeleteTask(transferTasks []persistence.Task, timerTasks []persistence.Task, deleteTimerTask persistence.Task, transactionID int64) error
 	}
 )
 
@@ -80,7 +84,6 @@ type (
 		locker                locks.Mutex
 		msBuilder             mutableState
 		updateCondition       int64
-		deleteTimerTask       persistence.Task
 		createReplicationTask bool
 	}
 )
@@ -100,9 +103,9 @@ func newWorkflowExecutionContext(
 	logger log.Logger,
 ) *workflowExecutionContextImpl {
 	lg := logger.WithTags(
-		tag.WorkflowID(domainID),
-		tag.WorkflowRunID(execution.GetWorkflowId()),
-		tag.WorkflowDomainID(execution.GetRunId()))
+		tag.WorkflowID(execution.GetWorkflowId()),
+		tag.WorkflowRunID(execution.GetRunId()),
+		tag.WorkflowDomainID(domainID))
 
 	return &workflowExecutionContextImpl{
 		domainID:          domainID,
@@ -181,6 +184,84 @@ func (c *workflowExecutionContextImpl) loadWorkflowExecutionInternal() error {
 	return nil
 }
 
+func (c *workflowExecutionContextImpl) createWorkflowExecution(
+	msBuilder mutableState, sourceCluster string, createReplicationTask bool, now time.Time,
+	transferTasks []persistence.Task, replicationTasks []persistence.Task, timerTasks []persistence.Task,
+	createMode int, prevRunID string, prevLastWriteVersion int64) error {
+
+	if msBuilder.GetReplicationState() != nil {
+		msBuilder.UpdateReplicationStateLastEventID(
+			sourceCluster,
+			msBuilder.GetCurrentVersion(),
+			msBuilder.GetNextEventID()-1,
+		)
+	}
+
+	executionInfo := msBuilder.GetExecutionInfo()
+	replicationState := msBuilder.GetReplicationState()
+
+	setTaskInfo(msBuilder.GetCurrentVersion(), now, transferTasks, timerTasks)
+
+	createRequest := &persistence.CreateWorkflowExecutionRequest{
+		RequestID: executionInfo.CreateRequestID,
+		DomainID:  executionInfo.DomainID,
+		Execution: workflow.WorkflowExecution{
+			WorkflowId: &executionInfo.WorkflowID,
+			RunId:      &executionInfo.RunID,
+		},
+
+		// parent execution
+		ParentDomainID: executionInfo.ParentDomainID,
+		ParentExecution: workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(executionInfo.ParentWorkflowID),
+			RunId:      common.StringPtr(executionInfo.ParentRunID),
+		},
+		InitiatedID: executionInfo.InitiatedID,
+
+		TaskList:                    executionInfo.TaskList,
+		WorkflowTypeName:            executionInfo.WorkflowTypeName,
+		WorkflowTimeout:             executionInfo.WorkflowTimeout,
+		DecisionTimeoutValue:        executionInfo.DecisionTimeoutValue,
+		ExecutionContext:            nil,
+		LastEventTaskID:             executionInfo.LastEventTaskID,
+		NextEventID:                 executionInfo.NextEventID,
+		LastProcessedEvent:          common.EmptyEventID,
+		HistorySize:                 executionInfo.HistorySize,
+		TransferTasks:               transferTasks,
+		ReplicationTasks:            replicationTasks,
+		TimerTasks:                  timerTasks,
+		DecisionVersion:             executionInfo.DecisionVersion,
+		DecisionScheduleID:          executionInfo.DecisionScheduleID,
+		DecisionStartedID:           executionInfo.DecisionStartedID,
+		DecisionStartToCloseTimeout: executionInfo.DecisionTimeout,
+		State:                       executionInfo.State,
+		CloseStatus:                 executionInfo.CloseStatus,
+		EventStoreVersion:           executionInfo.EventStoreVersion,
+		BranchToken:                 executionInfo.BranchToken,
+		CronSchedule:                executionInfo.CronSchedule,
+		ReplicationState:            replicationState,
+		SearchAttributes:            executionInfo.SearchAttributes,
+
+		// retry policy
+		HasRetryPolicy:     executionInfo.HasRetryPolicy,
+		BackoffCoefficient: executionInfo.BackoffCoefficient,
+		ExpirationSeconds:  executionInfo.ExpirationSeconds,
+		InitialInterval:    executionInfo.InitialInterval,
+		MaximumAttempts:    executionInfo.MaximumAttempts,
+		MaximumInterval:    executionInfo.MaximumInterval,
+		NonRetriableErrors: executionInfo.NonRetriableErrors,
+		ExpirationTime:     executionInfo.ExpirationTime,
+
+		// workflow create mode & prev run ID & version
+		CreateWorkflowMode:       createMode,
+		PreviousRunID:            prevRunID,
+		PreviousLastWriteVersion: prevLastWriteVersion,
+	}
+
+	_, err := c.shard.CreateWorkflowExecution(createRequest)
+	return err
+}
+
 func (c *workflowExecutionContextImpl) resetMutableState(prevRunID string, resetBuilder mutableState) (mutableState,
 	error) {
 	// this only resets one mutableState for a workflow
@@ -244,7 +325,9 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(currMutableState m
 	if updateCurr {
 		hBuilder := currMutableState.GetHistoryBuilder()
 		var size int
-		size, retError = c.appendHistoryEvents(hBuilder.GetHistory().GetEvents(), transactionID, true)
+		// TODO workflow execution reset logic generates replication tasks in its own business logic
+		// should use append history events in the future
+		size, _, retError = c.appendHistoryEvents(hBuilder.GetHistory().GetEvents(), transactionID, true, false, nil)
 		if retError != nil {
 			return
 		}
@@ -319,23 +402,22 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNewRunAndConte
 	timerTasks []persistence.Task, transactionID int64, newStateBuilder mutableState) error {
 	c.msBuilder.GetExecutionInfo().ExecutionContext = context
 
-	return c.updateWorkflowExecutionWithNewRun(transferTasks, timerTasks, transactionID, newStateBuilder)
-}
-
-func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithDeleteTask(transferTasks []persistence.Task,
-	timerTasks []persistence.Task, deleteTimerTask persistence.Task, transactionID int64) error {
-	c.deleteTimerTask = deleteTimerTask
-
-	return c.updateWorkflowExecution(transferTasks, timerTasks, transactionID)
+	return c.updateWorkflowExecutionForActive(transferTasks, timerTasks, transactionID, newStateBuilder)
 }
 
 func (c *workflowExecutionContextImpl) replicateWorkflowExecution(request *h.ReplicateEventsRequest,
-	transferTasks []persistence.Task, timerTasks []persistence.Task, lastEventID, transactionID int64, now time.Time) error {
+	transferTasks []persistence.Task, timerTasks []persistence.Task, lastEventID int64, now time.Time) error {
+
+	transactionID, err := c.shard.GetNextTransferTaskID()
+	if err != nil {
+		return err
+	}
+
 	nextEventID := lastEventID + 1
 	c.msBuilder.GetExecutionInfo().SetNextEventID(nextEventID)
 
 	standbyHistoryBuilder := newHistoryBuilderFromEvents(request.History.Events, c.logger)
-	return c.updateHelper(transferTasks, timerTasks, transactionID, now, false, standbyHistoryBuilder, request.GetSourceCluster())
+	return c.updateWorkflowExecutionForStandby(transferTasks, timerTasks, transactionID, now, false, standbyHistoryBuilder, request.GetSourceCluster())
 }
 
 func (c *workflowExecutionContextImpl) updateVersion() error {
@@ -357,7 +439,7 @@ func (c *workflowExecutionContextImpl) updateVersion() error {
 	return nil
 }
 
-func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNewRun(transferTasks []persistence.Task,
+func (c *workflowExecutionContextImpl) updateWorkflowExecutionForActive(transferTasks []persistence.Task,
 	timerTasks []persistence.Task, transactionID int64, newStateBuilder mutableState) error {
 	if c.msBuilder.GetReplicationState() != nil {
 		currentVersion := c.msBuilder.GetCurrentVersion()
@@ -394,16 +476,38 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNewRun(transfe
 			c.msBuilder.GetExecutionInfo().LastFirstEventID, c.msBuilder.GetExecutionInfo().NextEventID))
 	}
 
+	// compare with bad binaries and schedule a reset task
+	if len(c.msBuilder.GetPendingChildExecutionInfos()) == 0 {
+		// only schedule reset task if current doesn't have childWFs.
+		// TODO: This will be removed once our reset allows childWFs
+
+		domainEntry, err := c.shard.GetDomainCache().GetDomainByID(c.domainID)
+		if err != nil {
+			return err
+		}
+		_, pt := FindAutoResetPoint(&domainEntry.GetConfig().BadBinaries, c.msBuilder.GetExecutionInfo().AutoResetPoints)
+		if pt != nil {
+			transferTasks = append(transferTasks, &persistence.ResetWorkflowTask{})
+			c.logger.Info("Auto-Reset task is scheduled",
+				tag.WorkflowDomainName(domainEntry.GetInfo().Name),
+				tag.WorkflowID(c.msBuilder.GetExecutionInfo().WorkflowID),
+				tag.WorkflowRunID(c.msBuilder.GetExecutionInfo().RunID),
+				tag.WorkflowResetBaseRunID(pt.GetRunId()),
+				tag.WorkflowEventID(pt.GetFirstDecisionCompletedId()),
+				tag.WorkflowBinaryChecksum(pt.GetBinaryChecksum()))
+		}
+	}
+
 	now := time.Now()
 	return c.update(transferTasks, timerTasks, transactionID, now, c.createReplicationTask, nil, "", newStateBuilder)
 }
 
 func (c *workflowExecutionContextImpl) updateWorkflowExecution(transferTasks []persistence.Task,
 	timerTasks []persistence.Task, transactionID int64) error {
-	return c.updateWorkflowExecutionWithNewRun(transferTasks, timerTasks, transactionID, nil)
+	return c.updateWorkflowExecutionForActive(transferTasks, timerTasks, transactionID, nil)
 }
 
-func (c *workflowExecutionContextImpl) updateHelper(transferTasks []persistence.Task, timerTasks []persistence.Task,
+func (c *workflowExecutionContextImpl) updateWorkflowExecutionForStandby(transferTasks []persistence.Task, timerTasks []persistence.Task,
 	transactionID int64, now time.Time,
 	createReplicationTask bool, standbyHistoryBuilder *historyBuilder, sourceCluster string) (errRet error) {
 	return c.update(transferTasks, timerTasks, transactionID, now, createReplicationTask, standbyHistoryBuilder, sourceCluster, nil)
@@ -478,11 +582,13 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 	}
 
 	newHistorySize := 0
+	var replicationTasks []persistence.Task
+
 	// always standby history first
 	if hasNewStandbyHistoryEvents {
 		firstEvent := standbyHistoryBuilder.GetFirstEvent()
 		// Note: standby events has no transient decision events
-		newHistorySize, err = c.appendHistoryEvents(standbyHistoryBuilder.history, transactionID, true)
+		newHistorySize, _, err = c.appendHistoryEvents(standbyHistoryBuilder.history, transactionID, true, false, nil)
 		if err != nil {
 			return err
 		}
@@ -492,23 +598,31 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 
 	// Some operations only update the mutable state. For example RecordActivityTaskHeartbeat.
 	if hasNewActiveHistoryEvents {
-		firstEvent := activeHistoryBuilder.GetFirstEvent()
+		var newReplicationTask persistence.Task
+
 		// Transient decision events need to be written as a separate batch
 		if activeHistoryBuilder.HasTransientEvents() {
 			// transient decision events batch should not perform last event check
-			newHistorySize, err = c.appendHistoryEvents(activeHistoryBuilder.transientHistory, transactionID, false)
+			newHistorySize, newReplicationTask, err = c.appendHistoryEvents(activeHistoryBuilder.transientHistory, transactionID, false, createReplicationTask, newStateBuilder)
 			if err != nil {
 				return err
 			}
+			if newReplicationTask != nil {
+				replicationTasks = append(replicationTasks, newReplicationTask)
+			}
+			executionInfo.SetLastFirstEventID(activeHistoryBuilder.transientHistory[0].GetEventId())
 		}
 
 		var size int
-		size, err = c.appendHistoryEvents(activeHistoryBuilder.history, transactionID, true)
+		size, newReplicationTask, err = c.appendHistoryEvents(activeHistoryBuilder.history, transactionID, true, createReplicationTask, newStateBuilder)
 		if err != nil {
 			return err
 		}
+		if newReplicationTask != nil {
+			replicationTasks = append(replicationTasks, newReplicationTask)
+		}
 
-		executionInfo.SetLastFirstEventID(firstEvent.GetEventId())
+		executionInfo.SetLastFirstEventID(activeHistoryBuilder.history[0].GetEventId())
 		newHistorySize += size
 
 		// enforce history size/count limit (only on active side)
@@ -518,14 +632,22 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 		historyCount := int(c.msBuilder.GetNextEventID()) - 1
 		historySize := int(c.msBuilder.GetHistorySize()) + newHistorySize
 
+		// All execution stats are emitted under emitWorkflowExecutionStats which is only invoked when the mutableState
+		// is loaded.  Looks like MutableStateStats are returned by persistence layer when mutableState is loaded from DB.
+		// It is much better to emit the entire execution stats on each update.  So for now we are explicitly emitting
+		// historySize and historyCount metric for execution on each update explicitly.
 		// N.B. - Dual emit is required here so that we can see aggregate timer stats across all
 		// domains along with the individual domains stats
-		c.metricsClient.RecordTimer(metrics.PersistenceUpdateWorkflowExecutionScope, metrics.HistorySize, time.Duration(historySize))
-		c.metricsClient.RecordTimer(metrics.PersistenceUpdateWorkflowExecutionScope, metrics.HistoryCount, time.Duration(historyCount))
+		allDomainSizeScope := c.metricsClient.Scope(metrics.ExecutionSizeStatsScope, metrics.DomainAllTag())
+		allDomainCountScope := c.metricsClient.Scope(metrics.ExecutionCountStatsScope, metrics.DomainAllTag())
+		allDomainSizeScope.RecordTimer(metrics.HistorySize, time.Duration(historySize))
+		allDomainCountScope.RecordTimer(metrics.HistoryCount, time.Duration(historyCount))
 		if entry, err := c.shard.GetDomainCache().GetDomainByID(executionInfo.DomainID); err == nil && entry != nil && entry.GetInfo() != nil {
-			scope := c.metricsClient.Scope(metrics.PersistenceUpdateWorkflowExecutionScope, metrics.DomainTag(entry.GetInfo().Name))
-			scope.RecordTimer(metrics.HistorySize, time.Duration(historySize))
-			scope.RecordTimer(metrics.HistoryCount, time.Duration(historyCount))
+			domain := entry.GetInfo().Name
+			domainSizeScope := c.metricsClient.Scope(metrics.ExecutionSizeStatsScope, metrics.DomainTag(domain))
+			domainCountScope := c.metricsClient.Scope(metrics.ExecutionCountStatsScope, metrics.DomainTag(domain))
+			domainSizeScope.RecordTimer(metrics.HistorySize, time.Duration(historySize))
+			domainCountScope.RecordTimer(metrics.HistoryCount, time.Duration(historyCount))
 		}
 
 		if historySize > sizeLimitWarn || historyCount > countLimitWarn {
@@ -545,11 +667,6 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 				_, err1 := c.loadWorkflowExecution() // reload mutable state
 				if err1 != nil {
 					return err1
-				}
-
-				err = failInFlightDecisionToClearBufferedEvents(c.msBuilder)
-				if err != nil {
-					return err
 				}
 
 				c.msBuilder.AddWorkflowExecutionTerminatedEvent(&workflow.TerminateWorkflowExecutionRequest{
@@ -574,22 +691,25 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 					)
 				}
 
-				firstEvent = activeHistoryBuilder.GetFirstEvent()
 				terminateTransactionID, err1 := c.shard.GetNextTransferTaskID()
 				if err1 != nil {
 					return err1
 				}
-				newHistorySize, err = c.appendHistoryEvents(activeHistoryBuilder.history, terminateTransactionID, true)
+				newHistorySize, newReplicationTask, err = c.appendHistoryEvents(activeHistoryBuilder.history, terminateTransactionID, true, createReplicationTask, newStateBuilder)
 				if err != nil {
 					return err
 				}
-				executionInfo.SetLastFirstEventID(firstEvent.GetEventId())
+				if newReplicationTask != nil {
+					replicationTasks = []persistence.Task{newReplicationTask}
+				}
+				executionInfo.SetLastFirstEventID(activeHistoryBuilder.GetFirstEvent().GetEventId())
 
 				// add clean up tasks
 				tranT, timerT, err := getWorkflowHistoryCleanupTasksFromShard(c.shard, executionInfo.DomainID, executionInfo.WorkflowID, nil)
 				if err != nil {
 					return err
 				}
+				// TODO since this is a force termination, should clear existing tx / timer tasks?
 				transferTasks = append(transferTasks, tranT)
 				timerTasks = append(timerTasks, timerT)
 			} // end of hard terminate workflow
@@ -598,38 +718,14 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 	} // end of update history events for active builder
 
 	continueAsNew := updates.continueAsNew
-	finishExecution := false
-	var finishExecutionTTL int32
 	if executionInfo.State == persistence.WorkflowStateCompleted {
-		// Workflow execution completed as part of this transaction.
-		// Also transactionally delete workflow execution representing
-		// current run for the execution using cassandra TTL
-		finishExecution = true
-		domainEntry, err := c.shard.GetDomainCache().GetDomainByID(executionInfo.DomainID)
-		if err != nil {
-			return err
-		}
-		// NOTE: domain retention is in days, so we need to do a conversion
-		finishExecutionTTL = domainEntry.GetRetentionDays(executionInfo.WorkflowID) * secondsInDay
-
 		// clear stickness
 		c.msBuilder.ClearStickyness()
 	}
 
-	var replicationTasks []persistence.Task
-	// Check if the update resulted in new history events before generating replication task
 	if createReplicationTask {
-		// Let's create a replication task as part of this update
-		if hasNewActiveHistoryEvents {
-			if newStateBuilder != nil && newStateBuilder.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
-				replicationTasks = append(replicationTasks, c.msBuilder.CreateReplicationTask(persistence.EventStoreVersionV2, newStateBuilder.GetCurrentBranch()))
-			} else {
-				replicationTasks = append(replicationTasks, c.msBuilder.CreateReplicationTask(0, nil))
-			}
-		}
 		replicationTasks = append(replicationTasks, updates.syncActivityTasks...)
 	}
-
 	setTaskInfo(c.msBuilder.GetCurrentVersion(), now, transferTasks, timerTasks)
 
 	// Update history size on mutableState before calling UpdateWorkflowExecution
@@ -644,7 +740,6 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 		ReplicationTasks:              replicationTasks,
 		TimerTasks:                    timerTasks,
 		Condition:                     c.updateCondition,
-		DeleteTimerTask:               c.deleteTimerTask,
 		UpsertActivityInfos:           updates.updateActivityInfos,
 		DeleteActivityInfos:           updates.deleteActivityInfos,
 		UpserTimerInfos:               updates.updateTimerInfos,
@@ -662,8 +757,6 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 		NewBufferedReplicationTask:    updates.newBufferedReplicationEventsInfo,
 		DeleteBufferedReplicationTask: updates.deleteBufferedReplicationEvent,
 		ContinueAsNew:                 continueAsNew,
-		FinishExecution:               finishExecution,
-		FinishedExecutionTTL:          finishExecutionTTL,
 	}); err1 != nil {
 		switch err1.(type) {
 		case *persistence.ConditionFailedError:
@@ -705,16 +798,79 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 	return nil
 }
 
+func (c *workflowExecutionContextImpl) appendFirstBatchEventsForActive(msBuilder mutableState, createReplicationTask bool) (int, persistence.Task, error) {
+	// call FlushBufferedEvents to assign task id to event
+	// as well as update last event task id in mutable state builder
+	err := msBuilder.FlushBufferedEvents()
+	if err != nil {
+		return 0, nil, err
+	}
+	events := msBuilder.GetHistoryBuilder().GetHistory().Events
+	return c.appendFirstBatchEvents(msBuilder, events, createReplicationTask)
+}
+
+func (c *workflowExecutionContextImpl) appendFirstBatchEventsForStandby(msBuilder mutableState, history []*workflow.HistoryEvent) (int, persistence.Task, error) {
+	return c.appendFirstBatchEvents(msBuilder, history, false)
+}
+
+func (c *workflowExecutionContextImpl) appendFirstBatchEvents(msBuilder mutableState, history []*workflow.HistoryEvent, replicateEvents bool) (int, persistence.Task, error) {
+	firstEvent := history[0]
+	lastEvent := history[len(history)-1]
+	var historySize int
+	var err error
+	if msBuilder.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
+		historySize, err = c.shard.AppendHistoryV2Events(&persistence.AppendHistoryNodesRequest{
+			IsNewBranch: true,
+			Info:        historyGarbageCleanupInfo(c.domainID, c.workflowExecution.GetWorkflowId(), c.workflowExecution.GetRunId()),
+			BranchToken: msBuilder.GetCurrentBranch(),
+			Events:      history,
+			// It is ok to use 0 for TransactionID because RunID is unique so there are
+			// no potential duplicates to override.
+			TransactionID: 0,
+		}, c.domainID, c.workflowExecution)
+	} else {
+		historySize, err = c.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
+			DomainID:  c.domainID,
+			Execution: c.workflowExecution,
+			// It is ok to use 0 for TransactionID because RunID is unique so there are
+			// no potential duplicates to override.
+			TransactionID:     0,
+			FirstEventID:      firstEvent.GetEventId(),
+			EventBatchVersion: firstEvent.GetVersion(),
+			Events:            history,
+		})
+	}
+
+	var replicationTask persistence.Task
+	if err == nil {
+		msBuilder.IncrementHistorySize(historySize)
+		if replicateEvents && msBuilder.GetReplicationState() != nil {
+			replicationTask = &persistence.HistoryReplicationTask{
+				FirstEventID:            firstEvent.GetEventId(),
+				NextEventID:             lastEvent.GetEventId() + 1,
+				Version:                 firstEvent.GetVersion(),
+				LastReplicationInfo:     msBuilder.GetReplicationState().LastReplicationInfo,
+				EventStoreVersion:       msBuilder.GetEventStoreVersion(),
+				BranchToken:             msBuilder.GetCurrentBranch(),
+				NewRunEventStoreVersion: 0,   // no new run
+				NewRunBranchToken:       nil, // no new run
+			}
+		}
+	}
+	return historySize, replicationTask, err
+}
+
 func (c *workflowExecutionContextImpl) appendHistoryEvents(history []*workflow.HistoryEvent,
-	transactionID int64, doLastEventValidation bool) (int, error) {
+	transactionID int64, doLastEventValidation bool, replicateEvents bool, newStateBuilder mutableState) (int, persistence.Task, error) {
 
 	if doLastEventValidation {
 		if err := c.validateNoEventsAfterWorkflowFinish(history); err != nil {
-			return 0, err
+			return 0, nil, err
 		}
 	}
 
 	firstEvent := history[0]
+	lastEvent := history[len(history)-1]
 	var historySize int
 	var err error
 
@@ -739,17 +895,37 @@ func (c *workflowExecutionContextImpl) appendHistoryEvents(history []*workflow.H
 	if err != nil {
 		switch err.(type) {
 		case *persistence.ConditionFailedError:
-			return historySize, ErrConflict
+			return historySize, nil, ErrConflict
 		}
 
 		c.logger.Error("Persistent store operation failure",
 			tag.StoreOperationUpdateWorkflowExecution,
 			tag.Error(err),
 			tag.Number(c.updateCondition))
-		return historySize, err
+		return historySize, nil, err
 	}
 
-	return historySize, nil
+	var replicationTask persistence.Task
+	if replicateEvents && c.msBuilder.GetReplicationState() != nil {
+		var newRunEventStoreVersion int32
+		var newRunBranchToken []byte
+		if newStateBuilder != nil {
+			newRunEventStoreVersion = newStateBuilder.GetEventStoreVersion()
+			newRunBranchToken = newStateBuilder.GetCurrentBranch()
+		}
+
+		replicationTask = &persistence.HistoryReplicationTask{
+			FirstEventID:            firstEvent.GetEventId(),
+			NextEventID:             lastEvent.GetEventId() + 1,
+			Version:                 firstEvent.GetVersion(),
+			LastReplicationInfo:     c.msBuilder.GetReplicationState().LastReplicationInfo,
+			EventStoreVersion:       c.msBuilder.GetEventStoreVersion(),
+			BranchToken:             c.msBuilder.GetCurrentBranch(),
+			NewRunEventStoreVersion: newRunEventStoreVersion,
+			NewRunBranchToken:       newRunBranchToken,
+		}
+	}
+	return historySize, replicationTask, nil
 }
 
 func (c *workflowExecutionContextImpl) continueAsNewWorkflowExecution(context []byte, newStateBuilder mutableState,
@@ -933,38 +1109,6 @@ func (c *workflowExecutionContextImpl) emitWorkflowExecutionStats(stats *persist
 	allSizeScope := c.metricsClient.Scope(metrics.ExecutionSizeStatsScope, metrics.DomainAllTag())
 	allCountScope := c.metricsClient.Scope(metrics.ExecutionCountStatsScope, metrics.DomainAllTag())
 	emitWorkflowExecutionStats(allSizeScope, allCountScope, stats, executionInfoHistorySize)
-
-	// TODO: (@shreyassrivatsan) remove the below legacy style metrics
-	c.metricsClient.RecordTimer(metrics.ExecutionSizeStatsScope, metrics.MutableStateSize,
-		time.Duration(stats.MutableStateSize))
-	c.metricsClient.RecordTimer(metrics.ExecutionSizeStatsScope, metrics.ExecutionInfoSize,
-		time.Duration(stats.MutableStateSize))
-	c.metricsClient.RecordTimer(metrics.ExecutionSizeStatsScope, metrics.ActivityInfoSize,
-		time.Duration(stats.ActivityInfoSize))
-	c.metricsClient.RecordTimer(metrics.ExecutionSizeStatsScope, metrics.TimerInfoSize,
-		time.Duration(stats.TimerInfoSize))
-	c.metricsClient.RecordTimer(metrics.ExecutionSizeStatsScope, metrics.ChildInfoSize,
-		time.Duration(stats.ChildInfoSize))
-	c.metricsClient.RecordTimer(metrics.ExecutionSizeStatsScope, metrics.SignalInfoSize,
-		time.Duration(stats.SignalInfoSize))
-	c.metricsClient.RecordTimer(metrics.ExecutionSizeStatsScope, metrics.BufferedEventsSize,
-		time.Duration(stats.BufferedEventsSize))
-	c.metricsClient.RecordTimer(metrics.ExecutionSizeStatsScope, metrics.BufferedReplicationTasksSize,
-		time.Duration(stats.BufferedReplicationTasksSize))
-	c.metricsClient.RecordTimer(metrics.ExecutionCountStatsScope, metrics.ActivityInfoCount,
-		time.Duration(stats.ActivityInfoCount))
-	c.metricsClient.RecordTimer(metrics.ExecutionCountStatsScope, metrics.TimerInfoCount,
-		time.Duration(stats.TimerInfoCount))
-	c.metricsClient.RecordTimer(metrics.ExecutionCountStatsScope, metrics.ChildInfoCount,
-		time.Duration(stats.ChildInfoCount))
-	c.metricsClient.RecordTimer(metrics.ExecutionCountStatsScope, metrics.SignalInfoCount,
-		time.Duration(stats.SignalInfoCount))
-	c.metricsClient.RecordTimer(metrics.ExecutionCountStatsScope, metrics.RequestCancelInfoCount,
-		time.Duration(stats.RequestCancelInfoCount))
-	c.metricsClient.RecordTimer(metrics.ExecutionCountStatsScope, metrics.BufferedEventsCount,
-		time.Duration(stats.BufferedEventsCount))
-	c.metricsClient.RecordTimer(metrics.ExecutionCountStatsScope, metrics.BufferedReplicationTasksCount,
-		time.Duration(stats.BufferedReplicationTasksCount))
 }
 
 func (c *workflowExecutionContextImpl) emitSessionUpdateStats(stats *persistence.MutableStateUpdateSessionStats) {
@@ -989,44 +1133,6 @@ func (c *workflowExecutionContextImpl) emitSessionUpdateStats(stats *persistence
 	allSizeScope := c.metricsClient.Scope(metrics.SessionSizeStatsScope, metrics.DomainAllTag())
 	allCountScope := c.metricsClient.Scope(metrics.SessionCountStatsScope, metrics.DomainAllTag())
 	emitSessionUpdateStats(allSizeScope, allCountScope, stats)
-
-	// TODO: (@shreyassrivatsan) remove the below legacy style metrics
-	c.metricsClient.RecordTimer(metrics.SessionSizeStatsScope, metrics.MutableStateSize,
-		time.Duration(stats.MutableStateSize))
-	c.metricsClient.RecordTimer(metrics.SessionSizeStatsScope, metrics.ExecutionInfoSize,
-		time.Duration(stats.ExecutionInfoSize))
-	c.metricsClient.RecordTimer(metrics.SessionSizeStatsScope, metrics.ActivityInfoSize,
-		time.Duration(stats.ActivityInfoSize))
-	c.metricsClient.RecordTimer(metrics.SessionSizeStatsScope, metrics.TimerInfoSize,
-		time.Duration(stats.TimerInfoSize))
-	c.metricsClient.RecordTimer(metrics.SessionSizeStatsScope, metrics.ChildInfoSize,
-		time.Duration(stats.ChildInfoSize))
-	c.metricsClient.RecordTimer(metrics.SessionSizeStatsScope, metrics.SignalInfoSize,
-		time.Duration(stats.SignalInfoSize))
-	c.metricsClient.RecordTimer(metrics.SessionSizeStatsScope, metrics.BufferedEventsSize,
-		time.Duration(stats.BufferedEventsSize))
-	c.metricsClient.RecordTimer(metrics.SessionSizeStatsScope, metrics.BufferedReplicationTasksSize,
-		time.Duration(stats.BufferedReplicationTasksSize))
-	c.metricsClient.RecordTimer(metrics.SessionCountStatsScope, metrics.ActivityInfoCount,
-		time.Duration(stats.ActivityInfoCount))
-	c.metricsClient.RecordTimer(metrics.SessionCountStatsScope, metrics.TimerInfoCount,
-		time.Duration(stats.TimerInfoCount))
-	c.metricsClient.RecordTimer(metrics.SessionCountStatsScope, metrics.ChildInfoCount,
-		time.Duration(stats.ChildInfoCount))
-	c.metricsClient.RecordTimer(metrics.SessionCountStatsScope, metrics.SignalInfoCount,
-		time.Duration(stats.SignalInfoCount))
-	c.metricsClient.RecordTimer(metrics.SessionCountStatsScope, metrics.RequestCancelInfoCount,
-		time.Duration(stats.RequestCancelInfoCount))
-	c.metricsClient.RecordTimer(metrics.SessionCountStatsScope, metrics.DeleteActivityInfoCount,
-		time.Duration(stats.DeleteActivityInfoCount))
-	c.metricsClient.RecordTimer(metrics.SessionCountStatsScope, metrics.DeleteTimerInfoCount,
-		time.Duration(stats.DeleteTimerInfoCount))
-	c.metricsClient.RecordTimer(metrics.SessionCountStatsScope, metrics.DeleteChildInfoCount,
-		time.Duration(stats.DeleteChildInfoCount))
-	c.metricsClient.RecordTimer(metrics.SessionCountStatsScope, metrics.DeleteSignalInfoCount,
-		time.Duration(stats.DeleteSignalInfoCount))
-	c.metricsClient.RecordTimer(metrics.SessionCountStatsScope, metrics.DeleteRequestCancelInfoCount,
-		time.Duration(stats.DeleteRequestCancelInfoCount))
 }
 
 func (c *workflowExecutionContextImpl) emitWorkflowCompletionStats(event *workflow.HistoryEvent) {

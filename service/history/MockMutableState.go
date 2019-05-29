@@ -239,12 +239,12 @@ func (_m *mockMutableState) AddChildWorkflowExecutionFailedEvent(_a0 int64, _a1 
 }
 
 // AddChildWorkflowExecutionStartedEvent provides a mock function with given fields: _a0, _a1, _a2, _a3
-func (_m *mockMutableState) AddChildWorkflowExecutionStartedEvent(_a0 *string, _a1 *shared.WorkflowExecution, _a2 *shared.WorkflowType, _a3 int64) *shared.HistoryEvent {
-	ret := _m.Called(_a0, _a1, _a2, _a3)
+func (_m *mockMutableState) AddChildWorkflowExecutionStartedEvent(_a0 *string, _a1 *shared.WorkflowExecution, _a2 *shared.WorkflowType, _a3 int64, _a4 *shared.Header) *shared.HistoryEvent {
+	ret := _m.Called(_a0, _a1, _a2, _a3, _a4)
 
 	var r0 *shared.HistoryEvent
-	if rf, ok := ret.Get(0).(func(*string, *shared.WorkflowExecution, *shared.WorkflowType, int64) *shared.HistoryEvent); ok {
-		r0 = rf(_a0, _a1, _a2, _a3)
+	if rf, ok := ret.Get(0).(func(*string, *shared.WorkflowExecution, *shared.WorkflowType, int64, *shared.Header) *shared.HistoryEvent); ok {
+		r0 = rf(_a0, _a1, _a2, _a3, _a4)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*shared.HistoryEvent)
@@ -335,12 +335,12 @@ func (_m *mockMutableState) AddContinueAsNewEvent(_a0 int64, _a1 int64, _a2 *cac
 }
 
 // AddDecisionTaskCompletedEvent provides a mock function with given fields: _a0, _a1, _a2
-func (_m *mockMutableState) AddDecisionTaskCompletedEvent(_a0 int64, _a1 int64, _a2 *shared.RespondDecisionTaskCompletedRequest) *shared.HistoryEvent {
-	ret := _m.Called(_a0, _a1, _a2)
+func (_m *mockMutableState) AddDecisionTaskCompletedEvent(_a0 int64, _a1 int64, _a2 *shared.RespondDecisionTaskCompletedRequest, _a3 int) *shared.HistoryEvent {
+	ret := _m.Called(_a0, _a1, _a2, _a3)
 
 	var r0 *shared.HistoryEvent
-	if rf, ok := ret.Get(0).(func(int64, int64, *shared.RespondDecisionTaskCompletedRequest) *shared.HistoryEvent); ok {
-		r0 = rf(_a0, _a1, _a2)
+	if rf, ok := ret.Get(0).(func(int64, int64, *shared.RespondDecisionTaskCompletedRequest, int) *shared.HistoryEvent); ok {
+		r0 = rf(_a0, _a1, _a2, _a3)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*shared.HistoryEvent)
@@ -827,16 +827,6 @@ func (_m *mockMutableState) AddWorkflowExecutionTerminatedEvent(_a0 *shared.Term
 	return r0
 }
 
-// AfterAddDecisionTaskCompletedEvent provides a mock function with given fields: _a0
-func (_m *mockMutableState) AfterAddDecisionTaskCompletedEvent(_a0 int64) {
-	_m.Called(_a0)
-}
-
-// BeforeAddDecisionTaskCompletedEvent provides a mock function with given fields:
-func (_m *mockMutableState) BeforeAddDecisionTaskCompletedEvent() {
-	_m.Called()
-}
-
 // BufferReplicationTask provides a mock function with given fields: _a0
 func (_m *mockMutableState) BufferReplicationTask(_a0 *h.ReplicateEventsRequest) error {
 	ret := _m.Called(_a0)
@@ -877,6 +867,22 @@ func (_m *mockMutableState) CloseUpdateSession() (*mutableStateSessionUpdates, e
 	}
 
 	return r0, r1
+}
+
+// CloseUpdateSession provides a mock function with given fields:
+func (_m *mockMutableState) CheckResettable() error {
+	ret := _m.Called()
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(error)
+		}
+	}
+
+	return r0
 }
 
 // CopyToPersistence provides a mock function with given fields:
@@ -921,22 +927,6 @@ func (_m *mockMutableState) CreateNewHistoryEventWithTimestamp(eventType shared.
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*shared.HistoryEvent)
-		}
-	}
-
-	return r0
-}
-
-// CreateReplicationTask provides a mock function with given fields:
-func (_m *mockMutableState) CreateReplicationTask(_a0 int32, _a1 []byte) *persistence.HistoryReplicationTask {
-	ret := _m.Called(_a0, _a1)
-
-	var r0 *persistence.HistoryReplicationTask
-	if rf, ok := ret.Get(0).(func(_a0 int32, _a1 []byte) *persistence.HistoryReplicationTask); ok {
-		r0 = rf(_a0, _a1)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*persistence.HistoryReplicationTask)
 		}
 	}
 
@@ -1722,6 +1712,20 @@ func (_m *mockMutableState) HasPendingDecisionTask() bool {
 	return r0
 }
 
+// HasProcessedOrPendingDecisionTask provides a mock function with given fields:
+func (_m *mockMutableState) HasProcessedOrPendingDecisionTask() bool {
+	ret := _m.Called()
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func() bool); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	return r0
+}
+
 // IncrementHistorySize provides a mock function with given fields: appendSize
 func (_m *mockMutableState) IncrementHistorySize(appendSize int) {
 	_m.Called(appendSize)
@@ -1930,9 +1934,9 @@ func (_m *mockMutableState) ReplicateChildWorkflowExecutionTimedOutEvent(_a0 *sh
 	_m.Called(_a0)
 }
 
-// ReplicateDecisionTaskCompletedEvent provides a mock function with given fields: _a0, _a1
-func (_m *mockMutableState) ReplicateDecisionTaskCompletedEvent(_a0 int64, _a1 int64) {
-	_m.Called(_a0, _a1)
+// ReplicateDecisionTaskCompletedEvent provides a mock function with given fields: _a0
+func (_m *mockMutableState) ReplicateDecisionTaskCompletedEvent(_a0 *shared.HistoryEvent) {
+	_m.Called(_a0)
 }
 
 // ReplicateDecisionTaskFailedEvent provides a mock function with given fields: _a0, _a1
@@ -1941,12 +1945,12 @@ func (_m *mockMutableState) ReplicateDecisionTaskFailedEvent() {
 }
 
 // ReplicateDecisionTaskScheduledEvent provides a mock function with given fields: _a0, _a1, _a2, _a3, _a4
-func (_m *mockMutableState) ReplicateDecisionTaskScheduledEvent(_a0 int64, _a1 int64, _a2 string, _a3 int32, _a4 int64) *decisionInfo {
-	ret := _m.Called(_a0, _a1, _a2, _a3, _a4)
+func (_m *mockMutableState) ReplicateDecisionTaskScheduledEvent(_a0 int64, _a1 int64, _a2 string, _a3 int32, _a4, _a5 int64) *decisionInfo {
+	ret := _m.Called(_a0, _a1, _a2, _a3, _a4, _a5)
 
 	var r0 *decisionInfo
-	if rf, ok := ret.Get(0).(func(int64, int64, string, int32, int64) *decisionInfo); ok {
-		r0 = rf(_a0, _a1, _a2, _a3, _a4)
+	if rf, ok := ret.Get(0).(func(int64, int64, string, int32, int64, int64) *decisionInfo); ok {
+		r0 = rf(_a0, _a1, _a2, _a3, _a4, _a5)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*decisionInfo)
@@ -2108,12 +2112,12 @@ func (_m *mockMutableState) ReplicateWorkflowExecutionCompletedEvent(_a0 int64, 
 }
 
 // ReplicateWorkflowExecutionContinuedAsNewEvent provides a mock function with given fields: _a0, _a1, _a2, _a3, _a4, _a5
-func (_m *mockMutableState) ReplicateWorkflowExecutionContinuedAsNewEvent(_a0 int64, _a1 string, _a2 string, _a3 *shared.HistoryEvent, _a4 *shared.HistoryEvent, _a5 *decisionInfo, _a6 mutableState, _a7 int32) error {
-	ret := _m.Called(_a0, _a1, _a2, _a3, _a4, _a5, _a6, _a7)
+func (_m *mockMutableState) ReplicateWorkflowExecutionContinuedAsNewEvent(_a0 int64, _a1 string, _a2 string, _a3 *shared.HistoryEvent, _a4 *shared.HistoryEvent, _a5 *decisionInfo, _a6 mutableState, _a7 int32, _a8 int32) error {
+	ret := _m.Called(_a0, _a1, _a2, _a3, _a4, _a5, _a6, _a7, _a8)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(int64, string, string, *shared.HistoryEvent, *shared.HistoryEvent, *decisionInfo, mutableState, int32) error); ok {
-		r0 = rf(_a0, _a1, _a2, _a3, _a4, _a5, _a6, _a7)
+	if rf, ok := ret.Get(0).(func(int64, string, string, *shared.HistoryEvent, *shared.HistoryEvent, *decisionInfo, mutableState, int32, int32) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3, _a4, _a5, _a6, _a7, _a8)
 	} else {
 		r0 = ret.Error(0)
 	}

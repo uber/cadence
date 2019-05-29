@@ -24,8 +24,10 @@
 package host
 
 import (
+	"encoding/json"
 	"flag"
-	"io/ioutil"
+	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
@@ -35,6 +37,12 @@ import (
 	"github.com/stretchr/testify/suite"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/definition"
+)
+
+const (
+	numOfRetry   = 50
+	waitTimeInMs = 400
 )
 
 type elasticsearchIntegrationSuite struct {
@@ -43,24 +51,29 @@ type elasticsearchIntegrationSuite struct {
 	*require.Assertions
 	IntegrationBase
 	esClient *elastic.Client
+
+	testSearchAttributeKey string
+	testSearchAttributeVal string
 }
 
 // This cluster use customized threshold for history config
 func (s *elasticsearchIntegrationSuite) SetupSuite() {
 	s.setupSuite("testdata/integration_elasticsearch_cluster.yaml")
-	s.createESClient()
-	s.putIndexTemplate("testdata/es_index_template.json", "test-visibility-template")
-	s.createIndex(s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName])
+	s.esClient = CreateESClient(s.Suite, s.testClusterConfig.ESConfig.URL.String())
+	PutIndexTemplate(s.Suite, s.esClient, "testdata/es_index_template.json", "test-visibility-template")
+	CreateIndex(s.Suite, s.esClient, s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName])
 }
 
 func (s *elasticsearchIntegrationSuite) TearDownSuite() {
 	s.tearDownSuite()
-	s.deleteIndex(s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName])
+	DeleteIndex(s.Suite, s.esClient, s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName])
 }
 
 func (s *elasticsearchIntegrationSuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
+	s.testSearchAttributeKey = definition.CustomStringField
+	s.testSearchAttributeVal = "test value"
 }
 
 func TestElasticsearchIntegrationSuite(t *testing.T) {
@@ -72,6 +85,232 @@ func (s *elasticsearchIntegrationSuite) TestListOpenWorkflow() {
 	id := "es-integration-start-workflow-test"
 	wt := "es-integration-start-workflow-test-type"
 	tl := "es-integration-start-workflow-test-tasklist"
+	request := s.createStartWorkflowExecutionRequest(id, wt, tl)
+
+	attrValBytes, _ := json.Marshal(s.testSearchAttributeVal)
+	searchAttr := &workflow.SearchAttributes{
+		IndexedFields: map[string][]byte{
+			s.testSearchAttributeKey: attrValBytes,
+		},
+	}
+	request.SearchAttributes = searchAttr
+
+	startTime := time.Now().UnixNano()
+	we, err := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err)
+
+	startFilter := &workflow.StartTimeFilter{}
+	startFilter.EarliestTime = common.Int64Ptr(startTime)
+	var openExecution *workflow.WorkflowExecutionInfo
+	for i := 0; i < numOfRetry; i++ {
+		startFilter.LatestTime = common.Int64Ptr(time.Now().UnixNano())
+		resp, err := s.engine.ListOpenWorkflowExecutions(createContext(), &workflow.ListOpenWorkflowExecutionsRequest{
+			Domain:          common.StringPtr(s.domainName),
+			MaximumPageSize: common.Int32Ptr(100),
+			StartTimeFilter: startFilter,
+			ExecutionFilter: &workflow.WorkflowExecutionFilter{
+				WorkflowId: common.StringPtr(id),
+			},
+		})
+		s.Nil(err)
+		if len(resp.GetExecutions()) == 1 {
+			openExecution = resp.GetExecutions()[0]
+			break
+		}
+		time.Sleep(waitTimeInMs * time.Millisecond)
+	}
+	s.NotNil(openExecution)
+	s.Equal(we.GetRunId(), openExecution.GetExecution().GetRunId())
+	s.Equal(attrValBytes, openExecution.SearchAttributes.GetIndexedFields()[s.testSearchAttributeKey])
+}
+
+func (s *elasticsearchIntegrationSuite) TestListWorkflow() {
+	id := "es-integration-list-workflow-test"
+	wt := "es-integration-list-workflow-test-type"
+	tl := "es-integration-list-workflow-test-tasklist"
+	request := s.createStartWorkflowExecutionRequest(id, wt, tl)
+
+	we, err := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err)
+
+	query := fmt.Sprintf(`WorkflowID = "%s"`, id)
+	s.testHelperForReadOnce(we.GetRunId(), query, false)
+}
+
+func (s *elasticsearchIntegrationSuite) TestListWorkflow_ExecutionTime() {
+	id := "es-integration-list-workflow-execution-time-test"
+	wt := "es-integration-list-workflow-execution-time-test-type"
+	tl := "es-integration-list-workflow-execution-time-test-tasklist"
+	request := s.createStartWorkflowExecutionRequest(id, wt, tl)
+
+	we, err := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err)
+
+	cronID := id + "-cron"
+	request.CronSchedule = common.StringPtr("@every 1m")
+	request.WorkflowId = common.StringPtr(cronID)
+
+	weCron, err := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err)
+
+	query := fmt.Sprintf(`(WorkflowID = "%s" or WorkflowID = "%s") and ExecutionTime < %v`, id, cronID, time.Now().UnixNano()+int64(time.Minute))
+	s.testHelperForReadOnce(weCron.GetRunId(), query, false)
+
+	query = fmt.Sprintf(`WorkflowID = "%s"`, id)
+	s.testHelperForReadOnce(we.GetRunId(), query, false)
+}
+
+func (s *elasticsearchIntegrationSuite) TestListWorkflow_SearchAttribute() {
+	id := "es-integration-list-workflow-by-search-attr-test"
+	wt := "es-integration-list-workflow-by-search-attr-test-type"
+	tl := "es-integration-list-workflow-by-search-attr-test-tasklist"
+	request := s.createStartWorkflowExecutionRequest(id, wt, tl)
+
+	attrValBytes, _ := json.Marshal(s.testSearchAttributeVal)
+	searchAttr := &workflow.SearchAttributes{
+		IndexedFields: map[string][]byte{
+			s.testSearchAttributeKey: attrValBytes,
+		},
+	}
+	request.SearchAttributes = searchAttr
+
+	we, err := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err)
+	query := fmt.Sprintf(`WorkflowID = "%s" and %s = "%s"`, id, s.testSearchAttributeKey, s.testSearchAttributeVal)
+	s.testHelperForReadOnce(we.GetRunId(), query, false)
+}
+
+func (s *elasticsearchIntegrationSuite) TestListWorkflow_PageToken() {
+	id := "es-integration-list-workflow-token-test"
+	wt := "es-integration-list-workflow-token-test-type"
+	tl := "es-integration-list-workflow-token-test-tasklist"
+	request := s.createStartWorkflowExecutionRequest(id, wt, tl)
+
+	numOfWorkflows := defaultTestValueOfESIndexMaxResultWindow - 1 // == 4
+	pageSize := 3
+
+	s.testListWorkflowHelper(numOfWorkflows, pageSize, request, id, wt, false)
+}
+
+func (s *elasticsearchIntegrationSuite) TestListWorkflow_SearchAfter() {
+	id := "es-integration-list-workflow-searchAfter-test"
+	wt := "es-integration-list-workflow-searchAfter-test-type"
+	tl := "es-integration-list-workflow-searchAfter-test-tasklist"
+	request := s.createStartWorkflowExecutionRequest(id, wt, tl)
+
+	numOfWorkflows := defaultTestValueOfESIndexMaxResultWindow + 1 // == 6
+	pageSize := 4
+
+	s.testListWorkflowHelper(numOfWorkflows, pageSize, request, id, wt, false)
+}
+
+func (s *elasticsearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, pageSize int,
+	startRequest *workflow.StartWorkflowExecutionRequest, wid, wType string, isScan bool) {
+
+	// start enough number of workflows
+	for i := 0; i < numOfWorkflows; i++ {
+		startRequest.RequestId = common.StringPtr(uuid.New())
+		startRequest.WorkflowId = common.StringPtr(wid + strconv.Itoa(i))
+		_, err := s.engine.StartWorkflowExecution(createContext(), startRequest)
+		s.Nil(err)
+	}
+
+	var openExecutions []*workflow.WorkflowExecutionInfo
+	var nextPageToken []byte
+
+	listRequest := &workflow.ListWorkflowExecutionsRequest{
+		Domain:        common.StringPtr(s.domainName),
+		PageSize:      common.Int32Ptr(int32(pageSize)),
+		NextPageToken: nextPageToken,
+		Query:         common.StringPtr(fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing`, wType)),
+	}
+	// test first page
+	for i := 0; i < numOfRetry; i++ {
+		var resp *workflow.ListWorkflowExecutionsResponse
+		var err error
+
+		if isScan {
+			resp, err = s.engine.ScanWorkflowExecutions(createContext(), listRequest)
+		} else {
+			resp, err = s.engine.ListWorkflowExecutions(createContext(), listRequest)
+		}
+		s.Nil(err)
+		if len(resp.GetExecutions()) == pageSize {
+			openExecutions = resp.GetExecutions()
+			nextPageToken = resp.NextPageToken
+			break
+		}
+		time.Sleep(waitTimeInMs * time.Millisecond)
+	}
+	s.NotNil(openExecutions)
+	s.NotNil(nextPageToken)
+	s.True(len(nextPageToken) > 0)
+
+	// test last page
+	listRequest.NextPageToken = nextPageToken
+	inIf := false
+	for i := 0; i < numOfRetry; i++ {
+		var resp *workflow.ListWorkflowExecutionsResponse
+		var err error
+
+		if isScan {
+			resp, err = s.engine.ScanWorkflowExecutions(createContext(), listRequest)
+		} else {
+			resp, err = s.engine.ListWorkflowExecutions(createContext(), listRequest)
+		}
+		s.Nil(err)
+		if len(resp.GetExecutions()) == numOfWorkflows-pageSize {
+			inIf = true
+			openExecutions = resp.GetExecutions()
+			nextPageToken = resp.NextPageToken
+			break
+		}
+		time.Sleep(waitTimeInMs * time.Millisecond)
+	}
+	s.True(inIf)
+	s.NotNil(openExecutions)
+	s.Nil(nextPageToken)
+}
+
+func (s *elasticsearchIntegrationSuite) testHelperForReadOnce(runID, query string, isScan bool) {
+	var openExecution *workflow.WorkflowExecutionInfo
+	listRequest := &workflow.ListWorkflowExecutionsRequest{
+		Domain:   common.StringPtr(s.domainName),
+		PageSize: common.Int32Ptr(100),
+		Query:    common.StringPtr(query),
+	}
+	for i := 0; i < numOfRetry; i++ {
+		var resp *workflow.ListWorkflowExecutionsResponse
+		var err error
+
+		if isScan {
+			resp, err = s.engine.ScanWorkflowExecutions(createContext(), listRequest)
+		} else {
+			resp, err = s.engine.ListWorkflowExecutions(createContext(), listRequest)
+		}
+
+		s.Nil(err)
+		if len(resp.GetExecutions()) == 1 {
+			openExecution = resp.GetExecutions()[0]
+			break
+		}
+		time.Sleep(waitTimeInMs * time.Millisecond)
+	}
+	s.NotNil(openExecution)
+	s.Equal(runID, openExecution.GetExecution().GetRunId())
+	s.True(openExecution.GetExecutionTime() >= openExecution.GetStartTime())
+	if openExecution.SearchAttributes != nil && len(openExecution.SearchAttributes.GetIndexedFields()) > 0 {
+		searchValBytes := openExecution.SearchAttributes.GetIndexedFields()[s.testSearchAttributeKey]
+		var searchVal string
+		json.Unmarshal(searchValBytes, &searchVal)
+		s.Equal(s.testSearchAttributeVal, searchVal)
+	}
+}
+
+func (s *elasticsearchIntegrationSuite) TestScanWorkflow() {
+	id := "es-integration-scan-workflow-test"
+	wt := "es-integration-scan-workflow-test-type"
+	tl := "es-integration-scan-workflow-test-tasklist"
 	identity := "worker1"
 
 	workflowType := &workflow.WorkflowType{}
@@ -92,67 +331,118 @@ func (s *elasticsearchIntegrationSuite) TestListOpenWorkflow() {
 		Identity:                            common.StringPtr(identity),
 	}
 
-	startTime := time.Now().UnixNano()
 	we, err := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err)
+	query := fmt.Sprintf(`WorkflowID = "%s"`, id)
+	s.testHelperForReadOnce(we.GetRunId(), query, true)
+}
 
-	startFilter := &workflow.StartTimeFilter{}
-	startFilter.EarliestTime = common.Int64Ptr(startTime)
-	var openExecution *workflow.WorkflowExecutionInfo
-	for i := 0; i < 20; i++ {
-		startFilter.LatestTime = common.Int64Ptr(time.Now().UnixNano())
-		resp, err := s.engine.ListOpenWorkflowExecutions(createContext(), &workflow.ListOpenWorkflowExecutionsRequest{
-			Domain:          common.StringPtr(s.domainName),
-			MaximumPageSize: common.Int32Ptr(100),
-			StartTimeFilter: startFilter,
-			ExecutionFilter: &workflow.WorkflowExecutionFilter{
-				WorkflowId: common.StringPtr(id),
-			},
-		})
+func (s *elasticsearchIntegrationSuite) TestScanWorkflow_SearchAttribute() {
+	id := "es-integration-scan-workflow-search-attr-test"
+	wt := "es-integration-scan-workflow-search-attr-test-type"
+	tl := "es-integration-scan-workflow-search-attr-test-tasklist"
+	request := s.createStartWorkflowExecutionRequest(id, wt, tl)
+
+	attrValBytes, _ := json.Marshal(s.testSearchAttributeVal)
+	searchAttr := &workflow.SearchAttributes{
+		IndexedFields: map[string][]byte{
+			s.testSearchAttributeKey: attrValBytes,
+		},
+	}
+	request.SearchAttributes = searchAttr
+
+	we, err := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err)
+	query := fmt.Sprintf(`WorkflowID = "%s" and %s = "%s"`, id, s.testSearchAttributeKey, s.testSearchAttributeVal)
+	s.testHelperForReadOnce(we.GetRunId(), query, true)
+}
+
+func (s *elasticsearchIntegrationSuite) TestScanWorkflow_PageToken() {
+	id := "es-integration-scan-workflow-token-test"
+	wt := "es-integration-scan-workflow-token-test-type"
+	tl := "es-integration-scan-workflow-token-test-tasklist"
+	identity := "worker1"
+
+	workflowType := &workflow.WorkflowType{}
+	workflowType.Name = common.StringPtr(wt)
+
+	taskList := &workflow.TaskList{}
+	taskList.Name = common.StringPtr(tl)
+
+	request := &workflow.StartWorkflowExecutionRequest{
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		Identity:                            common.StringPtr(identity),
+	}
+
+	numOfWorkflows := 4
+	pageSize := 3
+
+	s.testListWorkflowHelper(numOfWorkflows, pageSize, request, id, wt, true)
+}
+
+func (s *elasticsearchIntegrationSuite) TestCountWorkflow() {
+	id := "es-integration-count-workflow-test"
+	wt := "es-integration-count-workflow-test-type"
+	tl := "es-integration-count-workflow-test-tasklist"
+	request := s.createStartWorkflowExecutionRequest(id, wt, tl)
+
+	attrValBytes, _ := json.Marshal(s.testSearchAttributeVal)
+	searchAttr := &workflow.SearchAttributes{
+		IndexedFields: map[string][]byte{
+			s.testSearchAttributeKey: attrValBytes,
+		},
+	}
+	request.SearchAttributes = searchAttr
+
+	_, err := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err)
+
+	query := fmt.Sprintf(`WorkflowID = "%s" and %s = "%s"`, id, s.testSearchAttributeKey, s.testSearchAttributeVal)
+	countRequest := &workflow.CountWorkflowExecutionsRequest{
+		Domain: common.StringPtr(s.domainName),
+		Query:  common.StringPtr(query),
+	}
+	var resp *workflow.CountWorkflowExecutionsResponse
+	for i := 0; i < numOfRetry; i++ {
+		resp, err = s.engine.CountWorkflowExecutions(createContext(), countRequest)
 		s.Nil(err)
-		if len(resp.GetExecutions()) == 1 {
-			openExecution = resp.GetExecutions()[0]
+		if resp.GetCount() == int64(1) {
 			break
 		}
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(waitTimeInMs * time.Millisecond)
 	}
-	s.NotNil(openExecution)
-	s.Equal(we.GetRunId(), openExecution.GetExecution().GetRunId())
-}
+	s.Equal(int64(1), resp.GetCount())
 
-func (s *elasticsearchIntegrationSuite) createESClient() {
-	var err error
-	s.esClient, err = elastic.NewClient(
-		elastic.SetURL(s.testClusterConfig.ESConfig.URL.String()),
-		elastic.SetRetrier(elastic.NewBackoffRetrier(elastic.NewExponentialBackoff(128*time.Millisecond, 513*time.Millisecond))),
-	)
-	s.Require().NoError(err)
-}
-
-func (s *elasticsearchIntegrationSuite) putIndexTemplate(templateConfigFile, templateName string) {
-	template, err := ioutil.ReadFile(templateConfigFile)
-	s.Require().NoError(err)
-	putTemplate, err := s.esClient.IndexPutTemplate(templateName).BodyString(string(template)).Do(createContext())
-	s.Require().NoError(err)
-	s.Require().True(putTemplate.Acknowledged)
-}
-
-func (s *elasticsearchIntegrationSuite) createIndex(indexName string) {
-	exists, err := s.esClient.IndexExists(indexName).Do(createContext())
-	s.Require().NoError(err)
-	if exists {
-		deleteTestIndex, err := s.esClient.DeleteIndex(indexName).Do(createContext())
-		s.Require().Nil(err)
-		s.Require().True(deleteTestIndex.Acknowledged)
-	}
-
-	createTestIndex, err := s.esClient.CreateIndex(indexName).Do(createContext())
-	s.Require().NoError(err)
-	s.Require().True(createTestIndex.Acknowledged)
-}
-
-func (s *elasticsearchIntegrationSuite) deleteIndex(indexName string) {
-	deleteTestIndex, err := s.esClient.DeleteIndex(indexName).Do(createContext())
+	query = fmt.Sprintf(`WorkflowID = "%s" and %s = "%s"`, id, s.testSearchAttributeKey, "noMatch")
+	countRequest.Query = common.StringPtr(query)
+	resp, err = s.engine.CountWorkflowExecutions(createContext(), countRequest)
 	s.Nil(err)
-	s.True(deleteTestIndex.Acknowledged)
+	s.Equal(int64(0), resp.GetCount())
+}
+
+func (s *elasticsearchIntegrationSuite) createStartWorkflowExecutionRequest(id, wt, tl string) *workflow.StartWorkflowExecutionRequest {
+	identity := "worker1"
+	workflowType := &workflow.WorkflowType{}
+	workflowType.Name = common.StringPtr(wt)
+
+	taskList := &workflow.TaskList{}
+	taskList.Name = common.StringPtr(tl)
+
+	request := &workflow.StartWorkflowExecutionRequest{
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		Identity:                            common.StringPtr(identity),
+	}
+	return request
 }

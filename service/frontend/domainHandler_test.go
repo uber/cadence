@@ -25,6 +25,10 @@ import (
 	"log"
 	"os"
 	"testing"
+	"time"
+
+	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
@@ -56,6 +60,8 @@ type (
 		handler *domainHandlerImpl
 	}
 )
+
+var nowInt64 = time.Now().UnixNano()
 
 func TestDomainHandlerCommonSuite(t *testing.T) {
 	s := new(domainHandlerCommonSuite)
@@ -155,6 +161,79 @@ func (s *domainHandlerCommonSuite) TestMergeDomainData_Nil() {
 		"k0": "v1",
 		"k1": "v2",
 	}, out)
+}
+
+// test merging bad binaries
+func (s *domainHandlerSuite) TestMergeBadBinaries_Overriding() {
+	out := s.handler.mergeBadBinaries(
+		map[string]*shared.BadBinaryInfo{
+			"k0": {Reason: common.StringPtr("reason0")},
+		},
+		map[string]*shared.BadBinaryInfo{
+			"k0": {Reason: common.StringPtr("reason2")},
+		}, nowInt64,
+	)
+
+	assert.True(s.T(), out.Equals(&shared.BadBinaries{
+		Binaries: map[string]*shared.BadBinaryInfo{
+			"k0": {Reason: common.StringPtr("reason2"), CreatedTimeNano: common.Int64Ptr(nowInt64)},
+		},
+	}))
+}
+
+func (s *domainHandlerSuite) TestMergeBadBinaries_Adding() {
+	out := s.handler.mergeBadBinaries(
+		map[string]*shared.BadBinaryInfo{
+			"k0": {Reason: common.StringPtr("reason0")},
+		},
+		map[string]*shared.BadBinaryInfo{
+			"k1": {Reason: common.StringPtr("reason2")},
+		}, nowInt64,
+	)
+
+	expected := &shared.BadBinaries{
+		Binaries: map[string]*shared.BadBinaryInfo{
+			"k0": {Reason: common.StringPtr("reason0")},
+			"k1": {Reason: common.StringPtr("reason2"), CreatedTimeNano: common.Int64Ptr(nowInt64)},
+		},
+	}
+	assert.Equal(s.T(), out.String(), expected.String())
+}
+
+func (s *domainHandlerSuite) TestMergeBadBinaries_Merging() {
+	out := s.handler.mergeBadBinaries(
+		map[string]*shared.BadBinaryInfo{
+			"k0": {Reason: common.StringPtr("reason0")},
+		},
+		map[string]*shared.BadBinaryInfo{
+			"k0": {Reason: common.StringPtr("reason1")},
+			"k1": {Reason: common.StringPtr("reason2")},
+		}, nowInt64,
+	)
+
+	assert.True(s.T(), out.Equals(&shared.BadBinaries{
+		Binaries: map[string]*shared.BadBinaryInfo{
+			"k0": {Reason: common.StringPtr("reason1"), CreatedTimeNano: common.Int64Ptr(nowInt64)},
+			"k1": {Reason: common.StringPtr("reason2"), CreatedTimeNano: common.Int64Ptr(nowInt64)},
+		},
+	}))
+}
+
+func (s *domainHandlerSuite) TestMergeBadBinaries_Nil() {
+	out := s.handler.mergeBadBinaries(
+		nil,
+		map[string]*shared.BadBinaryInfo{
+			"k0": {Reason: common.StringPtr("reason1")},
+			"k1": {Reason: common.StringPtr("reason2")},
+		}, nowInt64,
+	)
+
+	assert.True(s.T(), out.Equals(&shared.BadBinaries{
+		Binaries: map[string]*shared.BadBinaryInfo{
+			"k0": {Reason: common.StringPtr("reason1"), CreatedTimeNano: common.Int64Ptr(nowInt64)},
+			"k1": {Reason: common.StringPtr("reason2"), CreatedTimeNano: common.Int64Ptr(nowInt64)},
+		},
+	}))
 }
 
 func (s *domainHandlerCommonSuite) TestListDomain() {

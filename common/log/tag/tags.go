@@ -100,6 +100,21 @@ func WorkflowRunID(runID string) Tag {
 	return newStringTag("wf-run-id", runID)
 }
 
+// WorkflowResetBaseRunID returns tag for WorkflowResetBaseRunID
+func WorkflowResetBaseRunID(runID string) Tag {
+	return newStringTag("wf-reset-base-run-id", runID)
+}
+
+// WorkflowResetNewRunID returns tag for WorkflowResetNewRunID
+func WorkflowResetNewRunID(runID string) Tag {
+	return newStringTag("wf-reset-new-run-id", runID)
+}
+
+// WorkflowBinaryChecksum returns tag for WorkflowBinaryChecksum
+func WorkflowBinaryChecksum(cs string) Tag {
+	return newStringTag("wf-binary-checksum", cs)
+}
+
 // WorkflowActivityID returns tag for WorkflowActivityID
 func WorkflowActivityID(id string) Tag {
 	return newStringTag("wf-activity-id", id)
@@ -481,11 +496,21 @@ func ScheduleAttempt(scheduleAttempt int64) Tag {
 	return newInt64("schedule-attempt", scheduleAttempt)
 }
 
-// ElastiSearch
+// ElasticSearch
 
 // ESRequest returns tag for ESRequest
 func ESRequest(ESRequest string) Tag {
 	return newStringTag("es-request", ESRequest)
+}
+
+// ESResponseStatus returns tag for ESResponse status
+func ESResponseStatus(status int) Tag {
+	return newInt("es-response-status", status)
+}
+
+// ESResponseError returns tag for ESResponse error
+func ESResponseError(msg string) Tag {
+	return newStringTag("es-response-error", msg)
 }
 
 // ESKey returns tag for ESKey

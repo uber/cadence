@@ -63,7 +63,11 @@ func (c *metricClient) Download(ctx context.Context, bucket string, key blob.Key
 	sw.Stop()
 
 	if err != nil {
-		c.metricsClient.IncCounter(metrics.BlobstoreClientDownloadScope, metrics.CadenceClientFailures)
+		if err == ErrBlobNotExists {
+			c.metricsClient.IncCounter(metrics.BlobstoreClientGetTagsScope, metrics.CadenceErrEntityNotExistsCounter)
+		} else {
+			c.metricsClient.IncCounter(metrics.BlobstoreClientGetTagsScope, metrics.CadenceClientFailures)
+		}
 	}
 	return resp, err
 }
@@ -76,7 +80,11 @@ func (c *metricClient) GetTags(ctx context.Context, bucket string, key blob.Key)
 	sw.Stop()
 
 	if err != nil {
-		c.metricsClient.IncCounter(metrics.BlobstoreClientGetTagsScope, metrics.CadenceClientFailures)
+		if err == ErrBlobNotExists {
+			c.metricsClient.IncCounter(metrics.BlobstoreClientGetTagsScope, metrics.CadenceErrEntityNotExistsCounter)
+		} else {
+			c.metricsClient.IncCounter(metrics.BlobstoreClientGetTagsScope, metrics.CadenceClientFailures)
+		}
 	}
 	return resp, err
 }
@@ -102,7 +110,11 @@ func (c *metricClient) Delete(ctx context.Context, bucket string, key blob.Key) 
 	sw.Stop()
 
 	if err != nil {
-		c.metricsClient.IncCounter(metrics.BlobstoreClientDeleteScope, metrics.CadenceClientFailures)
+		if err == ErrBlobNotExists {
+			c.metricsClient.IncCounter(metrics.BlobstoreClientGetTagsScope, metrics.CadenceErrEntityNotExistsCounter)
+		} else {
+			c.metricsClient.IncCounter(metrics.BlobstoreClientGetTagsScope, metrics.CadenceClientFailures)
+		}
 	}
 	return resp, err
 }
@@ -128,7 +140,11 @@ func (c *metricClient) BucketMetadata(ctx context.Context, bucket string) (*Buck
 	sw.Stop()
 
 	if err != nil {
-		c.metricsClient.IncCounter(metrics.BlobstoreClientBucketMetadataScope, metrics.CadenceClientFailures)
+		if err == ErrBucketNotExists {
+			c.metricsClient.IncCounter(metrics.BlobstoreClientGetTagsScope, metrics.CadenceErrEntityNotExistsCounter)
+		} else {
+			c.metricsClient.IncCounter(metrics.BlobstoreClientGetTagsScope, metrics.CadenceClientFailures)
+		}
 	}
 	return resp, err
 }

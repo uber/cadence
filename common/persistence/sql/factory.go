@@ -33,47 +33,77 @@ import (
 type (
 	// Factory vends store objects backed by MySQL
 	Factory struct {
-		sync.RWMutex
-		cfg              config.SQL
-		clusterName      string
-		logger           log.Logger
-		execStoreFactory *executionStoreFactory
+		cfg         config.SQL
+		dbConn      dbConn
+		clusterName string
+		logger      log.Logger
 	}
-	executionStoreFactory struct {
-		db     sqldb.Interface
-		logger log.Logger
+
+	// dbConn represents a logical mysql connection - its a
+	// wrapper around the standard sql connection pool with
+	// additional reference counting
+	dbConn struct {
+		sync.Mutex
+		sqldb.Interface
+		refCnt int
+		cfg    *config.SQL
 	}
 )
 
 // NewFactory returns an instance of a factory object which can be used to create
 // datastores backed by any kind of SQL store
 func NewFactory(cfg config.SQL, clusterName string, logger log.Logger) *Factory {
-	return &Factory{cfg: cfg, clusterName: clusterName, logger: logger}
+	return &Factory{
+		cfg:         cfg,
+		clusterName: clusterName,
+		logger:      logger,
+		dbConn:      newRefCountedDBConn(&cfg),
+	}
 }
 
 // NewTaskStore returns a new task store
 func (f *Factory) NewTaskStore() (p.TaskStore, error) {
-	return newTaskPersistence(f.cfg, f.logger)
+	conn, err := f.dbConn.get()
+	if err != nil {
+		return nil, err
+	}
+	return newTaskPersistence(conn, f.cfg.NumShards, f.logger)
 }
 
 // NewShardStore returns a new shard store
 func (f *Factory) NewShardStore() (p.ShardStore, error) {
-	return newShardPersistence(f.cfg, f.clusterName, f.logger)
+	conn, err := f.dbConn.get()
+	if err != nil {
+		return nil, err
+	}
+	return newShardPersistence(conn, f.clusterName, f.logger)
 }
 
 // NewHistoryStore returns a new history store
 func (f *Factory) NewHistoryStore() (p.HistoryStore, error) {
-	return newHistoryPersistence(f.cfg, f.logger)
+	conn, err := f.dbConn.get()
+	if err != nil {
+		return nil, err
+	}
+	return newHistoryPersistence(conn, f.logger)
 }
 
 // NewHistoryV2Store returns a new history store
 func (f *Factory) NewHistoryV2Store() (p.HistoryV2Store, error) {
-	return newHistoryV2Persistence(f.cfg, f.logger)
+	conn, err := f.dbConn.get()
+	if err != nil {
+		return nil, err
+	}
+	return newHistoryV2Persistence(conn, f.logger)
 }
 
 // NewMetadataStore returns a new metadata store
 func (f *Factory) NewMetadataStore() (p.MetadataStore, error) {
-	return newMetadataPersistenceV2(f.cfg, f.clusterName, f.logger)
+	conn, err := f.dbConn.get()
+	if err != nil {
+		return nil, err
+	}
+	return newMetadataPersistenceV2(conn, f.clusterName, f.logger)
 }
 
 // NewMetadataStoreV1 returns the default metadatastore
@@ -88,11 +118,11 @@ func (f *Factory) NewMetadataStoreV2() (p.MetadataStore, error) {
 
 // NewExecutionStore returns an ExecutionStore for a given shardID
 func (f *Factory) NewExecutionStore(shardID int) (p.ExecutionStore, error) {
-	factory, err := f.newExecutionStoreFactory()
+	conn, err := f.dbConn.get()
 	if err != nil {
 		return nil, err
 	}
-	return factory.new(shardID)
+	return NewSQLExecutionStore(conn, f.logger, shardID)
 }
 
 // NewVisibilityStore returns a visibility store
@@ -102,49 +132,53 @@ func (f *Factory) NewVisibilityStore() (p.VisibilityStore, error) {
 
 // Close closes the factory
 func (f *Factory) Close() {
-	f.Lock()
-	defer f.Unlock()
-	if f.execStoreFactory != nil {
-		f.execStoreFactory.close()
-	}
+	f.dbConn.forceClose()
 }
 
-// newExecutionStoreFactory returns a new instance of a factory that vends
-// execution stores. This factory exist to make sure all of the execution
-// managers reuse the same underlying db connection / object and that closing
-// one closes all of them
-func (f *Factory) newExecutionStoreFactory() (*executionStoreFactory, error) {
-	f.RLock()
-	if f.execStoreFactory != nil {
-		f.RUnlock()
-		return f.execStoreFactory, nil
-	}
-	f.RUnlock()
-	f.Lock()
-	defer f.Unlock()
-	var err error
-	f.execStoreFactory, err = newExecutionStoreFactory(f.cfg, f.logger)
-	return f.execStoreFactory, err
+// newRefCountedDBConn returns a  logical mysql connection that
+// uses reference counting to decide when to close the
+// underlying connection object. The reference count gets incremented
+// everytime get() is called and decremented everytime Close() is called
+func newRefCountedDBConn(cfg *config.SQL) dbConn {
+	return dbConn{cfg: cfg}
 }
 
-func newExecutionStoreFactory(cfg config.SQL, logger log.Logger) (*executionStoreFactory, error) {
-	db, err := storage.NewSQLDB(&cfg)
-	if err != nil {
-		return nil, err
+// get returns a mysql db connection and increments a reference count
+// this method will create a new connection, if an existing connection
+// does not exist
+func (c *dbConn) get() (sqldb.Interface, error) {
+	c.Lock()
+	defer c.Unlock()
+	if c.refCnt == 0 {
+		conn, err := storage.NewSQLDB(c.cfg)
+		if err != nil {
+			return nil, err
+		}
+		c.Interface = conn
 	}
-	return &executionStoreFactory{
-		db:     db,
-		logger: logger,
-	}, nil
+	c.refCnt++
+	return c, nil
 }
 
-func (f *executionStoreFactory) new(shardID int) (p.ExecutionStore, error) {
-	return NewSQLExecutionStore(f.db, f.logger, shardID)
+// forceClose ignores reference counts and shutsdown the underlying connection pool
+func (c *dbConn) forceClose() {
+	c.Lock()
+	defer c.Unlock()
+	if c.Interface != nil {
+		c.Interface.Close()
+	}
+	c.refCnt = 0
 }
 
-// close closes the factory
-func (f *executionStoreFactory) close() {
-	if f.db != nil {
-		f.db.Close()
+// Close closes the underlying connection if the reference count becomes zero
+func (c *dbConn) Close() error {
+	c.Lock()
+	defer c.Unlock()
+	c.refCnt--
+	if c.refCnt == 0 {
+		err := c.Interface.Close()
+		c.Interface = nil
+		return err
 	}
+	return nil
 }

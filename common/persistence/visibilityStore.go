@@ -21,6 +21,7 @@
 package persistence
 
 import (
+	"encoding/json"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -68,6 +69,7 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionStarted(request *RecordWo
 		WorkflowTimeout:    request.WorkflowTimeout,
 		TaskID:             request.TaskID,
 		Memo:               v.serializeMemo(request.Memo, request.DomainUUID, request.Execution.GetWorkflowId(), request.Execution.GetRunId()),
+		SearchAttributes:   request.SearchAttributes,
 	}
 	return v.persistence.RecordWorkflowExecutionStarted(req)
 }
@@ -82,6 +84,7 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionClosed(request *RecordWor
 		ExecutionTimestamp: request.ExecutionTimestamp,
 		TaskID:             request.TaskID,
 		Memo:               v.serializeMemo(request.Memo, request.DomainUUID, request.Execution.GetWorkflowId(), request.Execution.GetRunId()),
+		SearchAttributes:   request.SearchAttributes,
 		CloseTimestamp:     request.CloseTimestamp,
 		Status:             request.Status,
 		HistoryLength:      request.HistoryLength,
@@ -158,6 +161,26 @@ func (v *visibilityManagerImpl) DeleteWorkflowExecution(request *VisibilityDelet
 	return v.persistence.DeleteWorkflowExecution(request)
 }
 
+func (v *visibilityManagerImpl) ListWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*ListWorkflowExecutionsResponse, error) {
+	internalResp, err := v.persistence.ListWorkflowExecutions(request)
+	if err != nil {
+		return nil, err
+	}
+	return v.convertInternalListResponse(internalResp), nil
+}
+
+func (v *visibilityManagerImpl) ScanWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*ListWorkflowExecutionsResponse, error) {
+	internalResp, err := v.persistence.ScanWorkflowExecutions(request)
+	if err != nil {
+		return nil, err
+	}
+	return v.convertInternalListResponse(internalResp), nil
+}
+
+func (v *visibilityManagerImpl) CountWorkflowExecutions(request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error) {
+	return v.persistence.CountWorkflowExecutions(request)
+}
+
 func (v *visibilityManagerImpl) convertInternalGetResponse(internalResp *InternalGetClosedWorkflowExecutionResponse) *GetClosedWorkflowExecutionResponse {
 	if internalResp == nil {
 		return nil
@@ -183,6 +206,26 @@ func (v *visibilityManagerImpl) convertInternalListResponse(internalResp *Intern
 	return resp
 }
 
+func (v *visibilityManagerImpl) getSearchAttributes(attr map[string]interface{}) (*shared.SearchAttributes, error) {
+	indexedFields := make(map[string][]byte)
+	var err error
+	var valBytes []byte
+	for k, val := range attr {
+		valBytes, err = json.Marshal(val)
+		if err != nil {
+			v.logger.Error("error when encode search attributes", tag.Value(val))
+			continue
+		}
+		indexedFields[k] = valBytes
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &shared.SearchAttributes{
+		IndexedFields: indexedFields,
+	}, nil
+}
+
 func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution *VisibilityWorkflowExecutionInfo) *shared.WorkflowExecutionInfo {
 	// special handling of ExecutionTime for cron or retry
 	if execution.ExecutionTime.UnixNano() == 0 {
@@ -196,6 +239,13 @@ func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution
 			tag.WorkflowRunID(execution.RunID),
 			tag.Error(err))
 	}
+	searchAttributes, err := v.getSearchAttributes(execution.SearchAttributes)
+	if err != nil {
+		v.logger.Error("failed to convert search attributes",
+			tag.WorkflowID(execution.WorkflowID),
+			tag.WorkflowRunID(execution.RunID),
+			tag.Error(err))
+	}
 
 	convertedExecution := &shared.WorkflowExecutionInfo{
 		Execution: &shared.WorkflowExecution{
@@ -205,9 +255,10 @@ func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution
 		Type: &shared.WorkflowType{
 			Name: common.StringPtr(execution.TypeName),
 		},
-		StartTime:     common.Int64Ptr(execution.StartTime.UnixNano()),
-		ExecutionTime: common.Int64Ptr(execution.ExecutionTime.UnixNano()),
-		Memo:          memo,
+		StartTime:        common.Int64Ptr(execution.StartTime.UnixNano()),
+		ExecutionTime:    common.Int64Ptr(execution.ExecutionTime.UnixNano()),
+		Memo:             memo,
+		SearchAttributes: searchAttributes,
 	}
 
 	// for close records

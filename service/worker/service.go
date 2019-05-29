@@ -21,17 +21,19 @@
 package worker
 
 import (
-	"context"
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
 	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
@@ -40,8 +42,6 @@ import (
 	"github.com/uber/cadence/service/worker/indexer"
 	"github.com/uber/cadence/service/worker/replicator"
 	"github.com/uber/cadence/service/worker/scanner"
-	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
-	"go.uber.org/cadence/client"
 )
 
 type (
@@ -68,6 +68,8 @@ type (
 	}
 )
 
+const domainRefreshInterval = time.Second * 30
+
 // NewService builds a new cadence-worker service
 func NewService(params *service.BootstrapParams) common.Daemon {
 	config := NewConfig(params)
@@ -85,12 +87,14 @@ func NewConfig(params *service.BootstrapParams) *Config {
 	dc := dynamicconfig.NewCollection(params.DynamicConfig, params.Logger)
 	return &Config{
 		ReplicationCfg: &replicator.Config{
-			PersistenceMaxQPS:                 dc.GetIntProperty(dynamicconfig.WorkerPersistenceMaxQPS, 500),
-			ReplicatorMetaTaskConcurrency:     dc.GetIntProperty(dynamicconfig.WorkerReplicatorMetaTaskConcurrency, 64),
-			ReplicatorTaskConcurrency:         dc.GetIntProperty(dynamicconfig.WorkerReplicatorTaskConcurrency, 256),
-			ReplicatorMessageConcurrency:      dc.GetIntProperty(dynamicconfig.WorkerReplicatorMessageConcurrency, 2048),
-			ReplicatorHistoryBufferRetryCount: dc.GetIntProperty(dynamicconfig.WorkerReplicatorHistoryBufferRetryCount, 8),
-			ReplicationTaskMaxRetry:           dc.GetIntProperty(dynamicconfig.WorkerReplicationTaskMaxRetry, 400),
+			PersistenceMaxQPS:                  dc.GetIntProperty(dynamicconfig.WorkerPersistenceMaxQPS, 500),
+			ReplicatorMetaTaskConcurrency:      dc.GetIntProperty(dynamicconfig.WorkerReplicatorMetaTaskConcurrency, 64),
+			ReplicatorTaskConcurrency:          dc.GetIntProperty(dynamicconfig.WorkerReplicatorTaskConcurrency, 256),
+			ReplicatorMessageConcurrency:       dc.GetIntProperty(dynamicconfig.WorkerReplicatorMessageConcurrency, 2048),
+			ReplicatorActivityBufferRetryCount: dc.GetIntProperty(dynamicconfig.WorkerReplicatorActivityBufferRetryCount, 8),
+			ReplicatorHistoryBufferRetryCount:  dc.GetIntProperty(dynamicconfig.WorkerReplicatorHistoryBufferRetryCount, 8),
+			ReplicationTaskMaxRetryCount:       dc.GetIntProperty(dynamicconfig.WorkerReplicationTaskMaxRetryCount, 400),
+			ReplicationTaskMaxRetryDuration:    dc.GetDurationProperty(dynamicconfig.WorkerReplicationTaskMaxRetryDuration, 15*time.Minute),
 		},
 		ArchiverConfig: &archiver.Config{
 			EnableArchivalCompression:                 dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableArchivalCompression, true),
@@ -99,6 +103,7 @@ func NewConfig(params *service.BootstrapParams) *Config {
 			ArchiverConcurrency:                       dc.GetIntProperty(dynamicconfig.WorkerArchiverConcurrency, 50),
 			ArchivalsPerIteration:                     dc.GetIntProperty(dynamicconfig.WorkerArchivalsPerIteration, 1000),
 			DeterministicConstructionCheckProbability: dc.GetFloat64Property(dynamicconfig.WorkerDeterministicConstructionCheckProbability, 0.002),
+			TimeLimitPerArchivalIteration:             dc.GetDurationProperty(dynamicconfig.WorkerTimeLimitPerArchivalIteration, archiver.MaxArchivalIterationTimeout()),
 		},
 		IndexerCfg: &indexer.Config{
 			IndexerConcurrency:       dc.GetIntProperty(dynamicconfig.WorkerIndexerConcurrency, 1000),
@@ -106,6 +111,7 @@ func NewConfig(params *service.BootstrapParams) *Config {
 			ESProcessorBulkActions:   dc.GetIntProperty(dynamicconfig.WorkerESProcessorBulkActions, 1000),
 			ESProcessorBulkSize:      dc.GetIntProperty(dynamicconfig.WorkerESProcessorBulkSize, 2<<24), // 16MB
 			ESProcessorFlushInterval: dc.GetDurationProperty(dynamicconfig.WorkerESProcessorFlushInterval, 1*time.Second),
+			ValidSearchAttributes:    dc.GetMapProperty(dynamicconfig.ValidSearchAttributes, definition.GetDefaultIndexedKeys()),
 		},
 		ScannerCfg: &scanner.Config{
 			PersistenceMaxQPS: dc.GetIntProperty(dynamicconfig.ScannerPersistenceMaxQPS, 100),
@@ -124,21 +130,32 @@ func (s *Service) Start() {
 	s.metricsClient = base.GetMetricsClient()
 	s.logger.Info("service starting", tag.ComponentWorker)
 
-	pConfig := s.params.PersistenceConfig
-	pConfig.SetMaxQPS(pConfig.DefaultStore, s.config.ReplicationCfg.PersistenceMaxQPS())
-	pFactory := persistencefactory.New(&pConfig, s.params.ClusterMetadata.GetCurrentClusterName(), s.metricsClient, s.logger)
-
-	if base.GetClusterMetadata().IsGlobalDomainEnabled() {
-		s.startReplicator(base, pFactory)
-	}
-	if base.GetClusterMetadata().ArchivalConfig().ConfiguredForArchival() {
-		s.startArchiver(base, pFactory)
-	}
 	if s.params.ESConfig.Enable {
 		s.startIndexer(base)
 	}
 
-	s.startScanner(base)
+	replicatorEnabled := base.GetClusterMetadata().IsGlobalDomainEnabled()
+	archiverEnabled := base.GetClusterMetadata().ArchivalConfig().ConfiguredForArchival()
+	scannerEnabled := s.config.ScannerCfg.Persistence.DefaultStoreType() == config.StoreTypeSQL
+
+	if replicatorEnabled || archiverEnabled || scannerEnabled {
+		pConfig := s.params.PersistenceConfig
+		pConfig.SetMaxQPS(pConfig.DefaultStore, s.config.ReplicationCfg.PersistenceMaxQPS())
+		pFactory := persistencefactory.New(&pConfig, s.params.ClusterMetadata.GetCurrentClusterName(), s.metricsClient, s.logger)
+
+		if archiverEnabled || scannerEnabled {
+			s.ensureSystemDomainExists(pFactory, base.GetClusterMetadata().GetCurrentClusterName())
+		}
+		if replicatorEnabled {
+			s.startReplicator(base, pFactory)
+		}
+		if archiverEnabled {
+			s.startArchiver(base, pFactory)
+		}
+		if scannerEnabled {
+			s.startScanner(base)
+		}
+	}
 
 	s.logger.Info("service started", tag.ComponentWorker)
 	<-s.stopC
@@ -155,11 +172,6 @@ func (s *Service) Stop() {
 }
 
 func (s *Service) startScanner(base service.Service) {
-	storeType := s.config.ScannerCfg.Persistence.DefaultStoreType()
-	if storeType != config.StoreTypeSQL {
-		s.logger.Info("Scanner not started: incompatible persistence store type", tag.StoreType(storeType))
-		return
-	}
 	params := &scanner.BootstrapParams{
 		Config:        *s.config.ScannerCfg,
 		SDKClient:     s.params.PublicClient,
@@ -212,7 +224,6 @@ func (s *Service) startIndexer(base service.Service) {
 
 func (s *Service) startArchiver(base service.Service, pFactory persistencefactory.Factory) {
 	publicClient := s.params.PublicClient
-	s.ensureSystemDomainExists(publicClient)
 
 	historyManager, err := pFactory.NewHistoryManager()
 	if err != nil {
@@ -252,12 +263,55 @@ func (s *Service) startArchiver(base service.Service, pFactory persistencefactor
 	}
 }
 
-func (s *Service) ensureSystemDomainExists(publicClient workflowserviceclient.Interface) {
-	domainClient := client.NewDomainClient(publicClient, nil)
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	_, err := domainClient.Describe(ctx, common.SystemDomainName)
+func (s *Service) ensureSystemDomainExists(pFactory persistencefactory.Factory, clusterName string) {
+	metadataProxy, err := pFactory.NewMetadataManager(persistencefactory.MetadataV1V2)
 	if err != nil {
-		s.logger.Fatal("failed to verify that cadence system domain exists", tag.Error(err))
+		s.logger.Fatal("error creating metadataMgr proxy", tag.Error(err))
 	}
+	defer metadataProxy.Close()
+	_, err = metadataProxy.GetDomain(&persistence.GetDomainRequest{Name: common.SystemDomainName})
+	switch err.(type) {
+	case nil:
+		return
+	case *shared.EntityNotExistsError:
+		s.logger.Info("cadence-system domain does not exist, attempting to register domain")
+		s.registerSystemDomain(pFactory, clusterName)
+	default:
+		s.logger.Fatal("failed to verify if cadence system domain exists", tag.Error(err))
+	}
+}
+
+func (s *Service) registerSystemDomain(pFactory persistencefactory.Factory, clusterName string) {
+	metadataV2, err := pFactory.NewMetadataManager(persistencefactory.MetadataV2)
+	if err != nil {
+		s.logger.Fatal("error creating metadataV2Mgr", tag.Error(err))
+	}
+	defer metadataV2.Close()
+	_, err = metadataV2.CreateDomain(&persistence.CreateDomainRequest{
+		Info: &persistence.DomainInfo{
+			ID:          common.SystemDomainID,
+			Name:        common.SystemDomainName,
+			Description: "Cadence internal system domain",
+		},
+		Config: &persistence.DomainConfig{
+			Retention:  common.SystemDomainRetentionDays,
+			EmitMetric: true,
+		},
+		ReplicationConfig: &persistence.DomainReplicationConfig{
+			ActiveClusterName: clusterName,
+			Clusters:          persistence.GetOrUseDefaultClusters(clusterName, nil),
+		},
+		IsGlobalDomain:  false,
+		FailoverVersion: common.EmptyVersion,
+	})
+	if err != nil {
+		if _, ok := err.(*shared.DomainAlreadyExistsError); ok {
+			return
+		}
+		s.logger.Fatal("failed to register system domain", tag.Error(err))
+	}
+	// this is needed because frontend domainCache will take about 10s to load the
+	// domain after its created first time. Archiver/Scanner cannot start their cadence
+	// workers until this refresh happens
+	time.Sleep(domainRefreshInterval)
 }

@@ -105,7 +105,7 @@ func NewHandler(sVice service.Service, config *Config, shardManager persistence.
 		visibilityMgr:       visibilityMgr,
 		executionMgrFactory: executionMgrFactory,
 		tokenSerializer:     common.NewJSONTaskTokenSerializer(),
-		rateLimiter:         tokenbucket.New(config.RPS(), clock.NewRealTimeSource()),
+		rateLimiter:         tokenbucket.NewDynamicTokenBucket(config.RPS, clock.NewRealTimeSource()),
 		publicClient:        publicClient,
 	}
 
@@ -114,10 +114,14 @@ func NewHandler(sVice service.Service, config *Config, shardManager persistence.
 	return handler
 }
 
-// Start starts the handler
-func (h *Handler) Start() error {
+// RegisterHandler register this handler, must be called before Start()
+func (h *Handler) RegisterHandler() {
 	h.Service.GetDispatcher().Register(historyserviceserver.New(h))
 	h.Service.GetDispatcher().Register(metaserver.New(h))
+}
+
+// Start starts the handler
+func (h *Handler) Start() error {
 	h.Service.Start()
 
 	h.matchingServiceClient = matching.NewRetryableClient(

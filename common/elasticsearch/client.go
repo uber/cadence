@@ -32,7 +32,16 @@ type (
 	// bleed through, as the main purpose is testability not abstraction.
 	Client interface {
 		Search(ctx context.Context, p *SearchParameters) (*elastic.SearchResult, error)
+		SearchWithDSL(ctx context.Context, index, query string) (*elastic.SearchResult, error)
+		Scroll(ctx context.Context, scrollID string) (*elastic.SearchResult, ScrollService, error)
+		ScrollFirstPage(ctx context.Context, index, query string) (*elastic.SearchResult, ScrollService, error)
+		Count(ctx context.Context, index, query string) (int64, error)
 		RunBulkProcessor(ctx context.Context, p *BulkProcessorParameters) (*elastic.BulkProcessor, error)
+	}
+
+	// ScrollService is a interface for elastic.ScrollService
+	ScrollService interface {
+		Clear(ctx context.Context) error
 	}
 
 	// SearchParameters holds all required and optional parameters for executing a search
@@ -60,6 +69,10 @@ type (
 	// elasticWrapper implements Client
 	elasticWrapper struct {
 		client *elastic.Client
+	}
+
+	scrollServiceImpl struct {
+		scrollService *elastic.ScrollService
 	}
 )
 
@@ -99,6 +112,30 @@ func (c *elasticWrapper) Search(ctx context.Context, p *SearchParameters) (*elas
 	return searchService.Do(ctx)
 }
 
+func (c *elasticWrapper) SearchWithDSL(ctx context.Context, index, query string) (*elastic.SearchResult, error) {
+	return c.client.Search(index).Source(query).Do(ctx)
+}
+
+func (c *elasticWrapper) Scroll(ctx context.Context, scrollID string) (
+	*elastic.SearchResult, ScrollService, error) {
+
+	scrollService := elastic.NewScrollService(c.client)
+	result, err := scrollService.ScrollId(scrollID).Do(ctx)
+	return result, &scrollServiceImpl{scrollService}, err
+}
+
+func (c *elasticWrapper) ScrollFirstPage(ctx context.Context, index, query string) (
+	*elastic.SearchResult, ScrollService, error) {
+
+	scrollService := elastic.NewScrollService(c.client)
+	result, err := scrollService.Index(index).Body(query).Do(ctx)
+	return result, &scrollServiceImpl{scrollService}, err
+}
+
+func (c *elasticWrapper) Count(ctx context.Context, index, query string) (int64, error) {
+	return c.client.Count(index).BodyString(query).Do(ctx)
+}
+
 func (c *elasticWrapper) RunBulkProcessor(ctx context.Context, p *BulkProcessorParameters) (*elastic.BulkProcessor, error) {
 	return c.client.BulkProcessor().
 		Name(p.Name).
@@ -107,6 +144,11 @@ func (c *elasticWrapper) RunBulkProcessor(ctx context.Context, p *BulkProcessorP
 		BulkSize(p.BulkSize).
 		FlushInterval(p.FlushInterval).
 		Backoff(p.Backoff).
+		Before(p.BeforeFunc).
 		After(p.AfterFunc).
 		Do(ctx)
+}
+
+func (s *scrollServiceImpl) Clear(ctx context.Context) error {
+	return s.scrollService.Clear(ctx)
 }

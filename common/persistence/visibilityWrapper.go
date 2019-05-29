@@ -122,6 +122,21 @@ func (v *visibilityManagerWrapper) DeleteWorkflowExecution(request *VisibilityDe
 	return v.visibilityManager.DeleteWorkflowExecution(request)
 }
 
+func (v *visibilityManagerWrapper) ListWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*ListWorkflowExecutionsResponse, error) {
+	manager := v.chooseVisibilityManagerForDomain(request.Domain)
+	return manager.ListWorkflowExecutions(request)
+}
+
+func (v *visibilityManagerWrapper) ScanWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*ListWorkflowExecutionsResponse, error) {
+	manager := v.chooseVisibilityManagerForDomain(request.Domain)
+	return manager.ScanWorkflowExecutions(request)
+}
+
+func (v *visibilityManagerWrapper) CountWorkflowExecutions(request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error) {
+	manager := v.chooseVisibilityManagerForDomain(request.Domain)
+	return manager.CountWorkflowExecutions(request)
+}
+
 func (v *visibilityManagerWrapper) chooseVisibilityManagerForDomain(domain string) VisibilityManager {
 	var visibilityMgr VisibilityManager
 	if v.enableReadVisibilityFromES(domain) && v.esVisibilityManager != nil {

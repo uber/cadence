@@ -22,6 +22,7 @@ package dynamicconfig
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -46,7 +47,7 @@ type Collection struct {
 func (c *Collection) logNoValue(key Key, err error) {
 	_, loaded := c.keys.LoadOrStore(key, struct{}{})
 	if !loaded {
-		c.logger.Debug("Failed to fetch key: %s from dynamic config with err: %s", tag.Key(key.String()), tag.Error(err))
+		c.logger.Debug("Failed to fetch key from dynamic config", tag.Key(key.String()), tag.Error(err))
 	}
 }
 
@@ -88,6 +89,9 @@ type BoolPropertyFn func(opts ...FilterOption) bool
 
 // StringPropertyFn is a wrapper to get string property from dynamic config
 type StringPropertyFn func(opts ...FilterOption) string
+
+// MapPropertyFn is a wrapper to get map property from dynamic config
+type MapPropertyFn func(opts ...FilterOption) map[string]interface{}
 
 // StringPropertyFnWithDomainFilter is a wrapper to get string property from dynamic config
 type StringPropertyFnWithDomainFilter func(domain string) string
@@ -233,6 +237,40 @@ func (c *Collection) GetStringProperty(key Key, defaultValue string) StringPrope
 		c.logValue(key, val, defaultValue)
 		return val
 	}
+}
+
+// GetMapProperty gets property and asserts that it's a map
+func (c *Collection) GetMapProperty(key Key, defaultValue map[string]interface{}) MapPropertyFn {
+	return func(opts ...FilterOption) map[string]interface{} {
+		val, err := c.client.GetMapValue(key, getFilterMap(opts...), defaultValue)
+		if err != nil {
+			c.logNoValue(key, err)
+		}
+		c.logValue(key, mapToString(val), defaultValue)
+		return val
+	}
+}
+
+// mapToString ensure fmt.Print(map) will always be same instead of random order of keys.
+// Go 1.12+ will fix this then we don't mapToString anymore
+func mapToString(inputMap map[string]interface{}) string {
+	if len(inputMap) == 0 {
+		return ""
+	}
+
+	keys := make([]string, len(inputMap))
+	i := 0
+	for key := range inputMap {
+		keys[i] = key
+		i++
+	}
+	sort.Strings(keys)
+	res := "map["
+	for _, key := range keys {
+		res += fmt.Sprintf("%v:%v ", key, inputMap[key])
+	}
+	res = res[:len(res)-1] + "]"
+	return res
 }
 
 // GetStringPropertyFnWithDomainFilter gets property with domain filter and asserts that its domain

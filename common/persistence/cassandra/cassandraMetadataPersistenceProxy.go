@@ -58,7 +58,7 @@ func (m *metadataManagerProxy) GetName() string {
 	return cassandraPersistenceName
 }
 
-func (m *metadataManagerProxy) GetDomain(request *p.GetDomainRequest) (*p.GetDomainResponse, error) {
+func (m *metadataManagerProxy) GetDomain(request *p.GetDomainRequest) (*p.InternalGetDomainResponse, error) {
 	// the reason this function does not call the v2 get domain is domain cache will
 	// use the list domain function to get all domain in the v2 table
 	resp, err := m.metadataMgrV2.GetDomain(request)
@@ -78,7 +78,7 @@ func (m *metadataManagerProxy) GetDomain(request *p.GetDomainRequest) (*p.GetDom
 	return resp, err
 }
 
-func (m *metadataManagerProxy) ListDomains(request *p.ListDomainsRequest) (*p.ListDomainsResponse, error) {
+func (m *metadataManagerProxy) ListDomains(request *p.ListDomainsRequest) (*p.InternalListDomainsResponse, error) {
 	return m.metadataMgrV2.ListDomains(request)
 }
 
@@ -95,7 +95,7 @@ func (m *metadataManagerProxy) CreateDomain(request *p.CreateDomainRequest) (*p.
 	return m.metadataMgrV2.CreateDomain(request)
 }
 
-func (m *metadataManagerProxy) UpdateDomain(request *p.UpdateDomainRequest) error {
+func (m *metadataManagerProxy) UpdateDomain(request *p.InternalUpdateDomainRequest) error {
 	switch request.TableVersion {
 	case p.DomainTableVersionV1:
 		return m.metadataMgr.UpdateDomain(request)

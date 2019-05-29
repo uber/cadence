@@ -21,8 +21,9 @@
 package frontend
 
 import (
-	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
@@ -56,6 +57,7 @@ type Config struct {
 	HistoryMgrNumConns dynamicconfig.IntPropertyFn
 
 	MaxDecisionStartToCloseTimeout dynamicconfig.IntPropertyFnWithDomainFilter
+	MaxBadBinaries                 dynamicconfig.IntPropertyFnWithDomainFilter
 
 	// security protection settings
 	EnableAdminProtection         dynamicconfig.BoolPropertyFn
@@ -70,6 +72,12 @@ type Config struct {
 
 	// Domain specific config
 	EnableDomainNotActiveAutoForwarding dynamicconfig.BoolPropertyFnWithDomainFilter
+
+	// ValidSearchAttributes is legal indexed keys that can be used in list APIs
+	ValidSearchAttributes             dynamicconfig.MapPropertyFn
+	SearchAttributesNumberOfKeysLimit dynamicconfig.IntPropertyFnWithDomainFilter
+	SearchAttributesSizeOfValueLimit  dynamicconfig.IntPropertyFnWithDomainFilter
+	SearchAttributesTotalSizeLimit    dynamicconfig.IntPropertyFnWithDomainFilter
 }
 
 // NewConfig returns new service config with default values
@@ -90,14 +98,19 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableVisibil
 		MaxIDLengthLimit:                    dc.GetIntProperty(dynamicconfig.MaxIDLengthLimit, 1000),
 		HistoryMgrNumConns:                  dc.GetIntProperty(dynamicconfig.FrontendHistoryMgrNumConns, 10),
 		MaxDecisionStartToCloseTimeout:      dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxDecisionStartToCloseTimeout, 600),
+		MaxBadBinaries:                      dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxBadBinaries, 10),
 		EnableAdminProtection:               dc.GetBoolProperty(dynamicconfig.EnableAdminProtection, false),
 		AdminOperationToken:                 dc.GetStringProperty(dynamicconfig.AdminOperationToken, "CadenceTeamONLY"),
 		DisableListVisibilityByFilter:       dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.DisableListVisibilityByFilter, false),
 		BlobSizeLimitError:                  dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitError, 2*1024*1024),
-		BlobSizeLimitWarn:                   dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitWarn, 256*1204),
+		BlobSizeLimitWarn:                   dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitWarn, 256*1024),
 		ThrottledLogRPS:                     dc.GetIntProperty(dynamicconfig.FrontendThrottledLogRPS, 20),
 		EnableDomainNotActiveAutoForwarding: dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableDomainNotActiveAutoForwarding, false),
 		EnableClientVersionCheck:            dc.GetBoolProperty(dynamicconfig.EnableClientVersionCheck, enableClientVersionCheck),
+		ValidSearchAttributes:               dc.GetMapProperty(dynamicconfig.ValidSearchAttributes, definition.GetDefaultIndexedKeys()),
+		SearchAttributesNumberOfKeysLimit:   dc.GetIntPropertyFilteredByDomain(dynamicconfig.SearchAttributesNumberOfKeysLimit, 20),
+		SearchAttributesSizeOfValueLimit:    dc.GetIntPropertyFilteredByDomain(dynamicconfig.SearchAttributesSizeOfValueLimit, 2*1024),
+		SearchAttributesTotalSizeLimit:      dc.GetIntPropertyFilteredByDomain(dynamicconfig.SearchAttributesTotalSizeLimit, 40*1024),
 	}
 }
 
@@ -183,13 +196,26 @@ func (s *Service) Start() {
 		kafkaProducer = &mocks.KafkaProducer{}
 	}
 
-	wfHandler := NewWorkflowHandler(base, s.config, metadata, history, historyV2, visibility, kafkaProducer,
-		params.BlobstoreClient)
-	wfHandler.Start()
+	metricsBlobstore := blobstore.NewMetricClient(params.BlobstoreClient, base.GetMetricsClient())
+	wfHandler := NewWorkflowHandler(base, s.config, metadata, history, historyV2, visibility, kafkaProducer, metricsBlobstore)
 	dcRedirectionHandler := NewDCRedirectionHandler(wfHandler, params.DCRedirectionPolicy)
-	base.GetDispatcher().Register(workflowserviceserver.New(dcRedirectionHandler))
+	dcRedirectionHandler.RegisterHandler()
+
 	adminHandler := NewAdminHandler(base, pConfig.NumHistoryShards, metadata, history, historyV2)
-	adminHandler.Start()
+	adminHandler.RegisterHandler()
+
+	// must start base service first
+	base.Start()
+	err = dcRedirectionHandler.Start()
+	if err != nil {
+		log.Fatal("DC redirection handler failed to start", tag.Error(err))
+	}
+	err = adminHandler.Start()
+	if err != nil {
+		log.Fatal("Admin handler failed to start", tag.Error(err))
+	}
+
+	// base (service is not started in frontend or admin handler) in case of race condition in yarpc registration function
 
 	log.Info("started", tag.Service(common.FrontendServiceName))
 

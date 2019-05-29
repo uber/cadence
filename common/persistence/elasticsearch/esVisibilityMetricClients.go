@@ -189,6 +189,48 @@ func (p *visibilityMetricsClient) GetClosedWorkflowExecution(request *p.GetClose
 	return response, err
 }
 
+func (p *visibilityMetricsClient) ListWorkflowExecutions(request *p.ListWorkflowExecutionsRequestV2) (*p.ListWorkflowExecutionsResponse, error) {
+	p.metricClient.IncCounter(metrics.ElasticsearchListWorkflowExecutionsScope, metrics.ElasticsearchRequests)
+
+	sw := p.metricClient.StartTimer(metrics.ElasticsearchListWorkflowExecutionsScope, metrics.ElasticsearchLatency)
+	response, err := p.persistence.ListWorkflowExecutions(request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.ElasticsearchListWorkflowExecutionsScope, err)
+	}
+
+	return response, err
+}
+
+func (p *visibilityMetricsClient) ScanWorkflowExecutions(request *p.ListWorkflowExecutionsRequestV2) (*p.ListWorkflowExecutionsResponse, error) {
+	p.metricClient.IncCounter(metrics.ElasticsearchScanWorkflowExecutionsScope, metrics.ElasticsearchRequests)
+
+	sw := p.metricClient.StartTimer(metrics.ElasticsearchScanWorkflowExecutionsScope, metrics.ElasticsearchLatency)
+	response, err := p.persistence.ScanWorkflowExecutions(request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.ElasticsearchScanWorkflowExecutionsScope, err)
+	}
+
+	return response, err
+}
+
+func (p *visibilityMetricsClient) CountWorkflowExecutions(request *p.CountWorkflowExecutionsRequest) (*p.CountWorkflowExecutionsResponse, error) {
+	p.metricClient.IncCounter(metrics.ElasticsearchCountWorkflowExecutionsScope, metrics.ElasticsearchRequests)
+
+	sw := p.metricClient.StartTimer(metrics.ElasticsearchCountWorkflowExecutionsScope, metrics.ElasticsearchLatency)
+	response, err := p.persistence.CountWorkflowExecutions(request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.ElasticsearchCountWorkflowExecutionsScope, err)
+	}
+
+	return response, err
+}
+
 func (p *visibilityMetricsClient) DeleteWorkflowExecution(request *p.VisibilityDeleteWorkflowExecutionRequest) error {
 	return nil // not applicable for elastic search, which relies on retention policies for deletion
 }

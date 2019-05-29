@@ -60,6 +60,8 @@ type (
 		mockClientBean      *client.MockClientBean
 		mockEventsCache     *MockEventsCache
 
+		sourceCluster string
+
 		stateBuilder *stateBuilderImpl
 	}
 )
@@ -111,6 +113,7 @@ func (s *stateBuilderSuite) SetupTest() {
 	s.stateBuilder = newStateBuilder(s.mockShard, s.mockMutableState, s.logger)
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
+	s.sourceCluster = "some random source cluster"
 }
 
 func (s *stateBuilderSuite) TearDownTest() {
@@ -127,6 +130,8 @@ func (s *stateBuilderSuite) TearDownTest() {
 func (s *stateBuilderSuite) mockUpdateVersion(events ...*shared.HistoryEvent) {
 	for _, event := range events {
 		s.mockMutableState.On("UpdateReplicationStateVersion", event.GetVersion(), true).Once()
+		s.mockClusterMetadata.On("ClusterNameForFailoverVersion", event.GetVersion()).Return(s.sourceCluster).Once()
+		s.mockMutableState.On("UpdateReplicationStateLastEventID", s.sourceCluster, event.GetVersion(), event.GetEventId()).Once()
 	}
 }
 
@@ -405,7 +410,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionFailed() {
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedAsNew() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainName := "some random domain name"
@@ -510,26 +514,27 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 			TableVersion:   persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", continueAsNewEvent.GetVersion()).Return(sourceCluster).Once()
+	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", continueAsNewEvent.GetVersion()).Return(s.sourceCluster).Once()
 	s.mockMutableState.On("ReplicateWorkflowExecutionContinuedAsNewEvent",
 		continueAsNewEvent.GetEventId(),
-		sourceCluster,
+		s.sourceCluster,
 		domainID,
 		continueAsNewEvent,
 		newRunStartedEvent,
 		&decisionInfo{
-			Version:         newRunDecisionEvent.GetVersion(),
-			ScheduleID:      newRunDecisionEvent.GetEventId(),
-			StartedID:       common.EmptyEventID,
-			RequestID:       emptyUUID,
-			DecisionTimeout: decisionTimeoutSecond,
-			TaskList:        tasklist,
-			Attempt:         newRunDecisionAttempt,
+			Version:            newRunDecisionEvent.GetVersion(),
+			ScheduleID:         newRunDecisionEvent.GetEventId(),
+			StartedID:          common.EmptyEventID,
+			RequestID:          emptyUUID,
+			DecisionTimeout:    decisionTimeoutSecond,
+			TaskList:           tasklist,
+			Attempt:            newRunDecisionAttempt,
+			ScheduledTimestamp: newRunDecisionEvent.GetTimestamp(),
 		},
 		mock.Anything,
-		int32(0),
+		int32(0), mock.Anything,
 	).Return(nil)
-	s.mockUpdateVersion(continueAsNewEvent)
+	s.mockUpdateVersion(continueAsNewEvent, newRunStartedEvent, newRunSignalEvent, newRunDecisionEvent)
 	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	newRunHistory := &shared.History{Events: []*shared.HistoryEvent{newRunStartedEvent, newRunSignalEvent, newRunDecisionEvent}}
@@ -561,11 +566,12 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 		tasklist,
 		decisionTimeoutSecond,
 		newRunDecisionAttempt,
+		newRunDecisionEvent.GetTimestamp(),
 	)
 	expectedNewRunStateBuilder.GetExecutionInfo().LastFirstEventID = newRunStartedEvent.GetEventId()
 	expectedNewRunStateBuilder.GetExecutionInfo().NextEventID = newRunDecisionEvent.GetEventId() + 1
 	expectedNewRunStateBuilder.SetHistoryBuilder(newHistoryBuilderFromEvents(newRunHistory.Events, s.logger))
-	expectedNewRunStateBuilder.UpdateReplicationStateLastEventID(sourceCluster, newRunStartedEvent.GetVersion(), newRunDecisionEvent.GetEventId())
+	expectedNewRunStateBuilder.UpdateReplicationStateLastEventID(s.sourceCluster, newRunStartedEvent.GetVersion(), newRunDecisionEvent.GetEventId())
 	s.Equal(expectedNewRunStateBuilder, newRunStateBuilder)
 
 	s.Equal([]persistence.Task{&persistence.CloseExecutionTask{}}, s.stateBuilder.transferTasks)
@@ -723,7 +729,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCancelRequ
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedAsNew_EventsV2() {
 
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainName := "some random domain name"
@@ -838,10 +843,10 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 			TableVersion:   persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", continueAsNewEvent.GetVersion()).Return(sourceCluster).Once()
+	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", continueAsNewEvent.GetVersion()).Return(s.sourceCluster).Once()
 	s.mockMutableState.On("ReplicateWorkflowExecutionContinuedAsNewEvent",
 		continueAsNewEvent.GetEventId(),
-		sourceCluster,
+		s.sourceCluster,
 		domainID,
 		continueAsNewEvent,
 		newRunStartedEvent,
@@ -855,9 +860,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 			Attempt:         newRunDecisionAttempt,
 		},
 		mock.Anything,
-		int32(persistence.EventStoreVersionV2),
+		int32(persistence.EventStoreVersionV2), mock.Anything,
 	).Return(nil)
-	s.mockUpdateVersion(continueAsNewEvent)
+	s.mockUpdateVersion(continueAsNewEvent, newRunStartedEvent, newRunSignalEvent, newRunDecisionEvent)
 	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 
 	newRunHistory := &shared.History{Events: []*shared.HistoryEvent{newRunStartedEvent, newRunSignalEvent, newRunDecisionEvent}}
@@ -891,13 +896,14 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 		tasklist,
 		decisionTimeoutSecond,
 		newRunDecisionAttempt,
+		newRunDecisionEvent.GetTimestamp(),
 	)
 	expectedNewRunStateBuilder.GetExecutionInfo().LastFirstEventID = newRunStartedEvent.GetEventId()
 	expectedNewRunStateBuilder.GetExecutionInfo().NextEventID = newRunDecisionEvent.GetEventId() + 1
 	expectedNewRunStateBuilder.GetExecutionInfo().EventStoreVersion = persistence.EventStoreVersionV2
 	expectedNewRunStateBuilder.GetExecutionInfo().BranchToken = newRunStateBuilder.GetCurrentBranch()
 	expectedNewRunStateBuilder.SetHistoryBuilder(newHistoryBuilderFromEvents(newRunHistory.Events, s.logger))
-	expectedNewRunStateBuilder.UpdateReplicationStateLastEventID(sourceCluster, newRunStartedEvent.GetVersion(), newRunDecisionEvent.GetEventId())
+	expectedNewRunStateBuilder.UpdateReplicationStateLastEventID(s.sourceCluster, newRunStartedEvent.GetVersion(), newRunDecisionEvent.GetEventId())
 	s.Equal(expectedNewRunStateBuilder, newRunStateBuilder)
 	s.Equal(int32(persistence.EventStoreVersionV2), newRunStateBuilder.GetEventStoreVersion())
 
@@ -1647,7 +1653,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskScheduled() {
 	}
 	s.mockMutableState.On("GetExecutionInfo").Return(executionInfo)
 	s.mockMutableState.On("ReplicateDecisionTaskScheduledEvent",
-		event.GetVersion(), event.GetEventId(), tasklist, timeoutSecond, decisionAttempt,
+		event.GetVersion(), event.GetEventId(), tasklist, timeoutSecond, decisionAttempt, event.GetTimestamp(),
 	).Return(di).Once()
 	s.mockMutableState.On("UpdateDecision", di).Once()
 	s.mockUpdateVersion(event)
@@ -1740,7 +1746,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskCompleted() {
 			StartedEventId:   common.Int64Ptr(startedID),
 		},
 	}
-	s.mockMutableState.On("ReplicateDecisionTaskCompletedEvent", scheduleID, startedID).Once()
+	s.mockMutableState.On("ReplicateDecisionTaskCompletedEvent", event).Once()
 	s.mockUpdateVersion(event)
 	s.mockMutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{})
 

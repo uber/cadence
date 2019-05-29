@@ -20,12 +20,13 @@
 
 package history
 
-import "github.com/stretchr/testify/mock"
+import (
+	"context"
 
-import "context"
-
-import h "github.com/uber/cadence/.gen/go/history"
-import workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/stretchr/testify/mock"
+	h "github.com/uber/cadence/.gen/go/history"
+	workflow "github.com/uber/cadence/.gen/go/shared"
+)
 
 type mockWorkflowResetor struct {
 	mock.Mock
@@ -34,12 +35,16 @@ type mockWorkflowResetor struct {
 var _ workflowResetor = (*mockWorkflowResetor)(nil)
 
 // ResetWorkflowExecution provides a mock function with given fields: ctx, resetRequest
-func (_m *mockWorkflowResetor) ResetWorkflowExecution(ctx context.Context, resetRequest *h.ResetWorkflowExecutionRequest) (*workflow.ResetWorkflowExecutionResponse, error) {
-	ret := _m.Called(ctx, resetRequest)
+func (_m *mockWorkflowResetor) ResetWorkflowExecution(ctx context.Context, resetRequest *workflow.ResetWorkflowExecutionRequest,
+	baseContext workflowExecutionContext, baseMutableState mutableState,
+	currContext workflowExecutionContext, currMutableState mutableState) (*workflow.ResetWorkflowExecutionResponse, error) {
+	ret := _m.Called(ctx, resetRequest, baseContext, baseMutableState, currContext, currMutableState)
 
 	var r0 *workflow.ResetWorkflowExecutionResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *h.ResetWorkflowExecutionRequest) *workflow.ResetWorkflowExecutionResponse); ok {
-		r0 = rf(ctx, resetRequest)
+	if rf, ok := ret.Get(0).(func(context.Context, *workflow.ResetWorkflowExecutionRequest,
+		workflowExecutionContext, mutableState,
+		workflowExecutionContext, mutableState) *workflow.ResetWorkflowExecutionResponse); ok {
+		r0 = rf(ctx, resetRequest, baseContext, baseMutableState, currContext, currMutableState)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*workflow.ResetWorkflowExecutionResponse)
@@ -47,8 +52,10 @@ func (_m *mockWorkflowResetor) ResetWorkflowExecution(ctx context.Context, reset
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *h.ResetWorkflowExecutionRequest) error); ok {
-		r1 = rf(ctx, resetRequest)
+	if rf, ok := ret.Get(1).(func(context.Context, *workflow.ResetWorkflowExecutionRequest,
+		workflowExecutionContext, mutableState,
+		workflowExecutionContext, mutableState) error); ok {
+		r1 = rf(ctx, resetRequest, baseContext, baseMutableState, currContext, currMutableState)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -63,6 +70,20 @@ func (_m *mockWorkflowResetor) ApplyResetEvent(ctx context.Context, request *h.R
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, *h.ReplicateEventsRequest, string, string, string) error); ok {
 		r0 = rf(ctx, request, domainID, workflowID, currentRunID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// CheckResettable provides a mock function for CheckResettable
+func (_m *mockWorkflowResetor) CheckResettable(ms mutableState, curr bool) error {
+	ret := _m.Called(ms, curr)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(baseMutableState mutableState, curr bool) error); ok {
+		r0 = rf(ms, curr)
 	} else {
 		r0 = ret.Error(0)
 	}

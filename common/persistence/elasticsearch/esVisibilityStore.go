@@ -24,11 +24,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"regexp"
+	"strconv"
+	"strings"
 	"time"
 
+	"github.com/cch123/elasticsql"
 	"github.com/olivere/elastic"
 	"github.com/pkg/errors"
-
 	"github.com/uber/cadence/.gen/go/indexer"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -38,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/valyala/fastjson"
 )
 
 const (
@@ -59,6 +64,8 @@ type (
 		// for ES API searchAfter
 		SortTime   int64  // startTime or closeTime
 		TieBreaker string // runID
+		// for ES scroll API
+		ScrollID string
 	}
 
 	visibilityRecord struct {
@@ -72,6 +79,7 @@ type (
 		HistoryLength int64
 		Memo          []byte
 		Encoding      string
+		Attr          map[string]interface{}
 	}
 )
 
@@ -112,6 +120,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(request *p.InternalRe
 		request.TaskID,
 		request.Memo.Data,
 		request.Memo.GetEncoding(),
+		request.SearchAttributes,
 	)
 	return v.producer.Publish(msg)
 }
@@ -131,6 +140,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionClosed(request *p.InternalRec
 		request.TaskID,
 		request.Memo.Data,
 		request.Memo.GetEncoding(),
+		request.SearchAttributes,
 	)
 	return v.producer.Publish(msg)
 }
@@ -318,6 +328,257 @@ func (v *esVisibilityStore) DeleteWorkflowExecution(request *p.VisibilityDeleteW
 	return v.producer.Publish(msg)
 }
 
+func (v *esVisibilityStore) ListWorkflowExecutions(
+	request *p.ListWorkflowExecutionsRequestV2) (*p.InternalListWorkflowExecutionsResponse, error) {
+
+	checkPageSize(request)
+
+	token, err := v.getNextPageToken(request.NextPageToken)
+	if err != nil {
+		return nil, err
+	}
+
+	queryDSL, isOpen, err := getESQueryDSL(request, token)
+	if err != nil {
+		return nil, &workflow.BadRequestError{Message: fmt.Sprintf("Error when parse query: %v", err)}
+	}
+
+	ctx := context.Background()
+	searchResult, err := v.esClient.SearchWithDSL(ctx, v.index, queryDSL)
+	if err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ListWorkflowExecutions failed. Error: %v", err),
+		}
+	}
+
+	return v.getListWorkflowExecutionsResponse(searchResult.Hits, token, isOpen, request.PageSize)
+}
+
+func (v *esVisibilityStore) ScanWorkflowExecutions(
+	request *p.ListWorkflowExecutionsRequestV2) (*p.InternalListWorkflowExecutionsResponse, error) {
+
+	checkPageSize(request)
+
+	token, err := v.getNextPageToken(request.NextPageToken)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx := context.Background()
+	var searchResult *elastic.SearchResult
+	var scrollService es.ScrollService
+	if len(token.ScrollID) == 0 { // first call
+		queryDSL, _, err := getESQueryDSLForScan(request, token)
+		if err != nil {
+			return nil, &workflow.BadRequestError{Message: fmt.Sprintf("Error when parse query: %v", err)}
+		}
+		searchResult, scrollService, err = v.esClient.ScrollFirstPage(ctx, v.index, queryDSL)
+	} else {
+		searchResult, scrollService, err = v.esClient.Scroll(ctx, token.ScrollID)
+	}
+
+	isLastPage := false
+	if err == io.EOF { // no more result
+		isLastPage = true
+		scrollService.Clear(context.Background())
+	} else if err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ScanWorkflowExecutions failed. Error: %v", err),
+		}
+	}
+
+	return v.getScanWorkflowExecutionsResponse(searchResult.Hits, token, request.PageSize, searchResult.ScrollId, isLastPage)
+}
+
+func (v *esVisibilityStore) CountWorkflowExecutions(request *p.CountWorkflowExecutionsRequest) (
+	*p.CountWorkflowExecutionsResponse, error) {
+
+	queryDSL, err := getESQueryDSLForCount(request)
+	if err != nil {
+		return nil, &workflow.BadRequestError{Message: fmt.Sprintf("Error when parse query: %v", err)}
+	}
+
+	ctx := context.Background()
+	count, err := v.esClient.Count(ctx, v.index, queryDSL)
+	if err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("CountWorkflowExecutions failed. Error: %v", err),
+		}
+	}
+
+	response := &p.CountWorkflowExecutionsResponse{Count: count}
+	return response, nil
+}
+
+const (
+	jsonMissingCloseTime     = `{"missing":{"field":"CloseTime"}}`
+	jsonRangeOnExecutionTime = `{"range":{"ExecutionTime":`
+	jsonSortForOpen          = `[{"StartTime":"desc"},{"WorkflowID":"desc"}]`
+	jsonSortForClose         = `[{"CloseTime":"desc"},{"WorkflowID":"desc"}]`
+	jsonSortWithTieBreaker   = `{"WorkflowID":"desc"}`
+
+	dslFieldSort        = "sort"
+	dslFieldSearchAfter = "search_after"
+	dslFieldFrom        = "from"
+	dslFieldSize        = "size"
+	dslFieldMust        = "must"
+
+	defaultDateTimeFormat = time.RFC3339 // used for converting UnixNano to string like 2018-02-15T16:16:36-08:00
+)
+
+var (
+	timeKeys = map[string]bool{
+		"StartTime":     true,
+		"CloseTime":     true,
+		"ExecutionTime": true,
+	}
+	rangeKeys = map[string]bool{
+		"from": true,
+		"to":   true,
+		"gt":   true,
+		"lt":   true,
+	}
+)
+
+func getESQueryDSLForScan(request *p.ListWorkflowExecutionsRequestV2, token *esVisibilityPageToken) (string, bool, error) {
+	return getESQueryDSLHelper(request, token, true)
+}
+
+func getESQueryDSL(request *p.ListWorkflowExecutionsRequestV2, token *esVisibilityPageToken) (string, bool, error) {
+	return getESQueryDSLHelper(request, token, false)
+}
+
+func getESQueryDSLForCount(request *p.CountWorkflowExecutionsRequest) (string, error) {
+	sql := getSQLFromCountRequest(request)
+	dsl, _, err := getCustomizedDSLFromSQL(sql, request.DomainUUID)
+	if err != nil {
+		return "", err
+	}
+
+	// remove not needed fields
+	dsl.Del(dslFieldFrom)
+	dsl.Del(dslFieldSize)
+	dsl.Del(dslFieldSort)
+
+	return dsl.String(), nil
+}
+
+func getESQueryDSLHelper(request *p.ListWorkflowExecutionsRequestV2, token *esVisibilityPageToken, isScan bool) (string, bool, error) {
+	sql := getSQLFromListRequest(request)
+	dsl, isOpen, err := getCustomizedDSLFromSQL(sql, request.DomainUUID)
+	if err != nil {
+		return "", false, err
+	}
+
+	if isScan { // no need to sort for scan
+		dsl.Del(dslFieldSort)
+		return dsl.String(), isOpen, nil
+	}
+
+	isSorted := dsl.Exists(dslFieldSort)
+	if !isSorted { // set default sorting
+		if isOpen {
+			dsl.Set(dslFieldSort, fastjson.MustParse(jsonSortForOpen))
+		} else {
+			dsl.Set(dslFieldSort, fastjson.MustParse(jsonSortForClose))
+		}
+	} else {
+		// add WorkflowID as tie-breaker
+		dsl.Get(dslFieldSort).Set("1", fastjson.MustParse(jsonSortWithTieBreaker))
+	}
+
+	if shouldSearchAfter(token) {
+		dsl.Set(dslFieldSearchAfter, fastjson.MustParse(getValueOfSearchAfterInJSON(token)))
+	} else { // use from+size
+		dsl.Set(dslFieldFrom, fastjson.MustParse(strconv.Itoa(token.From)))
+	}
+	return dsl.String(), isOpen, nil
+}
+
+func getSQLFromListRequest(request *p.ListWorkflowExecutionsRequestV2) string {
+	var sql string
+	if strings.TrimSpace(request.Query) == "" {
+		sql = fmt.Sprintf("select * from dumy limit %d", request.PageSize)
+	} else {
+		sql = fmt.Sprintf("select * from dumy where %s limit %d", request.Query, request.PageSize)
+	}
+	return sql
+}
+
+func getSQLFromCountRequest(request *p.CountWorkflowExecutionsRequest) string {
+	var sql string
+	if strings.TrimSpace(request.Query) == "" {
+		sql = "select * from dumy"
+	} else {
+		sql = fmt.Sprintf("select * from dumy where %s", request.Query)
+	}
+	return sql
+}
+
+func getCustomizedDSLFromSQL(sql string, domainID string) (*fastjson.Value, bool, error) {
+	dslStr, _, err := elasticsql.Convert(sql)
+	if err != nil {
+		return nil, false, err
+	}
+	dsl := fastjson.MustParse(dslStr) // dsl.String() will be a compact json without spaces
+
+	dslStr = dsl.String()
+	isOpen := strings.Contains(dslStr, jsonMissingCloseTime)
+	if isOpen {
+		dsl = replaceQueryForOpen(dsl)
+	}
+	if strings.Contains(dslStr, jsonRangeOnExecutionTime) {
+		addQueryForExecutionTime(dsl)
+	}
+	addDomainToQuery(dsl, domainID)
+	if err := processAllValuesForKey(dsl, timeKeyFilter, timeProcessFunc); err != nil {
+		return nil, false, err
+	}
+	return dsl, isOpen, nil
+}
+
+// ES v6 only accepts "must_not exists" query instead of "missing" query, but elasticsql will produce "missing",
+// so use this func to replace.
+// Note it also means a temp limitation that we cannot support field missing search
+func replaceQueryForOpen(dsl *fastjson.Value) *fastjson.Value {
+	re := regexp.MustCompile(`(,)?` + jsonMissingCloseTime + `(,)?`)
+	newDslStr := re.ReplaceAllString(dsl.String(), "")
+	dsl = fastjson.MustParse(newDslStr)
+	dsl.Get("query").Get("bool").Set("must_not", fastjson.MustParse(`{"exists": {"field": "CloseTime"}}`))
+	return dsl
+}
+
+func addQueryForExecutionTime(dsl *fastjson.Value) {
+	executionTimeQueryString := `{"range" : {"ExecutionTime" : {"gt" : "0"}}}`
+	addMustQuery(dsl, executionTimeQueryString)
+}
+
+func addDomainToQuery(dsl *fastjson.Value, domainID string) {
+	if len(domainID) == 0 {
+		return
+	}
+
+	domainQueryString := fmt.Sprintf(`{"match_phrase":{"DomainID":{"query":"%s"}}}`, domainID)
+	addMustQuery(dsl, domainQueryString)
+}
+
+func addMustQuery(dsl *fastjson.Value, queryString string) {
+	valOfBool := dsl.Get("query", "bool")
+	if valOfMust := valOfBool.Get(dslFieldMust); valOfMust == nil {
+		valOfBool.Set(dslFieldMust, fastjson.MustParse(fmt.Sprintf("[%s]", queryString)))
+	} else {
+		valOfMust.SetArrayItem(len(valOfMust.GetArray()), fastjson.MustParse(queryString))
+	}
+}
+
+func shouldSearchAfter(token *esVisibilityPageToken) bool {
+	return token.SortTime != 0 && token.TieBreaker != ""
+}
+
+func getValueOfSearchAfterInJSON(token *esVisibilityPageToken) string {
+	return fmt.Sprintf(`[%v, "%s"]`, token.SortTime, token.TieBreaker)
+}
+
 func (v *esVisibilityStore) checkProducer() {
 	if v.producer == nil {
 		// must be bug, check history setup
@@ -379,11 +640,37 @@ func (v *esVisibilityStore) getSearchResult(request *p.ListWorkflowExecutionsReq
 	}
 	params.Sorter = append(params.Sorter, elastic.NewFieldSort(es.RunID).Desc())
 
-	if token.SortTime != 0 && token.TieBreaker != "" {
+	if shouldSearchAfter(token) {
 		params.SearchAfter = []interface{}{token.SortTime, token.TieBreaker}
 	}
 
 	return v.esClient.Search(ctx, params)
+}
+
+func (v *esVisibilityStore) getScanWorkflowExecutionsResponse(searchHits *elastic.SearchHits,
+	token *esVisibilityPageToken, pageSize int, scrollID string, isLastPage bool) (
+	*p.InternalListWorkflowExecutionsResponse, error) {
+
+	response := &p.InternalListWorkflowExecutionsResponse{}
+	actualHits := searchHits.Hits
+	numOfActualHits := len(actualHits)
+
+	response.Executions = make([]*p.VisibilityWorkflowExecutionInfo, 0)
+	for i := 0; i < numOfActualHits; i++ {
+		workflowExecutionInfo := v.convertSearchResultToVisibilityRecord(actualHits[i], false)
+		response.Executions = append(response.Executions, workflowExecutionInfo)
+	}
+
+	if numOfActualHits == pageSize && !isLastPage {
+		nextPageToken, err := v.serializePageToken(&esVisibilityPageToken{ScrollID: scrollID})
+		if err != nil {
+			return nil, err
+		}
+		response.NextPageToken = make([]byte, len(nextPageToken))
+		copy(response.NextPageToken, nextPageToken)
+	}
+
+	return response, nil
 }
 
 func (v *esVisibilityStore) getListWorkflowExecutionsResponse(searchHits *elastic.SearchHits,
@@ -459,12 +746,13 @@ func (v *esVisibilityStore) convertSearchResultToVisibilityRecord(hit *elastic.S
 	}
 
 	record := &p.VisibilityWorkflowExecutionInfo{
-		WorkflowID:    source.WorkflowID,
-		RunID:         source.RunID,
-		TypeName:      source.WorkflowType,
-		StartTime:     time.Unix(0, source.StartTime),
-		ExecutionTime: time.Unix(0, source.ExecutionTime),
-		Memo:          p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)),
+		WorkflowID:       source.WorkflowID,
+		RunID:            source.RunID,
+		TypeName:         source.WorkflowType,
+		StartTime:        time.Unix(0, source.StartTime),
+		ExecutionTime:    time.Unix(0, source.ExecutionTime),
+		Memo:             p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)),
+		SearchAttributes: source.Attr,
 	}
 	if !isOpen {
 		record.CloseTime = time.Unix(0, source.CloseTime)
@@ -476,7 +764,8 @@ func (v *esVisibilityStore) convertSearchResultToVisibilityRecord(hit *elastic.S
 }
 
 func getVisibilityMessageForOpenExecution(domainID string, wid, rid string, workflowTypeName string,
-	startTimeUnixNano, executionTimeUnixNano int64, taskID int64, memo []byte, encoding common.EncodingType) *indexer.Message {
+	startTimeUnixNano, executionTimeUnixNano int64, taskID int64, memo []byte, encoding common.EncodingType,
+	searchAttributes map[string][]byte) *indexer.Message {
 
 	msgType := indexer.MessageTypeIndex
 	fields := map[string]*indexer.Field{
@@ -487,6 +776,9 @@ func getVisibilityMessageForOpenExecution(domainID string, wid, rid string, work
 	if len(memo) != 0 {
 		fields[es.Memo] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: memo}
 		fields[es.Encoding] = &indexer.Field{Type: &es.FieldTypeString, StringData: common.StringPtr(string(encoding))}
+	}
+	for k, v := range searchAttributes {
+		fields[k] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: v}
 	}
 
 	msg := &indexer.Message{
@@ -502,7 +794,8 @@ func getVisibilityMessageForOpenExecution(domainID string, wid, rid string, work
 
 func getVisibilityMessageForCloseExecution(domainID string, wid, rid string, workflowTypeName string,
 	startTimeUnixNano int64, executionTimeUnixNano int64, endTimeUnixNano int64, closeStatus workflow.WorkflowExecutionCloseStatus,
-	historyLength int64, taskID int64, memo []byte, encoding common.EncodingType) *indexer.Message {
+	historyLength int64, taskID int64, memo []byte, encoding common.EncodingType,
+	searchAttributes map[string][]byte) *indexer.Message {
 
 	msgType := indexer.MessageTypeIndex
 	fields := map[string]*indexer.Field{
@@ -516,6 +809,9 @@ func getVisibilityMessageForCloseExecution(domainID string, wid, rid string, wor
 	if len(memo) != 0 {
 		fields[es.Memo] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: memo}
 		fields[es.Encoding] = &indexer.Field{Type: &es.FieldTypeString, StringData: common.StringPtr(string(encoding))}
+	}
+	for k, v := range searchAttributes {
+		fields[k] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: v}
 	}
 
 	msg := &indexer.Message{
@@ -539,4 +835,71 @@ func getVisibilityMessageForDeletion(domainID, workflowID, runID string, docVers
 		Version:     common.Int64Ptr(docVersion),
 	}
 	return msg
+}
+
+func checkPageSize(request *p.ListWorkflowExecutionsRequestV2) {
+	if request.PageSize == 0 {
+		request.PageSize = 1000
+	}
+}
+
+func processAllValuesForKey(dsl *fastjson.Value, keyFilter func(k string) bool,
+	processFunc func(obj *fastjson.Object, key string, v *fastjson.Value) error,
+) error {
+	switch dsl.Type() {
+	case fastjson.TypeArray:
+		for _, val := range dsl.GetArray() {
+			if err := processAllValuesForKey(val, keyFilter, processFunc); err != nil {
+				return err
+			}
+		}
+	case fastjson.TypeObject:
+		objectVal := dsl.GetObject()
+		keys := []string{}
+		objectVal.Visit(func(key []byte, val *fastjson.Value) {
+			keys = append(keys, string(key))
+		})
+
+		for _, key := range keys {
+			var err error
+			val := objectVal.Get(key)
+			if keyFilter(key) {
+				err = processFunc(objectVal, key, val)
+			} else {
+				err = processAllValuesForKey(val, keyFilter, processFunc)
+			}
+			if err != nil {
+				return err
+			}
+		}
+	default:
+		// do nothing, since there's no key
+	}
+	return nil
+}
+
+func timeKeyFilter(key string) bool {
+	return timeKeys[key]
+}
+
+func timeProcessFunc(obj *fastjson.Object, key string, value *fastjson.Value) error {
+	return processAllValuesForKey(value, func(key string) bool {
+		return rangeKeys[key]
+	}, func(obj *fastjson.Object, key string, v *fastjson.Value) error {
+		timeStr := string(v.GetStringBytes())
+
+		// first check if already in int64 format
+		if _, err := strconv.ParseInt(timeStr, 10, 64); err == nil {
+			return nil
+		}
+
+		// try to parse time
+		parsedTime, err := time.Parse(defaultDateTimeFormat, timeStr)
+		if err != nil {
+			return err
+		}
+
+		obj.Set(key, fastjson.MustParse(fmt.Sprintf(`"%v"`, parsedTime.UnixNano())))
+		return nil
+	})
 }

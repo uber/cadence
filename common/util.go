@@ -22,11 +22,12 @@ package common
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/rand"
 	"sync"
 	"time"
 
-	farm "github.com/dgryski/go-farm"
+	"github.com/dgryski/go-farm"
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -198,6 +199,8 @@ func IsServiceNonRetryableError(err error) bool {
 		return true
 	case *workflow.DomainNotActiveError:
 		return true
+	case *workflow.WorkflowExecutionAlreadyStartedError:
+		return true
 	case *workflow.CancellationAlreadyRequestedError:
 		return true
 	case *yarpcerrors.Status:
@@ -254,9 +257,9 @@ func PrettyPrintHistory(history *workflow.History, logger log.Logger) {
 		logger.Error("Error serializing history: %v\n", tag.Error(err))
 	}
 
-	logger.Info("******************************************")
-	logger.Info("History", tag.DetailInfo(string(data)))
-	logger.Info("******************************************")
+	fmt.Println("******************************************")
+	fmt.Println("History", tag.DetailInfo(string(data)))
+	fmt.Println("******************************************")
 }
 
 // IsValidContext checks that the thrift context is not expired on cancelled.
@@ -300,11 +303,21 @@ func CreateMatchingPollForDecisionTaskResponse(historyResponse *h.RecordDecision
 		WorkflowExecutionTaskList: historyResponse.WorkflowExecutionTaskList,
 		EventStoreVersion:         historyResponse.EventStoreVersion,
 		BranchToken:               historyResponse.BranchToken,
+		ScheduledTimestamp:        historyResponse.ScheduledTimestamp,
+		StartedTimestamp:          historyResponse.StartedTimestamp,
 	}
 	if historyResponse.GetPreviousStartedEventId() != EmptyEventID {
 		matchingResp.PreviousStartedEventId = historyResponse.PreviousStartedEventId
 	}
 	return matchingResp
+}
+
+// MinInt64 returns the smaller of two given int64
+func MinInt64(a, b int64) int64 {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // MinInt32 return smaller one of two inputs int32
