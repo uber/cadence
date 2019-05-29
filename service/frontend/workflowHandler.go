@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
-	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
 	"github.com/uber/cadence/.gen/go/health"
 	"github.com/uber/cadence/.gen/go/health/metaserver"
@@ -2897,7 +2896,7 @@ func (wh *WorkflowHandler) getLoggerForTask(taskToken []byte) log.Logger {
 }
 
 // startRequestProfile initiates recording of request metrics
-func (wh *WorkflowHandler) startRequestProfile(scope int) (metrics.Scope, tally.Stopwatch) {
+func (wh *WorkflowHandler) startRequestProfile(scope int) (metrics.Scope, metrics.Stopwatch) {
 	wh.startWG.Wait()
 
 	metricsScope := wh.metricsClient.Scope(scope)
@@ -2907,7 +2906,7 @@ func (wh *WorkflowHandler) startRequestProfile(scope int) (metrics.Scope, tally.
 }
 
 // startRequestProfileWithDomain initiates recording of request metrics and returns a domain tagged scope
-func (wh *WorkflowHandler) startRequestProfileWithDomain(scope int, domain *string) (metrics.Scope, tally.Stopwatch) {
+func (wh *WorkflowHandler) startRequestProfileWithDomain(scope int, domain *string) (metrics.Scope, metrics.Stopwatch) {
 	wh.startWG.Wait()
 
 	var metricsScope metrics.Scope
