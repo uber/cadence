@@ -715,6 +715,18 @@ func (m *executionManagerImpl) ValidateResetWorkflowExecutionRequest(request *Re
 				"insert replication state and insert version histories cannot both be set."),
 		}
 	}
+	if request.InsertVersionHistories != nil && (request.InsertExecutionInfo.NextEventID != common.EmptyEventID || request.InsertExecutionInfo.BranchToken != nil) {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("Reset workflow execution with invalid request:" +
+				"insert version histories and insert eventID/branch token cannot both be set."),
+		}
+	}
+	if request.CurrVersionHistories != nil && (request.CurrExecutionInfo.NextEventID != common.EmptyEventID || request.CurrExecutionInfo.BranchToken != nil) {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("Reset workflow execution with invalid request:" +
+				"current version histories and current eventID/branch token cannot both be set."),
+		}
+	}
 	return nil
 }
 
