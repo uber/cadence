@@ -125,30 +125,45 @@ func (domainReplicator *domainReplicatorImpl) handleDomainCreationReplicationTas
 		// SQL and Cassandra handle domain UUID collision differently
 		// here, whenever seeing a error replicating a domain
 		// do a check if there is a name / UUID collision
+
+		recordExists := true
 		resp, getErr := domainReplicator.metadataManagerV2.GetDomain(&persistence.GetDomainRequest{
 			Name: task.Info.GetName(),
 		})
-		if getErr != nil {
+		switch getErr.(type) {
+		case nil:
+			if resp.Info.ID != task.GetID() {
+				return ErrNameUUIDCollision
+			}
+		case *shared.EntityNotExistsError:
+			// no check is necessary
+			recordExists = false
+		default:
 			// return the original err
 			return err
-		}
-		if resp.Info.ID != task.GetID() {
-			return ErrNameUUIDCollision
 		}
 
 		resp, getErr = domainReplicator.metadataManagerV2.GetDomain(&persistence.GetDomainRequest{
 			ID: task.GetID(),
 		})
-		if getErr != nil {
+		switch getErr.(type) {
+		case nil:
+			if resp.Info.Name != task.Info.GetName() {
+				return ErrNameUUIDCollision
+			}
+		case *shared.EntityNotExistsError:
+			// no check is necessary
+			recordExists = false
+		default:
 			// return the original err
 			return err
 		}
-		if resp.Info.Name != task.Info.GetName() {
-			return ErrNameUUIDCollision
-		}
 
-		// name -> id & id -> name check pass, this is duplication request
-		return nil
+		if recordExists {
+			// name -> id & id -> name check pass, this is duplication request
+			return nil
+		}
+		return err
 	}
 
 	return err
