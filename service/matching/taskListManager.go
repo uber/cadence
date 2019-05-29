@@ -271,7 +271,7 @@ func newTaskListManagerWithRateLimiter(
 		taskListKind:        int(*taskListKind),
 	}
 	tlMgr.domainNameValue.Store("")
-	tlMgr.domainScopeValue.Store(e.metricsClient.Scope(metrics.MatchingTaskListMgrScope))
+	tlMgr.domainScopeValue.Store(e.metricsClient.Scope(metrics.MatchingTaskListMgrScope, metrics.DomainUnknownTag()))
 	tlMgr.tryInitDomainNameAndScope()
 	tlMgr.taskWriter = newTaskWriter(tlMgr)
 	tlMgr.startWG.Add(1)
