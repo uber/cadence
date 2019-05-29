@@ -44,7 +44,8 @@ type domainTag struct {
 	value string
 }
 
-// DomainTag returns a new domain tag
+// DomainTag returns a new domain tag. For timers, this also ensures that we
+// dual emit the metric with the all tag.
 func DomainTag(value string) Tag {
 	return domainTag{value}
 }

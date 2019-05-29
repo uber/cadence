@@ -636,8 +636,6 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 		// is loaded.  Looks like MutableStateStats are returned by persistence layer when mutableState is loaded from DB.
 		// It is much better to emit the entire execution stats on each update.  So for now we are explicitly emitting
 		// historySize and historyCount metric for execution on each update explicitly.
-		// N.B. - Dual emit is required here so that we can see aggregate timer stats across all
-		// domains along with the individual domains stats
 		if entry, err := c.shard.GetDomainCache().GetDomainByID(executionInfo.DomainID); err == nil && entry != nil && entry.GetInfo() != nil {
 			domain := entry.GetInfo().Name
 			domainSizeScope := c.metricsClient.Scope(metrics.ExecutionSizeStatsScope, metrics.DomainTag(domain))
@@ -645,6 +643,7 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 			domainSizeScope.RecordTimer(metrics.HistorySize, time.Duration(historySize))
 			domainCountScope.RecordTimer(metrics.HistoryCount, time.Duration(historyCount))
 		} else {
+			// explicitly emit to domain all if we cannot retrieve the domain
 			allDomainSizeScope := c.metricsClient.Scope(metrics.ExecutionSizeStatsScope, metrics.DomainAllTag())
 			allDomainCountScope := c.metricsClient.Scope(metrics.ExecutionCountStatsScope, metrics.DomainAllTag())
 			allDomainSizeScope.RecordTimer(metrics.HistorySize, time.Duration(historySize))
@@ -1132,9 +1131,6 @@ func (c *workflowExecutionContextImpl) emitSessionUpdateStats(stats *persistence
 		allCountScope := c.metricsClient.Scope(metrics.SessionCountStatsScope, metrics.DomainAllTag())
 		emitSessionUpdateStats(allSizeScope, allCountScope, stats)
 	}
-
-	// N.B - always emit domain "all" metrics for aggregate information as we
-	// need a way to look at aggregate stats across all domain
 }
 
 func (c *workflowExecutionContextImpl) emitWorkflowCompletionStats(event *workflow.HistoryEvent) {
