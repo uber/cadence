@@ -339,7 +339,6 @@ func (v *esVisibilityStore) ListWorkflowExecutions(
 	}
 
 	queryDSL, isOpen, err := getESQueryDSL(request, token)
-	fmt.Println("vancexu queryDSL: ", queryDSL)
 	if err != nil {
 		return nil, &workflow.BadRequestError{Message: fmt.Sprintf("Error when parse query: %v", err)}
 	}
