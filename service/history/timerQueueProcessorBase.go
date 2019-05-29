@@ -21,7 +21,6 @@
 package history
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"math"
@@ -717,7 +716,7 @@ func (t *timerQueueProcessorBase) deleteWorkflowHistory(task *persistence.TimerT
 			if versionHistories != nil {
 			CleanupLoop:
 				for idx, versionHistory := range versionHistories.Histories {
-					if shouldDeleteCurrent && bytes.Equal(versionHistory.BranchToken, msBuilder.GetCurrentBranch()) {
+					if !shouldDeleteCurrent && int32(idx) == versionHistories.CurrentBranch {
 						continue CleanupLoop
 					}
 					if err := persistence.DeleteWorkflowExecutionHistoryV2(
@@ -731,6 +730,10 @@ func (t *timerQueueProcessorBase) deleteWorkflowHistory(task *persistence.TimerT
 				}
 			}
 		}
+		if !shouldDeleteCurrent {
+			return nil
+		}
+
 		return t.historyService.historyMgr.DeleteWorkflowExecutionHistory(
 			&persistence.DeleteWorkflowExecutionHistoryRequest{
 				DomainID:  domainID,
