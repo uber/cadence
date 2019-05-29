@@ -27,7 +27,7 @@ import (
 	"sync"
 	"time"
 
-	farm "github.com/dgryski/go-farm"
+	"github.com/dgryski/go-farm"
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -303,6 +303,8 @@ func CreateMatchingPollForDecisionTaskResponse(historyResponse *h.RecordDecision
 		WorkflowExecutionTaskList: historyResponse.WorkflowExecutionTaskList,
 		EventStoreVersion:         historyResponse.EventStoreVersion,
 		BranchToken:               historyResponse.BranchToken,
+		ScheduledTimestamp:        historyResponse.ScheduledTimestamp,
+		StartedTimestamp:          historyResponse.StartedTimestamp,
 	}
 	if historyResponse.GetPreviousStartedEventId() != EmptyEventID {
 		matchingResp.PreviousStartedEventId = historyResponse.PreviousStartedEventId

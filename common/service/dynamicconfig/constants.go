@@ -70,19 +70,23 @@ var keys = map[Key]string{
 	MaxIDLengthLimit:       "limit.maxIDLength",
 
 	// frontend settings
-	FrontendPersistenceMaxQPS:      "frontend.persistenceMaxQPS",
-	FrontendVisibilityMaxPageSize:  "frontend.visibilityMaxPageSize",
-	FrontendVisibilityListMaxQPS:   "frontend.visibilityListMaxQPS",
-	FrontendESVisibilityListMaxQPS: "frontend.esVisibilityListMaxQPS",
-	FrontendMaxBadBinaries:         "frontend.maxBadBinaries",
-	FrontendESIndexMaxResultWindow: "frontend.esIndexMaxResultWindow",
-	FrontendHistoryMaxPageSize:     "frontend.historyMaxPageSize",
-	FrontendRPS:                    "frontend.rps",
-	FrontendHistoryMgrNumConns:     "frontend.historyMgrNumConns",
-	MaxDecisionStartToCloseTimeout: "frontend.maxDecisionStartToCloseTimeout",
-	DisableListVisibilityByFilter:  "frontend.disableListVisibilityByFilter",
-	FrontendThrottledLogRPS:        "frontend.throttledLogRPS",
-	EnableClientVersionCheck:       "frontend.enableClientVersionCheck",
+	FrontendPersistenceMaxQPS:         "frontend.persistenceMaxQPS",
+	FrontendVisibilityMaxPageSize:     "frontend.visibilityMaxPageSize",
+	FrontendVisibilityListMaxQPS:      "frontend.visibilityListMaxQPS",
+	FrontendESVisibilityListMaxQPS:    "frontend.esVisibilityListMaxQPS",
+	FrontendMaxBadBinaries:            "frontend.maxBadBinaries",
+	FrontendESIndexMaxResultWindow:    "frontend.esIndexMaxResultWindow",
+	FrontendHistoryMaxPageSize:        "frontend.historyMaxPageSize",
+	FrontendRPS:                       "frontend.rps",
+	FrontendHistoryMgrNumConns:        "frontend.historyMgrNumConns",
+	MaxDecisionStartToCloseTimeout:    "frontend.maxDecisionStartToCloseTimeout",
+	DisableListVisibilityByFilter:     "frontend.disableListVisibilityByFilter",
+	FrontendThrottledLogRPS:           "frontend.throttledLogRPS",
+	EnableClientVersionCheck:          "frontend.enableClientVersionCheck",
+	ValidSearchAttributes:             "frontend.validSearchAttributes",
+	SearchAttributesNumberOfKeysLimit: "frontend.searchAttributesNumberOfKeysLimit",
+	SearchAttributesSizeOfValueLimit:  "frontend.searchAttributesSizeOfValueLimit",
+	SearchAttributesTotalSizeLimit:    "frontend.searchAttributesTotalSizeLimit",
 
 	// matching settings
 	MatchingRPS:                             "matching.rps",
@@ -165,6 +169,7 @@ var keys = map[Key]string{
 	AdminOperationToken:                                   "history.adminOperationToken",
 	EnableEventsV2:                                        "history.enableEventsV2",
 	NumArchiveSystemWorkflows:                             "history.numArchiveSystemWorkflows",
+	ArchiveRequestRPS:                                     "history.archiveRequestRPS",
 	EmitShardDiffLog:                                      "history.emitShardDiffLog",
 	HistoryThrottledLogRPS:                                "history.throttledLogRPS",
 
@@ -187,6 +192,7 @@ var keys = map[Key]string{
 	WorkerArchiverConcurrency:                       "worker.ArchiverConcurrency",
 	WorkerArchivalsPerIteration:                     "worker.ArchivalsPerIteration",
 	WorkerDeterministicConstructionCheckProbability: "worker.DeterministicConstructionCheckProbability",
+	WorkerTimeLimitPerArchivalIteration:             "worker.TimeLimitPerArchivalIteration",
 	WorkerThrottledLogRPS:                           "worker.throttledLogRPS",
 	ScannerPersistenceMaxQPS:                        "worker.scannerPersistenceMaxQPS",
 }
@@ -273,8 +279,16 @@ const (
 	MaxDecisionStartToCloseTimeout
 	// EnableClientVersionCheck enables client version check for frontend
 	EnableClientVersionCheck
-	// FrontendMaxBadBinaries is the max number of bad banaries in domain config
+	// FrontendMaxBadBinaries is the max number of bad binaries in domain config
 	FrontendMaxBadBinaries
+	// ValidSearchAttributes is legal indexed keys that can be used in list APIs
+	ValidSearchAttributes
+	// SearchAttributesNumberOfKeysLimit is the limit of number of keys
+	SearchAttributesNumberOfKeysLimit
+	// SearchAttributesSizeOfValueLimit is the size limit of each value
+	SearchAttributesSizeOfValueLimit
+	// SearchAttributesTotalSizeLimit is the size limit of the whole map
+	SearchAttributesTotalSizeLimit
 
 	// key for matching
 
@@ -429,6 +443,8 @@ const (
 	DefaultEventEncoding
 	// NumArchiveSystemWorkflows is key for number of archive system workflows running in total
 	NumArchiveSystemWorkflows
+	// ArchiveRequestRPS is the rate limit on the number of archive request per second
+	ArchiveRequestRPS
 
 	// EnableAdminProtection is whether to enable admin checking
 	EnableAdminProtection
@@ -482,6 +498,8 @@ const (
 	WorkerArchivalsPerIteration
 	// WorkerDeterministicConstructionCheckProbability controls the probability of running a deterministic construction check for any given archival
 	WorkerDeterministicConstructionCheckProbability
+	// WorkerTimeLimitPerArchivalIteration controls the time limit of each iteration of archival workflow
+	WorkerTimeLimitPerArchivalIteration
 	// WorkerThrottledLogRPS is the rate limit on number of log messages emitted per second for throttled logger
 	WorkerThrottledLogRPS
 	// ScannerPersistenceMaxQPS is the maximum rate of persistence calls from worker.Scanner

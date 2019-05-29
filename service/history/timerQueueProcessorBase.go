@@ -21,10 +21,10 @@
 package history
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"math"
-	"reflect"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -120,7 +120,7 @@ func newTimerQueueProcessorBase(scope int, shard ShardContext, historyService *h
 		workerNotificationChans: workerNotificationChans,
 		newTimerCh:              make(chan struct{}, 1),
 		lastPollTime:            time.Time{},
-		rateLimiter:             tokenbucket.New(maxPollRPS(), clock.NewRealTimeSource()),
+		rateLimiter:             tokenbucket.NewDynamicTokenBucket(maxPollRPS, clock.NewRealTimeSource()),
 		startDelay:              startDelay,
 		retryPolicy:             common.CreatePersistanceRetryPolicy(),
 	}
@@ -618,7 +618,7 @@ func (t *timerQueueProcessorBase) deleteWorkflow(task *persistence.TimerTaskInfo
 		return err
 	}
 
-	if err := t.deleteWorkflowHistory(task, msBuilder); err != nil {
+	if err := t.deleteWorkflowHistory(task, msBuilder, true); err != nil {
 		return err
 	}
 
@@ -632,9 +632,15 @@ func (t *timerQueueProcessorBase) deleteWorkflow(task *persistence.TimerTaskInfo
 }
 
 func (t *timerQueueProcessorBase) archiveWorkflow(task *persistence.TimerTaskInfo, msBuilder mutableState, context workflowExecutionContext) error {
+	domainCacheEntry, err := t.historyService.shard.GetDomainCache().GetDomainByID(task.DomainID)
+	if err != nil {
+		return err
+	}
+
 	req := &archiver.ArchiveRequest{
 		ShardID:              t.shard.GetShardID(),
 		DomainID:             task.DomainID,
+		DomainName:           domainCacheEntry.GetInfo().Name,
 		WorkflowID:           task.WorkflowID,
 		RunID:                task.RunID,
 		EventStoreVersion:    msBuilder.GetEventStoreVersion(),
@@ -659,6 +665,9 @@ func (t *timerQueueProcessorBase) archiveWorkflow(task *persistence.TimerTaskInf
 		return err
 	}
 	if err := t.deleteWorkflowExecution(task); err != nil {
+		return err
+	}
+	if err := t.deleteWorkflowHistory(task, msBuilder, false); err != nil {
 		return err
 	}
 	if err := t.deleteWorkflowVisibility(task); err != nil {
@@ -692,7 +701,7 @@ func (t *timerQueueProcessorBase) deleteCurrentWorkflowExecution(task *persisten
 	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 }
 
-func (t *timerQueueProcessorBase) deleteWorkflowHistory(task *persistence.TimerTaskInfo, msBuilder mutableState) error {
+func (t *timerQueueProcessorBase) deleteWorkflowHistory(task *persistence.TimerTaskInfo, msBuilder mutableState, shouldDeleteCurrent bool) error {
 	domainID, workflowExecution := t.getDomainIDAndWorkflowExecution(task)
 	op := func() error {
 		if msBuilder.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
@@ -703,22 +712,23 @@ func (t *timerQueueProcessorBase) deleteWorkflowHistory(task *persistence.TimerT
 				tag.TaskID(task.GetTaskID()),
 				tag.FailoverVersion(task.GetVersion()),
 				tag.TaskType(task.GetTaskType()))
-			versionHistories := msBuilder.GetAllBranches()
+			versionHistories := msBuilder.GetAllVersionHistories()
 
-		CleanupLoop:
-			for idx, versionHistory := range versionHistories.Histories {
-				if reflect.DeepEqual(versionHistory.BranchToken, msBuilder.GetCurrentBranch()) {
-					continue CleanupLoop
+			if versionHistories != nil {
+			CleanupLoop:
+				for idx, versionHistory := range versionHistories.Histories {
+					if shouldDeleteCurrent && bytes.Equal(versionHistory.BranchToken, msBuilder.GetCurrentBranch()) {
+						continue CleanupLoop
+					}
+					if err := persistence.DeleteWorkflowExecutionHistoryV2(
+						t.historyService.historyV2Mgr,
+						versionHistory.BranchToken,
+						common.IntPtr(t.shard.GetShardID()),
+						logger); err != nil {
+						return err
+					}
+					msBuilder.DeleteVersionHistory(idx)
 				}
-
-				if err := persistence.DeleteWorkflowExecutionHistoryV2(
-					t.historyService.historyV2Mgr,
-					versionHistory.BranchToken,
-					common.IntPtr(t.shard.GetShardID()),
-					logger); err != nil {
-					return err
-				}
-				msBuilder.DeleteVersionHistory(idx)
 			}
 		}
 		return t.historyService.historyMgr.DeleteWorkflowExecutionHistory(
