@@ -71,6 +71,8 @@ func (b *historyBuilder) HasTransientEvents() bool {
 	return b.transientHistory != nil && len(b.transientHistory) > 0
 }
 
+// originalRunID is the runID when the WorkflowExecutionStarted event is written
+// firstRunID is the very first runID along the chain of ContinueAsNew and Reset
 func (b *historyBuilder) AddWorkflowExecutionStartedEvent(request *h.StartWorkflowExecutionRequest,
 	previousExecution *persistence.WorkflowExecutionInfo, firstRunID, originalRunID string) *workflow.HistoryEvent {
 	event := b.newWorkflowExecutionStartedEvent(request, previousExecution, firstRunID, originalRunID)
