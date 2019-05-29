@@ -50,11 +50,8 @@ type (
 
 var _ workflowResetor = (*workflowResetorImpl)(nil)
 
-func newWorkflowResetor(historyEngine *historyEngineImpl, repl *historyReplicator) *workflowResetorImpl {
-	return &workflowResetorImpl{
-		eng:        historyEngine,
-		replicator: repl,
-	}
+func newWorkflowResetor(historyEngine *historyEngineImpl) *workflowResetorImpl {
+	return &workflowResetorImpl{eng: historyEngine}
 }
 
 // ResetWorkflowExecution only allows resetting to decisionTaskCompleted, but exclude that batch of decisionTaskCompleted/decisionTaskFailed/decisionTaskTimeout.
@@ -70,7 +67,7 @@ func (w *workflowResetorImpl) ResetWorkflowExecution(ctx context.Context, reques
 
 	resetNewRunID := uuid.New()
 	response = &workflow.ResetWorkflowExecutionResponse{
-		RunId: common.StringPtr(uuid.New()),
+		RunId: common.StringPtr(resetNewRunID),
 	}
 
 	// before changing mutable state
@@ -81,7 +78,7 @@ func (w *workflowResetorImpl) ResetWorkflowExecution(ctx context.Context, reques
 		return
 	}
 
-	retError = validateResetWorkflowBeforeReplay(baseMutableState, currMutableState)
+	retError = w.validateResetWorkflowBeforeReplay(baseMutableState, currMutableState)
 	if retError != nil {
 		return
 	}
@@ -95,7 +92,7 @@ func (w *workflowResetorImpl) ResetWorkflowExecution(ctx context.Context, reques
 		if newMutableState != nil && len(newMutableState.GetExecutionInfo().GetCurrentBranch()) > 0 {
 			w.eng.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
 				BranchToken: newMutableState.GetExecutionInfo().GetCurrentBranch(),
-				Success:     retError == nil,
+				Success:     retError == nil || persistence.IsTimeoutError(retError),
 				ShardID:     common.IntPtr(w.eng.shard.GetShardID()),
 			})
 		}
@@ -135,82 +132,57 @@ func (w *workflowResetorImpl) checkDomainStatus(newMutableState mutableState, pr
 		clusterMetadata := w.eng.shard.GetService().GetClusterMetadata()
 		currentVersion := newMutableState.GetCurrentVersion()
 		if currentVersion < prevRunVersion {
-			retError = ce.NewDomainNotActiveError(
+			return ce.NewDomainNotActiveError(
 				domain,
 				clusterMetadata.GetCurrentClusterName(),
 				clusterMetadata.ClusterNameForFailoverVersion(prevRunVersion),
 			)
-			return
 		}
 		activeCluster := clusterMetadata.ClusterNameForFailoverVersion(currentVersion)
 		currentCluster := clusterMetadata.GetCurrentClusterName()
 		if activeCluster != currentCluster {
-			retError = ce.NewDomainNotActiveError(domain, currentCluster, activeCluster)
-			return
+			return ce.NewDomainNotActiveError(domain, currentCluster, activeCluster)
 		}
 	}
 	return nil
 }
 
-func validateResetWorkflowBeforeReplay(baseMutableState, currMutableState mutableState) (retError error) {
+func (w *workflowResetorImpl) validateResetWorkflowBeforeReplay(baseMutableState, currMutableState mutableState) (retError error) {
 	if baseMutableState.GetEventStoreVersion() != persistence.EventStoreVersionV2 {
-		retError = &workflow.BadRequestError{
+		return &workflow.BadRequestError{
 			Message: fmt.Sprintf("reset API is not supported for V1 history events"),
 		}
-		return
-	}
-	if len(baseMutableState.GetPendingChildExecutionInfos()) > 0 {
-		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("reset is not allowed when workflow has pending child workflow. RunID: %v", baseMutableState.GetExecutionInfo().RunID),
-		}
-		return
 	}
 	if len(currMutableState.GetPendingChildExecutionInfos()) > 0 {
-		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("reset is not allowed when workflow has pending child workflow. RunID: %v", currMutableState.GetExecutionInfo().RunID),
+		return &workflow.BadRequestError{
+			Message: fmt.Sprintf("reset is not allowed when current workflow has pending child workflow."),
 		}
-		return
 	}
 	if currMutableState.IsWorkflowExecutionRunning() {
-		retError = &workflow.InternalServiceError{
+		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("current workflow should already been terminated"),
 		}
 	}
 	return
 }
 
-func validateResetWorkflowAfterReplay(newMutableState mutableState) (retError error) {
-	if len(newMutableState.GetAllRequestCancels()) > 0 {
-		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending request cancel "),
-		}
-		return
-	}
-	if len(newMutableState.GetPendingChildExecutionInfos()) > 0 {
-		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending child workflow "),
-		}
-		return
-	}
-	if len(newMutableState.GetAllSignalsToSend()) > 0 {
-		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending signals to send, pending signal: %+v ", newMutableState.GetAllSignalsToSend()),
-		}
+func (w *workflowResetorImpl) validateResetWorkflowAfterReplay(newMutableState mutableState) (retError error) {
+	retError = newMutableState.CheckResettable()
+	if retError != nil {
 		return
 	}
 	if !newMutableState.HasInFlightDecisionTask() {
-		retError = &workflow.BadRequestError{
+		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("can't find the last started decision"),
 		}
-		return
 	}
 	if newMutableState.HasBufferedEvents() {
-		retError = &workflow.InternalServiceError{
+		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("replay history shouldn't see any bufferred events"),
 		}
 	}
 	if newMutableState.IsStickyTaskListEnabled() {
-		retError = &workflow.InternalServiceError{
+		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("replay history shouldn't have stikyness"),
 		}
 	}
@@ -271,7 +243,7 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(
 	}
 	newMutableState = newStateBuilder.getMutableState()
 
-	retError = validateResetWorkflowAfterReplay(newMutableState)
+	retError = w.validateResetWorkflowAfterReplay(newMutableState)
 	if retError != nil {
 		return
 	}
@@ -289,6 +261,7 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(
 		identityHistoryService, resetReason, baseRunID, newRunID, forkEventVersion)
 	if event == nil {
 		retError = &workflow.InternalServiceError{Message: "Failed to add decision failed event."}
+		return
 	}
 
 	retError = w.failStartedActivities(newMutableState)
@@ -353,12 +326,6 @@ func (w *workflowResetorImpl) terminateIfCurrIsRunning(currMutableState mutableS
 
 	if currMutableState.IsWorkflowExecutionRunning() {
 		terminateCurr = true
-
-		retError = failInFlightDecisionToClearBufferedEvents(currMutableState)
-		if retError != nil {
-			return
-		}
-
 		currMutableState.AddWorkflowExecutionTerminatedEvent(&workflow.TerminateWorkflowExecutionRequest{
 			Reason:   common.StringPtr(reason),
 			Details:  nil,
@@ -572,6 +539,7 @@ func (w *workflowResetorImpl) replayHistoryEvents(decisionFinishEventID int64, r
 		for _, batch := range readResp.History {
 			history := batch.Events
 			firstEvent := history[0]
+			lastEvent := history[len(history)-1]
 
 			// for saving received signals only
 			if firstEvent.GetEventId() >= decisionFinishEventID {
@@ -615,10 +583,11 @@ func (w *workflowResetorImpl) replayHistoryEvents(decisionFinishEventID int64, r
 			}
 
 			// avoid replay this event in stateBuilder which will run into NPE if WF doesn't enable XDC
-			if firstEvent.GetEventType() == workflow.EventTypeWorkflowExecutionContinuedAsNew {
+			if lastEvent.GetEventType() == workflow.EventTypeWorkflowExecutionContinuedAsNew {
 				retError = &workflow.BadRequestError{
 					Message: fmt.Sprintf("wrong DecisionFinishEventId, cannot replay history to continueAsNew"),
 				}
+				return
 			}
 
 			_, _, _, retError = sBuilder.applyEvents(domainID, requestID, prevExecution, history, nil, persistence.EventStoreVersionV2, persistence.EventStoreVersionV2)
@@ -755,14 +724,14 @@ func (w *workflowResetorImpl) ApplyResetEvent(ctx context.Context, request *h.Re
 	defer func() {
 		w.eng.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
 			BranchToken: newMsBuilder.GetExecutionInfo().GetCurrentBranch(),
-			Success:     retError == nil,
+			Success:     retError == nil || persistence.IsTimeoutError(retError),
 			ShardID:     shardID,
 		})
 	}()
 	newMsBuilder.GetExecutionInfo().BranchToken = forkResp.NewBranchToken
 
 	// prepare to append history to new branch
-	hBuilder := newHistoryBuilder(newMsBuilder, w.replicator.logger)
+	hBuilder := newHistoryBuilder(newMsBuilder, w.eng.logger)
 	hBuilder.history = historyAfterReset
 	newMsBuilder.SetHistoryBuilder(hBuilder)
 
@@ -771,7 +740,7 @@ func (w *workflowResetorImpl) ApplyResetEvent(ctx context.Context, request *h.Re
 		return
 	}
 	now := time.Unix(0, lastEvent.GetTimestamp())
-	w.replicator.notify(request.GetSourceCluster(), now, newRunTransferTasks, newRunTimerTasks)
+	notify(w.eng.shard, w.eng, request.GetSourceCluster(), now, newRunTransferTasks, newRunTimerTasks)
 	return nil
 }
 
@@ -879,5 +848,24 @@ func (w *workflowResetorImpl) replicateResetEvent(baseMutableState mutableState,
 
 	newMsBuilder.GetExecutionInfo().SetLastFirstEventID(firstEvent.GetEventId())
 	newMsBuilder.UpdateReplicationStateLastEventID(clusterMetadata.GetCurrentClusterName(), lastEvent.GetVersion(), lastEvent.GetEventId())
+	return
+}
+
+// FindAutoResetPoint returns the auto reset point
+func FindAutoResetPoint(badBinaries *workflow.BadBinaries, autoResetPoints *workflow.ResetPoints) (reason string, pt *workflow.ResetPointInfo) {
+	if badBinaries == nil || badBinaries.Binaries == nil || autoResetPoints == nil || autoResetPoints.Points == nil {
+		return
+	}
+	nowNano := time.Now().UnixNano()
+	for _, p := range autoResetPoints.Points {
+		bin, ok := badBinaries.Binaries[p.GetBinaryChecksum()]
+		if ok && p.GetResettable() {
+			if p.GetExpiringTimeNano() > 0 && nowNano > p.GetExpiringTimeNano() {
+				// reset point has expired and we may already deleted the history
+				continue
+			}
+			return bin.GetReason(), p
+		}
+	}
 	return
 }

@@ -814,6 +814,9 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 	activityID := "activityId1"
 	activityType := &workflow.ActivityType{Name: &activityTypeName}
 	activityInput := []byte("Activity1 Input")
+	activityHeader := &workflow.Header{
+		Fields: map[string][]byte{"tracing": []byte("tracing data")},
+	}
 
 	identity := "nobody"
 
@@ -829,6 +832,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 						TaskList:                      &workflow.TaskList{Name: taskList.Name},
 						ActivityType:                  activityType,
 						Input:                         activityInput,
+						Header:                        activityHeader,
 						ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(2),
 						StartToCloseTimeoutSeconds:    common.Int32Ptr(1),
@@ -859,6 +863,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 				s.EqualValues(activityID, *result.ActivityId)
 				s.EqualValues(activityType, result.ActivityType)
 				s.EqualValues(activityInput, result.Input)
+				s.EqualValues(activityHeader, result.Header)
 				s.EqualValues(workflowExecution, *result.WorkflowExecution)
 				token := &common.TaskToken{
 					DomainID:   domainID,
@@ -1534,6 +1539,9 @@ func (s *matchingEngineSuite) TestTaskExpiryAndCompletion() {
 	const rangeSize = 10
 	s.matchingEngine.config.RangeSize = rangeSize
 	s.matchingEngine.config.MaxTaskDeleteBatchSize = dynamicconfig.GetIntPropertyFilteredByTaskListInfo(2)
+	// set idle timer check to a really small value to assert that we don't accidentally drop tasks while blocking
+	// on enqueuing a task to task buffer
+	s.matchingEngine.config.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(time.Microsecond)
 
 	testCases := []struct {
 		batchSize          int
@@ -1555,7 +1563,7 @@ func (s *matchingEngineSuite) TestTaskExpiryAndCompletion() {
 				ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
 			}
 			if i%2 == 0 {
-				// simulates creating a task whos scheduledToStartTimeout is already expired
+				// simulates creating a task whose scheduledToStartTimeout is already expired
 				addRequest.ScheduleToStartTimeoutSeconds = common.Int32Ptr(-5)
 			}
 			_, err := s.matchingEngine.AddActivityTask(&addRequest)
@@ -1642,6 +1650,7 @@ func newActivityTaskScheduledEvent(eventID int64, decisionTaskCompletedEventID i
 	attributes.ActivityType = scheduleAttributes.ActivityType
 	attributes.TaskList = scheduleAttributes.TaskList
 	attributes.Input = scheduleAttributes.Input
+	attributes.Header = scheduleAttributes.Header
 	attributes.ScheduleToCloseTimeoutSeconds = common.Int32Ptr(*scheduleAttributes.ScheduleToCloseTimeoutSeconds)
 	attributes.ScheduleToStartTimeoutSeconds = common.Int32Ptr(*scheduleAttributes.ScheduleToStartTimeoutSeconds)
 	attributes.StartToCloseTimeoutSeconds = common.Int32Ptr(*scheduleAttributes.StartToCloseTimeoutSeconds)

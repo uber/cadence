@@ -654,6 +654,18 @@ func (v *cassandraVisibilityPersistence) DeleteWorkflowExecution(request *p.Visi
 	return nil
 }
 
+func (v *cassandraVisibilityPersistence) ListWorkflowExecutions(request *p.ListWorkflowExecutionsRequestV2) (*p.InternalListWorkflowExecutionsResponse, error) {
+	return nil, p.NewOperationNotSupportErrorForVis()
+}
+
+func (v *cassandraVisibilityPersistence) ScanWorkflowExecutions(request *p.ListWorkflowExecutionsRequestV2) (*p.InternalListWorkflowExecutionsResponse, error) {
+	return nil, p.NewOperationNotSupportErrorForVis()
+}
+
+func (v *cassandraVisibilityPersistence) CountWorkflowExecutions(request *p.CountWorkflowExecutionsRequest) (*p.CountWorkflowExecutionsResponse, error) {
+	return nil, p.NewOperationNotSupportErrorForVis()
+}
+
 func readOpenWorkflowExecutionRecord(iter *gocql.Iter) (*p.VisibilityWorkflowExecutionInfo, bool) {
 	var workflowID string
 	var runID gocql.UUID

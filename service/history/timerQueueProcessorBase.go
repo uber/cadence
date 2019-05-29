@@ -119,7 +119,7 @@ func newTimerQueueProcessorBase(scope int, shard ShardContext, historyService *h
 		workerNotificationChans: workerNotificationChans,
 		newTimerCh:              make(chan struct{}, 1),
 		lastPollTime:            time.Time{},
-		rateLimiter:             tokenbucket.New(maxPollRPS(), clock.NewRealTimeSource()),
+		rateLimiter:             tokenbucket.NewDynamicTokenBucket(maxPollRPS, clock.NewRealTimeSource()),
 		startDelay:              startDelay,
 		retryPolicy:             common.CreatePersistanceRetryPolicy(),
 	}
@@ -539,8 +539,8 @@ func (t *timerQueueProcessorBase) ackTaskOnce(task *persistence.TimerTaskInfo, s
 
 func (t *timerQueueProcessorBase) initializeLoggerForTask(task *persistence.TimerTaskInfo) log.Logger {
 	logger := t.logger.WithTags(
-		tag.WorkflowID(task.RunID),
-		tag.WorkflowRunID(task.WorkflowID),
+		tag.WorkflowID(task.WorkflowID),
+		tag.WorkflowRunID(task.RunID),
 		tag.WorkflowDomainID(task.DomainID),
 		tag.ShardID(t.shard.GetShardID()),
 		tag.TaskID(task.GetTaskID()),
@@ -609,18 +609,19 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.Ti
 }
 
 func (t *timerQueueProcessorBase) deleteWorkflow(task *persistence.TimerTaskInfo, msBuilder mutableState, context workflowExecutionContext) error {
-	err := t.deleteWorkflowExecution(task)
-	if err != nil {
+	if err := t.deleteCurrentWorkflowExecution(task); err != nil {
 		return err
 	}
 
-	err = t.deleteWorkflowHistory(task, msBuilder)
-	if err != nil {
+	if err := t.deleteWorkflowExecution(task); err != nil {
 		return err
 	}
 
-	err = t.deleteWorkflowVisibility(task)
-	if err != nil {
+	if err := t.deleteWorkflowHistory(task, msBuilder); err != nil {
+		return err
+	}
+
+	if err := t.deleteWorkflowVisibility(task); err != nil {
 		return err
 	}
 	// calling clear here to force accesses of mutable state to read database
@@ -630,9 +631,15 @@ func (t *timerQueueProcessorBase) deleteWorkflow(task *persistence.TimerTaskInfo
 }
 
 func (t *timerQueueProcessorBase) archiveWorkflow(task *persistence.TimerTaskInfo, msBuilder mutableState, context workflowExecutionContext) error {
+	domainCacheEntry, err := t.historyService.shard.GetDomainCache().GetDomainByID(task.DomainID)
+	if err != nil {
+		return err
+	}
+
 	req := &archiver.ArchiveRequest{
 		ShardID:              t.shard.GetShardID(),
 		DomainID:             task.DomainID,
+		DomainName:           domainCacheEntry.GetInfo().Name,
 		WorkflowID:           task.WorkflowID,
 		RunID:                task.RunID,
 		EventStoreVersion:    msBuilder.GetEventStoreVersion(),
@@ -644,8 +651,8 @@ func (t *timerQueueProcessorBase) archiveWorkflow(task *persistence.TimerTaskInf
 	// send signal before deleting mutable state to make sure archival is idempotent
 	if err := t.historyService.archivalClient.Archive(req); err != nil {
 		t.logger.Error("failed to initiate archival", tag.Error(err),
-			tag.WorkflowID(task.RunID),
-			tag.WorkflowRunID(task.WorkflowID),
+			tag.WorkflowID(task.WorkflowID),
+			tag.WorkflowRunID(task.RunID),
 			tag.WorkflowDomainID(task.DomainID),
 			tag.ShardID(t.shard.GetShardID()),
 			tag.TaskID(task.GetTaskID()),
@@ -653,12 +660,13 @@ func (t *timerQueueProcessorBase) archiveWorkflow(task *persistence.TimerTaskInf
 			tag.TaskType(task.GetTaskType()))
 		return err
 	}
-	err := t.deleteWorkflowExecution(task)
-	if err != nil {
+	if err := t.deleteCurrentWorkflowExecution(task); err != nil {
 		return err
 	}
-	err = t.deleteWorkflowVisibility(task)
-	if err != nil {
+	if err := t.deleteWorkflowExecution(task); err != nil {
+		return err
+	}
+	if err := t.deleteWorkflowVisibility(task); err != nil {
 		return err
 	}
 	// calling clear here to force accesses of mutable state to read database
@@ -678,12 +686,23 @@ func (t *timerQueueProcessorBase) deleteWorkflowExecution(task *persistence.Time
 	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 }
 
+func (t *timerQueueProcessorBase) deleteCurrentWorkflowExecution(task *persistence.TimerTaskInfo) error {
+	op := func() error {
+		return t.executionManager.DeleteCurrentWorkflowExecution(&persistence.DeleteCurrentWorkflowExecutionRequest{
+			DomainID:   task.DomainID,
+			WorkflowID: task.WorkflowID,
+			RunID:      task.RunID,
+		})
+	}
+	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+}
+
 func (t *timerQueueProcessorBase) deleteWorkflowHistory(task *persistence.TimerTaskInfo, msBuilder mutableState) error {
 	domainID, workflowExecution := t.getDomainIDAndWorkflowExecution(task)
 	op := func() error {
 		if msBuilder.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
-			logger := t.logger.WithTags(tag.WorkflowID(task.RunID),
-				tag.WorkflowRunID(task.WorkflowID),
+			logger := t.logger.WithTags(tag.WorkflowID(task.WorkflowID),
+				tag.WorkflowRunID(task.RunID),
 				tag.WorkflowDomainID(task.DomainID),
 				tag.ShardID(t.shard.GetShardID()),
 				tag.TaskID(task.GetTaskID()),

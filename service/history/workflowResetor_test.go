@@ -27,6 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"go.uber.org/cadence/.gen/go/shared"
 
 	"github.com/google/uuid"
@@ -118,7 +120,7 @@ func (s *resetorSuite) SetupTest() {
 	s.mockClientBean = &client.MockClientBean{}
 	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean)
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("GetAllClusterFailoverVersions").Return(cluster.TestSingleDCAllClusterFailoverVersions)
+	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestSingleDCClusterInfo)
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
 	s.mockDomainCache = &cache.DomainCacheMock{}
 	s.mockArchivalClient = &archiver.ClientMock{}
@@ -159,8 +161,7 @@ func (s *resetorSuite) SetupTest() {
 	}
 	h.txProcessor = newTransferQueueProcessor(mockShard, h, s.mockVisibilityMgr, s.mockMatchingClient, s.mockHistoryClient, s.logger)
 	h.timerProcessor = newTimerQueueProcessor(mockShard, h, s.mockMatchingClient, s.logger)
-	repl := newHistoryReplicator(mockShard, h, historyCache, s.mockDomainCache, s.mockHistoryMgr, s.mockHistoryV2Mgr, s.logger)
-	s.resetor = newWorkflowResetor(h, repl)
+	s.resetor = newWorkflowResetor(h)
 	h.resetor = s.resetor
 	s.historyEngine = h
 }
@@ -1434,11 +1435,16 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication_WithRequestCance
 	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
 
 	_, err = s.historyEngine.ResetWorkflowExecution(context.Background(), request)
-	s.EqualError(err, "BadRequestError{Message: it is not allowed resetting to a point that workflow has pending request cancel }")
+	s.EqualError(err, "BadRequestError{Message: it is not allowed resetting to a point that workflow has pending request cancel.}")
 }
 
 func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCurrent() {
 	domainName := "testDomainName"
+	beforeResetVersion := int64(100)
+	afterResetVersion := int64(101)
+	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", beforeResetVersion).Return("standby")
+	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", afterResetVersion).Return("active")
+
 	testDomainEntry := cache.NewDomainCacheEntryWithReplicationForTest(
 		&p.DomainInfo{ID: validDomainID},
 		&p.DomainConfig{Retention: 1},
@@ -1451,7 +1457,10 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 					ClusterName: "standby",
 				},
 			},
-		}, cluster.GetTestClusterMetadata(true, true, false))
+		},
+		afterResetVersion,
+		cluster.GetTestClusterMetadata(true, true, false),
+	)
 	// override domain cache
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(testDomainEntry, nil)
 	s.mockDomainCache.On("GetDomain", mock.Anything).Return(testDomainEntry, nil)
@@ -1517,10 +1526,10 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 		BranchToken:       forkBranchToken,
 		NextEventID:       35,
 	}
-	currentVersion := int64(100)
+
 	forkRepState := &p.ReplicationState{
-		CurrentVersion:      currentVersion,
-		StartVersion:        currentVersion,
+		CurrentVersion:      beforeResetVersion,
+		StartVersion:        beforeResetVersion,
 		LastWriteEventID:    common.EmptyEventID,
 		LastWriteVersion:    common.EmptyVersion,
 		LastReplicationInfo: map[string]*p.ReplicationInfo{},
@@ -1576,7 +1585,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 				Events: []*workflow.HistoryEvent{
 					&workflow.HistoryEvent{
 						EventId:   common.Int64Ptr(1),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeWorkflowExecutionStarted),
 						WorkflowExecutionStartedEventAttributes: &workflow.WorkflowExecutionStartedEventAttributes{
 							WorkflowType: &workflow.WorkflowType{
@@ -1590,7 +1599,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 					},
 					{
 						EventId:   common.Int64Ptr(2),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskScheduled),
 						DecisionTaskScheduledEventAttributes: &workflow.DecisionTaskScheduledEventAttributes{
 							TaskList:                   taskList,
@@ -1603,7 +1612,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(3),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskStarted),
 						DecisionTaskStartedEventAttributes: &workflow.DecisionTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(2),
@@ -1615,7 +1624,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(4),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskCompleted),
 						DecisionTaskCompletedEventAttributes: &workflow.DecisionTaskCompletedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(2),
@@ -1624,7 +1633,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 					},
 					{
 						EventId:   common.Int64Ptr(5),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeMarkerRecorded),
 						MarkerRecordedEventAttributes: &workflow.MarkerRecordedEventAttributes{
 							MarkerName:                   common.StringPtr("Version"),
@@ -1634,7 +1643,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 					},
 					{
 						EventId:   common.Int64Ptr(6),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskScheduled),
 						ActivityTaskScheduledEventAttributes: &workflow.ActivityTaskScheduledEventAttributes{
 							ActivityId: common.StringPtr(actIDCompleted1),
@@ -1651,7 +1660,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 					},
 					{
 						EventId:   common.Int64Ptr(7),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeTimerStarted),
 						TimerStartedEventAttributes: &workflow.TimerStartedEventAttributes{
 							TimerId:                      common.StringPtr(timerFiredID),
@@ -1665,7 +1674,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(8),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskStarted),
 						ActivityTaskStartedEventAttributes: &workflow.ActivityTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(6),
@@ -1677,7 +1686,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(9),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskCompleted),
 						ActivityTaskCompletedEventAttributes: &workflow.ActivityTaskCompletedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(6),
@@ -1686,7 +1695,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 					},
 					{
 						EventId:   common.Int64Ptr(10),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskScheduled),
 						DecisionTaskScheduledEventAttributes: &workflow.DecisionTaskScheduledEventAttributes{
 							TaskList:                   taskList,
@@ -1699,7 +1708,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(11),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskStarted),
 						DecisionTaskStartedEventAttributes: &workflow.DecisionTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(10),
@@ -1711,7 +1720,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(12),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskCompleted),
 						DecisionTaskCompletedEventAttributes: &workflow.DecisionTaskCompletedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(10),
@@ -1724,7 +1733,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(13),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeTimerFired),
 						TimerFiredEventAttributes: &workflow.TimerFiredEventAttributes{
 							TimerId: common.StringPtr(timerFiredID),
@@ -1732,7 +1741,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 					},
 					{
 						EventId:   common.Int64Ptr(14),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskScheduled),
 						DecisionTaskScheduledEventAttributes: &workflow.DecisionTaskScheduledEventAttributes{
 							TaskList:                   taskList,
@@ -1745,7 +1754,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(15),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskStarted),
 						DecisionTaskStartedEventAttributes: &workflow.DecisionTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(14),
@@ -1757,7 +1766,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(16),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskCompleted),
 						DecisionTaskCompletedEventAttributes: &workflow.DecisionTaskCompletedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(14),
@@ -1766,7 +1775,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 					},
 					{
 						EventId:   common.Int64Ptr(17),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskScheduled),
 						ActivityTaskScheduledEventAttributes: &workflow.ActivityTaskScheduledEventAttributes{
 							ActivityId: common.StringPtr(actIDRetry),
@@ -1790,7 +1799,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 					},
 					{
 						EventId:   common.Int64Ptr(18),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskScheduled),
 						ActivityTaskScheduledEventAttributes: &workflow.ActivityTaskScheduledEventAttributes{
 							ActivityId: common.StringPtr(actIDNotStarted),
@@ -1807,7 +1816,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 					},
 					{
 						EventId:   common.Int64Ptr(19),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeTimerStarted),
 						TimerStartedEventAttributes: &workflow.TimerStartedEventAttributes{
 							TimerId:                      common.StringPtr(timerUnfiredID1),
@@ -1817,7 +1826,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 					},
 					{
 						EventId:   common.Int64Ptr(20),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeTimerStarted),
 						TimerStartedEventAttributes: &workflow.TimerStartedEventAttributes{
 							TimerId:                      common.StringPtr(timerUnfiredID2),
@@ -1827,7 +1836,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 					},
 					{
 						EventId:   common.Int64Ptr(21),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskScheduled),
 						ActivityTaskScheduledEventAttributes: &workflow.ActivityTaskScheduledEventAttributes{
 							ActivityId: common.StringPtr(actIDCompleted2),
@@ -1844,7 +1853,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 					},
 					{
 						EventId:   common.Int64Ptr(22),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskScheduled),
 						ActivityTaskScheduledEventAttributes: &workflow.ActivityTaskScheduledEventAttributes{
 							ActivityId: common.StringPtr(actIDStartedNoRetry),
@@ -1861,7 +1870,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 					},
 					{
 						EventId:   common.Int64Ptr(23),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeWorkflowExecutionSignaled),
 						WorkflowExecutionSignaledEventAttributes: &workflow.WorkflowExecutionSignaledEventAttributes{
 							SignalName: common.StringPtr(signalName3),
@@ -1873,7 +1882,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(24),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskStarted),
 						ActivityTaskStartedEventAttributes: &workflow.ActivityTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(21),
@@ -1885,7 +1894,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(25),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeWorkflowExecutionSignaled),
 						WorkflowExecutionSignaledEventAttributes: &workflow.WorkflowExecutionSignaledEventAttributes{
 							SignalName: common.StringPtr(signalName4),
@@ -1897,7 +1906,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(26),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskStarted),
 						ActivityTaskStartedEventAttributes: &workflow.ActivityTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(22),
@@ -1909,7 +1918,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(27),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskCompleted),
 						ActivityTaskCompletedEventAttributes: &workflow.ActivityTaskCompletedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(21),
@@ -1918,7 +1927,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 					},
 					{
 						EventId:   common.Int64Ptr(28),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskScheduled),
 						DecisionTaskScheduledEventAttributes: &workflow.DecisionTaskScheduledEventAttributes{
 							TaskList:                   taskList,
@@ -1931,7 +1940,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(29),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskStarted),
 						DecisionTaskStartedEventAttributes: &workflow.DecisionTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(28),
@@ -1944,7 +1953,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(30),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskCompleted),
 						DecisionTaskCompletedEventAttributes: &workflow.DecisionTaskCompletedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(28),
@@ -1953,7 +1962,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 					},
 					{
 						EventId:   common.Int64Ptr(31),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeTimerStarted),
 						TimerStartedEventAttributes: &workflow.TimerStartedEventAttributes{
 							TimerId:                      common.StringPtr(timerAfterReset),
@@ -1967,7 +1976,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(32),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskStarted),
 						ActivityTaskStartedEventAttributes: &workflow.ActivityTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(18),
@@ -1979,7 +1988,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(33),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeWorkflowExecutionSignaled),
 						WorkflowExecutionSignaledEventAttributes: &workflow.WorkflowExecutionSignaledEventAttributes{
 							SignalName: common.StringPtr(signalName1),
@@ -1991,7 +2000,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(34),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeWorkflowExecutionSignaled),
 						WorkflowExecutionSignaledEventAttributes: &workflow.WorkflowExecutionSignaledEventAttributes{
 							SignalName: common.StringPtr(signalName2),
@@ -2045,7 +2054,6 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	s.mockHistoryV2Mgr.On("CompleteForkBranch", completeReqErr).Return(nil).Maybe()
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(appendV1Resp, nil).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(appendV2Resp, nil).Once()
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", mock.Anything).Return("active")
 	s.mockExecutionMgr.On("ResetWorkflowExecution", mock.Anything).Return(nil).Once()
 	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
 
@@ -2134,8 +2142,16 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	s.Equal(p.ReplicationTaskTypeHistory, resetReq.CurrReplicationTasks[0].GetType())
 
 	compareRepState := copyReplicationState(forkRepState)
+	compareRepState.StartVersion = beforeResetVersion
+	compareRepState.CurrentVersion = afterResetVersion
 	compareRepState.LastWriteEventID = 34
-	compareRepState.LastWriteVersion = currentVersion
+	compareRepState.LastWriteVersion = afterResetVersion
+	compareRepState.LastReplicationInfo = map[string]*p.ReplicationInfo{
+		"standby": &p.ReplicationInfo{
+			LastEventID: 29,
+			Version:     beforeResetVersion,
+		},
+	}
 	s.Equal(compareRepState, resetReq.InsertReplicationState)
 
 	// not supported feature
@@ -2147,6 +2163,11 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 
 func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 	domainName := "testDomainName"
+	beforeResetVersion := int64(100)
+	afterResetVersion := int64(101)
+	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", beforeResetVersion).Return("active")
+	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", afterResetVersion).Return("standby")
+
 	testDomainEntry := cache.NewDomainCacheEntryWithReplicationForTest(
 		&p.DomainInfo{ID: validDomainID},
 		&p.DomainConfig{Retention: 1},
@@ -2159,7 +2180,10 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 					ClusterName: "standby",
 				},
 			},
-		}, cluster.GetTestClusterMetadata(true, true, false))
+		},
+		afterResetVersion,
+		cluster.GetTestClusterMetadata(true, true, false),
+	)
 	// override domain cache
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(testDomainEntry, nil)
 	s.mockDomainCache.On("GetDomain", mock.Anything).Return(testDomainEntry, nil)
@@ -2225,10 +2249,10 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 		BranchToken:       forkBranchToken,
 		NextEventID:       35,
 	}
-	currentVersion := int64(100)
+
 	forkRepState := &p.ReplicationState{
-		CurrentVersion:      currentVersion,
-		StartVersion:        currentVersion,
+		CurrentVersion:      beforeResetVersion,
+		StartVersion:        beforeResetVersion,
 		LastWriteEventID:    common.EmptyEventID,
 		LastWriteVersion:    common.EmptyVersion,
 		LastReplicationInfo: map[string]*p.ReplicationInfo{},
@@ -2283,7 +2307,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 				Events: []*workflow.HistoryEvent{
 					&workflow.HistoryEvent{
 						EventId:   common.Int64Ptr(1),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeWorkflowExecutionStarted),
 						WorkflowExecutionStartedEventAttributes: &workflow.WorkflowExecutionStartedEventAttributes{
 							WorkflowType: &workflow.WorkflowType{
@@ -2297,7 +2321,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 					},
 					{
 						EventId:   common.Int64Ptr(2),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskScheduled),
 						DecisionTaskScheduledEventAttributes: &workflow.DecisionTaskScheduledEventAttributes{
 							TaskList:                   taskList,
@@ -2310,7 +2334,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(3),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskStarted),
 						DecisionTaskStartedEventAttributes: &workflow.DecisionTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(2),
@@ -2322,7 +2346,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(4),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskCompleted),
 						DecisionTaskCompletedEventAttributes: &workflow.DecisionTaskCompletedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(2),
@@ -2331,7 +2355,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 					},
 					{
 						EventId:   common.Int64Ptr(5),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeMarkerRecorded),
 						MarkerRecordedEventAttributes: &workflow.MarkerRecordedEventAttributes{
 							MarkerName:                   common.StringPtr("Version"),
@@ -2341,7 +2365,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 					},
 					{
 						EventId:   common.Int64Ptr(6),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskScheduled),
 						ActivityTaskScheduledEventAttributes: &workflow.ActivityTaskScheduledEventAttributes{
 							ActivityId: common.StringPtr(actIDCompleted1),
@@ -2358,7 +2382,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 					},
 					{
 						EventId:   common.Int64Ptr(7),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeTimerStarted),
 						TimerStartedEventAttributes: &workflow.TimerStartedEventAttributes{
 							TimerId:                      common.StringPtr(timerFiredID),
@@ -2372,7 +2396,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(8),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskStarted),
 						ActivityTaskStartedEventAttributes: &workflow.ActivityTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(6),
@@ -2384,7 +2408,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(9),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskCompleted),
 						ActivityTaskCompletedEventAttributes: &workflow.ActivityTaskCompletedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(6),
@@ -2393,7 +2417,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 					},
 					{
 						EventId:   common.Int64Ptr(10),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskScheduled),
 						DecisionTaskScheduledEventAttributes: &workflow.DecisionTaskScheduledEventAttributes{
 							TaskList:                   taskList,
@@ -2406,7 +2430,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(11),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskStarted),
 						DecisionTaskStartedEventAttributes: &workflow.DecisionTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(10),
@@ -2418,7 +2442,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(12),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskCompleted),
 						DecisionTaskCompletedEventAttributes: &workflow.DecisionTaskCompletedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(10),
@@ -2431,7 +2455,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(13),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeTimerFired),
 						TimerFiredEventAttributes: &workflow.TimerFiredEventAttributes{
 							TimerId: common.StringPtr(timerFiredID),
@@ -2439,7 +2463,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 					},
 					{
 						EventId:   common.Int64Ptr(14),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskScheduled),
 						DecisionTaskScheduledEventAttributes: &workflow.DecisionTaskScheduledEventAttributes{
 							TaskList:                   taskList,
@@ -2452,7 +2476,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(15),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskStarted),
 						DecisionTaskStartedEventAttributes: &workflow.DecisionTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(14),
@@ -2464,7 +2488,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(16),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskCompleted),
 						DecisionTaskCompletedEventAttributes: &workflow.DecisionTaskCompletedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(14),
@@ -2473,7 +2497,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 					},
 					{
 						EventId:   common.Int64Ptr(17),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskScheduled),
 						ActivityTaskScheduledEventAttributes: &workflow.ActivityTaskScheduledEventAttributes{
 							ActivityId: common.StringPtr(actIDRetry),
@@ -2497,7 +2521,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 					},
 					{
 						EventId:   common.Int64Ptr(18),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskScheduled),
 						ActivityTaskScheduledEventAttributes: &workflow.ActivityTaskScheduledEventAttributes{
 							ActivityId: common.StringPtr(actIDNotStarted),
@@ -2514,7 +2538,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 					},
 					{
 						EventId:   common.Int64Ptr(19),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeTimerStarted),
 						TimerStartedEventAttributes: &workflow.TimerStartedEventAttributes{
 							TimerId:                      common.StringPtr(timerUnfiredID1),
@@ -2524,7 +2548,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 					},
 					{
 						EventId:   common.Int64Ptr(20),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeTimerStarted),
 						TimerStartedEventAttributes: &workflow.TimerStartedEventAttributes{
 							TimerId:                      common.StringPtr(timerUnfiredID2),
@@ -2534,7 +2558,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 					},
 					{
 						EventId:   common.Int64Ptr(21),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskScheduled),
 						ActivityTaskScheduledEventAttributes: &workflow.ActivityTaskScheduledEventAttributes{
 							ActivityId: common.StringPtr(actIDCompleted2),
@@ -2551,7 +2575,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 					},
 					{
 						EventId:   common.Int64Ptr(22),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskScheduled),
 						ActivityTaskScheduledEventAttributes: &workflow.ActivityTaskScheduledEventAttributes{
 							ActivityId: common.StringPtr(actIDStartedNoRetry),
@@ -2568,7 +2592,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 					},
 					{
 						EventId:   common.Int64Ptr(23),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeWorkflowExecutionSignaled),
 						WorkflowExecutionSignaledEventAttributes: &workflow.WorkflowExecutionSignaledEventAttributes{
 							SignalName: common.StringPtr(signalName3),
@@ -2580,7 +2604,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(24),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskStarted),
 						ActivityTaskStartedEventAttributes: &workflow.ActivityTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(21),
@@ -2592,7 +2616,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(25),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeWorkflowExecutionSignaled),
 						WorkflowExecutionSignaledEventAttributes: &workflow.WorkflowExecutionSignaledEventAttributes{
 							SignalName: common.StringPtr(signalName4),
@@ -2604,7 +2628,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(26),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskStarted),
 						ActivityTaskStartedEventAttributes: &workflow.ActivityTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(22),
@@ -2616,7 +2640,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(27),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskCompleted),
 						ActivityTaskCompletedEventAttributes: &workflow.ActivityTaskCompletedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(21),
@@ -2625,7 +2649,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 					},
 					{
 						EventId:   common.Int64Ptr(28),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskScheduled),
 						DecisionTaskScheduledEventAttributes: &workflow.DecisionTaskScheduledEventAttributes{
 							TaskList:                   taskList,
@@ -2638,7 +2662,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(29),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskStarted),
 						DecisionTaskStartedEventAttributes: &workflow.DecisionTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(28),
@@ -2651,7 +2675,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(30),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskCompleted),
 						DecisionTaskCompletedEventAttributes: &workflow.DecisionTaskCompletedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(28),
@@ -2660,7 +2684,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 					},
 					{
 						EventId:   common.Int64Ptr(31),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeTimerStarted),
 						TimerStartedEventAttributes: &workflow.TimerStartedEventAttributes{
 							TimerId:                      common.StringPtr(timerAfterReset),
@@ -2674,7 +2698,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(32),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskStarted),
 						ActivityTaskStartedEventAttributes: &workflow.ActivityTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(18),
@@ -2686,7 +2710,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(33),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeWorkflowExecutionSignaled),
 						WorkflowExecutionSignaledEventAttributes: &workflow.WorkflowExecutionSignaledEventAttributes{
 							SignalName: common.StringPtr(signalName1),
@@ -2698,7 +2722,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(34),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeWorkflowExecutionSignaled),
 						WorkflowExecutionSignaledEventAttributes: &workflow.WorkflowExecutionSignaledEventAttributes{
 							SignalName: common.StringPtr(signalName2),
@@ -2737,7 +2761,6 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", readHistoryReq).Return(readHistoryResp, nil).Once()
 	s.mockHistoryV2Mgr.On("ForkHistoryBranch", mock.Anything).Return(forkResp, nil).Once()
 	s.mockHistoryV2Mgr.On("CompleteForkBranch", completeReqErr).Return(nil).Once()
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", mock.Anything).Return("standby")
 	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Once()
 
 	_, err = s.historyEngine.ResetWorkflowExecution(context.Background(), request)
@@ -2746,6 +2769,11 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 
 func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurrent() {
 	domainName := "testDomainName"
+	beforeResetVersion := int64(100)
+	afterResetVersion := int64(101)
+	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", beforeResetVersion).Return("standby")
+	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", afterResetVersion).Return("active")
+
 	testDomainEntry := cache.NewDomainCacheEntryWithReplicationForTest(
 		&p.DomainInfo{ID: validDomainID},
 		&p.DomainConfig{Retention: 1},
@@ -2758,7 +2786,10 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 					ClusterName: "standby",
 				},
 			},
-		}, cluster.GetTestClusterMetadata(true, true, false))
+		},
+		afterResetVersion,
+		cluster.GetTestClusterMetadata(true, true, false),
+	)
 	// override domain cache
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(testDomainEntry, nil)
 	s.mockDomainCache.On("GetDomain", mock.Anything).Return(testDomainEntry, nil)
@@ -2824,10 +2855,10 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 		BranchToken:       forkBranchToken,
 		NextEventID:       35,
 	}
-	currentVersion := int64(100)
+
 	forkRepState := &p.ReplicationState{
-		CurrentVersion:      currentVersion,
-		StartVersion:        currentVersion,
+		CurrentVersion:      beforeResetVersion,
+		StartVersion:        beforeResetVersion,
 		LastWriteEventID:    common.EmptyEventID,
 		LastWriteVersion:    common.EmptyVersion,
 		LastReplicationInfo: map[string]*p.ReplicationInfo{},
@@ -2884,7 +2915,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 				Events: []*workflow.HistoryEvent{
 					&workflow.HistoryEvent{
 						EventId:   common.Int64Ptr(1),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeWorkflowExecutionStarted),
 						WorkflowExecutionStartedEventAttributes: &workflow.WorkflowExecutionStartedEventAttributes{
 							WorkflowType: &workflow.WorkflowType{
@@ -2898,7 +2929,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 					},
 					{
 						EventId:   common.Int64Ptr(2),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskScheduled),
 						DecisionTaskScheduledEventAttributes: &workflow.DecisionTaskScheduledEventAttributes{
 							TaskList:                   taskList,
@@ -2911,7 +2942,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(3),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskStarted),
 						DecisionTaskStartedEventAttributes: &workflow.DecisionTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(2),
@@ -2923,7 +2954,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(4),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskCompleted),
 						DecisionTaskCompletedEventAttributes: &workflow.DecisionTaskCompletedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(2),
@@ -2932,7 +2963,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 					},
 					{
 						EventId:   common.Int64Ptr(5),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeMarkerRecorded),
 						MarkerRecordedEventAttributes: &workflow.MarkerRecordedEventAttributes{
 							MarkerName:                   common.StringPtr("Version"),
@@ -2942,7 +2973,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 					},
 					{
 						EventId:   common.Int64Ptr(6),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskScheduled),
 						ActivityTaskScheduledEventAttributes: &workflow.ActivityTaskScheduledEventAttributes{
 							ActivityId: common.StringPtr(actIDCompleted1),
@@ -2959,7 +2990,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 					},
 					{
 						EventId:   common.Int64Ptr(7),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeTimerStarted),
 						TimerStartedEventAttributes: &workflow.TimerStartedEventAttributes{
 							TimerId:                      common.StringPtr(timerFiredID),
@@ -2973,7 +3004,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(8),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskStarted),
 						ActivityTaskStartedEventAttributes: &workflow.ActivityTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(6),
@@ -2985,7 +3016,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(9),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskCompleted),
 						ActivityTaskCompletedEventAttributes: &workflow.ActivityTaskCompletedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(6),
@@ -2994,7 +3025,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 					},
 					{
 						EventId:   common.Int64Ptr(10),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskScheduled),
 						DecisionTaskScheduledEventAttributes: &workflow.DecisionTaskScheduledEventAttributes{
 							TaskList:                   taskList,
@@ -3007,7 +3038,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(11),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskStarted),
 						DecisionTaskStartedEventAttributes: &workflow.DecisionTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(10),
@@ -3019,7 +3050,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(12),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskCompleted),
 						DecisionTaskCompletedEventAttributes: &workflow.DecisionTaskCompletedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(10),
@@ -3032,7 +3063,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(13),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeTimerFired),
 						TimerFiredEventAttributes: &workflow.TimerFiredEventAttributes{
 							TimerId: common.StringPtr(timerFiredID),
@@ -3040,7 +3071,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 					},
 					{
 						EventId:   common.Int64Ptr(14),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskScheduled),
 						DecisionTaskScheduledEventAttributes: &workflow.DecisionTaskScheduledEventAttributes{
 							TaskList:                   taskList,
@@ -3053,7 +3084,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(15),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskStarted),
 						DecisionTaskStartedEventAttributes: &workflow.DecisionTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(14),
@@ -3065,7 +3096,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(16),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskCompleted),
 						DecisionTaskCompletedEventAttributes: &workflow.DecisionTaskCompletedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(14),
@@ -3074,7 +3105,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 					},
 					{
 						EventId:   common.Int64Ptr(17),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskScheduled),
 						ActivityTaskScheduledEventAttributes: &workflow.ActivityTaskScheduledEventAttributes{
 							ActivityId: common.StringPtr(actIDRetry),
@@ -3098,7 +3129,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 					},
 					{
 						EventId:   common.Int64Ptr(18),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskScheduled),
 						ActivityTaskScheduledEventAttributes: &workflow.ActivityTaskScheduledEventAttributes{
 							ActivityId: common.StringPtr(actIDNotStarted),
@@ -3115,7 +3146,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 					},
 					{
 						EventId:   common.Int64Ptr(19),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeTimerStarted),
 						TimerStartedEventAttributes: &workflow.TimerStartedEventAttributes{
 							TimerId:                      common.StringPtr(timerUnfiredID1),
@@ -3125,7 +3156,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 					},
 					{
 						EventId:   common.Int64Ptr(20),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeTimerStarted),
 						TimerStartedEventAttributes: &workflow.TimerStartedEventAttributes{
 							TimerId:                      common.StringPtr(timerUnfiredID2),
@@ -3135,7 +3166,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 					},
 					{
 						EventId:   common.Int64Ptr(21),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskScheduled),
 						ActivityTaskScheduledEventAttributes: &workflow.ActivityTaskScheduledEventAttributes{
 							ActivityId: common.StringPtr(actIDCompleted2),
@@ -3152,7 +3183,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 					},
 					{
 						EventId:   common.Int64Ptr(22),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskScheduled),
 						ActivityTaskScheduledEventAttributes: &workflow.ActivityTaskScheduledEventAttributes{
 							ActivityId: common.StringPtr(actIDStartedNoRetry),
@@ -3169,7 +3200,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 					},
 					{
 						EventId:   common.Int64Ptr(23),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeWorkflowExecutionSignaled),
 						WorkflowExecutionSignaledEventAttributes: &workflow.WorkflowExecutionSignaledEventAttributes{
 							SignalName: common.StringPtr(signalName3),
@@ -3181,7 +3212,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(24),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskStarted),
 						ActivityTaskStartedEventAttributes: &workflow.ActivityTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(21),
@@ -3193,7 +3224,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(25),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeWorkflowExecutionSignaled),
 						WorkflowExecutionSignaledEventAttributes: &workflow.WorkflowExecutionSignaledEventAttributes{
 							SignalName: common.StringPtr(signalName4),
@@ -3205,7 +3236,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(26),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskStarted),
 						ActivityTaskStartedEventAttributes: &workflow.ActivityTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(22),
@@ -3217,7 +3248,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(27),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskCompleted),
 						ActivityTaskCompletedEventAttributes: &workflow.ActivityTaskCompletedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(21),
@@ -3226,7 +3257,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 					},
 					{
 						EventId:   common.Int64Ptr(28),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskScheduled),
 						DecisionTaskScheduledEventAttributes: &workflow.DecisionTaskScheduledEventAttributes{
 							TaskList:                   taskList,
@@ -3239,7 +3270,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(29),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskStarted),
 						DecisionTaskStartedEventAttributes: &workflow.DecisionTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(28),
@@ -3252,7 +3283,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(30),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskCompleted),
 						DecisionTaskCompletedEventAttributes: &workflow.DecisionTaskCompletedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(28),
@@ -3261,7 +3292,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 					},
 					{
 						EventId:   common.Int64Ptr(31),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeTimerStarted),
 						TimerStartedEventAttributes: &workflow.TimerStartedEventAttributes{
 							TimerId:                      common.StringPtr(timerAfterReset),
@@ -3275,7 +3306,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(32),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskStarted),
 						ActivityTaskStartedEventAttributes: &workflow.ActivityTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(18),
@@ -3287,7 +3318,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(33),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeWorkflowExecutionSignaled),
 						WorkflowExecutionSignaledEventAttributes: &workflow.WorkflowExecutionSignaledEventAttributes{
 							SignalName: common.StringPtr(signalName1),
@@ -3299,7 +3330,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(34),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeWorkflowExecutionSignaled),
 						WorkflowExecutionSignaledEventAttributes: &workflow.WorkflowExecutionSignaledEventAttributes{
 							SignalName: common.StringPtr(signalName2),
@@ -3349,7 +3380,6 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 	s.mockHistoryV2Mgr.On("CompleteForkBranch", completeReq).Return(nil).Once()
 	s.mockHistoryV2Mgr.On("CompleteForkBranch", completeReqErr).Return(nil).Maybe()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(appendV2Resp, nil).Once()
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", mock.Anything).Return("active")
 	s.mockExecutionMgr.On("ResetWorkflowExecution", mock.Anything).Return(nil).Once()
 	response, err := s.historyEngine.ResetWorkflowExecution(context.Background(), request)
 	s.Nil(err)
@@ -3424,8 +3454,16 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 	s.Equal(p.ReplicationTaskTypeHistory, resetReq.InsertReplicationTasks[0].GetType())
 
 	compareRepState := copyReplicationState(forkRepState)
+	compareRepState.StartVersion = beforeResetVersion
+	compareRepState.CurrentVersion = afterResetVersion
 	compareRepState.LastWriteEventID = 34
-	compareRepState.LastWriteVersion = currentVersion
+	compareRepState.LastWriteVersion = afterResetVersion
+	compareRepState.LastReplicationInfo = map[string]*p.ReplicationInfo{
+		"standby": &p.ReplicationInfo{
+			LastEventID: 29,
+			Version:     beforeResetVersion,
+		},
+	}
 	s.Equal(compareRepState, resetReq.InsertReplicationState)
 
 	// not supported feature
@@ -3437,6 +3475,11 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 
 func (s *resetorSuite) TestApplyReset() {
 	domainID := validDomainID
+	beforeResetVersion := int64(100)
+	afterResetVersion := int64(101)
+	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", beforeResetVersion).Return("standby")
+	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", afterResetVersion).Return("active")
+
 	testDomainEntry := cache.NewDomainCacheEntryWithReplicationForTest(
 		&p.DomainInfo{ID: validDomainID},
 		&p.DomainConfig{Retention: 1},
@@ -3449,7 +3492,10 @@ func (s *resetorSuite) TestApplyReset() {
 					ClusterName: "standby",
 				},
 			},
-		}, cluster.GetTestClusterMetadata(true, true, false))
+		},
+		afterResetVersion,
+		cluster.GetTestClusterMetadata(true, true, false),
+	)
 	// override domain cache
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(testDomainEntry, nil)
 	s.mockDomainCache.On("GetDomain", mock.Anything).Return(testDomainEntry, nil)
@@ -3505,10 +3551,10 @@ func (s *resetorSuite) TestApplyReset() {
 		BranchToken:       forkBranchToken,
 		NextEventID:       35,
 	}
-	currentVersion := int64(100)
+
 	forkRepState := &p.ReplicationState{
-		CurrentVersion:      currentVersion,
-		StartVersion:        currentVersion,
+		CurrentVersion:      beforeResetVersion,
+		StartVersion:        beforeResetVersion,
 		LastWriteEventID:    common.EmptyEventID,
 		LastWriteVersion:    common.EmptyVersion,
 		LastReplicationInfo: map[string]*p.ReplicationInfo{},
@@ -3562,7 +3608,7 @@ func (s *resetorSuite) TestApplyReset() {
 				Events: []*workflow.HistoryEvent{
 					&workflow.HistoryEvent{
 						EventId:   common.Int64Ptr(1),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeWorkflowExecutionStarted),
 						WorkflowExecutionStartedEventAttributes: &workflow.WorkflowExecutionStartedEventAttributes{
 							WorkflowType: &workflow.WorkflowType{
@@ -3576,7 +3622,7 @@ func (s *resetorSuite) TestApplyReset() {
 					},
 					{
 						EventId:   common.Int64Ptr(2),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskScheduled),
 						DecisionTaskScheduledEventAttributes: &workflow.DecisionTaskScheduledEventAttributes{
 							TaskList:                   taskList,
@@ -3589,7 +3635,7 @@ func (s *resetorSuite) TestApplyReset() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(3),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskStarted),
 						DecisionTaskStartedEventAttributes: &workflow.DecisionTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(2),
@@ -3601,7 +3647,7 @@ func (s *resetorSuite) TestApplyReset() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(4),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskCompleted),
 						DecisionTaskCompletedEventAttributes: &workflow.DecisionTaskCompletedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(2),
@@ -3610,7 +3656,7 @@ func (s *resetorSuite) TestApplyReset() {
 					},
 					{
 						EventId:   common.Int64Ptr(5),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeMarkerRecorded),
 						MarkerRecordedEventAttributes: &workflow.MarkerRecordedEventAttributes{
 							MarkerName:                   common.StringPtr("Version"),
@@ -3620,7 +3666,7 @@ func (s *resetorSuite) TestApplyReset() {
 					},
 					{
 						EventId:   common.Int64Ptr(6),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskScheduled),
 						ActivityTaskScheduledEventAttributes: &workflow.ActivityTaskScheduledEventAttributes{
 							ActivityId: common.StringPtr(actIDCompleted1),
@@ -3637,7 +3683,7 @@ func (s *resetorSuite) TestApplyReset() {
 					},
 					{
 						EventId:   common.Int64Ptr(7),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeTimerStarted),
 						TimerStartedEventAttributes: &workflow.TimerStartedEventAttributes{
 							TimerId:                      common.StringPtr(timerFiredID),
@@ -3651,7 +3697,7 @@ func (s *resetorSuite) TestApplyReset() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(8),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskStarted),
 						ActivityTaskStartedEventAttributes: &workflow.ActivityTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(6),
@@ -3663,7 +3709,7 @@ func (s *resetorSuite) TestApplyReset() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(9),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskCompleted),
 						ActivityTaskCompletedEventAttributes: &workflow.ActivityTaskCompletedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(6),
@@ -3672,7 +3718,7 @@ func (s *resetorSuite) TestApplyReset() {
 					},
 					{
 						EventId:   common.Int64Ptr(10),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskScheduled),
 						DecisionTaskScheduledEventAttributes: &workflow.DecisionTaskScheduledEventAttributes{
 							TaskList:                   taskList,
@@ -3685,7 +3731,7 @@ func (s *resetorSuite) TestApplyReset() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(11),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskStarted),
 						DecisionTaskStartedEventAttributes: &workflow.DecisionTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(10),
@@ -3697,7 +3743,7 @@ func (s *resetorSuite) TestApplyReset() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(12),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskCompleted),
 						DecisionTaskCompletedEventAttributes: &workflow.DecisionTaskCompletedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(10),
@@ -3710,7 +3756,7 @@ func (s *resetorSuite) TestApplyReset() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(13),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeTimerFired),
 						TimerFiredEventAttributes: &workflow.TimerFiredEventAttributes{
 							TimerId: common.StringPtr(timerFiredID),
@@ -3718,7 +3764,7 @@ func (s *resetorSuite) TestApplyReset() {
 					},
 					{
 						EventId:   common.Int64Ptr(14),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskScheduled),
 						DecisionTaskScheduledEventAttributes: &workflow.DecisionTaskScheduledEventAttributes{
 							TaskList:                   taskList,
@@ -3731,7 +3777,7 @@ func (s *resetorSuite) TestApplyReset() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(15),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskStarted),
 						DecisionTaskStartedEventAttributes: &workflow.DecisionTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(14),
@@ -3743,7 +3789,7 @@ func (s *resetorSuite) TestApplyReset() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(16),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskCompleted),
 						DecisionTaskCompletedEventAttributes: &workflow.DecisionTaskCompletedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(14),
@@ -3752,7 +3798,7 @@ func (s *resetorSuite) TestApplyReset() {
 					},
 					{
 						EventId:   common.Int64Ptr(17),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskScheduled),
 						ActivityTaskScheduledEventAttributes: &workflow.ActivityTaskScheduledEventAttributes{
 							ActivityId: common.StringPtr(actIDRetry),
@@ -3776,7 +3822,7 @@ func (s *resetorSuite) TestApplyReset() {
 					},
 					{
 						EventId:   common.Int64Ptr(18),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskScheduled),
 						ActivityTaskScheduledEventAttributes: &workflow.ActivityTaskScheduledEventAttributes{
 							ActivityId: common.StringPtr(actIDNotStarted),
@@ -3793,7 +3839,7 @@ func (s *resetorSuite) TestApplyReset() {
 					},
 					{
 						EventId:   common.Int64Ptr(19),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeTimerStarted),
 						TimerStartedEventAttributes: &workflow.TimerStartedEventAttributes{
 							TimerId:                      common.StringPtr(timerUnfiredID1),
@@ -3803,7 +3849,7 @@ func (s *resetorSuite) TestApplyReset() {
 					},
 					{
 						EventId:   common.Int64Ptr(20),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeTimerStarted),
 						TimerStartedEventAttributes: &workflow.TimerStartedEventAttributes{
 							TimerId:                      common.StringPtr(timerUnfiredID2),
@@ -3813,7 +3859,7 @@ func (s *resetorSuite) TestApplyReset() {
 					},
 					{
 						EventId:   common.Int64Ptr(21),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskScheduled),
 						ActivityTaskScheduledEventAttributes: &workflow.ActivityTaskScheduledEventAttributes{
 							ActivityId: common.StringPtr(actIDCompleted2),
@@ -3830,7 +3876,7 @@ func (s *resetorSuite) TestApplyReset() {
 					},
 					{
 						EventId:   common.Int64Ptr(22),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskScheduled),
 						ActivityTaskScheduledEventAttributes: &workflow.ActivityTaskScheduledEventAttributes{
 							ActivityId: common.StringPtr(actIDStartedNoRetry),
@@ -3847,7 +3893,7 @@ func (s *resetorSuite) TestApplyReset() {
 					},
 					{
 						EventId:   common.Int64Ptr(23),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeWorkflowExecutionSignaled),
 						WorkflowExecutionSignaledEventAttributes: &workflow.WorkflowExecutionSignaledEventAttributes{
 							SignalName: common.StringPtr(signalName3),
@@ -3859,7 +3905,7 @@ func (s *resetorSuite) TestApplyReset() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(24),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskStarted),
 						ActivityTaskStartedEventAttributes: &workflow.ActivityTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(21),
@@ -3871,7 +3917,7 @@ func (s *resetorSuite) TestApplyReset() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(25),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeWorkflowExecutionSignaled),
 						WorkflowExecutionSignaledEventAttributes: &workflow.WorkflowExecutionSignaledEventAttributes{
 							SignalName: common.StringPtr(signalName4),
@@ -3883,7 +3929,7 @@ func (s *resetorSuite) TestApplyReset() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(26),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskStarted),
 						ActivityTaskStartedEventAttributes: &workflow.ActivityTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(22),
@@ -3895,7 +3941,7 @@ func (s *resetorSuite) TestApplyReset() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(27),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeActivityTaskCompleted),
 						ActivityTaskCompletedEventAttributes: &workflow.ActivityTaskCompletedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(21),
@@ -3904,7 +3950,7 @@ func (s *resetorSuite) TestApplyReset() {
 					},
 					{
 						EventId:   common.Int64Ptr(28),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskScheduled),
 						DecisionTaskScheduledEventAttributes: &workflow.DecisionTaskScheduledEventAttributes{
 							TaskList:                   taskList,
@@ -3917,7 +3963,7 @@ func (s *resetorSuite) TestApplyReset() {
 				Events: []*workflow.HistoryEvent{
 					{
 						EventId:   common.Int64Ptr(29),
-						Version:   common.Int64Ptr(currentVersion),
+						Version:   common.Int64Ptr(beforeResetVersion),
 						EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskStarted),
 						DecisionTaskStartedEventAttributes: &workflow.DecisionTaskStartedEventAttributes{
 							ScheduledEventId: common.Int64Ptr(28),
@@ -3966,7 +4012,7 @@ func (s *resetorSuite) TestApplyReset() {
 		Events: []*workflow.HistoryEvent{
 			&workflow.HistoryEvent{
 				EventId:   common.Int64Ptr(30),
-				Version:   common.Int64Ptr(currentVersion),
+				Version:   common.Int64Ptr(afterResetVersion),
 				EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskFailed),
 				DecisionTaskFailedEventAttributes: &workflow.DecisionTaskFailedEventAttributes{
 					ScheduledEventId: common.Int64Ptr(int64(28)),
@@ -3977,12 +4023,12 @@ func (s *resetorSuite) TestApplyReset() {
 					Reason:           common.StringPtr("resetWFtest"),
 					BaseRunId:        common.StringPtr(forkRunID),
 					NewRunId:         common.StringPtr(newRunID),
-					ForkEventVersion: common.Int64Ptr(currentVersion),
+					ForkEventVersion: common.Int64Ptr(beforeResetVersion),
 				},
 			},
 			{
 				EventId:   common.Int64Ptr(31),
-				Version:   common.Int64Ptr(currentVersion),
+				Version:   common.Int64Ptr(afterResetVersion),
 				EventType: common.EventTypePtr(workflow.EventTypeActivityTaskFailed),
 				ActivityTaskFailedEventAttributes: &workflow.ActivityTaskFailedEventAttributes{
 					Reason:           common.StringPtr("resetWF"),
@@ -3993,7 +4039,7 @@ func (s *resetorSuite) TestApplyReset() {
 			},
 			{
 				EventId:   common.Int64Ptr(32),
-				Version:   common.Int64Ptr(currentVersion),
+				Version:   common.Int64Ptr(afterResetVersion),
 				EventType: common.EventTypePtr(workflow.EventTypeWorkflowExecutionSignaled),
 				WorkflowExecutionSignaledEventAttributes: &workflow.WorkflowExecutionSignaledEventAttributes{
 					SignalName: common.StringPtr(signalName1),
@@ -4001,7 +4047,7 @@ func (s *resetorSuite) TestApplyReset() {
 			},
 			{
 				EventId:   common.Int64Ptr(33),
-				Version:   common.Int64Ptr(currentVersion),
+				Version:   common.Int64Ptr(afterResetVersion),
 				EventType: common.EventTypePtr(workflow.EventTypeWorkflowExecutionSignaled),
 				WorkflowExecutionSignaledEventAttributes: &workflow.WorkflowExecutionSignaledEventAttributes{
 					SignalName: common.StringPtr(signalName2),
@@ -4009,7 +4055,7 @@ func (s *resetorSuite) TestApplyReset() {
 			},
 			{
 				EventId:   common.Int64Ptr(34),
-				Version:   common.Int64Ptr(currentVersion),
+				Version:   common.Int64Ptr(afterResetVersion),
 				EventType: common.EventTypePtr(workflow.EventTypeDecisionTaskScheduled),
 				DecisionTaskScheduledEventAttributes: &workflow.DecisionTaskScheduledEventAttributes{
 					TaskList:                   taskList,
@@ -4117,8 +4163,16 @@ func (s *resetorSuite) TestApplyReset() {
 	s.assertActivityIDs([]string{actIDRetry, actIDNotStarted}, resetReq.InsertActivityInfos)
 
 	compareRepState := copyReplicationState(forkRepState)
+	compareRepState.StartVersion = beforeResetVersion
+	compareRepState.CurrentVersion = afterResetVersion
 	compareRepState.LastWriteEventID = 34
-	compareRepState.LastWriteVersion = currentVersion
+	compareRepState.LastWriteVersion = afterResetVersion
+	compareRepState.LastReplicationInfo = map[string]*p.ReplicationInfo{
+		"standby": &p.ReplicationInfo{
+			LastEventID: 29,
+			Version:     beforeResetVersion,
+		},
+	}
 	s.Equal(compareRepState, resetReq.InsertReplicationState)
 
 	s.Equal(0, len(resetReq.InsertReplicationTasks))
@@ -4127,4 +4181,120 @@ func (s *resetorSuite) TestApplyReset() {
 	s.Nil(resetReq.InsertSignalInfos)
 	s.Nil(resetReq.InsertSignalRequestedIDs)
 	s.Equal(0, len(resetReq.InsertRequestCancelInfos))
+}
+
+func TestFindAutoResetPoint(t *testing.T) {
+	// case 1: nil
+	_, pt := FindAutoResetPoint(nil, nil)
+	assert.Nil(t, pt)
+
+	// case 2: empty
+	_, pt = FindAutoResetPoint(&workflow.BadBinaries{}, &workflow.ResetPoints{})
+	assert.Nil(t, pt)
+
+	pt0 := &workflow.ResetPointInfo{
+		BinaryChecksum: common.StringPtr("abc"),
+		Resettable:     common.BoolPtr(true),
+	}
+	pt1 := &workflow.ResetPointInfo{
+		BinaryChecksum: common.StringPtr("def"),
+		Resettable:     common.BoolPtr(true),
+	}
+	pt3 := &workflow.ResetPointInfo{
+		BinaryChecksum: common.StringPtr("ghi"),
+		Resettable:     common.BoolPtr(false),
+	}
+
+	expiredNowNano := time.Now().UnixNano() - int64(time.Hour)
+	notExpiredNowNano := time.Now().UnixNano() + int64(time.Hour)
+	pt4 := &workflow.ResetPointInfo{
+		BinaryChecksum:   common.StringPtr("expired"),
+		Resettable:       common.BoolPtr(true),
+		ExpiringTimeNano: common.Int64Ptr(expiredNowNano),
+	}
+
+	pt5 := &workflow.ResetPointInfo{
+		BinaryChecksum:   common.StringPtr("notExpired"),
+		Resettable:       common.BoolPtr(true),
+		ExpiringTimeNano: common.Int64Ptr(notExpiredNowNano),
+	}
+
+	// case 3: two intersection
+	_, pt = FindAutoResetPoint(&workflow.BadBinaries{
+		Binaries: map[string]*workflow.BadBinaryInfo{
+			"abc": {},
+			"def": {},
+		},
+	}, &workflow.ResetPoints{
+		Points: []*workflow.ResetPointInfo{
+			pt0, pt1, pt3,
+		},
+	})
+	assert.Equal(t, pt.String(), pt0.String())
+
+	// case 4: one intersection
+	_, pt = FindAutoResetPoint(&workflow.BadBinaries{
+		Binaries: map[string]*workflow.BadBinaryInfo{
+			"none":    {},
+			"def":     {},
+			"expired": {},
+		},
+	}, &workflow.ResetPoints{
+		Points: []*workflow.ResetPointInfo{
+			pt4, pt0, pt1, pt3,
+		},
+	})
+	assert.Equal(t, pt.String(), pt1.String())
+
+	// case 4: no intersection
+	_, pt = FindAutoResetPoint(&workflow.BadBinaries{
+		Binaries: map[string]*workflow.BadBinaryInfo{
+			"none1": {},
+			"none2": {},
+		},
+	}, &workflow.ResetPoints{
+		Points: []*workflow.ResetPointInfo{
+			pt0, pt1, pt3,
+		},
+	})
+	assert.Nil(t, pt)
+
+	// case 5: not resettable
+	_, pt = FindAutoResetPoint(&workflow.BadBinaries{
+		Binaries: map[string]*workflow.BadBinaryInfo{
+			"none1": {},
+			"ghi":   {},
+		},
+	}, &workflow.ResetPoints{
+		Points: []*workflow.ResetPointInfo{
+			pt0, pt1, pt3,
+		},
+	})
+	assert.Nil(t, pt)
+
+	// case 6: one intersection of expired
+	_, pt = FindAutoResetPoint(&workflow.BadBinaries{
+		Binaries: map[string]*workflow.BadBinaryInfo{
+			"none":    {},
+			"expired": {},
+		},
+	}, &workflow.ResetPoints{
+		Points: []*workflow.ResetPointInfo{
+			pt0, pt1, pt3, pt4, pt5,
+		},
+	})
+	assert.Nil(t, pt)
+
+	// case 7: one intersection of not expred
+	_, pt = FindAutoResetPoint(&workflow.BadBinaries{
+		Binaries: map[string]*workflow.BadBinaryInfo{
+			"none":       {},
+			"notExpired": {},
+		},
+	}, &workflow.ResetPoints{
+		Points: []*workflow.ResetPointInfo{
+			pt0, pt1, pt3, pt4, pt5,
+		},
+	})
+	assert.Equal(t, pt.String(), pt5.String())
 }

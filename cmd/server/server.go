@@ -24,12 +24,15 @@ import (
 	"log"
 	"time"
 
+	"github.com/uber/cadence/common/cluster"
+
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore/filestore"
-	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/blobstore/s3store"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service"
@@ -111,29 +114,41 @@ func (s *server) startService() common.Daemon {
 		log.Fatalf("error creating ringpop factory: %v", err)
 	}
 
-	params.DynamicConfig = dynamicconfig.NewNopClient()
+	params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DynamicConfigClient, params.Logger.WithTags(tag.Service(params.Name)), s.doneC)
+	if err != nil {
+		log.Printf("error creating file based dynamic config client, use no-op config client instead. error: %v", err)
+		params.DynamicConfig = dynamicconfig.NewNopClient()
+	}
 	dc := dynamicconfig.NewCollection(params.DynamicConfig, params.Logger)
 
 	svcCfg := s.cfg.Services[s.name]
-	params.MetricScope = svcCfg.Metrics.NewScope()
+	params.MetricScope = svcCfg.Metrics.NewScope(params.Logger)
 	params.RPCFactory = svcCfg.RPC.NewFactory(params.Name, params.Logger)
 	params.PProfInitializer = svcCfg.PProf.NewInitializer(params.Logger)
-	enableGlobalDomain := dc.GetBoolProperty(dynamicconfig.EnableGlobalDomain, s.cfg.ClustersInfo.EnableGlobalDomain)
+
 	archivalStatus := dc.GetStringProperty(dynamicconfig.ArchivalStatus, s.cfg.Archival.Status)
 	enableReadFromArchival := dc.GetBoolProperty(dynamicconfig.EnableReadFromArchival, s.cfg.Archival.EnableReadFromArchival)
 
 	params.DCRedirectionPolicy = s.cfg.DCRedirectionPolicy
 
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
+
+	clusterMetadata := s.cfg.ClusterMetadata
+	// TODO remove when ClustersInfo is fully deprecated
+	if len(s.cfg.ClustersInfo.CurrentClusterName) != 0 && len(s.cfg.ClusterMetadata.CurrentClusterName) != 0 {
+		log.Fatalf("cannot config both clustersInfo and clusterMetadata")
+	}
+	if len(s.cfg.ClustersInfo.CurrentClusterName) != 0 {
+		clusterMetadata = s.cfg.ClustersInfo.ToClusterMetadata()
+	}
 	params.ClusterMetadata = cluster.NewMetadata(
 		params.Logger,
 		params.MetricsClient,
-		enableGlobalDomain,
-		s.cfg.ClustersInfo.FailoverVersionIncrement,
-		s.cfg.ClustersInfo.MasterClusterName,
-		s.cfg.ClustersInfo.CurrentClusterName,
-		s.cfg.ClustersInfo.ClusterInitialFailoverVersions,
-		s.cfg.ClustersInfo.ClusterAddress,
+		dc.GetBoolProperty(dynamicconfig.EnableGlobalDomain, clusterMetadata.EnableGlobalDomain),
+		clusterMetadata.FailoverVersionIncrement,
+		clusterMetadata.MasterClusterName,
+		clusterMetadata.CurrentClusterName,
+		clusterMetadata.ClusterInformation,
 		archivalStatus,
 		s.cfg.Archival.DefaultBucket,
 		enableReadFromArchival,
@@ -170,7 +185,18 @@ func (s *server) startService() common.Daemon {
 	params.PublicClient = workflowserviceclient.New(dispatcher.ClientConfig(common.FrontendServiceName))
 
 	if params.ClusterMetadata.ArchivalConfig().ConfiguredForArchival() {
-		params.BlobstoreClient, err = filestore.NewClient(&s.cfg.Archival.Filestore)
+		if s.cfg.Archival.Filestore != nil && s.cfg.Archival.S3store != nil {
+			log.Fatalf("cannot config both filestore and s3store")
+		}
+		if s.cfg.Archival.Filestore != nil {
+			params.BlobstoreClient, err = filestore.NewClient(s.cfg.Archival.Filestore)
+		}
+		if s.cfg.Archival.S3store != nil {
+			s3cli, err := s3store.ClientFromConfig(s.cfg.Archival.S3store)
+			if err != nil {
+				params.BlobstoreClient = s3store.NewClient(s3cli)
+			}
+		}
 		if err != nil {
 			log.Fatalf("error creating blobstore: %v", err)
 		}
@@ -199,5 +225,5 @@ func (s *server) startService() common.Daemon {
 // execute runs the daemon in a separate go routine
 func execute(d common.Daemon, doneC chan struct{}) {
 	d.Start()
-	doneC <- struct{}{}
+	close(doneC)
 }

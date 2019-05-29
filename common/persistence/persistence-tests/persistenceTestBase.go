@@ -282,6 +282,8 @@ func (s *TestBase) CreateWorkflowExecution(domainID string, workflowExecution wo
 		WorkflowTimeout:      wTimeout,
 		DecisionTimeoutValue: decisionTimeout,
 		ExecutionContext:     executionContext,
+		State:                p.WorkflowStateRunning,
+		CloseStatus:          p.WorkflowCloseStatusNone,
 		NextEventID:          nextEventID,
 		LastProcessedEvent:   lastProcessedEventID,
 		RangeID:              s.ShardInfo.RangeID,
@@ -334,6 +336,8 @@ func (s *TestBase) CreateWorkflowExecutionWithReplication(domainID string, workf
 		WorkflowTypeName:            wType,
 		WorkflowTimeout:             wTimeout,
 		DecisionTimeoutValue:        decisionTimeout,
+		State:                       p.WorkflowStateRunning,
+		CloseStatus:                 p.WorkflowCloseStatusNone,
 		NextEventID:                 nextEventID,
 		LastProcessedEvent:          lastProcessedEventID,
 		RangeID:                     s.ShardInfo.RangeID,
@@ -380,6 +384,8 @@ func (s *TestBase) CreateWorkflowExecutionManyTasks(domainID string, workflowExe
 		Execution:                   workflowExecution,
 		TaskList:                    taskList,
 		ExecutionContext:            executionContext,
+		State:                       p.WorkflowStateRunning,
+		CloseStatus:                 p.WorkflowCloseStatusNone,
 		NextEventID:                 nextEventID,
 		LastProcessedEvent:          lastProcessedEventID,
 		TransferTasks:               transferTasks,
@@ -394,7 +400,7 @@ func (s *TestBase) CreateWorkflowExecutionManyTasks(domainID string, workflowExe
 
 // CreateChildWorkflowExecution is a utility method to create child workflow executions
 func (s *TestBase) CreateChildWorkflowExecution(domainID string, workflowExecution workflow.WorkflowExecution,
-	parentDomainID string, parentExecution *workflow.WorkflowExecution, initiatedID int64, taskList, wType string,
+	parentDomainID string, parentExecution workflow.WorkflowExecution, initiatedID int64, taskList, wType string,
 	wTimeout int32, decisionTimeout int32, executionContext []byte, nextEventID int64, lastProcessedEventID int64,
 	decisionScheduleID int64, timerTasks []p.Task) (*p.CreateWorkflowExecutionResponse, error) {
 	response, err := s.ExecutionManager.CreateWorkflowExecution(&p.CreateWorkflowExecutionRequest{
@@ -409,6 +415,8 @@ func (s *TestBase) CreateChildWorkflowExecution(domainID string, workflowExecuti
 		WorkflowTimeout:      wTimeout,
 		DecisionTimeoutValue: decisionTimeout,
 		ExecutionContext:     executionContext,
+		State:                p.WorkflowStateCreated,
+		CloseStatus:          p.WorkflowCloseStatusNone,
 		NextEventID:          nextEventID,
 		LastProcessedEvent:   lastProcessedEventID,
 		RangeID:              s.ShardInfo.RangeID,
@@ -473,7 +481,7 @@ func (s *TestBase) GetCurrentWorkflowRunID(domainID, workflowID string) (string,
 
 // ContinueAsNewExecution is a utility method to create workflow executions
 func (s *TestBase) ContinueAsNewExecution(updatedInfo *p.WorkflowExecutionInfo, condition int64,
-	newExecution workflow.WorkflowExecution, nextEventID, decisionScheduleID int64) error {
+	newExecution workflow.WorkflowExecution, nextEventID, decisionScheduleID int64, prevResetPoints *workflow.ResetPoints) error {
 	newdecisionTask := &p.DecisionTask{
 		TaskID:     s.GetNextSequenceNumber(),
 		DomainID:   updatedInfo.DomainID,
@@ -486,7 +494,6 @@ func (s *TestBase) ContinueAsNewExecution(updatedInfo *p.WorkflowExecutionInfo, 
 		TransferTasks:       []p.Task{newdecisionTask},
 		TimerTasks:          nil,
 		Condition:           condition,
-		DeleteTimerTask:     nil,
 		RangeID:             s.ShardInfo.RangeID,
 		UpsertActivityInfos: nil,
 		DeleteActivityInfos: nil,
@@ -501,6 +508,8 @@ func (s *TestBase) ContinueAsNewExecution(updatedInfo *p.WorkflowExecutionInfo, 
 			WorkflowTimeout:             updatedInfo.WorkflowTimeout,
 			DecisionTimeoutValue:        updatedInfo.DecisionTimeoutValue,
 			ExecutionContext:            nil,
+			State:                       updatedInfo.State,
+			CloseStatus:                 updatedInfo.CloseStatus,
 			NextEventID:                 nextEventID,
 			LastProcessedEvent:          common.EmptyEventID,
 			RangeID:                     s.ShardInfo.RangeID,
@@ -511,6 +520,7 @@ func (s *TestBase) ContinueAsNewExecution(updatedInfo *p.WorkflowExecutionInfo, 
 			DecisionStartToCloseTimeout: 1,
 			CreateWorkflowMode:          p.CreateWorkflowModeContinueAsNew,
 			PreviousRunID:               updatedInfo.RunID,
+			PreviousAutoResetPoints:     prevResetPoints,
 		},
 		Encoding: pickRandomEncoding(),
 	})
@@ -519,33 +529,30 @@ func (s *TestBase) ContinueAsNewExecution(updatedInfo *p.WorkflowExecutionInfo, 
 
 // UpdateWorkflowExecution is a utility method to update workflow execution
 func (s *TestBase) UpdateWorkflowExecution(updatedInfo *p.WorkflowExecutionInfo, decisionScheduleIDs []int64,
-	activityScheduleIDs []int64, condition int64, timerTasks []p.Task, deleteTimerTask p.Task,
+	activityScheduleIDs []int64, condition int64, timerTasks []p.Task,
 	upsertActivityInfos []*p.ActivityInfo, deleteActivityInfos []int64,
 	upsertTimerInfos []*p.TimerInfo, deleteTimerInfos []string) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, decisionScheduleIDs, activityScheduleIDs,
-		s.ShardInfo.RangeID, condition, timerTasks, deleteTimerTask, upsertActivityInfos, deleteActivityInfos,
+		s.ShardInfo.RangeID, condition, timerTasks, upsertActivityInfos, deleteActivityInfos,
 		upsertTimerInfos, deleteTimerInfos, nil, nil, nil, nil,
 		nil, nil, nil, "")
 }
 
 // UpdateWorkflowExecutionAndFinish is a utility method to update workflow execution
-func (s *TestBase) UpdateWorkflowExecutionAndFinish(updatedInfo *p.WorkflowExecutionInfo, condition int64, retentionSecond int32) error {
+func (s *TestBase) UpdateWorkflowExecutionAndFinish(updatedInfo *p.WorkflowExecutionInfo, condition int64) error {
 	transferTasks := []p.Task{}
 	transferTasks = append(transferTasks, &p.CloseExecutionTask{TaskID: s.GetNextSequenceNumber()})
 	_, err := s.ExecutionManager.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
-		ExecutionInfo:        updatedInfo,
-		TransferTasks:        transferTasks,
-		TimerTasks:           nil,
-		Condition:            condition,
-		DeleteTimerTask:      nil,
-		RangeID:              s.ShardInfo.RangeID,
-		UpsertActivityInfos:  nil,
-		DeleteActivityInfos:  nil,
-		UpserTimerInfos:      nil,
-		DeleteTimerInfos:     nil,
-		FinishedExecutionTTL: retentionSecond,
-		FinishExecution:      true,
-		Encoding:             pickRandomEncoding(),
+		ExecutionInfo:       updatedInfo,
+		TransferTasks:       transferTasks,
+		TimerTasks:          nil,
+		Condition:           condition,
+		RangeID:             s.ShardInfo.RangeID,
+		UpsertActivityInfos: nil,
+		DeleteActivityInfos: nil,
+		UpserTimerInfos:     nil,
+		DeleteTimerInfos:    nil,
+		Encoding:            pickRandomEncoding(),
 	})
 	return err
 }
@@ -554,7 +561,7 @@ func (s *TestBase) UpdateWorkflowExecutionAndFinish(updatedInfo *p.WorkflowExecu
 func (s *TestBase) UpsertChildExecutionsState(updatedInfo *p.WorkflowExecutionInfo, condition int64,
 	upsertChildInfos []*p.ChildExecutionInfo) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
-		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
+		s.ShardInfo.RangeID, condition, nil, nil, nil,
 		nil, nil, upsertChildInfos, nil, nil, nil,
 		nil, nil, nil, "")
 }
@@ -563,7 +570,7 @@ func (s *TestBase) UpsertChildExecutionsState(updatedInfo *p.WorkflowExecutionIn
 func (s *TestBase) UpsertRequestCancelState(updatedInfo *p.WorkflowExecutionInfo, condition int64,
 	upsertCancelInfos []*p.RequestCancelInfo) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
-		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
+		s.ShardInfo.RangeID, condition, nil, nil, nil,
 		nil, nil, nil, nil, upsertCancelInfos, nil,
 		nil, nil, nil, "")
 }
@@ -572,7 +579,7 @@ func (s *TestBase) UpsertRequestCancelState(updatedInfo *p.WorkflowExecutionInfo
 func (s *TestBase) UpsertSignalInfoState(updatedInfo *p.WorkflowExecutionInfo, condition int64,
 	upsertSignalInfos []*p.SignalInfo) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
-		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
+		s.ShardInfo.RangeID, condition, nil, nil, nil,
 		nil, nil, nil, nil, nil, nil,
 		upsertSignalInfos, nil, nil, "")
 }
@@ -581,7 +588,7 @@ func (s *TestBase) UpsertSignalInfoState(updatedInfo *p.WorkflowExecutionInfo, c
 func (s *TestBase) UpsertSignalsRequestedState(updatedInfo *p.WorkflowExecutionInfo, condition int64,
 	upsertSignalsRequested []string) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
-		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
+		s.ShardInfo.RangeID, condition, nil, nil, nil,
 		nil, nil, nil, nil, nil, nil,
 		nil, nil, upsertSignalsRequested, "")
 }
@@ -590,7 +597,7 @@ func (s *TestBase) UpsertSignalsRequestedState(updatedInfo *p.WorkflowExecutionI
 func (s *TestBase) DeleteChildExecutionsState(updatedInfo *p.WorkflowExecutionInfo, condition int64,
 	deleteChildInfo int64) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
-		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
+		s.ShardInfo.RangeID, condition, nil, nil, nil,
 		nil, nil, nil, &deleteChildInfo, nil, nil,
 		nil, nil, nil, "")
 }
@@ -599,7 +606,7 @@ func (s *TestBase) DeleteChildExecutionsState(updatedInfo *p.WorkflowExecutionIn
 func (s *TestBase) DeleteCancelState(updatedInfo *p.WorkflowExecutionInfo, condition int64,
 	deleteCancelInfo int64) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
-		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
+		s.ShardInfo.RangeID, condition, nil, nil, nil,
 		nil, nil, nil, nil, nil, &deleteCancelInfo,
 		nil, nil, nil, "")
 }
@@ -608,7 +615,7 @@ func (s *TestBase) DeleteCancelState(updatedInfo *p.WorkflowExecutionInfo, condi
 func (s *TestBase) DeleteSignalState(updatedInfo *p.WorkflowExecutionInfo, condition int64,
 	deleteSignalInfo int64) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
-		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
+		s.ShardInfo.RangeID, condition, nil, nil, nil,
 		nil, nil, nil, nil, nil, nil,
 		nil, &deleteSignalInfo, nil, "")
 }
@@ -617,7 +624,7 @@ func (s *TestBase) DeleteSignalState(updatedInfo *p.WorkflowExecutionInfo, condi
 func (s *TestBase) DeleteSignalsRequestedState(updatedInfo *p.WorkflowExecutionInfo, condition int64,
 	deleteSignalsRequestedID string) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
-		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
+		s.ShardInfo.RangeID, condition, nil, nil, nil,
 		nil, nil, nil, nil, nil, nil,
 		nil, nil, nil, deleteSignalsRequestedID)
 }
@@ -627,20 +634,20 @@ func (s *TestBase) UpdateWorklowStateAndReplication(updatedInfo *p.WorkflowExecu
 	updatedReplicationState *p.ReplicationState, newBufferedReplicationTask *p.BufferedReplicationTask,
 	deleteBufferedReplicationTask *int64, condition int64, txTasks []p.Task) error {
 	return s.UpdateWorkflowExecutionWithReplication(updatedInfo, updatedReplicationState, nil, nil,
-		s.ShardInfo.RangeID, condition, nil, txTasks, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "",
+		s.ShardInfo.RangeID, condition, nil, txTasks, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "",
 		newBufferedReplicationTask, deleteBufferedReplicationTask)
 }
 
 // UpdateWorkflowExecutionWithRangeID is a utility method to update workflow execution
 func (s *TestBase) UpdateWorkflowExecutionWithRangeID(updatedInfo *p.WorkflowExecutionInfo, decisionScheduleIDs []int64,
-	activityScheduleIDs []int64, rangeID, condition int64, timerTasks []p.Task, deleteTimerTask p.Task,
+	activityScheduleIDs []int64, rangeID, condition int64, timerTasks []p.Task,
 	upsertActivityInfos []*p.ActivityInfo, deleteActivityInfos []int64, upsertTimerInfos []*p.TimerInfo,
 	deleteTimerInfos []string, upsertChildInfos []*p.ChildExecutionInfo, deleteChildInfo *int64,
 	upsertCancelInfos []*p.RequestCancelInfo, deleteCancelInfo *int64,
 	upsertSignalInfos []*p.SignalInfo, deleteSignalInfo *int64,
 	upsertSignalRequestedIDs []string, deleteSignalRequestedID string) error {
 	return s.UpdateWorkflowExecutionWithReplication(updatedInfo, nil, decisionScheduleIDs, activityScheduleIDs, rangeID,
-		condition, timerTasks, []p.Task{}, deleteTimerTask, upsertActivityInfos, deleteActivityInfos, upsertTimerInfos, deleteTimerInfos,
+		condition, timerTasks, []p.Task{}, upsertActivityInfos, deleteActivityInfos, upsertTimerInfos, deleteTimerInfos,
 		upsertChildInfos, deleteChildInfo, upsertCancelInfos, deleteCancelInfo, upsertSignalInfos, deleteSignalInfo,
 		upsertSignalRequestedIDs, deleteSignalRequestedID, nil, nil)
 }
@@ -648,7 +655,7 @@ func (s *TestBase) UpdateWorkflowExecutionWithRangeID(updatedInfo *p.WorkflowExe
 // UpdateWorkflowExecutionWithReplication is a utility method to update workflow execution
 func (s *TestBase) UpdateWorkflowExecutionWithReplication(updatedInfo *p.WorkflowExecutionInfo,
 	updatedReplicationState *p.ReplicationState, decisionScheduleIDs []int64, activityScheduleIDs []int64, rangeID,
-	condition int64, timerTasks []p.Task, txTasks []p.Task, deleteTimerTask p.Task, upsertActivityInfos []*p.ActivityInfo,
+	condition int64, timerTasks []p.Task, txTasks []p.Task, upsertActivityInfos []*p.ActivityInfo,
 	deleteActivityInfos []int64, upsertTimerInfos []*p.TimerInfo, deleteTimerInfos []string,
 	upsertChildInfos []*p.ChildExecutionInfo, deleteChildInfo *int64, upsertCancelInfos []*p.RequestCancelInfo,
 	deleteCancelInfo *int64, upsertSignalInfos []*p.SignalInfo, deleteSignalInfo *int64, upsertSignalRequestedIDs []string,
@@ -689,7 +696,6 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(updatedInfo *p.Workflo
 		ReplicationTasks:              replicationTasks,
 		TimerTasks:                    timerTasks,
 		Condition:                     condition,
-		DeleteTimerTask:               deleteTimerTask,
 		RangeID:                       rangeID,
 		UpsertActivityInfos:           upsertActivityInfos,
 		DeleteActivityInfos:           deleteActivityInfos,
@@ -898,6 +904,15 @@ func (s *TestBase) ResetWorkflowExecution(condition int64, info *p.WorkflowExecu
 // DeleteWorkflowExecution is a utility method to delete a workflow execution
 func (s *TestBase) DeleteWorkflowExecution(info *p.WorkflowExecutionInfo) error {
 	return s.ExecutionManager.DeleteWorkflowExecution(&p.DeleteWorkflowExecutionRequest{
+		DomainID:   info.DomainID,
+		WorkflowID: info.WorkflowID,
+		RunID:      info.RunID,
+	})
+}
+
+// DeleteCurrentWorkflowExecution is a utility method to delete the workflow current execution
+func (s *TestBase) DeleteCurrentWorkflowExecution(info *p.WorkflowExecutionInfo) error {
+	return s.ExecutionManager.DeleteCurrentWorkflowExecution(&p.DeleteCurrentWorkflowExecutionRequest{
 		DomainID:   info.DomainID,
 		WorkflowID: info.WorkflowID,
 		RunID:      info.RunID,

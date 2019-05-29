@@ -65,15 +65,29 @@ services:
     pprof:
       port: 7940
 
-clustersInfo:
+# use clustersInfo for testing compatibility
+# NOTE: clustersInfo is deprecated, plz use clusterMetadata below
+#clustersInfo:
+#  enableGlobalDomain: false
+#  failoverVersionIncrement: 10
+#  masterClusterName: "active"
+#  currentClusterName: "active"
+#  clusterInitialFailoverVersion:
+#    active: 0
+#  clusterAddress:
+#    active:
+#      rpcName: "cadence-frontend"
+#      rpcAddress: "127.0.0.1:7933"
+
+clusterMetadata:
   enableGlobalDomain: false
   failoverVersionIncrement: 10
   masterClusterName: "active"
   currentClusterName: "active"
-  clusterInitialFailoverVersion:
-    active: 0
-  clusterAddress:
+  clusterInformation:
     active:
+      enabled: true
+      initialFailoverVersion: 0
       rpcName: "cadence-frontend"
       rpcAddress: "127.0.0.1:7933"
 
@@ -98,6 +112,10 @@ archival:
       - name: "custom-bucket-2"
         owner: "custom-owner-2"
         retentionDays: 5
+#  s3store:
+#    region: "us-east-1"
+#    endpoint: "http://127.0.0.1:4572"
+#    s3ForcePathStyle: true
 
 kafka:
   clusters:
@@ -124,4 +142,8 @@ elasticsearch:
 
 publicClient:
   hostPort: "127.0.0.1:7933"
+
+dynamicConfigClient:
+  filepath: "config/dynamicconfig/development.yaml"
+  pollInterval: "10s"
 

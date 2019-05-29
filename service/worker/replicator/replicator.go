@@ -60,12 +60,14 @@ type (
 
 	// Config contains all the replication config for worker
 	Config struct {
-		PersistenceMaxQPS                 dynamicconfig.IntPropertyFn
-		ReplicatorMetaTaskConcurrency     dynamicconfig.IntPropertyFn
-		ReplicatorTaskConcurrency         dynamicconfig.IntPropertyFn
-		ReplicatorMessageConcurrency      dynamicconfig.IntPropertyFn
-		ReplicatorHistoryBufferRetryCount dynamicconfig.IntPropertyFn
-		ReplicationTaskMaxRetry           dynamicconfig.IntPropertyFn
+		PersistenceMaxQPS                  dynamicconfig.IntPropertyFn
+		ReplicatorMetaTaskConcurrency      dynamicconfig.IntPropertyFn
+		ReplicatorTaskConcurrency          dynamicconfig.IntPropertyFn
+		ReplicatorMessageConcurrency       dynamicconfig.IntPropertyFn
+		ReplicatorActivityBufferRetryCount dynamicconfig.IntPropertyFn
+		ReplicatorHistoryBufferRetryCount  dynamicconfig.IntPropertyFn
+		ReplicationTaskMaxRetryCount       dynamicconfig.IntPropertyFn
+		ReplicationTaskMaxRetryDuration    dynamicconfig.DurationPropertyFn
 	}
 )
 
@@ -96,11 +98,15 @@ func NewReplicator(clusterMetadata cluster.Metadata, metadataManagerV2 persisten
 // Start is called to start replicator
 func (r *Replicator) Start() error {
 	currentClusterName := r.clusterMetadata.GetCurrentClusterName()
-	for cluster := range r.clusterMetadata.GetAllClusterFailoverVersions() {
-		if cluster != currentClusterName {
-			consumerName := getConsumerName(currentClusterName, cluster)
+	for clusterName, info := range r.clusterMetadata.GetAllClusterInfo() {
+		if !info.Enabled {
+			continue
+		}
+
+		if clusterName != currentClusterName {
+			consumerName := getConsumerName(currentClusterName, clusterName)
 			adminClient := admin.NewRetryableClient(
-				r.clientBean.GetRemoteAdminClient(cluster),
+				r.clientBean.GetRemoteAdminClient(clusterName),
 				common.CreateAdminServiceRetryPolicy(),
 				common.IsWhitelistServiceTransientError,
 			)
@@ -109,7 +115,7 @@ func (r *Replicator) Start() error {
 				common.CreateHistoryServiceRetryPolicy(),
 				common.IsWhitelistServiceTransientError,
 			)
-			logger := r.logger.WithTags(tag.ComponentReplicationTaskProcessor, tag.SourceCluster(cluster), tag.KafkaConsumerName(consumerName))
+			logger := r.logger.WithTags(tag.ComponentReplicationTaskProcessor, tag.SourceCluster(clusterName), tag.KafkaConsumerName(consumerName))
 			historyRereplicator := xdc.NewHistoryRereplicator(
 				currentClusterName,
 				r.domainCache,
@@ -122,12 +128,14 @@ func (r *Replicator) Start() error {
 				r.logger,
 			)
 			r.processors = append(r.processors, newReplicationTaskProcessor(
-				currentClusterName, cluster, consumerName, r.client,
+				currentClusterName, clusterName, consumerName, r.client,
 				r.config, logger, r.metricsClient, r.domainReplicator,
 				historyRereplicator, r.historyClient,
 				task.NewSequentialTaskProcessor(
 					r.config.ReplicatorTaskConcurrency(),
-					r.config.ReplicatorMessageConcurrency(),
+					replicationSequentialTaskQueueHashFn,
+					newReplicationSequentialTaskQueue,
+					r.metricsClient,
 					logger,
 				),
 			))

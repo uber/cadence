@@ -25,8 +25,10 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common/blobstore/filestore"
+	"github.com/uber/cadence/common/blobstore/s3store"
 
 	"github.com/uber-go/tally/m3"
+	"github.com/uber-go/tally/prometheus"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/service/dynamicconfig"
@@ -43,7 +45,10 @@ type (
 		// Log is the logging config
 		Log Logger `yaml:"log"`
 		// ClustersInfo is the config containing all valid clusters and active cluster
+		// Deprecated: please use ClusterMetadata instead
 		ClustersInfo ClustersInfo `yaml:"clustersInfo"`
+		// ClusterMetadata is the config containing all valid clusters and active cluster
+		ClusterMetadata ClusterMetadata `yaml:"clusterMetadata"`
 		// DCRedirectionPolicy contains the frontend datacenter redirection policy
 		DCRedirectionPolicy DCRedirectionPolicy `yaml:"dcRedirectionPolicy"`
 		// Services is a map of service name to service config items
@@ -56,6 +61,9 @@ type (
 		ElasticSearch elasticsearch.Config `yaml:"elasticsearch"`
 		// PublicClient is config for connecting to cadence frontend
 		PublicClient PublicClient `yaml:"publicClient"`
+		// DynamicConfigClient is the config for setting up the file based dynamic config client
+		// Filepath should be relative to the root directory
+		DynamicConfigClient dynamicconfig.FileBasedClientConfig `yaml:"dynamicConfigClient"`
 	}
 
 	// Service contains the service specific config items
@@ -192,6 +200,10 @@ type (
 		MaxQPS int `yaml:"maxQPS"`
 		// MaxConns the max number of connections to this datastore
 		MaxConns int `yaml:"maxConns"`
+		// MaxIdleConns is the max number of idle connections to this datastore
+		MaxIdleConns int `yaml:"maxIdleConns"`
+		// MaxConnLifetime is the maximum time a connection can be alive
+		MaxConnLifetime time.Duration `yaml:"maxConnLifetime"`
 		// NumShards is the number of storage shards to use for tables
 		// in a sharded sql database. The default value for this param is 1
 		NumShards int `yaml:"nShards"`
@@ -211,6 +223,8 @@ type (
 	}
 
 	// ClustersInfo contains the all cluster names and active cluster
+	//
+	// Deprecated: please use ClustersMetadata instead
 	ClustersInfo struct {
 		// EnableGlobalDomain whether the global domain is enabled, this attr should be discarded when
 		// cross DC is made public
@@ -229,7 +243,33 @@ type (
 	}
 
 	// Address indicate the remote cluster's service name and address
+	//
+	// Deprecated: please use ClusterInformation instead
 	Address struct {
+		// RPCName indicate the remote service name
+		RPCName string `yaml:"rpcName"`
+		// Address indicate the remote service IP address
+		RPCAddress string `yaml:"rpcAddress"`
+	}
+
+	// ClusterMetadata contains the all cluster which participated in cross DC
+	ClusterMetadata struct {
+		EnableGlobalDomain bool `yaml:"enableGlobalDomain"`
+		// FailoverVersionIncrement is the increment of each cluster version when failover happens
+		FailoverVersionIncrement int64 `yaml:"failoverVersionIncrement"`
+		// MasterClusterName is the master cluster name, only the master cluster can register / update domain
+		// all clusters can do domain failover
+		MasterClusterName string `yaml:"masterClusterName"`
+		// CurrentClusterName is the name of the current cluster
+		CurrentClusterName string `yaml:"currentClusterName"`
+		// ClusterInformation contains all cluster names to corresponding information about that cluster
+		ClusterInformation map[string]ClusterInformation `yaml:"clusterInformation"`
+	}
+
+	// ClusterInformation contains the information about each cluster which participated in cross DC
+	ClusterInformation struct {
+		Enabled                bool  `yaml:"enabled"`
+		InitialFailoverVersion int64 `yaml:"initialFailoverVersion"`
 		// RPCName indicate the remote service name
 		RPCName string `yaml:"rpcName"`
 		// Address indicate the remote service IP address
@@ -248,6 +288,8 @@ type (
 		M3 *m3.Configuration `yaml:"m3"`
 		// Statsd is the configuration for statsd reporter
 		Statsd *Statsd `yaml:"statsd"`
+		// Prometheus is the configuration for prometheus reporter
+		Prometheus *prometheus.Configuration `yaml:"prometheus"`
 		// Tags is the set of key-value pairs to be reported
 		// as part of every metric
 		Tags map[string]string `yaml:"tags"`
@@ -277,7 +319,9 @@ type (
 		// DefaultBucket is the default bucket used for archival in case domain does not specify override
 		DefaultBucket string `yaml:"defaultBucket"`
 		// Filestore the configuration for file based blobstore
-		Filestore filestore.Config `yaml:"filestore"`
+		Filestore *filestore.Config `yaml:"filestore"`
+		// S3store the configuration for amazon s3 based blobstore
+		S3store *s3store.Config `yaml:"s3store"`
 	}
 
 	// PublicClient is config for connecting to cadence frontend

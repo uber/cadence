@@ -62,6 +62,8 @@ type (
 )
 
 const (
+	// ErrMessageHistorySizeZero indicate that history is empty
+	ErrMessageHistorySizeZero = "encounter history size being zero"
 	// ErrMessageNewRunHistorySizeZero indicate that new run history is empty
 	ErrMessageNewRunHistorySizeZero = "encounter new run history size being zero"
 )
@@ -102,21 +104,26 @@ func (b *stateBuilderImpl) getNewRunTimerTasks() []persistence.Task {
 func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution shared.WorkflowExecution,
 	history []*shared.HistoryEvent, newRunHistory []*shared.HistoryEvent, eventStoreVersion, newRunEventStoreVersion int32) (*shared.HistoryEvent,
 	*decisionInfo, mutableState, error) {
-	var lastEvent *shared.HistoryEvent
+
+	if len(history) == 0 {
+		return nil, nil, nil, errors.NewInternalFailureError(ErrMessageHistorySizeZero)
+	}
+	firstEvent := history[0]
+	lastEvent := history[len(history)-1]
 	var lastDecision *decisionInfo
 	var newRunMutableStateBuilder mutableState
-	var firstEvent *shared.HistoryEvent
-	if len(history) > 0 {
-		firstEvent = history[0]
-	}
 
 	// need to clear the stickiness since workflow turned to passive
 	b.msBuilder.ClearStickyness()
+
 	for _, event := range history {
-		lastEvent = event
 		// NOTE: stateBuilder is also being used in the active side
 		if b.msBuilder.GetReplicationState() != nil {
+			// this function must be called within the for loop, in case
+			// history event version changed during for loop
 			b.msBuilder.UpdateReplicationStateVersion(event.GetVersion(), true)
+			sourceClusterName := b.clusterMetadata.ClusterNameForFailoverVersion(lastEvent.GetVersion())
+			b.msBuilder.UpdateReplicationStateLastEventID(sourceClusterName, lastEvent.GetVersion(), lastEvent.GetEventId())
 		}
 		b.msBuilder.GetExecutionInfo().LastEventTaskID = event.GetTaskId()
 
@@ -145,7 +152,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 		case shared.EventTypeDecisionTaskScheduled:
 			attributes := event.DecisionTaskScheduledEventAttributes
 			di := b.msBuilder.ReplicateDecisionTaskScheduledEvent(event.GetVersion(), event.GetEventId(),
-				attributes.TaskList.GetName(), attributes.GetStartToCloseTimeoutSeconds(), attributes.GetAttempt())
+				attributes.TaskList.GetName(), attributes.GetStartToCloseTimeoutSeconds(), attributes.GetAttempt(), event.GetTimestamp())
 
 			b.transferTasks = append(b.transferTasks, b.scheduleDecisionTransferTask(domainID, b.getTaskList(b.msBuilder),
 				di.ScheduleID))
@@ -164,9 +171,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			lastDecision = di
 
 		case shared.EventTypeDecisionTaskCompleted:
-			attributes := event.DecisionTaskCompletedEventAttributes
-			b.msBuilder.ReplicateDecisionTaskCompletedEvent(attributes.GetScheduledEventId(),
-				attributes.GetStartedEventId())
+			b.msBuilder.ReplicateDecisionTaskCompletedEvent(event)
 
 		case shared.EventTypeDecisionTaskTimedOut:
 			attributes := event.DecisionTaskTimedOutEventAttributes
@@ -442,8 +447,13 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			b.newRunTransferTasks = append(b.newRunTransferTasks, newRunStateBuilder.getTransferTasks()...)
 			b.newRunTimerTasks = append(b.newRunTimerTasks, newRunStateBuilder.getTimerTasks()...)
 
+			domainEntry, err := b.domainCache.GetDomainByID(domainID)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+
 			err = b.msBuilder.ReplicateWorkflowExecutionContinuedAsNewEvent(firstEvent.GetEventId(), sourceClusterName, domainID, event,
-				newRunStartedEvent, newRunDecisionInfo, newRunMutableStateBuilder, newRunEventStoreVersion)
+				newRunStartedEvent, newRunDecisionInfo, newRunMutableStateBuilder, newRunEventStoreVersion, domainEntry.GetRetentionDays(execution.GetWorkflowId()))
 			if err != nil {
 				return nil, nil, nil, err
 			}
@@ -458,6 +468,9 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			}
 		}
 	}
+
+	b.msBuilder.GetExecutionInfo().SetLastFirstEventID(firstEvent.GetEventId())
+	b.msBuilder.GetExecutionInfo().SetNextEventID(lastEvent.GetEventId() + 1)
 
 	return lastEvent, lastDecision, newRunMutableStateBuilder, nil
 }

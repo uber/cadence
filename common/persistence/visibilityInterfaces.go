@@ -43,6 +43,7 @@ type (
 		WorkflowTimeout    int64 // not persisted, used for cassandra ttl
 		TaskID             int64 // not persisted, used as condition update version for ES
 		Memo               *s.Memo
+		SearchAttributes   map[string][]byte
 	}
 
 	// RecordWorkflowExecutionClosedRequest is used to add a record of a newly
@@ -60,6 +61,7 @@ type (
 		RetentionSeconds   int64
 		TaskID             int64 // not persisted, used as condition update version for ES
 		Memo               *s.Memo
+		SearchAttributes   map[string][]byte
 	}
 
 	// ListWorkflowExecutionsRequest is used to list executions in a domain
@@ -75,12 +77,35 @@ type (
 		NextPageToken []byte
 	}
 
+	// ListWorkflowExecutionsRequestV2 is used to list executions in a domain
+	ListWorkflowExecutionsRequestV2 struct {
+		DomainUUID string
+		Domain     string // domain name is not persisted, but used as config filter key
+		PageSize   int    // Maximum number of workflow executions per page
+		// Token to continue reading next page of workflow executions.
+		// Pass in empty slice for first page.
+		NextPageToken []byte
+		Query         string
+	}
+
 	// ListWorkflowExecutionsResponse is the response to ListWorkflowExecutionsRequest
 	ListWorkflowExecutionsResponse struct {
 		Executions []*s.WorkflowExecutionInfo
 		// Token to read next page if there are more workflow executions beyond page size.
 		// Use this to set NextPageToken on ListWorkflowExecutionsRequest to read the next page.
 		NextPageToken []byte
+	}
+
+	// CountWorkflowExecutionsRequest is request from CountWorkflowExecutions
+	CountWorkflowExecutionsRequest struct {
+		DomainUUID string
+		Domain     string // domain name is not persisted, but used as config filter key
+		Query      string
+	}
+
+	// CountWorkflowExecutionsResponse is response to CountWorkflowExecutions
+	CountWorkflowExecutionsResponse struct {
+		Count int64
 	}
 
 	// ListWorkflowExecutionsByTypeRequest is used to list executions of
@@ -139,5 +164,13 @@ type (
 		ListClosedWorkflowExecutionsByStatus(request *ListClosedWorkflowExecutionsByStatusRequest) (*ListWorkflowExecutionsResponse, error)
 		GetClosedWorkflowExecution(request *GetClosedWorkflowExecutionRequest) (*GetClosedWorkflowExecutionResponse, error)
 		DeleteWorkflowExecution(request *VisibilityDeleteWorkflowExecutionRequest) error
+		ListWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*ListWorkflowExecutionsResponse, error)
+		ScanWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*ListWorkflowExecutionsResponse, error)
+		CountWorkflowExecutions(request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error)
 	}
 )
+
+// NewOperationNotSupportErrorForVis create error for operation not support in visibility
+func NewOperationNotSupportErrorForVis() error {
+	return &s.BadRequestError{Message: "Operation not support. Please use on ElasticSearch"}
+}

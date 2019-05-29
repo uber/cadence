@@ -254,6 +254,15 @@ func (p *workflowExecutionRateLimitedPersistenceClient) DeleteWorkflowExecution(
 	return err
 }
 
+func (p *workflowExecutionRateLimitedPersistenceClient) DeleteCurrentWorkflowExecution(request *DeleteCurrentWorkflowExecutionRequest) error {
+	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
+		return ErrPersistenceLimitExceeded
+	}
+
+	err := p.persistence.DeleteCurrentWorkflowExecution(request)
+	return err
+}
+
 func (p *workflowExecutionRateLimitedPersistenceClient) GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error) {
 	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
 		return nil, ErrPersistenceLimitExceeded
@@ -627,6 +636,27 @@ func (p *visibilityRateLimitedPersistenceClient) DeleteWorkflowExecution(request
 		return ErrPersistenceLimitExceeded
 	}
 	return p.persistence.DeleteWorkflowExecution(request)
+}
+
+func (p *visibilityRateLimitedPersistenceClient) ListWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*ListWorkflowExecutionsResponse, error) {
+	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
+		return nil, ErrPersistenceLimitExceeded
+	}
+	return p.persistence.ListWorkflowExecutions(request)
+}
+
+func (p *visibilityRateLimitedPersistenceClient) ScanWorkflowExecutions(request *ListWorkflowExecutionsRequestV2) (*ListWorkflowExecutionsResponse, error) {
+	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
+		return nil, ErrPersistenceLimitExceeded
+	}
+	return p.persistence.ScanWorkflowExecutions(request)
+}
+
+func (p *visibilityRateLimitedPersistenceClient) CountWorkflowExecutions(request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error) {
+	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
+		return nil, ErrPersistenceLimitExceeded
+	}
+	return p.persistence.CountWorkflowExecutions(request)
 }
 
 func (p *visibilityRateLimitedPersistenceClient) Close() {

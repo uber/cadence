@@ -246,7 +246,7 @@ func (t *timerQueueStandbyProcessorImpl) processActivityTimeout(timerTask *persi
 	// although there will be an task syncing activity from remote, the task is not an event,
 	// and cannot attempt to recreate a new activity timer task.
 	//
-	// the overall solution is to attampt to generate a new activity timer task whenever the
+	// the overall solution is to attempt to generate a new activity timer task whenever the
 	// task passed in is safe to be throw away.
 
 	var nextEventID *int64
@@ -319,7 +319,7 @@ func (t *timerQueueStandbyProcessorImpl) processActivityTimeout(timerTask *persi
 		// since the job being done here is update the activity and possibly write a timer task to DB
 		// also need to reset the current version.
 		msBuilder.UpdateReplicationStateVersion(lastWriteVersion, true)
-		err = context.updateHelper(nil, newTimerTasks, transactionID, now, false, nil, sourceCluster)
+		err = context.updateWorkflowExecutionForStandby(nil, newTimerTasks, transactionID, now, false, nil, sourceCluster)
 		if err == nil {
 			t.notifyNewTimers(newTimerTasks)
 		}
@@ -357,7 +357,7 @@ func (t *timerQueueStandbyProcessorImpl) processDecisionTimeout(timerTask *persi
 		// standby cluster should just call ack manager to retry this task
 		// since we are stilling waiting for the decision timeout event / decision completion to be replicated
 		//
-		// we do not need to notity new timer to base, since if there is no new event being replicated
+		// we do not need to notify new timer to base, since if there is no new event being replicated
 		// checking again if the timer can be completed is meaningless
 
 		if t.discardTask(timerTask) {
@@ -384,8 +384,7 @@ func (t *timerQueueStandbyProcessorImpl) processWorkflowBackoffTimer(timerTask *
 
 	return t.processTimer(timerTask, func(context workflowExecutionContext, msBuilder mutableState) error {
 
-		if msBuilder.GetPreviousStartedEventID() != common.EmptyEventID ||
-			msBuilder.HasPendingDecisionTask() {
+		if msBuilder.HasProcessedOrPendingDecisionTask() {
 			// if there is one decision already been processed
 			// or has pending decision, meaning workflow has already running
 			return nil
@@ -528,8 +527,8 @@ func (t *timerQueueStandbyProcessorImpl) fetchHistoryFromRemote(timerTask *persi
 	)
 	if err != nil {
 		t.logger.Error("Error re-replicating history from remote.",
-			tag.WorkflowID(timerTask.RunID),
-			tag.WorkflowRunID(timerTask.WorkflowID),
+			tag.WorkflowID(timerTask.WorkflowID),
+			tag.WorkflowRunID(timerTask.RunID),
 			tag.WorkflowDomainID(timerTask.DomainID),
 			tag.ShardID(t.shard.GetShardID()),
 			tag.WorkflowNextEventID(nextEventID),

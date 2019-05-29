@@ -22,6 +22,7 @@ package host
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"strconv"
 	"strings"
@@ -552,7 +553,7 @@ CheckHistoryLoopForSignalSent:
 		})
 		s.Nil(err)
 		history := historyResponse.History
-		common.PrettyPrintHistory(history, s.Logger)
+		//common.PrettyPrintHistory(history, s.Logger)
 
 		signalRequestedEvent := history.Events[len(history.Events)-2]
 		if *signalRequestedEvent.EventType != workflow.EventTypeExternalWorkflowExecutionSignaled {
@@ -583,6 +584,85 @@ CheckHistoryLoopForSignalSent:
 	s.Equal(signalName, *signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
 	s.Equal(signalInput, signalEvent.WorkflowExecutionSignaledEventAttributes.Input)
 	s.Equal("history-service", *signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
+}
+
+func (s *integrationSuite) TestSignalWorkflow_Cron_NoDecisionTaskCreated() {
+	id := "integration-signal-workflow-test-cron"
+	wt := "integration-signal-workflow-test-cron-type"
+	tl := "integration-signal-workflow-test-cron-tasklist"
+	identity := "worker1"
+	cronSpec := "@every 2s"
+
+	workflowType := &workflow.WorkflowType{}
+	workflowType.Name = common.StringPtr(wt)
+
+	taskList := &workflow.TaskList{}
+	taskList.Name = common.StringPtr(tl)
+
+	// Start workflow execution
+	request := &workflow.StartWorkflowExecutionRequest{
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		Identity:                            common.StringPtr(identity),
+		CronSchedule:                        &cronSpec,
+	}
+	now := time.Now()
+
+	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err0)
+
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunId))
+
+	// Send first signal using RunID
+	signalName := "my signal"
+	signalInput := []byte("my signal input.")
+	err := s.engine.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
+		Domain: common.StringPtr(s.domainName),
+		WorkflowExecution: &workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(id),
+			RunId:      common.StringPtr(*we.RunId),
+		},
+		SignalName: common.StringPtr(signalName),
+		Input:      signalInput,
+		Identity:   common.StringPtr(identity),
+	})
+	s.Nil(err)
+
+	// decider logic
+	var decisionTaskDelay time.Duration
+	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+		decisionTaskDelay = time.Now().Sub(now)
+
+		return nil, []*workflow.Decision{{
+			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
+			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+				Result: []byte("Done."),
+			},
+		}}, nil
+	}
+
+	poller := &TaskPoller{
+		Engine:          s.engine,
+		Domain:          s.domainName,
+		TaskList:        taskList,
+		Identity:        identity,
+		DecisionHandler: dtHandler,
+		Logger:          s.Logger,
+		T:               s.T(),
+	}
+
+	// Make first decision to schedule activity
+	_, err = poller.PollAndProcessDecisionTask(false, false)
+	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
+	s.Nil(err)
+	s.True(decisionTaskDelay > time.Second*2)
 }
 
 func (s *integrationSuite) TestSignalExternalWorkflowDecision_WithoutRunID() {
@@ -770,7 +850,6 @@ CheckHistoryLoopForSignalSent:
 		})
 		s.Nil(err)
 		history := historyResponse.History
-		common.PrettyPrintHistory(history, s.Logger)
 
 		signalRequestedEvent := history.Events[len(history.Events)-2]
 		if *signalRequestedEvent.EventType != workflow.EventTypeExternalWorkflowExecutionSignaled {
@@ -910,7 +989,6 @@ CheckHistoryLoopForCancelSent:
 		})
 		s.Nil(err)
 		history := historyResponse.History
-		common.PrettyPrintHistory(history, s.Logger)
 
 		signalFailedEvent := history.Events[len(history.Events)-2]
 		if *signalFailedEvent.EventType != workflow.EventTypeSignalExternalWorkflowExecutionFailed {
@@ -1038,7 +1116,6 @@ CheckHistoryLoopForCancelSent:
 		})
 		s.Nil(err)
 		history := historyResponse.History
-		common.PrettyPrintHistory(history, s.Logger)
 
 		signalFailedEvent := history.Events[len(history.Events)-2]
 		if *signalFailedEvent.EventType != workflow.EventTypeSignalExternalWorkflowExecutionFailed {
@@ -1073,6 +1150,10 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 	taskList := &workflow.TaskList{}
 	taskList.Name = common.StringPtr(tl)
 
+	header := &workflow.Header{
+		Fields: map[string][]byte{"tracing": []byte("sample data")},
+	}
+
 	// Start a workflow
 	request := &workflow.StartWorkflowExecutionRequest{
 		RequestId:                           common.StringPtr(uuid.New()),
@@ -1096,7 +1177,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 	activityScheduled := false
 	activityData := int32(1)
 	newWorkflowStarted := false
-	var signalEvent *workflow.HistoryEvent
+	var signalEvent, startedEvent *workflow.HistoryEvent
 	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
 
@@ -1127,11 +1208,18 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 			}
 		} else if newWorkflowStarted {
 			newWorkflowStarted = false
-			for _, event := range history.Events {
+			signalEvent = nil
+			startedEvent = nil
+			for _, event := range history.Events[previousStartedEventID:] {
 				if *event.EventType == workflow.EventTypeWorkflowExecutionSignaled {
 					signalEvent = event
-					return nil, []*workflow.Decision{}, nil
 				}
+				if *event.EventType == workflow.EventTypeWorkflowExecutionStarted {
+					startedEvent = event
+				}
+			}
+			if signalEvent != nil && startedEvent != nil {
+				return nil, []*workflow.Decision{}, nil
 			}
 		}
 
@@ -1178,6 +1266,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
+		Header:                              header,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		SignalName:                          common.StringPtr(signalName),
@@ -1235,6 +1324,8 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 	s.Equal(signalName, *signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
 	s.Equal(signalInput, signalEvent.WorkflowExecutionSignaledEventAttributes.Input)
 	s.Equal(identity, *signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
+	s.True(startedEvent != nil)
+	s.Equal(header, startedEvent.WorkflowExecutionStartedEventAttributes.Header)
 
 	// Send signal to not existed workflow
 	id = "integration-signal-with-start-workflow-test-non-exist"
@@ -1421,7 +1512,8 @@ func (s *integrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 		Identity:                            common.StringPtr(identity),
 		WorkflowIdReusePolicy:               &wfIDReusePolicy,
 	}
-	resp, err := s.engine.SignalWithStartWorkflowExecution(createContext(), sRequest)
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	resp, err := s.engine.SignalWithStartWorkflowExecution(ctx, sRequest)
 	s.Nil(resp)
 	s.Error(err)
 	errMsg := err.(*workflow.WorkflowExecutionAlreadyStartedError).GetMessage()
@@ -1429,7 +1521,8 @@ func (s *integrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 
 	// test policy WorkflowIdReusePolicyAllowDuplicateFailedOnly
 	wfIDReusePolicy = workflow.WorkflowIdReusePolicyAllowDuplicateFailedOnly
-	resp, err = s.engine.SignalWithStartWorkflowExecution(createContext(), sRequest)
+	ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
+	resp, err = s.engine.SignalWithStartWorkflowExecution(ctx, sRequest)
 	s.Nil(resp)
 	s.Error(err)
 	errMsg = err.(*workflow.WorkflowExecutionAlreadyStartedError).GetMessage()
@@ -1437,7 +1530,8 @@ func (s *integrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 
 	// test policy WorkflowIdReusePolicyAllowDuplicate
 	wfIDReusePolicy = workflow.WorkflowIdReusePolicyAllowDuplicate
-	resp, err = s.engine.SignalWithStartWorkflowExecution(createContext(), sRequest)
+	ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
+	resp, err = s.engine.SignalWithStartWorkflowExecution(ctx, sRequest)
 	s.Nil(err)
 	s.NotEmpty(resp.GetRunId())
 

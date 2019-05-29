@@ -21,12 +21,43 @@
 package config
 
 import (
-	"github.com/cactus/go-statsd-client/statsd"
-	"github.com/uber-go/tally"
-	tallystatsdreporter "github.com/uber-go/tally/statsd"
-	statsdreporter "github.com/uber/cadence/common/metrics/tally/statsd"
-	"log"
 	"time"
+
+	"github.com/cactus/go-statsd-client/statsd"
+	prom "github.com/m3db/prometheus_client_golang/prometheus"
+	"github.com/uber-go/tally"
+	"github.com/uber-go/tally/prometheus"
+	tallystatsdreporter "github.com/uber-go/tally/statsd"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
+	statsdreporter "github.com/uber/cadence/common/metrics/tally/statsd"
+)
+
+// tally sanitizer options that satisfy both Prometheus and M3 restrictions.
+// This will rename metrics at the tally emission level, so metrics name we
+// use maybe different from what gets emitted. In the current implementation
+// it will replace - and . with _
+// We should still ensure that the base metrics are prometheus compatible,
+// but this is necessary as the same prom client initialization is used by
+// our system workflows.
+var (
+	safeCharacters = []rune{'_'}
+
+	sanitizeOptions = tally.SanitizeOptions{
+		NameCharacters: tally.ValidCharacters{
+			Ranges:     tally.AlphanumericRange,
+			Characters: safeCharacters,
+		},
+		KeyCharacters: tally.ValidCharacters{
+			Ranges:     tally.AlphanumericRange,
+			Characters: safeCharacters,
+		},
+		ValueCharacters: tally.ValidCharacters{
+			Ranges:     tally.AlphanumericRange,
+			Characters: safeCharacters,
+		},
+		ReplacementCharacter: tally.DefaultReplacementCharacter,
+	}
 )
 
 // NewScope builds a new tally scope
@@ -37,22 +68,25 @@ import (
 // only one of them will be used for
 // reporting. Currently, m3 is preferred
 // over statsd
-func (c *Metrics) NewScope() tally.Scope {
+func (c *Metrics) NewScope(logger log.Logger) tally.Scope {
 	if c.M3 != nil {
-		return c.newM3Scope()
+		return c.newM3Scope(logger)
 	}
 	if c.Statsd != nil {
-		return c.newStatsdScope()
+		return c.newStatsdScope(logger)
+	}
+	if c.Prometheus != nil {
+		return c.newPrometheusScope(logger)
 	}
 	return tally.NoopScope
 }
 
 // newM3Scope returns a new m3 scope with
 // a default reporting interval of a second
-func (c *Metrics) newM3Scope() tally.Scope {
+func (c *Metrics) newM3Scope(logger log.Logger) tally.Scope {
 	reporter, err := c.M3.NewReporter()
 	if err != nil {
-		log.Fatalf("error creating m3 reporter, err=%v", err)
+		logger.Fatal("error creating m3 reporter", tag.Error(err))
 	}
 	scopeOpts := tally.ScopeOptions{
 		Tags:           c.Tags,
@@ -64,14 +98,14 @@ func (c *Metrics) newM3Scope() tally.Scope {
 
 // newM3Scope returns a new statsd scope with
 // a default reporting interval of a second
-func (c *Metrics) newStatsdScope() tally.Scope {
+func (c *Metrics) newStatsdScope(logger log.Logger) tally.Scope {
 	config := c.Statsd
 	if len(config.HostPort) == 0 {
 		return tally.NoopScope
 	}
 	statter, err := statsd.NewBufferedClient(config.HostPort, config.Prefix, config.FlushInterval, config.FlushBytes)
 	if err != nil {
-		log.Fatalf("error creating statsd client, err=%v", err)
+		logger.Fatal("error creating statsd client", tag.Error(err))
 	}
 	//NOTE: according to ( https://github.com/uber-go/tally )Tally's statsd implementation doesn't support tagging.
 	// Therefore, we implement Tally interface to have a statsd reporter that can support tagging
@@ -79,6 +113,30 @@ func (c *Metrics) newStatsdScope() tally.Scope {
 	scopeOpts := tally.ScopeOptions{
 		Tags:     c.Tags,
 		Reporter: reporter,
+	}
+	scope, _ := tally.NewRootScope(scopeOpts, time.Second)
+	return scope
+}
+
+// newPrometheusScope returns a new prometheus scope with
+// a default reporting interval of a second
+func (c *Metrics) newPrometheusScope(logger log.Logger) tally.Scope {
+	reporter, err := c.Prometheus.NewReporter(
+		prometheus.ConfigurationOptions{
+			Registry: prom.NewRegistry(),
+			OnError: func(err error) {
+				logger.Warn("error in prometheus reporter", tag.Error(err))
+			},
+		},
+	)
+	if err != nil {
+		logger.Fatal("error creating prometheus reporter", tag.Error(err))
+	}
+	scopeOpts := tally.ScopeOptions{
+		Tags:            c.Tags,
+		CachedReporter:  reporter,
+		Separator:       prometheus.DefaultSeparator,
+		SanitizeOptions: &sanitizeOptions,
 	}
 	scope, _ := tally.NewRootScope(scopeOpts, time.Second)
 	return scope

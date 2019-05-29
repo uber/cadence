@@ -103,6 +103,11 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(info *InternalWorkflowEx
 		return nil, err
 	}
 
+	autoResetPoints, err := m.serializer.DeserializeResetPoints(info.AutoResetPoints)
+	if err != nil {
+		return nil, err
+	}
+
 	newInfo := &WorkflowExecutionInfo{
 		CompletionEvent: completionEvent,
 
@@ -136,7 +141,8 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(info *InternalWorkflowEx
 		DecisionRequestID:            info.DecisionRequestID,
 		DecisionTimeout:              info.DecisionTimeout,
 		DecisionAttempt:              info.DecisionAttempt,
-		DecisionTimestamp:            info.DecisionTimestamp,
+		DecisionStartedTimestamp:     info.DecisionStartedTimestamp,
+		DecisionScheduledTimestamp:   info.DecisionScheduledTimestamp,
 		CancelRequested:              info.CancelRequested,
 		CancelRequestID:              info.CancelRequestID,
 		StickyTaskList:               info.StickyTaskList,
@@ -156,6 +162,8 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(info *InternalWorkflowEx
 		BranchToken:                  info.BranchToken,
 		CronSchedule:                 info.CronSchedule,
 		ExpirationSeconds:            info.ExpirationSeconds,
+		AutoResetPoints:              autoResetPoints,
+		SearchAttributes:             info.SearchAttributes,
 	}
 	return newInfo, nil
 }
@@ -315,6 +323,11 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		return nil, err
 	}
 
+	continueAsNew, err := m.SerializeCreateWorkflowExecutionRequest(request.ContinueAsNew)
+	if err != nil {
+		return nil, err
+	}
+
 	newRequest := &InternalUpdateWorkflowExecutionRequest{
 		ExecutionInfo:              executionInfo,
 		UpsertActivityInfos:        upsertActivityInfos,
@@ -326,12 +339,9 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		TransferTasks:                 request.TransferTasks,
 		TimerTasks:                    request.TimerTasks,
 		ReplicationTasks:              request.ReplicationTasks,
-		DeleteTimerTask:               request.DeleteTimerTask,
 		Condition:                     request.Condition,
 		RangeID:                       request.RangeID,
-		ContinueAsNew:                 request.ContinueAsNew,
-		FinishExecution:               request.FinishExecution,
-		FinishedExecutionTTL:          request.FinishedExecutionTTL,
+		ContinueAsNew:                 continueAsNew,
 		DeleteActivityInfos:           request.DeleteActivityInfos,
 		UpserTimerInfos:               request.UpserTimerInfos,
 		DeleteTimerInfos:              request.DeleteTimerInfos,
@@ -470,6 +480,11 @@ func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInf
 		return nil, err
 	}
 
+	resetPoints, err := m.serializer.SerializeResetPoints(info.AutoResetPoints, encoding)
+	if err != nil {
+		return nil, err
+	}
+
 	return &InternalWorkflowExecutionInfo{
 		DomainID:                     info.DomainID,
 		WorkflowID:                   info.WorkflowID,
@@ -502,7 +517,8 @@ func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInf
 		DecisionRequestID:            info.DecisionRequestID,
 		DecisionTimeout:              info.DecisionTimeout,
 		DecisionAttempt:              info.DecisionAttempt,
-		DecisionTimestamp:            info.DecisionTimestamp,
+		DecisionStartedTimestamp:     info.DecisionStartedTimestamp,
+		DecisionScheduledTimestamp:   info.DecisionScheduledTimestamp,
 		CancelRequested:              info.CancelRequested,
 		CancelRequestID:              info.CancelRequestID,
 		StickyTaskList:               info.StickyTaskList,
@@ -510,6 +526,7 @@ func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInf
 		ClientLibraryVersion:         info.ClientLibraryVersion,
 		ClientFeatureVersion:         info.ClientFeatureVersion,
 		ClientImpl:                   info.ClientImpl,
+		AutoResetPoints:              resetPoints,
 		Attempt:                      info.Attempt,
 		HasRetryPolicy:               info.HasRetryPolicy,
 		InitialInterval:              info.InitialInterval,
@@ -522,6 +539,7 @@ func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInf
 		BranchToken:                  info.BranchToken,
 		CronSchedule:                 info.CronSchedule,
 		ExpirationSeconds:            info.ExpirationSeconds,
+		SearchAttributes:             info.SearchAttributes,
 	}, nil
 }
 
@@ -608,10 +626,76 @@ func (m *executionManagerImpl) ResetWorkflowExecution(request *ResetWorkflowExec
 }
 
 func (m *executionManagerImpl) CreateWorkflowExecution(request *CreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error) {
-	return m.persistence.CreateWorkflowExecution(request)
+	intReq, err := m.SerializeCreateWorkflowExecutionRequest(request)
+	if err != nil {
+		return nil, err
+	}
+	return m.persistence.CreateWorkflowExecution(intReq)
 }
+
+func (m *executionManagerImpl) SerializeCreateWorkflowExecutionRequest(request *CreateWorkflowExecutionRequest) (*InternalCreateWorkflowExecutionRequest, error) {
+	if request == nil {
+		return nil, nil
+	}
+	autoResetPointsBlob, err := m.serializer.SerializeResetPoints(request.PreviousAutoResetPoints, common.EncodingTypeThriftRW)
+	if err != nil {
+		return nil, err
+	}
+
+	return &InternalCreateWorkflowExecutionRequest{
+		RequestID:                   request.RequestID,
+		DomainID:                    request.DomainID,
+		Execution:                   request.Execution,
+		ParentDomainID:              request.ParentDomainID,
+		ParentExecution:             request.ParentExecution,
+		InitiatedID:                 request.InitiatedID,
+		TaskList:                    request.TaskList,
+		WorkflowTypeName:            request.WorkflowTypeName,
+		WorkflowTimeout:             request.WorkflowTimeout,
+		DecisionTimeoutValue:        request.DecisionTimeoutValue,
+		ExecutionContext:            request.ExecutionContext,
+		LastEventTaskID:             request.LastEventTaskID,
+		NextEventID:                 request.NextEventID,
+		LastProcessedEvent:          request.LastProcessedEvent,
+		SignalCount:                 request.SignalCount,
+		HistorySize:                 request.HistorySize,
+		TransferTasks:               request.TransferTasks,
+		ReplicationTasks:            request.ReplicationTasks,
+		TimerTasks:                  request.TimerTasks,
+		RangeID:                     request.RangeID,
+		DecisionVersion:             request.DecisionVersion,
+		DecisionScheduleID:          request.DecisionScheduleID,
+		DecisionStartedID:           request.DecisionStartedID,
+		DecisionStartToCloseTimeout: request.DecisionStartToCloseTimeout,
+		State:                       request.State,
+		CloseStatus:                 request.CloseStatus,
+		CreateWorkflowMode:          request.CreateWorkflowMode,
+		PreviousRunID:               request.PreviousRunID,
+		PreviousLastWriteVersion:    request.PreviousLastWriteVersion,
+		ReplicationState:            request.ReplicationState,
+		Attempt:                     request.Attempt,
+		HasRetryPolicy:              request.HasRetryPolicy,
+		InitialInterval:             request.InitialInterval,
+		BackoffCoefficient:          request.BackoffCoefficient,
+		MaximumInterval:             request.MaximumInterval,
+		ExpirationTime:              request.ExpirationTime,
+		MaximumAttempts:             request.MaximumAttempts,
+		NonRetriableErrors:          request.NonRetriableErrors,
+		PreviousAutoResetPoints:     autoResetPointsBlob,
+		EventStoreVersion:           request.EventStoreVersion,
+		BranchToken:                 request.BranchToken,
+		CronSchedule:                request.CronSchedule,
+		ExpirationSeconds:           request.ExpirationSeconds,
+		SearchAttributes:            request.SearchAttributes,
+	}, nil
+}
+
 func (m *executionManagerImpl) DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error {
 	return m.persistence.DeleteWorkflowExecution(request)
+}
+
+func (m *executionManagerImpl) DeleteCurrentWorkflowExecution(request *DeleteCurrentWorkflowExecutionRequest) error {
+	return m.persistence.DeleteCurrentWorkflowExecution(request)
 }
 
 func (m *executionManagerImpl) GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error) {

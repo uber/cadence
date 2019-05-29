@@ -21,10 +21,11 @@
 package history
 
 import (
-	"context"
+	ctx "context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -168,12 +169,12 @@ func NewEngineWithShardContext(
 		visibilityMgr:        visibilityMgr,
 		tokenSerializer:      common.NewJSONTaskTokenSerializer(),
 		historyCache:         historyCache,
-		logger:               logger.WithTags(tag.ComponentMatchingEngine),
-		throttledLogger:      shard.GetThrottledLogger().WithTags(tag.ComponentMatchingEngine),
+		logger:               logger.WithTags(tag.ComponentHistoryEngine),
+		throttledLogger:      shard.GetThrottledLogger().WithTags(tag.ComponentHistoryEngine),
 		metricsClient:        shard.GetMetricsClient(),
 		historyEventNotifier: historyEventNotifier,
 		config:               config,
-		archivalClient:       archiver.NewClient(shard.GetMetricsClient(), shard.GetLogger(), publicClient, shard.GetConfig().NumArchiveSystemWorkflows),
+		archivalClient:       archiver.NewClient(shard.GetMetricsClient(), shard.GetLogger(), publicClient, shard.GetConfig().NumArchiveSystemWorkflows, shard.GetConfig().ArchiveRequestRPS),
 	}
 
 	txProcessor := newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, matching, historyClient, logger)
@@ -189,7 +190,7 @@ func NewEngineWithShardContext(
 		historyEngImpl.replicator = newHistoryReplicator(shard, historyEngImpl, historyCache, shard.GetDomainCache(), historyManager, historyV2Manager,
 			logger)
 	}
-	historyEngImpl.resetor = newWorkflowResetor(historyEngImpl, historyEngImpl.replicator)
+	historyEngImpl.resetor = newWorkflowResetor(historyEngImpl)
 
 	return historyEngImpl
 }
@@ -356,148 +357,8 @@ func (e *historyEngineImpl) generateFirstDecisionTask(domainID string, msBuilder
 	return transferTasks, di, nil
 }
 
-func (e *historyEngineImpl) appendFirstBatchHistoryEvents(msBuilder mutableState, domainID string, execution workflow.WorkflowExecution) (historySize int, err error) {
-	// call FlushBufferedEvents to assign task id to event
-	// as well as update last event task id in new state builder
-	err = msBuilder.FlushBufferedEvents()
-	if err != nil {
-		return 0, err
-	}
-	events := msBuilder.GetHistoryBuilder().GetHistory().Events
-	startedEvent := events[0]
-	if msBuilder.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
-		branchToken := msBuilder.GetCurrentBranch()
-		historySize, err = e.shard.AppendHistoryV2Events(&persistence.AppendHistoryNodesRequest{
-			IsNewBranch: true,
-			Info:        historyGarbageCleanupInfo(domainID, execution.GetWorkflowId(), execution.GetRunId()),
-			BranchToken: branchToken,
-			Events:      events,
-			// It is ok to use 0 for TransactionID because RunID is unique so there are
-			// no potential duplicates to override.
-			TransactionID: 0,
-		}, domainID, execution)
-	} else {
-		historySize, err = e.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
-			DomainID:  domainID,
-			Execution: execution,
-			// It is ok to use 0 for TransactionID because RunID is unique so there are
-			// no potential duplicates to override.
-			TransactionID:     0,
-			FirstEventID:      startedEvent.GetEventId(),
-			EventBatchVersion: startedEvent.GetVersion(),
-			Events:            events,
-		})
-	}
-	return
-}
-
-func fulfillExecutionInfo(msBuilder mutableState, domainID, taskList string, execution workflow.WorkflowExecution, lastFirstEventID int64) {
-	info := msBuilder.GetExecutionInfo()
-	info.DomainID = domainID
-	info.WorkflowID = *execution.WorkflowId
-	info.RunID = *execution.RunId
-	info.SetLastFirstEventID(lastFirstEventID)
-	info.TaskList = taskList
-}
-
-func generateFirstReplicationTask(msBuilder mutableState, clusterMetadata cluster.Metadata, domainEntry *cache.DomainCacheEntry) []persistence.Task {
-	var replicationTasks []persistence.Task
-	if msBuilder.GetReplicationState() != nil {
-		msBuilder.UpdateReplicationStateLastEventID(
-			clusterMetadata.GetCurrentClusterName(),
-			msBuilder.GetCurrentVersion(),
-			msBuilder.GetNextEventID()-1,
-		)
-		// this is a hack, only create replication task if have # target cluster > 1, for more see #868
-		if domainEntry.CanReplicateEvent() {
-			replicationTask := &persistence.HistoryReplicationTask{
-				FirstEventID:        common.FirstEventID,
-				NextEventID:         msBuilder.GetNextEventID(),
-				Version:             msBuilder.GetCurrentVersion(),
-				LastReplicationInfo: nil,
-				EventStoreVersion:   msBuilder.GetEventStoreVersion(),
-				BranchToken:         msBuilder.GetCurrentBranch(),
-			}
-
-			replicationTasks = append(replicationTasks, replicationTask)
-		}
-	}
-	return replicationTasks
-}
-
-func (e *historyEngineImpl) createWorkflow(startRequest *h.StartWorkflowExecutionRequest, msBuilder mutableState, createMode int, prevRunID string, prevLastWriteVersion int64,
-	firstDecisionTask *decisionInfo, transferTasks, timerTasks, replicationTasks []persistence.Task, clusterMetadata cluster.Metadata) (err error) {
-
-	request := startRequest.StartRequest
-	currExeInfo := msBuilder.GetExecutionInfo()
-	execution := workflow.WorkflowExecution{
-		WorkflowId: &currExeInfo.WorkflowID,
-		RunId:      &currExeInfo.RunID,
-	}
-
-	var parentExecution *workflow.WorkflowExecution
-	initiatedID := common.EmptyEventID
-	parentDomainID := ""
-	parentInfo := startRequest.ParentExecutionInfo
-	if startRequest.ParentExecutionInfo != nil {
-		parentDomainID = *parentInfo.DomainUUID
-		parentExecution = parentInfo.Execution
-		initiatedID = *parentInfo.InitiatedId
-	}
-
-	createRequest := &persistence.CreateWorkflowExecutionRequest{
-		RequestID:                   common.StringDefault(request.RequestId),
-		DomainID:                    currExeInfo.DomainID,
-		Execution:                   execution,
-		ParentDomainID:              parentDomainID,
-		ParentExecution:             parentExecution,
-		InitiatedID:                 initiatedID,
-		TaskList:                    *request.TaskList.Name,
-		WorkflowTypeName:            *request.WorkflowType.Name,
-		WorkflowTimeout:             *request.ExecutionStartToCloseTimeoutSeconds,
-		DecisionTimeoutValue:        *request.TaskStartToCloseTimeoutSeconds,
-		ExecutionContext:            nil,
-		LastEventTaskID:             currExeInfo.LastEventTaskID,
-		NextEventID:                 msBuilder.GetNextEventID(),
-		LastProcessedEvent:          common.EmptyEventID,
-		HistorySize:                 int64(msBuilder.GetHistorySize()),
-		TransferTasks:               transferTasks,
-		ReplicationTasks:            replicationTasks,
-		DecisionVersion:             firstDecisionTask.Version,
-		DecisionScheduleID:          firstDecisionTask.ScheduleID,
-		DecisionStartedID:           firstDecisionTask.StartedID,
-		DecisionStartToCloseTimeout: firstDecisionTask.DecisionTimeout,
-		TimerTasks:                  timerTasks,
-		PreviousRunID:               prevRunID,
-		PreviousLastWriteVersion:    prevLastWriteVersion,
-		ReplicationState:            msBuilder.GetReplicationState(),
-		HasRetryPolicy:              request.RetryPolicy != nil,
-		EventStoreVersion:           msBuilder.GetEventStoreVersion(),
-		BranchToken:                 msBuilder.GetCurrentBranch(),
-		CreateWorkflowMode:          createMode,
-		CronSchedule:                request.GetCronSchedule(),
-	}
-
-	if createRequest.HasRetryPolicy {
-		createRequest.InitialInterval = request.RetryPolicy.GetInitialIntervalInSeconds()
-		createRequest.BackoffCoefficient = request.RetryPolicy.GetBackoffCoefficient()
-		createRequest.MaximumInterval = request.RetryPolicy.GetMaximumIntervalInSeconds()
-
-		if startRequest.ExpirationTimestamp != nil && *startRequest.ExpirationTimestamp > 0 {
-			expireTimeNano := *startRequest.ExpirationTimestamp
-			createRequest.ExpirationTime = time.Unix(0, expireTimeNano)
-		}
-		createRequest.MaximumAttempts = request.RetryPolicy.GetMaximumAttempts()
-		createRequest.NonRetriableErrors = request.RetryPolicy.NonRetriableErrorReasons
-		createRequest.ExpirationSeconds = request.RetryPolicy.GetExpirationIntervalInSeconds()
-	}
-
-	_, err = e.shard.CreateWorkflowExecution(createRequest)
-	return err
-}
-
 // StartWorkflowExecution starts a workflow execution
-func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startRequest *h.StartWorkflowExecutionRequest) (
+func (e *historyEngineImpl) StartWorkflowExecution(ctx ctx.Context, startRequest *h.StartWorkflowExecutionRequest) (
 	resp *workflow.StartWorkflowExecutionResponse, retError error) {
 	domainEntry, retError := e.getActiveDomainEntry(startRequest.DomainUUID)
 	if retError != nil {
@@ -515,7 +376,6 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 		WorkflowId: request.WorkflowId,
 		RunId:      common.StringPtr(uuid.New()),
 	}
-
 	clusterMetadata := e.shard.GetService().GetClusterMetadata()
 	msBuilder := e.createMutableState(clusterMetadata, domainEntry)
 	var eventStoreVersion int32
@@ -538,7 +398,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 	taskList := request.TaskList.GetName()
 	cronBackoffSeconds := startRequest.GetFirstDecisionTaskBackoffSeconds()
 	// Generate first decision task event if not child WF and no first decision task backoff
-	transferTasks, firstDecisionTask, retError := e.generateFirstDecisionTask(domainID, msBuilder, startRequest.ParentExecutionInfo, taskList, cronBackoffSeconds)
+	transferTasks, _, retError := e.generateFirstDecisionTask(domainID, msBuilder, startRequest.ParentExecutionInfo, taskList, cronBackoffSeconds)
 	if retError != nil {
 		return
 	}
@@ -558,15 +418,18 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 		})
 	}
 
-	// generate first replication task
-	replicationTasks := generateFirstReplicationTask(msBuilder, clusterMetadata, domainEntry)
-	// set versions and timestamp for timer and transfer tasks
-	setTaskInfo(msBuilder.GetCurrentVersion(), time.Now(), transferTasks, timerTasks)
-
-	historySize, retError := e.appendFirstBatchHistoryEvents(msBuilder, domainID, execution)
+	context := newWorkflowExecutionContext(domainID, execution, e.shard, e.executionManager, e.logger)
+	createReplicationTask := domainEntry.CanReplicateEvent()
+	replicationTasks := []persistence.Task{}
+	var replicationTask persistence.Task
+	_, replicationTask, retError = context.appendFirstBatchEventsForActive(msBuilder, createReplicationTask)
 	if retError != nil {
 		return
 	}
+	if replicationTask != nil {
+		replicationTasks = append(replicationTasks, replicationTask)
+	}
+
 	// delete history if createWorkflow failed, otherwise history will leak
 	shouldDeleteHistory := true
 	defer func() {
@@ -575,15 +438,15 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 		}
 	}()
 
-	// prepare for execution persistence operation
-	msBuilder.IncrementHistorySize(historySize)
-	fulfillExecutionInfo(msBuilder, domainID, taskList, execution, startedEvent.GetEventId())
-
 	// create as brand new
 	createMode := persistence.CreateWorkflowModeBrandNew
 	prevRunID := ""
 	prevLastWriteVersion := int64(0)
-	retError = e.createWorkflow(startRequest, msBuilder, createMode, prevRunID, prevLastWriteVersion, firstDecisionTask, transferTasks, timerTasks, replicationTasks, clusterMetadata)
+	retError = context.createWorkflowExecution(
+		msBuilder, e.currentClusterName, createReplicationTask, time.Now(),
+		transferTasks, replicationTasks, timerTasks,
+		createMode, prevRunID, prevLastWriteVersion,
+	)
 	if retError != nil {
 		t, ok := retError.(*persistence.WorkflowExecutionAlreadyStartedError)
 		if ok {
@@ -611,22 +474,26 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 			if retError != nil {
 				return
 			}
-			retError = e.createWorkflow(startRequest, msBuilder, createMode, prevRunID, prevLastWriteVersion, firstDecisionTask, transferTasks, timerTasks, replicationTasks, clusterMetadata)
+			retError = context.createWorkflowExecution(
+				msBuilder, e.currentClusterName, createReplicationTask, time.Now(),
+				transferTasks, replicationTasks, timerTasks,
+				createMode, prevRunID, prevLastWriteVersion,
+			)
 		}
 	}
 
-	if retError == nil {
+	if retError == nil || persistence.IsTimeoutError(retError) {
 		shouldDeleteHistory = false
 		e.timerProcessor.NotifyNewTimers(e.currentClusterName, e.shard.GetCurrentTime(e.currentClusterName), timerTasks)
 		return &workflow.StartWorkflowExecutionResponse{
 			RunId: execution.RunId,
-		}, nil
+		}, retError
 	}
 	return
 }
 
 // GetMutableState retrieves the mutable state of the workflow execution
-func (e *historyEngineImpl) GetMutableState(ctx context.Context,
+func (e *historyEngineImpl) GetMutableState(ctx ctx.Context,
 	request *h.GetMutableStateRequest) (*h.GetMutableStateResponse, error) {
 
 	domainID, err := validateDomainUUID(request.DomainUUID)
@@ -698,7 +565,7 @@ func (e *historyEngineImpl) GetMutableState(ctx context.Context,
 	return response, nil
 }
 
-func (e *historyEngineImpl) getMutableState(ctx context.Context,
+func (e *historyEngineImpl) getMutableState(ctx ctx.Context,
 	domainID string, execution workflow.WorkflowExecution) (retResp *h.GetMutableStateResponse, retError error) {
 
 	context, release, retError := e.historyCache.getOrCreateWorkflowExecutionWithTimeout(ctx, domainID, execution)
@@ -745,7 +612,7 @@ func (e *historyEngineImpl) getMutableState(ctx context.Context,
 	return
 }
 
-func (e *historyEngineImpl) DescribeMutableState(ctx context.Context,
+func (e *historyEngineImpl) DescribeMutableState(ctx ctx.Context,
 	request *h.DescribeMutableStateRequest) (retResp *h.DescribeMutableStateResponse, retError error) {
 
 	domainID, err := validateDomainUUID(request.DomainUUID)
@@ -793,7 +660,7 @@ func (e *historyEngineImpl) toMutableStateJSON(msb mutableState) (*string, error
 // 3. ClientLibraryVersion
 // 4. ClientFeatureVersion
 // 5. ClientImpl
-func (e *historyEngineImpl) ResetStickyTaskList(ctx context.Context, resetRequest *h.ResetStickyTaskListRequest) (*h.ResetStickyTaskListResponse, error) {
+func (e *historyEngineImpl) ResetStickyTaskList(ctx ctx.Context, resetRequest *h.ResetStickyTaskListRequest) (*h.ResetStickyTaskListResponse, error) {
 	domainID, err := validateDomainUUID(resetRequest.DomainUUID)
 	if err != nil {
 		return nil, err
@@ -816,7 +683,7 @@ func (e *historyEngineImpl) ResetStickyTaskList(ctx context.Context, resetReques
 }
 
 // DescribeWorkflowExecution returns information about the specified workflow execution.
-func (e *historyEngineImpl) DescribeWorkflowExecution(ctx context.Context,
+func (e *historyEngineImpl) DescribeWorkflowExecution(ctx ctx.Context,
 	request *h.DescribeWorkflowExecutionRequest) (retResp *workflow.DescribeWorkflowExecutionResponse, retError error) {
 	domainID, err := validateDomainUUID(request.DomainUUID)
 	if err != nil {
@@ -849,11 +716,24 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(ctx context.Context,
 				WorkflowId: common.StringPtr(executionInfo.WorkflowID),
 				RunId:      common.StringPtr(executionInfo.RunID),
 			},
-			Type:          &workflow.WorkflowType{Name: common.StringPtr(executionInfo.WorkflowTypeName)},
-			StartTime:     common.Int64Ptr(executionInfo.StartTimestamp.UnixNano()),
-			HistoryLength: common.Int64Ptr(msBuilder.GetNextEventID() - common.FirstEventID),
+			Type:            &workflow.WorkflowType{Name: common.StringPtr(executionInfo.WorkflowTypeName)},
+			StartTime:       common.Int64Ptr(executionInfo.StartTimestamp.UnixNano()),
+			HistoryLength:   common.Int64Ptr(msBuilder.GetNextEventID() - common.FirstEventID),
+			AutoResetPoints: executionInfo.AutoResetPoints,
 		},
 	}
+
+	// TODO: we need to consider adding execution time to mutable state
+	// For now execution time will be calculated based on start time and cron schedule/retry policy
+	// each time DescribeWorkflowExecution is called.
+	backoff := time.Duration(0)
+	if executionInfo.HasRetryPolicy && (executionInfo.Attempt > 0) {
+		backoff = time.Duration(float64(executionInfo.InitialInterval)*math.Pow(executionInfo.BackoffCoefficient, float64(executionInfo.Attempt-1))) * time.Second
+	} else if len(executionInfo.CronSchedule) != 0 {
+		backoff = cron.GetBackoffForNextSchedule(executionInfo.CronSchedule, executionInfo.StartTimestamp)
+	}
+	result.WorkflowExecutionInfo.ExecutionTime = common.Int64Ptr(result.WorkflowExecutionInfo.GetStartTime() + backoff.Nanoseconds())
+
 	if executionInfo.ParentRunID != "" {
 		result.WorkflowExecutionInfo.ParentExecution = &workflow.WorkflowExecution{
 			WorkflowId: common.StringPtr(executionInfo.ParentWorkflowID),
@@ -914,7 +794,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(ctx context.Context,
 	return result, nil
 }
 
-func (e *historyEngineImpl) RecordDecisionTaskStarted(ctx context.Context,
+func (e *historyEngineImpl) RecordDecisionTaskStarted(ctx ctx.Context,
 	request *h.RecordDecisionTaskStartedRequest) (retResp *h.RecordDecisionTaskStartedResponse, retError error) {
 
 	domainEntry, err := e.getActiveDomainEntry(request.DomainUUID)
@@ -1011,7 +891,7 @@ Update_History_Loop:
 	return nil, ErrMaxAttemptsExceeded
 }
 
-func (e *historyEngineImpl) RecordActivityTaskStarted(ctx context.Context,
+func (e *historyEngineImpl) RecordActivityTaskStarted(ctx ctx.Context,
 	request *h.RecordActivityTaskStartedRequest) (*h.RecordActivityTaskStartedResponse, error) {
 
 	domainEntry, err := e.getActiveDomainEntry(request.DomainUUID)
@@ -1129,11 +1009,6 @@ func (c *decisionBlobSizeChecker) failWorkflowIfBlobSizeExceedsLimit(blob []byte
 		return false, nil
 	}
 
-	err = failInFlightDecisionToClearBufferedEvents(c.msBuilder)
-	if err != nil {
-		return false, err
-	}
-
 	attributes := &workflow.FailWorkflowExecutionDecisionAttributes{
 		Reason:  common.StringPtr(common.FailureReasonDecisionBlobSizeExceedsLimit),
 		Details: []byte(message),
@@ -1146,25 +1021,9 @@ func (c *decisionBlobSizeChecker) failWorkflowIfBlobSizeExceedsLimit(blob []byte
 	return true, nil
 }
 
-// Before closing workflow, if there is a in-flight decision, fail the decision first. So that we don't close the workflow with buffered events
-func failInFlightDecisionToClearBufferedEvents(msBuilder mutableState) error {
-	if msBuilder.HasInFlightDecisionTask() {
-		di, _ := msBuilder.GetInFlightDecisionTask()
-
-		event := msBuilder.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, workflow.DecisionTaskFailedCauseResetWorkflow, nil,
-			identityHistoryService, decisionFailureForBuffered, "", "", 0)
-		if event == nil {
-			return &workflow.InternalServiceError{Message: "Failed to add decision failed event."}
-		}
-
-		return msBuilder.FlushBufferedEvents()
-	}
-	return nil
-}
-
 // RespondDecisionTaskCompleted completes a decision task
 func (e *historyEngineImpl) RespondDecisionTaskCompleted(
-	ctx context.Context,
+	ctx ctx.Context,
 	req *h.RespondDecisionTaskCompletedRequest,
 ) (response *h.RespondDecisionTaskCompletedResponse, retError error) {
 
@@ -1245,7 +1104,17 @@ Update_History_Loop:
 		}
 
 		startedID := di.StartedID
-		completedEvent := msBuilder.AddDecisionTaskCompletedEvent(scheduleID, startedID, request)
+		maxResetPoints := e.config.MaxAutoResetPoints(domainEntry.GetInfo().Name)
+		if msBuilder.GetExecutionInfo().AutoResetPoints != nil && maxResetPoints == len(msBuilder.GetExecutionInfo().AutoResetPoints.Points) {
+			e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.AutoResetPointsLimitExceededCounter)
+			e.throttledLogger.Warn("the number of auto-reset points is exceeding the limit, will do rotating.",
+				tag.WorkflowDomainName(domainEntry.GetInfo().Name),
+				tag.WorkflowDomainID(domainEntry.GetInfo().ID),
+				tag.WorkflowID(workflowExecution.GetWorkflowId()),
+				tag.WorkflowRunID(workflowExecution.GetRunId()),
+				tag.Number(int64(maxResetPoints)))
+		}
+		completedEvent := msBuilder.AddDecisionTaskCompletedEvent(scheduleID, startedID, request, maxResetPoints)
 		if completedEvent == nil {
 			return nil, &workflow.InternalServiceError{Message: "Unable to add DecisionTaskCompleted event to history."}
 		}
@@ -1280,478 +1149,485 @@ Update_History_Loop:
 		sizeChecker.completedID = completedID
 		sizeChecker.msBuilder = msBuilder
 
-	Process_Decision_Loop:
-		for _, d := range request.Decisions {
-			switch *d.DecisionType {
-			case workflow.DecisionTypeScheduleActivityTask:
-				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
-					metrics.DecisionTypeScheduleActivityCounter)
-				targetDomainID := domainID
-				attributes := d.ScheduleActivityTaskDecisionAttributes
-				// First check if we need to use a different target domain to schedule activity
-				if attributes.Domain != nil {
-					// TODO: Error handling for ActivitySchedule failed when domain lookup fails
-					domainEntry, err := e.shard.GetDomainCache().GetDomain(*attributes.Domain)
-					if err != nil {
-						return nil, &workflow.InternalServiceError{Message: "Unable to schedule activity across domain."}
-					}
-					targetDomainID = domainEntry.GetInfo().ID
-				}
-
-				if err = validateActivityScheduleAttributes(attributes, executionInfo.WorkflowTimeout, maxIDLengthLimit); err != nil {
-					failDecision = true
-					failCause = workflow.DecisionTaskFailedCauseBadScheduleActivityAttributes
-					failMessage = err.Error()
-					break Process_Decision_Loop
-				}
-
-				failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(attributes.Input, "ScheduleActivityTaskDecisionAttributes.Input exceeds size limit.")
-				if err != nil {
-					return nil, err
-				}
-				if failWorkflow {
-					break Process_Decision_Loop
-				}
-
-				scheduleEvent, _ := msBuilder.AddActivityTaskScheduledEvent(completedID, attributes)
-				transferTasks = append(transferTasks, &persistence.ActivityTask{
-					DomainID:   targetDomainID,
-					TaskList:   *attributes.TaskList.Name,
-					ScheduleID: *scheduleEvent.EventId,
-				})
-				hasDecisionScheduleActivityTask = true
-
-			case workflow.DecisionTypeCompleteWorkflowExecution:
-				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
-					metrics.DecisionTypeCompleteWorkflowCounter)
-				if hasUnhandledEvents {
-					failDecision = true
-					failCause = workflow.DecisionTaskFailedCauseUnhandledDecision
-					break Process_Decision_Loop
-				}
-
-				// If the decision has more than one completion event than just pick the first one
-				if isComplete {
+		binChecksum := request.GetBinaryChecksum()
+		if _, ok := domainEntry.GetConfig().BadBinaries.Binaries[binChecksum]; ok {
+			failDecision = true
+			failCause = workflow.DecisionTaskFailedCauseBadBinary
+			failMessage = fmt.Sprintf("binary %v is already marked as bad deployment", binChecksum)
+		} else {
+		Process_Decision_Loop:
+			for _, d := range request.Decisions {
+				switch *d.DecisionType {
+				case workflow.DecisionTypeScheduleActivityTask:
 					e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
-						metrics.MultipleCompletionDecisionsCounter)
-					e.logger.Warn("Multiple completion decisions", tag.WorkflowDecisionType(int64(*d.DecisionType)), tag.ErrorTypeMultipleCompletionDecisions)
-					continue Process_Decision_Loop
-				}
-				attributes := d.CompleteWorkflowExecutionDecisionAttributes
-				if err = validateCompleteWorkflowExecutionAttributes(attributes); err != nil {
-					failDecision = true
-					failCause = workflow.DecisionTaskFailedCauseBadCompleteWorkflowExecutionAttributes
-					failMessage = err.Error()
-					break Process_Decision_Loop
-				}
-				failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(attributes.Result, "CompleteWorkflowExecutionDecisionAttributes.Result exceeds size limit.")
-				if err != nil {
-					return nil, err
-				}
-				if failWorkflow {
-					break Process_Decision_Loop
-				}
-
-				// check if this is a cron workflow
-				cronBackoff := msBuilder.GetCronBackoffDuration()
-				if cronBackoff == cron.NoBackoff {
-					// not cron, so complete this workflow execution
-					if e := msBuilder.AddCompletedWorkflowEvent(completedID, attributes); e == nil {
-						return nil, &workflow.InternalServiceError{Message: "Unable to add complete workflow event."}
+						metrics.DecisionTypeScheduleActivityCounter)
+					targetDomainID := domainID
+					attributes := d.ScheduleActivityTaskDecisionAttributes
+					// First check if we need to use a different target domain to schedule activity
+					if attributes.Domain != nil {
+						// TODO: Error handling for ActivitySchedule failed when domain lookup fails
+						domainEntry, err := e.shard.GetDomainCache().GetDomain(*attributes.Domain)
+						if err != nil {
+							return nil, &workflow.InternalServiceError{Message: "Unable to schedule activity across domain."}
+						}
+						targetDomainID = domainEntry.GetInfo().ID
 					}
-				} else {
-					// this is a cron workflow
-					startEvent, err := getWorkflowStartedEvent(e.historyMgr, e.historyV2Mgr, msBuilder.GetEventStoreVersion(), msBuilder.GetCurrentBranch(), e.logger, domainID, workflowExecution.GetWorkflowId(), workflowExecution.GetRunId(), common.IntPtr(e.shard.GetShardID()))
+
+					if err = validateActivityScheduleAttributes(attributes, executionInfo.WorkflowTimeout, maxIDLengthLimit); err != nil {
+						failDecision = true
+						failCause = workflow.DecisionTaskFailedCauseBadScheduleActivityAttributes
+						failMessage = err.Error()
+						break Process_Decision_Loop
+					}
+
+					failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(attributes.Input, "ScheduleActivityTaskDecisionAttributes.Input exceeds size limit.")
 					if err != nil {
 						return nil, err
 					}
-
-					startAttributes := startEvent.WorkflowExecutionStartedEventAttributes
-					continueAsNewAttributes := &workflow.ContinueAsNewWorkflowExecutionDecisionAttributes{
-						WorkflowType:                        startAttributes.WorkflowType,
-						TaskList:                            startAttributes.TaskList,
-						RetryPolicy:                         startAttributes.RetryPolicy,
-						Input:                               startAttributes.Input,
-						ExecutionStartToCloseTimeoutSeconds: startAttributes.ExecutionStartToCloseTimeoutSeconds,
-						TaskStartToCloseTimeoutSeconds:      startAttributes.TaskStartToCloseTimeoutSeconds,
-						BackoffStartIntervalInSeconds:       common.Int32Ptr(int32(cronBackoff.Seconds())),
-						Initiator:                           workflow.ContinueAsNewInitiatorCronSchedule.Ptr(),
-						LastCompletionResult:                attributes.Result,
-						CronSchedule:                        common.StringPtr(msBuilder.GetExecutionInfo().CronSchedule),
+					if failWorkflow {
+						break Process_Decision_Loop
 					}
 
-					if _, continueAsNewBuilder, err = msBuilder.AddContinueAsNewEvent(completedID, completedID, domainEntry,
-						startAttributes.GetParentWorkflowDomain(), continueAsNewAttributes, eventStoreVersion); err != nil {
-						return nil, err
-					}
-				}
+					scheduleEvent, _ := msBuilder.AddActivityTaskScheduledEvent(completedID, attributes)
+					transferTasks = append(transferTasks, &persistence.ActivityTask{
+						DomainID:   targetDomainID,
+						TaskList:   *attributes.TaskList.Name,
+						ScheduleID: *scheduleEvent.EventId,
+					})
+					hasDecisionScheduleActivityTask = true
 
-				isComplete = true
-			case workflow.DecisionTypeFailWorkflowExecution:
-				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
-					metrics.DecisionTypeFailWorkflowCounter)
-				if hasUnhandledEvents {
-					failDecision = true
-					failCause = workflow.DecisionTaskFailedCauseUnhandledDecision
-					break Process_Decision_Loop
-				}
-
-				// If the decision has more than one completion event than just pick the first one
-				if isComplete {
+				case workflow.DecisionTypeCompleteWorkflowExecution:
 					e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
-						metrics.MultipleCompletionDecisionsCounter)
-					e.logger.Warn("Multiple completion decisions", tag.WorkflowDecisionType(int64(*d.DecisionType)), tag.ErrorTypeMultipleCompletionDecisions)
-					continue Process_Decision_Loop
-				}
-
-				failedAttributes := d.FailWorkflowExecutionDecisionAttributes
-				if err = validateFailWorkflowExecutionAttributes(failedAttributes); err != nil {
-					failDecision = true
-					failCause = workflow.DecisionTaskFailedCauseBadFailWorkflowExecutionAttributes
-					failMessage = err.Error()
-					break Process_Decision_Loop
-				}
-
-				failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(failedAttributes.Details, "FailWorkflowExecutionDecisionAttributes.Details exceeds size limit.")
-				if err != nil {
-					return nil, err
-				}
-				if failWorkflow {
-					break Process_Decision_Loop
-				}
-
-				backoffInterval := msBuilder.GetRetryBackoffDuration(failedAttributes.GetReason())
-				continueAsNewInitiator := workflow.ContinueAsNewInitiatorRetryPolicy
-				if backoffInterval == common.NoRetryBackoff {
-					backoffInterval = msBuilder.GetCronBackoffDuration()
-					continueAsNewInitiator = workflow.ContinueAsNewInitiatorCronSchedule
-				}
-
-				if backoffInterval == cron.NoBackoff {
-					// no retry or cron
-					if evt := msBuilder.AddFailWorkflowEvent(completedID, failedAttributes); evt == nil {
-						return nil, &workflow.InternalServiceError{Message: "Unable to add fail workflow event."}
+						metrics.DecisionTypeCompleteWorkflowCounter)
+					if hasUnhandledEvents {
+						failDecision = true
+						failCause = workflow.DecisionTaskFailedCauseUnhandledDecision
+						break Process_Decision_Loop
 					}
-				} else {
-					// retry or cron with backoff
-					startEvent, err := getWorkflowStartedEvent(e.historyMgr, e.historyV2Mgr, msBuilder.GetEventStoreVersion(), msBuilder.GetCurrentBranch(), e.logger, domainID, workflowExecution.GetWorkflowId(), workflowExecution.GetRunId(), common.IntPtr(e.shard.GetShardID()))
+
+					// If the decision has more than one completion event than just pick the first one
+					if isComplete {
+						e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
+							metrics.MultipleCompletionDecisionsCounter)
+						e.logger.Warn("Multiple completion decisions", tag.WorkflowDecisionType(int64(*d.DecisionType)), tag.ErrorTypeMultipleCompletionDecisions)
+						continue Process_Decision_Loop
+					}
+					attributes := d.CompleteWorkflowExecutionDecisionAttributes
+					if err = validateCompleteWorkflowExecutionAttributes(attributes); err != nil {
+						failDecision = true
+						failCause = workflow.DecisionTaskFailedCauseBadCompleteWorkflowExecutionAttributes
+						failMessage = err.Error()
+						break Process_Decision_Loop
+					}
+					failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(attributes.Result, "CompleteWorkflowExecutionDecisionAttributes.Result exceeds size limit.")
 					if err != nil {
 						return nil, err
 					}
-
-					startAttributes := startEvent.WorkflowExecutionStartedEventAttributes
-					continueAsNewAttributes := &workflow.ContinueAsNewWorkflowExecutionDecisionAttributes{
-						WorkflowType:                        startAttributes.WorkflowType,
-						TaskList:                            startAttributes.TaskList,
-						RetryPolicy:                         startAttributes.RetryPolicy,
-						Input:                               startAttributes.Input,
-						ExecutionStartToCloseTimeoutSeconds: startAttributes.ExecutionStartToCloseTimeoutSeconds,
-						TaskStartToCloseTimeoutSeconds:      startAttributes.TaskStartToCloseTimeoutSeconds,
-						BackoffStartIntervalInSeconds:       common.Int32Ptr(int32(backoffInterval.Seconds())),
-						Initiator:                           continueAsNewInitiator.Ptr(),
-						FailureReason:                       failedAttributes.Reason,
-						FailureDetails:                      failedAttributes.Details,
-						LastCompletionResult:                startAttributes.LastCompletionResult,
-						CronSchedule:                        common.StringPtr(msBuilder.GetExecutionInfo().CronSchedule),
+					if failWorkflow {
+						break Process_Decision_Loop
 					}
 
-					if _, continueAsNewBuilder, err = msBuilder.AddContinueAsNewEvent(completedID, completedID, domainEntry,
-						startAttributes.GetParentWorkflowDomain(), continueAsNewAttributes, eventStoreVersion); err != nil {
-						return nil, err
+					// check if this is a cron workflow
+					cronBackoff := msBuilder.GetCronBackoffDuration()
+					if cronBackoff == cron.NoBackoff {
+						// not cron, so complete this workflow execution
+						if e := msBuilder.AddCompletedWorkflowEvent(completedID, attributes); e == nil {
+							return nil, &workflow.InternalServiceError{Message: "Unable to add complete workflow event."}
+						}
+					} else {
+						// this is a cron workflow
+						startEvent, err := getWorkflowStartedEvent(e.historyMgr, e.historyV2Mgr, msBuilder.GetEventStoreVersion(), msBuilder.GetCurrentBranch(), e.logger, domainID, workflowExecution.GetWorkflowId(), workflowExecution.GetRunId(), common.IntPtr(e.shard.GetShardID()))
+						if err != nil {
+							return nil, err
+						}
+
+						startAttributes := startEvent.WorkflowExecutionStartedEventAttributes
+						continueAsNewAttributes := &workflow.ContinueAsNewWorkflowExecutionDecisionAttributes{
+							WorkflowType:                        startAttributes.WorkflowType,
+							TaskList:                            startAttributes.TaskList,
+							RetryPolicy:                         startAttributes.RetryPolicy,
+							Input:                               startAttributes.Input,
+							ExecutionStartToCloseTimeoutSeconds: startAttributes.ExecutionStartToCloseTimeoutSeconds,
+							TaskStartToCloseTimeoutSeconds:      startAttributes.TaskStartToCloseTimeoutSeconds,
+							BackoffStartIntervalInSeconds:       common.Int32Ptr(int32(cronBackoff.Seconds())),
+							Initiator:                           workflow.ContinueAsNewInitiatorCronSchedule.Ptr(),
+							LastCompletionResult:                attributes.Result,
+							CronSchedule:                        common.StringPtr(msBuilder.GetExecutionInfo().CronSchedule),
+						}
+
+						if _, continueAsNewBuilder, err = msBuilder.AddContinueAsNewEvent(completedID, completedID, domainEntry,
+							startAttributes.GetParentWorkflowDomain(), continueAsNewAttributes, eventStoreVersion); err != nil {
+							return nil, err
+						}
 					}
-				}
 
-				isComplete = true
-
-			case workflow.DecisionTypeCancelWorkflowExecution:
-				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
-					metrics.DecisionTypeCancelWorkflowCounter)
-				// If new events came while we are processing the decision, we would fail this and give a chance to client
-				// to process the new event.
-				if hasUnhandledEvents {
-					failDecision = true
-					failCause = workflow.DecisionTaskFailedCauseUnhandledDecision
-					break Process_Decision_Loop
-				}
-
-				// If the decision has more than one completion event than just pick the first one
-				if isComplete {
+					isComplete = true
+				case workflow.DecisionTypeFailWorkflowExecution:
 					e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
-						metrics.MultipleCompletionDecisionsCounter)
-					e.logger.Warn("Multiple completion decisions", tag.WorkflowDecisionType(int64(*d.DecisionType)), tag.ErrorTypeMultipleCompletionDecisions)
-					continue Process_Decision_Loop
-				}
-				attributes := d.CancelWorkflowExecutionDecisionAttributes
-				if err = validateCancelWorkflowExecutionAttributes(attributes); err != nil {
-					failDecision = true
-					failCause = workflow.DecisionTaskFailedCauseBadCancelWorkflowExecutionAttributes
-					failMessage = err.Error()
-					break Process_Decision_Loop
-				}
-				msBuilder.AddWorkflowExecutionCanceledEvent(completedID, attributes)
-				isComplete = true
-
-			case workflow.DecisionTypeStartTimer:
-				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
-					metrics.DecisionTypeStartTimerCounter)
-				attributes := d.StartTimerDecisionAttributes
-				if err = validateTimerScheduleAttributes(attributes, maxIDLengthLimit); err != nil {
-					failDecision = true
-					failCause = workflow.DecisionTaskFailedCauseBadStartTimerAttributes
-					failMessage = err.Error()
-					break Process_Decision_Loop
-				}
-				_, ti := msBuilder.AddTimerStartedEvent(completedID, attributes)
-				if ti == nil {
-					failDecision = true
-					failCause = workflow.DecisionTaskFailedCauseStartTimerDuplicateID
-					break Process_Decision_Loop
-				}
-				tBuilder.AddUserTimer(ti, msBuilder)
-
-			case workflow.DecisionTypeRequestCancelActivityTask:
-				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
-					metrics.DecisionTypeCancelActivityCounter)
-				attributes := d.RequestCancelActivityTaskDecisionAttributes
-				if err = validateActivityCancelAttributes(attributes, maxIDLengthLimit); err != nil {
-					failDecision = true
-					failCause = workflow.DecisionTaskFailedCauseBadRequestCancelActivityAttributes
-					failMessage = err.Error()
-					break Process_Decision_Loop
-				}
-				activityID := *attributes.ActivityId
-				actCancelReqEvent, ai, isRunning := msBuilder.AddActivityTaskCancelRequestedEvent(completedID, activityID,
-					common.StringDefault(request.Identity))
-				if !isRunning {
-					msBuilder.AddRequestCancelActivityTaskFailedEvent(completedID, activityID,
-						activityCancellationMsgActivityIDUnknown)
-					continue Process_Decision_Loop
-				}
-
-				if ai.StartedID == common.EmptyEventID {
-					// We haven't started the activity yet, we can cancel the activity right away and
-					// schedule a decision task to ensure the workflow makes progress.
-					msBuilder.AddActivityTaskCanceledEvent(ai.ScheduleID, ai.StartedID, *actCancelReqEvent.EventId,
-						[]byte(activityCancellationMsgActivityNotStarted), common.StringDefault(request.Identity))
-					activityNotStartedCancelled = true
-				}
-
-			case workflow.DecisionTypeCancelTimer:
-				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
-					metrics.DecisionTypeCancelTimerCounter)
-				attributes := d.CancelTimerDecisionAttributes
-				if err = validateTimerCancelAttributes(attributes, maxIDLengthLimit); err != nil {
-					failDecision = true
-					failCause = workflow.DecisionTaskFailedCauseBadCancelTimerAttributes
-					failMessage = err.Error()
-					break Process_Decision_Loop
-				}
-				if msBuilder.AddTimerCanceledEvent(completedID, attributes, common.StringDefault(request.Identity)) == nil {
-					msBuilder.AddCancelTimerFailedEvent(completedID, attributes, common.StringDefault(request.Identity))
-				} else {
-					// timer deletion is success. we need to rebuild the timer builder
-					// since timer builder has a local cached version of timers
-					tBuilder = e.getTimerBuilder(context.getExecution())
-					tBuilder.loadUserTimers(msBuilder)
-
-					// timer deletion is a success, we may have deleted a fired timer in
-					// which case we should reset hasBufferedEvents
-					hasUnhandledEvents = msBuilder.HasBufferedEvents()
-				}
-
-			case workflow.DecisionTypeRecordMarker:
-				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
-					metrics.DecisionTypeRecordMarkerCounter)
-				attributes := d.RecordMarkerDecisionAttributes
-				if err = validateRecordMarkerAttributes(attributes, maxIDLengthLimit); err != nil {
-					failDecision = true
-					failCause = workflow.DecisionTaskFailedCauseBadRecordMarkerAttributes
-					failMessage = err.Error()
-					break Process_Decision_Loop
-				}
-				failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(attributes.Details, "RecordMarkerDecisionAttributes.Details exceeds size limit.")
-				if err != nil {
-					return nil, err
-				}
-				if failWorkflow {
-					break Process_Decision_Loop
-				}
-
-				msBuilder.AddRecordMarkerEvent(completedID, attributes)
-
-			case workflow.DecisionTypeRequestCancelExternalWorkflowExecution:
-				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
-					metrics.DecisionTypeCancelExternalWorkflowCounter)
-				attributes := d.RequestCancelExternalWorkflowExecutionDecisionAttributes
-				if err = validateCancelExternalWorkflowExecutionAttributes(attributes, maxIDLengthLimit); err != nil {
-					failDecision = true
-					failCause = workflow.DecisionTaskFailedCauseBadRequestCancelExternalWorkflowExecutionAttributes
-					failMessage = err.Error()
-					break Process_Decision_Loop
-				}
-
-				foreignDomainID := ""
-				if attributes.GetDomain() == "" {
-					foreignDomainID = executionInfo.DomainID
-				} else {
-					foreignDomainEntry, err := e.shard.GetDomainCache().GetDomain(attributes.GetDomain())
-					if err != nil {
-						return nil, &workflow.InternalServiceError{
-							Message: fmt.Sprintf("Unable to cancel workflow across domain: %v.", attributes.GetDomain())}
+						metrics.DecisionTypeFailWorkflowCounter)
+					if hasUnhandledEvents {
+						failDecision = true
+						failCause = workflow.DecisionTaskFailedCauseUnhandledDecision
+						break Process_Decision_Loop
 					}
-					foreignDomainID = foreignDomainEntry.GetInfo().ID
-				}
 
-				cancelRequestID := uuid.New()
-				wfCancelReqEvent, _ := msBuilder.AddRequestCancelExternalWorkflowExecutionInitiatedEvent(completedID,
-					cancelRequestID, attributes)
-				if wfCancelReqEvent == nil {
-					return nil, &workflow.InternalServiceError{Message: "Unable to add external cancel workflow request."}
-				}
-
-				transferTasks = append(transferTasks, &persistence.CancelExecutionTask{
-					TargetDomainID:          foreignDomainID,
-					TargetWorkflowID:        attributes.GetWorkflowId(),
-					TargetRunID:             attributes.GetRunId(),
-					TargetChildWorkflowOnly: attributes.GetChildWorkflowOnly(),
-					InitiatedID:             wfCancelReqEvent.GetEventId(),
-				})
-
-			case workflow.DecisionTypeSignalExternalWorkflowExecution:
-				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
-					metrics.DecisionTypeSignalExternalWorkflowCounter)
-
-				attributes := d.SignalExternalWorkflowExecutionDecisionAttributes
-				if err = validateSignalExternalWorkflowExecutionAttributes(attributes, maxIDLengthLimit); err != nil {
-					failDecision = true
-					failCause = workflow.DecisionTaskFailedCauseBadSignalWorkflowExecutionAttributes
-					failMessage = err.Error()
-					break Process_Decision_Loop
-				}
-				failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(attributes.Input, "SignalExternalWorkflowExecutionDecisionAttributes.Input exceeds size limit.")
-				if err != nil {
-					return nil, err
-				}
-				if failWorkflow {
-					break Process_Decision_Loop
-				}
-
-				foreignDomainID := ""
-				if attributes.GetDomain() == "" {
-					foreignDomainID = executionInfo.DomainID
-				} else {
-					foreignDomainEntry, err := e.shard.GetDomainCache().GetDomain(attributes.GetDomain())
-					if err != nil {
-						return nil, &workflow.InternalServiceError{
-							Message: fmt.Sprintf("Unable to signal workflow across domain: %v.", attributes.GetDomain())}
+					// If the decision has more than one completion event than just pick the first one
+					if isComplete {
+						e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
+							metrics.MultipleCompletionDecisionsCounter)
+						e.logger.Warn("Multiple completion decisions", tag.WorkflowDecisionType(int64(*d.DecisionType)), tag.ErrorTypeMultipleCompletionDecisions)
+						continue Process_Decision_Loop
 					}
-					foreignDomainID = foreignDomainEntry.GetInfo().ID
-				}
 
-				signalRequestID := uuid.New() // for deduplicate
-				wfSignalReqEvent, _ := msBuilder.AddSignalExternalWorkflowExecutionInitiatedEvent(completedID,
-					signalRequestID, attributes)
-				if wfSignalReqEvent == nil {
-					return nil, &workflow.InternalServiceError{Message: "Unable to add external signal workflow request."}
-				}
+					failedAttributes := d.FailWorkflowExecutionDecisionAttributes
+					if err = validateFailWorkflowExecutionAttributes(failedAttributes); err != nil {
+						failDecision = true
+						failCause = workflow.DecisionTaskFailedCauseBadFailWorkflowExecutionAttributes
+						failMessage = err.Error()
+						break Process_Decision_Loop
+					}
 
-				transferTasks = append(transferTasks, &persistence.SignalExecutionTask{
-					TargetDomainID:          foreignDomainID,
-					TargetWorkflowID:        attributes.Execution.GetWorkflowId(),
-					TargetRunID:             attributes.Execution.GetRunId(),
-					TargetChildWorkflowOnly: attributes.GetChildWorkflowOnly(),
-					InitiatedID:             wfSignalReqEvent.GetEventId(),
-				})
-
-			case workflow.DecisionTypeContinueAsNewWorkflowExecution:
-				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
-					metrics.DecisionTypeContinueAsNewCounter)
-				if hasUnhandledEvents {
-					failDecision = true
-					failCause = workflow.DecisionTaskFailedCauseUnhandledDecision
-					break Process_Decision_Loop
-				}
-
-				// If the decision has more than one completion event than just pick the first one
-				if isComplete {
-					e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
-						metrics.MultipleCompletionDecisionsCounter)
-					e.logger.Warn("Multiple completion decisions", tag.WorkflowDecisionType(int64(*d.DecisionType)), tag.ErrorTypeMultipleCompletionDecisions)
-					continue Process_Decision_Loop
-				}
-				attributes := d.ContinueAsNewWorkflowExecutionDecisionAttributes
-				if err = validateContinueAsNewWorkflowExecutionAttributes(executionInfo, attributes, maxIDLengthLimit); err != nil {
-					failDecision = true
-					failCause = workflow.DecisionTaskFailedCauseBadContinueAsNewAttributes
-					failMessage = err.Error()
-					break Process_Decision_Loop
-				}
-				failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(attributes.Input, "ContinueAsNewWorkflowExecutionDecisionAttributes.Input exceeds size limit.")
-				if err != nil {
-					return nil, err
-				}
-				if failWorkflow {
-					break Process_Decision_Loop
-				}
-
-				// Extract parentDomainName so it can be passed down to next run of workflow execution
-				var parentDomainName string
-				if msBuilder.HasParentExecution() {
-					parentDomainID := executionInfo.ParentDomainID
-					parentDomainEntry, err := e.shard.GetDomainCache().GetDomainByID(parentDomainID)
+					failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(failedAttributes.Details, "FailWorkflowExecutionDecisionAttributes.Details exceeds size limit.")
 					if err != nil {
 						return nil, err
 					}
-					parentDomainName = parentDomainEntry.GetInfo().Name
-				}
-
-				_, newStateBuilder, err := msBuilder.AddContinueAsNewEvent(completedID, completedID, domainEntry, parentDomainName, attributes, eventStoreVersion)
-				if err != nil {
-					return nil, err
-				}
-
-				isComplete = true
-				continueAsNewBuilder = newStateBuilder
-
-			case workflow.DecisionTypeStartChildWorkflowExecution:
-				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
-					metrics.DecisionTypeChildWorkflowCounter)
-				targetDomainID := domainID
-				attributes := d.StartChildWorkflowExecutionDecisionAttributes
-				if err = validateStartChildExecutionAttributes(executionInfo, attributes, maxIDLengthLimit); err != nil {
-					failDecision = true
-					failCause = workflow.DecisionTaskFailedCauseBadStartChildExecutionAttributes
-					failMessage = err.Error()
-					break Process_Decision_Loop
-				}
-				failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(attributes.Input, "StartChildWorkflowExecutionDecisionAttributes.Input exceeds size limit.")
-				if err != nil {
-					return nil, err
-				}
-				if failWorkflow {
-					break Process_Decision_Loop
-				}
-
-				// First check if we need to use a different target domain to schedule child execution
-				if attributes.Domain != nil {
-					// TODO: Error handling for DecisionType_StartChildWorkflowExecution failed when domain lookup fails
-					domainEntry, err := e.shard.GetDomainCache().GetDomain(*attributes.Domain)
-					if err != nil {
-						return nil, &workflow.InternalServiceError{Message: "Unable to schedule child execution across domain."}
+					if failWorkflow {
+						break Process_Decision_Loop
 					}
-					targetDomainID = domainEntry.GetInfo().ID
+
+					backoffInterval := msBuilder.GetRetryBackoffDuration(failedAttributes.GetReason())
+					continueAsNewInitiator := workflow.ContinueAsNewInitiatorRetryPolicy
+					if backoffInterval == common.NoRetryBackoff {
+						backoffInterval = msBuilder.GetCronBackoffDuration()
+						continueAsNewInitiator = workflow.ContinueAsNewInitiatorCronSchedule
+					}
+
+					if backoffInterval == cron.NoBackoff {
+						// no retry or cron
+						if evt := msBuilder.AddFailWorkflowEvent(completedID, failedAttributes); evt == nil {
+							return nil, &workflow.InternalServiceError{Message: "Unable to add fail workflow event."}
+						}
+					} else {
+						// retry or cron with backoff
+						startEvent, err := getWorkflowStartedEvent(e.historyMgr, e.historyV2Mgr, msBuilder.GetEventStoreVersion(), msBuilder.GetCurrentBranch(), e.logger, domainID, workflowExecution.GetWorkflowId(), workflowExecution.GetRunId(), common.IntPtr(e.shard.GetShardID()))
+						if err != nil {
+							return nil, err
+						}
+
+						startAttributes := startEvent.WorkflowExecutionStartedEventAttributes
+						continueAsNewAttributes := &workflow.ContinueAsNewWorkflowExecutionDecisionAttributes{
+							WorkflowType:                        startAttributes.WorkflowType,
+							TaskList:                            startAttributes.TaskList,
+							RetryPolicy:                         startAttributes.RetryPolicy,
+							Input:                               startAttributes.Input,
+							ExecutionStartToCloseTimeoutSeconds: startAttributes.ExecutionStartToCloseTimeoutSeconds,
+							TaskStartToCloseTimeoutSeconds:      startAttributes.TaskStartToCloseTimeoutSeconds,
+							BackoffStartIntervalInSeconds:       common.Int32Ptr(int32(backoffInterval.Seconds())),
+							Initiator:                           continueAsNewInitiator.Ptr(),
+							FailureReason:                       failedAttributes.Reason,
+							FailureDetails:                      failedAttributes.Details,
+							LastCompletionResult:                startAttributes.LastCompletionResult,
+							CronSchedule:                        common.StringPtr(msBuilder.GetExecutionInfo().CronSchedule),
+						}
+
+						if _, continueAsNewBuilder, err = msBuilder.AddContinueAsNewEvent(completedID, completedID, domainEntry,
+							startAttributes.GetParentWorkflowDomain(), continueAsNewAttributes, eventStoreVersion); err != nil {
+							return nil, err
+						}
+					}
+
+					isComplete = true
+
+				case workflow.DecisionTypeCancelWorkflowExecution:
+					e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
+						metrics.DecisionTypeCancelWorkflowCounter)
+					// If new events came while we are processing the decision, we would fail this and give a chance to client
+					// to process the new event.
+					if hasUnhandledEvents {
+						failDecision = true
+						failCause = workflow.DecisionTaskFailedCauseUnhandledDecision
+						break Process_Decision_Loop
+					}
+
+					// If the decision has more than one completion event than just pick the first one
+					if isComplete {
+						e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
+							metrics.MultipleCompletionDecisionsCounter)
+						e.logger.Warn("Multiple completion decisions", tag.WorkflowDecisionType(int64(*d.DecisionType)), tag.ErrorTypeMultipleCompletionDecisions)
+						continue Process_Decision_Loop
+					}
+					attributes := d.CancelWorkflowExecutionDecisionAttributes
+					if err = validateCancelWorkflowExecutionAttributes(attributes); err != nil {
+						failDecision = true
+						failCause = workflow.DecisionTaskFailedCauseBadCancelWorkflowExecutionAttributes
+						failMessage = err.Error()
+						break Process_Decision_Loop
+					}
+					msBuilder.AddWorkflowExecutionCanceledEvent(completedID, attributes)
+					isComplete = true
+
+				case workflow.DecisionTypeStartTimer:
+					e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
+						metrics.DecisionTypeStartTimerCounter)
+					attributes := d.StartTimerDecisionAttributes
+					if err = validateTimerScheduleAttributes(attributes, maxIDLengthLimit); err != nil {
+						failDecision = true
+						failCause = workflow.DecisionTaskFailedCauseBadStartTimerAttributes
+						failMessage = err.Error()
+						break Process_Decision_Loop
+					}
+					_, ti := msBuilder.AddTimerStartedEvent(completedID, attributes)
+					if ti == nil {
+						failDecision = true
+						failCause = workflow.DecisionTaskFailedCauseStartTimerDuplicateID
+						break Process_Decision_Loop
+					}
+					tBuilder.AddUserTimer(ti, msBuilder)
+
+				case workflow.DecisionTypeRequestCancelActivityTask:
+					e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
+						metrics.DecisionTypeCancelActivityCounter)
+					attributes := d.RequestCancelActivityTaskDecisionAttributes
+					if err = validateActivityCancelAttributes(attributes, maxIDLengthLimit); err != nil {
+						failDecision = true
+						failCause = workflow.DecisionTaskFailedCauseBadRequestCancelActivityAttributes
+						failMessage = err.Error()
+						break Process_Decision_Loop
+					}
+					activityID := *attributes.ActivityId
+					actCancelReqEvent, ai, isRunning := msBuilder.AddActivityTaskCancelRequestedEvent(completedID, activityID,
+						common.StringDefault(request.Identity))
+					if !isRunning {
+						msBuilder.AddRequestCancelActivityTaskFailedEvent(completedID, activityID,
+							activityCancellationMsgActivityIDUnknown)
+						continue Process_Decision_Loop
+					}
+
+					if ai.StartedID == common.EmptyEventID {
+						// We haven't started the activity yet, we can cancel the activity right away and
+						// schedule a decision task to ensure the workflow makes progress.
+						msBuilder.AddActivityTaskCanceledEvent(ai.ScheduleID, ai.StartedID, *actCancelReqEvent.EventId,
+							[]byte(activityCancellationMsgActivityNotStarted), common.StringDefault(request.Identity))
+						activityNotStartedCancelled = true
+					}
+
+				case workflow.DecisionTypeCancelTimer:
+					e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
+						metrics.DecisionTypeCancelTimerCounter)
+					attributes := d.CancelTimerDecisionAttributes
+					if err = validateTimerCancelAttributes(attributes, maxIDLengthLimit); err != nil {
+						failDecision = true
+						failCause = workflow.DecisionTaskFailedCauseBadCancelTimerAttributes
+						failMessage = err.Error()
+						break Process_Decision_Loop
+					}
+					if msBuilder.AddTimerCanceledEvent(completedID, attributes, common.StringDefault(request.Identity)) == nil {
+						msBuilder.AddCancelTimerFailedEvent(completedID, attributes, common.StringDefault(request.Identity))
+					} else {
+						// timer deletion is success. we need to rebuild the timer builder
+						// since timer builder has a local cached version of timers
+						tBuilder = e.getTimerBuilder(context.getExecution())
+						tBuilder.loadUserTimers(msBuilder)
+
+						// timer deletion is a success, we may have deleted a fired timer in
+						// which case we should reset hasBufferedEvents
+						hasUnhandledEvents = msBuilder.HasBufferedEvents()
+					}
+
+				case workflow.DecisionTypeRecordMarker:
+					e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
+						metrics.DecisionTypeRecordMarkerCounter)
+					attributes := d.RecordMarkerDecisionAttributes
+					if err = validateRecordMarkerAttributes(attributes, maxIDLengthLimit); err != nil {
+						failDecision = true
+						failCause = workflow.DecisionTaskFailedCauseBadRecordMarkerAttributes
+						failMessage = err.Error()
+						break Process_Decision_Loop
+					}
+					failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(attributes.Details, "RecordMarkerDecisionAttributes.Details exceeds size limit.")
+					if err != nil {
+						return nil, err
+					}
+					if failWorkflow {
+						break Process_Decision_Loop
+					}
+
+					msBuilder.AddRecordMarkerEvent(completedID, attributes)
+
+				case workflow.DecisionTypeRequestCancelExternalWorkflowExecution:
+					e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
+						metrics.DecisionTypeCancelExternalWorkflowCounter)
+					attributes := d.RequestCancelExternalWorkflowExecutionDecisionAttributes
+					if err = validateCancelExternalWorkflowExecutionAttributes(attributes, maxIDLengthLimit); err != nil {
+						failDecision = true
+						failCause = workflow.DecisionTaskFailedCauseBadRequestCancelExternalWorkflowExecutionAttributes
+						failMessage = err.Error()
+						break Process_Decision_Loop
+					}
+
+					foreignDomainID := ""
+					if attributes.GetDomain() == "" {
+						foreignDomainID = executionInfo.DomainID
+					} else {
+						foreignDomainEntry, err := e.shard.GetDomainCache().GetDomain(attributes.GetDomain())
+						if err != nil {
+							return nil, &workflow.InternalServiceError{
+								Message: fmt.Sprintf("Unable to cancel workflow across domain: %v.", attributes.GetDomain())}
+						}
+						foreignDomainID = foreignDomainEntry.GetInfo().ID
+					}
+
+					cancelRequestID := uuid.New()
+					wfCancelReqEvent, _ := msBuilder.AddRequestCancelExternalWorkflowExecutionInitiatedEvent(completedID,
+						cancelRequestID, attributes)
+					if wfCancelReqEvent == nil {
+						return nil, &workflow.InternalServiceError{Message: "Unable to add external cancel workflow request."}
+					}
+
+					transferTasks = append(transferTasks, &persistence.CancelExecutionTask{
+						TargetDomainID:          foreignDomainID,
+						TargetWorkflowID:        attributes.GetWorkflowId(),
+						TargetRunID:             attributes.GetRunId(),
+						TargetChildWorkflowOnly: attributes.GetChildWorkflowOnly(),
+						InitiatedID:             wfCancelReqEvent.GetEventId(),
+					})
+
+				case workflow.DecisionTypeSignalExternalWorkflowExecution:
+					e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
+						metrics.DecisionTypeSignalExternalWorkflowCounter)
+
+					attributes := d.SignalExternalWorkflowExecutionDecisionAttributes
+					if err = validateSignalExternalWorkflowExecutionAttributes(attributes, maxIDLengthLimit); err != nil {
+						failDecision = true
+						failCause = workflow.DecisionTaskFailedCauseBadSignalWorkflowExecutionAttributes
+						failMessage = err.Error()
+						break Process_Decision_Loop
+					}
+					failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(attributes.Input, "SignalExternalWorkflowExecutionDecisionAttributes.Input exceeds size limit.")
+					if err != nil {
+						return nil, err
+					}
+					if failWorkflow {
+						break Process_Decision_Loop
+					}
+
+					foreignDomainID := ""
+					if attributes.GetDomain() == "" {
+						foreignDomainID = executionInfo.DomainID
+					} else {
+						foreignDomainEntry, err := e.shard.GetDomainCache().GetDomain(attributes.GetDomain())
+						if err != nil {
+							return nil, &workflow.InternalServiceError{
+								Message: fmt.Sprintf("Unable to signal workflow across domain: %v.", attributes.GetDomain())}
+						}
+						foreignDomainID = foreignDomainEntry.GetInfo().ID
+					}
+
+					signalRequestID := uuid.New() // for deduplicate
+					wfSignalReqEvent, _ := msBuilder.AddSignalExternalWorkflowExecutionInitiatedEvent(completedID,
+						signalRequestID, attributes)
+					if wfSignalReqEvent == nil {
+						return nil, &workflow.InternalServiceError{Message: "Unable to add external signal workflow request."}
+					}
+
+					transferTasks = append(transferTasks, &persistence.SignalExecutionTask{
+						TargetDomainID:          foreignDomainID,
+						TargetWorkflowID:        attributes.Execution.GetWorkflowId(),
+						TargetRunID:             attributes.Execution.GetRunId(),
+						TargetChildWorkflowOnly: attributes.GetChildWorkflowOnly(),
+						InitiatedID:             wfSignalReqEvent.GetEventId(),
+					})
+
+				case workflow.DecisionTypeContinueAsNewWorkflowExecution:
+					e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
+						metrics.DecisionTypeContinueAsNewCounter)
+					if hasUnhandledEvents {
+						failDecision = true
+						failCause = workflow.DecisionTaskFailedCauseUnhandledDecision
+						break Process_Decision_Loop
+					}
+
+					// If the decision has more than one completion event than just pick the first one
+					if isComplete {
+						e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
+							metrics.MultipleCompletionDecisionsCounter)
+						e.logger.Warn("Multiple completion decisions", tag.WorkflowDecisionType(int64(*d.DecisionType)), tag.ErrorTypeMultipleCompletionDecisions)
+						continue Process_Decision_Loop
+					}
+					attributes := d.ContinueAsNewWorkflowExecutionDecisionAttributes
+					if err = validateContinueAsNewWorkflowExecutionAttributes(executionInfo, attributes, maxIDLengthLimit); err != nil {
+						failDecision = true
+						failCause = workflow.DecisionTaskFailedCauseBadContinueAsNewAttributes
+						failMessage = err.Error()
+						break Process_Decision_Loop
+					}
+					failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(attributes.Input, "ContinueAsNewWorkflowExecutionDecisionAttributes.Input exceeds size limit.")
+					if err != nil {
+						return nil, err
+					}
+					if failWorkflow {
+						break Process_Decision_Loop
+					}
+
+					// Extract parentDomainName so it can be passed down to next run of workflow execution
+					var parentDomainName string
+					if msBuilder.HasParentExecution() {
+						parentDomainID := executionInfo.ParentDomainID
+						parentDomainEntry, err := e.shard.GetDomainCache().GetDomainByID(parentDomainID)
+						if err != nil {
+							return nil, err
+						}
+						parentDomainName = parentDomainEntry.GetInfo().Name
+					}
+
+					_, newStateBuilder, err := msBuilder.AddContinueAsNewEvent(completedID, completedID, domainEntry, parentDomainName, attributes, eventStoreVersion)
+					if err != nil {
+						return nil, err
+					}
+
+					isComplete = true
+					continueAsNewBuilder = newStateBuilder
+
+				case workflow.DecisionTypeStartChildWorkflowExecution:
+					e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
+						metrics.DecisionTypeChildWorkflowCounter)
+					targetDomainID := domainID
+					attributes := d.StartChildWorkflowExecutionDecisionAttributes
+					if err = validateStartChildExecutionAttributes(executionInfo, attributes, maxIDLengthLimit); err != nil {
+						failDecision = true
+						failCause = workflow.DecisionTaskFailedCauseBadStartChildExecutionAttributes
+						failMessage = err.Error()
+						break Process_Decision_Loop
+					}
+					failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(attributes.Input, "StartChildWorkflowExecutionDecisionAttributes.Input exceeds size limit.")
+					if err != nil {
+						return nil, err
+					}
+					if failWorkflow {
+						break Process_Decision_Loop
+					}
+
+					// First check if we need to use a different target domain to schedule child execution
+					if attributes.Domain != nil {
+						// TODO: Error handling for DecisionType_StartChildWorkflowExecution failed when domain lookup fails
+						domainEntry, err := e.shard.GetDomainCache().GetDomain(*attributes.Domain)
+						if err != nil {
+							return nil, &workflow.InternalServiceError{Message: "Unable to schedule child execution across domain."}
+						}
+						targetDomainID = domainEntry.GetInfo().ID
+					}
+
+					requestID := uuid.New()
+					initiatedEvent, _ := msBuilder.AddStartChildWorkflowExecutionInitiatedEvent(completedID, requestID, attributes)
+					transferTasks = append(transferTasks, &persistence.StartChildExecutionTask{
+						TargetDomainID:   targetDomainID,
+						TargetWorkflowID: *attributes.WorkflowId,
+						InitiatedID:      *initiatedEvent.EventId,
+					})
+
+				default:
+					return nil, &workflow.BadRequestError{Message: fmt.Sprintf("Unknown decision type: %v", *d.DecisionType)}
 				}
-
-				requestID := uuid.New()
-				initiatedEvent, _ := msBuilder.AddStartChildWorkflowExecutionInitiatedEvent(completedID, requestID, attributes)
-				transferTasks = append(transferTasks, &persistence.StartChildExecutionTask{
-					TargetDomainID:   targetDomainID,
-					TargetWorkflowID: *attributes.WorkflowId,
-					InitiatedID:      *initiatedEvent.EventId,
-				})
-
-			default:
-				return nil, &workflow.BadRequestError{Message: fmt.Sprintf("Unknown decision type: %v", *d.DecisionType)}
 			}
 		}
 
@@ -1879,7 +1755,7 @@ Update_History_Loop:
 	return nil, ErrMaxAttemptsExceeded
 }
 
-func (e *historyEngineImpl) RespondDecisionTaskFailed(ctx context.Context, req *h.RespondDecisionTaskFailedRequest) error {
+func (e *historyEngineImpl) RespondDecisionTaskFailed(ctx ctx.Context, req *h.RespondDecisionTaskFailedRequest) error {
 
 	domainEntry, err := e.getActiveDomainEntry(req.DomainUUID)
 	if err != nil {
@@ -1918,7 +1794,7 @@ func (e *historyEngineImpl) RespondDecisionTaskFailed(ctx context.Context, req *
 }
 
 // RespondActivityTaskCompleted completes an activity task.
-func (e *historyEngineImpl) RespondActivityTaskCompleted(ctx context.Context, req *h.RespondActivityTaskCompletedRequest) error {
+func (e *historyEngineImpl) RespondActivityTaskCompleted(ctx ctx.Context, req *h.RespondActivityTaskCompletedRequest) error {
 
 	domainEntry, err := e.getActiveDomainEntry(req.DomainUUID)
 	if err != nil {
@@ -1973,7 +1849,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(ctx context.Context, re
 }
 
 // RespondActivityTaskFailed completes an activity task failure.
-func (e *historyEngineImpl) RespondActivityTaskFailed(ctx context.Context, req *h.RespondActivityTaskFailedRequest) error {
+func (e *historyEngineImpl) RespondActivityTaskFailed(ctx ctx.Context, req *h.RespondActivityTaskFailedRequest) error {
 
 	domainEntry, err := e.getActiveDomainEntry(req.DomainUUID)
 	if err != nil {
@@ -2038,7 +1914,7 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(ctx context.Context, req *
 }
 
 // RespondActivityTaskCanceled completes an activity task failure.
-func (e *historyEngineImpl) RespondActivityTaskCanceled(ctx context.Context, req *h.RespondActivityTaskCanceledRequest) error {
+func (e *historyEngineImpl) RespondActivityTaskCanceled(ctx ctx.Context, req *h.RespondActivityTaskCanceledRequest) error {
 
 	domainEntry, err := e.getActiveDomainEntry(req.DomainUUID)
 	if err != nil {
@@ -2099,7 +1975,7 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(ctx context.Context, req
 // This method can be used for two purposes.
 // - For reporting liveness of the activity.
 // - For reporting progress of the activity, this can be done even if the liveness is not configured.
-func (e *historyEngineImpl) RecordActivityTaskHeartbeat(ctx context.Context,
+func (e *historyEngineImpl) RecordActivityTaskHeartbeat(ctx ctx.Context,
 	req *h.RecordActivityTaskHeartbeatRequest) (*workflow.RecordActivityTaskHeartbeatResponse, error) {
 
 	domainEntry, err := e.getActiveDomainEntry(req.DomainUUID)
@@ -2169,7 +2045,7 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(ctx context.Context,
 }
 
 // RequestCancelWorkflowExecution records request cancellation event for workflow execution
-func (e *historyEngineImpl) RequestCancelWorkflowExecution(ctx context.Context,
+func (e *historyEngineImpl) RequestCancelWorkflowExecution(ctx ctx.Context,
 	req *h.RequestCancelWorkflowExecutionRequest) error {
 
 	domainEntry, err := e.getActiveDomainEntry(req.DomainUUID)
@@ -2224,7 +2100,7 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(ctx context.Context,
 		})
 }
 
-func (e *historyEngineImpl) SignalWorkflowExecution(ctx context.Context, signalRequest *h.SignalWorkflowExecutionRequest) error {
+func (e *historyEngineImpl) SignalWorkflowExecution(ctx ctx.Context, signalRequest *h.SignalWorkflowExecutionRequest) error {
 
 	domainEntry, err := e.getActiveDomainEntry(signalRequest.DomainUUID)
 	if err != nil {
@@ -2240,48 +2116,58 @@ func (e *historyEngineImpl) SignalWorkflowExecution(ctx context.Context, signalR
 		RunId:      request.WorkflowExecution.RunId,
 	}
 
-	return e.updateWorkflowExecution(ctx, domainID, execution, false, true,
-		func(msBuilder mutableState, tBuilder *timerBuilder) ([]persistence.Task, error) {
-			if !msBuilder.IsWorkflowExecutionRunning() {
-				return nil, ErrWorkflowCompleted
-			}
+	return e.updateWorkflowExecutionWithAction(ctx, domainID, execution, func(msBuilder mutableState, tBuilder *timerBuilder) (*updateWorkflowAction, error) {
+		executionInfo := msBuilder.GetExecutionInfo()
+		createDecisionTask := true
+		// Do not create decision task when the workflow is cron and the cron has not been started yet
+		if msBuilder.GetExecutionInfo().CronSchedule != "" && !msBuilder.HasProcessedOrPendingDecisionTask() {
+			createDecisionTask = false
+		}
+		postActions := &updateWorkflowAction{
+			deleteWorkflow: false,
+			createDecision: createDecisionTask,
+			timerTasks:     nil,
+		}
 
-			executionInfo := msBuilder.GetExecutionInfo()
-			maxAllowedSignals := e.config.MaximumSignalsPerExecution(domainEntry.GetInfo().Name)
-			if maxAllowedSignals > 0 && int(executionInfo.SignalCount) >= maxAllowedSignals {
-				e.logger.Info("Execution limit reached for maximum signals", tag.WorkflowSignalCount(executionInfo.SignalCount),
-					tag.WorkflowID(execution.GetWorkflowId()),
-					tag.WorkflowRunID(execution.GetRunId()),
-					tag.WorkflowDomainID(domainID))
-				return nil, ErrSignalsLimitExceeded
-			}
+		if !msBuilder.IsWorkflowExecutionRunning() {
+			return nil, ErrWorkflowCompleted
+		}
 
-			if childWorkflowOnly {
-				parentWorkflowID := executionInfo.ParentWorkflowID
-				parentRunID := executionInfo.ParentRunID
-				if parentExecution.GetWorkflowId() != parentWorkflowID ||
-					parentExecution.GetRunId() != parentRunID {
-					return nil, ErrWorkflowParent
-				}
-			}
+		maxAllowedSignals := e.config.MaximumSignalsPerExecution(domainEntry.GetInfo().Name)
+		if maxAllowedSignals > 0 && int(executionInfo.SignalCount) >= maxAllowedSignals {
+			e.logger.Info("Execution limit reached for maximum signals", tag.WorkflowSignalCount(executionInfo.SignalCount),
+				tag.WorkflowID(execution.GetWorkflowId()),
+				tag.WorkflowRunID(execution.GetRunId()),
+				tag.WorkflowDomainID(domainID))
+			return nil, ErrSignalsLimitExceeded
+		}
 
-			// deduplicate by request id for signal decision
-			if requestID := request.GetRequestId(); requestID != "" {
-				if msBuilder.IsSignalRequested(requestID) {
-					return nil, nil
-				}
-				msBuilder.AddSignalRequested(requestID)
+		if childWorkflowOnly {
+			parentWorkflowID := executionInfo.ParentWorkflowID
+			parentRunID := executionInfo.ParentRunID
+			if parentExecution.GetWorkflowId() != parentWorkflowID ||
+				parentExecution.GetRunId() != parentRunID {
+				return nil, ErrWorkflowParent
 			}
+		}
 
-			if msBuilder.AddWorkflowExecutionSignaled(request.GetSignalName(), request.GetInput(), request.GetIdentity()) == nil {
-				return nil, &workflow.InternalServiceError{Message: "Unable to signal workflow execution."}
+		// deduplicate by request id for signal decision
+		if requestID := request.GetRequestId(); requestID != "" {
+			if msBuilder.IsSignalRequested(requestID) {
+				return postActions, nil
 			}
+			msBuilder.AddSignalRequested(requestID)
+		}
 
-			return nil, nil
-		})
+		if msBuilder.AddWorkflowExecutionSignaled(request.GetSignalName(), request.GetInput(), request.GetIdentity()) == nil {
+			return nil, &workflow.InternalServiceError{Message: "Unable to signal workflow execution."}
+		}
+
+		return postActions, nil
+	})
 }
 
-func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context, signalWithStartRequest *h.SignalWithStartWorkflowExecutionRequest) (
+func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx ctx.Context, signalWithStartRequest *h.SignalWithStartWorkflowExecutionRequest) (
 	retResp *workflow.StartWorkflowExecutionResponse, retError error) {
 
 	domainEntry, retError := e.getActiveDomainEntry(signalWithStartRequest.DomainUUID)
@@ -2436,30 +2322,30 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 		return nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution signaled event."}
 	}
 	// first decision task
-	firstDecisionTask := msBuilder.AddDecisionTaskScheduledEvent()
-	if firstDecisionTask == nil {
-		return nil, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
+	var transferTasks []persistence.Task
+	transferTasks, _, retError = e.generateFirstDecisionTask(domainID, msBuilder, startRequest.ParentExecutionInfo, taskList, 0)
+	if retError != nil {
+		return
 	}
-	transferTasks := []persistence.Task{
-		&persistence.DecisionTask{
-			DomainID: domainID, TaskList: taskList, ScheduleID: firstDecisionTask.ScheduleID,
-		},
-		&persistence.RecordWorkflowStartedTask{},
-	}
+
 	// first timer task
 	duration := time.Duration(*request.ExecutionStartToCloseTimeoutSeconds) * time.Second
 	timerTasks := []persistence.Task{&persistence.WorkflowTimeoutTask{
 		VisibilityTimestamp: e.shard.GetTimeSource().Now().Add(duration),
 	}}
-	// first replication task
-	replicationTasks := generateFirstReplicationTask(msBuilder, clusterMetadata, domainEntry)
-	// set versions and timestamp for timer and transfer tasks
-	setTaskInfo(msBuilder.GetCurrentVersion(), time.Now(), transferTasks, timerTasks)
 
-	historySize, retError := e.appendFirstBatchHistoryEvents(msBuilder, domainID, execution)
+	context = newWorkflowExecutionContext(domainID, execution, e.shard, e.executionManager, e.logger)
+	createReplicationTask := domainEntry.CanReplicateEvent()
+	replicationTasks := []persistence.Task{}
+	var replicationTask persistence.Task
+	_, replicationTask, retError = context.appendFirstBatchEventsForActive(msBuilder, createReplicationTask)
 	if retError != nil {
 		return
 	}
+	if replicationTask != nil {
+		replicationTasks = append(replicationTasks, replicationTask)
+	}
+
 	// delete history if createWorkflow failed, otherwise history will leak
 	shouldDeleteHistory := true
 	defer func() {
@@ -2468,18 +2354,19 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 		}
 	}()
 
-	msBuilder.IncrementHistorySize(historySize)
-	fulfillExecutionInfo(msBuilder, domainID, taskList, execution, startedEvent.GetEventId())
-
+	createMode := persistence.CreateWorkflowModeBrandNew
+	prevRunID := ""
+	prevLastWriteVersion := int64(0)
 	if prevMutableState != nil {
-		createMode := persistence.CreateWorkflowModeWorkflowIDReuse
-		prevRunID := prevMutableState.GetExecutionInfo().RunID
-		lastWriteVersion := prevMutableState.GetLastWriteVersion()
-		retError = e.createWorkflow(startRequest, msBuilder, createMode, prevRunID, lastWriteVersion, firstDecisionTask, transferTasks, timerTasks, replicationTasks, clusterMetadata)
-	} else {
-		createMode := persistence.CreateWorkflowModeBrandNew
-		retError = e.createWorkflow(startRequest, msBuilder, createMode, "", 0, firstDecisionTask, transferTasks, timerTasks, replicationTasks, clusterMetadata)
+		createMode = persistence.CreateWorkflowModeWorkflowIDReuse
+		prevRunID = prevMutableState.GetExecutionInfo().RunID
+		prevLastWriteVersion = prevMutableState.GetLastWriteVersion()
 	}
+	retError = context.createWorkflowExecution(
+		msBuilder, e.currentClusterName, createReplicationTask, time.Now(),
+		transferTasks, replicationTasks, timerTasks,
+		createMode, prevRunID, prevLastWriteVersion,
+	)
 
 	t, ok := retError.(*persistence.WorkflowExecutionAlreadyStartedError)
 	if ok {
@@ -2491,18 +2378,19 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 		}
 	}
 
-	if retError == nil {
+	// Timeout error is not a failure
+	if retError == nil || persistence.IsTimeoutError(retError) {
 		shouldDeleteHistory = false
 		e.timerProcessor.NotifyNewTimers(e.currentClusterName, e.shard.GetCurrentTime(e.currentClusterName), timerTasks)
 		return &workflow.StartWorkflowExecutionResponse{
 			RunId: execution.RunId,
-		}, nil
+		}, retError
 	}
 	return
 }
 
 // RemoveSignalMutableState remove the signal request id in signal_requested for deduplicate
-func (e *historyEngineImpl) RemoveSignalMutableState(ctx context.Context, request *h.RemoveSignalMutableStateRequest) error {
+func (e *historyEngineImpl) RemoveSignalMutableState(ctx ctx.Context, request *h.RemoveSignalMutableStateRequest) error {
 
 	domainEntry, err := e.getActiveDomainEntry(request.DomainUUID)
 	if err != nil {
@@ -2527,7 +2415,7 @@ func (e *historyEngineImpl) RemoveSignalMutableState(ctx context.Context, reques
 		})
 }
 
-func (e *historyEngineImpl) TerminateWorkflowExecution(ctx context.Context, terminateRequest *h.TerminateWorkflowExecutionRequest) error {
+func (e *historyEngineImpl) TerminateWorkflowExecution(ctx ctx.Context, terminateRequest *h.TerminateWorkflowExecutionRequest) error {
 
 	domainEntry, err := e.getActiveDomainEntry(terminateRequest.DomainUUID)
 	if err != nil {
@@ -2547,11 +2435,6 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(ctx context.Context, term
 				return nil, ErrWorkflowCompleted
 			}
 
-			err := failInFlightDecisionToClearBufferedEvents(msBuilder)
-			if err != nil {
-				return nil, err
-			}
-
 			if msBuilder.AddWorkflowExecutionTerminatedEvent(request) == nil {
 				return nil, &workflow.InternalServiceError{Message: "Unable to terminate workflow execution."}
 			}
@@ -2561,7 +2444,7 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(ctx context.Context, term
 }
 
 // ScheduleDecisionTask schedules a decision if no outstanding decision found
-func (e *historyEngineImpl) ScheduleDecisionTask(ctx context.Context, scheduleRequest *h.ScheduleDecisionTaskRequest) error {
+func (e *historyEngineImpl) ScheduleDecisionTask(ctx ctx.Context, scheduleRequest *h.ScheduleDecisionTaskRequest) error {
 
 	domainEntry, err := e.getActiveDomainEntry(scheduleRequest.DomainUUID)
 	if err != nil {
@@ -2600,7 +2483,7 @@ func (e *historyEngineImpl) ScheduleDecisionTask(ctx context.Context, scheduleRe
 }
 
 // RecordChildExecutionCompleted records the completion of child execution into parent execution history
-func (e *historyEngineImpl) RecordChildExecutionCompleted(ctx context.Context, completionRequest *h.RecordChildExecutionCompletedRequest) error {
+func (e *historyEngineImpl) RecordChildExecutionCompleted(ctx ctx.Context, completionRequest *h.RecordChildExecutionCompletedRequest) error {
 
 	domainEntry, err := e.getActiveDomainEntry(completionRequest.DomainUUID)
 	if err != nil {
@@ -2651,15 +2534,15 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(ctx context.Context, c
 		})
 }
 
-func (e *historyEngineImpl) ReplicateEvents(ctx context.Context, replicateRequest *h.ReplicateEventsRequest) error {
+func (e *historyEngineImpl) ReplicateEvents(ctx ctx.Context, replicateRequest *h.ReplicateEventsRequest) error {
 	return e.replicator.ApplyEvents(ctx, replicateRequest)
 }
 
-func (e *historyEngineImpl) ReplicateRawEvents(ctx context.Context, replicateRequest *h.ReplicateRawEventsRequest) error {
+func (e *historyEngineImpl) ReplicateRawEvents(ctx ctx.Context, replicateRequest *h.ReplicateRawEventsRequest) error {
 	return e.replicator.ApplyRawEvents(ctx, replicateRequest)
 }
 
-func (e *historyEngineImpl) SyncShardStatus(ctx context.Context, request *h.SyncShardStatusRequest) error {
+func (e *historyEngineImpl) SyncShardStatus(ctx ctx.Context, request *h.SyncShardStatusRequest) error {
 	clusterName := request.GetSourceCluster()
 	now := time.Unix(0, request.GetTimestamp())
 
@@ -2673,11 +2556,11 @@ func (e *historyEngineImpl) SyncShardStatus(ctx context.Context, request *h.Sync
 	return nil
 }
 
-func (e *historyEngineImpl) SyncActivity(ctx context.Context, request *h.SyncActivityRequest) (retError error) {
+func (e *historyEngineImpl) SyncActivity(ctx ctx.Context, request *h.SyncActivityRequest) (retError error) {
 	return e.replicator.SyncActivity(ctx, request)
 }
 
-func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context,
+func (e *historyEngineImpl) ResetWorkflowExecution(ctx ctx.Context,
 	resetRequest *h.ResetWorkflowExecutionRequest) (response *workflow.ResetWorkflowExecutionResponse, retError error) {
 
 	domainEntry, retError := e.getActiveDomainEntry(resetRequest.DomainUUID)
@@ -2780,7 +2663,7 @@ type updateWorkflowAction struct {
 	transferTasks  []persistence.Task
 }
 
-func (e *historyEngineImpl) updateWorkflowExecutionWithAction(ctx context.Context, domainID string, execution workflow.WorkflowExecution,
+func (e *historyEngineImpl) updateWorkflowExecutionWithAction(ctx ctx.Context, domainID string, execution workflow.WorkflowExecution,
 	action func(builder mutableState, tBuilder *timerBuilder) (*updateWorkflowAction, error)) (retError error) {
 	context, release, err0 := e.historyCache.getOrCreateWorkflowExecutionWithTimeout(ctx, domainID, execution)
 	if err0 != nil {
@@ -2864,7 +2747,7 @@ Update_History_Loop:
 	return ErrMaxAttemptsExceeded
 }
 
-func (e *historyEngineImpl) updateWorkflowExecution(ctx context.Context, domainID string, execution workflow.WorkflowExecution,
+func (e *historyEngineImpl) updateWorkflowExecution(ctx ctx.Context, domainID string, execution workflow.WorkflowExecution,
 	createDeletionTask, createDecisionTask bool,
 	action func(builder mutableState, tBuilder *timerBuilder) ([]persistence.Task, error)) error {
 	return e.updateWorkflowExecutionWithAction(ctx, domainID, execution,
@@ -2939,6 +2822,8 @@ func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(domainID str
 		Name: &executionInfo.TaskList,
 		Kind: common.TaskListKindPtr(workflow.TaskListKindNormal),
 	})
+	response.ScheduledTimestamp = common.Int64Ptr(di.ScheduledTimestamp)
+	response.StartedTimestamp = common.Int64Ptr(di.StartedTimestamp)
 
 	if di.Attempt > 0 {
 		// This decision is retried from mutable state
@@ -3428,6 +3313,8 @@ func getStartRequest(domainID string,
 		RetryPolicy:                         request.RetryPolicy,
 		CronSchedule:                        request.CronSchedule,
 		Memo:                                request.Memo,
+		SearchAttributes:                    request.SearchAttributes,
+		Header:                              request.Header,
 	}
 
 	startRequest := common.CreateHistoryStartWorkflowRequest(domainID, req)

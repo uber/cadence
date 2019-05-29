@@ -44,6 +44,10 @@ func (s *integrationSuite) TestContinueAsNewWorkflow() {
 	taskList := &workflow.TaskList{}
 	taskList.Name = common.StringPtr(tl)
 
+	header := &workflow.Header{
+		Fields: map[string][]byte{"tracing": []byte("sample payload")},
+	}
+
 	request := &workflow.StartWorkflowExecutionRequest{
 		RequestId:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
@@ -51,6 +55,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
+		Header:                              header,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 		Identity:                            common.StringPtr(identity),
@@ -80,6 +85,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow() {
 					WorkflowType:                        workflowType,
 					TaskList:                            &workflow.TaskList{Name: &tl},
 					Input:                               buf.Bytes(),
+					Header:                              header,
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 				},
@@ -117,6 +123,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow() {
 	s.Nil(err)
 	s.True(workflowComplete)
 	s.Equal(previousRunID, lastRunStartedEvent.WorkflowExecutionStartedEventAttributes.GetContinuedExecutionRunId())
+	s.Equal(header, lastRunStartedEvent.WorkflowExecutionStartedEventAttributes.Header)
 }
 
 func (s *integrationSuite) TestContinueAsNewWorkflow_Timeout() {
@@ -208,7 +215,6 @@ GetHistoryLoop:
 		})
 		s.Nil(err)
 		history := historyResponse.History
-		common.PrettyPrintHistory(history, s.Logger)
 
 		lastEvent := history.Events[len(history.Events)-1]
 		if *lastEvent.EventType != workflow.EventTypeWorkflowExecutionTimedOut {
@@ -472,12 +478,4 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 	s.Equal([]byte("Child Done."), completedAttributes.Result)
 
 	s.Logger.Info("Parent Workflow Execution History: ")
-	s.printWorkflowHistory(s.domainName, &workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(parentID),
-		RunId:      common.StringPtr(*we.RunId),
-	})
-
-	s.Logger.Info("Child Workflow Execution History: ")
-	s.printWorkflowHistory(s.domainName,
-		startedEvent.ChildWorkflowExecutionStartedEventAttributes.WorkflowExecution)
 }

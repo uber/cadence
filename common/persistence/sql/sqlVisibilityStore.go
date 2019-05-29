@@ -244,6 +244,18 @@ func (s *sqlVisibilityStore) DeleteWorkflowExecution(request *p.VisibilityDelete
 	return nil
 }
 
+func (s *sqlVisibilityStore) ListWorkflowExecutions(request *p.ListWorkflowExecutionsRequestV2) (*p.InternalListWorkflowExecutionsResponse, error) {
+	return nil, p.NewOperationNotSupportErrorForVis()
+}
+
+func (s *sqlVisibilityStore) ScanWorkflowExecutions(request *p.ListWorkflowExecutionsRequestV2) (*p.InternalListWorkflowExecutionsResponse, error) {
+	return nil, p.NewOperationNotSupportErrorForVis()
+}
+
+func (s *sqlVisibilityStore) CountWorkflowExecutions(request *p.CountWorkflowExecutionsRequest) (*p.CountWorkflowExecutionsResponse, error) {
+	return nil, p.NewOperationNotSupportErrorForVis()
+}
+
 func (s *sqlVisibilityStore) rowToInfo(row *sqldb.VisibilityRow) *p.VisibilityWorkflowExecutionInfo {
 	if row.ExecutionTime.UnixNano() == 0 {
 		row.ExecutionTime = row.StartTime

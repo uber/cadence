@@ -133,42 +133,18 @@ func (s *cliAppSuite) TestDomainRegister_LocalDomain() {
 func (s *cliAppSuite) TestDomainRegister_GlobalDomain() {
 	s.clientFrontendClient.EXPECT().RegisterDomain(gomock.Any(), gomock.Any(), callOptions...).Return(nil)
 	err := s.app.Run([]string{"", "--do", domainName, "domain", "register", "--global_domain", "true"})
-	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestDomainRegister_DomainExist() {
-	s.clientFrontendClient.EXPECT().RegisterDomain(gomock.Any(), gomock.Any(), callOptions...).Return(&shared.DomainAlreadyExistsError{})
+	s.serverFrontendClient.EXPECT().RegisterDomain(gomock.Any(), gomock.Any()).Return(&shared.DomainAlreadyExistsError{})
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "register"})
 	s.Equal(1, errorCode)
 }
 
 func (s *cliAppSuite) TestDomainRegister_Failed() {
-	s.clientFrontendClient.EXPECT().RegisterDomain(gomock.Any(), gomock.Any(), callOptions...).Return(&shared.BadRequestError{"fake error"})
+	s.serverFrontendClient.EXPECT().RegisterDomain(gomock.Any(), gomock.Any()).Return(&shared.BadRequestError{"fake error"})
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "register"})
 	s.Equal(1, errorCode)
-}
-
-var describeDomainResponse = &shared.DescribeDomainResponse{
-	DomainInfo: &shared.DomainInfo{
-		Name:        common.StringPtr("test-domain"),
-		Description: common.StringPtr("a test domain"),
-		OwnerEmail:  common.StringPtr("test@uber.com"),
-	},
-	Configuration: &shared.DomainConfiguration{
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(3),
-		EmitMetric:                             common.BoolPtr(true),
-	},
-	ReplicationConfiguration: &shared.DomainReplicationConfiguration{
-		ActiveClusterName: common.StringPtr("active"),
-		Clusters: []*shared.ClusterReplicationConfiguration{
-			{
-				ClusterName: common.StringPtr("active"),
-			},
-			{
-				ClusterName: common.StringPtr("standby"),
-			},
-		},
-	},
 }
 
 var describeDomainResponseServer = &serverShared.DescribeDomainResponse{
@@ -195,9 +171,9 @@ var describeDomainResponseServer = &serverShared.DescribeDomainResponse{
 }
 
 func (s *cliAppSuite) TestDomainUpdate() {
-	resp := describeDomainResponse
-	s.clientFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil).Times(2)
-	s.clientFrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any(), callOptions...).Return(nil, nil).Times(2)
+	resp := describeDomainResponseServer
+	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(resp, nil).Times(2)
+	s.serverFrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Return(nil, nil).Times(2)
 	err := s.app.Run([]string{"", "--do", domainName, "domain", "update"})
 	s.Nil(err)
 	err = s.app.Run([]string{"", "--do", domainName, "domain", "update", "--desc", "another desc", "--oe", "another@uber.com", "--rd", "1", "--em", "f"})
@@ -205,23 +181,23 @@ func (s *cliAppSuite) TestDomainUpdate() {
 }
 
 func (s *cliAppSuite) TestDomainUpdate_DomainNotExist() {
-	resp := describeDomainResponse
-	s.clientFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
-	s.clientFrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any(), callOptions...).Return(nil, &shared.EntityNotExistsError{})
+	resp := describeDomainResponseServer
+	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(resp, nil)
+	s.serverFrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Return(nil, &shared.EntityNotExistsError{})
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "update"})
 	s.Equal(1, errorCode)
 }
 
 func (s *cliAppSuite) TestDomainUpdate_ActiveClusterFlagNotSet_DomainNotExist() {
-	s.clientFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any(), callOptions...).Return(nil, &shared.EntityNotExistsError{})
+	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(nil, &shared.EntityNotExistsError{})
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "update"})
 	s.Equal(1, errorCode)
 }
 
 func (s *cliAppSuite) TestDomainUpdate_Failed() {
-	resp := describeDomainResponse
-	s.clientFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
-	s.clientFrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any(), callOptions...).Return(nil, &shared.BadRequestError{"faked error"})
+	resp := describeDomainResponseServer
+	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(resp, nil)
+	s.serverFrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Return(nil, &shared.BadRequestError{"faked error"})
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "update"})
 	s.Equal(1, errorCode)
 }
@@ -591,6 +567,23 @@ func (s *cliAppSuite) TestAnyToString() {
 	s.Equal(147, l)
 }
 
+func (s *cliAppSuite) TestAnyToString_DecodeMapValues() {
+	fields := map[string][]byte{
+		"TestKey": []byte("testValue"),
+	}
+	execution := &shared.WorkflowExecutionInfo{
+		Memo: &shared.Memo{Fields: fields},
+	}
+	s.Equal("{Memo:{Fields:map{TestKey:testValue}}}", anyToString(execution, true, 0))
+
+	fields["TestKey2"] = []byte(`anotherTestValue`)
+	execution.Memo = &shared.Memo{Fields: fields}
+	got := anyToString(execution, true, 0)
+	expected := got == "{Memo:{Fields:map{TestKey2:anotherTestValue, TestKey:testValue}}}" ||
+		got == "{Memo:{Fields:map{TestKey:testValue, TestKey2:anotherTestValue}}}"
+	s.True(expected)
+}
+
 func (s *cliAppSuite) TestIsAttributeName() {
 	s.True(isAttributeName("WorkflowExecutionStartedEventAttributes"))
 	s.False(isAttributeName("workflowExecutionStartedEventAttributes"))
@@ -621,4 +614,53 @@ func (s *cliAppSuite) TestGetWorkflowIdReusePolicy_Failed_Negative() {
 	}
 	getWorkflowIDReusePolicy(-1)
 	s.Equal(1, errorCode)
+}
+
+func (s *cliAppSuite) TestGetSearchAttributes() {
+	resp := &shared.GetSearchAttributesResponse{}
+	s.clientFrontendClient.EXPECT().GetSearchAttributes(gomock.Any(), callOptions...).Return(resp, nil).Times(1)
+	err := s.app.Run([]string{"", "--do", domainName, "workflow", "get-search-attr"})
+	s.Nil(err)
+}
+
+func (s *cliAppSuite) TestParseBool() {
+	res, err := parseBool("true")
+	s.NoError(err)
+	s.True(res)
+
+	res, err = parseBool("false")
+	s.NoError(err)
+	s.False(res)
+
+	for _, v := range []string{"True, TRUE, False, FALSE, T, F"} {
+		res, err = parseBool(v)
+		s.Error(err)
+		s.False(res)
+	}
+}
+
+func (s *cliAppSuite) TestConvertStringToRealType() {
+	var res interface{}
+
+	// int
+	res = convertStringToRealType("1")
+	s.Equal(int64(1), res)
+
+	// bool
+	res = convertStringToRealType("true")
+	s.Equal(true, res)
+	res = convertStringToRealType("false")
+	s.Equal(false, res)
+
+	// double
+	res = convertStringToRealType("1.0")
+	s.Equal(float64(1.0), res)
+
+	// datetime
+	res = convertStringToRealType("2019-01-01T01:01:01Z")
+	s.Equal(time.Date(2019, 1, 1, 1, 1, 1, 0, time.UTC), res)
+
+	// string
+	res = convertStringToRealType("test string")
+	s.Equal("test string", res)
 }

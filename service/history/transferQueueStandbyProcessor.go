@@ -166,7 +166,9 @@ func (t *transferQueueStandbyProcessorImpl) process(qTask queueTaskInfo, shouldP
 			err = t.processRecordWorkflowStarted(task)
 		}
 		return metrics.TransferStandbyTaskRecordWorkflowStartedScope, err
-
+	case persistence.TransferTaskTypeResetWorkflow:
+		// no reset needed for standby
+		return metrics.TransferStandbyTaskResetWorkflowScope, err
 	default:
 		return metrics.TransferStandbyQueueProcessorScope, errUnknownTransferTask
 	}
@@ -274,14 +276,10 @@ func (t *transferQueueStandbyProcessorImpl) processCloseExecution(transferTask *
 		}
 
 		completionEvent, ok := msBuilder.GetCompletionEvent()
-		var wfCloseTime int64
 		if !ok {
-			// This is need for backwards compatibility
-			// TODO: remove usage of getLastUpdatedTimestamp after release 0.5.4, only use completionEvent timestamp
-			wfCloseTime = getLastUpdatedTimestamp(msBuilder)
-		} else {
-			wfCloseTime = completionEvent.GetTimestamp()
+			return &workflow.InternalServiceError{Message: "Unable to get workflow completion event."}
 		}
+		wfCloseTime := completionEvent.GetTimestamp()
 
 		executionInfo := msBuilder.GetExecutionInfo()
 		workflowTypeName := executionInfo.WorkflowTypeName
@@ -292,6 +290,7 @@ func (t *transferQueueStandbyProcessorImpl) processCloseExecution(transferTask *
 		startEvent, _ := msBuilder.GetStartEvent()
 		workflowExecutionTimestamp := getWorkflowExecutionTimestamp(msBuilder, startEvent)
 		visibilityMemo := getVisibilityMemo(startEvent)
+		searchAttr := executionInfo.SearchAttributes
 
 		ok, err := verifyTaskVersion(t.shard, t.logger, transferTask.DomainID, msBuilder.GetLastWriteVersion(), transferTask.Version, transferTask)
 		if err != nil {
@@ -305,7 +304,7 @@ func (t *transferQueueStandbyProcessorImpl) processCloseExecution(transferTask *
 
 		return t.recordWorkflowClosed(
 			transferTask.DomainID, execution, workflowTypeName, workflowStartTimestamp, workflowExecutionTimestamp.UnixNano(),
-			workflowCloseTimestamp, workflowCloseStatus, workflowHistoryLength, transferTask.GetTaskID(), visibilityMemo,
+			workflowCloseTimestamp, workflowCloseStatus, workflowHistoryLength, transferTask.GetTaskID(), visibilityMemo, searchAttr,
 		)
 	}, standbyTaskPostActionNoOp) // no op post action, since the entire workflow is finished
 }
@@ -445,9 +444,10 @@ func (t *transferQueueStandbyProcessorImpl) processRecordWorkflowStarted(transfe
 		startEvent, _ := msBuilder.GetStartEvent()
 		executionTimestamp := getWorkflowExecutionTimestamp(msBuilder, startEvent)
 		visibilityMemo := getVisibilityMemo(startEvent)
+		searchAttr := executionInfo.SearchAttributes
 
 		return t.recordWorkflowStarted(transferTask.DomainID, execution, wfTypeName, startTimestamp, executionTimestamp.UnixNano(),
-			workflowTimeout, transferTask.GetTaskID(), visibilityMemo)
+			workflowTimeout, transferTask.GetTaskID(), visibilityMemo, searchAttr)
 	}, standbyTaskPostActionNoOp)
 }
 

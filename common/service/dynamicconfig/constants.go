@@ -41,6 +41,8 @@ var keys = map[Key]string{
 	testGetFloat64PropertyKey:                        "testGetFloat64PropertyKey",
 	testGetDurationPropertyKey:                       "testGetDurationPropertyKey",
 	testGetBoolPropertyKey:                           "testGetBoolPropertyKey",
+	testGetStringPropertyKey:                         "testGetStringPropertyKey",
+	testGetMapPropertyKey:                            "testGetMapPropertyKey",
 	testGetIntPropertyFilteredByDomainKey:            "testGetIntPropertyFilteredByDomainKey",
 	testGetDurationPropertyFilteredByDomainKey:       "testGetDurationPropertyFilteredByDomainKey",
 	testGetIntPropertyFilteredByTaskListInfoKey:      "testGetIntPropertyFilteredByTaskListInfoKey",
@@ -68,18 +70,23 @@ var keys = map[Key]string{
 	MaxIDLengthLimit:       "limit.maxIDLength",
 
 	// frontend settings
-	FrontendPersistenceMaxQPS:      "frontend.persistenceMaxQPS",
-	FrontendVisibilityMaxPageSize:  "frontend.visibilityMaxPageSize",
-	FrontendVisibilityListMaxQPS:   "frontend.visibilityListMaxQPS",
-	FrontendESVisibilityListMaxQPS: "frontend.esVisibilityListMaxQPS",
-	FrontendESIndexMaxResultWindow: "frontend.esIndexMaxResultWindow",
-	FrontendHistoryMaxPageSize:     "frontend.historyMaxPageSize",
-	FrontendRPS:                    "frontend.rps",
-	FrontendHistoryMgrNumConns:     "frontend.historyMgrNumConns",
-	MaxDecisionStartToCloseTimeout: "frontend.maxDecisionStartToCloseTimeout",
-	DisableListVisibilityByFilter:  "frontend.disableListVisibilityByFilter",
-	FrontendThrottledLogRPS:        "frontend.throttledLogRPS",
-	EnableClientVersionCheck:       "frontend.enableClientVersionCheck",
+	FrontendPersistenceMaxQPS:         "frontend.persistenceMaxQPS",
+	FrontendVisibilityMaxPageSize:     "frontend.visibilityMaxPageSize",
+	FrontendVisibilityListMaxQPS:      "frontend.visibilityListMaxQPS",
+	FrontendESVisibilityListMaxQPS:    "frontend.esVisibilityListMaxQPS",
+	FrontendMaxBadBinaries:            "frontend.maxBadBinaries",
+	FrontendESIndexMaxResultWindow:    "frontend.esIndexMaxResultWindow",
+	FrontendHistoryMaxPageSize:        "frontend.historyMaxPageSize",
+	FrontendRPS:                       "frontend.rps",
+	FrontendHistoryMgrNumConns:        "frontend.historyMgrNumConns",
+	MaxDecisionStartToCloseTimeout:    "frontend.maxDecisionStartToCloseTimeout",
+	DisableListVisibilityByFilter:     "frontend.disableListVisibilityByFilter",
+	FrontendThrottledLogRPS:           "frontend.throttledLogRPS",
+	EnableClientVersionCheck:          "frontend.enableClientVersionCheck",
+	ValidSearchAttributes:             "frontend.validSearchAttributes",
+	SearchAttributesNumberOfKeysLimit: "frontend.searchAttributesNumberOfKeysLimit",
+	SearchAttributesSizeOfValueLimit:  "frontend.searchAttributesSizeOfValueLimit",
+	SearchAttributesTotalSizeLimit:    "frontend.searchAttributesTotalSizeLimit",
 
 	// matching settings
 	MatchingRPS:                             "matching.rps",
@@ -103,6 +110,7 @@ var keys = map[Key]string{
 	HistoryVisibilityClosedMaxQPS:                         "history.historyVisibilityClosedMaxQPS",
 	HistoryLongPollExpirationInterval:                     "history.longPollExpirationInterval",
 	HistoryCacheInitialSize:                               "history.cacheInitialSize",
+	HistoryMaxAutoResetPoints:                             "history.historyMaxAutoResetPoints",
 	HistoryCacheMaxSize:                                   "history.cacheMaxSize",
 	HistoryCacheTTL:                                       "history.cacheTTL",
 	EventsCacheInitialSize:                                "history.eventsCacheInitialSize",
@@ -161,6 +169,7 @@ var keys = map[Key]string{
 	AdminOperationToken:                                   "history.adminOperationToken",
 	EnableEventsV2:                                        "history.enableEventsV2",
 	NumArchiveSystemWorkflows:                             "history.numArchiveSystemWorkflows",
+	ArchiveRequestRPS:                                     "history.archiveRequestRPS",
 	EmitShardDiffLog:                                      "history.emitShardDiffLog",
 	HistoryThrottledLogRPS:                                "history.throttledLogRPS",
 
@@ -168,8 +177,10 @@ var keys = map[Key]string{
 	WorkerReplicatorMetaTaskConcurrency:             "worker.replicatorMetaTaskConcurrency",
 	WorkerReplicatorTaskConcurrency:                 "worker.replicatorTaskConcurrency",
 	WorkerReplicatorMessageConcurrency:              "worker.replicatorMessageConcurrency",
+	WorkerReplicatorActivityBufferRetryCount:        "worker.replicatorActivityBufferRetryCount",
 	WorkerReplicatorHistoryBufferRetryCount:         "worker.replicatorHistoryBufferRetryCount",
-	WorkerReplicationTaskMaxRetry:                   "worker.replicationTaskMaxRetry",
+	WorkerReplicationTaskMaxRetryCount:              "worker.replicationTaskMaxRetryCount",
+	WorkerReplicationTaskMaxRetryDuration:           "worker.replicationTaskMaxRetryDuration",
 	WorkerIndexerConcurrency:                        "worker.indexerConcurrency",
 	WorkerESProcessorNumOfWorkers:                   "worker.ESProcessorNumOfWorkers",
 	WorkerESProcessorBulkActions:                    "worker.ESProcessorBulkActions",
@@ -181,6 +192,7 @@ var keys = map[Key]string{
 	WorkerArchiverConcurrency:                       "worker.ArchiverConcurrency",
 	WorkerArchivalsPerIteration:                     "worker.ArchivalsPerIteration",
 	WorkerDeterministicConstructionCheckProbability: "worker.DeterministicConstructionCheckProbability",
+	WorkerTimeLimitPerArchivalIteration:             "worker.TimeLimitPerArchivalIteration",
 	WorkerThrottledLogRPS:                           "worker.throttledLogRPS",
 	ScannerPersistenceMaxQPS:                        "worker.scannerPersistenceMaxQPS",
 }
@@ -194,6 +206,8 @@ const (
 	testGetFloat64PropertyKey
 	testGetDurationPropertyKey
 	testGetBoolPropertyKey
+	testGetStringPropertyKey
+	testGetMapPropertyKey
 	testGetIntPropertyFilteredByDomainKey
 	testGetDurationPropertyFilteredByDomainKey
 	testGetIntPropertyFilteredByTaskListInfoKey
@@ -265,6 +279,16 @@ const (
 	MaxDecisionStartToCloseTimeout
 	// EnableClientVersionCheck enables client version check for frontend
 	EnableClientVersionCheck
+	// FrontendMaxBadBinaries is the max number of bad binaries in domain config
+	FrontendMaxBadBinaries
+	// ValidSearchAttributes is legal indexed keys that can be used in list APIs
+	ValidSearchAttributes
+	// SearchAttributesNumberOfKeysLimit is the limit of number of keys
+	SearchAttributesNumberOfKeysLimit
+	// SearchAttributesSizeOfValueLimit is the size limit of each value
+	SearchAttributesSizeOfValueLimit
+	// SearchAttributesTotalSizeLimit is the size limit of the whole map
+	SearchAttributesTotalSizeLimit
 
 	// key for matching
 
@@ -419,11 +443,15 @@ const (
 	DefaultEventEncoding
 	// NumArchiveSystemWorkflows is key for number of archive system workflows running in total
 	NumArchiveSystemWorkflows
+	// ArchiveRequestRPS is the rate limit on the number of archive request per second
+	ArchiveRequestRPS
 
 	// EnableAdminProtection is whether to enable admin checking
 	EnableAdminProtection
 	// AdminOperationToken is the token to pass admin checking
 	AdminOperationToken
+	// HistoryMaxAutoResetPoints is the key for max number of auto reset points stored in mutableState
+	HistoryMaxAutoResetPoints
 
 	// EnableEventsV2 is whether to use eventsV2
 	EnableEventsV2
@@ -440,10 +468,14 @@ const (
 	WorkerReplicatorTaskConcurrency
 	// WorkerReplicatorMessageConcurrency is the max concurrent tasks provided by messaging client
 	WorkerReplicatorMessageConcurrency
+	// WorkerReplicatorActivityBufferRetryCount is the retry attempt when encounter retry error on activity
+	WorkerReplicatorActivityBufferRetryCount
 	// WorkerReplicatorHistoryBufferRetryCount is the retry attempt when encounter retry error on history
 	WorkerReplicatorHistoryBufferRetryCount
-	// WorkerReplicationTaskMaxRetry is the max retry for any task
-	WorkerReplicationTaskMaxRetry
+	// WorkerReplicationTaskMaxRetryCount is the max retry count for any task
+	WorkerReplicationTaskMaxRetryCount
+	// WorkerReplicationTaskMaxRetryDuration is the max retry duration for any task
+	WorkerReplicationTaskMaxRetryDuration
 	// WorkerIndexerConcurrency is the max concurrent messages to be processed at any given time
 	WorkerIndexerConcurrency
 	// WorkerESProcessorNumOfWorkers is num of workers for esProcessor
@@ -466,6 +498,8 @@ const (
 	WorkerArchivalsPerIteration
 	// WorkerDeterministicConstructionCheckProbability controls the probability of running a deterministic construction check for any given archival
 	WorkerDeterministicConstructionCheckProbability
+	// WorkerTimeLimitPerArchivalIteration controls the time limit of each iteration of archival workflow
+	WorkerTimeLimitPerArchivalIteration
 	// WorkerThrottledLogRPS is the rate limit on number of log messages emitted per second for throttled logger
 	WorkerThrottledLogRPS
 	// ScannerPersistenceMaxQPS is the maximum rate of persistence calls from worker.Scanner
@@ -479,7 +513,7 @@ const (
 type Filter int
 
 func (f Filter) String() string {
-	if f <= unknownFilter || f > TaskListName {
+	if f <= unknownFilter || f > TaskType {
 		return filters[unknownFilter]
 	}
 	return filters[f]

@@ -68,6 +68,10 @@ const (
 	FlagInputWithAlias              = FlagInput + ", i"
 	FlagInputFile                   = "input_file"
 	FlagInputFileWithAlias          = FlagInputFile + ", if"
+	FlagExcludeFile                 = "exclude_file"
+	FlagInputSeparator              = "input_separator"
+	FlagParallism                   = "input_parallism"
+	FlagSkipCurrent                 = "skip_current_open"
 	FlagInputTopic                  = "input_topic"
 	FlagInputTopicWithAlias         = FlagInputTopic + ", it"
 	FlagHostFile                    = "host_file"
@@ -99,6 +103,10 @@ const (
 	FlagPrintRawTimeWithAlias       = FlagPrintRawTime + ", prt"
 	FlagPrintDateTime               = "print_datetime"
 	FlagPrintDateTimeWithAlias      = FlagPrintDateTime + ", pdt"
+	FlagPrintMemo                   = "print_memo"
+	FlagPrintMemoWithAlias          = FlagPrintMemo + ", pme"
+	FlagPrintJSON                   = "print_json"
+	FlagPrintJSONWithAlias          = FlagPrintJSON + ", pjson"
 	FlagDescription                 = "description"
 	FlagDescriptionWithAlias        = FlagDescription + ", desc"
 	FlagOwnerEmail                  = "owner_email"
@@ -147,6 +155,16 @@ const (
 	FlagIndex                       = "index"
 	FlagBatchSize                   = "batch_size"
 	FlagBatchSizeWithAlias          = FlagBatchSize + ", bs"
+	FlagMemoKey                     = "memo_key"
+	FlagMemo                        = "memo"
+	FlagMemoFile                    = "memo_file"
+	FlagSearchAttributesKey         = "search_attr_key"
+	FlagSearchAttributesVal         = "search_attr_value"
+	FlagAddBadBinary                = "add_bad_binary"
+	FlagRemoveBadBinary             = "remove_bad_binary"
+	FlagResetType                   = "reset_type"
+	FlagResetPointsOnly             = "reset_points_only"
+	FlagResetBadBinaryChecksum      = "reset_bad_binary_checksum"
 )
 
 var flagsForExecution = []cli.Flag{
@@ -194,6 +212,10 @@ func getFlagsForShowID() []cli.Flag {
 			Name:  FlagMaxFieldLengthWithAlias,
 			Usage: "Maximum length for each attribute field",
 			Value: defaultMaxFieldLength,
+		},
+		cli.BoolFlag{
+			Name:  FlagResetPointsOnly,
+			Usage: "Only show events that are eligible for reset",
 		},
 	}
 }
@@ -245,6 +267,30 @@ func getFlagsForStart() []cli.Flag {
 			Name: FlagInputFileWithAlias,
 			Usage: "Optional input for the workflow from JSON file. If there are multiple JSON, concatenate them and separate by space or newline. " +
 				"Input from file will be overwrite by input from command line",
+		},
+		cli.StringFlag{
+			Name:  FlagMemoKey,
+			Usage: "Optional key of memo. If there are multiple keys, concatenate them and separate by space",
+		},
+		cli.StringFlag{
+			Name: FlagMemo,
+			Usage: "Optional info that can be showed when list workflow, in JSON format. If there are multiple JSON, concatenate them and separate by space. " +
+				"The order must be same as memo_key",
+		},
+		cli.StringFlag{
+			Name: FlagMemoFile,
+			Usage: "Optional info that can be listed in list workflow, from JSON format file. If there are multiple JSON, concatenate them and separate by space or newline. " +
+				"The order must be same as memo_key",
+		},
+		cli.StringFlag{
+			Name: FlagSearchAttributesKey,
+			Usage: "Optional search attributes keys that can be be used in list query. If there are multiple keys, concatenate them and separate by |. " +
+				"Use `workflow get-search-attr` cmd to list legal keys.",
+		},
+		cli.StringFlag{
+			Name: FlagSearchAttributesVal,
+			Usage: "Optional search attributes value that can be be used in list query. If there are multiple keys, concatenate them and separate by |. " +
+				"Use `workflow get-search-attr` cmd to list legal keys and value types",
 		},
 	}
 }
@@ -310,9 +356,21 @@ func getFlagsForListAll() []cli.Flag {
 			Name:  FlagPrintDateTimeWithAlias,
 			Usage: "Print full date time in '2006-01-02T15:04:05Z07:00' format",
 		},
+		cli.BoolFlag{
+			Name:  FlagPrintMemoWithAlias,
+			Usage: "Print memo",
+		},
+		cli.BoolFlag{
+			Name:  FlagPrintFullyDetailWithAlias,
+			Usage: "Print full message without table format",
+		},
+		cli.BoolFlag{
+			Name:  FlagPrintJSONWithAlias,
+			Usage: "Print in raw json format",
+		},
 		cli.StringFlag{
 			Name:  FlagWorkflowStatusWithAlias,
-			Usage: "Closed workflow status [completed, failed, canceled, terminated, continueasnew, timedout]",
+			Usage: "Closed workflow status [completed, failed, canceled, terminated, continuedasnew, timedout]",
 		},
 	}
 }
@@ -363,6 +421,10 @@ func getFlagsForDescribeID() []cli.Flag {
 		cli.BoolFlag{
 			Name:  FlagPrintRawTimeWithAlias,
 			Usage: "Print raw time stamp",
+		},
+		cli.BoolFlag{
+			Name:  FlagResetPointsOnly,
+			Usage: "Only show auto-reset points",
 		},
 	}
 }

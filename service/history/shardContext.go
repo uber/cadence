@@ -420,6 +420,7 @@ Create_Loop:
 			case *shared.WorkflowExecutionAlreadyStartedError,
 				*persistence.WorkflowExecutionAlreadyStartedError,
 				*shared.ServiceBusyError,
+				*persistence.TimeoutError,
 				*shared.LimitExceededError:
 				// No special handling required for these errors
 			case *persistence.ShardOwnershipLostError:
@@ -638,6 +639,7 @@ Reset_Loop:
 			switch err.(type) {
 			case *persistence.ConditionFailedError,
 				*shared.ServiceBusyError,
+				*persistence.TimeoutError,
 				*shared.LimitExceededError:
 				// No special handling required for these errors
 			case *persistence.ShardOwnershipLostError:
@@ -774,9 +776,12 @@ func (s *shardContextImpl) AppendHistoryEvents(request *persistence.AppendHistor
 	defer func() {
 		// N.B. - Dual emit here makes sense so that we can see aggregate timer stats across all
 		// domains along with the individual domains stats
-		s.metricsClient.RecordTimer(metrics.SessionSizeStatsScope, metrics.HistorySize, time.Duration(size))
+		allDomainSizeScope := s.metricsClient.Scope(metrics.SessionSizeStatsScope, metrics.DomainAllTag())
+		allDomainSizeScope.RecordTimer(metrics.HistorySize, time.Duration(size))
 		if domainEntry != nil && domainEntry.GetInfo() != nil {
-			s.metricsClient.Scope(metrics.SessionSizeStatsScope, metrics.DomainTag(domainEntry.GetInfo().Name)).RecordTimer(metrics.HistorySize, time.Duration(size))
+			domainSizeScope := s.metricsClient.Scope(metrics.SessionSizeStatsScope, metrics.DomainTag(
+				domainEntry.GetInfo().Name))
+			domainSizeScope.RecordTimer(metrics.HistorySize, time.Duration(size))
 		}
 		if size >= historySizeLogThreshold {
 			s.throttledLogger.Warn("history size threshold breached",
@@ -1128,7 +1133,11 @@ func acquireShard(shardItem *historyShardsItem, closeCh chan<- int) (ShardContex
 	// initialize the cluster current time to be the same as ack level
 	standbyClusterCurrentTime := make(map[string]time.Time)
 	timerMaxReadLevelMap := make(map[string]time.Time)
-	for clusterName := range shardItem.service.GetClusterMetadata().GetAllClusterFailoverVersions() {
+	for clusterName, info := range shardItem.service.GetClusterMetadata().GetAllClusterInfo() {
+		if !info.Enabled {
+			continue
+		}
+
 		if clusterName != shardItem.service.GetClusterMetadata().GetCurrentClusterName() {
 			if currentTime, ok := shardInfo.ClusterTimerAckLevel[clusterName]; ok {
 				standbyClusterCurrentTime[clusterName] = currentTime
