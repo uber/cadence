@@ -459,7 +459,7 @@ func (m *MetadataPersistenceSuite) TestConcurrentUpdateDomain() {
 	m.NotNil(resp2)
 	m.Equal(id, resp2.Info.ID)
 	m.Equal(name, resp2.Info.Name)
-	m.Equal(gen.BadBinaries{}, resp2.Config.BadBinaries)
+	m.Equal(badBinaries, resp2.Config.BadBinaries)
 
 	testBinaries := gen.BadBinaries{
 		Binaries: map[string]*gen.BadBinaryInfo{

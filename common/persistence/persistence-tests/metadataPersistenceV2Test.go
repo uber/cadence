@@ -467,7 +467,7 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 
 	resp2, err2 := m.GetDomain(id, "")
 	m.NoError(err2)
-	m.Equal(gen.BadBinaries{}, resp2.Config.BadBinaries)
+	m.Equal(badBinaries, resp2.Config.BadBinaries)
 	metadata, err := m.MetadataManagerV2.GetMetadata()
 	m.NoError(err)
 	notificationVersion := metadata.NotificationVersion
