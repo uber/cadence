@@ -2748,7 +2748,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(firstEventID, decisionComple
 	if !found {
 		return nil, nil, &workflow.InternalServiceError{Message: "Failed to load start event."}
 	}
-	originalRunID := currentStartEvent.GetWorkflowExecutionStartedEventAttributes().GetOriginalExecutionRunId()
+	firstRunID := currentStartEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstExecutionRunId()
 
 	var newStateBuilder *mutableStateBuilder
 	if domainEntry.IsGlobalDomain() {
@@ -2760,7 +2760,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(firstEventID, decisionComple
 		newStateBuilder = newMutableStateBuilder(e.currentCluster, e.shard, e.eventsCache, e.logger)
 	}
 	domainID := domainEntry.GetInfo().ID
-	startedEvent := newStateBuilder.addWorkflowExecutionStartedEventForContinueAsNew(domainID, parentInfo, newExecution, e, attributes, originalRunID)
+	startedEvent := newStateBuilder.addWorkflowExecutionStartedEventForContinueAsNew(domainID, parentInfo, newExecution, e, attributes, firstRunID)
 	if startedEvent == nil {
 		return nil, nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
 	}
