@@ -264,5 +264,5 @@ func TestMapToString(t *testing.T) {
 		"k1": 1,
 		"k2": 2,
 	}
-	require.Equal(t, "[k1:1 k2:2]", mapToString(m))
+	require.Equal(t, "map[k1:1 k2:2]", mapToString(m))
 }

@@ -252,6 +252,7 @@ func (c *Collection) GetMapProperty(key Key, defaultValue map[string]interface{}
 }
 
 // mapToString ensure fmt.Print(map) will always be same instead of random order of keys.
+// Go 1.12+ will fix this then we don't mapToString anymore
 func mapToString(inputMap map[string]interface{}) string {
 	if len(inputMap) == 0 {
 		return ""
@@ -264,7 +265,7 @@ func mapToString(inputMap map[string]interface{}) string {
 		i++
 	}
 	sort.Strings(keys)
-	res := "["
+	res := "map["
 	for _, key := range keys {
 		res += fmt.Sprintf("%v:%v ", key, inputMap[key])
 	}
