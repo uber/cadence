@@ -386,6 +386,12 @@ func (m *executionManagerImpl) ValidateUpdateWorkflowExecutionRequest(request *U
 				"replication state and version histories cannot both be set."),
 		}
 	}
+	if request.VersionHistories != nil && (request.ExecutionInfo.BranchToken != nil || request.ExecutionInfo.NextEventID != common.EmptyEventID) {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("Update workflow with invalid request:" +
+				"version histories and branch token/next event id cannot both be set."),
+		}
+	}
 	return nil
 }
 
@@ -623,6 +629,12 @@ func (m *executionManagerImpl) ValidateResetMutableStateRequest(request *ResetMu
 				"replication state and version histories cannot both be set."),
 		}
 	}
+	if request.VersionHistories != nil && (request.ExecutionInfo.BranchToken != nil || request.ExecutionInfo.NextEventID != common.EmptyEventID) {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("Reset workflow with invalid request:" +
+				"version histories and branch token/next event id cannot both be set."),
+		}
+	}
 	return nil
 }
 
@@ -722,6 +734,12 @@ func (m *executionManagerImpl) ValidateCreateWorkflowExecutionRequest(request *C
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Create workflow with invalid request:" +
 				"replication state and version histories cannot both be set."),
+		}
+	}
+	if request.VersionHistories != nil && (request.BranchToken != nil || request.NextEventID != common.EmptyEventID) {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("Create workflow with invalid request:" +
+				"version histories and branch token/next event id cannot both be set."),
 		}
 	}
 	return nil
