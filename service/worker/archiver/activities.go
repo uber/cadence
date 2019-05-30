@@ -46,7 +46,7 @@ const (
 	blobstoreTimeout            = 30 * time.Second
 
 	errGetDomainByID = "could not get domain cache entry"
-	errConstructKey  = "coud not construct blob key"
+	errConstructKey  = "could not construct blob key"
 	errGetTags       = "could not get blob tags"
 	errUploadBlob    = "could not upload blob"
 	errReadBlob      = "could not read blob"
