@@ -731,7 +731,7 @@ func (s *activitiesSuite) TestDeleteBlobActivity_Fail_DeleteBlobError() {
 	s.metricsClient.On("Scope", metrics.ArchiverDeleteBlobActivityScope, []metrics.Tag{metrics.DomainTag(testDomainName)}).Return(s.metricsScope).Once()
 	s.metricsScope.On("IncCounter", metrics.ArchiverNonRetryableErrorCount).Once()
 
-	blobKey, err := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, common.FirstBlobPageToken)
+	blobKey, err := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, testCloseFailoverVersion, common.FirstBlobPageToken)
 	s.Nil(err)
 
 	mockBlobstore := &mocks.BlobstoreClient{}
@@ -765,14 +765,17 @@ func (s *activitiesSuite) TestDeleteBlobActivity_Success_NoHeartbeatDetails() {
 	s.metricsClient.On("Scope", metrics.ArchiverDeleteBlobActivityScope, []metrics.Tag{metrics.DomainTag(testDomainName)}).Return(s.metricsScope).Once()
 
 	pageToken := common.FirstBlobPageToken
-	firstBlobKey, err := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, pageToken)
+	firstBlobKey, err := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, testCloseFailoverVersion, pageToken)
 	s.Nil(err)
-	secondBlobKey, err := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, pageToken+1)
+	secondBlobKey, err := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, testCloseFailoverVersion, pageToken+1)
+	s.Nil(err)
+	indexBlobKey, err := NewHistoryIndexBlobKey(testDomainID, testWorkflowID, testRunID)
 	s.Nil(err)
 
 	mockBlobstore := &mocks.BlobstoreClient{}
 	mockBlobstore.On("Delete", mock.Anything, testArchivalBucket, firstBlobKey).Return(true, nil).Once()
 	mockBlobstore.On("Delete", mock.Anything, testArchivalBucket, secondBlobKey).Return(false, nil).Once()
+	mockBlobstore.On("Delete", mock.Anything, testArchivalBucket, indexBlobKey).Return(true, nil).Once()
 
 	container := &BootstrapContainer{
 		Logger:        s.logger,
@@ -801,14 +804,17 @@ func (s *activitiesSuite) TestDeleteBlobActivity_Success_WithHeartbeatDetails() 
 	s.metricsClient.On("Scope", metrics.ArchiverDeleteBlobActivityScope, []metrics.Tag{metrics.DomainTag(testDomainName)}).Return(s.metricsScope).Once()
 
 	prevPageToken := common.FirstBlobPageToken + 1
-	thirdBlobKey, err := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, prevPageToken+1)
+	thirdBlobKey, err := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, testCloseFailoverVersion, prevPageToken+1)
 	s.Nil(err)
-	fourthBlobKey, err := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, prevPageToken+2)
+	fourthBlobKey, err := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, testCloseFailoverVersion, prevPageToken+2)
+	s.Nil(err)
+	indexBlobKey, err := NewHistoryIndexBlobKey(testDomainID, testWorkflowID, testRunID)
 	s.Nil(err)
 
 	mockBlobstore := &mocks.BlobstoreClient{}
 	mockBlobstore.On("Delete", mock.Anything, testArchivalBucket, thirdBlobKey).Return(true, nil).Once()
 	mockBlobstore.On("Delete", mock.Anything, testArchivalBucket, fourthBlobKey).Return(false, nil).Once()
+	mockBlobstore.On("Delete", mock.Anything, testArchivalBucket, indexBlobKey).Return(true, nil).Once()
 
 	container := &BootstrapContainer{
 		Logger:        s.logger,
@@ -838,17 +844,20 @@ func (s *activitiesSuite) TestDeleteBlobActivity_Success_FirstBlobNotExist() {
 	s.metricsClient.On("Scope", metrics.ArchiverDeleteBlobActivityScope, []metrics.Tag{metrics.DomainTag(testDomainName)}).Return(s.metricsScope).Once()
 
 	prevPageToken := common.FirstBlobPageToken + 1
-	thirdBlobKey, err := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, prevPageToken+1)
+	thirdBlobKey, err := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, testCloseFailoverVersion, prevPageToken+1)
 	s.Nil(err)
-	fourthBlobKey, err := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, prevPageToken+2)
+	fourthBlobKey, err := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, testCloseFailoverVersion, prevPageToken+2)
 	s.Nil(err)
-	fifthBlobKey, err := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, prevPageToken+3)
+	fifthBlobKey, err := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, testCloseFailoverVersion, prevPageToken+3)
+	s.Nil(err)
+	indexBlobKey, err := NewHistoryIndexBlobKey(testDomainID, testWorkflowID, testRunID)
 	s.Nil(err)
 
 	mockBlobstore := &mocks.BlobstoreClient{}
 	mockBlobstore.On("Delete", mock.Anything, testArchivalBucket, thirdBlobKey).Return(false, blobstore.ErrBlobNotExists).Once()
 	mockBlobstore.On("Delete", mock.Anything, testArchivalBucket, fourthBlobKey).Return(true, nil).Once()
 	mockBlobstore.On("Delete", mock.Anything, testArchivalBucket, fifthBlobKey).Return(false, blobstore.ErrBlobNotExists).Once()
+	mockBlobstore.On("Delete", mock.Anything, testArchivalBucket, indexBlobKey).Return(true, nil).Once()
 
 	container := &BootstrapContainer{
 		Logger:        s.logger,

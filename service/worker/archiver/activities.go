@@ -192,20 +192,20 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	}
 	indexBlobKey, err := NewHistoryIndexBlobKey(request.DomainID, request.WorkflowID, request.RunID)
 	if err != nil {
-		logger.Error(uploadErrorMsg, tag.UploadFailReason("could not construct index blob key"), tag.ArchivalBucket(bucket))
+		logger.Error(uploadErrorMsg, tag.UploadFailReason("could not construct index blob key"), tag.ArchivalBucket(request.BucketName))
 		return cadence.NewCustomError(errConstructBlob)
 	}
-	existingVersions, err := getTags(ctx, blobstoreClient, bucket, indexBlobKey)
+	existingVersions, err := getTags(ctx, blobstoreClient, request.BucketName, indexBlobKey)
 	if err != nil && err != blobstore.ErrBlobNotExists {
-		logger.Error(uploadErrorMsg, tag.UploadFailReason("could not get index blob tags"), tag.ArchivalBucket(bucket), tag.ArchivalBlobKey(indexBlobKey.String()))
+		logger.Error(uploadErrorMsg, tag.UploadFailReason("could not get index blob tags"), tag.ArchivalBucket(request.BucketName), tag.ArchivalBlobKey(indexBlobKey.String()))
 		return err
 	}
 	indexBlobWithVersion := addVersion(request.CloseFailoverVersion, existingVersions)
 	if indexBlobWithVersion == nil {
 		return nil
 	}
-	if err := uploadBlob(ctx, blobstoreClient, bucket, indexBlobKey, indexBlobWithVersion); err != nil {
-		logger.Error(uploadErrorMsg, tag.UploadFailReason("could not upload index blob"), tag.ArchivalBucket(bucket), tag.ArchivalBlobKey(indexBlobKey.String()))
+	if err := uploadBlob(ctx, blobstoreClient, request.BucketName, indexBlobKey, indexBlobWithVersion); err != nil {
+		logger.Error(uploadErrorMsg, tag.UploadFailReason("could not upload index blob"), tag.ArchivalBucket(request.BucketName), tag.ArchivalBlobKey(indexBlobKey.String()))
 		return err
 	}
 	return nil
@@ -273,7 +273,7 @@ func deleteBlobActivity(ctx context.Context, request ArchiveRequest) (err error)
 
 	startPageToken := pageToken
 	for {
-		key, err := NewHistoryBlobKey(request.DomainID, request.WorkflowID, request.RunID, pageToken)
+		key, err := NewHistoryBlobKey(request.DomainID, request.WorkflowID, request.RunID, request.CloseFailoverVersion, pageToken)
 		if err != nil {
 			logger.Error("could not construct blob key", tag.Error(err))
 			return cadence.NewCustomError(errConstructKey, err.Error())
@@ -294,7 +294,16 @@ func deleteBlobActivity(ctx context.Context, request ArchiveRequest) (err error)
 		pageToken++
 	}
 
-	// TODO: delete index blob
+	// delete index blob
+	indexBlobKey, err := NewHistoryIndexBlobKey(request.DomainID, request.WorkflowID, request.RunID)
+	if err != nil {
+		logger.Error("could not construct index blob key", tag.Error(err))
+		return cadence.NewCustomError(errConstructKey, err.Error())
+	}
+	if _, err := deleteBlob(ctx, blobstoreClient, request.BucketName, indexBlobKey); err != nil {
+		logger.Error("failed to delete index blob", tag.ArchivalBucket(request.BucketName), tag.ArchivalBlobKey(indexBlobKey.String()), tag.Error(err))
+		return err
+	}
 	return nil
 }
 
