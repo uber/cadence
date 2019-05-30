@@ -2900,9 +2900,9 @@ func (wh *WorkflowHandler) getLoggerForTask(taskToken []byte) log.Logger {
 func (wh *WorkflowHandler) startRequestProfile(scope int) (metrics.Scope, metrics.Stopwatch) {
 	wh.startWG.Wait()
 
-	metricsScope := wh.metricsClient.Scope(scope)
+	metricsScope := wh.metricsClient.Scope(scope).Tagged(metrics.DomainUnknownTag())
 	// timer should be emitted with the all tag
-	sw := metricsScope.Tagged(metrics.DomainAllTag()).StartTimer(metrics.CadenceLatency)
+	sw := metricsScope.StartTimer(metrics.CadenceLatency)
 	metricsScope.IncCounter(metrics.CadenceRequests)
 	return metricsScope, sw
 }
@@ -2912,10 +2912,10 @@ func (wh *WorkflowHandler) startRequestProfileWithDomain(scope int, d domainGett
 	wh.startWG.Wait()
 
 	var metricsScope metrics.Scope
-	if d != nil && len(d.GetDomain()) > 0 {
+	if d != nil {
 		metricsScope = wh.metricsClient.Scope(scope).Tagged(metrics.DomainTag(d.GetDomain()))
 	} else {
-		metricsScope = wh.metricsClient.Scope(scope).Tagged(metrics.DomainAllTag())
+		metricsScope = wh.metricsClient.Scope(scope).Tagged(metrics.DomainUnknownTag())
 	}
 	sw := metricsScope.StartTimer(metrics.CadenceLatency)
 	metricsScope.IncCounter(metrics.CadenceRequests)

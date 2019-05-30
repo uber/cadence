@@ -774,13 +774,12 @@ func (s *shardContextImpl) AppendHistoryEvents(request *persistence.AppendHistor
 
 	size := 0
 	defer func() {
+		domain := ""
 		if domainEntry != nil && domainEntry.GetInfo() != nil {
-			domainSizeScope := s.metricsClient.Scope(metrics.SessionSizeStatsScope, metrics.DomainTag(domainEntry.GetInfo().Name))
-			domainSizeScope.RecordTimer(metrics.HistorySize, time.Duration(size))
-		} else {
-			allDomainSizeScope := s.metricsClient.Scope(metrics.SessionSizeStatsScope, metrics.DomainAllTag())
-			allDomainSizeScope.RecordTimer(metrics.HistorySize, time.Duration(size))
+			domain = domainEntry.GetInfo().Name
 		}
+		domainSizeScope := s.metricsClient.Scope(metrics.SessionSizeStatsScope, metrics.DomainTag(domain))
+		domainSizeScope.RecordTimer(metrics.HistorySize, time.Duration(size))
 
 		if size >= historySizeLogThreshold {
 			s.throttledLogger.Warn("history size threshold breached",
