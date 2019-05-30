@@ -109,6 +109,16 @@ func (v *VersionHistory) IsAppendable(item VersionHistoryItem) bool {
 	return v.History[len(v.History)-1] == item
 }
 
+// ToThrift return thrift format of version history
+func (h *VersionHistory) ToThrift() *shared.VersionHistory {
+	tHistory := &shared.VersionHistory{BranchToken: append([]byte(nil), h.BranchToken...)}
+	for _, item := range h.History {
+		tHistory.History = append(tHistory.History,
+			&shared.VersionHistoryItem{EventID: common.Int64Ptr(item.EventID), Version: common.Int64Ptr(item.Version)})
+	}
+	return tHistory
+}
+
 // NewVersionHistories initialize new version histories
 func NewVersionHistories(histories []VersionHistory) VersionHistories {
 	if len(histories) == 0 {
@@ -177,13 +187,7 @@ func (h *VersionHistories) ToThrift() *shared.VersionHistories {
 	tHistories := &shared.VersionHistories{}
 	tHistories.CurrentBranch = common.Int32Ptr(h.CurrentBranch)
 	for _, history := range h.Histories {
-
-		tHistory := &shared.VersionHistory{BranchToken: append([]byte(nil), history.BranchToken...)}
-		for _, item := range history.History {
-			tHistory.History = append(tHistory.History,
-				&shared.VersionHistoryItem{EventID: common.Int64Ptr(item.EventID), Version: common.Int64Ptr(item.Version)})
-		}
-		tHistories.Histories = append(tHistories.Histories, tHistory)
+		tHistories.Histories = append(tHistories.Histories, history.ToThrift())
 	}
 
 	return tHistories
