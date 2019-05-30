@@ -59,6 +59,9 @@ const (
 	// Update current record only if workflow is open
 	// Only applicable for UpdateWorkflowExecution
 	CreateWorkflowModeContinueAsNew
+	// Do not update current record since workflow to
+	// applicable for CreateWorkflowExecution, UpdateWorkflowExecution
+	CreateWorkflowModeZombie
 )
 
 // Workflow execution states
@@ -66,6 +69,7 @@ const (
 	WorkflowStateCreated = iota
 	WorkflowStateRunning
 	WorkflowStateCompleted
+	WorkflowStateZombie
 )
 
 // Workflow execution close status
@@ -251,7 +255,8 @@ type (
 		DecisionRequestID            string
 		DecisionTimeout              int32
 		DecisionAttempt              int64
-		DecisionTimestamp            int64
+		DecisionStartedTimestamp     int64
+		DecisionScheduledTimestamp   int64
 		CancelRequested              bool
 		CancelRequestID              string
 		StickyTaskList               string
@@ -260,6 +265,7 @@ type (
 		ClientFeatureVersion         string
 		ClientImpl                   string
 		AutoResetPoints              *workflow.ResetPoints
+		SearchAttributes             map[string][]byte
 		// for retry
 		Attempt            int32
 		HasRetryPolicy     bool
@@ -359,6 +365,7 @@ type (
 		ScheduleID             int64
 		ScheduleToStartTimeout int32
 		Expiry                 time.Time
+		CreatedTime            time.Time
 	}
 
 	// Task is the generic interface for workflow tasks
@@ -537,6 +544,24 @@ type (
 		LastEventID int64
 	}
 
+	// VersionHistoryItem contains the event id and the associated version
+	VersionHistoryItem struct {
+		EventID int64
+		Version int64
+	}
+
+	// VersionHistory provides operations on version history
+	VersionHistory struct {
+		BranchToken []byte
+		History     []VersionHistoryItem
+	}
+
+	// VersionHistories contains a set of VersionHistory
+	VersionHistories struct {
+		CurrentBranch int32
+		Histories     []VersionHistory
+	}
+
 	// WorkflowMutableState indicates workflow related state
 	WorkflowMutableState struct {
 		ActivityInfos            map[int64]*ActivityInfo
@@ -549,6 +574,7 @@ type (
 		ReplicationState         *ReplicationState
 		BufferedEvents           []*workflow.HistoryEvent
 		BufferedReplicationTasks map[int64]*BufferedReplicationTask
+		VersionHistories         *VersionHistories
 	}
 
 	// ActivityInfo details.
@@ -702,12 +728,14 @@ type (
 		MaximumAttempts             int32
 		NonRetriableErrors          []string
 		PreviousAutoResetPoints     *workflow.ResetPoints
+		VersionHistories            *VersionHistories
 		// 2 means using eventsV2, empty/0/1 means using events(V1)
 		EventStoreVersion int32
 		// for eventsV2: branchToken from historyPersistence
 		BranchToken       []byte
 		CronSchedule      string
 		ExpirationSeconds int32
+		SearchAttributes  map[string][]byte
 	}
 
 	// CreateWorkflowExecutionResponse is the response to CreateWorkflowExecutionRequest
@@ -745,6 +773,7 @@ type (
 	UpdateWorkflowExecutionRequest struct {
 		ExecutionInfo    *WorkflowExecutionInfo
 		ReplicationState *ReplicationState
+		VersionHistories *VersionHistories
 		TransferTasks    []Task
 		TimerTasks       []Task
 		ReplicationTasks []Task
@@ -777,6 +806,7 @@ type (
 		PrevRunID        string
 		ExecutionInfo    *WorkflowExecutionInfo
 		ReplicationState *ReplicationState
+		VersionHistories *VersionHistories
 		Condition        int64
 		RangeID          int64
 
@@ -808,13 +838,16 @@ type (
 		UpdateCurr           bool
 		CurrExecutionInfo    *WorkflowExecutionInfo
 		CurrReplicationState *ReplicationState
+		CurrVersionHistories *VersionHistories
 		CurrReplicationTasks []Task
 		CurrTransferTasks    []Task
 		CurrTimerTasks       []Task
+		VersionHistories     *workflow.VersionHistories
 
 		// For new mutable state
 		InsertExecutionInfo       *WorkflowExecutionInfo
 		InsertReplicationState    *ReplicationState
+		InsertVersionHistories    *VersionHistories
 		InsertTransferTasks       []Task
 		InsertTimerTasks          []Task
 		InsertReplicationTasks    []Task

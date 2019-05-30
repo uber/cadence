@@ -190,12 +190,14 @@ type (
 		MaximumAttempts             int32
 		NonRetriableErrors          []string
 		PreviousAutoResetPoints     *DataBlob
+		VersionHistories            *DataBlob
 		// 2 means using eventsV2, empty/0/1 means using events(V1)
 		EventStoreVersion int32
 		// for eventsV2: branchToken from historyPersistence
 		BranchToken       []byte
 		CronSchedule      string
 		ExpirationSeconds int32
+		SearchAttributes  map[string][]byte
 	}
 
 	// InternalWorkflowExecutionInfo describes a workflow execution for Persistence Interface
@@ -231,7 +233,8 @@ type (
 		DecisionRequestID            string
 		DecisionTimeout              int32
 		DecisionAttempt              int64
-		DecisionTimestamp            int64
+		DecisionStartedTimestamp     int64
+		DecisionScheduledTimestamp   int64
 		CancelRequested              bool
 		CancelRequestID              string
 		StickyTaskList               string
@@ -254,11 +257,12 @@ type (
 		BranchToken       []byte
 		CronSchedule      string
 		ExpirationSeconds int32
+		SearchAttributes  map[string][]byte
 	}
 
 	// InternalWorkflowMutableState indicates workflow related state for Persistence Interface
 	InternalWorkflowMutableState struct {
-		ActivitInfos             map[int64]*InternalActivityInfo
+		ActivityInfos            map[int64]*InternalActivityInfo
 		TimerInfos               map[string]*TimerInfo
 		ChildExecutionInfos      map[int64]*InternalChildExecutionInfo
 		RequestCancelInfos       map[int64]*RequestCancelInfo
@@ -268,6 +272,7 @@ type (
 		ReplicationState         *ReplicationState
 		BufferedEvents           []*DataBlob
 		BufferedReplicationTasks map[int64]*InternalBufferedReplicationTask
+		VersionHistories         *DataBlob
 	}
 
 	// InternalActivityInfo details  for Persistence Interface
@@ -337,6 +342,7 @@ type (
 	InternalUpdateWorkflowExecutionRequest struct {
 		ExecutionInfo    *InternalWorkflowExecutionInfo
 		ReplicationState *ReplicationState
+		VersionHistories *DataBlob
 		TransferTasks    []Task
 		TimerTasks       []Task
 		ReplicationTasks []Task
@@ -368,6 +374,7 @@ type (
 		PrevRunID        string
 		ExecutionInfo    *InternalWorkflowExecutionInfo
 		ReplicationState *ReplicationState
+		VersionHistories *DataBlob
 		Condition        int64
 		RangeID          int64
 
@@ -399,6 +406,7 @@ type (
 		CurrReplicationTasks []Task
 		CurrTransferTasks    []Task
 		CurrTimerTasks       []Task
+		CurrVersionHistories *DataBlob
 
 		// For new mutable state
 		InsertExecutionInfo       *InternalWorkflowExecutionInfo
@@ -412,6 +420,7 @@ type (
 		InsertRequestCancelInfos  []*RequestCancelInfo
 		InsertSignalInfos         []*SignalInfo
 		InsertSignalRequestedIDs  []string
+		InsertVersionHistories    *DataBlob
 	}
 
 	// InternalAppendHistoryEventsRequest is used to append new events to workflow execution history  for Persistence Interface
@@ -542,15 +551,16 @@ type (
 
 	// VisibilityWorkflowExecutionInfo is visibility info for internal response
 	VisibilityWorkflowExecutionInfo struct {
-		WorkflowID    string
-		RunID         string
-		TypeName      string
-		StartTime     time.Time
-		ExecutionTime time.Time
-		CloseTime     time.Time
-		Status        *workflow.WorkflowExecutionCloseStatus
-		HistoryLength int64
-		Memo          *DataBlob
+		WorkflowID       string
+		RunID            string
+		TypeName         string
+		StartTime        time.Time
+		ExecutionTime    time.Time
+		CloseTime        time.Time
+		Status           *workflow.WorkflowExecutionCloseStatus
+		HistoryLength    int64
+		Memo             *DataBlob
+		SearchAttributes map[string]interface{}
 	}
 
 	// InternalListWorkflowExecutionsResponse is response from ListWorkflowExecutions
@@ -577,6 +587,7 @@ type (
 		WorkflowTimeout    int64
 		TaskID             int64
 		Memo               *DataBlob
+		SearchAttributes   map[string][]byte
 	}
 
 	// InternalRecordWorkflowExecutionClosedRequest is request to RecordWorkflowExecutionClosed
@@ -589,6 +600,7 @@ type (
 		ExecutionTimestamp int64
 		TaskID             int64
 		Memo               *DataBlob
+		SearchAttributes   map[string][]byte
 		CloseTimestamp     int64
 		Status             workflow.WorkflowExecutionCloseStatus
 		HistoryLength      int64

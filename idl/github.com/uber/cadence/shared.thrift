@@ -254,6 +254,15 @@ enum ArchivalStatus {
   ENABLED,
 }
 
+enum IndexedValueType {
+  STRING,
+  KEYWORD,
+  INT,
+  DOUBLE,
+  BOOL,
+  DATETIME,
+}
+
 struct Header {
     10: optional map<string, binary> fields
 }
@@ -298,6 +307,10 @@ struct Memo {
   10: optional map<string,binary> fields
 }
 
+struct SearchAttributes {
+  10: optional map<string,binary> indexedFields
+}
+
 struct WorkflowExecutionInfo {
   10: optional WorkflowExecution execution
   20: optional WorkflowType type
@@ -309,6 +322,7 @@ struct WorkflowExecutionInfo {
   80: optional WorkflowExecution parentExecution
   90: optional i64 (js.type = "Long") executionTime
   100: optional Memo memo
+  101: optional SearchAttributes searchAttributes
   110: optional ResetPoints autoResetPoints
 }
 
@@ -450,6 +464,7 @@ struct WorkflowExecutionStartedEventAttributes {
   56: optional string continuedFailureReason
   57: optional binary continuedFailureDetails
   58: optional binary lastCompletionResult
+  59: optional string originalExecutionRunId // This is the very first runID along the chain of ContinueAsNew and Reset.
   60: optional string identity
   70: optional RetryPolicy retryPolicy
   80: optional i32 attempt
@@ -457,6 +472,7 @@ struct WorkflowExecutionStartedEventAttributes {
   100: optional string cronSchedule
   110: optional i32 firstDecisionTaskBackoffSeconds
   120: optional Memo memo
+  121: optional SearchAttributes searchAttributes
   130: optional ResetPoints prevAutoResetPoints
   140: optional Header header
 }
@@ -985,6 +1001,7 @@ struct StartWorkflowExecutionRequest {
   120: optional RetryPolicy retryPolicy
   130: optional string cronSchedule
   140: optional Memo memo
+  141: optional SearchAttributes searchAttributes
   150: optional Header header
 }
 
@@ -1011,6 +1028,8 @@ struct PollForDecisionTaskResponse {
   70: optional binary nextPageToken
   80: optional WorkflowQuery query
   90: optional TaskList WorkflowExecutionTaskList
+  100:  optional i64 (js.type = "Long") scheduledTimestamp
+  110:  optional i64 (js.type = "Long") startedTimestamp
 }
 
 struct StickyExecutionAttributes {
@@ -1181,6 +1200,7 @@ struct SignalWithStartWorkflowExecutionRequest {
   140: optional RetryPolicy retryPolicy
   150: optional string cronSchedule
   160: optional Memo memo
+  161: optional SearchAttributes searchAttributes
   170: optional Header header
 }
 
@@ -1252,6 +1272,10 @@ struct CountWorkflowExecutionsRequest {
 
 struct CountWorkflowExecutionsResponse {
   10: optional i64 count
+}
+
+struct GetSearchAttributesResponse {
+  10: optional map<string, IndexedValueType> keys
 }
 
 struct QueryWorkflowRequest {
@@ -1412,4 +1436,22 @@ struct HistoryBranch{
   10: optional string treeID
   20: optional string branchID
   30: optional list<HistoryBranchRange>  ancestors
+}
+
+// VersionHistoryItem contains signal eventID and the corresponding version
+struct VersionHistoryItem{
+  10: optional i64 (js.type = "Long") eventID
+  20: optional i64 (js.type = "Long") version
+}
+
+// VersionHistory contains the version history of a branch
+struct VersionHistory{
+  10: optional binary branchToken
+  20: optional list<VersionHistoryItem> history
+}
+
+// VersionHistories contains all version histories from all branches
+struct VersionHistories{
+  10: optional i32 currentBranch
+  20: optional list<VersionHistory> histories
 }

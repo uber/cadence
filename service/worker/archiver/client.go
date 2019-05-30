@@ -42,6 +42,7 @@ type (
 	ArchiveRequest struct {
 		ShardID              int
 		DomainID             string
+		DomainName           string
 		WorkflowID           string
 		RunID                string
 		EventStoreVersion    int32
@@ -72,14 +73,14 @@ func NewClient(
 	logger log.Logger,
 	publicClient workflowserviceclient.Interface,
 	numWorkflows dynamicconfig.IntPropertyFn,
-	requestRPS int,
+	requestRPS dynamicconfig.IntPropertyFn,
 ) Client {
 	return &client{
 		metricsClient: metricsClient,
 		logger:        logger,
 		cadenceClient: cclient.NewClient(publicClient, common.SystemDomainName, &cclient.Options{}),
 		numWorkflows:  numWorkflows,
-		rateLimiter:   tokenbucket.New(requestRPS, clock.NewRealTimeSource()),
+		rateLimiter:   tokenbucket.NewDynamicTokenBucket(requestRPS, clock.NewRealTimeSource()),
 	}
 }
 

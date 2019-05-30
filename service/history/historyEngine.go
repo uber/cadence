@@ -169,12 +169,12 @@ func NewEngineWithShardContext(
 		visibilityMgr:        visibilityMgr,
 		tokenSerializer:      common.NewJSONTaskTokenSerializer(),
 		historyCache:         historyCache,
-		logger:               logger.WithTags(tag.ComponentMatchingEngine),
-		throttledLogger:      shard.GetThrottledLogger().WithTags(tag.ComponentMatchingEngine),
+		logger:               logger.WithTags(tag.ComponentHistoryEngine),
+		throttledLogger:      shard.GetThrottledLogger().WithTags(tag.ComponentHistoryEngine),
 		metricsClient:        shard.GetMetricsClient(),
 		historyEventNotifier: historyEventNotifier,
 		config:               config,
-		archivalClient:       archiver.NewClient(shard.GetMetricsClient(), shard.GetLogger(), publicClient, shard.GetConfig().NumArchiveSystemWorkflows, shard.GetConfig().ArchiveRequestRPS()),
+		archivalClient:       archiver.NewClient(shard.GetMetricsClient(), shard.GetLogger(), publicClient, shard.GetConfig().NumArchiveSystemWorkflows, shard.GetConfig().ArchiveRequestRPS),
 	}
 
 	txProcessor := newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, matching, historyClient, logger)
@@ -190,7 +190,7 @@ func NewEngineWithShardContext(
 		historyEngImpl.replicator = newHistoryReplicator(shard, historyEngImpl, historyCache, shard.GetDomainCache(), historyManager, historyV2Manager,
 			logger)
 	}
-	historyEngImpl.resetor = newWorkflowResetor(historyEngImpl, historyEngImpl.replicator)
+	historyEngImpl.resetor = newWorkflowResetor(historyEngImpl)
 
 	return historyEngImpl
 }
@@ -581,7 +581,7 @@ func (e *historyEngineImpl) getMutableState(ctx ctx.Context,
 
 	executionInfo := msBuilder.GetExecutionInfo()
 	execution.RunId = context.getExecution().RunId
-	versionHistories := msBuilder.GetAllBranches()
+	versionHistories := msBuilder.GetAllVersionHistories()
 	retResp = &h.GetMutableStateResponse{
 		Execution:                            &execution,
 		WorkflowType:                         &workflow.WorkflowType{Name: common.StringPtr(executionInfo.WorkflowTypeName)},
@@ -1111,8 +1111,9 @@ Update_History_Loop:
 			e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.AutoResetPointsLimitExceededCounter)
 			e.throttledLogger.Warn("the number of auto-reset points is exceeding the limit, will do rotating.",
 				tag.WorkflowDomainName(domainEntry.GetInfo().Name),
+				tag.WorkflowDomainID(domainEntry.GetInfo().ID),
 				tag.WorkflowID(workflowExecution.GetWorkflowId()),
-				tag.WorkflowDomainName(workflowExecution.GetRunId()),
+				tag.WorkflowRunID(workflowExecution.GetRunId()),
 				tag.Number(int64(maxResetPoints)))
 		}
 		completedEvent := msBuilder.AddDecisionTaskCompletedEvent(scheduleID, startedID, request, maxResetPoints)
@@ -2823,6 +2824,8 @@ func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(domainID str
 		Name: &executionInfo.TaskList,
 		Kind: common.TaskListKindPtr(workflow.TaskListKindNormal),
 	})
+	response.ScheduledTimestamp = common.Int64Ptr(di.ScheduledTimestamp)
+	response.StartedTimestamp = common.Int64Ptr(di.StartedTimestamp)
 
 	if di.Attempt > 0 {
 		// This decision is retried from mutable state
@@ -3312,6 +3315,7 @@ func getStartRequest(domainID string,
 		RetryPolicy:                         request.RetryPolicy,
 		CronSchedule:                        request.CronSchedule,
 		Memo:                                request.Memo,
+		SearchAttributes:                    request.SearchAttributes,
 		Header:                              request.Header,
 	}
 
@@ -3392,10 +3396,18 @@ func (e *historyEngineImpl) applyWorkflowIDReusePolicyHelper(prevStartRequestID,
 
 	// here we know there is some information about the prev workflow, i.e. either running right now
 	// or has history check if the this workflow is finished
-	if prevState != persistence.WorkflowStateCompleted {
+	switch prevState {
+	case persistence.WorkflowStateCreated,
+		persistence.WorkflowStateRunning:
 		msg := "Workflow execution is already running. WorkflowId: %v, RunId: %v."
 		return getWorkflowAlreadyStartedError(msg, prevStartRequestID, execution.GetWorkflowId(), prevRunID)
+	case persistence.WorkflowStateCompleted:
+		// previous workflow completed, proceed
+	default:
+		// persistence.WorkflowStateZombie or unknown type
+		return &workflow.InternalServiceError{Message: fmt.Sprintf("Failed to process workflow, workflow has invalid state: %v.", prevState)}
 	}
+
 	switch wfIDReusePolicy {
 	case workflow.WorkflowIdReusePolicyAllowDuplicateFailedOnly:
 		if _, ok := FailedWorkflowCloseState[prevCloseState]; !ok {

@@ -83,6 +83,7 @@ struct GetMutableStateResponse {
   120: optional i32 eventStoreVersion
   130: optional binary branchToken
   140: optional map<string, shared.ReplicationInfo> replicationInfo
+  150: optional shared.VersionHistories versionHistories
 }
 
 struct ResetStickyTaskListRequest {
@@ -169,6 +170,8 @@ struct RecordDecisionTaskStartedResponse {
   90: optional shared.TaskList WorkflowExecutionTaskList
   100: optional i32 eventStoreVersion
   110: optional binary branchToken
+  120:  optional i64 (js.type = "Long") scheduledTimestamp
+  130:  optional i64 (js.type = "Long") startedTimestamp
 }
 
 struct SignalWorkflowExecutionRequest {
