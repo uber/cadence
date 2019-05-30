@@ -156,10 +156,6 @@ func (m *cassandraMetadataPersistenceV2) CreateDomainInV2Table(request *p.Intern
 		return nil, err
 	}
 
-	if request.Config.BadBinaries == nil {
-		request.Config.BadBinaries = &p.DataBlob{}
-	}
-
 	batch := m.session.NewBatch(gocql.LoggedBatch)
 	batch.Query(templateCreateDomainByNameQueryWithinBatchV2,
 		constDomainPartition,
