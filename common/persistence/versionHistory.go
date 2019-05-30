@@ -110,9 +110,9 @@ func (v *VersionHistory) IsAppendable(item VersionHistoryItem) bool {
 }
 
 // ToThrift return thrift format of version history
-func (h *VersionHistory) ToThrift() *shared.VersionHistory {
-	tHistory := &shared.VersionHistory{BranchToken: append([]byte(nil), h.BranchToken...)}
-	for _, item := range h.History {
+func (v *VersionHistory) ToThrift() *shared.VersionHistory {
+	tHistory := &shared.VersionHistory{BranchToken: append([]byte(nil), v.BranchToken...)}
+	for _, item := range v.History {
 		tHistory.History = append(tHistory.History,
 			&shared.VersionHistoryItem{EventID: common.Int64Ptr(item.EventID), Version: common.Int64Ptr(item.Version)})
 	}
@@ -169,8 +169,7 @@ func (h *VersionHistories) FindLowestCommonVersionHistory(history VersionHistory
 // AddHistory add new history into version histories
 // TODO: merge this func with FindLowestCommonVersionHistory
 func (h *VersionHistories) AddHistory(item VersionHistoryItem, local VersionHistory, remote VersionHistory) error {
-	commonItem := item
-	if local.IsAppendable(commonItem) {
+	if local.IsAppendable(item) {
 		//it won't update h.versionHistories
 		for idx, history := range h.Histories {
 			if reflect.DeepEqual(history, local) {
