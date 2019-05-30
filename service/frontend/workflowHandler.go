@@ -96,7 +96,8 @@ type (
 	}
 
 	getHistoryContinuationTokenArchival struct {
-		BlobstorePageToken int
+		BlobstorePageToken   int
+		CloseFailoverVersion int64
 	}
 )
 
@@ -230,7 +231,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 		return wh.error(err, scope)
 	}
 
-	err := wh.domainHandler.registerDomain(ctx, registerRequest, scope)
+	err := wh.domainHandler.registerDomain(ctx, registerRequest)
 	if err != nil {
 		return wh.error(err, scope)
 	}
@@ -249,7 +250,7 @@ func (wh *WorkflowHandler) ListDomains(ctx context.Context,
 		return nil, wh.error(err, scope)
 	}
 
-	resp, err := wh.domainHandler.listDomains(ctx, listRequest, scope)
+	resp, err := wh.domainHandler.listDomains(ctx, listRequest)
 	if err != nil {
 		return resp, wh.error(err, scope)
 	}
@@ -268,7 +269,7 @@ func (wh *WorkflowHandler) DescribeDomain(ctx context.Context,
 		return nil, wh.error(err, scope)
 	}
 
-	resp, err := wh.domainHandler.describeDomain(ctx, describeRequest, scope)
+	resp, err := wh.domainHandler.describeDomain(ctx, describeRequest)
 	if err != nil {
 		return resp, wh.error(err, scope)
 	}
@@ -287,7 +288,7 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 		return nil, wh.error(err, scope)
 	}
 
-	resp, err := wh.domainHandler.updateDomain(ctx, updateRequest, scope)
+	resp, err := wh.domainHandler.updateDomain(ctx, updateRequest)
 	if err != nil {
 		return resp, wh.error(err, scope)
 	}
@@ -307,7 +308,7 @@ func (wh *WorkflowHandler) DeprecateDomain(ctx context.Context, deprecateRequest
 		return wh.error(err, scope)
 	}
 
-	err := wh.domainHandler.deprecateDomain(ctx, deprecateRequest, scope)
+	err := wh.domainHandler.deprecateDomain(ctx, deprecateRequest)
 	if err != nil {
 		return wh.error(err, scope)
 	}
@@ -1585,7 +1586,10 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 
 	sizeLimitError := wh.config.BlobSizeLimitError(domainName)
 	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainName)
-	actualSize := len(startRequest.Input) + common.GetSizeOfMapStringToByteArray(startRequest.Memo.GetFields())
+	actualSize := len(startRequest.Input)
+	if startRequest.Memo != nil {
+		actualSize += common.GetSizeOfMapStringToByteArray(startRequest.Memo.GetFields())
+	}
 	if err := common.CheckEventBlobSizeLimit(
 		actualSize,
 		sizeLimitWarn,
@@ -3213,7 +3217,6 @@ func (wh *WorkflowHandler) getArchivedHistory(
 	domainID string,
 	scope metrics.Scope,
 ) (*gen.GetWorkflowExecutionHistoryResponse, error) {
-
 	entry, err := wh.domainCache.GetDomainByID(domainID)
 	if err != nil {
 		return nil, wh.error(err, scope)
@@ -3229,11 +3232,24 @@ func (wh *WorkflowHandler) getArchivedHistory(
 			return nil, wh.error(errInvalidNextArchivalPageToken, scope)
 		}
 	} else {
+		indexKey, err := archiver.NewHistoryIndexBlobKey(domainID, request.Execution.GetWorkflowId(), request.Execution.GetRunId())
+		if err != nil {
+			return nil, wh.error(err, scope)
+		}
+		indexTags, err := wh.blobstoreClient.GetTags(ctx, archivalBucket, indexKey)
+		if err != nil {
+			return nil, wh.error(err, scope)
+		}
+		highestVersion, err := archiver.GetHighestVersion(indexTags)
+		if err != nil {
+			return nil, wh.error(err, scope)
+		}
 		token = &getHistoryContinuationTokenArchival{
-			BlobstorePageToken: common.FirstBlobPageToken,
+			BlobstorePageToken:   common.FirstBlobPageToken,
+			CloseFailoverVersion: *highestVersion,
 		}
 	}
-	key, err := archiver.NewHistoryBlobKey(domainID, request.Execution.GetWorkflowId(), request.Execution.GetRunId(), token.BlobstorePageToken)
+	key, err := archiver.NewHistoryBlobKey(domainID, request.Execution.GetWorkflowId(), request.Execution.GetRunId(), token.CloseFailoverVersion, token.BlobstorePageToken)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -3252,9 +3268,7 @@ func (wh *WorkflowHandler) getArchivedHistory(
 			return nil, wh.error(err, scope)
 		}
 	}
-	token = &getHistoryContinuationTokenArchival{
-		BlobstorePageToken: *historyBlob.Header.NextPageToken,
-	}
+	token.BlobstorePageToken = *historyBlob.Header.NextPageToken
 	if *historyBlob.Header.IsLast {
 		token = nil
 	}
