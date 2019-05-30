@@ -169,7 +169,8 @@ func (h *VersionHistories) FindLowestCommonVersionHistory(history VersionHistory
 // AddHistory add new history into version histories
 // TODO: merge this func with FindLowestCommonVersionHistory
 func (h *VersionHistories) AddHistory(item VersionHistoryItem, local VersionHistory, remote VersionHistory) error {
-	if local.IsAppendable(item) {
+	commonItem := item
+	if local.IsAppendable(commonItem) {
 		//it won't update h.versionHistories
 		for idx, history := range h.Histories {
 			if reflect.DeepEqual(history, local) {

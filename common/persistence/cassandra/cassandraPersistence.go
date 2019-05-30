@@ -1378,6 +1378,8 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Int
 	default:
 		panic(fmt.Sprintf("Unknown CreateWorkflowMode: %v", request.CreateWorkflowMode))
 	}
+
+	versionHistoriesData, versionHistoriesEncoding := p.FromDataBlob(request.VersionHistories)
 	// TODO use updateMutableState() with useCondition=false to make code much cleaner
 	if request.ReplicationState != nil {
 		lastReplicationInfo := make(map[string]map[string]interface{})
@@ -1456,7 +1458,6 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Int
 			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID)
 	} else if request.VersionHistories != nil {
-		versionHistoriesData, versionHistoriesEncoding := p.FromDataBlob(request.VersionHistories)
 		batch.Query(templateCreateWorkflowExecutionWithVersionHistoriesQuery,
 			d.shardID,
 			request.DomainID,
@@ -1723,6 +1724,7 @@ func (d *cassandraPersistence) updateMutableState(batch *gocql.Batch, executionI
 	}
 
 	completionData, completionEncoding := p.FromDataBlob(executionInfo.CompletionEvent)
+	versionHistoriesData, versionHistoriesEncoding := p.FromDataBlob(versionHistories)
 	if replicationState != nil {
 		lastReplicationInfo := make(map[string]map[string]interface{})
 		for k, v := range replicationState.LastReplicationInfo {
@@ -1799,8 +1801,7 @@ func (d *cassandraPersistence) updateMutableState(batch *gocql.Batch, executionI
 			executionInfo.RunID,
 			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID)
-	} else if versionHistories != nil {
-		versionHistoriesData, versionHistoriesEncoding := p.FromDataBlob(versionHistories)
+	} else if versionHistoriesData != nil {
 		batchQueryHelper(batch, templateUpdateWorkflowExecutionWithVersionHistoriesQuery, useCondition, condition,
 			executionInfo.DomainID,
 			executionInfo.WorkflowID,
