@@ -23,9 +23,8 @@ package cassandra
 import (
 	"errors"
 
-	"github.com/uber/cadence/common"
-
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
