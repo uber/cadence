@@ -78,3 +78,12 @@ monitor past and current workflow executions.
 Replay any workflow execution history locally under a debugger. The Cadence client library provides
 an API that allows you to capture a stack trace from any failed workflow execution history.
 
+### Memos
+Many Cadence users need to get information from workflows. The only data available from the visibility APIs 
+are the workflow ID and run ID. Users then have to take the approach of getting the list of workflows, 
+getting the workflow description, and potentially executing a query for each workflow (side note: don’t 
+scrub the history, use a query). This is a time-consuming process.
+
+The memo feature addresses many of these scenarios. When starting a workflow, you can specify some data to 
+associate with that workflow run. This data is immutable but is available through the visibility APIs when 
+listing workflows. 

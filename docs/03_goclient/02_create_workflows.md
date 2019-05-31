@@ -129,7 +129,7 @@ Time related functions:
 * **workflow.Now()** : This is a replacement for **time.Now()**.
 * **workflow.Sleep()** : This is a replacement for **time.Sleep()**.
 
-### Failing A Workflow
+### Failing a workflow
 
 To mark an workflow as failed all that needs to happen is for the workflow function to return an 
 error via the **err** return value.
