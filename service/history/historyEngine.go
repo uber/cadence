@@ -795,13 +795,6 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(ctx ctx.Context,
 	return result, nil
 }
 
-func (e *historyEngineImpl) RecordDecisionTaskStarted(
-	ctx ctx.Context,
-	request *h.RecordDecisionTaskStartedRequest,
-) (*h.RecordDecisionTaskStartedResponse, error) {
-	return e.decisionHandler.handleDecisionTaskStarted(ctx, request)
-}
-
 func (e *historyEngineImpl) RecordActivityTaskStarted(ctx ctx.Context,
 	request *h.RecordActivityTaskStartedRequest) (*h.RecordActivityTaskStartedResponse, error) {
 
@@ -930,6 +923,19 @@ func (c *decisionBlobSizeChecker) failWorkflowIfBlobSizeExceedsLimit(blob []byte
 	}
 
 	return true, nil
+}
+
+// ScheduleDecisionTask schedules a decision if no outstanding decision found
+func (e *historyEngineImpl) ScheduleDecisionTask(ctx ctx.Context, req *h.ScheduleDecisionTaskRequest) error {
+	return e.decisionHandler.handleDecisionTaskScheduled(ctx, req)
+}
+
+// RecordDecisionTaskStarted start a decision
+func (e *historyEngineImpl) RecordDecisionTaskStarted(
+	ctx ctx.Context,
+	request *h.RecordDecisionTaskStartedRequest,
+) (*h.RecordDecisionTaskStartedResponse, error) {
+	return e.decisionHandler.handleDecisionTaskStarted(ctx, request)
 }
 
 // RespondDecisionTaskCompleted completes a decision task
@@ -1595,11 +1601,6 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(ctx ctx.Context, terminat
 
 			return nil, nil
 		})
-}
-
-// ScheduleDecisionTask schedules a decision if no outstanding decision found
-func (e *historyEngineImpl) ScheduleDecisionTask(ctx ctx.Context, req *h.ScheduleDecisionTaskRequest) error {
-	return e.decisionHandler.handleDecisionTaskScheduled(ctx, req)
 }
 
 // RecordChildExecutionCompleted records the completion of child execution into parent execution history
