@@ -61,7 +61,7 @@ const (
 
 var (
 	uploadHistoryActivityNonRetryableErrors = []string{errGetDomainByID, errConstructKey, errGetTags, errUploadBlob, errReadBlob, errEmptyBucket, errConstructBlob, errDownloadBlob}
-	deleteBlobActivityNonRetryableErrors    = []string{errConstructKey, errDeleteBlob}
+	deleteBlobActivityNonRetryableErrors    = []string{errConstructKey, errGetTags, errUploadBlob, errEmptyBucket, errDeleteBlob}
 	deleteHistoryActivityNonRetryableErrors = []string{errDeleteHistoryV1, errDeleteHistoryV2}
 	errContextTimeout                       = errors.New("activity aborted because context timed out")
 )
@@ -185,7 +185,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	indexBlobKey, err := NewHistoryIndexBlobKey(request.DomainID, request.WorkflowID, request.RunID)
 	if err != nil {
 		logger.Error(uploadErrorMsg, tag.UploadFailReason("could not construct index blob key"))
-		return cadence.NewCustomError(errConstructBlob, err.Error())
+		return cadence.NewCustomError(errConstructKey, err.Error())
 	}
 	existingVersions, err := getTags(ctx, blobstoreClient, request.BucketName, indexBlobKey)
 	if err != nil && err != blobstore.ErrBlobNotExists {
@@ -256,6 +256,11 @@ func deleteBlobActivity(ctx context.Context, request ArchiveRequest) (err error)
 	}()
 	logger := tagLoggerWithRequest(container.Logger, request).WithTags(tag.Attempt(activity.GetInfo(ctx).Attempt))
 	blobstoreClient := container.Blobstore
+
+	if err := validateArchivalRequest(&request); err != nil {
+		logger.Error(errEmptyBucket)
+		return err
+	}
 
 	// delete index blob
 	indexBlobKey, err := NewHistoryIndexBlobKey(request.DomainID, request.WorkflowID, request.RunID)
