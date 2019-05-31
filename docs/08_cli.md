@@ -109,7 +109,7 @@ Use option `--workflowidreusepolicy` or `--wrp` to configure the workflow id re-
 ##### Start workflow with a memo
 Memos are immutable key/value pairs that can be attached to a workflow run when starting the workflow. These are 
 visible when listing workflows. More information on memos can be found 
-[here]({{ '/docs/02_key_features#durable-timers' | relative_url }}).
+[here]({{ '/docs/02_key_features#memos' | relative_url }}).
 ```
 cadence wf start -tl helloWorldGroup -wt main.Workflow -et 60 -i '"cadence"' -memo_key ‘“Service” “Env” “Instance”’ -memo ‘“serverName1” “test” 5’
 ```
