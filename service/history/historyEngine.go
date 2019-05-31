@@ -926,7 +926,10 @@ func (c *decisionBlobSizeChecker) failWorkflowIfBlobSizeExceedsLimit(blob []byte
 }
 
 // ScheduleDecisionTask schedules a decision if no outstanding decision found
-func (e *historyEngineImpl) ScheduleDecisionTask(ctx ctx.Context, req *h.ScheduleDecisionTaskRequest) error {
+func (e *historyEngineImpl) ScheduleDecisionTask(
+	ctx ctx.Context,
+	req *h.ScheduleDecisionTaskRequest,
+) error {
 	return e.decisionHandler.handleDecisionTaskScheduled(ctx, req)
 }
 
