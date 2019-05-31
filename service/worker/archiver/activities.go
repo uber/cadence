@@ -60,7 +60,7 @@ const (
 )
 
 var (
-	uploadHistoryActivityNonRetryableErrors = []string{errGetDomainByID, errConstructKey, errGetTags, errUploadBlob, errReadBlob, errEmptyBucket, errConstructBlob}
+	uploadHistoryActivityNonRetryableErrors = []string{errGetDomainByID, errConstructKey, errGetTags, errUploadBlob, errReadBlob, errEmptyBucket, errConstructBlob, errDownloadBlob}
 	deleteBlobActivityNonRetryableErrors    = []string{errConstructKey, errDeleteBlob}
 	deleteHistoryActivityNonRetryableErrors = []string{errDeleteHistoryV1, errDeleteHistoryV2}
 	errContextTimeout                       = errors.New("activity aborted because context timed out")
@@ -108,11 +108,11 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 		scope.IncCounter(metrics.ArchiverSkipUploadCount)
 		return nil
 	}
-	if len(request.BucketName) == 0 {
-		// this should not be able to occur, if domain enables archival bucket should always be set
-		logger.Error(uploadErrorMsg, tag.UploadFailReason("domain enables archival but does not have a bucket set"))
-		return cadence.NewCustomError(errEmptyBucket)
+	if err := validateArchivalRequest(&request); err != nil {
+		logger.Error(uploadErrorMsg, tag.UploadFailReason(err.Error()))
+		return err
 	}
+
 	domainName := domainCacheEntry.GetInfo().Name
 	clusterName := container.ClusterMetadata.GetCurrentClusterName()
 	historyBlobReader := container.HistoryBlobReader
@@ -121,24 +121,20 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	}
 	blobstoreClient := container.Blobstore
 
-	// start uploading blobs
 	handledLastBlob := false
 	for pageToken := common.FirstBlobPageToken; !handledLastBlob; pageToken++ {
 		key, err := NewHistoryBlobKey(request.DomainID, request.WorkflowID, request.RunID, request.CloseFailoverVersion, pageToken)
 		if err != nil {
-			logger.Error(uploadErrorMsg, tag.UploadFailReason("could not construct blob key"), tag.ArchivalBucket(request.BucketName))
-			return cadence.NewCustomError(errConstructKey)
+			logger.Error(uploadErrorMsg, tag.UploadFailReason("could not construct blob key"))
+			return cadence.NewCustomError(errConstructKey, err.Error())
 		}
 
-		// get blob tag using constructed key to see if the blob exists and if it's the last blob
 		tags, err := getTags(ctx, blobstoreClient, request.BucketName, key)
 		if err != nil && err != blobstore.ErrBlobNotExists {
-			logger.Error(uploadErrorMsg, tag.UploadFailReason("could not get blob tags"), tag.ArchivalBucket(request.BucketName), tag.ArchivalBlobKey(key.String()))
+			logger.Error(uploadErrorMsg, tag.UploadFailReason("could not get blob tags"), tag.ArchivalBlobKey(key.String()))
 			return err
 		}
 
-		// if we can get tag, it means this blob already exists
-		// Based on if it's the last blob, we need to break the loop or continue
 		runConstTest := false
 		blobAlreadyExists := err == nil
 		if blobAlreadyExists {
@@ -152,24 +148,21 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 			scope.IncCounter(metrics.ArchiverRunningDeterministicConstructionCheckCount)
 		}
 
-		// blob doesn't exist, read from history
 		historyBlob, err := getBlob(ctx, historyBlobReader, pageToken)
 		if err != nil {
-			logger.Error(uploadErrorMsg, tag.UploadFailReason("could not get history blob from reader"), tag.ArchivalBucket(request.BucketName))
+			logger.Error(uploadErrorMsg, tag.UploadFailReason("could not get history blob from reader"))
 			return err
 		}
-
 		if runConstTest {
 			// some tags are specific to the cluster and time a blob was uploaded from/when
 			// this only updates those specific tags, all other parts of the blob are left unchanged
 			modifyBlobForConstCheck(historyBlob, tags)
 		}
 
-		// construct blob from history blob
 		blob, reason, err := constructBlob(historyBlob, container.Config.EnableArchivalCompression(domainName))
 		if err != nil {
-			logger.Error(uploadErrorMsg, tag.UploadFailReason(reason), tag.ArchivalBucket(request.BucketName), tag.ArchivalBlobKey(key.String()))
-			return cadence.NewCustomError(errConstructBlob)
+			logger.Error(uploadErrorMsg, tag.UploadFailReason(reason), tag.ArchivalBlobKey(key.String()))
+			return cadence.NewCustomError(errConstructBlob, err.Error())
 		}
 		if runConstTest {
 			existingBlob, err := downloadBlob(ctx, blobstoreClient, request.BucketName, key)
@@ -183,21 +176,20 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 			continue
 		}
 
-		// upload constructed blob
 		if err := uploadBlob(ctx, blobstoreClient, request.BucketName, key, blob); err != nil {
-			logger.Error(uploadErrorMsg, tag.UploadFailReason("could not upload blob"), tag.ArchivalBucket(request.BucketName), tag.ArchivalBlobKey(key.String()))
+			logger.Error(uploadErrorMsg, tag.UploadFailReason("could not upload blob"), tag.ArchivalBlobKey(key.String()))
 			return err
 		}
 		handledLastBlob = *historyBlob.Header.IsLast
 	}
 	indexBlobKey, err := NewHistoryIndexBlobKey(request.DomainID, request.WorkflowID, request.RunID)
 	if err != nil {
-		logger.Error(uploadErrorMsg, tag.UploadFailReason("could not construct index blob key"), tag.ArchivalBucket(request.BucketName))
-		return cadence.NewCustomError(errConstructBlob)
+		logger.Error(uploadErrorMsg, tag.UploadFailReason("could not construct index blob key"))
+		return cadence.NewCustomError(errConstructBlob, err.Error())
 	}
 	existingVersions, err := getTags(ctx, blobstoreClient, request.BucketName, indexBlobKey)
 	if err != nil && err != blobstore.ErrBlobNotExists {
-		logger.Error(uploadErrorMsg, tag.UploadFailReason("could not get index blob tags"), tag.ArchivalBucket(request.BucketName), tag.ArchivalBlobKey(indexBlobKey.String()))
+		logger.Error(uploadErrorMsg, tag.UploadFailReason("could not get index blob tags"), tag.ArchivalBlobKey(indexBlobKey.String()))
 		return err
 	}
 	indexBlobWithVersion := addVersion(request.CloseFailoverVersion, existingVersions)
@@ -205,7 +197,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 		return nil
 	}
 	if err := uploadBlob(ctx, blobstoreClient, request.BucketName, indexBlobKey, indexBlobWithVersion); err != nil {
-		logger.Error(uploadErrorMsg, tag.UploadFailReason("could not upload index blob"), tag.ArchivalBucket(request.BucketName), tag.ArchivalBlobKey(indexBlobKey.String()))
+		logger.Error(uploadErrorMsg, tag.UploadFailReason("could not upload index blob"), tag.ArchivalBlobKey(indexBlobKey.String()))
 		return err
 	}
 	return nil
@@ -246,6 +238,8 @@ func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 // deleteBlobActivity deletes uploaded history blobs from blob store.
 // method will retry all retryable operations until context expires.
 // method will always return either: nil, contextTimeoutErr or an error from deleteBlobActivityNonRetryableErrors.
+// TODO: after heartbeating during uploadHistoryActivity is implemented, this activity should take
+// a list of uploaded blob keys as input.
 func deleteBlobActivity(ctx context.Context, request ArchiveRequest) (err error) {
 	container := ctx.Value(bootstrapContainerKey).(*BootstrapContainer)
 	scope := container.MetricsClient.Scope(metrics.ArchiverDeleteBlobActivityScope, metrics.DomainTag(request.DomainName))
@@ -262,6 +256,33 @@ func deleteBlobActivity(ctx context.Context, request ArchiveRequest) (err error)
 	}()
 	logger := tagLoggerWithRequest(container.Logger, request).WithTags(tag.Attempt(activity.GetInfo(ctx).Attempt))
 	blobstoreClient := container.Blobstore
+
+	// delete index blob
+	indexBlobKey, err := NewHistoryIndexBlobKey(request.DomainID, request.WorkflowID, request.RunID)
+	if err != nil {
+		logger.Error("could not construct index blob key", tag.Error(err))
+		return cadence.NewCustomError(errConstructKey, err.Error())
+	}
+	existingVersions, err := getTags(ctx, blobstoreClient, request.BucketName, indexBlobKey)
+	if err != nil && err != blobstore.ErrBlobNotExists {
+		logger.Error("could not get index blob tags", tag.ArchivalBlobKey(indexBlobKey.String()), tag.Error(err))
+		return err
+	}
+	if err != blobstore.ErrBlobNotExists {
+		indexBlobWithVersion := deleteVersion(request.CloseFailoverVersion, existingVersions)
+		if indexBlobWithVersion == nil {
+			// We removed the last version in the tag, delete the whole index blob.
+			if _, err := deleteBlob(ctx, blobstoreClient, request.BucketName, indexBlobKey); err != nil {
+				logger.Error("failed to delete index blob", tag.ArchivalBlobKey(indexBlobKey.String()), tag.Error(err))
+				return err
+			}
+		} else {
+			if err := uploadBlob(ctx, blobstoreClient, request.BucketName, indexBlobKey, indexBlobWithVersion); err != nil {
+				logger.Error("could not upload index blob", tag.ArchivalBlobKey(indexBlobKey.String()), tag.Error(err))
+				return err
+			}
+		}
+	}
 
 	pageToken := common.FirstBlobPageToken
 	if activity.HasHeartbeatDetails(ctx) {
@@ -281,7 +302,7 @@ func deleteBlobActivity(ctx context.Context, request ArchiveRequest) (err error)
 
 		deleted, err := deleteBlob(ctx, blobstoreClient, request.BucketName, key)
 		if err != nil {
-			logger.Error("failed to delete blob", tag.ArchivalBucket(request.BucketName), tag.ArchivalBlobKey(key.String()), tag.Error(err))
+			logger.Error("failed to delete blob", tag.ArchivalBlobKey(key.String()), tag.Error(err))
 			return err
 		}
 		if !deleted && pageToken != startPageToken {
@@ -294,16 +315,6 @@ func deleteBlobActivity(ctx context.Context, request ArchiveRequest) (err error)
 		pageToken++
 	}
 
-	// delete index blob
-	indexBlobKey, err := NewHistoryIndexBlobKey(request.DomainID, request.WorkflowID, request.RunID)
-	if err != nil {
-		logger.Error("could not construct index blob key", tag.Error(err))
-		return cadence.NewCustomError(errConstructKey, err.Error())
-	}
-	if _, err := deleteBlob(ctx, blobstoreClient, request.BucketName, indexBlobKey); err != nil {
-		logger.Error("failed to delete index blob", tag.ArchivalBucket(request.BucketName), tag.ArchivalBlobKey(indexBlobKey.String()), tag.Error(err))
-		return err
-	}
 	return nil
 }
 
@@ -315,7 +326,7 @@ func getBlob(ctx context.Context, historyBlobReader HistoryBlobReader, blobPage 
 	}
 	for err != nil {
 		if !common.IsPersistenceTransientError(err) {
-			return nil, cadence.NewCustomError(errReadBlob)
+			return nil, cadence.NewCustomError(errReadBlob, err.Error())
 		}
 		if contextExpired(ctx) {
 			return nil, errContextTimeout
@@ -334,7 +345,7 @@ func getTags(ctx context.Context, blobstoreClient blobstore.Client, bucket strin
 			return nil, err
 		}
 		if !blobstoreClient.IsRetryableError(err) {
-			return nil, cadence.NewCustomError(errGetTags)
+			return nil, cadence.NewCustomError(errGetTags, err.Error())
 		}
 		if contextExpired(ctx) {
 			return nil, errContextTimeout
@@ -352,7 +363,7 @@ func uploadBlob(ctx context.Context, blobstoreClient blobstore.Client, bucket st
 	cancel()
 	for err != nil {
 		if !blobstoreClient.IsRetryableError(err) {
-			return cadence.NewCustomError(errUploadBlob)
+			return cadence.NewCustomError(errUploadBlob, err.Error())
 		}
 		if contextExpired(ctx) {
 			return errContextTimeout
@@ -370,7 +381,7 @@ func downloadBlob(ctx context.Context, blobstoreClient blobstore.Client, bucket 
 	cancel()
 	for err != nil {
 		if !blobstoreClient.IsRetryableError(err) {
-			return nil, cadence.NewCustomError(errDownloadBlob)
+			return nil, cadence.NewCustomError(errDownloadBlob, err.Error())
 		}
 		if contextExpired(ctx) {
 			return nil, errContextTimeout
@@ -412,7 +423,7 @@ func getDomainByID(ctx context.Context, domainCache cache.DomainCache, id string
 	}
 	for err != nil {
 		if !common.IsPersistenceTransientError(err) {
-			return nil, cadence.NewCustomError(errGetDomainByID)
+			return nil, cadence.NewCustomError(errGetDomainByID, err.Error())
 		}
 		if contextExpired(ctx) {
 			return nil, errContextTimeout
@@ -439,7 +450,7 @@ func deleteHistoryV1(ctx context.Context, container *BootstrapContainer, request
 	}
 	for err != nil {
 		if !common.IsPersistenceTransientError(err) {
-			return cadence.NewCustomError(errDeleteHistoryV1)
+			return cadence.NewCustomError(errDeleteHistoryV1, err.Error())
 		}
 		if contextExpired(ctx) {
 			return errContextTimeout
@@ -459,7 +470,7 @@ func deleteHistoryV2(ctx context.Context, container *BootstrapContainer, request
 	}
 	for err != nil {
 		if !common.IsPersistenceTransientError(err) {
-			return cadence.NewCustomError(errDeleteHistoryV2)
+			return cadence.NewCustomError(errDeleteHistoryV2, err.Error())
 		}
 		if contextExpired(ctx) {
 			return errContextTimeout
