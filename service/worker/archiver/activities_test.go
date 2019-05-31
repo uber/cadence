@@ -818,7 +818,7 @@ func (s *activitiesSuite) TestDeleteBlobActivity_Success_WithHeartbeatDetails() 
 	s.Nil(err)
 
 	mockBlobstore := &mocks.BlobstoreClient{}
-	mockBlobstore.On("GetTags", mock.Anything, testArchivalBucket, indexBlobKey).Return(nil, blobstore.ErrBlobNotExists).Once()
+	mockBlobstore.On("GetTags", mock.Anything, testArchivalBucket, indexBlobKey).Return(map[string]string{"some other version": ""}, nil).Once()
 	mockBlobstore.On("Delete", mock.Anything, testArchivalBucket, thirdBlobKey).Return(true, nil).Once()
 	mockBlobstore.On("Delete", mock.Anything, testArchivalBucket, fourthBlobKey).Return(false, nil).Once()
 	mockBlobstore.On("Delete", mock.Anything, testArchivalBucket, indexBlobKey).Return(true, nil).Once()

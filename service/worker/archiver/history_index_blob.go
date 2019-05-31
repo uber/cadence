@@ -88,6 +88,10 @@ func deleteVersion(closeFailoverVersion int64, existingVersions map[string]strin
 		return nil
 	}
 	versionToDelete := strconv.FormatInt(closeFailoverVersion, 10)
+	if _, ok := existingVersions[versionToDelete]; !ok {
+		return nil
+	}
+
 	newVersions := make(map[string]string)
 	for ev := range existingVersions {
 		if ev != versionToDelete {
@@ -95,8 +99,5 @@ func deleteVersion(closeFailoverVersion int64, existingVersions map[string]strin
 		}
 	}
 
-	if len(newVersions) == 0 {
-		return nil
-	}
 	return blob.NewBlob(nil, newVersions)
 }
