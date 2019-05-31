@@ -930,7 +930,7 @@ func (e *historyEngineImpl) ScheduleDecisionTask(ctx ctx.Context, req *h.Schedul
 	return e.decisionHandler.handleDecisionTaskScheduled(ctx, req)
 }
 
-// RecordDecisionTaskStarted start a decision
+// RecordDecisionTaskStarted starts a decision
 func (e *historyEngineImpl) RecordDecisionTaskStarted(
 	ctx ctx.Context,
 	request *h.RecordDecisionTaskStartedRequest,
@@ -946,6 +946,7 @@ func (e *historyEngineImpl) RespondDecisionTaskCompleted(
 	return e.decisionHandler.handleDecisionTaskCompleted(ctx, req)
 }
 
+// RespondDecisionTaskFailed fails a decision
 func (e *historyEngineImpl) RespondDecisionTaskFailed(
 	ctx ctx.Context,
 	req *h.RespondDecisionTaskFailedRequest,
