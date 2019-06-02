@@ -21,6 +21,7 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -90,6 +91,39 @@ func (s *RingpopSuite) TestCustomMode() {
 	s.NotNil(f)
 }
 
+type mockResolver struct {
+	Hosts map[string][]string
+}
+
+func (resolver *mockResolver) LookupHost(ctx context.Context, host string) ([]string, error) {
+	addrs, ok := resolver.Hosts[host]
+	if !ok {
+		return nil, fmt.Errorf("Host was not resolved: %s", host)
+	}
+	return addrs, nil
+}
+
+func (s *RingpopSuite) TestDNSMode() {
+	var cfg Ringpop
+	err := yaml.Unmarshal([]byte(getDNSConfig()), &cfg)
+	fmt.Println(err, cfg)
+	s.Nil(err)
+	s.Equal("test", cfg.Name)
+	s.Equal(BootstrapModeDNS, cfg.BootstrapMode)
+	s.Nil(cfg.validate())
+	s.Equal([]string{"example.net:1111", "example.net:1112"}, cfg.BootstrapHosts)
+
+	cfg.DiscoveryProvider = &dnsProvider{
+		Resolver: &mockResolver{
+			Hosts: map[string][]string{"example.net": []string{"10.0.0.0", "10.0.0.1"}},
+		},
+		UnresolvedHosts: cfg.BootstrapHosts,
+	}
+	hostports, err := cfg.DiscoveryProvider.Hosts()
+	s.Nil(err)
+	s.Equal([]string{"10.0.0.0:1111", "10.0.0.1:1111", "10.0.0.0:1112", "10.0.0.1:1112"}, hostports)
+}
+
 func (s *RingpopSuite) TestInvalidConfig() {
 	var cfg Ringpop
 	s.NotNil(cfg.validate())
@@ -118,5 +152,12 @@ maxJoinDuration: 30s`
 func getCustomConfig() string {
 	return `name: "test"
 bootstrapMode: "custom"
+maxJoinDuration: 30s`
+}
+
+func getDNSConfig() string {
+	return `name: "test"
+bootstrapMode: "dns"
+bootstrapHosts: ["example.net:1111", "example.net:1112"]
 maxJoinDuration: 30s`
 }

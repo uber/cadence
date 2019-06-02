@@ -21,8 +21,10 @@
 package config
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"net"
 	"reflect"
 	"strings"
 	"time"
@@ -49,6 +51,9 @@ const (
 	BootstrapModeHosts
 	// BootstrapModeCustom represents a custom bootstrap mode
 	BootstrapModeCustom
+	// BootstrapModeDNS represents a list of hosts passed in the configuration
+	// to be resolved, and the resulting addresses are used for bootstrap
+	BootstrapModeDNS
 )
 
 const (
@@ -104,6 +109,8 @@ func parseBootstrapMode(s string) (BootstrapMode, error) {
 		return BootstrapModeFile, nil
 	case "custom":
 		return BootstrapModeCustom, nil
+	case "dns":
+		return BootstrapModeDNS, nil
 	}
 	return BootstrapModeNone, errors.New("invalid or no ringpop bootstrap mode")
 }
@@ -114,7 +121,7 @@ func validateBootstrapMode(rpConfig *Ringpop) error {
 		if len(rpConfig.BootstrapFile) == 0 {
 			return fmt.Errorf("ringpop config missing bootstrap file param")
 		}
-	case BootstrapModeHosts:
+	case BootstrapModeHosts, BootstrapModeDNS:
 		if len(rpConfig.BootstrapHosts) == 0 {
 			return fmt.Errorf("ringpop config missing boostrap hosts param")
 		}
@@ -202,6 +209,42 @@ func (factory *RingpopFactory) getChannel(dispatcher *yarpc.Dispatcher) (*tcg.Ch
 	return ch, nil
 }
 
+type minimalResolver interface {
+	LookupHost(ctx context.Context, host string) (addrs []string, err error)
+}
+
+type dnsProvider struct {
+	Resolver        minimalResolver
+	UnresolvedHosts []string
+}
+
+func (provider *dnsProvider) Hosts() ([]string, error) {
+	results := []string{}
+	resolvedHosts := map[string][]string{}
+	for _, hostport := range provider.UnresolvedHosts {
+		host, port, err := net.SplitHostPort(hostport)
+		if err != nil {
+			return nil, err
+		}
+
+		resolved, exists := resolvedHosts[host]
+		if !exists {
+			resolved, err = provider.Resolver.LookupHost(context.Background(), host)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		for _, r := range resolved {
+			if !exists {
+				resolvedHosts[host] = append(resolvedHosts[host], r)
+			}
+			results = append(results, net.JoinHostPort(r, port))
+		}
+	}
+	return results, nil
+}
+
 func newDiscoveryProvider(cfg *Ringpop) (discovery.DiscoverProvider, error) {
 
 	if cfg.DiscoveryProvider != nil {
@@ -214,6 +257,8 @@ func newDiscoveryProvider(cfg *Ringpop) (discovery.DiscoverProvider, error) {
 		return statichosts.New(cfg.BootstrapHosts...), nil
 	case BootstrapModeFile:
 		return jsonfile.New(cfg.BootstrapFile), nil
+	case BootstrapModeDNS:
+		return &dnsProvider{Resolver: net.DefaultResolver, UnresolvedHosts: cfg.BootstrapHosts}, nil
 	}
 	return nil, fmt.Errorf("unknown bootstrap mode")
 }
