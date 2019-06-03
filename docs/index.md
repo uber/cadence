@@ -11,8 +11,12 @@ updating, and calculating cart items), entering the order in a pipeline (for pre
 coordinating delivery), to scheduling delivery as well as handling payments.
 
 Cadence consists of a programming framework (or client library) and a managed service (or backend).
-The framework enables developers to author and coordinate tasks in familiar languages. Initially, 
-as the framework only supports Go, code samples in this guide focus on Go.
+The framework enables developers to author and coordinate tasks in familiar languages 
+([Go](https://github.com/uber-go/cadence-client/) and [Java](https://github.com/uber/cadence-java-client) 
+are supported today with some projects in [Python](https://github.com/firdaus/cadence-python) and 
+[C#](https://github.com/nforgeio/neonKUBE/tree/master/Lib/Neon.Cadence) 
+via [proxy](https://github.com/nforgeio/neonKUBE/tree/master/Go/src/github.com/loopieio/cadence-proxy) 
+in development).
 
 [Watch Maxim's talk](https://youtu.be/llmsBGKOuWI) from the Uber Open Summit for an introduction 
 to the Cadence programming model and value proposition.
