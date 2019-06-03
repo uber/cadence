@@ -16,3 +16,7 @@ where:
 In Cadence, you can code the logical flow of events separately as a workflow and code business logic
 as activities. The workflow identifies the activities and sequences them, while an activity executes
 the logic.
+
+The video below explores the Cadence architecture in more depth:
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/5M5eiNBUf4Q" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
