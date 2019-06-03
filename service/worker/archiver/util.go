@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/dgryski/go-farm"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 )
@@ -92,4 +93,15 @@ func shouldRun(probability float64) bool {
 		return true
 	}
 	return rand.Intn(int(1.0/probability)) == 0
+}
+
+func isHistoryMutated(historyBlob *HistoryBlob, request *ArchiveRequest) bool {
+	lastFailoverVersion := common.Int64Default(historyBlob.Header.LastFailoverVersion)
+	if lastFailoverVersion > request.CloseFailoverVersion {
+		return true
+	}
+
+	isLast := common.BoolDefault(historyBlob.Header.IsLast)
+	lastEventID := common.Int64Default(historyBlob.Header.LastEventID)
+	return isLast && (lastFailoverVersion != request.CloseFailoverVersion || lastEventID+1 != request.NextEventID)
 }
