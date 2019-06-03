@@ -1,7 +1,7 @@
 ---
 title: Welcome
 layout: marketing
-callout: Rethink how to build and run distributed applications at scale
+callout: Redefining Building and Running Distributed Applications at Scale
 callout_description: Directly code your application business logic. Cadence takes care of making it highly scalable, fault tolerant and durable. 
 ---
 
