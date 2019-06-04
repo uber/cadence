@@ -2925,7 +2925,7 @@ func validateActivityScheduleAttributes(attributes *workflow.ScheduleActivityTas
 		return &workflow.BadRequestError{Message: "ActivityId is not set on decision."}
 	}
 
-	if attributes.ActivityType == nil || attributes.ActivityType.Name == nil || *attributes.GetActivityType().Name == "" {
+	if attributes.ActivityType == nil || attributes.ActivityType.Name == nil || *attributes.ActivityType.Name == "" {
 		return &workflow.BadRequestError{Message: "ActivityType is not set on decision."}
 	}
 
