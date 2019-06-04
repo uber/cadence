@@ -2229,6 +2229,11 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 		listRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize(listRequest.GetDomain())))
 	}
 
+	if wh.isListRequestPageSizeTooLarge(listRequest.GetMaximumPageSize(), listRequest.GetDomain()) {
+		return nil, wh.error(&gen.BadRequestError{
+			Message: fmt.Sprintf("Pagesize is larger than allow %d", wh.config.ESIndexMaxResultWindow())}, scope)
+	}
+
 	domain := listRequest.GetDomain()
 	domainID, err := wh.domainCache.GetDomainID(domain)
 	if err != nil {
@@ -2335,6 +2340,11 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 		listRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize(listRequest.GetDomain())))
 	}
 
+	if wh.isListRequestPageSizeTooLarge(listRequest.GetMaximumPageSize(), listRequest.GetDomain()) {
+		return nil, wh.error(&gen.BadRequestError{
+			Message: fmt.Sprintf("Pagesize is larger than allow %d", wh.config.ESIndexMaxResultWindow())}, scope)
+	}
+
 	domain := listRequest.GetDomain()
 	domainID, err := wh.domainCache.GetDomainID(domain)
 	if err != nil {
@@ -2426,6 +2436,11 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(ctx context.Context, listReque
 		listRequest.PageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize(listRequest.GetDomain())))
 	}
 
+	if wh.isListRequestPageSizeTooLarge(listRequest.GetPageSize(), listRequest.GetDomain()) {
+		return nil, wh.error(&gen.BadRequestError{
+			Message: fmt.Sprintf("Pagesize is larger than allow %d", wh.config.ESIndexMaxResultWindow())}, scope)
+	}
+
 	if err := wh.visibilityQueryValidator.ValidateListRequestForQuery(listRequest); err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -2479,6 +2494,11 @@ func (wh *WorkflowHandler) ScanWorkflowExecutions(ctx context.Context, listReque
 
 	if listRequest.GetPageSize() <= 0 {
 		listRequest.PageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize(listRequest.GetDomain())))
+	}
+
+	if wh.isListRequestPageSizeTooLarge(listRequest.GetPageSize(), listRequest.GetDomain()) {
+		return nil, wh.error(&gen.BadRequestError{
+			Message: fmt.Sprintf("Pagesize is larger than allow %d", wh.config.ESIndexMaxResultWindow())}, scope)
 	}
 
 	if err := wh.visibilityQueryValidator.ValidateListRequestForQuery(listRequest); err != nil {
@@ -3316,4 +3336,9 @@ func (wh *WorkflowHandler) validateSearchAttributes(input *gen.SearchAttributes,
 	}
 
 	return nil
+}
+
+func (wh *WorkflowHandler) isListRequestPageSizeTooLarge(pageSize int32, domain string) bool {
+	return wh.config.EnableReadVisibilityFromES(domain) &&
+		pageSize > int32(wh.config.ESIndexMaxResultWindow())
 }
