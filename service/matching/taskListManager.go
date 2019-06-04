@@ -532,21 +532,18 @@ func (c *taskListManagerImpl) allocTaskIDBlock(prevBlockEnd int64) (taskIDBlock,
 }
 
 func (c *taskListManagerImpl) String() string {
-	var buf bytes.Buffer
+	buf := new(bytes.Buffer)
 	if c.taskListID.taskType == persistence.TaskListTypeActivity {
 		buf.WriteString("Activity")
 	} else {
 		buf.WriteString("Decision")
 	}
 	rangeID := c.db.RangeID()
-	buf.WriteString(" task list ")
-	buf.WriteString(c.taskListID.taskListName)
-	buf.WriteString("\n")
-
-	buf.WriteString(fmt.Sprintf("RangeID=%v\n", rangeID))
-	buf.WriteString(fmt.Sprintf("TaskIDBlock=%+v\n", c.rangeIDToTaskIDBlock(rangeID)))
-	buf.WriteString(fmt.Sprintf("AckLevel=%v\n", c.taskAckManager.ackLevel))
-	buf.WriteString(fmt.Sprintf("MaxReadLevel=%v\n", c.taskAckManager.getReadLevel()))
+	fmt.Fprintf(buf, " task list %v\n", c.taskListID.taskListName)
+	fmt.Fprintf(buf, "RangeID=%v\n", rangeID)
+	fmt.Fprintf(buf, "TaskIDBlock=%+v\n", c.rangeIDToTaskIDBlock(rangeID))
+	fmt.Fprintf(buf, "AckLevel=%v\n", c.taskAckManager.ackLevel)
+	fmt.Fprintf(buf, "MaxReadLevel=%v\n", c.taskAckManager.getReadLevel())
 
 	return buf.String()
 }

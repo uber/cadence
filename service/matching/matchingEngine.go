@@ -158,10 +158,9 @@ func (e *matchingEngineImpl) getTaskLists(maxCount int) (lists []taskListManager
 
 func (e *matchingEngineImpl) String() string {
 	// Executes taskList.String() on each task list outside of lock
-	var buf bytes.Buffer
+	buf := new(bytes.Buffer)
 	for _, l := range e.getTaskLists(1000) {
-		buf.WriteString("\n")
-		buf.WriteString(l.String())
+		fmt.Fprintf(buf, "\n%s", l.String())
 	}
 	return buf.String()
 }
