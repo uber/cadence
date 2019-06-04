@@ -707,6 +707,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Success_ConcurrentUploads() 
 func (s *activitiesSuite) TestUploadHistoryActivity_Fail_HistoryMutated() {
 	s.metricsClient.On("Scope", metrics.ArchiverUploadHistoryActivityScope, []metrics.Tag{metrics.DomainTag(testDomainName)}).Return(s.metricsScope).Once()
 	s.metricsScope.On("IncCounter", metrics.ArchiverNonRetryableErrorCount).Once()
+	s.metricsScope.On("IncCounter", metrics.ArchiverHistoryMutatedCount).Once()
 	firstKey, _ := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, testCloseFailoverVersion, common.FirstBlobPageToken)
 	domainCache, mockClusterMetadata := s.archivalConfig(true, testArchivalBucket, true)
 	mockBlobstore := &mocks.BlobstoreClient{}
@@ -767,7 +768,6 @@ func (s *activitiesSuite) TestDeleteBlobActivity_Fail_ConstructBlobKeyError() {
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-
 	_, err := env.ExecuteActivity(deleteBlobActivity, request)
 	s.Equal(errConstructKey, err.Error())
 }

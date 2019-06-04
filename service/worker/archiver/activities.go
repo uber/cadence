@@ -157,6 +157,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 		}
 
 		if isHistoryMutated(historyBlob, &request) {
+			scope.IncCounter(metrics.ArchiverHistoryMutatedCount)
 			logger.Error(uploadErrorMsg, tag.UploadFailReason("history was mutated during archiving"))
 			return cadence.NewCustomError(errHistoryMutated)
 		}
