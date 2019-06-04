@@ -274,16 +274,16 @@ func deleteBlobActivity(ctx context.Context, request ArchiveRequest) (err error)
 		return err
 	}
 	if err != blobstore.ErrBlobNotExists {
-		if indexBlobWithVersion := deleteVersion(request.CloseFailoverVersion, existingVersions); indexBlobWithVersion != nil {
+		if indexBlobWithoutVersion := deleteVersion(request.CloseFailoverVersion, existingVersions); indexBlobWithoutVersion != nil {
 			// We changed the existing versions, either upload the new blob or delete the exising one
-			if len(indexBlobWithVersion.Tags) == 0 {
+			if len(indexBlobWithoutVersion.Tags) == 0 {
 				// We removed the last version in the tag, delete the whole index blob.
 				if _, err := deleteBlob(ctx, blobstoreClient, request.BucketName, indexBlobKey); err != nil {
 					logger.Error("failed to delete index blob", tag.ArchivalBlobKey(indexBlobKey.String()), tag.Error(err))
 					return err
 				}
 			} else {
-				if err := uploadBlob(ctx, blobstoreClient, request.BucketName, indexBlobKey, indexBlobWithVersion); err != nil {
+				if err := uploadBlob(ctx, blobstoreClient, request.BucketName, indexBlobKey, indexBlobWithoutVersion); err != nil {
 					logger.Error("could not upload index blob", tag.ArchivalBlobKey(indexBlobKey.String()), tag.Error(err))
 					return err
 				}

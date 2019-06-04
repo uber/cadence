@@ -124,7 +124,6 @@ func handleRequest(ctx workflow.Context, logger log.Logger, metricsClient metric
 	uploadSW.Stop()
 
 	if err != nil {
-		// If uploading or version check fails, delete all uploaded blobs
 		ao := workflow.ActivityOptions{
 			ScheduleToStartTimeout: 10 * time.Minute,
 			StartToCloseTimeout:    5 * time.Minute,
