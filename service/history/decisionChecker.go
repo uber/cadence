@@ -108,15 +108,15 @@ func (v *decisionAttrValidator) validateActivityScheduleAttributes(
 		return &workflow.BadRequestError{Message: "ScheduleActivityTaskDecisionAttributes is not set on decision."}
 	}
 
-	if attributes.TaskList == nil || attributes.TaskList.Name == nil || *attributes.TaskList.Name == "" {
+	if attributes.TaskList == nil || attributes.TaskList.GetName() == "" {
 		return &workflow.BadRequestError{Message: "TaskList is not set on decision."}
 	}
 
-	if attributes.ActivityId == nil || *attributes.ActivityId == "" {
+	if attributes.GetActivityId() == "" {
 		return &workflow.BadRequestError{Message: "ActivityId is not set on decision."}
 	}
 
-	if attributes.ActivityType == nil || attributes.ActivityType.Name == nil || *attributes.ActivityType.Name == "" {
+	if attributes.ActivityType == nil || attributes.ActivityType.GetName() == "" {
 		return &workflow.BadRequestError{Message: "ActivityType is not set on decision."}
 	}
 
@@ -200,13 +200,13 @@ func (v *decisionAttrValidator) validateTimerScheduleAttributes(
 	if attributes == nil {
 		return &workflow.BadRequestError{Message: "StartTimerDecisionAttributes is not set on decision."}
 	}
-	if attributes.TimerId == nil || *attributes.TimerId == "" {
+	if attributes.GetTimerId() == "" {
 		return &workflow.BadRequestError{Message: "TimerId is not set on decision."}
 	}
 	if len(attributes.GetTimerId()) > v.maxIDLengthLimit {
 		return &workflow.BadRequestError{Message: "TimerId exceeds length limit."}
 	}
-	if attributes.StartToFireTimeoutSeconds == nil || *attributes.StartToFireTimeoutSeconds <= 0 {
+	if attributes.GetStartToFireTimeoutSeconds() <= 0 {
 		return &workflow.BadRequestError{Message: "A valid StartToFireTimeoutSeconds is not set on decision."}
 	}
 	return nil
@@ -219,7 +219,7 @@ func (v *decisionAttrValidator) validateActivityCancelAttributes(
 	if attributes == nil {
 		return &workflow.BadRequestError{Message: "RequestCancelActivityTaskDecisionAttributes is not set on decision."}
 	}
-	if attributes.ActivityId == nil || *attributes.ActivityId == "" {
+	if attributes.GetActivityId() == "" {
 		return &workflow.BadRequestError{Message: "ActivityId is not set on decision."}
 	}
 	if len(attributes.GetActivityId()) > v.maxIDLengthLimit {
@@ -235,7 +235,7 @@ func (v *decisionAttrValidator) validateTimerCancelAttributes(
 	if attributes == nil {
 		return &workflow.BadRequestError{Message: "CancelTimerDecisionAttributes is not set on decision."}
 	}
-	if attributes.TimerId == nil || *attributes.TimerId == "" {
+	if attributes.GetTimerId() == "" {
 		return &workflow.BadRequestError{Message: "TimerId is not set on decision."}
 	}
 	if len(attributes.GetTimerId()) > v.maxIDLengthLimit {
@@ -251,7 +251,7 @@ func (v *decisionAttrValidator) validateRecordMarkerAttributes(
 	if attributes == nil {
 		return &workflow.BadRequestError{Message: "RecordMarkerDecisionAttributes is not set on decision."}
 	}
-	if attributes.MarkerName == nil || *attributes.MarkerName == "" {
+	if attributes.GetMarkerName() == "" {
 		return &workflow.BadRequestError{Message: "MarkerName is not set on decision."}
 	}
 	if len(attributes.GetMarkerName()) > v.maxIDLengthLimit {
