@@ -354,12 +354,14 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_MaxWindowSize() {
 		}
 		time.Sleep(waitTimeInMs * time.Millisecond)
 	}
+	s.NotNil(listResp)
 	s.True(len(listResp.GetNextPageToken()) != 0)
 
 	// the last request
 	listRequest.NextPageToken = listResp.GetNextPageToken()
 	resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
 	s.Nil(err)
+	s.Logger.Debug(fmt.Sprintf("last request get executions %s", resp.GetExecutions()))
 	s.True(len(resp.GetExecutions()) == 0)
 	s.True(len(resp.GetNextPageToken()) == 0)
 
