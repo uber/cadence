@@ -582,7 +582,6 @@ func (e *historyEngineImpl) getMutableState(ctx ctx.Context,
 
 	executionInfo := msBuilder.GetExecutionInfo()
 	execution.RunId = context.getExecution().RunId
-	versionHistories := msBuilder.GetAllVersionHistories()
 	retResp = &h.GetMutableStateResponse{
 		Execution:                            &execution,
 		WorkflowType:                         &workflow.WorkflowType{Name: common.StringPtr(executionInfo.WorkflowTypeName)},
@@ -598,7 +597,6 @@ func (e *historyEngineImpl) getMutableState(ctx ctx.Context,
 		StickyTaskListScheduleToStartTimeout: common.Int32Ptr(executionInfo.StickyScheduleToStartTimeout),
 		EventStoreVersion:                    common.Int32Ptr(msBuilder.GetEventStoreVersion()),
 		BranchToken:                          msBuilder.GetCurrentBranch(),
-		VersionHistories:                     versionHistories.ToThrift(),
 	}
 
 	replicationState := msBuilder.GetReplicationState()
@@ -611,7 +609,10 @@ func (e *historyEngineImpl) getMutableState(ctx ctx.Context,
 			}
 		}
 	}
-
+	versionHistories := msBuilder.GetAllVersionHistories()
+	if versionHistories != nil {
+		retResp.VersionHistories = versionHistories.ToThrift()
+	}
 	return
 }
 
@@ -2916,15 +2917,15 @@ func validateActivityScheduleAttributes(attributes *workflow.ScheduleActivityTas
 		return &workflow.BadRequestError{Message: "ScheduleActivityTaskDecisionAttributes is not set on decision."}
 	}
 
-	if attributes.TaskList == nil || attributes.TaskList.Name == nil || *attributes.TaskList.Name == "" {
+	if attributes.TaskList == nil || attributes.TaskList.Name == nil || attributes.TaskList.GetName() == "" {
 		return &workflow.BadRequestError{Message: "TaskList is not set on decision."}
 	}
 
-	if attributes.ActivityId == nil || *attributes.ActivityId == "" {
+	if attributes.ActivityId == nil || attributes.GetActivityId() == "" {
 		return &workflow.BadRequestError{Message: "ActivityId is not set on decision."}
 	}
 
-	if attributes.ActivityType == nil || attributes.ActivityType.Name == nil || *attributes.ActivityType.Name == "" {
+	if attributes.ActivityType == nil || attributes.ActivityType.Name == nil || attributes.GetActivityType().GetName() == "" {
 		return &workflow.BadRequestError{Message: "ActivityType is not set on decision."}
 	}
 
