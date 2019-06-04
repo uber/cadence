@@ -1743,6 +1743,7 @@ func (e *historyEngineImpl) DeleteExecutionFromVisibility(task *persistence.Time
 }
 
 type updateWorkflowAction struct {
+	noop           bool
 	deleteWorkflow bool
 	createDecision bool
 	timerTasks     []persistence.Task
@@ -1777,6 +1778,9 @@ Update_History_Loop:
 
 			// Returned error back to the caller
 			return err
+		}
+		if postActions.noop {
+			return nil
 		}
 
 		transferTasks, timerTasks := postActions.transferTasks, postActions.timerTasks
