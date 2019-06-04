@@ -416,10 +416,11 @@ func DescribeDomain(c *cli.Context) {
 		ErrorAndExit(fmt.Sprintf("Domain %s does not exist.", domainName), err)
 	}
 
-	var formatStr = "Name: %v\nDescription: %v\nOwnerEmail: %v\nDomainData: %v\nStatus: %v\nRetentionInDays: %v\n" +
+	var formatStr = "Name: %v\nUUID: %v\nDescription: %v\nOwnerEmail: %v\nDomainData: %v\nStatus: %v\nRetentionInDays: %v\n" +
 		"EmitMetrics: %v\nActiveClusterName: %v\nClusters: %v\nArchivalStatus: %v\n"
 	descValues := []interface{}{
 		resp.DomainInfo.GetName(),
+		resp.DomainInfo.GetUUID(),
 		resp.DomainInfo.GetDescription(),
 		resp.DomainInfo.GetOwnerEmail(),
 		resp.DomainInfo.Data,
@@ -855,7 +856,6 @@ func queryWorkflowHelper(c *cli.Context, queryType string) {
 // ListWorkflow list workflow executions based on filters
 func ListWorkflow(c *cli.Context) {
 	more := c.Bool(FlagMore)
-	pageSize := c.Int(FlagPageSize)
 	queryOpen := c.Bool(FlagOpen)
 
 	printJSON := c.Bool(FlagPrintJSON)
@@ -880,14 +880,13 @@ func ListWorkflow(c *cli.Context) {
 		prepareTable(nil)
 		table.Render()
 	} else { // require input Enter to view next page
-		var resultSize int
 		var nextPageToken []byte
 		for {
-			nextPageToken, resultSize = prepareTable(nextPageToken)
+			nextPageToken, _ = prepareTable(nextPageToken)
 			table.Render()
 			table.ClearRows()
 
-			if resultSize < pageSize {
+			if len(nextPageToken) == 0 {
 				break
 			}
 
@@ -918,8 +917,7 @@ func ListAllWorkflow(c *cli.Context) {
 		for {
 			results, nextPageToken = getListResultInRaw(c, queryOpen, nextPageToken)
 			printListResults(results, printJSON)
-			//printListResultsInJson(results)
-			if len(results) < defaultPageSizeForList {
+			if len(nextPageToken) == 0 {
 				break
 			}
 		}
@@ -929,11 +927,10 @@ func ListAllWorkflow(c *cli.Context) {
 
 	table := createTableForListWorkflow(c, true, queryOpen)
 	prepareTable := listWorkflow(c, table, queryOpen)
-	var resultSize int
 	var nextPageToken []byte
 	for {
-		nextPageToken, resultSize = prepareTable(nextPageToken)
-		if resultSize < defaultPageSizeForList {
+		nextPageToken, _ = prepareTable(nextPageToken)
+		if len(nextPageToken) == 0 {
 			break
 		}
 	}
@@ -1153,7 +1150,10 @@ func listWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) func
 	prepareTable := func(next []byte) ([]byte, int) {
 		var result []*s.WorkflowExecutionInfo
 		var nextPageToken []byte
-		if queryOpen {
+		if c.IsSet(FlagListQuery) {
+			listQuery := c.String(FlagListQuery)
+			result, nextPageToken = listWorkflowExecutions(wfClient, pageSize, next, listQuery, c)
+		} else if queryOpen {
 			result, nextPageToken = listOpenWorkflow(wfClient, pageSize, earliestTime, latestTime, workflowID, workflowType, next, c)
 		} else {
 			result, nextPageToken = listClosedWorkflow(wfClient, pageSize, earliestTime, latestTime, workflowID, workflowType, workflowStatus, next, c)
@@ -1183,6 +1183,24 @@ func listWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) func
 		return nextPageToken, len(result)
 	}
 	return prepareTable
+}
+
+func listWorkflowExecutions(client client.Client, pageSize int, nextPageToken []byte, query string, c *cli.Context) (
+	[]*s.WorkflowExecutionInfo, []byte) {
+
+	request := &s.ListWorkflowExecutionsRequest{
+		PageSize:      common.Int32Ptr(int32(pageSize)),
+		NextPageToken: nextPageToken,
+		Query:         common.StringPtr(query),
+	}
+
+	ctx, cancel := newContextForLongPoll(c)
+	defer cancel()
+	response, err := client.ListWorkflow(ctx, request)
+	if err != nil {
+		ErrorAndExit("Failed to list workflow.", err)
+	}
+	return response.Executions, response.NextPageToken
 }
 
 func listOpenWorkflow(client client.Client, pageSize int, earliestTime, latestTime int64, workflowID, workflowType string,
