@@ -2917,15 +2917,15 @@ func validateActivityScheduleAttributes(attributes *workflow.ScheduleActivityTas
 		return &workflow.BadRequestError{Message: "ScheduleActivityTaskDecisionAttributes is not set on decision."}
 	}
 
-	if attributes.TaskList == nil || attributes.TaskList.Name == nil || attributes.TaskList.GetName() == "" {
+	if attributes.TaskList == nil || attributes.TaskList.Name == nil || *attributes.TaskList.Name == "" {
 		return &workflow.BadRequestError{Message: "TaskList is not set on decision."}
 	}
 
-	if attributes.ActivityId == nil || attributes.GetActivityId() == "" {
+	if attributes.ActivityId == nil || *attributes.ActivityId == "" {
 		return &workflow.BadRequestError{Message: "ActivityId is not set on decision."}
 	}
 
-	if attributes.ActivityType == nil || attributes.ActivityType.Name == nil || attributes.GetActivityType().GetName() == "" {
+	if attributes.ActivityType == nil || attributes.ActivityType.Name == nil || *attributes.GetActivityType().Name == "" {
 		return &workflow.BadRequestError{Message: "ActivityType is not set on decision."}
 	}
 
