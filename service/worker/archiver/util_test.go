@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber/cadence/common"
+	"go.uber.org/cadence"
 )
 
 type UtilSuite struct {
@@ -147,8 +148,27 @@ func (s *UtilSuite) TestIsHistoryMutated() {
 			isMutated: false,
 		},
 	}
-
 	for _, tc := range testCases {
 		s.Equal(tc.isMutated, isHistoryMutated(tc.historyBlob, tc.request))
+	}
+}
+
+func (s *UtilSuite) TestValidateRequest() {
+	testCases := []struct {
+		request     *ArchiveRequest
+		expectedErr error
+	}{
+		{
+			request:     &ArchiveRequest{},
+			expectedErr: cadence.NewCustomError(errEmptyBucket),
+		},
+		{
+			request:     &ArchiveRequest{BucketName: "some random bucket name"},
+			expectedErr: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		s.Equal(tc.expectedErr, validateArchivalRequest(tc.request))
 	}
 }
