@@ -27,6 +27,7 @@ import (
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/blobstore/blob"
 	"github.com/uber/cadence/common/cache"
@@ -34,7 +35,6 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/retry"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
 )
@@ -67,12 +67,12 @@ var (
 )
 
 const (
-	uploadErrorMsg = "Archival upload attempt is giving up, possibly could retry."
-	uploadSkipMsg  = "Archival upload request is being skipped, will not retry."
+	uploadErrorMsg = "Archival upload attempt is giving up, possibly could backoff."
+	uploadSkipMsg  = "Archival upload request is being skipped, will not backoff."
 )
 
 // uploadHistoryActivity is used to upload a workflow execution history to blobstore.
-// method will retry all retryable operations until context expires.
+// method will backoff all retryable operations until context expires.
 // archival will be skipped and no error will be returned if cluster or domain is not figured for archival.
 // method will always return either: nil, errContextTimeout or an error from uploadHistoryActivityNonRetryableErrors.
 func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err error) {
@@ -204,7 +204,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 }
 
 // deleteHistoryActivity deletes workflow execution history from persistence.
-// method will retry all retryable operations until context expires.
+// method will backoff all retryable operations until context expires.
 // method will always return either: nil, contextTimeoutErr or an error from deleteHistoryActivityNonRetryableErrors.
 func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) (err error) {
 	container := ctx.Value(bootstrapContainerKey).(*BootstrapContainer)
@@ -236,7 +236,7 @@ func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 }
 
 // deleteBlobActivity deletes uploaded history blobs from blob store.
-// method will retry all retryable operations until context expires.
+// method will backoff all retryable operations until context expires.
 // method will always return either: nil, contextTimeoutErr or an error from deleteBlobActivityNonRetryableErrors.
 // TODO: after heartbeating during uploadHistoryActivity is implemented, this activity should take
 // a list of uploaded blob keys as input.
@@ -338,7 +338,7 @@ func getBlob(ctx context.Context, historyBlobReader HistoryBlobReader, blobPage 
 		if contextExpired(ctx) {
 			return nil, errContextTimeout
 		}
-		err = retry.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+		err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
 	}
 	return blob, nil
 }
@@ -435,7 +435,7 @@ func getDomainByID(ctx context.Context, domainCache cache.DomainCache, id string
 		if contextExpired(ctx) {
 			return nil, errContextTimeout
 		}
-		err = retry.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+		err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
 	}
 	return entry, nil
 }
@@ -462,7 +462,7 @@ func deleteHistoryV1(ctx context.Context, container *BootstrapContainer, request
 		if contextExpired(ctx) {
 			return errContextTimeout
 		}
-		err = retry.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+		err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
 	}
 	return nil
 }
@@ -482,7 +482,7 @@ func deleteHistoryV2(ctx context.Context, container *BootstrapContainer, request
 		if contextExpired(ctx) {
 			return errContextTimeout
 		}
-		err = retry.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+		err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
 	}
 	return nil
 }

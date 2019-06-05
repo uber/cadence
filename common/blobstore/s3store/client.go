@@ -33,9 +33,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/blobstore/blob"
-	"github.com/uber/cadence/common/retry"
 	"go.uber.org/multierr"
 )
 
@@ -290,8 +290,8 @@ func (c *client) IsRetryableError(err error) bool {
 	return c.isStatusCodeRetryable(err) || request.IsErrorRetryable(err) || request.IsErrorThrottle(err)
 }
 
-func (c *client) GetRetryPolicy() retry.RetryPolicy {
-	policy := retry.NewExponentialRetryPolicy(30)
+func (c *client) GetRetryPolicy() backoff.RetryPolicy {
+	policy := backoff.NewExponentialRetryPolicy(30)
 	policy.SetMaximumAttempts(3)
 	return policy
 }

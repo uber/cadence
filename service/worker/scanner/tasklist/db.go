@@ -24,8 +24,8 @@ import (
 	"time"
 
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/backoff"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/retry"
 )
 
 var retryForeverPolicy = newRetryForeverPolicy()
@@ -76,8 +76,8 @@ func (s *Scavenger) listTaskList(pageSize int, pageToken []byte) (*p.ListTaskLis
 }
 
 func (s *Scavenger) deleteTaskList(key *taskListKey, rangeID int64) error {
-	// retry only on service busy errors
-	return retry.Retry(func() error {
+	// backoff only on service busy errors
+	return backoff.Retry(func() error {
 		return s.db.DeleteTaskList(&p.DeleteTaskListRequest{
 			DomainID:     key.DomainID,
 			TaskListName: key.Name,
@@ -91,12 +91,12 @@ func (s *Scavenger) deleteTaskList(key *taskListKey, rangeID int64) error {
 }
 
 func (s *Scavenger) retryForever(op func() error) error {
-	return retry.Retry(op, retryForeverPolicy, s.isRetryable)
+	return backoff.Retry(op, retryForeverPolicy, s.isRetryable)
 }
 
-func newRetryForeverPolicy() retry.RetryPolicy {
-	policy := retry.NewExponentialRetryPolicy(250 * time.Millisecond)
-	policy.SetExpirationInterval(retry.NoInterval)
+func newRetryForeverPolicy() backoff.RetryPolicy {
+	policy := backoff.NewExponentialRetryPolicy(250 * time.Millisecond)
+	policy.SetExpirationInterval(backoff.NoInterval)
 	policy.SetMaximumInterval(30 * time.Second)
 	return policy
 }

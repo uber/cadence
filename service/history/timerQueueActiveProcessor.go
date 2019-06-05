@@ -29,11 +29,11 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/retry"
 )
 
 type (
@@ -374,7 +374,7 @@ Update_History_Loop:
 				timeoutType, ai.ScheduleID, ai.StartedID))
 
 			if td.Attempt < ai.Attempt {
-				// retry could update ai.Attempt, and we should ignore further timeouts for previous attempt
+				// backoff could update ai.Attempt, and we should ignore further timeouts for previous attempt
 				t.logger.Info("Retry attempt mismatch, skip activity timeout processing",
 					tag.WorkflowID(msBuilder.GetExecutionInfo().WorkflowID),
 					tag.WorkflowRunID(msBuilder.GetExecutionInfo().RunID),
@@ -388,14 +388,14 @@ Update_History_Loop:
 			}
 
 			if timeoutType != workflow.TimeoutTypeScheduleToStart {
-				// ScheduleToStart (queue timeout) is not retriable. Instead of retry, customer should set larger
+				// ScheduleToStart (queue timeout) is not retriable. Instead of backoff, customer should set larger
 				// ScheduleToStart timeout.
 				retryTask := msBuilder.CreateActivityRetryTimer(ai, getTimeoutErrorReason(timeoutType))
 				if retryTask != nil {
 					timerTasks = append(timerTasks, retryTask)
 					updateState = true
 
-					t.logger.Info("Ignore activity timeout due to retry",
+					t.logger.Info("Ignore activity timeout due to backoff",
 						tag.WorkflowID(msBuilder.GetExecutionInfo().WorkflowID),
 						tag.WorkflowRunID(msBuilder.GetExecutionInfo().RunID),
 						tag.WorkflowDomainID(msBuilder.GetExecutionInfo().DomainID),
@@ -611,7 +611,7 @@ func (t *timerQueueActiveProcessorImpl) processActivityRetryTimer(task *persiste
 		ai, running := msBuilder.GetActivityInfo(scheduledID)
 		if !running || task.ScheduleAttempt < int64(ai.Attempt) {
 			if running && ai != nil {
-				t.logger.Info("Duplicate activity retry timer task",
+				t.logger.Info("Duplicate activity backoff timer task",
 					tag.WorkflowID(msBuilder.GetExecutionInfo().WorkflowID),
 					tag.WorkflowRunID(msBuilder.GetExecutionInfo().RunID),
 					tag.WorkflowDomainID(msBuilder.GetExecutionInfo().DomainID),
@@ -662,7 +662,7 @@ func (t *timerQueueActiveProcessorImpl) processActivityRetryTimer(task *persiste
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(scheduleToStartTimeout),
 		})
 
-		t.logger.Debug(fmt.Sprintf("Adding ActivityTask for retry, WorkflowID: %v, RunID: %v, ScheduledID: %v, TaskList: %v, Attempt: %v, Err: %v",
+		t.logger.Debug(fmt.Sprintf("Adding ActivityTask for backoff, WorkflowID: %v, RunID: %v, ScheduledID: %v, TaskList: %v, Attempt: %v, Err: %v",
 			task.WorkflowID, task.RunID, scheduledID, taskList.GetName(), task.ScheduleAttempt, err))
 
 		return err
@@ -708,12 +708,12 @@ Update_History_Loop:
 		timeoutReason := getTimeoutErrorReason(workflow.TimeoutTypeStartToClose)
 		backoffInterval := msBuilder.GetRetryBackoffDuration(timeoutReason)
 		continueAsNewInitiator := workflow.ContinueAsNewInitiatorRetryPolicy
-		if backoffInterval == retry.NoBackoff {
+		if backoffInterval == backoff.NoBackoff {
 			// check if a cron backoff is needed
 			backoffInterval = msBuilder.GetCronBackoffDuration()
 			continueAsNewInitiator = workflow.ContinueAsNewInitiatorCronSchedule
 		}
-		if backoffInterval == retry.NoBackoff {
+		if backoffInterval == backoff.NoBackoff {
 			if e := msBuilder.AddTimeoutWorkflowEvent(); e == nil {
 				// If we failed to add the event that means the workflow is already completed.
 				// we drop this timeout event.
@@ -731,7 +731,7 @@ Update_History_Loop:
 			return err
 		}
 
-		// workflow timeout, but a retry or cron is needed, so we do continue as new to retry or cron
+		// workflow timeout, but a backoff or cron is needed, so we do continue as new to backoff or cron
 		startEvent, found := msBuilder.GetStartEvent()
 		if !found {
 			return &workflow.InternalServiceError{Message: "Failed to load start event."}

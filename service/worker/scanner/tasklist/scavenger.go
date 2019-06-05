@@ -96,7 +96,7 @@ var (
 //  - deletion of expired tasks in the task lists
 //  - deletion of task list itself, if there are no tasks and the task list hasn't been updated for a grace period
 //
-// The scavenger will retry on all persistence errors infinitely and will only stop under
+// The scavenger will backoff on all persistence errors infinitely and will only stop under
 // two conditions
 //  - either all task lists are processed successfully (or)
 //  - Stop() method is called to stop the scavenger

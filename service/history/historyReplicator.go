@@ -74,12 +74,12 @@ var (
 	// ErrRetryEntityNotExists is returned to indicate workflow execution is not created yet and replicator should
 	// try this task again after a small delay.
 	ErrRetryEntityNotExists = &shared.RetryTaskError{Message: "entity not exists"}
-	// ErrRetrySyncActivityMsg is returned when sync activity replication tasks are arriving out of order, should retry
-	ErrRetrySyncActivityMsg = "retry on applying sync activity"
-	// ErrRetryBufferEventsMsg is returned when events are arriving out of order, should retry, or specify force apply
-	ErrRetryBufferEventsMsg = "retry on applying buffer events"
+	// ErrRetrySyncActivityMsg is returned when sync activity replication tasks are arriving out of order, should backoff
+	ErrRetrySyncActivityMsg = "backoff on applying sync activity"
+	// ErrRetryBufferEventsMsg is returned when events are arriving out of order, should backoff, or specify force apply
+	ErrRetryBufferEventsMsg = "backoff on applying buffer events"
 	// ErrWorkflowNotFoundMsg is returned when workflow not found
-	ErrWorkflowNotFoundMsg = "retry on workflow not found"
+	ErrWorkflowNotFoundMsg = "backoff on workflow not found"
 	// ErrRetryExistingWorkflowMsg is returned when events are arriving out of order, and there is another workflow with same version running
 	ErrRetryExistingWorkflowMsg = "workflow with same version is running"
 	// ErrRetryExecutionAlreadyStarted is returned to indicate another workflow execution already started,
@@ -142,10 +142,10 @@ func newHistoryReplicator(shard ShardContext, historyEngine *historyEngineImpl, 
 func (r *historyReplicator) SyncActivity(ctx ctx.Context, request *h.SyncActivityRequest) (retError error) {
 
 	// sync activity info will only be sent from active side, when
-	// 1. activity has retry policy and activity got started
+	// 1. activity has backoff policy and activity got started
 	// 2. activity heart beat
 	// no sync activity task will be sent when active side fail / timeout activity,
-	// since standby side does not have activity retry timer
+	// since standby side does not have activity backoff timer
 
 	domainID := request.GetDomainId()
 	execution := workflow.WorkflowExecution{
@@ -195,25 +195,25 @@ func (r *historyReplicator) SyncActivity(ctx ctx.Context, request *h.SyncActivit
 
 	ai, isRunning := msBuilder.GetActivityInfo(scheduleID)
 	if !isRunning {
-		// this should not retry, can be caused by out of order delivery
+		// this should not backoff, can be caused by out of order delivery
 		// since the activity is already finished
 		return nil
 	}
 
 	if ai.Version > request.GetVersion() {
-		// this should not retry, can be caused by failover or reset
+		// this should not backoff, can be caused by failover or reset
 		return nil
 	}
 
 	if ai.Version == request.GetVersion() {
 		if ai.Attempt > request.GetAttempt() {
-			// this should not retry, can be caused by failover or reset
+			// this should not backoff, can be caused by failover or reset
 			return nil
 		}
 		if ai.Attempt == request.GetAttempt() {
 			lastHeartbeatTime := time.Unix(0, request.GetLastHeartbeatTime())
 			if ai.LastHeartBeatUpdatedTime.After(lastHeartbeatTime) {
-				// this should not retry, can be caused by out of order delivery
+				// this should not backoff, can be caused by out of order delivery
 				return nil
 			}
 			// version equal & attempt equal & last heartbeat after existing heartbeat
@@ -363,7 +363,7 @@ func (r *historyReplicator) ApplyEvents(ctx ctx.Context, request *h.ReplicateEve
 			return nil
 		}
 		if _, ok := err.(*shared.EntityNotExistsError); !ok {
-			// GetWorkflowExecution failed with some transient error. Return err so we can retry the task later
+			// GetWorkflowExecution failed with some transient error. Return err so we can backoff the task later
 			return err
 		}
 		return r.ApplyStartEvent(ctx, context, request, logger)
@@ -436,7 +436,7 @@ func (r *historyReplicator) ApplyOtherEventsMissingMutableState(ctx ctx.Context,
 				// if workflow is completed just when the call is made, will get EntityNotExistsError
 				// we are not sure whether the workflow to be terminated ends with continue as new or not
 				// so when encounter EntityNotExistsError, just continue to execute, if err occurs,
-				// there will be retry on the worker level
+				// there will be backoff on the worker level
 			}
 		}
 		if request.GetResetWorkflow() {
@@ -789,7 +789,7 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx ctx.Context, context wo
 		// if workflow is completed just when the call is made, will get EntityNotExistsError
 		// we are not sure whether the workflow to be terminated ends with continue as new or not
 		// so when encounter EntityNotExistsError, just contiue to execute, if err occurs,
-		// there will be retry on the worker level
+		// there will be backoff on the worker level
 	}
 	createMode = persistence.CreateWorkflowModeWorkflowIDReuse
 	prevRunID = currentRunID
@@ -868,7 +868,7 @@ func (r *historyReplicator) getCurrentWorkflowMutableState(ctx ctx.Context, doma
 
 	msBuilder, err := context.loadWorkflowExecution()
 	if err != nil {
-		// no matter what error happen, we need to retry
+		// no matter what error happen, we need to backoff
 		release(err)
 		return nil, nil, nil, err
 	}

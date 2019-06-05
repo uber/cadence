@@ -242,7 +242,7 @@ type (
 		ClientFeatureVersion         string
 		ClientImpl                   string
 		AutoResetPoints              *DataBlob
-		// for retry
+		// for backoff
 		Attempt            int32
 		HasRetryPolicy     bool
 		InitialInterval    int32
@@ -294,7 +294,7 @@ type (
 		CancelRequestID          int64
 		LastHeartBeatUpdatedTime time.Time
 		TimerTaskStatus          int32
-		// For retry
+		// For backoff
 		Attempt            int32
 		DomainID           string
 		StartedIdentity    string

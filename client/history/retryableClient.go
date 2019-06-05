@@ -25,7 +25,7 @@ import (
 
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common/retry"
+	"github.com/uber/cadence/common/backoff"
 	"go.uber.org/yarpc"
 )
 
@@ -33,12 +33,12 @@ var _ Client = (*retryableClient)(nil)
 
 type retryableClient struct {
 	client      Client
-	policy      retry.RetryPolicy
-	isRetryable retry.IsRetryable
+	policy      backoff.RetryPolicy
+	isRetryable backoff.IsRetryable
 }
 
-// NewRetryableClient creates a new instance of Client with retry policy
-func NewRetryableClient(client Client, policy retry.RetryPolicy, isRetryable retry.IsRetryable) Client {
+// NewRetryableClient creates a new instance of Client with backoff policy
+func NewRetryableClient(client Client, policy backoff.RetryPolicy, isRetryable backoff.IsRetryable) Client {
 	return &retryableClient{
 		client:      client,
 		policy:      policy,
@@ -58,7 +58,7 @@ func (c *retryableClient) StartWorkflowExecution(
 		return err
 	}
 
-	err := retry.Retry(op, c.policy, c.isRetryable)
+	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -74,7 +74,7 @@ func (c *retryableClient) DescribeHistoryHost(
 		return err
 	}
 
-	err := retry.Retry(op, c.policy, c.isRetryable)
+	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -90,7 +90,7 @@ func (c *retryableClient) DescribeMutableState(
 		return err
 	}
 
-	err := retry.Retry(op, c.policy, c.isRetryable)
+	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -106,7 +106,7 @@ func (c *retryableClient) GetMutableState(
 		return err
 	}
 
-	err := retry.Retry(op, c.policy, c.isRetryable)
+	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -122,7 +122,7 @@ func (c *retryableClient) ResetStickyTaskList(
 		return err
 	}
 
-	err := retry.Retry(op, c.policy, c.isRetryable)
+	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -138,7 +138,7 @@ func (c *retryableClient) DescribeWorkflowExecution(
 		return err
 	}
 
-	err := retry.Retry(op, c.policy, c.isRetryable)
+	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -154,7 +154,7 @@ func (c *retryableClient) RecordDecisionTaskStarted(
 		return err
 	}
 
-	err := retry.Retry(op, c.policy, c.isRetryable)
+	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -170,7 +170,7 @@ func (c *retryableClient) RecordActivityTaskStarted(
 		return err
 	}
 
-	err := retry.Retry(op, c.policy, c.isRetryable)
+	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -186,7 +186,7 @@ func (c *retryableClient) RespondDecisionTaskCompleted(
 		return err
 	}
 
-	err := retry.Retry(op, c.policy, c.isRetryable)
+	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -199,7 +199,7 @@ func (c *retryableClient) RespondDecisionTaskFailed(
 		return c.client.RespondDecisionTaskFailed(ctx, request, opts...)
 	}
 
-	return retry.Retry(op, c.policy, c.isRetryable)
+	return backoff.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) RespondActivityTaskCompleted(
@@ -211,7 +211,7 @@ func (c *retryableClient) RespondActivityTaskCompleted(
 		return c.client.RespondActivityTaskCompleted(ctx, request, opts...)
 	}
 
-	return retry.Retry(op, c.policy, c.isRetryable)
+	return backoff.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) RespondActivityTaskFailed(
@@ -223,7 +223,7 @@ func (c *retryableClient) RespondActivityTaskFailed(
 		return c.client.RespondActivityTaskFailed(ctx, request, opts...)
 	}
 
-	return retry.Retry(op, c.policy, c.isRetryable)
+	return backoff.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) RespondActivityTaskCanceled(
@@ -235,7 +235,7 @@ func (c *retryableClient) RespondActivityTaskCanceled(
 		return c.client.RespondActivityTaskCanceled(ctx, request, opts...)
 	}
 
-	return retry.Retry(op, c.policy, c.isRetryable)
+	return backoff.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) RecordActivityTaskHeartbeat(
@@ -250,7 +250,7 @@ func (c *retryableClient) RecordActivityTaskHeartbeat(
 		return err
 	}
 
-	err := retry.Retry(op, c.policy, c.isRetryable)
+	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -263,7 +263,7 @@ func (c *retryableClient) RequestCancelWorkflowExecution(
 		return c.client.RequestCancelWorkflowExecution(ctx, request, opts...)
 	}
 
-	return retry.Retry(op, c.policy, c.isRetryable)
+	return backoff.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) SignalWorkflowExecution(
@@ -275,7 +275,7 @@ func (c *retryableClient) SignalWorkflowExecution(
 		return c.client.SignalWorkflowExecution(ctx, request, opts...)
 	}
 
-	return retry.Retry(op, c.policy, c.isRetryable)
+	return backoff.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) SignalWithStartWorkflowExecution(
@@ -290,7 +290,7 @@ func (c *retryableClient) SignalWithStartWorkflowExecution(
 		return err
 	}
 
-	err := retry.Retry(op, c.policy, c.isRetryable)
+	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -303,7 +303,7 @@ func (c *retryableClient) RemoveSignalMutableState(
 		return c.client.RemoveSignalMutableState(ctx, request, opts...)
 	}
 
-	return retry.Retry(op, c.policy, c.isRetryable)
+	return backoff.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) TerminateWorkflowExecution(
@@ -315,7 +315,7 @@ func (c *retryableClient) TerminateWorkflowExecution(
 		return c.client.TerminateWorkflowExecution(ctx, request, opts...)
 	}
 
-	return retry.Retry(op, c.policy, c.isRetryable)
+	return backoff.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) ResetWorkflowExecution(
@@ -330,7 +330,7 @@ func (c *retryableClient) ResetWorkflowExecution(
 		return err
 	}
 
-	err := retry.Retry(op, c.policy, c.isRetryable)
+	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -343,7 +343,7 @@ func (c *retryableClient) ScheduleDecisionTask(
 		return c.client.ScheduleDecisionTask(ctx, request, opts...)
 	}
 
-	return retry.Retry(op, c.policy, c.isRetryable)
+	return backoff.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) RecordChildExecutionCompleted(
@@ -355,7 +355,7 @@ func (c *retryableClient) RecordChildExecutionCompleted(
 		return c.client.RecordChildExecutionCompleted(ctx, request, opts...)
 	}
 
-	return retry.Retry(op, c.policy, c.isRetryable)
+	return backoff.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) ReplicateEvents(
@@ -367,7 +367,7 @@ func (c *retryableClient) ReplicateEvents(
 		return c.client.ReplicateEvents(ctx, request, opts...)
 	}
 
-	return retry.Retry(op, c.policy, c.isRetryable)
+	return backoff.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) ReplicateRawEvents(
@@ -379,7 +379,7 @@ func (c *retryableClient) ReplicateRawEvents(
 		return c.client.ReplicateRawEvents(ctx, request, opts...)
 	}
 
-	return retry.Retry(op, c.policy, c.isRetryable)
+	return backoff.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) SyncShardStatus(
@@ -391,7 +391,7 @@ func (c *retryableClient) SyncShardStatus(
 		return c.client.SyncShardStatus(ctx, request, opts...)
 	}
 
-	return retry.Retry(op, c.policy, c.isRetryable)
+	return backoff.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) SyncActivity(
@@ -403,5 +403,5 @@ func (c *retryableClient) SyncActivity(
 		return c.client.SyncActivity(ctx, request, opts...)
 	}
 
-	return retry.Retry(op, c.policy, c.isRetryable)
+	return backoff.Retry(op, c.policy, c.isRetryable)
 }

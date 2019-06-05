@@ -231,7 +231,7 @@ func (t *activityReplicationTask) HandleErr(err error) error {
 	stopwatch := t.metricsClient.StartTimer(metrics.HistoryRereplicationByActivityReplicationScope, metrics.CadenceClientLatency)
 	defer stopwatch.Stop()
 
-	// this is the retry error
+	// this is the backoff error
 	beginRunID := retryErr.GetRunId()
 	beginEventID := retryErr.GetNextEventId()
 	endRunID := t.queueID.RunID
@@ -270,7 +270,7 @@ func (t *historyReplicationTask) HandleErr(err error) error {
 	stopwatch := t.metricsClient.StartTimer(metrics.HistoryRereplicationByHistoryReplicationScope, metrics.CadenceClientLatency)
 	defer stopwatch.Stop()
 
-	// this is the retry error
+	// this is the backoff error
 	beginRunID := retryErr.GetRunId()
 	beginEventID := retryErr.GetNextEventId()
 	endRunID := t.queueID.RunID
@@ -310,7 +310,7 @@ func (t *historyMetadataReplicationTask) HandleErr(err error) error {
 	stopwatch := t.metricsClient.StartTimer(metrics.HistoryRereplicationByHistoryReplicationScope, metrics.CadenceClientLatency)
 	defer stopwatch.Stop()
 
-	// this is the retry error
+	// this is the backoff error
 	beginRunID := retryErr.GetRunId()
 	beginEventID := retryErr.GetNextEventId()
 	endRunID := t.queueID.RunID

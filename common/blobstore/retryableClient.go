@@ -23,20 +23,20 @@ package blobstore
 import (
 	"context"
 
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/blobstore/blob"
-	"github.com/uber/cadence/common/retry"
 )
 
 var _ Client = (*retryableClient)(nil)
 
 type retryableClient struct {
 	client      Client
-	policy      retry.RetryPolicy
-	isRetryable retry.IsRetryable
+	policy      backoff.RetryPolicy
+	isRetryable backoff.IsRetryable
 }
 
-// NewRetryableClient creates a new instance of Client with retry policy
-func NewRetryableClient(client Client, policy retry.RetryPolicy, isRetryable retry.IsRetryable) Client {
+// NewRetryableClient creates a new instance of Client with backoff policy
+func NewRetryableClient(client Client, policy backoff.RetryPolicy, isRetryable backoff.IsRetryable) Client {
 	return &retryableClient{
 		client:      client,
 		policy:      policy,
@@ -48,7 +48,7 @@ func (c *retryableClient) Upload(ctx context.Context, bucket string, key blob.Ke
 	op := func() error {
 		return c.client.Upload(ctx, bucket, key, blob)
 	}
-	return retry.Retry(op, c.policy, c.isRetryable)
+	return backoff.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) Download(ctx context.Context, bucket string, key blob.Key) (*blob.Blob, error) {
@@ -58,7 +58,7 @@ func (c *retryableClient) Download(ctx context.Context, bucket string, key blob.
 		resp, err = c.client.Download(ctx, bucket, key)
 		return err
 	}
-	err := retry.Retry(op, c.policy, c.isRetryable)
+	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -69,7 +69,7 @@ func (c *retryableClient) GetTags(ctx context.Context, bucket string, key blob.K
 		resp, err = c.client.GetTags(ctx, bucket, key)
 		return err
 	}
-	err := retry.Retry(op, c.policy, c.isRetryable)
+	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -80,7 +80,7 @@ func (c *retryableClient) Exists(ctx context.Context, bucket string, key blob.Ke
 		resp, err = c.client.Exists(ctx, bucket, key)
 		return err
 	}
-	err := retry.Retry(op, c.policy, c.isRetryable)
+	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -91,7 +91,7 @@ func (c *retryableClient) Delete(ctx context.Context, bucket string, key blob.Ke
 		resp, err = c.client.Delete(ctx, bucket, key)
 		return err
 	}
-	err := retry.Retry(op, c.policy, c.isRetryable)
+	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -102,7 +102,7 @@ func (c *retryableClient) ListByPrefix(ctx context.Context, bucket string, prefi
 		resp, err = c.client.ListByPrefix(ctx, bucket, prefix)
 		return err
 	}
-	err := retry.Retry(op, c.policy, c.isRetryable)
+	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -113,7 +113,7 @@ func (c *retryableClient) BucketMetadata(ctx context.Context, bucket string) (*B
 		resp, err = c.client.BucketMetadata(ctx, bucket)
 		return err
 	}
-	err := retry.Retry(op, c.policy, c.isRetryable)
+	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -124,7 +124,7 @@ func (c *retryableClient) BucketExists(ctx context.Context, bucket string) (bool
 		resp, err = c.client.BucketExists(ctx, bucket)
 		return err
 	}
-	err := retry.Retry(op, c.policy, c.isRetryable)
+	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -132,6 +132,6 @@ func (c *retryableClient) IsRetryableError(err error) bool {
 	return c.client.IsRetryableError(err)
 }
 
-func (c *retryableClient) GetRetryPolicy() retry.RetryPolicy {
+func (c *retryableClient) GetRetryPolicy() backoff.RetryPolicy {
 	return c.client.GetRetryPolicy()
 }

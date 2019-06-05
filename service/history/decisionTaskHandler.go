@@ -26,12 +26,12 @@ import (
 	"github.com/pborman/uuid"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/retry"
 )
 
 type (
@@ -326,7 +326,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionCompleteWorkflow(
 
 	// check if this is a cron workflow
 	cronBackoff := handler.mutableState.GetCronBackoffDuration()
-	if cronBackoff == retry.NoBackoff {
+	if cronBackoff == backoff.NoBackoff {
 		// not cron, so complete this workflow execution
 		if event := handler.mutableState.AddCompletedWorkflowEvent(handler.decisionTaskCompletedID, attr); event == nil {
 			return &workflow.InternalServiceError{Message: "Unable to add complete workflow event."}
@@ -395,26 +395,26 @@ func (handler *decisionTaskHandlerImpl) handleDecisionFailWorkflow(
 		return nil
 	}
 
-	// below will check whether to do continue as new based on backoff & retry or cron
+	// below will check whether to do continue as new based on backoff & backoff or cron
 	backoffInterval := handler.mutableState.GetRetryBackoffDuration(attr.GetReason())
 	continueAsNewInitiator := workflow.ContinueAsNewInitiatorRetryPolicy
-	// first check the retry backoff
-	if backoffInterval == retry.NoBackoff {
-		// if no retry backoff, set the backoffInterval using cron schedule
+	// first check the backoff backoff
+	if backoffInterval == backoff.NoBackoff {
+		// if no backoff backoff, set the backoffInterval using cron schedule
 		backoffInterval = handler.mutableState.GetCronBackoffDuration()
 		continueAsNewInitiator = workflow.ContinueAsNewInitiatorCronSchedule
 	}
 
-	// second check the retry / cron schedule
-	if backoffInterval == retry.NoBackoff {
-		// no retry or cron
+	// second check the backoff / cron schedule
+	if backoffInterval == backoff.NoBackoff {
+		// no backoff or cron
 		if event := handler.mutableState.AddFailWorkflowEvent(handler.decisionTaskCompletedID, attr); event == nil {
 			return &workflow.InternalServiceError{Message: "Unable to add fail workflow event."}
 		}
 		return nil
 	}
 
-	// this is a cron / retry workflow
+	// this is a cron / backoff workflow
 	startEvent, found := handler.mutableState.GetStartEvent()
 	if !found {
 		return &workflow.InternalServiceError{Message: "Failed to load start event."}

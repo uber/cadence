@@ -24,8 +24,8 @@ import (
 	"context"
 
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/blobstore/blob"
-	"github.com/uber/cadence/common/retry"
 )
 
 var (
@@ -59,5 +59,5 @@ type Client interface {
 	BucketExists(ctx context.Context, bucket string) (bool, error)
 
 	IsRetryableError(err error) bool
-	GetRetryPolicy() retry.RetryPolicy
+	GetRetryPolicy() backoff.RetryPolicy
 }

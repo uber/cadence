@@ -35,8 +35,8 @@ import (
 	gen "github.com/uber/cadence/.gen/go/shared"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/retry"
 )
 
 type (
@@ -56,8 +56,8 @@ var defaultVisibilityTimestamp = p.UnixNanoToDBTimestamp(time.Now().UnixNano()) 
 
 var historyTestRetryPolicy = createHistoryTestRetryPolicy()
 
-func createHistoryTestRetryPolicy() retry.RetryPolicy {
-	policy := retry.NewExponentialRetryPolicy(time.Millisecond * 50)
+func createHistoryTestRetryPolicy() backoff.RetryPolicy {
+	policy := backoff.NewExponentialRetryPolicy(time.Millisecond * 50)
 	policy.SetMaximumInterval(time.Second * 3)
 	policy.SetExpirationInterval(time.Second * 30)
 
@@ -632,7 +632,7 @@ func (s *HistoryV2PersistenceSuite) deleteHistoryBranch(branch []byte) error {
 		return err
 	}
 
-	return retry.Retry(op, historyTestRetryPolicy, isConditionFail)
+	return backoff.Retry(op, historyTestRetryPolicy, isConditionFail)
 }
 
 // persistence helper
@@ -743,7 +743,7 @@ func (s *HistoryV2PersistenceSuite) append(branch []byte, events []*workflow.His
 		return err
 	}
 
-	err := retry.Retry(op, historyTestRetryPolicy, isConditionFail)
+	err := backoff.Retry(op, historyTestRetryPolicy, isConditionFail)
 	if err != nil {
 		return err
 	}
@@ -771,7 +771,7 @@ func (s *HistoryV2PersistenceSuite) fork(forkBranch []byte, forkNodeID int64) ([
 		return err
 	}
 
-	err := retry.Retry(op, historyTestRetryPolicy, isConditionFail)
+	err := backoff.Retry(op, historyTestRetryPolicy, isConditionFail)
 	return bi, err
 }
 

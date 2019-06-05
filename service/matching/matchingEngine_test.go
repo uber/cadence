@@ -1097,7 +1097,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 				_, err := engine.AddActivityTask(&addRequest)
 				if err != nil {
 					if _, ok := err.(*persistence.ConditionFailedError); ok {
-						i-- // retry adding
+						i-- // backoff adding
 					} else {
 						panic(fmt.Sprintf("errType=%T, err=%v", err, err))
 					}
@@ -1251,7 +1251,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 				_, err := engine.AddDecisionTask(&addRequest)
 				if err != nil {
 					if _, ok := err.(*persistence.ConditionFailedError); ok {
-						i-- // retry adding
+						i-- // backoff adding
 					} else {
 						panic(fmt.Sprintf("errType=%T, err=%v", err, err))
 					}

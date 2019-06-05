@@ -22,9 +22,10 @@ package persistence
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"time"
 
 	"github.com/uber/cadence/.gen/go/shared"
 )
@@ -50,7 +51,7 @@ child branch fork in progress is ConditionFailedError).
 4. If error was not caused by child branch fork in progress then return error.
 5. Otherwise history will attempt to be deleted while a child branch fork is ongoing. In order to do this
 it is checked if the child branch fork was created less than one minute ago. If it was created less than one minute ago
-return retryable error type indicating that branch cannot be deleted currently but client can retry deletion. If child
+return retryable error type indicating that branch cannot be deleted currently but client can backoff deletion. If child
 branch fork has been in progress for longer than one minute then it is assumed the child branch fork will be successful
 and only the section of history which is not common to the child being created will get deleted.
 

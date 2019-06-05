@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
@@ -39,7 +40,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/retry"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -199,8 +199,8 @@ func (s *stateBuilderSuite) applyWorkflowExecutionStartedEventTest(cronSchedule 
 
 	expectedTimerTasksLength := 1
 	timeout := now.Add(time.Duration(executionInfo.WorkflowTimeout) * time.Second)
-	backoffDuration := retry.GetBackoffForNextSchedule(cronSchedule, now)
-	if backoffDuration != retry.NoBackoff {
+	backoffDuration := backoff.GetBackoffForNextSchedule(cronSchedule, now)
+	if backoffDuration != backoff.NoBackoff {
 		expectedTimerTasksLength = 2
 		timeout = timeout.Add(backoffDuration)
 	}
@@ -211,7 +211,7 @@ func (s *stateBuilderSuite) applyWorkflowExecutionStartedEventTest(cronSchedule 
 		case *persistence.WorkflowTimeoutTask:
 			s.True(timerTask.VisibilityTimestamp.Equal(timeout))
 		case *persistence.WorkflowBackoffTimerTask:
-			s.NotEqual(retry.NoBackoff, backoffDuration)
+			s.NotEqual(backoff.NoBackoff, backoffDuration)
 			s.True(timerTask.VisibilityTimestamp.Equal(now.Add(backoffDuration)))
 		default:
 			s.FailNow("Unexpected timer task type.")

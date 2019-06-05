@@ -163,9 +163,9 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Success() {
 }
 
 func (s *integrationSuite) TestActivityHeartbeatDetailsDuringRetry() {
-	id := "integration-heartbeat-details-retry-test"
-	wt := "integration-heartbeat-details-retry-type"
-	tl := "integration-heartbeat-details-retry-tasklist"
+	id := "integration-heartbeat-details-backoff-test"
+	wt := "integration-heartbeat-details-backoff-type"
+	tl := "integration-heartbeat-details-backoff-tasklist"
 	identity := "worker1"
 	activityName := "activity_heartbeat_retry"
 
@@ -246,11 +246,11 @@ func (s *integrationSuite) TestActivityHeartbeatDetailsDuringRetry() {
 			_, err = s.engine.RecordActivityTaskHeartbeat(createContext(), &workflow.RecordActivityTaskHeartbeatRequest{
 				TaskToken: taskToken, Details: heartbeatDetails})
 			s.Nil(err)
-			// Trigger heartbeat timeout and retry
+			// Trigger heartbeat timeout and backoff
 			time.Sleep(time.Second * 2)
 		} else if activityExecutedCount == 1 {
-			// return an error and retry
-			err = errors.New("retry")
+			// return an error and backoff
+			err = errors.New("backoff")
 		}
 
 		activityExecutedCount++
@@ -328,9 +328,9 @@ func (s *integrationSuite) TestActivityHeartbeatDetailsDuringRetry() {
 }
 
 func (s *integrationSuite) TestActivityRetry() {
-	id := "integration-activity-retry-test"
-	wt := "integration-activity-retry-type"
-	tl := "integration-activity-retry-tasklist"
+	id := "integration-activity-backoff-test"
+	wt := "integration-activity-backoff-type"
+	tl := "integration-activity-backoff-tasklist"
 	identity := "worker1"
 	activityName := "activity_retry"
 	timeoutActivityName := "timeout_activity"
@@ -447,7 +447,7 @@ func (s *integrationSuite) TestActivityRetry() {
 		s.Equal(activityName, *activityType.Name)
 		var err error
 		if activityExecutedCount == 0 {
-			err = errors.New("bad-luck-please-retry")
+			err = errors.New("bad-luck-please-backoff")
 		} else if activityExecutedCount == 1 {
 			err = errors.New("bad-bug")
 		}

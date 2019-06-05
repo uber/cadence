@@ -262,7 +262,7 @@ func (e *matchingEngineImpl) AddActivityTask(addRequest *m.AddActivityTaskReques
 	return tlMgr.AddTask(addRequest.Execution, taskInfo)
 }
 
-var errQueryBeforeFirstDecisionCompleted = errors.New("query cannot be handled before first decision task is processed, please retry later")
+var errQueryBeforeFirstDecisionCompleted = errors.New("query cannot be handled before first decision task is processed, please backoff later")
 
 // PollForDecisionTask tries to get the decision task using exponential backoff.
 func (e *matchingEngineImpl) PollForDecisionTask(ctx context.Context, req *m.PollForDecisionTaskRequest) (
@@ -479,7 +479,7 @@ query_loop:
 					})
 					if err == nil {
 						if ms.GetPreviousStartedEventId() > 0 {
-							// now we have at least one decision task completed, so retry query
+							// now we have at least one decision task completed, so backoff query
 							continue query_loop
 						}
 
@@ -506,7 +506,7 @@ query_loop:
 			return nil, &workflow.QueryFailedError{Message: "timeout: workflow worker is not responding"}
 		}
 	}
-	return nil, &workflow.QueryFailedError{Message: "query failed with max retry" + lastErr.Error()}
+	return nil, &workflow.QueryFailedError{Message: "query failed with max backoff" + lastErr.Error()}
 }
 
 type queryResult struct {

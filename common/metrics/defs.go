@@ -635,9 +635,9 @@ const (
 	TimerActiveTaskUserTimerScope
 	// TimerActiveTaskWorkflowTimeoutScope is the scope used by metric emitted by timer queue processor for processing workflow timeouts.
 	TimerActiveTaskWorkflowTimeoutScope
-	// TimerActiveTaskActivityRetryTimerScope is the scope used by metric emitted by timer queue processor for processing retry task.
+	// TimerActiveTaskActivityRetryTimerScope is the scope used by metric emitted by timer queue processor for processing backoff task.
 	TimerActiveTaskActivityRetryTimerScope
-	// TimerActiveTaskWorkflowBackoffTimerScope is the scope used by metric emitted by timer queue processor for processing retry task.
+	// TimerActiveTaskWorkflowBackoffTimerScope is the scope used by metric emitted by timer queue processor for processing backoff task.
 	TimerActiveTaskWorkflowBackoffTimerScope
 	// TimerActiveTaskDeleteHistoryEventScope is the scope used by metric emitted by timer queue processor for processing history event cleanup
 	TimerActiveTaskDeleteHistoryEventScope
@@ -649,11 +649,11 @@ const (
 	TimerStandbyTaskUserTimerScope
 	// TimerStandbyTaskWorkflowTimeoutScope is the scope used by metric emitted by timer queue processor for processing workflow timeouts.
 	TimerStandbyTaskWorkflowTimeoutScope
-	// TimerStandbyTaskActivityRetryTimerScope is the scope used by metric emitted by timer queue processor for processing retry task.
+	// TimerStandbyTaskActivityRetryTimerScope is the scope used by metric emitted by timer queue processor for processing backoff task.
 	TimerStandbyTaskActivityRetryTimerScope
 	// TimerStandbyTaskDeleteHistoryEventScope is the scope used by metric emitted by timer queue processor for processing history event cleanup
 	TimerStandbyTaskDeleteHistoryEventScope
-	// TimerStandbyTaskWorkflowBackoffTimerScope is the scope used by metric emitted by timer queue processor for processing retry task.
+	// TimerStandbyTaskWorkflowBackoffTimerScope is the scope used by metric emitted by timer queue processor for processing backoff task.
 	TimerStandbyTaskWorkflowBackoffTimerScope
 	// HistoryEventNotificationScope is the scope used by shard history event nitification
 	HistoryEventNotificationScope

@@ -38,6 +38,7 @@ import (
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/blobstore/blob"
 	"github.com/uber/cadence/common/cache"
@@ -49,7 +50,6 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/retry"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/tokenbucket"
 	"github.com/uber/cadence/service/worker/archiver"
@@ -377,7 +377,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		return err
 	}
 
-	err = retry.Retry(op, frontendServiceRetryPolicy, common.IsServiceTransientError)
+	err = backoff.Retry(op, frontendServiceRetryPolicy, common.IsServiceTransientError)
 	if err != nil {
 		err = wh.cancelOutstandingPoll(ctx, err, domainID, persistence.TaskListTypeActivity, pollRequest.TaskList, pollerID)
 		if err != nil {
@@ -464,7 +464,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		return err
 	}
 
-	err = retry.Retry(op, frontendServiceRetryPolicy, common.IsServiceTransientError)
+	err = backoff.Retry(op, frontendServiceRetryPolicy, common.IsServiceTransientError)
 	if err != nil {
 		err = wh.cancelOutstandingPoll(ctx, err, domainID, persistence.TaskListTypeDecision, pollRequest.TaskList, pollerID)
 		if err != nil {
@@ -1508,7 +1508,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(err, scope)
 	}
 
-	if err := retry.ValidateSchedule(startRequest.GetCronSchedule()); err != nil {
+	if err := backoff.ValidateSchedule(startRequest.GetCronSchedule()); err != nil {
 		return nil, wh.error(err, scope)
 	}
 
@@ -1966,7 +1966,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(ctx context.Context,
 		return nil, wh.error(err, scope)
 	}
 
-	if err := retry.ValidateSchedule(signalWithStartRequest.GetCronSchedule()); err != nil {
+	if err := backoff.ValidateSchedule(signalWithStartRequest.GetCronSchedule()); err != nil {
 		return nil, wh.error(err, scope)
 	}
 
@@ -2040,7 +2040,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(ctx context.Context,
 		return err
 	}
 
-	err = retry.Retry(op, frontendServiceRetryPolicy, common.IsServiceTransientError)
+	err = backoff.Retry(op, frontendServiceRetryPolicy, common.IsServiceTransientError)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -2829,7 +2829,7 @@ func (wh *WorkflowHandler) DescribeTaskList(ctx context.Context, request *gen.De
 		return err
 	}
 
-	err = retry.Retry(op, frontendServiceRetryPolicy, common.IsServiceTransientError)
+	err = backoff.Retry(op, frontendServiceRetryPolicy, common.IsServiceTransientError)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}

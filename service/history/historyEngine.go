@@ -34,6 +34,7 @@ import (
 	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
@@ -44,7 +45,6 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/retry"
 	"github.com/uber/cadence/service/worker/archiver"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/.gen/go/shared"
@@ -99,7 +99,7 @@ var (
 	// ErrTaskDiscarded is the error indicating that the timer / transfer task is pending for too long and discarded.
 	ErrTaskDiscarded = errors.New("passive task pending for too long")
 	// ErrTaskRetry is the error indicating that the timer / transfer task should be retried.
-	ErrTaskRetry = errors.New("passive task should retry due to condition in mutable state is not met")
+	ErrTaskRetry = errors.New("passive task should backoff due to condition in mutable state is not met")
 	// ErrDuplicate is exported temporarily for integration test
 	ErrDuplicate = errors.New("Duplicate task, completing it")
 	// ErrConflict is exported temporarily for integration test
@@ -725,15 +725,15 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(ctx ctx.Context,
 	}
 
 	// TODO: we need to consider adding execution time to mutable state
-	// For now execution time will be calculated based on start time and cron schedule/retry policy
+	// For now execution time will be calculated based on start time and cron schedule/backoff policy
 	// each time DescribeWorkflowExecution is called.
-	backoff := time.Duration(0)
+	backoffDuration := time.Duration(0)
 	if executionInfo.HasRetryPolicy && (executionInfo.Attempt > 0) {
-		backoff = time.Duration(float64(executionInfo.InitialInterval)*math.Pow(executionInfo.BackoffCoefficient, float64(executionInfo.Attempt-1))) * time.Second
+		backoffDuration = time.Duration(float64(executionInfo.InitialInterval)*math.Pow(executionInfo.BackoffCoefficient, float64(executionInfo.Attempt-1))) * time.Second
 	} else if len(executionInfo.CronSchedule) != 0 {
-		backoff = retry.GetBackoffForNextSchedule(executionInfo.CronSchedule, executionInfo.StartTimestamp)
+		backoffDuration = backoff.GetBackoffForNextSchedule(executionInfo.CronSchedule, executionInfo.StartTimestamp)
 	}
-	result.WorkflowExecutionInfo.ExecutionTime = common.Int64Ptr(result.WorkflowExecutionInfo.GetStartTime() + backoff.Nanoseconds())
+	result.WorkflowExecutionInfo.ExecutionTime = common.Int64Ptr(result.WorkflowExecutionInfo.GetStartTime() + backoffDuration.Nanoseconds())
 
 	if executionInfo.ParentRunID != "" {
 		result.WorkflowExecutionInfo.ParentExecution = &workflow.WorkflowExecution{
@@ -1023,10 +1023,10 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(ctx ctx.Context, req *h.Re
 			postActions := &updateWorkflowAction{}
 			retryTask := msBuilder.CreateActivityRetryTimer(ai, req.FailedRequest.GetReason())
 			if retryTask != nil {
-				// need retry
+				// need backoff
 				postActions.timerTasks = append(postActions.timerTasks, retryTask)
 			} else {
-				// no more retry, and we want to record the failure event
+				// no more backoff, and we want to record the failure event
 				if msBuilder.AddActivityTaskFailedEvent(scheduleID, ai.StartedID, request) == nil {
 					// Unable to add ActivityTaskFailed event to history
 					return nil, &workflow.InternalServiceError{Message: "Unable to add ActivityTaskFailed event to history."}

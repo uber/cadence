@@ -23,6 +23,8 @@ package indexer
 import (
 	"context"
 	"encoding/json"
+	"time"
+
 	"github.com/olivere/elastic"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
@@ -31,7 +33,6 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
-	"time"
 )
 
 type (
@@ -69,7 +70,7 @@ var _ ESProcessor = (*esProcessorImpl)(nil)
 var _ ElasticBulkProcessor = (*elastic.BulkProcessor)(nil)
 
 const (
-	// retry configs for es bulk processor
+	// backoff configs for es bulk processor
 	esProcessorInitialRetryInterval = 200 * time.Millisecond
 	esProcessorMaxRetryInterval     = 20 * time.Second
 )
@@ -129,7 +130,7 @@ func (p *esProcessorImpl) bulkBeforeAction(executionID int64, requests []elastic
 // bulkAfterAction is triggered after bulk processor commit
 func (p *esProcessorImpl) bulkAfterAction(id int64, requests []elastic.BulkableRequest, response *elastic.BulkResponse, err error) {
 	if err != nil {
-		// This happens after configured retry, which means something bad happens on cluster or index
+		// This happens after configured backoff, which means something bad happens on cluster or index
 		// When cluster back to live, processor will re-commit those failure requests
 		p.logger.Error("Error commit bulk request.", tag.Error(err))
 
@@ -155,7 +156,7 @@ func (p *esProcessorImpl) bulkAfterAction(id int64, requests []elastic.BulkableR
 				p.logger.Error("ES request failed.",
 					tag.ESResponseStatus(resp.Status), tag.ESResponseError(getErrorMsgFromESResp(resp)))
 				p.nackKafkaMsg(key)
-			default: // bulk processor will retry
+			default: // bulk processor will backoff
 				p.logger.Info("ES request retried.", tag.ESResponseStatus(resp.Status))
 				p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorRetries)
 			}

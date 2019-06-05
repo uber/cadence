@@ -28,13 +28,13 @@ import (
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/retry"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/tokenbucket"
 )
@@ -63,7 +63,7 @@ type (
 		metricsClient metrics.Client
 		rateLimiter   tokenbucket.TokenBucket // Read rate limiter
 		ackMgr        queueAckMgr
-		retryPolicy   retry.RetryPolicy
+		retryPolicy   backoff.RetryPolicy
 
 		// worker coroutines notification
 		workerNotificationChans []chan struct{}
@@ -148,7 +148,7 @@ func (p *queueProcessorBase) notifyNewTask() {
 }
 
 func (p *queueProcessorBase) processorPump() {
-	<-time.NewTimer(retry.NewJitter().JitDuration(p.options.StartDelay(), 0.99)).C
+	<-time.NewTimer(backoff.NewJitter().JitDuration(p.options.StartDelay(), 0.99)).C
 
 	defer p.shutdownWG.Done()
 	tasksCh := make(chan queueTaskInfo, p.options.BatchSize())
@@ -160,7 +160,7 @@ func (p *queueProcessorBase) processorPump() {
 		go p.taskWorker(tasksCh, notificationChan, &workerWG)
 	}
 
-	jitter := retry.NewJitter()
+	jitter := backoff.NewJitter()
 	pollTimer := time.NewTimer(jitter.JitDuration(
 		p.options.MaxPollInterval(),
 		p.options.MaxPollIntervalJitterCoefficient(),
@@ -327,7 +327,7 @@ FilterLoop:
 			// this must return without ack
 			return
 		default:
-			err = retry.Retry(op, p.retryPolicy, retryCondition)
+			err = backoff.Retry(op, p.retryPolicy, retryCondition)
 			if err == nil {
 				p.ackTaskOnce(task, scope, shouldProcessTask, startTime, attempt)
 				return

@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/common/retry"
+	"github.com/uber/cadence/common/backoff"
 
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
@@ -1651,6 +1651,6 @@ func (s *transferQueueActiveProcessorSuite) createChildWorkflowExecutionRequest(
 			Execution:   &execution,
 			InitiatedId: common.Int64Ptr(task.ScheduleID),
 		},
-		FirstDecisionTaskBackoffSeconds: common.Int32Ptr(retry.GetBackoffForNextScheduleInSeconds(attributes.GetCronSchedule(), time.Now())),
+		FirstDecisionTaskBackoffSeconds: common.Int32Ptr(backoff.GetBackoffForNextScheduleInSeconds(attributes.GetCronSchedule(), time.Now())),
 	}
 }

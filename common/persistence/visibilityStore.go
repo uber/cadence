@@ -22,6 +22,7 @@ package persistence
 
 import (
 	"encoding/json"
+
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -227,7 +228,7 @@ func (v *visibilityManagerImpl) getSearchAttributes(attr map[string]interface{})
 }
 
 func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution *VisibilityWorkflowExecutionInfo) *shared.WorkflowExecutionInfo {
-	// special handling of ExecutionTime for cron or retry
+	// special handling of ExecutionTime for cron or backoff
 	if execution.ExecutionTime.UnixNano() == 0 {
 		execution.ExecutionTime = execution.StartTime
 	}

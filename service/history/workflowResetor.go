@@ -205,7 +205,7 @@ func (w *workflowResetorImpl) failStartedActivities(msBuilder mutableState) erro
 }
 
 // Generate new transfer tasks to re-schedule task for scheduled(not started) activities.
-// NOTE 1: activities with retry may have started but don't have the start event, we also re-schedule it)
+// NOTE 1: activities with backoff may have started but don't have the start event, we also re-schedule it)
 // NOTE 2: ignore requestCancel/childWFs/singalExternal for now).
 func (w *workflowResetorImpl) scheduleUnstartedActivities(msBuilder mutableState) ([]persistence.Task, error) {
 	var tasks []persistence.Task

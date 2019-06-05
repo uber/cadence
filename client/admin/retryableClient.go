@@ -25,7 +25,7 @@ import (
 
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common/retry"
+	"github.com/uber/cadence/common/backoff"
 	"go.uber.org/yarpc"
 )
 
@@ -33,12 +33,12 @@ var _ Client = (*retryableClient)(nil)
 
 type retryableClient struct {
 	client      Client
-	policy      retry.RetryPolicy
-	isRetryable retry.IsRetryable
+	policy      backoff.RetryPolicy
+	isRetryable backoff.IsRetryable
 }
 
-// NewRetryableClient creates a new instance of Client with retry policy
-func NewRetryableClient(client Client, policy retry.RetryPolicy, isRetryable retry.IsRetryable) Client {
+// NewRetryableClient creates a new instance of Client with backoff policy
+func NewRetryableClient(client Client, policy backoff.RetryPolicy, isRetryable backoff.IsRetryable) Client {
 	return &retryableClient{
 		client:      client,
 		policy:      policy,
@@ -58,7 +58,7 @@ func (c *retryableClient) DescribeHistoryHost(
 		resp, err = c.client.DescribeHistoryHost(ctx, request, opts...)
 		return err
 	}
-	err := retry.Retry(op, c.policy, c.isRetryable)
+	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -74,7 +74,7 @@ func (c *retryableClient) DescribeWorkflowExecution(
 		resp, err = c.client.DescribeWorkflowExecution(ctx, request, opts...)
 		return err
 	}
-	err := retry.Retry(op, c.policy, c.isRetryable)
+	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -90,6 +90,6 @@ func (c *retryableClient) GetWorkflowExecutionRawHistory(
 		resp, err = c.client.GetWorkflowExecutionRawHistory(ctx, request, opts...)
 		return err
 	}
-	err := retry.Retry(op, c.policy, c.isRetryable)
+	err := backoff.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }

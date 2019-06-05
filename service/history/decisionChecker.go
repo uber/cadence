@@ -24,10 +24,10 @@ import (
 	"github.com/pborman/uuid"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/retry"
 )
 
 type (
@@ -176,7 +176,7 @@ func (v *decisionAttrValidator) validateActivityScheduleAttributes(
 		// Deduction failed as there's not enough information to fill in missing timeouts.
 		return &workflow.BadRequestError{Message: "A valid ScheduleToCloseTimeout is not set on decision."}
 	}
-	// ensure activity's SCHEDULE_TO_START and SCHEDULE_TO_CLOSE is as long as expiration on retry policy
+	// ensure activity's SCHEDULE_TO_START and SCHEDULE_TO_CLOSE is as long as expiration on backoff policy
 	p := attributes.RetryPolicy
 	if p != nil {
 		expiration := p.GetExpirationIntervalInSeconds()
@@ -427,7 +427,7 @@ func (v *decisionAttrValidator) validateStartChildExecutionAttributes(
 		return err
 	}
 
-	if err := retry.ValidateSchedule(attributes.GetCronSchedule()); err != nil {
+	if err := backoff.ValidateSchedule(attributes.GetCronSchedule()); err != nil {
 		return err
 	}
 

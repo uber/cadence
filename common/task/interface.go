@@ -38,7 +38,7 @@ type (
 		Execute() error
 		// HandleErr handle the error returned by Execute
 		HandleErr(err error) error
-		// RetryErr check whether to retry after HandleErr(Execute())
+		// RetryErr check whether to backoff after HandleErr(Execute())
 		RetryErr(err error) bool
 		// Ack marks the task as successful completed
 		Ack()

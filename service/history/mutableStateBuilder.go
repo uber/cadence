@@ -29,12 +29,12 @@ import (
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/retry"
 )
 
 const (
@@ -930,7 +930,7 @@ func (e *mutableStateBuilder) GetRequestCancelInfo(initiatedEventID int64) (*per
 func (e *mutableStateBuilder) GetRetryBackoffDuration(errReason string) time.Duration {
 	info := e.executionInfo
 	if !info.HasRetryPolicy {
-		return retry.NoBackoff
+		return backoff.NoBackoff
 	}
 
 	return getBackoffInterval(info.Attempt, info.MaximumAttempts, info.InitialInterval, info.MaximumInterval, info.BackoffCoefficient, time.Now(), info.ExpirationTime, errReason, info.NonRetriableErrors)
@@ -939,9 +939,9 @@ func (e *mutableStateBuilder) GetRetryBackoffDuration(errReason string) time.Dur
 func (e *mutableStateBuilder) GetCronBackoffDuration() time.Duration {
 	info := e.executionInfo
 	if len(info.CronSchedule) == 0 {
-		return retry.NoBackoff
+		return backoff.NoBackoff
 	}
-	return retry.GetBackoffForNextSchedule(info.CronSchedule, time.Now())
+	return backoff.GetBackoffForNextSchedule(info.CronSchedule, time.Now())
 }
 
 // GetSignalInfo get details about a signal request that is currently in progress.
@@ -1361,7 +1361,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(d
 		// ContinueAsNew by decider or cron
 		req.Attempt = common.Int32Ptr(0)
 		if attributes.RetryPolicy != nil && attributes.RetryPolicy.GetExpirationIntervalInSeconds() > 0 {
-			// has retry policy and expiration time.
+			// has backoff policy and expiration time.
 			expirationSeconds := attributes.RetryPolicy.GetExpirationIntervalInSeconds() + req.GetFirstDecisionTaskBackoffSeconds()
 			expirationTime := time.Now().Add(time.Second * time.Duration(expirationSeconds))
 			req.ExpirationTimestamp = common.Int64Ptr(expirationTime.UnixNano())
@@ -1980,7 +1980,7 @@ func (e *mutableStateBuilder) AddActivityTaskStartedEvent(ai *persistence.Activi
 		return event
 	}
 
-	// we might need to retry, so do not append started event just yet,
+	// we might need to backoff, so do not append started event just yet,
 	// instead update mutable state and will record started event when activity task is closed
 	ai.Version = e.GetCurrentVersion()
 	ai.StartedID = common.TransientEventID
@@ -2766,7 +2766,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(firstEventID, decisionComple
 	}
 
 	var di *decisionInfo
-	// First decision for retry will be created by a backoff timer
+	// First decision for backoff will be created by a backoff timer
 	if attributes.GetBackoffStartIntervalInSeconds() == 0 {
 		di = newStateBuilder.AddDecisionTaskScheduledEvent()
 		if di == nil {
@@ -2890,7 +2890,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(firs
 	}
 
 	if continueAsNewAttributes.GetInitiator() == workflow.ContinueAsNewInitiatorRetryPolicy {
-		// retry
+		// backoff
 		continueAsNew.Attempt = startedAttributes.GetAttempt()
 		continueAsNew.ExpirationTime = e.executionInfo.ExpirationTime
 	} else {
@@ -2936,7 +2936,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(firs
 			ScheduleID: di.ScheduleID,
 		})
 	} else {
-		// this need a backoff (for retry or cron)
+		// this need a backoff (for backoff or cron)
 		continueAsNew.DecisionVersion = newStateBuilder.GetCurrentVersion()
 		continueAsNew.DecisionScheduleID = common.EmptyEventID
 		continueAsNew.DecisionStartedID = common.EmptyEventID

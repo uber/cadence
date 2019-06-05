@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package retry
+package backoff
 
 import (
 	"sync"
@@ -26,10 +26,10 @@ import (
 )
 
 type (
-	// Operation to retry
+	// Operation to backoff
 	Operation func() error
 
-	// IsRetryable handler can be used to exclude certain errors during retry
+	// IsRetryable handler can be used to exclude certain errors during backoff
 	IsRetryable func(error) bool
 
 	// ConcurrentRetrier is used for client-side throttling. It determines whether to
@@ -88,14 +88,14 @@ func NewConcurrentRetrier(retryPolicy RetryPolicy) *ConcurrentRetrier {
 	return &ConcurrentRetrier{retrier: retrier}
 }
 
-// Retry function can be used to wrap any call with retry logic using the passed in policy
+// Retry function can be used to wrap any call with backoff logic using the passed in policy
 func Retry(operation Operation, policy RetryPolicy, isRetryable IsRetryable) error {
 	var err error
 	var next time.Duration
 
 	r := NewRetrier(policy, SystemClock)
 	for {
-		// operation completed successfully.  No need to retry.
+		// operation completed successfully.  No need to backoff.
 		if err = operation(); err == nil {
 			return nil
 		}
@@ -113,7 +113,7 @@ func Retry(operation Operation, policy RetryPolicy, isRetryable IsRetryable) err
 	}
 }
 
-// IgnoreErrors can be used as IsRetryable handler for Retry function to exclude certain errors from the retry list
+// IgnoreErrors can be used as IsRetryable handler for Retry function to exclude certain errors from the backoff list
 func IgnoreErrors(errorsToExclude []error) func(error) bool {
 	return func(err error) bool {
 		for _, errorToExclude := range errorsToExclude {

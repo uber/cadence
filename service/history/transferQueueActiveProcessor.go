@@ -31,11 +31,11 @@ import (
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/retry"
 )
 
 const identityHistoryService = "history-service"
@@ -538,7 +538,7 @@ func (t *transferQueueActiveProcessorImpl) processCancelExecution(task *persiste
 		return t.historyClient.RequestCancelWorkflowExecution(nil, cancelRequest)
 	}
 
-	err = retry.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+	err = backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 	if err != nil {
 		if _, ok := err.(*workflow.CancellationAlreadyRequestedError); ok {
 			// this could happen if target workflow cancellation is alreay requested
@@ -795,7 +795,7 @@ func (t *transferQueueActiveProcessorImpl) processStartChildExecution(task *pers
 				},
 				InitiatedId: common.Int64Ptr(initiatedEventID),
 			},
-			FirstDecisionTaskBackoffSeconds: common.Int32Ptr(retry.GetBackoffForNextScheduleInSeconds(attributes.GetCronSchedule(), time.Now())),
+			FirstDecisionTaskBackoffSeconds: common.Int32Ptr(backoff.GetBackoffForNextScheduleInSeconds(attributes.GetCronSchedule(), time.Now())),
 		}
 
 		var startResponse *workflow.StartWorkflowExecutionResponse
@@ -998,13 +998,13 @@ func (t *transferQueueActiveProcessorImpl) processResetWorkflow(task *persistenc
 	}, baseContext, baseMutableState, currContext, currMutableState)
 	if err != nil {
 		if _, ok := err.(*workflow.BadRequestError); ok {
-			// This means the reset point is corrupted and not retry able.
+			// This means the reset point is corrupted and not backoff able.
 			// There must be a bug in our system that we must fix.(for example, history is not the same in active/passive)
 			t.metricsClient.IncCounter(metrics.TransferQueueProcessorScope, metrics.AutoResetPointCorruptionCounter)
 			logger.Error("Auto-Reset workflow failed and not retryable. The reset point is corrupted.", tag.Error(err))
 			return nil
 		}
-		// log this error and retry
+		// log this error and backoff
 		logger.Error("Auto-Reset workflow failed", tag.Error(err))
 		return err
 	}
@@ -1249,7 +1249,7 @@ func (t *transferQueueActiveProcessorImpl) SignalExecutionWithRetry(signalReques
 		return t.historyClient.SignalWorkflowExecution(nil, signalRequest)
 	}
 
-	return retry.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 }
 
 func getWorkflowExecutionCloseStatus(status int) workflow.WorkflowExecutionCloseStatus {

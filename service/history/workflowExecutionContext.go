@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/errors"
@@ -37,7 +38,6 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/retry"
 )
 
 const (
@@ -242,7 +242,7 @@ func (c *workflowExecutionContextImpl) createWorkflowExecution(
 		ReplicationState:            replicationState,
 		SearchAttributes:            executionInfo.SearchAttributes,
 
-		// retry policy
+		// backoff policy
 		HasRetryPolicy:     executionInfo.HasRetryPolicy,
 		BackoffCoefficient: executionInfo.BackoffCoefficient,
 		ExpirationSeconds:  executionInfo.ExpirationSeconds,
@@ -532,7 +532,7 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 				return err1
 			}
 
-			// Buffered events are flushed, we want upper layer to retry
+			// Buffered events are flushed, we want upper layer to backoff
 			return ErrConflict
 		}
 		return err
@@ -990,7 +990,7 @@ func (c *workflowExecutionContextImpl) getWorkflowExecutionWithRetry(
 		return err
 	}
 
-	err := retry.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 	if err != nil {
 		return nil, err
 	}
@@ -1007,7 +1007,7 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithRetry(
 		return err
 	}
 
-	err := retry.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 	return resp, err
 }
 
