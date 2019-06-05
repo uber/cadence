@@ -53,12 +53,9 @@ type (
 		failDecision                      bool
 		failDecisionCause                 *workflow.DecisionTaskFailedCause
 		activityNotStartedCancelled       bool
-		// TODO since timer builder provide `GetActivityTimerTaskIfNeeded`,
-		//  should probably delete hasDecisionScheduleActivityTask
-		hasDecisionScheduleActivityTask bool
-		continueAsNewBuilder            mutableState
-		stopProcessing                  bool // should stop processing any more decisions
-		mutableState                    mutableState
+		continueAsNewBuilder              mutableState
+		stopProcessing                    bool // should stop processing any more decisions
+		mutableState                      mutableState
 
 		// validation
 		attrValidator    *decisionAttrValidator
@@ -100,7 +97,6 @@ func newDecisionTaskHandler(
 		failDecision:                      false,
 		failDecisionCause:                 nil,
 		activityNotStartedCancelled:       false,
-		hasDecisionScheduleActivityTask:   false,
 		continueAsNewBuilder:              nil,
 		stopProcessing:                    false,
 		mutableState:                      mutableState,
@@ -221,7 +217,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 		TaskList:   attr.TaskList.GetName(),
 		ScheduleID: scheduleEvent.GetEventId(),
 	})
-	handler.hasDecisionScheduleActivityTask = true
+
 	return nil
 }
 
@@ -466,7 +462,8 @@ func (handler *decisionTaskHandlerImpl) handleDecisionFailWorkflow(
 			handler.domainEntry,
 			startAttributes.GetParentWorkflowDomain(),
 			continueAsNewAttributes,
-			handler.eventStoreVersion)
+			handler.eventStoreVersion,
+		)
 		if err != nil {
 			return err
 		}

@@ -364,16 +364,15 @@ Update_History_Loop:
 		}
 
 		var (
-			failDecision                    bool
-			failCause                       workflow.DecisionTaskFailedCause
-			failMessage                     string
-			isComplete                      bool
-			activityNotStartedCancelled     bool
-			transferTasks                   []persistence.Task
-			timerTasks                      []persistence.Task
-			continueAsNewBuilder            mutableState
-			continueAsNewTimerTasks         []persistence.Task
-			hasDecisionScheduleActivityTask bool
+			failDecision                bool
+			failCause                   workflow.DecisionTaskFailedCause
+			failMessage                 string
+			isComplete                  bool
+			activityNotStartedCancelled bool
+			transferTasks               []persistence.Task
+			timerTasks                  []persistence.Task
+			continueAsNewBuilder        mutableState
+			continueAsNewTimerTasks     []persistence.Task
 
 			tBuilder           *timerBuilder
 			hasUnhandledEvents bool
@@ -442,7 +441,6 @@ Update_History_Loop:
 			isComplete = !msBuilder.IsWorkflowExecutionRunning()
 			activityNotStartedCancelled = decisionTaskHandler.activityNotStartedCancelled
 			// continueAsNewTimerTasks is not used by decisionTaskHandler
-			hasDecisionScheduleActivityTask = decisionTaskHandler.hasDecisionScheduleActivityTask
 
 			transferTasks = append(transferTasks, decisionTaskHandler.transferTasks...)
 			timerTasks = append(timerTasks, decisionTaskHandler.timerTasks...)
@@ -473,10 +471,8 @@ Update_History_Loop:
 		if tt := tBuilder.GetUserTimerTaskIfNeeded(msBuilder); tt != nil {
 			timerTasks = append(timerTasks, tt)
 		}
-		if hasDecisionScheduleActivityTask {
-			if tt := tBuilder.GetActivityTimerTaskIfNeeded(msBuilder); tt != nil {
-				timerTasks = append(timerTasks, tt)
-			}
+		if tt := tBuilder.GetActivityTimerTaskIfNeeded(msBuilder); tt != nil {
+			timerTasks = append(timerTasks, tt)
 		}
 
 		// Schedule another decision task if new events came in during this decision or if request forced to
