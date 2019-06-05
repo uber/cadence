@@ -97,15 +97,18 @@ func shouldRun(probability float64) bool {
 	return rand.Intn(int(1.0/probability)) == 0
 }
 
-func isHistoryMutated(historyBlob *HistoryBlob, request *ArchiveRequest) bool {
+func historyMutated(historyBlob *HistoryBlob, request *ArchiveRequest) bool {
 	lastFailoverVersion := common.Int64Default(historyBlob.Header.LastFailoverVersion)
 	if lastFailoverVersion > request.CloseFailoverVersion {
 		return true
 	}
 
-	isLast := common.BoolDefault(historyBlob.Header.IsLast)
+	if !common.BoolDefault(historyBlob.Header.IsLast) {
+		return false
+	}
+
 	lastEventID := common.Int64Default(historyBlob.Header.LastEventID)
-	return isLast && (lastFailoverVersion != request.CloseFailoverVersion || lastEventID+1 != request.NextEventID)
+	return lastFailoverVersion != request.CloseFailoverVersion || lastEventID+1 != request.NextEventID
 }
 
 func validateArchivalRequest(request *ArchiveRequest) error {

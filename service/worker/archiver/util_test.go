@@ -90,7 +90,7 @@ func (s *UtilSuite) TestHashesEqual() {
 	}
 }
 
-func (s *UtilSuite) TestIsHistoryMutated() {
+func (s *UtilSuite) TestHistoryMutated() {
 	testCases := []struct {
 		historyBlob *HistoryBlob
 		request     *ArchiveRequest
@@ -149,7 +149,7 @@ func (s *UtilSuite) TestIsHistoryMutated() {
 		},
 	}
 	for _, tc := range testCases {
-		s.Equal(tc.isMutated, isHistoryMutated(tc.historyBlob, tc.request))
+		s.Equal(tc.isMutated, historyMutated(tc.historyBlob, tc.request))
 	}
 }
 
