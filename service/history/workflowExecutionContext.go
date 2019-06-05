@@ -277,11 +277,11 @@ func (c *workflowExecutionContextImpl) resetMutableState(prevRunID string, reset
 	c.shard.NotifyNewHistoryEvent(newHistoryEventNotification(
 		c.domainID,
 		&c.workflowExecution,
-		c.msBuilder.GetLastFirstEventID(),
-		c.msBuilder.GetNextEventID(),
-		c.msBuilder.GetPreviousStartedEventID(),
-		c.msBuilder.IsWorkflowExecutionRunning(),
-		c.msBuilder.GetCurrentBranch(),
+		resetBuilder.GetLastFirstEventID(),
+		resetBuilder.GetNextEventID(),
+		resetBuilder.GetPreviousStartedEventID(),
+		resetBuilder.IsWorkflowExecutionRunning(),
+		resetBuilder.GetCurrentBranch(),
 	))
 	return c.loadWorkflowExecution()
 }
