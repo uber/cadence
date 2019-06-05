@@ -1918,7 +1918,7 @@ func (s *integrationClustersTestSuite) TestCronWorkflowFailover() {
 }
 
 func (s *integrationClustersTestSuite) TestWorkflowRetryFailover() {
-	domainName := "test-workflow-backoff-failover-" + common.GenerateRandomString(5)
+	domainName := "test-workflow-retry-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &workflow.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),
@@ -1942,9 +1942,9 @@ func (s *integrationClustersTestSuite) TestWorkflowRetryFailover() {
 	client2 := s.cluster2.GetFrontendClient() // standby
 
 	// start a workflow
-	id := "integration-workflow-backoff-failover-test"
-	wt := "integration-workflow-backoff-failover-test-type"
-	tl := "integration-workflow-backoff-failover-test-tasklist"
+	id := "integration-workflow-retry-failover-test"
+	wt := "integration-workflow-retry-failover-test-type"
+	tl := "integration-workflow-retry-failover-test-tasklist"
 	identity := "worker1"
 	workflowType := &workflow.WorkflowType{Name: common.StringPtr(wt)}
 	taskList := &workflow.TaskList{Name: common.StringPtr(tl)}
@@ -2025,7 +2025,7 @@ func (s *integrationClustersTestSuite) TestWorkflowRetryFailover() {
 	s.Equal(workflow.EventTypeWorkflowExecutionContinuedAsNew, events[len(events)-1].GetEventType())
 	s.Equal(int32(1), events[0].GetWorkflowExecutionStartedEventAttributes().GetAttempt())
 
-	// third attempt. Still failing, should stop backoff.
+	// third attempt. Still failing, should stop retry.
 	_, err = poller2.PollAndProcessDecisionTask(false, false)
 	s.Nil(err)
 	events = s.getHistory(client2, domainName, executions[2])

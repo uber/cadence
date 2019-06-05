@@ -294,7 +294,7 @@ type (
 		CancelRequestID          int64
 		LastHeartBeatUpdatedTime time.Time
 		TimerTaskStatus          int32
-		// For backoff
+		// For retry
 		Attempt            int32
 		DomainID           string
 		StartedIdentity    string

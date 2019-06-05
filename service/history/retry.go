@@ -46,7 +46,7 @@ func prepareActivityNextRetryWithNowTime(version int64, a *persistence.ActivityI
 	}
 	nextScheduleTime := now.Add(backoffInterval)
 
-	// a backoff is needed, update activity info for next backoff
+	// a retry is needed, update activity info for next retry
 	a.Version = version
 	a.Attempt++
 	a.ScheduledTime = nextScheduleTime // update to next schedule time
@@ -70,7 +70,7 @@ func getBackoffInterval(currAttempt, maxAttempts, initInterval, maxInterval int3
 
 	if maxAttempts > 0 && currAttempt >= maxAttempts-1 {
 		// currAttempt starts from 0.
-		// MaximumAttempts is the total attempts, including initial (non-backoff) attempt.
+		// MaximumAttempts is the total attempts, including initial (non-retry) attempt.
 		return backoff.NoBackoff
 	}
 
@@ -95,7 +95,7 @@ func getBackoffInterval(currAttempt, maxAttempts, initInterval, maxInterval int3
 		return backoff.NoBackoff
 	}
 
-	// make sure we don't backoff size exceeded error reasons. Note that FailureReasonFailureDetailsExceedsLimit is retryable.
+	// make sure we don't retry size exceeded error reasons. Note that FailureReasonFailureDetailsExceedsLimit is retryable.
 	if errReason == common.FailureReasonCancelDetailsExceedsLimit ||
 		errReason == common.FailureReasonCompleteResultExceedsLimit ||
 		errReason == common.FailureReasonHeartbeatExceedsLimit ||

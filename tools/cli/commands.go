@@ -1420,7 +1420,7 @@ func processResets(c *cli.Context, domain string, wes chan shared.WorkflowExecut
 				if err == nil {
 					break
 				}
-				fmt.Println("failed and backoff...: ", wid, rid, err)
+				fmt.Println("failed and retry...: ", wid, rid, err)
 				time.Sleep(time.Millisecond * time.Duration(rand.Intn(2000)))
 			}
 			time.Sleep(time.Millisecond * time.Duration(rand.Intn(1000)))

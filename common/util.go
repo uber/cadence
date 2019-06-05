@@ -341,7 +341,7 @@ func MinInt(a, b int) int {
 // ValidateRetryPolicy validates a retry policy
 func ValidateRetryPolicy(policy *workflow.RetryPolicy) error {
 	if policy == nil {
-		// nil policy is valid which means no backoff
+		// nil policy is valid which means no retry
 		return nil
 	}
 	if policy.GetInitialIntervalInSeconds() <= 0 {

@@ -1378,7 +1378,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 	})
 	s.Nil(err)
 
-	for i := 0; i < 10; i++ { // backoff
+	for i := 0; i < 10; i++ { // retry
 		listResp, err = s.engine.ListOpenWorkflowExecutions(createContext(), listOpenRequest)
 		s.NoError(err)
 		if len(listResp.Executions) == 0 {

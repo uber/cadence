@@ -139,7 +139,7 @@ func (r *historyReplicatorV2) applyEvents(ctx ctx.Context, context workflowExecu
 			// mutable state not created, proceed
 			return r.applyStartEvents(ctx, context, task)
 		default:
-			// unable to get mutable state, return err so we can backoff the task later
+			// unable to get mutable state, return err so we can retry the task later
 			return err
 		}
 
@@ -162,7 +162,7 @@ func (r *historyReplicatorV2) applyEvents(ctx ctx.Context, context workflowExecu
 			// mutable state not created, proceed
 			return r.applyNonStartEventsMissingMutableState(ctx, context, task)
 		default:
-			// unable to get mutable state, return err so we can backoff the task later
+			// unable to get mutable state, return err so we can retry the task later
 			return err
 		}
 	}
@@ -289,7 +289,7 @@ func (r *historyReplicatorV2) applyStartEvents(ctx ctx.Context, context workflow
 		// if workflow is completed just when the call is made, will get EntityNotExistsError
 		// we are not sure whether the workflow to be terminated ends with continue as new or not
 		// so when encounter EntityNotExistsError, just contiue to execute, if err occurs,
-		// there will be backoff on the worker level
+		// there will be retry on the worker level
 	}
 	createMode = persistence.CreateWorkflowModeWorkflowIDReuse
 	prevRunID = currentRunID
@@ -400,7 +400,7 @@ func (r *historyReplicatorV2) applyNonStartEventsMissingMutableState(ctx ctx.Con
 	currentRelease(nil)
 
 	if currentLastWriteVersion > task.getVersion() {
-		// return backoff task error for backfill
+		// return retry task error for backfill
 		return newRetryTaskErrorWithHint(ErrWorkflowNotFoundMsg, task.getDomainID(), task.getWorkflowID(), task.getRunID(), common.FirstEventID)
 	}
 	if currentLastWriteVersion < task.getVersion() {
@@ -413,9 +413,9 @@ func (r *historyReplicatorV2) applyNonStartEventsMissingMutableState(ctx ctx.Con
 				// if workflow is completed just when the call is made, will get EntityNotExistsError
 				// we are not sure whether the workflow to be terminated ends with continue as new or not
 				// so when encounter EntityNotExistsError, just continue to execute, if err occurs,
-				// there will be backoff on the worker level
+				// there will be retry on the worker level
 			}
-			// TODO if local was not active, better return a backoff task error backfill all history, in case kafka lost events.
+			// TODO if local was not active, better return a retry task error backfill all history, in case kafka lost events.
 		}
 		if task.getRequest().GetResetWorkflow() {
 			return r.resetor.ApplyResetEvent(ctx, task.getRequest(), task.getDomainID(), task.getWorkflowID(), currentRunID)
@@ -426,7 +426,7 @@ func (r *historyReplicatorV2) applyNonStartEventsMissingMutableState(ctx ctx.Con
 	// currentLastWriteVersion == incomingVersion
 	if currentStillRunning {
 		if task.getLastEvent().GetTaskId() < currentLastEventTaskID {
-			// return backoff task error for backfill
+			// return retry task error for backfill
 			return newRetryTaskErrorWithHint(ErrWorkflowNotFoundMsg, task.getDomainID(), task.getWorkflowID(), task.getRunID(), common.FirstEventID)
 		}
 		return newRetryTaskErrorWithHint(ErrWorkflowNotFoundMsg, task.getDomainID(), task.getWorkflowID(), currentRunID, currentNextEventID)
@@ -457,7 +457,7 @@ func (r *historyReplicatorV2) getCurrentWorkflowMutableState(ctx ctx.Context, do
 
 	msBuilder, err := context.loadWorkflowExecution()
 	if err != nil {
-		// no matter what error happen, we need to backoff
+		// no matter what error happen, we need to retry
 		release(err)
 		return nil, nil, nil, err
 	}

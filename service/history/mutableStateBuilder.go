@@ -1980,7 +1980,7 @@ func (e *mutableStateBuilder) AddActivityTaskStartedEvent(ai *persistence.Activi
 		return event
 	}
 
-	// we might need to backoff, so do not append started event just yet,
+	// we might need to retry, so do not append started event just yet,
 	// instead update mutable state and will record started event when activity task is closed
 	ai.Version = e.GetCurrentVersion()
 	ai.StartedID = common.TransientEventID
@@ -2766,7 +2766,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(firstEventID, decisionComple
 	}
 
 	var di *decisionInfo
-	// First decision for backoff will be created by a backoff timer
+	// First decision for retry will be created by a backoff timer
 	if attributes.GetBackoffStartIntervalInSeconds() == 0 {
 		di = newStateBuilder.AddDecisionTaskScheduledEvent()
 		if di == nil {
@@ -2890,7 +2890,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(firs
 	}
 
 	if continueAsNewAttributes.GetInitiator() == workflow.ContinueAsNewInitiatorRetryPolicy {
-		// backoff
+		// retry
 		continueAsNew.Attempt = startedAttributes.GetAttempt()
 		continueAsNew.ExpirationTime = e.executionInfo.ExpirationTime
 	} else {
@@ -2936,7 +2936,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(firs
 			ScheduleID: di.ScheduleID,
 		})
 	} else {
-		// this need a backoff (for backoff or cron)
+		// this need a backoff (for retry or cron)
 		continueAsNew.DecisionVersion = newStateBuilder.GetCurrentVersion()
 		continueAsNew.DecisionScheduleID = common.EmptyEventID
 		continueAsNew.DecisionStartedID = common.EmptyEventID

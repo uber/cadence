@@ -76,7 +76,7 @@ func (s *Scavenger) listTaskList(pageSize int, pageToken []byte) (*p.ListTaskLis
 }
 
 func (s *Scavenger) deleteTaskList(key *taskListKey, rangeID int64) error {
-	// backoff only on service busy errors
+	// retry only on service busy errors
 	return backoff.Retry(func() error {
 		return s.db.DeleteTaskList(&p.DeleteTaskListRequest{
 			DomainID:     key.DomainID,

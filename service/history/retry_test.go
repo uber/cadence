@@ -33,7 +33,7 @@ func Test_NextRetry(t *testing.T) {
 	now, _ := time.Parse(time.RFC3339, "2018-04-13T16:08:08+00:00")
 	reason := "good-reason"
 
-	// no backoff without retry policy
+	// no retry without retry policy
 	var version int64 = 59
 	ai := &persistence.ActivityInfo{
 		Version:                version,
@@ -45,21 +45,21 @@ func Test_NextRetry(t *testing.T) {
 	}
 	a.Nil(prepareActivityNextRetry(version, ai, reason))
 
-	// no backoff if cancel requested
+	// no retry if cancel requested
 	ai.HasRetryPolicy = true
 	ai.CancelRequested = true
 	a.Nil(prepareActivityNextRetry(version, ai, reason))
 
-	// no backoff if both MaximumAttempts and ExpirationTime are not set
+	// no retry if both MaximumAttempts and ExpirationTime are not set
 	ai.CancelRequested = false
 	a.Nil(prepareActivityNextRetry(version, ai, reason))
 
-	// no backoff if MaximumAttempts is 1 (for initial attempt)
+	// no retry if MaximumAttempts is 1 (for initial attempt)
 	ai.InitialInterval = 1
 	ai.MaximumAttempts = 1
 	a.Nil(prepareActivityNextRetry(version, ai, reason))
 
-	// backoff backoff, intervals: 1s, 2s, 4s, 8s.
+	// backoff retry, intervals: 1s, 2s, 4s, 8s.
 	ai.MaximumAttempts = 5
 	ai.BackoffCoefficient = 2
 	retryTask := prepareActivityNextRetryWithNowTime(version, ai, reason, now)
@@ -85,7 +85,7 @@ func Test_NextRetry(t *testing.T) {
 	a.NotNil(retryTask)
 	a.Equal(now.Add(time.Second*8), retryTask.(*persistence.ActivityRetryTimerTask).VisibilityTimestamp)
 
-	// no backoff as max attempt reached
+	// no retry as max attempt reached
 	a.Equal(ai.MaximumAttempts-1, ai.Attempt)
 	retryTask = prepareActivityNextRetryWithNowTime(version, ai, reason, now)
 	a.Nil(retryTask)
@@ -97,7 +97,7 @@ func Test_NextRetry(t *testing.T) {
 	a.NotNil(retryTask)
 	a.Equal(now.Add(time.Second*10), retryTask.(*persistence.ActivityRetryTimerTask).VisibilityTimestamp)
 
-	// no backoff because expiration time before next interval
+	// no retry because expiration time before next interval
 	ai.MaximumAttempts = 8
 	ai.ExpirationTime = now.Add(time.Second * 5)
 	retryTask = prepareActivityNextRetryWithNowTime(version, ai, reason, now)
@@ -111,7 +111,7 @@ func Test_NextRetry(t *testing.T) {
 	a.Equal(version, ai.Version)
 	a.Equal(now.Add(time.Second*10), retryTask.(*persistence.ActivityRetryTimerTask).VisibilityTimestamp)
 
-	// with big max backoff, math.Pow() could overflow, verify that it uses the MaxInterval
+	// with big max retry, math.Pow() could overflow, verify that it uses the MaxInterval
 	ai.Attempt = 64
 	ai.MaximumAttempts = 100
 	retryTask = prepareActivityNextRetryWithNowTime(version, ai, reason, now)

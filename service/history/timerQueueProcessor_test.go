@@ -345,7 +345,7 @@ func (s *timerQueueProcessorSuite) TestTimerTaskAfterProcessorStart() {
 }
 
 func (s *timerQueueProcessorSuite) waitForTimerTasksToProcess(p *timerQueueProcessorImpl, expectedFireCount uint64) {
-	// backoff for 20 seconds
+	// retry for 20 seconds
 	for i := 0; i < 20; i++ {
 		if expectedFireCount == p.getTimerFiredCount(cluster.TestCurrentClusterName) {
 			break

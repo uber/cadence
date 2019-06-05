@@ -1400,11 +1400,11 @@ struct PollerInfo {
 }
 
 struct RetryPolicy {
-  // Interval of the first backoff. If coefficient is 1.0 then it is used for all retries.
+  // Interval of the first retry. If coefficient is 1.0 then it is used for all retries.
   10: optional i32 initialIntervalInSeconds
 
-  // Coefficient used to calculate the next backoff interval.
-  // The next backoff interval is previous interval multiplied by the coefficient.
+  // Coefficient used to calculate the next retry interval.
+  // The next retry interval is previous interval multiplied by the coefficient.
   // Must be 1 or larger.
   20: optional double backoffCoefficient
 
@@ -1419,7 +1419,7 @@ struct RetryPolicy {
   // Non-Retriable errors. Will stop retrying if error matches this list.
   50: optional list<string> nonRetriableErrorReasons
 
-  // Expiration time for the whole backoff process.
+  // Expiration time for the whole retry process.
   60: optional i32 expirationIntervalInSeconds
 }
 

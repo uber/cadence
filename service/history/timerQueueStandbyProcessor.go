@@ -169,7 +169,7 @@ func (t *timerQueueStandbyProcessorImpl) process(timerTask *persistence.TimerTas
 		return metrics.TimerStandbyTaskWorkflowTimeoutScope, err
 
 	case persistence.TaskTypeActivityRetryTimer:
-		// backoff backoff timer should not get created on passive cluster
+		// retry backoff timer should not get created on passive cluster
 		return metrics.TimerStandbyTaskActivityRetryTimerScope, err
 
 	case persistence.TaskTypeWorkflowBackoffTimer:
@@ -212,7 +212,7 @@ func (t *timerQueueStandbyProcessorImpl) processExpiredUserTimer(timerTask *pers
 
 			if isExpired := tBuilder.IsTimerExpired(td, timerTask.VisibilityTimestamp); isExpired {
 				// active cluster will add an timer fired event and schedule a decision if necessary
-				// standby cluster should just call ack manager to backoff this task
+				// standby cluster should just call ack manager to retry this task
 				// since we are stilling waiting for the fired event to be replicated
 				//
 				// we do not need to notity new timer to base, since if there is no new event being replicated
@@ -354,7 +354,7 @@ func (t *timerQueueStandbyProcessorImpl) processDecisionTimeout(timerTask *persi
 		}
 
 		// active cluster will add an decision timeout event and schedule a decision
-		// standby cluster should just call ack manager to backoff this task
+		// standby cluster should just call ack manager to retry this task
 		// since we are stilling waiting for the decision timeout event / decision completion to be replicated
 		//
 		// we do not need to notify new timer to base, since if there is no new event being replicated
@@ -397,7 +397,7 @@ func (t *timerQueueStandbyProcessorImpl) processWorkflowBackoffTimer(timerTask *
 		// however, workflow started version is immutable
 
 		// active cluster will add first decision task after backoff timeout.
-		// standby cluster should just call ack manager to backoff this task
+		// standby cluster should just call ack manager to retry this task
 		// since we are stilling waiting for the first DecisionSchedueldEvent to be replicated from active side.
 		//
 		// we do not need to notity new timer to base, since if there is no new event being replicated

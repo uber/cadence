@@ -532,7 +532,7 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 				return err1
 			}
 
-			// Buffered events are flushed, we want upper layer to backoff
+			// Buffered events are flushed, we want upper layer to retry
 			return ErrConflict
 		}
 		return err

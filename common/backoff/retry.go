@@ -26,7 +26,7 @@ import (
 )
 
 type (
-	// Operation to backoff
+	// Operation to retry
 	Operation func() error
 
 	// IsRetryable handler can be used to exclude certain errors during retry

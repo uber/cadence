@@ -69,12 +69,12 @@ var (
 )
 
 const (
-	uploadErrorMsg = "Archival upload attempt is giving up, possibly could backoff."
-	uploadSkipMsg  = "Archival upload request is being skipped, will not backoff."
+	uploadErrorMsg = "Archival upload attempt is giving up, possibly could retry."
+	uploadSkipMsg  = "Archival upload request is being skipped, will not retry."
 )
 
 // uploadHistoryActivity is used to upload a workflow execution history to blobstore.
-// method will backoff all retryable operations until context expires.
+// method will retry all retryable operations until context expires.
 // archival will be skipped and no error will be returned if cluster or domain is not figured for archival.
 // method will always return either: nil, errContextTimeout or an error from uploadHistoryActivityNonRetryableErrors.
 func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err error) {
@@ -213,7 +213,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 }
 
 // deleteHistoryActivity deletes workflow execution history from persistence.
-// method will backoff all retryable operations until context expires.
+// method will retry all retryable operations until context expires.
 // method will always return either: nil, contextTimeoutErr or an error from deleteHistoryActivityNonRetryableErrors.
 func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) (err error) {
 	container := ctx.Value(bootstrapContainerKey).(*BootstrapContainer)
@@ -245,7 +245,7 @@ func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 }
 
 // deleteBlobActivity deletes uploaded history blobs from blob store.
-// method will backoff all retryable operations until context expires.
+// method will retry all retryable operations until context expires.
 // method will always return either: nil, contextTimeoutErr or an error from deleteBlobActivityNonRetryableErrors.
 // TODO: after heartbeating during uploadHistoryActivity is implemented, this activity should take
 // a list of uploaded blob keys as input.

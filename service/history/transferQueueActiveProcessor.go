@@ -998,13 +998,13 @@ func (t *transferQueueActiveProcessorImpl) processResetWorkflow(task *persistenc
 	}, baseContext, baseMutableState, currContext, currMutableState)
 	if err != nil {
 		if _, ok := err.(*workflow.BadRequestError); ok {
-			// This means the reset point is corrupted and not backoff able.
+			// This means the reset point is corrupted and not retry able.
 			// There must be a bug in our system that we must fix.(for example, history is not the same in active/passive)
 			t.metricsClient.IncCounter(metrics.TransferQueueProcessorScope, metrics.AutoResetPointCorruptionCounter)
 			logger.Error("Auto-Reset workflow failed and not retryable. The reset point is corrupted.", tag.Error(err))
 			return nil
 		}
-		// log this error and backoff
+		// log this error and retry
 		logger.Error("Auto-Reset workflow failed", tag.Error(err))
 		return err
 	}

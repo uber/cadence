@@ -469,7 +469,7 @@ func TimerTaskStatus(timerTaskStatus int32) Tag {
 	return newInt32("timer-task-status", timerTaskStatus)
 }
 
-// backoff
+// retry
 
 // Attempt returns tag for Attempt
 func Attempt(attempt int32) Tag {

@@ -55,13 +55,13 @@ CREATE TYPE workflow_execution (
   client_library_version           text,
   client_feature_version           text,
   client_impl                      text,
-  attempt                          int,    -- starting from 0 (for initial non-backoff)
+  attempt                          int,    -- starting from 0 (for initial non-retry)
   has_retry_policy                 boolean,-- If there is a retry policy
-  init_interval                    int,    -- initial backoff interval, in seconds
+  init_interval                    int,    -- initial retry interval, in seconds
   backoff_coefficient              double,
-  max_interval                     int,    -- max backoff interval in seconds
-  expiration_time                  timestamp, -- backoff expiration time
-  max_attempts                     int,    -- max number of attempts including initial non-backoff attempt
+  max_interval                     int,    -- max retry interval in seconds
+  expiration_time                  timestamp, -- retry expiration time
+  max_attempts                     int,    -- max number of attempts including initial non-retry attempt
   non_retriable_errors             list<text>,
   event_store_version              int, -- indicates which version of events persistence is using
   signal_count                     int,
@@ -70,7 +70,7 @@ CREATE TYPE workflow_execution (
   last_first_event_id              bigint,
   next_event_id                    bigint,
   cron_schedule                    text,
-  expiration_seconds               int,    -- backoff expiration duration in seconds
+  expiration_seconds               int,    -- retry expiration duration in seconds
   last_event_task_id               bigint,
   auto_reset_points                blob, -- the resetting points for auto-reset feature
   auto_reset_points_encoding       text, -- encoding for auto_reset_points_data
@@ -137,7 +137,7 @@ CREATE TYPE timer_task (
   type             int,  -- enum TaskType {DecisionTaskTimeout, ActivityTaskTimeout, UserTimer}
   timeout_type     int, -- enum TimeoutType in IDL {START_TO_CLOSE, SCHEDULE_TO_START, SCHEDULE_TO_CLOSE, HEARTBEAT}
   event_id         bigint, -- Corresponds to event ID in history that is responsible for this timer.
-  schedule_attempt bigint, -- Used to backoff failed decision tasks using mutable state
+  schedule_attempt bigint, -- Used to retry failed decision tasks using mutable state
   version          bigint, -- the failover version when this task is created, used to compare against the mutable state, in case the events got overwritten
 );
 
@@ -162,15 +162,15 @@ CREATE TYPE activity_info (
   cancel_request_id         bigint,  -- Event ID that identifies the cancel request.
   last_hb_updated_time      timestamp, -- Last time the heartbeat is received.
   timer_task_status         int,    -- Indicates whether timers are created for this activity.
-  attempt                   int,    -- starting from 0 (for initial non-backoff)
+  attempt                   int,    -- starting from 0 (for initial non-retry)
   task_list                 text,
   started_identity          text,   -- last started poller's identity
   has_retry_policy          boolean,-- If there is a retry policy
-  init_interval             int,    -- initial backoff interval, in seconds
+  init_interval             int,    -- initial retry interval, in seconds
   backoff_coefficient       double,
-  max_interval              int,    -- max backoff interval in seconds
-  expiration_time           timestamp, -- backoff expiration time
-  max_attempts              int,    -- max number of attempts including initial non-backoff attempt
+  max_interval              int,    -- max retry interval in seconds
+  expiration_time           timestamp, -- retry expiration time
+  max_attempts              int,    -- max number of attempts including initial non-retry attempt
   non_retriable_errors      list<text>,
   event_data_encoding   text, -- Protocol used for history serialization
 );

@@ -99,7 +99,7 @@ var (
 	// ErrTaskDiscarded is the error indicating that the timer / transfer task is pending for too long and discarded.
 	ErrTaskDiscarded = errors.New("passive task pending for too long")
 	// ErrTaskRetry is the error indicating that the timer / transfer task should be retried.
-	ErrTaskRetry = errors.New("passive task should backoff due to condition in mutable state is not met")
+	ErrTaskRetry = errors.New("passive task should retry due to condition in mutable state is not met")
 	// ErrDuplicate is exported temporarily for integration test
 	ErrDuplicate = errors.New("Duplicate task, completing it")
 	// ErrConflict is exported temporarily for integration test
@@ -1023,10 +1023,10 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(ctx ctx.Context, req *h.Re
 			postActions := &updateWorkflowAction{}
 			retryTask := msBuilder.CreateActivityRetryTimer(ai, req.FailedRequest.GetReason())
 			if retryTask != nil {
-				// need backoff
+				// need retry
 				postActions.timerTasks = append(postActions.timerTasks, retryTask)
 			} else {
-				// no more backoff, and we want to record the failure event
+				// no more retry, and we want to record the failure event
 				if msBuilder.AddActivityTaskFailedEvent(scheduleID, ai.StartedID, request) == nil {
 					// Unable to add ActivityTaskFailed event to history
 					return nil, &workflow.InternalServiceError{Message: "Unable to add ActivityTaskFailed event to history."}
