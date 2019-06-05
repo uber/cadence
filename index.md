@@ -1,7 +1,7 @@
 ---
 title: Welcome
 layout: marketing
-callout: Superior Way to Design and Implement Distributed Systems
+callout:  Superior Way to Design and Implement Distributed Systems
 callout_description: Directly code your application business logic. Cadence takes care of making it highly scalable, 
 fault tolerant and durable. 
 ---
