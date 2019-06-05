@@ -254,9 +254,7 @@ func (provider *dnsProvider) Hosts() ([]string, error) {
 				provider.Logger.Warn("Could not resolve host", tag.Address(host), tag.Error(err))
 				continue
 			}
-			for _, r := range resolved {
-				resolvedHosts[host] = append(resolvedHosts[host], r)
-			}
+			resolvedHosts[host] = resolved
 		}
 		for _, r := range resolved {
 			results = append(results, net.JoinHostPort(r, port))
