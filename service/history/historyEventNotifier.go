@@ -59,7 +59,7 @@ type (
 var _ historyEventNotifier = (*historyEventNotifierImpl)(nil)
 
 func newHistoryEventNotification(domainID string, workflowExecution *gen.WorkflowExecution,
-	lastFirstEventID int64, nextEventID int64, previousStartedEventID int64, isWorkflowRunning bool) *historyEventNotification {
+	lastFirstEventID int64, nextEventID int64, previousStartedEventID int64, isWorkflowRunning bool, branchToken []byte) *historyEventNotification {
 	return &historyEventNotification{
 		id: definition.NewWorkflowIdentifier(
 			domainID,
@@ -70,6 +70,7 @@ func newHistoryEventNotification(domainID string, workflowExecution *gen.Workflo
 		nextEventID:            nextEventID,
 		previousStartedEventID: previousStartedEventID,
 		isWorkflowRunning:      isWorkflowRunning,
+		branchToken:            branchToken,
 	}
 }
 

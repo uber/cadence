@@ -272,8 +272,17 @@ func (c *workflowExecutionContextImpl) resetMutableState(prevRunID string, reset
 	if err != nil {
 		return nil, err
 	}
-
 	c.clear()
+
+	c.shard.NotifyNewHistoryEvent(newHistoryEventNotification(
+		c.domainID,
+		&c.workflowExecution,
+		c.msBuilder.GetLastFirstEventID(),
+		c.msBuilder.GetNextEventID(),
+		c.msBuilder.GetPreviousStartedEventID(),
+		c.msBuilder.IsWorkflowExecutionRunning(),
+		c.msBuilder.GetCurrentBranch(),
+	))
 	return c.loadWorkflowExecution()
 }
 
@@ -781,6 +790,7 @@ func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, 
 		c.msBuilder.GetNextEventID(),
 		c.msBuilder.GetPreviousStartedEventID(),
 		c.msBuilder.IsWorkflowExecutionRunning(),
+		c.msBuilder.GetCurrentBranch(),
 	))
 
 	// finally emit session stats

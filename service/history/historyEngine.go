@@ -21,6 +21,7 @@
 package history
 
 import (
+	"bytes"
 	ctx "context"
 	"encoding/json"
 	"errors"
@@ -506,10 +507,17 @@ func (e *historyEngineImpl) GetMutableState(ctx ctx.Context,
 		RunId:      request.Execution.RunId,
 	}
 
-	//TODO: GetMutableState can be a long poll and with 3DC, we need to handle when the current branch changes.
 	response, err := e.getMutableState(ctx, domainID, execution)
 	if err != nil {
 		return nil, err
+	}
+	// record the current branch token
+	currBranchToken := response.BranchToken
+	if request.BranchToken != nil {
+		if !bytes.Equal(request.BranchToken, currBranchToken) {
+			return response, nil
+		}
+		currBranchToken = request.BranchToken
 	}
 	// set the run id in case query the current running workflow
 	execution.RunId = response.Execution.RunId
@@ -535,7 +543,9 @@ func (e *historyEngineImpl) GetMutableState(ctx ctx.Context,
 			return nil, err
 		}
 
-		if expectedNextEventID < response.GetNextEventId() || !response.GetIsWorkflowRunning() {
+		if !bytes.Equal(response.BranchToken, currBranchToken) ||
+			expectedNextEventID < response.GetNextEventId() ||
+			!response.GetIsWorkflowRunning() {
 			return response, nil
 		}
 
@@ -548,6 +558,10 @@ func (e *historyEngineImpl) GetMutableState(ctx ctx.Context,
 		for {
 			select {
 			case event := <-channel:
+				if !bytes.Equal(event.branchToken, currBranchToken) {
+					// return the latest mutable state
+					return e.getMutableState(ctx, domainID, execution)
+				}
 				response.LastFirstEventId = common.Int64Ptr(event.lastFirstEventID)
 				response.NextEventId = common.Int64Ptr(event.nextEventID)
 				response.IsWorkflowRunning = common.BoolPtr(event.isWorkflowRunning)

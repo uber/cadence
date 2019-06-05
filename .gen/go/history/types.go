@@ -737,6 +737,7 @@ type GetMutableStateRequest struct {
 	DomainUUID          *string                   `json:"domainUUID,omitempty"`
 	Execution           *shared.WorkflowExecution `json:"execution,omitempty"`
 	ExpectedNextEventId *int64                    `json:"expectedNextEventId,omitempty"`
+	BranchToken         []byte                    `json:"branchToken,omitempty"`
 }
 
 // ToWire translates a GetMutableStateRequest struct into a Thrift-level intermediate
@@ -756,7 +757,7 @@ type GetMutableStateRequest struct {
 //   }
 func (v *GetMutableStateRequest) ToWire() (wire.Value, error) {
 	var (
-		fields [3]wire.Field
+		fields [4]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -784,6 +785,14 @@ func (v *GetMutableStateRequest) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+	if v.BranchToken != nil {
+		w, err = wire.NewValueBinary(v.BranchToken), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 40, Value: w}
 		i++
 	}
 
@@ -840,6 +849,14 @@ func (v *GetMutableStateRequest) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 40:
+			if field.Value.Type() == wire.TBinary {
+				v.BranchToken, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -853,7 +870,7 @@ func (v *GetMutableStateRequest) String() string {
 		return "<nil>"
 	}
 
-	var fields [3]string
+	var fields [4]string
 	i := 0
 	if v.DomainUUID != nil {
 		fields[i] = fmt.Sprintf("DomainUUID: %v", *(v.DomainUUID))
@@ -865,6 +882,10 @@ func (v *GetMutableStateRequest) String() string {
 	}
 	if v.ExpectedNextEventId != nil {
 		fields[i] = fmt.Sprintf("ExpectedNextEventId: %v", *(v.ExpectedNextEventId))
+		i++
+	}
+	if v.BranchToken != nil {
+		fields[i] = fmt.Sprintf("BranchToken: %v", v.BranchToken)
 		i++
 	}
 
@@ -900,6 +921,9 @@ func (v *GetMutableStateRequest) Equals(rhs *GetMutableStateRequest) bool {
 	if !_I64_EqualsPtr(v.ExpectedNextEventId, rhs.ExpectedNextEventId) {
 		return false
 	}
+	if !((v.BranchToken == nil && rhs.BranchToken == nil) || (v.BranchToken != nil && rhs.BranchToken != nil && bytes.Equal(v.BranchToken, rhs.BranchToken))) {
+		return false
+	}
 
 	return true
 }
@@ -918,6 +942,9 @@ func (v *GetMutableStateRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (er
 	}
 	if v.ExpectedNextEventId != nil {
 		enc.AddInt64("expectedNextEventId", *v.ExpectedNextEventId)
+	}
+	if v.BranchToken != nil {
+		enc.AddString("branchToken", base64.StdEncoding.EncodeToString(v.BranchToken))
 	}
 	return err
 }
@@ -965,6 +992,21 @@ func (v *GetMutableStateRequest) GetExpectedNextEventId() (o int64) {
 // IsSetExpectedNextEventId returns true if ExpectedNextEventId is not nil.
 func (v *GetMutableStateRequest) IsSetExpectedNextEventId() bool {
 	return v != nil && v.ExpectedNextEventId != nil
+}
+
+// GetBranchToken returns the value of BranchToken if it is set or its
+// zero value if it is unset.
+func (v *GetMutableStateRequest) GetBranchToken() (o []byte) {
+	if v != nil && v.BranchToken != nil {
+		return v.BranchToken
+	}
+
+	return
+}
+
+// IsSetBranchToken returns true if BranchToken is not nil.
+func (v *GetMutableStateRequest) IsSetBranchToken() bool {
+	return v != nil && v.BranchToken != nil
 }
 
 type GetMutableStateResponse struct {
