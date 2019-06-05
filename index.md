@@ -1,23 +1,24 @@
 ---
 title: Welcome
 layout: marketing
-callout: Redefining Building and Running Distributed Applications at Scale
-callout_description: Directly code your application business logic. Cadence takes care of making it highly scalable, fault tolerant and durable. 
+callout: Superior Way to Design and Implement Distributed Systems
+callout_description: Directly code your application business logic. Cadence takes care of making it highly scalable, 
+fault tolerant and durable. 
 ---
 
 <section class="features">
-  <div class="feature dynamic-execution">
-    <a href="{{ '/docs/02_key_features#dynamic-workflow-execution-graphs' | relative_url }}">
+  <div class="feature open-source">
+    <a href="{{ '/docs/01_license' | relative_url }}">
       <div class="icon">
         <svg class="icon-arrow-divert">
           <use xlink:href="#icon-arrow-divert"></use>
         </svg>
       </div>
     </a>
-    <a href="{{ '/docs/02_key_features#dynamic-workflow-execution-graphs' | relative_url }}">
-      <span class="description">Dynamic Workflow Execution Graphs</span>
+    <a href="{{ '/docs/01_license' | relative_url }}">
+      <span class="description">Open Source</span>
     </a>
-    <p>Determine the workflow execution graphs at runtime based on the data you are processing</p>
+    <p>Permissive MIT License</p>
   </div>
 
   <div class="feature child-workflows">
