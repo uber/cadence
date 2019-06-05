@@ -1,8 +1,8 @@
 ---
 title: Welcome
 layout: marketing
-callout:  Superior Way to Design and Implement Distributed Systems
-callout_description: Directly code your application business logic. Cadence takes care of making it highly scalable, fault tolerant and durable. 
+callout: Open Source, Scalable, Durable Workflows
+callout_description: Develop resilient long-running business applications with straightforward code
 ---
 
 <section class="features">
