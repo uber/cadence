@@ -27,7 +27,6 @@ import (
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/blobstore/blob"
 	"github.com/uber/cadence/common/cache"
@@ -35,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/retry"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
 )
@@ -338,7 +338,7 @@ func getBlob(ctx context.Context, historyBlobReader HistoryBlobReader, blobPage 
 		if contextExpired(ctx) {
 			return nil, errContextTimeout
 		}
-		err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+		err = retry.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
 	}
 	return blob, nil
 }
@@ -435,7 +435,7 @@ func getDomainByID(ctx context.Context, domainCache cache.DomainCache, id string
 		if contextExpired(ctx) {
 			return nil, errContextTimeout
 		}
-		err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+		err = retry.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
 	}
 	return entry, nil
 }
@@ -462,7 +462,7 @@ func deleteHistoryV1(ctx context.Context, container *BootstrapContainer, request
 		if contextExpired(ctx) {
 			return errContextTimeout
 		}
-		err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+		err = retry.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
 	}
 	return nil
 }
@@ -482,7 +482,7 @@ func deleteHistoryV2(ctx context.Context, container *BootstrapContainer, request
 		if contextExpired(ctx) {
 			return errContextTimeout
 		}
-		err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+		err = retry.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
 	}
 	return nil
 }

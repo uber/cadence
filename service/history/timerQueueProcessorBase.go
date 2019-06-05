@@ -30,7 +30,6 @@ import (
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
@@ -38,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/retry"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/tokenbucket"
 	"github.com/uber/cadence/service/worker/archiver"
@@ -73,7 +73,7 @@ type (
 		timerGate        TimerGate
 		rateLimiter      tokenbucket.TokenBucket
 		startDelay       dynamicconfig.DurationPropertyFn
-		retryPolicy      backoff.RetryPolicy
+		retryPolicy      retry.RetryPolicy
 
 		// worker coroutines notification
 		workerNotificationChans []chan struct{}
@@ -157,7 +157,7 @@ func (t *timerQueueProcessorBase) Stop() {
 }
 
 func (t *timerQueueProcessorBase) processorPump() {
-	<-time.NewTimer(backoff.NewJitter().JitDuration(t.startDelay(), 0.99)).C
+	<-time.NewTimer(retry.NewJitter().JitDuration(t.startDelay(), 0.99)).C
 
 	defer t.shutdownWG.Done()
 
@@ -287,7 +287,7 @@ func (t *timerQueueProcessorBase) notifyNewTimer(newTime time.Time) {
 }
 
 func (t *timerQueueProcessorBase) internalProcessor() error {
-	jitter := backoff.NewJitter()
+	jitter := retry.NewJitter()
 	pollTimer := time.NewTimer(jitter.JitDuration(
 		t.config.TimerProcessorMaxPollInterval(),
 		t.config.TimerProcessorMaxPollIntervalJitterCoefficient(),
@@ -447,7 +447,7 @@ FilterLoop:
 			// this must return without ack
 			return
 		default:
-			err = backoff.Retry(op, t.retryPolicy, retryCondition)
+			err = retry.Retry(op, t.retryPolicy, retryCondition)
 			if err == nil {
 				t.ackTaskOnce(task, scope, shouldProcessTask, startTime, attempt)
 				return
@@ -684,7 +684,7 @@ func (t *timerQueueProcessorBase) deleteWorkflowExecution(task *persistence.Time
 			RunID:      task.RunID,
 		})
 	}
-	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+	return retry.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 }
 
 func (t *timerQueueProcessorBase) deleteCurrentWorkflowExecution(task *persistence.TimerTaskInfo) error {
@@ -695,7 +695,7 @@ func (t *timerQueueProcessorBase) deleteCurrentWorkflowExecution(task *persisten
 			RunID:      task.RunID,
 		})
 	}
-	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+	return retry.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 }
 
 func (t *timerQueueProcessorBase) deleteWorkflowHistory(task *persistence.TimerTaskInfo, msBuilder mutableState) error {
@@ -717,14 +717,14 @@ func (t *timerQueueProcessorBase) deleteWorkflowHistory(task *persistence.TimerT
 				Execution: workflowExecution,
 			})
 	}
-	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+	return retry.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 }
 
 func (t *timerQueueProcessorBase) deleteWorkflowVisibility(task *persistence.TimerTaskInfo) error {
 	op := func() error {
 		return t.historyService.DeleteExecutionFromVisibility(task)
 	}
-	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+	return retry.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 }
 
 func (t *timerQueueProcessorBase) getTimerTaskType(taskType int) string {

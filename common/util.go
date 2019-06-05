@@ -32,11 +32,10 @@ import (
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common/backoff"
-	"github.com/uber/cadence/common/cron"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/retry"
 	"go.uber.org/yarpc/yarpcerrors"
 	"golang.org/x/net/context"
 )
@@ -120,8 +119,8 @@ func AddSecondsToBaseTime(baseTimeInNanoSec int64, durationInSeconds int64) int6
 }
 
 // CreatePersistanceRetryPolicy creates a retry policy for persistence layer operations
-func CreatePersistanceRetryPolicy() backoff.RetryPolicy {
-	policy := backoff.NewExponentialRetryPolicy(retryPersistenceOperationInitialInterval)
+func CreatePersistanceRetryPolicy() retry.RetryPolicy {
+	policy := retry.NewExponentialRetryPolicy(retryPersistenceOperationInitialInterval)
 	policy.SetMaximumInterval(retryPersistenceOperationMaxInterval)
 	policy.SetExpirationInterval(retryPersistenceOperationExpirationInterval)
 
@@ -129,8 +128,8 @@ func CreatePersistanceRetryPolicy() backoff.RetryPolicy {
 }
 
 // CreateHistoryServiceRetryPolicy creates a retry policy for calls to history service
-func CreateHistoryServiceRetryPolicy() backoff.RetryPolicy {
-	policy := backoff.NewExponentialRetryPolicy(historyServiceOperationInitialInterval)
+func CreateHistoryServiceRetryPolicy() retry.RetryPolicy {
+	policy := retry.NewExponentialRetryPolicy(historyServiceOperationInitialInterval)
 	policy.SetMaximumInterval(historyServiceOperationMaxInterval)
 	policy.SetExpirationInterval(historyServiceOperationExpirationInterval)
 
@@ -138,8 +137,8 @@ func CreateHistoryServiceRetryPolicy() backoff.RetryPolicy {
 }
 
 // CreateMatchingServiceRetryPolicy creates a retry policy for calls to matching service
-func CreateMatchingServiceRetryPolicy() backoff.RetryPolicy {
-	policy := backoff.NewExponentialRetryPolicy(matchingServiceOperationInitialInterval)
+func CreateMatchingServiceRetryPolicy() retry.RetryPolicy {
+	policy := retry.NewExponentialRetryPolicy(matchingServiceOperationInitialInterval)
 	policy.SetMaximumInterval(matchingServiceOperationMaxInterval)
 	policy.SetExpirationInterval(matchingServiceOperationExpirationInterval)
 
@@ -147,8 +146,8 @@ func CreateMatchingServiceRetryPolicy() backoff.RetryPolicy {
 }
 
 // CreateFrontendServiceRetryPolicy creates a retry policy for calls to frontend service
-func CreateFrontendServiceRetryPolicy() backoff.RetryPolicy {
-	policy := backoff.NewExponentialRetryPolicy(frontendServiceOperationInitialInterval)
+func CreateFrontendServiceRetryPolicy() retry.RetryPolicy {
+	policy := retry.NewExponentialRetryPolicy(frontendServiceOperationInitialInterval)
 	policy.SetMaximumInterval(frontendServiceOperationMaxInterval)
 	policy.SetExpirationInterval(frontendServiceOperationExpirationInterval)
 
@@ -156,8 +155,8 @@ func CreateFrontendServiceRetryPolicy() backoff.RetryPolicy {
 }
 
 // CreateAdminServiceRetryPolicy creates a retry policy for calls to matching service
-func CreateAdminServiceRetryPolicy() backoff.RetryPolicy {
-	policy := backoff.NewExponentialRetryPolicy(adminServiceOperationInitialInterval)
+func CreateAdminServiceRetryPolicy() retry.RetryPolicy {
+	policy := retry.NewExponentialRetryPolicy(adminServiceOperationInitialInterval)
 	policy.SetMaximumInterval(adminServiceOperationMaxInterval)
 	policy.SetExpirationInterval(adminServiceOperationExpirationInterval)
 
@@ -165,8 +164,8 @@ func CreateAdminServiceRetryPolicy() backoff.RetryPolicy {
 }
 
 // CreateKafkaOperationRetryPolicy creates a retry policy for kafka operation
-func CreateKafkaOperationRetryPolicy() backoff.RetryPolicy {
-	policy := backoff.NewExponentialRetryPolicy(retryKafkaOperationInitialInterval)
+func CreateKafkaOperationRetryPolicy() retry.RetryPolicy {
+	policy := retry.NewExponentialRetryPolicy(retryKafkaOperationInitialInterval)
 	policy.SetMaximumInterval(retryKafkaOperationMaxInterval)
 	policy.SetExpirationInterval(retryKafkaOperationExpirationInterval)
 
@@ -380,7 +379,7 @@ func CreateHistoryStartWorkflowRequest(domainID string, startRequest *workflow.S
 		deadline := time.Now().Add(time.Second * time.Duration(expirationInSeconds))
 		histRequest.ExpirationTimestamp = Int64Ptr(deadline.Round(time.Millisecond).UnixNano())
 	}
-	histRequest.FirstDecisionTaskBackoffSeconds = Int32Ptr(cron.GetBackoffForNextScheduleInSeconds(startRequest.GetCronSchedule(), time.Now()))
+	histRequest.FirstDecisionTaskBackoffSeconds = Int32Ptr(retry.GetBackoffForNextScheduleInSeconds(startRequest.GetCronSchedule(), time.Now()))
 	return histRequest
 }
 

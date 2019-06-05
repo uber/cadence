@@ -29,9 +29,9 @@ import (
 	"sync"
 
 	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/blobstore/blob"
+	"github.com/uber/cadence/common/retry"
 )
 
 const (
@@ -244,8 +244,8 @@ func (c *client) IsRetryableError(err error) bool {
 	return false
 }
 
-func (c *client) GetRetryPolicy() backoff.RetryPolicy {
-	policy := backoff.NewExponentialRetryPolicy(0)
+func (c *client) GetRetryPolicy() retry.RetryPolicy {
+	policy := retry.NewExponentialRetryPolicy(0)
 	policy.SetMaximumAttempts(1)
 	return policy
 }

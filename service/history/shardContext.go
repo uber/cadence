@@ -28,13 +28,13 @@ import (
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/retry"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -1084,7 +1084,7 @@ func acquireShard(shardItem *historyShardsItem, closeCh chan<- int) (ShardContex
 
 	var shardInfo *persistence.ShardInfo
 
-	retryPolicy := backoff.NewExponentialRetryPolicy(50 * time.Millisecond)
+	retryPolicy := retry.NewExponentialRetryPolicy(50 * time.Millisecond)
 	retryPolicy.SetMaximumInterval(time.Second)
 	retryPolicy.SetExpirationInterval(5 * time.Second)
 
@@ -1118,7 +1118,7 @@ func acquireShard(shardItem *historyShardsItem, closeCh chan<- int) (ShardContex
 		return shardItem.shardMgr.CreateShard(&persistence.CreateShardRequest{ShardInfo: shardInfo})
 	}
 
-	err := backoff.Retry(getShard, retryPolicy, retryPredicate)
+	err := retry.Retry(getShard, retryPolicy, retryPredicate)
 	if err != nil {
 		shardItem.logger.Error("Fail to acquire shard.", tag.ShardID(shardItem.shardID), tag.Error(err))
 		return nil, err

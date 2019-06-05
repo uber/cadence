@@ -25,7 +25,7 @@ import (
 
 	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/retry"
 	"go.uber.org/yarpc"
 )
 
@@ -33,12 +33,12 @@ var _ Client = (*retryableClient)(nil)
 
 type retryableClient struct {
 	client      Client
-	policy      backoff.RetryPolicy
-	isRetryable backoff.IsRetryable
+	policy      retry.RetryPolicy
+	isRetryable retry.IsRetryable
 }
 
 // NewRetryableClient creates a new instance of Client with retry policy
-func NewRetryableClient(client Client, policy backoff.RetryPolicy, isRetryable backoff.IsRetryable) Client {
+func NewRetryableClient(client Client, policy retry.RetryPolicy, isRetryable retry.IsRetryable) Client {
 	return &retryableClient{
 		client:      client,
 		policy:      policy,
@@ -54,7 +54,7 @@ func (c *retryableClient) AddActivityTask(
 		return c.client.AddActivityTask(ctx, addRequest, opts...)
 	}
 
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return retry.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) AddDecisionTask(
@@ -66,7 +66,7 @@ func (c *retryableClient) AddDecisionTask(
 		return c.client.AddDecisionTask(ctx, addRequest, opts...)
 	}
 
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return retry.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) PollForActivityTask(
@@ -81,7 +81,7 @@ func (c *retryableClient) PollForActivityTask(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -97,7 +97,7 @@ func (c *retryableClient) PollForDecisionTask(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -113,7 +113,7 @@ func (c *retryableClient) QueryWorkflow(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -126,7 +126,7 @@ func (c *retryableClient) RespondQueryTaskCompleted(
 		return c.client.RespondQueryTaskCompleted(ctx, request, opts...)
 	}
 
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return retry.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) CancelOutstandingPoll(
@@ -138,7 +138,7 @@ func (c *retryableClient) CancelOutstandingPoll(
 		return c.client.CancelOutstandingPoll(ctx, request, opts...)
 	}
 
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return retry.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) DescribeTaskList(
@@ -153,6 +153,6 @@ func (c *retryableClient) DescribeTaskList(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }

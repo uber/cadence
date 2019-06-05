@@ -33,12 +33,12 @@ import (
 	m "github.com/uber/cadence/.gen/go/matching"
 	s "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/retry"
 )
 
 const (
@@ -502,7 +502,7 @@ func (c *taskListManagerImpl) renewLeaseWithRetry() (taskListState, error) {
 		return
 	}
 	c.domainScope().IncCounter(metrics.LeaseRequestCounter)
-	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+	err := retry.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 	if err != nil {
 		c.domainScope().IncCounter(metrics.LeaseFailureCounter)
 		c.engine.unloadTaskList(c.taskListID)
@@ -619,7 +619,7 @@ func (c *taskListManagerImpl) executeWithRetry(
 	}
 
 	var retryCount int64
-	err = backoff.Retry(op, persistenceOperationRetryPolicy, func(err error) bool {
+	err = retry.Retry(op, persistenceOperationRetryPolicy, func(err error) bool {
 		c.logger.Debug(fmt.Sprintf("Retry executeWithRetry as task list range has changed. retryCount=%v, errType=%T", retryCount, err))
 		if _, ok := err.(*persistence.ConditionFailedError); ok {
 			return false
@@ -650,7 +650,7 @@ func (c *taskContext) RecordDecisionTaskStartedWithRetry(ctx context.Context,
 		resp, err = c.tlMgr.engine.historyService.RecordDecisionTaskStarted(ctx, request)
 		return err
 	}
-	err = backoff.Retry(op, historyServiceOperationRetryPolicy, func(err error) bool {
+	err = retry.Retry(op, historyServiceOperationRetryPolicy, func(err error) bool {
 		switch err.(type) {
 		case *s.EntityNotExistsError, *h.EventAlreadyStartedError:
 			return false
@@ -667,7 +667,7 @@ func (c *taskContext) RecordActivityTaskStartedWithRetry(ctx context.Context,
 		resp, err = c.tlMgr.engine.historyService.RecordActivityTaskStarted(ctx, request)
 		return err
 	}
-	err = backoff.Retry(op, historyServiceOperationRetryPolicy, func(err error) bool {
+	err = retry.Retry(op, historyServiceOperationRetryPolicy, func(err error) bool {
 		switch err.(type) {
 		case *s.EntityNotExistsError, *h.EventAlreadyStartedError:
 			return false

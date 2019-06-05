@@ -23,22 +23,21 @@ package frontend
 import (
 	"context"
 
-	"go.uber.org/yarpc"
-
 	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/retry"
+	"go.uber.org/yarpc"
 )
 
 var _ Client = (*retryableClient)(nil)
 
 type retryableClient struct {
 	client      Client
-	policy      backoff.RetryPolicy
-	isRetryable backoff.IsRetryable
+	policy      retry.RetryPolicy
+	isRetryable retry.IsRetryable
 }
 
 // NewRetryableClient creates a new instance of Client with retry policy
-func NewRetryableClient(client Client, policy backoff.RetryPolicy, isRetryable backoff.IsRetryable) Client {
+func NewRetryableClient(client Client, policy retry.RetryPolicy, isRetryable retry.IsRetryable) Client {
 	return &retryableClient{
 		client:      client,
 		policy:      policy,
@@ -55,7 +54,7 @@ func (c *retryableClient) DeprecateDomain(
 	op := func() error {
 		return c.client.DeprecateDomain(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return retry.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) DescribeDomain(
@@ -70,7 +69,7 @@ func (c *retryableClient) DescribeDomain(
 		resp, err = c.client.DescribeDomain(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -86,7 +85,7 @@ func (c *retryableClient) DescribeTaskList(
 		resp, err = c.client.DescribeTaskList(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -102,7 +101,7 @@ func (c *retryableClient) DescribeWorkflowExecution(
 		resp, err = c.client.DescribeWorkflowExecution(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -118,7 +117,7 @@ func (c *retryableClient) GetWorkflowExecutionHistory(
 		resp, err = c.client.GetWorkflowExecutionHistory(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -134,7 +133,7 @@ func (c *retryableClient) ListClosedWorkflowExecutions(
 		resp, err = c.client.ListClosedWorkflowExecutions(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -150,7 +149,7 @@ func (c *retryableClient) ListDomains(
 		resp, err = c.client.ListDomains(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -166,7 +165,7 @@ func (c *retryableClient) ListOpenWorkflowExecutions(
 		resp, err = c.client.ListOpenWorkflowExecutions(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -182,7 +181,7 @@ func (c *retryableClient) ListWorkflowExecutions(
 		resp, err = c.client.ListWorkflowExecutions(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -198,7 +197,7 @@ func (c *retryableClient) ScanWorkflowExecutions(
 		resp, err = c.client.ScanWorkflowExecutions(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -214,7 +213,7 @@ func (c *retryableClient) CountWorkflowExecutions(
 		resp, err = c.client.CountWorkflowExecutions(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -229,7 +228,7 @@ func (c *retryableClient) GetSearchAttributes(
 		resp, err = c.client.GetSearchAttributes(ctx, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -245,7 +244,7 @@ func (c *retryableClient) PollForActivityTask(
 		resp, err = c.client.PollForActivityTask(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -261,7 +260,7 @@ func (c *retryableClient) PollForDecisionTask(
 		resp, err = c.client.PollForDecisionTask(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -277,7 +276,7 @@ func (c *retryableClient) QueryWorkflow(
 		resp, err = c.client.QueryWorkflow(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -293,7 +292,7 @@ func (c *retryableClient) RecordActivityTaskHeartbeat(
 		resp, err = c.client.RecordActivityTaskHeartbeat(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -309,7 +308,7 @@ func (c *retryableClient) RecordActivityTaskHeartbeatByID(
 		resp, err = c.client.RecordActivityTaskHeartbeatByID(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -322,7 +321,7 @@ func (c *retryableClient) RegisterDomain(
 	op := func() error {
 		return c.client.RegisterDomain(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return retry.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) RequestCancelWorkflowExecution(
@@ -334,7 +333,7 @@ func (c *retryableClient) RequestCancelWorkflowExecution(
 	op := func() error {
 		return c.client.RequestCancelWorkflowExecution(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return retry.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) ResetStickyTaskList(
@@ -349,7 +348,7 @@ func (c *retryableClient) ResetStickyTaskList(
 		resp, err = c.client.ResetStickyTaskList(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -365,7 +364,7 @@ func (c *retryableClient) ResetWorkflowExecution(
 		resp, err = c.client.ResetWorkflowExecution(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -378,7 +377,7 @@ func (c *retryableClient) RespondActivityTaskCanceled(
 	op := func() error {
 		return c.client.RespondActivityTaskCanceled(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return retry.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) RespondActivityTaskCanceledByID(
@@ -390,7 +389,7 @@ func (c *retryableClient) RespondActivityTaskCanceledByID(
 	op := func() error {
 		return c.client.RespondActivityTaskCanceledByID(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return retry.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) RespondActivityTaskCompleted(
@@ -402,7 +401,7 @@ func (c *retryableClient) RespondActivityTaskCompleted(
 	op := func() error {
 		return c.client.RespondActivityTaskCompleted(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return retry.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) RespondActivityTaskCompletedByID(
@@ -414,7 +413,7 @@ func (c *retryableClient) RespondActivityTaskCompletedByID(
 	op := func() error {
 		return c.client.RespondActivityTaskCompletedByID(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return retry.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) RespondActivityTaskFailed(
@@ -426,7 +425,7 @@ func (c *retryableClient) RespondActivityTaskFailed(
 	op := func() error {
 		return c.client.RespondActivityTaskFailed(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return retry.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) RespondActivityTaskFailedByID(
@@ -438,7 +437,7 @@ func (c *retryableClient) RespondActivityTaskFailedByID(
 	op := func() error {
 		return c.client.RespondActivityTaskFailedByID(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return retry.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) RespondDecisionTaskCompleted(
@@ -453,7 +452,7 @@ func (c *retryableClient) RespondDecisionTaskCompleted(
 		resp, err = c.client.RespondDecisionTaskCompleted(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -466,7 +465,7 @@ func (c *retryableClient) RespondDecisionTaskFailed(
 	op := func() error {
 		return c.client.RespondDecisionTaskFailed(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return retry.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) RespondQueryTaskCompleted(
@@ -478,7 +477,7 @@ func (c *retryableClient) RespondQueryTaskCompleted(
 	op := func() error {
 		return c.client.RespondQueryTaskCompleted(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return retry.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) SignalWithStartWorkflowExecution(
@@ -493,7 +492,7 @@ func (c *retryableClient) SignalWithStartWorkflowExecution(
 		resp, err = c.client.SignalWithStartWorkflowExecution(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -506,7 +505,7 @@ func (c *retryableClient) SignalWorkflowExecution(
 	op := func() error {
 		return c.client.SignalWorkflowExecution(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return retry.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) StartWorkflowExecution(
@@ -521,7 +520,7 @@ func (c *retryableClient) StartWorkflowExecution(
 		resp, err = c.client.StartWorkflowExecution(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }
 
@@ -534,7 +533,7 @@ func (c *retryableClient) TerminateWorkflowExecution(
 	op := func() error {
 		return c.client.TerminateWorkflowExecution(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return retry.Retry(op, c.policy, c.isRetryable)
 }
 
 func (c *retryableClient) UpdateDomain(
@@ -549,6 +548,6 @@ func (c *retryableClient) UpdateDomain(
 		resp, err = c.client.UpdateDomain(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := retry.Retry(op, c.policy, c.isRetryable)
 	return resp, err
 }

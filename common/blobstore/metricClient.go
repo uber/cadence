@@ -22,9 +22,10 @@ package blobstore
 
 import (
 	"context"
-	"github.com/uber/cadence/common/backoff"
+
 	"github.com/uber/cadence/common/blobstore/blob"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/retry"
 )
 
 var _ Client = (*metricClient)(nil)
@@ -166,6 +167,6 @@ func (c *metricClient) IsRetryableError(err error) bool {
 	return c.client.IsRetryableError(err)
 }
 
-func (c *metricClient) GetRetryPolicy() backoff.RetryPolicy {
+func (c *metricClient) GetRetryPolicy() retry.RetryPolicy {
 	return c.client.GetRetryPolicy()
 }

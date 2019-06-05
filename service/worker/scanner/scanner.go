@@ -26,13 +26,13 @@ import (
 
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
 	pfactory "github.com/uber/cadence/common/persistence/persistence-factory"
+	"github.com/uber/cadence/common/retry"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
@@ -131,10 +131,10 @@ func (s *Scanner) Start() error {
 
 func (s *Scanner) startWorkflowWithRetry() error {
 	client := cclient.NewClient(s.context.sdkClient, common.SystemDomainName, &cclient.Options{})
-	policy := backoff.NewExponentialRetryPolicy(time.Second)
+	policy := retry.NewExponentialRetryPolicy(time.Second)
 	policy.SetMaximumInterval(time.Minute)
-	policy.SetExpirationInterval(backoff.NoInterval)
-	return backoff.Retry(func() error {
+	policy.SetExpirationInterval(retry.NoInterval)
+	return retry.Retry(func() error {
 		return s.startWorkflow(client)
 	}, policy, func(err error) bool {
 		return true
