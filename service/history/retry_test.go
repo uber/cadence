@@ -33,7 +33,7 @@ func Test_NextRetry(t *testing.T) {
 	now, _ := time.Parse(time.RFC3339, "2018-04-13T16:08:08+00:00")
 	reason := "good-reason"
 
-	// no backoff without backoff policy
+	// no backoff without retry policy
 	var version int64 = 59
 	ai := &persistence.ActivityInfo{
 		Version:                version,

@@ -267,7 +267,7 @@ type (
 		ClientImpl                   string
 		AutoResetPoints              *workflow.ResetPoints
 		SearchAttributes             map[string][]byte
-		// for backoff
+		// for retry
 		Attempt            int32
 		HasRetryPolicy     bool
 		InitialInterval    int32
@@ -498,7 +498,7 @@ type (
 		Version             int64
 	}
 
-	// ActivityRetryTimerTask to schedule a backoff task for activity
+	// ActivityRetryTimerTask to schedule a retry task for activity
 	ActivityRetryTimerTask struct {
 		VisibilityTimestamp time.Time
 		TaskID              int64
@@ -513,7 +513,7 @@ type (
 		TaskID              int64
 		EventID             int64
 		Version             int64
-		TimeoutType         int // 0 for backoff, 1 for cron.
+		TimeoutType         int // 0 for retry, 1 for cron.
 	}
 
 	// HistoryReplicationTask is the replication task created for shipping history replication events to other clusters
@@ -1854,17 +1854,17 @@ func (u *UserTimerTask) SetVisibilityTimestamp(t time.Time) {
 	u.VisibilityTimestamp = t
 }
 
-// GetType returns the type of the backoff timer task
+// GetType returns the type of the retry timer task
 func (r *ActivityRetryTimerTask) GetType() int {
 	return TaskTypeActivityRetryTimer
 }
 
-// GetVersion returns the version of the backoff timer task
+// GetVersion returns the version of the retry timer task
 func (r *ActivityRetryTimerTask) GetVersion() int64 {
 	return r.Version
 }
 
-// SetVersion returns the version of the backoff timer task
+// SetVersion returns the version of the retry timer task
 func (r *ActivityRetryTimerTask) SetVersion(version int64) {
 	r.Version = version
 }
@@ -1889,17 +1889,17 @@ func (r *ActivityRetryTimerTask) SetVisibilityTimestamp(t time.Time) {
 	r.VisibilityTimestamp = t
 }
 
-// GetType returns the type of the backoff timer task
+// GetType returns the type of the retry timer task
 func (r *WorkflowBackoffTimerTask) GetType() int {
 	return TaskTypeWorkflowBackoffTimer
 }
 
-// GetVersion returns the version of the backoff timer task
+// GetVersion returns the version of the retry timer task
 func (r *WorkflowBackoffTimerTask) GetVersion() int64 {
 	return r.Version
 }
 
-// SetVersion returns the version of the backoff timer task
+// SetVersion returns the version of the retry timer task
 func (r *WorkflowBackoffTimerTask) SetVersion(version int64) {
 	r.Version = version
 }

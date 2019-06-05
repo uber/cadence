@@ -242,7 +242,7 @@ func (c *workflowExecutionContextImpl) createWorkflowExecution(
 		ReplicationState:            replicationState,
 		SearchAttributes:            executionInfo.SearchAttributes,
 
-		// backoff policy
+		// retry policy
 		HasRetryPolicy:     executionInfo.HasRetryPolicy,
 		BackoffCoefficient: executionInfo.BackoffCoefficient,
 		ExpirationSeconds:  executionInfo.ExpirationSeconds,

@@ -228,7 +228,7 @@ func (v *visibilityManagerImpl) getSearchAttributes(attr map[string]interface{})
 }
 
 func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution *VisibilityWorkflowExecutionInfo) *shared.WorkflowExecutionInfo {
-	// special handling of ExecutionTime for cron or backoff
+	// special handling of ExecutionTime for cron or retry
 	if execution.ExecutionTime.UnixNano() == 0 {
 		execution.ExecutionTime = execution.StartTime
 	}

@@ -56,7 +56,7 @@ CREATE TYPE workflow_execution (
   client_feature_version           text,
   client_impl                      text,
   attempt                          int,    -- starting from 0 (for initial non-backoff)
-  has_retry_policy                 boolean,-- If there is a backoff policy
+  has_retry_policy                 boolean,-- If there is a retry policy
   init_interval                    int,    -- initial backoff interval, in seconds
   backoff_coefficient              double,
   max_interval                     int,    -- max backoff interval in seconds
@@ -165,7 +165,7 @@ CREATE TYPE activity_info (
   attempt                   int,    -- starting from 0 (for initial non-backoff)
   task_list                 text,
   started_identity          text,   -- last started poller's identity
-  has_retry_policy          boolean,-- If there is a backoff policy
+  has_retry_policy          boolean,-- If there is a retry policy
   init_interval             int,    -- initial backoff interval, in seconds
   backoff_coefficient       double,
   max_interval              int,    -- max backoff interval in seconds

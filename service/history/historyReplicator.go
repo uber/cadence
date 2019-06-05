@@ -142,7 +142,7 @@ func newHistoryReplicator(shard ShardContext, historyEngine *historyEngineImpl, 
 func (r *historyReplicator) SyncActivity(ctx ctx.Context, request *h.SyncActivityRequest) (retError error) {
 
 	// sync activity info will only be sent from active side, when
-	// 1. activity has backoff policy and activity got started
+	// 1. activity has retry policy and activity got started
 	// 2. activity heart beat
 	// no sync activity task will be sent when active side fail / timeout activity,
 	// since standby side does not have activity backoff timer

@@ -354,15 +354,15 @@ const (
 	TimerTaskBatchSize
 	// TimerTaskWorkerCount is number of task workers for timer processor
 	TimerTaskWorkerCount
-	// TimerTaskMaxRetryCount is max backoff count for timer processor
+	// TimerTaskMaxRetryCount is max retry count for timer processor
 	TimerTaskMaxRetryCount
 	// TimerProcessorStartDelay is the start delay
 	TimerProcessorStartDelay
 	// TimerProcessorFailoverStartDelay is the failover start delay
 	TimerProcessorFailoverStartDelay
-	// TimerProcessorGetFailureRetryCount is backoff count for timer processor get failure operation
+	// TimerProcessorGetFailureRetryCount is retry count for timer processor get failure operation
 	TimerProcessorGetFailureRetryCount
-	// TimerProcessorCompleteTimerFailureRetryCount is backoff count for timer processor complete timer operation
+	// TimerProcessorCompleteTimerFailureRetryCount is retry count for timer processor complete timer operation
 	TimerProcessorCompleteTimerFailureRetryCount
 	// TimerProcessorUpdateShardTaskCount is update shard count for timer processor
 	TimerProcessorUpdateShardTaskCount
@@ -390,13 +390,13 @@ const (
 	TransferProcessorMaxPollRPS
 	// TransferTaskWorkerCount is number of worker for transferQueueProcessor
 	TransferTaskWorkerCount
-	// TransferTaskMaxRetryCount is max times of backoff for transferQueueProcessor
+	// TransferTaskMaxRetryCount is max times of retry for transferQueueProcessor
 	TransferTaskMaxRetryCount
 	// TransferProcessorStartDelay is the start delay
 	TransferProcessorStartDelay
 	// TransferProcessorFailoverStartDelay is the failover start delay
 	TransferProcessorFailoverStartDelay
-	// TransferProcessorCompleteTransferFailureRetryCount is times of backoff for failure
+	// TransferProcessorCompleteTransferFailureRetryCount is times of retry for failure
 	TransferProcessorCompleteTransferFailureRetryCount
 	// TransferProcessorUpdateShardTaskCount is update shard count for transferQueueProcessor
 	TransferProcessorUpdateShardTaskCount
@@ -414,7 +414,7 @@ const (
 	ReplicatorTaskBatchSize
 	// ReplicatorTaskWorkerCount is number of worker for ReplicatorProcessor
 	ReplicatorTaskWorkerCount
-	// ReplicatorTaskMaxRetryCount is max times of backoff for ReplicatorProcessor
+	// ReplicatorTaskMaxRetryCount is max times of retry for ReplicatorProcessor
 	ReplicatorTaskMaxRetryCount
 	// ReplicatorProcessorStartDelay is the start delay
 	ReplicatorProcessorStartDelay
@@ -471,13 +471,13 @@ const (
 	WorkerReplicatorTaskConcurrency
 	// WorkerReplicatorMessageConcurrency is the max concurrent tasks provided by messaging client
 	WorkerReplicatorMessageConcurrency
-	// WorkerReplicatorActivityBufferRetryCount is the backoff attempt when encounter backoff error on activity
+	// WorkerReplicatorActivityBufferRetryCount is the retry attempt when encounter retry error on activity
 	WorkerReplicatorActivityBufferRetryCount
-	// WorkerReplicatorHistoryBufferRetryCount is the backoff attempt when encounter backoff error on history
+	// WorkerReplicatorHistoryBufferRetryCount is the retry attempt when encounter retry error on history
 	WorkerReplicatorHistoryBufferRetryCount
-	// WorkerReplicationTaskMaxRetryCount is the max backoff count for any task
+	// WorkerReplicationTaskMaxRetryCount is the max retry count for any task
 	WorkerReplicationTaskMaxRetryCount
-	// WorkerReplicationTaskMaxRetryDuration is the max backoff duration for any task
+	// WorkerReplicationTaskMaxRetryDuration is the max retry duration for any task
 	WorkerReplicationTaskMaxRetryDuration
 	// WorkerIndexerConcurrency is the max concurrent messages to be processed at any given time
 	WorkerIndexerConcurrency

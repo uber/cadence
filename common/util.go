@@ -118,7 +118,7 @@ func AddSecondsToBaseTime(baseTimeInNanoSec int64, durationInSeconds int64) int6
 	return time.Unix(0, baseTimeInNanoSec).Add(timeOut).UnixNano()
 }
 
-// CreatePersistanceRetryPolicy creates a backoff policy for persistence layer operations
+// CreatePersistanceRetryPolicy creates a retry policy for persistence layer operations
 func CreatePersistanceRetryPolicy() backoff.RetryPolicy {
 	policy := backoff.NewExponentialRetryPolicy(retryPersistenceOperationInitialInterval)
 	policy.SetMaximumInterval(retryPersistenceOperationMaxInterval)
@@ -127,7 +127,7 @@ func CreatePersistanceRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
-// CreateHistoryServiceRetryPolicy creates a backoff policy for calls to history service
+// CreateHistoryServiceRetryPolicy creates a retry policy for calls to history service
 func CreateHistoryServiceRetryPolicy() backoff.RetryPolicy {
 	policy := backoff.NewExponentialRetryPolicy(historyServiceOperationInitialInterval)
 	policy.SetMaximumInterval(historyServiceOperationMaxInterval)
@@ -136,7 +136,7 @@ func CreateHistoryServiceRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
-// CreateMatchingServiceRetryPolicy creates a backoff policy for calls to matching service
+// CreateMatchingServiceRetryPolicy creates a retry policy for calls to matching service
 func CreateMatchingServiceRetryPolicy() backoff.RetryPolicy {
 	policy := backoff.NewExponentialRetryPolicy(matchingServiceOperationInitialInterval)
 	policy.SetMaximumInterval(matchingServiceOperationMaxInterval)
@@ -145,7 +145,7 @@ func CreateMatchingServiceRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
-// CreateFrontendServiceRetryPolicy creates a backoff policy for calls to frontend service
+// CreateFrontendServiceRetryPolicy creates a retry policy for calls to frontend service
 func CreateFrontendServiceRetryPolicy() backoff.RetryPolicy {
 	policy := backoff.NewExponentialRetryPolicy(frontendServiceOperationInitialInterval)
 	policy.SetMaximumInterval(frontendServiceOperationMaxInterval)
@@ -154,7 +154,7 @@ func CreateFrontendServiceRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
-// CreateAdminServiceRetryPolicy creates a backoff policy for calls to matching service
+// CreateAdminServiceRetryPolicy creates a retry policy for calls to matching service
 func CreateAdminServiceRetryPolicy() backoff.RetryPolicy {
 	policy := backoff.NewExponentialRetryPolicy(adminServiceOperationInitialInterval)
 	policy.SetMaximumInterval(adminServiceOperationMaxInterval)
@@ -163,7 +163,7 @@ func CreateAdminServiceRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
-// CreateKafkaOperationRetryPolicy creates a backoff policy for kafka operation
+// CreateKafkaOperationRetryPolicy creates a retry policy for kafka operation
 func CreateKafkaOperationRetryPolicy() backoff.RetryPolicy {
 	policy := backoff.NewExponentialRetryPolicy(retryKafkaOperationInitialInterval)
 	policy.SetMaximumInterval(retryKafkaOperationMaxInterval)
@@ -232,7 +232,7 @@ func IsWhitelistServiceTransientError(err error) bool {
 	case *h.ShardOwnershipLostError:
 		return true
 	case *yarpcerrors.Status:
-		// We only selectively backoff the following yarpc errors client can safe backoff with a backoff
+		// We only selectively retry the following yarpc errors client can safe retry with a backoff
 		if yarpcerrors.IsDeadlineExceeded(err) ||
 			yarpcerrors.IsUnavailable(err) ||
 			yarpcerrors.IsUnknown(err) ||
@@ -338,29 +338,29 @@ func MinInt(a, b int) int {
 	return b
 }
 
-// ValidateRetryPolicy validates a backoff policy
+// ValidateRetryPolicy validates a retry policy
 func ValidateRetryPolicy(policy *workflow.RetryPolicy) error {
 	if policy == nil {
 		// nil policy is valid which means no backoff
 		return nil
 	}
 	if policy.GetInitialIntervalInSeconds() <= 0 {
-		return &workflow.BadRequestError{Message: "InitialIntervalInSeconds must be greater than 0 on backoff policy."}
+		return &workflow.BadRequestError{Message: "InitialIntervalInSeconds must be greater than 0 on retry policy."}
 	}
 	if policy.GetBackoffCoefficient() < 1 {
-		return &workflow.BadRequestError{Message: "BackoffCoefficient cannot be less than 1 on backoff policy."}
+		return &workflow.BadRequestError{Message: "BackoffCoefficient cannot be less than 1 on retry policy."}
 	}
 	if policy.GetMaximumIntervalInSeconds() < 0 {
-		return &workflow.BadRequestError{Message: "MaximumIntervalInSeconds cannot be less than 0 on backoff policy."}
+		return &workflow.BadRequestError{Message: "MaximumIntervalInSeconds cannot be less than 0 on retry policy."}
 	}
 	if policy.GetMaximumIntervalInSeconds() > 0 && policy.GetMaximumIntervalInSeconds() < policy.GetInitialIntervalInSeconds() {
-		return &workflow.BadRequestError{Message: "MaximumIntervalInSeconds cannot be less than InitialIntervalInSeconds on backoff policy."}
+		return &workflow.BadRequestError{Message: "MaximumIntervalInSeconds cannot be less than InitialIntervalInSeconds on retry policy."}
 	}
 	if policy.GetMaximumAttempts() < 0 {
-		return &workflow.BadRequestError{Message: "MaximumAttempts cannot be less than 0 on backoff policy."}
+		return &workflow.BadRequestError{Message: "MaximumAttempts cannot be less than 0 on retry policy."}
 	}
 	if policy.GetExpirationIntervalInSeconds() < 0 {
-		return &workflow.BadRequestError{Message: "ExpirationIntervalInSeconds cannot be less than 0 on backoff policy."}
+		return &workflow.BadRequestError{Message: "ExpirationIntervalInSeconds cannot be less than 0 on retry policy."}
 	}
 	if policy.GetMaximumAttempts() == 0 && policy.GetExpirationIntervalInSeconds() == 0 {
 		return &workflow.BadRequestError{Message: "MaximumAttempts and ExpirationIntervalInSeconds are both 0. At least one of them must be specified."}

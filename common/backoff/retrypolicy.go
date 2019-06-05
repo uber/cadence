@@ -39,12 +39,12 @@ const (
 )
 
 type (
-	// RetryPolicy is the API which needs to be implemented by various backoff policy implementations
+	// RetryPolicy is the API which needs to be implemented by various retry policy implementations
 	RetryPolicy interface {
 		ComputeNextDelay(elapsedTime time.Duration, numAttempts int) time.Duration
 	}
 
-	// Retrier manages the state of backoff operation
+	// Retrier manages the state of retry operation
 	Retrier interface {
 		NextBackOff() time.Duration
 		Reset()
@@ -55,7 +55,7 @@ type (
 		Now() time.Time
 	}
 
-	// ExponentialRetryPolicy provides the implementation for backoff policy using a coefficient to compute the next delay.
+	// ExponentialRetryPolicy provides the implementation for retry policy using a coefficient to compute the next delay.
 	// Formula used to compute the next delay is: initialInterval * math.Pow(backoffCoefficient, currentAttempt)
 	ExponentialRetryPolicy struct {
 		initialInterval    time.Duration
@@ -101,21 +101,21 @@ func NewRetrier(policy RetryPolicy, clock Clock) Retrier {
 	}
 }
 
-// SetInitialInterval sets the initial interval used by ExponentialRetryPolicy for the very first backoff
+// SetInitialInterval sets the initial interval used by ExponentialRetryPolicy for the very first retry
 // All later retries are computed using the following formula:
 // initialInterval * math.Pow(backoffCoefficient, currentAttempt)
 func (p *ExponentialRetryPolicy) SetInitialInterval(initialInterval time.Duration) {
 	p.initialInterval = initialInterval
 }
 
-// SetBackoffCoefficient sets the coefficient used by ExponentialRetryPolicy to compute next delay for each backoff
+// SetBackoffCoefficient sets the coefficient used by ExponentialRetryPolicy to compute next delay for each retry
 // All retries are computed using the following formula:
 // initialInterval * math.Pow(backoffCoefficient, currentAttempt)
 func (p *ExponentialRetryPolicy) SetBackoffCoefficient(backoffCoefficient float64) {
 	p.backoffCoefficient = backoffCoefficient
 }
 
-// SetMaximumInterval sets the maximum interval for each backoff
+// SetMaximumInterval sets the maximum interval for each retry
 func (p *ExponentialRetryPolicy) SetMaximumInterval(maximumInterval time.Duration) {
 	p.maximumInterval = maximumInterval
 }
@@ -125,7 +125,7 @@ func (p *ExponentialRetryPolicy) SetExpirationInterval(expirationInterval time.D
 	p.expirationInterval = expirationInterval
 }
 
-// SetMaximumAttempts sets the maximum number of backoff attempts
+// SetMaximumAttempts sets the maximum number of retry attempts
 func (p *ExponentialRetryPolicy) SetMaximumAttempts(maximumAttempts int) {
 	p.maximumAttempts = maximumAttempts
 }
@@ -156,7 +156,7 @@ func (p *ExponentialRetryPolicy) ComputeNextDelay(elapsedTime time.Duration, num
 		nextInterval = math.Min(remainingTime, nextInterval)
 	}
 
-	// Bail out if the next interval is smaller than initial backoff interval
+	// Bail out if the next interval is smaller than initial retry interval
 	nextDuration := time.Duration(nextInterval)
 	if nextDuration < p.initialInterval {
 		return done

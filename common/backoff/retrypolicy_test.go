@@ -78,7 +78,7 @@ func (s *RetryPolicySuite) TestNumberOfAttempts() {
 	s.Equal(done, next)
 }
 
-// Test to make sure relative maximum interval for each backoff is honoured
+// Test to make sure relative maximum interval for each retry is honoured
 func (s *RetryPolicySuite) TestMaximumInterval() {
 	policy := createPolicy(time.Second)
 	policy.SetMaximumInterval(10 * time.Second)
@@ -185,7 +185,7 @@ func (s *RetryPolicySuite) TestNoMaxAttempts() {
 	for i := 0; i < 100; i++ {
 		next := r.NextBackOff()
 		//print("Iter: ", i, ", Next Backoff: ", next.String(), "\n")
-		s.True(next > 0 || next == done, "Unexpected value for next backoff duration: %v", next)
+		s.True(next > 0 || next == done, "Unexpected value for next retry duration: %v", next)
 		clock.moveClock(next)
 	}
 }
@@ -197,7 +197,7 @@ func (s *RetryPolicySuite) TestUnbounded() {
 	for i := 0; i < 100; i++ {
 		next := r.NextBackOff()
 		//print("Iter: ", i, ", Next Backoff: ", next.String(), "\n")
-		s.True(next > 0 || next == done, "Unexpected value for next backoff duration: %v", next)
+		s.True(next > 0 || next == done, "Unexpected value for next retry duration: %v", next)
 		clock.moveClock(next)
 	}
 }

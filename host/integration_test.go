@@ -586,9 +586,9 @@ func (s *integrationSuite) TestDecisionAndActivityTimeoutsWorkflow() {
 }
 
 func (s *integrationSuite) TestWorkflowRetry() {
-	id := "integration-wf-backoff-test"
-	wt := "integration-wf-backoff-type"
-	tl := "integration-wf-backoff-tasklist"
+	id := "integration-wf-retry-test"
+	wt := "integration-wf-retry-type"
+	tl := "integration-wf-retry-tasklist"
 	identity := "worker1"
 
 	workflowType := &workflow.WorkflowType{}
@@ -638,7 +638,7 @@ func (s *integrationSuite) TestWorkflowRetry() {
 				{
 					DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
 					CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
-						Result: []byte("succeed-after-backoff"),
+						Result: []byte("succeed-after-retry"),
 					},
 				}}, nil
 		}
@@ -692,9 +692,9 @@ func (s *integrationSuite) TestWorkflowRetry() {
 }
 
 func (s *integrationSuite) TestWorkflowRetryFailures() {
-	id := "integration-wf-backoff-failures-test"
-	wt := "integration-wf-backoff-failures-type"
-	tl := "integration-wf-backoff-failures-tasklist"
+	id := "integration-wf-retry-failures-test"
+	wt := "integration-wf-retry-failures-type"
+	tl := "integration-wf-retry-failures-tasklist"
 	identity := "worker1"
 
 	workflowType := &workflow.WorkflowType{}
@@ -715,7 +715,7 @@ func (s *integrationSuite) TestWorkflowRetryFailures() {
 					{
 						DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
 						CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
-							Result: []byte("succeed-after-backoff"),
+							Result: []byte("succeed-after-retry"),
 						},
 					}}, nil
 			}

@@ -725,7 +725,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(ctx ctx.Context,
 	}
 
 	// TODO: we need to consider adding execution time to mutable state
-	// For now execution time will be calculated based on start time and cron schedule/backoff policy
+	// For now execution time will be calculated based on start time and cron schedule/retry policy
 	// each time DescribeWorkflowExecution is called.
 	backoffDuration := time.Duration(0)
 	if executionInfo.HasRetryPolicy && (executionInfo.Attempt > 0) {

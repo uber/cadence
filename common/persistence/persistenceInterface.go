@@ -242,7 +242,7 @@ type (
 		ClientFeatureVersion         string
 		ClientImpl                   string
 		AutoResetPoints              *DataBlob
-		// for backoff
+		// for retry
 		Attempt            int32
 		HasRetryPolicy     bool
 		InitialInterval    int32

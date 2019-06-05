@@ -176,7 +176,7 @@ func (v *decisionAttrValidator) validateActivityScheduleAttributes(
 		// Deduction failed as there's not enough information to fill in missing timeouts.
 		return &workflow.BadRequestError{Message: "A valid ScheduleToCloseTimeout is not set on decision."}
 	}
-	// ensure activity's SCHEDULE_TO_START and SCHEDULE_TO_CLOSE is as long as expiration on backoff policy
+	// ensure activity's SCHEDULE_TO_START and SCHEDULE_TO_CLOSE is as long as expiration on retry policy
 	p := attributes.RetryPolicy
 	if p != nil {
 		expiration := p.GetExpirationIntervalInSeconds()
