@@ -48,7 +48,6 @@ func (s *RingpopSuite) SetupTest() {
 
 func (s *RingpopSuite) TestHostsMode() {
 	var cfg Ringpop
-	fmt.Println(getHostsConfig())
 	err := yaml.Unmarshal([]byte(getHostsConfig()), &cfg)
 	s.Nil(err)
 	s.Equal("test", cfg.Name)
@@ -106,22 +105,63 @@ func (resolver *mockResolver) LookupHost(ctx context.Context, host string) ([]st
 func (s *RingpopSuite) TestDNSMode() {
 	var cfg Ringpop
 	err := yaml.Unmarshal([]byte(getDNSConfig()), &cfg)
-	fmt.Println(err, cfg)
 	s.Nil(err)
 	s.Equal("test", cfg.Name)
 	s.Equal(BootstrapModeDNS, cfg.BootstrapMode)
 	s.Nil(cfg.validate())
-	s.Equal([]string{"example.net:1111", "example.net:1112"}, cfg.BootstrapHosts)
+	logger := loggerimpl.NewNopLogger()
+	f, err := cfg.NewFactory(logger, "test")
+	s.Nil(err)
+	s.NotNil(f)
 
-	cfg.DiscoveryProvider = &dnsProvider{
-		Resolver: &mockResolver{
+	s.ElementsMatch(
+		[]string{
+			"example.net:1111",
+			"example.net:1112",
+			"unknown-duplicate.example.net:1111",
+			"unknown-duplicate.example.net:1111",
+			"badhostport",
+		},
+		cfg.BootstrapHosts,
+	)
+
+	provider := newDNSProvider(
+		cfg.BootstrapHosts,
+		&mockResolver{
 			Hosts: map[string][]string{"example.net": []string{"10.0.0.0", "10.0.0.1"}},
 		},
-		UnresolvedHosts: cfg.BootstrapHosts,
-	}
+		logger,
+	)
+	cfg.DiscoveryProvider = provider
+	s.ElementsMatch(
+		[]string{
+			"example.net:1111",
+			"example.net:1112",
+			"unknown-duplicate.example.net:1111",
+			"badhostport",
+		},
+		provider.UnresolvedHosts,
+		"duplicate entries should be removed",
+	)
+
 	hostports, err := cfg.DiscoveryProvider.Hosts()
 	s.Nil(err)
-	s.Equal([]string{"10.0.0.0:1111", "10.0.0.1:1111", "10.0.0.0:1112", "10.0.0.1:1112"}, hostports)
+	s.ElementsMatch(
+		[]string{
+			"10.0.0.0:1111", "10.0.0.1:1111",
+			"10.0.0.0:1112", "10.0.0.1:1112",
+		},
+		hostports,
+	)
+
+	cfg.DiscoveryProvider = newDNSProvider(
+		cfg.BootstrapHosts,
+		&mockResolver{Hosts: map[string][]string{}},
+		logger,
+	)
+	hostports, err = cfg.DiscoveryProvider.Hosts()
+	s.Nil(hostports)
+	s.NotNil(err, "error should be returned when no hosts")
 }
 
 func (s *RingpopSuite) TestInvalidConfig() {
@@ -158,6 +198,11 @@ maxJoinDuration: 30s`
 func getDNSConfig() string {
 	return `name: "test"
 bootstrapMode: "dns"
-bootstrapHosts: ["example.net:1111", "example.net:1112"]
+bootstrapHosts:
+- example.net:1111
+- example.net:1112
+- unknown-duplicate.example.net:1111
+- unknown-duplicate.example.net:1111
+- badhostport
 maxJoinDuration: 30s`
 }
