@@ -195,7 +195,6 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 			logger.Error(uploadErrorMsg, tag.ArchivalUploadFailReason(errorDetails(err)), tag.ArchivalBlobKey(key.String()), tag.Error(err))
 			return err
 		}
-
 		handledLastBlob = *historyBlob.Header.IsLast
 	}
 	scope.RecordTimer(metrics.ArchiverTotalUploadSize, time.Duration(totalUploadSize))
