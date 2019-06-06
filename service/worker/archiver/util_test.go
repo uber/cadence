@@ -21,6 +21,8 @@
 package archiver
 
 import (
+	"github.com/uber/cadence/.gen/go/shared"
+	clientShared "go.uber.org/cadence/.gen/go/shared"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -40,6 +42,152 @@ func TestUtilSuite(t *testing.T) {
 
 func (s *UtilSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
+}
+
+func (s *UtilSuite) TestHistoriesEqual() {
+	testCases := []struct {
+		clientHistoryEvents *clientShared.History
+		serverHistoryEvents *shared.History
+		expectedEqual       bool
+	}{
+		{
+			clientHistoryEvents: &clientShared.History{},
+			serverHistoryEvents: &shared.History{},
+			expectedEqual:       true,
+		},
+		{
+			clientHistoryEvents: &clientShared.History{
+				Events: []*clientShared.HistoryEvent{},
+			},
+			serverHistoryEvents: &shared.History{},
+			expectedEqual:       false,
+		},
+		{
+			clientHistoryEvents: &clientShared.History{
+				Events: []*clientShared.HistoryEvent{},
+			},
+			serverHistoryEvents: &shared.History{
+				Events: []*shared.HistoryEvent{},
+			},
+			expectedEqual: true,
+		},
+		{
+			clientHistoryEvents: &clientShared.History{
+				Events: []*clientShared.HistoryEvent{
+					{
+						EventId: common.Int64Ptr(10),
+						WorkflowExecutionStartedEventAttributes: &clientShared.WorkflowExecutionStartedEventAttributes{
+							ParentWorkflowDomain: common.StringPtr("parent"),
+						},
+					},
+					{
+						EventId: common.Int64Ptr(11),
+						WorkflowExecutionStartedEventAttributes: &clientShared.WorkflowExecutionStartedEventAttributes{
+							ContinuedFailureReason: common.StringPtr("reason"),
+						},
+					},
+				},
+			},
+			serverHistoryEvents: &shared.History{
+				Events: []*shared.HistoryEvent{
+					{
+						EventId: common.Int64Ptr(10),
+						WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
+							ParentWorkflowDomain: common.StringPtr("parent"),
+						},
+					},
+					{
+						EventId: common.Int64Ptr(11),
+						WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
+							ContinuedFailureReason: common.StringPtr("reason"),
+						},
+					},
+				},
+			},
+			expectedEqual: true,
+		},
+		{
+			clientHistoryEvents: &clientShared.History{
+				Events: []*clientShared.HistoryEvent{
+					{
+						EventId: common.Int64Ptr(10),
+						WorkflowExecutionStartedEventAttributes: &clientShared.WorkflowExecutionStartedEventAttributes{
+							ParentWorkflowDomain: common.StringPtr("parent"),
+						},
+					},
+					{
+						EventId: common.Int64Ptr(11),
+						WorkflowExecutionStartedEventAttributes: &clientShared.WorkflowExecutionStartedEventAttributes{
+							ContinuedFailureReason: common.StringPtr("reason"),
+						},
+					},
+					{
+						EventId: common.Int64Ptr(12),
+						WorkflowExecutionStartedEventAttributes: &clientShared.WorkflowExecutionStartedEventAttributes{
+							ContinuedFailureReason: common.StringPtr("reason"),
+						},
+					},
+				},
+			},
+			serverHistoryEvents: &shared.History{
+				Events: []*shared.HistoryEvent{
+					{
+						EventId: common.Int64Ptr(10),
+						WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
+							ParentWorkflowDomain: common.StringPtr("parent"),
+						},
+					},
+					{
+						EventId: common.Int64Ptr(11),
+						WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
+							ContinuedFailureReason: common.StringPtr("reason"),
+						},
+					},
+				},
+			},
+			expectedEqual: false,
+		},
+		{
+			clientHistoryEvents: &clientShared.History{
+				Events: []*clientShared.HistoryEvent{
+					{
+						EventId: common.Int64Ptr(10),
+						WorkflowExecutionStartedEventAttributes: &clientShared.WorkflowExecutionStartedEventAttributes{
+							ParentWorkflowDomain: common.StringPtr("parent"),
+						},
+					},
+					{
+						EventId: common.Int64Ptr(11),
+						WorkflowExecutionStartedEventAttributes: &clientShared.WorkflowExecutionStartedEventAttributes{
+							ContinuedFailureReason: common.StringPtr("reason"),
+						},
+					},
+				},
+			},
+			serverHistoryEvents: &shared.History{
+				Events: []*shared.HistoryEvent{
+					{
+						EventId: common.Int64Ptr(10),
+						WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
+							ParentWorkflowDomain: common.StringPtr("parent"),
+						},
+					},
+					{
+						EventId: common.Int64Ptr(12),
+						WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
+							ContinuedFailureReason: common.StringPtr("reason"),
+						},
+					},
+				},
+			},
+			expectedEqual: false,
+		},
+	}
+	for _, tc := range testCases {
+		equal, err := historiesEqual(tc.clientHistoryEvents, tc.serverHistoryEvents)
+		s.NoError(err)
+		s.Equal(tc.expectedEqual, equal)
+	}
 }
 
 func (s *UtilSuite) TestHashesEqual() {

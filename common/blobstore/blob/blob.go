@@ -61,7 +61,7 @@ func (b *Blob) Equal(other *Blob) bool {
 	return equal
 }
 
-// Equal returns true if input blob is equal, false otherwise.
+// EqualWithDetails returns true if input blob is equal, false otherwise.
 // Additionally returns reason for the inequality.
 func (b *Blob) EqualWithDetails(other *Blob) (bool, string) {
 	if b == nil && other == nil {

@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"go.uber.org/cadence"
+	clientShared "go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/activity"
 )
 
@@ -123,8 +124,11 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	}
 	blobstoreClient := container.Blobstore
 
-	handledLastBlob := false
+	var handledLastBlob bool
 	var totalUploadSize int64
+
+	runBlobIntegrityCheck := shouldRun(container.Config.BlobIntegrityCheckProbability())
+	uploadedHistory := &shared.History{}
 	for pageToken := common.FirstBlobPageToken; !handledLastBlob; pageToken++ {
 		key, err := NewHistoryBlobKey(request.DomainID, request.WorkflowID, request.RunID, request.CloseFailoverVersion, pageToken)
 		if err != nil {
@@ -155,6 +159,9 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 		if err != nil {
 			logger.Error(uploadErrorMsg, tag.ArchivalUploadFailReason(errorDetails(err)), tag.Error(err))
 			return err
+		}
+		if runBlobIntegrityCheck {
+			uploadedHistory.Events = append(uploadedHistory.Events, historyBlob.Body.Events...)
 		}
 
 		if historyMutated(historyBlob, &request) {
@@ -224,6 +231,52 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	if err := uploadBlob(ctx, blobstoreClient, request.BucketName, indexBlobKey, indexBlobWithVersion); err != nil {
 		logger.Error(uploadErrorMsg, tag.ArchivalUploadFailReason(errorDetails(err)), tag.ArchivalBlobKey(indexBlobKey.String()), tag.Error(err))
 		return err
+	}
+	if runBlobIntegrityCheck {
+		scope.IncCounter(metrics.ArchiverRunningBlobIntegrityCheckCount)
+		req := &clientShared.GetWorkflowExecutionHistoryRequest{
+			Domain: common.StringPtr(request.DomainName),
+			Execution: &clientShared.WorkflowExecution{
+				WorkflowId: common.StringPtr(request.WorkflowID),
+				RunId:      common.StringPtr(request.RunID),
+			},
+		}
+		resp, err := container.PublicClient.GetWorkflowExecutionHistory(ctx, req)
+		if err != nil {
+			scope.IncCounter(metrics.ArchiverCouldNotRunBlobIntegrityCheckCount)
+			logger.Error("failed to access history for blob integrity check", tag.Error(err))
+			return nil
+		}
+		if !resp.GetArchived() {
+			scope.IncCounter(metrics.ArchiverBlobIntegrityCheckFailedCount)
+			logger.Error("blob integrity check failed history was not archived")
+			return nil
+		}
+		fetchedHistory := resp.History
+		for len(resp.NextPageToken) != 0 {
+			req.NextPageToken = resp.NextPageToken
+			resp, err := container.PublicClient.GetWorkflowExecutionHistory(ctx, req)
+			if err != nil {
+				scope.IncCounter(metrics.ArchiverCouldNotRunBlobIntegrityCheckCount)
+				logger.Error("failed to access history for blob integrity check", tag.Error(err))
+				return nil
+			}
+			if !resp.GetArchived() {
+				scope.IncCounter(metrics.ArchiverBlobIntegrityCheckFailedCount)
+				logger.Error("blob integrity check failed history was not archived")
+				return nil
+			}
+			fetchedHistory.Events = append(fetchedHistory.Events, resp.History.Events...)
+		}
+		equal, err := historiesEqual(fetchedHistory, uploadedHistory)
+		if err != nil {
+			scope.IncCounter(metrics.ArchiverCouldNotRunBlobIntegrityCheckCount)
+			logger.Error("failed to check if histories are equal", tag.Error(err))
+		}
+		if !equal {
+			scope.IncCounter(metrics.ArchiverBlobIntegrityCheckFailedCount)
+			logger.Error("uploaded history does not match fetched history")
+		}
 	}
 	return nil
 }

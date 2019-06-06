@@ -28,10 +28,13 @@ import (
 	"time"
 
 	"github.com/dgryski/go-farm"
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"go.uber.org/cadence"
+	clientShared "go.uber.org/cadence/.gen/go/shared"
 )
 
 // MaxArchivalIterationTimeout returns the max allowed timeout for a single iteration of archival workflow
@@ -39,9 +42,9 @@ func MaxArchivalIterationTimeout() time.Duration {
 	return workflowStartToCloseTimeout / 2
 }
 
-func hashArchiveRequest(archiveRequest ArchiveRequest) uint64 {
+func hash(e interface{}) uint64 {
 	var b bytes.Buffer
-	gob.NewEncoder(&b).Encode(archiveRequest)
+	gob.NewEncoder(&b).Encode(e)
 	return farm.Fingerprint64(b.Bytes())
 }
 
@@ -126,4 +129,25 @@ func errorDetails(err error) string {
 	}
 	err.(*cadence.CustomError).Details(&details)
 	return details
+}
+
+func historiesEqual(clientHistory *clientShared.History, serverHistory *shared.History) (bool, error) {
+	encoder := codec.NewThriftRWEncoder()
+	clientHistoryBytes, err := encoder.Encode(clientHistory)
+	if err != nil {
+		return false, err
+	}
+	serverHistoryBytes, err := encoder.Encode(serverHistory)
+	if err != nil {
+		return false, err
+	}
+	if len(clientHistoryBytes) != len(serverHistoryBytes) {
+		return false, nil
+	}
+	for i := 0; i < len(clientHistoryBytes); i++ {
+		if clientHistoryBytes[i] != serverHistoryBytes[i] {
+			return false, nil
+		}
+	}
+	return true, nil
 }
