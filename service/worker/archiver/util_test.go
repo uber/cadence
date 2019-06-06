@@ -21,14 +21,14 @@
 package archiver
 
 import (
-	"github.com/uber/cadence/.gen/go/shared"
-	clientShared "go.uber.org/cadence/.gen/go/shared"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"go.uber.org/cadence"
+	clientShared "go.uber.org/cadence/.gen/go/shared"
 )
 
 type UtilSuite struct {
