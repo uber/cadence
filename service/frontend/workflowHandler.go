@@ -21,7 +21,6 @@
 package frontend
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -1715,13 +1714,9 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 			if !isCloseEventOnly {
 				queryNextEventID = token.NextEventID
 			}
-			var branchToken []byte
-			token.EventStoreVersion, branchToken, _, lastFirstEventID, nextEventID, isWorkflowRunning, err = queryHistory(domainID, execution, queryNextEventID, token.BranchToken)
+			token.EventStoreVersion, token.BranchToken, _, lastFirstEventID, nextEventID, isWorkflowRunning, err = queryHistory(domainID, execution, queryNextEventID, token.BranchToken)
 			if err != nil {
 				return nil, wh.error(err, scope)
-			}
-			if !bytes.Equal(branchToken, token.BranchToken) {
-				return nil, wh.error(&shared.BadRequestError{Message: "The current branch changed."}, scope)
 			}
 			token.FirstEventID = token.NextEventID
 			token.NextEventID = nextEventID

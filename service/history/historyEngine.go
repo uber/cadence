@@ -513,10 +513,8 @@ func (e *historyEngineImpl) GetMutableState(ctx ctx.Context,
 	}
 	// record the current branch token
 	currBranchToken := response.BranchToken
-	if request.BranchToken != nil {
-		if !bytes.Equal(request.BranchToken, currBranchToken) {
-			return response, nil
-		}
+	if request.BranchToken != nil && !bytes.Equal(request.BranchToken, currBranchToken) {
+		return nil, &workflow.BadRequestError{Message: "Current branch token and request branch token doesn't match."}
 	}
 	// set the run id in case query the current running workflow
 	execution.RunId = response.Execution.RunId
@@ -541,7 +539,9 @@ func (e *historyEngineImpl) GetMutableState(ctx ctx.Context,
 		if err != nil {
 			return nil, err
 		}
-
+		if request.BranchToken != nil && !bytes.Equal(request.BranchToken, currBranchToken) {
+			return nil, &workflow.BadRequestError{Message: "Current branch token and request branch token doesn't match."}
+		}
 		if !bytes.Equal(response.BranchToken, currBranchToken) ||
 			expectedNextEventID < response.GetNextEventId() ||
 			!response.GetIsWorkflowRunning() {
@@ -557,6 +557,9 @@ func (e *historyEngineImpl) GetMutableState(ctx ctx.Context,
 		for {
 			select {
 			case event := <-channel:
+				if request.BranchToken != nil && !bytes.Equal(request.BranchToken, currBranchToken) {
+					return nil, &workflow.BadRequestError{Message: "Current branch token and request branch token doesn't match."}
+				}
 				if !bytes.Equal(event.branchToken, currBranchToken) {
 					// return the latest mutable state
 					return e.getMutableState(ctx, domainID, execution)
