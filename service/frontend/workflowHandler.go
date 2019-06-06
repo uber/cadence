@@ -1715,9 +1715,13 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 			if !isCloseEventOnly {
 				queryNextEventID = token.NextEventID
 			}
-			token.EventStoreVersion, token.BranchToken, _, lastFirstEventID, nextEventID, isWorkflowRunning, err = queryHistory(domainID, execution, queryNextEventID, token.BranchToken)
+			var branchToken []byte
+			token.EventStoreVersion, branchToken, _, lastFirstEventID, nextEventID, isWorkflowRunning, err = queryHistory(domainID, execution, queryNextEventID, token.BranchToken)
 			if err != nil {
 				return nil, wh.error(err, scope)
+			}
+			if !bytes.Equal(branchToken, token.BranchToken) {
+				return nil, wh.error(&shared.BadRequestError{Message: "The current branch changed."}, scope)
 			}
 			token.FirstEventID = token.NextEventID
 			token.NextEventID = nextEventID
@@ -1727,14 +1731,10 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		if !isCloseEventOnly {
 			queryNextEventID = common.FirstEventID
 		}
-		var branchToken []byte
-		token.EventStoreVersion, branchToken, runID, lastFirstEventID, nextEventID, isWorkflowRunning, err = queryHistory(domainID, execution, queryNextEventID, token.BranchToken)
+
+		token.EventStoreVersion, token.BranchToken, runID, lastFirstEventID, nextEventID, isWorkflowRunning, err = queryHistory(domainID, execution, queryNextEventID, token.BranchToken)
 		if err != nil {
 			return nil, wh.error(err, scope)
-		}
-		if !bytes.Equal(branchToken, token.BranchToken) {
-
-			return nil, wh.error(&shared.BadRequestError{Message: "The current branch changed."}, scope)
 		}
 		execution.RunId = &runID
 

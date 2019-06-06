@@ -517,7 +517,6 @@ func (e *historyEngineImpl) GetMutableState(ctx ctx.Context,
 		if !bytes.Equal(request.BranchToken, currBranchToken) {
 			return response, nil
 		}
-		currBranchToken = request.BranchToken
 	}
 	// set the run id in case query the current running workflow
 	execution.RunId = response.Execution.RunId
