@@ -280,9 +280,8 @@ func (s *engineSuite) TestGetMutableState_BranchTokenNotMatch() {
 		Execution:   &execution,
 		BranchToken: branchToken,
 	})
-	s.Nil(err)
-	s.Equal(int64(4), response.GetNextEventId())
-	s.NotEqual(response.BranchToken, branchToken)
+	s.Error(err)
+	s.Nil(response)
 }
 
 func (s *engineSuite) TestGetMutableStateLongPoll() {
