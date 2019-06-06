@@ -7,14 +7,14 @@ callout_description: Directly code your application business logic. Cadence take
 
 <section class="features">
   <div class="feature open-source">
-    <a href="{{ '/docs/01_license' | relative_url }}">
+    <a href="{{ 'docs/01_license' | relative_url }}">
       <div class="icon">
         <svg class="icon-arrow-divert">
           <use xlink:href="#icon-arrow-divert"></use>
         </svg>
       </div>
     </a>
-    <a href="{{ '/docs/01_license' | relative_url }}">
+    <a href="{{ 'docs/01_license' | relative_url }}">
       <span class="description">Open Source</span>
     </a>
     <p>Permissive MIT License</p>
