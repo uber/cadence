@@ -80,7 +80,7 @@ func NewHistoryBlobKey(domainID, workflowID, runID string, closeFailoverVersion 
 	return blob.NewKey("history", combinedHash, strconv.FormatInt(closeFailoverVersion, 10), strconv.Itoa(pageToken))
 }
 
-// NewNonDeterministicBlobKey returns a randomly generated key for history blob
+// NewNonDeterministicBlobKey returns a randomly generated key for non-deterministic history blob
 func NewNonDeterministicBlobKey() (blob.Key, error) {
 	return blob.NewKey("history", uuid.New())
 }
