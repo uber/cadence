@@ -253,8 +253,8 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 			return nil
 		}
 		fetchedHistory := resp.History
-		for len(resp.NextPageToken) != 0 {
-			req.NextPageToken = resp.NextPageToken
+		req.NextPageToken = resp.NextPageToken
+		for len(req.NextPageToken) != 0 {
 			resp, err := container.PublicClient.GetWorkflowExecutionHistory(ctx, req)
 			if err != nil {
 				scope.IncCounter(metrics.ArchiverCouldNotRunBlobIntegrityCheckCount)
@@ -267,6 +267,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 				return nil
 			}
 			fetchedHistory.Events = append(fetchedHistory.Events, resp.History.Events...)
+			req.NextPageToken = resp.NextPageToken
 		}
 		equal, err := historiesEqual(fetchedHistory, uploadedHistory)
 		if err != nil {

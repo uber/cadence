@@ -41,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	clientShared "go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/testsuite"
 	"go.uber.org/cadence/worker"
 	"go.uber.org/zap"
@@ -644,6 +645,207 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Success_BlobDoesNotAlreadyEx
 		Blobstore:         mockBlobstore,
 		HistoryBlobReader: mockHistoryBlobReader,
 		Config:            getConfig(false, false),
+	}
+	env := s.NewTestActivityEnvironment()
+	env.SetWorkerOptions(worker.Options{
+		BackgroundActivityContext: context.WithValue(context.Background(), bootstrapContainerKey, container),
+	})
+	request := ArchiveRequest{
+		DomainID:             testDomainID,
+		DomainName:           testDomainName,
+		WorkflowID:           testWorkflowID,
+		RunID:                testRunID,
+		BranchToken:          testBranchToken,
+		NextEventID:          testNextEventID,
+		CloseFailoverVersion: testCloseFailoverVersion,
+		BucketName:           testArchivalBucket,
+	}
+	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	s.NoError(err)
+}
+
+func (s *activitiesSuite) TestUploadHistoryActivity_Fail_CouldNotRunBlobIntegrityCheck() {
+	s.metricsClient.On("Scope", metrics.ArchiverUploadHistoryActivityScope, []metrics.Tag{metrics.DomainTag(testDomainName)}).Return(s.metricsScope).Once()
+	s.metricsScope.On("IncCounter", metrics.ArchiverRunningBlobIntegrityCheckCount).Once()
+	s.metricsScope.On("IncCounter", metrics.ArchiverCouldNotRunBlobIntegrityCheckCount).Once()
+	domainCache, mockClusterMetadata := s.archivalConfig(true, testArchivalBucket, true)
+	mockBlobstore := &mocks.BlobstoreClient{}
+	mockBlobstore.On("GetTags", mock.Anything, mock.Anything, mock.Anything).Return(nil, blobstore.ErrBlobNotExists).Twice()
+	mockBlobstore.On("Upload", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Twice()
+	mockHistoryBlobReader := &HistoryBlobReaderMock{}
+	mockHistoryBlobReader.On("GetBlob", mock.Anything).Return(&HistoryBlob{
+		Header: &HistoryBlobHeader{
+			LastFailoverVersion: common.Int64Ptr(testCloseFailoverVersion),
+			LastEventID:         common.Int64Ptr(testNextEventID - 1),
+			IsLast:              common.BoolPtr(true),
+		},
+		Body: &shared.History{},
+	}, nil)
+	mockPublicClient := &mocks.PublicClient{}
+	mockPublicClient.On("GetWorkflowExecutionHistory", mock.Anything, mock.Anything).Return(nil, errors.New("error calling frontend to get workflow execution history")).Once()
+	container := &BootstrapContainer{
+		Logger:            s.logger,
+		MetricsClient:     s.metricsClient,
+		DomainCache:       domainCache,
+		ClusterMetadata:   mockClusterMetadata,
+		Blobstore:         mockBlobstore,
+		HistoryBlobReader: mockHistoryBlobReader,
+		Config:            getConfig(false, true),
+		PublicClient:      mockPublicClient,
+	}
+	env := s.NewTestActivityEnvironment()
+	env.SetWorkerOptions(worker.Options{
+		BackgroundActivityContext: context.WithValue(context.Background(), bootstrapContainerKey, container),
+	})
+	request := ArchiveRequest{
+		DomainID:             testDomainID,
+		DomainName:           testDomainName,
+		WorkflowID:           testWorkflowID,
+		RunID:                testRunID,
+		BranchToken:          testBranchToken,
+		NextEventID:          testNextEventID,
+		CloseFailoverVersion: testCloseFailoverVersion,
+		BucketName:           testArchivalBucket,
+	}
+	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	s.NoError(err)
+}
+
+func (s *activitiesSuite) TestUploadHistoryActivity_Fail_BlobIntegrityCheckFailed() {
+	s.metricsClient.On("Scope", metrics.ArchiverUploadHistoryActivityScope, []metrics.Tag{metrics.DomainTag(testDomainName)}).Return(s.metricsScope).Once()
+	s.metricsScope.On("IncCounter", metrics.ArchiverRunningBlobIntegrityCheckCount).Once()
+	s.metricsScope.On("IncCounter", metrics.ArchiverBlobIntegrityCheckFailedCount).Once()
+	domainCache, mockClusterMetadata := s.archivalConfig(true, testArchivalBucket, true)
+	mockBlobstore := &mocks.BlobstoreClient{}
+	mockBlobstore.On("GetTags", mock.Anything, mock.Anything, mock.Anything).Return(nil, blobstore.ErrBlobNotExists).Twice()
+	mockBlobstore.On("Upload", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Twice()
+	mockHistoryBlobReader := &HistoryBlobReaderMock{}
+	mockHistoryBlobReader.On("GetBlob", mock.Anything).Return(&HistoryBlob{
+		Header: &HistoryBlobHeader{
+			LastFailoverVersion: common.Int64Ptr(testCloseFailoverVersion),
+			LastEventID:         common.Int64Ptr(testNextEventID - 1),
+			IsLast:              common.BoolPtr(true),
+		},
+		Body: &shared.History{
+			Events: []*shared.HistoryEvent{
+				{
+					EventId: common.Int64Ptr(7),
+				},
+			},
+		},
+	}, nil)
+	mockPublicClient := &mocks.PublicClient{}
+	mockPublicClient.On("GetWorkflowExecutionHistory", mock.Anything, mock.Anything).Return(&clientShared.GetWorkflowExecutionHistoryResponse{
+		Archived:      common.BoolPtr(true),
+		NextPageToken: nil,
+		History: &clientShared.History{
+			Events: []*clientShared.HistoryEvent{
+				{
+					EventId: common.Int64Ptr(6),
+				},
+			},
+		},
+	}, nil).Once()
+	container := &BootstrapContainer{
+		Logger:            s.logger,
+		MetricsClient:     s.metricsClient,
+		DomainCache:       domainCache,
+		ClusterMetadata:   mockClusterMetadata,
+		Blobstore:         mockBlobstore,
+		HistoryBlobReader: mockHistoryBlobReader,
+		Config:            getConfig(false, true),
+		PublicClient:      mockPublicClient,
+	}
+	env := s.NewTestActivityEnvironment()
+	env.SetWorkerOptions(worker.Options{
+		BackgroundActivityContext: context.WithValue(context.Background(), bootstrapContainerKey, container),
+	})
+	request := ArchiveRequest{
+		DomainID:             testDomainID,
+		DomainName:           testDomainName,
+		WorkflowID:           testWorkflowID,
+		RunID:                testRunID,
+		BranchToken:          testBranchToken,
+		NextEventID:          testNextEventID,
+		CloseFailoverVersion: testCloseFailoverVersion,
+		BucketName:           testArchivalBucket,
+	}
+	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	s.NoError(err)
+}
+
+func (s *activitiesSuite) TestUploadHistoryActivity_Success_BlobIntegrityCheckPassed() {
+	s.metricsClient.On("Scope", metrics.ArchiverUploadHistoryActivityScope, []metrics.Tag{metrics.DomainTag(testDomainName)}).Return(s.metricsScope).Once()
+	s.metricsScope.On("IncCounter", metrics.ArchiverRunningBlobIntegrityCheckCount).Once()
+	domainCache, mockClusterMetadata := s.archivalConfig(true, testArchivalBucket, true)
+	mockBlobstore := &mocks.BlobstoreClient{}
+	mockBlobstore.On("GetTags", mock.Anything, mock.Anything, mock.Anything).Return(nil, blobstore.ErrBlobNotExists).Twice()
+	mockBlobstore.On("Upload", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Twice()
+	mockHistoryBlobReader := &HistoryBlobReaderMock{}
+	mockHistoryBlobReader.On("GetBlob", mock.Anything).Return(&HistoryBlob{
+		Header: &HistoryBlobHeader{
+			LastFailoverVersion: common.Int64Ptr(testCloseFailoverVersion),
+			LastEventID:         common.Int64Ptr(testNextEventID - 1),
+			IsLast:              common.BoolPtr(true),
+		},
+		Body: &shared.History{
+			Events: []*shared.HistoryEvent{
+				{
+					EventId: common.Int64Ptr(6),
+				},
+				{
+					EventId: common.Int64Ptr(7),
+				},
+			},
+		},
+	}, nil)
+	mockPublicClient := &mocks.PublicClient{}
+	firstReq := &clientShared.GetWorkflowExecutionHistoryRequest{
+		Domain: common.StringPtr(testDomainName),
+		Execution: &clientShared.WorkflowExecution{
+			WorkflowId: common.StringPtr(testWorkflowID),
+			RunId:      common.StringPtr(testRunID),
+		},
+	}
+	mockPublicClient.On("GetWorkflowExecutionHistory", mock.Anything, firstReq).Return(&clientShared.GetWorkflowExecutionHistoryResponse{
+		Archived:      common.BoolPtr(true),
+		NextPageToken: []byte{1},
+		History: &clientShared.History{
+			Events: []*clientShared.HistoryEvent{
+				{
+					EventId: common.Int64Ptr(6),
+				},
+			},
+		},
+	}, nil).Once()
+	secondReq := &clientShared.GetWorkflowExecutionHistoryRequest{
+		Domain: common.StringPtr(testDomainName),
+		Execution: &clientShared.WorkflowExecution{
+			WorkflowId: common.StringPtr(testWorkflowID),
+			RunId:      common.StringPtr(testRunID),
+		},
+		NextPageToken: []byte{1},
+	}
+	mockPublicClient.On("GetWorkflowExecutionHistory", mock.Anything, secondReq).Return(&clientShared.GetWorkflowExecutionHistoryResponse{
+		Archived:      common.BoolPtr(true),
+		NextPageToken: nil,
+		History: &clientShared.History{
+			Events: []*clientShared.HistoryEvent{
+				{
+					EventId: common.Int64Ptr(7),
+				},
+			},
+		},
+	}, nil).Once()
+	container := &BootstrapContainer{
+		Logger:            s.logger,
+		MetricsClient:     s.metricsClient,
+		DomainCache:       domainCache,
+		ClusterMetadata:   mockClusterMetadata,
+		Blobstore:         mockBlobstore,
+		HistoryBlobReader: mockHistoryBlobReader,
+		Config:            getConfig(false, true),
+		PublicClient:      mockPublicClient,
 	}
 	env := s.NewTestActivityEnvironment()
 	env.SetWorkerOptions(worker.Options{
