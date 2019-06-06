@@ -188,7 +188,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 					tag.ArchivalDeterministicConstructionCheckFailReason(reason))
 				scope.IncCounter(metrics.ArchiverDeterministicConstructionCheckFailedCount)
 
-				nonDeterministicBlobKey, err := newNonDeterministicBlobKey()
+				nonDeterministicBlobKey, err := NewNonDeterministicBlobKey()
 				if err != nil {
 					logger.Error("failed to construct non-deterministic blob key", tag.Error(err))
 				} else if err := uploadBlob(ctx, blobstoreClient, request.BucketName, nonDeterministicBlobKey, blob); err != nil {

@@ -27,9 +27,6 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/pborman/uuid"
-	"github.com/uber/cadence/common/blobstore/blob"
-
 	"github.com/dgryski/go-farm"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -129,8 +126,4 @@ func errorDetails(err error) string {
 	}
 	err.(*cadence.CustomError).Details(&details)
 	return details
-}
-
-func newNonDeterministicBlobKey() (blob.Key, error) {
-	return blob.NewKey("history", uuid.New())
 }
