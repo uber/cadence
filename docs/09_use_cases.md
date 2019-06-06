@@ -23,13 +23,28 @@ In some cases instead of trying to complete the process by retrying for a long t
 Cadence is a perfect fit for such scenarios. It guarantees that workflow code eventually completes, has built it support
 for unlimited exponential activity retries and simplifies coding of the compensation logic. 
 
-## Event Driven Applications
+## Event Driven Application
 
 Many applications listen to multiple event sources, update state of correspondent business entities 
 and have to execute some actions if some state is reached.
 Cadence is a good fit for many of them. It has direct support for asynchronous events (aka signals), 
 has a simple programming model that hides a lot of complexity
 around state persistence and ensures external action execution through built-in retries. 
+
+## Storage Scan
+
+It is common to have large data sets partitioned across large number of hosts or databases or having billions of files in an S3 bucket.
+Cadence is an ideal solution for implementing the full scan of such data in a scalable and resilient way. The standard pattern 
+is to run an activity (or multiple parallel activities for partitioned data sets) that performs the scan and heartbeats its progress
+back to Cadence. In a case of a host failure the activity is retried on a different host and continues execution from the last reported progress. 
+
+## Batch Job
+
+A lot of batch jobs are not pure data manipulation programs. For those the existing big data frameworks are the best fit.
+But if processing a record requires external API calls that might fail and potentially take long time Cadence might be a better fit.
+One of internal Uber customers uses Cadence for end of month statement generation. Each statement requires calls to multiple 
+ microservices and some statements can be really large. Cadence was choosen as it provides hard guarantees around durability of the financial data
+ and seamlessly deals with long running operations, retries and other intermittent failures. 
 
 ## Infrastructure Provisioning
 
