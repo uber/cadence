@@ -56,9 +56,14 @@ func newWorkflowResetor(historyEngine *historyEngineImpl) *workflowResetorImpl {
 
 // ResetWorkflowExecution only allows resetting to decisionTaskCompleted, but exclude that batch of decisionTaskCompleted/decisionTaskFailed/decisionTaskTimeout.
 // It will then fail the decision with cause of "reset_workflow"
-func (w *workflowResetorImpl) ResetWorkflowExecution(ctx context.Context, request *workflow.ResetWorkflowExecutionRequest,
-	baseContext workflowExecutionContext, baseMutableState mutableState,
-	currContext workflowExecutionContext, currMutableState mutableState) (response *workflow.ResetWorkflowExecutionResponse, retError error) {
+func (w *workflowResetorImpl) ResetWorkflowExecution(
+	ctx context.Context,
+	request *workflow.ResetWorkflowExecutionRequest,
+	baseContext workflowExecutionContext,
+	baseMutableState mutableState,
+	currContext workflowExecutionContext,
+	currMutableState mutableState,
+) (response *workflow.ResetWorkflowExecutionResponse, retError error) {
 
 	domainEntry, retError := w.eng.shard.GetDomainCache().GetDomain(request.GetDomain())
 	if retError != nil {
