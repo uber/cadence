@@ -104,3 +104,20 @@ func validateArchivalRequest(request *ArchiveRequest) error {
 
 	return nil
 }
+
+func getUploadHistoryActivityResponse(progress uploadProgress, errReason string, rootErr error) (uploadResult, error) {
+	if rootErr == nil || rootErr == errContextTimeout {
+		return uploadResult{}, rootErr
+	}
+
+	switch errReason {
+	case errGetDomainByID, errInvalidRequest:
+		return uploadResult{}, cadence.NewCustomError(errReason, rootErr.Error())
+	default:
+		return uploadResult{
+			UploadedBlobs: progress.UploadedBlobs,
+			ErrorReason:   errReason,
+			ErrorDetails:  rootErr.Error(),
+		}, nil
+	}
+}

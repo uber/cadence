@@ -21,6 +21,7 @@
 package archiver
 
 import (
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -40,13 +41,17 @@ type (
 	HistoryBlobIterator interface {
 		Next() (*HistoryBlob, error)
 		HasNext() bool
+		GetState() ([]byte, error)
+	}
+
+	historyBlobIteratorState struct {
+		BlobPageToken        int
+		PersistencePageToken []byte
+		FinishedIteration    bool
 	}
 
 	historyBlobIterator struct {
-		// the following defines the state of the iterator
-		blobPageToken        int
-		persistencePageToken []byte
-		finishedIteration    bool
+		historyBlobIteratorState
 
 		// the following are only used to read history and dynamic config
 		historyManager       persistence.HistoryManager
@@ -75,12 +80,14 @@ func NewHistoryBlobIterator(
 	container *BootstrapContainer,
 	domainName string,
 	clusterName string,
-) HistoryBlobIterator {
-	return &historyBlobIterator{
-		blobPageToken:        common.FirstBlobPageToken,
-		persistencePageToken: nil,
-		finishedIteration:    false,
-
+	initialState []byte,
+) (HistoryBlobIterator, error) {
+	iterator := &historyBlobIterator{
+		historyBlobIteratorState: historyBlobIteratorState{
+			BlobPageToken:        common.FirstBlobPageToken,
+			PersistencePageToken: nil,
+			FinishedIteration:    false,
+		},
 		historyManager:       container.HistoryManager,
 		historyV2Manager:     container.HistoryV2Manager,
 		domainID:             request.DomainID,
@@ -95,6 +102,11 @@ func NewHistoryBlobIterator(
 		closeFailoverVersion: request.CloseFailoverVersion,
 		shardID:              request.ShardID,
 	}
+	if initialState == nil {
+		return iterator, nil
+	}
+	err := iterator.reset(initialState)
+	return iterator, err
 }
 
 // Next returns historyBlob and advances iterator.
@@ -104,14 +116,14 @@ func (i *historyBlobIterator) Next() (*HistoryBlob, error) {
 	if !i.HasNext() {
 		return nil, errIteratorDepleted
 	}
-	events, nextPersistencePageToken, historyEndReached, err := i.readBlobEvents(i.persistencePageToken)
+	events, nextPersistencePageToken, historyEndReached, err := i.readBlobEvents(i.PersistencePageToken)
 	if err != nil {
 		return nil, err
 	}
 
 	// only if no error was encountered reading history does the state of the iterator get advanced
-	i.finishedIteration = historyEndReached
-	i.persistencePageToken = nextPersistencePageToken
+	i.FinishedIteration = historyEndReached
+	i.PersistencePageToken = nextPersistencePageToken
 
 	firstEvent := events[0]
 	lastEvent := events[len(events)-1]
@@ -121,7 +133,7 @@ func (i *historyBlobIterator) Next() (*HistoryBlob, error) {
 		DomainID:             &i.domainID,
 		WorkflowID:           &i.workflowID,
 		RunID:                &i.runID,
-		CurrentPageToken:     common.IntPtr(i.blobPageToken),
+		CurrentPageToken:     common.IntPtr(i.BlobPageToken),
 		NextPageToken:        common.IntPtr(common.LastBlobNextPageToken),
 		IsLast:               common.BoolPtr(true),
 		FirstFailoverVersion: firstEvent.Version,
@@ -134,8 +146,8 @@ func (i *historyBlobIterator) Next() (*HistoryBlob, error) {
 		CloseFailoverVersion: &i.closeFailoverVersion,
 	}
 	if i.HasNext() {
-		i.blobPageToken++
-		header.NextPageToken = common.IntPtr(i.blobPageToken)
+		i.BlobPageToken++
+		header.NextPageToken = common.IntPtr(i.BlobPageToken)
 		header.IsLast = common.BoolPtr(false)
 	}
 	return &HistoryBlob{
@@ -148,7 +160,12 @@ func (i *historyBlobIterator) Next() (*HistoryBlob, error) {
 
 // HasNext returns true if there are more items to iterate over.
 func (i *historyBlobIterator) HasNext() bool {
-	return !i.finishedIteration
+	return !i.FinishedIteration
+}
+
+// GetState returns the encoded iterator state
+func (i *historyBlobIterator) GetState() ([]byte, error) {
+	return json.Marshal(i.historyBlobIteratorState)
 }
 
 // readBlobEvents gets history events, starting from page identified by given pageToken.
@@ -209,4 +226,15 @@ func (i *historyBlobIterator) readHistory(pageToken []byte) ([]*shared.HistoryEv
 		return nil, 0, nil, err
 	}
 	return resp.History.Events, resp.Size, resp.NextPageToken, nil
+}
+
+// reset resets iterator to a certain state given its encoded representation
+// if it returns an error, the operation will have no effect on the iterator
+func (i *historyBlobIterator) reset(stateToken []byte) error {
+	var iteratorState historyBlobIteratorState
+	if err := json.Unmarshal(stateToken, &iteratorState); err != nil {
+		return err
+	}
+	i.historyBlobIteratorState = iteratorState
+	return nil
 }
