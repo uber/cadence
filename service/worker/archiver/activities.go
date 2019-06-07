@@ -128,7 +128,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	var totalUploadSize int64
 
 	runBlobIntegrityCheck := shouldRun(container.Config.BlobIntegrityCheckProbability())
-	uploadedHistory := &shared.History{}
+	var uploadedHistoryEventHashes []uint64
 	for pageToken := common.FirstBlobPageToken; !handledLastBlob; pageToken++ {
 		key, err := NewHistoryBlobKey(request.DomainID, request.WorkflowID, request.RunID, request.CloseFailoverVersion, pageToken)
 		if err != nil {
@@ -161,7 +161,9 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 			return err
 		}
 		if runBlobIntegrityCheck {
-			uploadedHistory.Events = append(uploadedHistory.Events, historyBlob.Body.Events...)
+			for _, e := range historyBlob.Body.Events {
+				uploadedHistoryEventHashes = append(uploadedHistoryEventHashes, hash(e.String()))
+			}
 		}
 
 		if historyMutated(historyBlob, &request) {
@@ -252,7 +254,10 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 			logger.Error("blob integrity check failed history was not archived")
 			return nil
 		}
-		fetchedHistory := resp.History
+		var fetchedHistoryEventHashes []uint64
+		for _, e := range resp.History.Events {
+			fetchedHistoryEventHashes = append(fetchedHistoryEventHashes, hash(e.String()))
+		}
 		req.NextPageToken = resp.NextPageToken
 		for len(req.NextPageToken) != 0 {
 			resp, err := container.PublicClient.GetWorkflowExecutionHistory(ctx, req)
@@ -266,17 +271,14 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 				logger.Error("blob integrity check failed history was not archived")
 				return nil
 			}
-			fetchedHistory.Events = append(fetchedHistory.Events, resp.History.Events...)
+			for _, e := range resp.History.Events {
+				fetchedHistoryEventHashes = append(fetchedHistoryEventHashes, hash(e.String()))
+			}
 			req.NextPageToken = resp.NextPageToken
 		}
-		equal, reason := historiesEqual(fetchedHistory, uploadedHistory)
-		if err != nil {
-			scope.IncCounter(metrics.ArchiverCouldNotRunBlobIntegrityCheckCount)
-			logger.Error("failed to check if histories are equal", tag.Error(err))
-		}
-		if !equal {
+		if !hashesEqual(fetchedHistoryEventHashes, uploadedHistoryEventHashes) {
 			scope.IncCounter(metrics.ArchiverBlobIntegrityCheckFailedCount)
-			logger.Error("uploaded history does not match fetched history", tag.ArchivalBlobIntegrityCheckFailReason(reason))
+			logger.Error("uploaded history does not match fetched history")
 		}
 	}
 	return nil

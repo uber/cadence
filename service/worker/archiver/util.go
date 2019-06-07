@@ -24,17 +24,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
-	"fmt"
 	"math/rand"
 	"time"
 
 	"github.com/dgryski/go-farm"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"go.uber.org/cadence"
-	clientShared "go.uber.org/cadence/.gen/go/shared"
 )
 
 // MaxArchivalIterationTimeout returns the max allowed timeout for a single iteration of archival workflow
@@ -129,34 +126,4 @@ func errorDetails(err error) string {
 	}
 	err.(*cadence.CustomError).Details(&details)
 	return details
-}
-
-func historiesEqual(fetchedHistory *clientShared.History, uploadedHistory *shared.History) (bool, string) {
-	if fetchedHistory == nil && uploadedHistory == nil {
-		return true, ""
-	}
-	if fetchedHistory == nil {
-		return false, "fetched history is nil while uploaded history is not nil"
-	}
-	if uploadedHistory == nil {
-		return false, "fetched history is not nil while uploaded history is nil"
-	}
-	if len(fetchedHistory.Events) != len(uploadedHistory.Events) {
-		return false, fmt.Sprintf(
-			"fetched history and uploaded history are of different sizes, fetchedHistorySize:%v, uploadedHistorySize:%v",
-			len(fetchedHistory.Events),
-			len(uploadedHistory.Events),
-		)
-	}
-	for i := 0; i < len(fetchedHistory.Events); i++ {
-		fetchedHistoryEvent := fetchedHistory.Events[i]
-		uploadedHistoryEvent := uploadedHistory.Events[i]
-		if *fetchedHistoryEvent.EventId != *uploadedHistoryEvent.EventId {
-			return false, fmt.Sprintf("fetched history does not match uploaded history on event:%v", i)
-		}
-		if fetchedHistoryEvent.EventType.String() != uploadedHistoryEvent.EventType.String() {
-			return false, fmt.Sprintf("fetched history does not match uploaded history on event:%v", i)
-		}
-	}
-	return true, ""
 }

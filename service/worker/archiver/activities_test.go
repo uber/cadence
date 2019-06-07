@@ -729,7 +729,11 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_BlobIntegrityCheckFaile
 		Body: &shared.History{
 			Events: []*shared.HistoryEvent{
 				{
-					EventId: common.Int64Ptr(7),
+					EventId:   common.Int64Ptr(7),
+					EventType: serverEventTypePtr(shared.EventTypeChildWorkflowExecutionCanceled),
+					ChildWorkflowExecutionCanceledEventAttributes: &shared.ChildWorkflowExecutionCanceledEventAttributes{
+						Details: []byte{1, 2, 3, 4, 5},
+					},
 				},
 			},
 		},
@@ -741,7 +745,11 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_BlobIntegrityCheckFaile
 		History: &clientShared.History{
 			Events: []*clientShared.HistoryEvent{
 				{
-					EventId: common.Int64Ptr(6),
+					EventId:   common.Int64Ptr(7),
+					EventType: clientEventTypePtr(clientShared.EventTypeChildWorkflowExecutionCanceled),
+					ChildWorkflowExecutionCanceledEventAttributes: &clientShared.ChildWorkflowExecutionCanceledEventAttributes{
+						Details: []byte{1, 2, 3, 4},
+					},
 				},
 			},
 		},
