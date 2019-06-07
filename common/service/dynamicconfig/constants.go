@@ -197,6 +197,7 @@ var keys = map[Key]string{
 	WorkerTimeLimitPerArchivalIteration:             "worker.TimeLimitPerArchivalIteration",
 	WorkerThrottledLogRPS:                           "worker.throttledLogRPS",
 	ScannerPersistenceMaxQPS:                        "worker.scannerPersistenceMaxQPS",
+	EnableBatcher:                                   "worker.enableBatcher",
 }
 
 const (
@@ -510,6 +511,8 @@ const (
 	WorkerThrottledLogRPS
 	// ScannerPersistenceMaxQPS is the maximum rate of persistence calls from worker.Scanner
 	ScannerPersistenceMaxQPS
+	// EnableBatcher decides whether start batcher in our worker
+	EnableBatcher
 
 	// lastKeyForTest must be the last one in this const group for testing purpose
 	lastKeyForTest

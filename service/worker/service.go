@@ -24,6 +24,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/service/worker/batcher"
+
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore"
@@ -64,7 +66,9 @@ type (
 		ArchiverConfig  *archiver.Config
 		IndexerCfg      *indexer.Config
 		ScannerCfg      *scanner.Config
+		BatcherCfg      *batcher.Config
 		ThrottledLogRPS dynamicconfig.IntPropertyFn
+		EnableBatcher   dynamicconfig.BoolPropertyFn
 	}
 )
 
@@ -119,6 +123,11 @@ func NewConfig(params *service.BootstrapParams) *Config {
 			Persistence:       &params.PersistenceConfig,
 			ClusterMetadata:   params.ClusterMetadata,
 		},
+		BatcherCfg: &batcher.Config{
+			AdminOperationToken: dc.GetStringProperty(dynamicconfig.AdminOperationToken, common.DefaultAdminOperationToken),
+			ClusterMetadata:     params.ClusterMetadata,
+		},
+		EnableBatcher:   dc.GetBoolProperty(dynamicconfig.EnableBatcher, false),
 		ThrottledLogRPS: dc.GetIntProperty(dynamicconfig.WorkerThrottledLogRPS, 20),
 	}
 }
@@ -138,6 +147,7 @@ func (s *Service) Start() {
 	replicatorEnabled := base.GetClusterMetadata().IsGlobalDomainEnabled()
 	archiverEnabled := base.GetClusterMetadata().ArchivalConfig().ConfiguredForArchival()
 	scannerEnabled := s.config.ScannerCfg.Persistence.DefaultStoreType() == config.StoreTypeSQL
+	batcherEnabled := s.config.EnableBatcher()
 
 	if replicatorEnabled || archiverEnabled || scannerEnabled {
 		pConfig := s.params.PersistenceConfig
@@ -156,6 +166,9 @@ func (s *Service) Start() {
 		if scannerEnabled {
 			s.startScanner(base)
 		}
+		if batcherEnabled {
+			s.startBatcher(base)
+		}
 	}
 
 	s.logger.Info("service started", tag.ComponentWorker)
@@ -170,6 +183,21 @@ func (s *Service) Stop() {
 	}
 	close(s.stopC)
 	s.params.Logger.Info("service stopped", tag.ComponentWorker)
+}
+
+func (s *Service) startBatcher(base service.Service) {
+	params := &batcher.BootstrapParams{
+		Config:        *s.config.BatcherCfg,
+		ServiceClient: s.params.PublicClient,
+		MetricsClient: s.metricsClient,
+		Logger:        s.logger,
+		TallyScope:    s.params.MetricScope,
+	}
+	batcher := batcher.New(params)
+	if err := batcher.Start(); err != nil {
+		// We only emit error log instead of fatal here since batcher is not a critical part for running cadence
+		s.logger.Error("error starting batcher, batch operation will not be working", tag.Error(err))
+	}
 }
 
 func (s *Service) startScanner(base service.Service) {
