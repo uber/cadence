@@ -436,9 +436,9 @@ func (handler *decisionTaskHandlerImpl) handleDecisionFailWorkflow(
 	// below will check whether to do continue as new based on backoff & backoff or cron
 	backoffInterval := handler.mutableState.GetRetryBackoffDuration(attr.GetReason())
 	continueAsNewInitiator := workflow.ContinueAsNewInitiatorRetryPolicy
-	// first check the backoff backoff
+	// first check the backoff retry
 	if backoffInterval == backoff.NoBackoff {
-		// if no backoff backoff, set the backoffInterval using cron schedule
+		// if no backoff retry, set the backoffInterval using cron schedule
 		backoffInterval = handler.mutableState.GetCronBackoffDuration()
 		continueAsNewInitiator = workflow.ContinueAsNewInitiatorCronSchedule
 	}
