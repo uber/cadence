@@ -365,8 +365,7 @@ func (e *mutableStateBuilder) FlushBufferedEvents() error {
 	e.hBuilder.history = newCommittedEvents
 	// make sure all new committed events have correct EventID
 	e.assignEventIDToBufferedEvents()
-	err := e.assignTaskIDToEvents()
-	if err != nil {
+	if err := e.assignTaskIDToEvents(); err != nil {
 		return err
 	}
 
@@ -1359,8 +1358,12 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(d
 	}
 
 	event := e.hBuilder.AddWorkflowExecutionStartedEvent(req, previousExecutionInfo, firstRunID, execution.GetRunId())
-	err := e.ReplicateWorkflowExecutionStartedEvent(domainID, parentDomainID, execution, createRequest.GetRequestId(), event)
-	if err != nil {
+	if err := e.ReplicateWorkflowExecutionStartedEvent(
+		domainID,
+		parentDomainID,
+		execution,
+		createRequest.GetRequestId(),
+		event); err != nil {
 		return nil, err
 	}
 
@@ -1381,7 +1384,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(execution workflo
 		e.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(eventID),
 			tag.ErrorTypeInvalidHistoryAction)
-		return nil, e.createServerError(opTag)
+		return nil, e.createInternalServerError(opTag)
 	}
 
 	event := e.hBuilder.AddWorkflowExecutionStartedEvent(startRequest, nil, execution.GetRunId(), execution.GetRunId())
@@ -1390,9 +1393,12 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(execution workflo
 	if startRequest.ParentExecutionInfo != nil {
 		parentDomainID = startRequest.ParentExecutionInfo.DomainUUID
 	}
-	err := e.ReplicateWorkflowExecutionStartedEvent(startRequest.GetDomainUUID(), parentDomainID,
-		execution, request.GetRequestId(), event)
-	if err != nil {
+	if err := e.ReplicateWorkflowExecutionStartedEvent(
+		startRequest.GetDomainUUID(),
+		parentDomainID,
+		execution,
+		request.GetRequestId(),
+		event); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -1470,7 +1476,7 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent() (*decisionInfo, er
 			tag.WorkflowEventID(e.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.WorkflowScheduleID(e.executionInfo.DecisionScheduleID))
-		return nil, e.createServerError(opTag)
+		return nil, e.createInternalServerError(opTag)
 	}
 
 	// set workflow state to running
@@ -1581,7 +1587,7 @@ func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(scheduleEventID int64,
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.Bool(hasPendingDecision),
 			tag.WorkflowScheduleID(scheduleEventID))
-		return nil, nil, e.createServerError(opTag)
+		return nil, nil, e.createInternalServerError(opTag)
 	}
 
 	var event *workflow.HistoryEvent
@@ -1758,7 +1764,7 @@ func (e *mutableStateBuilder) AddDecisionTaskCompletedEvent(scheduleEventID, sta
 			tag.WorkflowScheduleID(scheduleEventID),
 			tag.WorkflowStartedID(startedEventID))
 
-		return nil, e.createServerError(opTag)
+		return nil, e.createInternalServerError(opTag)
 	}
 
 	e.beforeAddDecisionTaskCompletedEvent()
@@ -1800,7 +1806,7 @@ func (e *mutableStateBuilder) AddDecisionTaskTimedOutEvent(scheduleEventID int64
 			tag.Bool(hasPendingDecision),
 			tag.WorkflowScheduleID(scheduleEventID),
 			tag.WorkflowStartedID(startedEventID))
-		return nil, e.createServerError(opTag)
+		return nil, e.createInternalServerError(opTag)
 	}
 
 	var event *workflow.HistoryEvent
@@ -1809,8 +1815,7 @@ func (e *mutableStateBuilder) AddDecisionTaskTimedOutEvent(scheduleEventID int64
 		event = e.hBuilder.AddDecisionTaskTimedOutEvent(scheduleEventID, startedEventID, workflow.TimeoutTypeStartToClose)
 	}
 
-	err := e.ReplicateDecisionTaskTimedOutEvent(workflow.TimeoutTypeStartToClose)
-	if err != nil {
+	if err := e.ReplicateDecisionTaskTimedOutEvent(workflow.TimeoutTypeStartToClose); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -1839,7 +1844,7 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduleToStartTimeoutEvent(schedul
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.WorkflowScheduleID(scheduleEventID),
 		)
-		return nil, e.createServerError(opTag)
+		return nil, e.createInternalServerError(opTag)
 	}
 
 	// Clear stickiness whenever decision fails
@@ -1847,8 +1852,7 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduleToStartTimeoutEvent(schedul
 
 	event := e.hBuilder.AddDecisionTaskTimedOutEvent(scheduleEventID, 0, workflow.TimeoutTypeScheduleToStart)
 
-	err := e.ReplicateDecisionTaskTimedOutEvent(workflow.TimeoutTypeScheduleToStart)
-	if err != nil {
+	if err := e.ReplicateDecisionTaskTimedOutEvent(workflow.TimeoutTypeScheduleToStart); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -1882,7 +1886,7 @@ func (e *mutableStateBuilder) AddDecisionTaskFailedEvent(scheduleEventID int64, 
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.WorkflowScheduleID(scheduleEventID),
 			tag.WorkflowStartedID(startedEventID))
-		return nil, e.createServerError(opTag)
+		return nil, e.createInternalServerError(opTag)
 	}
 
 	var event *workflow.HistoryEvent
@@ -1891,8 +1895,7 @@ func (e *mutableStateBuilder) AddDecisionTaskFailedEvent(scheduleEventID int64, 
 		event = e.hBuilder.AddDecisionTaskFailedEvent(attr)
 	}
 
-	err := e.ReplicateDecisionTaskFailedEvent()
-	if err != nil {
+	if err := e.ReplicateDecisionTaskFailedEvent(); err != nil {
 		return nil, err
 	}
 
@@ -1924,7 +1927,7 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(decisionCompletedEve
 			tag.WorkflowScheduleID(ai.ScheduleID),
 			tag.WorkflowStartedID(ai.StartedID),
 			tag.Bool(isActivityRunning))
-		return nil, nil, e.createUserError(opTag)
+		return nil, nil, e.createCallerError(opTag)
 	}
 
 	event := e.hBuilder.AddActivityTaskScheduledEvent(decisionCompletedEventID, attributes)
@@ -2005,8 +2008,7 @@ func (e *mutableStateBuilder) AddActivityTaskStartedEvent(ai *persistence.Activi
 
 	if !ai.HasRetryPolicy {
 		event := e.hBuilder.AddActivityTaskStartedEvent(scheduleEventID, ai.Attempt, requestID, identity)
-		err := e.ReplicateActivityTaskStartedEvent(event)
-		if err != nil {
+		if err := e.ReplicateActivityTaskStartedEvent(event); err != nil {
 			return nil, err
 		}
 		return event, nil
@@ -2020,8 +2022,7 @@ func (e *mutableStateBuilder) AddActivityTaskStartedEvent(ai *persistence.Activi
 	ai.StartedTime = time.Now()
 	ai.LastHeartBeatUpdatedTime = ai.StartedTime
 	ai.StartedIdentity = identity
-	err := e.UpdateActivity(ai)
-	if err != nil {
+	if err := e.UpdateActivity(ai); err != nil {
 		return nil, err
 	}
 	e.syncActivityTasks[ai.ScheduleID] = struct{}{}
@@ -2057,7 +2058,7 @@ func (e *mutableStateBuilder) AddActivityTaskCompletedEvent(scheduleEventID, sta
 			tag.Bool(ok),
 			tag.WorkflowScheduleID(scheduleEventID),
 			tag.WorkflowStartedID(startedEventID))
-		return nil, e.createServerError(opTag)
+		return nil, e.createInternalServerError(opTag)
 	}
 
 	if err := e.addTransientActivityStartedEvent(scheduleEventID); err != nil {
@@ -2093,7 +2094,7 @@ func (e *mutableStateBuilder) AddActivityTaskFailedEvent(scheduleEventID, starte
 			tag.Bool(ok),
 			tag.WorkflowScheduleID(scheduleEventID),
 			tag.WorkflowStartedID(startedEventID))
-		return nil, e.createServerError(opTag)
+		return nil, e.createInternalServerError(opTag)
 	}
 
 	if err := e.addTransientActivityStartedEvent(scheduleEventID); err != nil {
@@ -2132,7 +2133,7 @@ func (e *mutableStateBuilder) AddActivityTaskTimedOutEvent(scheduleEventID, star
 			tag.WorkflowScheduleID(ai.ScheduleID),
 			tag.WorkflowStartedID(ai.StartedID),
 			tag.WorkflowTimeoutType(int64(timeoutType)))
-		return nil, e.createServerError(opTag)
+		return nil, e.createInternalServerError(opTag)
 	}
 
 	if err := e.addTransientActivityStartedEvent(scheduleEventID); err != nil {
@@ -2174,11 +2175,10 @@ func (e *mutableStateBuilder) AddActivityTaskCancelRequestedEvent(decisionComple
 			tag.Bool(isRunning),
 			tag.WorkflowActivityID(activityID))
 
-		return nil, nil, e.createUserError(opTag)
+		return nil, nil, e.createCallerError(opTag)
 	}
 
-	err := e.ReplicateActivityTaskCancelRequestedEvent(actCancelReqEvent)
-	if err != nil {
+	if err := e.ReplicateActivityTaskCancelRequestedEvent(actCancelReqEvent); err != nil {
 		return nil, nil, err
 	}
 
@@ -2230,7 +2230,7 @@ func (e *mutableStateBuilder) AddActivityTaskCanceledEvent(scheduleEventID, star
 			tag.WorkflowEventID(e.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.WorkflowScheduleID(scheduleEventID))
-		return nil, e.createServerError(opTag)
+		return nil, e.createInternalServerError(opTag)
 	}
 
 	// Verify cancel request as well.
@@ -2241,7 +2241,7 @@ func (e *mutableStateBuilder) AddActivityTaskCanceledEvent(scheduleEventID, star
 			tag.WorkflowScheduleID(scheduleEventID),
 			tag.WorkflowActivityID(ai.ActivityID),
 			tag.WorkflowStartedID(ai.StartedID))
-		return nil, e.createServerError(opTag)
+		return nil, e.createInternalServerError(opTag)
 	}
 
 	if err := e.addTransientActivityStartedEvent(scheduleEventID); err != nil {
@@ -2272,8 +2272,7 @@ func (e *mutableStateBuilder) AddCompletedWorkflowEvent(decisionCompletedEventID
 	}
 
 	event := e.hBuilder.AddCompletedWorkflowEvent(decisionCompletedEventID, attributes)
-	err := e.ReplicateWorkflowExecutionCompletedEvent(decisionCompletedEventID, event)
-	if err != nil {
+	if err := e.ReplicateWorkflowExecutionCompletedEvent(decisionCompletedEventID, event); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -2296,8 +2295,7 @@ func (e *mutableStateBuilder) AddFailWorkflowEvent(decisionCompletedEventID int6
 	}
 
 	event := e.hBuilder.AddFailWorkflowEvent(decisionCompletedEventID, attributes)
-	err := e.ReplicateWorkflowExecutionFailedEvent(decisionCompletedEventID, event)
-	if err != nil {
+	if err := e.ReplicateWorkflowExecutionFailedEvent(decisionCompletedEventID, event); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -2319,8 +2317,7 @@ func (e *mutableStateBuilder) AddTimeoutWorkflowEvent() (*workflow.HistoryEvent,
 	}
 
 	event := e.hBuilder.AddTimeoutWorkflowEvent()
-	err := e.ReplicateWorkflowExecutionTimedoutEvent(event.GetEventId(), event)
-	if err != nil {
+	if err := e.ReplicateWorkflowExecutionTimedoutEvent(event.GetEventId(), event); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -2350,12 +2347,11 @@ func (e *mutableStateBuilder) AddWorkflowExecutionCancelRequestedEvent(cause str
 			tag.Bool(e.executionInfo.CancelRequested),
 			tag.Key(e.executionInfo.CancelRequestID),
 		)
-		return nil, e.createServerError(opTag)
+		return nil, e.createInternalServerError(opTag)
 	}
 
 	event := e.hBuilder.AddWorkflowExecutionCancelRequestedEvent(cause, request)
-	err := e.ReplicateWorkflowExecutionCancelRequestedEvent(event)
-	if err != nil {
+	if err := e.ReplicateWorkflowExecutionCancelRequestedEvent(event); err != nil {
 		return nil, err
 	}
 
@@ -2378,8 +2374,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionCanceledEvent(decisionTaskComp
 	}
 
 	event := e.hBuilder.AddWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID, attributes)
-	err := e.ReplicateWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID, event)
-	if err != nil {
+	if err := e.ReplicateWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID, event); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -2441,12 +2436,11 @@ func (e *mutableStateBuilder) AddExternalWorkflowExecutionCancelRequested(initia
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.WorkflowInitiatedID(initiatedID),
 			tag.Bool(ok))
-		return nil, e.createServerError(opTag)
+		return nil, e.createInternalServerError(opTag)
 	}
 
 	event := e.hBuilder.AddExternalWorkflowExecutionCancelRequested(initiatedID, domain, workflowID, runID)
-	err := e.ReplicateExternalWorkflowExecutionCancelRequested(event)
-	if err != nil {
+	if err := e.ReplicateExternalWorkflowExecutionCancelRequested(event); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -2475,13 +2469,12 @@ func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionFailedEve
 			tag.WorkflowInitiatedID(initiatedID),
 			tag.Bool(ok))
 
-		return nil, e.createServerError(opTag)
+		return nil, e.createInternalServerError(opTag)
 	}
 
 	event := e.hBuilder.AddRequestCancelExternalWorkflowExecutionFailedEvent(decisionTaskCompletedEventID, initiatedID,
 		domain, workflowID, runID, cause)
-	err := e.ReplicateRequestCancelExternalWorkflowExecutionFailedEvent(event)
-	if err != nil {
+	if err := e.ReplicateRequestCancelExternalWorkflowExecutionFailedEvent(event); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -2543,12 +2536,11 @@ func (e *mutableStateBuilder) AddExternalWorkflowExecutionSignaled(initiatedID i
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.WorkflowInitiatedID(initiatedID),
 			tag.Bool(ok))
-		return nil, e.createServerError(opTag)
+		return nil, e.createInternalServerError(opTag)
 	}
 
 	event := e.hBuilder.AddExternalWorkflowExecutionSignaled(initiatedID, domain, workflowID, runID, control)
-	err := e.ReplicateExternalWorkflowExecutionSignaled(event)
-	if err != nil {
+	if err := e.ReplicateExternalWorkflowExecutionSignaled(event); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -2577,13 +2569,12 @@ func (e *mutableStateBuilder) AddSignalExternalWorkflowExecutionFailedEvent(
 			tag.WorkflowInitiatedID(initiatedID),
 			tag.Bool(ok))
 
-		return nil, e.createServerError(opTag)
+		return nil, e.createInternalServerError(opTag)
 	}
 
 	event := e.hBuilder.AddSignalExternalWorkflowExecutionFailedEvent(decisionTaskCompletedEventID, initiatedID, domain,
 		workflowID, runID, control, cause)
-	err := e.ReplicateSignalExternalWorkflowExecutionFailedEvent(event)
-	if err != nil {
+	if err := e.ReplicateSignalExternalWorkflowExecutionFailedEvent(event); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -2611,7 +2602,7 @@ func (e *mutableStateBuilder) AddTimerStartedEvent(decisionCompletedEventID int6
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.WorkflowStartedID(ti.StartedID),
 			tag.Bool(isTimerRunning))
-		return nil, nil, e.createUserError(opTag)
+		return nil, nil, e.createCallerError(opTag)
 	}
 
 	event := e.hBuilder.AddTimerStartedEvent(decisionCompletedEventID, request)
@@ -2659,13 +2650,12 @@ func (e *mutableStateBuilder) AddTimerFiredEvent(startedEventID int64, timerID s
 			tag.WorkflowStartedID(startedEventID),
 			tag.Bool(isTimerRunning),
 			tag.WorkflowTimerID(timerID))
-		return nil, e.createServerError(opTag)
+		return nil, e.createInternalServerError(opTag)
 	}
 
 	// Timer is running.
 	event := e.hBuilder.AddTimerFiredEvent(startedEventID, timerID)
-	err := e.ReplicateTimerFiredEvent(event)
-	if err != nil {
+	if err := e.ReplicateTimerFiredEvent(event); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -2704,7 +2694,7 @@ func (e *mutableStateBuilder) AddTimerCanceledEvent(
 				tag.ErrorTypeInvalidHistoryAction,
 				tag.Bool(isTimerRunning),
 				tag.WorkflowTimerID(timerID))
-			return nil, e.createUserError(opTag)
+			return nil, e.createCallerError(opTag)
 		}
 		timerStartedID = timerFiredEvent.TimerFiredEventAttributes.GetStartedEventId()
 	} else {
@@ -2714,8 +2704,7 @@ func (e *mutableStateBuilder) AddTimerCanceledEvent(
 	// Timer is running.
 	event := e.hBuilder.AddTimerCanceledEvent(timerStartedID, decisionCompletedEventID, timerID, identity)
 	if isTimerRunning {
-		err := e.ReplicateTimerCanceledEvent(event)
-		if err != nil {
+		if err := e.ReplicateTimerCanceledEvent(event); err != nil {
 			return nil, err
 		}
 	}
@@ -2764,8 +2753,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionTerminatedEvent(
 	}
 
 	event := e.hBuilder.AddWorkflowExecutionTerminatedEvent(request)
-	err := e.ReplicateWorkflowExecutionTerminatedEvent(event.GetEventId(), event)
-	if err != nil {
+	if err := e.ReplicateWorkflowExecutionTerminatedEvent(event.GetEventId(), event); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -2788,8 +2776,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionSignaled(
 	}
 
 	event := e.hBuilder.AddWorkflowExecutionSignaledEvent(signalName, input, identity)
-	err := e.ReplicateWorkflowExecutionSignaled(event)
-	if err != nil {
+	if err := e.ReplicateWorkflowExecutionSignaled(event); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -3114,7 +3101,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionStartedEvent(
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.Bool(ok),
 			tag.WorkflowInitiatedID(ci.InitiatedID))
-		return nil, e.createServerError(opTag)
+		return nil, e.createInternalServerError(opTag)
 	}
 
 	event := e.hBuilder.AddChildWorkflowExecutionStartedEvent(domain, execution, workflowType, initiatedID, header)
@@ -3152,12 +3139,11 @@ func (e *mutableStateBuilder) AddStartChildWorkflowExecutionFailedEvent(initiate
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.Bool(ok),
 			tag.WorkflowInitiatedID(initiatedID))
-		return nil, e.createServerError(opTag)
+		return nil, e.createInternalServerError(opTag)
 	}
 
 	event := e.hBuilder.AddStartChildWorkflowExecutionFailedEvent(initiatedID, cause, initiatedEventAttributes)
-	err := e.ReplicateStartChildWorkflowExecutionFailedEvent(event)
-	if err != nil {
+	if err := e.ReplicateStartChildWorkflowExecutionFailedEvent(event); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -3187,7 +3173,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCompletedEvent(initiatedI
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.Bool(ok),
 			tag.WorkflowInitiatedID(ci.InitiatedID))
-		return nil, e.createServerError(opTag)
+		return nil, e.createInternalServerError(opTag)
 	}
 
 	var domain *string
@@ -3200,8 +3186,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCompletedEvent(initiatedI
 
 	event := e.hBuilder.AddChildWorkflowExecutionCompletedEvent(domain, childExecution, workflowType, ci.InitiatedID,
 		ci.StartedID, attributes)
-	err := e.ReplicateChildWorkflowExecutionCompletedEvent(event)
-	if err != nil {
+	if err := e.ReplicateChildWorkflowExecutionCompletedEvent(event); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -3231,7 +3216,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionFailedEvent(initiatedID i
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.Bool(ok),
 			tag.WorkflowInitiatedID(ci.InitiatedID))
-		return nil, e.createServerError(opTag)
+		return nil, e.createInternalServerError(opTag)
 	}
 
 	var domain *string
@@ -3244,8 +3229,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionFailedEvent(initiatedID i
 
 	event := e.hBuilder.AddChildWorkflowExecutionFailedEvent(domain, childExecution, workflowType, ci.InitiatedID,
 		ci.StartedID, attributes)
-	err := e.ReplicateChildWorkflowExecutionFailedEvent(event)
-	if err != nil {
+	if err := e.ReplicateChildWorkflowExecutionFailedEvent(event); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -3275,7 +3259,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCanceledEvent(initiatedID
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.Bool(ok),
 			tag.WorkflowInitiatedID(ci.InitiatedID))
-		return nil, e.createServerError(opTag)
+		return nil, e.createInternalServerError(opTag)
 	}
 
 	var domain *string
@@ -3288,8 +3272,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCanceledEvent(initiatedID
 
 	event := e.hBuilder.AddChildWorkflowExecutionCanceledEvent(domain, childExecution, workflowType, ci.InitiatedID,
 		ci.StartedID, attributes)
-	err := e.ReplicateChildWorkflowExecutionCanceledEvent(event)
-	if err != nil {
+	if err := e.ReplicateChildWorkflowExecutionCanceledEvent(event); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -3319,7 +3302,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTerminatedEvent(initiated
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.Bool(ok),
 			tag.WorkflowInitiatedID(ci.InitiatedID))
-		return nil, e.createServerError(opTag)
+		return nil, e.createInternalServerError(opTag)
 	}
 
 	var domain *string
@@ -3332,8 +3315,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTerminatedEvent(initiated
 
 	event := e.hBuilder.AddChildWorkflowExecutionTerminatedEvent(domain, childExecution, workflowType, ci.InitiatedID,
 		ci.StartedID, attributes)
-	err := e.ReplicateChildWorkflowExecutionTerminatedEvent(event)
-	if err != nil {
+	if err := e.ReplicateChildWorkflowExecutionTerminatedEvent(event); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -3363,7 +3345,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTimedOutEvent(initiatedID
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.Bool(ok),
 			tag.WorkflowInitiatedID(ci.InitiatedID))
-		return nil, e.createServerError(opTag)
+		return nil, e.createInternalServerError(opTag)
 	}
 
 	var domain *string
@@ -3376,8 +3358,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTimedOutEvent(initiatedID
 
 	event := e.hBuilder.AddChildWorkflowExecutionTimedOutEvent(domain, childExecution, workflowType, ci.InitiatedID,
 		ci.StartedID, attributes)
-	err := e.ReplicateChildWorkflowExecutionTimedOutEvent(event)
-	if err != nil {
+	if err := e.ReplicateChildWorkflowExecutionTimedOutEvent(event); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -3419,11 +3400,11 @@ func (e *mutableStateBuilder) checkMutability(actionTag tag.Tag) error {
 	return nil
 }
 
-func (e *mutableStateBuilder) createServerError(actionTag tag.Tag) error {
-	return &workflow.InternalServiceError{Message: actionTag.Field().String}
+func (e *mutableStateBuilder) createInternalServerError(actionTag tag.Tag) error {
+	return &workflow.InternalServiceError{Message: actionTag.Field().String + " operation failed"}
 }
 
-func (e *mutableStateBuilder) createUserError(actionTag tag.Tag) error {
+func (e *mutableStateBuilder) createCallerError(actionTag tag.Tag) error {
 	return &workflow.BadRequestError{
 		Message: fmt.Sprintf(mutableStateInvalidHistoryActionMsgTemplate, actionTag.Field().String),
 	}
