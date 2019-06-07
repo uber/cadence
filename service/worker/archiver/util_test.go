@@ -59,13 +59,6 @@ func (s *UtilSuite) TestHistoriesEqual() {
 			clientHistoryEvents: &clientShared.History{
 				Events: []*clientShared.HistoryEvent{},
 			},
-			serverHistoryEvents: &shared.History{},
-			expectedEqual:       false,
-		},
-		{
-			clientHistoryEvents: &clientShared.History{
-				Events: []*clientShared.HistoryEvent{},
-			},
 			serverHistoryEvents: &shared.History{
 				Events: []*shared.HistoryEvent{},
 			},
@@ -75,32 +68,24 @@ func (s *UtilSuite) TestHistoriesEqual() {
 			clientHistoryEvents: &clientShared.History{
 				Events: []*clientShared.HistoryEvent{
 					{
-						EventId: common.Int64Ptr(10),
-						WorkflowExecutionStartedEventAttributes: &clientShared.WorkflowExecutionStartedEventAttributes{
-							ParentWorkflowDomain: common.StringPtr("parent"),
-						},
+						EventId:   common.Int64Ptr(10),
+						EventType: clientEventTypePtr(clientShared.EventTypeActivityTaskCancelRequested),
 					},
 					{
-						EventId: common.Int64Ptr(11),
-						WorkflowExecutionStartedEventAttributes: &clientShared.WorkflowExecutionStartedEventAttributes{
-							ContinuedFailureReason: common.StringPtr("reason"),
-						},
+						EventId:   common.Int64Ptr(11),
+						EventType: clientEventTypePtr(clientShared.EventTypeChildWorkflowExecutionCanceled),
 					},
 				},
 			},
 			serverHistoryEvents: &shared.History{
 				Events: []*shared.HistoryEvent{
 					{
-						EventId: common.Int64Ptr(10),
-						WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
-							ParentWorkflowDomain: common.StringPtr("parent"),
-						},
+						EventId:   common.Int64Ptr(10),
+						EventType: serverEventTypePtr(shared.EventTypeActivityTaskCancelRequested),
 					},
 					{
-						EventId: common.Int64Ptr(11),
-						WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
-							ContinuedFailureReason: common.StringPtr("reason"),
-						},
+						EventId:   common.Int64Ptr(11),
+						EventType: serverEventTypePtr(shared.EventTypeChildWorkflowExecutionCanceled),
 					},
 				},
 			},
@@ -110,38 +95,28 @@ func (s *UtilSuite) TestHistoriesEqual() {
 			clientHistoryEvents: &clientShared.History{
 				Events: []*clientShared.HistoryEvent{
 					{
-						EventId: common.Int64Ptr(10),
-						WorkflowExecutionStartedEventAttributes: &clientShared.WorkflowExecutionStartedEventAttributes{
-							ParentWorkflowDomain: common.StringPtr("parent"),
-						},
+						EventId:   common.Int64Ptr(10),
+						EventType: clientEventTypePtr(clientShared.EventTypeActivityTaskCancelRequested),
 					},
 					{
-						EventId: common.Int64Ptr(11),
-						WorkflowExecutionStartedEventAttributes: &clientShared.WorkflowExecutionStartedEventAttributes{
-							ContinuedFailureReason: common.StringPtr("reason"),
-						},
+						EventId:   common.Int64Ptr(11),
+						EventType: clientEventTypePtr(clientShared.EventTypeActivityTaskCancelRequested),
 					},
 					{
-						EventId: common.Int64Ptr(12),
-						WorkflowExecutionStartedEventAttributes: &clientShared.WorkflowExecutionStartedEventAttributes{
-							ContinuedFailureReason: common.StringPtr("reason"),
-						},
+						EventId:   common.Int64Ptr(12),
+						EventType: clientEventTypePtr(clientShared.EventTypeActivityTaskCancelRequested),
 					},
 				},
 			},
 			serverHistoryEvents: &shared.History{
 				Events: []*shared.HistoryEvent{
 					{
-						EventId: common.Int64Ptr(10),
-						WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
-							ParentWorkflowDomain: common.StringPtr("parent"),
-						},
+						EventId:   common.Int64Ptr(10),
+						EventType: serverEventTypePtr(shared.EventTypeActivityTaskCancelRequested),
 					},
 					{
-						EventId: common.Int64Ptr(11),
-						WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
-							ContinuedFailureReason: common.StringPtr("reason"),
-						},
+						EventId:   common.Int64Ptr(11),
+						EventType: serverEventTypePtr(shared.EventTypeActivityTaskCancelRequested),
 					},
 				},
 			},
@@ -151,32 +126,24 @@ func (s *UtilSuite) TestHistoriesEqual() {
 			clientHistoryEvents: &clientShared.History{
 				Events: []*clientShared.HistoryEvent{
 					{
-						EventId: common.Int64Ptr(10),
-						WorkflowExecutionStartedEventAttributes: &clientShared.WorkflowExecutionStartedEventAttributes{
-							ParentWorkflowDomain: common.StringPtr("parent"),
-						},
+						EventId:   common.Int64Ptr(10),
+						EventType: clientEventTypePtr(clientShared.EventTypeActivityTaskCancelRequested),
 					},
 					{
-						EventId: common.Int64Ptr(11),
-						WorkflowExecutionStartedEventAttributes: &clientShared.WorkflowExecutionStartedEventAttributes{
-							ContinuedFailureReason: common.StringPtr("reason"),
-						},
+						EventId:   common.Int64Ptr(11),
+						EventType: clientEventTypePtr(clientShared.EventTypeActivityTaskCancelRequested),
 					},
 				},
 			},
 			serverHistoryEvents: &shared.History{
 				Events: []*shared.HistoryEvent{
 					{
-						EventId: common.Int64Ptr(10),
-						WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
-							ParentWorkflowDomain: common.StringPtr("parent"),
-						},
+						EventId:   common.Int64Ptr(10),
+						EventType: serverEventTypePtr(shared.EventTypeWorkflowExecutionStarted),
 					},
 					{
-						EventId: common.Int64Ptr(12),
-						WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
-							ContinuedFailureReason: common.StringPtr("reason"),
-						},
+						EventId:   common.Int64Ptr(12),
+						EventType: serverEventTypePtr(shared.EventTypeActivityTaskFailed),
 					},
 				},
 			},
@@ -184,8 +151,7 @@ func (s *UtilSuite) TestHistoriesEqual() {
 		},
 	}
 	for _, tc := range testCases {
-		equal, err := historiesEqual(tc.clientHistoryEvents, tc.serverHistoryEvents)
-		s.NoError(err)
+		equal, _ := historiesEqual(tc.clientHistoryEvents, tc.serverHistoryEvents)
 		s.Equal(tc.expectedEqual, equal)
 	}
 }
@@ -319,4 +285,12 @@ func (s *UtilSuite) TestValidateRequest() {
 	for _, tc := range testCases {
 		s.Equal(tc.expectedErr, validateArchivalRequest(tc.request))
 	}
+}
+
+func serverEventTypePtr(e shared.EventType) *shared.EventType {
+	return &e
+}
+
+func clientEventTypePtr(e clientShared.EventType) *clientShared.EventType {
+	return &e
 }

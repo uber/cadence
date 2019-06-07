@@ -269,14 +269,14 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 			fetchedHistory.Events = append(fetchedHistory.Events, resp.History.Events...)
 			req.NextPageToken = resp.NextPageToken
 		}
-		equal, err := historiesEqual(fetchedHistory, uploadedHistory)
+		equal, reason := historiesEqual(fetchedHistory, uploadedHistory)
 		if err != nil {
 			scope.IncCounter(metrics.ArchiverCouldNotRunBlobIntegrityCheckCount)
 			logger.Error("failed to check if histories are equal", tag.Error(err))
 		}
 		if !equal {
 			scope.IncCounter(metrics.ArchiverBlobIntegrityCheckFailedCount)
-			logger.Error("uploaded history does not match fetched history")
+			logger.Error("uploaded history does not match fetched history", tag.ArchivalBlobIntegrityCheckFailReason(reason))
 		}
 	}
 	return nil

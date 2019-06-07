@@ -24,13 +24,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"fmt"
 	"math/rand"
 	"time"
 
 	"github.com/dgryski/go-farm"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"go.uber.org/cadence"
@@ -131,23 +131,38 @@ func errorDetails(err error) string {
 	return details
 }
 
-func historiesEqual(clientHistory *clientShared.History, serverHistory *shared.History) (bool, error) {
-	encoder := codec.NewThriftRWEncoder()
-	clientHistoryBytes, err := encoder.Encode(clientHistory)
-	if err != nil {
-		return false, err
+func historiesEqual(fetchedHistory *clientShared.History, uploadedHistory *shared.History) (bool, string) {
+	if fetchedHistory == nil && uploadedHistory == nil {
+		fmt.Println("andrew 1")
+		return true, ""
 	}
-	serverHistoryBytes, err := encoder.Encode(serverHistory)
-	if err != nil {
-		return false, err
+	if fetchedHistory == nil {
+		fmt.Println("andrew 2")
+		return false, "fetched history is nil while uploaded history is not nil"
 	}
-	if len(clientHistoryBytes) != len(serverHistoryBytes) {
-		return false, nil
+	if uploadedHistory == nil {
+		fmt.Println("andrew 3")
+		return false, "fetched history is not nil while uploaded history is nil"
 	}
-	for i := 0; i < len(clientHistoryBytes); i++ {
-		if clientHistoryBytes[i] != serverHistoryBytes[i] {
-			return false, nil
+	fmt.Println("andrew 4")
+	if len(fetchedHistory.Events) != len(uploadedHistory.Events) {
+		fmt.Println("andrew 5")
+		return false, fmt.Sprintf(
+			"fetched history and uploaded history are of different sizes, fetchedHistorySize:%v, uploadedHistorySize:%v",
+			len(fetchedHistory.Events),
+			len(uploadedHistory.Events),
+		)
+	}
+	fmt.Println("andrew 6")
+	for i := 0; i < len(fetchedHistory.Events); i++ {
+		fetchedHistoryEvent := fetchedHistory.Events[i]
+		uploadedHistoryEvent := uploadedHistory.Events[i]
+		if *fetchedHistoryEvent.EventId != *uploadedHistoryEvent.EventId {
+			return false, fmt.Sprintf("fetched history does not match uploaded history on event:%v", i)
+		}
+		if fetchedHistoryEvent.EventType.String() != uploadedHistoryEvent.EventType.String() {
+			return false, fmt.Sprintf("fetched history does not match uploaded history on event:%v", i)
 		}
 	}
-	return true, nil
+	return true, ""
 }
