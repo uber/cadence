@@ -864,8 +864,9 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(ctx ctx.Context,
 				return nil, &h.EventAlreadyStartedError{Message: "Activity task already started."}
 			}
 
-			_, err := msBuilder.AddActivityTaskStartedEvent(ai, scheduleID, requestID, request.PollRequest.GetIdentity())
-			if err != nil {
+			if _, err := msBuilder.AddActivityTaskStartedEvent(
+				ai, scheduleID, requestID, request.PollRequest.GetIdentity(),
+			); err != nil {
 				return nil, err
 			}
 
@@ -1941,8 +1942,9 @@ func (e *historyEngineImpl) failDecision(context workflowExecutionContext, sched
 		return nil, err
 	}
 
-	_, err = msBuilder.AddDecisionTaskFailedEvent(scheduleID, startedID, cause, nil, request.GetIdentity(), "", "", "", 0)
-	if err != nil {
+	if _, err = msBuilder.AddDecisionTaskFailedEvent(
+		scheduleID, startedID, cause, nil, request.GetIdentity(), "", "", "", 0,
+	); err != nil {
 		return nil, err
 	}
 
