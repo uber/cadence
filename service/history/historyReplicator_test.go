@@ -900,7 +900,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 		RunId:      common.StringPtr(currentRunID),
 	}
 	contextCurrentCacheKey := definition.NewWorkflowIdentifier(domainID, currentExecution.GetWorkflowId(), currentExecution.GetRunId())
-	s.Nil(s.historyReplicator.historyCache.PutIfNotExist(contextCurrentCacheKey, contextCurrent))
+	s.historyReplicator.historyCache.PutIfNotExist(contextCurrentCacheKey, contextCurrent)
 
 	msBuilderCurrent.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{
 		RunID: currentRunID,
@@ -2865,7 +2865,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		RunId:      common.StringPtr(currentRunID),
 	}
 	contextCurrentCacheKey := definition.NewWorkflowIdentifier(domainID, currentExecution.GetWorkflowId(), currentExecution.GetRunId())
-	s.Nil(s.historyReplicator.historyCache.PutIfNotExist(contextCurrentCacheKey, contextCurrent))
+	s.historyReplicator.historyCache.PutIfNotExist(contextCurrentCacheKey, contextCurrent)
 
 	msBuilderCurrent.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{
 		DomainID:   domainID,
@@ -3006,7 +3006,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		RunId:      common.StringPtr(currentRunID),
 	}
 	contextCurrentCacheKey := definition.NewWorkflowIdentifier(domainID, currentExecution.GetWorkflowId(), currentExecution.GetRunId())
-	s.Nil(s.historyReplicator.historyCache.PutIfNotExist(contextCurrentCacheKey, contextCurrent))
+	s.historyReplicator.historyCache.PutIfNotExist(contextCurrentCacheKey, contextCurrent)
 
 	msBuilderCurrent.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{
 		DomainID:        domainID,
@@ -3252,7 +3252,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		RunId:      common.StringPtr(currentRunID),
 	}
 	contextCurrentCacheKey := definition.NewWorkflowIdentifier(domainID, currentExecution.GetWorkflowId(), currentExecution.GetRunId())
-	s.Nil(s.historyReplicator.historyCache.PutIfNotExist(contextCurrentCacheKey, contextCurrent))
+	s.historyReplicator.historyCache.PutIfNotExist(contextCurrentCacheKey, contextCurrent)
 	msBuilderCurrent.On("IsWorkflowExecutionRunning").Return(false)
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(&persistence.GetDomainResponse{
 		Info:              &persistence.DomainInfo{ID: domainID, Name: "domain name"},
@@ -3373,7 +3373,7 @@ func (s *historyReplicatorSuite) TestConflictResolutionTerminateCurrentRunningIf
 		RunId:      common.StringPtr(currentRunID),
 	}
 	contextCurrentCacheKey := definition.NewWorkflowIdentifier(domainID, currentExecution.GetWorkflowId(), currentExecution.GetRunId())
-	s.Nil(s.historyReplicator.historyCache.PutIfNotExist(contextCurrentCacheKey, contextCurrent))
+	s.historyReplicator.historyCache.PutIfNotExist(contextCurrentCacheKey, contextCurrent)
 
 	currentNextEventID := int64(999)
 	msBuilderCurrent.On("GetReplicationState").Return(&persistence.ReplicationState{})
