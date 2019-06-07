@@ -50,6 +50,7 @@ type (
 		timerTasks                        []persistence.Task
 		failDecision                      bool
 		failDecisionCause                 *workflow.DecisionTaskFailedCause
+		failMessage                       *string
 		activityNotStartedCancelled       bool
 		continueAsNewBuilder              mutableState
 		stopProcessing                    bool // should stop processing any more decisions
@@ -92,6 +93,7 @@ func newDecisionTaskHandler(
 		timerTasks:                        nil,
 		failDecision:                      false,
 		failDecisionCause:                 nil,
+		failMessage:                       nil,
 		activityNotStartedCancelled:       false,
 		continueAsNewBuilder:              nil,
 		stopProcessing:                    false,
@@ -178,6 +180,25 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 	executionInfo := handler.mutableState.GetExecutionInfo()
 	domainID := executionInfo.DomainID
 
+	err := handler.attrValidator.validateActivityScheduleAttributes(attr, executionInfo.WorkflowTimeout)
+	if err != nil {
+		if _, ok := err.(*workflow.BadRequestError); ok {
+			return handler.handlerFailDecision(
+				workflow.DecisionTaskFailedCauseBadScheduleActivityAttributes,
+				err.Error(),
+			)
+		}
+		return err
+	}
+	failWorkflow, err := handler.sizeLimitChecker.failWorkflowIfBlobSizeExceedsLimit(
+		attr.Input,
+		"ScheduleActivityTaskDecisionAttributes.Input exceeds size limit.",
+	)
+	if err != nil || failWorkflow {
+		handler.stopProcessing = true
+		return err
+	}
+
 	targetDomainID := domainID
 	// First check if we need to use a different target domain to schedule activity
 	if attr.Domain != nil {
@@ -187,23 +208,6 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 			return &workflow.InternalServiceError{Message: "Unable to schedule activity across domain."}
 		}
 		targetDomainID = targetDomainEntry.GetInfo().ID
-	}
-
-	if err := handler.attrValidator.validateActivityScheduleAttributes(
-		attr, executionInfo.WorkflowTimeout,
-	); err != nil {
-		return err
-	}
-	failWorkflow, err := handler.sizeLimitChecker.failWorkflowIfBlobSizeExceedsLimit(
-		attr.Input,
-		"ScheduleActivityTaskDecisionAttributes.Input exceeds size limit.",
-	)
-	if err != nil {
-		return err
-	}
-	if failWorkflow {
-		handler.stopProcessing = true
-		return nil
 	}
 
 	scheduleEvent, _, err := handler.mutableState.AddActivityTaskScheduledEvent(handler.decisionTaskCompletedID, attr)
@@ -216,10 +220,9 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 		})
 		return nil
 	case *workflow.BadRequestError:
-		handler.failDecision = true
-		handler.failDecisionCause = workflow.DecisionTaskFailedCauseScheduleActivityDuplicateID.Ptr()
-		handler.stopProcessing = true
-		return nil
+		return handler.handlerFailDecision(
+			workflow.DecisionTaskFailedCauseScheduleActivityDuplicateID, "",
+		)
 	default:
 		return err
 	}
@@ -228,13 +231,23 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 func (handler *decisionTaskHandlerImpl) handleDecisionRequestCancelActivity(
 	attr *workflow.RequestCancelActivityTaskDecisionAttributes,
 ) error {
+
 	handler.metricsClient.IncCounter(
 		metrics.HistoryRespondDecisionTaskCompletedScope,
 		metrics.DecisionTypeCancelActivityCounter,
 	)
-	if err := handler.attrValidator.validateActivityCancelAttributes(attr); err != nil {
+
+	err := handler.attrValidator.validateActivityCancelAttributes(attr)
+	if err != nil {
+		if _, ok := err.(*workflow.BadRequestError); ok {
+			return handler.handlerFailDecision(
+				workflow.DecisionTaskFailedCauseBadRequestCancelActivityAttributes,
+				err.Error(),
+			)
+		}
 		return err
 	}
+
 	activityID := attr.GetActivityId()
 	actCancelReqEvent, ai, err := handler.mutableState.AddActivityTaskCancelRequestedEvent(
 		handler.decisionTaskCompletedID,
@@ -274,24 +287,32 @@ func (handler *decisionTaskHandlerImpl) handleDecisionRequestCancelActivity(
 func (handler *decisionTaskHandlerImpl) handleDecisionStartTimer(
 	attr *workflow.StartTimerDecisionAttributes,
 ) error {
+
 	handler.metricsClient.IncCounter(
 		metrics.HistoryRespondDecisionTaskCompletedScope,
 		metrics.DecisionTypeStartTimerCounter,
 	)
 
-	if err := handler.attrValidator.validateTimerScheduleAttributes(attr); err != nil {
+	err := handler.attrValidator.validateTimerScheduleAttributes(attr)
+	if err != nil {
+		if _, ok := err.(*workflow.BadRequestError); ok {
+			return handler.handlerFailDecision(
+				workflow.DecisionTaskFailedCauseBadStartTimerAttributes,
+				err.Error(),
+			)
+		}
 		return err
 	}
+
 	_, ti, err := handler.mutableState.AddTimerStartedEvent(handler.decisionTaskCompletedID, attr)
 	switch err.(type) {
 	case nil:
 		handler.timerBuilder.AddUserTimer(ti, handler.mutableState)
 		return nil
 	case *workflow.BadRequestError:
-		handler.failDecision = true
-		handler.failDecisionCause = workflow.DecisionTaskFailedCauseStartTimerDuplicateID.Ptr()
-		handler.stopProcessing = true
-		return nil
+		return handler.handlerFailDecision(
+			workflow.DecisionTaskFailedCauseStartTimerDuplicateID, "",
+		)
 	default:
 		return err
 	}
@@ -307,10 +328,26 @@ func (handler *decisionTaskHandlerImpl) handleDecisionCompleteWorkflow(
 	)
 
 	if handler.hasUnhandledEventsBeforeDecisions {
-		handler.failDecision = true
-		handler.failDecisionCause = workflow.DecisionTaskFailedCauseUnhandledDecision.Ptr()
+		return handler.handlerFailDecision(workflow.DecisionTaskFailedCauseUnhandledDecision, "")
+	}
+
+	err := handler.attrValidator.validateCompleteWorkflowExecutionAttributes(attr)
+	if err != nil {
+		if _, ok := err.(*workflow.BadRequestError); ok {
+			return handler.handlerFailDecision(
+				workflow.DecisionTaskFailedCauseBadCompleteWorkflowExecutionAttributes,
+				err.Error(),
+			)
+		}
+		return err
+	}
+	failWorkflow, err := handler.sizeLimitChecker.failWorkflowIfBlobSizeExceedsLimit(
+		attr.Result,
+		"CompleteWorkflowExecutionDecisionAttributes.Result exceeds size limit.",
+	)
+	if err != nil || failWorkflow {
 		handler.stopProcessing = true
-		return nil
+		return err
 	}
 
 	// If the decision has more than one completion event than just pick the first one
@@ -324,21 +361,6 @@ func (handler *decisionTaskHandlerImpl) handleDecisionCompleteWorkflow(
 			tag.WorkflowDecisionType(int64(workflow.DecisionTypeCompleteWorkflowExecution)),
 			tag.ErrorTypeMultipleCompletionDecisions,
 		)
-		return nil
-	}
-
-	if err := handler.attrValidator.validateCompleteWorkflowExecutionAttributes(attr); err != nil {
-		return err
-	}
-	failWorkflow, err := handler.sizeLimitChecker.failWorkflowIfBlobSizeExceedsLimit(
-		attr.Result,
-		"CompleteWorkflowExecutionDecisionAttributes.Result exceeds size limit.",
-	)
-	if err != nil {
-		return err
-	}
-	if failWorkflow {
-		handler.stopProcessing = true
 		return nil
 	}
 
@@ -378,10 +400,26 @@ func (handler *decisionTaskHandlerImpl) handleDecisionFailWorkflow(
 	)
 
 	if handler.hasUnhandledEventsBeforeDecisions {
-		handler.failDecision = true
-		handler.failDecisionCause = workflow.DecisionTaskFailedCauseUnhandledDecision.Ptr()
+		return handler.handlerFailDecision(workflow.DecisionTaskFailedCauseUnhandledDecision, "")
+	}
+
+	err := handler.attrValidator.validateFailWorkflowExecutionAttributes(attr)
+	if err != nil {
+		if _, ok := err.(*workflow.BadRequestError); ok {
+			return handler.handlerFailDecision(
+				workflow.DecisionTaskFailedCauseBadFailWorkflowExecutionAttributes,
+				err.Error(),
+			)
+		}
+		return err
+	}
+	failWorkflow, err := handler.sizeLimitChecker.failWorkflowIfBlobSizeExceedsLimit(
+		attr.Details,
+		"FailWorkflowExecutionDecisionAttributes.Details exceeds size limit.",
+	)
+	if err != nil || failWorkflow {
 		handler.stopProcessing = true
-		return nil
+		return err
 	}
 
 	// If the decision has more than one completion event than just pick the first one
@@ -395,21 +433,6 @@ func (handler *decisionTaskHandlerImpl) handleDecisionFailWorkflow(
 			tag.WorkflowDecisionType(int64(workflow.DecisionTypeFailWorkflowExecution)),
 			tag.ErrorTypeMultipleCompletionDecisions,
 		)
-		return nil
-	}
-
-	if err := handler.attrValidator.validateFailWorkflowExecutionAttributes(attr); err != nil {
-		return err
-	}
-	failWorkflow, err := handler.sizeLimitChecker.failWorkflowIfBlobSizeExceedsLimit(
-		attr.Details,
-		"FailWorkflowExecutionDecisionAttributes.Details exceeds size limit.",
-	)
-	if err != nil {
-		return err
-	}
-	if failWorkflow {
-		handler.stopProcessing = true
 		return nil
 	}
 
@@ -456,10 +479,18 @@ func (handler *decisionTaskHandlerImpl) handleDecisionCancelTimer(
 		metrics.DecisionTypeCancelTimerCounter,
 	)
 
-	if err := handler.attrValidator.validateTimerCancelAttributes(attr); err != nil {
+	err := handler.attrValidator.validateTimerCancelAttributes(attr)
+	if err != nil {
+		if _, ok := err.(*workflow.BadRequestError); ok {
+			return handler.handlerFailDecision(
+				workflow.DecisionTaskFailedCauseBadCancelTimerAttributes,
+				err.Error(),
+			)
+		}
 		return err
 	}
-	_, err := handler.mutableState.AddTimerCanceledEvent(
+
+	_, err = handler.mutableState.AddTimerCanceledEvent(
 		handler.decisionTaskCompletedID,
 		attr,
 		handler.identity)
@@ -494,13 +525,20 @@ func (handler *decisionTaskHandlerImpl) handleDecisionCancelWorkflow(
 
 	handler.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
 		metrics.DecisionTypeCancelWorkflowCounter)
-	// If new events came while we are processing the decision, we would fail this and give a chance to client
-	// to process the new event.
+
 	if handler.hasUnhandledEventsBeforeDecisions {
-		handler.failDecision = true
-		handler.failDecisionCause = workflow.DecisionTaskFailedCauseUnhandledDecision.Ptr()
-		handler.stopProcessing = true
-		return nil
+		return handler.handlerFailDecision(workflow.DecisionTaskFailedCauseUnhandledDecision, "")
+	}
+
+	err := handler.attrValidator.validateCancelWorkflowExecutionAttributes(attr)
+	if err != nil {
+		if _, ok := err.(*workflow.BadRequestError); ok {
+			return handler.handlerFailDecision(
+				workflow.DecisionTaskFailedCauseBadCancelWorkflowExecutionAttributes,
+				err.Error(),
+			)
+		}
+		return err
 	}
 
 	// If the decision has more than one completion event than just pick the first one
@@ -517,10 +555,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionCancelWorkflow(
 		return nil
 	}
 
-	if err := handler.attrValidator.validateCancelWorkflowExecutionAttributes(attr); err != nil {
-		return err
-	}
-	_, err := handler.mutableState.AddWorkflowExecutionCanceledEvent(handler.decisionTaskCompletedID, attr)
+	_, err = handler.mutableState.AddWorkflowExecutionCanceledEvent(handler.decisionTaskCompletedID, attr)
 	return err
 }
 
@@ -533,10 +568,18 @@ func (handler *decisionTaskHandlerImpl) handleDecisionRequestCancelExternalWorkf
 		metrics.DecisionTypeCancelExternalWorkflowCounter,
 	)
 
-	executionInfo := handler.mutableState.GetExecutionInfo()
-	if err := handler.attrValidator.validateCancelExternalWorkflowExecutionAttributes(attr); err != nil {
+	err := handler.attrValidator.validateCancelExternalWorkflowExecutionAttributes(attr)
+	if err != nil {
+		if _, ok := err.(*workflow.BadRequestError); ok {
+			return handler.handlerFailDecision(
+				workflow.DecisionTaskFailedCauseBadRequestCancelExternalWorkflowExecutionAttributes,
+				err.Error(),
+			)
+		}
 		return err
 	}
+
+	executionInfo := handler.mutableState.GetExecutionInfo()
 
 	foreignDomainID := ""
 	if attr.GetDomain() == "" {
@@ -577,19 +620,24 @@ func (handler *decisionTaskHandlerImpl) handleDecisionRecordMarker(
 		metrics.HistoryRespondDecisionTaskCompletedScope,
 		metrics.DecisionTypeRecordMarkerCounter,
 	)
-	if err := handler.attrValidator.validateRecordMarkerAttributes(attr); err != nil {
+
+	err := handler.attrValidator.validateRecordMarkerAttributes(attr)
+	if err != nil {
+		if _, ok := err.(*workflow.BadRequestError); ok {
+			return handler.handlerFailDecision(
+				workflow.DecisionTaskFailedCauseBadRecordMarkerAttributes,
+				err.Error(),
+			)
+		}
 		return err
 	}
 	failWorkflow, err := handler.sizeLimitChecker.failWorkflowIfBlobSizeExceedsLimit(
 		attr.Details,
 		"RecordMarkerDecisionAttributes.Details exceeds size limit.",
 	)
-	if err != nil {
-		return err
-	}
-	if failWorkflow {
+	if err != nil || failWorkflow {
 		handler.stopProcessing = true
-		return nil
+		return err
 	}
 
 	_, err = handler.mutableState.AddRecordMarkerEvent(handler.decisionTaskCompletedID, attr)
@@ -604,14 +652,31 @@ func (handler *decisionTaskHandlerImpl) handleDecisionContinueAsNewWorkflow(
 		metrics.HistoryRespondDecisionTaskCompletedScope,
 		metrics.DecisionTypeContinueAsNewCounter,
 	)
+
 	if handler.hasUnhandledEventsBeforeDecisions {
-		handler.failDecision = true
-		handler.failDecisionCause = workflow.DecisionTaskFailedCauseUnhandledDecision.Ptr()
-		handler.stopProcessing = true
-		return nil
+		return handler.handlerFailDecision(workflow.DecisionTaskFailedCauseUnhandledDecision, "")
 	}
 
 	executionInfo := handler.mutableState.GetExecutionInfo()
+	err := handler.attrValidator.validateContinueAsNewWorkflowExecutionAttributes(executionInfo, attr)
+	if err != nil {
+		if _, ok := err.(*workflow.BadRequestError); ok {
+			return handler.handlerFailDecision(
+				workflow.DecisionTaskFailedCauseBadContinueAsNewAttributes,
+				err.Error(),
+			)
+		}
+		return err
+	}
+	failWorkflow, err := handler.sizeLimitChecker.failWorkflowIfBlobSizeExceedsLimit(
+		attr.Input,
+		"ContinueAsNewWorkflowExecutionDecisionAttributes.Input exceeds size limit.",
+	)
+	if err != nil || failWorkflow {
+		handler.stopProcessing = true
+		return err
+	}
+
 	// If the decision has more than one completion event than just pick the first one
 	if !handler.mutableState.IsWorkflowExecutionRunning() {
 		handler.metricsClient.IncCounter(
@@ -623,21 +688,6 @@ func (handler *decisionTaskHandlerImpl) handleDecisionContinueAsNewWorkflow(
 			tag.WorkflowDecisionType(int64(workflow.DecisionTypeContinueAsNewWorkflowExecution)),
 			tag.ErrorTypeMultipleCompletionDecisions,
 		)
-		return nil
-	}
-
-	if err := handler.attrValidator.validateContinueAsNewWorkflowExecutionAttributes(executionInfo, attr); err != nil {
-		return err
-	}
-	failWorkflow, err := handler.sizeLimitChecker.failWorkflowIfBlobSizeExceedsLimit(
-		attr.Input,
-		"ContinueAsNewWorkflowExecutionDecisionAttributes.Input exceeds size limit.",
-	)
-	if err != nil {
-		return err
-	}
-	if failWorkflow {
-		handler.stopProcessing = true
 		return nil
 	}
 
@@ -678,19 +728,23 @@ func (handler *decisionTaskHandlerImpl) handleDecisionStartChildWorkflow(
 	)
 
 	executionInfo := handler.mutableState.GetExecutionInfo()
-	if err := handler.attrValidator.validateStartChildExecutionAttributes(executionInfo, attr); err != nil {
+	err := handler.attrValidator.validateStartChildExecutionAttributes(executionInfo, attr)
+	if err != nil {
+		if _, ok := err.(*workflow.BadRequestError); ok {
+			return handler.handlerFailDecision(
+				workflow.DecisionTaskFailedCauseBadStartChildExecutionAttributes,
+				err.Error(),
+			)
+		}
 		return err
 	}
 	failWorkflow, err := handler.sizeLimitChecker.failWorkflowIfBlobSizeExceedsLimit(
 		attr.Input,
 		"StartChildWorkflowExecutionDecisionAttributes.Input exceeds size limit.",
 	)
-	if err != nil {
-		return err
-	}
-	if failWorkflow {
+	if err != nil || failWorkflow {
 		handler.stopProcessing = true
-		return nil
+		return err
 	}
 
 	targetDomainID := executionInfo.DomainID
@@ -729,19 +783,23 @@ func (handler *decisionTaskHandlerImpl) handleDecisionSignalExternalWorkflow(
 	)
 
 	executionInfo := handler.mutableState.GetExecutionInfo()
-	if err := handler.attrValidator.validateSignalExternalWorkflowExecutionAttributes(attr); err != nil {
+	err := handler.attrValidator.validateSignalExternalWorkflowExecutionAttributes(attr)
+	if err != nil {
+		if _, ok := err.(*workflow.BadRequestError); ok {
+			return handler.handlerFailDecision(
+				workflow.DecisionTaskFailedCauseBadSignalWorkflowExecutionAttributes,
+				err.Error(),
+			)
+		}
 		return err
 	}
 	failWorkflow, err := handler.sizeLimitChecker.failWorkflowIfBlobSizeExceedsLimit(
 		attr.Input,
 		"SignalExternalWorkflowExecutionDecisionAttributes.Input exceeds size limit.",
 	)
-	if err != nil {
-		return err
-	}
-	if failWorkflow {
+	if err != nil || failWorkflow {
 		handler.stopProcessing = true
-		return nil
+		return err
 	}
 
 	foreignDomainID := ""
@@ -812,5 +870,16 @@ func (handler *decisionTaskHandlerImpl) retryCronContinueAsNew(
 	}
 
 	handler.continueAsNewBuilder = newStateBuilder
+	return nil
+}
+
+func (handler *decisionTaskHandlerImpl) handlerFailDecision(
+	failedCause workflow.DecisionTaskFailedCause,
+	failMessage string,
+) error {
+	handler.failDecision = true
+	handler.failDecisionCause = failedCause.Ptr()
+	handler.failMessage = common.StringPtr(failMessage)
+	handler.stopProcessing = true
 	return nil
 }
