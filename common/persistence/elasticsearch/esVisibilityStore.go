@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -34,7 +35,6 @@ import (
 
 	"github.com/cch123/elasticsql"
 	"github.com/olivere/elastic"
-	"github.com/pkg/errors"
 	"github.com/uber/cadence/.gen/go/indexer"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -338,13 +338,11 @@ func (v *esVisibilityStore) ListWorkflowExecutions(
 	if err != nil {
 		return nil, err
 	}
-	//fmt.Println("vancexu: list token is: ", token.SortValue, token)
 
 	queryDSL, sortField, err := v.getESQueryDSL(request, token)
 	if err != nil {
 		return nil, &workflow.BadRequestError{Message: fmt.Sprintf("Error when parse query: %v", err)}
 	}
-	//fmt.Println("vancexu: query", queryDSL)
 
 	ctx := context.Background()
 	searchResult, err := v.esClient.SearchWithDSL(ctx, v.index, queryDSL)
@@ -619,7 +617,6 @@ func shouldSearchAfter(token *esVisibilityPageToken) bool {
 func (v *esVisibilityStore) getValueOfSearchAfterInJSON(token *esVisibilityPageToken, sortField string) (string, error) {
 	var sortVal interface{}
 	var err error
-	//fmt.Printf("vancexu temp test: %T %v\n", token.SortValue, token.SortValue)
 	switch v.getFieldType(sortField) {
 	case workflow.IndexedValueTypeInt, workflow.IndexedValueTypeDatetime, workflow.IndexedValueTypeBool:
 		sortVal, err = token.SortValue.(json.Number).Int64()
@@ -779,8 +776,6 @@ func (v *esVisibilityStore) getListWorkflowExecutionsResponse(searchHits *elasti
 			tieBreaker := sortVals[1].(string)
 
 			nextPageToken, err = v.serializePageToken(&esVisibilityPageToken{SortValue: sortVal, TieBreaker: tieBreaker})
-			//fmt.Println("vancexu sortField: ", sortField)
-			//fmt.Println("vancexu pageToken: ", sortVal, tieBreaker)
 		}
 		if err != nil {
 			return nil, err

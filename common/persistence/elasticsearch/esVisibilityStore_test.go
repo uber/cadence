@@ -722,23 +722,30 @@ func (s *ESVisibilitySuite) TestGetESQueryDSL() {
 	s.Equal(definition.ExecutionTime, sortField)
 	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"DomainID":{"query":"bfd5c907-f899-4baf-a7b2-2ab85e623ebd"}}},{"bool":{"must":[{"match_all":{}}]}}]}},"from":0,"size":10,"sort":[{"ExecutionTime":"desc"},{"RunID":"desc"}]}`, dsl)
 
+	request.Query = `order by StartTime desc, CloseTime desc`
+	dsl, sortField, err = v.getESQueryDSL(request, token)
+	s.Equal(errors.New("only one field can be used to sort"), err)
+
+	request.Query = `order by CustomStringField desc`
+	dsl, sortField, err = v.getESQueryDSL(request, token)
+	s.Equal(errors.New("not able to sort by IndexedValueTypeString field, use IndexedValueTypeKeyword field"), err)
+
+	request.Query = `order by CustomIntField asc`
+	dsl, sortField, err = v.getESQueryDSL(request, token)
+	s.Nil(err)
+	s.Equal(definition.CustomIntField, sortField)
+	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"DomainID":{"query":"bfd5c907-f899-4baf-a7b2-2ab85e623ebd"}}},{"bool":{"must":[{"match_all":{}}]}}]}},"from":0,"size":10,"sort":[{"CustomIntField":"asc"},{"RunID":"desc"}]}`, dsl)
+
 	request.Query = `ExecutionTime < "unable to parse"`
 	_, _, err = v.getESQueryDSL(request, token)
 	s.Error(err)
 
-	token = &esVisibilityPageToken{
-		SortValue:  1,
-		TieBreaker: "a",
-	}
-	tokenBytes, err := v.serializePageToken(token)
-	s.Nil(err)
-	token, err = v.deserializePageToken(tokenBytes) // necessary, otherwise token is fake and not json decoded
-	s.Nil(err)
+	token = s.getTokenHelper(1)
 	request.Query = `WorkflowID = 'wid'`
 	dsl, sortField, err = v.getESQueryDSL(request, token)
 	s.Nil(err)
 	s.Equal(definition.StartTime, sortField)
-	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"DomainID":{"query":"bfd5c907-f899-4baf-a7b2-2ab85e623ebd"}}},{"bool":{"must":[{"match_phrase":{"WorkflowID":{"query":"wid"}}}]}}]}},"from":0,"size":10,"sort":[{"StartTime":"desc"},{"RunID":"desc"}],"search_after":[1,"a"]}`, dsl)
+	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"DomainID":{"query":"bfd5c907-f899-4baf-a7b2-2ab85e623ebd"}}},{"bool":{"must":[{"match_phrase":{"WorkflowID":{"query":"wid"}}}]}}]}},"from":0,"size":10,"sort":[{"StartTime":"desc"},{"RunID":"desc"}],"search_after":[1,"t"]}`, dsl)
 }
 
 func (s *ESVisibilitySuite) TestGetESQueryDSLForScan() {
@@ -992,4 +999,72 @@ func (s *ESVisibilitySuite) TestProcessAllValuesForKey() {
 func (s *ESVisibilitySuite) TestGetFieldType() {
 	s.Equal(workflow.IndexedValueTypeInt, s.visibilityStore.getFieldType("StartTime"))
 	s.Equal(workflow.IndexedValueTypeDatetime, s.visibilityStore.getFieldType("Attr.CustomDatetimeField"))
+}
+
+func (s *ESVisibilitySuite) TestGetValueOfSearchAfterInJSON() {
+	v := s.visibilityStore
+
+	// Int field
+	token := s.getTokenHelper(123)
+	sortField := definition.CustomIntField
+	res, err := v.getValueOfSearchAfterInJSON(token, sortField)
+	s.Nil(err)
+	s.Equal(`[123, "t"]`, res)
+
+	jsonData := `{"SortValue": -9223372036854776000, "TieBreaker": "t"}`
+	dec := json.NewDecoder(strings.NewReader(jsonData))
+	dec.UseNumber()
+	err = dec.Decode(&token)
+	s.Nil(err)
+	res, err = v.getValueOfSearchAfterInJSON(token, sortField)
+	s.Nil(err)
+	s.Equal(`[-9223372036854775808, "t"]`, res)
+
+	jsonData = `{"SortValue": 9223372036854776000, "TieBreaker": "t"}`
+	dec = json.NewDecoder(strings.NewReader(jsonData))
+	dec.UseNumber()
+	err = dec.Decode(&token)
+	s.Nil(err)
+	res, err = v.getValueOfSearchAfterInJSON(token, sortField)
+	s.Nil(err)
+	s.Equal(`[9223372036854775807, "t"]`, res)
+
+	// Double field
+	token = s.getTokenHelper(1.11)
+	sortField = definition.CustomDoubleField
+	res, err = v.getValueOfSearchAfterInJSON(token, sortField)
+	s.Nil(err)
+	s.Equal(`[1.11, "t"]`, res)
+
+	jsonData = `{"SortValue": "-Infinity", "TieBreaker": "t"}`
+	dec = json.NewDecoder(strings.NewReader(jsonData))
+	dec.UseNumber()
+	err = dec.Decode(&token)
+	s.Nil(err)
+	res, err = v.getValueOfSearchAfterInJSON(token, sortField)
+	s.Nil(err)
+	s.Equal(`["-Infinity", "t"]`, res)
+
+	// Keyword field
+	token = s.getTokenHelper("keyword")
+	sortField = definition.CustomKeywordField
+	res, err = v.getValueOfSearchAfterInJSON(token, sortField)
+	s.Nil(err)
+	s.Equal(`["keyword", "t"]`, res)
+
+	token = s.getTokenHelper(nil)
+	res, err = v.getValueOfSearchAfterInJSON(token, sortField)
+	s.Nil(err)
+	s.Equal(`[null, "t"]`, res)
+}
+
+func (s *ESVisibilitySuite) getTokenHelper(sortValue interface{}) *esVisibilityPageToken {
+	v := s.visibilityStore
+	token := &esVisibilityPageToken{
+		SortValue:  sortValue,
+		TieBreaker: "t",
+	}
+	encoded, _ := v.serializePageToken(token) // necessary, otherwise token is fake and not json decoded
+	token, _ = v.deserializePageToken(encoded)
+	return token
 }
