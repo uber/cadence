@@ -421,5 +421,88 @@ Let's complete the workflow by sending a signal with "Bye" greeting:
 ```text
 16:58:22.962 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 4: Bye World!
 ```
-Note that value of cout variable wasn't lost during the restart.
+Note that value of count variable was not lost during the restart. 
+
+Also note that while a single worker instance is used for this
+walk through, any real production deployment has multiple worker instances running. So any worker failure or restart does not delay any
+workflow execution as it is just migrated to any other available worker.
 ## Query
+So far we learned that the workflow code is fault tolerant and can update its state in reaction to external events in form of signals.
+Cadence provides a query feature that supports synchronously returning any information from a workflow to an external caller.
+
+Update the workflow code to:
+```java
+  public interface HelloWorld {
+    @WorkflowMethod
+    void sayHello(String name);
+
+    @SignalMethod
+    void updateGreeting(String greeting);
+
+    @QueryMethod
+    int getCount();
+  }
+
+  public static class HelloWorldImpl implements HelloWorld {
+
+    private String greeting = "Hello";
+    private int count = 0;
+
+    @Override
+    public void sayHello(String name) {
+      while (!"Bye".equals(greeting)) {
+        logger.info(++count + ": " + greeting + " " + name + "!");
+        String oldGreeting = greeting;
+        Workflow.await(() -> !Objects.equals(greeting, oldGreeting));
+      }
+      logger.info(++count + ": " + greeting + " " + name + "!");
+    }
+
+    @Override
+    public void updateGreeting(String greeting) {
+      this.greeting = greeting;
+    }
+
+    @Override
+    public int getCount() {
+      return count;
+    }
+  }
+```
+The new `getCount` method annotated with `@QueryMethod` was added to the workflow interface definition. It is allowed
+to have multiple query methods per workflow interface.
+
+The main restriction on the implementation of the query method is that it is not allowed to modify workflow state in any form. 
+It also is not allowed to block its thread in any way. It is usually just returns a value derived from the fields of the workflow object.
+Let's run the updated worker and send a couple signals to it:
+```bash
+cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow start  --workflow_id "HelloQuery" --tasklist HelloWorldTaskList --workflow_type HelloWorld::sayHello --execution_timeout 3600 --input \"World\"
+Started Workflow Id: HelloQuery, run Id: 1925f668-45b5-4405-8cba-74f7c68c3135
+cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow signal --workflow_id "HelloQuery" --name "HelloWorld::updateGreeting" --input \"Hi\"
+Signal workflow succeeded.
+cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow signal --workflow_id "HelloQuery" --name "HelloWorld::updateGreeting" --input \"Welcome\"
+Signal workflow succeeded.
+```
+The worker output:
+```text
+17:35:50.485 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 1: Hello World!
+17:36:10.483 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 2: Hi World!
+17:36:16.204 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 3: Welcome World!
+```
+Now let's query the workflow using CLI:
+```bash
+cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow query --workflow_id "HelloQuery" --query_type "HelloWorld::getCount"
+Query result as JSON:
+3
+```
+One limitation of the query is that it requires a worker process running as it is executing callback code. 
+An interesting feature of the query is that it works for completed workflows as well. Let's complete the workflow by sending "Bye" and query it.
+```bash
+cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow signal --workflow_id "HelloQuery" --name "HelloWorld::updateGreeting" --input \"Bye\"
+Signal workflow succeeded.
+cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow query --workflow_id "HelloQuery" --query_type "HelloWorld::getCount"
+Query result as JSON:
+4
+```
+Query method can accept parameters. It might be useful if only part of the workflow state should be returned.
+## Activities
