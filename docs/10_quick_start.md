@@ -14,7 +14,7 @@ Download Cadence docker-compose file:
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
 100   675  100   675    0     0    958      0 --:--:-- --:--:-- --:--:--   958
-quick_start: ls
+> ls
 docker-compose.yml
 ```
 Start Cadence Service:
@@ -98,7 +98,7 @@ Bad binaries to reset:
 | BINARY CHECKSUM | OPERATOR | START TIME | REASON |
 +-----------------+----------+------------+--------+
 +-----------------+----------+------------+--------+
-quick_start:
+>
 ```
 ## Implement Hello World Java Workflow
 
@@ -278,7 +278,7 @@ Error Details: WorkflowExecutionAlreadyStartedError{Message: Workflow execution 
 ('export CADENCE_CLI_SHOW_STACKS=1' to see stack traces)
 ```
 Oops, Cadence doesn't let to create workflow with the same ID. But there are use cases when it is desired. For example there is a need to reexecute the workflow for whatever reason.
-This is achieved by specifying a special flag _Workflow ID Reuse Policy_. The value of 1 means AllowDuplicate:
+This is achieved by specifying a special flag _Workflow ID Reuse Policy_. The value of 1 means `AllowDuplicate`:
 ```bash
 > docker run --network=host --rm ubercadence/cli:master --do test-domain workflow start  --workflowidreusepolicy 1 --workflow_id "HelloCadence1" --tasklist HelloWorldTaskList --workflow_type HelloWorld::sayHello --execution_timeout 3600 --input \"Cadence\"
 Started Workflow Id: HelloCadence1, run Id: 37a740e5-838c-4020-aed6-1111b0689c38
@@ -291,8 +291,12 @@ After the second start the workflow list is:
 ```
 Now it might be clear why every workflow has two IDs: Workflow ID and Run ID. As the Workflow ID can be reused the Run ID uniquely identifies a particular run of a workflow. Run ID is 
 system generated and cannot be controlled by client code.
+
+Note that ID Reuse Policy applies only when previous run of a workflow is completed. 
+Under no circumstances Cadence allows more than one instance of open workflow with the same ID. 
+
 ### CLI Help
-You might be asking how do I now that 1 means AllowDuplicate. It came from the help command:
+You might be asking how to discover that 1 means `AllowDuplicate`. It came from the help command:
 ```bash
 > docker run --network=host --rm ubercadence/cli:master workflow help start
 NAME:
@@ -339,17 +343,13 @@ So far our workflow is not very interesting. Let's change it to listen on an ext
 
     @Override
     public void sayHello(String name) {
+      int count = 0;
       while (!"Bye".equals(greeting)) {
-        logger.info(greeting + " " + name + "!");
+        logger.info(++count + ": " + greeting + " " + name + "!");
         String oldGreeting = greeting;
-        // await blocks until the condition is satisfied
-        Workflow.await(()-> !Objects.equals(greeting, oldGreeting));
+        Workflow.await(() -> !Objects.equals(greeting, oldGreeting));
       }
-    }
-
-    @Override
-    public void updateGreeting(String greeting) {
-      this.greeting = greeting;
+      logger.info(++count + ": " + greeting + " " + name + "!");
     }
   }
 ```
@@ -361,49 +361,44 @@ The updated workflow implementation demonstrates a few important Cadence concept
 have fields of any complex type. Another one is `Workflow.await` function that blocks until the function it receives as a parameter evaluates to true.
 The condition is going to be evaluated only on workflow state changes, so it is not a busy wait in traditional sense.   
 ```bash
-> docker run --network=host --rm ubercadence/cli:master --do test-domain workflow start  --workflowidreusepolicy 1 --workflow_id "Hello2" --tasklist HelloWorldTaskList --workflow_type HelloWorld::sayHello --execution_timeout 3600 --input \"World\"
-Started Workflow Id: Hello2, run Id: 3c1c3ff4-4206-4c8f-b7f8-9d7d95ad32f4
+cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow start  --workflow_id "HelloSignal" --tasklist HelloWorldTaskList --workflow_type HelloWorld::sayHello --execution_timeout 3600 --input \"World\"
+Started Workflow Id: HelloSignal, run Id: 6fa204cb-f478-469a-9432-78060b83b6cd
 ```
 Program output:
 ```text
-16:03:38.346 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - Hello World!
+16:53:56.120 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 1: Hello World!
 ```
 Let's send a signal using CLI:
 ```bash
-> docker run --network=host --rm ubercadence/cli:master --do test-domain workflow signal --workflow_id "Hello2" --name "HelloWorld::updateGreeting" --input \"Hi\"
+cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow signal --workflow_id "HelloSignal" --name "HelloWorld::updateGreeting" --input \"Hi\"
 Signal workflow succeeded.
 ```
 Program output:
 ```text
-16:03:38.346 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - Hello World!
-16:14:02.315 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - Hi World!
+16:53:56.120 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 1: Hello World!
+16:54:57.901 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 2: Hi World!
 ```
 Try sending the same signal with the same input again. Note that output doesn't change. It happens because await condition
-doesn't see the change in the value in this case. By a new greeting unblocks it:
+doesn't unblock when it sees the same value. By a new greeting unblocks it:
 ```bash
-> docker run --network=host --rm ubercadence/cli:master --do test-domain workflow signal --workflow_id "Hello2" --name "HelloWorld::updateGreeting" --input \"Welcome\"
+cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow signal --workflow_id "HelloSignal" --name "HelloWorld::updateGreeting" --input \"Welcome\"
 Signal workflow succeeded.
 ```
 Program output:
 ```text
-16:03:38.346 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - Hello World!
-16:14:02.315 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - Hi World!
-16:17:05.997 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - Welcome World!
+16:53:56.120 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 1: Hello World!
+16:54:57.901 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 2: Hi World!
+16:56:24.400 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 3: Welcome World!
 ```
 Now shutdown the worker and send the same signal again:
 ```bash
-> docker run --network=host --rm ubercadence/cli:master --do test-domain workflow signal --workflow_id "Hello2" --name "HelloWorld::updateGreeting" --input \"Welcome\"
+cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow signal --workflow_id "HelloSignal" --name "HelloWorld::updateGreeting" --input \"Welcome\"
 Signal workflow succeeded.
 ```
 Note that sending signals as well as starting workflows does not need a worker running. The requests are queued inside the Cadence service. 
 
-Now bring the worker back. Note that it doesn't log anything besides the standard startup messages:
-```text
-16:19:15.609 [main] INFO  c.u.c.s.WorkflowServiceTChannel - Initialized TChannel for service cadence-frontend, LibraryVersion: 2.2.0, FeatureVersion: 1.0.0
-16:19:15.700 [main] INFO  c.u.cadence.internal.worker.Poller - start(): Poller{options=PollerOptions{maximumPollRateIntervalMilliseconds=1000, maximumPollRatePerSecond=0.0, pollBackoffCoefficient=2.0, pollBackoffInitialInterval=PT0.2S, pollBackoffMaximumInterval=PT20S, pollThreadCount=1, pollThreadNamePrefix='Workflow Poller taskList="HelloWorldTaskList", domain="test-domain", type="workflow"'}, identity=57994@maxim-C02XD0AAJGH6}
-16:19:15.702 [main] INFO  c.u.cadence.internal.worker.Poller - start(): Poller{options=PollerOptions{maximumPollRateIntervalMilliseconds=1000, maximumPollRatePerSecond=0.0, pollBackoffCoefficient=2.0, pollBackoffInitialInterval=PT0.2S, pollBackoffMaximumInterval=PT20S, pollThreadCount=1, pollThreadNamePrefix='null'}, identity=20676238-1269-4d26-b7ef-ec06b188a6cf}
-```
-It happens because it ignores the already received signal that contains the same input as the current value of greeting. 
+Now bring the worker back. Note that it doesn't log anything besides the standard startup messages.
+It happens because it ignores the queued signal that contains the same input as the current value of greeting. 
 Note that the restart of the worker didn't affect the workflow execution. It is still blocked on the same line of code as before the failure.
 This is the most important feature of Cadence. The workflow code doesn't need to deal with worker failures at all. It state is fully recovered to its current state that includes all the
 local variables and threads.
@@ -424,8 +419,7 @@ Yes, indeed the workflow is blocked on await. This feature works for any open wo
 Let's complete the workflow by sending a signal with "Bye" greeting:
  
 ```text
-16:19:15.609 [main] INFO  c.u.c.s.WorkflowServiceTChannel - Initialized TChannel for service cadence-frontend, LibraryVersion: 2.2.0, FeatureVersion: 1.0.0
-16:19:15.700 [main] INFO  c.u.cadence.internal.worker.Poller - start(): Poller{options=PollerOptions{maximumPollRateIntervalMilliseconds=1000, maximumPollRatePerSecond=0.0, pollBackoffCoefficient=2.0, pollBackoffInitialInterval=PT0.2S, pollBackoffMaximumInterval=PT20S, pollThreadCount=1, pollThreadNamePrefix='Workflow Poller taskList="HelloWorldTaskList", domain="test-domain", type="workflow"'}, identity=57994@maxim-C02XD0AAJGH6}
-16:19:15.702 [main] INFO  c.u.cadence.internal.worker.Poller - start(): Poller{options=PollerOptions{maximumPollRateIntervalMilliseconds=1000, maximumPollRatePerSecond=0.0, pollBackoffCoefficient=2.0, pollBackoffInitialInterval=PT0.2S, pollBackoffMaximumInterval=PT20S, pollThreadCount=1, pollThreadNamePrefix='null'}, identity=20676238-1269-4d26-b7ef-ec06b188a6cf}
-16:32:49.005 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - Bye World!!!
+16:58:22.962 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 4: Bye World!
 ```
+Note that value of cout variable wasn't lost during the restart.
+## Query
