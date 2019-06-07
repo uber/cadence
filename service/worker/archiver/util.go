@@ -133,27 +133,21 @@ func errorDetails(err error) string {
 
 func historiesEqual(fetchedHistory *clientShared.History, uploadedHistory *shared.History) (bool, string) {
 	if fetchedHistory == nil && uploadedHistory == nil {
-		fmt.Println("andrew 1")
 		return true, ""
 	}
 	if fetchedHistory == nil {
-		fmt.Println("andrew 2")
 		return false, "fetched history is nil while uploaded history is not nil"
 	}
 	if uploadedHistory == nil {
-		fmt.Println("andrew 3")
 		return false, "fetched history is not nil while uploaded history is nil"
 	}
-	fmt.Println("andrew 4")
 	if len(fetchedHistory.Events) != len(uploadedHistory.Events) {
-		fmt.Println("andrew 5")
 		return false, fmt.Sprintf(
 			"fetched history and uploaded history are of different sizes, fetchedHistorySize:%v, uploadedHistorySize:%v",
 			len(fetchedHistory.Events),
 			len(uploadedHistory.Events),
 		)
 	}
-	fmt.Println("andrew 6")
 	for i := 0; i < len(fetchedHistory.Events); i++ {
 		fetchedHistoryEvent := fetchedHistory.Events[i]
 		uploadedHistoryEvent := uploadedHistory.Events[i]
