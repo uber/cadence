@@ -97,21 +97,21 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	clusterMetadata := container.ClusterMetadata
 	domainCacheEntry, err := getDomainByID(ctx, domainCache, request.DomainID)
 	if err != nil {
-		logger.Error(uploadErrorMsg, tag.UploadFailReason("could not get domain cache entry"))
+		logger.Error(uploadErrorMsg, tag.ArchivalUploadFailReason(errorDetails(err)), tag.Error(err))
 		return err
 	}
 	if clusterMetadata.ArchivalConfig().GetArchivalStatus() != cluster.ArchivalEnabled {
-		logger.Error(uploadSkipMsg, tag.UploadFailReason("cluster is not enabled for archival"))
+		logger.Error(uploadSkipMsg, tag.ArchivalUploadFailReason("cluster is not enabled for archival"))
 		scope.IncCounter(metrics.ArchiverSkipUploadCount)
 		return nil
 	}
 	if domainCacheEntry.GetConfig().ArchivalStatus != shared.ArchivalStatusEnabled {
-		logger.Error(uploadSkipMsg, tag.UploadFailReason("domain is not enabled for archival"))
+		logger.Error(uploadSkipMsg, tag.ArchivalUploadFailReason("domain is not enabled for archival"))
 		scope.IncCounter(metrics.ArchiverSkipUploadCount)
 		return nil
 	}
 	if err := validateArchivalRequest(&request); err != nil {
-		logger.Error(uploadErrorMsg, tag.UploadFailReason(err.Error()))
+		logger.Error(uploadErrorMsg, tag.ArchivalUploadFailReason(err.Error()))
 		return err
 	}
 
@@ -124,16 +124,17 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	blobstoreClient := container.Blobstore
 
 	handledLastBlob := false
+	var totalUploadSize int64
 	for pageToken := common.FirstBlobPageToken; !handledLastBlob; pageToken++ {
 		key, err := NewHistoryBlobKey(request.DomainID, request.WorkflowID, request.RunID, request.CloseFailoverVersion, pageToken)
 		if err != nil {
-			logger.Error(uploadErrorMsg, tag.UploadFailReason("could not construct blob key"))
+			logger.Error(uploadErrorMsg, tag.ArchivalUploadFailReason("could not construct blob key"))
 			return cadence.NewCustomError(errConstructKey, err.Error())
 		}
 
 		tags, err := getTags(ctx, blobstoreClient, request.BucketName, key)
 		if err != nil && err != blobstore.ErrBlobNotExists {
-			logger.Error(uploadErrorMsg, tag.UploadFailReason("could not get blob tags"), tag.ArchivalBlobKey(key.String()))
+			logger.Error(uploadErrorMsg, tag.ArchivalUploadFailReason(errorDetails(err)), tag.ArchivalBlobKey(key.String()), tag.Error(err))
 			return err
 		}
 
@@ -152,13 +153,13 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 
 		historyBlob, err := getBlob(ctx, historyBlobReader, pageToken)
 		if err != nil {
-			logger.Error(uploadErrorMsg, tag.UploadFailReason("could not get history blob from reader"))
+			logger.Error(uploadErrorMsg, tag.ArchivalUploadFailReason(errorDetails(err)), tag.Error(err))
 			return err
 		}
 
 		if historyMutated(historyBlob, &request) {
 			scope.IncCounter(metrics.ArchiverHistoryMutatedCount)
-			logger.Error(uploadErrorMsg, tag.UploadFailReason("history was mutated during archiving"))
+			logger.Error(uploadErrorMsg, tag.ArchivalUploadFailReason("history was mutated during archiving"))
 			return cadence.NewCustomError(errHistoryMutated)
 		}
 
@@ -170,35 +171,50 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 
 		blob, reason, err := constructBlob(historyBlob, container.Config.EnableArchivalCompression(domainName))
 		if err != nil {
-			logger.Error(uploadErrorMsg, tag.UploadFailReason(reason), tag.ArchivalBlobKey(key.String()))
+			logger.Error(uploadErrorMsg, tag.ArchivalUploadFailReason(reason), tag.ArchivalBlobKey(key.String()))
 			return cadence.NewCustomError(errConstructBlob, err.Error())
 		}
+		currBlobSize := int64(len(blob.Body))
+		scope.RecordTimer(metrics.ArchiverBlobSize, time.Duration(currBlobSize))
+		totalUploadSize = totalUploadSize + currBlobSize
 		if runConstTest {
 			existingBlob, err := downloadBlob(ctx, blobstoreClient, request.BucketName, key)
 			if err != nil {
-				logger.Error("failed to download blob for deterministic construction verification", tag.Error(err))
+				logger.Error("failed to download blob for deterministic construction verification", tag.ArchivalUploadFailReason(errorDetails(err)), tag.Error(err))
 				scope.IncCounter(metrics.ArchiverCouldNotRunDeterministicConstructionCheckCount)
-			} else if !blob.Equal(existingBlob) {
-				logger.Error("deterministic construction check failed")
+			} else if equal, reason := blob.EqualWithDetails(existingBlob); !equal {
+				logger.Error("deterministic construction check failed",
+					tag.ArchivalBlobKey(key.String()),
+					tag.ArchivalDeterministicConstructionCheckFailReason(reason))
 				scope.IncCounter(metrics.ArchiverDeterministicConstructionCheckFailedCount)
+
+				nonDeterministicBlobKey, err := NewNonDeterministicBlobKey()
+				if err != nil {
+					logger.Error("failed to construct non-deterministic blob key", tag.Error(err))
+				} else if err := uploadBlob(ctx, blobstoreClient, request.BucketName, nonDeterministicBlobKey, blob); err != nil {
+					logger.Error("failed to upload non-deterministic blob", tag.ArchivalUploadFailReason(errorDetails(err)), tag.Error(err))
+				} else {
+					logger.Info("uploaded non-deterministic blob", tag.ArchivalBlobKey(key.String()), tag.ArchivalNonDeterministicBlobKey(nonDeterministicBlobKey.String()))
+				}
 			}
 			continue
 		}
 
 		if err := uploadBlob(ctx, blobstoreClient, request.BucketName, key, blob); err != nil {
-			logger.Error(uploadErrorMsg, tag.UploadFailReason("could not upload blob"), tag.ArchivalBlobKey(key.String()))
+			logger.Error(uploadErrorMsg, tag.ArchivalUploadFailReason(errorDetails(err)), tag.ArchivalBlobKey(key.String()), tag.Error(err))
 			return err
 		}
 		handledLastBlob = *historyBlob.Header.IsLast
 	}
+	scope.RecordTimer(metrics.ArchiverTotalUploadSize, time.Duration(totalUploadSize))
 	indexBlobKey, err := NewHistoryIndexBlobKey(request.DomainID, request.WorkflowID, request.RunID)
 	if err != nil {
-		logger.Error(uploadErrorMsg, tag.UploadFailReason("could not construct index blob key"))
+		logger.Error(uploadErrorMsg, tag.ArchivalUploadFailReason("could not construct index blob key"))
 		return cadence.NewCustomError(errConstructKey, err.Error())
 	}
 	existingVersions, err := getTags(ctx, blobstoreClient, request.BucketName, indexBlobKey)
 	if err != nil && err != blobstore.ErrBlobNotExists {
-		logger.Error(uploadErrorMsg, tag.UploadFailReason("could not get index blob tags"), tag.ArchivalBlobKey(indexBlobKey.String()))
+		logger.Error(uploadErrorMsg, tag.ArchivalUploadFailReason(errorDetails(err)), tag.ArchivalBlobKey(indexBlobKey.String()), tag.Error(err))
 		return err
 	}
 	indexBlobWithVersion := addVersion(request.CloseFailoverVersion, existingVersions)
@@ -206,7 +222,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 		return nil
 	}
 	if err := uploadBlob(ctx, blobstoreClient, request.BucketName, indexBlobKey, indexBlobWithVersion); err != nil {
-		logger.Error(uploadErrorMsg, tag.UploadFailReason("could not upload index blob"), tag.ArchivalBlobKey(indexBlobKey.String()))
+		logger.Error(uploadErrorMsg, tag.ArchivalUploadFailReason(errorDetails(err)), tag.ArchivalBlobKey(indexBlobKey.String()), tag.Error(err))
 		return err
 	}
 	return nil
@@ -232,13 +248,13 @@ func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	logger := tagLoggerWithRequest(container.Logger, request).WithTags(tag.Attempt(activity.GetInfo(ctx).Attempt))
 	if request.EventStoreVersion == persistence.EventStoreVersionV2 {
 		if err := deleteHistoryV2(ctx, container, request); err != nil {
-			logger.Error("failed to delete history from events v2", tag.Error(err))
+			logger.Error("failed to delete history from events v2", tag.ArchivalDeleteHistoryFailReason(errorDetails(err)), tag.Error(err))
 			return err
 		}
 		return nil
 	}
 	if err := deleteHistoryV1(ctx, container, request); err != nil {
-		logger.Error("failed to delete history from events v1", tag.Error(err))
+		logger.Error("failed to delete history from events v1", tag.ArchivalDeleteHistoryFailReason(errorDetails(err)), tag.Error(err))
 		return err
 	}
 	return nil
@@ -279,7 +295,7 @@ func deleteBlobActivity(ctx context.Context, request ArchiveRequest) (err error)
 	}
 	existingVersions, err := getTags(ctx, blobstoreClient, request.BucketName, indexBlobKey)
 	if err != nil && err != blobstore.ErrBlobNotExists {
-		logger.Error("could not get index blob tags", tag.ArchivalBlobKey(indexBlobKey.String()), tag.Error(err))
+		logger.Error("could not get index blob tags", tag.ArchivalBlobKey(indexBlobKey.String()), tag.ArchivalDeleteHistoryFailReason(errorDetails(err)), tag.Error(err))
 		return err
 	}
 	if err != blobstore.ErrBlobNotExists {
@@ -288,12 +304,12 @@ func deleteBlobActivity(ctx context.Context, request ArchiveRequest) (err error)
 			if len(indexBlobWithoutVersion.Tags) == 0 {
 				// We removed the last version in the tag, delete the whole index blob.
 				if _, err := deleteBlob(ctx, blobstoreClient, request.BucketName, indexBlobKey); err != nil {
-					logger.Error("failed to delete index blob", tag.ArchivalBlobKey(indexBlobKey.String()), tag.Error(err))
+					logger.Error("failed to delete index blob", tag.ArchivalBlobKey(indexBlobKey.String()), tag.ArchivalDeleteHistoryFailReason(errorDetails(err)), tag.Error(err))
 					return err
 				}
 			} else {
 				if err := uploadBlob(ctx, blobstoreClient, request.BucketName, indexBlobKey, indexBlobWithoutVersion); err != nil {
-					logger.Error("could not upload index blob", tag.ArchivalBlobKey(indexBlobKey.String()), tag.Error(err))
+					logger.Error("could not upload index blob", tag.ArchivalBlobKey(indexBlobKey.String()), tag.ArchivalDeleteHistoryFailReason(errorDetails(err)), tag.Error(err))
 					return err
 				}
 			}
@@ -318,7 +334,7 @@ func deleteBlobActivity(ctx context.Context, request ArchiveRequest) (err error)
 
 		deleted, err := deleteBlob(ctx, blobstoreClient, request.BucketName, key)
 		if err != nil {
-			logger.Error("failed to delete blob", tag.ArchivalBlobKey(key.String()), tag.Error(err))
+			logger.Error("failed to delete blob", tag.ArchivalBlobKey(key.String()), tag.ArchivalDeleteHistoryFailReason(errorDetails(err)), tag.Error(err))
 			return err
 		}
 		if !deleted && pageToken != startPageToken {

@@ -45,6 +45,7 @@ const (
 )
 
 var (
+	// ErrWorkflowFinished indicates trying to mutate mutable state after workflow finished
 	ErrWorkflowFinished = &workflow.InternalServiceError{Message: "invalid mutable state action: mutation after finish"}
 )
 
