@@ -74,6 +74,7 @@ type (
 		ArchiverConcurrency                       dynamicconfig.IntPropertyFn
 		ArchivalsPerIteration                     dynamicconfig.IntPropertyFn
 		DeterministicConstructionCheckProbability dynamicconfig.FloatPropertyFn
+		BlobIntegrityCheckProbability             dynamicconfig.FloatPropertyFn
 		TimeLimitPerArchivalIteration             dynamicconfig.DurationPropertyFn
 	}
 

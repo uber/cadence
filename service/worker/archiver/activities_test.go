@@ -329,7 +329,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Success_BlobAlreadyExists() 
 		DomainCache:     domainCache,
 		ClusterMetadata: mockClusterMetadata,
 		Blobstore:       mockBlobstore,
-		Config:          getConfig(false),
+		Config:          getConfig(false, false),
 	}
 	env := s.NewTestActivityEnvironment()
 	env.SetWorkerOptions(worker.Options{
@@ -365,7 +365,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Success_MultipleBlobsAlready
 		DomainCache:     domainCache,
 		ClusterMetadata: mockClusterMetadata,
 		Blobstore:       mockBlobstore,
-		Config:          getConfig(false),
+		Config:          getConfig(false, false),
 	}
 	env := s.NewTestActivityEnvironment()
 	env.SetWorkerOptions(worker.Options{
@@ -475,7 +475,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_CouldNotRunCheck() {
 		DomainCache:       domainCache,
 		ClusterMetadata:   mockClusterMetadata,
 		Blobstore:         mockBlobstore,
-		Config:            getConfig(true),
+		Config:            getConfig(true, false),
 		HistoryBlobReader: mockHistoryBlobReader,
 	}
 	env := s.NewTestActivityEnvironment()
@@ -518,7 +518,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_CheckFailed() {
 		DomainCache:       domainCache,
 		ClusterMetadata:   mockClusterMetadata,
 		Blobstore:         mockBlobstore,
-		Config:            getConfig(true),
+		Config:            getConfig(true, false),
 		HistoryBlobReader: mockHistoryBlobReader,
 	}
 	env := s.NewTestActivityEnvironment()
@@ -558,7 +558,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_UploadBlobNonRetryableE
 		ClusterMetadata:   mockClusterMetadata,
 		Blobstore:         mockBlobstore,
 		HistoryBlobReader: mockHistoryBlobReader,
-		Config:            getConfig(false),
+		Config:            getConfig(false, false),
 	}
 	env := s.NewTestActivityEnvironment()
 	env.SetWorkerOptions(worker.Options{
@@ -597,7 +597,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_UploadBlobTimeout() {
 		ClusterMetadata:   mockClusterMetadata,
 		Blobstore:         mockBlobstore,
 		HistoryBlobReader: mockHistoryBlobReader,
-		Config:            getConfig(false),
+		Config:            getConfig(false, false),
 	}
 	env := s.NewTestActivityEnvironment()
 	env.SetWorkerOptions(worker.Options{
@@ -638,7 +638,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Success_BlobDoesNotAlreadyEx
 		ClusterMetadata:   mockClusterMetadata,
 		Blobstore:         mockBlobstore,
 		HistoryBlobReader: mockHistoryBlobReader,
-		Config:            getConfig(false),
+		Config:            getConfig(false, false),
 	}
 	env := s.NewTestActivityEnvironment()
 	env.SetWorkerOptions(worker.Options{
@@ -686,7 +686,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Success_ConcurrentUploads() 
 		ClusterMetadata:   mockClusterMetadata,
 		Blobstore:         mockBlobstore,
 		HistoryBlobReader: mockHistoryBlobReader,
-		Config:            getConfig(false),
+		Config:            getConfig(false, false),
 	}
 	env := s.NewTestActivityEnvironment()
 	env.SetWorkerOptions(worker.Options{
@@ -729,7 +729,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_HistoryMutated() {
 		ClusterMetadata:   mockClusterMetadata,
 		Blobstore:         mockBlobstore,
 		HistoryBlobReader: mockHistoryBlobReader,
-		Config:            getConfig(false),
+		Config:            getConfig(false, false),
 	}
 	env := s.NewTestActivityEnvironment()
 	env.SetWorkerOptions(worker.Options{
@@ -1120,13 +1120,18 @@ func (s *activitiesSuite) archivalConfig(
 	return cache.NewDomainCache(mockMetadataMgr, mockClusterMetadata, s.metricsClient, loggerimpl.NewNopLogger()), mockClusterMetadata
 }
 
-func getConfig(constCheck bool) *Config {
-	probability := 0.0
+func getConfig(constCheck, integrityCheck bool) *Config {
+	constCheckProbability := 0.0
 	if constCheck {
-		probability = 1.0
+		constCheckProbability = 1.0
+	}
+	integrityCheckProbability := 0.0
+	if integrityCheck {
+		integrityCheckProbability = 1.0
 	}
 	return &Config{
-		DeterministicConstructionCheckProbability: dynamicconfig.GetFloatPropertyFn(probability),
+		DeterministicConstructionCheckProbability: dynamicconfig.GetFloatPropertyFn(constCheckProbability),
+		BlobIntegrityCheckProbability:             dynamicconfig.GetFloatPropertyFn(integrityCheckProbability),
 		EnableArchivalCompression:                 dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
 	}
 }
