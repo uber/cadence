@@ -523,8 +523,7 @@ func getCustomizedDSLFromSQL(sql string, domainID string) (*fastjson.Value, erro
 	dsl := fastjson.MustParse(dslStr) // dsl.String() will be a compact json without spaces
 
 	dslStr = dsl.String()
-	isOpen := strings.Contains(dslStr, jsonMissingCloseTime)
-	if isOpen {
+	if strings.Contains(dslStr, jsonMissingCloseTime) { // isOpen
 		dsl = replaceQueryForOpen(dsl)
 	}
 	if strings.Contains(dslStr, jsonRangeOnExecutionTime) {
@@ -585,7 +584,7 @@ func (v *esVisibilityStore) processSortField(dsl *fastjson.Value) (string, error
 		}
 		// sort validation to exclude IndexedValueTypeString
 		obj, _ := dsl.GetArray(dslFieldSort)[0].Object()
-		obj.Visit(func(k []byte, v *fastjson.Value) {
+		obj.Visit(func(k []byte, v *fastjson.Value) { // visit is only way to get object key in fastjson
 			sortField = string(k)
 		})
 		if v.getFieldType(sortField) == workflow.IndexedValueTypeString {
@@ -644,7 +643,7 @@ func (v *esVisibilityStore) getValueOfSearchAfterInJSON(token *esVisibilityPageT
 	case workflow.IndexedValueTypeKeyword:
 		if token.SortValue != nil {
 			sortVal = fmt.Sprintf(`"%s"`, token.SortValue.(string))
-		} else { // // field not present, ES will return null (so token.SortValue is nil)
+		} else { // field not present, ES will return null (so token.SortValue is nil)
 			sortVal = "null"
 		}
 	default:
