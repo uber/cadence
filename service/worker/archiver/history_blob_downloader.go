@@ -29,8 +29,8 @@ import (
 )
 
 type (
-	// DownloadPageRequest is request to DownloadPage
-	DownloadPageRequest struct {
+	// DownloadBlobRequest is request to DownloadBlob
+	DownloadBlobRequest struct {
 		NextPageToken        []byte
 		ArchivalBucket       string
 		DomainID             string
@@ -39,15 +39,15 @@ type (
 		CloseFailoverVersion *int64
 	}
 
-	// DownloadPageResponse is response from DownloadPage
-	DownloadPageResponse struct {
+	// DownloadBlobResponse is response from DownloadBlob
+	DownloadBlobResponse struct {
 		NextPageToken []byte
 		HistoryBlob   *HistoryBlob
 	}
 
 	// HistoryBlobDownloader is used to download history blobs
 	HistoryBlobDownloader interface {
-		DownloadBlob(context.Context, *DownloadPageRequest) (*DownloadPageResponse, error)
+		DownloadBlob(context.Context, *DownloadBlobRequest) (*DownloadBlobResponse, error)
 	}
 
 	historyBlobDownloader struct {
@@ -69,11 +69,11 @@ func NewHistoryBlobDownloader(blobstoreClient blobstore.Client) HistoryBlobDownl
 
 // DownloadBlob is used to access a history blob from blobstore.
 // CloseFailoverVersion can be optionally provided to get a specific version of a blob, if not provided gets highest available version.
-func (d *historyBlobDownloader) DownloadBlob(ctx context.Context, request *DownloadPageRequest) (*DownloadPageResponse, error) {
+func (d *historyBlobDownloader) DownloadBlob(ctx context.Context, request *DownloadBlobRequest) (*DownloadBlobResponse, error) {
 	var token *archivalToken
 	var err error
 	if request.NextPageToken != nil {
-		token, err = deserializeHistoryTokenArchival(request.NextPageToken)
+		token, err = deserializeArchivalToken(request.NextPageToken)
 		if err != nil {
 			return nil, err
 		}
@@ -124,23 +124,23 @@ func (d *historyBlobDownloader) DownloadBlob(ctx context.Context, request *Downl
 	} else {
 		token.BlobstorePageToken = *historyBlob.Header.NextPageToken
 	}
-	nextToken, err := serializeHistoryTokenArchival(token)
+	nextToken, err := serializeArchivalToken(token)
 	if err != nil {
 		return nil, err
 	}
-	return &DownloadPageResponse{
+	return &DownloadBlobResponse{
 		NextPageToken: nextToken,
 		HistoryBlob:   historyBlob,
 	}, nil
 }
 
-func deserializeHistoryTokenArchival(bytes []byte) (*archivalToken, error) {
+func deserializeArchivalToken(bytes []byte) (*archivalToken, error) {
 	token := &archivalToken{}
 	err := json.Unmarshal(bytes, token)
 	return token, err
 }
 
-func serializeHistoryTokenArchival(token *archivalToken) ([]byte, error) {
+func serializeArchivalToken(token *archivalToken) ([]byte, error) {
 	if token == nil {
 		return nil, nil
 	}

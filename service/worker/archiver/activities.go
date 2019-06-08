@@ -207,7 +207,6 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 			}
 			continue
 		}
-
 		if err := uploadBlob(ctx, blobstoreClient, request.BucketName, key, blob); err != nil {
 			logger.Error(uploadErrorMsg, tag.ArchivalUploadFailReason(errorDetails(err)), tag.ArchivalBlobKey(key.String()), tag.Error(err))
 			return err
@@ -235,12 +234,15 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	}
 	if runBlobIntegrityCheck {
 		scope.IncCounter(metrics.ArchiverRunningBlobIntegrityCheckCount)
-		blobDownloader := NewHistoryBlobDownloader(blobstoreClient)
-		req := &DownloadPageRequest{
-			ArchivalBucket: request.BucketName,
-			DomainID: request.DomainID,
-			WorkflowID: request.WorkflowID,
-			RunID: request.RunID,
+		blobDownloader := container.HistoryBlobDownloader
+		if blobDownloader == nil {
+			blobDownloader = NewHistoryBlobDownloader(blobstoreClient)
+		}
+		req := &DownloadBlobRequest{
+			ArchivalBucket:       request.BucketName,
+			DomainID:             request.DomainID,
+			WorkflowID:           request.WorkflowID,
+			RunID:                request.RunID,
 			CloseFailoverVersion: common.Int64Ptr(request.CloseFailoverVersion),
 		}
 		var fetchedHistoryEventHashes []uint64

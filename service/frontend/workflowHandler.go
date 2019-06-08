@@ -3194,7 +3194,7 @@ func (wh *WorkflowHandler) getArchivedHistory(
 	if archivalBucket == "" {
 		return nil, wh.error(errDomainHasNeverBeenEnabledForArchival, scope)
 	}
-	downloadReq := &archiver.DownloadPageRequest{
+	downloadReq := &archiver.DownloadBlobRequest{
 		NextPageToken:  request.NextPageToken,
 		ArchivalBucket: archivalBucket,
 		DomainID:       domainID,

@@ -53,17 +53,20 @@ type (
 
 	// BootstrapContainer contains everything need for bootstrapping
 	BootstrapContainer struct {
-		PublicClient         workflowserviceclient.Interface
-		MetricsClient        metrics.Client
-		Logger               log.Logger
-		ClusterMetadata      cluster.Metadata
-		HistoryManager       persistence.HistoryManager
-		HistoryV2Manager     persistence.HistoryV2Manager
-		Blobstore            blobstore.Client
-		DomainCache          cache.DomainCache
-		Config               *Config
-		HistoryBlobReader    HistoryBlobReader // this is only set in testing code
-		HistorySizeEstimator SizeEstimator     // this is only set in testing code
+		PublicClient     workflowserviceclient.Interface
+		MetricsClient    metrics.Client
+		Logger           log.Logger
+		ClusterMetadata  cluster.Metadata
+		HistoryManager   persistence.HistoryManager
+		HistoryV2Manager persistence.HistoryV2Manager
+		Blobstore        blobstore.Client
+		DomainCache      cache.DomainCache
+		Config           *Config
+
+		// the following are only set in testing code
+		HistoryBlobReader     HistoryBlobReader
+		HistorySizeEstimator  SizeEstimator
+		HistoryBlobDownloader HistoryBlobDownloader
 	}
 
 	// Config for ClientWorker
