@@ -506,3 +506,78 @@ Query result as JSON:
 ```
 Query method can accept parameters. It might be useful if only part of the workflow state should be returned.
 ## Activities
+Having a fault tolerant code that maintains state, updates it as a reaction to external events and supports querying is already very useful. 
+But in most practical applications the workflow is expected to act upon external world. Cadence support such externally facing code in form of activities. 
+An activiy is essentially a function that can execute any code like DB updates or service calls. The workflow is not allowed
+directly calling int external APIs, only through activities. The workflow is orchestrator of activities.
+Let's change our program to print the greeting from an activity on every change.
+
+First lest's define activities interface and implement it:
+```java
+  public interface HelloWorldActivities {
+    @ActivityMethod(scheduleToCloseTimeoutSeconds = 100)
+    void say(String message);
+  }
+
+  public static class HelloWordActivitiesImpl implements HelloWorldActivities {
+    private final PrintStream out;
+
+    public HelloWordActivitiesImpl(PrintStream out) {
+      this.out = out;
+    }
+
+    @Override
+    public void say(String message) {
+      out.println(message);
+    }
+  }
+```
+@ActivityMethod annotation is not required, but the scheduleToCloseTimeout is required and annotation is a convenient way to specify it.
+It is allowed to have multiple activities on a single interface.
+Activity implementation is just a normal [POJO](https://en.wikipedia.org/wiki/Plain_old_Java_object). 
+The `out` stream is passed as a parameter to the constructor to demonstrate that the 
+activity object can have any dependencies. Example of real application dependencies are database connections and service clients.
+To make the activity implementation known to Cadence register it with the worker:
+```java
+  public static void main(String[] args) {
+    Worker.Factory factory = new Worker.Factory("test-domain");
+    Worker worker = factory.newWorker("HelloWorldTaskList");
+    worker.registerWorkflowImplementationTypes(HelloWorldImpl.class);
+    worker.registerActivitiesImplementations(new HelloWordActivitiesImpl(System.out));
+    factory.start();
+  }
+```
+Note that a workflow object is created by workflow execution by the Cadence framework. That's why the workflow class is registered with the worker.
+But the single instance of the activity object is registered per activity type. It means that the activity implementation should be thread-safe as 
+the activity method can be simultaneously called from multiple threads.
+
+Let's modify the workflow code to invoke the activity instead of logging:
+```java
+  public static class HelloWorldImpl implements HelloWorld {
+
+    private final HelloWorldActivities activities = Workflow.newActivityStub(HelloWorldActivities.class);
+    private String greeting = "Hello";
+    private int count = 0;
+
+    @Override
+    public void sayHello(String name) {
+      while (!"Bye".equals(greeting)) {
+        activities.say(++count + ": " + greeting + " " + name + "!");
+        String oldGreeting = greeting;
+        Workflow.await(() -> !Objects.equals(greeting, oldGreeting));
+      }
+      activities.say(++count + ": " + greeting + " " + name + "!");
+    }
+
+    @Override
+    public void updateGreeting(String greeting) {
+      this.greeting = greeting;
+    }
+
+    @Override
+    public int getCount() {
+      return count;
+    }
+  }
+```
+Activities are invoked through a stub that implements their interface. So an invocation is just a method call on an activity stub.
