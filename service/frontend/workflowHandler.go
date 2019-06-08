@@ -3197,9 +3197,9 @@ func (wh *WorkflowHandler) getArchivedHistory(
 	downloadReq := &archiver.DownloadPageRequest{
 		NextPageToken:  request.NextPageToken,
 		ArchivalBucket: archivalBucket,
-		DomainId:       domainID,
-		WorkflowId:     request.GetExecution().GetWorkflowId(),
-		RunId:          request.GetExecution().GetRunId(),
+		DomainID:       domainID,
+		WorkflowID:     request.GetExecution().GetWorkflowId(),
+		RunID:          request.GetExecution().GetRunId(),
 	}
 	resp, err := wh.historyBlobDownloader.DownloadBlob(ctx, downloadReq)
 	if err != nil {

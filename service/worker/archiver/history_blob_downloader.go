@@ -23,7 +23,6 @@ package archiver
 import (
 	"context"
 	"encoding/json"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/blobstore/blob"
@@ -34,9 +33,9 @@ type (
 	DownloadPageRequest struct {
 		NextPageToken        []byte
 		ArchivalBucket       string
-		DomainId             string
-		WorkflowId           string
-		RunId                string
+		DomainID             string
+		WorkflowID           string
+		RunID                string
 		CloseFailoverVersion *int64
 	}
 
@@ -46,7 +45,7 @@ type (
 		HistoryBlob   *HistoryBlob
 	}
 
-	// HistoryBlobDownload is used to download history blobs
+	// HistoryBlobDownloader is used to download history blobs
 	HistoryBlobDownloader interface {
 		DownloadBlob(context.Context, *DownloadPageRequest) (*DownloadPageResponse, error)
 	}
@@ -55,7 +54,7 @@ type (
 		blobstoreClient blobstore.Client
 	}
 
-	getHistoryContinuationTokenArchival struct {
+	archivalToken struct {
 		BlobstorePageToken   int
 		CloseFailoverVersion int64
 	}
@@ -71,7 +70,7 @@ func NewHistoryBlobDownloader(blobstoreClient blobstore.Client) HistoryBlobDownl
 // DownloadBlob is used to access a history blob from blobstore.
 // CloseFailoverVersion can be optionally provided to get a specific version of a blob, if not provided gets highest available version.
 func (d *historyBlobDownloader) DownloadBlob(ctx context.Context, request *DownloadPageRequest) (*DownloadPageResponse, error) {
-	var token *getHistoryContinuationTokenArchival
+	var token *archivalToken
 	var err error
 	if request.NextPageToken != nil {
 		token, err = deserializeHistoryTokenArchival(request.NextPageToken)
@@ -79,12 +78,12 @@ func (d *historyBlobDownloader) DownloadBlob(ctx context.Context, request *Downl
 			return nil, err
 		}
 	} else if request.CloseFailoverVersion != nil {
-		token = &getHistoryContinuationTokenArchival{
+		token = &archivalToken{
 			BlobstorePageToken:   common.FirstBlobPageToken,
 			CloseFailoverVersion: *request.CloseFailoverVersion,
 		}
 	} else {
-		indexKey, err := NewHistoryIndexBlobKey(request.DomainId, request.WorkflowId, request.RunId)
+		indexKey, err := NewHistoryIndexBlobKey(request.DomainID, request.WorkflowID, request.RunID)
 		if err != nil {
 			return nil, err
 		}
@@ -96,12 +95,12 @@ func (d *historyBlobDownloader) DownloadBlob(ctx context.Context, request *Downl
 		if err != nil {
 			return nil, err
 		}
-		token = &getHistoryContinuationTokenArchival{
+		token = &archivalToken{
 			BlobstorePageToken:   common.FirstBlobPageToken,
 			CloseFailoverVersion: *highestVersion,
 		}
 	}
-	key, err := NewHistoryBlobKey(request.DomainId, request.WorkflowId, request.RunId, token.CloseFailoverVersion, token.BlobstorePageToken)
+	key, err := NewHistoryBlobKey(request.DomainID, request.WorkflowID, request.RunID, token.CloseFailoverVersion, token.BlobstorePageToken)
 	if err != nil {
 		return nil, err
 	}
@@ -120,9 +119,10 @@ func (d *historyBlobDownloader) DownloadBlob(ctx context.Context, request *Downl
 			return nil, err
 		}
 	}
-	token.BlobstorePageToken = *historyBlob.Header.NextPageToken
 	if *historyBlob.Header.IsLast {
 		token = nil
+	} else {
+		token.BlobstorePageToken = *historyBlob.Header.NextPageToken
 	}
 	nextToken, err := serializeHistoryTokenArchival(token)
 	if err != nil {
@@ -134,13 +134,13 @@ func (d *historyBlobDownloader) DownloadBlob(ctx context.Context, request *Downl
 	}, nil
 }
 
-func deserializeHistoryTokenArchival(bytes []byte) (*getHistoryContinuationTokenArchival, error) {
-	token := &getHistoryContinuationTokenArchival{}
+func deserializeHistoryTokenArchival(bytes []byte) (*archivalToken, error) {
+	token := &archivalToken{}
 	err := json.Unmarshal(bytes, token)
 	return token, err
 }
 
-func serializeHistoryTokenArchival(token *getHistoryContinuationTokenArchival) ([]byte, error) {
+func serializeHistoryTokenArchival(token *archivalToken) ([]byte, error) {
 	if token == nil {
 		return nil, nil
 	}

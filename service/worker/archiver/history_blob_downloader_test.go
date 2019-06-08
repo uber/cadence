@@ -24,13 +24,20 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"testing"
+
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore/blob"
 	"github.com/uber/cadence/common/mocks"
-	"testing"
+)
+
+const (
+	testHighVersion    = 5
+	testHighVersionStr = "5"
+	testLowVersionStr  = "1"
 )
 
 type historyBlobDownloaderSuite struct {
@@ -42,175 +49,190 @@ func TestHistoryBlobDownloderSuite(t *testing.T) {
 	suite.Run(t, new(historyBlobDownloaderSuite))
 }
 
-func (h *historyBlobDownloaderSuite) SetupTest() {
-	h.blobstoreClient = &mocks.BlobstoreClient{}
+func (s *historyBlobDownloaderSuite) SetupTest() {
+	s.blobstoreClient = &mocks.BlobstoreClient{}
 }
 
-func (h *historyBlobDownloaderSuite) TearDownTest() {
-	h.blobstoreClient.AssertExpectations(h.T())
+func (s *historyBlobDownloaderSuite) TearDownTest() {
+	s.blobstoreClient.AssertExpectations(s.T())
 }
 
-func (h *historyBlobDownloaderSuite) TestDownloadBlob_Failed_CouldNotDeserializeToken() {
-	blobstoreClient := &mocks.BlobstoreClient{}
-	blobDownloader := NewHistoryBlobDownloader(blobstoreClient)
+func (s *historyBlobDownloaderSuite) TestDownloadBlob_Failed_CouldNotDeserializeToken() {
+	blobDownloader := NewHistoryBlobDownloader(s.blobstoreClient)
 	resp, err := blobDownloader.DownloadBlob(context.Background(), &DownloadPageRequest{
 		NextPageToken: []byte{1},
 	})
-	h.Error(err)
-	h.Nil(resp)
+	s.Error(err)
+	s.Nil(resp)
 }
 
-func (h *historyBlobDownloaderSuite) TestDownloadBlob_Failed_CouldNotGetHighestVersion() {
-	h.blobstoreClient.On("GetTags", mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("failed to get tags")).Once()
-	blobDownloader := NewHistoryBlobDownloader(h.blobstoreClient)
+func (s *historyBlobDownloaderSuite) TestDownloadBlob_Failed_CouldNotGetHighestVersion() {
+	s.blobstoreClient.On("GetTags", mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("failed to get tags")).Once()
+	blobDownloader := NewHistoryBlobDownloader(s.blobstoreClient)
 	resp, err := blobDownloader.DownloadBlob(context.Background(), &DownloadPageRequest{
 		ArchivalBucket: testArchivalBucket,
-		DomainId:       testDomainID,
-		WorkflowId:     testWorkflowID,
-		RunId:          testRunID,
+		DomainID:       testDomainID,
+		WorkflowID:     testWorkflowID,
+		RunID:          testRunID,
 	})
-	h.Error(err)
-	h.Nil(resp)
+	s.Error(err)
+	s.Nil(resp)
 }
 
-func (h *historyBlobDownloaderSuite) TestDownloadBlob_Failed_CouldNotDownloadBlob() {
-	h.blobstoreClient.On("GetTags", mock.Anything, mock.Anything, mock.Anything).Return(map[string]string{"1": ""}, nil).Once()
-	h.blobstoreClient.On("Download", mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("failed to download blob")).Once()
-	blobDownloader := NewHistoryBlobDownloader(h.blobstoreClient)
+func (s *historyBlobDownloaderSuite) TestDownloadBlob_Failed_CouldNotDownloadBlob() {
+	s.blobstoreClient.On("GetTags", mock.Anything, mock.Anything, mock.Anything).Return(map[string]string{testLowVersionStr: ""}, nil).Once()
+	s.blobstoreClient.On("Download", mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("failed to download blob")).Once()
+	blobDownloader := NewHistoryBlobDownloader(s.blobstoreClient)
 	resp, err := blobDownloader.DownloadBlob(context.Background(), &DownloadPageRequest{
 		ArchivalBucket: testArchivalBucket,
-		DomainId:       testDomainID,
-		WorkflowId:     testWorkflowID,
-		RunId:          testRunID,
+		DomainID:       testDomainID,
+		WorkflowID:     testWorkflowID,
+		RunID:          testRunID,
 	})
-	h.Error(err)
-	h.Nil(resp)
+	s.Error(err)
+	s.Nil(resp)
 }
 
-func (h *historyBlobDownloaderSuite) TestDownloadBlob_Success_GetFirstPage() {
-	unwrappedBlob := &HistoryBlob{
-		Header: &HistoryBlobHeader{
-			CurrentPageToken: common.IntPtr(common.FirstBlobPageToken),
-			NextPageToken:    common.IntPtr(common.FirstBlobPageToken + 1),
-			IsLast:           common.BoolPtr(false),
-		},
-		Body: &shared.History{},
-	}
-	bytes, err := json.Marshal(unwrappedBlob)
-	h.NoError(err)
-	historyBlob, err := blob.Wrap(blob.NewBlob(bytes, map[string]string{}), blob.JSONEncoded())
-	h.blobstoreClient.On("GetTags", mock.Anything, mock.Anything, mock.Anything).Return(map[string]string{"1": "", "2": "", "10": ""}, nil).Once()
-	historyKey, _ := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, 10, common.FirstBlobPageToken)
-	h.blobstoreClient.On("Download", mock.Anything, mock.Anything, historyKey).Return(historyBlob, nil).Once()
-	blobDownloader := NewHistoryBlobDownloader(h.blobstoreClient)
+func (s *historyBlobDownloaderSuite) TestDownloadBlob_Success_GetFirstPage() {
+	expected, page := s.getBlob(common.FirstBlobPageToken, false)
+	key := s.getHistoryKey(testHighVersion, common.FirstBlobPageToken)
+	s.blobstoreClient.On("GetTags", mock.Anything, mock.Anything, mock.Anything).Return(map[string]string{testLowVersionStr: "", testHighVersionStr: ""}, nil).Once()
+	s.blobstoreClient.On("Download", mock.Anything, mock.Anything, key).Return(page, nil).Once()
+	blobDownloader := NewHistoryBlobDownloader(s.blobstoreClient)
 	resp, err := blobDownloader.DownloadBlob(context.Background(), &DownloadPageRequest{
 		ArchivalBucket: testArchivalBucket,
-		DomainId:       testDomainID,
-		WorkflowId:     testWorkflowID,
-		RunId:          testRunID,
+		DomainID:       testDomainID,
+		WorkflowID:     testWorkflowID,
+		RunID:          testRunID,
 	})
-	h.NoError(err)
-	h.Equal(hash(*unwrappedBlob), hash(*resp.HistoryBlob))
-	expectedPageToken, _ := serializeHistoryTokenArchival(&getHistoryContinuationTokenArchival{
-		BlobstorePageToken:   common.FirstBlobPageToken + 1,
-		CloseFailoverVersion: 10,
-	})
-	h.Equal(expectedPageToken, resp.NextPageToken)
+	s.NoError(err)
+	s.Equal(hash(*expected), hash(*resp.HistoryBlob))
+	s.Equal(s.getPageToken(common.FirstBlobPageToken+1, testHighVersion), resp.NextPageToken)
 }
 
-func (h *historyBlobDownloaderSuite) TestDownloadBlob_Success_ProvidedVersion() {
-	unwrappedBlob := &HistoryBlob{
-		Header: &HistoryBlobHeader{
-			CurrentPageToken: common.IntPtr(common.FirstBlobPageToken),
-			NextPageToken:    common.IntPtr(common.FirstBlobPageToken + 1),
-			IsLast:           common.BoolPtr(false),
-		},
-		Body: &shared.History{},
-	}
-	bytes, err := json.Marshal(unwrappedBlob)
-	h.NoError(err)
-	historyBlob, err := blob.Wrap(blob.NewBlob(bytes, map[string]string{}), blob.JSONEncoded())
-	historyKey, _ := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, 10, common.FirstBlobPageToken)
-	h.blobstoreClient.On("Download", mock.Anything, mock.Anything, historyKey).Return(historyBlob, nil).Once()
-	blobDownloader := NewHistoryBlobDownloader(h.blobstoreClient)
+func (s *historyBlobDownloaderSuite) TestDownloadBlob_Success_ProvidedVersion() {
+	expected, page := s.getBlob(common.FirstBlobPageToken, false)
+	key := s.getHistoryKey(testHighVersion, common.FirstBlobPageToken)
+	s.blobstoreClient.On("Download", mock.Anything, mock.Anything, key).Return(page, nil).Once()
+	blobDownloader := NewHistoryBlobDownloader(s.blobstoreClient)
 	resp, err := blobDownloader.DownloadBlob(context.Background(), &DownloadPageRequest{
 		ArchivalBucket:       testArchivalBucket,
-		DomainId:             testDomainID,
-		WorkflowId:           testWorkflowID,
-		RunId:                testRunID,
-		CloseFailoverVersion: common.Int64Ptr(10),
+		DomainID:             testDomainID,
+		WorkflowID:           testWorkflowID,
+		RunID:                testRunID,
+		CloseFailoverVersion: common.Int64Ptr(testHighVersion),
 	})
-	h.NoError(err)
-	h.Equal(hash(*unwrappedBlob), hash(*resp.HistoryBlob))
-	expectedPageToken, _ := serializeHistoryTokenArchival(&getHistoryContinuationTokenArchival{
-		BlobstorePageToken:   common.FirstBlobPageToken + 1,
-		CloseFailoverVersion: 10,
-	})
-	h.Equal(expectedPageToken, resp.NextPageToken)
+	s.NoError(err)
+	s.Equal(hash(*expected), hash(*resp.HistoryBlob))
+	s.Equal(s.getPageToken(common.FirstBlobPageToken+1, testHighVersion), resp.NextPageToken)
 }
 
-func (h *historyBlobDownloaderSuite) TestDownloadBlob_Success_UsePageToken() {
-	unwrappedBlob := &HistoryBlob{
+func (s *historyBlobDownloaderSuite) TestDownloadBlob_Success_UsePageToken() {
+	expected, page := s.getBlob(common.FirstBlobPageToken+1, false)
+	key := s.getHistoryKey(testHighVersion, common.FirstBlobPageToken+1)
+	s.blobstoreClient.On("Download", mock.Anything, mock.Anything, key).Return(page, nil).Once()
+	blobDownloader := NewHistoryBlobDownloader(s.blobstoreClient)
+	resp, err := blobDownloader.DownloadBlob(context.Background(), &DownloadPageRequest{
+		ArchivalBucket: testArchivalBucket,
+		DomainID:       testDomainID,
+		WorkflowID:     testWorkflowID,
+		RunID:          testRunID,
+		NextPageToken:  s.getPageToken(common.FirstBlobPageToken+1, testHighVersion),
+	})
+	s.NoError(err)
+	s.Equal(hash(*expected), hash(*resp.HistoryBlob))
+	s.Equal(s.getPageToken(common.FirstBlobPageToken+2, testHighVersion), resp.NextPageToken)
+}
+
+func (s *historyBlobDownloaderSuite) TestDownloadBlob_Success_GetLastPage() {
+	expected, page := s.getBlob(common.FirstBlobPageToken+1, true)
+	key := s.getHistoryKey(testHighVersion, common.FirstBlobPageToken+1)
+	s.blobstoreClient.On("Download", mock.Anything, mock.Anything, key).Return(page, nil).Once()
+	blobDownloader := NewHistoryBlobDownloader(s.blobstoreClient)
+	resp, err := blobDownloader.DownloadBlob(context.Background(), &DownloadPageRequest{
+		ArchivalBucket: testArchivalBucket,
+		DomainID:       testDomainID,
+		WorkflowID:     testWorkflowID,
+		RunID:          testRunID,
+		NextPageToken:  s.getPageToken(common.FirstBlobPageToken+1, testHighVersion),
+	})
+	s.NoError(err)
+	s.Equal(hash(*expected), hash(*resp.HistoryBlob))
+	s.Nil(resp.NextPageToken)
+}
+
+func (s *historyBlobDownloaderSuite) TestDownloadBlob_Success_DownloadMultiple() {
+	var expectedBlobs []*HistoryBlob
+	for i := common.FirstBlobPageToken; i <= 10; i++ {
+		currExpected, currPage := s.getBlob(i, i == 10)
+		key := s.getHistoryKey(testHighVersion, i)
+		s.blobstoreClient.On("Download", mock.Anything, mock.Anything, key).Return(currPage, nil).Once()
+		expectedBlobs = append(expectedBlobs, currExpected)
+	}
+	s.blobstoreClient.On("GetTags", mock.Anything, mock.Anything, mock.Anything).Return(map[string]string{testLowVersionStr: "", testHighVersionStr: ""}, nil).Once()
+	blobDownloader := NewHistoryBlobDownloader(s.blobstoreClient)
+	resp, err := blobDownloader.DownloadBlob(context.Background(), &DownloadPageRequest{
+		ArchivalBucket: testArchivalBucket,
+		DomainID:       testDomainID,
+		WorkflowID:     testWorkflowID,
+		RunID:          testRunID,
+	})
+	s.NoError(err)
+	s.Equal(hash(*expectedBlobs[0]), hash(*resp.HistoryBlob))
+	index := 1
+	for resp.NextPageToken != nil {
+		resp, err = blobDownloader.DownloadBlob(context.Background(), &DownloadPageRequest{
+			ArchivalBucket: testArchivalBucket,
+			DomainID:       testDomainID,
+			WorkflowID:     testWorkflowID,
+			RunID:          testRunID,
+			NextPageToken:  resp.NextPageToken,
+		})
+		s.NoError(err)
+		s.Equal(hash(*expectedBlobs[index]), hash(*resp.HistoryBlob))
+		index++
+	}
+}
+
+func (s *historyBlobDownloaderSuite) getIndexKey() blob.Key {
+	key, err := NewHistoryIndexBlobKey(testDomainID, testWorkflowID, testRunID)
+	s.NoError(err)
+	return key
+}
+
+func (s *historyBlobDownloaderSuite) getHistoryKey(version int64, page int) blob.Key {
+	key, err := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, version, page)
+	s.NoError(err)
+	return key
+}
+
+func (s *historyBlobDownloaderSuite) getBlob(pageToken int, last bool) (*HistoryBlob, *blob.Blob) {
+	historyBlob := &HistoryBlob{
 		Header: &HistoryBlobHeader{
-			CurrentPageToken: common.IntPtr(common.FirstBlobPageToken + 1),
-			NextPageToken:    common.IntPtr(common.FirstBlobPageToken + 2),
-			IsLast:           common.BoolPtr(false),
+			CurrentPageToken: common.IntPtr(pageToken),
+			NextPageToken:    common.IntPtr(pageToken + 1),
+			IsLast:           common.BoolPtr(last),
 		},
 		Body: &shared.History{},
 	}
-	bytes, err := json.Marshal(unwrappedBlob)
-	h.NoError(err)
-	historyBlob, err := blob.Wrap(blob.NewBlob(bytes, map[string]string{}), blob.JSONEncoded())
-	historyKey, _ := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, 10, common.FirstBlobPageToken+1)
-	h.blobstoreClient.On("Download", mock.Anything, mock.Anything, historyKey).Return(historyBlob, nil).Once()
-	blobDownloader := NewHistoryBlobDownloader(h.blobstoreClient)
-	requestPageToken, _ := serializeHistoryTokenArchival(&getHistoryContinuationTokenArchival{
-		BlobstorePageToken:   common.FirstBlobPageToken + 1,
-		CloseFailoverVersion: 10,
-	})
-	resp, err := blobDownloader.DownloadBlob(context.Background(), &DownloadPageRequest{
-		ArchivalBucket: testArchivalBucket,
-		DomainId:       testDomainID,
-		WorkflowId:     testWorkflowID,
-		RunId:          testRunID,
-		NextPageToken:  requestPageToken,
-	})
-	h.NoError(err)
-	h.Equal(hash(*unwrappedBlob), hash(*resp.HistoryBlob))
-	expectedPageToken, _ := serializeHistoryTokenArchival(&getHistoryContinuationTokenArchival{
-		BlobstorePageToken:   common.FirstBlobPageToken + 2,
-		CloseFailoverVersion: 10,
-	})
-	h.Equal(expectedPageToken, resp.NextPageToken)
+	if last {
+		historyBlob.Header.NextPageToken = nil
+	}
+	for i := 0; i < 10; i++ {
+		historyBlob.Body.Events = append(historyBlob.Body.Events, &shared.HistoryEvent{EventId: common.Int64Ptr(int64(i))})
+	}
+	bytes, err := json.Marshal(historyBlob)
+	s.NoError(err)
+	result, err := blob.Wrap(blob.NewBlob(bytes, map[string]string{}), blob.JSONEncoded())
+	s.NoError(err)
+	return historyBlob, result
 }
 
-func (h *historyBlobDownloaderSuite) TestDownloadBlob_Success_GetLastPage() {
-	unwrappedBlob := &HistoryBlob{
-		Header: &HistoryBlobHeader{
-			CurrentPageToken: common.IntPtr(common.FirstBlobPageToken + 1),
-			NextPageToken:    common.IntPtr(common.FirstBlobPageToken + 2),
-			IsLast:           common.BoolPtr(true),
-		},
-		Body: &shared.History{},
-	}
-	bytes, err := json.Marshal(unwrappedBlob)
-	h.NoError(err)
-	historyBlob, err := blob.Wrap(blob.NewBlob(bytes, map[string]string{}), blob.JSONEncoded())
-	historyKey, _ := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, 10, common.FirstBlobPageToken+1)
-	h.blobstoreClient.On("Download", mock.Anything, mock.Anything, historyKey).Return(historyBlob, nil).Once()
-	blobDownloader := NewHistoryBlobDownloader(h.blobstoreClient)
-	requestPageToken, _ := serializeHistoryTokenArchival(&getHistoryContinuationTokenArchival{
-		BlobstorePageToken:   common.FirstBlobPageToken + 1,
-		CloseFailoverVersion: 10,
+func (s *historyBlobDownloaderSuite) getPageToken(blobstorePageToken int, version int64) []byte {
+	token, err := serializeHistoryTokenArchival(&archivalToken{
+		BlobstorePageToken:   blobstorePageToken,
+		CloseFailoverVersion: version,
 	})
-	resp, err := blobDownloader.DownloadBlob(context.Background(), &DownloadPageRequest{
-		ArchivalBucket: testArchivalBucket,
-		DomainId:       testDomainID,
-		WorkflowId:     testWorkflowID,
-		RunId:          testRunID,
-		NextPageToken:  requestPageToken,
-	})
-	h.NoError(err)
-	h.Equal(hash(*unwrappedBlob), hash(*resp.HistoryBlob))
-	h.Nil(resp.NextPageToken)
+	s.NoError(err)
+	return token
 }
