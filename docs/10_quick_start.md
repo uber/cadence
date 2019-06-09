@@ -506,10 +506,10 @@ Query result as JSON:
 ```
 Query method can accept parameters. It might be useful if only part of the workflow state should be returned.
 ## Activities
-Having a fault tolerant code that maintains state, updates it as a reaction to external events and supports querying is already very useful. 
-But in most practical applications the workflow is expected to act upon external world. Cadence support such externally facing code in form of activities. 
-An activiy is essentially a function that can execute any code like DB updates or service calls. The workflow is not allowed
-directly calling int external APIs, only through activities. The workflow is orchestrator of activities.
+Having a fault tolerant code that maintains state, updates it reacting to external events and supports querying is already very useful. 
+But in most practical applications the workflow is expected to act upon the external world. Cadence support such externally facing code in form of activities. 
+An activity is essentially a function that can execute any code like DB updates or service calls. The workflow is not allowed
+directly calling any external APIs, only through activities. The workflow is essentially an orchestrator of activities.
 Let's change our program to print the greeting from an activity on every change.
 
 First lest's define activities interface and implement it:
@@ -518,8 +518,15 @@ First lest's define activities interface and implement it:
     @ActivityMethod(scheduleToCloseTimeoutSeconds = 100)
     void say(String message);
   }
+```
+@ActivityMethod annotation is not required, but the scheduleToCloseTimeout is required and annotation is a convenient way to specify it.
+It is allowed to have multiple activities on a single interface.
 
-  public static class HelloWordActivitiesImpl implements HelloWorldActivities {
+Activity implementation is just a normal [POJO](https://en.wikipedia.org/wiki/Plain_old_Java_object). 
+The `out` stream is passed as a parameter to the constructor to demonstrate that the 
+activity object can have any dependencies. Example of real application dependencies are database connections and service clients.
+```java
+  public class HelloWordActivitiesImpl implements HelloWorldActivities {
     private final PrintStream out;
 
     public HelloWordActivitiesImpl(PrintStream out) {
@@ -532,23 +539,21 @@ First lest's define activities interface and implement it:
     }
   }
 ```
-@ActivityMethod annotation is not required, but the scheduleToCloseTimeout is required and annotation is a convenient way to specify it.
-It is allowed to have multiple activities on a single interface.
-Activity implementation is just a normal [POJO](https://en.wikipedia.org/wiki/Plain_old_Java_object). 
-The `out` stream is passed as a parameter to the constructor to demonstrate that the 
-activity object can have any dependencies. Example of real application dependencies are database connections and service clients.
+Let's create a separate main method for the activity worker. It is common to have a single worker that hosts both activities and workflows,
+but here we keep them separate to demonstrate how Cadence deals with worker failures.
 To make the activity implementation known to Cadence register it with the worker:
 ```java
+public class GettingStartedActivityWorker {
+
   public static void main(String[] args) {
     Worker.Factory factory = new Worker.Factory("test-domain");
     Worker worker = factory.newWorker("HelloWorldTaskList");
-    worker.registerWorkflowImplementationTypes(HelloWorldImpl.class);
     worker.registerActivitiesImplementations(new HelloWordActivitiesImpl(System.out));
     factory.start();
   }
+}
 ```
-Note that a workflow object is created by workflow execution by the Cadence framework. That's why the workflow class is registered with the worker.
-But the single instance of the activity object is registered per activity type. It means that the activity implementation should be thread-safe as 
+A single instance of an activity object is registered per activity interface type. It means that the activity implementation should be thread-safe as 
 the activity method can be simultaneously called from multiple threads.
 
 Let's modify the workflow code to invoke the activity instead of logging:
@@ -581,3 +586,164 @@ Let's modify the workflow code to invoke the activity instead of logging:
   }
 ```
 Activities are invoked through a stub that implements their interface. So an invocation is just a method call on an activity stub.
+
+Now run the workflow worker. Do not run the activity worker yet. Then start a new workflow execution:
+```bash
+cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow start  --workflow_id "HelloActivityWorker" --tasklist HelloWorldTaskList --workflow_type HelloWorld::sayHello --execution_timeout 3600 --input \"World\"
+Started Workflow Id: HelloActivityWorker, run Id: ff015637-b5af-43e8-b3f6-8b6c7b919b62
+```
+So workflow is started, but nothing visible happens. It is expected as the activity worker is not running. What are the options to understand the currently running workflow state?
+
+The first option is look at the stack trace:
+```text
+cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow stack  --workflow_id "HelloActivityWorker"
+Query result as JSON:
+"workflow-root: (BLOCKED on Feature.get)com.uber.cadence.internal.sync.CompletablePromiseImpl.get(CompletablePromiseImpl.java:71)
+com.uber.cadence.internal.sync.ActivityStubImpl.execute(ActivityStubImpl.java:58)
+com.uber.cadence.internal.sync.ActivityInvocationHandler.lambda$invoke$0(ActivityInvocationHandler.java:87)
+com.uber.cadence.internal.sync.ActivityInvocationHandler$$Lambda$25/1816732716.apply(Unknown Source)
+com.uber.cadence.internal.sync.ActivityInvocationHandler.invoke(ActivityInvocationHandler.java:94)
+com.sun.proxy.$Proxy6.say(Unknown Source)
+com.uber.cadence.samples.hello.GettingStarted$HelloWorldImpl.sayHello(GettingStarted.java:55)
+sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+"
+```
+It clearly shows that the workflow code is blocked on "say" method of a Proxy object that implements the activity stub.
+You can restart the workflow worker if you want to make sure that restarting it does not change that. It works for activities
+of any duration. It is OK for the workflow code to block on an activity invocation for a month for example.
+
+Another way to see what exactly happened in the workflow execution is to look at the workflow execution history:
+```text
+cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow show  --workflow_id "HelloActivityWorker"
+  1  WorkflowExecutionStarted  {WorkflowType:{Name:HelloWorld::sayHello},
+                                TaskList:{Name:HelloWorldTaskList},
+                                Input:["World"],
+                                ExecutionStartToCloseTimeoutSeconds:3600,
+                                TaskStartToCloseTimeoutSeconds:10,
+                                ContinuedFailureDetails:[],
+                                LastCompletionResult:[],
+                                Identity:cadence-cli@linuxkit-025000000001,
+                                Attempt:0,
+                                FirstDecisionTaskBackoffSeconds:0}
+  2  DecisionTaskScheduled     {TaskList:{Name:HelloWorldTaskList},
+                                StartToCloseTimeoutSeconds:10,
+                                Attempt:0}
+  3  DecisionTaskStarted       {ScheduledEventId:2,
+                                Identity:36234@maxim-C02XD0AAJGH6,
+                                RequestId:ef645576-7cee-4d2e-9892-597a08b7b01f}
+  4  DecisionTaskCompleted     {ExecutionContext:[],
+                                ScheduledEventId:2,
+                                StartedEventId:3,
+                                Identity:36234@maxim-C02XD0AAJGH6}
+  5  ActivityTaskScheduled     {ActivityId:0,
+                                ActivityType:{Name:HelloWorldActivities::say},
+                                TaskList:{Name:HelloWorldTaskList},
+                                Input:["1: Hello World!"],
+                                ScheduleToCloseTimeoutSeconds:100,
+                                ScheduleToStartTimeoutSeconds:100,
+                                StartToCloseTimeoutSeconds:100,
+                                HeartbeatTimeoutSeconds:100,
+                                DecisionTaskCompletedEventId:4}
+cadence:
+```
+The last envent in the workflow history is ActivityTaskScheduled. It is recorded when workflow invoked the activity, but it wasn't picked up by an activity worker yet.
+
+Another useful API is DescribeWorkflowExecution which among other information contains the list of outstanding activities:
+```text
+cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow describe  --workflow_id "HelloActivityWorker"
+{
+  "ExecutionConfiguration": {
+    "taskList": {
+      "name": "HelloWorldTaskList"
+    },
+    "executionStartToCloseTimeoutSeconds": 3600,
+    "taskStartToCloseTimeoutSeconds": 10,
+    "childPolicy": "TERMINATE"
+  },
+  "WorkflowExecutionInfo": {
+    "Execution": {
+      "workflowId": "HelloActivityWorker",
+      "runId": "ff015637-b5af-43e8-b3f6-8b6c7b919b62"
+    },
+    "Type": {
+      "name": "HelloWorld::sayHello"
+    },
+    "StartTime": "2019-06-08T23:56:41Z",
+    "CloseTime": "1970-01-01T00:00:00Z",
+    "CloseStatus": null,
+    "HistoryLength": 5,
+    "ParentDomainID": null,
+    "ParentExecution": null,
+    "AutoResetPoints": {}
+  },
+  "PendingActivities": [
+    {
+      "ActivityID": "0",
+      "ActivityType": {
+        "name": "HelloWorldActivities::say"
+      },
+      "State": "SCHEDULED",
+      "ScheduledTimestamp": "2019-06-08T23:57:00Z"
+    }
+  ]
+}
+cadence:
+```
+Let's start the activity worker. It starts and immediately prints
+```text
+1: Hello World!
+```
+Let's look at the workflow execution history:
+```text
+cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow show  --workflow_id "HelloActivityWorker"
+   1  WorkflowExecutionStarted  {WorkflowType:{Name:HelloWorld::sayHello},
+                                TaskList:{Name:HelloWorldTaskList},
+                                Input:["World"],
+                                ExecutionStartToCloseTimeoutSeconds:3600,
+                                TaskStartToCloseTimeoutSeconds:10,
+                                ContinuedFailureDetails:[],
+                                LastCompletionResult:[],
+                                Identity:cadence-cli@linuxkit-025000000001,
+                                Attempt:0,
+                                FirstDecisionTaskBackoffSeconds:0}
+   2  DecisionTaskScheduled     {TaskList:{Name:HelloWorldTaskList},
+                                StartToCloseTimeoutSeconds:10,
+                                Attempt:0}
+   3  DecisionTaskStarted       {ScheduledEventId:2,
+                                Identity:37694@maxim-C02XD0AAJGH6,
+                                RequestId:1d7cba6d-98c8-41fd-91b1-c27dffb21c7f}
+   4  DecisionTaskCompleted     {ExecutionContext:[],
+                                ScheduledEventId:2,
+                                StartedEventId:3,
+                                Identity:37694@maxim-C02XD0AAJGH6}
+   5  ActivityTaskScheduled     {ActivityId:0,
+                                ActivityType:{Name:HelloWorldActivities::say},
+                                TaskList:{Name:HelloWorldTaskList},
+                                Input:["1: Hello World!"],
+                                ScheduleToCloseTimeoutSeconds:300,
+                                ScheduleToStartTimeoutSeconds:300,
+                                StartToCloseTimeoutSeconds:300,
+                                HeartbeatTimeoutSeconds:300,
+                                DecisionTaskCompletedEventId:4}
+   6  ActivityTaskStarted       {ScheduledEventId:5,
+                                Identity:37784@maxim-C02XD0AAJGH6,
+                                RequestId:a646d5d2-566f-4f43-92d7-6689139ce944,
+                                Attempt:0}
+   7  ActivityTaskCompleted     {Result:[], ScheduledEventId:5,
+                                StartedEventId:6,
+                                Identity:37784@maxim-C02XD0AAJGH6}
+   8  DecisionTaskScheduled     {TaskList:{Name:maxim-C02XD0AAJGH6:fd3a85ed-752d-4662-a49d-2665b7667c8a},
+                                StartToCloseTimeoutSeconds:10, Attempt:0}
+   9  DecisionTaskStarted       {ScheduledEventId:8,
+                                Identity:fd3a85ed-752d-4662-a49d-2665b7667c8a,
+                                RequestId:601ef30a-0d1b-4400-b034-65b8328ad34c}
+  10  DecisionTaskCompleted     {ExecutionContext:[],
+                                ScheduledEventId:8,
+                                StartedEventId:9,
+                                Identity:37694@maxim-C02XD0AAJGH6}
+```
+ActivityTaskStarted event is recorded when the activity task is picked up by an activity worker. The Identity field
+contains the id of the worker (you can set it to whatever value on worker startup).
+
+ActivityTaskCompleted event is recorded when activity completes. It contains the result of the activity execution.
