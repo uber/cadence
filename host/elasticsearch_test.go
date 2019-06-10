@@ -183,6 +183,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_SearchAttribute() {
 
 /*
 func (s *elasticsearchIntegrationSuite) TestListWorkflow_PageToken() {
+	s.T().Skip("fixme: flaky test")
 	id := "es-integration-list-workflow-token-test"
 	wt := "es-integration-list-workflow-token-test-type"
 	tl := "es-integration-list-workflow-token-test-tasklist"
@@ -197,6 +198,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_PageToken() {
 
 /*
 func (s *elasticsearchIntegrationSuite) TestListWorkflow_SearchAfter() {
+	s.T().Skip("fixme: flaky test")
 	id := "es-integration-list-workflow-searchAfter-test"
 	wt := "es-integration-list-workflow-searchAfter-test-type"
 	tl := "es-integration-list-workflow-searchAfter-test-tasklist"
