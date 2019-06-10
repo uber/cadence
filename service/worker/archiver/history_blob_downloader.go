@@ -123,9 +123,6 @@ func (d *historyBlobDownloader) DownloadBlob(ctx context.Context, request *Downl
 	default:
 		return nil, errors.New("unknown blob encoding format")
 	}
-	if historyBlob.Header == nil || historyBlob.Header.IsLast == nil || historyBlob.Header.NextPageToken == nil {
-		return nil, errors.New("got corrupted blob")
-	}
 	if *historyBlob.Header.IsLast {
 		token = nil
 	} else {
