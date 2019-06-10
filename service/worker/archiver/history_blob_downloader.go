@@ -23,6 +23,8 @@ package archiver
 import (
 	"context"
 	"encoding/json"
+	"errors"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/blobstore/blob"
@@ -118,6 +120,11 @@ func (d *historyBlobDownloader) DownloadBlob(ctx context.Context, request *Downl
 		if err := json.Unmarshal(unwrappedBlob.Body, historyBlob); err != nil {
 			return nil, err
 		}
+	default:
+		return nil, errors.New("unknown blob encoding format")
+	}
+	if historyBlob.Header == nil || historyBlob.Header.IsLast == nil || historyBlob.Header.NextPageToken == nil {
+		return nil, errors.New("got corrupted blob")
 	}
 	if *historyBlob.Header.IsLast {
 		token = nil

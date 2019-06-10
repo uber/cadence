@@ -246,9 +246,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 			CloseFailoverVersion: common.Int64Ptr(request.CloseFailoverVersion),
 		}
 		var fetchedHistoryEventHashes []uint64
-		firstPage := true
-		for firstPage || len(req.NextPageToken) != 0 {
-			firstPage = false
+		for len(fetchedHistoryEventHashes) == 0 || len(req.NextPageToken) != 0 {
 			resp, err := blobDownloader.DownloadBlob(ctx, req)
 			if err != nil {
 				scope.IncCounter(metrics.ArchiverCouldNotRunBlobIntegrityCheckCount)
