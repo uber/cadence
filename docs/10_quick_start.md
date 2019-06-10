@@ -743,7 +743,7 @@ cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain 
                                 StartedEventId:9,
                                 Identity:37694@maxim-C02XD0AAJGH6}
 ```
-ActivityTaskStarted event is recorded when the activity task is picked up by an activity worker. The Identity field
+_ActivityTaskStarted_ event is recorded when the activity task is picked up by an activity worker. The Identity field
 contains the id of the worker (you can set it to whatever value on worker startup).
 
-ActivityTaskCompleted event is recorded when activity completes. It contains the result of the activity execution.
+_ActivityTaskCompleted_ event is recorded when activity completes. It contains the result of the activity execution.
