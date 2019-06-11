@@ -22,6 +22,7 @@ package batcher
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/uber-go/tally"
@@ -43,6 +44,9 @@ const (
 	backOffInitialInterval = time.Second
 	backOffMaxInterval     = time.Minute
 	rpcTimeout             = time.Second
+
+	// TODO remove this logic after this issue is resolved: https://github.com/uber/cadence/issues/2002
+	waitingForGlobalDomainCreationRacingCondition = time.Second * 20
 )
 
 type (
@@ -104,6 +108,7 @@ func (s *Batcher) Start() error {
 	if err != nil {
 		return err
 	}
+	time.Sleep(waitingForGlobalDomainCreationRacingCondition)
 
 	// start worker for batch operation workflows
 	workerOpts := worker.Options{
@@ -135,6 +140,10 @@ func (s *Batcher) createGlobalSystemDomainIfNotExists() error {
 	if err == nil {
 		s.context.logger.Info("Global system domain already exists", tag.WorkflowDomainName(common.SystemGlobalDomainName))
 		return nil
+	}
+
+	if s.context.cfg.ClusterMetadata.IsMasterCluster() && !s.context.cfg.ClusterMetadata.IsGlobalDomainEnabled() {
+		return fmt.Errorf("not master cluster, retry on describe domain only")
 	}
 
 	ctx, cancel = context.WithTimeout(context.Background(), rpcTimeout)

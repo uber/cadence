@@ -195,8 +195,7 @@ func (s *Service) startBatcher(base service.Service) {
 	}
 	batcher := batcher.New(params)
 	if err := batcher.Start(); err != nil {
-		// We emit error instead of fatal log because batcher is not a critical part for running cadence
-		s.logger.Error("error starting batcher, batch operation will not be working", tag.Error(err))
+		s.logger.Fatal("error starting batcher", tag.Error(err))
 	}
 }
 
@@ -210,7 +209,7 @@ func (s *Service) startScanner(base service.Service) {
 	}
 	scanner := scanner.New(params)
 	if err := scanner.Start(); err != nil {
-		s.logger.Fatal("error starting scanner:%v", tag.Error(err))
+		s.logger.Fatal("error starting scanner", tag.Error(err))
 	}
 }
 
