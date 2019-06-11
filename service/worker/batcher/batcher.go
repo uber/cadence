@@ -40,7 +40,10 @@ import (
 
 const (
 	// maximum time waiting for this batcher to start before giving up
-	maxTimeForStartup = time.Minute * 3
+	maxStartupTime         = time.Minute * 3
+	backOffInitialInterval = time.Second
+	backOffMaxInterval     = time.Minute
+	rpcTimeout             = time.Second
 )
 
 type (
@@ -97,24 +100,25 @@ func New(params *BootstrapParams) *Batcher {
 
 // Start starts the scanner
 func (s *Batcher) Start() error {
-	workerOpts := worker.Options{
-		MetricsScope:              s.context.tallyScope,
-		BackgroundActivityContext: context.WithValue(context.Background(), batcherContextKey, s.context),
-	}
-	worker := worker.New(s.context.svcClient, common.SystemDomainName, tlBatcherTaskListName, workerOpts)
-	err := worker.Start()
+	//retry until making sure global system domain is there
+	err := s.createGlobalSystemDomainIfNotExistsWithRetry()
 	if err != nil {
 		return err
 	}
 
-	//retry until making sure global system domain is there
-	return s.createGlobalSystemDomainIfNotExistsWithRetry()
+	// start worker for batch operation workflows
+	workerOpts := worker.Options{
+		MetricsScope:              s.context.tallyScope,
+		BackgroundActivityContext: context.WithValue(context.Background(), batcherContextKey, s.context),
+	}
+	worker := worker.New(s.context.svcClient, common.SystemDomainName, batcherTaskListName, workerOpts)
+	return worker.Start()
 }
 
 func (s *Batcher) createGlobalSystemDomainIfNotExistsWithRetry() error {
-	policy := backoff.NewExponentialRetryPolicy(time.Second)
-	policy.SetMaximumInterval(time.Minute)
-	policy.SetExpirationInterval(maxTimeForStartup)
+	policy := backoff.NewExponentialRetryPolicy(backOffInitialInterval)
+	policy.SetMaximumInterval(backOffMaxInterval)
+	policy.SetExpirationInterval(maxStartupTime)
 	return backoff.Retry(func() error {
 		return s.createGlobalSystemDomainIfNotExists()
 	}, policy, func(err error) bool {
@@ -123,22 +127,22 @@ func (s *Batcher) createGlobalSystemDomainIfNotExistsWithRetry() error {
 }
 
 func (s *Batcher) createGlobalSystemDomainIfNotExists() error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), rpcTimeout)
 	_, err := s.context.svcClient.DescribeDomain(ctx, &shared.DescribeDomainRequest{
 		Name: common.StringPtr(common.SystemGlobalDomainName),
 	})
 	cancel()
 
 	if err == nil {
-		s.context.logger.Info("global system domain already exists", tag.WorkflowDomainName(common.SystemGlobalDomainName))
+		s.context.logger.Info("Global system domain already exists", tag.WorkflowDomainName(common.SystemGlobalDomainName))
 		return nil
 	}
 
-	ctx, cancel = context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel = context.WithTimeout(context.Background(), rpcTimeout)
 	err = s.context.svcClient.RegisterDomain(ctx, s.getDomainCreationRequest())
 	cancel()
 	if err != nil {
-		s.context.logger.Error("error creating global system domain", tag.Error(err))
+		s.context.logger.Error("Error creating global system domain", tag.Error(err))
 		return err
 	}
 	s.context.logger.Info("Domain created successfully")
