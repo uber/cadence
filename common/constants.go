@@ -88,8 +88,8 @@ const (
 const (
 	// SystemGlobalDomainName is global domain name for cadence system workflows running globally
 	SystemGlobalDomainName = "cadence-system-global"
-	// SystemDomainName is domain name for cadence system workflows running in local cluster
-	SystemDomainName = "cadence-system"
+	// SystemLocalDomainName is domain name for cadence system workflows running in local cluster
+	SystemLocalDomainName = "cadence-system"
 	// SystemDomainID is domain id for all cadence system workflows
 	SystemDomainID = "32049b68-7872-4094-8e63-d0dd59896a83"
 	// SystemDomainRetentionDays is retention config for all cadence system workflows

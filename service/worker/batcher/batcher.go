@@ -110,7 +110,7 @@ func (s *Batcher) Start() error {
 		MetricsScope:              s.context.tallyScope,
 		BackgroundActivityContext: context.WithValue(context.Background(), batcherContextKey, s.context),
 	}
-	worker := worker.New(s.context.svcClient, common.SystemDomainName, batcherTaskListName, workerOpts)
+	worker := worker.New(s.context.svcClient, common.SystemLocalDomainName, batcherTaskListName, workerOpts)
 	return worker.Start()
 }
 

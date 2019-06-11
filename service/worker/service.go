@@ -298,7 +298,7 @@ func (s *Service) ensureSystemDomainExists(pFactory persistencefactory.Factory, 
 		s.logger.Fatal("error creating metadataMgr proxy", tag.Error(err))
 	}
 	defer metadataProxy.Close()
-	_, err = metadataProxy.GetDomain(&persistence.GetDomainRequest{Name: common.SystemDomainName})
+	_, err = metadataProxy.GetDomain(&persistence.GetDomainRequest{Name: common.SystemLocalDomainName})
 	switch err.(type) {
 	case nil:
 		return
@@ -319,7 +319,7 @@ func (s *Service) registerSystemDomain(pFactory persistencefactory.Factory, clus
 	_, err = metadataV2.CreateDomain(&persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          common.SystemDomainID,
-			Name:        common.SystemDomainName,
+			Name:        common.SystemLocalDomainName,
 			Description: "Cadence internal system domain",
 		},
 		Config: &persistence.DomainConfig{
