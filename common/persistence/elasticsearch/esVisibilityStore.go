@@ -338,6 +338,7 @@ func (v *esVisibilityStore) ListWorkflowExecutions(
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("vancexu, list get token: %v, %v\n", token.SortValue, token.TieBreaker)
 
 	queryDSL, sortField, err := v.getESQueryDSL(request, token)
 	if err != nil {
@@ -775,6 +776,7 @@ func (v *esVisibilityStore) getListWorkflowExecutionsResponse(searchHits *elasti
 			tieBreaker := sortVals[1].(string)
 
 			nextPageToken, err = v.serializePageToken(&esVisibilityPageToken{SortValue: sortVal, TieBreaker: tieBreaker})
+			fmt.Printf("vancexu: response token: %v, %v\n", sortVal, tieBreaker)
 		}
 		if err != nil {
 			return nil, err
