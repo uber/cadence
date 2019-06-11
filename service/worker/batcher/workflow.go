@@ -20,52 +20,7 @@
 
 package batcher
 
-import (
-	"context"
-	"time"
-
-	"go.uber.org/cadence"
-	"go.uber.org/cadence/activity"
-	"go.uber.org/cadence/workflow"
-)
-
 const (
-	batcherContextKey      = "batcherContext"
-	batcherTaskListName    = "cadence-sys-batcher-tasklist"
-	batchResetWFTypeName   = "cadence-sys-batch-reset-workflow"
-	batchResetActivityName = "cadence-sys-batch-reset-activity"
-
-	infiniteDuration        = 20 * 365 * 24 * time.Hour
-	batchActivityHBInterval = 10 * time.Second
+	batcherContextKey   = "batcherContext"
+	batcherTaskListName = "cadence-sys-batcher-tasklist"
 )
-
-var (
-	batchActivityRetryPolicy = cadence.RetryPolicy{
-		InitialInterval:    10 * time.Second,
-		BackoffCoefficient: 1.7,
-		MaximumInterval:    5 * time.Minute,
-		ExpirationInterval: infiniteDuration,
-	}
-
-	batchActivityOptions = workflow.ActivityOptions{
-		ScheduleToStartTimeout: 5 * time.Minute,
-		StartToCloseTimeout:    infiniteDuration,
-		HeartbeatTimeout:       5 * time.Minute,
-		RetryPolicy:            &batchActivityRetryPolicy,
-	}
-)
-
-func init() {
-	workflow.RegisterWithOptions(BatchResetWorkflow, workflow.RegisterOptions{Name: batchResetWFTypeName})
-	activity.RegisterWithOptions(BatchResetActivity, activity.RegisterOptions{Name: batchResetActivityName})
-}
-
-// BatchResetWorkflow is the workflow that runs a batch job of resetting workflows
-func BatchResetWorkflow(ctx workflow.Context) error {
-	future := workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, batchActivityOptions), batchResetActivityName)
-	return future.Get(ctx, nil)
-}
-
-func BatchResetActivity(aCtx context.Context) error {
-	return nil
-}
