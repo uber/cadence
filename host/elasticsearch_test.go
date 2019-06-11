@@ -17,7 +17,6 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-//+build esintegration
 
 // to run locally, make sure kafka and es is running,
 // then run cmd `go test -v ./host -run TestElasticsearchIntegrationSuite -tags esintegration`
@@ -183,7 +182,6 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_SearchAttribute() {
 }
 
 func (s *elasticsearchIntegrationSuite) TestListWorkflow_PageToken() {
-	s.T().Skip("fixme: flaky test")
 	id := "es-integration-list-workflow-token-test"
 	wt := "es-integration-list-workflow-token-test-type"
 	tl := "es-integration-list-workflow-token-test-tasklist"
@@ -196,7 +194,6 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_PageToken() {
 }
 
 func (s *elasticsearchIntegrationSuite) TestListWorkflow_SearchAfter() {
-	s.T().Skip("fixme: flaky test")
 	id := "es-integration-list-workflow-searchAfter-test"
 	wt := "es-integration-list-workflow-searchAfter-test-type"
 	tl := "es-integration-list-workflow-searchAfter-test-tasklist"
@@ -315,7 +312,6 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_OrQuery() {
 
 // To test last page search trigger max window size error
 func (s *elasticsearchIntegrationSuite) TestListWorkflow_MaxWindowSize() {
-	s.T().Skip("fixme: flaky test")
 	// set es index index settings
 	indexName := s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName]
 	_, err := s.esClient.IndexPutSettings(indexName).
@@ -536,7 +532,7 @@ func (s *elasticsearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, p
 		s.Nil(err)
 		if len(resp.GetExecutions()) == pageSize {
 			openExecutions = resp.GetExecutions()
-			nextPageToken = resp.NextPageToken
+			nextPageToken = resp.GetNextPageToken()
 			break
 		}
 		time.Sleep(waitTimeInMs * time.Millisecond)
@@ -561,8 +557,11 @@ func (s *elasticsearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, p
 		if len(resp.GetExecutions()) == numOfWorkflows-pageSize {
 			inIf = true
 			openExecutions = resp.GetExecutions()
-			nextPageToken = resp.NextPageToken
+			nextPageToken = resp.GetNextPageToken()
 			break
+		} else {
+			fmt.Println("vancexu len of resp: ", len(resp.GetExecutions()))
+			fmt.Println("vancexu resp: ", resp)
 		}
 		time.Sleep(waitTimeInMs * time.Millisecond)
 	}
