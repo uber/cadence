@@ -25,6 +25,7 @@ package host
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -181,7 +182,6 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_SearchAttribute() {
 	s.testHelperForReadOnce(we.GetRunId(), query, false)
 }
 
-/*
 func (s *elasticsearchIntegrationSuite) TestListWorkflow_PageToken() {
 	s.T().Skip("fixme: flaky test")
 	id := "es-integration-list-workflow-token-test"
@@ -194,9 +194,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_PageToken() {
 
 	s.testListWorkflowHelper(numOfWorkflows, pageSize, request, id, wt, false)
 }
-*/
 
-/*
 func (s *elasticsearchIntegrationSuite) TestListWorkflow_SearchAfter() {
 	s.T().Skip("fixme: flaky test")
 	id := "es-integration-list-workflow-searchAfter-test"
@@ -209,7 +207,6 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_SearchAfter() {
 
 	s.testListWorkflowHelper(numOfWorkflows, pageSize, request, id, wt, false)
 }
-*/
 
 func (s *elasticsearchIntegrationSuite) TestListWorkflow_OrQuery() {
 	id := "es-integration-list-workflow-or-query-test"
@@ -316,9 +313,9 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_OrQuery() {
 	s.Equal(3, searchVal)
 }
 
-/*
 // To test last page search trigger max window size error
 func (s *elasticsearchIntegrationSuite) TestListWorkflow_MaxWindowSize() {
+	s.T().Skip("fixme: flaky test")
 	// set es index index settings
 	indexName := s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName]
 	_, err := s.esClient.IndexPutSettings(indexName).
@@ -372,7 +369,6 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_MaxWindowSize() {
 		Do(context.Background())
 	s.NoError(err)
 }
-*/
 
 func (s *elasticsearchIntegrationSuite) TestListWorkflow_OrderBy() {
 	id := "es-integration-list-workflow-order-by-test"
