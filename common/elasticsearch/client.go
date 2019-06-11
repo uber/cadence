@@ -83,6 +83,7 @@ func NewClient(config *Config) (Client, error) {
 	client, err := elastic.NewClient(
 		elastic.SetURL(config.URL.String()),
 		elastic.SetRetrier(elastic.NewBackoffRetrier(elastic.NewExponentialBackoff(128*time.Millisecond, 513*time.Millisecond))),
+		elastic.SetDecoder(&elastic.NumberDecoder{}),
 	)
 	if err != nil {
 		return nil, err
