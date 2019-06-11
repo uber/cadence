@@ -60,6 +60,7 @@ var keys = map[Key]string{
 	EnableReadFromArchival:              "system.enableReadFromArchival",
 	EnableDomainNotActiveAutoForwarding: "system.enableDomainNotActiveAutoForwarding",
 	TransactionSizeLimit:                "system.transactionSizeLimit",
+	EnableBatcher:                       "worker.enableBatcher",
 
 	// size limit
 	BlobSizeLimitError:     "limit.blobSize.error",
@@ -197,7 +198,6 @@ var keys = map[Key]string{
 	WorkerTimeLimitPerArchivalIteration:             "worker.TimeLimitPerArchivalIteration",
 	WorkerThrottledLogRPS:                           "worker.throttledLogRPS",
 	ScannerPersistenceMaxQPS:                        "worker.scannerPersistenceMaxQPS",
-	EnableBatcher:                                   "worker.enableBatcher",
 }
 
 const (

@@ -24,8 +24,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/uber/cadence/common/service/dynamicconfig"
-
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -33,6 +31,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/worker"
@@ -162,7 +161,10 @@ func (s *Batcher) getDomainCreationRequest() *shared.RegisterDomainRequest {
 		req.IsGlobalDomain = common.BoolPtr(true)
 		req.ActiveClusterName = common.StringPtr(s.context.cfg.ClusterMetadata.GetMasterClusterName())
 		var clusters []*shared.ClusterReplicationConfiguration
-		for name := range s.context.cfg.ClusterMetadata.GetAllClusterInfo() {
+		for name, c := range s.context.cfg.ClusterMetadata.GetAllClusterInfo() {
+			if !c.Enabled {
+				continue
+			}
 			clusters = append(clusters, &shared.ClusterReplicationConfiguration{
 				ClusterName: common.StringPtr(name),
 			})
