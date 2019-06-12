@@ -17,6 +17,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+//+build esintegration
 
 // to run locally, make sure kafka and es is running,
 // then run cmd `go test -v ./host -run TestElasticsearchIntegrationSuite -tags esintegration`
@@ -44,6 +45,7 @@ import (
 const (
 	numOfRetry   = 50
 	waitTimeInMs = 400
+	waitForESToSettle = 4 * time.Second // wait es shards for some time ensure data consistent
 )
 
 type elasticsearchIntegrationSuite struct {
@@ -237,6 +239,8 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_OrQuery() {
 	we3, err := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err)
 
+	time.Sleep(waitForESToSettle)
+
 	// query 1 workflow with search attr
 	query1 := fmt.Sprintf(`CustomIntField = %d`, 1)
 	var openExecution *workflow.WorkflowExecutionInfo
@@ -330,6 +334,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_MaxWindowSize() {
 		_, err := s.engine.StartWorkflowExecution(createContext(), startRequest)
 		s.Nil(err)
 	}
+	time.Sleep(waitForESToSettle)
 
 	var listResp *workflow.ListWorkflowExecutionsResponse
 	var nextPageToken []byte
@@ -352,16 +357,11 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_MaxWindowSize() {
 	}
 	s.NotNil(listResp)
 	s.True(len(listResp.GetNextPageToken()) != 0)
-	fmt.Println("vancexu len of listResp: ", len(listResp.GetExecutions()))
-	fmt.Println("vancexu listResp: ", listResp)
 
 	// the last request
 	listRequest.NextPageToken = listResp.GetNextPageToken()
 	resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
 	s.Nil(err)
-	s.Logger.Debug(fmt.Sprintf("last request get executions %s", resp.GetExecutions()))
-	fmt.Println("vancexu len of resp: ", len(resp.GetExecutions()))
-	fmt.Println("vancexu resp: ", resp)
 	s.True(len(resp.GetExecutions()) == 0)
 	s.True(len(resp.GetNextPageToken()) == 0)
 
@@ -403,6 +403,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_OrderBy() {
 		_, err := s.engine.StartWorkflowExecution(createContext(), startRequest)
 		s.Nil(err)
 	}
+	time.Sleep(waitForESToSettle)
 
 	desc := "desc"
 	asc := "asc"
@@ -513,6 +514,7 @@ func (s *elasticsearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, p
 		_, err := s.engine.StartWorkflowExecution(createContext(), startRequest)
 		s.Nil(err)
 	}
+	time.Sleep(waitForESToSettle)
 
 	var openExecutions []*workflow.WorkflowExecutionInfo
 	var nextPageToken []byte
@@ -537,8 +539,6 @@ func (s *elasticsearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, p
 		if len(resp.GetExecutions()) == pageSize {
 			openExecutions = resp.GetExecutions()
 			nextPageToken = resp.GetNextPageToken()
-			fmt.Println("vancexu len of listResp: ", len(resp.GetExecutions()))
-			fmt.Println("vancexu listResp: ", resp)
 			break
 		}
 		time.Sleep(waitTimeInMs * time.Millisecond)
@@ -565,9 +565,6 @@ func (s *elasticsearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, p
 			openExecutions = resp.GetExecutions()
 			nextPageToken = resp.GetNextPageToken()
 			break
-		} else {
-			fmt.Println("vancexu len of resp: ", len(resp.GetExecutions()))
-			fmt.Println("vancexu resp: ", resp)
 		}
 		time.Sleep(waitTimeInMs * time.Millisecond)
 	}
