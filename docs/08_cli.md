@@ -218,7 +218,7 @@ To find out which **binary checksum** of the bad deployment to reset, you should
 ...
 ```
 
-Then use this command to tell Cadence to auto-reset all workflows impacted by the bad deployment. The bad binary checksum needs to store in domain info.
+Then use this command to tell Cadence to auto-reset all workflows impacted by the bad deployment. Essentailly the command will store the bad binary checksum into domain info and trigger a process to reset all your workflows.
 ```
 ./cadence --do <YourDomainName> domain update -h --add_bad_binary aae748fdc557a3f873adbe1dd066713f  --reason "rollback bad deployment"
 ```
