@@ -43,8 +43,8 @@ import (
 )
 
 const (
-	numOfRetry   = 50
-	waitTimeInMs = 400
+	numOfRetry        = 50
+	waitTimeInMs      = 400
 	waitForESToSettle = 4 * time.Second // wait es shards for some time ensure data consistent
 )
 
@@ -334,6 +334,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_MaxWindowSize() {
 		_, err := s.engine.StartWorkflowExecution(createContext(), startRequest)
 		s.Nil(err)
 	}
+
 	time.Sleep(waitForESToSettle)
 
 	var listResp *workflow.ListWorkflowExecutionsResponse
@@ -403,6 +404,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_OrderBy() {
 		_, err := s.engine.StartWorkflowExecution(createContext(), startRequest)
 		s.Nil(err)
 	}
+
 	time.Sleep(waitForESToSettle)
 
 	desc := "desc"
@@ -514,6 +516,7 @@ func (s *elasticsearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, p
 		_, err := s.engine.StartWorkflowExecution(createContext(), startRequest)
 		s.Nil(err)
 	}
+
 	time.Sleep(waitForESToSettle)
 
 	var openExecutions []*workflow.WorkflowExecutionInfo
