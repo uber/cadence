@@ -1885,21 +1885,6 @@ func createTimerTasks(
 	return nil
 }
 
-func assertNotCurrentExecution(tx sqldb.Tx, shardID int, domainID sqldb.UUID, workflowID string, runID sqldb.UUID) error {
-
-	assertFn := func(currentRow *sqldb.CurrentExecutionsRow) error {
-		if bytes.Equal(currentRow.RunID, runID) {
-			return &p.ConditionFailedError{Msg: fmt.Sprintf(
-				"Assertion on current record failed failed. Current run ID was %v, expected %v",
-				currentRow.RunID,
-				runID,
-			)}
-		}
-		return nil
-	}
-	return assertCurrentExecution(tx, shardID, domainID, workflowID, assertFn)
-}
-
 func assertRunIDAndUpdateCurrentExecution(tx sqldb.Tx, shardID int, domainID sqldb.UUID, workflowID string, newRunID sqldb.UUID, previousRunID sqldb.UUID,
 	createRequestID string, state int, closeStatus int, startVersion int64, lastWriteVersion int64) error {
 
