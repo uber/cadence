@@ -34,10 +34,10 @@ import (
 	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/cron"
 	"github.com/uber/cadence/common/definition"
 	ce "github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log"
@@ -47,7 +47,6 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/worker/archiver"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
-	"go.uber.org/cadence/.gen/go/shared"
 )
 
 const (
@@ -125,7 +124,7 @@ var (
 	// ErrSignalsLimitExceeded is the error indicating limit reached for maximum number of signal events
 	ErrSignalsLimitExceeded = &workflow.LimitExceededError{Message: "Exceeded workflow execution limit for signal events"}
 	// ErrEventsAterWorkflowFinish is the error indicating server error trying to write events after workflow finish event
-	ErrEventsAterWorkflowFinish = &shared.InternalServiceError{Message: "error validating last event being workflow finish event."}
+	ErrEventsAterWorkflowFinish = &workflow.InternalServiceError{Message: "error validating last event being workflow finish event."}
 
 	// FailedWorkflowCloseState is a set of failed workflow close states, used for start workflow policy
 	// for start workflow execution API
@@ -340,13 +339,14 @@ func (e *historyEngineImpl) generateFirstDecisionTask(domainID string, msBuilder
 		DecisionTimeout: int32(0),
 	}
 	var transferTasks []persistence.Task
+	var err error
 	if parentInfo == nil {
 		// RecordWorkflowStartedTask is only created when it is not a Child Workflow
 		transferTasks = append(transferTasks, &persistence.RecordWorkflowStartedTask{})
 		if cronBackoffSeconds == 0 {
 			// DecisionTask is only created when it is not a Child Workflow and no backoff is needed
-			di = msBuilder.AddDecisionTaskScheduledEvent()
-			if di == nil {
+			di, err = msBuilder.AddDecisionTaskScheduledEvent()
+			if err != nil {
 				return nil, nil, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
 			}
 
@@ -359,8 +359,11 @@ func (e *historyEngineImpl) generateFirstDecisionTask(domainID string, msBuilder
 }
 
 // StartWorkflowExecution starts a workflow execution
-func (e *historyEngineImpl) StartWorkflowExecution(ctx ctx.Context, startRequest *h.StartWorkflowExecutionRequest) (
-	resp *workflow.StartWorkflowExecutionResponse, retError error) {
+func (e *historyEngineImpl) StartWorkflowExecution(
+	ctx ctx.Context,
+	startRequest *h.StartWorkflowExecutionRequest,
+) (resp *workflow.StartWorkflowExecutionResponse, retError error) {
+
 	domainEntry, retError := e.getActiveDomainEntry(startRequest.DomainUUID)
 	if retError != nil {
 		return
@@ -390,8 +393,8 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx ctx.Context, startRequest
 		}
 	}
 
-	startedEvent := msBuilder.AddWorkflowExecutionStartedEvent(execution, startRequest)
-	if startedEvent == nil {
+	_, retError = msBuilder.AddWorkflowExecutionStartedEvent(execution, startRequest)
+	if retError != nil {
 		retError = &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
 		return
 	}
@@ -727,13 +730,13 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(ctx ctx.Context,
 	// TODO: we need to consider adding execution time to mutable state
 	// For now execution time will be calculated based on start time and cron schedule/retry policy
 	// each time DescribeWorkflowExecution is called.
-	backoff := time.Duration(0)
+	backoffDuration := time.Duration(0)
 	if executionInfo.HasRetryPolicy && (executionInfo.Attempt > 0) {
-		backoff = time.Duration(float64(executionInfo.InitialInterval)*math.Pow(executionInfo.BackoffCoefficient, float64(executionInfo.Attempt-1))) * time.Second
+		backoffDuration = time.Duration(float64(executionInfo.InitialInterval)*math.Pow(executionInfo.BackoffCoefficient, float64(executionInfo.Attempt-1))) * time.Second
 	} else if len(executionInfo.CronSchedule) != 0 {
-		backoff = cron.GetBackoffForNextSchedule(executionInfo.CronSchedule, executionInfo.StartTimestamp)
+		backoffDuration = backoff.GetBackoffForNextSchedule(executionInfo.CronSchedule, executionInfo.StartTimestamp)
 	}
-	result.WorkflowExecutionInfo.ExecutionTime = common.Int64Ptr(result.WorkflowExecutionInfo.GetStartTime() + backoff.Nanoseconds())
+	result.WorkflowExecutionInfo.ExecutionTime = common.Int64Ptr(result.WorkflowExecutionInfo.GetStartTime() + backoffDuration.Nanoseconds())
 
 	if executionInfo.ParentRunID != "" {
 		result.WorkflowExecutionInfo.ParentExecution = &workflow.WorkflowExecution{
@@ -861,7 +864,11 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(ctx ctx.Context,
 				return nil, &h.EventAlreadyStartedError{Message: "Activity task already started."}
 			}
 
-			msBuilder.AddActivityTaskStartedEvent(ai, scheduleID, requestID, request.PollRequest.GetIdentity())
+			if _, err := msBuilder.AddActivityTaskStartedEvent(
+				ai, scheduleID, requestID, request.PollRequest.GetIdentity(),
+			); err != nil {
+				return nil, err
+			}
 
 			response.StartedTimestamp = common.Int64Ptr(ai.StartedTime.UnixNano())
 			response.Attempt = common.Int64Ptr(int64(ai.Attempt))
@@ -965,7 +972,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(ctx ctx.Context, req *h
 				return nil, ErrActivityTaskNotFound
 			}
 
-			if msBuilder.AddActivityTaskCompletedEvent(scheduleID, ai.StartedID, request) == nil {
+			if _, err := msBuilder.AddActivityTaskCompletedEvent(scheduleID, ai.StartedID, request); err != nil {
 				// Unable to add ActivityTaskCompleted event to history
 				return nil, &workflow.InternalServiceError{Message: "Unable to add ActivityTaskCompleted event to history."}
 			}
@@ -1027,7 +1034,7 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(ctx ctx.Context, req *h.Re
 				postActions.timerTasks = append(postActions.timerTasks, retryTask)
 			} else {
 				// no more retry, and we want to record the failure event
-				if msBuilder.AddActivityTaskFailedEvent(scheduleID, ai.StartedID, request) == nil {
+				if _, err := msBuilder.AddActivityTaskFailedEvent(scheduleID, ai.StartedID, request); err != nil {
 					// Unable to add ActivityTaskFailed event to history
 					return nil, &workflow.InternalServiceError{Message: "Unable to add ActivityTaskFailed event to history."}
 				}
@@ -1085,8 +1092,12 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(ctx ctx.Context, req *h.
 				return nil, ErrActivityTaskNotFound
 			}
 
-			if msBuilder.AddActivityTaskCanceledEvent(scheduleID, ai.StartedID, ai.CancelRequestID, request.Details,
-				common.StringDefault(request.Identity)) == nil {
+			if _, err := msBuilder.AddActivityTaskCanceledEvent(
+				scheduleID,
+				ai.StartedID,
+				ai.CancelRequestID,
+				request.Details,
+				common.StringDefault(request.Identity)); err != nil {
 				// Unable to add ActivityTaskCanceled event to history
 				return nil, &workflow.InternalServiceError{Message: "Unable to add ActivityTaskCanceled event to history."}
 			}
@@ -1217,7 +1228,7 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(ctx ctx.Context,
 				return nil, ErrCancellationAlreadyRequested
 			}
 
-			if msBuilder.AddWorkflowExecutionCancelRequestedEvent("", req) == nil {
+			if _, err := msBuilder.AddWorkflowExecutionCancelRequestedEvent("", req); err != nil {
 				return nil, &workflow.InternalServiceError{Message: "Unable to cancel workflow execution."}
 			}
 
@@ -1284,7 +1295,10 @@ func (e *historyEngineImpl) SignalWorkflowExecution(ctx ctx.Context, signalReque
 			msBuilder.AddSignalRequested(requestID)
 		}
 
-		if msBuilder.AddWorkflowExecutionSignaled(request.GetSignalName(), request.GetInput(), request.GetIdentity()) == nil {
+		if _, err := msBuilder.AddWorkflowExecutionSignaled(
+			request.GetSignalName(),
+			request.GetInput(),
+			request.GetIdentity()); err != nil {
 			return nil, &workflow.InternalServiceError{Message: "Unable to signal workflow execution."}
 		}
 
@@ -1339,7 +1353,10 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx ctx.Context, si
 				return nil, ErrSignalsLimitExceeded
 			}
 
-			if msBuilder.AddWorkflowExecutionSignaled(sRequest.GetSignalName(), sRequest.GetSignalInput(), sRequest.GetIdentity()) == nil {
+			if _, err := msBuilder.AddWorkflowExecutionSignaled(
+				sRequest.GetSignalName(),
+				sRequest.GetSignalInput(),
+				sRequest.GetIdentity()); err != nil {
 				return nil, &workflow.InternalServiceError{Message: "Unable to signal workflow execution."}
 			}
 
@@ -1347,8 +1364,8 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx ctx.Context, si
 			var timerTasks []persistence.Task
 			// Create a transfer task to schedule a decision task
 			if !msBuilder.HasPendingDecisionTask() {
-				di := msBuilder.AddDecisionTaskScheduledEvent()
-				if di == nil {
+				di, err := msBuilder.AddDecisionTaskScheduledEvent()
+				if err != nil {
 					return nil, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
 				}
 				transferTasks = append(transferTasks, &persistence.DecisionTask{
@@ -1438,12 +1455,15 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx ctx.Context, si
 	// Generate first decision task event.
 	taskList := request.TaskList.GetName()
 	// Add WF start event
-	startedEvent := msBuilder.AddWorkflowExecutionStartedEvent(execution, startRequest)
-	if startedEvent == nil {
+	_, err := msBuilder.AddWorkflowExecutionStartedEvent(execution, startRequest)
+	if err != nil {
 		return nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
 	}
 	// Add signal event
-	if msBuilder.AddWorkflowExecutionSignaled(sRequest.GetSignalName(), sRequest.GetSignalInput(), sRequest.GetIdentity()) == nil {
+	if _, err := msBuilder.AddWorkflowExecutionSignaled(
+		sRequest.GetSignalName(),
+		sRequest.GetSignalInput(),
+		sRequest.GetIdentity()); err != nil {
 		return nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution signaled event."}
 	}
 	// first decision task
@@ -1560,7 +1580,7 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(ctx ctx.Context, terminat
 				return nil, ErrWorkflowCompleted
 			}
 
-			if msBuilder.AddWorkflowExecutionTerminatedEvent(request) == nil {
+			if _, err := msBuilder.AddWorkflowExecutionTerminatedEvent(request); err != nil {
 				return nil, &workflow.InternalServiceError{Message: "Unable to terminate workflow execution."}
 			}
 
@@ -1598,25 +1618,26 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(ctx ctx.Context, compl
 				return nil, &workflow.EntityNotExistsError{Message: "Pending child execution not found."}
 			}
 
+			var err error
 			switch *completionEvent.EventType {
 			case workflow.EventTypeWorkflowExecutionCompleted:
 				attributes := completionEvent.WorkflowExecutionCompletedEventAttributes
-				msBuilder.AddChildWorkflowExecutionCompletedEvent(initiatedID, completedExecution, attributes)
+				_, err = msBuilder.AddChildWorkflowExecutionCompletedEvent(initiatedID, completedExecution, attributes)
 			case workflow.EventTypeWorkflowExecutionFailed:
 				attributes := completionEvent.WorkflowExecutionFailedEventAttributes
-				msBuilder.AddChildWorkflowExecutionFailedEvent(initiatedID, completedExecution, attributes)
+				_, err = msBuilder.AddChildWorkflowExecutionFailedEvent(initiatedID, completedExecution, attributes)
 			case workflow.EventTypeWorkflowExecutionCanceled:
 				attributes := completionEvent.WorkflowExecutionCanceledEventAttributes
-				msBuilder.AddChildWorkflowExecutionCanceledEvent(initiatedID, completedExecution, attributes)
+				_, err = msBuilder.AddChildWorkflowExecutionCanceledEvent(initiatedID, completedExecution, attributes)
 			case workflow.EventTypeWorkflowExecutionTerminated:
 				attributes := completionEvent.WorkflowExecutionTerminatedEventAttributes
-				msBuilder.AddChildWorkflowExecutionTerminatedEvent(initiatedID, completedExecution, attributes)
+				_, err = msBuilder.AddChildWorkflowExecutionTerminatedEvent(initiatedID, completedExecution, attributes)
 			case workflow.EventTypeWorkflowExecutionTimedOut:
 				attributes := completionEvent.WorkflowExecutionTimedOutEventAttributes
-				msBuilder.AddChildWorkflowExecutionTimedOutEvent(initiatedID, completedExecution, attributes)
+				_, err = msBuilder.AddChildWorkflowExecutionTimedOutEvent(initiatedID, completedExecution, attributes)
 			}
 
-			return nil, nil
+			return nil, err
 		})
 }
 
@@ -1658,13 +1679,13 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx ctx.Context,
 	request := resetRequest.ResetRequest
 	if request == nil || request.WorkflowExecution == nil || len(request.WorkflowExecution.GetRunId()) == 0 || len(request.WorkflowExecution.GetWorkflowId()) == 0 {
 		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("Require workflowId and runId."),
+			Message: "Require workflowId and runId.",
 		}
 		return
 	}
 	if request.GetDecisionFinishEventId() <= common.FirstEventID {
 		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("Decision finish ID must be > 1."),
+			Message: "Decision finish ID must be > 1.",
 		}
 		return
 	}
@@ -1743,6 +1764,7 @@ func (e *historyEngineImpl) DeleteExecutionFromVisibility(task *persistence.Time
 }
 
 type updateWorkflowAction struct {
+	noop           bool
 	deleteWorkflow bool
 	createDecision bool
 	timerTasks     []persistence.Task
@@ -1778,6 +1800,9 @@ Update_History_Loop:
 			// Returned error back to the caller
 			return err
 		}
+		if postActions.noop {
+			return nil
+		}
 
 		transferTasks, timerTasks := postActions.transferTasks, postActions.timerTasks
 		if postActions.deleteWorkflow {
@@ -1795,8 +1820,8 @@ Update_History_Loop:
 		if postActions.createDecision {
 			// Create a transfer task to schedule a decision task
 			if !msBuilder.HasPendingDecisionTask() {
-				di := msBuilder.AddDecisionTaskScheduledEvent()
-				if di == nil {
+				di, err := msBuilder.AddDecisionTaskScheduledEvent()
+				if err != nil {
 					return &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
 				}
 				transferTasks = append(transferTasks, &persistence.DecisionTask{
@@ -1917,7 +1942,11 @@ func (e *historyEngineImpl) failDecision(context workflowExecutionContext, sched
 		return nil, err
 	}
 
-	msBuilder.AddDecisionTaskFailedEvent(scheduleID, startedID, cause, nil, request.GetIdentity(), "", "", "", 0)
+	if _, err = msBuilder.AddDecisionTaskFailedEvent(
+		scheduleID, startedID, cause, nil, request.GetIdentity(), "", "", "", 0,
+	); err != nil {
+		return nil, err
+	}
 
 	// Return new builder back to the caller for further updates
 	return msBuilder, nil
@@ -2051,50 +2080,6 @@ func getStartRequest(domainID string,
 
 	startRequest := common.CreateHistoryStartWorkflowRequest(domainID, req)
 	return startRequest
-}
-
-func getWorkflowStartedEvent(historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager, eventStoreVersion int32, branchToken []byte, logger log.Logger, domainID, workflowID, runID string, shardID *int) (*workflow.HistoryEvent, error) {
-	var events []*workflow.HistoryEvent
-	if eventStoreVersion == persistence.EventStoreVersionV2 {
-		response, err := historyV2Mgr.ReadHistoryBranch(&persistence.ReadHistoryBranchRequest{
-			BranchToken:   branchToken,
-			MinEventID:    common.FirstEventID,
-			MaxEventID:    common.FirstEventID + 1,
-			PageSize:      defaultHistoryPageSize,
-			NextPageToken: nil,
-			ShardID:       shardID,
-		})
-		if err != nil {
-			logger.Error("Conflict resolution current workflow finished.", tag.Error(err))
-			return nil, err
-		}
-		events = response.HistoryEvents
-	} else {
-		response, err := historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
-			DomainID: domainID,
-			Execution: workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(workflowID),
-				RunId:      common.StringPtr(runID),
-			},
-			FirstEventID:  common.FirstEventID,
-			NextEventID:   common.FirstEventID + 1,
-			PageSize:      defaultHistoryPageSize,
-			NextPageToken: nil,
-		})
-		if err != nil {
-			logger.Error("Conflict resolution current workflow finished.", tag.Error(err))
-			return nil, err
-		}
-		events = response.History.Events
-	}
-
-	if len(events) == 0 {
-		logger.WithTags(tag.WorkflowID(workflowID), tag.WorkflowRunID(runID))
-		logError(logger, errNoHistoryFound.Error(), errNoHistoryFound)
-		return nil, errNoHistoryFound
-	}
-
-	return events[0], nil
 }
 
 func setTaskInfo(version int64, timestamp time.Time, transferTasks []persistence.Task, timerTasks []persistence.Task) {

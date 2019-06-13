@@ -1333,9 +1333,15 @@ const (
 	IndexProcessorCorruptedData
 	ArchiverNonRetryableErrorCount
 	ArchiverSkipUploadCount
+	ArchiverHistoryMutatedCount
+	ArchiverBlobSize
+	ArchiverTotalUploadSize
 	ArchiverRunningDeterministicConstructionCheckCount
 	ArchiverDeterministicConstructionCheckFailedCount
 	ArchiverCouldNotRunDeterministicConstructionCheckCount
+	ArchiverRunningBlobIntegrityCheckCount
+	ArchiverBlobIntegrityCheckFailedCount
+	ArchiverCouldNotRunBlobIntegrityCheckCount
 	ArchiverStartedCount
 	ArchiverStoppedCount
 	ArchiverCoroutineStartedCount
@@ -1573,9 +1579,15 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		IndexProcessorCorruptedData:                            {metricName: "index_processor_corrupted_data"},
 		ArchiverNonRetryableErrorCount:                         {metricName: "archiver_non_retryable_error"},
 		ArchiverSkipUploadCount:                                {metricName: "archiver_skip_upload"},
+		ArchiverHistoryMutatedCount:                            {metricName: "archiver_history_mutated"},
+		ArchiverBlobSize:                                       {metricName: "archiver_blob_size", metricType: Timer},
+		ArchiverTotalUploadSize:                                {metricName: "archiver_total_upload_size", metricType: Timer},
 		ArchiverRunningDeterministicConstructionCheckCount:     {metricName: "archiver_running_deterministic_construction_check"},
 		ArchiverDeterministicConstructionCheckFailedCount:      {metricName: "archiver_deterministic_construction_check_failed"},
 		ArchiverCouldNotRunDeterministicConstructionCheckCount: {metricName: "archiver_could_not_run_deterministic_construction_check"},
+		ArchiverRunningBlobIntegrityCheckCount:                 {metricName: "archiver_running_blob_integrity_check"},
+		ArchiverCouldNotRunBlobIntegrityCheckCount:             {metricName: "archiver_could_not_run_blob_integrity_check"},
+		ArchiverBlobIntegrityCheckFailedCount:                  {metricName: "archiver_blob_integrity_check_failed"},
 		ArchiverStartedCount:                                   {metricName: "archiver_started"},
 		ArchiverStoppedCount:                                   {metricName: "archiver_stopped"},
 		ArchiverCoroutineStartedCount:                          {metricName: "archiver_coroutine_started"},

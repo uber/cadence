@@ -18,39 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package history
+package batcher
 
-import (
-	"github.com/stretchr/testify/mock"
-	"github.com/uber/cadence/common/persistence"
+const (
+	batcherContextKey   = "batcherContext"
+	batcherTaskListName = "cadence-sys-batcher-tasklist"
 )
-
-// mockConflictResolver is used as mock implementation for conflictResolver
-type mockConflictResolver struct {
-	mock.Mock
-}
-
-var _ conflictResolver = (*mockConflictResolver)(nil)
-
-// reset is mock implementation for reset of conflictResolver
-func (_m *mockConflictResolver) reset(_a0 string, _a1 int64, _a2 int, _a3 string, _a4 int64, _a5 *persistence.WorkflowExecutionInfo) (mutableState, error) {
-	ret := _m.Called(_a0, _a1, _a2, _a3, _a4, _a5)
-
-	var r0 mutableState
-	if rf, ok := ret.Get(0).(func(string, int64, int, string, int64, *persistence.WorkflowExecutionInfo) mutableState); ok {
-		r0 = rf(_a0, _a1, _a2, _a3, _a4, _a5)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(mutableState)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}

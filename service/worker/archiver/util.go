@@ -28,9 +28,11 @@ import (
 	"time"
 
 	"github.com/dgryski/go-farm"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"go.uber.org/cadence"
+	"go.uber.org/cadence/activity"
 )
 
 // MaxArchivalIterationTimeout returns the max allowed timeout for a single iteration of archival workflow
@@ -38,9 +40,9 @@ func MaxArchivalIterationTimeout() time.Duration {
 	return workflowStartToCloseTimeout / 2
 }
 
-func hashArchiveRequest(archiveRequest ArchiveRequest) uint64 {
+func hash(i interface{}) uint64 {
 	var b bytes.Buffer
-	gob.NewEncoder(&b).Encode(archiveRequest)
+	gob.NewEncoder(&b).Encode(i)
 	return farm.Fingerprint64(b.Bytes())
 }
 
@@ -77,6 +79,13 @@ func tagLoggerWithRequest(logger log.Logger, request ArchiveRequest) log.Logger 
 	)
 }
 
+func tagLoggerWithActivityInfo(logger log.Logger, activityInfo activity.Info) log.Logger {
+	return logger.WithTags(
+		tag.WorkflowID(activityInfo.WorkflowExecution.ID),
+		tag.WorkflowRunID(activityInfo.WorkflowExecution.RunID),
+		tag.Attempt(activityInfo.Attempt))
+}
+
 func contextExpired(ctx context.Context) bool {
 	select {
 	case <-ctx.Done():
@@ -96,12 +105,25 @@ func shouldRun(probability float64) bool {
 	return rand.Intn(int(1.0/probability)) == 0
 }
 
+func historyMutated(historyBlob *HistoryBlob, request *ArchiveRequest) bool {
+	lastFailoverVersion := common.Int64Default(historyBlob.Header.LastFailoverVersion)
+	if lastFailoverVersion > request.CloseFailoverVersion {
+		return true
+	}
+
+	if !common.BoolDefault(historyBlob.Header.IsLast) {
+		return false
+	}
+
+	lastEventID := common.Int64Default(historyBlob.Header.LastEventID)
+	return lastFailoverVersion != request.CloseFailoverVersion || lastEventID+1 != request.NextEventID
+}
+
 func validateArchivalRequest(request *ArchiveRequest) error {
 	if len(request.BucketName) == 0 {
 		// this should not be able to occur, if domain enables archival bucket should always be set
 		return cadence.NewCustomError(errEmptyBucket)
 	}
-
 	return nil
 }
 
@@ -120,4 +142,13 @@ func getUploadHistoryActivityResponse(progress uploadProgress, errReason string,
 			ErrorDetails:  rootErr.Error(),
 		}, nil
 	}
+}
+
+func errorDetails(err error) string {
+	var details string
+	if _, ok := err.(*cadence.CustomError); !ok {
+		return details
+	}
+	err.(*cadence.CustomError).Details(&details)
+	return details
 }

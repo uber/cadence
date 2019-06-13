@@ -79,6 +79,11 @@ func NewHistoryBlobKey(domainID, workflowID, runID string, closeFailoverVersion 
 	return blob.NewKey("history", combinedHash, strconv.FormatInt(closeFailoverVersion, 10), strconv.Itoa(pageToken))
 }
 
+// NewNonDeterministicBlobKey returns a key for the non-deterministic history blob given the key for the other blob
+func NewNonDeterministicBlobKey(key blob.Key) (blob.Key, error) {
+	return blob.NewKey("nondeterministic", key.Pieces()...)
+}
+
 // ConvertHeaderToTags converts header into metadata tags for blob
 func ConvertHeaderToTags(header *HistoryBlobHeader) (map[string]string, error) {
 	var tempMap map[string]interface{}

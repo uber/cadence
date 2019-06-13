@@ -22,8 +22,6 @@ package common
 
 import (
 	"time"
-
-	"github.com/uber/cadence/common/cron"
 )
 
 const (
@@ -67,9 +65,6 @@ const (
 	EncodingTypeEmpty                 = ""
 )
 
-// NoRetryBackoff is used to represent backoff when no retry is needed
-const NoRetryBackoff = cron.NoBackoff
-
 type (
 	// EncodingType is an enum that represents various data encoding types
 	EncodingType string
@@ -91,12 +86,16 @@ const (
 )
 
 const (
-	// SystemDomainName is domain name for all cadence system workflows
-	SystemDomainName = "cadence-system"
+	// SystemGlobalDomainName is global domain name for cadence system workflows running globally
+	SystemGlobalDomainName = "cadence-system-global"
+	// SystemLocalDomainName is domain name for cadence system workflows running in local cluster
+	SystemLocalDomainName = "cadence-system"
 	// SystemDomainID is domain id for all cadence system workflows
 	SystemDomainID = "32049b68-7872-4094-8e63-d0dd59896a83"
 	// SystemDomainRetentionDays is retention config for all cadence system workflows
 	SystemDomainRetentionDays = 7
+	// DefaultAdminOperationToken is the default dynamic config value for AdminOperationToken
+	DefaultAdminOperationToken = "CadenceTeamONLY"
 )
 
 const (
