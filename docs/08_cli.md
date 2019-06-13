@@ -208,7 +208,7 @@ Let's get familar with some concepts. Each deployment will have an identifier, w
 
 To find out which **binary checksum** of the bad deployment to reset, you should be aware of at least one workflow running into a bad state. Use the describe command with **--reset_points_only** option to show all the reset points:
 ```
-./cadence wf desc -w <>  --reset_points_only
+./cadence wf desc -w <WorkflowID>  --reset_points_only
 +----------------------------------+--------------------------------+--------------------------------------+---------+
 |         BINARY CHECKSUM          |          CREATE TIME           |                RUNID                 | EVENTID |
 +----------------------------------+--------------------------------+--------------------------------------+---------+
@@ -220,5 +220,5 @@ To find out which **binary checksum** of the bad deployment to reset, you should
 
 Then use this command to tell Cadence to auto-reset all workflows impacted by the bad deployment. The command will store the bad binary checksum into domain info and trigger a process to reset all your workflows.
 ```
-./cadence --do <YourDomainName> domain update -h --add_bad_binary aae748fdc557a3f873adbe1dd066713f  --reason "rollback bad deployment"
+./cadence --do <YourDomainName> domain update --add_bad_binary aae748fdc557a3f873adbe1dd066713f  --reason "rollback bad deployment"
 ```
