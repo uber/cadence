@@ -923,7 +923,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 	}, nil)
 
 	msBuilderCurrent.On("AddWorkflowExecutionTerminatedEvent",
-		workflowTerminationReason, []byte(nil), workflowTerminationIdentity).Return(&workflow.HistoryEvent{}, nil)
+		workflowTerminationReason, mock.Anything, workflowTerminationIdentity).Return(&workflow.HistoryEvent{}, nil)
 	contextCurrent.On("updateWorkflowExecution", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 	s.mockTimerProcessor.On("NotifyNewTimers", currentClusterName, mock.Anything, mock.Anything)
 
@@ -3276,7 +3276,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentVersion).Return(currentClusterName)
 
 	msBuilderCurrent.On("AddWorkflowExecutionTerminatedEvent",
-		workflowTerminationReason, []byte(nil), workflowTerminationIdentity).Return(&workflow.HistoryEvent{}, nil)
+		workflowTerminationReason, mock.Anything, workflowTerminationIdentity).Return(&workflow.HistoryEvent{}, nil)
 	contextCurrent.On("updateWorkflowExecution", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 	s.mockTimerProcessor.On("NotifyNewTimers", currentClusterName, mock.Anything, mock.Anything)
 
@@ -3433,7 +3433,7 @@ func (s *historyReplicatorSuite) TestConflictResolutionTerminateCurrentRunningIf
 	}, nil)
 
 	msBuilderCurrent.On("AddWorkflowExecutionTerminatedEvent",
-		workflowTerminationReason, []byte(nil), workflowTerminationIdentity).Return(&workflow.HistoryEvent{}, nil)
+		workflowTerminationReason, mock.Anything, workflowTerminationIdentity).Return(&workflow.HistoryEvent{}, nil)
 	contextCurrent.On("updateWorkflowExecution", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 	s.mockTimerProcessor.On("NotifyNewTimers", currentCluster, mock.Anything, mock.Anything)
 

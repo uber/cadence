@@ -853,6 +853,7 @@ func (r *historyReplicator) conflictResolutionTerminateCurrentRunningIfNotSelf(
 	// remote run 1's version trigger a conflict resolution trying to force terminate run 2R
 	// conflict resolution should only force terminate workflow if that workflow has lower last write version
 	if incomingVersion <= currentLastWriteVetsion {
+		logger.Info("Conflict resolution current workflow has equal or higher version.")
 		return "", 0, 0, nil
 	}
 
@@ -958,7 +959,7 @@ func (r *historyReplicator) terminateWorkflow(
 			msBuilder.UpdateReplicationStateVersion(currentLastWriteVersion, true)
 			if _, err := msBuilder.AddWorkflowExecutionTerminatedEvent(
 				workflowTerminationReason,
-				nil,
+				[]byte(fmt.Sprintf("terminated by version: %v", incomingVersion)),
 				workflowTerminationIdentity,
 			); err != nil {
 				return nil, &workflow.InternalServiceError{Message: "Unable to terminate workflow execution."}
