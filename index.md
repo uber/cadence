@@ -35,14 +35,14 @@ callout_description: Directly code your application business logic. Cadence take
   </div>
 
   <div class="feature timers">
-    <a href="{{ '/docs/02_key_features#durable-timers' | relative_url }}">
+    <a href="{{ '/docs/>03_key_features#durable-timers' | relative_url }}">
       <div class="icon">
         <svg class="icon-stopwatch">
           <use xlink:href="#icon-stopwatch"></use>
         </svg>
       </div>
     </a>
-    <a href="{{ '/docs/02_key_features#durable-timers' | relative_url }}">
+    <a href="{{ '/docs/>03_key_features#durable-timers' | relative_url }}">
       <span class="description">Durable Timers</span>
     </a>
     <p>Persisted timers are robust to worker failures</p>
@@ -63,14 +63,14 @@ callout_description: Directly code your application business logic. Cadence take
   </div>
 
   <div class="feature at-most-once">
-    <a href="{{ '/docs/02_key_features#at-most-once-activity-execution' | relative_url }}">
+    <a href="{{ '/docs/>03_key_features#at-most-once-activity-execution' | relative_url }}">
       <div class="icon">
         <svg class="icon-umbrella">
           <use xlink:href="#icon-umbrella"></use>
         </svg>
       </div>
     </a>
-    <a href="{{ '/docs/02_key_features#at-most-once-activity-execution' | relative_url }}">
+    <a href="{{ '/docs/>03_key_features#at-most-once-activity-execution' | relative_url }}">
       <span class="description">At-Most-Once Activity Execution</span>
     </a>
     <p>Activities need not be idempotent</p>

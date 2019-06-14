@@ -747,3 +747,24 @@ _ActivityTaskStarted_ event is recorded when the activity task is picked up by a
 contains the id of the worker (you can set it to whatever value on worker startup).
 
 _ActivityTaskCompleted_ event is recorded when activity completes. It contains the result of the activity execution.
+
+Let's look at various failure scenarios. Modify activity task timeout to  
+```java
+  public interface HelloWorldActivities {
+    @ActivityMethod(scheduleToCloseTimeoutSeconds = 100)
+    void say(String message);
+  }
+
+  public class HelloWordActivitiesImpl implements HelloWorldActivities {
+    private final PrintStream out;
+
+    public HelloWordActivitiesImpl(PrintStream out) {
+      this.out = out;
+    }
+
+    @Override
+    public void say(String message) {
+      out.println(message);
+    }
+  }
+```
