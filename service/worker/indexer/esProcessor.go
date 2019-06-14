@@ -122,10 +122,7 @@ func (p *esProcessorImpl) Add(request elastic.BulkableRequest, key string, kafka
 		return nil
 	}
 	sw := p.metricsClient.StartTimer(metrics.ESProcessorScope, metrics.ESProcessorProcessMsgLatency)
-	mapVal := &kafkaMessageWithMetrics{
-		message:        kafkaMsg,
-		swFromAddToAck: &sw,
-	}
+	mapVal := newKafkaMessageWithMetrics(kafkaMsg, &sw)
 	_, isDup, _ := p.mapToKafkaMsg.PutOrDo(key, mapVal, actionWhenFoundDuplicates)
 	if isDup {
 		return
@@ -194,13 +191,9 @@ func (p *esProcessorImpl) ackKafkaMsgHelper(key string, nack bool) {
 	}
 
 	if nack {
-		kafkaMsg.message.Nack()
+		kafkaMsg.Nack()
 	} else {
-		kafkaMsg.message.Ack()
-	}
-
-	if kafkaMsg.swFromAddToAck != nil {
-		kafkaMsg.swFromAddToAck.Stop()
+		kafkaMsg.Ack()
 	}
 
 	p.mapToKafkaMsg.Remove(key)
@@ -294,4 +287,25 @@ func getErrorMsgFromESResp(resp *elastic.BulkResponseItem) string {
 		errMsg = resp.Error.Reason
 	}
 	return errMsg
+}
+
+func newKafkaMessageWithMetrics(kafkaMsg messaging.Message, stopwatch *tally.Stopwatch) *kafkaMessageWithMetrics {
+	return &kafkaMessageWithMetrics{
+		message:        kafkaMsg,
+		swFromAddToAck: stopwatch,
+	}
+}
+
+func (km *kafkaMessageWithMetrics) Ack() {
+	km.message.Ack()
+	if km.swFromAddToAck != nil {
+		km.swFromAddToAck.Stop()
+	}
+}
+
+func (km *kafkaMessageWithMetrics) Nack() {
+	km.message.Nack()
+	if km.swFromAddToAck != nil {
+		km.swFromAddToAck.Stop()
+	}
 }

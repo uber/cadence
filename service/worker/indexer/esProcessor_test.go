@@ -205,10 +205,7 @@ func (s *esProcessorSuite) TestBulkAfterActionX() {
 	}
 
 	mockKafkaMsg := &msgMocks.Message{}
-	mapVal := &kafkaMessageWithMetrics{
-		message:        mockKafkaMsg,
-		swFromAddToAck: &testStopWatch,
-	}
+	mapVal := newKafkaMessageWithMetrics(mockKafkaMsg, &testStopWatch)
 	s.esProcessor.mapToKafkaMsg.Put(testKey, mapVal)
 	mockKafkaMsg.On("Ack").Return(nil).Once()
 	s.esProcessor.bulkAfterAction(0, requests, response, nil)
@@ -243,10 +240,7 @@ func (s *esProcessorSuite) TestBulkAfterAction_Nack() {
 	}
 
 	mockKafkaMsg := &msgMocks.Message{}
-	mapVal := &kafkaMessageWithMetrics{
-		message:        mockKafkaMsg,
-		swFromAddToAck: &testStopWatch,
-	}
+	mapVal := newKafkaMessageWithMetrics(mockKafkaMsg, &testStopWatch)
 	s.esProcessor.mapToKafkaMsg.Put(testKey, mapVal)
 	mockKafkaMsg.On("Nack").Return(nil).Once()
 	s.esProcessor.bulkAfterAction(0, requests, response, nil)
