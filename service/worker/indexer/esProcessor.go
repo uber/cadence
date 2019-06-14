@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/olivere/elastic"
+	"github.com/uber-go/tally"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
 	es "github.com/uber/cadence/common/elasticsearch"
@@ -63,6 +64,11 @@ type (
 		config        *Config
 		logger        log.Logger
 		metricsClient metrics.Client
+	}
+
+	kafkaMessageWithMetrics struct { // value of esProcessorImpl.mapToKafkaMsg
+		message        messaging.Message
+		swFromAddToAck *tally.Stopwatch // metric from message add to process, to message ack/nack
 	}
 )
 
@@ -115,7 +121,12 @@ func (p *esProcessorImpl) Add(request elastic.BulkableRequest, key string, kafka
 		kafkaMsg.Ack()
 		return nil
 	}
-	_, isDup, _ := p.mapToKafkaMsg.PutOrDo(key, kafkaMsg, actionWhenFoundDuplicates)
+	sw := p.metricsClient.StartTimer(metrics.ESProcessorScope, metrics.ESProcessorProcessMsgLatency)
+	mapVal := &kafkaMessageWithMetrics{
+		message:        kafkaMsg,
+		swFromAddToAck: &sw,
+	}
+	_, isDup, _ := p.mapToKafkaMsg.PutOrDo(key, mapVal, actionWhenFoundDuplicates)
 	if isDup {
 		return
 	}
@@ -177,16 +188,21 @@ func (p *esProcessorImpl) ackKafkaMsgHelper(key string, nack bool) {
 	if !ok {
 		return // duplicate kafka message
 	}
-	kafkaMsg, ok := msg.(messaging.Message)
+	kafkaMsg, ok := msg.(*kafkaMessageWithMetrics)
 	if !ok { // must be bug in code and bad deployment
 		p.logger.Fatal("Message is not kafka message.", tag.ESKey(key))
 	}
 
 	if nack {
-		kafkaMsg.Nack()
+		kafkaMsg.message.Nack()
 	} else {
-		kafkaMsg.Ack()
+		kafkaMsg.message.Ack()
 	}
+
+	if kafkaMsg.swFromAddToAck != nil {
+		kafkaMsg.swFromAddToAck.Stop()
+	}
+
 	p.mapToKafkaMsg.Remove(key)
 }
 
