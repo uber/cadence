@@ -22,7 +22,6 @@ package archiver
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/uber/cadence/common/log"
@@ -138,7 +137,6 @@ func handleRequest(ctx workflow.Context, logger log.Logger, metricsClient metric
 		}
 		blobsToDelete = progress.UploadedBlobs
 	}
-	fmt.Println("@@@", blobsToDelete)
 	if len(blobsToDelete) != 0 {
 		ao := workflow.ActivityOptions{
 			ScheduleToStartTimeout: 10 * time.Minute,

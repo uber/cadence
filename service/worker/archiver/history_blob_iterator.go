@@ -125,15 +125,15 @@ func (i *historyBlobIterator) Next() (*HistoryBlob, error) {
 	if !i.HasNext() {
 		return nil, errIteratorDepleted
 	}
-	events, nextPersistencePageToken, historyEndReached, numEventsToSkip, err := i.readBlobEvents(i.PersistencePageToken, i.NumEventsToSkip)
+	events, newIterState, err := i.readBlobEvents(i.PersistencePageToken, i.NumEventsToSkip)
 	if err != nil {
 		return nil, err
 	}
 
 	// only if no error was encountered reading history does the state of the iterator get advanced
-	i.FinishedIteration = historyEndReached
-	i.PersistencePageToken = nextPersistencePageToken
-	i.NumEventsToSkip = numEventsToSkip
+	i.FinishedIteration = newIterState.FinishedIteration
+	i.PersistencePageToken = newIterState.PersistencePageToken
+	i.NumEventsToSkip = newIterState.NumEventsToSkip
 
 	firstEvent := events[0]
 	lastEvent := events[len(events)-1]
@@ -184,25 +184,23 @@ func (i *historyBlobIterator) GetState() ([]byte, error) {
 // Does not modify any iterator state (i.e. calls to readBlobEvents are idempotent).
 // Returns the following four things:
 // 1. HistoryEvents: Either all of history starting from given pageToken or enough history to satisfy blob size target.
-// 2. NextPageToken: The page token that should be used to fetch the next chunk of history
-// 3. HistoryEndReached: True if fetched all history beyond page starting from given pageToken
-// 4. NumEventsToSkip: The number of events that should be skipped in the next chunk of history
-// 5. Error: Any error that occurred while reading history
-func (i *historyBlobIterator) readBlobEvents(pageToken []byte, numEventsToSkip int) ([]*shared.HistoryEvent, []byte, bool, int, error) {
+// 2. NewIteratorState: Including persistence page token, finished iteration and numEventsToSkip
+// 3. Error: Any error that occurred while reading history
+func (i *historyBlobIterator) readBlobEvents(pageToken []byte, numEventsToSkip int) ([]*shared.HistoryEvent, historyBlobIteratorState, error) {
 	currSize := 0
 	targetSize := i.config.TargetArchivalBlobSize(i.domain)
 	var historyEvents []*shared.HistoryEvent
-
+	newIterState := historyBlobIteratorState{}
 	for currSize == 0 || (len(pageToken) > 0 && currSize < targetSize) {
 		currHistoryEvents, nextPageToken, err := i.readHistory(pageToken)
 		if err != nil {
-			return nil, nil, false, 0, err
+			return nil, newIterState, err
 		}
 		currHistoryEvents = currHistoryEvents[numEventsToSkip:]
 		for idx, event := range currHistoryEvents {
 			eventSize, err := i.sizeEstimator.EstimateSize(event)
 			if err != nil {
-				return nil, nil, false, 0, err
+				return nil, newIterState, err
 			}
 			currSize += eventSize
 			historyEvents = append(historyEvents, event)
@@ -210,7 +208,9 @@ func (i *historyBlobIterator) readBlobEvents(pageToken []byte, numEventsToSkip i
 			// If targetSize is meeted after appending the last event, we are not sure if there's more events or not,
 			// so we need to exclude that case.
 			if currSize >= targetSize && idx != len(currHistoryEvents)-1 {
-				return historyEvents, pageToken, false, numEventsToSkip + idx + 1, nil
+				newIterState.PersistencePageToken = pageToken
+				newIterState.NumEventsToSkip = numEventsToSkip + idx + 1
+				return historyEvents, newIterState, nil
 			}
 		}
 		numEventsToSkip = 0
@@ -218,7 +218,8 @@ func (i *historyBlobIterator) readBlobEvents(pageToken []byte, numEventsToSkip i
 	}
 
 	if len(pageToken) == 0 {
-		return historyEvents, nil, true, 0, nil
+		newIterState.FinishedIteration = true
+		return historyEvents, newIterState, nil
 	}
 
 	// If nextPageToken is not empty it is still possible there are no more events.
@@ -227,12 +228,14 @@ func (i *historyBlobIterator) readBlobEvents(pageToken []byte, numEventsToSkip i
 	// the same way as reading through the end of history.
 	lookAheadHistoryEvents, _, err := i.readHistory(pageToken)
 	if err != nil {
-		return nil, nil, false, 0, err
+		return nil, newIterState, err
 	}
 	if len(lookAheadHistoryEvents) == 0 {
-		return historyEvents, nil, true, 0, nil
+		newIterState.FinishedIteration = true
+		return historyEvents, newIterState, nil
 	}
-	return historyEvents, pageToken, false, 0, nil
+	newIterState.PersistencePageToken = pageToken
+	return historyEvents, newIterState, nil
 }
 
 // readHistory fetches a single page of history events identified by given pageToken.

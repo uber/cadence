@@ -75,10 +75,12 @@ const (
 	errDeleteHistoryV2 = "failed to delete history from events_v2"
 
 	errHistoryMutated = "history was mutated during uploading"
+
+	errActivityPanic = "cadenceInternal:Panic"
 )
 
 var (
-	uploadHistoryActivityNonRetryableErrors = []string{errGetDomainByID, errConstructKey, errGetTags, errUploadBlob, errReadBlob, errEmptyBucket, errConstructBlob, errDownloadBlob, errHistoryMutated}
+	uploadHistoryActivityNonRetryableErrors = []string{errGetDomainByID, errConstructKey, errGetTags, errUploadBlob, errReadBlob, errEmptyBucket, errConstructBlob, errDownloadBlob, errHistoryMutated, errActivityPanic}
 	deleteBlobActivityNonRetryableErrors    = []string{errConstructKey, errGetTags, errUploadBlob, errEmptyBucket, errDeleteBlob}
 	deleteHistoryActivityNonRetryableErrors = []string{errDeleteHistoryV1, errDeleteHistoryV2}
 	errContextTimeout                       = errors.New("activity aborted because context timed out")
@@ -92,7 +94,9 @@ const (
 // uploadHistoryActivity is used to upload a workflow execution history to blobstore.
 // method will retry all retryable operations until context expires.
 // archival will be skipped and no error will be returned if cluster or domain is not figured for archival.
-// method will always return either: nil, errContextTimeout or an error from uploadHistoryActivityNonRetryableErrors.
+// An error will be returned if context timeout, request is invalid, or failed to get domain cache entry.
+// All other errors (and the error details) will be included in the uploadResult.
+// The result will also contain a list of blob keys to delete when there's an error.
 func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (result uploadResult, err error) {
 	container := ctx.Value(bootstrapContainerKey).(*BootstrapContainer)
 	progress := uploadProgress{
@@ -114,6 +118,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (result 
 	if activity.HasHeartbeatDetails(ctx) {
 		if err := activity.GetHeartbeatDetails(ctx, &progress); err != nil {
 			logger.Info("failed to get previous progress, start from beginning")
+			// reset to initial state
 			progress = uploadProgress{
 				UploadedBlobs:   nil,
 				IteratorState:   nil,
@@ -273,7 +278,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (result 
 	}
 	indexBlobWithVersion := addVersion(request.CloseFailoverVersion, existingVersions)
 	if indexBlobWithVersion == nil {
-		return getUploadHistoryActivityResponse(progress, nil)
+		return result, nil
 	}
 	if err := uploadBlob(ctx, blobstoreClient, request.BucketName, indexBlobKey, indexBlobWithVersion); err != nil {
 		logger.Error(uploadErrorMsg, tag.ArchivalUploadFailReason(errorDetails(err)), tag.ArchivalBlobKey(indexBlobKey.String()), tag.Error(err))
@@ -421,7 +426,7 @@ func deleteBlobActivity(ctx context.Context, request ArchiveRequest, blobsToDele
 			continue
 		}
 
-		activity.RecordHeartbeat(ctx, idx)
+		activity.RecordHeartbeat(ctx, idx+startIdx)
 	}
 	return nil
 }
