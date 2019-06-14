@@ -1,5 +1,5 @@
 <ul>
-  {% assign sorted_pages = site.html_pages | sort:"weight" %}
+  {% assign sorted_pages = site.html_pages | sort:"order" %}
   {% for item in sorted_pages %}
     {% if item.url contains include.base_url %}
       {% assign item_url_parts = item.url | split: '/' %}
