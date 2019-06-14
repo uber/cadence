@@ -30,7 +30,7 @@ import (
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log"  
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
 )
