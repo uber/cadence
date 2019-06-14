@@ -691,6 +691,9 @@ func (v *esVisibilityStore) getSearchResult(request *p.ListWorkflowExecutionsReq
 	if request.LatestStartTime > math.MaxInt64-oneMilliSecondInNano { // prevent latestTime overflow
 		request.LatestStartTime = math.MaxInt64 - oneMilliSecondInNano
 	}
+	if request.EarliestStartTime < math.MinInt64+oneMilliSecondInNano { // prevent earliestTime overflow
+		request.EarliestStartTime = math.MinInt64 + oneMilliSecondInNano
+	}
 	earliestTimeStr := strconv.FormatInt(request.EarliestStartTime-oneMilliSecondInNano, 10)
 	latestTimeStr := strconv.FormatInt(request.LatestStartTime+oneMilliSecondInNano, 10)
 	rangeQuery = rangeQuery.
