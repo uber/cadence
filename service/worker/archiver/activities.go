@@ -94,9 +94,9 @@ const (
 // uploadHistoryActivity is used to upload a workflow execution history to blobstore.
 // method will retry all retryable operations until context expires.
 // archival will be skipped and no error will be returned if cluster or domain is not figured for archival.
-// An error will be returned if context timeout, request is invalid, or failed to get domain cache entry.
-// All other errors (and the error details) will be included in the uploadResult.
-// The result will also contain a list of blob keys to delete when there's an error.
+// an error will be returned if context timeout, request is invalid, or failed to get domain cache entry.
+// all other errors (and the error details) will be included in the uploadResult.
+// the result will also contain a list of blob keys to delete when there's an error.
 func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (result uploadResult, err error) {
 	container := ctx.Value(bootstrapContainerKey).(*BootstrapContainer)
 	progress := uploadProgress{
