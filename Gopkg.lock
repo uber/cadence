@@ -770,7 +770,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:910e3636d87582759d3beef6438337137c128ba544e178ab36493f3274582830"
+  digest = "1:ae8d7e1283982301330612e433601aff2f4a6e181fff894e191f19c54334c3c1"
   name = "go.uber.org/cadence"
   packages = [
     ".",
@@ -792,7 +792,7 @@
     "workflow",
   ]
   pruneopts = ""
-  revision = "8e96b4f6316956910895bc11a12161b440c0d5d3"
+  revision = "0637d0bc444e61c0b6c58931c02d818ee9eb0edd"
 
 [[projects]]
   digest = "1:22c7effcb4da0eacb2bb1940ee173fac010e9ef3c691f5de4b524d538bd980f5"

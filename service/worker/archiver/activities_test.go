@@ -22,6 +22,7 @@ package archiver
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strconv"
 	"testing"
@@ -41,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"go.uber.org/cadence/encoded"
 	"go.uber.org/cadence/testsuite"
 	"go.uber.org/cadence/worker"
 	"go.uber.org/zap"
@@ -49,6 +51,8 @@ import (
 const (
 	testArchivalBucket     = "test-archival-bucket"
 	testCurrentClusterName = "test-current-cluster-name"
+
+	testErrDetails = "some error"
 )
 
 var (
@@ -163,8 +167,11 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Skip_ClusterArchivalNotEnabl
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	encodedResult, err := env.ExecuteActivity(uploadHistoryActivity, request)
 	s.NoError(err)
+
+	result := s.getDecodedUploadResult(encodedResult)
+	s.Empty(result)
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Skip_DomainArchivalNotEnabled() {
@@ -191,8 +198,11 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Skip_DomainArchivalNotEnable
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	encodedResult, err := env.ExecuteActivity(uploadHistoryActivity, request)
 	s.NoError(err)
+
+	result := s.getDecodedUploadResult(encodedResult)
+	s.Empty(result)
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Fail_DomainConfigMissingBucket() {
@@ -220,7 +230,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_DomainConfigMissingBuck
 		BucketName:           "",
 	}
 	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
-	s.Equal(errEmptyBucket, err.Error())
+	s.Equal(errInvalidRequest, err.Error())
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Fail_ConstructBlobKeyError() {
@@ -248,8 +258,13 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_ConstructBlobKeyError()
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
-	s.Equal(errConstructKey, err.Error())
+	encodedResult, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	s.NoError(err)
+
+	result := s.getDecodedUploadResult(encodedResult)
+	s.Equal(errConstructKey, result.ErrorReason)
+	s.Equal(errInvalidKeyInput.Error(), result.ErrorDetails)
+	s.Empty(result.BlobsToDelete)
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Fail_GetTagsNonRetryableError() {
@@ -257,7 +272,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_GetTagsNonRetryableErro
 	s.metricsScope.On("IncCounter", metrics.ArchiverNonRetryableErrorCount).Once()
 	domainCache, mockClusterMetadata := s.archivalConfig(true, testArchivalBucket, true)
 	mockBlobstore := &mocks.BlobstoreClient{}
-	mockBlobstore.On("GetTags", mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("some error"))
+	mockBlobstore.On("GetTags", mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New(testErrDetails))
 	mockBlobstore.On("IsRetryableError", mock.Anything).Return(false)
 	container := &BootstrapContainer{
 		Logger:          s.logger,
@@ -281,8 +296,13 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_GetTagsNonRetryableErro
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
-	s.Equal(errGetTags, err.Error())
+	encodedResult, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	s.NoError(err)
+
+	result := s.getDecodedUploadResult(encodedResult)
+	s.Equal(errGetTags, result.ErrorReason)
+	s.Equal(testErrDetails, result.ErrorDetails)
+	s.Empty(result.BlobsToDelete)
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Fail_GetTagsTimeout() {
@@ -290,7 +310,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_GetTagsTimeout() {
 	s.metricsScope.On("IncCounter", metrics.CadenceErrContextTimeoutCounter).Once()
 	domainCache, mockClusterMetadata := s.archivalConfig(true, testArchivalBucket, true)
 	mockBlobstore := &mocks.BlobstoreClient{}
-	mockBlobstore.On("GetTags", mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("some error"))
+	mockBlobstore.On("GetTags", mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New(testErrDetails))
 	mockBlobstore.On("IsRetryableError", mock.Anything).Return(true)
 	container := &BootstrapContainer{
 		Logger:          s.logger,
@@ -348,8 +368,11 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Success_BlobAlreadyExists() 
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	encodedResult, err := env.ExecuteActivity(uploadHistoryActivity, request)
 	s.NoError(err)
+
+	result := s.getDecodedUploadResult(encodedResult)
+	s.Empty(result)
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Success_MultipleBlobsAlreadyExist() {
@@ -384,8 +407,11 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Success_MultipleBlobsAlready
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	encodedResult, err := env.ExecuteActivity(uploadHistoryActivity, request)
 	s.NoError(err)
+
+	result := s.getDecodedUploadResult(encodedResult)
+	s.Empty(result)
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Fail_ReadBlobNonRetryableError() {
@@ -419,8 +445,13 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_ReadBlobNonRetryableErr
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
-	s.Equal(errReadBlob, err.Error())
+	encodedResult, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	s.NoError(err)
+
+	result := s.getDecodedUploadResult(encodedResult)
+	s.Equal(errReadBlob, result.ErrorReason)
+	s.Equal(errPersistenceNonRetryable.Error(), result.ErrorDetails)
+	s.Empty(result.BlobsToDelete)
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Fail_ReadBlobTimeout() {
@@ -497,8 +528,11 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_CouldNotRunCheck() {
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	encodedResult, err := env.ExecuteActivity(uploadHistoryActivity, request)
 	s.NoError(err)
+
+	result := s.getDecodedUploadResult(encodedResult)
+	s.Empty(result)
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Fail_CheckFailed() {
@@ -540,8 +574,11 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_CheckFailed() {
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	encodedResult, err := env.ExecuteActivity(uploadHistoryActivity, request)
 	s.NoError(err)
+
+	result := s.getDecodedUploadResult(encodedResult)
+	s.Empty(result)
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Fail_UploadBlobNonRetryableError() {
@@ -550,7 +587,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_UploadBlobNonRetryableE
 	domainCache, mockClusterMetadata := s.archivalConfig(true, testArchivalBucket, true)
 	mockBlobstore := &mocks.BlobstoreClient{}
 	mockBlobstore.On("GetTags", mock.Anything, mock.Anything, mock.Anything).Return(nil, blobstore.ErrBlobNotExists).Once()
-	mockBlobstore.On("Upload", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errors.New("some error"))
+	mockBlobstore.On("Upload", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errors.New(testErrDetails))
 	mockBlobstore.On("IsRetryableError", mock.Anything).Return(false)
 	mockHistoryBlobReader := &HistoryBlobReaderMock{}
 	mockHistoryBlobReader.On("GetBlob", mock.Anything).Return(&HistoryBlob{
@@ -579,8 +616,13 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_UploadBlobNonRetryableE
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
-	s.Equal(errUploadBlob, err.Error())
+	encodedResult, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	s.NoError(err)
+
+	result := s.getDecodedUploadResult(encodedResult)
+	s.Equal(errUploadBlob, result.ErrorReason)
+	s.Equal(testErrDetails, result.ErrorDetails)
+	s.Empty(result.BlobsToDelete)
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Fail_UploadBlobTimeout() {
@@ -659,8 +701,11 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Success_BlobDoesNotAlreadyEx
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	encodedResult, err := env.ExecuteActivity(uploadHistoryActivity, request)
 	s.NoError(err)
+
+	result := s.getDecodedUploadResult(encodedResult)
+	s.Empty(result)
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Success_ConcurrentUploads() {
@@ -707,8 +752,11 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Success_ConcurrentUploads() 
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	encodedResult, err := env.ExecuteActivity(uploadHistoryActivity, request)
 	s.NoError(err)
+
+	result := s.getDecodedUploadResult(encodedResult)
+	s.Empty(result)
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Fail_HistoryMutated() {
@@ -750,8 +798,13 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_HistoryMutated() {
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
-	s.Equal(errHistoryMutated, err.Error())
+	encodedResult, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	s.NoError(err)
+
+	result := s.getDecodedUploadResult(encodedResult)
+	s.Equal(errHistoryMutated, result.ErrorReason)
+	s.Empty(result.ErrorDetails)
+	s.Empty(result.BlobsToDelete)
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Fail_CouldNotRunBlobIntegrityCheck() {
@@ -797,8 +850,11 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_CouldNotRunBlobIntegrit
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	encodedResult, err := env.ExecuteActivity(uploadHistoryActivity, request)
 	s.NoError(err)
+
+	result := s.getDecodedUploadResult(encodedResult)
+	s.Empty(result)
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Fail_BlobIntegrityCheckFailed() {
@@ -876,8 +932,11 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_BlobIntegrityCheckFaile
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	encodedResult, err := env.ExecuteActivity(uploadHistoryActivity, request)
 	s.NoError(err)
+
+	result := s.getDecodedUploadResult(encodedResult)
+	s.Empty(result)
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Success_BlobIntegrityCheckPassed() {
@@ -1003,7 +1062,192 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Success_BlobIntegrityCheckPa
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-	_, err = env.ExecuteActivity(uploadHistoryActivity, request)
+	encodedResult, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	s.NoError(err)
+
+	result := s.getDecodedUploadResult(encodedResult)
+	s.Empty(result)
+}
+
+func (s *activitiesSuite) TestUploadHistoryActivity_Fail_AfterUploadedSomeBlobs() {
+	s.metricsClient.On("Scope", metrics.ArchiverUploadHistoryActivityScope, []metrics.Tag{metrics.DomainTag(testDomainName)}).Return(s.metricsScope).Once()
+	s.metricsScope.On("IncCounter", metrics.ArchiverNonRetryableErrorCount).Once()
+	domainCache, mockClusterMetadata := s.archivalConfig(true, testArchivalBucket, true)
+
+	pageToken := common.FirstBlobPageToken
+	firstBlobKey, err := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, testCloseFailoverVersion, pageToken)
+	s.Nil(err)
+	secondBlobKey, err := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, testCloseFailoverVersion, pageToken+1)
+	s.Nil(err)
+
+	mockBlobstore := &mocks.BlobstoreClient{}
+	mockBlobstore.On("GetTags", mock.Anything, mock.Anything, mock.Anything).Return(nil, blobstore.ErrBlobNotExists).Twice()
+	mockBlobstore.On("Upload", mock.Anything, mock.Anything, firstBlobKey, mock.Anything).Return(nil)
+	mockBlobstore.On("Upload", mock.Anything, mock.Anything, secondBlobKey, mock.Anything).Return(errors.New(testErrDetails))
+	mockBlobstore.On("IsRetryableError", mock.Anything).Return(false)
+	mockHistoryBlobReader := &HistoryBlobReaderMock{}
+	mockHistoryBlobReader.On("GetBlob", mock.Anything).Return(&HistoryBlob{
+		Header: &HistoryBlobHeader{IsLast: common.BoolPtr(false)},
+	}, nil)
+	container := &BootstrapContainer{
+		Logger:            s.logger,
+		MetricsClient:     s.metricsClient,
+		DomainCache:       domainCache,
+		ClusterMetadata:   mockClusterMetadata,
+		Blobstore:         mockBlobstore,
+		HistoryBlobReader: mockHistoryBlobReader,
+		Config:            getConfig(false, false),
+	}
+	env := s.NewTestActivityEnvironment()
+	env.SetWorkerOptions(worker.Options{
+		BackgroundActivityContext: context.WithValue(context.Background(), bootstrapContainerKey, container),
+	})
+	request := ArchiveRequest{
+		DomainID:             testDomainID,
+		DomainName:           testDomainName,
+		WorkflowID:           testWorkflowID,
+		RunID:                testRunID,
+		BranchToken:          testBranchToken,
+		NextEventID:          testNextEventID,
+		CloseFailoverVersion: testCloseFailoverVersion,
+		BucketName:           testArchivalBucket,
+	}
+	encodedResult, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	s.NoError(err)
+
+	result := s.getDecodedUploadResult(encodedResult)
+	s.Equal(errUploadBlob, result.ErrorReason)
+	s.Equal(testErrDetails, result.ErrorDetails)
+	s.Equal([]string{firstBlobKey.String()}, result.BlobsToDelete)
+}
+
+func (s *activitiesSuite) TestUploadHistoryActivity_Fail_ContinueFromPreviousProgress() {
+	s.metricsClient.On("Scope", metrics.ArchiverUploadHistoryActivityScope, []metrics.Tag{metrics.DomainTag(testDomainName)}).Return(s.metricsScope).Once()
+	s.metricsScope.On("IncCounter", metrics.ArchiverNonRetryableErrorCount).Once()
+	domainCache, mockClusterMetadata := s.archivalConfig(true, testArchivalBucket, true)
+
+	pageToken := common.FirstBlobPageToken
+	thirdBlobKey, err := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, testCloseFailoverVersion, pageToken+2)
+	s.Nil(err)
+	fourthBlobKey, err := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, testCloseFailoverVersion, pageToken+3)
+	s.Nil(err)
+
+	mockBlobstore := &mocks.BlobstoreClient{}
+	mockBlobstore.On("GetTags", mock.Anything, mock.Anything, mock.Anything).Return(nil, blobstore.ErrBlobNotExists).Twice()
+	mockBlobstore.On("Upload", mock.Anything, mock.Anything, thirdBlobKey, mock.Anything).Return(nil)
+	mockBlobstore.On("Upload", mock.Anything, mock.Anything, fourthBlobKey, mock.Anything).Return(errors.New(testErrDetails))
+	mockBlobstore.On("IsRetryableError", mock.Anything).Return(false)
+	mockHistoryBlobReader := &HistoryBlobReaderMock{}
+	mockHistoryBlobReader.On("GetBlob", mock.Anything).Return(&HistoryBlob{
+		Header: &HistoryBlobHeader{IsLast: common.BoolPtr(false)},
+	}, nil)
+	container := &BootstrapContainer{
+		Logger:            s.logger,
+		MetricsClient:     s.metricsClient,
+		DomainCache:       domainCache,
+		ClusterMetadata:   mockClusterMetadata,
+		Blobstore:         mockBlobstore,
+		HistoryBlobReader: mockHistoryBlobReader,
+		Config:            getConfig(false, false),
+	}
+	env := s.NewTestActivityEnvironment()
+	env.SetWorkerOptions(worker.Options{
+		BackgroundActivityContext: context.WithValue(context.Background(), bootstrapContainerKey, container),
+	})
+	uploadedBlobs := []string{"blob key 1", "blob key 2"}
+	iterState, err := json.Marshal(historyBlobIteratorState{
+		BlobPageToken:     common.FirstBlobPageToken + 1,
+		FinishedIteration: false,
+	})
+	s.NoError(err)
+	env.SetHeartbeatDetails(uploadProgress{
+		UploadedBlobs:   uploadedBlobs,
+		BlobPageToken:   common.FirstBlobPageToken + 1,
+		HandledLastBlob: false,
+		IteratorState:   iterState,
+	})
+	request := ArchiveRequest{
+		DomainID:             testDomainID,
+		DomainName:           testDomainName,
+		WorkflowID:           testWorkflowID,
+		RunID:                testRunID,
+		BranchToken:          testBranchToken,
+		NextEventID:          testNextEventID,
+		CloseFailoverVersion: testCloseFailoverVersion,
+		BucketName:           testArchivalBucket,
+	}
+	encodedResult, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	s.NoError(err)
+
+	result := s.getDecodedUploadResult(encodedResult)
+	s.Equal(errUploadBlob, result.ErrorReason)
+	s.Equal(testErrDetails, result.ErrorDetails)
+	uploadedBlobs = append(uploadedBlobs, thirdBlobKey.String())
+	s.Equal(uploadedBlobs, result.BlobsToDelete)
+}
+
+func (s *activitiesSuite) TestDeleteBlobActivity_Fail_DeleteIndexBlobError() {
+	s.metricsClient.On("Scope", metrics.ArchiverDeleteBlobActivityScope, []metrics.Tag{metrics.DomainTag(testDomainName)}).Return(s.metricsScope).Once()
+	s.metricsScope.On("IncCounter", metrics.ArchiverNonRetryableErrorCount).Once()
+
+	indexBlobKey, err := NewHistoryIndexBlobKey(testDomainID, testWorkflowID, testRunID)
+	s.Nil(err)
+	mockBlobstore := &mocks.BlobstoreClient{}
+	mockBlobstore.On("GetTags", mock.Anything, testArchivalBucket, indexBlobKey).Return(nil, errors.New(testErrDetails)).Once()
+	mockBlobstore.On("IsRetryableError", mock.Anything).Return(false).Once()
+	container := &BootstrapContainer{
+		Logger:        s.logger,
+		MetricsClient: s.metricsClient,
+		Blobstore:     mockBlobstore,
+	}
+	env := s.NewTestActivityEnvironment()
+	env.SetWorkerOptions(worker.Options{
+		BackgroundActivityContext: context.WithValue(context.Background(), bootstrapContainerKey, container),
+	})
+	request := ArchiveRequest{
+		DomainID:             testDomainID,
+		DomainName:           testDomainName,
+		WorkflowID:           testWorkflowID,
+		RunID:                testRunID,
+		BranchToken:          testBranchToken,
+		NextEventID:          testNextEventID,
+		CloseFailoverVersion: testCloseFailoverVersion,
+		BucketName:           testArchivalBucket,
+	}
+	_, err = env.ExecuteActivity(deleteBlobActivity, request, []string{})
+	s.Equal(errGetTags, err.Error())
+}
+
+func (s *activitiesSuite) TestDeleteBlobActivity_Success_IndexBlobNotExist() {
+	s.metricsClient.On("Scope", metrics.ArchiverDeleteBlobActivityScope, []metrics.Tag{metrics.DomainTag(testDomainName)}).Return(s.metricsScope).Once()
+
+	indexBlobKey, err := NewHistoryIndexBlobKey(testDomainID, testWorkflowID, testRunID)
+	s.Nil(err)
+	blobKey, err := NewHistoryBlobKey(testDomainID, testWorkflowID, testRunID, testCloseFailoverVersion, common.FirstBlobPageToken)
+	s.Nil(err)
+	mockBlobstore := &mocks.BlobstoreClient{}
+	mockBlobstore.On("GetTags", mock.Anything, testArchivalBucket, indexBlobKey).Return(nil, blobstore.ErrBlobNotExists).Once()
+	mockBlobstore.On("Delete", mock.Anything, testArchivalBucket, blobKey).Return(true, nil).Once()
+	container := &BootstrapContainer{
+		Logger:        s.logger,
+		MetricsClient: s.metricsClient,
+		Blobstore:     mockBlobstore,
+	}
+	env := s.NewTestActivityEnvironment()
+	env.SetWorkerOptions(worker.Options{
+		BackgroundActivityContext: context.WithValue(context.Background(), bootstrapContainerKey, container),
+	})
+	request := ArchiveRequest{
+		DomainID:             testDomainID,
+		DomainName:           testDomainName,
+		WorkflowID:           testWorkflowID,
+		RunID:                testRunID,
+		BranchToken:          testBranchToken,
+		NextEventID:          testNextEventID,
+		CloseFailoverVersion: testCloseFailoverVersion,
+		BucketName:           testArchivalBucket,
+	}
+	_, err = env.ExecuteActivity(deleteBlobActivity, request, []string{blobKey.String()})
 	s.NoError(err)
 }
 
@@ -1028,13 +1272,12 @@ func (s *activitiesSuite) TestDeleteBlobActivity_Fail_ConstructBlobKeyError() {
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-	_, err := env.ExecuteActivity(deleteBlobActivity, request)
+	_, err := env.ExecuteActivity(deleteBlobActivity, request, []string{})
 	s.Equal(errConstructKey, err.Error())
 }
 
-func (s *activitiesSuite) TestDeleteBlobActivity_Fail_DeleteBlobError() {
+func (s *activitiesSuite) TestDeleteBlobActivity_Success_DeleteBlobError() {
 	s.metricsClient.On("Scope", metrics.ArchiverDeleteBlobActivityScope, []metrics.Tag{metrics.DomainTag(testDomainName)}).Return(s.metricsScope).Once()
-	s.metricsScope.On("IncCounter", metrics.ArchiverNonRetryableErrorCount).Once()
 
 	indexBlobKey, err := NewHistoryIndexBlobKey(testDomainID, testWorkflowID, testRunID)
 	s.Nil(err)
@@ -1066,8 +1309,8 @@ func (s *activitiesSuite) TestDeleteBlobActivity_Fail_DeleteBlobError() {
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-	_, err = env.ExecuteActivity(deleteBlobActivity, request)
-	s.Equal(errDeleteBlob, err.Error())
+	_, err = env.ExecuteActivity(deleteBlobActivity, request, []string{blobKey.String()})
+	s.NoError(err)
 }
 
 func (s *activitiesSuite) TestDeleteBlobActivity_Success_NoHeartbeatDetails() {
@@ -1107,7 +1350,7 @@ func (s *activitiesSuite) TestDeleteBlobActivity_Success_NoHeartbeatDetails() {
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-	_, err = env.ExecuteActivity(deleteBlobActivity, request)
+	_, err = env.ExecuteActivity(deleteBlobActivity, request, []string{firstBlobKey.String(), secondBlobKey.String()})
 	s.NoError(err)
 }
 
@@ -1148,7 +1391,7 @@ func (s *activitiesSuite) TestDeleteBlobActivity_Success_WithHeartbeatDetails() 
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-	_, err = env.ExecuteActivity(deleteBlobActivity, request)
+	_, err = env.ExecuteActivity(deleteBlobActivity, request, []string{"random key 1", "random key 2", thirdBlobKey.String(), fourthBlobKey.String()})
 	s.NoError(err)
 }
 
@@ -1192,7 +1435,8 @@ func (s *activitiesSuite) TestDeleteBlobActivity_Success_FirstBlobNotExist() {
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-	_, err = env.ExecuteActivity(deleteBlobActivity, request)
+	blobsToDelete := []string{"random key1", "random key2", thirdBlobKey.String(), fourthBlobKey.String(), fifthBlobKey.String()}
+	_, err = env.ExecuteActivity(deleteBlobActivity, request, blobsToDelete)
 	s.NoError(err)
 }
 
@@ -1376,6 +1620,13 @@ func (s *activitiesSuite) archivalConfig(
 		nil,
 	)
 	return cache.NewDomainCache(mockMetadataMgr, mockClusterMetadata, s.metricsClient, loggerimpl.NewNopLogger()), mockClusterMetadata
+}
+
+func (s *activitiesSuite) getDecodedUploadResult(encodedResult encoded.Value) uploadResult {
+	result := uploadResult{}
+	err := encodedResult.Get(&result)
+	s.NoError(err)
+	return result
 }
 
 func getConfig(constCheck, integrityCheck bool) *Config {

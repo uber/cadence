@@ -499,6 +499,7 @@ func (s *HistoryBlobIteratorSuite) TestNewIteratorWithState() {
 		BlobPageToken:        123,
 		PersistencePageToken: []byte{'r', 'a', 'n', 'd', 'o', 'm'},
 		FinishedIteration:    true,
+		NumEventsToSkip:      3,
 	}
 	itr.historyBlobIteratorState = testIteratorState
 	stateToken, err := itr.GetState()
@@ -507,6 +508,7 @@ func (s *HistoryBlobIteratorSuite) TestNewIteratorWithState() {
 	newItr := s.constructTestHistoryBlobIterator(nil, nil, nil, stateToken)
 	s.assertStateMatches(testIteratorState, newItr)
 }
+
 func (s *HistoryBlobIteratorSuite) TestReadBlobEvents_Success_SameHistoryDifferentPage() {
 	pages := []page{
 		{

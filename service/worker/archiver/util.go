@@ -122,24 +122,25 @@ func historyMutated(historyBlob *HistoryBlob, request *ArchiveRequest) bool {
 func validateArchivalRequest(request *ArchiveRequest) error {
 	if len(request.BucketName) == 0 {
 		// this should not be able to occur, if domain enables archival bucket should always be set
-		return cadence.NewCustomError(errEmptyBucket)
+		return cadence.NewCustomError(errInvalidRequest, errEmptyBucket)
 	}
 	return nil
 }
 
-func getUploadHistoryActivityResponse(progress uploadProgress, errReason string, rootErr error) (uploadResult, error) {
-	if rootErr == nil || rootErr == errContextTimeout {
-		return uploadResult{}, rootErr
+func getUploadHistoryActivityResponse(progress uploadProgress, err error) (uploadResult, error) {
+	if err == nil || err == errContextTimeout {
+		return uploadResult{}, err
 	}
 
+	errReason := err.Error()
 	switch errReason {
 	case errGetDomainByID, errInvalidRequest:
-		return uploadResult{}, cadence.NewCustomError(errReason, rootErr.Error())
+		return uploadResult{}, err
 	default:
 		return uploadResult{
-			UploadedBlobs: progress.UploadedBlobs,
+			BlobsToDelete: progress.UploadedBlobs,
 			ErrorReason:   errReason,
-			ErrorDetails:  rootErr.Error(),
+			ErrorDetails:  errorDetails(err),
 		}, nil
 	}
 }

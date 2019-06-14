@@ -22,6 +22,7 @@ package archiver
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/uber/cadence/common/log"
@@ -116,34 +117,29 @@ func handleRequest(ctx workflow.Context, logger log.Logger, metricsClient metric
 	actCtx := workflow.WithActivityOptions(ctx, ao)
 	uploadSW := metricsClient.StartTimer(metrics.ArchiverScope, metrics.ArchiverUploadWithRetriesLatency)
 	var result uploadResult
-	uploadErr := workflow.ExecuteActivity(actCtx, uploadHistoryActivityFnName, request).Get(actCtx, &result)
-	uploadSW.Stop()
-
-	var uploadedBlobs []string
-	var deleteUploaded bool
-	if uploadErr == nil {
-		deleteUploaded = result.ErrorReason == ""
-		uploadedBlobs = result.UploadedBlobs
-	} else if timeoutErr, ok := uploadErr.(*workflow.TimeoutError); ok {
-		deleteUploaded = true
-		if timeoutErr.HasDetails() {
-			err := timeoutErr.Details(&uploadedBlobs)
-			logger.Error("failed to get uploaded blobs from timeout error details", tag.Error(err))
-		}
+	err := workflow.ExecuteActivity(actCtx, uploadHistoryActivityFnName, request).Get(actCtx, &result)
+	if err == nil && result.ErrorReason != "" {
+		err = errors.New(result.ErrorReason)
 	}
-
-	if uploadErr != nil || deleteUploaded {
-		err := uploadErr
-		if err == nil {
-			err = errors.New(result.ErrorReason)
-		}
+	if err != nil {
 		logger.Error("failed to upload history, will delete all uploaded blobs and moving on to deleting history without archiving", tag.Error(err))
 		metricsClient.IncCounter(metrics.ArchiverScope, metrics.ArchiverUploadFailedAllRetriesCount)
 	} else {
 		metricsClient.IncCounter(metrics.ArchiverScope, metrics.ArchiverUploadSuccessCount)
 	}
+	uploadSW.Stop()
 
-	if deleteUploaded {
+	blobsToDelete := result.BlobsToDelete
+	if timeoutErr, ok := err.(*workflow.TimeoutError); ok {
+		progress := uploadProgress{}
+		if timeoutErr.HasDetails() {
+			err := timeoutErr.Details(&progress)
+			logger.Error("failed to get upload progress from timeout error details", tag.Error(err))
+		}
+		blobsToDelete = progress.UploadedBlobs
+	}
+	fmt.Println("@@@", blobsToDelete)
+	if len(blobsToDelete) != 0 {
 		ao := workflow.ActivityOptions{
 			ScheduleToStartTimeout: 10 * time.Minute,
 			StartToCloseTimeout:    5 * time.Minute,
@@ -156,7 +152,7 @@ func handleRequest(ctx workflow.Context, logger log.Logger, metricsClient metric
 		}
 		actCtx := workflow.WithActivityOptions(ctx, ao)
 		deleteBlobSW := metricsClient.StartTimer(metrics.ArchiverScope, metrics.ArchiverDeleteBlobWithRetriesLatency)
-		if err := workflow.ExecuteActivity(actCtx, deleteBlobActivityFnName, request, uploadedBlobs).Get(actCtx, nil); err != nil {
+		if err := workflow.ExecuteActivity(actCtx, deleteBlobActivityFnName, request, blobsToDelete).Get(actCtx, nil); err != nil {
 			logger.Error("failed to delete uploaded blobs", tag.Error(err))
 			metricsClient.IncCounter(metrics.ArchiverScope, metrics.ArchiverDeleteBlobFailedAllRetriesCount)
 		} else {
@@ -176,7 +172,7 @@ func handleRequest(ctx workflow.Context, logger log.Logger, metricsClient metric
 	}
 	deleteSW := metricsClient.StartTimer(metrics.ArchiverScope, metrics.ArchiverDeleteWithRetriesLatency)
 	localActCtx := workflow.WithLocalActivityOptions(ctx, lao)
-	err := workflow.ExecuteLocalActivity(localActCtx, deleteHistoryActivity, request).Get(localActCtx, nil)
+	err = workflow.ExecuteLocalActivity(localActCtx, deleteHistoryActivity, request).Get(localActCtx, nil)
 	if err == nil {
 		metricsClient.IncCounter(metrics.ArchiverScope, metrics.ArchiverDeleteLocalSuccessCount)
 		sw.Stop()

@@ -160,7 +160,7 @@ func (s *UtilSuite) TestValidateRequest() {
 	}{
 		{
 			request:     &ArchiveRequest{},
-			expectedErr: cadence.NewCustomError(errEmptyBucket),
+			expectedErr: cadence.NewCustomError(errInvalidRequest, errEmptyBucket),
 		},
 		{
 			request:     &ArchiveRequest{BucketName: "some random bucket name"},
