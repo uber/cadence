@@ -222,3 +222,5 @@ Then use this command to tell Cadence to auto-reset all workflows impacted by th
 ```
 ./cadence --do <YourDomainName> domain update --add_bad_binary aae748fdc557a3f873adbe1dd066713f  --reason "rollback bad deployment"
 ```
+
+As you add the bad binary checksum to your domain, Cadence will not dispatch any decision tasks to the bad binary. So make sure that you have rolled back to a good deployment(or roll out new bits with bug fixes). Otherwise your workflow can't make any progress after auto-reset. 
