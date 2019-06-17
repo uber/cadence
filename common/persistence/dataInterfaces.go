@@ -70,6 +70,10 @@ const (
 	WorkflowStateRunning
 	WorkflowStateCompleted
 	WorkflowStateZombie
+
+	// Note: this is the initial state of mutable state
+	// this value will not be persisted to persistence layer
+	WorkflowStateVoid
 )
 
 // Workflow execution close status
@@ -143,6 +147,9 @@ const (
 	// TransferTaskTransferTargetRunID is the the dummy run ID for transfer tasks of types
 	// that do not have a target workflow
 	TransferTaskTransferTargetRunID = "30000000-0000-f000-f000-000000000002"
+
+	// indicate invalid workflow state transition
+	invalidStateTransitionMsg = "unable to change workflow state from %v to %v, close status %v"
 )
 
 type (
@@ -551,20 +558,20 @@ type (
 
 	// VersionHistoryItem contains the event id and the associated version
 	VersionHistoryItem struct {
-		EventID int64
-		Version int64
+		eventID int64
+		version int64
 	}
 
 	// VersionHistory provides operations on version history
 	VersionHistory struct {
-		BranchToken []byte
-		History     []VersionHistoryItem
+		branchToken []byte
+		items       []*VersionHistoryItem
 	}
 
 	// VersionHistories contains a set of VersionHistory
 	VersionHistories struct {
-		CurrentBranch int32
-		Histories     []VersionHistory
+		currentBranchIndex int
+		histories          []*VersionHistory
 	}
 
 	// WorkflowMutableState indicates workflow related state
@@ -2308,6 +2315,52 @@ func (e *WorkflowExecutionInfo) SetLastFirstEventID(id int64) {
 // GetCurrentBranch return the current branch token
 func (e *WorkflowExecutionInfo) GetCurrentBranch() []byte {
 	return e.BranchToken
+}
+
+// UpdateWorkflowStateCloseStatus update the workflow state
+func (e *WorkflowExecutionInfo) UpdateWorkflowStateCloseStatus(
+	state int,
+	closeStatus int,
+) error {
+	invalidErr := &workflow.InternalServiceError{
+		Message: fmt.Sprintf(invalidStateTransitionMsg, e.State, state, closeStatus),
+	}
+
+	switch e.State {
+	case WorkflowStateVoid:
+		if state == WorkflowStateCompleted || closeStatus != WorkflowCloseStatusNone {
+			return invalidErr
+		}
+	case WorkflowStateCreated:
+		if state == WorkflowStateRunning && closeStatus != WorkflowCloseStatusNone {
+			return invalidErr
+		}
+		if state == WorkflowStateCompleted && closeStatus == WorkflowCloseStatusNone {
+			// TODO may want to further assert that close status being
+			//  WorkflowCloseStatusTerminated or
+			//  WorkflowCloseStatusTimedOut
+			return invalidErr
+		}
+
+	case WorkflowStateRunning:
+		if state == WorkflowStateCompleted && closeStatus == WorkflowCloseStatusNone {
+			return invalidErr
+		}
+
+	case WorkflowStateCompleted:
+		return invalidErr
+	case WorkflowStateZombie:
+		// no op
+	default:
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("unknown workflow state: %v", state),
+		}
+	}
+
+	e.State = state
+	e.CloseStatus = closeStatus
+	return nil
+
 }
 
 var internalThriftEncoder = codec.NewThriftRWEncoder()
