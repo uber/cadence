@@ -32,7 +32,7 @@ const (
 	targetCluster = "target_cluster"
 
 	domainAllValue = "all"
-	knownValue     = "_unknown_"
+	unknownValue   = "_unknown_"
 )
 
 // Tag is an interface to define metrics tags
@@ -62,7 +62,7 @@ type (
 // this converts that to an unknown domain.
 func DomainTag(value string) Tag {
 	if len(value) == 0 {
-		value = knownValue
+		value = unknownValue
 	}
 	return domainTag{value}
 }
@@ -89,7 +89,7 @@ func (d domainUnknownTag) Key() string {
 
 // Value returns the value of the domain unknown tag
 func (d domainUnknownTag) Value() string {
-	return knownValue
+	return unknownValue
 }
 
 // InstanceTag returns a new instance tag
@@ -110,7 +110,7 @@ func (i instanceTag) Value() string {
 // TargetClusterTag returns a new target cluster tag.
 func TargetClusterTag(value string) Tag {
 	if len(value) == 0 {
-		value = knownValue
+		value = unknownValue
 	}
 	return targetClusterTag{value}
 }
