@@ -115,10 +115,10 @@ func handleRequest(ctx workflow.Context, logger log.Logger, metricsClient metric
 	}
 	actCtx := workflow.WithActivityOptions(ctx, ao)
 	uploadSW := metricsClient.StartTimer(metrics.ArchiverScope, metrics.ArchiverUploadWithRetriesLatency)
-	var result uploadResult
+	var result *uploadResult
 	err := workflow.ExecuteActivity(actCtx, uploadHistoryActivityFnName, request).Get(actCtx, &result)
-	if err == nil && result.ErrorReason != "" {
-		err = errors.New(result.ErrorReason)
+	if err == nil && result != nil {
+		err = errors.New(result.ErrorWithDetails)
 	}
 	if err != nil {
 		logger.Error("failed to upload history, will delete all uploaded blobs and moving on to deleting history without archiving", tag.Error(err))
@@ -128,8 +128,13 @@ func handleRequest(ctx workflow.Context, logger log.Logger, metricsClient metric
 	}
 	uploadSW.Stop()
 
-	blobsToDelete := result.BlobsToDelete
+	var blobsToDelete []string
+	if result != nil {
+		blobsToDelete = result.BlobsToDelete
+	}
 	if timeoutErr, ok := err.(*workflow.TimeoutError); ok {
+		// In the case of timeout, activity is not able to return any information.
+		// We need to get what blobs has been uploaded from the last heartbeat details.
 		progress := uploadProgress{}
 		if timeoutErr.HasDetails() {
 			err := timeoutErr.Details(&progress)

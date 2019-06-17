@@ -48,9 +48,8 @@ type (
 	}
 
 	uploadResult struct {
-		BlobsToDelete []string
-		ErrorReason   string
-		ErrorDetails  string
+		BlobsToDelete    []string
+		ErrorWithDetails string
 	}
 )
 
@@ -97,7 +96,7 @@ const (
 // an error will be returned if context timeout, request is invalid, or failed to get domain cache entry.
 // all other errors (and the error details) will be included in the uploadResult.
 // the result will also contain a list of blob keys to delete when there's an error.
-func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (result uploadResult, err error) {
+func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (result *uploadResult, err error) {
 	container := ctx.Value(bootstrapContainerKey).(*BootstrapContainer)
 	progress := uploadProgress{
 		BlobPageToken: common.FirstBlobPageToken,
@@ -105,11 +104,9 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (result 
 	scope := container.MetricsClient.Scope(metrics.ArchiverUploadHistoryActivityScope, metrics.DomainTag(request.DomainName))
 	sw := scope.StartTimer(metrics.CadenceLatency)
 	defer func() {
-		result, err = getUploadHistoryActivityResponse(progress, err)
 		sw.Stop()
-		if err == errContextTimeout {
-			scope.IncCounter(metrics.CadenceErrContextTimeoutCounter)
-		} else if err != nil || result.ErrorReason != "" {
+		result, err = getUploadHistoryActivityResponse(progress, err)
+		if err != nil || (result != nil && result.ErrorWithDetails != errContextTimeout.Error()) {
 			scope.IncCounter(metrics.ArchiverNonRetryableErrorCount)
 		}
 	}()
@@ -117,7 +114,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (result 
 
 	if activity.HasHeartbeatDetails(ctx) {
 		if err := activity.GetHeartbeatDetails(ctx, &progress); err != nil {
-			logger.Info("failed to get previous progress, start from beginning")
+			logger.Error("failed to get previous progress, start from beginning")
 			// reset to initial state
 			progress = uploadProgress{
 				UploadedBlobs:   nil,
@@ -157,6 +154,12 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (result 
 	historyBlobIterator, err := NewHistoryBlobIterator(request, container, domainName, clusterName, progress.IteratorState)
 	if err != nil {
 		logger.Error("failed to decode history blob iterator state, start from beginning", tag.Error(err))
+		historyBlobIterator, err = NewHistoryBlobIterator(request, container, domainName, clusterName, nil)
+		if err != nil {
+			// this should never occur
+			logger.Error("failed to create new history blob iterator", tag.Error(err))
+			return result, err
+		}
 	}
 	historyBlobReader := container.HistoryBlobReader
 	if historyBlobReader == nil { // only will be set by testing code
@@ -254,14 +257,14 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (result 
 		}
 		handledLastBlob = *historyBlob.Header.IsLast
 
-		progress.UploadedBlobs = append(progress.UploadedBlobs, key.String())
 		currIteratorState, err := historyBlobIterator.GetState()
-		if err == nil {
+		if err != nil {
+			logger.Error("failed to get history blob iterator state", tag.Error(err))
+		} else {
+			progress.UploadedBlobs = append(progress.UploadedBlobs, key.String())
 			progress.IteratorState = currIteratorState
 			progress.BlobPageToken = pageToken
 			progress.HandledLastBlob = handledLastBlob
-		} else {
-			logger.Error("failed to get history blob iterator state", tag.Error(err))
 		}
 		activity.RecordHeartbeat(ctx, progress)
 	}
@@ -327,12 +330,8 @@ func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	sw := scope.StartTimer(metrics.CadenceLatency)
 	defer func() {
 		sw.Stop()
-		if err != nil {
-			if err == errContextTimeout {
-				scope.IncCounter(metrics.CadenceErrContextTimeoutCounter)
-			} else {
-				scope.IncCounter(metrics.ArchiverNonRetryableErrorCount)
-			}
+		if err != nil && err != errContextTimeout {
+			scope.IncCounter(metrics.ArchiverNonRetryableErrorCount)
 		}
 	}()
 	logger := tagLoggerWithRequest(tagLoggerWithActivityInfo(container.Logger, activity.GetInfo(ctx)), request)
@@ -359,12 +358,8 @@ func deleteBlobActivity(ctx context.Context, request ArchiveRequest, blobsToDele
 	sw := scope.StartTimer(metrics.CadenceLatency)
 	defer func() {
 		sw.Stop()
-		if err != nil {
-			if err == errContextTimeout {
-				scope.IncCounter(metrics.CadenceErrContextTimeoutCounter)
-			} else {
-				scope.IncCounter(metrics.ArchiverNonRetryableErrorCount)
-			}
+		if err != nil && err != errContextTimeout {
+			scope.IncCounter(metrics.ArchiverNonRetryableErrorCount)
 		}
 	}()
 	logger := tagLoggerWithRequest(tagLoggerWithActivityInfo(container.Logger, activity.GetInfo(ctx)), request)

@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -127,22 +128,28 @@ func validateArchivalRequest(request *ArchiveRequest) error {
 	return nil
 }
 
-func getUploadHistoryActivityResponse(progress uploadProgress, err error) (uploadResult, error) {
-	if err == nil || err == errContextTimeout {
-		return uploadResult{}, err
+func getUploadHistoryActivityResponse(progress uploadProgress, err error) (*uploadResult, error) {
+	if err == nil {
+		return nil, nil
 	}
 
-	errReason := err.Error()
-	switch errReason {
-	case errGetDomainByID, errInvalidRequest:
-		return uploadResult{}, err
-	default:
-		return uploadResult{
-			BlobsToDelete: progress.UploadedBlobs,
-			ErrorReason:   errReason,
-			ErrorDetails:  errorDetails(err),
-		}, nil
+	fatalError := map[string]bool{
+		errGetDomainByID:  true,
+		errInvalidRequest: true,
 	}
+	errReason := err.Error()
+	if _, ok := fatalError[errReason]; ok {
+		return nil, err
+	}
+
+	errorWithDetails := errReason
+	if details := errorDetails(err); details != "" {
+		errorWithDetails = fmt.Sprintf("%v: %v", errReason, details)
+	}
+	return &uploadResult{
+		BlobsToDelete:    progress.UploadedBlobs,
+		ErrorWithDetails: errorWithDetails,
+	}, nil
 }
 
 func errorDetails(err error) string {

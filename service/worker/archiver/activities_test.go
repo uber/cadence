@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 	"testing"
 
@@ -119,7 +120,6 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_TimeoutGettingDomainCac
 	domainCache := &cache.DomainCacheMock{}
 	domainCache.On("GetDomainByID", mock.Anything).Return(nil, errPersistenceRetryable).Once()
 	s.metricsClient.On("Scope", metrics.ArchiverUploadHistoryActivityScope, []metrics.Tag{metrics.DomainTag(testDomainName)}).Return(s.metricsScope).Once()
-	s.metricsScope.On("IncCounter", metrics.CadenceErrContextTimeoutCounter).Once()
 	container := &BootstrapContainer{
 		Logger:        s.logger,
 		MetricsClient: s.metricsClient,
@@ -139,8 +139,12 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_TimeoutGettingDomainCac
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
-	s.Equal(errContextTimeout.Error(), err.Error())
+	encodedResult, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	s.NoError(err)
+
+	result := s.getDecodedUploadResult(encodedResult)
+	s.Empty(result.BlobsToDelete)
+	s.Equal(errContextTimeout.Error(), result.ErrorWithDetails)
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Skip_ClusterArchivalNotEnabled() {
@@ -262,8 +266,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_ConstructBlobKeyError()
 	s.NoError(err)
 
 	result := s.getDecodedUploadResult(encodedResult)
-	s.Equal(errConstructKey, result.ErrorReason)
-	s.Equal(errInvalidKeyInput.Error(), result.ErrorDetails)
+	s.Equal(fmt.Sprintf("%v: %v", errConstructKey, errInvalidKeyInput.Error()), result.ErrorWithDetails)
 	s.Empty(result.BlobsToDelete)
 }
 
@@ -300,14 +303,12 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_GetTagsNonRetryableErro
 	s.NoError(err)
 
 	result := s.getDecodedUploadResult(encodedResult)
-	s.Equal(errGetTags, result.ErrorReason)
-	s.Equal(testErrDetails, result.ErrorDetails)
+	s.Equal(fmt.Sprintf("%v: %v", errGetTags, testErrDetails), result.ErrorWithDetails)
 	s.Empty(result.BlobsToDelete)
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Fail_GetTagsTimeout() {
 	s.metricsClient.On("Scope", metrics.ArchiverUploadHistoryActivityScope, []metrics.Tag{metrics.DomainTag(testDomainName)}).Return(s.metricsScope).Once()
-	s.metricsScope.On("IncCounter", metrics.CadenceErrContextTimeoutCounter).Once()
 	domainCache, mockClusterMetadata := s.archivalConfig(true, testArchivalBucket, true)
 	mockBlobstore := &mocks.BlobstoreClient{}
 	mockBlobstore.On("GetTags", mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New(testErrDetails))
@@ -334,8 +335,12 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_GetTagsTimeout() {
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
-	s.Equal(errContextTimeout.Error(), err.Error())
+	encodedResult, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	s.NoError(err)
+
+	result := s.getDecodedUploadResult(encodedResult)
+	s.Empty(result.BlobsToDelete)
+	s.Equal(errContextTimeout.Error(), result.ErrorWithDetails)
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Success_BlobAlreadyExists() {
@@ -449,14 +454,12 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_ReadBlobNonRetryableErr
 	s.NoError(err)
 
 	result := s.getDecodedUploadResult(encodedResult)
-	s.Equal(errReadBlob, result.ErrorReason)
-	s.Equal(errPersistenceNonRetryable.Error(), result.ErrorDetails)
+	s.Equal(fmt.Sprintf("%v: %v", errReadBlob, errPersistenceNonRetryable.Error()), result.ErrorWithDetails)
 	s.Empty(result.BlobsToDelete)
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Fail_ReadBlobTimeout() {
 	s.metricsClient.On("Scope", metrics.ArchiverUploadHistoryActivityScope, []metrics.Tag{metrics.DomainTag(testDomainName)}).Return(s.metricsScope).Once()
-	s.metricsScope.On("IncCounter", metrics.CadenceErrContextTimeoutCounter).Once()
 	domainCache, mockClusterMetadata := s.archivalConfig(true, testArchivalBucket, true)
 	mockBlobstore := &mocks.BlobstoreClient{}
 	mockBlobstore.On("GetTags", mock.Anything, mock.Anything, mock.Anything).Return(nil, blobstore.ErrBlobNotExists).Once()
@@ -485,8 +488,12 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_ReadBlobTimeout() {
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
-	s.Equal(errContextTimeout.Error(), err.Error())
+	encodedResult, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	s.NoError(err)
+
+	result := s.getDecodedUploadResult(encodedResult)
+	s.Empty(result.BlobsToDelete)
+	s.Equal(errContextTimeout.Error(), result.ErrorWithDetails)
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Fail_CouldNotRunCheck() {
@@ -620,14 +627,12 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_UploadBlobNonRetryableE
 	s.NoError(err)
 
 	result := s.getDecodedUploadResult(encodedResult)
-	s.Equal(errUploadBlob, result.ErrorReason)
-	s.Equal(testErrDetails, result.ErrorDetails)
+	s.Equal(fmt.Sprintf("%v: %v", errUploadBlob, testErrDetails), result.ErrorWithDetails)
 	s.Empty(result.BlobsToDelete)
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Fail_UploadBlobTimeout() {
 	s.metricsClient.On("Scope", metrics.ArchiverUploadHistoryActivityScope, []metrics.Tag{metrics.DomainTag(testDomainName)}).Return(s.metricsScope).Once()
-	s.metricsScope.On("IncCounter", metrics.CadenceErrContextTimeoutCounter).Once()
 	domainCache, mockClusterMetadata := s.archivalConfig(true, testArchivalBucket, true)
 	mockBlobstore := &mocks.BlobstoreClient{}
 	mockBlobstore.On("GetTags", mock.Anything, mock.Anything, mock.Anything).Return(nil, blobstore.ErrBlobNotExists).Once()
@@ -660,8 +665,12 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_UploadBlobTimeout() {
 		CloseFailoverVersion: testCloseFailoverVersion,
 		BucketName:           testArchivalBucket,
 	}
-	_, err := env.ExecuteActivity(uploadHistoryActivity, request)
-	s.Equal(errContextTimeout.Error(), err.Error())
+	encodedResult, err := env.ExecuteActivity(uploadHistoryActivity, request)
+	s.NoError(err)
+
+	result := s.getDecodedUploadResult(encodedResult)
+	s.Empty(result.BlobsToDelete)
+	s.Equal(errContextTimeout.Error(), result.ErrorWithDetails)
 }
 
 func (s *activitiesSuite) TestUploadHistoryActivity_Success_BlobDoesNotAlreadyExist() {
@@ -802,8 +811,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_HistoryMutated() {
 	s.NoError(err)
 
 	result := s.getDecodedUploadResult(encodedResult)
-	s.Equal(errHistoryMutated, result.ErrorReason)
-	s.Empty(result.ErrorDetails)
+	s.Equal(errHistoryMutated, result.ErrorWithDetails)
 	s.Empty(result.BlobsToDelete)
 }
 
@@ -1116,8 +1124,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_AfterUploadedSomeBlobs(
 	s.NoError(err)
 
 	result := s.getDecodedUploadResult(encodedResult)
-	s.Equal(errUploadBlob, result.ErrorReason)
-	s.Equal(testErrDetails, result.ErrorDetails)
+	s.Equal(fmt.Sprintf("%v: %v", errUploadBlob, testErrDetails), result.ErrorWithDetails)
 	s.Equal([]string{firstBlobKey.String()}, result.BlobsToDelete)
 }
 
@@ -1180,8 +1187,7 @@ func (s *activitiesSuite) TestUploadHistoryActivity_Fail_ContinueFromPreviousPro
 	s.NoError(err)
 
 	result := s.getDecodedUploadResult(encodedResult)
-	s.Equal(errUploadBlob, result.ErrorReason)
-	s.Equal(testErrDetails, result.ErrorDetails)
+	s.Equal(fmt.Sprintf("%v: %v", errUploadBlob, testErrDetails), result.ErrorWithDetails)
 	uploadedBlobs = append(uploadedBlobs, thirdBlobKey.String())
 	s.Equal(uploadedBlobs, result.BlobsToDelete)
 }
@@ -1471,7 +1477,6 @@ func (s *activitiesSuite) TestDeleteHistoryActivity_Fail_DeleteFromV2NonRetryabl
 
 func (s *activitiesSuite) TestDeleteHistoryActivity_Fail_TimeoutOnDeleteHistoryV2() {
 	s.metricsClient.On("Scope", metrics.ArchiverDeleteHistoryActivityScope, []metrics.Tag{metrics.DomainTag(testDomainName)}).Return(s.metricsScope).Once()
-	s.metricsScope.On("IncCounter", metrics.CadenceErrContextTimeoutCounter).Once()
 	mockHistoryV2Manager := &mocks.HistoryV2Manager{}
 	mockHistoryV2Manager.On("DeleteHistoryBranch", mock.Anything).Return(errPersistenceRetryable)
 	container := &BootstrapContainer{
@@ -1528,7 +1533,6 @@ func (s *activitiesSuite) TestDeleteHistoryActivity_Fail_DeleteFromV1NonRetryabl
 
 func (s *activitiesSuite) TestDeleteHistoryActivity_Fail_TimeoutOnDeleteHistoryV1() {
 	s.metricsClient.On("Scope", metrics.ArchiverDeleteHistoryActivityScope, []metrics.Tag{metrics.DomainTag(testDomainName)}).Return(s.metricsScope).Once()
-	s.metricsScope.On("IncCounter", metrics.CadenceErrContextTimeoutCounter).Once()
 	mockHistoryManager := &mocks.HistoryManager{}
 	mockHistoryManager.On("DeleteWorkflowExecutionHistory", mock.Anything).Return(errPersistenceRetryable)
 	container := &BootstrapContainer{
@@ -1622,8 +1626,11 @@ func (s *activitiesSuite) archivalConfig(
 	return cache.NewDomainCache(mockMetadataMgr, mockClusterMetadata, s.metricsClient, loggerimpl.NewNopLogger()), mockClusterMetadata
 }
 
-func (s *activitiesSuite) getDecodedUploadResult(encodedResult encoded.Value) uploadResult {
-	result := uploadResult{}
+func (s *activitiesSuite) getDecodedUploadResult(encodedResult encoded.Value) *uploadResult {
+	if !encodedResult.HasValue() {
+		return nil
+	}
+	result := &uploadResult{}
 	err := encodedResult.Get(&result)
 	s.NoError(err)
 	return result

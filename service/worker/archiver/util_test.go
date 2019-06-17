@@ -22,6 +22,7 @@ package archiver
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -180,44 +181,45 @@ func (s *UtilSuite) TestGetUploadResponse() {
 	testCases := []struct {
 		progress          uploadProgress
 		inputErr          error
-		expectedResult    uploadResult
+		expectedResult    *uploadResult
 		expectedOutputErr error
 	}{
 		{
 			progress: uploadProgress{UploadedBlobs: []string{"key 1", "key 2"}},
 			inputErr: testCustomErr,
-			expectedResult: uploadResult{
-				BlobsToDelete: []string{"key 1", "key 2"},
-				ErrorReason:   testErrReason,
-				ErrorDetails:  testErrDetails,
+			expectedResult: &uploadResult{
+				BlobsToDelete:    []string{"key 1", "key 2"},
+				ErrorWithDetails: fmt.Sprintf("%v: %v", testErrReason, testErrDetails),
+			},
+			expectedOutputErr: nil,
+		},
+		{
+			progress: uploadProgress{UploadedBlobs: []string{"key 1"}},
+			inputErr: errContextTimeout,
+			expectedResult: &uploadResult{
+				BlobsToDelete:    []string{"key 1"},
+				ErrorWithDetails: errContextTimeout.Error(),
 			},
 			expectedOutputErr: nil,
 		},
 		{
 			progress:          uploadProgress{UploadedBlobs: []string{"key 1"}},
-			inputErr:          errContextTimeout,
-			expectedResult:    uploadResult{},
-			expectedOutputErr: errContextTimeout,
-		},
-		{
-			progress:          uploadProgress{UploadedBlobs: []string{"key 1"}},
 			inputErr:          errors.New(errGetDomainByID),
-			expectedResult:    uploadResult{},
+			expectedResult:    nil,
 			expectedOutputErr: errors.New(errGetDomainByID),
 		},
 		{
 			progress:          uploadProgress{UploadedBlobs: []string{"key 1"}},
 			inputErr:          errors.New(errInvalidRequest),
-			expectedResult:    uploadResult{},
+			expectedResult:    nil,
 			expectedOutputErr: errors.New(errInvalidRequest),
 		},
 		{
 			progress: uploadProgress{UploadedBlobs: []string{"key 1"}},
 			inputErr: errors.New(testErrReason),
-			expectedResult: uploadResult{
-				BlobsToDelete: []string{"key 1"},
-				ErrorReason:   testErrReason,
-				ErrorDetails:  "",
+			expectedResult: &uploadResult{
+				BlobsToDelete:    []string{"key 1"},
+				ErrorWithDetails: testErrReason,
 			},
 			expectedOutputErr: nil,
 		},
