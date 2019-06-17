@@ -22,6 +22,7 @@ package frontend
 
 import (
 	"context"
+	"time"
 
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
 	"github.com/uber/cadence/.gen/go/health"
@@ -30,7 +31,9 @@ import (
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
 )
@@ -41,7 +44,9 @@ type (
 	// DCRedirectionHandlerImpl is simple wrapper over frontend service, doing redirection based on policy
 	DCRedirectionHandlerImpl struct {
 		currentClusterName string
+		timeSource         clock.TimeSource
 		domainCache        cache.DomainCache
+		metricsClient      metrics.Client
 		config             *Config
 		redirectionPolicy  DCRedirectionPolicy
 		tokenSerializer    common.TaskTokenSerializer
@@ -65,7 +70,9 @@ func NewDCRedirectionHandler(wfHandler *WorkflowHandler, policy config.DCRedirec
 
 	return &DCRedirectionHandlerImpl{
 		currentClusterName: wfHandler.GetClusterMetadata().GetCurrentClusterName(),
+		timeSource:         clock.NewRealTimeSource(),
 		domainCache:        wfHandler.domainCache,
+		metricsClient:      wfHandler.metricsClient,
 		config:             wfHandler.config,
 		redirectionPolicy:  dcRedirectionPolicy,
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
@@ -105,7 +112,12 @@ func (handler *DCRedirectionHandlerImpl) Health(ctx context.Context) (*health.He
 func (handler *DCRedirectionHandlerImpl) DeprecateDomain(
 	ctx context.Context,
 	request *shared.DeprecateDomainRequest,
-) error {
+) (retError error) {
+	var scope = metrics.DCRedirectionDeprecateDomainScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	return handler.frontendHandler.DeprecateDomain(ctx, request)
 }
@@ -114,7 +126,12 @@ func (handler *DCRedirectionHandlerImpl) DeprecateDomain(
 func (handler *DCRedirectionHandlerImpl) DescribeDomain(
 	ctx context.Context,
 	request *shared.DescribeDomainRequest,
-) (*shared.DescribeDomainResponse, error) {
+) (resp *shared.DescribeDomainResponse, retError error) {
+	var scope = metrics.DCRedirectionDescribeDomainScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	return handler.frontendHandler.DescribeDomain(ctx, request)
 }
@@ -123,7 +140,12 @@ func (handler *DCRedirectionHandlerImpl) DescribeDomain(
 func (handler *DCRedirectionHandlerImpl) ListDomains(
 	ctx context.Context,
 	request *shared.ListDomainsRequest,
-) (*shared.ListDomainsResponse, error) {
+) (resp *shared.ListDomainsResponse, retError error) {
+	var scope = metrics.DCRedirectionListDomainsScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	return handler.frontendHandler.ListDomains(ctx, request)
 }
@@ -132,7 +154,12 @@ func (handler *DCRedirectionHandlerImpl) ListDomains(
 func (handler *DCRedirectionHandlerImpl) RegisterDomain(
 	ctx context.Context,
 	request *shared.RegisterDomainRequest,
-) error {
+) (retError error) {
+	var scope = metrics.DCRedirectionRegisterDomainScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	return handler.frontendHandler.RegisterDomain(ctx, request)
 }
@@ -141,7 +168,12 @@ func (handler *DCRedirectionHandlerImpl) RegisterDomain(
 func (handler *DCRedirectionHandlerImpl) UpdateDomain(
 	ctx context.Context,
 	request *shared.UpdateDomainRequest,
-) (*shared.UpdateDomainResponse, error) {
+) (resp *shared.UpdateDomainResponse, retError error) {
+	var scope = metrics.DCRedirectionUpdateDomainScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	return handler.frontendHandler.UpdateDomain(ctx, request)
 }
@@ -153,7 +185,11 @@ func (handler *DCRedirectionHandlerImpl) DescribeTaskList(
 	ctx context.Context,
 	request *shared.DescribeTaskListRequest,
 ) (resp *shared.DescribeTaskListResponse, retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionDescribeTaskListScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "DescribeTaskList"
 	var err error
@@ -177,7 +213,11 @@ func (handler *DCRedirectionHandlerImpl) DescribeWorkflowExecution(
 	ctx context.Context,
 	request *shared.DescribeWorkflowExecutionRequest,
 ) (resp *shared.DescribeWorkflowExecutionResponse, retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionDescribeWorkflowExecutionScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "DescribeWorkflowExecution"
 	var err error
@@ -201,7 +241,11 @@ func (handler *DCRedirectionHandlerImpl) GetWorkflowExecutionHistory(
 	ctx context.Context,
 	request *shared.GetWorkflowExecutionHistoryRequest,
 ) (resp *shared.GetWorkflowExecutionHistoryResponse, retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionGetWorkflowExecutionHistoryScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "GetWorkflowExecutionHistory"
 	var err error
@@ -225,7 +269,11 @@ func (handler *DCRedirectionHandlerImpl) ListClosedWorkflowExecutions(
 	ctx context.Context,
 	request *shared.ListClosedWorkflowExecutionsRequest,
 ) (resp *shared.ListClosedWorkflowExecutionsResponse, retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionListClosedWorkflowExecutionsScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "ListClosedWorkflowExecutions"
 	var err error
@@ -249,7 +297,11 @@ func (handler *DCRedirectionHandlerImpl) ListOpenWorkflowExecutions(
 	ctx context.Context,
 	request *shared.ListOpenWorkflowExecutionsRequest,
 ) (resp *shared.ListOpenWorkflowExecutionsResponse, retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionListOpenWorkflowExecutionsScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "ListOpenWorkflowExecutions"
 	var err error
@@ -273,7 +325,11 @@ func (handler *DCRedirectionHandlerImpl) ListWorkflowExecutions(
 	ctx context.Context,
 	request *shared.ListWorkflowExecutionsRequest,
 ) (resp *shared.ListWorkflowExecutionsResponse, retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionListWorkflowExecutionsScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "ListWorkflowExecutions"
 	var err error
@@ -297,7 +353,11 @@ func (handler *DCRedirectionHandlerImpl) ScanWorkflowExecutions(
 	ctx context.Context,
 	request *shared.ListWorkflowExecutionsRequest,
 ) (resp *shared.ListWorkflowExecutionsResponse, retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionScanWorkflowExecutionsScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "ScanWorkflowExecutions"
 	var err error
@@ -321,7 +381,11 @@ func (handler *DCRedirectionHandlerImpl) CountWorkflowExecutions(
 	ctx context.Context,
 	request *shared.CountWorkflowExecutionsRequest,
 ) (resp *shared.CountWorkflowExecutionsResponse, retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionCountWorkflowExecutionsScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "CountWorkflowExecutions"
 	var err error
@@ -343,7 +407,12 @@ func (handler *DCRedirectionHandlerImpl) CountWorkflowExecutions(
 // GetSearchAttributes API call
 func (handler *DCRedirectionHandlerImpl) GetSearchAttributes(
 	ctx context.Context,
-) (*shared.GetSearchAttributesResponse, error) {
+) (resp *shared.GetSearchAttributesResponse, retError error) {
+	var scope = metrics.DCRedirectionGetSearchAttributesScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	return handler.frontendHandler.GetSearchAttributes(ctx)
 }
@@ -353,7 +422,11 @@ func (handler *DCRedirectionHandlerImpl) PollForActivityTask(
 	ctx context.Context,
 	request *shared.PollForActivityTaskRequest,
 ) (resp *shared.PollForActivityTaskResponse, retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionPollForActivityTaskScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "PollForActivityTask"
 	var err error
@@ -377,7 +450,11 @@ func (handler *DCRedirectionHandlerImpl) PollForDecisionTask(
 	ctx context.Context,
 	request *shared.PollForDecisionTaskRequest,
 ) (resp *shared.PollForDecisionTaskResponse, retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionPollForDecisionTaskScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "PollForDecisionTask"
 	var err error
@@ -401,7 +478,11 @@ func (handler *DCRedirectionHandlerImpl) QueryWorkflow(
 	ctx context.Context,
 	request *shared.QueryWorkflowRequest,
 ) (resp *shared.QueryWorkflowResponse, retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionQueryWorkflowScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "QueryWorkflow"
 	var err error
@@ -425,7 +506,11 @@ func (handler *DCRedirectionHandlerImpl) RecordActivityTaskHeartbeat(
 	ctx context.Context,
 	request *shared.RecordActivityTaskHeartbeatRequest,
 ) (resp *shared.RecordActivityTaskHeartbeatResponse, retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionRecordActivityTaskHeartbeatScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "RecordActivityTaskHeartbeat"
 	var err error
@@ -454,7 +539,11 @@ func (handler *DCRedirectionHandlerImpl) RecordActivityTaskHeartbeatByID(
 	ctx context.Context,
 	request *shared.RecordActivityTaskHeartbeatByIDRequest,
 ) (resp *shared.RecordActivityTaskHeartbeatResponse, retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionRecordActivityTaskHeartbeatByIDScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "RecordActivityTaskHeartbeatByID"
 	var err error
@@ -478,7 +567,11 @@ func (handler *DCRedirectionHandlerImpl) RequestCancelWorkflowExecution(
 	ctx context.Context,
 	request *shared.RequestCancelWorkflowExecutionRequest,
 ) (retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionRequestCancelWorkflowExecutionScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "RequestCancelWorkflowExecution"
 	var err error
@@ -502,7 +595,11 @@ func (handler *DCRedirectionHandlerImpl) ResetStickyTaskList(
 	ctx context.Context,
 	request *shared.ResetStickyTaskListRequest,
 ) (resp *shared.ResetStickyTaskListResponse, retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionResetStickyTaskListScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "ResetStickyTaskList"
 	var err error
@@ -526,7 +623,11 @@ func (handler *DCRedirectionHandlerImpl) ResetWorkflowExecution(
 	ctx context.Context,
 	request *shared.ResetWorkflowExecutionRequest,
 ) (resp *shared.ResetWorkflowExecutionResponse, retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionResetWorkflowExecutionScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "ResetWorkflowExecution"
 	var err error
@@ -550,7 +651,11 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCanceled(
 	ctx context.Context,
 	request *shared.RespondActivityTaskCanceledRequest,
 ) (retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionRespondActivityTaskCanceledScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "RespondActivityTaskCanceled"
 	var err error
@@ -579,7 +684,11 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCanceledByID(
 	ctx context.Context,
 	request *shared.RespondActivityTaskCanceledByIDRequest,
 ) (retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionRespondActivityTaskCanceledByIDScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "RespondActivityTaskCanceledByID"
 	var err error
@@ -603,7 +712,11 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCompleted(
 	ctx context.Context,
 	request *shared.RespondActivityTaskCompletedRequest,
 ) (retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionRespondActivityTaskCompletedScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "RespondActivityTaskCompleted"
 	var err error
@@ -632,7 +745,11 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCompletedByID(
 	ctx context.Context,
 	request *shared.RespondActivityTaskCompletedByIDRequest,
 ) (retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionRespondActivityTaskCompletedByIDScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "RespondActivityTaskCompletedByID"
 	var err error
@@ -656,7 +773,11 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskFailed(
 	ctx context.Context,
 	request *shared.RespondActivityTaskFailedRequest,
 ) (retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionRespondActivityTaskFailedScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "RespondActivityTaskFailed"
 	var err error
@@ -685,7 +806,11 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskFailedByID(
 	ctx context.Context,
 	request *shared.RespondActivityTaskFailedByIDRequest,
 ) (retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionRespondActivityTaskFailedByIDScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "RespondActivityTaskFailedByID"
 	var err error
@@ -709,7 +834,11 @@ func (handler *DCRedirectionHandlerImpl) RespondDecisionTaskCompleted(
 	ctx context.Context,
 	request *shared.RespondDecisionTaskCompletedRequest,
 ) (resp *shared.RespondDecisionTaskCompletedResponse, retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionRespondDecisionTaskCompletedScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "RespondDecisionTaskCompleted"
 	var err error
@@ -738,7 +867,11 @@ func (handler *DCRedirectionHandlerImpl) RespondDecisionTaskFailed(
 	ctx context.Context,
 	request *shared.RespondDecisionTaskFailedRequest,
 ) (retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionRespondDecisionTaskFailedScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "RespondDecisionTaskFailed"
 	var err error
@@ -767,7 +900,11 @@ func (handler *DCRedirectionHandlerImpl) RespondQueryTaskCompleted(
 	ctx context.Context,
 	request *shared.RespondQueryTaskCompletedRequest,
 ) (retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionRespondQueryTaskCompletedScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "RespondQueryTaskCompleted"
 	var err error
@@ -796,7 +933,11 @@ func (handler *DCRedirectionHandlerImpl) SignalWithStartWorkflowExecution(
 	ctx context.Context,
 	request *shared.SignalWithStartWorkflowExecutionRequest,
 ) (resp *shared.StartWorkflowExecutionResponse, retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionSignalWithStartWorkflowExecutionScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "SignalWithStartWorkflowExecution"
 	var err error
@@ -820,7 +961,11 @@ func (handler *DCRedirectionHandlerImpl) SignalWorkflowExecution(
 	ctx context.Context,
 	request *shared.SignalWorkflowExecutionRequest,
 ) (retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionSignalWorkflowExecutionScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "SignalWorkflowExecution"
 	var err error
@@ -843,7 +988,11 @@ func (handler *DCRedirectionHandlerImpl) StartWorkflowExecution(
 	ctx context.Context,
 	request *shared.StartWorkflowExecutionRequest,
 ) (resp *shared.StartWorkflowExecutionResponse, retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionStartWorkflowExecutionScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "StartWorkflowExecution"
 	var err error
@@ -867,7 +1016,11 @@ func (handler *DCRedirectionHandlerImpl) TerminateWorkflowExecution(
 	ctx context.Context,
 	request *shared.TerminateWorkflowExecutionRequest,
 ) (retError error) {
-	defer log.CapturePanic(handler.service.GetLogger(), &retError)
+	var scope = metrics.DCRedirectionTerminateWorkflowExecutionScope
+	startTime := handler.beforeCall()
+	defer func() {
+		handler.afterCall(scope, startTime, &retError)
+	}()
 
 	var apiName = "TerminateWorkflowExecution"
 	var err error
@@ -884,4 +1037,18 @@ func (handler *DCRedirectionHandlerImpl) TerminateWorkflowExecution(
 	})
 
 	return err
+}
+
+func (handler *DCRedirectionHandlerImpl) beforeCall() time.Time {
+	return handler.timeSource.Now()
+}
+
+func (handler *DCRedirectionHandlerImpl) afterCall(scope int, startTime time.Time, retError *error) {
+	log.CapturePanic(handler.service.GetLogger(), retError)
+
+	handler.metricsClient.IncCounter(scope, metrics.CadenceClientRequests)
+	handler.metricsClient.RecordTimer(scope, metrics.CadenceClientLatency, handler.timeSource.Now().Sub(startTime))
+	if *retError != nil {
+		handler.metricsClient.IncCounter(scope, metrics.CadenceClientFailures)
+	}
 }
