@@ -181,9 +181,25 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 
 	executionInfo := handler.mutableState.GetExecutionInfo()
 	domainID := executionInfo.DomainID
+	targetDomainID := domainID
+	if attr.GetDomain() != "" {
+		targetDomainEntry, err := handler.domainCache.GetDomain(attr.GetDomain())
+		if err != nil {
+			return &workflow.InternalServiceError{
+				Message: fmt.Sprintf("Unable to schedule activity across domain %v.", attr.GetDomain()),
+			}
+		}
+		targetDomainID = targetDomainEntry.GetInfo().ID
+	}
 
 	if err := handler.validateDecisionAttr(
 		func() error {
+			if err := handler.attrValidator.validateCrossDomainCall(
+				domainID,
+				targetDomainID,
+			); err != nil {
+				return err
+			}
 			return handler.attrValidator.validateActivityScheduleAttributes(
 				attr, executionInfo.WorkflowTimeout,
 			)
@@ -200,17 +216,6 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 	if err != nil || failWorkflow {
 		handler.stopProcessing = true
 		return err
-	}
-
-	targetDomainID := domainID
-	// First check if we need to use a different target domain to schedule activity
-	if attr.Domain != nil {
-		// TODO: Error handling for ActivitySchedule failed when domain lookup fails
-		targetDomainEntry, err := handler.domainCache.GetDomain(attr.GetDomain())
-		if err != nil {
-			return &workflow.InternalServiceError{Message: "Unable to schedule activity across domain."}
-		}
-		targetDomainID = targetDomainEntry.GetInfo().ID
 	}
 
 	scheduleEvent, _, err := handler.mutableState.AddActivityTaskScheduledEvent(handler.decisionTaskCompletedID, attr)
@@ -561,28 +566,32 @@ func (handler *decisionTaskHandlerImpl) handleDecisionRequestCancelExternalWorkf
 		metrics.DecisionTypeCancelExternalWorkflowCounter,
 	)
 
-	if err := handler.validateDecisionAttr(
-		func() error {
-			return handler.attrValidator.validateCancelExternalWorkflowExecutionAttributes(attr)
-		},
-		workflow.DecisionTaskFailedCauseBadRequestCancelExternalWorkflowExecutionAttributes,
-	); err != nil || handler.stopProcessing {
-		return err
-	}
-
 	executionInfo := handler.mutableState.GetExecutionInfo()
-
-	foreignDomainID := ""
-	if attr.GetDomain() == "" {
-		foreignDomainID = executionInfo.DomainID
-	} else {
-		foreignDomainEntry, err := handler.domainCache.GetDomain(attr.GetDomain())
+	domainID := executionInfo.DomainID
+	targetDomainID := domainID
+	if attr.GetDomain() != "" {
+		targetDomainEntry, err := handler.domainCache.GetDomain(attr.GetDomain())
 		if err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Unable to cancel workflow across domain: %v.", attr.GetDomain()),
 			}
 		}
-		foreignDomainID = foreignDomainEntry.GetInfo().ID
+		targetDomainID = targetDomainEntry.GetInfo().ID
+	}
+
+	if err := handler.validateDecisionAttr(
+		func() error {
+			if err := handler.attrValidator.validateCrossDomainCall(
+				domainID,
+				targetDomainID,
+			); err != nil {
+				return err
+			}
+			return handler.attrValidator.validateCancelExternalWorkflowExecutionAttributes(attr)
+		},
+		workflow.DecisionTaskFailedCauseBadRequestCancelExternalWorkflowExecutionAttributes,
+	); err != nil || handler.stopProcessing {
+		return err
 	}
 
 	cancelRequestID := uuid.New()
@@ -594,7 +603,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionRequestCancelExternalWorkf
 	}
 
 	handler.transferTasks = append(handler.transferTasks, &persistence.CancelExecutionTask{
-		TargetDomainID:          foreignDomainID,
+		TargetDomainID:          targetDomainID,
 		TargetWorkflowID:        attr.GetWorkflowId(),
 		TargetRunID:             attr.GetRunId(),
 		TargetChildWorkflowOnly: attr.GetChildWorkflowOnly(),
@@ -720,9 +729,26 @@ func (handler *decisionTaskHandlerImpl) handleDecisionStartChildWorkflow(
 	)
 
 	executionInfo := handler.mutableState.GetExecutionInfo()
+	domainID := executionInfo.DomainID
+	targetDomainID := domainID
+	if attr.GetDomain() != "" {
+		targetDomainEntry, err := handler.domainCache.GetDomain(attr.GetDomain())
+		if err != nil {
+			return &workflow.InternalServiceError{
+				Message: fmt.Sprintf("Unable to schedule child execution across domain %v.", attr.GetDomain()),
+			}
+		}
+		targetDomainID = targetDomainEntry.GetInfo().ID
+	}
 
 	if err := handler.validateDecisionAttr(
 		func() error {
+			if err := handler.attrValidator.validateCrossDomainCall(
+				domainID,
+				targetDomainID,
+			); err != nil {
+				return err
+			}
 			return handler.attrValidator.validateStartChildExecutionAttributes(
 				executionInfo, attr,
 			)
@@ -739,17 +765,6 @@ func (handler *decisionTaskHandlerImpl) handleDecisionStartChildWorkflow(
 	if err != nil || failWorkflow {
 		handler.stopProcessing = true
 		return err
-	}
-
-	targetDomainID := executionInfo.DomainID
-	// First check if we need to use a different target domain to schedule child execution
-	if attr.Domain != nil {
-		// TODO: Error handling for DecisionType_StartChildWorkflowExecution failed when domain lookup fails
-		targetDomainEntry, err := handler.domainCache.GetDomain(attr.GetDomain())
-		if err != nil {
-			return &workflow.InternalServiceError{Message: "Unable to schedule child execution across domain."}
-		}
-		targetDomainID = targetDomainEntry.GetInfo().ID
 	}
 
 	requestID := uuid.New()
@@ -777,9 +792,26 @@ func (handler *decisionTaskHandlerImpl) handleDecisionSignalExternalWorkflow(
 	)
 
 	executionInfo := handler.mutableState.GetExecutionInfo()
+	domainID := executionInfo.DomainID
+	targetDomainID := domainID
+	if attr.GetDomain() != "" {
+		targetDomainEntry, err := handler.domainCache.GetDomain(attr.GetDomain())
+		if err != nil {
+			return &workflow.InternalServiceError{
+				Message: fmt.Sprintf("Unable to signal workflow across domain: %v.", attr.GetDomain()),
+			}
+		}
+		targetDomainID = targetDomainEntry.GetInfo().ID
+	}
 
 	if err := handler.validateDecisionAttr(
 		func() error {
+			if err := handler.attrValidator.validateCrossDomainCall(
+				domainID,
+				targetDomainID,
+			); err != nil {
+				return err
+			}
 			return handler.attrValidator.validateSignalExternalWorkflowExecutionAttributes(attr)
 		},
 		workflow.DecisionTaskFailedCauseBadSignalWorkflowExecutionAttributes,
@@ -796,19 +828,6 @@ func (handler *decisionTaskHandlerImpl) handleDecisionSignalExternalWorkflow(
 		return err
 	}
 
-	foreignDomainID := ""
-	if attr.GetDomain() == "" {
-		foreignDomainID = executionInfo.DomainID
-	} else {
-		foreignDomainEntry, err := handler.domainCache.GetDomain(attr.GetDomain())
-		if err != nil {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("Unable to signal workflow across domain: %v.", attr.GetDomain()),
-			}
-		}
-		foreignDomainID = foreignDomainEntry.GetInfo().ID
-	}
-
 	signalRequestID := uuid.New() // for deduplicate
 	wfSignalReqEvent, _, err := handler.mutableState.AddSignalExternalWorkflowExecutionInitiatedEvent(
 		handler.decisionTaskCompletedID, signalRequestID, attr,
@@ -818,7 +837,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionSignalExternalWorkflow(
 	}
 
 	handler.transferTasks = append(handler.transferTasks, &persistence.SignalExecutionTask{
-		TargetDomainID:          foreignDomainID,
+		TargetDomainID:          targetDomainID,
 		TargetWorkflowID:        attr.Execution.GetWorkflowId(),
 		TargetRunID:             attr.Execution.GetRunId(),
 		TargetChildWorkflowOnly: attr.GetChildWorkflowOnly(),

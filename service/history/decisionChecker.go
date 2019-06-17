@@ -21,10 +21,13 @@
 package history
 
 import (
+	"fmt"
+
 	"github.com/pborman/uuid"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -32,6 +35,7 @@ import (
 
 type (
 	decisionAttrValidator struct {
+		domainCache      cache.DomainCache
 		maxIDLengthLimit int
 	}
 
@@ -45,8 +49,14 @@ type (
 	}
 )
 
-func newDecisionAttrValidator(maxIDLengthLimit int) *decisionAttrValidator {
-	return &decisionAttrValidator{maxIDLengthLimit: maxIDLengthLimit}
+func newDecisionAttrValidator(
+	domainCache cache.DomainCache,
+	maxIDLengthLimit int,
+) *decisionAttrValidator {
+	return &decisionAttrValidator{
+		domainCache:      domainCache,
+		maxIDLengthLimit: maxIDLengthLimit,
+	}
 }
 
 func newDecisionBlobSizeChecker(
@@ -451,4 +461,54 @@ func (v *decisionAttrValidator) validateStartChildExecutionAttributes(
 	}
 
 	return nil
+}
+
+func (v *decisionAttrValidator) validateCrossDomainCall(
+	domainID string,
+	targetDomainID string,
+) error {
+
+	// same name, no check needed
+	if domainID == targetDomainID {
+		return nil
+	}
+
+	domainEntry, err := v.domainCache.GetDomainByID(domainID)
+	if err != nil {
+		return err
+	}
+
+	targetDomainEntry, err := v.domainCache.GetDomainByID(targetDomainID)
+	if err != nil {
+		return err
+	}
+
+	// both local domain
+	if !domainEntry.IsGlobalDomain() && !targetDomainEntry.IsGlobalDomain() {
+		return nil
+	}
+
+	domainClusters := domainEntry.GetReplicationConfig().Clusters
+	targetDomainClusters := targetDomainEntry.GetReplicationConfig().Clusters
+
+	// one is local domain, another one is global domain or both global domain
+	// treat global domain with one replication cluster as local domain
+	if len(domainClusters) == 1 && len(targetDomainClusters) == 1 {
+		if *domainClusters[0] == *targetDomainClusters[0] {
+			return nil
+		}
+		return v.createCrossDomainCallError(domainEntry, targetDomainEntry)
+	}
+	return v.createCrossDomainCallError(domainEntry, targetDomainEntry)
+}
+
+func (v *decisionAttrValidator) createCrossDomainCallError(
+	domainEntry *cache.DomainCacheEntry,
+	targetDomainEntry *cache.DomainCacheEntry,
+) error {
+	return &workflow.BadRequestError{Message: fmt.Sprintf(
+		"cannot make cross domain call between %v and %v",
+		domainEntry.GetInfo().Name,
+		targetDomainEntry.GetInfo().Name,
+	)}
 }
