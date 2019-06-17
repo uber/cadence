@@ -42,9 +42,9 @@ Run `./cadence tasklist` for help on tasklist operations
 ### Domain operation examples 
 - Register a new domain named "samples-domain":  
 ```
-./cadence --domain samples-domain domain register 
+./cadence --domain samples-domain domain register --global_domain false
 # OR using short alias  
-./cadence --do samples-domain d re
+./cadence --do samples-domain d re --gd false
 ```   
 - View "samples-domain" details:   
 ```
