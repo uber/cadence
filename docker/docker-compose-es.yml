@@ -12,7 +12,7 @@ services:
       - "8125:8125"
       - "8126:8126"
   cadence:
-    image: ubercadence/server:master
+    image: ubercadence/server-es:master
     ports:
       - "7933:7933"
       - "7934:7934"
