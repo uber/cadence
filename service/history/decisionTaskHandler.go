@@ -194,14 +194,11 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 
 	if err := handler.validateDecisionAttr(
 		func() error {
-			if err := handler.attrValidator.validateCrossDomainCall(
+			return handler.attrValidator.validateActivityScheduleAttributes(
 				domainID,
 				targetDomainID,
-			); err != nil {
-				return err
-			}
-			return handler.attrValidator.validateActivityScheduleAttributes(
-				attr, executionInfo.WorkflowTimeout,
+				attr,
+				executionInfo.WorkflowTimeout,
 			)
 		},
 		workflow.DecisionTaskFailedCauseBadScheduleActivityAttributes,
@@ -581,13 +578,11 @@ func (handler *decisionTaskHandlerImpl) handleDecisionRequestCancelExternalWorkf
 
 	if err := handler.validateDecisionAttr(
 		func() error {
-			if err := handler.attrValidator.validateCrossDomainCall(
+			return handler.attrValidator.validateCancelExternalWorkflowExecutionAttributes(
 				domainID,
 				targetDomainID,
-			); err != nil {
-				return err
-			}
-			return handler.attrValidator.validateCancelExternalWorkflowExecutionAttributes(attr)
+				attr,
+			)
 		},
 		workflow.DecisionTaskFailedCauseBadRequestCancelExternalWorkflowExecutionAttributes,
 	); err != nil || handler.stopProcessing {
@@ -661,7 +656,8 @@ func (handler *decisionTaskHandlerImpl) handleDecisionContinueAsNewWorkflow(
 	if err := handler.validateDecisionAttr(
 		func() error {
 			return handler.attrValidator.validateContinueAsNewWorkflowExecutionAttributes(
-				executionInfo, attr,
+				attr,
+				executionInfo,
 			)
 		},
 		workflow.DecisionTaskFailedCauseBadContinueAsNewAttributes,
@@ -743,14 +739,11 @@ func (handler *decisionTaskHandlerImpl) handleDecisionStartChildWorkflow(
 
 	if err := handler.validateDecisionAttr(
 		func() error {
-			if err := handler.attrValidator.validateCrossDomainCall(
+			return handler.attrValidator.validateStartChildExecutionAttributes(
 				domainID,
 				targetDomainID,
-			); err != nil {
-				return err
-			}
-			return handler.attrValidator.validateStartChildExecutionAttributes(
-				executionInfo, attr,
+				attr,
+				executionInfo,
 			)
 		},
 		workflow.DecisionTaskFailedCauseBadStartChildExecutionAttributes,
@@ -806,13 +799,11 @@ func (handler *decisionTaskHandlerImpl) handleDecisionSignalExternalWorkflow(
 
 	if err := handler.validateDecisionAttr(
 		func() error {
-			if err := handler.attrValidator.validateCrossDomainCall(
+			return handler.attrValidator.validateSignalExternalWorkflowExecutionAttributes(
 				domainID,
 				targetDomainID,
-			); err != nil {
-				return err
-			}
-			return handler.attrValidator.validateSignalExternalWorkflowExecutionAttributes(attr)
+				attr,
+			)
 		},
 		workflow.DecisionTaskFailedCauseBadSignalWorkflowExecutionAttributes,
 	); err != nil || handler.stopProcessing {

@@ -110,9 +110,18 @@ func (c *decisionBlobSizeChecker) failWorkflowIfBlobSizeExceedsLimit(
 }
 
 func (v *decisionAttrValidator) validateActivityScheduleAttributes(
+	domainID string,
+	targetDomainID string,
 	attributes *workflow.ScheduleActivityTaskDecisionAttributes,
 	wfTimeout int32,
 ) error {
+
+	if err := v.validateCrossDomainCall(
+		domainID,
+		targetDomainID,
+	); err != nil {
+		return err
+	}
 
 	if attributes == nil {
 		return &workflow.BadRequestError{Message: "ScheduleActivityTaskDecisionAttributes is not set on decision."}
@@ -305,8 +314,17 @@ func (v *decisionAttrValidator) validateCancelWorkflowExecutionAttributes(
 }
 
 func (v *decisionAttrValidator) validateCancelExternalWorkflowExecutionAttributes(
+	domainID string,
+	targetDomainID string,
 	attributes *workflow.RequestCancelExternalWorkflowExecutionDecisionAttributes,
 ) error {
+
+	if err := v.validateCrossDomainCall(
+		domainID,
+		targetDomainID,
+	); err != nil {
+		return err
+	}
 
 	if attributes == nil {
 		return &workflow.BadRequestError{Message: "RequestCancelExternalWorkflowExecutionDecisionAttributes is not set on decision."}
@@ -329,8 +347,17 @@ func (v *decisionAttrValidator) validateCancelExternalWorkflowExecutionAttribute
 }
 
 func (v *decisionAttrValidator) validateSignalExternalWorkflowExecutionAttributes(
+	domainID string,
+	targetDomainID string,
 	attributes *workflow.SignalExternalWorkflowExecutionDecisionAttributes,
 ) error {
+
+	if err := v.validateCrossDomainCall(
+		domainID,
+		targetDomainID,
+	); err != nil {
+		return err
+	}
 
 	if attributes == nil {
 		return &workflow.BadRequestError{Message: "SignalExternalWorkflowExecutionDecisionAttributes is not set on decision."}
@@ -363,8 +390,8 @@ func (v *decisionAttrValidator) validateSignalExternalWorkflowExecutionAttribute
 }
 
 func (v *decisionAttrValidator) validateContinueAsNewWorkflowExecutionAttributes(
-	executionInfo *persistence.WorkflowExecutionInfo,
 	attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes,
+	executionInfo *persistence.WorkflowExecutionInfo,
 ) error {
 
 	if attributes == nil {
@@ -401,9 +428,18 @@ func (v *decisionAttrValidator) validateContinueAsNewWorkflowExecutionAttributes
 }
 
 func (v *decisionAttrValidator) validateStartChildExecutionAttributes(
-	parentInfo *persistence.WorkflowExecutionInfo,
+	domainID string,
+	targetDomainID string,
 	attributes *workflow.StartChildWorkflowExecutionDecisionAttributes,
+	parentInfo *persistence.WorkflowExecutionInfo,
 ) error {
+
+	if err := v.validateCrossDomainCall(
+		domainID,
+		targetDomainID,
+	); err != nil {
+		return err
+	}
 
 	if attributes == nil {
 		return &workflow.BadRequestError{Message: "StartChildWorkflowExecutionDecisionAttributes is not set on decision."}
