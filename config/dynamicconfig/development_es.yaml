@@ -1,0 +1,6 @@
+frontend.enableClientVersionCheck:
+  - value: true
+system.enableVisibilityToKafka:
+  - value: true
+system.enableReadVisibilityFromES:
+  - value: true
