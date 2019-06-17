@@ -58,7 +58,7 @@ COPY ./start.sh $CADENCE_HOME/start.sh
 COPY ./config_template.yaml $CADENCE_HOME/config/docker_template_cassandra.yaml
 COPY ./config_template_mysql.yaml $CADENCE_HOME/config/docker_template_mysql.yaml
 RUN mkdir $CADENCE_HOME/config/dynamicconfig/
-COPY ../config/dynamicconfig/development_es.yaml $CADENCE_HOME/config/dynamicconfig/development_es.yaml
+COPY ./dynamicconfig/development_es.yaml $CADENCE_HOME/config/dynamicconfig/development_es.yaml
 RUN chmod a+x $CADENCE_HOME/start.sh
 
 COPY --from=builder /go/src/github.com/uber/cadence/cadence-cassandra-tool /cadence
