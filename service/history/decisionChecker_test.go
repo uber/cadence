@@ -68,31 +68,49 @@ func (s *decisionAttrValidatorSuite) TearDownTest() {
 }
 
 func (s *decisionAttrValidatorSuite) TestValidateSignalExternalWorkflowExecutionAttributes() {
+	domainID := "some random domain ID"
+	targetDomainID := "some random target domain ID"
+	domainEntry := cache.NewLocalDomainCacheEntryForTest(
+		&persistence.DomainInfo{Name: domainID},
+		nil,
+		cluster.TestCurrentClusterName,
+		nil,
+	)
+	targetDomainEntry := cache.NewLocalDomainCacheEntryForTest(
+		&persistence.DomainInfo{Name: targetDomainID},
+		nil,
+		cluster.TestCurrentClusterName,
+		nil,
+	)
+
+	s.mockDomainCache.On("GetDomainByID", domainID).Return(domainEntry, nil)
+	s.mockDomainCache.On("GetDomainByID", targetDomainID).Return(targetDomainEntry, nil)
+
 	var attributes *workflow.SignalExternalWorkflowExecutionDecisionAttributes
 
-	err := s.validator.validateSignalExternalWorkflowExecutionAttributes(attributes)
+	err := s.validator.validateSignalExternalWorkflowExecutionAttributes(domainID, targetDomainID, attributes)
 	s.EqualError(err, "BadRequestError{Message: SignalExternalWorkflowExecutionDecisionAttributes is not set on decision.}")
 
 	attributes = &workflow.SignalExternalWorkflowExecutionDecisionAttributes{}
-	err = s.validator.validateSignalExternalWorkflowExecutionAttributes(attributes)
+	err = s.validator.validateSignalExternalWorkflowExecutionAttributes(domainID, targetDomainID, attributes)
 	s.EqualError(err, "BadRequestError{Message: Execution is nil on decision.}")
 
 	attributes.Execution = &workflow.WorkflowExecution{}
 	attributes.Execution.WorkflowId = common.StringPtr("workflow-id")
-	err = s.validator.validateSignalExternalWorkflowExecutionAttributes(attributes)
+	err = s.validator.validateSignalExternalWorkflowExecutionAttributes(domainID, targetDomainID, attributes)
 	s.EqualError(err, "BadRequestError{Message: SignalName is not set on decision.}")
 
 	attributes.Execution.RunId = common.StringPtr("run-id")
-	err = s.validator.validateSignalExternalWorkflowExecutionAttributes(attributes)
+	err = s.validator.validateSignalExternalWorkflowExecutionAttributes(domainID, targetDomainID, attributes)
 	s.EqualError(err, "BadRequestError{Message: Invalid RunId set on decision.}")
 	attributes.Execution.RunId = common.StringPtr(validRunID)
 
 	attributes.SignalName = common.StringPtr("my signal name")
-	err = s.validator.validateSignalExternalWorkflowExecutionAttributes(attributes)
+	err = s.validator.validateSignalExternalWorkflowExecutionAttributes(domainID, targetDomainID, attributes)
 	s.EqualError(err, "BadRequestError{Message: Input is not set on decision.}")
 
 	attributes.Input = []byte("test input")
-	err = s.validator.validateSignalExternalWorkflowExecutionAttributes(attributes)
+	err = s.validator.validateSignalExternalWorkflowExecutionAttributes(domainID, targetDomainID, attributes)
 	s.Nil(err)
 }
 
