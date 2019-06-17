@@ -24,6 +24,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/uber/cadence/common/cluster"
 
 	"github.com/uber/cadence/client"
@@ -191,13 +192,17 @@ func (s *server) startService() common.Daemon {
 			params.BlobstoreClient, err = filestore.NewClient(s.cfg.Archival.Filestore)
 		}
 		if s.cfg.Archival.S3store != nil {
-			s3cli, err := s3store.ClientFromConfig(s.cfg.Archival.S3store)
-			if err != nil {
+			var s3cli s3iface.S3API
+			s3cli, err = s3store.ClientFromConfig(s.cfg.Archival.S3store)
+			if err == nil {
 				params.BlobstoreClient = s3store.NewClient(s3cli)
 			}
 		}
 		if err != nil {
 			log.Fatalf("error creating blobstore: %v", err)
+		}
+		if params.BlobstoreClient == nil {
+			log.Fatalf("no blobstore created, please add a filrestore or s3store configuration to archival")
 		}
 	}
 
