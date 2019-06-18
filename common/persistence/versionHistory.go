@@ -35,7 +35,11 @@ func NewVersionHistoryItem(
 ) *VersionHistoryItem {
 
 	if inputEventID < 0 || inputVersion < 0 {
-		panic("invalid version history item event ID / version")
+		panic(fmt.Sprintf(
+			"invalid version history item event ID: %v, version: %v",
+			inputEventID,
+			inputVersion,
+		))
 	}
 
 	return &VersionHistoryItem{eventID: inputEventID, version: inputVersion}
