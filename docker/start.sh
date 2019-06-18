@@ -63,11 +63,22 @@ setup_mysql_schema() {
     $CADENCE_HOME/cadence-sql-tool --ep $MYSQL_SEEDS -u $MYSQL_USER --pw $MYSQL_PWD --db $VISIBILITY_DBNAME update-schema -d $VISIBILITY_SCHEMA_DIR
 }
 
+setup_es_template() {
+    SCHEMA_FILE=$CADENCE_HOME/schema/elasticsearch/visibility/index_template.json
+    server=`echo $ES_SEEDS | awk -F ',' '{print $1}'`
+    URL="http://$server:$ES_PORT/_template/cadence-visibility-template"
+    curl -X PUT $URL -H 'Content-Type: application/json' --data-binary "@$SCHEMA_FILE"
+}
+
 setup_schema() {
     if [ "$DB" == "mysql" ]; then
         setup_mysql_schema
     else
         setup_cassandra_schema
+    fi
+
+    if [ "$ENABLE_ES" == "true" ]; then
+        setup_es_template
     fi
 }
 
