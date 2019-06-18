@@ -187,7 +187,7 @@ func (v *VersionHistory) SetBranchToken(
 ) error {
 
 	if len(v.branchToken) != 0 {
-		return &shared.BadRequestError{Message: "cannot branch token is already set"}
+		return &shared.BadRequestError{Message: "branch token is already set"}
 	}
 
 	token := make([]byte, len(inputToken))
