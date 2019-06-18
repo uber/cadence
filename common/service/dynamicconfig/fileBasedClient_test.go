@@ -94,7 +94,7 @@ func (s *fileBasedClientSuite) TestGetValueWithFilters() {
 	}
 	v, err = s.client.GetValueWithFilters(testGetBoolPropertyKey, filters, false)
 	s.NoError(err)
-	s.Equal(true, v)
+	s.Equal(false, v)
 }
 
 func (s *fileBasedClientSuite) TestGetValueWithFilters_UnknownFilter() {
@@ -104,7 +104,7 @@ func (s *fileBasedClientSuite) TestGetValueWithFilters_UnknownFilter() {
 	}
 	v, err := s.client.GetValueWithFilters(testGetBoolPropertyKey, filters, false)
 	s.NoError(err)
-	s.Equal(true, v)
+	s.Equal(false, v)
 }
 
 func (s *fileBasedClientSuite) TestGetIntValue() {
@@ -237,7 +237,6 @@ func (s *fileBasedClientSuite) TestMatch() {
 		v       *constrainedValue
 		filters map[Filter]interface{}
 		matched bool
-		score   int
 	}{
 		{
 			v: &constrainedValue{
@@ -246,8 +245,7 @@ func (s *fileBasedClientSuite) TestMatch() {
 			filters: map[Filter]interface{}{
 				DomainName: "some random domain",
 			},
-			matched: true,
-			score:   0,
+			matched: false,
 		},
 		{
 			v: &constrainedValue{
@@ -255,7 +253,6 @@ func (s *fileBasedClientSuite) TestMatch() {
 			},
 			filters: map[Filter]interface{}{},
 			matched: false,
-			score:   0,
 		},
 		{
 			v: &constrainedValue{
@@ -265,7 +262,6 @@ func (s *fileBasedClientSuite) TestMatch() {
 				DomainName: "some random domain",
 			},
 			matched: false,
-			score:   0,
 		},
 		{
 			v: &constrainedValue{
@@ -279,7 +275,6 @@ func (s *fileBasedClientSuite) TestMatch() {
 				TaskListName: "sample-task-list",
 			},
 			matched: true,
-			score:   2,
 		},
 		{
 			v: &constrainedValue{
@@ -293,7 +288,6 @@ func (s *fileBasedClientSuite) TestMatch() {
 				TaskListName: "sample-task-list",
 			},
 			matched: false,
-			score:   0,
 		},
 		{
 			v: &constrainedValue{
@@ -305,13 +299,11 @@ func (s *fileBasedClientSuite) TestMatch() {
 				TaskListName: "sample-task-list",
 			},
 			matched: false,
-			score:   0,
 		},
 	}
 
 	for _, tc := range testCases {
-		matched, score := match(tc.v, tc.filters)
+		matched := match(tc.v, tc.filters)
 		s.Equal(tc.matched, matched)
-		s.Equal(tc.score, score)
 	}
 }
