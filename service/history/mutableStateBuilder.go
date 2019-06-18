@@ -546,7 +546,9 @@ func checkAndClearTimerFiredEvent(
 	if timerFiredIdx == -1 {
 		return events, nil
 	}
-	return append(events[:timerFiredIdx], events[timerFiredIdx+1:]...), events[timerFiredIdx]
+
+	timerEvent := events[timerFiredIdx]
+	return append(events[:timerFiredIdx], events[timerFiredIdx+1:]...), timerEvent
 }
 
 func convertUpdateActivityInfos(inputs map[*persistence.ActivityInfo]struct{}) []*persistence.ActivityInfo {
@@ -2928,7 +2930,7 @@ func (e *mutableStateBuilder) AddRecordMarkerEvent(
 }
 
 func (e *mutableStateBuilder) AddWorkflowExecutionTerminatedEvent(
-	request *workflow.TerminateWorkflowExecutionRequest,
+	reason string, details []byte, identity string,
 ) (*workflow.HistoryEvent, error) {
 
 	opTag := tag.WorkflowActionWorkflowTerminated
@@ -2936,7 +2938,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionTerminatedEvent(
 		return nil, err
 	}
 
-	event := e.hBuilder.AddWorkflowExecutionTerminatedEvent(request)
+	event := e.hBuilder.AddWorkflowExecutionTerminatedEvent(reason, details, identity)
 	if err := e.ReplicateWorkflowExecutionTerminatedEvent(event.GetEventId(), event); err != nil {
 		return nil, err
 	}
