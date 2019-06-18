@@ -107,7 +107,7 @@ kafka:
   clusters:
     test:
       brokers:
-        - 127.0.0.1:9092
+        - ${KAFKA_SEEDS}:9092
   topics:
     cadence-visibility-dev:
       cluster: test
@@ -122,7 +122,7 @@ elasticsearch:
   enable: false
   url:
     scheme: "http"
-    host: "127.0.0.1:9200"
+    host: "${ES_SEEDS}:${ES_PORT}"
   indices:
     visibility: cadence-visibility-dev
 

@@ -44,6 +44,7 @@ services:
       - "DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development_es.yaml"
       - "ENABLE_ES=true"
       - "ES_SEEDS=elasticsearch"
+      - "KAFKA_SEEDS=kafka"
     depends_on:
       - cassandra
       - statsd
