@@ -23,6 +23,8 @@
 CADENCE_HOME=$1
 DB="${DB:-cassandra}"
 CFG_TEMPLATE=docker_template_$DB.yaml
+ENABLE_ES="${ENABLE_ES:-false}"
+ES_PORT="${ES_PORT:-9200}"
 SERVICES="${SERVICES:-history,matching,frontend,worker}"
 RF=${RF:-1}
 export LOG_LEVEL="${LOG_LEVEL:-info}"
@@ -89,14 +91,28 @@ wait_for_mysql() {
     echo 'mysql started'
 }
 
+wait_for_es() {
+    URL=`http://localhost:$ES_PORT`
+    curl -s $URL 2>&1 > /dev/null
+    until [ $? -eq 0 ]; do
+        echo 'waiting for elasticsearch to start up'
+        sleep 1
+        curl -s $URL 2>&1 > /dev/null
+    done
+    echo 'elasticsearch started'
+}
+
 wait_for_db() {
     if [ "$DB" == "mysql" ]; then
         wait_for_mysql
     else
         wait_for_cassandra
     fi
-}
 
+    if [ "$ENABLE_ES" == "true" ]; then
+        wait_for_es
+    fi
+}
 
 json_array() {
   echo -n '['

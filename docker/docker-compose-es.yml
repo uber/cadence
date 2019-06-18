@@ -11,28 +11,6 @@ services:
       - "2003:2003"
       - "8125:8125"
       - "8126:8126"
-  cadence:
-    image: ubercadence/server-es:master
-    ports:
-      - "7933:7933"
-      - "7934:7934"
-      - "7935:7935"
-      - "7939:7939"
-    environment:
-      - "CASSANDRA_SEEDS=cassandra"
-      - "STATSD_ENDPOINT=statsd:8125"
-      - "DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development_es.yaml"
-    depends_on:
-      - cassandra
-      - statsd
-  cadence-web:
-    image: ubercadence/web:3.1.2
-    environment:
-      - "CADENCE_TCHANNEL_PEERS=cadence:7933"
-    ports:
-      - "8088:8088"
-    depends_on:
-      - cadence
   zookeeper:
     image: wurstmeister/zookeeper:3.4.6
     ports:
@@ -53,3 +31,28 @@ services:
       - "9200:9200"
     environment:
       - discovery.type=single-node
+  cadence:
+    image: ubercadence/server-es:master
+    ports:
+      - "7933:7933"
+      - "7934:7934"
+      - "7935:7935"
+      - "7939:7939"
+    environment:
+      - "CASSANDRA_SEEDS=cassandra"
+      - "STATSD_ENDPOINT=statsd:8125"
+      - "DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development_es.yaml"
+      - "ENABLE_ES=true"
+    depends_on:
+      - cassandra
+      - statsd
+      - kafka
+      - elasticsearch
+  cadence-web:
+    image: ubercadence/web:3.1.2
+    environment:
+      - "CADENCE_TCHANNEL_PEERS=cadence:7933"
+    ports:
+      - "8088:8088"
+    depends_on:
+      - cadence
