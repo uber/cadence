@@ -231,6 +231,7 @@ func (fc *fileBasedClient) getValueWithFilters(key Key, filters map[Filter]inter
 		matched, score := match(constrainedValue, filters)
 		if matched && score >= maxScore {
 			candidate = constrainedValue.Value
+			maxScore = score
 		}
 	}
 	if candidate == nil {
