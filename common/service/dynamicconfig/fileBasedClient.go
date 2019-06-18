@@ -225,24 +225,45 @@ func (fc *fileBasedClient) update() error {
 func (fc *fileBasedClient) getValueWithFilters(key Key, filters map[Filter]interface{}, defaultValue interface{}) (interface{}, error) {
 	keyName := keys[key]
 	values := fc.values.Load().(map[string][]*constrainedValue)
+	var candidate interface{}
+	maxScore := 0
 	for _, constrainedValue := range values[keyName] {
-		if match(constrainedValue, filters) {
-			return constrainedValue.Value, nil
+		matched, score := match(constrainedValue, filters)
+		if matched && score >= maxScore {
+			candidate = constrainedValue.Value
 		}
 	}
-	return defaultValue, errors.New("unable to find key")
+	if candidate == nil {
+		return defaultValue, errors.New("unable to find key")
+	}
+	return candidate, nil
 }
 
-func match(v *constrainedValue, filters map[Filter]interface{}) bool {
-	if len(v.Constraints) != len(filters) {
-		return false
+func match(v *constrainedValue, filters map[Filter]interface{}) (bool, int) {
+	if len(v.Constraints) > len(filters) {
+		return false, 0
 	}
+	score := 0
+	filtersKey := map[string]bool{}
 	for filter, filterValue := range filters {
-		if v.Constraints[filter.String()] != filterValue {
-			return false
+		filtersKey[filter.String()] = true
+		constraint, ok := v.Constraints[filter.String()]
+		if !ok {
+			continue
+		}
+		if ok && constraint != filterValue {
+			return false, 0
+		}
+		score++
+	}
+
+	for constraintKey := range v.Constraints {
+		if _, ok := filtersKey[constraintKey]; !ok {
+			return false, 0
 		}
 	}
-	return true
+
+	return true, score
 }
 
 func convertKeyTypeToString(v interface{}) (interface{}, error) {
