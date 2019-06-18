@@ -4,5 +4,4 @@ system.enableVisibilityToKafka:
   - value: true
 system.enableReadVisibilityFromES:
   - value: true
-worker.indexerConcurrency:
-  - value: 200
+
