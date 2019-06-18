@@ -43,6 +43,7 @@ services:
       - "STATSD_ENDPOINT=statsd:8125"
       - "DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development_es.yaml"
       - "ENABLE_ES=true"
+      - "ES_SEEDS=elasticsearch"
     depends_on:
       - cassandra
       - statsd

@@ -92,7 +92,8 @@ wait_for_mysql() {
 }
 
 wait_for_es() {
-    URL="http://localhost:$ES_PORT"
+    server=`echo $ES_SEEDS | awk -F ',' '{print $1}'`
+    URL="http://$server:$ES_PORT"
     curl -s $URL 2>&1 > /dev/null
     until [ $? -eq 0 ]; do
         echo 'waiting for elasticsearch to start up'
