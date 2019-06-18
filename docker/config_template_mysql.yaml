@@ -122,7 +122,7 @@ elasticsearch:
   enable: false
   url:
     scheme: "http"
-    host: "${ES_SEEDS}:${ES_PORT}"
+    host: "${ES_SEEDS}:9200"
   indices:
     visibility: cadence-visibility-dev
 
