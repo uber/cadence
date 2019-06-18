@@ -72,38 +72,65 @@ func newHistoryCache(shard ShardContext) *historyCache {
 	}
 }
 
-func (c *historyCache) getOrCreateWorkflowExecution(domainID string,
-	execution workflow.WorkflowExecution) (workflowExecutionContext, releaseWorkflowExecutionFunc, error) {
-	return c.getOrCreateWorkflowExecutionWithTimeout(context.Background(), domainID, execution)
-}
+func (c *historyCache) getOrCreatCurrentWorkflowExecution(
+	ctx context.Context,
+	domainID string,
+	workflowID string,
+) (workflowExecutionContext, releaseWorkflowExecutionFunc, error) {
 
-func (c *historyCache) validateWorkflowExecutionInfo(domainID string, execution *workflow.WorkflowExecution) error {
-	if execution.GetWorkflowId() == "" {
-		return &workflow.BadRequestError{Message: "Can't load workflow execution.  WorkflowId not set."}
+	// using empty run ID as current workflow run ID
+	runID := ""
+	execution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(workflowID),
+		RunId:      common.StringPtr(runID),
 	}
 
-	// RunID is not provided, lets try to retrieve the RunID for current active execution
-	if execution.GetRunId() == "" {
-		response, err := c.getCurrentExecutionWithRetry(&persistence.GetCurrentExecutionRequest{
-			DomainID:   domainID,
-			WorkflowID: execution.GetWorkflowId(),
-		})
+	// Test hook for disabling the cache
+	if c.disabled {
+		return newWorkflowExecutionContext(
+			domainID,
+			execution,
+			c.shard,
+			c.executionManager,
+			c.logger,
+		), func(error) {}, nil
+	}
 
+	key := definition.NewWorkflowIdentifier(domainID, workflowID, runID)
+	workflowCtx, cacheHit := c.Get(key).(workflowExecutionContext)
+	if !cacheHit {
+		c.metricsClient.IncCounter(metrics.HistoryCacheGetOrCreateScope, metrics.CacheMissCounter)
+		// Let's create the workflow execution workflowCtx
+		workflowCtx = newWorkflowExecutionContext(domainID, execution, c.shard, c.executionManager, c.logger)
+		elem, err := c.PutIfNotExist(key, workflowCtx)
 		if err != nil {
-			return err
+			c.metricsClient.IncCounter(metrics.HistoryCacheGetOrCreateScope, metrics.CacheFailures)
+			return nil, nil, err
 		}
-
-		execution.RunId = common.StringPtr(response.RunID)
-	} else if uuid.Parse(execution.GetRunId()) == nil { // immediately return if invalid runID
-		return &workflow.BadRequestError{Message: "RunID is not valid UUID."}
+		workflowCtx = elem.(workflowExecutionContext)
 	}
-	return nil
+
+	// This will create a closure on every request.
+	// Consider revisiting this if it causes too much GC activity
+	releaseFunc := c.makeReleaseFunc(key, cacheNotReleased, workflowCtx, true)
+
+	if err := workflowCtx.lock(ctx); err != nil {
+		// ctx is done before lock can be acquired
+		c.Release(key)
+		c.metricsClient.IncCounter(metrics.HistoryCacheGetOrCreateScope, metrics.CacheFailures)
+		c.metricsClient.IncCounter(metrics.HistoryCacheGetOrCreateScope, metrics.AcquireLockFailedCounter)
+		return nil, nil, err
+	}
+	return workflowCtx, releaseFunc, nil
 }
 
 // For analyzing mutableState, we have to try get workflowExecutionContext from cache and also load from database
-func (c *historyCache) getAndCreateWorkflowExecutionWithTimeout(ctx context.Context, domainID string,
-	execution workflow.WorkflowExecution) (workflowExecutionContext, workflowExecutionContext,
-	releaseWorkflowExecutionFunc, bool, error) {
+func (c *historyCache) getAndCreateWorkflowExecution(
+	ctx context.Context,
+	domainID string,
+	execution workflow.WorkflowExecution,
+) (workflowExecutionContext, workflowExecutionContext, releaseWorkflowExecutionFunc, bool, error) {
+
 	c.metricsClient.IncCounter(metrics.HistoryCacheGetAndCreateScope, metrics.CacheRequests)
 	sw := c.metricsClient.StartTimer(metrics.HistoryCacheGetAndCreateScope, metrics.CacheLatency)
 	defer sw.Stop()
@@ -125,7 +152,7 @@ func (c *historyCache) getAndCreateWorkflowExecutionWithTimeout(ctx context.Cont
 			c.metricsClient.IncCounter(metrics.HistoryCacheGetAndCreateScope, metrics.AcquireLockFailedCounter)
 			return nil, nil, nil, false, err
 		}
-		releaseFunc = c.makeReleaseFunc(key, cacheNotReleased, contextFromCache)
+		releaseFunc = c.makeReleaseFunc(key, cacheNotReleased, contextFromCache, false)
 	} else {
 		c.metricsClient.IncCounter(metrics.HistoryCacheGetAndCreateScope, metrics.CacheMissCounter)
 	}
@@ -135,11 +162,22 @@ func (c *historyCache) getAndCreateWorkflowExecutionWithTimeout(ctx context.Cont
 	return contextFromCache, contextFromDB, releaseFunc, cacheHit, nil
 }
 
-func (c *historyCache) getOrCreateWorkflowExecutionWithTimeout(ctx context.Context, domainID string,
-	execution workflow.WorkflowExecution) (workflowExecutionContext, releaseWorkflowExecutionFunc, error) {
+func (c *historyCache) getOrCreateWorkflowExecutionForBackground(
+	domainID string,
+	execution workflow.WorkflowExecution,
+) (workflowExecutionContext, releaseWorkflowExecutionFunc, error) {
+
+	return c.getOrCreateWorkflowExecution(context.Background(), domainID, execution)
+}
+
+func (c *historyCache) getOrCreateWorkflowExecution(
+	ctx context.Context,
+	domainID string,
+	execution workflow.WorkflowExecution,
+) (workflowExecutionContext, releaseWorkflowExecutionFunc, error) {
+
 	c.metricsClient.IncCounter(metrics.HistoryCacheGetOrCreateScope, metrics.CacheRequests)
 	sw := c.metricsClient.StartTimer(metrics.HistoryCacheGetOrCreateScope, metrics.CacheLatency)
-
 	defer sw.Stop()
 
 	if err := c.validateWorkflowExecutionInfo(domainID, &execution); err != nil {
@@ -168,7 +206,7 @@ func (c *historyCache) getOrCreateWorkflowExecutionWithTimeout(ctx context.Conte
 
 	// This will create a closure on every request.
 	// Consider revisiting this if it causes too much GC activity
-	releaseFunc := c.makeReleaseFunc(key, cacheNotReleased, workflowCtx)
+	releaseFunc := c.makeReleaseFunc(key, cacheNotReleased, workflowCtx, false)
 
 	if err := workflowCtx.lock(ctx); err != nil {
 		// ctx is done before lock can be acquired
@@ -180,10 +218,43 @@ func (c *historyCache) getOrCreateWorkflowExecutionWithTimeout(ctx context.Conte
 	return workflowCtx, releaseFunc, nil
 }
 
-func (c *historyCache) makeReleaseFunc(key definition.WorkflowIdentifier, status int32, context workflowExecutionContext) func(error) {
+func (c *historyCache) validateWorkflowExecutionInfo(
+	domainID string,
+	execution *workflow.WorkflowExecution,
+) error {
+
+	if execution.GetWorkflowId() == "" {
+		return &workflow.BadRequestError{Message: "Can't load workflow execution.  WorkflowId not set."}
+	}
+
+	// RunID is not provided, lets try to retrieve the RunID for current active execution
+	if execution.GetRunId() == "" {
+		response, err := c.getCurrentExecutionWithRetry(&persistence.GetCurrentExecutionRequest{
+			DomainID:   domainID,
+			WorkflowID: execution.GetWorkflowId(),
+		})
+
+		if err != nil {
+			return err
+		}
+
+		execution.RunId = common.StringPtr(response.RunID)
+	} else if uuid.Parse(execution.GetRunId()) == nil { // immediately return if invalid runID
+		return &workflow.BadRequestError{Message: "RunID is not valid UUID."}
+	}
+	return nil
+}
+
+func (c *historyCache) makeReleaseFunc(
+	key definition.WorkflowIdentifier,
+	status int32,
+	context workflowExecutionContext,
+	forceClearCache bool,
+) func(error) {
+
 	return func(err error) {
 		if atomic.CompareAndSwapInt32(&status, cacheNotReleased, cacheReleased) {
-			if err != nil {
+			if err != nil || forceClearCache {
 				// TODO see issue #668, there are certain type or errors which can bypass the clear
 				context.clear()
 			}
@@ -194,7 +265,9 @@ func (c *historyCache) makeReleaseFunc(key definition.WorkflowIdentifier, status
 }
 
 func (c *historyCache) getCurrentExecutionWithRetry(
-	request *persistence.GetCurrentExecutionRequest) (*persistence.GetCurrentExecutionResponse, error) {
+	request *persistence.GetCurrentExecutionRequest,
+) (*persistence.GetCurrentExecutionResponse, error) {
+
 	c.metricsClient.IncCounter(metrics.HistoryCacheGetCurrentExecutionScope, metrics.CacheRequests)
 	sw := c.metricsClient.StartTimer(metrics.HistoryCacheGetCurrentExecutionScope, metrics.CacheLatency)
 	defer sw.Stop()
