@@ -92,7 +92,7 @@ wait_for_mysql() {
 }
 
 wait_for_es() {
-    URL=`http://localhost:$ES_PORT`
+    URL="http://localhost:$ES_PORT"
     curl -s $URL 2>&1 > /dev/null
     until [ $? -eq 0 ]; do
         echo 'waiting for elasticsearch to start up'
