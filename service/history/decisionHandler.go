@@ -375,7 +375,10 @@ Update_History_Loop:
 			failMessage = fmt.Sprintf("binary %v is already marked as bad deployment", binChecksum)
 		} else {
 
-			decisionAttrValidator := newDecisionAttrValidator(handler.config.MaxIDLengthLimit())
+			decisionAttrValidator := newDecisionAttrValidator(
+				handler.domainCache,
+				handler.config.MaxIDLengthLimit(),
+			)
 			decisionBlobSizeChecker := newDecisionBlobSizeChecker(
 				handler.config.BlobSizeLimitWarn(domainEntry.GetInfo().Name),
 				handler.config.BlobSizeLimitError(domainEntry.GetInfo().Name),
@@ -533,11 +536,11 @@ Update_History_Loop:
 					return nil, err
 				}
 
-				_, err := msBuilder.AddWorkflowExecutionTerminatedEvent(&workflow.TerminateWorkflowExecutionRequest{
-					Reason:   common.StringPtr(common.FailureReasonTransactionSizeExceedsLimit),
-					Identity: common.StringPtr("cadence-history-server"),
-					Details:  []byte(updateErr.Error()),
-				})
+				_, err := msBuilder.AddWorkflowExecutionTerminatedEvent(
+					common.FailureReasonTransactionSizeExceedsLimit,
+					[]byte(updateErr.Error()),
+					"cadence-history-server",
+				)
 				if err != nil {
 					return nil, err
 				}
