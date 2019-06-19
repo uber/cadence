@@ -57,7 +57,7 @@ func (s *ClientSuite) SetupTest() {
 func (s *ClientSuite) TestNewClient_Fail_InvalidConfig() {
 	invalidCfg := &Config{
 		StoreDirectory: "/test/store/dir",
-		DefaultBucket:  "default-bucket-name",
+		DefaultBucket:  "",
 	}
 
 	client, err := NewClient(invalidCfg)
