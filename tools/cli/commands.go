@@ -937,6 +937,7 @@ func ListAllWorkflow(c *cli.Context) {
 	table.Render()
 }
 
+// CountWorkflow count number of workflows
 func CountWorkflow(c *cli.Context) {
 	wfClient := getWorkflowClient(c)
 

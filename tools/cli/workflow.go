@@ -150,7 +150,7 @@ func newWorkflowCommands() []cli.Command {
 		{
 			Name:    "count",
 			Aliases: []string{"cnt"},
-			Usage:   "count number of workflow executions",
+			Usage:   "count number of workflow executions (only work with ElasticSearch)",
 			Flags:   getFlagsForCount(),
 			Action: func(c *cli.Context) {
 				CountWorkflow(c)
