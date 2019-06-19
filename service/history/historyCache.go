@@ -72,7 +72,7 @@ func newHistoryCache(shard ShardContext) *historyCache {
 	}
 }
 
-func (c *historyCache) getOrCreatCurrentWorkflowExecution(
+func (c *historyCache) getOrCreateCurrentWorkflowExecution(
 	ctx context.Context,
 	domainID string,
 	workflowID string,
@@ -99,26 +99,26 @@ func (c *historyCache) getOrCreatCurrentWorkflowExecution(
 	key := definition.NewWorkflowIdentifier(domainID, workflowID, runID)
 	workflowCtx, cacheHit := c.Get(key).(workflowExecutionContext)
 	if !cacheHit {
-		c.metricsClient.IncCounter(metrics.HistoryCacheGetOrCreateScope, metrics.CacheMissCounter)
+		c.metricsClient.IncCounter(metrics.HistoryCacheGetOrCreateCurrentScope, metrics.CacheMissCounter)
 		// Let's create the workflow execution workflowCtx
 		workflowCtx = newWorkflowExecutionContext(domainID, execution, c.shard, c.executionManager, c.logger)
 		elem, err := c.PutIfNotExist(key, workflowCtx)
 		if err != nil {
-			c.metricsClient.IncCounter(metrics.HistoryCacheGetOrCreateScope, metrics.CacheFailures)
+			c.metricsClient.IncCounter(metrics.HistoryCacheGetOrCreateCurrentScope, metrics.CacheFailures)
 			return nil, nil, err
 		}
 		workflowCtx = elem.(workflowExecutionContext)
 	}
 
-	// This will create a closure on every request.
-	// Consider revisiting this if it causes too much GC activity
+	// TODO This will create a closure on every request.
+	//  Consider revisiting this if it causes too much GC activity
 	releaseFunc := c.makeReleaseFunc(key, cacheNotReleased, workflowCtx, true)
 
 	if err := workflowCtx.lock(ctx); err != nil {
 		// ctx is done before lock can be acquired
 		c.Release(key)
-		c.metricsClient.IncCounter(metrics.HistoryCacheGetOrCreateScope, metrics.CacheFailures)
-		c.metricsClient.IncCounter(metrics.HistoryCacheGetOrCreateScope, metrics.AcquireLockFailedCounter)
+		c.metricsClient.IncCounter(metrics.HistoryCacheGetOrCreateCurrentScope, metrics.CacheFailures)
+		c.metricsClient.IncCounter(metrics.HistoryCacheGetOrCreateCurrentScope, metrics.AcquireLockFailedCounter)
 		return nil, nil, err
 	}
 	return workflowCtx, releaseFunc, nil
@@ -142,6 +142,8 @@ func (c *historyCache) getAndCreateWorkflowExecution(
 
 	key := definition.NewWorkflowIdentifier(domainID, execution.GetWorkflowId(), execution.GetRunId())
 	contextFromCache, cacheHit := c.Get(key).(workflowExecutionContext)
+	// TODO This will create a closure on every request.
+	//  Consider revisiting this if it causes too much GC activity
 	releaseFunc := func(error) {}
 	// If cache hit, we need to lock the cache to prevent race condition
 	if cacheHit {
@@ -204,8 +206,8 @@ func (c *historyCache) getOrCreateWorkflowExecution(
 		workflowCtx = elem.(workflowExecutionContext)
 	}
 
-	// This will create a closure on every request.
-	// Consider revisiting this if it causes too much GC activity
+	// TODO This will create a closure on every request.
+	//  Consider revisiting this if it causes too much GC activity
 	releaseFunc := c.makeReleaseFunc(key, cacheNotReleased, workflowCtx, false)
 
 	if err := workflowCtx.lock(ctx); err != nil {

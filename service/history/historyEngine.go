@@ -388,7 +388,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 
 	workflowID := request.GetWorkflowId()
 	// grab the current context as a lock, nothing more
-	_, currentRelease, err := e.historyCache.getOrCreatCurrentWorkflowExecution(
+	_, currentRelease, err := e.historyCache.getOrCreateCurrentWorkflowExecution(
 		ctx,
 		domainID,
 		workflowID,
@@ -1474,7 +1474,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 
 	workflowID := request.GetWorkflowId()
 	// grab the current context as a lock, nothing more
-	_, currentRelease, err := e.historyCache.getOrCreatCurrentWorkflowExecution(
+	_, currentRelease, err := e.historyCache.getOrCreateCurrentWorkflowExecution(
 		ctx,
 		domainID,
 		workflowID,
