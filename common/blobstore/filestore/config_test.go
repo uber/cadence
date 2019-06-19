@@ -21,9 +21,10 @@
 package filestore
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"testing"
 )
 
 type ConfigSuite struct {
@@ -64,47 +65,13 @@ func (s *ConfigSuite) TestValidate() {
 					Name: "test-default-bucket-name",
 				},
 			},
-			isValid: false,
-		},
-		{
-			config: &Config{
-				StoreDirectory: "test-store-directory",
-				DefaultBucket: BucketConfig{
-					Name:  "test-default-bucket-name",
-					Owner: "test-default-bucket-owner",
-				},
-			},
 			isValid: true,
 		},
 		{
 			config: &Config{
 				StoreDirectory: "test-store-directory",
 				DefaultBucket: BucketConfig{
-					Name:          "test-default-bucket-name",
-					Owner:         "test-default-bucket-owner",
-					RetentionDays: -1,
-				},
-			},
-			isValid: false,
-		},
-		{
-			config: &Config{
-				StoreDirectory: "test-store-directory",
-				DefaultBucket: BucketConfig{
-					Name:          "test-default-bucket-name",
-					Owner:         "test-default-bucket-owner",
-					RetentionDays: 10,
-				},
-			},
-			isValid: true,
-		},
-		{
-			config: &Config{
-				StoreDirectory: "test-store-directory",
-				DefaultBucket: BucketConfig{
-					Name:          "test-default-bucket-name",
-					Owner:         "test-default-bucket-owner",
-					RetentionDays: 10,
+					Name: "test-default-bucket-name",
 				},
 				CustomBuckets: []BucketConfig{
 					{},
@@ -116,15 +83,11 @@ func (s *ConfigSuite) TestValidate() {
 			config: &Config{
 				StoreDirectory: "test-store-directory",
 				DefaultBucket: BucketConfig{
-					Name:          "test-default-bucket-name",
-					Owner:         "test-default-bucket-owner",
-					RetentionDays: 10,
+					Name: "test-default-bucket-name",
 				},
 				CustomBuckets: []BucketConfig{
 					{
-						Name:          "test-custom-bucket-name",
-						Owner:         "test-custom-bucket-owner",
-						RetentionDays: 10,
+						Name: "test-custom-bucket-name",
 					},
 				},
 			},

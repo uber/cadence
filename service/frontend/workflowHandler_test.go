@@ -37,7 +37,6 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/blobstore/blob"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -1176,13 +1175,6 @@ func (s *workflowHandlerSuite) TestCountWorkflowExecutions() {
 
 func (s *workflowHandlerSuite) newConfig() *Config {
 	return NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger), numHistoryShards, false)
-}
-
-func bucketMetadataResponse(owner string, retentionDays int) *blobstore.BucketMetadataResponse {
-	return &blobstore.BucketMetadataResponse{
-		Owner:         owner,
-		RetentionDays: retentionDays,
-	}
 }
 
 func updateRequest(archivalBucketName *string, archivalStatus *shared.ArchivalStatus, archivalRetentionDays *int32, archivalOwner *string) *shared.UpdateDomainRequest {

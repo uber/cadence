@@ -34,9 +34,7 @@ type (
 
 	// BucketConfig describes the config for a bucket
 	BucketConfig struct {
-		Name          string `yaml:"name"`
-		Owner         string `yaml:"owner"`
-		RetentionDays int    `yaml:"retentionDays"`
+		Name string `yaml:"name"`
 	}
 )
 
@@ -45,12 +43,6 @@ func (c *Config) Validate() error {
 	validateBucketConfig := func(b BucketConfig) error {
 		if len(b.Name) == 0 {
 			return errors.New("empty bucket name")
-		}
-		if len(b.Owner) == 0 {
-			return errors.New("empty bucket owner")
-		}
-		if b.RetentionDays < 0 {
-			return errors.New("negative retention days")
 		}
 		return nil
 	}
