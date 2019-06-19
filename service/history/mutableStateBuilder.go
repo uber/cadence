@@ -3072,11 +3072,12 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 	}
 	firstRunID := currentStartEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstExecutionRunId()
 
+	// TODO use version history for both local & global workflow
 	var newStateBuilder *mutableStateBuilder
 	if domainEntry.IsGlobalDomain() {
 		// all workflows within a global domain should have replication state,
 		// no matter whether it will be replicated to multiple
-		// target clusters or not
+		// target clusters or not, for 2DC case
 		if e.GetReplicationState() != nil {
 			newStateBuilder = newMutableStateBuilderWithReplicationState(
 				e.currentCluster, e.shard, e.eventsCache, e.logger, domainEntry.GetFailoverVersion(),
