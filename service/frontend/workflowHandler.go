@@ -121,7 +121,7 @@ var (
 	errInvalidExecutionStartToCloseTimeoutSeconds = &gen.BadRequestError{Message: "A valid ExecutionStartToCloseTimeoutSeconds is not set on request."}
 	errInvalidTaskStartToCloseTimeoutSeconds      = &gen.BadRequestError{Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}
 	errClientVersionNotSet                        = &gen.BadRequestError{Message: "Client version is not set on request."}
-	errInvalidRetentionPeriod                     = &gen.BadRequestError{Message: "Retention period is not set to a positive number on request."}
+	errInvalidRetentionPeriod                     = &gen.BadRequestError{Message: "A valid retention period is not set on request."}
 
 	// err for archival
 	errDomainHasNeverBeenEnabledForArchival = &gen.BadRequestError{Message: "Attempted to fetch history from archival, but domain has never been enabled for archival."}
@@ -158,6 +158,7 @@ func NewWorkflowHandler(sVice service.Service, config *Config, metadataMgr persi
 		historyV2Mgr:    historyV2Mgr,
 		visibilityMgr:   visibilityMgr,
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
+		metricsClient:   sVice.GetMetricsClient(),
 		domainCache:     cache.NewDomainCache(metadataMgr, sVice.GetClusterMetadata(), sVice.GetMetricsClient(), sVice.GetLogger()),
 		rateLimiter:     tokenbucket.NewDynamicTokenBucket(config.RPS, clock.NewRealTimeSource()),
 		blobstoreClient: blobstoreClient,
@@ -193,7 +194,6 @@ func (wh *WorkflowHandler) Start() error {
 	wh.matchingRawClient = wh.GetClientBean().GetMatchingClient()
 	wh.matching = matching.NewRetryableClient(wh.matchingRawClient, common.CreateMatchingServiceRetryPolicy(),
 		common.IsWhitelistServiceTransientError)
-	wh.metricsClient = wh.Service.GetMetricsClient()
 	wh.startWG.Done()
 	return nil
 }
@@ -2214,6 +2214,10 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 		return nil, wh.error(&gen.BadRequestError{Message: "LatestTime in StartTimeFilter is required"}, scope)
 	}
 
+	if listRequest.StartTimeFilter.GetEarliestTime() > listRequest.StartTimeFilter.GetLatestTime() {
+		return nil, wh.error(&gen.BadRequestError{Message: "EarliestTime in StartTimeFilter should not be larger than LatestTime"}, scope)
+	}
+
 	if listRequest.ExecutionFilter != nil && listRequest.TypeFilter != nil {
 		return nil, wh.error(&gen.BadRequestError{
 			Message: "Only one of ExecutionFilter or TypeFilter is allowed"}, scope)
@@ -2315,6 +2319,10 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 
 	if listRequest.StartTimeFilter.LatestTime == nil {
 		return nil, wh.error(&gen.BadRequestError{Message: "LatestTime in StartTimeFilter is required"}, scope)
+	}
+
+	if listRequest.StartTimeFilter.GetEarliestTime() > listRequest.StartTimeFilter.GetLatestTime() {
+		return nil, wh.error(&gen.BadRequestError{Message: "EarliestTime in StartTimeFilter should not be larger than LatestTime"}, scope)
 	}
 
 	filterCount := 0

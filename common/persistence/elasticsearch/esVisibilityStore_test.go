@@ -25,6 +25,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -430,8 +432,8 @@ func (s *ESVisibilitySuite) TestGetSearchResult() {
 	existClosedStatusQuery := elastic.NewExistsQuery(es.CloseStatus)
 	tieBreakerSorter := elastic.NewFieldSort(es.RunID).Desc()
 
-	earliestTime := request.EarliestStartTime - oneMilliSecondInNano
-	latestTime := request.LatestStartTime + oneMilliSecondInNano
+	earliestTime := strconv.FormatInt(request.EarliestStartTime-oneMilliSecondInNano, 10)
+	latestTime := strconv.FormatInt(request.LatestStartTime+oneMilliSecondInNano, 10)
 
 	// test for open
 	isOpen := true
@@ -446,6 +448,21 @@ func (s *ESVisibilitySuite) TestGetSearchResult() {
 	}
 	s.mockESClient.On("Search", mock.Anything, params).Return(nil, nil).Once()
 	s.visibilityStore.getSearchResult(request, token, nil, isOpen)
+
+	// test request latestTime overflow
+	request.LatestStartTime = math.MaxInt64
+	rangeQuery1 := elastic.NewRangeQuery(es.StartTime).Gte(earliestTime).Lte(strconv.FormatInt(request.LatestStartTime, 10))
+	boolQuery1 := elastic.NewBoolQuery().Must(matchDomainQuery).Filter(rangeQuery1).MustNot(existClosedStatusQuery)
+	param1 := &es.SearchParameters{
+		Index:    testIndex,
+		Query:    boolQuery1,
+		From:     from,
+		PageSize: testPageSize,
+		Sorter:   []elastic.Sorter{elastic.NewFieldSort(es.StartTime).Desc(), tieBreakerSorter},
+	}
+	s.mockESClient.On("Search", mock.Anything, param1).Return(nil, nil).Once()
+	s.visibilityStore.getSearchResult(request, token, nil, isOpen)
+	request.LatestStartTime = testLatestTime // revert
 
 	// test for closed
 	isOpen = false
@@ -1067,4 +1084,23 @@ func (s *ESVisibilitySuite) getTokenHelper(sortValue interface{}) *esVisibilityP
 	encoded, _ := v.serializePageToken(token) // necessary, otherwise token is fake and not json decoded
 	token, _ = v.deserializePageToken(encoded)
 	return token
+}
+
+func (s *ESVisibilitySuite) TestCleanDSL() {
+	// dsl without `field`
+	dsl := `{"query":{"bool":{"must":[{"match_phrase":{"DomainID":{"query":"2b8344db-0ed6-47a4-92fd-bdeb6ead93e3"}}},{"bool":{"must":[{"match_phrase":{"Attr.CustomIntField":{"query":"1"}}}]}}]}},"from":0,"size":10,"sort":[{"StartTime":"desc"},{"RunID":"desc"}]}`
+	res := cleanDSL(dsl)
+	s.Equal(dsl, res)
+
+	// dsl with `field`
+	dsl = `{"query":{"bool":{"must":[{"match_phrase":{"DomainID":{"query":"2b8344db-0ed6-47a4-92fd-bdeb6ead93e3"}}},{"bool":{"must":[{"range":{"` + "`Attr.CustomIntField`" + `":{"from":"1","to":"5"}}}]}}]}},"from":0,"size":10,"sort":[{"StartTime":"desc"},{"RunID":"desc"}]}`
+	res = cleanDSL(dsl)
+	expected := `{"query":{"bool":{"must":[{"match_phrase":{"DomainID":{"query":"2b8344db-0ed6-47a4-92fd-bdeb6ead93e3"}}},{"bool":{"must":[{"range":{"Attr.CustomIntField":{"from":"1","to":"5"}}}]}}]}},"from":0,"size":10,"sort":[{"StartTime":"desc"},{"RunID":"desc"}]}`
+	s.Equal(expected, res)
+
+	// dsl with mixed
+	dsl = `{"query":{"bool":{"must":[{"match_phrase":{"DomainID":{"query":"2b8344db-0ed6-47a4-92fd-bdeb6ead93e3"}}},{"bool":{"must":[{"range":{"` + "`Attr.CustomIntField`" + `":{"from":"1","to":"5"}}},{"range":{"` + "`Attr.CustomDoubleField`" + `":{"from":"1.0","to":"2.0"}}},{"range":{"StartTime":{"gt":"0"}}}]}}]}},"from":0,"size":10,"sort":[{"StartTime":"desc"},{"RunID":"desc"}]}`
+	res = cleanDSL(dsl)
+	expected = `{"query":{"bool":{"must":[{"match_phrase":{"DomainID":{"query":"2b8344db-0ed6-47a4-92fd-bdeb6ead93e3"}}},{"bool":{"must":[{"range":{"Attr.CustomIntField":{"from":"1","to":"5"}}},{"range":{"Attr.CustomDoubleField":{"from":"1.0","to":"2.0"}}},{"range":{"StartTime":{"gt":"0"}}}]}}]}},"from":0,"size":10,"sort":[{"StartTime":"desc"},{"RunID":"desc"}]}`
+	s.Equal(expected, res)
 }
