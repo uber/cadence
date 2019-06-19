@@ -223,11 +223,11 @@ func setupDirectories(cfg *Config) error {
 	if err := mkdirAll(cfg.StoreDirectory); err != nil {
 		return err
 	}
-	if err := mkdirAll(bucketDirectory(cfg.StoreDirectory, cfg.DefaultBucket.Name)); err != nil {
+	if err := mkdirAll(bucketDirectory(cfg.StoreDirectory, cfg.DefaultBucket)); err != nil {
 		return err
 	}
 	for _, b := range cfg.CustomBuckets {
-		if err := mkdirAll(bucketDirectory(cfg.StoreDirectory, b.Name)); err != nil {
+		if err := mkdirAll(bucketDirectory(cfg.StoreDirectory, b)); err != nil {
 			return err
 		}
 	}

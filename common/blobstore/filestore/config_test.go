@@ -54,42 +54,30 @@ func (s *ConfigSuite) TestValidate() {
 		{
 			config: &Config{
 				StoreDirectory: "test-store-directory",
-				DefaultBucket:  BucketConfig{},
+				DefaultBucket:  "",
 			},
 			isValid: false,
 		},
 		{
 			config: &Config{
 				StoreDirectory: "test-store-directory",
-				DefaultBucket: BucketConfig{
-					Name: "test-default-bucket-name",
-				},
+				DefaultBucket:  "test-default-bucket-name",
 			},
 			isValid: true,
 		},
 		{
 			config: &Config{
 				StoreDirectory: "test-store-directory",
-				DefaultBucket: BucketConfig{
-					Name: "test-default-bucket-name",
-				},
-				CustomBuckets: []BucketConfig{
-					{},
-				},
+				DefaultBucket:  "test-default-bucket-name",
+				CustomBuckets:  []string{""},
 			},
 			isValid: false,
 		},
 		{
 			config: &Config{
 				StoreDirectory: "test-store-directory",
-				DefaultBucket: BucketConfig{
-					Name: "test-default-bucket-name",
-				},
-				CustomBuckets: []BucketConfig{
-					{
-						Name: "test-custom-bucket-name",
-					},
-				},
+				DefaultBucket:  "test-default-bucket-name",
+				CustomBuckets:  []string{"test-custom-bucket-name"},
 			},
 			isValid: true,
 		},

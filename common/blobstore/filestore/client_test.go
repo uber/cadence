@@ -57,9 +57,7 @@ func (s *ClientSuite) SetupTest() {
 func (s *ClientSuite) TestNewClient_Fail_InvalidConfig() {
 	invalidCfg := &Config{
 		StoreDirectory: "/test/store/dir",
-		DefaultBucket: BucketConfig{
-			Name: "default-bucket-name",
-		},
+		DefaultBucket:  "default-bucket-name",
 	}
 
 	client, err := NewClient(invalidCfg)
@@ -301,14 +299,10 @@ func (s *ClientSuite) constructConfig(storeDir string) *Config {
 	cfg := &Config{
 		StoreDirectory: storeDir,
 	}
-	cfg.DefaultBucket = BucketConfig{
-		Name: defaultBucketName,
-	}
+	cfg.DefaultBucket = defaultBucketName
 
 	for i := 0; i < numberOfCustomBuckets; i++ {
-		cfg.CustomBuckets = append(cfg.CustomBuckets, BucketConfig{
-			Name: fmt.Sprintf("%v-%v", customBucketNamePrefix, i),
-		})
+		cfg.CustomBuckets = append(cfg.CustomBuckets, fmt.Sprintf("%v-%v", customBucketNamePrefix, i))
 	}
 	return cfg
 }
