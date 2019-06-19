@@ -937,6 +937,24 @@ func ListAllWorkflow(c *cli.Context) {
 	table.Render()
 }
 
+func CountWorkflow(c *cli.Context) {
+	wfClient := getWorkflowClient(c)
+
+	query := c.String(FlagListQuery)
+	request := &s.CountWorkflowExecutionsRequest{
+		Query: common.StringPtr(query),
+	}
+
+	ctx, cancel := newContextForLongPoll(c)
+	defer cancel()
+	response, err := wfClient.CountWorkflow(ctx, request)
+	if err != nil {
+		ErrorAndExit("Failed to list workflow.", err)
+	}
+
+	fmt.Println(response.GetCount())
+}
+
 // DescribeWorkflow show information about the specified workflow execution
 func DescribeWorkflow(c *cli.Context) {
 	wid := getRequiredOption(c, FlagWorkflowID)

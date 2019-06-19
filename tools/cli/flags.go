@@ -388,6 +388,15 @@ func getFlagsForListAll() []cli.Flag {
 	}
 }
 
+func getFlagsForCount() []cli.Flag {
+	return []cli.Flag{
+		cli.StringFlag{
+			Name:  FlagListQueryWithAlias,
+			Usage: "Optional SQL like query for use of search attributes",
+		},
+	}
+}
+
 func getFlagsForQuery() []cli.Flag {
 	return []cli.Flag{
 		cli.StringFlag{
