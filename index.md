@@ -1,8 +1,8 @@
 ---
 title: Welcome
 layout: marketing
-callout: Superior Way to Design and Implement Distributed Systems
-callout_description: Directly code your application business logic. Cadence takes care of making it highly scalable, fault tolerant and durable.
+callout: Open Source Durable Functions Platform
+callout_description: Cadence durable functions preserve complete multhreaded application state including local variables across hardware and software failures. They are perfect for microservice orchestration, event processing and business process automation.
 ---
 
 <section class="features">
