@@ -137,10 +137,12 @@ func handleRequest(ctx workflow.Context, logger log.Logger, metricsClient metric
 		// We need to get what blobs has been uploaded from the last heartbeat details.
 		progress := uploadProgress{}
 		if timeoutErr.HasDetails() {
-			err := timeoutErr.Details(&progress)
-			logger.Error("failed to get upload progress from timeout error details", tag.Error(err))
+			if err := timeoutErr.Details(&progress); err != nil {
+				logger.Error("failed to get upload progress from timeout error details", tag.Error(err))
+			} else {
+				blobsToDelete = progress.UploadedBlobs
+			}
 		}
-		blobsToDelete = progress.UploadedBlobs
 	}
 	if len(blobsToDelete) != 0 {
 		ao := workflow.ActivityOptions{

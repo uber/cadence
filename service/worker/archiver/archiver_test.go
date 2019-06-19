@@ -94,11 +94,17 @@ func (s *archiverSuite) TestHandleRequest_UploadFails_NonRetryableError() {
 
 func (s *archiverSuite) TestHandleRequest_UploadFails_ExpireRetryTimeout() {
 	archiverTestMetrics.On("IncCounter", metrics.ArchiverScope, metrics.ArchiverUploadFailedAllRetriesCount).Once()
+	archiverTestMetrics.On("IncCounter", metrics.ArchiverScope, metrics.ArchiverDeleteBlobSuccessCount).Once()
 	archiverTestMetrics.On("IncCounter", metrics.ArchiverScope, metrics.ArchiverDeleteLocalSuccessCount).Once()
 	archiverTestLogger.On("Error", mock.Anything, mock.Anything).Once()
 
+	uploadedBlobs := []string{"test key 1", "test key 2"}
+	progress := uploadProgress{UploadedBlobs: uploadedBlobs}
+	timeoutErr := workflow.NewTimeoutError(shared.TimeoutTypeStartToClose, progress)
+
 	env := s.NewTestWorkflowEnvironment()
-	env.OnActivity(uploadHistoryActivityFnName, mock.Anything, mock.Anything).Return(nil, workflow.NewTimeoutError(shared.TimeoutTypeStartToClose))
+	env.OnActivity(uploadHistoryActivityFnName, mock.Anything, mock.Anything).Return(nil, timeoutErr)
+	env.OnActivity(deleteBlobActivityFnName, mock.Anything, mock.Anything, uploadedBlobs).Return(nil)
 	env.OnActivity(deleteHistoryActivityFnName, mock.Anything, mock.Anything).Return(nil)
 	env.ExecuteWorkflow(handleRequestWorkflow, ArchiveRequest{})
 
