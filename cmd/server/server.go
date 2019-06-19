@@ -188,6 +188,9 @@ func (s *server) startService() common.Daemon {
 		if s.cfg.Archival.Filestore != nil && s.cfg.Archival.S3store != nil {
 			log.Fatalf("cannot config both filestore and s3store")
 		}
+		if s.cfg.Archival.Filestore == nil && s.cfg.Archival.S3store == nil {
+			log.Fatalf("cannot config archival without filestore or s3store")
+		}
 		if s.cfg.Archival.Filestore != nil {
 			params.BlobstoreClient, err = filestore.NewClient(s.cfg.Archival.Filestore)
 		}
@@ -200,9 +203,6 @@ func (s *server) startService() common.Daemon {
 		}
 		if err != nil {
 			log.Fatalf("error creating blobstore: %v", err)
-		}
-		if params.BlobstoreClient == nil {
-			log.Fatalf("no blobstore created, please add a filrestore or s3store configuration to archival")
 		}
 	}
 
