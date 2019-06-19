@@ -949,7 +949,7 @@ func CountWorkflow(c *cli.Context) {
 	defer cancel()
 	response, err := wfClient.CountWorkflow(ctx, request)
 	if err != nil {
-		ErrorAndExit("Failed to list workflow.", err)
+		ErrorAndExit("Failed to count workflow.", err)
 	}
 
 	fmt.Println(response.GetCount())
