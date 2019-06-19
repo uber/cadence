@@ -78,6 +78,11 @@ func (c *historyCache) getOrCreateCurrentWorkflowExecution(
 	workflowID string,
 ) (workflowExecutionContext, releaseWorkflowExecutionFunc, error) {
 
+	scope := metrics.HistoryCacheGetOrCreateCurrentScope
+	c.metricsClient.IncCounter(scope, metrics.CacheRequests)
+	sw := c.metricsClient.StartTimer(scope, metrics.CacheLatency)
+	defer sw.Stop()
+
 	// using empty run ID as current workflow run ID
 	runID := ""
 	execution := workflow.WorkflowExecution{
@@ -85,43 +90,13 @@ func (c *historyCache) getOrCreateCurrentWorkflowExecution(
 		RunId:      common.StringPtr(runID),
 	}
 
-	// Test hook for disabling the cache
-	if c.disabled {
-		return newWorkflowExecutionContext(
-			domainID,
-			execution,
-			c.shard,
-			c.executionManager,
-			c.logger,
-		), func(error) {}, nil
-	}
-
-	key := definition.NewWorkflowIdentifier(domainID, workflowID, runID)
-	workflowCtx, cacheHit := c.Get(key).(workflowExecutionContext)
-	if !cacheHit {
-		c.metricsClient.IncCounter(metrics.HistoryCacheGetOrCreateCurrentScope, metrics.CacheMissCounter)
-		// Let's create the workflow execution workflowCtx
-		workflowCtx = newWorkflowExecutionContext(domainID, execution, c.shard, c.executionManager, c.logger)
-		elem, err := c.PutIfNotExist(key, workflowCtx)
-		if err != nil {
-			c.metricsClient.IncCounter(metrics.HistoryCacheGetOrCreateCurrentScope, metrics.CacheFailures)
-			return nil, nil, err
-		}
-		workflowCtx = elem.(workflowExecutionContext)
-	}
-
-	// TODO This will create a closure on every request.
-	//  Consider revisiting this if it causes too much GC activity
-	releaseFunc := c.makeReleaseFunc(key, cacheNotReleased, workflowCtx, true)
-
-	if err := workflowCtx.lock(ctx); err != nil {
-		// ctx is done before lock can be acquired
-		c.Release(key)
-		c.metricsClient.IncCounter(metrics.HistoryCacheGetOrCreateCurrentScope, metrics.CacheFailures)
-		c.metricsClient.IncCounter(metrics.HistoryCacheGetOrCreateCurrentScope, metrics.AcquireLockFailedCounter)
-		return nil, nil, err
-	}
-	return workflowCtx, releaseFunc, nil
+	return c.getOrCreateWorkflowExecutionInternal(
+		ctx,
+		domainID,
+		execution,
+		scope,
+		true,
+	)
 }
 
 // For analyzing mutableState, we have to try get workflowExecutionContext from cache and also load from database
@@ -131,12 +106,13 @@ func (c *historyCache) getAndCreateWorkflowExecution(
 	execution workflow.WorkflowExecution,
 ) (workflowExecutionContext, workflowExecutionContext, releaseWorkflowExecutionFunc, bool, error) {
 
-	c.metricsClient.IncCounter(metrics.HistoryCacheGetAndCreateScope, metrics.CacheRequests)
-	sw := c.metricsClient.StartTimer(metrics.HistoryCacheGetAndCreateScope, metrics.CacheLatency)
+	scope := metrics.HistoryCacheGetAndCreateScope
+	c.metricsClient.IncCounter(scope, metrics.CacheRequests)
+	sw := c.metricsClient.StartTimer(scope, metrics.CacheLatency)
 	defer sw.Stop()
 
 	if err := c.validateWorkflowExecutionInfo(domainID, &execution); err != nil {
-		c.metricsClient.IncCounter(metrics.HistoryCacheGetAndCreateScope, metrics.CacheFailures)
+		c.metricsClient.IncCounter(scope, metrics.CacheFailures)
 		return nil, nil, nil, false, err
 	}
 
@@ -178,14 +154,32 @@ func (c *historyCache) getOrCreateWorkflowExecution(
 	execution workflow.WorkflowExecution,
 ) (workflowExecutionContext, releaseWorkflowExecutionFunc, error) {
 
-	c.metricsClient.IncCounter(metrics.HistoryCacheGetOrCreateScope, metrics.CacheRequests)
-	sw := c.metricsClient.StartTimer(metrics.HistoryCacheGetOrCreateScope, metrics.CacheLatency)
+	scope := metrics.HistoryCacheGetOrCreateScope
+	c.metricsClient.IncCounter(scope, metrics.CacheRequests)
+	sw := c.metricsClient.StartTimer(scope, metrics.CacheLatency)
 	defer sw.Stop()
 
 	if err := c.validateWorkflowExecutionInfo(domainID, &execution); err != nil {
-		c.metricsClient.IncCounter(metrics.HistoryCacheGetOrCreateScope, metrics.CacheFailures)
+		c.metricsClient.IncCounter(scope, metrics.CacheFailures)
 		return nil, nil, err
 	}
+
+	return c.getOrCreateWorkflowExecutionInternal(
+		ctx,
+		domainID,
+		execution,
+		scope,
+		false,
+	)
+}
+
+func (c *historyCache) getOrCreateWorkflowExecutionInternal(
+	ctx context.Context,
+	domainID string,
+	execution workflow.WorkflowExecution,
+	scope int,
+	forceClearCache bool,
+) (workflowExecutionContext, releaseWorkflowExecutionFunc, error) {
 
 	// Test hook for disabling the cache
 	if c.disabled {
@@ -195,12 +189,12 @@ func (c *historyCache) getOrCreateWorkflowExecution(
 	key := definition.NewWorkflowIdentifier(domainID, execution.GetWorkflowId(), execution.GetRunId())
 	workflowCtx, cacheHit := c.Get(key).(workflowExecutionContext)
 	if !cacheHit {
-		c.metricsClient.IncCounter(metrics.HistoryCacheGetOrCreateScope, metrics.CacheMissCounter)
+		c.metricsClient.IncCounter(scope, metrics.CacheMissCounter)
 		// Let's create the workflow execution workflowCtx
 		workflowCtx = newWorkflowExecutionContext(domainID, execution, c.shard, c.executionManager, c.logger)
 		elem, err := c.PutIfNotExist(key, workflowCtx)
 		if err != nil {
-			c.metricsClient.IncCounter(metrics.HistoryCacheGetOrCreateScope, metrics.CacheFailures)
+			c.metricsClient.IncCounter(scope, metrics.CacheFailures)
 			return nil, nil, err
 		}
 		workflowCtx = elem.(workflowExecutionContext)
@@ -208,13 +202,13 @@ func (c *historyCache) getOrCreateWorkflowExecution(
 
 	// TODO This will create a closure on every request.
 	//  Consider revisiting this if it causes too much GC activity
-	releaseFunc := c.makeReleaseFunc(key, cacheNotReleased, workflowCtx, false)
+	releaseFunc := c.makeReleaseFunc(key, cacheNotReleased, workflowCtx, forceClearCache)
 
 	if err := workflowCtx.lock(ctx); err != nil {
 		// ctx is done before lock can be acquired
 		c.Release(key)
-		c.metricsClient.IncCounter(metrics.HistoryCacheGetOrCreateScope, metrics.CacheFailures)
-		c.metricsClient.IncCounter(metrics.HistoryCacheGetOrCreateScope, metrics.AcquireLockFailedCounter)
+		c.metricsClient.IncCounter(scope, metrics.CacheFailures)
+		c.metricsClient.IncCounter(scope, metrics.AcquireLockFailedCounter)
 		return nil, nil, err
 	}
 	return workflowCtx, releaseFunc, nil
