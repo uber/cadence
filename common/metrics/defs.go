@@ -742,6 +742,8 @@ const (
 	HistoryCacheGetAndCreateScope
 	// HistoryCacheGetOrCreateScope is the scope used by history cache
 	HistoryCacheGetOrCreateScope
+	// HistoryCacheGetOrCreateCurrentScope is the scope used by history cache
+	HistoryCacheGetOrCreateCurrentScope
 	// HistoryCacheGetCurrentExecutionScope is the scope used by history cache for getting current execution
 	HistoryCacheGetCurrentExecutionScope
 	// EventsCacheGetEventScope is the scope used by events cache
@@ -1166,6 +1168,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		WorkflowContextScope:                          {operation: "WorkflowContext"},
 		HistoryCacheGetAndCreateScope:                 {operation: "HistoryCacheGetAndCreate", tags: map[string]string{CacheTypeTagName: MutableStateCacheTypeTagValue}},
 		HistoryCacheGetOrCreateScope:                  {operation: "HistoryCacheGetOrCreate", tags: map[string]string{CacheTypeTagName: MutableStateCacheTypeTagValue}},
+		HistoryCacheGetOrCreateCurrentScope:           {operation: "HistoryCacheGetOrCreateCurrent", tags: map[string]string{CacheTypeTagName: MutableStateCacheTypeTagValue}},
 		HistoryCacheGetCurrentExecutionScope:          {operation: "HistoryCacheGetCurrentExecution", tags: map[string]string{CacheTypeTagName: MutableStateCacheTypeTagValue}},
 		EventsCacheGetEventScope:                      {operation: "EventsCacheGetEvent", tags: map[string]string{CacheTypeTagName: EventsCacheTypeTagValue}},
 		EventsCachePutEventScope:                      {operation: "EventsCachePutEvent", tags: map[string]string{CacheTypeTagName: EventsCacheTypeTagValue}},
@@ -1436,6 +1439,7 @@ const (
 	ArchiverNonRetryableErrorCount
 	ArchiverSkipUploadCount
 	ArchiverHistoryMutatedCount
+	ArchiverBlobExistsCount
 	ArchiverBlobSize
 	ArchiverTotalUploadSize
 	ArchiverRunningDeterministicConstructionCheckCount
@@ -1684,6 +1688,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ArchiverNonRetryableErrorCount:                         {metricName: "archiver_non_retryable_error"},
 		ArchiverSkipUploadCount:                                {metricName: "archiver_skip_upload"},
 		ArchiverHistoryMutatedCount:                            {metricName: "archiver_history_mutated"},
+		ArchiverBlobExistsCount:                                {metricName: "archiver_blob_exists"},
 		ArchiverBlobSize:                                       {metricName: "archiver_blob_size", metricType: Timer},
 		ArchiverTotalUploadSize:                                {metricName: "archiver_total_upload_size", metricType: Timer},
 		ArchiverRunningDeterministicConstructionCheckCount:     {metricName: "archiver_running_deterministic_construction_check"},
