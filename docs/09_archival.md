@@ -63,3 +63,21 @@ All archival code interacts with a blobstore interface. Currently there
 are two implementations of this interface: S3 and filestore. Filestore is ony used
 for running locally. In order to run on top of a different blobstore all that needs
 to be done is to write a new implementation of the interface backed by the desired blobstore.
+
+### Why are *.index files uploaded along with history files?
+Global domains can have multiple versions of histories due to conflict resolution. Each
+archival task operates over a single version of history. The *.index file contains all versions that have been uploaded
+for a single execution.
+
+History blob names include version as part of the name. This means that archival tasks
+of different versions will not upload conflicting blobs. 
+
+### Why not just use list on history blobs to get all the versions?
+Since blob names contain version it is reasonable to use ```ListByPrefix``` to get all 
+versions of archived history. However some implementations of blobstore do not support ```ListByPrefix```.
+For these implementations uploading an index file allows clients to determine which versions are available.
+There is an open work item which will separate the implementations for listable vs non-listable blobstores.
+
+### Why are multiple blobs uploaded for a single history?
+Some blobstores do not support a seek API. For these blobstores the only way to do pagination over history is to upload multiple
+blobs with increasing page numbers.
