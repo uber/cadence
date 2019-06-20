@@ -110,7 +110,7 @@ var (
 	// ErrUnknownEncodingType indicate that the encoding type is unknown
 	ErrUnknownEncodingType = &shared.BadRequestError{Message: "unknown encoding type"}
 	// ErrUnreappliableEvent indicate that the event is not reappliable
-	ErrUnreappliableEvent = &shared.BadRequestError{Message: "event is not "}
+	ErrUnreappliableEvent = &shared.BadRequestError{Message: "event is not reappliable"}
 	// ErrWorkflowMutationDecision indicate that something is wrong with mutating workflow, i.e. adding decision to workflow
 	ErrWorkflowMutationDecision = &shared.BadRequestError{Message: "error encountered when mutating workflow adding decision"}
 	// ErrWorkflowMutationSignal indicate that something is wrong with mutating workflow, i.e. adding signal to workflow
@@ -1287,6 +1287,7 @@ func (r *historyReplicator) reapplyEventsToCurrentRunningWorkflow(
 		return err
 	}
 
+	numSignals := 0
 	for _, event := range events {
 		switch event.GetEventType() {
 		case workflow.EventTypeWorkflowExecutionSignaled:
@@ -1297,11 +1298,14 @@ func (r *historyReplicator) reapplyEventsToCurrentRunningWorkflow(
 				attr.GetIdentity()); err != nil {
 				return ErrWorkflowMutationSignal
 			}
+			numSignals += 1
+
 		default:
 			return ErrUnreappliableEvent
 		}
 	}
 
+	r.logger.Info(fmt.Sprintf("reapplying %v signals", numSignals))
 	return r.persistWorkflowMutation(context, msBuilder, []persistence.Task{}, []persistence.Task{})
 }
 
