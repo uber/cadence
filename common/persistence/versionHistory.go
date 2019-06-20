@@ -458,6 +458,11 @@ func (h *VersionHistories) AddVersionHistory(
 	if newLastItem.version > currentLastItem.version {
 		currentBranchChanged = true
 		h.currentBranchIndex = newVersionHistoryIndex
+	} else if newLastItem.version == currentLastItem.version {
+		if newLastItem.eventID > currentLastItem.eventID {
+			currentBranchChanged = true
+			h.currentBranchIndex = newVersionHistoryIndex
+		}
 	}
 	return currentBranchChanged, newVersionHistoryIndex, nil
 }

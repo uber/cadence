@@ -256,7 +256,7 @@ func (r *nDCHistoryReplicator) applyStartEvents(
 		return nil
 	}
 
-	currentLastEventID, currentLastWriteVersion, currentLastEventTaskID, err := r.getWorkflowVersionTaskID(
+	currentLastEventID, currentLastWriteVersion, currentLastEventTaskID, err := r.getWorkflowLastEventIDVersionTaskID(
 		ctx,
 		task.getDomainID(),
 		task.getWorkflowID(),
@@ -440,14 +440,15 @@ func (r *nDCHistoryReplicator) applyNonStartEventsToCurrentBranch(
 	}
 
 	// we need to check the current workflow execution
-	currentRunID, err := r.getCurrentWorkflowRunID(ctx,
+	currentRunID, err := r.getCurrentWorkflowRunID(
+		ctx,
 		task.getDomainID(),
 		task.getWorkflowID(),
 	)
 	if err != nil {
 		return err
 	}
-	_, currentLastWriteVersion, currentLastEventTaskID, err := r.getWorkflowVersionTaskID(
+	_, currentLastWriteVersion, currentLastEventTaskID, err := r.getWorkflowLastEventIDVersionTaskID(
 		ctx,
 		task.getDomainID(),
 		task.getWorkflowID(),
@@ -574,7 +575,8 @@ func (r *nDCHistoryReplicator) applyNonStartEventsMissingMutableState(
 	// reset workflow execution, this requires some special handling
 
 	// we need to check the current workflow execution
-	currentRunID, err := r.getCurrentWorkflowRunID(ctx,
+	currentRunID, err := r.getCurrentWorkflowRunID(
+		ctx,
 		task.getDomainID(),
 		task.getWorkflowID(),
 	)
@@ -666,7 +668,7 @@ func (r *nDCHistoryReplicator) terminateOrZombifyWorkflow(
 	return false, nil
 }
 
-func (r *nDCHistoryReplicator) getWorkflowVersionTaskID(
+func (r *nDCHistoryReplicator) getWorkflowLastEventIDVersionTaskID(
 	ctx ctx.Context,
 	domainID string,
 	workflowID string,

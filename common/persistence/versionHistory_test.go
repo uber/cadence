@@ -470,7 +470,7 @@ func (s *versionHistoriesSuite) TestConversion() {
 	s.Equal(histories, NewVersionHistoriesFromThrift(histories.ToThrift()))
 }
 
-func (s *versionHistoriesSuite) TestAddGetVersionHistory() {
+func (s *versionHistoriesSuite) TestAddGetVersionHistory_LargerVersion() {
 	versionHistory1 := NewVersionHistory([]byte("branch token 1"), []*VersionHistoryItem{
 		{eventID: 3, version: 0},
 		{eventID: 5, version: 4},
@@ -482,6 +482,38 @@ func (s *versionHistoriesSuite) TestAddGetVersionHistory() {
 		{eventID: 5, version: 4},
 		{eventID: 6, version: 6},
 		{eventID: 11, version: 12},
+	})
+
+	histories := NewVersionHistories(versionHistory1)
+	s.Equal(0, histories.currentBranchIndex)
+
+	currentBranchChanged, newVersionHistoryIndex, err := histories.AddVersionHistory(versionHistory2)
+	s.Nil(err)
+	s.True(currentBranchChanged)
+	s.Equal(1, newVersionHistoryIndex)
+	s.Equal(1, histories.currentBranchIndex)
+
+	resultVersionHistory1, err := histories.GetVersionHistory(0)
+	s.Nil(err)
+	s.Equal(versionHistory1, resultVersionHistory1)
+
+	resultVersionHistory2, err := histories.GetVersionHistory(1)
+	s.Nil(err)
+	s.Equal(versionHistory2, resultVersionHistory2)
+}
+
+func (s *versionHistoriesSuite) TestAddGetVersionHistory_SameVersion_LargerEventID() {
+	versionHistory1 := NewVersionHistory([]byte("branch token 1"), []*VersionHistoryItem{
+		{eventID: 3, version: 0},
+		{eventID: 5, version: 4},
+		{eventID: 7, version: 6},
+		{eventID: 9, version: 10},
+	})
+	versionHistory2 := NewVersionHistory([]byte("branch token 2"), []*VersionHistoryItem{
+		{eventID: 3, version: 0},
+		{eventID: 5, version: 4},
+		{eventID: 7, version: 6},
+		{eventID: 16, version: 10},
 	})
 
 	histories := NewVersionHistories(versionHistory1)
