@@ -81,3 +81,11 @@ There is an open work item which will separate the implementations for listable 
 ### Why are multiple blobs uploaded for a single history?
 Some blobstores do not support a seek API. For these blobstores the only way to do pagination over history is to upload multiple
 blobs with increasing page numbers.
+
+## Planned Future Work
+* Support accessing histories without providing runID.
+* Support archival of visibility.
+* Provide hard guarantee that no history is deleted from persistence before being archived if archival is enabled.
+* Implement paused state. In this state no archivals will occur but histories also will not be deleted from persistence.
+Once enabled again from paused state, all skipped archivals will occur. 
+* Separate implementations based on listable blobstores from those based on non-listable blobstores.
