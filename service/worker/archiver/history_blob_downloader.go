@@ -64,9 +64,8 @@ type (
 )
 
 var (
-	errArchivalTokenCorrupted      = &gen.BadRequestError{Message: "Next page token is corrupted."}
-	errRequestedHistoryNotArchived = &gen.BadRequestError{Message: "Requested workflow history has not been archived yet."}
-	errHistoryNotExist             = &gen.BadRequestError{Message: "Requested workflow history does not exist."}
+	errArchivalTokenCorrupted = &gen.BadRequestError{Message: "Next page token is corrupted."}
+	errHistoryNotExist        = &gen.BadRequestError{Message: "Requested workflow history does not exist."}
 )
 
 // NewHistoryBlobDownloader returns a new HistoryBlobDownloader
@@ -98,7 +97,7 @@ func (d *historyBlobDownloader) DownloadBlob(ctx context.Context, request *Downl
 		}
 		indexTags, err := d.blobstoreClient.GetTags(ctx, request.ArchivalBucket, indexKey)
 		if err == blobstore.ErrBlobNotExists {
-			return nil, errRequestedHistoryNotArchived
+			return nil, errHistoryNotExist
 		} else if err != nil {
 			return nil, err
 		}
