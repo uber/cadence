@@ -13,7 +13,7 @@ Another commonly employed approach is to use a timer service and queues. So any 
 
 With Cadence the whole logic can be encapsulated in a simple durable function that directly implements the business logic. As the function is stateful the implementer doesn't need to employ any additional systems to ensure durability and fault tolerance.
 
-Here is an example workflow that implements the subscription management use case:
+Here is an example workflow that implements the subscription management use case. It is in Java, but Go is also supported. The Python and .NET libraries are under active development.
 
 ```java
 public interface SubscriptionWorkflow {
@@ -52,4 +52,4 @@ Again, note that this code directly implements the business logic. If any of the
 
 Cadence has practically no scalability limits on number of open workflow instances. So even if your site has hundreds of millions of consumers the above code is not going to change.
 
-The commonly asked question by the developers that learn Cadence is "How do I handle workflow worker process failure/restart in my workflow?". The answer is that you do not. The workflow code is completely oblivious to any failures and downtime of workers or even Cadence service itself. As soon as they are recovered and the workflow needs to handle some event like timer or an activity completion the current state of the workflow is fully restored and continues execution. The only reason for the workflow failure is workflow business code throwing an exception, not underlying infrasturcture outages.
+The commonly asked question by the developers that learn Cadence is "How do I handle workflow worker process failure/restart in my workflow"? The answer is that you do not. The workflow code is completely oblivious to any failures and downtime of workers or even Cadence service itself. As soon as they are recovered and the workflow needs to handle some event like timer or an activity completion the current state of the workflow is fully restored and continues execution. The only reason for the workflow failure is workflow business code throwing an exception, not underlying infrasturcture outages.
