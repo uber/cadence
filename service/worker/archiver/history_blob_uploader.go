@@ -163,11 +163,12 @@ func (h *historyBlobUploader) recordCurrentProgress(ctx context.Context, currKey
 		return
 	}
 
-	progress := uploadProgress{}
-	progress.UploadedBlobs = h.uploadedBlobs
-	progress.IteratorState = currIteratorState
-	progress.BlobPageToken = currPage
-	progress.HandledLastBlob = handledLastBlob
+	progress := uploadProgress{
+		UploadedBlobs:   h.uploadedBlobs,
+		IteratorState:   currIteratorState,
+		BlobPageToken:   currPage,
+		HandledLastBlob: handledLastBlob,
+	}
 	activity.RecordHeartbeat(ctx, progress)
 }
 
