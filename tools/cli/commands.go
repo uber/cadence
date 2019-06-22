@@ -435,19 +435,6 @@ func DescribeDomain(c *cli.Context) {
 		formatStr = formatStr + "BucketName: %v\n"
 		descValues = append(descValues, resp.Configuration.GetArchivalBucketName())
 	}
-	if resp.Configuration.ArchivalRetentionPeriodInDays != nil {
-		formatStr = formatStr + "ArchivalRetentionInDays: %v\n"
-		archivalRetentionDays := resp.Configuration.GetArchivalRetentionPeriodInDays()
-		if archivalRetentionDays == 0 {
-			descValues = append(descValues, "unlimited")
-		} else {
-			descValues = append(descValues, archivalRetentionDays)
-		}
-	}
-	if resp.Configuration.GetArchivalBucketOwner() != "" {
-		formatStr = formatStr + "BucketOwner: %v\n"
-		descValues = append(descValues, resp.Configuration.GetArchivalBucketOwner())
-	}
 	fmt.Printf(formatStr, descValues...)
 	if resp.Configuration.BadBinaries != nil {
 		fmt.Println("Bad binaries to reset:")
@@ -935,6 +922,25 @@ func ListAllWorkflow(c *cli.Context) {
 		}
 	}
 	table.Render()
+}
+
+// CountWorkflow count number of workflows
+func CountWorkflow(c *cli.Context) {
+	wfClient := getWorkflowClient(c)
+
+	query := c.String(FlagListQuery)
+	request := &s.CountWorkflowExecutionsRequest{
+		Query: common.StringPtr(query),
+	}
+
+	ctx, cancel := newContextForLongPoll(c)
+	defer cancel()
+	response, err := wfClient.CountWorkflow(ctx, request)
+	if err != nil {
+		ErrorAndExit("Failed to count workflow.", err)
+	}
+
+	fmt.Println(response.GetCount())
 }
 
 // DescribeWorkflow show information about the specified workflow execution
