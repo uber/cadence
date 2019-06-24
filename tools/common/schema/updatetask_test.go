@@ -44,6 +44,10 @@ func (s *UpdateTaskTestSuite) SetupSuite() {
 
 func (s *UpdateTaskTestSuite) TestReadSchemaDir() {
 
+	emptyDir, err := ioutil.TempDir("", "update_schema_test_empty")
+	s.Nil(err)
+	defer os.RemoveAll(emptyDir)
+
 	tmpDir, err := ioutil.TempDir("", "update_schema_test")
 	s.Nil(err)
 	defer os.RemoveAll(tmpDir)
@@ -57,6 +61,16 @@ func (s *UpdateTaskTestSuite) TestReadSchemaDir() {
 	s.NotNil(err)
 	_, err = readSchemaDir(tmpDir, "0.5", "10.3")
 	s.NotNil(err)
+	_, err = readSchemaDir(tmpDir, "1.5", "1.5")
+	s.NotNil(err)
+	_, err = readSchemaDir(tmpDir, "1.5", "0.5")
+	s.NotNil(err)
+	_, err = readSchemaDir(tmpDir, "10.3", "")
+	s.NotNil(err)
+	_, err = readSchemaDir(emptyDir, "11.0", "")
+	s.NotNil(err)
+	_, err = readSchemaDir(emptyDir, "10.1", "")
+	s.NotNil(err)
 
 	ans, err := readSchemaDir(tmpDir, "0.4", "10.2")
 	s.Nil(err)
@@ -65,6 +79,10 @@ func (s *UpdateTaskTestSuite) TestReadSchemaDir() {
 	ans, err = readSchemaDir(tmpDir, "0.5", "3.5")
 	s.Nil(err)
 	s.Equal([]string{"v1.5", "v2.5", "v3.5"}, ans)
+
+	ans, err = readSchemaDir(tmpDir, "10.2", "")
+	s.Nil(err)
+	s.Equal(0, len(ans))
 }
 
 func (s *UpdateTaskTestSuite) TestReadManifest() {
