@@ -23,9 +23,8 @@ package frontend
 import (
 	"fmt"
 
-	"github.com/uber/cadence/common/cluster"
-
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/persistence"
 )
 
