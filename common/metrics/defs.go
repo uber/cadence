@@ -34,7 +34,7 @@ type (
 	metricDefinition struct {
 		metricType MetricType    // metric type
 		metricName MetricName    // metric name
-		buckets    tally.Buckets // buckets if they are if we are emitting histograms
+		buckets    tally.Buckets // buckets if we are emitting histograms
 	}
 
 	// scopeDefinition holds the tag definitions for a scope
