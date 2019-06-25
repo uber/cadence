@@ -223,6 +223,8 @@ func (tb *timerBuilder) GetUserTimer(timerID string) (bool, *persistence.TimerIn
 
 // IsTimerExpired - Whether a timer is expired w.r.t reference time.
 func (tb *timerBuilder) IsTimerExpired(td *timerDetails, reference time.Time) bool {
+	// TODO revisit this timer resolution issue #2102
+
 	// Cql timestamp is in milli sec resolution, here we do the check in terms of second resolution.
 	expireTime := td.TimerSequenceID.VisibilityTimestamp.UnixNano()
 	expireTimeSeconds := expireTime / 1e9
