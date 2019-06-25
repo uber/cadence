@@ -24,6 +24,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"runtime/debug"
 	"testing"
 
 	"github.com/pborman/uuid"
@@ -36,6 +38,7 @@ import (
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
@@ -138,6 +141,7 @@ func (s *engine2Suite) SetupTest() {
 		logger:                    s.logger,
 		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
 		eventsCache:               s.mockEventsCache,
+		timeSource:                clock.NewRealTimeSource(),
 	}
 
 	historyCache := newHistoryCache(mockShard)
@@ -153,6 +157,7 @@ func (s *engine2Suite) SetupTest() {
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
 		config:             s.config,
 		archivalClient:     s.mockArchivalClient,
+		timeSource:         mockShard.timeSource,
 	}
 	h.txProcessor = newTransferQueueProcessor(mockShard, h, s.mockVisibilityMgr, s.mockMatchingClient, s.mockHistoryClient, s.logger)
 	h.timerProcessor = newTimerQueueProcessor(mockShard, h, s.mockMatchingClient, s.logger)
@@ -1070,7 +1075,6 @@ func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_Dedup() {
 		CloseStatus:      p.WorkflowCloseStatusNone,
 		LastWriteVersion: lastWriteVersion,
 	}).Once()
-	s.mockHistoryV2Mgr.On("DeleteHistoryBranch", mock.Anything).Return(nil).Once()
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
 		&p.GetDomainResponse{
 			Info:   &p.DomainInfo{ID: domainID},
@@ -1121,7 +1125,6 @@ func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_NonDeDup() {
 		CloseStatus:      p.WorkflowCloseStatusNone,
 		LastWriteVersion: lastWriteVersion,
 	}).Once()
-	s.mockHistoryV2Mgr.On("DeleteHistoryBranch", mock.Anything).Return(nil).Once()
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
 		&p.GetDomainResponse{
 			Info:   &p.DomainInfo{ID: domainID},
@@ -1257,8 +1260,6 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevSuccess() {
 						request.PreviousLastWriteVersion == lastWriteVersion
 				}),
 			).Return(&p.CreateWorkflowExecutionResponse{}, nil).Once()
-		} else {
-			s.mockHistoryV2Mgr.On("DeleteHistoryBranch", mock.Anything).Return(nil).Once()
 		}
 
 		resp, err := s.historyEngine.StartWorkflowExecution(context.Background(), &h.StartWorkflowExecutionRequest{
@@ -1354,8 +1355,6 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
 							request.PreviousLastWriteVersion == lastWriteVersion
 					}),
 				).Return(&p.CreateWorkflowExecutionResponse{}, nil).Once()
-			} else {
-				s.mockHistoryV2Mgr.On("DeleteHistoryBranch", mock.Anything).Return(nil).Once()
 			}
 
 			resp, err := s.historyEngine.StartWorkflowExecution(context.Background(), &h.StartWorkflowExecutionRequest{
@@ -1494,6 +1493,14 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 }
 
 func (s *engine2Suite) TestSignalWithStartWorkflowExecution_CreateTimeout() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("#####")
+			fmt.Println(string(debug.Stack()))
+			fmt.Println("#####")
+		}
+	}()
+
 	sRequest := &h.SignalWithStartWorkflowExecutionRequest{}
 	_, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
@@ -1655,7 +1662,6 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_DuplicateReque
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, workflowAlreadyStartedErr).Once()
-	s.mockHistoryV2Mgr.On("DeleteHistoryBranch", mock.Anything).Return(nil).Once()
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
 		&p.GetDomainResponse{
 			Info:   &p.DomainInfo{ID: domainID},
@@ -1722,7 +1728,6 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_WorkflowAlread
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, workflowAlreadyStartedErr).Once()
-	s.mockHistoryV2Mgr.On("DeleteHistoryBranch", mock.Anything).Return(nil).Once()
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
 		&p.GetDomainResponse{
 			Info:   &p.DomainInfo{ID: domainID},
