@@ -1,18 +1,18 @@
 # Sessions
 
-The session framework provides a straight-forward interface for scheduling multiple activities on a single worker without having users manually specify the task list name. It also includes features like **concurrent session limitation** and **worker failure detection**.
+The session framework provides a straight-forward interface for scheduling multiple activities on a single worker without requiring you to manually specify the task list name. It also includes features like **concurrent session limitation** and **worker failure detection**.
 
 ## Use Cases
 
-- **File Processing**: User may want to implement a workflow that can download a file, process it and then upload the modified version. If these three steps are implemented as three different activities, all of them should be executed by the same worker. This is a perfect use case of the session framework.
+- **File Processing**: You may want to implement a workflow that can download a file, process it and then upload the modified version. If these three steps are implemented as three different activities, all of them should be executed by the same worker.
 
-- **Machine Learning Model Training**: Similar to file processing, training a machine learning model also involves three stages: download the data set, optimize the model and upload the trained parameter. However, as each model may consume a large amount of GPU memory, the number of concurrent models being trained should be limited. If the training of each model is implemented as a session, this requirement can easily be achieved by using the concurrent session limitation feature.
+- **Machine Learning Model Training**: Training a machine learning model typically involves three stages: download the data set, optimize the model, and upload the trained parameter. Since the models may consume a large amount of resources (GPU memory for example), the number of models processed on a host needs to be limited.
 
 ## Basic Usage
 
 Before using the session framework to write your workflow code, your worker needs to be configured to process sessions. To do that, set the `EnableSessionWorker` field of `worker.Options` to `true` when starting your worker.
 
-The most important APIs provided by the session framework are `workflow.CreateSession()` and `workflow.CompleteSession()`. The basic idea is that all the activities executed within a session will be processed by the same worker and these two APIs allow users to create new sessions and close them after all activities finish execution.
+The most important APIs provided by the session framework are `workflow.CreateSession()` and `workflow.CompleteSession()`. The basic idea is that all the activities executed within a session will be processed by the same worker and these two APIs allow you to create new sessions and close them after all activities finish execution.
 
 Heres a more detailed description of these two APIs:
 ```go
@@ -29,15 +29,17 @@ type SessionOptions struct {
 func CreateSession(ctx Context, sessionOptions *SessionOptions) (Context, error)
 ```
 
-`CreateSession()` takes in workflow.Context, sessionOptions and returns a new session context. When it's called, it will check the task list name specified in the ActivityOptions (or the one specified in StartWorkflowOptions) and create the session on one of the workers which is polling that task list. `CreateSession()` will return an error if the context passed in already contains an open session or all the workers are currently busy and unable to handle new sessions (check the **Concurrent Session Limitation** section for more details).
+`CreateSession()` takes in workflow.Context, sessionOptions and returns a new context which contains metadata information of the created session (referred to as the **session context** below). When it's called, it will check the task list name specified in the `ActivityOptions` (or in the `StartWorkflowOptions` if the task list name is not specified in the `ActivityOptions`), and create the session on one of the workers which is polling that task list. 
 
-The returned session context should be used to execute all activities belonging to the session. The context will be cancelled if the worker executing this session dies or `CompleteSession()` is called. When using the returned session context to execute activities, a `workflow.ErrSessionFailed` error may be returned if the session framework detects that the worker executing this session has died. The failure of user activities won't affect the state of the session, so user still needs to handler the errors returned from their activites and call `CompleteSession()` if necessary.
+The returned session context should be used to execute all activities belonging to the session. The context will be cancelled if the worker executing this session dies or `CompleteSession()` is called. When using the returned session context to execute activities, a `workflow.ErrSessionFailed` error may be returned if the session framework detects that the worker executing this session has died. The failure of your activities won't affect the state of the session, so you still need to handle the errors returned from your activites and call `CompleteSession()` if necessary.
+
+`CreateSession()` will return an error if the context passed in already contains an open session. If all the workers are currently busy and unable to handle new sessions, the framework will keep retrying until the `CreationTimeout` you specified in the `SessionOptions` has passed before returning an error (check the **Concurrent Session Limitation** section for more details).
 
 ```go
 func CompleteSession(ctx Context)
 ```
 
-`CompleteSession()` takes in a session context and closes it. When it's called, the session context will be canceled (means all user activities using that session context will also be canceled) and the resources reserved at the worker will be released, so make sure `CompleteSession()` is called when you no longer need the session. As it's safe to call `CompleteSession()` on a failed session, typical usage is running it as a `defer` function after a session is successfully created.
+`CompleteSession()` releases the resources reserved on the worker, so it's important to call it as soon as you no longer need the session. It will cancel the session context and therefore all the activities using that session context. Note that it's safe to call `CompleteSession()` on a failed session, meaning that you can call it from a `defer` function after the session is successfully created.
 
 ### Sample Code
 
@@ -91,7 +93,7 @@ type SessionInfo struct {
 func GetSessionInfo(ctx Context) *SessionInfo
 ```
 
-The session context also stores some metadata of the session, which can be retrieved by the `GetSessionInfo()` API. For now, there are only two exported fields in the returned `workflow.SessionInfo`. We may consider exposing more information in the future.
+The session context also stores some metadata of the session, which can be retrieved by the `GetSessionInfo()` API. If the context passed in doesn't contain any session metadata, this API will return a `nil` pointer. 
 
 ## Concurrent Session Limitation
 
@@ -101,24 +103,24 @@ If a worker hits this limitation, it won't accept any new `CreateSession()` requ
 
 ## Recreate Session
 
-For long-running sessions, user may want to use the ContinueAsNew feature to split the workflow into multiple runs, but still needs all the activities to be executed by the same worker. The `RecreateSession()`  API is designed for such use case.
+For long-running sessions, you may want to use the ContinueAsNew feature to split the workflow into multiple runs, but still needs all the activities to be executed by the same worker. The `RecreateSession()`  API is designed for such use case.
 
 ```go
 func RecreateSession(ctx Context, recreateToken []byte, sessionOptions *SessionOptions) (Context, error)
 ```
 
-Its usage is the same as `CreateSession()` except that it also takes in a `recrateToken`, which is needed to create a new session on the same worker as the previous one. User can get the token by calling the `GetRecreateToken()` method of the `SessionInfo` object and pass it to the next run.
+Its usage is the same as `CreateSession()` except that it also takes in a `recreateToken`, which is needed to create a new session on the same worker as the previous one. You can get the token by calling the `GetRecreateToken()` method of the `SessionInfo` object.
 
 ```go
-token := workflow.GetSessionInfo(sessionCtx).GetRecrateToken()
+token := workflow.GetSessionInfo(sessionCtx).GetRecreateToken()
 ```
 
 ## Q&A
 
 ### Is there a complete sample code?
-Yes, the fileprocessing example in the cadence-sample repo has been updated to use the session framework.
+Yes, the [file processing example](https://github.com/samarabbas/cadence-samples/blob/master/cmd/samples/fileprocessing/workflow.go) in the cadence-sample repo has been updated to use the session framework.
 
-### What happens to my activity if worker dies?
+### What happens to my activity if the worker dies?
 If your activity has already been scheduled, it will be cancelled. If not, you will get an `workflow.ErrSessionFailed` error when you call `workflow.ExecuteActivity()`.
 
 ### Is the concurrent session limitation per process or per host?
@@ -127,8 +129,8 @@ It's per worker process, so make sure there's only one worker process running on
 
 ## Future Work
 
-* **Support automatic session re-establishing**:
-  Right now a session is considered failed if the worker process dies. However, for some use cases, user only cares if the worker host is alive or not. For these uses cases, we should automatically re-establish the session if the worker process is restarted.
+* **[Support automatic session re-establishing](https://github.com/uber-go/cadence-client/issues/775)**   
+Right now a session is considered failed if the worker process dies. However, for some use cases, you may only care if the worker host is alive or not. For these uses cases, session should be automatically re-established if the worker process is restarted.
 
-* **Support fine-grained concurrent session limitation**:
-  The current implementation assumes that all sessions are consuming the same type of resource and there's only one global limitation. In the future, we may allow users to specify what type of resource their session will consume and enforce different limitations on different type of resources.
+* **[Support fine-grained concurrent session limitation](https://github.com/uber-go/cadence-client/issues/776)**   
+The current implementation assumes that all sessions are consuming the same type of resource and there's only one global limitation. Our plan is to allow you to specify what type of resource your session will consume and enforce different limitations on different types of resources.
