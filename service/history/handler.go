@@ -25,8 +25,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/uber/cadence/common/archiver"
-
 	"github.com/pborman/uuid"
 	"github.com/uber/cadence/.gen/go/health"
 	"github.com/uber/cadence/.gen/go/health/metaserver"
@@ -36,6 +34,7 @@ import (
 	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"

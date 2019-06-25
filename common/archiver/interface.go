@@ -52,7 +52,7 @@ type (
 
 	// GetHistoryResponse is the response of Get archived history
 	GetHistoryResponse struct {
-		HistoryBatches []shared.History
+		HistoryBatches []*shared.History
 		NextPageToken  []byte
 	}
 
@@ -64,6 +64,7 @@ type (
 	}
 
 	// ycyang TODO: implement visibility archiver
+
 	// ArchiveVisibilityRequest is request to Archive
 	ArchiveVisibilityRequest struct{}
 

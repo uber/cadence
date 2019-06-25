@@ -26,12 +26,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/common/archiver"
-
 	"github.com/uber-go/tally"
-
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cluster"
 	es "github.com/uber/cadence/common/elasticsearch"
