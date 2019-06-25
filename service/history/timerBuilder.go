@@ -237,7 +237,7 @@ func (tb *timerBuilder) IsTimerExpired(td *timerDetails, reference time.Time) bo
 	// do a tiny sleep here to guarantee timer fire after schedule time + timeout time
 	if expireTimeSeconds <= referenceTimeSeconds {
 		if expireTimeNanoSeconds > referenceTimeNanoSeconds {
-			time.Sleep(time.Nanosecond * (expireTimeNanoSeconds - referenceTimeNanoSeconds))
+			time.Sleep(time.Nanosecond * time.Duration(expireTimeNanoSeconds-referenceTimeNanoSeconds))
 		}
 		return true
 	}
