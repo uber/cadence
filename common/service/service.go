@@ -26,6 +26,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/archiver"
+
 	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/client"
@@ -76,6 +78,8 @@ type (
 		BlobstoreClient     blobstore.Client
 		DCRedirectionPolicy config.DCRedirectionPolicy
 		PublicClient        workflowserviceclient.Interface
+		HistoryArchivers    map[string]archiver.HistoryArchiver
+		VisibilityArchivers map[string]archiver.VisibilityArchiver
 	}
 
 	// MembershipMonitorFactory provides a bootstrapped membership monitor
