@@ -39,13 +39,22 @@ import (
 type (
 	// decision business logic handler
 	decisionHandler interface {
-		handleDecisionTaskScheduled(ctx.Context, *h.ScheduleDecisionTaskRequest) error
-		handleDecisionTaskStarted(ctx.Context,
-			*h.RecordDecisionTaskStartedRequest) (*h.RecordDecisionTaskStartedResponse, error)
-		handleDecisionTaskFailed(ctx.Context,
-			*h.RespondDecisionTaskFailedRequest) error
-		handleDecisionTaskCompleted(ctx.Context,
-			*h.RespondDecisionTaskCompletedRequest) (*h.RespondDecisionTaskCompletedResponse, error)
+		handleDecisionTaskScheduled(
+			ctx.Context,
+			*h.ScheduleDecisionTaskRequest,
+		) error
+		handleDecisionTaskStarted(
+			ctx.Context,
+			*h.RecordDecisionTaskStartedRequest,
+		) (*h.RecordDecisionTaskStartedResponse, error)
+		handleDecisionTaskFailed(
+			ctx.Context,
+			*h.RespondDecisionTaskFailedRequest,
+		) error
+		handleDecisionTaskCompleted(
+			ctx.Context,
+			*h.RespondDecisionTaskCompletedRequest,
+		) (*h.RespondDecisionTaskCompletedResponse, error)
 		// TODO also include the handle of decision timeout here
 	}
 
