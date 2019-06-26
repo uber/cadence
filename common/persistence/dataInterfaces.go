@@ -547,16 +547,15 @@ type (
 
 	// WorkflowMutableState indicates workflow related state
 	WorkflowMutableState struct {
-		ActivityInfos            map[int64]*ActivityInfo
-		TimerInfos               map[string]*TimerInfo
-		ChildExecutionInfos      map[int64]*ChildExecutionInfo
-		RequestCancelInfos       map[int64]*RequestCancelInfo
-		SignalInfos              map[int64]*SignalInfo
-		SignalRequestedIDs       map[string]struct{}
-		ExecutionInfo            *WorkflowExecutionInfo
-		ReplicationState         *ReplicationState
-		BufferedEvents           []*workflow.HistoryEvent
-		BufferedReplicationTasks map[int64]*BufferedReplicationTask
+		ActivityInfos       map[int64]*ActivityInfo
+		TimerInfos          map[string]*TimerInfo
+		ChildExecutionInfos map[int64]*ChildExecutionInfo
+		RequestCancelInfos  map[int64]*RequestCancelInfo
+		SignalInfos         map[int64]*SignalInfo
+		SignalRequestedIDs  map[string]struct{}
+		ExecutionInfo       *WorkflowExecutionInfo
+		ReplicationState    *ReplicationState
+		BufferedEvents      []*workflow.HistoryEvent
 	}
 
 	// ActivityInfo details.
@@ -635,17 +634,6 @@ type (
 		SignalName      string
 		Input           []byte
 		Control         []byte
-	}
-
-	// BufferedReplicationTask has details to handle out of order receive of history events
-	BufferedReplicationTask struct {
-		FirstEventID            int64
-		NextEventID             int64
-		Version                 int64
-		History                 []*workflow.HistoryEvent
-		NewRunHistory           []*workflow.HistoryEvent
-		EventStoreVersion       int32
-		NewRunEventStoreVersion int32
 	}
 
 	// CreateShardRequest is used to create a shard in executions table
@@ -752,59 +740,29 @@ type (
 
 	// UpdateWorkflowExecutionRequest is used to update a workflow execution
 	UpdateWorkflowExecutionRequest struct {
-		ExecutionInfo    *WorkflowExecutionInfo
-		ReplicationState *ReplicationState
-		TransferTasks    []Task
-		TimerTasks       []Task
-		ReplicationTasks []Task
-		Condition        int64
-		RangeID          int64
-		ContinueAsNew    *CreateWorkflowExecutionRequest
+		RangeID int64
 
-		// Mutable state
-		UpsertActivityInfos           []*ActivityInfo
-		DeleteActivityInfos           []int64
-		UpserTimerInfos               []*TimerInfo
-		DeleteTimerInfos              []string
-		UpsertChildExecutionInfos     []*ChildExecutionInfo
-		DeleteChildExecutionInfo      *int64
-		UpsertRequestCancelInfos      []*RequestCancelInfo
-		DeleteRequestCancelInfo       *int64
-		UpsertSignalInfos             []*SignalInfo
-		DeleteSignalInfo              *int64
-		UpsertSignalRequestedIDs      []string
-		DeleteSignalRequestedID       string
-		NewBufferedEvents             []*workflow.HistoryEvent
-		ClearBufferedEvents           bool
-		NewBufferedReplicationTask    *BufferedReplicationTask
-		DeleteBufferedReplicationTask *int64
-		Encoding                      common.EncodingType // optional binary encoding type
+		UpdateWorkflowMutation WorkflowMutation
+
+		ContinueAsNew *CreateWorkflowExecutionRequest
+
+		Encoding common.EncodingType // optional binary encoding type
 	}
 
 	// ResetMutableStateRequest is used to reset workflow execution state for a single run
 	ResetMutableStateRequest struct {
+		RangeID int64
+
 		// previous workflow information
 		PrevRunID            string
 		PrevLastWriteVersion int64
 		PrevState            int
 
-		ExecutionInfo    *WorkflowExecutionInfo
-		ReplicationState *ReplicationState
-		Condition        int64
-		RangeID          int64
+		// workflow to be resetted
+		ResetWorkflowSnapshot WorkflowSnapshot
 
-		// mutable state pending info
-		InsertActivityInfos       []*ActivityInfo
-		InsertTimerInfos          []*TimerInfo
-		InsertChildExecutionInfos []*ChildExecutionInfo
-		InsertRequestCancelInfos  []*RequestCancelInfo
-		InsertSignalInfos         []*SignalInfo
-		InsertSignalRequestedIDs  []string
-
-		// replication/ transfer / timer task
-		InsertReplicationTasks []Task
-		InsertTransferTasks    []Task
-		InsertTimerTasks       []Task
+		// current workflow
+		CurrentWorkflowMutation *WorkflowMutation
 
 		Encoding common.EncodingType // optional binary encoding type
 	}
@@ -832,18 +790,55 @@ type (
 		CurrTimerTasks       []Task
 
 		// For new mutable state
-		InsertExecutionInfo       *WorkflowExecutionInfo
-		InsertReplicationState    *ReplicationState
-		InsertTransferTasks       []Task
-		InsertTimerTasks          []Task
-		InsertReplicationTasks    []Task
-		InsertActivityInfos       []*ActivityInfo
-		InsertTimerInfos          []*TimerInfo
-		InsertChildExecutionInfos []*ChildExecutionInfo
-		InsertRequestCancelInfos  []*RequestCancelInfo
-		InsertSignalInfos         []*SignalInfo
-		InsertSignalRequestedIDs  []string
-		Encoding                  common.EncodingType // optional binary encoding type
+		NewWorkflowSnapshot WorkflowSnapshot
+
+		Encoding common.EncodingType // optional binary encoding type
+	}
+
+	// WorkflowMutation is used as generic workflow execution state mutation
+	WorkflowMutation struct {
+		ExecutionInfo    *WorkflowExecutionInfo
+		ReplicationState *ReplicationState
+
+		UpsertActivityInfos       []*ActivityInfo
+		DeleteActivityInfos       []int64
+		UpserTimerInfos           []*TimerInfo
+		DeleteTimerInfos          []string
+		UpsertChildExecutionInfos []*ChildExecutionInfo
+		DeleteChildExecutionInfo  *int64
+		UpsertRequestCancelInfos  []*RequestCancelInfo
+		DeleteRequestCancelInfo   *int64
+		UpsertSignalInfos         []*SignalInfo
+		DeleteSignalInfo          *int64
+		UpsertSignalRequestedIDs  []string
+		DeleteSignalRequestedID   string
+		NewBufferedEvents         []*workflow.HistoryEvent
+		ClearBufferedEvents       bool
+
+		TransferTasks    []Task
+		ReplicationTasks []Task
+		TimerTasks       []Task
+
+		Condition int64
+	}
+
+	// WorkflowSnapshot is used as generic workflow execution state snapshot
+	WorkflowSnapshot struct {
+		ExecutionInfo    *WorkflowExecutionInfo
+		ReplicationState *ReplicationState
+
+		ActivityInfos       []*ActivityInfo
+		TimerInfos          []*TimerInfo
+		ChildExecutionInfos []*ChildExecutionInfo
+		RequestCancelInfos  []*RequestCancelInfo
+		SignalInfos         []*SignalInfo
+		SignalRequestedIDs  []string
+
+		TransferTasks    []Task
+		ReplicationTasks []Task
+		TimerTasks       []Task
+
+		Condition int64
 	}
 
 	// DeleteWorkflowExecutionRequest is used to delete a workflow execution
@@ -1193,22 +1188,20 @@ type (
 		MutableStateSize int
 
 		// Breakdown of size into more granular stats
-		ExecutionInfoSize            int
-		ActivityInfoSize             int
-		TimerInfoSize                int
-		ChildInfoSize                int
-		SignalInfoSize               int
-		BufferedEventsSize           int
-		BufferedReplicationTasksSize int
+		ExecutionInfoSize  int
+		ActivityInfoSize   int
+		TimerInfoSize      int
+		ChildInfoSize      int
+		SignalInfoSize     int
+		BufferedEventsSize int
 
 		// Item count for various information captured within mutable state
-		ActivityInfoCount             int
-		TimerInfoCount                int
-		ChildInfoCount                int
-		SignalInfoCount               int
-		RequestCancelInfoCount        int
-		BufferedEventsCount           int
-		BufferedReplicationTasksCount int
+		ActivityInfoCount      int
+		TimerInfoCount         int
+		ChildInfoCount         int
+		SignalInfoCount        int
+		RequestCancelInfoCount int
+		BufferedEventsCount    int
 	}
 
 	// MutableStateUpdateSessionStats is size stats for mutableState updating session
@@ -1216,13 +1209,12 @@ type (
 		MutableStateSize int // Total size of mutable state update
 
 		// Breakdown of mutable state size update for more granular stats
-		ExecutionInfoSize            int
-		ActivityInfoSize             int
-		TimerInfoSize                int
-		ChildInfoSize                int
-		SignalInfoSize               int
-		BufferedEventsSize           int
-		BufferedReplicationTasksSize int
+		ExecutionInfoSize  int
+		ActivityInfoSize   int
+		TimerInfoSize      int
+		ChildInfoSize      int
+		SignalInfoSize     int
+		BufferedEventsSize int
 
 		// Item counts in this session update
 		ActivityInfoCount      int

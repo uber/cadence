@@ -150,6 +150,7 @@ type (
 		executionManager  persistence.ExecutionManager
 		logger            log.Logger
 		metricsClient     metrics.Client
+		timeSource        clock.TimeSource
 
 		locker                locks.Mutex
 		msBuilder             mutableState
@@ -186,6 +187,7 @@ func newWorkflowExecutionContext(
 		executionManager:  executionManager,
 		logger:            lg,
 		metricsClient:     shard.GetMetricsClient(),
+		timeSource:        shard.GetTimeSource(),
 		locker:            locks.NewMutex(),
 	}
 }
@@ -360,7 +362,7 @@ func (c *workflowExecutionContextImpl) resetMutableState(
 		transferTasks,
 		timerTasks,
 	)
-	snapshotRequest.Condition = c.updateCondition
+	snapshotRequest.ResetWorkflowSnapshot.Condition = c.updateCondition
 
 	err := c.shard.ResetMutableState(snapshotRequest)
 	if err != nil {
@@ -389,7 +391,7 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(
 	prevRunVersion int64,
 ) (retError error) {
 
-	now := time.Now()
+	now := c.timeSource.Now()
 	currTransferTasks := []persistence.Task{}
 	currTimerTasks := []persistence.Task{}
 	if closeTask != nil {
@@ -453,9 +455,9 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(
 
 	// ResetSnapshot function used here really does rely on inputs below
 	snapshotRequest := newMutableState.ResetSnapshot("", 0, 0, nil, nil, nil)
-	if len(snapshotRequest.InsertChildExecutionInfos) > 0 ||
-		len(snapshotRequest.InsertSignalInfos) > 0 ||
-		len(snapshotRequest.InsertSignalRequestedIDs) > 0 {
+	if len(snapshotRequest.ResetWorkflowSnapshot.ChildExecutionInfos) > 0 ||
+		len(snapshotRequest.ResetWorkflowSnapshot.SignalInfos) > 0 ||
+		len(snapshotRequest.ResetWorkflowSnapshot.SignalRequestedIDs) > 0 {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("something went wrong, we shouldn't see any pending childWF, sending Signal or signal requested"),
 		}
@@ -482,15 +484,21 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(
 		CurrTransferTasks:    currTransferTasks,
 		CurrTimerTasks:       currTimerTasks,
 
-		InsertExecutionInfo:    newMutableState.GetExecutionInfo(),
-		InsertReplicationState: newMutableState.GetReplicationState(),
-		InsertTransferTasks:    newTransferTasks,
-		InsertTimerTasks:       newTimerTasks,
-		InsertReplicationTasks: insertReplicationTasks,
+		NewWorkflowSnapshot: persistence.WorkflowSnapshot{
+			ExecutionInfo:    newMutableState.GetExecutionInfo(),
+			ReplicationState: newMutableState.GetReplicationState(),
 
-		InsertTimerInfos:         snapshotRequest.InsertTimerInfos,
-		InsertActivityInfos:      snapshotRequest.InsertActivityInfos,
-		InsertRequestCancelInfos: snapshotRequest.InsertRequestCancelInfos,
+			ActivityInfos:       snapshotRequest.ResetWorkflowSnapshot.ActivityInfos,
+			TimerInfos:          snapshotRequest.ResetWorkflowSnapshot.TimerInfos,
+			ChildExecutionInfos: snapshotRequest.ResetWorkflowSnapshot.ChildExecutionInfos,
+			RequestCancelInfos:  snapshotRequest.ResetWorkflowSnapshot.RequestCancelInfos,
+			SignalInfos:         snapshotRequest.ResetWorkflowSnapshot.SignalInfos,
+			SignalRequestedIDs:  snapshotRequest.ResetWorkflowSnapshot.SignalRequestedIDs,
+
+			TransferTasks:    newTransferTasks,
+			ReplicationTasks: insertReplicationTasks,
+			TimerTasks:       newTimerTasks,
+		},
 	}
 
 	return c.shard.ResetWorkflowExecution(resetWFReq)
@@ -633,7 +641,7 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionForActive(
 		if err != nil {
 			return err
 		}
-		_, pt := FindAutoResetPoint(&domainEntry.GetConfig().BadBinaries, c.msBuilder.GetExecutionInfo().AutoResetPoints)
+		_, pt := FindAutoResetPoint(c.timeSource, &domainEntry.GetConfig().BadBinaries, c.msBuilder.GetExecutionInfo().AutoResetPoints)
 		if pt != nil {
 			transferTasks = append(transferTasks, &persistence.ResetWorkflowTask{})
 			c.logger.Info("Auto-Reset task is scheduled",
@@ -646,7 +654,7 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionForActive(
 		}
 	}
 
-	now := time.Now()
+	now := c.timeSource.Now()
 	return c.update(
 		transferTasks,
 		timerTasks,
@@ -915,29 +923,29 @@ func (c *workflowExecutionContextImpl) update(
 	var resp *persistence.UpdateWorkflowExecutionResponse
 	var err1 error
 	if resp, err1 = c.updateWorkflowExecutionWithRetry(&persistence.UpdateWorkflowExecutionRequest{
-		ExecutionInfo:                 executionInfo,
-		ReplicationState:              c.msBuilder.GetReplicationState(),
-		TransferTasks:                 transferTasks,
-		ReplicationTasks:              replicationTasks,
-		TimerTasks:                    timerTasks,
-		Condition:                     c.updateCondition,
-		UpsertActivityInfos:           updates.updateActivityInfos,
-		DeleteActivityInfos:           updates.deleteActivityInfos,
-		UpserTimerInfos:               updates.updateTimerInfos,
-		DeleteTimerInfos:              updates.deleteTimerInfos,
-		UpsertChildExecutionInfos:     updates.updateChildExecutionInfos,
-		DeleteChildExecutionInfo:      updates.deleteChildExecutionInfo,
-		UpsertRequestCancelInfos:      updates.updateCancelExecutionInfos,
-		DeleteRequestCancelInfo:       updates.deleteCancelExecutionInfo,
-		UpsertSignalInfos:             updates.updateSignalInfos,
-		DeleteSignalInfo:              updates.deleteSignalInfo,
-		UpsertSignalRequestedIDs:      updates.updateSignalRequestedIDs,
-		DeleteSignalRequestedID:       updates.deleteSignalRequestedID,
-		NewBufferedEvents:             updates.newBufferedEvents,
-		ClearBufferedEvents:           updates.clearBufferedEvents,
-		NewBufferedReplicationTask:    updates.newBufferedReplicationEventsInfo,
-		DeleteBufferedReplicationTask: updates.deleteBufferedReplicationEvent,
-		ContinueAsNew:                 continueAsNew,
+		UpdateWorkflowMutation: persistence.WorkflowMutation{
+			ExecutionInfo:             executionInfo,
+			ReplicationState:          c.msBuilder.GetReplicationState(),
+			TransferTasks:             transferTasks,
+			ReplicationTasks:          replicationTasks,
+			TimerTasks:                timerTasks,
+			Condition:                 c.updateCondition,
+			UpsertActivityInfos:       updates.updateActivityInfos,
+			DeleteActivityInfos:       updates.deleteActivityInfos,
+			UpserTimerInfos:           updates.updateTimerInfos,
+			DeleteTimerInfos:          updates.deleteTimerInfos,
+			UpsertChildExecutionInfos: updates.updateChildExecutionInfos,
+			DeleteChildExecutionInfo:  updates.deleteChildExecutionInfo,
+			UpsertRequestCancelInfos:  updates.updateCancelExecutionInfos,
+			DeleteRequestCancelInfo:   updates.deleteCancelExecutionInfo,
+			UpsertSignalInfos:         updates.updateSignalInfos,
+			DeleteSignalInfo:          updates.deleteSignalInfo,
+			UpsertSignalRequestedIDs:  updates.updateSignalRequestedIDs,
+			DeleteSignalRequestedID:   updates.deleteSignalRequestedID,
+			NewBufferedEvents:         updates.newBufferedEvents,
+			ClearBufferedEvents:       updates.clearBufferedEvents,
+		},
+		ContinueAsNew: continueAsNew,
 	}); err1 != nil {
 		switch err1.(type) {
 		case *persistence.ConditionFailedError:
@@ -952,7 +960,7 @@ func (c *workflowExecutionContextImpl) update(
 
 	// Update went through so update the condition for new updates
 	c.updateCondition = c.msBuilder.GetNextEventID()
-	c.msBuilder.GetExecutionInfo().LastUpdatedTimestamp = time.Now()
+	c.msBuilder.GetExecutionInfo().LastUpdatedTimestamp = c.timeSource.Now()
 
 	// for any change in the workflow, send a event
 	c.shard.NotifyNewHistoryEvent(newHistoryEventNotification(
@@ -1382,7 +1390,6 @@ func emitWorkflowExecutionStats(
 	sizeScope.RecordTimer(metrics.ChildInfoSize, time.Duration(stats.ChildInfoSize))
 	sizeScope.RecordTimer(metrics.SignalInfoSize, time.Duration(stats.SignalInfoSize))
 	sizeScope.RecordTimer(metrics.BufferedEventsSize, time.Duration(stats.BufferedEventsSize))
-	sizeScope.RecordTimer(metrics.BufferedReplicationTasksSize, time.Duration(stats.BufferedReplicationTasksSize))
 
 	countScope.RecordTimer(metrics.ActivityInfoCount, time.Duration(stats.ActivityInfoCount))
 	countScope.RecordTimer(metrics.TimerInfoCount, time.Duration(stats.TimerInfoCount))
@@ -1390,7 +1397,6 @@ func emitWorkflowExecutionStats(
 	countScope.RecordTimer(metrics.SignalInfoCount, time.Duration(stats.SignalInfoCount))
 	countScope.RecordTimer(metrics.RequestCancelInfoCount, time.Duration(stats.RequestCancelInfoCount))
 	countScope.RecordTimer(metrics.BufferedEventsCount, time.Duration(stats.BufferedEventsCount))
-	countScope.RecordTimer(metrics.BufferedReplicationTasksCount, time.Duration(stats.BufferedReplicationTasksCount))
 }
 
 func emitSessionUpdateStats(
@@ -1406,7 +1412,6 @@ func emitSessionUpdateStats(
 	sizeScope.RecordTimer(metrics.ChildInfoSize, time.Duration(stats.ChildInfoSize))
 	sizeScope.RecordTimer(metrics.SignalInfoSize, time.Duration(stats.SignalInfoSize))
 	sizeScope.RecordTimer(metrics.BufferedEventsSize, time.Duration(stats.BufferedEventsSize))
-	sizeScope.RecordTimer(metrics.BufferedReplicationTasksSize, time.Duration(stats.BufferedReplicationTasksSize))
 
 	countScope.RecordTimer(metrics.ActivityInfoCount, time.Duration(stats.ActivityInfoCount))
 	countScope.RecordTimer(metrics.TimerInfoCount, time.Duration(stats.TimerInfoCount))

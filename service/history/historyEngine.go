@@ -34,6 +34,7 @@ import (
 	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
+	carchiver "github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
@@ -60,6 +61,7 @@ type (
 	historyEngineImpl struct {
 		currentClusterName   string
 		shard                ShardContext
+		timeSource           clock.TimeSource
 		decisionHandler      decisionHandler
 		historyMgr           persistence.HistoryManager
 		historyV2Mgr         persistence.HistoryV2Manager
@@ -79,6 +81,8 @@ type (
 		config               *Config
 		archivalClient       archiver.Client
 		resetor              workflowResetor
+		historyArchivers     map[string]carchiver.HistoryArchiver
+		visibilityArchivers  map[string]carchiver.VisibilityArchiver
 	}
 
 	// shardContextWrapper wraps ShardContext to notify transferQueueProcessor on new tasks.
@@ -146,6 +150,8 @@ func NewEngineWithShardContext(
 	historyEventNotifier historyEventNotifier,
 	publisher messaging.Producer,
 	config *Config,
+	historyArchivers map[string]carchiver.HistoryArchiver,
+	visibilityArchivers map[string]carchiver.VisibilityArchiver,
 ) Engine {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 	shardWrapper := &shardContextWrapper{
@@ -162,6 +168,7 @@ func NewEngineWithShardContext(
 	historyEngImpl := &historyEngineImpl{
 		currentClusterName:   currentClusterName,
 		shard:                shard,
+		timeSource:           shard.GetTimeSource(),
 		historyMgr:           historyManager,
 		historyV2Mgr:         historyV2Manager,
 		executionManager:     executionManager,
@@ -174,6 +181,8 @@ func NewEngineWithShardContext(
 		historyEventNotifier: historyEventNotifier,
 		config:               config,
 		archivalClient:       archiver.NewClient(shard.GetMetricsClient(), shard.GetLogger(), publicClient, shard.GetConfig().NumArchiveSystemWorkflows, shard.GetConfig().ArchiveRequestRPS),
+		historyArchivers:     historyArchivers,
+		visibilityArchivers:  visibilityArchivers,
 	}
 
 	txProcessor := newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, matching, historyClient, logger)
@@ -456,20 +465,12 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 		replicationTasks = append(replicationTasks, replicationTask)
 	}
 
-	// delete history if createWorkflow failed, otherwise history will leak
-	shouldDeleteHistory := true
-	defer func() {
-		if shouldDeleteHistory {
-			e.deleteEvents(domainID, execution, eventStoreVersion, msBuilder.GetCurrentBranch())
-		}
-	}()
-
 	// create as brand new
 	createMode := persistence.CreateWorkflowModeBrandNew
 	prevRunID := ""
 	prevLastWriteVersion := int64(0)
 	retError = context.createWorkflowExecution(
-		msBuilder, e.currentClusterName, createReplicationTask, time.Now(),
+		msBuilder, e.currentClusterName, createReplicationTask, e.timeSource.Now(),
 		transferTasks, replicationTasks, timerTasks,
 		createMode, prevRunID, prevLastWriteVersion,
 	)
@@ -501,7 +502,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 				return
 			}
 			retError = context.createWorkflowExecution(
-				msBuilder, e.currentClusterName, createReplicationTask, time.Now(),
+				msBuilder, e.currentClusterName, createReplicationTask, e.timeSource.Now(),
 				transferTasks, replicationTasks, timerTasks,
 				createMode, prevRunID, prevLastWriteVersion,
 			)
@@ -509,7 +510,6 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 	}
 
 	if retError == nil || persistence.IsTimeoutError(retError) {
-		shouldDeleteHistory = false
 		e.timerProcessor.NotifyNewTimers(e.currentClusterName, e.shard.GetCurrentTime(e.currentClusterName), timerTasks)
 		return &workflow.StartWorkflowExecutionResponse{
 			RunId: execution.RunId,
@@ -1559,14 +1559,6 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 		replicationTasks = append(replicationTasks, replicationTask)
 	}
 
-	// delete history if createWorkflow failed, otherwise history will leak
-	shouldDeleteHistory := true
-	defer func() {
-		if shouldDeleteHistory {
-			e.deleteEvents(domainID, execution, eventStoreVersion, msBuilder.GetCurrentBranch())
-		}
-	}()
-
 	createMode := persistence.CreateWorkflowModeBrandNew
 	prevRunID := ""
 	prevLastWriteVersion := int64(0)
@@ -1576,7 +1568,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 		prevLastWriteVersion = prevMutableState.GetLastWriteVersion()
 	}
 	retError = context.createWorkflowExecution(
-		msBuilder, e.currentClusterName, createReplicationTask, time.Now(),
+		msBuilder, e.currentClusterName, createReplicationTask, e.timeSource.Now(),
 		transferTasks, replicationTasks, timerTasks,
 		createMode, prevRunID, prevLastWriteVersion,
 	)
@@ -1593,7 +1585,6 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 
 	// Timeout error is not a failure
 	if retError == nil || persistence.IsTimeoutError(retError) {
-		shouldDeleteHistory = false
 		e.timerProcessor.NotifyNewTimers(e.currentClusterName, e.shard.GetCurrentTime(e.currentClusterName), timerTasks)
 		return &workflow.StartWorkflowExecutionResponse{
 			RunId: execution.RunId,
@@ -2096,8 +2087,8 @@ func (s *shardContextWrapper) UpdateWorkflowExecution(
 
 	resp, err := s.ShardContext.UpdateWorkflowExecution(request)
 	if err == nil {
-		s.txProcessor.NotifyNewTask(s.currentClusterName, request.TransferTasks)
-		if len(request.ReplicationTasks) > 0 {
+		s.txProcessor.NotifyNewTask(s.currentClusterName, request.UpdateWorkflowMutation.TransferTasks)
+		if len(request.UpdateWorkflowMutation.ReplicationTasks) > 0 {
 			s.replicatorProcessor.notifyNewTask()
 		}
 	}
