@@ -22,6 +22,8 @@ package batcher
 
 import (
 	"context"
+	"fmt"
+	"github.com/uber/cadence/.gen/go/shared"
 	"time"
 
 	"go.uber.org/cadence"
@@ -78,14 +80,30 @@ var (
 func init() {
 	workflow.RegisterWithOptions(BatchWorkflow, workflow.RegisterOptions{Name: batchWFTypeName})
 	activity.RegisterWithOptions(BatchResetActivity, activity.RegisterOptions{Name: batchResetActivityName})
+	activity.RegisterWithOptions(BatchTerminateActivity, activity.RegisterOptions{Name: batchTerminateActivityName})
 }
 
 // BatchWorkflow is the workflow that runs a batch job of resetting workflows
 func BatchWorkflow(ctx workflow.Context, batchParams BatchParams) error {
-	future := workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, batchActivityOptions), batchResetActivityName)
+	var future workflow.Future
+	switch batchParams.BatchType {
+	case BatchTypeReset:
+		future = workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, batchActivityOptions), batchResetActivityName, batchParams.QueryCondition, batchParams.ResetParams)
+	case BatchTypeTerminate:
+		future = workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, batchActivityOptions), batchTerminateActivityName, batchParams.QueryCondition)
+	default:
+		return fmt.Errorf("Unsupported operation: %v", batchParams.BatchType)
+	}
+
 	return future.Get(ctx, nil)
 }
 
-func BatchResetActivity(aCtx context.Context) error {
+func BatchResetActivity(aCtx context.Context, queryCondition string, params ResetParams) error {
+	ctx := aCtx.Value(batcherContextKey).(batcherContext)
+	resp, err := ctx.svcClient.ListWorkflowExecutions(aCtx, &shared.ListWorkflowExecutionsRequest{})
+	return nil
+}
+
+func BatchTerminateActivity(aCtx context.Context, queryCondition string) error {
 	return nil
 }
