@@ -40,6 +40,7 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
+	"github.com/uber/cadence/common/log/tag"
 )
 
 const (
@@ -749,4 +750,115 @@ func (s *elasticsearchIntegrationSuite) createStartWorkflowExecutionRequest(id, 
 		Identity:                            common.StringPtr(identity),
 	}
 	return request
+}
+
+func (s *elasticsearchIntegrationSuite) TestUpsertWorkflowExecution() {
+	id := "es-integration-upsert-workflow-test"
+	wt := "es-integration-upsert-workflow-test-type"
+	tl := "es-integration-upsert-workflow-test-tasklist"
+	identity := "worker1"
+
+	workflowType := &workflow.WorkflowType{}
+	workflowType.Name = common.StringPtr(wt)
+
+	taskList := &workflow.TaskList{}
+	taskList.Name = common.StringPtr(tl)
+
+	request := &workflow.StartWorkflowExecutionRequest{
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		Identity:                            common.StringPtr(identity),
+	}
+
+	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err0)
+
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunId))
+
+	attrValBytes, _ := json.Marshal(s.testSearchAttributeVal)
+	upsertSearchAttr := &workflow.SearchAttributes{
+		IndexedFields: map[string][]byte{
+			s.testSearchAttributeKey: attrValBytes,
+		},
+	}
+
+	decisionCount := 0
+	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+
+		if decisionCount < 1 {
+			decisionCount++
+			return nil, []*workflow.Decision{{
+				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeUpsertWorkflowSearchAttributes),
+				UpsertWorkflowSearchAttributesDecisionAttributes: &workflow.UpsertWorkflowSearchAttributesDecisionAttributes{
+					SearchAttributes: upsertSearchAttr,
+				},
+			}}, nil
+		}
+
+		return nil, []*workflow.Decision{{
+			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
+			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+				Result: []byte("Done."),
+			},
+		}}, nil
+	}
+
+	poller := &TaskPoller{
+		Engine:          s.engine,
+		Domain:          s.domainName,
+		TaskList:        taskList,
+		StickyTaskList:  taskList,
+		Identity:        identity,
+		DecisionHandler: dtHandler,
+		Logger:          s.Logger,
+		T:               s.T(),
+	}
+
+	// process decision and assert decision is handled correctly.
+	_, newTask, err := poller.PollAndProcessDecisionTaskWithAttemptAndRetryAndForceNewDecision(false, false, true, true, int64(0), 1, true)
+	s.Nil(err)
+	s.NotNil(newTask)
+	s.NotNil(newTask.DecisionTask)
+	s.Equal(int64(3), newTask.DecisionTask.GetPreviousStartedEventId())
+	s.Equal(int64(7), newTask.DecisionTask.GetStartedEventId())
+	s.Equal(4, len(newTask.DecisionTask.History.Events))
+	s.Equal(workflow.EventTypeDecisionTaskCompleted, newTask.DecisionTask.History.Events[0].GetEventType())
+	s.Equal(workflow.EventTypeUpsertWorkflowSearchAttributes, newTask.DecisionTask.History.Events[1].GetEventType())
+	s.Equal(workflow.EventTypeDecisionTaskScheduled, newTask.DecisionTask.History.Events[2].GetEventType())
+	s.Equal(workflow.EventTypeDecisionTaskStarted, newTask.DecisionTask.History.Events[3].GetEventType())
+
+	time.Sleep(waitForESToSettle)
+
+	// verify upsert data is on ES
+	listRequest := &workflow.ListWorkflowExecutionsRequest{
+		Domain:   common.StringPtr(s.domainName),
+		PageSize: common.Int32Ptr(int32(2)),
+		Query:    common.StringPtr(fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing`, wt)),
+	}
+	verified := false
+	for i := 0; i < numOfRetry; i++ {
+		resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
+		s.Nil(err)
+		if len(resp.GetExecutions()) == 1 {
+			execution := resp.GetExecutions()[0]
+			retrievedSearchAttr := execution.SearchAttributes
+			if retrievedSearchAttr != nil && len(retrievedSearchAttr.GetIndexedFields()) > 0 {
+				searchValBytes := retrievedSearchAttr.GetIndexedFields()[s.testSearchAttributeKey]
+				var searchVal string
+				json.Unmarshal(searchValBytes, &searchVal)
+				s.Equal(s.testSearchAttributeVal, searchVal)
+				verified = true
+				break
+			}
+		}
+		time.Sleep(waitTimeInMs * time.Millisecond)
+	}
+	s.True(verified)
 }
