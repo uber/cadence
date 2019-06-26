@@ -41,8 +41,9 @@ const (
 )
 
 const (
-	BatchTypeReset = iota
+	BatchTypeResetUnknown = iota
 	BatchTypeTerminate
+	BatchTypeReset
 )
 
 type (
