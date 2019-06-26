@@ -922,29 +922,27 @@ func (c *workflowExecutionContextImpl) update(
 	var resp *persistence.UpdateWorkflowExecutionResponse
 	var err1 error
 	if resp, err1 = c.updateWorkflowExecutionWithRetry(&persistence.UpdateWorkflowExecutionRequest{
-		ExecutionInfo:                 executionInfo,
-		ReplicationState:              c.msBuilder.GetReplicationState(),
-		TransferTasks:                 transferTasks,
-		ReplicationTasks:              replicationTasks,
-		TimerTasks:                    timerTasks,
-		Condition:                     c.updateCondition,
-		UpsertActivityInfos:           updates.updateActivityInfos,
-		DeleteActivityInfos:           updates.deleteActivityInfos,
-		UpserTimerInfos:               updates.updateTimerInfos,
-		DeleteTimerInfos:              updates.deleteTimerInfos,
-		UpsertChildExecutionInfos:     updates.updateChildExecutionInfos,
-		DeleteChildExecutionInfo:      updates.deleteChildExecutionInfo,
-		UpsertRequestCancelInfos:      updates.updateCancelExecutionInfos,
-		DeleteRequestCancelInfo:       updates.deleteCancelExecutionInfo,
-		UpsertSignalInfos:             updates.updateSignalInfos,
-		DeleteSignalInfo:              updates.deleteSignalInfo,
-		UpsertSignalRequestedIDs:      updates.updateSignalRequestedIDs,
-		DeleteSignalRequestedID:       updates.deleteSignalRequestedID,
-		NewBufferedEvents:             updates.newBufferedEvents,
-		ClearBufferedEvents:           updates.clearBufferedEvents,
-		NewBufferedReplicationTask:    updates.newBufferedReplicationEventsInfo,
-		DeleteBufferedReplicationTask: updates.deleteBufferedReplicationEvent,
-		ContinueAsNew:                 continueAsNew,
+		ExecutionInfo:             executionInfo,
+		ReplicationState:          c.msBuilder.GetReplicationState(),
+		TransferTasks:             transferTasks,
+		ReplicationTasks:          replicationTasks,
+		TimerTasks:                timerTasks,
+		Condition:                 c.updateCondition,
+		UpsertActivityInfos:       updates.updateActivityInfos,
+		DeleteActivityInfos:       updates.deleteActivityInfos,
+		UpserTimerInfos:           updates.updateTimerInfos,
+		DeleteTimerInfos:          updates.deleteTimerInfos,
+		UpsertChildExecutionInfos: updates.updateChildExecutionInfos,
+		DeleteChildExecutionInfo:  updates.deleteChildExecutionInfo,
+		UpsertRequestCancelInfos:  updates.updateCancelExecutionInfos,
+		DeleteRequestCancelInfo:   updates.deleteCancelExecutionInfo,
+		UpsertSignalInfos:         updates.updateSignalInfos,
+		DeleteSignalInfo:          updates.deleteSignalInfo,
+		UpsertSignalRequestedIDs:  updates.updateSignalRequestedIDs,
+		DeleteSignalRequestedID:   updates.deleteSignalRequestedID,
+		NewBufferedEvents:         updates.newBufferedEvents,
+		ClearBufferedEvents:       updates.clearBufferedEvents,
+		ContinueAsNew:             continueAsNew,
 	}); err1 != nil {
 		switch err1.(type) {
 		case *persistence.ConditionFailedError:
@@ -1389,7 +1387,6 @@ func emitWorkflowExecutionStats(
 	sizeScope.RecordTimer(metrics.ChildInfoSize, time.Duration(stats.ChildInfoSize))
 	sizeScope.RecordTimer(metrics.SignalInfoSize, time.Duration(stats.SignalInfoSize))
 	sizeScope.RecordTimer(metrics.BufferedEventsSize, time.Duration(stats.BufferedEventsSize))
-	sizeScope.RecordTimer(metrics.BufferedReplicationTasksSize, time.Duration(stats.BufferedReplicationTasksSize))
 
 	countScope.RecordTimer(metrics.ActivityInfoCount, time.Duration(stats.ActivityInfoCount))
 	countScope.RecordTimer(metrics.TimerInfoCount, time.Duration(stats.TimerInfoCount))
@@ -1397,7 +1394,6 @@ func emitWorkflowExecutionStats(
 	countScope.RecordTimer(metrics.SignalInfoCount, time.Duration(stats.SignalInfoCount))
 	countScope.RecordTimer(metrics.RequestCancelInfoCount, time.Duration(stats.RequestCancelInfoCount))
 	countScope.RecordTimer(metrics.BufferedEventsCount, time.Duration(stats.BufferedEventsCount))
-	countScope.RecordTimer(metrics.BufferedReplicationTasksCount, time.Duration(stats.BufferedReplicationTasksCount))
 }
 
 func emitSessionUpdateStats(
@@ -1413,7 +1409,6 @@ func emitSessionUpdateStats(
 	sizeScope.RecordTimer(metrics.ChildInfoSize, time.Duration(stats.ChildInfoSize))
 	sizeScope.RecordTimer(metrics.SignalInfoSize, time.Duration(stats.SignalInfoSize))
 	sizeScope.RecordTimer(metrics.BufferedEventsSize, time.Duration(stats.BufferedEventsSize))
-	sizeScope.RecordTimer(metrics.BufferedReplicationTasksSize, time.Duration(stats.BufferedReplicationTasksSize))
 
 	countScope.RecordTimer(metrics.ActivityInfoCount, time.Duration(stats.ActivityInfoCount))
 	countScope.RecordTimer(metrics.TimerInfoCount, time.Duration(stats.TimerInfoCount))

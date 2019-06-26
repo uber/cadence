@@ -644,11 +644,10 @@ func (s *TestBase) DeleteSignalsRequestedState(updatedInfo *p.WorkflowExecutionI
 
 // UpdateWorklowStateAndReplication is a utility method to update workflow execution
 func (s *TestBase) UpdateWorklowStateAndReplication(updatedInfo *p.WorkflowExecutionInfo, versionHistories *p.VersionHistories,
-	updatedReplicationState *p.ReplicationState, newBufferedReplicationTask *p.BufferedReplicationTask,
-	deleteBufferedReplicationTask *int64, condition int64, txTasks []p.Task) error {
+	updatedReplicationState *p.ReplicationState, condition int64, txTasks []p.Task) error {
 	return s.UpdateWorkflowExecutionWithReplication(updatedInfo, updatedReplicationState, versionHistories, nil, nil,
 		s.ShardInfo.RangeID, condition, nil, txTasks, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "",
-		newBufferedReplicationTask, deleteBufferedReplicationTask)
+	)
 }
 
 // UpdateWorkflowExecutionWithRangeID is a utility method to update workflow execution
@@ -662,7 +661,7 @@ func (s *TestBase) UpdateWorkflowExecutionWithRangeID(updatedInfo *p.WorkflowExe
 	return s.UpdateWorkflowExecutionWithReplication(updatedInfo, nil, versionHistories, decisionScheduleIDs, activityScheduleIDs, rangeID,
 		condition, timerTasks, []p.Task{}, upsertActivityInfos, deleteActivityInfos, upsertTimerInfos, deleteTimerInfos,
 		upsertChildInfos, deleteChildInfo, upsertCancelInfos, deleteCancelInfo, upsertSignalInfos, deleteSignalInfo,
-		upsertSignalRequestedIDs, deleteSignalRequestedID, nil, nil)
+		upsertSignalRequestedIDs, deleteSignalRequestedID)
 }
 
 // UpdateWorkflowExecutionWithReplication is a utility method to update workflow execution
@@ -672,8 +671,7 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(updatedInfo *p.Workflo
 	deleteActivityInfos []int64, upsertTimerInfos []*p.TimerInfo, deleteTimerInfos []string,
 	upsertChildInfos []*p.ChildExecutionInfo, deleteChildInfo *int64, upsertCancelInfos []*p.RequestCancelInfo,
 	deleteCancelInfo *int64, upsertSignalInfos []*p.SignalInfo, deleteSignalInfo *int64, upsertSignalRequestedIDs []string,
-	deleteSignalRequestedID string, newBufferedReplicationTask *p.BufferedReplicationTask,
-	deleteBufferedReplicationTask *int64) error {
+	deleteSignalRequestedID string) error {
 	var transferTasks []p.Task
 	var replicationTasks []p.Task
 	for _, task := range txTasks {
@@ -702,29 +700,27 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(updatedInfo *p.Workflo
 			ScheduleID: int64(activityScheduleID)})
 	}
 	_, err := s.ExecutionManager.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
-		ExecutionInfo:                 updatedInfo,
-		ReplicationState:              updatedReplicationState,
-		TransferTasks:                 transferTasks,
-		ReplicationTasks:              replicationTasks,
-		VersionHistories:              versionHistories,
-		TimerTasks:                    timerTasks,
-		Condition:                     condition,
-		RangeID:                       rangeID,
-		UpsertActivityInfos:           upsertActivityInfos,
-		DeleteActivityInfos:           deleteActivityInfos,
-		UpserTimerInfos:               upsertTimerInfos,
-		DeleteTimerInfos:              deleteTimerInfos,
-		UpsertChildExecutionInfos:     upsertChildInfos,
-		DeleteChildExecutionInfo:      deleteChildInfo,
-		UpsertRequestCancelInfos:      upsertCancelInfos,
-		DeleteRequestCancelInfo:       deleteCancelInfo,
-		UpsertSignalInfos:             upsertSignalInfos,
-		DeleteSignalInfo:              deleteSignalInfo,
-		UpsertSignalRequestedIDs:      upsertSignalRequestedIDs,
-		DeleteSignalRequestedID:       deleteSignalRequestedID,
-		NewBufferedReplicationTask:    newBufferedReplicationTask,
-		DeleteBufferedReplicationTask: deleteBufferedReplicationTask,
-		Encoding:                      pickRandomEncoding(),
+		ExecutionInfo:             updatedInfo,
+		ReplicationState:          updatedReplicationState,
+		TransferTasks:             transferTasks,
+		ReplicationTasks:          replicationTasks,
+		VersionHistories:          versionHistories,
+		TimerTasks:                timerTasks,
+		Condition:                 condition,
+		RangeID:                   rangeID,
+		UpsertActivityInfos:       upsertActivityInfos,
+		DeleteActivityInfos:       deleteActivityInfos,
+		UpserTimerInfos:           upsertTimerInfos,
+		DeleteTimerInfos:          deleteTimerInfos,
+		UpsertChildExecutionInfos: upsertChildInfos,
+		DeleteChildExecutionInfo:  deleteChildInfo,
+		UpsertRequestCancelInfos:  upsertCancelInfos,
+		DeleteRequestCancelInfo:   deleteCancelInfo,
+		UpsertSignalInfos:         upsertSignalInfos,
+		DeleteSignalInfo:          deleteSignalInfo,
+		UpsertSignalRequestedIDs:  upsertSignalRequestedIDs,
+		DeleteSignalRequestedID:   deleteSignalRequestedID,
+		Encoding:                  pickRandomEncoding(),
 	})
 	return err
 }

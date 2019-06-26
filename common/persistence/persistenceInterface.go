@@ -262,17 +262,16 @@ type (
 
 	// InternalWorkflowMutableState indicates workflow related state for Persistence Interface
 	InternalWorkflowMutableState struct {
-		ActivityInfos            map[int64]*InternalActivityInfo
-		TimerInfos               map[string]*TimerInfo
-		ChildExecutionInfos      map[int64]*InternalChildExecutionInfo
-		RequestCancelInfos       map[int64]*RequestCancelInfo
-		SignalInfos              map[int64]*SignalInfo
-		SignalRequestedIDs       map[string]struct{}
-		ExecutionInfo            *InternalWorkflowExecutionInfo
-		ReplicationState         *ReplicationState
-		BufferedEvents           []*DataBlob
-		BufferedReplicationTasks map[int64]*InternalBufferedReplicationTask
-		VersionHistories         *DataBlob
+		ActivityInfos       map[int64]*InternalActivityInfo
+		TimerInfos          map[string]*TimerInfo
+		ChildExecutionInfos map[int64]*InternalChildExecutionInfo
+		RequestCancelInfos  map[int64]*RequestCancelInfo
+		SignalInfos         map[int64]*SignalInfo
+		SignalRequestedIDs  map[string]struct{}
+		ExecutionInfo       *InternalWorkflowExecutionInfo
+		ReplicationState    *ReplicationState
+		BufferedEvents      []*DataBlob
+		VersionHistories    *DataBlob
 	}
 
 	// InternalActivityInfo details  for Persistence Interface
@@ -327,17 +326,6 @@ type (
 		WorkflowTypeName      string
 	}
 
-	// InternalBufferedReplicationTask has details to handle out of order receive of history events  for Persistence Interface
-	InternalBufferedReplicationTask struct {
-		FirstEventID            int64
-		NextEventID             int64
-		Version                 int64
-		History                 *DataBlob
-		NewRunHistory           *DataBlob
-		EventStoreVersion       int32
-		NewRunEventStoreVersion int32
-	}
-
 	// InternalUpdateWorkflowExecutionRequest is used to update a workflow execution  for Persistence Interface
 	InternalUpdateWorkflowExecutionRequest struct {
 		ExecutionInfo    *InternalWorkflowExecutionInfo
@@ -351,22 +339,20 @@ type (
 		ContinueAsNew    *InternalCreateWorkflowExecutionRequest
 
 		// Mutable state
-		UpsertActivityInfos           []*InternalActivityInfo
-		DeleteActivityInfos           []int64
-		UpserTimerInfos               []*TimerInfo
-		DeleteTimerInfos              []string
-		UpsertChildExecutionInfos     []*InternalChildExecutionInfo
-		DeleteChildExecutionInfo      *int64
-		UpsertRequestCancelInfos      []*RequestCancelInfo
-		DeleteRequestCancelInfo       *int64
-		UpsertSignalInfos             []*SignalInfo
-		DeleteSignalInfo              *int64
-		UpsertSignalRequestedIDs      []string
-		DeleteSignalRequestedID       string
-		NewBufferedEvents             *DataBlob
-		ClearBufferedEvents           bool
-		NewBufferedReplicationTask    *InternalBufferedReplicationTask
-		DeleteBufferedReplicationTask *int64
+		UpsertActivityInfos       []*InternalActivityInfo
+		DeleteActivityInfos       []int64
+		UpserTimerInfos           []*TimerInfo
+		DeleteTimerInfos          []string
+		UpsertChildExecutionInfos []*InternalChildExecutionInfo
+		DeleteChildExecutionInfo  *int64
+		UpsertRequestCancelInfos  []*RequestCancelInfo
+		DeleteRequestCancelInfo   *int64
+		UpsertSignalInfos         []*SignalInfo
+		DeleteSignalInfo          *int64
+		UpsertSignalRequestedIDs  []string
+		DeleteSignalRequestedID   string
+		NewBufferedEvents         *DataBlob
+		ClearBufferedEvents       bool
 	}
 
 	// InternalResetMutableStateRequest is used to reset workflow execution state  for Persistence Interface
