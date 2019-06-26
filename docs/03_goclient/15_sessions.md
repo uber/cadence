@@ -1,6 +1,6 @@
 # Sessions
 
-The session framework provides a straight-forward interface for scheduling multiple activities on a single worker without requiring you to manually specify the task list name. It also includes features like **concurrent session limitation** and **worker failure detection**.
+The session framework provides a straightforward interface for scheduling multiple activities on a single worker without requiring you to manually specify the task list name. It also includes features like **concurrent session limitation** and **worker failure detection**.
 
 ## Use Cases
 
@@ -10,11 +10,11 @@ The session framework provides a straight-forward interface for scheduling multi
 
 ## Basic Usage
 
-Before using the session framework to write your workflow code, your worker needs to be configured to process sessions. To do that, set the `EnableSessionWorker` field of `worker.Options` to `true` when starting your worker.
+Before using the session framework to write your workflow code, you need to configure your worker to process sessions. To do that, set the `EnableSessionWorker` field of `worker.Options` to `true` when starting your worker.
 
-The most important APIs provided by the session framework are `workflow.CreateSession()` and `workflow.CompleteSession()`. The basic idea is that all the activities executed within a session will be processed by the same worker and these two APIs allow you to create new sessions and close them after all activities finish execution.
+The most important APIs provided by the session framework are `workflow.CreateSession()` and `workflow.CompleteSession()`. The basic idea is that all the activities executed within a session will be processed by the same worker and these two APIs allow you to create new sessions and close them after all activities finish executing.
 
-Heres a more detailed description of these two APIs:
+Here's a more detailed description of these two APIs:
 ```go
 type SessionOptions struct {
   // ExecutionTimeout: required, no default
@@ -93,17 +93,17 @@ type SessionInfo struct {
 func GetSessionInfo(ctx Context) *SessionInfo
 ```
 
-The session context also stores some metadata of the session, which can be retrieved by the `GetSessionInfo()` API. If the context passed in doesn't contain any session metadata, this API will return a `nil` pointer. 
+The session context also stores some session metadata, which can be retrieved by the `GetSessionInfo()` API. If the context passed in doesn't contain any session metadata, this API will return a `nil` pointer. 
 
 ## Concurrent Session Limitation
 
-It's very easy to limit the number of concurrent sessions running on a worker, just set the `MaxConcurrentSessionExecutionSize` field of `worker.Options` to the desired value. By default this field is set to a very large value, so there's no need to manually set it if no limitation is needed.
+To limit the number of concurrent sessions running on a worker, set the `MaxConcurrentSessionExecutionSize` field of `worker.Options` to the desired value. By default this field is set to a very large value, so there's no need to manually set it if no limitation is needed.
 
-If a worker hits this limitation, it won't accept any new `CreateSession()` request until one of the existing sessions is completed and `CreateSession()` will return an error if the session can't be created within `CreationTimeout`.
+If a worker hits this limitation, it won't accept any new `CreateSession()` requests until one of the existing sessions is completed. `CreateSession()` will return an error if the session can't be created within `CreationTimeout`.
 
 ## Recreate Session
 
-For long-running sessions, you may want to use the ContinueAsNew feature to split the workflow into multiple runs, but still needs all the activities to be executed by the same worker. The `RecreateSession()`  API is designed for such use case.
+For long-running sessions, you may want to use the ContinueAsNew feature to split the workflow into multiple runs when all activities need to be executed by the same worker. The `RecreateSession()`  API is designed for such a use case.
 
 ```go
 func RecreateSession(ctx Context, recreateToken []byte, sessionOptions *SessionOptions) (Context, error)
@@ -117,11 +117,11 @@ token := workflow.GetSessionInfo(sessionCtx).GetRecreateToken()
 
 ## Q&A
 
-### Is there a complete sample code?
+### Is there a complete example?
 Yes, the [file processing example](https://github.com/samarabbas/cadence-samples/blob/master/cmd/samples/fileprocessing/workflow.go) in the cadence-sample repo has been updated to use the session framework.
 
 ### What happens to my activity if the worker dies?
-If your activity has already been scheduled, it will be cancelled. If not, you will get an `workflow.ErrSessionFailed` error when you call `workflow.ExecuteActivity()`.
+If your activity has already been scheduled, it will be cancelled. If not, you will get a `workflow.ErrSessionFailed` error when you call `workflow.ExecuteActivity()`.
 
 ### Is the concurrent session limitation per process or per host?
 It's per worker process, so make sure there's only one worker process running on the host if you plan to use that feature.
@@ -130,7 +130,7 @@ It's per worker process, so make sure there's only one worker process running on
 ## Future Work
 
 * **[Support automatic session re-establishing](https://github.com/uber-go/cadence-client/issues/775)**   
-Right now a session is considered failed if the worker process dies. However, for some use cases, you may only care if the worker host is alive or not. For these uses cases, session should be automatically re-established if the worker process is restarted.
+Right now a session is considered failed if the worker process dies. However, for some use cases, you may only care whether worker host is alive or not. For these uses cases, the session should be automatically re-established if the worker process is restarted.
 
 * **[Support fine-grained concurrent session limitation](https://github.com/uber-go/cadence-client/issues/776)**   
 The current implementation assumes that all sessions are consuming the same type of resource and there's only one global limitation. Our plan is to allow you to specify what type of resource your session will consume and enforce different limitations on different types of resources.
