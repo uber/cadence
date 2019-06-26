@@ -56,7 +56,6 @@ func (s *decisionAttrValidatorSuite) SetupSuite() {
 }
 
 func (s *decisionAttrValidatorSuite) TearDownSuite() {
-
 }
 
 func (s *decisionAttrValidatorSuite) SetupTest() {
