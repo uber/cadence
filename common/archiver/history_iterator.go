@@ -31,6 +31,7 @@ import (
 )
 
 type (
+	// HistoryBlobIterator is used to get history batches
 	HistoryIterator interface {
 		Next() ([]*shared.History, error)
 		HasNext() bool
@@ -42,6 +43,7 @@ type (
 		FinishedIteration bool
 	}
 
+	// HistoryIteratorConfig cofigs the history iterator
 	HistoryIteratorConfig struct {
 		HistoryPageSize          dynamicconfig.IntPropertyFnWithDomainFilter
 		TargetHistoryBatchesSize dynamicconfig.IntPropertyFnWithDomainFilter
@@ -52,6 +54,7 @@ type (
 
 		historyManager    persistence.HistoryManager
 		historyV2Manager  persistence.HistoryV2Manager
+		sizeEstimator     SizeEstimator
 		domainID          string
 		domainName        string
 		workflowID        string
@@ -67,12 +70,14 @@ var (
 	errIteratorDepleted = errors.New("iterator is depleted")
 )
 
+// NewHistoryIterator returns a new HistoryIterator
 func NewHistoryIterator(
 	request ArchiveHistoryRequest,
 	historyManager persistence.HistoryManager,
 	historyV2Manager persistence.HistoryV2Manager,
 	config *HistoryIteratorConfig,
 	initialState []byte,
+	sizeEstimator SizeEstimator,
 ) (HistoryIterator, error) {
 	it := &historyIterator{
 		historyIteratorState: historyIteratorState{
@@ -81,6 +86,7 @@ func NewHistoryIterator(
 		},
 		historyManager:    historyManager,
 		historyV2Manager:  historyV2Manager,
+		sizeEstimator:     sizeEstimator,
 		domainID:          request.DomainID,
 		domainName:        request.DomainName,
 		workflowID:        request.WorkflowID,
@@ -89,6 +95,9 @@ func NewHistoryIterator(
 		eventStoreVersion: request.EventStoreVersion,
 		branchToken:       request.BranchToken,
 		config:            config,
+	}
+	if it.sizeEstimator == nil {
+		it.sizeEstimator = NewJSONSizeEstimator()
 	}
 	if initialState == nil {
 		return it, nil
@@ -124,10 +133,60 @@ func (i *historyIterator) GetState() ([]byte, error) {
 }
 
 func (i *historyIterator) readHistoryBatches(firstEventID int64) ([]*shared.History, historyIteratorState, error) {
-	return nil, historyIteratorState{}, nil
+	size := 0
+	targetSize := i.config.TargetHistoryBatchesSize(i.domainName)
+	var historyBatches []*shared.History
+	newIterState := historyIteratorState{}
+	nextPageToken := []byte{}
+	for size == 0 || (len(nextPageToken) > 0 && size < targetSize) {
+		var currHistoryBatches []*shared.History
+		var err error
+		currHistoryBatches, nextPageToken, err = i.readHistory(firstEventID)
+		if err != nil {
+			return nil, newIterState, err
+		}
+		for idx, batch := range currHistoryBatches {
+			batchSize, err := i.sizeEstimator.EstimateSize(batch)
+			if err != nil {
+				return nil, newIterState, err
+			}
+			size += batchSize
+			historyBatches = append(historyBatches, batch)
+			firstEventID = *batch.Events[len(batch.Events)-1].EventId + 1
+
+			// If targetSize is meeted after appending the last batch, we are not sure if there's more batches or not,
+			// so we need to exclude that case.
+			if size >= targetSize && idx != len(currHistoryBatches)-1 {
+				newIterState.FinishedIteration = false
+				newIterState.NextEventID = firstEventID
+				return historyBatches, newIterState, nil
+			}
+		}
+	}
+
+	if len(nextPageToken) == 0 {
+		newIterState.FinishedIteration = true
+		return historyBatches, newIterState, nil
+	}
+
+	// If nextPageToken is not empty it is still possible there are more batches.
+	// This occurs if history was read exactly to the last batch.
+	// Here we look forward so that we can treat reading exactly to the end of history
+	// the same way as reading through the end of history.
+	_, _, err := i.readHistory(firstEventID)
+	if _, ok := err.(*shared.EntityNotExistsError); ok {
+		newIterState.FinishedIteration = true
+		return historyBatches, newIterState, nil
+	}
+	if err != nil {
+		return nil, newIterState, err
+	}
+	newIterState.FinishedIteration = false
+	newIterState.NextEventID = firstEventID
+	return historyBatches, newIterState, nil
 }
 
-func (i *historyIterator) readHistory(firstEventID int64) ([]*shared.History, int, error) {
+func (i *historyIterator) readHistory(firstEventID int64) ([]*shared.History, []byte, error) {
 	if i.eventStoreVersion == persistence.EventStoreVersionV2 {
 		req := &persistence.ReadHistoryBranchRequest{
 			BranchToken: i.branchToken,
@@ -136,7 +195,44 @@ func (i *historyIterator) readHistory(firstEventID int64) ([]*shared.History, in
 			PageSize:    i.config.HistoryPageSize(i.domainName),
 			ShardID:     common.IntPtr(i.shardID),
 		}
+		return i.readFullPageV2EventsByBatch(i.historyV2Manager, req)
+	}
+	req := &persistence.GetWorkflowExecutionHistoryRequest{
+		DomainID: i.domainID,
+		Execution: shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(i.workflowID),
+			RunId:      common.StringPtr(i.runID),
+		},
+		FirstEventID: firstEventID,
+		NextEventID:  common.EndEventID,
+		PageSize:     i.config.HistoryPageSize(i.domainName),
+	}
+	resp, err := i.historyManager.GetWorkflowExecutionHistoryByBatch(req)
+	if err != nil {
+		return nil, nil, err
+	}
+	return resp.History, resp.NextPageToken, nil
+}
 
+func (i *historyIterator) readFullPageV2EventsByBatch(
+	historyV2Mgr persistence.HistoryV2Manager,
+	req *persistence.ReadHistoryBranchRequest,
+) ([]*shared.History, []byte, error) {
+	historyBatches := []*shared.History{}
+	eventsRead := 0
+	for {
+		response, err := historyV2Mgr.ReadHistoryBranchByBatch(req)
+		if err != nil {
+			return nil, nil, err
+		}
+		historyBatches = append(historyBatches, response.History...)
+		for _, batch := range historyBatches {
+			eventsRead += len(batch.Events)
+		}
+		if eventsRead >= req.PageSize || len(response.NextPageToken) == 0 {
+			return historyBatches, response.NextPageToken, nil
+		}
+		req.NextPageToken = response.NextPageToken
 	}
 }
 
@@ -149,4 +245,27 @@ func (i *historyIterator) reset(stateToken []byte) error {
 	}
 	i.historyIteratorState = iteratorState
 	return nil
+}
+
+type (
+	// SizeEstimator is used to estimate the size of any object
+	SizeEstimator interface {
+		EstimateSize(v interface{}) (int, error)
+	}
+
+	jsonSizeEstimator struct{}
+)
+
+func (e *jsonSizeEstimator) EstimateSize(v interface{}) (int, error) {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return 0, err
+	}
+	return len(data), nil
+}
+
+// NewJSONSizeEstimator returns a new SizeEstimator which uses json encoding to
+// estimate size
+func NewJSONSizeEstimator() SizeEstimator {
+	return &jsonSizeEstimator{}
 }
