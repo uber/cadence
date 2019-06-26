@@ -247,11 +247,19 @@ func (t *transferQueueActiveProcessorImpl) process(qTask queueTaskInfo, shouldPr
 			err = t.processRecordWorkflowStarted(task)
 		}
 		return metrics.TransferActiveTaskRecordWorkflowStartedScope, err
+
 	case persistence.TransferTaskTypeResetWorkflow:
 		if shouldProcessTask {
 			err = t.processResetWorkflow(task)
 		}
 		return metrics.TransferActiveTaskResetWorkflowScope, err
+
+	case persistence.TransferTaskTypeUpsertWorkflowSearchAttributes:
+		if shouldProcessTask {
+			err = t.processUpsertWorkflowSearchAttributes(task)
+		}
+		return metrics.TransferActiveTaskUpsertWorkflowSearchAttributesScope, err
+
 	default:
 		return metrics.TransferActiveQueueProcessorScope, errUnknownTransferTask
 	}
@@ -838,6 +846,14 @@ func (t *transferQueueActiveProcessorImpl) processStartChildExecution(task *pers
 }
 
 func (t *transferQueueActiveProcessorImpl) processRecordWorkflowStarted(task *persistence.TransferTaskInfo) (retError error) {
+	return t.processRecordWorkflowStartedOrUpsertHelper(task, true)
+}
+
+func (t *transferQueueActiveProcessorImpl) processUpsertWorkflowSearchAttributes(task *persistence.TransferTaskInfo) (retError error) {
+	return t.processRecordWorkflowStartedOrUpsertHelper(task, false)
+}
+
+func (t *transferQueueActiveProcessorImpl) processRecordWorkflowStartedOrUpsertHelper(task *persistence.TransferTaskInfo, isRecordStart bool) (retError error) {
 	var err error
 	execution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(task.WorkflowID),
@@ -881,7 +897,12 @@ func (t *transferQueueActiveProcessorImpl) processRecordWorkflowStarted(task *pe
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
 	release(nil)
-	return t.recordWorkflowStarted(task.DomainID, execution, wfTypeName, startTimestamp, executionTimestamp.UnixNano(),
+
+	if isRecordStart {
+		return t.recordWorkflowStarted(task.DomainID, execution, wfTypeName, startTimestamp, executionTimestamp.UnixNano(),
+			workflowTimeout, task.GetTaskID(), visibilityMemo, searchAttr)
+	}
+	return t.upsertWorkflowExecution(task.DomainID, execution, wfTypeName, startTimestamp, executionTimestamp.UnixNano(),
 		workflowTimeout, task.GetTaskID(), visibilityMemo, searchAttr)
 }
 

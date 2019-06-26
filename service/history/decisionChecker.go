@@ -31,12 +31,14 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/validator"
 )
 
 type (
 	decisionAttrValidator struct {
-		domainCache      cache.DomainCache
-		maxIDLengthLimit int
+		domainCache               cache.DomainCache
+		maxIDLengthLimit          int
+		searchAttributesValidator *validator.SearchAttributesValidator
 	}
 
 	decisionBlobSizeChecker struct {
@@ -51,11 +53,17 @@ type (
 
 func newDecisionAttrValidator(
 	domainCache cache.DomainCache,
-	maxIDLengthLimit int,
+	config *Config,
+	logger log.Logger,
 ) *decisionAttrValidator {
 	return &decisionAttrValidator{
 		domainCache:      domainCache,
-		maxIDLengthLimit: maxIDLengthLimit,
+		maxIDLengthLimit: config.MaxIDLengthLimit(),
+		searchAttributesValidator: validator.NewSearchAttributesValidator(logger,
+			config.ValidSearchAttributes,
+			config.SearchAttributesNumberOfKeysLimit,
+			config.SearchAttributesSizeOfValueLimit,
+			config.SearchAttributesTotalSizeLimit),
 	}
 }
 
@@ -387,6 +395,24 @@ func (v *decisionAttrValidator) validateSignalExternalWorkflowExecutionAttribute
 	}
 
 	return nil
+}
+
+func (v *decisionAttrValidator) validateUpsertWorkflowSearchAttributes(domainName string,
+	attributes *workflow.UpsertWorkflowSearchAttributesDecisionAttributes) error {
+
+	if attributes == nil {
+		return &workflow.BadRequestError{Message: "UpsertWorkflowSearchAttributesDecisionAttributes is not set on decision."}
+	}
+
+	if !attributes.IsSetSearchAttributes() {
+		return &workflow.BadRequestError{Message: "SearchAttributes is not set on decision."}
+	}
+
+	if len(attributes.GetSearchAttributes().GetIndexedFields()) == 0 {
+		return &workflow.BadRequestError{Message: "IndexedFields is empty on decision."}
+	}
+
+	return v.searchAttributesValidator.ValidateSearchAttributes(attributes.GetSearchAttributes(), domainName)
 }
 
 func (v *decisionAttrValidator) validateContinueAsNewWorkflowExecutionAttributes(

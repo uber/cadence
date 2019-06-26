@@ -79,6 +79,9 @@ var (
 	WorkflowActionExternalWorkflowSignalRequested = workflowAction("add-externalworkflow-signal-requested-event")
 	WorkflowActionExternalWorkflowSignalFailed    = workflowAction("add-externalworkflow-signal-failed-event")
 
+	// upsert workflow search attributes
+	WorkflowActionUpsertWorkflowSearchAttributes = workflowAction("add-upsert-workflow-search-attributes-event")
+
 	WorkflowActionUnknown = workflowAction("add-unknown-event")
 )
 

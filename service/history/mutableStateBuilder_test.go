@@ -192,6 +192,7 @@ func (s *mutableStateSuite) TestShouldBufferEvent() {
 		workflow.EventTypeMarkerRecorded:                                  true,
 		workflow.EventTypeStartChildWorkflowExecutionInitiated:            true,
 		workflow.EventTypeSignalExternalWorkflowExecutionInitiated:        true,
+		workflow.EventTypeUpsertWorkflowSearchAttributes:                  true,
 	}
 
 	// other events will not be assign event ID immediately
