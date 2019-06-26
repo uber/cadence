@@ -22,8 +22,15 @@ package archiver
 
 import (
 	"context"
+	"errors"
 
 	"github.com/uber/cadence/.gen/go/shared"
+)
+
+var (
+	// ArchiveNonRetriableErr is the error every Archiver implementation should return when
+	// a non-retriable error is encountered.
+	ArchiveNonRetriableErr = errors.New("archive method encountered a non-retriable error")
 )
 
 type (

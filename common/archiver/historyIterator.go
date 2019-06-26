@@ -137,20 +137,21 @@ func (i *historyIterator) readHistoryBatches(firstEventID int64) ([]*shared.Hist
 	targetSize := i.config.TargetHistoryBatchesSize(i.domainName)
 	var historyBatches []*shared.History
 	newIterState := historyIteratorState{}
-	nextPageToken := []byte{}
-	for size == 0 || (len(nextPageToken) > 0 && size < targetSize) {
-		var currHistoryBatches []*shared.History
-		var err error
-		currHistoryBatches, nextPageToken, err = i.readHistory(firstEventID)
+	for size < targetSize {
+		currHistoryBatches, err := i.readHistory(firstEventID)
+		if _, ok := err.(*shared.EntityNotExistsError); ok && firstEventID != common.FirstEventID {
+			newIterState.FinishedIteration = true
+			return historyBatches, newIterState, nil
+		}
 		if err != nil {
 			return nil, newIterState, err
 		}
 		for idx, batch := range currHistoryBatches {
-			batchSize, err := i.sizeEstimator.EstimateSize(batch)
+			historyBatchSize, err := i.sizeEstimator.EstimateSize(batch)
 			if err != nil {
 				return nil, newIterState, err
 			}
-			size += batchSize
+			size += historyBatchSize
 			historyBatches = append(historyBatches, batch)
 			firstEventID = *batch.Events[len(batch.Events)-1].EventId + 1
 
@@ -164,17 +165,10 @@ func (i *historyIterator) readHistoryBatches(firstEventID int64) ([]*shared.Hist
 		}
 	}
 
-	if len(nextPageToken) == 0 {
-		newIterState.FinishedIteration = true
-		return historyBatches, newIterState, nil
-	}
-
-	// If nextPageToken is not empty it is still possible there are more batches.
-	// This occurs if history was read exactly to the last batch.
-	// Here we look forward so that we can treat reading exactly to the end of history
-	// the same way as reading through the end of history.
-	_, _, err := i.readHistory(firstEventID)
-	if _, ok := err.(*shared.EntityNotExistsError); ok {
+	// If you are here, it means the target size is meeted after add the last batch of read history.
+	// We need to check if there's more history batches.
+	_, err := i.readHistory(firstEventID)
+	if _, ok := err.(*shared.EntityNotExistsError); ok && firstEventID != common.FirstEventID {
 		newIterState.FinishedIteration = true
 		return historyBatches, newIterState, nil
 	}
@@ -186,7 +180,7 @@ func (i *historyIterator) readHistoryBatches(firstEventID int64) ([]*shared.Hist
 	return historyBatches, newIterState, nil
 }
 
-func (i *historyIterator) readHistory(firstEventID int64) ([]*shared.History, []byte, error) {
+func (i *historyIterator) readHistory(firstEventID int64) ([]*shared.History, error) {
 	if i.eventStoreVersion == persistence.EventStoreVersionV2 {
 		req := &persistence.ReadHistoryBranchRequest{
 			BranchToken: i.branchToken,
@@ -209,28 +203,28 @@ func (i *historyIterator) readHistory(firstEventID int64) ([]*shared.History, []
 	}
 	resp, err := i.historyManager.GetWorkflowExecutionHistoryByBatch(req)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return resp.History, resp.NextPageToken, nil
+	return resp.History, nil
 }
 
 func (i *historyIterator) readFullPageV2EventsByBatch(
 	historyV2Mgr persistence.HistoryV2Manager,
 	req *persistence.ReadHistoryBranchRequest,
-) ([]*shared.History, []byte, error) {
+) ([]*shared.History, error) {
 	historyBatches := []*shared.History{}
 	eventsRead := 0
 	for {
 		response, err := historyV2Mgr.ReadHistoryBranchByBatch(req)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		historyBatches = append(historyBatches, response.History...)
 		for _, batch := range historyBatches {
 			eventsRead += len(batch.Events)
 		}
 		if eventsRead >= req.PageSize || len(response.NextPageToken) == 0 {
-			return historyBatches, response.NextPageToken, nil
+			return historyBatches, nil
 		}
 		req.NextPageToken = response.NextPageToken
 	}
