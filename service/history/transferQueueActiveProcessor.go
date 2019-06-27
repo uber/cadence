@@ -911,6 +911,10 @@ func (t *transferQueueActiveProcessorImpl) processRecordWorkflowStartedOrUpsertH
 }
 
 func copySearchAttributes(input map[string][]byte) map[string][]byte {
+	if input == nil {
+		return nil
+	}
+
 	result := make(map[string][]byte)
 	for k, v := range input {
 		val := make([]byte, len(v))
