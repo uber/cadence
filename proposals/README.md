@@ -32,11 +32,11 @@ The design process for changes to Cadence is modeled on the [proposal process us
 - Once the design doc is agreed upon, the author shall export the contents of the Google Doc as a Markdown document and submit a PR to add it to the proposal repository
 
   - Authors can use [gdocs2md](https://github.com/mangini/gdocs2md) to convert the document but any cleanup required must be done by hand.
-  - The design doc should be checked in at `proposals/XYZ-shortname.md`, where `XYZ` is the GitHub issue number and `shortname` is a short name (a few dash-separated words at most).
-  - The design doc should be added to the list of existing proposals in `index.md`
+  - The design doc should be checked in at `docs/design/XYZ-shortname.md`, where `XYZ` is the GitHub issue number and `shortname` is a short name (a few dash-separated words at most).
+  - The design doc should be added to the list of existing proposals in `docs/design/index.md`
 
 - The author (and/or other contributors) do the work as described by the "Implementation" section of the proposal.
 
 ---
 
-This project is released under the [Apache License, Version 2.0](https://github.com/uber/cadence/blob/master/LICENSE).
+This project is released under the [Apache License, Version 2.0](LICENSE).
