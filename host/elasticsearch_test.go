@@ -182,6 +182,43 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_SearchAttribute() {
 	s.Nil(err)
 	query := fmt.Sprintf(`WorkflowID = "%s" and %s = "%s"`, id, s.testSearchAttributeKey, s.testSearchAttributeVal)
 	s.testHelperForReadOnce(we.GetRunId(), query, false)
+
+	// test upsert
+	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+
+		upsertDecision := &workflow.Decision{
+			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeUpsertWorkflowSearchAttributes),
+			UpsertWorkflowSearchAttributesDecisionAttributes: &workflow.UpsertWorkflowSearchAttributesDecisionAttributes{}}
+
+		upsertDecision.UpsertWorkflowSearchAttributesDecisionAttributes.SearchAttributes = getUpsertSearchAttributes()
+		return nil, []*workflow.Decision{upsertDecision}, nil
+	}
+	taskList := &workflow.TaskList{Name: common.StringPtr(tl)}
+	poller := &TaskPoller{
+		Engine:          s.engine,
+		Domain:          s.domainName,
+		TaskList:        taskList,
+		StickyTaskList:  taskList,
+		Identity:        "worker1",
+		DecisionHandler: dtHandler,
+		Logger:          s.Logger,
+		T:               s.T(),
+	}
+	_, newTask, err := poller.PollAndProcessDecisionTaskWithAttemptAndRetryAndForceNewDecision(false, false, true, true, int64(0), 1, true)
+	s.Nil(err)
+	s.NotNil(newTask)
+	s.NotNil(newTask.DecisionTask)
+
+	time.Sleep(waitForESToSettle)
+
+	listRequest := &workflow.ListWorkflowExecutionsRequest{
+		Domain:   common.StringPtr(s.domainName),
+		PageSize: common.Int32Ptr(int32(2)),
+		Query:    common.StringPtr(fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing`, wt)),
+	}
+	// verify upsert data is on ES
+	s.testListResultForUpsertSearchAttributes(listRequest)
 }
 
 func (s *elasticsearchIntegrationSuite) TestListWorkflow_PageToken() {
@@ -781,25 +818,32 @@ func (s *elasticsearchIntegrationSuite) TestUpsertWorkflowExecution() {
 
 	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunId))
 
-	attrValBytes, _ := json.Marshal(s.testSearchAttributeVal)
-	upsertSearchAttr := &workflow.SearchAttributes{
-		IndexedFields: map[string][]byte{
-			s.testSearchAttributeKey: attrValBytes,
-		},
-	}
-
 	decisionCount := 0
 	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
 
-		if decisionCount < 1 {
+		upsertDecision := &workflow.Decision{
+			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeUpsertWorkflowSearchAttributes),
+			UpsertWorkflowSearchAttributesDecisionAttributes: &workflow.UpsertWorkflowSearchAttributesDecisionAttributes{}}
+
+		// handle first upsert
+		if decisionCount == 0 {
 			decisionCount++
-			return nil, []*workflow.Decision{{
-				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeUpsertWorkflowSearchAttributes),
-				UpsertWorkflowSearchAttributesDecisionAttributes: &workflow.UpsertWorkflowSearchAttributesDecisionAttributes{
-					SearchAttributes: upsertSearchAttr,
+
+			attrValBytes, _ := json.Marshal(s.testSearchAttributeVal)
+			upsertSearchAttr := &workflow.SearchAttributes{
+				IndexedFields: map[string][]byte{
+					s.testSearchAttributeKey: attrValBytes,
 				},
-			}}, nil
+			}
+			upsertDecision.UpsertWorkflowSearchAttributesDecisionAttributes.SearchAttributes = upsertSearchAttr
+			return nil, []*workflow.Decision{upsertDecision}, nil
+		}
+		// handle second upsert, which update existing field and add new field
+		if decisionCount == 1 {
+			decisionCount++
+			upsertDecision.UpsertWorkflowSearchAttributesDecisionAttributes.SearchAttributes = getUpsertSearchAttributes()
+			return nil, []*workflow.Decision{upsertDecision}, nil
 		}
 
 		return nil, []*workflow.Decision{{
@@ -821,7 +865,7 @@ func (s *elasticsearchIntegrationSuite) TestUpsertWorkflowExecution() {
 		T:               s.T(),
 	}
 
-	// process decision and assert decision is handled correctly.
+	// process 1st decision and assert decision is handled correctly.
 	_, newTask, err := poller.PollAndProcessDecisionTaskWithAttemptAndRetryAndForceNewDecision(false, false, true, true, int64(0), 1, true)
 	s.Nil(err)
 	s.NotNil(newTask)
@@ -861,4 +905,61 @@ func (s *elasticsearchIntegrationSuite) TestUpsertWorkflowExecution() {
 		time.Sleep(waitTimeInMs * time.Millisecond)
 	}
 	s.True(verified)
+
+	// process 2nd decision and assert decision is handled correctly.
+	_, newTask, err = poller.PollAndProcessDecisionTaskWithAttemptAndRetryAndForceNewDecision(false, false, true, true, int64(0), 1, true)
+	s.Nil(err)
+	s.NotNil(newTask)
+	s.NotNil(newTask.DecisionTask)
+	s.Equal(4, len(newTask.DecisionTask.History.Events))
+	s.Equal(workflow.EventTypeDecisionTaskCompleted, newTask.DecisionTask.History.Events[0].GetEventType())
+	s.Equal(workflow.EventTypeUpsertWorkflowSearchAttributes, newTask.DecisionTask.History.Events[1].GetEventType())
+	s.Equal(workflow.EventTypeDecisionTaskScheduled, newTask.DecisionTask.History.Events[2].GetEventType())
+	s.Equal(workflow.EventTypeDecisionTaskStarted, newTask.DecisionTask.History.Events[3].GetEventType())
+
+	time.Sleep(waitForESToSettle)
+
+	// verify upsert data is on ES
+	s.testListResultForUpsertSearchAttributes(listRequest)
+}
+
+func (s *elasticsearchIntegrationSuite) testListResultForUpsertSearchAttributes(listRequest *workflow.ListWorkflowExecutionsRequest) {
+	verified := false
+	for i := 0; i < numOfRetry; i++ {
+		resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
+		s.Nil(err)
+		if len(resp.GetExecutions()) == 1 {
+			execution := resp.GetExecutions()[0]
+			retrievedSearchAttr := execution.SearchAttributes
+			if retrievedSearchAttr != nil && len(retrievedSearchAttr.GetIndexedFields()) == 2 {
+				fields := retrievedSearchAttr.GetIndexedFields()
+				searchValBytes := fields[s.testSearchAttributeKey]
+				var searchVal string
+				json.Unmarshal(searchValBytes, &searchVal)
+				s.Equal("another string", searchVal)
+
+				searchValBytes2 := fields[definition.CustomIntField]
+				var searchVal2 int
+				json.Unmarshal(searchValBytes2, &searchVal2)
+				s.Equal(123, searchVal2)
+
+				verified = true
+				break
+			}
+		}
+		time.Sleep(waitTimeInMs * time.Millisecond)
+	}
+	s.True(verified)
+}
+
+func getUpsertSearchAttributes() *workflow.SearchAttributes {
+	attrValBytes1, _ := json.Marshal("another string")
+	attrValBytes2, _ := json.Marshal(123)
+	upsertSearchAttr := &workflow.SearchAttributes{
+		IndexedFields: map[string][]byte{
+			definition.CustomStringField: attrValBytes1,
+			definition.CustomIntField:    attrValBytes2,
+		},
+	}
+	return upsertSearchAttr
 }
