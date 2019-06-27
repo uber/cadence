@@ -52,22 +52,21 @@ const (
 
 var (
 	errContextTimeout           = errors.New("activity aborted because context timed out")
+	errInvalidGetHistoryRequest = &shared.BadRequestError{Message: "Get archived history request is invalid"}
 	errGetHistoryTokenCorrupted = &shared.BadRequestError{Message: "Next page token is corrupted."}
 	errHistoryNotExist          = &shared.BadRequestError{Message: "Requested workflow history does not exist."}
 )
 
 type (
-	HistoryConfig struct {
+	HistoryArchiverConfig struct {
 		*archiver.HistoryIteratorConfig
-
-		StoreDirectory string
 	}
 
 	historyArchiver struct {
 		historyManager   persistence.HistoryManager
 		historyV2Manager persistence.HistoryV2Manager
 		logger           log.Logger
-		config           *HistoryConfig
+		config           *HistoryArchiverConfig
 
 		// only set in test code
 		historyIterator archiver.HistoryIterator
@@ -83,7 +82,7 @@ func newHistoryArchiver(
 	historyManager persistence.HistoryManager,
 	historyV2Manager persistence.HistoryV2Manager,
 	logger log.Logger,
-	config *HistoryConfig,
+	config *HistoryArchiverConfig,
 	historyIterator archiver.HistoryIterator,
 ) *historyArchiver {
 	return &historyArchiver{
@@ -108,11 +107,17 @@ func (h *historyArchiver) Archive(
 		return archiver.ArchiveNonRetriableErr
 	}
 
+	if err := validateArchiveRequest(request); err != nil {
+		logger.Error(archiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errInvalidRequest), tag.Error(err))
+		return archiver.ArchiveNonRetriableErr
+	}
+
 	historyIterator := h.historyIterator
 	if historyIterator == nil {
 		var err error
 		historyIterator, err = archiver.NewHistoryIterator(request, h.historyManager, h.historyV2Manager, h.config.HistoryIteratorConfig, nil, nil)
 		if err != nil {
+			// this should not happen
 			logger.Error(archiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errConstructHistoryIterator), tag.Error(err))
 			return archiver.ArchiveNonRetriableErr
 		}
@@ -164,6 +169,10 @@ func (h *historyArchiver) Get(
 		return nil, errors.New(errInvalidURI)
 	}
 
+	if err := validateGetRequest(request); err != nil {
+		return nil, errInvalidGetHistoryRequest
+	}
+
 	dirPath := getDirPathFromURI(URI)
 	exists, err := directoryExists(dirPath)
 	if err != nil {
@@ -192,7 +201,7 @@ func (h *historyArchiver) Get(
 		highestVersion := int64(-1)
 		for _, filename := range filenames {
 			version, err := extractCloseFailoverVersion(filename)
-			if err != nil && version > highestVersion {
+			if err == nil && version > highestVersion {
 				highestVersion = version
 			}
 		}

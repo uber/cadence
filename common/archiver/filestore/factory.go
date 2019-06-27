@@ -31,13 +31,13 @@ import (
 
 type (
 	archiverFactoryImpl struct {
-		historyConfig *HistoryConfig
+		historyArchiverConfig *HistoryArchiverConfig
 	}
 )
 
 // NewArchiverFactory returns a new ArchiverFactory for filestore
-func NewArchiverFactory(historyConfig *HistoryConfig) archiver.Factory {
-	return &archiverFactoryImpl{historyConfig: historyConfig}
+func NewArchiverFactory(historyArchiverConfig *HistoryArchiverConfig) archiver.Factory {
+	return &archiverFactoryImpl{historyArchiverConfig: historyArchiverConfig}
 }
 
 func (f *archiverFactoryImpl) NewHistoryArchiver(
@@ -46,7 +46,7 @@ func (f *archiverFactoryImpl) NewHistoryArchiver(
 	logger log.Logger,
 	metricsClient metrics.Client,
 ) (archiver.HistoryArchiver, error) {
-	historyArchiver := newHistoryArchiver(historyManager, historyV2Manager, logger, f.historyConfig, nil)
+	historyArchiver := newHistoryArchiver(historyManager, historyV2Manager, logger, f.historyArchiverConfig, nil)
 	return historyArchiver, nil
 }
 

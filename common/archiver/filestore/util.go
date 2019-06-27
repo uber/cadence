@@ -230,3 +230,35 @@ func serializeGetHistoryToken(token *getHistoryToken) ([]byte, error) {
 	bytes, err := json.Marshal(token)
 	return bytes, err
 }
+
+func validateArchiveRequest(request *archiver.ArchiveHistoryRequest) error {
+	if request.DomainID == "" {
+		return errors.New("DomainID is empty")
+	}
+	if request.WorkflowID == "" {
+		return errors.New("WorkflowID is empty")
+	}
+	if request.RunID == "" {
+		return errors.New("RunID is empty")
+	}
+	if request.DomainName == "" {
+		return errors.New("DomainName is empty")
+	}
+	return nil
+}
+
+func validateGetRequest(request *archiver.GetHistoryRequest) error {
+	if request.DomainID == "" {
+		return errors.New("DomainID is empty")
+	}
+	if request.WorkflowID == "" {
+		return errors.New("WorkflowID is empty")
+	}
+	if request.RunID == "" {
+		return errors.New("RunID is empty")
+	}
+	if request.PageSize == 0 {
+		return errors.New("PageSize should not be 0")
+	}
+	return nil
+}
