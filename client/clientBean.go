@@ -197,7 +197,11 @@ func NewDNSYarpcDispatcherProvider(logger log.Logger, interval time.Duration) Di
 }
 
 func (p *dnsDispatcherProvider) Get(serviceName string, address string) (*yarpc.Dispatcher, error) {
-	tchanTransport, err := tchannel.NewTransport(tchannel.ServiceName(serviceName))
+	tchanTransport, err := tchannel.NewTransport(
+		tchannel.ServiceName(serviceName),
+		// this aim to get rid of the annoying popup about accepting incoming network connections
+		tchannel.ListenAddr("127.0.0.1:0"),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -266,7 +270,7 @@ func (d *dnsUpdater) Start() {
 				}
 				d.currentPeers = res.newPeers
 			} else {
-				d.logger.Info("No change in DNS lookup", tag.Address(d.dnsAddress))
+				d.logger.Debug("No change in DNS lookup", tag.Address(d.dnsAddress))
 			}
 			sleepDu := now.Add(d.interval).Sub(now)
 			time.Sleep(sleepDu)
