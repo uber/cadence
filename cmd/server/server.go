@@ -21,15 +21,14 @@
 package main
 
 import (
-	"github.com/uber/cadence/client"
 	"log"
 	"time"
 
-	"github.com/uber/cadence/common/cluster"
-
+	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore/filestore"
 	"github.com/uber/cadence/common/blobstore/s3store"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
