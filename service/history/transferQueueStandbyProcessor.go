@@ -449,17 +449,22 @@ func (t *transferQueueStandbyProcessorImpl) processUpsertWorkflowSearchAttribute
 }
 
 func (t *transferQueueStandbyProcessorImpl) processRecordWorkflowStartedOrUpsertHelper(transferTask *persistence.TransferTaskInfo, msBuilder mutableState, isRecordStart bool) error {
-	ok, err := verifyTaskVersion(t.shard, t.logger, transferTask.DomainID, msBuilder.GetStartVersion(), transferTask.Version, transferTask)
-	if err != nil {
-		return err
-	} else if !ok {
-		return nil
+
+	// verify task version for RecordWorkflowStarted.
+	// upsert doesn't require verifyTask, because it is just a sync of mutableState.
+	if isRecordStart {
+		ok, err := verifyTaskVersion(t.shard, t.logger, transferTask.DomainID, msBuilder.GetStartVersion(), transferTask.Version, transferTask)
+		if err != nil {
+			return err
+		} else if !ok {
+			return nil
+		}
 	}
+
 	execution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(transferTask.WorkflowID),
 		RunId:      common.StringPtr(transferTask.RunID),
 	}
-
 	executionInfo := msBuilder.GetExecutionInfo()
 	workflowTimeout := executionInfo.WorkflowTimeout
 	wfTypeName := executionInfo.WorkflowTypeName
@@ -470,7 +475,7 @@ func (t *transferQueueStandbyProcessorImpl) processRecordWorkflowStartedOrUpsert
 	}
 	executionTimestamp := getWorkflowExecutionTimestamp(msBuilder, startEvent)
 	visibilityMemo := getVisibilityMemo(startEvent)
-	searchAttr := executionInfo.SearchAttributes
+	searchAttr := copySearchAttributes(executionInfo.SearchAttributes)
 
 	if isRecordStart {
 		return t.recordWorkflowStarted(transferTask.DomainID, execution, wfTypeName, startTimestamp, executionTimestamp.UnixNano(),

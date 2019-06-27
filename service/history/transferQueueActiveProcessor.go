@@ -875,11 +875,15 @@ func (t *transferQueueActiveProcessorImpl) processRecordWorkflowStartedOrUpsertH
 		return nil
 	}
 
-	ok, err := verifyTaskVersion(t.shard, t.logger, task.DomainID, msBuilder.GetStartVersion(), task.Version, task)
-	if err != nil {
-		return err
-	} else if !ok {
-		return nil
+	// verify task version for RecordWorkflowStarted.
+	// upsert doesn't require verifyTask, because it is just a sync of mutableState.
+	if isRecordStart {
+		ok, err := verifyTaskVersion(t.shard, t.logger, task.DomainID, msBuilder.GetStartVersion(), task.Version, task)
+		if err != nil {
+			return err
+		} else if !ok {
+			return nil
+		}
 	}
 
 	executionInfo := msBuilder.GetExecutionInfo()
@@ -892,7 +896,7 @@ func (t *transferQueueActiveProcessorImpl) processRecordWorkflowStartedOrUpsertH
 	}
 	executionTimestamp := getWorkflowExecutionTimestamp(msBuilder, startEvent)
 	visibilityMemo := getVisibilityMemo(startEvent)
-	searchAttr := executionInfo.SearchAttributes
+	searchAttr := copySearchAttributes(executionInfo.SearchAttributes)
 
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
@@ -904,6 +908,16 @@ func (t *transferQueueActiveProcessorImpl) processRecordWorkflowStartedOrUpsertH
 	}
 	return t.upsertWorkflowExecution(task.DomainID, execution, wfTypeName, startTimestamp, executionTimestamp.UnixNano(),
 		workflowTimeout, task.GetTaskID(), visibilityMemo, searchAttr)
+}
+
+func copySearchAttributes(input map[string][]byte) map[string][]byte {
+	result := make(map[string][]byte)
+	for k, v := range input {
+		val := make([]byte, len(v))
+		copy(val, v)
+		result[k] = val
+	}
+	return result
 }
 
 func (t *transferQueueActiveProcessorImpl) processResetWorkflow(task *persistence.TransferTaskInfo) (retError error) {
