@@ -2639,20 +2639,6 @@ func (e *mutableStateBuilder) AddSignalExternalWorkflowExecutionInitiatedEvent(
 	return event, si, nil
 }
 
-func (e *mutableStateBuilder) AddUpsertWorkflowSearchAttributesEvent(
-	decisionCompletedEventID int64, request *workflow.UpsertWorkflowSearchAttributesDecisionAttributes,
-) (*workflow.HistoryEvent, error) {
-
-	opTag := tag.WorkflowActionUpsertWorkflowSearchAttributes
-	if err := e.checkMutability(opTag); err != nil {
-		return nil, err
-	}
-
-	event := e.hBuilder.AddUpsertWorkflowSearchAttributesEvent(decisionCompletedEventID, request)
-	e.ReplicateUpsertWorkflowSearchAttributesEvent(event)
-	return event, nil
-}
-
 func (e *mutableStateBuilder) ReplicateSignalExternalWorkflowExecutionInitiatedEvent(
 	event *workflow.HistoryEvent,
 	signalRequestID string,
@@ -2673,6 +2659,21 @@ func (e *mutableStateBuilder) ReplicateSignalExternalWorkflowExecutionInitiatedE
 	e.pendingSignalInfoIDs[initiatedEventID] = si
 	e.updateSignalInfos[si] = struct{}{}
 	return si, nil
+}
+
+func (e *mutableStateBuilder) AddUpsertWorkflowSearchAttributesEvent(
+	decisionCompletedEventID int64,
+	request *workflow.UpsertWorkflowSearchAttributesDecisionAttributes,
+) (*workflow.HistoryEvent, error) {
+
+	opTag := tag.WorkflowActionUpsertWorkflowSearchAttributes
+	if err := e.checkMutability(opTag); err != nil {
+		return nil, err
+	}
+
+	event := e.hBuilder.AddUpsertWorkflowSearchAttributesEvent(decisionCompletedEventID, request)
+	e.ReplicateUpsertWorkflowSearchAttributesEvent(event)
+	return event, nil
 }
 
 func (e *mutableStateBuilder) ReplicateUpsertWorkflowSearchAttributesEvent(

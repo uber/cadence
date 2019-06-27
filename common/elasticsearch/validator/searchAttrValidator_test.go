@@ -67,36 +67,36 @@ func (s *searchAttributesValidatorSuite) TestValidateSearchAttributes() {
 	fields = map[string][]byte{
 		"CustomIntField":     []byte(`1`),
 		"CustomKeywordField": []byte(`keyword`),
-		"CustomBoolField": []byte(`true`),
+		"CustomBoolField":    []byte(`true`),
 	}
 	attr.IndexedFields = fields
 	err = validator.ValidateSearchAttributes(attr, domain)
 	s.Equal("BadRequestError{Message: number of keys 3 exceed limit}", err.Error())
 
 	fields = map[string][]byte{
-		"InvalidKey":     []byte(`1`),
+		"InvalidKey": []byte(`1`),
 	}
 	attr.IndexedFields = fields
 	err = validator.ValidateSearchAttributes(attr, domain)
 	s.Equal(`BadRequestError{Message: InvalidKey is not valid search attribute}`, err.Error())
 
 	fields = map[string][]byte{
-		"StartTime":     []byte(`1`),
+		"StartTime": []byte(`1`),
 	}
 	attr.IndexedFields = fields
 	err = validator.ValidateSearchAttributes(attr, domain)
 	s.Equal(`BadRequestError{Message: StartTime is read-only Cadence reservered attribute}`, err.Error())
 
 	fields = map[string][]byte{
-		"CustomKeywordField":     []byte(`123456`),
+		"CustomKeywordField": []byte(`123456`),
 	}
 	attr.IndexedFields = fields
 	err = validator.ValidateSearchAttributes(attr, domain)
 	s.Equal(`BadRequestError{Message: size limit exceed for key CustomKeywordField}`, err.Error())
 
 	fields = map[string][]byte{
-		"CustomKeywordField":     []byte(`123`),
-		"CustomStringField":     []byte(`12`),
+		"CustomKeywordField": []byte(`123`),
+		"CustomStringField":  []byte(`12`),
 	}
 	attr.IndexedFields = fields
 	err = validator.ValidateSearchAttributes(attr, domain)

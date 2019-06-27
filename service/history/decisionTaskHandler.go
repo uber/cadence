@@ -841,7 +841,8 @@ func (handler *decisionTaskHandlerImpl) handleDecisionSignalExternalWorkflow(
 }
 
 func (handler *decisionTaskHandlerImpl) handleDecisionUpsertWorkflowSearchAttributes(
-	attr *workflow.UpsertWorkflowSearchAttributesDecisionAttributes) error {
+	attr *workflow.UpsertWorkflowSearchAttributesDecisionAttributes,
+) error {
 
 	handler.metricsClient.IncCounter(
 		metrics.HistoryRespondDecisionTaskCompletedScope,

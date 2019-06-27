@@ -21,10 +21,10 @@
 package history
 
 import (
-	"github.com/uber/cadence/common/definition"
 	"time"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
