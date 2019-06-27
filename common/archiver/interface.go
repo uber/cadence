@@ -28,9 +28,9 @@ import (
 )
 
 var (
-	// ArchiveNonRetriableErr is the error every Archiver implementation should return when
+	// ErrArchiveNonRetriable is the error every Archiver implementation should return when
 	// a non-retriable error is encountered.
-	ArchiveNonRetriableErr = errors.New("archive method encountered a non-retriable error")
+	ErrArchiveNonRetriable = errors.New("archive method encountered a non-retriable error")
 )
 
 type (

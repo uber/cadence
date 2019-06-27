@@ -31,7 +31,7 @@ import (
 )
 
 type (
-	// HistoryBlobIterator is used to get history batches
+	// HistoryIterator is used to get history batches
 	HistoryIterator interface {
 		Next() ([]*shared.History, error)
 		HasNext() bool

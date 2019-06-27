@@ -58,6 +58,7 @@ var (
 )
 
 type (
+	// HistoryArchiverConfig configs the filestore implementation of archiver.HistoryArchiver interface
 	HistoryArchiverConfig struct {
 		*archiver.HistoryIteratorConfig
 	}
@@ -104,12 +105,12 @@ func (h *historyArchiver) Archive(
 
 	if !h.ValidateURI(URI) {
 		logger.Error(archiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errInvalidURI), tag.ArchivalURI(URI))
-		return archiver.ArchiveNonRetriableErr
+		return archiver.ErrArchiveNonRetriable
 	}
 
 	if err := validateArchiveRequest(request); err != nil {
 		logger.Error(archiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errInvalidRequest), tag.Error(err))
-		return archiver.ArchiveNonRetriableErr
+		return archiver.ErrArchiveNonRetriable
 	}
 
 	historyIterator := h.historyIterator
@@ -119,7 +120,7 @@ func (h *historyArchiver) Archive(
 		if err != nil {
 			// this should not happen
 			logger.Error(archiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errConstructHistoryIterator), tag.Error(err))
-			return archiver.ArchiveNonRetriableErr
+			return archiver.ErrArchiveNonRetriable
 		}
 	}
 
@@ -128,12 +129,12 @@ func (h *historyArchiver) Archive(
 		currHistoryBatches, err := getNextSetofBatches(ctx, historyIterator)
 		if err != nil {
 			logger.Error(archiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errReadHistory), tag.Error(err))
-			return archiver.ArchiveNonRetriableErr
+			return archiver.ErrArchiveNonRetriable
 		}
 
 		if historyMutated(request, currHistoryBatches, !historyIterator.HasNext()) {
 			logger.Error(archiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errHistoryMutated))
-			return archiver.ArchiveNonRetriableErr
+			return archiver.ErrArchiveNonRetriable
 		}
 
 		historyBatches = append(historyBatches, currHistoryBatches...)
@@ -142,19 +143,19 @@ func (h *historyArchiver) Archive(
 	encodedHistoryBatches, err := encodeHistoryBatches(historyBatches)
 	if err != nil {
 		logger.Error(archiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errEncodeHistory), tag.Error(err))
-		return archiver.ArchiveNonRetriableErr
+		return archiver.ErrArchiveNonRetriable
 	}
 
 	dirPath := getDirPathFromURI(URI)
 	if err = mkdirAll(dirPath); err != nil {
 		logger.Error(archiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errMakeDirectory), tag.Error(err))
-		return archiver.ArchiveNonRetriableErr
+		return archiver.ErrArchiveNonRetriable
 	}
 
 	filename := constructFilename(request.DomainID, request.WorkflowID, request.RunID, request.CloseFailoverVersion)
 	if err := writeFile(path.Join(dirPath, filename), encodedHistoryBatches); err != nil {
 		logger.Error(archiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errWriteFile), tag.Error(err))
-		return archiver.ArchiveNonRetriableErr
+		return archiver.ErrArchiveNonRetriable
 	}
 
 	return nil
