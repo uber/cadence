@@ -157,11 +157,6 @@ func (s *server) startService() common.Daemon {
 	} else {
 		log.Fatalf("need to provide an endpoint config for PublicClient")
 	}
-	dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, s.cfg.PublicClient.HostPort)
-	if err != nil {
-		log.Fatalf("failed to construct dispatcher: %v", err)
-	}
-	params.PublicClient = workflowserviceclient.New(dispatcher.ClientConfig(common.FrontendServiceName))
 
 	params.ESConfig = &s.cfg.ElasticSearch
 	params.ESConfig.Enable = dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, params.ESConfig.Enable)() // force override with dynamic config
@@ -186,6 +181,12 @@ func (s *server) startService() common.Daemon {
 			log.Fatalf("elastic search config missing visibility index")
 		}
 	}
+
+	dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, s.cfg.PublicClient.HostPort)
+	if err != nil {
+		log.Fatalf("failed to construct dispatcher: %v", err)
+	}
+	params.PublicClient = workflowserviceclient.New(dispatcher.ClientConfig(common.FrontendServiceName))
 
 	if params.ClusterMetadata.ArchivalConfig().ConfiguredForArchival() {
 		if s.cfg.Archival.Filestore != nil && s.cfg.Archival.S3store != nil {

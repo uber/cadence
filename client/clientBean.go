@@ -217,8 +217,8 @@ func (p *dnsDispatcherProvider) Get(serviceName string, address string) (*yarpc.
 			},
 		},
 	})
-	err = dispatcher.Start()
-	if err != nil {
+
+	if err := dispatcher.Start(); err != nil {
 		return nil, err
 	}
 	return dispatcher, nil
@@ -286,7 +286,7 @@ func (d *dnsUpdater) refresh() (map[string]struct{}, *peer.ListUpdates, bool, er
 		Removals:  make([]peer.Identifier, 0),
 	}
 	changed := false
-	//remove if it doesn't exist anymore
+	// remove if it doesn't exist anymore
 	for addr := range d.currentPeers {
 		if _, ok := newPeers[addr]; !ok {
 			changed = true
@@ -297,7 +297,7 @@ func (d *dnsUpdater) refresh() (map[string]struct{}, *peer.ListUpdates, bool, er
 		}
 	}
 
-	//add if it doesn't exist before
+	// add if it doesn't exist before
 	for addr := range newPeers {
 		if _, ok := d.currentPeers[addr]; !ok {
 			changed = true
@@ -316,7 +316,7 @@ func (a aPeer) Identifier() string {
 }
 
 func identifiersToStringList(ids []peer.Identifier) []string {
-	ss := make([]string, 0)
+	ss := make([]string, 0, len(ids))
 	for _, id := range ids {
 		ss = append(ss, id.Identifier())
 	}
