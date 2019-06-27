@@ -81,6 +81,11 @@ type (
 		list         peer.List
 		logger       log.Logger
 	}
+	dnsRefreshResult struct {
+		updates  peer.ListUpdates
+		newPeers map[string]struct{}
+		changed  bool
+	}
 	aPeer struct {
 		addrPort string
 	}
@@ -243,23 +248,23 @@ func (d *dnsUpdater) Start() {
 	go func() {
 		for {
 			now := time.Now()
-			newPeers, updates, changed, err := d.refresh()
+			res, err := d.refresh()
 			if err != nil {
 				d.logger.Error("Failed to update DNS", tag.Error(err), tag.Address(d.dnsAddress))
 			}
-			if changed {
-				if len(updates.Additions) > 0 {
-					d.logger.Info("Add new peers by DNS lookup", tag.Address(d.dnsAddress), tag.Addresses(identifiersToStringList(updates.Additions)))
+			if res.changed {
+				if len(res.updates.Additions) > 0 {
+					d.logger.Info("Add new peers by DNS lookup", tag.Address(d.dnsAddress), tag.Addresses(identifiersToStringList(res.updates.Additions)))
 				}
-				if len(updates.Removals) > 0 {
-					d.logger.Info("Remove stale peers by DNS lookup", tag.Address(d.dnsAddress), tag.Addresses(identifiersToStringList(updates.Removals)))
+				if len(res.updates.Removals) > 0 {
+					d.logger.Info("Remove stale peers by DNS lookup", tag.Address(d.dnsAddress), tag.Addresses(identifiersToStringList(res.updates.Removals)))
 				}
 
-				err := d.list.Update(*updates)
+				err := d.list.Update(res.updates)
 				if err != nil {
 					d.logger.Error("Failed to update peerList", tag.Error(err), tag.Address(d.dnsAddress))
 				}
-				d.currentPeers = newPeers
+				d.currentPeers = res.newPeers
 			} else {
 				d.logger.Info("No change in DNS lookup", tag.Address(d.dnsAddress))
 			}
@@ -269,11 +274,11 @@ func (d *dnsUpdater) Start() {
 	}()
 }
 
-func (d *dnsUpdater) refresh() (map[string]struct{}, *peer.ListUpdates, bool, error) {
+func (d *dnsUpdater) refresh() (*dnsRefreshResult, error) {
 	resolver := net.DefaultResolver
 	ips, err := resolver.LookupHost(context.Background(), d.dnsAddress)
 	if err != nil {
-		return nil, nil, false, err
+		return nil, err
 	}
 	newPeers := map[string]struct{}{}
 	for _, ip := range ips {
@@ -281,7 +286,7 @@ func (d *dnsUpdater) refresh() (map[string]struct{}, *peer.ListUpdates, bool, er
 		newPeers[adr] = struct{}{}
 	}
 
-	updates := &peer.ListUpdates{
+	updates := peer.ListUpdates{
 		Additions: make([]peer.Identifier, 0),
 		Removals:  make([]peer.Identifier, 0),
 	}
@@ -308,7 +313,11 @@ func (d *dnsUpdater) refresh() (map[string]struct{}, *peer.ListUpdates, bool, er
 		}
 	}
 
-	return newPeers, updates, changed, nil
+	return &dnsRefreshResult{
+		updates:  updates,
+		newPeers: newPeers,
+		changed:  changed,
+	}, nil
 }
 
 func (a aPeer) Identifier() string {
