@@ -21,12 +21,12 @@
 package main
 
 import (
+	"github.com/uber/cadence/client"
 	"log"
 	"time"
 
 	"github.com/uber/cadence/common/cluster"
 
-	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore/filestore"
 	"github.com/uber/cadence/common/blobstore/s3store"
@@ -152,7 +152,26 @@ func (s *server) startService() common.Daemon {
 		s.cfg.Archival.DefaultBucket,
 		enableReadFromArchival(),
 	)
-	params.DispatcherProvider = client.NewIPYarpcDispatcherProvider()
+
+	// TODO this DispatcherProvider will also be used for clientBean to create dispatchers for remoteCluster in CrossDC re-replication.
+	// Right now need to make sure the config is using the same type(HostPort or DNS). Otherwise CrossDC will not work.
+	// In the future we need to refactor the config and add validation here.
+	address := ""
+	if s.cfg.PublicClient.DNSPort != "" {
+		params.DispatcherProvider = client.NewDNSYarpcDispatcherProvider(params.Logger, s.cfg.PublicClient.DNSRefreshInterval)
+		address = s.cfg.PublicClient.DNSPort
+	} else if s.cfg.PublicClient.HostPort != "" {
+		params.DispatcherProvider = client.NewIPYarpcDispatcherProvider()
+		address = s.cfg.PublicClient.HostPort
+	} else {
+		log.Fatalf("need to provide an endpoint config for PublicClient")
+	}
+	dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, address)
+	if err != nil {
+		log.Fatalf("failed to construct dispatcher: %v", err)
+	}
+	params.PublicClient = workflowserviceclient.New(dispatcher.ClientConfig(common.FrontendServiceName))
+
 	params.ESConfig = &s.cfg.ElasticSearch
 	params.ESConfig.Enable = dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, params.ESConfig.Enable)() // force override with dynamic config
 	if params.ClusterMetadata.IsGlobalDomainEnabled() {
@@ -176,12 +195,6 @@ func (s *server) startService() common.Daemon {
 			log.Fatalf("elastic search config missing visibility index")
 		}
 	}
-
-	dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, s.cfg.PublicClient.HostPort)
-	if err != nil {
-		log.Fatalf("failed to construct dispatcher: %v", err)
-	}
-	params.PublicClient = workflowserviceclient.New(dispatcher.ClientConfig(common.FrontendServiceName))
 
 	if params.ClusterMetadata.ArchivalConfig().ConfiguredForArchival() {
 		if s.cfg.Archival.Filestore != nil && s.cfg.Archival.S3store != nil {

@@ -329,9 +329,14 @@ type (
 	}
 
 	// PublicClient is config for connecting to cadence frontend
+	// Currently supporting single IP address(HostPort) and DNS and Port. Only one of them is required.
 	PublicClient struct {
 		// HostPort is the host port to connect on
 		HostPort string `yaml:"hostPort" validate:"nonzero"`
+		// DNS is the DNS name to connect on
+		DNSPort string `yaml:"DNSPort" validate:"nonzero"`
+		// only for DNSPort mode, interval to refresh DNS. Default to 10s
+		DNSRefreshInterval time.Duration `yaml:"DNSRereshInterval"`
 	}
 
 	// BootstrapMode is an enum type for ringpop bootstrap mode
