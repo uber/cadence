@@ -278,8 +278,8 @@ func newDNSUpdater(list peer.List, dnsPort string, interval time.Duration, logge
 
 func (d *dnsUpdater) Start() {
 	go func() {
-		now := time.Now()
 		for {
+			now := time.Now()
 			newPeers, updates, changed, err := d.refresh()
 			if err != nil {
 				d.logger.Error("Failed to update DNS", tag.Error(err), tag.Address(d.dnsAddress))
