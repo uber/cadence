@@ -31,7 +31,6 @@ import (
 	"strings"
 
 	"github.com/dgryski/go-farm"
-
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/log"
@@ -167,6 +166,9 @@ func getDirPathFromURI(URI string) string {
 }
 
 func validateDirPath(dirPath string) bool {
+	if len(dirPath) == 0 {
+		return false
+	}
 	info, err := os.Stat(dirPath)
 	if os.IsNotExist(err) {
 		return true
@@ -179,7 +181,7 @@ func validateDirPath(dirPath string) bool {
 
 func constructFilename(domainID, workflowID, runID string, version int64) string {
 	combinedHash := constructFilenamePrefix(domainID, workflowID, runID)
-	return fmt.Sprintf("%s-%v.history", combinedHash, version)
+	return fmt.Sprintf("%s_%v.history", combinedHash, version)
 }
 
 func constructFilenamePrefix(domainID, workflowID, runID string) string {
@@ -191,7 +193,7 @@ func constructFilenamePrefix(domainID, workflowID, runID string) string {
 
 func extractCloseFailoverVersion(filename string) (int64, error) {
 	filenameParts := strings.FieldsFunc(filename, func(r rune) bool {
-		return r == '-' || r == '.'
+		return r == '_' || r == '.'
 	})
 	if len(filenameParts) != 3 {
 		return -1, errors.New("unknown filename structure")

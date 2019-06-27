@@ -21,6 +21,8 @@
 package filestore
 
 import (
+	"errors"
+
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
@@ -49,5 +51,5 @@ func (f *archiverFactoryImpl) NewHistoryArchiver(
 }
 
 func (f *archiverFactoryImpl) NewVisibilityArchiver() (archiver.VisibilityArchiver, error) {
-	return nil, nil
+	return nil, errors.New("visibility archiver is not implemented")
 }
