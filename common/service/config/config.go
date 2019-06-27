@@ -331,7 +331,7 @@ type (
 	// PublicClient is config for connecting to cadence frontend
 	PublicClient struct {
 		// HostPort is the host port to connect on. Host can be DNS name
-		HostPort string `yaml:"hostPort"`
+		HostPort string `yaml:"hostPort" validate:"nonzero"`
 		// interval to refresh DNS. Default to 10s
 		RefreshInterval time.Duration `yaml:"RefreshInterval"`
 	}
