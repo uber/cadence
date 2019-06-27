@@ -327,10 +327,9 @@ func (d *dnsUpdater) refresh() (map[string]struct{}, *peer.ListUpdates, bool, er
 	for addr := range d.currentPeers {
 		if _, ok := newPeers[addr]; !ok {
 			changed = true
-			updates.Removals = append(updates.Removals,
-				aPeer{
-					addrPort: addr,
-				},
+			updates.Removals = append(
+				updates.Removals,
+				aPeer{addrPort: addr},
 			)
 		}
 	}
@@ -339,9 +338,10 @@ func (d *dnsUpdater) refresh() (map[string]struct{}, *peer.ListUpdates, bool, er
 	for addr := range newPeers {
 		if _, ok := d.currentPeers[addr]; !ok {
 			changed = true
-			updates.Additions = append(updates.Additions, aPeer{
-				addrPort: fmt.Sprintf("%v:%v", addr, d.port),
-			})
+			updates.Additions = append(
+				updates.Additions,
+				aPeer{addrPort: addr},
+			)
 		}
 	}
 
