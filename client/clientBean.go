@@ -44,7 +44,8 @@ import (
 )
 
 const (
-	ipPortRegex = `\b(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9]):[1-9]\d*\b`
+	ipPortRegex            = `\b(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9]):[1-9]\d*\b`
+	defaultRefreshInterval = time.Second * 10
 )
 
 type (
@@ -222,6 +223,9 @@ func (p *ipDispatcherProvider) Get(name string, address string) (*yarpc.Dispatch
 
 // NewDNSYarpcDispatcherProvider create a dispatcher provider which handles with IP address
 func NewDNSYarpcDispatcherProvider(logger log.Logger, interval time.Duration) DispatcherProvider {
+	if interval == 0 {
+		interval = defaultRefreshInterval
+	}
 	return &dnsDispatcherProvider{
 		interval: interval,
 		logger:   logger,
