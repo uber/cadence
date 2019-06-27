@@ -1,6 +1,6 @@
 # Periodic Execution (aka Distributed Cron)
 
-Execute some business logic periodically. The advantage of Cadence in this scenario is that it provides
+Execute some business logic periodically. Frequently referenced as distributed cron. The advantage of Cadence for these scenarios is that it provides
 guarantees of the execution, sophisticated error handling, retry policies and visibility into execution history.
 
 Another important dimension is scale. Some use cases require periodic execution for large number of entities.

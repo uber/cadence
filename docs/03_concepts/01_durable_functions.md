@@ -1,13 +1,17 @@
 # Durable Functions aka Workflows
 
-Cadence core abstraction is a durable workfow function. The state of the function including local variables and threads it creates is immune to process failures.
+## Overview
+
+Cadence core abstraction is a **durable workfow function**. The state of the function including local variables and threads it creates is immune to process failures.
 This is very powerful concept as it encapsulates state, processing threads, durable timers and event handlers.
+
+## Example
 
 Let's look at a use case. A customer signs up to an application with a trial period. After the period if the customer is not cancelled he should be charged once a month for the renewal. Customer has to be notified by email about the charges and should be able to cancel the subscription at any time.
 
 The business logic of the use case is not very complicated and can be expressed in a few dozen lines of code. But any practical implementation has to ensure that the business process is fault tolerant and scalable. There are various ways to approach the design of such system.
 
-One apporach is to center it around a database. An application processes would periodically scan database tables for customers in specific states, execute necessary actions and update the state to reflect that. While feasible this apporach has various drawbacks. Most obvious one is that the state machine of the customer state quickly becomes extremely complicated. For example credit card charge or emails sending can fail due to downstream system unavailability. The failed calls should be retried, ideally using an exponential retry policy. These calls should be throttled to not overload the external systems. There should be support for poison pills to avoid blocking the whole process if a single customer record cannot be processed for whatever reason. Database based apporach also usually has peformance problems. Databases are not efficient for scenarios that require constant polling for records in a specific state.
+One apporach is to center it around a database. An application processes would periodically scan database tables for customers in specific states, execute necessary actions and update the state to reflect that. While feasible this apporach has various drawbacks. Most obvious one is that the state machine of the customer state quickly becomes extremely complicated. For example a credit card charge or emails sending can fail due to downstream system unavailability. The failed calls should be retried, ideally using an exponential retry policy. These calls should be throttled to not overload external systems. There should be support for poison pills to avoid blocking the whole process if a single customer record cannot be processed for whatever reason. Database based apporach also usually has peformance problems. Databases are not efficient for scenarios that require constant polling for records in a specific state.
 
 Another commonly employed approach is to use a timer service and queues. So any update is pushed to a queue and then a worker that consumes from it updates a database and possibly pushes more messages in downstream queues. For operations that require scheduling an external timer service can be used. This apporach usually scales much better as a database is not constantly polled for changes. But it makes the programming model even more complex and error prone as usually there is no transactional update between a queing system and a database.
 
@@ -53,3 +57,9 @@ Again, note that this code directly implements the business logic. If any of the
 Cadence has practically no scalability limits on number of open workflow instances. So even if your site has hundreds of millions of consumers the above code is not going to change.
 
 The commonly asked question by the developers that learn Cadence is "How do I handle workflow worker process failure/restart in my workflow"? The answer is that you do not. The workflow code is completely oblivious to any failures and downtime of workers or even Cadence service itself. As soon as they are recovered and the workflow needs to handle some event like timer or an activity completion the current state of the workflow is fully restored and continues execution. The only reason for the workflow failure is workflow business code throwing an exception, not underlying infrasturcture outages.
+
+## State Recovery and Determinism
+
+The workflow function state recovery utilizes event sourcing which puts a few restrictions on how the code is written. The main restriction is that the workflow code must be deterministic which means that it must produce exactly the same result if executed multiple times. It rules out any external API calls from the workflow code as external calls can fail intermittently or change its output any time. That is why all communication with external world should happen through activities. For the same reason workflow code must use Cadence APIs to get current time, sleep and create new threads.
+
+To understand the Cadence execution model as well as the recovery mechanism watch [this webcast](https://youtu.be/qce_AqCkFys). The animation covering recovery starts at 15:50.
