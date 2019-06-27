@@ -152,20 +152,12 @@ func (s *server) startService() common.Daemon {
 		enableReadFromArchival(),
 	)
 
-	// TODO this DispatcherProvider will also be used for clientBean to create dispatchers for remoteCluster in CrossDC re-replication.
-	// Right now need to make sure the config is using the same type(HostPort or DNS). Otherwise CrossDC will not work.
-	// In the future we need to refactor the config and add validation here.
-	address := ""
-	if s.cfg.PublicClient.DNSPort != "" {
-		params.DispatcherProvider = client.NewDNSYarpcDispatcherProvider(params.Logger, s.cfg.PublicClient.DNSRefreshInterval)
-		address = s.cfg.PublicClient.DNSPort
-	} else if s.cfg.PublicClient.HostPort != "" {
-		params.DispatcherProvider = client.NewIPYarpcDispatcherProvider()
-		address = s.cfg.PublicClient.HostPort
+	if s.cfg.PublicClient.HostPort != "" {
+		params.DispatcherProvider = client.NewDNSYarpcDispatcherProvider(params.Logger, s.cfg.PublicClient.RefreshInterval)
 	} else {
 		log.Fatalf("need to provide an endpoint config for PublicClient")
 	}
-	dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, address)
+	dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, s.cfg.PublicClient.HostPort)
 	if err != nil {
 		log.Fatalf("failed to construct dispatcher: %v", err)
 	}

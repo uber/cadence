@@ -252,7 +252,7 @@ type (
 	Address struct {
 		// RPCName indicate the remote service name
 		RPCName string `yaml:"rpcName"`
-		// Address indicate the remote service IP address
+		// Address indicate the remote service address(Host:Port). Host can be DNS name.
 		RPCAddress string `yaml:"rpcAddress"`
 	}
 
@@ -276,7 +276,7 @@ type (
 		InitialFailoverVersion int64 `yaml:"initialFailoverVersion"`
 		// RPCName indicate the remote service name
 		RPCName string `yaml:"rpcName"`
-		// Address indicate the remote service IP address
+		// Address indicate the remote service address(Host:Port). Host can be DNS name.
 		RPCAddress string `yaml:"rpcAddress"`
 	}
 
@@ -329,14 +329,11 @@ type (
 	}
 
 	// PublicClient is config for connecting to cadence frontend
-	// Currently supporting single IP address(HostPort) and DNS and Port. Only one of them is required.
 	PublicClient struct {
-		// HostPort is the host port to connect on
+		// HostPort is the host port to connect on. Host can be DNS name
 		HostPort string `yaml:"hostPort"`
-		// DNS is the DNS name to connect on
-		DNSPort string `yaml:"DNSPort"`
-		// only for DNSPort mode, interval to refresh DNS. Default to 10s
-		DNSRefreshInterval time.Duration `yaml:"DNSRereshInterval"`
+		// interval to refresh DNS. Default to 10s
+		RefreshInterval time.Duration `yaml:"RefreshInterval"`
 	}
 
 	// BootstrapMode is an enum type for ringpop bootstrap mode

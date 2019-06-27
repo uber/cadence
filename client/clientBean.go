@@ -22,10 +22,8 @@ package client
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
-	"regexp"
 	"strings"
 	"time"
 
@@ -69,9 +67,6 @@ type (
 		frontendClient        frontend.Client
 		remoteAdminClients    map[string]admin.Client
 		remoteFrontendClients map[string]frontend.Client
-	}
-
-	ipDispatcherProvider struct {
 	}
 
 	dnsDispatcherProvider struct {
@@ -185,45 +180,9 @@ func (h *clientBeanImpl) GetRemoteFrontendClient(cluster string) frontend.Client
 	return client
 }
 
-// NewIPYarpcDispatcherProvider create a dispatcher provider which handles with IP address
-func NewIPYarpcDispatcherProvider() DispatcherProvider {
-	return &ipDispatcherProvider{}
-}
-
-func (p *ipDispatcherProvider) Get(name string, address string) (*yarpc.Dispatcher, error) {
-	match, err := regexp.MatchString(ipPortRegex, address)
-	if err != nil {
-		return nil, err
-	}
-	if !match {
-		return nil, errors.New("invalid ip:port address")
-	}
-
-	channel, err := tchannel.NewChannelTransport(
-		tchannel.ServiceName(crossDCCaller),
-		// this aim to get rid of the annoying popup about accepting incoming network connections
-		tchannel.ListenAddr("127.0.0.1:0"),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-		Name: crossDCCaller,
-		Outbounds: yarpc.Outbounds{
-			name: {Unary: channel.NewSingleOutbound(address)},
-		},
-	})
-	err = dispatcher.Start()
-	if err != nil {
-		return nil, err
-	}
-	return dispatcher, nil
-}
-
 // NewDNSYarpcDispatcherProvider create a dispatcher provider which handles with IP address
 func NewDNSYarpcDispatcherProvider(logger log.Logger, interval time.Duration) DispatcherProvider {
-	if interval == 0 {
+	if interval <= 0 {
 		interval = defaultRefreshInterval
 	}
 	return &dnsDispatcherProvider{
