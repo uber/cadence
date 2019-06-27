@@ -21,19 +21,17 @@
 package filestore
 
 import (
-	"github.com/uber/cadence/common/backoff"
 	"context"
 	"errors"
-	"os"
 	"path"
 	"strings"
 
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
-	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -53,50 +51,42 @@ const (
 )
 
 var (
-	errContextTimeout = errors.New("activity aborted because context timed out")
+	errContextTimeout           = errors.New("activity aborted because context timed out")
+	errGetHistoryTokenCorrupted = &shared.BadRequestError{Message: "Next page token is corrupted."}
+	errHistoryNotExist          = &shared.BadRequestError{Message: "Requested workflow history does not exist."}
 )
 
 type (
-	Config struct {
+	HistoryConfig struct {
 		*archiver.HistoryIteratorConfig
 
 		StoreDirectory string
 	}
 
 	historyArchiver struct {
-		clusterMetadata  cluster.Metadata
 		historyManager   persistence.HistoryManager
 		historyV2Manager persistence.HistoryV2Manager
 		logger           log.Logger
-		config           *Config
+		config           *HistoryConfig
 
 		// only set in test code
 		historyIterator archiver.HistoryIterator
 	}
+
+	getHistoryToken struct {
+		CloseFailoverVersion int64
+		NextBatchIdx         int
+	}
 )
 
-func NewHistoryArchiver(
-	clusterMetadata cluster.Metadata,
-	historyManager persistence.HistoryManager,
-	historyV2Manager persistence.HistoryV2Manager,
-	metricsClient metrics.Client,
-	logger log.Logger,
-	config *Config,
-) archiver.HistoryArchiver {
-	return newHistoryArchiver(clusterMetadata, historyManager, historyV2Manager,
-		logger, config, nil)
-}
-
 func newHistoryArchiver(
-	clusterMetadata cluster.Metadata,
 	historyManager persistence.HistoryManager,
 	historyV2Manager persistence.HistoryV2Manager,
 	logger log.Logger,
-	config *Config,
+	config *HistoryConfig,
 	historyIterator archiver.HistoryIterator,
 ) *historyArchiver {
 	return &historyArchiver{
-		clusterMetadata:  clusterMetadata,
 		historyManager:   historyManager,
 		historyV2Manager: historyV2Manager,
 		logger:           logger,
@@ -108,10 +98,10 @@ func newHistoryArchiver(
 func (h *historyArchiver) Archive(
 	ctx context.Context,
 	URI string,
-	request archiver.ArchiveHistoryRequest,
+	request *archiver.ArchiveHistoryRequest,
 	opts ...archiver.ArchiveOption,
 ) error {
-	logger := tagLoggerWithArchiveHistoryRequest(h.logger, &request)
+	logger := tagLoggerWithArchiveHistoryRequest(h.logger, request)
 
 	if !h.ValidateURI(URI) {
 		logger.Error(archiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errInvalidURI), tag.ArchivalURI(URI))
@@ -136,7 +126,7 @@ func (h *historyArchiver) Archive(
 			return archiver.ArchiveNonRetriableErr
 		}
 
-		if historyMutated(&request, currHistoryBatches, !historyIterator.HasNext()) {
+		if historyMutated(request, currHistoryBatches, !historyIterator.HasNext()) {
 			logger.Error(archiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errHistoryMutated))
 			return archiver.ArchiveNonRetriableErr
 		}
@@ -156,7 +146,7 @@ func (h *historyArchiver) Archive(
 		return archiver.ArchiveNonRetriableErr
 	}
 
-	filename := constructFilename(&request)
+	filename := constructFilename(request.DomainID, request.WorkflowID, request.RunID, request.CloseFailoverVersion)
 	if err := writeFile(path.Join(dirPath, filename), encodedHistoryBatches); err != nil {
 		logger.Error(archiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errWriteFile), tag.Error(err))
 		return archiver.ArchiveNonRetriableErr
@@ -168,9 +158,93 @@ func (h *historyArchiver) Archive(
 func (h *historyArchiver) Get(
 	ctx context.Context,
 	URI string,
-	request archiver.GetHistoryRequest,
-) (archiver.GetHistoryResponse, error) {
-	return archiver.GetHistoryResponse{}, nil
+	request *archiver.GetHistoryRequest,
+) (*archiver.GetHistoryResponse, error) {
+	if !h.ValidateURI(URI) {
+		return nil, errors.New(errInvalidURI)
+	}
+
+	dirPath := getDirPathFromURI(URI)
+	exists, err := directoryExists(dirPath)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errHistoryNotExist
+	}
+
+	var token *getHistoryToken
+	if request.NextPageToken != nil {
+		token, err = deserializeGetHistoryToken(request.NextPageToken)
+		if err != nil {
+			return nil, errGetHistoryTokenCorrupted
+		}
+	} else if request.CloseFailoverVersion != nil {
+		token = &getHistoryToken{
+			CloseFailoverVersion: *request.CloseFailoverVersion,
+			NextBatchIdx:         0,
+		}
+	} else {
+		filenames, err := listFilesByPrefix(dirPath, constructFilenamePrefix(request.DomainID, request.WorkflowID, request.RunID))
+		if err != nil {
+			return nil, err
+		}
+		highestVersion := int64(-1)
+		for _, filename := range filenames {
+			version, err := extractCloseFailoverVersion(filename)
+			if err != nil && version > highestVersion {
+				highestVersion = version
+			}
+		}
+		token = &getHistoryToken{
+			CloseFailoverVersion: highestVersion,
+			NextBatchIdx:         0,
+		}
+	}
+
+	filename := constructFilename(request.DomainID, request.WorkflowID, request.RunID, token.CloseFailoverVersion)
+	filepath := path.Join(dirPath, filename)
+	exists, err = fileExists(filepath)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errHistoryNotExist
+	}
+
+	encodedHistoryBatches, err := readFile(filepath)
+	if err != nil {
+		return nil, err
+	}
+
+	historyBatches, err := decodeHistoryBatches(encodedHistoryBatches)
+	if err != nil {
+		return nil, err
+	}
+	historyBatches = historyBatches[token.NextBatchIdx:]
+
+	response := &archiver.GetHistoryResponse{}
+	numOfEvents := 0
+	numOfBatches := 0
+	for _, batch := range historyBatches {
+		response.HistoryBatches = append(response.HistoryBatches, batch)
+		numOfBatches++
+		numOfEvents += len(batch.Events)
+		if numOfEvents >= request.PageSize {
+			break
+		}
+	}
+
+	if numOfBatches < len(historyBatches) {
+		token.NextBatchIdx += numOfBatches
+		nextToken, err := serializeGetHistoryToken(token)
+		if err != nil {
+			return nil, err
+		}
+		response.NextPageToken = nextToken
+	}
+
+	return response, nil
 }
 
 func (h *historyArchiver) ValidateURI(URI string) bool {
@@ -178,15 +252,7 @@ func (h *historyArchiver) ValidateURI(URI string) bool {
 		return false
 	}
 
-	dirPath := getDirPathFromURI(URI)
-	info, err := os.Stat(dirPath)
-	if os.IsNotExist(err) {
-		return true
-	}
-	if err != nil {
-		return false
-	}
-	return info.IsDir()
+	return validateDirPath(getDirPathFromURI(URI))
 }
 
 func getNextSetofBatches(ctx context.Context, historyIterator archiver.HistoryIterator) ([]*shared.History, error) {

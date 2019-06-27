@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/dgryski/go-farm"
@@ -97,14 +98,7 @@ func readFile(filepath string) ([]byte, error) {
 	return ioutil.ReadFile(filepath)
 }
 
-func deleteFile(filepath string) (bool, error) {
-	if err := os.Remove(filepath); err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-func listFiles(path string) ([]string, error) {
+func listFilesByPrefix(path string, prefix string) ([]string, error) {
 	if info, err := os.Stat(path); err != nil {
 		return nil, err
 	} else if !info.IsDir() {
@@ -120,7 +114,10 @@ func listFiles(path string) ([]string, error) {
 		if c.IsDir() {
 			continue
 		}
-		files = append(files, c.Name())
+		filename := c.Name()
+		if strings.HasPrefix(filename, prefix) {
+			files = append(files, filename)
+		}
 	}
 	return files, nil
 }
@@ -169,16 +166,37 @@ func getDirPathFromURI(URI string) string {
 	return URI[len(fileStoreScheme):]
 }
 
-func constructFilename(request *archiver.ArchiveHistoryRequest) string {
-	combinedHash := constructFilenamePrefix(request)
-	return fmt.Sprintf("%s-%v.history", combinedHash, request.CloseFailoverVersion)
+func validateDirPath(dirPath string) bool {
+	info, err := os.Stat(dirPath)
+	if os.IsNotExist(err) {
+		return true
+	}
+	if err != nil {
+		return false
+	}
+	return info.IsDir()
 }
 
-func constructFilenamePrefix(request *archiver.ArchiveHistoryRequest) string {
-	domainIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(request.DomainID)))
-	workflowIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(request.WorkflowID)))
-	runIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(request.RunID)))
+func constructFilename(domainID, workflowID, runID string, version int64) string {
+	combinedHash := constructFilenamePrefix(domainID, workflowID, runID)
+	return fmt.Sprintf("%s-%v.history", combinedHash, version)
+}
+
+func constructFilenamePrefix(domainID, workflowID, runID string) string {
+	domainIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(domainID)))
+	workflowIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(workflowID)))
+	runIDHash := fmt.Sprintf("%v", farm.Fingerprint64([]byte(runID)))
 	return strings.Join([]string{domainIDHash, workflowIDHash, runIDHash}, "")
+}
+
+func extractCloseFailoverVersion(filename string) (int64, error) {
+	filenameParts := strings.FieldsFunc(filename, func(r rune) bool {
+		return r == '-' || r == '.'
+	})
+	if len(filenameParts) != 3 {
+		return -1, errors.New("unknown filename structure")
+	}
+	return strconv.ParseInt(filenameParts[1], 10, 64)
 }
 
 func historyMutated(request *archiver.ArchiveHistoryRequest, historyBatches []*shared.History, isLast bool) bool {
@@ -194,4 +212,19 @@ func historyMutated(request *archiver.ArchiveHistoryRequest, historyBatches []*s
 	}
 	lastEventID := lastEvent.GetEventId()
 	return lastFailoverVersion != request.CloseFailoverVersion || lastEventID+1 != request.NextEventID
+}
+
+func deserializeGetHistoryToken(bytes []byte) (*getHistoryToken, error) {
+	token := &getHistoryToken{}
+	err := json.Unmarshal(bytes, token)
+	return token, err
+}
+
+func serializeGetHistoryToken(token *getHistoryToken) ([]byte, error) {
+	if token == nil {
+		return nil, nil
+	}
+
+	bytes, err := json.Marshal(token)
+	return bytes, err
 }

@@ -65,8 +65,8 @@ type (
 
 	// HistoryArchiver is used to archive history and read archived history
 	HistoryArchiver interface {
-		Archive(ctx context.Context, URI string, request ArchiveHistoryRequest, opts ...ArchiveOption) error
-		Get(ctx context.Context, URI string, request GetHistoryRequest) (GetHistoryResponse, error)
+		Archive(ctx context.Context, URI string, request *ArchiveHistoryRequest, opts ...ArchiveOption) error
+		Get(ctx context.Context, URI string, request *GetHistoryRequest) (*GetHistoryResponse, error)
 		ValidateURI(URI string) bool
 	}
 
@@ -83,8 +83,8 @@ type (
 
 	// VisibilityArchiver is used to archive visibility and read archived visibility
 	VisibilityArchiver interface {
-		Archive(ctx context.Context, URI string, request ArchiveVisibilityRequest, opts ...ArchiveOption) error
-		Get(ctx context.Context, URI string, request GetVisibilityRequest) (GetVisibilityResponse, error)
+		Archive(ctx context.Context, URI string, request *ArchiveVisibilityRequest, opts ...ArchiveOption) error
+		Get(ctx context.Context, URI string, request *GetVisibilityRequest) (*GetVisibilityResponse, error)
 		ValidateURI(URI string) bool
 	}
 )

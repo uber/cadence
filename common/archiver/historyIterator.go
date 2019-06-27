@@ -72,7 +72,7 @@ var (
 
 // NewHistoryIterator returns a new HistoryIterator
 func NewHistoryIterator(
-	request ArchiveHistoryRequest,
+	request *ArchiveHistoryRequest,
 	historyManager persistence.HistoryManager,
 	historyV2Manager persistence.HistoryV2Manager,
 	config *HistoryIteratorConfig,
@@ -189,7 +189,8 @@ func (i *historyIterator) readHistory(firstEventID int64) ([]*shared.History, er
 			PageSize:    i.config.HistoryPageSize(i.domainName),
 			ShardID:     common.IntPtr(i.shardID),
 		}
-		return i.readFullPageV2EventsByBatch(i.historyV2Manager, req)
+		historyBatches, _, _, err := persistence.ReadFullPageV2EventsByBatch(i.historyV2Manager, req)
+		return historyBatches, err
 	}
 	req := &persistence.GetWorkflowExecutionHistoryRequest{
 		DomainID: i.domainID,
@@ -206,28 +207,6 @@ func (i *historyIterator) readHistory(firstEventID int64) ([]*shared.History, er
 		return nil, err
 	}
 	return resp.History, nil
-}
-
-func (i *historyIterator) readFullPageV2EventsByBatch(
-	historyV2Mgr persistence.HistoryV2Manager,
-	req *persistence.ReadHistoryBranchRequest,
-) ([]*shared.History, error) {
-	historyBatches := []*shared.History{}
-	eventsRead := 0
-	for {
-		response, err := historyV2Mgr.ReadHistoryBranchByBatch(req)
-		if err != nil {
-			return nil, err
-		}
-		historyBatches = append(historyBatches, response.History...)
-		for _, batch := range historyBatches {
-			eventsRead += len(batch.Events)
-		}
-		if eventsRead >= req.PageSize || len(response.NextPageToken) == 0 {
-			return historyBatches, nil
-		}
-		req.NextPageToken = response.NextPageToken
-	}
 }
 
 // reset resets iterator to a certain state given its encoded representation

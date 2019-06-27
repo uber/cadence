@@ -143,29 +143,7 @@ func (s *UtilSuite) TestReadFile() {
 	s.Equal("file contents", string(data))
 }
 
-func (s *UtilSuite) TestDeleteFile() {
-	dir, err := ioutil.TempDir("", "TestDeleteFile")
-	s.NoError(err)
-	defer os.Remove(dir)
-	s.assertDirectoryExists(dir)
-
-	filename := "test-file-name"
-	fpath := filepath.Join(dir, filename)
-	deleted, err := deleteFile(fpath)
-	s.True(os.IsNotExist(err))
-	s.False(deleted)
-
-	err = writeFile(fpath, []byte("file contents"))
-	s.NoError(err)
-	deleted, err = deleteFile(fpath)
-	s.NoError(err)
-	s.True(deleted)
-	exists, err := fileExists(fpath)
-	s.NoError(err)
-	s.False(exists)
-}
-
-func (s *UtilSuite) TestListFiles() {
+func (s *UtilSuite) TestListFilesByPrefix() {
 	dir, err := ioutil.TempDir("", "TestListFiles")
 	s.NoError(err)
 	defer os.Remove(dir)
@@ -173,7 +151,7 @@ func (s *UtilSuite) TestListFiles() {
 
 	filename := "test-file-name"
 	fpath := filepath.Join(dir, filename)
-	files, err := listFiles(fpath)
+	files, err := listFilesByPrefix(fpath, "test-")
 	s.Error(err)
 	s.Nil(files)
 
@@ -184,7 +162,10 @@ func (s *UtilSuite) TestListFiles() {
 	for _, f := range expectedFileNames {
 		s.createFile(dir, f)
 	}
-	actualFileNames, err := listFiles(dir)
+	for _, f := range []string{"randomFile", "fileWithOtherPrefix"} {
+		s.createFile(dir, f)
+	}
+	actualFileNames, err := listFilesByPrefix(dir, "file_")
 	s.NoError(err)
 	s.Equal(expectedFileNames, actualFileNames)
 }
