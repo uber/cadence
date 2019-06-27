@@ -22,7 +22,7 @@ In this case, a session represents the deployment of a service to one worker and
 
 ## Proposal
 
-The scope of the proposal contains only cadence client. Cadence server doesn’t need to be changed at all. The basic idea here is that we should write special workflow code for users to perform activity scheduling and worker monitoring, and expose simple APIs to users. Now that users don’t need to care about those implementation details, they can focus on their own business logic.
+The scope of the proposal contains only Cadence client. Cadence server doesn’t need to be changed at all. The basic idea here is that we should write special workflow code for users to perform activity scheduling and worker monitoring, and expose simple APIs to users. Now that users don’t need to care about those implementation details, they can focus on their own business logic.
 
 The proposal includes both API changes and implementations. It aims at solving three problems:
 
@@ -40,7 +40,9 @@ The following sections will first go through the APIs exposed to users, provide 
 
 There will be four new APIs available when writing a workflow:
 
-* sessionCtx, err := workflow.**CreateSession**(ctx)
+```go
+sessionCtx, err := workflow.**CreateSession**(ctx)
+```
 
 User call this API to create a session and use the returned sessionCtx to execute activities. All activities executed within returned sessionCtx are considered to be part of the session and will be executed on the same worker. It’s possible that this call will fail due to various reasons: for example, no worker is available at this time.
 
@@ -48,65 +50,73 @@ The session will be created on one of the workers that poll from the tasklist sp
 
 When executing an activity within a session, user may get two types of errors. The first one is those returned from user activities. Session will not be marked as failed in this case, so user can return whatever error they want and apply their business logic as necessary. If they want to end a session due to the error returned from the activity, use the CompleteSession() API below. The second type of error is a special error which says the session has failed due to worker failure and the session is marked as failed in the background. In this case, no activities can be executed using this context. It’s the user’s choice on how to handle the failure; for example, they can create a new session to retry or end the workflow with an error.
 
-* err := workflow.**CompleteSession**(sessionCtx)
+```go
+err := workflow.**CompleteSession**(sessionCtx)
+```
 
 This API is used to complete a session. It will return an error if the context passed in does not contain a session with state "Open" or it fails to complete the session.
 
-* sessionInfo, err := workflow.**GetSessionInfo**(sessionCtx)
+```go
+sessionInfo, err := workflow.**GetSessionInfo**(sessionCtx)
+```
 
 This API returns session information stored in the context. It returns an error if the context passed in doesn’t contain any session information or the session has already failed. For now, the only information returned is sessionID, which is a unique identifier for a session.
 
-* sessionCtx, err := workflow.**RecreateSession**(ctx, sessionInfo)
+```go
+sessionCtx, err := workflow.**RecreateSession**(ctx, sessionInfo)
+```
 
 This API takes session information and recreate a session. All the activities in the recreated session will be executed by the specified worker. The primary use case will be continueAsNew. Before returning the continueAsNew error, user should get the sessionInfo from sessionCtx and complete the session. Then in the next run, the session can be recreated and activities in this new run can continue to be executed on the same activity worker as previous runs.
 
 #### Example
 
-The basic usage looks like the following (it belongs to a larger workflow): 
+The basic usage looks like the following (it belongs to a larger workflow):
 
-  sessionCtx, err := CreateSession(ctx)
+```go
+sessionCtx, err := CreateSession(ctx)
 
-  if err != nil {
+if err != nil {
 
-      // Creation failed. Wrong ctx or too many outstanding sessions.
+    // Creation failed. Wrong ctx or too many outstanding sessions.
 
-  }
+}
 
-  err = ExecuteActivity(sessionCtx, DownloadFileActivity, filename).Get(sessionCtx, nil)
+err = ExecuteActivity(sessionCtx, DownloadFileActivity, filename).Get(sessionCtx, nil)
 
-  if err != nil {
+if err != nil {
 
-      // Session(worker) has failed or activity itself returns an error.
+    // Session(worker) has failed or activity itself returns an error.
 
-      // User can perform normal error handling here and decide whether creating a new session is needed. 
+    // User can perform normal error handling here and decide whether creating a new session is needed.
 
-      // If they decide to create a new session, they need to call CompleteSession() so that worker resource can be released. It’s recommended that users create a function for session and call defer CompleteSession(sessionCtx) after a session is created. If session retry is needed, this function can be called multiple times if the error returned is retriable. 
+    // If they decide to create a new session, they need to call CompleteSession() so that worker resource can be released. It’s recommended that users create a function for session and call defer CompleteSession(sessionCtx) after a session is created. If session retry is needed, this function can be called multiple times if the error returned is retriable.
 
-  }
+}
 
-  err = ExecuteActivity(sessionCtx, ProcessFileActivity, filename).Get(sessionCtx, nil)
+err = ExecuteActivity(sessionCtx, ProcessFileActivity, filename).Get(sessionCtx, nil)
 
-  if err != nil {
+if err != nil {
 
-      // Session(worker) has failed or activity itself returns an error.
+    // Session(worker) has failed or activity itself returns an error.
 
-  }
+}
 
-  err = ExecuteActivity(sessionCtx, UploadFileActivity, filename).Get(sessionCtx, nil)
+err = ExecuteActivity(sessionCtx, UploadFileActivity, filename).Get(sessionCtx, nil)
 
-  if err != nil {
+if err != nil {
 
-      // Session(worker) has failed or activity itself returns an error.
+    // Session(worker) has failed or activity itself returns an error.
 
-  }
+}
 
-  err = CompleteSession(sessionCtx)
+err = CompleteSession(sessionCtx)
 
-  if err != nil {
+if err != nil {
 
-      // Wrong ctx is used or failed to release session resource.
+    // Wrong ctx is used or failed to release session resource.
 
-  }
+}
+```
 
 #### New Worker Options
 
@@ -130,7 +140,7 @@ There will be three new options available when creating a worker:
 
 ### Session Model
 
-All sessions are **resource specific**. It basically means a session is always tied to some kind of resource (not the worker). The resource can be CPU, GPU, memory, file descriptors etc and we want all the activities within a session to be executed by the same worker which owns the resource. If worker dies and restarts, as long as it owns the same resource, we can try to reestablish the session (this is future work). Also user needs to ensure that resource is owned by only one worker. 
+All sessions are **resource specific**. It basically means a session is always tied to some kind of resource (not the worker). The resource can be CPU, GPU, memory, file descriptors etc and we want all the activities within a session to be executed by the same worker which owns the resource. If worker dies and restarts, as long as it owns the same resource, we can try to reestablish the session (this is future work). Also user needs to ensure that resource is owned by only one worker.
 
 Note that when creating a session, user doesn’t need to specify the resource that is consumed by the session. This is because right now one worker owns only one resource, so there’s only one resource type on the worker. As a result, as long as the user specifies the correct tasklist in the context passed into the createSession API, the correct type of resource will be consumed (since there’s only one). Later, a worker can support multiple types of resources and at that time, users need to specify the resource type when creating a session.
 
@@ -150,7 +160,7 @@ When user calls the CreateSession() or CreateSessionWithHostID() API, a structur
 
 When user calls the CompleteSession() API, the state of the session will be changed to "Closed" in place, that’s why this API won’t return a new context variable.
 
-User has no way to set the state of a session to failed. The state of a session is "failed" only when the worker executing the session is down and the change from “open” to “failed” is done in the background. Also notice that it’s possible that the worker is down, but the session state is still “Open” (since it takes some time to detect the worker failure). In this case, when a user executes an activity, the activity will still be scheduled on the resource specific tasklist. However, since no one will poll from this task list, that activity will timeout and user will get an error. 
+User has no way to set the state of a session to failed. The state of a session is "failed" only when the worker executing the session is down and the change from “open” to “failed” is done in the background. Also notice that it’s possible that the worker is down, but the session state is still “Open” (since it takes some time to detect the worker failure). In this case, when a user executes an activity, the activity will still be scheduled on the resource specific tasklist. However, since no one will poll from this task list, that activity will timeout and user will get an error.
 
 Note that If user tries to call CreateSession() with a context which already has an open session, the call will return an error. Same thing happens if a call to CompleteSession() is made when there’s no open session. You can call it with a failed session though, but it won’t do anything. This allowed because the state transition to "failed" is done in the background, and user may not know the session has failed.
 
@@ -158,7 +168,7 @@ Note that If user tries to call CreateSession() with a context which already has
 
 When scheduling an activity, the workflow worker needs to check the context to see if this activity belongs to a session. If so and the state of that session is "open", get the session tasklist from the context and use it to override the tasklist value specified in the activity option. If on the other hand, the state is “failed”, the ExecuteActivity call will immediately fail without scheduling the activity and return an error through Future.Get().
 
-What CreateSession() and CompleteSession() really do is **scheduling a special activity** and get some information from the worker which executes the activity. 
+What CreateSession() and CompleteSession() really do is **scheduling a special activity** and get some information from the worker which executes the activity.
 
 * For CreateSession(), a special **session creation activity** will be scheduled on a global tasklist which is only used for this type of activity. During the execution of the activity, a signal containing the tasklist (depending on the session type, the tasklist will be either host specific or process specific) name will be sent back to the workflow. Then the tasklist name can be stored in the context for later use. The activity also performs heart beating throughout the whole lifetime of the session, so if the activity worker is down, the workflow can be notified and set the session state to "Failed". The CreateSession() call is considered as success when it gets the tasklist.
 
@@ -172,27 +182,27 @@ When EnableSessionWorker is set to true, two more activity workers will be start
 
 * Session Creation Worker: this worker polls from a global tasklist whose name is derived from the tasklist name specified in the workerOption. This worker executes only one kind of activity: the special session creation activity. This special activity serves several purposes:
 
-1. **Send the resource specific tasklist name** back to the workflow through signal.
+   1. **Send the resource specific tasklist name** back to the workflow through signal.
 
-2. Keep **heart beating** to cadence server till the end of the session.
+   2. Keep **heart beating** to cadence server till the end of the session.
 
-If the heart beating returns EntityNotExist Error, this means the workflow/session has gone and this special activity should stop to release resource.
+      If the heart beating returns EntityNotExist Error, this means the workflow/session has gone and this special activity should stop to release resource.
 
-If on the other hand, the worker is down, cadence server will send heartbeat timeout error to the workflow, so the workflow can be notified and update the session state. Later ExecuteActivity() call with the failed session context will also fail.
+      If on the other hand, the worker is down, cadence server will send heartbeat timeout error to the workflow, so the workflow can be notified and update the session state. Later ExecuteActivity() call with the failed session context will also fail.
 
-1. Check the number of currently running sessions on the worker. If the maximum number of concurrent session has been reached, return an error to fail the creation.
+   3. Check the number of currently running sessions on the worker. If the maximum number of concurrent session has been reached, return an error to fail the creation.
 
-One detail we need to ensure it that when the maximum number of concurrent session has been reached, this worker should stop polling from the global task list.
+   One detail we need to ensure is that when the maximum number of concurrent session has been reached, this worker should stop polling from the global task list.
 
 * Session Activity Worker: this worker only polls from the resource specific tasklist. There are three kinds of activities can be run by this worker.
 
-1. User activities in a session that belongs to this host.
+   1. User activities in a session that belongs to this host.
 
-2. Special activity to complete a session.
+   2. Special activity to complete a session.
 
-   The sole purpose of this activity is to stop the long running session creation activity so that new sessions can be executed.
+      The sole purpose of this activity is to stop the long running session creation activity so that new sessions can be executed.
 
-3. Special session creation activity scheduled by RecreateSession().
+   3. Special session creation activity scheduled by RecreateSession().
 
 When domain failover happens, since no worker will poll from the resource specific task, all activities within a session will timeout and user will get an error. Also cadence server will detect heartbeat timeout from the session creation activity.
 
