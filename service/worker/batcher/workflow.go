@@ -65,6 +65,7 @@ type (
 	ResetParams struct {
 		ResetType         string
 		BadBinaryChecksum string
+		SkipIfOpen        bool
 	}
 
 	BatchParams struct {
@@ -72,6 +73,8 @@ type (
 		DomainName string
 		// To query the target workflows for processing
 		QueryCondition string
+		// Reaason for the operation
+		Reason string
 		// Supporting: reset,terminate
 		BatchType string
 		// Detailed param for reset batch type
@@ -80,6 +83,7 @@ type (
 		// Below are all optional
 
 		// RPS of processing. Default to defaultRPS
+		// TODO we will implement smarter way than this static rate limiter: https://github.com/uber/cadence/issues/2138
 		RPS int
 		// Number of goroutines running in parallel to process
 		Concurrency int
@@ -240,7 +244,6 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 func startTaskProcessor(
 	ctx context.Context, batchParams BatchParams, taskCh chan taskDetail,
 	limiter *rate.Limiter, doneCount, skipCount, errCount *int32) {
-	batcher := ctx.Value(batcherContextKey).(Batcher)
 
 	for {
 		select {
@@ -249,12 +252,16 @@ func startTaskProcessor(
 				return
 			}
 			var err error
+			err = limiter.Wait(ctx)
+			if err != nil {
+				getActivityLogger(ctx).Error("Failed to wait for rateLimiter", tag.Error(err))
+			}
 
 			switch batchParams.BatchType {
 			case BatchTypeTerminate:
-				err = processTerminate(ctx, batcher, limiter, task)
+				err = processTerminate(ctx, limiter, task, batchParams)
 			case BatchTypeReset:
-				err = processReset(ctx, batcher, limiter, task, batchParams.ResetParams)
+				err = processReset(ctx, limiter, task, batchParams)
 			}
 			if err != nil {
 				_, ok := err.(*shared.EntityNotExistsError)
@@ -277,16 +284,41 @@ func startTaskProcessor(
 	}
 }
 
-func processTerminate(ctx context.Context, batcher Batcher, limiter *rate.Limiter, task taskDetail) error {
-	//TODO
+func processTerminate(ctx context.Context, limiter *rate.Limiter, task taskDetail, param BatchParams) error {
+	batcher := ctx.Value(batcherContextKey).(Batcher)
+
+	wfs := []shared.WorkflowExecution{task.execution}
+	for len(wfs) >= 0 {
+		wf := wfs[0]
+		newCtx, cancel := context.WithDeadline(ctx, time.Now().Add(rpcTimeout))
+		err := batcher.svcClient.TerminateWorkflowExecution(newCtx, &shared.TerminateWorkflowExecutionRequest{
+			Domain:            common.StringPtr(param.DomainName),
+			WorkflowExecution: &wf,
+			Reason:            common.StringPtr(param.Reason),
+			Identity:          common.StringPtr(batchWFTypeName),
+		})
+		cancel()
+		if err != nil{
+			return err
+		}
+		newCtx, cancel = context.WithDeadline(ctx, time.Now().Add(rpcTimeout))
+		resp, err := batcher.svcClient.DescribeWorkflowExecution(newCtx, &shared.DescribeWorkflowExecutionRequest{
+			Domain:            common.StringPtr(param.DomainName),
+			Execution: &wf,
+		})
+		cancel()
+		if err != nil{
+			return err
+		}
+		if resp.WorkflowExecutionInfo.
+	}
+
 	return nil
 }
 
-func processReset(ctx context.Context, batcher Batcher, limiter *rate.Limiter, task taskDetail, param ResetParams) error {
-	err := limiter.Wait(ctx)
-	if err != nil {
-		getActivityLogger(ctx).Error("Failed to wait for rateLimiter", tag.Error(err))
-	}
+func processReset(ctx context.Context, limiter *rate.Limiter, task taskDetail, param BatchParams) error {
+	//TODO
+	return nil
 }
 
 func isDone(ctx context.Context) bool {
