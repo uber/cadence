@@ -57,9 +57,11 @@ func newTaskReader(tlMgr *taskListManagerImpl) *taskReader {
 		tlMgr:               tlMgr,
 		cancelCtx:           ctx,
 		cancelFunc:          cancel,
-		taskBuffer:          make(chan *persistence.TaskInfo, tlMgr.config.GetTasksBatchSize()-1),
 		notifyC:             make(chan struct{}, 1),
 		dispatcherShutdownC: make(chan struct{}),
+		// we always dequeue the head of the buffer and try to dispatch it to a poller
+		// so allocate one less than desired target buffer size
+		taskBuffer: make(chan *persistence.TaskInfo, tlMgr.config.GetTasksBatchSize()-1),
 	}
 }
 
