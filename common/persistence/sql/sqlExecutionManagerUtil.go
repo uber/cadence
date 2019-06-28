@@ -1288,6 +1288,7 @@ func updateExecution(
 
 	// TODO we should set the last update time on business logic layer
 	executionInfo.LastUpdatedTimestamp = time.Now()
+
 	row, err := buildExecutionRow(executionInfo, replicationState, shardID)
 	if err != nil {
 		return err
