@@ -763,6 +763,7 @@ func applyTasks(
 	replicationTasks []p.Task,
 	timerTasks []p.Task,
 ) error {
+
 	if err := createTransferTasks(
 		batch,
 		transferTasks,
@@ -807,6 +808,7 @@ func createTransferTasks(
 	workflowID string,
 	runID string,
 ) error {
+
 	targetDomainID := domainID
 	for _, task := range transferTasks {
 		var taskList string
