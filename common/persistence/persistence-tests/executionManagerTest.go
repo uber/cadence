@@ -727,7 +727,7 @@ func (s *ExecutionManagerSuite) TestPersistenceStartWorkflowWithReplicationState
 	s.Equal(workflowExecution.GetRunId(), startedErr.RunID, startedErr.Msg)
 	s.Equal(p.WorkflowStateRunning, startedErr.State, startedErr.Msg)
 	s.Equal(p.WorkflowCloseStatusNone, startedErr.CloseStatus, startedErr.Msg)
-	s.Equal(common.EmptyVersion, startedErr.LastWriteVersion, startedErr.Msg)
+	s.Equal(lastWriteVersion, startedErr.LastWriteVersion, startedErr.Msg)
 	s.Empty(task1, "Expected empty task identifier.")
 
 	response, err2 := s.ExecutionManager.CreateWorkflowExecution(&p.CreateWorkflowExecutionRequest{

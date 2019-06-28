@@ -1140,12 +1140,8 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 				if execution, ok := previous["execution"].(map[string]interface{}); ok {
 					// CreateWorkflowExecution failed because it already exists
 					executionInfo := createWorkflowExecutionInfo(execution)
-
-					lastWriteVersion := common.EmptyVersion
-					if replicationState != nil {
-						replicationState := createReplicationState(previous["replication_state"].(map[string]interface{}))
-						lastWriteVersion = replicationState.LastWriteVersion
-					}
+					replicationState := createReplicationState(previous["replication_state"].(map[string]interface{}))
+					lastWriteVersion := replicationState.LastWriteVersion
 
 					msg := fmt.Sprintf("Workflow execution already running. WorkflowId: %v, RunId: %v, rangeID: %v, columns: (%v)",
 						executionInfo.WorkflowID, executionInfo.RunID, request.RangeID, strings.Join(columns, ","))
