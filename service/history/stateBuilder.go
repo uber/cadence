@@ -497,6 +497,10 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 				return nil, nil, nil, err
 			}
 
+		case shared.EventTypeUpsertWorkflowSearchAttributes:
+			b.msBuilder.ReplicateUpsertWorkflowSearchAttributesEvent(event)
+			b.transferTasks = append(b.transferTasks, &persistence.UpsertWorkflowSearchAttributesTask{})
+
 		case shared.EventTypeWorkflowExecutionContinuedAsNew:
 			if len(newRunHistory) == 0 {
 				return nil, nil, nil, errors.NewInternalFailureError(ErrMessageNewRunHistorySizeZero)
@@ -564,6 +568,10 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			if err != nil {
 				return nil, nil, nil, err
 			}
+
+		default:
+			err := &shared.BadRequestError{Message: "Unknown event type"}
+			return nil, nil, nil, err
 		}
 	}
 

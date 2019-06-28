@@ -2559,6 +2559,11 @@ func (_m *mockMutableState) ReplicateTransientDecisionTaskScheduled() (*decision
 	return r0, r1
 }
 
+// ReplicateUpsertWorkflowSearchAttributesEvent provides a mock function with given fields: _a0
+func (_m *mockMutableState) ReplicateUpsertWorkflowSearchAttributesEvent(_a0 *shared.HistoryEvent) {
+	_m.Called(_a0)
+}
+
 // ReplicateWorkflowExecutionCancelRequestedEvent provides a mock function with given fields: _a0
 func (_m *mockMutableState) ReplicateWorkflowExecutionCancelRequestedEvent(_a0 *shared.HistoryEvent) error {
 	ret := _m.Called(_a0)

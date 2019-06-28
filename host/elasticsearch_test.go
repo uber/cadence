@@ -189,9 +189,10 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_SearchAttribute() {
 
 		upsertDecision := &workflow.Decision{
 			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeUpsertWorkflowSearchAttributes),
-			UpsertWorkflowSearchAttributesDecisionAttributes: &workflow.UpsertWorkflowSearchAttributesDecisionAttributes{}}
+			UpsertWorkflowSearchAttributesDecisionAttributes: &workflow.UpsertWorkflowSearchAttributesDecisionAttributes{
+				SearchAttributes: getUpsertSearchAttributes(),
+			}}
 
-		upsertDecision.UpsertWorkflowSearchAttributesDecisionAttributes.SearchAttributes = getUpsertSearchAttributes()
 		return nil, []*workflow.Decision{upsertDecision}, nil
 	}
 	taskList := &workflow.TaskList{Name: common.StringPtr(tl)}

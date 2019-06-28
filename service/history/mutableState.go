@@ -183,6 +183,7 @@ type (
 		ReplicateTimerFiredEvent(*workflow.HistoryEvent) error
 		ReplicateTimerStartedEvent(*workflow.HistoryEvent) (*persistence.TimerInfo, error)
 		ReplicateTransientDecisionTaskScheduled() (*decisionInfo, error)
+		ReplicateUpsertWorkflowSearchAttributesEvent(*workflow.HistoryEvent)
 		ReplicateWorkflowExecutionCancelRequestedEvent(*workflow.HistoryEvent) error
 		ReplicateWorkflowExecutionCanceledEvent(int64, *workflow.HistoryEvent) error
 		ReplicateWorkflowExecutionCompletedEvent(int64, *workflow.HistoryEvent) error
