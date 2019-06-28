@@ -24,8 +24,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"runtime/debug"
 	"testing"
 	"time"
 
@@ -1515,14 +1513,6 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowSuccess() 
 }
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowSuccess() {
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("####")
-			fmt.Println(string(debug.Stack()))
-			fmt.Println("####")
-		}
-	}()
-
 	domainID := validDomainID
 	we := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
