@@ -370,8 +370,11 @@ func (s *shardContextImpl) UpdateTimerMaxReadLevel(cluster string) time.Time {
 func (s *shardContextImpl) CreateWorkflowExecution(request *persistence.CreateWorkflowExecutionRequest) (
 	*persistence.CreateWorkflowExecutionResponse, error) {
 
+	domainID := request.NewWorkflowSnapshot.ExecutionInfo.DomainID
+	workflowID := request.NewWorkflowSnapshot.ExecutionInfo.WorkflowID
+
 	// do not try to get domain cache within shard lock
-	domainEntry, err := s.domainCache.GetDomainByID(request.NewWorkflowSnapshot.ExecutionInfo.DomainID)
+	domainEntry, err := s.domainCache.GetDomainByID(domainID)
 	if err != nil {
 		return nil, err
 	}
@@ -383,35 +386,19 @@ func (s *shardContextImpl) CreateWorkflowExecution(request *persistence.CreateWo
 	// assign IDs for the transfer tasks
 	// Must be done under the shard lock to ensure transfer tasks are written to persistence in increasing
 	// ID order
-	for _, task := range request.NewWorkflowSnapshot.TransferTasks {
-		id, err := s.getNextTransferTaskIDLocked()
-		if err != nil {
-			return nil, err
-		}
-		s.logger.Debug(fmt.Sprintf("Assigning transfer task ID: %v", id))
-		task.SetTaskID(id)
-		transferMaxReadLevel = id
-	}
-
-	for _, task := range request.NewWorkflowSnapshot.ReplicationTasks {
-		id, err := s.getNextTransferTaskIDLocked()
-		if err != nil {
-			return nil, err
-		}
-		s.logger.Debug(fmt.Sprintf("Assigning replication task ID: %v", id))
-		task.SetTaskID(id)
-		transferMaxReadLevel = id
-	}
-
-	defer s.updateMaxReadLevelLocked(transferMaxReadLevel)
-
-	if err = s.allocateTimerIDsLocked(
-		domainEntry,
-		request.NewWorkflowSnapshot.TimerTasks,
-		request.NewWorkflowSnapshot.ExecutionInfo.DomainID,
-		request.NewWorkflowSnapshot.ExecutionInfo.WorkflowID); err != nil {
+	err = s.allocateTransferIDsLocked(request.NewWorkflowSnapshot.TransferTasks, &transferMaxReadLevel)
+	if err != nil {
 		return nil, err
 	}
+	err = s.allocateTransferIDsLocked(request.NewWorkflowSnapshot.ReplicationTasks, &transferMaxReadLevel)
+	if err != nil {
+		return nil, err
+	}
+	err = s.allocateTimerIDsLocked(domainEntry, request.NewWorkflowSnapshot.TimerTasks, domainID, workflowID)
+	if err != nil {
+		return nil, err
+	}
+	defer s.updateMaxReadLevelLocked(transferMaxReadLevel)
 
 Create_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
@@ -467,8 +454,11 @@ func (s *shardContextImpl) getDefaultEncoding(domainEntry *cache.DomainCacheEntr
 
 func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) (*persistence.UpdateWorkflowExecutionResponse, error) {
 
+	domainID := request.UpdateWorkflowMutation.ExecutionInfo.DomainID
+	workflowID := request.UpdateWorkflowMutation.ExecutionInfo.WorkflowID
+
 	// do not try to get domain cache within shard lock
-	domainEntry, err := s.domainCache.GetDomainByID(request.UpdateWorkflowMutation.ExecutionInfo.DomainID)
+	domainEntry, err := s.domainCache.GetDomainByID(domainID)
 	if err != nil {
 		return nil, err
 	}
@@ -481,60 +471,33 @@ func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWo
 	// assign IDs for the transfer tasks
 	// Must be done under the shard lock to ensure transfer tasks are written to persistence in increasing
 	// ID order
-	for _, task := range request.UpdateWorkflowMutation.TransferTasks {
-		id, err := s.getNextTransferTaskIDLocked()
-		if err != nil {
-			return nil, err
-		}
-		s.logger.Debug(fmt.Sprintf("Assigning transfer task ID: %v", id))
-		task.SetTaskID(id)
-		transferMaxReadLevel = id
+	err = s.allocateTransferIDsLocked(request.UpdateWorkflowMutation.TransferTasks, &transferMaxReadLevel)
+	if err != nil {
+		return nil, err
 	}
-
-	for _, task := range request.UpdateWorkflowMutation.ReplicationTasks {
-		id, err := s.getNextTransferTaskIDLocked()
-		if err != nil {
-			return nil, err
-		}
-		s.logger.Debug(fmt.Sprintf("Assigning replication task ID: %v", id))
-		task.SetTaskID(id)
-		transferMaxReadLevel = id
+	err = s.allocateTransferIDsLocked(request.UpdateWorkflowMutation.ReplicationTasks, &transferMaxReadLevel)
+	if err != nil {
+		return nil, err
 	}
-
+	err = s.allocateTimerIDsLocked(domainEntry, request.UpdateWorkflowMutation.TimerTasks, domainID, workflowID)
+	if err != nil {
+		return nil, err
+	}
 	if request.NewWorkflowSnapshot != nil {
-		for _, task := range request.NewWorkflowSnapshot.TransferTasks {
-			id, err := s.getNextTransferTaskIDLocked()
-			if err != nil {
-				return nil, err
-			}
-			s.logger.Debug(fmt.Sprintf("Assigning transfer task ID: %v", id))
-			task.SetTaskID(id)
-			transferMaxReadLevel = id
+		err = s.allocateTransferIDsLocked(request.NewWorkflowSnapshot.TransferTasks, &transferMaxReadLevel)
+		if err != nil {
+			return nil, err
 		}
-
-		for _, task := range request.NewWorkflowSnapshot.ReplicationTasks {
-			id, err := s.getNextTransferTaskIDLocked()
-			if err != nil {
-				return nil, err
-			}
-			s.logger.Debug(fmt.Sprintf("Assigning replication task ID: %v", id))
-			task.SetTaskID(id)
-			transferMaxReadLevel = id
+		err = s.allocateTransferIDsLocked(request.NewWorkflowSnapshot.ReplicationTasks, &transferMaxReadLevel)
+		if err != nil {
+			return nil, err
 		}
-
-		err = s.allocateTimerIDsLocked(domainEntry, request.NewWorkflowSnapshot.TimerTasks,
-			request.UpdateWorkflowMutation.ExecutionInfo.DomainID, request.UpdateWorkflowMutation.ExecutionInfo.WorkflowID)
+		err = s.allocateTimerIDsLocked(domainEntry, request.NewWorkflowSnapshot.TimerTasks, domainID, workflowID)
 		if err != nil {
 			return nil, err
 		}
 	}
 	defer s.updateMaxReadLevelLocked(transferMaxReadLevel)
-
-	err = s.allocateTimerIDsLocked(domainEntry, request.UpdateWorkflowMutation.TimerTasks,
-		request.UpdateWorkflowMutation.ExecutionInfo.DomainID, request.UpdateWorkflowMutation.ExecutionInfo.WorkflowID)
-	if err != nil {
-		return nil, err
-	}
 
 Update_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
@@ -595,8 +558,12 @@ func (s *shardContextImpl) allocateTransferIDsLocked(tasks []persistence.Task, t
 }
 
 func (s *shardContextImpl) ResetWorkflowExecution(request *persistence.ResetWorkflowExecutionRequest) error {
+
+	domainID := request.NewWorkflowSnapshot.ExecutionInfo.DomainID
+	workflowID := request.NewWorkflowSnapshot.ExecutionInfo.WorkflowID
+
 	// do not try to get domain cache within shard lock
-	domainEntry, err := s.domainCache.GetDomainByID(request.CurrExecutionInfo.DomainID)
+	domainEntry, err := s.domainCache.GetDomainByID(domainID)
 	if err != nil {
 		return err
 	}
@@ -617,25 +584,26 @@ func (s *shardContextImpl) ResetWorkflowExecution(request *persistence.ResetWork
 	if err != nil {
 		return err
 	}
-	err = s.allocateTransferIDsLocked(request.CurrReplicationTasks, &transferMaxReadLevel)
+	err = s.allocateTimerIDsLocked(domainEntry, request.NewWorkflowSnapshot.TimerTasks, domainID, workflowID)
 	if err != nil {
 		return err
 	}
-	err = s.allocateTransferIDsLocked(request.CurrTransferTasks, &transferMaxReadLevel)
-	if err != nil {
-		return err
+	if request.CurrentWorkflowMutation != nil {
+		err = s.allocateTransferIDsLocked(request.CurrentWorkflowMutation.TransferTasks, &transferMaxReadLevel)
+		if err != nil {
+			return err
+		}
+		err = s.allocateTransferIDsLocked(request.CurrentWorkflowMutation.ReplicationTasks, &transferMaxReadLevel)
+		if err != nil {
+			return err
+		}
+		err = s.allocateTimerIDsLocked(domainEntry, request.CurrentWorkflowMutation.TimerTasks, domainID, workflowID)
+		if err != nil {
+			return err
+		}
 	}
 	defer s.updateMaxReadLevelLocked(transferMaxReadLevel)
 
-	// assign IDs for timer tasks
-	err = s.allocateTimerIDsLocked(domainEntry, request.NewWorkflowSnapshot.TimerTasks, request.CurrExecutionInfo.DomainID, request.CurrExecutionInfo.WorkflowID)
-	if err != nil {
-		return err
-	}
-	err = s.allocateTimerIDsLocked(domainEntry, request.CurrTimerTasks, request.CurrExecutionInfo.DomainID, request.CurrExecutionInfo.WorkflowID)
-	if err != nil {
-		return err
-	}
 Reset_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
 		currentRangeID := s.getRangeID()
