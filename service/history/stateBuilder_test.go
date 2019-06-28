@@ -2428,3 +2428,10 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskCancelRequested
 	s.Empty(s.stateBuilder.newRunTimerTasks)
 	s.Empty(s.stateBuilder.newRunTransferTasks)
 }
+
+func (s *stateBuilderSuite) TestApplyEventsNewEventsNotHandled() {
+	eventTypes := shared.EventType_Values()
+	s.Equal(42, len(eventTypes), "If you see this error, you are adding new event type. "+
+		"Before updating the number to make this test pass, please make sure you update stateBuilderImpl.applyEvents method "+
+		"to handle the new decision type. Otherwise cross dc will not work on the new event.")
+}
