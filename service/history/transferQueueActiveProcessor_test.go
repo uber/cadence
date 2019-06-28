@@ -1523,6 +1523,21 @@ func (s *transferQueueActiveProcessorSuite) TestProcessRecordWorkflowStartedTask
 	s.Nil(err)
 }
 
+func (s *transferQueueActiveProcessorSuite) TestCopySearchAttributes() {
+	var input map[string][]byte
+	s.Nil(copySearchAttributes(input))
+
+	key := "key"
+	val := []byte{'1', '2', '3'}
+	input = map[string][]byte{
+		key: val,
+	}
+	result := copySearchAttributes(input)
+	s.Equal(input, result)
+	result[key][0] = '0'
+	s.Equal(byte('1'), val[0])
+}
+
 func (s *transferQueueActiveProcessorSuite) createAddActivityTaskRequest(task *persistence.TransferTaskInfo,
 	ai *persistence.ActivityInfo) *matching.AddActivityTaskRequest {
 	execution := workflow.WorkflowExecution{
