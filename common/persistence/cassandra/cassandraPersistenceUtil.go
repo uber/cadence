@@ -36,7 +36,7 @@ func (d *cassandraPersistence) applyWorkflowMutationBatch(
 	workflowMutation *p.InternalWorkflowMutation,
 ) error {
 
-	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
+	cqlNowTimestampMillis := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 
 	executionInfo := workflowMutation.ExecutionInfo
 	replicationState := workflowMutation.ReplicationState
@@ -50,7 +50,7 @@ func (d *cassandraPersistence) applyWorkflowMutationBatch(
 		shardID,
 		executionInfo,
 		replicationState,
-		cqlNowTimestamp,
+		cqlNowTimestampMillis,
 		condition,
 	); err != nil {
 		return err
@@ -160,7 +160,7 @@ func applyWorkflowSnapshotBatchAsReset(
 	workflowSnapshot *p.InternalWorkflowSnapshot,
 ) error {
 
-	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
+	cqlNowTimestampMillis := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 
 	executionInfo := workflowSnapshot.ExecutionInfo
 	replicationState := workflowSnapshot.ReplicationState
@@ -174,7 +174,7 @@ func applyWorkflowSnapshotBatchAsReset(
 		shardID,
 		executionInfo,
 		replicationState,
-		cqlNowTimestamp,
+		cqlNowTimestampMillis,
 		condition,
 	); err != nil {
 		return err
@@ -282,7 +282,7 @@ func applyWorkflowSnapshotBatchAsNew(
 	workflowSnapshot *p.InternalWorkflowSnapshot,
 ) error {
 
-	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
+	cqlNowTimestampMillis := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 
 	executionInfo := workflowSnapshot.ExecutionInfo
 	replicationState := workflowSnapshot.ReplicationState
@@ -296,7 +296,7 @@ func applyWorkflowSnapshotBatchAsNew(
 		shardID,
 		executionInfo,
 		replicationState,
-		cqlNowTimestamp,
+		cqlNowTimestampMillis,
 	); err != nil {
 		return err
 	}
@@ -393,7 +393,7 @@ func createExecution(
 	shardID int,
 	executionInfo *p.InternalWorkflowExecutionInfo,
 	replicationState *p.ReplicationState,
-	cqlNowTimestamp int64,
+	cqlNowTimestampMillis int64,
 ) error {
 
 	// validate workflow state & close status
@@ -419,8 +419,8 @@ func createExecution(
 	}
 
 	// TODO we should set the start time and last update time on business logic layer
-	executionInfo.StartTimestamp = time.Unix(0, p.DBTimestampToUnixNano(cqlNowTimestamp))
-	executionInfo.LastUpdatedTimestamp = time.Unix(0, p.DBTimestampToUnixNano(cqlNowTimestamp))
+	executionInfo.StartTimestamp = time.Unix(0, p.DBTimestampToUnixNano(cqlNowTimestampMillis))
+	executionInfo.LastUpdatedTimestamp = time.Unix(0, p.DBTimestampToUnixNano(cqlNowTimestampMillis))
 
 	completionData, completionEncoding := p.FromDataBlob(executionInfo.CompletionEvent)
 	if replicationState == nil {
@@ -575,7 +575,7 @@ func updateExecution(
 	shardID int,
 	executionInfo *p.InternalWorkflowExecutionInfo,
 	replicationState *p.ReplicationState,
-	cqlNowTimestamp int64,
+	cqlNowTimestampMillis int64,
 	condition int64,
 ) error {
 
@@ -602,7 +602,7 @@ func updateExecution(
 	}
 
 	// TODO we should set the last update time on business logic layer
-	executionInfo.LastUpdatedTimestamp = time.Unix(0, p.DBTimestampToUnixNano(cqlNowTimestamp))
+	executionInfo.LastUpdatedTimestamp = time.Unix(0, p.DBTimestampToUnixNano(cqlNowTimestampMillis))
 
 	completionData, completionEncoding := p.FromDataBlob(executionInfo.CompletionEvent)
 	if replicationState == nil {
