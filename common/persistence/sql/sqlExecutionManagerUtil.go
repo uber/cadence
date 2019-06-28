@@ -1148,7 +1148,7 @@ func buildExecutionRow(
 		LastEventTaskID:                 &executionInfo.LastEventTaskID,
 		LastProcessedEvent:              &executionInfo.LastProcessedEvent,
 		StartTimeNanos:                  common.Int64Ptr(executionInfo.StartTimestamp.UnixNano()),
-		LastUpdatedTimeNanos:            common.TimeNowNanosPtr(),
+		LastUpdatedTimeNanos:            common.Int64Ptr(executionInfo.LastUpdatedTimestamp.UnixNano()),
 		CreateRequestID:                 &executionInfo.CreateRequestID,
 		DecisionVersion:                 &executionInfo.DecisionVersion,
 		DecisionScheduleID:              &executionInfo.DecisionScheduleID,
@@ -1245,6 +1245,8 @@ func createExecution(
 
 	// TODO we should set the start time and last update time on business logic layer
 	executionInfo.StartTimestamp = time.Now()
+	executionInfo.LastUpdatedTimestamp = executionInfo.StartTimestamp
+
 	row, err := buildExecutionRow(executionInfo, replicationState, shardID)
 	if err != nil {
 		return err
@@ -1284,6 +1286,8 @@ func updateExecution(
 		return err
 	}
 
+	// TODO we should set the last update time on business logic layer
+	executionInfo.LastUpdatedTimestamp = time.Now()
 	row, err := buildExecutionRow(executionInfo, replicationState, shardID)
 	if err != nil {
 		return err

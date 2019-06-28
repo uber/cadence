@@ -420,6 +420,7 @@ func createExecution(
 
 	// TODO we should set the start time and last update time on business logic layer
 	executionInfo.StartTimestamp = time.Unix(0, cqlNowTimestamp)
+	executionInfo.LastUpdatedTimestamp = time.Unix(0, cqlNowTimestamp)
 
 	completionData, completionEncoding := p.FromDataBlob(executionInfo.CompletionEvent)
 	if replicationState == nil {
@@ -452,7 +453,7 @@ func createExecution(
 			executionInfo.NextEventID,
 			executionInfo.LastProcessedEvent,
 			executionInfo.StartTimestamp,
-			cqlNowTimestamp,
+			executionInfo.LastUpdatedTimestamp,
 			executionInfo.CreateRequestID,
 			executionInfo.SignalCount,
 			executionInfo.HistorySize,
@@ -523,7 +524,7 @@ func createExecution(
 			executionInfo.NextEventID,
 			executionInfo.LastProcessedEvent,
 			executionInfo.StartTimestamp,
-			cqlNowTimestamp,
+			executionInfo.LastUpdatedTimestamp,
 			executionInfo.CreateRequestID,
 			executionInfo.SignalCount,
 			executionInfo.HistorySize,
@@ -600,6 +601,9 @@ func updateExecution(
 		initiatedID = executionInfo.InitiatedID
 	}
 
+	// TODO we should set the last update time on business logic layer
+	executionInfo.LastUpdatedTimestamp = time.Unix(0, cqlNowTimestamp)
+
 	completionData, completionEncoding := p.FromDataBlob(executionInfo.CompletionEvent)
 	if replicationState == nil {
 		// Updates will be called with null ReplicationState while the feature is disabled
@@ -626,7 +630,7 @@ func updateExecution(
 			executionInfo.NextEventID,
 			executionInfo.LastProcessedEvent,
 			executionInfo.StartTimestamp,
-			cqlNowTimestamp,
+			executionInfo.LastUpdatedTimestamp,
 			executionInfo.CreateRequestID,
 			executionInfo.SignalCount,
 			executionInfo.HistorySize,
@@ -697,7 +701,7 @@ func updateExecution(
 			executionInfo.NextEventID,
 			executionInfo.LastProcessedEvent,
 			executionInfo.StartTimestamp,
-			cqlNowTimestamp,
+			executionInfo.LastUpdatedTimestamp,
 			executionInfo.CreateRequestID,
 			executionInfo.SignalCount,
 			executionInfo.HistorySize,
