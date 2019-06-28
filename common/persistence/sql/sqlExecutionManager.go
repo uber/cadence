@@ -123,19 +123,13 @@ func (m *sqlExecutionManager) createWorkflowExecutionTx(
 	if row != nil {
 		switch request.CreateWorkflowMode {
 		case p.CreateWorkflowModeBrandNew:
-			// TODO why there is a check here?
-			lastWriteVersion := common.EmptyVersion
-			if newWorkflow.ReplicationState != nil {
-				lastWriteVersion = row.LastWriteVersion
-			}
-
 			return nil, &p.WorkflowExecutionAlreadyStartedError{
 				Msg:              fmt.Sprintf("Workflow execution already running. WorkflowId: %v", row.WorkflowID),
 				StartRequestID:   row.CreateRequestID,
 				RunID:            row.RunID.String(),
 				State:            int(row.State),
 				CloseStatus:      int(row.CloseStatus),
-				LastWriteVersion: lastWriteVersion,
+				LastWriteVersion: row.LastWriteVersion,
 			}
 		case p.CreateWorkflowModeWorkflowIDReuse:
 			if request.PreviousLastWriteVersion != row.LastWriteVersion {
