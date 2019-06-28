@@ -21,6 +21,7 @@
 package backoff
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -58,4 +59,14 @@ func Test_NextCronSchedule(t *testing.T) {
 	cronSpec = "invalid-cron-spec"
 	backoff = GetBackoffForNextSchedule(cronSpec, now)
 	a.Equal(NoBackoff, backoff)
+}
+
+func Test_Every(t *testing.T) {
+	cronSpec1 := "*/1 * * * *"
+	cronSpec2 := "@every 1m"
+	now, _ := time.Parse(time.RFC3339, "2018-12-17T08:08:30+00:00")
+	duration1 := GetBackoffForNextSchedule(cronSpec1, now)
+	duration2 := GetBackoffForNextSchedule(cronSpec2, now)
+	fmt.Println("First:" + duration1.String())
+	fmt.Println("Second:" + duration2.String())
 }
