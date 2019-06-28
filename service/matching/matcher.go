@@ -25,7 +25,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
 	"golang.org/x/time/rate"
 )
@@ -50,9 +49,6 @@ type TaskMatcher struct {
 const (
 	_defaultTaskDispatchRPS    = 100000.0
 	_defaultTaskDispatchRPSTTL = 60 * time.Second
-	// maxRateLimitWaitTime is the max amount of time that we are willing to wait for a
-	// ratelimit token to be available in future
-	maxRateLimitWaitTime = int64(200 * time.Millisecond)
 )
 
 var errTasklistThrottled = errors.New("cannot add to tasklist, limit exceeded")
@@ -107,7 +103,7 @@ func (tm *TaskMatcher) Offer(ctx context.Context, task *internalTask) (bool, err
 			err = <-task.syncResponseCh
 			return true, err
 		}
-		return false, err
+		return false, nil
 	default: // no poller waiting for tasks
 		if rsv != nil {
 			// there was a ratelimit token we consumed
@@ -193,12 +189,9 @@ func (tm *TaskMatcher) ratelimit(ctx context.Context) (*rate.Reservation, error)
 		return nil, nil
 	}
 
-	// how long can we wait for a ratelimit token to be available in future
-	timeout := time.Duration(common.MinInt64(int64(deadline.Sub(time.Now())), maxRateLimitWaitTime))
-
 	rsv := tm.limiter.Reserve()
 	// If we have to wait too long for reservation, give up and return
-	if !rsv.OK() || rsv.Delay() > timeout {
+	if !rsv.OK() || rsv.Delay() > deadline.Sub(time.Now()) {
 		if rsv.OK() { // if we were indeed given a reservation, return it before we bail out
 			rsv.Cancel()
 		}

@@ -108,6 +108,11 @@ type (
 	}
 )
 
+const (
+	// maxSyncMatchWaitTime is the max amount of time that we are willing to wait for a sync match to happen
+	maxSyncMatchWaitTime = 200 * time.Millisecond
+)
+
 var _ taskListManager = (*taskListManagerImpl)(nil)
 
 func newTaskListManager(
@@ -204,9 +209,8 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 			return r, err
 		}
 
-		ok, err := c.matcher.Offer(ctx, newInternalTask(params.taskInfo, c.completeTask, true))
-		if ok {
-			syncMatch = true
+		syncMatch, err = c.trySyncMatch(ctx, params)
+		if syncMatch {
 			return &persistence.CreateTasksResponse{}, err
 		}
 
@@ -258,19 +262,11 @@ func (c *taskListManagerImpl) GetTask(
 }
 
 func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond *float64) (*internalTask, error) {
-	childCtxTimeout := c.config.LongPollExpirationInterval()
-	if deadline, ok := ctx.Deadline(); ok {
-		// We need to set a shorter timeout than the original ctx; otherwise, by the time ctx deadline is
-		// reached, instead of emptyTask, context timeout error is returned to the frontend by the rpc stack,
-		// which counts against our SLO. By shortening the timeout by a very small amount, the emptyTask can be
-		// returned to the handler before a context timeout error is generated.
-		shortenedCtxTimeout := deadline.Sub(time.Now()) - returnEmptyTaskTimeBudget
-		if shortenedCtxTimeout < childCtxTimeout {
-			childCtxTimeout = shortenedCtxTimeout
-		}
-	}
-	// ChildCtx timeout will be the shorter of longPollExpirationInterval and shortened parent context timeout.
-	childCtx, cancel := context.WithTimeout(ctx, childCtxTimeout)
+	// We need to set a shorter timeout than the original ctx; otherwise, by the time ctx deadline is
+	// reached, instead of emptyTask, context timeout error is returned to the frontend by the rpc stack,
+	// which counts against our SLO. By shortening the timeout by a very small amount, the emptyTask can be
+	// returned to the handler before a context timeout error is generated.
+	childCtx, cancel := c.newChildContext(ctx, c.config.LongPollExpirationInterval(), returnEmptyTaskTimeBudget)
 	defer cancel()
 
 	pollerID, ok := ctx.Value(pollerIDKey).(string)
@@ -479,6 +475,40 @@ func (c *taskListManagerImpl) executeWithRetry(
 		c.Stop()
 	}
 	return
+}
+
+func (c *taskListManagerImpl) trySyncMatch(ctx context.Context, params addTaskParams) (bool, error) {
+	childCtx, cancel := c.newChildContext(ctx, maxSyncMatchWaitTime, time.Second)
+	matched, err := c.matcher.Offer(childCtx, newInternalTask(params.taskInfo, c.completeTask, true))
+	cancel()
+	return matched, err
+}
+
+// newChildContext creates a child context with desired timeout.
+// if tailroom is non-zero, then child context timeout will be
+// the minOf(parentCtx.Deadline()-tailroom, timeout). Use this
+// method to create child context when childContext cannot use
+// all of parent's deadline but instead there is a need to leave
+// some time for parent to do some post-work
+func (c *taskListManagerImpl) newChildContext(
+	parent context.Context,
+	timeout time.Duration,
+	tailroom time.Duration,
+) (context.Context, context.CancelFunc) {
+	select {
+	case <-parent.Done():
+		return parent, func() {}
+	default:
+	}
+	deadline, ok := parent.Deadline()
+	if !ok {
+		return context.WithTimeout(parent, timeout)
+	}
+	remaining := deadline.Sub(time.Now()) - tailroom
+	if remaining < timeout {
+		timeout = time.Duration(common.MaxInt64(0, int64(remaining)))
+	}
+	return context.WithTimeout(parent, timeout)
 }
 
 func createServiceBusyError(msg string) *s.ServiceBusyError {
