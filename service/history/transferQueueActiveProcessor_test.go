@@ -1523,6 +1523,58 @@ func (s *transferQueueActiveProcessorSuite) TestProcessRecordWorkflowStartedTask
 	s.Nil(err)
 }
 
+func (s *transferQueueActiveProcessorSuite) TestProcessUpsertWorkflowSearchAttributes() {
+	domainID := "some random domain ID"
+	execution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr("some random workflow ID"),
+		RunId:      common.StringPtr(uuid.New()),
+	}
+	workflowType := "some random workflow type"
+	taskListName := "some random task list"
+
+	msBuilder := newMutableStateBuilderWithReplicationStateWithEventV2(s.mockClusterMetadata.GetCurrentClusterName(),
+		s.mockShard, s.mockShard.GetEventsCache(), s.logger, s.version, execution.GetRunId())
+
+	event, err := msBuilder.AddWorkflowExecutionStartedEvent(
+		execution,
+		&history.StartWorkflowExecutionRequest{
+			DomainUUID: common.StringPtr(domainID),
+			StartRequest: &workflow.StartWorkflowExecutionRequest{
+				WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+				TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskListName)},
+				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
+				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+			},
+		},
+	)
+	s.Nil(err)
+
+	taskID := int64(59)
+	msBuilder.UpdateReplicationStateLastEventID(s.mockClusterMetadata.GetCurrentClusterName(), s.version, event.GetEventId())
+
+	msBuilder.UpdateReplicationStateVersion(s.version+1, false)
+	di := addDecisionTaskScheduledEvent(msBuilder)
+	msBuilder.UpdateReplicationStateLastEventID(s.mockClusterMetadata.GetCurrentClusterName(), di.Version, di.ScheduleID)
+
+	transferTask := &persistence.TransferTaskInfo{
+		Version:    s.version,
+		DomainID:   domainID,
+		WorkflowID: execution.GetWorkflowId(),
+		RunID:      execution.GetRunId(),
+		TaskID:     taskID,
+		TaskList:   taskListName,
+		TaskType:   persistence.TransferTaskTypeUpsertWorkflowSearchAttributes,
+		ScheduleID: event.GetEventId(),
+	}
+
+	persistenceMutableState := createMutableState(msBuilder)
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
+	s.mockVisibilityMgr.On("UpsertWorkflowExecution", s.createUpsertWorkflowSearchAttributesRequest(transferTask, msBuilder)).Once().Return(nil)
+
+	_, err = s.transferQueueActiveProcessor.process(transferTask, true)
+	s.Nil(err)
+}
+
 func (s *transferQueueActiveProcessorSuite) TestCopySearchAttributes() {
 	var input map[string][]byte
 	s.Nil(copySearchAttributes(input))
@@ -1688,5 +1740,26 @@ func (s *transferQueueActiveProcessorSuite) createChildWorkflowExecutionRequest(
 			InitiatedId: common.Int64Ptr(task.ScheduleID),
 		},
 		FirstDecisionTaskBackoffSeconds: common.Int32Ptr(backoff.GetBackoffForNextScheduleInSeconds(attributes.GetCronSchedule(), time.Now())),
+	}
+}
+
+func (s *transferQueueActiveProcessorSuite) createUpsertWorkflowSearchAttributesRequest(
+	task *persistence.TransferTaskInfo,
+	msBuilder mutableState,
+) *persistence.UpsertWorkflowExecutionRequest {
+
+	execution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(task.WorkflowID),
+		RunId:      common.StringPtr(task.RunID),
+	}
+	executionInfo := msBuilder.GetExecutionInfo()
+
+	return &persistence.UpsertWorkflowExecutionRequest{
+		DomainUUID:       task.DomainID,
+		Execution:        execution,
+		WorkflowTypeName: executionInfo.WorkflowTypeName,
+		StartTimestamp:   executionInfo.StartTimestamp.UnixNano(),
+		WorkflowTimeout:  int64(executionInfo.WorkflowTimeout),
+		TaskID:           task.TaskID,
 	}
 }

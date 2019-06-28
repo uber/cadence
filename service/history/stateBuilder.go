@@ -499,7 +499,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 
 		case shared.EventTypeUpsertWorkflowSearchAttributes:
 			b.msBuilder.ReplicateUpsertWorkflowSearchAttributesEvent(event)
-			b.transferTasks = append(b.transferTasks, &persistence.UpsertWorkflowSearchAttributesTask{})
+			b.transferTasks = append(b.transferTasks, b.scheduleUpsertSearchAttributesTask())
 
 		case shared.EventTypeWorkflowExecutionContinuedAsNew:
 			if len(newRunHistory) == 0 {
@@ -688,6 +688,10 @@ func (b *stateBuilderImpl) scheduleDeleteHistoryTimerTask(event *shared.HistoryE
 		retentionInDays = domainEntry.GetRetentionDays(workflowID)
 	}
 	return b.getTimerBuilder(event).createDeleteHistoryEventTimerTask(time.Duration(retentionInDays) * time.Hour * 24), nil
+}
+
+func (b *stateBuilderImpl) scheduleUpsertSearchAttributesTask() persistence.Task {
+	return &persistence.UpsertWorkflowSearchAttributesTask{}
 }
 
 func (b *stateBuilderImpl) getTaskList(msBuilder mutableState) string {

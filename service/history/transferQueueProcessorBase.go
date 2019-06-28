@@ -198,6 +198,7 @@ func (t *transferQueueProcessorBase) upsertWorkflowExecution(
 		WorkflowTypeName:   workflowTypeName,
 		StartTimestamp:     startTimeUnixNano,
 		ExecutionTimestamp: executionTimeUnixNano,
+		WorkflowTimeout:    int64(workflowTimeout),
 		TaskID:             taskID,
 		Memo:               visibilityMemo,
 		SearchAttributes:   searchAttributes,
