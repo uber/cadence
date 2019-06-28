@@ -1,38 +1,38 @@
-# Proposal: Resource Specific Tasklist
+# Proposal: Resource-Specific Tasklist
 
 Author: Yichao Yang (yycptt)
 
-Last updated: Apr. 2019
+Last updated: April 2019
 
 Discussion at <https://github.com/uber-go/cadence-client/issues/697>
 
 ## Abstract
 
-Currently, there’s no straightforward way for a Cadence user to run multiple activities (a session) on a single activity worker. Although they have the option to explicitly specify a host specific tasklist name or manually execute special activities to get information about the activity worker, these approaches have limitations and are error prone. Besides running multiple activities on a single worker, a user may also want to limit the total number of sessions running concurrently on a single worker if those sessions consume some kind of resource of the worker. This document proposes several new APIs and their implementations so that a user can create sessions, execute activities and limit the number of concurrent sessions through simple API call.
+Currently, there’s no straightforward way for a Cadence user to run multiple activities (a session) on a single activity worker. Although there is the option to explicitly specify a host-specific tasklist name or manually execute special activities to get information about the activity worker, these approaches have limitations and are error prone. Besides running multiple activities on a single worker, a user may also want to limit the total number of sessions running concurrently on a single worker if those sessions consume worker resources. This document proposes several new APIs and their implementations so that a user can create sessions, execute activities, and limit the number of concurrent sessions through a simple API call.
 
 ## Use Cases
 
 ### Machine Learning Model Training
 
-User can model the whole training process with multiple activities, for example, downloading datasets, data cleaning, model training and parameter uploading. In this case, all activities should be executed by one activity worker. Otherwise, the dataset may be downloaded multiple times. In addition, as typically dataset consumes lots of disk space and model training requires GPU support, the number of total models training on a single worker should be limited.
+A user can model the entire training process with multiple activities, for example, downloading datasets, data cleaning, model training, and parameter uploading. In this case, all activities should be executed by one activity worker. Otherwise, the dataset might be downloaded multiple times. In addition, as a dataset typically consumes a lot of disk space and model training requires GPU support, the number of total models training on a single worker should be limited.
 
 ### Service Deployment
 
-In this case, a session represents the deployment of a service to one worker and the number of concurrent deployments is critical. User can have control over that number by limiting the number of concurrently running sessions on an activity worker.
+In this case, a session represents the deployment of a service to one worker and the number of concurrent deployments is critical. A user controls that number by limiting the number of concurrently running sessions on an activity worker.
 
 ## Proposal
 
-The scope of the proposal contains only Cadence client. Cadence server doesn’t need to be changed at all. The basic idea here is that we should write special workflow code for users to perform activity scheduling and worker monitoring, and expose simple APIs to users. Now that users don’t need to care about those implementation details, they can focus on their own business logic.
+The scope of this proposal is limited to the Cadence client. Cadence server doesn’t need to be changed at all. The basic idea here is that we should write special workflow code for users to perform activity scheduling and worker monitoring, and expose simple APIs to users. Once users don’t need to care about those implementation details, they can focus on their own business logic.
 
 The proposal includes both API changes and implementations. It aims at solving three problems:
 
-1. How to ensure multiple activities are executed on one activity worker?
+1. How to ensure multiple activities are executed on one activity worker.
 
-2. How to limit the number of concurrent sessions on an activity worker?
+2. How to limit the number of concurrent sessions on an activity worker.
 
-3. How to carry over session information between different workflow runs?
+3. How to carry over session information between different workflow runs.
 
-The following sections will first go through the APIs exposed to users, provide some explanation on how to use them and some sample code. It should be very easy for any developer with previous cadence experience to understand those APIs and start using them. After that I will explain the model behind those APIs and how they are implemented.
+The following sections will first go through the APIs exposed to users, explain how to use them, and provide sample code. Any developer with previous Cadence experience should be able to understand the APIs and start using them immediately. After that I will explain the model behind those APIs and how they are implemented.
 
 ### API Changes
 
@@ -44,11 +44,11 @@ There will be four new APIs available when writing a workflow:
 sessionCtx, err := workflow.**CreateSession**(ctx)
 ```
 
-User call this API to create a session and use the returned sessionCtx to execute activities. All activities executed within returned sessionCtx are considered to be part of the session and will be executed on the same worker. It’s possible that this call will fail due to various reasons: for example, no worker is available at this time.
+A user calls this API to create a session and use the returned sessionCtx to execute activities. All activities executed within the returned sessionCtx are considered to be part of the session and will be executed on the same worker. It’s possible that this call will fail due to various reasons, for example, no worker is available at this time.
 
-The session will be created on one of the workers that poll from the tasklist specified in the context passed into the CreateSession API. As a result, users needs to make sure they are using the correct task list.
+The session will be created on one of the workers that polls from the tasklist specified in the context passed into the CreateSession API. As a result, users need to make sure they are using the correct task list.
 
-When executing an activity within a session, user may get two types of errors. The first one is those returned from user activities. Session will not be marked as failed in this case, so user can return whatever error they want and apply their business logic as necessary. If they want to end a session due to the error returned from the activity, use the CompleteSession() API below. The second type of error is a special error which says the session has failed due to worker failure and the session is marked as failed in the background. In this case, no activities can be executed using this context. It’s the user’s choice on how to handle the failure; for example, they can create a new session to retry or end the workflow with an error.
+When executing an activity within a session, a user may get two types of errors. The first one is returned from user activities. The session will not be marked as failed in this case, so the user can return whatever error they want and apply their business logic as necessary. If a user wants to end a session due to the error returned from the activity, use the CompleteSession() API below. The second type of error is a special error which says the session has failed due to worker failure and the session is marked as failed in the background. In this case, no activities can be executed using this context. The user can choose how to handle the failure. They can create a new session to retry or end the workflow with an error.
 
 ```go
 err := workflow.**CompleteSession**(sessionCtx)
@@ -66,7 +66,7 @@ This API returns session information stored in the context. It returns an error 
 sessionCtx, err := workflow.**RecreateSession**(ctx, sessionInfo)
 ```
 
-This API takes session information and recreate a session. All the activities in the recreated session will be executed by the specified worker. The primary use case will be continueAsNew. Before returning the continueAsNew error, user should get the sessionInfo from sessionCtx and complete the session. Then in the next run, the session can be recreated and activities in this new run can continue to be executed on the same activity worker as previous runs.
+This API takes session information and recreates a session. All the activities in the recreated session will be executed by the specified worker. The primary use case will be continueAsNew. Before returning the continueAsNew error, the user should get the sessionInfo from sessionCtx and complete the session. Then in the next run, the session can be recreated and activities in this new run can continue to be executed on the same activity worker as previous runs.
 
 #### Example
 
@@ -89,7 +89,7 @@ if err != nil {
 
     // User can perform normal error handling here and decide whether creating a new session is needed.
 
-    // If they decide to create a new session, they need to call CompleteSession() so that worker resource can be released. It’s recommended that users create a function for session and call defer CompleteSession(sessionCtx) after a session is created. If session retry is needed, this function can be called multiple times if the error returned is retriable.
+    // If they decide to create a new session, they need to call CompleteSession() so that worker resources can be released. We recommend that users create a function for a session and call defer CompleteSession(sessionCtx) after a session is created. If session retry is needed, this function can be called multiple times if the error returned is retriable.
 
 }
 
@@ -124,29 +124,29 @@ There will be three new options available when creating a worker:
 
 * **EnableSessionWorker**
 
-  The flag controls whether the worker will accept activities belongs to a session.
+  This flag controls whether the worker will accept activities that belong to a session.
 
 * **SessionResourceID**
 
   An identifier of the resource that will be consumed if a session is executed on the worker. For example, if a worker has a GPU, and a session for training a machine learning model is executed on the worker, then some memory on the GPU will be consumed. In this case, the resourceID can be the identifier of the GPU.
 
-**NOTE: user need to ensure there’s only one worker using a certain resourceID.**
+**NOTE:** The user needs to ensure there’s only one worker using a certain resourceID.
 
 * **MaxCurrentSessionExecutionSize**
 
-  Since a session may consume some kind of resource, user can use this option to control the maximum number of sessions running in the worker process at the same time.
+  Because a session may consume some kind of resource, a user can use this option to control the maximum number of sessions running in the worker process at the same time.
 
 ## Implementation
 
 ### Session Model
 
-All sessions are **resource specific**. It basically means a session is always tied to some kind of resource (not the worker). The resource can be CPU, GPU, memory, file descriptors etc and we want all the activities within a session to be executed by the same worker which owns the resource. If worker dies and restarts, as long as it owns the same resource, we can try to reestablish the session (this is future work). Also user needs to ensure that resource is owned by only one worker.
+All sessions are **resource specific**. This means that a session is always tied to some kind of resource (not the worker). The resource can be CPU, GPU, memory, file descriptors, etc., and we want all the activities within a session to be executed by the same worker that owns the resource. If a worker dies and restarts, as long as it owns the same resource, we can try to reestablish the session (this is future work). Also, the user needs to ensure that the resource is owned by only one worker.
 
-Note that when creating a session, user doesn’t need to specify the resource that is consumed by the session. This is because right now one worker owns only one resource, so there’s only one resource type on the worker. As a result, as long as the user specifies the correct tasklist in the context passed into the createSession API, the correct type of resource will be consumed (since there’s only one). Later, a worker can support multiple types of resources and at that time, users need to specify the resource type when creating a session.
+Note that when creating a session, a user doesn’t need to specify the resource that is consumed by the session. This is because right now one worker owns only one resource, so there’s only one resource type on the worker. As a result, as long as the user specifies the correct tasklist in the context passed into the createSession API, the correct type of resource will be consumed (since there’s only one). Later, when a worker can support multiple types of resources, users will need to specify the resource type when creating a session.
 
 ### Workflow Context
 
-When user calls the CreateSession() or CreateSessionWithHostID() API, a structure contains information about the created session will be stored in the returned context. The structure contains three two pieces of information:
+When a user calls the CreateSession() or CreateSessionWithHostID() API, a structure that contains information about the created session will be stored in the returned context. The structure contains three pieces of information:
 
 1. **SessionID**: a unique ID for the created session. (Exported)
 
@@ -155,14 +155,14 @@ When user calls the CreateSession() or CreateSessionWithHostID() API, a structur
 3. **state:** state of the session (Not Exported).  It can take one of the three values below:
 
    1. **Open**: when the session is created and running
-   2. **Failed**: when worker is down and session can’t continue
-   3. **Closed**: when user closes the session through the API call and session is successfully closed.
+   2. **Failed**: when the worker is down and the session can’t continue
+   3. **Closed**: when the user closes the session through the API call and the session is successfully closed
 
-When user calls the CompleteSession() API, the state of the session will be changed to "Closed" in place, that’s why this API won’t return a new context variable.
+When a user calls the CompleteSession() API, the state of the session will be changed to "Closed" in place, which is why this API doesn’t return a new context variable.
 
-User has no way to set the state of a session to failed. The state of a session is "failed" only when the worker executing the session is down and the change from “open” to “failed” is done in the background. Also notice that it’s possible that the worker is down, but the session state is still “Open” (since it takes some time to detect the worker failure). In this case, when a user executes an activity, the activity will still be scheduled on the resource specific tasklist. However, since no one will poll from this task list, that activity will timeout and user will get an error.
+A user has no way to set the state of a session to failed. The state of a session is "failed" only when the worker executing the session is down and the change from “open” to “failed” is done in the background. Also notice that it’s possible that the worker is down, but the session state is still “Open” (since it takes some time to detect the worker failure). In this case, when a user executes an activity, the activity will still be scheduled on the resource specific tasklist. However, since no worker will poll from this task list, that activity will timeout and the user will get an error.
 
-Note that If user tries to call CreateSession() with a context which already has an open session, the call will return an error. Same thing happens if a call to CompleteSession() is made when there’s no open session. You can call it with a failed session though, but it won’t do anything. This allowed because the state transition to "failed" is done in the background, and user may not know the session has failed.
+Note that if a user tries to call CreateSession() with a context that already has an open session, the call will return an error. The same thing happens if a call to CompleteSession() is made when there’s no open session. You can call it with a failed session, but it won’t do anything. This is allowed because the state transition to "failed" is done in the background, and user may not know the session has failed.
 
 ### Workflow Worker
 
@@ -184,17 +184,17 @@ When EnableSessionWorker is set to true, two more activity workers will be start
 
    1. **Send the resource specific tasklist name** back to the workflow through signal.
 
-   2. Keep **heart beating** to cadence server till the end of the session.
+   2. Keep **heart beating** to Cadence server until the end of the session.
 
-      If the heart beating returns EntityNotExist Error, this means the workflow/session has gone and this special activity should stop to release resource.
+      If the heart beating returns EntityNotExist Error, this means the workflow/session has gone and this special activity should stop to release its resources.
 
-      If on the other hand, the worker is down, cadence server will send heartbeat timeout error to the workflow, so the workflow can be notified and update the session state. Later ExecuteActivity() call with the failed session context will also fail.
+      If on the other hand, the worker is down, Cadence server will send a heartbeat timeout error to the workflow, so the workflow can be notified and update the session state. Later,  an ExecuteActivity() call to the failed session context will also fail.
 
-   3. Check the number of currently running sessions on the worker. If the maximum number of concurrent session has been reached, return an error to fail the creation.
+   3. Check the number of currently running sessions on the worker. If the maximum number of concurrent sessions has been reached, return an error to fail the creation.
 
-   One detail we need to ensure is that when the maximum number of concurrent session has been reached, this worker should stop polling from the global task list.
+   One detail we need to ensure is that when the maximum number of concurrent sessions has been reached, this worker should stop polling from the global task list.
 
-* Session Activity Worker: this worker only polls from the resource specific tasklist. There are three kinds of activities can be run by this worker.
+* Session Activity Worker: this worker only polls from the resource specific tasklist. There are three kinds of activities that can be run by this worker.
 
    1. User activities in a session that belongs to this host.
 
@@ -204,11 +204,11 @@ When EnableSessionWorker is set to true, two more activity workers will be start
 
    3. Special session creation activity scheduled by RecreateSession().
 
-When domain failover happens, since no worker will poll from the resource specific task, all activities within a session will timeout and user will get an error. Also cadence server will detect heartbeat timeout from the session creation activity.
+When domain failover happens, since no worker will poll from the resource specific task, all activities within a session will timeout and the user will get an error. Also, Cadence server will detect the heartbeat timeout from the session creation activity.
 
 ### Sequence Diagrams
 
-This section shows the sequence diagram for possible situations that may occur during the session execution.
+This section illustrates the sequence diagrams for situations that may occur during the session execution.
 
 * Here is the sequence diagram for a normal session execution.
 
@@ -222,7 +222,7 @@ This section shows the sequence diagram for possible situations that may occur d
 
 ![image alt text](1533-host-specific-tasklist-image_2.png)
 
-* When there are too many outstanding sessions and user is trying to create a new one. The assumption here is that each activity worker is configured to have **MaxCurrentSessionExecutionSize = 1. **Host specific tasklist and worker is omitted in the diagram.
+* When there are too many outstanding sessions and the user is trying to create a new one. The assumption here is that each activity worker is configured to have **MaxCurrentSessionExecutionSize = 1**. Host specific tasklist and worker is omitted in the diagram.
 
 ![image alt text](1533-host-specific-tasklist-image_3.png)
 
