@@ -1,3 +1,0 @@
-# Task Routing
-
-It is common requirement that specific activity be executed on a specific worker pool or even host or process. For example one pool of workers can be used for high priority tasks while another for low priority ones. Another example is media processing workflow that downloads file from S3, transcodes it to another bitrate and uploads result back. The download activity can run on any worker, but transcode and upload should run on the same as download. Cadence supports activity task routing to any specific worker and thus is a good fit for applications with such task routing requirements.
