@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/uber/cadence/.gen/go/sqlblobs"
 
@@ -1242,6 +1243,8 @@ func createExecution(
 		return err
 	}
 
+	// TODO we should set the start time and last update time on business logic layer
+	executionInfo.StartTimestamp = time.Now()
 	row, err := buildExecutionRow(executionInfo, replicationState, shardID)
 	if err != nil {
 		return err

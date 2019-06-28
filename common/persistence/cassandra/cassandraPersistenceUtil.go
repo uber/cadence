@@ -418,6 +418,9 @@ func createExecution(
 		initiatedID = executionInfo.InitiatedID
 	}
 
+	// TODO we should set the start time and last update time on business logic layer
+	executionInfo.StartTimestamp = time.Unix(0, cqlNowTimestamp)
+
 	completionData, completionEncoding := p.FromDataBlob(executionInfo.CompletionEvent)
 	if replicationState == nil {
 		// Cross DC feature is currently disabled so we will be creating workflow executions without replication state
@@ -448,7 +451,7 @@ func createExecution(
 			executionInfo.LastEventTaskID,
 			executionInfo.NextEventID,
 			executionInfo.LastProcessedEvent,
-			cqlNowTimestamp,
+			executionInfo.StartTimestamp,
 			cqlNowTimestamp,
 			executionInfo.CreateRequestID,
 			executionInfo.SignalCount,
@@ -519,7 +522,7 @@ func createExecution(
 			executionInfo.LastEventTaskID,
 			executionInfo.NextEventID,
 			executionInfo.LastProcessedEvent,
-			cqlNowTimestamp,
+			executionInfo.StartTimestamp,
 			cqlNowTimestamp,
 			executionInfo.CreateRequestID,
 			executionInfo.SignalCount,
