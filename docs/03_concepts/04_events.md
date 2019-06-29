@@ -8,7 +8,7 @@ There are multiple scenarios where signals are useful.
 
 Cadence is not a replacement for generic stream processing engines like Flink or Spark. But in certain scenarios it is a better fit. For example when all events that should be aggregated and correlated are always applied to to some business entity with a clear ID. And then when a certain condition is met some actions should be executed.
 
-The main limitation is that a single Cadence workflow has pretty limited throughput, while number of workflows is practically unlimited. So if you need to aggregate events per customer, your applicaiton has 100 million customers and each customer doesn't generate more than 20 events per second then Cadence would work fine. But if you want to aggregate all events for US customers then the rate of these events would be beyond the single workflow capacity.
+The main limitation is that a single Cadence workflow has a pretty limited throughput, while number of workflows is practically unlimited. So if you need to aggregate events per customer, your applicaiton has 100 million customers and each customer doesn't generate more than 20 events per second then Cadence would work fine. But if you want to aggregate all events for US customers then the rate of these events would be beyond the single workflow capacity.
 
 For example an IoT device generates events and a certain sequence of events indicates that the device should be reprovisioned. A workflow instance per device would be created and each instance would manage the state machine of the device and execute reprovision activity when necessary.
 
@@ -18,7 +18,7 @@ Another use case is a customer loyalty program. Every time a customer makes a pu
 
 A lot of business processes involve human participants. The standard Cadence pattern for implementing an external interaction is to execute and activity that creates a human task in an external system. It can be an email with a form, or a record in some external database or a mobile app notification. When a user changes the status of the task a signal is sent to the corresponding workflow. For example when the form is submitted, or mobile app notificaiton is acknoweldged. Some tasks have multiple possible actions like claim, return, complete, reject. So multiple signals can be sent in relation to it.
 
-## Affect Process Execution
+## Process Execution Alteration
 
 Some business processes should change their behavior if some external event has happened. For example while executing an order shipment workflow any change in item quantity could be delivered in a form of a signal.
 

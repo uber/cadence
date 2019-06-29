@@ -1,4 +1,4 @@
-# Durable Functions aka Workflows
+# Durable Workflow Functions
 
 ## Overview
 
@@ -11,7 +11,7 @@ Let's look at a use case. A customer signs up to an application with a trial per
 
 The business logic of the use case is not very complicated and can be expressed in a few dozen lines of code. But any practical implementation has to ensure that the business process is fault tolerant and scalable. There are various ways to approach the design of such system.
 
-One apporach is to center it around a database. An application processes would periodically scan database tables for customers in specific states, execute necessary actions and update the state to reflect that. While feasible this apporach has various drawbacks. Most obvious one is that the state machine of the customer state quickly becomes extremely complicated. For example a credit card charge or emails sending can fail due to downstream system unavailability. The failed calls should be retried, ideally using an exponential retry policy. These calls should be throttled to not overload external systems. There should be support for poison pills to avoid blocking the whole process if a single customer record cannot be processed for whatever reason. Database based apporach also usually has peformance problems. Databases are not efficient for scenarios that require constant polling for records in a specific state.
+One apporach is to center it around a database. An application processes would periodically scan database tables for customers in specific states, execute necessary actions and update the state to reflect that. While feasible this apporach has various drawbacks. Most obvious one is that the state machine of the customer state quickly becomes extremely complicated. For example a credit card charge or emails sending can fail due to a downstream system unavailability. The failed calls might need to be retried for a long time, ideally using an exponential retry policy. These calls should be throttled to not overload external systems. There should be support for poison pills to avoid blocking the whole process if a single customer record cannot be processed for whatever reason. Database based apporach also usually has peformance problems. Databases are not efficient for scenarios that require constant polling for records in a specific state.
 
 Another commonly employed approach is to use a timer service and queues. So any update is pushed to a queue and then a worker that consumes from it updates a database and possibly pushes more messages in downstream queues. For operations that require scheduling an external timer service can be used. This apporach usually scales much better as a database is not constantly polled for changes. But it makes the programming model even more complex and error prone as usually there is no transactional update between a queing system and a database.
 
@@ -56,7 +56,7 @@ Again, note that this code directly implements the business logic. If any of the
 
 Cadence has practically no scalability limits on number of open workflow instances. So even if your site has hundreds of millions of consumers the above code is not going to change.
 
-The commonly asked question by the developers that learn Cadence is "How do I handle workflow worker process failure/restart in my workflow"? The answer is that you do not. The workflow code is completely oblivious to any failures and downtime of workers or even Cadence service itself. As soon as they are recovered and the workflow needs to handle some event like timer or an activity completion the current state of the workflow is fully restored and continues execution. The only reason for the workflow failure is workflow business code throwing an exception, not underlying infrasturcture outages.
+The commonly asked question by the developers that learn Cadence is "How do I handle workflow worker process failure/restart in my workflow"? The answer is that you do not. **The workflow code is completely oblivious to any failures and downtime of workers or even Cadence service itself**. As soon as they are recovered and the workflow needs to handle some event like timer or an activity completion, the current state of the workflow is fully restored and the execution is continued. The only reason for the workflow failure is the workflow business code throwing an exception, not underlying infrasturcture outages.
 
 ## State Recovery and Determinism
 
@@ -68,11 +68,11 @@ To understand the Cadence execution model as well as the recovery mechanism watc
 
 Workflow ID is assigned by a client when starting a workflow. It is usually a business level ID like customer ID or order ID.
 
-Cadence guarantees that there could be only one workflow (across all workflow types) with given ID open per domain at any time. An attempt to start workflow with the same ID is going to fail with WorkflowExecutionAlreadyStarted error.
+Cadence guarantees that there could be only one workflow (across all workflow types) with given ID open per domain at any time. An attempt to start workflow with the same ID is going to fail with `WorkflowExecutionAlreadyStarted` error.
 
 An attempt to start a workflow if there is a completed workflow with the same ID depends on a `WorkflowIdReusePolicy` option:
 
-- `AllowDuplicateFailedOnly` means that it is allowed to start a workflow only if a previously run workflow with the same ID failed.
+- `AllowDuplicateFailedOnly` means that it is allowed to start a workflow only if a previously executed workflow with the same ID failed.
 - `AllowDuplicate` means that it is allowed to start independently of the previous workflow completion status.
 - `RejectDuplicate` mans that it is not allowed start a workflow execution using the same workflow ID at all.
 
@@ -97,14 +97,14 @@ It is recommended starting from a single workflow implementation if your problem
 
 ## Workflow Retries
 
-Workflow code is unaffected by infrastructure level downtime and failures. But it still can fail due to business logic level failures. For example an activity can fail due to exceeding retry interval and error is not handled by appliation code or workflow code has a bug.
+Workflow code is unaffected by infrastructure level downtime and failures. But it still can fail due to business logic level failures. For example an activity can fail due to exceeding retry interval and error is not handled by appliation code or workflow code having a bug.
 
-Some workflows require guarantee that they keep running even in presence of such failures. To support such use cases an optional exponential retry policy can be specified when starting a workflow. When specified a workflow failure restarts a workflow from the beginning after the calculated retry interval. Here are retry policy parameters:
+Some workflows require guarantee that they keep running even in presence of such failures. To support such use cases an optional exponential _retry policy_ can be specified when starting a workflow. When it is specified a workflow failure restarts a workflow from the beginning after the calculated retry interval. Here are retry policy parameters:
 
-- InitialInterval is a delay before the first retry
-- BackoffCoefficient. Retry policies are exponential. The coefficient specifies how fast the retry interval is growing. The coefficient of 1 means that retry interval is always equal to the InitialInterval.
-- MaximumInterval specifies the maximum interval between retries. Useful for coefficients more than 1.
-- MaximumAttempts specifies how many times to attempt to execute a workflow in presence of failures. If this limit is exceeded the workflow fails without retry. Not required if ExpirationInterval is specified.
-- ExpirationInterval specifies for how long to attempt executing an workflow in presence of failures. If this interval is exceeded the workflow fails without retry. Not required if MaximumAttempts is specified.
-- NonRetryableErrorReasons allows to specify erros that shouldn't be retried. For example retrying invalid arguments error doesn't make sense in some scenarios.
+- `InitialInterval` is a delay before the first retry
+- BackoffCoefficient. Retry policies are exponential. The coefficient specifies how fast the retry interval is growing. The coefficient of 1 means that retry interval is always equal to the `InitialInterval`.
+- `MaximumInterval` specifies the maximum interval between retries. Useful for coefficients more than 1.
+- `MaximumAttempts` specifies how many times to attempt to execute a workflow in presence of failures. If this limit is exceeded the workflow fails without retry. Not required if `ExpirationInterval` is specified.
+- `ExpirationInterval` specifies for how long to attempt executing a workflow in presence of failures. If this interval is exceeded the workflow fails without retry. Not required if `MaximumAttempts` is specified.
+- `NonRetryableErrorReasons` allows to specify erros that shouldn't be retried. For example retrying invalid arguments error doesn't make sense in some scenarios.
 

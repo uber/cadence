@@ -1,6 +1,6 @@
 # Polling
 
-Polling is executing periodic action to check for state changes. Examples are pinging a host, calling REST API or listing S3 bucket for newly uploaded files.
+Polling is executing some periodic action checking for a state change. Examples are pinging a host, calling REST API or listing S3 bucket for newly uploaded files.
 
 Cadence support for long running activities and unlimited retries makes it a good fit.
 
