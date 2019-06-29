@@ -1,17 +1,26 @@
 # Glossary
-
 This glossary contains terms that are used with the Cadence product.
 
 ### Activity
 A business-level task that implements your application logic such as calling
 a service or transcoding a media file. An activity usually implements a single
 well-defined action; it can be short or long running. An activity can be implemented
-as a synchronous method or fully asynchronously involving multiple processes. An
-activity is executed at most once. This means that the Cadence service never
-requests activity execution more than once. If for any reason an activity is not
-completed within the specified timeout, an error is reported to the workflow and
+as a synchronous method or fully asynchronously involving multiple processes.
+Activity can be retried indefinitely according to provided exponential retry policy.
+If for any reason an activity is not completed within the specified timeout, an error is reported to the workflow and
 the workflow decides how to handle it. There is no limit on potential activity
 duration.
+
+### Archival
+Archival is a feature that automatically moves [histories](#event-history) from persistence to a blobstore after
+the workflow retention period. The purpose of archival is to be able to keep histories as long as needed
+while not overwhelming the persistence store. There are two reasons you may want
+to keep the histories after the retention period has past:
+1. **Compliance:** For legal reasons histories may need to be stored for a long period of time.
+2. **Debugging:** Old histories can still be accessed for debugging.
+
+### CLI
+Cadence Command line interface.
 
 ### Client Stub
 A client-side proxy used to make remote invocations to an entity that it
@@ -19,8 +28,10 @@ represents. For example, to start a workflow, a stub object that represents
 this workflow is created through a special API. Then this stub is used to start,
 query, or signal the corresponding workflow.
 
+Go client doesn't use it.
+
 ### Decision
-Any action taken by the workflow function is called a decision. For example:
+Any action taken by the workflow durable function is called a decision. For example:
 scheduling a task, canceling a task, or starting a timer.
 
 ### Domain
@@ -33,9 +44,9 @@ or through the CLI.
 
 ### Event
 An indivisible operation performed by your application. For example,
-acitvity_task_started, task_failed, or timer_canceled.
+acitvity_task_started, task_failed, or timer_canceled. Events are recorded in the event history.
 
-### History
+### Event History
 An append log of events for your application. History is durably persisted
 by the Cadence service, enabling seamless recovery of your application state
 from crashes or failures. It also serves as an audit log for debugging.
@@ -70,7 +81,7 @@ to work, the *Task List* name that is used to request an activity execution and
 the name used to configure a worker must match.
 
 ### Task Token
-A unique identifier for a Cadence activity.
+A unique correlation id for a Cadence activity.
 
 ### Worker
 Also known as a *worker service*. A service that hosts the workflow and
@@ -79,7 +90,7 @@ those tasks, and communicates task execution results back to the Cadence service
 Worker services are developed, deployed, and operated by Cadence customers.
 
 ### Workflow
-A program that orchestrates activities. A *Workflow* has full control over
+A durable function that orchestrates activities. A *Workflow* has full control over
 which activities are executed, and in which order. A *Workflow* must not affect
 the external world directly, only through activities. What makes workflow code
 a *Workflow* is that its state is preserved by Cadence. Therefore any failure
