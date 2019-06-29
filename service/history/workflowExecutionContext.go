@@ -760,7 +760,6 @@ func (c *workflowExecutionContextImpl) update(
 			tag.WorkflowNextEventID(executionInfo.NextEventID),
 			tag.ReplicationState(c.msBuilder.GetReplicationState()),
 		)
-
 	}
 
 	// Replication state should only be updated after the UpdateSession is closed.  IDs for certain events are only
@@ -922,7 +921,7 @@ func (c *workflowExecutionContextImpl) update(
 	} // end of update history events for active builder
 
 	if executionInfo.State == persistence.WorkflowStateCompleted {
-		// clear stickness
+		// clear stickyness
 		c.msBuilder.ClearStickyness()
 	}
 
