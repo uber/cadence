@@ -93,7 +93,7 @@ func (p *provider) GetHistoryArchiver(scheme, serviceName string) (archiver.Hist
 	}
 
 	switch scheme {
-	case filestore.UriScheme:
+	case filestore.URIScheme:
 		container := *p.container
 		container.Logger = container.Logger.WithTags(tag.Service(serviceName), componentTag)
 		return filestore.NewHistoryArchiver(container, p.historyArchiverConfigs.FileStore), nil

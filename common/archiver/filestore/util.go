@@ -162,7 +162,7 @@ func contextExpired(ctx context.Context) bool {
 }
 
 func getDirPathFromURI(URI string) string {
-	return URI[len(UriScheme):]
+	return URI[len(URIScheme):]
 }
 
 func validateDirPath(dirPath string) bool {

@@ -49,6 +49,6 @@ var (
 	ErrInvalidGetHistoryRequest = &shared.BadRequestError{Message: "Get archived history request is invalid"}
 	// ErrGetHistoryTokenCorrupted is the error for corrupted GetHistory token
 	ErrGetHistoryTokenCorrupted = &shared.BadRequestError{Message: "Next page token is corrupted."}
-	// ErrGetHistoryTokenCorrupted is the error for non-exist history
+	// ErrHistoryNotExist is the error for non-exist history
 	ErrHistoryNotExist = &shared.BadRequestError{Message: "Requested workflow history does not exist."}
 )

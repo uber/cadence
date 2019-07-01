@@ -49,8 +49,8 @@ import (
 )
 
 const (
-	// UriScheme is the scheme for the filestore implementation
-	UriScheme = "file://"
+	// URIScheme is the scheme for the filestore implementation
+	URIScheme = "file://"
 
 	errEncodeHistory = "failed to encode history batches"
 	errMakeDirectory = "failed to make directory"
@@ -253,7 +253,7 @@ func (h *historyArchiver) Get(
 }
 
 func (h *historyArchiver) ValidateURI(URI string) bool {
-	if !strings.HasPrefix(URI, UriScheme) {
+	if !strings.HasPrefix(URI, URIScheme) {
 		return false
 	}
 
