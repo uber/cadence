@@ -204,6 +204,11 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 			return err
 		}
 
+		// clear all counters
+		atomic.StoreInt32(&succCount, 0)
+		atomic.StoreInt32(&skipCount, 0)
+		atomic.StoreInt32(&errCount, 0)
+
 		// send all tasks
 		for _, wf := range resp.Executions {
 			taskCh <- taskDetail{
@@ -213,11 +218,6 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 			}
 		}
 		batchCount := len(resp.Executions)
-
-		// clear all counters
-		atomic.StoreInt32(&succCount, 0)
-		atomic.StoreInt32(&skipCount, 0)
-		atomic.StoreInt32(&errCount, 0)
 
 		// wait for counters indicate this batch is done
 	Loop:
