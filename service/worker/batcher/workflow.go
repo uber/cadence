@@ -56,8 +56,8 @@ const (
 )
 
 const (
-	BatchTypeTerminate = "reset"
-	BatchTypeReset     = "terminate"
+	BatchTypeTerminate = "terminate"
+	BatchTypeReset     = "reset"
 )
 
 type (
@@ -163,7 +163,7 @@ func setDefaultParams(params BatchParams) (BatchParams, error) {
 }
 
 func BatchActivity(ctx context.Context, batchParams BatchParams) error {
-	batcher := ctx.Value(batcherContextKey).(Batcher)
+	batcher := ctx.Value(batcherContextKey).(*Batcher)
 
 	hbd := HeartBeatDetails{}
 	startOver := true
@@ -186,7 +186,7 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 		}
 		hbd.TotalEstimate = resp.GetCount()
 	}
-	rateLimiter := rate.NewLimiter(rate.Limit(batchParams.RPS), 0)
+	rateLimiter := rate.NewLimiter(rate.Limit(batchParams.RPS), batchParams.RPS)
 	taskCh := make(chan taskDetail, pageSize)
 	var succCount, skipCount, errCount int32
 	for i := 0; i < batchParams.Concurrency; i++ {
@@ -285,7 +285,7 @@ func startTaskProcessor(
 }
 
 func processOneTerminateTask(ctx context.Context, limiter *rate.Limiter, task taskDetail, param BatchParams) error {
-	batcher := ctx.Value(batcherContextKey).(Batcher)
+	batcher := ctx.Value(batcherContextKey).(*Batcher)
 
 	wfs := []shared.WorkflowExecution{task.execution}
 	for len(wfs) >= 0 {
@@ -341,7 +341,7 @@ func isDone(ctx context.Context) bool {
 }
 
 func getActivityLogger(ctx context.Context) log.Logger {
-	batcher := ctx.Value(batcherContextKey).(Batcher)
+	batcher := ctx.Value(batcherContextKey).(*Batcher)
 	wfInfo := activity.GetInfo(ctx)
 	return batcher.logger.WithTags(
 		tag.WorkflowID(wfInfo.WorkflowExecution.ID),
