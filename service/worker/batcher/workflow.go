@@ -22,19 +22,18 @@ package batcher
 
 import (
 	"context"
+	"fmt"
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/common/log"
-
-	"golang.org/x/time/rate"
-
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/workflow"
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -108,6 +107,8 @@ type (
 	taskDetail struct {
 		execution shared.WorkflowExecution
 		attempts  int
+		// passing along the current heartbeat details to make heartbeat within a task so that it won't timeout
+		hbd HeartBeatDetails
 	}
 )
 
@@ -133,13 +134,16 @@ func init() {
 
 // BatchWorkflow is the workflow that runs a batch job of resetting workflows
 func BatchWorkflow(ctx workflow.Context, batchParams BatchParams) error {
-	batchParams = setDefaultParams(batchParams)
+	batchParams, err := setDefaultParams(batchParams)
+	if err != nil {
+		return err
+	}
 	batchActivityOptions.HeartbeatTimeout = batchParams.ActivityHeartBeatTimeout
 	opt := workflow.WithActivityOptions(ctx, batchActivityOptions)
 	return workflow.ExecuteActivity(opt, batchActivityName, batchParams).Get(ctx, nil)
 }
 
-func setDefaultParams(params BatchParams) BatchParams {
+func setDefaultParams(params BatchParams) (BatchParams, error) {
 	if params.RPS <= 0 {
 		params.RPS = defaultRPS
 	}
@@ -152,7 +156,15 @@ func setDefaultParams(params BatchParams) BatchParams {
 	if params.ActivityHeartBeatTimeout <= 0 {
 		params.ActivityHeartBeatTimeout = defaultActivityHeartBeatTimeout
 	}
-	return params
+	switch params.BatchType {
+	case BatchTypeReset:
+		fallthrough
+	default:
+		return BatchParams{}, fmt.Errorf("not supported batch type: %v", params.BatchType)
+	case BatchTypeTerminate:
+
+	}
+	return params, nil
 }
 
 func BatchActivity(ctx context.Context, batchParams BatchParams) error {
@@ -202,6 +214,7 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 			taskCh <- taskDetail{
 				execution: *wf.Execution,
 				attempts:  0,
+				hbd:       hbd,
 			}
 		}
 		batchCount := len(resp.Executions)
@@ -220,8 +233,6 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 					break Loop
 				}
 			case <-ctx.Done():
-				// Need to return in case of cancellation, otherwise we may leak this goroutine
-				// TODO need to check if should we return cancellation error or it doesn't matter
 				return nil
 			}
 		}
@@ -252,16 +263,10 @@ func startTaskProcessor(
 				return
 			}
 			var err error
-			err = limiter.Wait(ctx)
-			if err != nil {
-				getActivityLogger(ctx).Error("Failed to wait for rateLimiter", tag.Error(err))
-			}
 
 			switch batchParams.BatchType {
 			case BatchTypeTerminate:
 				err = processTerminate(ctx, limiter, task, batchParams)
-			case BatchTypeReset:
-				err = processReset(ctx, limiter, task, batchParams)
 			}
 			if err != nil {
 				_, ok := err.(*shared.EntityNotExistsError)
@@ -290,34 +295,43 @@ func processTerminate(ctx context.Context, limiter *rate.Limiter, task taskDetai
 	wfs := []shared.WorkflowExecution{task.execution}
 	for len(wfs) >= 0 {
 		wf := wfs[0]
+
+		err := limiter.Wait(ctx)
+		if err != nil {
+			getActivityLogger(ctx).Error("Failed to wait for rateLimiter", tag.Error(err))
+		}
+
 		newCtx, cancel := context.WithDeadline(ctx, time.Now().Add(rpcTimeout))
-		err := batcher.svcClient.TerminateWorkflowExecution(newCtx, &shared.TerminateWorkflowExecutionRequest{
+		err = batcher.svcClient.TerminateWorkflowExecution(newCtx, &shared.TerminateWorkflowExecutionRequest{
 			Domain:            common.StringPtr(param.DomainName),
 			WorkflowExecution: &wf,
 			Reason:            common.StringPtr(param.Reason),
 			Identity:          common.StringPtr(batchWFTypeName),
 		})
 		cancel()
-		if err != nil{
+		if err != nil {
 			return err
 		}
 		newCtx, cancel = context.WithDeadline(ctx, time.Now().Add(rpcTimeout))
 		resp, err := batcher.svcClient.DescribeWorkflowExecution(newCtx, &shared.DescribeWorkflowExecutionRequest{
-			Domain:            common.StringPtr(param.DomainName),
+			Domain:    common.StringPtr(param.DomainName),
 			Execution: &wf,
 		})
 		cancel()
-		if err != nil{
+		if err != nil {
 			return err
 		}
-		if resp.WorkflowExecutionInfo.
+		if len(resp.PendingChildren) > 0 {
+			for _, ch := range resp.PendingChildren {
+				wfs = append(wfs, shared.WorkflowExecution{
+					WorkflowId: ch.WorkflowID,
+					RunId:      ch.RunID,
+				})
+			}
+		}
+		activity.RecordHeartbeat(ctx, task.hbd)
 	}
 
-	return nil
-}
-
-func processReset(ctx context.Context, limiter *rate.Limiter, task taskDetail, param BatchParams) error {
-	//TODO
 	return nil
 }
 
