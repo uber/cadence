@@ -266,7 +266,7 @@ func startTaskProcessor(
 
 			switch batchParams.BatchType {
 			case BatchTypeTerminate:
-				err = processTerminate(ctx, limiter, task, batchParams)
+				err = processOneTerminateTask(ctx, limiter, task, batchParams)
 			}
 			if err != nil {
 				_, ok := err.(*shared.EntityNotExistsError)
@@ -289,7 +289,7 @@ func startTaskProcessor(
 	}
 }
 
-func processTerminate(ctx context.Context, limiter *rate.Limiter, task taskDetail, param BatchParams) error {
+func processOneTerminateTask(ctx context.Context, limiter *rate.Limiter, task taskDetail, param BatchParams) error {
 	batcher := ctx.Value(batcherContextKey).(Batcher)
 
 	wfs := []shared.WorkflowExecution{task.execution}
