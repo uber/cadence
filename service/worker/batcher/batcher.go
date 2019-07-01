@@ -108,7 +108,7 @@ func (s *Batcher) Start() error {
 		MetricsScope:              s.tallyScope,
 		BackgroundActivityContext: context.WithValue(context.Background(), batcherContextKey, s),
 	}
-	worker := worker.New(s.svcClient, common.SystemLocalDomainName, batcherTaskListName, workerOpts)
+	worker := worker.New(s.svcClient, common.SystemGlobalDomainName, batcherTaskListName, workerOpts)
 	return worker.Start()
 }
 
@@ -135,8 +135,8 @@ func (s *Batcher) createGlobalSystemDomainIfNotExists() error {
 		return nil
 	}
 
-	if s.cfg.ClusterMetadata.IsMasterCluster() && !s.cfg.ClusterMetadata.IsGlobalDomainEnabled() {
-		return fmt.Errorf("not master cluster, retry on describe domain only")
+	if s.cfg.ClusterMetadata.IsGlobalDomainEnabled() && !s.cfg.ClusterMetadata.IsMasterCluster() {
+		return fmt.Errorf("not master of the global cluster, retry on describe domain only")
 	}
 
 	ctx, cancel = context.WithTimeout(context.Background(), rpcTimeout)
