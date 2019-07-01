@@ -61,12 +61,6 @@ const (
 )
 
 type (
-	ResetParams struct {
-		ResetType         string
-		BadBinaryChecksum string
-		SkipIfOpen        bool
-	}
-
 	BatchParams struct {
 		// Target domain to execute batch operation
 		DomainName string
@@ -76,8 +70,6 @@ type (
 		Reason string
 		// Supporting: reset,terminate
 		BatchType string
-		// Detailed param for reset batch type
-		ResetParams ResetParams
 
 		// Below are all optional
 
@@ -144,6 +136,9 @@ func BatchWorkflow(ctx workflow.Context, batchParams BatchParams) error {
 }
 
 func setDefaultParams(params BatchParams) (BatchParams, error) {
+	if params.BatchType == "" || params.Reason == "" || params.DomainName == "" || params.QueryCondition == "" {
+		return BatchParams{}, fmt.Errorf("must provide required parameters: BatchType/Reason/DomainName/QueryCondition")
+	}
 	if params.RPS <= 0 {
 		params.RPS = defaultRPS
 	}
