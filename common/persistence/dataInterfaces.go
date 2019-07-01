@@ -101,6 +101,7 @@ const (
 	TransferTaskTypeSignalExecution
 	TransferTaskTypeRecordWorkflowStarted
 	TransferTaskTypeResetWorkflow
+	TransferTaskTypeUpsertWorkflowSearchAttributes
 )
 
 // Types of replication tasks
@@ -470,6 +471,13 @@ type (
 		Version                 int64
 	}
 
+	// UpsertWorkflowSearchAttributesTask identifies a transfer task for upsert search attributes
+	UpsertWorkflowSearchAttributesTask struct {
+		VisibilityTimestamp time.Time
+		TaskID              int64
+		Version             int64
+	}
+
 	// StartChildExecutionTask identifies a transfer task for starting child execution
 	StartChildExecutionTask struct {
 		VisibilityTimestamp time.Time
@@ -659,52 +667,14 @@ type (
 
 	// CreateWorkflowExecutionRequest is used to write a new workflow execution
 	CreateWorkflowExecutionRequest struct {
-		RequestID                   string
-		DomainID                    string
-		Execution                   workflow.WorkflowExecution
-		ParentDomainID              string
-		ParentExecution             workflow.WorkflowExecution
-		InitiatedID                 int64
-		TaskList                    string
-		WorkflowTypeName            string
-		WorkflowTimeout             int32
-		DecisionTimeoutValue        int32
-		ExecutionContext            []byte
-		LastEventTaskID             int64
-		NextEventID                 int64
-		LastProcessedEvent          int64
-		SignalCount                 int32
-		HistorySize                 int64
-		TransferTasks               []Task
-		ReplicationTasks            []Task
-		TimerTasks                  []Task
-		RangeID                     int64
-		DecisionVersion             int64
-		DecisionScheduleID          int64
-		DecisionStartedID           int64
-		DecisionStartToCloseTimeout int32
-		State                       int
-		CloseStatus                 int
-		CreateWorkflowMode          int
-		PreviousRunID               string
-		PreviousLastWriteVersion    int64
-		ReplicationState            *ReplicationState
-		Attempt                     int32
-		HasRetryPolicy              bool
-		InitialInterval             int32
-		BackoffCoefficient          float64
-		MaximumInterval             int32
-		ExpirationTime              time.Time
-		MaximumAttempts             int32
-		NonRetriableErrors          []string
-		PreviousAutoResetPoints     *workflow.ResetPoints
-		// 2 means using eventsV2, empty/0/1 means using events(V1)
-		EventStoreVersion int32
-		// for eventsV2: branchToken from historyPersistence
-		BranchToken       []byte
-		CronSchedule      string
-		ExpirationSeconds int32
-		SearchAttributes  map[string][]byte
+		RangeID int64
+
+		CreateWorkflowMode int
+
+		PreviousRunID            string
+		PreviousLastWriteVersion int64
+
+		NewWorkflowSnapshot WorkflowSnapshot
 	}
 
 	// CreateWorkflowExecutionResponse is the response to CreateWorkflowExecutionRequest
@@ -744,7 +714,7 @@ type (
 
 		UpdateWorkflowMutation WorkflowMutation
 
-		ContinueAsNew *CreateWorkflowExecutionRequest
+		NewWorkflowSnapshot *WorkflowSnapshot
 
 		Encoding common.EncodingType // optional binary encoding type
 	}
@@ -2028,6 +1998,41 @@ func (u *SignalExecutionTask) GetVisibilityTimestamp() time.Time {
 
 // SetVisibilityTimestamp set the visibility timestamp
 func (u *SignalExecutionTask) SetVisibilityTimestamp(timestamp time.Time) {
+	u.VisibilityTimestamp = timestamp
+}
+
+// GetType returns the type of the upsert search attributes transfer task
+func (u *UpsertWorkflowSearchAttributesTask) GetType() int {
+	return TransferTaskTypeUpsertWorkflowSearchAttributes
+}
+
+// GetVersion returns the version of the upsert search attributes transfer task
+func (u *UpsertWorkflowSearchAttributesTask) GetVersion() int64 {
+	return u.Version
+}
+
+// SetVersion returns the version of the upsert search attributes transfer task
+func (u *UpsertWorkflowSearchAttributesTask) SetVersion(version int64) {
+	u.Version = version
+}
+
+// GetTaskID returns the sequence ID of the signal transfer task.
+func (u *UpsertWorkflowSearchAttributesTask) GetTaskID() int64 {
+	return u.TaskID
+}
+
+// SetTaskID sets the sequence ID of the signal transfer task.
+func (u *UpsertWorkflowSearchAttributesTask) SetTaskID(id int64) {
+	u.TaskID = id
+}
+
+// GetVisibilityTimestamp get the visibility timestamp
+func (u *UpsertWorkflowSearchAttributesTask) GetVisibilityTimestamp() time.Time {
+	return u.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp set the visibility timestamp
+func (u *UpsertWorkflowSearchAttributesTask) SetVisibilityTimestamp(timestamp time.Time) {
 	u.VisibilityTimestamp = timestamp
 }
 

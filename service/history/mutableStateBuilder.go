@@ -84,7 +84,7 @@ type (
 
 		executionInfo    *persistence.WorkflowExecutionInfo // Workflow mutable state info.
 		replicationState *persistence.ReplicationState
-		continueAsNew    *persistence.CreateWorkflowExecutionRequest
+		continueAsNew    *persistence.WorkflowSnapshot
 		hBuilder         *historyBuilder
 
 		// in memory only attribute which indicates whether there are
@@ -233,7 +233,7 @@ func (e *mutableStateBuilder) GetHistorySize() int64 {
 
 func (e *mutableStateBuilder) SetNewRunSize(size int) {
 	if e.continueAsNew != nil {
-		e.continueAsNew.HistorySize = int64(size)
+		e.continueAsNew.ExecutionInfo.HistorySize = int64(size)
 	}
 }
 
@@ -827,7 +827,8 @@ func (e *mutableStateBuilder) shouldBufferEvent(eventType workflow.EventType) bo
 		workflow.EventTypeRequestCancelExternalWorkflowExecutionInitiated,
 		workflow.EventTypeMarkerRecorded,
 		workflow.EventTypeStartChildWorkflowExecutionInitiated,
-		workflow.EventTypeSignalExternalWorkflowExecutionInitiated:
+		workflow.EventTypeSignalExternalWorkflowExecutionInitiated,
+		workflow.EventTypeUpsertWorkflowSearchAttributes:
 		// do not buffer event if event is directly generated from a corresponding decision
 
 		// sanity check there is no decision on the fly
@@ -2660,6 +2661,39 @@ func (e *mutableStateBuilder) ReplicateSignalExternalWorkflowExecutionInitiatedE
 	return si, nil
 }
 
+func (e *mutableStateBuilder) AddUpsertWorkflowSearchAttributesEvent(
+	decisionCompletedEventID int64,
+	request *workflow.UpsertWorkflowSearchAttributesDecisionAttributes,
+) (*workflow.HistoryEvent, error) {
+
+	opTag := tag.WorkflowActionUpsertWorkflowSearchAttributes
+	if err := e.checkMutability(opTag); err != nil {
+		return nil, err
+	}
+
+	event := e.hBuilder.AddUpsertWorkflowSearchAttributesEvent(decisionCompletedEventID, request)
+	e.ReplicateUpsertWorkflowSearchAttributesEvent(event)
+	return event, nil
+}
+
+func (e *mutableStateBuilder) ReplicateUpsertWorkflowSearchAttributesEvent(
+	event *workflow.HistoryEvent) {
+	upsertSearchAttr := event.UpsertWorkflowSearchAttributesEventAttributes.GetSearchAttributes().GetIndexedFields()
+	currentSearchAttr := e.GetExecutionInfo().SearchAttributes
+
+	e.executionInfo.SearchAttributes = mergeMapOfByteArray(currentSearchAttr, upsertSearchAttr)
+}
+
+func mergeMapOfByteArray(current, upsert map[string][]byte) map[string][]byte {
+	if current == nil {
+		current = make(map[string][]byte)
+	}
+	for k, v := range upsert {
+		current[k] = v
+	}
+	return current
+}
+
 func (e *mutableStateBuilder) AddExternalWorkflowExecutionSignaled(
 	initiatedID int64,
 	domain string,
@@ -3116,54 +3150,61 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(
 		initiatedID = newExecutionInfo.InitiatedID
 	}
 
-	continueAsNew := &persistence.CreateWorkflowExecutionRequest{
-		// NOTE: there is no replication task for the start / decision scheduled event,
-		// the above 2 events will be replicated along with previous continue as new event.
-		RequestID:               uuid.New(),
-		DomainID:                domainID,
-		Execution:               newExecution,
-		ParentDomainID:          parentDomainID,
-		ParentExecution:         parentExecution,
-		InitiatedID:             initiatedID,
-		TaskList:                newExecutionInfo.TaskList,
-		WorkflowTypeName:        newExecutionInfo.WorkflowTypeName,
-		WorkflowTimeout:         newExecutionInfo.WorkflowTimeout,
-		DecisionTimeoutValue:    newExecutionInfo.DecisionTimeoutValue,
-		ExecutionContext:        nil,
-		LastEventTaskID:         newExecutionInfo.LastEventTaskID,
-		State:                   newExecutionInfo.State,
-		CloseStatus:             newExecutionInfo.CloseStatus,
-		NextEventID:             newStateBuilder.GetNextEventID(),
-		LastProcessedEvent:      common.EmptyEventID,
-		CreateWorkflowMode:      persistence.CreateWorkflowModeContinueAsNew,
-		PreviousRunID:           prevRunID,
-		ReplicationState:        newStateBuilder.GetReplicationState(),
-		HasRetryPolicy:          startedAttributes.RetryPolicy != nil,
-		CronSchedule:            startedAttributes.GetCronSchedule(),
-		EventStoreVersion:       newStateBuilder.GetEventStoreVersion(),
-		BranchToken:             newStateBuilder.GetCurrentBranch(),
-		PreviousAutoResetPoints: rolloverAutoResetPointsWithExpiringTime(startedAttributes.GetPrevAutoResetPoints(), prevRunID, continueAsNewEvent.GetTimestamp(), domainRetentionDays),
+	continueAsNew := &persistence.WorkflowSnapshot{
+		ExecutionInfo: &persistence.WorkflowExecutionInfo{
+			// NOTE: there is no replication task for the start / decision scheduled event,
+			// the above 2 events will be replicated along with previous continue as new event.
+			CreateRequestID:      uuid.New(),
+			DomainID:             domainID,
+			WorkflowID:           newExecution.GetWorkflowId(),
+			RunID:                newExecution.GetRunId(),
+			ParentDomainID:       parentDomainID,
+			ParentWorkflowID:     parentExecution.GetWorkflowId(),
+			ParentRunID:          parentExecution.GetRunId(),
+			InitiatedID:          initiatedID,
+			TaskList:             newExecutionInfo.TaskList,
+			WorkflowTypeName:     newExecutionInfo.WorkflowTypeName,
+			WorkflowTimeout:      newExecutionInfo.WorkflowTimeout,
+			DecisionTimeoutValue: newExecutionInfo.DecisionTimeoutValue,
+			ExecutionContext:     nil,
+			LastEventTaskID:      newExecutionInfo.LastEventTaskID,
+			State:                newExecutionInfo.State,
+			CloseStatus:          newExecutionInfo.CloseStatus,
+			NextEventID:          newStateBuilder.GetNextEventID(),
+			LastProcessedEvent:   common.EmptyEventID,
+			HasRetryPolicy:       startedAttributes.RetryPolicy != nil,
+			CronSchedule:         startedAttributes.GetCronSchedule(),
+			EventStoreVersion:    newStateBuilder.GetEventStoreVersion(),
+			BranchToken:          newStateBuilder.GetCurrentBranch(),
+			AutoResetPoints: rolloverAutoResetPointsWithExpiringTime(
+				startedAttributes.GetPrevAutoResetPoints(),
+				prevRunID,
+				continueAsNewEvent.GetTimestamp(),
+				domainRetentionDays,
+			),
+		},
+		ReplicationState: newStateBuilder.GetReplicationState(),
 	}
-
-	if continueAsNew.HasRetryPolicy {
-		continueAsNew.InitialInterval = startedAttributes.RetryPolicy.GetInitialIntervalInSeconds()
-		continueAsNew.BackoffCoefficient = startedAttributes.RetryPolicy.GetBackoffCoefficient()
-		continueAsNew.MaximumInterval = startedAttributes.RetryPolicy.GetMaximumIntervalInSeconds()
-		continueAsNew.MaximumAttempts = startedAttributes.RetryPolicy.GetMaximumAttempts()
-		continueAsNew.ExpirationSeconds = startedAttributes.RetryPolicy.GetExpirationIntervalInSeconds()
-		continueAsNew.NonRetriableErrors = startedAttributes.RetryPolicy.NonRetriableErrorReasons
+	continueAsNewExecutionInfo := continueAsNew.ExecutionInfo
+	if continueAsNewExecutionInfo.HasRetryPolicy {
+		continueAsNewExecutionInfo.InitialInterval = startedAttributes.RetryPolicy.GetInitialIntervalInSeconds()
+		continueAsNewExecutionInfo.BackoffCoefficient = startedAttributes.RetryPolicy.GetBackoffCoefficient()
+		continueAsNewExecutionInfo.MaximumInterval = startedAttributes.RetryPolicy.GetMaximumIntervalInSeconds()
+		continueAsNewExecutionInfo.MaximumAttempts = startedAttributes.RetryPolicy.GetMaximumAttempts()
+		continueAsNewExecutionInfo.ExpirationSeconds = startedAttributes.RetryPolicy.GetExpirationIntervalInSeconds()
+		continueAsNewExecutionInfo.NonRetriableErrors = startedAttributes.RetryPolicy.NonRetriableErrorReasons
 	}
 
 	if continueAsNewAttributes.GetInitiator() == workflow.ContinueAsNewInitiatorRetryPolicy {
 		// retry
-		continueAsNew.Attempt = startedAttributes.GetAttempt()
-		continueAsNew.ExpirationTime = e.executionInfo.ExpirationTime
+		continueAsNewExecutionInfo.Attempt = startedAttributes.GetAttempt()
+		continueAsNewExecutionInfo.ExpirationTime = e.executionInfo.ExpirationTime
 	} else {
 		// by cron or decider
-		continueAsNew.Attempt = 0
-		if startedAttributes.RetryPolicy != nil && continueAsNew.ExpirationSeconds > 0 {
+		continueAsNewExecutionInfo.Attempt = 0
+		if startedAttributes.RetryPolicy != nil && continueAsNewExecutionInfo.ExpirationSeconds > 0 {
 			expirationInSeconds := startedAttributes.RetryPolicy.GetExpirationIntervalInSeconds() + continueAsNewAttributes.GetBackoffStartIntervalInSeconds()
-			continueAsNew.ExpirationTime = e.timeSource.Now().Add(time.Second * time.Duration(expirationInSeconds))
+			continueAsNewExecutionInfo.ExpirationTime = e.timeSource.Now().Add(time.Second * time.Duration(expirationInSeconds))
 		}
 	}
 
@@ -3172,9 +3213,9 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(
 	timeoutDuration := time.Duration(timeoutInSeconds) * time.Second
 	startedTime := e.timeSource.Now()
 	timeoutDeadline := startedTime.Add(timeoutDuration)
-	if !continueAsNew.ExpirationTime.IsZero() && timeoutDeadline.After(continueAsNew.ExpirationTime) {
+	if !continueAsNewExecutionInfo.ExpirationTime.IsZero() && timeoutDeadline.After(continueAsNewExecutionInfo.ExpirationTime) {
 		// expire before timeout
-		timeoutDeadline = continueAsNew.ExpirationTime
+		timeoutDeadline = continueAsNewExecutionInfo.ExpirationTime
 	}
 	continueAsNew.TransferTasks = []persistence.Task{&persistence.RecordWorkflowStartedTask{}}
 	continueAsNew.TimerTasks = []persistence.Task{&persistence.WorkflowTimeoutTask{
@@ -3186,10 +3227,10 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(
 			newStateBuilder.UpdateReplicationStateLastEventID(sourceClusterName, startedEvent.GetVersion(), di.ScheduleID)
 		}
 
-		continueAsNew.DecisionVersion = di.Version
-		continueAsNew.DecisionScheduleID = di.ScheduleID
-		continueAsNew.DecisionStartedID = di.StartedID
-		continueAsNew.DecisionStartToCloseTimeout = di.DecisionTimeout
+		continueAsNewExecutionInfo.DecisionVersion = di.Version
+		continueAsNewExecutionInfo.DecisionScheduleID = di.ScheduleID
+		continueAsNewExecutionInfo.DecisionStartedID = di.StartedID
+		continueAsNewExecutionInfo.DecisionTimeout = di.DecisionTimeout
 
 		if newStateBuilder.GetReplicationState() != nil {
 			newStateBuilder.UpdateReplicationStateLastEventID(sourceClusterName, startedEvent.GetVersion(), di.ScheduleID)
@@ -3202,9 +3243,9 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(
 		})
 	} else {
 		// this need a backoff (for retry or cron)
-		continueAsNew.DecisionVersion = newStateBuilder.GetCurrentVersion()
-		continueAsNew.DecisionScheduleID = common.EmptyEventID
-		continueAsNew.DecisionStartedID = common.EmptyEventID
+		continueAsNewExecutionInfo.DecisionVersion = newStateBuilder.GetCurrentVersion()
+		continueAsNewExecutionInfo.DecisionScheduleID = common.EmptyEventID
+		continueAsNewExecutionInfo.DecisionStartedID = common.EmptyEventID
 		if newStateBuilder.GetReplicationState() != nil {
 			newStateBuilder.UpdateReplicationStateLastEventID(sourceClusterName, startedEvent.GetVersion(), startedEvent.GetEventId())
 		}
@@ -3591,7 +3632,7 @@ func (e *mutableStateBuilder) CreateActivityRetryTimer(
 	return retryTask
 }
 
-func (e *mutableStateBuilder) GetContinueAsNew() *persistence.CreateWorkflowExecutionRequest {
+func (e *mutableStateBuilder) GetContinueAsNew() *persistence.WorkflowSnapshot {
 	return e.continueAsNew
 }
 
