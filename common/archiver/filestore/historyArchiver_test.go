@@ -58,6 +58,7 @@ type historyArchiverSuite struct {
 	*require.Assertions
 	suite.Suite
 
+	container          archiver.BootstrapContainer
 	logger             log.Logger
 	testGetDirectory   string
 	historyBatchesV1   []*shared.History
@@ -82,7 +83,9 @@ func (s *historyArchiverSuite) TearDownSuite() {
 func (s *historyArchiverSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 	zapLogger := zap.NewNop()
-	s.logger = loggerimpl.NewLogger(zapLogger)
+	s.container = archiver.BootstrapContainer{
+		Logger: loggerimpl.NewLogger(zapLogger),
+	}
 }
 
 func (s *historyArchiverSuite) TestValidateURI() {
@@ -108,14 +111,14 @@ func (s *historyArchiverSuite) TestValidateURI() {
 		},
 	}
 
-	historyArchiver := newHistoryArchiver(nil, nil, s.logger, nil, nil)
+	historyArchiver := newHistoryArchiver(s.container, nil, nil)
 	for _, tc := range testCases {
 		s.Equal(tc.isValid, historyArchiver.ValidateURI(tc.URI))
 	}
 }
 
 func (s *historyArchiverSuite) TestArchive_Fail_InvalidURI() {
-	historyArchiver := newHistoryArchiver(nil, nil, s.logger, nil, nil)
+	historyArchiver := newHistoryArchiver(s.container, nil, nil)
 	request := &archiver.ArchiveHistoryRequest{
 		DomainID:             testDomainID,
 		DomainName:           testDomainName,
@@ -130,7 +133,7 @@ func (s *historyArchiverSuite) TestArchive_Fail_InvalidURI() {
 }
 
 func (s *historyArchiverSuite) TestArchive_Fail_InvalidRequest() {
-	historyArchiver := newHistoryArchiver(nil, nil, s.logger, nil, nil)
+	historyArchiver := newHistoryArchiver(s.container, nil, nil)
 	request := &archiver.ArchiveHistoryRequest{
 		DomainID:             testDomainID,
 		DomainName:           testDomainName,
@@ -153,7 +156,7 @@ func (s *historyArchiverSuite) TestArchive_Fail_ErrorOnReadHistory() {
 		historyIterator.EXPECT().Next().Return(nil, errors.New("some random error")),
 	)
 
-	historyArchiver := newHistoryArchiver(nil, nil, s.logger, nil, historyIterator)
+	historyArchiver := newHistoryArchiver(s.container, nil, historyIterator)
 	request := &archiver.ArchiveHistoryRequest{
 		DomainID:             testDomainID,
 		DomainName:           testDomainName,
@@ -176,7 +179,7 @@ func (s *historyArchiverSuite) TestArchive_Fail_TimeoutWhenReadingHistory() {
 		historyIterator.EXPECT().Next().Return(nil, &shared.ServiceBusyError{}),
 	)
 
-	historyArchiver := newHistoryArchiver(nil, nil, s.logger, nil, historyIterator)
+	historyArchiver := newHistoryArchiver(s.container, nil, historyIterator)
 	request := &archiver.ArchiveHistoryRequest{
 		DomainID:             testDomainID,
 		DomainName:           testDomainName,
@@ -205,13 +208,18 @@ func (s *historyArchiverSuite) TestArchive_Fail_HistoryMutated() {
 			},
 		},
 	}
+	historyBlob := &archiver.HistoryBlob{
+		Header: &archiver.HistoryBlobHeader{
+			IsLast: common.BoolPtr(true),
+		},
+		Body: historyBatches,
+	}
 	gomock.InOrder(
 		historyIterator.EXPECT().HasNext().Return(true),
-		historyIterator.EXPECT().Next().Return(historyBatches, nil),
-		historyIterator.EXPECT().HasNext().Return(false),
+		historyIterator.EXPECT().Next().Return(historyBlob, nil),
 	)
 
-	historyArchiver := newHistoryArchiver(nil, nil, s.logger, nil, historyIterator)
+	historyArchiver := newHistoryArchiver(s.container, nil, historyIterator)
 	request := &archiver.ArchiveHistoryRequest{
 		DomainID:             testDomainID,
 		DomainName:           testDomainName,
@@ -254,10 +262,15 @@ func (s *historyArchiverSuite) TestArchive_Success() {
 			},
 		},
 	}
+	historyBlob := &archiver.HistoryBlob{
+		Header: &archiver.HistoryBlobHeader{
+			IsLast: common.BoolPtr(true),
+		},
+		Body: historyBatches,
+	}
 	gomock.InOrder(
 		historyIterator.EXPECT().HasNext().Return(true),
-		historyIterator.EXPECT().Next().Return(historyBatches, nil),
-		historyIterator.EXPECT().HasNext().Return(false),
+		historyIterator.EXPECT().Next().Return(historyBlob, nil),
 		historyIterator.EXPECT().HasNext().Return(false),
 	)
 
@@ -265,7 +278,7 @@ func (s *historyArchiverSuite) TestArchive_Success() {
 	s.NoError(err)
 	defer os.RemoveAll(dir)
 
-	historyArchiver := newHistoryArchiver(nil, nil, s.logger, nil, historyIterator)
+	historyArchiver := newHistoryArchiver(s.container, nil, historyIterator)
 	request := &archiver.ArchiveHistoryRequest{
 		DomainID:             testDomainID,
 		DomainName:           testDomainName,
@@ -283,7 +296,7 @@ func (s *historyArchiverSuite) TestArchive_Success() {
 }
 
 func (s *historyArchiverSuite) TestGet_Fail_InvalidURI() {
-	historyArchiver := newHistoryArchiver(nil, nil, s.logger, nil, nil)
+	historyArchiver := newHistoryArchiver(s.container, nil, nil)
 	request := &archiver.GetHistoryRequest{
 		DomainID:   testDomainID,
 		WorkflowID: testWorkflowID,
@@ -293,11 +306,11 @@ func (s *historyArchiverSuite) TestGet_Fail_InvalidURI() {
 	response, err := historyArchiver.Get(context.Background(), "wrongscheme://", request)
 	s.Nil(response)
 	s.Error(err)
-	s.Equal(errInvalidURI, err.Error())
+	s.Equal(archiver.ErrInvalidURI, err.Error())
 }
 
 func (s *historyArchiverSuite) TestGet_Fail_InvalidRequest() {
-	historyArchiver := newHistoryArchiver(nil, nil, s.logger, nil, nil)
+	historyArchiver := newHistoryArchiver(s.container, nil, nil)
 	request := &archiver.GetHistoryRequest{
 		DomainID:   testDomainID,
 		WorkflowID: testWorkflowID,
@@ -306,11 +319,11 @@ func (s *historyArchiverSuite) TestGet_Fail_InvalidRequest() {
 	}
 	response, err := historyArchiver.Get(context.Background(), "file:///a/b/c", request)
 	s.Nil(response)
-	s.Equal(errInvalidGetHistoryRequest, err)
+	s.Equal(archiver.ErrInvalidGetHistoryRequest, err)
 }
 
 func (s *historyArchiverSuite) TestGet_Fail_DirectoryNotExist() {
-	historyArchiver := newHistoryArchiver(nil, nil, s.logger, nil, nil)
+	historyArchiver := newHistoryArchiver(s.container, nil, nil)
 	request := &archiver.GetHistoryRequest{
 		DomainID:   testDomainID,
 		WorkflowID: testWorkflowID,
@@ -319,11 +332,11 @@ func (s *historyArchiverSuite) TestGet_Fail_DirectoryNotExist() {
 	}
 	response, err := historyArchiver.Get(context.Background(), "file:///a/b/c", request)
 	s.Nil(response)
-	s.Equal(errHistoryNotExist, err)
+	s.Equal(archiver.ErrHistoryNotExist, err)
 }
 
 func (s *historyArchiverSuite) TestGet_Fail_InvalidToken() {
-	historyArchiver := newHistoryArchiver(nil, nil, s.logger, nil, nil)
+	historyArchiver := newHistoryArchiver(s.container, nil, nil)
 	request := &archiver.GetHistoryRequest{
 		DomainID:      testDomainID,
 		WorkflowID:    testWorkflowID,
@@ -333,11 +346,11 @@ func (s *historyArchiverSuite) TestGet_Fail_InvalidToken() {
 	}
 	response, err := historyArchiver.Get(context.Background(), "file://.", request)
 	s.Nil(response)
-	s.Equal(errGetHistoryTokenCorrupted, err)
+	s.Equal(archiver.ErrGetHistoryTokenCorrupted, err)
 }
 
 func (s *historyArchiverSuite) TestGet_Fail_FileNotExist() {
-	historyArchiver := newHistoryArchiver(nil, nil, s.logger, nil, nil)
+	historyArchiver := newHistoryArchiver(s.container, nil, nil)
 	request := &archiver.GetHistoryRequest{
 		DomainID:             testDomainID,
 		WorkflowID:           testWorkflowID,
@@ -347,11 +360,11 @@ func (s *historyArchiverSuite) TestGet_Fail_FileNotExist() {
 	}
 	response, err := historyArchiver.Get(context.Background(), "file://.", request)
 	s.Nil(response)
-	s.Equal(errHistoryNotExist, err)
+	s.Equal(archiver.ErrHistoryNotExist, err)
 }
 
 func (s *historyArchiverSuite) TestGet_Success_PickHighestVersion() {
-	historyArchiver := newHistoryArchiver(nil, nil, s.logger, nil, nil)
+	historyArchiver := newHistoryArchiver(s.container, nil, nil)
 	request := &archiver.GetHistoryRequest{
 		DomainID:   testDomainID,
 		WorkflowID: testWorkflowID,
@@ -365,7 +378,7 @@ func (s *historyArchiverSuite) TestGet_Success_PickHighestVersion() {
 }
 
 func (s *historyArchiverSuite) TestGet_Success_UseProvidedVersion() {
-	historyArchiver := newHistoryArchiver(nil, nil, s.logger, nil, nil)
+	historyArchiver := newHistoryArchiver(s.container, nil, nil)
 	request := &archiver.GetHistoryRequest{
 		DomainID:             testDomainID,
 		WorkflowID:           testWorkflowID,
@@ -380,7 +393,7 @@ func (s *historyArchiverSuite) TestGet_Success_UseProvidedVersion() {
 }
 
 func (s *historyArchiverSuite) TestGet_Success_SmallPageSize() {
-	historyArchiver := newHistoryArchiver(nil, nil, s.logger, nil, nil)
+	historyArchiver := newHistoryArchiver(s.container, nil, nil)
 	request := &archiver.GetHistoryRequest{
 		DomainID:             testDomainID,
 		WorkflowID:           testWorkflowID,
@@ -414,10 +427,15 @@ func (s *historyArchiverSuite) TestArchiveAndGet() {
 	mockCtrl := gomock.NewController(s.T())
 	defer mockCtrl.Finish()
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
+	historyBlob := &archiver.HistoryBlob{
+		Header: &archiver.HistoryBlobHeader{
+			IsLast: common.BoolPtr(true),
+		},
+		Body: s.historyBatchesV100,
+	}
 	gomock.InOrder(
 		historyIterator.EXPECT().HasNext().Return(true),
-		historyIterator.EXPECT().Next().Return(s.historyBatchesV100, nil),
-		historyIterator.EXPECT().HasNext().Return(false),
+		historyIterator.EXPECT().Next().Return(historyBlob, nil),
 		historyIterator.EXPECT().HasNext().Return(false),
 	)
 
@@ -425,7 +443,7 @@ func (s *historyArchiverSuite) TestArchiveAndGet() {
 	s.NoError(err)
 	defer os.RemoveAll(dir)
 
-	historyArchiver := newHistoryArchiver(nil, nil, s.logger, nil, historyIterator)
+	historyArchiver := newHistoryArchiver(s.container, nil, historyIterator)
 	archiveRequest := &archiver.ArchiveHistoryRequest{
 		DomainID:             testDomainID,
 		DomainName:           testDomainName,

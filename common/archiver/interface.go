@@ -25,6 +25,9 @@ import (
 	"errors"
 
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
 )
 
 var (
@@ -61,6 +64,14 @@ type (
 	GetHistoryResponse struct {
 		HistoryBatches []*shared.History
 		NextPageToken  []byte
+	}
+
+	// BootstrapContainer contains components needed by all Archiver implementations
+	BootstrapContainer struct {
+		HistoryManager   persistence.HistoryManager
+		HistoryV2Manager persistence.HistoryV2Manager
+		Logger           log.Logger
+		MetricsClient    metrics.Client
 	}
 
 	// HistoryArchiver is used to archive history and read archived history

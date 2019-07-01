@@ -40,7 +40,6 @@ const (
 	testWorkflowID                      = "test-workflow-id"
 	testRunID                           = "test-run-id"
 	testNextEventID                     = 1800
-	testDomain                          = "test-domain"
 	testCloseFailoverVersion            = 100
 	testDefaultPersistencePageSize      = 250
 	testDefaultTargetHistoryBatchesSize = 2 * 1024 * 124
@@ -360,7 +359,7 @@ func (s *HistoryIteratorSuite) TestNext_Fail_IteratorDepleted() {
 	// set target history batches such that a single call to next will read all of history
 	config := constructConfig(testDefaultPersistencePageSize, 16*testDefaultHistoryEventSize)
 	itr := s.constructTestHistoryIterator(historyManager, nil, config, nil)
-	history, err := itr.Next()
+	blob, err := itr.Next()
 	s.Nil(err)
 
 	expectedIteratorState := historyIteratorState{
@@ -369,13 +368,27 @@ func (s *HistoryIteratorSuite) TestNext_Fail_IteratorDepleted() {
 		NextEventID:       0,
 	}
 	s.assertStateMatches(expectedIteratorState, itr)
-	s.NotNil(history)
+	s.NotNil(blob)
+	expectedHeader := &HistoryBlobHeader{
+		DomainName:           common.StringPtr(testDomainName),
+		DomainID:             common.StringPtr(testDomainID),
+		WorkflowID:           common.StringPtr(testWorkflowID),
+		RunID:                common.StringPtr(testRunID),
+		IsLast:               common.BoolPtr(true),
+		FirstFailoverVersion: common.Int64Ptr(1),
+		LastFailoverVersion:  common.Int64Ptr(5),
+		FirstEventID:         common.Int64Ptr(common.FirstEventID),
+		LastEventID:          common.Int64Ptr(16),
+		EventCount:           common.Int64Ptr(16),
+	}
+	s.Equal(expectedHeader, blob.Header)
+	s.Len(blob.Body, 7)
 	s.NoError(err)
 	s.False(itr.HasNext())
 
-	history, err = itr.Next()
+	blob, err = itr.Next()
 	s.Equal(err, errIteratorDepleted)
-	s.Nil(history)
+	s.Nil(blob)
 	s.assertStateMatches(expectedIteratorState, itr)
 	historyManager.AssertExpectations(s.T())
 }
@@ -412,19 +425,32 @@ func (s *HistoryIteratorSuite) TestNext_Fail_ReturnErrOnSecondCallToNext() {
 	// set target blob size such that the first two pages are read for blob one without error, third page will return error
 	config := constructConfig(testDefaultPersistencePageSize, 6*testDefaultHistoryEventSize)
 	itr := s.constructTestHistoryIterator(historyManager, nil, config, nil)
-	history, err := itr.Next()
+	blob, err := itr.Next()
 	expectedIteratorState := historyIteratorState{
 		FinishedIteration: false,
 		NextEventID:       7,
 	}
 	s.assertStateMatches(expectedIteratorState, itr)
-	s.NotNil(history)
+	s.NotNil(blob)
+	expectedHeader := &HistoryBlobHeader{
+		DomainName:           common.StringPtr(testDomainName),
+		DomainID:             common.StringPtr(testDomainID),
+		WorkflowID:           common.StringPtr(testWorkflowID),
+		RunID:                common.StringPtr(testRunID),
+		IsLast:               common.BoolPtr(false),
+		FirstFailoverVersion: common.Int64Ptr(1),
+		LastFailoverVersion:  common.Int64Ptr(1),
+		FirstEventID:         common.Int64Ptr(common.FirstEventID),
+		LastEventID:          common.Int64Ptr(6),
+		EventCount:           common.Int64Ptr(6),
+	}
+	s.Equal(expectedHeader, blob.Header)
 	s.NoError(err)
 	s.True(itr.HasNext())
 
-	history, err = itr.Next()
+	blob, err = itr.Next()
 	s.Error(err)
-	s.Nil(history)
+	s.Nil(blob)
 	s.assertStateMatches(expectedIteratorState, itr)
 	historyManager.AssertExpectations(s.T())
 }
@@ -458,6 +484,23 @@ func (s *HistoryIteratorSuite) TestNext_Success_TenCallsToNext() {
 		blob, err := itr.Next()
 		s.NoError(err)
 		s.NotNil(blob)
+		expectedHeader := &HistoryBlobHeader{
+			DomainName:           common.StringPtr(testDomainName),
+			DomainID:             common.StringPtr(testDomainID),
+			WorkflowID:           common.StringPtr(testWorkflowID),
+			RunID:                common.StringPtr(testRunID),
+			IsLast:               common.BoolPtr(false),
+			FirstFailoverVersion: common.Int64Ptr(1),
+			LastFailoverVersion:  common.Int64Ptr(1),
+			FirstEventID:         common.Int64Ptr(common.FirstEventID + int64(i*200)),
+			LastEventID:          common.Int64Ptr(int64(200 + (i * 200))),
+			EventCount:           common.Int64Ptr(200),
+		}
+		if i == 9 {
+			expectedHeader.IsLast = common.BoolPtr(true)
+		}
+		s.Equal(expectedHeader, blob.Header)
+
 		if i < 9 {
 			expectedIteratorState.FinishedIteration = false
 			expectedIteratorState.NextEventID = int64(200*(i+1) + 1)
@@ -557,9 +600,10 @@ func (s *HistoryIteratorSuite) TestNext_Success_SameHistoryDifferentPage() {
 		history2, err := itr2.Next()
 		s.NoError(err)
 
-		s.Equal(len(history1), len(history2))
-		s.Equal(expectedFirstEventID[i], history1[0].Events[0].GetEventId())
-		s.Equal(expectedFirstEventID[i], history2[0].Events[0].GetEventId())
+		s.Equal(history1.Header, history2.Header)
+		s.Equal(len(history1.Body), len(history2.Body))
+		s.Equal(expectedFirstEventID[i], history1.Body[0].Events[0].GetEventId())
+		s.Equal(expectedFirstEventID[i], history2.Body[0].Events[0].GetEventId())
 	}
 	expectedIteratorState := historyIteratorState{
 		NextEventID:       0,

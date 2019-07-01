@@ -33,9 +33,29 @@ import (
 type (
 	// HistoryIterator is used to get history batches
 	HistoryIterator interface {
-		Next() ([]*shared.History, error)
+		Next() (*HistoryBlob, error)
 		HasNext() bool
 		GetState() ([]byte, error)
+	}
+
+	// HistoryBlobHeader is the header attached to all history blobs
+	HistoryBlobHeader struct {
+		DomainName           *string `json:"domain_name,omitempty"`
+		DomainID             *string `json:"domain_id,omitempty"`
+		WorkflowID           *string `json:"workflow_id,omitempty"`
+		RunID                *string `json:"run_id,omitempty"`
+		IsLast               *bool   `json:"is_last,omitempty"`
+		FirstFailoverVersion *int64  `json:"first_failover_version,omitempty"`
+		LastFailoverVersion  *int64  `json:"last_failover_version,omitempty"`
+		FirstEventID         *int64  `json:"first_event_id,omitempty"`
+		LastEventID          *int64  `json:"last_event_id,omitempty"`
+		EventCount           *int64  `json:"event_count,omitempty"`
+	}
+
+	// HistoryBlob is the serializable data that forms the body of a blob
+	HistoryBlob struct {
+		Header *HistoryBlobHeader `json:"header"`
+		Body   []*shared.History  `json:"body"`
 	}
 
 	historyIteratorState struct {
@@ -108,7 +128,7 @@ func NewHistoryIterator(
 	return it, nil
 }
 
-func (i *historyIterator) Next() ([]*shared.History, error) {
+func (i *historyIterator) Next() (*HistoryBlob, error) {
 	if !i.HasNext() {
 		return nil, errIteratorDepleted
 	}
@@ -119,7 +139,30 @@ func (i *historyIterator) Next() ([]*shared.History, error) {
 	}
 
 	i.historyIteratorState = newIterState
-	return historyBatches, nil
+	firstEvent := historyBatches[0].Events[0]
+	lastBatch := historyBatches[len(historyBatches)-1]
+	lastEvent := lastBatch.Events[len(lastBatch.Events)-1]
+	eventCount := int64(0)
+	for _, batch := range historyBatches {
+		eventCount += int64(len(batch.Events))
+	}
+	header := &HistoryBlobHeader{
+		DomainName:           common.StringPtr(i.domainName),
+		DomainID:             common.StringPtr(i.domainID),
+		WorkflowID:           common.StringPtr(i.workflowID),
+		RunID:                common.StringPtr(i.runID),
+		IsLast:               common.BoolPtr(i.FinishedIteration),
+		FirstFailoverVersion: firstEvent.Version,
+		LastFailoverVersion:  lastEvent.Version,
+		FirstEventID:         firstEvent.EventId,
+		LastEventID:          lastEvent.EventId,
+		EventCount:           common.Int64Ptr(eventCount),
+	}
+
+	return &HistoryBlob{
+		Header: header,
+		Body:   historyBatches,
+	}, nil
 }
 
 // HasNext returns true if there are more items to iterate over.
@@ -165,7 +208,7 @@ func (i *historyIterator) readHistoryBatches(firstEventID int64) ([]*shared.Hist
 		}
 	}
 
-	// If you are here, it means the target size is meeted after add the last batch of read history.
+	// If you are here, it means the target size is meeted after adding the last batch of read history.
 	// We need to check if there's more history batches.
 	_, err := i.readHistory(firstEventID)
 	if _, ok := err.(*shared.EntityNotExistsError); ok && firstEventID != common.FirstEventID {
