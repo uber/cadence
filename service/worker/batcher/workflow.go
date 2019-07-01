@@ -322,6 +322,7 @@ func processTerminate(ctx context.Context, limiter *rate.Limiter, task taskDetai
 			return err
 		}
 		if len(resp.PendingChildren) > 0 {
+			getActivityLogger(ctx).Info("Found more child workflows to terminate", tag.Number(int64(len(resp.PendingChildren))))
 			for _, ch := range resp.PendingChildren {
 				wfs = append(wfs, shared.WorkflowExecution{
 					WorkflowId: ch.WorkflowID,
