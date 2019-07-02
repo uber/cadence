@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -27,13 +27,15 @@ import (
 )
 
 type (
-	// Model is a group of edges
+	// Model represents a state transition graph that contains all the relationships of Vertex
 	Model interface {
 		AddEdge(...Edge)
 		ListEdges() []Edge
 	}
 
-	// Generator generates random events based on the defined models
+	// Generator generates a sequence of Vertexes based on the defined models
+	// It must define InitialEntryVertex and ExitVertex
+	// RandomEntryVertex is a random entry point which can be access at any state of the generator
 	Generator interface {
 		AddInitialEntryVertex(...Vertex)
 		AddExitVertex(...Vertex)
@@ -45,7 +47,9 @@ type (
 		Reset()
 	}
 
-	// Vertex is a state in the model
+	// Vertex represents a state in the model. A state can be an event
+	// IsStrictOnNextVertex means if the vertex must be followed by its children
+	// MaxNextVertex means the max concurrent path can branch out from this vertex
 	Vertex interface {
 		SetName(string)
 		GetName() string
@@ -56,7 +60,8 @@ type (
 		GetMaxNextVertex() int
 	}
 
-	// Edge is the relation between two vertexes
+	// Edge is the relationship between two vertexes
+	// The condition means if the edge is accessible at the state
 	Edge interface {
 		SetStartVertex(Vertex)
 		GetStartVertex() Vertex
