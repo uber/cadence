@@ -30,7 +30,7 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 )
 
-func (d *cassandraPersistence) applyWorkflowMutationBatch(
+func applyWorkflowMutationBatch(
 	batch *gocql.Batch,
 	shardID int,
 	workflowMutation *p.InternalWorkflowMutation,
@@ -64,7 +64,6 @@ func (d *cassandraPersistence) applyWorkflowMutationBatch(
 		domainID,
 		workflowID,
 		runID,
-		condition,
 	); err != nil {
 		return err
 	}
@@ -77,7 +76,6 @@ func (d *cassandraPersistence) applyWorkflowMutationBatch(
 		domainID,
 		workflowID,
 		runID,
-		condition,
 	)
 
 	if err := updateChildExecutionInfos(
@@ -88,7 +86,6 @@ func (d *cassandraPersistence) applyWorkflowMutationBatch(
 		domainID,
 		workflowID,
 		runID,
-		condition,
 	); err != nil {
 		return err
 	}
@@ -101,7 +98,6 @@ func (d *cassandraPersistence) applyWorkflowMutationBatch(
 		domainID,
 		workflowID,
 		runID,
-		condition,
 	)
 
 	updateSignalInfos(
@@ -112,7 +108,6 @@ func (d *cassandraPersistence) applyWorkflowMutationBatch(
 		domainID,
 		workflowID,
 		runID,
-		condition,
 	)
 
 	updateSignalsRequested(
@@ -123,7 +118,6 @@ func (d *cassandraPersistence) applyWorkflowMutationBatch(
 		domainID,
 		workflowID,
 		runID,
-		condition,
 	)
 
 	updateBufferedEvents(
@@ -134,7 +128,6 @@ func (d *cassandraPersistence) applyWorkflowMutationBatch(
 		domainID,
 		workflowID,
 		runID,
-		condition,
 	)
 
 	// transfer / replication / timer tasks
@@ -183,8 +176,6 @@ func applyWorkflowSnapshotBatchAsReset(
 		domainID,
 		workflowID,
 		runID,
-		true,
-		condition,
 	); err != nil {
 		return err
 	}
@@ -196,8 +187,6 @@ func applyWorkflowSnapshotBatchAsReset(
 		domainID,
 		workflowID,
 		runID,
-		true,
-		condition,
 	)
 
 	if err := resetChildExecutionInfos(
@@ -207,8 +196,6 @@ func applyWorkflowSnapshotBatchAsReset(
 		domainID,
 		workflowID,
 		runID,
-		true,
-		condition,
 	); err != nil {
 		return err
 	}
@@ -220,8 +207,6 @@ func applyWorkflowSnapshotBatchAsReset(
 		domainID,
 		workflowID,
 		runID,
-		true,
-		condition,
 	)
 
 	resetSignalInfos(
@@ -231,8 +216,6 @@ func applyWorkflowSnapshotBatchAsReset(
 		domainID,
 		workflowID,
 		runID,
-		true,
-		condition,
 	)
 
 	resetSignalRequested(
@@ -242,8 +225,6 @@ func applyWorkflowSnapshotBatchAsReset(
 		domainID,
 		workflowID,
 		runID,
-		true,
-		condition,
 	)
 
 	deleteBufferedEvents(
@@ -252,7 +233,6 @@ func applyWorkflowSnapshotBatchAsReset(
 		domainID,
 		workflowID,
 		runID,
-		condition,
 	)
 
 	// transfer / replication / timer tasks
@@ -281,7 +261,6 @@ func applyWorkflowSnapshotBatchAsNew(
 	domainID := executionInfo.DomainID
 	workflowID := executionInfo.WorkflowID
 	runID := executionInfo.RunID
-	condition := workflowSnapshot.Condition
 
 	if err := createExecution(
 		batch,
@@ -301,7 +280,6 @@ func applyWorkflowSnapshotBatchAsNew(
 		domainID,
 		workflowID,
 		runID,
-		condition,
 	); err != nil {
 		return err
 	}
@@ -314,7 +292,6 @@ func applyWorkflowSnapshotBatchAsNew(
 		domainID,
 		workflowID,
 		runID,
-		condition,
 	)
 
 	if err := updateChildExecutionInfos(
@@ -325,7 +302,6 @@ func applyWorkflowSnapshotBatchAsNew(
 		domainID,
 		workflowID,
 		runID,
-		condition,
 	); err != nil {
 		return err
 	}
@@ -338,7 +314,6 @@ func applyWorkflowSnapshotBatchAsNew(
 		domainID,
 		workflowID,
 		runID,
-		condition,
 	)
 
 	updateSignalInfos(
@@ -349,7 +324,6 @@ func applyWorkflowSnapshotBatchAsNew(
 		domainID,
 		workflowID,
 		runID,
-		condition,
 	)
 
 	updateSignalsRequested(
@@ -360,7 +334,6 @@ func applyWorkflowSnapshotBatchAsNew(
 		domainID,
 		workflowID,
 		runID,
-		condition,
 	)
 
 	// transfer / replication / timer tasks
@@ -595,7 +568,7 @@ func updateExecution(
 	completionData, completionEncoding := p.FromDataBlob(executionInfo.CompletionEvent)
 	if replicationState == nil {
 		// Updates will be called with null ReplicationState while the feature is disabled
-		batchQueryHelper(batch, templateUpdateWorkflowExecutionQuery, true, condition,
+		batch.Query(templateUpdateWorkflowExecutionQuery,
 			domainID,
 			workflowID,
 			runID,
@@ -659,14 +632,15 @@ func updateExecution(
 			workflowID,
 			runID,
 			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID)
+			rowTypeExecutionTaskID,
+			condition)
 	} else {
 		lastReplicationInfo := make(map[string]map[string]interface{})
 		for k, v := range replicationState.LastReplicationInfo {
 			lastReplicationInfo[k] = createReplicationInfoMap(v)
 		}
 
-		batchQueryHelper(batch, templateUpdateWorkflowExecutionWithReplicationQuery, true, condition,
+		batch.Query(templateUpdateWorkflowExecutionWithReplicationQuery,
 			domainID,
 			workflowID,
 			runID,
@@ -735,7 +709,8 @@ func updateExecution(
 			workflowID,
 			runID,
 			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID)
+			rowTypeExecutionTaskID,
+			condition)
 	}
 
 	return nil
@@ -1136,7 +1111,6 @@ func updateActivityInfos(
 	domainID string,
 	workflowID string,
 	runID string,
-	condition int64,
 ) error {
 
 	for _, a := range activityInfos {
@@ -1186,8 +1160,7 @@ func updateActivityInfos(
 			workflowID,
 			runID,
 			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
-			condition)
+			rowTypeExecutionTaskID)
 	}
 
 	for _, deleteInfo := range deleteInfos {
@@ -1199,8 +1172,7 @@ func updateActivityInfos(
 			workflowID,
 			runID,
 			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
-			condition)
+			rowTypeExecutionTaskID)
 	}
 	return nil
 }
@@ -1211,7 +1183,6 @@ func deleteBufferedEvents(
 	domainID string,
 	workflowID string,
 	runID string,
-	condition int64,
 ) {
 
 	batch.Query(templateDeleteBufferedEventsQuery,
@@ -1221,8 +1192,7 @@ func deleteBufferedEvents(
 		workflowID,
 		runID,
 		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID,
-		condition)
+		rowTypeExecutionTaskID)
 
 }
 
@@ -1233,8 +1203,6 @@ func resetActivityInfos(
 	domainID string,
 	workflowID string,
 	runID string,
-	useCondition bool,
-	condition int64,
 ) error {
 
 	infoMap, err := resetActivityInfoMap(activityInfos)
@@ -1242,7 +1210,7 @@ func resetActivityInfos(
 		return err
 	}
 
-	batchQueryHelper(batch, templateResetActivityInfoQuery, useCondition, condition,
+	batch.Query(templateResetActivityInfoQuery,
 		infoMap,
 		shardID,
 		rowTypeExecution,
@@ -1262,7 +1230,6 @@ func updateTimerInfos(
 	domainID string,
 	workflowID string,
 	runID string,
-	condition int64,
 ) {
 
 	for _, a := range timerInfos {
@@ -1279,8 +1246,7 @@ func updateTimerInfos(
 			workflowID,
 			runID,
 			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
-			condition)
+			rowTypeExecutionTaskID)
 	}
 
 	for _, t := range deleteInfos {
@@ -1292,8 +1258,7 @@ func updateTimerInfos(
 			workflowID,
 			runID,
 			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
-			condition)
+			rowTypeExecutionTaskID)
 	}
 }
 
@@ -1304,11 +1269,9 @@ func resetTimerInfos(
 	domainID string,
 	workflowID string,
 	runID string,
-	useCondition bool,
-	condition int64,
 ) {
 
-	batchQueryHelper(batch, templateResetTimerInfoQuery, useCondition, condition,
+	batch.Query(templateResetTimerInfoQuery,
 		resetTimerInfoMap(timerInfos),
 		shardID,
 		rowTypeExecution,
@@ -1327,7 +1290,6 @@ func updateChildExecutionInfos(
 	domainID string,
 	workflowID string,
 	runID string,
-	condition int64,
 ) error {
 
 	for _, c := range childExecutionInfos {
@@ -1362,8 +1324,7 @@ func updateChildExecutionInfos(
 			workflowID,
 			runID,
 			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
-			condition)
+			rowTypeExecutionTaskID)
 	}
 
 	// deleteInfo is the initiatedID for ChildInfo being deleted
@@ -1376,8 +1337,7 @@ func updateChildExecutionInfos(
 			workflowID,
 			runID,
 			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
-			condition)
+			rowTypeExecutionTaskID)
 	}
 	return nil
 }
@@ -1389,15 +1349,13 @@ func resetChildExecutionInfos(
 	domainID string,
 	workflowID string,
 	runID string,
-	useCondition bool,
-	condition int64,
 ) error {
 
 	infoMap, err := resetChildExecutionInfoMap(childExecutionInfos)
 	if err != nil {
 		return err
 	}
-	batchQueryHelper(batch, templateResetChildExecutionInfoQuery, useCondition, condition,
+	batch.Query(templateResetChildExecutionInfoQuery,
 		infoMap,
 		shardID,
 		rowTypeExecution,
@@ -1417,7 +1375,6 @@ func updateRequestCancelInfos(
 	domainID string,
 	workflowID string,
 	runID string,
-	condition int64,
 ) {
 
 	for _, c := range requestCancelInfos {
@@ -1432,8 +1389,7 @@ func updateRequestCancelInfos(
 			workflowID,
 			runID,
 			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
-			condition)
+			rowTypeExecutionTaskID)
 	}
 
 	// deleteInfo is the initiatedID for RequestCancelInfo being deleted
@@ -1446,8 +1402,7 @@ func updateRequestCancelInfos(
 			workflowID,
 			runID,
 			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
-			condition)
+			rowTypeExecutionTaskID)
 	}
 }
 
@@ -1458,11 +1413,9 @@ func resetRequestCancelInfos(
 	domainID string,
 	workflowID string,
 	runID string,
-	useCondition bool,
-	condition int64,
 ) {
 
-	batchQueryHelper(batch, templateResetRequestCancelInfoQuery, useCondition, condition,
+	batch.Query(templateResetRequestCancelInfoQuery,
 		resetRequestCancelInfoMap(requestCancelInfos),
 		shardID,
 		rowTypeExecution,
@@ -1481,7 +1434,6 @@ func updateSignalInfos(
 	domainID string,
 	workflowID string,
 	runID string,
-	condition int64,
 ) {
 
 	for _, c := range signalInfos {
@@ -1499,8 +1451,7 @@ func updateSignalInfos(
 			workflowID,
 			runID,
 			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
-			condition)
+			rowTypeExecutionTaskID)
 	}
 
 	// deleteInfo is the initiatedID for SignalInfo being deleted
@@ -1513,8 +1464,7 @@ func updateSignalInfos(
 			workflowID,
 			runID,
 			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
-			condition)
+			rowTypeExecutionTaskID)
 	}
 }
 
@@ -1525,11 +1475,9 @@ func resetSignalInfos(
 	domainID string,
 	workflowID string,
 	runID string,
-	useCondition bool,
-	condition int64,
 ) {
 
-	batchQueryHelper(batch, templateResetSignalInfoQuery, useCondition, condition,
+	batch.Query(templateResetSignalInfoQuery,
 		resetSignalInfoMap(signalInfos),
 		shardID,
 		rowTypeExecution,
@@ -1548,7 +1496,6 @@ func updateSignalsRequested(
 	domainID string,
 	workflowID string,
 	runID string,
-	condition int64,
 ) {
 
 	if len(signalReqIDs) > 0 {
@@ -1560,8 +1507,7 @@ func updateSignalsRequested(
 			workflowID,
 			runID,
 			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
-			condition)
+			rowTypeExecutionTaskID)
 	}
 
 	if deleteSignalReqID != "" {
@@ -1574,8 +1520,7 @@ func updateSignalsRequested(
 			workflowID,
 			runID,
 			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
-			condition)
+			rowTypeExecutionTaskID)
 	}
 }
 
@@ -1586,11 +1531,9 @@ func resetSignalRequested(
 	domainID string,
 	workflowID string,
 	runID string,
-	useCondition bool,
-	condition int64,
 ) {
 
-	batchQueryHelper(batch, templateResetSignalRequestedQuery, useCondition, condition,
+	batch.Query(templateResetSignalRequestedQuery,
 		signalRequested,
 		shardID,
 		rowTypeExecution,
@@ -1609,7 +1552,6 @@ func updateBufferedEvents(
 	domainID string,
 	workflowID string,
 	runID string,
-	condition int64,
 ) {
 
 	if clearBufferedEvents {
@@ -1620,8 +1562,7 @@ func updateBufferedEvents(
 			workflowID,
 			runID,
 			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
-			condition)
+			rowTypeExecutionTaskID)
 	} else if newBufferedEvents != nil {
 		values := make(map[string]interface{})
 		values["encoding_type"] = newBufferedEvents.Encoding
@@ -1636,8 +1577,7 @@ func updateBufferedEvents(
 			workflowID,
 			runID,
 			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
-			condition)
+			rowTypeExecutionTaskID)
 	}
 }
 
@@ -2378,15 +2318,6 @@ func createReplicationInfoMap(
 	rInfoMap["last_event_id"] = info.LastEventID
 
 	return rInfoMap
-}
-
-// this helper is passing dynamic number of arguments based on whether needing condition or not
-func batchQueryHelper(batch *gocql.Batch, stmt string, useCondition bool, condition int64, args ...interface{}) {
-	if useCondition {
-		stmt += templateUpdateWorkflowExecutionConditionSuffix
-		args = append(args, condition)
-	}
-	batch.Query(stmt, args...)
 }
 
 func isTimeoutError(err error) bool {
