@@ -50,9 +50,7 @@ const (
 	defaultRPS                      = 50
 	defaultConcurrency              = 5
 	defaultAttemptsOnRetryableError = 50
-	// this number is based on above default values in the worst case:
-	//  pageSize * defaultAttemptsOnRetryableError / defaultRPS  = 1000s = 16.6 Min
-	defaultActivityHeartBeatTimeout = 20 * time.Minute
+	defaultActivityHeartBeatTimeout = time.Minute
 )
 
 const (
@@ -90,8 +88,6 @@ type (
 		TotalEstimate int64
 		// Number of workflows processed successfully
 		SuccessCount int32
-		// Number of workflows skipped due to some errors that are safe to skip, like EntityNotExtits.
-		SkipCount int32
 		// Number of workflows that give up due to errors.
 		ErrorCount int32
 	}
@@ -188,13 +184,16 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 	}
 	rateLimiter := rate.NewLimiter(rate.Limit(batchParams.RPS), batchParams.RPS)
 	taskCh := make(chan taskDetail, pageSize)
-	var succCount, skipCount, errCount int32
+	var succCount, errCount int32
 	for i := 0; i < batchParams.Concurrency; i++ {
-		go startTaskProcessor(ctx, batchParams, taskCh, rateLimiter, &succCount, &skipCount, &errCount)
+		go startTaskProcessor(ctx, batchParams, taskCh, rateLimiter, &succCount, &errCount)
 	}
 
 	for {
-		resp, err := batcher.svcClient.ListWorkflowExecutions(ctx, &shared.ListWorkflowExecutionsRequest{
+		// TODO https://github.com/uber/cadence/issues/2154
+		//  Need to improve scan concurrency because it will hold a ES resource for a long time.
+		//  we can't use list API because terminate / reset will mutate the result.
+		resp, err := batcher.svcClient.ScanWorkflowExecutions(ctx, &shared.ListWorkflowExecutionsRequest{
 			PageSize:      common.Int32Ptr(int32(pageSize)),
 			Domain:        common.StringPtr(batchParams.DomainName),
 			NextPageToken: hbd.PageToken,
@@ -206,7 +205,6 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 
 		// clear all counters
 		atomic.StoreInt32(&succCount, 0)
-		atomic.StoreInt32(&skipCount, 0)
 		atomic.StoreInt32(&errCount, 0)
 
 		// send all tasks
@@ -224,7 +222,7 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 		for {
 			select {
 			case <-time.Tick(time.Second):
-				if int32(batchCount) == atomic.LoadInt32(&succCount)+atomic.LoadInt32(&skipCount)+atomic.LoadInt32(&errCount) {
+				if int32(batchCount) == atomic.LoadInt32(&succCount)+atomic.LoadInt32(&errCount) {
 					break Loop
 				}
 			case <-ctx.Done():
@@ -235,7 +233,6 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 		hbd.CurrentPage++
 		hbd.PageToken = resp.NextPageToken
 		hbd.SuccessCount += atomic.LoadInt32(&succCount)
-		hbd.SkipCount += atomic.LoadInt32(&skipCount)
 		hbd.ErrorCount += atomic.LoadInt32(&errCount)
 		activity.RecordHeartbeat(ctx, hbd)
 
@@ -249,7 +246,7 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 
 func startTaskProcessor(
 	ctx context.Context, batchParams BatchParams, taskCh chan taskDetail,
-	limiter *rate.Limiter, doneCount, skipCount, errCount *int32) {
+	limiter *rate.Limiter, doneCount, errCount *int32) {
 
 	for {
 		select {
@@ -264,18 +261,13 @@ func startTaskProcessor(
 				err = processOneTerminateTask(ctx, limiter, task, batchParams)
 			}
 			if err != nil {
-				_, ok := err.(*shared.EntityNotExistsError)
-				if ok {
-					atomic.AddInt32(skipCount, 1)
+				getActivityLogger(ctx).Error("Failed to process task", tag.Error(err))
+				// put back to the channel if less than attemptsOnError
+				task.attempts++
+				if task.attempts >= batchParams.AttemptsOnRetryableError {
+					atomic.AddInt32(errCount, 1)
 				} else {
-					getActivityLogger(ctx).Error("Failed to process task", tag.Error(err))
-					// put back to the channel if less than attemptsOnError
-					task.attempts++
-					if task.attempts >= batchParams.AttemptsOnRetryableError {
-						atomic.AddInt32(errCount, 1)
-					} else {
-						taskCh <- task
-					}
+					taskCh <- task
 				}
 			} else {
 				atomic.AddInt32(doneCount, 1)
@@ -288,7 +280,7 @@ func processOneTerminateTask(ctx context.Context, limiter *rate.Limiter, task ta
 	batcher := ctx.Value(batcherContextKey).(*Batcher)
 
 	wfs := []shared.WorkflowExecution{task.execution}
-	for len(wfs) >= 0 {
+	for len(wfs) > 0 {
 		wf := wfs[0]
 
 		err := limiter.Wait(ctx)
@@ -305,8 +297,13 @@ func processOneTerminateTask(ctx context.Context, limiter *rate.Limiter, task ta
 		})
 		cancel()
 		if err != nil {
-			return err
+			_, ok := err.(*shared.EntityNotExistsError)
+			if !ok {
+				return err
+			}
 		}
+		wfs = wfs[1:]
+		getActivityLogger(ctx).Info("terminated wf:", tag.WorkflowID(wf.GetWorkflowId()), tag.WorkflowRunID(wf.GetRunId()))
 		newCtx, cancel = context.WithDeadline(ctx, time.Now().Add(rpcTimeout))
 		resp, err := batcher.svcClient.DescribeWorkflowExecution(newCtx, &shared.DescribeWorkflowExecutionRequest{
 			Domain:    common.StringPtr(param.DomainName),
