@@ -987,7 +987,7 @@
     "internal/semver",
   ]
   pruneopts = ""
-  revision = "38ae2c8f64122bd595b7f93f968a6686cd27bb5a"
+  revision = "7e72c71c505fa4ee8da98520d2b0673ba2eefe56"
 
 [[projects]]
   digest = "1:47f391ee443f578f01168347818cb234ed819521e49e4d2c8dd2fb80d48ee41a"
