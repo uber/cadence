@@ -20,8 +20,6 @@
 
 package quotas
 
-import "time"
-
 // Policy corresponds to a quota policy. A policy allows implementing layered
 // and more complex rate limiting functionality.
 type Policy interface {
@@ -29,8 +27,4 @@ type Policy interface {
 	// immediately with a true or false indicating if the request can make
 	// progress
 	Allow() bool
-
-	// Wait will wait upto duration d for the request to go through. The method
-	// returns a true or false indicating if the request can make progress.
-	Wait(d time.Duration) bool
 }
