@@ -50,6 +50,9 @@ func prepareActivityNextRetryWithTime(version int64, a *persistence.ActivityInfo
 	a.RequestID = ""
 	a.StartedTime = time.Time{}
 	a.TimerTaskStatus = TimerTaskStatusNone
+	a.LastFailureReason = errReason
+	a.LastWorkerIdentity = a.StartedIdentity
+	a.StartedIdentity = ""
 
 	return &persistence.ActivityRetryTimerTask{
 		Version:             a.Version,

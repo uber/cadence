@@ -8949,17 +8949,19 @@ func (v *StartWorkflowExecutionRequest) IsSetFirstDecisionTaskBackoffSeconds() b
 }
 
 type SyncActivityRequest struct {
-	DomainId          *string `json:"domainId,omitempty"`
-	WorkflowId        *string `json:"workflowId,omitempty"`
-	RunId             *string `json:"runId,omitempty"`
-	Version           *int64  `json:"version,omitempty"`
-	ScheduledId       *int64  `json:"scheduledId,omitempty"`
-	ScheduledTime     *int64  `json:"scheduledTime,omitempty"`
-	StartedId         *int64  `json:"startedId,omitempty"`
-	StartedTime       *int64  `json:"startedTime,omitempty"`
-	LastHeartbeatTime *int64  `json:"lastHeartbeatTime,omitempty"`
-	Details           []byte  `json:"details,omitempty"`
-	Attempt           *int32  `json:"attempt,omitempty"`
+	DomainId           *string `json:"domainId,omitempty"`
+	WorkflowId         *string `json:"workflowId,omitempty"`
+	RunId              *string `json:"runId,omitempty"`
+	Version            *int64  `json:"version,omitempty"`
+	ScheduledId        *int64  `json:"scheduledId,omitempty"`
+	ScheduledTime      *int64  `json:"scheduledTime,omitempty"`
+	StartedId          *int64  `json:"startedId,omitempty"`
+	StartedTime        *int64  `json:"startedTime,omitempty"`
+	LastHeartbeatTime  *int64  `json:"lastHeartbeatTime,omitempty"`
+	Details            []byte  `json:"details,omitempty"`
+	Attempt            *int32  `json:"attempt,omitempty"`
+	LastFailureReason  *string `json:"lastFailureReason,omitempty"`
+	LastWorkerIdentity *string `json:"lastWorkerIdentity,omitempty"`
 }
 
 // ToWire translates a SyncActivityRequest struct into a Thrift-level intermediate
@@ -8979,7 +8981,7 @@ type SyncActivityRequest struct {
 //   }
 func (v *SyncActivityRequest) ToWire() (wire.Value, error) {
 	var (
-		fields [11]wire.Field
+		fields [13]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -9071,6 +9073,22 @@ func (v *SyncActivityRequest) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 110, Value: w}
+		i++
+	}
+	if v.LastFailureReason != nil {
+		w, err = wire.NewValueString(*(v.LastFailureReason)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 120, Value: w}
+		i++
+	}
+	if v.LastWorkerIdentity != nil {
+		w, err = wire.NewValueString(*(v.LastWorkerIdentity)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 130, Value: w}
 		i++
 	}
 
@@ -9207,6 +9225,26 @@ func (v *SyncActivityRequest) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 120:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.LastFailureReason = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 130:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.LastWorkerIdentity = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -9220,7 +9258,7 @@ func (v *SyncActivityRequest) String() string {
 		return "<nil>"
 	}
 
-	var fields [11]string
+	var fields [13]string
 	i := 0
 	if v.DomainId != nil {
 		fields[i] = fmt.Sprintf("DomainId: %v", *(v.DomainId))
@@ -9264,6 +9302,14 @@ func (v *SyncActivityRequest) String() string {
 	}
 	if v.Attempt != nil {
 		fields[i] = fmt.Sprintf("Attempt: %v", *(v.Attempt))
+		i++
+	}
+	if v.LastFailureReason != nil {
+		fields[i] = fmt.Sprintf("LastFailureReason: %v", *(v.LastFailureReason))
+		i++
+	}
+	if v.LastWorkerIdentity != nil {
+		fields[i] = fmt.Sprintf("LastWorkerIdentity: %v", *(v.LastWorkerIdentity))
 		i++
 	}
 
@@ -9313,6 +9359,12 @@ func (v *SyncActivityRequest) Equals(rhs *SyncActivityRequest) bool {
 	if !_I32_EqualsPtr(v.Attempt, rhs.Attempt) {
 		return false
 	}
+	if !_String_EqualsPtr(v.LastFailureReason, rhs.LastFailureReason) {
+		return false
+	}
+	if !_String_EqualsPtr(v.LastWorkerIdentity, rhs.LastWorkerIdentity) {
+		return false
+	}
 
 	return true
 }
@@ -9355,6 +9407,12 @@ func (v *SyncActivityRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err e
 	}
 	if v.Attempt != nil {
 		enc.AddInt32("attempt", *v.Attempt)
+	}
+	if v.LastFailureReason != nil {
+		enc.AddString("lastFailureReason", *v.LastFailureReason)
+	}
+	if v.LastWorkerIdentity != nil {
+		enc.AddString("lastWorkerIdentity", *v.LastWorkerIdentity)
 	}
 	return err
 }
@@ -9522,6 +9580,36 @@ func (v *SyncActivityRequest) GetAttempt() (o int32) {
 // IsSetAttempt returns true if Attempt is not nil.
 func (v *SyncActivityRequest) IsSetAttempt() bool {
 	return v != nil && v.Attempt != nil
+}
+
+// GetLastFailureReason returns the value of LastFailureReason if it is set or its
+// zero value if it is unset.
+func (v *SyncActivityRequest) GetLastFailureReason() (o string) {
+	if v != nil && v.LastFailureReason != nil {
+		return *v.LastFailureReason
+	}
+
+	return
+}
+
+// IsSetLastFailureReason returns true if LastFailureReason is not nil.
+func (v *SyncActivityRequest) IsSetLastFailureReason() bool {
+	return v != nil && v.LastFailureReason != nil
+}
+
+// GetLastWorkerIdentity returns the value of LastWorkerIdentity if it is set or its
+// zero value if it is unset.
+func (v *SyncActivityRequest) GetLastWorkerIdentity() (o string) {
+	if v != nil && v.LastWorkerIdentity != nil {
+		return *v.LastWorkerIdentity
+	}
+
+	return
+}
+
+// IsSetLastWorkerIdentity returns true if LastWorkerIdentity is not nil.
+func (v *SyncActivityRequest) IsSetLastWorkerIdentity() bool {
+	return v != nil && v.LastWorkerIdentity != nil
 }
 
 type SyncShardStatusRequest struct {

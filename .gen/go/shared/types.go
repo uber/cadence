@@ -24744,6 +24744,8 @@ type PendingActivityInfo struct {
 	MaximumAttempts        *int32                `json:"maximumAttempts,omitempty"`
 	ScheduledTimestamp     *int64                `json:"scheduledTimestamp,omitempty"`
 	ExpirationTimestamp    *int64                `json:"expirationTimestamp,omitempty"`
+	LastFailureReason      *string               `json:"lastFailureReason,omitempty"`
+	LastWorkerIdentity     *string               `json:"lastWorkerIdentity,omitempty"`
 }
 
 // ToWire translates a PendingActivityInfo struct into a Thrift-level intermediate
@@ -24763,7 +24765,7 @@ type PendingActivityInfo struct {
 //   }
 func (v *PendingActivityInfo) ToWire() (wire.Value, error) {
 	var (
-		fields [10]wire.Field
+		fields [12]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -24847,6 +24849,22 @@ func (v *PendingActivityInfo) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 100, Value: w}
+		i++
+	}
+	if v.LastFailureReason != nil {
+		w, err = wire.NewValueString(*(v.LastFailureReason)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 110, Value: w}
+		i++
+	}
+	if v.LastWorkerIdentity != nil {
+		w, err = wire.NewValueString(*(v.LastWorkerIdentity)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 120, Value: w}
 		i++
 	}
 
@@ -24977,6 +24995,26 @@ func (v *PendingActivityInfo) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 110:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.LastFailureReason = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 120:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.LastWorkerIdentity = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -24990,7 +25028,7 @@ func (v *PendingActivityInfo) String() string {
 		return "<nil>"
 	}
 
-	var fields [10]string
+	var fields [12]string
 	i := 0
 	if v.ActivityID != nil {
 		fields[i] = fmt.Sprintf("ActivityID: %v", *(v.ActivityID))
@@ -25030,6 +25068,14 @@ func (v *PendingActivityInfo) String() string {
 	}
 	if v.ExpirationTimestamp != nil {
 		fields[i] = fmt.Sprintf("ExpirationTimestamp: %v", *(v.ExpirationTimestamp))
+		i++
+	}
+	if v.LastFailureReason != nil {
+		fields[i] = fmt.Sprintf("LastFailureReason: %v", *(v.LastFailureReason))
+		i++
+	}
+	if v.LastWorkerIdentity != nil {
+		fields[i] = fmt.Sprintf("LastWorkerIdentity: %v", *(v.LastWorkerIdentity))
 		i++
 	}
 
@@ -25086,6 +25132,12 @@ func (v *PendingActivityInfo) Equals(rhs *PendingActivityInfo) bool {
 	if !_I64_EqualsPtr(v.ExpirationTimestamp, rhs.ExpirationTimestamp) {
 		return false
 	}
+	if !_String_EqualsPtr(v.LastFailureReason, rhs.LastFailureReason) {
+		return false
+	}
+	if !_String_EqualsPtr(v.LastWorkerIdentity, rhs.LastWorkerIdentity) {
+		return false
+	}
 
 	return true
 }
@@ -25125,6 +25177,12 @@ func (v *PendingActivityInfo) MarshalLogObject(enc zapcore.ObjectEncoder) (err e
 	}
 	if v.ExpirationTimestamp != nil {
 		enc.AddInt64("expirationTimestamp", *v.ExpirationTimestamp)
+	}
+	if v.LastFailureReason != nil {
+		enc.AddString("lastFailureReason", *v.LastFailureReason)
+	}
+	if v.LastWorkerIdentity != nil {
+		enc.AddString("lastWorkerIdentity", *v.LastWorkerIdentity)
 	}
 	return err
 }
@@ -25277,6 +25335,36 @@ func (v *PendingActivityInfo) GetExpirationTimestamp() (o int64) {
 // IsSetExpirationTimestamp returns true if ExpirationTimestamp is not nil.
 func (v *PendingActivityInfo) IsSetExpirationTimestamp() bool {
 	return v != nil && v.ExpirationTimestamp != nil
+}
+
+// GetLastFailureReason returns the value of LastFailureReason if it is set or its
+// zero value if it is unset.
+func (v *PendingActivityInfo) GetLastFailureReason() (o string) {
+	if v != nil && v.LastFailureReason != nil {
+		return *v.LastFailureReason
+	}
+
+	return
+}
+
+// IsSetLastFailureReason returns true if LastFailureReason is not nil.
+func (v *PendingActivityInfo) IsSetLastFailureReason() bool {
+	return v != nil && v.LastFailureReason != nil
+}
+
+// GetLastWorkerIdentity returns the value of LastWorkerIdentity if it is set or its
+// zero value if it is unset.
+func (v *PendingActivityInfo) GetLastWorkerIdentity() (o string) {
+	if v != nil && v.LastWorkerIdentity != nil {
+		return *v.LastWorkerIdentity
+	}
+
+	return
+}
+
+// IsSetLastWorkerIdentity returns true if LastWorkerIdentity is not nil.
+func (v *PendingActivityInfo) IsSetLastWorkerIdentity() bool {
+	return v != nil && v.LastWorkerIdentity != nil
 }
 
 type PendingActivityState int32

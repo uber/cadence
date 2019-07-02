@@ -63,6 +63,8 @@ type ActivityInfo struct {
 	RetryExpirationTimeNanos      *int64   `json:"retryExpirationTimeNanos,omitempty"`
 	RetryBackoffCoefficient       *float64 `json:"retryBackoffCoefficient,omitempty"`
 	RetryNonRetryableErrors       []string `json:"retryNonRetryableErrors,omitempty"`
+	RetryLastFailureReason        *string  `json:"retryLastFailureReason,omitempty"`
+	RetryLastWorkerIdentity       *string  `json:"retryLastWorkerIdentity,omitempty"`
 }
 
 type _List_String_ValueList []string
@@ -108,7 +110,7 @@ func (_List_String_ValueList) Close() {}
 //   }
 func (v *ActivityInfo) ToWire() (wire.Value, error) {
 	var (
-		fields [28]wire.Field
+		fields [30]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -336,6 +338,22 @@ func (v *ActivityInfo) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 64, Value: w}
+		i++
+	}
+	if v.RetryLastFailureReason != nil {
+		w, err = wire.NewValueString(*(v.RetryLastFailureReason)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 66, Value: w}
+		i++
+	}
+	if v.RetryLastWorkerIdentity != nil {
+		w, err = wire.NewValueString(*(v.RetryLastWorkerIdentity)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 68, Value: w}
 		i++
 	}
 
@@ -656,6 +674,26 @@ func (v *ActivityInfo) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 66:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.RetryLastFailureReason = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 68:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.RetryLastWorkerIdentity = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -669,7 +707,7 @@ func (v *ActivityInfo) String() string {
 		return "<nil>"
 	}
 
-	var fields [28]string
+	var fields [30]string
 	i := 0
 	if v.Version != nil {
 		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
@@ -781,6 +819,14 @@ func (v *ActivityInfo) String() string {
 	}
 	if v.RetryNonRetryableErrors != nil {
 		fields[i] = fmt.Sprintf("RetryNonRetryableErrors: %v", v.RetryNonRetryableErrors)
+		i++
+	}
+	if v.RetryLastFailureReason != nil {
+		fields[i] = fmt.Sprintf("RetryLastFailureReason: %v", *(v.RetryLastFailureReason))
+		i++
+	}
+	if v.RetryLastWorkerIdentity != nil {
+		fields[i] = fmt.Sprintf("RetryLastWorkerIdentity: %v", *(v.RetryLastWorkerIdentity))
 		i++
 	}
 
@@ -946,6 +992,12 @@ func (v *ActivityInfo) Equals(rhs *ActivityInfo) bool {
 	if !((v.RetryNonRetryableErrors == nil && rhs.RetryNonRetryableErrors == nil) || (v.RetryNonRetryableErrors != nil && rhs.RetryNonRetryableErrors != nil && _List_String_Equals(v.RetryNonRetryableErrors, rhs.RetryNonRetryableErrors))) {
 		return false
 	}
+	if !_String_EqualsPtr(v.RetryLastFailureReason, rhs.RetryLastFailureReason) {
+		return false
+	}
+	if !_String_EqualsPtr(v.RetryLastWorkerIdentity, rhs.RetryLastWorkerIdentity) {
+		return false
+	}
 
 	return true
 }
@@ -1050,6 +1102,12 @@ func (v *ActivityInfo) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	}
 	if v.RetryNonRetryableErrors != nil {
 		err = multierr.Append(err, enc.AddArray("retryNonRetryableErrors", (_List_String_Zapper)(v.RetryNonRetryableErrors)))
+	}
+	if v.RetryLastFailureReason != nil {
+		enc.AddString("retryLastFailureReason", *v.RetryLastFailureReason)
+	}
+	if v.RetryLastWorkerIdentity != nil {
+		enc.AddString("retryLastWorkerIdentity", *v.RetryLastWorkerIdentity)
 	}
 	return err
 }
@@ -1472,6 +1530,36 @@ func (v *ActivityInfo) GetRetryNonRetryableErrors() (o []string) {
 // IsSetRetryNonRetryableErrors returns true if RetryNonRetryableErrors is not nil.
 func (v *ActivityInfo) IsSetRetryNonRetryableErrors() bool {
 	return v != nil && v.RetryNonRetryableErrors != nil
+}
+
+// GetRetryLastFailureReason returns the value of RetryLastFailureReason if it is set or its
+// zero value if it is unset.
+func (v *ActivityInfo) GetRetryLastFailureReason() (o string) {
+	if v != nil && v.RetryLastFailureReason != nil {
+		return *v.RetryLastFailureReason
+	}
+
+	return
+}
+
+// IsSetRetryLastFailureReason returns true if RetryLastFailureReason is not nil.
+func (v *ActivityInfo) IsSetRetryLastFailureReason() bool {
+	return v != nil && v.RetryLastFailureReason != nil
+}
+
+// GetRetryLastWorkerIdentity returns the value of RetryLastWorkerIdentity if it is set or its
+// zero value if it is unset.
+func (v *ActivityInfo) GetRetryLastWorkerIdentity() (o string) {
+	if v != nil && v.RetryLastWorkerIdentity != nil {
+		return *v.RetryLastWorkerIdentity
+	}
+
+	return
+}
+
+// IsSetRetryLastWorkerIdentity returns true if RetryLastWorkerIdentity is not nil.
+func (v *ActivityInfo) IsSetRetryLastWorkerIdentity() bool {
+	return v != nil && v.RetryLastWorkerIdentity != nil
 }
 
 type ChildExecutionInfo struct {
