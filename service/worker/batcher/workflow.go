@@ -45,7 +45,6 @@ const (
 	pageSize         = 1000
 
 	// below are default values for BatchParams
-
 	defaultRPS                      = 50
 	defaultConcurrency              = 5
 	defaultAttemptsOnRetryableError = 50
