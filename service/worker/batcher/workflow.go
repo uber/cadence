@@ -54,6 +54,7 @@ const (
 )
 
 const (
+	// BatchTypeTerminate is batch type for terminating workflows
 	BatchTypeTerminate = "terminate"
 )
 
@@ -177,6 +178,7 @@ func setDefaultParams(params BatchParams) (BatchParams, error) {
 	}
 }
 
+// BatchActivity is activity for processing batch operation
 func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 	batcher := ctx.Value(batcherContextKey).(*Batcher)
 
