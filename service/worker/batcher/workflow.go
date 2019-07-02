@@ -59,18 +59,18 @@ const (
 )
 
 type (
+	// BatchParams is the parameters for batch operation workflow
 	BatchParams struct {
 		// Target domain to execute batch operation
 		DomainName string
-		// To query the target workflows for processing
-		QueryCondition string
-		// Reaason for the operation
+		// To get the target workflows for processing
+		Query string
+		// Reason for the operation
 		Reason string
 		// Supporting: reset,terminate
 		BatchType string
 
 		// Below are all optional
-
 		// RPS of processing. Default to defaultRPS
 		// TODO we will implement smarter way than this static rate limiter: https://github.com/uber/cadence/issues/2138
 		RPS int
@@ -81,6 +81,7 @@ type (
 		ActivityHeartBeatTimeout time.Duration
 	}
 
+	// HeartBeatDetails is the struct for heartbeat details
 	HeartBeatDetails struct {
 		PageToken   []byte
 		CurrentPage int
@@ -132,8 +133,11 @@ func BatchWorkflow(ctx workflow.Context, batchParams BatchParams) error {
 }
 
 func setDefaultParams(params BatchParams) (BatchParams, error) {
-	if params.BatchType == "" || params.Reason == "" || params.DomainName == "" || params.QueryCondition == "" {
-		return BatchParams{}, fmt.Errorf("must provide required parameters: BatchType/Reason/DomainName/QueryCondition")
+	if params.BatchType == "" ||
+		params.Reason == "" ||
+		params.DomainName == "" ||
+		params.Query == "" {
+		return BatchParams{}, fmt.Errorf("must provide required parameters: BatchType/Reason/DomainName/Query")
 	}
 	if params.RPS <= 0 {
 		params.RPS = defaultRPS
@@ -148,14 +152,11 @@ func setDefaultParams(params BatchParams) (BatchParams, error) {
 		params.ActivityHeartBeatTimeout = defaultActivityHeartBeatTimeout
 	}
 	switch params.BatchType {
-	case BatchTypeReset:
-		fallthrough
+	case BatchTypeTerminate:
+		return params, nil
 	default:
 		return BatchParams{}, fmt.Errorf("not supported batch type: %v", params.BatchType)
-	case BatchTypeTerminate:
-
 	}
-	return params, nil
 }
 
 func BatchActivity(ctx context.Context, batchParams BatchParams) error {
@@ -175,7 +176,7 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 	if startOver {
 		resp, err := batcher.svcClient.CountWorkflowExecutions(ctx, &shared.CountWorkflowExecutionsRequest{
 			Domain: common.StringPtr(batchParams.DomainName),
-			Query:  common.StringPtr(batchParams.QueryCondition),
+			Query:  common.StringPtr(batchParams.Query),
 		})
 		if err != nil {
 			return err
@@ -197,7 +198,7 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 			PageSize:      common.Int32Ptr(int32(pageSize)),
 			Domain:        common.StringPtr(batchParams.DomainName),
 			NextPageToken: hbd.PageToken,
-			Query:         common.StringPtr(batchParams.QueryCondition),
+			Query:         common.StringPtr(batchParams.Query),
 		})
 		if err != nil {
 			return err
@@ -245,8 +246,11 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 }
 
 func startTaskProcessor(
-	ctx context.Context, batchParams BatchParams, taskCh chan taskDetail,
-	limiter *rate.Limiter, doneCount, errCount *int32) {
+	ctx context.Context,
+	batchParams BatchParams,
+	taskCh chan taskDetail,
+	limiter *rate.Limiter,
+	doneCount, errCount *int32) {
 
 	for {
 		select {

@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/opentracing/opentracing-go"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -107,6 +108,7 @@ func (s *Batcher) Start() error {
 	workerOpts := worker.Options{
 		MetricsScope:              s.tallyScope,
 		BackgroundActivityContext: context.WithValue(context.Background(), batcherContextKey, s),
+		Tracer:                    opentracing.GlobalTracer(),
 	}
 	worker := worker.New(s.svcClient, common.SystemGlobalDomainName, batcherTaskListName, workerOpts)
 	return worker.Start()
