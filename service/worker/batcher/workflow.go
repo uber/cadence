@@ -56,6 +56,12 @@ const (
 )
 
 type (
+	// TerminateParams is the parameters for terminating workflow
+	TerminateParams struct {
+		// this indicates whether to terminate children workflow. Default to false.
+		TerminateChildren bool
+	}
+
 	// BatchParams is the parameters for batch operation workflow
 	BatchParams struct {
 		// Target domain to execute batch operation
@@ -68,6 +74,8 @@ type (
 		BatchType string
 
 		// Below are all optional
+		// TerminateParams is params only for BatchTypeTerminate
+		TerminateParams TerminateParams
 		// RPS of processing. Default to defaultRPS
 		// TODO we will implement smarter way than this static rate limiter: https://github.com/uber/cadence/issues/2138
 		RPS int
@@ -328,7 +336,9 @@ func processOneTerminateTask(ctx context.Context, limiter *rate.Limiter, task ta
 		if err != nil {
 			return err
 		}
-		if len(resp.PendingChildren) > 0 {
+		// TODO https://github.com/uber/cadence/issues/2159
+		// ChildPolicy is totally broken in Cadence, we need to fix it before using
+		if batchParams.TerminateParams.TerminateChildren && len(resp.PendingChildren) > 0 {
 			getActivityLogger(ctx).Info("Found more child workflows to terminate", tag.Number(int64(len(resp.PendingChildren))))
 			for _, ch := range resp.PendingChildren {
 				wfs = append(wfs, shared.WorkflowExecution{
