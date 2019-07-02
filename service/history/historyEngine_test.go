@@ -5231,7 +5231,7 @@ func copyActivityInfo(sourceInfo *persistence.ActivityInfo) *persistence.Activit
 		MaximumAttempts:          sourceInfo.MaximumAttempts,
 		NonRetriableErrors:       sourceInfo.NonRetriableErrors,
 		LastFailureReason:        sourceInfo.LastFailureReason,
-		LastWorkerIdentity: sourceInfo.LastWorkerIdentity,
+		LastWorkerIdentity:       sourceInfo.LastWorkerIdentity,
 		//// Not written to database - This is used only for deduping heartbeat timer creation
 		// LastHeartbeatTimeoutVisibility: sourceInfo.LastHeartbeatTimeoutVisibility,
 	}
