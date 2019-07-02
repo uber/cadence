@@ -2973,8 +2973,6 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
 				HeartbeatTimeout:         4,
 				LastHeartBeatUpdatedTime: currentTime,
 				TimerTaskStatus:          1,
-				LastFailureReason:        "some random error",
-				LastWorkerIdentity:       "some random identity",
 			},
 			5: {
 				Version:                  7789,
@@ -3111,8 +3109,6 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
 	s.Equal(int32(4), ai.HeartbeatTimeout)
 	s.EqualTimes(currentTime, ai.LastHeartBeatUpdatedTime)
 	s.Equal(int32(1), ai.TimerTaskStatus)
-	s.Equal("some random error", ai.LastFailureReason)
-	s.Equal("some random identity", ai.LastWorkerIdentity)
 
 	ai, ok = state1.ActivityInfos[5]
 	s.True(ok)
@@ -3206,8 +3202,6 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
 			HeartbeatTimeout:         40,
 			LastHeartBeatUpdatedTime: currentTime,
 			TimerTaskStatus:          1,
-			LastFailureReason:        "some random error",
-			LastWorkerIdentity:       "some random identity",
 		}}
 
 	resetTimerInfos := []*p.TimerInfo{
@@ -3301,8 +3295,6 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
 	s.Equal(int32(40), ai.HeartbeatTimeout)
 	s.Equal(currentTime.Unix(), ai.LastHeartBeatUpdatedTime.Unix())
 	s.Equal(int32(1), ai.TimerTaskStatus)
-	s.Equal("some random error", ai.LastFailureReason)
-	s.Equal("some random identity", ai.LastWorkerIdentity)
 
 	s.Equal(2, len(state4.TimerInfos))
 	ti, ok = state4.TimerInfos["t1_new"]
