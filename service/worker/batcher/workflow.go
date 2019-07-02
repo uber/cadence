@@ -303,7 +303,6 @@ func processOneTerminateTask(ctx context.Context, limiter *rate.Limiter, task ta
 			}
 		}
 		wfs = wfs[1:]
-		getActivityLogger(ctx).Info("terminated wf:", tag.WorkflowID(wf.GetWorkflowId()), tag.WorkflowRunID(wf.GetRunId()))
 		newCtx, cancel = context.WithDeadline(ctx, time.Now().Add(rpcTimeout))
 		resp, err := batcher.svcClient.DescribeWorkflowExecution(newCtx, &shared.DescribeWorkflowExecutionRequest{
 			Domain:    common.StringPtr(param.DomainName),
