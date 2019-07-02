@@ -23,7 +23,6 @@ package provider
 import (
 	"errors"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/filestore"
 	"github.com/uber/cadence/common/log/tag"
@@ -32,16 +31,14 @@ import (
 var (
 	// ErrUnknownScheme is the error for unknown archiver scheme
 	ErrUnknownScheme = errors.New("unknown archiver scheme")
-	// ErrUnknownServiceName is the error for unknown cadence service name
-	ErrUnknownServiceName = errors.New("unknown service name")
 )
 
 type (
 	// Provider returns history or visiblity archiver based on the scheme and serviceName.
 	// The archiver for each combination of scheme and serviceName will be created only once and cached.
 	Provider interface {
-		GetHistoryArchiver(scheme string, serviceName string) (archiver.HistoryArchiver, error)
-		GetVisibilityArchiver(scheme string, serviceName string) (archiver.VisibilityArchiver, error)
+		GetHistoryArchiver(scheme string, serviceName string, tags ...tag.Tag) (archiver.HistoryArchiver, error)
+		GetVisibilityArchiver(scheme string, serviceName string, tags ...tag.Tag) (archiver.VisibilityArchiver, error)
 	}
 
 	// HistoryArchiverConfigs contain config for all implementations of the HistoryArchiver interface
@@ -51,10 +48,12 @@ type (
 
 	// VisibilityArchiverConfigs contain config for all implementations of the VisibilityArchiver interface
 	VisibilityArchiverConfigs struct {
+		FileStore *filestore.VisibilityArchiverConfig
 	}
 
 	provider struct {
-		container                 *archiver.BootstrapContainer
+		historyContainer          *archiver.HistoryBootstrapContainer
+		visibilityContainer       *archiver.VisibilityBootstrapContainer
 		historyArchiverConfigs    *HistoryArchiverConfigs
 		visibilityArchiverConfigs *VisibilityArchiverConfigs
 
@@ -65,44 +64,49 @@ type (
 
 // NewArchiverProvider returns a new Archiver provider
 func NewArchiverProvider(
-	container *archiver.BootstrapContainer,
+	historyContainer *archiver.HistoryBootstrapContainer,
+	visibilityContainer *archiver.VisibilityBootstrapContainer,
 	historyArchiverConfigs *HistoryArchiverConfigs,
 	visibilityArchiverConfigs *VisibilityArchiverConfigs,
 ) Provider {
 	return &provider{
-		container:                 container,
+		historyContainer:          historyContainer,
+		visibilityContainer:       visibilityContainer,
 		historyArchiverConfigs:    historyArchiverConfigs,
 		visibilityArchiverConfigs: visibilityArchiverConfigs,
 	}
 }
 
-func (p *provider) GetHistoryArchiver(scheme, serviceName string) (archiver.HistoryArchiver, error) {
+func (p *provider) GetHistoryArchiver(scheme, serviceName string, tags ...tag.Tag) (archiver.HistoryArchiver, error) {
 	key := p.getArchiverKey(scheme, serviceName)
-	if archiver, ok := p.historyArchivers[key]; ok {
-		return archiver, nil
-	}
-
-	var componentTag tag.Tag
-	switch serviceName {
-	case common.HistoryServiceName:
-		componentTag = tag.ComponentTimerQueue
-	case common.WorkerServiceName:
-		componentTag = tag.ComponentArchiver
-	default:
-		return nil, ErrUnknownServiceName
+	if historyArchiver, ok := p.historyArchivers[key]; ok {
+		return historyArchiver, nil
 	}
 
 	switch scheme {
 	case filestore.URIScheme:
-		container := *p.container
-		container.Logger = container.Logger.WithTags(tag.Service(serviceName), componentTag)
-		return filestore.NewHistoryArchiver(container, p.historyArchiverConfigs.FileStore), nil
+		container := *p.historyContainer
+		container.Logger = container.Logger.WithTags(tag.Service(serviceName)).WithTags(tags...)
+		historyArchiver := filestore.NewHistoryArchiver(container, p.historyArchiverConfigs.FileStore)
+		p.historyArchivers[key] = historyArchiver
+		return historyArchiver, nil
 	}
 	return nil, ErrUnknownScheme
 }
 
-func (p *provider) GetVisibilityArchiver(scheme, serviceName string) (archiver.VisibilityArchiver, error) {
-	return nil, errors.New("GetVisibilityArchiver is not implemented")
+func (p *provider) GetVisibilityArchiver(scheme, serviceName string, tags ...tag.Tag) (archiver.VisibilityArchiver, error) {
+	key := p.getArchiverKey(scheme, serviceName)
+	if visiblityArchiver, ok := p.visibilityArchivers[key]; ok {
+		return visiblityArchiver, nil
+	}
+
+	switch scheme {
+	case filestore.URIScheme:
+		visiblityArchiver := filestore.NewVisibilityArchiver(*p.visibilityContainer, p.visibilityArchiverConfigs.FileStore)
+		p.visibilityArchivers[key] = visiblityArchiver
+		return visiblityArchiver, nil
+	}
+	return nil, ErrUnknownScheme
 }
 
 func (p *provider) getArchiverKey(scheme, serviceName string) string {

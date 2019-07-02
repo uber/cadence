@@ -30,19 +30,21 @@ const (
 	// ArchiveNonRetriableErrorMsg is the log message when the Archive() method encounters a non-retriable error
 	ArchiveNonRetriableErrorMsg = "Archive method encountered an non-retriable error."
 
-	// ErrInvalidURI is the error for invalid URI
-	ErrInvalidURI = "archive URI is invalid"
-	// ErrInvalidRequest is the error for invalid request
-	ErrInvalidRequest = "archive request is invalid"
-	// ErrConstructHistoryIterator is the error for failed to construct history iterator
+	// ErrInvalidURI is the error reason for invalid URI
+	ErrInvalidURI = "URI is invalid"
+	// ErrInvalidArchiveRequest is the error reason for invalid archive request
+	ErrInvalidArchiveRequest = "archive request is invalid"
+	// ErrConstructHistoryIterator is the error reason for failing to construct history iterator
 	ErrConstructHistoryIterator = "failed to construct history iterator"
-	// ErrReadHistory is the error for failed to read history
+	// ErrReadHistory is the error reason for failing to read history
 	ErrReadHistory = "failed to read history batches"
-	// ErrHistoryMutated is the error for mutated history
+	// ErrHistoryMutated is the error reason for mutated history
 	ErrHistoryMutated = "history was mutated"
 )
 
 var (
+	// ErrInvalidURIScheme is the error for invalid URI
+	ErrInvalidURIScheme = errors.New("URI scheme is invalid")
 	// ErrContextTimeout is the error for context timeout
 	ErrContextTimeout = errors.New("archive aborted because context timed out")
 	// ErrInvalidGetHistoryRequest is the error for invalid GetHistory request

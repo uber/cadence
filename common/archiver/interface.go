@@ -33,6 +33,7 @@ import (
 var (
 	// ErrArchiveNonRetriable is the error every Archiver implementation should return when
 	// a non-retriable error is encountered.
+	// If errors of other types are returned, method might be retried by caller
 	ErrArchiveNonRetriable = errors.New("archive method encountered a non-retriable error")
 )
 
@@ -66,8 +67,8 @@ type (
 		NextPageToken  []byte
 	}
 
-	// BootstrapContainer contains components needed by all Archiver implementations
-	BootstrapContainer struct {
+	// HistoryBootstrapContainer contains components needed by all history Archiver implementations
+	HistoryBootstrapContainer struct {
 		HistoryManager   persistence.HistoryManager
 		HistoryV2Manager persistence.HistoryV2Manager
 		Logger           log.Logger
@@ -78,7 +79,7 @@ type (
 	HistoryArchiver interface {
 		Archive(ctx context.Context, URI string, request *ArchiveHistoryRequest, opts ...ArchiveOption) error
 		Get(ctx context.Context, URI string, request *GetHistoryRequest) (*GetHistoryResponse, error)
-		ValidateURI(URI string) bool
+		ValidateURI(URI string) error
 	}
 
 	// ycyang TODO: implement visibility archiver
@@ -92,10 +93,13 @@ type (
 	// GetVisibilityResponse is the response of Get archived visibility records
 	GetVisibilityResponse struct{}
 
+	// VisibilityBootstrapContainer contains components needed by all visibility Archiver implementations
+	VisibilityBootstrapContainer struct{}
+
 	// VisibilityArchiver is used to archive visibility and read archived visibility
 	VisibilityArchiver interface {
 		Archive(ctx context.Context, URI string, request *ArchiveVisibilityRequest, opts ...ArchiveOption) error
 		Get(ctx context.Context, URI string, request *GetVisibilityRequest) (*GetVisibilityResponse, error)
-		ValidateURI(URI string) bool
+		ValidateURI(URI string) error
 	}
 )

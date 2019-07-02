@@ -198,8 +198,8 @@ func (i *historyIterator) readHistoryBatches(firstEventID int64) ([]*shared.Hist
 			historyBatches = append(historyBatches, batch)
 			firstEventID = *batch.Events[len(batch.Events)-1].EventId + 1
 
-			// If targetSize is meeted after appending the last batch, we are not sure if there's more batches or not,
-			// so we need to exclude that case.
+			// In case targetSize is satisfied before reaching the end of current set of batches, return immediately.
+			// Otherwise, we need to look ahead to see if there's more history batches.
 			if size >= targetSize && idx != len(currHistoryBatches)-1 {
 				newIterState.FinishedIteration = false
 				newIterState.NextEventID = firstEventID
@@ -208,7 +208,7 @@ func (i *historyIterator) readHistoryBatches(firstEventID int64) ([]*shared.Hist
 		}
 	}
 
-	// If you are here, it means the target size is meeted after adding the last batch of read history.
+	// If you are here, it means the target size is met after adding the last batch of read history.
 	// We need to check if there's more history batches.
 	_, err := i.readHistory(firstEventID)
 	if _, ok := err.(*shared.EntityNotExistsError); ok && firstEventID != common.FirstEventID {

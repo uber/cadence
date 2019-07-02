@@ -220,33 +220,33 @@ func (s *UtilSuite) TestValidateDirPath() {
 	fpath := filepath.Join(dir, filename)
 
 	testCases := []struct {
-		dirPath string
-		isValid bool
+		dirPath     string
+		expectedErr error
 	}{
 		{
-			dirPath: "",
-			isValid: false,
+			dirPath:     "",
+			expectedErr: errEmptyDirectoryPath,
 		},
 		{
-			dirPath: "/absolute/path",
-			isValid: true,
+			dirPath:     "/absolute/path",
+			expectedErr: nil,
 		},
 		{
-			dirPath: "relative/path",
-			isValid: true,
+			dirPath:     "relative/path",
+			expectedErr: nil,
 		},
 		{
-			dirPath: dir,
-			isValid: true,
+			dirPath:     dir,
+			expectedErr: nil,
 		},
 		{
-			dirPath: fpath,
-			isValid: false,
+			dirPath:     fpath,
+			expectedErr: errDirectoryExpected,
 		},
 	}
 
 	for _, tc := range testCases {
-		s.Equal(tc.isValid, validateDirPath(tc.dirPath))
+		s.Equal(tc.expectedErr, validateDirPath(tc.dirPath))
 	}
 }
 

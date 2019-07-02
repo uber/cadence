@@ -58,7 +58,7 @@ type historyArchiverSuite struct {
 	*require.Assertions
 	suite.Suite
 
-	container          archiver.BootstrapContainer
+	container          archiver.HistoryBootstrapContainer
 	logger             log.Logger
 	testGetDirectory   string
 	historyBatchesV1   []*shared.History
@@ -83,37 +83,37 @@ func (s *historyArchiverSuite) TearDownSuite() {
 func (s *historyArchiverSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 	zapLogger := zap.NewNop()
-	s.container = archiver.BootstrapContainer{
+	s.container = archiver.HistoryBootstrapContainer{
 		Logger: loggerimpl.NewLogger(zapLogger),
 	}
 }
 
 func (s *historyArchiverSuite) TestValidateURI() {
 	testCases := []struct {
-		URI     string
-		isValid bool
+		URI         string
+		expectedErr error
 	}{
 		{
-			URI:     "wrongscheme:///a/b/c",
-			isValid: false,
+			URI:         "wrongscheme:///a/b/c",
+			expectedErr: archiver.ErrInvalidURIScheme,
 		},
 		{
-			URI:     "",
-			isValid: false,
+			URI:         "",
+			expectedErr: archiver.ErrInvalidURIScheme,
 		},
 		{
-			URI:     "file://",
-			isValid: false,
+			URI:         "file://",
+			expectedErr: errEmptyDirectoryPath,
 		},
 		{
-			URI:     "file:///a/b/c",
-			isValid: true,
+			URI:         "file:///a/b/c",
+			expectedErr: nil,
 		},
 	}
 
 	historyArchiver := newHistoryArchiver(s.container, nil, nil)
 	for _, tc := range testCases {
-		s.Equal(tc.isValid, historyArchiver.ValidateURI(tc.URI))
+		s.Equal(tc.expectedErr, historyArchiver.ValidateURI(tc.URI))
 	}
 }
 
@@ -306,7 +306,6 @@ func (s *historyArchiverSuite) TestGet_Fail_InvalidURI() {
 	response, err := historyArchiver.Get(context.Background(), "wrongscheme://", request)
 	s.Nil(response)
 	s.Error(err)
-	s.Equal(archiver.ErrInvalidURI, err.Error())
 }
 
 func (s *historyArchiverSuite) TestGet_Fail_InvalidRequest() {

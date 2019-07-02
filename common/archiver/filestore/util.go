@@ -43,8 +43,9 @@ const (
 )
 
 var (
-	errDirectoryExpected = errors.New("a path to a directory was expected")
-	errFileExpected      = errors.New("a path to a file was expected")
+	errDirectoryExpected  = errors.New("a path to a directory was expected")
+	errFileExpected       = errors.New("a path to a file was expected")
+	errEmptyDirectoryPath = errors.New("directory path is empty")
 )
 
 func fileExists(filepath string) (bool, error) {
@@ -165,18 +166,21 @@ func getDirPathFromURI(URI string) string {
 	return URI[len(URIScheme):]
 }
 
-func validateDirPath(dirPath string) bool {
+func validateDirPath(dirPath string) error {
 	if len(dirPath) == 0 {
-		return false
+		return errEmptyDirectoryPath
 	}
 	info, err := os.Stat(dirPath)
 	if os.IsNotExist(err) {
-		return true
+		return nil
 	}
 	if err != nil {
-		return false
+		return err
 	}
-	return info.IsDir()
+	if !info.IsDir() {
+		return errDirectoryExpected
+	}
+	return nil
 }
 
 func constructFilename(domainID, workflowID, runID string, version int64) string {

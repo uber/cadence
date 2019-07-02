@@ -30,14 +30,14 @@
 // version and the index of the first history batch that should be returned. Instead of
 // NextPageToken, caller can also provide a close failover version, in which case, Get() method
 // will return history batches starting from the beginning of that history verison. If neither
-// of NextPageToken or close failover version is specified, the hightest close failover version
+// of NextPageToken or close failover version is specified, the highest close failover version
 // will be picked.
 
 package filestore
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"path"
 	"strings"
 
@@ -64,7 +64,7 @@ type (
 	}
 
 	historyArchiver struct {
-		container archiver.BootstrapContainer
+		container archiver.HistoryBootstrapContainer
 		config    *HistoryArchiverConfig
 
 		// only set in test code
@@ -79,14 +79,14 @@ type (
 
 // NewHistoryArchiver creates a new archiver.HistoryArchiver based on filestore
 func NewHistoryArchiver(
-	container archiver.BootstrapContainer,
+	container archiver.HistoryBootstrapContainer,
 	config *HistoryArchiverConfig,
 ) archiver.HistoryArchiver {
 	return newHistoryArchiver(container, config, nil)
 }
 
 func newHistoryArchiver(
-	container archiver.BootstrapContainer,
+	container archiver.HistoryBootstrapContainer,
 	config *HistoryArchiverConfig,
 	historyIterator archiver.HistoryIterator,
 ) *historyArchiver {
@@ -105,13 +105,13 @@ func (h *historyArchiver) Archive(
 ) error {
 	logger := tagLoggerWithArchiveHistoryRequest(h.container.Logger, request)
 
-	if !h.ValidateURI(URI) {
-		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrInvalidURI), tag.ArchivalURI(URI))
+	if err := h.ValidateURI(URI); err != nil {
+		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrInvalidURI), tag.Error(err), tag.ArchivalURI(URI))
 		return archiver.ErrArchiveNonRetriable
 	}
 
 	if err := validateArchiveRequest(request); err != nil {
-		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrInvalidRequest), tag.Error(err))
+		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrInvalidArchiveRequest), tag.Error(err))
 		return archiver.ErrArchiveNonRetriable
 	}
 
@@ -168,8 +168,8 @@ func (h *historyArchiver) Get(
 	URI string,
 	request *archiver.GetHistoryRequest,
 ) (*archiver.GetHistoryResponse, error) {
-	if !h.ValidateURI(URI) {
-		return nil, errors.New(archiver.ErrInvalidURI)
+	if err := h.ValidateURI(URI); err != nil {
+		return nil, fmt.Errorf("%s: %v", archiver.ErrInvalidURI, err)
 	}
 
 	if err := validateGetRequest(request); err != nil {
@@ -252,9 +252,9 @@ func (h *historyArchiver) Get(
 	return response, nil
 }
 
-func (h *historyArchiver) ValidateURI(URI string) bool {
+func (h *historyArchiver) ValidateURI(URI string) error {
 	if !strings.HasPrefix(URI, URIScheme) {
-		return false
+		return archiver.ErrInvalidURIScheme
 	}
 
 	return validateDirPath(getDirPathFromURI(URI))
