@@ -62,7 +62,7 @@ func (v *visibilityArchiver) Get(
 	URI string,
 	request *archiver.GetVisibilityRequest,
 ) (*archiver.GetVisibilityResponse, error) {
-	return nil, errors.New("methed Get() is not implemented")
+	return nil, errors.New("method Get() is not implemented")
 }
 
 func (v *visibilityArchiver) ValidateURI(URI string) error {
