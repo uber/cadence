@@ -70,7 +70,6 @@ func Test_NextRetry(t *testing.T) {
 	a.Equal(version, retryTask.GetVersion())
 	a.Equal(now.Add(time.Second), retryTask.(*persistence.ActivityRetryTimerTask).VisibilityTimestamp)
 	a.Equal(reason, ai.LastFailureReason)
-	a.Equal("", ai.StartedIdentity)
 	a.Equal(identity, ai.LastWorkerIdentity)
 
 	retryTask = prepareActivityNextRetryWithTime(version, ai, reason, now)

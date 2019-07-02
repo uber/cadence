@@ -173,7 +173,7 @@ CREATE TYPE activity_info (
   max_attempts              int,    -- max number of attempts including initial non-retry attempt
   non_retriable_errors      list<text>,
   last_failure_reason       text,
-  last_worker_identity      text,
+  last_worker_identity      text, -- Worker that returns the last failure reason
   event_data_encoding       text, -- Protocol used for history serialization
 );
 
