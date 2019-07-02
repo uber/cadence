@@ -272,6 +272,8 @@ func startTaskProcessor(
 
 	for {
 		select {
+		case <-ctx.Done():
+			return
 		case task := <-taskCh:
 			if isDone(ctx) {
 				return
