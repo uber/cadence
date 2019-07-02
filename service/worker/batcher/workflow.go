@@ -292,7 +292,7 @@ func startTaskProcessor(
 	}
 }
 
-func processOneTerminateTask(ctx context.Context, limiter *rate.Limiter, task taskDetail, param BatchParams) error {
+func processOneTerminateTask(ctx context.Context, limiter *rate.Limiter, task taskDetail, batchParams BatchParams) error {
 	batcher := ctx.Value(batcherContextKey).(*Batcher)
 
 	wfs := []shared.WorkflowExecution{task.execution}
@@ -306,9 +306,9 @@ func processOneTerminateTask(ctx context.Context, limiter *rate.Limiter, task ta
 
 		newCtx, cancel := context.WithDeadline(ctx, time.Now().Add(rpcTimeout))
 		err = batcher.svcClient.TerminateWorkflowExecution(newCtx, &shared.TerminateWorkflowExecutionRequest{
-			Domain:            common.StringPtr(param.DomainName),
+			Domain:            common.StringPtr(batchParams.DomainName),
 			WorkflowExecution: &wf,
-			Reason:            common.StringPtr(param.Reason),
+			Reason:            common.StringPtr(batchParams.Reason),
 			Identity:          common.StringPtr(batchWFTypeName),
 		})
 		cancel()
@@ -321,7 +321,7 @@ func processOneTerminateTask(ctx context.Context, limiter *rate.Limiter, task ta
 		wfs = wfs[1:]
 		newCtx, cancel = context.WithDeadline(ctx, time.Now().Add(rpcTimeout))
 		resp, err := batcher.svcClient.DescribeWorkflowExecution(newCtx, &shared.DescribeWorkflowExecutionRequest{
-			Domain:    common.StringPtr(param.DomainName),
+			Domain:    common.StringPtr(batchParams.DomainName),
 			Execution: &wf,
 		})
 		cancel()
