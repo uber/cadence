@@ -96,15 +96,15 @@ func (p *provider) GetHistoryArchiver(scheme, serviceName string, tags ...tag.Ta
 
 func (p *provider) GetVisibilityArchiver(scheme, serviceName string, tags ...tag.Tag) (archiver.VisibilityArchiver, error) {
 	key := p.getArchiverKey(scheme, serviceName)
-	if visiblityArchiver, ok := p.visibilityArchivers[key]; ok {
-		return visiblityArchiver, nil
+	if visibilityArchiver, ok := p.visibilityArchivers[key]; ok {
+		return visibilityArchiver, nil
 	}
 
 	switch scheme {
 	case filestore.URIScheme:
-		visiblityArchiver := filestore.NewVisibilityArchiver(*p.visibilityContainer, p.visibilityArchiverConfigs.FileStore)
-		p.visibilityArchivers[key] = visiblityArchiver
-		return visiblityArchiver, nil
+		visibilityArchiver := filestore.NewVisibilityArchiver(*p.visibilityContainer, p.visibilityArchiverConfigs.FileStore)
+		p.visibilityArchivers[key] = visibilityArchiver
+		return visibilityArchiver, nil
 	}
 	return nil, ErrUnknownScheme
 }
