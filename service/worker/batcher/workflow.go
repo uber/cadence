@@ -136,7 +136,8 @@ func init() {
 
 // BatchWorkflow is the workflow that runs a batch job of resetting workflows
 func BatchWorkflow(ctx workflow.Context, batchParams BatchParams) error {
-	batchParams, err := setDefaultParams(batchParams)
+	batchParams = setDefaultParams(batchParams)
+	err := validateDefaultParams(batchParams)
 	if err != nil {
 		return err
 	}
@@ -145,13 +146,22 @@ func BatchWorkflow(ctx workflow.Context, batchParams BatchParams) error {
 	return workflow.ExecuteActivity(opt, batchActivityName, batchParams).Get(ctx, nil)
 }
 
-func setDefaultParams(params BatchParams) (BatchParams, error) {
+func validateDefaultParams(params BatchParams) error {
 	if params.BatchType == "" ||
 		params.Reason == "" ||
 		params.DomainName == "" ||
 		params.Query == "" {
-		return BatchParams{}, fmt.Errorf("must provide required parameters: BatchType/Reason/DomainName/Query")
+		return fmt.Errorf("must provide required parameters: BatchType/Reason/DomainName/Query")
 	}
+	switch params.BatchType {
+	case BatchTypeTerminate:
+		return nil
+	default:
+		return fmt.Errorf("not supported batch type: %v", params.BatchType)
+	}
+}
+
+func setDefaultParams(params BatchParams) BatchParams {
 	if params.RPS <= 0 {
 		params.RPS = defaultRPS
 	}
@@ -170,12 +180,7 @@ func setDefaultParams(params BatchParams) (BatchParams, error) {
 			params._nonRetryableErrors[estr] = struct{}{}
 		}
 	}
-	switch params.BatchType {
-	case BatchTypeTerminate:
-		return params, nil
-	default:
-		return BatchParams{}, fmt.Errorf("not supported batch type: %v", params.BatchType)
-	}
+	return params
 }
 
 // BatchActivity is activity for processing batch operation
