@@ -2018,7 +2018,7 @@ func createActivityInfo(
 		case "last_failure_reason":
 			info.LastFailureReason = v.(string)
 		case "last_worker_identity":
-			info.LastFailureReason = v.(string)
+			info.LastWorkerIdentity = v.(string)
 		case "event_data_encoding":
 			sharedEncoding = common.EncodingType(v.(string))
 		}
