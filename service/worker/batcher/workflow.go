@@ -23,7 +23,6 @@ package batcher
 import (
 	"context"
 	"fmt"
-	"sync/atomic"
 	"time"
 
 	"github.com/uber/cadence/common"
@@ -55,7 +54,6 @@ const (
 
 const (
 	BatchTypeTerminate = "terminate"
-	BatchTypeReset     = "reset"
 )
 
 type (
@@ -78,7 +76,12 @@ type (
 		Concurrency int
 		// Number of attempts for each workflow to process in case of retryable error before giving up
 		AttemptsOnRetryableError int
+		// timeout for activity heartbeat
 		ActivityHeartBeatTimeout time.Duration
+		// errors that will not retry which consumes AttemptsOnRetryableError. Default to empty
+		NonRetryableErrors []string
+		// internal conversion for NonRetryableErrors
+		_nonRetryableErrors map[string]struct{}
 	}
 
 	// HeartBeatDetails is the struct for heartbeat details
@@ -88,9 +91,9 @@ type (
 		// This is just an estimation for visibility
 		TotalEstimate int64
 		// Number of workflows processed successfully
-		SuccessCount int32
+		SuccessCount int
 		// Number of workflows that give up due to errors.
-		ErrorCount int32
+		ErrorCount int
 	}
 
 	taskDetail struct {
@@ -151,6 +154,12 @@ func setDefaultParams(params BatchParams) (BatchParams, error) {
 	if params.ActivityHeartBeatTimeout <= 0 {
 		params.ActivityHeartBeatTimeout = defaultActivityHeartBeatTimeout
 	}
+	if len(params.NonRetryableErrors) > 0 {
+		params._nonRetryableErrors = make(map[string]struct{}, len(params.NonRetryableErrors))
+		for _, estr := range params.NonRetryableErrors {
+			params._nonRetryableErrors[estr] = struct{}{}
+		}
+	}
 	switch params.BatchType {
 	case BatchTypeTerminate:
 		return params, nil
@@ -168,7 +177,6 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 		if err := activity.GetHeartbeatDetails(ctx, &hbd); err == nil {
 			startOver = false
 		} else {
-			//TODO error metrics
 			getActivityLogger(ctx).Error("Failed to recover from last heartbeat, start over from beginning", tag.Error(err))
 		}
 	}
@@ -185,15 +193,15 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 	}
 	rateLimiter := rate.NewLimiter(rate.Limit(batchParams.RPS), batchParams.RPS)
 	taskCh := make(chan taskDetail, pageSize)
-	var succCount, errCount int32
+	respCh := make(chan error, pageSize)
 	for i := 0; i < batchParams.Concurrency; i++ {
-		go startTaskProcessor(ctx, batchParams, taskCh, rateLimiter, &succCount, &errCount)
+		go startTaskProcessor(ctx, batchParams, taskCh, respCh, rateLimiter)
 	}
 
 	for {
 		// TODO https://github.com/uber/cadence/issues/2154
-		//  Need to improve scan concurrency because it will hold a ES resource for a long time.
-		//  we can't use list API because terminate / reset will mutate the result.
+		//  Need to improve scan concurrency because it will hold an ES resource until the workflow finishes.
+		//  And we can't use list API because terminate / reset will mutate the result.
 		resp, err := batcher.svcClient.ScanWorkflowExecutions(ctx, &shared.ListWorkflowExecutionsRequest{
 			PageSize:      common.Int32Ptr(int32(pageSize)),
 			Domain:        common.StringPtr(batchParams.DomainName),
@@ -203,10 +211,6 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 		if err != nil {
 			return err
 		}
-
-		// clear all counters
-		atomic.StoreInt32(&succCount, 0)
-		atomic.StoreInt32(&errCount, 0)
 
 		// send all tasks
 		for _, wf := range resp.Executions {
@@ -218,12 +222,19 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 		}
 		batchCount := len(resp.Executions)
 
+		succCount := 0
+		errCount := 0
 		// wait for counters indicate this batch is done
 	Loop:
 		for {
 			select {
-			case <-time.Tick(time.Second):
-				if int32(batchCount) == atomic.LoadInt32(&succCount)+atomic.LoadInt32(&errCount) {
+			case err := <-respCh:
+				if err == nil {
+					succCount++
+				} else {
+					errCount++
+				}
+				if succCount+errCount == batchCount {
 					break Loop
 				}
 			case <-ctx.Done():
@@ -233,8 +244,8 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 
 		hbd.CurrentPage++
 		hbd.PageToken = resp.NextPageToken
-		hbd.SuccessCount += atomic.LoadInt32(&succCount)
-		hbd.ErrorCount += atomic.LoadInt32(&errCount)
+		hbd.SuccessCount += succCount
+		hbd.ErrorCount += errCount
 		activity.RecordHeartbeat(ctx, hbd)
 
 		if len(hbd.PageToken) == 0 {
@@ -249,8 +260,8 @@ func startTaskProcessor(
 	ctx context.Context,
 	batchParams BatchParams,
 	taskCh chan taskDetail,
-	limiter *rate.Limiter,
-	doneCount, errCount *int32) {
+	respCh chan error,
+	limiter *rate.Limiter) {
 
 	for {
 		select {
@@ -265,16 +276,18 @@ func startTaskProcessor(
 				err = processOneTerminateTask(ctx, limiter, task, batchParams)
 			}
 			if err != nil {
-				getActivityLogger(ctx).Error("Failed to process task", tag.Error(err))
-				// put back to the channel if less than attemptsOnError
-				task.attempts++
-				if task.attempts >= batchParams.AttemptsOnRetryableError {
-					atomic.AddInt32(errCount, 1)
+				getActivityLogger(ctx).Error("Failed to process batch operation task", tag.Error(err))
+
+				_, ok := batchParams._nonRetryableErrors[err.Error()]
+				if ok || task.attempts >= batchParams.AttemptsOnRetryableError {
+					respCh <- err
 				} else {
+					// put back to the channel if less than attemptsOnError
+					task.attempts++
 					taskCh <- task
 				}
 			} else {
-				atomic.AddInt32(doneCount, 1)
+				respCh <- nil
 			}
 		}
 	}
