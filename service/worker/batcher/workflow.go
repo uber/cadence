@@ -26,9 +26,11 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"go.uber.org/cadence"
+	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/workflow"
@@ -209,12 +211,7 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 		// TODO https://github.com/uber/cadence/issues/2154
 		//  Need to improve scan concurrency because it will hold an ES resource until the workflow finishes.
 		//  And we can't use list API because terminate / reset will mutate the result.
-		resp, err := batcher.svcClient.ScanWorkflowExecutions(ctx, &shared.ListWorkflowExecutionsRequest{
-			PageSize:      common.Int32Ptr(int32(pageSize)),
-			Domain:        common.StringPtr(batchParams.DomainName),
-			NextPageToken: hbd.PageToken,
-			Query:         common.StringPtr(batchParams.Query),
-		})
+		resp, err := scanWorkflowsWithRetry(ctx, batcher.svcClient, hbd.PageToken, batchParams)
 		if err != nil {
 			return err
 		}
@@ -261,6 +258,27 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 	}
 
 	return nil
+}
+
+func scanWorkflowsWithRetry(ctx context.Context, svcClient workflowserviceclient.Interface, pageToken []byte, batchParams BatchParams) (*shared.ListWorkflowExecutionsResponse, error) {
+	var resp *shared.ListWorkflowExecutionsResponse
+	policy := backoff.NewExponentialRetryPolicy(rpcTimeout)
+	policy.SetMaximumInterval(batchParams.ActivityHeartBeatTimeout)
+	policy.SetExpirationInterval(batchParams.ActivityHeartBeatTimeout)
+	err := backoff.Retry(func() error {
+		var err error
+		resp, err = svcClient.ScanWorkflowExecutions(ctx, &shared.ListWorkflowExecutionsRequest{
+			PageSize:      common.Int32Ptr(int32(pageSize)),
+			Domain:        common.StringPtr(batchParams.DomainName),
+			NextPageToken: pageToken,
+			Query:         common.StringPtr(batchParams.Query),
+		})
+		return err
+	}, policy, func(err error) bool {
+		return true
+	})
+
+	return resp, err
 }
 
 func startTaskProcessor(
