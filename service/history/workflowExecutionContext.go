@@ -105,13 +105,12 @@ type (
 			closeTask persistence.Task,
 			cleanupTask persistence.Task,
 			newMutableState mutableState,
-			transferTasks []persistence.Task,
-			timerTasks []persistence.Task,
-			currReplicationTasks []persistence.Task,
-			insertReplicationTasks []persistence.Task,
+			newTransferTasks []persistence.Task,
+			newTimerTasks []persistence.Task,
+			currentReplicationTasks []persistence.Task,
+			newReplicationTasks []persistence.Task,
 			baseRunID string,
-			forkRunNextEventID int64,
-			prevRunVersion int64,
+			baseRunNextEventID int64,
 		) (retError error)
 		scheduleNewDecision(
 			transferTasks []persistence.Task,
@@ -284,59 +283,59 @@ func (c *workflowExecutionContextImpl) createWorkflowExecution(
 	setTaskInfo(msBuilder.GetCurrentVersion(), now, transferTasks, timerTasks)
 
 	createRequest := &persistence.CreateWorkflowExecutionRequest{
-		RequestID: executionInfo.CreateRequestID,
-		DomainID:  executionInfo.DomainID,
-		Execution: workflow.WorkflowExecution{
-			WorkflowId: &executionInfo.WorkflowID,
-			RunId:      &executionInfo.RunID,
-		},
-
-		// parent execution
-		ParentDomainID: executionInfo.ParentDomainID,
-		ParentExecution: workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(executionInfo.ParentWorkflowID),
-			RunId:      common.StringPtr(executionInfo.ParentRunID),
-		},
-		InitiatedID: executionInfo.InitiatedID,
-
-		TaskList:                    executionInfo.TaskList,
-		WorkflowTypeName:            executionInfo.WorkflowTypeName,
-		WorkflowTimeout:             executionInfo.WorkflowTimeout,
-		DecisionTimeoutValue:        executionInfo.DecisionTimeoutValue,
-		ExecutionContext:            nil,
-		LastEventTaskID:             executionInfo.LastEventTaskID,
-		NextEventID:                 executionInfo.NextEventID,
-		LastProcessedEvent:          common.EmptyEventID,
-		HistorySize:                 executionInfo.HistorySize,
-		TransferTasks:               transferTasks,
-		ReplicationTasks:            replicationTasks,
-		TimerTasks:                  timerTasks,
-		DecisionVersion:             executionInfo.DecisionVersion,
-		DecisionScheduleID:          executionInfo.DecisionScheduleID,
-		DecisionStartedID:           executionInfo.DecisionStartedID,
-		DecisionStartToCloseTimeout: executionInfo.DecisionTimeout,
-		State:                       executionInfo.State,
-		CloseStatus:                 executionInfo.CloseStatus,
-		EventStoreVersion:           executionInfo.EventStoreVersion,
-		BranchToken:                 executionInfo.BranchToken,
-		CronSchedule:                executionInfo.CronSchedule,
-		ReplicationState:            replicationState,
-		SearchAttributes:            executionInfo.SearchAttributes,
-
-		// retry policy
-		HasRetryPolicy:     executionInfo.HasRetryPolicy,
-		BackoffCoefficient: executionInfo.BackoffCoefficient,
-		ExpirationSeconds:  executionInfo.ExpirationSeconds,
-		InitialInterval:    executionInfo.InitialInterval,
-		MaximumAttempts:    executionInfo.MaximumAttempts,
-		MaximumInterval:    executionInfo.MaximumInterval,
-		NonRetriableErrors: executionInfo.NonRetriableErrors,
-		ExpirationTime:     executionInfo.ExpirationTime,
-
 		// workflow create mode & prev run ID & version
 		CreateWorkflowMode:       createMode,
 		PreviousRunID:            prevRunID,
 		PreviousLastWriteVersion: prevLastWriteVersion,
+
+		NewWorkflowSnapshot: persistence.WorkflowSnapshot{
+			ExecutionInfo: &persistence.WorkflowExecutionInfo{
+				CreateRequestID: executionInfo.CreateRequestID,
+				DomainID:        executionInfo.DomainID,
+				WorkflowID:      executionInfo.WorkflowID,
+				RunID:           executionInfo.RunID,
+
+				// parent execution
+				ParentDomainID:   executionInfo.ParentDomainID,
+				ParentWorkflowID: executionInfo.ParentWorkflowID,
+				ParentRunID:      executionInfo.ParentRunID,
+				InitiatedID:      executionInfo.InitiatedID,
+
+				TaskList:             executionInfo.TaskList,
+				WorkflowTypeName:     executionInfo.WorkflowTypeName,
+				WorkflowTimeout:      executionInfo.WorkflowTimeout,
+				DecisionTimeoutValue: executionInfo.DecisionTimeoutValue,
+				ExecutionContext:     nil,
+				LastEventTaskID:      executionInfo.LastEventTaskID,
+				NextEventID:          executionInfo.NextEventID,
+				LastProcessedEvent:   common.EmptyEventID,
+				HistorySize:          executionInfo.HistorySize,
+				DecisionVersion:      executionInfo.DecisionVersion,
+				DecisionScheduleID:   executionInfo.DecisionScheduleID,
+				DecisionStartedID:    executionInfo.DecisionStartedID,
+				DecisionTimeout:      executionInfo.DecisionTimeout,
+				State:                executionInfo.State,
+				CloseStatus:          executionInfo.CloseStatus,
+				EventStoreVersion:    executionInfo.EventStoreVersion,
+				BranchToken:          executionInfo.BranchToken,
+				CronSchedule:         executionInfo.CronSchedule,
+				SearchAttributes:     executionInfo.SearchAttributes,
+
+				// retry policy
+				HasRetryPolicy:     executionInfo.HasRetryPolicy,
+				BackoffCoefficient: executionInfo.BackoffCoefficient,
+				ExpirationSeconds:  executionInfo.ExpirationSeconds,
+				InitialInterval:    executionInfo.InitialInterval,
+				MaximumAttempts:    executionInfo.MaximumAttempts,
+				MaximumInterval:    executionInfo.MaximumInterval,
+				NonRetriableErrors: executionInfo.NonRetriableErrors,
+				ExpirationTime:     executionInfo.ExpirationTime,
+			},
+			ReplicationState: replicationState,
+			TransferTasks:    transferTasks,
+			ReplicationTasks: replicationTasks,
+			TimerTasks:       timerTasks,
+		},
 	}
 
 	_, err := c.shard.CreateWorkflowExecution(createRequest)
@@ -362,7 +361,7 @@ func (c *workflowExecutionContextImpl) resetMutableState(
 		transferTasks,
 		timerTasks,
 	)
-	snapshotRequest.Condition = c.updateCondition
+	snapshotRequest.ResetWorkflowSnapshot.Condition = c.updateCondition
 
 	err := c.shard.ResetMutableState(snapshotRequest)
 	if err != nil {
@@ -380,15 +379,15 @@ func (c *workflowExecutionContextImpl) resetMutableState(
 func (c *workflowExecutionContextImpl) resetWorkflowExecution(
 	currMutableState mutableState,
 	updateCurr bool,
-	closeTask, cleanupTask persistence.Task,
+	closeTask persistence.Task,
+	cleanupTask persistence.Task,
 	newMutableState mutableState,
 	newTransferTasks []persistence.Task,
 	newTimerTasks []persistence.Task,
 	currReplicationTasks []persistence.Task,
-	insertReplicationTasks []persistence.Task,
+	newReplicationTasks []persistence.Task,
 	baseRunID string,
 	baseRunNextEventID int64,
-	prevRunVersion int64,
 ) (retError error) {
 
 	now := c.timeSource.Now()
@@ -455,44 +454,66 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(
 
 	// ResetSnapshot function used here really does rely on inputs below
 	snapshotRequest := newMutableState.ResetSnapshot("", 0, 0, nil, nil, nil)
-	if len(snapshotRequest.InsertChildExecutionInfos) > 0 ||
-		len(snapshotRequest.InsertSignalInfos) > 0 ||
-		len(snapshotRequest.InsertSignalRequestedIDs) > 0 {
+	if len(snapshotRequest.ResetWorkflowSnapshot.ChildExecutionInfos) > 0 ||
+		len(snapshotRequest.ResetWorkflowSnapshot.SignalInfos) > 0 ||
+		len(snapshotRequest.ResetWorkflowSnapshot.SignalRequestedIDs) > 0 {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("something went wrong, we shouldn't see any pending childWF, sending Signal or signal requested"),
 		}
 	}
 
-	// NOTE: workflow_state in current record is either completed(2) or running(1), there is no 0(created)
-	prevRunState := persistence.WorkflowStateCompleted
-	if updateCurr {
-		prevRunState = persistence.WorkflowStateRunning
-	}
 	resetWFReq := &persistence.ResetWorkflowExecutionRequest{
-		PrevRunVersion: prevRunVersion,
-		PrevRunState:   prevRunState,
-
-		Condition:  c.updateCondition,
-		UpdateCurr: updateCurr,
-
 		BaseRunID:          baseRunID,
 		BaseRunNextEventID: baseRunNextEventID,
 
-		CurrExecutionInfo:    currMutableState.GetExecutionInfo(),
-		CurrReplicationState: currMutableState.GetReplicationState(),
-		CurrReplicationTasks: currReplicationTasks,
-		CurrTransferTasks:    currTransferTasks,
-		CurrTimerTasks:       currTimerTasks,
+		CurrentRunID:          currMutableState.GetExecutionInfo().RunID,
+		CurrentRunNextEventID: currMutableState.GetExecutionInfo().NextEventID,
 
-		InsertExecutionInfo:    newMutableState.GetExecutionInfo(),
-		InsertReplicationState: newMutableState.GetReplicationState(),
-		InsertTransferTasks:    newTransferTasks,
-		InsertTimerTasks:       newTimerTasks,
-		InsertReplicationTasks: insertReplicationTasks,
+		CurrentWorkflowMutation: nil,
 
-		InsertTimerInfos:         snapshotRequest.InsertTimerInfos,
-		InsertActivityInfos:      snapshotRequest.InsertActivityInfos,
-		InsertRequestCancelInfos: snapshotRequest.InsertRequestCancelInfos,
+		NewWorkflowSnapshot: persistence.WorkflowSnapshot{
+			ExecutionInfo:    newMutableState.GetExecutionInfo(),
+			ReplicationState: newMutableState.GetReplicationState(),
+
+			ActivityInfos:       snapshotRequest.ResetWorkflowSnapshot.ActivityInfos,
+			TimerInfos:          snapshotRequest.ResetWorkflowSnapshot.TimerInfos,
+			ChildExecutionInfos: snapshotRequest.ResetWorkflowSnapshot.ChildExecutionInfos,
+			RequestCancelInfos:  snapshotRequest.ResetWorkflowSnapshot.RequestCancelInfos,
+			SignalInfos:         snapshotRequest.ResetWorkflowSnapshot.SignalInfos,
+			SignalRequestedIDs:  snapshotRequest.ResetWorkflowSnapshot.SignalRequestedIDs,
+
+			TransferTasks:    newTransferTasks,
+			ReplicationTasks: newReplicationTasks,
+			TimerTasks:       newTimerTasks,
+		},
+	}
+
+	if updateCurr {
+		resetWFReq.CurrentWorkflowMutation = &persistence.WorkflowMutation{
+			ExecutionInfo:    currMutableState.GetExecutionInfo(),
+			ReplicationState: currMutableState.GetReplicationState(),
+
+			UpsertActivityInfos:       []*persistence.ActivityInfo{},
+			DeleteActivityInfos:       []int64{},
+			UpserTimerInfos:           []*persistence.TimerInfo{},
+			DeleteTimerInfos:          []string{},
+			UpsertChildExecutionInfos: []*persistence.ChildExecutionInfo{},
+			DeleteChildExecutionInfo:  nil,
+			UpsertRequestCancelInfos:  []*persistence.RequestCancelInfo{},
+			DeleteRequestCancelInfo:   nil,
+			UpsertSignalInfos:         []*persistence.SignalInfo{},
+			DeleteSignalInfo:          nil,
+			UpsertSignalRequestedIDs:  []string{},
+			DeleteSignalRequestedID:   "",
+			NewBufferedEvents:         []*workflow.HistoryEvent{},
+			ClearBufferedEvents:       false,
+
+			TransferTasks:    currTransferTasks,
+			ReplicationTasks: currReplicationTasks,
+			TimerTasks:       currTimerTasks,
+
+			Condition: c.updateCondition,
+		}
 	}
 
 	return c.shard.ResetWorkflowExecution(resetWFReq)
@@ -739,7 +760,6 @@ func (c *workflowExecutionContextImpl) update(
 			tag.WorkflowNextEventID(executionInfo.NextEventID),
 			tag.ReplicationState(c.msBuilder.GetReplicationState()),
 		)
-
 	}
 
 	// Replication state should only be updated after the UpdateSession is closed.  IDs for certain events are only
@@ -900,9 +920,8 @@ func (c *workflowExecutionContextImpl) update(
 
 	} // end of update history events for active builder
 
-	continueAsNew := updates.continueAsNew
 	if executionInfo.State == persistence.WorkflowStateCompleted {
-		// clear stickness
+		// clear stickyness
 		c.msBuilder.ClearStickyness()
 	}
 
@@ -917,29 +936,29 @@ func (c *workflowExecutionContextImpl) update(
 	var resp *persistence.UpdateWorkflowExecutionResponse
 	var err1 error
 	if resp, err1 = c.updateWorkflowExecutionWithRetry(&persistence.UpdateWorkflowExecutionRequest{
-		ExecutionInfo:                 executionInfo,
-		ReplicationState:              c.msBuilder.GetReplicationState(),
-		TransferTasks:                 transferTasks,
-		ReplicationTasks:              replicationTasks,
-		TimerTasks:                    timerTasks,
-		Condition:                     c.updateCondition,
-		UpsertActivityInfos:           updates.updateActivityInfos,
-		DeleteActivityInfos:           updates.deleteActivityInfos,
-		UpserTimerInfos:               updates.updateTimerInfos,
-		DeleteTimerInfos:              updates.deleteTimerInfos,
-		UpsertChildExecutionInfos:     updates.updateChildExecutionInfos,
-		DeleteChildExecutionInfo:      updates.deleteChildExecutionInfo,
-		UpsertRequestCancelInfos:      updates.updateCancelExecutionInfos,
-		DeleteRequestCancelInfo:       updates.deleteCancelExecutionInfo,
-		UpsertSignalInfos:             updates.updateSignalInfos,
-		DeleteSignalInfo:              updates.deleteSignalInfo,
-		UpsertSignalRequestedIDs:      updates.updateSignalRequestedIDs,
-		DeleteSignalRequestedID:       updates.deleteSignalRequestedID,
-		NewBufferedEvents:             updates.newBufferedEvents,
-		ClearBufferedEvents:           updates.clearBufferedEvents,
-		NewBufferedReplicationTask:    updates.newBufferedReplicationEventsInfo,
-		DeleteBufferedReplicationTask: updates.deleteBufferedReplicationEvent,
-		ContinueAsNew:                 continueAsNew,
+		UpdateWorkflowMutation: persistence.WorkflowMutation{
+			ExecutionInfo:             executionInfo,
+			ReplicationState:          c.msBuilder.GetReplicationState(),
+			TransferTasks:             transferTasks,
+			ReplicationTasks:          replicationTasks,
+			TimerTasks:                timerTasks,
+			Condition:                 c.updateCondition,
+			UpsertActivityInfos:       updates.updateActivityInfos,
+			DeleteActivityInfos:       updates.deleteActivityInfos,
+			UpserTimerInfos:           updates.updateTimerInfos,
+			DeleteTimerInfos:          updates.deleteTimerInfos,
+			UpsertChildExecutionInfos: updates.updateChildExecutionInfos,
+			DeleteChildExecutionInfo:  updates.deleteChildExecutionInfo,
+			UpsertRequestCancelInfos:  updates.updateCancelExecutionInfos,
+			DeleteRequestCancelInfo:   updates.deleteCancelExecutionInfo,
+			UpsertSignalInfos:         updates.updateSignalInfos,
+			DeleteSignalInfo:          updates.deleteSignalInfo,
+			UpsertSignalRequestedIDs:  updates.updateSignalRequestedIDs,
+			DeleteSignalRequestedID:   updates.deleteSignalRequestedID,
+			NewBufferedEvents:         updates.newBufferedEvents,
+			ClearBufferedEvents:       updates.clearBufferedEvents,
+		},
+		NewWorkflowSnapshot: updates.continueAsNew,
 	}); err1 != nil {
 		switch err1.(type) {
 		case *persistence.ConditionFailedError:
@@ -1384,7 +1403,6 @@ func emitWorkflowExecutionStats(
 	sizeScope.RecordTimer(metrics.ChildInfoSize, time.Duration(stats.ChildInfoSize))
 	sizeScope.RecordTimer(metrics.SignalInfoSize, time.Duration(stats.SignalInfoSize))
 	sizeScope.RecordTimer(metrics.BufferedEventsSize, time.Duration(stats.BufferedEventsSize))
-	sizeScope.RecordTimer(metrics.BufferedReplicationTasksSize, time.Duration(stats.BufferedReplicationTasksSize))
 
 	countScope.RecordTimer(metrics.ActivityInfoCount, time.Duration(stats.ActivityInfoCount))
 	countScope.RecordTimer(metrics.TimerInfoCount, time.Duration(stats.TimerInfoCount))
@@ -1392,7 +1410,6 @@ func emitWorkflowExecutionStats(
 	countScope.RecordTimer(metrics.SignalInfoCount, time.Duration(stats.SignalInfoCount))
 	countScope.RecordTimer(metrics.RequestCancelInfoCount, time.Duration(stats.RequestCancelInfoCount))
 	countScope.RecordTimer(metrics.BufferedEventsCount, time.Duration(stats.BufferedEventsCount))
-	countScope.RecordTimer(metrics.BufferedReplicationTasksCount, time.Duration(stats.BufferedReplicationTasksCount))
 }
 
 func emitSessionUpdateStats(
@@ -1408,7 +1425,6 @@ func emitSessionUpdateStats(
 	sizeScope.RecordTimer(metrics.ChildInfoSize, time.Duration(stats.ChildInfoSize))
 	sizeScope.RecordTimer(metrics.SignalInfoSize, time.Duration(stats.SignalInfoSize))
 	sizeScope.RecordTimer(metrics.BufferedEventsSize, time.Duration(stats.BufferedEventsSize))
-	sizeScope.RecordTimer(metrics.BufferedReplicationTasksSize, time.Duration(stats.BufferedReplicationTasksSize))
 
 	countScope.RecordTimer(metrics.ActivityInfoCount, time.Duration(stats.ActivityInfoCount))
 	countScope.RecordTimer(metrics.TimerInfoCount, time.Duration(stats.TimerInfoCount))
