@@ -62,6 +62,8 @@ type (
 	// TerminateParams is the parameters for terminating workflow
 	TerminateParams struct {
 		// this indicates whether to terminate children workflow. Default to true.
+		// TODO https://github.com/uber/cadence/issues/2159
+		// Ideally default should be childPolicy of the workflow. But it's currently totally broken.
 		TerminateChildren *bool
 	}
 
