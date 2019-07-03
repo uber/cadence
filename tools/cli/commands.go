@@ -970,7 +970,7 @@ func DescribeWorkflowWithID(c *cli.Context) {
 func describeWorkflowHelper(c *cli.Context, wid, rid string) {
 	frontendClient := cFactory.ServerFrontendClient(c)
 	domain := getRequiredGlobalOption(c, FlagDomain)
-	printRawTime := c.Bool(FlagPrintRawTime) // default show datetime instead of raw time
+	printRaw := c.Bool(FlagPrintRaw) // default show datetime and decoded search attributes instead of raw timestamp and byte arrays
 	printResetPointsOnly := c.Bool(FlagResetPointsOnly)
 
 	ctx, cancel := newContext(c)
@@ -993,7 +993,7 @@ func describeWorkflowHelper(c *cli.Context, wid, rid string) {
 	}
 
 	var o interface{}
-	if printRawTime {
+	if printRaw {
 		o = resp
 	} else {
 		o = convertDescribeWorkflowExecutionResponse(resp, frontendClient, c)
@@ -1072,6 +1072,53 @@ type pendingActivityInfo struct {
 	LastWorkerIdentity     *string `json:",omitempty"`
 }
 
+func convertDescribeWorkflowExecutionResponse(resp *shared.DescribeWorkflowExecutionResponse,
+	wfClient workflowserviceclient.Interface, c *cli.Context) *describeWorkflowExecutionResponse {
+
+	info := resp.WorkflowExecutionInfo
+	executionInfo := workflowExecutionInfo{
+		Execution:        info.Execution,
+		Type:             info.Type,
+		StartTime:        common.StringPtr(convertTime(info.GetStartTime(), false)),
+		CloseTime:        common.StringPtr(convertTime(info.GetCloseTime(), false)),
+		CloseStatus:      info.CloseStatus,
+		HistoryLength:    info.HistoryLength,
+		ParentDomainID:   info.ParentDomainId,
+		ParentExecution:  info.ParentExecution,
+		AutoResetPoints:  info.AutoResetPoints,
+		SearchAttributes: convertSearchAttributesToMapOfInterface(info.SearchAttributes, wfClient, c),
+	}
+
+	var pendingActs []*pendingActivityInfo
+	var tmpAct *pendingActivityInfo
+	for _, pa := range resp.PendingActivities {
+		tmpAct = &pendingActivityInfo{
+			ActivityID:             pa.ActivityID,
+			ActivityType:           pa.ActivityType,
+			State:                  pa.State,
+			ScheduledTimestamp:     timestampPtrToStringPtr(pa.ScheduledTimestamp, false),
+			LastStartedTimestamp:   timestampPtrToStringPtr(pa.LastStartedTimestamp, false),
+			LastHeartbeatTimestamp: timestampPtrToStringPtr(pa.LastHeartbeatTimestamp, false),
+			Attempt:                pa.Attempt,
+			MaximumAttempts:        pa.MaximumAttempts,
+			ExpirationTimestamp:    timestampPtrToStringPtr(pa.ExpirationTimestamp, false),
+			LastFailureReason:      pa.LastFailureReason,
+			LastWorkerIdentity:     pa.LastWorkerIdentity,
+		}
+		if pa.HeartbeatDetails != nil {
+			tmpAct.HeartbeatDetails = common.StringPtr(string(pa.HeartbeatDetails))
+		}
+		pendingActs = append(pendingActs, tmpAct)
+	}
+
+	return &describeWorkflowExecutionResponse{
+		ExecutionConfiguration: resp.ExecutionConfiguration,
+		WorkflowExecutionInfo:  executionInfo,
+		PendingActivities:      pendingActs,
+		PendingChildren:        resp.PendingChildren,
+	}
+}
+
 func convertSearchAttributesToMapOfInterface(searchAttributes *shared.SearchAttributes,
 	wfClient workflowserviceclient.Interface, c *cli.Context) map[string]interface{} {
 
@@ -1118,53 +1165,6 @@ func convertSearchAttributesToMapOfInterface(searchAttributes *shared.SearchAttr
 	}
 
 	return result
-}
-
-func convertDescribeWorkflowExecutionResponse(resp *shared.DescribeWorkflowExecutionResponse,
-	wfClient workflowserviceclient.Interface, c *cli.Context) *describeWorkflowExecutionResponse {
-
-	info := resp.WorkflowExecutionInfo
-	executionInfo := workflowExecutionInfo{
-		Execution:        info.Execution,
-		Type:             info.Type,
-		StartTime:        common.StringPtr(convertTime(info.GetStartTime(), false)),
-		CloseTime:        common.StringPtr(convertTime(info.GetCloseTime(), false)),
-		CloseStatus:      info.CloseStatus,
-		HistoryLength:    info.HistoryLength,
-		ParentDomainID:   info.ParentDomainId,
-		ParentExecution:  info.ParentExecution,
-		AutoResetPoints:  info.AutoResetPoints,
-		SearchAttributes: convertSearchAttributesToMapOfInterface(info.SearchAttributes, wfClient, c),
-	}
-
-	var pendingActs []*pendingActivityInfo
-	var tmpAct *pendingActivityInfo
-	for _, pa := range resp.PendingActivities {
-		tmpAct = &pendingActivityInfo{
-			ActivityID:             pa.ActivityID,
-			ActivityType:           pa.ActivityType,
-			State:                  pa.State,
-			ScheduledTimestamp:     timestampPtrToStringPtr(pa.ScheduledTimestamp, false),
-			LastStartedTimestamp:   timestampPtrToStringPtr(pa.LastStartedTimestamp, false),
-			LastHeartbeatTimestamp: timestampPtrToStringPtr(pa.LastHeartbeatTimestamp, false),
-			Attempt:                pa.Attempt,
-			MaximumAttempts:        pa.MaximumAttempts,
-			ExpirationTimestamp:    timestampPtrToStringPtr(pa.ExpirationTimestamp, false),
-			LastFailureReason:      pa.LastFailureReason,
-			LastWorkerIdentity:     pa.LastWorkerIdentity,
-		}
-		if pa.HeartbeatDetails != nil {
-			tmpAct.HeartbeatDetails = common.StringPtr(string(pa.HeartbeatDetails))
-		}
-		pendingActs = append(pendingActs, tmpAct)
-	}
-
-	return &describeWorkflowExecutionResponse{
-		ExecutionConfiguration: resp.ExecutionConfiguration,
-		WorkflowExecutionInfo:  executionInfo,
-		PendingActivities:      pendingActs,
-		PendingChildren:        resp.PendingChildren,
-	}
 }
 
 func createTableForListWorkflow(c *cli.Context, listAll bool, queryOpen bool) *tablewriter.Table {

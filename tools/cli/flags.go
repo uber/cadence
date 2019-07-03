@@ -101,6 +101,8 @@ const (
 	FlagPrintFullyDetailWithAlias   = FlagPrintFullyDetail + ", pf"
 	FlagPrintRawTime                = "print_raw_time"
 	FlagPrintRawTimeWithAlias       = FlagPrintRawTime + ", prt"
+	FlagPrintRaw                    = "print_raw"
+	FlagPrintRawWithAlias           = FlagPrintRaw + ", praw"
 	FlagPrintDateTime               = "print_datetime"
 	FlagPrintDateTimeWithAlias      = FlagPrintDateTime + ", pdt"
 	FlagPrintMemo                   = "print_memo"
@@ -441,8 +443,8 @@ func getFlagsForDescribe() []cli.Flag {
 func getFlagsForDescribeID() []cli.Flag {
 	return []cli.Flag{
 		cli.BoolFlag{
-			Name:  FlagPrintRawTimeWithAlias,
-			Usage: "Print raw time stamp",
+			Name:  FlagPrintRawWithAlias,
+			Usage: "Print raw time stamp and properties as they are",
 		},
 		cli.BoolFlag{
 			Name:  FlagResetPointsOnly,
