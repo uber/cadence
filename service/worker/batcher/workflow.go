@@ -135,15 +135,17 @@ func init() {
 }
 
 // BatchWorkflow is the workflow that runs a batch job of resetting workflows
-func BatchWorkflow(ctx workflow.Context, batchParams BatchParams) error {
+func BatchWorkflow(ctx workflow.Context, batchParams BatchParams) (HeartBeatDetails, error) {
 	batchParams = setDefaultParams(batchParams)
 	err := validateParams(batchParams)
 	if err != nil {
-		return err
+		return HeartBeatDetails{}, err
 	}
 	batchActivityOptions.HeartbeatTimeout = batchParams.ActivityHeartBeatTimeout
 	opt := workflow.WithActivityOptions(ctx, batchActivityOptions)
-	return workflow.ExecuteActivity(opt, batchActivityName, batchParams).Get(ctx, nil)
+	var result HeartBeatDetails
+	err = workflow.ExecuteActivity(opt, batchActivityName, batchParams).Get(ctx, &result)
+	return result, err
 }
 
 func validateParams(params BatchParams) error {
@@ -187,7 +189,7 @@ func setDefaultParams(params BatchParams) BatchParams {
 }
 
 // BatchActivity is activity for processing batch operation
-func BatchActivity(ctx context.Context, batchParams BatchParams) error {
+func BatchActivity(ctx context.Context, batchParams BatchParams) (HeartBeatDetails, error) {
 	batcher := ctx.Value(batcherContextKey).(*Batcher)
 
 	hbd := HeartBeatDetails{}
@@ -203,7 +205,7 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 	if startOver {
 		resp, err := countWorkflowsWithRetry(ctx, batcher.svcClient, batchParams)
 		if err != nil {
-			return err
+			return HeartBeatDetails{}, err
 		}
 		hbd.TotalEstimate = resp.GetCount()
 	}
@@ -220,7 +222,7 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 		//  And we can't use list API because terminate / reset will mutate the result.
 		resp, err := scanWorkflowsWithRetry(ctx, batcher.svcClient, hbd.PageToken, batchParams)
 		if err != nil {
-			return err
+			return HeartBeatDetails{}, err
 		}
 		batchCount := len(resp.Executions)
 		if batchCount <= 0 {
@@ -252,7 +254,7 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 					break Loop
 				}
 			case <-ctx.Done():
-				return nil
+				return HeartBeatDetails{}, ctx.Err()
 			}
 		}
 
@@ -267,7 +269,7 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 		}
 	}
 
-	return nil
+	return hbd, nil
 }
 
 func countWorkflowsWithRetry(ctx context.Context, svcClient workflowserviceclient.Interface, batchParams BatchParams) (*shared.CountWorkflowExecutionsResponse, error) {
