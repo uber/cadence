@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/.gen/go/shared"
@@ -200,6 +201,8 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) (HeartBeatDetai
 		if err := activity.GetHeartbeatDetails(ctx, &hbd); err == nil {
 			startOver = false
 		} else {
+			batcher := ctx.Value(batcherContextKey).(*Batcher)
+			batcher.metricsClient.IncCounter(metrics.BatcherScope, metrics.BatcherProcessorFailures)
 			getActivityLogger(ctx).Error("Failed to recover from last heartbeat, start over from beginning", tag.Error(err))
 		}
 	}
@@ -287,6 +290,8 @@ func countWorkflowsWithRetry(ctx context.Context, svcClient workflowserviceclien
 			Query:  common.StringPtr(batchParams.Query),
 		})
 		if err != nil {
+			batcher := ctx.Value(batcherContextKey).(*Batcher)
+			batcher.metricsClient.IncCounter(metrics.BatcherScope, metrics.BatcherProcessorFailures)
 			getActivityLogger(ctx).Error("Failed to countWorkflowsWithRetry for batch operation task", tag.Error(err))
 		}
 
@@ -311,6 +316,8 @@ func scanWorkflowsWithRetry(ctx context.Context, svcClient workflowserviceclient
 			Query:         common.StringPtr(batchParams.Query),
 		})
 		if err != nil {
+			batcher := ctx.Value(batcherContextKey).(*Batcher)
+			batcher.metricsClient.IncCounter(metrics.BatcherScope, metrics.BatcherProcessorFailures)
 			getActivityLogger(ctx).Error("Failed to scanWorkflowsWithRetry for batch operation task", tag.Error(err))
 		}
 
@@ -329,7 +336,7 @@ func startTaskProcessor(
 	respCh chan error,
 	limiter *rate.Limiter,
 ) {
-
+	batcher := ctx.Value(batcherContextKey).(*Batcher)
 	for {
 		select {
 		case <-ctx.Done():
@@ -345,6 +352,7 @@ func startTaskProcessor(
 				err = processTerminateTask(ctx, limiter, task, batchParams)
 			}
 			if err != nil {
+				batcher.metricsClient.IncCounter(metrics.BatcherScope, metrics.BatcherProcessorFailures)
 				getActivityLogger(ctx).Error("Failed to process batch operation task", tag.Error(err))
 
 				_, ok := batchParams._nonRetryableErrors[err.Error()]
@@ -356,6 +364,7 @@ func startTaskProcessor(
 					taskCh <- task
 				}
 			} else {
+				batcher.metricsClient.IncCounter(metrics.BatcherScope, metrics.BatcherProcessorSuccess)
 				respCh <- nil
 			}
 		}
@@ -371,7 +380,6 @@ func processTerminateTask(ctx context.Context, limiter *rate.Limiter, task taskD
 
 		err := limiter.Wait(ctx)
 		if err != nil {
-			getActivityLogger(ctx).Error("Failed to wait for rateLimiter", tag.Error(err))
 			return err
 		}
 
