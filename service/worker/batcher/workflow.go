@@ -370,6 +370,7 @@ func processTerminateTask(ctx context.Context, limiter *rate.Limiter, task taskD
 		err := limiter.Wait(ctx)
 		if err != nil {
 			getActivityLogger(ctx).Error("Failed to wait for rateLimiter", tag.Error(err))
+			return err
 		}
 
 		newCtx, cancel := context.WithTimeout(ctx, rpcTimeout)
@@ -381,6 +382,7 @@ func processTerminateTask(ctx context.Context, limiter *rate.Limiter, task taskD
 		})
 		cancel()
 		if err != nil {
+			// EntityNotExistsError means wf is not running or deleted
 			_, ok := err.(*shared.EntityNotExistsError)
 			if !ok {
 				return err
@@ -394,7 +396,12 @@ func processTerminateTask(ctx context.Context, limiter *rate.Limiter, task taskD
 		})
 		cancel()
 		if err != nil {
-			return err
+			// // EntityNotExistsError means wf is deleted
+			_, ok := err.(*shared.EntityNotExistsError)
+			if !ok {
+				return err
+			}
+			continue
 		}
 		// TODO https://github.com/uber/cadence/issues/2159
 		// ChildPolicy is totally broken in Cadence, we need to fix it before using
