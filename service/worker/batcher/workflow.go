@@ -198,10 +198,7 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 	}
 
 	if startOver {
-		resp, err := batcher.svcClient.CountWorkflowExecutions(ctx, &shared.CountWorkflowExecutionsRequest{
-			Domain: common.StringPtr(batchParams.DomainName),
-			Query:  common.StringPtr(batchParams.Query),
-		})
+		resp, err := countWorkflowsWithRetry(ctx, batcher.svcClient, batchParams)
 		if err != nil {
 			return err
 		}
@@ -267,6 +264,29 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 	return nil
 }
 
+func countWorkflowsWithRetry(ctx context.Context, svcClient workflowserviceclient.Interface, batchParams BatchParams) (*shared.CountWorkflowExecutionsResponse, error) {
+	var resp *shared.CountWorkflowExecutionsResponse
+	policy := backoff.NewExponentialRetryPolicy(rpcTimeout)
+	policy.SetMaximumInterval(batchParams.ActivityHeartBeatTimeout)
+	policy.SetExpirationInterval(batchParams.ActivityHeartBeatTimeout)
+
+	err := backoff.Retry(func() error {
+		var err error
+		resp, err = svcClient.CountWorkflowExecutions(ctx, &shared.CountWorkflowExecutionsRequest{
+			Domain: common.StringPtr(batchParams.DomainName),
+			Query:  common.StringPtr(batchParams.Query),
+		})
+		if err != nil {
+			getActivityLogger(ctx).Error("Failed to countWorkflowsWithRetry for batch operation task", tag.Error(err))
+		}
+
+		return err
+	}, policy, func(err error) bool {
+		return true
+	})
+
+	return resp, err
+}
 func scanWorkflowsWithRetry(ctx context.Context, svcClient workflowserviceclient.Interface, pageToken []byte, batchParams BatchParams) (*shared.ListWorkflowExecutionsResponse, error) {
 	var resp *shared.ListWorkflowExecutionsResponse
 	policy := backoff.NewExponentialRetryPolicy(rpcTimeout)
@@ -280,6 +300,10 @@ func scanWorkflowsWithRetry(ctx context.Context, svcClient workflowserviceclient
 			NextPageToken: pageToken,
 			Query:         common.StringPtr(batchParams.Query),
 		})
+		if err != nil {
+			getActivityLogger(ctx).Error("Failed to scanWorkflowsWithRetry for batch operation task", tag.Error(err))
+		}
+
 		return err
 	}, policy, func(err error) bool {
 		return true
