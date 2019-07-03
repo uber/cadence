@@ -61,8 +61,8 @@ const (
 type (
 	// TerminateParams is the parameters for terminating workflow
 	TerminateParams struct {
-		// this indicates whether to terminate children workflow. Default to false.
-		TerminateChildren bool
+		// this indicates whether to terminate children workflow. Default to true.
+		TerminateChildren *bool
 	}
 
 	// BatchParams is the parameters for batch operation workflow
@@ -137,7 +137,7 @@ func init() {
 // BatchWorkflow is the workflow that runs a batch job of resetting workflows
 func BatchWorkflow(ctx workflow.Context, batchParams BatchParams) error {
 	batchParams = setDefaultParams(batchParams)
-	err := validateDefaultParams(batchParams)
+	err := validateParams(batchParams)
 	if err != nil {
 		return err
 	}
@@ -146,7 +146,7 @@ func BatchWorkflow(ctx workflow.Context, batchParams BatchParams) error {
 	return workflow.ExecuteActivity(opt, batchActivityName, batchParams).Get(ctx, nil)
 }
 
-func validateDefaultParams(params BatchParams) error {
+func validateParams(params BatchParams) error {
 	if params.BatchType == "" ||
 		params.Reason == "" ||
 		params.DomainName == "" ||
@@ -179,6 +179,9 @@ func setDefaultParams(params BatchParams) BatchParams {
 		for _, estr := range params.NonRetryableErrors {
 			params._nonRetryableErrors[estr] = struct{}{}
 		}
+	}
+	if params.TerminateParams.TerminateChildren == nil {
+		params.TerminateParams.TerminateChildren = common.BoolPtr(true)
 	}
 	return params
 }
@@ -320,7 +323,8 @@ func startTaskProcessor(
 	batchParams BatchParams,
 	taskCh chan taskDetail,
 	respCh chan error,
-	limiter *rate.Limiter) {
+	limiter *rate.Limiter,
+) {
 
 	for {
 		select {
@@ -334,7 +338,7 @@ func startTaskProcessor(
 
 			switch batchParams.BatchType {
 			case BatchTypeTerminate:
-				err = processOneTerminateTask(ctx, limiter, task, batchParams)
+				err = processTerminateTask(ctx, limiter, task, batchParams)
 			}
 			if err != nil {
 				getActivityLogger(ctx).Error("Failed to process batch operation task", tag.Error(err))
@@ -354,7 +358,7 @@ func startTaskProcessor(
 	}
 }
 
-func processOneTerminateTask(ctx context.Context, limiter *rate.Limiter, task taskDetail, batchParams BatchParams) error {
+func processTerminateTask(ctx context.Context, limiter *rate.Limiter, task taskDetail, batchParams BatchParams) error {
 	batcher := ctx.Value(batcherContextKey).(*Batcher)
 
 	wfs := []shared.WorkflowExecution{task.execution}
@@ -366,7 +370,7 @@ func processOneTerminateTask(ctx context.Context, limiter *rate.Limiter, task ta
 			getActivityLogger(ctx).Error("Failed to wait for rateLimiter", tag.Error(err))
 		}
 
-		newCtx, cancel := context.WithDeadline(ctx, time.Now().Add(rpcTimeout))
+		newCtx, cancel := context.WithTimeout(ctx, rpcTimeout)
 		err = batcher.svcClient.TerminateWorkflowExecution(newCtx, &shared.TerminateWorkflowExecutionRequest{
 			Domain:            common.StringPtr(batchParams.DomainName),
 			WorkflowExecution: &wf,
@@ -381,7 +385,7 @@ func processOneTerminateTask(ctx context.Context, limiter *rate.Limiter, task ta
 			}
 		}
 		wfs = wfs[1:]
-		newCtx, cancel = context.WithDeadline(ctx, time.Now().Add(rpcTimeout))
+		newCtx, cancel = context.WithTimeout(ctx, rpcTimeout)
 		resp, err := batcher.svcClient.DescribeWorkflowExecution(newCtx, &shared.DescribeWorkflowExecutionRequest{
 			Domain:    common.StringPtr(batchParams.DomainName),
 			Execution: &wf,
@@ -392,7 +396,7 @@ func processOneTerminateTask(ctx context.Context, limiter *rate.Limiter, task ta
 		}
 		// TODO https://github.com/uber/cadence/issues/2159
 		// ChildPolicy is totally broken in Cadence, we need to fix it before using
-		if batchParams.TerminateParams.TerminateChildren && len(resp.PendingChildren) > 0 {
+		if *batchParams.TerminateParams.TerminateChildren && len(resp.PendingChildren) > 0 {
 			getActivityLogger(ctx).Info("Found more child workflows to terminate", tag.Number(int64(len(resp.PendingChildren))))
 			for _, ch := range resp.PendingChildren {
 				wfs = append(wfs, shared.WorkflowExecution{
