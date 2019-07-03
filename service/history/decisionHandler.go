@@ -516,10 +516,14 @@ Update_History_Loop:
 		var updateErr error
 		if continueAsNewBuilder != nil {
 			continueAsNewTimerTasks = msBuilder.GetContinueAsNew().TimerTasks
-			updateErr = context.continueAsNewWorkflowExecution(continueAsNewBuilder,
-				transferTasks, timerTasks, transactionID)
+
+			err := context.appendFirstBatchHistoryForContinueAsNew(continueAsNewBuilder, transactionID)
+			if err != nil {
+				return nil, err
+			}
+			updateErr = context.updateAsActiveWithNew(transferTasks, timerTasks, transactionID, continueAsNewBuilder)
 		} else {
-			updateErr = context.updateWorkflowExecution(transferTasks, timerTasks,
+			updateErr = context.updateAsActive(transferTasks, timerTasks,
 				transactionID)
 		}
 
@@ -557,7 +561,7 @@ Update_History_Loop:
 				if err != nil {
 					return nil, err
 				}
-				if err := context.updateWorkflowExecution(transferTasks, timerTasks, transactionID); err != nil {
+				if err := context.updateAsActive(transferTasks, timerTasks, transactionID); err != nil {
 					return nil, err
 				}
 				handler.timerProcessor.NotifyNewTimers(handler.currentClusterName, handler.shard.GetCurrentTime(handler.currentClusterName), timerTasks)
