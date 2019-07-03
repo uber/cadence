@@ -444,7 +444,7 @@ func getFlagsForDescribeID() []cli.Flag {
 	return []cli.Flag{
 		cli.BoolFlag{
 			Name:  FlagPrintRawWithAlias,
-			Usage: "Print raw time stamp and properties as they are",
+			Usage: "Print properties as they are stored",
 		},
 		cli.BoolFlag{
 			Name:  FlagResetPointsOnly,

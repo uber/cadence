@@ -970,7 +970,8 @@ func DescribeWorkflowWithID(c *cli.Context) {
 func describeWorkflowHelper(c *cli.Context, wid, rid string) {
 	frontendClient := cFactory.ServerFrontendClient(c)
 	domain := getRequiredGlobalOption(c, FlagDomain)
-	printRaw := c.Bool(FlagPrintRaw) // default show datetime and decoded search attributes instead of raw timestamp and byte arrays
+	printRaw := c.Bool(FlagPrintRaw) // printRaw is false by default,
+	// and will show datetime and decoded search attributes instead of raw timestamp and byte arrays
 	printResetPointsOnly := c.Bool(FlagResetPointsOnly)
 
 	ctx, cancel := newContext(c)
