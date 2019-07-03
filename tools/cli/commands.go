@@ -1052,8 +1052,8 @@ type workflowExecutionInfo struct {
 	HistoryLength    *int64
 	ParentDomainID   *string
 	ParentExecution  *shared.WorkflowExecution
-	AutoResetPoints  *shared.ResetPoints
 	SearchAttributes map[string]interface{}
+	AutoResetPoints  *shared.ResetPoints
 }
 
 // pendingActivityInfo has same fields as shared.PendingActivityInfo, but different field type for better display
@@ -1085,8 +1085,8 @@ func convertDescribeWorkflowExecutionResponse(resp *shared.DescribeWorkflowExecu
 		HistoryLength:    info.HistoryLength,
 		ParentDomainID:   info.ParentDomainId,
 		ParentExecution:  info.ParentExecution,
-		AutoResetPoints:  info.AutoResetPoints,
 		SearchAttributes: convertSearchAttributesToMapOfInterface(info.SearchAttributes, wfClient, c),
+		AutoResetPoints:  info.AutoResetPoints,
 	}
 
 	var pendingActs []*pendingActivityInfo
