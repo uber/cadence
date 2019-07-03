@@ -278,6 +278,7 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) (HeartBeatDetai
 }
 
 func countWorkflowsWithRetry(ctx context.Context, svcClient workflowserviceclient.Interface, batchParams BatchParams) (*shared.CountWorkflowExecutionsResponse, error) {
+	batcher := ctx.Value(batcherContextKey).(*Batcher)
 	var resp *shared.CountWorkflowExecutionsResponse
 	policy := backoff.NewExponentialRetryPolicy(rpcTimeout)
 	policy.SetMaximumInterval(batchParams.ActivityHeartBeatTimeout)
@@ -290,7 +291,6 @@ func countWorkflowsWithRetry(ctx context.Context, svcClient workflowserviceclien
 			Query:  common.StringPtr(batchParams.Query),
 		})
 		if err != nil {
-			batcher := ctx.Value(batcherContextKey).(*Batcher)
 			batcher.metricsClient.IncCounter(metrics.BatcherScope, metrics.BatcherProcessorFailures)
 			getActivityLogger(ctx).Error("Failed to countWorkflowsWithRetry for batch operation task", tag.Error(err))
 		}
@@ -302,7 +302,9 @@ func countWorkflowsWithRetry(ctx context.Context, svcClient workflowserviceclien
 
 	return resp, err
 }
+
 func scanWorkflowsWithRetry(ctx context.Context, svcClient workflowserviceclient.Interface, pageToken []byte, batchParams BatchParams) (*shared.ListWorkflowExecutionsResponse, error) {
+	batcher := ctx.Value(batcherContextKey).(*Batcher)
 	var resp *shared.ListWorkflowExecutionsResponse
 	policy := backoff.NewExponentialRetryPolicy(rpcTimeout)
 	policy.SetMaximumInterval(batchParams.ActivityHeartBeatTimeout)
@@ -316,7 +318,6 @@ func scanWorkflowsWithRetry(ctx context.Context, svcClient workflowserviceclient
 			Query:         common.StringPtr(batchParams.Query),
 		})
 		if err != nil {
-			batcher := ctx.Value(batcherContextKey).(*Batcher)
 			batcher.metricsClient.IncCounter(metrics.BatcherScope, metrics.BatcherProcessorFailures)
 			getActivityLogger(ctx).Error("Failed to scanWorkflowsWithRetry for batch operation task", tag.Error(err))
 		}
