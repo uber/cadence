@@ -398,7 +398,7 @@ func processTerminateTask(ctx context.Context, limiter *rate.Limiter, task taskD
 		})
 		cancel()
 		if err != nil {
-			// // EntityNotExistsError means wf is deleted
+			// EntityNotExistsError means wf is deleted
 			_, ok := err.(*shared.EntityNotExistsError)
 			if !ok {
 				return err
