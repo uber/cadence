@@ -783,7 +783,7 @@ Update_History_Loop:
 		}
 
 		timersToNotify := append(timerTasks, msBuilder.GetContinueAsNew().TimerTasks...)
-		err = context.continueAsNewWorkflowExecution(nil, continueAsNewBuilder, transferTasks, timerTasks, transactionID)
+		err = context.continueAsNewWorkflowExecution(continueAsNewBuilder, transferTasks, timerTasks, transactionID)
 
 		if err != nil {
 			if err == ErrConflict {

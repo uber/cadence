@@ -101,12 +101,12 @@ func (_m *mockWorkflowExecutionContext) clear() {
 	_m.Called()
 }
 
-func (_m *mockWorkflowExecutionContext) continueAsNewWorkflowExecution(_a0 []byte, _a1 mutableState, _a2 []persistence.Task, _a3 []persistence.Task, _a4 int64) error {
-	ret := _m.Called(_a0, _a1, _a2, _a3, _a4)
+func (_m *mockWorkflowExecutionContext) continueAsNewWorkflowExecution(_a0 mutableState, _a1 []persistence.Task, _a2 []persistence.Task, _a3 int64) error {
+	ret := _m.Called(_a0, _a1, _a2, _a3)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func([]byte, mutableState, []persistence.Task, []persistence.Task, int64) error); ok {
-		r0 = rf(_a0, _a1, _a2, _a3, _a4)
+	if rf, ok := ret.Get(0).(func(mutableState, []persistence.Task, []persistence.Task, int64) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -322,19 +322,6 @@ func (_m *mockWorkflowExecutionContext) updateWorkflowExecution(_a0 []persistenc
 	var r0 error
 	if rf, ok := ret.Get(0).(func([]persistence.Task, []persistence.Task, int64) error); ok {
 		r0 = rf(_a0, _a1, _a2)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-func (_m *mockWorkflowExecutionContext) updateWorkflowExecutionWithContext(_a0 []byte, _a1 []persistence.Task, _a2 []persistence.Task, _a3 int64) error {
-	ret := _m.Called(_a0, _a1, _a2, _a3)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func([]byte, []persistence.Task, []persistence.Task, int64) error); ok {
-		r0 = rf(_a0, _a1, _a2, _a3)
 	} else {
 		r0 = ret.Error(0)
 	}

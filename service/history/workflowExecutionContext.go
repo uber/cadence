@@ -60,7 +60,6 @@ type (
 		) (int, persistence.Task, error)
 		clear()
 		continueAsNewWorkflowExecution(
-			context []byte,
 			newStateBuilder mutableState,
 			transferTasks []persistence.Task,
 			timerTasks []persistence.Task,
@@ -127,12 +126,6 @@ type (
 			sourceCluster string,
 		) error
 		updateWorkflowExecution(
-			transferTasks []persistence.Task,
-			timerTasks []persistence.Task,
-			transactionID int64,
-		) error
-		updateWorkflowExecutionWithContext(
-			context []byte,
 			transferTasks []persistence.Task,
 			timerTasks []persistence.Task,
 			transactionID int64,
@@ -517,29 +510,6 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(
 	}
 
 	return c.shard.ResetWorkflowExecution(resetWFReq)
-}
-
-func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithContext(
-	context []byte,
-	transferTasks []persistence.Task,
-	timerTasks []persistence.Task,
-	transactionID int64,
-) error {
-
-	c.msBuilder.GetExecutionInfo().ExecutionContext = context
-	return c.updateWorkflowExecution(transferTasks, timerTasks, transactionID)
-}
-
-func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNewRunAndContext(
-	context []byte,
-	transferTasks []persistence.Task,
-	timerTasks []persistence.Task,
-	transactionID int64,
-	newStateBuilder mutableState,
-) error {
-
-	c.msBuilder.GetExecutionInfo().ExecutionContext = context
-	return c.updateWorkflowExecutionForActive(transferTasks, timerTasks, transactionID, newStateBuilder)
 }
 
 func (c *workflowExecutionContextImpl) replicateWorkflowExecution(
@@ -1154,7 +1124,6 @@ func (c *workflowExecutionContextImpl) appendHistoryEvents(
 }
 
 func (c *workflowExecutionContextImpl) continueAsNewWorkflowExecution(
-	context []byte,
 	newStateBuilder mutableState,
 	transferTasks []persistence.Task,
 	timerTasks []persistence.Task,
@@ -1166,7 +1135,7 @@ func (c *workflowExecutionContextImpl) continueAsNewWorkflowExecution(
 		return err1
 	}
 
-	err2 := c.updateWorkflowExecutionWithNewRunAndContext(context, transferTasks, timerTasks, transactionID, newStateBuilder)
+	err2 := c.updateWorkflowExecutionForActive(transferTasks, timerTasks, transactionID, newStateBuilder)
 	if err2 != nil {
 		// TODO: Delete new execution if update fails due to conflict or shard being lost
 	}

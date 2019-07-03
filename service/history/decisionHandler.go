@@ -403,8 +403,10 @@ Update_History_Loop:
 				handler.metricsClient,
 			)
 
-			err := decisionTaskHandler.handleDecisions(request.Decisions)
-			if err != nil {
+			if err := decisionTaskHandler.handleDecisions(
+				request.ExecutionContext,
+				request.Decisions,
+			); err != nil {
 				return nil, err
 			}
 
@@ -514,10 +516,10 @@ Update_History_Loop:
 		var updateErr error
 		if continueAsNewBuilder != nil {
 			continueAsNewTimerTasks = msBuilder.GetContinueAsNew().TimerTasks
-			updateErr = context.continueAsNewWorkflowExecution(request.ExecutionContext, continueAsNewBuilder,
+			updateErr = context.continueAsNewWorkflowExecution(continueAsNewBuilder,
 				transferTasks, timerTasks, transactionID)
 		} else {
-			updateErr = context.updateWorkflowExecutionWithContext(request.ExecutionContext, transferTasks, timerTasks,
+			updateErr = context.updateWorkflowExecution(transferTasks, timerTasks,
 				transactionID)
 		}
 
@@ -555,7 +557,7 @@ Update_History_Loop:
 				if err != nil {
 					return nil, err
 				}
-				if err := context.updateWorkflowExecutionWithContext(request.ExecutionContext, transferTasks, timerTasks, transactionID); err != nil {
+				if err := context.updateWorkflowExecution(transferTasks, timerTasks, transactionID); err != nil {
 					return nil, err
 				}
 				handler.timerProcessor.NotifyNewTimers(handler.currentClusterName, handler.shard.GetCurrentTime(handler.currentClusterName), timerTasks)
