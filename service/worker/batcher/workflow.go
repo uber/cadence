@@ -219,6 +219,10 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 		if err != nil {
 			return err
 		}
+		batchCount := len(resp.Executions)
+		if batchCount <= 0 {
+			break
+		}
 
 		// send all tasks
 		for _, wf := range resp.Executions {
@@ -228,7 +232,6 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) error {
 				hbd:       hbd,
 			}
 		}
-		batchCount := len(resp.Executions)
 
 		succCount := 0
 		errCount := 0
