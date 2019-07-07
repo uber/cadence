@@ -92,9 +92,9 @@ type (
 		// buffered events in persistence
 		hasBufferedEventsInPersistence bool
 
+		shard           ShardContext
 		clusterMetadata cluster.Metadata
 		eventsCache     eventsCache
-		shard           ShardContext
 		config          *Config
 		timeSource      clock.TimeSource
 		logger          log.Logger
