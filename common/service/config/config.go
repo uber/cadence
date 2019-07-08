@@ -24,9 +24,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/uber/cadence/common/blobstore/filestore"
-	"github.com/uber/cadence/common/blobstore/s3store"
-
 	"github.com/uber-go/tally/m3"
 	"github.com/uber-go/tally/prometheus"
 	"github.com/uber/cadence/common/elasticsearch"
@@ -61,6 +58,8 @@ type (
 		// DynamicConfigClient is the config for setting up the file based dynamic config client
 		// Filepath should be relative to the root directory
 		DynamicConfigClient dynamicconfig.FileBasedClientConfig `yaml:"dynamicConfigClient"`
+		// Domain is the default config for every domain
+		Domain Domain `yaml:"domain"`
 	}
 
 	// Service contains the service specific config items
@@ -283,16 +282,26 @@ type (
 
 	// Archival contains the config for archival
 	Archival struct {
-		// Status is the status of archival either: enabled, disabled, or paused
+		// History is the config for the history archival
+		History HistoryArchival `yaml:"historyArchival"`
+		// Visibility is the config for visibility archival
+		Visibility VisibilityArchival `yaml:"visibilityArchival"`
+	}
+
+	// HistoryArchival contains the config for history archival
+	HistoryArchival struct {
+		// Status is the status of history archival either: enabled, disabled, or paused
 		Status string `yaml:"status"`
 		// EnableReadFromArchival whether history can be read from archival
 		EnableReadFromArchival bool `yaml:"enableReadFromArchival"`
-		// DefaultBucket is the default bucket used for archival in case domain does not specify override
-		DefaultBucket string `yaml:"defaultBucket"`
-		// Filestore the configuration for file based blobstore
-		Filestore *filestore.Config `yaml:"filestore"`
-		// S3store the configuration for amazon s3 based blobstore
-		S3store *s3store.Config `yaml:"s3store"`
+	}
+
+	// VisibilityArchival contains the config for visibility archival
+	VisibilityArchival struct {
+		// Status is the status of visibility archival either: enabled, disabled, or paused
+		Status string `yaml:"status"`
+		// EnableReadFromArchival whether visibility can be read from archival
+		EnableReadFromArchival bool `yaml:"enableReadFromArchival"`
 	}
 
 	// PublicClient is config for connecting to cadence frontend
@@ -301,6 +310,36 @@ type (
 		HostPort string `yaml:"hostPort" validate:"nonzero"`
 		// interval to refresh DNS. Default to 10s
 		RefreshInterval time.Duration `yaml:"RefreshInterval"`
+	}
+
+	// Domain is the default config for each domain
+	Domain struct {
+		// Archival is the default archival config for each domain
+		Archival ArchivalDomainDefault `yaml:"archival"`
+	}
+
+	// ArchivalDomainDefault is the default archival config for each domain
+	ArchivalDomainDefault struct {
+		// History is the default history archival config for each domain
+		History HistoryArchivalDomainDefault `yaml:"history"`
+		// Visibility is the default visibility archival config for each domain
+		Visibility VisibilityArchivalDomainDefault `yaml:"visibility"`
+	}
+
+	// HistoryArchivalDomainDefault is the default history archival config for each domain
+	HistoryArchivalDomainDefault struct {
+		// DefaultStatus is the default status of history archival
+		DefaultStatus string `yaml:"defaultStatus"`
+		// DefaultURI is the default URI for history archiver
+		DefaultURI string `yaml:"defaultURI"`
+	}
+
+	// VisibilityArchivalDomainDefault is the default visibility archival config for each domain
+	VisibilityArchivalDomainDefault struct {
+		// DefaultStatus is the default status of history archival
+		DefaultStatus string `yaml:"defaultStatus"`
+		// DefaultURI is the default URI for history archiver
+		DefaultURI string `yaml:"defaultURI"`
 	}
 
 	// BootstrapMode is an enum type for ringpop bootstrap mode
