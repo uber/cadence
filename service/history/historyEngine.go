@@ -1776,69 +1776,109 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 
 	domainEntry, retError := e.getActiveDomainEntry(resetRequest.DomainUUID)
 	if retError != nil {
-		return
+		return response, retError
 	}
 	domainID := domainEntry.GetInfo().ID
 
 	request := resetRequest.ResetRequest
-	if request == nil || request.WorkflowExecution == nil || len(request.WorkflowExecution.GetRunId()) == 0 || len(request.WorkflowExecution.GetWorkflowId()) == 0 {
-		retError = &workflow.BadRequestError{
-			Message: "Require workflowId and runId.",
+	if request == nil || request.WorkflowExecution == nil || len(request.WorkflowExecution.GetWorkflowId()) == 0 {
+		return response, &workflow.BadRequestError{
+			Message: "Require workflowId.",
 		}
-		return
 	}
-	if request.GetDecisionFinishEventId() <= common.FirstEventID {
-		retError = &workflow.BadRequestError{
-			Message: "Decision finish ID must be > 1.",
+	if request.DecisionFinishEventId != nil {
+		if len(request.WorkflowExecution.GetRunId()) == 0 {
+			return response, &workflow.BadRequestError{
+				Message: "Decision finish ID must be provided with runID",
+			}
 		}
-		return
+		if request.GetDecisionFinishEventId() <= common.FirstEventID {
+			return response, &workflow.BadRequestError{
+				Message: "Decision finish ID must be > 1",
+			}
+		}
 	}
+
+	// load the current run of the workflow
+	currResp, retError := e.executionManager.GetCurrentExecution(&persistence.GetCurrentExecutionRequest{
+		DomainID:   domainID,
+		WorkflowID: request.WorkflowExecution.GetWorkflowId(),
+	})
+	if retError != nil {
+		return response, retError
+	}
+
 	baseExecution := workflow.WorkflowExecution{
 		WorkflowId: request.WorkflowExecution.WorkflowId,
 		RunId:      request.WorkflowExecution.RunId,
 	}
 
+	// baseRunID default to the currentRunID if empty
+	if len(request.WorkflowExecution.GetRunId()) == 0 {
+		baseExecution.RunId = common.StringPtr(currResp.RunID)
+	}
+
 	baseContext, baseRelease, retError := e.historyCache.getOrCreateWorkflowExecution(ctx, domainID, baseExecution)
 	if retError != nil {
-		return
+		return response, retError
 	}
 	defer func() { baseRelease(retError) }()
 
 	baseMutableState, retError := baseContext.loadWorkflowExecution()
 	if retError != nil {
-		return
+		return response, retError
 	}
 
-	// also load the current run of the workflow, it can be different from the base runID
-	resp, retError := e.executionManager.GetCurrentExecution(&persistence.GetCurrentExecutionRequest{
-		DomainID:   domainID,
-		WorkflowID: request.WorkflowExecution.GetWorkflowId(),
-	})
-	if retError != nil {
-		return
+	if request.GetResetType() == workflow.ResetTypeBadBinary {
+		if len(request.GetBadBinaryChecksum()) <= 0 {
+			return response, &workflow.BadRequestError{
+				Message: "ResetTypeBadBinary must be provided with BadBinaryChecksum",
+			}
+		}
+		// refill DecisionFinishEventId from mutableState
+		runID, eventID, retError := LookupResetPoint(baseMutableState.GetExecutionInfo().AutoResetPoints, request.GetBadBinaryChecksum())
+		if retError != nil {
+			return response, retError
+		}
+		request.DecisionFinishEventId = common.Int64Ptr(eventID)
+		// reload another base from anther runID if different
+		if runID != baseExecution.GetRunId() {
+			baseExecution.RunId = common.StringPtr(runID)
+			// release the prev base
+			baseRelease(nil)
+			baseContext, baseRelease, retError = e.historyCache.getOrCreateWorkflowExecution(ctx, domainID, baseExecution)
+			if retError != nil {
+				return response, retError
+			}
+			defer func() { baseRelease(retError) }()
+			baseMutableState, retError = baseContext.loadWorkflowExecution()
+			if retError != nil {
+				return response, retError
+			}
+		}
 	}
 
 	var currMutableState mutableState
 	var currContext workflowExecutionContext
 	var currExecution workflow.WorkflowExecution
-	if resp.RunID == baseExecution.GetRunId() {
+	if currResp.RunID == baseExecution.GetRunId() {
 		currContext = baseContext
 		currMutableState = baseMutableState
 		currExecution = baseExecution
 	} else {
 		currExecution = workflow.WorkflowExecution{
 			WorkflowId: request.WorkflowExecution.WorkflowId,
-			RunId:      common.StringPtr(resp.RunID),
+			RunId:      common.StringPtr(currResp.RunID),
 		}
 		var currRelease func(err error)
 		currContext, currRelease, retError = e.historyCache.getOrCreateWorkflowExecution(ctx, domainID, currExecution)
 		if retError != nil {
-			return
+			return response, retError
 		}
 		defer func() { currRelease(retError) }()
 		currMutableState, retError = currContext.loadWorkflowExecution()
 		if retError != nil {
-			return
+			return response, retError
 		}
 	}
 
@@ -1851,7 +1891,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 			tag.WorkflowID(currExecution.GetWorkflowId()),
 			tag.WorkflowRunID(currExecution.GetRunId()),
 			tag.WorkflowDomainID(domainID))
-		return
+		return response, retError
 	}
 
 	return e.resetor.ResetWorkflowExecution(ctx, request, baseContext, baseMutableState, currContext, currMutableState)
