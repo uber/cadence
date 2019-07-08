@@ -18,7 +18,8 @@ propagation support provided by the client.
 We provide a standard way to propagate custom context across a workflow. The
 [ClientOptions](https://godoc.org/go.uber.org/cadence/internal#ClientOptions) and [WorkerOptions](https://godoc.org/go.uber.org/cadence/internal#WorkerOptions)
 allow configuring a context propagator. Context propagator extracts and passes on information present in the `context.Context`
-and `workflow.Context` objects across workflow.
+and `workflow.Context` objects across workflow. Once a context propagator is configured you should be able to access the required values
+in the context objects as you would normally do in Go.
 For a sample, the Go client implements a [tracing context propagator](https://github.com/uber-go/cadence-client/blob/master/internal/tracer.go).
 
 ### Server-Side Headers Support
