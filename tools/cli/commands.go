@@ -211,9 +211,12 @@ func RegisterDomain(c *cli.Context) {
 	var clusters []*shared.ClusterReplicationConfiguration
 	if !isGlobalDomain { // set default for local domain
 		activeClusterName = "active"
-		clusters = append(clusters, &shared.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr("active"),
-		})
+		clusters = append(
+			clusters,
+			&shared.ClusterReplicationConfiguration{
+				ClusterName: common.StringPtr("active"),
+			},
+		)
 	}
 	if c.IsSet(FlagActiveClusterName) {
 		activeClusterName = c.String(FlagActiveClusterName)
