@@ -59,7 +59,7 @@ When executing an activity within a session, a user may get three types of error
 workflow.**CompleteSession**(sessionCtx Context)
 ```
 
-This API is used to complete a session. It releases the resources reserved on the worker and cancel the session context (therefore all the activities using that session context). It does nothing when the session is already closed or failed.
+This API is used to complete a session. It releases the resources reserved on the worker and cancels the session context (therefore all the activities using that session context). It does nothing when the session is already closed or failed.
 
 ```go
 sessionInfoPtr := workflow.**GetSessionInfo**(sessionCtx Context)
@@ -71,9 +71,9 @@ This API returns session metadata stored in the context. If the context passed i
 sessionCtx, err := workflow.**RecreateSession**(ctx Context, recreateToken []byte, so *SessionOptions)
 ```
 
-For long running sessions, user may want to split it into multiple runs while still want all the activities executed by the same worker. This API is designed for such a use case.
+For long running sessions, user may want to split it into multiple runs while still wanting all the activities executed by the same worker. This API is designed for such a use case.
 
-Its usage is the same as CreateSession() except that it also takes in a recreateToken. The token encodes the resource specific tasklist name on which the new session should be created.The token can be get by calling the GetRecreateToken() method of the SessionInfo object.
+Its usage is the same as CreateSession() except that it also takes in a recreateToken. The token encodes the resource specific tasklist name on which the new session should be created. A user can get the token by calling the GetRecreateToken() method of the SessionInfo object.
 
 
 #### Example
@@ -132,7 +132,7 @@ There will be three new options available when creating a worker:
 
   An identifier of the resource that will be consumed if a session is executed on the worker. For example, if a worker has a GPU, and a session for training a machine learning model is executed on the worker, then some memory on the GPU will be consumed. In this case, the resourceID can be the identifier of the GPU.
 
-**NOTE:** The user needs to ensure, on one host, there’s only one worker using a certain resourceID.
+**NOTE:** Users must ensure that only one worker uses a certain resourceID on a host.
 
 * **MaxCurrentSessionExecutionSize**
 
@@ -152,13 +152,13 @@ When a user calls the CreateSession() or RecreateSession() API, a structure that
 
 1. **SessionID**: a unique ID for the created session. (Exported)
 
-2. **Hostname**: hostname of the worker that is responsible for executing the session. (Exported)
+2. **Hostname**: the hostname of the worker that is responsible for executing the session. (Exported)
 
 3. **ResourceID**: the resource consumed by the session. (Will Be Exported)
  
 4. **tasklist**: the resource specific tasklist used by this session. (Not Exported)
 
-5. **sessionState**: state of the session (Not Exported).  It can take one of the three values below:
+5. **sessionState**: the state of the session (Not Exported).  It can take one of the three values below:
 
    1. **Open**: when the session is created and running
    2. **Failed**: when the worker is down and the session can’t continue
@@ -170,15 +170,15 @@ When a user calls the CreateSession() or RecreateSession() API, a structure that
 
 When a user calls the CompleteSession() API, the state of the session will be changed to "Closed" in place, which is why this API doesn’t return a new context variable.
 
-A user has no way to set the state of a session to “Failed”. The state of a session is “Failed” only when the worker executing the session is down and the change from “Open” to “Failed” is done in the background. Also notice that it’s possible that the worker is down, but the session state is still “Open” (since it takes some time to detect the worker failure). In this case, when a user executes an activity, the activity will still be scheduled on the resource specific tasklist. However, it will be cancelled after worker failure is detected and the user will get a cancelled error.
+There is no way to set the state of a session to “Failed”. The state of a session is “Failed” only when the worker executing the session is down and the change from “Open” to “Failed” is done in the background. Also notice that it’s possible that the worker is down, but the session state is still “Open” (since it takes some time to detect the worker failure). In this case, when a user executes an activity, the activity will still be scheduled on the resource specific tasklist. However, it will be cancelled after worker failure is detected and the user will get a cancelled error.
 
 ### Workflow Worker
 
 When scheduling an activity, the workflow worker needs to check the context to see if this activity belongs to a session. If so and the state of that session is "Open", get the resource specific tasklist from the context and use it to override the tasklist value specified in the activity option. If on the other hand, the state is "Failed", the ExecuteActivity call will immediately fail without scheduling the activity and return an ErrSessionFailed error through Future.Get().
 
-What CreateSession() and CompleteSession() really do are **scheduling special activities** and get some information from the worker which executes these activities.
+CreateSession() and CompleteSession() really do are **schedule special activities** and get some information from the worker which executes these activities.
 
-* For CreateSession(), a special **session creation activity** will be scheduled on a global tasklist which is only used for this type of activity. During the execution of that activity, a signal containing the resource specific tasklist name will be sent back to the workflow (with other information like hostname etc.). Once the signal is received by the worker, the creation is considered successful and the tasklist name will be stored in the session context. The creation activity also performs periodic heartbeat throughout the whole lifetime of the session. As a result, if the activity worker is down, the workflow can be notified and set the session state to “Failed”. 
+* For CreateSession(), a special **session creation activity** will be scheduled on a global tasklist which is only used for this type of activity. During the execution of that activity, a signal containing the resource specific tasklist name will be sent back to the workflow (with other information like hostname). Once the signal is received by the worker, the creation is considered successful and the tasklist name will be stored in the session context. The creation activity also performs periodic heartbeat throughout the whole lifetime of the session. As a result, if the activity worker is down, the workflow can be notified and set the session state to “Failed”. 
 
 * For RecreateSession(), the same thing happens. The only difference is that the session creation activity will be **scheduled on the resource specific task list instead of a global one**.
 
@@ -194,7 +194,7 @@ When `EnableSessionWorker` is set to true, two more activity workers will be sta
 
    2. Keep **heart beating** to Cadence server until the end of the session.
 
-      If the heart beating returns `EntityNotExist` Error, this means the workflow/session has gone and this special activity should stop to release its resources.
+      If the heart beating returns the `EntityNotExist` Error, this means the workflow/session has gone and this special activity should stop to release its resources.
 
       If on the other hand, the worker is down, Cadence server will send a heartbeat timeout error to the workflow, so the workflow can be notified and update the session state. Later, an ExecuteActivity() call to the failed session context will also fail.
 
@@ -230,7 +230,7 @@ This section illustrates the sequence diagrams for situations that may occur dur
 
 ![image alt text](1533-host-specific-tasklist-image_2.png)
 
-* When there are too many outstanding sessions and the user is trying to create a new one. The assumption here is that each activity worker is configured to have **MaxCurrentSessionExecutionSize = 1**. Resource specific tasklist and session activity worker is omitted in the diagram.
+* When there are too many outstanding sessions and the user is trying to create a new one. The assumption here is that each activity worker is configured to have **MaxCurrentSessionExecutionSize = 1**. Resource specific tasklist and session activity worker are omitted in the diagram.
 
 ![image alt text](1533-host-specific-tasklist-image_3.png)
 
