@@ -46,7 +46,7 @@ sessionCtx, err := workflow.**CreateSession**(ctx Context, so *SessionOptions)
 
 A user calls this API to create a session on the worker that polls the task list specified in the ActivityOptions (or in the StartWorkflowOptions if the task list name is not specified in the ActivityOptions). All activities executed within the returned sessionCtx (a new context which contains metadata information of the created session) are considered to be part of the session and will be executed on the same worker. The sessionCtx will be cancelled if the worker executing this session dies or CompleteSession() is called.
 
-The SessionOptions struct contains two fields: ExecutionTimeout, which specifies the maximum amount of time the session can run and CreationTimeout, which specifies how long session creation can take before returning an error.
+The SessionOptions struct contains two fields: `ExecutionTimeout`, which specifies the maximum amount of time the session can run and `CreationTimeout`, which specifies how long session creation can take before returning an error.
 
 CreateSession() will return an error if the context passed in already contains an open session. If all the workers are currently busy and unable to handle new sessions, the framework will keep retrying until the CreationTimeout you specified in the SessionOptions has passed before returning an error.
 
