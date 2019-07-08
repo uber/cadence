@@ -50,7 +50,7 @@ The SessionOptions struct contains two fields: `ExecutionTimeout`, which specifi
 
 CreateSession() will return an error if the context passed in already contains an open session. If all the workers are currently busy and unable to handle new sessions, the framework will keep retrying until the CreationTimeout you specified in the SessionOptions has passed before returning an error.
 
-When executing an activity within a session, a user may get three types of errors:
+When executing an activity within a session, a user might get three types of errors:
 1. Those returned from user activities. The session will not be marked as failed in this case, so the user can return whatever error they want and apply their business logic as necessary. If a user wants to end a session due to the error returned from the activity, use the CompleteSession() API below. 
 2. A special `ErrSessionFailed` error: this error means the session has failed due to worker failure and the session is marked as failed in the background. In this case, no activities can be executed using this context. The user can choose how to handle the failure. They can create a new session to retry or end the workflow with an error.
 3. Cancelled error: If a session activity has been scheduled before worker failure is detected, it will be cancelled afterwards and a cancelled error will be returned.
@@ -71,7 +71,7 @@ This API returns session metadata stored in the context. If the context passed i
 sessionCtx, err := workflow.**RecreateSession**(ctx Context, recreateToken []byte, so *SessionOptions)
 ```
 
-For long running sessions, user may want to split it into multiple runs while still wanting all the activities executed by the same worker. This API is designed for such a use case.
+For long running sessions, user might want to split it into multiple runs while still wanting all the activities executed by the same worker. This API is designed for such a use case.
 
 Its usage is the same as CreateSession() except that it also takes in a recreateToken. The token encodes the resource specific tasklist name on which the new session should be created. A user can get the token by calling the GetRecreateToken() method of the SessionInfo object.
 
