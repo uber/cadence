@@ -165,6 +165,7 @@ func (s *domainHandlerGlobalDomainDisabledSuite) TestRegisterGetDomain_AllDefaul
 	err := s.handler.registerDomain(context.Background(), &shared.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),
 		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
+		ActiveClusterName:                      common.StringPtr(""),
 	})
 	s.Nil(err)
 

@@ -116,7 +116,7 @@ func (d *domainHandlerImpl) registerDomain(
 
 	activeClusterName := d.clusterMetadata.GetCurrentClusterName()
 	// input validation on cluster names
-	if registerRequest.ActiveClusterName != nil {
+	if len(registerRequest.GetActiveClusterName()) != 0 {
 		activeClusterName = registerRequest.GetActiveClusterName()
 	}
 	clusters := []*persistence.ClusterReplicationConfig{}

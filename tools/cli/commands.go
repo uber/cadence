@@ -183,9 +183,7 @@ func RegisterDomain(c *cli.Context) {
 		}
 	}
 	isGlobalDomain := false
-	if !c.IsSet(FlagIsGlobalDomain) {
-		ErrorAndExit(fmt.Sprintf("Option %s must be provided.", FlagIsGlobalDomain), err)
-	} else {
+	if c.IsSet(FlagIsGlobalDomain) {
 		isGlobalDomain, err = strconv.ParseBool(c.String(FlagIsGlobalDomain))
 		if err != nil {
 			ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagIsGlobalDomain), err)
@@ -208,19 +206,10 @@ func RegisterDomain(c *cli.Context) {
 	}
 
 	var activeClusterName string
-	var clusters []*shared.ClusterReplicationConfiguration
-	if !isGlobalDomain { // set default for local domain
-		activeClusterName = "active"
-		clusters = append(
-			clusters,
-			&shared.ClusterReplicationConfiguration{
-				ClusterName: common.StringPtr("active"),
-			},
-		)
-	}
 	if c.IsSet(FlagActiveClusterName) {
 		activeClusterName = c.String(FlagActiveClusterName)
 	}
+	var clusters []*shared.ClusterReplicationConfiguration
 	if c.IsSet(FlagClusters) {
 		clusterStr := c.String(FlagClusters)
 		clusters = append(clusters, &shared.ClusterReplicationConfiguration{

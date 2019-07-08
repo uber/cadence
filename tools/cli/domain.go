@@ -95,7 +95,7 @@ func newDomainCommands() []cli.Command {
 				},
 				cli.StringFlag{
 					Name:  FlagIsGlobalDomainWithAlias,
-					Usage: "Flag to indicate whether domain is a global domain",
+					Usage: "Flag to indicate whether domain is a global domain, default to false if not provided",
 				},
 				cli.StringFlag{
 					Name:  FlagDomainDataWithAlias,
