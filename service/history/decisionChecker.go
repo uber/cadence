@@ -129,7 +129,7 @@ func (c *workflowSizeChecker) failWorkflowIfBlobSizeExceedsLimit(
 	}
 
 	if _, err := c.mutableState.AddFailWorkflowEvent(c.completedID, attributes); err != nil {
-		return false, &workflow.InternalServiceError{Message: "Unable to add fail workflow event."}
+		return false, err
 	}
 
 	return true, nil
@@ -154,9 +154,7 @@ func (c *workflowSizeChecker) failWorkflowSizeExceedsLimit() (bool, error) {
 		}
 
 		if _, err := c.mutableState.AddFailWorkflowEvent(c.completedID, attributes); err != nil {
-			return false, &workflow.InternalServiceError{
-				Message: "Unable to add fail workflow event.",
-			}
+			return false, err
 		}
 		return true, nil
 	}
