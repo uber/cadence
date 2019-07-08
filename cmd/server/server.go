@@ -125,8 +125,10 @@ func (s *server) startService() common.Daemon {
 	params.RPCFactory = svcCfg.RPC.NewFactory(params.Name, params.Logger)
 	params.PProfInitializer = svcCfg.PProf.NewInitializer(params.Logger)
 
-	archivalStatus := dc.GetStringProperty(dynamicconfig.ArchivalStatus, s.cfg.Archival.Status)
-	enableReadFromArchival := dc.GetBoolProperty(dynamicconfig.EnableReadFromArchival, s.cfg.Archival.EnableReadFromArchival)
+	historyArchivalStatus := dc.GetStringProperty(dynamicconfig.ArchivalStatus, s.cfg.Archival.History.Status)
+	enableReadFromHistoryArchival := dc.GetBoolProperty(dynamicconfig.EnableReadFromArchival, s.cfg.Archival.History.EnableReadFromArchival)
+	visibilityArchivalStatus := dc.GetStringProperty(dynamicconfig.ArchivalStatus, s.cfg.Archival.Visibility.Status)
+	enableReadFromVisibilityArchival := dc.GetBoolProperty(dynamicconfig.EnableReadFromArchival, s.cfg.Archival.Visibility.EnableReadFromArchival)
 
 	params.DCRedirectionPolicy = s.cfg.DCRedirectionPolicy
 
@@ -140,9 +142,10 @@ func (s *server) startService() common.Daemon {
 		clusterMetadata.MasterClusterName,
 		clusterMetadata.CurrentClusterName,
 		clusterMetadata.ClusterInformation,
-		archivalStatus(),
-		s.cfg.Archival.DefaultBucket,
-		enableReadFromArchival(),
+		historyArchivalStatus(),
+		enableReadFromHistoryArchival(),
+		visibilityArchivalStatus(),
+		enableReadFromVisibilityArchival(),
 	)
 
 	if s.cfg.PublicClient.HostPort != "" {

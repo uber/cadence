@@ -32,7 +32,6 @@ type (
 	// ArchivalConfig is an immutable representation of the current archival configuration of the cluster
 	ArchivalConfig struct {
 		status                 ArchivalStatus
-		defaultBucket          string
 		enableReadFromArchival bool
 	}
 )
@@ -47,20 +46,11 @@ const (
 )
 
 // NewArchivalConfig constructs a new valid ArchivalConfig
-func NewArchivalConfig(status ArchivalStatus, defaultBucket string, enableReadFromArchival bool) *ArchivalConfig {
-	ac := &ArchivalConfig{
+func NewArchivalConfig(status ArchivalStatus, enableReadFromArchival bool) *ArchivalConfig {
+	return &ArchivalConfig{
 		status:                 status,
-		defaultBucket:          defaultBucket,
 		enableReadFromArchival: enableReadFromArchival,
 	}
-	if !ac.isValid() {
-		return &ArchivalConfig{
-			status:                 ArchivalDisabled,
-			defaultBucket:          "",
-			enableReadFromArchival: false,
-		}
-	}
-	return ac
 }
 
 // GetDefaultBucket returns the default bucket for ArchivalConfig
@@ -98,10 +88,4 @@ func getArchivalStatus(str string) (ArchivalStatus, error) {
 		return ArchivalEnabled, nil
 	}
 	return ArchivalDisabled, fmt.Errorf("invalid archival status of %v, valid status are: {\"\", \"disabled\", \"paused\", \"enabled\"}", str)
-}
-
-func (a *ArchivalConfig) isValid() bool {
-	bucketSet := len(a.defaultBucket) != 0
-	disabled := a.status == ArchivalDisabled
-	return (!bucketSet && disabled) || (bucketSet && !disabled)
 }

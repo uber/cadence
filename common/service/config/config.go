@@ -328,7 +328,7 @@ type (
 
 	// HistoryArchivalDomainDefault is the default history archival config for each domain
 	HistoryArchivalDomainDefault struct {
-		// DefaultStatus is the default status of history archival
+		// DefaultStatus is the default status of history archival: enabled or disabled
 		DefaultStatus string `yaml:"defaultStatus"`
 		// DefaultURI is the default URI for history archiver
 		DefaultURI string `yaml:"defaultURI"`
@@ -336,7 +336,7 @@ type (
 
 	// VisibilityArchivalDomainDefault is the default visibility archival config for each domain
 	VisibilityArchivalDomainDefault struct {
-		// DefaultStatus is the default status of history archival
+		// DefaultStatus is the default status of history archival: enabled or disabled
 		DefaultStatus string `yaml:"defaultStatus"`
 		// DefaultURI is the default URI for history archiver
 		DefaultURI string `yaml:"defaultURI"`

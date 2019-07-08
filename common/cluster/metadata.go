@@ -49,8 +49,10 @@ type (
 		// ClusterNameForFailoverVersion return the corresponding cluster name for a given failover version
 		ClusterNameForFailoverVersion(failoverVersion int64) string
 
-		// ArchivalConfig returns the archival config of the cluster
-		ArchivalConfig() *ArchivalConfig
+		// HistoryArchivalConfig returns the history archival config of the cluster
+		HistoryArchivalConfig() *ArchivalConfig
+		// VisibilityArchivalConfig returns the visibility archival config of the cluster
+		VisibilityArchivalConfig() *ArchivalConfig
 	}
 
 	metadataImpl struct {
@@ -70,8 +72,10 @@ type (
 		// versionToClusterName contains all initial version -> corresponding cluster name
 		versionToClusterName map[int64]string
 
-		// archivalConfig is cluster's archival config
-		archivalConfig *ArchivalConfig
+		// historyArchivalConfig is cluster's history archival config
+		historyArchivalConfig *ArchivalConfig
+		// visibilityArchivalConfig is cluster's visibility archival config
+		visibilityArchivalConfig *ArchivalConfig
 	}
 )
 
@@ -83,9 +87,10 @@ func NewMetadata(
 	masterClusterName string,
 	currentClusterName string,
 	clusterInfo map[string]config.ClusterInformation,
-	archivalStatus string,
-	defaultBucket string,
-	enableReadFromArchival bool,
+	historyArchivalStatus string,
+	enableReadFromHistoryArchival bool,
+	visibilityArchivalStatus string,
+	enableReadFromVisibilityArchival bool,
 ) Metadata {
 
 	if len(clusterInfo) == 0 {
@@ -127,10 +132,18 @@ func NewMetadata(
 		panic("Cluster info initial versions have duplicates")
 	}
 
-	status, err := getArchivalStatus(archivalStatus)
+	status, err := getArchivalStatus(historyArchivalStatus)
 	if err != nil {
 		panic(err)
 	}
+	historyArchivalConfig := NewArchivalConfig(status, enableReadFromHistoryArchival)
+
+	status, err = getArchivalStatus(visibilityArchivalStatus)
+	if err != nil {
+		panic(err)
+	}
+	visibilityArchivalConfig := NewArchivalConfig(status, enableReadFromVisibilityArchival)
+
 	return &metadataImpl{
 		logger:                   logger,
 		enableGlobalDomain:       enableGlobalDomain,
@@ -139,7 +152,8 @@ func NewMetadata(
 		currentClusterName:       currentClusterName,
 		clusterInfo:              clusterInfo,
 		versionToClusterName:     versionToClusterName,
-		archivalConfig:           NewArchivalConfig(status, defaultBucket, enableReadFromArchival),
+		historyArchivalConfig:    historyArchivalConfig,
+		visibilityArchivalConfig: visibilityArchivalConfig,
 	}
 }
 
@@ -205,7 +219,12 @@ func (metadata *metadataImpl) ClusterNameForFailoverVersion(failoverVersion int6
 	return clusterName
 }
 
-// ArchivalConfig returns the archival config of the cluster.
-func (metadata *metadataImpl) ArchivalConfig() *ArchivalConfig {
-	return metadata.archivalConfig
+// HistoryArchivalConfig returns the history archival config of the cluster.
+func (metadata *metadataImpl) HistoryArchivalConfig() *ArchivalConfig {
+	return metadata.historyArchivalConfig
+}
+
+// VisibilityArchivalConfig returns the visibility archival config of the cluster.
+func (metadata *metadataImpl) VisibilityArchivalConfig() *ArchivalConfig {
+	return metadata.visibilityArchivalConfig
 }
