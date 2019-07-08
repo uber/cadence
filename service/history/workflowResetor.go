@@ -934,3 +934,30 @@ func FindAutoResetPoint(
 	}
 	return "", nil
 }
+
+func LookupResetPoint(resetPoints *workflow.ResetPoints, binaryChecksum string) (string, int64, error) {
+	if resetPoints != nil {
+		for _, p := range resetPoints.Points {
+			if p.GetBinaryChecksum() == binaryChecksum {
+				if !p.GetResettable() {
+					return "", common.EmptyEventID, &workflow.BadRequestError{
+						Message: fmt.Sprintf("cannot find valid reset point by BadBinaryChecksum: %v", binaryChecksum),
+					}
+				}
+				if p.GetExpiringTimeNano() > time.Now().UnixNano() {
+					return "", common.EmptyEventID, &workflow.BadRequestError{
+						Message: fmt.Sprintf("reset point of BadBinaryChecksum: %v is already expired", binaryChecksum),
+					}
+				}
+				return p.GetRunId(), p.GetFirstDecisionCompletedId(), nil
+			}
+		}
+		return "", common.EmptyEventID, &workflow.BadRequestError{
+			Message: fmt.Sprintf("cannot find valid reset point by BadBinaryChecksum: %v", binaryChecksum),
+		}
+	} else {
+		return "", common.EmptyEventID, &workflow.BadRequestError{
+			Message: fmt.Sprintf("Empty resetPoints to lookup"),
+		}
+	}
+}
