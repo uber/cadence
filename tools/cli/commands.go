@@ -182,12 +182,13 @@ func RegisterDomain(c *cli.Context) {
 			ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagEmitMetric), err)
 		}
 	}
-	isGlobalDomain := false
+	var isGlobalDomainPtr *bool
 	if c.IsSet(FlagIsGlobalDomain) {
-		isGlobalDomain, err = strconv.ParseBool(c.String(FlagIsGlobalDomain))
+		isGlobalDomain, err := strconv.ParseBool(c.String(FlagIsGlobalDomain))
 		if err != nil {
 			ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagIsGlobalDomain), err)
 		}
+		isGlobalDomainPtr = common.BoolPtr(isGlobalDomain)
 	}
 
 	domainData := map[string]string{}
@@ -234,7 +235,7 @@ func RegisterDomain(c *cli.Context) {
 		SecurityToken:                          common.StringPtr(securityToken),
 		ArchivalStatus:                         archivalStatus(c),
 		ArchivalBucketName:                     common.StringPtr(c.String(FlagArchivalBucketName)),
-		IsGlobalDomain:                         common.BoolPtr(isGlobalDomain),
+		IsGlobalDomain:                         isGlobalDomainPtr,
 	}
 
 	ctx, cancel := newContext(c)
