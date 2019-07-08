@@ -92,12 +92,13 @@ type (
 		// buffered events in persistence
 		hasBufferedEventsInPersistence bool
 
-		shard           ShardContext
-		clusterMetadata cluster.Metadata
-		eventsCache     eventsCache
-		config          *Config
-		timeSource      clock.TimeSource
-		logger          log.Logger
+		shard             ShardContext
+		clusterMetadata   cluster.Metadata
+		eventsCache       eventsCache
+		payloadSerializer persistence.PayloadSerializer
+		config            *Config
+		timeSource        clock.TimeSource
+		logger            log.Logger
 	}
 )
 
@@ -137,12 +138,13 @@ func newMutableStateBuilder(
 
 		hasBufferedEventsInPersistence: false,
 
-		clusterMetadata: shard.GetClusterMetadata(),
-		eventsCache:     eventsCache,
-		shard:           shard,
-		config:          shard.GetConfig(),
-		timeSource:      shard.GetTimeSource(),
-		logger:          logger,
+		shard:             shard,
+		clusterMetadata:   shard.GetClusterMetadata(),
+		eventsCache:       eventsCache,
+		payloadSerializer: shard.GetPayloadSerializer(),
+		config:            shard.GetConfig(),
+		timeSource:        shard.GetTimeSource(),
+		logger:            logger,
 	}
 	s.executionInfo = &persistence.WorkflowExecutionInfo{
 		NextEventID:        common.FirstEventID,
@@ -150,7 +152,7 @@ func newMutableStateBuilder(
 		CloseStatus:        persistence.WorkflowCloseStatusNone,
 		LastProcessedEvent: common.EmptyEventID,
 	}
-	s.hBuilder = newHistoryBuilder(s, logger)
+	s.hBuilder = newHistoryBuilder(s, shard.GetPayloadSerializer(), logger)
 
 	return s
 }
@@ -475,7 +477,7 @@ func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates,
 	}
 
 	// Clear all updates to prepare for the next session
-	e.hBuilder = newHistoryBuilder(e, e.logger)
+	e.hBuilder = newHistoryBuilder(e, e.shard.GetPayloadSerializer(), e.logger)
 	e.updateActivityInfos = make(map[*persistence.ActivityInfo]struct{})
 	e.deleteActivityInfos = make(map[int64]struct{})
 	e.syncActivityTasks = make(map[int64]struct{})

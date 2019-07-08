@@ -45,6 +45,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
+	"github.com/uber/cadence/common/persistence"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/worker/archiver"
@@ -74,6 +75,7 @@ type (
 		mockArchivalClient  *archiver.ClientMock
 		mockClientBean      *client.MockClientBean
 		mockEventsCache     *MockEventsCache
+		serializer          persistence.PayloadSerializer
 		resetor             workflowResetor
 
 		shardClosedCh chan int
@@ -124,6 +126,7 @@ func (s *resetorSuite) SetupTest() {
 	s.mockDomainCache = &cache.DomainCacheMock{}
 	s.mockArchivalClient = &archiver.ClientMock{}
 	s.mockEventsCache = &MockEventsCache{}
+	s.serializer = persistence.NewPayloadSerializer()
 
 	mockShard := &shardContextImpl{
 		service:                   s.mockService,
@@ -137,6 +140,7 @@ func (s *resetorSuite) SetupTest() {
 		eventsCache:               s.mockEventsCache,
 		clusterMetadata:           s.mockClusterMetadata,
 		shardManager:              s.mockShardManager,
+		payloadSerializer:         s.serializer,
 		maxTransferSequenceNumber: 100000,
 		closeCh:                   s.shardClosedCh,
 		config:                    s.config,
@@ -742,7 +746,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	}
 
 	appendV1Resp := &p.AppendHistoryEventsResponse{
-		Size: 100,
+		Size: 105,
 	}
 	appendV2Resp := &p.AppendHistoryNodesResponse{
 		Size: 200,
@@ -778,20 +782,22 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	s.Equal(true, ok)
 	s.Equal(newBranchToken, appendReq.BranchToken)
 	s.Equal(false, appendReq.IsNewBranch)
-	s.Equal(6, len(appendReq.Events))
-	s.Equal(workflow.EventTypeDecisionTaskFailed, appendReq.Events[0].GetEventType())
-	s.Equal(workflow.EventTypeActivityTaskFailed, appendReq.Events[1].GetEventType())
-	s.Equal(workflow.EventTypeActivityTaskFailed, appendReq.Events[2].GetEventType())
-	s.Equal(workflow.EventTypeWorkflowExecutionSignaled, appendReq.Events[3].GetEventType())
-	s.Equal(workflow.EventTypeWorkflowExecutionSignaled, appendReq.Events[4].GetEventType())
-	s.Equal(workflow.EventTypeDecisionTaskScheduled, appendReq.Events[5].GetEventType())
+	events, err := s.serializer.DeserializeBatchEvents(appendReq.EventsBlob)
+	s.Nil(err)
+	s.Equal(6, len(events))
+	s.Equal(workflow.EventTypeDecisionTaskFailed, events[0].GetEventType())
+	s.Equal(workflow.EventTypeActivityTaskFailed, events[1].GetEventType())
+	s.Equal(workflow.EventTypeActivityTaskFailed, events[2].GetEventType())
+	s.Equal(workflow.EventTypeWorkflowExecutionSignaled, events[3].GetEventType())
+	s.Equal(workflow.EventTypeWorkflowExecutionSignaled, events[4].GetEventType())
+	s.Equal(workflow.EventTypeDecisionTaskScheduled, events[5].GetEventType())
 
-	s.Equal(int64(29), appendReq.Events[0].GetEventId())
-	s.Equal(int64(30), appendReq.Events[1].GetEventId())
-	s.Equal(int64(31), appendReq.Events[2].GetEventId())
-	s.Equal(int64(32), appendReq.Events[3].GetEventId())
-	s.Equal(int64(33), appendReq.Events[4].GetEventId())
-	s.Equal(int64(34), appendReq.Events[5].GetEventId())
+	s.Equal(int64(29), events[0].GetEventId())
+	s.Equal(int64(30), events[1].GetEventId())
+	s.Equal(int64(31), events[2].GetEventId())
+	s.Equal(int64(32), events[3].GetEventId())
+	s.Equal(int64(33), events[4].GetEventId())
+	s.Equal(int64(34), events[5].GetEventId())
 
 	// verify executionManager request
 	calls = s.mockExecutionMgr.Calls
@@ -806,7 +812,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	compareCurrExeInfo.State = p.WorkflowStateCompleted
 	compareCurrExeInfo.CloseStatus = p.WorkflowCloseStatusTerminated
 	compareCurrExeInfo.NextEventID = 2
-	compareCurrExeInfo.HistorySize = 100
+	compareCurrExeInfo.HistorySize = 105
 	compareCurrExeInfo.CompletionEventBatchID = 1
 	s.Equal(compareCurrExeInfo, resetReq.CurrentWorkflowMutation.ExecutionInfo)
 	s.Equal(1, len(resetReq.CurrentWorkflowMutation.TransferTasks))
@@ -2044,7 +2050,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	}
 
 	appendV1Resp := &p.AppendHistoryEventsResponse{
-		Size: 100,
+		Size: 105,
 	}
 	appendV2Resp := &p.AppendHistoryNodesResponse{
 		Size: 200,
@@ -2080,18 +2086,20 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	s.Equal(true, ok)
 	s.Equal(newBranchToken, appendReq.BranchToken)
 	s.Equal(false, appendReq.IsNewBranch)
-	s.Equal(5, len(appendReq.Events))
-	s.Equal(workflow.EventTypeDecisionTaskFailed, appendReq.Events[0].GetEventType())
-	s.Equal(workflow.EventTypeActivityTaskFailed, appendReq.Events[1].GetEventType())
-	s.Equal(workflow.EventTypeWorkflowExecutionSignaled, appendReq.Events[2].GetEventType())
-	s.Equal(workflow.EventTypeWorkflowExecutionSignaled, appendReq.Events[3].GetEventType())
-	s.Equal(workflow.EventTypeDecisionTaskScheduled, appendReq.Events[4].GetEventType())
+	events, err := s.serializer.DeserializeBatchEvents(appendReq.EventsBlob)
+	s.Nil(err)
+	s.Equal(5, len(events))
+	s.Equal(workflow.EventTypeDecisionTaskFailed, events[0].GetEventType())
+	s.Equal(workflow.EventTypeActivityTaskFailed, events[1].GetEventType())
+	s.Equal(workflow.EventTypeWorkflowExecutionSignaled, events[2].GetEventType())
+	s.Equal(workflow.EventTypeWorkflowExecutionSignaled, events[3].GetEventType())
+	s.Equal(workflow.EventTypeDecisionTaskScheduled, events[4].GetEventType())
 
-	s.Equal(int64(30), appendReq.Events[0].GetEventId())
-	s.Equal(int64(31), appendReq.Events[1].GetEventId())
-	s.Equal(int64(32), appendReq.Events[2].GetEventId())
-	s.Equal(int64(33), appendReq.Events[3].GetEventId())
-	s.Equal(int64(34), appendReq.Events[4].GetEventId())
+	s.Equal(int64(30), events[0].GetEventId())
+	s.Equal(int64(31), events[1].GetEventId())
+	s.Equal(int64(32), events[2].GetEventId())
+	s.Equal(int64(33), events[3].GetEventId())
+	s.Equal(int64(34), events[4].GetEventId())
 
 	// verify executionManager request
 	calls = s.mockExecutionMgr.Calls
@@ -2106,7 +2114,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	compareCurrExeInfo.State = p.WorkflowStateCompleted
 	compareCurrExeInfo.CloseStatus = p.WorkflowCloseStatusTerminated
 	compareCurrExeInfo.NextEventID = 2
-	compareCurrExeInfo.HistorySize = 100
+	compareCurrExeInfo.HistorySize = 105
 	compareCurrExeInfo.LastFirstEventID = 1
 	compareCurrExeInfo.CompletionEventBatchID = 1
 	s.Equal(compareCurrExeInfo, resetReq.CurrentWorkflowMutation.ExecutionInfo)
@@ -3403,18 +3411,20 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 	s.Equal(true, ok)
 	s.Equal(newBranchToken, appendReq.BranchToken)
 	s.Equal(false, appendReq.IsNewBranch)
-	s.Equal(5, len(appendReq.Events))
-	s.Equal(workflow.EventTypeDecisionTaskFailed, appendReq.Events[0].GetEventType())
-	s.Equal(workflow.EventTypeActivityTaskFailed, appendReq.Events[1].GetEventType())
-	s.Equal(workflow.EventTypeWorkflowExecutionSignaled, appendReq.Events[2].GetEventType())
-	s.Equal(workflow.EventTypeWorkflowExecutionSignaled, appendReq.Events[3].GetEventType())
-	s.Equal(workflow.EventTypeDecisionTaskScheduled, appendReq.Events[4].GetEventType())
+	events, err := s.serializer.DeserializeBatchEvents(appendReq.EventsBlob)
+	s.Nil(err)
+	s.Equal(5, len(events))
+	s.Equal(workflow.EventTypeDecisionTaskFailed, events[0].GetEventType())
+	s.Equal(workflow.EventTypeActivityTaskFailed, events[1].GetEventType())
+	s.Equal(workflow.EventTypeWorkflowExecutionSignaled, events[2].GetEventType())
+	s.Equal(workflow.EventTypeWorkflowExecutionSignaled, events[3].GetEventType())
+	s.Equal(workflow.EventTypeDecisionTaskScheduled, events[4].GetEventType())
 
-	s.Equal(int64(30), appendReq.Events[0].GetEventId())
-	s.Equal(int64(31), appendReq.Events[1].GetEventId())
-	s.Equal(int64(32), appendReq.Events[2].GetEventId())
-	s.Equal(int64(33), appendReq.Events[3].GetEventId())
-	s.Equal(int64(34), appendReq.Events[4].GetEventId())
+	s.Equal(int64(30), events[0].GetEventId())
+	s.Equal(int64(31), events[1].GetEventId())
+	s.Equal(int64(32), events[2].GetEventId())
+	s.Equal(int64(33), events[3].GetEventId())
+	s.Equal(int64(34), events[4].GetEventId())
 
 	// verify executionManager request
 	calls = s.mockExecutionMgr.Calls
@@ -4067,13 +4077,18 @@ func (s *resetorSuite) TestApplyReset() {
 		},
 	}
 
+	eventsBlob, err := s.serializer.SerializeBatchEvents(
+		historyAfterReset.Events,
+		common.EncodingType(s.config.EventEncodingType(domainID)),
+	)
+	s.Nil(err)
 	appendV2Req := &p.AppendHistoryNodesRequest{
 		IsNewBranch:   false,
 		Info:          "",
 		BranchToken:   newBranchToken,
-		Events:        historyAfterReset.Events,
+		NodeID:        historyAfterReset.Events[0].GetEventId(),
+		EventsBlob:    eventsBlob,
 		TransactionID: 1,
-		Encoding:      common.EncodingType(s.config.EventEncodingType(domainID)),
 		ShardID:       common.IntPtr(s.shardID),
 	}
 	appendV2Resp := &p.AppendHistoryNodesResponse{
@@ -4097,7 +4112,7 @@ func (s *resetorSuite) TestApplyReset() {
 	s.mockHistoryV2Mgr.On("CompleteForkBranch", completeReqErr).Return(nil).Maybe()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", appendV2Req).Return(appendV2Resp, nil).Once()
 	s.mockExecutionMgr.On("ResetWorkflowExecution", mock.Anything).Return(nil).Once()
-	err := s.resetor.ApplyResetEvent(context.Background(), request, domainID, wid, currRunID)
+	err = s.resetor.ApplyResetEvent(context.Background(), request, domainID, wid, currRunID)
 	s.Nil(err)
 
 	// verify historyEvent: 5 events to append
@@ -4114,18 +4129,20 @@ func (s *resetorSuite) TestApplyReset() {
 	s.Equal(true, ok)
 	s.Equal(newBranchToken, appendReq.BranchToken)
 	s.Equal(false, appendReq.IsNewBranch)
-	s.Equal(5, len(appendReq.Events))
-	s.Equal(workflow.EventTypeDecisionTaskFailed, appendReq.Events[0].GetEventType())
-	s.Equal(workflow.EventTypeActivityTaskFailed, appendReq.Events[1].GetEventType())
-	s.Equal(workflow.EventTypeWorkflowExecutionSignaled, appendReq.Events[2].GetEventType())
-	s.Equal(workflow.EventTypeWorkflowExecutionSignaled, appendReq.Events[3].GetEventType())
-	s.Equal(workflow.EventTypeDecisionTaskScheduled, appendReq.Events[4].GetEventType())
+	events, err := s.serializer.DeserializeBatchEvents(appendReq.EventsBlob)
+	s.Nil(err)
+	s.Equal(5, len(events))
+	s.Equal(workflow.EventTypeDecisionTaskFailed, events[0].GetEventType())
+	s.Equal(workflow.EventTypeActivityTaskFailed, events[1].GetEventType())
+	s.Equal(workflow.EventTypeWorkflowExecutionSignaled, events[2].GetEventType())
+	s.Equal(workflow.EventTypeWorkflowExecutionSignaled, events[3].GetEventType())
+	s.Equal(workflow.EventTypeDecisionTaskScheduled, events[4].GetEventType())
 
-	s.Equal(int64(30), appendReq.Events[0].GetEventId())
-	s.Equal(int64(31), appendReq.Events[1].GetEventId())
-	s.Equal(int64(32), appendReq.Events[2].GetEventId())
-	s.Equal(int64(33), appendReq.Events[3].GetEventId())
-	s.Equal(int64(34), appendReq.Events[4].GetEventId())
+	s.Equal(int64(30), events[0].GetEventId())
+	s.Equal(int64(31), events[1].GetEventId())
+	s.Equal(int64(32), events[2].GetEventId())
+	s.Equal(int64(33), events[3].GetEventId())
+	s.Equal(int64(34), events[4].GetEventId())
 
 	// verify executionManager request
 	calls = s.mockExecutionMgr.Calls

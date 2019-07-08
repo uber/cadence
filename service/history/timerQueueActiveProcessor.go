@@ -784,8 +784,16 @@ Update_History_Loop:
 
 		timersToNotify := append(timerTasks, msBuilder.GetContinueAsNew().TimerTasks...)
 
+		workflowEventsSeq, _, err := continueAsNewBuilder.GetHistoryBuilder().ToSerializedEvents(
+			continueAsNewBuilder.GetCurrentBranch(),
+			getDefaultEncoding(t.shard.GetConfig(), domainEntry),
+		)
+		if err != nil {
+			return err
+		}
 		if err := context.appendFirstBatchHistoryForContinueAsNew(
 			continueAsNewBuilder,
+			workflowEventsSeq,
 			transactionID,
 		); err != nil {
 			return err

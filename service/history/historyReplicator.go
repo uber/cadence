@@ -722,7 +722,18 @@ func (r *historyReplicator) ApplyReplicationTask(
 			return err
 		}
 		// continueAsNew
-		err = context.appendFirstBatchHistoryForContinueAsNew(newRunStateBuilder, transactionID)
+		domainEntry, err := r.shard.GetDomainCache().GetDomainByID(context.getDomainID())
+		if err != nil {
+			return err
+		}
+		workflowEventsSeq, _, err := newRunStateBuilder.GetHistoryBuilder().ToSerializedEvents(
+			newRunStateBuilder.GetCurrentBranch(),
+			getDefaultEncoding(r.shard.GetConfig(), domainEntry),
+		)
+		if err != nil {
+			return err
+		}
+		err = context.appendFirstBatchHistoryForContinueAsNew(newRunStateBuilder, workflowEventsSeq, transactionID)
 		if err != nil {
 			return err
 		}
@@ -766,7 +777,21 @@ func (r *historyReplicator) replicateWorkflowStarted(
 	executionInfo.SetLastFirstEventID(firstEvent.GetEventId())
 	executionInfo.SetNextEventID(lastEvent.GetEventId() + 1)
 
-	_, _, err := context.appendFirstBatchEventsForStandby(msBuilder, history.Events)
+	domainEntry, err := r.shard.GetDomainCache().GetDomainByID(executionInfo.DomainID)
+	if err != nil {
+		return err
+	}
+
+	standbyHistoryBuilder := newHistoryBuilderFromEvents(
+		history.Events,
+		r.shard.GetPayloadSerializer(),
+		logger,
+	)
+	workflowEventsSeq, _, err := standbyHistoryBuilder.ToSerializedEvents(
+		msBuilder.GetCurrentBranch(),
+		getDefaultEncoding(r.shard.GetConfig(), domainEntry),
+	)
+	_, _, err = context.appendFirstBatchEventsForStandby(msBuilder, workflowEventsSeq)
 	if err != nil {
 		return err
 	}

@@ -66,6 +66,7 @@ type (
 		mockQueueAckMgr         *MockQueueAckMgr
 		mockService             service.Service
 		mockHistoryRereplicator *xdc.MockHistoryRereplicator
+		serializer              persistence.PayloadSerializer
 		clusterName             string
 
 		transferQueueStandbyProcessor *transferQueueStandbyProcessorImpl
@@ -116,6 +117,7 @@ func (s *transferQueueStandbyProcessorSuite) SetupTest() {
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
 	s.mockClientBean = &client.MockClientBean{}
 	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean)
+	s.serializer = persistence.NewPayloadSerializer()
 
 	config := NewDynamicConfigForTest()
 	shardContext := &shardContextImpl{
@@ -126,6 +128,7 @@ func (s *transferQueueStandbyProcessorSuite) SetupTest() {
 		executionManager:          s.mockExecutionMgr,
 		shardManager:              s.mockShardManager,
 		historyMgr:                s.mockHistoryMgr,
+		payloadSerializer:         s.serializer,
 		maxTransferSequenceNumber: 100000,
 		closeCh:                   make(chan int, 100),
 		config:                    config,

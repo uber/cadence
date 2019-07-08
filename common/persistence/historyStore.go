@@ -23,6 +23,7 @@ package persistence
 import (
 	"encoding/json"
 	"fmt"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -65,22 +66,15 @@ func (m *historyManagerImpl) GetName() string {
 }
 
 func (m *historyManagerImpl) AppendHistoryEvents(request *AppendHistoryEventsRequest) (*AppendHistoryEventsResponse, error) {
-	if len(request.Events) == 0 {
-		return nil, fmt.Errorf("events to be appended cannot be empty")
-	}
-	eventsData, err := m.serializer.SerializeBatchEvents(request.Events, request.Encoding)
-	if err != nil {
-		return nil, err
-	}
 
-	size := len(eventsData.Data)
+	size := len(request.EventsBlob.Data)
 	sizeLimit := m.transactionSizeLimit()
 	if size > sizeLimit {
 		return nil, &TransactionSizeLimitError{
 			Msg: fmt.Sprintf("transaction size of %v bytes exceeds limit of %v bytes", size, sizeLimit),
 		}
 	}
-	resp := &AppendHistoryEventsResponse{Size: len(eventsData.Data)}
+	resp := &AppendHistoryEventsResponse{Size: len(request.EventsBlob.Data)}
 	return resp, m.persistence.AppendHistoryEvents(
 		&InternalAppendHistoryEventsRequest{
 			DomainID:          request.DomainID,
@@ -89,7 +83,7 @@ func (m *historyManagerImpl) AppendHistoryEvents(request *AppendHistoryEventsReq
 			EventBatchVersion: request.EventBatchVersion,
 			RangeID:           request.RangeID,
 			TransactionID:     request.TransactionID,
-			Events:            eventsData,
+			Events:            request.EventsBlob,
 			Overwrite:         request.Overwrite,
 		})
 }

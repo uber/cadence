@@ -31,26 +31,38 @@ import (
 
 type (
 	historyBuilder struct {
-		transientHistory []*workflow.HistoryEvent
-		history          []*workflow.HistoryEvent
-		msBuilder        mutableState
-		logger           log.Logger
+		transientHistory  []*workflow.HistoryEvent
+		history           []*workflow.HistoryEvent
+		msBuilder         mutableState
+		payloadSerializer persistence.PayloadSerializer
+		logger            log.Logger
 	}
 )
 
-func newHistoryBuilder(msBuilder mutableState, logger log.Logger) *historyBuilder {
+func newHistoryBuilder(
+	msBuilder mutableState,
+	payloadSerializer persistence.PayloadSerializer,
+	logger log.Logger,
+) *historyBuilder {
+
 	return &historyBuilder{
-		transientHistory: []*workflow.HistoryEvent{},
-		history:          []*workflow.HistoryEvent{},
-		msBuilder:        msBuilder,
-		logger:           logger.WithTags(tag.ComponentHistoryBuilder),
+		transientHistory:  []*workflow.HistoryEvent{},
+		history:           []*workflow.HistoryEvent{},
+		msBuilder:         msBuilder,
+		payloadSerializer: payloadSerializer,
+		logger:            logger.WithTags(tag.ComponentHistoryBuilder),
 	}
 }
 
-func newHistoryBuilderFromEvents(history []*workflow.HistoryEvent, logger log.Logger) *historyBuilder {
+func newHistoryBuilderFromEvents(
+	history []*workflow.HistoryEvent,
+	payloadSerializer persistence.PayloadSerializer,
+	logger log.Logger,
+) *historyBuilder {
 	return &historyBuilder{
-		history: history,
-		logger:  logger.WithTags(tag.ComponentHistoryBuilder),
+		history:           history,
+		payloadSerializer: payloadSerializer,
+		logger:            logger.WithTags(tag.ComponentHistoryBuilder),
 	}
 }
 
@@ -1065,4 +1077,125 @@ func setDecisionTaskStartedEventInfo(historyEvent *workflow.HistoryEvent, schedu
 func (b *historyBuilder) GetHistory() *workflow.History {
 	history := workflow.History{Events: b.history}
 	return &history
+}
+
+func (b *historyBuilder) ToSerializedEvents(
+	branchToken []byte,
+	encoding common.EncodingType,
+) ([]*persistence.WorkflowEvents, int, error) {
+
+	eventsSize := 0
+	workflowEventsSeq := []*persistence.WorkflowEvents{}
+
+	if len(b.transientHistory) != 0 {
+		serializedEvents, err := b.serializeEvents(branchToken, b.transientHistory, encoding)
+		if err != nil {
+			return nil, 0, err
+		}
+		if serializedEvents != nil {
+			eventsSize += len(serializedEvents.EventsBlob.Data)
+			workflowEventsSeq = append(workflowEventsSeq, serializedEvents)
+		}
+	}
+
+	if err := b.validateNoEventsAfterWorkflowFinish(b.history); err != nil {
+		return nil, 0, err
+	}
+	serializedEvents, err := b.serializeEvents(branchToken, b.history, encoding)
+	if err != nil {
+		return nil, 0, err
+	}
+	if serializedEvents != nil {
+		eventsSize += len(serializedEvents.EventsBlob.Data)
+		workflowEventsSeq = append(workflowEventsSeq, serializedEvents)
+	}
+
+	return workflowEventsSeq, eventsSize, nil
+}
+
+func (b *historyBuilder) serializeEvents(
+	branchToken []byte,
+	events []*workflow.HistoryEvent,
+	encoding common.EncodingType,
+) (*persistence.WorkflowEvents, error) {
+
+	if len(events) == 0 {
+		return nil, nil
+	}
+
+	firstEvent := events[0]
+	lastEvent := events[len(events)-1]
+	firstEventID := firstEvent.GetEventId()
+	lastEventID := lastEvent.GetEventId()
+	version := firstEvent.GetVersion()
+
+	blob, err := b.payloadSerializer.SerializeBatchEvents(events, encoding)
+	if err != nil {
+		return nil, err
+	}
+
+	// sanity check
+	for index, event := range events {
+		if event.GetVersion() != version {
+			return nil, &workflow.InternalServiceError{
+				Message: "event version must be the same inside a batch",
+			}
+		}
+		if event.GetEventId() != firstEventID+int64(index) {
+			return nil, &workflow.InternalServiceError{
+				Message: "event ID must be continous",
+			}
+		}
+	}
+
+	return &persistence.WorkflowEvents{
+		BranchToken:  branchToken,
+		FirstEventID: firstEventID,
+		LastEventID:  lastEventID,
+		Version:      version,
+		EventsBlob:   blob,
+	}, nil
+}
+
+// validateNoEventsAfterWorkflowFinish perform check on history event batch
+// NOTE: do not apply this check on every batch, since transient
+// decision && workflow finish will be broken (the first batch)
+func (b *historyBuilder) validateNoEventsAfterWorkflowFinish(
+	input []*workflow.HistoryEvent,
+) error {
+
+	if len(input) == 0 {
+		return nil
+	}
+
+	// if workflow is still running, no check is necessary
+	if b.msBuilder == nil || b.msBuilder.IsWorkflowExecutionRunning() {
+		return nil
+	}
+
+	// workflow close
+	// this will perform check on the last event of last batch
+	// NOTE: do not apply this check on every batch, since transient
+	// decision && workflow finish will be broken (the first batch)
+	lastEvent := input[len(input)-1]
+	switch lastEvent.GetEventType() {
+	case workflow.EventTypeWorkflowExecutionCompleted,
+		workflow.EventTypeWorkflowExecutionFailed,
+		workflow.EventTypeWorkflowExecutionTimedOut,
+		workflow.EventTypeWorkflowExecutionTerminated,
+		workflow.EventTypeWorkflowExecutionContinuedAsNew,
+		workflow.EventTypeWorkflowExecutionCanceled:
+
+		return nil
+
+	default:
+		executionInfo := b.msBuilder.GetExecutionInfo()
+		b.logger.Error("encounter case where events appears after workflow finish.",
+			tag.WorkflowDomainID(executionInfo.DomainID),
+			tag.WorkflowID(executionInfo.WorkflowID),
+			tag.WorkflowRunID(executionInfo.RunID),
+		)
+
+		return ErrEventsAterWorkflowFinish
+	}
 }

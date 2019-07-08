@@ -69,6 +69,7 @@ type (
 		mockClientBean      *client.MockClientBean
 		mockArchivalClient  *archiver.ClientMock
 		mockEventsCache     *MockEventsCache
+		serializer          p.PayloadSerializer
 
 		shardClosedCh chan int
 		config        *Config
@@ -117,6 +118,7 @@ func (s *engine3Suite) SetupTest() {
 	s.mockEventsCache = &MockEventsCache{}
 	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
 		mock.Anything).Return()
+	s.serializer = p.NewPayloadSerializer()
 
 	mockShard := &shardContextImpl{
 		service:                   s.mockService,
@@ -129,6 +131,7 @@ func (s *engine3Suite) SetupTest() {
 		eventsCache:               s.mockEventsCache,
 		shardManager:              s.mockShardManager,
 		clusterMetadata:           s.mockClusterMetadata,
+		payloadSerializer:         s.serializer,
 		maxTransferSequenceNumber: 100000,
 		closeCh:                   s.shardClosedCh,
 		config:                    s.config,

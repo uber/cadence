@@ -39,6 +39,8 @@ type (
 		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
 		// not merely log an error
 		*require.Assertions
+
+		serializer p.PayloadSerializer
 	}
 )
 
@@ -53,6 +55,7 @@ func (s *HistoryPersistenceSuite) SetupSuite() {
 func (s *HistoryPersistenceSuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
+	s.serializer = p.NewPayloadSerializer()
 }
 
 // TearDownSuite implementation
@@ -385,16 +388,20 @@ func (s *HistoryPersistenceSuite) TestOverwriteAndShadowingHistoryEvents() {
 func (s *HistoryPersistenceSuite) AppendHistoryEvents(domainID string, workflowExecution gen.WorkflowExecution,
 	firstEventID, eventBatchVersion int64, rangeID, txID int64, eventsBatch *gen.History, overwrite bool) error {
 
-	_, err := s.HistoryMgr.AppendHistoryEvents(&p.AppendHistoryEventsRequest{
+	blob, err := s.serializer.SerializeBatchEvents(eventsBatch.Events, pickRandomEncoding())
+	if err != nil {
+		return err
+	}
+
+	_, err = s.HistoryMgr.AppendHistoryEvents(&p.AppendHistoryEventsRequest{
 		DomainID:          domainID,
 		Execution:         workflowExecution,
 		FirstEventID:      firstEventID,
 		EventBatchVersion: eventBatchVersion,
 		RangeID:           rangeID,
 		TransactionID:     txID,
-		Events:            eventsBatch.Events,
+		EventsBlob:        blob,
 		Overwrite:         overwrite,
-		Encoding:          pickRandomEncoding(),
 	})
 	return err
 }

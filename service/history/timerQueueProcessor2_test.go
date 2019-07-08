@@ -69,6 +69,7 @@ type (
 		mockMessagingClient messaging.Client
 		mockService         service.Service
 		mockEventsCache     *MockEventsCache
+		serializer          persistence.PayloadSerializer
 	}
 )
 
@@ -116,6 +117,7 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 	s.mockClientBean = &client.MockClientBean{}
 	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean)
 	s.mockEventsCache = &MockEventsCache{}
+	s.serializer = persistence.NewPayloadSerializer()
 
 	domainCache := cache.NewDomainCache(s.mockMetadataMgr, s.mockClusterMetadata, metricsClient, s.logger)
 	s.mockShard = &shardContextImpl{
@@ -127,6 +129,7 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 		historyMgr:                s.mockHistoryMgr,
 		clusterMetadata:           s.mockClusterMetadata,
 		historyV2Mgr:              s.mockHistoryV2Mgr,
+		payloadSerializer:         s.serializer,
 		maxTransferSequenceNumber: 100000,
 		closeCh:                   s.shardClosedCh,
 		config:                    s.config,

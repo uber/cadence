@@ -74,10 +74,12 @@ type (
 		mockMessagingClient messaging.Client
 		mockService         service.Service
 		mockMetricClient    metrics.Client
-		shardClosedCh       chan int
-		eventsCache         eventsCache
-		config              *Config
-		logger              log.Logger
+		serializer          p.PayloadSerializer
+
+		shardClosedCh chan int
+		eventsCache   eventsCache
+		config        *Config
+		logger        log.Logger
 	}
 )
 
@@ -123,6 +125,7 @@ func (s *engineSuite) SetupTest() {
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestSingleDCClusterInfo)
 	s.mockEventsCache = &MockEventsCache{}
+	s.serializer = p.NewPayloadSerializer()
 
 	historyEventNotifier := newHistoryEventNotifier(
 		clock.NewRealTimeSource(),
@@ -142,6 +145,7 @@ func (s *engineSuite) SetupTest() {
 		historyV2Mgr:              s.mockHistoryV2Mgr,
 		domainCache:               domainCache,
 		shardManager:              s.mockShardManager,
+		payloadSerializer:         s.serializer,
 		maxTransferSequenceNumber: 100000,
 		closeCh:                   s.shardClosedCh,
 		config:                    s.config,
@@ -4375,8 +4379,10 @@ func (s *engineSuite) TestStarTimer_DuplicateTimerID() {
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse2, nil).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Run(func(arguments mock.Arguments) {
 		req := arguments.Get(0).(*persistence.AppendHistoryNodesRequest)
-		decTaskIndex := len(req.Events) - 1
-		if decTaskIndex >= 0 && *req.Events[decTaskIndex].EventType == workflow.EventTypeDecisionTaskFailed {
+		events, err := s.serializer.DeserializeBatchEvents(req.EventsBlob)
+		s.Nil(err)
+		decTaskIndex := len(events) - 1
+		if decTaskIndex >= 0 && events[decTaskIndex].GetEventType() == workflow.EventTypeDecisionTaskFailed {
 			decisionFailedEvent = true
 		}
 	}).Once()

@@ -44,6 +44,8 @@ type (
 		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
 		// not merely log an error
 		*require.Assertions
+
+		serializer p.PayloadSerializer
 	}
 )
 
@@ -58,6 +60,7 @@ func (s *HistoryPerfSuite) SetupSuite() {
 func (s *HistoryPerfSuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
+	s.serializer = p.NewPayloadSerializer()
 }
 
 // TearDownSuite implementation
@@ -258,11 +261,16 @@ func (s *HistoryPerfSuite) appendV2(br []byte, events []*workflow.HistoryEvent, 
 	var resp *p.AppendHistoryNodesResponse
 	var err error
 
+	blob, err := s.serializer.SerializeBatchEvents(events, common.EncodingTypeThriftRW)
+	if err != nil {
+		return err
+	}
+
 	resp, err = s.HistoryV2Mgr.AppendHistoryNodes(&p.AppendHistoryNodesRequest{
 		BranchToken:   br,
-		Events:        events,
+		NodeID:        events[0].GetEventId(),
+		EventsBlob:    blob,
 		TransactionID: txnID,
-		Encoding:      common.EncodingTypeThriftRW,
 		ShardID:       common.IntPtr(shardID),
 	})
 	if err != nil {
@@ -275,16 +283,20 @@ func (s *HistoryPerfSuite) appendV2(br []byte, events []*workflow.HistoryEvent, 
 func (s *HistoryPerfSuite) appendV1(domainID string, workflowExecution workflow.WorkflowExecution,
 	firstEventID, eventBatchVersion int64, rangeID, txID int64, eventsBatch *workflow.History, overwrite bool) error {
 
-	_, err := s.HistoryMgr.AppendHistoryEvents(&p.AppendHistoryEventsRequest{
+	blob, err := s.serializer.SerializeBatchEvents(eventsBatch.Events, common.EncodingTypeThriftRW)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.HistoryMgr.AppendHistoryEvents(&p.AppendHistoryEventsRequest{
 		DomainID:          domainID,
 		Execution:         workflowExecution,
 		FirstEventID:      firstEventID,
 		EventBatchVersion: eventBatchVersion,
 		RangeID:           rangeID,
 		TransactionID:     txID,
-		Events:            eventsBatch.Events,
+		EventsBlob:        blob,
 		Overwrite:         overwrite,
-		Encoding:          common.EncodingTypeThriftRW,
 	})
 	return err
 }

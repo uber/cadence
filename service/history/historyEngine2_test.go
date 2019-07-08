@@ -24,6 +24,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"runtime/debug"
 	"testing"
 
 	"github.com/pborman/uuid"
@@ -72,6 +74,7 @@ type (
 		mockService         service.Service
 		mockDomainCache     *cache.DomainCacheMock
 		mockEventsCache     *MockEventsCache
+		serializer          p.PayloadSerializer
 
 		shardClosedCh chan int
 		config        *Config
@@ -123,6 +126,7 @@ func (s *engine2Suite) SetupTest() {
 	s.mockEventsCache = &MockEventsCache{}
 	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
 		mock.Anything).Return()
+	s.serializer = p.NewPayloadSerializer()
 
 	mockShard := &shardContextImpl{
 		service:                   s.mockService,
@@ -134,6 +138,7 @@ func (s *engine2Suite) SetupTest() {
 		domainCache:               s.mockDomainCache,
 		shardManager:              s.mockShardManager,
 		clusterMetadata:           s.mockClusterMetadata,
+		payloadSerializer:         s.serializer,
 		maxTransferSequenceNumber: 100000,
 		closeCh:                   s.shardClosedCh,
 		config:                    s.config,
@@ -782,6 +787,14 @@ func (s *engine2Suite) TestRecordActivityTaskStartedIfNoExecution() {
 }
 
 func (s *engine2Suite) TestRecordActivityTaskStartedSuccess() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("########")
+			fmt.Println(string(debug.Stack()))
+			fmt.Println("########")
+		}
+	}()
+
 	domainID := validDomainID
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),

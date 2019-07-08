@@ -47,6 +47,7 @@ type (
 		GetExecutionManager() persistence.ExecutionManager
 		GetHistoryManager() persistence.HistoryManager
 		GetHistoryV2Manager() persistence.HistoryV2Manager
+		GetPayloadSerializer() persistence.PayloadSerializer
 		GetDomainCache() cache.DomainCache
 		GetClusterMetadata() cluster.Metadata
 		GetNextTransferTaskID() (int64, error)
@@ -91,24 +92,25 @@ type (
 	}
 
 	shardContextImpl struct {
-		shardItem        *historyShardsItem
-		shardID          int
-		clusterMetadata  cluster.Metadata
-		service          service.Service
-		rangeID          int64
-		shardManager     persistence.ShardManager
-		historyMgr       persistence.HistoryManager
-		historyV2Mgr     persistence.HistoryV2Manager
-		executionManager persistence.ExecutionManager
-		domainCache      cache.DomainCache
-		eventsCache      eventsCache
-		closeCh          chan<- int
-		isClosed         bool
-		config           *Config
-		logger           log.Logger
-		throttledLogger  log.Logger
-		metricsClient    metrics.Client
-		timeSource       clock.TimeSource
+		shardItem         *historyShardsItem
+		shardID           int
+		clusterMetadata   cluster.Metadata
+		service           service.Service
+		rangeID           int64
+		shardManager      persistence.ShardManager
+		historyMgr        persistence.HistoryManager
+		historyV2Mgr      persistence.HistoryV2Manager
+		payloadSerializer persistence.PayloadSerializer
+		executionManager  persistence.ExecutionManager
+		domainCache       cache.DomainCache
+		eventsCache       eventsCache
+		closeCh           chan<- int
+		isClosed          bool
+		config            *Config
+		logger            log.Logger
+		throttledLogger   log.Logger
+		metricsClient     metrics.Client
+		timeSource        clock.TimeSource
 
 		sync.RWMutex
 		lastUpdated               time.Time
@@ -149,6 +151,10 @@ func (s *shardContextImpl) GetHistoryManager() persistence.HistoryManager {
 
 func (s *shardContextImpl) GetHistoryV2Manager() persistence.HistoryV2Manager {
 	return s.historyV2Mgr
+}
+
+func (s *shardContextImpl) GetPayloadSerializer() persistence.PayloadSerializer {
+	return s.payloadSerializer
 }
 
 func (s *shardContextImpl) GetDomainCache() cache.DomainCache {
@@ -453,10 +459,6 @@ Create_Loop:
 	return nil, ErrMaxAttemptsExceeded
 }
 
-func (s *shardContextImpl) getDefaultEncoding(domainEntry *cache.DomainCacheEntry) common.EncodingType {
-	return common.EncodingType(s.config.EventEncodingType(domainEntry.GetInfo().Name))
-}
-
 func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) (*persistence.UpdateWorkflowExecutionResponse, error) {
 
 	domainID := request.UpdateWorkflowMutation.ExecutionInfo.DomainID
@@ -467,7 +469,7 @@ func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWo
 	if err != nil {
 		return nil, err
 	}
-	request.Encoding = s.getDefaultEncoding(domainEntry)
+	request.Encoding = getDefaultEncoding(s.config, domainEntry)
 
 	s.Lock()
 	defer s.Unlock()
@@ -555,7 +557,7 @@ func (s *shardContextImpl) ResetWorkflowExecution(request *persistence.ResetWork
 	if err != nil {
 		return err
 	}
-	request.Encoding = s.getDefaultEncoding(domainEntry)
+	request.Encoding = getDefaultEncoding(s.config, domainEntry)
 
 	s.Lock()
 	defer s.Unlock()
@@ -644,7 +646,7 @@ func (s *shardContextImpl) ResetMutableState(request *persistence.ResetMutableSt
 	if err != nil {
 		return err
 	}
-	request.Encoding = s.getDefaultEncoding(domainEntry)
+	request.Encoding = getDefaultEncoding(s.config, domainEntry)
 
 	s.Lock()
 	defer s.Unlock()
@@ -725,11 +727,6 @@ Reset_Loop:
 func (s *shardContextImpl) AppendHistoryV2Events(
 	request *persistence.AppendHistoryNodesRequest, domainID string, execution shared.WorkflowExecution) (int, error) {
 
-	domainEntry, err := s.domainCache.GetDomainByID(domainID)
-	if err != nil {
-		return 0, err
-	}
-	request.Encoding = s.getDefaultEncoding(domainEntry)
 	request.ShardID = common.IntPtr(s.shardID)
 	size := 0
 	defer func() {
@@ -760,7 +757,6 @@ func (s *shardContextImpl) AppendHistoryEvents(request *persistence.AppendHistor
 	if err != nil {
 		return 0, err
 	}
-	request.Encoding = s.getDefaultEncoding(domainEntry)
 
 	size := 0
 	defer func() {
@@ -1194,6 +1190,7 @@ func acquireShard(shardItem *historyShardsItem, closeCh chan<- int) (ShardContex
 		shardManager:              shardItem.shardMgr,
 		historyMgr:                shardItem.historyMgr,
 		historyV2Mgr:              shardItem.historyV2Mgr,
+		payloadSerializer:         shardItem.payloadSerializer,
 		executionManager:          shardItem.executionMgr,
 		domainCache:               shardItem.domainCache,
 		shardInfo:                 updatedShardInfo,

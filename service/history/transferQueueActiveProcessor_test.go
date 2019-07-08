@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
+
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -71,6 +72,7 @@ type (
 		mockTransferQueueProcessor *MockTransferQueueProcessor
 		mockTimerQueueProcessor    *MockTimerQueueProcessor
 		mockService                service.Service
+		serializer                 persistence.PayloadSerializer
 
 		version                      int64
 		transferQueueActiveProcessor *transferQueueActiveProcessorImpl
@@ -124,6 +126,7 @@ func (s *transferQueueActiveProcessorSuite) SetupTest() {
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
 	s.mockClientBean = &client.MockClientBean{}
 	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean)
+	s.serializer = persistence.NewPayloadSerializer()
 
 	shardContext := &shardContextImpl{
 		service:                   s.mockService,
@@ -134,6 +137,7 @@ func (s *transferQueueActiveProcessorSuite) SetupTest() {
 		historyMgr:                s.mockHistoryMgr,
 		historyV2Mgr:              s.mockHistoryV2Mgr,
 		clusterMetadata:           s.mockClusterMetadata,
+		payloadSerializer:         s.serializer,
 		maxTransferSequenceNumber: 100000,
 		closeCh:                   make(chan int, 100),
 		config:                    NewDynamicConfigForTest(),

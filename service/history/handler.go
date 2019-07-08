@@ -57,6 +57,7 @@ type (
 		visibilityMgr         persistence.VisibilityManager
 		historyMgr            persistence.HistoryManager
 		historyV2Mgr          persistence.HistoryV2Manager
+		payloadSerializer     persistence.PayloadSerializer
 		executionMgrFactory   persistence.ExecutionManagerFactory
 		domainCache           cache.DomainCache
 		historyServiceClient  hc.Client
@@ -105,6 +106,7 @@ func NewHandler(sVice service.Service, config *Config, shardManager persistence.
 		metadataMgr:         metadataMgr,
 		historyMgr:          historyMgr,
 		historyV2Mgr:        historyV2Mgr,
+		payloadSerializer:   persistence.NewPayloadSerializer(),
 		visibilityMgr:       visibilityMgr,
 		executionMgrFactory: executionMgrFactory,
 		tokenSerializer:     common.NewJSONTaskTokenSerializer(),
@@ -159,7 +161,7 @@ func (h *Handler) Start() error {
 	h.domainCache = cache.NewDomainCache(h.metadataMgr, h.GetClusterMetadata(), h.GetMetricsClient(), h.GetLogger())
 	h.domainCache.Start()
 	h.controller = newShardController(h.Service, h.GetHostInfo(), hServiceResolver, h.shardManager, h.historyMgr, h.historyV2Mgr,
-		h.domainCache, h.executionMgrFactory, h, h.config, h.GetLogger(), h.GetMetricsClient())
+		h.payloadSerializer, h.domainCache, h.executionMgrFactory, h, h.config, h.GetLogger(), h.GetMetricsClient())
 	h.metricsClient = h.GetMetricsClient()
 	h.historyEventNotifier = newHistoryEventNotifier(h.Service.GetTimeSource(), h.GetMetricsClient(), h.config.GetShardID)
 	// events notifier must starts before controller

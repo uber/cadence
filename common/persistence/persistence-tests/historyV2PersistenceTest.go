@@ -47,6 +47,8 @@ type (
 		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
 		// not merely log an error
 		*require.Assertions
+
+		serializer p.PayloadSerializer
 	}
 )
 
@@ -84,6 +86,7 @@ func (s *HistoryV2PersistenceSuite) SetupSuite() {
 func (s *HistoryV2PersistenceSuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
+	s.serializer = p.NewPayloadSerializer()
 }
 
 // TearDownSuite implementation
@@ -729,21 +732,26 @@ func (s *HistoryV2PersistenceSuite) append(branch []byte, events []*workflow.His
 
 	var resp *p.AppendHistoryNodesResponse
 
+	blob, err := s.serializer.SerializeBatchEvents(events, pickRandomEncoding())
+	if err != nil {
+		return err
+	}
+
 	op := func() error {
 		var err error
 		resp, err = s.HistoryV2Mgr.AppendHistoryNodes(&p.AppendHistoryNodesRequest{
 			IsNewBranch:   isNewBranch,
 			Info:          branchInfo,
 			BranchToken:   branch,
-			Events:        events,
+			NodeID:        events[0].GetEventId(),
+			EventsBlob:    blob,
 			TransactionID: txnID,
-			Encoding:      pickRandomEncoding(),
 			ShardID:       common.IntPtr(s.ShardInfo.ShardID),
 		})
 		return err
 	}
 
-	err := backoff.Retry(op, historyTestRetryPolicy, isConditionFail)
+	err = backoff.Retry(op, historyTestRetryPolicy, isConditionFail)
 	if err != nil {
 		return err
 	}

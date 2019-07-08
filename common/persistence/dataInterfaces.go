@@ -760,6 +760,15 @@ type (
 		Encoding common.EncodingType // optional binary encoding type
 	}
 
+	// WorkflowEvents is used as generic workflow history events transaction container
+	WorkflowEvents struct {
+		BranchToken  []byte
+		FirstEventID int64
+		LastEventID  int64
+		Version      int64
+		EventsBlob   *DataBlob
+	}
+
 	// WorkflowMutation is used as generic workflow execution state mutation
 	WorkflowMutation struct {
 		ExecutionInfo    *WorkflowExecutionInfo
@@ -990,9 +999,8 @@ type (
 		EventBatchVersion int64
 		RangeID           int64
 		TransactionID     int64
-		Events            []*workflow.HistoryEvent
+		EventsBlob        *DataBlob
 		Overwrite         bool
-		Encoding          common.EncodingType // optional binary encoding type
 	}
 
 	// GetWorkflowExecutionHistoryRequest is used to retrieve history of a workflow execution
@@ -1209,12 +1217,12 @@ type (
 		Info string
 		// The branch to be appended
 		BranchToken []byte
-		// The batch of events to be appended. The first eventID will become the nodeID of this batch
-		Events []*workflow.HistoryEvent
+		// Node ID is the first event ID of the events blob
+		NodeID int64
+		// The blob of events to be appended.
+		EventsBlob *DataBlob
 		// requested TransactionID for this write operation. For the same eventID, the node with larger TransactionID always wins
 		TransactionID int64
-		// optional binary encoding type
-		Encoding common.EncodingType
 		// The shard to get history node data
 		ShardID *int
 	}

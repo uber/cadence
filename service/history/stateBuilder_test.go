@@ -60,6 +60,7 @@ type (
 		mockMutableState    *mockMutableState
 		mockClientBean      *client.MockClientBean
 		mockEventsCache     *MockEventsCache
+		serializer          persistence.PayloadSerializer
 
 		sourceCluster string
 
@@ -93,6 +94,7 @@ func (s *stateBuilderSuite) SetupTest() {
 	s.mockClientBean = &client.MockClientBean{}
 	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean)
 	s.mockEventsCache = &MockEventsCache{}
+	s.serializer = persistence.NewPayloadSerializer()
 
 	s.mockShard = &shardContextImpl{
 		service:                   s.mockService,
@@ -108,6 +110,7 @@ func (s *stateBuilderSuite) SetupTest() {
 		logger:                    s.logger,
 		domainCache:               cache.NewDomainCache(s.mockMetadataMgr, s.mockClusterMetadata, metricsClient, s.logger),
 		eventsCache:               s.mockEventsCache,
+		payloadSerializer:         s.serializer,
 		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
 		timeSource:                clock.NewRealTimeSource(),
 	}
@@ -580,7 +583,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 	s.Nil(err)
 	expectedNewRunStateBuilder.GetExecutionInfo().LastFirstEventID = newRunStartedEvent.GetEventId()
 	expectedNewRunStateBuilder.GetExecutionInfo().NextEventID = newRunDecisionEvent.GetEventId() + 1
-	expectedNewRunStateBuilder.SetHistoryBuilder(newHistoryBuilderFromEvents(newRunHistory.Events, s.logger))
+	expectedNewRunStateBuilder.SetHistoryBuilder(newHistoryBuilderFromEvents(newRunHistory.Events, s.serializer, s.logger))
 	expectedNewRunStateBuilder.UpdateReplicationStateLastEventID(newRunStartedEvent.GetVersion(), newRunDecisionEvent.GetEventId())
 	s.Equal(expectedNewRunStateBuilder, newRunStateBuilder)
 
@@ -916,7 +919,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 	expectedNewRunStateBuilder.GetExecutionInfo().NextEventID = newRunDecisionEvent.GetEventId() + 1
 	expectedNewRunStateBuilder.GetExecutionInfo().EventStoreVersion = persistence.EventStoreVersionV2
 	expectedNewRunStateBuilder.GetExecutionInfo().BranchToken = newRunStateBuilder.GetCurrentBranch()
-	expectedNewRunStateBuilder.SetHistoryBuilder(newHistoryBuilderFromEvents(newRunHistory.Events, s.logger))
+	expectedNewRunStateBuilder.SetHistoryBuilder(newHistoryBuilderFromEvents(newRunHistory.Events, s.serializer, s.logger))
 	expectedNewRunStateBuilder.UpdateReplicationStateLastEventID(newRunStartedEvent.GetVersion(), newRunDecisionEvent.GetEventId())
 	s.Equal(expectedNewRunStateBuilder, newRunStateBuilder)
 	s.Equal(int32(persistence.EventStoreVersionV2), newRunStateBuilder.GetEventStoreVersion())

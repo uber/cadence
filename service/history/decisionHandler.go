@@ -519,7 +519,14 @@ Update_History_Loop:
 		if continueAsNewBuilder != nil {
 			continueAsNewTimerTasks = msBuilder.GetContinueAsNew().TimerTasks
 
-			err := context.appendFirstBatchHistoryForContinueAsNew(continueAsNewBuilder, transactionID)
+			workflowEventsSeq, _, err := continueAsNewBuilder.GetHistoryBuilder().ToSerializedEvents(
+				continueAsNewBuilder.GetCurrentBranch(),
+				getDefaultEncoding(handler.shard.GetConfig(), domainEntry),
+			)
+			if err != nil {
+				return nil, err
+			}
+			err = context.appendFirstBatchHistoryForContinueAsNew(continueAsNewBuilder, workflowEventsSeq, transactionID)
 			if err != nil {
 				return nil, err
 			}

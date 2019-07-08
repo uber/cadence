@@ -776,7 +776,7 @@ func (w *workflowResetorImpl) ApplyResetEvent(
 	newMsBuilder.GetExecutionInfo().BranchToken = forkResp.NewBranchToken
 
 	// prepare to append history to new branch
-	hBuilder := newHistoryBuilder(newMsBuilder, w.eng.logger)
+	hBuilder := newHistoryBuilder(newMsBuilder, w.eng.shard.GetPayloadSerializer(), w.eng.logger)
 	hBuilder.history = historyAfterReset
 	newMsBuilder.SetHistoryBuilder(hBuilder)
 

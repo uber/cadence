@@ -58,6 +58,7 @@ type (
 		mockQueueAckMgr      *MockTimerQueueAckMgr
 		mockClientBean       *client.MockClientBean
 		mockExecutionManager *mocks.ExecutionManager
+		serializer           persistence.PayloadSerializer
 
 		scope            int
 		notificationChan chan struct{}
@@ -90,9 +91,11 @@ func (s *timerQueueProcessorBaseSuite) SetupTest() {
 	s.mockMetadataMgr = &mocks.MetadataManager{}
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockClientBean = &client.MockClientBean{}
+	s.serializer = persistence.NewPayloadSerializer()
 	s.mockService = service.NewTestService(s.mockClusterMetadata, nil, metricsClient, s.mockClientBean)
 	s.mockShard = &shardContextImpl{
 		service:                   s.mockService,
+		payloadSerializer:         s.serializer,
 		shardInfo:                 &persistence.ShardInfo{ShardID: shardID, RangeID: 1, TransferAckLevel: 0},
 		transferSequenceNumber:    1,
 		maxTransferSequenceNumber: 100000,

@@ -73,6 +73,7 @@ type (
 		mockTimerProcessor  *MockTimerQueueProcessor
 		mockClientBean      *client.MockClientBean
 		mockWorkflowResetor *mockWorkflowResetor
+		serializer          p.PayloadSerializer
 
 		historyReplicator *historyReplicator
 	}
@@ -104,6 +105,7 @@ func (s *historyReplicatorSuite) SetupTest() {
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockClientBean = &client.MockClientBean{}
 	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.mockClientBean)
+	s.serializer = p.NewPayloadSerializer()
 
 	s.mockShard = &shardContextImpl{
 		service:                   s.mockService,
@@ -115,6 +117,7 @@ func (s *historyReplicatorSuite) SetupTest() {
 		clusterMetadata:           s.mockClusterMetadata,
 		historyMgr:                s.mockHistoryMgr,
 		historyV2Mgr:              s.mockHistoryV2Mgr,
+		payloadSerializer:         s.serializer,
 		maxTransferSequenceNumber: 100000,
 		closeCh:                   make(chan int, 100),
 		config:                    NewDynamicConfigForTest(),

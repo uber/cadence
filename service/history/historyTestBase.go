@@ -70,6 +70,7 @@ type (
 		transferSequenceNumber int64
 		historyMgr             persistence.HistoryManager
 		historyV2Mgr           persistence.HistoryV2Manager
+		payloadSerializer      persistence.PayloadSerializer
 		executionMgr           persistence.ExecutionManager
 		domainCache            cache.DomainCache
 		clusterMetadata        cluster.Metadata
@@ -126,6 +127,7 @@ func newTestShardContext(shardInfo *persistence.ShardInfo, transferSequenceNumbe
 		transferSequenceNumber:    transferSequenceNumber,
 		historyMgr:                historyMgr,
 		historyV2Mgr:              historyV2Mgr,
+		payloadSerializer:         persistence.NewPayloadSerializer(),
 		executionMgr:              executionMgr,
 		domainCache:               domainCache,
 		clusterMetadata:           clusterMetadata,
@@ -163,6 +165,11 @@ func (s *TestShardContext) GetHistoryManager() persistence.HistoryManager {
 // GetHistoryV2Manager return historyV2
 func (s *TestShardContext) GetHistoryV2Manager() persistence.HistoryV2Manager {
 	return s.historyV2Mgr
+}
+
+// GetPayloadSerializer return historyV2
+func (s *TestShardContext) GetPayloadSerializer() persistence.PayloadSerializer {
+	return s.payloadSerializer
 }
 
 // GetDomainCache test implementation

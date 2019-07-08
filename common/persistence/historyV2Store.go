@@ -172,37 +172,15 @@ func (m *historyV2ManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReq
 	if err != nil {
 		return nil, err
 	}
-	if len(request.Events) == 0 {
-		return nil, &InvalidPersistenceRequestError{
-			Msg: fmt.Sprintf("events to be appended cannot be empty"),
-		}
-	}
-	version := *request.Events[0].Version
-	nodeID := *request.Events[0].EventId
-	lastID := nodeID - 1
 
-	if nodeID <= 0 {
+	if request.NodeID <= 0 {
 		return nil, &InvalidPersistenceRequestError{
 			Msg: fmt.Sprintf("eventID cannot be less than 1"),
 		}
 	}
-	for _, e := range request.Events {
-		if *e.Version != version {
-			return nil, &InvalidPersistenceRequestError{
-				Msg: fmt.Sprintf("event version must be the same inside a batch"),
-			}
-		}
-		if *e.EventId != lastID+1 {
-			return nil, &InvalidPersistenceRequestError{
-				Msg: fmt.Sprintf("event ID must be continous"),
-			}
-		}
-		lastID++
-	}
 
 	// nodeID will be the first eventID
-	blob, err := m.historySerializer.SerializeBatchEvents(request.Events, request.Encoding)
-	size := len(blob.Data)
+	size := len(request.EventsBlob.Data)
 	sizeLimit := m.transactionSizeLimit()
 	if size > sizeLimit {
 		return nil, &TransactionSizeLimitError{
@@ -220,8 +198,8 @@ func (m *historyV2ManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReq
 		IsNewBranch:   request.IsNewBranch,
 		Info:          request.Info,
 		BranchInfo:    branch,
-		NodeID:        nodeID,
-		Events:        blob,
+		NodeID:        request.NodeID,
+		Events:        request.EventsBlob,
 		TransactionID: request.TransactionID,
 		ShardID:       shardID,
 	}
