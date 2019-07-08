@@ -1829,18 +1829,32 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 		return response, retError
 	}
 
-	if request.GetResetType() == workflow.ResetTypeBadBinary {
-		if len(request.GetBadBinaryChecksum()) <= 0 {
-			return response, &workflow.BadRequestError{
-				Message: "ResetTypeBadBinary must be provided with BadBinaryChecksum",
+	// these reset types may need to load another base
+	if request.GetResetType() == workflow.ResetTypeBadBinary || request.GetResetType() == workflow.ResetTypeLastContinuedAsNew {
+		var runID string
+		var eventID int64
+		if request.GetResetType() == workflow.ResetTypeBadBinary {
+			if len(request.GetBadBinaryChecksum()) <= 0 {
+				return response, &workflow.BadRequestError{
+					Message: "ResetTypeBadBinary must be provided with BadBinaryChecksum",
+				}
 			}
+			// refill DecisionFinishEventId from mutableState
+			runID, eventID, retError = LookupResetPoint(baseMutableState.GetExecutionInfo().AutoResetPoints, request.GetBadBinaryChecksum())
+			if retError != nil {
+				return response, retError
+			}
+			request.DecisionFinishEventId = common.Int64Ptr(eventID)
+		} else {
+			startEvent, found := baseMutableState.GetStartEvent()
+			if !found {
+				return response, &workflow.InternalServiceError{
+					Message: "Start event is missing",
+				}
+			}
+			runID = startEvent.WorkflowExecutionStartedEventAttributes.GetContinuedExecutionRunId()
 		}
-		// refill DecisionFinishEventId from mutableState
-		runID, eventID, retError := LookupResetPoint(baseMutableState.GetExecutionInfo().AutoResetPoints, request.GetBadBinaryChecksum())
-		if retError != nil {
-			return response, retError
-		}
-		request.DecisionFinishEventId = common.Int64Ptr(eventID)
+
 		// reload another base from anther runID if different
 		if runID != baseExecution.GetRunId() {
 			baseExecution.RunId = common.StringPtr(runID)
