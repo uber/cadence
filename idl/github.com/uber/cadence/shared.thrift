@@ -267,6 +267,13 @@ enum IndexedValueType {
   DATETIME,
 }
 
+enum ResetType {
+  LastDecisionCompleted,
+  LastContinuedAsNew,
+  FirstDecisionCompleted,
+  BadBinary,
+}
+
 struct Header {
     10: optional map<string, binary> fields
 }
@@ -1233,6 +1240,8 @@ struct ResetWorkflowExecutionRequest {
   30: optional string reason
   40: optional i64 (js.type = "Long") decisionFinishEventId
   50: optional string requestId
+  60: optional ResetType resetType
+  70: optional string badBinaryChecksum
 }
 
 struct ResetWorkflowExecutionResponse {
