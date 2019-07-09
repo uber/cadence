@@ -56,6 +56,8 @@ const (
 const (
 	// BatchTypeTerminate is batch type for terminating workflows
 	BatchTypeTerminate = "terminate"
+	// BatchTypeSignal is batch type for signaling workflows
+	BatchTypeSignal = "signal"
 )
 
 type (
@@ -65,6 +67,12 @@ type (
 		// TODO https://github.com/uber/cadence/issues/2159
 		// Ideally default should be childPolicy of the workflow. But it's currently totally broken.
 		TerminateChildren *bool
+	}
+
+	// SignalParams is the parameters for signaling workflow
+	SignalParams struct {
+		SignalName string
+		Input      string
 	}
 
 	// BatchParams is the parameters for batch operation workflow
@@ -81,6 +89,8 @@ type (
 		// Below are all optional
 		// TerminateParams is params only for BatchTypeTerminate
 		TerminateParams TerminateParams
+		// SignalParams is params only for BatchTypeSignal
+		SignalParams SignalParams
 		// RPS of processing. Default to defaultRPS
 		// TODO we will implement smarter way than this static rate limiter: https://github.com/uber/cadence/issues/2138
 		RPS int
@@ -158,6 +168,11 @@ func validateParams(params BatchParams) error {
 		return fmt.Errorf("must provide required parameters: BatchType/Reason/DomainName/Query")
 	}
 	switch params.BatchType {
+	case BatchTypeSignal:
+		if params.SignalParams.SignalName == "" {
+			return fmt.Errorf("must provide signal name")
+		}
+		return nil
 	case BatchTypeTerminate:
 		return nil
 	default:
@@ -305,6 +320,8 @@ func startTaskProcessor(
 			switch batchParams.BatchType {
 			case BatchTypeTerminate:
 				err = processTerminateTask(ctx, limiter, task, batchParams, client)
+			case BatchTypeSignal:
+				err = processSignalTask(ctx, limiter, task, batchParams, client)
 			}
 			if err != nil {
 				batcher.metricsClient.IncCounter(metrics.BatcherScope, metrics.BatcherProcessorFailures)
@@ -326,8 +343,25 @@ func startTaskProcessor(
 	}
 }
 
-func processTerminateTask(ctx context.Context, limiter *rate.Limiter, task taskDetail, batchParams BatchParams, client cclient.Client) error {
+func processSignalTask(ctx context.Context, limiter *rate.Limiter, task taskDetail, batchParams BatchParams, client cclient.Client) error {
+	err := limiter.Wait(ctx)
+	if err != nil {
+		return err
+	}
 
+	err = client.SignalWorkflow(ctx, task.execution.GetWorkflowId(), task.execution.GetRunId(),
+		batchParams.SignalParams.SignalName, batchParams.SignalParams.Input)
+	if err != nil {
+		// EntityNotExistsError means wf is not running or deleted
+		_, ok := err.(*shared.EntityNotExistsError)
+		if !ok {
+			return err
+		}
+	}
+	return nil
+}
+
+func processTerminateTask(ctx context.Context, limiter *rate.Limiter, task taskDetail, batchParams BatchParams, client cclient.Client) error {
 	wfs := []shared.WorkflowExecution{task.execution}
 	for len(wfs) > 0 {
 		wf := wfs[0]
