@@ -726,7 +726,7 @@ func (r *historyReplicator) ApplyReplicationTask(
 		if err != nil {
 			return err
 		}
-		workflowEventsSeq, _, err := newRunStateBuilder.GetHistoryBuilder().ToSerializedEvents(
+		workflowEventsSeq, err := newRunStateBuilder.GetHistoryBuilder().ToSerializedEvents(
 			newRunStateBuilder.GetCurrentBranch(),
 			getDefaultEncoding(r.shard.GetConfig(), domainEntry),
 		)
@@ -787,7 +787,7 @@ func (r *historyReplicator) replicateWorkflowStarted(
 		r.shard.GetPayloadSerializer(),
 		logger,
 	)
-	workflowEventsSeq, _, err := standbyHistoryBuilder.ToSerializedEvents(
+	workflowEventsSeq, err := standbyHistoryBuilder.ToSerializedEvents(
 		msBuilder.GetCurrentBranch(),
 		getDefaultEncoding(r.shard.GetConfig(), domainEntry),
 	)

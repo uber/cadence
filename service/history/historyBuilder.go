@@ -1082,42 +1082,39 @@ func (b *historyBuilder) GetHistory() *workflow.History {
 func (b *historyBuilder) ToSerializedEvents(
 	branchToken []byte,
 	encoding common.EncodingType,
-) ([]*persistence.WorkflowEvents, int, error) {
+) ([]*persistence.WorkflowEventBatch, error) {
 
-	eventsSize := 0
-	workflowEventsSeq := []*persistence.WorkflowEvents{}
+	workflowEventsSeq := []*persistence.WorkflowEventBatch{}
 
 	if len(b.transientHistory) != 0 {
 		serializedEvents, err := b.serializeEvents(branchToken, b.transientHistory, encoding)
 		if err != nil {
-			return nil, 0, err
+			return nil, err
 		}
 		if serializedEvents != nil {
-			eventsSize += len(serializedEvents.EventsBlob.Data)
 			workflowEventsSeq = append(workflowEventsSeq, serializedEvents)
 		}
 	}
 
 	if err := b.validateNoEventsAfterWorkflowFinish(b.history); err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 	serializedEvents, err := b.serializeEvents(branchToken, b.history, encoding)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 	if serializedEvents != nil {
-		eventsSize += len(serializedEvents.EventsBlob.Data)
 		workflowEventsSeq = append(workflowEventsSeq, serializedEvents)
 	}
 
-	return workflowEventsSeq, eventsSize, nil
+	return workflowEventsSeq, nil
 }
 
 func (b *historyBuilder) serializeEvents(
 	branchToken []byte,
 	events []*workflow.HistoryEvent,
 	encoding common.EncodingType,
-) (*persistence.WorkflowEvents, error) {
+) (*persistence.WorkflowEventBatch, error) {
 
 	if len(events) == 0 {
 		return nil, nil
@@ -1148,7 +1145,7 @@ func (b *historyBuilder) serializeEvents(
 		}
 	}
 
-	return &persistence.WorkflowEvents{
+	return &persistence.WorkflowEventBatch{
 		BranchToken:  branchToken,
 		FirstEventID: firstEventID,
 		LastEventID:  lastEventID,

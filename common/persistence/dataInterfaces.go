@@ -760,8 +760,8 @@ type (
 		Encoding common.EncodingType // optional binary encoding type
 	}
 
-	// WorkflowEvents is used as generic workflow history events transaction container
-	WorkflowEvents struct {
+	// WorkflowEventBatch is used as generic workflow history events transaction container
+	WorkflowEventBatch struct {
 		BranchToken  []byte
 		FirstEventID int64
 		LastEventID  int64
@@ -2327,4 +2327,9 @@ func NewHistoryBranchTokenFromAnother(branchID string, anotherToken []byte) ([]b
 		return nil, err
 	}
 	return token, nil
+}
+
+// Len return the size of event batch
+func (e *WorkflowEventBatch) Len() int {
+	return len(e.EventsBlob.Data)
 }

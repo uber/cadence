@@ -784,7 +784,7 @@ Update_History_Loop:
 
 		timersToNotify := append(timerTasks, msBuilder.GetContinueAsNew().TimerTasks...)
 
-		workflowEventsSeq, _, err := continueAsNewBuilder.GetHistoryBuilder().ToSerializedEvents(
+		workflowEventsSeq, err := continueAsNewBuilder.GetHistoryBuilder().ToSerializedEvents(
 			continueAsNewBuilder.GetCurrentBranch(),
 			getDefaultEncoding(t.shard.GetConfig(), domainEntry),
 		)

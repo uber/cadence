@@ -57,7 +57,7 @@ type (
 
 		appendFirstBatchHistoryForContinueAsNew(
 			newStateBuilder mutableState,
-			workflowEventsSeq []*persistence.WorkflowEvents,
+			workflowEventsSeq []*persistence.WorkflowEventBatch,
 			transactionID int64,
 		) error
 		appendFirstBatchEventsForActive(
@@ -66,7 +66,7 @@ type (
 		) (int, persistence.Task, error)
 		appendFirstBatchEventsForStandby(
 			msBuilder mutableState,
-			workflowEventsSeq []*persistence.WorkflowEvents,
+			workflowEventsSeq []*persistence.WorkflowEventBatch,
 		) (int, persistence.Task, error)
 
 		createWorkflowExecution(
@@ -432,7 +432,7 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(
 
 	if updateCurr {
 		hBuilder := currMutableState.GetHistoryBuilder()
-		workflowEventsSeq, eventsSize, err := hBuilder.ToSerializedEvents(
+		workflowEventsSeq, err := hBuilder.ToSerializedEvents(
 			currMutableState.GetCurrentBranch(),
 			getDefaultEncoding(c.shard.GetConfig(), domainEntry),
 		)
@@ -446,13 +446,14 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(
 			if err != nil {
 				return err
 			}
+			currMutableState.IncrementHistorySize(workflowEvents.Len())
 		}
-		currMutableState.IncrementHistorySize(eventsSize)
+
 	}
 
 	// Note: we already made sure that newMutableState is using eventsV2
 	hBuilder := newMutableState.GetHistoryBuilder()
-	workflowEventsSeq, eventsSize, err := hBuilder.ToSerializedEvents(
+	workflowEventsSeq, err := hBuilder.ToSerializedEvents(
 		newMutableState.GetCurrentBranch(),
 		getDefaultEncoding(c.shard.GetConfig(), domainEntry),
 	)
@@ -470,8 +471,8 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(
 		if err != nil {
 			return err
 		}
+		newMutableState.IncrementHistorySize(workflowEvents.Len())
 	}
-	newMutableState.IncrementHistorySize(eventsSize)
 
 	// ResetSnapshot function used here really does rely on inputs below
 	snapshotRequest := newMutableState.ResetSnapshot("", 0, 0, nil, nil, nil)
@@ -799,7 +800,7 @@ func (c *workflowExecutionContextImpl) update(
 		firstEvent := standbyHistoryBuilder.GetFirstEvent()
 		// Note: standby events has no transient decision events
 
-		workflowEventsSeq, _, err := standbyHistoryBuilder.ToSerializedEvents(
+		workflowEventsSeq, err := standbyHistoryBuilder.ToSerializedEvents(
 			executionInfo.GetCurrentBranch(),
 			getDefaultEncoding(c.shard.GetConfig(), domainEntry),
 		)
@@ -820,7 +821,7 @@ func (c *workflowExecutionContextImpl) update(
 	if hasNewActiveHistoryEvents {
 		var newReplicationTask persistence.Task
 
-		workflowEventsSeq, eventsSize, err := activeHistoryBuilder.ToSerializedEvents(
+		workflowEventsSeq, err := activeHistoryBuilder.ToSerializedEvents(
 			executionInfo.GetCurrentBranch(),
 			getDefaultEncoding(c.shard.GetConfig(), domainEntry),
 		)
@@ -836,9 +837,8 @@ func (c *workflowExecutionContextImpl) update(
 				replicationTasks = append(replicationTasks, newReplicationTask)
 			}
 			executionInfo.SetLastFirstEventID(workflowEvents.FirstEventID)
+			newHistorySize += workflowEvents.Len()
 		}
-
-		newHistorySize += eventsSize
 	} // end of update history events for active builder
 
 	if executionInfo.State == persistence.WorkflowStateCompleted {
@@ -950,7 +950,7 @@ func (c *workflowExecutionContextImpl) appendFirstBatchEventsForActive(
 	if err != nil {
 		return 0, nil, err
 	}
-	workflowEventsSeq, _, err := msBuilder.GetHistoryBuilder().ToSerializedEvents(
+	workflowEventsSeq, err := msBuilder.GetHistoryBuilder().ToSerializedEvents(
 		msBuilder.GetCurrentBranch(),
 		getDefaultEncoding(c.shard.GetConfig(), domainEntry),
 	)
@@ -959,7 +959,7 @@ func (c *workflowExecutionContextImpl) appendFirstBatchEventsForActive(
 
 func (c *workflowExecutionContextImpl) appendFirstBatchEventsForStandby(
 	msBuilder mutableState,
-	workflowEventsSeq []*persistence.WorkflowEvents,
+	workflowEventsSeq []*persistence.WorkflowEventBatch,
 ) (int, persistence.Task, error) {
 
 	return c.appendFirstBatchEvents(msBuilder, workflowEventsSeq, false)
@@ -967,7 +967,7 @@ func (c *workflowExecutionContextImpl) appendFirstBatchEventsForStandby(
 
 func (c *workflowExecutionContextImpl) appendFirstBatchEvents(
 	msBuilder mutableState,
-	workflowEventsSeq []*persistence.WorkflowEvents,
+	workflowEventsSeq []*persistence.WorkflowEventBatch,
 	replicateEvents bool,
 ) (int, persistence.Task, error) {
 
@@ -1029,7 +1029,7 @@ func (c *workflowExecutionContextImpl) appendFirstBatchEvents(
 }
 
 func (c *workflowExecutionContextImpl) appendHistoryEvents(
-	workflowEvents *persistence.WorkflowEvents,
+	workflowEvents *persistence.WorkflowEventBatch,
 	transactionID int64,
 	replicateEvents bool,
 	newStateBuilder mutableState,
@@ -1094,7 +1094,7 @@ func (c *workflowExecutionContextImpl) appendHistoryEvents(
 
 func (c *workflowExecutionContextImpl) appendFirstBatchHistoryForContinueAsNew(
 	newStateBuilder mutableState,
-	workflowEventsSeq []*persistence.WorkflowEvents,
+	workflowEventsSeq []*persistence.WorkflowEventBatch,
 	transactionID int64,
 ) error {
 

@@ -68,18 +68,18 @@ func (_m *mockWorkflowExecutionContext) appendFirstBatchEventsForActive(_a0 muta
 	return r0, r1, r2
 }
 
-func (_m *mockWorkflowExecutionContext) appendFirstBatchEventsForStandby(_a0 mutableState, _a1 []*persistence.WorkflowEvents) (int, persistence.Task, error) {
+func (_m *mockWorkflowExecutionContext) appendFirstBatchEventsForStandby(_a0 mutableState, _a1 []*persistence.WorkflowEventBatch) (int, persistence.Task, error) {
 	ret := _m.Called(_a0, _a1)
 
 	var r0 int
-	if rf, ok := ret.Get(0).(func(mutableState, []*persistence.WorkflowEvents) int); ok {
+	if rf, ok := ret.Get(0).(func(mutableState, []*persistence.WorkflowEventBatch) int); ok {
 		r0 = rf(_a0, _a1)
 	} else {
 		r0 = ret.Get(0).(int)
 	}
 
 	var r1 persistence.Task
-	if rf, ok := ret.Get(1).(func(mutableState, []*persistence.WorkflowEvents) persistence.Task); ok {
+	if rf, ok := ret.Get(1).(func(mutableState, []*persistence.WorkflowEventBatch) persistence.Task); ok {
 		r1 = rf(_a0, _a1)
 	} else {
 		if ret.Get(1) != nil {
@@ -88,7 +88,7 @@ func (_m *mockWorkflowExecutionContext) appendFirstBatchEventsForStandby(_a0 mut
 	}
 
 	var r2 error
-	if rf, ok := ret.Get(2).(func(mutableState, []*persistence.WorkflowEvents) error); ok {
+	if rf, ok := ret.Get(2).(func(mutableState, []*persistence.WorkflowEventBatch) error); ok {
 		r2 = rf(_a0, _a1)
 	} else {
 		r2 = ret.Error(2)
@@ -195,11 +195,11 @@ func (_m *mockWorkflowExecutionContext) lock(_a0 context.Context) error {
 	return r0
 }
 
-func (_m *mockWorkflowExecutionContext) appendFirstBatchHistoryForContinueAsNew(_a0 mutableState, _a1 []*persistence.WorkflowEvents, _a2 int64) error {
+func (_m *mockWorkflowExecutionContext) appendFirstBatchHistoryForContinueAsNew(_a0 mutableState, _a1 []*persistence.WorkflowEventBatch, _a2 int64) error {
 	ret := _m.Called(_a0, _a1, _a2)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(mutableState, []*persistence.WorkflowEvents, int64) error); ok {
+	if rf, ok := ret.Get(0).(func(mutableState, []*persistence.WorkflowEventBatch, int64) error); ok {
 		r0 = rf(_a0, _a1, _a2)
 	} else {
 		r0 = ret.Error(0)
