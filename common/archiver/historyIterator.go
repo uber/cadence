@@ -63,10 +63,10 @@ type (
 		FinishedIteration bool
 	}
 
-	// HistoryIteratorConfig cofigs the history iterator
+	// HistoryIteratorConfig configs the history iterator
 	HistoryIteratorConfig struct {
-		HistoryPageSize          dynamicconfig.IntPropertyFnWithDomainFilter
-		TargetHistoryBatchesSize dynamicconfig.IntPropertyFnWithDomainFilter
+		HistoryPageSize       dynamicconfig.IntPropertyFnWithDomainFilter
+		TargetHistoryBlobSize dynamicconfig.IntPropertyFnWithDomainFilter
 	}
 
 	historyIterator struct {
@@ -177,7 +177,7 @@ func (i *historyIterator) GetState() ([]byte, error) {
 
 func (i *historyIterator) readHistoryBatches(firstEventID int64) ([]*shared.History, historyIteratorState, error) {
 	size := 0
-	targetSize := i.config.TargetHistoryBatchesSize(i.domainName)
+	targetSize := i.config.TargetHistoryBlobSize(i.domainName)
 	var historyBatches []*shared.History
 	newIterState := historyIteratorState{}
 	for size < targetSize {

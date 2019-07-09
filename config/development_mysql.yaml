@@ -94,13 +94,19 @@ dcRedirectionPolicy:
   toDC: ""
 
 archival:
-  enabled: false
-  filestore:
-    storeDirectory: "/tmp/development/blobstore/"
-    defaultBucket: "cadence-development"
-    customBuckets:
-      - "custom-bucket-1"
-      - "custom-bucket-2"
+  history:
+    status: "enabled"
+    enableReadFromArchival: true
+  visibility:
+    status: "disabled"
+    enableReadFromArchival: false
+
+domain:
+  archival:
+    history:
+      defaultStatus: "disabled"
+    visibility:
+      defaultStatus: "disabled"
 
 kafka:
   clusters:

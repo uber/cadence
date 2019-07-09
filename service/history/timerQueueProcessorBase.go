@@ -585,7 +585,7 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.Ti
 		return nil
 	}
 
-	clusterArchivalStatus := t.shard.GetService().GetClusterMetadata().ArchivalConfig().GetArchivalStatus()
+	clusterArchivalStatus := t.shard.GetService().GetClusterMetadata().HistoryArchivalConfig().GetArchivalStatus()
 	domainCacheEntry, err := t.historyService.shard.GetDomainCache().GetDomainByID(task.DomainID)
 	if err != nil {
 		return err

@@ -42,7 +42,7 @@ const (
 )
 
 func (s *integrationSuite) TestArchival() {
-	s.Equal(cluster.ArchivalEnabled, s.testCluster.testBase.ClusterMetadata.ArchivalConfig().GetArchivalStatus())
+	s.Equal(cluster.ArchivalEnabled, s.testCluster.testBase.ClusterMetadata.HistoryArchivalConfig().GetArchivalStatus())
 
 	domainID := s.getDomainID(s.archivalDomainName)
 	workflowID := "archival-workflow-id"
@@ -62,7 +62,7 @@ func (s *integrationSuite) TestArchival() {
 }
 
 func (s *integrationSuite) TestArchival_ContinueAsNew() {
-	s.Equal(cluster.ArchivalEnabled, s.testCluster.testBase.ClusterMetadata.ArchivalConfig().GetArchivalStatus())
+	s.Equal(cluster.ArchivalEnabled, s.testCluster.testBase.ClusterMetadata.HistoryArchivalConfig().GetArchivalStatus())
 
 	domainID := s.getDomainID(s.archivalDomainName)
 	workflowID := "archival-continueAsNew-workflow-id"
@@ -84,7 +84,7 @@ func (s *integrationSuite) TestArchival_ContinueAsNew() {
 }
 
 func (s *integrationSuite) TestArchival_MultiBlob() {
-	s.Equal(cluster.ArchivalEnabled, s.testCluster.testBase.ClusterMetadata.ArchivalConfig().GetArchivalStatus())
+	s.Equal(cluster.ArchivalEnabled, s.testCluster.testBase.ClusterMetadata.HistoryArchivalConfig().GetArchivalStatus())
 
 	domainID := s.getDomainID(s.archivalDomainName)
 	workflowID := "archival-multi-blob-workflow-id"

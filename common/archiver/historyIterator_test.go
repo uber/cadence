@@ -35,15 +35,15 @@ import (
 )
 
 const (
-	testDomainID                        = "test-domain-id"
-	testDomainName                      = "test-domain-name"
-	testWorkflowID                      = "test-workflow-id"
-	testRunID                           = "test-run-id"
-	testNextEventID                     = 1800
-	testCloseFailoverVersion            = 100
-	testDefaultPersistencePageSize      = 250
-	testDefaultTargetHistoryBatchesSize = 2 * 1024 * 124
-	testDefaultHistoryEventSize         = 50
+	testDomainID                     = "test-domain-id"
+	testDomainName                   = "test-domain-name"
+	testWorkflowID                   = "test-workflow-id"
+	testRunID                        = "test-run-id"
+	testNextEventID                  = 1800
+	testCloseFailoverVersion         = 100
+	testDefaultPersistencePageSize   = 250
+	testDefaultTargetHistoryBlobSize = 2 * 1024 * 124
+	testDefaultHistoryEventSize      = 50
 )
 
 var (
@@ -720,7 +720,7 @@ func (s *HistoryIteratorSuite) constructTestHistoryIterator(
 		eventStoreVersion = persistence.EventStoreVersionV2
 	}
 	if config == nil {
-		config = constructConfig(testDefaultPersistencePageSize, testDefaultTargetHistoryBatchesSize)
+		config = constructConfig(testDefaultPersistencePageSize, testDefaultTargetHistoryBlobSize)
 	}
 
 	request := &ArchiveHistoryRequest{
@@ -738,9 +738,9 @@ func (s *HistoryIteratorSuite) constructTestHistoryIterator(
 	return iterator.(*historyIterator)
 }
 
-func constructConfig(historyPageSize, targetHistoryBatchesSize int) *HistoryIteratorConfig {
+func constructConfig(historyPageSize, targetHistoryBlobSize int) *HistoryIteratorConfig {
 	return &HistoryIteratorConfig{
-		HistoryPageSize:          dynamicconfig.GetIntPropertyFilteredByDomain(historyPageSize),
-		TargetHistoryBatchesSize: dynamicconfig.GetIntPropertyFilteredByDomain(targetHistoryBatchesSize),
+		HistoryPageSize:       dynamicconfig.GetIntPropertyFilteredByDomain(historyPageSize),
+		TargetHistoryBlobSize: dynamicconfig.GetIntPropertyFilteredByDomain(targetHistoryBlobSize),
 	}
 }

@@ -33,6 +33,8 @@ type (
 	ArchivalConfig struct {
 		status                 ArchivalStatus
 		enableReadFromArchival bool
+		domainDefaultStatus    ArchivalStatus
+		domainDefaultURI       string
 	}
 )
 
@@ -46,11 +48,23 @@ const (
 )
 
 // NewArchivalConfig constructs a new valid ArchivalConfig
-func NewArchivalConfig(status ArchivalStatus, enableReadFromArchival bool) *ArchivalConfig {
-	return &ArchivalConfig{
+func NewArchivalConfig(
+	status ArchivalStatus,
+	enableReadFromArchival bool,
+	domainDefaultStatus ArchivalStatus,
+	domainDefaultURI string,
+) *ArchivalConfig {
+	ac := &ArchivalConfig{
 		status:                 status,
 		enableReadFromArchival: enableReadFromArchival,
+		domainDefaultStatus:    domainDefaultStatus,
+		domainDefaultURI:       domainDefaultURI,
 	}
+	if !ac.isDomainDefaultValid() {
+		ac.domainDefaultStatus = ArchivalDisabled
+		ac.domainDefaultURI = ""
+	}
+	return ac
 }
 
 // GetArchivalStatus returns the archival status for ArchivalConfig
@@ -66,6 +80,16 @@ func (a *ArchivalConfig) ConfiguredForArchival() bool {
 // EnableReadFromArchival indicates whether history can be read from archival
 func (a *ArchivalConfig) EnableReadFromArchival() bool {
 	return a.enableReadFromArchival
+}
+
+func (a *ArchivalConfig) isDomainDefaultValid() bool {
+	if a.domainDefaultStatus == ArchivalPaused {
+		return false
+	}
+
+	URISet := len(a.domainDefaultURI) != 0
+	disabled := a.domainDefaultStatus == ArchivalDisabled
+	return (!URISet && disabled) || (URISet && !disabled)
 }
 
 func getArchivalStatus(str string) (ArchivalStatus, error) {

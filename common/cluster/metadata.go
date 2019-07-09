@@ -82,15 +82,14 @@ type (
 // NewMetadata create a new instance of Metadata
 func NewMetadata(
 	logger log.Logger,
-	enableGlobalDomain dynamicconfig.BoolPropertyFn,
+	dc *dynamicconfig.Collection,
+	enableGlobalDomain bool,
 	failoverVersionIncrement int64,
 	masterClusterName string,
 	currentClusterName string,
 	clusterInfo map[string]config.ClusterInformation,
-	historyArchivalStatus string,
-	enableReadFromHistoryArchival bool,
-	visibilityArchivalStatus string,
-	enableReadFromVisibilityArchival bool,
+	archivalClusterConfig config.Archival,
+	archivalDomainDefault config.ArchivalDomainDefault,
 ) Metadata {
 
 	if len(clusterInfo) == 0 {
@@ -132,21 +131,34 @@ func NewMetadata(
 		panic("Cluster info initial versions have duplicates")
 	}
 
+	historyArchivalStatus := dc.GetStringProperty(dynamicconfig.HistoryArchivalStatus, archivalClusterConfig.History.Status)()
+	enableReadFromHistoryArchival := dc.GetBoolProperty(dynamicconfig.EnableReadFromHistoryArchival, archivalClusterConfig.History.EnableReadFromArchival)()
+	visibilityArchivalStatus := dc.GetStringProperty(dynamicconfig.VisibilityArchivalStatus, archivalClusterConfig.Visibility.Status)()
+	enableReadFromVisibilityArchival := dc.GetBoolProperty(dynamicconfig.EnableReadFromVisibilityArchival, archivalClusterConfig.Visibility.EnableReadFromArchival)()
+
 	status, err := getArchivalStatus(historyArchivalStatus)
 	if err != nil {
 		panic(err)
 	}
-	historyArchivalConfig := NewArchivalConfig(status, enableReadFromHistoryArchival)
+	domainStatus, err := getArchivalStatus(archivalDomainDefault.History.DefaultStatus)
+	if err != nil {
+		panic(err)
+	}
+	historyArchivalConfig := NewArchivalConfig(status, enableReadFromHistoryArchival, domainStatus, archivalDomainDefault.History.DefaultURI)
 
 	status, err = getArchivalStatus(visibilityArchivalStatus)
 	if err != nil {
 		panic(err)
 	}
-	visibilityArchivalConfig := NewArchivalConfig(status, enableReadFromVisibilityArchival)
+	domainStatus, err = getArchivalStatus(archivalDomainDefault.Visibility.DefaultStatus)
+	if err != nil {
+		panic(err)
+	}
+	visibilityArchivalConfig := NewArchivalConfig(status, enableReadFromVisibilityArchival, domainStatus, archivalDomainDefault.Visibility.DefaultURI)
 
 	return &metadataImpl{
 		logger:                   logger,
-		enableGlobalDomain:       enableGlobalDomain,
+		enableGlobalDomain:       dc.GetBoolProperty(dynamicconfig.EnableGlobalDomain, enableGlobalDomain),
 		failoverVersionIncrement: failoverVersionIncrement,
 		masterClusterName:        masterClusterName,
 		currentClusterName:       currentClusterName,

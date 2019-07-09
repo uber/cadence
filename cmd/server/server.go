@@ -24,6 +24,10 @@ import (
 	"log"
 	"time"
 
+	"github.com/uber/cadence/common/archiver"
+	"github.com/uber/cadence/common/archiver/filestore"
+	"github.com/uber/cadence/common/archiver/provider"
+
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
@@ -123,11 +127,6 @@ func (s *server) startService() common.Daemon {
 	params.RPCFactory = svcCfg.RPC.NewFactory(params.Name, params.Logger)
 	params.PProfInitializer = svcCfg.PProf.NewInitializer(params.Logger)
 
-	historyArchivalStatus := dc.GetStringProperty(dynamicconfig.HistoryArchivalStatus, s.cfg.Archival.History.Status)
-	enableReadFromHistoryArchival := dc.GetBoolProperty(dynamicconfig.EnableReadFromHistoryArchival, s.cfg.Archival.History.EnableReadFromArchival)
-	visibilityArchivalStatus := dc.GetStringProperty(dynamicconfig.VisibilityArchivalStatus, s.cfg.Archival.Visibility.Status)
-	enableReadFromVisibilityArchival := dc.GetBoolProperty(dynamicconfig.EnableReadFromVisibilityArchival, s.cfg.Archival.Visibility.EnableReadFromArchival)
-
 	params.DCRedirectionPolicy = s.cfg.DCRedirectionPolicy
 
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
@@ -135,15 +134,14 @@ func (s *server) startService() common.Daemon {
 	clusterMetadata := s.cfg.ClusterMetadata
 	params.ClusterMetadata = cluster.NewMetadata(
 		params.Logger,
-		dc.GetBoolProperty(dynamicconfig.EnableGlobalDomain, clusterMetadata.EnableGlobalDomain),
+		dc,
+		s.cfg.ClusterMetadata.EnableGlobalDomain,
 		clusterMetadata.FailoverVersionIncrement,
 		clusterMetadata.MasterClusterName,
 		clusterMetadata.CurrentClusterName,
 		clusterMetadata.ClusterInformation,
-		historyArchivalStatus(),
-		enableReadFromHistoryArchival(),
-		visibilityArchivalStatus(),
-		enableReadFromVisibilityArchival(),
+		s.cfg.Archival,
+		s.cfg.Domain.Archival,
 	)
 
 	if s.cfg.PublicClient.HostPort != "" {
@@ -182,28 +180,28 @@ func (s *server) startService() common.Daemon {
 	}
 	params.PublicClient = workflowserviceclient.New(dispatcher.ClientConfig(common.FrontendServiceName))
 
-	if params.ClusterMetadata.HistoryArchivalConfig().ConfiguredForArchival() {
+	configuredForHistoryArchival := params.ClusterMetadata.HistoryArchivalConfig().ConfiguredForArchival()
+	configuredForVisibilityArchival := params.ClusterMetadata.VisibilityArchivalConfig().ConfiguredForArchival()
+	if configuredForHistoryArchival || configuredForVisibilityArchival {
+		var historyConfigs *provider.HistoryArchiverConfigs
+		if configuredForHistoryArchival {
+			iteratorConfig := &archiver.HistoryIteratorConfig{
+				HistoryPageSize:       dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkerHistoryPageSize, 250),
+				TargetHistoryBlobSize: dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkerTargetArchivalBlobSize, 2*1024*1024), // 2MB
+			}
+			historyConfigs = &provider.HistoryArchiverConfigs{
+				FileStore: &filestore.HistoryArchiverConfig{HistoryIteratorConfig: iteratorConfig},
+			}
+		}
 
-		// if s.cfg.Archival.Filestore != nil && s.cfg.Archival.S3store != nil {
-		// 	log.Fatalf("cannot config both filestore and s3store")
-		// }
-		// if s.cfg.Archival.Filestore == nil && s.cfg.Archival.S3store == nil {
-		// 	log.Fatalf("cannot config archival without filestore or s3store")
-		// }
-		// if s.cfg.Archival.Filestore != nil {
-		// 	filestoreClient, err := filestore.NewClient(s.cfg.Archival.Filestore)
-		// 	if err != nil {
-		// 		log.Fatalf("error creating file based blobstore: %v", err)
-		// 	}
-		// 	params.BlobstoreClient = filestoreClient
-		// }
-		// if s.cfg.Archival.S3store != nil {
-		// 	s3cli, err := s3store.ClientFromConfig(s.cfg.Archival.S3store)
-		// 	if err != nil {
-		// 		log.Fatalf("error creating s3 blobstore: %v", err)
-		// 	}
-		// 	params.BlobstoreClient = s3store.NewClient(s3cli)
-		// }
+		var visibilityConfigs *provider.VisibilityArchiverConfigs
+		if configuredForVisibilityArchival {
+			visibilityConfigs = &provider.VisibilityArchiverConfigs{
+				FileStore: &filestore.VisibilityArchiverConfig{},
+			}
+		}
+
+		params.ArchiverProvider = provider.NewArchiverProvider(historyConfigs, visibilityConfigs)
 	}
 
 	params.PersistenceConfig.TransactionSizeLimit = dc.GetIntProperty(dynamicconfig.TransactionSizeLimit, common.DefaultTransactionSizeLimit)

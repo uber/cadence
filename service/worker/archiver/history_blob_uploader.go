@@ -90,7 +90,7 @@ func (h *historyBlobUploader) UploadHistory(ctx context.Context, request *Archiv
 		h.logger.Error(uploadErrorMsg, tag.ArchivalUploadFailReason(errorDetails(err)), tag.Error(err))
 		return result, err
 	}
-	if clusterMetadata.ArchivalConfig().GetArchivalStatus() != cluster.ArchivalEnabled {
+	if clusterMetadata.HistoryArchivalConfig().GetArchivalStatus() != cluster.ArchivalEnabled {
 		h.logger.Error(uploadSkipMsg, tag.ArchivalUploadFailReason("cluster is not enabled for archival"))
 		h.scope.IncCounter(metrics.ArchiverSkipUploadCount)
 		return result, nil

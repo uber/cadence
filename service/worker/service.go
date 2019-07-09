@@ -147,7 +147,7 @@ func (s *Service) Start() {
 	}
 
 	replicatorEnabled := base.GetClusterMetadata().IsGlobalDomainEnabled()
-	archiverEnabled := base.GetClusterMetadata().ArchivalConfig().ConfiguredForArchival()
+	archiverEnabled := base.GetClusterMetadata().HistoryArchivalConfig().ConfiguredForArchival()
 	scannerEnabled := s.config.ScannerCfg.Persistence.DefaultStoreType() == config.StoreTypeSQL
 	batcherEnabled := s.config.EnableBatcher()
 
