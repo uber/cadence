@@ -1789,12 +1789,12 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 	if request.DecisionFinishEventId != nil {
 		if len(request.WorkflowExecution.GetRunId()) == 0 {
 			return response, &workflow.BadRequestError{
-				Message: "Decision finish ID must be provided with runID",
+				Message: "DecisionFinishEventId must be provided with runID",
 			}
 		}
 		if request.GetDecisionFinishEventId() <= common.FirstEventID {
 			return response, &workflow.BadRequestError{
-				Message: "Decision finish ID must be > 1",
+				Message: "DecisionFinishEventId must be > 1",
 			}
 		}
 		if request.ResetType != nil {
