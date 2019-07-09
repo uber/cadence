@@ -1797,6 +1797,12 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 				Message: "Decision finish ID must be > 1",
 			}
 		}
+	} else {
+		if request.ResetType == nil {
+			return response, &workflow.BadRequestError{
+				Message: "must provide DecisionFinishEventId or ResetType",
+			}
+		}
 	}
 
 	// load the current run of the workflow
