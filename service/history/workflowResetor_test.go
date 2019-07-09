@@ -197,7 +197,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	request.DomainUUID = &domainID
 	request.ResetRequest = &workflow.ResetWorkflowExecutionRequest{}
 	_, err = s.historyEngine.ResetWorkflowExecution(context.Background(), request)
-	s.EqualError(err, "BadRequestError{Message: Require workflowId and runId.}")
+	s.EqualError(err, "BadRequestError{Message: Require workflowId.}")
 
 	wid := "wId"
 	wfType := "wfType"
@@ -891,7 +891,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication_WithRequestCance
 	request.DomainUUID = &domainID
 	request.ResetRequest = &workflow.ResetWorkflowExecutionRequest{}
 	_, err = s.historyEngine.ResetWorkflowExecution(context.Background(), request)
-	s.EqualError(err, "BadRequestError{Message: Require workflowId and runId.}")
+	s.EqualError(err, "BadRequestError{Message: Require workflowId.}")
 
 	wid := "wId"
 	wfType := "wfType"
@@ -1479,7 +1479,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	request.DomainUUID = &domainID
 	request.ResetRequest = &workflow.ResetWorkflowExecutionRequest{}
 	_, err = s.historyEngine.ResetWorkflowExecution(context.Background(), request)
-	s.EqualError(err, "BadRequestError{Message: Require workflowId and runId.}")
+	s.EqualError(err, "BadRequestError{Message: Require workflowId.}")
 
 	wid := "wId"
 	wfType := "wfType"
@@ -2201,7 +2201,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 	request.DomainUUID = &domainID
 	request.ResetRequest = &workflow.ResetWorkflowExecutionRequest{}
 	_, err = s.historyEngine.ResetWorkflowExecution(context.Background(), request)
-	s.EqualError(err, "BadRequestError{Message: Require workflowId and runId.}")
+	s.EqualError(err, "BadRequestError{Message: Require workflowId.}")
 
 	wid := "wId"
 	wfType := "wfType"
@@ -2807,7 +2807,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 	request.DomainUUID = &domainID
 	request.ResetRequest = &workflow.ResetWorkflowExecutionRequest{}
 	_, err = s.historyEngine.ResetWorkflowExecution(context.Background(), request)
-	s.EqualError(err, "BadRequestError{Message: Require workflowId and runId.}")
+	s.EqualError(err, "BadRequestError{Message: Require workflowId.}")
 
 	wid := "wId"
 	wfType := "wfType"
