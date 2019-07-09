@@ -63,7 +63,13 @@ func TestTaskListParentName(t *testing.T) {
 		degree int
 		output string
 	}{
-		/* binary tree */
+		/* unexpected input */
+		{"list0", 0, ""},
+		/* 1-ary tree */
+		{"list0", 1, ""},
+		{"/__cadence_sys/list0/1", 1, "list0"},
+		{"/__cadence_sys/list0/2", 1, "/__cadence_sys/list0/1"},
+		/* 2-ary tree */
 		{"list0", 2, ""},
 		{"/__cadence_sys/list0/1", 2, "list0"},
 		{"/__cadence_sys/list0/2", 2, "list0"},

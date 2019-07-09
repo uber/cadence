@@ -87,7 +87,7 @@ func (tn *qualifiedTaskListName) IsRoot() bool {
 //   degree: Number of children at each level of the tree
 // Returns empty string if this task list is the root
 func (tn *qualifiedTaskListName) Parent(degree int) string {
-	if tn.IsRoot() {
+	if tn.IsRoot() || degree == 0 {
 		return ""
 	}
 	pid := (tn.partition+degree-1)/degree - 1

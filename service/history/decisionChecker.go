@@ -22,7 +22,6 @@ package history
 
 import (
 	"fmt"
-
 	"strings"
 
 	"github.com/pborman/uuid"
@@ -61,7 +60,9 @@ type (
 	}
 )
 
-const reservedTaskListPrefix = "/__cadence_sys/"
+const (
+	reservedTaskListPrefix = "/__cadence_sys/"
+)
 
 func newDecisionAttrValidator(
 	domainCache cache.DomainCache,
@@ -195,7 +196,8 @@ func (v *decisionAttrValidator) validateActivityScheduleAttributes(
 		return &workflow.BadRequestError{Message: "ScheduleActivityTaskDecisionAttributes is not set on decision."}
 	}
 
-	if _, err := v.validatedTaskList(attributes.TaskList, ""); err != nil {
+	defaultTaskListName := ""
+	if _, err := v.validatedTaskList(attributes.TaskList, defaultTaskListName); err != nil {
 		return err
 	}
 
