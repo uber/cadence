@@ -195,7 +195,7 @@ func (v *decisionAttrValidator) validateActivityScheduleAttributes(
 		return &workflow.BadRequestError{Message: "ScheduleActivityTaskDecisionAttributes is not set on decision."}
 	}
 
-	if err := v.validateTaskListName(attributes.TaskList, ""); err != nil {
+	if _, err := v.validatedTaskList(attributes.TaskList, ""); err != nil {
 		return err
 	}
 
@@ -496,9 +496,11 @@ func (v *decisionAttrValidator) validateContinueAsNewWorkflowExecutionAttributes
 	}
 
 	// Inherit Tasklist from previous execution if not provided on decision
-	if err := v.validateTaskListName(attributes.TaskList, executionInfo.TaskList); err != nil {
+	tl, err := v.validatedTaskList(attributes.TaskList, executionInfo.TaskList)
+	if err != nil {
 		return err
 	}
+	attributes.TaskList = tl
 
 	// Inherit workflow timeout from previous execution if not provided on decision
 	if attributes.GetExecutionStartToCloseTimeoutSeconds() <= 0 {
@@ -564,9 +566,11 @@ func (v *decisionAttrValidator) validateStartChildExecutionAttributes(
 	}
 
 	// Inherit tasklist from parent workflow execution if not provided on decision
-	if err := v.validateTaskListName(attributes.TaskList, parentInfo.TaskList); err != nil {
+	tl, err := v.validatedTaskList(attributes.TaskList, parentInfo.TaskList)
+	if err != nil {
 		return err
 	}
+	attributes.TaskList = tl
 
 	// Inherit workflow timeout from parent workflow execution if not provided on decision
 	if attributes.GetExecutionStartToCloseTimeoutSeconds() <= 0 {
@@ -581,29 +585,37 @@ func (v *decisionAttrValidator) validateStartChildExecutionAttributes(
 	return nil
 }
 
-func (v *decisionAttrValidator) validateTaskListName(tl *workflow.TaskList, defaultVal string) error {
-	if tl == nil || tl.GetName() == "" {
+func (v *decisionAttrValidator) validatedTaskList(
+	tl *workflow.TaskList,
+	defaultVal string,
+) (*workflow.TaskList, error) {
+
+	if tl == nil {
+		tl = &workflow.TaskList{}
+	}
+
+	if tl.GetName() == "" {
 		if defaultVal == "" {
-			return &workflow.BadRequestError{"missing task list name"}
+			return tl, &workflow.BadRequestError{"missing task list name"}
 		}
 		tl.Name = &defaultVal
-		return nil
+		return tl, nil
 	}
 
 	name := tl.GetName()
 	if len(name) > v.maxIDLengthLimit {
-		return &workflow.BadRequestError{
+		return tl, &workflow.BadRequestError{
 			Message: fmt.Sprintf("task list name exceeds length limit of %v", v.maxIDLengthLimit),
 		}
 	}
 
 	if strings.HasPrefix(name, reservedTaskListPrefix) {
-		return &workflow.BadRequestError{
+		return tl, &workflow.BadRequestError{
 			Message: fmt.Sprintf("task list name cannot start with reserved prefix %v", reservedTaskListPrefix),
 		}
 	}
 
-	return nil
+	return tl, nil
 }
 
 func (v *decisionAttrValidator) validateCrossDomainCall(

@@ -492,38 +492,45 @@ func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_GlobalToGlobal_
 }
 
 func (s *decisionAttrValidatorSuite) TestValidateTaskListName() {
-	testCases := []struct {
-		param1      string
-		param2      string
-		output      string
-		isOutputErr bool
-	}{
-		{"", "tl-1", "tl-1", false},
-		{"tl-1", "", "tl-1", false},
-		{"/tl-1", "", "/tl-1", false},
-		{"/__cadence_sys", "", "/__cadence_sys", false},
-		{"", "", "", true},
-		{reservedTaskListPrefix, "", "", true},
-		{reservedTaskListPrefix, "tl-1", "", true},
-		{reservedTaskListPrefix + "tl-1", "", "", true},
-		{reservedTaskListPrefix + "tl-1", "tl-1", "", true},
-	}
-	for _, tc := range testCases {
-		s.Run(tc.param1+"#"+tc.param2, func() {
-			tl := &workflow.TaskList{Name: &tc.param1}
-			err := s.validator.validateTaskListName(tl, tc.param2)
-			if tc.isOutputErr {
-				s.Error(err)
-				return
-			}
-			s.NoError(err)
-			s.Equal(tc.output, tl.GetName())
-		})
+	taskList := func(name string) *workflow.TaskList {
+		kind := workflow.TaskListKindNormal
+		return &workflow.TaskList{Name: &name, Kind: &kind}
 	}
 
-	tl := &workflow.TaskList{}
-	s.Error(s.validator.validateTaskListName(tl, ""))
-	err := s.validator.validateTaskListName(tl, "tl-1")
-	s.NoError(err)
-	s.Equal("tl-1", tl.GetName())
+	testCases := []struct {
+		defaultVal  string
+		input       *workflow.TaskList
+		output      *workflow.TaskList
+		isOutputErr bool
+	}{
+		{"tl-1", nil, &workflow.TaskList{Name: common.StringPtr("tl-1")}, false},
+		{"", taskList("tl-1"), taskList("tl-1"), false},
+		{"tl-1", taskList("tl-1"), taskList("tl-1"), false},
+		{"", taskList("/tl-1"), taskList("/tl-1"), false},
+		{"", taskList("/__cadence_sys"), taskList("/__cadence_sys"), false},
+		{"", nil, &workflow.TaskList{}, true},
+		{"", taskList(""), taskList(""), true},
+		{"", taskList(reservedTaskListPrefix), taskList(reservedTaskListPrefix), true},
+		{"tl-1", taskList(reservedTaskListPrefix), taskList(reservedTaskListPrefix), true},
+		{"", taskList(reservedTaskListPrefix + "tl-1"), taskList(reservedTaskListPrefix + "tl-1"), true},
+		{"tl-1", taskList(reservedTaskListPrefix + "tl-1"), taskList(reservedTaskListPrefix + "tl-1"), true},
+	}
+
+	for _, tc := range testCases {
+		key := tc.defaultVal + "#"
+		if tc.input != nil {
+			key += tc.input.GetName()
+		} else {
+			key += "nil"
+		}
+		s.Run(key, func() {
+			output, err := s.validator.validatedTaskList(tc.input, tc.defaultVal)
+			if tc.isOutputErr {
+				s.Error(err)
+			} else {
+				s.NoError(err)
+			}
+			s.EqualValues(tc.output, output)
+		})
+	}
 }
