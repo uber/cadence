@@ -23,6 +23,8 @@ package history
 import (
 	"fmt"
 
+	"strings"
+
 	"github.com/pborman/uuid"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -58,6 +60,8 @@ type (
 		logger        log.Logger
 	}
 )
+
+const reservedTaskListPrefix = "/__cadence_sys/"
 
 func newDecisionAttrValidator(
 	domainCache cache.DomainCache,
@@ -191,8 +195,8 @@ func (v *decisionAttrValidator) validateActivityScheduleAttributes(
 		return &workflow.BadRequestError{Message: "ScheduleActivityTaskDecisionAttributes is not set on decision."}
 	}
 
-	if attributes.TaskList == nil || attributes.TaskList.GetName() == "" {
-		return &workflow.BadRequestError{Message: "TaskList is not set on decision."}
+	if err := v.validateTaskListName(attributes.TaskList, ""); err != nil {
+		return err
 	}
 
 	if attributes.GetActivityId() == "" {
@@ -453,8 +457,10 @@ func (v *decisionAttrValidator) validateSignalExternalWorkflowExecutionAttribute
 	return nil
 }
 
-func (v *decisionAttrValidator) validateUpsertWorkflowSearchAttributes(domainName string,
-	attributes *workflow.UpsertWorkflowSearchAttributesDecisionAttributes) error {
+func (v *decisionAttrValidator) validateUpsertWorkflowSearchAttributes(
+	domainName string,
+	attributes *workflow.UpsertWorkflowSearchAttributesDecisionAttributes,
+) error {
 
 	if attributes == nil {
 		return &workflow.BadRequestError{Message: "UpsertWorkflowSearchAttributesDecisionAttributes is not set on decision."}
@@ -485,15 +491,13 @@ func (v *decisionAttrValidator) validateContinueAsNewWorkflowExecutionAttributes
 		attributes.WorkflowType = &workflow.WorkflowType{Name: common.StringPtr(executionInfo.WorkflowTypeName)}
 	}
 
-	// Inherit Tasklist from previous execution if not provided on decision
-	if attributes.TaskList == nil || attributes.TaskList.GetName() == "" {
-		attributes.TaskList = &workflow.TaskList{Name: common.StringPtr(executionInfo.TaskList)}
-	}
-	if len(attributes.TaskList.GetName()) > v.maxIDLengthLimit {
-		return &workflow.BadRequestError{Message: "TaskList exceeds length limit."}
-	}
 	if len(attributes.WorkflowType.GetName()) > v.maxIDLengthLimit {
 		return &workflow.BadRequestError{Message: "WorkflowType exceeds length limit."}
+	}
+
+	// Inherit Tasklist from previous execution if not provided on decision
+	if err := v.validateTaskListName(attributes.TaskList, executionInfo.TaskList); err != nil {
+		return err
 	}
 
 	// Inherit workflow timeout from previous execution if not provided on decision
@@ -560,12 +564,8 @@ func (v *decisionAttrValidator) validateStartChildExecutionAttributes(
 	}
 
 	// Inherit tasklist from parent workflow execution if not provided on decision
-	if attributes.TaskList == nil || attributes.TaskList.GetName() == "" {
-		attributes.TaskList = &workflow.TaskList{Name: common.StringPtr(parentInfo.TaskList)}
-	}
-
-	if len(attributes.TaskList.GetName()) > v.maxIDLengthLimit {
-		return &workflow.BadRequestError{Message: "TaskList exceeds length limit."}
+	if err := v.validateTaskListName(attributes.TaskList, parentInfo.TaskList); err != nil {
+		return err
 	}
 
 	// Inherit workflow timeout from parent workflow execution if not provided on decision
@@ -576,6 +576,31 @@ func (v *decisionAttrValidator) validateStartChildExecutionAttributes(
 	// Inherit decision task timeout from parent workflow execution if not provided on decision
 	if attributes.GetTaskStartToCloseTimeoutSeconds() <= 0 {
 		attributes.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(parentInfo.DecisionTimeoutValue)
+	}
+
+	return nil
+}
+
+func (v *decisionAttrValidator) validateTaskListName(tl *workflow.TaskList, defaultVal string) error {
+	if tl == nil || tl.GetName() == "" {
+		if defaultVal == "" {
+			return &workflow.BadRequestError{"missing task list name"}
+		}
+		tl.Name = &defaultVal
+		return nil
+	}
+
+	name := tl.GetName()
+	if len(name) > v.maxIDLengthLimit {
+		return &workflow.BadRequestError{
+			Message: fmt.Sprintf("task list name exceeds length limit of %v", v.maxIDLengthLimit),
+		}
+	}
+
+	if strings.HasPrefix(name, reservedTaskListPrefix) {
+		return &workflow.BadRequestError{
+			Message: fmt.Sprintf("task list name cannot start with reserved prefix %v", reservedTaskListPrefix),
+		}
 	}
 
 	return nil

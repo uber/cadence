@@ -21,6 +21,8 @@
 package history
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/suite"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -30,7 +32,6 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
-	"testing"
 )
 
 type (
@@ -488,4 +489,41 @@ func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_GlobalToGlobal_
 
 	err := s.validator.validateCrossDomainCall(s.testDomainID, targetDomainID)
 	s.Nil(err)
+}
+
+func (s *decisionAttrValidatorSuite) TestValidateTaskListName() {
+	testCases := []struct {
+		param1      string
+		param2      string
+		output      string
+		isOutputErr bool
+	}{
+		{"", "tl-1", "tl-1", false},
+		{"tl-1", "", "tl-1", false},
+		{"/tl-1", "", "/tl-1", false},
+		{"/__cadence_sys", "", "/__cadence_sys", false},
+		{"", "", "", true},
+		{reservedTaskListPrefix, "", "", true},
+		{reservedTaskListPrefix, "tl-1", "", true},
+		{reservedTaskListPrefix + "tl-1", "", "", true},
+		{reservedTaskListPrefix + "tl-1", "tl-1", "", true},
+	}
+	for _, tc := range testCases {
+		s.Run(tc.param1+"#"+tc.param2, func() {
+			tl := &workflow.TaskList{Name: &tc.param1}
+			err := s.validator.validateTaskListName(tl, tc.param2)
+			if tc.isOutputErr {
+				s.Error(err)
+				return
+			}
+			s.NoError(err)
+			s.Equal(tc.output, tl.GetName())
+		})
+	}
+
+	tl := &workflow.TaskList{}
+	s.Error(s.validator.validateTaskListName(tl, ""))
+	err := s.validator.validateTaskListName(tl, "tl-1")
+	s.NoError(err)
+	s.Equal("tl-1", tl.GetName())
 }
