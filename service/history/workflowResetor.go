@@ -139,9 +139,6 @@ func (w *workflowResetorImpl) ResetWorkflowExecution(
 			w.eng.logger.Error("Failed at CompleteForkBranch", tag.Error(err))
 		}
 	}()
-	if retError != nil {
-		return response, retError
-	}
 
 	retError = w.checkDomainStatus(newMutableState, currPrevRunVersion, domainEntry.GetInfo().Name)
 	if retError != nil {
@@ -272,7 +269,7 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(
 	baseMutableState, currMutableState mutableState,
 	request *workflow.ResetWorkflowExecutionRequest,
 	newRunID string,
-) (snapshot resetSnapshot, retError error) {
+) (resetSnapshot, error) {
 
 	domainID := baseMutableState.GetExecutionInfo().DomainID
 	workflowID := baseMutableState.GetExecutionInfo().WorkflowID
@@ -281,7 +278,7 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(
 	// replay history to reset point(exclusive) to rebuild mutableState
 	replayResult, retError := w.replayHistoryEvents(request, baseMutableState, newRunID)
 	if retError != nil {
-		return snapshot, retError
+		return resetSnapshot{}, retError
 	}
 	forkEventVersion := replayResult.forkEventVersion
 	wfTimeoutSecs := replayResult.workflowTimeoutSecs
@@ -293,7 +290,7 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(
 
 	retError = w.validateResetWorkflowAfterReplay(newMutableState)
 	if retError != nil {
-		return snapshot, retError
+		return resetSnapshot{}, retError
 	}
 
 	// set the new mutable state with the version in domain
@@ -308,17 +305,17 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(
 	_, err := newMutableState.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, workflow.DecisionTaskFailedCauseResetWorkflow, nil,
 		identityHistoryService, request.GetReason(), baseRunID, newRunID, forkEventVersion)
 	if err != nil {
-		return snapshot, &workflow.InternalServiceError{Message: "Failed to add decision failed event."}
+		return resetSnapshot{}, &workflow.InternalServiceError{Message: "Failed to add decision failed event."}
 	}
 
 	retError = w.failStartedActivities(newMutableState)
 	if retError != nil {
-		return snapshot, retError
+		return resetSnapshot{}, retError
 	}
 
 	newTransferTasks, retError := w.scheduleUnstartedActivities(newMutableState)
 	if retError != nil {
-		return snapshot, retError
+		return resetSnapshot{}, retError
 	}
 
 	// we will need a timer for the scheduled activities
@@ -330,18 +327,18 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(
 	// 3. activity timeout for scheduled but not started activities
 	newTimerTasks, retError := w.generateTimerTasksForReset(newMutableState, wfTimeoutSecs, needActivityTimer)
 	if retError != nil {
-		return snapshot, retError
+		return resetSnapshot{}, retError
 	}
 	// replay received signals back to mutableState/history:
 	retError = w.replayReceivedSignals(ctx, receivedSignals, continueRunID, newMutableState, currMutableState)
 	if retError != nil {
-		return snapshot, retError
+		return resetSnapshot{}, retError
 	}
 
 	// we always schedule a new decision after reset
 	di, err = newMutableState.AddDecisionTaskScheduledEvent()
 	if err != nil {
-		return snapshot, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
+		return resetSnapshot{}, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
 	}
 
 	newTransferTasks = append(newTransferTasks,
@@ -361,9 +358,10 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(
 		ShardID:         common.IntPtr(w.eng.shard.GetShardID()),
 	})
 	if retError != nil {
-		return snapshot, retError
+		return resetSnapshot{}, retError
 	}
 	newMutableState.GetExecutionInfo().BranchToken = forkResp.NewBranchToken
+	snapshot := resetSnapshot{}
 	snapshot.newTimerTasks = newTimerTasks
 	snapshot.newTransferTasks = newTransferTasks
 	snapshot.newMutableState = newMutableState
@@ -584,7 +582,7 @@ func (w *workflowResetorImpl) replayHistoryEvents(
 	request *workflow.ResetWorkflowExecutionRequest,
 	prevMutableState mutableState,
 	newRunID string,
-) (replayResult replayHistoryResult, retError error) {
+) (replayHistoryResult, error) {
 
 	prevExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(prevMutableState.GetExecutionInfo().WorkflowID),
@@ -604,12 +602,13 @@ func (w *workflowResetorImpl) replayHistoryEvents(
 	var resetMutableState *mutableStateBuilder
 	var lastBatch []*workflow.HistoryEvent
 	var lastDecisionTaskCompletedEventID *int64
+	replayResult := replayHistoryResult{}
 
 	for {
 		var readResp *persistence.ReadHistoryBranchByBatchResponse
-		readResp, retError = w.eng.historyV2Mgr.ReadHistoryBranchByBatch(readReq)
+		readResp, retError := w.eng.historyV2Mgr.ReadHistoryBranchByBatch(readReq)
 		if retError != nil {
-			return replayResult, retError
+			return replayHistoryResult{}, retError
 		}
 		for _, batch := range readResp.History {
 			history := batch.Events
@@ -639,7 +638,7 @@ func (w *workflowResetorImpl) replayHistoryEvents(
 						}
 					}
 				default:
-					return replayResult, &workflow.BadRequestError{
+					return replayHistoryResult{}, &workflow.BadRequestError{
 						Message: fmt.Sprintf("not supported type %v", request.GetResetType()),
 					}
 				}
@@ -716,7 +715,7 @@ func (w *workflowResetorImpl) replayHistoryEvents(
 		replayResult.forkEventID = *lastDecisionTaskCompletedEventID
 	}
 
-	retError = validateLastBatchOfReset(lastBatch, replayResult.forkEventID)
+	retError := validateLastBatchOfReset(lastBatch, replayResult.forkEventID)
 	if retError != nil {
 		return replayResult, retError
 	}
