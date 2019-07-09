@@ -1843,6 +1843,26 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 	if request.ResetType != nil {
 		var runID string
 		var eventID int64
+
+		reloadNewBase := func() (releaseWorkflowExecutionFunc, error) {
+			var err error
+			// release the prev base
+			baseRelease(nil)
+
+			// reload new base
+			baseExecution.RunId = common.StringPtr(runID)
+			baseContext, baseRelease, err = e.historyCache.getOrCreateWorkflowExecution(ctx, domainID, baseExecution)
+			if err != nil {
+				return nil, err
+			}
+			baseMutableState, err = baseContext.loadWorkflowExecution()
+			if err != nil {
+				baseRelease(nil)
+				return nil, err
+			}
+			return baseRelease, nil
+		}
+
 		// Note: some reset types may need to load another base
 		switch request.GetResetType() {
 		case workflow.ResetTypeFirstDecisionCompleted:
@@ -1861,20 +1881,12 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 				return response, retError
 			}
 			request.DecisionFinishEventId = common.Int64Ptr(eventID)
-			// release the prev base
-			baseRelease(nil)
 
-			// reload new base
-			baseExecution.RunId = common.StringPtr(runID)
-			baseContext, baseRelease, retError = e.historyCache.getOrCreateWorkflowExecution(ctx, domainID, baseExecution)
+			baseRelease, retError = reloadNewBase()
 			if retError != nil {
 				return response, retError
 			}
 			defer func() { baseRelease(retError) }()
-			baseMutableState, retError = baseContext.loadWorkflowExecution()
-			if retError != nil {
-				return response, retError
-			}
 		case workflow.ResetTypeLastContinuedAsNew:
 			startEvent, found := baseMutableState.GetStartEvent()
 			if !found {
@@ -1883,20 +1895,11 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 				}
 			}
 			runID = startEvent.WorkflowExecutionStartedEventAttributes.GetContinuedExecutionRunId()
-			// release the prev base
-			baseRelease(nil)
-
-			// reload new base
-			baseExecution.RunId = common.StringPtr(runID)
-			baseContext, baseRelease, retError = e.historyCache.getOrCreateWorkflowExecution(ctx, domainID, baseExecution)
+			baseRelease, retError = reloadNewBase()
 			if retError != nil {
 				return response, retError
 			}
 			defer func() { baseRelease(retError) }()
-			baseMutableState, retError = baseContext.loadWorkflowExecution()
-			if retError != nil {
-				return response, retError
-			}
 		default:
 			return response, &workflow.BadRequestError{
 				Message: fmt.Sprintf("not supported ResetType %v", request.GetResetType()),
