@@ -181,6 +181,103 @@ func (s *resetorSuite) TearDownTest() {
 	s.mockEventsCache.AssertExpectations(s.T())
 }
 
+func (s *resetorSuite) TestResetWorkflowExecution_ValidateResetRequest() {
+	request := &workflow.ResetWorkflowExecutionRequest{}
+	err := ValidateResetRequest(request)
+	s.EqualError(err, "BadRequestError{Message: Require workflowId.}")
+	request.WorkflowExecution = &workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr("test-wf-id"),
+	}
+
+	err = ValidateResetRequest(request)
+	s.EqualError(err, "BadRequestError{Message: must provide DecisionFinishEventId or ResetType}")
+
+	// err cases for DecisionFinishEventId validation
+	request.DecisionFinishEventId = common.Int64Ptr(2)
+	err = ValidateResetRequest(request)
+	s.EqualError(err, "BadRequestError{Message: DecisionFinishEventId must be provided with runID}")
+
+	request.WorkflowExecution = &workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr("test-wf-id"),
+		RunId:      common.StringPtr("test-run-id"),
+	}
+	request.DecisionFinishEventId = common.Int64Ptr(0)
+	err = ValidateResetRequest(request)
+	s.EqualError(err, "BadRequestError{Message: DecisionFinishEventId must be > 1}")
+
+	request.DecisionFinishEventId = common.Int64Ptr(2)
+	rt := workflow.ResetTypeBadBinary
+	request.ResetType = &rt
+	err = ValidateResetRequest(request)
+	s.EqualError(err, "BadRequestError{Message: DecisionFinishEventId cannot be used with reset type}")
+
+	//succ for DecisionFinishEventId
+	request.ResetType = nil
+	err = ValidateResetRequest(request)
+	s.Nil(err)
+
+	// err cases for ResetType
+	request.ResetType = &rt
+	request.DecisionFinishEventId = nil
+	err = ValidateResetRequest(request)
+	s.EqualError(err, "BadRequestError{Message: ResetTypeBadBinary must be provided with BadBinaryChecksum}")
+
+	// succ case for ResetType
+	request.BadBinaryChecksum = common.StringPtr("test-bad-binary-checksum")
+	err = ValidateResetRequest(request)
+	s.Nil(err)
+}
+
+func (s *resetorSuite) TestResetWorkflowExecution_LookupResetPoint() {
+	chsum := "test-checksum"
+	runID := ""
+	eventID := int64(0)
+
+	runID, eventID, err := LookupResetPoint(nil, chsum)
+	s.EqualError(err, "BadRequestError{Message: Empty resetPoints to lookup}")
+
+	resetPoints := &workflow.ResetPoints{}
+	runID, eventID, err = LookupResetPoint(resetPoints, chsum)
+	s.EqualError(err, "BadRequestError{Message: cannot find valid reset point by BadBinaryChecksum: "+chsum+"}")
+
+	resetPoints = &workflow.ResetPoints{
+		Points: []*workflow.ResetPointInfo{
+			{
+				BinaryChecksum: common.StringPtr(chsum),
+			},
+		},
+	}
+	runID, eventID, err = LookupResetPoint(resetPoints, chsum)
+	s.EqualError(err, "BadRequestError{Message: reset point of BadBinaryChecksum: "+chsum+" is not supported}")
+
+	resetPoints = &workflow.ResetPoints{
+		Points: []*workflow.ResetPointInfo{
+			{
+				BinaryChecksum:   common.StringPtr(chsum),
+				Resettable:       common.BoolPtr(true),
+				ExpiringTimeNano: common.Int64Ptr(time.Now().Add(-time.Hour).UnixNano()),
+			},
+		},
+	}
+	runID, eventID, err = LookupResetPoint(resetPoints, chsum)
+	s.EqualError(err, "BadRequestError{Message: reset point of BadBinaryChecksum: "+chsum+" is already expired}")
+
+	resetPoints = &workflow.ResetPoints{
+		Points: []*workflow.ResetPointInfo{
+			{
+				BinaryChecksum:           common.StringPtr(chsum),
+				Resettable:               common.BoolPtr(true),
+				RunId:                    common.StringPtr("test-run-id"),
+				FirstDecisionCompletedId: common.Int64Ptr(100),
+			},
+		},
+	}
+	runID, eventID, err = LookupResetPoint(resetPoints, chsum)
+	s.Nil(err)
+	s.Equal("test-run-id", runID)
+	s.Equal(int64(100), eventID)
+}
+
 func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	testDomainEntry := cache.NewLocalDomainCacheEntryForTest(
 		&p.DomainInfo{ID: validDomainID}, &p.DomainConfig{Retention: 1}, "", nil,

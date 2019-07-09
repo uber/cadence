@@ -1011,10 +1011,10 @@ func LookupResetPoint(resetPoints *workflow.ResetPoints, binaryChecksum string) 
 			if p.GetBinaryChecksum() == binaryChecksum {
 				if !p.GetResettable() {
 					return "", common.EmptyEventID, &workflow.BadRequestError{
-						Message: fmt.Sprintf("cannot find valid reset point by BadBinaryChecksum: %v", binaryChecksum),
+						Message: fmt.Sprintf("reset point of BadBinaryChecksum: %v is not supported", binaryChecksum),
 					}
 				}
-				if p.GetExpiringTimeNano() > time.Now().UnixNano() {
+				if p.GetExpiringTimeNano() > 0 && p.GetExpiringTimeNano() < time.Now().UnixNano() {
 					return "", common.EmptyEventID, &workflow.BadRequestError{
 						Message: fmt.Sprintf("reset point of BadBinaryChecksum: %v is already expired", binaryChecksum),
 					}
