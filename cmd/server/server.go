@@ -24,12 +24,11 @@ import (
 	"log"
 	"time"
 
+	"github.com/uber/cadence/client"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/filestore"
 	"github.com/uber/cadence/common/archiver/provider"
-
-	"github.com/uber/cadence/client"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log/loggerimpl"
