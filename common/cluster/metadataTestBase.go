@@ -84,10 +84,8 @@ func GetTestClusterMetadata(enableGlobalDomain bool, isMasterCluster bool, enabl
 	}
 
 	archivalStatus := "disabled"
-	clusterDefaultBucket := ""
 	if enableArchival {
 		archivalStatus = "enabled"
-		clusterDefaultBucket = "default_bucket"
 	}
 	if enableGlobalDomain {
 		return NewMetadata(
@@ -98,7 +96,8 @@ func GetTestClusterMetadata(enableGlobalDomain bool, isMasterCluster bool, enabl
 			TestCurrentClusterName,
 			TestAllClusterInfo,
 			archivalStatus,
-			clusterDefaultBucket,
+			enableArchival,
+			archivalStatus,
 			enableArchival,
 		)
 	}
@@ -111,7 +110,8 @@ func GetTestClusterMetadata(enableGlobalDomain bool, isMasterCluster bool, enabl
 		TestCurrentClusterName,
 		TestSingleDCClusterInfo,
 		archivalStatus,
-		clusterDefaultBucket,
+		enableArchival,
+		archivalStatus,
 		enableArchival,
 	)
 }

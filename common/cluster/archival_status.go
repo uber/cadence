@@ -53,22 +53,13 @@ func NewArchivalConfig(status ArchivalStatus, enableReadFromArchival bool) *Arch
 	}
 }
 
-// GetDefaultBucket returns the default bucket for ArchivalConfig
-func (a *ArchivalConfig) GetDefaultBucket() string {
-	return a.defaultBucket
-}
-
 // GetArchivalStatus returns the archival status for ArchivalConfig
 func (a *ArchivalConfig) GetArchivalStatus() ArchivalStatus {
 	return a.status
 }
 
 // ConfiguredForArchival returns true if cluster is configured to handle archival, false otherwise.
-// If cluster is configured for archival then defaultBucket will be set.
 func (a *ArchivalConfig) ConfiguredForArchival() bool {
-	if !a.isValid() {
-		return false
-	}
 	return a.status != ArchivalDisabled
 }
 

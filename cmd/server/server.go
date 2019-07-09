@@ -26,8 +26,6 @@ import (
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/blobstore/filestore"
-	"github.com/uber/cadence/common/blobstore/s3store"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log/loggerimpl"
@@ -125,10 +123,10 @@ func (s *server) startService() common.Daemon {
 	params.RPCFactory = svcCfg.RPC.NewFactory(params.Name, params.Logger)
 	params.PProfInitializer = svcCfg.PProf.NewInitializer(params.Logger)
 
-	historyArchivalStatus := dc.GetStringProperty(dynamicconfig.ArchivalStatus, s.cfg.Archival.History.Status)
-	enableReadFromHistoryArchival := dc.GetBoolProperty(dynamicconfig.EnableReadFromArchival, s.cfg.Archival.History.EnableReadFromArchival)
-	visibilityArchivalStatus := dc.GetStringProperty(dynamicconfig.ArchivalStatus, s.cfg.Archival.Visibility.Status)
-	enableReadFromVisibilityArchival := dc.GetBoolProperty(dynamicconfig.EnableReadFromArchival, s.cfg.Archival.Visibility.EnableReadFromArchival)
+	historyArchivalStatus := dc.GetStringProperty(dynamicconfig.HistoryArchivalStatus, s.cfg.Archival.History.Status)
+	enableReadFromHistoryArchival := dc.GetBoolProperty(dynamicconfig.EnableReadFromHistoryArchival, s.cfg.Archival.History.EnableReadFromArchival)
+	visibilityArchivalStatus := dc.GetStringProperty(dynamicconfig.VisibilityArchivalStatus, s.cfg.Archival.Visibility.Status)
+	enableReadFromVisibilityArchival := dc.GetBoolProperty(dynamicconfig.EnableReadFromVisibilityArchival, s.cfg.Archival.Visibility.EnableReadFromArchival)
 
 	params.DCRedirectionPolicy = s.cfg.DCRedirectionPolicy
 
@@ -184,27 +182,28 @@ func (s *server) startService() common.Daemon {
 	}
 	params.PublicClient = workflowserviceclient.New(dispatcher.ClientConfig(common.FrontendServiceName))
 
-	if params.ClusterMetadata.ArchivalConfig().ConfiguredForArchival() {
-		if s.cfg.Archival.Filestore != nil && s.cfg.Archival.S3store != nil {
-			log.Fatalf("cannot config both filestore and s3store")
-		}
-		if s.cfg.Archival.Filestore == nil && s.cfg.Archival.S3store == nil {
-			log.Fatalf("cannot config archival without filestore or s3store")
-		}
-		if s.cfg.Archival.Filestore != nil {
-			filestoreClient, err := filestore.NewClient(s.cfg.Archival.Filestore)
-			if err != nil {
-				log.Fatalf("error creating file based blobstore: %v", err)
-			}
-			params.BlobstoreClient = filestoreClient
-		}
-		if s.cfg.Archival.S3store != nil {
-			s3cli, err := s3store.ClientFromConfig(s.cfg.Archival.S3store)
-			if err != nil {
-				log.Fatalf("error creating s3 blobstore: %v", err)
-			}
-			params.BlobstoreClient = s3store.NewClient(s3cli)
-		}
+	if params.ClusterMetadata.HistoryArchivalConfig().ConfiguredForArchival() {
+
+		// if s.cfg.Archival.Filestore != nil && s.cfg.Archival.S3store != nil {
+		// 	log.Fatalf("cannot config both filestore and s3store")
+		// }
+		// if s.cfg.Archival.Filestore == nil && s.cfg.Archival.S3store == nil {
+		// 	log.Fatalf("cannot config archival without filestore or s3store")
+		// }
+		// if s.cfg.Archival.Filestore != nil {
+		// 	filestoreClient, err := filestore.NewClient(s.cfg.Archival.Filestore)
+		// 	if err != nil {
+		// 		log.Fatalf("error creating file based blobstore: %v", err)
+		// 	}
+		// 	params.BlobstoreClient = filestoreClient
+		// }
+		// if s.cfg.Archival.S3store != nil {
+		// 	s3cli, err := s3store.ClientFromConfig(s.cfg.Archival.S3store)
+		// 	if err != nil {
+		// 		log.Fatalf("error creating s3 blobstore: %v", err)
+		// 	}
+		// 	params.BlobstoreClient = s3store.NewClient(s3cli)
+		// }
 	}
 
 	params.PersistenceConfig.TransactionSizeLimit = dc.GetIntProperty(dynamicconfig.TransactionSizeLimit, common.DefaultTransactionSizeLimit)
