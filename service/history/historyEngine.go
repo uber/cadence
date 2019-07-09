@@ -1772,42 +1772,18 @@ func (e *historyEngineImpl) SyncActivity(
 func (e *historyEngineImpl) ResetWorkflowExecution(
 	ctx ctx.Context,
 	resetRequest *h.ResetWorkflowExecutionRequest,
-) (response *workflow.ResetWorkflowExecutionResponse, retError error) {
+) (*workflow.ResetWorkflowExecutionResponse, error) {
 
 	domainEntry, retError := e.getActiveDomainEntry(resetRequest.DomainUUID)
 	if retError != nil {
-		return response, retError
+		return nil, retError
 	}
 	domainID := domainEntry.GetInfo().ID
 
 	request := resetRequest.ResetRequest
-	if request == nil || request.WorkflowExecution == nil || len(request.WorkflowExecution.GetWorkflowId()) == 0 {
-		return response, &workflow.BadRequestError{
-			Message: "Require workflowId.",
-		}
-	}
-	if request.DecisionFinishEventId != nil {
-		if len(request.WorkflowExecution.GetRunId()) == 0 {
-			return response, &workflow.BadRequestError{
-				Message: "DecisionFinishEventId must be provided with runID",
-			}
-		}
-		if request.GetDecisionFinishEventId() <= common.FirstEventID {
-			return response, &workflow.BadRequestError{
-				Message: "DecisionFinishEventId must be > 1",
-			}
-		}
-		if request.ResetType != nil {
-			return response, &workflow.BadRequestError{
-				Message: "DecisionFinishEventId cannot be used with reset type",
-			}
-		}
-	} else {
-		if request.ResetType == nil {
-			return response, &workflow.BadRequestError{
-				Message: "must provide DecisionFinishEventId or ResetType",
-			}
-		}
+	retError = ValidateResetRequest(request)
+	if retError != nil {
+		return nil, retError
 	}
 
 	// load the current run of the workflow
@@ -1816,7 +1792,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 		WorkflowID: request.WorkflowExecution.GetWorkflowId(),
 	})
 	if retError != nil {
-		return response, retError
+		return nil, retError
 	}
 
 	baseExecution := workflow.WorkflowExecution{
@@ -1831,13 +1807,13 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 
 	baseContext, baseRelease, retError := e.historyCache.getOrCreateWorkflowExecution(ctx, domainID, baseExecution)
 	if retError != nil {
-		return response, retError
+		return nil, retError
 	}
 	defer func() { baseRelease(retError) }()
 
 	baseMutableState, retError := baseContext.loadWorkflowExecution()
 	if retError != nil {
-		return response, retError
+		return nil, retError
 	}
 
 	if request.ResetType != nil {
@@ -1870,40 +1846,33 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 		case workflow.ResetTypeLastDecisionCompleted:
 			break
 		case workflow.ResetTypeBadBinary:
-			if len(request.GetBadBinaryChecksum()) <= 0 {
-				return response, &workflow.BadRequestError{
-					Message: "ResetTypeBadBinary must be provided with BadBinaryChecksum",
-				}
-			}
 			// refill DecisionFinishEventId from mutableState
 			runID, eventID, retError = LookupResetPoint(baseMutableState.GetExecutionInfo().AutoResetPoints, request.GetBadBinaryChecksum())
 			if retError != nil {
-				return response, retError
+				return nil, retError
 			}
 			request.DecisionFinishEventId = common.Int64Ptr(eventID)
 
 			baseRelease, retError = reloadNewBase()
 			if retError != nil {
-				return response, retError
+				return nil, retError
 			}
 			defer func() { baseRelease(retError) }()
 		case workflow.ResetTypeLastContinuedAsNew:
 			startEvent, found := baseMutableState.GetStartEvent()
 			if !found {
-				return response, &workflow.InternalServiceError{
+				return nil, &workflow.InternalServiceError{
 					Message: "Start event is missing",
 				}
 			}
 			runID = startEvent.WorkflowExecutionStartedEventAttributes.GetContinuedExecutionRunId()
 			baseRelease, retError = reloadNewBase()
 			if retError != nil {
-				return response, retError
+				return nil, retError
 			}
 			defer func() { baseRelease(retError) }()
 		default:
-			return response, &workflow.BadRequestError{
-				Message: fmt.Sprintf("not supported ResetType %v", request.GetResetType()),
-			}
+			panic("not supported")
 		}
 	}
 
@@ -1922,18 +1891,18 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 		var currRelease func(err error)
 		currContext, currRelease, retError = e.historyCache.getOrCreateWorkflowExecution(ctx, domainID, currExecution)
 		if retError != nil {
-			return response, retError
+			return nil, retError
 		}
 		defer func() { currRelease(retError) }()
 		currMutableState, retError = currContext.loadWorkflowExecution()
 		if retError != nil {
-			return response, retError
+			return nil, retError
 		}
 	}
 
 	// dedup by requestID
 	if currMutableState.GetExecutionInfo().CreateRequestID == request.GetRequestId() {
-		response = &workflow.ResetWorkflowExecutionResponse{
+		response := &workflow.ResetWorkflowExecutionResponse{
 			RunId: currExecution.RunId,
 		}
 		e.logger.Info("Duplicated reset request",

@@ -1032,3 +1032,52 @@ func LookupResetPoint(resetPoints *workflow.ResetPoints, binaryChecksum string) 
 		}
 	}
 }
+
+func ValidateResetRequest(request *workflow.ResetWorkflowExecutionRequest) error {
+	if request == nil || request.WorkflowExecution == nil || len(request.WorkflowExecution.GetWorkflowId()) == 0 {
+		return &workflow.BadRequestError{
+			Message: "Require workflowId.",
+		}
+	}
+	if request.DecisionFinishEventId != nil {
+		if len(request.WorkflowExecution.GetRunId()) == 0 {
+			return &workflow.BadRequestError{
+				Message: "DecisionFinishEventId must be provided with runID",
+			}
+		}
+		if request.GetDecisionFinishEventId() <= common.FirstEventID {
+			return &workflow.BadRequestError{
+				Message: "DecisionFinishEventId must be > 1",
+			}
+		}
+		if request.ResetType != nil {
+			return &workflow.BadRequestError{
+				Message: "DecisionFinishEventId cannot be used with reset type",
+			}
+		}
+	} else {
+		if request.ResetType == nil {
+			return &workflow.BadRequestError{
+				Message: "must provide DecisionFinishEventId or ResetType",
+			}
+		}
+
+		switch request.GetResetType() {
+		case workflow.ResetTypeLastContinuedAsNew:
+		case workflow.ResetTypeLastDecisionCompleted:
+		case workflow.ResetTypeFirstDecisionCompleted:
+		case workflow.ResetTypeBadBinary:
+			if len(request.GetBadBinaryChecksum()) <= 0 {
+				return &workflow.BadRequestError{
+					Message: "ResetTypeBadBinary must be provided with BadBinaryChecksum",
+				}
+			}
+		default:
+			return &workflow.BadRequestError{
+				Message: fmt.Sprintf("not supported ResetType %v", request.GetResetType()),
+			}
+		}
+	}
+
+	return nil
+}
