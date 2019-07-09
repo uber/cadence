@@ -25,6 +25,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/common/log/tag"
+
 	"github.com/pborman/uuid"
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -56,6 +58,21 @@ type (
 	workflowResetorImpl struct {
 		eng        *historyEngineImpl
 		timeSource clock.TimeSource
+	}
+
+	resetSnapshot struct {
+		newMutableState  mutableState
+		newTransferTasks []persistence.Task
+		newTimerTasks    []persistence.Task
+	}
+
+	replayHistoryResult struct {
+		forkEventVersion          int64
+		workflowTimeoutSecs       int64
+		receivedSignalsAfterReset []*workflow.HistoryEvent
+		continueRunID             string
+		newRunStateBuilder        stateBuilder
+		forkEventID               int64
 	}
 )
 
@@ -102,18 +119,25 @@ func (w *workflowResetorImpl) ResetWorkflowExecution(
 		return response, retError
 	}
 
-	newMutableState, newTransferTasks, newTimerTasks, retError := w.buildNewMutableStateForReset(
-		ctx, domainEntry, baseMutableState, currMutableState,
-		request.GetReason(), request.GetDecisionFinishEventId(), request.GetRequestId(), resetNewRunID,
+	snapshot, retError := w.buildNewMutableStateForReset(
+		ctx, domainEntry, baseMutableState, currMutableState, request, resetNewRunID,
 	)
+	if retError != nil {
+		return response, retError
+	}
+
+	newMutableState := snapshot.newMutableState
+	newTransferTasks := snapshot.newTransferTasks
+	newTimerTasks := snapshot.newTimerTasks
 	// complete the fork process at the end, it is OK even if this defer fails, because our timer task can still clean up correctly
 	defer func() {
 		if newMutableState != nil && len(newMutableState.GetExecutionInfo().GetCurrentBranch()) > 0 {
-			w.eng.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
+			err := w.eng.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
 				BranchToken: newMutableState.GetExecutionInfo().GetCurrentBranch(),
 				Success:     retError == nil || persistence.IsTimeoutError(retError),
 				ShardID:     common.IntPtr(w.eng.shard.GetShardID()),
 			})
+			w.eng.logger.Error("Failed at CompleteForkBranch", tag.Error(err))
 		}
 	}()
 	if retError != nil {
@@ -243,32 +267,34 @@ func (w *workflowResetorImpl) scheduleUnstartedActivities(msBuilder mutableState
 	return tasks, nil
 }
 
-// TODO: @shreyassrivatsan reduce number of return parameters
 func (w *workflowResetorImpl) buildNewMutableStateForReset(
 	ctx context.Context,
 	domainEntry *cache.DomainCacheEntry,
 	baseMutableState, currMutableState mutableState,
-	resetReason string,
-	resetDecisionCompletedEventID int64,
-	requestedID, newRunID string,
-) (newMutableState mutableState, newTransferTasks, newTimerTasks []persistence.Task, retError error) {
+	request *workflow.ResetWorkflowExecutionRequest,
+	newRunID string,
+) (snapshot resetSnapshot, retError error) {
 
 	domainID := baseMutableState.GetExecutionInfo().DomainID
 	workflowID := baseMutableState.GetExecutionInfo().WorkflowID
 	baseRunID := baseMutableState.GetExecutionInfo().RunID
 
 	// replay history to reset point(exclusive) to rebuild mutableState
-	forkEventVersion, wfTimeoutSecs, receivedSignals, continueRunID, newStateBuilder, retError := w.replayHistoryEvents(
-		resetDecisionCompletedEventID, requestedID, baseMutableState, newRunID,
-	)
+	replayResult, retError := w.replayHistoryEvents(request, baseMutableState, newRunID)
 	if retError != nil {
-		return
+		return snapshot, retError
 	}
-	newMutableState = newStateBuilder.getMutableState()
+	forkEventVersion := replayResult.forkEventVersion
+	wfTimeoutSecs := replayResult.workflowTimeoutSecs
+	receivedSignals := replayResult.receivedSignalsAfterReset
+	continueRunID := replayResult.continueRunID
+	newStateBuilder := replayResult.newRunStateBuilder
+
+	newMutableState := newStateBuilder.getMutableState()
 
 	retError = w.validateResetWorkflowAfterReplay(newMutableState)
 	if retError != nil {
-		return
+		return snapshot, retError
 	}
 
 	// set the new mutable state with the version in domain
@@ -281,20 +307,19 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(
 	di, _ := newMutableState.GetInFlightDecisionTask()
 
 	_, err := newMutableState.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, workflow.DecisionTaskFailedCauseResetWorkflow, nil,
-		identityHistoryService, resetReason, baseRunID, newRunID, forkEventVersion)
+		identityHistoryService, request.GetReason(), baseRunID, newRunID, forkEventVersion)
 	if err != nil {
-		retError = &workflow.InternalServiceError{Message: "Failed to add decision failed event."}
-		return
+		return snapshot, &workflow.InternalServiceError{Message: "Failed to add decision failed event."}
 	}
 
 	retError = w.failStartedActivities(newMutableState)
 	if retError != nil {
-		return
+		return snapshot, retError
 	}
 
-	newTransferTasks, retError = w.scheduleUnstartedActivities(newMutableState)
+	newTransferTasks, retError := w.scheduleUnstartedActivities(newMutableState)
 	if retError != nil {
-		return
+		return snapshot, retError
 	}
 
 	// we will need a timer for the scheduled activities
@@ -304,21 +329,20 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(
 	// 1. WF timeout,
 	// 2. user timers for timers started but not fired by reset
 	// 3. activity timeout for scheduled but not started activities
-	newTimerTasks, retError = w.generateTimerTasksForReset(newMutableState, wfTimeoutSecs, needActivityTimer)
+	newTimerTasks, retError := w.generateTimerTasksForReset(newMutableState, wfTimeoutSecs, needActivityTimer)
 	if retError != nil {
-		return
+		return snapshot, retError
 	}
 	// replay received signals back to mutableState/history:
 	retError = w.replayReceivedSignals(ctx, receivedSignals, continueRunID, newMutableState, currMutableState)
 	if retError != nil {
-		return
+		return snapshot, retError
 	}
 
 	// we always schedule a new decision after reset
 	di, err = newMutableState.AddDecisionTaskScheduledEvent()
 	if err != nil {
-		retError = &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
-		return
+		return snapshot, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
 	}
 
 	newTransferTasks = append(newTransferTasks,
@@ -333,15 +357,18 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(
 	// fork a new history branch
 	forkResp, retError := w.eng.historyV2Mgr.ForkHistoryBranch(&persistence.ForkHistoryBranchRequest{
 		ForkBranchToken: baseMutableState.GetCurrentBranch(),
-		ForkNodeID:      resetDecisionCompletedEventID,
+		ForkNodeID:      replayResult.forkEventID,
 		Info:            historyGarbageCleanupInfo(domainID, workflowID, newRunID),
 		ShardID:         common.IntPtr(w.eng.shard.GetShardID()),
 	})
 	if retError != nil {
-		return
+		return snapshot, retError
 	}
 	newMutableState.GetExecutionInfo().BranchToken = forkResp.NewBranchToken
-	return
+	snapshot.newTimerTasks = newTimerTasks
+	snapshot.newTransferTasks = newTransferTasks
+	snapshot.newMutableState = newMutableState
+	return snapshot, nil
 }
 
 func (w *workflowResetorImpl) terminateIfCurrIsRunning(
@@ -437,7 +464,10 @@ func (w *workflowResetorImpl) replayReceivedSignals(
 			Identity:   se.GetWorkflowExecutionSignaledEventAttributes().Identity,
 			Input:      se.GetWorkflowExecutionSignaledEventAttributes().Input,
 		}
-		newMutableState.AddWorkflowExecutionSignaled(sigReq.GetSignalName(), sigReq.GetInput(), sigReq.GetIdentity())
+		_, err := newMutableState.AddWorkflowExecutionSignaled(sigReq.GetSignalName(), sigReq.GetInput(), sigReq.GetIdentity())
+		if err != nil {
+			return err
+		}
 	}
 	for {
 		if len(continueRunID) == 0 {
@@ -487,7 +517,10 @@ func (w *workflowResetorImpl) replayReceivedSignals(
 							Identity:   e.GetWorkflowExecutionSignaledEventAttributes().Identity,
 							Input:      e.GetWorkflowExecutionSignaledEventAttributes().Input,
 						}
-						newMutableState.AddWorkflowExecutionSignaled(sigReq.GetSignalName(), sigReq.GetInput(), sigReq.GetIdentity())
+						_, err := newMutableState.AddWorkflowExecutionSignaled(sigReq.GetSignalName(), sigReq.GetInput(), sigReq.GetIdentity())
+						if err != nil {
+							return err
+						}
 					} else if e.GetEventType() == workflow.EventTypeWorkflowExecutionContinuedAsNew {
 						attr := e.GetWorkflowExecutionContinuedAsNewEventAttributes()
 						continueRunID = attr.GetNewExecutionRunId()
@@ -548,13 +581,11 @@ func getRespondActivityTaskFailedRequestFromActivity(ai *persistence.ActivityInf
 	}
 }
 
-// TODO: @shreyassrivatsan reduce the number of return parameters from this method or return a struct
 func (w *workflowResetorImpl) replayHistoryEvents(
-	decisionFinishEventID int64,
-	requestID string,
+	request *workflow.ResetWorkflowExecutionRequest,
 	prevMutableState mutableState,
 	newRunID string,
-) (forkEventVersion, wfTimeoutSecs int64, receivedSignalsAfterReset []*workflow.HistoryEvent, continueRunID string, sBuilder stateBuilder, retError error) {
+) (replayResult replayHistoryResult, retError error) {
 
 	prevExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(prevMutableState.GetExecutionInfo().WorkflowID),
@@ -573,27 +604,57 @@ func (w *workflowResetorImpl) replayHistoryEvents(
 	}
 	var resetMutableState *mutableStateBuilder
 	var lastBatch []*workflow.HistoryEvent
+	var lastDecisionTaskCompletedEventID *int64
 
 	for {
 		var readResp *persistence.ReadHistoryBranchByBatchResponse
 		readResp, retError = w.eng.historyV2Mgr.ReadHistoryBranchByBatch(readReq)
 		if retError != nil {
-			return
+			return replayResult, retError
 		}
 		for _, batch := range readResp.History {
 			history := batch.Events
 			firstEvent := history[0]
 			lastEvent := history[len(history)-1]
 
-			// for saving received signals only
-			if firstEvent.GetEventId() >= decisionFinishEventID {
+			if request.ResetType != nil {
+				switch request.GetResetType() {
+				case workflow.ResetTypeFirstDecisionCompleted:
+					if request.DecisionFinishEventId != nil {
+						break
+					} else {
+						for _, e := range history {
+							if e.GetEventType() == workflow.EventTypeDecisionTaskCompleted {
+								request.DecisionFinishEventId = e.EventId
+								break
+							}
+						}
+					}
+				case workflow.ResetTypeLastContinuedAsNew:
+					fallthrough
+				case workflow.ResetTypeLastDecisionCompleted:
+					for _, e := range history {
+						if e.GetEventType() == workflow.EventTypeDecisionTaskCompleted {
+							lastDecisionTaskCompletedEventID = e.EventId
+							break
+						}
+					}
+				default:
+					return replayResult, &workflow.BadRequestError{
+						Message: fmt.Sprintf("not supported type %v", request.GetResetType()),
+					}
+				}
+			}
+
+			if request.DecisionFinishEventId != nil && firstEvent.GetEventId() >= request.GetDecisionFinishEventId() {
+				// beyond the reset point, save received signals
 				for _, e := range batch.Events {
 					if e.GetEventType() == workflow.EventTypeWorkflowExecutionSignaled {
-						receivedSignalsAfterReset = append(receivedSignalsAfterReset, e)
+						replayResult.receivedSignalsAfterReset = append(replayResult.receivedSignalsAfterReset, e)
 					}
 					if e.GetEventType() == workflow.EventTypeWorkflowExecutionContinuedAsNew {
 						attr := e.GetWorkflowExecutionContinuedAsNewEventAttributes()
-						continueRunID = attr.GetNewExecutionRunId()
+						replayResult.continueRunID = attr.GetNewExecutionRunId()
 					}
 				}
 				continue
@@ -602,12 +663,11 @@ func (w *workflowResetorImpl) replayHistoryEvents(
 			lastBatch = history
 			if firstEvent.GetEventId() == common.FirstEventID {
 				if firstEvent.GetEventType() != workflow.EventTypeWorkflowExecutionStarted {
-					retError = &workflow.InternalServiceError{
+					return replayResult, &workflow.InternalServiceError{
 						Message: fmt.Sprintf("first event type is not EventTypeWorkflowExecutionStarted: %v", firstEvent.GetEventType()),
 					}
-					return
 				}
-				wfTimeoutSecs = int64(firstEvent.GetWorkflowExecutionStartedEventAttributes().GetExecutionStartToCloseTimeoutSeconds())
+				replayResult.workflowTimeoutSecs = int64(firstEvent.GetWorkflowExecutionStartedEventAttributes().GetExecutionStartToCloseTimeoutSeconds())
 				if prevMutableState.GetReplicationState() != nil {
 					resetMutableState = newMutableStateBuilderWithReplicationState(
 						w.eng.shard,
@@ -621,20 +681,21 @@ func (w *workflowResetorImpl) replayHistoryEvents(
 
 				resetMutableState.executionInfo.EventStoreVersion = persistence.EventStoreVersionV2
 
-				sBuilder = newStateBuilder(w.eng.shard, resetMutableState, w.eng.logger)
+				replayResult.newRunStateBuilder = newStateBuilder(w.eng.shard, resetMutableState, w.eng.logger)
 			}
 
 			// avoid replay this event in stateBuilder which will run into NPE if WF doesn't enable XDC
 			if lastEvent.GetEventType() == workflow.EventTypeWorkflowExecutionContinuedAsNew {
-				retError = &workflow.BadRequestError{
+				return replayResult, &workflow.BadRequestError{
 					Message: fmt.Sprintf("wrong DecisionFinishEventId, cannot replay history to continueAsNew"),
 				}
-				return
 			}
 
-			_, _, _, retError = sBuilder.applyEvents(domainID, requestID, prevExecution, history, nil, persistence.EventStoreVersionV2, persistence.EventStoreVersionV2)
+			_, _, _, retError = replayResult.newRunStateBuilder.applyEvents(
+				domainID, request.GetRequestId(), prevExecution, history, nil,
+				persistence.EventStoreVersionV2, persistence.EventStoreVersionV2)
 			if retError != nil {
-				return
+				return replayResult, retError
 			}
 		}
 		resetMutableState.IncrementHistorySize(readResp.Size)
@@ -645,19 +706,30 @@ func (w *workflowResetorImpl) replayHistoryEvents(
 		}
 	}
 
-	retError = validateLastBatchOfReset(lastBatch, decisionFinishEventID)
-	if retError != nil {
-		return
+	if request.DecisionFinishEventId != nil {
+		replayResult.forkEventID = request.GetDecisionFinishEventId()
+	} else {
+		if lastDecisionTaskCompletedEventID == nil {
+			return replayResult, &workflow.BadRequestError{
+				Message: fmt.Sprintf("workflow doesn't have a decision task completed event to reset"),
+			}
+		}
+		replayResult.forkEventID = *lastDecisionTaskCompletedEventID
 	}
-	forkEventVersion = lastBatch[len(lastBatch)-1].GetVersion()
+
+	retError = validateLastBatchOfReset(lastBatch, replayResult.forkEventID)
+	if retError != nil {
+		return replayResult, retError
+	}
+	replayResult.forkEventVersion = lastBatch[len(lastBatch)-1].GetVersion()
 
 	startTime := w.timeSource.Now()
 	resetMutableState.executionInfo.RunID = newRunID
 	resetMutableState.executionInfo.StartTimestamp = startTime
 	resetMutableState.executionInfo.LastUpdatedTimestamp = startTime
-	resetMutableState.executionInfo.SetNextEventID(decisionFinishEventID)
+	resetMutableState.executionInfo.SetNextEventID(replayResult.forkEventID)
 	resetMutableState.ClearStickyness()
-	return
+	return replayResult, nil
 }
 
 func validateLastBatchOfReset(lastBatch []*workflow.HistoryEvent, decisionFinishEventID int64) error {

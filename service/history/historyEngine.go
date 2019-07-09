@@ -1797,6 +1797,11 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 				Message: "Decision finish ID must be > 1",
 			}
 		}
+		if request.ResetType != nil {
+			return response, &workflow.BadRequestError{
+				Message: "DecisionFinishEventId cannot be used with reset type",
+			}
+		}
 	} else {
 		if request.ResetType == nil {
 			return response, &workflow.BadRequestError{
@@ -1835,11 +1840,16 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 		return response, retError
 	}
 
-	// these reset types may need to load another base
-	if request.GetResetType() == workflow.ResetTypeBadBinary || request.GetResetType() == workflow.ResetTypeLastContinuedAsNew {
+	if request.ResetType != nil {
 		var runID string
 		var eventID int64
-		if request.GetResetType() == workflow.ResetTypeBadBinary {
+		// Note: some reset types may need to load another base
+		switch request.GetResetType() {
+		case workflow.ResetTypeFirstDecisionCompleted:
+			break
+		case workflow.ResetTypeLastDecisionCompleted:
+			break
+		case workflow.ResetTypeBadBinary:
 			if len(request.GetBadBinaryChecksum()) <= 0 {
 				return response, &workflow.BadRequestError{
 					Message: "ResetTypeBadBinary must be provided with BadBinaryChecksum",
@@ -1851,21 +1861,11 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 				return response, retError
 			}
 			request.DecisionFinishEventId = common.Int64Ptr(eventID)
-		} else {
-			startEvent, found := baseMutableState.GetStartEvent()
-			if !found {
-				return response, &workflow.InternalServiceError{
-					Message: "Start event is missing",
-				}
-			}
-			runID = startEvent.WorkflowExecutionStartedEventAttributes.GetContinuedExecutionRunId()
-		}
-
-		// reload another base from anther runID if different
-		if runID != baseExecution.GetRunId() {
-			baseExecution.RunId = common.StringPtr(runID)
 			// release the prev base
 			baseRelease(nil)
+
+			// reload new base
+			baseExecution.RunId = common.StringPtr(runID)
 			baseContext, baseRelease, retError = e.historyCache.getOrCreateWorkflowExecution(ctx, domainID, baseExecution)
 			if retError != nil {
 				return response, retError
@@ -1874,6 +1874,32 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 			baseMutableState, retError = baseContext.loadWorkflowExecution()
 			if retError != nil {
 				return response, retError
+			}
+		case workflow.ResetTypeLastContinuedAsNew:
+			startEvent, found := baseMutableState.GetStartEvent()
+			if !found {
+				return response, &workflow.InternalServiceError{
+					Message: "Start event is missing",
+				}
+			}
+			runID = startEvent.WorkflowExecutionStartedEventAttributes.GetContinuedExecutionRunId()
+			// release the prev base
+			baseRelease(nil)
+
+			// reload new base
+			baseExecution.RunId = common.StringPtr(runID)
+			baseContext, baseRelease, retError = e.historyCache.getOrCreateWorkflowExecution(ctx, domainID, baseExecution)
+			if retError != nil {
+				return response, retError
+			}
+			defer func() { baseRelease(retError) }()
+			baseMutableState, retError = baseContext.loadWorkflowExecution()
+			if retError != nil {
+				return response, retError
+			}
+		default:
+			return response, &workflow.BadRequestError{
+				Message: fmt.Sprintf("not supported ResetType %v", request.GetResetType()),
 			}
 		}
 	}
