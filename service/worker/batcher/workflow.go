@@ -335,17 +335,21 @@ func startTaskProcessor(
 			case BatchTypeTerminate:
 				err = processChildRecursiveTask(ctx, limiter, task, batchParams, client,
 					batchParams.TerminateParams.TerminateChildren,
-					func(workflowID, runID, reason string) error {
+					func(workflowID, runID string) error {
 						return client.TerminateWorkflow(ctx, workflowID, runID, batchParams.Reason, []byte{})
 					})
 			case BatchTypeCancel:
 				err = processChildRecursiveTask(ctx, limiter, task, batchParams, client,
 					batchParams.CancelParams.CancelChildren,
-					func(workflowID, runID, reason string) error {
+					func(workflowID, runID string) error {
 						return client.CancelWorkflow(ctx, workflowID, runID)
 					})
 			case BatchTypeSignal:
-				err = processSignalTask(ctx, limiter, task, batchParams, client)
+				err = processChildRecursiveTask(ctx, limiter, task, batchParams, client, nil,
+					func(workflowID, runID string) error {
+						return client.SignalWorkflow(ctx, workflowID, runID,
+							batchParams.SignalParams.SignalName, []byte(batchParams.SignalParams.Input))
+					})
 			}
 			if err != nil {
 				batcher.metricsClient.IncCounter(metrics.BatcherScope, metrics.BatcherProcessorFailures)
@@ -367,28 +371,15 @@ func startTaskProcessor(
 	}
 }
 
-func processSignalTask(ctx context.Context, limiter *rate.Limiter, task taskDetail, batchParams BatchParams, client cclient.Client) error {
-	err := limiter.Wait(ctx)
-	if err != nil {
-		return err
-	}
-
-	err = client.SignalWorkflow(ctx, task.execution.GetWorkflowId(), task.execution.GetRunId(),
-		batchParams.SignalParams.SignalName, []byte(batchParams.SignalParams.Input))
-	if err != nil {
-		// EntityNotExistsError means wf is not running or deleted
-		_, ok := err.(*shared.EntityNotExistsError)
-		if !ok {
-			return err
-		}
-	}
-	activity.RecordHeartbeat(ctx, task.hbd)
-	return nil
-}
-
 func processChildRecursiveTask(
-	ctx context.Context, limiter *rate.Limiter, task taskDetail, batchParams BatchParams,
-	client cclient.Client, applyOnChild *bool, procFn func(string, string, string) error) error {
+	ctx context.Context,
+	limiter *rate.Limiter,
+	task taskDetail,
+	batchParams BatchParams,
+	client cclient.Client,
+	applyOnChild *bool,
+	procFn func(string, string) error,
+) error {
 	wfs := []shared.WorkflowExecution{task.execution}
 	for len(wfs) > 0 {
 		wf := wfs[0]
@@ -398,7 +389,7 @@ func processChildRecursiveTask(
 			return err
 		}
 
-		err = procFn(wf.GetWorkflowId(), wf.GetRunId(), batchParams.Reason)
+		err = procFn(wf.GetWorkflowId(), wf.GetRunId())
 		if err != nil {
 			// EntityNotExistsError means wf is not running or deleted
 			_, ok := err.(*shared.EntityNotExistsError)
