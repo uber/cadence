@@ -1402,6 +1402,16 @@ const (
 	SyncMatchLatency
 	AsyncMatchLatency
 	ExpiredTasksCounter
+	ForwardedCounter
+	ForwardTaskCalls
+	ForwardTaskErrors
+	ForwardTaskLatency
+	ForwardQueryCalls
+	ForwardQueryErrors
+	ForwardQueryLatency
+	ForwardPollCalls
+	ForwardPollErrors
+	ForwardPollLatency
 
 	NumMatchingMetrics
 )
@@ -1655,8 +1665,15 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		SyncThrottleCounter:           {metricName: "sync_throttle_count"},
 		BufferThrottleCounter:         {metricName: "buffer_throttle_count"},
 		ExpiredTasksCounter:           {metricName: "tasks_expired"},
+		ForwardedCounter:              {metricName: "forwarded"},
+		ForwardTaskCalls:              {metricName: "forward_task_calls"},
+		ForwardQueryCalls:             {metricName: "forward_query_calls"},
+		ForwardPollCalls:              {metricName: "forward_poll_calls"},
 		SyncMatchLatency:              {metricName: "syncmatch_latency", metricType: Timer},
 		AsyncMatchLatency:             {metricName: "asyncmatch_latency", metricType: Timer},
+		ForwardTaskLatency:            {metricName: "forward_task_latency"},
+		ForwardQueryLatency:           {metricName: "forward_query_latency"},
+		ForwardPollLatency:            {metricName: "forward_poll_latency"},
 	},
 	Worker: {
 		ReplicatorMessages:                       {metricName: "replicator_messages"},
