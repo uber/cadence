@@ -345,7 +345,7 @@ func startTaskProcessor(
 						return client.CancelWorkflow(ctx, workflowID, runID)
 					})
 			case BatchTypeSignal:
-				err = processChildRecursiveTask(ctx, limiter, task, batchParams, client, nil,
+				err = processChildRecursiveTask(ctx, limiter, task, batchParams, client, common.BoolPtr(false),
 					func(workflowID, runID string) error {
 						return client.SignalWorkflow(ctx, workflowID, runID,
 							batchParams.SignalParams.SignalName, []byte(batchParams.SignalParams.Input))
