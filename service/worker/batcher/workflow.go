@@ -97,8 +97,6 @@ type (
 		BatchType string
 
 		// Below are all optional
-		// for dedup operation
-		RequestID string
 		// TerminateParams is params only for BatchTypeTerminate
 		TerminateParams TerminateParams
 		// CancelParams is params only for BatchTypeCancel
