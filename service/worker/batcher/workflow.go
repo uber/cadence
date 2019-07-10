@@ -335,9 +335,17 @@ func startTaskProcessor(
 
 			switch batchParams.BatchType {
 			case BatchTypeTerminate:
-				fallthrough
+				err = processChildRecursiveTask(ctx, limiter, task, batchParams, client,
+					batchParams.TerminateParams.TerminateChildren,
+					func(workflowID, runID, reason string) error {
+						return client.TerminateWorkflow(ctx, workflowID, runID, batchParams.Reason, []byte{})
+					})
 			case BatchTypeCancel:
-				err = processTerminateOrCancelTask(ctx, limiter, task, batchParams, client)
+				err = processChildRecursiveTask(ctx, limiter, task, batchParams, client,
+					batchParams.CancelParams.CancelChildren,
+					func(workflowID, runID, reason string) error {
+						return client.CancelWorkflow(ctx, workflowID, runID)
+					})
 			case BatchTypeSignal:
 				err = processSignalTask(ctx, limiter, task, batchParams, client)
 			}
@@ -368,7 +376,7 @@ func processSignalTask(ctx context.Context, limiter *rate.Limiter, task taskDeta
 	}
 
 	err = client.SignalWorkflow(ctx, task.execution.GetWorkflowId(), task.execution.GetRunId(),
-		batchParams.SignalParams.SignalName, batchParams.SignalParams.Input)
+		batchParams.SignalParams.SignalName, []byte(batchParams.SignalParams.Input))
 	if err != nil {
 		// EntityNotExistsError means wf is not running or deleted
 		_, ok := err.(*shared.EntityNotExistsError)
@@ -380,7 +388,9 @@ func processSignalTask(ctx context.Context, limiter *rate.Limiter, task taskDeta
 	return nil
 }
 
-func processTerminateOrCancelTask(ctx context.Context, limiter *rate.Limiter, task taskDetail, batchParams BatchParams, client cclient.Client) error {
+func processChildRecursiveTask(
+	ctx context.Context, limiter *rate.Limiter, task taskDetail, batchParams BatchParams,
+	client cclient.Client, applyOnChild *bool, procFn func(string, string, string) error) error {
 	wfs := []shared.WorkflowExecution{task.execution}
 	for len(wfs) > 0 {
 		wf := wfs[0]
@@ -390,11 +400,7 @@ func processTerminateOrCancelTask(ctx context.Context, limiter *rate.Limiter, ta
 			return err
 		}
 
-		if batchParams.BatchType == BatchTypeTerminate {
-			err = client.TerminateWorkflow(ctx, wf.GetWorkflowId(), wf.GetRunId(), batchParams.Reason, []byte{})
-		} else {
-			err = client.CancelWorkflow(ctx, wf.GetWorkflowId(), wf.GetRunId())
-		}
+		err = procFn(wf.GetWorkflowId(), wf.GetRunId(), batchParams.Reason)
 		if err != nil {
 			// EntityNotExistsError means wf is not running or deleted
 			_, ok := err.(*shared.EntityNotExistsError)
@@ -415,25 +421,13 @@ func processTerminateOrCancelTask(ctx context.Context, limiter *rate.Limiter, ta
 
 		// TODO https://github.com/uber/cadence/issues/2159
 		// By default should use ChildPolicy, but it is totally broken in Cadence, we need to fix it before using
-		if batchParams.BatchType == BatchTypeTerminate {
-			if *batchParams.TerminateParams.TerminateChildren && len(resp.PendingChildren) > 0 {
-				getActivityLogger(ctx).Info("Found more child workflows to terminate", tag.Number(int64(len(resp.PendingChildren))))
-				for _, ch := range resp.PendingChildren {
-					wfs = append(wfs, shared.WorkflowExecution{
-						WorkflowId: ch.WorkflowID,
-						RunId:      ch.RunID,
-					})
-				}
-			}
-		} else {
-			if *batchParams.CancelParams.CancelChildren && len(resp.PendingChildren) > 0 {
-				getActivityLogger(ctx).Info("Found more child workflows to cancel", tag.Number(int64(len(resp.PendingChildren))))
-				for _, ch := range resp.PendingChildren {
-					wfs = append(wfs, shared.WorkflowExecution{
-						WorkflowId: ch.WorkflowID,
-						RunId:      ch.RunID,
-					})
-				}
+		if applyOnChild != nil && *applyOnChild && len(resp.PendingChildren) > 0 {
+			getActivityLogger(ctx).Info("Found more child workflows to process", tag.Number(int64(len(resp.PendingChildren))))
+			for _, ch := range resp.PendingChildren {
+				wfs = append(wfs, shared.WorkflowExecution{
+					WorkflowId: ch.WorkflowID,
+					RunId:      ch.RunID,
+				})
 			}
 		}
 
