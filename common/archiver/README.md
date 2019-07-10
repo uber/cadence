@@ -64,7 +64,7 @@ func (a *Archiver) Archive(
 }
 ```
 
-4. The `archiver` package provides a utility class called `HistoryIterator` which is a wrapper of `HistoryReader`. Its usage is simpler than the `HistoryReader` given in the `BootstrapContainer`, so archiver implementations can choose to use it when reading workflow histories. Check the `historyIterator.go` file for more details. Sample usage can be found in the filestore historyArchiver implementation.
+4. The `archiver` package provides a utility class called `HistoryIterator` which is a wrapper of `HistoryManager`. Its usage is simpler than the `HistoryManager` given in the `BootstrapContainer`, so archiver implementations can choose to use it when reading workflow histories. Check the `historyIterator.go` file for more details. Sample usage can be found in the filestore historyArchiver implementation.
 
 5. The `archiver` package also provides some common error types and messages in `constants.go`.
 
