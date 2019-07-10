@@ -283,9 +283,9 @@ type (
 	// Archival contains the config for archival
 	Archival struct {
 		// History is the config for the history archival
-		History HistoryArchival `yaml:"historyArchival"`
+		History HistoryArchival `yaml:"history"`
 		// Visibility is the config for visibility archival
-		Visibility VisibilityArchival `yaml:"visibilityArchival"`
+		Visibility VisibilityArchival `yaml:"visibility"`
 	}
 
 	// HistoryArchival contains the config for history archival

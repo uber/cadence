@@ -95,8 +95,8 @@ dcRedirectionPolicy:
 
 archival:
   history:
-    status: "enabled"
-    enableReadFromArchival: true
+    status: "disabled"
+    enableReadFromArchival: false
     archiverConfig:
       filestore:
         fileMode: "0600"
