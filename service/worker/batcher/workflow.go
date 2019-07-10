@@ -333,19 +333,19 @@ func startTaskProcessor(
 
 			switch batchParams.BatchType {
 			case BatchTypeTerminate:
-				err = processChildRecursiveTask(ctx, limiter, task, batchParams, client,
+				err = processTask(ctx, limiter, task, batchParams, client,
 					batchParams.TerminateParams.TerminateChildren,
 					func(workflowID, runID string) error {
 						return client.TerminateWorkflow(ctx, workflowID, runID, batchParams.Reason, []byte{})
 					})
 			case BatchTypeCancel:
-				err = processChildRecursiveTask(ctx, limiter, task, batchParams, client,
+				err = processTask(ctx, limiter, task, batchParams, client,
 					batchParams.CancelParams.CancelChildren,
 					func(workflowID, runID string) error {
 						return client.CancelWorkflow(ctx, workflowID, runID)
 					})
 			case BatchTypeSignal:
-				err = processChildRecursiveTask(ctx, limiter, task, batchParams, client, common.BoolPtr(false),
+				err = processTask(ctx, limiter, task, batchParams, client, common.BoolPtr(false),
 					func(workflowID, runID string) error {
 						return client.SignalWorkflow(ctx, workflowID, runID,
 							batchParams.SignalParams.SignalName, []byte(batchParams.SignalParams.Input))
@@ -371,7 +371,7 @@ func startTaskProcessor(
 	}
 }
 
-func processChildRecursiveTask(
+func processTask(
 	ctx context.Context,
 	limiter *rate.Limiter,
 	task taskDetail,
