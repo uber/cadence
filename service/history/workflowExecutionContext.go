@@ -319,6 +319,10 @@ func (c *workflowExecutionContextImpl) resetMutableState(
 		HistorySize: resetHistorySize,
 	}
 	snapshotRequest.ResetWorkflowSnapshot.Condition = c.updateCondition
+	snapshotRequest.ResetWorkflowSnapshot.TransferTasks = append(
+		snapshotRequest.ResetWorkflowSnapshot.TransferTasks,
+		&persistence.UpsertWorkflowSearchAttributesTask{},
+	)
 
 	err := c.shard.ResetMutableState(snapshotRequest)
 	if err != nil {
