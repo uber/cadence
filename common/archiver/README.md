@@ -68,4 +68,4 @@ func (a *Archiver) Archive(
 
 5. The `archiver` package also provides some common error types and messages in `constants.go`.
 
-6. After you have finished the implementation, modify the `./provider/provider.go` file so that the `ArchiverProvider` knows how to create an instance of your archiver. Also, add configs for you archiver to static yaml config files and modify the `HistoryArchival` and `VisibilityArchival` struct in the `../common/service/config.go` accordingly.
+6. After you have finished the implementation, modify the `./provider/provider.go` file so that the `ArchiverProvider` knows how to create an instance of your archiver. Also, add configs for you archiver to static yaml config files and modify the `HistoryArchiverConfig` and `VisibilityArchiverConfig` struct in the `../common/service/config.go` accordingly.
