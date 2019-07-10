@@ -1203,7 +1203,7 @@ func (s *historyBlobUploaderSuite) archivalConfig(
 	}
 	mockMetadataMgr := &mocks.MetadataManager{}
 	mockClusterMetadata := &mocks.ClusterMetadata{}
-	mockClusterMetadata.On("HistoryArchivalConfig").Return(cluster.NewArchivalConfig(clusterArchivalStatus, clusterEnablesArchival, cluster.ArchivalDisabled, ""))
+	mockClusterMetadata.On("HistoryArchivalConfig").Return(cluster.NewArchivalConfig(clusterArchivalStatus, clusterEnablesArchival, cluster.DomainArchivalDisabled, ""))
 	mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
 	mockClusterMetadata.On("GetCurrentClusterName").Return(testCurrentClusterName)
 	mockMetadataMgr.On("GetDomain", mock.Anything).Return(

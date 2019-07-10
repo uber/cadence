@@ -294,6 +294,24 @@ type (
 		Status string `yaml:"status"`
 		// EnableReadFromArchival whether history can be read from archival
 		EnableReadFromArchival bool `yaml:"enableReadFromArchival"`
+		// ArchiverConfig contains the config for all history archivers
+		ArchiverConfig HistoryArchiverConfig `yaml:"archiverConfig"`
+	}
+
+	// HistoryArchiverConfig contains the config for all history archivers
+	HistoryArchiverConfig struct {
+		// Filestore is the config the filestore history archiver
+		Filestore *HistoryFilestore `yaml:"filestore"`
+	}
+
+	// HistoryFilestore is the config the filestore history archiver
+	HistoryFilestore struct {
+		// FileMode is the mode for the files created by the filestore history archiver
+		// Please use the "0xxx" format
+		FileMode string `yaml:"fileMode"`
+		// DirMode is the mode for the directories created by the filestore history archiver
+		// Please use the "0xxx" format
+		DirMode string `yaml:"dirMode"`
 	}
 
 	// VisibilityArchival contains the config for visibility archival
@@ -302,7 +320,12 @@ type (
 		Status string `yaml:"status"`
 		// EnableReadFromArchival whether visibility can be read from archival
 		EnableReadFromArchival bool `yaml:"enableReadFromArchival"`
+		// ArchiverConfig contains the config for all visibility archivers
+		ArchiverConfig VisibilityArchiverConfig `yaml:"archiverConfig"`
 	}
+
+	// VisibilityArchiverConfig contains the config for all visibility archivers
+	VisibilityArchiverConfig struct{}
 
 	// PublicClient is config for connecting to cadence frontend
 	PublicClient struct {

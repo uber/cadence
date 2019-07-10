@@ -22,6 +22,8 @@ package main
 
 import (
 	"log"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/uber/cadence/client"
@@ -179,8 +181,8 @@ func (s *server) startService() common.Daemon {
 	}
 	params.PublicClient = workflowserviceclient.New(dispatcher.ClientConfig(common.FrontendServiceName))
 
-	configuredForHistoryArchival := params.ClusterMetadata.HistoryArchivalConfig().ConfiguredForArchival()
-	configuredForVisibilityArchival := params.ClusterMetadata.VisibilityArchivalConfig().ConfiguredForArchival()
+	configuredForHistoryArchival := params.ClusterMetadata.HistoryArchivalConfig().ClusterConfiguredForArchival()
+	configuredForVisibilityArchival := params.ClusterMetadata.VisibilityArchivalConfig().ClusterConfiguredForArchival()
 	if configuredForHistoryArchival || configuredForVisibilityArchival {
 		var historyConfigs *provider.HistoryArchiverConfigs
 		if configuredForHistoryArchival {
@@ -188,8 +190,22 @@ func (s *server) startService() common.Daemon {
 				HistoryPageSize:       dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkerHistoryPageSize, 250),
 				TargetHistoryBlobSize: dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkerTargetArchivalBlobSize, 2*1024*1024), // 2MB
 			}
-			historyConfigs = &provider.HistoryArchiverConfigs{
-				FileStore: &filestore.HistoryArchiverConfig{HistoryIteratorConfig: iteratorConfig},
+			historyConfigs = &provider.HistoryArchiverConfigs{}
+			filestoreConfig := s.cfg.Archival.History.ArchiverConfig.Filestore
+			if filestoreConfig != nil {
+				fileMode, err := strconv.ParseUint(filestoreConfig.FileMode, 0, 32)
+				if err != nil {
+					log.Fatalf("failed to parse filemode: %v", filestoreConfig.FileMode)
+				}
+				dirMode, err := strconv.ParseUint(filestoreConfig.DirMode, 0, 32)
+				if err != nil {
+					log.Fatalf("failed to parse dirmode: %v", filestoreConfig.DirMode)
+				}
+				historyConfigs.FileStore = &filestore.HistoryArchiverConfig{
+					HistoryIteratorConfig: iteratorConfig,
+					FileMode:              os.FileMode(fileMode),
+					DirMode:               os.FileMode(dirMode),
+				}
 			}
 		}
 

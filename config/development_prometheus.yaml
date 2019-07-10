@@ -85,6 +85,10 @@ archival:
   history:
     status: "enabled"
     enableReadFromArchival: true
+    archiverConfig:
+      filestore:
+        fileMode: "0600"
+        dirMode: "0700"
   visibility:
     status: "disabled"
     enableReadFromArchival: false

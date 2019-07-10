@@ -131,30 +131,30 @@ func NewMetadata(
 		panic("Cluster info initial versions have duplicates")
 	}
 
-	historyArchivalStatus := dc.GetStringProperty(dynamicconfig.HistoryArchivalStatus, archivalClusterConfig.History.Status)()
+	clusterHistoryArchivalStatus := dc.GetStringProperty(dynamicconfig.HistoryArchivalStatus, archivalClusterConfig.History.Status)()
 	enableReadFromHistoryArchival := dc.GetBoolProperty(dynamicconfig.EnableReadFromHistoryArchival, archivalClusterConfig.History.EnableReadFromArchival)()
-	visibilityArchivalStatus := dc.GetStringProperty(dynamicconfig.VisibilityArchivalStatus, archivalClusterConfig.Visibility.Status)()
+	clusterVisibilityArchivalStatus := dc.GetStringProperty(dynamicconfig.VisibilityArchivalStatus, archivalClusterConfig.Visibility.Status)()
 	enableReadFromVisibilityArchival := dc.GetBoolProperty(dynamicconfig.EnableReadFromVisibilityArchival, archivalClusterConfig.Visibility.EnableReadFromArchival)()
 
-	status, err := getArchivalStatus(historyArchivalStatus)
+	clusterStatus, err := getClusterArchivalStatus(clusterHistoryArchivalStatus)
 	if err != nil {
 		panic(err)
 	}
-	domainStatus, err := getArchivalStatus(archivalDomainDefault.History.DefaultStatus)
+	domainStatus, err := getDomainArchivalStatus(archivalDomainDefault.History.DefaultStatus)
 	if err != nil {
 		panic(err)
 	}
-	historyArchivalConfig := NewArchivalConfig(status, enableReadFromHistoryArchival, domainStatus, archivalDomainDefault.History.DefaultURI)
+	historyArchivalConfig := NewArchivalConfig(clusterStatus, enableReadFromHistoryArchival, domainStatus, archivalDomainDefault.History.DefaultURI)
 
-	status, err = getArchivalStatus(visibilityArchivalStatus)
+	clusterStatus, err = getClusterArchivalStatus(clusterVisibilityArchivalStatus)
 	if err != nil {
 		panic(err)
 	}
-	domainStatus, err = getArchivalStatus(archivalDomainDefault.Visibility.DefaultStatus)
+	domainStatus, err = getDomainArchivalStatus(archivalDomainDefault.Visibility.DefaultStatus)
 	if err != nil {
 		panic(err)
 	}
-	visibilityArchivalConfig := NewArchivalConfig(status, enableReadFromVisibilityArchival, domainStatus, archivalDomainDefault.Visibility.DefaultURI)
+	visibilityArchivalConfig := NewArchivalConfig(clusterStatus, enableReadFromVisibilityArchival, domainStatus, archivalDomainDefault.Visibility.DefaultURI)
 
 	return &metadataImpl{
 		logger:                   logger,

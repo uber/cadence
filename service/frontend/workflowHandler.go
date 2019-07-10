@@ -1659,8 +1659,8 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		getRequest.MaximumPageSize = common.Int32Ptr(common.GetHistoryMaxPageSize)
 	}
 
-	configuredForArchival := wh.GetClusterMetadata().HistoryArchivalConfig().ConfiguredForArchival()
-	enableArchivalRead := wh.GetClusterMetadata().HistoryArchivalConfig().EnableReadFromArchival()
+	configuredForArchival := wh.GetClusterMetadata().HistoryArchivalConfig().ClusterConfiguredForArchival()
+	enableArchivalRead := wh.GetClusterMetadata().HistoryArchivalConfig().EnableReadFromArchival
 	historyArchived := wh.historyArchived(ctx, getRequest, domainID)
 	if configuredForArchival && enableArchivalRead && historyArchived {
 		return wh.getArchivedHistory(ctx, getRequest, domainID, scope)

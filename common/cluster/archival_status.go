@@ -29,12 +29,15 @@ type (
 	// ArchivalStatus represents the archival status of the cluster
 	ArchivalStatus int
 
+	// DomainArchivalStatus represents the archival status of a domain
+	DomainArchivalStatus int
+
 	// ArchivalConfig is an immutable representation of the current archival configuration of the cluster
 	ArchivalConfig struct {
-		status                 ArchivalStatus
-		enableReadFromArchival bool
-		domainDefaultStatus    ArchivalStatus
-		domainDefaultURI       string
+		ClusterStatus          ArchivalStatus
+		EnableReadFromArchival bool
+		DomainDefaultStatus    DomainArchivalStatus
+		DomainDefaultURI       string
 	}
 )
 
@@ -45,54 +48,53 @@ const (
 	ArchivalPaused
 	// ArchivalEnabled means this cluster is currently archiving
 	ArchivalEnabled
+
+	// DomainArchivalDisabled means a domain is not configured to handle archival
+	DomainArchivalDisabled DomainArchivalStatus = iota
+	// DomainArchivalEnabled means a domain is currently archiving
+	DomainArchivalEnabled
 )
 
 // NewArchivalConfig constructs a new valid ArchivalConfig
 func NewArchivalConfig(
-	status ArchivalStatus,
+	clusterStatus ArchivalStatus,
 	enableReadFromArchival bool,
-	domainDefaultStatus ArchivalStatus,
+	domainDefaultStatus DomainArchivalStatus,
 	domainDefaultURI string,
 ) *ArchivalConfig {
 	ac := &ArchivalConfig{
-		status:                 status,
-		enableReadFromArchival: enableReadFromArchival,
-		domainDefaultStatus:    domainDefaultStatus,
-		domainDefaultURI:       domainDefaultURI,
+		ClusterStatus:          clusterStatus,
+		EnableReadFromArchival: enableReadFromArchival,
+		DomainDefaultStatus:    domainDefaultStatus,
+		DomainDefaultURI:       domainDefaultURI,
 	}
 	if !ac.isDomainDefaultValid() {
-		ac.domainDefaultStatus = ArchivalDisabled
-		ac.domainDefaultURI = ""
+		return newDisabledArchivalConfig()
 	}
 	return ac
 }
 
-// GetArchivalStatus returns the archival status for ArchivalConfig
-func (a *ArchivalConfig) GetArchivalStatus() ArchivalStatus {
-	return a.status
-}
-
-// ConfiguredForArchival returns true if cluster is configured to handle archival, false otherwise.
-func (a *ArchivalConfig) ConfiguredForArchival() bool {
-	return a.status != ArchivalDisabled
-}
-
-// EnableReadFromArchival indicates whether history can be read from archival
-func (a *ArchivalConfig) EnableReadFromArchival() bool {
-	return a.enableReadFromArchival
+// ClusterConfiguredForArchival returns true if cluster is configured to handle archival, false otherwise.
+func (a *ArchivalConfig) ClusterConfiguredForArchival() bool {
+	return a.ClusterStatus == ArchivalEnabled
 }
 
 func (a *ArchivalConfig) isDomainDefaultValid() bool {
-	if a.domainDefaultStatus == ArchivalPaused {
-		return false
-	}
-
-	URISet := len(a.domainDefaultURI) != 0
-	disabled := a.domainDefaultStatus == ArchivalDisabled
+	URISet := len(a.DomainDefaultURI) != 0
+	disabled := a.DomainDefaultStatus == DomainArchivalDisabled
 	return (!URISet && disabled) || (URISet && !disabled)
 }
 
-func getArchivalStatus(str string) (ArchivalStatus, error) {
+func newDisabledArchivalConfig() *ArchivalConfig {
+	return &ArchivalConfig{
+		ClusterStatus:          ArchivalDisabled,
+		EnableReadFromArchival: false,
+		DomainDefaultStatus:    DomainArchivalDisabled,
+		DomainDefaultURI:       "",
+	}
+}
+
+func getClusterArchivalStatus(str string) (ArchivalStatus, error) {
 	str = strings.TrimSpace(strings.ToLower(str))
 	switch str {
 	case "", "disabled":
@@ -102,5 +104,16 @@ func getArchivalStatus(str string) (ArchivalStatus, error) {
 	case "enabled":
 		return ArchivalEnabled, nil
 	}
-	return ArchivalDisabled, fmt.Errorf("invalid archival status of %v, valid status are: {\"\", \"disabled\", \"paused\", \"enabled\"}", str)
+	return ArchivalDisabled, fmt.Errorf("invalid archival status of %v for cluster, valid status are: {\"\", \"disabled\", \"paused\", \"enabled\"}", str)
+}
+
+func getDomainArchivalStatus(str string) (DomainArchivalStatus, error) {
+	str = strings.TrimSpace(strings.ToLower(str))
+	switch str {
+	case "", "disabled":
+		return DomainArchivalDisabled, nil
+	case "enabled":
+		return DomainArchivalEnabled, nil
+	}
+	return DomainArchivalDisabled, fmt.Errorf("invalid archival status of %v for domain, valid status are: {\"\", \"disabled\", \"enabled\"}", str)
 }

@@ -38,6 +38,7 @@ package filestore
 import (
 	"context"
 	"fmt"
+	"os"
 	"path"
 	"strings"
 
@@ -60,6 +61,8 @@ const (
 type (
 	// HistoryArchiverConfig configs the filestore implementation of archiver.HistoryArchiver interface
 	HistoryArchiverConfig struct {
+		FileMode os.FileMode
+		DirMode  os.FileMode
 		*archiver.HistoryIteratorConfig
 	}
 
@@ -149,13 +152,13 @@ func (h *historyArchiver) Archive(
 	}
 
 	dirPath := getDirPathFromURI(URI)
-	if err = mkdirAll(dirPath); err != nil {
+	if err = mkdirAll(dirPath, h.config.DirMode); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errMakeDirectory), tag.Error(err))
 		return archiver.ErrArchiveNonRetriable
 	}
 
 	filename := constructFilename(request.DomainID, request.WorkflowID, request.RunID, request.CloseFailoverVersion)
-	if err := writeFile(path.Join(dirPath, filename), encodedHistoryBatches); err != nil {
+	if err := writeFile(path.Join(dirPath, filename), encodedHistoryBatches, h.config.FileMode); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errWriteFile), tag.Error(err))
 		return archiver.ErrArchiveNonRetriable
 	}
