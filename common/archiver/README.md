@@ -8,12 +8,14 @@ This README explains how to create new implementations for the History and Visib
 
 ```
 ./common/archiver
-  - filestore/                  -- Filestore implementation 
+  - filestore/                      -- Filestore implementation 
   - provider/
-      - provider.go             -- Provider of archiver instances
+      - provider.go                 -- Provider of archiver instances
   - yourImplementation/
-      - historyArchiver.go      -- HistoryArchiver implementation
-      - visibilityArchiver.go   -- VisibilityArchiver implementations
+      - historyArchiver.go          -- HistoryArchiver implementation
+      - historyArchiver_test.go     -- Unit tests for HistoryArchiver
+      - visibilityArchiver.go       -- VisibilityArchiver implementations
+      - visibilityArchiver_test.go  -- Unit tests for VisibilityArchiver
 ```
 2. Each Archiver will be given a `BootstrapContainer` when it's created and the archiver implementation can (will) use them to read history, emit logs/metrics etc. Check `interface.go` for more details.
 
@@ -31,7 +33,7 @@ Each archiver implementation should define a format of URI, which is used to des
 
 The `Archive()` method should archive workflow histories or visibility records described by the archive request to the location specified by the URI, while the `Get()` method is responsible for retrieving those archived data.
 
-Since the `Archive()` method will be called from different places (for example, timerQueueProcessor and worker), it may want to do different things. Therefore, a list of `ArchiveOption` will be passed to this method. These options will be applied to an `ArchiveFeatureCatalog`, and by checking the fields of that catalog, the `Archive()` method can figure out what to do. Right now, the only feature in the catalog is `ProgressManager` which can be used to record and load archive progress. More features can be added if needed. The correct way to use it is shown in the code sample below.
+`Archive()` method may be invoked differently by different callers. For examples some callers may automatically retry, while others only try once. Therefore, a list of `ArchiveOption` will be passed to this method. These options will be applied to an `ArchiveFeatureCatalog`, and by checking the fields of that catalog, the `Archive()` method can figure out what to do. Right now, the only feature in the catalog is `ProgressManager` which can be used to record and load archive progress. More features can be added if needed. The correct way to use it is shown in the code sample below.
 
 ```go
 func (a *Archiver) Archive(
