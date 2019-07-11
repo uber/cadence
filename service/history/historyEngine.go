@@ -1819,7 +1819,10 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 		var runID string
 		var eventID int64
 
-		reloadNewBase := func() (releaseWorkflowExecutionFunc, error) {
+		reloadNewBase := func() error {
+			if runID == baseExecution.GetRunId() {
+				return nil
+			}
 			var err error
 			// release the prev base
 			baseRelease(nil)
@@ -1828,14 +1831,14 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 			baseExecution.RunId = common.StringPtr(runID)
 			baseContext, baseRelease, err = e.historyCache.getOrCreateWorkflowExecution(ctx, domainID, baseExecution)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			baseMutableState, err = baseContext.loadWorkflowExecution()
 			if err != nil {
 				baseRelease(nil)
-				return nil, err
+				return err
 			}
-			return baseRelease, nil
+			return nil
 		}
 
 		// Note: some reset types may need to load another base
@@ -1852,11 +1855,10 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 			}
 			request.DecisionFinishEventId = common.Int64Ptr(eventID)
 
-			baseRelease, retError = reloadNewBase()
+			retError = reloadNewBase()
 			if retError != nil {
 				return nil, retError
 			}
-			defer func() { baseRelease(retError) }()
 		case workflow.ResetTypeLastContinuedAsNew:
 			startEvent, found := baseMutableState.GetStartEvent()
 			if !found {
@@ -1865,11 +1867,10 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 				}
 			}
 			runID = startEvent.WorkflowExecutionStartedEventAttributes.GetContinuedExecutionRunId()
-			baseRelease, retError = reloadNewBase()
+			retError = reloadNewBase()
 			if retError != nil {
 				return nil, retError
 			}
-			defer func() { baseRelease(retError) }()
 		default:
 			panic("not supported")
 		}
