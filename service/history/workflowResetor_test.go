@@ -182,100 +182,169 @@ func (s *resetorSuite) TearDownTest() {
 }
 
 func (s *resetorSuite) TestResetWorkflowExecution_ValidateResetRequest() {
-	request := &workflow.ResetWorkflowExecutionRequest{}
-	err := validateResetRequest(request)
-	s.EqualError(err, "BadRequestError{Message: Require workflowId.}")
-	request.WorkflowExecution = &workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("test-wf-id"),
+	type test struct {
+		request        *workflow.ResetWorkflowExecutionRequest
+		expectedErrStr string
 	}
 
-	err = validateResetRequest(request)
-	s.EqualError(err, "BadRequestError{Message: must provide DecisionFinishEventId or ResetType}")
-
-	// err cases for DecisionFinishEventId validation
-	request.DecisionFinishEventId = common.Int64Ptr(2)
-	err = validateResetRequest(request)
-	s.EqualError(err, "BadRequestError{Message: DecisionFinishEventId must be provided with runID}")
-
-	request.WorkflowExecution = &workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("test-wf-id"),
-		RunId:      common.StringPtr("test-run-id"),
-	}
-	request.DecisionFinishEventId = common.Int64Ptr(0)
-	err = validateResetRequest(request)
-	s.EqualError(err, "BadRequestError{Message: DecisionFinishEventId must be > 1}")
-
-	request.DecisionFinishEventId = common.Int64Ptr(2)
 	rt := workflow.ResetTypeBadBinary
-	request.ResetType = &rt
-	err = validateResetRequest(request)
-	s.EqualError(err, "BadRequestError{Message: DecisionFinishEventId cannot be used with reset type}")
 
-	//succ for DecisionFinishEventId
-	request.ResetType = nil
-	err = validateResetRequest(request)
-	s.Nil(err)
+	tests := []test{
+		{
+			request:        &workflow.ResetWorkflowExecutionRequest{},
+			expectedErrStr: "BadRequestError{Message: Require workflowId.}",
+		},
+		{
+			request: &workflow.ResetWorkflowExecutionRequest{
+				WorkflowExecution: &workflow.WorkflowExecution{
+					WorkflowId: common.StringPtr("test-wf-id"),
+				},
+			},
+			expectedErrStr: "BadRequestError{Message: must provide DecisionFinishEventId or ResetType}",
+		},
+		{
+			request: &workflow.ResetWorkflowExecutionRequest{
+				WorkflowExecution: &workflow.WorkflowExecution{
+					WorkflowId: common.StringPtr("test-wf-id"),
+				},
+				DecisionFinishEventId: common.Int64Ptr(2),
+			},
+			expectedErrStr: "BadRequestError{Message: DecisionFinishEventId must be provided with runID}",
+		},
+		{
+			request: &workflow.ResetWorkflowExecutionRequest{
+				WorkflowExecution: &workflow.WorkflowExecution{
+					WorkflowId: common.StringPtr("test-wf-id"),
+					RunId:      common.StringPtr("test-run-id"),
+				},
+				DecisionFinishEventId: common.Int64Ptr(0),
+			},
+			expectedErrStr: "BadRequestError{Message: DecisionFinishEventId must be > 1}",
+		},
+		{
+			request: &workflow.ResetWorkflowExecutionRequest{
+				WorkflowExecution: &workflow.WorkflowExecution{
+					WorkflowId: common.StringPtr("test-wf-id"),
+					RunId:      common.StringPtr("test-run-id"),
+				},
+				DecisionFinishEventId: common.Int64Ptr(2),
+				ResetType:             &rt,
+			},
+			expectedErrStr: "BadRequestError{Message: DecisionFinishEventId cannot be used with reset type}",
+		},
+		{
+			request: &workflow.ResetWorkflowExecutionRequest{
+				WorkflowExecution: &workflow.WorkflowExecution{
+					WorkflowId: common.StringPtr("test-wf-id"),
+					RunId:      common.StringPtr("test-run-id"),
+				},
+				DecisionFinishEventId: common.Int64Ptr(2),
+			},
+			//succ
+			expectedErrStr: "",
+		},
+		{
+			request: &workflow.ResetWorkflowExecutionRequest{
+				WorkflowExecution: &workflow.WorkflowExecution{
+					WorkflowId: common.StringPtr("test-wf-id"),
+					RunId:      common.StringPtr("test-run-id"),
+				},
+				ResetType: &rt,
+			},
+			expectedErrStr: "BadRequestError{Message: ResetTypeBadBinary must be provided with BadBinaryChecksum}",
+		},
+		{
+			request: &workflow.ResetWorkflowExecutionRequest{
+				WorkflowExecution: &workflow.WorkflowExecution{
+					WorkflowId: common.StringPtr("test-wf-id"),
+					RunId:      common.StringPtr("test-run-id"),
+				},
+				ResetType:         &rt,
+				BadBinaryChecksum: common.StringPtr("test-bad-binary-checksum"),
+			},
+			expectedErrStr: "",
+		},
+	}
 
-	// err cases for ResetType
-	request.ResetType = &rt
-	request.DecisionFinishEventId = nil
-	err = validateResetRequest(request)
-	s.EqualError(err, "BadRequestError{Message: ResetTypeBadBinary must be provided with BadBinaryChecksum}")
-
-	// succ case for ResetType
-	request.BadBinaryChecksum = common.StringPtr("test-bad-binary-checksum")
-	err = validateResetRequest(request)
-	s.Nil(err)
+	for _, t := range tests {
+		err := validateResetRequest(t.request)
+		if t.expectedErrStr != "" {
+			s.EqualError(err, t.expectedErrStr)
+		} else {
+			s.Nil(err)
+		}
+	}
 }
 
 func (s *resetorSuite) TestResetWorkflowExecution_LookupResetPoint() {
 	chsum := "test-checksum"
-	runID := ""
-	eventID := int64(0)
 
-	runID, eventID, err := lookupResetPoint(nil, chsum)
-	s.EqualError(err, "BadRequestError{Message: Empty resetPoints to lookup}")
+	type test struct {
+		resetPoints     *workflow.ResetPoints
+		expectedErrStr  string
+		expectedRunID   string
+		expectedEventID int64
+	}
 
-	resetPoints := &workflow.ResetPoints{}
-	runID, eventID, err = lookupResetPoint(resetPoints, chsum)
-	s.EqualError(err, "BadRequestError{Message: cannot find valid reset point by BadBinaryChecksum: "+chsum+"}")
-
-	resetPoints = &workflow.ResetPoints{
-		Points: []*workflow.ResetPointInfo{
-			{
-				BinaryChecksum: common.StringPtr(chsum),
+	tests := []test{
+		{
+			resetPoints:    nil,
+			expectedErrStr: "BadRequestError{Message: Empty resetPoints to lookup}",
+		},
+		{
+			resetPoints:    &workflow.ResetPoints{},
+			expectedErrStr: "BadRequestError{Message: cannot find valid reset point by BadBinaryChecksum: " + chsum + "}",
+		},
+		{
+			resetPoints: &workflow.ResetPoints{
+				Points: []*workflow.ResetPointInfo{
+					{
+						BinaryChecksum: common.StringPtr(chsum),
+					},
+				},
 			},
+			expectedErrStr: "BadRequestError{Message: reset point of BadBinaryChecksum: " + chsum + " is not supported}",
+		},
+		{
+			resetPoints: &workflow.ResetPoints{
+				Points: []*workflow.ResetPointInfo{
+					{
+						BinaryChecksum:   common.StringPtr(chsum),
+						Resettable:       common.BoolPtr(true),
+						ExpiringTimeNano: common.Int64Ptr(time.Now().Add(-time.Hour).UnixNano()),
+					},
+				},
+			},
+			expectedErrStr: "BadRequestError{Message: reset point of BadBinaryChecksum: " + chsum + " is already expired}",
+		},
+		{
+			resetPoints: &workflow.ResetPoints{
+				Points: []*workflow.ResetPointInfo{
+					{
+						BinaryChecksum:           common.StringPtr(chsum),
+						Resettable:               common.BoolPtr(true),
+						RunId:                    common.StringPtr("test-run-id"),
+						FirstDecisionCompletedId: common.Int64Ptr(100),
+					},
+				},
+			},
+			expectedErrStr:  "",
+			expectedRunID:   "test-run-id",
+			expectedEventID: 100,
 		},
 	}
-	runID, eventID, err = lookupResetPoint(resetPoints, chsum)
-	s.EqualError(err, "BadRequestError{Message: reset point of BadBinaryChecksum: "+chsum+" is not supported}")
 
-	resetPoints = &workflow.ResetPoints{
-		Points: []*workflow.ResetPointInfo{
-			{
-				BinaryChecksum:   common.StringPtr(chsum),
-				Resettable:       common.BoolPtr(true),
-				ExpiringTimeNano: common.Int64Ptr(time.Now().Add(-time.Hour).UnixNano()),
-			},
-		},
+	for _, t := range tests {
+		runID, eventID, err := lookupResetPoint(t.resetPoints, chsum)
+		if t.expectedErrStr != "" {
+			s.EqualError(err, t.expectedErrStr)
+		} else {
+			s.Nil(err)
+			s.Equal(t.expectedRunID, runID)
+			s.Equal(t.expectedEventID, eventID)
+		}
 	}
-	runID, eventID, err = lookupResetPoint(resetPoints, chsum)
-	s.EqualError(err, "BadRequestError{Message: reset point of BadBinaryChecksum: "+chsum+" is already expired}")
 
-	resetPoints = &workflow.ResetPoints{
-		Points: []*workflow.ResetPointInfo{
-			{
-				BinaryChecksum:           common.StringPtr(chsum),
-				Resettable:               common.BoolPtr(true),
-				RunId:                    common.StringPtr("test-run-id"),
-				FirstDecisionCompletedId: common.Int64Ptr(100),
-			},
-		},
-	}
-	runID, eventID, err = lookupResetPoint(resetPoints, chsum)
-	s.Nil(err)
-	s.Equal("test-run-id", runID)
-	s.Equal(int64(100), eventID)
 }
 
 func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
