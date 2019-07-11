@@ -21,6 +21,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -318,4 +319,30 @@ func DescribeDomain(c *cli.Context) {
 		}
 		table.Render()
 	}
+}
+
+func archivalStatus(c *cli.Context) *shared.ArchivalStatus {
+	if c.IsSet(FlagArchivalStatus) {
+		switch c.String(FlagArchivalStatus) {
+		case "disabled":
+			return common.ArchivalStatusPtr(shared.ArchivalStatusDisabled)
+		case "enabled":
+			return common.ArchivalStatusPtr(shared.ArchivalStatusEnabled)
+		default:
+			ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagArchivalStatus), errors.New("invalid status, valid values are \"disabled\" and \"enabled\""))
+		}
+	}
+	return nil
+}
+
+func clustersToString(clusters []*shared.ClusterReplicationConfiguration) string {
+	var res string
+	for i, cluster := range clusters {
+		if i == 0 {
+			res = res + cluster.GetClusterName()
+		} else {
+			res = res + ", " + cluster.GetClusterName()
+		}
+	}
+	return res
 }

@@ -22,6 +22,7 @@ package cli
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -34,6 +35,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/valyala/fastjson"
 
 	"github.com/uber/cadence/common/clock"
 
@@ -260,6 +263,86 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) {
 	} else {
 		startFn()
 	}
+}
+
+func processSearchAttr(c *cli.Context) map[string][]byte {
+	rawSearchAttrKey := c.String(FlagSearchAttributesKey)
+	var searchAttrKeys []string
+	if strings.TrimSpace(rawSearchAttrKey) != "" {
+		searchAttrKeys = trimSpace(strings.Split(rawSearchAttrKey, searchAttrInputSeparator))
+	}
+
+	rawSearchAttrVal := c.String(FlagSearchAttributesVal)
+	var searchAttrVals []interface{}
+	if strings.TrimSpace(rawSearchAttrVal) != "" {
+		searchAttrValsStr := trimSpace(strings.Split(rawSearchAttrVal, searchAttrInputSeparator))
+
+		for _, v := range searchAttrValsStr {
+			searchAttrVals = append(searchAttrVals, convertStringToRealType(v))
+		}
+	}
+
+	if len(searchAttrKeys) != len(searchAttrVals) {
+		ErrorAndExit("Number of search attributes keys and values are not equal.", nil)
+	}
+
+	fields := map[string][]byte{}
+	for i, key := range searchAttrKeys {
+		val, err := json.Marshal(searchAttrVals[i])
+		if err != nil {
+			ErrorAndExit(fmt.Sprintf("Encode value %v error", val), err)
+		}
+		fields[key] = val
+	}
+
+	return fields
+}
+
+func processMemo(c *cli.Context) map[string][]byte {
+	rawMemoKey := c.String(FlagMemoKey)
+	var memoKeys []string
+	if strings.TrimSpace(rawMemoKey) != "" {
+		memoKeys = strings.Split(rawMemoKey, " ")
+	}
+
+	rawMemoValue := processJSONInputHelper(c, jsonTypeMemo)
+	var memoValues []string
+
+	var sc fastjson.Scanner
+	sc.Init(rawMemoValue)
+	for sc.Next() {
+		memoValues = append(memoValues, sc.Value().String())
+	}
+	if err := sc.Error(); err != nil {
+		ErrorAndExit("Parse json error.", err)
+	}
+	if len(memoKeys) != len(memoValues) {
+		ErrorAndExit("Number of memo keys and values are not equal.", nil)
+	}
+
+	fields := map[string][]byte{}
+	for i, key := range memoKeys {
+		fields[key] = []byte(memoValues[i])
+	}
+	return fields
+}
+
+func getPrintableMemo(memo *s.Memo) string {
+	buf := new(bytes.Buffer)
+	for k, v := range memo.Fields {
+		fmt.Fprintf(buf, "%s=%s\n", k, string(v))
+	}
+	return buf.String()
+}
+
+func getPrintableSearchAttr(searchAttr *s.SearchAttributes) string {
+	buf := new(bytes.Buffer)
+	for k, v := range searchAttr.IndexedFields {
+		var decodedVal interface{}
+		json.Unmarshal(v, &decodedVal)
+		fmt.Fprintf(buf, "%s=%v\n", k, decodedVal)
+	}
+	return buf.String()
 }
 
 // helper function to print workflow progress with time refresh every second
@@ -848,6 +931,39 @@ func listWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) func
 	return prepareTable
 }
 
+func printRunStatus(event *s.HistoryEvent) {
+	switch event.GetEventType() {
+	case s.EventTypeWorkflowExecutionCompleted:
+		fmt.Printf("  Status: %s\n", colorGreen("COMPLETED"))
+		fmt.Printf("  Output: %s\n", string(event.WorkflowExecutionCompletedEventAttributes.Result))
+	case s.EventTypeWorkflowExecutionFailed:
+		fmt.Printf("  Status: %s\n", colorRed("FAILED"))
+		fmt.Printf("  Reason: %s\n", event.WorkflowExecutionFailedEventAttributes.GetReason())
+		fmt.Printf("  Detail: %s\n", string(event.WorkflowExecutionFailedEventAttributes.Details))
+	case s.EventTypeWorkflowExecutionTimedOut:
+		fmt.Printf("  Status: %s\n", colorRed("TIMEOUT"))
+		fmt.Printf("  Timeout Type: %s\n", event.WorkflowExecutionTimedOutEventAttributes.GetTimeoutType())
+	case s.EventTypeWorkflowExecutionCanceled:
+		fmt.Printf("  Status: %s\n", colorRed("CANCELED"))
+		fmt.Printf("  Detail: %s\n", string(event.WorkflowExecutionCanceledEventAttributes.Details))
+	}
+}
+
+// in case workflow type is too long to show in table, trim it like .../example.Workflow
+func trimWorkflowType(str string) string {
+	res := str
+	if len(str) >= maxWorkflowTypeLength {
+		items := strings.Split(str, "/")
+		res = items[len(items)-1]
+		if len(res) >= maxWorkflowTypeLength {
+			res = "..." + res[len(res)-maxWorkflowTypeLength:]
+		} else {
+			res = ".../" + res
+		}
+	}
+	return res
+}
+
 func listWorkflowExecutions(client client.Client, pageSize int, nextPageToken []byte, query string, c *cli.Context) (
 	[]*s.WorkflowExecutionInfo, []byte) {
 
@@ -957,6 +1073,24 @@ func getListResultInRaw(c *cli.Context, queryOpen bool, nextPageToken []byte) ([
 	}
 
 	return result, nextPageToken
+}
+
+func getWorkflowStatus(statusStr string) s.WorkflowExecutionCloseStatus {
+	if status, ok := workflowClosedStatusMap[strings.ToLower(statusStr)]; ok {
+		return status
+	}
+	ErrorAndExit(optionErr, errors.New("option status is not one of allowed values "+
+		"[completed, failed, canceled, terminated, continueasnew, timedout]"))
+	return 0
+}
+
+func getWorkflowIDReusePolicy(value int) *s.WorkflowIdReusePolicy {
+	if value >= 0 && value <= len(s.WorkflowIdReusePolicy_Values()) {
+		return s.WorkflowIdReusePolicy(value).Ptr()
+	}
+	// At this point, the policy should return if the value is valid
+	ErrorAndExit(fmt.Sprintf("Option %v value is not in supported range.", FlagWorkflowIDReusePolicy), nil)
+	return nil
 }
 
 // default will print decoded raw
