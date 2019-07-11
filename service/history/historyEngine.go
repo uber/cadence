@@ -1781,8 +1781,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 	domainID := domainEntry.GetInfo().ID
 
 	request := resetRequest.ResetRequest
-	retError = ValidateResetRequest(request)
-	if retError != nil {
+	if retError = validateResetRequest(request); retError != nil {
 		return nil, retError
 	}
 
@@ -1847,7 +1846,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 			break
 		case workflow.ResetTypeBadBinary:
 			// refill DecisionFinishEventId from mutableState
-			runID, eventID, retError = LookupResetPoint(baseMutableState.GetExecutionInfo().AutoResetPoints, request.GetBadBinaryChecksum())
+			runID, eventID, retError = lookupResetPoint(baseMutableState.GetExecutionInfo().AutoResetPoints, request.GetBadBinaryChecksum())
 			if retError != nil {
 				return nil, retError
 			}

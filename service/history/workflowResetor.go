@@ -1005,7 +1005,7 @@ func FindAutoResetPoint(
 	return "", nil
 }
 
-func LookupResetPoint(resetPoints *workflow.ResetPoints, binaryChecksum string) (string, int64, error) {
+func lookupResetPoint(resetPoints *workflow.ResetPoints, binaryChecksum string) (string, int64, error) {
 	if resetPoints != nil {
 		for _, p := range resetPoints.Points {
 			if p.GetBinaryChecksum() == binaryChecksum {
@@ -1032,7 +1032,7 @@ func LookupResetPoint(resetPoints *workflow.ResetPoints, binaryChecksum string) 
 	}
 }
 
-func ValidateResetRequest(request *workflow.ResetWorkflowExecutionRequest) error {
+func validateResetRequest(request *workflow.ResetWorkflowExecutionRequest) error {
 	if request == nil || request.WorkflowExecution == nil || len(request.WorkflowExecution.GetWorkflowId()) == 0 {
 		return &workflow.BadRequestError{
 			Message: "Require workflowId.",
