@@ -1808,7 +1808,12 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 	if retError != nil {
 		return nil, retError
 	}
-	defer func() { baseRelease(retError) }()
+	defer func() {
+		// baseRelease could be nil because it may change in reloadNewBase
+		if baseRelease != nil {
+			baseRelease(retError)
+		}
+	}()
 
 	baseMutableState, retError := baseContext.loadWorkflowExecution()
 	if retError != nil {
