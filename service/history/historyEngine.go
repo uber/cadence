@@ -1835,7 +1835,6 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 			}
 			baseMutableState, err = baseContext.loadWorkflowExecution()
 			if err != nil {
-				baseRelease(nil)
 				return err
 			}
 			return nil
