@@ -1,0 +1,60 @@
+version: '3.2'
+services:
+  cassandra:
+    image: cassandra:3.11
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    ports:
+      - "9042:9042"
+      - "7199:7199"
+# Uncomment below config to use volume mounting
+#    volumes:
+#      - /PATH/TO/DESTINATION:/var/lib/cassandra
+  statsd:
+    image: hopsoft/graphite-statsd
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+    ports:
+      - "8080:80"
+      - "2003:2003"
+      - "8125:8125"
+      - "8126:8126"
+  cadence:
+# Change 0.x.y to the latest version of Cadence server
+# Get versions from release page: https://github.com/uber/cadence/releases
+    image: ubercadence/server:0.x.y-auto-setup
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    ports:
+     - "7933:7933"
+     - "7934:7934"
+     - "7935:7935"
+     - "7939:7939"
+    environment:
+      - "CASSANDRA_SEEDS=cassandra"
+      - "STATSD_ENDPOINT=statsd:8125"
+      - "DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development.yaml"
+      - "NUM_HISTORY_SHARDS=1024"
+    depends_on:
+      - cassandra
+      - statsd
+  cadence-web:
+    image: ubercadence/web:3.1.2
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+    environment:
+      - "CADENCE_TCHANNEL_PEERS=cadence:7933"
+    ports:
+      - "8088:8088"
+    depends_on:
+      - cadence
