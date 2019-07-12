@@ -83,6 +83,7 @@ func RegisterDomain(c *cli.Context) {
 	if c.IsSet(FlagActiveClusterName) {
 		activeClusterName = common.StringPtr(c.String(FlagActiveClusterName))
 	}
+
 	var clusters []*shared.ClusterReplicationConfiguration
 	if c.IsSet(FlagClusters) {
 		clusterStr := c.String(FlagClusters)
