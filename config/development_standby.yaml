@@ -117,7 +117,7 @@ archival:
   history:
     status: "disabled"
     enableReadFromArchival: false
-    archiverConfig:
+    archiverProvider:
       filestore:
         fileMode: "0600"
         dirMode: "0700"

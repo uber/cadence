@@ -29,6 +29,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/common/service/config"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -48,6 +50,9 @@ const (
 	testNextEventID          = 1800
 	testCloseFailoverVersion = 100
 	testPageSize             = 100
+
+	testFileModeStr = "0700"
+	testDirModeStr  = "0600"
 )
 
 var (
@@ -472,11 +477,13 @@ func (s *historyArchiverSuite) TestArchiveAndGet() {
 }
 
 func (s *historyArchiverSuite) newTestHistoryArchiver(historyIterator archiver.HistoryIterator) *historyArchiver {
-	config := &HistoryArchiverConfig{
-		FileMode: testFileMode,
-		DirMode:  testDirMode,
+	config := &config.FilestoreHistoryArchiver{
+		FileMode: testFileModeStr,
+		DirMode:  testDirModeStr,
 	}
-	return newHistoryArchiver(s.container, config, historyIterator)
+	archiver, err := newHistoryArchiver(s.container, config, historyIterator)
+	s.NoError(err)
+	return archiver
 }
 
 func (s *historyArchiverSuite) setupHistoryDirectory() {

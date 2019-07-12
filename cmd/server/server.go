@@ -22,14 +22,10 @@ package main
 
 import (
 	"log"
-	"os"
-	"strconv"
 	"time"
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/archiver"
-	"github.com/uber/cadence/common/archiver/filestore"
 	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/elasticsearch"
@@ -181,43 +177,7 @@ func (s *server) startService() common.Daemon {
 	}
 	params.PublicClient = workflowserviceclient.New(dispatcher.ClientConfig(common.FrontendServiceName))
 
-	configuredForHistoryArchival := params.ClusterMetadata.HistoryArchivalConfig().ClusterConfiguredForArchival()
-	configuredForVisibilityArchival := params.ClusterMetadata.VisibilityArchivalConfig().ClusterConfiguredForArchival()
-	if configuredForHistoryArchival || configuredForVisibilityArchival {
-		var historyConfigs *provider.HistoryArchiverConfigs
-		if configuredForHistoryArchival {
-			iteratorConfig := &archiver.HistoryIteratorConfig{
-				HistoryPageSize:       dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkerHistoryPageSize, 250),
-				TargetHistoryBlobSize: dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkerTargetArchivalBlobSize, 2*1024*1024), // 2MB
-			}
-			historyConfigs = &provider.HistoryArchiverConfigs{}
-			filestoreConfig := s.cfg.Archival.History.ArchiverConfig.Filestore
-			if filestoreConfig != nil {
-				fileMode, err := strconv.ParseUint(filestoreConfig.FileMode, 0, 32)
-				if err != nil {
-					log.Fatalf("failed to parse filemode: %v", filestoreConfig.FileMode)
-				}
-				dirMode, err := strconv.ParseUint(filestoreConfig.DirMode, 0, 32)
-				if err != nil {
-					log.Fatalf("failed to parse dirmode: %v", filestoreConfig.DirMode)
-				}
-				historyConfigs.FileStore = &filestore.HistoryArchiverConfig{
-					HistoryIteratorConfig: iteratorConfig,
-					FileMode:              os.FileMode(fileMode),
-					DirMode:               os.FileMode(dirMode),
-				}
-			}
-		}
-
-		var visibilityConfigs *provider.VisibilityArchiverConfigs
-		if configuredForVisibilityArchival {
-			visibilityConfigs = &provider.VisibilityArchiverConfigs{
-				FileStore: &filestore.VisibilityArchiverConfig{},
-			}
-		}
-
-		params.ArchiverProvider = provider.NewArchiverProvider(historyConfigs, visibilityConfigs)
-	}
+	params.ArchiverProvider = provider.NewArchiverProvider(&s.cfg.Archival.History.ArchiverProvider, &s.cfg.Archival.Visibility.ArchiverProvider)
 
 	params.PersistenceConfig.TransactionSizeLimit = dc.GetIntProperty(dynamicconfig.TransactionSizeLimit, common.DefaultTransactionSizeLimit)
 

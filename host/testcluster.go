@@ -101,7 +101,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 			options.ClusterMetadata.CurrentClusterName,
 			options.ClusterMetadata.ClusterInformation,
 			config.Archival{},
-			config.ArchivalDomainDefault{},
+			config.ArchivalDomainDefaults{},
 		)
 	}
 

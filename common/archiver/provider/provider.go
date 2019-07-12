@@ -25,6 +25,7 @@ import (
 
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/filestore"
+	"github.com/uber/cadence/common/service/config"
 )
 
 var (
@@ -32,6 +33,8 @@ var (
 	ErrUnknownScheme = errors.New("unknown archiver scheme")
 	// ErrBootstrapContainerNotFound is the error for unable to find the bootstrap container given serviceName
 	ErrBootstrapContainerNotFound = errors.New("unable to find bootstrap container for the given service name")
+	// ErrArchiverConfigNotFound is the error for unable to find the config for an archiver given scheme
+	ErrArchiverConfigNotFound = errors.New("unable to find archiver config for the given scheme")
 )
 
 type (
@@ -47,19 +50,9 @@ type (
 		GetVisibilityArchiver(scheme string, serviceName string) (archiver.VisibilityArchiver, error)
 	}
 
-	// HistoryArchiverConfigs contain config for all implementations of the HistoryArchiver interface
-	HistoryArchiverConfigs struct {
-		FileStore *filestore.HistoryArchiverConfig
-	}
-
-	// VisibilityArchiverConfigs contain config for all implementations of the VisibilityArchiver interface
-	VisibilityArchiverConfigs struct {
-		FileStore *filestore.VisibilityArchiverConfig
-	}
-
 	archiverProvider struct {
-		historyArchiverConfigs    *HistoryArchiverConfigs
-		visibilityArchiverConfigs *VisibilityArchiverConfigs
+		historyArchiverConfigs    *config.HistoryArchiverProvider
+		visibilityArchiverConfigs *config.VisibilityArchiverProvider
 
 		// Key for the container is just serviceName
 		historyContainers    map[string]*archiver.HistoryBootstrapContainer
@@ -73,8 +66,8 @@ type (
 
 // NewArchiverProvider returns a new Archiver provider
 func NewArchiverProvider(
-	historyArchiverConfigs *HistoryArchiverConfigs,
-	visibilityArchiverConfigs *VisibilityArchiverConfigs,
+	historyArchiverConfigs *config.HistoryArchiverProvider,
+	visibilityArchiverConfigs *config.VisibilityArchiverProvider,
 ) ArchiverProvider {
 	return &archiverProvider{
 		historyArchiverConfigs:    historyArchiverConfigs,
@@ -104,8 +97,15 @@ func (p *archiverProvider) GetHistoryArchiver(scheme, serviceName string) (archi
 
 	switch scheme {
 	case filestore.URIScheme:
-		p.historyArchivers[archiverKey] = filestore.NewHistoryArchiver(*container, p.historyArchiverConfigs.FileStore)
-		return p.historyArchivers[archiverKey], nil
+		if p.historyArchiverConfigs.Filestore == nil {
+			return nil, ErrArchiverConfigNotFound
+		}
+		historyArchiver, err := filestore.NewHistoryArchiver(*container, p.historyArchiverConfigs.Filestore)
+		if err != nil {
+			return nil, err
+		}
+		p.historyArchivers[archiverKey] = historyArchiver
+		return historyArchiver, nil
 	}
 	return nil, ErrUnknownScheme
 }
@@ -123,7 +123,10 @@ func (p *archiverProvider) GetVisibilityArchiver(scheme, serviceName string) (ar
 
 	switch scheme {
 	case filestore.URIScheme:
-		p.visibilityArchivers[archiverKey] = filestore.NewVisibilityArchiver(*container, p.visibilityArchiverConfigs.FileStore)
+		if p.visibilityArchiverConfigs.Filestore == nil {
+			return nil, ErrArchiverConfigNotFound
+		}
+		p.visibilityArchivers[archiverKey] = filestore.NewVisibilityArchiver(*container, p.visibilityArchiverConfigs.Filestore)
 		return p.visibilityArchivers[archiverKey], nil
 	}
 	return nil, ErrUnknownScheme

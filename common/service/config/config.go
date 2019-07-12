@@ -294,24 +294,19 @@ type (
 		Status string `yaml:"status"`
 		// EnableReadFromArchival whether history can be read from archival
 		EnableReadFromArchival bool `yaml:"enableReadFromArchival"`
-		// ArchiverConfig contains the config for all history archivers
-		ArchiverConfig HistoryArchiverConfig `yaml:"archiverConfig"`
+		// ArchiverProvider contains the config for all history archivers
+		ArchiverProvider HistoryArchiverProvider `yaml:"archiverProvider"`
 	}
 
-	// HistoryArchiverConfig contains the config for all history archivers
-	HistoryArchiverConfig struct {
-		// Filestore is the config the filestore history archiver
-		Filestore *HistoryFilestore `yaml:"filestore"`
+	// HistoryArchiverProvider contains the config for all history archivers
+	HistoryArchiverProvider struct {
+		Filestore *FilestoreHistoryArchiver `yaml:"filestore"`
 	}
 
-	// HistoryFilestore is the config the filestore history archiver
-	HistoryFilestore struct {
-		// FileMode is the mode for the files created by the filestore history archiver
-		// Please use the "0xxx" format
+	// FilestoreHistoryArchiver contain the config for filestore history archiver
+	FilestoreHistoryArchiver struct {
 		FileMode string `yaml:"fileMode"`
-		// DirMode is the mode for the directories created by the filestore history archiver
-		// Please use the "0xxx" format
-		DirMode string `yaml:"dirMode"`
+		DirMode  string `yaml:"dirMode"`
 	}
 
 	// VisibilityArchival contains the config for visibility archival
@@ -320,12 +315,17 @@ type (
 		Status string `yaml:"status"`
 		// EnableReadFromArchival whether visibility can be read from archival
 		EnableReadFromArchival bool `yaml:"enableReadFromArchival"`
-		// ArchiverConfig contains the config for all visibility archivers
-		ArchiverConfig VisibilityArchiverConfig `yaml:"archiverConfig"`
+		// ArchiverProvider contains the config for all visibility archivers
+		ArchiverProvider VisibilityArchiverProvider `yaml:"archiverProvider"`
 	}
 
-	// VisibilityArchiverConfig contains the config for all visibility archivers
-	VisibilityArchiverConfig struct{}
+	// VisibilityArchiverProvider contains the config for all visibility archivers
+	VisibilityArchiverProvider struct {
+		Filestore *FilestoreVisibilityArchiver `yaml:"filestore"`
+	}
+
+	// FilestoreVisibilityArchiver contain the config for filestore visibility archiver
+	FilestoreVisibilityArchiver struct{}
 
 	// PublicClient is config for connecting to cadence frontend
 	PublicClient struct {
