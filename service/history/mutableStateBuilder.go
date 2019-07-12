@@ -3115,7 +3115,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(
 			return err
 		}
 	}
-	newWorkflowSnapshot, newWorkflowEventsSeq, err := newStateBuilder.CloseTransactionForWorkflowSnapshot(newStartedTime)
+	newWorkflowSnapshot, newWorkflowEventsSeq, err := newStateBuilder.CloseTransactionAsSnapshot(newStartedTime)
 	if err != nil {
 		return err
 	}
@@ -3503,7 +3503,7 @@ func (e *mutableStateBuilder) AddTimerTasks(timerTasks ...persistence.Task) {
 	e.insertTimerTasks = append(e.insertTimerTasks, timerTasks...)
 }
 
-func (e *mutableStateBuilder) CloseTransactionForWorkflowMutation(now time.Time) (*persistence.WorkflowMutation, []*persistence.WorkflowEvents, error) {
+func (e *mutableStateBuilder) CloseTransactionAsMutation(now time.Time) (*persistence.WorkflowMutation, []*persistence.WorkflowEvents, error) {
 	if err := e.FlushBufferedEvents(); err != nil {
 		return nil, nil, err
 	}
@@ -3553,7 +3553,7 @@ func (e *mutableStateBuilder) CloseTransactionForWorkflowMutation(now time.Time)
 	return workflowMutation, workflowEventsSeq, nil
 }
 
-func (e *mutableStateBuilder) CloseTransactionForWorkflowSnapshot(now time.Time) (*persistence.WorkflowSnapshot, []*persistence.WorkflowEvents, error) {
+func (e *mutableStateBuilder) CloseTransactionAsSnapshot(now time.Time) (*persistence.WorkflowSnapshot, []*persistence.WorkflowEvents, error) {
 	if err := e.FlushBufferedEvents(); err != nil {
 		return nil, nil, err
 	}

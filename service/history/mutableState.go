@@ -204,7 +204,7 @@ type (
 		AddTransferTasks(transferTasks ...persistence.Task)
 		AddTimerTasks(timerTasks ...persistence.Task)
 
-		CloseTransactionForWorkflowMutation(now time.Time) (*persistence.WorkflowMutation, []*persistence.WorkflowEvents, error)
-		CloseTransactionForWorkflowSnapshot(now time.Time) (*persistence.WorkflowSnapshot, []*persistence.WorkflowEvents, error)
+		CloseTransactionAsMutation(now time.Time) (*persistence.WorkflowMutation, []*persistence.WorkflowEvents, error)
+		CloseTransactionAsSnapshot(now time.Time) (*persistence.WorkflowSnapshot, []*persistence.WorkflowEvents, error)
 	}
 )

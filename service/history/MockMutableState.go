@@ -2756,7 +2756,7 @@ func (_m *mockMutableState) AddTimerTasks(_a0 ...persistence.Task) {
 }
 
 // UpdateUserTimer provides a mock function with given fields: _a0
-func (_m *mockMutableState) CloseTransactionForWorkflowMutation(_a0 time.Time) (*persistence.WorkflowMutation, []*persistence.WorkflowEvents, error) {
+func (_m *mockMutableState) CloseTransactionAsMutation(_a0 time.Time) (*persistence.WorkflowMutation, []*persistence.WorkflowEvents, error) {
 	ret := _m.Called(_a0)
 
 	var r0 *persistence.WorkflowMutation
@@ -2788,7 +2788,7 @@ func (_m *mockMutableState) CloseTransactionForWorkflowMutation(_a0 time.Time) (
 }
 
 // UpdateUserTimer provides a mock function with given fields: _a0, _a1
-func (_m *mockMutableState) CloseTransactionForWorkflowSnapshot(_a0 time.Time) (*persistence.WorkflowSnapshot, []*persistence.WorkflowEvents, error) {
+func (_m *mockMutableState) CloseTransactionAsSnapshot(_a0 time.Time) (*persistence.WorkflowSnapshot, []*persistence.WorkflowEvents, error) {
 	ret := _m.Called(_a0)
 
 	var r0 *persistence.WorkflowSnapshot

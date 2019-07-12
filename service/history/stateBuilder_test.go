@@ -600,9 +600,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 	expectedNewRunStateBuilder.insertTransferTasks = newRunStateBuilder.(*mutableStateBuilder).insertTransferTasks
 	expectedNewRunStateBuilder.insertTimerTasks = newRunStateBuilder.(*mutableStateBuilder).insertTimerTasks
 
-	expectedSnapshot, _, err := expectedNewRunStateBuilder.CloseTransactionForWorkflowSnapshot(now)
+	expectedSnapshot, _, err := expectedNewRunStateBuilder.CloseTransactionAsSnapshot(now)
 	s.Nil(err)
-	actualSnapshot, _, err := newRunStateBuilder.CloseTransactionForWorkflowSnapshot(now)
+	actualSnapshot, _, err := newRunStateBuilder.CloseTransactionAsSnapshot(now)
 	s.Nil(err)
 	expectedSnapshot.ReplicationTasks = nil
 	actualSnapshot.ReplicationTasks = nil
@@ -946,9 +946,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 	expectedNewRunStateBuilder.insertTransferTasks = newRunStateBuilder.(*mutableStateBuilder).insertTransferTasks
 	expectedNewRunStateBuilder.insertTimerTasks = newRunStateBuilder.(*mutableStateBuilder).insertTimerTasks
 
-	expectedSnapshot, _, err := expectedNewRunStateBuilder.CloseTransactionForWorkflowSnapshot(now)
+	expectedSnapshot, _, err := expectedNewRunStateBuilder.CloseTransactionAsSnapshot(now)
 	s.Nil(err)
-	actualSnapshot, _, err := newRunStateBuilder.CloseTransactionForWorkflowSnapshot(now)
+	actualSnapshot, _, err := newRunStateBuilder.CloseTransactionAsSnapshot(now)
 	s.Nil(err)
 	expectedSnapshot.ReplicationTasks = nil
 	actualSnapshot.ReplicationTasks = nil
