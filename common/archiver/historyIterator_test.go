@@ -464,7 +464,7 @@ func (s *HistoryIteratorSuite) TestNext_Success_TenCallsToNext() {
 		pages = append(pages, p)
 	}
 	historyManager := s.constructMockHistoryManager(batchInfo, -1, true, pages...)
-	// set config such that every 10 persistence pages is one group of history batches
+	// set target blob size size such that every 10 persistence pages is one group of history batches
 	itr := s.constructTestHistoryIterator(historyManager, nil, 20*10*testDefaultHistoryEventSize, nil)
 	expectedIteratorState := historyIteratorState{
 		FinishedIteration: false,
@@ -703,7 +703,6 @@ func (s *HistoryIteratorSuite) constructHistoryBatches(batchInfo []int, page pag
 func (s *HistoryIteratorSuite) constructTestHistoryIterator(
 	mockHistoryManager *mocks.HistoryManager,
 	mockHistoryV2Manager *mocks.HistoryV2Manager,
-	// config *HistoryIteratorConfig,
 	targetHistoryBlobSize int,
 	initialState []byte,
 ) *historyIterator {
@@ -711,9 +710,6 @@ func (s *HistoryIteratorSuite) constructTestHistoryIterator(
 	if mockHistoryV2Manager != nil {
 		eventStoreVersion = persistence.EventStoreVersionV2
 	}
-	// if config == nil {
-	// 	config = constructConfig(testDefaultPersistencePageSize, testDefaultTargetHistoryBlobSize)
-	// }
 
 	request := &ArchiveHistoryRequest{
 		DomainID:             testDomainID,
@@ -729,10 +725,3 @@ func (s *HistoryIteratorSuite) constructTestHistoryIterator(
 	s.NoError(err)
 	return iterator.(*historyIterator)
 }
-
-// func constructConfig(historyPageSize, targetHistoryBlobSize int) *historyIteratorConfig {
-// 	return &historyIteratorConfig{
-// 		historyPageSize:       dynamicconfig.GetIntPropertyFilteredByDomain(historyPageSize),
-// 		targetHistoryBlobSize: dynamicconfig.GetIntPropertyFilteredByDomain(targetHistoryBlobSize),
-// 	}
-// }

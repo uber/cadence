@@ -66,25 +66,21 @@ type (
 		FinishedIteration bool
 	}
 
-	historyIteratorConfig struct {
-		historyPageSize       int
-		targetHistoryBlobSize int
-	}
-
 	historyIterator struct {
 		historyIteratorState
 
-		historyManager    persistence.HistoryManager
-		historyV2Manager  persistence.HistoryV2Manager
-		sizeEstimator     SizeEstimator
-		domainID          string
-		domainName        string
-		workflowID        string
-		runID             string
-		shardID           int
-		eventStoreVersion int32
-		branchToken       []byte
-		config            *historyIteratorConfig
+		historyManager        persistence.HistoryManager
+		historyV2Manager      persistence.HistoryV2Manager
+		sizeEstimator         SizeEstimator
+		domainID              string
+		domainName            string
+		workflowID            string
+		runID                 string
+		shardID               int
+		eventStoreVersion     int32
+		branchToken           []byte
+		historyPageSize       int
+		targetHistoryBlobSize int
 	}
 )
 
@@ -106,20 +102,18 @@ func NewHistoryIterator(
 			NextEventID:       common.FirstEventID,
 			FinishedIteration: false,
 		},
-		historyManager:    historyManager,
-		historyV2Manager:  historyV2Manager,
-		sizeEstimator:     sizeEstimator,
-		domainID:          request.DomainID,
-		domainName:        request.DomainName,
-		workflowID:        request.WorkflowID,
-		runID:             request.RunID,
-		shardID:           request.ShardID,
-		eventStoreVersion: request.EventStoreVersion,
-		branchToken:       request.BranchToken,
-		config: &historyIteratorConfig{
-			historyPageSize:       historyPageSize,
-			targetHistoryBlobSize: targetHistoryBlobSize,
-		},
+		historyManager:        historyManager,
+		historyV2Manager:      historyV2Manager,
+		sizeEstimator:         sizeEstimator,
+		domainID:              request.DomainID,
+		domainName:            request.DomainName,
+		workflowID:            request.WorkflowID,
+		runID:                 request.RunID,
+		shardID:               request.ShardID,
+		eventStoreVersion:     request.EventStoreVersion,
+		branchToken:           request.BranchToken,
+		historyPageSize:       historyPageSize,
+		targetHistoryBlobSize: targetHistoryBlobSize,
 	}
 	if it.sizeEstimator == nil {
 		it.sizeEstimator = NewJSONSizeEstimator()
@@ -182,7 +176,7 @@ func (i *historyIterator) GetState() ([]byte, error) {
 
 func (i *historyIterator) readHistoryBatches(firstEventID int64) ([]*shared.History, historyIteratorState, error) {
 	size := 0
-	targetSize := i.config.targetHistoryBlobSize
+	targetSize := i.targetHistoryBlobSize
 	var historyBatches []*shared.History
 	newIterState := historyIteratorState{}
 	for size < targetSize {
@@ -234,7 +228,7 @@ func (i *historyIterator) readHistory(firstEventID int64) ([]*shared.History, er
 			BranchToken: i.branchToken,
 			MinEventID:  firstEventID,
 			MaxEventID:  common.EndEventID,
-			PageSize:    i.config.historyPageSize,
+			PageSize:    i.historyPageSize,
 			ShardID:     common.IntPtr(i.shardID),
 		}
 		historyBatches, _, _, err := persistence.ReadFullPageV2EventsByBatch(i.historyV2Manager, req)
@@ -248,7 +242,7 @@ func (i *historyIterator) readHistory(firstEventID int64) ([]*shared.History, er
 		},
 		FirstEventID: firstEventID,
 		NextEventID:  common.EndEventID,
-		PageSize:     i.config.historyPageSize,
+		PageSize:     i.historyPageSize,
 	}
 	resp, err := i.historyManager.GetWorkflowExecutionHistoryByBatch(req)
 	if err != nil {
