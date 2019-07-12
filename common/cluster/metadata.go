@@ -89,7 +89,7 @@ func NewMetadata(
 	currentClusterName string,
 	clusterInfo map[string]config.ClusterInformation,
 	archivalClusterConfig config.Archival,
-	archivalDomainDefault config.ArchivalDomainDefault,
+	archivalDomainDefault config.ArchivalDomainDefaults,
 ) Metadata {
 
 	if len(clusterInfo) == 0 {

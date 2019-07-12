@@ -106,7 +106,7 @@ func GetTestClusterMetadata(enableGlobalDomain bool, isMasterCluster bool, enabl
 			TestCurrentClusterName,
 			TestAllClusterInfo,
 			archivalClusterConfig,
-			config.ArchivalDomainDefault{},
+			config.ArchivalDomainDefaults{},
 		)
 	}
 
@@ -119,6 +119,6 @@ func GetTestClusterMetadata(enableGlobalDomain bool, isMasterCluster bool, enabl
 		TestCurrentClusterName,
 		TestSingleDCClusterInfo,
 		archivalClusterConfig,
-		config.ArchivalDomainDefault{},
+		config.ArchivalDomainDefaults{},
 	)
 }
