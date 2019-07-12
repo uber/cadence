@@ -3508,8 +3508,6 @@ func (e *mutableStateBuilder) ToWorkflowMutation(now time.Time) (*persistence.Wo
 		return nil, nil, err
 	}
 
-	// TODO last event task ID
-
 	workflowEventsSeq, err := e.prepareEventsAndReplicationTasks()
 	if err != nil {
 		return nil, nil, err
@@ -3559,8 +3557,6 @@ func (e *mutableStateBuilder) ToWorkflowSnapshot(now time.Time) (*persistence.Wo
 	if err := e.FlushBufferedEvents(); err != nil {
 		return nil, nil, err
 	}
-
-	// TODO last event task ID
 
 	workflowEventsSeq, err := e.prepareEventsAndReplicationTasks()
 	if err != nil {
