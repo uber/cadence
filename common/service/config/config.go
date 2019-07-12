@@ -349,7 +349,7 @@ type (
 		Visibility VisibilityArchivalDomainDefaults `yaml:"visibility"`
 	}
 
-	// HistoryArchivalDomainDefault is the default history archival config for each domain
+	// HistoryArchivalDomainDefaults is the default history archival config for each domain
 	HistoryArchivalDomainDefaults struct {
 		// DefaultStatus is the domain default status of history archival: enabled or disabled
 		DefaultStatus string `yaml:"defaultStatus"`
@@ -357,7 +357,7 @@ type (
 		DefaultURI string `yaml:"defaultURI"`
 	}
 
-	// VisibilityArchivalDomainDefault is the default visibility archival config for each domain
+	// VisibilityArchivalDomainDefaults is the default visibility archival config for each domain
 	VisibilityArchivalDomainDefaults struct {
 		// DefaultStatus is the domain default status of visibility archival: enabled or disabled
 		DefaultStatus string `yaml:"defaultStatus"`
