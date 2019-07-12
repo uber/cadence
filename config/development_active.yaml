@@ -125,7 +125,7 @@ archival:
     status: "disabled"
     enableReadFromArchival: false
 
-domain:
+domainDefaults:
   archival:
     history:
       defaultStatus: "disabled"

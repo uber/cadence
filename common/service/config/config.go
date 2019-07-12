@@ -58,8 +58,8 @@ type (
 		// DynamicConfigClient is the config for setting up the file based dynamic config client
 		// Filepath should be relative to the root directory
 		DynamicConfigClient dynamicconfig.FileBasedClientConfig `yaml:"dynamicConfigClient"`
-		// Domain is the default config for every domain
-		Domain Domain `yaml:"domain"`
+		// DomainDefaults is the default config for every domain
+		DomainDefaults DomainDefaults `yaml:"domainDefaults"`
 	}
 
 	// Service contains the service specific config items
@@ -335,22 +335,22 @@ type (
 		RefreshInterval time.Duration `yaml:"RefreshInterval"`
 	}
 
-	// Domain is the default config for each domain
-	Domain struct {
+	// DomainDefaults is the default config for each domain
+	DomainDefaults struct {
 		// Archival is the default archival config for each domain
-		Archival ArchivalDomainDefault `yaml:"archival"`
+		Archival ArchivalDomainDefaults `yaml:"archival"`
 	}
 
-	// ArchivalDomainDefault is the default archival config for each domain
-	ArchivalDomainDefault struct {
+	// ArchivalDomainDefaults is the default archival config for each domain
+	ArchivalDomainDefaults struct {
 		// History is the domain default history archival config for each domain
-		History HistoryArchivalDomainDefault `yaml:"history"`
+		History HistoryArchivalDomainDefaults `yaml:"history"`
 		// Visibility is the domain default visibility archival config for each domain
-		Visibility VisibilityArchivalDomainDefault `yaml:"visibility"`
+		Visibility VisibilityArchivalDomainDefaults `yaml:"visibility"`
 	}
 
 	// HistoryArchivalDomainDefault is the default history archival config for each domain
-	HistoryArchivalDomainDefault struct {
+	HistoryArchivalDomainDefaults struct {
 		// DefaultStatus is the domain default status of history archival: enabled or disabled
 		DefaultStatus string `yaml:"defaultStatus"`
 		// DefaultURI is the domain default URI for history archiver
@@ -358,7 +358,7 @@ type (
 	}
 
 	// VisibilityArchivalDomainDefault is the default visibility archival config for each domain
-	VisibilityArchivalDomainDefault struct {
+	VisibilityArchivalDomainDefaults struct {
 		// DefaultStatus is the domain default status of visibility archival: enabled or disabled
 		DefaultStatus string `yaml:"defaultStatus"`
 		// DefaultURI is the domain default URI for visibility archiver
