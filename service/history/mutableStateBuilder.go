@@ -95,9 +95,9 @@ type (
 		// indicates the previous next event ID
 		condition int64
 
-		pendingTransferTasks    []persistence.Task
-		pendingReplicationTasks []persistence.Task
-		pendingTimerTasks       []persistence.Task
+		insertTransferTasks    []persistence.Task
+		insertReplicationTasks []persistence.Task
+		insertTimerTasks       []persistence.Task
 
 		shard           ShardContext
 		clusterMetadata cluster.Metadata
@@ -3495,12 +3495,12 @@ func (e *mutableStateBuilder) GetContinueAsNew() *persistence.WorkflowSnapshot {
 
 // TODO convert AddTransferTasks to prepareTransferTasks
 func (e *mutableStateBuilder) AddTransferTasks(transferTasks ...persistence.Task) {
-	e.pendingTransferTasks = append(e.pendingTransferTasks, transferTasks...)
+	e.insertTransferTasks = append(e.insertTransferTasks, transferTasks...)
 }
 
 // TODO convert AddTransferTasks to prepareTimerTasks
 func (e *mutableStateBuilder) AddTimerTasks(timerTasks ...persistence.Task) {
-	e.pendingTimerTasks = append(e.pendingTimerTasks, timerTasks...)
+	e.insertTimerTasks = append(e.insertTimerTasks, timerTasks...)
 }
 
 func (e *mutableStateBuilder) ToWorkflowMutation(now time.Time) (*persistence.WorkflowMutation, []*persistence.WorkflowEvents, error) {
@@ -3521,7 +3521,7 @@ func (e *mutableStateBuilder) ToWorkflowMutation(now time.Time) (*persistence.Wo
 		e.UpdateReplicationStateLastEventID(lastEvent.GetVersion(), lastEvent.GetEventId())
 	}
 
-	setTaskInfo(e.GetCurrentVersion(), now, e.pendingTransferTasks, e.pendingTimerTasks)
+	setTaskInfo(e.GetCurrentVersion(), now, e.insertTransferTasks, e.insertTimerTasks)
 
 	workflowMutation := &persistence.WorkflowMutation{
 		ExecutionInfo:    e.executionInfo,
@@ -3542,9 +3542,9 @@ func (e *mutableStateBuilder) ToWorkflowMutation(now time.Time) (*persistence.Wo
 		NewBufferedEvents:         e.updateBufferedEvents,
 		ClearBufferedEvents:       e.clearBufferedEvents,
 
-		TransferTasks:    e.pendingTransferTasks,
-		ReplicationTasks: e.pendingReplicationTasks,
-		TimerTasks:       e.pendingTimerTasks,
+		TransferTasks:    e.insertTransferTasks,
+		ReplicationTasks: e.insertReplicationTasks,
+		TimerTasks:       e.insertTimerTasks,
 
 		Condition: e.condition,
 	}
@@ -3585,7 +3585,7 @@ func (e *mutableStateBuilder) ToWorkflowSnapshot(now time.Time) (*persistence.Wo
 		e.UpdateReplicationStateLastEventID(lastEvent.GetVersion(), lastEvent.GetEventId())
 	}
 
-	setTaskInfo(e.GetCurrentVersion(), now, e.pendingTransferTasks, e.pendingTimerTasks)
+	setTaskInfo(e.GetCurrentVersion(), now, e.insertTransferTasks, e.insertTimerTasks)
 
 	workflowSnapshot := &persistence.WorkflowSnapshot{
 		ExecutionInfo:    e.executionInfo,
@@ -3598,9 +3598,9 @@ func (e *mutableStateBuilder) ToWorkflowSnapshot(now time.Time) (*persistence.Wo
 		SignalInfos:         convertPendingSignalInfos(e.pendingSignalInfoIDs),
 		SignalRequestedIDs:  convertSignalRequestedIDs(e.pendingSignalRequestedIDs),
 
-		TransferTasks:    e.pendingTransferTasks,
-		ReplicationTasks: e.pendingReplicationTasks,
-		TimerTasks:       e.pendingTimerTasks,
+		TransferTasks:    e.insertTransferTasks,
+		ReplicationTasks: e.insertReplicationTasks,
+		TimerTasks:       e.insertTimerTasks,
 
 		Condition: e.condition,
 	}
@@ -3640,6 +3640,11 @@ func (e *mutableStateBuilder) closeSession() error {
 
 	e.hasBufferedEventsInPersistence = len(e.bufferedEvents) > 0
 	e.condition = e.GetNextEventID()
+
+	e.insertTransferTasks = nil
+	e.insertReplicationTasks = nil
+	e.insertTimerTasks = nil
+
 	return nil
 }
 
@@ -3663,6 +3668,9 @@ func (e *mutableStateBuilder) prepareEventsAndReplicationTasks() ([]*persistence
 			BranchToken: e.GetCurrentBranch(),
 			Events:      e.hBuilder.history,
 		})
+
+		// this update the last event task ID in execution info
+		e.GetExecutionInfo().LastEventTaskID = e.hBuilder.history[len(e.hBuilder.history)-1].GetTaskId()
 	}
 
 	if err := e.validateNoEventsAfterWorkflowFinish(e.hBuilder.history); err != nil {
@@ -3670,12 +3678,12 @@ func (e *mutableStateBuilder) prepareEventsAndReplicationTasks() ([]*persistence
 	}
 
 	for _, workflowEvents := range workflowEventsSeq {
-		e.pendingReplicationTasks = append(e.pendingReplicationTasks,
+		e.insertReplicationTasks = append(e.insertReplicationTasks,
 			e.eventsToReplicationTask(workflowEvents.Events)...,
 		)
 	}
 
-	e.pendingReplicationTasks = append(e.pendingReplicationTasks,
+	e.insertReplicationTasks = append(e.insertReplicationTasks,
 		convertSyncActivityInfos(
 			e.pendingActivityInfoIDs,
 			e.syncActivityTasks,

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,11 +24,15 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
+// NOTE: do not use make(type, len(input))
+// since this will assume initial length being len(inputs)
+// always use make(type, 0, len(input))
+
 func convertPendingActivityInfos(
 	inputs map[int64]*persistence.ActivityInfo,
 ) []*persistence.ActivityInfo {
 
-	outputs := []*persistence.ActivityInfo{}
+	outputs := make([]*persistence.ActivityInfo, 0, len(inputs))
 	for _, item := range inputs {
 		outputs = append(outputs, item)
 	}
@@ -39,7 +43,7 @@ func convertUpdateActivityInfos(
 	inputs map[*persistence.ActivityInfo]struct{},
 ) []*persistence.ActivityInfo {
 
-	outputs := []*persistence.ActivityInfo{}
+	outputs := make([]*persistence.ActivityInfo, 0, len(inputs))
 	for item := range inputs {
 		outputs = append(outputs, item)
 	}
@@ -50,7 +54,7 @@ func convertDeleteActivityInfos(
 	inputs map[int64]struct{},
 ) []int64 {
 
-	outputs := []int64{}
+	outputs := make([]int64, 0, len(inputs))
 	for item := range inputs {
 		outputs = append(outputs, item)
 	}
@@ -61,7 +65,7 @@ func convertSyncActivityInfos(
 	activityInfos map[int64]*persistence.ActivityInfo,
 	inputs map[int64]struct{},
 ) []persistence.Task {
-	outputs := []persistence.Task{}
+	outputs := make([]persistence.Task, 0, len(inputs))
 	for item := range inputs {
 		activityInfo, ok := activityInfos[item]
 		if ok {
@@ -78,7 +82,7 @@ func convertPendingTimerInfos(
 	inputs map[string]*persistence.TimerInfo,
 ) []*persistence.TimerInfo {
 
-	outputs := []*persistence.TimerInfo{}
+	outputs := make([]*persistence.TimerInfo, 0, len(inputs))
 	for _, item := range inputs {
 		outputs = append(outputs, item)
 	}
@@ -89,7 +93,7 @@ func convertUpdateTimerInfos(
 	inputs map[*persistence.TimerInfo]struct{},
 ) []*persistence.TimerInfo {
 
-	outputs := []*persistence.TimerInfo{}
+	outputs := make([]*persistence.TimerInfo, 0, len(inputs))
 	for item := range inputs {
 		outputs = append(outputs, item)
 	}
@@ -100,7 +104,7 @@ func convertDeleteTimerInfos(
 	inputs map[string]struct{},
 ) []string {
 
-	outputs := []string{}
+	outputs := make([]string, 0, len(inputs))
 	for item := range inputs {
 		outputs = append(outputs, item)
 	}
@@ -111,7 +115,7 @@ func convertPendingChildExecutionInfos(
 	inputs map[int64]*persistence.ChildExecutionInfo,
 ) []*persistence.ChildExecutionInfo {
 
-	outputs := []*persistence.ChildExecutionInfo{}
+	outputs := make([]*persistence.ChildExecutionInfo, 0, len(inputs))
 	for _, item := range inputs {
 		outputs = append(outputs, item)
 	}
@@ -122,7 +126,7 @@ func convertUpdateChildExecutionInfos(
 	inputs map[*persistence.ChildExecutionInfo]struct{},
 ) []*persistence.ChildExecutionInfo {
 
-	outputs := []*persistence.ChildExecutionInfo{}
+	outputs := make([]*persistence.ChildExecutionInfo, 0, len(inputs))
 	for item := range inputs {
 		outputs = append(outputs, item)
 	}
@@ -133,7 +137,7 @@ func convertPendingRequestCancelInfos(
 	inputs map[int64]*persistence.RequestCancelInfo,
 ) []*persistence.RequestCancelInfo {
 
-	outputs := []*persistence.RequestCancelInfo{}
+	outputs := make([]*persistence.RequestCancelInfo, 0, len(inputs))
 	for _, item := range inputs {
 		outputs = append(outputs, item)
 	}
@@ -144,7 +148,7 @@ func convertUpdateRequestCancelInfos(
 	inputs map[*persistence.RequestCancelInfo]struct{},
 ) []*persistence.RequestCancelInfo {
 
-	outputs := []*persistence.RequestCancelInfo{}
+	outputs := make([]*persistence.RequestCancelInfo, 0, len(inputs))
 	for item := range inputs {
 		outputs = append(outputs, item)
 	}
@@ -155,7 +159,7 @@ func convertPendingSignalInfos(
 	inputs map[int64]*persistence.SignalInfo,
 ) []*persistence.SignalInfo {
 
-	outputs := []*persistence.SignalInfo{}
+	outputs := make([]*persistence.SignalInfo, 0, len(inputs))
 	for _, item := range inputs {
 		outputs = append(outputs, item)
 	}
@@ -166,7 +170,7 @@ func convertUpdateSignalInfos(
 	inputs map[*persistence.SignalInfo]struct{},
 ) []*persistence.SignalInfo {
 
-	outputs := []*persistence.SignalInfo{}
+	outputs := make([]*persistence.SignalInfo, 0, len(inputs))
 	for item := range inputs {
 		outputs = append(outputs, item)
 	}
@@ -177,7 +181,7 @@ func convertSignalRequestedIDs(
 	inputs map[string]struct{},
 ) []string {
 
-	outputs := []string{}
+	outputs := make([]string, 0, len(inputs))
 	for item := range inputs {
 		outputs = append(outputs, item)
 	}
