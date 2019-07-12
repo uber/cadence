@@ -34,7 +34,7 @@ import (
 	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
-	carchiver "github.com/uber/cadence/common/archiver"
+	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
@@ -81,8 +81,7 @@ type (
 		config               *Config
 		archivalClient       archiver.Client
 		resetor              workflowResetor
-		historyArchivers     map[string]carchiver.HistoryArchiver
-		visibilityArchivers  map[string]carchiver.VisibilityArchiver
+		archiverProvider     provider.ArchiverProvider
 	}
 
 	// shardContextWrapper wraps ShardContext to notify transferQueueProcessor on new tasks.
@@ -150,8 +149,7 @@ func NewEngineWithShardContext(
 	historyEventNotifier historyEventNotifier,
 	publisher messaging.Producer,
 	config *Config,
-	historyArchivers map[string]carchiver.HistoryArchiver,
-	visibilityArchivers map[string]carchiver.VisibilityArchiver,
+	archiverProvider provider.ArchiverProvider,
 ) Engine {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 	shardWrapper := &shardContextWrapper{
@@ -181,8 +179,7 @@ func NewEngineWithShardContext(
 		historyEventNotifier: historyEventNotifier,
 		config:               config,
 		archivalClient:       archiver.NewClient(shard.GetMetricsClient(), shard.GetLogger(), publicClient, shard.GetConfig().NumArchiveSystemWorkflows, shard.GetConfig().ArchiveRequestRPS),
-		historyArchivers:     historyArchivers,
-		visibilityArchivers:  visibilityArchivers,
+		archiverProvider:     archiverProvider,
 	}
 
 	txProcessor := newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, matching, historyClient, logger)
@@ -453,8 +450,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 	context := newWorkflowExecutionContext(domainID, execution, e.shard, e.executionManager, e.logger)
 	createReplicationTask := domainEntry.CanReplicateEvent()
 	replicationTasks := []persistence.Task{}
-	var replicationTask persistence.Task
-	_, replicationTask, err = context.appendFirstBatchEventsForActive(msBuilder, createReplicationTask)
+	historySize, replicationTask, err := context.appendFirstBatchEventsForActive(msBuilder, createReplicationTask)
 	if err != nil {
 		return nil, err
 	}
@@ -467,7 +463,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 	prevRunID := ""
 	prevLastWriteVersion := int64(0)
 	err = context.createWorkflowExecution(
-		msBuilder, createReplicationTask, e.timeSource.Now(),
+		msBuilder, historySize, createReplicationTask, e.timeSource.Now(),
 		transferTasks, replicationTasks, timerTasks,
 		createMode, prevRunID, prevLastWriteVersion,
 	)
@@ -500,7 +496,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 				return nil, err
 			}
 			err = context.createWorkflowExecution(
-				msBuilder, createReplicationTask, e.timeSource.Now(),
+				msBuilder, historySize, createReplicationTask, e.timeSource.Now(),
 				transferTasks, replicationTasks, timerTasks,
 				createMode, prevRunID, prevLastWriteVersion,
 			)
@@ -1567,8 +1563,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 	context = newWorkflowExecutionContext(domainID, execution, e.shard, e.executionManager, e.logger)
 	createReplicationTask := domainEntry.CanReplicateEvent()
 	replicationTasks := []persistence.Task{}
-	var replicationTask persistence.Task
-	_, replicationTask, err = context.appendFirstBatchEventsForActive(msBuilder, createReplicationTask)
+	historySize, replicationTask, err := context.appendFirstBatchEventsForActive(msBuilder, createReplicationTask)
 	if err != nil {
 		return nil, err
 	}
@@ -1585,7 +1580,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 		prevLastWriteVersion = prevMutableState.GetLastWriteVersion()
 	}
 	err = context.createWorkflowExecution(
-		msBuilder, createReplicationTask, e.timeSource.Now(),
+		msBuilder, historySize, createReplicationTask, e.timeSource.Now(),
 		transferTasks, replicationTasks, timerTasks,
 		createMode, prevRunID, prevLastWriteVersion,
 	)
@@ -2081,7 +2076,7 @@ func (e *historyEngineImpl) failDecision(
 	}
 
 	if _, err = msBuilder.AddDecisionTaskFailedEvent(
-		scheduleID, startedID, cause, nil, request.GetIdentity(), "", "", "", 0,
+		scheduleID, startedID, cause, details, request.GetIdentity(), "", "", "", 0,
 	); err != nil {
 		return nil, err
 	}
