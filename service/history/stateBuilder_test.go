@@ -943,8 +943,8 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 	expectedNewRunStateBuilder.UpdateReplicationStateLastEventID(newRunStartedEvent.GetVersion(), newRunDecisionEvent.GetEventId())
 
 	expectedNewRunStateBuilder.condition = newRunStateBuilder.(*mutableStateBuilder).condition
-	expectedNewRunStateBuilder.pendingTransferTasks = newRunStateBuilder.(*mutableStateBuilder).pendingTransferTasks
-	expectedNewRunStateBuilder.pendingTimerTasks = newRunStateBuilder.(*mutableStateBuilder).pendingTimerTasks
+	expectedNewRunStateBuilder.insertTransferTasks = newRunStateBuilder.(*mutableStateBuilder).insertTransferTasks
+	expectedNewRunStateBuilder.insertTimerTasks = newRunStateBuilder.(*mutableStateBuilder).insertTimerTasks
 
 	expectedSnapshot, _, err := expectedNewRunStateBuilder.CloseTransactionForWorkflowSnapshot(now)
 	s.Nil(err)
