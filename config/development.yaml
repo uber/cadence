@@ -85,14 +85,10 @@ archival:
   history:
     status: "disabled"
     enableReadFromArchival: false
-    archiverProvider:
-      filestore:
-        fileMode: "0600"
-        dirMode: "0700"
-      # s3store:
-      #   region: "us-east-1"
-      #   endpoint: "http://127.0.0.1:4572"
-      #   s3ForcePathStyle: true
+    # archiverProvider:
+    #   filestore:
+    #     fileMode: "0600"
+    #     dirMode: "0700"
   visibility:
     status: "disabled"
     enableReadFromArchival: false

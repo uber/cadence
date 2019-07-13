@@ -29,10 +29,7 @@ import (
 )
 
 type (
-	visibilityArchiver struct {
-		container archiver.VisibilityBootstrapContainer
-		config    *config.FilestoreVisibilityArchiver
-	}
+	visibilityArchiver struct{}
 )
 
 // NewVisibilityArchiver creates a new archiver.VisibilityArchiver based on filestore
@@ -40,10 +37,7 @@ func NewVisibilityArchiver(
 	container archiver.VisibilityBootstrapContainer,
 	config *config.FilestoreVisibilityArchiver,
 ) archiver.VisibilityArchiver {
-	return &visibilityArchiver{
-		container: container,
-		config:    config,
-	}
+	return &visibilityArchiver{}
 }
 
 func (v *visibilityArchiver) Archive(

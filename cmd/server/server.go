@@ -177,7 +177,17 @@ func (s *server) startService() common.Daemon {
 	}
 	params.PublicClient = workflowserviceclient.New(dispatcher.ClientConfig(common.FrontendServiceName))
 
-	params.ArchiverProvider = provider.NewArchiverProvider(&s.cfg.Archival.History.ArchiverProvider, &s.cfg.Archival.Visibility.ArchiverProvider)
+	configuredForHistoryArchival := params.ClusterMetadata.HistoryArchivalConfig().ClusterConfiguredForArchival()
+	configuredForVisibilityArchival := params.ClusterMetadata.VisibilityArchivalConfig().ClusterConfiguredForArchival()
+	historyArchiverProvider := s.cfg.Archival.History.ArchiverProvider
+	visibilityArchiverProvider := s.cfg.Archival.Visibility.ArchiverProvider
+	if (configuredForHistoryArchival && historyArchiverProvider == nil) || (!configuredForHistoryArchival && historyArchiverProvider != nil) {
+		log.Fatalf("invalid history archival config")
+	}
+	if (configuredForVisibilityArchival && visibilityArchiverProvider == nil) || (!configuredForVisibilityArchival && visibilityArchiverProvider != nil) {
+		log.Fatalf("invalid visibility archival config")
+	}
+	params.ArchiverProvider = provider.NewArchiverProvider(historyArchiverProvider, visibilityArchiverProvider)
 
 	params.PersistenceConfig.TransactionSizeLimit = dc.GetIntProperty(dynamicconfig.TransactionSizeLimit, common.DefaultTransactionSizeLimit)
 

@@ -295,7 +295,7 @@ type (
 		// EnableReadFromArchival whether history can be read from archival
 		EnableReadFromArchival bool `yaml:"enableReadFromArchival"`
 		// ArchiverProvider contains the config for all history archivers
-		ArchiverProvider HistoryArchiverProvider `yaml:"archiverProvider"`
+		ArchiverProvider *HistoryArchiverProvider `yaml:"archiverProvider"`
 	}
 
 	// HistoryArchiverProvider contains the config for all history archivers
@@ -316,7 +316,7 @@ type (
 		// EnableReadFromArchival whether visibility can be read from archival
 		EnableReadFromArchival bool `yaml:"enableReadFromArchival"`
 		// ArchiverProvider contains the config for all visibility archivers
-		ArchiverProvider VisibilityArchiverProvider `yaml:"archiverProvider"`
+		ArchiverProvider *VisibilityArchiverProvider `yaml:"archiverProvider"`
 	}
 
 	// VisibilityArchiverProvider contains the config for all visibility archivers

@@ -75,6 +75,11 @@ func NewArchiverProvider(
 	}
 }
 
+// RegisterBootstrapContainer stores the given bootstrap container given the serviceName
+// The container should be registered when a service starts up and before GetArchiver() is ever called.
+// Later calls to GetArchiver() will used the registered container to initialize new archivers.
+// If this method is called multiple times for one serviceName, later calls will overwrite the container
+// given in previous calls.
 func (p *archiverProvider) RegisterBootstrapContainer(
 	serviceName string,
 	historyContainer *archiver.HistoryBootstrapContainer,
