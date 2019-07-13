@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -1311,6 +1312,15 @@ func (s *workflowHandlerSuite) TestCountWorkflowExecutions() {
 	countRequest.Query = common.StringPtr(query)
 	_, err = wh.CountWorkflowExecutions(ctx, countRequest)
 	s.NotNil(err)
+}
+
+func (s *workflowHandlerSuite) TestConvertIndexedKeyToThrift() {
+	m := map[string]interface{}{
+		"key1": 1,
+	}
+	wh := s.getWorkflowHandlerHelper()
+
+	fmt.Println("vancexu: ", wh.convertIndexedKeyToThrift(m))
 }
 
 func (s *workflowHandlerSuite) newConfig() *Config {
