@@ -152,7 +152,7 @@ var (
 // NewWorkflowHandler creates a thrift handler for the cadence service
 func NewWorkflowHandler(sVice service.Service, config *Config, metadataMgr persistence.MetadataManager,
 	historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
-	visibilityMgr persistence.VisibilityManager, kafkaProducer messaging.Producer,
+	visibilityMgr persistence.VisibilityManager, kafkaProducer messaging.Producer, domainCache cache.DomainCache,
 	blobstoreClient blobstore.Client, archiverProvider provider.ArchiverProvider) *WorkflowHandler {
 	handler := &WorkflowHandler{
 		Service:         sVice,
@@ -163,7 +163,7 @@ func NewWorkflowHandler(sVice service.Service, config *Config, metadataMgr persi
 		visibilityMgr:   visibilityMgr,
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		metricsClient:   sVice.GetMetricsClient(),
-		domainCache:     cache.NewDomainCache(metadataMgr, sVice.GetClusterMetadata(), sVice.GetMetricsClient(), sVice.GetLogger()),
+		domainCache:     domainCache, 
 		rateLimiter:     quotas.NewSimpleRateLimiter(tokenbucket.NewDynamicTokenBucket(config.RPS, clock.NewRealTimeSource())),
 		blobstoreClient: blobstoreClient,
 		versionChecker:  &versionChecker{checkVersion: config.EnableClientVersionCheck()},

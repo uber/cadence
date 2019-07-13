@@ -26,14 +26,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/log/loggerimpl"
-
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/suite"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-
-	"github.com/stretchr/testify/suite"
+	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"

@@ -1210,9 +1210,9 @@ func (s *historyBlobUploaderSuite) archivalConfig(
 		&persistence.GetDomainResponse{
 			Info: &persistence.DomainInfo{ID: testDomainID, Name: testDomain},
 			Config: &persistence.DomainConfig{
-				Retention:      1,
-				ArchivalBucket: domainArchivalBucket,
-				ArchivalStatus: domainArchivalStatus,
+				Retention:             1,
+				HistoryArchivalStatus: domainArchivalStatus,
+				HistoryArchivalURI:    domainArchivalBucket,
 			},
 			ReplicationConfig: &persistence.DomainReplicationConfig{
 				ActiveClusterName: cluster.TestCurrentClusterName,

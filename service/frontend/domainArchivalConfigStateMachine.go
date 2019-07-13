@@ -24,7 +24,8 @@ import (
 	"context"
 
 	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/archiver"
 )
 
 // domainArchivalConfigStateMachine is only used by workflowHandler.
@@ -33,63 +34,79 @@ import (
 
 type (
 	// archivalState represents the state of archival config
-	// the only invalid state is {bucket="", status=enabled}
-	// once bucket is set it is immutable
-	// the initial state is {bucket="", status=disabled}, this is what all domains initially default to
+	// the only invalid state is {URI="", status=enabled}
+	// once URI is set it is immutable
+	// the initial state is {URI="", status=disabled}, this is what all domains initially default to
 	archivalState struct {
-		bucket string
-		status shared.ArchivalStatus
+		historyStatus    shared.ArchivalStatus
+		historyURI       string
+		visibilityStatus shared.ArchivalStatus
+		visibilityURI    string
 	}
 
 	// archivalEvent represents a change request to archival config state
-	// the only restriction placed on events is that defaultBucket is not empty
-	// setting requestedBucket to empty string means user is not attempting to set bucket
+	// the only restriction placed on events is that defaultURI is not empty
+	// setting requestedURI to empty string means user is not attempting to set URI
 	// status can be nil, enabled, or disabled (nil indicates no update by user is being attempted)
 	archivalEvent struct {
-		defaultBucket string
-		bucket        string
-		status        *shared.ArchivalStatus
+		defaultHistoryURI    string
+		historyURI           string
+		historyStatus        *shared.ArchivalStatus
+		defaultVisibilityURI string
+		visibilityURI        string
+		visibilityStatus     *shared.ArchivalStatus
 	}
 )
 
 // the following errors represents impossible code states that should never occur
 var (
-	errInvalidState            = &shared.BadRequestError{Message: "Encountered illegal state: archival is enabled but bucket is not set (should be impossible)"}
-	errInvalidEvent            = &shared.BadRequestError{Message: "Encountered illegal event: default bucket is not set (should be impossible)"}
+	errInvalidState            = &shared.BadRequestError{Message: "Encountered illegal state: archival is enabled but URI is not set (should be impossible)"}
+	errInvalidEvent            = &shared.BadRequestError{Message: "Encountered illegal event: default URI is not set (should be impossible)"}
 	errCannotHandleStateChange = &shared.BadRequestError{Message: "Encountered current state and event that cannot be handled (should be impossible)"}
 )
 
 // the following errors represents bad user input
 var (
-	errBucketNameUpdate   = &shared.BadRequestError{Message: "Cannot update existing bucket name"}
-	errBucketDoesNotExist = &shared.BadRequestError{Message: "Bucket does not exist"}
+	errURIUpdate  = &shared.BadRequestError{Message: "Cannot update existing archival URI"}
+	errInvalidURI = &shared.BadRequestError{Message: "Invalid archival URI"}
 )
 
 func neverEnabledState() *archivalState {
 	return &archivalState{
-		bucket: "",
-		status: shared.ArchivalStatusDisabled,
+		historyURI:       "",
+		historyStatus:    shared.ArchivalStatusDisabled,
+		visibilityURI:    "",
+		visibilityStatus: shared.ArchivalStatusDisabled,
 	}
 }
 
 func (e *archivalEvent) validate() error {
-	if len(e.defaultBucket) == 0 {
+	if len(e.defaultHistoryURI) == 0 || len(e.defaultVisibilityURI) == 0 {
 		return errInvalidEvent
 	}
 	return nil
 }
 
 func (s *archivalState) validate() error {
-	if s.status == shared.ArchivalStatusEnabled && len(s.bucket) == 0 {
+	historyStateInvalid := s.historyStatus == shared.ArchivalStatusEnabled && len(s.historyURI) == 0
+	visibilityStateInvalid := s.visibilityStatus == shared.ArchivalStatusEnabled && len(s.visibilityURI) == 0
+	if historyStateInvalid || visibilityStateInvalid {
 		return errInvalidState
 	}
 	return nil
 }
 
-func (s *archivalState) getNextState(ctx context.Context, blobstoreClient blobstore.Client, e *archivalEvent) (nextState *archivalState, changed bool, err error) {
+func (s *archivalState) getNextState(
+	ctx context.Context,
+	historyArchiver archiver.HistoryArchiver,
+	visibilityArchiver archiver.VisibilityArchiver,
+	e *archivalEvent,
+) (nextState *archivalState, changed bool, err error) {
 	defer func() {
-		// ensure that any existing bucket name was not mutated
-		if nextState != nil && len(s.bucket) != 0 && s.bucket != nextState.bucket {
+		// ensure that any existing URI name was not mutated
+		historyURIChanged := nextState != nil && len(s.historyURI) != 0 && s.historyURI != nextState.historyURI
+		visibilityURIChanged := nextState != nil && len(s.visibilityURI) != 0 && s.visibilityURI != nextState.visibilityURI
+		if historyURIChanged || visibilityURIChanged {
 			nextState = nil
 			changed = false
 			err = errCannotHandleStateChange
@@ -104,17 +121,19 @@ func (s *archivalState) getNextState(ctx context.Context, blobstoreClient blobst
 			}
 		}
 
-		// ensure the bucket exists
-		if nextState != nil && nextState.bucket != "" {
-			exists, bucketExistsErr := blobstoreClient.BucketExists(ctx, nextState.bucket)
-			if bucketExistsErr != nil {
+		if nextState != nil && nextState.historyURI != "" {
+			if err = historyArchiver.ValidateURI(nextState.historyURI); err != nil {
 				nextState = nil
 				changed = false
-				err = bucketExistsErr
-			} else if !exists {
+				err = errInvalidURI
+			}
+		}
+
+		if nextState != nil && nextState.visibilityURI != "" {
+			if err = visibilityArchiver.ValidateURI(nextState.visibilityURI); err != nil {
 				nextState = nil
 				changed = false
-				err = errBucketDoesNotExist
+				err = errInvalidURI
 			}
 		}
 	}()
@@ -129,119 +148,118 @@ func (s *archivalState) getNextState(ctx context.Context, blobstoreClient blobst
 		return nil, false, err
 	}
 
+	nextHistoryStatus, nextHistoryURI, historyStateChanged, err := getNextStateHelper(s.historyStatus, s.historyURI, e.historyStatus, e.historyURI, e.defaultHistoryURI)
+	if err != nil {
+		return nil, false, err
+	}
+	nextState.historyStatus = *nextHistoryStatus
+	nextState.historyURI = *nextHistoryURI
+
+	nextVisibilityStatus, nextVisibilityURI, visibilityStateChanged, err := getNextStateHelper(s.visibilityStatus, s.visibilityURI, e.visibilityStatus, e.visibilityURI, e.defaultVisibilityURI)
+	if err != nil {
+		return nil, false, err
+	}
+	nextState.visibilityStatus = *nextVisibilityStatus
+	nextState.visibilityURI = *nextVisibilityURI
+	return nextState, historyStateChanged || visibilityStateChanged, nil
+}
+
+func getNextStateHelper(
+	stateStatus shared.ArchivalStatus,
+	stateURI string,
+	eventStatus *shared.ArchivalStatus,
+	eventURI string,
+	eventDefaultURI string,
+) (nextStatus *shared.ArchivalStatus, nextURI *string, changed bool, err error) {
 	/**
 	At this point state and event are both non-nil and valid.
 
 	State can be any one of the following:
-	{status=enabled,  bucket="foo"}
-	{status=disabled, bucket="foo"}
-	{status=disabled, bucket=""}
+	{status=enabled,  URI="foo"}
+	{status=disabled, URI="foo"}
+	{status=disabled, URI=""}
 
 	Event can be any one of the following:
-	{status=enabled,  bucket="foo", defaultBucket="bar"}
-	{status=enabled,  bucket="",    defaultBucket="bar"}
-	{status=disabled, bucket="foo", defaultBucket="bar"}
-	{status=disabled, bucket="",    defaultBucket="bar"}
-	{status=nil,      bucket="foo", defaultBucket="bar"}
-	{status=nil,      bucket="",    defaultBucket="bar"}
+	{status=enabled,  URI="foo", defaultURI="bar"}
+	{status=enabled,  URI="",    defaultURI="bar"}
+	{status=disabled, URI="foo", defaultURI="bar"}
+	{status=disabled, URI="",    defaultURI="bar"}
+	{status=nil,      URI="foo", defaultURI="bar"}
+	{status=nil,      URI="",    defaultURI="bar"}
 	*/
 
-	stateBucketSet := len(s.bucket) != 0
-	eventBucketSet := len(e.bucket) != 0
+	stateURISet := len(stateURI) != 0
+	eventURISet := len(eventURI) != 0
 
-	// factor this case out to ensure that bucket name is immutable
-	if stateBucketSet && eventBucketSet && s.bucket != e.bucket {
-		return nil, false, errBucketNameUpdate
+	// factor this case out to ensure that URI is immutable
+	if stateURISet && eventURISet && stateURI != eventURI {
+		return nil, nil, false, errURIUpdate
 	}
 
 	// state 1
-	if s.status == shared.ArchivalStatusEnabled && stateBucketSet {
-		if e.status != nil && *e.status == shared.ArchivalStatusEnabled && eventBucketSet {
-			return s, false, nil
+	if stateStatus == shared.ArchivalStatusEnabled && stateURISet {
+		if eventStatus != nil && *eventStatus == shared.ArchivalStatusEnabled && eventURISet {
+			return &stateStatus, &stateURI, false, nil
 		}
-		if e.status != nil && *e.status == shared.ArchivalStatusEnabled && !eventBucketSet {
-			return s, false, nil
+		if eventStatus != nil && *eventStatus == shared.ArchivalStatusEnabled && !eventURISet {
+			return &stateStatus, &stateURI, false, nil
 		}
-		if e.status != nil && *e.status == shared.ArchivalStatusDisabled && eventBucketSet {
-			return &archivalState{
-				bucket: s.bucket,
-				status: shared.ArchivalStatusDisabled,
-			}, true, nil
+		if eventStatus != nil && *eventStatus == shared.ArchivalStatusDisabled && eventURISet {
+			return common.ArchivalStatusPtr(shared.ArchivalStatusDisabled), &stateURI, true, nil
 		}
-		if e.status != nil && *e.status == shared.ArchivalStatusDisabled && !eventBucketSet {
-			return &archivalState{
-				bucket: s.bucket,
-				status: shared.ArchivalStatusDisabled,
-			}, true, nil
+		if eventStatus != nil && *eventStatus == shared.ArchivalStatusDisabled && !eventURISet {
+			return common.ArchivalStatusPtr(shared.ArchivalStatusDisabled), &stateURI, true, nil
 		}
-		if e.status == nil && eventBucketSet {
-			return s, false, nil
+		if eventStatus == nil && eventURISet {
+			return &stateStatus, &stateURI, false, nil
 		}
-		if e.status == nil && !eventBucketSet {
-			return s, false, nil
+		if eventStatus == nil && !eventURISet {
+			return &stateStatus, &stateURI, false, nil
 		}
 	}
 
 	// state 2
-	if s.status == shared.ArchivalStatusDisabled && stateBucketSet {
-		if e.status != nil && *e.status == shared.ArchivalStatusEnabled && eventBucketSet {
-			return &archivalState{
-				status: shared.ArchivalStatusEnabled,
-				bucket: s.bucket,
-			}, true, nil
+	if stateStatus == shared.ArchivalStatusDisabled && stateURISet {
+		if eventStatus != nil && *eventStatus == shared.ArchivalStatusEnabled && eventURISet {
+			return common.ArchivalStatusPtr(shared.ArchivalStatusEnabled), &stateURI, true, nil
 		}
-		if e.status != nil && *e.status == shared.ArchivalStatusEnabled && !eventBucketSet {
-			return &archivalState{
-				status: shared.ArchivalStatusEnabled,
-				bucket: s.bucket,
-			}, true, nil
+		if eventStatus != nil && *eventStatus == shared.ArchivalStatusEnabled && !eventURISet {
+			return common.ArchivalStatusPtr(shared.ArchivalStatusEnabled), &stateURI, true, nil
 		}
-		if e.status != nil && *e.status == shared.ArchivalStatusDisabled && eventBucketSet {
-			return s, false, nil
+		if eventStatus != nil && *eventStatus == shared.ArchivalStatusDisabled && eventURISet {
+			return &stateStatus, &stateURI, false, nil
 		}
-		if e.status != nil && *e.status == shared.ArchivalStatusDisabled && !eventBucketSet {
-			return s, false, nil
+		if eventStatus != nil && *eventStatus == shared.ArchivalStatusDisabled && !eventURISet {
+			return &stateStatus, &stateURI, false, nil
 		}
-		if e.status == nil && eventBucketSet {
-			return s, false, nil
+		if eventStatus == nil && eventURISet {
+			return &stateStatus, &stateURI, false, nil
 		}
-		if e.status == nil && !eventBucketSet {
-			return s, false, nil
+		if eventStatus == nil && !eventURISet {
+			return &stateStatus, &stateURI, false, nil
 		}
 	}
 
 	// state 3
-	if s.status == shared.ArchivalStatusDisabled && !stateBucketSet {
-		if e.status != nil && *e.status == shared.ArchivalStatusEnabled && eventBucketSet {
-			return &archivalState{
-				status: shared.ArchivalStatusEnabled,
-				bucket: e.bucket,
-			}, true, nil
+	if stateStatus == shared.ArchivalStatusDisabled && !stateURISet {
+		if eventStatus != nil && *eventStatus == shared.ArchivalStatusEnabled && eventURISet {
+			return common.ArchivalStatusPtr(shared.ArchivalStatusEnabled), &eventURI, true, nil
 		}
-		if e.status != nil && *e.status == shared.ArchivalStatusEnabled && !eventBucketSet {
-			return &archivalState{
-				status: shared.ArchivalStatusEnabled,
-				bucket: e.defaultBucket,
-			}, true, nil
+		if eventStatus != nil && *eventStatus == shared.ArchivalStatusEnabled && !eventURISet {
+			return common.ArchivalStatusPtr(shared.ArchivalStatusEnabled), &eventDefaultURI, true, nil
 		}
-		if e.status != nil && *e.status == shared.ArchivalStatusDisabled && eventBucketSet {
-			return &archivalState{
-				status: shared.ArchivalStatusDisabled,
-				bucket: e.bucket,
-			}, true, nil
+		if eventStatus != nil && *eventStatus == shared.ArchivalStatusDisabled && eventURISet {
+			return common.ArchivalStatusPtr(shared.ArchivalStatusDisabled), &eventURI, true, nil
 		}
-		if e.status != nil && *e.status == shared.ArchivalStatusDisabled && !eventBucketSet {
-			return s, false, nil
+		if eventStatus != nil && *eventStatus == shared.ArchivalStatusDisabled && !eventURISet {
+			return &stateStatus, &stateURI, false, nil
 		}
-		if e.status == nil && eventBucketSet {
-			return &archivalState{
-				status: shared.ArchivalStatusDisabled,
-				bucket: e.bucket,
-			}, true, nil
+		if eventStatus == nil && eventURISet {
+			return common.ArchivalStatusPtr(shared.ArchivalStatusDisabled), &eventURI, true, nil
 		}
-		if e.status == nil && !eventBucketSet {
-			return s, false, nil
+		if eventStatus == nil && !eventURISet {
+			return &stateStatus, &stateURI, false, nil
 		}
 	}
-	return nil, false, errCannotHandleStateChange
+	return nil, nil, false, errCannotHandleStateChange
 }

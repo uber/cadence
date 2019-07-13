@@ -26,6 +26,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/common/archiver/provider"
+
+	"github.com/uber/cadence/common/archiver"
+
 	"github.com/pborman/uuid"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
@@ -39,13 +43,16 @@ import (
 
 type (
 	domainHandlerImpl struct {
-		config              *Config
-		logger              log.Logger
-		metadataMgr         persistence.MetadataManager
-		clusterMetadata     cluster.Metadata
-		blobstoreClient     blobstore.Client
-		domainReplicator    DomainReplicator
-		domainAttrValidator *domainAttrValidatorImpl
+		config                               *Config
+		logger                               log.Logger
+		metadataMgr                          persistence.MetadataManager
+		clusterMetadata                      cluster.Metadata
+		blobstoreClient                      blobstore.Client
+		domainReplicator                     DomainReplicator
+		domainAttrValidator                  *domainAttrValidatorImpl
+		archiverProvider                     provider.ArchiverProvider
+		historyArchiverBootstrapContainer    archiver.HistoryBootstrapContainer
+		visibilityArchiverBootstrapContainer archiver.VisibilityBootstrapContainer
 	}
 )
 
@@ -55,8 +62,9 @@ func newDomainHandler(config *Config,
 	metadataMgr persistence.MetadataManager,
 	clusterMetadata cluster.Metadata,
 	blobstoreClient blobstore.Client,
-	domainReplicator DomainReplicator) *domainHandlerImpl {
-
+	domainReplicator DomainReplicator,
+	archiverProvider provider.ArchiverProvider,
+) *domainHandlerImpl {
 	return &domainHandlerImpl{
 		config:              config,
 		logger:              logger,
@@ -65,6 +73,7 @@ func newDomainHandler(config *Config,
 		blobstoreClient:     blobstoreClient,
 		domainReplicator:    domainReplicator,
 		domainAttrValidator: newDomainAttrValidator(clusterMetadata, int32(config.MinRetentionDays())),
+		archiverProvider:    archiverProvider,
 	}
 }
 
@@ -126,8 +135,20 @@ func (d *domainHandlerImpl) registerDomain(
 	}
 	clusters = persistence.GetOrUseDefaultClusters(activeClusterName, clusters)
 
-	nextArchivalState := neverEnabledState()
-	// ycyang TODO: handle register domain with archival enabled.
+	currentArchivalState := neverEnabledState()
+	nextArchivalState := currentArchivalState
+	archivalClusterConfig := d.clusterMetadata.ArchivalConfig()
+	if archivalClusterConfig.ConfiguredForArchival() {
+		archivalEvent, err := d.toArchivalRegisterEvent(registerRequest, archivalClusterConfig.GetDefaultBucket())
+		if err != nil {
+			return err
+		}
+
+		nextArchivalState, _, err = currentArchivalState.getNextState(ctx, d.blobstoreClient, archivalEvent)
+		if err != nil {
+			return err
+		}
+	}
 
 	info := &persistence.DomainInfo{
 		ID:          uuid.New(),
