@@ -250,7 +250,6 @@ type (
 		LastUpdatedTimestamp         time.Time
 		CreateRequestID              string
 		SignalCount                  int32
-		HistorySize                  int64
 		DecisionVersion              int64
 		DecisionScheduleID           int64
 		DecisionStartedID            int64
@@ -283,6 +282,11 @@ type (
 		// Cron
 		CronSchedule      string
 		ExpirationSeconds int32
+	}
+
+	// ExecutionStats is the statistics about workflow execution
+	ExecutionStats struct {
+		HistorySize int64
 	}
 
 	// ReplicationState represents mutable state information for global domains.
@@ -562,6 +566,7 @@ type (
 		SignalInfos         map[int64]*SignalInfo
 		SignalRequestedIDs  map[string]struct{}
 		ExecutionInfo       *WorkflowExecutionInfo
+		ExecutionStats      *ExecutionStats
 		ReplicationState    *ReplicationState
 		BufferedEvents      []*workflow.HistoryEvent
 	}
@@ -760,9 +765,19 @@ type (
 		Encoding common.EncodingType // optional binary encoding type
 	}
 
+	// WorkflowEvents is used as generic workflow history events transaction container
+	WorkflowEvents struct {
+		DomainID    string
+		WorkflowID  string
+		RunID       string
+		BranchToken []byte
+		Events      []*workflow.HistoryEvent
+	}
+
 	// WorkflowMutation is used as generic workflow execution state mutation
 	WorkflowMutation struct {
 		ExecutionInfo    *WorkflowExecutionInfo
+		ExecutionStats   *ExecutionStats
 		ReplicationState *ReplicationState
 
 		UpsertActivityInfos       []*ActivityInfo
@@ -790,6 +805,7 @@ type (
 	// WorkflowSnapshot is used as generic workflow execution state snapshot
 	WorkflowSnapshot struct {
 		ExecutionInfo    *WorkflowExecutionInfo
+		ExecutionStats   *ExecutionStats
 		ReplicationState *ReplicationState
 
 		ActivityInfos       []*ActivityInfo
@@ -2252,16 +2268,6 @@ func DBTimestampToUnixNano(milliseconds int64) int64 {
 // UnixNanoToDBTimestamp converts UnixNano to CQL timestamp
 func UnixNanoToDBTimestamp(timestamp int64) int64 {
 	return timestamp / (1000 * 1000) // Milliseconds are 10⁻³, nanoseconds are 10⁻⁹, (-9) - (-3) = -6, so divide by 10⁶
-}
-
-// SetHistorySize set the historySize
-func (e *WorkflowExecutionInfo) SetHistorySize(size int64) {
-	e.HistorySize = size
-}
-
-// IncreaseHistorySize increase historySize by delta
-func (e *WorkflowExecutionInfo) IncreaseHistorySize(delta int64) {
-	e.HistorySize += delta
 }
 
 // SetNextEventID sets the nextEventID

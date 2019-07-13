@@ -26,14 +26,13 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"go.uber.org/cadence"
-	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/activity"
+	cclient "go.uber.org/cadence/client"
 	"go.uber.org/cadence/workflow"
 	"golang.org/x/time/rate"
 )
@@ -57,6 +56,10 @@ const (
 const (
 	// BatchTypeTerminate is batch type for terminating workflows
 	BatchTypeTerminate = "terminate"
+	// BatchTypeCancel is the batch type for canceling workflows
+	BatchTypeCancel = "cancel"
+	// BatchTypeSignal is batch type for signaling workflows
+	BatchTypeSignal = "signal"
 )
 
 type (
@@ -66,6 +69,20 @@ type (
 		// TODO https://github.com/uber/cadence/issues/2159
 		// Ideally default should be childPolicy of the workflow. But it's currently totally broken.
 		TerminateChildren *bool
+	}
+
+	// CancelParams is the parameters for canceling workflow
+	CancelParams struct {
+		// this indicates whether to cancel children workflow. Default to true.
+		// TODO https://github.com/uber/cadence/issues/2159
+		// Ideally default should be childPolicy of the workflow. But it's currently totally broken.
+		CancelChildren *bool
+	}
+
+	// SignalParams is the parameters for signaling workflow
+	SignalParams struct {
+		SignalName string
+		Input      string
 	}
 
 	// BatchParams is the parameters for batch operation workflow
@@ -82,6 +99,10 @@ type (
 		// Below are all optional
 		// TerminateParams is params only for BatchTypeTerminate
 		TerminateParams TerminateParams
+		// CancelParams is params only for BatchTypeCancel
+		CancelParams CancelParams
+		// SignalParams is params only for BatchTypeSignal
+		SignalParams SignalParams
 		// RPS of processing. Default to defaultRPS
 		// TODO we will implement smarter way than this static rate limiter: https://github.com/uber/cadence/issues/2138
 		RPS int
@@ -159,6 +180,13 @@ func validateParams(params BatchParams) error {
 		return fmt.Errorf("must provide required parameters: BatchType/Reason/DomainName/Query")
 	}
 	switch params.BatchType {
+	case BatchTypeSignal:
+		if params.SignalParams.SignalName == "" {
+			return fmt.Errorf("must provide signal name")
+		}
+		return nil
+	case BatchTypeCancel:
+		fallthrough
 	case BatchTypeTerminate:
 		return nil
 	default:
@@ -194,6 +222,7 @@ func setDefaultParams(params BatchParams) BatchParams {
 // BatchActivity is activity for processing batch operation
 func BatchActivity(ctx context.Context, batchParams BatchParams) (HeartBeatDetails, error) {
 	batcher := ctx.Value(batcherContextKey).(*Batcher)
+	client := cclient.NewClient(batcher.svcClient, batchParams.DomainName, &cclient.Options{})
 
 	hbd := HeartBeatDetails{}
 	startOver := true
@@ -208,7 +237,9 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) (HeartBeatDetai
 	}
 
 	if startOver {
-		resp, err := countWorkflowsWithRetry(ctx, batcher.svcClient, batchParams)
+		resp, err := client.CountWorkflow(ctx, &shared.CountWorkflowExecutionsRequest{
+			Query: common.StringPtr(batchParams.Query),
+		})
 		if err != nil {
 			return HeartBeatDetails{}, err
 		}
@@ -218,14 +249,18 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) (HeartBeatDetai
 	taskCh := make(chan taskDetail, pageSize)
 	respCh := make(chan error, pageSize)
 	for i := 0; i < batchParams.Concurrency; i++ {
-		go startTaskProcessor(ctx, batchParams, taskCh, respCh, rateLimiter)
+		go startTaskProcessor(ctx, batchParams, taskCh, respCh, rateLimiter, client)
 	}
 
 	for {
 		// TODO https://github.com/uber/cadence/issues/2154
 		//  Need to improve scan concurrency because it will hold an ES resource until the workflow finishes.
 		//  And we can't use list API because terminate / reset will mutate the result.
-		resp, err := scanWorkflowsWithRetry(ctx, batcher.svcClient, hbd.PageToken, batchParams)
+		resp, err := client.ScanWorkflow(ctx, &shared.ListWorkflowExecutionsRequest{
+			PageSize:      common.Int32Ptr(int32(pageSize)),
+			NextPageToken: hbd.PageToken,
+			Query:         common.StringPtr(batchParams.Query),
+		})
 		if err != nil {
 			return HeartBeatDetails{}, err
 		}
@@ -277,65 +312,13 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) (HeartBeatDetai
 	return hbd, nil
 }
 
-func countWorkflowsWithRetry(ctx context.Context, svcClient workflowserviceclient.Interface, batchParams BatchParams) (*shared.CountWorkflowExecutionsResponse, error) {
-	batcher := ctx.Value(batcherContextKey).(*Batcher)
-	var resp *shared.CountWorkflowExecutionsResponse
-	policy := backoff.NewExponentialRetryPolicy(rpcTimeout)
-	policy.SetMaximumInterval(batchParams.ActivityHeartBeatTimeout)
-	policy.SetExpirationInterval(batchParams.ActivityHeartBeatTimeout)
-
-	err := backoff.Retry(func() error {
-		var err error
-		resp, err = svcClient.CountWorkflowExecutions(ctx, &shared.CountWorkflowExecutionsRequest{
-			Domain: common.StringPtr(batchParams.DomainName),
-			Query:  common.StringPtr(batchParams.Query),
-		})
-		if err != nil {
-			batcher.metricsClient.IncCounter(metrics.BatcherScope, metrics.BatcherProcessorFailures)
-			getActivityLogger(ctx).Error("Failed to countWorkflowsWithRetry for batch operation task", tag.Error(err))
-		}
-
-		return err
-	}, policy, func(err error) bool {
-		return true
-	})
-
-	return resp, err
-}
-
-func scanWorkflowsWithRetry(ctx context.Context, svcClient workflowserviceclient.Interface, pageToken []byte, batchParams BatchParams) (*shared.ListWorkflowExecutionsResponse, error) {
-	batcher := ctx.Value(batcherContextKey).(*Batcher)
-	var resp *shared.ListWorkflowExecutionsResponse
-	policy := backoff.NewExponentialRetryPolicy(rpcTimeout)
-	policy.SetMaximumInterval(batchParams.ActivityHeartBeatTimeout)
-	policy.SetExpirationInterval(batchParams.ActivityHeartBeatTimeout)
-	err := backoff.Retry(func() error {
-		var err error
-		resp, err = svcClient.ScanWorkflowExecutions(ctx, &shared.ListWorkflowExecutionsRequest{
-			PageSize:      common.Int32Ptr(int32(pageSize)),
-			Domain:        common.StringPtr(batchParams.DomainName),
-			NextPageToken: pageToken,
-			Query:         common.StringPtr(batchParams.Query),
-		})
-		if err != nil {
-			batcher.metricsClient.IncCounter(metrics.BatcherScope, metrics.BatcherProcessorFailures)
-			getActivityLogger(ctx).Error("Failed to scanWorkflowsWithRetry for batch operation task", tag.Error(err))
-		}
-
-		return err
-	}, policy, func(err error) bool {
-		return true
-	})
-
-	return resp, err
-}
-
 func startTaskProcessor(
 	ctx context.Context,
 	batchParams BatchParams,
 	taskCh chan taskDetail,
 	respCh chan error,
 	limiter *rate.Limiter,
+	client cclient.Client,
 ) {
 	batcher := ctx.Value(batcherContextKey).(*Batcher)
 	for {
@@ -350,7 +333,23 @@ func startTaskProcessor(
 
 			switch batchParams.BatchType {
 			case BatchTypeTerminate:
-				err = processTerminateTask(ctx, limiter, task, batchParams)
+				err = processTask(ctx, limiter, task, batchParams, client,
+					batchParams.TerminateParams.TerminateChildren,
+					func(workflowID, runID string) error {
+						return client.TerminateWorkflow(ctx, workflowID, runID, batchParams.Reason, []byte{})
+					})
+			case BatchTypeCancel:
+				err = processTask(ctx, limiter, task, batchParams, client,
+					batchParams.CancelParams.CancelChildren,
+					func(workflowID, runID string) error {
+						return client.CancelWorkflow(ctx, workflowID, runID)
+					})
+			case BatchTypeSignal:
+				err = processTask(ctx, limiter, task, batchParams, client, common.BoolPtr(false),
+					func(workflowID, runID string) error {
+						return client.SignalWorkflow(ctx, workflowID, runID,
+							batchParams.SignalParams.SignalName, []byte(batchParams.SignalParams.Input))
+					})
 			}
 			if err != nil {
 				batcher.metricsClient.IncCounter(metrics.BatcherScope, metrics.BatcherProcessorFailures)
@@ -372,9 +371,15 @@ func startTaskProcessor(
 	}
 }
 
-func processTerminateTask(ctx context.Context, limiter *rate.Limiter, task taskDetail, batchParams BatchParams) error {
-	batcher := ctx.Value(batcherContextKey).(*Batcher)
-
+func processTask(
+	ctx context.Context,
+	limiter *rate.Limiter,
+	task taskDetail,
+	batchParams BatchParams,
+	client cclient.Client,
+	applyOnChild *bool,
+	procFn func(string, string) error,
+) error {
 	wfs := []shared.WorkflowExecution{task.execution}
 	for len(wfs) > 0 {
 		wf := wfs[0]
@@ -384,14 +389,7 @@ func processTerminateTask(ctx context.Context, limiter *rate.Limiter, task taskD
 			return err
 		}
 
-		newCtx, cancel := context.WithTimeout(ctx, rpcTimeout)
-		err = batcher.svcClient.TerminateWorkflowExecution(newCtx, &shared.TerminateWorkflowExecutionRequest{
-			Domain:            common.StringPtr(batchParams.DomainName),
-			WorkflowExecution: &wf,
-			Reason:            common.StringPtr(batchParams.Reason),
-			Identity:          common.StringPtr(batchWFTypeName),
-		})
-		cancel()
+		err = procFn(wf.GetWorkflowId(), wf.GetRunId())
 		if err != nil {
 			// EntityNotExistsError means wf is not running or deleted
 			_, ok := err.(*shared.EntityNotExistsError)
@@ -400,12 +398,7 @@ func processTerminateTask(ctx context.Context, limiter *rate.Limiter, task taskD
 			}
 		}
 		wfs = wfs[1:]
-		newCtx, cancel = context.WithTimeout(ctx, rpcTimeout)
-		resp, err := batcher.svcClient.DescribeWorkflowExecution(newCtx, &shared.DescribeWorkflowExecutionRequest{
-			Domain:    common.StringPtr(batchParams.DomainName),
-			Execution: &wf,
-		})
-		cancel()
+		resp, err := client.DescribeWorkflowExecution(ctx, wf.GetWorkflowId(), wf.GetRunId())
 		if err != nil {
 			// EntityNotExistsError means wf is deleted
 			_, ok := err.(*shared.EntityNotExistsError)
@@ -414,10 +407,11 @@ func processTerminateTask(ctx context.Context, limiter *rate.Limiter, task taskD
 			}
 			continue
 		}
+
 		// TODO https://github.com/uber/cadence/issues/2159
-		// ChildPolicy is totally broken in Cadence, we need to fix it before using
-		if *batchParams.TerminateParams.TerminateChildren && len(resp.PendingChildren) > 0 {
-			getActivityLogger(ctx).Info("Found more child workflows to terminate", tag.Number(int64(len(resp.PendingChildren))))
+		// By default should use ChildPolicy, but it is totally broken in Cadence, we need to fix it before using
+		if applyOnChild != nil && *applyOnChild && len(resp.PendingChildren) > 0 {
+			getActivityLogger(ctx).Info("Found more child workflows to process", tag.Number(int64(len(resp.PendingChildren))))
 			for _, ch := range resp.PendingChildren {
 				wfs = append(wfs, shared.WorkflowExecution{
 					WorkflowId: ch.WorkflowID,
@@ -425,6 +419,7 @@ func processTerminateTask(ctx context.Context, limiter *rate.Limiter, task taskD
 				})
 			}
 		}
+
 		activity.RecordHeartbeat(ctx, task.hbd)
 	}
 

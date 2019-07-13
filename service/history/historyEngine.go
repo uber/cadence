@@ -419,7 +419,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 		}
 	}
 
-	_, err = msBuilder.AddWorkflowExecutionStartedEvent(execution, startRequest)
+	_, err = msBuilder.AddWorkflowExecutionStartedEvent(domainEntry, execution, startRequest)
 	if err != nil {
 		return nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
 	}
@@ -450,8 +450,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 	context := newWorkflowExecutionContext(domainID, execution, e.shard, e.executionManager, e.logger)
 	createReplicationTask := domainEntry.CanReplicateEvent()
 	replicationTasks := []persistence.Task{}
-	var replicationTask persistence.Task
-	_, replicationTask, err = context.appendFirstBatchEventsForActive(msBuilder, createReplicationTask)
+	historySize, replicationTask, err := context.appendFirstBatchEventsForActive(msBuilder, createReplicationTask)
 	if err != nil {
 		return nil, err
 	}
@@ -464,7 +463,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 	prevRunID := ""
 	prevLastWriteVersion := int64(0)
 	err = context.createWorkflowExecution(
-		msBuilder, createReplicationTask, e.timeSource.Now(),
+		msBuilder, historySize, createReplicationTask, e.timeSource.Now(),
 		transferTasks, replicationTasks, timerTasks,
 		createMode, prevRunID, prevLastWriteVersion,
 	)
@@ -497,7 +496,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 				return nil, err
 			}
 			err = context.createWorkflowExecution(
-				msBuilder, createReplicationTask, e.timeSource.Now(),
+				msBuilder, historySize, createReplicationTask, e.timeSource.Now(),
 				transferTasks, replicationTasks, timerTasks,
 				createMode, prevRunID, prevLastWriteVersion,
 			)
@@ -1537,7 +1536,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 	// Generate first decision task event.
 	taskList := request.TaskList.GetName()
 	// Add WF start event
-	_, err = msBuilder.AddWorkflowExecutionStartedEvent(execution, startRequest)
+	_, err = msBuilder.AddWorkflowExecutionStartedEvent(domainEntry, execution, startRequest)
 	if err != nil {
 		return nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
 	}
@@ -1564,8 +1563,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 	context = newWorkflowExecutionContext(domainID, execution, e.shard, e.executionManager, e.logger)
 	createReplicationTask := domainEntry.CanReplicateEvent()
 	replicationTasks := []persistence.Task{}
-	var replicationTask persistence.Task
-	_, replicationTask, err = context.appendFirstBatchEventsForActive(msBuilder, createReplicationTask)
+	historySize, replicationTask, err := context.appendFirstBatchEventsForActive(msBuilder, createReplicationTask)
 	if err != nil {
 		return nil, err
 	}
@@ -1582,7 +1580,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 		prevLastWriteVersion = prevMutableState.GetLastWriteVersion()
 	}
 	err = context.createWorkflowExecution(
-		msBuilder, createReplicationTask, e.timeSource.Now(),
+		msBuilder, historySize, createReplicationTask, e.timeSource.Now(),
 		transferTasks, replicationTasks, timerTasks,
 		createMode, prevRunID, prevLastWriteVersion,
 	)
@@ -2078,7 +2076,7 @@ func (e *historyEngineImpl) failDecision(
 	}
 
 	if _, err = msBuilder.AddDecisionTaskFailedEvent(
-		scheduleID, startedID, cause, nil, request.GetIdentity(), "", "", "", 0,
+		scheduleID, startedID, cause, details, request.GetIdentity(), "", "", "", 0,
 	); err != nil {
 		return nil, err
 	}

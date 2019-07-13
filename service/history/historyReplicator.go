@@ -709,23 +709,9 @@ func (r *historyReplicator) ApplyReplicationTask(
 	}
 
 	// directly use stateBuilder to apply events for other events(including continueAsNew)
-	lastEvent, _, newRunStateBuilder, err := sBuilder.applyEvents(domainID, requestID, execution, request.History.Events, newRunHistory, request.GetEventStoreVersion(), request.GetNewRunEventStoreVersion())
+	lastEvent, _, _, err := sBuilder.applyEvents(domainID, requestID, execution, request.History.Events, newRunHistory, request.GetEventStoreVersion(), request.GetNewRunEventStoreVersion())
 	if err != nil {
 		return err
-	}
-
-	// If replicated events has ContinueAsNew event, then append the new run history
-	if newRunStateBuilder != nil {
-		// Generate a transaction ID for appending events to history
-		transactionID, err := r.shard.GetNextTransferTaskID()
-		if err != nil {
-			return err
-		}
-		// continueAsNew
-		err = context.appendFirstBatchHistoryForContinueAsNew(newRunStateBuilder, transactionID)
-		if err != nil {
-			return err
-		}
 	}
 
 	firstEvent := request.History.Events[0]
@@ -766,7 +752,7 @@ func (r *historyReplicator) replicateWorkflowStarted(
 	executionInfo.SetLastFirstEventID(firstEvent.GetEventId())
 	executionInfo.SetNextEventID(lastEvent.GetEventId() + 1)
 
-	_, _, err := context.appendFirstBatchEventsForStandby(msBuilder, history.Events)
+	historySize, _, err := context.appendFirstBatchEventsForStandby(msBuilder, history.Events)
 	if err != nil {
 		return err
 	}
@@ -799,7 +785,8 @@ func (r *historyReplicator) replicateWorkflowStarted(
 	prevRunID := ""
 	prevLastWriteVersion := int64(0)
 	err = context.createWorkflowExecution(
-		msBuilder, createReplicationTask, now, transferTasks, replicationTasks, timerTasks,
+		msBuilder, historySize, createReplicationTask, now,
+		transferTasks, replicationTasks, timerTasks,
 		createMode, prevRunID, prevLastWriteVersion,
 	)
 	if err == nil {
@@ -832,7 +819,8 @@ func (r *historyReplicator) replicateWorkflowStarted(
 		prevRunID = currentRunID
 		prevLastWriteVersion = currentLastWriteVersion
 		return context.createWorkflowExecution(
-			msBuilder, createReplicationTask, now, transferTasks, replicationTasks, timerTasks,
+			msBuilder, historySize, createReplicationTask, now,
+			transferTasks, replicationTasks, timerTasks,
 			createMode, prevRunID, prevLastWriteVersion,
 		)
 	}
@@ -906,7 +894,8 @@ func (r *historyReplicator) replicateWorkflowStarted(
 	prevRunID = currentRunID
 	prevLastWriteVersion = currentLastWriteVersion
 	return context.createWorkflowExecution(
-		msBuilder, createReplicationTask, now, transferTasks, replicationTasks, timerTasks,
+		msBuilder, historySize, createReplicationTask, now,
+		transferTasks, replicationTasks, timerTasks,
 		createMode, prevRunID, prevLastWriteVersion,
 	)
 }

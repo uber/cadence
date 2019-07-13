@@ -248,7 +248,8 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 		NextEventID:       34,
 	}
 	forkGwmsResponse := &p.GetWorkflowExecutionResponse{State: &p.WorkflowMutableState{
-		ExecutionInfo: forkExeInfo,
+		ExecutionInfo:  forkExeInfo,
+		ExecutionStats: &p.ExecutionStats{},
 	}}
 
 	currGwmsRequest := &p.GetWorkflowExecutionRequest{
@@ -268,7 +269,8 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	}
 	compareCurrExeInfo := copyWorkflowExecutionInfo(currExeInfo)
 	currGwmsResponse := &p.GetWorkflowExecutionResponse{State: &p.WorkflowMutableState{
-		ExecutionInfo: currExeInfo,
+		ExecutionInfo:  currExeInfo,
+		ExecutionStats: &p.ExecutionStats{},
 	}}
 
 	gcurResponse := &p.GetCurrentExecutionResponse{
@@ -806,13 +808,13 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication() {
 	compareCurrExeInfo.State = p.WorkflowStateCompleted
 	compareCurrExeInfo.CloseStatus = p.WorkflowCloseStatusTerminated
 	compareCurrExeInfo.NextEventID = 2
-	compareCurrExeInfo.HistorySize = 100
 	compareCurrExeInfo.CompletionEventBatchID = 1
 	s.Equal(compareCurrExeInfo, resetReq.CurrentWorkflowMutation.ExecutionInfo)
 	s.Equal(1, len(resetReq.CurrentWorkflowMutation.TransferTasks))
 	s.Equal(1, len(resetReq.CurrentWorkflowMutation.TimerTasks))
 	s.Equal(p.TransferTaskTypeCloseExecution, resetReq.CurrentWorkflowMutation.TransferTasks[0].GetType())
 	s.Equal(p.TaskTypeDeleteHistoryEvent, resetReq.CurrentWorkflowMutation.TimerTasks[0].GetType())
+	s.Equal(int64(100), resetReq.CurrentWorkflowMutation.ExecutionStats.HistorySize)
 
 	s.Equal("wfType", resetReq.NewWorkflowSnapshot.ExecutionInfo.WorkflowTypeName)
 	s.True(len(resetReq.NewWorkflowSnapshot.ExecutionInfo.RunID) > 0)
@@ -945,7 +947,8 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication_WithRequestCance
 		NextEventID:       35,
 	}
 	forkGwmsResponse := &p.GetWorkflowExecutionResponse{State: &p.WorkflowMutableState{
-		ExecutionInfo: forkExeInfo,
+		ExecutionInfo:  forkExeInfo,
+		ExecutionStats: &p.ExecutionStats{},
 	}}
 
 	currGwmsRequest := &p.GetWorkflowExecutionRequest{
@@ -964,7 +967,8 @@ func (s *resetorSuite) TestResetWorkflowExecution_NoReplication_WithRequestCance
 		NextEventID:      common.FirstEventID,
 	}
 	currGwmsResponse := &p.GetWorkflowExecutionResponse{State: &p.WorkflowMutableState{
-		ExecutionInfo: currExeInfo,
+		ExecutionInfo:  currExeInfo,
+		ExecutionStats: &p.ExecutionStats{},
 	}}
 
 	gcurResponse := &p.GetCurrentExecutionResponse{
@@ -1541,6 +1545,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	}
 	forkGwmsResponse := &p.GetWorkflowExecutionResponse{State: &p.WorkflowMutableState{
 		ExecutionInfo:    forkExeInfo,
+		ExecutionStats:   &p.ExecutionStats{},
 		ReplicationState: forkRepState,
 	}}
 
@@ -1562,6 +1567,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	compareCurrExeInfo := copyWorkflowExecutionInfo(currExeInfo)
 	currGwmsResponse := &p.GetWorkflowExecutionResponse{State: &p.WorkflowMutableState{
 		ExecutionInfo:    currExeInfo,
+		ExecutionStats:   &p.ExecutionStats{},
 		ReplicationState: forkRepState,
 	}}
 
@@ -2106,7 +2112,6 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	compareCurrExeInfo.State = p.WorkflowStateCompleted
 	compareCurrExeInfo.CloseStatus = p.WorkflowCloseStatusTerminated
 	compareCurrExeInfo.NextEventID = 2
-	compareCurrExeInfo.HistorySize = 100
 	compareCurrExeInfo.LastFirstEventID = 1
 	compareCurrExeInfo.CompletionEventBatchID = 1
 	s.Equal(compareCurrExeInfo, resetReq.CurrentWorkflowMutation.ExecutionInfo)
@@ -2114,6 +2119,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_WithTerminatingCur
 	s.Equal(1, len(resetReq.CurrentWorkflowMutation.TimerTasks))
 	s.Equal(p.TransferTaskTypeCloseExecution, resetReq.CurrentWorkflowMutation.TransferTasks[0].GetType())
 	s.Equal(p.TaskTypeDeleteHistoryEvent, resetReq.CurrentWorkflowMutation.TimerTasks[0].GetType())
+	s.Equal(int64(100), resetReq.CurrentWorkflowMutation.ExecutionStats.HistorySize)
 
 	s.Equal("wfType", resetReq.NewWorkflowSnapshot.ExecutionInfo.WorkflowTypeName)
 	s.True(len(resetReq.NewWorkflowSnapshot.ExecutionInfo.RunID) > 0)
@@ -2263,6 +2269,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 	}
 	forkGwmsResponse := &p.GetWorkflowExecutionResponse{State: &p.WorkflowMutableState{
 		ExecutionInfo:    forkExeInfo,
+		ExecutionStats:   &p.ExecutionStats{},
 		ReplicationState: forkRepState,
 	}}
 
@@ -2283,6 +2290,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NotActive() {
 	}
 	currGwmsResponse := &p.GetWorkflowExecutionResponse{State: &p.WorkflowMutableState{
 		ExecutionInfo:    currExeInfo,
+		ExecutionStats:   &p.ExecutionStats{},
 		ReplicationState: forkRepState,
 	}}
 
@@ -2869,6 +2877,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 	}
 	forkGwmsResponse := &p.GetWorkflowExecutionResponse{State: &p.WorkflowMutableState{
 		ExecutionInfo:    forkExeInfo,
+		ExecutionStats:   &p.ExecutionStats{},
 		ReplicationState: forkRepState,
 	}}
 
@@ -2891,6 +2900,7 @@ func (s *resetorSuite) TestResetWorkflowExecution_Replication_NoTerminatingCurre
 	compareCurrExeInfo := copyWorkflowExecutionInfo(currExeInfo)
 	currGwmsResponse := &p.GetWorkflowExecutionResponse{State: &p.WorkflowMutableState{
 		ExecutionInfo:    currExeInfo,
+		ExecutionStats:   &p.ExecutionStats{},
 		ReplicationState: forkRepState,
 	}}
 
@@ -3563,6 +3573,7 @@ func (s *resetorSuite) TestApplyReset() {
 	}
 	forkGwmsResponse := &p.GetWorkflowExecutionResponse{State: &p.WorkflowMutableState{
 		ExecutionInfo:    forkExeInfo,
+		ExecutionStats:   &p.ExecutionStats{},
 		ReplicationState: forkRepState,
 	}}
 
@@ -3585,6 +3596,7 @@ func (s *resetorSuite) TestApplyReset() {
 	compareCurrExeInfo := copyWorkflowExecutionInfo(currExeInfo)
 	currGwmsResponse := &p.GetWorkflowExecutionResponse{State: &p.WorkflowMutableState{
 		ExecutionInfo:    currExeInfo,
+		ExecutionStats:   &p.ExecutionStats{},
 		ReplicationState: forkRepState,
 	}}
 
