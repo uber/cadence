@@ -577,4 +577,61 @@ service WorkflowService {
       6: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,
     )
 
+  /**
+  * StartBatchJob starts a new batch job
+  **/
+  shared.StartBatchJobResponse StartBatchJob(1: shared.StartBatchJobRequest startRequest)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.WorkflowExecutionAlreadyStartedError sessionAlreadyExistError,
+      4: shared.ServiceBusyError serviceBusyError,
+      5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
+      7: shared.EntityNotExistsError entityNotExistError,
+      8: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,
+    )
+
+  /**
+  * StopBatchJob stops a batch job
+  **/
+  shared.StopBatchJobResponse StartBatchJob(1: shared.StopBatchJobRequest stopRequest)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      4: shared.ServiceBusyError serviceBusyError,
+      5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
+      7: shared.EntityNotExistsError entityNotExistError,
+      8: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,
+    )
+
+  /**
+  * DescribeBatchJob describes a batch job
+  **/
+  shared.DescribeBatchJobResponse DescribeBatchJob(1: shared.DescribeBatchJobRequest descRequest)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.WorkflowExecutionAlreadyStartedError sessionAlreadyExistError,
+      4: shared.ServiceBusyError serviceBusyError,
+      5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
+      7: shared.EntityNotExistsError entityNotExistError,
+      8: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,
+    )
+
+  /**
+  * ListBatchJobs list batch jobs
+  **/
+  shared.ListBatchJobsResponse ListBatchJobs(1: shared.ListBatchJobsRequest listRequest)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      4: shared.ServiceBusyError serviceBusyError,
+      5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
+      7: shared.EntityNotExistsError entityNotExistError,
+      8: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,
+    )
 }
