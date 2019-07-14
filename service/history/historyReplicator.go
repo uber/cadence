@@ -720,6 +720,7 @@ func (r *historyReplicator) ApplyReplicationTask(
 		err = r.replicateWorkflowStarted(ctx, context, msBuilder, request.History, sBuilder, logger)
 	default:
 		now := time.Unix(0, lastEvent.GetTimestamp())
+		// TODO remove this set history builder once the update path is re-written
 		msBuilder.SetHistoryBuilder(newHistoryBuilder(msBuilder, r.logger))
 		err = context.replicateWorkflowExecution(request, sBuilder.getTransferTasks(), sBuilder.getTimerTasks(), lastEvent.GetEventId(), now)
 	}
