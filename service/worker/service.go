@@ -25,12 +25,9 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common/archiver/provider"
-
 	"github.com/uber/cadence/service/worker/batcher"
-
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
@@ -270,11 +267,6 @@ func (s *Service) startArchiver(base service.Service, pFactory persistencefactor
 	domainCache := cache.NewDomainCache(metadataMgr, s.params.ClusterMetadata, s.metricsClient, s.logger)
 	domainCache.Start()
 
-	blobstoreClient := blobstore.NewRetryableClient(
-		blobstore.NewMetricClient(s.params.BlobstoreClient, s.metricsClient),
-		s.params.BlobstoreClient.GetRetryPolicy(),
-		s.params.BlobstoreClient.IsRetryableError)
-
 	bc := &archiver.BootstrapContainer{
 		PublicClient:     publicClient,
 		MetricsClient:    s.metricsClient,
@@ -282,7 +274,6 @@ func (s *Service) startArchiver(base service.Service, pFactory persistencefactor
 		ClusterMetadata:  base.GetClusterMetadata(),
 		HistoryManager:   historyManager,
 		HistoryV2Manager: historyV2Manager,
-		Blobstore:        blobstoreClient,
 		DomainCache:      domainCache,
 		Config:           s.config.ArchiverConfig,
 		ArchiverProvider: archiverProvider,

@@ -3216,26 +3216,20 @@ func (wh *WorkflowHandler) getArchivedHistory(
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
-	archivalBucket := entry.GetConfig().HistoryArchivalURI // TODO ycyang: rewrite get archived history with archiver
-	if archivalBucket == "" {
+	archivalURI := entry.GetConfig().HistoryArchivalURI
+	if archivalURI == "" {
 		return nil, wh.error(errHistoryHasPassedRetentionPeriod, scope)
 	}
-	downloadReq := &warchiver.DownloadBlobRequest{
-		NextPageToken:  request.NextPageToken,
-		ArchivalBucket: archivalBucket,
-		DomainID:       domainID,
-		WorkflowID:     request.GetExecution().GetWorkflowId(),
-		RunID:          request.GetExecution().GetRunId(),
-	}
-	resp, err := wh.historyBlobDownloader.DownloadBlob(ctx, downloadReq)
+	scheme, err := common.GetArchivalScheme(archivalURI)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
-	return &gen.GetWorkflowExecutionHistoryResponse{
-		History:       resp.HistoryBlob.Body,
-		NextPageToken: resp.NextPageToken,
-		Archived:      common.BoolPtr(true),
-	}, nil
+
+	archiver, err := wh.archiverProvider.GetHistoryArchiver(scheme, common.FrontendServiceName)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+	resp, err := archiver.Get(ctx, archivalURI)
 }
 
 func (wh *WorkflowHandler) convertIndexedKeyToThrift(keys map[string]interface{}) map[string]gen.IndexedValueType {
