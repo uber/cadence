@@ -144,7 +144,7 @@ func (d *domainHandlerImpl) registerDomain(
 			return err
 		}
 
-		nextHistoryArchivalState, _, err = currentHistoryArchivalState.getNextState(ctx, archivalEvent, d.validateHistoryArchivalURI)
+		nextHistoryArchivalState, _, err = currentHistoryArchivalState.getNextState(archivalEvent, d.validateHistoryArchivalURI)
 		if err != nil {
 			return err
 		}
@@ -164,7 +164,7 @@ func (d *domainHandlerImpl) registerDomain(
 			return err
 		}
 
-		nextVisibilityArchivalState, _, err = currentVisibilityArchivalState.getNextState(ctx, archivalEvent, d.validateVisibilityArchivalURI)
+		nextVisibilityArchivalState, _, err = currentVisibilityArchivalState.getNextState(archivalEvent, d.validateVisibilityArchivalURI)
 		if err != nil {
 			return err
 		}
@@ -379,7 +379,7 @@ func (d *domainHandlerImpl) updateDomain(
 		if err != nil {
 			return nil, err
 		}
-		nextHistoryArchivalState, historyArchivalConfigChanged, err = currentHistoryArchivalState.getNextState(ctx, archivalEvent, d.validateHistoryArchivalURI)
+		nextHistoryArchivalState, historyArchivalConfigChanged, err = currentHistoryArchivalState.getNextState(archivalEvent, d.validateHistoryArchivalURI)
 		if err != nil {
 			return nil, err
 		}
@@ -398,7 +398,7 @@ func (d *domainHandlerImpl) updateDomain(
 		if err != nil {
 			return nil, err
 		}
-		nextVisibilityArchivalState, visibilityArchivalConfigChanged, err = currentVisibilityArchivalState.getNextState(ctx, archivalEvent, d.validateVisibilityArchivalURI)
+		nextVisibilityArchivalState, visibilityArchivalConfigChanged, err = currentVisibilityArchivalState.getNextState(archivalEvent, d.validateVisibilityArchivalURI)
 		if err != nil {
 			return nil, err
 		}

@@ -21,8 +21,6 @@
 package frontend
 
 import (
-	"context"
-
 	"github.com/uber/cadence/.gen/go/shared"
 )
 
@@ -42,7 +40,6 @@ type (
 
 	// archivalEvent represents a change request to archival config state
 	// the only restriction placed on events is that defaultURI is not empty
-	// setting requestedURI to empty string means user is not attempting to set URI
 	// status can be nil, enabled, or disabled (nil indicates no update by user is being attempted)
 	archivalEvent struct {
 		defaultURI string
@@ -86,7 +83,6 @@ func (s *archivalState) validate() error {
 }
 
 func (s *archivalState) getNextState(
-	ctx context.Context,
 	e *archivalEvent,
 	URIValidationFunc func(URI string) error,
 ) (nextState *archivalState, changed bool, err error) {
