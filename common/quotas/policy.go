@@ -23,7 +23,6 @@ package quotas
 import (
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/tokenbucket"
@@ -46,10 +45,6 @@ func (s *simpleRateLimitPolicy) Allow() bool {
 	return ok
 }
 
-func (s *simpleRateLimitPolicy) Wait(d time.Duration) bool {
-	return s.tb.Consume(1, d)
-}
-
 // DomainRateLimitPolicy indicates a domain specific rate limit policy
 type DomainRateLimitPolicy struct {
 	sync.RWMutex
@@ -58,7 +53,8 @@ type DomainRateLimitPolicy struct {
 	globalLimiter  atomic.Value
 }
 
-// NewDomainRateLimiter returns a new domain quota rate limiter
+// NewDomainRateLimiter returns a new domain quota rate limiter. This is about
+// an order of magnitude slower than
 func NewDomainRateLimiter(rps dynamicconfig.IntPropertyFn) *DomainRateLimitPolicy {
 	return newDomainRateLimiter(rps())
 }
@@ -71,20 +67,27 @@ func newDomainRateLimiter(rps int) *DomainRateLimitPolicy {
 	return rl
 }
 
-func (d *DomainRateLimitPolicy) Wait(dur time.Duration) bool {
-	return false
-}
-
+// Allow attempts to allow a request to go through. The method returns
+// immediately with a true or false indicating if the request can make
+// progress
 func (d *DomainRateLimitPolicy) Allow(domain string) bool {
 	// check if we have a per-domain limiter - if not create a default one for
 	// the domain.
 	d.RLock()
 	limiter, ok := d.domainLimiters[domain]
 	d.RUnlock()
+
 	if !ok {
+		// create a new limiter
+		domainLimiter := rate.NewLimiter(rate.Limit(defaultRps), defaultRps)
+
+		// verify that it is needed and add to map
 		d.Lock()
-		limiter = rate.NewLimiter(rate.Limit(defaultRps), defaultRps)
-		d.domainLimiters[domain] = limiter
+		limiter, ok = d.domainLimiters[domain]
+		if !ok {
+			d.domainLimiters[domain] = domainLimiter
+			limiter = domainLimiter
+		}
 		d.Unlock()
 	}
 

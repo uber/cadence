@@ -20,13 +20,16 @@
 package quotas
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/tokenbucket"
 )
 
-const defaultDomain = "test"
+const (
+	defaultDomain = "test"
+)
 
 func BenchmarkSimpleRateLimit(b *testing.B) {
 	policy := NewSimpleRateLimiter(tokenbucket.New(defaultRps, clock.NewRealTimeSource()))
@@ -39,5 +42,41 @@ func BenchmarkDynamicRateLimit(b *testing.B) {
 	policy := newDomainRateLimiter(defaultRps)
 	for n := 0; n < b.N; n++ {
 		policy.Allow(defaultDomain)
+	}
+}
+
+func BenchmarkDynamicRateLimitDomains20(b *testing.B) {
+	numDomains := 100
+	policy := newDomainRateLimiter(defaultRps)
+	domains := make([]string, numDomains)
+	for i := 0; i < numDomains; i++ {
+		domains = append(domains, fmt.Sprintf("domains%v", i))
+	}
+	for n := 0; n < b.N; n++ {
+		policy.Allow(domains[n%numDomains])
+	}
+}
+
+func BenchmarkDynamicRateLimitDomains100(b *testing.B) {
+	numDomains := 100
+	policy := newDomainRateLimiter(defaultRps)
+	domains := make([]string, numDomains)
+	for i := 0; i < numDomains; i++ {
+		domains = append(domains, fmt.Sprintf("domains%v", i))
+	}
+	for n := 0; n < b.N; n++ {
+		policy.Allow(domains[n%numDomains])
+	}
+}
+
+func BenchmarkDynamicRateLimitDomains1000(b *testing.B) {
+	numDomains := 100
+	policy := newDomainRateLimiter(defaultRps)
+	domains := make([]string, numDomains)
+	for i := 0; i < numDomains; i++ {
+		domains = append(domains, fmt.Sprintf("domains%v", i))
+	}
+	for n := 0; n < b.N; n++ {
+		policy.Allow(domains[n%numDomains])
 	}
 }
