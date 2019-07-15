@@ -41,7 +41,6 @@ import (
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/backoff"
-	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/clock"
@@ -54,7 +53,6 @@ import (
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/tokenbucket"
-	warchiver "github.com/uber/cadence/service/worker/archiver"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -76,12 +74,10 @@ type (
 		startWG                   sync.WaitGroup
 		rateLimiter               quotas.Policy
 		config                    *Config
-		blobstoreClient           blobstore.Client
 		versionChecker            *versionChecker
 		domainHandler             *domainHandlerImpl
 		visibilityQueryValidator  *validator.VisibilityQueryValidator
 		searchAttributesValidator *validator.SearchAttributesValidator
-		historyBlobDownloader     warchiver.HistoryBlobDownloader
 		archiverProvider          provider.ArchiverProvider
 		service.Service
 	}
@@ -154,7 +150,7 @@ var (
 func NewWorkflowHandler(sVice service.Service, config *Config, metadataMgr persistence.MetadataManager,
 	historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
 	visibilityMgr persistence.VisibilityManager, kafkaProducer messaging.Producer,
-	blobstoreClient blobstore.Client, archiverProvider provider.ArchiverProvider) *WorkflowHandler {
+	archiverProvider provider.ArchiverProvider) *WorkflowHandler {
 	handler := &WorkflowHandler{
 		Service:         sVice,
 		config:          config,
@@ -166,22 +162,19 @@ func NewWorkflowHandler(sVice service.Service, config *Config, metadataMgr persi
 		metricsClient:   sVice.GetMetricsClient(),
 		domainCache:     cache.NewDomainCache(metadataMgr, sVice.GetClusterMetadata(), sVice.GetMetricsClient(), sVice.GetLogger()),
 		rateLimiter:     quotas.NewSimpleRateLimiter(tokenbucket.NewDynamicTokenBucket(config.RPS, clock.NewRealTimeSource())),
-		blobstoreClient: blobstoreClient,
 		versionChecker:  &versionChecker{checkVersion: config.EnableClientVersionCheck()},
 		domainHandler: newDomainHandler(
 			config,
 			sVice.GetLogger(),
 			metadataMgr,
 			sVice.GetClusterMetadata(),
-			blobstoreClient,
 			NewDomainReplicator(kafkaProducer, sVice.GetLogger()),
 			archiverProvider,
 		),
 		visibilityQueryValidator: validator.NewQueryValidator(config.ValidSearchAttributes),
 		searchAttributesValidator: validator.NewSearchAttributesValidator(sVice.GetLogger(), config.ValidSearchAttributes,
 			config.SearchAttributesNumberOfKeysLimit, config.SearchAttributesSizeOfValueLimit, config.SearchAttributesTotalSizeLimit),
-		historyBlobDownloader: warchiver.NewHistoryBlobDownloader(blobstoreClient),
-		archiverProvider:      archiverProvider,
+		archiverProvider: archiverProvider,
 	}
 	historyArchiverBootstrapContainer := &archiver.HistoryBootstrapContainer{
 		HistoryManager:   handler.historyMgr,
@@ -3212,24 +3205,25 @@ func (wh *WorkflowHandler) getArchivedHistory(
 	domainID string,
 	scope metrics.Scope,
 ) (*gen.GetWorkflowExecutionHistoryResponse, error) {
-	entry, err := wh.domainCache.GetDomainByID(domainID)
-	if err != nil {
-		return nil, wh.error(err, scope)
-	}
-	archivalURI := entry.GetConfig().HistoryArchivalURI
-	if archivalURI == "" {
-		return nil, wh.error(errHistoryHasPassedRetentionPeriod, scope)
-	}
-	scheme, err := common.GetArchivalScheme(archivalURI)
-	if err != nil {
-		return nil, wh.error(err, scope)
-	}
+	return nil, nil
+	// entry, err := wh.domainCache.GetDomainByID(domainID)
+	// if err != nil {
+	// 	return nil, wh.error(err, scope)
+	// }
+	// archivalURI := entry.GetConfig().HistoryArchivalURI
+	// if archivalURI == "" {
+	// 	return nil, wh.error(errHistoryHasPassedRetentionPeriod, scope)
+	// }
+	// scheme, err := common.GetArchivalScheme(archivalURI)
+	// if err != nil {
+	// 	return nil, wh.error(err, scope)
+	// }
 
-	archiver, err := wh.archiverProvider.GetHistoryArchiver(scheme, common.FrontendServiceName)
-	if err != nil {
-		return nil, wh.error(err, scope)
-	}
-	resp, err := archiver.Get(ctx, archivalURI)
+	// archiver, err := wh.archiverProvider.GetHistoryArchiver(scheme, common.FrontendServiceName)
+	// if err != nil {
+	// 	return nil, wh.error(err, scope)
+	// }
+	// resp, err := archiver.Get(ctx, archivalURI)
 }
 
 func (wh *WorkflowHandler) convertIndexedKeyToThrift(keys map[string]interface{}) map[string]gen.IndexedValueType {

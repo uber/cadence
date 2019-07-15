@@ -649,7 +649,7 @@ func (t *timerQueueProcessorBase) archiveWorkflow(task *persistence.TimerTaskInf
 		BranchToken:          msBuilder.GetCurrentBranch(),
 		NextEventID:          msBuilder.GetNextEventID(),
 		CloseFailoverVersion: msBuilder.GetLastWriteVersion(),
-		BucketName:           domainCacheEntry.GetConfig().HistoryArchivalURI,
+		URI:                  domainCacheEntry.GetConfig().HistoryArchivalURI,
 	}
 
 	// send signal before deleting mutable state to make sure archival is idempotent
