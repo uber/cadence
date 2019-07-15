@@ -24,14 +24,24 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/tokenbucket"
+	"golang.org/x/time/rate"
 )
 
 const (
 	defaultDomain = "test"
 	defaultRps    = 1200
+	_minBurst     = 10000
 )
+
+func TestNewRateLimiter(t *testing.T) {
+	maxDispatch := float64(0.01)
+	rl := NewRateLimiter(&maxDispatch, time.Second, _minBurst)
+	limiter := rl.globalLimiter.Load().(*rate.Limiter)
+	assert.Equal(t, _minBurst, limiter.Burst())
+}
 
 func BenchmarkSimpleRateLimiter(b *testing.B) {
 	policy := NewSimpleRateLimiter(tokenbucket.New(defaultRps, clock.NewRealTimeSource()))
