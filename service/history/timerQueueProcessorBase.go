@@ -515,12 +515,6 @@ func (t *timerQueueProcessorBase) handleTaskError(scope int, startTime time.Time
 		return nil
 	}
 
-	if _, ok := err.(*workflow.LimitExceededError); ok {
-		t.metricsClient.IncCounter(scope, metrics.TaskLimitExceededCounter)
-		logger.Error("Task encounter limit exceeded error.", tag.Error(err), tag.LifeCycleProcessingFailed)
-		return err
-	}
-
 	logger.Error("Fail to process task", tag.Error(err), tag.LifeCycleProcessingFailed)
 	return err
 }

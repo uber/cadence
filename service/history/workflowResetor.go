@@ -259,7 +259,7 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(
 
 	// replay history to reset point(exclusive) to rebuild mutableState
 	forkEventVersion, wfTimeoutSecs, receivedSignals, continueRunID, newStateBuilder, historySize, retError := w.replayHistoryEvents(
-		resetDecisionCompletedEventID, requestedID, baseMutableState, newRunID,
+		domainEntry, resetDecisionCompletedEventID, requestedID, baseMutableState, newRunID,
 	)
 	if retError != nil {
 		return
@@ -268,7 +268,7 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(
 
 	// before this, the mutable state is in replay mode
 	// need to close / flush the mutable state for new changes
-	_, _, retError = newMutableState.CloseTransactionAsSnapshot(w.timeSource.Now())
+	_, _, retError = newMutableState.CloseTransactionAsSnapshot(w.timeSource.Now(), false)
 	if retError != nil {
 		return
 	}
@@ -559,6 +559,7 @@ func getRespondActivityTaskFailedRequestFromActivity(ai *persistence.ActivityInf
 
 // TODO: @shreyassrivatsan reduce the number of return parameters from this method or return a struct
 func (w *workflowResetorImpl) replayHistoryEvents(
+	domainEntry *cache.DomainCacheEntry,
 	decisionFinishEventID int64,
 	requestID string,
 	prevMutableState mutableState,
@@ -623,6 +624,7 @@ func (w *workflowResetorImpl) replayHistoryEvents(
 						w.eng.shard.GetEventsCache(),
 						w.eng.logger,
 						firstEvent.GetVersion(),
+						domainEntry.CanReplicateEvent(),
 					)
 				} else {
 					resetMutableState = newMutableStateBuilder(w.eng.shard, w.eng.shard.GetEventsCache(), w.eng.logger)
@@ -858,6 +860,9 @@ func (w *workflowResetorImpl) replicateResetEvent(
 					w.eng.shard.GetEventsCache(),
 					w.eng.logger,
 					firstEvent.GetVersion(),
+					// if can see replication task, meaning that domain is
+					// global domain with > 1 target clusters
+					true,
 				)
 				newMsBuilder.GetExecutionInfo().EventStoreVersion = persistence.EventStoreVersionV2
 				sBuilder = newStateBuilder(w.eng.shard, newMsBuilder, w.eng.logger)
