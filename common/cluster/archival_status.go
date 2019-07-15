@@ -63,7 +63,7 @@ func NewArchivalConfig(
 		DomainDefaultURI:       domainDefaultURI,
 	}
 	if !ac.isValid() {
-		return newDisabledArchivalConfig()
+		panic("invalid cluster level archival configuration")
 	}
 	return ac
 }
@@ -77,15 +77,6 @@ func (a *ArchivalConfig) isValid() bool {
 	URISet := len(a.DomainDefaultURI) != 0
 	disabled := a.ClusterStatus == ArchivalDisabled
 	return (!URISet && disabled) || (URISet && !disabled)
-}
-
-func newDisabledArchivalConfig() *ArchivalConfig {
-	return &ArchivalConfig{
-		ClusterStatus:          ArchivalDisabled,
-		EnableReadFromArchival: false,
-		DomainDefaultStatus:    shared.ArchivalStatusDisabled,
-		DomainDefaultURI:       "",
-	}
 }
 
 func getClusterArchivalStatus(str string) (ArchivalStatus, error) {

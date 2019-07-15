@@ -24,8 +24,6 @@ import (
 	"context"
 
 	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/archiver/provider"
 )
 
 // domainArchivalConfigStateMachine is only used by workflowHandler.
@@ -89,9 +87,8 @@ func (s *archivalState) validate() error {
 
 func (s *archivalState) getNextState(
 	ctx context.Context,
-	archiverProvider provider.ArchiverProvider,
 	e *archivalEvent,
-	isHistoryEvent bool,
+	URIValidationFunc func(URI string) error,
 ) (nextState *archivalState, changed bool, err error) {
 	defer func() {
 		// ensure that any existing URI name was not mutated
@@ -113,36 +110,7 @@ func (s *archivalState) getNextState(
 		}
 
 		if nextState != nil && nextState.URI != "" {
-			scheme, getSchemeErr := common.GetArchivalScheme(nextState.URI)
-			if getSchemeErr != nil {
-				nextState = nil
-				changed = false
-				err = errInvalidURI
-				return
-			}
-
-			var validateURIErr error
-			if isHistoryEvent {
-				archiver, getArchiverErr := archiverProvider.GetHistoryArchiver(scheme, common.FrontendServiceName)
-				if getArchiverErr != nil {
-					nextState = nil
-					changed = false
-					err = getArchiverErr
-					return
-				}
-				validateURIErr = archiver.ValidateURI(nextState.URI)
-			} else {
-				archiver, getArchiverErr := archiverProvider.GetVisibilityArchiver(scheme, common.FrontendServiceName)
-				if getArchiverErr != nil {
-					nextState = nil
-					changed = false
-					err = getArchiverErr
-					return
-				}
-				validateURIErr = archiver.ValidateURI(nextState.URI)
-			}
-
-			if validateURIErr != nil {
+			if validateURIErr := URIValidationFunc(nextState.URI); validateURIErr != nil {
 				nextState = nil
 				changed = false
 				err = errInvalidURI

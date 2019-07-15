@@ -30,7 +30,6 @@ import (
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cluster"
@@ -41,16 +40,14 @@ import (
 
 type (
 	domainHandlerImpl struct {
-		config                               *Config
-		logger                               log.Logger
-		metadataMgr                          persistence.MetadataManager
-		clusterMetadata                      cluster.Metadata
-		blobstoreClient                      blobstore.Client
-		domainReplicator                     DomainReplicator
-		domainAttrValidator                  *domainAttrValidatorImpl
-		archiverProvider                     provider.ArchiverProvider
-		historyArchiverBootstrapContainer    archiver.HistoryBootstrapContainer
-		visibilityArchiverBootstrapContainer archiver.VisibilityBootstrapContainer
+		config              *Config
+		logger              log.Logger
+		metadataMgr         persistence.MetadataManager
+		clusterMetadata     cluster.Metadata
+		blobstoreClient     blobstore.Client
+		domainReplicator    DomainReplicator
+		domainAttrValidator *domainAttrValidatorImpl
+		archiverProvider    provider.ArchiverProvider
 	}
 )
 
@@ -147,7 +144,7 @@ func (d *domainHandlerImpl) registerDomain(
 			return err
 		}
 
-		nextHistoryArchivalState, _, err = currentHistoryArchivalState.getNextState(ctx, d.archiverProvider, archivalEvent, true)
+		nextHistoryArchivalState, _, err = currentHistoryArchivalState.getNextState(ctx, archivalEvent, d.validateHistoryArchivalURI)
 		if err != nil {
 			return err
 		}
@@ -167,7 +164,7 @@ func (d *domainHandlerImpl) registerDomain(
 			return err
 		}
 
-		nextVisibilityArchivalState, _, err = currentVisibilityArchivalState.getNextState(ctx, d.archiverProvider, archivalEvent, false)
+		nextVisibilityArchivalState, _, err = currentVisibilityArchivalState.getNextState(ctx, archivalEvent, d.validateVisibilityArchivalURI)
 		if err != nil {
 			return err
 		}
@@ -382,7 +379,7 @@ func (d *domainHandlerImpl) updateDomain(
 		if err != nil {
 			return nil, err
 		}
-		nextHistoryArchivalState, historyArchivalConfigChanged, err = currentHistoryArchivalState.getNextState(ctx, d.archiverProvider, archivalEvent, true)
+		nextHistoryArchivalState, historyArchivalConfigChanged, err = currentHistoryArchivalState.getNextState(ctx, archivalEvent, d.validateHistoryArchivalURI)
 		if err != nil {
 			return nil, err
 		}
@@ -401,7 +398,7 @@ func (d *domainHandlerImpl) updateDomain(
 		if err != nil {
 			return nil, err
 		}
-		nextVisibilityArchivalState, visibilityArchivalConfigChanged, err = currentVisibilityArchivalState.getNextState(ctx, d.archiverProvider, archivalEvent, false)
+		nextVisibilityArchivalState, visibilityArchivalConfigChanged, err = currentVisibilityArchivalState.getNextState(ctx, archivalEvent, d.validateVisibilityArchivalURI)
 		if err != nil {
 			return nil, err
 		}
@@ -778,4 +775,28 @@ func (d *domainHandlerImpl) toArchivalUpdateEvent(
 		return nil, err
 	}
 	return event, nil
+}
+
+func (d *domainHandlerImpl) validateHistoryArchivalURI(URI string) error {
+	scheme, err := common.GetArchivalScheme(URI)
+	if err != nil {
+		return err
+	}
+	archiver, err := d.archiverProvider.GetHistoryArchiver(scheme, common.FrontendServiceName)
+	if err != nil {
+		return err
+	}
+	return archiver.ValidateURI(URI)
+}
+
+func (d *domainHandlerImpl) validateVisibilityArchivalURI(URI string) error {
+	scheme, err := common.GetArchivalScheme(URI)
+	if err != nil {
+		return err
+	}
+	archiver, err := d.archiverProvider.GetVisibilityArchiver(scheme, common.FrontendServiceName)
+	if err != nil {
+		return err
+	}
+	return archiver.ValidateURI(URI)
 }

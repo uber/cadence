@@ -622,8 +622,8 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Success_NotEnabled() {
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
 	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestAllClusterInfo)
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("HistoryArchivalConfig").Return(cluster.NewArchivalConfig(cluster.ArchivalEnabled, true, shared.ArchivalStatusDisabled, ""))
-	s.mockClusterMetadata.On("VisibilityArchivalConfig").Return(cluster.NewArchivalConfig(cluster.ArchivalEnabled, true, shared.ArchivalStatusDisabled, ""))
+	s.mockClusterMetadata.On("HistoryArchivalConfig").Return(cluster.NewArchivalConfig(cluster.ArchivalEnabled, true, shared.ArchivalStatusDisabled, "some random URI"))
+	s.mockClusterMetadata.On("VisibilityArchivalConfig").Return(cluster.NewArchivalConfig(cluster.ArchivalEnabled, true, shared.ArchivalStatusDisabled, "some random URI"))
 	s.mockClusterMetadata.On("GetNextFailoverVersion", mock.Anything, mock.Anything).Return(int64(0))
 	mMetadataManager := &mocks.MetadataManager{}
 	mMetadataManager.On("GetDomain", mock.Anything).Return(nil, &shared.EntityNotExistsError{})

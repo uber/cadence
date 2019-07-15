@@ -25,8 +25,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/uber/cadence/common/archiver/provider"
-
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-go/tally"
@@ -35,6 +33,7 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
