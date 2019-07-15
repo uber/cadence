@@ -752,9 +752,6 @@ func (r *historyReplicator) replicateWorkflowStarted(
 	incomingVersion := firstEvent.GetVersion()
 	lastEvent := history.Events[len(history.Events)-1]
 
-	msBuilder.AddTransferTasks(sBuilder.getTransferTasks()...)
-	msBuilder.AddTimerTasks(sBuilder.getTimerTasks()...)
-
 	now := time.Unix(0, lastEvent.GetTimestamp())
 	newWorkflow, workflowEventsSeq, err := msBuilder.CloseTransactionAsSnapshot(now)
 	if err != nil {
