@@ -24,7 +24,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -1315,12 +1314,24 @@ func (s *workflowHandlerSuite) TestCountWorkflowExecutions() {
 }
 
 func (s *workflowHandlerSuite) TestConvertIndexedKeyToThrift() {
-	m := map[string]interface{}{
-		"key1": 1,
-	}
 	wh := s.getWorkflowHandlerHelper()
-
-	fmt.Println("vancexu: ", wh.convertIndexedKeyToThrift(m))
+	m := map[string]interface{}{
+		"key1":        float64(0),
+		"key2":        float64(1),
+		"key3":        float64(2),
+		"key4":        float64(3),
+		"key5":        float64(4),
+		"key6":        float64(5),
+		"invalidType": 0,
+	}
+	result := wh.convertIndexedKeyToThrift(m)
+	s.Equal(6, len(result))
+	s.Equal(gen.IndexedValueTypeString, result["key1"])
+	s.Equal(gen.IndexedValueTypeKeyword, result["key2"])
+	s.Equal(gen.IndexedValueTypeInt, result["key3"])
+	s.Equal(gen.IndexedValueTypeDouble, result["key4"])
+	s.Equal(gen.IndexedValueTypeBool, result["key5"])
+	s.Equal(gen.IndexedValueTypeDatetime, result["key6"])
 }
 
 func (s *workflowHandlerSuite) newConfig() *Config {
