@@ -122,6 +122,12 @@ func NewCliApp() *cli.App {
 				},
 			},
 		},
+		{
+			Name:        "cluster",
+			Aliases:     []string{"cl"},
+			Usage:       "Operate cadence cluster",
+			Subcommands: newClusterCommands(),
+		},
 	}
 
 	// set builder if not customized
