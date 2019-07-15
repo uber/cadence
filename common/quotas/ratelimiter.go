@@ -34,7 +34,7 @@ import (
 // configuration updates of the max dispatch per second. This has comparable
 // performance to the token bucket rate limiter.
 // BenchmarkSimpleRateLimiter-4   	10000000	       114 ns/op (tokenbucket)
-// BenchmarkRateLimiter-4         	10000000	       148 ns/op (goland wrapper)
+// BenchmarkRateLimiter-4         	10000000	       148 ns/op (this)
 type RateLimiter struct {
 	sync.RWMutex
 	maxDispatchPerSecond *float64
