@@ -36,7 +36,7 @@ func BenchmarkSimpleRateLimit(b *testing.B) {
 }
 
 func BenchmarkDynamicRateLimit(b *testing.B) {
-	policy := NewDomainRateLimiter()
+	policy := newDomainRateLimiter(defaultRps)
 	for n := 0; n < b.N; n++ {
 		policy.Allow(defaultDomain)
 	}

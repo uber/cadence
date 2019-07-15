@@ -22,8 +22,10 @@ package quotas
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/tokenbucket"
 	"golang.org/x/time/rate"
 )
@@ -51,16 +53,21 @@ func (s *simpleRateLimitPolicy) Wait(d time.Duration) bool {
 // DomainRateLimitPolicy indicates a domain specific rate limit policy
 type DomainRateLimitPolicy struct {
 	sync.RWMutex
+	rps            dynamicconfig.IntPropertyFn
 	domainLimiters map[string]*rate.Limiter
-	globalLimiter  *rate.Limiter
+	globalLimiter  atomic.Value
 }
 
 // NewDomainRateLimiter returns a new domain quota rate limiter
-func NewDomainRateLimiter() *DomainRateLimitPolicy {
+func NewDomainRateLimiter(rps dynamicconfig.IntPropertyFn) *DomainRateLimitPolicy {
+	return newDomainRateLimiter(rps())
+}
+
+func newDomainRateLimiter(rps int) *DomainRateLimitPolicy {
 	rl := &DomainRateLimitPolicy{
-		globalLimiter:  rate.NewLimiter(rate.Limit(defaultRps), defaultRps),
 		domainLimiters: map[string]*rate.Limiter{},
 	}
+	rl.globalLimiter.Store(rate.NewLimiter(rate.Limit(rps), defaultRps))
 	return rl
 }
 
@@ -89,7 +96,8 @@ func (d *DomainRateLimitPolicy) Allow(domain string) bool {
 
 	// ensure that the reservation does not break the global rate limit, if it
 	// does, cancel the reservation and do not allow to proceed.
-	if !d.globalLimiter.Allow() {
+	globalLimiter := d.globalLimiter.Load().(*rate.Limiter)
+	if !globalLimiter.Allow() {
 		rsv.Cancel()
 		return false
 	}
