@@ -584,7 +584,7 @@ type (
 		// NOTE: this retention is in days, not in seconds
 		Retention                int32
 		EmitMetric               bool
-		ArchivalBucket           string // deprecated 
+		ArchivalBucket           string                  // deprecated
 		ArchivalStatus           workflow.ArchivalStatus // deprecated
 		HistoryArchivalStatus    workflow.ArchivalStatus
 		HistoryArchivalURI       string

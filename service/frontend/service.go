@@ -22,9 +22,7 @@ package frontend
 
 import (
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/blobstore"
-	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
@@ -200,19 +198,9 @@ func (s *Service) Start() {
 	} else {
 		kafkaProducer = &mocks.KafkaProducer{}
 	}
-	domainCache := cache.NewDomainCache(metadata, base.GetClusterMetadata(), base.GetMetricsClient(), base.GetLogger())
 
-	historyArchiverBootstrapContainer := &archiver.HistoryBootstrapContainer{
-		HistoryManager:   history,
-		HistoryV2Manager: historyV2,
-		Logger:           base.GetLogger(),
-		MetricsClient:    base.GetMetricsClient(),
-		ClusterMetadata:  base.GetClusterMetadata(),
-		DomainCache:      domainCache,
-	}
-	params.ArchiverProvider.RegisterBootstrapContainer(common.FrontendServiceName, historyArchiverBootstrapContainer, &archiver.VisibilityBootstrapContainer{})
 	metricsBlobstore := blobstore.NewMetricClient(params.BlobstoreClient, base.GetMetricsClient())
-	wfHandler := NewWorkflowHandler(base, s.config, metadata, history, historyV2, visibility, kafkaProducer, domainCache, metricsBlobstore, params.ArchiverProvider)
+	wfHandler := NewWorkflowHandler(base, s.config, metadata, history, historyV2, visibility, kafkaProducer, metricsBlobstore, params.ArchiverProvider)
 	dcRedirectionHandler := NewDCRedirectionHandler(wfHandler, params.DCRedirectionPolicy)
 	dcRedirectionHandler.RegisterHandler()
 

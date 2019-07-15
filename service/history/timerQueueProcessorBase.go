@@ -590,7 +590,7 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.Ti
 	if err != nil {
 		return err
 	}
-	domainArchivalStatus := domainCacheEntry.GetConfig().ArchivalStatus
+	domainArchivalStatus := domainCacheEntry.GetConfig().HistoryArchivalStatus
 	switch clusterArchivalStatus {
 	case cluster.ArchivalDisabled:
 		t.metricsClient.IncCounter(metrics.HistoryProcessDeleteHistoryEventScope, metrics.WorkflowCleanupDeleteCount)

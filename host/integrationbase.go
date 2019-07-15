@@ -96,7 +96,7 @@ func (s *IntegrationBase) setupSuite(defaultClusterConfigFile string) {
 
 	s.domainName = s.randomizeStr("integration-test-domain")
 	s.Require().NoError(
-		s.registerDomain(s.domainName, 1, workflow.ArchivalStatusDisabled, "default-test-bucket", workflow.ArchivalStatusDisabled, ""))
+		s.registerDomain(s.domainName, 1, workflow.ArchivalStatusDisabled, "", workflow.ArchivalStatusDisabled, ""))
 
 	s.foreignDomainName = s.randomizeStr("integration-foreign-test-domain")
 	s.Require().NoError(
@@ -227,6 +227,7 @@ func (s *IntegrationBase) registerArchivalDomain() error {
 		},
 		Config: &persistence.DomainConfig{
 			Retention:                0,
+			HistoryArchivalStatus:    workflow.ArchivalStatusEnabled,
 			HistoryArchivalURI:       s.testCluster.blobstore.bucketName, // TODO ycyang: change this to a URI.
 			VisibilityArchivalStatus: workflow.ArchivalStatusDisabled,
 			VisibilityArchivalURI:    "",

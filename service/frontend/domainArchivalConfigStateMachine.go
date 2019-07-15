@@ -25,7 +25,7 @@ import (
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/archiver"
+	"github.com/uber/cadence/common/archiver/provider"
 )
 
 // domainArchivalConfigStateMachine is only used by workflowHandler.
@@ -38,10 +38,8 @@ type (
 	// once URI is set it is immutable
 	// the initial state is {URI="", status=disabled}, this is what all domains initially default to
 	archivalState struct {
-		historyStatus    shared.ArchivalStatus
-		historyURI       string
-		visibilityStatus shared.ArchivalStatus
-		visibilityURI    string
+		status shared.ArchivalStatus
+		URI    string
 	}
 
 	// archivalEvent represents a change request to archival config state
@@ -49,12 +47,9 @@ type (
 	// setting requestedURI to empty string means user is not attempting to set URI
 	// status can be nil, enabled, or disabled (nil indicates no update by user is being attempted)
 	archivalEvent struct {
-		defaultHistoryURI    string
-		historyURI           string
-		historyStatus        *shared.ArchivalStatus
-		defaultVisibilityURI string
-		visibilityURI        string
-		visibilityStatus     *shared.ArchivalStatus
+		defaultURI string
+		URI        string
+		status     *shared.ArchivalStatus
 	}
 )
 
@@ -73,24 +68,20 @@ var (
 
 func neverEnabledState() *archivalState {
 	return &archivalState{
-		historyURI:       "",
-		historyStatus:    shared.ArchivalStatusDisabled,
-		visibilityURI:    "",
-		visibilityStatus: shared.ArchivalStatusDisabled,
+		URI:    "",
+		status: shared.ArchivalStatusDisabled,
 	}
 }
 
 func (e *archivalEvent) validate() error {
-	if len(e.defaultHistoryURI) == 0 || len(e.defaultVisibilityURI) == 0 {
+	if len(e.defaultURI) == 0 {
 		return errInvalidEvent
 	}
 	return nil
 }
 
 func (s *archivalState) validate() error {
-	historyStateInvalid := s.historyStatus == shared.ArchivalStatusEnabled && len(s.historyURI) == 0
-	visibilityStateInvalid := s.visibilityStatus == shared.ArchivalStatusEnabled && len(s.visibilityURI) == 0
-	if historyStateInvalid || visibilityStateInvalid {
+	if s.status == shared.ArchivalStatusEnabled && len(s.URI) == 0 {
 		return errInvalidState
 	}
 	return nil
@@ -98,18 +89,17 @@ func (s *archivalState) validate() error {
 
 func (s *archivalState) getNextState(
 	ctx context.Context,
-	historyArchiver archiver.HistoryArchiver,
-	visibilityArchiver archiver.VisibilityArchiver,
+	archiverProvider provider.ArchiverProvider,
 	e *archivalEvent,
+	isHistoryEvent bool,
 ) (nextState *archivalState, changed bool, err error) {
 	defer func() {
 		// ensure that any existing URI name was not mutated
-		historyURIChanged := nextState != nil && len(s.historyURI) != 0 && s.historyURI != nextState.historyURI
-		visibilityURIChanged := nextState != nil && len(s.visibilityURI) != 0 && s.visibilityURI != nextState.visibilityURI
-		if historyURIChanged || visibilityURIChanged {
+		if nextState != nil && len(s.URI) != 0 && s.URI != nextState.URI {
 			nextState = nil
 			changed = false
 			err = errCannotHandleStateChange
+			return
 		}
 
 		// ensure that next state is valid
@@ -118,22 +108,45 @@ func (s *archivalState) getNextState(
 				nextState = nil
 				changed = false
 				err = nextStateErr
+				return
 			}
 		}
 
-		if nextState != nil && nextState.historyURI != "" {
-			if err = historyArchiver.ValidateURI(nextState.historyURI); err != nil {
+		if nextState != nil && nextState.URI != "" {
+			scheme, getSchemeErr := common.GetArchivalScheme(nextState.URI)
+			if getSchemeErr != nil {
 				nextState = nil
 				changed = false
 				err = errInvalidURI
+				return
 			}
-		}
 
-		if nextState != nil && nextState.visibilityURI != "" {
-			if err = visibilityArchiver.ValidateURI(nextState.visibilityURI); err != nil {
+			var validateURIErr error
+			if isHistoryEvent {
+				archiver, getArchiverErr := archiverProvider.GetHistoryArchiver(scheme, common.FrontendServiceName)
+				if getArchiverErr != nil {
+					nextState = nil
+					changed = false
+					err = getArchiverErr
+					return
+				}
+				validateURIErr = archiver.ValidateURI(nextState.URI)
+			} else {
+				archiver, getArchiverErr := archiverProvider.GetVisibilityArchiver(scheme, common.FrontendServiceName)
+				if getArchiverErr != nil {
+					nextState = nil
+					changed = false
+					err = getArchiverErr
+					return
+				}
+				validateURIErr = archiver.ValidateURI(nextState.URI)
+			}
+
+			if validateURIErr != nil {
 				nextState = nil
 				changed = false
 				err = errInvalidURI
+				return
 			}
 		}
 	}()
@@ -148,29 +161,6 @@ func (s *archivalState) getNextState(
 		return nil, false, err
 	}
 
-	nextHistoryStatus, nextHistoryURI, historyStateChanged, err := getNextStateHelper(s.historyStatus, s.historyURI, e.historyStatus, e.historyURI, e.defaultHistoryURI)
-	if err != nil {
-		return nil, false, err
-	}
-	nextState.historyStatus = *nextHistoryStatus
-	nextState.historyURI = *nextHistoryURI
-
-	nextVisibilityStatus, nextVisibilityURI, visibilityStateChanged, err := getNextStateHelper(s.visibilityStatus, s.visibilityURI, e.visibilityStatus, e.visibilityURI, e.defaultVisibilityURI)
-	if err != nil {
-		return nil, false, err
-	}
-	nextState.visibilityStatus = *nextVisibilityStatus
-	nextState.visibilityURI = *nextVisibilityURI
-	return nextState, historyStateChanged || visibilityStateChanged, nil
-}
-
-func getNextStateHelper(
-	stateStatus shared.ArchivalStatus,
-	stateURI string,
-	eventStatus *shared.ArchivalStatus,
-	eventURI string,
-	eventDefaultURI string,
-) (nextStatus *shared.ArchivalStatus, nextURI *string, changed bool, err error) {
 	/**
 	At this point state and event are both non-nil and valid.
 
@@ -188,78 +178,102 @@ func getNextStateHelper(
 	{status=nil,      URI="",    defaultURI="bar"}
 	*/
 
-	stateURISet := len(stateURI) != 0
-	eventURISet := len(eventURI) != 0
+	stateURISet := len(s.URI) != 0
+	eventURISet := len(e.URI) != 0
 
 	// factor this case out to ensure that URI is immutable
-	if stateURISet && eventURISet && stateURI != eventURI {
-		return nil, nil, false, errURIUpdate
+	if stateURISet && eventURISet && s.URI != e.URI {
+		return nil, false, errURIUpdate
 	}
 
 	// state 1
-	if stateStatus == shared.ArchivalStatusEnabled && stateURISet {
-		if eventStatus != nil && *eventStatus == shared.ArchivalStatusEnabled && eventURISet {
-			return &stateStatus, &stateURI, false, nil
+	if s.status == shared.ArchivalStatusEnabled && stateURISet {
+		if e.status != nil && *e.status == shared.ArchivalStatusEnabled && eventURISet {
+			return s, false, nil
 		}
-		if eventStatus != nil && *eventStatus == shared.ArchivalStatusEnabled && !eventURISet {
-			return &stateStatus, &stateURI, false, nil
+		if e.status != nil && *e.status == shared.ArchivalStatusEnabled && !eventURISet {
+			return s, false, nil
 		}
-		if eventStatus != nil && *eventStatus == shared.ArchivalStatusDisabled && eventURISet {
-			return common.ArchivalStatusPtr(shared.ArchivalStatusDisabled), &stateURI, true, nil
+		if e.status != nil && *e.status == shared.ArchivalStatusDisabled && eventURISet {
+			return &archivalState{
+				status: shared.ArchivalStatusDisabled,
+				URI:    s.URI,
+			}, true, nil
 		}
-		if eventStatus != nil && *eventStatus == shared.ArchivalStatusDisabled && !eventURISet {
-			return common.ArchivalStatusPtr(shared.ArchivalStatusDisabled), &stateURI, true, nil
+		if e.status != nil && *e.status == shared.ArchivalStatusDisabled && !eventURISet {
+			return &archivalState{
+				status: shared.ArchivalStatusDisabled,
+				URI:    s.URI,
+			}, true, nil
 		}
-		if eventStatus == nil && eventURISet {
-			return &stateStatus, &stateURI, false, nil
+		if e.status == nil && eventURISet {
+			return s, false, nil
 		}
-		if eventStatus == nil && !eventURISet {
-			return &stateStatus, &stateURI, false, nil
+		if e.status == nil && !eventURISet {
+			return s, false, nil
 		}
 	}
 
 	// state 2
-	if stateStatus == shared.ArchivalStatusDisabled && stateURISet {
-		if eventStatus != nil && *eventStatus == shared.ArchivalStatusEnabled && eventURISet {
-			return common.ArchivalStatusPtr(shared.ArchivalStatusEnabled), &stateURI, true, nil
+	if s.status == shared.ArchivalStatusDisabled && stateURISet {
+		if e.status != nil && *e.status == shared.ArchivalStatusEnabled && eventURISet {
+			return &archivalState{
+				URI:    s.URI,
+				status: shared.ArchivalStatusEnabled,
+			}, true, nil
 		}
-		if eventStatus != nil && *eventStatus == shared.ArchivalStatusEnabled && !eventURISet {
-			return common.ArchivalStatusPtr(shared.ArchivalStatusEnabled), &stateURI, true, nil
+		if e.status != nil && *e.status == shared.ArchivalStatusEnabled && !eventURISet {
+			return &archivalState{
+				status: shared.ArchivalStatusEnabled,
+				URI:    s.URI,
+			}, true, nil
 		}
-		if eventStatus != nil && *eventStatus == shared.ArchivalStatusDisabled && eventURISet {
-			return &stateStatus, &stateURI, false, nil
+		if e.status != nil && *e.status == shared.ArchivalStatusDisabled && eventURISet {
+			return s, false, nil
 		}
-		if eventStatus != nil && *eventStatus == shared.ArchivalStatusDisabled && !eventURISet {
-			return &stateStatus, &stateURI, false, nil
+		if e.status != nil && *e.status == shared.ArchivalStatusDisabled && !eventURISet {
+			return s, false, nil
 		}
-		if eventStatus == nil && eventURISet {
-			return &stateStatus, &stateURI, false, nil
+		if e.status == nil && eventURISet {
+			return s, false, nil
 		}
-		if eventStatus == nil && !eventURISet {
-			return &stateStatus, &stateURI, false, nil
+		if e.status == nil && !eventURISet {
+			return s, false, nil
 		}
 	}
 
 	// state 3
-	if stateStatus == shared.ArchivalStatusDisabled && !stateURISet {
-		if eventStatus != nil && *eventStatus == shared.ArchivalStatusEnabled && eventURISet {
-			return common.ArchivalStatusPtr(shared.ArchivalStatusEnabled), &eventURI, true, nil
+	if s.status == shared.ArchivalStatusDisabled && !stateURISet {
+		if e.status != nil && *e.status == shared.ArchivalStatusEnabled && eventURISet {
+			return &archivalState{
+				status: shared.ArchivalStatusEnabled,
+				URI:    e.URI,
+			}, true, nil
 		}
-		if eventStatus != nil && *eventStatus == shared.ArchivalStatusEnabled && !eventURISet {
-			return common.ArchivalStatusPtr(shared.ArchivalStatusEnabled), &eventDefaultURI, true, nil
+		if e.status != nil && *e.status == shared.ArchivalStatusEnabled && !eventURISet {
+			return &archivalState{
+				status: shared.ArchivalStatusEnabled,
+				URI:    e.defaultURI,
+			}, true, nil
 		}
-		if eventStatus != nil && *eventStatus == shared.ArchivalStatusDisabled && eventURISet {
-			return common.ArchivalStatusPtr(shared.ArchivalStatusDisabled), &eventURI, true, nil
+		if e.status != nil && *e.status == shared.ArchivalStatusDisabled && eventURISet {
+			return &archivalState{
+				status: shared.ArchivalStatusDisabled,
+				URI:    e.URI,
+			}, true, nil
 		}
-		if eventStatus != nil && *eventStatus == shared.ArchivalStatusDisabled && !eventURISet {
-			return &stateStatus, &stateURI, false, nil
+		if e.status != nil && *e.status == shared.ArchivalStatusDisabled && !eventURISet {
+			return s, false, nil
 		}
-		if eventStatus == nil && eventURISet {
-			return common.ArchivalStatusPtr(shared.ArchivalStatusDisabled), &eventURI, true, nil
+		if e.status == nil && eventURISet {
+			return &archivalState{
+				status: shared.ArchivalStatusDisabled,
+				URI:    e.URI,
+			}, true, nil
 		}
-		if eventStatus == nil && !eventURISet {
-			return &stateStatus, &stateURI, false, nil
+		if e.status == nil && !eventURISet {
+			return s, false, nil
 		}
 	}
-	return nil, nil, false, errCannotHandleStateChange
+	return nil, false, errCannotHandleStateChange
 }

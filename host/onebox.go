@@ -25,6 +25,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/uber/cadence/common/archiver/provider"
+
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-go/tally"
@@ -424,7 +426,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	frontendConfig := frontend.NewConfig(dc, c.historyConfig.NumHistoryShards, c.workerConfig.EnableIndexer)
 	c.frontendHandler = frontend.NewWorkflowHandler(
 		c.frontEndService, frontendConfig, c.metadataMgr, c.historyMgr, c.historyV2Mgr,
-		c.visibilityMgr, kafkaProducer, params.BlobstoreClient, nil)
+		c.visibilityMgr, kafkaProducer, params.BlobstoreClient, provider.NewArchiverProvider(nil, nil))
 	dcRedirectionHandler := frontend.NewDCRedirectionHandler(c.frontendHandler, params.DCRedirectionPolicy)
 	dcRedirectionHandler.RegisterHandler()
 
@@ -656,8 +658,9 @@ func (c *cadenceImpl) createSystemDomain() error {
 			Description: "Cadence system domain",
 		},
 		Config: &persistence.DomainConfig{
-			Retention:      1,
-			ArchivalStatus: shared.ArchivalStatusDisabled,
+			Retention:                1,
+			HistoryArchivalStatus:    shared.ArchivalStatusDisabled,
+			VisibilityArchivalStatus: shared.ArchivalStatusDisabled,
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
 	})
