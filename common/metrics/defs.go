@@ -61,7 +61,6 @@ const (
 	History
 	Matching
 	Worker
-	Blobstore
 	NumServices
 )
 
@@ -83,7 +82,6 @@ const (
 	FrontendRoleTagValue      = "frontend"
 	AdminRoleTagValue         = "admin"
 	DCRedirectionRoleTagValue = "dc_redirection"
-	BlobstoreRoleTagValue     = "blobstore"
 
 	SizeStatsTypeTagValue  = "size"
 	CountStatsTypeTagValue = "count"
@@ -466,21 +464,6 @@ const (
 	// PersistenceGetHistoryTreeScope tracks GetHistoryTree calls made by service to persistence layer
 	PersistenceGetHistoryTreeScope
 
-	// BlobstoreClientUploadScope tracks Upload calls to blobstore
-	BlobstoreClientUploadScope
-	// BlobstoreClientDownloadScope tracks Download calls to blobstore
-	BlobstoreClientDownloadScope
-	// BlobstoreClientGetTagsScope tracks GetTags calls to blobstore
-	BlobstoreClientGetTagsScope
-	// BlobstoreClientExistsScope tracks Exists calls to blobstore
-	BlobstoreClientExistsScope
-	// BlobstoreClientDeleteScope tracks Delete calls to blobstore
-	BlobstoreClientDeleteScope
-	// BlobstoreClientListByPrefixScope tracks ListByPrefix calls to blobstore
-	BlobstoreClientListByPrefixScope
-	// BlobstoreClientBucketExistsScope tracks BucketExists calls to blobstore
-	BlobstoreClientBucketExistsScope
-
 	// ClusterMetadataArchivalConfigScope tracks ArchivalConfig calls to ClusterMetadata
 	ClusterMetadataArchivalConfigScope
 
@@ -847,24 +830,6 @@ const (
 	NumWorkerScopes
 )
 
-// Operation scopes for Blobstore
-const (
-	// BlobstoreUploadScope tracks Upload API calls received by blobstore
-	BlobstoreUploadScope = iota + NumCommonScopes
-	// BlobstoreDownloadScope tracks Download API calls received by blobstore
-	BlobstoreDownloadScope
-	// BlobstoreGetTagsScope tracks GetTags API calls received by blobstore
-	BlobstoreGetTagsScope
-	// BlobstoreExistsScope tracks Exists API calls received by blobstore
-	BlobstoreExistsScope
-	// BlobstoreDeleteScope tracks Delete API calls received by blobstore
-	BlobstoreDeleteScope
-	// BlobstoreListByPrefixScope tracks ListByPrefix API calls received by blobstore
-	BlobstoreListByPrefixScope
-
-	NumBlobstoreScopes
-)
-
 // ScopeDefs record the scopes for all services
 var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 	// common scope Names
@@ -927,14 +892,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceDeleteHistoryBranchScope:                      {operation: "DeleteHistoryBranch"},
 		PersistenceCompleteForkBranchScope:                       {operation: "CompleteForkBranch"},
 		PersistenceGetHistoryTreeScope:                           {operation: "GetHistoryTree"},
-
-		BlobstoreClientUploadScope:       {operation: "BlobstoreClientUpload", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
-		BlobstoreClientDownloadScope:     {operation: "BlobstoreClientDownload", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
-		BlobstoreClientGetTagsScope:      {operation: "BlobstoreClientGetTags", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
-		BlobstoreClientExistsScope:       {operation: "BlobstoreClientExists", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
-		BlobstoreClientDeleteScope:       {operation: "BlobstoreClientDelete", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
-		BlobstoreClientListByPrefixScope: {operation: "BlobstoreClientListByPrefix", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
-		BlobstoreClientBucketExistsScope: {operation: "BlobstoreClientBucketExists", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
 
 		ClusterMetadataArchivalConfigScope: {operation: "ArchivalConfig"},
 
@@ -1228,15 +1185,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ArchiverArchivalWorkflowScope:       {operation: "ArchiverArchivalWorkflow"},
 		TaskListScavengerScope:              {operation: "tasklistscavenger"},
 		BatcherScope:                        {operation: "batcher"},
-	},
-	// Blobstore Scope Names
-	Blobstore: {
-		BlobstoreUploadScope:       {operation: "Upload"},
-		BlobstoreDownloadScope:     {operation: "Download"},
-		BlobstoreGetTagsScope:      {operation: "GetTags"},
-		BlobstoreExistsScope:       {operation: "Exists"},
-		BlobstoreDeleteScope:       {operation: "Delete"},
-		BlobstoreListByPrefixScope: {operation: "ListByPrefix"},
 	},
 }
 
