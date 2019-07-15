@@ -34,7 +34,6 @@ import (
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver/provider"
-	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/elasticsearch"
@@ -100,7 +99,6 @@ type (
 		clientWorker        archiver.ClientWorker
 		indexer             *indexer.Indexer
 		enableEventsV2      bool
-		blobstoreClient     blobstore.Client
 		historyConfig       *HistoryConfig
 		esConfig            *elasticsearch.Config
 		esClient            elasticsearch.Client
@@ -132,7 +130,6 @@ type (
 		Logger                        log.Logger
 		ClusterNo                     int
 		EnableEventsV2                bool
-		Blobstore                     blobstore.Client
 		EnableReadHistoryFromArchival bool
 		HistoryConfig                 *HistoryConfig
 		ESConfig                      *elasticsearch.Config
@@ -167,7 +164,6 @@ func NewCadence(params *CadenceParams) Cadence {
 		enableEventsV2:      params.EnableEventsV2,
 		esConfig:            params.ESConfig,
 		esClient:            params.ESClient,
-		blobstoreClient:     params.Blobstore,
 		historyConfig:       params.HistoryConfig,
 		workerConfig:        params.WorkerConfig,
 	}
@@ -397,7 +393,6 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	params.ClusterMetadata = c.clusterMetadata
 	params.DispatcherProvider = c.dispatcherProvider
 	params.MessagingClient = c.messagingClient
-	params.BlobstoreClient = c.blobstoreClient
 	params.PersistenceConfig = c.persistenceConfig
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
@@ -425,7 +420,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	frontendConfig := frontend.NewConfig(dc, c.historyConfig.NumHistoryShards, c.workerConfig.EnableIndexer)
 	c.frontendHandler = frontend.NewWorkflowHandler(
 		c.frontEndService, frontendConfig, c.metadataMgr, c.historyMgr, c.historyV2Mgr,
-		c.visibilityMgr, kafkaProducer, params.BlobstoreClient, provider.NewArchiverProvider(nil, nil))
+		c.visibilityMgr, kafkaProducer, provider.NewArchiverProvider(nil, nil))
 	dcRedirectionHandler := frontend.NewDCRedirectionHandler(c.frontendHandler, params.DCRedirectionPolicy)
 	dcRedirectionHandler.RegisterHandler()
 
@@ -605,23 +600,17 @@ func (c *cadenceImpl) startWorkerReplicator(params *service.BootstrapParams, ser
 }
 
 func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, service service.Service, domainCache cache.DomainCache) {
-	blobstoreClient := blobstore.NewRetryableClient(
-		blobstore.NewMetricClient(c.blobstoreClient, service.GetMetricsClient()),
-		c.blobstoreClient.GetRetryPolicy(),
-		c.blobstoreClient.IsRetryableError)
 	workerConfig := worker.NewConfig(params)
 	workerConfig.ArchiverConfig.ArchiverConcurrency = dynamicconfig.GetIntPropertyFn(10)
-	workerConfig.ArchiverConfig.TargetArchivalBlobSize = dynamicconfig.GetIntPropertyFilteredByDomain(archivalBlobSize)
 	bc := &archiver.BootstrapContainer{
 		PublicClient:     params.PublicClient,
 		MetricsClient:    service.GetMetricsClient(),
 		Logger:           c.logger,
-		ClusterMetadata:  service.GetClusterMetadata(),
 		HistoryManager:   c.historyMgr,
 		HistoryV2Manager: c.historyV2Mgr,
-		Blobstore:        blobstoreClient,
 		DomainCache:      domainCache,
 		Config:           workerConfig.ArchiverConfig,
+		ArchiverProvider: nil, // TODO ycyang:
 	}
 	c.clientWorker = archiver.NewClientWorker(bc)
 	if err := c.clientWorker.Start(); err != nil {

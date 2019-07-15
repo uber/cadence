@@ -40,66 +40,66 @@ const (
 	retryBackoffTime = 200 * time.Millisecond
 )
 
-func (s *integrationSuite) TestArchival() {
-	s.True(s.testCluster.testBase.ClusterMetadata.HistoryArchivalConfig().ClusterConfiguredForArchival())
+// func (s *integrationSuite) TestArchival() {
+// 	s.True(s.testCluster.testBase.ClusterMetadata.HistoryArchivalConfig().ClusterConfiguredForArchival())
 
-	domainID := s.getDomainID(s.archivalDomainName)
-	workflowID := "archival-workflow-id"
-	workflowType := "archival-workflow-type"
-	taskList := "archival-task-list"
-	numActivities := 1
-	numRuns := 1
-	runID := s.startAndFinishWorkflow(workflowID, workflowType, taskList, s.archivalDomainName, domainID, numActivities, numRuns, false)[0]
+// 	domainID := s.getDomainID(s.archivalDomainName)
+// 	workflowID := "archival-workflow-id"
+// 	workflowType := "archival-workflow-type"
+// 	taskList := "archival-task-list"
+// 	numActivities := 1
+// 	numRuns := 1
+// 	runID := s.startAndFinishWorkflow(workflowID, workflowType, taskList, s.archivalDomainName, domainID, numActivities, numRuns, false)[0]
 
-	execution := &workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}
-	s.True(s.isHistoryArchived(s.archivalDomainName, execution))
-	s.True(s.isHistoryDeleted(domainID, execution))
-	s.True(s.isMutableStateDeleted(domainID, execution))
-}
+// 	execution := &workflow.WorkflowExecution{
+// 		WorkflowId: common.StringPtr(workflowID),
+// 		RunId:      common.StringPtr(runID),
+// 	}
+// 	s.True(s.isHistoryArchived(s.archivalDomainName, execution))
+// 	s.True(s.isHistoryDeleted(domainID, execution))
+// 	s.True(s.isMutableStateDeleted(domainID, execution))
+// }
 
-func (s *integrationSuite) TestArchival_ContinueAsNew() {
-	s.True(s.testCluster.testBase.ClusterMetadata.HistoryArchivalConfig().ClusterConfiguredForArchival())
+// func (s *integrationSuite) TestArchival_ContinueAsNew() {
+// 	s.True(s.testCluster.testBase.ClusterMetadata.HistoryArchivalConfig().ClusterConfiguredForArchival())
 
-	domainID := s.getDomainID(s.archivalDomainName)
-	workflowID := "archival-continueAsNew-workflow-id"
-	workflowType := "archival-continueAsNew-workflow-type"
-	taskList := "archival-continueAsNew-task-list"
-	numActivities := 1
-	numRuns := 5
-	runIDs := s.startAndFinishWorkflow(workflowID, workflowType, taskList, s.archivalDomainName, domainID, numActivities, numRuns, false)
+// 	domainID := s.getDomainID(s.archivalDomainName)
+// 	workflowID := "archival-continueAsNew-workflow-id"
+// 	workflowType := "archival-continueAsNew-workflow-type"
+// 	taskList := "archival-continueAsNew-task-list"
+// 	numActivities := 1
+// 	numRuns := 5
+// 	runIDs := s.startAndFinishWorkflow(workflowID, workflowType, taskList, s.archivalDomainName, domainID, numActivities, numRuns, false)
 
-	for _, runID := range runIDs {
-		execution := &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
-		}
-		s.True(s.isHistoryArchived(s.archivalDomainName, execution))
-		s.True(s.isHistoryDeleted(domainID, execution))
-		s.True(s.isMutableStateDeleted(domainID, execution))
-	}
-}
+// 	for _, runID := range runIDs {
+// 		execution := &workflow.WorkflowExecution{
+// 			WorkflowId: common.StringPtr(workflowID),
+// 			RunId:      common.StringPtr(runID),
+// 		}
+// 		s.True(s.isHistoryArchived(s.archivalDomainName, execution))
+// 		s.True(s.isHistoryDeleted(domainID, execution))
+// 		s.True(s.isMutableStateDeleted(domainID, execution))
+// 	}
+// }
 
-func (s *integrationSuite) TestArchival_MultiBlob() {
-	s.True(s.testCluster.testBase.ClusterMetadata.HistoryArchivalConfig().ClusterConfiguredForArchival())
+// func (s *integrationSuite) TestArchival_MultiBlob() {
+// 	s.True(s.testCluster.testBase.ClusterMetadata.HistoryArchivalConfig().ClusterConfiguredForArchival())
 
-	domainID := s.getDomainID(s.archivalDomainName)
-	workflowID := "archival-multi-blob-workflow-id"
-	workflowType := "archival-multi-blob-workflow-type"
-	taskList := "archival-multi-blob-task-list"
-	numActivities := 10
-	runID := s.startAndFinishWorkflow(workflowID, workflowType, taskList, s.archivalDomainName, domainID, numActivities, 1, true)[0]
+// 	domainID := s.getDomainID(s.archivalDomainName)
+// 	workflowID := "archival-multi-blob-workflow-id"
+// 	workflowType := "archival-multi-blob-workflow-type"
+// 	taskList := "archival-multi-blob-task-list"
+// 	numActivities := 10
+// 	runID := s.startAndFinishWorkflow(workflowID, workflowType, taskList, s.archivalDomainName, domainID, numActivities, 1, true)[0]
 
-	execution := &workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}
-	s.True(s.isHistoryArchived(s.archivalDomainName, execution))
-	s.True(s.isHistoryDeleted(domainID, execution))
-	s.True(s.isMutableStateDeleted(domainID, execution))
-}
+// 	execution := &workflow.WorkflowExecution{
+// 		WorkflowId: common.StringPtr(workflowID),
+// 		RunId:      common.StringPtr(runID),
+// 	}
+// 	s.True(s.isHistoryArchived(s.archivalDomainName, execution))
+// 	s.True(s.isHistoryDeleted(domainID, execution))
+// 	s.True(s.isMutableStateDeleted(domainID, execution))
+// }
 
 func (s *integrationSuite) getDomainID(domain string) string {
 	domainResp, err := s.engine.DescribeDomain(createContext(), &workflow.DescribeDomainRequest{

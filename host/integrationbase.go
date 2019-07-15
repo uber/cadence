@@ -228,7 +228,7 @@ func (s *IntegrationBase) registerArchivalDomain() error {
 		Config: &persistence.DomainConfig{
 			Retention:                0,
 			HistoryArchivalStatus:    workflow.ArchivalStatusEnabled,
-			HistoryArchivalURI:       s.testCluster.blobstore.bucketName, // TODO ycyang: change this to a URI.
+			HistoryArchivalURI:       "some random uri", // TODO ycyang: change this to a real URI.
 			VisibilityArchivalStatus: workflow.ArchivalStatusDisabled,
 			VisibilityArchivalURI:    "",
 			BadBinaries:              workflow.BadBinaries{Binaries: map[string]*workflow.BadBinaryInfo{}},

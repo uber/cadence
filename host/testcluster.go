@@ -21,13 +21,9 @@
 package host
 
 import (
-	"io/ioutil"
-	"os"
-
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/blobstore/filestore"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/elasticsearch"
@@ -46,9 +42,8 @@ import (
 type (
 	// TestCluster is a base struct for integration tests
 	TestCluster struct {
-		testBase  persistencetests.TestBase
-		blobstore *BlobstoreBase
-		host      Cadence
+		testBase persistencetests.TestBase
+		host     Cadence
 	}
 
 	// TestClusterConfig are config for a test cluster
@@ -109,7 +104,6 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 	testBase := persistencetests.NewTestBase(&options.Persistence)
 	testBase.Setup()
 	setupShards(testBase, options.HistoryConfig.NumHistoryShards, logger)
-	blobstore := setupBlobstore(logger)
 	messagingClient := getMessagingClient(options.MessagingClientConfig, logger)
 	var esClient elasticsearch.Client
 	var esVisibilityMgr persistence.VisibilityManager
@@ -156,7 +150,6 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 		EnableEventsV2:      options.EnableEventsV2,
 		ESConfig:            &options.ESConfig,
 		ESClient:            esClient,
-		Blobstore:           blobstore.client,
 		HistoryConfig:       options.HistoryConfig,
 		WorkerConfig:        options.WorkerConfig,
 	}
@@ -165,7 +158,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 		return nil, err
 	}
 
-	return &TestCluster{testBase: testBase, blobstore: blobstore, host: cluster}, nil
+	return &TestCluster{testBase: testBase, host: cluster}, nil
 }
 
 func setupShards(testBase persistencetests.TestBase, numHistoryShards int, logger log.Logger) {
@@ -175,27 +168,6 @@ func setupShards(testBase persistencetests.TestBase, numHistoryShards int, logge
 		if err != nil {
 			logger.Fatal("Failed to create shard", tag.Error(err))
 		}
-	}
-}
-
-func setupBlobstore(logger log.Logger) *BlobstoreBase {
-	bucketName := "default-test-bucket"
-	storeDirectory, err := ioutil.TempDir("", "test-blobstore")
-	if err != nil {
-		logger.Fatal("Failed to create temp dir for blobstore", tag.Error(err))
-	}
-	cfg := &filestore.Config{
-		StoreDirectory: storeDirectory,
-		DefaultBucket:  bucketName,
-	}
-	client, err := filestore.NewClient(cfg)
-	if err != nil {
-		logger.Fatal("Failed to construct blobstore client", tag.Error(err))
-	}
-	return &BlobstoreBase{
-		client:         client,
-		storeDirectory: storeDirectory,
-		bucketName:     bucketName,
 	}
 }
 
@@ -213,7 +185,6 @@ func (tc *TestCluster) TearDownCluster() {
 	tc.host.Stop()
 	tc.host = nil
 	tc.testBase.TearDownWorkflowStore()
-	os.RemoveAll(tc.blobstore.storeDirectory)
 }
 
 // GetFrontendClient returns a frontend client from the test cluster
