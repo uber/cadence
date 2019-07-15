@@ -2529,10 +2529,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_BrandNew() {
 		EventStoreVersion:    persistence.EventStoreVersionV2,
 	}
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
-	sBuilder.On("getTransferTasks").Return(transferTasks)
-	sBuilder.On("getTimerTasks").Return(timerTasks)
-	msBuilder.On("AddTransferTasks", transferTasks).Once()
-	msBuilder.On("AddTimerTasks", timerTasks).Once()
 	newWorkflowSnapshot := &persistence.WorkflowSnapshot{
 		ExecutionInfo:    executionInfo,
 		ExecutionStats:   &persistence.ExecutionStats{HistorySize: int64(historySize)},
@@ -2645,10 +2641,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_ISE() {
 		EventStoreVersion:    persistence.EventStoreVersionV2,
 	}
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
-	sBuilder.On("getTransferTasks").Return(transferTasks)
-	sBuilder.On("getTimerTasks").Return(timerTasks)
-	msBuilder.On("AddTransferTasks", transferTasks).Once()
-	msBuilder.On("AddTimerTasks", timerTasks).Once()
 	newWorkflowSnapshot := &persistence.WorkflowSnapshot{
 		ExecutionInfo:    executionInfo,
 		ExecutionStats:   &persistence.ExecutionStats{HistorySize: int64(historySize)},
@@ -2756,10 +2748,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_SameRunID() {
 		EventStoreVersion:    persistence.EventStoreVersionV2,
 	}
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
-	sBuilder.On("getTransferTasks").Return(transferTasks)
-	sBuilder.On("getTimerTasks").Return(timerTasks)
-	msBuilder.On("AddTransferTasks", transferTasks).Once()
-	msBuilder.On("AddTimerTasks", timerTasks).Once()
 	newWorkflowSnapshot := &persistence.WorkflowSnapshot{
 		ExecutionInfo:    executionInfo,
 		ExecutionStats:   &persistence.ExecutionStats{HistorySize: int64(historySize)},
@@ -2890,10 +2878,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		NonRetriableErrors:   retryPolicy.GetNonRetriableErrorReasons(),
 	}
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
-	sBuilder.On("getTransferTasks").Return(transferTasks)
-	sBuilder.On("getTimerTasks").Return(timerTasks)
-	msBuilder.On("AddTransferTasks", transferTasks).Once()
-	msBuilder.On("AddTimerTasks", timerTasks).Once()
 	newWorkflowSnapshot := &persistence.WorkflowSnapshot{
 		ExecutionInfo:    executionInfo,
 		ExecutionStats:   &persistence.ExecutionStats{HistorySize: int64(historySize)},
@@ -3023,10 +3007,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		EventStoreVersion:    persistence.EventStoreVersionV2,
 	}
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
-	sBuilder.On("getTransferTasks").Return(transferTasks)
-	sBuilder.On("getTimerTasks").Return(timerTasks)
-	msBuilder.On("AddTransferTasks", transferTasks).Once()
-	msBuilder.On("AddTimerTasks", timerTasks).Once()
 	newWorkflowSnapshot := &persistence.WorkflowSnapshot{
 		ExecutionInfo:    executionInfo,
 		ExecutionStats:   &persistence.ExecutionStats{HistorySize: int64(historySize)},
@@ -3156,10 +3136,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		EventStoreVersion:    persistence.EventStoreVersionV2,
 	}
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
-	sBuilder.On("getTransferTasks").Return(transferTasks)
-	sBuilder.On("getTimerTasks").Return(timerTasks)
-	msBuilder.On("AddTransferTasks", transferTasks).Once()
-	msBuilder.On("AddTimerTasks", timerTasks).Once()
 	newWorkflowSnapshot := &persistence.WorkflowSnapshot{
 		ExecutionInfo:    executionInfo,
 		ExecutionStats:   &persistence.ExecutionStats{HistorySize: int64(historySize)},
@@ -3291,10 +3267,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	msBuilder.On("GetEventStoreVersion").Return(executionInfo.EventStoreVersion)
 	msBuilder.On("GetCurrentBranch").Return(executionInfo.BranchToken)
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
-	sBuilder.On("getTransferTasks").Return(transferTasks)
-	sBuilder.On("getTimerTasks").Return(timerTasks)
-	msBuilder.On("AddTransferTasks", transferTasks).Once()
-	msBuilder.On("AddTimerTasks", timerTasks).Once()
 	newWorkflowSnapshot := &persistence.WorkflowSnapshot{
 		ExecutionInfo:    executionInfo,
 		ExecutionStats:   &persistence.ExecutionStats{HistorySize: int64(historySize)},
@@ -3453,10 +3425,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	msBuilder.On("GetEventStoreVersion").Return(executionInfo.EventStoreVersion)
 	msBuilder.On("GetCurrentBranch").Return(executionInfo.BranchToken)
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
-	sBuilder.On("getTransferTasks").Return(transferTasks)
-	sBuilder.On("getTimerTasks").Return(timerTasks)
-	msBuilder.On("AddTransferTasks", transferTasks).Once()
-	msBuilder.On("AddTimerTasks", timerTasks).Once()
 	newWorkflowSnapshot := &persistence.WorkflowSnapshot{
 		ExecutionInfo:    executionInfo,
 		ExecutionStats:   &persistence.ExecutionStats{HistorySize: int64(historySize)},
@@ -3629,10 +3597,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	msBuilder.On("GetEventStoreVersion").Return(executionInfo.EventStoreVersion)
 	msBuilder.On("GetCurrentBranch").Return(executionInfo.BranchToken)
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
-	sBuilder.On("getTransferTasks").Return(transferTasks)
-	sBuilder.On("getTimerTasks").Return(timerTasks)
-	msBuilder.On("AddTransferTasks", transferTasks).Once()
-	msBuilder.On("AddTimerTasks", timerTasks).Once()
 	newWorkflowSnapshot := &persistence.WorkflowSnapshot{
 		ExecutionInfo:    executionInfo,
 		ExecutionStats:   &persistence.ExecutionStats{HistorySize: int64(historySize)},
@@ -3823,10 +3787,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		EventStoreVersion:    persistence.EventStoreVersionV2,
 	}
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
-	sBuilder.On("getTransferTasks").Return(transferTasks)
-	sBuilder.On("getTimerTasks").Return(timerTasks)
-	msBuilder.On("AddTransferTasks", transferTasks).Once()
-	msBuilder.On("AddTimerTasks", timerTasks).Once()
 	newWorkflowSnapshot := &persistence.WorkflowSnapshot{
 		ExecutionInfo:    executionInfo,
 		ExecutionStats:   &persistence.ExecutionStats{HistorySize: int64(historySize)},
@@ -3974,10 +3934,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		EventStoreVersion:    persistence.EventStoreVersionV2,
 	}
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
-	sBuilder.On("getTransferTasks").Return(transferTasks)
-	sBuilder.On("getTimerTasks").Return(timerTasks)
-	msBuilder.On("AddTransferTasks", transferTasks).Once()
-	msBuilder.On("AddTimerTasks", timerTasks).Once()
 	newWorkflowSnapshot := &persistence.WorkflowSnapshot{
 		ExecutionInfo:    executionInfo,
 		ExecutionStats:   &persistence.ExecutionStats{HistorySize: int64(historySize)},
@@ -4142,10 +4098,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		NonRetriableErrors:   retryPolicy.GetNonRetriableErrorReasons(),
 	}
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
-	sBuilder.On("getTransferTasks").Return(transferTasks)
-	sBuilder.On("getTimerTasks").Return(timerTasks)
-	msBuilder.On("AddTransferTasks", transferTasks).Once()
-	msBuilder.On("AddTimerTasks", timerTasks).Once()
 	newWorkflowSnapshot := &persistence.WorkflowSnapshot{
 		ExecutionInfo:    executionInfo,
 		ExecutionStats:   &persistence.ExecutionStats{HistorySize: int64(historySize)},
