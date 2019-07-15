@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +31,10 @@ import (
 )
 
 // RateLimiter is a wrapper around the golang rate limiter handling dynamic
-// configuration updates of the max dispatch per second.
+// configuration updates of the max dispatch per second. This has comparable
+// performance to the token bucket rate limiter.
+// BenchmarkSimpleRateLimiter-4   	10000000	       114 ns/op (tokenbucket)
+// BenchmarkRateLimiter-4         	10000000	       148 ns/op (goland wrapper)
 type RateLimiter struct {
 	sync.RWMutex
 	maxDispatchPerSecond *float64
