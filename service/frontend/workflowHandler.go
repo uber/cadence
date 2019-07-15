@@ -2610,11 +2610,6 @@ func (wh *WorkflowHandler) GetSearchAttributes(ctx context.Context) (resp *gen.G
 	}
 
 	keys := wh.config.ValidSearchAttributes()
-	// TODO: remove test log
-	wh.GetLogger().Info("GetSearchAttributes", tag.Value(keys))
-	if v, ok := keys["Operator"]; ok {
-		wh.GetLogger().Info("Get Operator", tag.Value(v))
-	}
 	resp = &gen.GetSearchAttributesResponse{
 		Keys: wh.convertIndexedKeyToThrift(keys),
 	}
