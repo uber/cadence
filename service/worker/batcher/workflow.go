@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"time"
 
+	s "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -39,27 +40,30 @@ import (
 
 const (
 	batcherContextKey   = "batcherContext"
-	batcherTaskListName = "cadence-sys-batcher-tasklist"
-	batchWFTypeName     = "cadence-sys-batch-workflow"
-	batchActivityName   = "cadence-sys-batch-activity"
+	BatcherTaskListName = "cadence-sys-batcher-tasklist"
+	BatchWFTypeName     = "cadence-sys-batch-workflow"
+	BatchActivityName   = "cadence-sys-batch-activity"
 
 	infiniteDuration = 20 * 365 * 24 * time.Hour
 	pageSize         = 1000
 
 	// below are default values for BatchParams
-	defaultRPS                      = 50
-	defaultConcurrency              = 5
-	defaultAttemptsOnRetryableError = 50
-	defaultActivityHeartBeatTimeout = time.Minute
+	defaultRPS                                = 50
+	defaultRPSPerConcurrency                  = 10
+	defaultAttemptsOnRetryableError           = 50
+	defaultActivityHeartBeatTimeout           = time.Minute
+	DefaultWorkflowStartToCloseTimeoutSeconds = 60 * 60 * 6 // 6 hours
+	DecisionStartToCloseTimeoutSeconds        = 10
 )
 
 const (
+	//TODO use client side import after the IDL is in client
 	// BatchTypeTerminate is batch type for terminating workflows
-	BatchTypeTerminate = "terminate"
+	BatchTypeTerminate = int(s.BatchOperationTypeTerminate)
 	// BatchTypeCancel is the batch type for canceling workflows
-	BatchTypeCancel = "cancel"
+	BatchTypeCancel = int(s.BatchOperationTypeRequestCancel)
 	// BatchTypeSignal is batch type for signaling workflows
-	BatchTypeSignal = "signal"
+	BatchTypeSignal = int(s.BatchOperationTypeSignal)
 )
 
 type (
@@ -93,8 +97,8 @@ type (
 		Query string
 		// Reason for the operation
 		Reason string
-		// Supporting: reset,terminate
-		BatchType string
+		// Supporting: terminate,requestCancel,signal
+		BatchType int
 
 		// Below are all optional
 		// TerminateParams is params only for BatchTypeTerminate
@@ -154,8 +158,8 @@ var (
 )
 
 func init() {
-	workflow.RegisterWithOptions(BatchWorkflow, workflow.RegisterOptions{Name: batchWFTypeName})
-	activity.RegisterWithOptions(BatchActivity, activity.RegisterOptions{Name: batchActivityName})
+	workflow.RegisterWithOptions(BatchWorkflow, workflow.RegisterOptions{Name: BatchWFTypeName})
+	activity.RegisterWithOptions(BatchActivity, activity.RegisterOptions{Name: BatchActivityName})
 }
 
 // BatchWorkflow is the workflow that runs a batch job of resetting workflows
@@ -168,13 +172,12 @@ func BatchWorkflow(ctx workflow.Context, batchParams BatchParams) (HeartBeatDeta
 	batchActivityOptions.HeartbeatTimeout = batchParams.ActivityHeartBeatTimeout
 	opt := workflow.WithActivityOptions(ctx, batchActivityOptions)
 	var result HeartBeatDetails
-	err = workflow.ExecuteActivity(opt, batchActivityName, batchParams).Get(ctx, &result)
+	err = workflow.ExecuteActivity(opt, BatchActivityName, batchParams).Get(ctx, &result)
 	return result, err
 }
 
 func validateParams(params BatchParams) error {
-	if params.BatchType == "" ||
-		params.Reason == "" ||
+	if params.Reason == "" ||
 		params.DomainName == "" ||
 		params.Query == "" {
 		return fmt.Errorf("must provide required parameters: BatchType/Reason/DomainName/Query")
@@ -199,7 +202,7 @@ func setDefaultParams(params BatchParams) BatchParams {
 		params.RPS = defaultRPS
 	}
 	if params.Concurrency <= 0 {
-		params.Concurrency = defaultConcurrency
+		params.Concurrency = params.RPS / defaultRPSPerConcurrency
 	}
 	if params.AttemptsOnRetryableError <= 0 {
 		params.AttemptsOnRetryableError = defaultAttemptsOnRetryableError

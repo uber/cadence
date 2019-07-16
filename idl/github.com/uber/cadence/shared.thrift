@@ -1464,79 +1464,86 @@ struct HistoryBranch{
 }
 
 enum BatchOperationType{
-    Terminate,
-    RequestCancel,
-    Signal,
+    Terminate
+    RequestCancel
+    Signal
 }
 
 struct BatchSignalRequest{
-    10: optional string signalName,
-    20: optional binary signalData,
+    10: optional string signalName
+    20: optional binary signalData
 }
 
 struct BatchTerminateRequest{
-    10: optional bool applyOnChildren,
+    10: optional bool applyOnChildren
 }
 
 struct BatchCancelRequest{
-    10: optional bool applyOnChildren,
+    10: optional bool applyOnChildren
 }
 
 struct StartBatchJobRequest{
-    10: optional string domainName,
+    10: optional string domain
     20: optional string jobID
-    30: optional BatchOperationType type,
-    40: optional string sourceQuery,
-    50: optional string reason,
-    60: optional BatchSignalRequest signalRequest,
-    70: optional BatchTerminateRequest terminateRequest,
-    80: optional BatchCancelRequest cancelRequest,
-    90: optional i64 rps,
+    30: optional BatchOperationType operationType
+    40: optional string sourceQuery
+    50: optional string reason
+    60: optional BatchSignalRequest signalRequest
+    70: optional BatchTerminateRequest terminateRequest
+    80: optional BatchCancelRequest cancelRequest
+    90: optional i64 rps
+    100: optional Header header
+    110: optional i32 startToCloseTimeoutSeconds
+    120: optional string requestID
+    130: optional binary identity
+
 }
 
 struct StartBatchJobResponse{
-    10: optional string domainName,
-    20: optional string jobID
+    10: optional string jobID
 }
 
 struct StopBatchJobRequest{
-    10: optional string domainName,
+    10: optional string domain
     20: optional string jobID
 }
 
 struct DescribeBatchJobRequest{
-    10: optional string domainName,
+    10: optional string domain,
     20: optional string jobID
 }
 
 struct DescribeBatchJobResponse{
-    10: optional BatchOperationType type,
-    20: optional string sourceQuery,
-    30: optional string reason,
-    40: optional BatchSignalRequest signalRequest,
-    50: optional BatchTerminateRequest terminateRequest,
-    60: optional BatchCancelRequest cancelRequest,
-    70: optional i64 rps,
-    80: optional i64 totalEstimate,
-    90: optional i64 successCount,
-    100: optional i64 failureCount,
-    110: optional WorkflowExecutionCloseStatus status,
+    10: optional i64 totalEstimate
+    20: optional i64 successCount
+    30: optional i64 failureCount
+    40: optional WorkflowExecutionCloseStatus status
+    50: optional i32 currentPage
+    // TODO: https://github.com/uber/cadence/issues/2218
+    //  these will be supported after we implement the feature
+    //    10: optional BatchOperationType operationType
+    //    20: optional string sourceQuery
+    //    30: optional string reason
+    //    40: optional BatchSignalRequest signalRequest
+    //    50: optional BatchTerminateRequest terminateRequest
+    //    60: optional BatchCancelRequest cancelRequest
+    //    70: optional i64 rps
 }
 
 struct ListBatchJobsRequest{
-    10: optional string domainName,
+    10: optional string domain
 }
 
 struct BatchJobInfo{
-    10: optional string jobID,
-    20: optional WorkflowExecutionCloseStatus status,
-    30: optional BatchOperationType type,
-    40: optional string sourceQuery,
-    50: optional string reason,
-    60: optional BatchSignalRequest signalRequest,
-    70: optional BatchTerminateRequest terminateRequest,
-    80: optional BatchCancelRequest cancelRequest,
-    90: optional i64 rps,
+    10: optional string jobID
+    20: optional WorkflowExecutionCloseStatus status
+    30: optional BatchOperationType operationType
+    40: optional string sourceQuery
+    50: optional string reason
+    60: optional BatchSignalRequest signalRequest
+    70: optional BatchTerminateRequest terminateRequest
+    80: optional BatchCancelRequest cancelRequest
+    90: optional i32 rps
 }
 
 struct ListBatchJobsResponse{

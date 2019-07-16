@@ -603,6 +603,14 @@ const (
 	FrontendResetWorkflowExecutionScope
 	// FrontendGetSearchAttributesScope is the metric scope for frontend.GetSearchAttributes
 	FrontendGetSearchAttributesScope
+	// FrontendStartBatchJobScope is the metric scope for frontend.StartBatchJob
+	FrontendStartBatchJobScope
+	// FrontendStopBatchJobScope is the metric scope for frontend.StopBatchJob
+	FrontendStopBatchJobScope
+	// FrontendDescribeBatchJobScope is the metric scope for frontend.DescribeBatchJob
+	FrontendDescribeBatchJobScope
+	// FrontendListBatchJobsScope is the metric scope for frontend.ListBatchJobs
+	FrontendListBatchJobsScope
 
 	NumFrontendScopes
 )
@@ -1108,6 +1116,10 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendDescribeTaskListScope:                 {operation: "DescribeTaskList"},
 		FrontendResetStickyTaskListScope:              {operation: "ResetStickyTaskList"},
 		FrontendGetSearchAttributesScope:              {operation: "GetSearchAttributes"},
+		FrontendStartBatchJobScope:                    {operation: "StartBatchJob"},
+		FrontendStopBatchJobScope:                     {operation: "StopBatchJob"},
+		FrontendDescribeBatchJobScope:                 {operation: "DescribeBatchJob"},
+		FrontendListBatchJobsScope:                    {operation: "ListBatchJobs"},
 	},
 	// History Scope Names
 	History: {

@@ -27,6 +27,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/uber/cadence/common/definition"
+
+	"github.com/uber/cadence/service/worker/batcher"
+
 	"github.com/pborman/uuid"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
 	"github.com/uber/cadence/.gen/go/health"
@@ -2847,6 +2851,106 @@ func (wh *WorkflowHandler) DescribeTaskList(ctx context.Context, request *gen.De
 	return response, nil
 }
 
+func (wh *WorkflowHandler) StartBatchJob(ctx context.Context, request *gen.StartBatchJobRequest) (resp *gen.StartBatchJobResponse, retError error) {
+	defer log.CapturePanic(wh.GetLogger(), &retError)
+
+	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendStartBatchJobScope, request)
+	defer sw.Stop()
+
+	if err := wh.versionChecker.checkClientVersion(ctx); err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	if request == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
+
+	if ok := wh.rateLimiter.Allow(); !ok {
+		return nil, wh.error(createServiceBusyError(), scope)
+	}
+
+	if request.GetDomain() == "" {
+		return nil, wh.error(errDomainNotSet, scope)
+	}
+
+	if err := wh.validateStartBatchJobRequest(request); err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	sysDomainID, err := wh.domainCache.GetDomainID(common.SystemGlobalDomainName)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	request = setDefaultStartBatchJobValue(request)
+
+	input, err := wh.encodeBatchJobParam(request)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	startReq := &gen.StartWorkflowExecutionRequest{
+		Domain:     common.StringPtr(common.SystemGlobalDomainName),
+		WorkflowId: common.StringPtr(request.GetJobID()),
+		WorkflowType: common.WorkflowTypePtr(shared.WorkflowType{
+			Name: common.StringPtr(batcher.BatchWFTypeName),
+		}),
+		TaskList: common.TaskListPtr(shared.TaskList{
+			Name: common.StringPtr(batcher.BatcherTaskListName),
+			Kind: common.TaskListKindPtr(gen.TaskListKindNormal),
+		}),
+		Input:                               input,
+		ExecutionStartToCloseTimeoutSeconds: request.StartToCloseTimeoutSeconds,
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(batcher.DecisionStartToCloseTimeoutSeconds),
+		Memo: &gen.Memo{
+			Fields: map[string][]byte{
+				"BatchJobStartParams": input,
+			},
+		},
+		SearchAttributes: &gen.SearchAttributes{
+			IndexedFields: map[string][]byte{
+				definition.CustomDomain: []byte(request.GetDomain()),
+			},
+		},
+		Header: request.Header,
+	}
+	op := func() error {
+		var err error
+		_, err = wh.history.StartWorkflowExecution(ctx, common.CreateHistoryStartWorkflowRequest(sysDomainID, startReq))
+		return err
+	}
+
+	err = backoff.Retry(op, frontendServiceRetryPolicy, common.IsServiceTransientError)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+	return &gen.StartBatchJobResponse{
+		JobID: common.StringPtr(request.GetJobID()),
+	}, nil
+}
+
+func (wh *WorkflowHandler) encodeBatchJobParam(request *gen.StartBatchJobRequest) ([]byte, error) {
+	startParams := batcher.BatchParams{
+		DomainName: request.GetDomain(),
+		Query:      request.GetSourceQuery(),
+		Reason:     request.GetReason(),
+		BatchType:  int(request.GetOperationType()),
+		RPS:        int(request.GetRps()),
+	}
+	return json.Marshal(startParams)
+}
+
+func setDefaultStartBatchJobValue(request *gen.StartBatchJobRequest) *gen.StartBatchJobRequest {
+	if request.GetJobID() == "" {
+		request.JobID = common.StringPtr(uuid.New())
+	}
+
+	if request.StartToCloseTimeoutSeconds == nil {
+		request.StartToCloseTimeoutSeconds = common.Int32Ptr(batcher.DefaultWorkflowStartToCloseTimeoutSeconds)
+	}
+	return request
+}
+
 func (wh *WorkflowHandler) getHistory(
 	scope metrics.Scope,
 	domainID string,
@@ -3037,6 +3141,44 @@ func validateExecution(w *gen.WorkflowExecution) error {
 	}
 	if w.GetRunId() != "" && uuid.Parse(w.GetRunId()) == nil {
 		return errInvalidRunID
+	}
+	return nil
+}
+
+func (wh *WorkflowHandler) validateStartBatchJobRequest(req *gen.StartBatchJobRequest) error {
+	if !wh.config.EnableBatcher() {
+		return &gen.BadRequestError{
+			Message: "BatchJob feature is not enabled",
+		}
+	}
+
+	if req.OperationType == nil {
+		return &gen.BadRequestError{
+			Message: "Must specify operationType",
+		}
+	}
+
+	if req.SourceQuery == nil {
+		return &gen.BadRequestError{
+			Message: "Must specify SourceQuery",
+		}
+	}
+
+	if req.Reason == nil {
+		return &gen.BadRequestError{
+			Message: "Must specify Reason",
+		}
+	}
+
+	switch req.GetOperationType() {
+	case gen.BatchOperationTypeSignal:
+		if req.SignalRequest == nil || req.GetSignalRequest().GetSignalName() == "" {
+			return &gen.BadRequestError{
+				Message: "Must provide signal name for batch signal",
+			}
+		}
+	default:
+		break
 	}
 	return nil
 }

@@ -42,6 +42,7 @@ const (
 	CustomBoolField     = "CustomBoolField"
 	CustomDoubleField   = "CustomDoubleField"
 	CustomDatetimeField = "CustomDatetimeField"
+	CustomDomain        = "CustomDomain"
 )
 
 // valid non-indexed fields on ES
@@ -63,6 +64,7 @@ func createDefaultIndexedKeys() map[string]interface{} {
 		CustomBoolField:     shared.IndexedValueTypeBool,
 		CustomDoubleField:   shared.IndexedValueTypeDouble,
 		CustomDatetimeField: shared.IndexedValueTypeDatetime,
+		CustomDomain:        shared.IndexedValueTypeKeyword,
 	}
 	for k, v := range systemIndexedKeys {
 		defaultIndexedKeys[k] = v
