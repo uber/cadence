@@ -118,6 +118,8 @@ func (fc *fileBasedClient) GetFloatValue(name Key, filters map[Filter]interface{
 
 	if floatVal, ok := val.(float64); ok {
 		return floatVal, nil
+	} else if intVal, ok := val.(int); ok {
+		return float64(intVal), nil
 	}
 	return defaultValue, errors.New("value type is not float64")
 }
@@ -177,6 +179,33 @@ func (fc *fileBasedClient) GetDurationValue(
 		return defaultValue, fmt.Errorf("failed to parse duration: %v", err)
 	}
 	return durationVal, nil
+}
+
+func (fc *fileBasedClient) UpdateValue(name Key, value interface{}) error {
+	keyName := keys[name]
+	currentValues := make(map[string][]*constrainedValue)
+
+	confContent, err := ioutil.ReadFile(fc.config.Filepath)
+	if err != nil {
+		return fmt.Errorf("failed to read dynamic config file %v: %v", fc.config.Filepath, err)
+	}
+
+	if err = yaml.Unmarshal(confContent, currentValues); err != nil {
+		return fmt.Errorf("failed to decode dynamic config %v", err)
+	}
+
+	cVal := &constrainedValue{
+		Value: value,
+	}
+	currentValues[keyName] = []*constrainedValue{cVal}
+	newBytes, err := yaml.Marshal(currentValues)
+
+	err = ioutil.WriteFile(fc.config.Filepath, newBytes, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write config file, err: %v", err)
+	}
+
+	return fc.update()
 }
 
 func (fc *fileBasedClient) update() error {

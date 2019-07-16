@@ -40,4 +40,5 @@ type Client interface {
 	GetDurationValue(
 		name Key, filters map[Filter]interface{}, defaultValue time.Duration,
 	) (time.Duration, error)
+	UpdateValue(name Key, value interface{}) error
 }
