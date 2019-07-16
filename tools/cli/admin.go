@@ -546,3 +546,26 @@ func newAdminTaskListCommands() []cli.Command {
 		},
 	}
 }
+
+func newAdminClusterCommands() []cli.Command {
+	return []cli.Command{
+		{
+			Name:    "add-search-attr",
+			Aliases: []string{"asa"},
+			Usage:   "whitelist search attribute",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagSearchAttributesKey,
+					Usage: "Search Attribute key to be whitelisted",
+				},
+				cli.IntFlag{
+					Name:  FlagSearchAttributesType,
+					Usage: "Search Attribute value type. [0:String, 1:Keyword, 2:Int, 3:Double, 4:Bool, 5:Datetime]",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminAddSearchAttribute(c)
+			},
+		},
+	}
+}

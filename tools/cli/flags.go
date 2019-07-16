@@ -168,6 +168,7 @@ const (
 	FlagMemoFile                          = "memo_file"
 	FlagSearchAttributesKey               = "search_attr_key"
 	FlagSearchAttributesVal               = "search_attr_value"
+	FlagSearchAttributesType              = "search_attr_type"
 	FlagAddBadBinary                      = "add_bad_binary"
 	FlagRemoveBadBinary                   = "remove_bad_binary"
 	FlagResetType                         = "reset_type"
