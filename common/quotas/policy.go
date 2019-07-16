@@ -54,7 +54,7 @@ type DomainRateLimitPolicy struct {
 
 // NewDomainRateLimiter returns a new domain quota rate limiter. This is about
 // an order of magnitude slower than
-func NewDomainRateLimiter(rps dynamicconfig.IntPropertyFn) *DomainRateLimitPolicy {
+func NewDomainRateLimiter(rps RPSFunc) *DomainRateLimitPolicy {
 	rl := &DomainRateLimitPolicy{
 		domainLimiters: map[string]*rate.Limiter{},
 		globalLimiter:  NewDynamicRateLimiter(rps),
