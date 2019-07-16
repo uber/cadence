@@ -198,7 +198,7 @@ func (fc *fileBasedClient) UpdateValue(name Key, value interface{}) error {
 		Value: value,
 	}
 	currentValues[keyName] = []*constrainedValue{cVal}
-	newBytes, err := yaml.Marshal(currentValues)
+	newBytes, _ := yaml.Marshal(currentValues)
 
 	err = ioutil.WriteFile(fc.config.Filepath, newBytes, 0644)
 	if err != nil {
