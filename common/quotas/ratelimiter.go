@@ -27,8 +27,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/service/dynamicconfig"
 	"golang.org/x/time/rate"
 )
+
+const _defaultTaskDispatchRPSTTL = 60 * time.Second
 
 // RateLimiter is a wrapper around the golang rate limiter handling dynamic
 // configuration updates of the max dispatch per second. This has comparable
@@ -122,4 +125,22 @@ func (rl *RateLimiter) shouldUpdate(maxDispatchPerSecond *float64) bool {
 		defer rl.RUnlock()
 		return *maxDispatchPerSecond < *rl.maxDispatchPerSecond
 	}
+}
+
+type dynamicRateLimiter struct {
+	rps dynamicconfig.IntPropertyFn
+	rl  *RateLimiter
+}
+
+// NewDynamicRateLimiter returns a rate limiter which handles dynamic config
+func NewDynamicRateLimiter(rps dynamicconfig.IntPropertyFn) Policy {
+	initialRps := float64(rps())
+	rl := NewRateLimiter(&initialRps, _defaultTaskDispatchRPSTTL, rps())
+	return &dynamicRateLimiter{rps, rl}
+}
+
+func (d *dynamicRateLimiter) Allow() bool {
+	rps := float64(d.rps())
+	d.rl.UpdateMaxDispatch(&rps)
+	return d.rl.Allow()
 }
