@@ -66,7 +66,7 @@ func newDomainRateLimiter(rps int) *DomainRateLimitPolicy {
 	initialRps := float64(rps)
 	rl := &DomainRateLimitPolicy{
 		domainLimiters: map[string]*rate.Limiter{},
-		globalLimiter:  NewRateLimiter(&initialRps, _defaultTaskDispatchRPSTTL, rps),
+		globalLimiter:  NewRateLimiter(&initialRps, _defaultRPSTTL, rps),
 	}
 	return rl
 }
