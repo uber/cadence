@@ -27,7 +27,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	"golang.org/x/time/rate"
 )
 
@@ -128,14 +127,14 @@ func (rl *RateLimiter) shouldUpdate(maxDispatchPerSecond *float64) bool {
 }
 
 type dynamicRateLimiter struct {
-	rps dynamicconfig.IntPropertyFn
+	rps RPSFunc
 	rl  *RateLimiter
 }
 
 // NewDynamicRateLimiter returns a rate limiter which handles dynamic config
-func NewDynamicRateLimiter(rps dynamicconfig.IntPropertyFn) Policy {
-	initialRps := float64(rps())
-	rl := NewRateLimiter(&initialRps, _defaultRPSTTL, rps())
+func NewDynamicRateLimiter(rps RPSFunc) Policy {
+	initialRps := rps()
+	rl := NewRateLimiter(&initialRps, _defaultRPSTTL, int(rps()))
 	return &dynamicRateLimiter{rps, rl}
 }
 
