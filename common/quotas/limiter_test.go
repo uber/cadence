@@ -32,6 +32,7 @@ import (
 )
 
 const (
+	defaultRps    = 1200
 	defaultDomain = "test"
 	_minBurst     = 10000
 )

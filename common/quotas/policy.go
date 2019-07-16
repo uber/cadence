@@ -28,7 +28,7 @@ import (
 	"golang.org/x/time/rate"
 )
 
-const defaultRps = 1200
+const domainRps = 400
 
 type simpleRateLimitPolicy struct {
 	tb tokenbucket.TokenBucket
@@ -83,7 +83,7 @@ func (d *DomainRateLimitPolicy) Allow(domain string) bool {
 
 	if !ok {
 		// create a new limiter
-		domainLimiter := rate.NewLimiter(rate.Limit(defaultRps), defaultRps)
+		domainLimiter := rate.NewLimiter(rate.Limit(domainRps), domainRps)
 
 		// verify that it is needed and add to map
 		d.Lock()
