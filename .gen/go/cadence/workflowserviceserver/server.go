@@ -44,6 +44,11 @@ type Interface interface {
 		DeprecateRequest *shared.DeprecateDomainRequest,
 	) error
 
+	DescribeBatchJob(
+		ctx context.Context,
+		DescRequest *shared.DescribeBatchJobRequest,
+	) (*shared.DescribeBatchJobResponse, error)
+
 	DescribeDomain(
 		ctx context.Context,
 		DescribeRequest *shared.DescribeDomainRequest,
@@ -67,6 +72,11 @@ type Interface interface {
 		ctx context.Context,
 		GetRequest *shared.GetWorkflowExecutionHistoryRequest,
 	) (*shared.GetWorkflowExecutionHistoryResponse, error)
+
+	ListBatchJobs(
+		ctx context.Context,
+		ListRequest *shared.ListBatchJobsRequest,
+	) (*shared.ListBatchJobsResponse, error)
 
 	ListClosedWorkflowExecutions(
 		ctx context.Context,
@@ -193,10 +203,20 @@ type Interface interface {
 		SignalRequest *shared.SignalWorkflowExecutionRequest,
 	) error
 
+	StartBatchJob(
+		ctx context.Context,
+		StartRequest *shared.StartBatchJobRequest,
+	) (*shared.StartBatchJobResponse, error)
+
 	StartWorkflowExecution(
 		ctx context.Context,
 		StartRequest *shared.StartWorkflowExecutionRequest,
 	) (*shared.StartWorkflowExecutionResponse, error)
+
+	StopBatchJob(
+		ctx context.Context,
+		StopRequest *shared.StopBatchJobRequest,
+	) error
 
 	TerminateWorkflowExecution(
 		ctx context.Context,
@@ -239,6 +259,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.DeprecateDomain),
 				},
 				Signature:    "DeprecateDomain(DeprecateRequest *shared.DeprecateDomainRequest)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "DescribeBatchJob",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.DescribeBatchJob),
+				},
+				Signature:    "DescribeBatchJob(DescRequest *shared.DescribeBatchJobRequest) (*shared.DescribeBatchJobResponse)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -294,6 +325,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.GetWorkflowExecutionHistory),
 				},
 				Signature:    "GetWorkflowExecutionHistory(GetRequest *shared.GetWorkflowExecutionHistoryRequest) (*shared.GetWorkflowExecutionHistoryResponse)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "ListBatchJobs",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.ListBatchJobs),
+				},
+				Signature:    "ListBatchJobs(ListRequest *shared.ListBatchJobsRequest) (*shared.ListBatchJobsResponse)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -573,6 +615,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "StartBatchJob",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.StartBatchJob),
+				},
+				Signature:    "StartBatchJob(StartRequest *shared.StartBatchJobRequest) (*shared.StartBatchJobResponse)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "StartWorkflowExecution",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -580,6 +633,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.StartWorkflowExecution),
 				},
 				Signature:    "StartWorkflowExecution(StartRequest *shared.StartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "StopBatchJob",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.StopBatchJob),
+				},
+				Signature:    "StopBatchJob(StopRequest *shared.StopBatchJobRequest)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -607,7 +671,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 35)
+	procedures := make([]transport.Procedure, 0, 39)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -643,6 +707,25 @@ func (h handler) DeprecateDomain(ctx context.Context, body wire.Value) (thrift.R
 
 	hadError := err != nil
 	result, err := cadence.WorkflowService_DeprecateDomain_Helper.WrapResponse(err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) DescribeBatchJob(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_DescribeBatchJob_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.DescribeBatchJob(ctx, args.DescRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_DescribeBatchJob_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {
@@ -738,6 +821,25 @@ func (h handler) GetWorkflowExecutionHistory(ctx context.Context, body wire.Valu
 
 	hadError := err != nil
 	result, err := cadence.WorkflowService_GetWorkflowExecutionHistory_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) ListBatchJobs(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_ListBatchJobs_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.ListBatchJobs(ctx, args.ListRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_ListBatchJobs_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {
@@ -1222,6 +1324,25 @@ func (h handler) SignalWorkflowExecution(ctx context.Context, body wire.Value) (
 	return response, err
 }
 
+func (h handler) StartBatchJob(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_StartBatchJob_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.StartBatchJob(ctx, args.StartRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_StartBatchJob_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
 func (h handler) StartWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args cadence.WorkflowService_StartWorkflowExecution_Args
 	if err := args.FromWire(body); err != nil {
@@ -1232,6 +1353,25 @@ func (h handler) StartWorkflowExecution(ctx context.Context, body wire.Value) (t
 
 	hadError := err != nil
 	result, err := cadence.WorkflowService_StartWorkflowExecution_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) StopBatchJob(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_StopBatchJob_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	err := h.impl.StopBatchJob(ctx, args.StopRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_StopBatchJob_Helper.WrapResponse(err)
 
 	var response thrift.Response
 	if err == nil {

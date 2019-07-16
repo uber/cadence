@@ -595,7 +595,7 @@ service WorkflowService {
   /**
   * StopBatchJob stops a batch job
   **/
-  shared.StopBatchJobResponse StartBatchJob(1: shared.StopBatchJobRequest stopRequest)
+  void StopBatchJob(1: shared.StopBatchJobRequest stopRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,

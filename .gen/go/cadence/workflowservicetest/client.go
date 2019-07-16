@@ -126,6 +126,39 @@ func (mr *_MockClientRecorder) DeprecateDomain(
 	return mr.mock.ctrl.RecordCall(mr.mock, "DeprecateDomain", args...)
 }
 
+// DescribeBatchJob responds to a DescribeBatchJob call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().DescribeBatchJob(gomock.Any(), ...).Return(...)
+// 	... := client.DescribeBatchJob(...)
+func (m *MockClient) DescribeBatchJob(
+	ctx context.Context,
+	_DescRequest *shared.DescribeBatchJobRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.DescribeBatchJobResponse, err error) {
+
+	args := []interface{}{ctx, _DescRequest}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "DescribeBatchJob", args...)
+	success, _ = ret[i].(*shared.DescribeBatchJobResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) DescribeBatchJob(
+	ctx interface{},
+	_DescRequest interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _DescRequest}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "DescribeBatchJob", args...)
+}
+
 // DescribeDomain responds to a DescribeDomain call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
@@ -287,6 +320,39 @@ func (mr *_MockClientRecorder) GetWorkflowExecutionHistory(
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _GetRequest}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "GetWorkflowExecutionHistory", args...)
+}
+
+// ListBatchJobs responds to a ListBatchJobs call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().ListBatchJobs(gomock.Any(), ...).Return(...)
+// 	... := client.ListBatchJobs(...)
+func (m *MockClient) ListBatchJobs(
+	ctx context.Context,
+	_ListRequest *shared.ListBatchJobsRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.ListBatchJobsResponse, err error) {
+
+	args := []interface{}{ctx, _ListRequest}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "ListBatchJobs", args...)
+	success, _ = ret[i].(*shared.ListBatchJobsResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) ListBatchJobs(
+	ctx interface{},
+	_ListRequest interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _ListRequest}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "ListBatchJobs", args...)
 }
 
 // ListClosedWorkflowExecutions responds to a ListClosedWorkflowExecutions call based on the mock expectations. This
@@ -1092,6 +1158,39 @@ func (mr *_MockClientRecorder) SignalWorkflowExecution(
 	return mr.mock.ctrl.RecordCall(mr.mock, "SignalWorkflowExecution", args...)
 }
 
+// StartBatchJob responds to a StartBatchJob call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().StartBatchJob(gomock.Any(), ...).Return(...)
+// 	... := client.StartBatchJob(...)
+func (m *MockClient) StartBatchJob(
+	ctx context.Context,
+	_StartRequest *shared.StartBatchJobRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.StartBatchJobResponse, err error) {
+
+	args := []interface{}{ctx, _StartRequest}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "StartBatchJob", args...)
+	success, _ = ret[i].(*shared.StartBatchJobResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) StartBatchJob(
+	ctx interface{},
+	_StartRequest interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _StartRequest}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "StartBatchJob", args...)
+}
+
 // StartWorkflowExecution responds to a StartWorkflowExecution call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
@@ -1123,6 +1222,37 @@ func (mr *_MockClientRecorder) StartWorkflowExecution(
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _StartRequest}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "StartWorkflowExecution", args...)
+}
+
+// StopBatchJob responds to a StopBatchJob call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().StopBatchJob(gomock.Any(), ...).Return(...)
+// 	... := client.StopBatchJob(...)
+func (m *MockClient) StopBatchJob(
+	ctx context.Context,
+	_StopRequest *shared.StopBatchJobRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := []interface{}{ctx, _StopRequest}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "StopBatchJob", args...)
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) StopBatchJob(
+	ctx interface{},
+	_StopRequest interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _StopRequest}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "StopBatchJob", args...)
 }
 
 // TerminateWorkflowExecution responds to a TerminateWorkflowExecution call based on the mock expectations. This

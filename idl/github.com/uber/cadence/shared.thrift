@@ -1462,3 +1462,84 @@ struct HistoryBranch{
   20: optional string branchID
   30: optional list<HistoryBranchRange>  ancestors
 }
+
+enum BatchOperationType{
+    Terminate,
+    RequestCancel,
+    Signal,
+}
+
+struct BatchSignalRequest{
+    10: optional string signalName,
+    20: optional binary signalData,
+}
+
+struct BatchTerminateRequest{
+    10: optional bool applyOnChildren,
+}
+
+struct BatchCancelRequest{
+    10: optional bool applyOnChildren,
+}
+
+struct StartBatchJobRequest{
+    10: optional string domainName,
+    20: optional string jobID
+    30: optional BatchOperationType type,
+    40: optional string sourceQuery,
+    50: optional string reason,
+    60: optional BatchSignalRequest signalRequest,
+    70: optional BatchTerminateRequest terminateRequest,
+    80: optional BatchCancelRequest cancelRequest,
+    90: optional i64 rps,
+}
+
+struct StartBatchJobResponse{
+    10: optional string domainName,
+    20: optional string jobID
+}
+
+struct StopBatchJobRequest{
+    10: optional string domainName,
+    20: optional string jobID
+}
+
+struct DescribeBatchJobRequest{
+    10: optional string domainName,
+    20: optional string jobID
+}
+
+struct DescribeBatchJobResponse{
+    10: optional BatchOperationType type,
+    20: optional string sourceQuery,
+    30: optional string reason,
+    40: optional BatchSignalRequest signalRequest,
+    50: optional BatchTerminateRequest terminateRequest,
+    60: optional BatchCancelRequest cancelRequest,
+    70: optional i64 rps,
+    80: optional i64 totalEstimate,
+    90: optional i64 successCount,
+    100: optional i64 failureCount,
+    110: optional WorkflowExecutionCloseStatus status,
+}
+
+struct ListBatchJobsRequest{
+    10: optional string domainName,
+}
+
+struct BatchJobInfo{
+    10: optional string jobID,
+    20: optional WorkflowExecutionCloseStatus status,
+    30: optional BatchOperationType type,
+    40: optional string sourceQuery,
+    50: optional string reason,
+    60: optional BatchSignalRequest signalRequest,
+    70: optional BatchTerminateRequest terminateRequest,
+    80: optional BatchCancelRequest cancelRequest,
+    90: optional i64 rps,
+}
+
+struct ListBatchJobsResponse{
+    10: optional list<BatchJobInfo> jobs
+    20: optional binary nextPageToken
+}

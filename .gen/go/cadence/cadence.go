@@ -39,14 +39,14 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "cadence",
 	Package:  "github.com/uber/cadence/.gen/go/cadence",
 	FilePath: "cadence.thrift",
-	SHA1:     "2d75e7300db85eedf440c3e1f8441926c3c6e7d6",
+	SHA1:     "486dcdc0dc6ec22b2cac7b1a64cabc0a454d490f",
 	Includes: []*thriftreflect.ThriftModule{
 		shared.ThriftModule,
 	},
 	Raw: rawIDL,
 }
 
-const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\ninclude \"shared.thrift\"\n\nnamespace java com.uber.cadence\n\n/**\n* WorkflowService API is exposed to provide support for long running applications.  Application is expected to call\n* StartWorkflowExecution to create an instance for each instance of long running workflow.  Such applications are expected\n* to have a worker which regularly polls for DecisionTask and ActivityTask from the WorkflowService.  For each\n* DecisionTask, application is expected to process the history of events for that session and respond back with next\n* decisions.  For each ActivityTask, application is expected to execute the actual logic for that task and respond back\n* with completion or failure.  Worker is expected to regularly heartbeat while activity task is running.\n**/\nservice WorkflowService {\n  /**\n  * RegisterDomain creates a new domain which can be used as a container for all resources.  Domain is a top level\n  * entity within Cadence, used as a container for all resources like workflow executions, tasklists, etc.  Domain\n  * acts as a sandbox and provides isolation for all resources within the domain.  All resources belongs to exactly one\n  * domain.\n  **/\n  void RegisterDomain(1: shared.RegisterDomainRequest registerRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.DomainAlreadyExistsError domainExistsError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * DescribeDomain returns the information and configuration for a registered domain.\n  **/\n  shared.DescribeDomainResponse DescribeDomain(1: shared.DescribeDomainRequest describeRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n    * ListDomains returns the information and configuration for all domains.\n    **/\n    shared.ListDomainsResponse ListDomains(1: shared.ListDomainsRequest listRequest)\n      throws (\n        1: shared.BadRequestError badRequestError,\n        2: shared.InternalServiceError internalServiceError,\n        3: shared.EntityNotExistsError entityNotExistError,\n        4: shared.ServiceBusyError serviceBusyError,\n        5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      )\n\n  /**\n  * UpdateDomain is used to update the information and configuration for a registered domain.\n  **/\n  shared.UpdateDomainResponse UpdateDomain(1: shared.UpdateDomainRequest updateRequest)\n      throws (\n        1: shared.BadRequestError badRequestError,\n        2: shared.InternalServiceError internalServiceError,\n        3: shared.EntityNotExistsError entityNotExistError,\n        4: shared.ServiceBusyError serviceBusyError,\n        5: shared.DomainNotActiveError domainNotActiveError,\n        6: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      )\n\n  /**\n  * DeprecateDomain us used to update status of a registered domain to DEPRECATED.  Once the domain is deprecated\n  * it cannot be used to start new workflow executions.  Existing workflow executions will continue to run on\n  * deprecated domains.\n  **/\n  void DeprecateDomain(1: shared.DeprecateDomainRequest deprecateRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * StartWorkflowExecution starts a new long running workflow instance.  It will create the instance with\n  * 'WorkflowExecutionStarted' event in history and also schedule the first DecisionTask for the worker to make the\n  * first decision for this instance.  It will return 'WorkflowExecutionAlreadyStartedError', if an instance already\n  * exists with same workflowId.\n  **/\n  shared.StartWorkflowExecutionResponse StartWorkflowExecution(1: shared.StartWorkflowExecutionRequest startRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.WorkflowExecutionAlreadyStartedError sessionAlreadyExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.LimitExceededError limitExceededError,\n      7: shared.EntityNotExistsError entityNotExistError,\n      8: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * Returns the history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  **/\n  shared.GetWorkflowExecutionHistoryResponse GetWorkflowExecutionHistory(1: shared.GetWorkflowExecutionHistoryRequest getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * PollForDecisionTask is called by application worker to process DecisionTask from a specific taskList.  A\n  * DecisionTask is dispatched to callers for active workflow executions, with pending decisions.\n  * Application is then expected to call 'RespondDecisionTaskCompleted' API when it is done processing the DecisionTask.\n  * It will also create a 'DecisionTaskStarted' event in the history for that session before handing off DecisionTask to\n  * application worker.\n  **/\n  shared.PollForDecisionTaskResponse PollForDecisionTask(1: shared.PollForDecisionTaskRequest pollRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.EntityNotExistsError entityNotExistError,\n      6: shared.DomainNotActiveError domainNotActiveError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondDecisionTaskCompleted is called by application worker to complete a DecisionTask handed as a result of\n  * 'PollForDecisionTask' API call.  Completing a DecisionTask will result in new events for the workflow execution and\n  * potentially new ActivityTask being created for corresponding decisions.  It will also create a DecisionTaskCompleted\n  * event in the history for that session.  Use the 'taskToken' provided as response of PollForDecisionTask API call\n  * for completing the DecisionTask.\n  * The response could contain a new decision task if there is one or if the request asking for one.\n  **/\n  shared.RespondDecisionTaskCompletedResponse RespondDecisionTaskCompleted(1: shared.RespondDecisionTaskCompletedRequest completeRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondDecisionTaskFailed is called by application worker to indicate failure.  This results in\n  * DecisionTaskFailedEvent written to the history and a new DecisionTask created.  This API can be used by client to\n  * either clear sticky tasklist or report any panics during DecisionTask processing.  Cadence will only append first\n  * DecisionTaskFailed event to the history of workflow execution for consecutive failures.\n  **/\n  void RespondDecisionTaskFailed(1: shared.RespondDecisionTaskFailedRequest failedRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * PollForActivityTask is called by application worker to process ActivityTask from a specific taskList.  ActivityTask\n  * is dispatched to callers whenever a ScheduleTask decision is made for a workflow execution.\n  * Application is expected to call 'RespondActivityTaskCompleted' or 'RespondActivityTaskFailed' once it is done\n  * processing the task.\n  * Application also needs to call 'RecordActivityTaskHeartbeat' API within 'heartbeatTimeoutSeconds' interval to\n  * prevent the task from getting timed out.  An event 'ActivityTaskStarted' event is also written to workflow execution\n  * history before the ActivityTask is dispatched to application worker.\n  **/\n  shared.PollForActivityTaskResponse PollForActivityTask(1: shared.PollForActivityTaskRequest pollRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.EntityNotExistsError entityNotExistError,\n      6: shared.DomainNotActiveError domainNotActiveError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RecordActivityTaskHeartbeat is called by application worker while it is processing an ActivityTask.  If worker fails\n  * to heartbeat within 'heartbeatTimeoutSeconds' interval for the ActivityTask, then it will be marked as timedout and\n  * 'ActivityTaskTimedOut' event will be written to the workflow history.  Calling 'RecordActivityTaskHeartbeat' will\n  * fail with 'EntityNotExistsError' in such situations.  Use the 'taskToken' provided as response of\n  * PollForActivityTask API call for heartbeating.\n  **/\n  shared.RecordActivityTaskHeartbeatResponse RecordActivityTaskHeartbeat(1: shared.RecordActivityTaskHeartbeatRequest heartbeatRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RecordActivityTaskHeartbeatByID is called by application worker while it is processing an ActivityTask.  If worker fails\n  * to heartbeat within 'heartbeatTimeoutSeconds' interval for the ActivityTask, then it will be marked as timedout and\n  * 'ActivityTaskTimedOut' event will be written to the workflow history.  Calling 'RecordActivityTaskHeartbeatByID' will\n  * fail with 'EntityNotExistsError' in such situations.  Instead of using 'taskToken' like in RecordActivityTaskHeartbeat,\n  * use Domain, WorkflowID and ActivityID\n  **/\n  shared.RecordActivityTaskHeartbeatResponse RecordActivityTaskHeartbeatByID(1: shared.RecordActivityTaskHeartbeatByIDRequest heartbeatRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondActivityTaskCompleted is called by application worker when it is done processing an ActivityTask.  It will\n  * result in a new 'ActivityTaskCompleted' event being written to the workflow history and a new DecisionTask\n  * created for the workflow so new decisions could be made.  Use the 'taskToken' provided as response of\n  * PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid\n  * anymore due to activity timeout.\n  **/\n  void  RespondActivityTaskCompleted(1: shared.RespondActivityTaskCompletedRequest completeRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondActivityTaskCompletedByID is called by application worker when it is done processing an ActivityTask.\n  * It will result in a new 'ActivityTaskCompleted' event being written to the workflow history and a new DecisionTask\n  * created for the workflow so new decisions could be made.  Similar to RespondActivityTaskCompleted but use Domain,\n  * WorkflowID and ActivityID instead of 'taskToken' for completion. It fails with 'EntityNotExistsError'\n  * if the these IDs are not valid anymore due to activity timeout.\n  **/\n  void  RespondActivityTaskCompletedByID(1: shared.RespondActivityTaskCompletedByIDRequest completeRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondActivityTaskFailed is called by application worker when it is done processing an ActivityTask.  It will\n  * result in a new 'ActivityTaskFailed' event being written to the workflow history and a new DecisionTask\n  * created for the workflow instance so new decisions could be made.  Use the 'taskToken' provided as response of\n  * PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid\n  * anymore due to activity timeout.\n  **/\n  void  RespondActivityTaskFailed(1: shared.RespondActivityTaskFailedRequest failRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondActivityTaskFailedByID is called by application worker when it is done processing an ActivityTask.\n  * It will result in a new 'ActivityTaskFailed' event being written to the workflow history and a new DecisionTask\n  * created for the workflow instance so new decisions could be made.  Similar to RespondActivityTaskFailed but use\n  * Domain, WorkflowID and ActivityID instead of 'taskToken' for completion. It fails with 'EntityNotExistsError'\n  * if the these IDs are not valid anymore due to activity timeout.\n  **/\n  void  RespondActivityTaskFailedByID(1: shared.RespondActivityTaskFailedByIDRequest failRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondActivityTaskCanceled is called by application worker when it is successfully canceled an ActivityTask.  It will\n  * result in a new 'ActivityTaskCanceled' event being written to the workflow history and a new DecisionTask\n  * created for the workflow instance so new decisions could be made.  Use the 'taskToken' provided as response of\n  * PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid\n  * anymore due to activity timeout.\n  **/\n  void RespondActivityTaskCanceled(1: shared.RespondActivityTaskCanceledRequest canceledRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondActivityTaskCanceledByID is called by application worker when it is successfully canceled an ActivityTask.\n  * It will result in a new 'ActivityTaskCanceled' event being written to the workflow history and a new DecisionTask\n  * created for the workflow instance so new decisions could be made.  Similar to RespondActivityTaskCanceled but use\n  * Domain, WorkflowID and ActivityID instead of 'taskToken' for completion. It fails with 'EntityNotExistsError'\n  * if the these IDs are not valid anymore due to activity timeout.\n  **/\n  void RespondActivityTaskCanceledByID(1: shared.RespondActivityTaskCanceledByIDRequest canceledRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RequestCancelWorkflowExecution is called by application worker when it wants to request cancellation of a workflow instance.\n  * It will result in a new 'WorkflowExecutionCancelRequested' event being written to the workflow history and a new DecisionTask\n  * created for the workflow instance so new decisions could be made. It fails with 'EntityNotExistsError' if the workflow is not valid\n  * anymore due to completion or doesn't exist.\n  **/\n  void RequestCancelWorkflowExecution(1: shared.RequestCancelWorkflowExecutionRequest cancelRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.CancellationAlreadyRequestedError cancellationAlreadyRequestedError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.DomainNotActiveError domainNotActiveError,\n      7: shared.LimitExceededError limitExceededError,\n      8: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * SignalWorkflowExecution is used to send a signal event to running workflow execution.  This results in\n  * WorkflowExecutionSignaled event recorded in the history and a decision task being created for the execution.\n  **/\n  void SignalWorkflowExecution(1: shared.SignalWorkflowExecutionRequest signalRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.LimitExceededError limitExceededError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * SignalWithStartWorkflowExecution is used to ensure sending signal to a workflow.\n  * If the workflow is running, this results in WorkflowExecutionSignaled event being recorded in the history\n  * and a decision task being created for the execution.\n  * If the workflow is not running or not found, this results in WorkflowExecutionStarted and WorkflowExecutionSignaled\n  * events being recorded in history, and a decision task being created for the execution\n  **/\n  shared.StartWorkflowExecutionResponse SignalWithStartWorkflowExecution(1: shared.SignalWithStartWorkflowExecutionRequest signalWithStartRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.LimitExceededError limitExceededError,\n      7: shared.WorkflowExecutionAlreadyStartedError workflowAlreadyStartedError,\n      8: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n    * ResetWorkflowExecution reset an existing workflow execution to DecisionTaskCompleted event(exclusive).\n    * And it will immediately terminating the current execution instance.\n    **/\n  shared.ResetWorkflowExecutionResponse ResetWorkflowExecution(1: shared.ResetWorkflowExecutionRequest resetRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.LimitExceededError limitExceededError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n    \n  /**\n  * TerminateWorkflowExecution terminates an existing workflow execution by recording WorkflowExecutionTerminated event\n  * in the history and immediately terminating the execution instance.\n  **/\n  void TerminateWorkflowExecution(1: shared.TerminateWorkflowExecutionRequest terminateRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.LimitExceededError limitExceededError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * ListOpenWorkflowExecutions is a visibility API to list the open executions in a specific domain.\n  **/\n  shared.ListOpenWorkflowExecutionsResponse ListOpenWorkflowExecutions(1: shared.ListOpenWorkflowExecutionsRequest listRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * ListClosedWorkflowExecutions is a visibility API to list the closed executions in a specific domain.\n  **/\n  shared.ListClosedWorkflowExecutionsResponse ListClosedWorkflowExecutions(1: shared.ListClosedWorkflowExecutionsRequest listRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * ListWorkflowExecutions is a visibility API to list workflow executions in a specific domain.\n  **/\n  shared.ListWorkflowExecutionsResponse ListWorkflowExecutions(1: shared.ListWorkflowExecutionsRequest listRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * ScanWorkflowExecutions is a visibility API to list large amount of workflow executions in a specific domain without order.\n  **/\n  shared.ListWorkflowExecutionsResponse ScanWorkflowExecutions(1: shared.ListWorkflowExecutionsRequest listRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * CountWorkflowExecutions is a visibility API to count of workflow executions in a specific domain.\n  **/\n  shared.CountWorkflowExecutionsResponse CountWorkflowExecutions(1: shared.CountWorkflowExecutionsRequest countRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * GetSearchAttributes is a visibility API to get all legal keys that could be used in list APIs\n  **/\n  shared.GetSearchAttributesResponse GetSearchAttributes()\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n      2: shared.ServiceBusyError serviceBusyError,\n      3: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondQueryTaskCompleted is called by application worker to complete a QueryTask (which is a DecisionTask for query)\n  * as a result of 'PollForDecisionTask' API call. Completing a QueryTask will unblock the client call to 'QueryWorkflow'\n  * API and return the query result to client as a response to 'QueryWorkflow' API call.\n  **/\n  void RespondQueryTaskCompleted(1: shared.RespondQueryTaskCompletedRequest completeRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.DomainNotActiveError domainNotActiveError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * Reset the sticky tasklist related information in mutable state of a given workflow.\n  * Things cleared are:\n  * 1. StickyTaskList\n  * 2. StickyScheduleToStartTimeout\n  * 3. ClientLibraryVersion\n  * 4. ClientFeatureVersion\n  * 5. ClientImpl\n  **/\n  shared.ResetStickyTaskListResponse ResetStickyTaskList(1: shared.ResetStickyTaskListRequest resetRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.DomainNotActiveError domainNotActiveError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * QueryWorkflow returns query result for a specified workflow execution\n  **/\n  shared.QueryWorkflowResponse QueryWorkflow(1: shared.QueryWorkflowRequest queryRequest)\n\tthrows (\n\t  1: shared.BadRequestError badRequestError,\n\t  2: shared.InternalServiceError internalServiceError,\n\t  3: shared.EntityNotExistsError entityNotExistError,\n\t  4: shared.QueryFailedError queryFailedError,\n\t  5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n\t)\n\n  /**\n  * DescribeWorkflowExecution returns information about the specified workflow execution.\n  **/\n  shared.DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: shared.DescribeWorkflowExecutionRequest describeRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * DescribeTaskList returns information about the target tasklist, right now this API returns the\n  * pollers which polled this tasklist in last few minutes.\n  **/\n  shared.DescribeTaskListResponse DescribeTaskList(1: shared.DescribeTaskListRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n}\n"
+const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\ninclude \"shared.thrift\"\n\nnamespace java com.uber.cadence\n\n/**\n* WorkflowService API is exposed to provide support for long running applications.  Application is expected to call\n* StartWorkflowExecution to create an instance for each instance of long running workflow.  Such applications are expected\n* to have a worker which regularly polls for DecisionTask and ActivityTask from the WorkflowService.  For each\n* DecisionTask, application is expected to process the history of events for that session and respond back with next\n* decisions.  For each ActivityTask, application is expected to execute the actual logic for that task and respond back\n* with completion or failure.  Worker is expected to regularly heartbeat while activity task is running.\n**/\nservice WorkflowService {\n  /**\n  * RegisterDomain creates a new domain which can be used as a container for all resources.  Domain is a top level\n  * entity within Cadence, used as a container for all resources like workflow executions, tasklists, etc.  Domain\n  * acts as a sandbox and provides isolation for all resources within the domain.  All resources belongs to exactly one\n  * domain.\n  **/\n  void RegisterDomain(1: shared.RegisterDomainRequest registerRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.DomainAlreadyExistsError domainExistsError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * DescribeDomain returns the information and configuration for a registered domain.\n  **/\n  shared.DescribeDomainResponse DescribeDomain(1: shared.DescribeDomainRequest describeRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n    * ListDomains returns the information and configuration for all domains.\n    **/\n    shared.ListDomainsResponse ListDomains(1: shared.ListDomainsRequest listRequest)\n      throws (\n        1: shared.BadRequestError badRequestError,\n        2: shared.InternalServiceError internalServiceError,\n        3: shared.EntityNotExistsError entityNotExistError,\n        4: shared.ServiceBusyError serviceBusyError,\n        5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      )\n\n  /**\n  * UpdateDomain is used to update the information and configuration for a registered domain.\n  **/\n  shared.UpdateDomainResponse UpdateDomain(1: shared.UpdateDomainRequest updateRequest)\n      throws (\n        1: shared.BadRequestError badRequestError,\n        2: shared.InternalServiceError internalServiceError,\n        3: shared.EntityNotExistsError entityNotExistError,\n        4: shared.ServiceBusyError serviceBusyError,\n        5: shared.DomainNotActiveError domainNotActiveError,\n        6: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n      )\n\n  /**\n  * DeprecateDomain us used to update status of a registered domain to DEPRECATED.  Once the domain is deprecated\n  * it cannot be used to start new workflow executions.  Existing workflow executions will continue to run on\n  * deprecated domains.\n  **/\n  void DeprecateDomain(1: shared.DeprecateDomainRequest deprecateRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * StartWorkflowExecution starts a new long running workflow instance.  It will create the instance with\n  * 'WorkflowExecutionStarted' event in history and also schedule the first DecisionTask for the worker to make the\n  * first decision for this instance.  It will return 'WorkflowExecutionAlreadyStartedError', if an instance already\n  * exists with same workflowId.\n  **/\n  shared.StartWorkflowExecutionResponse StartWorkflowExecution(1: shared.StartWorkflowExecutionRequest startRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.WorkflowExecutionAlreadyStartedError sessionAlreadyExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.LimitExceededError limitExceededError,\n      7: shared.EntityNotExistsError entityNotExistError,\n      8: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * Returns the history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  **/\n  shared.GetWorkflowExecutionHistoryResponse GetWorkflowExecutionHistory(1: shared.GetWorkflowExecutionHistoryRequest getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * PollForDecisionTask is called by application worker to process DecisionTask from a specific taskList.  A\n  * DecisionTask is dispatched to callers for active workflow executions, with pending decisions.\n  * Application is then expected to call 'RespondDecisionTaskCompleted' API when it is done processing the DecisionTask.\n  * It will also create a 'DecisionTaskStarted' event in the history for that session before handing off DecisionTask to\n  * application worker.\n  **/\n  shared.PollForDecisionTaskResponse PollForDecisionTask(1: shared.PollForDecisionTaskRequest pollRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.EntityNotExistsError entityNotExistError,\n      6: shared.DomainNotActiveError domainNotActiveError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondDecisionTaskCompleted is called by application worker to complete a DecisionTask handed as a result of\n  * 'PollForDecisionTask' API call.  Completing a DecisionTask will result in new events for the workflow execution and\n  * potentially new ActivityTask being created for corresponding decisions.  It will also create a DecisionTaskCompleted\n  * event in the history for that session.  Use the 'taskToken' provided as response of PollForDecisionTask API call\n  * for completing the DecisionTask.\n  * The response could contain a new decision task if there is one or if the request asking for one.\n  **/\n  shared.RespondDecisionTaskCompletedResponse RespondDecisionTaskCompleted(1: shared.RespondDecisionTaskCompletedRequest completeRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondDecisionTaskFailed is called by application worker to indicate failure.  This results in\n  * DecisionTaskFailedEvent written to the history and a new DecisionTask created.  This API can be used by client to\n  * either clear sticky tasklist or report any panics during DecisionTask processing.  Cadence will only append first\n  * DecisionTaskFailed event to the history of workflow execution for consecutive failures.\n  **/\n  void RespondDecisionTaskFailed(1: shared.RespondDecisionTaskFailedRequest failedRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * PollForActivityTask is called by application worker to process ActivityTask from a specific taskList.  ActivityTask\n  * is dispatched to callers whenever a ScheduleTask decision is made for a workflow execution.\n  * Application is expected to call 'RespondActivityTaskCompleted' or 'RespondActivityTaskFailed' once it is done\n  * processing the task.\n  * Application also needs to call 'RecordActivityTaskHeartbeat' API within 'heartbeatTimeoutSeconds' interval to\n  * prevent the task from getting timed out.  An event 'ActivityTaskStarted' event is also written to workflow execution\n  * history before the ActivityTask is dispatched to application worker.\n  **/\n  shared.PollForActivityTaskResponse PollForActivityTask(1: shared.PollForActivityTaskRequest pollRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.EntityNotExistsError entityNotExistError,\n      6: shared.DomainNotActiveError domainNotActiveError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RecordActivityTaskHeartbeat is called by application worker while it is processing an ActivityTask.  If worker fails\n  * to heartbeat within 'heartbeatTimeoutSeconds' interval for the ActivityTask, then it will be marked as timedout and\n  * 'ActivityTaskTimedOut' event will be written to the workflow history.  Calling 'RecordActivityTaskHeartbeat' will\n  * fail with 'EntityNotExistsError' in such situations.  Use the 'taskToken' provided as response of\n  * PollForActivityTask API call for heartbeating.\n  **/\n  shared.RecordActivityTaskHeartbeatResponse RecordActivityTaskHeartbeat(1: shared.RecordActivityTaskHeartbeatRequest heartbeatRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RecordActivityTaskHeartbeatByID is called by application worker while it is processing an ActivityTask.  If worker fails\n  * to heartbeat within 'heartbeatTimeoutSeconds' interval for the ActivityTask, then it will be marked as timedout and\n  * 'ActivityTaskTimedOut' event will be written to the workflow history.  Calling 'RecordActivityTaskHeartbeatByID' will\n  * fail with 'EntityNotExistsError' in such situations.  Instead of using 'taskToken' like in RecordActivityTaskHeartbeat,\n  * use Domain, WorkflowID and ActivityID\n  **/\n  shared.RecordActivityTaskHeartbeatResponse RecordActivityTaskHeartbeatByID(1: shared.RecordActivityTaskHeartbeatByIDRequest heartbeatRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondActivityTaskCompleted is called by application worker when it is done processing an ActivityTask.  It will\n  * result in a new 'ActivityTaskCompleted' event being written to the workflow history and a new DecisionTask\n  * created for the workflow so new decisions could be made.  Use the 'taskToken' provided as response of\n  * PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid\n  * anymore due to activity timeout.\n  **/\n  void  RespondActivityTaskCompleted(1: shared.RespondActivityTaskCompletedRequest completeRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondActivityTaskCompletedByID is called by application worker when it is done processing an ActivityTask.\n  * It will result in a new 'ActivityTaskCompleted' event being written to the workflow history and a new DecisionTask\n  * created for the workflow so new decisions could be made.  Similar to RespondActivityTaskCompleted but use Domain,\n  * WorkflowID and ActivityID instead of 'taskToken' for completion. It fails with 'EntityNotExistsError'\n  * if the these IDs are not valid anymore due to activity timeout.\n  **/\n  void  RespondActivityTaskCompletedByID(1: shared.RespondActivityTaskCompletedByIDRequest completeRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondActivityTaskFailed is called by application worker when it is done processing an ActivityTask.  It will\n  * result in a new 'ActivityTaskFailed' event being written to the workflow history and a new DecisionTask\n  * created for the workflow instance so new decisions could be made.  Use the 'taskToken' provided as response of\n  * PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid\n  * anymore due to activity timeout.\n  **/\n  void  RespondActivityTaskFailed(1: shared.RespondActivityTaskFailedRequest failRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondActivityTaskFailedByID is called by application worker when it is done processing an ActivityTask.\n  * It will result in a new 'ActivityTaskFailed' event being written to the workflow history and a new DecisionTask\n  * created for the workflow instance so new decisions could be made.  Similar to RespondActivityTaskFailed but use\n  * Domain, WorkflowID and ActivityID instead of 'taskToken' for completion. It fails with 'EntityNotExistsError'\n  * if the these IDs are not valid anymore due to activity timeout.\n  **/\n  void  RespondActivityTaskFailedByID(1: shared.RespondActivityTaskFailedByIDRequest failRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondActivityTaskCanceled is called by application worker when it is successfully canceled an ActivityTask.  It will\n  * result in a new 'ActivityTaskCanceled' event being written to the workflow history and a new DecisionTask\n  * created for the workflow instance so new decisions could be made.  Use the 'taskToken' provided as response of\n  * PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid\n  * anymore due to activity timeout.\n  **/\n  void RespondActivityTaskCanceled(1: shared.RespondActivityTaskCanceledRequest canceledRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondActivityTaskCanceledByID is called by application worker when it is successfully canceled an ActivityTask.\n  * It will result in a new 'ActivityTaskCanceled' event being written to the workflow history and a new DecisionTask\n  * created for the workflow instance so new decisions could be made.  Similar to RespondActivityTaskCanceled but use\n  * Domain, WorkflowID and ActivityID instead of 'taskToken' for completion. It fails with 'EntityNotExistsError'\n  * if the these IDs are not valid anymore due to activity timeout.\n  **/\n  void RespondActivityTaskCanceledByID(1: shared.RespondActivityTaskCanceledByIDRequest canceledRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.DomainNotActiveError domainNotActiveError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RequestCancelWorkflowExecution is called by application worker when it wants to request cancellation of a workflow instance.\n  * It will result in a new 'WorkflowExecutionCancelRequested' event being written to the workflow history and a new DecisionTask\n  * created for the workflow instance so new decisions could be made. It fails with 'EntityNotExistsError' if the workflow is not valid\n  * anymore due to completion or doesn't exist.\n  **/\n  void RequestCancelWorkflowExecution(1: shared.RequestCancelWorkflowExecutionRequest cancelRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.CancellationAlreadyRequestedError cancellationAlreadyRequestedError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.DomainNotActiveError domainNotActiveError,\n      7: shared.LimitExceededError limitExceededError,\n      8: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * SignalWorkflowExecution is used to send a signal event to running workflow execution.  This results in\n  * WorkflowExecutionSignaled event recorded in the history and a decision task being created for the execution.\n  **/\n  void SignalWorkflowExecution(1: shared.SignalWorkflowExecutionRequest signalRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.LimitExceededError limitExceededError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * SignalWithStartWorkflowExecution is used to ensure sending signal to a workflow.\n  * If the workflow is running, this results in WorkflowExecutionSignaled event being recorded in the history\n  * and a decision task being created for the execution.\n  * If the workflow is not running or not found, this results in WorkflowExecutionStarted and WorkflowExecutionSignaled\n  * events being recorded in history, and a decision task being created for the execution\n  **/\n  shared.StartWorkflowExecutionResponse SignalWithStartWorkflowExecution(1: shared.SignalWithStartWorkflowExecutionRequest signalWithStartRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.LimitExceededError limitExceededError,\n      7: shared.WorkflowExecutionAlreadyStartedError workflowAlreadyStartedError,\n      8: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n    * ResetWorkflowExecution reset an existing workflow execution to DecisionTaskCompleted event(exclusive).\n    * And it will immediately terminating the current execution instance.\n    **/\n  shared.ResetWorkflowExecutionResponse ResetWorkflowExecution(1: shared.ResetWorkflowExecutionRequest resetRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.LimitExceededError limitExceededError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n    \n  /**\n  * TerminateWorkflowExecution terminates an existing workflow execution by recording WorkflowExecutionTerminated event\n  * in the history and immediately terminating the execution instance.\n  **/\n  void TerminateWorkflowExecution(1: shared.TerminateWorkflowExecutionRequest terminateRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.LimitExceededError limitExceededError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * ListOpenWorkflowExecutions is a visibility API to list the open executions in a specific domain.\n  **/\n  shared.ListOpenWorkflowExecutionsResponse ListOpenWorkflowExecutions(1: shared.ListOpenWorkflowExecutionsRequest listRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * ListClosedWorkflowExecutions is a visibility API to list the closed executions in a specific domain.\n  **/\n  shared.ListClosedWorkflowExecutionsResponse ListClosedWorkflowExecutions(1: shared.ListClosedWorkflowExecutionsRequest listRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * ListWorkflowExecutions is a visibility API to list workflow executions in a specific domain.\n  **/\n  shared.ListWorkflowExecutionsResponse ListWorkflowExecutions(1: shared.ListWorkflowExecutionsRequest listRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * ScanWorkflowExecutions is a visibility API to list large amount of workflow executions in a specific domain without order.\n  **/\n  shared.ListWorkflowExecutionsResponse ScanWorkflowExecutions(1: shared.ListWorkflowExecutionsRequest listRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * CountWorkflowExecutions is a visibility API to count of workflow executions in a specific domain.\n  **/\n  shared.CountWorkflowExecutionsResponse CountWorkflowExecutions(1: shared.CountWorkflowExecutionsRequest countRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * GetSearchAttributes is a visibility API to get all legal keys that could be used in list APIs\n  **/\n  shared.GetSearchAttributesResponse GetSearchAttributes()\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n      2: shared.ServiceBusyError serviceBusyError,\n      3: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * RespondQueryTaskCompleted is called by application worker to complete a QueryTask (which is a DecisionTask for query)\n  * as a result of 'PollForDecisionTask' API call. Completing a QueryTask will unblock the client call to 'QueryWorkflow'\n  * API and return the query result to client as a response to 'QueryWorkflow' API call.\n  **/\n  void RespondQueryTaskCompleted(1: shared.RespondQueryTaskCompletedRequest completeRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.DomainNotActiveError domainNotActiveError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * Reset the sticky tasklist related information in mutable state of a given workflow.\n  * Things cleared are:\n  * 1. StickyTaskList\n  * 2. StickyScheduleToStartTimeout\n  * 3. ClientLibraryVersion\n  * 4. ClientFeatureVersion\n  * 5. ClientImpl\n  **/\n  shared.ResetStickyTaskListResponse ResetStickyTaskList(1: shared.ResetStickyTaskListRequest resetRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.DomainNotActiveError domainNotActiveError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * QueryWorkflow returns query result for a specified workflow execution\n  **/\n  shared.QueryWorkflowResponse QueryWorkflow(1: shared.QueryWorkflowRequest queryRequest)\n\tthrows (\n\t  1: shared.BadRequestError badRequestError,\n\t  2: shared.InternalServiceError internalServiceError,\n\t  3: shared.EntityNotExistsError entityNotExistError,\n\t  4: shared.QueryFailedError queryFailedError,\n\t  5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n\t)\n\n  /**\n  * DescribeWorkflowExecution returns information about the specified workflow execution.\n  **/\n  shared.DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: shared.DescribeWorkflowExecutionRequest describeRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * DescribeTaskList returns information about the target tasklist, right now this API returns the\n  * pollers which polled this tasklist in last few minutes.\n  **/\n  shared.DescribeTaskListResponse DescribeTaskList(1: shared.DescribeTaskListRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * StartBatchJob starts a new batch job\n  **/\n  shared.StartBatchJobResponse StartBatchJob(1: shared.StartBatchJobRequest startRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.WorkflowExecutionAlreadyStartedError sessionAlreadyExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.LimitExceededError limitExceededError,\n      7: shared.EntityNotExistsError entityNotExistError,\n      8: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * StopBatchJob stops a batch job\n  **/\n  void StopBatchJob(1: shared.StopBatchJobRequest stopRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.LimitExceededError limitExceededError,\n      7: shared.EntityNotExistsError entityNotExistError,\n      8: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * DescribeBatchJob describes a batch job\n  **/\n  shared.DescribeBatchJobResponse DescribeBatchJob(1: shared.DescribeBatchJobRequest descRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.WorkflowExecutionAlreadyStartedError sessionAlreadyExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.LimitExceededError limitExceededError,\n      7: shared.EntityNotExistsError entityNotExistError,\n      8: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  /**\n  * ListBatchJobs list batch jobs\n  **/\n  shared.ListBatchJobsResponse ListBatchJobs(1: shared.ListBatchJobsRequest listRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.LimitExceededError limitExceededError,\n      7: shared.EntityNotExistsError entityNotExistError,\n      8: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n}\n"
 
 // WorkflowService_CountWorkflowExecutions_Args represents the arguments for the WorkflowService.CountWorkflowExecutions function.
 //
@@ -1478,6 +1478,885 @@ func (v *WorkflowService_DeprecateDomain_Result) EnvelopeType() wire.EnvelopeTyp
 	return wire.Reply
 }
 
+// WorkflowService_DescribeBatchJob_Args represents the arguments for the WorkflowService.DescribeBatchJob function.
+//
+// The arguments for DescribeBatchJob are sent and received over the wire as this struct.
+type WorkflowService_DescribeBatchJob_Args struct {
+	DescRequest *shared.DescribeBatchJobRequest `json:"descRequest,omitempty"`
+}
+
+// ToWire translates a WorkflowService_DescribeBatchJob_Args struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *WorkflowService_DescribeBatchJob_Args) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.DescRequest != nil {
+		w, err = v.DescRequest.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _DescribeBatchJobRequest_Read(w wire.Value) (*shared.DescribeBatchJobRequest, error) {
+	var v shared.DescribeBatchJobRequest
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a WorkflowService_DescribeBatchJob_Args struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a WorkflowService_DescribeBatchJob_Args struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v WorkflowService_DescribeBatchJob_Args
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *WorkflowService_DescribeBatchJob_Args) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.DescRequest, err = _DescribeBatchJobRequest_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a WorkflowService_DescribeBatchJob_Args
+// struct.
+func (v *WorkflowService_DescribeBatchJob_Args) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.DescRequest != nil {
+		fields[i] = fmt.Sprintf("DescRequest: %v", v.DescRequest)
+		i++
+	}
+
+	return fmt.Sprintf("WorkflowService_DescribeBatchJob_Args{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this WorkflowService_DescribeBatchJob_Args match the
+// provided WorkflowService_DescribeBatchJob_Args.
+//
+// This function performs a deep comparison.
+func (v *WorkflowService_DescribeBatchJob_Args) Equals(rhs *WorkflowService_DescribeBatchJob_Args) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.DescRequest == nil && rhs.DescRequest == nil) || (v.DescRequest != nil && rhs.DescRequest != nil && v.DescRequest.Equals(rhs.DescRequest))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of WorkflowService_DescribeBatchJob_Args.
+func (v *WorkflowService_DescribeBatchJob_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.DescRequest != nil {
+		err = multierr.Append(err, enc.AddObject("descRequest", v.DescRequest))
+	}
+	return err
+}
+
+// GetDescRequest returns the value of DescRequest if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_DescribeBatchJob_Args) GetDescRequest() (o *shared.DescribeBatchJobRequest) {
+	if v != nil && v.DescRequest != nil {
+		return v.DescRequest
+	}
+
+	return
+}
+
+// IsSetDescRequest returns true if DescRequest is not nil.
+func (v *WorkflowService_DescribeBatchJob_Args) IsSetDescRequest() bool {
+	return v != nil && v.DescRequest != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the arguments.
+//
+// This will always be "DescribeBatchJob" for this struct.
+func (v *WorkflowService_DescribeBatchJob_Args) MethodName() string {
+	return "DescribeBatchJob"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Call for this struct.
+func (v *WorkflowService_DescribeBatchJob_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+// WorkflowService_DescribeBatchJob_Helper provides functions that aid in handling the
+// parameters and return values of the WorkflowService.DescribeBatchJob
+// function.
+var WorkflowService_DescribeBatchJob_Helper = struct {
+	// Args accepts the parameters of DescribeBatchJob in-order and returns
+	// the arguments struct for the function.
+	Args func(
+		descRequest *shared.DescribeBatchJobRequest,
+	) *WorkflowService_DescribeBatchJob_Args
+
+	// IsException returns true if the given error can be thrown
+	// by DescribeBatchJob.
+	//
+	// An error can be thrown by DescribeBatchJob only if the
+	// corresponding exception type was mentioned in the 'throws'
+	// section for it in the Thrift file.
+	IsException func(error) bool
+
+	// WrapResponse returns the result struct for DescribeBatchJob
+	// given its return value and error.
+	//
+	// This allows mapping values and errors returned by
+	// DescribeBatchJob into a serializable result struct.
+	// WrapResponse returns a non-nil error if the provided
+	// error cannot be thrown by DescribeBatchJob
+	//
+	//   value, err := DescribeBatchJob(args)
+	//   result, err := WorkflowService_DescribeBatchJob_Helper.WrapResponse(value, err)
+	//   if err != nil {
+	//     return fmt.Errorf("unexpected error from DescribeBatchJob: %v", err)
+	//   }
+	//   serialize(result)
+	WrapResponse func(*shared.DescribeBatchJobResponse, error) (*WorkflowService_DescribeBatchJob_Result, error)
+
+	// UnwrapResponse takes the result struct for DescribeBatchJob
+	// and returns the value or error returned by it.
+	//
+	// The error is non-nil only if DescribeBatchJob threw an
+	// exception.
+	//
+	//   result := deserialize(bytes)
+	//   value, err := WorkflowService_DescribeBatchJob_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*WorkflowService_DescribeBatchJob_Result) (*shared.DescribeBatchJobResponse, error)
+}{}
+
+func init() {
+	WorkflowService_DescribeBatchJob_Helper.Args = func(
+		descRequest *shared.DescribeBatchJobRequest,
+	) *WorkflowService_DescribeBatchJob_Args {
+		return &WorkflowService_DescribeBatchJob_Args{
+			DescRequest: descRequest,
+		}
+	}
+
+	WorkflowService_DescribeBatchJob_Helper.IsException = func(err error) bool {
+		switch err.(type) {
+		case *shared.BadRequestError:
+			return true
+		case *shared.InternalServiceError:
+			return true
+		case *shared.WorkflowExecutionAlreadyStartedError:
+			return true
+		case *shared.ServiceBusyError:
+			return true
+		case *shared.DomainNotActiveError:
+			return true
+		case *shared.LimitExceededError:
+			return true
+		case *shared.EntityNotExistsError:
+			return true
+		case *shared.ClientVersionNotSupportedError:
+			return true
+		default:
+			return false
+		}
+	}
+
+	WorkflowService_DescribeBatchJob_Helper.WrapResponse = func(success *shared.DescribeBatchJobResponse, err error) (*WorkflowService_DescribeBatchJob_Result, error) {
+		if err == nil {
+			return &WorkflowService_DescribeBatchJob_Result{Success: success}, nil
+		}
+
+		switch e := err.(type) {
+		case *shared.BadRequestError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_DescribeBatchJob_Result.BadRequestError")
+			}
+			return &WorkflowService_DescribeBatchJob_Result{BadRequestError: e}, nil
+		case *shared.InternalServiceError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_DescribeBatchJob_Result.InternalServiceError")
+			}
+			return &WorkflowService_DescribeBatchJob_Result{InternalServiceError: e}, nil
+		case *shared.WorkflowExecutionAlreadyStartedError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_DescribeBatchJob_Result.SessionAlreadyExistError")
+			}
+			return &WorkflowService_DescribeBatchJob_Result{SessionAlreadyExistError: e}, nil
+		case *shared.ServiceBusyError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_DescribeBatchJob_Result.ServiceBusyError")
+			}
+			return &WorkflowService_DescribeBatchJob_Result{ServiceBusyError: e}, nil
+		case *shared.DomainNotActiveError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_DescribeBatchJob_Result.DomainNotActiveError")
+			}
+			return &WorkflowService_DescribeBatchJob_Result{DomainNotActiveError: e}, nil
+		case *shared.LimitExceededError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_DescribeBatchJob_Result.LimitExceededError")
+			}
+			return &WorkflowService_DescribeBatchJob_Result{LimitExceededError: e}, nil
+		case *shared.EntityNotExistsError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_DescribeBatchJob_Result.EntityNotExistError")
+			}
+			return &WorkflowService_DescribeBatchJob_Result{EntityNotExistError: e}, nil
+		case *shared.ClientVersionNotSupportedError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_DescribeBatchJob_Result.ClientVersionNotSupportedError")
+			}
+			return &WorkflowService_DescribeBatchJob_Result{ClientVersionNotSupportedError: e}, nil
+		}
+
+		return nil, err
+	}
+	WorkflowService_DescribeBatchJob_Helper.UnwrapResponse = func(result *WorkflowService_DescribeBatchJob_Result) (success *shared.DescribeBatchJobResponse, err error) {
+		if result.BadRequestError != nil {
+			err = result.BadRequestError
+			return
+		}
+		if result.InternalServiceError != nil {
+			err = result.InternalServiceError
+			return
+		}
+		if result.SessionAlreadyExistError != nil {
+			err = result.SessionAlreadyExistError
+			return
+		}
+		if result.ServiceBusyError != nil {
+			err = result.ServiceBusyError
+			return
+		}
+		if result.DomainNotActiveError != nil {
+			err = result.DomainNotActiveError
+			return
+		}
+		if result.LimitExceededError != nil {
+			err = result.LimitExceededError
+			return
+		}
+		if result.EntityNotExistError != nil {
+			err = result.EntityNotExistError
+			return
+		}
+		if result.ClientVersionNotSupportedError != nil {
+			err = result.ClientVersionNotSupportedError
+			return
+		}
+
+		if result.Success != nil {
+			success = result.Success
+			return
+		}
+
+		err = errors.New("expected a non-void result")
+		return
+	}
+
+}
+
+// WorkflowService_DescribeBatchJob_Result represents the result of a WorkflowService.DescribeBatchJob function call.
+//
+// The result of a DescribeBatchJob execution is sent and received over the wire as this struct.
+//
+// Success is set only if the function did not throw an exception.
+type WorkflowService_DescribeBatchJob_Result struct {
+	// Value returned by DescribeBatchJob after a successful execution.
+	Success                        *shared.DescribeBatchJobResponse             `json:"success,omitempty"`
+	BadRequestError                *shared.BadRequestError                      `json:"badRequestError,omitempty"`
+	InternalServiceError           *shared.InternalServiceError                 `json:"internalServiceError,omitempty"`
+	SessionAlreadyExistError       *shared.WorkflowExecutionAlreadyStartedError `json:"sessionAlreadyExistError,omitempty"`
+	ServiceBusyError               *shared.ServiceBusyError                     `json:"serviceBusyError,omitempty"`
+	DomainNotActiveError           *shared.DomainNotActiveError                 `json:"domainNotActiveError,omitempty"`
+	LimitExceededError             *shared.LimitExceededError                   `json:"limitExceededError,omitempty"`
+	EntityNotExistError            *shared.EntityNotExistsError                 `json:"entityNotExistError,omitempty"`
+	ClientVersionNotSupportedError *shared.ClientVersionNotSupportedError       `json:"clientVersionNotSupportedError,omitempty"`
+}
+
+// ToWire translates a WorkflowService_DescribeBatchJob_Result struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *WorkflowService_DescribeBatchJob_Result) ToWire() (wire.Value, error) {
+	var (
+		fields [9]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Success != nil {
+		w, err = v.Success.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
+		i++
+	}
+	if v.BadRequestError != nil {
+		w, err = v.BadRequestError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+	if v.InternalServiceError != nil {
+		w, err = v.InternalServiceError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
+		i++
+	}
+	if v.SessionAlreadyExistError != nil {
+		w, err = v.SessionAlreadyExistError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 3, Value: w}
+		i++
+	}
+	if v.ServiceBusyError != nil {
+		w, err = v.ServiceBusyError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 4, Value: w}
+		i++
+	}
+	if v.DomainNotActiveError != nil {
+		w, err = v.DomainNotActiveError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 5, Value: w}
+		i++
+	}
+	if v.LimitExceededError != nil {
+		w, err = v.LimitExceededError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 6, Value: w}
+		i++
+	}
+	if v.EntityNotExistError != nil {
+		w, err = v.EntityNotExistError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 7, Value: w}
+		i++
+	}
+	if v.ClientVersionNotSupportedError != nil {
+		w, err = v.ClientVersionNotSupportedError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 8, Value: w}
+		i++
+	}
+
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("WorkflowService_DescribeBatchJob_Result should have exactly one field: got %v fields", i)
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _DescribeBatchJobResponse_Read(w wire.Value) (*shared.DescribeBatchJobResponse, error) {
+	var v shared.DescribeBatchJobResponse
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _WorkflowExecutionAlreadyStartedError_Read(w wire.Value) (*shared.WorkflowExecutionAlreadyStartedError, error) {
+	var v shared.WorkflowExecutionAlreadyStartedError
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _LimitExceededError_Read(w wire.Value) (*shared.LimitExceededError, error) {
+	var v shared.LimitExceededError
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a WorkflowService_DescribeBatchJob_Result struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a WorkflowService_DescribeBatchJob_Result struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v WorkflowService_DescribeBatchJob_Result
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *WorkflowService_DescribeBatchJob_Result) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 0:
+			if field.Value.Type() == wire.TStruct {
+				v.Success, err = _DescribeBatchJobResponse_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.BadRequestError, err = _BadRequestError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 2:
+			if field.Value.Type() == wire.TStruct {
+				v.InternalServiceError, err = _InternalServiceError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 3:
+			if field.Value.Type() == wire.TStruct {
+				v.SessionAlreadyExistError, err = _WorkflowExecutionAlreadyStartedError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 4:
+			if field.Value.Type() == wire.TStruct {
+				v.ServiceBusyError, err = _ServiceBusyError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 5:
+			if field.Value.Type() == wire.TStruct {
+				v.DomainNotActiveError, err = _DomainNotActiveError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 6:
+			if field.Value.Type() == wire.TStruct {
+				v.LimitExceededError, err = _LimitExceededError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 7:
+			if field.Value.Type() == wire.TStruct {
+				v.EntityNotExistError, err = _EntityNotExistsError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 8:
+			if field.Value.Type() == wire.TStruct {
+				v.ClientVersionNotSupportedError, err = _ClientVersionNotSupportedError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if v.InternalServiceError != nil {
+		count++
+	}
+	if v.SessionAlreadyExistError != nil {
+		count++
+	}
+	if v.ServiceBusyError != nil {
+		count++
+	}
+	if v.DomainNotActiveError != nil {
+		count++
+	}
+	if v.LimitExceededError != nil {
+		count++
+	}
+	if v.EntityNotExistError != nil {
+		count++
+	}
+	if v.ClientVersionNotSupportedError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("WorkflowService_DescribeBatchJob_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a WorkflowService_DescribeBatchJob_Result
+// struct.
+func (v *WorkflowService_DescribeBatchJob_Result) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [9]string
+	i := 0
+	if v.Success != nil {
+		fields[i] = fmt.Sprintf("Success: %v", v.Success)
+		i++
+	}
+	if v.BadRequestError != nil {
+		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
+		i++
+	}
+	if v.InternalServiceError != nil {
+		fields[i] = fmt.Sprintf("InternalServiceError: %v", v.InternalServiceError)
+		i++
+	}
+	if v.SessionAlreadyExistError != nil {
+		fields[i] = fmt.Sprintf("SessionAlreadyExistError: %v", v.SessionAlreadyExistError)
+		i++
+	}
+	if v.ServiceBusyError != nil {
+		fields[i] = fmt.Sprintf("ServiceBusyError: %v", v.ServiceBusyError)
+		i++
+	}
+	if v.DomainNotActiveError != nil {
+		fields[i] = fmt.Sprintf("DomainNotActiveError: %v", v.DomainNotActiveError)
+		i++
+	}
+	if v.LimitExceededError != nil {
+		fields[i] = fmt.Sprintf("LimitExceededError: %v", v.LimitExceededError)
+		i++
+	}
+	if v.EntityNotExistError != nil {
+		fields[i] = fmt.Sprintf("EntityNotExistError: %v", v.EntityNotExistError)
+		i++
+	}
+	if v.ClientVersionNotSupportedError != nil {
+		fields[i] = fmt.Sprintf("ClientVersionNotSupportedError: %v", v.ClientVersionNotSupportedError)
+		i++
+	}
+
+	return fmt.Sprintf("WorkflowService_DescribeBatchJob_Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this WorkflowService_DescribeBatchJob_Result match the
+// provided WorkflowService_DescribeBatchJob_Result.
+//
+// This function performs a deep comparison.
+func (v *WorkflowService_DescribeBatchJob_Result) Equals(rhs *WorkflowService_DescribeBatchJob_Result) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Success == nil && rhs.Success == nil) || (v.Success != nil && rhs.Success != nil && v.Success.Equals(rhs.Success))) {
+		return false
+	}
+	if !((v.BadRequestError == nil && rhs.BadRequestError == nil) || (v.BadRequestError != nil && rhs.BadRequestError != nil && v.BadRequestError.Equals(rhs.BadRequestError))) {
+		return false
+	}
+	if !((v.InternalServiceError == nil && rhs.InternalServiceError == nil) || (v.InternalServiceError != nil && rhs.InternalServiceError != nil && v.InternalServiceError.Equals(rhs.InternalServiceError))) {
+		return false
+	}
+	if !((v.SessionAlreadyExistError == nil && rhs.SessionAlreadyExistError == nil) || (v.SessionAlreadyExistError != nil && rhs.SessionAlreadyExistError != nil && v.SessionAlreadyExistError.Equals(rhs.SessionAlreadyExistError))) {
+		return false
+	}
+	if !((v.ServiceBusyError == nil && rhs.ServiceBusyError == nil) || (v.ServiceBusyError != nil && rhs.ServiceBusyError != nil && v.ServiceBusyError.Equals(rhs.ServiceBusyError))) {
+		return false
+	}
+	if !((v.DomainNotActiveError == nil && rhs.DomainNotActiveError == nil) || (v.DomainNotActiveError != nil && rhs.DomainNotActiveError != nil && v.DomainNotActiveError.Equals(rhs.DomainNotActiveError))) {
+		return false
+	}
+	if !((v.LimitExceededError == nil && rhs.LimitExceededError == nil) || (v.LimitExceededError != nil && rhs.LimitExceededError != nil && v.LimitExceededError.Equals(rhs.LimitExceededError))) {
+		return false
+	}
+	if !((v.EntityNotExistError == nil && rhs.EntityNotExistError == nil) || (v.EntityNotExistError != nil && rhs.EntityNotExistError != nil && v.EntityNotExistError.Equals(rhs.EntityNotExistError))) {
+		return false
+	}
+	if !((v.ClientVersionNotSupportedError == nil && rhs.ClientVersionNotSupportedError == nil) || (v.ClientVersionNotSupportedError != nil && rhs.ClientVersionNotSupportedError != nil && v.ClientVersionNotSupportedError.Equals(rhs.ClientVersionNotSupportedError))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of WorkflowService_DescribeBatchJob_Result.
+func (v *WorkflowService_DescribeBatchJob_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Success != nil {
+		err = multierr.Append(err, enc.AddObject("success", v.Success))
+	}
+	if v.BadRequestError != nil {
+		err = multierr.Append(err, enc.AddObject("badRequestError", v.BadRequestError))
+	}
+	if v.InternalServiceError != nil {
+		err = multierr.Append(err, enc.AddObject("internalServiceError", v.InternalServiceError))
+	}
+	if v.SessionAlreadyExistError != nil {
+		err = multierr.Append(err, enc.AddObject("sessionAlreadyExistError", v.SessionAlreadyExistError))
+	}
+	if v.ServiceBusyError != nil {
+		err = multierr.Append(err, enc.AddObject("serviceBusyError", v.ServiceBusyError))
+	}
+	if v.DomainNotActiveError != nil {
+		err = multierr.Append(err, enc.AddObject("domainNotActiveError", v.DomainNotActiveError))
+	}
+	if v.LimitExceededError != nil {
+		err = multierr.Append(err, enc.AddObject("limitExceededError", v.LimitExceededError))
+	}
+	if v.EntityNotExistError != nil {
+		err = multierr.Append(err, enc.AddObject("entityNotExistError", v.EntityNotExistError))
+	}
+	if v.ClientVersionNotSupportedError != nil {
+		err = multierr.Append(err, enc.AddObject("clientVersionNotSupportedError", v.ClientVersionNotSupportedError))
+	}
+	return err
+}
+
+// GetSuccess returns the value of Success if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_DescribeBatchJob_Result) GetSuccess() (o *shared.DescribeBatchJobResponse) {
+	if v != nil && v.Success != nil {
+		return v.Success
+	}
+
+	return
+}
+
+// IsSetSuccess returns true if Success is not nil.
+func (v *WorkflowService_DescribeBatchJob_Result) IsSetSuccess() bool {
+	return v != nil && v.Success != nil
+}
+
+// GetBadRequestError returns the value of BadRequestError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_DescribeBatchJob_Result) GetBadRequestError() (o *shared.BadRequestError) {
+	if v != nil && v.BadRequestError != nil {
+		return v.BadRequestError
+	}
+
+	return
+}
+
+// IsSetBadRequestError returns true if BadRequestError is not nil.
+func (v *WorkflowService_DescribeBatchJob_Result) IsSetBadRequestError() bool {
+	return v != nil && v.BadRequestError != nil
+}
+
+// GetInternalServiceError returns the value of InternalServiceError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_DescribeBatchJob_Result) GetInternalServiceError() (o *shared.InternalServiceError) {
+	if v != nil && v.InternalServiceError != nil {
+		return v.InternalServiceError
+	}
+
+	return
+}
+
+// IsSetInternalServiceError returns true if InternalServiceError is not nil.
+func (v *WorkflowService_DescribeBatchJob_Result) IsSetInternalServiceError() bool {
+	return v != nil && v.InternalServiceError != nil
+}
+
+// GetSessionAlreadyExistError returns the value of SessionAlreadyExistError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_DescribeBatchJob_Result) GetSessionAlreadyExistError() (o *shared.WorkflowExecutionAlreadyStartedError) {
+	if v != nil && v.SessionAlreadyExistError != nil {
+		return v.SessionAlreadyExistError
+	}
+
+	return
+}
+
+// IsSetSessionAlreadyExistError returns true if SessionAlreadyExistError is not nil.
+func (v *WorkflowService_DescribeBatchJob_Result) IsSetSessionAlreadyExistError() bool {
+	return v != nil && v.SessionAlreadyExistError != nil
+}
+
+// GetServiceBusyError returns the value of ServiceBusyError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_DescribeBatchJob_Result) GetServiceBusyError() (o *shared.ServiceBusyError) {
+	if v != nil && v.ServiceBusyError != nil {
+		return v.ServiceBusyError
+	}
+
+	return
+}
+
+// IsSetServiceBusyError returns true if ServiceBusyError is not nil.
+func (v *WorkflowService_DescribeBatchJob_Result) IsSetServiceBusyError() bool {
+	return v != nil && v.ServiceBusyError != nil
+}
+
+// GetDomainNotActiveError returns the value of DomainNotActiveError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_DescribeBatchJob_Result) GetDomainNotActiveError() (o *shared.DomainNotActiveError) {
+	if v != nil && v.DomainNotActiveError != nil {
+		return v.DomainNotActiveError
+	}
+
+	return
+}
+
+// IsSetDomainNotActiveError returns true if DomainNotActiveError is not nil.
+func (v *WorkflowService_DescribeBatchJob_Result) IsSetDomainNotActiveError() bool {
+	return v != nil && v.DomainNotActiveError != nil
+}
+
+// GetLimitExceededError returns the value of LimitExceededError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_DescribeBatchJob_Result) GetLimitExceededError() (o *shared.LimitExceededError) {
+	if v != nil && v.LimitExceededError != nil {
+		return v.LimitExceededError
+	}
+
+	return
+}
+
+// IsSetLimitExceededError returns true if LimitExceededError is not nil.
+func (v *WorkflowService_DescribeBatchJob_Result) IsSetLimitExceededError() bool {
+	return v != nil && v.LimitExceededError != nil
+}
+
+// GetEntityNotExistError returns the value of EntityNotExistError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_DescribeBatchJob_Result) GetEntityNotExistError() (o *shared.EntityNotExistsError) {
+	if v != nil && v.EntityNotExistError != nil {
+		return v.EntityNotExistError
+	}
+
+	return
+}
+
+// IsSetEntityNotExistError returns true if EntityNotExistError is not nil.
+func (v *WorkflowService_DescribeBatchJob_Result) IsSetEntityNotExistError() bool {
+	return v != nil && v.EntityNotExistError != nil
+}
+
+// GetClientVersionNotSupportedError returns the value of ClientVersionNotSupportedError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_DescribeBatchJob_Result) GetClientVersionNotSupportedError() (o *shared.ClientVersionNotSupportedError) {
+	if v != nil && v.ClientVersionNotSupportedError != nil {
+		return v.ClientVersionNotSupportedError
+	}
+
+	return
+}
+
+// IsSetClientVersionNotSupportedError returns true if ClientVersionNotSupportedError is not nil.
+func (v *WorkflowService_DescribeBatchJob_Result) IsSetClientVersionNotSupportedError() bool {
+	return v != nil && v.ClientVersionNotSupportedError != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the result.
+//
+// This will always be "DescribeBatchJob" for this struct.
+func (v *WorkflowService_DescribeBatchJob_Result) MethodName() string {
+	return "DescribeBatchJob"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Reply for this struct.
+func (v *WorkflowService_DescribeBatchJob_Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
 // WorkflowService_DescribeDomain_Args represents the arguments for the WorkflowService.DescribeDomain function.
 //
 // The arguments for DescribeDomain are sent and received over the wire as this struct.
@@ -2592,12 +3471,6 @@ func (v *WorkflowService_DescribeTaskList_Result) ToWire() (wire.Value, error) {
 
 func _DescribeTaskListResponse_Read(w wire.Value) (*shared.DescribeTaskListResponse, error) {
 	var v shared.DescribeTaskListResponse
-	err := v.FromWire(w)
-	return &v, err
-}
-
-func _LimitExceededError_Read(w wire.Value) (*shared.LimitExceededError, error) {
-	var v shared.LimitExceededError
 	err := v.FromWire(w)
 	return &v, err
 }
@@ -4918,6 +5791,817 @@ func (v *WorkflowService_GetWorkflowExecutionHistory_Result) MethodName() string
 //
 // This will always be Reply for this struct.
 func (v *WorkflowService_GetWorkflowExecutionHistory_Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
+// WorkflowService_ListBatchJobs_Args represents the arguments for the WorkflowService.ListBatchJobs function.
+//
+// The arguments for ListBatchJobs are sent and received over the wire as this struct.
+type WorkflowService_ListBatchJobs_Args struct {
+	ListRequest *shared.ListBatchJobsRequest `json:"listRequest,omitempty"`
+}
+
+// ToWire translates a WorkflowService_ListBatchJobs_Args struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *WorkflowService_ListBatchJobs_Args) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.ListRequest != nil {
+		w, err = v.ListRequest.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _ListBatchJobsRequest_Read(w wire.Value) (*shared.ListBatchJobsRequest, error) {
+	var v shared.ListBatchJobsRequest
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a WorkflowService_ListBatchJobs_Args struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a WorkflowService_ListBatchJobs_Args struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v WorkflowService_ListBatchJobs_Args
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *WorkflowService_ListBatchJobs_Args) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.ListRequest, err = _ListBatchJobsRequest_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a WorkflowService_ListBatchJobs_Args
+// struct.
+func (v *WorkflowService_ListBatchJobs_Args) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.ListRequest != nil {
+		fields[i] = fmt.Sprintf("ListRequest: %v", v.ListRequest)
+		i++
+	}
+
+	return fmt.Sprintf("WorkflowService_ListBatchJobs_Args{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this WorkflowService_ListBatchJobs_Args match the
+// provided WorkflowService_ListBatchJobs_Args.
+//
+// This function performs a deep comparison.
+func (v *WorkflowService_ListBatchJobs_Args) Equals(rhs *WorkflowService_ListBatchJobs_Args) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.ListRequest == nil && rhs.ListRequest == nil) || (v.ListRequest != nil && rhs.ListRequest != nil && v.ListRequest.Equals(rhs.ListRequest))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of WorkflowService_ListBatchJobs_Args.
+func (v *WorkflowService_ListBatchJobs_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.ListRequest != nil {
+		err = multierr.Append(err, enc.AddObject("listRequest", v.ListRequest))
+	}
+	return err
+}
+
+// GetListRequest returns the value of ListRequest if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_ListBatchJobs_Args) GetListRequest() (o *shared.ListBatchJobsRequest) {
+	if v != nil && v.ListRequest != nil {
+		return v.ListRequest
+	}
+
+	return
+}
+
+// IsSetListRequest returns true if ListRequest is not nil.
+func (v *WorkflowService_ListBatchJobs_Args) IsSetListRequest() bool {
+	return v != nil && v.ListRequest != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the arguments.
+//
+// This will always be "ListBatchJobs" for this struct.
+func (v *WorkflowService_ListBatchJobs_Args) MethodName() string {
+	return "ListBatchJobs"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Call for this struct.
+func (v *WorkflowService_ListBatchJobs_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+// WorkflowService_ListBatchJobs_Helper provides functions that aid in handling the
+// parameters and return values of the WorkflowService.ListBatchJobs
+// function.
+var WorkflowService_ListBatchJobs_Helper = struct {
+	// Args accepts the parameters of ListBatchJobs in-order and returns
+	// the arguments struct for the function.
+	Args func(
+		listRequest *shared.ListBatchJobsRequest,
+	) *WorkflowService_ListBatchJobs_Args
+
+	// IsException returns true if the given error can be thrown
+	// by ListBatchJobs.
+	//
+	// An error can be thrown by ListBatchJobs only if the
+	// corresponding exception type was mentioned in the 'throws'
+	// section for it in the Thrift file.
+	IsException func(error) bool
+
+	// WrapResponse returns the result struct for ListBatchJobs
+	// given its return value and error.
+	//
+	// This allows mapping values and errors returned by
+	// ListBatchJobs into a serializable result struct.
+	// WrapResponse returns a non-nil error if the provided
+	// error cannot be thrown by ListBatchJobs
+	//
+	//   value, err := ListBatchJobs(args)
+	//   result, err := WorkflowService_ListBatchJobs_Helper.WrapResponse(value, err)
+	//   if err != nil {
+	//     return fmt.Errorf("unexpected error from ListBatchJobs: %v", err)
+	//   }
+	//   serialize(result)
+	WrapResponse func(*shared.ListBatchJobsResponse, error) (*WorkflowService_ListBatchJobs_Result, error)
+
+	// UnwrapResponse takes the result struct for ListBatchJobs
+	// and returns the value or error returned by it.
+	//
+	// The error is non-nil only if ListBatchJobs threw an
+	// exception.
+	//
+	//   result := deserialize(bytes)
+	//   value, err := WorkflowService_ListBatchJobs_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*WorkflowService_ListBatchJobs_Result) (*shared.ListBatchJobsResponse, error)
+}{}
+
+func init() {
+	WorkflowService_ListBatchJobs_Helper.Args = func(
+		listRequest *shared.ListBatchJobsRequest,
+	) *WorkflowService_ListBatchJobs_Args {
+		return &WorkflowService_ListBatchJobs_Args{
+			ListRequest: listRequest,
+		}
+	}
+
+	WorkflowService_ListBatchJobs_Helper.IsException = func(err error) bool {
+		switch err.(type) {
+		case *shared.BadRequestError:
+			return true
+		case *shared.InternalServiceError:
+			return true
+		case *shared.ServiceBusyError:
+			return true
+		case *shared.DomainNotActiveError:
+			return true
+		case *shared.LimitExceededError:
+			return true
+		case *shared.EntityNotExistsError:
+			return true
+		case *shared.ClientVersionNotSupportedError:
+			return true
+		default:
+			return false
+		}
+	}
+
+	WorkflowService_ListBatchJobs_Helper.WrapResponse = func(success *shared.ListBatchJobsResponse, err error) (*WorkflowService_ListBatchJobs_Result, error) {
+		if err == nil {
+			return &WorkflowService_ListBatchJobs_Result{Success: success}, nil
+		}
+
+		switch e := err.(type) {
+		case *shared.BadRequestError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ListBatchJobs_Result.BadRequestError")
+			}
+			return &WorkflowService_ListBatchJobs_Result{BadRequestError: e}, nil
+		case *shared.InternalServiceError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ListBatchJobs_Result.InternalServiceError")
+			}
+			return &WorkflowService_ListBatchJobs_Result{InternalServiceError: e}, nil
+		case *shared.ServiceBusyError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ListBatchJobs_Result.ServiceBusyError")
+			}
+			return &WorkflowService_ListBatchJobs_Result{ServiceBusyError: e}, nil
+		case *shared.DomainNotActiveError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ListBatchJobs_Result.DomainNotActiveError")
+			}
+			return &WorkflowService_ListBatchJobs_Result{DomainNotActiveError: e}, nil
+		case *shared.LimitExceededError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ListBatchJobs_Result.LimitExceededError")
+			}
+			return &WorkflowService_ListBatchJobs_Result{LimitExceededError: e}, nil
+		case *shared.EntityNotExistsError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ListBatchJobs_Result.EntityNotExistError")
+			}
+			return &WorkflowService_ListBatchJobs_Result{EntityNotExistError: e}, nil
+		case *shared.ClientVersionNotSupportedError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ListBatchJobs_Result.ClientVersionNotSupportedError")
+			}
+			return &WorkflowService_ListBatchJobs_Result{ClientVersionNotSupportedError: e}, nil
+		}
+
+		return nil, err
+	}
+	WorkflowService_ListBatchJobs_Helper.UnwrapResponse = func(result *WorkflowService_ListBatchJobs_Result) (success *shared.ListBatchJobsResponse, err error) {
+		if result.BadRequestError != nil {
+			err = result.BadRequestError
+			return
+		}
+		if result.InternalServiceError != nil {
+			err = result.InternalServiceError
+			return
+		}
+		if result.ServiceBusyError != nil {
+			err = result.ServiceBusyError
+			return
+		}
+		if result.DomainNotActiveError != nil {
+			err = result.DomainNotActiveError
+			return
+		}
+		if result.LimitExceededError != nil {
+			err = result.LimitExceededError
+			return
+		}
+		if result.EntityNotExistError != nil {
+			err = result.EntityNotExistError
+			return
+		}
+		if result.ClientVersionNotSupportedError != nil {
+			err = result.ClientVersionNotSupportedError
+			return
+		}
+
+		if result.Success != nil {
+			success = result.Success
+			return
+		}
+
+		err = errors.New("expected a non-void result")
+		return
+	}
+
+}
+
+// WorkflowService_ListBatchJobs_Result represents the result of a WorkflowService.ListBatchJobs function call.
+//
+// The result of a ListBatchJobs execution is sent and received over the wire as this struct.
+//
+// Success is set only if the function did not throw an exception.
+type WorkflowService_ListBatchJobs_Result struct {
+	// Value returned by ListBatchJobs after a successful execution.
+	Success                        *shared.ListBatchJobsResponse          `json:"success,omitempty"`
+	BadRequestError                *shared.BadRequestError                `json:"badRequestError,omitempty"`
+	InternalServiceError           *shared.InternalServiceError           `json:"internalServiceError,omitempty"`
+	ServiceBusyError               *shared.ServiceBusyError               `json:"serviceBusyError,omitempty"`
+	DomainNotActiveError           *shared.DomainNotActiveError           `json:"domainNotActiveError,omitempty"`
+	LimitExceededError             *shared.LimitExceededError             `json:"limitExceededError,omitempty"`
+	EntityNotExistError            *shared.EntityNotExistsError           `json:"entityNotExistError,omitempty"`
+	ClientVersionNotSupportedError *shared.ClientVersionNotSupportedError `json:"clientVersionNotSupportedError,omitempty"`
+}
+
+// ToWire translates a WorkflowService_ListBatchJobs_Result struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *WorkflowService_ListBatchJobs_Result) ToWire() (wire.Value, error) {
+	var (
+		fields [8]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Success != nil {
+		w, err = v.Success.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
+		i++
+	}
+	if v.BadRequestError != nil {
+		w, err = v.BadRequestError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+	if v.InternalServiceError != nil {
+		w, err = v.InternalServiceError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
+		i++
+	}
+	if v.ServiceBusyError != nil {
+		w, err = v.ServiceBusyError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 4, Value: w}
+		i++
+	}
+	if v.DomainNotActiveError != nil {
+		w, err = v.DomainNotActiveError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 5, Value: w}
+		i++
+	}
+	if v.LimitExceededError != nil {
+		w, err = v.LimitExceededError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 6, Value: w}
+		i++
+	}
+	if v.EntityNotExistError != nil {
+		w, err = v.EntityNotExistError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 7, Value: w}
+		i++
+	}
+	if v.ClientVersionNotSupportedError != nil {
+		w, err = v.ClientVersionNotSupportedError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 8, Value: w}
+		i++
+	}
+
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("WorkflowService_ListBatchJobs_Result should have exactly one field: got %v fields", i)
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _ListBatchJobsResponse_Read(w wire.Value) (*shared.ListBatchJobsResponse, error) {
+	var v shared.ListBatchJobsResponse
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a WorkflowService_ListBatchJobs_Result struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a WorkflowService_ListBatchJobs_Result struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v WorkflowService_ListBatchJobs_Result
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *WorkflowService_ListBatchJobs_Result) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 0:
+			if field.Value.Type() == wire.TStruct {
+				v.Success, err = _ListBatchJobsResponse_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.BadRequestError, err = _BadRequestError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 2:
+			if field.Value.Type() == wire.TStruct {
+				v.InternalServiceError, err = _InternalServiceError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 4:
+			if field.Value.Type() == wire.TStruct {
+				v.ServiceBusyError, err = _ServiceBusyError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 5:
+			if field.Value.Type() == wire.TStruct {
+				v.DomainNotActiveError, err = _DomainNotActiveError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 6:
+			if field.Value.Type() == wire.TStruct {
+				v.LimitExceededError, err = _LimitExceededError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 7:
+			if field.Value.Type() == wire.TStruct {
+				v.EntityNotExistError, err = _EntityNotExistsError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 8:
+			if field.Value.Type() == wire.TStruct {
+				v.ClientVersionNotSupportedError, err = _ClientVersionNotSupportedError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if v.InternalServiceError != nil {
+		count++
+	}
+	if v.ServiceBusyError != nil {
+		count++
+	}
+	if v.DomainNotActiveError != nil {
+		count++
+	}
+	if v.LimitExceededError != nil {
+		count++
+	}
+	if v.EntityNotExistError != nil {
+		count++
+	}
+	if v.ClientVersionNotSupportedError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("WorkflowService_ListBatchJobs_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a WorkflowService_ListBatchJobs_Result
+// struct.
+func (v *WorkflowService_ListBatchJobs_Result) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [8]string
+	i := 0
+	if v.Success != nil {
+		fields[i] = fmt.Sprintf("Success: %v", v.Success)
+		i++
+	}
+	if v.BadRequestError != nil {
+		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
+		i++
+	}
+	if v.InternalServiceError != nil {
+		fields[i] = fmt.Sprintf("InternalServiceError: %v", v.InternalServiceError)
+		i++
+	}
+	if v.ServiceBusyError != nil {
+		fields[i] = fmt.Sprintf("ServiceBusyError: %v", v.ServiceBusyError)
+		i++
+	}
+	if v.DomainNotActiveError != nil {
+		fields[i] = fmt.Sprintf("DomainNotActiveError: %v", v.DomainNotActiveError)
+		i++
+	}
+	if v.LimitExceededError != nil {
+		fields[i] = fmt.Sprintf("LimitExceededError: %v", v.LimitExceededError)
+		i++
+	}
+	if v.EntityNotExistError != nil {
+		fields[i] = fmt.Sprintf("EntityNotExistError: %v", v.EntityNotExistError)
+		i++
+	}
+	if v.ClientVersionNotSupportedError != nil {
+		fields[i] = fmt.Sprintf("ClientVersionNotSupportedError: %v", v.ClientVersionNotSupportedError)
+		i++
+	}
+
+	return fmt.Sprintf("WorkflowService_ListBatchJobs_Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this WorkflowService_ListBatchJobs_Result match the
+// provided WorkflowService_ListBatchJobs_Result.
+//
+// This function performs a deep comparison.
+func (v *WorkflowService_ListBatchJobs_Result) Equals(rhs *WorkflowService_ListBatchJobs_Result) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Success == nil && rhs.Success == nil) || (v.Success != nil && rhs.Success != nil && v.Success.Equals(rhs.Success))) {
+		return false
+	}
+	if !((v.BadRequestError == nil && rhs.BadRequestError == nil) || (v.BadRequestError != nil && rhs.BadRequestError != nil && v.BadRequestError.Equals(rhs.BadRequestError))) {
+		return false
+	}
+	if !((v.InternalServiceError == nil && rhs.InternalServiceError == nil) || (v.InternalServiceError != nil && rhs.InternalServiceError != nil && v.InternalServiceError.Equals(rhs.InternalServiceError))) {
+		return false
+	}
+	if !((v.ServiceBusyError == nil && rhs.ServiceBusyError == nil) || (v.ServiceBusyError != nil && rhs.ServiceBusyError != nil && v.ServiceBusyError.Equals(rhs.ServiceBusyError))) {
+		return false
+	}
+	if !((v.DomainNotActiveError == nil && rhs.DomainNotActiveError == nil) || (v.DomainNotActiveError != nil && rhs.DomainNotActiveError != nil && v.DomainNotActiveError.Equals(rhs.DomainNotActiveError))) {
+		return false
+	}
+	if !((v.LimitExceededError == nil && rhs.LimitExceededError == nil) || (v.LimitExceededError != nil && rhs.LimitExceededError != nil && v.LimitExceededError.Equals(rhs.LimitExceededError))) {
+		return false
+	}
+	if !((v.EntityNotExistError == nil && rhs.EntityNotExistError == nil) || (v.EntityNotExistError != nil && rhs.EntityNotExistError != nil && v.EntityNotExistError.Equals(rhs.EntityNotExistError))) {
+		return false
+	}
+	if !((v.ClientVersionNotSupportedError == nil && rhs.ClientVersionNotSupportedError == nil) || (v.ClientVersionNotSupportedError != nil && rhs.ClientVersionNotSupportedError != nil && v.ClientVersionNotSupportedError.Equals(rhs.ClientVersionNotSupportedError))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of WorkflowService_ListBatchJobs_Result.
+func (v *WorkflowService_ListBatchJobs_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Success != nil {
+		err = multierr.Append(err, enc.AddObject("success", v.Success))
+	}
+	if v.BadRequestError != nil {
+		err = multierr.Append(err, enc.AddObject("badRequestError", v.BadRequestError))
+	}
+	if v.InternalServiceError != nil {
+		err = multierr.Append(err, enc.AddObject("internalServiceError", v.InternalServiceError))
+	}
+	if v.ServiceBusyError != nil {
+		err = multierr.Append(err, enc.AddObject("serviceBusyError", v.ServiceBusyError))
+	}
+	if v.DomainNotActiveError != nil {
+		err = multierr.Append(err, enc.AddObject("domainNotActiveError", v.DomainNotActiveError))
+	}
+	if v.LimitExceededError != nil {
+		err = multierr.Append(err, enc.AddObject("limitExceededError", v.LimitExceededError))
+	}
+	if v.EntityNotExistError != nil {
+		err = multierr.Append(err, enc.AddObject("entityNotExistError", v.EntityNotExistError))
+	}
+	if v.ClientVersionNotSupportedError != nil {
+		err = multierr.Append(err, enc.AddObject("clientVersionNotSupportedError", v.ClientVersionNotSupportedError))
+	}
+	return err
+}
+
+// GetSuccess returns the value of Success if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_ListBatchJobs_Result) GetSuccess() (o *shared.ListBatchJobsResponse) {
+	if v != nil && v.Success != nil {
+		return v.Success
+	}
+
+	return
+}
+
+// IsSetSuccess returns true if Success is not nil.
+func (v *WorkflowService_ListBatchJobs_Result) IsSetSuccess() bool {
+	return v != nil && v.Success != nil
+}
+
+// GetBadRequestError returns the value of BadRequestError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_ListBatchJobs_Result) GetBadRequestError() (o *shared.BadRequestError) {
+	if v != nil && v.BadRequestError != nil {
+		return v.BadRequestError
+	}
+
+	return
+}
+
+// IsSetBadRequestError returns true if BadRequestError is not nil.
+func (v *WorkflowService_ListBatchJobs_Result) IsSetBadRequestError() bool {
+	return v != nil && v.BadRequestError != nil
+}
+
+// GetInternalServiceError returns the value of InternalServiceError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_ListBatchJobs_Result) GetInternalServiceError() (o *shared.InternalServiceError) {
+	if v != nil && v.InternalServiceError != nil {
+		return v.InternalServiceError
+	}
+
+	return
+}
+
+// IsSetInternalServiceError returns true if InternalServiceError is not nil.
+func (v *WorkflowService_ListBatchJobs_Result) IsSetInternalServiceError() bool {
+	return v != nil && v.InternalServiceError != nil
+}
+
+// GetServiceBusyError returns the value of ServiceBusyError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_ListBatchJobs_Result) GetServiceBusyError() (o *shared.ServiceBusyError) {
+	if v != nil && v.ServiceBusyError != nil {
+		return v.ServiceBusyError
+	}
+
+	return
+}
+
+// IsSetServiceBusyError returns true if ServiceBusyError is not nil.
+func (v *WorkflowService_ListBatchJobs_Result) IsSetServiceBusyError() bool {
+	return v != nil && v.ServiceBusyError != nil
+}
+
+// GetDomainNotActiveError returns the value of DomainNotActiveError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_ListBatchJobs_Result) GetDomainNotActiveError() (o *shared.DomainNotActiveError) {
+	if v != nil && v.DomainNotActiveError != nil {
+		return v.DomainNotActiveError
+	}
+
+	return
+}
+
+// IsSetDomainNotActiveError returns true if DomainNotActiveError is not nil.
+func (v *WorkflowService_ListBatchJobs_Result) IsSetDomainNotActiveError() bool {
+	return v != nil && v.DomainNotActiveError != nil
+}
+
+// GetLimitExceededError returns the value of LimitExceededError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_ListBatchJobs_Result) GetLimitExceededError() (o *shared.LimitExceededError) {
+	if v != nil && v.LimitExceededError != nil {
+		return v.LimitExceededError
+	}
+
+	return
+}
+
+// IsSetLimitExceededError returns true if LimitExceededError is not nil.
+func (v *WorkflowService_ListBatchJobs_Result) IsSetLimitExceededError() bool {
+	return v != nil && v.LimitExceededError != nil
+}
+
+// GetEntityNotExistError returns the value of EntityNotExistError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_ListBatchJobs_Result) GetEntityNotExistError() (o *shared.EntityNotExistsError) {
+	if v != nil && v.EntityNotExistError != nil {
+		return v.EntityNotExistError
+	}
+
+	return
+}
+
+// IsSetEntityNotExistError returns true if EntityNotExistError is not nil.
+func (v *WorkflowService_ListBatchJobs_Result) IsSetEntityNotExistError() bool {
+	return v != nil && v.EntityNotExistError != nil
+}
+
+// GetClientVersionNotSupportedError returns the value of ClientVersionNotSupportedError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_ListBatchJobs_Result) GetClientVersionNotSupportedError() (o *shared.ClientVersionNotSupportedError) {
+	if v != nil && v.ClientVersionNotSupportedError != nil {
+		return v.ClientVersionNotSupportedError
+	}
+
+	return
+}
+
+// IsSetClientVersionNotSupportedError returns true if ClientVersionNotSupportedError is not nil.
+func (v *WorkflowService_ListBatchJobs_Result) IsSetClientVersionNotSupportedError() bool {
+	return v != nil && v.ClientVersionNotSupportedError != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the result.
+//
+// This will always be "ListBatchJobs" for this struct.
+func (v *WorkflowService_ListBatchJobs_Result) MethodName() string {
+	return "ListBatchJobs"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Reply for this struct.
+func (v *WorkflowService_ListBatchJobs_Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }
 
@@ -22873,12 +24557,6 @@ func _StartWorkflowExecutionResponse_Read(w wire.Value) (*shared.StartWorkflowEx
 	return &v, err
 }
 
-func _WorkflowExecutionAlreadyStartedError_Read(w wire.Value) (*shared.WorkflowExecutionAlreadyStartedError, error) {
-	var v shared.WorkflowExecutionAlreadyStartedError
-	err := v.FromWire(w)
-	return &v, err
-}
-
 // FromWire deserializes a WorkflowService_SignalWithStartWorkflowExecution_Result struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
@@ -24038,6 +25716,873 @@ func (v *WorkflowService_SignalWorkflowExecution_Result) EnvelopeType() wire.Env
 	return wire.Reply
 }
 
+// WorkflowService_StartBatchJob_Args represents the arguments for the WorkflowService.StartBatchJob function.
+//
+// The arguments for StartBatchJob are sent and received over the wire as this struct.
+type WorkflowService_StartBatchJob_Args struct {
+	StartRequest *shared.StartBatchJobRequest `json:"startRequest,omitempty"`
+}
+
+// ToWire translates a WorkflowService_StartBatchJob_Args struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *WorkflowService_StartBatchJob_Args) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.StartRequest != nil {
+		w, err = v.StartRequest.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _StartBatchJobRequest_Read(w wire.Value) (*shared.StartBatchJobRequest, error) {
+	var v shared.StartBatchJobRequest
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a WorkflowService_StartBatchJob_Args struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a WorkflowService_StartBatchJob_Args struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v WorkflowService_StartBatchJob_Args
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *WorkflowService_StartBatchJob_Args) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.StartRequest, err = _StartBatchJobRequest_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a WorkflowService_StartBatchJob_Args
+// struct.
+func (v *WorkflowService_StartBatchJob_Args) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.StartRequest != nil {
+		fields[i] = fmt.Sprintf("StartRequest: %v", v.StartRequest)
+		i++
+	}
+
+	return fmt.Sprintf("WorkflowService_StartBatchJob_Args{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this WorkflowService_StartBatchJob_Args match the
+// provided WorkflowService_StartBatchJob_Args.
+//
+// This function performs a deep comparison.
+func (v *WorkflowService_StartBatchJob_Args) Equals(rhs *WorkflowService_StartBatchJob_Args) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.StartRequest == nil && rhs.StartRequest == nil) || (v.StartRequest != nil && rhs.StartRequest != nil && v.StartRequest.Equals(rhs.StartRequest))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of WorkflowService_StartBatchJob_Args.
+func (v *WorkflowService_StartBatchJob_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.StartRequest != nil {
+		err = multierr.Append(err, enc.AddObject("startRequest", v.StartRequest))
+	}
+	return err
+}
+
+// GetStartRequest returns the value of StartRequest if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_StartBatchJob_Args) GetStartRequest() (o *shared.StartBatchJobRequest) {
+	if v != nil && v.StartRequest != nil {
+		return v.StartRequest
+	}
+
+	return
+}
+
+// IsSetStartRequest returns true if StartRequest is not nil.
+func (v *WorkflowService_StartBatchJob_Args) IsSetStartRequest() bool {
+	return v != nil && v.StartRequest != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the arguments.
+//
+// This will always be "StartBatchJob" for this struct.
+func (v *WorkflowService_StartBatchJob_Args) MethodName() string {
+	return "StartBatchJob"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Call for this struct.
+func (v *WorkflowService_StartBatchJob_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+// WorkflowService_StartBatchJob_Helper provides functions that aid in handling the
+// parameters and return values of the WorkflowService.StartBatchJob
+// function.
+var WorkflowService_StartBatchJob_Helper = struct {
+	// Args accepts the parameters of StartBatchJob in-order and returns
+	// the arguments struct for the function.
+	Args func(
+		startRequest *shared.StartBatchJobRequest,
+	) *WorkflowService_StartBatchJob_Args
+
+	// IsException returns true if the given error can be thrown
+	// by StartBatchJob.
+	//
+	// An error can be thrown by StartBatchJob only if the
+	// corresponding exception type was mentioned in the 'throws'
+	// section for it in the Thrift file.
+	IsException func(error) bool
+
+	// WrapResponse returns the result struct for StartBatchJob
+	// given its return value and error.
+	//
+	// This allows mapping values and errors returned by
+	// StartBatchJob into a serializable result struct.
+	// WrapResponse returns a non-nil error if the provided
+	// error cannot be thrown by StartBatchJob
+	//
+	//   value, err := StartBatchJob(args)
+	//   result, err := WorkflowService_StartBatchJob_Helper.WrapResponse(value, err)
+	//   if err != nil {
+	//     return fmt.Errorf("unexpected error from StartBatchJob: %v", err)
+	//   }
+	//   serialize(result)
+	WrapResponse func(*shared.StartBatchJobResponse, error) (*WorkflowService_StartBatchJob_Result, error)
+
+	// UnwrapResponse takes the result struct for StartBatchJob
+	// and returns the value or error returned by it.
+	//
+	// The error is non-nil only if StartBatchJob threw an
+	// exception.
+	//
+	//   result := deserialize(bytes)
+	//   value, err := WorkflowService_StartBatchJob_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*WorkflowService_StartBatchJob_Result) (*shared.StartBatchJobResponse, error)
+}{}
+
+func init() {
+	WorkflowService_StartBatchJob_Helper.Args = func(
+		startRequest *shared.StartBatchJobRequest,
+	) *WorkflowService_StartBatchJob_Args {
+		return &WorkflowService_StartBatchJob_Args{
+			StartRequest: startRequest,
+		}
+	}
+
+	WorkflowService_StartBatchJob_Helper.IsException = func(err error) bool {
+		switch err.(type) {
+		case *shared.BadRequestError:
+			return true
+		case *shared.InternalServiceError:
+			return true
+		case *shared.WorkflowExecutionAlreadyStartedError:
+			return true
+		case *shared.ServiceBusyError:
+			return true
+		case *shared.DomainNotActiveError:
+			return true
+		case *shared.LimitExceededError:
+			return true
+		case *shared.EntityNotExistsError:
+			return true
+		case *shared.ClientVersionNotSupportedError:
+			return true
+		default:
+			return false
+		}
+	}
+
+	WorkflowService_StartBatchJob_Helper.WrapResponse = func(success *shared.StartBatchJobResponse, err error) (*WorkflowService_StartBatchJob_Result, error) {
+		if err == nil {
+			return &WorkflowService_StartBatchJob_Result{Success: success}, nil
+		}
+
+		switch e := err.(type) {
+		case *shared.BadRequestError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_StartBatchJob_Result.BadRequestError")
+			}
+			return &WorkflowService_StartBatchJob_Result{BadRequestError: e}, nil
+		case *shared.InternalServiceError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_StartBatchJob_Result.InternalServiceError")
+			}
+			return &WorkflowService_StartBatchJob_Result{InternalServiceError: e}, nil
+		case *shared.WorkflowExecutionAlreadyStartedError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_StartBatchJob_Result.SessionAlreadyExistError")
+			}
+			return &WorkflowService_StartBatchJob_Result{SessionAlreadyExistError: e}, nil
+		case *shared.ServiceBusyError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_StartBatchJob_Result.ServiceBusyError")
+			}
+			return &WorkflowService_StartBatchJob_Result{ServiceBusyError: e}, nil
+		case *shared.DomainNotActiveError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_StartBatchJob_Result.DomainNotActiveError")
+			}
+			return &WorkflowService_StartBatchJob_Result{DomainNotActiveError: e}, nil
+		case *shared.LimitExceededError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_StartBatchJob_Result.LimitExceededError")
+			}
+			return &WorkflowService_StartBatchJob_Result{LimitExceededError: e}, nil
+		case *shared.EntityNotExistsError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_StartBatchJob_Result.EntityNotExistError")
+			}
+			return &WorkflowService_StartBatchJob_Result{EntityNotExistError: e}, nil
+		case *shared.ClientVersionNotSupportedError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_StartBatchJob_Result.ClientVersionNotSupportedError")
+			}
+			return &WorkflowService_StartBatchJob_Result{ClientVersionNotSupportedError: e}, nil
+		}
+
+		return nil, err
+	}
+	WorkflowService_StartBatchJob_Helper.UnwrapResponse = func(result *WorkflowService_StartBatchJob_Result) (success *shared.StartBatchJobResponse, err error) {
+		if result.BadRequestError != nil {
+			err = result.BadRequestError
+			return
+		}
+		if result.InternalServiceError != nil {
+			err = result.InternalServiceError
+			return
+		}
+		if result.SessionAlreadyExistError != nil {
+			err = result.SessionAlreadyExistError
+			return
+		}
+		if result.ServiceBusyError != nil {
+			err = result.ServiceBusyError
+			return
+		}
+		if result.DomainNotActiveError != nil {
+			err = result.DomainNotActiveError
+			return
+		}
+		if result.LimitExceededError != nil {
+			err = result.LimitExceededError
+			return
+		}
+		if result.EntityNotExistError != nil {
+			err = result.EntityNotExistError
+			return
+		}
+		if result.ClientVersionNotSupportedError != nil {
+			err = result.ClientVersionNotSupportedError
+			return
+		}
+
+		if result.Success != nil {
+			success = result.Success
+			return
+		}
+
+		err = errors.New("expected a non-void result")
+		return
+	}
+
+}
+
+// WorkflowService_StartBatchJob_Result represents the result of a WorkflowService.StartBatchJob function call.
+//
+// The result of a StartBatchJob execution is sent and received over the wire as this struct.
+//
+// Success is set only if the function did not throw an exception.
+type WorkflowService_StartBatchJob_Result struct {
+	// Value returned by StartBatchJob after a successful execution.
+	Success                        *shared.StartBatchJobResponse                `json:"success,omitempty"`
+	BadRequestError                *shared.BadRequestError                      `json:"badRequestError,omitempty"`
+	InternalServiceError           *shared.InternalServiceError                 `json:"internalServiceError,omitempty"`
+	SessionAlreadyExistError       *shared.WorkflowExecutionAlreadyStartedError `json:"sessionAlreadyExistError,omitempty"`
+	ServiceBusyError               *shared.ServiceBusyError                     `json:"serviceBusyError,omitempty"`
+	DomainNotActiveError           *shared.DomainNotActiveError                 `json:"domainNotActiveError,omitempty"`
+	LimitExceededError             *shared.LimitExceededError                   `json:"limitExceededError,omitempty"`
+	EntityNotExistError            *shared.EntityNotExistsError                 `json:"entityNotExistError,omitempty"`
+	ClientVersionNotSupportedError *shared.ClientVersionNotSupportedError       `json:"clientVersionNotSupportedError,omitempty"`
+}
+
+// ToWire translates a WorkflowService_StartBatchJob_Result struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *WorkflowService_StartBatchJob_Result) ToWire() (wire.Value, error) {
+	var (
+		fields [9]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Success != nil {
+		w, err = v.Success.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
+		i++
+	}
+	if v.BadRequestError != nil {
+		w, err = v.BadRequestError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+	if v.InternalServiceError != nil {
+		w, err = v.InternalServiceError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
+		i++
+	}
+	if v.SessionAlreadyExistError != nil {
+		w, err = v.SessionAlreadyExistError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 3, Value: w}
+		i++
+	}
+	if v.ServiceBusyError != nil {
+		w, err = v.ServiceBusyError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 4, Value: w}
+		i++
+	}
+	if v.DomainNotActiveError != nil {
+		w, err = v.DomainNotActiveError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 5, Value: w}
+		i++
+	}
+	if v.LimitExceededError != nil {
+		w, err = v.LimitExceededError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 6, Value: w}
+		i++
+	}
+	if v.EntityNotExistError != nil {
+		w, err = v.EntityNotExistError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 7, Value: w}
+		i++
+	}
+	if v.ClientVersionNotSupportedError != nil {
+		w, err = v.ClientVersionNotSupportedError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 8, Value: w}
+		i++
+	}
+
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("WorkflowService_StartBatchJob_Result should have exactly one field: got %v fields", i)
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _StartBatchJobResponse_Read(w wire.Value) (*shared.StartBatchJobResponse, error) {
+	var v shared.StartBatchJobResponse
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a WorkflowService_StartBatchJob_Result struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a WorkflowService_StartBatchJob_Result struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v WorkflowService_StartBatchJob_Result
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *WorkflowService_StartBatchJob_Result) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 0:
+			if field.Value.Type() == wire.TStruct {
+				v.Success, err = _StartBatchJobResponse_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.BadRequestError, err = _BadRequestError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 2:
+			if field.Value.Type() == wire.TStruct {
+				v.InternalServiceError, err = _InternalServiceError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 3:
+			if field.Value.Type() == wire.TStruct {
+				v.SessionAlreadyExistError, err = _WorkflowExecutionAlreadyStartedError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 4:
+			if field.Value.Type() == wire.TStruct {
+				v.ServiceBusyError, err = _ServiceBusyError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 5:
+			if field.Value.Type() == wire.TStruct {
+				v.DomainNotActiveError, err = _DomainNotActiveError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 6:
+			if field.Value.Type() == wire.TStruct {
+				v.LimitExceededError, err = _LimitExceededError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 7:
+			if field.Value.Type() == wire.TStruct {
+				v.EntityNotExistError, err = _EntityNotExistsError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 8:
+			if field.Value.Type() == wire.TStruct {
+				v.ClientVersionNotSupportedError, err = _ClientVersionNotSupportedError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if v.InternalServiceError != nil {
+		count++
+	}
+	if v.SessionAlreadyExistError != nil {
+		count++
+	}
+	if v.ServiceBusyError != nil {
+		count++
+	}
+	if v.DomainNotActiveError != nil {
+		count++
+	}
+	if v.LimitExceededError != nil {
+		count++
+	}
+	if v.EntityNotExistError != nil {
+		count++
+	}
+	if v.ClientVersionNotSupportedError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("WorkflowService_StartBatchJob_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a WorkflowService_StartBatchJob_Result
+// struct.
+func (v *WorkflowService_StartBatchJob_Result) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [9]string
+	i := 0
+	if v.Success != nil {
+		fields[i] = fmt.Sprintf("Success: %v", v.Success)
+		i++
+	}
+	if v.BadRequestError != nil {
+		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
+		i++
+	}
+	if v.InternalServiceError != nil {
+		fields[i] = fmt.Sprintf("InternalServiceError: %v", v.InternalServiceError)
+		i++
+	}
+	if v.SessionAlreadyExistError != nil {
+		fields[i] = fmt.Sprintf("SessionAlreadyExistError: %v", v.SessionAlreadyExistError)
+		i++
+	}
+	if v.ServiceBusyError != nil {
+		fields[i] = fmt.Sprintf("ServiceBusyError: %v", v.ServiceBusyError)
+		i++
+	}
+	if v.DomainNotActiveError != nil {
+		fields[i] = fmt.Sprintf("DomainNotActiveError: %v", v.DomainNotActiveError)
+		i++
+	}
+	if v.LimitExceededError != nil {
+		fields[i] = fmt.Sprintf("LimitExceededError: %v", v.LimitExceededError)
+		i++
+	}
+	if v.EntityNotExistError != nil {
+		fields[i] = fmt.Sprintf("EntityNotExistError: %v", v.EntityNotExistError)
+		i++
+	}
+	if v.ClientVersionNotSupportedError != nil {
+		fields[i] = fmt.Sprintf("ClientVersionNotSupportedError: %v", v.ClientVersionNotSupportedError)
+		i++
+	}
+
+	return fmt.Sprintf("WorkflowService_StartBatchJob_Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this WorkflowService_StartBatchJob_Result match the
+// provided WorkflowService_StartBatchJob_Result.
+//
+// This function performs a deep comparison.
+func (v *WorkflowService_StartBatchJob_Result) Equals(rhs *WorkflowService_StartBatchJob_Result) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Success == nil && rhs.Success == nil) || (v.Success != nil && rhs.Success != nil && v.Success.Equals(rhs.Success))) {
+		return false
+	}
+	if !((v.BadRequestError == nil && rhs.BadRequestError == nil) || (v.BadRequestError != nil && rhs.BadRequestError != nil && v.BadRequestError.Equals(rhs.BadRequestError))) {
+		return false
+	}
+	if !((v.InternalServiceError == nil && rhs.InternalServiceError == nil) || (v.InternalServiceError != nil && rhs.InternalServiceError != nil && v.InternalServiceError.Equals(rhs.InternalServiceError))) {
+		return false
+	}
+	if !((v.SessionAlreadyExistError == nil && rhs.SessionAlreadyExistError == nil) || (v.SessionAlreadyExistError != nil && rhs.SessionAlreadyExistError != nil && v.SessionAlreadyExistError.Equals(rhs.SessionAlreadyExistError))) {
+		return false
+	}
+	if !((v.ServiceBusyError == nil && rhs.ServiceBusyError == nil) || (v.ServiceBusyError != nil && rhs.ServiceBusyError != nil && v.ServiceBusyError.Equals(rhs.ServiceBusyError))) {
+		return false
+	}
+	if !((v.DomainNotActiveError == nil && rhs.DomainNotActiveError == nil) || (v.DomainNotActiveError != nil && rhs.DomainNotActiveError != nil && v.DomainNotActiveError.Equals(rhs.DomainNotActiveError))) {
+		return false
+	}
+	if !((v.LimitExceededError == nil && rhs.LimitExceededError == nil) || (v.LimitExceededError != nil && rhs.LimitExceededError != nil && v.LimitExceededError.Equals(rhs.LimitExceededError))) {
+		return false
+	}
+	if !((v.EntityNotExistError == nil && rhs.EntityNotExistError == nil) || (v.EntityNotExistError != nil && rhs.EntityNotExistError != nil && v.EntityNotExistError.Equals(rhs.EntityNotExistError))) {
+		return false
+	}
+	if !((v.ClientVersionNotSupportedError == nil && rhs.ClientVersionNotSupportedError == nil) || (v.ClientVersionNotSupportedError != nil && rhs.ClientVersionNotSupportedError != nil && v.ClientVersionNotSupportedError.Equals(rhs.ClientVersionNotSupportedError))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of WorkflowService_StartBatchJob_Result.
+func (v *WorkflowService_StartBatchJob_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Success != nil {
+		err = multierr.Append(err, enc.AddObject("success", v.Success))
+	}
+	if v.BadRequestError != nil {
+		err = multierr.Append(err, enc.AddObject("badRequestError", v.BadRequestError))
+	}
+	if v.InternalServiceError != nil {
+		err = multierr.Append(err, enc.AddObject("internalServiceError", v.InternalServiceError))
+	}
+	if v.SessionAlreadyExistError != nil {
+		err = multierr.Append(err, enc.AddObject("sessionAlreadyExistError", v.SessionAlreadyExistError))
+	}
+	if v.ServiceBusyError != nil {
+		err = multierr.Append(err, enc.AddObject("serviceBusyError", v.ServiceBusyError))
+	}
+	if v.DomainNotActiveError != nil {
+		err = multierr.Append(err, enc.AddObject("domainNotActiveError", v.DomainNotActiveError))
+	}
+	if v.LimitExceededError != nil {
+		err = multierr.Append(err, enc.AddObject("limitExceededError", v.LimitExceededError))
+	}
+	if v.EntityNotExistError != nil {
+		err = multierr.Append(err, enc.AddObject("entityNotExistError", v.EntityNotExistError))
+	}
+	if v.ClientVersionNotSupportedError != nil {
+		err = multierr.Append(err, enc.AddObject("clientVersionNotSupportedError", v.ClientVersionNotSupportedError))
+	}
+	return err
+}
+
+// GetSuccess returns the value of Success if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_StartBatchJob_Result) GetSuccess() (o *shared.StartBatchJobResponse) {
+	if v != nil && v.Success != nil {
+		return v.Success
+	}
+
+	return
+}
+
+// IsSetSuccess returns true if Success is not nil.
+func (v *WorkflowService_StartBatchJob_Result) IsSetSuccess() bool {
+	return v != nil && v.Success != nil
+}
+
+// GetBadRequestError returns the value of BadRequestError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_StartBatchJob_Result) GetBadRequestError() (o *shared.BadRequestError) {
+	if v != nil && v.BadRequestError != nil {
+		return v.BadRequestError
+	}
+
+	return
+}
+
+// IsSetBadRequestError returns true if BadRequestError is not nil.
+func (v *WorkflowService_StartBatchJob_Result) IsSetBadRequestError() bool {
+	return v != nil && v.BadRequestError != nil
+}
+
+// GetInternalServiceError returns the value of InternalServiceError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_StartBatchJob_Result) GetInternalServiceError() (o *shared.InternalServiceError) {
+	if v != nil && v.InternalServiceError != nil {
+		return v.InternalServiceError
+	}
+
+	return
+}
+
+// IsSetInternalServiceError returns true if InternalServiceError is not nil.
+func (v *WorkflowService_StartBatchJob_Result) IsSetInternalServiceError() bool {
+	return v != nil && v.InternalServiceError != nil
+}
+
+// GetSessionAlreadyExistError returns the value of SessionAlreadyExistError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_StartBatchJob_Result) GetSessionAlreadyExistError() (o *shared.WorkflowExecutionAlreadyStartedError) {
+	if v != nil && v.SessionAlreadyExistError != nil {
+		return v.SessionAlreadyExistError
+	}
+
+	return
+}
+
+// IsSetSessionAlreadyExistError returns true if SessionAlreadyExistError is not nil.
+func (v *WorkflowService_StartBatchJob_Result) IsSetSessionAlreadyExistError() bool {
+	return v != nil && v.SessionAlreadyExistError != nil
+}
+
+// GetServiceBusyError returns the value of ServiceBusyError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_StartBatchJob_Result) GetServiceBusyError() (o *shared.ServiceBusyError) {
+	if v != nil && v.ServiceBusyError != nil {
+		return v.ServiceBusyError
+	}
+
+	return
+}
+
+// IsSetServiceBusyError returns true if ServiceBusyError is not nil.
+func (v *WorkflowService_StartBatchJob_Result) IsSetServiceBusyError() bool {
+	return v != nil && v.ServiceBusyError != nil
+}
+
+// GetDomainNotActiveError returns the value of DomainNotActiveError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_StartBatchJob_Result) GetDomainNotActiveError() (o *shared.DomainNotActiveError) {
+	if v != nil && v.DomainNotActiveError != nil {
+		return v.DomainNotActiveError
+	}
+
+	return
+}
+
+// IsSetDomainNotActiveError returns true if DomainNotActiveError is not nil.
+func (v *WorkflowService_StartBatchJob_Result) IsSetDomainNotActiveError() bool {
+	return v != nil && v.DomainNotActiveError != nil
+}
+
+// GetLimitExceededError returns the value of LimitExceededError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_StartBatchJob_Result) GetLimitExceededError() (o *shared.LimitExceededError) {
+	if v != nil && v.LimitExceededError != nil {
+		return v.LimitExceededError
+	}
+
+	return
+}
+
+// IsSetLimitExceededError returns true if LimitExceededError is not nil.
+func (v *WorkflowService_StartBatchJob_Result) IsSetLimitExceededError() bool {
+	return v != nil && v.LimitExceededError != nil
+}
+
+// GetEntityNotExistError returns the value of EntityNotExistError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_StartBatchJob_Result) GetEntityNotExistError() (o *shared.EntityNotExistsError) {
+	if v != nil && v.EntityNotExistError != nil {
+		return v.EntityNotExistError
+	}
+
+	return
+}
+
+// IsSetEntityNotExistError returns true if EntityNotExistError is not nil.
+func (v *WorkflowService_StartBatchJob_Result) IsSetEntityNotExistError() bool {
+	return v != nil && v.EntityNotExistError != nil
+}
+
+// GetClientVersionNotSupportedError returns the value of ClientVersionNotSupportedError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_StartBatchJob_Result) GetClientVersionNotSupportedError() (o *shared.ClientVersionNotSupportedError) {
+	if v != nil && v.ClientVersionNotSupportedError != nil {
+		return v.ClientVersionNotSupportedError
+	}
+
+	return
+}
+
+// IsSetClientVersionNotSupportedError returns true if ClientVersionNotSupportedError is not nil.
+func (v *WorkflowService_StartBatchJob_Result) IsSetClientVersionNotSupportedError() bool {
+	return v != nil && v.ClientVersionNotSupportedError != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the result.
+//
+// This will always be "StartBatchJob" for this struct.
+func (v *WorkflowService_StartBatchJob_Result) MethodName() string {
+	return "StartBatchJob"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Reply for this struct.
+func (v *WorkflowService_StartBatchJob_Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
 // WorkflowService_StartWorkflowExecution_Args represents the arguments for the WorkflowService.StartWorkflowExecution function.
 //
 // The arguments for StartWorkflowExecution are sent and received over the wire as this struct.
@@ -24896,6 +27441,757 @@ func (v *WorkflowService_StartWorkflowExecution_Result) MethodName() string {
 //
 // This will always be Reply for this struct.
 func (v *WorkflowService_StartWorkflowExecution_Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
+// WorkflowService_StopBatchJob_Args represents the arguments for the WorkflowService.StopBatchJob function.
+//
+// The arguments for StopBatchJob are sent and received over the wire as this struct.
+type WorkflowService_StopBatchJob_Args struct {
+	StopRequest *shared.StopBatchJobRequest `json:"stopRequest,omitempty"`
+}
+
+// ToWire translates a WorkflowService_StopBatchJob_Args struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *WorkflowService_StopBatchJob_Args) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.StopRequest != nil {
+		w, err = v.StopRequest.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _StopBatchJobRequest_Read(w wire.Value) (*shared.StopBatchJobRequest, error) {
+	var v shared.StopBatchJobRequest
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a WorkflowService_StopBatchJob_Args struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a WorkflowService_StopBatchJob_Args struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v WorkflowService_StopBatchJob_Args
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *WorkflowService_StopBatchJob_Args) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.StopRequest, err = _StopBatchJobRequest_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a WorkflowService_StopBatchJob_Args
+// struct.
+func (v *WorkflowService_StopBatchJob_Args) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.StopRequest != nil {
+		fields[i] = fmt.Sprintf("StopRequest: %v", v.StopRequest)
+		i++
+	}
+
+	return fmt.Sprintf("WorkflowService_StopBatchJob_Args{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this WorkflowService_StopBatchJob_Args match the
+// provided WorkflowService_StopBatchJob_Args.
+//
+// This function performs a deep comparison.
+func (v *WorkflowService_StopBatchJob_Args) Equals(rhs *WorkflowService_StopBatchJob_Args) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.StopRequest == nil && rhs.StopRequest == nil) || (v.StopRequest != nil && rhs.StopRequest != nil && v.StopRequest.Equals(rhs.StopRequest))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of WorkflowService_StopBatchJob_Args.
+func (v *WorkflowService_StopBatchJob_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.StopRequest != nil {
+		err = multierr.Append(err, enc.AddObject("stopRequest", v.StopRequest))
+	}
+	return err
+}
+
+// GetStopRequest returns the value of StopRequest if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_StopBatchJob_Args) GetStopRequest() (o *shared.StopBatchJobRequest) {
+	if v != nil && v.StopRequest != nil {
+		return v.StopRequest
+	}
+
+	return
+}
+
+// IsSetStopRequest returns true if StopRequest is not nil.
+func (v *WorkflowService_StopBatchJob_Args) IsSetStopRequest() bool {
+	return v != nil && v.StopRequest != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the arguments.
+//
+// This will always be "StopBatchJob" for this struct.
+func (v *WorkflowService_StopBatchJob_Args) MethodName() string {
+	return "StopBatchJob"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Call for this struct.
+func (v *WorkflowService_StopBatchJob_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+// WorkflowService_StopBatchJob_Helper provides functions that aid in handling the
+// parameters and return values of the WorkflowService.StopBatchJob
+// function.
+var WorkflowService_StopBatchJob_Helper = struct {
+	// Args accepts the parameters of StopBatchJob in-order and returns
+	// the arguments struct for the function.
+	Args func(
+		stopRequest *shared.StopBatchJobRequest,
+	) *WorkflowService_StopBatchJob_Args
+
+	// IsException returns true if the given error can be thrown
+	// by StopBatchJob.
+	//
+	// An error can be thrown by StopBatchJob only if the
+	// corresponding exception type was mentioned in the 'throws'
+	// section for it in the Thrift file.
+	IsException func(error) bool
+
+	// WrapResponse returns the result struct for StopBatchJob
+	// given the error returned by it. The provided error may
+	// be nil if StopBatchJob did not fail.
+	//
+	// This allows mapping errors returned by StopBatchJob into a
+	// serializable result struct. WrapResponse returns a
+	// non-nil error if the provided error cannot be thrown by
+	// StopBatchJob
+	//
+	//   err := StopBatchJob(args)
+	//   result, err := WorkflowService_StopBatchJob_Helper.WrapResponse(err)
+	//   if err != nil {
+	//     return fmt.Errorf("unexpected error from StopBatchJob: %v", err)
+	//   }
+	//   serialize(result)
+	WrapResponse func(error) (*WorkflowService_StopBatchJob_Result, error)
+
+	// UnwrapResponse takes the result struct for StopBatchJob
+	// and returns the erorr returned by it (if any).
+	//
+	// The error is non-nil only if StopBatchJob threw an
+	// exception.
+	//
+	//   result := deserialize(bytes)
+	//   err := WorkflowService_StopBatchJob_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*WorkflowService_StopBatchJob_Result) error
+}{}
+
+func init() {
+	WorkflowService_StopBatchJob_Helper.Args = func(
+		stopRequest *shared.StopBatchJobRequest,
+	) *WorkflowService_StopBatchJob_Args {
+		return &WorkflowService_StopBatchJob_Args{
+			StopRequest: stopRequest,
+		}
+	}
+
+	WorkflowService_StopBatchJob_Helper.IsException = func(err error) bool {
+		switch err.(type) {
+		case *shared.BadRequestError:
+			return true
+		case *shared.InternalServiceError:
+			return true
+		case *shared.ServiceBusyError:
+			return true
+		case *shared.DomainNotActiveError:
+			return true
+		case *shared.LimitExceededError:
+			return true
+		case *shared.EntityNotExistsError:
+			return true
+		case *shared.ClientVersionNotSupportedError:
+			return true
+		default:
+			return false
+		}
+	}
+
+	WorkflowService_StopBatchJob_Helper.WrapResponse = func(err error) (*WorkflowService_StopBatchJob_Result, error) {
+		if err == nil {
+			return &WorkflowService_StopBatchJob_Result{}, nil
+		}
+
+		switch e := err.(type) {
+		case *shared.BadRequestError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_StopBatchJob_Result.BadRequestError")
+			}
+			return &WorkflowService_StopBatchJob_Result{BadRequestError: e}, nil
+		case *shared.InternalServiceError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_StopBatchJob_Result.InternalServiceError")
+			}
+			return &WorkflowService_StopBatchJob_Result{InternalServiceError: e}, nil
+		case *shared.ServiceBusyError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_StopBatchJob_Result.ServiceBusyError")
+			}
+			return &WorkflowService_StopBatchJob_Result{ServiceBusyError: e}, nil
+		case *shared.DomainNotActiveError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_StopBatchJob_Result.DomainNotActiveError")
+			}
+			return &WorkflowService_StopBatchJob_Result{DomainNotActiveError: e}, nil
+		case *shared.LimitExceededError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_StopBatchJob_Result.LimitExceededError")
+			}
+			return &WorkflowService_StopBatchJob_Result{LimitExceededError: e}, nil
+		case *shared.EntityNotExistsError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_StopBatchJob_Result.EntityNotExistError")
+			}
+			return &WorkflowService_StopBatchJob_Result{EntityNotExistError: e}, nil
+		case *shared.ClientVersionNotSupportedError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_StopBatchJob_Result.ClientVersionNotSupportedError")
+			}
+			return &WorkflowService_StopBatchJob_Result{ClientVersionNotSupportedError: e}, nil
+		}
+
+		return nil, err
+	}
+	WorkflowService_StopBatchJob_Helper.UnwrapResponse = func(result *WorkflowService_StopBatchJob_Result) (err error) {
+		if result.BadRequestError != nil {
+			err = result.BadRequestError
+			return
+		}
+		if result.InternalServiceError != nil {
+			err = result.InternalServiceError
+			return
+		}
+		if result.ServiceBusyError != nil {
+			err = result.ServiceBusyError
+			return
+		}
+		if result.DomainNotActiveError != nil {
+			err = result.DomainNotActiveError
+			return
+		}
+		if result.LimitExceededError != nil {
+			err = result.LimitExceededError
+			return
+		}
+		if result.EntityNotExistError != nil {
+			err = result.EntityNotExistError
+			return
+		}
+		if result.ClientVersionNotSupportedError != nil {
+			err = result.ClientVersionNotSupportedError
+			return
+		}
+		return
+	}
+
+}
+
+// WorkflowService_StopBatchJob_Result represents the result of a WorkflowService.StopBatchJob function call.
+//
+// The result of a StopBatchJob execution is sent and received over the wire as this struct.
+type WorkflowService_StopBatchJob_Result struct {
+	BadRequestError                *shared.BadRequestError                `json:"badRequestError,omitempty"`
+	InternalServiceError           *shared.InternalServiceError           `json:"internalServiceError,omitempty"`
+	ServiceBusyError               *shared.ServiceBusyError               `json:"serviceBusyError,omitempty"`
+	DomainNotActiveError           *shared.DomainNotActiveError           `json:"domainNotActiveError,omitempty"`
+	LimitExceededError             *shared.LimitExceededError             `json:"limitExceededError,omitempty"`
+	EntityNotExistError            *shared.EntityNotExistsError           `json:"entityNotExistError,omitempty"`
+	ClientVersionNotSupportedError *shared.ClientVersionNotSupportedError `json:"clientVersionNotSupportedError,omitempty"`
+}
+
+// ToWire translates a WorkflowService_StopBatchJob_Result struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *WorkflowService_StopBatchJob_Result) ToWire() (wire.Value, error) {
+	var (
+		fields [7]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.BadRequestError != nil {
+		w, err = v.BadRequestError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+	if v.InternalServiceError != nil {
+		w, err = v.InternalServiceError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
+		i++
+	}
+	if v.ServiceBusyError != nil {
+		w, err = v.ServiceBusyError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 4, Value: w}
+		i++
+	}
+	if v.DomainNotActiveError != nil {
+		w, err = v.DomainNotActiveError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 5, Value: w}
+		i++
+	}
+	if v.LimitExceededError != nil {
+		w, err = v.LimitExceededError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 6, Value: w}
+		i++
+	}
+	if v.EntityNotExistError != nil {
+		w, err = v.EntityNotExistError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 7, Value: w}
+		i++
+	}
+	if v.ClientVersionNotSupportedError != nil {
+		w, err = v.ClientVersionNotSupportedError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 8, Value: w}
+		i++
+	}
+
+	if i > 1 {
+		return wire.Value{}, fmt.Errorf("WorkflowService_StopBatchJob_Result should have at most one field: got %v fields", i)
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a WorkflowService_StopBatchJob_Result struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a WorkflowService_StopBatchJob_Result struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v WorkflowService_StopBatchJob_Result
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *WorkflowService_StopBatchJob_Result) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.BadRequestError, err = _BadRequestError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 2:
+			if field.Value.Type() == wire.TStruct {
+				v.InternalServiceError, err = _InternalServiceError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 4:
+			if field.Value.Type() == wire.TStruct {
+				v.ServiceBusyError, err = _ServiceBusyError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 5:
+			if field.Value.Type() == wire.TStruct {
+				v.DomainNotActiveError, err = _DomainNotActiveError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 6:
+			if field.Value.Type() == wire.TStruct {
+				v.LimitExceededError, err = _LimitExceededError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 7:
+			if field.Value.Type() == wire.TStruct {
+				v.EntityNotExistError, err = _EntityNotExistsError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 8:
+			if field.Value.Type() == wire.TStruct {
+				v.ClientVersionNotSupportedError, err = _ClientVersionNotSupportedError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	count := 0
+	if v.BadRequestError != nil {
+		count++
+	}
+	if v.InternalServiceError != nil {
+		count++
+	}
+	if v.ServiceBusyError != nil {
+		count++
+	}
+	if v.DomainNotActiveError != nil {
+		count++
+	}
+	if v.LimitExceededError != nil {
+		count++
+	}
+	if v.EntityNotExistError != nil {
+		count++
+	}
+	if v.ClientVersionNotSupportedError != nil {
+		count++
+	}
+	if count > 1 {
+		return fmt.Errorf("WorkflowService_StopBatchJob_Result should have at most one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a WorkflowService_StopBatchJob_Result
+// struct.
+func (v *WorkflowService_StopBatchJob_Result) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [7]string
+	i := 0
+	if v.BadRequestError != nil {
+		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
+		i++
+	}
+	if v.InternalServiceError != nil {
+		fields[i] = fmt.Sprintf("InternalServiceError: %v", v.InternalServiceError)
+		i++
+	}
+	if v.ServiceBusyError != nil {
+		fields[i] = fmt.Sprintf("ServiceBusyError: %v", v.ServiceBusyError)
+		i++
+	}
+	if v.DomainNotActiveError != nil {
+		fields[i] = fmt.Sprintf("DomainNotActiveError: %v", v.DomainNotActiveError)
+		i++
+	}
+	if v.LimitExceededError != nil {
+		fields[i] = fmt.Sprintf("LimitExceededError: %v", v.LimitExceededError)
+		i++
+	}
+	if v.EntityNotExistError != nil {
+		fields[i] = fmt.Sprintf("EntityNotExistError: %v", v.EntityNotExistError)
+		i++
+	}
+	if v.ClientVersionNotSupportedError != nil {
+		fields[i] = fmt.Sprintf("ClientVersionNotSupportedError: %v", v.ClientVersionNotSupportedError)
+		i++
+	}
+
+	return fmt.Sprintf("WorkflowService_StopBatchJob_Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this WorkflowService_StopBatchJob_Result match the
+// provided WorkflowService_StopBatchJob_Result.
+//
+// This function performs a deep comparison.
+func (v *WorkflowService_StopBatchJob_Result) Equals(rhs *WorkflowService_StopBatchJob_Result) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.BadRequestError == nil && rhs.BadRequestError == nil) || (v.BadRequestError != nil && rhs.BadRequestError != nil && v.BadRequestError.Equals(rhs.BadRequestError))) {
+		return false
+	}
+	if !((v.InternalServiceError == nil && rhs.InternalServiceError == nil) || (v.InternalServiceError != nil && rhs.InternalServiceError != nil && v.InternalServiceError.Equals(rhs.InternalServiceError))) {
+		return false
+	}
+	if !((v.ServiceBusyError == nil && rhs.ServiceBusyError == nil) || (v.ServiceBusyError != nil && rhs.ServiceBusyError != nil && v.ServiceBusyError.Equals(rhs.ServiceBusyError))) {
+		return false
+	}
+	if !((v.DomainNotActiveError == nil && rhs.DomainNotActiveError == nil) || (v.DomainNotActiveError != nil && rhs.DomainNotActiveError != nil && v.DomainNotActiveError.Equals(rhs.DomainNotActiveError))) {
+		return false
+	}
+	if !((v.LimitExceededError == nil && rhs.LimitExceededError == nil) || (v.LimitExceededError != nil && rhs.LimitExceededError != nil && v.LimitExceededError.Equals(rhs.LimitExceededError))) {
+		return false
+	}
+	if !((v.EntityNotExistError == nil && rhs.EntityNotExistError == nil) || (v.EntityNotExistError != nil && rhs.EntityNotExistError != nil && v.EntityNotExistError.Equals(rhs.EntityNotExistError))) {
+		return false
+	}
+	if !((v.ClientVersionNotSupportedError == nil && rhs.ClientVersionNotSupportedError == nil) || (v.ClientVersionNotSupportedError != nil && rhs.ClientVersionNotSupportedError != nil && v.ClientVersionNotSupportedError.Equals(rhs.ClientVersionNotSupportedError))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of WorkflowService_StopBatchJob_Result.
+func (v *WorkflowService_StopBatchJob_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.BadRequestError != nil {
+		err = multierr.Append(err, enc.AddObject("badRequestError", v.BadRequestError))
+	}
+	if v.InternalServiceError != nil {
+		err = multierr.Append(err, enc.AddObject("internalServiceError", v.InternalServiceError))
+	}
+	if v.ServiceBusyError != nil {
+		err = multierr.Append(err, enc.AddObject("serviceBusyError", v.ServiceBusyError))
+	}
+	if v.DomainNotActiveError != nil {
+		err = multierr.Append(err, enc.AddObject("domainNotActiveError", v.DomainNotActiveError))
+	}
+	if v.LimitExceededError != nil {
+		err = multierr.Append(err, enc.AddObject("limitExceededError", v.LimitExceededError))
+	}
+	if v.EntityNotExistError != nil {
+		err = multierr.Append(err, enc.AddObject("entityNotExistError", v.EntityNotExistError))
+	}
+	if v.ClientVersionNotSupportedError != nil {
+		err = multierr.Append(err, enc.AddObject("clientVersionNotSupportedError", v.ClientVersionNotSupportedError))
+	}
+	return err
+}
+
+// GetBadRequestError returns the value of BadRequestError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_StopBatchJob_Result) GetBadRequestError() (o *shared.BadRequestError) {
+	if v != nil && v.BadRequestError != nil {
+		return v.BadRequestError
+	}
+
+	return
+}
+
+// IsSetBadRequestError returns true if BadRequestError is not nil.
+func (v *WorkflowService_StopBatchJob_Result) IsSetBadRequestError() bool {
+	return v != nil && v.BadRequestError != nil
+}
+
+// GetInternalServiceError returns the value of InternalServiceError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_StopBatchJob_Result) GetInternalServiceError() (o *shared.InternalServiceError) {
+	if v != nil && v.InternalServiceError != nil {
+		return v.InternalServiceError
+	}
+
+	return
+}
+
+// IsSetInternalServiceError returns true if InternalServiceError is not nil.
+func (v *WorkflowService_StopBatchJob_Result) IsSetInternalServiceError() bool {
+	return v != nil && v.InternalServiceError != nil
+}
+
+// GetServiceBusyError returns the value of ServiceBusyError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_StopBatchJob_Result) GetServiceBusyError() (o *shared.ServiceBusyError) {
+	if v != nil && v.ServiceBusyError != nil {
+		return v.ServiceBusyError
+	}
+
+	return
+}
+
+// IsSetServiceBusyError returns true if ServiceBusyError is not nil.
+func (v *WorkflowService_StopBatchJob_Result) IsSetServiceBusyError() bool {
+	return v != nil && v.ServiceBusyError != nil
+}
+
+// GetDomainNotActiveError returns the value of DomainNotActiveError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_StopBatchJob_Result) GetDomainNotActiveError() (o *shared.DomainNotActiveError) {
+	if v != nil && v.DomainNotActiveError != nil {
+		return v.DomainNotActiveError
+	}
+
+	return
+}
+
+// IsSetDomainNotActiveError returns true if DomainNotActiveError is not nil.
+func (v *WorkflowService_StopBatchJob_Result) IsSetDomainNotActiveError() bool {
+	return v != nil && v.DomainNotActiveError != nil
+}
+
+// GetLimitExceededError returns the value of LimitExceededError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_StopBatchJob_Result) GetLimitExceededError() (o *shared.LimitExceededError) {
+	if v != nil && v.LimitExceededError != nil {
+		return v.LimitExceededError
+	}
+
+	return
+}
+
+// IsSetLimitExceededError returns true if LimitExceededError is not nil.
+func (v *WorkflowService_StopBatchJob_Result) IsSetLimitExceededError() bool {
+	return v != nil && v.LimitExceededError != nil
+}
+
+// GetEntityNotExistError returns the value of EntityNotExistError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_StopBatchJob_Result) GetEntityNotExistError() (o *shared.EntityNotExistsError) {
+	if v != nil && v.EntityNotExistError != nil {
+		return v.EntityNotExistError
+	}
+
+	return
+}
+
+// IsSetEntityNotExistError returns true if EntityNotExistError is not nil.
+func (v *WorkflowService_StopBatchJob_Result) IsSetEntityNotExistError() bool {
+	return v != nil && v.EntityNotExistError != nil
+}
+
+// GetClientVersionNotSupportedError returns the value of ClientVersionNotSupportedError if it is set or its
+// zero value if it is unset.
+func (v *WorkflowService_StopBatchJob_Result) GetClientVersionNotSupportedError() (o *shared.ClientVersionNotSupportedError) {
+	if v != nil && v.ClientVersionNotSupportedError != nil {
+		return v.ClientVersionNotSupportedError
+	}
+
+	return
+}
+
+// IsSetClientVersionNotSupportedError returns true if ClientVersionNotSupportedError is not nil.
+func (v *WorkflowService_StopBatchJob_Result) IsSetClientVersionNotSupportedError() bool {
+	return v != nil && v.ClientVersionNotSupportedError != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the result.
+//
+// This will always be "StopBatchJob" for this struct.
+func (v *WorkflowService_StopBatchJob_Result) MethodName() string {
+	return "StopBatchJob"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Reply for this struct.
+func (v *WorkflowService_StopBatchJob_Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }
 

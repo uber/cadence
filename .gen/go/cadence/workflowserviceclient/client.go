@@ -48,6 +48,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) error
 
+	DescribeBatchJob(
+		ctx context.Context,
+		DescRequest *shared.DescribeBatchJobRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.DescribeBatchJobResponse, error)
+
 	DescribeDomain(
 		ctx context.Context,
 		DescribeRequest *shared.DescribeDomainRequest,
@@ -76,6 +82,12 @@ type Interface interface {
 		GetRequest *shared.GetWorkflowExecutionHistoryRequest,
 		opts ...yarpc.CallOption,
 	) (*shared.GetWorkflowExecutionHistoryResponse, error)
+
+	ListBatchJobs(
+		ctx context.Context,
+		ListRequest *shared.ListBatchJobsRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.ListBatchJobsResponse, error)
 
 	ListClosedWorkflowExecutions(
 		ctx context.Context,
@@ -227,11 +239,23 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) error
 
+	StartBatchJob(
+		ctx context.Context,
+		StartRequest *shared.StartBatchJobRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.StartBatchJobResponse, error)
+
 	StartWorkflowExecution(
 		ctx context.Context,
 		StartRequest *shared.StartWorkflowExecutionRequest,
 		opts ...yarpc.CallOption,
 	) (*shared.StartWorkflowExecutionResponse, error)
+
+	StopBatchJob(
+		ctx context.Context,
+		StopRequest *shared.StopBatchJobRequest,
+		opts ...yarpc.CallOption,
+	) error
 
 	TerminateWorkflowExecution(
 		ctx context.Context,
@@ -313,6 +337,29 @@ func (c client) DeprecateDomain(
 	}
 
 	err = cadence.WorkflowService_DeprecateDomain_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) DescribeBatchJob(
+	ctx context.Context,
+	_DescRequest *shared.DescribeBatchJobRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.DescribeBatchJobResponse, err error) {
+
+	args := cadence.WorkflowService_DescribeBatchJob_Helper.Args(_DescRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_DescribeBatchJob_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = cadence.WorkflowService_DescribeBatchJob_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -427,6 +474,29 @@ func (c client) GetWorkflowExecutionHistory(
 	}
 
 	success, err = cadence.WorkflowService_GetWorkflowExecutionHistory_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) ListBatchJobs(
+	ctx context.Context,
+	_ListRequest *shared.ListBatchJobsRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.ListBatchJobsResponse, err error) {
+
+	args := cadence.WorkflowService_ListBatchJobs_Helper.Args(_ListRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_ListBatchJobs_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = cadence.WorkflowService_ListBatchJobs_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -1005,6 +1075,29 @@ func (c client) SignalWorkflowExecution(
 	return
 }
 
+func (c client) StartBatchJob(
+	ctx context.Context,
+	_StartRequest *shared.StartBatchJobRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.StartBatchJobResponse, err error) {
+
+	args := cadence.WorkflowService_StartBatchJob_Helper.Args(_StartRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_StartBatchJob_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = cadence.WorkflowService_StartBatchJob_Helper.UnwrapResponse(&result)
+	return
+}
+
 func (c client) StartWorkflowExecution(
 	ctx context.Context,
 	_StartRequest *shared.StartWorkflowExecutionRequest,
@@ -1025,6 +1118,29 @@ func (c client) StartWorkflowExecution(
 	}
 
 	success, err = cadence.WorkflowService_StartWorkflowExecution_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) StopBatchJob(
+	ctx context.Context,
+	_StopRequest *shared.StopBatchJobRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := cadence.WorkflowService_StopBatchJob_Helper.Args(_StopRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_StopBatchJob_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = cadence.WorkflowService_StopBatchJob_Helper.UnwrapResponse(&result)
 	return
 }
 
