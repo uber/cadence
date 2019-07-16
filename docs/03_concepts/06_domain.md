@@ -1,3 +1,0 @@
-## Domain
-
-Cadence is backed by a multitenant service. The unit of isolation is called **domain**. Each domain acts as a namespace for task list names as well as workflow IDs. Various configuration options like retention period or archival destination are configured per domain as well. In the multi-cluster deployment domain is a unit of fail-over. Each domain can be active only on a single Cadence cluster at a time. But different domains can be active in different clusters and can fail-over indpendently.

@@ -43,12 +43,10 @@ Note that handling of a decision task is usually very fast and is not related to
 of operations that workflow invokes.
 
 ### Domain
-A namespace-like concept. All entities stored in Cadence are stored in a
-specific domain. For example, when a workflow is started, it is started in a
+Cadence is backed by a multitenant service. The unit of isolation is called **domain**. Each domain acts as a namespace for task list names as well as workflow IDs. For example, when a workflow is started, it is started in a
 specific domain. Cadence guarantees a unique workflow ID within a domain, and
 supports running workflow executions to use the same workflow ID if they are in
-different domains. Domains are created and updated though a separate CRUD API
-or through the CLI.
+different domains. Various configuration options like retention period or archival destination are configured per domain as well through a special CRUD API or through the Cadence CLI. In the multi-cluster deployment domain is a unit of fail-over. Each domain can be active only on a single Cadence cluster at a time. But different domains can be active in different clusters and can fail-over indpendently.
 
 ### Event
 An indivisible operation performed by your application. For example,

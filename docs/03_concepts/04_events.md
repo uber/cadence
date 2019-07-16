@@ -1,6 +1,6 @@
 # Event Handling
 
-Fault-oblivious stateful workflows can be _signalled_ about an external event. Signal is always point to point destined to a specific workflow instance.
+Fault-oblivious stateful workflows can be _signalled_ about an external event. Signal is always point to point destined to a specific workflow instance. Signals are always processed in the order their are received.
 
 There are multiple scenarios where signals are useful.
 
