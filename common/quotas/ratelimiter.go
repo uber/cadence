@@ -31,7 +31,7 @@ import (
 	"golang.org/x/time/rate"
 )
 
-const _defaultTaskDispatchRPSTTL = 60 * time.Second
+const _defaultRPSTTL = 60 * time.Second
 
 // RateLimiter is a wrapper around the golang rate limiter handling dynamic
 // configuration updates of the max dispatch per second. This has comparable
@@ -135,7 +135,7 @@ type dynamicRateLimiter struct {
 // NewDynamicRateLimiter returns a rate limiter which handles dynamic config
 func NewDynamicRateLimiter(rps dynamicconfig.IntPropertyFn) Policy {
 	initialRps := float64(rps())
-	rl := NewRateLimiter(&initialRps, _defaultTaskDispatchRPSTTL, rps())
+	rl := NewRateLimiter(&initialRps, _defaultRPSTTL, rps())
 	return &dynamicRateLimiter{rps, rl}
 }
 
