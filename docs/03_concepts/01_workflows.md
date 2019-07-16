@@ -1,8 +1,8 @@
-# Durable Workflow Functions
+# Fault-Oblivious Stateful Workflow Code
 
 ## Overview
 
-Cadence core abstraction is a **durable workfow function**. The state of the function including local variables and threads it creates is immune to process failures.
+Cadence core abstraction is a **fault-oblivious stateful workfow**. The state of the workflow code including local variables and threads it creates is immune to process and Cadence service failures.
 This is very powerful concept as it encapsulates state, processing threads, durable timers and event handlers.
 
 ## Example
@@ -60,9 +60,9 @@ The commonly asked question by the developers that learn Cadence is "How do I ha
 
 ## State Recovery and Determinism
 
-The workflow function state recovery utilizes event sourcing which puts a few restrictions on how the code is written. The main restriction is that the workflow code must be deterministic which means that it must produce exactly the same result if executed multiple times. It rules out any external API calls from the workflow code as external calls can fail intermittently or change its output any time. That is why all communication with external world should happen through activities. For the same reason workflow code must use Cadence APIs to get current time, sleep and create new threads.
+The workflow state recovery utilizes event sourcing which puts a few restrictions on how the code is written. The main restriction is that the workflow code must be deterministic which means that it must produce exactly the same result if executed multiple times. It rules out any external API calls from the workflow code as external calls can fail intermittently or change its output any time. That is why all communication with external world should happen through activities. For the same reason workflow code must use Cadence APIs to get current time, sleep and create new threads.
 
-To understand the Cadence execution model as well as the recovery mechanism watch [this webcast](https://youtu.be/qce_AqCkFys). The animation covering recovery starts at 15:50.
+To understand the Cadence execution model as well as the recovery mechanism watch [this webcast](https://youtu.be/qce_AqCkFys?t=948). The animation covering recovery starts at 15:50.
 
 ## ID Uniqueness
 

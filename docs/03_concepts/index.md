@@ -2,7 +2,7 @@
 
 ## Overview
 
-Cadence is a highly scalable orchestration platform that is centered around durable function abstraction.
+Cadence is a highly scalable fault-oblivious stateful code platform. The fault-oblivious code is a next level of abstraction over commonly used techniques to acheive fault tolerance and durability.
 
 Usual Cadence based application consists from a Cadence Service, Workflow and Activity Workers and external clients.
 Note that both types of workers as well as external clients are roles and can be collocated in a single application process if necessary.
@@ -23,6 +23,8 @@ Cadence service is multitentant. So it is expected that multiple pools of worker
 
 ## Workflow Worker
 
+Cadence reuses terminology from _workflow automation_ domain. So failure-oblivious stateful code is called workflow.
+
 Cadence Service does not execute workflow code directly. The workflow code is hosted by an external (from the service point of view) _workflow worker_ processes. These processes receive so called _decision tasks_ that contain events that workflow is expected to handle from the Cadence service, delivers them to the workflow code and communicates workflow _decisions_ back to the service.
 
 As workflow code is external to the service it can be implemented in any language that can talk service Thrift API. Currently Java and Go clients are production ready. While Python and C# clients are under development. Let us know if you are interested in contributing a client in your preferred language.
@@ -31,7 +33,7 @@ The Cadence service API doesn't impose any specific workflow definition language
 
 ## Activity Worker
 
-Workflow code is not expected to communicate to external systems directly. Instead it orchestrates activities. Activities are pieces of code that can perform any application specific action like calling a service, updating database record or downloading file from S3. Cadence activities are very feature-rich comparing to queuing systems. Example features are task routing to specific processes, infinite retries, heartbeats and unlimited execution time.
+Workflow fault-oblivious code is immune to infrastructure failures. But it has to communicate to the unperfect external world where failures are common. All communication to external world is done through activities. Activities are pieces of code that can perform any application specific action like calling a service, updating database record or downloading file from S3. Cadence activities are very feature-rich comparing to queuing systems. Example features are task routing to specific processes, infinite retries, heartbeats and unlimited execution time.
 
 Activities are hosted by _activity worker_ processes that receive _activity tasks_ from the Cadence service, invoke correspondent activity implementations and report back task completion statuses.
 

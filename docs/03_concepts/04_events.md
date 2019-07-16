@@ -1,6 +1,6 @@
 # Event Handling
 
-Durable workflow functions can be _signalled_ about an external event. Signal is always point to point destined to a specific workflow instance.
+Fault-oblivious stateful workflows can be _signalled_ about an external event. Signal is always point to point destined to a specific workflow instance.
 
 There are multiple scenarios where signals are useful.
 

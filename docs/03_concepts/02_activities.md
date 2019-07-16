@@ -1,6 +1,6 @@
 # Activities
 
-Durable functions are the core abstraction of Cadence, but due to deterministic execution requirements they are not allowed to call any external API directly.
+Fault-oblivious stateful workflow code is the core abstraction of Cadence, but due to deterministic execution requirements they are not allowed to call any external API directly.
 Instead they orchestrate execution of activities. In its simplest form a Cadence activity is a function or an object method in one of the supported languages.
 Cadence does not recover activity state in case of failures therefore an activity function is allowed to contain any code without restrictions.
 

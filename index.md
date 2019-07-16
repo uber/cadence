@@ -1,8 +1,8 @@
 ---
 title: Welcome
 layout: marketing
-callout: Open Source Durable Functions Platform
-callout_description: Cadence durable functions preserve complete multhreaded application state including local variables across hardware and software failures. They are perfect for microservice orchestration, event processing and business process automation.
+callout: Failure-Oblivious Stateful Code Platform
+callout_description: Cadence failure-oblivious stateful code platform preserves complete multhreaded application state including thread stacks with local variables across hardware and software failures. It greatly simplifies coding of complex stateful distributed a applications. At the same time it is scalable and robust enought to power hundreds of critical use cases at Uber and outside.
 ---
 
 <section class="features">

@@ -2,14 +2,15 @@
 This glossary contains terms that are used with the Cadence product.
 
 ### Activity
-A business-level task that implements your application logic such as calling
+A business-level function that implements your application logic such as calling
 a service or transcoding a media file. An activity usually implements a single
 well-defined action; it can be short or long running. An activity can be implemented
 as a synchronous method or fully asynchronously involving multiple processes.
 Activity can be retried indefinitely according to provided exponential retry policy.
-If for any reason an activity is not completed within the specified timeout, an error is reported to the workflow and
-the workflow decides how to handle it. There is no limit on potential activity
+If for any reason an activity is not completed within the specified timeout, an error is reported to the workflow and the workflow decides how to handle it. There is no limit on potential activity
 duration.
+
+### Activity task
 
 ### Archival
 Archival is a feature that automatically moves [histories](#event-history) from persistence to a blobstore after
@@ -32,7 +33,14 @@ Go client doesn't use it.
 
 ### Decision
 Any action taken by the workflow durable function is called a decision. For example:
-scheduling a task, canceling a task, or starting a timer.
+scheduling an activity, canceling a child workflow, or starting a timer.
+
+### Decision Task
+
+Every time a new external event that might affect a workflow state is recorded a decision task
+is used to notify a workflow worker about it. After the new event is handled the decision task is completed.
+Note that handling of a decision task is usually very fast and is not related to duration
+of operations that workflow invokes.
 
 ### Domain
 A namespace-like concept. All entities stored in Cadence are stored in a
@@ -68,9 +76,10 @@ An external asynchronous request to a workflow. It can be used to deliver
 notifications or updates to a running workflow at any point in its existence.
 
 ### Task
-The context needed to execute a specific activity or workflow function.
-There are two types of tasks: activity tasks and decision tasks (workflow
-tasks).
+The context needed to execute a specific activity or workflow state transition.
+There are two types of tasks: [Activity task](#activity-task) and [Decision task](#decision-task)
+(aka workflow tasks). Note that a signle activity execution correponds to a single activity task,
+while a workflow execution employes multiple decision tasks.
 
 ### Task List
 A queue that is persisted inside a Cadence service. When a workflow requests
@@ -109,3 +118,7 @@ or it could have already completed execution.
 A unique identifier for a *Workflow Execution*. Cadence guarantees the
 uniqueness of an ID within a domain. An attempt to start a *Workflow* with a
 duplicate ID results in an **already started** error.
+
+### Workflow Task
+
+Synonym of [Decision Task](#decision-task)

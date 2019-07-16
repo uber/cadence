@@ -4,6 +4,7 @@ It is very easy to turn any Cadence workflow into a Cron workflow. All you need
 is to supply a cron schedule when starting the workflow using the CronSchedule
 parameter of
 [StartWorkflowOptions](https://godoc.org/go.uber.org/cadence/internal#StartWorkflowOptions).
+
 Cadence CLI can also start a workflow with an optional
 cron schedule using the `--cron` argument.
 
