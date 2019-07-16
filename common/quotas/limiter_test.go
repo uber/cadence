@@ -21,6 +21,7 @@
 package quotas
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -32,7 +33,6 @@ import (
 
 const (
 	defaultDomain = "test"
-	defaultRps    = 1200
 	_minBurst     = 10000
 )
 
@@ -55,5 +55,48 @@ func BenchmarkRateLimiter(b *testing.B) {
 	policy := NewRateLimiter(&rps, 2*time.Minute, defaultRps)
 	for n := 0; n < b.N; n++ {
 		policy.Allow()
+	}
+}
+
+func BenchmarkDomainRateLimiter(b *testing.B) {
+	policy := newDomainRateLimiter(defaultRps)
+	for n := 0; n < b.N; n++ {
+		policy.Allow(defaultDomain)
+	}
+}
+
+func BenchmarkDomainRateLimiter20Domains(b *testing.B) {
+	numDomains := 100
+	policy := newDomainRateLimiter(defaultRps)
+	domains := make([]string, numDomains)
+	for i := 0; i < numDomains; i++ {
+		domains = append(domains, fmt.Sprintf("domains%v", i))
+	}
+	for n := 0; n < b.N; n++ {
+		policy.Allow(domains[n%numDomains])
+	}
+}
+
+func BenchmarkDomainRateLimiter100Domains(b *testing.B) {
+	numDomains := 100
+	policy := newDomainRateLimiter(defaultRps)
+	domains := make([]string, numDomains)
+	for i := 0; i < numDomains; i++ {
+		domains = append(domains, fmt.Sprintf("domains%v", i))
+	}
+	for n := 0; n < b.N; n++ {
+		policy.Allow(domains[n%numDomains])
+	}
+}
+
+func BenchmarkDomainRateLimiter1000Domains(b *testing.B) {
+	numDomains := 100
+	policy := newDomainRateLimiter(defaultRps)
+	domains := make([]string, numDomains)
+	for i := 0; i < numDomains; i++ {
+		domains = append(domains, fmt.Sprintf("domains%v", i))
+	}
+	for n := 0; n < b.N; n++ {
+		policy.Allow(domains[n%numDomains])
 	}
 }
