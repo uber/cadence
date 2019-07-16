@@ -58,6 +58,9 @@ Cadence has practically no scalability limits on number of open workflow instanc
 
 The commonly asked question by the developers that learn Cadence is "How do I handle workflow worker process failure/restart in my workflow"? The answer is that you do not. **The workflow code is completely oblivious to any failures and downtime of workers or even Cadence service itself**. As soon as they are recovered and the workflow needs to handle some event like timer or an activity completion, the current state of the workflow is fully restored and the execution is continued. The only reason for the workflow failure is the workflow business code throwing an exception, not underlying infrasturcture outages.
 
+Another commonly asked quesion is if a worker can handle more workflow instances than its cache size or number of threads it can support. The answer is that a workflow when in a blocked state can be safely removed from a worker.
+Later it can be resurrected on different or same worker when need (in form of an external event) arises. So a single worker can handler millions of open workflow executions assuming it can handle the update rate.
+
 ## State Recovery and Determinism
 
 The workflow state recovery utilizes event sourcing which puts a few restrictions on how the code is written. The main restriction is that the workflow code must be deterministic which means that it must produce exactly the same result if executed multiple times. It rules out any external API calls from the workflow code as external calls can fail intermittently or change its output any time. That is why all communication with external world should happen through activities. For the same reason workflow code must use Cadence APIs to get current time, sleep and create new threads.
