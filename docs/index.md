@@ -10,7 +10,13 @@ The Cadence solution is a [_fault-oblivious stateful_ programming model](03_conc
 linked to a specific process and preserves the full application state including function stacks with local variables across all sort of host and software failures.
 This allows to write code using the full power of a programming language while Cadence takes care of durability, availability and scalability of the application.
 
-Cadence consists of a programming framework (or client library) and a backend service.
+Cadence consists of a programming framework (or client library) and a managed service (or backend).
+The framework enables developers to author and coordinate tasks in familiar languages
+([Go](https://github.com/uber-go/cadence-client/) and [Java](https://github.com/uber/cadence-java-client)
+are supported today with some projects in [Python](https://github.com/firdaus/cadence-python) and
+[C#](https://github.com/nforgeio/neonKUBE/tree/master/Lib/Neon.Cadence)
+via [proxy](https://github.com/nforgeio/neonKUBE/tree/master/Go/src/github.com/loopieio/cadence-proxy)
+in development).
 
 The framework enables developers to author fault-oblivious code in familiar languages.
 ([Go](https://github.com/uber-go/cadence-client/) and [Java](https://github.com/uber/cadence-java-client)
