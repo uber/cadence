@@ -1322,13 +1322,19 @@ func (s *workflowHandlerSuite) TestConvertIndexedKeyToThrift() {
 		"key4":        float64(3),
 		"key5":        float64(4),
 		"key6":        float64(5),
-		"invalidType": 0,
+		"key1i":       0,
+		"key2i":       1,
+		"key3i":       2,
+		"key4i":       3,
+		"key5i":       4,
+		"key6i":       5,
 		"key1t":       gen.IndexedValueTypeString,
 		"key2t":       gen.IndexedValueTypeKeyword,
 		"key3t":       gen.IndexedValueTypeInt,
 		"key4t":       gen.IndexedValueTypeDouble,
 		"key5t":       gen.IndexedValueTypeBool,
 		"key6t":       gen.IndexedValueTypeDatetime,
+		"invalidType": "invalid",
 	}
 	result := wh.convertIndexedKeyToThrift(m)
 	s.Equal(len(m)-1, len(result))
@@ -1338,6 +1344,12 @@ func (s *workflowHandlerSuite) TestConvertIndexedKeyToThrift() {
 	s.Equal(gen.IndexedValueTypeDouble, result["key4"])
 	s.Equal(gen.IndexedValueTypeBool, result["key5"])
 	s.Equal(gen.IndexedValueTypeDatetime, result["key6"])
+	s.Equal(gen.IndexedValueTypeString, result["key1i"])
+	s.Equal(gen.IndexedValueTypeKeyword, result["key2i"])
+	s.Equal(gen.IndexedValueTypeInt, result["key3i"])
+	s.Equal(gen.IndexedValueTypeDouble, result["key4i"])
+	s.Equal(gen.IndexedValueTypeBool, result["key5i"])
+	s.Equal(gen.IndexedValueTypeDatetime, result["key6i"])
 	s.Equal(gen.IndexedValueTypeString, result["key1t"])
 	s.Equal(gen.IndexedValueTypeKeyword, result["key2t"])
 	s.Equal(gen.IndexedValueTypeInt, result["key3t"])

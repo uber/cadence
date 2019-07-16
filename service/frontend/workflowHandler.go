@@ -3244,6 +3244,8 @@ func (wh *WorkflowHandler) convertIndexedKeyToThrift(keys map[string]interface{}
 		switch v.(type) {
 		case float64:
 			converted[k] = gen.IndexedValueType(v.(float64))
+		case int:
+			converted[k] = gen.IndexedValueType(v.(int))
 		case gen.IndexedValueType:
 			converted[k] = v.(gen.IndexedValueType)
 		default:
