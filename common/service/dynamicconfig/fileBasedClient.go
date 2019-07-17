@@ -35,7 +35,10 @@ import (
 
 var _ Client = (*fileBasedClient)(nil)
 
-const minPollInterval = time.Second * 5
+const (
+	minPollInterval = time.Second * 5
+	fileMode        = 0644 // used for update config file
+)
 
 type constrainedValue struct {
 	Value       interface{}
@@ -200,12 +203,12 @@ func (fc *fileBasedClient) UpdateValue(name Key, value interface{}) error {
 	currentValues[keyName] = []*constrainedValue{cVal}
 	newBytes, _ := yaml.Marshal(currentValues)
 
-	err = ioutil.WriteFile(fc.config.Filepath, newBytes, 0644)
+	err = ioutil.WriteFile(fc.config.Filepath, newBytes, fileMode)
 	if err != nil {
 		return fmt.Errorf("failed to write config file, err: %v", err)
 	}
 
-	return fc.update()
+	return fc.storeValues(currentValues)
 }
 
 func (fc *fileBasedClient) update() error {
@@ -232,6 +235,10 @@ func (fc *fileBasedClient) update() error {
 		return fmt.Errorf("failed to decode dynamic config %v", err)
 	}
 
+	return fc.storeValues(newValues)
+}
+
+func (fc *fileBasedClient) storeValues(newValues map[string][]*constrainedValue) error {
 	// yaml will unmarshal map into map[interface{}]interface{} instead of map[string]interface{}
 	// manually convert key type to string for all values here
 	// We don't need to convert constraints as their type can't be map. If user does use a map as filter

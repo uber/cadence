@@ -21,10 +21,11 @@
 package cli
 
 import (
-	"github.com/olekukonko/tablewriter"
-	"github.com/urfave/cli"
 	"os"
 	"sort"
+
+	"github.com/olekukonko/tablewriter"
+	"github.com/urfave/cli"
 )
 
 // GetSearchAttributes get valid search attributes

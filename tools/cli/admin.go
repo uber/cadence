@@ -560,6 +560,7 @@ func newAdminClusterCommands() []cli.Command {
 				},
 				cli.IntFlag{
 					Name:  FlagSearchAttributesType,
+					Value: -1,
 					Usage: "Search Attribute value type. [0:String, 1:Keyword, 2:Int, 3:Double, 4:Bool, 5:Datetime]",
 				},
 			},
