@@ -78,6 +78,10 @@ func (d *dynamicClient) GetDurationValue(
 	return d.client.GetDurationValue(name, filters, defaultValue)
 }
 
+func (d *dynamicClient) UpdateValue(name dynamicconfig.Key, value interface{}) error {
+	return nil
+}
+
 // newIntegrationConfigClient - returns a dynamic config client for integration testing
 func newIntegrationConfigClient(client dynamicconfig.Client) dynamicconfig.Client {
 	return &dynamicClient{client}
