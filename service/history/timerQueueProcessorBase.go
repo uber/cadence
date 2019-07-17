@@ -21,6 +21,7 @@
 package history
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -30,6 +31,7 @@ import (
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	carchiver "github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
@@ -632,50 +634,88 @@ func (t *timerQueueProcessorBase) deleteWorkflow(task *persistence.TimerTaskInfo
 	return nil
 }
 
-func (t *timerQueueProcessorBase) archiveWorkflow(task *persistence.TimerTaskInfo, msBuilder mutableState, context workflowExecutionContext) error {
+func (t *timerQueueProcessorBase) archiveWorkflow(task *persistence.TimerTaskInfo, msBuilder mutableState, workflowContext workflowExecutionContext) error {
 	domainCacheEntry, err := t.historyService.shard.GetDomainCache().GetDomainByID(task.DomainID)
 	if err != nil {
 		return err
 	}
 
-	// TODO ycyang: rewrite archiveRequest
-	req := &archiver.ArchiveRequest{
-		ShardID:              t.shard.GetShardID(),
-		DomainID:             task.DomainID,
-		DomainName:           domainCacheEntry.GetInfo().Name,
-		WorkflowID:           task.WorkflowID,
-		RunID:                task.RunID,
-		EventStoreVersion:    msBuilder.GetEventStoreVersion(),
-		BranchToken:          msBuilder.GetCurrentBranch(),
-		NextEventID:          msBuilder.GetNextEventID(),
-		CloseFailoverVersion: msBuilder.GetLastWriteVersion(),
-		URI:                  domainCacheEntry.GetConfig().HistoryArchivalURI,
-	}
-
-	// send signal before deleting mutable state to make sure archival is idempotent
-	if err := t.historyService.archivalClient.Archive(req); err != nil {
-		t.logger.Error("failed to initiate archival", tag.Error(err),
-			tag.WorkflowID(task.WorkflowID),
-			tag.WorkflowRunID(task.RunID),
-			tag.WorkflowDomainID(task.DomainID),
-			tag.ShardID(t.shard.GetShardID()),
-			tag.TaskID(task.GetTaskID()),
-			tag.FailoverVersion(task.GetVersion()),
-			tag.TaskType(task.GetTaskType()))
+	executionStats, err := workflowContext.loadExecutionStats()
+	if err != nil {
 		return err
 	}
+	archiveInline := executionStats.HistorySize < int64(t.config.TimerProcessorHistoryArchivalSizeLimit())
+	if !archiveInline {
+		req := &archiver.ArchiveRequest{
+			ShardID:              t.shard.GetShardID(),
+			DomainID:             task.DomainID,
+			DomainName:           domainCacheEntry.GetInfo().Name,
+			WorkflowID:           task.WorkflowID,
+			RunID:                task.RunID,
+			EventStoreVersion:    msBuilder.GetEventStoreVersion(),
+			BranchToken:          msBuilder.GetCurrentBranch(),
+			NextEventID:          msBuilder.GetNextEventID(),
+			CloseFailoverVersion: msBuilder.GetLastWriteVersion(),
+			URI:                  domainCacheEntry.GetConfig().HistoryArchivalURI,
+		}
+
+		// send signal before deleting mutable state to make sure archival is idempotent
+		if err := t.historyService.archivalClient.Archive(req); err != nil {
+			t.logger.Error("failed to initiate archival", tag.Error(err),
+				tag.WorkflowID(task.WorkflowID),
+				tag.WorkflowRunID(task.RunID),
+				tag.WorkflowDomainID(task.DomainID),
+				tag.ShardID(t.shard.GetShardID()),
+				tag.TaskID(task.GetTaskID()),
+				tag.FailoverVersion(task.GetVersion()),
+				tag.TaskType(task.GetTaskType()))
+			return err
+		}
+	} else {
+		URI := domainCacheEntry.GetConfig().HistoryArchivalURI
+		scheme, err := common.GetArchivalScheme(URI)
+		if err != nil {
+			return err
+		}
+		historyArchiver, err := t.historyService.archiverProvider.GetHistoryArchiver(scheme, common.HistoryServiceName)
+		if err != nil {
+			return err
+		}
+		req := &carchiver.ArchiveHistoryRequest{
+			ShardID:              t.shard.GetShardID(),
+			DomainID:             task.DomainID,
+			DomainName:           domainCacheEntry.GetInfo().Name,
+			WorkflowID:           task.WorkflowID,
+			RunID:                task.RunID,
+			EventStoreVersion:    msBuilder.GetEventStoreVersion(),
+			BranchToken:          msBuilder.GetCurrentBranch(),
+			NextEventID:          msBuilder.GetNextEventID(),
+			CloseFailoverVersion: msBuilder.GetLastWriteVersion(),
+		}
+		ctxWithTimeout, cancel := context.WithTimeout(context.Background(), t.config.TimerProcessorHistoryArchivalTimeLimit())
+		defer cancel()
+		if err := historyArchiver.Archive(ctxWithTimeout, URI, req); err != nil {
+			return err
+		}
+	}
+
 	if err := t.deleteCurrentWorkflowExecution(task); err != nil {
 		return err
 	}
 	if err := t.deleteWorkflowExecution(task); err != nil {
 		return err
 	}
+	if archiveInline {
+		if err := t.deleteWorkflowHistory(task, msBuilder); err != nil {
+			return err
+		}
+	}
 	if err := t.deleteWorkflowVisibility(task); err != nil {
 		return err
 	}
 	// calling clear here to force accesses of mutable state to read database
 	// if this is not called then callers will get mutable state even though its been removed from database
-	context.clear()
+	workflowContext.clear()
 	return nil
 }
 

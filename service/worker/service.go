@@ -266,6 +266,7 @@ func (s *Service) startArchiver(base service.Service, pFactory persistencefactor
 		PublicClient:     publicClient,
 		MetricsClient:    s.metricsClient,
 		Logger:           s.logger,
+		ClusterMetadata:  base.GetClusterMetadata(),
 		HistoryManager:   historyManager,
 		HistoryV2Manager: historyV2Manager,
 		DomainCache:      domainCache,

@@ -34,6 +34,7 @@ import (
 	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
@@ -46,7 +47,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/service/worker/archiver"
+	warchiver "github.com/uber/cadence/service/worker/archiver"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 )
 
@@ -79,7 +80,7 @@ type (
 		logger               log.Logger
 		throttledLogger      log.Logger
 		config               *Config
-		archivalClient       archiver.Client
+		archivalClient       warchiver.Client
 		resetor              workflowResetor
 		archiverProvider     provider.ArchiverProvider
 	}
@@ -178,9 +179,18 @@ func NewEngineWithShardContext(
 		metricsClient:        shard.GetMetricsClient(),
 		historyEventNotifier: historyEventNotifier,
 		config:               config,
-		archivalClient:       archiver.NewClient(shard.GetMetricsClient(), shard.GetLogger(), publicClient, shard.GetConfig().NumArchiveSystemWorkflows, shard.GetConfig().ArchiveRequestRPS),
+		archivalClient:       warchiver.NewClient(shard.GetMetricsClient(), shard.GetLogger(), publicClient, shard.GetConfig().NumArchiveSystemWorkflows, shard.GetConfig().ArchiveRequestRPS),
 		archiverProvider:     archiverProvider,
 	}
+	historyArchiverBootstrapContainer := &archiver.HistoryBootstrapContainer{
+		HistoryManager:   historyManager,
+		HistoryV2Manager: historyV2Manager,
+		Logger:           shard.GetLogger(),
+		MetricsClient:    shard.GetMetricsClient(),
+		ClusterMetadata:  shard.GetClusterMetadata(),
+		DomainCache:      shard.GetDomainCache(),
+	}
+	historyEngImpl.archiverProvider.RegisterBootstrapContainer(common.HistoryServiceName, historyArchiverBootstrapContainer, &archiver.VisibilityBootstrapContainer{})
 
 	txProcessor := newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, matching, historyClient, logger)
 	historyEngImpl.timerProcessor = newTimerQueueProcessor(shard, historyEngImpl, matching, logger)

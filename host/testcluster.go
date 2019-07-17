@@ -21,9 +21,14 @@
 package host
 
 import (
+	"io/ioutil"
+	"os"
+
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/archiver/filestore"
+	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/elasticsearch"
@@ -42,8 +47,16 @@ import (
 type (
 	// TestCluster is a base struct for integration tests
 	TestCluster struct {
-		testBase persistencetests.TestBase
-		host     Cadence
+		testBase     persistencetests.TestBase
+		archiverBase *ArchiverBase
+		host         Cadence
+	}
+
+	// ArchiverBase is a base struct for archiver provider being used in integration tests
+	ArchiverBase struct {
+		provider       provider.ArchiverProvider
+		storeDirectory string
+		historyURI     string
 	}
 
 	// TestClusterConfig are config for a test cluster
@@ -104,6 +117,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 	testBase := persistencetests.NewTestBase(&options.Persistence)
 	testBase.Setup()
 	setupShards(testBase, options.HistoryConfig.NumHistoryShards, logger)
+	archiverBase := newArchiverBase(logger)
 	messagingClient := getMessagingClient(options.MessagingClientConfig, logger)
 	var esClient elasticsearch.Client
 	var esVisibilityMgr persistence.VisibilityManager
@@ -150,6 +164,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 		EnableEventsV2:      options.EnableEventsV2,
 		ESConfig:            &options.ESConfig,
 		ESClient:            esClient,
+		archiverProvider:    archiverBase.provider,
 		HistoryConfig:       options.HistoryConfig,
 		WorkerConfig:        options.WorkerConfig,
 	}
@@ -158,7 +173,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 		return nil, err
 	}
 
-	return &TestCluster{testBase: testBase, host: cluster}, nil
+	return &TestCluster{testBase: testBase, archiverBase: archiverBase, host: cluster}, nil
 }
 
 func setupShards(testBase persistencetests.TestBase, numHistoryShards int, logger log.Logger) {
@@ -168,6 +183,25 @@ func setupShards(testBase persistencetests.TestBase, numHistoryShards int, logge
 		if err != nil {
 			logger.Fatal("Failed to create shard", tag.Error(err))
 		}
+	}
+}
+
+func newArchiverBase(logger log.Logger) *ArchiverBase {
+	storeDirectory, err := ioutil.TempDir("", "test-archiver")
+	if err != nil {
+		logger.Fatal("Failed to create temp dir for archiver", tag.Error(err))
+	}
+	cfg := &config.FilestoreHistoryArchiver{
+		FileMode: "0700",
+		DirMode:  "0600",
+	}
+	provider := provider.NewArchiverProvider(&config.HistoryArchiverProvider{
+		Filestore: cfg,
+	}, nil)
+	return &ArchiverBase{
+		provider:       provider,
+		storeDirectory: storeDirectory,
+		historyURI:     filestore.URIScheme + "://" + storeDirectory,
 	}
 }
 
@@ -185,6 +219,7 @@ func (tc *TestCluster) TearDownCluster() {
 	tc.host.Stop()
 	tc.host = nil
 	tc.testBase.TearDownWorkflowStore()
+	os.RemoveAll(tc.archiverBase.storeDirectory)
 }
 
 // GetFrontendClient returns a frontend client from the test cluster

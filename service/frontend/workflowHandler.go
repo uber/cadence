@@ -3205,25 +3205,46 @@ func (wh *WorkflowHandler) getArchivedHistory(
 	domainID string,
 	scope metrics.Scope,
 ) (*gen.GetWorkflowExecutionHistoryResponse, error) {
-	return nil, nil
-	// entry, err := wh.domainCache.GetDomainByID(domainID)
-	// if err != nil {
-	// 	return nil, wh.error(err, scope)
-	// }
-	// archivalURI := entry.GetConfig().HistoryArchivalURI
-	// if archivalURI == "" {
-	// 	return nil, wh.error(errHistoryHasPassedRetentionPeriod, scope)
-	// }
-	// scheme, err := common.GetArchivalScheme(archivalURI)
-	// if err != nil {
-	// 	return nil, wh.error(err, scope)
-	// }
+	entry, err := wh.domainCache.GetDomainByID(domainID)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
 
-	// archiver, err := wh.archiverProvider.GetHistoryArchiver(scheme, common.FrontendServiceName)
-	// if err != nil {
-	// 	return nil, wh.error(err, scope)
-	// }
-	// resp, err := archiver.Get(ctx, archivalURI)
+	archivalURI := entry.GetConfig().HistoryArchivalURI
+	if archivalURI == "" {
+		return nil, wh.error(errHistoryHasPassedRetentionPeriod, scope)
+	}
+
+	scheme, err := common.GetArchivalScheme(archivalURI)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	historyArchiver, err := wh.archiverProvider.GetHistoryArchiver(scheme, common.FrontendServiceName)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	resp, err := historyArchiver.Get(ctx, archivalURI, &archiver.GetHistoryRequest{
+		DomainID:      domainID,
+		WorkflowID:    request.GetExecution().GetWorkflowId(),
+		RunID:         request.GetExecution().GetRunId(),
+		NextPageToken: request.GetNextPageToken(),
+		PageSize:      int(request.GetMaximumPageSize()),
+	})
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	history := &shared.History{}
+	for _, batch := range resp.HistoryBatches {
+		history.Events = append(history.Events, batch.Events...)
+	}
+	return &gen.GetWorkflowExecutionHistoryResponse{
+		History:       history,
+		NextPageToken: resp.NextPageToken,
+		Archived:      common.BoolPtr(true),
+	}, nil
 }
 
 func (wh *WorkflowHandler) convertIndexedKeyToThrift(keys map[string]interface{}) map[string]gen.IndexedValueType {

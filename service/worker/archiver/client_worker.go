@@ -25,8 +25,10 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
+	carchiver "github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -55,6 +57,7 @@ type (
 		PublicClient     workflowserviceclient.Interface
 		MetricsClient    metrics.Client
 		Logger           log.Logger
+		ClusterMetadata  cluster.Metadata
 		HistoryManager   persistence.HistoryManager
 		HistoryV2Manager persistence.HistoryV2Manager
 		DomainCache      cache.DomainCache
@@ -105,6 +108,16 @@ func NewClientWorker(container *BootstrapContainer) ClientWorker {
 	wo := worker.Options{
 		BackgroundActivityContext: actCtx,
 	}
+	historyArchiverBootstrapContainer := &carchiver.HistoryBootstrapContainer{
+		HistoryManager:   container.HistoryManager,
+		HistoryV2Manager: container.HistoryV2Manager,
+		Logger:           container.Logger,
+		MetricsClient:    container.MetricsClient,
+		ClusterMetadata:  container.ClusterMetadata,
+		DomainCache:      container.DomainCache,
+	}
+	container.ArchiverProvider.RegisterBootstrapContainer(common.WorkerServiceName, historyArchiverBootstrapContainer, &carchiver.VisibilityBootstrapContainer{})
+
 	return &clientWorker{
 		worker:      worker.New(container.PublicClient, common.SystemLocalDomainName, decisionTaskList, wo),
 		domainCache: container.DomainCache,

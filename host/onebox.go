@@ -99,6 +99,7 @@ type (
 		clientWorker        archiver.ClientWorker
 		indexer             *indexer.Indexer
 		enableEventsV2      bool
+		archiverProvider    provider.ArchiverProvider
 		historyConfig       *HistoryConfig
 		esConfig            *elasticsearch.Config
 		esClient            elasticsearch.Client
@@ -130,6 +131,7 @@ type (
 		Logger                        log.Logger
 		ClusterNo                     int
 		EnableEventsV2                bool
+		archiverProvider              provider.ArchiverProvider
 		EnableReadHistoryFromArchival bool
 		HistoryConfig                 *HistoryConfig
 		ESConfig                      *elasticsearch.Config
@@ -164,6 +166,7 @@ func NewCadence(params *CadenceParams) Cadence {
 		enableEventsV2:      params.EnableEventsV2,
 		esConfig:            params.ESConfig,
 		esClient:            params.ESClient,
+		archiverProvider:    params.archiverProvider,
 		historyConfig:       params.HistoryConfig,
 		workerConfig:        params.WorkerConfig,
 	}
@@ -396,6 +399,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	params.PersistenceConfig = c.persistenceConfig
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
+	params.ArchiverProvider = c.archiverProvider
 
 	// TODO when cross DC is public, remove this temporary override
 	var kafkaProducer messaging.Producer
@@ -420,7 +424,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	frontendConfig := frontend.NewConfig(dc, c.historyConfig.NumHistoryShards, c.workerConfig.EnableIndexer)
 	c.frontendHandler = frontend.NewWorkflowHandler(
 		c.frontEndService, frontendConfig, c.metadataMgr, c.historyMgr, c.historyV2Mgr,
-		c.visibilityMgr, kafkaProducer, provider.NewArchiverProvider(nil, nil))
+		c.visibilityMgr, kafkaProducer, c.archiverProvider)
 	dcRedirectionHandler := frontend.NewDCRedirectionHandler(c.frontendHandler, params.DCRedirectionPolicy)
 	dcRedirectionHandler.RegisterHandler()
 
@@ -470,14 +474,16 @@ func (c *cadenceImpl) startHistory(hosts map[string][]string, startWG *sync.Wait
 		historyConfig.HistoryMgrNumConns = dynamicconfig.GetIntPropertyFn(hConfig.NumHistoryShards)
 		historyConfig.ExecutionMgrNumConns = dynamicconfig.GetIntPropertyFn(hConfig.NumHistoryShards)
 		historyConfig.EnableEventsV2 = dynamicconfig.GetBoolPropertyFnFilteredByDomain(enableEventsV2)
+		historyConfig.TimerProcessorHistoryArchivalSizeLimit = dynamicconfig.GetIntPropertyFn(5 * 1024)
 		if hConfig.HistoryCountLimitWarn != 0 {
 			historyConfig.HistoryCountLimitWarn = dynamicconfig.GetIntPropertyFilteredByDomain(hConfig.HistoryCountLimitWarn)
 		}
 		if hConfig.HistoryCountLimitError != 0 {
 			historyConfig.HistoryCountLimitError = dynamicconfig.GetIntPropertyFilteredByDomain(hConfig.HistoryCountLimitError)
 		}
+
 		handler := history.NewHandler(service, historyConfig, c.shardMgr, c.metadataMgr,
-			c.visibilityMgr, c.historyMgr, c.historyV2Mgr, c.executionMgrFactory, params.PublicClient, nil)
+			c.visibilityMgr, c.historyMgr, c.historyV2Mgr, c.executionMgrFactory, params.PublicClient, c.archiverProvider)
 		handler.RegisterHandler()
 
 		service.Start()
@@ -610,7 +616,7 @@ func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, s
 		HistoryV2Manager: c.historyV2Mgr,
 		DomainCache:      domainCache,
 		Config:           workerConfig.ArchiverConfig,
-		ArchiverProvider: nil, // TODO ycyang:
+		ArchiverProvider: c.archiverProvider,
 	}
 	c.clientWorker = archiver.NewClientWorker(bc)
 	if err := c.clientWorker.Start(); err != nil {

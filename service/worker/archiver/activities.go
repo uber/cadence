@@ -42,18 +42,15 @@ const (
 	errDeleteHistoryV1 = "failed to delete history from events_v1"
 	errDeleteHistoryV2 = "failed to delete history from events_v2"
 
-	errActivityPanic = "cadenceInternal:Panic"
+	errActivityPanic       = "cadenceInternal:Panic"
+	errTimeoutStartToClose = "cadenceInternal:Timeout START_TO_CLOSE"
+	errTimeoutHeartbeat    = "cadenceInternal:Timeout HEARTBEAT"
 )
 
 var (
-	uploadHistoryActivityNonRetryableErrors = []string{errActivityPanic}
+	uploadHistoryActivityNonRetryableErrors = []string{errActivityPanic, carchiver.ErrArchiveNonRetriable.Error(), errTimeoutStartToClose, errTimeoutHeartbeat}
 	deleteHistoryActivityNonRetryableErrors = []string{errDeleteHistoryV1, errDeleteHistoryV2}
 	errContextTimeout                       = errors.New("activity aborted because context timed out")
-)
-
-const (
-	uploadErrorMsg = "Archival upload attempt is giving up, possibly could retry."
-	uploadSkipMsg  = "Archival upload request is being skipped, will not retry."
 )
 
 // uploadHistoryActivity is used to upload a workflow execution history to blobstore.
@@ -68,8 +65,9 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	sw := scope.StartTimer(metrics.CadenceLatency)
 	defer func() {
 		sw.Stop()
-		if err != nil && err != errContextTimeout {
+		if err == carchiver.ErrArchiveNonRetriable {
 			scope.IncCounter(metrics.ArchiverNonRetryableErrorCount)
+			err = cadence.NewCustomError(err.Error())
 		}
 	}()
 
