@@ -657,7 +657,14 @@ func (c *workflowExecutionContextImpl) createWorkflowExecutionWithRetry(
 		persistenceOperationRetryPolicy,
 		common.IsPersistenceTransientError,
 	)
-	if err != nil {
+	switch err.(type) {
+	case nil:
+		return resp, nil
+	case *persistence.WorkflowExecutionAlreadyStartedError:
+		// it is possible that workflow already exists and caller need to apply
+		// workflow ID reuse policy
+		return nil, err
+	default:
 		c.logger.Error(
 			"Persistent store operation failure",
 			tag.StoreOperationCreateWorkflowExecution,
@@ -665,7 +672,6 @@ func (c *workflowExecutionContextImpl) createWorkflowExecutionWithRetry(
 		)
 		return nil, err
 	}
-	return resp, nil
 }
 
 func (c *workflowExecutionContextImpl) getWorkflowExecutionWithRetry(
@@ -716,13 +722,13 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithRetry(
 		op, persistenceOperationRetryPolicy,
 		common.IsPersistenceTransientError,
 	)
-	if err != nil {
-		switch err.(type) {
-		case *persistence.ConditionFailedError:
-			// TODO get rid of ErrConflict
-			return nil, ErrConflict
-		}
-
+	switch err.(type) {
+	case nil:
+		return resp, nil
+	case *persistence.ConditionFailedError:
+		// TODO get rid of ErrConflict
+		return nil, ErrConflict
+	default:
 		c.logger.Error(
 			"Persistent store operation failure",
 			tag.StoreOperationUpdateWorkflowExecution,
@@ -731,7 +737,6 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithRetry(
 		)
 		return nil, err
 	}
-	return resp, nil
 }
 
 func (c *workflowExecutionContextImpl) resetMutableState(
