@@ -126,19 +126,28 @@ func (rl *RateLimiter) shouldUpdate(maxDispatchPerSecond *float64) bool {
 	}
 }
 
-type dynamicRateLimiter struct {
+// DynamicRateLimiter implements a dynamic config wrapper around the rate limiter
+type DynamicRateLimiter struct {
 	rps RPSFunc
 	rl  *RateLimiter
 }
 
 // NewDynamicRateLimiter returns a rate limiter which handles dynamic config
-func NewDynamicRateLimiter(rps RPSFunc) Policy {
+func NewDynamicRateLimiter(rps RPSFunc) *DynamicRateLimiter {
 	initialRps := rps()
 	rl := NewRateLimiter(&initialRps, _defaultRPSTTL, int(rps()))
-	return &dynamicRateLimiter{rps, rl}
+	return &DynamicRateLimiter{rps, rl}
 }
 
-func (d *dynamicRateLimiter) Allow() bool {
+// Allow immediately returns with true or false indicating if a rate limit
+// token is available or not
+func (d *DynamicRateLimiter) Allow(info Info) bool {
+	return d.allow()
+}
+
+// Allow immediately returns with true or false indicating if a rate limit
+// token is available or not
+func (d *DynamicRateLimiter) allow() bool {
 	rps := float64(d.rps())
 	d.rl.UpdateMaxDispatch(&rps)
 	return d.rl.Allow()
