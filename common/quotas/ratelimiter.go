@@ -55,8 +55,7 @@ func NewRateLimiter(maxDispatchPerSecond *float64, ttl time.Duration, minBurst i
 		maxDispatchPerSecond: maxDispatchPerSecond,
 		ttl:                  ttl,
 		ttlTimer:             time.NewTimer(ttl),
-		// Note: Potentially expose burst config to users in future
-		minBurst: minBurst,
+		minBurst:             minBurst,
 	}
 	rl.storeLimiter(maxDispatchPerSecond)
 	return rl
@@ -135,7 +134,7 @@ type DynamicRateLimiter struct {
 // NewDynamicRateLimiter returns a rate limiter which handles dynamic config
 func NewDynamicRateLimiter(rps RPSFunc) *DynamicRateLimiter {
 	initialRps := rps()
-	rl := NewRateLimiter(&initialRps, _defaultRPSTTL, int(rps()))
+	rl := NewRateLimiter(&initialRps, _defaultRPSTTL, 5*int(rps()))
 	return &DynamicRateLimiter{rps, rl}
 }
 

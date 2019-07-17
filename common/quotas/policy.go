@@ -81,7 +81,7 @@ func (d *MultiStageRateLimiter) Allow(info Info) bool {
 	if !ok {
 		// create a new limiter
 		initialRps := d.domainRPS()
-		domainLimiter := NewRateLimiter(&initialRps, _defaultRPSTTL, int(d.domainRPS()))
+		domainLimiter := NewRateLimiter(&initialRps, _defaultRPSTTL, 5*int(d.domainRPS()))
 
 		// verify that it is needed and add to map
 		d.Lock()
