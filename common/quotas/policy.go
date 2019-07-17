@@ -42,8 +42,8 @@ func (s *simpleRateLimitPolicy) Allow(info Info) bool {
 	return ok
 }
 
-// DomainRateLimitPolicy indicates a domain specific rate limit policy
-type DomainRateLimitPolicy struct {
+// MultiStageRateLimiter indicates a domain specific rate limit policy
+type MultiStageRateLimiter struct {
 	sync.RWMutex
 	rps            RPSFunc
 	domainRPS      RPSFunc
@@ -51,10 +51,10 @@ type DomainRateLimitPolicy struct {
 	globalLimiter  *DynamicRateLimiter
 }
 
-// NewDomainRateLimiter returns a new domain quota rate limiter. This is about
+// NewMultiStageRateLimiter returns a new domain quota rate limiter. This is about
 // an order of magnitude slower than
-func NewDomainRateLimiter(rps RPSFunc, domainRps RPSFunc) *DomainRateLimitPolicy {
-	rl := &DomainRateLimitPolicy{
+func NewMultiStageRateLimiter(rps RPSFunc, domainRps RPSFunc) *MultiStageRateLimiter {
+	rl := &MultiStageRateLimiter{
 		rps:            rps,
 		domainRPS:      domainRps,
 		domainLimiters: map[string]*RateLimiter{},
@@ -66,7 +66,7 @@ func NewDomainRateLimiter(rps RPSFunc, domainRps RPSFunc) *DomainRateLimitPolicy
 // Allow attempts to allow a request to go through. The method returns
 // immediately with a true or false indicating if the request can make
 // progress
-func (d *DomainRateLimitPolicy) Allow(info Info) bool {
+func (d *MultiStageRateLimiter) Allow(info Info) bool {
 	domain := info.Domain
 	if len(domain) == 0 {
 		return d.globalLimiter.allow()
