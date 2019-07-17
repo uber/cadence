@@ -24,7 +24,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -45,9 +44,9 @@ func (s *integrationSuite) TestArchival_TimerQueueProcessor() {
 	s.True(s.testCluster.testBase.ClusterMetadata.HistoryArchivalConfig().ClusterConfiguredForArchival())
 
 	domainID := s.getDomainID(s.archivalDomainName)
-	workflowID := "archival-workflow-id"
-	workflowType := "archival-workflow-type"
-	taskList := "archival-task-list"
+	workflowID := "archival-timer-queue-processor-workflow-id"
+	workflowType := "archival-timer-queue-processor-type"
+	taskList := "archival-timer-queue-processor-task-list"
 	numActivities := 1
 	numRuns := 1
 	runID := s.startAndFinishWorkflow(workflowID, workflowType, taskList, s.archivalDomainName, domainID, numActivities, numRuns, false)[0]
@@ -87,9 +86,9 @@ func (s *integrationSuite) TestArchival_ArchiverWorker() {
 	s.True(s.testCluster.testBase.ClusterMetadata.HistoryArchivalConfig().ClusterConfiguredForArchival())
 
 	domainID := s.getDomainID(s.archivalDomainName)
-	workflowID := "archival-multi-blob-workflow-id"
-	workflowType := "archival-multi-blob-workflow-type"
-	taskList := "archival-multi-blob-task-list"
+	workflowID := "archival-archiver-worker-workflow-id"
+	workflowType := "archival-archiver-worker-workflow-type"
+	taskList := "archival-archiver-worker-task-list"
 	numActivities := 10
 	runID := s.startAndFinishWorkflow(workflowID, workflowType, taskList, s.archivalDomainName, domainID, numActivities, 1, true)[0]
 
@@ -118,7 +117,6 @@ func (s *integrationSuite) isHistoryArchived(domain string, execution *workflow.
 
 	for i := 0; i < retryLimit; i++ {
 		getHistoryResp, err := s.engine.GetWorkflowExecutionHistory(createContext(), request)
-		fmt.Println("@@@", err, getHistoryResp)
 		if err == nil && getHistoryResp != nil && getHistoryResp.GetArchived() {
 			return true
 		}

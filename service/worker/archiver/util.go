@@ -24,7 +24,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
-	"math/rand"
 	"time"
 
 	"github.com/dgryski/go-farm"
@@ -92,16 +91,6 @@ func contextExpired(ctx context.Context) bool {
 	default:
 		return false
 	}
-}
-
-func shouldRun(probability float64) bool {
-	if probability <= 0 {
-		return false
-	}
-	if probability >= 1.0 {
-		return true
-	}
-	return rand.Intn(int(1.0/probability)) == 0
 }
 
 func errorDetails(err error) string {

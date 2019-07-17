@@ -60,8 +60,6 @@ import (
 	"go.uber.org/yarpc/transport/tchannel"
 )
 
-const archivalBlobSize = 5 * 1024 // 5KB
-
 // Cadence hosts all of cadence services in one process
 type Cadence interface {
 	Start() error
@@ -612,6 +610,7 @@ func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, s
 		PublicClient:     params.PublicClient,
 		MetricsClient:    service.GetMetricsClient(),
 		Logger:           c.logger,
+		ClusterMetadata:  c.clusterMetadata,
 		HistoryManager:   c.historyMgr,
 		HistoryV2Manager: c.historyV2Mgr,
 		DomainCache:      domainCache,

@@ -184,8 +184,6 @@ func (h *historyArchiver) Get(
 	URI string,
 	request *archiver.GetHistoryRequest,
 ) (*archiver.GetHistoryResponse, error) {
-	fmt.Println("request: ", *request)
-	fmt.Println("URI: ", URI)
 	if err := h.ValidateURI(URI); err != nil {
 		return nil, fmt.Errorf("%s: %v", archiver.ErrInvalidURI, err)
 	}
@@ -196,7 +194,6 @@ func (h *historyArchiver) Get(
 
 	dirPath := getDirPathFromURI(URI)
 	exists, err := directoryExists(dirPath)
-	fmt.Println("dirPath: ", dirPath)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +226,6 @@ func (h *historyArchiver) Get(
 	filename := constructFilename(request.DomainID, request.WorkflowID, request.RunID, token.CloseFailoverVersion)
 	filepath := path.Join(dirPath, filename)
 	exists, err = fileExists(filepath)
-	fmt.Println("filepath: ", filepath)
 	if err != nil {
 		return nil, err
 	}
@@ -273,7 +269,7 @@ func (h *historyArchiver) Get(
 }
 
 func (h *historyArchiver) ValidateURI(URI string) error {
-	if !strings.HasPrefix(URI, URIScheme) {
+	if !strings.HasPrefix(URI, URIScheme+"://") {
 		return archiver.ErrInvalidURIScheme
 	}
 

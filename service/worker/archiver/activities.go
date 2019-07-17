@@ -53,20 +53,19 @@ var (
 	errContextTimeout                       = errors.New("activity aborted because context timed out")
 )
 
-// uploadHistoryActivity is used to upload a workflow execution history to blobstore.
-// method will retry all retryable operations until context expires.
-// archival will be skipped and no error will be returned if cluster or domain is not figured for archival.
-// an error will be returned if context timeout, request is invalid, or failed to get domain cache entry.
-// all other errors (and the error details) will be included in the uploadResult.
-// the result will also contain a list of blob keys to delete when there's an error.
+// uploadHistoryActivity is used to archive a workflow execution history.
+// method will retry all errors except timeout errors and archiver.ErrArchiveNonRetriable.
+// it's the history archiver's responsibility to retry individual operations inside the Archive() method.
 func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err error) {
 	container := ctx.Value(bootstrapContainerKey).(*BootstrapContainer)
 	scope := container.MetricsClient.Scope(metrics.ArchiverUploadHistoryActivityScope, metrics.DomainTag(request.DomainName))
 	sw := scope.StartTimer(metrics.CadenceLatency)
 	defer func() {
 		sw.Stop()
-		if err == carchiver.ErrArchiveNonRetriable {
-			scope.IncCounter(metrics.ArchiverNonRetryableErrorCount)
+		if err != nil {
+			if err == carchiver.ErrArchiveNonRetriable {
+				scope.IncCounter(metrics.ArchiverNonRetryableErrorCount)
+			}
 			err = cadence.NewCustomError(err.Error())
 		}
 	}()
