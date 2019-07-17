@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	defaultRps    = 1200
+	defaultRps    = 2000
 	defaultDomain = "test"
 	_minBurst     = 10000
 )
@@ -67,7 +67,7 @@ func BenchmarkDomainRateLimiter(b *testing.B) {
 }
 
 func BenchmarkDomainRateLimiter20Domains(b *testing.B) {
-	numDomains := 100
+	numDomains := 20
 	policy := getPolicy()
 	domains := getDomains(numDomains)
 	for n := 0; n < b.N; n++ {
@@ -85,7 +85,7 @@ func BenchmarkDomainRateLimiter100Domains(b *testing.B) {
 }
 
 func BenchmarkDomainRateLimiter1000Domains(b *testing.B) {
-	numDomains := 100
+	numDomains := 1000
 	policy := getPolicy()
 	domains := getDomains(numDomains)
 	for n := 0; n < b.N; n++ {
