@@ -45,6 +45,7 @@ func (s *simpleRateLimitPolicy) Allow(info Info) bool {
 // DomainRateLimitPolicy indicates a domain specific rate limit policy
 type DomainRateLimitPolicy struct {
 	sync.RWMutex
+	rps            RPSFunc
 	domainRPS      RPSFunc
 	domainLimiters map[string]*RateLimiter
 	globalLimiter  *DynamicRateLimiter
@@ -54,6 +55,8 @@ type DomainRateLimitPolicy struct {
 // an order of magnitude slower than
 func NewDomainRateLimiter(rps RPSFunc, domainRps RPSFunc) *DomainRateLimitPolicy {
 	rl := &DomainRateLimitPolicy{
+		rps:            rps,
+		domainRPS:      domainRps,
 		domainLimiters: map[string]*RateLimiter{},
 		globalLimiter:  NewDynamicRateLimiter(rps),
 	}

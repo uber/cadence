@@ -62,7 +62,7 @@ func BenchmarkRateLimiter(b *testing.B) {
 func BenchmarkDomainRateLimiter(b *testing.B) {
 	policy := getPolicy()
 	for n := 0; n < b.N; n++ {
-		policy.Allow(Info{domain: defaultDomain})
+		policy.Allow(Info{Domain: defaultDomain})
 	}
 }
 
@@ -71,7 +71,7 @@ func BenchmarkDomainRateLimiter20Domains(b *testing.B) {
 	policy := getPolicy()
 	domains := getDomains(numDomains)
 	for n := 0; n < b.N; n++ {
-		policy.Allow(Info{domain: domains[n%numDomains]})
+		policy.Allow(Info{Domain: domains[n%numDomains]})
 	}
 }
 
@@ -80,7 +80,7 @@ func BenchmarkDomainRateLimiter100Domains(b *testing.B) {
 	policy := getPolicy()
 	domains := getDomains(numDomains)
 	for n := 0; n < b.N; n++ {
-		policy.Allow(Info{domain: domains[n%numDomains]})
+		policy.Allow(Info{Domain: domains[n%numDomains]})
 	}
 }
 
@@ -89,7 +89,7 @@ func BenchmarkDomainRateLimiter1000Domains(b *testing.B) {
 	policy := getPolicy()
 	domains := getDomains(numDomains)
 	for n := 0; n < b.N; n++ {
-		policy.Allow(Info{domain: domains[n%numDomains]})
+		policy.Allow(Info{Domain: domains[n%numDomains]})
 	}
 }
 
