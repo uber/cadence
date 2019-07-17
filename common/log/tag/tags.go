@@ -677,24 +677,9 @@ func ArchivalRequestCloseFailoverVersion(requestCloseFailoverVersion int64) Tag 
 	return newInt64("archival-request-close-failover-version", requestCloseFailoverVersion)
 }
 
-// ArchivalBucket returns tag for Bucket
-func ArchivalBucket(bucket string) Tag {
-	return newStringTag("archival-bucket", bucket)
-}
-
 // ArchivalURI returns tag for Archival URI
 func ArchivalURI(URI string) Tag {
 	return newStringTag("archival-URI", URI)
-}
-
-// ArchivalBlobKey returns tag for BlobKey
-func ArchivalBlobKey(blobKey string) Tag {
-	return newStringTag("archival-blob-key", blobKey)
-}
-
-// ArchivalClusterArchivalStatus returns tag for ClusterArchivalStatus
-func ArchivalClusterArchivalStatus(clusterArchivalStatus interface{}) Tag {
-	return newObjectTag("archival-cluster-archival-status", clusterArchivalStatus)
 }
 
 // ArchivalArchiveFailReason returns tag for ArchivalArchiveFailReason
@@ -702,19 +687,9 @@ func ArchivalArchiveFailReason(archiveFailReason string) Tag {
 	return newStringTag("archival-archive-fail-reason", archiveFailReason)
 }
 
-// ArchivalUploadFailReason returns tag for ArchivalUploadFailReason
-func ArchivalUploadFailReason(uploadFailReason string) Tag {
-	return newStringTag("archival-upload-fail-reason", uploadFailReason)
-}
-
 // ArchivalDeleteHistoryFailReason returns tag for ArchivalDeleteHistoryFailReason
 func ArchivalDeleteHistoryFailReason(deleteHistoryFailReason string) Tag {
 	return newStringTag("archival-delete-history-fail-reason", deleteHistoryFailReason)
-}
-
-// ArchivalDeleteBlobsFailReason returns tag for ArchivalDeleteBlobsFailReason
-func ArchivalDeleteBlobsFailReason(deleteBlobsFailReason string) Tag {
-	return newStringTag("archival-delete-blobs-fail-reason", deleteBlobsFailReason)
 }
 
 // ArchivalDeterministicConstructionCheckFailReason returns tag for ArchivalDeterministicConstructionCheckFailReason

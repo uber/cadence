@@ -69,14 +69,16 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 			err = cadence.NewCustomError(err.Error())
 		}
 	}()
-
+	logger := tagLoggerWithRequest(tagLoggerWithActivityInfo(container.Logger, activity.GetInfo(ctx)), request)
 	scheme, err := common.GetArchivalScheme(request.URI)
 	if err != nil {
-		return err
+		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("failed to extract archival scheme"), tag.ArchivalURI(request.URI))
+		return carchiver.ErrArchiveNonRetriable
 	}
 	historyArchiver, err := container.ArchiverProvider.GetHistoryArchiver(scheme, common.WorkerServiceName)
 	if err != nil {
-		return err
+		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("failed to get history archiver"), tag.Error(err))
+		return carchiver.ErrArchiveNonRetriable
 	}
 	return historyArchiver.Archive(ctx, request.URI, &carchiver.ArchiveHistoryRequest{
 		ShardID:              request.ShardID,
