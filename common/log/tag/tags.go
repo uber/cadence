@@ -691,18 +691,3 @@ func ArchivalArchiveFailReason(archiveFailReason string) Tag {
 func ArchivalDeleteHistoryFailReason(deleteHistoryFailReason string) Tag {
 	return newStringTag("archival-delete-history-fail-reason", deleteHistoryFailReason)
 }
-
-// ArchivalDeterministicConstructionCheckFailReason returns tag for ArchivalDeterministicConstructionCheckFailReason
-func ArchivalDeterministicConstructionCheckFailReason(deterministicConstructionCheckFailReason string) Tag {
-	return newStringTag("archival-deterministic-construction-check-fail-reason", deterministicConstructionCheckFailReason)
-}
-
-// ArchivalNonDeterministicBlobKey returns tag for randomly generated NonDeterministicBlobKey
-func ArchivalNonDeterministicBlobKey(nondeterministicBlobKey string) Tag {
-	return newStringTag("archival-non-deterministic-blob-key", nondeterministicBlobKey)
-}
-
-// ArchivalBlobIntegrityCheckFailReason returns tag for ArchivalBlobIntegrityCheckFailReason
-func ArchivalBlobIntegrityCheckFailReason(blobIntegrityCheckFailReason string) Tag {
-	return newStringTag("archival-blob-integrity-check-fail-reason", blobIntegrityCheckFailReason)
-}
