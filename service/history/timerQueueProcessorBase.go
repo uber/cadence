@@ -645,6 +645,16 @@ func (t *timerQueueProcessorBase) archiveWorkflow(task *persistence.TimerTaskInf
 		return err
 	}
 	archiveInline := executionStats.HistorySize < int64(t.config.TimerProcessorHistoryArchivalSizeLimit())
+	taggedLogger := t.logger.WithTags(
+		tag.Error(err),
+		tag.WorkflowID(task.WorkflowID),
+		tag.WorkflowRunID(task.RunID),
+		tag.WorkflowDomainID(task.DomainID),
+		tag.ShardID(t.shard.GetShardID()),
+		tag.TaskID(task.GetTaskID()),
+		tag.FailoverVersion(task.GetVersion()),
+		tag.TaskType(task.GetTaskType()),
+	)
 	if !archiveInline {
 		req := &archiver.ArchiveRequest{
 			ShardID:              t.shard.GetShardID(),
@@ -661,14 +671,8 @@ func (t *timerQueueProcessorBase) archiveWorkflow(task *persistence.TimerTaskInf
 
 		// send signal before deleting mutable state to make sure archival is idempotent
 		if err := t.historyService.archivalClient.Archive(req); err != nil {
-			t.logger.Error("failed to initiate archival", tag.Error(err),
-				tag.WorkflowID(task.WorkflowID),
-				tag.WorkflowRunID(task.RunID),
-				tag.WorkflowDomainID(task.DomainID),
-				tag.ShardID(t.shard.GetShardID()),
-				tag.TaskID(task.GetTaskID()),
-				tag.FailoverVersion(task.GetVersion()),
-				tag.TaskType(task.GetTaskType()))
+			taggedLogger.Error("failed to initiate archival")
+			t.metricsClient.IncCounter(metrics.HistoryProcessDeleteHistoryEventScope, metrics.WorkflowCleanupSendArchiveSignalFailedCount)
 			return err
 		}
 	} else {
@@ -695,6 +699,8 @@ func (t *timerQueueProcessorBase) archiveWorkflow(task *persistence.TimerTaskInf
 		ctxWithTimeout, cancel := context.WithTimeout(context.Background(), t.config.TimerProcessorHistoryArchivalTimeLimit())
 		defer cancel()
 		if err := historyArchiver.Archive(ctxWithTimeout, URI, req); err != nil {
+			t.metricsClient.IncCounter(metrics.HistoryProcessDeleteHistoryEventScope, metrics.WorkflowCleanupArchiveFailedCount)
+			taggedLogger.Error("failed to perform workflow history archival inside timer queue processor")
 			return err
 		}
 	}
