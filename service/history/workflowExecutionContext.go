@@ -407,6 +407,7 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 	); err != nil {
 		return err
 	}
+
 	resp, err := c.updateWorkflowExecutionWithRetry(&persistence.UpdateWorkflowExecutionRequest{
 		// RangeID , this is set by shard context
 		UpdateWorkflowMutation: *currentWorkflow,
