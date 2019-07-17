@@ -144,7 +144,7 @@ func (adh *AdminHandler) AddSearchAttribute(ctx context.Context, request *admin.
 	// update dynamic config
 	err := adh.params.DynamicConfig.UpdateValue(dynamicconfig.ValidSearchAttributes, currentValidAttr)
 	if err != nil {
-		return &gen.BadRequestError{Message: fmt.Sprintf("Failed to update dynamic config, err: %v", err)}
+		return &gen.InternalServiceError{Message: fmt.Sprintf("Failed to update dynamic config, err: %v", err)}
 	}
 
 	// update elasticsearch mapping, new added field will not be able to remove or update
