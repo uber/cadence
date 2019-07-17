@@ -2889,9 +2889,11 @@ func (wh *WorkflowHandler) StartBatchJob(ctx context.Context, request *gen.Start
 		return nil, wh.error(err, scope)
 	}
 
+	jobID := uuid.New()
+
 	startReq := &gen.StartWorkflowExecutionRequest{
 		Domain:     common.StringPtr(common.SystemGlobalDomainName),
-		WorkflowId: common.StringPtr(request.GetJobID()),
+		WorkflowId: common.StringPtr(jobID),
 		WorkflowType: common.WorkflowTypePtr(shared.WorkflowType{
 			Name: common.StringPtr(batcher.BatchWFTypeName),
 		}),
@@ -2907,12 +2909,8 @@ func (wh *WorkflowHandler) StartBatchJob(ctx context.Context, request *gen.Start
 				"BatchJobStartParams": input,
 			},
 		},
-		SearchAttributes: &gen.SearchAttributes{
-			IndexedFields: map[string][]byte{
-				definition.CustomDomain: []byte(request.GetDomain()),
-			},
-		},
-		Header: request.Header,
+		SearchAttributes: request.SearchAttributes,
+		Header:           request.Header,
 	}
 	op := func() error {
 		var err error
@@ -2925,7 +2923,7 @@ func (wh *WorkflowHandler) StartBatchJob(ctx context.Context, request *gen.Start
 		return nil, wh.error(err, scope)
 	}
 	return &gen.StartBatchJobResponse{
-		JobID: common.StringPtr(request.GetJobID()),
+		JobID: common.StringPtr(jobID),
 	}, nil
 }
 
@@ -2941,14 +2939,106 @@ func (wh *WorkflowHandler) encodeBatchJobParam(request *gen.StartBatchJobRequest
 }
 
 func setDefaultStartBatchJobValue(request *gen.StartBatchJobRequest) *gen.StartBatchJobRequest {
-	if request.GetJobID() == "" {
-		request.JobID = common.StringPtr(uuid.New())
-	}
-
 	if request.StartToCloseTimeoutSeconds == nil {
 		request.StartToCloseTimeoutSeconds = common.Int32Ptr(batcher.DefaultWorkflowStartToCloseTimeoutSeconds)
 	}
+	if request.SearchAttributes == nil || request.SearchAttributes.IndexedFields == nil {
+		request.SearchAttributes = &gen.SearchAttributes{
+			IndexedFields: map[string][]byte{
+				definition.CustomDomain: []byte(request.GetDomain()),
+			},
+		}
+	} else {
+		request.SearchAttributes.IndexedFields[definition.CustomDomain] = []byte(request.GetDomain())
+	}
 	return request
+}
+
+func (wh *WorkflowHandler) DescribeBatchJob(ctx context.Context, request *gen.DescribeBatchJobRequest) (resp *gen.DescribeBatchJobResponse, retError error) {
+	defer log.CapturePanic(wh.GetLogger(), &retError)
+
+	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendStartBatchJobScope, request)
+	defer sw.Stop()
+
+	if err := wh.versionChecker.checkClientVersion(ctx); err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	if request == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
+
+	if ok := wh.rateLimiter.Allow(); !ok {
+		return nil, wh.error(createServiceBusyError(), scope)
+	}
+
+	if request.GetDomain() == "" {
+		return nil, wh.error(errDomainNotSet, scope)
+	}
+
+	if err := validateDescribeBatchJobRequest(request); err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	sysDomainID, err := wh.domainCache.GetDomainID(common.SystemGlobalDomainName)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	var descResp *shared.DescribeWorkflowExecutionResponse
+	req := &h.DescribeWorkflowExecutionRequest{
+		DomainUUID: common.StringPtr(sysDomainID),
+		Request: &gen.DescribeWorkflowExecutionRequest{
+			Domain: common.StringPtr(common.SystemGlobalDomainName),
+			Execution: &gen.WorkflowExecution{
+				WorkflowId: common.StringPtr(request.GetJobID()),
+			},
+		},
+	}
+	op := func() error {
+		var err error
+		descResp, err = wh.history.DescribeWorkflowExecution(ctx, req)
+		return err
+	}
+	err = backoff.Retry(op, frontendServiceRetryPolicy, common.IsServiceTransientError)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+	resp = &gen.DescribeBatchJobResponse{
+		Status: descResp.WorkflowExecutionInfo.CloseStatus,
+	}
+	if len(descResp.PendingActivities) > 0 {
+		hbdBinary := descResp.PendingActivities[0].HeartbeatDetails
+		if len(hbdBinary) > 0 {
+			hbd := batcher.HeartBeatDetails{}
+			err := json.Unmarshal(hbdBinary, &hbd)
+			if err != nil {
+				return nil, wh.error(err, scope)
+			}
+			resp.SuccessCount = common.Int64Ptr(int64(hbd.SuccessCount))
+			resp.FailureCount = common.Int64Ptr(int64(hbd.FailureCount))
+			resp.TotalEstimate = common.Int64Ptr(int64(hbd.TotalEstimate))
+			resp.CurrentPage = common.Int32Ptr(int32(hbd.CurrentPage))
+		}
+	}
+	return resp, nil
+}
+
+func validateDescribeBatchJobRequest(request *gen.DescribeBatchJobRequest) error {
+	if request.GetJobID() == "" {
+		return &gen.BadRequestError{
+			Message: "Must specify jobID",
+		}
+	}
+	return nil
+}
+
+func (wh *WorkflowHandler) ListBatchJobs(ctx context.Context, request *gen.ListBatchJobsRequest) (resp *gen.ListBatchJobsResponse, retError error) {
+
+}
+
+func (wh *WorkflowHandler) StopBatchJob(ctx context.Context, request *gen.StopBatchJobRequest) error {
+
 }
 
 func (wh *WorkflowHandler) getHistory(

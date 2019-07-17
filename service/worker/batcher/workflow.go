@@ -131,7 +131,7 @@ type (
 		// Number of workflows processed successfully
 		SuccessCount int
 		// Number of workflows that give up due to errors.
-		ErrorCount int
+		FailureCount int
 	}
 
 	taskDetail struct {
@@ -282,7 +282,7 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) (HeartBeatDetai
 		}
 
 		succCount := 0
-		errCount := 0
+		failCount := 0
 		// wait for counters indicate this batch is done
 	Loop:
 		for {
@@ -291,9 +291,9 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) (HeartBeatDetai
 				if err == nil {
 					succCount++
 				} else {
-					errCount++
+					failCount++
 				}
-				if succCount+errCount == batchCount {
+				if succCount+failCount == batchCount {
 					break Loop
 				}
 			case <-ctx.Done():
@@ -304,7 +304,7 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) (HeartBeatDetai
 		hbd.CurrentPage++
 		hbd.PageToken = resp.NextPageToken
 		hbd.SuccessCount += succCount
-		hbd.ErrorCount += errCount
+		hbd.FailureCount += failCount
 		activity.RecordHeartbeat(ctx, hbd)
 
 		if len(hbd.PageToken) == 0 {

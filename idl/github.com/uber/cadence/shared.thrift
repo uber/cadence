@@ -1484,7 +1484,7 @@ struct BatchCancelRequest{
 
 struct StartBatchJobRequest{
     10: optional string domain
-    20: optional string jobID
+    20: optional SearchAttributes searchAttributes
     30: optional BatchOperationType operationType
     40: optional string sourceQuery
     50: optional string reason
