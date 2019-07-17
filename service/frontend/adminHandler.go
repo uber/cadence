@@ -127,13 +127,21 @@ func (adh *AdminHandler) AddSearchAttribute(ctx context.Context, request *admin.
 		return &gen.BadRequestError{Message: "SearchAttributes are not provided"}
 	}
 
-	// update dynamic config
+	searchAttr := request.GetSearchAttribute()
 	currentValidAttr, _ := adh.params.DynamicConfig.GetMapValue(
 		dynamicconfig.ValidSearchAttributes, nil, definition.GetDefaultIndexedKeys())
-	searchAttr := request.GetSearchAttribute()
 	for k, v := range searchAttr {
+		if definition.IsSystemIndexedKey(k) {
+			return &gen.BadRequestError{Message: fmt.Sprintf("Key [%s] is reserverd by system", k)}
+		}
+		if _, exist := currentValidAttr[k]; exist {
+			return &gen.BadRequestError{Message: fmt.Sprintf("Key [%s] is already whitelist", k)}
+		}
+
 		currentValidAttr[k] = int(v)
 	}
+
+	// update dynamic config
 	err := adh.params.DynamicConfig.UpdateValue(dynamicconfig.ValidSearchAttributes, currentValidAttr)
 	if err != nil {
 		return &gen.BadRequestError{Message: fmt.Sprintf("Failed to update dynamic config, err: %v", err)}
