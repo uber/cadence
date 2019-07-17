@@ -1,6 +1,6 @@
 # Proposal: Synchronous Request Reply
 
-Authors: Maxim Fateev (mfateev), Andrew Dawson (andrewjdawson2016)
+Authors: Maxim Fateev (@mfateev), Andrew Dawson (@andrewjdawson2016)
 
 Last updated: July 16, 2019
 
@@ -46,7 +46,7 @@ All three together cover all the listed use cases.
 
 ### Guarantee read after write consistency between signal and query
 
-Currently there are situations when a query emitted after a signal sees a stale workflow state without the signal update yet delivered. This forces complications to a workflow logic as signal then query for updated state interaction pattern is not consistent. After this race condition is fixed signal then query can be used for request-reply like scenarios. The drawback of this approach is that it is not most optimal from the performance point of view as it requires at least two decisions and multiple database updates. But together with Long poll on query result changes feature it is a reasonable way to implement update and then wait for a long running update operations.
+Currently, there is a race condition when a query emitted after a signal sees a stale workflow state without the update from the signal. Accounting for this inconsistency complicates the workflow logic. Fixing this race condition allows the signal-then-query pattern to be used for request-reply scenarios. The drawback of this approach is suboptimal performance since it requires at least two decisions and multiple database updates. But, together with the long polling on query result changes feature, it is a reasonable way to implement update-and-wait for long-running update operations.
 
 The reverse consistency of failing a signal if the workflow state has changed since the last query is also possible when requested. The basic idea is to return a current workflow (or query result) version with a query in the form of an opaque token. Then include the token into the SignalWorkflowExecution call arguments. The call is rejected if the version doesn’t match the one in the token.
 
