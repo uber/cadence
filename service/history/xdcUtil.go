@@ -22,6 +22,7 @@ package history
 
 import (
 	"fmt"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -110,7 +111,6 @@ func loadMutableStateForTransferTask(context workflowExecutionContext, transferT
 
 	if transferTask.ScheduleID >= msBuilder.GetNextEventID() && !isDecisionRetry {
 		metricsClient.IncCounter(metrics.TransferQueueProcessorScope, metrics.StaleMutableStateCounter)
-		logger.Debug(fmt.Sprintf("Transfer Task Processor: task event ID: %v >= MS NextEventID: %v.", transferTask.ScheduleID, msBuilder.GetNextEventID()))
 		context.clear()
 
 		msBuilder, err = context.loadWorkflowExecution()
@@ -150,7 +150,6 @@ func loadMutableStateForTimerTask(context workflowExecutionContext, timerTask *p
 
 	if timerTask.EventID >= msBuilder.GetNextEventID() && !isDecisionRetry {
 		metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.StaleMutableStateCounter)
-		logger.Debug(fmt.Sprintf("Timer Task Processor: task event ID: %v >= MS NextEventID: %v.", timerTask.EventID, msBuilder.GetNextEventID()))
 		context.clear()
 
 		msBuilder, err = context.loadWorkflowExecution()
