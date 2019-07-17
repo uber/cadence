@@ -58,14 +58,8 @@ var (
 // it's the history archiver's responsibility to retry individual operations inside the Archive() method.
 func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err error) {
 	container := ctx.Value(bootstrapContainerKey).(*BootstrapContainer)
-	scope := container.MetricsClient.Scope(metrics.ArchiverUploadHistoryActivityScope, metrics.DomainTag(request.DomainName))
-	sw := scope.StartTimer(metrics.CadenceLatency)
 	defer func() {
-		sw.Stop()
 		if err != nil {
-			if err == carchiver.ErrArchiveNonRetriable {
-				scope.IncCounter(metrics.ArchiverNonRetryableErrorCount)
-			}
 			err = cadence.NewCustomError(err.Error())
 		}
 	}()
@@ -90,7 +84,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 		BranchToken:          request.BranchToken,
 		NextEventID:          request.NextEventID,
 		CloseFailoverVersion: request.CloseFailoverVersion,
-	})
+	}, carchiver.GetHeartbeatArchiveOption())
 }
 
 // deleteHistoryActivity deletes workflow execution history from persistence.

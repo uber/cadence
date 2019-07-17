@@ -83,7 +83,7 @@ func (s *activitiesSuite) SetupTest() {
 	s.metricsScope = &mmocks.Scope{}
 	s.archiverProvider = &provider.ArchiverProviderMock{}
 	s.historyArchiver = &carchiver.HistoryArchiverMock{}
-	s.metricsScope.On("StartTimer", metrics.CadenceLatency).Return(metrics.NewTestStopwatch()).Once()
+	s.metricsScope.On("StartTimer", metrics.CadenceLatency).Return(metrics.NewTestStopwatch()).Maybe()
 	s.metricsScope.On("RecordTimer", mock.Anything, mock.Anything).Maybe()
 }
 
@@ -95,8 +95,6 @@ func (s *activitiesSuite) TearDownTest() {
 }
 
 func (s *activitiesSuite) TestUploadHistory_Fail_InvalidURI() {
-	s.metricsClient.On("Scope", metrics.ArchiverUploadHistoryActivityScope, []metrics.Tag{metrics.DomainTag(testDomainName)}).Return(s.metricsScope).Once()
-	s.metricsScope.On("IncCounter", metrics.ArchiverNonRetryableErrorCount).Once()
 	container := &BootstrapContainer{
 		Logger:        s.logger,
 		MetricsClient: s.metricsClient,
@@ -121,8 +119,6 @@ func (s *activitiesSuite) TestUploadHistory_Fail_InvalidURI() {
 }
 
 func (s *activitiesSuite) TestUploadHistory_Fail_GetArchiverError() {
-	s.metricsClient.On("Scope", metrics.ArchiverUploadHistoryActivityScope, []metrics.Tag{metrics.DomainTag(testDomainName)}).Return(s.metricsScope).Once()
-	s.metricsScope.On("IncCounter", metrics.ArchiverNonRetryableErrorCount).Once()
 	s.archiverProvider.On("GetHistoryArchiver", testScheme, common.WorkerServiceName).Return(nil, errors.New("failed to get archiver"))
 	container := &BootstrapContainer{
 		Logger:           s.logger,
@@ -149,9 +145,7 @@ func (s *activitiesSuite) TestUploadHistory_Fail_GetArchiverError() {
 }
 
 func (s *activitiesSuite) TestUploadHistory_Fail_ArchiveNonRetriableError() {
-	s.metricsClient.On("Scope", metrics.ArchiverUploadHistoryActivityScope, []metrics.Tag{metrics.DomainTag(testDomainName)}).Return(s.metricsScope).Once()
-	s.metricsScope.On("IncCounter", metrics.ArchiverNonRetryableErrorCount).Once()
-	s.historyArchiver.On("Archive", mock.Anything, testArchivalURI, mock.Anything).Return(carchiver.ErrArchiveNonRetriable)
+	s.historyArchiver.On("Archive", mock.Anything, testArchivalURI, mock.Anything, mock.Anything).Return(carchiver.ErrArchiveNonRetriable)
 	s.archiverProvider.On("GetHistoryArchiver", testScheme, common.WorkerServiceName).Return(s.historyArchiver, nil)
 	container := &BootstrapContainer{
 		Logger:           s.logger,
@@ -178,9 +172,8 @@ func (s *activitiesSuite) TestUploadHistory_Fail_ArchiveNonRetriableError() {
 }
 
 func (s *activitiesSuite) TestUploadHistory_Fail_ArchiveRetriableError() {
-	s.metricsClient.On("Scope", metrics.ArchiverUploadHistoryActivityScope, []metrics.Tag{metrics.DomainTag(testDomainName)}).Return(s.metricsScope).Once()
 	testArchiveErr := errors.New("some random error")
-	s.historyArchiver.On("Archive", mock.Anything, testArchivalURI, mock.Anything).Return(testArchiveErr)
+	s.historyArchiver.On("Archive", mock.Anything, testArchivalURI, mock.Anything, mock.Anything).Return(testArchiveErr)
 	s.archiverProvider.On("GetHistoryArchiver", testScheme, common.WorkerServiceName).Return(s.historyArchiver, nil)
 	container := &BootstrapContainer{
 		Logger:           s.logger,
@@ -207,8 +200,7 @@ func (s *activitiesSuite) TestUploadHistory_Fail_ArchiveRetriableError() {
 }
 
 func (s *activitiesSuite) TestUploadHistory_Success() {
-	s.metricsClient.On("Scope", metrics.ArchiverUploadHistoryActivityScope, []metrics.Tag{metrics.DomainTag(testDomainName)}).Return(s.metricsScope).Once()
-	s.historyArchiver.On("Archive", mock.Anything, testArchivalURI, mock.Anything).Return(nil)
+	s.historyArchiver.On("Archive", mock.Anything, testArchivalURI, mock.Anything, mock.Anything).Return(nil)
 	s.archiverProvider.On("GetHistoryArchiver", testScheme, common.WorkerServiceName).Return(s.historyArchiver, nil)
 	container := &BootstrapContainer{
 		Logger:           s.logger,

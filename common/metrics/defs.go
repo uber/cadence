@@ -499,6 +499,9 @@ const (
 	// SequentialTaskProcessingScope is used by sequential task processing logic
 	SequentialTaskProcessingScope
 
+	// HistoryArchiverScope is used by history archivers
+	HistoryArchiverScope
+
 	NumCommonScopes
 )
 
@@ -810,8 +813,6 @@ const (
 	ESProcessorScope
 	// IndexProcessorScope is scope used by all metric emitted by index processor
 	IndexProcessorScope
-	// ArchiverUploadHistoryActivityScope is scope used by all metrics emitted by archiver.UploadHistoryActivity
-	ArchiverUploadHistoryActivityScope
 	// ArchiverDeleteHistoryActivityScope is scope used by all metrics emitted by archiver.DeleteHistoryActivity
 	ArchiverDeleteHistoryActivityScope
 	// ArchiverScope is scope used by all metrics emitted by archiver.Archiver
@@ -1020,6 +1021,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ElasticsearchScanWorkflowExecutionsScope:                   {operation: "ScanWorkflowExecutions"},
 		ElasticsearchCountWorkflowExecutionsScope:                  {operation: "CountWorkflowExecutions"},
 		SequentialTaskProcessingScope:                              {operation: "SequentialTaskProcessing"},
+
+		HistoryArchiverScope: {operation: "HistoryArchiver"},
 	},
 	// Frontend Scope Names
 	Frontend: {
@@ -1175,7 +1178,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		SyncActivityTaskScope:               {operation: "SyncActivityTask"},
 		ESProcessorScope:                    {operation: "ESProcessor"},
 		IndexProcessorScope:                 {operation: "IndexProcessor"},
-		ArchiverUploadHistoryActivityScope:  {operation: "ArchiverUploadHistoryActivity"},
 		ArchiverDeleteHistoryActivityScope:  {operation: "ArchiverDeleteHistoryActivity"},
 		ArchiverScope:                       {operation: "Archiver"},
 		ArchiverPumpScope:                   {operation: "ArchiverPump"},
