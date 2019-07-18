@@ -23,7 +23,6 @@ package matching
 import (
 	"fmt"
 	"math/rand"
-
 	"strings"
 
 	"github.com/uber/cadence/.gen/go/shared"
