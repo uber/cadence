@@ -155,3 +155,10 @@ func (d *DynamicRateLimiter) Allow() bool {
 	d.rl.UpdateMaxDispatch(&rps)
 	return d.rl.Allow()
 }
+
+// Wait waits up till deadline for a rate limit token
+func (d *DynamicRateLimiter) Wait(ctx context.Context) error {
+	rps := float64(d.rps())
+	d.rl.UpdateMaxDispatch(&rps)
+	return d.rl.Wait(ctx)
+}

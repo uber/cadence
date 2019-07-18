@@ -20,6 +20,8 @@
 
 package quotas
 
+import "context"
+
 // RPSFunc returns a float64 as the RPS
 type RPSFunc func() float64
 
@@ -34,6 +36,10 @@ type Limiter interface {
 	// immediately with a true or false indicating if the request can make
 	// progress
 	Allow() bool
+
+	// Wait waits till the deadline for a rate limit token to allow the request
+	// to go through.
+	Wait(ctx context.Context) error
 }
 
 // Policy corresponds to a quota policy. A policy allows implementing layered
