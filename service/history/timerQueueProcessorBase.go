@@ -662,7 +662,7 @@ func (t *timerQueueProcessorBase) archiveWorkflow(task *persistence.TimerTaskInf
 		CallerService: common.HistoryServiceName,
 		ArchiveInline: archiveInline,
 	}
-	if err := t.historyService.archivalClient.Archive(ctx, req, archiveInline); err != nil {
+	if err := t.historyService.archivalClient.Archive(ctx, req); err != nil {
 		return err
 	}
 

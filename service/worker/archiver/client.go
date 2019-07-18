@@ -40,7 +40,7 @@ import (
 )
 
 type (
-	// ArchiveClientRequest is the archive request sent to the archiver client
+	// ClientRequest is the archive request sent to the archiver client
 	ClientRequest struct {
 		ArchiveRequest *ArchiveRequest
 		CallerService  string
