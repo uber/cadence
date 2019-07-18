@@ -332,7 +332,7 @@ func (t *timerQueueStandbyProcessorImpl) processDecisionTimeout(timerTask *persi
 
 	// decision schedule to start timer task is a special snowflake.
 	// the schedule to start timer is for sticky decision, which is
-	// not applicable for cross DC
+	// not applicable on the passive cluster
 	if timerTask.TimeoutType == int(workflow.TimeoutTypeScheduleToStart) {
 		return nil
 	}
