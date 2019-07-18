@@ -705,32 +705,32 @@ func ArchivalDeleteHistoryFailReason(deleteHistoryFailReason string) Tag {
 // The following logger tags are only used by internal archiver implemention.
 // TODO: move them to internal repo once cadence plugin model is in place.
 
-// ArchivalBlobKey returns tag for BlobKey	
-func ArchivalBlobKey(blobKey string) Tag {	
-	return newStringTag("archival-blob-key", blobKey)	
+// ArchivalBlobKey returns tag for BlobKey
+func ArchivalBlobKey(blobKey string) Tag {
+	return newStringTag("archival-blob-key", blobKey)
 }
 
-// ArchivalUploadFailReason returns tag for ArchivalUploadFailReason	
-func ArchivalUploadFailReason(uploadFailReason string) Tag {	
-	return newStringTag("archival-upload-fail-reason", uploadFailReason)	
+// ArchivalUploadFailReason returns tag for ArchivalUploadFailReason
+func ArchivalUploadFailReason(uploadFailReason string) Tag {
+	return newStringTag("archival-upload-fail-reason", uploadFailReason)
 }
 
-// ArchivalDeleteBlobsFailReason returns tag for ArchivalDeleteBlobsFailReason	
-func ArchivalDeleteBlobsFailReason(deleteBlobsFailReason string) Tag {	
-	return newStringTag("archival-delete-blobs-fail-reason", deleteBlobsFailReason)	
-}	
+// ArchivalDeleteBlobsFailReason returns tag for ArchivalDeleteBlobsFailReason
+func ArchivalDeleteBlobsFailReason(deleteBlobsFailReason string) Tag {
+	return newStringTag("archival-delete-blobs-fail-reason", deleteBlobsFailReason)
+}
 
- // ArchivalDeterministicConstructionCheckFailReason returns tag for ArchivalDeterministicConstructionCheckFailReason	
-func ArchivalDeterministicConstructionCheckFailReason(deterministicConstructionCheckFailReason string) Tag {	
-	return newStringTag("archival-deterministic-construction-check-fail-reason", deterministicConstructionCheckFailReason)	
-}	
+// ArchivalDeterministicConstructionCheckFailReason returns tag for ArchivalDeterministicConstructionCheckFailReason
+func ArchivalDeterministicConstructionCheckFailReason(deterministicConstructionCheckFailReason string) Tag {
+	return newStringTag("archival-deterministic-construction-check-fail-reason", deterministicConstructionCheckFailReason)
+}
 
- // ArchivalNonDeterministicBlobKey returns tag for randomly generated NonDeterministicBlobKey	
-func ArchivalNonDeterministicBlobKey(nondeterministicBlobKey string) Tag {	
-	return newStringTag("archival-non-deterministic-blob-key", nondeterministicBlobKey)	
-}	
+// ArchivalNonDeterministicBlobKey returns tag for randomly generated NonDeterministicBlobKey
+func ArchivalNonDeterministicBlobKey(nondeterministicBlobKey string) Tag {
+	return newStringTag("archival-non-deterministic-blob-key", nondeterministicBlobKey)
+}
 
- // ArchivalBlobIntegrityCheckFailReason returns tag for ArchivalBlobIntegrityCheckFailReason	
-func ArchivalBlobIntegrityCheckFailReason(blobIntegrityCheckFailReason string) Tag {	
-	return newStringTag("archival-blob-integrity-check-fail-reason", blobIntegrityCheckFailReason)	
+// ArchivalBlobIntegrityCheckFailReason returns tag for ArchivalBlobIntegrityCheckFailReason
+func ArchivalBlobIntegrityCheckFailReason(blobIntegrityCheckFailReason string) Tag {
+	return newStringTag("archival-blob-integrity-check-fail-reason", blobIntegrityCheckFailReason)
 }
