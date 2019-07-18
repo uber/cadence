@@ -519,7 +519,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 				b.shard.GetEventsCache(),
 				b.logger,
 				newRunStartedEvent.GetVersion(),
-				domainEntry.CanReplicateEvent(),
+				domainEntry.GetReplicationPolicy(),
 			)
 			newRunStateBuilder := newStateBuilder(b.shard, newRunMutableStateBuilder, b.logger)
 

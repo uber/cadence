@@ -251,7 +251,7 @@ func (s *historyReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Incom
 		LastWriteEventID: nextEventID - 1,
 	})
 	msBuilder.On("GetLastWriteVersion").Return(lastWriteVersion)
-	msBuilder.On("UpdateCanReplicate", false).Once()
+	msBuilder.On("UpdateReplicationPolicy", cache.ReplicationPolicyOneCluster).Once()
 	msBuilder.On("UpdateReplicationStateVersion", lastWriteVersion, false).Once()
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: domainID}).Return(
 		&persistence.GetDomainResponse{
@@ -312,7 +312,7 @@ func (s *historyReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Incom
 		LastWriteEventID: nextEventID - 1,
 	})
 	msBuilder.On("GetLastWriteVersion").Return(lastWriteVersion)
-	msBuilder.On("UpdateCanReplicate", false).Once()
+	msBuilder.On("UpdateReplicationPolicy", cache.ReplicationPolicyOneCluster).Once()
 	msBuilder.On("UpdateReplicationStateVersion", lastWriteVersion, false).Once()
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: domainID}).Return(
 		&persistence.GetDomainResponse{
@@ -372,7 +372,7 @@ func (s *historyReplicatorSuite) TestSyncActivity_ActivityCompleted() {
 		LastWriteVersion: lastWriteVersion,
 		LastWriteEventID: nextEventID - 1,
 	})
-	msBuilder.On("UpdateCanReplicate", false).Once()
+	msBuilder.On("UpdateReplicationPolicy", cache.ReplicationPolicyOneCluster).Once()
 	msBuilder.On("UpdateReplicationStateVersion", lastWriteVersion, false).Once()
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: domainID}).Return(
 		&persistence.GetDomainResponse{
@@ -433,7 +433,7 @@ func (s *historyReplicatorSuite) TestSyncActivity_ActivityRunning_LocalActivityV
 		LastWriteVersion: lastWriteVersion,
 		LastWriteEventID: nextEventID - 1,
 	})
-	msBuilder.On("UpdateCanReplicate", false).Once()
+	msBuilder.On("UpdateReplicationPolicy", cache.ReplicationPolicyOneCluster).Once()
 	msBuilder.On("UpdateReplicationStateVersion", lastWriteVersion, false).Once()
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: domainID}).Return(
 		&persistence.GetDomainResponse{
@@ -507,7 +507,7 @@ func (s *historyReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVer
 		LastWriteVersion: version,
 		LastWriteEventID: nextEventID - 1,
 	})
-	msBuilder.On("UpdateCanReplicate", false).Once()
+	msBuilder.On("UpdateReplicationPolicy", cache.ReplicationPolicyOneCluster).Once()
 	msBuilder.On("UpdateReplicationStateVersion", version, false).Once()
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: domainID}).Return(
 		&persistence.GetDomainResponse{
@@ -588,7 +588,7 @@ func (s *historyReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVer
 		LastWriteVersion: version,
 		LastWriteEventID: nextEventID - 1,
 	})
-	msBuilder.On("UpdateCanReplicate", false).Once()
+	msBuilder.On("UpdateReplicationPolicy", cache.ReplicationPolicyOneCluster).Once()
 	msBuilder.On("UpdateReplicationStateVersion", version, false).Once()
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: domainID}).Return(
 		&persistence.GetDomainResponse{
@@ -669,7 +669,7 @@ func (s *historyReplicatorSuite) TestSyncActivity_ActivityRunning_Update_LargerV
 		LastWriteVersion: version,
 		LastWriteEventID: nextEventID - 1,
 	})
-	msBuilder.On("UpdateCanReplicate", false).Once()
+	msBuilder.On("UpdateReplicationPolicy", cache.ReplicationPolicyOneCluster).Once()
 	msBuilder.On("UpdateReplicationStateVersion", version, false).Once()
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: domainID}).Return(
 		&persistence.GetDomainResponse{
@@ -2543,7 +2543,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_BrandNew() {
 		BranchToken: executionInfo.GetCurrentBranch(),
 		Events:      history.Events,
 	}}
-	msBuilder.On("CloseTransactionAsSnapshot", now.Local(), false).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil)
+	msBuilder.On("CloseTransactionAsSnapshot", now.Local(), transactionPolicyPassive).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil)
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.MatchedBy(func(input *persistence.CreateWorkflowExecutionRequest) bool {
 		input.RangeID = 0
@@ -2655,7 +2655,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_ISE() {
 		BranchToken: executionInfo.GetCurrentBranch(),
 		Events:      history.Events,
 	}}
-	msBuilder.On("CloseTransactionAsSnapshot", now.Local(), false).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil)
+	msBuilder.On("CloseTransactionAsSnapshot", now.Local(), transactionPolicyPassive).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil)
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
 	errRet := &shared.InternalServiceError{}
 	// the test above already assert the create workflow request, so here just use anyting
@@ -2762,7 +2762,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_SameRunID() {
 		BranchToken: executionInfo.GetCurrentBranch(),
 		Events:      history.Events,
 	}}
-	msBuilder.On("CloseTransactionAsSnapshot", now.Local(), false).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil)
+	msBuilder.On("CloseTransactionAsSnapshot", now.Local(), transactionPolicyPassive).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil)
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
 
 	currentVersion := version
@@ -2892,7 +2892,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		BranchToken: executionInfo.GetCurrentBranch(),
 		Events:      history.Events,
 	}}
-	msBuilder.On("CloseTransactionAsSnapshot", now.Local(), false).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil)
+	msBuilder.On("CloseTransactionAsSnapshot", now.Local(), transactionPolicyPassive).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil)
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
 
 	currentVersion := version + 1
@@ -3021,7 +3021,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		BranchToken: executionInfo.GetCurrentBranch(),
 		Events:      history.Events,
 	}}
-	msBuilder.On("CloseTransactionAsSnapshot", now.Local(), false).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil)
+	msBuilder.On("CloseTransactionAsSnapshot", now.Local(), transactionPolicyPassive).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil)
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
 
 	currentVersion := version
@@ -3150,7 +3150,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		BranchToken: executionInfo.GetCurrentBranch(),
 		Events:      history.Events,
 	}}
-	msBuilder.On("CloseTransactionAsSnapshot", now.Local(), false).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil)
+	msBuilder.On("CloseTransactionAsSnapshot", now.Local(), transactionPolicyPassive).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil)
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
 
 	currentVersion := version - 1
@@ -3281,7 +3281,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		BranchToken: executionInfo.GetCurrentBranch(),
 		Events:      history.Events,
 	}}
-	msBuilder.On("CloseTransactionAsSnapshot", now.Local(), false).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil)
+	msBuilder.On("CloseTransactionAsSnapshot", now.Local(), transactionPolicyPassive).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil)
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
 
 	currentVersion := version + 1
@@ -3439,7 +3439,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		BranchToken: executionInfo.GetCurrentBranch(),
 		Events:      history.Events,
 	}}
-	msBuilder.On("CloseTransactionAsSnapshot", now.Local(), false).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil)
+	msBuilder.On("CloseTransactionAsSnapshot", now.Local(), transactionPolicyPassive).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil)
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
 
 	currentVersion := version + 1
@@ -3611,7 +3611,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		BranchToken: executionInfo.GetCurrentBranch(),
 		Events:      history.Events,
 	}}
-	msBuilder.On("CloseTransactionAsSnapshot", now.Local(), false).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil)
+	msBuilder.On("CloseTransactionAsSnapshot", now.Local(), transactionPolicyPassive).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil)
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
 
 	currentVersion := version + 1
@@ -3799,7 +3799,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		BranchToken: executionInfo.GetCurrentBranch(),
 		Events:      history.Events,
 	}}
-	msBuilder.On("CloseTransactionAsSnapshot", now.Local(), false).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil)
+	msBuilder.On("CloseTransactionAsSnapshot", now.Local(), transactionPolicyPassive).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil)
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
 
 	currentVersion := version
@@ -3946,7 +3946,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		BranchToken: executionInfo.GetCurrentBranch(),
 		Events:      history.Events,
 	}}
-	msBuilder.On("CloseTransactionAsSnapshot", now.Local(), false).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil)
+	msBuilder.On("CloseTransactionAsSnapshot", now.Local(), transactionPolicyPassive).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil)
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
 
 	currentVersion := version
@@ -4110,7 +4110,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		BranchToken: executionInfo.GetCurrentBranch(),
 		Events:      history.Events,
 	}}
-	msBuilder.On("CloseTransactionAsSnapshot", now.Local(), false).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil)
+	msBuilder.On("CloseTransactionAsSnapshot", now.Local(), transactionPolicyPassive).Return(newWorkflowSnapshot, newWorkflowEventsSeq, nil)
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: historySize}, nil).Once()
 
 	currentVersion := version - 1

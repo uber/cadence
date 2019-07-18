@@ -154,7 +154,7 @@ func newHistoryReplicator(
 				version,
 				// if can see replication task, meaning that domain is
 				// global domain with > 1 target clusters
-				true,
+				cache.ReplicationPolicyMultiCluster,
 			)
 		},
 	}
@@ -769,7 +769,10 @@ func (r *historyReplicator) replicateWorkflowStarted(
 	lastEvent := history.Events[len(history.Events)-1]
 
 	now := time.Unix(0, lastEvent.GetTimestamp())
-	newWorkflow, workflowEventsSeq, err := msBuilder.CloseTransactionAsSnapshot(now, false)
+	newWorkflow, workflowEventsSeq, err := msBuilder.CloseTransactionAsSnapshot(
+		now,
+		transactionPolicyPassive,
+	)
 	if err != nil {
 		return err
 	}

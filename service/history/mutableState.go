@@ -194,7 +194,7 @@ type (
 		SetHistoryTree(treeID string) error
 		UpdateActivity(*persistence.ActivityInfo) error
 		UpdateActivityProgress(ai *persistence.ActivityInfo, request *workflow.RecordActivityTaskHeartbeatRequest)
-		UpdateCanReplicate(bool)
+		UpdateReplicationPolicy(cache.ReplicationPolicy)
 		UpdateDecision(*decisionInfo)
 		UpdateReplicationStateVersion(int64, bool)
 		UpdateReplicationStateLastEventID(int64, int64)
@@ -205,7 +205,7 @@ type (
 		GetTransferTasks() []persistence.Task
 		GetTimerTasks() []persistence.Task
 
-		CloseTransactionAsMutation(now time.Time, closeAsActive bool) (*persistence.WorkflowMutation, []*persistence.WorkflowEvents, error)
-		CloseTransactionAsSnapshot(now time.Time, closeAsActive bool) (*persistence.WorkflowSnapshot, []*persistence.WorkflowEvents, error)
+		CloseTransactionAsMutation(now time.Time, transactionPolicy transactionPolicy) (*persistence.WorkflowMutation, []*persistence.WorkflowEvents, error)
+		CloseTransactionAsSnapshot(now time.Time, transactionPolicy transactionPolicy) (*persistence.WorkflowSnapshot, []*persistence.WorkflowEvents, error)
 	}
 )

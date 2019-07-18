@@ -323,7 +323,7 @@ func (e *historyEngineImpl) createMutableState(
 			e.shard.GetEventsCache(),
 			e.logger,
 			domainEntry.GetFailoverVersion(),
-			domainEntry.CanReplicateEvent(),
+			domainEntry.GetReplicationPolicy(),
 		)
 	} else {
 		msBuilder = newMutableStateBuilder(
@@ -451,7 +451,10 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 	msBuilder.AddTimerTasks(timerTasks...)
 
 	now := e.timeSource.Now()
-	newWorkflow, newWorkflowEventsSeq, err := msBuilder.CloseTransactionAsSnapshot(now, true)
+	newWorkflow, newWorkflowEventsSeq, err := msBuilder.CloseTransactionAsSnapshot(
+		now,
+		transactionPolicyActive,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -1561,7 +1564,10 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 	msBuilder.AddTimerTasks(timerTasks...)
 
 	now := e.timeSource.Now()
-	newWorkflow, newWorkflowEventsSeq, err := msBuilder.CloseTransactionAsSnapshot(now, true)
+	newWorkflow, newWorkflowEventsSeq, err := msBuilder.CloseTransactionAsSnapshot(
+		now,
+		transactionPolicyActive,
+	)
 	if err != nil {
 		return nil, err
 	}

@@ -574,7 +574,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 		s.mockShard.GetEventsCache(),
 		s.logger,
 		newRunStartedEvent.GetVersion(),
-		true,
+		cache.ReplicationPolicyMultiCluster,
 	)
 	err = expectedNewRunStateBuilder.ReplicateWorkflowExecutionStartedEvent(
 		cache.NewLocalDomainCacheEntryForTest(&persistence.DomainInfo{ID: domainID}, &persistence.DomainConfig{}, "", nil),
@@ -904,7 +904,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 		s.mockShard.GetEventsCache(),
 		s.logger,
 		newRunStartedEvent.GetVersion(),
-		true,
+		cache.ReplicationPolicyMultiCluster,
 	)
 	err = expectedNewRunStateBuilder.ReplicateWorkflowExecutionStartedEvent(
 		cache.NewLocalDomainCacheEntryForTest(&persistence.DomainInfo{ID: domainID}, &persistence.DomainConfig{}, "", nil),

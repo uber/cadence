@@ -95,7 +95,7 @@ type (
 		// indicates the next event ID in DB, for condition update
 		condition int64
 		// indicate whether can do replication
-		canReplicate bool
+		replicationPolicy cache.ReplicationPolicy
 
 		insertTransferTasks    []persistence.Task
 		insertReplicationTasks []persistence.Task
@@ -176,7 +176,7 @@ func newMutableStateBuilderWithReplicationState(
 	eventsCache eventsCache,
 	logger log.Logger,
 	version int64,
-	canReplicate bool,
+	replicationPolicy cache.ReplicationPolicy,
 ) *mutableStateBuilder {
 	s := newMutableStateBuilder(shard, eventsCache, logger)
 	s.replicationState = &persistence.ReplicationState{
@@ -186,7 +186,7 @@ func newMutableStateBuilderWithReplicationState(
 		LastWriteEventID:    common.EmptyEventID,
 		LastReplicationInfo: make(map[string]*persistence.ReplicationInfo),
 	}
-	s.canReplicate = canReplicate
+	s.replicationPolicy = replicationPolicy
 	return s
 }
 
@@ -422,11 +422,18 @@ func (e *mutableStateBuilder) GetLastWriteVersion() int64 {
 	return e.replicationState.LastWriteVersion
 }
 
-func (e *mutableStateBuilder) UpdateCanReplicate(canReplicate bool) {
-	e.canReplicate = canReplicate
+func (e *mutableStateBuilder) UpdateReplicationPolicy(
+	replicationPolicy cache.ReplicationPolicy,
+) {
+
+	e.replicationPolicy = replicationPolicy
 }
 
-func (e *mutableStateBuilder) UpdateReplicationStateVersion(version int64, forceUpdate bool) {
+func (e *mutableStateBuilder) UpdateReplicationStateVersion(
+	version int64,
+	forceUpdate bool,
+) {
+
 	if version > e.replicationState.CurrentVersion || forceUpdate {
 		e.replicationState.CurrentVersion = version
 	}
@@ -2938,7 +2945,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 			e.eventsCache,
 			e.logger,
 			e.GetCurrentVersion(),
-			e.canReplicate,
+			e.replicationPolicy,
 		)
 	} else {
 		newStateBuilder = newMutableStateBuilder(e.shard, e.eventsCache, e.logger)
@@ -3451,14 +3458,14 @@ func (e *mutableStateBuilder) GetTimerTasks() []persistence.Task {
 
 func (e *mutableStateBuilder) CloseTransactionAsMutation(
 	now time.Time,
-	closeAsActive bool,
+	transactionPolicy transactionPolicy,
 ) (*persistence.WorkflowMutation, []*persistence.WorkflowEvents, error) {
 
-	if err := e.prepareTransaction(closeAsActive); err != nil {
+	if err := e.prepareTransaction(transactionPolicy); err != nil {
 		return nil, nil, err
 	}
 
-	workflowEventsSeq, err := e.prepareEventsAndReplicationTasks(closeAsActive)
+	workflowEventsSeq, err := e.prepareEventsAndReplicationTasks(transactionPolicy)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -3503,7 +3510,7 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 		Condition: e.condition,
 	}
 
-	if err := e.cleanupTransaction(closeAsActive); err != nil {
+	if err := e.cleanupTransaction(transactionPolicy); err != nil {
 		return nil, nil, err
 	}
 	return workflowMutation, workflowEventsSeq, nil
@@ -3511,14 +3518,14 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 
 func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 	now time.Time,
-	closeAsActive bool,
+	transactionPolicy transactionPolicy,
 ) (*persistence.WorkflowSnapshot, []*persistence.WorkflowEvents, error) {
 
-	if err := e.prepareTransaction(closeAsActive); err != nil {
+	if err := e.prepareTransaction(transactionPolicy); err != nil {
 		return nil, nil, err
 	}
 
-	workflowEventsSeq, err := e.prepareEventsAndReplicationTasks(closeAsActive)
+	workflowEventsSeq, err := e.prepareEventsAndReplicationTasks(transactionPolicy)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -3567,36 +3574,36 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 		Condition: e.condition,
 	}
 
-	if err := e.cleanupTransaction(closeAsActive); err != nil {
+	if err := e.cleanupTransaction(transactionPolicy); err != nil {
 		return nil, nil, err
 	}
 	return workflowSnapshot, workflowEventsSeq, nil
 }
 
 func (e *mutableStateBuilder) prepareTransaction(
-	closeAsActive bool,
+	transactionPolicy transactionPolicy,
 ) error {
 
-	if err := e.closeTransactionCheckActiveness(
-		closeAsActive,
+	if err := e.closeTransactionWithPolicyCheck(
+		transactionPolicy,
 	); err != nil {
 		return err
 	}
 
 	if err := e.closeTransactionHandleDecisionFailover(
-		closeAsActive,
+		transactionPolicy,
 	); err != nil {
 		return err
 	}
 
 	if err := e.closeTransactionHandleBufferedEventsLimit(
-		closeAsActive,
+		transactionPolicy,
 	); err != nil {
 		return err
 	}
 
 	// flushing buffered events should happen at very last
-	if closeAsActive {
+	if transactionPolicy == transactionPolicyActive {
 		if err := e.FlushBufferedEvents(); err != nil {
 			return err
 		}
@@ -3606,7 +3613,7 @@ func (e *mutableStateBuilder) prepareTransaction(
 }
 
 func (e *mutableStateBuilder) cleanupTransaction(
-	closeAsActive bool,
+	transactionPolicy transactionPolicy,
 ) error {
 
 	// Clear all updates to prepare for the next session
@@ -3648,7 +3655,7 @@ func (e *mutableStateBuilder) cleanupTransaction(
 }
 
 func (e *mutableStateBuilder) prepareEventsAndReplicationTasks(
-	closeAsActive bool,
+	transactionPolicy transactionPolicy,
 ) ([]*persistence.WorkflowEvents, error) {
 
 	workflowEventsSeq := []*persistence.WorkflowEvents{}
@@ -3672,7 +3679,7 @@ func (e *mutableStateBuilder) prepareEventsAndReplicationTasks(
 	}
 
 	if err := e.validateNoEventsAfterWorkflowFinish(
-		closeAsActive,
+		transactionPolicy,
 		e.hBuilder.history,
 	); err != nil {
 		return nil, err
@@ -3680,17 +3687,17 @@ func (e *mutableStateBuilder) prepareEventsAndReplicationTasks(
 
 	for _, workflowEvents := range workflowEventsSeq {
 		e.insertReplicationTasks = append(e.insertReplicationTasks,
-			e.eventsToReplicationTask(closeAsActive, workflowEvents.Events)...,
+			e.eventsToReplicationTask(transactionPolicy, workflowEvents.Events)...,
 		)
 	}
 
 	e.insertReplicationTasks = append(e.insertReplicationTasks,
-		e.syncActivityToReplicationTask(closeAsActive)...,
+		e.syncActivityToReplicationTask(transactionPolicy)...,
 	)
 
-	if !closeAsActive && len(e.insertReplicationTasks) > 0 {
+	if transactionPolicy == transactionPolicyPassive && len(e.insertReplicationTasks) > 0 {
 		return nil, &workflow.InternalServiceError{
-			Message: "should no generate replication task when close transaction as passive",
+			Message: "should not generate replication task when close transaction as passive",
 		}
 	}
 
@@ -3698,11 +3705,13 @@ func (e *mutableStateBuilder) prepareEventsAndReplicationTasks(
 }
 
 func (e *mutableStateBuilder) eventsToReplicationTask(
-	closeAsActive bool,
+	transactionPolicy transactionPolicy,
 	events []*workflow.HistoryEvent,
 ) []persistence.Task {
 
-	if len(events) == 0 || !e.CanReplicate() || !closeAsActive {
+	if transactionPolicy == transactionPolicyPassive ||
+		!e.canReplicateEvents() ||
+		len(events) == 0 {
 		return emptyTasks
 	}
 
@@ -3731,12 +3740,12 @@ func (e *mutableStateBuilder) eventsToReplicationTask(
 }
 
 func (e *mutableStateBuilder) syncActivityToReplicationTask(
-	closeAsActive bool,
+	transactionPolicy transactionPolicy,
 ) []persistence.Task {
 
-	if !e.CanReplicate() || !closeAsActive {
+	if transactionPolicy == transactionPolicyPassive ||
+		!e.canReplicateEvents() {
 		return emptyTasks
-
 	}
 
 	return convertSyncActivityInfos(
@@ -3745,19 +3754,21 @@ func (e *mutableStateBuilder) syncActivityToReplicationTask(
 	)
 }
 
-func (e *mutableStateBuilder) CanReplicate() bool {
-	return e.GetReplicationState() != nil && e.canReplicate
+func (e *mutableStateBuilder) canReplicateEvents() bool {
+	return e.GetReplicationState() != nil &&
+		e.replicationPolicy == cache.ReplicationPolicyMultiCluster
 }
 
 // validateNoEventsAfterWorkflowFinish perform check on history event batch
 // NOTE: do not apply this check on every batch, since transient
 // decision && workflow finish will be broken (the first batch)
 func (e *mutableStateBuilder) validateNoEventsAfterWorkflowFinish(
-	closeAsActive bool,
+	transactionPolicy transactionPolicy,
 	events []*workflow.HistoryEvent,
 ) error {
 
-	if !closeAsActive || len(events) == 0 {
+	if transactionPolicy == transactionPolicyPassive ||
+		len(events) == 0 {
 		return nil
 	}
 
@@ -3792,11 +3803,12 @@ func (e *mutableStateBuilder) validateNoEventsAfterWorkflowFinish(
 	}
 }
 
-func (e *mutableStateBuilder) closeTransactionCheckActiveness(
-	closeAsActive bool,
+func (e *mutableStateBuilder) closeTransactionWithPolicyCheck(
+	transactionPolicy transactionPolicy,
 ) error {
 
-	if !closeAsActive || e.GetReplicationState() == nil {
+	if transactionPolicy == transactionPolicyPassive ||
+		e.GetReplicationState() == nil {
 		return nil
 	}
 
@@ -3811,10 +3823,12 @@ func (e *mutableStateBuilder) closeTransactionCheckActiveness(
 }
 
 func (e *mutableStateBuilder) closeTransactionHandleDecisionFailover(
-	closeAsActive bool,
+	transactionPolicy transactionPolicy,
 ) error {
 
-	if !closeAsActive || !e.IsWorkflowExecutionRunning() || e.GetReplicationState() == nil {
+	if transactionPolicy == transactionPolicyPassive ||
+		!e.IsWorkflowExecutionRunning() ||
+		e.GetReplicationState() == nil {
 		return nil
 	}
 
@@ -3839,10 +3853,11 @@ func (e *mutableStateBuilder) closeTransactionHandleDecisionFailover(
 }
 
 func (e *mutableStateBuilder) closeTransactionHandleBufferedEventsLimit(
-	closeAsActive bool,
+	transactionPolicy transactionPolicy,
 ) error {
 
-	if !closeAsActive || !e.IsWorkflowExecutionRunning() {
+	if transactionPolicy == transactionPolicyPassive ||
+		!e.IsWorkflowExecutionRunning() {
 		return nil
 	}
 
@@ -3870,10 +3885,11 @@ func (e *mutableStateBuilder) closeTransactionHandleBufferedEventsLimit(
 }
 
 func (e *mutableStateBuilder) closeTransactionHandleWorkflowReset(
-	closeAsActive bool,
+	transactionPolicy transactionPolicy,
 ) error {
 
-	if !closeAsActive || !e.IsWorkflowExecutionRunning() {
+	if transactionPolicy == transactionPolicyPassive ||
+		!e.IsWorkflowExecutionRunning() {
 		return nil
 	}
 

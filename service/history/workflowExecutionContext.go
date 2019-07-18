@@ -92,8 +92,8 @@ type (
 			now time.Time,
 			newContext workflowExecutionContext,
 			newMutableState mutableState,
-			closeCurrentWorkflowAsActive bool,
-			closeNewWorkflowAsActive bool,
+			currentWorkflowTransactionPolicy transactionPolicy,
+			newWorkflowTransactionPolicy *transactionPolicy,
 		) error
 
 		resetMutableState(
@@ -134,7 +134,7 @@ type (
 		metricsClient     metrics.Client
 		timeSource        clock.TimeSource
 
-		locker          locks.Mutex
+		mutex           locks.Mutex
 		msBuilder       mutableState
 		stats           *persistence.ExecutionStats
 		updateCondition int64
@@ -170,7 +170,7 @@ func newWorkflowExecutionContext(
 		logger:            lg,
 		metricsClient:     shard.GetMetricsClient(),
 		timeSource:        shard.GetTimeSource(),
-		locker:            locks.NewMutex(),
+		mutex:             locks.NewMutex(),
 		stats: &persistence.ExecutionStats{
 			HistorySize: 0,
 		},
@@ -178,11 +178,11 @@ func newWorkflowExecutionContext(
 }
 
 func (c *workflowExecutionContextImpl) lock(ctx context.Context) error {
-	return c.locker.Lock(ctx)
+	return c.mutex.Lock(ctx)
 }
 
 func (c *workflowExecutionContextImpl) unlock() {
-	c.locker.Unlock()
+	c.mutex.Unlock()
 }
 
 func (c *workflowExecutionContextImpl) clear() {
@@ -285,7 +285,7 @@ func (c *workflowExecutionContextImpl) updateVersion() error {
 		c.msBuilder.UpdateReplicationStateVersion(domainEntry.GetFailoverVersion(), false)
 
 		// this is a hack, only create replication task if have # target cluster > 1, for more see #868
-		c.msBuilder.UpdateCanReplicate(domainEntry.CanReplicateEvent())
+		c.msBuilder.UpdateReplicationPolicy(domainEntry.GetReplicationPolicy())
 	}
 	return nil
 }
@@ -319,7 +319,14 @@ func (c *workflowExecutionContextImpl) createWorkflowExecution(
 func (c *workflowExecutionContextImpl) updateWorkflowExecutionAsActive(
 	now time.Time,
 ) error {
-	return c.updateWorkflowExecutionWithNew(now, nil, nil, true, true)
+
+	return c.updateWorkflowExecutionWithNew(
+		now,
+		nil,
+		nil,
+		transactionPolicyActive,
+		nil,
+	)
 }
 
 func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNewAsActive(
@@ -327,13 +334,27 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNewAsActive(
 	newContext workflowExecutionContext,
 	newMutableState mutableState,
 ) error {
-	return c.updateWorkflowExecutionWithNew(now, newContext, newMutableState, true, true)
+
+	return c.updateWorkflowExecutionWithNew(
+		now,
+		newContext,
+		newMutableState,
+		transactionPolicyActive,
+		transactionPolicyActive.ptr(),
+	)
 }
 
 func (c *workflowExecutionContextImpl) updateWorkflowExecutionAsPassive(
 	now time.Time,
 ) error {
-	return c.updateWorkflowExecutionWithNew(now, nil, nil, false, false)
+
+	return c.updateWorkflowExecutionWithNew(
+		now,
+		nil,
+		nil,
+		transactionPolicyPassive,
+		nil,
+	)
 }
 
 func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNewAsPassive(
@@ -341,15 +362,22 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNewAsPassive(
 	newContext workflowExecutionContext,
 	newMutableState mutableState,
 ) error {
-	return c.updateWorkflowExecutionWithNew(now, newContext, newMutableState, false, false)
+
+	return c.updateWorkflowExecutionWithNew(
+		now,
+		newContext,
+		newMutableState,
+		transactionPolicyPassive,
+		transactionPolicyPassive.ptr(),
+	)
 }
 
 func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 	now time.Time,
 	newContext workflowExecutionContext,
 	newMutableState mutableState,
-	closeCurrentWorkflowAsActive bool,
-	closeNewWorkflowAsActive bool,
+	currentWorkflowTransactionPolicy transactionPolicy,
+	newWorkflowTransactionPolicy *transactionPolicy,
 ) (retError error) {
 
 	defer func() {
@@ -358,7 +386,7 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 		}
 	}()
 
-	currentWorkflow, workflowEventsSeq, err := c.msBuilder.CloseTransactionAsMutation(now, closeCurrentWorkflowAsActive)
+	currentWorkflow, workflowEventsSeq, err := c.msBuilder.CloseTransactionAsMutation(now, currentWorkflowTransactionPolicy)
 	if err != nil {
 		return err
 	}
@@ -376,14 +404,14 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 	}
 
 	var newWorkflow *persistence.WorkflowSnapshot
-	if newContext != nil && newMutableState != nil {
+	if newContext != nil && newMutableState != nil && newWorkflowTransactionPolicy != nil {
 		defer func() {
 			if retError != nil {
 				newContext.clear()
 			}
 		}()
 
-		newWorkflow, workflowEventsSeq, err = newMutableState.CloseTransactionAsSnapshot(now, closeNewWorkflowAsActive)
+		newWorkflow, workflowEventsSeq, err = newMutableState.CloseTransactionAsSnapshot(now, *newWorkflowTransactionPolicy)
 		if err != nil {
 			return err
 		}
