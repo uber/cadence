@@ -28,6 +28,14 @@ type Info struct {
 	Domain string
 }
 
+// Limiter corresponds to basic rate limiting functionality.
+type Limiter interface {
+	// Allow attempts to allow a request to go through. The method returns
+	// immediately with a true or false indicating if the request can make
+	// progress
+	Allow() bool
+}
+
 // Policy corresponds to a quota policy. A policy allows implementing layered
 // and more complex rate limiting functionality.
 type Policy interface {

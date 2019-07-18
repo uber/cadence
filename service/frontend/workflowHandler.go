@@ -72,7 +72,7 @@ type (
 		tokenSerializer           common.TaskTokenSerializer
 		metricsClient             metrics.Client
 		startWG                   sync.WaitGroup
-		rateLimiter               quotas.Policy
+		rateLimiter               quotas.Limiter
 		config                    *Config
 		blobstoreClient           blobstore.Client
 		versionChecker            *versionChecker
@@ -3312,9 +3312,5 @@ func (wh *WorkflowHandler) isListRequestPageSizeTooLarge(pageSize int32, domain 
 }
 
 func (wh *WorkflowHandler) allow(d domainGetter) bool {
-	domain := ""
-	if d != nil {
-		domain = d.GetDomain()
-	}
-	return wh.rateLimiter.Allow(quotas.Info{Domain: domain})
+	return wh.rateLimiter.Allow()
 }

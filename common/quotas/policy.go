@@ -33,11 +33,11 @@ type simpleRateLimitPolicy struct {
 }
 
 // NewSimpleRateLimiter returns a new simple rate limiter
-func NewSimpleRateLimiter(tb tokenbucket.TokenBucket) Policy {
+func NewSimpleRateLimiter(tb tokenbucket.TokenBucket) Limiter {
 	return &simpleRateLimitPolicy{tb}
 }
 
-func (s *simpleRateLimitPolicy) Allow(info Info) bool {
+func (s *simpleRateLimitPolicy) Allow() bool {
 	ok, _ := s.tb.TryConsume(1)
 	return ok
 }
@@ -69,7 +69,7 @@ func NewMultiStageRateLimiter(rps RPSFunc, domainRps RPSFunc) *MultiStageRateLim
 func (d *MultiStageRateLimiter) Allow(info Info) bool {
 	domain := info.Domain
 	if len(domain) == 0 {
-		return d.globalLimiter.allow()
+		return d.globalLimiter.Allow()
 	}
 
 	// check if we have a per-domain limiter - if not create a default one for
@@ -81,7 +81,7 @@ func (d *MultiStageRateLimiter) Allow(info Info) bool {
 	if !ok {
 		// create a new limiter
 		initialRps := d.domainRPS()
-		domainLimiter := NewRateLimiter(&initialRps, _defaultRPSTTL, 5*int(d.domainRPS()))
+		domainLimiter := NewRateLimiter(&initialRps, _defaultRPSTTL, _burstMultiplier*int(d.domainRPS()))
 
 		// verify that it is needed and add to map
 		d.Lock()
@@ -101,7 +101,7 @@ func (d *MultiStageRateLimiter) Allow(info Info) bool {
 
 	// ensure that the reservation does not break the global rate limit, if it
 	// does, cancel the reservation and do not allow to proceed.
-	if !d.globalLimiter.allow() {
+	if !d.globalLimiter.Allow() {
 		rsv.Cancel()
 		return false
 	}

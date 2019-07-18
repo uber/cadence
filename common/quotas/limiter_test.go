@@ -45,17 +45,17 @@ func TestNewRateLimiter(t *testing.T) {
 }
 
 func BenchmarkSimpleRateLimiter(b *testing.B) {
-	policy := NewSimpleRateLimiter(tokenbucket.New(defaultRps, clock.NewRealTimeSource()))
+	limiter := NewSimpleRateLimiter(tokenbucket.New(defaultRps, clock.NewRealTimeSource()))
 	for n := 0; n < b.N; n++ {
-		policy.Allow(Info{})
+		limiter.Allow()
 	}
 }
 
 func BenchmarkRateLimiter(b *testing.B) {
 	rps := float64(defaultRps)
-	policy := NewRateLimiter(&rps, 2*time.Minute, defaultRps)
+	limiter := NewRateLimiter(&rps, 2*time.Minute, defaultRps)
 	for n := 0; n < b.N; n++ {
-		policy.Allow()
+		limiter.Allow()
 	}
 }
 
