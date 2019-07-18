@@ -40,7 +40,14 @@ import (
 )
 
 type (
-	// ArchiveRequest is request to Archive
+	// ArchiveClientRequest is the archive request sent to the archiver client
+	ClientRequest struct {
+		ArchiveRequest *ArchiveRequest
+		CallerService  string
+		ArchiveInline  bool
+	}
+
+	// ArchiveRequest is the request signal sent to the archiver workflow
 	ArchiveRequest struct {
 		ShardID              int
 		DomainID             string
@@ -56,7 +63,7 @@ type (
 
 	// Client is used to archive workflow histories
 	Client interface {
-		Archive(context.Context, *ArchiveRequest, bool) error
+		Archive(context.Context, *ClientRequest) error
 	}
 
 	client struct {
@@ -70,9 +77,6 @@ type (
 )
 
 const (
-	// CallerServiceKey is the key to the context value which specifies the caller service
-	CallerServiceKey = "callerService"
-
 	tooManyRequestsErrMsg = "Too many requests to archival workflow"
 )
 
@@ -96,42 +100,44 @@ func NewClient(
 }
 
 // Archive starts an archival task
-func (c *client) Archive(ctx context.Context, request *ArchiveRequest, archiveInline bool) error {
+func (c *client) Archive(ctx context.Context, request *ClientRequest) error {
 	c.metricsClient.IncCounter(metrics.ArchiverClientScope, metrics.CadenceRequests)
 
-	taggedLogger := tagLoggerWithRequest(c.logger, *request)
-	if archiveInline {
+	taggedLogger := tagLoggerWithRequest(c.logger, *request.ArchiveRequest).WithTags(
+		tag.ArchivalCallerServiceName(request.CallerService),
+		tag.ArchivalArchiveInline(request.ArchiveInline),
+	)
+	if request.ArchiveInline {
 		var err error
 		defer func() {
 			if err != nil {
 				c.metricsClient.IncCounter(metrics.ArchiverClientScope, metrics.ArchiverClientInlineArchiveFailureCount)
-				taggedLogger.Error("failed to perform workflow history archival inline")
+				taggedLogger.Error("failed to perform workflow history archival inline", tag.Error(err))
 			}
 		}()
 
-		scheme, err := common.GetArchivalScheme(request.URI)
+		scheme, err := common.GetArchivalScheme(request.ArchiveRequest.URI)
 		if err != nil {
 			return err
 		}
 
-		caller := ctx.Value(CallerServiceKey).(string)
-		historyArchiver, err := c.archiverProvider.GetHistoryArchiver(scheme, caller)
+		historyArchiver, err := c.archiverProvider.GetHistoryArchiver(scheme, request.CallerService)
 		if err != nil {
 			return err
 		}
 
 		req := &carchiver.ArchiveHistoryRequest{
-			ShardID:              request.ShardID,
-			DomainID:             request.DomainID,
-			DomainName:           request.DomainName,
-			WorkflowID:           request.WorkflowID,
-			RunID:                request.RunID,
-			EventStoreVersion:    request.EventStoreVersion,
-			BranchToken:          request.BranchToken,
-			NextEventID:          request.NextEventID,
-			CloseFailoverVersion: request.CloseFailoverVersion,
+			ShardID:              request.ArchiveRequest.ShardID,
+			DomainID:             request.ArchiveRequest.DomainID,
+			DomainName:           request.ArchiveRequest.DomainName,
+			WorkflowID:           request.ArchiveRequest.WorkflowID,
+			RunID:                request.ArchiveRequest.RunID,
+			EventStoreVersion:    request.ArchiveRequest.EventStoreVersion,
+			BranchToken:          request.ArchiveRequest.BranchToken,
+			NextEventID:          request.ArchiveRequest.NextEventID,
+			CloseFailoverVersion: request.ArchiveRequest.CloseFailoverVersion,
 		}
-		return historyArchiver.Archive(ctx, request.URI, req)
+		return historyArchiver.Archive(ctx, request.ArchiveRequest.URI, req)
 	}
 
 	if ok, _ := c.rateLimiter.TryConsume(1); !ok {
@@ -148,7 +154,7 @@ func (c *client) Archive(ctx context.Context, request *ArchiveRequest, archiveIn
 		DecisionTaskStartToCloseTimeout: workflowTaskStartToCloseTimeout,
 		WorkflowIDReusePolicy:           cclient.WorkflowIDReusePolicyAllowDuplicate,
 	}
-	_, err := c.cadenceClient.SignalWithStartWorkflow(ctx, workflowID, signalName, *request, workflowOptions, archivalWorkflowFnName, nil)
+	_, err := c.cadenceClient.SignalWithStartWorkflow(ctx, workflowID, signalName, *request.ArchiveRequest, workflowOptions, archivalWorkflowFnName, nil)
 	if err != nil {
 		taggedLogger = taggedLogger.WithTags(tag.WorkflowID(workflowID), tag.Error(err))
 		taggedLogger.Error("failed to send signal to archival system workflow")

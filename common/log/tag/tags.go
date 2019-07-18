@@ -637,6 +637,16 @@ func TokenLastEventVersion(version int64) Tag {
 ///////////////////  Archival tags defined here: archival- ///////////////////
 // archival request tags
 
+// ArchivalCallerServiceName returns tag for the service name calling archival client
+func ArchivalCallerServiceName(callerServiceName string) Tag {
+	return newStringTag("archival-caller-service-name", callerServiceName)
+}
+
+// ArchivalArchiveInline returns tag for whether archival is done inline or a signal is sent
+func ArchivalArchiveInline(archiveInline bool) Tag {
+	return newBoolTag("archival-archive-inline", archiveInline)
+}
+
 // ArchivalRequestDomainID returns tag for RequestDomainID
 func ArchivalRequestDomainID(requestDomainID string) Tag {
 	return newStringTag("archival-request-domain-id", requestDomainID)

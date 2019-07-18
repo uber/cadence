@@ -645,19 +645,22 @@ func (t *timerQueueProcessorBase) archiveWorkflow(task *persistence.TimerTaskInf
 	}
 	archiveInline := executionStats.HistorySize < int64(t.config.TimerProcessorHistoryArchivalSizeLimit())
 	ctx, cancel := context.WithTimeout(context.Background(), t.config.TimerProcessorHistoryArchivalTimeLimit())
-	ctx = context.WithValue(ctx, archiver.CallerServiceKey, common.HistoryServiceName)
 	defer cancel()
-	req := &archiver.ArchiveRequest{
-		ShardID:              t.shard.GetShardID(),
-		DomainID:             task.DomainID,
-		DomainName:           domainCacheEntry.GetInfo().Name,
-		WorkflowID:           task.WorkflowID,
-		RunID:                task.RunID,
-		EventStoreVersion:    msBuilder.GetEventStoreVersion(),
-		BranchToken:          msBuilder.GetCurrentBranch(),
-		NextEventID:          msBuilder.GetNextEventID(),
-		CloseFailoverVersion: msBuilder.GetLastWriteVersion(),
-		URI:                  domainCacheEntry.GetConfig().HistoryArchivalURI,
+	req := &archiver.ClientRequest{
+		Signal: &archiver.ArchiveRequest{
+			ShardID:              t.shard.GetShardID(),
+			DomainID:             task.DomainID,
+			DomainName:           domainCacheEntry.GetInfo().Name,
+			WorkflowID:           task.WorkflowID,
+			RunID:                task.RunID,
+			EventStoreVersion:    msBuilder.GetEventStoreVersion(),
+			BranchToken:          msBuilder.GetCurrentBranch(),
+			NextEventID:          msBuilder.GetNextEventID(),
+			CloseFailoverVersion: msBuilder.GetLastWriteVersion(),
+			URI:                  domainCacheEntry.GetConfig().HistoryArchivalURI,
+		},
+		CallerService: common.HistoryServiceName,
+		ArchiveInline: archiveInline,
 	}
 	if err := t.historyService.archivalClient.Archive(ctx, req, archiveInline); err != nil {
 		return err
