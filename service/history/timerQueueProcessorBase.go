@@ -31,7 +31,6 @@ import (
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	carchiver "github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
@@ -645,64 +644,23 @@ func (t *timerQueueProcessorBase) archiveWorkflow(task *persistence.TimerTaskInf
 		return err
 	}
 	archiveInline := executionStats.HistorySize < int64(t.config.TimerProcessorHistoryArchivalSizeLimit())
-	taggedLogger := t.logger.WithTags(
-		tag.Error(err),
-		tag.WorkflowID(task.WorkflowID),
-		tag.WorkflowRunID(task.RunID),
-		tag.WorkflowDomainID(task.DomainID),
-		tag.ShardID(t.shard.GetShardID()),
-		tag.TaskID(task.GetTaskID()),
-		tag.FailoverVersion(task.GetVersion()),
-		tag.TaskType(task.GetTaskType()),
-	)
-	if !archiveInline {
-		req := &archiver.ArchiveRequest{
-			ShardID:              t.shard.GetShardID(),
-			DomainID:             task.DomainID,
-			DomainName:           domainCacheEntry.GetInfo().Name,
-			WorkflowID:           task.WorkflowID,
-			RunID:                task.RunID,
-			EventStoreVersion:    msBuilder.GetEventStoreVersion(),
-			BranchToken:          msBuilder.GetCurrentBranch(),
-			NextEventID:          msBuilder.GetNextEventID(),
-			CloseFailoverVersion: msBuilder.GetLastWriteVersion(),
-			URI:                  domainCacheEntry.GetConfig().HistoryArchivalURI,
-		}
-
-		// send signal before deleting mutable state to make sure archival is idempotent
-		if err := t.historyService.archivalClient.Archive(req); err != nil {
-			taggedLogger.Error("failed to initiate archival")
-			t.metricsClient.IncCounter(metrics.HistoryProcessDeleteHistoryEventScope, metrics.WorkflowCleanupSendArchiveSignalFailedCount)
-			return err
-		}
-	} else {
-		URI := domainCacheEntry.GetConfig().HistoryArchivalURI
-		scheme, err := common.GetArchivalScheme(URI)
-		if err != nil {
-			return err
-		}
-		historyArchiver, err := t.historyService.archiverProvider.GetHistoryArchiver(scheme, common.HistoryServiceName)
-		if err != nil {
-			return err
-		}
-		req := &carchiver.ArchiveHistoryRequest{
-			ShardID:              t.shard.GetShardID(),
-			DomainID:             task.DomainID,
-			DomainName:           domainCacheEntry.GetInfo().Name,
-			WorkflowID:           task.WorkflowID,
-			RunID:                task.RunID,
-			EventStoreVersion:    msBuilder.GetEventStoreVersion(),
-			BranchToken:          msBuilder.GetCurrentBranch(),
-			NextEventID:          msBuilder.GetNextEventID(),
-			CloseFailoverVersion: msBuilder.GetLastWriteVersion(),
-		}
-		ctxWithTimeout, cancel := context.WithTimeout(context.Background(), t.config.TimerProcessorHistoryArchivalTimeLimit())
-		defer cancel()
-		if err := historyArchiver.Archive(ctxWithTimeout, URI, req); err != nil {
-			t.metricsClient.IncCounter(metrics.HistoryProcessDeleteHistoryEventScope, metrics.WorkflowCleanupArchiveFailedCount)
-			taggedLogger.Error("failed to perform workflow history archival inside timer queue processor")
-			return err
-		}
+	ctx, cancel := context.WithTimeout(context.Background(), t.config.TimerProcessorHistoryArchivalTimeLimit())
+	ctx = context.WithValue(ctx, archiver.CallerServiceKey, common.HistoryServiceName)
+	defer cancel()
+	req := &archiver.ArchiveRequest{
+		ShardID:              t.shard.GetShardID(),
+		DomainID:             task.DomainID,
+		DomainName:           domainCacheEntry.GetInfo().Name,
+		WorkflowID:           task.WorkflowID,
+		RunID:                task.RunID,
+		EventStoreVersion:    msBuilder.GetEventStoreVersion(),
+		BranchToken:          msBuilder.GetCurrentBranch(),
+		NextEventID:          msBuilder.GetNextEventID(),
+		CloseFailoverVersion: msBuilder.GetLastWriteVersion(),
+		URI:                  domainCacheEntry.GetConfig().HistoryArchivalURI,
+	}
+	if err := t.historyService.archivalClient.Archive(ctx, req, archiveInline); err != nil {
+		return err
 	}
 
 	if err := t.deleteCurrentWorkflowExecution(task); err != nil {

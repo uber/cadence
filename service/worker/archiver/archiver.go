@@ -116,7 +116,7 @@ func handleRequest(ctx workflow.Context, logger log.Logger, metricsClient metric
 	uploadSW := metricsClient.StartTimer(metrics.ArchiverScope, metrics.ArchiverUploadWithRetriesLatency)
 	err := workflow.ExecuteActivity(actCtx, uploadHistoryActivityFnName, request).Get(actCtx, nil)
 	if err != nil {
-		logger.Error("failed to upload history, will move on to deleting history without archiving", tag.Error(err))
+		logger.Error("failed to archive history, will move on to deleting history without archiving", tag.Error(err))
 		metricsClient.IncCounter(metrics.ArchiverScope, metrics.ArchiverUploadFailedAllRetriesCount)
 	} else {
 		metricsClient.IncCounter(metrics.ArchiverScope, metrics.ArchiverUploadSuccessCount)

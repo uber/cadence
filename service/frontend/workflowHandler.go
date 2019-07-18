@@ -150,7 +150,7 @@ var (
 func NewWorkflowHandler(sVice service.Service, config *Config, metadataMgr persistence.MetadataManager,
 	historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
 	visibilityMgr persistence.VisibilityManager, kafkaProducer messaging.Producer,
-	archiverProvider provider.ArchiverProvider) *WorkflowHandler {
+	domainCache cache.DomainCache, archiverProvider provider.ArchiverProvider) *WorkflowHandler {
 	handler := &WorkflowHandler{
 		Service:         sVice,
 		config:          config,
@@ -160,7 +160,7 @@ func NewWorkflowHandler(sVice service.Service, config *Config, metadataMgr persi
 		visibilityMgr:   visibilityMgr,
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		metricsClient:   sVice.GetMetricsClient(),
-		domainCache:     cache.NewDomainCache(metadataMgr, sVice.GetClusterMetadata(), sVice.GetMetricsClient(), sVice.GetLogger()),
+		domainCache:     domainCache,
 		rateLimiter:     quotas.NewSimpleRateLimiter(tokenbucket.NewDynamicTokenBucket(config.RPS, clock.NewRealTimeSource())),
 		versionChecker:  &versionChecker{checkVersion: config.EnableClientVersionCheck()},
 		domainHandler: newDomainHandler(

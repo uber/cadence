@@ -26,6 +26,7 @@ import (
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	carchiver "github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/definition"
@@ -261,12 +262,20 @@ func (s *Service) startArchiver(base service.Service, pFactory persistencefactor
 	}
 	domainCache := cache.NewDomainCache(metadataMgr, s.params.ClusterMetadata, s.metricsClient, s.logger)
 	domainCache.Start()
+	historyArchiverBootstrapContainer := &carchiver.HistoryBootstrapContainer{
+		HistoryManager:   historyManager,
+		HistoryV2Manager: historyV2Manager,
+		Logger:           s.logger,
+		MetricsClient:    s.metricsClient,
+		ClusterMetadata:  base.GetClusterMetadata(),
+		DomainCache:      domainCache,
+	}
+	archiverProvider.RegisterBootstrapContainer(common.WorkerServiceName, historyArchiverBootstrapContainer, &carchiver.VisibilityBootstrapContainer{})
 
 	bc := &archiver.BootstrapContainer{
 		PublicClient:     publicClient,
 		MetricsClient:    s.metricsClient,
 		Logger:           s.logger,
-		ClusterMetadata:  base.GetClusterMetadata(),
 		HistoryManager:   historyManager,
 		HistoryV2Manager: historyV2Manager,
 		DomainCache:      domainCache,

@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
+	carchiver "github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -420,9 +421,21 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 
 	dc := dynamicconfig.NewCollection(params.DynamicConfig, c.logger)
 	frontendConfig := frontend.NewConfig(dc, c.historyConfig.NumHistoryShards, c.workerConfig.EnableIndexer)
+	domainCache := cache.NewDomainCache(c.metadataMgr, c.clusterMetadata, c.frontEndService.GetMetricsClient(), c.logger)
+
+	historyArchiverBootstrapContainer := &carchiver.HistoryBootstrapContainer{
+		HistoryManager:   c.historyMgr,
+		HistoryV2Manager: c.historyV2Mgr,
+		Logger:           c.logger,
+		MetricsClient:    c.frontEndService.GetMetricsClient(),
+		ClusterMetadata:  c.clusterMetadata,
+		DomainCache:      domainCache,
+	}
+	c.archiverProvider.RegisterBootstrapContainer(common.FrontendServiceName, historyArchiverBootstrapContainer, &carchiver.VisibilityBootstrapContainer{})
+
 	c.frontendHandler = frontend.NewWorkflowHandler(
 		c.frontEndService, frontendConfig, c.metadataMgr, c.historyMgr, c.historyV2Mgr,
-		c.visibilityMgr, kafkaProducer, c.archiverProvider)
+		c.visibilityMgr, kafkaProducer, domainCache, c.archiverProvider)
 	dcRedirectionHandler := frontend.NewDCRedirectionHandler(c.frontendHandler, params.DCRedirectionPolicy)
 	dcRedirectionHandler.RegisterHandler()
 
@@ -479,9 +492,20 @@ func (c *cadenceImpl) startHistory(hosts map[string][]string, startWG *sync.Wait
 		if hConfig.HistoryCountLimitError != 0 {
 			historyConfig.HistoryCountLimitError = dynamicconfig.GetIntPropertyFilteredByDomain(hConfig.HistoryCountLimitError)
 		}
+		domainCache := cache.NewDomainCache(c.metadataMgr, c.clusterMetadata, service.GetMetricsClient(), c.logger)
+
+		historyArchiverBootstrapContainer := &carchiver.HistoryBootstrapContainer{
+			HistoryManager:   c.historyMgr,
+			HistoryV2Manager: c.historyV2Mgr,
+			Logger:           c.logger,
+			MetricsClient:    service.GetMetricsClient(),
+			ClusterMetadata:  c.clusterMetadata,
+			DomainCache:      domainCache,
+		}
+		c.archiverProvider.RegisterBootstrapContainer(common.HistoryServiceName, historyArchiverBootstrapContainer, &carchiver.VisibilityBootstrapContainer{})
 
 		handler := history.NewHandler(service, historyConfig, c.shardMgr, c.metadataMgr,
-			c.visibilityMgr, c.historyMgr, c.historyV2Mgr, c.executionMgrFactory, params.PublicClient, c.archiverProvider)
+			c.visibilityMgr, c.historyMgr, c.historyV2Mgr, c.executionMgrFactory, domainCache, params.PublicClient, c.archiverProvider)
 		handler.RegisterHandler()
 
 		service.Start()
@@ -606,11 +630,20 @@ func (c *cadenceImpl) startWorkerReplicator(params *service.BootstrapParams, ser
 func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, service service.Service, domainCache cache.DomainCache) {
 	workerConfig := worker.NewConfig(params)
 	workerConfig.ArchiverConfig.ArchiverConcurrency = dynamicconfig.GetIntPropertyFn(10)
+	historyArchiverBootstrapContainer := &carchiver.HistoryBootstrapContainer{
+		HistoryManager:   c.historyMgr,
+		HistoryV2Manager: c.historyV2Mgr,
+		Logger:           c.logger,
+		MetricsClient:    service.GetMetricsClient(),
+		ClusterMetadata:  c.clusterMetadata,
+		DomainCache:      domainCache,
+	}
+	c.archiverProvider.RegisterBootstrapContainer(common.WorkerServiceName, historyArchiverBootstrapContainer, &carchiver.VisibilityBootstrapContainer{})
+
 	bc := &archiver.BootstrapContainer{
 		PublicClient:     params.PublicClient,
 		MetricsClient:    service.GetMetricsClient(),
 		Logger:           c.logger,
-		ClusterMetadata:  c.clusterMetadata,
 		HistoryManager:   c.historyMgr,
 		HistoryV2Manager: c.historyV2Mgr,
 		DomainCache:      domainCache,

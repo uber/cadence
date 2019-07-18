@@ -1359,8 +1359,6 @@ const (
 	WorkflowCronBackoffTimerCount
 	WorkflowCleanupDeleteCount
 	WorkflowCleanupArchiveCount
-	WorkflowCleanupSendArchiveSignalFailedCount
-	WorkflowCleanupArchiveFailedCount
 	WorkflowCleanupNopCount
 	WorkflowSuccessCount
 	WorkflowCancelCount
@@ -1429,6 +1427,8 @@ const (
 	ArchiverPumpedNotEqualHandledCount
 	ArchiverHandleAllRequestsLatency
 	ArchiverWorkflowStoppingCount
+	ArchiverClientSendSignalFailureCount
+	ArchiverClientInlineArchiveFailureCount
 	TaskProcessedCount
 	TaskDeletedCount
 	TaskListProcessedCount
@@ -1606,8 +1606,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		WorkflowCronBackoffTimerCount:                     {metricName: "workflow_cron_backoff_timer", metricType: Counter},
 		WorkflowCleanupDeleteCount:                        {metricName: "workflow_cleanup_delete", metricType: Counter},
 		WorkflowCleanupArchiveCount:                       {metricName: "workflow_cleanup_archive", metricType: Counter},
-		WorkflowCleanupSendArchiveSignalFailedCount:       {metricName: "workflow_cleanup_send_archive_signal_failed", metricType: Counter},
-		WorkflowCleanupArchiveFailedCount:                 {metricName: "workflow_cleanup_archive_failed", metricType: Counter},
 		WorkflowCleanupNopCount:                           {metricName: "workflow_cleanup_nop", metricType: Counter},
 		WorkflowSuccessCount:                              {metricName: "workflow_success", metricType: Counter},
 		WorkflowCancelCount:                               {metricName: "workflow_cancel", metricType: Counter},
@@ -1668,6 +1666,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ArchiverPumpedNotEqualHandledCount:       {metricName: "archiver_pumped_not_equal_handled"},
 		ArchiverHandleAllRequestsLatency:         {metricName: "archiver_handle_all_requests_latency"},
 		ArchiverWorkflowStoppingCount:            {metricName: "archiver_workflow_stopping"},
+		ArchiverClientSendSignalFailureCount:     {metricName: "archiver_client_send_signal_error"},
+		ArchiverClientInlineArchiveFailureCount:  {metricName: "archiver_client_inline_archive_failure"},
 		TaskProcessedCount:                       {metricName: "task_processed", metricType: Gauge},
 		TaskDeletedCount:                         {metricName: "task_deleted", metricType: Gauge},
 		TaskListProcessedCount:                   {metricName: "tasklist_processed", metricType: Gauge},

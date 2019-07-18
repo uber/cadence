@@ -95,8 +95,8 @@ var (
 func NewHandler(sVice service.Service, config *Config, shardManager persistence.ShardManager,
 	metadataMgr persistence.MetadataManager, visibilityMgr persistence.VisibilityManager,
 	historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
-	executionMgrFactory persistence.ExecutionManagerFactory, publicClient workflowserviceclient.Interface,
-	archiverProvider provider.ArchiverProvider) *Handler {
+	executionMgrFactory persistence.ExecutionManagerFactory, domainCache cache.DomainCache,
+	publicClient workflowserviceclient.Interface, archiverProvider provider.ArchiverProvider) *Handler {
 	handler := &Handler{
 		Service:             sVice,
 		config:              config,
@@ -106,6 +106,7 @@ func NewHandler(sVice service.Service, config *Config, shardManager persistence.
 		historyV2Mgr:        historyV2Mgr,
 		visibilityMgr:       visibilityMgr,
 		executionMgrFactory: executionMgrFactory,
+		domainCache:         domainCache,
 		tokenSerializer:     common.NewJSONTaskTokenSerializer(),
 		rateLimiter:         tokenbucket.NewDynamicTokenBucket(config.RPS, clock.NewRealTimeSource()),
 		publicClient:        publicClient,
@@ -154,7 +155,6 @@ func (h *Handler) Start() error {
 		}
 	}
 
-	h.domainCache = cache.NewDomainCache(h.metadataMgr, h.GetClusterMetadata(), h.GetMetricsClient(), h.GetLogger())
 	h.domainCache.Start()
 	h.controller = newShardController(h.Service, h.GetHostInfo(), hServiceResolver, h.shardManager, h.historyMgr, h.historyV2Mgr,
 		h.domainCache, h.executionMgrFactory, h, h.config, h.GetLogger(), h.GetMetricsClient())

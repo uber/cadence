@@ -55,7 +55,6 @@ var (
 
 // uploadHistoryActivity is used to archive a workflow execution history.
 // method will retry all errors except timeout errors and archiver.ErrArchiveNonRetriable.
-// it's the history archiver's responsibility to retry individual operations inside the Archive() method.
 func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err error) {
 	container := ctx.Value(bootstrapContainerKey).(*BootstrapContainer)
 	defer func() {

@@ -27,6 +27,8 @@ import (
 	"math/rand"
 
 	"github.com/uber/cadence/common"
+	carchiver "github.com/uber/cadence/common/archiver"
+	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -54,19 +56,25 @@ type (
 
 	// Client is used to archive workflow histories
 	Client interface {
-		Archive(*ArchiveRequest) error
+		Archive(context.Context, *ArchiveRequest, bool) error
 	}
 
 	client struct {
-		metricsClient metrics.Client
-		logger        log.Logger
-		cadenceClient cclient.Client
-		numWorkflows  dynamicconfig.IntPropertyFn
-		rateLimiter   tokenbucket.TokenBucket
+		metricsClient    metrics.Client
+		logger           log.Logger
+		cadenceClient    cclient.Client
+		numWorkflows     dynamicconfig.IntPropertyFn
+		rateLimiter      tokenbucket.TokenBucket
+		archiverProvider provider.ArchiverProvider
 	}
 )
 
-const tooManyRequestsErrMsg = "Too many requests to archival workflow"
+const (
+	// CallerServiceKey is the key to the context value which specifies the caller service
+	CallerServiceKey = "callerService"
+
+	tooManyRequestsErrMsg = "Too many requests to archival workflow"
+)
 
 // NewClient creates a new Client
 func NewClient(
@@ -75,19 +83,56 @@ func NewClient(
 	publicClient workflowserviceclient.Interface,
 	numWorkflows dynamicconfig.IntPropertyFn,
 	requestRPS dynamicconfig.IntPropertyFn,
+	archiverProvider provider.ArchiverProvider,
 ) Client {
 	return &client{
-		metricsClient: metricsClient,
-		logger:        logger,
-		cadenceClient: cclient.NewClient(publicClient, common.SystemLocalDomainName, &cclient.Options{}),
-		numWorkflows:  numWorkflows,
-		rateLimiter:   tokenbucket.NewDynamicTokenBucket(requestRPS, clock.NewRealTimeSource()),
+		metricsClient:    metricsClient,
+		logger:           logger,
+		cadenceClient:    cclient.NewClient(publicClient, common.SystemLocalDomainName, &cclient.Options{}),
+		numWorkflows:     numWorkflows,
+		rateLimiter:      tokenbucket.NewDynamicTokenBucket(requestRPS, clock.NewRealTimeSource()),
+		archiverProvider: archiverProvider,
 	}
 }
 
 // Archive starts an archival task
-func (c *client) Archive(request *ArchiveRequest) error {
+func (c *client) Archive(ctx context.Context, request *ArchiveRequest, archiveInline bool) error {
 	c.metricsClient.IncCounter(metrics.ArchiverClientScope, metrics.CadenceRequests)
+
+	taggedLogger := tagLoggerWithRequest(c.logger, *request)
+	if archiveInline {
+		var err error
+		defer func() {
+			if err != nil {
+				c.metricsClient.IncCounter(metrics.ArchiverClientScope, metrics.ArchiverClientInlineArchiveFailureCount)
+				taggedLogger.Error("failed to perform workflow history archival inline")
+			}
+		}()
+
+		scheme, err := common.GetArchivalScheme(request.URI)
+		if err != nil {
+			return err
+		}
+
+		caller := ctx.Value(CallerServiceKey).(string)
+		historyArchiver, err := c.archiverProvider.GetHistoryArchiver(scheme, caller)
+		if err != nil {
+			return err
+		}
+
+		req := &carchiver.ArchiveHistoryRequest{
+			ShardID:              request.ShardID,
+			DomainID:             request.DomainID,
+			DomainName:           request.DomainName,
+			WorkflowID:           request.WorkflowID,
+			RunID:                request.RunID,
+			EventStoreVersion:    request.EventStoreVersion,
+			BranchToken:          request.BranchToken,
+			NextEventID:          request.NextEventID,
+			CloseFailoverVersion: request.CloseFailoverVersion,
+		}
+		return historyArchiver.Archive(ctx, request.URI, req)
+	}
 
 	if ok, _ := c.rateLimiter.TryConsume(1); !ok {
 		c.logger.Error(tooManyRequestsErrMsg)
@@ -103,11 +148,12 @@ func (c *client) Archive(request *ArchiveRequest) error {
 		DecisionTaskStartToCloseTimeout: workflowTaskStartToCloseTimeout,
 		WorkflowIDReusePolicy:           cclient.WorkflowIDReusePolicyAllowDuplicate,
 	}
-	_, err := c.cadenceClient.SignalWithStartWorkflow(context.Background(), workflowID, signalName, *request, workflowOptions, archivalWorkflowFnName, nil)
+	_, err := c.cadenceClient.SignalWithStartWorkflow(ctx, workflowID, signalName, *request, workflowOptions, archivalWorkflowFnName, nil)
 	if err != nil {
-		taggedLogger := tagLoggerWithRequest(c.logger, *request).WithTags(tag.WorkflowID(workflowID), tag.Error(err))
+		taggedLogger = taggedLogger.WithTags(tag.WorkflowID(workflowID), tag.Error(err))
 		taggedLogger.Error("failed to send signal to archival system workflow")
-		c.metricsClient.IncCounter(metrics.ArchiverClientScope, metrics.CadenceFailures)
+		c.metricsClient.IncCounter(metrics.ArchiverClientScope, metrics.ArchiverClientSendSignalFailureCount)
+		return err
 	}
-	return err
+	return nil
 }
