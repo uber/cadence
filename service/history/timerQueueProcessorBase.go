@@ -647,7 +647,7 @@ func (t *timerQueueProcessorBase) archiveWorkflow(task *persistence.TimerTaskInf
 	ctx, cancel := context.WithTimeout(context.Background(), t.config.TimerProcessorHistoryArchivalTimeLimit())
 	defer cancel()
 	req := &archiver.ClientRequest{
-		Signal: &archiver.ArchiveRequest{
+		ArchiveRequest: &archiver.ArchiveRequest{
 			ShardID:              t.shard.GetShardID(),
 			DomainID:             task.DomainID,
 			DomainName:           domainCacheEntry.GetInfo().Name,

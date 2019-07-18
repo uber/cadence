@@ -1428,6 +1428,7 @@ const (
 	ArchiverHandleAllRequestsLatency
 	ArchiverWorkflowStoppingCount
 	ArchiverClientSendSignalFailureCount
+	ArchiverClientInlineArchiveAttemptCount
 	ArchiverClientInlineArchiveFailureCount
 	TaskProcessedCount
 	TaskDeletedCount
@@ -1667,6 +1668,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ArchiverHandleAllRequestsLatency:         {metricName: "archiver_handle_all_requests_latency"},
 		ArchiverWorkflowStoppingCount:            {metricName: "archiver_workflow_stopping"},
 		ArchiverClientSendSignalFailureCount:     {metricName: "archiver_client_send_signal_error"},
+		ArchiverClientInlineArchiveAttemptCount:  {metricName: "archiver_client_inline_archive_attempt"},
 		ArchiverClientInlineArchiveFailureCount:  {metricName: "archiver_client_inline_archive_failure"},
 		TaskProcessedCount:                       {metricName: "task_processed", metricType: Gauge},
 		TaskDeletedCount:                         {metricName: "task_deleted", metricType: Gauge},
