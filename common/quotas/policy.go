@@ -22,25 +22,7 @@ package quotas
 
 import (
 	"sync"
-
-	"github.com/uber/cadence/common/tokenbucket"
 )
-
-const domainRps = 400
-
-type simpleRateLimitPolicy struct {
-	tb tokenbucket.TokenBucket
-}
-
-// NewSimpleRateLimiter returns a new simple rate limiter
-func NewSimpleRateLimiter(tb tokenbucket.TokenBucket) Limiter {
-	return &simpleRateLimitPolicy{tb}
-}
-
-func (s *simpleRateLimitPolicy) Allow() bool {
-	ok, _ := s.tb.TryConsume(1)
-	return ok
-}
 
 // MultiStageRateLimiter indicates a domain specific rate limit policy
 type MultiStageRateLimiter struct {

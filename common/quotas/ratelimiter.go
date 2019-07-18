@@ -51,6 +51,13 @@ type RateLimiter struct {
 	minBurst int
 }
 
+// NewSimpleRateLimiter returns a new rate limiter backed by the golang rate
+// limiter
+func NewSimpleRateLimiter(rps int) *RateLimiter {
+	initialRps := float64(rps)
+	return NewRateLimiter(&initialRps, _defaultRPSTTL, _burstMultiplier*rps)
+}
+
 // NewRateLimiter returns a new rate limiter that can handle dynamic
 // configuration updates
 func NewRateLimiter(maxDispatchPerSecond *float64, ttl time.Duration, minBurst int) *RateLimiter {
