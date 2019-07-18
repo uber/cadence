@@ -21,13 +21,11 @@
 package matching
 
 import (
-	"testing"
-
 	"context"
-
 	"math/rand"
-
 	"sync"
+	"sync/atomic"
+	"testing"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -138,7 +136,7 @@ func (t *ForwarderTestSuite) TestForwardTaskMaxOutstanding() {
 	taskInfo := t.newTaskInfo()
 	task := newInternalTask(taskInfo, nil, "", false)
 	go func() {
-		t.NoError(t.fwdr.ForwardTask(context.Background(), task))
+		t.fwdr.ForwardTask(context.Background(), task)
 	}()
 	t.True(common.AwaitWaitGroup(&wg, time.Second))
 	err := t.fwdr.ForwardTask(context.Background(), task)
@@ -278,8 +276,7 @@ func (t *ForwarderTestSuite) TestForwardPollMaxOutstanding() {
 	}).Return(resp, nil).Twice()
 
 	go func() {
-		_, err := t.fwdr.ForwardPoll(context.Background())
-		t.NoError(err)
+		t.fwdr.ForwardPoll(context.Background())
 	}()
 
 	t.True(common.AwaitWaitGroup(&wg, time.Second))
@@ -300,13 +297,13 @@ func (t *ForwarderTestSuite) TestRatelimiting() {
 		t.Run(tc.name, func() {
 			wg := sync.WaitGroup{}
 			startC := make(chan struct{})
-			success := 0
+			var success int32
 			for i := 0; i < 50; i++ {
 				wg.Add(1)
 				go func() {
 					<-startC
 					if tc.token.acquire() {
-						success++
+						atomic.AddInt32(&success, 1)
 						tc.token.release()
 					}
 					wg.Done()
@@ -315,10 +312,10 @@ func (t *ForwarderTestSuite) TestRatelimiting() {
 			close(startC)
 			t.True(common.AwaitWaitGroup(&wg, time.Second))
 			if tc.name == "maxRate" {
-				t.Equal(int(tc.token.rpsFunc()), success)
+				t.Equal(int(tc.token.rpsFunc()), int(success))
 				return
 			}
-			t.True(success >= tc.token.maxOutstanding() && success <= int(tc.token.rpsFunc()))
+			t.True(int(success) >= tc.token.maxOutstanding() && int(success) <= int(tc.token.rpsFunc()))
 		})
 	}
 }
@@ -327,19 +324,19 @@ func (t *ForwarderTestSuite) TestMaxOutstanding() {
 	token := newForwarderToken(func() int { return 1 }, func() float64 { return 10 })
 	token.acquire()
 	wg := sync.WaitGroup{}
-	success := 0
+	var success int32
 	for i := 0; i < 50; i++ {
 		wg.Add(1)
 		go func() {
 			if token.acquire() {
-				success++
+				atomic.AddInt32(&success, 1)
 				token.release()
 			}
 			wg.Done()
 		}()
 	}
 	t.True(common.AwaitWaitGroup(&wg, time.Second))
-	t.Equal(0, success)
+	t.Equal(0, int(success))
 }
 
 func (t *ForwarderTestSuite) usingTasklistPartition(taskType int) {
