@@ -644,7 +644,7 @@ func (e *mutableStateBuilder) shouldBufferEvent(eventType workflow.EventType) bo
 		workflow.EventTypeActivityTaskScheduled,
 		workflow.EventTypeActivityTaskCancelRequested,
 		workflow.EventTypeTimerStarted,
-		// DecisionTypeCancelTimer is an excption. This decision will be mapped
+		// DecisionTypeCancelTimer is an exception. This decision will be mapped
 		// to either workflow.EventTypeTimerCanceled, or workflow.EventTypeCancelTimerFailed.
 		// So both should not be buffered. Ref: historyEngine, search for "workflow.DecisionTypeCancelTimer"
 		workflow.EventTypeTimerCanceled,
