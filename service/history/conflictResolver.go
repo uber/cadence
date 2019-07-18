@@ -161,8 +161,10 @@ func (r *conflictResolverImpl) reset(
 	}
 
 	resetMutableStateBuilder.SetUpdateCondition(updateCondition)
-	// whenever a reset of mutable state is done, we need to sync the workflow search attribute
-	resetMutableStateBuilder.AddTransferTasks(&persistence.UpsertWorkflowSearchAttributesTask{})
+	if r.shard.GetConfig().EnableVisibilityToKafka() {
+		// whenever a reset of mutable state is done, we need to sync the workflow search attribute
+		resetMutableStateBuilder.AddTransferTasks(&persistence.UpsertWorkflowSearchAttributesTask{})
+	}
 
 	r.logger.Info("All events applied for execution.", tag.WorkflowResetNextEventID(resetMutableStateBuilder.GetNextEventID()))
 	msBuilder, err := r.context.conflictResolveWorkflowExecution(

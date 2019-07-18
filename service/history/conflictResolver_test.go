@@ -42,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
@@ -197,6 +198,8 @@ func (s *conflictResolverSuite) TestGetHistory() {
 }
 
 func (s *conflictResolverSuite) TestReset() {
+	s.mockShard.config.EnableVisibilityToKafka = dynamicconfig.GetBoolPropertyFn(true)
+
 	prevRunID := uuid.New()
 	prevLastWriteVersion := int64(123)
 	prevState := persistence.WorkflowStateRunning
