@@ -1152,7 +1152,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 
 				msg := fmt.Sprintf("Workflow execution creation condition failed. WorkflowId: %v, CurrentRunID: %v, columns: (%v)",
 					executionInfo.WorkflowID, executionInfo.RunID, strings.Join(columns, ","))
-				return nil, &p.ConditionFailedError{Msg: msg}
+				return nil, &p.CurrentWorkflowConditionFailedError{Msg: msg}
 			}
 
 			previous = make(map[string]interface{})
