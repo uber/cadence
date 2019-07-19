@@ -55,8 +55,8 @@ var (
 	testDomainStandbyClusterName = cluster.TestAlternativeClusterName
 	testDomainIsGlobalDomain     = true
 	testDomainAllClusters        = []*persistence.ClusterReplicationConfig{
-		&persistence.ClusterReplicationConfig{ClusterName: testDomainActiveClusterName},
-		&persistence.ClusterReplicationConfig{ClusterName: testDomainStandbyClusterName},
+		{ClusterName: testDomainActiveClusterName},
+		{ClusterName: testDomainStandbyClusterName},
 	}
 )
 

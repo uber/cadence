@@ -104,8 +104,8 @@ func (s *transferQueueStandbyProcessorSuite) SetupTest() {
 			ReplicationConfig: &persistence.DomainReplicationConfig{
 				ActiveClusterName: cluster.TestAlternativeClusterName,
 				Clusters: []*persistence.ClusterReplicationConfig{
-					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
-					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestAlternativeClusterName},
+					{ClusterName: cluster.TestCurrentClusterName},
+					{ClusterName: cluster.TestAlternativeClusterName},
 				},
 			},
 			IsGlobalDomain: true,
