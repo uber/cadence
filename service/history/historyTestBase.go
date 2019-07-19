@@ -181,12 +181,12 @@ func (s *TestShardContext) GetEventsCache() eventsCache {
 	return s.eventsCache
 }
 
-// GetEventsCache test implementation
+// GetEngine test implementation
 func (s *TestShardContext) GetEngine() Engine {
 	return s.engine
 }
 
-// GetEventsCache test implementation
+// SetEngine test implementation
 func (s *TestShardContext) SetEngine(engine Engine) {
 	s.engine = engine
 }
