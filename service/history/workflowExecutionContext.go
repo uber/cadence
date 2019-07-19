@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/locks"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -113,6 +114,7 @@ type (
 			baseRunID string,
 			baseRunNextEventID int64,
 		) (retError error)
+		mutableStatePubSub() MutableStatePubSub
 	}
 )
 
@@ -127,10 +129,19 @@ type (
 		metricsClient     metrics.Client
 		timeSource        clock.TimeSource
 
+<<<<<<< HEAD
 		mutex           locks.Mutex
 		msBuilder       mutableState
 		stats           *persistence.ExecutionStats
 		updateCondition int64
+=======
+		locker                locks.Mutex
+		msBuilder             mutableState
+		stats                 *persistence.ExecutionStats
+		updateCondition       int64
+		createReplicationTask bool
+		pubSub                MutableStatePubSub
+>>>>>>> Implement mutable pub-sub
 	}
 )
 
@@ -163,10 +174,15 @@ func newWorkflowExecutionContext(
 		logger:            lg,
 		metricsClient:     shard.GetMetricsClient(),
 		timeSource:        shard.GetTimeSource(),
+<<<<<<< HEAD
 		mutex:             locks.NewMutex(),
 		stats: &persistence.ExecutionStats{
 			HistorySize: 0,
 		},
+=======
+		locker:            locks.NewMutex(),
+		pubSub:            NewMutableStatePubSub(),
+>>>>>>> Implement mutable pub-sub
 	}
 }
 
@@ -500,7 +516,12 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 	c.updateCondition = currentWorkflow.ExecutionInfo.NextEventID
 
 	// for any change in the workflow, send a event
+<<<<<<< HEAD
 	c.engine.NotifyNewHistoryEvent(newHistoryEventNotification(
+=======
+	c.pubSub.Publish(c.msBuilder.CopyToPersistence())
+	_ = c.shard.NotifyNewHistoryEvent(newHistoryEventNotification(
+>>>>>>> Implement mutable pub-sub
 		c.domainID,
 		&c.workflowExecution,
 		c.msBuilder.GetLastFirstEventID(),
@@ -1000,4 +1021,8 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(
 		)
 	}
 	return nil
+}
+
+func (c *workflowExecutionContextImpl) mutableStatePubSub() MutableStatePubSub {
+	return c.pubSub
 }

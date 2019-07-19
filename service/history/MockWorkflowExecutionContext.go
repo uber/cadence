@@ -317,3 +317,18 @@ func (_m *mockWorkflowExecutionContext) persistNonFirstWorkflowEvents(_a0 *persi
 
 	return r0, r1
 }
+
+func (_m *mockWorkflowExecutionContext) mutableStatePubSub() MutableStatePubSub {
+	ret := _m.Called()
+
+	var r0 MutableStatePubSub
+	if rf, ok := ret.Get(0).(func() MutableStatePubSub); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(MutableStatePubSub)
+		}
+	}
+
+	return r0
+}
