@@ -890,6 +890,7 @@ func (b *historyBuilder) newStartChildWorkflowExecutionInitiatedEvent(decisionTa
 	attributes.ExecutionStartToCloseTimeoutSeconds = startAttributes.ExecutionStartToCloseTimeoutSeconds
 	attributes.TaskStartToCloseTimeoutSeconds = startAttributes.TaskStartToCloseTimeoutSeconds
 	attributes.ChildPolicy = startAttributes.ChildPolicy
+	attributes.ParentClosePolicy = startAttributes.ParentClosePolicy
 	attributes.Control = startAttributes.Control
 	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
 	attributes.WorkflowIdReusePolicy = startAttributes.WorkflowIdReusePolicy

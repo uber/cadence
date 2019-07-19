@@ -226,6 +226,12 @@ enum WorkflowExecutionCloseStatus {
   TIMED_OUT,
 }
 
+enum ParentClosePolicy{
+  TERMINATE,
+  ABANDON,
+}
+
+// TODO https://github.com/uber/cadence/issues/2235
 enum ChildPolicy {
   TERMINATE,
   REQUEST_CANCEL,
@@ -433,7 +439,8 @@ struct StartChildWorkflowExecutionDecisionAttributes {
   50: optional binary input
   60: optional i32 executionStartToCloseTimeoutSeconds
   70: optional i32 taskStartToCloseTimeoutSeconds
-  80: optional ChildPolicy childPolicy
+  80: optional ChildPolicy childPolicy 
+  81: optional ParentClosePolicy parentClosePolicy
   90: optional binary control
   100: optional WorkflowIdReusePolicy workflowIdReusePolicy
   110: optional RetryPolicy retryPolicy
@@ -758,6 +765,7 @@ struct StartChildWorkflowExecutionInitiatedEventAttributes {
   60:  optional i32 executionStartToCloseTimeoutSeconds
   70:  optional i32 taskStartToCloseTimeoutSeconds
   80:  optional ChildPolicy childPolicy
+  81:  optional ParentClosePolicy parentClosePolicy
   90:  optional binary control
   100: optional i64 (js.type = "Long") decisionTaskCompletedEventId
   110: optional WorkflowIdReusePolicy workflowIdReusePolicy
