@@ -108,7 +108,10 @@ func (c *client) Archive(ctx context.Context, request *ClientRequest) error {
 		tag.ArchivalArchiveInline(request.ArchiveInline),
 	)
 	if request.ArchiveInline {
-		return c.archiveInline(ctx, request, taggedLogger)
+		if err := c.archiveInline(ctx, request, taggedLogger); err != nil {
+			return c.sendArchiveSignal(ctx, request.ArchiveRequest, taggedLogger)
+		}
+		return nil
 	}
 
 	return c.sendArchiveSignal(ctx, request.ArchiveRequest, taggedLogger)
@@ -119,7 +122,6 @@ func (c *client) archiveInline(ctx context.Context, request *ClientRequest, tagg
 		if err != nil {
 			c.metricsClient.IncCounter(metrics.ArchiverClientScope, metrics.ArchiverClientInlineArchiveFailureCount)
 			taggedLogger.Error("failed to perform workflow history archival inline", tag.Error(err))
-			err = c.sendArchiveSignal(ctx, request.ArchiveRequest, taggedLogger)
 		}
 	}()
 	c.metricsClient.IncCounter(metrics.ArchiverClientScope, metrics.ArchiverClientInlineArchiveAttemptCount)
@@ -162,7 +164,7 @@ func (c *client) sendArchiveSignal(ctx context.Context, request *ArchiveRequest,
 		DecisionTaskStartToCloseTimeout: workflowTaskStartToCloseTimeout,
 		WorkflowIDReusePolicy:           cclient.WorkflowIDReusePolicyAllowDuplicate,
 	}
-	_, err := c.cadenceClient.SignalWithStartWorkflow(ctx, workflowID, signalName, *request, workflowOptions, archivalWorkflowFnName, nil)
+	_, err := c.cadenceClient.SignalWithStartWorkflow(context.Background(), workflowID, signalName, *request, workflowOptions, archivalWorkflowFnName, nil)
 	if err != nil {
 		taggedLogger = taggedLogger.WithTags(tag.WorkflowID(workflowID), tag.Error(err))
 		taggedLogger.Error("failed to send signal to archival system workflow")
