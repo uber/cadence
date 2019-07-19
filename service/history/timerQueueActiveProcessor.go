@@ -333,11 +333,11 @@ ExpireUserTimers:
 }
 
 func (t *timerQueueActiveProcessorImpl) processActivityTimeout(
-	timerTask *persistence.TimerTaskInfo,
+	task *persistence.TimerTaskInfo,
 ) (retError error) {
 
 	context, release, err := t.cache.getOrCreateWorkflowExecutionForBackground(
-		t.timerQueueProcessorBase.getDomainIDAndWorkflowExecution(timerTask),
+		t.timerQueueProcessorBase.getDomainIDAndWorkflowExecution(task),
 	)
 	if err != nil {
 		return err
@@ -346,7 +346,7 @@ func (t *timerQueueActiveProcessorImpl) processActivityTimeout(
 
 	referenceTime := t.now()
 
-	msBuilder, err := loadMutableStateForTimerTask(context, timerTask, t.metricsClient, t.logger)
+	msBuilder, err := loadMutableStateForTimerTask(context, task, t.metricsClient, t.logger)
 	if err != nil {
 		return err
 	} else if msBuilder == nil || !msBuilder.IsWorkflowExecutionRunning() {
@@ -357,14 +357,14 @@ func (t *timerQueueActiveProcessorImpl) processActivityTimeout(
 	var timerTasks []persistence.Task
 	updateHistory := false
 	updateState := false
-	ai, running := msBuilder.GetActivityInfo(timerTask.EventID)
+	ai, running := msBuilder.GetActivityInfo(task.EventID)
 	if running {
 		// If current one is HB task then we may need to create the next heartbeat timer.  Clear the create flag for this
 		// heartbeat timer so we can create it again if needed.
 		// NOTE: When record activity HB comes in we only update last heartbeat timestamp, this is the place
 		// where we create next timer task based on that new updated timestamp.
-		isHeartBeatTask := timerTask.TimeoutType == int(workflow.TimeoutTypeHeartbeat)
-		if isHeartBeatTask && ai.LastHeartbeatTimeoutVisibility <= timerTask.VisibilityTimestamp.Unix() {
+		isHeartBeatTask := task.TimeoutType == int(workflow.TimeoutTypeHeartbeat)
+		if isHeartBeatTask && ai.LastHeartbeatTimeoutVisibility <= task.VisibilityTimestamp.Unix() {
 			ai.TimerTaskStatus = ai.TimerTaskStatus &^ TimerTaskStatusCreatedHeartbeat
 			msBuilder.UpdateActivity(ai)
 			updateState = true
@@ -489,7 +489,9 @@ func (t *timerQueueActiveProcessorImpl) processDecisionTimeout(
 	task *persistence.TimerTaskInfo,
 ) (retError error) {
 
-	context, release, err := t.cache.getOrCreateWorkflowExecutionForBackground(t.timerQueueProcessorBase.getDomainIDAndWorkflowExecution(task))
+	context, release, err := t.cache.getOrCreateWorkflowExecutionForBackground(
+		t.timerQueueProcessorBase.getDomainIDAndWorkflowExecution(task),
+	)
 	if err != nil {
 		return err
 	}
