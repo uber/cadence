@@ -135,7 +135,7 @@ func (s *engine3Suite) SetupTest() {
 		closeCh:                   s.shardClosedCh,
 		config:                    s.config,
 		logger:                    s.logger,
-		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
+		metricsClient:             metricsClient,
 		timeSource:                clock.NewRealTimeSource(),
 	}
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)

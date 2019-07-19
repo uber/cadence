@@ -139,7 +139,7 @@ func (s *engine2Suite) SetupTest() {
 		closeCh:                   s.shardClosedCh,
 		config:                    s.config,
 		logger:                    s.logger,
-		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
+		metricsClient:             metricsClient,
 		eventsCache:               s.mockEventsCache,
 		timeSource:                clock.NewRealTimeSource(),
 	}
