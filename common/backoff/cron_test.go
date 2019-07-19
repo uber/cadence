@@ -71,6 +71,12 @@ func Test_NextCronSchedule(t *testing.T) {
 	backoff = GetBackoffForNextSchedule(cronSpec, now, end)
 	a.Equal(time.Hour*10, backoff)
 
+	now, _ = time.Parse(time.RFC3339, "2018-12-17T00:04:00+00:00")
+	end, _ = time.Parse(time.RFC3339, "2018-12-17T01:02:00+00:00")
+	cronSpec = "*/10 * * * *"
+	backoff = GetBackoffForNextSchedule(cronSpec, now, end)
+	assert.Equal(t, time.Minute*8, backoff)
+
 	// invalid cron spec
 	cronSpec = "invalid-cron-spec"
 	backoff = GetBackoffForNextSchedule(cronSpec, now, now)

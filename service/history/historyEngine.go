@@ -25,7 +25,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -762,15 +761,11 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	// For now execution time will be calculated based on start time and cron schedule/retry policy
 	// each time DescribeWorkflowExecution is called.
 	backoffDuration := time.Duration(0)
-	if executionInfo.HasRetryPolicy && (executionInfo.Attempt > 0) {
-		backoffDuration = time.Duration(float64(executionInfo.InitialInterval)*math.Pow(executionInfo.BackoffCoefficient, float64(executionInfo.Attempt-1))) * time.Second
-	} else if len(executionInfo.CronSchedule) != 0 {
-		startEvent, ok := msBuilder.GetStartEvent()
-		if ok &&
-			startEvent.WorkflowExecutionStartedEventAttributes != nil &&
-			startEvent.WorkflowExecutionStartedEventAttributes.FirstDecisionTaskBackoffSeconds != nil {
-			backoffDuration = time.Duration(*startEvent.WorkflowExecutionStartedEventAttributes.FirstDecisionTaskBackoffSeconds) * time.Second
-		}
+	startEvent, ok := msBuilder.GetStartEvent()
+	if ok &&
+		startEvent.WorkflowExecutionStartedEventAttributes != nil &&
+		startEvent.WorkflowExecutionStartedEventAttributes.FirstDecisionTaskBackoffSeconds != nil {
+		backoffDuration = time.Duration(*startEvent.WorkflowExecutionStartedEventAttributes.FirstDecisionTaskBackoffSeconds) * time.Second
 	}
 	result.WorkflowExecutionInfo.ExecutionTime = common.Int64Ptr(result.WorkflowExecutionInfo.GetStartTime() + backoffDuration.Nanoseconds())
 
