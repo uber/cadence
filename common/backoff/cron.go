@@ -44,7 +44,7 @@ func ValidateSchedule(cronSchedule string) error {
 
 // GetBackoffForNextSchedule calculates the backoff time for the next run given
 // a cronSchedule, workflow start time and workflow close time
-func GetBackoffForNextSchedule(cronSchedule string, startTime time.Time, scheduleAfterTime time.Time) time.Duration {
+func GetBackoffForNextSchedule(cronSchedule string, startTime time.Time, closeTime time.Time) time.Duration {
 	if len(cronSchedule) == 0 {
 		return NoBackoff
 	}
@@ -53,17 +53,13 @@ func GetBackoffForNextSchedule(cronSchedule string, startTime time.Time, schedul
 	if err != nil {
 		return NoBackoff
 	}
-
 	startUTCTime := startTime.In(time.UTC)
-	scheduleAfterUTCTime := scheduleAfterTime.In(time.UTC)
-	if schedule.Next(startUTCTime).Before(scheduleAfterUTCTime) {
-		nextWaitDuration := schedule.Next(startUTCTime).Sub(startUTCTime)
-		startToEndDuration := scheduleAfterUTCTime.Sub(startUTCTime)
-		multiplier := startToEndDuration / nextWaitDuration
-		startUTCTime = startUTCTime.Add(nextWaitDuration * multiplier)
+	closeUTCTime := closeTime.In(time.UTC)
+	//Calculate the next schedule start time which is nearest to the close time
+	for schedule.Next(startUTCTime).Before(closeUTCTime) {
+		startUTCTime = schedule.Next(startUTCTime)
 	}
-
-	backoffInterval := schedule.Next(startUTCTime).Sub(scheduleAfterUTCTime)
+	backoffInterval := schedule.Next(startUTCTime).Sub(closeUTCTime)
 	roundedInterval := time.Second * time.Duration(math.Ceil(backoffInterval.Seconds()))
 	return roundedInterval
 }
