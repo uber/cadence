@@ -49,45 +49,56 @@ type (
 		GetHistoryV2Manager() persistence.HistoryV2Manager
 		GetDomainCache() cache.DomainCache
 		GetClusterMetadata() cluster.Metadata
-		GetNextTransferTaskID() (int64, error)
-		GetTransferTaskIDs(number int) ([]int64, error)
-		GetTransferMaxReadLevel() int64
-		GetTransferAckLevel() int64
-		UpdateTransferAckLevel(ackLevel int64) error
-		GetTransferClusterAckLevel(cluster string) int64
-		UpdateTransferClusterAckLevel(cluster string, ackLevel int64) error
-		GetReplicatorAckLevel() int64
-		UpdateReplicatorAckLevel(ackLevel int64) error
-		GetTimerAckLevel() time.Time
-		UpdateTimerAckLevel(ackLevel time.Time) error
-		GetTimerClusterAckLevel(cluster string) time.Time
-		UpdateTimerClusterAckLevel(cluster string, ackLevel time.Time) error
-		UpdateTransferFailoverLevel(failoverID string, level persistence.TransferFailoverLevel) error
-		DeleteTransferFailoverLevel(failoverID string) error
-		GetAllTransferFailoverLevels() map[string]persistence.TransferFailoverLevel
-		UpdateTimerFailoverLevel(failoverID string, level persistence.TimerFailoverLevel) error
-		DeleteTimerFailoverLevel(failoverID string) error
-		GetAllTimerFailoverLevels() map[string]persistence.TimerFailoverLevel
-		GetDomainNotificationVersion() int64
-		UpdateDomainNotificationVersion(domainNotificationVersion int64) error
-		CreateWorkflowExecution(request *persistence.CreateWorkflowExecutionRequest) (
-			*persistence.CreateWorkflowExecutionResponse, error)
-		UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) (*persistence.UpdateWorkflowExecutionResponse, error)
-		ConflictResolveWorkflowExecution(request *persistence.ConflictResolveWorkflowExecutionRequest) error
-		ResetWorkflowExecution(request *persistence.ResetWorkflowExecutionRequest) error
-		AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) (int, error)
-		AppendHistoryV2Events(request *persistence.AppendHistoryNodesRequest, domainID string, execution shared.WorkflowExecution) (int, error)
-		NotifyNewHistoryEvent(event *historyEventNotification) error
 		GetConfig() *Config
 		GetEventsCache() eventsCache
 		GetLogger() log.Logger
 		GetThrottledLogger() log.Logger
 		GetMetricsClient() metrics.Client
 		GetTimeSource() clock.TimeSource
+
+		GetEngine() Engine
+		SetEngine(Engine)
+
+		GetTransferTaskID() (int64, error)
+		GetTransferTaskIDs(number int) ([]int64, error)
+
+		GetTransferMaxReadLevel() int64
+		UpdateTimerMaxReadLevel(cluster string) time.Time
+
 		SetCurrentTime(cluster string, currentTime time.Time)
 		GetCurrentTime(cluster string) time.Time
 		GetTimerMaxReadLevel(cluster string) time.Time
-		UpdateTimerMaxReadLevel(cluster string) time.Time
+
+		GetTransferAckLevel() int64
+		UpdateTransferAckLevel(ackLevel int64) error
+		GetTransferClusterAckLevel(cluster string) int64
+		UpdateTransferClusterAckLevel(cluster string, ackLevel int64) error
+
+		GetReplicatorAckLevel() int64
+		UpdateReplicatorAckLevel(ackLevel int64) error
+
+		GetTimerAckLevel() time.Time
+		UpdateTimerAckLevel(ackLevel time.Time) error
+		GetTimerClusterAckLevel(cluster string) time.Time
+		UpdateTimerClusterAckLevel(cluster string, ackLevel time.Time) error
+
+		UpdateTransferFailoverLevel(failoverID string, level persistence.TransferFailoverLevel) error
+		DeleteTransferFailoverLevel(failoverID string) error
+		GetAllTransferFailoverLevels() map[string]persistence.TransferFailoverLevel
+
+		UpdateTimerFailoverLevel(failoverID string, level persistence.TimerFailoverLevel) error
+		DeleteTimerFailoverLevel(failoverID string) error
+		GetAllTimerFailoverLevels() map[string]persistence.TimerFailoverLevel
+
+		GetDomainNotificationVersion() int64
+		UpdateDomainNotificationVersion(domainNotificationVersion int64) error
+
+		CreateWorkflowExecution(request *persistence.CreateWorkflowExecutionRequest) (*persistence.CreateWorkflowExecutionResponse, error)
+		UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) (*persistence.UpdateWorkflowExecutionResponse, error)
+		ConflictResolveWorkflowExecution(request *persistence.ConflictResolveWorkflowExecutionRequest) error
+		ResetWorkflowExecution(request *persistence.ResetWorkflowExecutionRequest) error
+		AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) (int, error)
+		AppendHistoryV2Events(request *persistence.AppendHistoryNodesRequest, domainID string, execution shared.WorkflowExecution) (int, error)
 	}
 
 	shardContextImpl struct {
@@ -109,6 +120,7 @@ type (
 		throttledLogger  log.Logger
 		metricsClient    metrics.Client
 		timeSource       clock.TimeSource
+		engine           Engine
 
 		sync.RWMutex
 		lastUpdated               time.Time
@@ -159,7 +171,15 @@ func (s *shardContextImpl) GetClusterMetadata() cluster.Metadata {
 	return s.clusterMetadata
 }
 
-func (s *shardContextImpl) GetNextTransferTaskID() (int64, error) {
+func (s *shardContextImpl) GetEngine() Engine {
+	return s.engine
+}
+
+func (s *shardContextImpl) SetEngine(engine Engine) {
+	s.engine = engine
+}
+
+func (s *shardContextImpl) GetTransferTaskID() (int64, error) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -732,7 +752,7 @@ func (s *shardContextImpl) AppendHistoryV2Events(
 
 	// NOTE: do not use getNextTransferTaskIDLocked since
 	// getNextTransferTaskIDLocked is not guarded by lock
-	transactionID, err := s.GetNextTransferTaskID()
+	transactionID, err := s.GetTransferTaskID()
 	if err != nil {
 		return 0, err
 	}
@@ -773,7 +793,7 @@ func (s *shardContextImpl) AppendHistoryEvents(request *persistence.AppendHistor
 
 	// NOTE: do not use getNextTransferTaskIDLocked since
 	// getNextTransferTaskIDLocked is not guarded by lock
-	transactionID, err := s.GetNextTransferTaskID()
+	transactionID, err := s.GetTransferTaskID()
 	if err != nil {
 		return 0, err
 	}
@@ -820,13 +840,6 @@ func (s *shardContextImpl) AppendHistoryEvents(request *persistence.AppendHistor
 	}
 
 	return size, err0
-}
-
-func (s *shardContextImpl) NotifyNewHistoryEvent(event *historyEventNotification) error {
-	// in theory, this function should call persistence layer, such as
-	// Kafka to actually sent out the notification, here, just make this
-	// function do nothing, to we can actually override this function
-	return nil
 }
 
 func (s *shardContextImpl) GetConfig() *Config {

@@ -3380,20 +3380,12 @@ func (e *mutableStateBuilder) AddTransferTasks(
 	e.insertTransferTasks = append(e.insertTransferTasks, transferTasks...)
 }
 
-func (e *mutableStateBuilder) GetTransferTasks() []persistence.Task {
-	return e.insertTransferTasks
-}
-
 // TODO convert AddTransferTasks to prepareTimerTasks
 func (e *mutableStateBuilder) AddTimerTasks(
 	timerTasks ...persistence.Task,
 ) {
 
 	e.insertTimerTasks = append(e.insertTimerTasks, timerTasks...)
-}
-
-func (e *mutableStateBuilder) GetTimerTasks() []persistence.Task {
-	return e.insertTimerTasks
 }
 
 func (e *mutableStateBuilder) SetUpdateCondition(condition int64) {

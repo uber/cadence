@@ -74,6 +74,7 @@ type (
 		domainCache            cache.DomainCache
 		clusterMetadata        cluster.Metadata
 		eventsCache            eventsCache
+		engine                 Engine
 
 		config                    *Config
 		logger                    log.Logger
@@ -180,8 +181,18 @@ func (s *TestShardContext) GetEventsCache() eventsCache {
 	return s.eventsCache
 }
 
-// GetNextTransferTaskID test implementation
-func (s *TestShardContext) GetNextTransferTaskID() (int64, error) {
+// GetEventsCache test implementation
+func (s *TestShardContext) GetEngine() Engine {
+	return s.engine
+}
+
+// GetEventsCache test implementation
+func (s *TestShardContext) SetEngine(engine Engine) {
+	s.engine = engine
+}
+
+// GetTransferTaskID test implementation
+func (s *TestShardContext) GetTransferTaskID() (int64, error) {
 	return atomic.AddInt64(&s.transferSequenceNumber, 1), nil
 }
 
@@ -189,7 +200,7 @@ func (s *TestShardContext) GetNextTransferTaskID() (int64, error) {
 func (s *TestShardContext) GetTransferTaskIDs(number int) ([]int64, error) {
 	result := []int64{}
 	for i := 0; i < number; i++ {
-		id, err := s.GetNextTransferTaskID()
+		id, err := s.GetTransferTaskID()
 		if err != nil {
 			return nil, err
 		}
@@ -394,7 +405,7 @@ func (s *TestShardContext) UpdateWorkflowExecution(request *persistence.UpdateWo
 				time.Now(), ts, s.timerMaxReadLevelMap[clusterName]), tag.ClusterName(clusterName))
 			task.SetVisibilityTimestamp(s.timerMaxReadLevelMap[clusterName].Add(time.Millisecond))
 		}
-		seqID, err := s.GetNextTransferTaskID()
+		seqID, err := s.GetTransferTaskID()
 		if err != nil {
 			panic(err)
 		}
@@ -449,11 +460,6 @@ func (s *TestShardContext) AppendHistoryV2Events(
 	request.ShardID = common.IntPtr(s.shardID)
 	resp, err := s.historyV2Mgr.AppendHistoryNodes(request)
 	return resp.Size, err
-}
-
-// NotifyNewHistoryEvent test implementation
-func (s *TestShardContext) NotifyNewHistoryEvent(event *historyEventNotification) error {
-	return nil
 }
 
 // GetConfig test implementation

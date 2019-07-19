@@ -126,6 +126,7 @@ type (
 		domainID          string
 		workflowExecution workflow.WorkflowExecution
 		shard             ShardContext
+		engine            Engine
 		clusterMetadata   cluster.Metadata
 		executionManager  persistence.ExecutionManager
 		logger            log.Logger
@@ -163,6 +164,7 @@ func newWorkflowExecutionContext(
 		domainID:          domainID,
 		workflowExecution: execution,
 		shard:             shard,
+		engine:            shard.GetEngine(),
 		clusterMetadata:   shard.GetService().GetClusterMetadata(),
 		executionManager:  executionManager,
 		logger:            lg,
@@ -311,7 +313,16 @@ func (c *workflowExecutionContextImpl) createWorkflowExecution(
 	}
 
 	_, err := c.createWorkflowExecutionWithRetry(createRequest)
-	return err
+	if err != nil {
+		return err
+	}
+
+	c.notifyTasks(
+		newWorkflow.TransferTasks,
+		newWorkflow.ReplicationTasks,
+		newWorkflow.TimerTasks,
+	)
+	return nil
 }
 
 func (c *workflowExecutionContextImpl) conflictResolveWorkflowExecution(
@@ -351,6 +362,12 @@ func (c *workflowExecutionContextImpl) conflictResolveWorkflowExecution(
 	}); err != nil {
 		return nil, err
 	}
+
+	c.notifyTasks(
+		resetWorkflow.TransferTasks,
+		resetWorkflow.ReplicationTasks,
+		resetWorkflow.TimerTasks,
+	)
 
 	c.clear()
 	return c.loadWorkflowExecution()
@@ -490,7 +507,7 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 	c.updateCondition = currentWorkflow.ExecutionInfo.NextEventID
 
 	// for any change in the workflow, send a event
-	_ = c.shard.NotifyNewHistoryEvent(newHistoryEventNotification(
+	c.engine.NotifyNewHistoryEvent(newHistoryEventNotification(
 		c.domainID,
 		&c.workflowExecution,
 		c.msBuilder.GetLastFirstEventID(),
@@ -498,6 +515,22 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 		c.msBuilder.GetPreviousStartedEventID(),
 		c.msBuilder.IsWorkflowExecutionRunning(),
 	))
+
+	// notify current workflow tasks
+	c.notifyTasks(
+		currentWorkflow.TransferTasks,
+		currentWorkflow.ReplicationTasks,
+		currentWorkflow.TimerTasks,
+	)
+
+	// notify new workflow tasks
+	if newWorkflow != nil {
+		c.notifyTasks(
+			newWorkflow.TransferTasks,
+			newWorkflow.ReplicationTasks,
+			newWorkflow.TimerTasks,
+		)
+	}
 
 	// finally emit session stats
 	domainName := c.getDomainName()
@@ -512,19 +545,24 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 		domainName,
 		resp.MutableStateUpdateSessionStats,
 	)
-
 	// emit workflow completion stats if any
 	if currentWorkflow.ExecutionInfo.State == persistence.WorkflowStateCompleted {
 		if event, ok := c.msBuilder.GetCompletionEvent(); ok {
-			emitWorkflowCompletionStats(
-				c.metricsClient,
-				domainName,
-				event,
-			)
+			emitWorkflowCompletionStats(c.metricsClient, domainName, event)
 		}
 	}
 
 	return nil
+}
+
+func (c *workflowExecutionContextImpl) notifyTasks(
+	transferTasks []persistence.Task,
+	replicationTasks []persistence.Task,
+	timerTasks []persistence.Task,
+) {
+	c.engine.NotifyNewTransferTasks(transferTasks)
+	c.engine.NotifyNewReplicationTasks(replicationTasks)
+	c.engine.NotifyNewTimerTasks(timerTasks)
 }
 
 func (c *workflowExecutionContextImpl) mergeContinueAsNewReplicationTasks(
@@ -948,5 +986,25 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(
 		}
 	}
 
-	return c.shard.ResetWorkflowExecution(resetWFReq)
+	err = c.shard.ResetWorkflowExecution(resetWFReq)
+	if err != nil {
+		return err
+	}
+
+	// notify reset workflow tasks
+	c.notifyTasks(
+		resetWorkflow.TransferTasks,
+		resetWorkflow.ReplicationTasks,
+		resetWorkflow.TimerTasks,
+	)
+
+	// notify current workflow tasks
+	if resetWFReq.CurrentWorkflowMutation != nil {
+		c.notifyTasks(
+			resetWFReq.CurrentWorkflowMutation.TransferTasks,
+			resetWFReq.CurrentWorkflowMutation.ReplicationTasks,
+			resetWFReq.CurrentWorkflowMutation.TimerTasks,
+		)
+	}
+	return nil
 }
