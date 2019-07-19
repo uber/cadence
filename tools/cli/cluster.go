@@ -18,33 +18,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package history
+package cli
 
-import (
-	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common/persistence"
-)
+import "github.com/urfave/cli"
 
-type (
-	mutableStateSessionUpdates struct {
-		executionInfo               *persistence.WorkflowExecutionInfo
-		newEventsBuilder            *historyBuilder
-		updateActivityInfos         []*persistence.ActivityInfo
-		deleteActivityInfos         []int64
-		syncActivityTasks           []persistence.Task
-		updateTimerInfos            []*persistence.TimerInfo
-		deleteTimerInfos            []string
-		updateChildExecutionInfos   []*persistence.ChildExecutionInfo
-		deleteChildExecutionInfo    *int64
-		updateCancelExecutionInfos  []*persistence.RequestCancelInfo
-		deleteCancelExecutionInfo   *int64
-		updateSignalInfos           []*persistence.SignalInfo
-		deleteSignalInfo            *int64
-		updateSignalRequestedIDs    []string
-		deleteSignalRequestedID     string
-		continueAsNew               *persistence.WorkflowSnapshot
-		continueAsNewWorkflowEvents *persistence.WorkflowEvents
-		newBufferedEvents           []*workflow.HistoryEvent
-		clearBufferedEvents         bool
+func newClusterCommands() []cli.Command {
+	return []cli.Command{
+		{
+			Name:  "get-search-attr",
+			Usage: "get list of legal search attributes that can be used in list workflow query.",
+			Action: func(c *cli.Context) {
+				GetSearchAttributes(c)
+			},
+		},
 	}
-)
+}

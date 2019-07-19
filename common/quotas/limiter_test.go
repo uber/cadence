@@ -21,6 +21,7 @@
 package quotas
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -31,8 +32,8 @@ import (
 )
 
 const (
+	defaultRps    = 2000
 	defaultDomain = "test"
-	defaultRps    = 1200
 	_minBurst     = 10000
 )
 
@@ -46,7 +47,7 @@ func TestNewRateLimiter(t *testing.T) {
 func BenchmarkSimpleRateLimiter(b *testing.B) {
 	policy := NewSimpleRateLimiter(tokenbucket.New(defaultRps, clock.NewRealTimeSource()))
 	for n := 0; n < b.N; n++ {
-		policy.Allow()
+		policy.Allow(Info{})
 	}
 }
 
@@ -56,4 +57,56 @@ func BenchmarkRateLimiter(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		policy.Allow()
 	}
+}
+
+func BenchmarkMultiStageRateLimiter(b *testing.B) {
+	policy := getPolicy()
+	for n := 0; n < b.N; n++ {
+		policy.Allow(Info{Domain: defaultDomain})
+	}
+}
+
+func BenchmarkMultiStageRateLimiter20Domains(b *testing.B) {
+	numDomains := 20
+	policy := getPolicy()
+	domains := getDomains(numDomains)
+	for n := 0; n < b.N; n++ {
+		policy.Allow(Info{Domain: domains[n%numDomains]})
+	}
+}
+
+func BenchmarkMultiStageRateLimiter100Domains(b *testing.B) {
+	numDomains := 100
+	policy := getPolicy()
+	domains := getDomains(numDomains)
+	for n := 0; n < b.N; n++ {
+		policy.Allow(Info{Domain: domains[n%numDomains]})
+	}
+}
+
+func BenchmarkMultiStageRateLimiter1000Domains(b *testing.B) {
+	numDomains := 1000
+	policy := getPolicy()
+	domains := getDomains(numDomains)
+	for n := 0; n < b.N; n++ {
+		policy.Allow(Info{Domain: domains[n%numDomains]})
+	}
+}
+
+func getPolicy() Policy {
+	return NewMultiStageRateLimiter(
+		func() float64 {
+			return float64(defaultRps)
+		},
+		func() float64 {
+			return float64(defaultRps)
+		},
+	)
+}
+func getDomains(n int) []string {
+	domains := make([]string, n)
+	for i := 0; i < n; i++ {
+		domains = append(domains, fmt.Sprintf("domains%v", i))
+	}
+	return domains
 }

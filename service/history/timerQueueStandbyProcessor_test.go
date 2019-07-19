@@ -208,7 +208,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Pending() 
 	event, timerInfo := addTimerStartedEvent(msBuilder, event.GetEventId(), timerID, int64(timerTimeout.Seconds()))
 	nextEventID := event.GetEventId() + 1
 
-	tBuilder := newTimerBuilder(s.mockShard.GetConfig(), s.logger, clock.NewRealTimeSource())
+	tBuilder := newTimerBuilder(s.logger, clock.NewRealTimeSource())
 	tBuilder.AddUserTimer(timerInfo, msBuilder)
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             version,
@@ -273,7 +273,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Success() 
 	timerTimeout := 2 * time.Second
 	event, timerInfo := addTimerStartedEvent(msBuilder, event.GetEventId(), timerID, int64(timerTimeout.Seconds()))
 
-	tBuilder := newTimerBuilder(s.mockShard.GetConfig(), s.logger, clock.NewRealTimeSource())
+	tBuilder := newTimerBuilder(s.logger, clock.NewRealTimeSource())
 	tBuilder.AddUserTimer(timerInfo, msBuilder)
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             version,
@@ -335,7 +335,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Multiple()
 	timerTimeout2 := 50 * time.Second
 	_, timerInfo2 := addTimerStartedEvent(msBuilder, event.GetEventId(), timerID2, int64(timerTimeout2.Seconds()))
 
-	tBuilder := newTimerBuilder(s.mockShard.GetConfig(), s.logger, clock.NewRealTimeSource())
+	tBuilder := newTimerBuilder(s.logger, clock.NewRealTimeSource())
 	tBuilder.AddUserTimer(timerInfo1, msBuilder)
 	tBuilder.AddUserTimer(timerInfo2, msBuilder)
 
@@ -399,7 +399,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Pending() {
 		int32(timerTimeout.Seconds()), int32(timerTimeout.Seconds()), int32(timerTimeout.Seconds()))
 	nextEventID := scheduledEvent.GetEventId() + 1
 
-	tBuilder := newTimerBuilder(s.mockShard.GetConfig(), s.logger, clock.NewRealTimeSource())
+	tBuilder := newTimerBuilder(s.logger, clock.NewRealTimeSource())
 
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             version,
@@ -469,7 +469,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Success() {
 		int32(timerTimeout.Seconds()), int32(timerTimeout.Seconds()), int32(timerTimeout.Seconds()))
 	startedEvent := addActivityTaskStartedEvent(msBuilder, scheduleEvent.GetEventId(), identity)
 
-	tBuilder := newTimerBuilder(s.mockShard.GetConfig(), s.logger, clock.NewRealTimeSource())
+	tBuilder := newTimerBuilder(s.logger, clock.NewRealTimeSource())
 	_, err = tBuilder.AddStartToCloseActivityTimeout(timerInfo)
 	s.Nil(err)
 
@@ -546,7 +546,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Multiple_Ca
 	activityInfo2.TimerTaskStatus |= TimerTaskStatusCreatedHeartbeat
 	activityInfo2.LastHeartBeatUpdatedTime = time.Now()
 
-	tBuilder := newTimerBuilder(s.mockShard.GetConfig(), s.logger, clock.NewRealTimeSource())
+	tBuilder := newTimerBuilder(s.logger, clock.NewRealTimeSource())
 	_, err = tBuilder.AddStartToCloseActivityTimeout(timerInfo1)
 	s.Nil(err)
 	_, err = tBuilder.AddScheduleToCloseActivityTimeout(timerInfo2)
@@ -669,6 +669,32 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessDecisionTimeout_Pending() {
 	).Return(nil).Once()
 	_, err = s.timerQueueStandbyProcessor.process(timerTask, true)
 	s.Equal(ErrTaskDiscarded, err)
+}
+
+func (s *timerQueueStandbyProcessorSuite) TestProcessDecisionTimeout_ScheduleToStartTimer() {
+
+	execution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr("some random workflow ID"),
+		RunId:      common.StringPtr(uuid.New()),
+	}
+
+	version := int64(4096)
+	decisionScheduleID := int64(16384)
+
+	timerTask := &persistence.TimerTaskInfo{
+		Version:             version,
+		DomainID:            s.domainID,
+		WorkflowID:          execution.GetWorkflowId(),
+		RunID:               execution.GetRunId(),
+		TaskID:              int64(100),
+		TaskType:            persistence.TaskTypeDecisionTimeout,
+		TimeoutType:         int(workflow.TimeoutTypeScheduleToStart),
+		VisibilityTimestamp: time.Now(),
+		EventID:             decisionScheduleID,
+	}
+
+	_, err := s.timerQueueStandbyProcessor.process(timerTask, true)
+	s.Equal(nil, err)
 }
 
 func (s *timerQueueStandbyProcessorSuite) TestProcessDecisionTimeout_Success() {
