@@ -36,10 +36,6 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
-const (
-	secondsInDay = int32(24 * time.Hour / time.Second)
-)
-
 type (
 	workflowExecutionContext interface {
 		getDomainID() string
