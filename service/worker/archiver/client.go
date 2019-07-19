@@ -89,10 +89,10 @@ func NewClient(
 	archiverProvider provider.ArchiverProvider,
 ) Client {
 	return &client{
-		metricsClient:    metricsClient,
-		logger:           logger,
-		cadenceClient:    cclient.NewClient(publicClient, common.SystemLocalDomainName, &cclient.Options{}),
-		numWorkflows:     numWorkflows,
+		metricsClient: metricsClient,
+		logger:        logger,
+		cadenceClient: cclient.NewClient(publicClient, common.SystemLocalDomainName, &cclient.Options{}),
+		numWorkflows:  numWorkflows,
 		rateLimiter: quotas.NewDynamicRateLimiter(
 			func() float64 {
 				return float64(requestRPS())

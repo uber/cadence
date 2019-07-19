@@ -162,7 +162,7 @@ func NewWorkflowHandler(sVice service.Service, config *Config, metadataMgr persi
 		rateLimiter: quotas.NewDynamicRateLimiter(func() float64 {
 			return float64(config.RPS())
 		}),
-		versionChecker:  &versionChecker{checkVersion: config.EnableClientVersionCheck()},
+		versionChecker: &versionChecker{checkVersion: config.EnableClientVersionCheck()},
 		domainHandler: newDomainHandler(
 			config,
 			sVice.GetLogger(),
