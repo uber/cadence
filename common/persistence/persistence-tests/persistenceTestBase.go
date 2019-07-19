@@ -44,7 +44,7 @@ import (
 type (
 	// TransferTaskIDGenerator generates IDs for transfer tasks written by helper methods
 	TransferTaskIDGenerator interface {
-		GetTransferTaskID() (int64, error)
+		GenerateTransferTaskID() (int64, error)
 	}
 
 	// TestBaseOptions options to configure workflow test base.
@@ -1253,7 +1253,7 @@ func (s *TestBase) TearDownWorkflowStore() {
 
 // GetNextSequenceNumber generates a unique sequence number for can be used for transfer queue taskId
 func (s *TestBase) GetNextSequenceNumber() int64 {
-	taskID, _ := s.TaskIDGenerator.GetTransferTaskID()
+	taskID, _ := s.TaskIDGenerator.GenerateTransferTaskID()
 	return taskID
 }
 
@@ -1336,15 +1336,15 @@ func (s *TestBase) validateTimeRange(t time.Time, expectedDuration time.Duration
 }
 
 // GetTransferTaskID helper
-func (g *TestTransferTaskIDGenerator) GetTransferTaskID() (int64, error) {
+func (g *TestTransferTaskIDGenerator) GenerateTransferTaskID() (int64, error) {
 	return atomic.AddInt64(&g.seqNum, 1), nil
 }
 
 // GetTransferTaskIDs helper
-func (g *TestTransferTaskIDGenerator) GetTransferTaskIDs(number int) ([]int64, error) {
+func (g *TestTransferTaskIDGenerator) GenerateTransferTaskIDs(number int) ([]int64, error) {
 	result := []int64{}
 	for i := 0; i < number; i++ {
-		id, err := g.GetTransferTaskID()
+		id, err := g.GenerateTransferTaskID()
 		if err != nil {
 			return nil, err
 		}

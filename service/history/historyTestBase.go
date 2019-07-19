@@ -192,15 +192,15 @@ func (s *TestShardContext) SetEngine(engine Engine) {
 }
 
 // GetTransferTaskID test implementation
-func (s *TestShardContext) GetTransferTaskID() (int64, error) {
+func (s *TestShardContext) GenerateTransferTaskID() (int64, error) {
 	return atomic.AddInt64(&s.transferSequenceNumber, 1), nil
 }
 
 // GetTransferTaskIDs test implementation
-func (s *TestShardContext) GetTransferTaskIDs(number int) ([]int64, error) {
+func (s *TestShardContext) GenerateTransferTaskIDs(number int) ([]int64, error) {
 	result := []int64{}
 	for i := 0; i < number; i++ {
-		id, err := s.GetTransferTaskID()
+		id, err := s.GenerateTransferTaskID()
 		if err != nil {
 			return nil, err
 		}
@@ -405,7 +405,7 @@ func (s *TestShardContext) UpdateWorkflowExecution(request *persistence.UpdateWo
 				time.Now(), ts, s.timerMaxReadLevelMap[clusterName]), tag.ClusterName(clusterName))
 			task.SetVisibilityTimestamp(s.timerMaxReadLevelMap[clusterName].Add(time.Millisecond))
 		}
-		seqID, err := s.GetTransferTaskID()
+		seqID, err := s.GenerateTransferTaskID()
 		if err != nil {
 			panic(err)
 		}

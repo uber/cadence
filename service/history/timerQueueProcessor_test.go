@@ -147,7 +147,7 @@ func (s *timerQueueProcessorSuite) updateTimerSeqNumbers(timerTasks []persistenc
 				time.Now(), ts, s.engineImpl.shard.GetTimerMaxReadLevel(cluster)))
 			task.SetVisibilityTimestamp(s.engineImpl.shard.GetTimerMaxReadLevel(cluster).Add(time.Millisecond))
 		}
-		taskID, err := s.ShardContext.GetTransferTaskID()
+		taskID, err := s.ShardContext.GenerateTransferTaskID()
 		if err != nil {
 			panic(err)
 		}

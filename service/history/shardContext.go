@@ -59,8 +59,8 @@ type (
 		GetEngine() Engine
 		SetEngine(Engine)
 
-		GetTransferTaskID() (int64, error)
-		GetTransferTaskIDs(number int) ([]int64, error)
+		GenerateTransferTaskID() (int64, error)
+		GenerateTransferTaskIDs(number int) ([]int64, error)
 
 		GetTransferMaxReadLevel() int64
 		UpdateTimerMaxReadLevel(cluster string) time.Time
@@ -179,20 +179,20 @@ func (s *shardContextImpl) SetEngine(engine Engine) {
 	s.engine = engine
 }
 
-func (s *shardContextImpl) GetTransferTaskID() (int64, error) {
+func (s *shardContextImpl) GenerateTransferTaskID() (int64, error) {
 	s.Lock()
 	defer s.Unlock()
 
-	return s.getNextTransferTaskIDLocked()
+	return s.generateTransferTaskIDLocked()
 }
 
-func (s *shardContextImpl) GetTransferTaskIDs(number int) ([]int64, error) {
+func (s *shardContextImpl) GenerateTransferTaskIDs(number int) ([]int64, error) {
 	s.Lock()
 	defer s.Unlock()
 
 	result := []int64{}
 	for i := 0; i < number; i++ {
-		id, err := s.getNextTransferTaskIDLocked()
+		id, err := s.generateTransferTaskIDLocked()
 		if err != nil {
 			return nil, err
 		}
@@ -750,9 +750,9 @@ func (s *shardContextImpl) AppendHistoryV2Events(
 		return 0, err
 	}
 
-	// NOTE: do not use getNextTransferTaskIDLocked since
-	// getNextTransferTaskIDLocked is not guarded by lock
-	transactionID, err := s.GetTransferTaskID()
+	// NOTE: do not use generateNextTransferTaskIDLocked since
+	// generateNextTransferTaskIDLocked is not guarded by lock
+	transactionID, err := s.GenerateTransferTaskID()
 	if err != nil {
 		return 0, err
 	}
@@ -791,9 +791,9 @@ func (s *shardContextImpl) AppendHistoryEvents(request *persistence.AppendHistor
 		return 0, err
 	}
 
-	// NOTE: do not use getNextTransferTaskIDLocked since
-	// getNextTransferTaskIDLocked is not guarded by lock
-	transactionID, err := s.GetTransferTaskID()
+	// NOTE: do not use generateNextTransferTaskIDLocked since
+	// generateNextTransferTaskIDLocked is not guarded by lock
+	transactionID, err := s.GenerateTransferTaskID()
 	if err != nil {
 		return 0, err
 	}
@@ -885,7 +885,7 @@ func (s *shardContextImpl) closeShard() {
 	}
 }
 
-func (s *shardContextImpl) getNextTransferTaskIDLocked() (int64, error) {
+func (s *shardContextImpl) generateTransferTaskIDLocked() (int64, error) {
 	if err := s.updateRangeIfNeededLocked(); err != nil {
 		return -1, err
 	}
@@ -1068,7 +1068,7 @@ func (s *shardContextImpl) allocateTransferIDsLocked(
 ) error {
 
 	for _, task := range tasks {
-		id, err := s.getNextTransferTaskIDLocked()
+		id, err := s.generateTransferTaskIDLocked()
 		if err != nil {
 			return err
 		}
@@ -1111,7 +1111,7 @@ func (s *shardContextImpl) allocateTimerIDsLocked(
 			task.SetVisibilityTimestamp(s.timerMaxReadLevelMap[currentCluster].Add(time.Millisecond))
 		}
 
-		seqNum, err := s.getNextTransferTaskIDLocked()
+		seqNum, err := s.generateTransferTaskIDLocked()
 		if err != nil {
 			return err
 		}
