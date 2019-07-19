@@ -203,7 +203,7 @@ func (s *stateBuilderSuite) applyWorkflowExecutionStartedEventTest(cronSchedule 
 
 	expectedTimerTasksLength := 1
 	timeout := now.Add(time.Duration(executionInfo.WorkflowTimeout) * time.Second)
-	backoffDuration := backoff.GetBackoffForNextSchedule(cronSchedule, now)
+	backoffDuration := backoff.GetBackoffForNextSchedule(cronSchedule, now, now)
 	if backoffDuration != backoff.NoBackoff {
 		expectedTimerTasksLength = 2
 		timeout = timeout.Add(backoffDuration)

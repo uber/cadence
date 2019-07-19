@@ -661,7 +661,7 @@ func (b *stateBuilderImpl) scheduleWorkflowTimerTask(event *shared.HistoryEvent,
 	timeout := now.Add(time.Duration(msBuilder.GetExecutionInfo().WorkflowTimeout) * time.Second)
 
 	cronSchedule := b.msBuilder.GetExecutionInfo().CronSchedule
-	cronBackoffDuration := backoff.GetBackoffForNextSchedule(cronSchedule, now)
+	cronBackoffDuration := backoff.GetBackoffForNextSchedule(cronSchedule, now, now)
 	if cronBackoffDuration != backoff.NoBackoff {
 		timeout = timeout.Add(cronBackoffDuration)
 		timerTasks = append(timerTasks, &persistence.WorkflowBackoffTimerTask{
