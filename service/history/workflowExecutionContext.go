@@ -29,7 +29,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/clock"
-	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/locks"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -127,7 +126,6 @@ type (
 		workflowExecution workflow.WorkflowExecution
 		shard             ShardContext
 		engine            Engine
-		clusterMetadata   cluster.Metadata
 		executionManager  persistence.ExecutionManager
 		logger            log.Logger
 		metricsClient     metrics.Client
@@ -165,7 +163,6 @@ func newWorkflowExecutionContext(
 		workflowExecution: execution,
 		shard:             shard,
 		engine:            shard.GetEngine(),
-		clusterMetadata:   shard.GetService().GetClusterMetadata(),
 		executionManager:  executionManager,
 		logger:            lg,
 		metricsClient:     shard.GetMetricsClient(),
