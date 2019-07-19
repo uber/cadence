@@ -802,7 +802,7 @@ func (t *transferQueueActiveProcessorImpl) processStartChildExecution(task *pers
 				},
 				InitiatedId: common.Int64Ptr(initiatedEventID),
 			},
-			FirstDecisionTaskBackoffSeconds: common.Int32Ptr(backoff.GetBackoffForNextScheduleInSeconds(attributes.GetCronSchedule(), t.timeSource.Now())),
+			FirstDecisionTaskBackoffSeconds: common.Int32Ptr(backoff.GetBackoffForNextScheduleInSeconds(attributes.GetCronSchedule(), t.timeSource.Now(), t.timeSource.Now())),
 		}
 
 		var startResponse *workflow.StartWorkflowExecutionResponse

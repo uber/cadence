@@ -70,8 +70,8 @@ func GetBackoffForNextSchedule(cronSchedule string, startTime time.Time, schedul
 
 // GetBackoffForNextScheduleInSeconds calculates the backoff time in seconds for the
 // next run given a cronSchedule and current time
-func GetBackoffForNextScheduleInSeconds(cronSchedule string, nowTime time.Time) int32 {
-	backoffDuration := GetBackoffForNextSchedule(cronSchedule, nowTime, nowTime)
+func GetBackoffForNextScheduleInSeconds(cronSchedule string, startTime time.Time, closeTime time.Time) int32 {
+	backoffDuration := GetBackoffForNextSchedule(cronSchedule, startTime, closeTime)
 	if backoffDuration == NoBackoff {
 		return 0
 	}
