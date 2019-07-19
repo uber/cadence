@@ -128,7 +128,7 @@ func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 		config:                    config,
 		logger:                    s.logger,
 		domainCache:               cache.NewDomainCache(s.mockMetadataMgr, s.mockClusterMetadata, metricsClient, s.logger),
-		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
+		metricsClient:             metricsClient,
 		timerMaxReadLevelMap:      make(map[string]time.Time),
 		standbyClusterCurrentTime: make(map[string]time.Time),
 		timeSource:                clock.NewRealTimeSource(),

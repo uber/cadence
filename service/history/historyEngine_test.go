@@ -134,6 +134,7 @@ func (s *engineSuite) SetupTest() {
 		},
 	)
 	domainCache := cache.NewDomainCache(s.mockMetadataMgr, s.mockClusterMetadata, s.mockMetricClient, s.logger)
+	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	mockShard := &shardContextImpl{
 		service:                   s.mockService,
 		clusterMetadata:           s.mockClusterMetadata,
@@ -148,7 +149,7 @@ func (s *engineSuite) SetupTest() {
 		closeCh:                   s.shardClosedCh,
 		config:                    s.config,
 		logger:                    s.logger,
-		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
+		metricsClient:             metricsClient,
 		timeSource:                clock.NewRealTimeSource(),
 	}
 	s.eventsCache = newEventsCache(mockShard)
@@ -178,7 +179,7 @@ func (s *engineSuite) SetupTest() {
 		historyV2Mgr:         s.mockHistoryV2Mgr,
 		historyCache:         historyCache,
 		logger:               s.logger,
-		metricsClient:        metrics.NewClient(tally.NoopScope, metrics.History),
+		metricsClient:        metricsClient,
 		tokenSerializer:      common.NewJSONTaskTokenSerializer(),
 		historyEventNotifier: historyEventNotifier,
 		config:               NewDynamicConfigForTest(),

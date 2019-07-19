@@ -138,7 +138,7 @@ func (s *transferQueueActiveProcessorSuite) SetupTest() {
 		config:                    NewDynamicConfigForTest(),
 		logger:                    s.logger,
 		domainCache:               cache.NewDomainCache(s.mockMetadataMgr, s.mockClusterMetadata, metricsClient, s.logger),
-		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
+		metricsClient:             metricsClient,
 		timerMaxReadLevelMap:      make(map[string]time.Time),
 		timeSource:                clock.NewRealTimeSource(),
 	}

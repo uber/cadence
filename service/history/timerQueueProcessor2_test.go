@@ -142,7 +142,7 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 		logger:                    s.logger,
 		domainCache:               domainCache,
 		eventsCache:               s.mockEventsCache,
-		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
+		metricsClient:             metricsClient,
 		timerMaxReadLevelMap:      make(map[string]time.Time),
 		timeSource:                clock.NewRealTimeSource(),
 	}

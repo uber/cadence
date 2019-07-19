@@ -112,7 +112,7 @@ func (s *conflictResolverSuite) SetupTest() {
 		config:                    NewDynamicConfigForTest(),
 		logger:                    s.logger,
 		domainCache:               s.mockDomainCache,
-		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
+		metricsClient:             metricsClient,
 		eventsCache:               s.mockEventsCache,
 		timeSource:                clock.NewRealTimeSource(),
 	}
