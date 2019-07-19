@@ -511,7 +511,7 @@ func (_m *MockHistoryEngine) NotifyNewReplicationTasks(tasks []persistence.Task)
 	_m.Called(tasks)
 }
 
-// SyncActivity is mock implementation for SyncActivity of HistoryEngine
+// NotifyNewTimerTasks is mock implementation for SyncActivity of HistoryEngine
 func (_m *MockHistoryEngine) NotifyNewTimerTasks(tasks []persistence.Task) {
 	_m.Called(tasks)
 }
