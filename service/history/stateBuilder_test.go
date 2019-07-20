@@ -172,16 +172,23 @@ func (s *stateBuilderSuite) applyWorkflowExecutionStartedEventTest(cronSchedule 
 
 	now := time.Now()
 	evenType := shared.EventTypeWorkflowExecutionStarted
-	event := &shared.HistoryEvent{
-		Version:   common.Int64Ptr(version),
-		EventId:   common.Int64Ptr(1),
-		Timestamp: common.Int64Ptr(now.UnixNano()),
-		EventType: &evenType,
-		WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
-			ParentWorkflowDomain: common.StringPtr(parentName),
-		},
+	startWorkflowAttribute := &shared.WorkflowExecutionStartedEventAttributes{
+		ParentWorkflowDomain: common.StringPtr(parentName),
 	}
 
+	if len(cronSchedule) > 0 {
+		startWorkflowAttribute.Initiator = shared.ContinueAsNewInitiatorCronSchedule.Ptr()
+		startWorkflowAttribute.FirstDecisionTaskBackoffSeconds = common.Int32Ptr(int32(backoff.GetBackoffForNextSchedule(cronSchedule, now, now).Seconds()))
+	}
+	event := &shared.HistoryEvent{
+		Version:                                 common.Int64Ptr(version),
+		EventId:                                 common.Int64Ptr(1),
+		Timestamp:                               common.Int64Ptr(now.UnixNano()),
+		EventType:                               &evenType,
+		WorkflowExecutionStartedEventAttributes: startWorkflowAttribute,
+	}
+
+	s.mockMutableState.On("GetStartEvent").Return(event, true)
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: domainID}).Return(
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
@@ -511,7 +518,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 			Attempt:                    common.Int64Ptr(newRunDecisionAttempt),
 		},
 	}
-
+	s.mockMutableState.On("GetStartEvent").Return(newRunStartedEvent, true)
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: domainID}).Return(
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID, Name: domainName},
@@ -567,6 +574,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 	newRunHistory := &shared.History{Events: []*shared.HistoryEvent{newRunStartedEvent, newRunSignalEvent, newRunDecisionEvent}}
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Twice()
+	s.mockEventsCache.On("getEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(newRunStartedEvent, nil)
 	_, _, newRunStateBuilder, err := s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(continueAsNewEvent), newRunHistory.Events, 0, 0)
 	s.Nil(err)
 	expectedNewRunStateBuilder := newMutableStateBuilderWithReplicationState(
@@ -895,7 +903,8 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 
 	newRunHistory := &shared.History{Events: []*shared.HistoryEvent{newRunStartedEvent, newRunSignalEvent, newRunDecisionEvent}}
 	s.mockMutableState.On("ClearStickyness").Once()
-	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Times(2)
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Twice()
+	s.mockEventsCache.On("getEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(newRunStartedEvent, nil)
 	_, _, newRunStateBuilder, err := s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(continueAsNewEvent), newRunHistory.Events,
 		0, persistence.EventStoreVersionV2)
 	s.Nil(err)
