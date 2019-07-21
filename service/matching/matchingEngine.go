@@ -108,6 +108,7 @@ func NewEngine(taskManager persistence.TaskManager,
 		taskLists:       make(map[taskListID]taskListManager),
 		logger:          logger.WithTags(tag.ComponentMatchingEngine),
 		metricsClient:   metricsClient,
+		matchingClient:  matchingClient,
 		config:          config,
 		queryTaskMap:    make(map[string]chan *queryResult),
 		domainCache:     domainCache,
@@ -308,6 +309,8 @@ pollLoop:
 			return nil, err
 		}
 
+		e.emitForwardedFromStats(metrics.MatchingPollForDecisionTaskScope, task.isForwarded(), req.GetForwardedFrom())
+
 		if task.isStarted() {
 			// tasks received from remote are already started. So, simply forward the response
 			return task.pollForDecisionResponse(), nil
@@ -414,6 +417,8 @@ pollLoop:
 			}
 			return nil, err
 		}
+
+		e.emitForwardedFromStats(metrics.MatchingPollForActivityTaskScope, task.isForwarded(), req.GetForwardedFrom())
 
 		if task.isStarted() {
 			// tasks received from remote are already started. So, simply forward the response
@@ -764,6 +769,16 @@ func (e *matchingEngineImpl) recordActivityTaskStarted(
 	return resp, err
 }
 
-func workflowExecutionPtr(execution workflow.WorkflowExecution) *workflow.WorkflowExecution {
-	return &execution
+func (e *matchingEngineImpl) emitForwardedFromStats(scope int, isTaskForwarded bool, pollForwardedFrom string) {
+	isPollForwarded := len(pollForwardedFrom) > 0
+	switch {
+	case isTaskForwarded && isPollForwarded:
+		e.metricsClient.IncCounter(scope, metrics.RemoteToRemoteMatchCounter)
+	case isTaskForwarded:
+		e.metricsClient.IncCounter(scope, metrics.RemoteToLocalMatchCounter)
+	case isPollForwarded:
+		e.metricsClient.IncCounter(scope, metrics.LocalToRemoteMatchCounter)
+	default:
+		e.metricsClient.IncCounter(scope, metrics.LocalToLocalMatchCounter)
+	}
 }

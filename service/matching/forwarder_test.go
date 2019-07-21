@@ -109,38 +109,13 @@ func (t *ForwarderTestSuite) TestForwardActivityTask() {
 	t.NotNil(request)
 	t.Equal(t.taskList.Parent(20), request.TaskList.GetName())
 	t.Equal(t.fwdr.taskListKind, request.TaskList.GetKind())
-	t.Equal(taskInfo.DomainID, request.GetDomainUUID())
+	t.Equal(t.taskList.domainID, request.GetDomainUUID())
+	t.Equal(taskInfo.DomainID, request.GetSourceDomainUUID())
 	t.Equal(taskInfo.WorkflowID, request.GetExecution().GetWorkflowId())
 	t.Equal(taskInfo.RunID, request.GetExecution().GetRunId())
 	t.Equal(taskInfo.ScheduleID, request.GetScheduleId())
 	t.Equal(taskInfo.ScheduleToStartTimeout, request.GetScheduleToStartTimeoutSeconds())
 	t.Equal(t.taskList.name, request.GetForwardedFrom())
-}
-
-func (t *ForwarderTestSuite) TestForwardTaskMaxOutstanding() {
-	t.usingTasklistPartition(persistence.TaskListTypeActivity)
-
-	count := 0
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	t.client.On("AddActivityTask", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
-		count++
-		if count == 1 {
-			wg.Done()
-			time.Sleep(time.Millisecond * 500)
-		}
-	}).Return(nil).Twice()
-
-	taskInfo := t.newTaskInfo()
-	task := newInternalTask(taskInfo, nil, "", false)
-	go func() {
-		t.fwdr.ForwardTask(context.Background(), task)
-	}()
-	t.True(common.AwaitWaitGroup(&wg, time.Second))
-	err := t.fwdr.ForwardTask(context.Background(), task)
-	t.Equal(errForwarderRateLimit, err)
 }
 
 func (t *ForwarderTestSuite) TestForwardTaskRateExceeded() {
@@ -153,7 +128,7 @@ func (t *ForwarderTestSuite) TestForwardTaskRateExceeded() {
 	for i := 0; i < rps; i++ {
 		t.NoError(t.fwdr.ForwardTask(context.Background(), task))
 	}
-	t.Equal(errForwarderRateLimit, t.fwdr.ForwardTask(context.Background(), task))
+	t.Equal(errForwarderSlowDown, t.fwdr.ForwardTask(context.Background(), task))
 }
 
 func (t *ForwarderTestSuite) TestForwardQueryTaskError() {
@@ -183,7 +158,7 @@ func (t *ForwarderTestSuite) TestForwardQueryTask() {
 	t.True(resp == gotResp)
 }
 
-func (t *ForwarderTestSuite) TestForwardQueryTaskRateExceeded() {
+func (t *ForwarderTestSuite) TestForwardQueryTaskRateNotEnforced() {
 	t.usingTasklistPartition(persistence.TaskListTypeActivity)
 	task := newInternalQueryTask("id1", &gen.QueryWorkflowRequest{})
 	resp := &shared.QueryWorkflowResponse{}
@@ -194,7 +169,7 @@ func (t *ForwarderTestSuite) TestForwardQueryTaskRateExceeded() {
 		t.NoError(err)
 	}
 	_, err := t.fwdr.ForwardQueryTask(context.Background(), task)
-	t.Equal(errForwarderRateLimit, err)
+	t.NoError(err) // no rateliming should be enforced for query task
 }
 
 func (t *ForwarderTestSuite) TestForwardPollError() {
@@ -260,83 +235,84 @@ func (t *ForwarderTestSuite) TestForwardPollForActivity() {
 	t.Nil(task.pollForDecisionResponse())
 }
 
-func (t *ForwarderTestSuite) TestForwardPollMaxOutstanding() {
-	t.usingTasklistPartition(persistence.TaskListTypeActivity)
-
-	count := 0
-	resp := &shared.PollForActivityTaskResponse{}
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	t.client.On("PollForActivityTask", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
-		count++
-		if count == 1 {
-			wg.Done()
-			time.Sleep(time.Millisecond * 500)
-		}
-	}).Return(resp, nil).Twice()
-
-	go func() {
-		t.fwdr.ForwardPoll(context.Background())
-	}()
-
-	t.True(common.AwaitWaitGroup(&wg, time.Second))
-	_, err := t.fwdr.ForwardPoll(context.Background())
-	t.Equal(errForwarderRateLimit, err)
-}
-
-func (t *ForwarderTestSuite) TestRatelimiting() {
+func (t *ForwarderTestSuite) TestMaxOutstandingConcurrency() {
+	concurrency := 50
 	testCases := []struct {
-		name  string
-		token forwarderToken
+		name          string
+		mustLeakToken bool
+		output        int32
 	}{
-		{"maxRate", newForwarderToken(func() int { return 50 }, func() float64 { return 10 })},
-		{"maxOutstanding", newForwarderToken(func() int { return 1 }, func() float64 { return 10 })},
+		{"contention", false, int32(concurrency)},
+		{"token_leak", true, 1},
 	}
 
+	var adds int32
+	var polls int32
+	var wg sync.WaitGroup
+
 	for _, tc := range testCases {
+		adds = 0
+		polls = 0
 		t.Run(tc.name, func() {
-			wg := sync.WaitGroup{}
-			startC := make(chan struct{})
-			var success int32
-			for i := 0; i < 50; i++ {
+			for i := 0; i < concurrency; i++ {
 				wg.Add(1)
 				go func() {
-					<-startC
-					if tc.token.acquire() {
-						atomic.AddInt32(&success, 1)
-						tc.token.release()
+					select {
+					case token := <-t.fwdr.AddReqTokenC():
+						if !tc.mustLeakToken {
+							token.release()
+						}
+						atomic.AddInt32(&adds, 1)
+					case <-time.After(time.Millisecond * 200):
+						break
+					}
+
+					select {
+					case token := <-t.fwdr.PollReqTokenC():
+						if !tc.mustLeakToken {
+							token.release()
+						}
+						atomic.AddInt32(&polls, 1)
+					case <-time.After(time.Millisecond * 200):
+						break
 					}
 					wg.Done()
 				}()
 			}
-			close(startC)
 			t.True(common.AwaitWaitGroup(&wg, time.Second))
-			if tc.name == "maxRate" {
-				t.Equal(int(tc.token.rpsFunc()), int(success))
-				return
-			}
-			t.True(int(success) >= tc.token.maxOutstanding() && int(success) <= int(tc.token.rpsFunc()))
+			t.Equal(tc.output, adds)
+			t.Equal(tc.output, polls)
 		})
 	}
 }
 
-func (t *ForwarderTestSuite) TestMaxOutstanding() {
-	token := newForwarderToken(func() int { return 1 }, func() float64 { return 10 })
-	token.acquire()
-	wg := sync.WaitGroup{}
-	var success int32
-	for i := 0; i < 50; i++ {
-		wg.Add(1)
+func (t *ForwarderTestSuite) TestMaxOutstandingConfigUpdate() {
+	maxOutstandingTasks := int32(1)
+	maxOutstandingPolls := int32(1)
+	t.fwdr.cfg.ForwarderMaxOutstandingTasks = func() int { return int(atomic.LoadInt32(&maxOutstandingTasks)) }
+	t.fwdr.cfg.ForwarderMaxOutstandingPolls = func() int { return int(atomic.LoadInt32(&maxOutstandingPolls)) }
+
+	startC := make(chan struct{})
+	doneWG := sync.WaitGroup{}
+	for i := 0; i < 10; i++ {
+		doneWG.Add(1)
 		go func() {
-			if token.acquire() {
-				atomic.AddInt32(&success, 1)
-				token.release()
-			}
-			wg.Done()
+			<-startC
+			token1 := <-t.fwdr.AddReqTokenC()
+			token1.release()
+			token2 := <-t.fwdr.PollReqTokenC()
+			token2.release()
+			doneWG.Done()
 		}()
 	}
-	t.True(common.AwaitWaitGroup(&wg, time.Second))
-	t.Equal(0, int(success))
+
+	maxOutstandingTasks = 10
+	maxOutstandingPolls = 10
+	close(startC)
+	t.True(common.AwaitWaitGroup(&doneWG, time.Second))
+
+	t.Equal(10, cap(t.fwdr.addReqToken.Load().(*ForwarderReqToken).ch))
+	t.Equal(10, cap(t.fwdr.pollReqToken.Load().(*ForwarderReqToken).ch))
 }
 
 func (t *ForwarderTestSuite) usingTasklistPartition(taskType int) {

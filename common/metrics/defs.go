@@ -1412,6 +1412,10 @@ const (
 	ForwardPollCalls
 	ForwardPollErrors
 	ForwardPollLatency
+	LocalToLocalMatchCounter
+	LocalToRemoteMatchCounter
+	RemoteToLocalMatchCounter
+	RemoteToRemoteMatchCounter
 
 	NumMatchingMetrics
 )
@@ -1677,6 +1681,10 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ForwardTaskLatency:            {metricName: "forward_task_latency"},
 		ForwardQueryLatency:           {metricName: "forward_query_latency"},
 		ForwardPollLatency:            {metricName: "forward_poll_latency"},
+		LocalToLocalMatchCounter:      {metricName: "local_to_local_matches"},
+		LocalToRemoteMatchCounter:     {metricName: "local_to_remote_matches"},
+		RemoteToLocalMatchCounter:     {metricName: "remote_to_local_matches"},
+		RemoteToRemoteMatchCounter:    {metricName: "remote_to_remote_matches"},
 	},
 	Worker: {
 		ReplicatorMessages:                       {metricName: "replicator_messages"},

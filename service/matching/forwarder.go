@@ -41,31 +41,50 @@ type (
 		taskListID   *taskListID
 		taskListKind shared.TaskListKind
 		client       matching.Client
-		taskToken    forwarderToken
-		pollToken    forwarderToken
-		scope        struct {
+
+		// token channels that vend tokens necessary to make
+		// API calls exposed by forwarder. Tokens are used
+		// to enforce maxOutstanding forwarded calls from this
+		// instance. And channels are used so that the caller
+		// can use them in a select{} block along with other
+		// conditions
+		addReqToken  atomic.Value
+		pollReqToken atomic.Value
+
+		// cached values of maxOutstanding dynamic config values.
+		// these are used to detect changes
+		outstandingTasksLimit int32
+		outstandingPollsLimit int32
+
+		// todo: implement a dynamic rate limiter that automatically
+		// adjusts rate based on ServiceBusy errors from API calls
+		limiter *quotas.RateLimiter
+
+		// cached metric scopes for API calls
+		scope struct {
 			forwardTask  metrics.Scope
 			forwardQuery metrics.Scope
 			forwardPoll  metrics.Scope
 		}
 		scopeFunc func() metrics.Scope
 	}
-	// forwarderToken contains the state related to rate limiting
-	// of forwarded calls
-	forwarderToken struct {
-		nOutstanding   int32
-		maxOutstanding func() int
-		rpsFunc        func() float64
-		limiter        *quotas.RateLimiter
+	// ForwarderReqToken is the token that must be acquired before
+	// making forwarder API calls. This type contains the state
+	// for the token itself
+	ForwarderReqToken struct {
+		ch chan *ForwarderReqToken
 	}
 )
 
 var (
-	errForwarderRateLimit  = errors.New("limit exceeded")
 	errNoParent            = errors.New("cannot find parent task list for forwarding")
 	errTaskListKind        = errors.New("forwarding is not supported on sticky task list")
 	errInvalidTaskListType = errors.New("unrecognized task list type")
+	errForwarderSlowDown   = errors.New("limit exceeded")
 )
+
+// noopForwarderTokenC refers to a token channel that blocks forever
+var noopForwarderTokenC <-chan *ForwarderReqToken = make(chan *ForwarderReqToken)
 
 // newForwarder returns an instance of Forwarder object which
 // can be used to forward api request calls from a task list
@@ -75,7 +94,7 @@ var (
 // Returns following errors:
 //  - errNoParent: If this task list doesn't have a parent to forward to
 //  - errTaskListKind: If the task list is a sticky task list. Sticky task lists are never partitioned
-//  - errForwarderRateLimit: When the rate limit is exceeded
+//  - errForwarderSlowDown: When the rate limit is exceeded
 //  - errInvalidTaskType: If the task list type is invalid
 func newForwarder(
 	cfg *forwarderConfig,
@@ -84,16 +103,20 @@ func newForwarder(
 	client matching.Client,
 	scopeFunc func() metrics.Scope,
 ) *Forwarder {
-	rps := func() float64 { return float64(cfg.ForwarderMaxRatePerSecond()) }
-	return &Forwarder{
-		cfg:          cfg,
-		client:       client,
-		taskListID:   taskListID,
-		taskListKind: kind,
-		taskToken:    newForwarderToken(cfg.ForwarderMaxOutstandingTasks, rps),
-		pollToken:    newForwarderToken(cfg.ForwarderMaxOutstandingPolls, nil),
-		scopeFunc:    scopeFunc,
+	rps := float64(cfg.ForwarderMaxRatePerSecond())
+	fwdr := &Forwarder{
+		cfg:                   cfg,
+		client:                client,
+		taskListID:            taskListID,
+		taskListKind:          kind,
+		outstandingTasksLimit: int32(cfg.ForwarderMaxOutstandingTasks()),
+		outstandingPollsLimit: int32(cfg.ForwarderMaxOutstandingPolls()),
+		limiter:               quotas.NewRateLimiter(&rps, _defaultTaskDispatchRPSTTL, 1),
+		scopeFunc:             scopeFunc,
 	}
+	fwdr.addReqToken.Store(newForwarderReqToken(cfg.ForwarderMaxOutstandingTasks()))
+	fwdr.pollReqToken.Store(newForwarderReqToken(cfg.ForwarderMaxOutstandingPolls()))
+	return fwdr
 }
 
 // ForwardTask forwards an activity or decision task to the parent task list partition if it exist
@@ -107,16 +130,15 @@ func (fwdr *Forwarder) ForwardTask(ctx context.Context, task *internalTask) erro
 		return errNoParent
 	}
 
-	release, err := fwdr.acquireToken(
-		&fwdr.taskToken, metrics.ForwardTaskCalls, metrics.ForwardTaskErrors, metrics.ForwardTaskLatency)
-	if err != nil {
-		return err
+	if !fwdr.rateLimit() {
+		return errForwarderSlowDown
 	}
-	defer release()
+
+	var err error
 
 	switch fwdr.taskListID.taskType {
 	case persistence.TaskListTypeDecision:
-		return fwdr.client.AddDecisionTask(ctx, &gen.AddDecisionTaskRequest{
+		err = fwdr.client.AddDecisionTask(ctx, &gen.AddDecisionTaskRequest{
 			DomainUUID: &task.event.DomainID,
 			Execution:  task.workflowExecution(),
 			TaskList: &shared.TaskList{
@@ -128,9 +150,10 @@ func (fwdr *Forwarder) ForwardTask(ctx context.Context, task *internalTask) erro
 			ForwardedFrom:                 &fwdr.taskListID.name,
 		})
 	case persistence.TaskListTypeActivity:
-		return fwdr.client.AddActivityTask(ctx, &gen.AddActivityTaskRequest{
-			DomainUUID: &task.event.DomainID,
-			Execution:  task.workflowExecution(),
+		err = fwdr.client.AddActivityTask(ctx, &gen.AddActivityTaskRequest{
+			DomainUUID:       &fwdr.taskListID.domainID,
+			SourceDomainUUID: &task.event.DomainID,
+			Execution:        task.workflowExecution(),
 			TaskList: &shared.TaskList{
 				Name: &name,
 				Kind: &fwdr.taskListKind,
@@ -139,8 +162,11 @@ func (fwdr *Forwarder) ForwardTask(ctx context.Context, task *internalTask) erro
 			ScheduleToStartTimeoutSeconds: &task.event.ScheduleToStartTimeout,
 			ForwardedFrom:                 &fwdr.taskListID.name,
 		})
+	default:
+		return errInvalidTaskListType
 	}
-	return errInvalidTaskListType
+
+	return fwdr.handleErr(err)
 }
 
 // ForwardQueryTask forwards a query task to parent task list partition, if it exist
@@ -158,14 +184,7 @@ func (fwdr *Forwarder) ForwardQueryTask(
 		return nil, errNoParent
 	}
 
-	release, err := fwdr.acquireToken(
-		&fwdr.taskToken, metrics.ForwardQueryCalls, metrics.ForwardQueryErrors, metrics.ForwardQueryLatency)
-	if err != nil {
-		return nil, err
-	}
-	defer release()
-
-	return fwdr.client.QueryWorkflow(ctx, &gen.QueryWorkflowRequest{
+	resp, err := fwdr.client.QueryWorkflow(ctx, &gen.QueryWorkflowRequest{
 		DomainUUID: task.query.request.DomainUUID,
 		TaskList: &shared.TaskList{
 			Name: &name,
@@ -174,6 +193,8 @@ func (fwdr *Forwarder) ForwardQueryTask(
 		QueryRequest:  task.query.request.QueryRequest,
 		ForwardedFrom: &fwdr.taskListID.name,
 	})
+
+	return resp, fwdr.handleErr(err)
 }
 
 // ForwardPoll forwards a poll request to parent task list partition if it exist
@@ -186,13 +207,6 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
 	if name == "" {
 		return nil, errNoParent
 	}
-
-	release, err := fwdr.acquireToken(
-		&fwdr.pollToken, metrics.ForwardPollCalls, metrics.ForwardPollErrors, metrics.ForwardPollLatency)
-	if err != nil {
-		return nil, err
-	}
-	defer release()
 
 	pollerID, _ := ctx.Value(pollerIDKey).(string)
 	identity, _ := ctx.Value(identityKey).(string)
@@ -212,6 +226,7 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
 			ForwardedFrom: &fwdr.taskListID.name,
 		})
 		if err != nil {
+			fwdr.handleErr(err)
 			return nil, err
 		}
 		return newInternalStartedTask(&startedTaskInfo{decisionTaskInfo: resp}), nil
@@ -229,6 +244,7 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
 			ForwardedFrom: &fwdr.taskListID.name,
 		})
 		if err != nil {
+			fwdr.handleErr(err)
 			return nil, err
 		}
 		return newInternalStartedTask(&startedTaskInfo{activityTaskInfo: resp}), nil
@@ -237,60 +253,53 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
 	return nil, errInvalidTaskListType
 }
 
-func (fwdr *Forwarder) acquireToken(token *forwarderToken, calls int, errs int, latency int) (func(), error) {
-	fwdr.scopeFunc().IncCounter(calls)
-	if !token.acquire() {
-		fwdr.scopeFunc().IncCounter(errs)
-		return nil, errForwarderRateLimit
-	}
-	sw := fwdr.scopeFunc().StartTimer(latency)
-	return func() {
-		token.release()
-		sw.Stop()
-	}, nil
+// AddReqTokenC returns a channel that can be used to wait for a token
+// that's necessary before making a ForwardTask or ForwardQueryTask API call.
+// After the API call is invoked, token.release() must be invoked
+func (fwdr *Forwarder) AddReqTokenC() <-chan *ForwarderReqToken {
+	fwdr.refreshTokenC(&fwdr.addReqToken, &fwdr.outstandingTasksLimit, int32(fwdr.cfg.ForwarderMaxOutstandingTasks()))
+	return fwdr.addReqToken.Load().(*ForwarderReqToken).ch
 }
 
-func newForwarderToken(maxOutstanding func() int, rpsFunc func() float64) forwarderToken {
-	var limiter *quotas.RateLimiter
-	if rpsFunc != nil {
-		rate := rpsFunc()
-		limiter = quotas.NewRateLimiter(&rate, _defaultTaskDispatchRPSTTL, 1)
-	}
-	return forwarderToken{
-		maxOutstanding: maxOutstanding,
-		limiter:        limiter,
-		rpsFunc:        rpsFunc,
-	}
+// PollReqTokenC returns a channel that can be used to wait for a token
+// that's necessary before making a ForwardPoll API call. After the API
+// call is invoked, token.release() must be invoked
+func (fwdr *Forwarder) PollReqTokenC() <-chan *ForwarderReqToken {
+	fwdr.refreshTokenC(&fwdr.pollReqToken, &fwdr.outstandingPollsLimit, int32(fwdr.cfg.ForwarderMaxOutstandingPolls()))
+	return fwdr.pollReqToken.Load().(*ForwarderReqToken).ch
 }
 
-func (token *forwarderToken) acquire() bool {
-	curr := atomic.LoadInt32(&token.nOutstanding)
-	for {
-		if curr >= int32(token.maxOutstanding()) {
-			return false
+func (fwdr *Forwarder) refreshTokenC(value *atomic.Value, curr *int32, maxLimit int32) {
+	currLimit := atomic.LoadInt32(curr)
+	if currLimit != maxLimit {
+		if atomic.CompareAndSwapInt32(curr, currLimit, maxLimit) {
+			value.Store(newForwarderReqToken(int(maxLimit)))
 		}
-		if atomic.CompareAndSwapInt32(&token.nOutstanding, curr, curr+1) {
-			if !token.rateLimit() {
-				token.release()
-				return false
-			}
-			return true
-		}
-		curr = atomic.LoadInt32(&token.nOutstanding)
 	}
 }
 
-func (token *forwarderToken) rateLimit() bool {
-	if token.limiter == nil {
-		return true
-	}
-	if token.rpsFunc != nil {
-		rate := token.rpsFunc()
-		token.limiter.UpdateMaxDispatch(&rate)
-	}
-	return token.limiter.Allow()
+func (fwdr *Forwarder) rateLimit() bool {
+	rps := float64(fwdr.cfg.ForwarderMaxRatePerSecond())
+	fwdr.limiter.UpdateMaxDispatch(&rps)
+	return fwdr.limiter.Allow()
 }
 
-func (token *forwarderToken) release() {
-	atomic.AddInt32(&token.nOutstanding, -1)
+func (fwdr *Forwarder) handleErr(err error) error {
+	if _, ok := err.(*shared.ServiceBusyError); ok {
+		//fwdr.limiter.SlowDown()
+		return errForwarderSlowDown
+	}
+	return err
+}
+
+func newForwarderReqToken(maxOutstanding int) *ForwarderReqToken {
+	reqToken := &ForwarderReqToken{ch: make(chan *ForwarderReqToken, maxOutstanding)}
+	for i := 0; i < maxOutstanding; i++ {
+		reqToken.ch <- reqToken
+	}
+	return reqToken
+}
+
+func (token *ForwarderReqToken) release() {
+	token.ch <- token
 }
