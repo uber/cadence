@@ -502,7 +502,9 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 	// TODO remove updateCondition in favor of condition in mutable state
 	c.updateCondition = currentWorkflow.ExecutionInfo.NextEventID
 
-	c.watcher.Publish(c.msBuilder.CopyToPersistence())
+	c.watcher.Publish(&WatcherUpdate{
+		CloseStatus: c.msBuilder.GetExecutionInfo().CloseStatus,
+	})
 
 	// for any change in the workflow, send a event
 	// TODO: @andrewjdawson2016 remove historyEventNotifier once plumbing for MutableStatePubSub is finished

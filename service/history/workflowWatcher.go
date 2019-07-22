@@ -23,53 +23,57 @@ package history
 import (
 	"sync"
 	"sync/atomic"
-
-	"github.com/pborman/uuid"
-	"github.com/uber/cadence/common/persistence"
 )
 
 type (
+	// WatcherUpdate contains the union of all workflow state subscribers care about.
+	WatcherUpdate struct {
+		CloseStatus int
+	}
+
 	// WorkflowWatcher is used to get updates on mutable state changes.
 	WorkflowWatcher interface {
-		Publish(*persistence.WorkflowMutableState)
-		Subscribe() (string, <-chan struct{})
-		Unsubscribe(string)
-		LatestMutableState() *persistence.WorkflowMutableState
+		Publish(*WatcherUpdate)
+		Subscribe() (int64, <-chan struct{})
+		Unsubscribe(int64)
+		GetLatestUpdate() *WatcherUpdate
 	}
 
 	workflowWatcher struct {
-		// An atomic is used to keep track of mutable state rather than pushing updates on a channel.
-		// If a channel (buffered or unbuffered) is used, then at some point either blocking will occur or a mutable state update will be dropped.
-		// Since clients only care about getting the latest mutable state, simplify notifying clients
+		// An atomic is used to keep track of latest state rather than pushing updates on a channel.
+		// If a channel (buffered or unbuffered) is used, then at some point either blocking will occur or a state update will be dropped.
+		// Since clients only care about getting the latest state, simplify notifying clients
 		// of updates and providing the ability to get the latest satisfies all current use cases.
-		latestMS atomic.Value
+		latestUpdate atomic.Value
 		lockableSubscribers
 	}
 
 	lockableSubscribers struct {
-		sync.RWMutex
-		subscribers map[string]chan struct{}
+		sync.Mutex
+		nextSubscriberID int64
+		subscribers      map[int64]chan struct{}
 	}
 )
 
-func (ls *lockableSubscribers) add() (string, chan struct{}) {
+func (ls *lockableSubscribers) add() (int64, chan struct{}) {
 	ls.Lock()
 	defer ls.Unlock()
-	id := uuid.New()
+	id := ls.nextSubscriberID
 	ch := make(chan struct{}, 1)
+	ls.nextSubscriberID = ls.nextSubscriberID + 1
 	ls.subscribers[id] = ch
 	return id, ch
 }
 
-func (ls *lockableSubscribers) remove(id string) {
+func (ls *lockableSubscribers) remove(id int64) {
 	ls.Lock()
 	defer ls.Unlock()
 	delete(ls.subscribers, id)
 }
 
 func (ls *lockableSubscribers) notifyAll() {
-	ls.RLock()
-	defer ls.RUnlock()
+	ls.Lock()
+	defer ls.Unlock()
 	for _, ch := range ls.subscribers {
 		select {
 		case ch <- struct{}{}:
@@ -83,36 +87,36 @@ func (ls *lockableSubscribers) notifyAll() {
 func NewWorkflowWatcher() WorkflowWatcher {
 	return &workflowWatcher{
 		lockableSubscribers: lockableSubscribers{
-			subscribers: make(map[string]chan struct{}),
+			subscribers: make(map[int64]chan struct{}),
 		},
 	}
 }
 
-// Publish is used to indicate a mutable state change has been successfully persisted.
-func (w *workflowWatcher) Publish(latestMS *persistence.WorkflowMutableState) {
-	if latestMS == nil {
+// Publish is used to indicate an update has been successfully persisted and subscribers should be notified.
+func (w *workflowWatcher) Publish(update *WatcherUpdate) {
+	if update == nil {
 		return
 	}
-	w.latestMS.Store(latestMS)
+	w.latestUpdate.Store(update)
 	w.notifyAll()
 }
 
-// Subscribe to updates to mutable state.
+// Subscribe to updates.
 // Every time returned channel is received on it is guaranteed that at least one new update is available.
-func (w *workflowWatcher) Subscribe() (string, <-chan struct{}) {
+func (w *workflowWatcher) Subscribe() (int64, <-chan struct{}) {
 	return w.add()
 }
 
-// Unsubscribe from updates to mutable state.
-func (w *workflowWatcher) Unsubscribe(id string) {
+// Unsubscribe from updates. This must be called when client is finished watching in order to avoid resource leak.
+func (w *workflowWatcher) Unsubscribe(id int64) {
 	w.remove(id)
 }
 
-// LatestMutableState returns the latest mutable state update which has been persisted.
-func (w *workflowWatcher) LatestMutableState() *persistence.WorkflowMutableState {
-	v := w.latestMS.Load()
+// GetLatestUpdate returns the latest WatcherUpdate.
+func (w *workflowWatcher) GetLatestUpdate() *WatcherUpdate {
+	v := w.latestUpdate.Load()
 	if v == nil {
 		return nil
 	}
-	return v.(*persistence.WorkflowMutableState)
+	return v.(*WatcherUpdate)
 }

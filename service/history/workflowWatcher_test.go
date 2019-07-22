@@ -24,9 +24,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber/cadence/common/persistence"
 	"go.uber.org/cadence/testsuite"
 )
 
@@ -41,26 +39,26 @@ func TestWorkflowWatcherSuite(t *testing.T) {
 
 func (s *workflowWatcherSuite) TestWorkflowWatcher_NoSubscribers() {
 	ps := NewWorkflowWatcher()
-	state := s.newRandomWorkflowMutableState()
+	state := s.newRandomWatcherUpdate()
 	ps.Publish(state)
-	s.assertMutableStatesEqual(state, ps.LatestMutableState())
+	s.assertWatcherUpdateEqual(state, ps.GetLatestUpdate())
 }
 
 func (s *workflowWatcherSuite) TestWorkflowWatcher_NilPublishAndAccess() {
 	ps := NewWorkflowWatcher()
-	s.Nil(ps.LatestMutableState())
+	s.Nil(ps.GetLatestUpdate())
 	ps.Publish(nil)
-	s.Nil(ps.LatestMutableState())
+	s.Nil(ps.GetLatestUpdate())
 }
 
 func (s *workflowWatcherSuite) TestWorkflowWatcher_ZombieUnsubscribe() {
 	ps := NewWorkflowWatcher()
-	ps.Unsubscribe(uuid.New())
+	ps.Unsubscribe(-1)
 }
 
 func (s *workflowWatcherSuite) TestWorkflowWatcher_ManySubscribers() {
 	ps := NewWorkflowWatcher()
-	var ids []string
+	var ids []int64
 	var chans []<-chan struct{}
 	for i := 0; i < 10; i++ {
 		id, ch := ps.Subscribe()
@@ -73,36 +71,30 @@ func (s *workflowWatcherSuite) TestWorkflowWatcher_ManySubscribers() {
 		chans = append(chans[:index], chans[index+1:]...)
 	}
 	s.assertChanLengthsEqual(0, chans)
-	state1 := s.newRandomWorkflowMutableState()
+	state1 := s.newRandomWatcherUpdate()
 	ps.Publish(state1)
 	s.assertChanLengthsEqual(1, chans)
-	s.assertMutableStatesEqual(state1, ps.LatestMutableState())
-	state2 := s.newRandomWorkflowMutableState()
+	s.assertWatcherUpdateEqual(state1, ps.GetLatestUpdate())
+	state2 := s.newRandomWatcherUpdate()
 	ps.Publish(state2)
 	s.assertChanLengthsEqual(1, chans)
-	s.assertMutableStatesEqual(state2, ps.LatestMutableState())
+	s.assertWatcherUpdateEqual(state2, ps.GetLatestUpdate())
 	for _, ch := range chans {
 		<-ch
 	}
 	s.assertChanLengthsEqual(0, chans)
-	s.assertMutableStatesEqual(state2, ps.LatestMutableState())
+	s.assertWatcherUpdateEqual(state2, ps.GetLatestUpdate())
 
 }
 
-func (s *workflowWatcherSuite) newRandomWorkflowMutableState() *persistence.WorkflowMutableState {
-	return &persistence.WorkflowMutableState{
-		ExecutionInfo: &persistence.WorkflowExecutionInfo{
-			DomainID:   uuid.New(),
-			WorkflowID: uuid.New(),
-			RunID:      uuid.New(),
-		},
+func (s *workflowWatcherSuite) newRandomWatcherUpdate() *WatcherUpdate {
+	return &WatcherUpdate{
+		CloseStatus: rand.Intn(100),
 	}
 }
 
-func (s *workflowWatcherSuite) assertMutableStatesEqual(expected, actual *persistence.WorkflowMutableState) {
-	s.Equal(expected.ExecutionInfo.DomainID, actual.ExecutionInfo.DomainID)
-	s.Equal(expected.ExecutionInfo.WorkflowID, actual.ExecutionInfo.WorkflowID)
-	s.Equal(expected.ExecutionInfo.RunID, actual.ExecutionInfo.RunID)
+func (s *workflowWatcherSuite) assertWatcherUpdateEqual(expected, actual *WatcherUpdate) {
+	s.Equal(expected.CloseStatus, actual.CloseStatus)
 }
 
 func (s *workflowWatcherSuite) assertChanLengthsEqual(expectedLengths int, chans []<-chan struct{}) {
