@@ -18,34 +18,34 @@ ESQL aims at dealing all these addtional processing steps and providing an api t
 
 ## Usage
 ESQL has convert functions specific for cadence usage. Please refer to `cadencesql.go`. Below shows an example.
-Attention: to use cadence version api, `SetCadence{}` must be called at initialzation.
+Attention: to use cadence version api, `SetCadence()` must be called at initialzation.
 ~~~~go
 sql := "SELECT colA FROM myTable WHERE colB < 10 AND dateTime = '2015-01-01T02:59:59Z'"
 domainID := "CadenceSampleDomain"
 // custom policy that change colName like "col.." to "myCol.."
-func myFilter1(colName string) bool {
+func myKeyFilter(colName string) bool {
     return strings.HasPrefix(colName, "col")
 }
-func myReplace(colName string) (string, error) {
+func myKeyProcess(colName string) (string, error) {
     return "myCol"+colName[3:], nil
 }
 // custom policy that convert formatted time string to unix nano
-func myFilter2(colName string) bool {
+func myValueFilter(colName string) bool {
     return strings.Contains(colName, "Time") || strings.Contains(colName, "time")
 }
-func myProcess(timeStr string) (string, error) {
+func myValueProcess(timeStr string) (string, error) {
     // convert formatted time string to unix nano integer
     parsedTime, _ := time.Parse(defaultDateTimeFormat, timeStr)
     return fmt.Sprintf("%v", parsedTime.UnixNano()), nil
 }
-// with the 2 policies and cadence setting, converted dsl is equivalent to
-// "SELECT myColA FROM myTable WHERE myColB < 10 AND dateTime = '1561678568048000000' AND DomainID = dimainID"
+// with the 2 policies , converted dsl is equivalent to
+// "SELECT myColA FROM myTable WHERE myColB < 10 AND dateTime = '1561678568048000000'
 // in which the time is in unix nano format
 e := NewESql()
 e.SetCadence()
-e.SetReplace(myFilter1, myReplace)     // set up filtering policy
-e.SetProcess(myFilter2, myProcess)     // set up process policy
-dsl, _, err := e.ConvertPrettyCadence(sql, domainID)    // convert sql to dsl
+e.ProcessQueryKey(myKeyFilter, myKeyProcess)         // set up filtering policy
+e.ProcessQueryValue(myValueFilter, myValueProcess)     // set up process policy
+dsl, _, err := e.ConvertPretty(sql, domainID)             // convert sql to dsl
 if err == nil {
     fmt.Println(dsl)
 }

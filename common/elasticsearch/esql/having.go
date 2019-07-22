@@ -178,7 +178,7 @@ func (e *ESql) convertHavingComparisionExpr(expr sqlparser.Expr, aggNameSlice *[
 		aggNameStr := strings.ToLower(funcExpr.Name.String())
 		aggTargetStr := sqlparser.String(funcExpr.Exprs)
 		aggTargetStr = strings.Trim(aggTargetStr, "`")
-		aggTargetStr, err := e.filterAndReplace(aggTargetStr)
+		aggTargetStr, err := e.keyProcess(aggTargetStr)
 		if err != nil {
 			return "", err
 		}

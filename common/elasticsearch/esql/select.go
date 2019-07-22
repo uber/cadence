@@ -27,7 +27,7 @@ import (
 	"github.com/xwb1989/sqlparser"
 )
 
-func (e *ESql) convertSelect(sel sqlparser.Select, domainID string, pagination ...interface{}) (dsl string, sortFields []string, err error) {
+func (e *ESql) convertSelect(sel sqlparser.Select, domainID string, pagination ...interface{}) (dsl string, sortField []string, err error) {
 	if sel.Distinct != "" {
 		err := fmt.Errorf(`esql: SELECT DISTINCT not supported. use GROUP BY instead`)
 		return "", nil, err
@@ -144,7 +144,7 @@ func (e *ESql) convertSelect(sel sqlparser.Select, domainID string, pagination .
 			colNameStr = strings.Trim(colNameStr, "`")
 			orderByStr := fmt.Sprintf(`{"%v": "%v"}`, colNameStr, orderExpr.Direction)
 			orderBySlice = append(orderBySlice, orderByStr)
-			sortFields = append(sortFields, colNameStr)
+			sortField = append(sortField, colNameStr)
 		}
 		// cadence special handling: add runID as sorting tie breaker
 		if e.cadence {
@@ -152,9 +152,9 @@ func (e *ESql) convertSelect(sel sqlparser.Select, domainID string, pagination .
 			case 0: // if unsorted, use default sorting
 				cadenceOrderStartTime := fmt.Sprintf(`{"%v": "%v"}`, StartTime, StartTimeOrder)
 				orderBySlice = append(orderBySlice, cadenceOrderStartTime)
-				sortFields = append(sortFields, StartTime)
+				sortField = append(sortField, StartTime)
 			case 1: // user should not use tieBreaker to sort
-				if sortFields[0] == TieBreaker {
+				if sortField[0] == TieBreaker {
 					err = fmt.Errorf("esql: Cadence does not allow user sort by RunID")
 					return "", nil, err
 				}
@@ -166,7 +166,7 @@ func (e *ESql) convertSelect(sel sqlparser.Select, domainID string, pagination .
 			// add tie breaker
 			cadenceOrderTieBreaker := fmt.Sprintf(`{"%v": "%v"}`, TieBreaker, TieBreakerOrder)
 			orderBySlice = append(orderBySlice, cadenceOrderTieBreaker)
-			sortFields = append(sortFields, TieBreaker)
+			sortField = append(sortField, TieBreaker)
 		}
 		if len(orderBySlice) > 0 {
 			dslMap["sort"] = fmt.Sprintf("[%v]", strings.Join(orderBySlice, ","))
@@ -179,7 +179,7 @@ func (e *ESql) convertSelect(sel sqlparser.Select, domainID string, pagination .
 		dslQuerySlice = append(dslQuerySlice, fmt.Sprintf(`"%v": %v`, tag, content))
 	}
 	dsl = "{" + strings.Join(dslQuerySlice, ",") + "}"
-	return dsl, sortFields, nil
+	return dsl, sortField, nil
 }
 
 func (e *ESql) convertWhereExpr(expr sqlparser.Expr, parent sqlparser.Expr) (string, error) {
@@ -374,29 +374,12 @@ func (e *ESql) convertIsExpr(expr sqlparser.Expr, parent sqlparser.Expr, not boo
 
 func (e *ESql) convertComparisionExpr(expr sqlparser.Expr, parent sqlparser.Expr, not bool) (string, error) {
 	// extract lhs, and check lhs is a colName
+	var err error
+	scriptQuery := false
 	comparisonExpr := expr.(*sqlparser.ComparisonExpr)
-	lhsExpr := comparisonExpr.Left
-	lhs, ok := lhsExpr.(*sqlparser.ColName)
-	if !ok {
-		return "", fmt.Errorf("esql: invalid comparison expression, lhs must be a column name")
-	}
-
-	lhsStr, err := e.convertColName(lhs)
-	if err != nil {
-		return "", err
-	}
-
-	// extract rhs
-	rhsExpr := comparisonExpr.Right
-	rhsStr, err := e.convertValExpr(rhsExpr)
-	if err != nil {
-		return "", err
-	}
-	rhsStr, err = e.filterAndProcess(lhsStr, rhsStr)
-	if err != nil {
-		return "", err
-	}
-
+	lhsExpr, rhsExpr := comparisonExpr.Left, comparisonExpr.Right
+	var lhsStr, rhsStr, dsl string
+	// get operator
 	op := comparisonExpr.Operator
 	if not {
 		if _, exist := oppositeOperator[op]; !exist {
@@ -406,8 +389,65 @@ func (e *ESql) convertComparisionExpr(expr sqlparser.Expr, parent sqlparser.Expr
 		op = oppositeOperator[op]
 	}
 
+	if _, ok := lhsExpr.(*sqlparser.ColName); !ok {
+		scriptQuery = true
+	}
+	switch rhsExpr.(type) {
+	case *sqlparser.SQLVal, sqlparser.ValTuple:
+		rhsStr, err = e.convertValExpr(rhsExpr, false)
+		if err != nil {
+			return "", err
+		}
+		rhsStr, err = e.valueProcess(lhsStr, rhsStr)
+		if err != nil {
+			return "", err
+		}
+	default:
+		scriptQuery = true
+	}
+
+	// use painless scripting query here
+	if scriptQuery {
+		lhsStr, err = e.convertToScript(lhsExpr)
+		rhsStr, err = e.convertToScript(rhsExpr)
+		if err != nil {
+			return "", err
+		}
+		op, ok := op2PainlessOp[op]
+		if !ok {
+			err = fmt.Errorf("esql: not supported painless operator")
+			return "", err
+		}
+		script := fmt.Sprintf(`%v %v %v`, lhsStr, op, rhsStr)
+		dsl = fmt.Sprintf(`{"bool": {"filter": {"script": {"script": {"source": "%v"}}}}}`, script)
+		return dsl, nil
+	}
+
+	lhs := lhsExpr.(*sqlparser.ColName)
+	lhsStr, err = e.convertColName(lhs)
+	if err != nil {
+		return "", err
+	}
+
+	// // extract rhs
+	// switch rhsExpr.(type) {
+	// case *sqlparser.SQLVal, sqlparser.ValTuple:
+
+	// case *sqlparser.ColName:
+	// 	rhs, _ := rhsExpr.(*sqlparser.ColName)
+	// 	rhsStr, err = e.convertColName(rhs)
+	// 	if err != nil {
+	// 		return "", err
+	// 	}
+	// 	// if rhs is a colName, use painless scripting language
+	//
+	// 	return dsl, nil
+	// default:
+	// 	err := fmt.Errorf("unsupported comparion rhs type")
+	// 	return "", err
+	// }
+
 	// generate dsl according to operator
-	var dsl string
 	switch op {
 	case "=":
 		dsl = fmt.Sprintf(`{"term": {"%v": "%v"}}`, lhsStr, rhsStr)
@@ -450,11 +490,13 @@ func (e *ESql) convertComparisionExpr(expr sqlparser.Expr, parent sqlparser.Expr
 	return dsl, nil
 }
 
-func (e *ESql) convertValExpr(expr sqlparser.Expr) (dsl string, err error) {
+func (e *ESql) convertValExpr(expr sqlparser.Expr, script bool) (dsl string, err error) {
 	switch expr.(type) {
 	case *sqlparser.SQLVal:
 		dsl = sqlparser.String(expr)
-		dsl = strings.Trim(dsl, `'`)
+		if !script {
+			dsl = strings.Trim(dsl, `'`)
+		}
 	// ValTuple is not a pointer from sqlparser
 	case sqlparser.ValTuple:
 		dsl = sqlparser.String(expr)
@@ -468,7 +510,7 @@ func (e *ESql) convertValExpr(expr sqlparser.Expr) (dsl string, err error) {
 func (e *ESql) convertColName(colName *sqlparser.ColName) (string, error) {
 	// here we garuantee colName is of type *ColName
 	colNameStr := sqlparser.String(colName)
-	replacedColNameStr, err := e.filterAndReplace(colNameStr)
+	replacedColNameStr, err := e.keyProcess(colNameStr)
 	if err != nil {
 		return "", err
 	}
@@ -476,9 +518,9 @@ func (e *ESql) convertColName(colName *sqlparser.ColName) (string, error) {
 	return replacedColNameStr, nil
 }
 
-func (e *ESql) filterAndReplace(target string) (string, error) {
-	if e.filterReplace != nil && e.filterReplace(target) && e.replace != nil {
-		target, err := e.replace(target)
+func (e *ESql) keyProcess(target string) (string, error) {
+	if e.filterKey != nil && e.filterKey(target) && e.processKey != nil {
+		target, err := e.processKey(target)
 		if err != nil {
 			return "", err
 		}
@@ -487,9 +529,9 @@ func (e *ESql) filterAndReplace(target string) (string, error) {
 	return target, nil
 }
 
-func (e *ESql) filterAndProcess(colName string, value string) (string, error) {
-	if e.filterProcess != nil && e.filterProcess(colName) && e.process != nil {
-		value, err := e.process(value)
+func (e *ESql) valueProcess(colName string, value string) (string, error) {
+	if e.filterValue != nil && e.filterValue(colName) && e.processValue != nil {
+		value, err := e.processValue(value)
 		if err != nil {
 			return "", err
 		}

@@ -58,6 +58,19 @@ var op2PainlessOp = map[string]string{
 	"<>": "!==",
 }
 
+var opBinaryExpr = map[string]string{
+	"|":  "|",
+	"&":  "&",
+	"^":  "^",
+	"+":  "+",
+	"-":  "-",
+	"*":  "*",
+	"/":  "/",
+	"%":  "%",
+	">>": ">>",
+	"<<": "<<",
+}
+
 // default sizes and identifiers used in cadence visibility
 const (
 	DefaultPageSize      = 1000
