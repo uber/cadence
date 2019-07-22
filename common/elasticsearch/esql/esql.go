@@ -49,19 +49,6 @@ type ESql struct {
 	bucketNumber  int
 }
 
-// SetDefault ...
-// all members goes to default
-// should not be called if there is potential race condition
-func (e *ESql) SetDefault() {
-	e.pageSize = DefaultPageSize
-	e.bucketNumber = DefaultBucketNumber
-	e.cadence = false
-	e.replace = nil
-	e.process = nil
-	e.filterReplace = nil
-	e.filterProcess = nil
-}
-
 // NewESql ... return a new default ESql
 func NewESql() *ESql {
 	return &ESql{
@@ -113,10 +100,10 @@ func (e *ESql) SetBucketNum(bucketNumArg int) {
 //
 // return values:
 //  - dsl: the elasticsearch dsl json style string
-//  - sortField: string array that contains all column names used for sorting. useful for pagination.
+//  - sortFields: string array that contains all column names used for sorting. useful for pagination.
 //  - err: contains err information
-func (e *ESql) ConvertPretty(sql string, pagination ...interface{}) (dsl string, sortField []string, err error) {
-	dsl, sortField, err = e.Convert(sql, pagination...)
+func (e *ESql) ConvertPretty(sql string, pagination ...interface{}) (dsl string, sortFields []string, err error) {
+	dsl, sortFields, err = e.Convert(sql, pagination...)
 	if err != nil {
 		return "", nil, err
 	}
@@ -126,7 +113,7 @@ func (e *ESql) ConvertPretty(sql string, pagination ...interface{}) (dsl string,
 	if err != nil {
 		return "", nil, err
 	}
-	return string(prettifiedDSLBytes.Bytes()), sortField, err
+	return string(prettifiedDSLBytes.Bytes()), sortFields, err
 }
 
 // Convert ...
@@ -141,9 +128,9 @@ func (e *ESql) ConvertPretty(sql string, pagination ...interface{}) (dsl string,
 //
 // return values:
 //	- dsl: the elasticsearch dsl json style string
-//	- sortField: string array that contains all column names used for sorting. useful for pagination.
+//	- sortFields: string array that contains all column names used for sorting. useful for pagination.
 //  - err: contains err information
-func (e *ESql) Convert(sql string, pagination ...interface{}) (dsl string, sortField []string, err error) {
+func (e *ESql) Convert(sql string, pagination ...interface{}) (dsl string, sortFields []string, err error) {
 	stmt, err := sqlparser.Parse(sql)
 	if err != nil {
 		return "", nil, err
@@ -152,7 +139,7 @@ func (e *ESql) Convert(sql string, pagination ...interface{}) (dsl string, sortF
 	//sql valid, start to handle
 	switch stmt.(type) {
 	case *sqlparser.Select:
-		dsl, sortField, err = e.convertSelect(*(stmt.(*sqlparser.Select)), "", pagination...)
+		dsl, sortFields, err = e.convertSelect(*(stmt.(*sqlparser.Select)), "", pagination...)
 	default:
 		err = fmt.Errorf(`esql: Queries other than select not supported`)
 	}
@@ -160,5 +147,5 @@ func (e *ESql) Convert(sql string, pagination ...interface{}) (dsl string, sortF
 	if err != nil {
 		return "", nil, err
 	}
-	return dsl, sortField, nil
+	return dsl, sortFields, nil
 }

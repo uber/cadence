@@ -27,7 +27,7 @@ import (
 	"github.com/xwb1989/sqlparser"
 )
 
-func (e *ESql) convertSelect(sel sqlparser.Select, domainID string, pagination ...interface{}) (dsl string, sortField []string, err error) {
+func (e *ESql) convertSelect(sel sqlparser.Select, domainID string, pagination ...interface{}) (dsl string, sortFields []string, err error) {
 	if sel.Distinct != "" {
 		err := fmt.Errorf(`esql: SELECT DISTINCT not supported. use GROUP BY instead`)
 		return "", nil, err
@@ -144,7 +144,7 @@ func (e *ESql) convertSelect(sel sqlparser.Select, domainID string, pagination .
 			colNameStr = strings.Trim(colNameStr, "`")
 			orderByStr := fmt.Sprintf(`{"%v": "%v"}`, colNameStr, orderExpr.Direction)
 			orderBySlice = append(orderBySlice, orderByStr)
-			sortField = append(sortField, colNameStr)
+			sortFields = append(sortFields, colNameStr)
 		}
 		// cadence special handling: add runID as sorting tie breaker
 		if e.cadence {
@@ -152,9 +152,9 @@ func (e *ESql) convertSelect(sel sqlparser.Select, domainID string, pagination .
 			case 0: // if unsorted, use default sorting
 				cadenceOrderStartTime := fmt.Sprintf(`{"%v": "%v"}`, StartTime, StartTimeOrder)
 				orderBySlice = append(orderBySlice, cadenceOrderStartTime)
-				sortField = append(sortField, StartTime)
+				sortFields = append(sortFields, StartTime)
 			case 1: // user should not use tieBreaker to sort
-				if sortField[0] == TieBreaker {
+				if sortFields[0] == TieBreaker {
 					err = fmt.Errorf("esql: Cadence does not allow user sort by RunID")
 					return "", nil, err
 				}
@@ -166,7 +166,7 @@ func (e *ESql) convertSelect(sel sqlparser.Select, domainID string, pagination .
 			// add tie breaker
 			cadenceOrderTieBreaker := fmt.Sprintf(`{"%v": "%v"}`, TieBreaker, TieBreakerOrder)
 			orderBySlice = append(orderBySlice, cadenceOrderTieBreaker)
-			sortField = append(sortField, TieBreaker)
+			sortFields = append(sortFields, TieBreaker)
 		}
 		if len(orderBySlice) > 0 {
 			dslMap["sort"] = fmt.Sprintf("[%v]", strings.Join(orderBySlice, ","))
@@ -179,7 +179,7 @@ func (e *ESql) convertSelect(sel sqlparser.Select, domainID string, pagination .
 		dslQuerySlice = append(dslQuerySlice, fmt.Sprintf(`"%v": %v`, tag, content))
 	}
 	dsl = "{" + strings.Join(dslQuerySlice, ",") + "}"
-	return dsl, sortField, nil
+	return dsl, sortFields, nil
 }
 
 func (e *ESql) convertWhereExpr(expr sqlparser.Expr, parent sqlparser.Expr) (string, error) {

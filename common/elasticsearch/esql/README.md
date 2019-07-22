@@ -1,5 +1,4 @@
 # ESQL: Translate SQL to Elasticsearch DSL
-[![Build Status](https://travis-ci.org/jysui123/esql.svg?branch=master)](https://travis-ci.org/jysui123/esql) [![codecov](https://codecov.io/gh/jysui123/esql/branch/master/graph/badge.svg)](https://codecov.io/gh/jysui123/esql)
 
 Use SQL to query Elasticsearch. ES V6 compatible.
 
@@ -30,7 +29,9 @@ if err == nil {
     fmt.Println(dsl)
 }
 ~~~~
-ESQL support custom colName replacement policy and query target processing policy. It can be useful for time queries. User can register functions to let esql to automatically replace certain colNames and convert query target. Below shows an example.
+ESQL support API `SetReplace` to register custom policy for colName replacement. It accepts 2 functions, the first function determines whether a colName is to be replaced, the second specifies how to do the replacement. Use case: user has custom field `field`, but to resolve confict, server stores the field as `Custom.field`. `SetReplace` API can automatically do the conversion.
+ESQL support API `SetProcess` to register custom policy for value processing. It accepts 2 functions, the first function determines whether a value of a colName is to be processed, the second specifies how to do the processing. Use case: user want to query time in readable format, but server stores time as an integer (unix nano). `SetProcess` API can automatically do the conversion.
+Below shows an example.
 ~~~~go
 sql := "SELECT colA FROM myTable WHERE colB < 10 AND dateTime = '2015-01-01T02:59:59Z'"
 domainID := "CadenceSampleDomain"
@@ -61,7 +62,7 @@ if err == nil {
     fmt.Println(dsl)
 }
 ~~~~
-For Cadence usage, refer to [this](https://github.com/jysui123/esql/blob/master/cadenceDevReadme.md) link.
+For Cadence usage, refer to [this](cadenceDevReadme.md) link.
 
 
 ## Testing
@@ -98,11 +99,9 @@ To customize test cases:
 
 
 ## Attentions
-- We assume all the text are store in type `keyword`, i.e., ES does not break the text into separated words. And we use tag `term` to match the whole text rather than a word in the text.
-- `must_not` in ES does not share the same logic as `NOT` in sql
-- If you want to apply aggregation on some fields, they should be in type `keyword` in ES (set type of a field by put mapping to your table)
+- If you want to apply aggregation on some fields, they should not be in type `text` in ES (set type of a field by put mapping to your table)
 - `COUNT(colName)` will include documents w/ null values in that column in ES SQL API, while in esql we exclude null valued documents
-- ES SQL API and esql do not support `SELECT DISTINCT`, but we can achieve the same result by `SELECT * FROM table GROUP BY colName`
+- ES SQL API and esql do not support `SELECT DISTINCT`, a workaround is to query something like `SELECT * FROM table GROUP BY colName`
 - ES SQL API does not support `ORDER BY aggregation`, esql support it by applying bucket_sort
 - ES SQL API does not support `HAVING aggregation` that not show up in `SELECT`, esql support it
 - To use regex query, the column should be `keyword` type, otherwise the regex is applied to all the terms produced by tokenizer from the original text rather than the original text itself
