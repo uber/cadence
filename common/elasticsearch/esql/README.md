@@ -1,6 +1,4 @@
 # ESQL: Translate SQL to Elasticsearch DSL
-[![Build Status](https://travis-ci.org/jysui123/esql.svg?branch=master)](https://travis-ci.org/jysui123/esql) [![codecov](https://codecov.io/gh/jysui123/esql/branch/master/graph/badge.svg)](https://codecov.io/gh/jysui123/esql) [![MIT license](http://img.shields.io/badge/license-MIT-brightgreen.svg)](http://opensource.org/licenses/MIT)
-
 Use SQL to query Elasticsearch. ES V6 compatible.
 
 ## Supported features
@@ -62,18 +60,19 @@ func myValueProcess(timeStr string) (string, error) {
 // "SELECT myColA FROM myTable WHERE myColB < 10 AND dateTime = '1561678568048000000'
 // in which the time is in unix nano format
 e := NewESql()
-e.ProcessQueryKey(myKeyFilter, myKeyProcess)         // set up filtering policy
-e.ProcessQueryValue(myValueFilter, myValueProcess)     // set up process policy
-dsl, _, err := e.ConvertPretty(sql)             // convert sql to dsl
+e.ProcessQueryKey(myKeyFilter, myKeyProcess)            // set up macro for key
+e.ProcessQueryValue(myValueFilter, myValueProcess)      // set up macro for value
+dsl, _, err := e.ConvertPretty(sql)                     // convert sql to dsl
 if err == nil {
     fmt.Println(dsl)
 }
 ~~~~
 ### Pagination
 ESQL support 2 kinds of pagination: FROM keyword and ES search_after.
-For SQL FROM keyword: the same as SQL syntax. Be careful, **ES only support a page smaller than 10k**, if your offset is large than 10k, search_after is necessary.
-For search_after: Once you know the paging tokens, just feed them to `Convert` or `ConvertPretty` API in order.
-Below shows and example.
+- FROM keyword: the same as SQL syntax. Be careful, **ES only support a page smaller than 10k**, if your offset is large than 10k, search_after is necessary.
+- search_after: Once you know the paging tokens, just feed them to `Convert` or `ConvertPretty` API in order.
+
+Below shows an example.
 ~~~~go
 // first page
 sql_page1 := "SELECT * FROM myTable ORDER BY colA, colB LIMIT 10"
