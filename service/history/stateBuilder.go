@@ -657,12 +657,9 @@ func (b *stateBuilderImpl) scheduleWorkflowTimerTask(event *shared.HistoryEvent,
 	now := time.Unix(0, event.GetTimestamp())
 	timeout := now.Add(time.Duration(msBuilder.GetExecutionInfo().WorkflowTimeout) * time.Second)
 	backoffDuration := backoff.NoBackoff
-	var startWorkflowAttribute *shared.WorkflowExecutionStartedEventAttributes
-	if startEvent, ok := msBuilder.GetStartEvent(); ok {
-		startWorkflowAttribute = startEvent.GetWorkflowExecutionStartedEventAttributes()
-	}
+	startWorkflowAttribute := event.GetWorkflowExecutionStartedEventAttributes()
 	if startWorkflowAttribute.GetFirstDecisionTaskBackoffSeconds() > 0 {
-		backoffDuration = time.Duration(startWorkflowAttribute.GetFirstDecisionTaskBackoffSeconds()) * time.Second
+		backoffDuration = time.Duration(event.GetWorkflowExecutionStartedEventAttributes().GetFirstDecisionTaskBackoffSeconds()) * time.Second
 	}
 
 	if backoffDuration != backoff.NoBackoff {

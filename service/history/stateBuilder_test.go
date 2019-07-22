@@ -574,7 +574,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 	newRunHistory := &shared.History{Events: []*shared.HistoryEvent{newRunStartedEvent, newRunSignalEvent, newRunDecisionEvent}}
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Twice()
-	s.mockEventsCache.On("getEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(newRunStartedEvent, nil)
 	_, _, newRunStateBuilder, err := s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(continueAsNewEvent), newRunHistory.Events, 0, 0)
 	s.Nil(err)
 	expectedNewRunStateBuilder := newMutableStateBuilderWithReplicationState(
@@ -904,7 +903,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 	newRunHistory := &shared.History{Events: []*shared.HistoryEvent{newRunStartedEvent, newRunSignalEvent, newRunDecisionEvent}}
 	s.mockMutableState.On("ClearStickyness").Once()
 	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return().Twice()
-	s.mockEventsCache.On("getEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(newRunStartedEvent, nil)
 	_, _, newRunStateBuilder, err := s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(continueAsNewEvent), newRunHistory.Events,
 		0, persistence.EventStoreVersionV2)
 	s.Nil(err)
