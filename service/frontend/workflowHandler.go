@@ -70,7 +70,7 @@ type (
 		tokenSerializer           common.TaskTokenSerializer
 		metricsClient             metrics.Client
 		startWG                   sync.WaitGroup
-		rateLimiter               quotas.Limiter
+		rateLimiter               quotas.Policy
 		config                    *Config
 		versionChecker            *versionChecker
 		domainHandler             *domainHandlerImpl
@@ -159,9 +159,14 @@ func NewWorkflowHandler(sVice service.Service, config *Config, metadataMgr persi
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		metricsClient:   sVice.GetMetricsClient(),
 		domainCache:     domainCache,
-		rateLimiter: quotas.NewDynamicRateLimiter(func() float64 {
-			return float64(config.RPS())
-		}),
+		rateLimiter: quotas.NewMultiStageRateLimiter(
+			func() float64 {
+				return float64(config.RPS())
+			},
+			func() float64 {
+				return float64(config.DomainRPS())
+			},
+		),
 		versionChecker: &versionChecker{checkVersion: config.EnableClientVersionCheck()},
 		domainHandler: newDomainHandler(
 			config,
@@ -3301,16 +3306,7 @@ func (wh *WorkflowHandler) getArchivedHistory(
 func (wh *WorkflowHandler) convertIndexedKeyToThrift(keys map[string]interface{}) map[string]gen.IndexedValueType {
 	converted := make(map[string]gen.IndexedValueType)
 	for k, v := range keys {
-		switch v.(type) {
-		case float64:
-			converted[k] = gen.IndexedValueType(v.(float64))
-		case int:
-			converted[k] = gen.IndexedValueType(v.(int))
-		case gen.IndexedValueType:
-			converted[k] = v.(gen.IndexedValueType)
-		default:
-			wh.GetLogger().Error("unknown index value type", tag.Key(k), tag.Value(v), tag.ValueType(v))
-		}
+		converted[k] = common.ConvertIndexedValueTypeToThriftType(v, wh.GetLogger())
 	}
 	return converted
 }
@@ -3321,5 +3317,9 @@ func (wh *WorkflowHandler) isListRequestPageSizeTooLarge(pageSize int32, domain 
 }
 
 func (wh *WorkflowHandler) allow(d domainGetter) bool {
-	return wh.rateLimiter.Allow()
+	domain := ""
+	if d != nil {
+		domain = d.GetDomain()
+	}
+	return wh.rateLimiter.Allow(quotas.Info{Domain: domain})
 }
