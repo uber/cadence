@@ -64,6 +64,19 @@ if err == nil {
     fmt.Println(dsl)
 }
 ~~~~
+ESQL support ES search_after for pagination. Once you know the paging tokens, just feed them to `Convert` or `ConvertPretty` API in order. Below shows an example.
+~~~~go
+sql := "SELECT * FROM myTable ORDER BY colA, colB LIMIT 10"
+page_colA := "123"
+page_colB := "bbc"
+e := NewESql()
+dsl, sortFields, err := e.ConvertPretty(sql, page_colA, page_colB)
+if err == nil {
+    fmt.Println(dsl)
+}
+~~~~
+Alternatively, LIMIT, FROM can be used for pagination too.
+
 For Cadence usage, refer to [this](cadenceDevReadme.md) link.
 
 
