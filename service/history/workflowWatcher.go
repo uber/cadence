@@ -26,25 +26,25 @@ import (
 )
 
 type (
-	// WatcherUpdate contains the union of all workflow state subscribers care about.
-	WatcherUpdate struct {
+	// WatcherSnapshot contains the union of all workflow state subscribers care about.
+	WatcherSnapshot struct {
 		CloseStatus int
 	}
 
-	// WorkflowWatcher is used to get updates on mutable state changes.
+	// WorkflowWatcher is used to get WatcherSnapshots when workflow updates occur.
 	WorkflowWatcher interface {
-		Publish(*WatcherUpdate)
+		Publish(*WatcherSnapshot)
 		Subscribe() (int64, <-chan struct{})
 		Unsubscribe(int64)
-		GetLatestUpdate() *WatcherUpdate
+		GetLatestSnapshot() *WatcherSnapshot
 	}
 
 	workflowWatcher struct {
-		// An atomic is used to keep track of latest state rather than pushing updates on a channel.
-		// If a channel (buffered or unbuffered) is used, then at some point either blocking will occur or a state update will be dropped.
-		// Since clients only care about getting the latest state, simplify notifying clients
-		// of updates and providing the ability to get the latest satisfies all current use cases.
-		latestUpdate atomic.Value
+		// An atomic is used to keep track of latest snapshot rather than pushing snapshots on a channel.
+		// If a channel (buffered or unbuffered) is used, then at some point either blocking will occur or a snapshot will be dropped.
+		// Since clients only care about getting the latest, simplify notifying clients
+		// of updates and providing the ability to get the latest snapshot satisfies all current use cases.
+		latestSnapshot atomic.Value
 		lockableSubscribers
 	}
 
@@ -92,17 +92,14 @@ func NewWorkflowWatcher() WorkflowWatcher {
 	}
 }
 
-// Publish is used to indicate an update has been successfully persisted and subscribers should be notified.
-func (w *workflowWatcher) Publish(update *WatcherUpdate) {
-	if update == nil {
-		return
-	}
-	w.latestUpdate.Store(update)
+// Publish is used to indicate that the workflow has been updated and subscribers should be notified that there is a new snapshot.
+func (w *workflowWatcher) Publish(update *WatcherSnapshot) {
+	w.latestSnapshot.Store(update)
 	w.notifyAll()
 }
 
 // Subscribe to updates.
-// Every time returned channel is received on it is guaranteed that at least one new update is available.
+// Every time returned channel is received on it is guaranteed that at least one new snapshot is available.
 func (w *workflowWatcher) Subscribe() (int64, <-chan struct{}) {
 	return w.add()
 }
@@ -112,11 +109,11 @@ func (w *workflowWatcher) Unsubscribe(id int64) {
 	w.remove(id)
 }
 
-// GetLatestUpdate returns the latest WatcherUpdate.
-func (w *workflowWatcher) GetLatestUpdate() *WatcherUpdate {
-	v := w.latestUpdate.Load()
+// GetLatestSnapshot returns the latest WatcherSnapshot.
+func (w *workflowWatcher) GetLatestSnapshot() *WatcherSnapshot {
+	v := w.latestSnapshot.Load()
 	if v == nil {
 		return nil
 	}
-	return v.(*WatcherUpdate)
+	return v.(*WatcherSnapshot)
 }

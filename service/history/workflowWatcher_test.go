@@ -41,14 +41,14 @@ func (s *workflowWatcherSuite) TestWorkflowWatcher_NoSubscribers() {
 	ps := NewWorkflowWatcher()
 	state := s.newRandomWatcherUpdate()
 	ps.Publish(state)
-	s.assertWatcherUpdateEqual(state, ps.GetLatestUpdate())
+	s.assertWatcherUpdateEqual(state, ps.GetLatestSnapshot())
 }
 
 func (s *workflowWatcherSuite) TestWorkflowWatcher_NilPublishAndAccess() {
 	ps := NewWorkflowWatcher()
-	s.Nil(ps.GetLatestUpdate())
+	s.Nil(ps.GetLatestSnapshot())
 	ps.Publish(nil)
-	s.Nil(ps.GetLatestUpdate())
+	s.Nil(ps.GetLatestSnapshot())
 }
 
 func (s *workflowWatcherSuite) TestWorkflowWatcher_ZombieUnsubscribe() {
@@ -74,26 +74,26 @@ func (s *workflowWatcherSuite) TestWorkflowWatcher_ManySubscribers() {
 	state1 := s.newRandomWatcherUpdate()
 	ps.Publish(state1)
 	s.assertChanLengthsEqual(1, chans)
-	s.assertWatcherUpdateEqual(state1, ps.GetLatestUpdate())
+	s.assertWatcherUpdateEqual(state1, ps.GetLatestSnapshot())
 	state2 := s.newRandomWatcherUpdate()
 	ps.Publish(state2)
 	s.assertChanLengthsEqual(1, chans)
-	s.assertWatcherUpdateEqual(state2, ps.GetLatestUpdate())
+	s.assertWatcherUpdateEqual(state2, ps.GetLatestSnapshot())
 	for _, ch := range chans {
 		<-ch
 	}
 	s.assertChanLengthsEqual(0, chans)
-	s.assertWatcherUpdateEqual(state2, ps.GetLatestUpdate())
+	s.assertWatcherUpdateEqual(state2, ps.GetLatestSnapshot())
 
 }
 
-func (s *workflowWatcherSuite) newRandomWatcherUpdate() *WatcherUpdate {
-	return &WatcherUpdate{
+func (s *workflowWatcherSuite) newRandomWatcherUpdate() *WatcherSnapshot {
+	return &WatcherSnapshot{
 		CloseStatus: rand.Intn(100),
 	}
 }
 
-func (s *workflowWatcherSuite) assertWatcherUpdateEqual(expected, actual *WatcherUpdate) {
+func (s *workflowWatcherSuite) assertWatcherUpdateEqual(expected, actual *WatcherSnapshot) {
 	s.Equal(expected.CloseStatus, actual.CloseStatus)
 }
 
