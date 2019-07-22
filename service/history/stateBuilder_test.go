@@ -188,7 +188,6 @@ func (s *stateBuilderSuite) applyWorkflowExecutionStartedEventTest(cronSchedule 
 		WorkflowExecutionStartedEventAttributes: startWorkflowAttribute,
 	}
 
-	s.mockMutableState.On("GetStartEvent").Return(event, true)
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: domainID}).Return(
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
@@ -518,7 +517,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 			Attempt:                    common.Int64Ptr(newRunDecisionAttempt),
 		},
 	}
-	s.mockMutableState.On("GetStartEvent").Return(newRunStartedEvent, true)
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: domainID}).Return(
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID, Name: domainName},
