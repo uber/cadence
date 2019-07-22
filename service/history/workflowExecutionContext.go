@@ -29,16 +29,11 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/clock"
-	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/locks"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-)
-
-const (
-	secondsInDay = int32(24 * time.Hour / time.Second)
 )
 
 type (
@@ -118,6 +113,7 @@ type (
 			baseRunID string,
 			baseRunNextEventID int64,
 		) (retError error)
+		getWorkflowWatcher() WorkflowWatcher
 	}
 )
 
@@ -126,7 +122,7 @@ type (
 		domainID          string
 		workflowExecution workflow.WorkflowExecution
 		shard             ShardContext
-		clusterMetadata   cluster.Metadata
+		engine            Engine
 		executionManager  persistence.ExecutionManager
 		logger            log.Logger
 		metricsClient     metrics.Client
@@ -136,6 +132,7 @@ type (
 		msBuilder       mutableState
 		stats           *persistence.ExecutionStats
 		updateCondition int64
+		watcher         WorkflowWatcher
 	}
 )
 
@@ -163,7 +160,7 @@ func newWorkflowExecutionContext(
 		domainID:          domainID,
 		workflowExecution: execution,
 		shard:             shard,
-		clusterMetadata:   shard.GetService().GetClusterMetadata(),
+		engine:            shard.GetEngine(),
 		executionManager:  executionManager,
 		logger:            lg,
 		metricsClient:     shard.GetMetricsClient(),
@@ -172,6 +169,7 @@ func newWorkflowExecutionContext(
 		stats: &persistence.ExecutionStats{
 			HistorySize: 0,
 		},
+		watcher: NewWorkflowWatcher(),
 	}
 }
 
@@ -311,7 +309,16 @@ func (c *workflowExecutionContextImpl) createWorkflowExecution(
 	}
 
 	_, err := c.createWorkflowExecutionWithRetry(createRequest)
-	return err
+	if err != nil {
+		return err
+	}
+
+	c.notifyTasks(
+		newWorkflow.TransferTasks,
+		newWorkflow.ReplicationTasks,
+		newWorkflow.TimerTasks,
+	)
+	return nil
 }
 
 func (c *workflowExecutionContextImpl) conflictResolveWorkflowExecution(
@@ -351,6 +358,12 @@ func (c *workflowExecutionContextImpl) conflictResolveWorkflowExecution(
 	}); err != nil {
 		return nil, err
 	}
+
+	c.notifyTasks(
+		resetWorkflow.TransferTasks,
+		resetWorkflow.ReplicationTasks,
+		resetWorkflow.TimerTasks,
+	)
 
 	c.clear()
 	return c.loadWorkflowExecution()
@@ -489,8 +502,13 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 	// TODO remove updateCondition in favor of condition in mutable state
 	c.updateCondition = currentWorkflow.ExecutionInfo.NextEventID
 
+	c.watcher.Publish(&WatcherSnapshot{
+		CloseStatus: c.msBuilder.GetExecutionInfo().CloseStatus,
+	})
+
 	// for any change in the workflow, send a event
-	_ = c.shard.NotifyNewHistoryEvent(newHistoryEventNotification(
+	// TODO: @andrewjdawson2016 remove historyEventNotifier once plumbing for MutableStatePubSub is finished
+	c.engine.NotifyNewHistoryEvent(newHistoryEventNotification(
 		c.domainID,
 		&c.workflowExecution,
 		c.msBuilder.GetLastFirstEventID(),
@@ -498,6 +516,22 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 		c.msBuilder.GetPreviousStartedEventID(),
 		c.msBuilder.IsWorkflowExecutionRunning(),
 	))
+
+	// notify current workflow tasks
+	c.notifyTasks(
+		currentWorkflow.TransferTasks,
+		currentWorkflow.ReplicationTasks,
+		currentWorkflow.TimerTasks,
+	)
+
+	// notify new workflow tasks
+	if newWorkflow != nil {
+		c.notifyTasks(
+			newWorkflow.TransferTasks,
+			newWorkflow.ReplicationTasks,
+			newWorkflow.TimerTasks,
+		)
+	}
 
 	// finally emit session stats
 	domainName := c.getDomainName()
@@ -512,19 +546,24 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 		domainName,
 		resp.MutableStateUpdateSessionStats,
 	)
-
 	// emit workflow completion stats if any
 	if currentWorkflow.ExecutionInfo.State == persistence.WorkflowStateCompleted {
 		if event, ok := c.msBuilder.GetCompletionEvent(); ok {
-			emitWorkflowCompletionStats(
-				c.metricsClient,
-				domainName,
-				event,
-			)
+			emitWorkflowCompletionStats(c.metricsClient, domainName, event)
 		}
 	}
 
 	return nil
+}
+
+func (c *workflowExecutionContextImpl) notifyTasks(
+	transferTasks []persistence.Task,
+	replicationTasks []persistence.Task,
+	timerTasks []persistence.Task,
+) {
+	c.engine.NotifyNewTransferTasks(transferTasks)
+	c.engine.NotifyNewReplicationTasks(replicationTasks)
+	c.engine.NotifyNewTimerTasks(timerTasks)
 }
 
 func (c *workflowExecutionContextImpl) mergeContinueAsNewReplicationTasks(
@@ -948,5 +987,29 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(
 		}
 	}
 
-	return c.shard.ResetWorkflowExecution(resetWFReq)
+	err = c.shard.ResetWorkflowExecution(resetWFReq)
+	if err != nil {
+		return err
+	}
+
+	// notify reset workflow tasks
+	c.notifyTasks(
+		resetWorkflow.TransferTasks,
+		resetWorkflow.ReplicationTasks,
+		resetWorkflow.TimerTasks,
+	)
+
+	// notify current workflow tasks
+	if resetWFReq.CurrentWorkflowMutation != nil {
+		c.notifyTasks(
+			resetWFReq.CurrentWorkflowMutation.TransferTasks,
+			resetWFReq.CurrentWorkflowMutation.ReplicationTasks,
+			resetWFReq.CurrentWorkflowMutation.TimerTasks,
+		)
+	}
+	return nil
+}
+
+func (c *workflowExecutionContextImpl) getWorkflowWatcher() WorkflowWatcher {
+	return c.watcher
 }
