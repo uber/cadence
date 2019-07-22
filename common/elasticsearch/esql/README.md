@@ -30,7 +30,9 @@ if err == nil {
 }
 ~~~~
 ESQL support API `SetReplace` to register custom policy for colName replacement. It accepts 2 functions, the first function determines whether a colName is to be replaced, the second specifies how to do the replacement. Use case: user has custom field `field`, but to resolve confict, server stores the field as `Custom.field`. `SetReplace` API can automatically do the conversion.
+
 ESQL support API `SetProcess` to register custom policy for value processing. It accepts 2 functions, the first function determines whether a value of a colName is to be processed, the second specifies how to do the processing. Use case: user want to query time in readable format, but server stores time as an integer (unix nano). `SetProcess` API can automatically do the conversion.
+
 Below shows an example.
 ~~~~go
 sql := "SELECT colA FROM myTable WHERE colB < 10 AND dateTime = '2015-01-01T02:59:59Z'"
