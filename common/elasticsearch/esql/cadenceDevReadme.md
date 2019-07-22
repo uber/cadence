@@ -45,7 +45,7 @@ e := NewESql()
 e.SetCadence()
 e.ProcessQueryKey(myKeyFilter, myKeyProcess)         // set up filtering policy
 e.ProcessQueryValue(myValueFilter, myValueProcess)     // set up process policy
-dsl, _, err := e.ConvertPretty(sql, domainID)             // convert sql to dsl
+dsl, _, err := e.ConvertPrettyCadence(sql, domainID)             // convert sql to dsl
 if err == nil {
     fmt.Println(dsl)
 }
