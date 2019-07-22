@@ -29,15 +29,15 @@ import (
 )
 
 type (
-	// MutableStatePubSub is used to get updates on mutable state changes.
-	MutableStatePubSub interface {
+	// WorkflowWatcher is used to get updates on mutable state changes.
+	WorkflowWatcher interface {
 		Publish(*persistence.WorkflowMutableState)
 		Subscribe() (string, <-chan struct{})
 		Unsubscribe(string)
 		LatestMutableState() *persistence.WorkflowMutableState
 	}
 
-	mutableStatePubSub struct {
+	workflowWatcher struct {
 		// An atomic is used to keep track of mutable state rather than pushing updates on a channel.
 		// If a channel (buffered or unbuffered) is used, then at some point either blocking will occur or a mutable state update will be dropped.
 		// Since clients only care about getting the latest mutable state, simplify notifying clients
@@ -78,10 +78,10 @@ func (ls *lockableSubscribers) notifyAll() {
 	}
 }
 
-// NewMutableStatePubSub returns new MutableStatePubSub.
+// NewWorkflowWatcher returns new WorkflowWatcher.
 // This should only be called from workflowExecutionContext.go.
-func NewMutableStatePubSub() MutableStatePubSub {
-	return &mutableStatePubSub{
+func NewWorkflowWatcher() WorkflowWatcher {
+	return &workflowWatcher{
 		lockableSubscribers: lockableSubscribers{
 			subscribers: make(map[string]chan struct{}),
 		},
@@ -89,28 +89,28 @@ func NewMutableStatePubSub() MutableStatePubSub {
 }
 
 // Publish is used to indicate a mutable state change has been successfully persisted.
-func (ps *mutableStatePubSub) Publish(latestMS *persistence.WorkflowMutableState) {
+func (w *workflowWatcher) Publish(latestMS *persistence.WorkflowMutableState) {
 	if latestMS == nil {
 		return
 	}
-	ps.latestMS.Store(latestMS)
-	ps.notifyAll()
+	w.latestMS.Store(latestMS)
+	w.notifyAll()
 }
 
 // Subscribe to updates to mutable state.
 // Every time returned channel is received on it is guaranteed that at least one new update is available.
-func (ps *mutableStatePubSub) Subscribe() (string, <-chan struct{}) {
-	return ps.add()
+func (w *workflowWatcher) Subscribe() (string, <-chan struct{}) {
+	return w.add()
 }
 
 // Unsubscribe from updates to mutable state.
-func (ps *mutableStatePubSub) Unsubscribe(id string) {
-	ps.remove(id)
+func (w *workflowWatcher) Unsubscribe(id string) {
+	w.remove(id)
 }
 
 // LatestMutableState returns the latest mutable state update which has been persisted.
-func (ps *mutableStatePubSub) LatestMutableState() *persistence.WorkflowMutableState {
-	v := ps.latestMS.Load()
+func (w *workflowWatcher) LatestMutableState() *persistence.WorkflowMutableState {
+	v := w.latestMS.Load()
 	if v == nil {
 		return nil
 	}

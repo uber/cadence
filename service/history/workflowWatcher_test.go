@@ -30,36 +30,36 @@ import (
 	"go.uber.org/cadence/testsuite"
 )
 
-type mutableStatePubSubSuite struct {
+type workflowWatcherSuite struct {
 	suite.Suite
 	testsuite.WorkflowTestSuite
 }
 
-func TestMutableStatePubSubSuite(t *testing.T) {
-	suite.Run(t, new(mutableStatePubSubSuite))
+func TestWorkflowWatcherSuite(t *testing.T) {
+	suite.Run(t, new(workflowWatcherSuite))
 }
 
-func (s *mutableStatePubSubSuite) TestMutableStatePubSub_NoSubscribers() {
-	ps := NewMutableStatePubSub()
+func (s *workflowWatcherSuite) TestWorkflowWatcher_NoSubscribers() {
+	ps := NewWorkflowWatcher()
 	state := s.newRandomWorkflowMutableState()
 	ps.Publish(state)
 	s.assertMutableStatesEqual(state, ps.LatestMutableState())
 }
 
-func (s *mutableStatePubSubSuite) TestMutableStatePubSub_NilPublishAndAccess() {
-	ps := NewMutableStatePubSub()
+func (s *workflowWatcherSuite) TestWorkflowWatcher_NilPublishAndAccess() {
+	ps := NewWorkflowWatcher()
 	s.Nil(ps.LatestMutableState())
 	ps.Publish(nil)
 	s.Nil(ps.LatestMutableState())
 }
 
-func (s *mutableStatePubSubSuite) TestMutableStatePubSub_ZombieUnsubscribe() {
-	ps := NewMutableStatePubSub()
+func (s *workflowWatcherSuite) TestWorkflowWatcher_ZombieUnsubscribe() {
+	ps := NewWorkflowWatcher()
 	ps.Unsubscribe(uuid.New())
 }
 
-func (s *mutableStatePubSubSuite) TestMutableStatePubSub_ManySubscribers() {
-	ps := NewMutableStatePubSub()
+func (s *workflowWatcherSuite) TestWorkflowWatcher_ManySubscribers() {
+	ps := NewWorkflowWatcher()
 	var ids []string
 	var chans []<-chan struct{}
 	for i := 0; i < 10; i++ {
@@ -89,7 +89,7 @@ func (s *mutableStatePubSubSuite) TestMutableStatePubSub_ManySubscribers() {
 
 }
 
-func (s *mutableStatePubSubSuite) newRandomWorkflowMutableState() *persistence.WorkflowMutableState {
+func (s *workflowWatcherSuite) newRandomWorkflowMutableState() *persistence.WorkflowMutableState {
 	return &persistence.WorkflowMutableState{
 		ExecutionInfo: &persistence.WorkflowExecutionInfo{
 			DomainID:   uuid.New(),
@@ -99,13 +99,13 @@ func (s *mutableStatePubSubSuite) newRandomWorkflowMutableState() *persistence.W
 	}
 }
 
-func (s *mutableStatePubSubSuite) assertMutableStatesEqual(expected, actual *persistence.WorkflowMutableState) {
+func (s *workflowWatcherSuite) assertMutableStatesEqual(expected, actual *persistence.WorkflowMutableState) {
 	s.Equal(expected.ExecutionInfo.DomainID, actual.ExecutionInfo.DomainID)
 	s.Equal(expected.ExecutionInfo.WorkflowID, actual.ExecutionInfo.WorkflowID)
 	s.Equal(expected.ExecutionInfo.RunID, actual.ExecutionInfo.RunID)
 }
 
-func (s *mutableStatePubSubSuite) assertChanLengthsEqual(expectedLengths int, chans []<-chan struct{}) {
+func (s *workflowWatcherSuite) assertChanLengthsEqual(expectedLengths int, chans []<-chan struct{}) {
 	for _, ch := range chans {
 		s.Equal(expectedLengths, len(ch))
 	}

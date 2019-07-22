@@ -30,8 +30,6 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/locks"
-	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/locks"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -100,6 +98,7 @@ type (
 			currentWorkflowTransactionPolicy transactionPolicy,
 			newWorkflowTransactionPolicy *transactionPolicy,
 		) error
+
 		resetWorkflowExecution(
 			currMutableState mutableState,
 			updateCurr bool,
@@ -114,7 +113,7 @@ type (
 			baseRunID string,
 			baseRunNextEventID int64,
 		) (retError error)
-		mutableStatePubSub() MutableStatePubSub
+		getWorkflowWatcher() WorkflowWatcher
 	}
 )
 
@@ -133,7 +132,7 @@ type (
 		msBuilder       mutableState
 		stats           *persistence.ExecutionStats
 		updateCondition int64
-		pubSub          MutableStatePubSub
+		watcher         WorkflowWatcher
 	}
 )
 
@@ -170,7 +169,7 @@ func newWorkflowExecutionContext(
 		stats: &persistence.ExecutionStats{
 			HistorySize: 0,
 		},
-		pubSub: NewMutableStatePubSub(),
+		watcher: NewWorkflowWatcher(),
 	}
 }
 
@@ -503,18 +502,11 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 	// TODO remove updateCondition in favor of condition in mutable state
 	c.updateCondition = currentWorkflow.ExecutionInfo.NextEventID
 
-<<<<<<< HEAD
-	// for any change in the workflow, send a event
-<<<<<<< HEAD
-	c.engine.NotifyNewHistoryEvent(newHistoryEventNotification(
-=======
-=======
->>>>>>> rebase on master
 	c.pubSub.Publish(c.msBuilder.CopyToPersistence())
+
 	// for any change in the workflow, send a event
 	// TODO: @andrewjdawson2016 remove historyEventNotifier once plumbing for MutableStatePubSub is finished
-	_ = c.shard.NotifyNewHistoryEvent(newHistoryEventNotification(
->>>>>>> Implement mutable pub-sub
+	c.engine.NotifyNewHistoryEvent(newHistoryEventNotification(
 		c.domainID,
 		&c.workflowExecution,
 		c.msBuilder.GetLastFirstEventID(),
@@ -1016,6 +1008,6 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(
 	return nil
 }
 
-func (c *workflowExecutionContextImpl) mutableStatePubSub() MutableStatePubSub {
-	return c.pubSub
+func (c *workflowExecutionContextImpl) getWorkflowWatcher() WorkflowWatcher {
+	return c.watcher
 }

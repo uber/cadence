@@ -318,7 +318,7 @@ func (_m *mockWorkflowExecutionContext) persistNonFirstWorkflowEvents(_a0 *persi
 	return r0, r1
 }
 
-func (_m *mockWorkflowExecutionContext) mutableStatePubSub() MutableStatePubSub {
+func (_m *mockWorkflowExecutionContext) getMutableStatePubSub() MutableStatePubSub {
 	ret := _m.Called()
 
 	var r0 MutableStatePubSub
