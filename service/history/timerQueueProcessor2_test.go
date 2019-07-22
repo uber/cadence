@@ -128,15 +128,15 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 
 	domainCache := cache.NewDomainCache(s.mockMetadataMgr, s.mockClusterMetadata, metricsClient, s.logger)
 	s.mockShard = &shardContextImpl{
-		service:                   s.mockService,
-		shardInfo:                 &persistence.ShardInfo{
-			ShardID: shardID,
-			RangeID: 1,
-			TransferAckLevel: 0,
-			ClusterTransferAckLevel:   make(map[string]int64),
-			ClusterTimerAckLevel:      make(map[string]time.Time),
-			TransferFailoverLevels:    make(map[string]persistence.TransferFailoverLevel),
-			TimerFailoverLevels:       make(map[string]persistence.TimerFailoverLevel),
+		service: s.mockService,
+		shardInfo: &persistence.ShardInfo{
+			ShardID:                 shardID,
+			RangeID:                 1,
+			TransferAckLevel:        0,
+			ClusterTransferAckLevel: make(map[string]int64),
+			ClusterTimerAckLevel:    make(map[string]time.Time),
+			TransferFailoverLevels:  make(map[string]persistence.TransferFailoverLevel),
+			TimerFailoverLevels:     make(map[string]persistence.TimerFailoverLevel),
 		},
 		transferSequenceNumber:    1,
 		executionManager:          s.mockExecutionMgr,
