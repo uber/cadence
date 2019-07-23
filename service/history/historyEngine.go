@@ -747,8 +747,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	// each time DescribeWorkflowExecution is called.
 	backoffDuration := time.Duration(0)
 	startEvent, ok := msBuilder.GetStartEvent()
-	if ok &&
-		startEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstDecisionTaskBackoffSeconds() > 0 {
+	if ok {
 		backoffDuration = time.Duration(startEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstDecisionTaskBackoffSeconds()) * time.Second
 	}
 	result.WorkflowExecutionInfo.ExecutionTime = common.Int64Ptr(result.WorkflowExecutionInfo.GetStartTime() + backoffDuration.Nanoseconds())

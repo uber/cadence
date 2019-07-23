@@ -613,7 +613,7 @@ func (s *integrationSuite) TestWorkflowRetry() {
 		RetryPolicy: &workflow.RetryPolicy{
 			InitialIntervalInSeconds:    common.Int32Ptr(int32(initialIntervalInSeconds)),
 			MaximumAttempts:             common.Int32Ptr(int32(maximumAttempts)),
-			MaximumIntervalInSeconds:    common.Int32Ptr(10),
+			MaximumIntervalInSeconds:    common.Int32Ptr(1),
 			NonRetriableErrorReasons:    []string{"bad-bug"},
 			BackoffCoefficient:          common.Float64Ptr(backoffCoefficient),
 			ExpirationIntervalInSeconds: common.Int32Ptr(100),
@@ -685,6 +685,10 @@ func (s *integrationSuite) TestWorkflowRetry() {
 		backoff := time.Duration(0)
 		if i > 0 {
 			backoff = time.Duration(float64(initialIntervalInSeconds)*math.Pow(backoffCoefficient, float64(i-1))) * time.Second
+			// retry backoff cannot larger than MaximumIntervalInSeconds
+			if backoff > time.Second {
+				backoff = time.Second
+			}
 		}
 		expectedExecutionTime := dweResponse.WorkflowExecutionInfo.GetStartTime() + backoff.Nanoseconds()
 		s.Equal(expectedExecutionTime, dweResponse.WorkflowExecutionInfo.GetExecutionTime())

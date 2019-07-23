@@ -56,7 +56,7 @@ func GetBackoffForNextSchedule(cronSchedule string, startTime time.Time, closeTi
 	startUTCTime := startTime.In(time.UTC)
 	closeUTCTime := closeTime.In(time.UTC)
 	nextScheduleTime := schedule.Next(startUTCTime)
-	//Calculate the next schedule start time which is nearest to the close time
+	// Calculate the next schedule start time which is nearest to the close time
 	for nextScheduleTime.Before(closeUTCTime) {
 		nextScheduleTime = schedule.Next(nextScheduleTime)
 	}
