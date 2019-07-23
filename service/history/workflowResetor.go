@@ -623,9 +623,10 @@ func (w *workflowResetorImpl) replayHistoryEvents(
 						w.eng.logger,
 						firstEvent.GetVersion(),
 						domainEntry.GetReplicationPolicy(),
+						domainEntry.GetInfo().Name,
 					)
 				} else {
-					resetMutableState = newMutableStateBuilder(w.eng.shard, w.eng.shard.GetEventsCache(), w.eng.logger)
+					resetMutableState = newMutableStateBuilder(w.eng.shard, w.eng.shard.GetEventsCache(), w.eng.logger, domainEntry.GetInfo().Name)
 				}
 
 				resetMutableState.executionInfo.EventStoreVersion = persistence.EventStoreVersionV2

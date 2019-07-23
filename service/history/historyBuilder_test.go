@@ -76,7 +76,7 @@ func (s *historyBuilderSuite) SetupTest() {
 	}
 	s.mockEventsCache = &MockEventsCache{}
 	s.msBuilder = newMutableStateBuilder(s.mockShard, s.mockEventsCache,
-		s.logger)
+		s.logger, "")
 	s.builder = newHistoryBuilder(s.msBuilder, s.logger)
 }
 
@@ -256,10 +256,10 @@ func (s *historyBuilderSuite) TestHistoryBuilderWorkflowStartFailures() {
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
 			StartRequest: &workflow.StartWorkflowExecutionRequest{
-				WorkflowId:                          common.StringPtr(*we.WorkflowId),
-				WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(wt)},
-				TaskList:                            &workflow.TaskList{Name: common.StringPtr(tl)},
-				Input:                               input,
+				WorkflowId:   common.StringPtr(*we.WorkflowId),
+				WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(wt)},
+				TaskList:     &workflow.TaskList{Name: common.StringPtr(tl)},
+				Input:        input,
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(execTimeout),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(taskTimeout),
 				Identity:                            common.StringPtr(identity),
@@ -695,10 +695,10 @@ func (s *historyBuilderSuite) addWorkflowExecutionStartedEvent(we workflow.Workf
 		mock.Anything).Return()
 
 	request := &workflow.StartWorkflowExecutionRequest{
-		WorkflowId:                          common.StringPtr(*we.WorkflowId),
-		WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-		TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
-		Input:                               input,
+		WorkflowId:   common.StringPtr(*we.WorkflowId),
+		WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+		TaskList:     &workflow.TaskList{Name: common.StringPtr(taskList)},
+		Input:        input,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionStartToCloseTimeout),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(taskStartToCloseTimeout),
 		Identity:                            common.StringPtr(identity),
@@ -751,10 +751,10 @@ func (s *historyBuilderSuite) addActivityTaskScheduledEvent(decisionCompletedID 
 		mock.Anything).Return()
 	event, ai, err := s.msBuilder.AddActivityTaskScheduledEvent(decisionCompletedID,
 		&workflow.ScheduleActivityTaskDecisionAttributes{
-			ActivityId:                    common.StringPtr(activityID),
-			ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityType)},
-			TaskList:                      &workflow.TaskList{Name: common.StringPtr(taskList)},
-			Input:                         input,
+			ActivityId:   common.StringPtr(activityID),
+			ActivityType: &workflow.ActivityType{Name: common.StringPtr(activityType)},
+			TaskList:     &workflow.TaskList{Name: common.StringPtr(taskList)},
+			Input:        input,
 			ScheduleToCloseTimeoutSeconds: common.Int32Ptr(timeout),
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(queueTimeout),
 			HeartbeatTimeoutSeconds:       common.Int32Ptr(hearbeatTimeout),
