@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -323,7 +323,7 @@ run_id = ?
 (:shard_id, :domain_id, :workflow_id, :run_id, :signal_id)`
 
 	deleteSignalsRequestedSetQry = `DELETE FROM signals_requested_sets
-WHERE 
+WHERE
 shard_id = ? AND
 domain_id = ? AND
 workflow_id = ? AND

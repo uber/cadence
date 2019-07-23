@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -34,8 +34,8 @@ const (
  shard_id, range_id, data, data_encoding
  FROM shards WHERE shard_id = ?`
 
-	updateShardQry = `UPDATE shards 
- SET range_id = ?, data = ?, data_encoding = ? 
+	updateShardQry = `UPDATE shards
+ SET range_id = ?, data = ?, data_encoding = ?
  WHERE shard_id = ?`
 
 	lockShardQry     = `SELECT range_id FROM shards WHERE shard_id = ? FOR UPDATE`

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -30,11 +30,11 @@ import (
 const (
 	shardID = 54321
 
-	createDomainQry = `INSERT INTO 
+	createDomainQry = `INSERT INTO
  domains (id, name, is_global, data, data_encoding)
  VALUES(?, ?, ?, ?, ?)`
 
-	updateDomainQry = `UPDATE domains 
+	updateDomainQry = `UPDATE domains
  SET name = ?, data = ?, data_encoding = ?
  WHERE shard_id=54321 AND id = ?`
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -39,10 +39,10 @@ const (
 	getExecutionQry = `SELECT ` + executionsColumns + ` FROM executions
  WHERE shard_id = ? AND domain_id = ? AND workflow_id = ? AND run_id = ?`
 
-	deleteExecutionQry = `DELETE FROM executions 
+	deleteExecutionQry = `DELETE FROM executions
  WHERE shard_id = ? AND domain_id = ? AND workflow_id = ? AND run_id = ?`
 
-	lockExecutionQryBase = `SELECT next_event_id FROM executions 
+	lockExecutionQryBase = `SELECT next_event_id FROM executions
  WHERE shard_id = ? AND domain_id = ? AND workflow_id = ? AND run_id = ?`
 
 	writeLockExecutionQry = lockExecutionQryBase + ` FOR UPDATE`
@@ -79,10 +79,10 @@ domain_id = :domain_id AND
 workflow_id = :workflow_id
 `
 
-	getTransferTasksQry = `SELECT task_id, data, data_encoding 
+	getTransferTasksQry = `SELECT task_id, data, data_encoding
  FROM transfer_tasks WHERE shard_id = ? AND task_id > ? AND task_id <= ?`
 
-	createTransferTasksQry = `INSERT INTO transfer_tasks(shard_id, task_id, data, data_encoding) 
+	createTransferTasksQry = `INSERT INTO transfer_tasks(shard_id, task_id, data, data_encoding)
  VALUES(:shard_id, :task_id, :data, :data_encoding)`
 
 	deleteTransferTaskQry      = `DELETE FROM transfer_tasks WHERE shard_id = ? AND task_id = ?`
@@ -91,22 +91,22 @@ workflow_id = :workflow_id
 	createTimerTasksQry = `INSERT INTO timer_tasks (shard_id, visibility_timestamp, task_id, data, data_encoding)
   VALUES (:shard_id, :visibility_timestamp, :task_id, :data, :data_encoding)`
 
-	getTimerTasksQry = `SELECT visibility_timestamp, task_id, data, data_encoding FROM timer_tasks 
-  WHERE shard_id = ? 
-  AND ((visibility_timestamp >= ? AND task_id >= ?) OR visibility_timestamp > ?) 
+	getTimerTasksQry = `SELECT visibility_timestamp, task_id, data, data_encoding FROM timer_tasks
+  WHERE shard_id = ?
+  AND ((visibility_timestamp >= ? AND task_id >= ?) OR visibility_timestamp > ?)
   AND visibility_timestamp < ?
   ORDER BY visibility_timestamp,task_id LIMIT ?`
 
 	deleteTimerTaskQry      = `DELETE FROM timer_tasks WHERE shard_id = ? AND visibility_timestamp = ? AND task_id = ?`
 	rangeDeleteTimerTaskQry = `DELETE FROM timer_tasks WHERE shard_id = ? AND visibility_timestamp >= ? AND visibility_timestamp < ?`
 
-	createReplicationTasksQry = `INSERT INTO replication_tasks (shard_id, task_id, data, data_encoding) 
+	createReplicationTasksQry = `INSERT INTO replication_tasks (shard_id, task_id, data, data_encoding)
   VALUES(:shard_id, :task_id, :data, :data_encoding)`
 
-	getReplicationTasksQry = `SELECT task_id, data, data_encoding FROM replication_tasks WHERE 
+	getReplicationTasksQry = `SELECT task_id, data, data_encoding FROM replication_tasks WHERE
 shard_id = ? AND
 task_id > ? AND
-task_id <= ? 
+task_id <= ?
 ORDER BY task_id LIMIT ?`
 
 	deleteReplicationTaskQry = `DELETE FROM replication_tasks WHERE shard_id = ? AND task_id = ?`

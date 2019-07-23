@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -413,7 +413,7 @@ service WorkflowService {
       6: shared.LimitExceededError limitExceededError,
       7: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,
     )
-    
+
   /**
   * TerminateWorkflowExecution terminates an existing workflow execution by recording WorkflowExecutionTerminated event
   * in the history and immediately terminating the execution instance.
