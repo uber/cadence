@@ -252,6 +252,10 @@ func (c *taskListManagerImpl) DispatchQueryTask(
 		if err == context.DeadlineExceeded {
 			return nil, &s.QueryFailedError{Message: "timeout: no workflow worker polling for given tasklist"}
 		}
+		if _, ok := err.(*s.QueryFailedError); ok {
+			// this can happen when the query is forwarded to a parent partition
+			return nil, err
+		}
 		return nil, &s.QueryFailedError{Message: err.Error()}
 	}
 	return resp, nil
