@@ -57,7 +57,7 @@ func TestCron(t *testing.T) {
 				end, _ = time.Parse(time.RFC3339, tt.endTime)
 			}
 			backoff := GetBackoffForNextSchedule(tt.cron, start, end)
-			assert.Equal(t, tt.result, backoff)
+			assert.Equal(t, tt.result, backoff, "The cron spec is %s and the expected result is %s", tt.cron, tt.result)
 		})
 	}
 }
