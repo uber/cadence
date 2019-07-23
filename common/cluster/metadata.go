@@ -134,9 +134,6 @@ func NewMetadata(
 
 	clusterHistoryArchivalStatus := dc.GetStringProperty(dynamicconfig.HistoryArchivalStatus, archivalClusterConfig.History.Status)()
 	enableReadFromHistoryArchival := dc.GetBoolProperty(dynamicconfig.EnableReadFromHistoryArchival, archivalClusterConfig.History.EnableReadFromArchival)()
-	clusterVisibilityArchivalStatus := dc.GetStringProperty(dynamicconfig.VisibilityArchivalStatus, archivalClusterConfig.Visibility.Status)()
-	enableReadFromVisibilityArchival := dc.GetBoolProperty(dynamicconfig.EnableReadFromVisibilityArchival, archivalClusterConfig.Visibility.EnableReadFromArchival)()
-
 	clusterStatus, err := getClusterArchivalStatus(clusterHistoryArchivalStatus)
 	if err != nil {
 		panic(err)
@@ -147,6 +144,8 @@ func NewMetadata(
 	}
 	historyArchivalConfig := NewArchivalConfig(clusterStatus, enableReadFromHistoryArchival, domainStatus, archivalDomainDefault.History.DefaultURI)
 
+	clusterVisibilityArchivalStatus := dc.GetStringProperty(dynamicconfig.VisibilityArchivalStatus, archivalClusterConfig.Visibility.Status)()
+	enableReadFromVisibilityArchival := dc.GetBoolProperty(dynamicconfig.EnableReadFromVisibilityArchival, archivalClusterConfig.Visibility.EnableReadFromArchival)()
 	clusterStatus, err = getClusterArchivalStatus(clusterVisibilityArchivalStatus)
 	if err != nil {
 		panic(err)

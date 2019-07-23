@@ -145,10 +145,17 @@ var (
 )
 
 // NewWorkflowHandler creates a thrift handler for the cadence service
-func NewWorkflowHandler(sVice service.Service, config *Config, metadataMgr persistence.MetadataManager,
-	historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
-	visibilityMgr persistence.VisibilityManager, kafkaProducer messaging.Producer,
-	domainCache cache.DomainCache, archiverProvider provider.ArchiverProvider) *WorkflowHandler {
+func NewWorkflowHandler(
+	sVice service.Service,
+	config *Config,
+	metadataMgr persistence.MetadataManager,
+	historyMgr persistence.HistoryManager,
+	historyV2Mgr persistence.HistoryV2Manager,
+	visibilityMgr persistence.VisibilityManager,
+	kafkaProducer messaging.Producer,
+	domainCache cache.DomainCache,
+	archiverProvider provider.ArchiverProvider,
+) *WorkflowHandler {
 	handler := &WorkflowHandler{
 		Service:         sVice,
 		config:          config,

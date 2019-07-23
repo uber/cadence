@@ -132,11 +132,13 @@ func (s *server) startService() common.Daemon {
 	params.ClusterMetadata = cluster.NewMetadata(
 		params.Logger,
 		dc,
+		// here we are passing everything from cluster metadata can we just pass the cluster metadata
 		s.cfg.ClusterMetadata.EnableGlobalDomain,
 		clusterMetadata.FailoverVersionIncrement,
 		clusterMetadata.MasterClusterName,
 		clusterMetadata.CurrentClusterName,
 		clusterMetadata.ClusterInformation,
+		// humm... actually all of this stuff kind of seems like it belongs to clusterMetadata. Lets have a conversation with Samar and Wenquan on if we want to move this to clusterMetadata?
 		s.cfg.Archival,
 		s.cfg.DomainDefaults.Archival,
 	)
@@ -178,16 +180,16 @@ func (s *server) startService() common.Daemon {
 	params.PublicClient = workflowserviceclient.New(dispatcher.ClientConfig(common.FrontendServiceName))
 
 	configuredForHistoryArchival := params.ClusterMetadata.HistoryArchivalConfig().ClusterConfiguredForArchival()
-	configuredForVisibilityArchival := params.ClusterMetadata.VisibilityArchivalConfig().ClusterConfiguredForArchival()
-	historyArchiverProvider := s.cfg.Archival.History.ArchiverProvider
-	visibilityArchiverProvider := s.cfg.Archival.Visibility.ArchiverProvider
-	if (configuredForHistoryArchival && historyArchiverProvider == nil) || (!configuredForHistoryArchival && historyArchiverProvider != nil) {
+	historyArchiverProviderCfg := s.cfg.Archival.History.ArchiverProvider
+	if (configuredForHistoryArchival && historyArchiverProviderCfg == nil) || (!configuredForHistoryArchival && historyArchiverProviderCfg != nil) {
 		log.Fatalf("invalid history archival config")
 	}
-	if (configuredForVisibilityArchival && visibilityArchiverProvider == nil) || (!configuredForVisibilityArchival && visibilityArchiverProvider != nil) {
+	configuredForVisibilityArchival := params.ClusterMetadata.VisibilityArchivalConfig().ClusterConfiguredForArchival()
+	visibilityArchiverProviderCfg := s.cfg.Archival.Visibility.ArchiverProvider
+	if (configuredForVisibilityArchival && visibilityArchiverProviderCfg == nil) || (!configuredForVisibilityArchival && visibilityArchiverProviderCfg != nil) {
 		log.Fatalf("invalid visibility archival config")
 	}
-	params.ArchiverProvider = provider.NewArchiverProvider(historyArchiverProvider, visibilityArchiverProvider)
+	params.ArchiverProvider = provider.NewArchiverProvider(historyArchiverProviderCfg, visibilityArchiverProviderCfg)
 
 	params.PersistenceConfig.TransactionSizeLimit = dc.GetIntProperty(dynamicconfig.TransactionSizeLimit, common.DefaultTransactionSizeLimit)
 

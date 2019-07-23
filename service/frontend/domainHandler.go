@@ -225,6 +225,7 @@ func (d *domainHandlerImpl) registerDomain(
 		return err
 	}
 
+	// can you run locally and test that domain replication for archival config happens correctly
 	if domainRequest.IsGlobalDomain {
 		err = d.domainReplicator.HandleTransmissionTask(
 			replicator.DomainOperationCreate,
@@ -790,6 +791,9 @@ func (d *domainHandlerImpl) validateVisibilityArchivalURI(URI string) error {
 	if err != nil {
 		return err
 	}
+
+	// another option to consider (not saying you need to do this) but provider could take the full URI and do the parsing itself
+	// This creates a nice encapsoluation of parsing schemes
 	archiver, err := d.archiverProvider.GetVisibilityArchiver(scheme, common.FrontendServiceName)
 	if err != nil {
 		return err

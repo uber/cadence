@@ -81,6 +81,7 @@ dcRedirectionPolicy:
   policy: "noop"
   toDC: ""
 
+# can we enable this so we can start doing local verification against filestore
 archival:
   history:
     status: "disabled"
@@ -89,6 +90,7 @@ archival:
     status: "disabled"
     enableReadFromArchival: false
 
+# lets also set default=enabled and uri= file:///tmp/cadence_archival/development
 domainDefaults:
   archival:
     history:

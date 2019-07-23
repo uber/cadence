@@ -31,7 +31,8 @@ type (
 	// ArchivalStatus represents the archival status of the cluster
 	ArchivalStatus int
 
-	// ArchivalConfig is an immutable representation of the current archival configuration of the cluster
+	// ArchivalConfig is an immutable representation of the archival configuration of the cluster.
+	// This config is determined at cluster startup time.
 	ArchivalConfig struct {
 		ClusterStatus          ArchivalStatus
 		EnableReadFromArchival bool
@@ -43,7 +44,8 @@ type (
 const (
 	// ArchivalDisabled means this cluster is not configured to handle archival
 	ArchivalDisabled ArchivalStatus = iota
-	// ArchivalPaused means this cluster is configured to handle archival but is currently not archiving
+	// ArchivalPaused means this cluster is configured to handle archival but is currently not archiving.
+	// This state is not yet implemented, as of now ArchivalPaused is treated the same way as ArchivalDisabled.
 	ArchivalPaused
 	// ArchivalEnabled means this cluster is currently archiving
 	ArchivalEnabled
@@ -52,7 +54,7 @@ const (
 // NewArchivalConfig constructs a new valid ArchivalConfig
 func NewArchivalConfig(
 	clusterStatus ArchivalStatus,
-	enableReadFromArchival bool,
+	enableReadFromArchival bool, // this can be called enableRead its clear that its from archival based on the file
 	domainDefaultStatus shared.ArchivalStatus,
 	domainDefaultURI string,
 ) *ArchivalConfig {
@@ -75,8 +77,8 @@ func (a *ArchivalConfig) ClusterConfiguredForArchival() bool {
 
 func (a *ArchivalConfig) isValid() bool {
 	URISet := len(a.DomainDefaultURI) != 0
-	disabled := a.ClusterStatus == ArchivalDisabled
-	return (!URISet && disabled) || (URISet && !disabled)
+	// since we are actually treating paused as disabled now, the following code should instead be:
+	return (URISet && a.ClusterConfiguredForArchival()) || (!URISet && !a.ClusterConfiguredForArchival())
 }
 
 func getClusterArchivalStatus(str string) (ArchivalStatus, error) {

@@ -457,6 +457,7 @@ func IsJustOrderByClause(clause string) bool {
 }
 
 // GetArchivalScheme extract archival scheme from URI
+// I think this should live in the archiver package once you make the change to use strongly typed URI instead of strings
 func GetArchivalScheme(URI string) (string, error) {
 	sepIdx := strings.Index(URI, "://")
 	if sepIdx == -1 {

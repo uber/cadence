@@ -293,8 +293,10 @@ type (
 		// Status is the status of history archival either: enabled, disabled, or paused
 		Status string `yaml:"status"`
 		// EnableReadFromArchival whether history can be read from archival
+		// Lets just call this enableRead because this is already under the archival node
 		EnableReadFromArchival bool `yaml:"enableReadFromArchival"`
 		// ArchiverProvider contains the config for all history archivers
+		// Same thing here lets just call this provider basically across all yaml config I do not think there should be any duplication within naming given a fully qualified yaml node
 		ArchiverProvider *HistoryArchiverProvider `yaml:"archiverProvider"`
 	}
 
@@ -352,16 +354,20 @@ type (
 	// HistoryArchivalDomainDefaults is the default history archival config for each domain
 	HistoryArchivalDomainDefaults struct {
 		// DefaultStatus is the domain default status of history archival: enabled or disabled
+		// I do not think we need to include the word defaults here because the yaml node is domainDefaults.archival.history.defaultStatus
 		DefaultStatus string `yaml:"defaultStatus"`
 		// DefaultURI is the domain default URI for history archiver
+		// Same comment here
 		DefaultURI string `yaml:"defaultURI"`
 	}
 
 	// VisibilityArchivalDomainDefaults is the default visibility archival config for each domain
 	VisibilityArchivalDomainDefaults struct {
 		// DefaultStatus is the domain default status of visibility archival: enabled or disabled
+		// and here
 		DefaultStatus string `yaml:"defaultStatus"`
 		// DefaultURI is the domain default URI for visibility archiver
+		// and here
 		DefaultURI string `yaml:"defaultURI"`
 	}
 

@@ -305,6 +305,9 @@ func DescribeDomain(c *cli.Context) {
 		formatStr = formatStr + "HistoryArchivalURI: %v\n"
 		descValues = append(descValues, resp.Configuration.GetHistoryArchivalURI())
 	}
+
+	// remove output for visibility archival: basically CLI should not surface any visibility archival info though flags or through results
+	// it is misleading because this feature is not ready yet
 	formatStr = formatStr + "VisibilityArchivalStatus: %v\n"
 	descValues = append(descValues, resp.Configuration.GetVisibilityArchivalStatus().String())
 	if resp.Configuration.GetVisibilityArchivalURI() != "" {
