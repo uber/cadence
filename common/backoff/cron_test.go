@@ -21,6 +21,7 @@
 package backoff
 
 import (
+	"strconv"
 	"testing"
 	"time"
 
@@ -49,7 +50,7 @@ var crontests = []struct {
 
 func TestCron(t *testing.T) {
 	for idx, tt := range crontests {
-		t.Run(string(idx), func(t *testing.T) {
+		t.Run(strconv.Itoa(idx), func(t *testing.T) {
 			start, _ := time.Parse(time.RFC3339, tt.startTime)
 			end := start
 			if tt.endTime != "" {
