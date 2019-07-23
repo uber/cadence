@@ -613,7 +613,7 @@ func (s *integrationSuite) TestWorkflowRetry() {
 		RetryPolicy: &workflow.RetryPolicy{
 			InitialIntervalInSeconds:    common.Int32Ptr(int32(initialIntervalInSeconds)),
 			MaximumAttempts:             common.Int32Ptr(int32(maximumAttempts)),
-			MaximumIntervalInSeconds:    common.Int32Ptr(1),
+			MaximumIntervalInSeconds:    common.Int32Ptr(10),
 			NonRetriableErrorReasons:    []string{"bad-bug"},
 			BackoffCoefficient:          common.Float64Ptr(backoffCoefficient),
 			ExpirationIntervalInSeconds: common.Int32Ptr(100),
