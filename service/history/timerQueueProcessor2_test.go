@@ -368,7 +368,7 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout_Cron() {
 	schedule := "@every 30s"
 
 	builder := newMutableStateBuilderWithEventV2(s.mockShard, s.mockEventsCache, s.logger, we.GetRunId())
-	s.mockShardManager.On("UpdateShard", mock.Anything).Return(nil).Once()
+	s.mockShardManager.On("UpdateShard", mock.Anything).Return(nil).Maybe()
 	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
 		mock.Anything).Return().Once()
 	startRequest := &workflow.StartWorkflowExecutionRequest{
