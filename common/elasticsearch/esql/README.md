@@ -39,7 +39,6 @@ ESQL support API `ProcessQueryValue` to register custom policy for value process
 Below shows an example.
 ~~~~go
 sql := "SELECT colA FROM myTable WHERE colB < 10 AND dateTime = '2015-01-01T02:59:59Z'"
-domainID := "CadenceSampleDomain"
 // custom policy that change colName like "col.." to "myCol.."
 func myKeyFilter(colName string) bool {
     return strings.HasPrefix(colName, "col")
@@ -136,6 +135,7 @@ To customize test cases:
 - ES SQL API does not support `HAVING aggregation` that not show up in `SELECT`, esql support it
 - To use regex query, the column should be `keyword` type, otherwise the regex is applied to all the terms produced by tokenizer from the original text rather than the original text itself
 - Comparison with arithmetics can be potentially slow since it uses scripting query and thus is not able to take advantage of reverse index. For binary operators, please refer to [this link](https://www.elastic.co/guide/en/elasticsearch/painless/6.5/painless-operators.html) on the precedence. We don't support all of them.
+- Comparison with arithmetics does not support date type
 
 
 ## Acknowledgement

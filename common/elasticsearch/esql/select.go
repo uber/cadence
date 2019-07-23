@@ -45,27 +45,9 @@ func (e *ESql) convertSelect(sel sqlparser.Select, domainID string, pagination .
 		}
 		dslMap["query"] = dslQuery
 	}
-	// cadence special handling: add domain ID query
+	// cadence special handling: add domain ID query and time query bounds
 	if e.cadence {
-		var domainIDQuery string
-		if domainID != "" {
-			domainIDQuery = fmt.Sprintf(`{"term": {"%v": "%v"}}`, DomainID, domainID)
-		}
-		if sel.Where == nil {
-			if domainID != "" {
-				dslMap["query"] = domainIDQuery
-			}
-		} else {
-			if domainID != "" {
-				domainIDQuery = domainIDQuery + ","
-			}
-			if strings.Contains(fmt.Sprintf("%v", dslMap["query"]), ExecutionTime) {
-				executionTimeBound := fmt.Sprintf(`{"range": {"%v": {"gte": "0"}}}`, ExecutionTime)
-				dslMap["query"] = fmt.Sprintf(`{"bool": {"filter": [%v %v, %v]}}`, domainIDQuery, executionTimeBound, dslMap["query"])
-			} else {
-				dslMap["query"] = fmt.Sprintf(`{"bool": {"filter": [%v %v]}}`, domainIDQuery, dslMap["query"])
-			}
-		}
+		e.addCadenceDomainTimeQuery(sel, domainID, dslMap)
 	}
 
 	// handle FROM keyword, currently only support 1 target table
@@ -98,8 +80,6 @@ func (e *ESql) convertSelect(sel sqlparser.Select, domainID string, pagination .
 			dslMap["aggs"] = dslAgg
 		}
 		// do not return document contents if this is an aggregation query
-		// dslMap["_source"] = "false"
-		// dslMap["stored_fields"] = `"_none_"`
 		dslMap["size"] = 0
 	} else {
 		// handle LIMIT and OFFSET keyword, these 2 keywords only works in non-aggregation query
@@ -148,25 +128,10 @@ func (e *ESql) convertSelect(sel sqlparser.Select, domainID string, pagination .
 		}
 		// cadence special handling: add runID as sorting tie breaker
 		if e.cadence {
-			switch len(orderBySlice) {
-			case 0: // if unsorted, use default sorting
-				cadenceOrderStartTime := fmt.Sprintf(`{"%v": "%v"}`, StartTime, StartTimeOrder)
-				orderBySlice = append(orderBySlice, cadenceOrderStartTime)
-				sortField = append(sortField, StartTime)
-			case 1: // user should not use tieBreaker to sort
-				if sortField[0] == TieBreaker {
-					err = fmt.Errorf("esql: Cadence does not allow user sort by RunID")
-					return "", nil, err
-				}
-			default:
-				err = fmt.Errorf("esql: Cadence only allow 1 custom sort field")
+			orderBySlice, sortField, err = e.addCadenceSort(orderBySlice, sortField)
+			if err != nil {
 				return "", nil, err
 			}
-
-			// add tie breaker
-			cadenceOrderTieBreaker := fmt.Sprintf(`{"%v": "%v"}`, TieBreaker, TieBreakerOrder)
-			orderBySlice = append(orderBySlice, cadenceOrderTieBreaker)
-			sortField = append(sortField, TieBreaker)
 		}
 		if len(orderBySlice) > 0 {
 			dslMap["sort"] = fmt.Sprintf("[%v]", strings.Join(orderBySlice, ","))
@@ -186,6 +151,7 @@ func (e *ESql) convertWhereExpr(expr sqlparser.Expr, parent sqlparser.Expr) (str
 	var err error
 	if expr == nil {
 		err = fmt.Errorf("esql: invalid where expression, where expression should not be nil")
+		return "", err
 	}
 
 	switch expr.(type) {

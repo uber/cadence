@@ -29,21 +29,21 @@ import (
 )
 
 // ProcessFunc ...
-// esql use replace function to apply user colName or column value replacing policy
+// esql use ProcessFunc to process query key value macro
 type ProcessFunc func(string) (string, error)
 
 // FilterFunc ...
-// esql use filter function decide whether the policy will be applied to the column
-// only accept column names that filter(colName) == true
+// esql use FilterFunc to determine whether a target is to be processed by ProcessFunc
+// only those FilterFunc(colName) == true will be processed
 type FilterFunc func(string) bool
 
 // ESql ...
 // ESql is used to hold necessary information that required in parsing
 type ESql struct {
-	filterKey    FilterFunc  // select the column we want to replace name
-	filterValue  FilterFunc  // select the column we want to process value
-	processKey   ProcessFunc // if selected by filterReplace, change the column name
-	processValue ProcessFunc // if selected by filterProcess, change the column value
+	filterKey    FilterFunc  // select the column we want to process key macro
+	filterValue  FilterFunc  // select the column we want to process value macro
+	processKey   ProcessFunc // if selected by filterKey, change the query name
+	processValue ProcessFunc // if selected by filterValue, change the query value
 	cadence      bool
 	pageSize     int
 	bucketNumber int
@@ -62,11 +62,11 @@ func NewESql() *ESql {
 	}
 }
 
-// ProcessQueryKey ... set up user specified column name replacement policy
+// ProcessQueryKey ... set up user specified column name processing policy
 // should not be called if there is potential race condition
-func (e *ESql) ProcessQueryKey(filterArg FilterFunc, replaceArg ProcessFunc) {
+func (e *ESql) ProcessQueryKey(filterArg FilterFunc, processArg ProcessFunc) {
 	e.filterKey = filterArg
-	e.processKey = replaceArg
+	e.processKey = processArg
 }
 
 // ProcessQueryValue ... set up user specified column value processing policy
@@ -124,7 +124,7 @@ func (e *ESql) ConvertPretty(sql string, pagination ...interface{}) (dsl string,
 //
 // arguments:
 //  - sql: the sql query needs conversion in string format
-//  - pagination: variadic arguments that indicates es search_after for
+//  - pagination: variadic arguments that indicates es search_after
 //
 // return values:
 //	- dsl: the elasticsearch dsl json style string
