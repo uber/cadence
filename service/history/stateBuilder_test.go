@@ -188,6 +188,7 @@ func (s *stateBuilderSuite) applyWorkflowExecutionStartedEventTest(cronSchedule 
 		WorkflowExecutionStartedEventAttributes: startWorkflowAttribute,
 	}
 
+	s.mockMutableState.On("GetStartEvent").Return(event, true)
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: domainID}).Return(
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
