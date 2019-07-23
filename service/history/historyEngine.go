@@ -25,7 +25,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -748,9 +747,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	// each time DescribeWorkflowExecution is called.
 	backoffDuration := time.Duration(0)
 	startEvent, ok := msBuilder.GetStartEvent()
-	if executionInfo.HasRetryPolicy && (executionInfo.Attempt > 0) {
-		backoffDuration = time.Duration(float64(executionInfo.InitialInterval)*math.Pow(executionInfo.BackoffCoefficient, float64(executionInfo.Attempt-1))) * time.Second
-	} else if ok && startEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstDecisionTaskBackoffSeconds() > 0 {
+	if ok && startEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstDecisionTaskBackoffSeconds() > 0 {
 		backoffDuration = time.Duration(startEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstDecisionTaskBackoffSeconds()) * time.Second
 	}
 	result.WorkflowExecutionInfo.ExecutionTime = common.Int64Ptr(result.WorkflowExecutionInfo.GetStartTime() + backoffDuration.Nanoseconds())
