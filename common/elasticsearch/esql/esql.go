@@ -49,19 +49,6 @@ type ESql struct {
 	bucketNumber int
 }
 
-// SetDefault ...
-// all members goes to default
-// should not be called if there is potential race condition
-func (e *ESql) SetDefault() {
-	e.pageSize = DefaultPageSize
-	e.bucketNumber = DefaultBucketNumber
-	e.cadence = false
-	e.filterKey = nil
-	e.filterValue = nil
-	e.processKey = nil
-	e.processValue = nil
-}
-
 // NewESql ... return a new default ESql
 func NewESql() *ESql {
 	return &ESql{

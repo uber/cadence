@@ -36,6 +36,10 @@ func (e *ESql) convertToScript(expr sqlparser.Expr) (script string, err error) {
 		script, err = e.convertValExpr(expr, true)
 	case *sqlparser.BinaryExpr:
 		script, err = e.convertBinaryExpr(expr)
+	case *sqlparser.ParenExpr:
+		parenExpr := expr.(*sqlparser.ParenExpr)
+		script, err = e.convertToScript(parenExpr.Expr)
+		script = fmt.Sprintf(`(%v)`, script)
 	default:
 		err = fmt.Errorf("esql: invalid expression type for scripting")
 	}
@@ -61,6 +65,9 @@ func (e *ESql) convertBinaryExpr(expr sqlparser.Expr) (string, error) {
 	}
 
 	lhsStr, err = e.convertToScript(lhsExpr)
+	if err != nil {
+		return "", err
+	}
 	rhsStr, err = e.convertToScript(rhsExpr)
 	if err != nil {
 		return "", err

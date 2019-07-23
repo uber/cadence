@@ -138,10 +138,6 @@ To customize test cases:
 - Comparison with arithmetics can be potentially slow since it uses scripting query and thus is not able to take advantage of reverse index. For binary operators, please refer to [this link](https://www.elastic.co/guide/en/elasticsearch/painless/6.5/painless-operators.html) on the precedence. We don't support all of them.
 
 
-## Current Issue
-- parsing issue w/ date datatype in nested field
-
-
 ## Acknowledgement
 This project is originated from [elasticsql](https://github.com/cch123/elasticsql). Table below shows the improvement.
 
