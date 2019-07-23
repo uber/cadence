@@ -540,7 +540,7 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 	)
 	// emit workflow completion stats if any
 	if currentWorkflow.ExecutionInfo.State == persistence.WorkflowStateCompleted {
-		if event, ok := c.msBuilder.GetCompletionEvent(); ok {
+		if event, err := c.msBuilder.GetCompletionEvent(); err == nil {
 			emitWorkflowCompletionStats(c.metricsClient, domainName, event)
 		}
 	}
@@ -885,11 +885,15 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(
 		var size int64
 		// TODO workflow execution reset logic generates replication tasks in its own business logic
 		currentExecutionInfo := currMutableState.GetExecutionInfo()
+		currentBranchToken, err := currMutableState.GetCurrentBranchToken()
+		if err != nil {
+			return err
+		}
 		size, retError = c.persistNonFirstWorkflowEvents(&persistence.WorkflowEvents{
 			DomainID:    currentExecutionInfo.DomainID,
 			WorkflowID:  currentExecutionInfo.WorkflowID,
 			RunID:       currentExecutionInfo.RunID,
-			BranchToken: currMutableState.GetCurrentBranch(),
+			BranchToken: currentBranchToken,
 			Events:      hBuilder.GetHistory().GetEvents(),
 		})
 		if retError != nil {

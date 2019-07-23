@@ -485,13 +485,13 @@ func (s *versionHistoriesSuite) TestAddGetVersionHistory() {
 	})
 
 	histories := NewVersionHistories(versionHistory1)
-	s.Equal(0, histories.currentBranchIndex)
+	s.Equal(0, histories.currentVersionHistoryIndex)
 
 	currentBranchChanged, newVersionHistoryIndex, err := histories.AddVersionHistory(versionHistory2)
 	s.Nil(err)
 	s.True(currentBranchChanged)
 	s.Equal(1, newVersionHistoryIndex)
-	s.Equal(1, histories.currentBranchIndex)
+	s.Equal(1, histories.currentVersionHistoryIndex)
 
 	resultVersionHistory1, err := histories.GetVersionHistory(0)
 	s.Nil(err)
@@ -563,7 +563,7 @@ func (s *versionHistoriesSuite) TestFindLCAVersionHistoryIndexAndItem_SameEventI
 	s.Equal(NewVersionHistoryItem(7, 6), item)
 }
 
-func (s *versionHistoriesSuite) TestCurrentBranchIndexIsInReplay() {
+func (s *versionHistoriesSuite) TestCurrentVersionHistoryIndexIsInReplay() {
 	versionHistory1 := NewVersionHistory([]byte("branch token 1"), []*VersionHistoryItem{
 		{eventID: 3, version: 0},
 		{eventID: 5, version: 4},
@@ -578,25 +578,25 @@ func (s *versionHistoriesSuite) TestCurrentBranchIndexIsInReplay() {
 	})
 
 	histories := NewVersionHistories(versionHistory1)
-	s.Equal(0, histories.currentBranchIndex)
+	s.Equal(0, histories.currentVersionHistoryIndex)
 
 	currentBranchChanged, newVersionHistoryIndex, err := histories.AddVersionHistory(versionHistory2)
 	s.Nil(err)
 	s.True(currentBranchChanged)
 	s.Equal(1, newVersionHistoryIndex)
-	s.Equal(1, histories.currentBranchIndex)
+	s.Equal(1, histories.currentVersionHistoryIndex)
 
 	isInReplay, err := histories.IsRebuilt()
 	s.NoError(err)
 	s.False(isInReplay)
 
-	err = histories.SetCurrentBranchIndex(0)
+	err = histories.SetCurrentVersionHistoryIndex(0)
 	s.NoError(err)
 	isInReplay, err = histories.IsRebuilt()
 	s.NoError(err)
 	s.True(isInReplay)
 
-	err = histories.SetCurrentBranchIndex(1)
+	err = histories.SetCurrentVersionHistoryIndex(1)
 	s.NoError(err)
 	isInReplay, err = histories.IsRebuilt()
 	s.NoError(err)
