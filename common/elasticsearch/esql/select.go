@@ -429,24 +429,6 @@ func (e *ESql) convertComparisionExpr(expr sqlparser.Expr, parent sqlparser.Expr
 		return "", err
 	}
 
-	// // extract rhs
-	// switch rhsExpr.(type) {
-	// case *sqlparser.SQLVal, sqlparser.ValTuple:
-
-	// case *sqlparser.ColName:
-	// 	rhs, _ := rhsExpr.(*sqlparser.ColName)
-	// 	rhsStr, err = e.convertColName(rhs)
-	// 	if err != nil {
-	// 		return "", err
-	// 	}
-	// 	// if rhs is a colName, use painless scripting language
-	//
-	// 	return dsl, nil
-	// default:
-	// 	err := fmt.Errorf("unsupported comparion rhs type")
-	// 	return "", err
-	// }
-
 	// generate dsl according to operator
 	switch op {
 	case "=":

@@ -4,7 +4,7 @@ Use SQL to query Elasticsearch. ES V6 compatible.
 ## Supported features
 - [x] =, !=, <, >, <=, >=, <>, ()
 - [x] comparison with arithmetics (e.g. colA + 1 < colB * 2)
-- [x] arithmetic operators: +, -, *, /, %, >>, <<
+- [x] arithmetic operators: +, -, *, /, %, >>, <<, ()
 - [x] AND, OR, NOT
 - [x] LIKE, IN, REGEX, IS NULL, BETWEEN
 - [x] LIMIT, SIZE, DISTINCT
