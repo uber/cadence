@@ -371,6 +371,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 		return nil, err
 	}
 	workflowID := request.GetWorkflowId()
+
 	maxDecisionStartToCloseTimeoutSeconds := int32(e.config.MaxDecisionStartToCloseSeconds(
 		domainEntry.GetInfo().Name,
 	))
@@ -1473,6 +1474,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 		return nil, err
 	}
 	workflowID := request.GetWorkflowId()
+
 	maxDecisionStartToCloseTimeoutSeconds := int32(e.config.MaxDecisionStartToCloseSeconds(
 		domainEntry.GetInfo().Name,
 	))
