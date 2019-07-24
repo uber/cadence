@@ -370,8 +370,18 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 	if err != nil {
 		return nil, err
 	}
-
 	workflowID := request.GetWorkflowId()
+	maxDecisionStartToCloseTimeoutSeconds := int32(e.config.MaxDecisionStartToCloseSeconds(
+		domainEntry.GetInfo().Name,
+	))
+	if request.GetTaskStartToCloseTimeoutSeconds() > maxDecisionStartToCloseTimeoutSeconds {
+		e.logger.WithTags(
+			tag.WorkflowDomainID(domainID),
+			tag.WorkflowID(workflowID),
+		).Info("force override decision start to close timeout")
+		request.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(maxDecisionStartToCloseTimeoutSeconds)
+	}
+
 	// grab the current context as a lock, nothing more
 	_, currentRelease, err := e.historyCache.getOrCreateCurrentWorkflowExecution(
 		ctx,
@@ -1462,8 +1472,18 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 	if err != nil {
 		return nil, err
 	}
-
 	workflowID := request.GetWorkflowId()
+	maxDecisionStartToCloseTimeoutSeconds := int32(e.config.MaxDecisionStartToCloseSeconds(
+		domainEntry.GetInfo().Name,
+	))
+	if request.GetTaskStartToCloseTimeoutSeconds() > maxDecisionStartToCloseTimeoutSeconds {
+		e.logger.WithTags(
+			tag.WorkflowDomainID(domainID),
+			tag.WorkflowID(workflowID),
+		).Info("force override decision start to close timeout")
+		request.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(maxDecisionStartToCloseTimeoutSeconds)
+	}
+
 	// grab the current context as a lock, nothing more
 	_, currentRelease, err := e.historyCache.getOrCreateCurrentWorkflowExecution(
 		ctx,

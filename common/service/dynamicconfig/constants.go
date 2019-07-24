@@ -63,6 +63,7 @@ var keys = map[Key]string{
 	EnableDomainNotActiveAutoForwarding: "system.enableDomainNotActiveAutoForwarding",
 	TransactionSizeLimit:                "system.transactionSizeLimit",
 	MinRetentionDays:                    "system.minRetentionDays",
+	MaxDecisionStartToCloseSeconds:      "system.maxDecisionStartToCloseSeconds",
 	EnableBatcher:                       "worker.enableBatcher",
 
 	// size limit
@@ -254,6 +255,8 @@ const (
 	TransactionSizeLimit
 	// MinRetentionDays is the minimal allowed retention days for domain
 	MinRetentionDays
+	// MaxDecisionStartToCloseSeconds is the minimal allowed decision start to close timeout in seconds
+	MaxDecisionStartToCloseSeconds
 
 	// BlobSizeLimitError is the per event blob size limit
 	BlobSizeLimitError
