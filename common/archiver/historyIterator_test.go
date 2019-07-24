@@ -619,6 +619,10 @@ func (s *HistoryIteratorSuite) TestNewIteratorWithState() {
 
 	newItr := s.constructTestHistoryIterator(nil, nil, testDefaultTargetHistoryBlobSize, stateToken)
 	s.assertStateMatches(testIteratorState, newItr)
+
+	newItr2 := s.constructTestHistoryIterator(nil, nil, testDefaultTargetHistoryBlobSize, nil)
+	newItr2.Reset(stateToken)
+	s.assertStateMatches(testIteratorState, newItr2)
 }
 
 func (s *HistoryIteratorSuite) constructMockHistoryManager(batchInfo []int, returnErrorOnPage int, addNotExistCall bool, pages ...page) *mocks.HistoryManager {
@@ -721,7 +725,9 @@ func (s *HistoryIteratorSuite) constructTestHistoryIterator(
 		NextEventID:          testNextEventID,
 		CloseFailoverVersion: testCloseFailoverVersion,
 	}
-	iterator, err := NewHistoryIterator(request, mockHistoryManager, mockHistoryV2Manager, targetHistoryBlobSize, initialState, newTestSizeEstimator())
+	iterator, err := NewHistoryIteratorFromState(request, mockHistoryManager, mockHistoryV2Manager, targetHistoryBlobSize, initialState)
 	s.NoError(err)
-	return iterator.(*historyIterator)
+	iteratorImpl := iterator.(*historyIterator)
+	iteratorImpl.sizeEstimator = newTestSizeEstimator()
+	return iteratorImpl
 }

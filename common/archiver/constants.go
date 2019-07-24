@@ -22,8 +22,6 @@ package archiver
 
 import (
 	"errors"
-
-	"github.com/uber/cadence/.gen/go/shared"
 )
 
 const (
@@ -48,9 +46,9 @@ var (
 	// ErrContextTimeout is the error for context timeout
 	ErrContextTimeout = errors.New("archive aborted because context timed out")
 	// ErrInvalidGetHistoryRequest is the error for invalid GetHistory request
-	ErrInvalidGetHistoryRequest = &shared.BadRequestError{Message: "Get archived history request is invalid"}
+	ErrInvalidGetHistoryRequest = errors.New("get archived history request is invalid")
 	// ErrGetHistoryTokenCorrupted is the error for corrupted GetHistory token
-	ErrGetHistoryTokenCorrupted = &shared.BadRequestError{Message: "Next page token is corrupted."}
+	ErrGetHistoryTokenCorrupted = errors.New("next page token is corrupted")
 	// ErrHistoryNotExist is the error for non-exist history
-	ErrHistoryNotExist = &shared.BadRequestError{Message: "Requested workflow history does not exist."}
+	ErrHistoryNotExist = errors.New("requested workflow history does not exist")
 )

@@ -29,7 +29,7 @@
 // URI. It optionally takes in a NextPageToken which specifies the workflow close failover
 // version and the index of the first history batch that should be returned. Instead of
 // NextPageToken, caller can also provide a close failover version, in which case, Get() method
-// will return history batches starting from the beginning of that history verison. If neither
+// will return history batches starting from the beginning of that history version. If neither
 // of NextPageToken or close failover version is specified, the highest close failover version
 // will be picked.
 
@@ -38,11 +38,9 @@ package filestore
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"path"
 	"strconv"
-	"strings"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -115,31 +113,32 @@ func newHistoryArchiver(
 
 func (h *historyArchiver) Archive(
 	ctx context.Context,
-	URI string,
+	URI archiver.URI,
 	request *archiver.ArchiveHistoryRequest,
 	opts ...archiver.ArchiveOption,
-) error {
-	logger := tagLoggerWithArchiveHistoryRequest(h.container.Logger, request)
+) (err error) {
+	featureCatalog := archiver.GetFeatureCatalog(opts...)
+	defer func() {
+		if err != nil && featureCatalog.NonRetriableError != nil {
+			err = featureCatalog.NonRetriableError()
+		}
+	}()
+
+	logger := tagLoggerWithArchiveHistoryRequestAndURI(h.container.Logger, request, URI.String())
 
 	if err := h.ValidateURI(URI); err != nil {
-		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrInvalidURI), tag.Error(err), tag.ArchivalURI(URI))
-		return archiver.ErrArchiveNonRetriable
+		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrInvalidURI), tag.Error(err), tag.ArchivalURI(URI.String()))
+		return err
 	}
 
 	if err := validateArchiveRequest(request); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrInvalidArchiveRequest), tag.Error(err))
-		return archiver.ErrArchiveNonRetriable
+		return err
 	}
 
 	historyIterator := h.historyIterator
 	if historyIterator == nil { // will only be set by testing code
-		var err error
-		historyIterator, err = archiver.NewHistoryIterator(request, h.container.HistoryManager, h.container.HistoryV2Manager, targetHistoryBlobSize, nil, nil)
-		if err != nil {
-			// this should not happen
-			logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrConstructHistoryIterator), tag.Error(err))
-			return archiver.ErrArchiveNonRetriable
-		}
+		historyIterator = archiver.NewHistoryIterator(request, h.container.HistoryManager, h.container.HistoryV2Manager, targetHistoryBlobSize)
 	}
 
 	historyBatches := []*shared.History{}
@@ -147,12 +146,12 @@ func (h *historyArchiver) Archive(
 		historyBlob, err := getNextHistoryBlob(ctx, historyIterator)
 		if err != nil {
 			logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReadHistory), tag.Error(err))
-			return archiver.ErrArchiveNonRetriable
+			return err
 		}
 
 		if historyMutated(request, historyBlob.Body, *historyBlob.Header.IsLast) {
 			logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrHistoryMutated))
-			return archiver.ErrArchiveNonRetriable
+			return errors.New(archiver.ErrHistoryMutated)
 		}
 
 		historyBatches = append(historyBatches, historyBlob.Body...)
@@ -161,19 +160,19 @@ func (h *historyArchiver) Archive(
 	encodedHistoryBatches, err := encodeHistoryBatches(historyBatches)
 	if err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errEncodeHistory), tag.Error(err))
-		return archiver.ErrArchiveNonRetriable
+		return err
 	}
 
 	dirPath := getDirPathFromURI(URI)
 	if err = mkdirAll(dirPath, h.dirMode); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errMakeDirectory), tag.Error(err))
-		return archiver.ErrArchiveNonRetriable
+		return err
 	}
 
 	filename := constructFilename(request.DomainID, request.WorkflowID, request.RunID, request.CloseFailoverVersion)
 	if err := writeFile(path.Join(dirPath, filename), encodedHistoryBatches, h.fileMode); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errWriteFile), tag.Error(err))
-		return archiver.ErrArchiveNonRetriable
+		return err
 	}
 
 	return nil
@@ -181,31 +180,31 @@ func (h *historyArchiver) Archive(
 
 func (h *historyArchiver) Get(
 	ctx context.Context,
-	URI string,
+	URI archiver.URI,
 	request *archiver.GetHistoryRequest,
 ) (*archiver.GetHistoryResponse, error) {
 	if err := h.ValidateURI(URI); err != nil {
-		return nil, fmt.Errorf("%s: %v", archiver.ErrInvalidURI, err)
+		return nil, &shared.BadRequestError{Message: archiver.ErrInvalidURI}
 	}
 
 	if err := validateGetRequest(request); err != nil {
-		return nil, archiver.ErrInvalidGetHistoryRequest
+		return nil, &shared.BadRequestError{Message: archiver.ErrInvalidGetHistoryRequest.Error()}
 	}
 
 	dirPath := getDirPathFromURI(URI)
 	exists, err := directoryExists(dirPath)
 	if err != nil {
-		return nil, err
+		return nil, &shared.InternalServiceError{Message: err.Error()}
 	}
 	if !exists {
-		return nil, archiver.ErrHistoryNotExist
+		return nil, &shared.EntityNotExistsError{Message: archiver.ErrHistoryNotExist.Error()}
 	}
 
 	var token *getHistoryToken
 	if request.NextPageToken != nil {
 		token, err = deserializeGetHistoryToken(request.NextPageToken)
 		if err != nil {
-			return nil, archiver.ErrGetHistoryTokenCorrupted
+			return nil, &shared.BadRequestError{Message: archiver.ErrGetHistoryTokenCorrupted.Error()}
 		}
 	} else if request.CloseFailoverVersion != nil {
 		token = &getHistoryToken{
@@ -215,7 +214,7 @@ func (h *historyArchiver) Get(
 	} else {
 		highestVersion, err := getHighestVersion(dirPath, request)
 		if err != nil {
-			return nil, err
+			return nil, &shared.InternalServiceError{Message: err.Error()}
 		}
 		token = &getHistoryToken{
 			CloseFailoverVersion: *highestVersion,
@@ -227,20 +226,20 @@ func (h *historyArchiver) Get(
 	filepath := path.Join(dirPath, filename)
 	exists, err = fileExists(filepath)
 	if err != nil {
-		return nil, err
+		return nil, &shared.InternalServiceError{Message: err.Error()}
 	}
 	if !exists {
-		return nil, archiver.ErrHistoryNotExist
+		return nil, &shared.EntityNotExistsError{Message: archiver.ErrHistoryNotExist.Error()}
 	}
 
 	encodedHistoryBatches, err := readFile(filepath)
 	if err != nil {
-		return nil, err
+		return nil, &shared.InternalServiceError{Message: err.Error()}
 	}
 
 	historyBatches, err := decodeHistoryBatches(encodedHistoryBatches)
 	if err != nil {
-		return nil, err
+		return nil, &shared.InternalServiceError{Message: err.Error()}
 	}
 	historyBatches = historyBatches[token.NextBatchIdx:]
 
@@ -260,7 +259,7 @@ func (h *historyArchiver) Get(
 		token.NextBatchIdx += numOfBatches
 		nextToken, err := serializeGetHistoryToken(token)
 		if err != nil {
-			return nil, err
+			return nil, &shared.InternalServiceError{Message: err.Error()}
 		}
 		response.NextPageToken = nextToken
 	}
@@ -268,8 +267,8 @@ func (h *historyArchiver) Get(
 	return response, nil
 }
 
-func (h *historyArchiver) ValidateURI(URI string) error {
-	if !strings.HasPrefix(URI, URIScheme+"://") {
+func (h *historyArchiver) ValidateURI(URI archiver.URI) error {
+	if URI.Scheme() != URIScheme {
 		return archiver.ErrInvalidURIScheme
 	}
 
