@@ -38,6 +38,7 @@ import (
 
 type (
 	workflowExecutionContext interface {
+		getDomainName() string
 		getDomainID() string
 		getExecution() *workflow.WorkflowExecution
 		getLogger() log.Logger
