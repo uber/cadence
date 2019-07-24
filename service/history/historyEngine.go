@@ -370,19 +370,9 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 	if err != nil {
 		return nil, err
 	}
+	e.overrideStartWorkflowExecutionRequest(domainEntry, request)
+
 	workflowID := request.GetWorkflowId()
-
-	maxDecisionStartToCloseTimeoutSeconds := int32(e.config.MaxDecisionStartToCloseSeconds(
-		domainEntry.GetInfo().Name,
-	))
-	if request.GetTaskStartToCloseTimeoutSeconds() > maxDecisionStartToCloseTimeoutSeconds {
-		e.logger.WithTags(
-			tag.WorkflowDomainID(domainID),
-			tag.WorkflowID(workflowID),
-		).Info("force override decision start to close timeout")
-		request.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(maxDecisionStartToCloseTimeoutSeconds)
-	}
-
 	// grab the current context as a lock, nothing more
 	_, currentRelease, err := e.historyCache.getOrCreateCurrentWorkflowExecution(
 		ctx,
@@ -1473,19 +1463,9 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 	if err != nil {
 		return nil, err
 	}
+	e.overrideStartWorkflowExecutionRequest(domainEntry, request)
+
 	workflowID := request.GetWorkflowId()
-
-	maxDecisionStartToCloseTimeoutSeconds := int32(e.config.MaxDecisionStartToCloseSeconds(
-		domainEntry.GetInfo().Name,
-	))
-	if request.GetTaskStartToCloseTimeoutSeconds() > maxDecisionStartToCloseTimeoutSeconds {
-		e.logger.WithTags(
-			tag.WorkflowDomainID(domainID),
-			tag.WorkflowID(workflowID),
-		).Info("force override decision start to close timeout")
-		request.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(maxDecisionStartToCloseTimeoutSeconds)
-	}
-
 	// grab the current context as a lock, nothing more
 	_, currentRelease, err := e.historyCache.getOrCreateCurrentWorkflowExecution(
 		ctx,
@@ -2162,6 +2142,34 @@ func validateStartWorkflowExecutionRequest(
 	}
 
 	return common.ValidateRetryPolicy(request.RetryPolicy)
+}
+
+func (e *historyEngineImpl) overrideStartWorkflowExecutionRequest(
+	domainEntry *cache.DomainCacheEntry,
+	request *workflow.StartWorkflowExecutionRequest,
+) {
+
+	maxDecisionStartToCloseTimeoutSeconds := int32(e.config.MaxDecisionStartToCloseSeconds(
+		domainEntry.GetInfo().Name,
+	))
+
+	if request.GetTaskStartToCloseTimeoutSeconds() > maxDecisionStartToCloseTimeoutSeconds {
+		e.logger.WithTags(
+			tag.WorkflowDomainID(domainEntry.GetInfo().ID),
+			tag.WorkflowID(request.GetWorkflowId()),
+			tag.WorkflowDecisionTimeoutSeconds(request.GetTaskStartToCloseTimeoutSeconds()),
+		).Info("force override decision start to close timeout due to decision timout too large")
+		request.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(maxDecisionStartToCloseTimeoutSeconds)
+	}
+
+	if request.GetTaskStartToCloseTimeoutSeconds() > request.GetExecutionStartToCloseTimeoutSeconds() {
+		e.logger.WithTags(
+			tag.WorkflowDomainID(domainEntry.GetInfo().ID),
+			tag.WorkflowID(request.GetWorkflowId()),
+			tag.WorkflowDecisionTimeoutSeconds(request.GetTaskStartToCloseTimeoutSeconds()),
+		).Info("force override decision start to close timeout due to decision timeout larger than workflow timeout")
+		request.TaskStartToCloseTimeoutSeconds = request.ExecutionStartToCloseTimeoutSeconds
+	}
 }
 
 func validateDomainUUID(
