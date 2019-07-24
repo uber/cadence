@@ -871,7 +871,6 @@ func (s *integrationSuite) TestCronWorkflow() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	fmt.Println("testCronWorkflow: startWF", time.Now(), time.Now().UnixNano()/int64(time.Millisecond))
 	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunId))
 
 	var executions []*workflow.WorkflowExecution
@@ -880,7 +879,6 @@ func (s *integrationSuite) TestCronWorkflow() {
 
 	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
-		fmt.Println("testCronWorkflow:decisionHandler", time.Now(), time.Now().UnixNano()/int64(time.Millisecond))
 		executions = append(executions, execution)
 		attemptCount++
 		if attemptCount == 2 {
@@ -932,7 +930,6 @@ func (s *integrationSuite) TestCronWorkflow() {
 	executionInfo := resp.GetExecutions()[0]
 	s.Equal(targetBackoffDuration.Nanoseconds(), executionInfo.GetExecutionTime()-executionInfo.GetStartTime())
 
-	fmt.Println("testCronWorkflow: poll1", time.Now(), time.Now().UnixNano()/int64(time.Millisecond))
 	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.True(err == nil, err)
 
@@ -942,11 +939,9 @@ func (s *integrationSuite) TestCronWorkflow() {
 	s.True(backoffDuration > targetBackoffDuration)
 	s.True(backoffDuration < targetBackoffDuration+backoffDurationTolerance)
 
-	fmt.Println("testCronWorkflow: poll2", time.Now(), time.Now().UnixNano()/int64(time.Millisecond))
 	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.True(err == nil, err)
 
-	fmt.Println("testCronWorkflow: poll3", time.Now(), time.Now().UnixNano()/int64(time.Millisecond))
 	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.True(err == nil, err)
 
@@ -996,7 +991,6 @@ func (s *integrationSuite) TestCronWorkflow() {
 		})
 		s.Nil(err)
 		if len(resp.GetExecutions()) == 4 {
-			fmt.Println("testCronWorkflow: closed=4", time.Now(), time.Now().UnixNano()/int64(time.Millisecond))
 			closedExecutions = resp.GetExecutions()
 			break
 		}
