@@ -38,6 +38,8 @@ import (
 	cclient "go.uber.org/cadence/client"
 )
 
+// What are you opinions on moving this file to service/history I see arguments both ways.
+
 type (
 	// ClientRequest is the archive request sent to the archiver client
 	ClientRequest struct {
@@ -76,6 +78,7 @@ type (
 )
 
 const (
+	// err strings should not start with cap letter
 	tooManyRequestsErrMsg = "Too many requests to archival workflow"
 )
 
@@ -86,7 +89,7 @@ func NewClient(
 	publicClient workflowserviceclient.Interface,
 	numWorkflows dynamicconfig.IntPropertyFn,
 	requestRPS dynamicconfig.IntPropertyFn,
-	archiverProvider provider.ArchiverProvider,
+	archiverProvider provider.ArchiverProvider, // I love this provider pattern it makes handling all these archivers so clean - I am glad we thought through this together for a while :)
 ) Client {
 	return &client{
 		metricsClient: metricsClient,
@@ -108,6 +111,7 @@ func (c *client) Archive(ctx context.Context, request *ClientRequest) error {
 
 	taggedLogger := tagLoggerWithRequest(c.logger, *request.ArchiveRequest).WithTags(
 		tag.ArchivalCallerServiceName(request.CallerService),
+		// this logging might be misleading because the archive might be requested inline but not actually finished inline, maybe name it archive-attempted-inline
 		tag.ArchivalArchiveInline(request.ArchiveInline),
 	)
 	if request.ArchiveInline {
@@ -138,6 +142,7 @@ func (c *client) archiveInline(ctx context.Context, request *ClientRequest, tagg
 		return err
 	}
 
+	// is there a reason you don't just use request?
 	req := &carchiver.ArchiveHistoryRequest{
 		ShardID:              request.ArchiveRequest.ShardID,
 		DomainID:             request.ArchiveRequest.DomainID,
@@ -167,6 +172,8 @@ func (c *client) sendArchiveSignal(ctx context.Context, request *ArchiveRequest,
 		DecisionTaskStartToCloseTimeout: workflowTaskStartToCloseTimeout,
 		WorkflowIDReusePolicy:           cclient.WorkflowIDReusePolicyAllowDuplicate,
 	}
+
+	// even though we cannot reuse the context for inline we should still use a timeout here
 	_, err := c.cadenceClient.SignalWithStartWorkflow(context.Background(), workflowID, signalName, *request, workflowOptions, archivalWorkflowFnName, nil)
 	if err != nil {
 		taggedLogger = taggedLogger.WithTags(tag.WorkflowID(workflowID), tag.Error(err))

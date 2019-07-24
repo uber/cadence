@@ -589,11 +589,11 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.Ti
 		return nil
 	}
 
-	clusterArchivalStatus := t.shard.GetService().GetClusterMetadata().HistoryArchivalConfig().ClusterStatus
 	domainCacheEntry, err := t.historyService.shard.GetDomainCache().GetDomainByID(task.DomainID)
 	if err != nil {
 		return err
 	}
+	clusterArchivalStatus := t.shard.GetService().GetClusterMetadata().HistoryArchivalConfig().ClusterStatus
 	domainArchivalStatus := domainCacheEntry.GetConfig().HistoryArchivalStatus
 	switch clusterArchivalStatus {
 	case cluster.ArchivalDisabled:
@@ -637,6 +637,7 @@ func (t *timerQueueProcessorBase) deleteWorkflow(task *persistence.TimerTaskInfo
 }
 
 func (t *timerQueueProcessorBase) archiveWorkflow(task *persistence.TimerTaskInfo, msBuilder mutableState, workflowContext workflowExecutionContext) error {
+	// you have already accessed domain cache entry, you can pass it into this function
 	domainCacheEntry, err := t.historyService.shard.GetDomainCache().GetDomainByID(task.DomainID)
 	if err != nil {
 		return err
@@ -646,6 +647,8 @@ func (t *timerQueueProcessorBase) archiveWorkflow(task *persistence.TimerTaskInf
 	if err != nil {
 		return err
 	}
+
+	// can you chat with Samar about what he thinks a good first limit here is.
 	archiveInline := executionStats.HistorySize < int64(t.config.TimerProcessorHistoryArchivalSizeLimit())
 	ctx, cancel := context.WithTimeout(context.Background(), t.config.TimerProcessorHistoryArchivalTimeLimit())
 	defer cancel()
@@ -669,20 +672,36 @@ func (t *timerQueueProcessorBase) archiveWorkflow(task *persistence.TimerTaskInf
 		return err
 	}
 
+	// as part of these changes can we take care of the task of moving this out of here
+	// the reason is it actually impacts correctness/behavior because mutable state's existence is used to determine if a history should be considered archived.
 	if err := t.deleteCurrentWorkflowExecution(task); err != nil {
 		return err
 	}
+	// same here
 	if err := t.deleteWorkflowExecution(task); err != nil {
 		return err
 	}
+
+	// hummm, this won't work - even though it was determined that the history should
+	// be archived inline that does not mean that it was actually archived inline.
+	// I think we have no choice but to have the Archive method return a result struct
+	// this also means that the archie method should be the one to determine if its called inline or not
 	if archiveInline {
 		if err := t.deleteWorkflowHistory(task, msBuilder); err != nil {
 			return err
 		}
 	}
+
+	// actually this should also be deleted by the system workflow. This matters less but if you think about it
+	// system workflow should handle all these cleanup tasks only after history has been archived.
+	// I think it should be pretty easy to include this as part of the delete process if it is lets include it as well, if its hard we can leave this here for now with a TODO
 	if err := t.deleteWorkflowVisibility(task); err != nil {
 		return err
 	}
+
+	// I think we should think through a utility function which will do all cleanup for a workflow
+	// we wil need to call it in at least two places: archiveClient and workflow - we might also use it to cleanup the logic in this file for regular delete.
+
 	// calling clear here to force accesses of mutable state to read database
 	// if this is not called then callers will get mutable state even though its been removed from database
 	workflowContext.clear()
