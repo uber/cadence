@@ -408,9 +408,9 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: shared.EventTypeWorkflowExecutionStarted.Ptr(),
 		WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
-			WorkflowType: &shared.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:     &shared.TaskList{Name: common.StringPtr(tasklist)},
-			Input:        nil,
+			WorkflowType:                        &shared.WorkflowType{Name: common.StringPtr(workflowType)},
+			TaskList:                            &shared.TaskList{Name: common.StringPtr(tasklist)},
+			Input:                               nil,
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(workflowTimeoutSecond),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(decisionTimeoutSecond),
 		},
