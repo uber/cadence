@@ -25,6 +25,8 @@ import (
 	"errors"
 	"testing"
 
+	persistencehelper "github.com/uber/cadence/common/persistence-helper"
+
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber/cadence/.gen/go/shared"
@@ -70,6 +72,7 @@ type activitiesSuite struct {
 	metricsScope     *mmocks.Scope
 	archiverProvider *provider.ArchiverProviderMock
 	historyArchiver  *carchiver.HistoryArchiverMock
+	workflowCleaner  *persistencehelper.MockWorkflowCleaner
 }
 
 func TestActivitiesSuite(t *testing.T) {
@@ -83,6 +86,7 @@ func (s *activitiesSuite) SetupTest() {
 	s.metricsScope = &mmocks.Scope{}
 	s.archiverProvider = &provider.ArchiverProviderMock{}
 	s.historyArchiver = &carchiver.HistoryArchiverMock{}
+	s.workflowCleaner = &persistencehelper.MockWorkflowCleaner{}
 	s.metricsScope.On("StartTimer", metrics.CadenceLatency).Return(metrics.NewTestStopwatch()).Maybe()
 	s.metricsScope.On("RecordTimer", mock.Anything, mock.Anything).Maybe()
 }
@@ -92,6 +96,7 @@ func (s *activitiesSuite) TearDownTest() {
 	s.metricsScope.AssertExpectations(s.T())
 	s.archiverProvider.AssertExpectations(s.T())
 	s.historyArchiver.AssertExpectations(s.T())
+	s.workflowCleaner.AssertExpectations(s.T())
 }
 
 func (s *activitiesSuite) TestUploadHistory_Fail_InvalidURI() {

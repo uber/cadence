@@ -24,13 +24,11 @@ import (
 	"context"
 	"errors"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	carchiver "github.com/uber/cadence/common/archiver"
-	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/persistence"
+	persistencehelper "github.com/uber/cadence/common/persistence-helper"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
 )
@@ -39,17 +37,17 @@ const (
 	uploadHistoryActivityFnName = "uploadHistoryActivity"
 	deleteHistoryActivityFnName = "deleteHistoryActivity"
 
-	errDeleteHistoryV1 = "failed to delete history from events_v1"
-	errDeleteHistoryV2 = "failed to delete history from events_v2"
+	errCleanUpWorkflow = "failed to clean up workflow from persistence"
+	// errDeleteHistoryV1 = "failed to delete history from events_v1"
+	// errDeleteHistoryV2 = "failed to delete history from events_v2"
 
 	errActivityPanic       = "cadenceInternal:Panic"
 	errTimeoutStartToClose = "cadenceInternal:Timeout START_TO_CLOSE"
-	errTimeoutHeartbeat    = "cadenceInternal:Timeout HEARTBEAT"
 )
 
 var (
-	uploadHistoryActivityNonRetryableErrors = []string{errActivityPanic, carchiver.ErrArchiveNonRetriable.Error(), errTimeoutStartToClose, errTimeoutHeartbeat}
-	deleteHistoryActivityNonRetryableErrors = []string{errDeleteHistoryV1, errDeleteHistoryV2}
+	uploadHistoryActivityNonRetryableErrors = []string{errActivityPanic, carchiver.ErrArchiveNonRetriable.Error(), errTimeoutStartToClose}
+	deleteHistoryActivityNonRetryableErrors = []string{errCleanUpWorkflow}
 	errContextTimeout                       = errors.New("activity aborted because context timed out")
 )
 
@@ -93,70 +91,109 @@ func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	container := ctx.Value(bootstrapContainerKey).(*BootstrapContainer)
 	scope := container.MetricsClient.Scope(metrics.ArchiverDeleteHistoryActivityScope, metrics.DomainTag(request.DomainName))
 	sw := scope.StartTimer(metrics.CadenceLatency)
+	logger := tagLoggerWithRequest(tagLoggerWithActivityInfo(container.Logger, activity.GetInfo(ctx)), request)
 	defer func() {
 		sw.Stop()
-		if err != nil && err != errContextTimeout {
+		if err != nil {
+			logger.Error("failed to clean up workflow", tag.ArchivalDeleteHistoryFailReason(errCleanUpWorkflow), tag.Error(err))
+		}
+		if err != nil && !common.IsPersistenceTransientError(err) {
 			scope.IncCounter(metrics.ArchiverNonRetryableErrorCount)
 		}
 	}()
-	logger := tagLoggerWithRequest(tagLoggerWithActivityInfo(container.Logger, activity.GetInfo(ctx)), request)
-	if request.EventStoreVersion == persistence.EventStoreVersionV2 {
-		if err := deleteHistoryV2(ctx, container, request); err != nil {
-			logger.Error("failed to delete history from events v2", tag.ArchivalDeleteHistoryFailReason(errorDetails(err)), tag.Error(err))
-			return err
-		}
-		return nil
-	}
-	if err := deleteHistoryV1(ctx, container, request); err != nil {
-		logger.Error("failed to delete history from events v1", tag.ArchivalDeleteHistoryFailReason(errorDetails(err)), tag.Error(err))
-		return err
-	}
-	return nil
+
+	return container.WorkflowCleaner.CleanUp(&persistencehelper.CleanUpRequest{
+		DomainID:          request.DomainID,
+		WorkflowID:        request.WorkflowID,
+		RunID:             request.RunID,
+		ShardID:           request.ShardID,
+		FailoverVersion:   request.CloseFailoverVersion,
+		EventStoreVersion: request.EventStoreVersion,
+		BranchToken:       request.BranchToken,
+		TaskID:            request.TaskID,
+	})
+
+	// // if request.EventStoreVersion == persistence.EventStoreVersionV2 {
+	// // 	if err := deleteHistoryV2(ctx, container, request); err != nil {
+	// // 		logger.Error("failed to delete history from events v2", tag.ArchivalDeleteHistoryFailReason(errorDetails(err)), tag.Error(err))
+	// // 		return err
+	// // 	}
+	// // 	return nil
+	// // }
+	// // if err := deleteHistoryV1(ctx, container, request); err != nil {
+	// // 	logger.Error("failed to delete history from events v1", tag.ArchivalDeleteHistoryFailReason(errorDetails(err)), tag.Error(err))
+	// // 	return err
+	// // }
+	// return cleanUpWorkflow(ctx, container, &request)
 }
 
-func deleteHistoryV1(ctx context.Context, container *BootstrapContainer, request ArchiveRequest) error {
-	deleteHistoryReq := &persistence.DeleteWorkflowExecutionHistoryRequest{
-		DomainID: request.DomainID,
-		Execution: shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(request.WorkflowID),
-			RunId:      common.StringPtr(request.RunID),
-		},
-	}
-	err := container.HistoryManager.DeleteWorkflowExecutionHistory(deleteHistoryReq)
-	if err == nil {
-		return nil
-	}
-	op := func() error {
-		return container.HistoryManager.DeleteWorkflowExecutionHistory(deleteHistoryReq)
-	}
-	for err != nil {
-		if !common.IsPersistenceTransientError(err) {
-			return cadence.NewCustomError(errDeleteHistoryV1, err.Error())
-		}
-		if contextExpired(ctx) {
-			return errContextTimeout
-		}
-		err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
-	}
-	return nil
-}
+// func cleanUpWorkflow(ctx context.Context, container *BootstrapContainer, request *ArchiveRequest) error {
+// 	cleanUpRequest := &persistencehelper.CleanUpRequest{
+// 		DomainID:          request.DomainID,
+// 		WorkflowID:        request.WorkflowID,
+// 		RunID:             request.RunID,
+// 		ShardID:           request.ShardID,
+// 		FailoverVersion:   request.CloseFailoverVersion,
+// 		EventStoreVersion: request.EventStoreVersion,
+// 		BranchToken:       request.BranchToken,
+// 		TaskID:            request.TaskID,
+// 	}
+// 	err := container.WorkflowCleaner.CleanUp(cleanUpRequest)
+// 	for err != nil {
+// 		if !common.IsPersistenceTransientError(err) {
+// 			return err
+// 		}
+// 		if contextExpired(ctx) {
+// 			return err
+// 		}
+// 		err = container.WorkflowCleaner.CleanUp(cleanUpRequest)
+// 	}
+// 	return nil
+// }
 
-func deleteHistoryV2(ctx context.Context, container *BootstrapContainer, request ArchiveRequest) error {
-	err := persistence.DeleteWorkflowExecutionHistoryV2(container.HistoryV2Manager, request.BranchToken, common.IntPtr(request.ShardID), container.Logger)
-	if err == nil {
-		return nil
-	}
-	op := func() error {
-		return persistence.DeleteWorkflowExecutionHistoryV2(container.HistoryV2Manager, request.BranchToken, common.IntPtr(request.ShardID), container.Logger)
-	}
-	for err != nil {
-		if !common.IsPersistenceTransientError(err) {
-			return cadence.NewCustomError(errDeleteHistoryV2, err.Error())
-		}
-		if contextExpired(ctx) {
-			return errContextTimeout
-		}
-		err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
-	}
-	return nil
-}
+// func deleteHistoryV1(ctx context.Context, container *BootstrapContainer, request ArchiveRequest) error {
+// 	deleteHistoryReq := &persistence.DeleteWorkflowExecutionHistoryRequest{
+// 		DomainID: request.DomainID,
+// 		Execution: shared.WorkflowExecution{
+// 			WorkflowId: common.StringPtr(request.WorkflowID),
+// 			RunId:      common.StringPtr(request.RunID),
+// 		},
+// 	}
+// 	err := container.HistoryManager.DeleteWorkflowExecutionHistory(deleteHistoryReq)
+// 	if err == nil {
+// 		return nil
+// 	}
+// 	op := func() error {
+// 		return container.HistoryManager.DeleteWorkflowExecutionHistory(deleteHistoryReq)
+// 	}
+// 	for err != nil {
+// 		if !common.IsPersistenceTransientError(err) {
+// 			return cadence.NewCustomError(errDeleteHistoryV1, err.Error())
+// 		}
+// 		if contextExpired(ctx) {
+// 			return errContextTimeout
+// 		}
+// 		err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+// 	}
+// 	return nil
+// }
+
+// func deleteHistoryV2(ctx context.Context, container *BootstrapContainer, request ArchiveRequest) error {
+// 	err := persistence.DeleteWorkflowExecutionHistoryV2(container.HistoryV2Manager, request.BranchToken, common.IntPtr(request.ShardID), container.Logger)
+// 	if err == nil {
+// 		return nil
+// 	}
+// 	op := func() error {
+// 		return persistence.DeleteWorkflowExecutionHistoryV2(container.HistoryV2Manager, request.BranchToken, common.IntPtr(request.ShardID), container.Logger)
+// 	}
+// 	for err != nil {
+// 		if !common.IsPersistenceTransientError(err) {
+// 			return cadence.NewCustomError(errDeleteHistoryV2, err.Error())
+// 		}
+// 		if contextExpired(ctx) {
+// 			return errContextTimeout
+// 		}
+// 		err = backoff.Retry(op, common.CreatePersistanceRetryPolicy(), common.IsPersistenceTransientError)
+// 	}
+// 	return nil
+// }

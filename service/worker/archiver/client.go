@@ -25,6 +25,9 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"time"
+
+	persistencehelper "github.com/uber/cadence/common/persistence-helper"
 
 	"github.com/uber/cadence/common"
 	carchiver "github.com/uber/cadence/common/archiver"
@@ -58,6 +61,7 @@ type (
 		NextEventID          int64
 		CloseFailoverVersion int64
 		URI                  string
+		TaskID               int64
 	}
 
 	// Client is used to archive workflow histories
@@ -72,11 +76,14 @@ type (
 		numWorkflows     dynamicconfig.IntPropertyFn
 		rateLimiter      quotas.Limiter
 		archiverProvider provider.ArchiverProvider
+		workflowCleaner  persistencehelper.WorkflowCleaner
 	}
 )
 
 const (
-	tooManyRequestsErrMsg = "Too many requests to archival workflow"
+	signalTimeout = 300 * time.Millisecond
+
+	tooManyRequestsErrMsg = "too many requests to archival workflow"
 )
 
 // NewClient creates a new Client
@@ -87,6 +94,7 @@ func NewClient(
 	numWorkflows dynamicconfig.IntPropertyFn,
 	requestRPS dynamicconfig.IntPropertyFn,
 	archiverProvider provider.ArchiverProvider,
+	workflowCleaner persistencehelper.WorkflowCleaner,
 ) Client {
 	return &client{
 		metricsClient: metricsClient,
@@ -99,6 +107,7 @@ func NewClient(
 			},
 		),
 		archiverProvider: archiverProvider,
+		workflowCleaner:  workflowCleaner,
 	}
 }
 
@@ -108,13 +117,22 @@ func (c *client) Archive(ctx context.Context, request *ClientRequest) error {
 
 	taggedLogger := tagLoggerWithRequest(c.logger, *request.ArchiveRequest).WithTags(
 		tag.ArchivalCallerServiceName(request.CallerService),
-		tag.ArchivalArchiveInline(request.ArchiveInline),
+		tag.ArchivalArchiveAttemptedInline(request.ArchiveInline),
 	)
 	if request.ArchiveInline {
 		if err := c.archiveInline(ctx, request, taggedLogger); err != nil {
 			return c.sendArchiveSignal(ctx, request.ArchiveRequest, taggedLogger)
 		}
-		return nil
+		return c.workflowCleaner.CleanUp(&persistencehelper.CleanUpRequest{
+			DomainID:          request.ArchiveRequest.DomainID,
+			WorkflowID:        request.ArchiveRequest.WorkflowID,
+			RunID:             request.ArchiveRequest.RunID,
+			ShardID:           request.ArchiveRequest.ShardID,
+			FailoverVersion:   request.ArchiveRequest.CloseFailoverVersion,
+			EventStoreVersion: request.ArchiveRequest.EventStoreVersion,
+			BranchToken:       request.ArchiveRequest.BranchToken,
+			TaskID:            request.ArchiveRequest.TaskID,
+		})
 	}
 
 	return c.sendArchiveSignal(ctx, request.ArchiveRequest, taggedLogger)
@@ -138,7 +156,7 @@ func (c *client) archiveInline(ctx context.Context, request *ClientRequest, tagg
 		return err
 	}
 
-	req := &carchiver.ArchiveHistoryRequest{
+	return historyArchiver.Archive(ctx, request.ArchiveRequest.URI, &carchiver.ArchiveHistoryRequest{
 		ShardID:              request.ArchiveRequest.ShardID,
 		DomainID:             request.ArchiveRequest.DomainID,
 		DomainName:           request.ArchiveRequest.DomainName,
@@ -148,8 +166,7 @@ func (c *client) archiveInline(ctx context.Context, request *ClientRequest, tagg
 		BranchToken:          request.ArchiveRequest.BranchToken,
 		NextEventID:          request.ArchiveRequest.NextEventID,
 		CloseFailoverVersion: request.ArchiveRequest.CloseFailoverVersion,
-	}
-	return historyArchiver.Archive(ctx, request.ArchiveRequest.URI, req)
+	})
 }
 
 func (c *client) sendArchiveSignal(ctx context.Context, request *ArchiveRequest, taggedLogger log.Logger) error {
@@ -167,7 +184,9 @@ func (c *client) sendArchiveSignal(ctx context.Context, request *ArchiveRequest,
 		DecisionTaskStartToCloseTimeout: workflowTaskStartToCloseTimeout,
 		WorkflowIDReusePolicy:           cclient.WorkflowIDReusePolicyAllowDuplicate,
 	}
-	_, err := c.cadenceClient.SignalWithStartWorkflow(context.Background(), workflowID, signalName, *request, workflowOptions, archivalWorkflowFnName, nil)
+	signalCtx, cancel := context.WithTimeout(context.Background(), signalTimeout)
+	defer cancel()
+	_, err := c.cadenceClient.SignalWithStartWorkflow(signalCtx, workflowID, signalName, *request, workflowOptions, archivalWorkflowFnName, nil)
 	if err != nil {
 		taggedLogger = taggedLogger.WithTags(tag.WorkflowID(workflowID), tag.Error(err))
 		taggedLogger.Error("failed to send signal to archival system workflow")

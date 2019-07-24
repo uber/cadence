@@ -21,6 +21,7 @@
 package worker
 
 import (
+	"github.com/uber/cadence/common/persistence-helper"
 	"sync/atomic"
 	"time"
 
@@ -248,6 +249,10 @@ func (s *Service) startIndexer(base service.Service) {
 func (s *Service) startArchiver(base service.Service, pFactory persistencefactory.Factory, archiverProvider provider.ArchiverProvider) {
 	publicClient := s.params.PublicClient
 
+	executionManager, err := pFactory.NewExecutionManager()
+	if err != nil {
+		s.logger.Fatal("failed to start archiver, could not create ExecutionManager", tag.Error(err))
+	}
 	historyManager, err := pFactory.NewHistoryManager()
 	if err != nil {
 		s.logger.Fatal("failed to start archiver, could not create HistoryManager", tag.Error(err))
@@ -255,6 +260,10 @@ func (s *Service) startArchiver(base service.Service, pFactory persistencefactor
 	historyV2Manager, err := pFactory.NewHistoryV2Manager()
 	if err != nil {
 		s.logger.Fatal("failed to start archiver, could not create HistoryV2Manager", tag.Error(err))
+	}
+	visibilityManager, err := pFactory.NewVisibilityManager()
+	if err != nil {
+		s.logger.Fatal("failed to start archiver, could not create VisibilityManager", tag.Error(err))
 	}
 	metadataMgr, err := pFactory.NewMetadataManager(persistencefactory.MetadataV1V2)
 	if err != nil {
@@ -276,11 +285,18 @@ func (s *Service) startArchiver(base service.Service, pFactory persistencefactor
 		PublicClient:     publicClient,
 		MetricsClient:    s.metricsClient,
 		Logger:           s.logger,
-		HistoryManager:   historyManager,
-		HistoryV2Manager: historyV2Manager,
+		// HistoryManager:   historyManager,
+		// HistoryV2Manager: historyV2Manager,
 		DomainCache:      domainCache,
 		Config:           s.config.ArchiverConfig,
 		ArchiverProvider: archiverProvider,
+		WorkflowCleaner: persistencehelper.NewWorkflowCleaner(
+			executionManager,
+			historyManager,
+			historyV2Manager,
+			visibilityManager,
+			s.logger,
+		)
 	}
 	clientWorker := archiver.NewClientWorker(bc)
 	if err := clientWorker.Start(); err != nil {
