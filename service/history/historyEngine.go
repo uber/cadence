@@ -2154,7 +2154,7 @@ func (e *historyEngineImpl) overrideStartWorkflowExecutionRequest(
 	))
 
 	if request.GetTaskStartToCloseTimeoutSeconds() > maxDecisionStartToCloseTimeoutSeconds {
-		e.logger.WithTags(
+		e.throttledLogger.WithTags(
 			tag.WorkflowDomainID(domainEntry.GetInfo().ID),
 			tag.WorkflowID(request.GetWorkflowId()),
 			tag.WorkflowDecisionTimeoutSeconds(request.GetTaskStartToCloseTimeoutSeconds()),
@@ -2163,7 +2163,7 @@ func (e *historyEngineImpl) overrideStartWorkflowExecutionRequest(
 	}
 
 	if request.GetTaskStartToCloseTimeoutSeconds() > request.GetExecutionStartToCloseTimeoutSeconds() {
-		e.logger.WithTags(
+		e.throttledLogger.WithTags(
 			tag.WorkflowDomainID(domainEntry.GetInfo().ID),
 			tag.WorkflowID(request.GetWorkflowId()),
 			tag.WorkflowDecisionTimeoutSeconds(request.GetTaskStartToCloseTimeoutSeconds()),
