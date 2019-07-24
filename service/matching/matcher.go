@@ -23,6 +23,7 @@ package matching
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/uber/cadence/common/metrics"
@@ -187,6 +188,7 @@ forLoop:
 		case tm.taskC <- task:
 			return nil
 		case token := <-tm.fwdrAddReqTokenC():
+			fmt.Println("mustOffer: forwarding", time.Now(), time.Now().UnixNano()/int64(time.Millisecond))
 			childCtx, cancel := context.WithDeadline(ctx, time.Now().Add(time.Second*2))
 			err := tm.fwdr.ForwardTask(childCtx, task)
 			cancel()
@@ -205,6 +207,7 @@ forLoop:
 				}
 				continue forLoop
 			}
+			fmt.Println("mustOffer: remote match", time.Now(), time.Now().UnixNano()/int64(time.Millisecond))
 			return nil
 		case <-ctx.Done():
 			return ctx.Err()
