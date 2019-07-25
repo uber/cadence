@@ -83,6 +83,8 @@ var (
 	ErrEventVersionMismatch = &shared.BadRequestError{Message: "event version mismatch"}
 	// ErrNoNewRunHistory is returned if there is no new run history
 	ErrNoNewRunHistory = &shared.BadRequestError{Message: "no new run history events"}
+	// ErrLastEventIsNotContinueAsNew is returned if the last event is not continue as new
+	ErrLastEventIsNotContinueAsNew = &shared.BadRequestError{Message: "last event is not continue as new"}
 )
 
 func newNDCReplicationTask(
@@ -212,8 +214,9 @@ func (t *nDCReplicationTaskImpl) generateNewRunTask(
 	}
 	newHistoryEvents := t.newHistoryEvents
 
-	if t.getLastEvent().GetEventType() != shared.EventTypeWorkflowExecutionContinuedAsNew {
-		return nil, ErrNoNewRunHistory
+	if t.getLastEvent().GetEventType() != shared.EventTypeWorkflowExecutionContinuedAsNew ||
+		t.getLastEvent().WorkflowExecutionContinuedAsNewEventAttributes == nil {
+		return nil, ErrLastEventIsNotContinueAsNew
 	}
 	newRunID := t.getLastEvent().WorkflowExecutionContinuedAsNewEventAttributes.GetNewExecutionRunId()
 

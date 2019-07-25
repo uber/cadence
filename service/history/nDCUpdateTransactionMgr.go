@@ -77,9 +77,10 @@ func (r *nDCUpdateTransactionMgrImpl) dispatchWorkflowUpdate(
 		)
 	}
 
-	domainID := targetWorkflow.getMutableState().GetExecutionInfo().DomainID
-	workflowID := targetWorkflow.getMutableState().GetExecutionInfo().WorkflowID
-	targetRunID := targetWorkflow.getMutableState().GetExecutionInfo().RunID
+	targetExecutionInfo := targetWorkflow.getMutableState().GetExecutionInfo()
+	domainID := targetExecutionInfo.DomainID
+	workflowID := targetExecutionInfo.WorkflowID
+	targetRunID := targetExecutionInfo.RunID
 
 	// the target workflow is rebuilt
 	// we need to check the current workflow execution
@@ -235,14 +236,14 @@ func (r *nDCUpdateTransactionMgrImpl) updateAsZombie(
 	newWorkflow nDCWorkflow,
 ) error {
 
-	if err := targetWorkflow.suppressWorkflow(
+	if err := targetWorkflow.suppressWorkflowBy(
 		currentWorkflow,
 	); err != nil {
 		return err
 	}
 
 	if newWorkflow != nil {
-		if err := newWorkflow.suppressWorkflow(
+		if err := newWorkflow.suppressWorkflowBy(
 			currentWorkflow,
 		); err != nil {
 			return err
@@ -267,7 +268,7 @@ func (r *nDCUpdateTransactionMgrImpl) suppressCurrentAndUpdateAsCurrent(
 ) error {
 
 	if currentWorkflow.getMutableState().IsWorkflowExecutionRunning() {
-		if err := currentWorkflow.suppressWorkflow(
+		if err := currentWorkflow.suppressWorkflowBy(
 			targetWorkflow,
 		); err != nil {
 			return err
@@ -295,14 +296,14 @@ func (r *nDCUpdateTransactionMgrImpl) conflictResolveAsZombie(
 	newWorkflow nDCWorkflow,
 ) error {
 
-	if err := targetWorkflow.suppressWorkflow(
+	if err := targetWorkflow.suppressWorkflowBy(
 		currentWorkflow,
 	); err != nil {
 		return err
 	}
 
 	if newWorkflow != nil {
-		if err := newWorkflow.suppressWorkflow(
+		if err := newWorkflow.suppressWorkflowBy(
 			currentWorkflow,
 		); err != nil {
 			return err

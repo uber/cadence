@@ -41,7 +41,7 @@ type (
 		happensAfter(
 			that nDCWorkflow,
 		) (bool, error)
-		suppressWorkflow(
+		suppressWorkflowBy(
 			incomingWorkflow nDCWorkflow,
 		) error
 	}
@@ -164,7 +164,7 @@ func (r *nDCWorkflowImpl) happensAfter(
 	), nil
 }
 
-func (r *nDCWorkflowImpl) suppressWorkflow(
+func (r *nDCWorkflowImpl) suppressWorkflowBy(
 	incomingWorkflow nDCWorkflow,
 ) error {
 
@@ -222,6 +222,9 @@ func (r *nDCWorkflowImpl) terminateWorkflow(
 		[]byte(fmt.Sprintf("terminated by version: %v", incomingLastWriteVersion)),
 		workflowTerminationIdentity,
 	)
+	if err != nil {
+		return err
+	}
 
 	// add close workflow tasks
 	executionInfo := r.mutableState.GetExecutionInfo()

@@ -61,9 +61,10 @@ func (r *nDCCreateTransactionMgrImpl) dispatchWorkflowCreation(
 	// NOTE: this function does NOT mutate current workflow or target workflow,
 	//  workflow mutation is done in methods within executeTransaction function
 
-	domainID := targetWorkflow.getMutableState().GetExecutionInfo().DomainID
-	workflowID := targetWorkflow.getMutableState().GetExecutionInfo().WorkflowID
-	targetRunID := targetWorkflow.getMutableState().GetExecutionInfo().RunID
+	targetExecutionInfo := targetWorkflow.getMutableState().GetExecutionInfo()
+	domainID := targetExecutionInfo.DomainID
+	workflowID := targetExecutionInfo.WorkflowID
+	targetRunID := targetExecutionInfo.RunID
 
 	// we need to check the current workflow execution
 	currentRunID, err := r.transactionMgr.getCurrentWorkflowRunID(
@@ -194,7 +195,7 @@ func (r *nDCCreateTransactionMgrImpl) createAsZombie(
 	targetWorkflow nDCWorkflow,
 ) error {
 
-	if err := targetWorkflow.suppressWorkflow(
+	if err := targetWorkflow.suppressWorkflowBy(
 		currentWorkflow,
 	); err != nil {
 		return err
@@ -231,7 +232,7 @@ func (r *nDCCreateTransactionMgrImpl) suppressCurrentAndCreateAsCurrent(
 	targetWorkflow nDCWorkflow,
 ) error {
 
-	if err := currentWorkflow.suppressWorkflow(
+	if err := currentWorkflow.suppressWorkflowBy(
 		targetWorkflow,
 	); err != nil {
 		return err

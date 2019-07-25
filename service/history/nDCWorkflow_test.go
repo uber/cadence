@@ -228,7 +228,7 @@ func (s *nDCWorkflowSuite) TestHappensAfter_SameVersion_LatrgerTaskID() {
 	))
 }
 
-func (s *nDCWorkflowSuite) TestSuppressWorkflow_Error() {
+func (s *nDCWorkflowSuite) TestSuppressWorkflowBy_Error() {
 	nDCWorkflow := newNDCWorkflow(
 		context.Background(),
 		s.mockDomainCache,
@@ -253,7 +253,7 @@ func (s *nDCWorkflowSuite) TestSuppressWorkflow_Error() {
 
 	// cannot suppress closed workflow
 	s.mockMutableState.On("IsWorkflowExecutionRunning").Return(false).Once()
-	err := nDCWorkflow.suppressWorkflow(incomingNDCWorkflow)
+	err := nDCWorkflow.suppressWorkflowBy(incomingNDCWorkflow)
 	s.Error(err)
 
 	// cannot suppress by older workflow
@@ -295,11 +295,11 @@ func (s *nDCWorkflowSuite) TestSuppressWorkflow_Error() {
 	})
 
 	s.mockMutableState.On("IsWorkflowExecutionRunning").Return(true).Once()
-	err = nDCWorkflow.suppressWorkflow(incomingNDCWorkflow)
+	err = nDCWorkflow.suppressWorkflowBy(incomingNDCWorkflow)
 	s.Error(err)
 }
 
-func (s *nDCWorkflowSuite) TestSuppressWorkflow() {
+func (s *nDCWorkflowSuite) TestSuppressWorkflowBy() {
 	branchToken := []byte("some random branch token")
 	lastEventID := int64(2)
 	lastEventTaskID := int64(144)
@@ -391,11 +391,11 @@ func (s *nDCWorkflowSuite) TestSuppressWorkflow() {
 		return ok
 	})).Once()
 
-	err := nDCWorkflow.suppressWorkflow(incomingNDCWorkflow)
+	err := nDCWorkflow.suppressWorkflowBy(incomingNDCWorkflow)
 	s.NoError(err)
 }
 
-func (s *nDCWorkflowSuite) TestSuppressWorkflow_Zombiefy() {
+func (s *nDCWorkflowSuite) TestSuppressWorkflowBy_Zombiefy() {
 	branchToken := []byte("some random branch token")
 	lastEventID := int64(2)
 	lastEventTaskID := int64(144)
@@ -460,7 +460,7 @@ func (s *nDCWorkflowSuite) TestSuppressWorkflow_Zombiefy() {
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", lastEventVersion).Return(cluster.TestAlternativeClusterName)
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 
-	err := nDCWorkflow.suppressWorkflow(incomingNDCWorkflow)
+	err := nDCWorkflow.suppressWorkflowBy(incomingNDCWorkflow)
 	s.NoError(err)
 	s.Equal(persistence.WorkflowStateZombie, executionInfo.State)
 	s.Equal(persistence.WorkflowCloseStatusNone, executionInfo.CloseStatus)

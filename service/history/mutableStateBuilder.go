@@ -96,7 +96,7 @@ type (
 		// indicates whether the workflow is pointed by current record, guaranteed
 		isWorkflowBeingCurrentGuaranteed bool
 		// indicates the next event ID in DB, for conditional update
-		nextEventInDB int64
+		nextEventIDInDB int64
 		// indicate whether can do replication
 		replicationPolicy cache.ReplicationPolicy
 
@@ -149,7 +149,7 @@ func newMutableStateBuilder(
 
 		hasBufferedEventsInDB:            false,
 		isWorkflowBeingCurrentGuaranteed: false,
-		nextEventInDB:                    0,
+		nextEventIDInDB:                  0,
 
 		clusterMetadata: shard.GetClusterMetadata(),
 		eventsCache:     eventsCache,
@@ -248,7 +248,7 @@ func (e *mutableStateBuilder) Load(state *persistence.WorkflowMutableState) {
 	// if the workflow's state in DB is completed or zombie,
 	// caller need to call get current workflow for verification
 	e.isWorkflowBeingCurrentGuaranteed = e.IsWorkflowExecutionRunning()
-	e.nextEventInDB = state.ExecutionInfo.NextEventID
+	e.nextEventIDInDB = state.ExecutionInfo.NextEventID
 }
 
 func (e *mutableStateBuilder) GetEventStoreVersion() int32 {
@@ -3487,12 +3487,12 @@ func (e *mutableStateBuilder) AddTimerTasks(
 	e.insertTimerTasks = append(e.insertTimerTasks, timerTasks...)
 }
 
-func (e *mutableStateBuilder) SetUpdateCondition(nextEventInDB int64) {
-	e.nextEventInDB = nextEventInDB
+func (e *mutableStateBuilder) SetUpdateCondition(nextEventIDInDB int64) {
+	e.nextEventIDInDB = nextEventIDInDB
 }
 
 func (e *mutableStateBuilder) GetUpdateCondition() int64 {
-	return e.nextEventInDB
+	return e.nextEventIDInDB
 }
 
 func (e *mutableStateBuilder) CloseTransactionAsMutation(
@@ -3547,7 +3547,7 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 		ReplicationTasks: e.insertReplicationTasks,
 		TimerTasks:       e.insertTimerTasks,
 
-		Condition: e.nextEventInDB,
+		Condition: e.nextEventIDInDB,
 	}
 
 	if err := e.cleanupTransaction(transactionPolicy); err != nil {
@@ -3612,7 +3612,7 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 		ReplicationTasks: e.insertReplicationTasks,
 		TimerTasks:       e.insertTimerTasks,
 
-		Condition: e.nextEventInDB,
+		Condition: e.nextEventIDInDB,
 	}
 
 	if err := e.cleanupTransaction(transactionPolicy); err != nil {
@@ -3695,7 +3695,7 @@ func (e *mutableStateBuilder) cleanupTransaction(
 	// if the workflow's state in DB is completed or zombie,
 	// caller need to call get current workflow for verification
 	e.isWorkflowBeingCurrentGuaranteed = e.IsWorkflowExecutionRunning()
-	e.nextEventInDB = e.GetNextEventID()
+	e.nextEventIDInDB = e.GetNextEventID()
 
 	e.insertTransferTasks = nil
 	e.insertReplicationTasks = nil
