@@ -189,7 +189,6 @@ forLoop:
 		case token := <-tm.fwdrAddReqTokenC():
 			childCtx, cancel := context.WithDeadline(ctx, time.Now().Add(time.Second*2))
 			err := tm.fwdr.ForwardTask(childCtx, task)
-			cancel()
 			token.release()
 			if err != nil {
 				// forwarder returns error only when the call is rate limited. To
@@ -203,8 +202,10 @@ forLoop:
 				case <-ctx.Done():
 					return ctx.Err()
 				}
+				cancel()
 				continue forLoop
 			}
+			cancel()
 			return nil
 		case <-ctx.Done():
 			return ctx.Err()
