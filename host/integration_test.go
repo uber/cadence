@@ -997,6 +997,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 		time.Sleep(200 * time.Millisecond)
 	}
 	s.NotNil(closedExecutions)
+	// The first execution is the termination execution. It verified below.
 	firstExecutionTime := closedExecutions[0].GetExecutionTime()
 	for i := 1; i != 4; i++ {
 		executionInfo := closedExecutions[i]
@@ -1007,6 +1008,16 @@ func (s *integrationSuite) TestCronWorkflow() {
 		s.Equal(int(0), int(executionTime/1000000000-firstExecutionTime/1000000000)%3)
 
 	}
+	dweResponse, err := s.engine.DescribeWorkflowExecution(createContext(), &workflow.DescribeWorkflowExecutionRequest{
+		Domain: common.StringPtr(s.domainName),
+		Execution: &workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(id),
+			RunId:      we.RunId,
+		},
+	})
+	s.Nil(err)
+	expectedExecutionTime := dweResponse.WorkflowExecutionInfo.GetStartTime() + 3*time.Second.Nanoseconds()
+	s.Equal(expectedExecutionTime, dweResponse.WorkflowExecutionInfo.GetExecutionTime())
 }
 
 func (s *integrationSuite) TestSequential_UserTimers() {
@@ -1970,7 +1981,6 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 		} else {
 			s.Equal(executionInfo.GetExecutionTime(), executionInfo.GetStartTime())
 		}
-
 	}
 }
 
