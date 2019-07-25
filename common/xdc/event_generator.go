@@ -27,6 +27,11 @@ import (
 	"time"
 )
 
+var (
+	defaultBatchFunc = func(batch []Vertex) bool {
+		return len(batch) == 0
+	}
+)
 type (
 	// Model represents a state transition graph that contains all the relationships of Vertex
 	Model interface {
@@ -55,6 +60,8 @@ type (
 		ListGeneratedVertex() []Vertex
 		// Reset resets the generator to initial state
 		Reset()
+		// SetCanDoBatchOnNextVertex sets a function that used in GetNextVertex to return batch result
+		SetCanDoBatchOnNextVertex(func([]Vertex) bool)
 	}
 
 	// Vertex represents a state in the model. A state represents a type of an Cadence event
@@ -110,6 +117,7 @@ type (
 		exitVertexes        map[Vertex]bool
 		randomEntryVertexes []Vertex
 		dice                *rand.Rand
+		canDoBatch          func([]Vertex) bool
 	}
 
 	// Connection is the edge
@@ -137,6 +145,7 @@ func NewEventGenerator() Generator {
 		exitVertexes:        make(map[Vertex]bool),
 		randomEntryVertexes: make([]Vertex, 0),
 		dice:                rand.New(rand.NewSource(time.Now().Unix())),
+		canDoBatch:          defaultBatchFunc,
 	}
 }
 
@@ -189,7 +198,7 @@ func (g *EventGenerator) GetNextVertex() []Vertex {
 	}
 
 	batch := make([]Vertex, 0)
-	for g.HasNextVertex() && g.canBatch(batch) {
+	for g.HasNextVertex() && g.canDoBatch(batch) {
 		res := make([]Vertex, 0)
 		switch {
 		case len(g.previousVertexes) == 0:
@@ -216,6 +225,10 @@ func (g *EventGenerator) Reset() {
 	g.previousVertexes = make([]Vertex, 0)
 	g.leafVertexes = make([]Vertex, 0)
 	g.dice = rand.New(rand.NewSource(time.Now().Unix()))
+}
+
+func (g *EventGenerator) SetCanDoBatchOnNextVertex(canDoBatchFunc func([]Vertex) bool) {
+	g.canDoBatch = canDoBatchFunc
 }
 
 func (g *EventGenerator) canBatch(history []Vertex) bool {

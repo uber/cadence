@@ -96,6 +96,34 @@ func (s *historyEventTestSuit) SetupSuite() {
 		return count > 0
 	}
 
+	canDoBatch := func(history []Vertex) bool {
+		if len(history) == 0 {
+		return true
+	}
+
+		hasPendingDecisionTask := false
+		for _, event := range generator.ListGeneratedVertex() {
+		switch event.GetName() {
+		case shared.EventTypeDecisionTaskScheduled.String():
+			hasPendingDecisionTask = true
+		case shared.EventTypeDecisionTaskCompleted.String(),
+			shared.EventTypeDecisionTaskFailed.String(),
+			shared.EventTypeDecisionTaskTimedOut.String():
+			hasPendingDecisionTask = false
+		}
+	}
+		if hasPendingDecisionTask {
+		return false
+	}
+		if history[len(history)-1].GetName() == shared.EventTypeDecisionTaskScheduled.String() {
+		return false
+	}
+		if history[0].GetName() == shared.EventTypeDecisionTaskCompleted.String() {
+		return len(history) == 1
+	}
+		return true
+	}
+
 	//Setup decision task model
 	decisionModel := NewHistoryEventModel()
 	decisionSchedule := NewHistoryEvent(shared.EventTypeDecisionTaskScheduled.String())
@@ -270,6 +298,7 @@ func (s *historyEventTestSuit) SetupSuite() {
 		externalWorkflowCanceledToDecisionSchedule, externalWorkflowCancelFailToDecisionSchedule)
 
 	//Config event generator
+	generator.SetCanDoBatchOnNextVertex(canDoBatch)
 	generator.AddInitialEntryVertex(workflowStart)
 	generator.AddExitVertex(workflowComplete, workflowFail, continueAsNew, workflowTerminate, workflowTimedOut)
 	//generator.AddRandomEntryVertex(workflowSignal, workflowTerminate, workflowTimedOut)
