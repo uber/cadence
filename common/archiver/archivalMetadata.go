@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,18 +18,27 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cluster
+package archiver
 
 import (
 	"fmt"
 	"strings"
 
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/service/config"
 )
 
 type (
-	// ArchivalStatus represents the archival status of the cluster
-	ArchivalStatus int
+	// ArchivalMetadata provides cluster level archival information
+	ArchivalMetadata interface {
+		GetHistoryConfig() *ArchivalConfig
+		GetVisibilityConfig() *ArchivalConfig
+	}
+
+	archivalMetadata struct {
+		historyConfig    *ArchivalConfig
+		visibilityConfig *ArchivalConfig
+	}
 
 	// ArchivalConfig is an immutable representation of the archival configuration of the cluster
 	// This config is determined at cluster startup time
@@ -39,6 +48,9 @@ type (
 		DomainDefaultStatus shared.ArchivalStatus
 		DomainDefaultURI    string
 	}
+
+	// ArchivalStatus represents the archival status of the cluster
+	ArchivalStatus int
 )
 
 const (
@@ -51,13 +63,54 @@ const (
 	ArchivalEnabled
 )
 
+// NewArchivalMetadata constructs a new ArchivalMetadata
+func NewArchivalMetadata(
+	historyStatus string,
+	historyReadEnabled bool,
+	visibilityStatus string,
+	visibilityReadEnabled bool,
+	domainDefaults *config.ArchivalDomainDefaults,
+) ArchivalMetadata {
+	return &archivalMetadata{
+		historyConfig: NewArchivalConfig(
+			historyStatus,
+			historyReadEnabled,
+			domainDefaults.History.Status,
+			domainDefaults.History.URI,
+		),
+		visibilityConfig: NewArchivalConfig(
+			visibilityStatus,
+			visibilityReadEnabled,
+			domainDefaults.Visibility.Status,
+			domainDefaults.Visibility.URI,
+		),
+	}
+}
+
+func (metadata *archivalMetadata) GetHistoryConfig() *ArchivalConfig {
+	return metadata.historyConfig
+}
+
+func (metadata *archivalMetadata) GetVisibilityConfig() *ArchivalConfig {
+	return metadata.visibilityConfig
+}
+
 // NewArchivalConfig constructs a new valid ArchivalConfig
 func NewArchivalConfig(
-	clusterStatus ArchivalStatus,
+	clusterStatusStr string,
 	enableRead bool,
-	domainDefaultStatus shared.ArchivalStatus,
+	domainDefaultStatusStr string,
 	domainDefaultURI string,
 ) *ArchivalConfig {
+	clusterStatus, err := getClusterArchivalStatus(clusterStatusStr)
+	if err != nil {
+		panic(err)
+	}
+	domainDefaultStatus, err := getDomainArchivalStatus(domainDefaultStatusStr)
+	if err != nil {
+		panic(err)
+	}
+
 	ac := &ArchivalConfig{
 		ClusterStatus:       clusterStatus,
 		EnableRead:          enableRead,
@@ -102,4 +155,22 @@ func getDomainArchivalStatus(str string) (shared.ArchivalStatus, error) {
 		return shared.ArchivalStatusEnabled, nil
 	}
 	return shared.ArchivalStatusDisabled, fmt.Errorf("invalid archival status of %v for domain, valid status are: {\"\", \"disabled\", \"enabled\"}", str)
+}
+
+// GetTestArchivalMetadata return an archival metadata instance for test use
+func GetTestArchivalMetadata(enabled bool) ArchivalMetadata {
+	if !enabled {
+		return NewArchivalMetadata("", false, "", false, &config.ArchivalDomainDefaults{})
+	}
+
+	return NewArchivalMetadata("enabled", true, "enabled", true, &config.ArchivalDomainDefaults{
+		History: config.HistoryArchivalDomainDefaults{
+			Status: "enabled",
+			URI:    "testScheme://test/archive/path",
+		},
+		Visibility: config.VisibilityArchivalDomainDefaults{
+			Status: "enabled",
+			URI:    "testScheme://test/archive/path",
+		},
+	})
 }

@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log/loggerimpl"
@@ -49,7 +50,8 @@ type (
 		metadataMgr          persistence.MetadataManager
 		mockProducer         *mocks.KafkaProducer
 		mockDomainReplicator DomainReplicator
-		mockArchiverProvider *provider.ArchiverProviderMock
+		archvialMetadata     archiver.ArchivalMetadata
+		mockArchiverProvider *provider.MockArchiverProvider
 
 		handler *domainHandlerImpl
 	}
@@ -66,7 +68,7 @@ func (s *domainHandlerGlobalDomainDisabledSuite) SetupSuite() {
 	}
 
 	s.TestBase = persistencetests.NewTestBaseWithCassandra(&persistencetests.TestBaseOptions{
-		ClusterMetadata: cluster.GetTestClusterMetadata(false, false, false),
+		ClusterMetadata: cluster.GetTestClusterMetadata(false, false),
 	})
 	s.TestBase.Setup()
 }
@@ -81,14 +83,15 @@ func (s *domainHandlerGlobalDomainDisabledSuite) SetupTest() {
 	s.metadataMgr = s.TestBase.MetadataProxy
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.mockDomainReplicator = NewDomainReplicator(s.mockProducer, logger)
-	s.mockArchiverProvider = &provider.ArchiverProviderMock{}
-
+	s.archvialMetadata = archiver.GetTestArchivalMetadata(false)
+	s.mockArchiverProvider = &provider.MockArchiverProvider{}
 	s.handler = newDomainHandler(s.config, logger, s.metadataMgr, s.ClusterMetadata,
-		s.mockDomainReplicator, s.mockArchiverProvider)
+		s.mockDomainReplicator, s.archvialMetadata, s.mockArchiverProvider)
 }
 
 func (s *domainHandlerGlobalDomainDisabledSuite) TearDownTest() {
 	s.mockProducer.AssertExpectations(s.T())
+	s.mockArchiverProvider.AssertExpectations(s.T())
 }
 
 func (s *domainHandlerGlobalDomainDisabledSuite) TestRegisterGetDomain_InvalidGlobalDomain() {

@@ -77,36 +77,12 @@ var (
 )
 
 // GetTestClusterMetadata return an cluster metadata instance, which is initialized
-func GetTestClusterMetadata(enableGlobalDomain bool, isMasterCluster bool, enableArchival bool) Metadata {
+func GetTestClusterMetadata(enableGlobalDomain bool, isMasterCluster bool) Metadata {
 	masterClusterName := TestCurrentClusterName
 	if !isMasterCluster {
 		masterClusterName = TestAlternativeClusterName
 	}
 
-	archivalClusterConfig := config.Archival{}
-	archivalDomainDefaults := config.ArchivalDomainDefaults{}
-	if enableArchival {
-		archivalClusterConfig = config.Archival{
-			History: config.HistoryArchival{
-				Status:     "enabled",
-				EnableRead: true,
-			},
-			Visibility: config.VisibilityArchival{
-				Status:     "enabled",
-				EnableRead: true,
-			},
-		}
-		archivalDomainDefaults = config.ArchivalDomainDefaults{
-			History: config.HistoryArchivalDomainDefaults{
-				Status: "enabled",
-				URI:    "testScheme://test/archive/path",
-			},
-			Visibility: config.VisibilityArchivalDomainDefaults{
-				Status: "enabled",
-				URI:    "testScheme://test/archive/path",
-			},
-		}
-	}
 	if enableGlobalDomain {
 		return NewMetadata(
 			loggerimpl.NewNopLogger(),
@@ -116,8 +92,6 @@ func GetTestClusterMetadata(enableGlobalDomain bool, isMasterCluster bool, enabl
 			masterClusterName,
 			TestCurrentClusterName,
 			TestAllClusterInfo,
-			archivalClusterConfig,
-			archivalDomainDefaults,
 		)
 	}
 
@@ -129,7 +103,5 @@ func GetTestClusterMetadata(enableGlobalDomain bool, isMasterCluster bool, enabl
 		TestCurrentClusterName,
 		TestCurrentClusterName,
 		TestSingleDCClusterInfo,
-		archivalClusterConfig,
-		archivalDomainDefaults,
 	)
 }
