@@ -158,6 +158,7 @@ const (
 	FlagMessageType                       = "message_type"
 	FlagMessageTypeWithAlias              = FlagMessageType + ", mt"
 	FlagURL                               = "url"
+	FlagQuery                             = "query"
 	FlagMuttleyDestination                = "muttely_destination"
 	FlagMuttleyDestinationWithAlias       = FlagMuttleyDestination + ", muttley"
 	FlagIndex                             = "index"

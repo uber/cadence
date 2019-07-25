@@ -25,16 +25,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/olekukonko/tablewriter"
-	"github.com/olivere/elastic"
-	"github.com/uber/cadence/.gen/go/indexer"
-	es "github.com/uber/cadence/common/elasticsearch"
-	"github.com/urfave/cli"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/olekukonko/tablewriter"
+	"github.com/olivere/elastic"
+	"github.com/uber/cadence/.gen/go/indexer"
+	es "github.com/uber/cadence/common/elasticsearch"
+	"github.com/uber/cadence/common/elasticsearch/esql"
+	"github.com/urfave/cli"
 )
 
 const (
@@ -55,6 +57,29 @@ type muttleyTransport struct {
 
 	source      string
 	destination string
+}
+
+var timeKeys = map[string]bool{
+	"StartTime":     true,
+	"CloseTime":     true,
+	"ExecutionTime": true,
+}
+
+func timeKeyFilter(key string) bool {
+	return timeKeys[key]
+}
+
+func timeValProcess(timeStr string) (string, error) {
+	// first check if already in int64 format
+	if _, err := strconv.ParseInt(timeStr, 10, 64); err == nil {
+		return timeStr, nil
+	}
+	// try to parse time
+	parsedTime, err := time.Parse(defaultDateTimeFormat, timeStr)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%v", parsedTime.UnixNano()), nil
 }
 
 func (t *muttleyTransport) RoundTrip(r *http.Request) (*http.Response, error) {
@@ -230,4 +255,232 @@ func generateESDoc(msg *indexer.Message) map[string]interface{} {
 		}
 	}
 	return doc
+}
+
+func getOneKV(m map[string]interface{}) (string, string) {
+	for k, v := range m {
+		return k, fmt.Sprintf("%v", v)
+	}
+	return "", ""
+}
+
+func bucketKey(k string) string {
+	if strings.HasPrefix(k, "group_") {
+		k = k[6:]
+	}
+	if strings.HasPrefix(k, "Attr_") {
+		k = k[5:]
+	}
+	return fmt.Sprintf(`%v(*)`, k)
+}
+
+func timeStr(s interface{}) (string, error) {
+	floatTime, err := strconv.ParseFloat(s.(string), 64)
+	intTime := int64(floatTime)
+	//fmt.Printf("%v, %v %v %v", s, s.(string), floatTime, intTime)
+	if err != nil {
+		fmt.Println("timeStr err")
+		return "", err
+	}
+	t := time.Unix(0, intTime)
+	return t.Format(time.RFC3339), nil
+}
+
+// GenerateReport generate report for an aggregation query to ES
+func GenerateReport(c *cli.Context) {
+	url := getRequiredOption(c, FlagURL)
+	index := getRequiredOption(c, FlagIndex)
+	sql := getRequiredOption(c, FlagQuery)
+	esClient, err := elastic.NewClient(elastic.SetURL(url))
+	if err != nil {
+		ErrorAndExit("Fail to create elastic client", err)
+	}
+	ctx := context.Background()
+	e := esql.NewESql()
+	e.SetCadence(true)
+	e.ProcessQueryValue(timeKeyFilter, timeValProcess)
+	fmt.Println(sql)
+	dsl, _, err := e.ConvertPrettyCadence(sql, "")
+	fmt.Println(dsl)
+	if err != nil {
+		ErrorAndExit("Fail to convert sql to dsl", err)
+	}
+
+	resp, err := esClient.Search(index).Source(dsl).Do(ctx)
+	if err != nil {
+		ErrorAndExit("Fail to talk with ES", err)
+	}
+
+	table := tablewriter.NewWriter(os.Stdout)
+	var headers []string
+	var groupby, bucket map[string]interface{}
+	var buckets []interface{}
+	err = json.Unmarshal(*resp.Aggregations["groupby"], &groupby)
+	if err != nil {
+		ErrorAndExit("Fail to parse groupby", err)
+	}
+	buckets = groupby["buckets"].([]interface{})
+	if len(buckets) == 0 {
+		fmt.Println("no matching bucket")
+		return
+	}
+	bucket = buckets[0].(map[string]interface{})
+	ids := make(map[string]int)
+	// we want these 3 columns shows at leftmost of the table
+	primaryCols := []string{"group_DomainID", "group_WorkflowType", "group_CloseStatus"}
+	primaryColsMap := map[string]int{
+		"group_DomainID":     1,
+		"group_WorkflowType": 1,
+		"group_CloseStatus":  1,
+	}
+	buckKeys := 0
+	if v, exist := bucket["key"]; exist {
+		vmap := v.(map[string]interface{})
+		for _, k := range primaryCols {
+			if _, exist := vmap[k]; exist {
+				k = bucketKey(k)
+				headers = append(headers, k)
+				ids[k] = len(ids)
+				buckKeys++
+			}
+		}
+		for k := range vmap {
+			if _, exist := primaryColsMap[k]; !exist {
+				k = bucketKey(k)
+				headers = append(headers, k)
+				ids[k] = len(ids)
+				buckKeys++
+			}
+		}
+	}
+	for k := range bucket {
+		if k != "key" {
+			if k == "doc_count" {
+				k = "count"
+			}
+			headers = append(headers, k)
+			ids[k] = len(ids)
+		}
+	}
+	table.SetHeader(headers)
+	var tableData [][]string
+	for _, b := range buckets {
+		bucket = b.(map[string]interface{})
+		data := make([]string, len(headers))
+		for k, v := range bucket {
+			switch k {
+			case "key":
+				vmap := v.(map[string]interface{})
+				for kk, vv := range vmap {
+					kk = bucketKey(kk)
+					data[ids[kk]] = fmt.Sprintf("%v", vv)
+				}
+			case "doc_count":
+				data[ids["count"]] = fmt.Sprintf("%v", v)
+			default:
+				var datum string
+				vm := v.(map[string]interface{})
+				if strings.Contains(k, "Attr_CustomDatetimeField") {
+					datum = fmt.Sprintf("%v", vm["value_as_string"])
+				} else {
+					datum = fmt.Sprintf("%v", vm["value"])
+					if strings.Contains(k, "Time") && !strings.Contains(k, "Attr_") {
+						datum, _ = timeStr(datum)
+					}
+				}
+				data[ids[k]] = datum
+			}
+		}
+		table.Append(data)
+		tableData = append(tableData, data)
+	}
+	table.Render()
+
+	f, err := os.Create("/Users/jingyang/Desktop/report.html")
+	if err != nil {
+		ErrorAndExit("Fail to create html report file", err)
+	}
+	var htmlContent string
+	m, n := len(headers), len(tableData)
+	rowSpan := make([]int, m)
+	for i := 0; i < m; i++ {
+		rowSpan[i] = 1
+		cell := wrapWithTag(headers[i], "td", "")
+		htmlContent += cell
+	}
+	htmlContent = wrapWithTag(htmlContent, "tr", "")
+
+	for row := 0; row < n; row++ {
+		var rowData string
+		// maxSpan := rowSpan[0]
+		for col := 0; col < m; col++ {
+			rowSpan[col]--
+			if strings.Contains(headers[col], "(*)") && col < buckKeys-1 {
+				if rowSpan[col] == 0 {
+					for i := row; i < n; i++ {
+						if tableData[i][col] == tableData[row][col] {
+							rowSpan[col]++
+							// if rowSpan[col] == maxSpan {
+							// 	break
+							// }
+						} else {
+							break
+						}
+					}
+					var property string
+					if rowSpan[col] > 1 {
+						property = fmt.Sprintf(`rowspan="%d"`, rowSpan[col])
+					}
+					cell := wrapWithTag(tableData[row][col], "td", property)
+					rowData += cell
+				}
+			} else {
+				cell := wrapWithTag(tableData[row][col], "td", "")
+				rowData += cell
+			}
+			// if rowSpan[col] < maxSpan {
+			// 	maxSpan = rowSpan[col]
+			// }
+		}
+		rowData = wrapWithTag(rowData, "tr", "")
+		htmlContent += rowData
+	}
+	htmlContent = wrapWithTag(htmlContent, "table", "")
+	htmlContent = wrapWithTag(htmlContent, "body", "")
+	htmlContent = wrapWithTag(htmlContent, "html", "")
+	f.WriteString("<!DOCTYPE html>\n")
+	f.WriteString(`<head>
+	<style>
+	table, th, td {
+	  border: 1px solid black;
+	  padding: 5px;
+	}
+	table {
+	  border-spacing: 2px;
+	}
+	</style>
+	</head>` + "\n")
+	f.WriteString(htmlContent)
+	f.Close()
+
+	f, err = os.Create("/Users/jingyang/Desktop/report.csv")
+	if err != nil {
+		ErrorAndExit("Fail to create csv report file", err)
+	}
+	csvContent := strings.Join(headers, ",") + "\n"
+	for _, data := range tableData {
+		csvContent += strings.Join(data, ",") + "\n"
+	}
+	f.WriteString(csvContent)
+	f.Close()
+}
+
+func wrapWithTag(content string, tag string, property string) string {
+	if property != "" {
+		property = " " + property
+	}
+	if tag != "td" {
+		content = "\n" + content
+	}
+	return "<" + tag + property + ">" + content + "</" + tag + ">\n"
 }
