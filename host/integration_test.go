@@ -1981,15 +1981,6 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 		}
 
 	}
-
-	//for i := 0; i != 4; i++ {
-	//	executionInfo := closedExecutions[i]
-	//	if executionInfo.GetExecution().GetWorkflowId() == childID {
-	//		s.Equal(targetBackoffDuration.Nanoseconds(), executionInfo.GetExecutionTime()-executionInfo.GetStartTime())
-	//	} else {
-	//		s.Equal(executionInfo.GetExecutionTime(), executionInfo.GetStartTime())
-	//	}
-	//}
 }
 
 func (s *integrationSuite) TestWorkflowTimeout() {
