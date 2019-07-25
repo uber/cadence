@@ -257,14 +257,9 @@ func generateESDoc(msg *indexer.Message) map[string]interface{} {
 	return doc
 }
 
-func getOneKV(m map[string]interface{}) (string, string) {
-	for k, v := range m {
-		return k, fmt.Sprintf("%v", v)
-	}
-	return "", ""
-}
-
+// This function is used to trim unnecessary tag in returned json for table header
 func bucketKey(k string) string {
+	// group key is in form of "group_key", we only need "key" as the column name
 	if strings.HasPrefix(k, "group_") {
 		k = k[6:]
 	}
@@ -274,10 +269,10 @@ func bucketKey(k string) string {
 	return fmt.Sprintf(`%v(*)`, k)
 }
 
+// parse the returned time to readable string if time is in int64 format
 func timeStr(s interface{}) (string, error) {
 	floatTime, err := strconv.ParseFloat(s.(string), 64)
 	intTime := int64(floatTime)
-	//fmt.Printf("%v, %v %v %v", s, s.(string), floatTime, intTime)
 	if err != nil {
 		fmt.Println("timeStr err")
 		return "", err
@@ -288,6 +283,7 @@ func timeStr(s interface{}) (string, error) {
 
 // GenerateReport generate report for an aggregation query to ES
 func GenerateReport(c *cli.Context) {
+	// use url command argument to create client
 	url := getRequiredOption(c, FlagURL)
 	index := getRequiredOption(c, FlagIndex)
 	sql := getRequiredOption(c, FlagQuery)
@@ -296,21 +292,23 @@ func GenerateReport(c *cli.Context) {
 		ErrorAndExit("Fail to create elastic client", err)
 	}
 	ctx := context.Background()
+
+	// convert sql to dsl
 	e := esql.NewESql()
 	e.SetCadence(true)
 	e.ProcessQueryValue(timeKeyFilter, timeValProcess)
-	fmt.Println(sql)
-	dsl, _, err := e.ConvertPrettyCadence(sql, "")
-	fmt.Println(dsl)
+	dsl, sortFields, err := e.ConvertPrettyCadence(sql, "")
 	if err != nil {
 		ErrorAndExit("Fail to convert sql to dsl", err)
 	}
 
+	// query client
 	resp, err := esClient.Search(index).Source(dsl).Do(ctx)
 	if err != nil {
 		ErrorAndExit("Fail to talk with ES", err)
 	}
 
+	// Show result to terminal
 	table := tablewriter.NewWriter(os.Stdout)
 	var headers []string
 	var groupby, bucket map[string]interface{}
@@ -324,26 +322,31 @@ func GenerateReport(c *cli.Context) {
 		fmt.Println("no matching bucket")
 		return
 	}
+
+	// get the FIRST bucket in bucket list to extract all tags. These extracted tags are to be used as table heads
 	bucket = buckets[0].(map[string]interface{})
+	// record the column position in the table of each returned item
 	ids := make(map[string]int)
-	// we want these 3 columns shows at leftmost of the table
+	// We want these 3 columns shows at leftmost of the table in cadence report usage. It can be changed in future.
 	primaryCols := []string{"group_DomainID", "group_WorkflowType", "group_CloseStatus"}
 	primaryColsMap := map[string]int{
 		"group_DomainID":     1,
 		"group_WorkflowType": 1,
 		"group_CloseStatus":  1,
 	}
-	buckKeys := 0
+	buckKeys := 0 // number of bucket keys, used for table collapsing in html report
 	if v, exist := bucket["key"]; exist {
 		vmap := v.(map[string]interface{})
+		// first search whether primaryCols keys exist, if found, put them at the table beginning
 		for _, k := range primaryCols {
 			if _, exist := vmap[k]; exist {
-				k = bucketKey(k)
+				k = bucketKey(k) // trim the unnecessary prefix
 				headers = append(headers, k)
 				ids[k] = len(ids)
 				buckKeys++
 			}
 		}
+		// extract all remaining bucket keys
 		for k := range vmap {
 			if _, exist := primaryColsMap[k]; !exist {
 				k = bucketKey(k)
@@ -353,6 +356,7 @@ func GenerateReport(c *cli.Context) {
 			}
 		}
 	}
+	// extract all other non-key items and set the table head accordingly
 	for k := range bucket {
 		if k != "key" {
 			if k == "doc_count" {
@@ -363,19 +367,21 @@ func GenerateReport(c *cli.Context) {
 		}
 	}
 	table.SetHeader(headers)
+
+	// read each bucket and fill the table, use map ids to find the correct spot
 	var tableData [][]string
 	for _, b := range buckets {
 		bucket = b.(map[string]interface{})
 		data := make([]string, len(headers))
 		for k, v := range bucket {
 			switch k {
-			case "key":
+			case "key": // fill group key
 				vmap := v.(map[string]interface{})
 				for kk, vv := range vmap {
 					kk = bucketKey(kk)
 					data[ids[kk]] = fmt.Sprintf("%v", vv)
 				}
-			case "doc_count":
+			case "doc_count": // fill bucket size count
 				data[ids["count"]] = fmt.Sprintf("%v", v)
 			default:
 				var datum string
@@ -396,13 +402,14 @@ func GenerateReport(c *cli.Context) {
 	}
 	table.Render()
 
+	// write html report
 	f, err := os.Create("/Users/jingyang/Desktop/report.html")
 	if err != nil {
 		ErrorAndExit("Fail to create html report file", err)
 	}
 	var htmlContent string
 	m, n := len(headers), len(tableData)
-	rowSpan := make([]int, m)
+	rowSpan := make([]int, m) // record the collapsing size of each column
 	for i := 0; i < m; i++ {
 		rowSpan[i] = 1
 		cell := wrapWithTag(headers[i], "td", "")
@@ -412,23 +419,19 @@ func GenerateReport(c *cli.Context) {
 
 	for row := 0; row < n; row++ {
 		var rowData string
-		// maxSpan := rowSpan[0]
 		for col := 0; col < m; col++ {
 			rowSpan[col]--
-			if strings.Contains(headers[col], "(*)") && col < buckKeys-1 {
+			if col < buckKeys-1 {
 				if rowSpan[col] == 0 {
 					for i := row; i < n; i++ {
 						if tableData[i][col] == tableData[row][col] {
 							rowSpan[col]++
-							// if rowSpan[col] == maxSpan {
-							// 	break
-							// }
 						} else {
 							break
 						}
 					}
 					var property string
-					if rowSpan[col] > 1 {
+					if rowSpan[col] > 1 && len(sortFields) > 0 {
 						property = fmt.Sprintf(`rowspan="%d"`, rowSpan[col])
 					}
 					cell := wrapWithTag(tableData[row][col], "td", property)
@@ -438,9 +441,6 @@ func GenerateReport(c *cli.Context) {
 				cell := wrapWithTag(tableData[row][col], "td", "")
 				rowData += cell
 			}
-			// if rowSpan[col] < maxSpan {
-			// 	maxSpan = rowSpan[col]
-			// }
 		}
 		rowData = wrapWithTag(rowData, "tr", "")
 		htmlContent += rowData
@@ -463,6 +463,7 @@ func GenerateReport(c *cli.Context) {
 	f.WriteString(htmlContent)
 	f.Close()
 
+	// write csv report
 	f, err = os.Create("/Users/jingyang/Desktop/report.csv")
 	if err != nil {
 		ErrorAndExit("Fail to create csv report file", err)
@@ -475,6 +476,7 @@ func GenerateReport(c *cli.Context) {
 	f.Close()
 }
 
+// return a string that use tag to wrap content
 func wrapWithTag(content string, tag string, property string) string {
 	if property != "" {
 		property = " " + property
