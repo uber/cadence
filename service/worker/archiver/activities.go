@@ -65,17 +65,17 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 		}
 	}()
 	logger := tagLoggerWithRequest(tagLoggerWithActivityInfo(container.Logger, activity.GetInfo(ctx)), request)
-	parsedURI, err := carchiver.NewURI(request.URI)
+	URI, err := carchiver.NewURI(request.URI)
 	if err != nil {
 		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("failed to extract archival scheme"), tag.ArchivalURI(request.URI))
 		return errUploadNonRetriable
 	}
-	historyArchiver, err := container.ArchiverProvider.GetHistoryArchiver(parsedURI, common.WorkerServiceName)
+	historyArchiver, err := container.ArchiverProvider.GetHistoryArchiver(URI.Scheme(), common.WorkerServiceName)
 	if err != nil {
 		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("failed to get history archiver"), tag.Error(err))
 		return errUploadNonRetriable
 	}
-	return historyArchiver.Archive(ctx, parsedURI, &carchiver.ArchiveHistoryRequest{
+	return historyArchiver.Archive(ctx, URI, &carchiver.ArchiveHistoryRequest{
 		ShardID:              request.ShardID,
 		DomainID:             request.DomainID,
 		DomainName:           request.DomainName,

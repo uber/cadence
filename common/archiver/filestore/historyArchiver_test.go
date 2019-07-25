@@ -102,7 +102,7 @@ func (s *historyArchiverSuite) TestValidateURI() {
 	}{
 		{
 			URI:         "wrongscheme:///a/b/c",
-			expectedErr: archiver.ErrInvalidURIScheme,
+			expectedErr: archiver.ErrURISchemeMismatch,
 		},
 		{
 			URI:         "file://",
@@ -368,7 +368,7 @@ func (s *historyArchiverSuite) TestGet_Fail_DirectoryNotExist() {
 	response, err := historyArchiver.Get(context.Background(), s.testArchivalURI, request)
 	s.Nil(response)
 	s.Error(err)
-	s.IsType(&shared.EntityNotExistsError{}, err)
+	s.IsType(&shared.BadRequestError{}, err)
 }
 
 func (s *historyArchiverSuite) TestGet_Fail_InvalidToken() {

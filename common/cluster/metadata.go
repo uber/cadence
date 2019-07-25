@@ -132,6 +132,9 @@ func NewMetadata(
 		panic("Cluster info initial versions have duplicates")
 	}
 
+	// Dynamic archival config is accessed once on cluster startup than never accessed again.
+	// This is done so as to keep archival status and and the initialization of archiver.Provider in sync.
+	// TODO: Once archival pause is implemented archival config can be made truly dynamic.
 	clusterHistoryArchivalStatus := dc.GetStringProperty(dynamicconfig.HistoryArchivalStatus, archivalClusterConfig.History.Status)()
 	enableReadFromHistoryArchival := dc.GetBoolProperty(dynamicconfig.EnableReadFromHistoryArchival, archivalClusterConfig.History.EnableRead)()
 	clusterStatus, err := getClusterArchivalStatus(clusterHistoryArchivalStatus)

@@ -73,9 +73,9 @@ type (
 
 	// HistoryArchiver is used to archive history and read archived history
 	HistoryArchiver interface {
-		Archive(ctx context.Context, URI URI, request *ArchiveHistoryRequest, opts ...ArchiveOption) error
-		Get(ctx context.Context, URI URI, request *GetHistoryRequest) (*GetHistoryResponse, error)
-		ValidateURI(URI URI) error
+		Archive(context.Context, URI, *ArchiveHistoryRequest, ...ArchiveOption) error
+		Get(context.Context, URI, *GetHistoryRequest) (*GetHistoryResponse, error)
+		ValidateURI(URI) error
 	}
 
 	// ycyang TODO: implement visibility archiver
@@ -85,6 +85,6 @@ type (
 
 	// VisibilityArchiver is used to archive visibility and read archived visibility
 	VisibilityArchiver interface {
-		ValidateURI(URI URI) error
+		ValidateURI(URI) error
 	}
 )

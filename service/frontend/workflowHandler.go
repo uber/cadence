@@ -3264,22 +3264,22 @@ func (wh *WorkflowHandler) getArchivedHistory(
 		return nil, wh.error(err, scope)
 	}
 
-	URI := entry.GetConfig().HistoryArchivalURI
-	if URI == "" {
+	URIString := entry.GetConfig().HistoryArchivalURI
+	if URIString == "" {
 		return nil, wh.error(errHistoryHasPassedRetentionPeriod, scope)
 	}
 
-	parsedURI, err := archiver.NewURI(URI)
+	URI, err := archiver.NewURI(URIString)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
 
-	historyArchiver, err := wh.archiverProvider.GetHistoryArchiver(parsedURI, common.FrontendServiceName)
+	historyArchiver, err := wh.archiverProvider.GetHistoryArchiver(URI.Scheme(), common.FrontendServiceName)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
 
-	resp, err := historyArchiver.Get(ctx, parsedURI, &archiver.GetHistoryRequest{
+	resp, err := historyArchiver.Get(ctx, URI, &archiver.GetHistoryRequest{
 		DomainID:      domainID,
 		WorkflowID:    request.GetExecution().GetWorkflowId(),
 		RunID:         request.GetExecution().GetRunId(),

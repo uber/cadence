@@ -48,8 +48,8 @@ type (
 			historyContainer *archiver.HistoryBootstrapContainer,
 			visibilityContainter *archiver.VisibilityBootstrapContainer,
 		) error
-		GetHistoryArchiver(URI archiver.URI, serviceName string) (archiver.HistoryArchiver, error)
-		GetVisibilityArchiver(URI archiver.URI, serviceName string) (archiver.VisibilityArchiver, error)
+		GetHistoryArchiver(scheme, serviceName string) (archiver.HistoryArchiver, error)
+		GetVisibilityArchiver(scheme, serviceName string) (archiver.VisibilityArchiver, error)
 	}
 
 	archiverProvider struct {
@@ -107,8 +107,7 @@ func (p *archiverProvider) RegisterBootstrapContainer(
 	return nil
 }
 
-func (p *archiverProvider) GetHistoryArchiver(URI archiver.URI, serviceName string) (archiver.HistoryArchiver, error) {
-	scheme := URI.Scheme()
+func (p *archiverProvider) GetHistoryArchiver(scheme, serviceName string) (archiver.HistoryArchiver, error) {
 	archiverKey := p.getArchiverKey(scheme, serviceName)
 	if historyArchiver, ok := p.historyArchivers[archiverKey]; ok {
 		return historyArchiver, nil
@@ -134,8 +133,7 @@ func (p *archiverProvider) GetHistoryArchiver(URI archiver.URI, serviceName stri
 	return nil, ErrUnknownScheme
 }
 
-func (p *archiverProvider) GetVisibilityArchiver(URI archiver.URI, serviceName string) (archiver.VisibilityArchiver, error) {
-	scheme := URI.Scheme()
+func (p *archiverProvider) GetVisibilityArchiver(scheme, serviceName string) (archiver.VisibilityArchiver, error) {
 	archiverKey := p.getArchiverKey(scheme, serviceName)
 	if visibilityArchiver, ok := p.visibilityArchivers[archiverKey]; ok {
 		return visibilityArchiver, nil

@@ -30,13 +30,13 @@ type ArchiverProviderMock struct {
 	mock.Mock
 }
 
-// GetHistoryArchiver provides a mock function with given fields: URI, serviceName
-func (_m *ArchiverProviderMock) GetHistoryArchiver(URI archiver.URI, serviceName string) (archiver.HistoryArchiver, error) {
-	ret := _m.Called(URI, serviceName)
+// GetHistoryArchiver provides a mock function with given fields: scheme, serviceName
+func (_m *ArchiverProviderMock) GetHistoryArchiver(scheme string, serviceName string) (archiver.HistoryArchiver, error) {
+	ret := _m.Called(scheme, serviceName)
 
 	var r0 archiver.HistoryArchiver
-	if rf, ok := ret.Get(0).(func(archiver.URI, string) archiver.HistoryArchiver); ok {
-		r0 = rf(URI, serviceName)
+	if rf, ok := ret.Get(0).(func(string, string) archiver.HistoryArchiver); ok {
+		r0 = rf(scheme, serviceName)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(archiver.HistoryArchiver)
@@ -44,8 +44,8 @@ func (_m *ArchiverProviderMock) GetHistoryArchiver(URI archiver.URI, serviceName
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(archiver.URI, string) error); ok {
-		r1 = rf(URI, serviceName)
+	if rf, ok := ret.Get(1).(func(string, string) error); ok {
+		r1 = rf(scheme, serviceName)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -53,13 +53,13 @@ func (_m *ArchiverProviderMock) GetHistoryArchiver(URI archiver.URI, serviceName
 	return r0, r1
 }
 
-// GetVisibilityArchiver provides a mock function with given fields: URI, serviceName
-func (_m *ArchiverProviderMock) GetVisibilityArchiver(URI archiver.URI, serviceName string) (archiver.VisibilityArchiver, error) {
-	ret := _m.Called(URI, serviceName)
+// GetVisibilityArchiver provides a mock function with given fields: scheme, serviceName
+func (_m *ArchiverProviderMock) GetVisibilityArchiver(scheme string, serviceName string) (archiver.VisibilityArchiver, error) {
+	ret := _m.Called(scheme, serviceName)
 
 	var r0 archiver.VisibilityArchiver
-	if rf, ok := ret.Get(0).(func(archiver.URI, string) archiver.VisibilityArchiver); ok {
-		r0 = rf(URI, serviceName)
+	if rf, ok := ret.Get(0).(func(string, string) archiver.VisibilityArchiver); ok {
+		r0 = rf(scheme, serviceName)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(archiver.VisibilityArchiver)
@@ -67,8 +67,8 @@ func (_m *ArchiverProviderMock) GetVisibilityArchiver(URI archiver.URI, serviceN
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(archiver.URI, string) error); ok {
-		r1 = rf(URI, serviceName)
+	if rf, ok := ret.Get(1).(func(string, string) error); ok {
+		r1 = rf(scheme, serviceName)
 	} else {
 		r1 = ret.Error(1)
 	}

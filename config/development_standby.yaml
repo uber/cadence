@@ -116,14 +116,14 @@ kafka:
 archival:
   history:
     status: "enabled"
-    enableReadFromArchival: true
+    enableRead: true
     provider:
       filestore:
         fileMode: "0700"
         dirMode: "0600"
   visibility:
     status: "disabled"
-    enableReadFromArchival: false
+    enableRead: false
 
 domainDefaults:
   archival:

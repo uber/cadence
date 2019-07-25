@@ -26,7 +26,7 @@ import (
 )
 
 type (
-	// URI identifies the scheme and location an archiver can archive or get history/visibility records
+	// URI identifies the archival resource to which records are written to and read from.
 	URI interface {
 		Scheme() string
 		Path() string

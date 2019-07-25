@@ -128,12 +128,12 @@ func (c *client) archiveInline(ctx context.Context, request *ClientRequest, tagg
 		}
 	}()
 	c.metricsClient.IncCounter(metrics.ArchiverClientScope, metrics.ArchiverClientInlineArchiveAttemptCount)
-	parsedURI, err := carchiver.NewURI(request.ArchiveRequest.URI)
+	URI, err := carchiver.NewURI(request.ArchiveRequest.URI)
 	if err != nil {
 		return err
 	}
 
-	historyArchiver, err := c.archiverProvider.GetHistoryArchiver(parsedURI, request.CallerService)
+	historyArchiver, err := c.archiverProvider.GetHistoryArchiver(URI.Scheme(), request.CallerService)
 	if err != nil {
 		return err
 	}
@@ -149,7 +149,7 @@ func (c *client) archiveInline(ctx context.Context, request *ClientRequest, tagg
 		NextEventID:          request.ArchiveRequest.NextEventID,
 		CloseFailoverVersion: request.ArchiveRequest.CloseFailoverVersion,
 	}
-	return historyArchiver.Archive(ctx, parsedURI, req)
+	return historyArchiver.Archive(ctx, URI, req)
 }
 
 func (c *client) sendArchiveSignal(ctx context.Context, request *ArchiveRequest, taggedLogger log.Logger) error {

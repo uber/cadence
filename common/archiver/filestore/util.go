@@ -158,10 +158,6 @@ func contextExpired(ctx context.Context) bool {
 	}
 }
 
-func getDirPathFromURI(URI archiver.URI) string {
-	return URI.Path()
-}
-
 func validateDirPath(dirPath string) error {
 	if len(dirPath) == 0 {
 		return errEmptyDirectoryPath

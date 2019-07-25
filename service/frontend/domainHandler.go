@@ -774,30 +774,30 @@ func (d *domainHandlerImpl) toArchivalUpdateEvent(
 	return event, nil
 }
 
-func (d *domainHandlerImpl) validateHistoryArchivalURI(URI string) error {
-	parsedURI, err := archiver.NewURI(URI)
+func (d *domainHandlerImpl) validateHistoryArchivalURI(URIString string) error {
+	URI, err := archiver.NewURI(URIString)
 	if err != nil {
 		return err
 	}
 
-	archiver, err := d.archiverProvider.GetHistoryArchiver(parsedURI, common.FrontendServiceName)
+	archiver, err := d.archiverProvider.GetHistoryArchiver(URI.Scheme(), common.FrontendServiceName)
 	if err != nil {
 		return err
 	}
 
-	return archiver.ValidateURI(parsedURI)
+	return archiver.ValidateURI(URI)
 }
 
-func (d *domainHandlerImpl) validateVisibilityArchivalURI(URI string) error {
-	parsedURI, err := archiver.NewURI(URI)
+func (d *domainHandlerImpl) validateVisibilityArchivalURI(URIString string) error {
+	URI, err := archiver.NewURI(URIString)
 	if err != nil {
 		return err
 	}
 
-	archiver, err := d.archiverProvider.GetVisibilityArchiver(parsedURI, common.FrontendServiceName)
+	archiver, err := d.archiverProvider.GetVisibilityArchiver(URI.Scheme(), common.FrontendServiceName)
 	if err != nil {
 		return err
 	}
 
-	return archiver.ValidateURI(parsedURI)
+	return archiver.ValidateURI(URI)
 }

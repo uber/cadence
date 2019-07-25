@@ -19,7 +19,6 @@
 // THE SOFTWARE.
 
 // Filestore History Archiver will archive workflow histories to local disk.
-// The location is specified by the URI which has the form file:///path/to/directory.
 
 // Each Archive() request results in a file named in the format of
 // hash(domainID, workflowID, runID)_version.history being created in the specified
@@ -119,7 +118,7 @@ func (h *historyArchiver) Archive(
 ) (err error) {
 	featureCatalog := archiver.GetFeatureCatalog(opts...)
 	defer func() {
-		if err != nil && featureCatalog.NonRetriableError != nil {
+		if err != nil && !common.IsPersistenceTransientError(err) && featureCatalog.NonRetriableError != nil {
 			err = featureCatalog.NonRetriableError()
 		}
 	}()
@@ -127,12 +126,12 @@ func (h *historyArchiver) Archive(
 	logger := tagLoggerWithArchiveHistoryRequestAndURI(h.container.Logger, request, URI.String())
 
 	if err := h.ValidateURI(URI); err != nil {
-		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrInvalidURI), tag.Error(err), tag.ArchivalURI(URI.String()))
+		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidURI), tag.Error(err), tag.ArchivalURI(URI.String()))
 		return err
 	}
 
 	if err := validateArchiveRequest(request); err != nil {
-		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrInvalidArchiveRequest), tag.Error(err))
+		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidArchiveRequest), tag.Error(err))
 		return err
 	}
 
@@ -145,13 +144,18 @@ func (h *historyArchiver) Archive(
 	for historyIterator.HasNext() {
 		historyBlob, err := getNextHistoryBlob(ctx, historyIterator)
 		if err != nil {
-			logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReadHistory), tag.Error(err))
+			logger := logger.WithTags(tag.ArchivalArchiveFailReason(archiver.ErrReasonReadHistory), tag.Error(err))
+			if !common.IsPersistenceTransientError(err) {
+				logger.Error(archiver.ArchiveNonRetriableErrorMsg)
+			} else {
+				logger.Error(archiver.ArchiveTransientErrorMsg)
+			}
 			return err
 		}
 
 		if historyMutated(request, historyBlob.Body, *historyBlob.Header.IsLast) {
-			logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrHistoryMutated))
-			return errors.New(archiver.ErrHistoryMutated)
+			logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonHistoryMutated))
+			return archiver.ErrHistoryMutated
 		}
 
 		historyBatches = append(historyBatches, historyBlob.Body...)
@@ -163,7 +167,7 @@ func (h *historyArchiver) Archive(
 		return err
 	}
 
-	dirPath := getDirPathFromURI(URI)
+	dirPath := URI.Path()
 	if err = mkdirAll(dirPath, h.dirMode); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errMakeDirectory), tag.Error(err))
 		return err
@@ -184,20 +188,20 @@ func (h *historyArchiver) Get(
 	request *archiver.GetHistoryRequest,
 ) (*archiver.GetHistoryResponse, error) {
 	if err := h.ValidateURI(URI); err != nil {
-		return nil, &shared.BadRequestError{Message: archiver.ErrInvalidURI}
+		return nil, &shared.BadRequestError{Message: archiver.ErrInvalidURI.Error()}
 	}
 
 	if err := validateGetRequest(request); err != nil {
 		return nil, &shared.BadRequestError{Message: archiver.ErrInvalidGetHistoryRequest.Error()}
 	}
 
-	dirPath := getDirPathFromURI(URI)
+	dirPath := URI.Path()
 	exists, err := directoryExists(dirPath)
 	if err != nil {
 		return nil, &shared.InternalServiceError{Message: err.Error()}
 	}
 	if !exists {
-		return nil, &shared.EntityNotExistsError{Message: archiver.ErrHistoryNotExist.Error()}
+		return nil, &shared.BadRequestError{Message: archiver.ErrHistoryNotExist.Error()}
 	}
 
 	var token *getHistoryToken
@@ -269,10 +273,10 @@ func (h *historyArchiver) Get(
 
 func (h *historyArchiver) ValidateURI(URI archiver.URI) error {
 	if URI.Scheme() != URIScheme {
-		return archiver.ErrInvalidURIScheme
+		return archiver.ErrURISchemeMismatch
 	}
 
-	return validateDirPath(getDirPathFromURI(URI))
+	return validateDirPath(URI.Path())
 }
 
 func getNextHistoryBlob(ctx context.Context, historyIterator archiver.HistoryIterator) (*archiver.HistoryBlob, error) {

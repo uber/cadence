@@ -39,7 +39,6 @@ type (
 		Next() (*HistoryBlob, error)
 		HasNext() bool
 		GetState() ([]byte, error)
-		Reset([]byte) error
 	}
 
 	// HistoryBlobHeader is the header attached to all history blobs
@@ -90,6 +89,33 @@ func NewHistoryIterator(
 	historyV2Manager persistence.HistoryV2Manager,
 	targetHistoryBlobSize int,
 ) HistoryIterator {
+	return newHistoryIterator(request, historyManager, historyV2Manager, targetHistoryBlobSize)
+}
+
+// NewHistoryIteratorFromState returns a new HistoryIterator with specified state
+func NewHistoryIteratorFromState(
+	request *ArchiveHistoryRequest,
+	historyManager persistence.HistoryManager,
+	historyV2Manager persistence.HistoryV2Manager,
+	targetHistoryBlobSize int,
+	initialState []byte,
+) (HistoryIterator, error) {
+	it := newHistoryIterator(request, historyManager, historyV2Manager, targetHistoryBlobSize)
+	if initialState == nil {
+		return it, nil
+	}
+	if err := it.reset(initialState); err != nil {
+		return nil, err
+	}
+	return it, nil
+}
+
+func newHistoryIterator(
+	request *ArchiveHistoryRequest,
+	historyManager persistence.HistoryManager,
+	historyV2Manager persistence.HistoryV2Manager,
+	targetHistoryBlobSize int,
+) *historyIterator {
 	return &historyIterator{
 		historyIteratorState: historyIteratorState{
 			NextEventID:       common.FirstEventID,
@@ -102,24 +128,6 @@ func NewHistoryIterator(
 		targetHistoryBlobSize: targetHistoryBlobSize,
 		sizeEstimator:         NewJSONSizeEstimator(),
 	}
-}
-
-// NewHistoryIteratorFromState returns a new HistoryIterator with specified state
-func NewHistoryIteratorFromState(
-	request *ArchiveHistoryRequest,
-	historyManager persistence.HistoryManager,
-	historyV2Manager persistence.HistoryV2Manager,
-	targetHistoryBlobSize int,
-	initialState []byte,
-) (HistoryIterator, error) {
-	it := NewHistoryIterator(request, historyManager, historyV2Manager, targetHistoryBlobSize)
-	if initialState == nil {
-		return it, nil
-	}
-	if err := it.Reset(initialState); err != nil {
-		return nil, err
-	}
-	return it, nil
 }
 
 func (i *historyIterator) Next() (*HistoryBlob, error) {
@@ -246,9 +254,9 @@ func (i *historyIterator) readHistory(firstEventID int64) ([]*shared.History, er
 	return resp.History, nil
 }
 
-// Reset resets iterator to a certain state given its encoded representation
+// reset resets iterator to a certain state given its encoded representation
 // if it returns an error, the operation will have no effect on the iterator
-func (i *historyIterator) Reset(stateToken []byte) error {
+func (i *historyIterator) reset(stateToken []byte) error {
 	var iteratorState historyIteratorState
 	if err := json.Unmarshal(stateToken, &iteratorState); err != nil {
 		return err
