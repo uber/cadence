@@ -21,6 +21,7 @@
 package xdc
 
 import (
+	"github.com/uber/cadence/.gen/go/shared"
 	"math/rand"
 	"strings"
 	"time"
@@ -35,40 +36,57 @@ type (
 
 	// Generator generates a sequence of Vertexes based on the defined models
 	// It must define InitialEntryVertex and ExitVertex
-	// RandomEntryVertex is a random entry point which can be access at any state of the generator
 	Generator interface {
+		// InitialEntryVertex is the beginning vertexes of the graph
+		// Only one vertex will be picked as the entry
 		AddInitialEntryVertex(...Vertex)
+		// ExitVertex is the terminate vertexes of the graph
 		AddExitVertex(...Vertex)
+		// RandomEntryVertex is a random entry point which can be access at any state of the generator
 		AddRandomEntryVertex(...Vertex)
+		// AddModel loads model into the generator
+		// AddModel can load multiple models and models will be joint if there is common vertexes
 		AddModel(Model)
+		// HasNextVertex determines if there is more vertex to generate
 		HasNextVertex() bool
+		// GetNextVertex generates next vertex batch
 		GetNextVertex() []Vertex
+		// ListGeneratedVertex lists the pasted generated vertexes
 		ListGeneratedVertex() []Vertex
+		// Reset resets the generator to initial state
 		Reset()
 	}
 
-	// Vertex represents a state in the model. A state can be an event
-	// IsStrictOnNextVertex means if the vertex must be followed by its children
-	// MaxNextVertex means the max concurrent path can branch out from this vertex
+	// Vertex represents a state in the model. A state represents a type of an Cadence event
 	Vertex interface {
+		// The name of the vertex. Usually, this will be the Cadence event type
 		SetName(string)
 		GetName() string
 		Equals(Vertex) bool
+		// IsStrictOnNextVertex means if the vertex must be followed by its children
+		// When IsStrictOnNextVertex set to true, it means this event can only follow by its neighbors
 		SetIsStrictOnNextVertex(bool)
 		IsStrictOnNextVertex() bool
+		// MaxNextVertex means the max neighbors can branch out from this vertex
+		// MaxNextVertex means the max neighbors can branch out from this vertex
 		SetMaxNextVertex(int)
 		GetMaxNextVertex() int
 	}
 
-	// Edge is the relationship between two vertexes
-	// The condition means if the edge is accessible at the state
+	// Edge is the connection between two vertexes
 	Edge interface {
+		// StartVertex is the head of the connection
 		SetStartVertex(Vertex)
 		GetStartVertex() Vertex
+		// EndVertex is the end of the connection
 		SetEndVertex(Vertex)
 		GetEndVertex() Vertex
-		SetCondition(func(vertexes []Vertex) bool)
-		GetCondition() func(vertexes []Vertex) bool
+		// Condition defines a function to determine if this connection is accessible
+		SetCondition(func() bool)
+		GetCondition() func() bool
+		// Action defines function to perform when the end vertex reached
+		SetAction(func())
+		GetAction() func()
 	}
 
 	// HistoryEvent is the history event vertex
@@ -98,7 +116,8 @@ type (
 	Connection struct {
 		startVertex Vertex
 		endVertex   Vertex
-		condition   func(vertexes []Vertex) bool
+		condition   func() bool
+		action      func()
 	}
 
 	// RevokeFunc is the condition inside connection
@@ -169,21 +188,27 @@ func (g *EventGenerator) GetNextVertex() []Vertex {
 		panic("Generator reached to a terminate state.")
 	}
 
-	//Hardcoded to see get next vertex from pool or random entry vertex
-	res := make([]Vertex, 0)
-	switch {
-	case len(g.previousVertexes) == 0:
-		res = append(res, g.randomEntryVertex())
-	case g.previousVertexes[len(g.previousVertexes)-1].IsStrictOnNextVertex() || g.dice.Intn(len(g.connections)) != 0:
-		vertex := g.getNextPossibleVertex()
-		res = append(res, g.randomNextPossibleVertex(vertex)...)
-	case len(g.randomEntryVertexes) > 0:
-		res = append(res, g.randomRandomVertex())
-	default:
-		vertex := g.getNextPossibleVertex()
-		res = append(res, g.randomNextPossibleVertex(vertex)...)
+	batch := make([]Vertex, 0)
+	for g.HasNextVertex() && g.canBatch(batch) {
+		res := make([]Vertex, 0)
+		switch {
+		case len(g.previousVertexes) == 0:
+			// Generate for the first time, get the event candidates from entry vertex group
+			res = append(res, g.getEntryVertex())
+		case len(g.randomEntryVertexes) > 0 && g.dice.Intn(len(g.connections)) == 0:
+			// Get the event candidate from random vertex group
+			res = append(res, g.getRandomVertex())
+		default:
+			// Get the event candidates based on context
+			idx := g.getVertexIndexFromLeaf()
+			res = append(res, g.randomNextVertex(idx)...)
+			g.leafVertexes = append(g.leafVertexes[:idx], g.leafVertexes[idx+1:]...)
+		}
+		g.leafVertexes = append(g.leafVertexes, res...)
+		g.previousVertexes = append(g.previousVertexes, res...)
+		batch = append(batch, res...)
 	}
-	return res
+	return batch
 }
 
 // Reset reset the generator to the initial state
@@ -193,31 +218,55 @@ func (g *EventGenerator) Reset() {
 	g.dice = rand.New(rand.NewSource(time.Now().Unix()))
 }
 
-func (g *EventGenerator) randomEntryVertex() Vertex {
+func (g *EventGenerator) canBatch(history []Vertex) bool {
+	if len(history) == 0 {
+		return true
+	}
+
+	hasPendingDecisionTask := false
+	for _, event := range g.previousVertexes {
+		switch event.GetName() {
+		case shared.EventTypeDecisionTaskScheduled.String():
+			hasPendingDecisionTask = true
+		case shared.EventTypeDecisionTaskCompleted.String(),
+			shared.EventTypeDecisionTaskFailed.String(),
+			shared.EventTypeDecisionTaskTimedOut.String():
+			hasPendingDecisionTask = false
+		}
+	}
+	if hasPendingDecisionTask {
+		return false
+	}
+	if history[len(history)-1].GetName() == shared.EventTypeDecisionTaskScheduled.String() {
+		return false
+	}
+	if history[0].GetName() == shared.EventTypeDecisionTaskCompleted.String() {
+		return len(history) == 1
+	}
+	return true
+}
+
+func (g *EventGenerator) getEntryVertex() Vertex {
 	if len(g.entryVertexes) == 0 {
 		panic("No possible start vertex to go to next step")
 	}
 	nextRange := len(g.entryVertexes)
 	nextIdx := g.dice.Intn(nextRange)
 	vertex := g.entryVertexes[nextIdx]
-	g.leafVertexes = append(g.leafVertexes, vertex)
-	g.previousVertexes = append(g.previousVertexes, vertex)
 	return vertex
 }
 
-func (g *EventGenerator) randomRandomVertex() Vertex {
+func (g *EventGenerator) getRandomVertex() Vertex {
 	if len(g.randomEntryVertexes) == 0 {
 		panic("No possible vertex to go to next step")
 	}
 	nextRange := len(g.randomEntryVertexes)
 	nextIdx := g.dice.Intn(nextRange)
 	vertex := g.randomEntryVertexes[nextIdx]
-	g.leafVertexes = append(g.leafVertexes, vertex)
-	g.previousVertexes = append(g.previousVertexes, vertex)
 	return vertex
 }
 
-func (g *EventGenerator) getNextPossibleVertex() Vertex {
+func (g *EventGenerator) getVertexIndexFromLeaf() int {
 	if len(g.leafVertexes) == 0 {
 		panic("No possible vertex to go to next step")
 	}
@@ -239,7 +288,7 @@ func (g *EventGenerator) getNextPossibleVertex() Vertex {
 		}
 		neighbors := g.connections[leaf]
 		for _, nextV := range neighbors {
-			if nextV.GetCondition() == nil || (nextV.GetCondition() != nil && nextV.GetCondition()(g.previousVertexes)) {
+			if nextV.GetCondition() == nil || (nextV.GetCondition() != nil && nextV.GetCondition()()) {
 				isAccessible = true
 				break
 			}
@@ -251,33 +300,40 @@ func (g *EventGenerator) getNextPossibleVertex() Vertex {
 			}
 		}
 	}
-	g.leafVertexes = append(g.leafVertexes[:nextVertexIdx], g.leafVertexes[nextVertexIdx+1:]...)
-	return leaf
+	return nextVertexIdx
 }
 
-func (g *EventGenerator) randomNextPossibleVertex(next Vertex) []Vertex {
-	count := g.dice.Intn(next.GetMaxNextVertex()) + 1
-	neighbors := g.connections[next]
+func (g *EventGenerator) randomNextVertex(nextVertexIdx int) []Vertex {
+	nextVertex := g.leafVertexes[nextVertexIdx]
+	count := g.dice.Intn(nextVertex.GetMaxNextVertex()) + 1
+	neighbors := g.connections[nextVertex]
 	neighborsRange := len(neighbors)
 	res := make([]Vertex, 0)
 	for i := 0; i < count; i++ {
 		nextIdx := g.dice.Intn(neighborsRange)
-		for neighbors[nextIdx].GetCondition() != nil && !neighbors[nextIdx].GetCondition()(g.previousVertexes) {
+		for neighbors[nextIdx].GetCondition() != nil && !neighbors[nextIdx].GetCondition()() {
 			nextIdx = g.dice.Intn(neighborsRange)
 		}
-		newLeaf := neighbors[nextIdx].GetEndVertex()
-		g.previousVertexes = append(g.previousVertexes, newLeaf)
-		g.leafVertexes = append(g.leafVertexes, newLeaf)
+		newConnection := neighbors[nextIdx]
+		newLeaf := newConnection.GetEndVertex()
 		res = append(res, newLeaf)
+		if newConnection.GetAction() != nil {
+			newConnection.GetAction()()
+		}
 		if _, ok := g.exitVertexes[newLeaf]; ok {
-			break
+			res = []Vertex{newLeaf}
+			return res
 		}
 	}
+
 	return res
 }
 
 // NewConnection initials a new connection
-func NewConnection(start Vertex, end Vertex) Edge {
+func NewConnection(
+	start Vertex,
+	end Vertex,
+) Edge {
 	return &Connection{
 		startVertex: start,
 		endVertex:   end,
@@ -305,13 +361,23 @@ func (c Connection) GetEndVertex() Vertex {
 }
 
 // SetCondition sets the condition to access this edge
-func (c *Connection) SetCondition(condition func(vertexes []Vertex) bool) {
+func (c *Connection) SetCondition(condition func() bool) {
 	c.condition = condition
 }
 
 // GetCondition returns the condition
-func (c Connection) GetCondition() func(vertexes []Vertex) bool {
+func (c Connection) GetCondition() func() bool {
 	return c.condition
+}
+
+// SetAction sets an action to perform when the end vertex hits
+func (c Connection) SetAction(action func()) {
+	c.action = action
+}
+
+// GetAction returns the action
+func (c Connection) GetAction() func() {
+	return c.action
 }
 
 // NewHistoryEvent initials a history event
