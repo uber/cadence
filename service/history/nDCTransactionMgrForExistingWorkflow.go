@@ -66,7 +66,9 @@ func (r *nDCTransactionMgrForExistingWorkflowImpl) dispatchForExistingWorkflow(
 
 	// this is a performance optimization so most update does not need to
 	// check whether target workflow is current workflow by calling DB API
-	if targetWorkflow.getMutableState().IsCurrentWorkflowGuaranteed() {
+	if !isWorkflowRebuilt && targetWorkflow.getMutableState().IsCurrentWorkflowGuaranteed() {
+		// NOTE: if target workflow is rebuilt, then IsCurrentWorkflowGuaranteed is not trustworthy
+
 		// update to current record, since target workflow is pointed by current record
 		return r.dispatchWorkflowUpdateAsCurrent(
 			ctx,
