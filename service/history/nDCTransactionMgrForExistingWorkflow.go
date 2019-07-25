@@ -29,8 +29,8 @@ import (
 )
 
 type (
-	nDCUpdateTransactionMgr interface {
-		dispatchWorkflowUpdate(
+	nDCTransactionMgrForExistingWorkflow interface {
+		dispatchForExistingWorkflow(
 			ctx ctx.Context,
 			now time.Time,
 			isWorkflowRebuilt bool,
@@ -39,21 +39,21 @@ type (
 		) error
 	}
 
-	nDCUpdateTransactionMgrImpl struct {
+	nDCTransactionMgrForExistingWorkflowImpl struct {
 		transactionMgr *nDCTransactionMgrImpl
 	}
 )
 
-func newNDCUpdateTransactionMgr(
+func newNDCTransactionMgrForExistingWorkflow(
 	transactionMgr *nDCTransactionMgrImpl,
-) *nDCUpdateTransactionMgrImpl {
+) *nDCTransactionMgrForExistingWorkflowImpl {
 
-	return &nDCUpdateTransactionMgrImpl{
+	return &nDCTransactionMgrForExistingWorkflowImpl{
 		transactionMgr: transactionMgr,
 	}
 }
 
-func (r *nDCUpdateTransactionMgrImpl) dispatchWorkflowUpdate(
+func (r *nDCTransactionMgrForExistingWorkflowImpl) dispatchForExistingWorkflow(
 	ctx ctx.Context,
 	now time.Time,
 	isWorkflowRebuilt bool,
@@ -152,7 +152,7 @@ func (r *nDCUpdateTransactionMgrImpl) dispatchWorkflowUpdate(
 	)
 }
 
-func (r *nDCUpdateTransactionMgrImpl) dispatchWorkflowUpdateAsCurrent(
+func (r *nDCTransactionMgrForExistingWorkflowImpl) dispatchWorkflowUpdateAsCurrent(
 	ctx ctx.Context,
 	now time.Time,
 	isWorkflowRebuilt bool,
@@ -181,7 +181,7 @@ func (r *nDCUpdateTransactionMgrImpl) dispatchWorkflowUpdateAsCurrent(
 	)
 }
 
-func (r *nDCUpdateTransactionMgrImpl) dispatchWorkflowUpdateAsZombie(
+func (r *nDCTransactionMgrForExistingWorkflowImpl) dispatchWorkflowUpdateAsZombie(
 	ctx ctx.Context,
 	now time.Time,
 	isWorkflowRebuilt bool,
@@ -210,7 +210,7 @@ func (r *nDCUpdateTransactionMgrImpl) dispatchWorkflowUpdateAsZombie(
 	)
 }
 
-func (r *nDCUpdateTransactionMgrImpl) updateAsCurrent(
+func (r *nDCTransactionMgrForExistingWorkflowImpl) updateAsCurrent(
 	ctx ctx.Context,
 	now time.Time,
 	targetWorkflow nDCWorkflow,
@@ -228,7 +228,7 @@ func (r *nDCUpdateTransactionMgrImpl) updateAsCurrent(
 	)
 }
 
-func (r *nDCUpdateTransactionMgrImpl) updateAsZombie(
+func (r *nDCTransactionMgrForExistingWorkflowImpl) updateAsZombie(
 	ctx ctx.Context,
 	now time.Time,
 	currentWorkflow nDCWorkflow,
@@ -259,7 +259,7 @@ func (r *nDCUpdateTransactionMgrImpl) updateAsZombie(
 	return targetWorkflow.getContext().updateWorkflowExecutionAsPassive(now)
 }
 
-func (r *nDCUpdateTransactionMgrImpl) suppressCurrentAndUpdateAsCurrent(
+func (r *nDCTransactionMgrForExistingWorkflowImpl) suppressCurrentAndUpdateAsCurrent(
 	ctx ctx.Context,
 	now time.Time,
 	currentWorkflow nDCWorkflow,
@@ -278,7 +278,7 @@ func (r *nDCUpdateTransactionMgrImpl) suppressCurrentAndUpdateAsCurrent(
 	panic("wire with workflow conflict resolution function")
 }
 
-func (r *nDCUpdateTransactionMgrImpl) conflictResolveAsCurrent(
+func (r *nDCTransactionMgrForExistingWorkflowImpl) conflictResolveAsCurrent(
 	ctx ctx.Context,
 	now time.Time,
 	targetWorkflow nDCWorkflow,
@@ -288,7 +288,7 @@ func (r *nDCUpdateTransactionMgrImpl) conflictResolveAsCurrent(
 	panic("wire with workflow conflict resolution function")
 }
 
-func (r *nDCUpdateTransactionMgrImpl) conflictResolveAsZombie(
+func (r *nDCTransactionMgrForExistingWorkflowImpl) conflictResolveAsZombie(
 	ctx ctx.Context,
 	now time.Time,
 	currentWorkflow nDCWorkflow,
@@ -313,7 +313,7 @@ func (r *nDCUpdateTransactionMgrImpl) conflictResolveAsZombie(
 	panic("wire with workflow conflict resolution function")
 }
 
-func (r *nDCUpdateTransactionMgrImpl) executeTransaction(
+func (r *nDCTransactionMgrForExistingWorkflowImpl) executeTransaction(
 	ctx ctx.Context,
 	now time.Time,
 	transactionPolicy nDCTransactionPolicy,
@@ -377,7 +377,7 @@ func (r *nDCUpdateTransactionMgrImpl) executeTransaction(
 	}
 }
 
-func (r *nDCUpdateTransactionMgrImpl) cleanupTransaction(
+func (r *nDCTransactionMgrForExistingWorkflowImpl) cleanupTransaction(
 	currentWorkflow nDCWorkflow,
 	targetWorkflow nDCWorkflow,
 	newWorkflow nDCWorkflow,

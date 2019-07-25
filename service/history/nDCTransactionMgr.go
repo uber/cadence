@@ -124,8 +124,8 @@ type (
 		metricsClient   metrics.Client
 		logger          log.Logger
 
-		createMgr nDCCreateTransactionMgr
-		updateMgr nDCUpdateTransactionMgr
+		createMgr nDCTransactionMgrForNewWorkflow
+		updateMgr nDCTransactionMgrForExistingWorkflow
 	}
 )
 
@@ -147,8 +147,8 @@ func newNDCTransactionMgr(
 		createMgr: nil,
 		updateMgr: nil,
 	}
-	transactionMgr.createMgr = newNDCCreateTransactionMgr(transactionMgr)
-	transactionMgr.updateMgr = newNDCUpdateTransactionMgr(transactionMgr)
+	transactionMgr.createMgr = newNDCTransactionMgrForNewWorkflow(transactionMgr)
+	transactionMgr.updateMgr = newNDCTransactionMgrForExistingWorkflow(transactionMgr)
 	return transactionMgr
 }
 
@@ -158,7 +158,7 @@ func (r *nDCTransactionMgrImpl) createWorkflow(
 	targetWorkflow nDCWorkflow,
 ) error {
 
-	return r.createMgr.dispatchWorkflowCreation(
+	return r.createMgr.dispatchForNewWorkflow(
 		ctx,
 		now,
 		targetWorkflow,
@@ -173,7 +173,7 @@ func (r *nDCTransactionMgrImpl) updateWorkflow(
 	newWorkflow nDCWorkflow,
 ) error {
 
-	return r.updateMgr.dispatchWorkflowUpdate(
+	return r.updateMgr.dispatchForExistingWorkflow(
 		ctx,
 		now,
 		isWorkflowRebuilt,

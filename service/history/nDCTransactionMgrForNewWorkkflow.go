@@ -30,29 +30,29 @@ import (
 )
 
 type (
-	nDCCreateTransactionMgr interface {
-		dispatchWorkflowCreation(
+	nDCTransactionMgrForNewWorkflow interface {
+		dispatchForNewWorkflow(
 			ctx ctx.Context,
 			now time.Time,
 			targetWorkflow nDCWorkflow,
 		) error
 	}
 
-	nDCCreateTransactionMgrImpl struct {
+	nDCTransactionMgrForNewWorkflowImpl struct {
 		transactionMgr *nDCTransactionMgrImpl
 	}
 )
 
-func newNDCCreateTransactionMgr(
+func newNDCTransactionMgrForNewWorkflow(
 	transactionMgr *nDCTransactionMgrImpl,
-) *nDCCreateTransactionMgrImpl {
+) *nDCTransactionMgrForNewWorkflowImpl {
 
-	return &nDCCreateTransactionMgrImpl{
+	return &nDCTransactionMgrForNewWorkflowImpl{
 		transactionMgr: transactionMgr,
 	}
 }
 
-func (r *nDCCreateTransactionMgrImpl) dispatchWorkflowCreation(
+func (r *nDCTransactionMgrForNewWorkflowImpl) dispatchForNewWorkflow(
 	ctx ctx.Context,
 	now time.Time,
 	targetWorkflow nDCWorkflow,
@@ -141,7 +141,7 @@ func (r *nDCCreateTransactionMgrImpl) dispatchWorkflowCreation(
 	)
 }
 
-func (r *nDCCreateTransactionMgrImpl) createAsCurrent(
+func (r *nDCTransactionMgrForNewWorkflowImpl) createAsCurrent(
 	ctx ctx.Context,
 	now time.Time,
 	currentWorkflow nDCWorkflow,
@@ -188,7 +188,7 @@ func (r *nDCCreateTransactionMgrImpl) createAsCurrent(
 	)
 }
 
-func (r *nDCCreateTransactionMgrImpl) createAsZombie(
+func (r *nDCTransactionMgrForNewWorkflowImpl) createAsZombie(
 	ctx ctx.Context,
 	now time.Time,
 	currentWorkflow nDCWorkflow,
@@ -225,7 +225,7 @@ func (r *nDCCreateTransactionMgrImpl) createAsZombie(
 	)
 }
 
-func (r *nDCCreateTransactionMgrImpl) suppressCurrentAndCreateAsCurrent(
+func (r *nDCTransactionMgrForNewWorkflowImpl) suppressCurrentAndCreateAsCurrent(
 	ctx ctx.Context,
 	now time.Time,
 	currentWorkflow nDCWorkflow,
@@ -247,7 +247,7 @@ func (r *nDCCreateTransactionMgrImpl) suppressCurrentAndCreateAsCurrent(
 	)
 }
 
-func (r *nDCCreateTransactionMgrImpl) executeTransaction(
+func (r *nDCTransactionMgrForNewWorkflowImpl) executeTransaction(
 	ctx ctx.Context,
 	now time.Time,
 	transactionPolicy nDCTransactionPolicy,
@@ -291,7 +291,7 @@ func (r *nDCCreateTransactionMgrImpl) executeTransaction(
 	}
 }
 
-func (r *nDCCreateTransactionMgrImpl) cleanupTransaction(
+func (r *nDCTransactionMgrForNewWorkflowImpl) cleanupTransaction(
 	currentWorkflow nDCWorkflow,
 	targetWorkflow nDCWorkflow,
 	err error,
