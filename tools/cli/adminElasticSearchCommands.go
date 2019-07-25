@@ -403,7 +403,7 @@ func GenerateReport(c *cli.Context) {
 	table.Render()
 
 	// write html report
-	f, err := os.Create("/Users/jingyang/Desktop/report.html")
+	f, err := os.Create("report.html")
 	if err != nil {
 		ErrorAndExit("Fail to create html report file", err)
 	}
@@ -464,7 +464,7 @@ func GenerateReport(c *cli.Context) {
 	f.Close()
 
 	// write csv report
-	f, err = os.Create("/Users/jingyang/Desktop/report.csv")
+	f, err = os.Create("report.csv")
 	if err != nil {
 		ErrorAndExit("Fail to create csv report file", err)
 	}
