@@ -997,9 +997,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 		time.Sleep(200 * time.Millisecond)
 	}
 	s.NotNil(closedExecutions)
-	firstStartTime := closedExecutions[0].GetExecutionTime()
 	firstExecutionTime := closedExecutions[0].GetExecutionTime()
-	s.Equal(int(0), int(firstExecutionTime/1000000000-firstStartTime/1000000000))
 	for i := 1; i != 4; i++ {
 		executionInfo := closedExecutions[i]
 		executionTime := executionInfo.GetExecutionTime()
@@ -1009,16 +1007,6 @@ func (s *integrationSuite) TestCronWorkflow() {
 		s.Equal(int(0), int(executionTime/1000000000-firstExecutionTime/1000000000)%3)
 
 	}
-	dweResponse, err := s.engine.DescribeWorkflowExecution(createContext(), &workflow.DescribeWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
-		Execution: &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(id),
-			RunId:      we.RunId,
-		},
-	})
-	s.Nil(err)
-	expectedExecutionTime := dweResponse.WorkflowExecutionInfo.GetStartTime() + 3*time.Second.Nanoseconds()
-	s.Equal(expectedExecutionTime, dweResponse.WorkflowExecutionInfo.GetExecutionTime())
 }
 
 func (s *integrationSuite) TestSequential_UserTimers() {
