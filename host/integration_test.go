@@ -997,18 +997,18 @@ func (s *integrationSuite) TestCronWorkflow() {
 		time.Sleep(200 * time.Millisecond)
 	}
 	s.NotNil(closedExecutions)
+	firstStartTime := closedExecutions[0].GetExecutionTime()
 	firstExecutionTime := closedExecutions[0].GetExecutionTime()
+	s.Equal(int(0), int(firstExecutionTime/1000000000-firstStartTime/1000000000))
 	for i := 1; i != 4; i++ {
 		executionInfo := closedExecutions[i]
 		executionTime := executionInfo.GetExecutionTime()
-		s.Equal(int(0), int(executionTime/1000000000 - firstExecutionTime/1000000000 ) % 3)
+		// The delta of the first execution time and the current execution time should be able to divided by 3
+		// because the cron schedule interval is 3 seconds.
+		// The precision of the time is second so the time should be round up to seconds
+		s.Equal(int(0), int(executionTime/1000000000-firstExecutionTime/1000000000)%3)
 
 	}
-	for i := 0; i != 4; i++ {
-		executionInfo := closedExecutions[i]
-		s.Equal(targetBackoffDuration.Nanoseconds(), executionInfo.GetExecutionTime()-executionInfo.GetStartTime())
-	}
-
 	dweResponse, err := s.engine.DescribeWorkflowExecution(createContext(), &workflow.DescribeWorkflowExecutionRequest{
 		Domain: common.StringPtr(s.domainName),
 		Execution: &workflow.WorkflowExecution{
@@ -1975,7 +1975,10 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 		executionInfo := closedExecutions[i]
 		if executionInfo.GetExecution().GetWorkflowId() == childID {
 			executionTime := executionInfo.GetExecutionTime()
-			s.Equal(int(0), int(executionTime/1000000000 - firstExecutionTime/1000000000 ) % 3)
+			// The delta of the first execution time and the current execution time should be able to divided by 3
+			// because the cron schedule interval is 3 seconds.
+			// The precision of the time is second so the time should be round up to seconds
+			s.Equal(int(0), int(executionTime/1000000000-firstExecutionTime/1000000000)%3)
 		} else {
 			s.Equal(executionInfo.GetExecutionTime(), executionInfo.GetStartTime())
 		}
