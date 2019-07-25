@@ -865,14 +865,6 @@ func (s *integrationSuite) TestCronWorkflow() {
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
 		CronSchedule:                        common.StringPtr("@every 3s"), //minimum interval by standard spec is 1m (* * * * *), use non-standard descriptor for short interval for test
-		RetryPolicy: &workflow.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			MaximumAttempts:             common.Int32Ptr(5),
-			MaximumIntervalInSeconds:    common.Int32Ptr(1),
-			NonRetriableErrorReasons:    []string{"cron-test-error"},
-			BackoffCoefficient:          common.Float64Ptr(1),
-			ExpirationIntervalInSeconds: common.Int32Ptr(100),
-		},
 	}
 
 	startWorkflowTS := time.Now()
@@ -961,9 +953,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 			WorkflowId: common.StringPtr(id),
 		},
 	})
-
-	fmt.Printf("terminate_err: %v\n", terminateErr)
-
+	s.NoError(terminateErr)
 	events := s.getHistory(s.domainName, executions[0])
 	lastEvent := events[len(events)-1]
 	s.Equal(workflow.EventTypeWorkflowExecutionContinuedAsNew, lastEvent.GetEventType())
@@ -1007,11 +997,17 @@ func (s *integrationSuite) TestCronWorkflow() {
 		time.Sleep(200 * time.Millisecond)
 	}
 	s.NotNil(closedExecutions)
-	for i := 0; i != 4; i++ {
+	// The first execution is the termination execution. It verified below.
+	firstExecutionTime := closedExecutions[0].GetExecutionTime()
+	for i := 1; i != 4; i++ {
 		executionInfo := closedExecutions[i]
-		s.Equal(targetBackoffDuration.Nanoseconds(), executionInfo.GetExecutionTime()-executionInfo.GetStartTime())
-	}
+		executionTime := executionInfo.GetExecutionTime()
+		// The delta of the first execution time and the current execution time should be able to divided by 3
+		// because the cron schedule interval is 3 seconds.
+		// The precision of the time is second so the time should be round up to seconds
+		s.Equal(int(0), int(executionTime/1000000000-firstExecutionTime/1000000000)%3)
 
+	}
 	dweResponse, err := s.engine.DescribeWorkflowExecution(createContext(), &workflow.DescribeWorkflowExecutionRequest{
 		Domain: common.StringPtr(s.domainName),
 		Execution: &workflow.WorkflowExecution{
@@ -1632,6 +1628,19 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 	var startedEvent *workflow.HistoryEvent
 	var completedEvent *workflow.HistoryEvent
 
+	memoInfo, _ := json.Marshal("memo")
+	memo := &workflow.Memo{
+		Fields: map[string][]byte{
+			"Info": memoInfo,
+		},
+	}
+	attrValBytes, _ := json.Marshal("attrVal")
+	searchAttr := &workflow.SearchAttributes{
+		IndexedFields: map[string][]byte{
+			"CustomKeywordField": attrValBytes,
+		},
+	}
+
 	// Parent Decider Logic
 	dtHandlerParent := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
@@ -1655,6 +1664,8 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 						TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 						ChildPolicy:                         common.ChildPolicyPtr(workflow.ChildPolicyRequestCancel),
 						Control:                             nil,
+						Memo:                                memo,
+						SearchAttributes:                    searchAttr,
 					},
 				}}, nil
 			} else if previousStartedEventID > 0 {
@@ -1746,6 +1757,8 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 	s.Equal(workflow.ChildPolicyRequestCancel, childStartedEvent.WorkflowExecutionStartedEventAttributes.GetChildPolicy())
 	s.Equal(header, startedEvent.ChildWorkflowExecutionStartedEventAttributes.Header)
 	s.Equal(header, childStartedEvent.WorkflowExecutionStartedEventAttributes.Header)
+	s.Equal(memo, childStartedEvent.WorkflowExecutionStartedEventAttributes.GetMemo())
+	s.Equal(searchAttr, childStartedEvent.WorkflowExecutionStartedEventAttributes.GetSearchAttributes())
 
 	// Process ChildExecution completed event and complete parent execution
 	_, err = pollerParent.PollAndProcessDecisionTask(false, false)
@@ -1757,8 +1770,6 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 	s.Equal(childID, *completedAttributes.WorkflowExecution.WorkflowId)
 	s.Equal(wtChild, *completedAttributes.WorkflowType.Name)
 	s.Equal([]byte("Child Done."), completedAttributes.Result)
-
-	s.Logger.Info("Parent Workflow Execution History: ")
 }
 
 func (s *integrationSuite) TestCronChildWorkflowExecution() {
@@ -1958,10 +1969,15 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 		time.Sleep(200 * time.Millisecond)
 	}
 	s.NotNil(closedExecutions)
-	for i := 0; i != 4; i++ {
+	firstExecutionTime := closedExecutions[0].GetExecutionTime()
+	for i := 1; i != 4; i++ {
 		executionInfo := closedExecutions[i]
 		if executionInfo.GetExecution().GetWorkflowId() == childID {
-			s.Equal(targetBackoffDuration.Nanoseconds(), executionInfo.GetExecutionTime()-executionInfo.GetStartTime())
+			executionTime := executionInfo.GetExecutionTime()
+			// The delta of the first execution time and the current execution time should be able to divided by 3
+			// because the cron schedule interval is 3 seconds.
+			// The precision of the time is second so the time should be round up to seconds
+			s.Equal(int(0), int(executionTime/1000000000-firstExecutionTime/1000000000)%3)
 		} else {
 			s.Equal(executionInfo.GetExecutionTime(), executionInfo.GetStartTime())
 		}
