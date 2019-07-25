@@ -534,8 +534,16 @@ func newAdminElasticSearchCommands() []cli.Command {
 					Usage: "ElasticSearch target index",
 				},
 				cli.StringFlag{
-					Name:  FlagQuery,
+					Name:  FlagListQuery,
 					Usage: "SQL query of the report",
+				},
+				cli.StringFlag{
+					Name:  FlagOutputFormat,
+					Usage: "Additional output format (html or csv)",
+				},
+				cli.StringFlag{
+					Name:  FlagOutputFilename,
+					Usage: "Additional output filename with path",
 				},
 			},
 			Action: func(c *cli.Context) {

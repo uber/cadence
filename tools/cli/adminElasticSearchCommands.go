@@ -270,15 +270,14 @@ func bucketKey(k string) string {
 }
 
 // parse the returned time to readable string if time is in int64 format
-func timeStr(s interface{}) (string, error) {
+func toTimeStr(s interface{}) string {
 	floatTime, err := strconv.ParseFloat(s.(string), 64)
 	intTime := int64(floatTime)
 	if err != nil {
-		fmt.Println("timeStr err")
-		return "", err
+		return s.(string)
 	}
 	t := time.Unix(0, intTime)
-	return t.Format(time.RFC3339), nil
+	return t.Format(time.RFC3339)
 }
 
 // GenerateReport generate report for an aggregation query to ES
@@ -286,7 +285,9 @@ func GenerateReport(c *cli.Context) {
 	// use url command argument to create client
 	url := getRequiredOption(c, FlagURL)
 	index := getRequiredOption(c, FlagIndex)
-	sql := getRequiredOption(c, FlagQuery)
+	sql := getRequiredOption(c, FlagListQuery)
+	reportFormat := getRequiredOption(c, FlagOutputFormat)
+	reportFilePath := getRequiredOption(c, FlagOutputFilename)
 	esClient, err := elastic.NewClient(elastic.SetURL(url))
 	if err != nil {
 		ErrorAndExit("Fail to create elastic client", err)
@@ -391,7 +392,7 @@ func GenerateReport(c *cli.Context) {
 				} else {
 					datum = fmt.Sprintf("%v", vm["value"])
 					if strings.Contains(k, "Time") && !strings.Contains(k, "Attr_") {
-						datum, _ = timeStr(datum)
+						datum = toTimeStr(datum)
 					}
 				}
 				data[ids[k]] = datum
@@ -402,8 +403,36 @@ func GenerateReport(c *cli.Context) {
 	}
 	table.Render()
 
+	switch reportFormat {
+	case "html", "HTML":
+		generateHTMLReport(reportFilePath, buckKeys, len(sortFields) > 0, headers, tableData)
+	case "csv", "CSV":
+		generateCSVReport(reportFilePath, headers, tableData)
+	default:
+		err = fmt.Errorf("report format %v", reportFormat)
+		ErrorAndExit("Not supported: ", err)
+	}
+}
+
+// generate CSV report
+func generateCSVReport(reportFileName string, headers []string, tableData [][]string) {
+	// write csv report
+	f, err := os.Create(reportFileName)
+	if err != nil {
+		ErrorAndExit("Fail to create csv report file", err)
+	}
+	csvContent := strings.Join(headers, ",") + "\n"
+	for _, data := range tableData {
+		csvContent += strings.Join(data, ",") + "\n"
+	}
+	f.WriteString(csvContent)
+	f.Close()
+}
+
+// generate HTML report
+func generateHTMLReport(reportFileName string, numBuckKeys int, sorted bool, headers []string, tableData [][]string) {
 	// write html report
-	f, err := os.Create("report.html")
+	f, err := os.Create(reportFileName)
 	if err != nil {
 		ErrorAndExit("Fail to create html report file", err)
 	}
@@ -421,7 +450,7 @@ func GenerateReport(c *cli.Context) {
 		var rowData string
 		for col := 0; col < m; col++ {
 			rowSpan[col]--
-			if col < buckKeys-1 {
+			if col < numBuckKeys-1 {
 				if rowSpan[col] == 0 {
 					for i := row; i < n; i++ {
 						if tableData[i][col] == tableData[row][col] {
@@ -431,7 +460,7 @@ func GenerateReport(c *cli.Context) {
 						}
 					}
 					var property string
-					if rowSpan[col] > 1 && len(sortFields) > 0 {
+					if rowSpan[col] > 1 && sorted {
 						property = fmt.Sprintf(`rowspan="%d"`, rowSpan[col])
 					}
 					cell := wrapWithTag(tableData[row][col], "td", property)
@@ -463,17 +492,6 @@ func GenerateReport(c *cli.Context) {
 	f.WriteString(htmlContent)
 	f.Close()
 
-	// write csv report
-	f, err = os.Create("report.csv")
-	if err != nil {
-		ErrorAndExit("Fail to create csv report file", err)
-	}
-	csvContent := strings.Join(headers, ",") + "\n"
-	for _, data := range tableData {
-		csvContent += strings.Join(data, ",") + "\n"
-	}
-	f.WriteString(csvContent)
-	f.Close()
 }
 
 // return a string that use tag to wrap content
