@@ -591,7 +591,7 @@ func getCustomizedDSLFromSQL(sql string, domainID string) (*fastjson.Value, erro
 	return dsl, nil
 }
 
-// ES v6 only accepts "must_not exists" query instead of "missing" query, but elasticsql will produce "missing",
+// ES v6 only accepts "must_not exists" query instead of "missing" query, but elasticsql produces "missing",
 // so use this func to replace.
 // Note it also means a temp limitation that we cannot support field missing search
 func replaceQueryForOpen(dsl *fastjson.Value) *fastjson.Value {
