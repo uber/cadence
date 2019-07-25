@@ -52,6 +52,7 @@ type Config struct {
 	EnableVisibilityToKafka         dynamicconfig.BoolPropertyFn
 	EmitShardDiffLog                dynamicconfig.BoolPropertyFn
 	MaxAutoResetPoints              dynamicconfig.IntPropertyFnWithDomainFilter
+	MaxDecisionStartToCloseSeconds  dynamicconfig.IntPropertyFnWithDomainFilter
 
 	// HistoryCache settings
 	// Change of these configs require shard restart
@@ -156,6 +157,9 @@ type Config struct {
 	SearchAttributesNumberOfKeysLimit dynamicconfig.IntPropertyFnWithDomainFilter
 	SearchAttributesSizeOfValueLimit  dynamicconfig.IntPropertyFnWithDomainFilter
 	SearchAttributesTotalSizeLimit    dynamicconfig.IntPropertyFnWithDomainFilter
+
+	// StickyTTL is to expire a sticky tasklist if no update more than this duration
+	StickyTTL dynamicconfig.DurationPropertyFnWithDomainFilter
 }
 
 const (
@@ -174,6 +178,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, enableVisibilit
 		VisibilityOpenMaxQPS:                                  dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryVisibilityOpenMaxQPS, 300),
 		VisibilityClosedMaxQPS:                                dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryVisibilityClosedMaxQPS, 300),
 		MaxAutoResetPoints:                                    dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryMaxAutoResetPoints, defaultHistoryMaxAutoResetPoints),
+		MaxDecisionStartToCloseSeconds:                        dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxDecisionStartToCloseSeconds, 240),
 		EnableVisibilityToKafka:                               dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, enableVisibilityToKafka),
 		EmitShardDiffLog:                                      dc.GetBoolProperty(dynamicconfig.EmitShardDiffLog, false),
 		HistoryCacheInitialSize:                               dc.GetIntProperty(dynamicconfig.HistoryCacheInitialSize, 128),
@@ -252,6 +257,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, enableVisibilit
 		SearchAttributesNumberOfKeysLimit: dc.GetIntPropertyFilteredByDomain(dynamicconfig.SearchAttributesNumberOfKeysLimit, 100),
 		SearchAttributesSizeOfValueLimit:  dc.GetIntPropertyFilteredByDomain(dynamicconfig.SearchAttributesSizeOfValueLimit, 2*1024),
 		SearchAttributesTotalSizeLimit:    dc.GetIntPropertyFilteredByDomain(dynamicconfig.SearchAttributesTotalSizeLimit, 40*1024),
+		StickyTTL:                         dc.GetDurationPropertyFilteredByDomain(dynamicconfig.StickyTTL, time.Hour*24*365),
 	}
 
 	return cfg
