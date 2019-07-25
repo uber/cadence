@@ -21,7 +21,6 @@
 package xdc
 
 import (
-	"github.com/uber/cadence/.gen/go/shared"
 	"math/rand"
 	"strings"
 	"time"
@@ -32,6 +31,7 @@ var (
 		return len(batch) == 0
 	}
 )
+
 type (
 	// Model represents a state transition graph that contains all the relationships of Vertex
 	Model interface {
@@ -58,8 +58,10 @@ type (
 		GetNextVertex() []Vertex
 		// ListGeneratedVertex lists the pasted generated vertexes
 		ListGeneratedVertex() []Vertex
-		// Reset resets the generator to initial state
-		Reset()
+		// Reset resets the generator to a reset point
+		Reset(int)
+		// ListResetPoint lists all available reset points
+		ListResetPoint() []resetPoint
 		// SetCanDoBatchOnNextVertex sets a function that used in GetNextVertex to return batch result
 		SetCanDoBatchOnNextVertex(func([]Vertex) bool)
 	}
@@ -118,6 +120,12 @@ type (
 		randomEntryVertexes []Vertex
 		dice                *rand.Rand
 		canDoBatch          func([]Vertex) bool
+		resetPoints         []resetPoint
+	}
+
+	resetPoint struct {
+		previousVertexes []Vertex
+		leafVertexes     []Vertex
 	}
 
 	// Connection is the edge
@@ -137,6 +145,10 @@ type (
 
 // NewEventGenerator initials the event generator
 func NewEventGenerator() Generator {
+	initialResetPoint := resetPoint{
+		previousVertexes: make([]Vertex, 0),
+		leafVertexes:     make([]Vertex, 0),
+	}
 	return &EventGenerator{
 		connections:         make(map[Vertex][]Edge),
 		previousVertexes:    make([]Vertex, 0),
@@ -146,6 +158,7 @@ func NewEventGenerator() Generator {
 		randomEntryVertexes: make([]Vertex, 0),
 		dice:                rand.New(rand.NewSource(time.Now().Unix())),
 		canDoBatch:          defaultBatchFunc,
+		resetPoints:         []resetPoint{initialResetPoint},
 	}
 }
 
@@ -217,46 +230,36 @@ func (g *EventGenerator) GetNextVertex() []Vertex {
 		g.previousVertexes = append(g.previousVertexes, res...)
 		batch = append(batch, res...)
 	}
+	// Create a reset point of each batch
+	previousVertexesSnapshot := make([]Vertex, len(g.previousVertexes))
+	copy(previousVertexesSnapshot, g.previousVertexes)
+	leafVertexesSnapshot := make([]Vertex, len(g.leafVertexes))
+	copy(leafVertexesSnapshot, g.leafVertexes)
+	newResetPoint := resetPoint{
+		previousVertexes: previousVertexesSnapshot,
+		leafVertexes:     leafVertexesSnapshot,
+	}
+	g.resetPoints = append(g.resetPoints, newResetPoint)
 	return batch
 }
 
 // Reset reset the generator to the initial state
-func (g *EventGenerator) Reset() {
-	g.previousVertexes = make([]Vertex, 0)
-	g.leafVertexes = make([]Vertex, 0)
+func (g *EventGenerator) Reset(idx int) {
+	if idx >= len(g.resetPoints) {
+		panic("The reset point does not exist.")
+	}
+	toReset := g.resetPoints[idx]
+	g.previousVertexes = toReset.previousVertexes
+	g.leafVertexes = toReset.leafVertexes
 	g.dice = rand.New(rand.NewSource(time.Now().Unix()))
+}
+
+func (g *EventGenerator) ListResetPoint() []resetPoint {
+	return g.resetPoints
 }
 
 func (g *EventGenerator) SetCanDoBatchOnNextVertex(canDoBatchFunc func([]Vertex) bool) {
 	g.canDoBatch = canDoBatchFunc
-}
-
-func (g *EventGenerator) canBatch(history []Vertex) bool {
-	if len(history) == 0 {
-		return true
-	}
-
-	hasPendingDecisionTask := false
-	for _, event := range g.previousVertexes {
-		switch event.GetName() {
-		case shared.EventTypeDecisionTaskScheduled.String():
-			hasPendingDecisionTask = true
-		case shared.EventTypeDecisionTaskCompleted.String(),
-			shared.EventTypeDecisionTaskFailed.String(),
-			shared.EventTypeDecisionTaskTimedOut.String():
-			hasPendingDecisionTask = false
-		}
-	}
-	if hasPendingDecisionTask {
-		return false
-	}
-	if history[len(history)-1].GetName() == shared.EventTypeDecisionTaskScheduled.String() {
-		return false
-	}
-	if history[0].GetName() == shared.EventTypeDecisionTaskCompleted.String() {
-		return len(history) == 1
-	}
-	return true
 }
 
 func (g *EventGenerator) getEntryVertex() Vertex {

@@ -98,29 +98,29 @@ func (s *historyEventTestSuit) SetupSuite() {
 
 	canDoBatch := func(history []Vertex) bool {
 		if len(history) == 0 {
-		return true
-	}
+			return true
+		}
 
 		hasPendingDecisionTask := false
 		for _, event := range generator.ListGeneratedVertex() {
-		switch event.GetName() {
-		case shared.EventTypeDecisionTaskScheduled.String():
-			hasPendingDecisionTask = true
-		case shared.EventTypeDecisionTaskCompleted.String(),
-			shared.EventTypeDecisionTaskFailed.String(),
-			shared.EventTypeDecisionTaskTimedOut.String():
-			hasPendingDecisionTask = false
+			switch event.GetName() {
+			case shared.EventTypeDecisionTaskScheduled.String():
+				hasPendingDecisionTask = true
+			case shared.EventTypeDecisionTaskCompleted.String(),
+				shared.EventTypeDecisionTaskFailed.String(),
+				shared.EventTypeDecisionTaskTimedOut.String():
+				hasPendingDecisionTask = false
+			}
 		}
-	}
 		if hasPendingDecisionTask {
-		return false
-	}
+			return false
+		}
 		if history[len(history)-1].GetName() == shared.EventTypeDecisionTaskScheduled.String() {
-		return false
-	}
+			return false
+		}
 		if history[0].GetName() == shared.EventTypeDecisionTaskCompleted.String() {
-		return len(history) == 1
-	}
+			return len(history) == 1
+		}
 		return true
 	}
 
@@ -312,7 +312,7 @@ func (s *historyEventTestSuit) SetupSuite() {
 }
 
 func (s *historyEventTestSuit) SetupTest() {
-	s.generator.Reset()
+	s.generator.Reset(0)
 }
 
 func (s *historyEventTestSuit) Test_HistoryEvent_Generator() {
