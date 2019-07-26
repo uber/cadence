@@ -312,19 +312,82 @@ func (s *historyEventTestSuit) SetupSuite() {
 }
 
 func (s *historyEventTestSuit) SetupTest() {
-	s.generator.Reset(0)
+	s.generator.ResetAsNew()
 }
 
 func (s *historyEventTestSuit) Test_HistoryEvent_Generator() {
-	for s.generator.HasNextVertex() {
-		fmt.Println("########################")
-		v := s.generator.GetNextVertices()
-		for _, e := range v {
-			fmt.Println(e.GetName())
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println(err)
+		}
+	}()
+
+	totalBranchNumber := 2
+	currentBranch := totalBranchNumber
+	root := &branch{
+		batches: make([]batch, 0),
+	}
+	curr := root
+	//eventRanches := make([][]Vertex, 0, totalBranchNumber)
+	for currentBranch > 0 {
+		for s.generator.HasNextVertex() {
+			fmt.Println("########################")
+			events := s.generator.GetNextVertices()
+			newBatch := batch{
+				events: events,
+			}
+			curr.batches = append(curr.batches, newBatch)
+			for _, e := range events {
+				fmt.Println(e.GetName())
+			}
+		}
+		currentBranch--
+		if currentBranch > 0 {
+			resetIdx := s.generator.RandomReset()
+			curr = split(curr, resetIdx)
 		}
 	}
 	s.NotEmpty(s.generator.ListGeneratedVertices())
+	fmt.Println("$$$$$$$$$$$$$$$$$$$$$$$$$$")
+	fmt.Println("$$$$$$$$$$$$$$$$$$$$$$$$$$")
 
-	eventAttr := generateHistoryEvents(s.generator.ListGeneratedVertices())
-	s.NotEmpty(eventAttr)
+	queue := []*branch{root}
+	for len(queue) > 0 {
+		b := queue[0]
+		queue = queue[1:]
+		fmt.Println("BBBBBBBBBBBBBBBBBBBB")
+		for _, batch := range b.batches {
+			fmt.Println("########################")
+			for _, event := range batch.events {
+				fmt.Println(event)
+			}
+		}
+		queue = append(queue, b.next...)
+	}
+	//eventAttr := generateHistoryEvents(s.generator.ListGeneratedVertex())
+	//s.NotEmpty(eventAttr)
+}
+
+func split(root *branch, resetIdx int) *branch {
+	curr := root
+	for curr.next != nil {
+		length := len(curr.batches)
+		if length > resetIdx {
+			break
+		}
+		curr = curr.next[len(curr.next)-1]
+		resetIdx -= length
+	}
+
+	firstBatches := make([]batch, 0, resetIdx+1)
+	copy(firstBatches, curr.batches[:resetIdx])
+	secondBatches := make([]batch, 0, len(curr.batches)-resetIdx+1)
+	copy(secondBatches, curr.batches[:len(curr.batches)-resetIdx+1])
+	newBranch := &branch{
+		next:    curr.next,
+		batches: secondBatches,
+	}
+	curr.next = []*branch{newBranch}
+	curr.batches = firstBatches
+	return curr
 }

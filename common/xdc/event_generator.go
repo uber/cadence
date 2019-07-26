@@ -81,10 +81,6 @@ type (
 
 // NewEventGenerator initials the event generator
 func NewEventGenerator() Generator {
-	initialResetPoint := ResetPoint{
-		previousVertices: make([]Vertex, 0),
-		leafVertices:     make([]Vertex, 0),
-	}
 	return &EventGenerator{
 		connections:         make(map[Vertex][]Edge),
 		previousVertices:    make([]Vertex, 0),
@@ -94,7 +90,7 @@ func NewEventGenerator() Generator {
 		randomEntryVertices: make([]Vertex, 0),
 		dice:                rand.New(rand.NewSource(time.Now().Unix())),
 		canDoBatch:          defaultBatchFunc,
-		resetPoints:         []ResetPoint{initialResetPoint},
+		resetPoints:         make([]ResetPoint, 0),
 	}
 }
 
@@ -179,6 +175,12 @@ func (g *EventGenerator) GetNextVertices() []Vertex {
 	return batch
 }
 
+func (g *EventGenerator) ResetAsNew() {
+	g.leafVertices = make([]Vertex, 0)
+	g.previousVertices = make([]Vertex, 0)
+	g.dice = rand.New(rand.NewSource(time.Now().Unix()))
+}
+
 // Reset reset the generator to the initial state
 func (g *EventGenerator) Reset(idx int) {
 	if idx >= len(g.resetPoints) {
@@ -187,6 +189,7 @@ func (g *EventGenerator) Reset(idx int) {
 	toReset := g.resetPoints[idx]
 	g.previousVertices = toReset.previousVertices
 	g.leafVertices = toReset.leafVertices
+	g.resetPoints = g.resetPoints[idx:]
 	g.dice = rand.New(rand.NewSource(time.Now().Unix()))
 }
 
@@ -194,6 +197,13 @@ func (g *EventGenerator) Reset(idx int) {
 // this will reset the previous generated event history
 func (g *EventGenerator) ListResetPoint() []ResetPoint {
 	return g.resetPoints
+}
+
+func (g *EventGenerator) RandomReset() int {
+	// Random reset does not reset to index 0
+	nextIdx := g.dice.Intn(len(g.resetPoints)-1) + 1
+	g.Reset(nextIdx)
+	return nextIdx
 }
 
 // SetCanDoBatchOnNextVertex sets a function to determine next generated batch of history events

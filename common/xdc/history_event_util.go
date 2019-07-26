@@ -28,6 +28,17 @@ import (
 	"time"
 )
 
+type (
+	batch struct {
+		events []Vertex
+	}
+
+	branch struct {
+		next    []*branch
+		batches []batch
+	}
+)
+
 const (
 	workflowType = "history event generation mock"
 	domainID     = "00000000-0000-0000-0000-000000000000"
