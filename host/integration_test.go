@@ -27,6 +27,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/uber/cadence/common/backoff"
 	"math"
 	"strconv"
 	"testing"
@@ -844,6 +845,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 	wt := "integration-wf-cron-type"
 	tl := "integration-wf-cron-tasklist"
 	identity := "worker1"
+	cronSchedule := "@every 3s"
 
 	targetBackoffDuration := time.Second * 3
 	backoffDurationTolerance := time.Millisecond * 500
@@ -864,7 +866,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
-		CronSchedule:                        common.StringPtr("@every 3s"), //minimum interval by standard spec is 1m (* * * * *), use non-standard descriptor for short interval for test
+		CronSchedule:                        common.StringPtr(cronSchedule), //minimum interval by standard spec is 1m (* * * * *), use non-standard descriptor for short interval for test
 	}
 
 	startWorkflowTS := time.Now()
@@ -998,15 +1000,6 @@ func (s *integrationSuite) TestCronWorkflow() {
 	}
 	s.NotNil(closedExecutions)
 	// The first execution is the termination execution. It verified below.
-	firstExecutionTime := closedExecutions[0].GetExecutionTime()
-	for i := 1; i != 4; i++ {
-		executionInfo := closedExecutions[i]
-		executionTime := executionInfo.GetExecutionTime()
-		// The delta of the first execution time and the current execution time should be able to divided by 3
-		// because the cron schedule interval is 3 seconds.
-		// The precision of the time is second so the time should be round up to seconds
-		s.Equal(int(0), int(executionTime/1000000000-firstExecutionTime/1000000000)%3)
-	}
 	dweResponse, err := s.engine.DescribeWorkflowExecution(createContext(), &workflow.DescribeWorkflowExecutionRequest{
 		Domain: common.StringPtr(s.domainName),
 		Execution: &workflow.WorkflowExecution{
@@ -1017,6 +1010,15 @@ func (s *integrationSuite) TestCronWorkflow() {
 	s.Nil(err)
 	expectedExecutionTime := dweResponse.WorkflowExecutionInfo.GetStartTime() + 3*time.Second.Nanoseconds()
 	s.Equal(expectedExecutionTime, dweResponse.WorkflowExecutionInfo.GetExecutionTime())
+
+	// The first execution is the termination execution. It verified below.
+	firstExecutionTime := time.Unix(0, dweResponse.WorkflowExecutionInfo.GetStartTime())
+	for i := 1; i != 4; i++ {
+		executionInfo := closedExecutions[i]
+		executionStartTime := executionInfo.GetStartTime()
+		backoffDuration := backoff.GetBackoffForNextSchedule(cronSchedule, firstExecutionTime, time.Unix(0, executionStartTime))
+		s.Equal(backoffDuration.Nanoseconds(), executionInfo.GetExecutionTime()-executionStartTime)
+	}
 }
 
 func (s *integrationSuite) TestSequential_UserTimers() {
@@ -1968,15 +1970,24 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 		time.Sleep(200 * time.Millisecond)
 	}
 	s.NotNil(closedExecutions)
-	firstExecutionTime := closedExecutions[0].GetExecutionTime()
-	for i := 1; i != 4; i++ {
+	// Get the first executed child workflow
+	firstExecutionTime := time.Unix(0, closedExecutions[0].GetStartTime())
+	for i := 0; i != 4; i++ {
 		executionInfo := closedExecutions[i]
 		if executionInfo.GetExecution().GetWorkflowId() == childID {
-			executionTime := executionInfo.GetExecutionTime()
-			// The delta of the first execution time and the current execution time should be able to divided by 3
-			// because the cron schedule interval is 3 seconds.
-			// The precision of the time is second so the time should be round up to seconds
-			s.Equal(int(0), int(executionTime/1000000000-firstExecutionTime/1000000000)%3)
+			childStartTime := time.Unix(0, executionInfo.GetStartTime())
+			if firstExecutionTime.After(childStartTime) {
+				firstExecutionTime = childStartTime
+			}
+		}
+	}
+
+	for i := 0; i != 4; i++ {
+		executionInfo := closedExecutions[i]
+		if executionInfo.GetExecution().GetWorkflowId() == childID {
+			executionStartTime := executionInfo.GetStartTime()
+			backoffDuration := backoff.GetBackoffForNextSchedule(cronSchedule, firstExecutionTime, time.Unix(0, executionStartTime))
+			s.Equal(backoffDuration.Nanoseconds(), executionInfo.GetExecutionTime()-executionStartTime)
 		} else {
 			s.Equal(executionInfo.GetExecutionTime(), executionInfo.GetStartTime())
 		}
