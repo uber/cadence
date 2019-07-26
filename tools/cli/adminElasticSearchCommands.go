@@ -258,7 +258,7 @@ func generateESDoc(msg *indexer.Message) map[string]interface{} {
 }
 
 // This function is used to trim unnecessary tag in returned json for table header
-func bucketKey(k string) string {
+func trimBucketKey(k string) string {
 	// group key is in form of "group_key", we only need "key" as the column name
 	if strings.HasPrefix(k, "group_") {
 		k = k[6:]
@@ -348,7 +348,7 @@ func GenerateReport(c *cli.Context) {
 		// first search whether primaryCols keys exist, if found, put them at the table beginning
 		for _, k := range primaryCols {
 			if _, exist := vmap[k]; exist {
-				k = bucketKey(k) // trim the unnecessary prefix
+				k = trimBucketKey(k) // trim the unnecessary prefix
 				headers = append(headers, k)
 				ids[k] = len(ids)
 				buckKeys++
@@ -357,7 +357,7 @@ func GenerateReport(c *cli.Context) {
 		// extract all remaining bucket keys
 		for k := range vmap {
 			if _, exist := primaryColsMap[k]; !exist {
-				k = bucketKey(k)
+				k = trimBucketKey(k)
 				headers = append(headers, k)
 				ids[k] = len(ids)
 				buckKeys++
@@ -386,7 +386,7 @@ func GenerateReport(c *cli.Context) {
 			case "key": // fill group key
 				vmap := v.(map[string]interface{})
 				for kk, vv := range vmap {
-					kk = bucketKey(kk)
+					kk = trimBucketKey(kk)
 					data[ids[kk]] = fmt.Sprintf("%v", vv)
 				}
 			case "doc_count": // fill bucket size count
