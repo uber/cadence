@@ -413,7 +413,8 @@ func GenerateReport(c *cli.Context) {
 
 	switch reportFormat {
 	case "html", "HTML":
-		generateHTMLReport(reportFilePath, buckKeys, len(sortFields) > 0, headers, tableData)
+		sorted := len(sortFields) > 0 || strings.Contains(sql, "ORDER BY") || strings.Contains(sql, "order by")
+		generateHTMLReport(reportFilePath, buckKeys, sorted, headers, tableData)
 	case "csv", "CSV":
 		generateCSVReport(reportFilePath, headers, tableData)
 	default:
@@ -455,7 +456,7 @@ func generateHTMLReport(reportFileName string, numBuckKeys int, sorted bool, hea
 		var rowData string
 		for col := 0; col < m; col++ {
 			rowSpan[col]--
-			// here condition on sorted is not working since sortfield by aggregation is not returned
+			// don't do collapsing if sorted
 			if col < numBuckKeys-1 && !sorted {
 				if rowSpan[col] == 0 {
 					for i := row; i < n; i++ {
