@@ -23,8 +23,8 @@ package frontend
 import (
 	"context"
 	"fmt"
+	"github.com/olivere/elastic"
 	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -156,7 +156,7 @@ func (adh *AdminHandler) AddSearchAttribute(ctx context.Context, request *admin.
 			return &gen.BadRequestError{Message: fmt.Sprintf("Unknown value type, %v", v)}
 		}
 		err := adh.params.ESClient.PutMapping(ctx, index, definition.Attr, k, valueType)
-		if err != nil && strings.HasPrefix(err.Error(), "elastic: Error 404") {
+		if elastic.IsNotFound(err) {
 			err = adh.params.ESClient.CreateIndex(ctx, index)
 			if err != nil {
 				return &gen.InternalServiceError{Message: fmt.Sprintf("Failed to create ES index, err: %v", err)}
