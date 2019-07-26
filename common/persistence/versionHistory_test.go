@@ -76,7 +76,7 @@ func (s *versionHistorySuite) TestDuplicateUntilLCAItem_Success() {
 	newHistory, err := history.DuplicateUntilLCAItem(NewVersionHistoryItem(2, 0))
 	s.NoError(err)
 	newBranchToken := []byte("other random branch token")
-	err = newHistory.SetBranchToken(newBranchToken)
+	err = newHistory.InitializeBranchToken(newBranchToken)
 	s.NoError(err)
 	s.Equal(newBranchToken, newHistory.GetBranchToken())
 	s.Equal(NewVersionHistory(
@@ -87,7 +87,7 @@ func (s *versionHistorySuite) TestDuplicateUntilLCAItem_Success() {
 	newHistory, err = history.DuplicateUntilLCAItem(NewVersionHistoryItem(5, 4))
 	s.NoError(err)
 	newBranchToken = []byte("another random branch token")
-	err = newHistory.SetBranchToken(newBranchToken)
+	err = newHistory.InitializeBranchToken(newBranchToken)
 	s.NoError(err)
 	s.Equal(newBranchToken, newHistory.GetBranchToken())
 	s.Equal(NewVersionHistory(
@@ -101,7 +101,7 @@ func (s *versionHistorySuite) TestDuplicateUntilLCAItem_Success() {
 	newHistory, err = history.DuplicateUntilLCAItem(NewVersionHistoryItem(6, 4))
 	s.NoError(err)
 	newBranchToken = []byte("yet another random branch token")
-	err = newHistory.SetBranchToken(newBranchToken)
+	err = newHistory.InitializeBranchToken(newBranchToken)
 	s.NoError(err)
 	s.Equal(newBranchToken, newHistory.GetBranchToken())
 	s.Equal(NewVersionHistory(
@@ -141,18 +141,18 @@ func (s *versionHistorySuite) TestDuplicateUntilLCAItem_Failure() {
 	s.IsType(&shared.BadRequestError{}, err)
 }
 
-func (s *versionHistorySuite) TestSetBranchToken_Success() {
+func (s *versionHistorySuite) TestInitializeBranchToken_Success() {
 	items := []*VersionHistoryItem{
 		{eventID: 3, version: 0},
 		{eventID: 6, version: 4},
 	}
 	history := NewVersionHistory(nil, items)
 
-	err := history.SetBranchToken([]byte("some random branch token"))
+	err := history.InitializeBranchToken([]byte("some random branch token"))
 	s.NoError(err)
 }
 
-func (s *versionHistorySuite) TestSetBranchToken_Failure() {
+func (s *versionHistorySuite) TestInitializeBranchToken_Failure() {
 	branchToken := []byte("some random branch token")
 	items := []*VersionHistoryItem{
 		{eventID: 3, version: 0},
@@ -160,7 +160,7 @@ func (s *versionHistorySuite) TestSetBranchToken_Failure() {
 	}
 	history := NewVersionHistory(branchToken, items)
 
-	err := history.SetBranchToken([]byte("some random branch token"))
+	err := history.InitializeBranchToken([]byte("some random branch token"))
 	s.Error(err)
 }
 

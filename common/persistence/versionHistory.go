@@ -181,14 +181,22 @@ func (v *VersionHistory) DuplicateUntilLCAItem(
 	return nil, notFoundErr
 }
 
-// SetBranchToken the set the branch token
-func (v *VersionHistory) SetBranchToken(
+// InitializeBranchToken the set the branch token
+func (v *VersionHistory) InitializeBranchToken(
 	inputToken []byte,
 ) error {
 
 	if len(v.branchToken) != 0 {
 		return &shared.BadRequestError{Message: "branch token is already set"}
 	}
+
+	return v.SetBranchToken(inputToken)
+}
+
+// SetBranchToken the set the branch token
+func (v *VersionHistory) SetBranchToken(
+	inputToken []byte,
+) error {
 
 	token := make([]byte, len(inputToken))
 	copy(token, inputToken)
