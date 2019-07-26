@@ -73,8 +73,7 @@ type (
 // NewMetadata create a new instance of Metadata
 func NewMetadata(
 	logger log.Logger,
-	dc *dynamicconfig.Collection,
-	enableGlobalDomain bool,
+	enableGlobalDomain dynamicconfig.BoolPropertyFn,
 	failoverVersionIncrement int64,
 	masterClusterName string,
 	currentClusterName string,
@@ -122,7 +121,7 @@ func NewMetadata(
 
 	return &metadataImpl{
 		logger:                   logger,
-		enableGlobalDomain:       dc.GetBoolProperty(dynamicconfig.EnableGlobalDomain, enableGlobalDomain),
+		enableGlobalDomain:       enableGlobalDomain,
 		failoverVersionIncrement: failoverVersionIncrement,
 		masterClusterName:        masterClusterName,
 		currentClusterName:       currentClusterName,

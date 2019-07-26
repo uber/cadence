@@ -31,22 +31,30 @@ import (
 type (
 	// ArchivalMetadata provides cluster level archival information
 	ArchivalMetadata interface {
-		GetHistoryConfig() *ArchivalConfig
-		GetVisibilityConfig() *ArchivalConfig
-	}
-
-	archivalMetadata struct {
-		historyConfig    *ArchivalConfig
-		visibilityConfig *ArchivalConfig
+		GetHistoryConfig() ArchivalConfig
+		GetVisibilityConfig() ArchivalConfig
 	}
 
 	// ArchivalConfig is an immutable representation of the archival configuration of the cluster
 	// This config is determined at cluster startup time
-	ArchivalConfig struct {
-		ClusterStatus       ArchivalStatus
-		EnableRead          bool
-		DomainDefaultStatus shared.ArchivalStatus
-		DomainDefaultURI    string
+	ArchivalConfig interface {
+		ClusterConfiguredForArchival() bool
+		GetClusterStatus() ArchivalStatus
+		ReadEnabled() bool
+		GetDomainDefaultStatus() shared.ArchivalStatus
+		GetDomainDefaultURI() string
+	}
+
+	archivalMetadata struct {
+		historyConfig    ArchivalConfig
+		visibilityConfig ArchivalConfig
+	}
+
+	archivalConfig struct {
+		clusterStatus       ArchivalStatus
+		enableRead          bool
+		domainDefaultStatus shared.ArchivalStatus
+		domainDefaultURI    string
 	}
 
 	// ArchivalStatus represents the archival status of the cluster
@@ -87,11 +95,11 @@ func NewArchivalMetadata(
 	}
 }
 
-func (metadata *archivalMetadata) GetHistoryConfig() *ArchivalConfig {
+func (metadata *archivalMetadata) GetHistoryConfig() ArchivalConfig {
 	return metadata.historyConfig
 }
 
-func (metadata *archivalMetadata) GetVisibilityConfig() *ArchivalConfig {
+func (metadata *archivalMetadata) GetVisibilityConfig() ArchivalConfig {
 	return metadata.visibilityConfig
 }
 
@@ -101,7 +109,7 @@ func NewArchivalConfig(
 	enableRead bool,
 	domainDefaultStatusStr string,
 	domainDefaultURI string,
-) *ArchivalConfig {
+) ArchivalConfig {
 	clusterStatus, err := getClusterArchivalStatus(clusterStatusStr)
 	if err != nil {
 		panic(err)
@@ -111,11 +119,11 @@ func NewArchivalConfig(
 		panic(err)
 	}
 
-	ac := &ArchivalConfig{
-		ClusterStatus:       clusterStatus,
-		EnableRead:          enableRead,
-		DomainDefaultStatus: domainDefaultStatus,
-		DomainDefaultURI:    domainDefaultURI,
+	ac := &archivalConfig{
+		clusterStatus:       clusterStatus,
+		enableRead:          enableRead,
+		domainDefaultStatus: domainDefaultStatus,
+		domainDefaultURI:    domainDefaultURI,
 	}
 	if !ac.isValid() {
 		panic("invalid cluster level archival configuration")
@@ -124,12 +132,28 @@ func NewArchivalConfig(
 }
 
 // ClusterConfiguredForArchival returns true if cluster is configured to handle archival, false otherwise
-func (a *ArchivalConfig) ClusterConfiguredForArchival() bool {
-	return a.ClusterStatus == ArchivalEnabled
+func (a *archivalConfig) ClusterConfiguredForArchival() bool {
+	return a.clusterStatus == ArchivalEnabled
 }
 
-func (a *ArchivalConfig) isValid() bool {
-	URISet := len(a.DomainDefaultURI) != 0
+func (a *archivalConfig) GetClusterStatus() ArchivalStatus {
+	return a.clusterStatus
+}
+
+func (a *archivalConfig) ReadEnabled() bool {
+	return a.enableRead
+}
+
+func (a *archivalConfig) GetDomainDefaultStatus() shared.ArchivalStatus {
+	return a.domainDefaultStatus
+}
+
+func (a *archivalConfig) GetDomainDefaultURI() string {
+	return a.domainDefaultURI
+}
+
+func (a *archivalConfig) isValid() bool {
+	URISet := len(a.domainDefaultURI) != 0
 	return (URISet && a.ClusterConfiguredForArchival()) || (!URISet && !a.ClusterConfiguredForArchival())
 }
 
@@ -155,22 +179,4 @@ func getDomainArchivalStatus(str string) (shared.ArchivalStatus, error) {
 		return shared.ArchivalStatusEnabled, nil
 	}
 	return shared.ArchivalStatusDisabled, fmt.Errorf("invalid archival status of %v for domain, valid status are: {\"\", \"disabled\", \"enabled\"}", str)
-}
-
-// GetTestArchivalMetadata return an archival metadata instance for test use
-func GetTestArchivalMetadata(enabled bool) ArchivalMetadata {
-	if !enabled {
-		return NewArchivalMetadata("", false, "", false, &config.ArchivalDomainDefaults{})
-	}
-
-	return NewArchivalMetadata("enabled", true, "enabled", true, &config.ArchivalDomainDefaults{
-		History: config.HistoryArchivalDomainDefaults{
-			Status: "enabled",
-			URI:    "testScheme://test/archive/path",
-		},
-		Visibility: config.VisibilityArchivalDomainDefaults{
-			Status: "enabled",
-			URI:    "testScheme://test/archive/path",
-		},
-	})
 }

@@ -83,7 +83,7 @@ func (s *domainHandlerGlobalDomainDisabledSuite) SetupTest() {
 	s.metadataMgr = s.TestBase.MetadataProxy
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.mockDomainReplicator = NewDomainReplicator(s.mockProducer, logger)
-	s.archvialMetadata = archiver.GetTestArchivalMetadata(false)
+	s.archvialMetadata = archiver.NewArchivalMetadata("", false, "", false, &config.ArchivalDomainDefaults{})
 	s.mockArchiverProvider = &provider.MockArchiverProvider{}
 	s.handler = newDomainHandler(s.config, logger, s.metadataMgr, s.ClusterMetadata,
 		s.mockDomainReplicator, s.archvialMetadata, s.mockArchiverProvider)

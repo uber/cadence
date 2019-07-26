@@ -86,8 +86,7 @@ func GetTestClusterMetadata(enableGlobalDomain bool, isMasterCluster bool) Metad
 	if enableGlobalDomain {
 		return NewMetadata(
 			loggerimpl.NewNopLogger(),
-			dynamicconfig.NewNopCollection(),
-			true,
+			dynamicconfig.GetBoolPropertyFn(true),
 			TestFailoverVersionIncrement,
 			masterClusterName,
 			TestCurrentClusterName,
@@ -97,8 +96,7 @@ func GetTestClusterMetadata(enableGlobalDomain bool, isMasterCluster bool) Metad
 
 	return NewMetadata(
 		loggerimpl.NewNopLogger(),
-		dynamicconfig.NewNopCollection(),
-		false,
+		dynamicconfig.GetBoolPropertyFn(false),
 		TestFailoverVersionIncrement,
 		TestCurrentClusterName,
 		TestCurrentClusterName,

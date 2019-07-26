@@ -1661,7 +1661,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	}
 
 	configuredForArchival := wh.GetArchivalMetadata().GetHistoryConfig().ClusterConfiguredForArchival()
-	enableArchivalRead := wh.GetArchivalMetadata().GetHistoryConfig().EnableRead
+	enableArchivalRead := wh.GetArchivalMetadata().GetHistoryConfig().ReadEnabled()
 	historyArchived := wh.historyArchived(ctx, getRequest, domainID)
 	if configuredForArchival && enableArchivalRead && historyArchived {
 		return wh.getArchivedHistory(ctx, getRequest, domainID, scope)
