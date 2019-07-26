@@ -463,8 +463,8 @@ func (s *versionHistoriesSuite) TestConversion() {
 	histories := NewVersionHistories(versionHistory)
 
 	s.Equal(&VersionHistories{
-		currentBranchIndex: 0,
-		histories:          []*VersionHistory{versionHistory},
+		currentVersionHistoryIndex: 0,
+		histories:                  []*VersionHistory{versionHistory},
 	}, histories)
 
 	s.Equal(histories, NewVersionHistoriesFromThrift(histories.ToThrift()))
