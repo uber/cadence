@@ -275,10 +275,3 @@ func getWorkflowExecutionTimestamp(msBuilder mutableState, startEvent *workflow.
 	}
 	return executionTimestamp
 }
-
-func getVisibilityMemo(startEvent *workflow.HistoryEvent) *workflow.Memo {
-	if startEvent == nil {
-		return nil
-	}
-	return startEvent.WorkflowExecutionStartedEventAttributes.Memo
-}
