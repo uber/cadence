@@ -278,8 +278,7 @@ func (c *workflowExecutionContextImpl) updateVersion() error {
 
 		if c.msBuilder.GetReplicationState() != nil {
 			c.msBuilder.UpdateReplicationStateVersion(domainEntry.GetFailoverVersion(), false)
-		}
-		if c.msBuilder.GetVersionHistories() != nil {
+		} else if c.msBuilder.GetVersionHistories() != nil {
 			c.msBuilder.UpdateCurrentVersion(domainEntry.GetFailoverVersion(), false)
 		}
 
