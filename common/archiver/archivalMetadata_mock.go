@@ -30,15 +30,15 @@ type MockArchivalMetadata struct {
 }
 
 // GetHistoryConfig provides a mock function with given fields:
-func (_m *MockArchivalMetadata) GetHistoryConfig() *ArchivalConfig {
+func (_m *MockArchivalMetadata) GetHistoryConfig() ArchivalConfig {
 	ret := _m.Called()
 
-	var r0 *ArchivalConfig
-	if rf, ok := ret.Get(0).(func() *ArchivalConfig); ok {
+	var r0 ArchivalConfig
+	if rf, ok := ret.Get(0).(func() ArchivalConfig); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*ArchivalConfig)
+			r0 = ret.Get(0).(ArchivalConfig)
 		}
 	}
 
@@ -46,15 +46,15 @@ func (_m *MockArchivalMetadata) GetHistoryConfig() *ArchivalConfig {
 }
 
 // GetVisibilityConfig provides a mock function with given fields:
-func (_m *MockArchivalMetadata) GetVisibilityConfig() *ArchivalConfig {
+func (_m *MockArchivalMetadata) GetVisibilityConfig() ArchivalConfig {
 	ret := _m.Called()
 
-	var r0 *ArchivalConfig
-	if rf, ok := ret.Get(0).(func() *ArchivalConfig); ok {
+	var r0 ArchivalConfig
+	if rf, ok := ret.Get(0).(func() ArchivalConfig); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*ArchivalConfig)
+			r0 = ret.Get(0).(ArchivalConfig)
 		}
 	}
 
