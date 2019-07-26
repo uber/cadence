@@ -53,20 +53,23 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	sw := scope.StartTimer(metrics.CadenceLatency)
 	defer func() {
 		sw.Stop()
-		if err != nil && err.Error() == errUploadNonRetriable.Error() {
-			scope.IncCounter(metrics.ArchiverNonRetryableErrorCount)
+		if err != nil {
+			if err.Error() == errUploadNonRetriable.Error() {
+				scope.IncCounter(metrics.ArchiverNonRetryableErrorCount)
+			}
+			err = cadence.NewCustomError(err.Error())
 		}
 	}()
 	logger := tagLoggerWithRequest(tagLoggerWithActivityInfo(container.Logger, activity.GetInfo(ctx)), request)
 	URI, err := carchiver.NewURI(request.URI)
 	if err != nil {
-		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("failed to get archival uri"), tag.ArchivalURI(request.URI))
-		return cadence.NewCustomError(errUploadNonRetriable.Error(), err.Error())
+		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("failed to get archival uri"), tag.ArchivalURI(request.URI), tag.Error(err))
+		return errUploadNonRetriable
 	}
 	historyArchiver, err := container.ArchiverProvider.GetHistoryArchiver(URI.Scheme(), common.WorkerServiceName)
 	if err != nil {
 		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("failed to get history archiver"), tag.Error(err))
-		return cadence.NewCustomError(errUploadNonRetriable.Error(), err.Error())
+		return errUploadNonRetriable
 	}
 	err = historyArchiver.Archive(ctx, URI, &carchiver.ArchiveHistoryRequest{
 		ShardID:              request.ShardID,
@@ -79,9 +82,14 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 		NextEventID:          request.NextEventID,
 		CloseFailoverVersion: request.CloseFailoverVersion,
 	}, carchiver.GetHeartbeatArchiveOption(), carchiver.GetNonRetriableErrorOption(errUploadNonRetriable))
-	if err != nil && err.Error() == errUploadNonRetriable.Error() {
-		return cadence.NewCustomError(errUploadNonRetriable.Error())
+	if err == nil {
+		return nil
 	}
+	if err.Error() == errUploadNonRetriable.Error() {
+		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("got non-retryable error from archiver"))
+		return errUploadNonRetriable
+	}
+	logger.Error(carchiver.ArchiveTransientErrorMsg, tag.ArchivalArchiveFailReason("got retryable error from archiver"), tag.Error(err))
 	return err
 }
 
@@ -91,8 +99,11 @@ func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	sw := scope.StartTimer(metrics.CadenceLatency)
 	defer func() {
 		sw.Stop()
-		if err != nil && err.Error() == errDeleteNonRetriable.Error() {
-			scope.IncCounter(metrics.ArchiverNonRetryableErrorCount)
+		if err != nil {
+			if err.Error() == errDeleteNonRetriable.Error() {
+				scope.IncCounter(metrics.ArchiverNonRetryableErrorCount)
+			}
+			err = cadence.NewCustomError(err.Error())
 		}
 	}()
 	logger := tagLoggerWithRequest(tagLoggerWithActivityInfo(container.Logger, activity.GetInfo(ctx)), request)
@@ -103,7 +114,7 @@ func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 		}
 		logger.Error("failed to delete history from events v2", tag.Error(err))
 		if !common.IsPersistenceTransientError(err) {
-			return cadence.NewCustomError(errDeleteNonRetriable.Error(), err.Error())
+			return errDeleteNonRetriable
 		}
 		return err
 	}
@@ -121,7 +132,7 @@ func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 	}
 	logger.Error("failed to delete history from events v1", tag.Error(err))
 	if !common.IsPersistenceTransientError(err) {
-		return cadence.NewCustomError(errDeleteNonRetriable.Error(), err.Error())
+		return errDeleteNonRetriable
 	}
 	return err
 }
