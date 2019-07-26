@@ -188,7 +188,7 @@ func setupShards(testBase persistencetests.TestBase, numHistoryShards int, logge
 func newArchiverBase(enabled bool, logger log.Logger) *ArchiverBase {
 	if !enabled {
 		return &ArchiverBase{
-			metadata: NewArchivalMetadata("", false, "", false, &config.ArchivalDomainDefaults{}),
+			metadata: archiver.NewArchivalMetadata("", false, "", false, &config.ArchivalDomainDefaults{}),
 			provider: provider.NewArchiverProvider(nil, nil),
 		}
 	}
