@@ -393,11 +393,12 @@ func GenerateReport(c *cli.Context) {
 				data[ids["count"]] = fmt.Sprintf("%v", v)
 			default:
 				var datum string
-				vm := v.(map[string]interface{})
+				vmap := v.(map[string]interface{})
 				if strings.Contains(k, "Attr_CustomDatetimeField") {
-					datum = fmt.Sprintf("%v", vm["value_as_string"])
+					datum = fmt.Sprintf("%v", vmap["value_as_string"])
 				} else {
-					datum = fmt.Sprintf("%v", vm["value"])
+					datum = fmt.Sprintf("%v", vmap["value"])
+					// convert Cadence stored time (unix nano) to readable format
 					if strings.Contains(k, "Time") && !strings.Contains(k, "Attr_") {
 						datum = toTimeStr(datum)
 					}
