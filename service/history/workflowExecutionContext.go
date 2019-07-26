@@ -265,7 +265,7 @@ func (c *workflowExecutionContextImpl) loadWorkflowExecutionInternal() error {
 }
 
 func (c *workflowExecutionContextImpl) updateVersion() error {
-	if c.shard.GetService().GetClusterMetadata().IsGlobalDomainEnabled() && c.msBuilder.GetReplicationState() != nil {
+	if c.msBuilder.GetReplicationState() != nil || c.msBuilder.GetVersionHistories() != nil {
 		if !c.msBuilder.IsWorkflowExecutionRunning() {
 			// we should not update the version on mutable state when the workflow is finished
 			return nil
@@ -275,7 +275,13 @@ func (c *workflowExecutionContextImpl) updateVersion() error {
 		if err != nil {
 			return err
 		}
-		c.msBuilder.UpdateReplicationStateVersion(domainEntry.GetFailoverVersion(), false)
+
+		if c.msBuilder.GetReplicationState() != nil {
+			c.msBuilder.UpdateReplicationStateVersion(domainEntry.GetFailoverVersion(), false)
+		}
+		if c.msBuilder.GetVersionHistories() != nil {
+			c.msBuilder.UpdateCurrentVersion(domainEntry.GetFailoverVersion(), false)
+		}
 
 		// this is a hack, only create replication task if have # target cluster > 1, for more see #868
 		c.msBuilder.UpdateReplicationPolicy(domainEntry.GetReplicationPolicy())
