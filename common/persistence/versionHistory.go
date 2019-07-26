@@ -181,19 +181,7 @@ func (v *VersionHistory) DuplicateUntilLCAItem(
 	return nil, notFoundErr
 }
 
-// InitializeBranchToken the set the branch token
-func (v *VersionHistory) InitializeBranchToken(
-	inputToken []byte,
-) error {
-
-	if len(v.branchToken) != 0 {
-		return &shared.BadRequestError{Message: "branch token is already set"}
-	}
-
-	return v.SetBranchToken(inputToken)
-}
-
-// SetBranchToken the set the branch token
+// SetBranchToken the overwrite the branch token
 func (v *VersionHistory) SetBranchToken(
 	inputToken []byte,
 ) error {
@@ -547,11 +535,5 @@ func (h *VersionHistories) GetCurrentVersionHistoryIndex() int {
 // GetCurrentVersionHistory get the current version history
 func (h *VersionHistories) GetCurrentVersionHistory() (*VersionHistory, error) {
 
-	currentVersionHistory, err := h.GetVersionHistory(
-		h.GetCurrentVersionHistoryIndex(),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return currentVersionHistory, nil
+	return h.GetVersionHistory(h.GetCurrentVersionHistoryIndex())
 }

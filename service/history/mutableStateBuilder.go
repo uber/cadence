@@ -732,6 +732,14 @@ func (e *mutableStateBuilder) assignTaskIDToEvents() error {
 }
 
 func (e *mutableStateBuilder) IsCurrentWorkflowGuaranteed() bool {
+	// stateInDB is used like a bloom filter:
+	//
+	// 1. stateInDB being created / running meaning that this workflow must be the current
+	//  workflow (assuming there is no rebuild of mutable state).
+	// 2. stateInDB being completed does not guarantee this workflow being the current workflow
+	// 3. stateInDB being zombie guarantees this workflow not being the current workflow
+	// 4. stateInDB cannot be void, void is only possible when mutable state is just initialized
+
 	switch e.stateInDB {
 	case persistence.WorkflowStateVoid:
 		return false
