@@ -38,44 +38,32 @@ import (
 const (
 	uploadHistoryActivityFnName = "uploadHistoryActivity"
 	deleteHistoryActivityFnName = "deleteHistoryActivity"
-
-	errDeleteHistoryV1 = "failed to delete history from events_v1"
-	errDeleteHistoryV2 = "failed to delete history from events_v2"
-
-	errActivityPanic       = "cadenceInternal:Panic"
-	errTimeoutStartToClose = "cadenceInternal:Timeout START_TO_CLOSE"
-	errTimeoutHeartbeat    = "cadenceInternal:Timeout HEARTBEAT"
 )
 
 var (
 	errUploadNonRetriable = errors.New("upload non-retriable error")
-	errContextTimeout     = errors.New("activity aborted because context timed out")
+	errDeleteNonRetriable = errors.New("delete non-retriable error")
+	// we don't need a special error type for this context timeout
+	// errContextTimeout     = errors.New("activity aborted because context timed out")
 
-	uploadHistoryActivityNonRetryableErrors = []string{errActivityPanic, errUploadNonRetriable.Error(), errTimeoutStartToClose, errTimeoutHeartbeat}
-	deleteHistoryActivityNonRetryableErrors = []string{errDeleteHistoryV1, errDeleteHistoryV2}
+	uploadHistoryActivityNonRetryableErrors = []string{"cadenceInternal:Panic", errUploadNonRetriable.Error()}
+	deleteHistoryActivityNonRetryableErrors = []string{"cadenceInternal:Panic", errDeleteNonRetriable.Error()}
 )
 
-// uploadHistoryActivity is used to archive a workflow execution history.
-// method will retry all errors except timeout errors and archiver.ErrArchiveNonRetriable.
-func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err error) {
+func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) error {
 	container := ctx.Value(bootstrapContainerKey).(*BootstrapContainer)
-	defer func() {
-		if err != nil {
-			err = cadence.NewCustomError(err.Error())
-		}
-	}()
 	logger := tagLoggerWithRequest(tagLoggerWithActivityInfo(container.Logger, activity.GetInfo(ctx)), request)
 	URI, err := carchiver.NewURI(request.URI)
 	if err != nil {
-		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("failed to extract archival scheme"), tag.ArchivalURI(request.URI))
-		return errUploadNonRetriable
+		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("failed to get archival uri"), tag.ArchivalURI(request.URI))
+		return cadence.NewCustomError(errUploadNonRetriable.Error(), err.Error())
 	}
 	historyArchiver, err := container.ArchiverProvider.GetHistoryArchiver(URI.Scheme(), common.WorkerServiceName)
 	if err != nil {
 		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("failed to get history archiver"), tag.Error(err))
-		return errUploadNonRetriable
+		return cadence.NewCustomError(errUploadNonRetriable.Error(), err.Error())
 	}
-	return historyArchiver.Archive(ctx, URI, &carchiver.ArchiveHistoryRequest{
+	err = historyArchiver.Archive(ctx, URI, &carchiver.ArchiveHistoryRequest{
 		ShardID:              request.ShardID,
 		DomainID:             request.DomainID,
 		DomainName:           request.DomainName,
@@ -86,11 +74,12 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 		NextEventID:          request.NextEventID,
 		CloseFailoverVersion: request.CloseFailoverVersion,
 	}, carchiver.GetHeartbeatArchiveOption(), carchiver.GetNonRetriableErrorOption(errUploadNonRetriable))
+	if err == errUploadNonRetriable {
+		return cadence.NewCustomError(errUploadNonRetriable.Error(), err.Error())
+	}
+	return nil
 }
 
-// deleteHistoryActivity deletes workflow execution history from persistence.
-// method will retry all retryable operations until context expires.
-// method will always return either: nil, contextTimeoutErr or an error from deleteHistoryActivityNonRetryableErrors.
 func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) (err error) {
 	container := ctx.Value(bootstrapContainerKey).(*BootstrapContainer)
 	scope := container.MetricsClient.Scope(metrics.ArchiverDeleteHistoryActivityScope, metrics.DomainTag(request.DomainName))
