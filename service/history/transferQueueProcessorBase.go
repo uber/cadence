@@ -275,3 +275,10 @@ func getWorkflowExecutionTimestamp(msBuilder mutableState, startEvent *workflow.
 	}
 	return executionTimestamp
 }
+
+func getWorkflowMemo(memo map[string][]byte) *workflow.Memo {
+	if memo == nil {
+		return nil
+	}
+	return &workflow.Memo{Fields: memo}
+}
