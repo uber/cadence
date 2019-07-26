@@ -24,6 +24,8 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber/cadence/.gen/go/shared"
+	"runtime/debug"
+	"strconv"
 	"testing"
 )
 
@@ -359,13 +361,79 @@ func (s *historyEventTestSuit) Test_HistoryEvent_Generator() {
 		for _, batch := range b.batches {
 			fmt.Println("########################")
 			for _, event := range batch.events {
-				fmt.Println(event)
+				fmt.Println(event.GetName())
 			}
 		}
 		queue = append(queue, b.next...)
 	}
 	//eventAttr := generateHistoryEvents(s.generator.ListGeneratedVertex())
 	//s.NotEmpty(eventAttr)
+}
+
+func (s *historyEventTestSuit) Test_Brach() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("stacktrace from panic: \n" + string(debug.Stack()))
+		}
+	}()
+
+	root := &branch{
+		batches: []batch{
+			{
+				[]Vertex{
+					NewHistoryEvent("root"),
+				},
+			},
+		},
+		next: []*branch {
+			{
+				batches: []batch{
+					{
+						[]Vertex{
+							NewHistoryEvent("left1"),
+							NewHistoryEvent("left2"),
+						},
+					},
+				},
+			},
+			{
+				batches: []batch{
+					{
+						[]Vertex{
+							NewHistoryEvent("right1"),
+							//NewHistoryEvent("right2"),
+						},
+					},
+					{
+						[]Vertex{
+							//NewHistoryEvent("right1"),
+							NewHistoryEvent("right2"),
+						},
+					},
+				},
+			},
+		},
+	}
+	next := split(root, 1)
+	next.batches = append(next.batches, batch{
+		[]Vertex {
+			NewHistoryEvent("split"),
+		},
+	})
+
+	queue := []*branch{root}
+	for len(queue) > 0 {
+		b := queue[0]
+		queue = queue[1:]
+		fmt.Println("BBBBBBBBBBBBBBBBBBBB")
+		for _, batch := range b.batches {
+			fmt.Println("########################")
+			for _, event := range batch.events {
+				fmt.Println(event.GetName())
+			}
+		}
+		queue = append(queue, b.next...)
+	}
 }
 
 func split(root *branch, resetIdx int) *branch {
@@ -379,15 +447,21 @@ func split(root *branch, resetIdx int) *branch {
 		resetIdx -= length
 	}
 
-	firstBatches := make([]batch, 0, resetIdx+1)
-	copy(firstBatches, curr.batches[:resetIdx])
-	secondBatches := make([]batch, 0, len(curr.batches)-resetIdx+1)
-	copy(secondBatches, curr.batches[:len(curr.batches)-resetIdx+1])
-	newBranch := &branch{
+	firstBatches := make([]batch, resetIdx+1)
+	copy(firstBatches, curr.batches[:resetIdx+1])
+	secondBatches := make([]batch, len(curr.batches)-resetIdx-1)
+	copy(secondBatches, curr.batches[resetIdx+1:])
+	fmt.Println("LENGTH:" + strconv.Itoa(len(curr.batches[0].events)))
+	fmt.Println("LLENGTH:" + strconv.Itoa(len(firstBatches)))
+	fmt.Println("RLENGTH:" + strconv.Itoa(len(secondBatches)))
+	splitBranch := &branch{
 		next:    curr.next,
 		batches: secondBatches,
 	}
-	curr.next = []*branch{newBranch}
+	newBranch := &branch{
+		batches: make([]batch, 0),
+	}
+	curr.next = []*branch{splitBranch, newBranch}
 	curr.batches = firstBatches
-	return curr
+	return newBranch
 }
