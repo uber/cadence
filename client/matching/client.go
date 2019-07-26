@@ -45,7 +45,7 @@ type clientImpl struct {
 	timeout         time.Duration
 	longPollTimeout time.Duration
 	clients         common.ClientCache
-	lb              LoadBalancer
+	loadBalancer    LoadBalancer
 }
 
 // NewClient creates a new history service TChannel client
@@ -59,7 +59,7 @@ func NewClient(
 		timeout:         timeout,
 		longPollTimeout: longPollTimeout,
 		clients:         clients,
-		lb:              lb,
+		loadBalancer:    lb,
 	}
 }
 
@@ -68,7 +68,7 @@ func (c *clientImpl) AddActivityTask(
 	request *m.AddActivityTaskRequest,
 	opts ...yarpc.CallOption) error {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	partition := c.lb.PickWritePartition(
+	partition := c.loadBalancer.PickWritePartition(
 		request.GetDomainUUID(),
 		*request.GetTaskList(),
 		persistence.TaskListTypeActivity,
@@ -89,7 +89,7 @@ func (c *clientImpl) AddDecisionTask(
 	request *m.AddDecisionTaskRequest,
 	opts ...yarpc.CallOption) error {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	partition := c.lb.PickWritePartition(
+	partition := c.loadBalancer.PickWritePartition(
 		request.GetDomainUUID(),
 		*request.GetTaskList(),
 		persistence.TaskListTypeDecision,
@@ -110,7 +110,7 @@ func (c *clientImpl) PollForActivityTask(
 	request *m.PollForActivityTaskRequest,
 	opts ...yarpc.CallOption) (*workflow.PollForActivityTaskResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	partition := c.lb.PickReadPartition(
+	partition := c.loadBalancer.PickReadPartition(
 		request.GetDomainUUID(),
 		*request.PollRequest.GetTaskList(),
 		persistence.TaskListTypeActivity,
@@ -131,7 +131,7 @@ func (c *clientImpl) PollForDecisionTask(
 	request *m.PollForDecisionTaskRequest,
 	opts ...yarpc.CallOption) (*m.PollForDecisionTaskResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	partition := c.lb.PickReadPartition(
+	partition := c.loadBalancer.PickReadPartition(
 		request.GetDomainUUID(),
 		*request.PollRequest.GetTaskList(),
 		persistence.TaskListTypeDecision,
@@ -149,7 +149,7 @@ func (c *clientImpl) PollForDecisionTask(
 
 func (c *clientImpl) QueryWorkflow(ctx context.Context, request *m.QueryWorkflowRequest, opts ...yarpc.CallOption) (*workflow.QueryWorkflowResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	partition := c.lb.PickReadPartition(
+	partition := c.loadBalancer.PickReadPartition(
 		request.GetDomainUUID(),
 		*request.GetTaskList(),
 		persistence.TaskListTypeDecision,

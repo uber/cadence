@@ -49,7 +49,7 @@ type (
 
 		// PickReadPartition returns the task list partition to send a poller to.
 		// Input is name of the original task list as specified by caller. When
-		// forwardeFrom is non-empty, no load balancing should be done.
+		// forwardedFrom is non-empty, no load balancing should be done.
 		PickReadPartition(
 			domainID string,
 			taskList shared.TaskList,
@@ -113,7 +113,7 @@ func (lb *defaultLoadBalancer) pickPartition(
 	}
 
 	if strings.HasPrefix(taskList.GetName(), taskListPartitionPrefix) {
-		// this should never happen when forwardedFrom is false
+		// this should never happen when forwardedFrom is empty
 		return taskList.GetName()
 	}
 

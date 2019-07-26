@@ -155,8 +155,13 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 		return matchingserviceclient.New(dispatcher.ClientConfig(common.MatchingServiceName)), nil
 	}
 
-	lb := matching.NewLoadBalancer(domainIDToName, cf.dynConfig)
-	client := matching.NewClient(timeout, longPollTimeout, common.NewClientCache(keyResolver, clientProvider), lb)
+	client := matching.NewClient(
+		timeout,
+		longPollTimeout,
+		common.NewClientCache(keyResolver, clientProvider),
+		matching.NewLoadBalancer(domainIDToName, cf.dynConfig),
+	)
+
 	if cf.metricsClient != nil {
 		client = matching.NewMetricClient(client, cf.metricsClient)
 	}

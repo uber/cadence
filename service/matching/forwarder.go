@@ -56,9 +56,9 @@ type (
 		outstandingTasksLimit int32
 		outstandingPollsLimit int32
 
-		// todo: implement a dynamic rate limiter that automatically
+		// todo: implement a rate limiter that automatically
 		// adjusts rate based on ServiceBusy errors from API calls
-		limiter *quotas.RateLimiter
+		limiter *quotas.DynamicRateLimiter
 
 		// cached metric scopes for API calls
 		scope struct {
@@ -103,7 +103,7 @@ func newForwarder(
 	client matching.Client,
 	scopeFunc func() metrics.Scope,
 ) *Forwarder {
-	rps := float64(cfg.ForwarderMaxRatePerSecond())
+	rpsFunc := func() float64 { return float64(cfg.ForwarderMaxRatePerSecond()) }
 	fwdr := &Forwarder{
 		cfg:                   cfg,
 		client:                client,
@@ -111,7 +111,7 @@ func newForwarder(
 		taskListKind:          kind,
 		outstandingTasksLimit: int32(cfg.ForwarderMaxOutstandingTasks()),
 		outstandingPollsLimit: int32(cfg.ForwarderMaxOutstandingPolls()),
-		limiter:               quotas.NewRateLimiter(&rps, _defaultTaskDispatchRPSTTL, 1),
+		limiter:               quotas.NewDynamicRateLimiter(rpsFunc),
 		scopeFunc:             scopeFunc,
 	}
 	fwdr.addReqToken.Store(newForwarderReqToken(cfg.ForwarderMaxOutstandingTasks()))
@@ -130,7 +130,7 @@ func (fwdr *Forwarder) ForwardTask(ctx context.Context, task *internalTask) erro
 		return errNoParent
 	}
 
-	if !fwdr.rateLimit() {
+	if !fwdr.limiter.Allow() {
 		return errForwarderSlowDown
 	}
 
@@ -278,15 +278,8 @@ func (fwdr *Forwarder) refreshTokenC(value *atomic.Value, curr *int32, maxLimit 
 	}
 }
 
-func (fwdr *Forwarder) rateLimit() bool {
-	rps := float64(fwdr.cfg.ForwarderMaxRatePerSecond())
-	fwdr.limiter.UpdateMaxDispatch(&rps)
-	return fwdr.limiter.Allow()
-}
-
 func (fwdr *Forwarder) handleErr(err error) error {
 	if _, ok := err.(*shared.ServiceBusyError); ok {
-		//fwdr.limiter.SlowDown()
 		return errForwarderSlowDown
 	}
 	return err
