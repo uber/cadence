@@ -286,8 +286,15 @@ func GenerateReport(c *cli.Context) {
 	url := getRequiredOption(c, FlagURL)
 	index := getRequiredOption(c, FlagIndex)
 	sql := getRequiredOption(c, FlagListQuery)
-	reportFormat := getRequiredOption(c, FlagOutputFormat)
-	reportFilePath := getRequiredOption(c, FlagOutputFilename)
+	var reportFormat, reportFilePath string
+	if c.IsSet(FlagOutputFormat) {
+		reportFormat = c.String(FlagOutputFormat)
+	}
+	if c.IsSet(FlagOutputFilename) {
+		reportFilePath = c.String(FlagOutputFilename)
+	} else {
+		reportFilePath = "./report." + reportFormat
+	}
 	esClient, err := elastic.NewClient(elastic.SetURL(url))
 	if err != nil {
 		ErrorAndExit("Fail to create elastic client", err)
@@ -409,12 +416,10 @@ func GenerateReport(c *cli.Context) {
 	case "csv", "CSV":
 		generateCSVReport(reportFilePath, headers, tableData)
 	default:
-		err = fmt.Errorf("report format %v", reportFormat)
-		ErrorAndExit("Not supported: ", err)
+		ErrorAndExit(fmt.Sprintf(`Report format %v not supported.`, reportFormat), nil)
 	}
 }
 
-// generate CSV report
 func generateCSVReport(reportFileName string, headers []string, tableData [][]string) {
 	// write csv report
 	f, err := os.Create(reportFileName)
@@ -429,7 +434,6 @@ func generateCSVReport(reportFileName string, headers []string, tableData [][]st
 	f.Close()
 }
 
-// generate HTML report
 func generateHTMLReport(reportFileName string, numBuckKeys int, sorted bool, headers []string, tableData [][]string) {
 	// write html report
 	f, err := os.Create(reportFileName)
@@ -450,7 +454,8 @@ func generateHTMLReport(reportFileName string, numBuckKeys int, sorted bool, hea
 		var rowData string
 		for col := 0; col < m; col++ {
 			rowSpan[col]--
-			if col < numBuckKeys-1 {
+			// here condition on sorted is not working since sortfield by aggregation is not returned
+			if col < numBuckKeys-1 && !sorted {
 				if rowSpan[col] == 0 {
 					for i := row; i < n; i++ {
 						if tableData[i][col] == tableData[row][col] {
@@ -460,7 +465,7 @@ func generateHTMLReport(reportFileName string, numBuckKeys int, sorted bool, hea
 						}
 					}
 					var property string
-					if rowSpan[col] > 1 && sorted {
+					if rowSpan[col] > 1 {
 						property = fmt.Sprintf(`rowspan="%d"`, rowSpan[col])
 					}
 					cell := wrapWithTag(tableData[row][col], "td", property)
