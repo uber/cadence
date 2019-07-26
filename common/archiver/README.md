@@ -33,6 +33,7 @@ type HistoryArchiver interface {
     
     // Get is used to access an archived history. When context expires method should stop trying to fetch history.
     // The URI identifies the resource from which history should be accessed and it is up to the implementor to interpret this URI.
+    // This method should thrift errors - see filestore as an example.
     Get(context.Context, URI, *GetHistoryRequest) (*GetHistoryResponse, error)
     
     // ValidateURI is used to define what a valid URI for an implementation is.
@@ -55,8 +56,8 @@ Despite this implementors are still expected to implement this one method interf
 **Step 4: Update provider to provide access to your implementation**
 
 Modify the `./provider/provider.go` file so that the `ArchiverProvider` knows how to create an instance of your archiver. 
-Also, add configs for you archiver to static yaml config files and modify the `HistoryArchiverConfig` 
-and `VisibilityArchiverConfig` struct in the `../common/service/config.go` accordingly.
+Also, add configs for you archiver to static yaml config files and modify the `HistoryArchiverProvider` 
+and `VisibilityArchiverProvider` struct in the `../common/service/config.go` accordingly.
 
 
 ## FAQ
