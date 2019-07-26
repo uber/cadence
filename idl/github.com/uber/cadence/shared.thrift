@@ -423,6 +423,8 @@ struct ContinueAsNewWorkflowExecutionDecisionAttributes {
   110: optional binary lastCompletionResult
   120: optional string cronSchedule
   130: optional Header header
+  140: optional Memo memo
+  150: optional SearchAttributes searchAttributes
 }
 
 struct StartChildWorkflowExecutionDecisionAttributes {

@@ -517,7 +517,11 @@ func (v *decisionAttrValidator) validateContinueAsNewWorkflowExecutionAttributes
 		attributes.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(executionInfo.DecisionTimeoutValue)
 	}
 
-	return nil
+	domainEntry, err := v.domainCache.GetDomainByID(executionInfo.DomainID)
+	if err != nil {
+		return err
+	}
+	return v.searchAttributesValidator.ValidateSearchAttributes(attributes.GetSearchAttributes(), domainEntry.GetInfo().Name)
 }
 
 func (v *decisionAttrValidator) validateStartChildExecutionAttributes(
