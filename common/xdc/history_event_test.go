@@ -44,7 +44,7 @@ func (s *historyEventTestSuit) SetupSuite() {
 	//Function
 	notPendingDecisionTask := func() bool {
 		count := 0
-		for _, e := range generator.ListGeneratedVertex() {
+		for _, e := range generator.ListGeneratedVertices() {
 			switch e.GetName() {
 			case shared.EventTypeDecisionTaskScheduled.String():
 				count++
@@ -58,7 +58,7 @@ func (s *historyEventTestSuit) SetupSuite() {
 	}
 
 	containActivityComplete := func() bool {
-		for _, e := range generator.ListGeneratedVertex() {
+		for _, e := range generator.ListGeneratedVertices() {
 			if e.GetName() == shared.EventTypeActivityTaskCompleted.String() {
 				return true
 			}
@@ -68,7 +68,7 @@ func (s *historyEventTestSuit) SetupSuite() {
 
 	hasPendingTimer := func() bool {
 		count := 0
-		for _, e := range generator.ListGeneratedVertex() {
+		for _, e := range generator.ListGeneratedVertices() {
 			switch e.GetName() {
 			case shared.EventTypeTimerStarted.String():
 				count++
@@ -82,7 +82,7 @@ func (s *historyEventTestSuit) SetupSuite() {
 
 	hasPendingActivity := func() bool {
 		count := 0
-		for _, e := range generator.ListGeneratedVertex() {
+		for _, e := range generator.ListGeneratedVertices() {
 			switch e.GetName() {
 			case shared.EventTypeActivityTaskScheduled.String():
 				count++
@@ -102,7 +102,7 @@ func (s *historyEventTestSuit) SetupSuite() {
 		}
 
 		hasPendingDecisionTask := false
-		for _, event := range generator.ListGeneratedVertex() {
+		for _, event := range generator.ListGeneratedVertices() {
 			switch event.GetName() {
 			case shared.EventTypeDecisionTaskScheduled.String():
 				hasPendingDecisionTask = true
@@ -318,13 +318,13 @@ func (s *historyEventTestSuit) SetupTest() {
 func (s *historyEventTestSuit) Test_HistoryEvent_Generator() {
 	for s.generator.HasNextVertex() {
 		fmt.Println("########################")
-		v := s.generator.GetNextVertex()
+		v := s.generator.GetNextVertices()
 		for _, e := range v {
 			fmt.Println(e.GetName())
 		}
 	}
-	s.NotEmpty(s.generator.ListGeneratedVertex())
+	s.NotEmpty(s.generator.ListGeneratedVertices())
 
-	eventAttr := generateHistoryEvents(s.generator.ListGeneratedVertex())
+	eventAttr := generateHistoryEvents(s.generator.ListGeneratedVertices())
 	s.NotEmpty(eventAttr)
 }
