@@ -23,7 +23,6 @@ package archiver
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -49,7 +48,6 @@ var (
 )
 
 func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err error) {
-	fmt.Println("here 1")
 	container := ctx.Value(bootstrapContainerKey).(*BootstrapContainer)
 	scope := container.MetricsClient.Scope(metrics.ArchiverUploadHistoryActivityScope, metrics.DomainTag(request.DomainName))
 	sw := scope.StartTimer(metrics.CadenceLatency)
