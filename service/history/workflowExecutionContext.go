@@ -470,17 +470,15 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 		if err != nil {
 			return err
 		}
-
 		newWorkflowSizeSize := newContext.getHistorySize()
 		eventsSize, err := c.persistFirstWorkflowEvents(workflowEventsSeq[0])
 		if err != nil {
 			return err
 		}
 		newWorkflowSizeSize += eventsSize
-
-		newContext.setHistorySize(currentWorkflowSize)
+		newContext.setHistorySize(newWorkflowSizeSize)
 		newWorkflow.ExecutionStats = &persistence.ExecutionStats{
-			HistorySize: currentWorkflowSize,
+			HistorySize: newWorkflowSizeSize,
 		}
 	}
 
