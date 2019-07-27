@@ -32,7 +32,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 )
 
-func (s *integrationSuite) TestContinueAsNewWorkflowX() {
+func (s *integrationSuite) TestContinueAsNewWorkflow() {
 	id := "interation-continue-as-new-workflow-test"
 	wt := "interation-continue-as-new-workflow-test-type"
 	tl := "interation-continue-as-new-workflow-test-tasklist"
