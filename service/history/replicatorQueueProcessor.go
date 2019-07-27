@@ -68,7 +68,6 @@ func newReplicatorQueueProcessor(shard ShardContext, historyCache *historyCache,
 
 	config := shard.GetConfig()
 	options := &QueueProcessorOptions{
-		StartDelay:                         config.ReplicatorProcessorStartDelay,
 		BatchSize:                          config.ReplicatorTaskBatchSize,
 		WorkerCount:                        config.ReplicatorTaskWorkerCount,
 		MaxPollRPS:                         config.ReplicatorProcessorMaxPollRPS,
