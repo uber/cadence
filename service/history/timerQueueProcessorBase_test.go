@@ -121,7 +121,6 @@ func (s *timerQueueProcessorBaseSuite) SetupTest() {
 		s.mockQueueAckMgr,
 		NewLocalTimerGate(clock.NewRealTimeSource()),
 		dynamicconfig.GetIntPropertyFn(10),
-		dynamicconfig.GetDurationPropertyFn(0*time.Second),
 		s.logger,
 	)
 	s.timerQueueProcessor.timerProcessor = s.mockProcessor
@@ -209,7 +208,7 @@ func (s *timerQueueProcessorBaseSuite) TestDeleteWorkflow_NoErr() {
 	ms.On("GetEventStoreVersion").Return(persistence.EventStoreVersionV2).Once()
 	ms.On("GetCurrentBranch").Return([]byte{}).Once()
 
-	err := s.timerQueueProcessor.deleteWorkflow(task, ms, ctx)
+	err := s.timerQueueProcessor.deleteWorkflow(task, ctx, ms)
 	s.NoError(err)
 }
 
