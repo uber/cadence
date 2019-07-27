@@ -114,7 +114,6 @@ func NewClient(
 // Archive starts an archival task
 func (c *client) Archive(ctx context.Context, request *ClientRequest) error {
 	c.metricsClient.IncCounter(metrics.ArchiverClientScope, metrics.CadenceRequests)
-
 	taggedLogger := tagLoggerWithRequest(c.logger, *request.ArchiveRequest).WithTags(
 		tag.ArchivalCallerServiceName(request.CallerService),
 		tag.ArchivalArchiveAttemptedInline(request.ArchiveInline),
@@ -134,7 +133,6 @@ func (c *client) Archive(ctx context.Context, request *ClientRequest) error {
 			TaskID:            request.ArchiveRequest.TaskID,
 		})
 	}
-
 	return c.sendArchiveSignal(ctx, request.ArchiveRequest, taggedLogger)
 }
 
@@ -146,17 +144,17 @@ func (c *client) archiveInline(ctx context.Context, request *ClientRequest, tagg
 		}
 	}()
 	c.metricsClient.IncCounter(metrics.ArchiverClientScope, metrics.ArchiverClientInlineArchiveAttemptCount)
-	scheme, err := common.GetArchivalScheme(request.ArchiveRequest.URI)
+	URI, err := carchiver.NewURI(request.ArchiveRequest.URI)
 	if err != nil {
 		return err
 	}
 
-	historyArchiver, err := c.archiverProvider.GetHistoryArchiver(scheme, request.CallerService)
+	historyArchiver, err := c.archiverProvider.GetHistoryArchiver(URI.Scheme(), request.CallerService)
 	if err != nil {
 		return err
 	}
 
-	return historyArchiver.Archive(ctx, request.ArchiveRequest.URI, &carchiver.ArchiveHistoryRequest{
+	return historyArchiver.Archive(ctx, URI, &carchiver.ArchiveHistoryRequest{
 		ShardID:              request.ArchiveRequest.ShardID,
 		DomainID:             request.ArchiveRequest.DomainID,
 		DomainName:           request.ArchiveRequest.DomainName,

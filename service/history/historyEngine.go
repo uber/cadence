@@ -25,7 +25,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -34,8 +33,6 @@ import (
 	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/archiver/provider"
-	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
@@ -138,7 +135,6 @@ func NewEngineWithShardContext(
 	historyEventNotifier historyEventNotifier,
 	publisher messaging.Producer,
 	config *Config,
-	archiverProvider provider.ArchiverProvider,
 ) Engine {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 
@@ -169,7 +165,7 @@ func NewEngineWithShardContext(
 			publicClient,
 			shard.GetConfig().NumArchiveSystemWorkflows,
 			shard.GetConfig().ArchiveRequestRPS,
-			archiverProvider,
+			shard.GetService().GetArchiverProvider(),
 			persistencehelper.NewWorkflowCleaner(executionManager, historyManager, historyV2Manager, visibilityMgr, logger),
 		),
 	}
@@ -317,12 +313,14 @@ func (e *historyEngineImpl) createMutableState(
 			e.logger,
 			domainEntry.GetFailoverVersion(),
 			domainEntry.GetReplicationPolicy(),
+			domainEntry.GetInfo().Name,
 		)
 	} else {
 		msBuilder = newMutableStateBuilder(
 			e.shard,
 			e.shard.GetEventsCache(),
 			e.logger,
+			domainEntry.GetInfo().Name,
 		)
 	}
 
@@ -381,6 +379,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 	if err != nil {
 		return nil, err
 	}
+	e.overrideStartWorkflowExecutionRequest(domainEntry, request)
 
 	workflowID := request.GetWorkflowId()
 	// grab the current context as a lock, nothing more
@@ -602,22 +601,24 @@ func (e *historyEngineImpl) getMutableState(
 	executionInfo := msBuilder.GetExecutionInfo()
 	execution.RunId = context.getExecution().RunId
 	retResp = &h.GetMutableStateResponse{
-		Execution:                            &execution,
-		WorkflowType:                         &workflow.WorkflowType{Name: common.StringPtr(executionInfo.WorkflowTypeName)},
-		LastFirstEventId:                     common.Int64Ptr(msBuilder.GetLastFirstEventID()),
-		NextEventId:                          common.Int64Ptr(msBuilder.GetNextEventID()),
-		PreviousStartedEventId:               common.Int64Ptr(msBuilder.GetPreviousStartedEventID()),
-		TaskList:                             &workflow.TaskList{Name: common.StringPtr(executionInfo.TaskList)},
-		StickyTaskList:                       &workflow.TaskList{Name: common.StringPtr(executionInfo.StickyTaskList)},
-		ClientLibraryVersion:                 common.StringPtr(executionInfo.ClientLibraryVersion),
-		ClientFeatureVersion:                 common.StringPtr(executionInfo.ClientFeatureVersion),
-		ClientImpl:                           common.StringPtr(executionInfo.ClientImpl),
-		IsWorkflowRunning:                    common.BoolPtr(msBuilder.IsWorkflowExecutionRunning()),
-		StickyTaskListScheduleToStartTimeout: common.Int32Ptr(executionInfo.StickyScheduleToStartTimeout),
-		EventStoreVersion:                    common.Int32Ptr(msBuilder.GetEventStoreVersion()),
-		BranchToken:                          msBuilder.GetCurrentBranch(),
+		Execution:              &execution,
+		WorkflowType:           &workflow.WorkflowType{Name: common.StringPtr(executionInfo.WorkflowTypeName)},
+		LastFirstEventId:       common.Int64Ptr(msBuilder.GetLastFirstEventID()),
+		NextEventId:            common.Int64Ptr(msBuilder.GetNextEventID()),
+		PreviousStartedEventId: common.Int64Ptr(msBuilder.GetPreviousStartedEventID()),
+		TaskList:               &workflow.TaskList{Name: common.StringPtr(executionInfo.TaskList)},
+		ClientLibraryVersion:   common.StringPtr(executionInfo.ClientLibraryVersion),
+		ClientFeatureVersion:   common.StringPtr(executionInfo.ClientFeatureVersion),
+		ClientImpl:             common.StringPtr(executionInfo.ClientImpl),
+		IsWorkflowRunning:      common.BoolPtr(msBuilder.IsWorkflowExecutionRunning()),
+		EventStoreVersion:      common.Int32Ptr(msBuilder.GetEventStoreVersion()),
+		BranchToken:            msBuilder.GetCurrentBranch(),
 	}
 
+	if msBuilder.IsStickyTaskListEnabled() {
+		retResp.StickyTaskList = &workflow.TaskList{Name: common.StringPtr(executionInfo.StickyTaskList)}
+		retResp.StickyTaskListScheduleToStartTimeout = common.Int32Ptr(executionInfo.StickyScheduleToStartTimeout)
+	}
 	replicationState := msBuilder.GetReplicationState()
 	if replicationState != nil {
 		retResp.ReplicationInfo = map[string]*workflow.ReplicationInfo{}
@@ -757,10 +758,9 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	// For now execution time will be calculated based on start time and cron schedule/retry policy
 	// each time DescribeWorkflowExecution is called.
 	backoffDuration := time.Duration(0)
-	if executionInfo.HasRetryPolicy && (executionInfo.Attempt > 0) {
-		backoffDuration = time.Duration(float64(executionInfo.InitialInterval)*math.Pow(executionInfo.BackoffCoefficient, float64(executionInfo.Attempt-1))) * time.Second
-	} else if len(executionInfo.CronSchedule) != 0 {
-		backoffDuration = backoff.GetBackoffForNextSchedule(executionInfo.CronSchedule, executionInfo.StartTimestamp)
+	startEvent, ok := msBuilder.GetStartEvent()
+	if ok {
+		backoffDuration = time.Duration(startEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstDecisionTaskBackoffSeconds()) * time.Second
 	}
 	result.WorkflowExecutionInfo.ExecutionTime = common.Int64Ptr(result.WorkflowExecutionInfo.GetStartTime() + backoffDuration.Nanoseconds())
 
@@ -1474,6 +1474,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 	if err != nil {
 		return nil, err
 	}
+	e.overrideStartWorkflowExecutionRequest(domainEntry, request)
 
 	workflowID := request.GetWorkflowId()
 	// grab the current context as a lock, nothing more
@@ -2152,6 +2153,34 @@ func validateStartWorkflowExecutionRequest(
 	}
 
 	return common.ValidateRetryPolicy(request.RetryPolicy)
+}
+
+func (e *historyEngineImpl) overrideStartWorkflowExecutionRequest(
+	domainEntry *cache.DomainCacheEntry,
+	request *workflow.StartWorkflowExecutionRequest,
+) {
+
+	maxDecisionStartToCloseTimeoutSeconds := int32(e.config.MaxDecisionStartToCloseSeconds(
+		domainEntry.GetInfo().Name,
+	))
+
+	if request.GetTaskStartToCloseTimeoutSeconds() > maxDecisionStartToCloseTimeoutSeconds {
+		e.throttledLogger.WithTags(
+			tag.WorkflowDomainID(domainEntry.GetInfo().ID),
+			tag.WorkflowID(request.GetWorkflowId()),
+			tag.WorkflowDecisionTimeoutSeconds(request.GetTaskStartToCloseTimeoutSeconds()),
+		).Info("force override decision start to close timeout due to decision timout too large")
+		request.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(maxDecisionStartToCloseTimeoutSeconds)
+	}
+
+	if request.GetTaskStartToCloseTimeoutSeconds() > request.GetExecutionStartToCloseTimeoutSeconds() {
+		e.throttledLogger.WithTags(
+			tag.WorkflowDomainID(domainEntry.GetInfo().ID),
+			tag.WorkflowID(request.GetWorkflowId()),
+			tag.WorkflowDecisionTimeoutSeconds(request.GetTaskStartToCloseTimeoutSeconds()),
+		).Info("force override decision start to close timeout due to decision timeout larger than workflow timeout")
+		request.TaskStartToCloseTimeoutSeconds = request.ExecutionStartToCloseTimeoutSeconds
+	}
 }
 
 func validateDomainUUID(

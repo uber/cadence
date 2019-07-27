@@ -319,7 +319,7 @@ func (t *transferQueueStandbyProcessorImpl) processCloseExecution(
 			return &workflow.InternalServiceError{Message: "Failed to load start event."}
 		}
 		workflowExecutionTimestamp := getWorkflowExecutionTimestamp(msBuilder, startEvent)
-		visibilityMemo := getVisibilityMemo(startEvent)
+		visibilityMemo := getWorkflowMemo(executionInfo.Memo)
 		searchAttr := executionInfo.SearchAttributes
 
 		ok, err := verifyTaskVersion(t.shard, t.logger, transferTask.DomainID, msBuilder.GetLastWriteVersion(), transferTask.Version, transferTask)
@@ -512,7 +512,7 @@ func (t *transferQueueStandbyProcessorImpl) processRecordWorkflowStartedOrUpsert
 		return &workflow.InternalServiceError{Message: "Failed to load start event."}
 	}
 	executionTimestamp := getWorkflowExecutionTimestamp(msBuilder, startEvent)
-	visibilityMemo := getVisibilityMemo(startEvent)
+	visibilityMemo := getWorkflowMemo(executionInfo.Memo)
 	searchAttr := copySearchAttributes(executionInfo.SearchAttributes)
 
 	if isRecordStart {
@@ -629,7 +629,7 @@ func (t *transferQueueStandbyProcessorImpl) discardTask(
 ) bool {
 
 	// the current time got from shard is already delayed by t.shard.GetConfig().StandbyClusterDelay()
-	// so discard will be true if task is delayed by 2*t.shard.GetConfig().StandbyClusterDelay()
+	// so discard will be true if task is delayed by 4*t.shard.GetConfig().StandbyClusterDelay()
 	now := t.shard.GetCurrentTime(t.clusterName)
-	return now.Sub(transferTask.GetVisibilityTimestamp()) > t.shard.GetConfig().StandbyClusterDelay()
+	return now.Sub(transferTask.GetVisibilityTimestamp()) > 3*t.shard.GetConfig().StandbyClusterDelay()
 }

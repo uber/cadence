@@ -28,7 +28,6 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	carchiver "github.com/uber/cadence/common/archiver"
-	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
@@ -141,7 +140,7 @@ func (s *Service) Start() {
 	}
 
 	replicatorEnabled := base.GetClusterMetadata().IsGlobalDomainEnabled()
-	archiverEnabled := base.GetClusterMetadata().HistoryArchivalConfig().ClusterConfiguredForArchival()
+	archiverEnabled := base.GetArchivalMetadata().GetHistoryConfig().ClusterConfiguredForArchival()
 	scannerEnabled := s.config.ScannerCfg.Persistence.DefaultStoreType() == config.StoreTypeSQL
 	batcherEnabled := s.config.EnableBatcher()
 
@@ -157,7 +156,7 @@ func (s *Service) Start() {
 			s.startReplicator(base, pFactory)
 		}
 		if archiverEnabled {
-			s.startArchiver(base, pFactory, s.params.ArchiverProvider)
+			s.startArchiver(base, pFactory)
 		}
 		if scannerEnabled {
 			s.startScanner(base)
@@ -246,7 +245,7 @@ func (s *Service) startIndexer(base service.Service) {
 	}
 }
 
-func (s *Service) startArchiver(base service.Service, pFactory persistencefactory.Factory, archiverProvider provider.ArchiverProvider) {
+func (s *Service) startArchiver(base service.Service, pFactory persistencefactory.Factory) {
 	publicClient := s.params.PublicClient
 
 	executionManager, err := pFactory.NewExecutionManager()
@@ -279,7 +278,11 @@ func (s *Service) startArchiver(base service.Service, pFactory persistencefactor
 		ClusterMetadata:  base.GetClusterMetadata(),
 		DomainCache:      domainCache,
 	}
-	archiverProvider.RegisterBootstrapContainer(common.WorkerServiceName, historyArchiverBootstrapContainer, &carchiver.VisibilityBootstrapContainer{})
+	archiverProvider := base.GetArchiverProvider()
+	err = archiverProvider.RegisterBootstrapContainer(common.WorkerServiceName, historyArchiverBootstrapContainer, &carchiver.VisibilityBootstrapContainer{})
+	if err != nil {
+		s.logger.Fatal("failed to register archiver bootstrap container", tag.Error(err))
+	}
 
 	bc := &archiver.BootstrapContainer{
 		PublicClient:     publicClient,

@@ -123,7 +123,7 @@ func (s *engineSuite) SetupTest() {
 	s.mockMetricClient = metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
 	s.mockClientBean = &client.MockClientBean{}
-	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean)
+	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, nil, nil)
 	s.mockEventsCache = &MockEventsCache{}
 
 	historyEventNotifier := newHistoryEventNotifier(
@@ -149,6 +149,7 @@ func (s *engineSuite) SetupTest() {
 		closeCh:                   s.shardClosedCh,
 		config:                    s.config,
 		logger:                    s.logger,
+		throttledLogger:           s.logger,
 		metricsClient:             metricsClient,
 		timeSource:                clock.NewRealTimeSource(),
 	}
@@ -5125,7 +5126,7 @@ func addCompleteWorkflowEvent(builder mutableState, decisionCompletedEventID int
 func newMutableStateBuilderWithEventV2(shard ShardContext, eventsCache eventsCache,
 	logger log.Logger, runID string) *mutableStateBuilder {
 
-	msBuilder := newMutableStateBuilder(shard, eventsCache, logger)
+	msBuilder := newMutableStateBuilder(shard, eventsCache, logger, "")
 	_ = msBuilder.SetHistoryTree(runID)
 
 	return msBuilder
@@ -5134,7 +5135,7 @@ func newMutableStateBuilderWithEventV2(shard ShardContext, eventsCache eventsCac
 func newMutableStateBuilderWithReplicationStateWithEventV2(shard ShardContext, eventsCache eventsCache,
 	logger log.Logger, version int64, runID string) *mutableStateBuilder {
 
-	msBuilder := newMutableStateBuilderWithReplicationState(shard, eventsCache, logger, version, cache.ReplicationPolicyOneCluster)
+	msBuilder := newMutableStateBuilderWithReplicationState(shard, eventsCache, logger, version, cache.ReplicationPolicyOneCluster, "")
 	_ = msBuilder.SetHistoryTree(runID)
 
 	return msBuilder
@@ -5234,6 +5235,8 @@ func copyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *p
 		ClientFeatureVersion:         sourceInfo.ClientFeatureVersion,
 		ClientImpl:                   sourceInfo.ClientImpl,
 		AutoResetPoints:              sourceInfo.AutoResetPoints,
+		Memo:                         sourceInfo.Memo,
+		SearchAttributes:             sourceInfo.SearchAttributes,
 		Attempt:                      sourceInfo.Attempt,
 		HasRetryPolicy:               sourceInfo.HasRetryPolicy,
 		InitialInterval:              sourceInfo.InitialInterval,

@@ -39,7 +39,6 @@ import (
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
-	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/client"
@@ -76,7 +75,6 @@ type (
 		domainHandler             *domainHandlerImpl
 		visibilityQueryValidator  *validator.VisibilityQueryValidator
 		searchAttributesValidator *validator.SearchAttributesValidator
-		archiverProvider          provider.ArchiverProvider
 		service.Service
 	}
 
@@ -121,6 +119,7 @@ var (
 	errInvalidTaskStartToCloseTimeoutSeconds      = &gen.BadRequestError{Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}
 	errClientVersionNotSet                        = &gen.BadRequestError{Message: "Client version is not set on request."}
 	errInvalidRetentionPeriod                     = &gen.BadRequestError{Message: "A valid retention period is not set on request."}
+	errInvalidArchivalConfig                      = &gen.BadRequestError{Message: "Invalid to enable archival without specifying a uri."}
 
 	// err for archival
 	errHistoryHasPassedRetentionPeriod = &gen.BadRequestError{Message: "Requested workflow history has passed retention period."}
@@ -145,10 +144,16 @@ var (
 )
 
 // NewWorkflowHandler creates a thrift handler for the cadence service
-func NewWorkflowHandler(sVice service.Service, config *Config, metadataMgr persistence.MetadataManager,
-	historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
-	visibilityMgr persistence.VisibilityManager, kafkaProducer messaging.Producer,
-	domainCache cache.DomainCache, archiverProvider provider.ArchiverProvider) *WorkflowHandler {
+func NewWorkflowHandler(
+	sVice service.Service,
+	config *Config,
+	metadataMgr persistence.MetadataManager,
+	historyMgr persistence.HistoryManager,
+	historyV2Mgr persistence.HistoryV2Manager,
+	visibilityMgr persistence.VisibilityManager,
+	kafkaProducer messaging.Producer,
+	domainCache cache.DomainCache,
+) *WorkflowHandler {
 	handler := &WorkflowHandler{
 		Service:         sVice,
 		config:          config,
@@ -163,8 +168,8 @@ func NewWorkflowHandler(sVice service.Service, config *Config, metadataMgr persi
 			func() float64 {
 				return float64(config.RPS())
 			},
-			func() float64 {
-				return float64(config.DomainRPS())
+			func(domain string) float64 {
+				return float64(config.DomainRPS(domain))
 			},
 		),
 		versionChecker: &versionChecker{checkVersion: config.EnableClientVersionCheck()},
@@ -174,22 +179,13 @@ func NewWorkflowHandler(sVice service.Service, config *Config, metadataMgr persi
 			metadataMgr,
 			sVice.GetClusterMetadata(),
 			NewDomainReplicator(kafkaProducer, sVice.GetLogger()),
-			archiverProvider,
+			sVice.GetArchivalMetadata(),
+			sVice.GetArchiverProvider(),
 		),
 		visibilityQueryValidator: validator.NewQueryValidator(config.ValidSearchAttributes),
 		searchAttributesValidator: validator.NewSearchAttributesValidator(sVice.GetLogger(), config.ValidSearchAttributes,
 			config.SearchAttributesNumberOfKeysLimit, config.SearchAttributesSizeOfValueLimit, config.SearchAttributesTotalSizeLimit),
-		archiverProvider: archiverProvider,
 	}
-	historyArchiverBootstrapContainer := &archiver.HistoryBootstrapContainer{
-		HistoryManager:   handler.historyMgr,
-		HistoryV2Manager: handler.historyV2Mgr,
-		Logger:           sVice.GetLogger(),
-		MetricsClient:    handler.metricsClient,
-		ClusterMetadata:  sVice.GetClusterMetadata(),
-		DomainCache:      handler.domainCache,
-	}
-	archiverProvider.RegisterBootstrapContainer(common.FrontendServiceName, historyArchiverBootstrapContainer, &archiver.VisibilityBootstrapContainer{})
 	// prevent us from trying to serve requests before handler's Start() is complete
 	handler.startWG.Add(1)
 	return handler
@@ -207,7 +203,11 @@ func (wh *WorkflowHandler) Start() error {
 	wh.domainCache.Start()
 
 	wh.history = wh.GetClientBean().GetHistoryClient()
-	wh.matchingRawClient = wh.GetClientBean().GetMatchingClient()
+	matchingRawClient, err := wh.GetClientBean().GetMatchingClient(wh.domainCache.GetDomainName)
+	if err != nil {
+		return err
+	}
+	wh.matchingRawClient = matchingRawClient
 	wh.matching = matching.NewRetryableClient(wh.matchingRawClient, common.CreateMatchingServiceRetryPolicy(),
 		common.IsWhitelistServiceTransientError)
 	wh.startWG.Done()
@@ -1579,30 +1579,6 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(err, scope)
 	}
 
-	maxDecisionTimeout := int32(wh.config.MaxDecisionStartToCloseTimeout(domainName))
-	// TODO: remove this assignment and logging in future, so that frontend will just return bad request for large decision timeout
-	if startRequest.GetTaskStartToCloseTimeoutSeconds() > startRequest.GetExecutionStartToCloseTimeoutSeconds() {
-		wh.Service.GetThrottledLogger().Warn("Decision timeout is larger than workflow timeout",
-			tag.WorkflowDecisionTimeoutSeconds(startRequest.GetTaskStartToCloseTimeoutSeconds()),
-			tag.WorkflowDomainName(domainName),
-			tag.WorkflowID(startRequest.GetWorkflowId()),
-			tag.WorkflowType(startRequest.GetWorkflowType().GetName()))
-		startRequest.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(startRequest.GetExecutionStartToCloseTimeoutSeconds())
-	}
-	if startRequest.GetTaskStartToCloseTimeoutSeconds() > maxDecisionTimeout {
-		wh.Service.GetThrottledLogger().Warn("Decision timeout is too large",
-			tag.WorkflowDecisionTimeoutSeconds(startRequest.GetTaskStartToCloseTimeoutSeconds()),
-			tag.WorkflowDomainName(domainName),
-			tag.WorkflowID(startRequest.GetWorkflowId()),
-			tag.WorkflowType(startRequest.GetWorkflowType().GetName()))
-		startRequest.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(maxDecisionTimeout)
-	}
-	if startRequest.GetTaskStartToCloseTimeoutSeconds() > startRequest.GetExecutionStartToCloseTimeoutSeconds() ||
-		startRequest.GetTaskStartToCloseTimeoutSeconds() > maxDecisionTimeout {
-		return nil, wh.error(&gen.BadRequestError{
-			Message: fmt.Sprintf("TaskStartToCloseTimeoutSeconds is larger than ExecutionStartToCloseTimeout or MaxDecisionStartToCloseTimeout (%ds).", maxDecisionTimeout)}, scope)
-	}
-
 	wh.Service.GetLogger().Debug("Start workflow execution request domain", tag.WorkflowDomainName(domainName))
 	domainID, err := wh.domainCache.GetDomainID(domainName)
 	if err != nil {
@@ -1689,8 +1665,8 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		getRequest.MaximumPageSize = common.Int32Ptr(common.GetHistoryMaxPageSize)
 	}
 
-	configuredForArchival := wh.GetClusterMetadata().HistoryArchivalConfig().ClusterConfiguredForArchival()
-	enableArchivalRead := wh.GetClusterMetadata().HistoryArchivalConfig().EnableReadFromArchival
+	configuredForArchival := wh.GetArchivalMetadata().GetHistoryConfig().ClusterConfiguredForArchival()
+	enableArchivalRead := wh.GetArchivalMetadata().GetHistoryConfig().ReadEnabled()
 	historyArchived := wh.historyArchived(ctx, getRequest, domainID)
 	if configuredForArchival && enableArchivalRead && historyArchived {
 		return wh.getArchivedHistory(ctx, getRequest, domainID, scope)
@@ -2008,30 +1984,6 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 
 	if err := wh.searchAttributesValidator.ValidateSearchAttributes(signalWithStartRequest.SearchAttributes, domainName); err != nil {
 		return nil, wh.error(err, scope)
-	}
-
-	maxDecisionTimeout := int32(wh.config.MaxDecisionStartToCloseTimeout(domainName))
-	// TODO: remove this assignment and logging in future, so that frontend will just return bad request for large decision timeout
-	if signalWithStartRequest.GetTaskStartToCloseTimeoutSeconds() > signalWithStartRequest.GetExecutionStartToCloseTimeoutSeconds() {
-		wh.Service.GetThrottledLogger().Warn("Decision timeout is larger than workflow timeout",
-			tag.WorkflowDecisionTimeoutSeconds(signalWithStartRequest.GetTaskStartToCloseTimeoutSeconds()),
-			tag.WorkflowDomainName(domainName),
-			tag.WorkflowID(signalWithStartRequest.GetWorkflowId()),
-			tag.WorkflowType(signalWithStartRequest.GetWorkflowType().GetName()))
-		signalWithStartRequest.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(signalWithStartRequest.GetExecutionStartToCloseTimeoutSeconds())
-	}
-	if signalWithStartRequest.GetTaskStartToCloseTimeoutSeconds() > maxDecisionTimeout {
-		wh.Service.GetThrottledLogger().Warn("Decision timeout is too large",
-			tag.WorkflowDecisionTimeoutSeconds(signalWithStartRequest.GetTaskStartToCloseTimeoutSeconds()),
-			tag.WorkflowDomainName(domainName),
-			tag.WorkflowID(signalWithStartRequest.GetWorkflowId()),
-			tag.WorkflowType(signalWithStartRequest.GetWorkflowType().GetName()))
-		signalWithStartRequest.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(maxDecisionTimeout)
-	}
-	if signalWithStartRequest.GetTaskStartToCloseTimeoutSeconds() > signalWithStartRequest.GetExecutionStartToCloseTimeoutSeconds() ||
-		signalWithStartRequest.GetTaskStartToCloseTimeoutSeconds() > maxDecisionTimeout {
-		return nil, wh.error(&gen.BadRequestError{
-			Message: fmt.Sprintf("TaskStartToCloseTimeoutSeconds is larger than ExecutionStartToCloseTimeout or MaxDecisionStartToCloseTimeout (%ds).", maxDecisionTimeout)}, scope)
 	}
 
 	domainID, err := wh.domainCache.GetDomainID(domainName)
@@ -3266,22 +3218,22 @@ func (wh *WorkflowHandler) getArchivedHistory(
 		return nil, wh.error(err, scope)
 	}
 
-	archivalURI := entry.GetConfig().HistoryArchivalURI
-	if archivalURI == "" {
+	URIString := entry.GetConfig().HistoryArchivalURI
+	if URIString == "" {
 		return nil, wh.error(errHistoryHasPassedRetentionPeriod, scope)
 	}
 
-	scheme, err := common.GetArchivalScheme(archivalURI)
+	URI, err := archiver.NewURI(URIString)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
 
-	historyArchiver, err := wh.archiverProvider.GetHistoryArchiver(scheme, common.FrontendServiceName)
+	historyArchiver, err := wh.GetArchiverProvider().GetHistoryArchiver(URI.Scheme(), common.FrontendServiceName)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
 
-	resp, err := historyArchiver.Get(ctx, archivalURI, &archiver.GetHistoryRequest{
+	resp, err := historyArchiver.Get(ctx, URI, &archiver.GetHistoryRequest{
 		DomainID:      domainID,
 		WorkflowID:    request.GetExecution().GetWorkflowId(),
 		RunID:         request.GetExecution().GetRunId(),

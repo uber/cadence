@@ -22,7 +22,6 @@ package common
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -347,6 +346,14 @@ func MinInt(a, b int) int {
 	return b
 }
 
+// MaxInt returns the greater one of two given integers
+func MaxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
 // ValidateRetryPolicy validates a retry policy
 func ValidateRetryPolicy(policy *workflow.RetryPolicy) error {
 	if policy == nil {
@@ -378,17 +385,21 @@ func ValidateRetryPolicy(policy *workflow.RetryPolicy) error {
 }
 
 // CreateHistoryStartWorkflowRequest create a start workflow request for history
-func CreateHistoryStartWorkflowRequest(domainID string, startRequest *workflow.StartWorkflowExecutionRequest) *h.StartWorkflowExecutionRequest {
+func CreateHistoryStartWorkflowRequest(
+	domainID string,
+	startRequest *workflow.StartWorkflowExecutionRequest,
+) *h.StartWorkflowExecutionRequest {
+	now := time.Now()
 	histRequest := &h.StartWorkflowExecutionRequest{
 		DomainUUID:   StringPtr(domainID),
 		StartRequest: startRequest,
 	}
 	if startRequest.RetryPolicy != nil && startRequest.RetryPolicy.GetExpirationIntervalInSeconds() > 0 {
 		expirationInSeconds := startRequest.RetryPolicy.GetExpirationIntervalInSeconds()
-		deadline := time.Now().Add(time.Second * time.Duration(expirationInSeconds))
+		deadline := now.Add(time.Second * time.Duration(expirationInSeconds))
 		histRequest.ExpirationTimestamp = Int64Ptr(deadline.Round(time.Millisecond).UnixNano())
 	}
-	histRequest.FirstDecisionTaskBackoffSeconds = Int32Ptr(backoff.GetBackoffForNextScheduleInSeconds(startRequest.GetCronSchedule(), time.Now()))
+	histRequest.FirstDecisionTaskBackoffSeconds = Int32Ptr(backoff.GetBackoffForNextScheduleInSeconds(startRequest.GetCronSchedule(), now, now))
 	return histRequest
 }
 
@@ -454,15 +465,6 @@ func IsJustOrderByClause(clause string) bool {
 	whereClause := strings.TrimSpace(clause)
 	whereClause = strings.ToLower(whereClause)
 	return strings.HasPrefix(whereClause, "order by")
-}
-
-// GetArchivalScheme extract archival scheme from URI
-func GetArchivalScheme(URI string) (string, error) {
-	sepIdx := strings.Index(URI, "://")
-	if sepIdx == -1 {
-		return "", errors.New("invalid archival URI")
-	}
-	return URI[:sepIdx], nil
 }
 
 // ConvertIndexedValueTypeToThriftType takes fieldType as interface{} and convert to IndexedValueType.
