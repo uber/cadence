@@ -460,6 +460,7 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 
 	var newWorkflow *persistence.WorkflowSnapshot
 	if newContext != nil && newMutableState != nil && newWorkflowTransactionPolicy != nil {
+
 		defer func() {
 			if retError != nil {
 				newContext.clear()
