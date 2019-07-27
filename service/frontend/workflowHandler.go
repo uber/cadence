@@ -2912,11 +2912,8 @@ func (wh *WorkflowHandler) getHistory(
 		nextPageToken = response.NextPageToken
 		size = response.Size
 	}
-
-	if len(historyEvents) > 0 {
-		scope.RecordTimer(metrics.HistorySize, time.Duration(size))
-	}
-
+	scope.RecordTimer(metrics.HistorySize, time.Duration(size))
+	
 	if len(nextPageToken) == 0 && transientDecision != nil {
 		// Append the transient decision events once we are done enumerating everything from the events table
 		historyEvents = append(historyEvents, transientDecision.ScheduledEvent, transientDecision.StartedEvent)
