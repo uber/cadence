@@ -198,6 +198,10 @@ func (r *nDCStateRebuilderImpl) rebuild(
 	}
 	// set the update condition from original mutable state
 	rebuildMutableState.SetUpdateCondition(r.mutableState.GetUpdateCondition())
+	if r.shard.GetConfig().EnableVisibilityToKafka() {
+		// whenever a reset of mutable state is done, we need to sync the workflow search attribute
+		rebuildMutableState.AddTransferTasks(&persistence.UpsertWorkflowSearchAttributesTask{})
+	}
 
 	r.context.clear()
 	r.context.setHistorySize(r.historySize)
