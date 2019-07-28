@@ -83,7 +83,7 @@ const (
 // ConflictResolveWorkflowMode conflict resolve mode
 type ConflictResolveWorkflowMode int
 
-// Update Workflow Execution Mode
+// Conflict Resolve Workflow Mode
 const (
 	// Conflict resolve workflow, including current record
 	// NOTE: update on current record is a condition update
