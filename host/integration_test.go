@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"github.com/uber/cadence/common/backoff"
 	"math"
+	"sort"
 	"strconv"
 	"testing"
 	"time"
@@ -999,7 +1000,6 @@ func (s *integrationSuite) TestCronWorkflow() {
 		time.Sleep(200 * time.Millisecond)
 	}
 	s.NotNil(closedExecutions)
-	// The first execution is the termination execution. It verified below.
 	dweResponse, err := s.engine.DescribeWorkflowExecution(createContext(), &workflow.DescribeWorkflowExecutionRequest{
 		Domain: common.StringPtr(s.domainName),
 		Execution: &workflow.WorkflowExecution{
@@ -1011,13 +1011,17 @@ func (s *integrationSuite) TestCronWorkflow() {
 	expectedExecutionTime := dweResponse.WorkflowExecutionInfo.GetStartTime() + 3*time.Second.Nanoseconds()
 	s.Equal(expectedExecutionTime, dweResponse.WorkflowExecutionInfo.GetExecutionTime())
 
-	// The first execution is the termination execution. It verified below.
-	firstExecutionTime := time.Unix(0, dweResponse.WorkflowExecutionInfo.GetStartTime())
+	sort.Slice(closedExecutions, func(i, j int) bool {
+		return closedExecutions[i].GetStartTime() < closedExecutions[j].GetStartTime()
+	})
+	// The first execution is the termination execution.
+	lastExecution := closedExecutions[0]
 	for i := 1; i != 4; i++ {
 		executionInfo := closedExecutions[i]
-		executionStartTime := executionInfo.GetStartTime()
-		backoffDuration := backoff.GetBackoffForNextSchedule(cronSchedule, firstExecutionTime, time.Unix(0, executionStartTime))
-		s.Equal(backoffDuration.Nanoseconds(), executionInfo.GetExecutionTime()-executionStartTime)
+		backoffDuration := backoff.GetBackoffForNextSchedule(cronSchedule, time.Unix(0, lastExecution.GetStartTime()), time.Unix(0, lastExecution.GetCloseTime()))
+		// Round up to compare only seconds
+		s.Equal(backoffDuration.Nanoseconds()/1000000000, int64(executionInfo.GetExecutionTime() - lastExecution.GetCloseTime())/1000000000)
+		lastExecution = closedExecutions[i]
 	}
 }
 
@@ -1905,7 +1909,6 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 
 	startFilter := &workflow.StartTimeFilter{}
 	startFilter.EarliestTime = common.Int64Ptr(startChildWorkflowTS.UnixNano())
-
 	for i := 0; i < 2; i++ {
 		// Sleep some time before checking the open executions.
 		// This will not cost extra time as the polling for first decision task will be blocked for 3 seconds.
@@ -1921,8 +1924,6 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 		})
 		s.Nil(err)
 		s.Equal(1, len(resp.GetExecutions()))
-		executionInfo := resp.GetExecutions()[0]
-		s.Equal(targetBackoffDuration.Nanoseconds(), executionInfo.GetExecutionTime()-executionInfo.GetStartTime())
 
 		_, err = pollerChild.PollAndProcessDecisionTask(false, false)
 		s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
@@ -1970,27 +1971,25 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 		time.Sleep(200 * time.Millisecond)
 	}
 	s.NotNil(closedExecutions)
-	// Get the first executed child workflow
-	firstExecutionTime := time.Unix(0, closedExecutions[0].GetStartTime())
-	for i := 0; i != 4; i++ {
-		executionInfo := closedExecutions[i]
-		if executionInfo.GetExecution().GetWorkflowId() == childID {
-			childStartTime := time.Unix(0, executionInfo.GetStartTime())
-			if firstExecutionTime.After(childStartTime) {
-				firstExecutionTime = childStartTime
-			}
-		}
-	}
 
-	for i := 0; i != 4; i++ {
+	sort.Slice(closedExecutions, func(i, j int) bool {
+		return closedExecutions[i].GetStartTime() < closedExecutions[j].GetStartTime()
+	})
+	// The first execution is the termination execution.
+	lastChildExecution := closedExecutions[1]
+	for i := 2; i != 4; i++ {
 		executionInfo := closedExecutions[i]
 		if executionInfo.GetExecution().GetWorkflowId() == childID {
-			executionStartTime := executionInfo.GetStartTime()
-			backoffDuration := backoff.GetBackoffForNextSchedule(cronSchedule, firstExecutionTime, time.Unix(0, executionStartTime))
-			s.Equal(backoffDuration.Nanoseconds(), executionInfo.GetExecutionTime()-executionStartTime)
+			firstChildStartTime := time.Unix(0, lastChildExecution.GetStartTime())
+			// Use last close time because the cron backoff time calculate in ContinueAsNew
+			firstChildCloseTime := time.Unix(0, lastChildExecution.GetCloseTime())
+			backoffDuration := backoff.GetBackoffForNextSchedule(cronSchedule, firstChildStartTime, firstChildCloseTime)
+			// Round up the time precision to seconds
+			s.Equal(backoffDuration.Nanoseconds()/1000000000,int64(executionInfo.GetExecutionTime() - lastChildExecution.GetCloseTime())/1000000000)
 		} else {
 			s.Equal(executionInfo.GetExecutionTime(), executionInfo.GetStartTime())
 		}
+		lastChildExecution = closedExecutions[i]
 	}
 }
 
