@@ -45,6 +45,8 @@ type (
 	}
 )
 
+var _ nDCTransactionMgrForExistingWorkflow = (*nDCTransactionMgrForExistingWorkflowImpl)(nil)
+
 func newNDCTransactionMgrForExistingWorkflow(
 	transactionMgr nDCTransactionMgr,
 ) *nDCTransactionMgrForExistingWorkflowImpl {

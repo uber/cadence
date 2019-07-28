@@ -142,6 +142,8 @@ type (
 	}
 )
 
+var _ nDCTransactionMgr = (*nDCTransactionMgrImpl)(nil)
+
 func newNDCTransactionMgr(
 	shard ShardContext,
 	historyCache *historyCache,
