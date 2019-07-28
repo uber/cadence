@@ -1020,7 +1020,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 		executionInfo := closedExecutions[i]
 		backoffDuration := backoff.GetBackoffForNextSchedule(cronSchedule, time.Unix(0, lastExecution.GetStartTime()), time.Unix(0, lastExecution.GetCloseTime()))
 		// Round up to compare only seconds
-		s.Equal(backoffDuration.Nanoseconds()/1000000000, int64(executionInfo.GetExecutionTime() - lastExecution.GetCloseTime())/1000000000)
+		s.Equal(backoffDuration.Nanoseconds()/1000000000, int64(executionInfo.GetExecutionTime()-lastExecution.GetCloseTime())/1000000000)
 		lastExecution = closedExecutions[i]
 	}
 }
@@ -1985,7 +1985,7 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 			firstChildCloseTime := time.Unix(0, lastChildExecution.GetCloseTime())
 			backoffDuration := backoff.GetBackoffForNextSchedule(cronSchedule, firstChildStartTime, firstChildCloseTime)
 			// Round up the time precision to seconds
-			s.Equal(backoffDuration.Nanoseconds()/1000000000,int64(executionInfo.GetExecutionTime() - lastChildExecution.GetCloseTime())/1000000000)
+			s.Equal(backoffDuration.Nanoseconds()/1000000000, int64(executionInfo.GetExecutionTime()-lastChildExecution.GetCloseTime())/1000000000)
 		} else {
 			s.Equal(executionInfo.GetExecutionTime(), executionInfo.GetStartTime())
 		}
