@@ -267,7 +267,8 @@ func (g *EventGenerator) getVertexCandidate() int {
 		if _, ok := notAvailable[nextVertexIdx]; ok {
 			continue
 		}
-		if isAccessible, nextVertexIdx := g.findAccessibleVertex(nextVertexIdx); isAccessible {
+		isAccessible, nextVertexIdx := g.findAccessibleVertex(nextVertexIdx)
+		if isAccessible {
 			return nextVertexIdx
 		}
 		notAvailable[nextVertexIdx] = true
@@ -278,15 +279,14 @@ func (g *EventGenerator) getVertexCandidate() int {
 
 func (g *EventGenerator) findAccessibleVertex(vertexIndex int) (bool, int) {
 	candidate := g.leafVertices[vertexIndex]
-	var nextVertexIdx int
 	if g.leafVertices[len(g.leafVertices)-1].IsStrictOnNextVertex() {
-		nextVertexIdx = len(g.leafVertices) - 1
-		candidate = g.leafVertices[nextVertexIdx]
+		vertexIndex = len(g.leafVertices) - 1
+		candidate = g.leafVertices[vertexIndex]
 	}
 	neighbors := g.connections[candidate]
 	for _, nextV := range neighbors {
 		if nextV.GetCondition() == nil || nextV.GetCondition()() {
-			return true, nextVertexIdx
+			return true, vertexIndex
 		}
 	}
 	return false, emptyCandidateIndex

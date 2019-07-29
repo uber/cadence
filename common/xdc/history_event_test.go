@@ -97,6 +97,22 @@ func (s *historyEventTestSuit) SetupSuite() {
 		return count > 0
 	}
 
+	hasPendingStartActivity := func() bool {
+		count := 0
+		for _, e := range generator.ListGeneratedVertices() {
+			switch e.GetName() {
+			case shared.EventTypeActivityTaskStarted.String():
+				count++
+			case shared.EventTypeActivityTaskCanceled.String(),
+				shared.EventTypeActivityTaskFailed.String(),
+				shared.EventTypeActivityTaskTimedOut.String(),
+				shared.EventTypeActivityTaskCompleted.String():
+				count--
+			}
+		}
+		return count > 0
+	}
+
 	canDoBatch := func(history []Vertex) bool {
 		if len(history) == 0 {
 			return true
@@ -212,6 +228,7 @@ func (s *historyEventTestSuit) SetupSuite() {
 	activityCancelRequestFailToDecisionSchedule := NewHistoryEventEdge(activityCancelRequestFail, decisionSchedule)
 	activityCancelRequestFailToDecisionSchedule.SetCondition(notPendingDecisionTask)
 	decisionCompleteToActivityCancelRequest := NewHistoryEventEdge(decisionComplete, activityCancelRequest)
+	decisionCompleteToActivityCancelRequest.SetCondition(hasPendingStartActivity)
 
 	activityModel.AddEdge(decisionCompleteToATSchedule, activityScheduleToStart, activityStartToComplete,
 		activityStartToFail, activityStartToTimedOut, decisionCompleteToATSchedule, activityCompleteToDecisionSchedule,
@@ -360,6 +377,12 @@ func (s *historyEventTestSuit) Test_HistoryEvent_Generator() {
 		}
 		queue = append(queue, b.next...)
 	}
-	//eventAttr := generateHistoryEvents(s.generator.ListGeneratedVertex())
-	//s.NotEmpty(eventAttr)
+
+	// Generator one branch of history events
+	batches := []batch{}
+	batches = append(batches, root.batches...)
+	batches = append(batches, root.next[0].batches...)
+	attributeGenerator := NewHistoryAttributesGenerator()
+	history := attributeGenerator.GenerateHistoryEvents(batches)
+	s.NotEmpty(history)
 }
