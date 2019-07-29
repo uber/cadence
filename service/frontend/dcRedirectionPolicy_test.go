@@ -24,6 +24,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/uber/cadence/common"
+
+	"code.uber.internal/devexp/cadence-server/.tmp/.go/goroot/src/context"
+
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/shared"
@@ -88,10 +92,10 @@ func (s *noopDCRedirectionPolicySuite) TestWithDomainRedirect() {
 		return nil
 	}
 
-	err := s.policy.WithDomainIDRedirect(domainID, apiName, callFn)
+	err := s.policy.WithDomainIDRedirect(context.Background(), domainID, apiName, callFn)
 	s.Nil(err)
 
-	err = s.policy.WithDomainNameRedirect(domainName, apiName, callFn)
+	err = s.policy.WithDomainNameRedirect(context.Background(), domainName, apiName, callFn)
 	s.Nil(err)
 
 	s.Equal(2, callCount)
@@ -150,10 +154,10 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) TestWithDomainRedirect_Lo
 		return nil
 	}
 
-	err := s.policy.WithDomainIDRedirect(s.domainID, apiName, callFn)
+	err := s.policy.WithDomainIDRedirect(context.Background(), s.domainID, apiName, callFn)
 	s.Nil(err)
 
-	err = s.policy.WithDomainNameRedirect(s.domainName, apiName, callFn)
+	err = s.policy.WithDomainNameRedirect(context.Background(), s.domainName, apiName, callFn)
 	s.Nil(err)
 
 	s.Equal(2, callCount)
@@ -170,10 +174,10 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) TestWithDomainRedirect_Gl
 		return nil
 	}
 
-	err := s.policy.WithDomainIDRedirect(s.domainID, apiName, callFn)
+	err := s.policy.WithDomainIDRedirect(context.Background(), s.domainID, apiName, callFn)
 	s.Nil(err)
 
-	err = s.policy.WithDomainNameRedirect(s.domainName, apiName, callFn)
+	err = s.policy.WithDomainNameRedirect(context.Background(), s.domainName, apiName, callFn)
 	s.Nil(err)
 
 	s.Equal(2, callCount)
@@ -190,10 +194,10 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) TestWithDomainRedirect_Gl
 		return nil
 	}
 
-	err := s.policy.WithDomainIDRedirect(s.domainID, apiName, callFn)
+	err := s.policy.WithDomainIDRedirect(context.Background(), s.domainID, apiName, callFn)
 	s.Nil(err)
 
-	err = s.policy.WithDomainNameRedirect(s.domainName, apiName, callFn)
+	err = s.policy.WithDomainNameRedirect(context.Background(), s.domainName, apiName, callFn)
 	s.Nil(err)
 
 	s.Equal(2, callCount)
@@ -210,10 +214,10 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) TestWithDomainRedirect_Gl
 	}
 
 	for apiName := range selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs {
-		err := s.policy.WithDomainIDRedirect(s.domainID, apiName, callFn)
+		err := s.policy.WithDomainIDRedirect(context.Background(), s.domainID, apiName, callFn)
 		s.Nil(err)
 
-		err = s.policy.WithDomainNameRedirect(s.domainName, apiName, callFn)
+		err = s.policy.WithDomainNameRedirect(context.Background(), s.domainName, apiName, callFn)
 		s.Nil(err)
 	}
 
@@ -231,10 +235,10 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) TestGetTargetDataCenter_G
 	}
 
 	for apiName := range selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs {
-		err := s.policy.WithDomainIDRedirect(s.domainID, apiName, callFn)
+		err := s.policy.WithDomainIDRedirect(context.Background(), s.domainID, apiName, callFn)
 		s.Nil(err)
 
-		err = s.policy.WithDomainNameRedirect(s.domainName, apiName, callFn)
+		err = s.policy.WithDomainNameRedirect(context.Background(), s.domainName, apiName, callFn)
 		s.Nil(err)
 	}
 
@@ -252,10 +256,10 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) TestGetTargetDataCenter_G
 	}
 
 	for apiName := range selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs {
-		err := s.policy.WithDomainIDRedirect(s.domainID, apiName, callFn)
+		err := s.policy.WithDomainIDRedirect(context.Background(), s.domainID, apiName, callFn)
 		s.Nil(err)
 
-		err = s.policy.WithDomainNameRedirect(s.domainName, apiName, callFn)
+		err = s.policy.WithDomainNameRedirect(context.Background(), s.domainName, apiName, callFn)
 		s.Nil(err)
 	}
 
@@ -284,10 +288,10 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) TestGetTargetDataCenter_G
 	}
 
 	for apiName := range selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs {
-		err := s.policy.WithDomainIDRedirect(s.domainID, apiName, callFn)
+		err := s.policy.WithDomainIDRedirect(context.Background(), s.domainID, apiName, callFn)
 		s.Nil(err)
 
-		err = s.policy.WithDomainNameRedirect(s.domainName, apiName, callFn)
+		err = s.policy.WithDomainNameRedirect(context.Background(), s.domainName, apiName, callFn)
 		s.Nil(err)
 	}
 
@@ -317,10 +321,44 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) TestGetTargetDataCenter_G
 	}
 
 	for apiName := range selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs {
-		err := s.policy.WithDomainIDRedirect(s.domainID, apiName, callFn)
+		err := s.policy.WithDomainIDRedirect(context.Background(), s.domainID, apiName, callFn)
 		s.Nil(err)
 
-		err = s.policy.WithDomainNameRedirect(s.domainName, apiName, callFn)
+		err = s.policy.WithDomainNameRedirect(context.Background(), s.domainName, apiName, callFn)
+		s.Nil(err)
+	}
+
+	s.Equal(2*len(selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs), currentClustercallCount)
+	s.Equal(2*len(selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs), alternativeClustercallCount)
+}
+
+func (s *selectedAPIsForwardingRedirectionPolicySuite) TestGetTargetDataCenter_GlobalDomain_Enforce_Forwarding_AlternativeClusterToCurrentCluster() {
+	s.setupGlobalDomainWithTwoReplicationCluster(false, false)
+
+	currentClustercallCount := 0
+	alternativeClustercallCount := 0
+	callFn := func(targetCluster string) error {
+		switch targetCluster {
+		case s.currentClusterName:
+			currentClustercallCount++
+			return nil
+		case s.alternativeClusterName:
+			alternativeClustercallCount++
+			return &shared.DomainNotActiveError{
+				CurrentCluster: s.alternativeClusterName,
+				ActiveCluster:  s.currentClusterName,
+			}
+		default:
+			panic(fmt.Sprintf("unknown cluster name %v", targetCluster))
+		}
+	}
+
+	ctx := context.WithValue(context.Background(), common.EnforceDCRedirection, "true")
+	for apiName := range selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs {
+		err := s.policy.WithDomainIDRedirect(ctx, s.domainID, apiName, callFn)
+		s.Nil(err)
+
+		err = s.policy.WithDomainNameRedirect(ctx, s.domainName, apiName, callFn)
 		s.Nil(err)
 	}
 
