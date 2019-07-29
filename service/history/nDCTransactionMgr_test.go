@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
@@ -52,8 +53,9 @@ type (
 		mockShard           *shardContextImpl
 		mockDomainCache     *cache.DomainCacheMock
 
-		mockCreateMgr *mockNDCTransactionMgrForNewWorkflow
-		mockUpdateMgr *mockNDCTransactionMgrForExistingWorkflow
+		controller    *gomock.Controller
+		mockCreateMgr *MocknDCTransactionMgrForNewWorkflow
+		mockUpdateMgr *MocknDCTransactionMgrForExistingWorkflow
 
 		transactionMgr *nDCTransactionMgrImpl
 	}
@@ -90,8 +92,9 @@ func (s *nDCTransactionMgrSuite) SetupTest() {
 	}
 	s.transactionMgr = newNDCTransactionMgr(s.mockShard, newHistoryCache(s.mockShard), s.logger)
 
-	s.mockCreateMgr = &mockNDCTransactionMgrForNewWorkflow{}
-	s.mockUpdateMgr = &mockNDCTransactionMgrForExistingWorkflow{}
+	s.controller = gomock.NewController(s.T())
+	s.mockCreateMgr = NewMocknDCTransactionMgrForNewWorkflow(s.controller)
+	s.mockUpdateMgr = NewMocknDCTransactionMgrForExistingWorkflow(s.controller)
 	s.transactionMgr.createMgr = s.mockCreateMgr
 	s.transactionMgr.updateMgr = s.mockUpdateMgr
 
@@ -102,8 +105,7 @@ func (s *nDCTransactionMgrSuite) TearDownTest() {
 	s.mockExecutionMgr.AssertExpectations(s.T())
 	s.mockMetadataMgr.AssertExpectations(s.T())
 	s.mockDomainCache.AssertExpectations(s.T())
-	s.mockCreateMgr.AssertExpectations(s.T())
-	s.mockUpdateMgr.AssertExpectations(s.T())
+	s.controller.Finish()
 }
 
 func (s *nDCTransactionMgrSuite) TestCreateWorkflow() {
@@ -111,9 +113,9 @@ func (s *nDCTransactionMgrSuite) TestCreateWorkflow() {
 	now := time.Now()
 	targetWorkflow := &mockNDCWorkflow{}
 
-	s.mockCreateMgr.On(
-		"dispatchForNewWorkflow", ctx, now, targetWorkflow,
-	).Return(nil).Once()
+	s.mockCreateMgr.EXPECT().dispatchForNewWorkflow(
+		ctx, now, targetWorkflow,
+	).Return(nil).Times(1)
 
 	err := s.transactionMgr.createWorkflow(ctx, now, targetWorkflow)
 	s.NoError(err)
@@ -126,9 +128,9 @@ func (s *nDCTransactionMgrSuite) TestUpdateWorkflow() {
 	targetWorkflow := &mockNDCWorkflow{}
 	newWorkflow := &mockNDCWorkflow{}
 
-	s.mockUpdateMgr.On(
-		"dispatchForExistingWorkflow", ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow,
-	).Return(nil).Once()
+	s.mockUpdateMgr.EXPECT().dispatchForExistingWorkflow(
+		ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow,
+	).Return(nil).Times(1)
 
 	err := s.transactionMgr.updateWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow)
 	s.NoError(err)

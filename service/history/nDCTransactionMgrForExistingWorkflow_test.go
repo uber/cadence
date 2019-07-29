@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
@@ -51,7 +52,8 @@ type (
 		mockShard           *shardContextImpl
 		mockDomainCache     *cache.DomainCacheMock
 
-		mockTransactionMgr *mockNDCTransactionMgr
+		controller         *gomock.Controller
+		mockTransactionMgr *MocknDCTransactionMgr
 		updateMgr          *nDCTransactionMgrForExistingWorkflowImpl
 	}
 )
@@ -85,7 +87,9 @@ func (s *nDCTransactionMgrForExistingWorkflowSuite) SetupTest() {
 		metricsClient:             metricsClient,
 		timeSource:                clock.NewRealTimeSource(),
 	}
-	s.mockTransactionMgr = &mockNDCTransactionMgr{}
+
+	s.controller = gomock.NewController(s.T())
+	s.mockTransactionMgr = NewMocknDCTransactionMgr(s.controller)
 	s.updateMgr = newNDCTransactionMgrForExistingWorkflow(s.mockTransactionMgr)
 }
 
@@ -94,6 +98,7 @@ func (s *nDCTransactionMgrForExistingWorkflowSuite) TearDownTest() {
 	s.mockExecutionMgr.AssertExpectations(s.T())
 	s.mockMetadataMgr.AssertExpectations(s.T())
 	s.mockDomainCache.AssertExpectations(s.T())
+	s.controller.Finish()
 }
 
 func (s *nDCTransactionMgrForExistingWorkflowSuite) TestDispatchForExistingWorkflow_NoRebuild_CurrentWorkflowGuaranteed() {
@@ -168,7 +173,7 @@ func (s *nDCTransactionMgrForExistingWorkflowSuite) TestDispatchForExistingWorkf
 		WorkflowID: workflowID,
 		RunID:      targetRunID,
 	})
-	s.mockTransactionMgr.On("getCurrentWorkflowRunID", ctx, domainID, workflowID).Return(targetRunID, nil).Once()
+	s.mockTransactionMgr.EXPECT().getCurrentWorkflowRunID(ctx, domainID, workflowID).Return(targetRunID, nil).Times(1)
 
 	err := s.updateMgr.dispatchForExistingWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow)
 	s.Error(err)
@@ -228,8 +233,8 @@ func (s *nDCTransactionMgrForExistingWorkflowSuite) TestDispatchForExistingWorkf
 		WorkflowID: workflowID,
 		RunID:      targetRunID,
 	})
-	s.mockTransactionMgr.On("getCurrentWorkflowRunID", ctx, domainID, workflowID).Return(currentRunID, nil).Once()
-	s.mockTransactionMgr.On("loadNDCWorkflow", ctx, domainID, workflowID, currentRunID).Return(currentWorkflow, nil).Once()
+	s.mockTransactionMgr.EXPECT().getCurrentWorkflowRunID(ctx, domainID, workflowID).Return(currentRunID, nil).Times(1)
+	s.mockTransactionMgr.EXPECT().loadNDCWorkflow(ctx, domainID, workflowID, currentRunID).Return(currentWorkflow, nil).Times(1)
 
 	targetWorkflow.On("happensAfter", currentWorkflow).Return(true, nil)
 	currentMutableState.On("IsWorkflowExecutionRunning").Return(true)
@@ -306,8 +311,8 @@ func (s *nDCTransactionMgrForExistingWorkflowSuite) TestDispatchForExistingWorkf
 		WorkflowID: workflowID,
 		RunID:      targetRunID,
 	})
-	s.mockTransactionMgr.On("getCurrentWorkflowRunID", ctx, domainID, workflowID).Return(currentRunID, nil).Once()
-	s.mockTransactionMgr.On("loadNDCWorkflow", ctx, domainID, workflowID, currentRunID).Return(currentWorkflow, nil).Once()
+	s.mockTransactionMgr.EXPECT().getCurrentWorkflowRunID(ctx, domainID, workflowID).Return(currentRunID, nil).Times(1)
+	s.mockTransactionMgr.EXPECT().loadNDCWorkflow(ctx, domainID, workflowID, currentRunID).Return(currentWorkflow, nil).Times(1)
 
 	targetWorkflow.On("happensAfter", currentWorkflow).Return(false, nil)
 	targetWorkflow.On("suppressWorkflowBy", currentWorkflow).Return(nil).Once()
@@ -370,7 +375,7 @@ func (s *nDCTransactionMgrForExistingWorkflowSuite) TestDispatchForExistingWorkf
 		WorkflowID: workflowID,
 		RunID:      targetRunID,
 	})
-	s.mockTransactionMgr.On("getCurrentWorkflowRunID", ctx, domainID, workflowID).Return(targetRunID, nil).Once()
+	s.mockTransactionMgr.EXPECT().getCurrentWorkflowRunID(ctx, domainID, workflowID).Return(targetRunID, nil).Times(1)
 
 	targetContext.On(
 		"conflictResolveWorkflowExecution",
@@ -443,8 +448,8 @@ func (s *nDCTransactionMgrForExistingWorkflowSuite) TestDispatchForExistingWorkf
 		WorkflowID: workflowID,
 		RunID:      targetRunID,
 	})
-	s.mockTransactionMgr.On("getCurrentWorkflowRunID", ctx, domainID, workflowID).Return(currentRunID, nil).Once()
-	s.mockTransactionMgr.On("loadNDCWorkflow", ctx, domainID, workflowID, currentRunID).Return(currentWorkflow, nil).Once()
+	s.mockTransactionMgr.EXPECT().getCurrentWorkflowRunID(ctx, domainID, workflowID).Return(currentRunID, nil).Times(1)
+	s.mockTransactionMgr.EXPECT().loadNDCWorkflow(ctx, domainID, workflowID, currentRunID).Return(currentWorkflow, nil).Times(1)
 
 	targetWorkflow.On("happensAfter", currentWorkflow).Return(true, nil)
 	currentMutableState.On("IsWorkflowExecutionRunning").Return(true)
@@ -520,8 +525,8 @@ func (s *nDCTransactionMgrForExistingWorkflowSuite) TestDispatchForExistingWorkf
 		WorkflowID: workflowID,
 		RunID:      targetRunID,
 	})
-	s.mockTransactionMgr.On("getCurrentWorkflowRunID", ctx, domainID, workflowID).Return(currentRunID, nil).Once()
-	s.mockTransactionMgr.On("loadNDCWorkflow", ctx, domainID, workflowID, currentRunID).Return(currentWorkflow, nil).Once()
+	s.mockTransactionMgr.EXPECT().getCurrentWorkflowRunID(ctx, domainID, workflowID).Return(currentRunID, nil).Times(1)
+	s.mockTransactionMgr.EXPECT().loadNDCWorkflow(ctx, domainID, workflowID, currentRunID).Return(currentWorkflow, nil).Times(1)
 
 	targetWorkflow.On("happensAfter", currentWorkflow).Return(false, nil)
 	targetWorkflow.On("suppressWorkflowBy", currentWorkflow).Return(nil).Once()
