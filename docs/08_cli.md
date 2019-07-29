@@ -14,7 +14,12 @@ Example of using the docker image to describe a domain:
 docker run --rm ubercadence/cli:master --domain samples-domain domain describe
 ```
 
-You could use docker image `ubercadence/cli`, by replacing all the following `./cadence ...` with `docker run --rm ubercadence/cli:master --address <HOST_DNS>:7933 ...` . For old versions of docker, HOST_DNS is just 127.0.0.1; for 18.03 onwards, you may have to use host.docker.internal. For more info check https://docs.docker.com/docker-for-mac/networking/#use-cases-and-workarounds  
+You could use docker image `ubercadence/cli`, by replacing all the following `./cadence ...` with `docker run --rm ubercadence/cli:master --address <HOST_DNS>:7933 ...` . 
+
+You may get "connection refused" error for 18.03 onwards versions of docker. You have to use host.docker.internal. For more info check https://docs.docker.com/docker-for-mac/networking/#use-cases-and-workarounds  
+```
+docker run --rm ubercadence/cli:master --address host.docker.internal:7933 --domain samples-domain domain describe
+```
 
 
 To build the CLI tool locally, clone the [Cadence server repo](https://github.com/uber/cadence) and run
