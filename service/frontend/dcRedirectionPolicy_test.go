@@ -21,16 +21,14 @@
 package frontend
 
 import (
+	"context"
 	"fmt"
 	"testing"
-
-	"github.com/uber/cadence/common"
-
-	"code.uber.internal/devexp/cadence-server/.tmp/.go/goroot/src/context"
 
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log/loggerimpl"
