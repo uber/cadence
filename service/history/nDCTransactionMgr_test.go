@@ -111,7 +111,7 @@ func (s *nDCTransactionMgrSuite) TearDownTest() {
 func (s *nDCTransactionMgrSuite) TestCreateWorkflow() {
 	ctx := ctx.Background()
 	now := time.Now()
-	targetWorkflow := &mockNDCWorkflow{}
+	targetWorkflow := NewMocknDCWorkflow(s.controller)
 
 	s.mockCreateMgr.EXPECT().dispatchForNewWorkflow(
 		ctx, now, targetWorkflow,
@@ -125,8 +125,8 @@ func (s *nDCTransactionMgrSuite) TestUpdateWorkflow() {
 	ctx := ctx.Background()
 	now := time.Now()
 	isWorkflowRebuilt := true
-	targetWorkflow := &mockNDCWorkflow{}
-	newWorkflow := &mockNDCWorkflow{}
+	targetWorkflow := NewMocknDCWorkflow(s.controller)
+	newWorkflow := NewMocknDCWorkflow(s.controller)
 
 	s.mockUpdateMgr.EXPECT().dispatchForExistingWorkflow(
 		ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow,
@@ -142,8 +142,7 @@ func (s *nDCTransactionMgrSuite) TestBackfillWorkflow_CurrentGuaranteed() {
 
 	releaseCalled := false
 
-	workflow := &mockNDCWorkflow{}
-	defer workflow.AssertExpectations(s.T())
+	workflow := NewMocknDCWorkflow(s.controller)
 	context := &mockWorkflowExecutionContext{}
 	defer context.AssertExpectations(s.T())
 	mutableState := &mockMutableState{}
@@ -152,9 +151,9 @@ func (s *nDCTransactionMgrSuite) TestBackfillWorkflow_CurrentGuaranteed() {
 
 	workflowEvents := &persistence.WorkflowEvents{}
 
-	workflow.On("getContext").Return(context)
-	workflow.On("getMutableState").Return(mutableState)
-	workflow.On("getReleaseFn").Return(releaseFn)
+	workflow.EXPECT().getContext().Return(context).AnyTimes()
+	workflow.EXPECT().getMutableState().Return(mutableState).AnyTimes()
+	workflow.EXPECT().getReleaseFn().Return(releaseFn).AnyTimes()
 
 	mutableState.On("IsCurrentWorkflowGuaranteed").Return(true)
 
@@ -181,8 +180,7 @@ func (s *nDCTransactionMgrSuite) TestBackfillWorkflow_CheckDB_NotCurrent() {
 
 	releaseCalled := false
 
-	workflow := &mockNDCWorkflow{}
-	defer workflow.AssertExpectations(s.T())
+	workflow := NewMocknDCWorkflow(s.controller)
 	context := &mockWorkflowExecutionContext{}
 	defer context.AssertExpectations(s.T())
 	mutableState := &mockMutableState{}
@@ -191,9 +189,9 @@ func (s *nDCTransactionMgrSuite) TestBackfillWorkflow_CheckDB_NotCurrent() {
 
 	workflowEvents := &persistence.WorkflowEvents{}
 
-	workflow.On("getContext").Return(context)
-	workflow.On("getMutableState").Return(mutableState)
-	workflow.On("getReleaseFn").Return(releaseFn)
+	workflow.EXPECT().getContext().Return(context).AnyTimes()
+	workflow.EXPECT().getMutableState().Return(mutableState).AnyTimes()
+	workflow.EXPECT().getReleaseFn().Return(releaseFn).AnyTimes()
 
 	mutableState.On("IsCurrentWorkflowGuaranteed").Return(false)
 	mutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{
@@ -229,8 +227,7 @@ func (s *nDCTransactionMgrSuite) TestBackfillWorkflow_CheckDB_Current() {
 
 	releaseCalled := false
 
-	workflow := &mockNDCWorkflow{}
-	defer workflow.AssertExpectations(s.T())
+	workflow := NewMocknDCWorkflow(s.controller)
 	context := &mockWorkflowExecutionContext{}
 	defer context.AssertExpectations(s.T())
 	mutableState := &mockMutableState{}
@@ -239,9 +236,9 @@ func (s *nDCTransactionMgrSuite) TestBackfillWorkflow_CheckDB_Current() {
 
 	workflowEvents := &persistence.WorkflowEvents{}
 
-	workflow.On("getContext").Return(context)
-	workflow.On("getMutableState").Return(mutableState)
-	workflow.On("getReleaseFn").Return(releaseFn)
+	workflow.EXPECT().getContext().Return(context).AnyTimes()
+	workflow.EXPECT().getMutableState().Return(mutableState).AnyTimes()
+	workflow.EXPECT().getReleaseFn().Return(releaseFn).AnyTimes()
 
 	mutableState.On("IsCurrentWorkflowGuaranteed").Return(false)
 	mutableState.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{
