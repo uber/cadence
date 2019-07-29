@@ -149,34 +149,11 @@ func (g *EventGenerator) GetNextVertices() []Vertex {
 
 	batch := make([]Vertex, 0)
 	for g.HasNextVertex() && g.canDoBatch(batch) {
-		res := make([]Vertex, 0)
-		switch {
-		case len(g.previousVertices) == 0:
-			// Generate for the first time, get the event candidates from entry vertex group
-			res = append(res, g.getEntryVertex())
-		case len(g.randomEntryVertices) > 0 && g.dice.Intn(len(g.connections)) == 0:
-			// Get the event candidate from random vertex group
-			res = append(res, g.getRandomVertex())
-		default:
-			// Get the event candidates based on context
-			idx := g.getVertexIndexFromLeaf()
-			res = append(res, g.randomNextVertex(idx)...)
-			g.leafVertices = append(g.leafVertices[:idx], g.leafVertices[idx+1:]...)
-		}
-		g.leafVertices = append(g.leafVertices, res...)
-		g.previousVertices = append(g.previousVertices, res...)
+		res := g.generateNextEventBatch()
+		g.updateContext(res)
 		batch = append(batch, res...)
 	}
-	// Create a reset point of each batch
-	previousVerticesSnapshot := make([]Vertex, len(g.previousVertices))
-	copy(previousVerticesSnapshot, g.previousVertices)
-	leafVerticesSnapshot := make([]Vertex, len(g.leafVertices))
-	copy(leafVerticesSnapshot, g.leafVertices)
-	newResetPoint := ResetPoint{
-		previousVertices: previousVerticesSnapshot,
-		leafVertices:     leafVerticesSnapshot,
-	}
-	g.resetPoints = append(g.resetPoints, newResetPoint)
+	g.addNewResetPoint()
 	return batch
 }
 
@@ -218,6 +195,41 @@ func (g *EventGenerator) SetBatchGenerationRule(canDoBatchFunc func([]Vertex) bo
 	g.canDoBatch = canDoBatchFunc
 }
 
+func (g *EventGenerator) generateNextEventBatch() []Vertex {
+	batch := make([]Vertex, 0)
+	switch {
+	case len(g.previousVertices) == 0:
+		// Generate for the first time, get the event candidates from entry vertex group
+		batch = append(batch, g.getEntryVertex())
+	case len(g.randomEntryVertices) > 0 && g.dice.Intn(len(g.connections)) == 0:
+		// Get the event candidate from random vertex group
+		batch = append(batch, g.getRandomVertex())
+	default:
+		// Get the event candidates based on context
+		idx := g.getVertexIndexFromLeaf()
+		batch = append(batch, g.randomNextVertex(idx)...)
+		g.leafVertices = append(g.leafVertices[:idx], g.leafVertices[idx+1:]...)
+	}
+	return batch
+}
+
+func (g *EventGenerator) addNewResetPoint() {
+	previousVerticesSnapshot := make([]Vertex, len(g.previousVertices))
+	copy(previousVerticesSnapshot, g.previousVertices)
+	leafVerticesSnapshot := make([]Vertex, len(g.leafVertices))
+	copy(leafVerticesSnapshot, g.leafVertices)
+	newResetPoint := ResetPoint{
+		previousVertices: previousVerticesSnapshot,
+		leafVertices:     leafVerticesSnapshot,
+	}
+	g.resetPoints = append(g.resetPoints, newResetPoint)
+}
+
+func (g *EventGenerator) updateContext(batch []Vertex) {
+	g.leafVertices = append(g.leafVertices, batch...)
+	g.previousVertices = append(g.previousVertices, batch...)
+}
+
 func (g *EventGenerator) getEntryVertex() Vertex {
 	if len(g.entryVertices) == 0 {
 		panic("No possible start vertex to go to next step")
@@ -250,6 +262,7 @@ func (g *EventGenerator) getVertexIndexFromLeaf() int {
 	var nextVertexIdx int
 	for !isAccessible {
 		nextVertexIdx = g.dice.Intn(nextRange)
+		// If the vertex is not accessible at this state, skip it
 		if _, ok := notAvailable[nextVertexIdx]; ok {
 			continue
 		}
@@ -265,10 +278,11 @@ func (g *EventGenerator) getVertexIndexFromLeaf() int {
 				return nextVertexIdx
 			}
 		}
+		// If all history event cannot be accessible, which means the model is incorrect
 		if !isAccessible {
 			notAvailable[nextVertexIdx] = true
 			if len(notAvailable) == nextRange {
-				panic("cannot find vertex to proceed")
+				panic("cannot find available history event to proceed. please check your model")
 			}
 		}
 	}
@@ -297,8 +311,12 @@ func (g *EventGenerator) randomNextVertex(nextVertexIdx int) []Vertex {
 			return res
 		}
 	}
-
 	return res
+}
+
+func (g *EventGenerator) getRandomVertex(nextVertex Vertex) {
+	neighbors := g.connections[nextVertex]
+	neighborsRange := len(neighbors)
 }
 
 // NewHistoryEventEdge initials a new edge between two HistoryEventVertexes

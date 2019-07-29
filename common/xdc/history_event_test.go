@@ -299,7 +299,7 @@ func (s *historyEventTestSuit) SetupSuite() {
 		externalWorkflowCanceledToDecisionSchedule, externalWorkflowCancelFailToDecisionSchedule)
 
 	//Config event generator
-	generator.SetCanDoBatchOnNextVertex(canDoBatch)
+	generator.SetBatchGenerationRule(canDoBatch)
 	generator.AddInitialEntryVertex(workflowStart)
 	generator.AddExitVertex(workflowComplete, workflowFail, continueAsNew, workflowTerminate, workflowTimedOut)
 	//generator.AddRandomEntryVertex(workflowSignal, workflowTerminate, workflowTimedOut)
@@ -316,6 +316,7 @@ func (s *historyEventTestSuit) SetupTest() {
 	s.generator.ResetAsNew()
 }
 
+// This is a sample about how to use the generator
 func (s *historyEventTestSuit) Test_HistoryEvent_Generator() {
 	defer func() {
 		if r := recover(); r != nil {
