@@ -1014,13 +1014,15 @@ func (s *integrationSuite) TestCronWorkflow() {
 	sort.Slice(closedExecutions, func(i, j int) bool {
 		return closedExecutions[i].GetStartTime() < closedExecutions[j].GetStartTime()
 	})
-	lastExecution := closedExecutions[0]
+	startTime := time.Unix(0, closedExecutions[0].GetStartTime())
+	closeTime := time.Unix(0, closedExecutions[0].GetStartTime())
 	for i := 0; i != 4; i++ {
 		executionInfo := closedExecutions[i]
-		backoffDuration := backoff.GetBackoffForNextSchedule(cronSchedule, time.Unix(0, lastExecution.GetStartTime()), time.Unix(0, lastExecution.GetCloseTime()))
+		backoffDuration := backoff.GetBackoffForNextSchedule(cronSchedule, startTime, closeTime)
 		// Round up to compare only seconds
 		s.Equal(backoffDuration.Nanoseconds()/1000000000, int64(executionInfo.GetExecutionTime()-executionInfo.GetStartTime())/1000000000)
-		lastExecution = closedExecutions[i]
+		startTime = time.Unix(0, closedExecutions[i].GetStartTime())
+		closeTime = time.Unix(0, closedExecutions[i].GetCloseTime())
 	}
 }
 
@@ -1975,16 +1977,16 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 		return closedExecutions[i].GetStartTime() < closedExecutions[j].GetStartTime()
 	})
 	// exclude the first execution which is the parent workflow
-	lastChildExecution := closedExecutions[1]
+	lastChildStartTime := time.Unix(0, closedExecutions[1].GetStartTime())
+	// Use last start time because the first cron use start time to calculate backoff
+	lastChildCloseTime := time.Unix(0, closedExecutions[1].GetStartTime())
 	for i := 1; i != 4; i++ {
 		executionInfo := closedExecutions[i]
-		lastChildStartTime := time.Unix(0, lastChildExecution.GetStartTime())
-		// Use last close time because the cron backoff time calculate in ContinueAsNew
-		lastChildCloseTime := time.Unix(0, lastChildExecution.GetCloseTime())
 		backoffDuration := backoff.GetBackoffForNextSchedule(cronSchedule, lastChildStartTime, lastChildCloseTime)
 		// Round up the time precision to seconds
-		s.Equal(backoffDuration.Nanoseconds()/1000000000, int64(executionInfo.GetExecutionTime()-executionInfo.GetStartTime())/1000000000, i)
-		lastChildExecution = closedExecutions[i]
+		s.Equal(backoffDuration.Nanoseconds()/1000000000, int64(executionInfo.GetExecutionTime()-executionInfo.GetStartTime())/1000000000)
+		lastChildStartTime = time.Unix(0, executionInfo.GetStartTime())
+		lastChildCloseTime = time.Unix(0, executionInfo.GetCloseTime())
 	}
 }
 
