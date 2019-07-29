@@ -26,6 +26,7 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber-go/tally"
+	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
@@ -66,6 +67,8 @@ type (
 		Logger        log.Logger
 		// TallyScope is an instance of tally metrics scope
 		TallyScope tally.Scope
+		// ClientBean is an instance of client.Bean for a collection of clients
+		ClientBean client.Bean
 	}
 
 	// Batcher is the background sub-system that execute workflow for batch operations
@@ -73,6 +76,7 @@ type (
 	Batcher struct {
 		cfg           Config
 		svcClient     workflowserviceclient.Interface
+		clientBean    client.Bean
 		metricsClient metrics.Client
 		tallyScope    tally.Scope
 		logger        log.Logger
@@ -88,6 +92,7 @@ func New(params *BootstrapParams) *Batcher {
 		metricsClient: params.MetricsClient,
 		tallyScope:    params.TallyScope,
 		logger:        params.Logger.WithTags(tag.ComponentBatcher),
+		clientBean:    params.ClientBean,
 	}
 }
 
@@ -95,7 +100,6 @@ func New(params *BootstrapParams) *Batcher {
 func (s *Batcher) Start() error {
 	// start worker for batch operation workflows
 	ctx := context.WithValue(context.Background(), batcherContextKey, s)
-	ctx = context.WithValue(ctx, common.EnforceDCRedirection, "true")
 	workerOpts := worker.Options{
 		MetricsScope:              s.tallyScope,
 		BackgroundActivityContext: ctx,
