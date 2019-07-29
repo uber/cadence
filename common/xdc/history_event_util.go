@@ -28,17 +28,6 @@ import (
 	"time"
 )
 
-type (
-	batch struct {
-		events []Vertex
-	}
-
-	branch struct {
-		next    []*branch
-		batches []batch
-	}
-)
-
 const (
 	workflowType = "history event generation mock"
 	domainID     = "00000000-0000-0000-0000-000000000000"
@@ -603,4 +592,44 @@ func getDefaultHistoryEvent(eventID int64) *shared.HistoryEvent {
 		TaskId:    common.Int64Ptr(common.EmptyEventTaskID),
 		Version:   common.Int64Ptr(common.EmptyVersion),
 	}
+}
+
+type (
+	// batch is the struct for history event batch
+	batch struct {
+		events []Vertex
+	}
+
+	// branch is a branch of new history events
+	branch struct {
+		next    []*branch
+		batches []batch
+	}
+)
+
+func (b *branch) split(resetIdx int) *branch {
+	curr := b
+	for curr.next != nil {
+		length := len(curr.batches)
+		if length > resetIdx {
+			break
+		}
+		curr = curr.next[len(curr.next)-1]
+		resetIdx -= length
+	}
+
+	firstBatches := make([]batch, resetIdx+1)
+	copy(firstBatches, curr.batches[:resetIdx+1])
+	secondBatches := make([]batch, len(curr.batches)-resetIdx-1)
+	copy(secondBatches, curr.batches[resetIdx+1:])
+	splitBranch := &branch{
+		next:    curr.next,
+		batches: secondBatches,
+	}
+	newBranch := &branch{
+		batches: make([]batch, 0),
+	}
+	curr.next = []*branch{splitBranch, newBranch}
+	curr.batches = firstBatches
+	return newBranch
 }

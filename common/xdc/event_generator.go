@@ -33,8 +33,8 @@ var (
 )
 
 type (
-	// HistoryEvent is the history event vertex
-	HistoryEvent struct {
+	// HistoryEventVertex is the history event vertex
+	HistoryEventVertex struct {
 		name                 string
 		isStrictOnNextVertex bool
 		maxNextGeneration    int
@@ -64,8 +64,8 @@ type (
 		leafVertices     []Vertex
 	}
 
-	// Connection is the edge
-	Connection struct {
+	// HistoryEventEdge is the edge of history events
+	HistoryEventEdge struct {
 		startVertex Vertex
 		endVertex   Vertex
 		condition   func() bool
@@ -175,6 +175,7 @@ func (g *EventGenerator) GetNextVertices() []Vertex {
 	return batch
 }
 
+// ResetAsNew resets history event generator to its initial state
 func (g *EventGenerator) ResetAsNew() {
 	g.leafVertices = make([]Vertex, 0)
 	g.previousVertices = make([]Vertex, 0)
@@ -199,6 +200,7 @@ func (g *EventGenerator) ListResetPoint() []ResetPoint {
 	return g.resetPoints
 }
 
+// RandomReset randomly pick a reset point and reset the event generator to the point
 func (g *EventGenerator) RandomReset() int {
 	// Random reset does not reset to index 0
 	nextIdx := g.dice.Intn(len(g.resetPoints)-1) + 1
@@ -294,60 +296,60 @@ func (g *EventGenerator) randomNextVertex(nextVertexIdx int) []Vertex {
 	return res
 }
 
-// NewConnection initials a new connection
-func NewConnection(
+// NewHistoryEventEdge initials a new edge between two HistoryEventVertex
+func NewHistoryEventEdge(
 	start Vertex,
 	end Vertex,
 ) Edge {
-	return &Connection{
+	return &HistoryEventEdge{
 		startVertex: start,
 		endVertex:   end,
 	}
 }
 
 // SetStartVertex sets the start vertex
-func (c *Connection) SetStartVertex(start Vertex) {
+func (c *HistoryEventEdge) SetStartVertex(start Vertex) {
 	c.startVertex = start
 }
 
 // GetStartVertex returns the start vertex
-func (c Connection) GetStartVertex() Vertex {
+func (c HistoryEventEdge) GetStartVertex() Vertex {
 	return c.startVertex
 }
 
 // SetEndVertex sets the end vertex
-func (c *Connection) SetEndVertex(end Vertex) {
+func (c *HistoryEventEdge) SetEndVertex(end Vertex) {
 	c.endVertex = end
 }
 
 // GetEndVertex returns the end vertex
-func (c Connection) GetEndVertex() Vertex {
+func (c HistoryEventEdge) GetEndVertex() Vertex {
 	return c.endVertex
 }
 
 // SetCondition sets the condition to access this edge
-func (c *Connection) SetCondition(condition func() bool) {
+func (c *HistoryEventEdge) SetCondition(condition func() bool) {
 	c.condition = condition
 }
 
 // GetCondition returns the condition
-func (c Connection) GetCondition() func() bool {
+func (c HistoryEventEdge) GetCondition() func() bool {
 	return c.condition
 }
 
 // SetAction sets an action to perform when the end vertex hits
-func (c Connection) SetAction(action func()) {
+func (c HistoryEventEdge) SetAction(action func()) {
 	c.action = action
 }
 
 // GetAction returns the action
-func (c Connection) GetAction() func() {
+func (c HistoryEventEdge) GetAction() func() {
 	return c.action
 }
 
-// NewHistoryEvent initials a history event
-func NewHistoryEvent(name string) Vertex {
-	return &HistoryEvent{
+// NewHistoryEventVertex initials a history event vertex
+func NewHistoryEventVertex(name string) Vertex {
+	return &HistoryEventVertex{
 		name:                 name,
 		isStrictOnNextVertex: false,
 		maxNextGeneration:    1,
@@ -355,32 +357,32 @@ func NewHistoryEvent(name string) Vertex {
 }
 
 // GetName returns the name
-func (he HistoryEvent) GetName() string {
+func (he HistoryEventVertex) GetName() string {
 	return he.name
 }
 
 // SetName sets the name
-func (he *HistoryEvent) SetName(name string) {
+func (he *HistoryEventVertex) SetName(name string) {
 	he.name = name
 }
 
 // Equals compares two vertex
-func (he *HistoryEvent) Equals(v Vertex) bool {
+func (he *HistoryEventVertex) Equals(v Vertex) bool {
 	return strings.EqualFold(he.name, v.GetName())
 }
 
 // SetIsStrictOnNextVertex sets if a vertex can be added between the current vertex and its child Vertices
-func (he *HistoryEvent) SetIsStrictOnNextVertex(isStrict bool) {
+func (he *HistoryEventVertex) SetIsStrictOnNextVertex(isStrict bool) {
 	he.isStrictOnNextVertex = isStrict
 }
 
 // IsStrictOnNextVertex returns the isStrict flag
-func (he HistoryEvent) IsStrictOnNextVertex() bool {
+func (he HistoryEventVertex) IsStrictOnNextVertex() bool {
 	return he.isStrictOnNextVertex
 }
 
 // SetMaxNextVertex sets the max concurrent path can be generated from this vertex
-func (he *HistoryEvent) SetMaxNextVertex(maxNextGeneration int) {
+func (he *HistoryEventVertex) SetMaxNextVertex(maxNextGeneration int) {
 	if maxNextGeneration < 1 {
 		panic("max next vertex number cannot less than 1")
 	}
@@ -388,7 +390,7 @@ func (he *HistoryEvent) SetMaxNextVertex(maxNextGeneration int) {
 }
 
 // GetMaxNextVertex returns the max concurrent path
-func (he HistoryEvent) GetMaxNextVertex() int {
+func (he HistoryEventVertex) GetMaxNextVertex() int {
 	return he.maxNextGeneration
 }
 
