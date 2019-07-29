@@ -1181,6 +1181,8 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 		Header:                              attributes.Header,
 		RetryPolicy:                         attributes.RetryPolicy,
 		CronSchedule:                        attributes.CronSchedule,
+		Memo:                                attributes.Memo,
+		SearchAttributes:                    attributes.SearchAttributes,
 	}
 
 	req := &h.StartWorkflowExecutionRequest{
@@ -1331,6 +1333,9 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(
 		domainEntry.GetRetentionDays(e.executionInfo.WorkflowID),
 	)
 
+	if event.Memo != nil {
+		e.executionInfo.Memo = event.Memo.GetFields()
+	}
 	if event.SearchAttributes != nil {
 		e.executionInfo.SearchAttributes = event.SearchAttributes.GetIndexedFields()
 	}
