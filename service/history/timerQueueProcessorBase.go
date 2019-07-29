@@ -665,7 +665,8 @@ func (t *timerQueueProcessorBase) archiveWorkflow(
 		CallerService: common.HistoryServiceName,
 		ArchiveInline: archiveInline,
 	}
-	if err := t.historyService.archivalClient.Archive(ctx, req); err != nil {
+	resp, err := t.historyService.archivalClient.Archive(ctx, req)
+	if err != nil {
 		return err
 	}
 
@@ -675,7 +676,7 @@ func (t *timerQueueProcessorBase) archiveWorkflow(
 	if err := t.deleteWorkflowExecution(task); err != nil {
 		return err
 	}
-	if archiveInline {
+	if resp.ArchivedInline {
 		if err := t.deleteWorkflowHistory(task, msBuilder); err != nil {
 			return err
 		}

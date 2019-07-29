@@ -47,6 +47,11 @@ type (
 		ArchiveInline  bool
 	}
 
+	// ClientResponse is the archive response returned from the archiver client
+	ClientResponse struct {
+		ArchivedInline bool
+	}
+
 	// ArchiveRequest is the request signal sent to the archiver workflow
 	ArchiveRequest struct {
 		ShardID              int
@@ -63,7 +68,7 @@ type (
 
 	// Client is used to archive workflow histories
 	Client interface {
-		Archive(context.Context, *ClientRequest) error
+		Archive(context.Context, *ClientRequest) (*ClientResponse, error)
 	}
 
 	client struct {
@@ -106,19 +111,33 @@ func NewClient(
 }
 
 // Archive starts an archival task
-func (c *client) Archive(ctx context.Context, request *ClientRequest) error {
+func (c *client) Archive(ctx context.Context, request *ClientRequest) (resp *ClientResponse, err error) {
 	c.metricsClient.IncCounter(metrics.ArchiverClientScope, metrics.CadenceRequests)
 	taggedLogger := tagLoggerWithRequest(c.logger, *request.ArchiveRequest).WithTags(
 		tag.ArchivalCallerServiceName(request.CallerService),
 		tag.ArchivalArchiveAttemptedInline(request.ArchiveInline),
 	)
-	if request.ArchiveInline {
-		if err := c.archiveInline(ctx, request, taggedLogger); err != nil {
-			return c.sendArchiveSignal(ctx, request.ArchiveRequest, taggedLogger)
+	archivedInline := false
+	defer func() {
+		if err != nil {
+			resp = nil
+			return
 		}
-		return nil
+		resp = &ClientResponse{
+			ArchivedInline: archivedInline,
+		}
+	}()
+	if request.ArchiveInline {
+		err = c.archiveInline(ctx, request, taggedLogger)
+		if err != nil {
+			err = c.sendArchiveSignal(ctx, request.ArchiveRequest, taggedLogger)
+			return
+		}
+		archivedInline = true
+		return
 	}
-	return c.sendArchiveSignal(ctx, request.ArchiveRequest, taggedLogger)
+	err = c.sendArchiveSignal(ctx, request.ArchiveRequest, taggedLogger)
+	return
 }
 
 func (c *client) archiveInline(ctx context.Context, request *ClientRequest, taggedLogger log.Logger) (err error) {

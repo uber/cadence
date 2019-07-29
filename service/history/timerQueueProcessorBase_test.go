@@ -30,6 +30,7 @@ import (
 	"github.com/uber-go/tally"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
@@ -41,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/service/worker/archiver"
 )
 
 type (
@@ -58,6 +60,7 @@ type (
 		mockExecutionManager  *mocks.ExecutionManager
 		mockVisibilityManager *mocks.VisibilityManager
 		mockHistoryV2Manager  *mocks.HistoryV2Manager
+		mockArchivalClient    *archiver.ClientMock
 
 		scope            int
 		notificationChan chan struct{}
@@ -94,6 +97,7 @@ func (s *timerQueueProcessorBaseSuite) SetupTest() {
 	s.mockExecutionManager = &mocks.ExecutionManager{}
 	s.mockVisibilityManager = &mocks.VisibilityManager{}
 	s.mockHistoryV2Manager = &mocks.HistoryV2Manager{}
+	s.mockArchivalClient = &archiver.ClientMock{}
 	s.mockShard = &shardContextImpl{
 		service:                   s.mockService,
 		shardInfo:                 &persistence.ShardInfo{ShardID: shardID, RangeID: 1, TransferAckLevel: 0},
@@ -117,11 +121,12 @@ func (s *timerQueueProcessorBaseSuite) SetupTest() {
 		s.scope,
 		s.mockShard,
 		&historyEngineImpl{
-			shard:         s.mockShard,
-			logger:        s.logger,
-			metricsClient: metricsClient,
-			visibilityMgr: s.mockVisibilityManager,
-			historyV2Mgr:  s.mockHistoryV2Manager,
+			shard:          s.mockShard,
+			logger:         s.logger,
+			metricsClient:  metricsClient,
+			visibilityMgr:  s.mockVisibilityManager,
+			historyV2Mgr:   s.mockHistoryV2Manager,
+			archivalClient: s.mockArchivalClient,
 		},
 		s.mockQueueAckMgr,
 		NewLocalTimerGate(clock.NewRealTimeSource()),
@@ -140,6 +145,7 @@ func (s *timerQueueProcessorBaseSuite) TearDownTest() {
 	s.mockExecutionManager.AssertExpectations(s.T())
 	s.mockHistoryV2Manager.AssertExpectations(s.T())
 	s.mockVisibilityManager.AssertExpectations(s.T())
+	s.mockArchivalClient.AssertExpectations(s.T())
 }
 
 func (s *timerQueueProcessorBaseSuite) TestProcessTaskAndAck_ShutDown() {
@@ -246,7 +252,8 @@ func (s *timerQueueProcessorBaseSuite) TestHandleTaskError_RandomErr() {
 func (s *timerQueueProcessorBaseSuite) TestDeleteWorkflow_NoErr() {
 	task := &persistence.TimerTaskInfo{
 		TaskID:              12345,
-		VisibilityTimestamp: time.Now()}
+		VisibilityTimestamp: time.Now(),
+	}
 	executionInfo := workflow.WorkflowExecution{
 		WorkflowId: &task.WorkflowID,
 		RunId:      &task.RunID,
@@ -258,9 +265,58 @@ func (s *timerQueueProcessorBaseSuite) TestDeleteWorkflow_NoErr() {
 	s.mockHistoryV2Manager.On("DeleteHistoryBranch", mock.Anything).Return(nil).Once()
 	s.mockVisibilityManager.On("DeleteWorkflowExecution", mock.Anything).Return(nil).Once()
 	mockMutableState.On("GetEventStoreVersion").Return(int32(persistence.EventStoreVersionV2)).Once()
-	mockMutableState.On("GetCurrentBranch").Return([]byte{}).Once()
+	mockMutableState.On("GetCurrentBranch").Return([]byte{1, 2, 3}).Once()
 	mockMutableState.On("GetLastWriteVersion").Return(int64(1234))
 
 	err := s.timerQueueProcessor.deleteWorkflow(task, mockMutableState, ctx)
 	s.NoError(err)
+}
+
+func (s *timerQueueProcessorBaseSuite) TestArchiveWorkflow_NoErr_InlineArchivalFailed() {
+	mockWorkflowExecutionContext := &mockWorkflowExecutionContext{}
+	mockWorkflowExecutionContext.On("loadExecutionStats").Return(&persistence.ExecutionStats{
+		HistorySize: 1024,
+	}, nil)
+	mockWorkflowExecutionContext.On("clear")
+
+	mockMutableState := &mockMutableState{}
+	mockMutableState.On("GetEventStoreVersion").Return(int32(persistence.EventStoreVersionV2)).Once()
+	mockMutableState.On("GetCurrentBranch").Return([]byte{1, 2, 3}).Once()
+	mockMutableState.On("GetLastWriteVersion").Return(int64(1234)).Once()
+	mockMutableState.On("GetNextEventID").Return(int64(101)).Once()
+
+	s.mockExecutionManager.On("DeleteCurrentWorkflowExecution", mock.Anything).Return(nil).Once()
+	s.mockExecutionManager.On("DeleteWorkflowExecution", mock.Anything).Return(nil).Once()
+	s.mockVisibilityManager.On("DeleteWorkflowExecution", mock.Anything).Return(nil).Once()
+
+	s.mockArchivalClient.On("Archive", mock.Anything, mock.MatchedBy(func(req *archiver.ClientRequest) bool {
+		return req.CallerService == common.HistoryServiceName && req.ArchiveInline
+	})).Return(&archiver.ClientResponse{
+		ArchivedInline: false,
+	}, nil)
+
+	domainCacheEntry := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{}, &persistence.DomainConfig{}, false, nil, 0, nil)
+	err := s.timerQueueProcessor.archiveWorkflow(&persistence.TimerTaskInfo{}, mockMutableState, mockWorkflowExecutionContext, domainCacheEntry)
+	s.NoError(err)
+}
+
+func (s *timerQueueProcessorBaseSuite) TestArchiveWorkflow_SendSignalErr() {
+	mockWorkflowExecutionContext := &mockWorkflowExecutionContext{}
+	mockWorkflowExecutionContext.On("loadExecutionStats").Return(&persistence.ExecutionStats{
+		HistorySize: 1024 * 1024 * 1024,
+	}, nil)
+
+	mockMutableState := &mockMutableState{}
+	mockMutableState.On("GetEventStoreVersion").Return(int32(persistence.EventStoreVersionV2)).Once()
+	mockMutableState.On("GetCurrentBranch").Return([]byte{1, 2, 3}).Once()
+	mockMutableState.On("GetLastWriteVersion").Return(int64(1234)).Once()
+	mockMutableState.On("GetNextEventID").Return(int64(101)).Once()
+
+	s.mockArchivalClient.On("Archive", mock.Anything, mock.MatchedBy(func(req *archiver.ClientRequest) bool {
+		return req.CallerService == common.HistoryServiceName && !req.ArchiveInline
+	})).Return(nil, errors.New("failed to send signal"))
+
+	domainCacheEntry := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{}, &persistence.DomainConfig{}, false, nil, 0, nil)
+	err := s.timerQueueProcessor.archiveWorkflow(&persistence.TimerTaskInfo{}, mockMutableState, mockWorkflowExecutionContext, domainCacheEntry)
+	s.Error(err)
 }
