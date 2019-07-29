@@ -43,7 +43,6 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	persistencehelper "github.com/uber/cadence/common/persistence-helper"
 	warchiver "github.com/uber/cadence/service/worker/archiver"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 )
@@ -166,7 +165,6 @@ func NewEngineWithShardContext(
 			shard.GetConfig().NumArchiveSystemWorkflows,
 			shard.GetConfig().ArchiveRequestRPS,
 			shard.GetService().GetArchiverProvider(),
-			persistencehelper.NewWorkflowCleaner(executionManager, historyManager, historyV2Manager, visibilityMgr, logger),
 		),
 	}
 

@@ -27,8 +27,6 @@ import (
 	"math/rand"
 	"time"
 
-	persistencehelper "github.com/uber/cadence/common/persistence-helper"
-
 	"github.com/uber/cadence/common"
 	carchiver "github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
@@ -61,7 +59,6 @@ type (
 		NextEventID          int64
 		CloseFailoverVersion int64
 		URI                  string
-		TaskID               int64
 	}
 
 	// Client is used to archive workflow histories
@@ -76,7 +73,6 @@ type (
 		numWorkflows     dynamicconfig.IntPropertyFn
 		rateLimiter      quotas.Limiter
 		archiverProvider provider.ArchiverProvider
-		workflowCleaner  persistencehelper.WorkflowCleaner
 	}
 )
 
@@ -94,7 +90,6 @@ func NewClient(
 	numWorkflows dynamicconfig.IntPropertyFn,
 	requestRPS dynamicconfig.IntPropertyFn,
 	archiverProvider provider.ArchiverProvider,
-	workflowCleaner persistencehelper.WorkflowCleaner,
 ) Client {
 	return &client{
 		metricsClient: metricsClient,
@@ -107,7 +102,6 @@ func NewClient(
 			},
 		),
 		archiverProvider: archiverProvider,
-		workflowCleaner:  workflowCleaner,
 	}
 }
 
@@ -122,16 +116,7 @@ func (c *client) Archive(ctx context.Context, request *ClientRequest) error {
 		if err := c.archiveInline(ctx, request, taggedLogger); err != nil {
 			return c.sendArchiveSignal(ctx, request.ArchiveRequest, taggedLogger)
 		}
-		return c.workflowCleaner.CleanUp(&persistencehelper.CleanUpRequest{
-			DomainID:          request.ArchiveRequest.DomainID,
-			WorkflowID:        request.ArchiveRequest.WorkflowID,
-			RunID:             request.ArchiveRequest.RunID,
-			ShardID:           request.ArchiveRequest.ShardID,
-			FailoverVersion:   request.ArchiveRequest.CloseFailoverVersion,
-			EventStoreVersion: request.ArchiveRequest.EventStoreVersion,
-			BranchToken:       request.ArchiveRequest.BranchToken,
-			TaskID:            request.ArchiveRequest.TaskID,
-		})
+		return nil
 	}
 	return c.sendArchiveSignal(ctx, request.ArchiveRequest, taggedLogger)
 }

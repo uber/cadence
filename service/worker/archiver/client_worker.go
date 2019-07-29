@@ -30,7 +30,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
-	persistencehelper "github.com/uber/cadence/common/persistence-helper"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/activity"
@@ -52,15 +52,14 @@ type (
 
 	// BootstrapContainer contains everything need for bootstrapping
 	BootstrapContainer struct {
-		PublicClient  workflowserviceclient.Interface
-		MetricsClient metrics.Client
-		Logger        log.Logger
-		// HistoryManager   persistence.HistoryManager
-		// HistoryV2Manager persistence.HistoryV2Manager
+		PublicClient     workflowserviceclient.Interface
+		MetricsClient    metrics.Client
+		Logger           log.Logger
+		HistoryManager   persistence.HistoryManager
+		HistoryV2Manager persistence.HistoryV2Manager
 		DomainCache      cache.DomainCache
 		Config           *Config
 		ArchiverProvider provider.ArchiverProvider
-		WorkflowCleaner  persistencehelper.WorkflowCleaner
 	}
 
 	// Config for ClientWorker
