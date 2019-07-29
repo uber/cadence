@@ -161,22 +161,10 @@ func (g *EventGenerator) GetNextVertices() []Vertex {
 	return batch
 }
 
-// ResetAsNew resets history event generator to its initial state
-func (g *EventGenerator) ResetAsNew() {
+// Reset reset the generator to the initial state
+func (g *EventGenerator) Reset() {
 	g.leafVertices = make([]Vertex, 0)
 	g.previousVertices = make([]Vertex, 0)
-	g.dice = rand.New(rand.NewSource(time.Now().Unix()))
-}
-
-// Reset reset the generator to the initial state
-func (g *EventGenerator) Reset(idx int) {
-	if idx >= len(g.resetPoints) {
-		panic("The reset point does not exist.")
-	}
-	toReset := g.resetPoints[idx]
-	g.previousVertices = toReset.previousVertices
-	g.leafVertices = toReset.leafVertices
-	g.resetPoints = g.resetPoints[idx:]
 	g.dice = rand.New(rand.NewSource(time.Now().Unix()))
 }
 
@@ -186,12 +174,24 @@ func (g *EventGenerator) ListResetPoint() []ResetPoint {
 	return g.resetPoints
 }
 
-// RandomReset randomly pick a reset point and reset the event generator to the point
-func (g *EventGenerator) RandomReset() int {
+// RandomResetToResetPoint randomly pick a reset point and reset the event generator to the point
+func (g *EventGenerator) RandomResetToResetPoint() int {
 	// Random reset does not reset to index 0
 	nextIdx := g.dice.Intn(len(g.resetPoints)-1) + 1
-	g.Reset(nextIdx)
+	g.ResetToResetPoint(nextIdx)
 	return nextIdx
+}
+
+// ResetToResetPoint resets to the corresponding reset point based on the input reset point index
+func (g *EventGenerator) ResetToResetPoint(index int) {
+	if index >= len(g.resetPoints) {
+		panic("The reset point does not exist.")
+	}
+	toReset := g.resetPoints[index]
+	g.previousVertices = toReset.previousVertices
+	g.leafVertices = toReset.leafVertices
+	g.resetPoints = g.resetPoints[index:]
+	g.dice = rand.New(rand.NewSource(time.Now().Unix()))
 }
 
 // SetBatchGenerationRule sets a function to determine next generated batch of history events

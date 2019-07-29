@@ -330,7 +330,7 @@ func (s *historyEventTestSuit) SetupSuite() {
 }
 
 func (s *historyEventTestSuit) SetupTest() {
-	s.generator.ResetAsNew()
+	s.generator.Reset()
 }
 
 // This is a sample about how to use the generator
@@ -361,7 +361,7 @@ func (s *historyEventTestSuit) Test_HistoryEvent_Generator() {
 		}
 		currentBranch--
 		if currentBranch > 0 {
-			resetIdx := s.generator.RandomReset()
+			resetIdx := s.generator.RandomResetToResetPoint()
 			curr = root.split(resetIdx)
 		}
 	}

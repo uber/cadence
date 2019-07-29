@@ -50,14 +50,14 @@ type (
 		GetNextVertices() []Vertex
 		// ListGeneratedVertices lists the pasted generated vertices
 		ListGeneratedVertices() []Vertex
-		// Reset resets the generator to a reset point
-		Reset(int)
+		// Reset cleans up all the internal states and reset to a brand new generator
+		Reset()
 		// ListResetPoint lists all available reset points
 		ListResetPoint() []ResetPoint
-		// ListResetPoint randomly pick a reset point to reset and return the reset point index
-		RandomReset() int
-		// ResetAsNew cleans up all the internal states and reset to a brand new generator
-		ResetAsNew()
+		// RandomResetToResetPoint randomly pick a reset point to reset and return the reset point index
+		RandomResetToResetPoint() int
+		// ResetToResetPoint resets the generator to a reset point
+		ResetToResetPoint(int)
 		// SetBatchGenerationRule sets a function that used in GetNextVertex to return batch result
 		SetBatchGenerationRule(func([]Vertex) bool)
 	}
