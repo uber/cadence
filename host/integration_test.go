@@ -27,7 +27,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/uber/cadence/common/backoff"
 	"math"
 	"sort"
 	"strconv"
@@ -40,6 +39,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/service/matching"
 )
@@ -1975,7 +1975,6 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 	sort.Slice(closedExecutions, func(i, j int) bool {
 		return closedExecutions[i].GetStartTime() < closedExecutions[j].GetStartTime()
 	})
-	// The first execution is the termination execution.
 	lastChildExecution := closedExecutions[1]
 	for i := 2; i != 4; i++ {
 		executionInfo := closedExecutions[i]
