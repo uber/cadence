@@ -26,6 +26,10 @@ import (
 	"time"
 )
 
+const (
+	emptyCandidateIndex = -1
+)
+
 var (
 	defaultBatchFunc = func(batch []Vertex) bool {
 		return len(batch) == 0
@@ -206,7 +210,7 @@ func (g *EventGenerator) generateNextEventBatch() []Vertex {
 		batch = append(batch, g.getRandomVertex())
 	default:
 		// Get the event candidates based on context
-		idx := g.getVertexIndexFromLeaf()
+		idx := g.getVertexCandidate()
 		batch = append(batch, g.randomNextVertex(idx)...)
 		g.leafVertices = append(g.leafVertices[:idx], g.leafVertices[idx+1:]...)
 	}
@@ -250,73 +254,72 @@ func (g *EventGenerator) getRandomVertex() Vertex {
 	return vertex
 }
 
-func (g *EventGenerator) getVertexIndexFromLeaf() int {
+func (g *EventGenerator) getVertexCandidate() int {
 	if len(g.leafVertices) == 0 {
 		panic("No possible vertex to go to next step")
 	}
-
-	isAccessible := false
 	nextRange := len(g.leafVertices)
 	notAvailable := make(map[int]bool)
-	var leaf Vertex
 	var nextVertexIdx int
-	for !isAccessible {
+	for len(notAvailable) < nextRange {
 		nextVertexIdx = g.dice.Intn(nextRange)
 		// If the vertex is not accessible at this state, skip it
 		if _, ok := notAvailable[nextVertexIdx]; ok {
 			continue
 		}
-		leaf = g.leafVertices[nextVertexIdx]
-		if g.leafVertices[len(g.leafVertices)-1].IsStrictOnNextVertex() {
-			nextVertexIdx = len(g.leafVertices) - 1
-			leaf = g.leafVertices[nextVertexIdx]
+		if isAccessible, nextVertexIdx := g.findAccessibleVertex(nextVertexIdx); isAccessible {
+			return nextVertexIdx
 		}
-		neighbors := g.connections[leaf]
-		for _, nextV := range neighbors {
-			if nextV.GetCondition() == nil || nextV.GetCondition()() {
-				isAccessible = true
-				return nextVertexIdx
-			}
-		}
-		// If all history event cannot be accessible, which means the model is incorrect
-		if !isAccessible {
-			notAvailable[nextVertexIdx] = true
-			if len(notAvailable) == nextRange {
-				panic("cannot find available history event to proceed. please check your model")
-			}
+		notAvailable[nextVertexIdx] = true
+	}
+	// If all history event cannot be accessible, which means the model is incorrect
+	panic("cannot find available history event to proceed. please check your model")
+}
+
+func (g *EventGenerator) findAccessibleVertex(vertexIndex int) (bool, int) {
+	candidate := g.leafVertices[vertexIndex]
+	var nextVertexIdx int
+	if g.leafVertices[len(g.leafVertices)-1].IsStrictOnNextVertex() {
+		nextVertexIdx = len(g.leafVertices) - 1
+		candidate = g.leafVertices[nextVertexIdx]
+	}
+	neighbors := g.connections[candidate]
+	for _, nextV := range neighbors {
+		if nextV.GetCondition() == nil || nextV.GetCondition()() {
+			return true, nextVertexIdx
 		}
 	}
-	return nextVertexIdx
+	return false, emptyCandidateIndex
 }
 
 func (g *EventGenerator) randomNextVertex(nextVertexIdx int) []Vertex {
 	nextVertex := g.leafVertices[nextVertexIdx]
 	count := g.dice.Intn(nextVertex.GetMaxNextVertex()) + 1
-	neighbors := g.connections[nextVertex]
-	neighborsRange := len(neighbors)
 	res := make([]Vertex, 0)
 	for i := 0; i < count; i++ {
-		nextIdx := g.dice.Intn(neighborsRange)
-		for neighbors[nextIdx].GetCondition() != nil && !neighbors[nextIdx].GetCondition()() {
-			nextIdx = g.dice.Intn(neighborsRange)
-		}
-		newConnection := neighbors[nextIdx]
-		newLeaf := newConnection.GetEndVertex()
-		res = append(res, newLeaf)
-		if newConnection.GetAction() != nil {
-			newConnection.GetAction()()
-		}
-		if _, ok := g.exitVertices[newLeaf]; ok {
-			res = []Vertex{newLeaf}
+		endVertex := g.pickRandomVertex(nextVertex)
+		res = append(res, endVertex)
+		if _, ok := g.exitVertices[endVertex]; ok {
+			res = []Vertex{endVertex}
 			return res
 		}
 	}
 	return res
 }
 
-func (g *EventGenerator) getRandomVertex(nextVertex Vertex) {
+func (g *EventGenerator) pickRandomVertex(nextVertex Vertex) Vertex {
 	neighbors := g.connections[nextVertex]
 	neighborsRange := len(neighbors)
+	nextIdx := g.dice.Intn(neighborsRange)
+	for neighbors[nextIdx].GetCondition() != nil && !neighbors[nextIdx].GetCondition()() {
+		nextIdx = g.dice.Intn(neighborsRange)
+	}
+	newConnection := neighbors[nextIdx]
+	endVertex := newConnection.GetEndVertex()
+	if newConnection.GetAction() != nil {
+		newConnection.GetAction()()
+	}
+	return endVertex
 }
 
 // NewHistoryEventEdge initials a new edge between two HistoryEventVertexes
