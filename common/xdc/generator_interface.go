@@ -29,6 +29,10 @@ type (
 
 	// Generator generates a sequence of vertices based on the defined models
 	// It must define InitialEntryVertex and ExitVertex
+	// To use a generator:
+	// for generator.HasNextVertex {
+	//     generator.GetNextVertices
+	// }
 	Generator interface {
 		// InitialEntryVertex is the beginning vertices of the graph
 		// Only one vertex will be picked as the entry
@@ -54,8 +58,8 @@ type (
 		RandomReset() int
 		// ResetAsNew cleans up all the internal states and reset to a brand new generator
 		ResetAsNew()
-		// SetCanDoBatchOnNextVertex sets a function that used in GetNextVertex to return batch result
-		SetCanDoBatchOnNextVertex(func([]Vertex) bool)
+		// SetBatchGenerationRule sets a function that used in GetNextVertex to return batch result
+		SetBatchGenerationRule(func([]Vertex) bool)
 	}
 
 	// Vertex represents a state in the model. A state represents a type of an Cadence event

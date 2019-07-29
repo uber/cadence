@@ -33,19 +33,22 @@ var (
 )
 
 type (
-	// HistoryEventVertex is the history event vertex
+	// HistoryEventVertex represents a history event
 	HistoryEventVertex struct {
 		name                 string
 		isStrictOnNextVertex bool
 		maxNextGeneration    int
 	}
 
-	// HistoryEventModel is the history event model
+	// HistoryEventModel is a history event model
+	// which contains transition state of each history event
 	HistoryEventModel struct {
 		edges []Edge
 	}
 
-	// EventGenerator is a event generator
+	// EventGenerator is a history event generator
+	// The event generator will generate next history event
+	// based on the history event transition graph defined in the model
 	EventGenerator struct {
 		connections         map[Vertex][]Edge
 		previousVertices    []Vertex
@@ -64,7 +67,7 @@ type (
 		leafVertices     []Vertex
 	}
 
-	// HistoryEventEdge is the edge of history events
+	// HistoryEventEdge is the directional edge of two history events
 	HistoryEventEdge struct {
 		startVertex Vertex
 		endVertex   Vertex
@@ -72,7 +75,8 @@ type (
 		action      func()
 	}
 
-	// RevokeFunc is the condition inside connection
+	// RevokeFunc is the condition inside edge
+	// The function used to check if the edge is accessible at a certain state
 	RevokeFunc struct {
 		methodName string
 		input      []interface{}
@@ -94,24 +98,25 @@ func NewEventGenerator() Generator {
 	}
 }
 
-// AddInitialEntryVertex adds the initial entry vertex. Generator will only start from one of the entry vertex
+// AddInitialEntryVertex adds the initial history event vertices
+// Generator will only start from one of the entry vertex
 func (g *EventGenerator) AddInitialEntryVertex(entry ...Vertex) {
 	g.entryVertices = append(g.entryVertices, entry...)
 }
 
-// AddExitVertex adds the terminate vertex in the generator
+// AddExitVertex adds the terminate history event vertex
 func (g *EventGenerator) AddExitVertex(exit ...Vertex) {
 	for _, v := range exit {
 		g.exitVertices[v] = true
 	}
 }
 
-// AddRandomEntryVertex adds the random vertex in the generator
+// AddRandomEntryVertex adds the random history event vertex
 func (g *EventGenerator) AddRandomEntryVertex(exit ...Vertex) {
 	g.randomEntryVertices = append(g.randomEntryVertices, exit...)
 }
 
-// AddModel adds a model
+// AddModel adds a history event model
 func (g *EventGenerator) AddModel(model Model) {
 	for _, e := range model.ListEdges() {
 		if _, ok := g.connections[e.GetStartVertex()]; !ok {
@@ -126,7 +131,7 @@ func (g EventGenerator) ListGeneratedVertices() []Vertex {
 	return g.previousVertices
 }
 
-// HasNextVertex checks if there is accessible vertex
+// HasNextVertex checks if there is accessible history event vertex
 func (g *EventGenerator) HasNextVertex() bool {
 	for _, prev := range g.previousVertices {
 		if _, ok := g.exitVertices[prev]; ok {
@@ -208,8 +213,8 @@ func (g *EventGenerator) RandomReset() int {
 	return nextIdx
 }
 
-// SetCanDoBatchOnNextVertex sets a function to determine next generated batch of history events
-func (g *EventGenerator) SetCanDoBatchOnNextVertex(canDoBatchFunc func([]Vertex) bool) {
+// SetBatchGenerationRule sets a function to determine next generated batch of history events
+func (g *EventGenerator) SetBatchGenerationRule(canDoBatchFunc func([]Vertex) bool) {
 	g.canDoBatch = canDoBatchFunc
 }
 
@@ -296,7 +301,7 @@ func (g *EventGenerator) randomNextVertex(nextVertexIdx int) []Vertex {
 	return res
 }
 
-// NewHistoryEventEdge initials a new edge between two HistoryEventVertex
+// NewHistoryEventEdge initials a new edge between two HistoryEventVertexes
 func NewHistoryEventEdge(
 	start Vertex,
 	end Vertex,
