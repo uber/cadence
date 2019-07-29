@@ -699,6 +699,38 @@ func (t *timerQueueActiveProcessorImpl) processWorkflowTimeout(
 			return err
 		}
 
+		if task.DomainID == "cb026e4f-a3af-4a5a-8036-6b53f2f8cab5" {
+			// NOTE: temporary patch
+			tryCount := 0
+		tryLoop:
+			for {
+				if _, ok := msBuilder.GetStartEvent(); ok {
+					break tryLoop
+				}
+
+				tryCount++
+				time.Sleep(2 * time.Second)
+
+				if tryCount > 30 {
+					executionInfo := msBuilder.GetExecutionInfo()
+					err := t.shard.GetExecutionManager().DeleteCurrentWorkflowExecution(&persistence.DeleteCurrentWorkflowExecutionRequest{
+						DomainID:   executionInfo.DomainID,
+						WorkflowID: executionInfo.WorkflowID,
+						RunID:      executionInfo.RunID,
+					})
+					if err != nil {
+						return err
+					}
+					return t.shard.GetExecutionManager().DeleteWorkflowExecution(&persistence.DeleteWorkflowExecutionRequest{
+						DomainID:   executionInfo.DomainID,
+						WorkflowID: executionInfo.WorkflowID,
+						RunID:      executionInfo.RunID,
+					})
+				}
+			}
+		}
+		// NOTE: temporary patch
+
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.
 		return t.updateWorkflowExecution(context, msBuilder, false, true, nil)
