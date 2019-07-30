@@ -267,7 +267,7 @@ func (s *timerQueueProcessorBaseSuite) TestDeleteWorkflow_NoErr() {
 	mockMutableState.On("GetCurrentBranch").Return([]byte{1, 2, 3}).Once()
 	mockMutableState.On("GetLastWriteVersion").Return(int64(1234))
 
-	err := s.timerQueueProcessor.deleteWorkflow(task, mockMutableState, ctx)
+	err := s.timerQueueProcessor.deleteWorkflow(task, ctx, mockMutableState)
 	s.NoError(err)
 }
 
@@ -295,7 +295,7 @@ func (s *timerQueueProcessorBaseSuite) TestArchiveWorkflow_NoErr_InlineArchivalF
 	}, nil)
 
 	domainCacheEntry := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{}, &persistence.DomainConfig{}, false, nil, 0, nil)
-	err := s.timerQueueProcessor.archiveWorkflow(&persistence.TimerTaskInfo{}, mockMutableState, mockWorkflowExecutionContext, domainCacheEntry)
+	err := s.timerQueueProcessor.archiveWorkflow(&persistence.TimerTaskInfo{}, mockWorkflowExecutionContext, mockMutableState, domainCacheEntry)
 	s.NoError(err)
 }
 
@@ -316,6 +316,6 @@ func (s *timerQueueProcessorBaseSuite) TestArchiveWorkflow_SendSignalErr() {
 	})).Return(nil, errors.New("failed to send signal"))
 
 	domainCacheEntry := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{}, &persistence.DomainConfig{}, false, nil, 0, nil)
-	err := s.timerQueueProcessor.archiveWorkflow(&persistence.TimerTaskInfo{}, mockMutableState, mockWorkflowExecutionContext, domainCacheEntry)
+	err := s.timerQueueProcessor.archiveWorkflow(&persistence.TimerTaskInfo{}, mockWorkflowExecutionContext, mockMutableState, domainCacheEntry)
 	s.Error(err)
 }

@@ -1463,8 +1463,6 @@ const (
 	ArchiverUploadSuccessCount
 	ArchiverDeleteLocalFailedAllRetriesCount
 	ArchiverDeleteLocalSuccessCount
-	ArchiverDeleteFailedAllRetriesCount
-	ArchiverDeleteSuccessCount
 	ArchiverBacklogSizeGauge
 	ArchiverPumpTimeoutCount
 	ArchiverPumpSignalThresholdCount
@@ -1730,8 +1728,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ArchiverUploadSuccessCount:               {metricName: "archiver_upload_success"},
 		ArchiverDeleteLocalFailedAllRetriesCount: {metricName: "archiver_delete_local_failed_all_retries"},
 		ArchiverDeleteLocalSuccessCount:          {metricName: "archiver_delete_local_success"},
-		ArchiverDeleteFailedAllRetriesCount:      {metricName: "archiver_delete_failed_all_retries"},
-		ArchiverDeleteSuccessCount:               {metricName: "archiver_delete_success"},
 		ArchiverBacklogSizeGauge:                 {metricName: "archiver_backlog_size"},
 		ArchiverPumpTimeoutCount:                 {metricName: "archiver_pump_timeout"},
 		ArchiverPumpSignalThresholdCount:         {metricName: "archiver_pump_signal_threshold"},

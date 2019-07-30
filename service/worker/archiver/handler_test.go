@@ -117,18 +117,12 @@ func (s *handlerSuite) TestHandleRequest_UploadSuccess() {
 func (s *handlerSuite) TestHandleRequest_LocalDeleteFails_NonRetryableError() {
 	handlerTestMetrics.On("IncCounter", metrics.ArchiverScope, metrics.ArchiverUploadSuccessCount).Once()
 	handlerTestMetrics.On("IncCounter", metrics.ArchiverScope, metrics.ArchiverDeleteLocalFailedAllRetriesCount).Once()
-	handlerTestMetrics.On("IncCounter", metrics.ArchiverScope, metrics.ArchiverDeleteSuccessCount).Once()
-	handlerTestLogger.On("Warn", mock.Anything, mock.Anything).Once()
+	handlerTestLogger.On("Error", mock.Anything, mock.Anything).Once()
 
 	env := s.NewTestWorkflowEnvironment()
 	env.OnActivity(uploadHistoryActivityFnName, mock.Anything, mock.Anything).Return(nil)
-	var deleteSucceed bool
 	env.OnActivity(deleteHistoryActivityFnName, mock.Anything, mock.Anything).Return(func(context.Context, ArchiveRequest) error {
-		if !deleteSucceed {
-			deleteSucceed = true
-			return cadence.NewCustomError(errDeleteNonRetriable.Error())
-		}
-		return nil
+		return cadence.NewCustomError(errDeleteNonRetriable.Error())
 	})
 	env.ExecuteWorkflow(handleRequestWorkflow, ArchiveRequest{})
 
