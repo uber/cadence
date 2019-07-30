@@ -140,7 +140,7 @@ ignored = ["github.com/uber/cadence/.gen"]
   version = "1.1.0"
 
 [[constraint]]
-  name = "github.com/hashicorp/go-version"
+  name = "github.com/hashicorp/go-version.git"
   version = "1.1.0"
 
 [[constraint]]
