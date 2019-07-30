@@ -30,8 +30,8 @@ RUN go get -u github.com/golang/dep/cmd/dep
 RUN go get -u golang.org/x/lint/golint
 
 # get and compile cadence-server
-RUN git clone https://github.com/uber/cadence.git /go/src/github.com/uber/cadence
-RUN cd /go/src/github.com/uber/cadence && git fetch && git checkout $git_branch && git rev-parse HEAD && make bins_nothrift
+RUN git clone https://github.com/uber/cadence.git /cadence
+RUN cd /cadence && git fetch && git checkout $git_branch && git rev-parse HEAD && make bins_nothrift
 
 
 # Final Cadence image
@@ -62,11 +62,11 @@ RUN mkdir $CADENCE_HOME/config/dynamicconfig/
 COPY ./dynamicconfig/development_es.yaml $CADENCE_HOME/config/dynamicconfig/development_es.yaml
 RUN chmod a+x $CADENCE_HOME/start.sh
 
-COPY --from=builder /go/src/github.com/uber/cadence/cadence-cassandra-tool /cadence
-COPY --from=builder /go/src/github.com/uber/cadence/cadence-sql-tool /cadence
-COPY --from=builder /go/src/github.com/uber/cadence/cadence /cadence
-COPY --from=builder /go/src/github.com/uber/cadence/cadence-server /cadence
-COPY --from=builder /go/src/github.com/uber/cadence/schema/ /cadence/schema/
+COPY --from=builder /cadence/cadence-cassandra-tool /cadence
+COPY --from=builder /cadence/cadence-sql-tool /cadence
+COPY --from=builder /cadence/cadence /cadence
+COPY --from=builder /cadence/cadence-server /cadence
+COPY --from=builder /cadence/schema/ /cadence/schema/
 
 WORKDIR $CADENCE_HOME
 CMD ./start.sh $CADENCE_HOME

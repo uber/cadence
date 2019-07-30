@@ -81,13 +81,13 @@ PKG_TEST_DIRS := $(filter-out $(INTEG_TEST_ROOT)%,$(TEST_DIRS))
 #   Packages are specified as import paths.
 GOCOVERPKG_ARG := -coverpkg="$(PROJECT_ROOT)/common/...,$(PROJECT_ROOT)/service/...,$(PROJECT_ROOT)/client/...,$(PROJECT_ROOT)/tools/..."
 
-dep-ensured:
-	./install-dep.sh
-	dep ensure
+go-mod:
+	go mod tidy
+	go mod vendor
 
 yarpc-install:
-	go get './vendor/go.uber.org/thriftrw'
-	go get './vendor/go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc'
+	go get 'go.uber.org/thriftrw'
+	go get 'go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc'
 
 clean_thrift:
 	rm -rf .gen
@@ -97,30 +97,30 @@ thriftc: yarpc-install $(THRIFTRW_GEN_SRC)
 copyright: cmd/tools/copyright/licensegen.go
 	GOOS= GOARCH= go run ./cmd/tools/copyright/licensegen.go --verifyOnly
 
-cadence-cassandra-tool: dep-ensured $(TOOLS_SRC)
+cadence-cassandra-tool: go-mod $(TOOLS_SRC)
 	go build -i -o cadence-cassandra-tool cmd/tools/cassandra/main.go
 
-cadence-sql-tool: dep-ensured $(TOOLS_SRC)
+cadence-sql-tool: go-mod $(TOOLS_SRC)
 	go build -i -o cadence-sql-tool cmd/tools/sql/main.go
 
-cadence: dep-ensured $(TOOLS_SRC)
+cadence: go-mod $(TOOLS_SRC)
 	go build -i -o cadence cmd/tools/cli/main.go
 
-cadence-server: dep-ensured $(ALL_SRC)
+cadence-server: go-mod $(ALL_SRC)
 	go build -ldflags '$(GO_BUILD_LDFLAGS)' -i -o cadence-server cmd/server/cadence.go cmd/server/server.go
 
 bins_nothrift: lint copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server
 
 bins: thriftc bins_nothrift
 
-test: dep-ensured bins
+test: go-mod bins
 	@rm -f test
 	@rm -f test.log
 	@for dir in $(TEST_DIRS); do \
 		go test -timeout 20m -race -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
 	done;
 
-test_eventsV2: dep-ensured bins
+test_eventsV2: go-mod bins
 	@rm -f test_eventsV2
 	@rm -f test_eventsV2.log
 	@echo Running integration test
@@ -128,7 +128,7 @@ test_eventsV2: dep-ensured bins
     		go test -timeout 20m -coverprofile=$@ "$$dir" -v $(TEST_TAG) -eventsV2=true | tee -a test_eventsV2.log; \
     done;
 
-test_eventsV2_xdc: dep-ensured bins
+test_eventsV2_xdc: go-mod bins
 	@rm -f test_eventsV2_xdc
 	@rm -f test_eventsV2_xdc.log
 	@echo Running integration test for cross dc:
@@ -137,7 +137,7 @@ test_eventsV2_xdc: dep-ensured bins
 	done;
 
 # need to run xdc tests with race detector off because of ringpop bug causing data race issue
-test_xdc: dep-ensured bins
+test_xdc: go-mod bins
 	@rm -f test
 	@rm -f test.log
 	@for dir in $(INTEG_TEST_XDC_ROOT); do \
@@ -185,7 +185,7 @@ cover_integration_ci: cover_integration_profile
 cover_xdc_ci: cover_xdc_profile
 	goveralls -coverprofile=$(BUILD)/cover.out -service=travis-ci || echo -e "\x1b[31mCoveralls failed\x1b[m"; \
 
-lint: dep-ensured
+lint: go-mod
 	@echo Running linter
 	@lintFail=0; for file in $(ALL_SRC); do \
 		golint "$$file"; \
