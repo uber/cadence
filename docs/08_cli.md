@@ -14,7 +14,8 @@ Example of using the docker image to describe a domain:
 docker run --rm ubercadence/cli:master --domain samples-domain domain describe
 ```
 
-You may get "connection refused" error for 18.03 onwards versions of docker. You have to use host.docker.internal. For more info check https://docs.docker.com/docker-for-mac/networking/#use-cases-and-workarounds  
+On Docker versions 18.03 and later, you may get a "connection refused" error. You can work around this by setting the host to "host.docker.internal" (see [here](https://docs.docker.com/docker-for-mac/networking/#use-cases-and-workarounds) for more info).
+
 ```
 docker run --rm ubercadence/cli:master --address host.docker.internal:7933 --domain samples-domain domain describe
 ```
