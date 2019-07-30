@@ -43,7 +43,7 @@ A domain includes two pieces of archival related config:
 In order to run locally do the following:
 1. `./cadence-server start`
 2. `./cadence --do samples-domain domain register --gd false --archival_status enabled --retention 0`
-3. Run the [helloworld cadence-sample](https://github.com/samarabbas/cadence-samples) by following the README
+3. Run the [helloworld cadence-sample](https://github.com/uber-common/cadence-samples) by following the README
 4. Copy the workflowID and runID of the completed workflow from log output
 5. `./cadence --do samples-domain wf show --wid <workflowID> --rid <runID>`
 

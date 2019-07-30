@@ -69,7 +69,7 @@ To run a workflow, the user must specify the following:
 3. Execution start to close timeout in seconds (--et)
 4. Input in JSON format (--i) (optional) 
 
-This example uses [this cadence-samples workflow](https://github.com/samarabbas/cadence-samples/blob/master/cmd/samples/recipes/helloworld/helloworld_workflow.go) 
+This example uses [this cadence-samples workflow](https://github.com/uber-common/cadence-samples/blob/master/cmd/samples/recipes/helloworld/helloworld_workflow.go) 
 and takes a string as input with the `-i '"cadence"'` parameter. Single quotes (`''`) are used to wrap input as JSON. 
 
 **Note:** You need to start the worker so that the workflow can make progress.  
