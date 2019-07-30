@@ -69,7 +69,7 @@ type Interface interface {
 	QueryWorkflow(
 		ctx context.Context,
 		QueryRequest *matching.QueryWorkflowRequest,
-	) (*shared.QueryWorkflowResponse, error)
+	) (*matching.QueryWorkflowResponse, error)
 
 	RespondQueryTaskCompleted(
 		ctx context.Context,
@@ -161,7 +161,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.QueryWorkflow),
 				},
-				Signature:    "QueryWorkflow(QueryRequest *matching.QueryWorkflowRequest) (*shared.QueryWorkflowResponse)",
+				Signature:    "QueryWorkflow(QueryRequest *matching.QueryWorkflowRequest) (*matching.QueryWorkflowResponse)",
 				ThriftModule: matching.ThriftModule,
 			},
 

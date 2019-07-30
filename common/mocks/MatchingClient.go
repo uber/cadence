@@ -113,15 +113,15 @@ func (_m *MatchingClient) PollForDecisionTask(ctx context.Context,
 
 // QueryWorkflow provides a mock function with given fields: ctx, queryRequest
 func (_m *MatchingClient) QueryWorkflow(ctx context.Context,
-	queryRequest *matching.QueryWorkflowRequest, opts ...yarpc.CallOption) (*shared.QueryWorkflowResponse, error) {
+	queryRequest *matching.QueryWorkflowRequest, opts ...yarpc.CallOption) (*matching.QueryWorkflowResponse, error) {
 	ret := _m.Called(ctx, queryRequest)
 
-	var r0 *shared.QueryWorkflowResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *matching.QueryWorkflowRequest) *shared.QueryWorkflowResponse); ok {
+	var r0 *matching.QueryWorkflowResponse
+	if rf, ok := ret.Get(0).(func(context.Context, *matching.QueryWorkflowRequest) *matching.QueryWorkflowResponse); ok {
 		r0 = rf(ctx, queryRequest)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*shared.QueryWorkflowResponse)
+			r0 = ret.Get(0).(*matching.QueryWorkflowResponse)
 		}
 	}
 

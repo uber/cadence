@@ -267,7 +267,7 @@ func (m *MockClient) QueryWorkflow(
 	ctx context.Context,
 	_QueryRequest *matching.QueryWorkflowRequest,
 	opts ...yarpc.CallOption,
-) (success *shared.QueryWorkflowResponse, err error) {
+) (success *matching.QueryWorkflowResponse, err error) {
 
 	args := []interface{}{ctx, _QueryRequest}
 	for _, o := range opts {
@@ -275,7 +275,7 @@ func (m *MockClient) QueryWorkflow(
 	}
 	i := 0
 	ret := m.ctrl.Call(m, "QueryWorkflow", args...)
-	success, _ = ret[i].(*shared.QueryWorkflowResponse)
+	success, _ = ret[i].(*matching.QueryWorkflowResponse)
 	i++
 	err, _ = ret[i].(error)
 	return

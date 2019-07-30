@@ -1320,6 +1320,8 @@ struct QueryWorkflowRequest {
 
 struct QueryWorkflowResponse {
   10: optional binary queryResult
+  20: optional bool isWorkflowRunning
+  30: optional WorkflowExecutionCloseStatus closeStatus
 }
 
 struct WorkflowQuery {

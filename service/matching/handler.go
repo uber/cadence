@@ -235,7 +235,7 @@ func (h *Handler) PollForDecisionTask(ctx context.Context,
 
 // QueryWorkflow queries a given workflow synchronously and return the query result.
 func (h *Handler) QueryWorkflow(ctx context.Context,
-	queryRequest *m.QueryWorkflowRequest) (resp *gen.QueryWorkflowResponse, retError error) {
+	queryRequest *m.QueryWorkflowRequest) (resp *m.QueryWorkflowResponse, retError error) {
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	scope := metrics.MatchingQueryWorkflowScope
 	sw := h.startRequestProfile("QueryWorkflow", scope)

@@ -81,6 +81,10 @@ struct QueryWorkflowRequest {
   40: optional string forwardedFrom
 }
 
+struct QueryWorkflowResponse {
+  10: optional binary queryResult
+}
+
 struct RespondQueryTaskCompletedRequest {
   10: optional string domainUUID
   20: optional shared.TaskList taskList
@@ -161,7 +165,7 @@ service MatchingService {
   /**
   * QueryWorkflow is called by frontend to query a workflow.
   **/
-  shared.QueryWorkflowResponse QueryWorkflow(1: QueryWorkflowRequest queryRequest)
+  QueryWorkflowResponse QueryWorkflow(1: QueryWorkflowRequest queryRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,

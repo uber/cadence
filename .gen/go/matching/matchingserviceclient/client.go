@@ -78,7 +78,7 @@ type Interface interface {
 		ctx context.Context,
 		QueryRequest *matching.QueryWorkflowRequest,
 		opts ...yarpc.CallOption,
-	) (*shared.QueryWorkflowResponse, error)
+	) (*matching.QueryWorkflowResponse, error)
 
 	RespondQueryTaskCompleted(
 		ctx context.Context,
@@ -253,7 +253,7 @@ func (c client) QueryWorkflow(
 	ctx context.Context,
 	_QueryRequest *matching.QueryWorkflowRequest,
 	opts ...yarpc.CallOption,
-) (success *shared.QueryWorkflowResponse, err error) {
+) (success *matching.QueryWorkflowResponse, err error) {
 
 	args := matching.MatchingService_QueryWorkflow_Helper.Args(_QueryRequest)
 

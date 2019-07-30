@@ -147,7 +147,7 @@ func (c *clientImpl) PollForDecisionTask(
 	return client.PollForDecisionTask(ctx, request, opts...)
 }
 
-func (c *clientImpl) QueryWorkflow(ctx context.Context, request *m.QueryWorkflowRequest, opts ...yarpc.CallOption) (*workflow.QueryWorkflowResponse, error) {
+func (c *clientImpl) QueryWorkflow(ctx context.Context, request *m.QueryWorkflowRequest, opts ...yarpc.CallOption) (*m.QueryWorkflowResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	partition := c.loadBalancer.PickReadPartition(
 		request.GetDomainUUID(),

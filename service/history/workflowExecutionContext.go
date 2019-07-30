@@ -503,8 +503,9 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 	// TODO remove updateCondition in favor of condition in mutable state
 	c.updateCondition = currentWorkflow.ExecutionInfo.NextEventID
 
+	closeStatus := c.msBuilder.GetExecutionInfo().CloseStatus
 	c.watcher.Publish(&WatcherSnapshot{
-		CloseStatus: c.msBuilder.GetExecutionInfo().CloseStatus,
+		CloseStatus: closeStatus,
 	})
 
 	// for any change in the workflow, send a event
@@ -516,6 +517,7 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 		c.msBuilder.GetNextEventID(),
 		c.msBuilder.GetPreviousStartedEventID(),
 		c.msBuilder.IsWorkflowExecutionRunning(),
+		closeStatus,
 	))
 
 	// notify current workflow tasks

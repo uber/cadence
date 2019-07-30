@@ -173,7 +173,7 @@ func (fwdr *Forwarder) ForwardTask(ctx context.Context, task *internalTask) erro
 func (fwdr *Forwarder) ForwardQueryTask(
 	ctx context.Context,
 	task *internalTask,
-) (*shared.QueryWorkflowResponse, error) {
+) (*gen.QueryWorkflowResponse, error) {
 
 	if fwdr.taskListKind == shared.TaskListKindSticky {
 		return nil, errTaskListKind

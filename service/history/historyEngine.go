@@ -565,6 +565,12 @@ func (e *historyEngineImpl) GetMutableState(
 				response.NextEventId = common.Int64Ptr(event.nextEventID)
 				response.IsWorkflowRunning = common.BoolPtr(event.isWorkflowRunning)
 				response.PreviousStartedEventId = common.Int64Ptr(event.previousStartedEventID)
+				if !response.GetIsWorkflowRunning() {
+					closeStatus := getWorkflowExecutionCloseStatus(event.closeStatus)
+					response.CloseStatus = &closeStatus
+				} else {
+					response.CloseStatus = nil
+				}
 				if expectedNextEventID < response.GetNextEventId() || !response.GetIsWorkflowRunning() {
 					return response, nil
 				}
@@ -611,6 +617,10 @@ func (e *historyEngineImpl) getMutableState(
 		IsWorkflowRunning:      common.BoolPtr(msBuilder.IsWorkflowExecutionRunning()),
 		EventStoreVersion:      common.Int32Ptr(msBuilder.GetEventStoreVersion()),
 		BranchToken:            msBuilder.GetCurrentBranch(),
+	}
+	if !retResp.GetIsWorkflowRunning() {
+		closeStatus := getWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
+		retResp.CloseStatus = &closeStatus
 	}
 
 	if msBuilder.IsStickyTaskListEnabled() {

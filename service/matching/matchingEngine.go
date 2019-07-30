@@ -445,7 +445,7 @@ pollLoop:
 
 // QueryWorkflow creates a DecisionTask with query data, send it through sync match channel, wait for that DecisionTask
 // to be processed by worker, and then return the query result.
-func (e *matchingEngineImpl) QueryWorkflow(ctx context.Context, queryRequest *m.QueryWorkflowRequest) (*workflow.QueryWorkflowResponse, error) {
+func (e *matchingEngineImpl) QueryWorkflow(ctx context.Context, queryRequest *m.QueryWorkflowRequest) (*m.QueryWorkflowResponse, error) {
 	domainID := queryRequest.GetDomainUUID()
 	taskListName := queryRequest.TaskList.GetName()
 	taskListKind := common.TaskListKindPtr(queryRequest.TaskList.GetKind())
@@ -469,7 +469,7 @@ query_loop:
 
 		if result != nil {
 			// task was remotely matched on another host, directly send the response
-			return &workflow.QueryWorkflowResponse{QueryResult: result}, nil
+			return &m.QueryWorkflowResponse{QueryResult: result}, nil
 		}
 
 		queryResultCh := make(chan *queryResult, 1)
@@ -485,7 +485,7 @@ query_loop:
 		select {
 		case result := <-queryResultCh:
 			if result.err == nil {
-				return &workflow.QueryWorkflowResponse{QueryResult: result.result}, nil
+				return &m.QueryWorkflowResponse{QueryResult: result.result}, nil
 			}
 
 			lastErr = result.err // lastErr will not be nil

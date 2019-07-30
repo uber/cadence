@@ -145,7 +145,7 @@ func (t *ForwarderTestSuite) TestForwardQueryTaskError() {
 func (t *ForwarderTestSuite) TestForwardQueryTask() {
 	t.usingTasklistPartition(persistence.TaskListTypeDecision)
 	task := newInternalQueryTask("id1", &gen.QueryWorkflowRequest{})
-	resp := &shared.QueryWorkflowResponse{}
+	resp := &gen.QueryWorkflowResponse{}
 	var request *gen.QueryWorkflowRequest
 	t.client.On("QueryWorkflow", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		request = args.Get(1).(*gen.QueryWorkflowRequest)
@@ -161,7 +161,7 @@ func (t *ForwarderTestSuite) TestForwardQueryTask() {
 func (t *ForwarderTestSuite) TestForwardQueryTaskRateNotEnforced() {
 	t.usingTasklistPartition(persistence.TaskListTypeActivity)
 	task := newInternalQueryTask("id1", &gen.QueryWorkflowRequest{})
-	resp := &shared.QueryWorkflowResponse{}
+	resp := &gen.QueryWorkflowResponse{}
 	rps := 2
 	t.client.On("QueryWorkflow", mock.Anything, mock.Anything).Return(resp, nil).Times(rps + 1)
 	for i := 0; i < rps; i++ {

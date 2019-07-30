@@ -144,7 +144,7 @@ func (c *metricClient) PollForDecisionTask(
 func (c *metricClient) QueryWorkflow(
 	ctx context.Context,
 	request *m.QueryWorkflowRequest,
-	opts ...yarpc.CallOption) (*workflow.QueryWorkflowResponse, error) {
+	opts ...yarpc.CallOption) (*m.QueryWorkflowResponse, error) {
 	c.metricsClient.IncCounter(metrics.MatchingClientQueryWorkflowScope, metrics.CadenceClientRequests)
 	sw := c.metricsClient.StartTimer(metrics.MatchingClientQueryWorkflowScope, metrics.CadenceClientLatency)
 

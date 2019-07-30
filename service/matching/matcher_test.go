@@ -203,7 +203,7 @@ func (t *MatcherTestSuite) TestQueryRemoteSyncMatch() {
 		close(pollSigC)
 		time.Sleep(10 * time.Millisecond)
 		t.matcher.OfferQuery(ctx, task)
-	}).Return(&shared.QueryWorkflowResponse{QueryResult: []byte("answer")}, nil)
+	}).Return(&gen.QueryWorkflowResponse{QueryResult: []byte("answer")}, nil)
 
 	go func() {
 		time.Sleep(time.Millisecond * 5)

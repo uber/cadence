@@ -2703,7 +2703,7 @@ func (wh *WorkflowHandler) QueryWorkflow(
 	}
 
 	// we should always use the mutable state, since it contains the sticky tasklist information
-	response, err := wh.history.GetMutableState(ctx, &h.GetMutableStateRequest{
+	historyResp, err := wh.history.GetMutableState(ctx, &h.GetMutableStateRequest{
 		DomainUUID: common.StringPtr(domainID),
 		Execution:  queryRequest.Execution,
 	})
@@ -2711,22 +2711,26 @@ func (wh *WorkflowHandler) QueryWorkflow(
 		return nil, wh.error(err, scope)
 	}
 	clientFeature := client.NewFeatureImpl(
-		response.GetClientLibraryVersion(),
-		response.GetClientFeatureVersion(),
-		response.GetClientImpl(),
+		historyResp.GetClientLibraryVersion(),
+		historyResp.GetClientFeatureVersion(),
+		historyResp.GetClientImpl(),
 	)
 
-	queryRequest.Execution.RunId = response.Execution.RunId
-	if len(response.StickyTaskList.GetName()) != 0 && clientFeature.SupportStickyQuery() {
-		matchingRequest.TaskList = response.StickyTaskList
-		stickyDecisionTimeout := response.GetStickyTaskListScheduleToStartTimeout()
+	queryRequest.Execution.RunId = historyResp.Execution.RunId
+	if len(historyResp.StickyTaskList.GetName()) != 0 && clientFeature.SupportStickyQuery() {
+		matchingRequest.TaskList = historyResp.StickyTaskList
+		stickyDecisionTimeout := historyResp.GetStickyTaskListScheduleToStartTimeout()
 		// using a clean new context in case customer provide a context which has
 		// a really short deadline, causing we clear the stickyness
 		stickyContext, cancel := context.WithTimeout(context.Background(), time.Duration(stickyDecisionTimeout)*time.Second)
 		matchingResp, err := wh.matchingRawClient.QueryWorkflow(stickyContext, matchingRequest)
 		cancel()
 		if err == nil {
-			return matchingResp, nil
+			return &shared.QueryWorkflowResponse{
+				QueryResult:       matchingResp.QueryResult,
+				IsWorkflowRunning: historyResp.IsWorkflowRunning,
+				CloseStatus:       historyResp.CloseStatus,
+			}, nil
 		}
 		if yarpcError, ok := err.(*yarpcerrors.Status); !ok || yarpcError.Code() != yarpcerrors.CodeDeadlineExceeded {
 			wh.Service.GetLogger().Info("QueryWorkflowFailed.",
@@ -2749,7 +2753,7 @@ func (wh *WorkflowHandler) QueryWorkflow(
 		}
 	}
 
-	matchingRequest.TaskList = response.TaskList
+	matchingRequest.TaskList = historyResp.TaskList
 	matchingResp, err := wh.matching.QueryWorkflow(ctx, matchingRequest)
 	if err != nil {
 		wh.Service.GetLogger().Info("QueryWorkflowFailed.",
@@ -2760,7 +2764,11 @@ func (wh *WorkflowHandler) QueryWorkflow(
 		return nil, wh.error(err, scope)
 	}
 
-	return matchingResp, nil
+	return &shared.QueryWorkflowResponse{
+		QueryResult:       matchingResp.QueryResult,
+		IsWorkflowRunning: historyResp.IsWorkflowRunning,
+		CloseStatus:       historyResp.CloseStatus,
+	}, nil
 }
 
 // DescribeWorkflowExecution returns information about the specified workflow execution.

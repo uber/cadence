@@ -104,9 +104,9 @@ func (c *retryableClient) PollForDecisionTask(
 func (c *retryableClient) QueryWorkflow(
 	ctx context.Context,
 	queryRequest *m.QueryWorkflowRequest,
-	opts ...yarpc.CallOption) (*workflow.QueryWorkflowResponse, error) {
+	opts ...yarpc.CallOption) (*m.QueryWorkflowResponse, error) {
 
-	var resp *workflow.QueryWorkflowResponse
+	var resp *m.QueryWorkflowResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.QueryWorkflow(ctx, queryRequest, opts...)
