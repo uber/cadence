@@ -72,6 +72,7 @@ type (
 		AddDecisionTaskFailedEvent(scheduleEventID int64, startedEventID int64, cause workflow.DecisionTaskFailedCause, details []byte, identity, reason, baseRunID, newRunID string, forkEventVersion int64) (*workflow.HistoryEvent, error)
 		AddDecisionTaskScheduleToStartTimeoutEvent(int64) (*workflow.HistoryEvent, error)
 		AddDecisionTaskScheduledEvent() (*decisionInfo, error)
+		AddDecisionTaskScheduledEventAsHeartbeat(originalScheduledTimestamp int64) (*decisionInfo, error)
 		AddDecisionTaskStartedEvent(int64, string, *workflow.PollForDecisionTaskRequest) (*workflow.HistoryEvent, *decisionInfo, error)
 		AddDecisionTaskTimedOutEvent(int64, int64) (*workflow.HistoryEvent, error)
 		AddExternalWorkflowExecutionCancelRequested(int64, string, string, string) (*workflow.HistoryEvent, error)
@@ -170,7 +171,7 @@ type (
 		ReplicateChildWorkflowExecutionTimedOutEvent(*workflow.HistoryEvent) error
 		ReplicateDecisionTaskCompletedEvent(*workflow.HistoryEvent) error
 		ReplicateDecisionTaskFailedEvent() error
-		ReplicateDecisionTaskScheduledEvent(int64, int64, string, int32, int64, int64) (*decisionInfo, error)
+		ReplicateDecisionTaskScheduledEvent(int64, int64, string, int32, int64, int64, int64) (*decisionInfo, error)
 		ReplicateDecisionTaskStartedEvent(*decisionInfo, int64, int64, int64, string, int64) (*decisionInfo, error)
 		ReplicateDecisionTaskTimedOutEvent(workflow.TimeoutType) error
 		ReplicateExternalWorkflowExecutionCancelRequested(*workflow.HistoryEvent) error

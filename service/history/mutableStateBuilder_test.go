@@ -408,9 +408,9 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: shared.EventTypeWorkflowExecutionStarted.Ptr(),
 		WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
-			WorkflowType:                        &shared.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &shared.TaskList{Name: common.StringPtr(tasklist)},
-			Input:                               nil,
+			WorkflowType: &shared.WorkflowType{Name: common.StringPtr(workflowType)},
+			TaskList:     &shared.TaskList{Name: common.StringPtr(tasklist)},
+			Input:        nil,
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(workflowTimeoutSecond),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(decisionTimeoutSecond),
 		},
@@ -472,7 +472,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 		decisionScheduleEvent.DecisionTaskScheduledEventAttributes.TaskList.GetName(),
 		decisionScheduleEvent.DecisionTaskScheduledEventAttributes.GetStartToCloseTimeoutSeconds(),
 		decisionScheduleEvent.DecisionTaskScheduledEventAttributes.GetAttempt(),
-		0,
+		0, 0,
 	)
 	s.Nil(err)
 	s.NotNil(di)
@@ -522,7 +522,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 		newDecisionScheduleEvent.DecisionTaskScheduledEventAttributes.TaskList.GetName(),
 		newDecisionScheduleEvent.DecisionTaskScheduledEventAttributes.GetStartToCloseTimeoutSeconds(),
 		newDecisionScheduleEvent.DecisionTaskScheduledEventAttributes.GetAttempt(),
-		0,
+		0, 0,
 	)
 	s.Nil(err)
 	s.NotNil(di)
