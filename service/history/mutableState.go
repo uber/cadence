@@ -39,10 +39,16 @@ type (
 		DecisionTimeout int32
 		TaskList        string // This is only needed to communicate tasklist used after AddDecisionTaskScheduledEvent
 		Attempt         int64
-		// They are useful for transient decision: when transient decision finally completes, use these timestamp to create scheduled/started events.
+		// Scheduled and Started timestamps are useful for transient decision: when transient decision finally completes,
+		// use these timestamp to create scheduled/started events.
 		// Also used for recording latency metrics
 		ScheduledTimestamp int64
 		StartedTimestamp   int64
+		// OriginalScheduledTimestamp is to record the first scheduled decision during decision heartbeat.
+		// Client may heartbeat decision by RespondDecisionTaskComplete with ForceCreateNewDecisionTask == true
+		// In this case, OriginalScheduledTimestamp won't change. Then when current time - OriginalScheduledTimestamp exceeds
+		// some threshold, server can interrupt the heartbeat by enforcing to timeout the decision.
+		OriginalScheduledTimestamp int64
 	}
 
 	mutableState interface {

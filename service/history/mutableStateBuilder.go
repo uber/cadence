@@ -593,8 +593,8 @@ func (e *mutableStateBuilder) IsStickyTaskListEnabled() bool {
 	if e.executionInfo.StickyTaskList == "" {
 		return false
 	}
-	maxDu := e.config.StickyTTL(e.domainName)
-	if e.timeSource.Now().After(e.executionInfo.LastUpdatedTimestamp.Add(maxDu)) {
+	ttl := e.config.StickyTTL(e.domainName)
+	if e.timeSource.Now().After(e.executionInfo.LastUpdatedTimestamp.Add(ttl)) {
 		return false
 	}
 	return true
