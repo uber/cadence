@@ -231,3 +231,7 @@ func (tc *TestCluster) GetFrontendClient() FrontendClient {
 func (tc *TestCluster) GetAdminClient() AdminClient {
 	return tc.host.GetAdminClient()
 }
+
+func (tc *TestCluster) GetHistoryClient() HistoryClient {
+	return tc.host.GetHistoryClient()
+}
