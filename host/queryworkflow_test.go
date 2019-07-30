@@ -94,7 +94,6 @@ func (s *integrationSuite) TestQueryWorkflow_Sticky() {
 				},
 			}}, nil
 		}
-
 		return nil, []*workflow.Decision{{
 			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
 			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
@@ -175,6 +174,8 @@ func (s *integrationSuite) TestQueryWorkflow_Sticky() {
 	s.NoError(queryResult.Err)
 	s.NotNil(queryResult.Resp)
 	s.NotNil(queryResult.Resp.QueryResult)
+	s.True(queryResult.Resp.GetIsWorkflowRunning())
+	s.Nil(queryResult.Resp.CloseStatus)
 	queryResultString := string(queryResult.Resp.QueryResult)
 	s.Equal("query-result", queryResultString)
 
@@ -340,6 +341,8 @@ func (s *integrationSuite) TestQueryWorkflow_StickyTimeout() {
 	s.NoError(queryResult.Err)
 	s.NotNil(queryResult.Resp)
 	s.NotNil(queryResult.Resp.QueryResult)
+	s.True(queryResult.Resp.GetIsWorkflowRunning())
+	s.Nil(queryResult.Resp.CloseStatus)
 	queryResultString := string(queryResult.Resp.QueryResult)
 	s.Equal("query-result", queryResultString)
 }
@@ -497,6 +500,31 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 	queryFailError, ok := queryResult.Err.(*workflow.QueryFailedError)
 	s.True(ok)
 	s.Equal("unknown-query-type", queryFailError.Message)
+
+	// complete the workflow
+	_, err = poller.PollAndProcessDecisionTaskWithAttempt(false, false, false, true, int64(0))
+	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
+	s.Nil(err)
+
+	go queryWorkflowFn(queryType)
+	for {
+		// loop until process the query task
+		isQueryTask, errInner := poller.PollAndProcessDecisionTask(false, false)
+		s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
+		s.Nil(errInner)
+		if isQueryTask {
+			break
+		}
+	}
+	// wait until query result is ready
+	queryResult = <-queryResultCh
+	s.Nil(queryResult.Err)
+	s.NotNil(queryResult.Resp)
+	s.NotNil(queryResult.Resp.QueryResult)
+	s.False(queryResult.Resp.GetIsWorkflowRunning())
+	s.Equal(workflow.WorkflowExecutionCloseStatusCompleted, queryResult.Resp.GetCloseStatus())
+	queryResultString = string(queryResult.Resp.QueryResult)
+	s.Equal("query-result", queryResultString)
 }
 
 func (s *integrationSuite) TestQueryWorkflow_BeforeFirstDecision() {
@@ -628,6 +656,40 @@ func (s *integrationSuite) TestQueryWorkflow_BeforeFirstDecision() {
 	s.NoError(queryResult.Err)
 	s.NotNil(queryResult.Resp)
 	s.NotNil(queryResult.Resp.QueryResult)
+	s.True(queryResult.Resp.GetIsWorkflowRunning())
+	s.Nil(queryResult.Resp.CloseStatus)
 	queryResultString := string(queryResult.Resp.QueryResult)
+	s.Equal("query-result", queryResultString)
+
+	err := s.engine.TerminateWorkflowExecution(createContext(), &workflow.TerminateWorkflowExecutionRequest{
+		Domain: common.StringPtr(s.domainName),
+		WorkflowExecution: &workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(id),
+			RunId:      common.StringPtr(*we.RunId),
+		},
+		Reason:   common.StringPtr("terminate reason."),
+		Details:  []byte("terminate details."),
+		Identity: common.StringPtr(identity),
+	})
+	s.Nil(err)
+
+	go queryWorkflowFn(queryType)
+	for {
+		// loop until process the query task
+		isQueryTask, errInner := poller.PollAndProcessDecisionTask(false, false)
+		s.Nil(errInner)
+		if isQueryTask {
+			break
+		}
+	} // wait until query result is ready
+	s.True(queryTaskHandled)
+
+	queryResult = <-queryResultCh
+	s.NoError(queryResult.Err)
+	s.NotNil(queryResult.Resp)
+	s.NotNil(queryResult.Resp.QueryResult)
+	s.False(queryResult.Resp.GetIsWorkflowRunning())
+	s.Equal(workflow.WorkflowExecutionCloseStatusTerminated, queryResult.Resp.GetCloseStatus())
+	queryResultString = string(queryResult.Resp.QueryResult)
 	s.Equal("query-result", queryResultString)
 }
