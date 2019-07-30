@@ -92,7 +92,7 @@ func (task *addLicenseHeaderTask) run() error {
 
 	task.license, err = commentOutLines(string(data))
 	if err != nil {
-		return fmt.Errorf("copyright header check failed, err=%v", err.Error())
+		return fmt.Errorf("copyright header failed to comment out lines, err=%v", err.Error())
 	}
 
 	err = filepath.Walk(task.config.rootDir, task.handleFile)
