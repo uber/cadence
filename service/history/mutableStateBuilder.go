@@ -964,14 +964,15 @@ func (e *mutableStateBuilder) DeleteUserTimer(timerID string) {
 
 func (e *mutableStateBuilder) getDecisionInfo() *decisionInfo {
 	return &decisionInfo{
-		Version:            e.executionInfo.DecisionVersion,
-		ScheduleID:         e.executionInfo.DecisionScheduleID,
-		StartedID:          e.executionInfo.DecisionStartedID,
-		RequestID:          e.executionInfo.DecisionRequestID,
-		DecisionTimeout:    e.executionInfo.DecisionTimeout,
-		Attempt:            e.executionInfo.DecisionAttempt,
-		StartedTimestamp:   e.executionInfo.DecisionStartedTimestamp,
-		ScheduledTimestamp: e.executionInfo.DecisionScheduledTimestamp,
+		Version:                    e.executionInfo.DecisionVersion,
+		ScheduleID:                 e.executionInfo.DecisionScheduleID,
+		StartedID:                  e.executionInfo.DecisionStartedID,
+		RequestID:                  e.executionInfo.DecisionRequestID,
+		DecisionTimeout:            e.executionInfo.DecisionTimeout,
+		Attempt:                    e.executionInfo.DecisionAttempt,
+		StartedTimestamp:           e.executionInfo.DecisionStartedTimestamp,
+		ScheduledTimestamp:         e.executionInfo.DecisionScheduledTimestamp,
+		OriginalScheduledTimestamp: e.executionInfo.DecisionOriginalScheduledTimestamp,
 	}
 }
 
