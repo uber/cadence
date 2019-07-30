@@ -131,7 +131,6 @@ func (s *timerQueueProcessorBaseSuite) SetupTest() {
 		s.mockQueueAckMgr,
 		NewLocalTimerGate(clock.NewRealTimeSource()),
 		dynamicconfig.GetIntPropertyFn(10),
-		dynamicconfig.GetDurationPropertyFn(0*time.Second),
 		s.logger,
 	)
 	s.timerQueueProcessor.timerProcessor = s.mockProcessor
