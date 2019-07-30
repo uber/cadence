@@ -248,7 +248,8 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) (HeartBeatDetai
 
 	if startOver {
 		resp, err := client.CountWorkflowExecutions(ctx, &shared.CountWorkflowExecutionsRequest{
-			Query: common.StringPtr(batchParams.Query),
+			Domain: common.StringPtr(batchParams.DomainName),
+			Query:  common.StringPtr(batchParams.Query),
 		})
 		if err != nil {
 			return HeartBeatDetails{}, err
@@ -267,6 +268,7 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) (HeartBeatDetai
 		//  Need to improve scan concurrency because it will hold an ES resource until the workflow finishes.
 		//  And we can't use list API because terminate / reset will mutate the result.
 		resp, err := client.ScanWorkflowExecutions(ctx, &shared.ListWorkflowExecutionsRequest{
+			Domain:        common.StringPtr(batchParams.DomainName),
 			PageSize:      common.Int32Ptr(int32(pageSize)),
 			NextPageToken: hbd.PageToken,
 			Query:         common.StringPtr(batchParams.Query),
