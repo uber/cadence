@@ -71,7 +71,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("failed to get history archiver"), tag.Error(err))
 		return errUploadNonRetriable
 	}
-	return historyArchiver.Archive(ctx, URI, &carchiver.ArchiveHistoryRequest{
+	err = historyArchiver.Archive(ctx, URI, &carchiver.ArchiveHistoryRequest{
 		ShardID:              request.ShardID,
 		DomainID:             request.DomainID,
 		DomainName:           request.DomainName,
@@ -82,6 +82,15 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 		NextEventID:          request.NextEventID,
 		CloseFailoverVersion: request.CloseFailoverVersion,
 	}, carchiver.GetHeartbeatArchiveOption(), carchiver.GetNonRetriableErrorOption(errUploadNonRetriable))
+	if err == nil {
+		return nil
+	}
+	if err.Error() == errUploadNonRetriable.Error() {
+		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("got non-retryable error from archiver"))
+		return errUploadNonRetriable
+	}
+	logger.Error(carchiver.ArchiveTransientErrorMsg, tag.ArchivalArchiveFailReason("got retryable error from archiver"), tag.Error(err))
+	return err
 }
 
 func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) (err error) {

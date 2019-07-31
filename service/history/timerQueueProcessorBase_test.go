@@ -289,7 +289,7 @@ func (s *timerQueueProcessorBaseSuite) TestArchiveWorkflow_NoErr_InlineArchivalF
 	s.mockVisibilityManager.On("DeleteWorkflowExecution", mock.Anything).Return(nil).Once()
 
 	s.mockArchivalClient.On("Archive", mock.Anything, mock.MatchedBy(func(req *archiver.ClientRequest) bool {
-		return req.CallerService == common.HistoryServiceName && req.ArchiveInline
+		return req.CallerService == common.HistoryServiceName && req.AttemptArchiveInline
 	})).Return(&archiver.ClientResponse{
 		ArchivedInline: false,
 	}, nil)
@@ -312,7 +312,7 @@ func (s *timerQueueProcessorBaseSuite) TestArchiveWorkflow_SendSignalErr() {
 	mockMutableState.On("GetNextEventID").Return(int64(101)).Once()
 
 	s.mockArchivalClient.On("Archive", mock.Anything, mock.MatchedBy(func(req *archiver.ClientRequest) bool {
-		return req.CallerService == common.HistoryServiceName && !req.ArchiveInline
+		return req.CallerService == common.HistoryServiceName && !req.AttemptArchiveInline
 	})).Return(nil, errors.New("failed to send signal"))
 
 	domainCacheEntry := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{}, &persistence.DomainConfig{}, false, nil, 0, nil)

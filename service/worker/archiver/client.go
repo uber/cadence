@@ -42,9 +42,9 @@ import (
 type (
 	// ClientRequest is the archive request sent to the archiver client
 	ClientRequest struct {
-		ArchiveRequest *ArchiveRequest
-		CallerService  string
-		ArchiveInline  bool
+		ArchiveRequest       *ArchiveRequest
+		CallerService        string
+		AttemptArchiveInline bool
 	}
 
 	// ClientResponse is the archive response returned from the archiver client
@@ -115,7 +115,7 @@ func (c *client) Archive(ctx context.Context, request *ClientRequest) (resp *Cli
 	c.metricsClient.IncCounter(metrics.ArchiverClientScope, metrics.CadenceRequests)
 	taggedLogger := tagLoggerWithRequest(c.logger, *request.ArchiveRequest).WithTags(
 		tag.ArchivalCallerServiceName(request.CallerService),
-		tag.ArchivalArchiveAttemptedInline(request.ArchiveInline),
+		tag.ArchivalArchiveAttemptedInline(request.AttemptArchiveInline),
 	)
 	archivedInline := false
 	defer func() {
@@ -127,7 +127,7 @@ func (c *client) Archive(ctx context.Context, request *ClientRequest) (resp *Cli
 			ArchivedInline: archivedInline,
 		}
 	}()
-	if request.ArchiveInline {
+	if request.AttemptArchiveInline {
 		err = c.archiveInline(ctx, request, taggedLogger)
 		if err != nil {
 			err = c.sendArchiveSignal(ctx, request.ArchiveRequest, taggedLogger)

@@ -686,7 +686,7 @@ func (t *timerQueueProcessorBase) archiveWorkflow(
 	if err != nil {
 		return err
 	}
-	archiveInline := executionStats.HistorySize < int64(t.config.TimerProcessorHistoryArchivalSizeLimit())
+	attemptArchiveInline := executionStats.HistorySize < int64(t.config.TimerProcessorHistoryArchivalSizeLimit())
 	ctx, cancel := context.WithTimeout(context.Background(), t.config.TimerProcessorHistoryArchivalTimeLimit())
 	defer cancel()
 	req := &archiver.ClientRequest{
@@ -702,8 +702,8 @@ func (t *timerQueueProcessorBase) archiveWorkflow(
 			CloseFailoverVersion: msBuilder.GetLastWriteVersion(),
 			URI:                  domainCacheEntry.GetConfig().HistoryArchivalURI,
 		},
-		CallerService: common.HistoryServiceName,
-		ArchiveInline: archiveInline,
+		CallerService:        common.HistoryServiceName,
+		AttemptArchiveInline: attemptArchiveInline,
 	}
 	resp, err := t.historyService.archivalClient.Archive(ctx, req)
 	if err != nil {

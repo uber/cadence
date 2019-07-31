@@ -136,10 +136,10 @@ func handleRequest(ctx workflow.Context, logger log.Logger, metricsClient metric
 	localActCtx := workflow.WithLocalActivityOptions(ctx, lao)
 	err = workflow.ExecuteLocalActivity(localActCtx, deleteHistoryActivity, request).Get(localActCtx, nil)
 	if err != nil {
-		logger.Error("deleting history though local activity failed, this means zombie histories are left", tag.Error(err))
-		metricsClient.IncCounter(metrics.ArchiverScope, metrics.ArchiverDeleteLocalFailedAllRetriesCount)
+		logger.Error("deleting history failed, this means zombie histories are left", tag.Error(err))
+		metricsClient.IncCounter(metrics.ArchiverScope, metrics.ArchiverDeleteFailedAllRetriesCount)
 	} else {
-		metricsClient.IncCounter(metrics.ArchiverScope, metrics.ArchiverDeleteLocalSuccessCount)
+		metricsClient.IncCounter(metrics.ArchiverScope, metrics.ArchiverDeleteSuccessCount)
 	}
 	deleteSW.Stop()
 	sw.Stop()
