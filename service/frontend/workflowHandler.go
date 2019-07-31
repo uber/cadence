@@ -39,7 +39,6 @@ import (
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
-	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/client"
@@ -76,7 +75,6 @@ type (
 		domainHandler             *domainHandlerImpl
 		visibilityQueryValidator  *validator.VisibilityQueryValidator
 		searchAttributesValidator *validator.SearchAttributesValidator
-		archiverProvider          provider.ArchiverProvider
 		service.Service
 	}
 
@@ -121,6 +119,7 @@ var (
 	errInvalidTaskStartToCloseTimeoutSeconds      = &gen.BadRequestError{Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}
 	errClientVersionNotSet                        = &gen.BadRequestError{Message: "Client version is not set on request."}
 	errInvalidRetentionPeriod                     = &gen.BadRequestError{Message: "A valid retention period is not set on request."}
+	errInvalidArchivalConfig                      = &gen.BadRequestError{Message: "Invalid to enable archival without specifying a uri."}
 
 	// err for archival
 	errHistoryHasPassedRetentionPeriod = &gen.BadRequestError{Message: "Requested workflow history has passed retention period."}
@@ -154,7 +153,6 @@ func NewWorkflowHandler(
 	visibilityMgr persistence.VisibilityManager,
 	kafkaProducer messaging.Producer,
 	domainCache cache.DomainCache,
-	archiverProvider provider.ArchiverProvider,
 ) *WorkflowHandler {
 	handler := &WorkflowHandler{
 		Service:         sVice,
@@ -170,8 +168,8 @@ func NewWorkflowHandler(
 			func() float64 {
 				return float64(config.RPS())
 			},
-			func() float64 {
-				return float64(config.DomainRPS())
+			func(domain string) float64 {
+				return float64(config.DomainRPS(domain))
 			},
 		),
 		versionChecker: &versionChecker{checkVersion: config.EnableClientVersionCheck()},
@@ -181,12 +179,12 @@ func NewWorkflowHandler(
 			metadataMgr,
 			sVice.GetClusterMetadata(),
 			NewDomainReplicator(kafkaProducer, sVice.GetLogger()),
-			archiverProvider,
+			sVice.GetArchivalMetadata(),
+			sVice.GetArchiverProvider(),
 		),
 		visibilityQueryValidator: validator.NewQueryValidator(config.ValidSearchAttributes),
 		searchAttributesValidator: validator.NewSearchAttributesValidator(sVice.GetLogger(), config.ValidSearchAttributes,
 			config.SearchAttributesNumberOfKeysLimit, config.SearchAttributesSizeOfValueLimit, config.SearchAttributesTotalSizeLimit),
-		archiverProvider: archiverProvider,
 	}
 	// prevent us from trying to serve requests before handler's Start() is complete
 	handler.startWG.Add(1)
@@ -205,7 +203,11 @@ func (wh *WorkflowHandler) Start() error {
 	wh.domainCache.Start()
 
 	wh.history = wh.GetClientBean().GetHistoryClient()
-	wh.matchingRawClient = wh.GetClientBean().GetMatchingClient()
+	matchingRawClient, err := wh.GetClientBean().GetMatchingClient(wh.domainCache.GetDomainName)
+	if err != nil {
+		return err
+	}
+	wh.matchingRawClient = matchingRawClient
 	wh.matching = matching.NewRetryableClient(wh.matchingRawClient, common.CreateMatchingServiceRetryPolicy(),
 		common.IsWhitelistServiceTransientError)
 	wh.startWG.Done()
@@ -358,7 +360,11 @@ func (wh *WorkflowHandler) PollForActivityTask(
 	}
 
 	wh.Service.GetLogger().Debug("Received PollForActivityTask")
-	if err := common.ValidateLongPollContextTimeout(ctx, "PollForActivityTask", wh.Service.GetLogger()); err != nil {
+	if err := common.ValidateLongPollContextTimeout(
+		ctx,
+		"PollForActivityTask",
+		wh.Service.GetThrottledLogger(),
+	); err != nil {
 		return nil, wh.error(err, scope)
 	}
 
@@ -438,7 +444,11 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	}
 
 	wh.Service.GetLogger().Debug("Received PollForDecisionTask")
-	if err := common.ValidateLongPollContextTimeout(ctx, "PollForDecisionTask", wh.Service.GetLogger()); err != nil {
+	if err := common.ValidateLongPollContextTimeout(
+		ctx,
+		"PollForDecisionTask",
+		wh.Service.GetThrottledLogger(),
+	); err != nil {
 		return nil, wh.error(err, scope)
 	}
 
@@ -1663,8 +1673,8 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		getRequest.MaximumPageSize = common.Int32Ptr(common.GetHistoryMaxPageSize)
 	}
 
-	configuredForArchival := wh.GetClusterMetadata().HistoryArchivalConfig().ClusterConfiguredForArchival()
-	enableArchivalRead := wh.GetClusterMetadata().HistoryArchivalConfig().EnableRead
+	configuredForArchival := wh.GetArchivalMetadata().GetHistoryConfig().ClusterConfiguredForArchival()
+	enableArchivalRead := wh.GetArchivalMetadata().GetHistoryConfig().ReadEnabled()
 	historyArchived := wh.historyArchived(ctx, getRequest, domainID)
 	if configuredForArchival && enableArchivalRead && historyArchived {
 		return wh.getArchivedHistory(ctx, getRequest, domainID, scope)
@@ -2902,18 +2912,7 @@ func (wh *WorkflowHandler) getHistory(
 		nextPageToken = response.NextPageToken
 		size = response.Size
 	}
-
-	if len(historyEvents) > 0 {
-		scope.RecordTimer(metrics.HistorySize, time.Duration(size))
-
-		if size > common.GetHistoryWarnSizeLimit {
-			wh.GetThrottledLogger().Warn("GetHistory size threshold breached",
-				tag.WorkflowID(execution.GetWorkflowId()),
-				tag.WorkflowRunID(execution.GetRunId()),
-				tag.WorkflowDomainID(domainID),
-				tag.WorkflowSize(int64(size)))
-		}
-	}
+	scope.RecordTimer(metrics.HistorySize, time.Duration(size))
 
 	if len(nextPageToken) == 0 && transientDecision != nil {
 		// Append the transient decision events once we are done enumerating everything from the events table
@@ -3226,7 +3225,7 @@ func (wh *WorkflowHandler) getArchivedHistory(
 		return nil, wh.error(err, scope)
 	}
 
-	historyArchiver, err := wh.archiverProvider.GetHistoryArchiver(URI.Scheme(), common.FrontendServiceName)
+	historyArchiver, err := wh.GetArchiverProvider().GetHistoryArchiver(URI.Scheme(), common.FrontendServiceName)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}

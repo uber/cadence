@@ -62,7 +62,6 @@ func newTransferQueueStandbyProcessor(
 
 	config := shard.GetConfig()
 	options := &QueueProcessorOptions{
-		StartDelay:                         config.TransferProcessorStartDelay,
 		BatchSize:                          config.TransferTaskBatchSize,
 		WorkerCount:                        config.TransferTaskWorkerCount,
 		MaxPollRPS:                         config.TransferProcessorMaxPollRPS,
@@ -319,7 +318,7 @@ func (t *transferQueueStandbyProcessorImpl) processCloseExecution(
 			return &workflow.InternalServiceError{Message: "Failed to load start event."}
 		}
 		workflowExecutionTimestamp := getWorkflowExecutionTimestamp(msBuilder, startEvent)
-		visibilityMemo := getVisibilityMemo(startEvent)
+		visibilityMemo := getWorkflowMemo(executionInfo.Memo)
 		searchAttr := executionInfo.SearchAttributes
 
 		ok, err := verifyTaskVersion(t.shard, t.logger, transferTask.DomainID, msBuilder.GetLastWriteVersion(), transferTask.Version, transferTask)
@@ -512,7 +511,7 @@ func (t *transferQueueStandbyProcessorImpl) processRecordWorkflowStartedOrUpsert
 		return &workflow.InternalServiceError{Message: "Failed to load start event."}
 	}
 	executionTimestamp := getWorkflowExecutionTimestamp(msBuilder, startEvent)
-	visibilityMemo := getVisibilityMemo(startEvent)
+	visibilityMemo := getWorkflowMemo(executionInfo.Memo)
 	searchAttr := copySearchAttributes(executionInfo.SearchAttributes)
 
 	if isRecordStart {

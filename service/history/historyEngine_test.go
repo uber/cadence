@@ -123,7 +123,7 @@ func (s *engineSuite) SetupTest() {
 	s.mockMetricClient = metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
 	s.mockClientBean = &client.MockClientBean{}
-	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean)
+	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.mockClientBean, nil, nil)
 	s.mockEventsCache = &MockEventsCache{}
 
 	historyEventNotifier := newHistoryEventNotifier(
@@ -5235,6 +5235,8 @@ func copyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *p
 		ClientFeatureVersion:         sourceInfo.ClientFeatureVersion,
 		ClientImpl:                   sourceInfo.ClientImpl,
 		AutoResetPoints:              sourceInfo.AutoResetPoints,
+		Memo:                         sourceInfo.Memo,
+		SearchAttributes:             sourceInfo.SearchAttributes,
 		Attempt:                      sourceInfo.Attempt,
 		HasRetryPolicy:               sourceInfo.HasRetryPolicy,
 		InitialInterval:              sourceInfo.InitialInterval,

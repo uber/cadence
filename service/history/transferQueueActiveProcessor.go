@@ -69,7 +69,6 @@ func newTransferQueueActiveProcessor(
 
 	config := shard.GetConfig()
 	options := &QueueProcessorOptions{
-		StartDelay:                         config.TransferProcessorStartDelay,
 		BatchSize:                          config.TransferTaskBatchSize,
 		WorkerCount:                        config.TransferTaskWorkerCount,
 		MaxPollRPS:                         config.TransferProcessorMaxPollRPS,
@@ -139,7 +138,6 @@ func newTransferQueueFailoverProcessor(
 
 	config := shard.GetConfig()
 	options := &QueueProcessorOptions{
-		StartDelay:                         config.TransferProcessorFailoverStartDelay,
 		BatchSize:                          config.TransferTaskBatchSize,
 		WorkerCount:                        config.TransferTaskWorkerCount,
 		MaxPollRPS:                         config.TransferProcessorFailoverMaxPollRPS,
@@ -448,7 +446,7 @@ func (t *transferQueueActiveProcessorImpl) processCloseExecution(
 		return &workflow.InternalServiceError{Message: "Unable to get workflow start event."}
 	}
 	workflowExecutionTimestamp := getWorkflowExecutionTimestamp(msBuilder, startEvent)
-	visibilityMemo := getVisibilityMemo(startEvent)
+	visibilityMemo := getWorkflowMemo(executionInfo.Memo)
 	searchAttr := executionInfo.SearchAttributes
 
 	// release the context lock since we no longer need mutable state builder and
@@ -943,7 +941,7 @@ func (t *transferQueueActiveProcessorImpl) processRecordWorkflowStartedOrUpsertH
 		return &workflow.InternalServiceError{Message: "Failed to load start event."}
 	}
 	executionTimestamp := getWorkflowExecutionTimestamp(msBuilder, startEvent)
-	visibilityMemo := getVisibilityMemo(startEvent)
+	visibilityMemo := getWorkflowMemo(executionInfo.Memo)
 	searchAttr := copySearchAttributes(executionInfo.SearchAttributes)
 
 	// release the context lock since we no longer need mutable state builder and

@@ -108,6 +108,12 @@ var keys = map[Key]string{
 	MatchingMaxTaskBatchSize:                "matching.maxTaskBatchSize",
 	MatchingMaxTaskDeleteBatchSize:          "matching.maxTaskDeleteBatchSize",
 	MatchingThrottledLogRPS:                 "matching.throttledLogRPS",
+	MatchingNumTasklistWritePartitions:      "matching.numTasklistWritePartitions",
+	MatchingNumTasklistReadPartitions:       "matching.numTasklistReadPartitions",
+	MatchingForwarderMaxOutstandingPolls:    "matching.forwarderMaxOutstandingPolls",
+	MatchingForwarderMaxOutstandingTasks:    "matching.forwarderMaxOutstandingTasks",
+	MatchingForwarderMaxRatePerSecond:       "matching.forwarderMaxRatePerSecond",
+	MatchingForwarderMaxChildrenPerNode:     "matching.forwarderMaxChildrenPerNode",
 
 	// history settings
 	HistoryRPS:                                            "history.rps",
@@ -127,8 +133,6 @@ var keys = map[Key]string{
 	TimerTaskBatchSize:                                    "history.timerTaskBatchSize",
 	TimerTaskWorkerCount:                                  "history.timerTaskWorkerCount",
 	TimerTaskMaxRetryCount:                                "history.timerTaskMaxRetryCount",
-	TimerProcessorStartDelay:                              "history.timerProcessorStartDelay",
-	TimerProcessorFailoverStartDelay:                      "history.timerProcessorFailoverStartDelay",
 	TimerProcessorGetFailureRetryCount:                    "history.timerProcessorGetFailureRetryCount",
 	TimerProcessorCompleteTimerFailureRetryCount:          "history.timerProcessorCompleteTimerFailureRetryCount",
 	TimerProcessorUpdateShardTaskCount:                    "history.timerProcessorUpdateShardTaskCount",
@@ -147,8 +151,6 @@ var keys = map[Key]string{
 	TransferProcessorMaxPollRPS:                           "history.transferProcessorMaxPollRPS",
 	TransferTaskWorkerCount:                               "history.transferTaskWorkerCount",
 	TransferTaskMaxRetryCount:                             "history.transferTaskMaxRetryCount",
-	TransferProcessorStartDelay:                           "history.transferProcessorStartDelay",
-	TransferProcessorFailoverStartDelay:                   "history.transferProcessorFailoverStartDelay",
 	TransferProcessorCompleteTransferFailureRetryCount:    "history.transferProcessorCompleteTransferFailureRetryCount",
 	TransferProcessorUpdateShardTaskCount:                 "history.transferProcessorUpdateShardTaskCount",
 	TransferProcessorMaxPollInterval:                      "history.transferProcessorMaxPollInterval",
@@ -159,7 +161,6 @@ var keys = map[Key]string{
 	ReplicatorTaskBatchSize:                               "history.replicatorTaskBatchSize",
 	ReplicatorTaskWorkerCount:                             "history.replicatorTaskWorkerCount",
 	ReplicatorTaskMaxRetryCount:                           "history.replicatorTaskMaxRetryCount",
-	ReplicatorProcessorStartDelay:                         "history.replicatorProcessorStartDelay",
 	ReplicatorProcessorMaxPollRPS:                         "history.replicatorProcessorMaxPollRPS",
 	ReplicatorProcessorUpdateShardTaskCount:               "history.replicatorProcessorUpdateShardTaskCount",
 	ReplicatorProcessorMaxPollInterval:                    "history.replicatorProcessorMaxPollInterval",
@@ -338,6 +339,18 @@ const (
 	MatchingMaxTaskDeleteBatchSize
 	// MatchingThrottledLogRPS is the rate limit on number of log messages emitted per second for throttled logger
 	MatchingThrottledLogRPS
+	// MatchingNumTasklistWritePartitions is the number of write partitions for a task list
+	MatchingNumTasklistWritePartitions
+	// MatchingNumTasklistReadPartitions is the number of read partitions for a task list
+	MatchingNumTasklistReadPartitions
+	// MatchingForwarderMaxOutstandingPolls is the max number of inflight polls from the forwarder
+	MatchingForwarderMaxOutstandingPolls
+	// MatchingForwarderMaxOutstandingTasks is the max number of inflight addTask/queryTask from the forwarder
+	MatchingForwarderMaxOutstandingTasks
+	// MatchingForwarderMaxRatePerSecond is the max rate at which add/query can be forwarded
+	MatchingForwarderMaxRatePerSecond
+	// MatchingForwarderMaxChildrenPerNode is the max number of children per node in the task list partition tree
+	MatchingForwarderMaxChildrenPerNode
 
 	// key for history
 
@@ -373,10 +386,6 @@ const (
 	TimerTaskWorkerCount
 	// TimerTaskMaxRetryCount is max retry count for timer processor
 	TimerTaskMaxRetryCount
-	// TimerProcessorStartDelay is the start delay
-	TimerProcessorStartDelay
-	// TimerProcessorFailoverStartDelay is the failover start delay
-	TimerProcessorFailoverStartDelay
 	// TimerProcessorGetFailureRetryCount is retry count for timer processor get failure operation
 	TimerProcessorGetFailureRetryCount
 	// TimerProcessorCompleteTimerFailureRetryCount is retry count for timer processor complete timer operation
@@ -413,10 +422,6 @@ const (
 	TransferTaskWorkerCount
 	// TransferTaskMaxRetryCount is max times of retry for transferQueueProcessor
 	TransferTaskMaxRetryCount
-	// TransferProcessorStartDelay is the start delay
-	TransferProcessorStartDelay
-	// TransferProcessorFailoverStartDelay is the failover start delay
-	TransferProcessorFailoverStartDelay
 	// TransferProcessorCompleteTransferFailureRetryCount is times of retry for failure
 	TransferProcessorCompleteTransferFailureRetryCount
 	// TransferProcessorUpdateShardTaskCount is update shard count for transferQueueProcessor
@@ -437,8 +442,6 @@ const (
 	ReplicatorTaskWorkerCount
 	// ReplicatorTaskMaxRetryCount is max times of retry for ReplicatorProcessor
 	ReplicatorTaskMaxRetryCount
-	// ReplicatorProcessorStartDelay is the start delay
-	ReplicatorProcessorStartDelay
 	// ReplicatorProcessorMaxPollRPS is max poll rate per second for ReplicatorProcessor
 	ReplicatorProcessorMaxPollRPS
 	// ReplicatorProcessorUpdateShardTaskCount is update shard count for ReplicatorProcessor
