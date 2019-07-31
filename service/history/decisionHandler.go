@@ -23,6 +23,7 @@ package history
 import (
 	ctx "context"
 	"fmt"
+	"time"
 
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -318,7 +319,7 @@ Update_History_Loop:
 		}
 
 		scheduleID := token.ScheduleID
-		di, isRunning := msBuilder.GetPendingDecision(scheduleID)
+		currentDecision, isRunning := msBuilder.GetPendingDecision(scheduleID)
 
 		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 		// some extreme cassandra failure cases.
@@ -329,12 +330,12 @@ Update_History_Loop:
 			continue Update_History_Loop
 		}
 
-		if !msBuilder.IsWorkflowExecutionRunning() || !isRunning || di.Attempt != token.ScheduleAttempt ||
-			di.StartedID == common.EmptyEventID {
+		if !msBuilder.IsWorkflowExecutionRunning() || !isRunning || currentDecision.Attempt != token.ScheduleAttempt ||
+			currentDecision.StartedID == common.EmptyEventID {
 			return nil, &workflow.EntityNotExistsError{Message: "Decision task not found."}
 		}
 
-		startedID := di.StartedID
+		startedID := currentDecision.StartedID
 		maxResetPoints := handler.config.MaxAutoResetPoints(domainEntry.GetInfo().Name)
 		if msBuilder.GetExecutionInfo().AutoResetPoints != nil && maxResetPoints == len(msBuilder.GetExecutionInfo().AutoResetPoints.Points) {
 			handler.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.AutoResetPointsLimitExceededCounter)
@@ -465,11 +466,31 @@ Update_History_Loop:
 		createNewDecisionTask := !isComplete && (hasUnhandledEvents ||
 			request.GetForceCreateNewDecisionTask() || activityNotStartedCancelled)
 		var newDecisionTaskScheduledID int64
+		var timeoutDecision bool
 		if createNewDecisionTask {
-			di, err := msBuilder.AddDecisionTaskScheduledEvent()
+			var di *decisionInfo
+			var err error
+			if request.GetForceCreateNewDecisionTask() {
+				// heartbeating decision, timeout the heartbeat based on heartbeat timeout
+				timeout := handler.config.DecisionHeartbeatTimeout(domainEntry.GetInfo().Name)
+				if time.Now().After(time.Unix(0, currentDecision.OriginalScheduledTimestamp).Add(timeout)) {
+					timeoutDecision = true
+					_, err = msBuilder.AddDecisionTaskTimedOutEvent(currentDecision.ScheduleID, currentDecision.StartedID)
+					if err != nil {
+						return nil, &workflow.InternalServiceError{Message: "Failed to add decision timeout event."}
+					}
+					msBuilder.ClearStickyness()
+					di, err = msBuilder.AddDecisionTaskScheduledEvent()
+				} else {
+					di, err = msBuilder.AddDecisionTaskScheduledEventAsHeartbeat(currentDecision.OriginalScheduledTimestamp)
+				}
+			} else {
+				di, err = msBuilder.AddDecisionTaskScheduledEvent()
+			}
 			if err != nil {
 				return nil, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
 			}
+
 			newDecisionTaskScheduledID = di.ScheduleID
 			// skip transfer task for decision if request asking to return new decision task
 			if !request.GetReturnNewDecisionTask() {
@@ -573,6 +594,13 @@ Update_History_Loop:
 			}
 
 			return nil, updateErr
+		}
+
+		if timeoutDecision {
+			// at this point, update is successful, but we still return an error to client so that the worker will give up this workflow
+			return nil, &workflow.EntityNotExistsError{
+				Message: fmt.Sprintf("decision heartbeat timeout"),
+			}
 		}
 
 		resp = &h.RespondDecisionTaskCompletedResponse{}
