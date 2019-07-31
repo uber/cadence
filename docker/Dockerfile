@@ -55,7 +55,7 @@ ENV CADENCE_HOME /cadence
 
 EXPOSE 7933 7934 7935 7939
 
-COPY ./start.sh $CADENCE_HOME/start.sh
+COPY ./docker_start.sh $CADENCE_HOME/start.sh
 COPY ./config_template.yaml $CADENCE_HOME/config/docker_template_cassandra.yaml
 COPY ./config_template_mysql.yaml $CADENCE_HOME/config/docker_template_mysql.yaml
 RUN mkdir $CADENCE_HOME/config/dynamicconfig/
