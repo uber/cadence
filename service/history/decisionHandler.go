@@ -471,9 +471,9 @@ Update_History_Loop:
 			var newDecision *decisionInfo
 			var err error
 			if request.GetForceCreateNewDecisionTask() {
-				// heartbeating decision, timeout the heartbeat based on heartbeat timeout
+				// heartbeating decision, timeout the heartbeat based on heartbeat timeout if the decision is empty
 				timeout := handler.config.DecisionHeartbeatTimeout(domainEntry.GetInfo().Name)
-				if time.Now().After(time.Unix(0, currentDecision.OriginalScheduledTimestamp).Add(timeout)) {
+				if len(request.Decisions) == 0 && time.Now().After(time.Unix(0, currentDecision.OriginalScheduledTimestamp).Add(timeout)) {
 					timeoutDecision = true
 					_, err = msBuilder.AddDecisionTaskTimedOutEvent(currentDecision.ScheduleID, currentDecision.StartedID)
 					if err != nil {
