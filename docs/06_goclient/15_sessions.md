@@ -118,7 +118,7 @@ token := workflow.GetSessionInfo(sessionCtx).GetRecreateToken()
 ## Q&A
 
 ### Is there a complete example?
-Yes, the [file processing example](https://github.com/samarabbas/cadence-samples/blob/master/cmd/samples/fileprocessing/workflow.go) in the cadence-sample repo has been updated to use the session framework.
+Yes, the [file processing example](https://github.com/uber-common/cadence-samples/blob/master/cmd/samples/fileprocessing/workflow.go) in the cadence-sample repo has been updated to use the session framework.
 
 ### What happens to my activity if the worker dies?
 If your activity has already been scheduled, it will be cancelled. If not, you will get a `workflow.ErrSessionFailed` error when you call `workflow.ExecuteActivity()`.
