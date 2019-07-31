@@ -1,32 +1,32 @@
 # Cross-DC Replication
 The Cadence Global Domain feature provides clients with the capability to continue their workflow execution from another
-cluster in the event of a datacenter failover.  Although you can configure a Global Domain to be replicated to any number of
+cluster in the event of a datacenter failover. Although you can configure a Global Domain to be replicated to any number of
 clusters, it is only considered active in a single cluster.
 
 ## Global Domains Architecture
 Cadence has introduced a new top level entity, Global Domains, which provides support for replication of workflow
-execution across clusters.  Client applications need to run workers polling on Activity/Decision tasks on all clusters.
+execution across clusters. Client applications need to run workers polling on Activity/Decision tasks on all clusters.
 Cadence will only dispatch tasks on the current active cluster; workers on the standby cluster will sit idle
 until the Global Domain is failed over.
 
 Because Cadence is a service that provides highly consistent semantics, we only allow external events like
-**StartWorkflowExecution**, **SignalWorkflowExecution**, etc. on an active cluster.  Global Domains relies on light-weight
+**StartWorkflowExecution**, **SignalWorkflowExecution**, etc. on an active cluster. Global Domains relies on light-weight
 transactions (paxos) on the local cluster (Local_Quorum) to update the workflow execution state and create replication
-tasks which are applied asynchronously to replicate state across clusters.  If an application makes these API calls on a
+tasks which are applied asynchronously to replicate state across clusters. If an application makes these API calls on a
 cluster where Global Domain is in standby mode, Cadence will reject those calls with **DomainNotActiveError**, which
-contains the name of the current active cluster.  It is the responsibility of the application to forward the external
+contains the name of the current active cluster. It is the responsibility of the application to forward the external
 event to the cluster that is currently active.
 
 ## New config for Global Domains
 
 ### IsGlobal
 This config is used to distinguish domains local to the cluster from the global domain. It controls the creation of
-replication tasks on updates allowing the state to be replicated across clusters.  This is a read-only setting that can
+replication tasks on updates allowing the state to be replicated across clusters. This is a read-only setting that can
 only be set when the domain is provisioned.
 
 ### Clusters
 A list of clusters where the domain can fail over to, including the current active cluster.
-This is also a read-only setting that can only be set when the domain is provisioned. A re-replication feature on the 
+This is also a read-only setting that can only be set when the domain is provisioned. A re-replication feature on the
 roadmap will allow updating this config to add/remove clusters in the future.
 
 ### Active Cluster Name
@@ -56,7 +56,7 @@ to the Cadence Visibility API will continue to work even if a Global Domain is i
 a lag due to replication delay when querying the workflow execution state from a standby cluster.
 
 ## CLI
-The Cadence CLI can also be used to query the domain config or perform failovers.  Here are some useful commands.
+The Cadence CLI can also be used to query the domain config or perform failovers. Here are some useful commands.
 
 ### Query Global Domain
 The following command can be used to describe Global Domain metadata:
@@ -66,7 +66,7 @@ $ cadence --do cadence-canary-xdc d desc
 Name: cadence-canary-xdc
 Description: cadence canary cross dc testing domain
 OwnerEmail: cadence-dev@cadenceworkflow.io
-DomainData: 
+DomainData:
 Status: REGISTERED
 RetentionInDays: 7
 EmitMetrics: true
@@ -96,4 +96,4 @@ the failed call to active cluster based on information provided in the error.
 ### What is the recommended pattern to send external events to an active cluster?
 The recommendation at this point is to publish events to a Kafka topic if they can be generated in any DC.
 Then, have a consumer that consumes from the aggregated Kafka topic in the same DC and sends them to Cadence. Both the
-Kafka consumer and Global Domain need to be failed over together. 
+Kafka consumer and Global Domain need to be failed over together.

@@ -1,6 +1,6 @@
 # Java Client
 
-Important links for the Cadence Java client:
+The following are important links for the Cadence Java client:
 
 - GitHub project: [https://github.com/uber/cadence-java-client](https://github.com/uber/cadence-java-client)
 - Samples: [https://github.com/uber/cadence-java-samples](https://github.com/uber/cadence-java-samples)

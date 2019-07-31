@@ -1,9 +1,9 @@
 # Versioning
 
-As outlined in the _Workflow Implementation Constraints_ section, the workflow code has to be deterministic by taking the same
+As outlined in the _Workflow Implementation Constraints_ section, workflow code has to be deterministic by taking the same
 code path when replaying history events. Any workflow code change that affects the order in which decisions are generated breaks
 this assumption. The solution that allows updating code of already running workflows is to keep both the old and new code.
-When replaying, use the code version that the events were generated with and when executing a new code path always take the
+When replaying, use the code version that the events were generated with and when executing a new code path, always take the
 new code.
 
 Use the `Workflow.getVersion` function to return a version of the code that should be executed and then use the returned
@@ -87,4 +87,3 @@ public void processFile(Arguments args) {
 The ID that is passed to the `getVersion` call identifies the change. Each change is expected to have its own ID. But if
 a change spawns multiple places in the workflow code and the new code should be either executed in all of them or
 in none of them, then they have to share the ID.
-

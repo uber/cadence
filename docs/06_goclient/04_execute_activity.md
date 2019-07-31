@@ -1,7 +1,7 @@
-# Executing activities
+# Executing Activities
 
 The primary responsibility of a workflow implementation is to schedule activities for execution. The
-most straightforward way to do this is via the library method workflow.ExecuteActivity. The following
+most straightforward way to do this is via the library method `workflow.ExecuteActivity`. The following
 sample code demonstrates making this call:
 
 ```go
@@ -39,7 +39,7 @@ are executed *at most once*, so an activity either succeeds or fails with one of
 Timeout | Description
 --- | ---
 `StartToCloseTimeout` | Maximum time that a worker can take to process a task after it has received the task.
-`ScheduleToStartTimeout` | Time a task can wait to be picked up by an activity worker after a workflow schedules it. If there are no workers available to process this task for the specified duration, the task will timeout.
+`ScheduleToStartTimeout` | Time a task can wait to be picked up by an activity worker after a workflow schedules it. If there are no workers available to process this task for the specified duration, the task will time out.
 `ScheduleToCloseTimeout` | Time a task can take to complete after it is scheduled by a workflow. This is usually greater than the sum of `StartToClose` and `ScheduleToStart` timetouts.
 `HeartbeatTimeout` | If a task doesn't heartbeat to the Cadence service for this duration, it will be considered to have failed. This is useful for long-running tasks.
 
@@ -60,7 +60,7 @@ The method call returns immediately and returns a `cadence.Future`. This allows 
 code without having to wait for the scheduled activity to complete.
 
 When you are ready to process the results of the activity, call the `Get()` method on the future
-object returned. The parameters to this method is the `ctx` object we passed to the
+object returned. The parameters to this method are the `ctx` object we passed to the
 `workflow.ExecuteActivity()` call and an output parameter that will receive the output of the
 activity. The type of the output parameter must match the type of the return value declared by the
 activity function. The `Get()` method will block until the activity completes and results are
@@ -78,9 +78,9 @@ if err := future.Get(ctx1, &result); err != nil {
 
 switch result {
 case "apple":
-        // do something
+        // Do something.
 case "banana":
-        // do something
+        // Do something.
 default:
         return err
 }
@@ -91,4 +91,3 @@ repeatedly call `workflow.ExecuteActivity()`, store the returned futures, and th
 activities to complete by calling the `Get()` methods of the future at a later time.
 
 To implement more complex wait conditions on returned future objects, use the `cadence.Selector` class.
-

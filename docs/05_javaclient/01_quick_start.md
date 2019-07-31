@@ -1,14 +1,16 @@
 # Quick Start
 
+This topic helps you install the Cadence service and implement a workflow.
+
 ## Install Cadence Service Locally
 
 ### Install docker
 
-Docker installation instructions: https://docs.docker.com/engine/installation/
+Follow the Docker installation instructions found here: https://docs.docker.com/engine/installation/
 
 ### Run Cadence Server Using Docker Compose
 
-Download Cadence docker-compose file:
+Download the Cadence docker-compose file:
 ```bash
 > curl -O https://raw.githubusercontent.com/uber/cadence/master/docker/docker-compose.yml
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
@@ -60,7 +62,7 @@ cadence_1      | {"level":"info","ts":"2019-06-06T15:26:52.282Z","msg":"Get dyna
 cadence_1      | {"level":"info","ts":"2019-06-06T15:27:24.903Z","msg":"Get dynamic config","name":"history.transferProcessorCompleteTransferFailureRetryCount","value":"10","default-value":"10","logging-call-at":"config.go:57"}
 cadence_1      | {"level":"info","ts":"2019-06-06T15:27:24.905Z","msg":"Get dynamic config","name":"history.timerProcessorCompleteTimerFailureRetryCount","value":"10","default-value":"10","logging-call-at":"config.go:57"}
 ```
-### Register Domain Using CLI
+### Register a Domain Using the CLI
 From a different console window:
 ```bash
 > docker run --network=host --rm ubercadence/cli:master --do test-domain domain register -rd 1
@@ -104,7 +106,7 @@ Bad binaries to reset:
 
 ### Include Cadence Java Client Dependency
 
-Go to [Maven Repository Uber Cadence Java Client Page](https://mvnrepository.com/artifact/com.uber.cadence/cadence-client)
+Go to the [Maven Repository Uber Cadence Java Client Page](https://mvnrepository.com/artifact/com.uber.cadence/cadence-client)
 and find the latest version of the library. Include it as a dependency into your Java project. For example if you
 are using Gradle the dependency looks like:
 ```
@@ -132,8 +134,8 @@ public class GettingStarted {
 
 }
 ```
-If you are having problems setting up the build files use 
-[Cadence Java Samples](https://github.com/uber/cadence-java-samples) Github repository as a reference.
+If you are having problems setting up the build files use the
+[Cadence Java Samples](https://github.com/uber/cadence-java-samples) GitHub repository as a reference.
 
 Also add the following logback config file somewhere in your classpath:
 ```xml
@@ -153,7 +155,8 @@ Also add the following logback config file somewhere in your classpath:
 ```
 
 ### Implement Hello World Workflow
-Let's add HelloWorldImpl with sayHello method that just logs the "Hello ..." and returns.
+
+Let's add `HelloWorldImpl` with the `sayHello` method that just logs the "Hello ..." and returns.
 ```java
 import com.uber.cadence.worker.Worker;
 import com.uber.cadence.workflow.Workflow;
@@ -178,7 +181,7 @@ public class GettingStarted {
     }
 }
 ```
-To link the workflow implementation to Cadence framework it should be registered with a worker that connects to 
+To link the workflow implementation to the Cadence framework, it should be registered with a worker that connects to
 a Cadence Service. By default the worker connects to the locally running Cadence service.
 ```java
     public static void main(String[] args) {
@@ -188,14 +191,15 @@ a Cadence Service. By default the worker connects to the locally running Cadence
         factory.start();
     }
 ```
-### Execute Hello World Workflow Through CLI
-Now run the worker program. This is what it logs on my machine:
+### Execute Hello World Workflow using the CLI
+
+Now run the worker program. Following is an example log:
 ```text
 13:35:02.575 [main] INFO  c.u.c.s.WorkflowServiceTChannel - Initialized TChannel for service cadence-frontend, LibraryVersion: 2.2.0, FeatureVersion: 1.0.0
 13:35:02.671 [main] INFO  c.u.cadence.internal.worker.Poller - start(): Poller{options=PollerOptions{maximumPollRateIntervalMilliseconds=1000, maximumPollRatePerSecond=0.0, pollBackoffCoefficient=2.0, pollBackoffInitialInterval=PT0.2S, pollBackoffMaximumInterval=PT20S, pollThreadCount=1, pollThreadNamePrefix='Workflow Poller taskList="HelloWorldTaskList", domain="test-domain", type="workflow"'}, identity=45937@maxim-C02XD0AAJGH6}
 13:35:02.673 [main] INFO  c.u.cadence.internal.worker.Poller - start(): Poller{options=PollerOptions{maximumPollRateIntervalMilliseconds=1000, maximumPollRatePerSecond=0.0, pollBackoffCoefficient=2.0, pollBackoffInitialInterval=PT0.2S, pollBackoffMaximumInterval=PT20S, pollThreadCount=1, pollThreadNamePrefix='null'}, identity=81b8d0ac-ff89-47e8-b842-3dd26337feea}
-``` 
-No Hello printed. It is expected as a worker is just a workflow code host. The workflow has to be started to execute. Let's use Cadence CLI to start the workflow:
+```
+No Hello printed. This is expected because a worker is just a workflow code host. The workflow has to be started to execute. Let's use Cadence CLI to start the workflow:
 ```bash
 > docker docker run --network=host --rm ubercadence/cli:master --do test-domain workflow start --tasklist HelloWorldTaskList --workflow_type HelloWorld::sayHello --execution_timeout 3600 --input \"World\"
 Started Workflow Id: bcacfabd-9f9a-46ac-9b25-83bcea5d7fd7, run Id: e7c40431-8e23-485b-9649-e8f161219efe
@@ -221,6 +225,7 @@ And the output changed to:
 13:42:34.994 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - Hello Cadence!
 ```
 ### List Workflows and Workflow History
+
 Let's list our workflows in the CLI:
 ```bash
 > docker run --network=host --rm ubercadence/cli:master --do test-domain workflow list
@@ -228,7 +233,7 @@ Let's list our workflows in the CLI:
   HelloWorld::sayHello                | d2083532-9c68-49ab-90e1-d960175377a7 | 331bfa04-834b-45a7-861e-bcb9f6ddae3e | 20:42:34   | 20:42:34       | 20:42:35
   HelloWorld::sayHello                | bcacfabd-9f9a-46ac-9b25-83bcea5d7fd7 | e7c40431-8e23-485b-9649-e8f161219efe | 20:40:28   | 20:40:28       | 20:40:29
 ```
-Let's look at the workflow execution history:
+Now let's look at the workflow execution history:
 ```bash
 > docker run --network=host --rm ubercadence/cli:master --do test-domain workflow showid 1965109f-607f-4b14-a5f2-24399a7b8fa7
   1  WorkflowExecutionStarted    {WorkflowType:{Name:HelloWorld::sayHello},
@@ -254,12 +259,12 @@ Let's look at the workflow execution history:
   5  WorkflowExecutionCompleted  {Result:[],
                                   DecisionTaskCompletedEventId:4}
 ```
-Even for a such trivial workflow the history gives a lot of useful information. For complex workflows it is really useful tools for production and development troubleshooting.
-History can be automatically archived to a long term blob store (for example S3) upon workflow completion for compliance, analytical and troubleshooting purposes.
+Even for such a trivial workflow, the history gives a lot of useful information. For complex workflows this is a really useful tool for production and development troubleshooting. History can be automatically archived to a long-term blob store (for example Amazon S3) upon workflow completion for compliance, analytical, and troubleshooting purposes.
+
 ### Workflow ID Uniqueness
-Before proceeding to a more complex workflow implementation let's look at the workflow ID semantic. 
-When starting a workflow without providing an ID the client generates one in the form of an UUID. In most real life scenarios it is not a desired behavior. 
-The business ID should be used instead. Let's specify the ID when starting a workflow:
+
+Before proceeding to a more complex workflow implementation, let's take a look at the workflow ID semantic.
+When starting a workflow without providing an ID, the client generates one in the form of a UUID. In most real-life scenarios this is not a desired behavior. The business ID should be used instead. Here, we'll specify the ID when starting a workflow:
 ```bash
 > docker run --network=host --rm ubercadence/cli:master --do test-domain workflow start  --workflow_id "HelloCadence1" --tasklist HelloWorldTaskList --workflow_type HelloWorld::sayHello --execution_timeout 3600 --input \"Cadence\"
 Started Workflow Id: HelloCadence1, run Id: 75170c60-6d72-48c6-b509-7c9d9f25a8a8
@@ -277,8 +282,8 @@ Error: Failed to create workflow.
 Error Details: WorkflowExecutionAlreadyStartedError{Message: Workflow execution already finished successfully. WorkflowId: HelloCadence1, RunId: 75170c60-6d72-48c6-b509-7c9d9f25a8a8. Workflow ID reuse policy: allow duplicate workflow ID if last run failed., StartRequestId: 350a03ed-a11f-4959-a424-8ff7166ed457, RunId: 75170c60-6d72-48c6-b509-7c9d9f25a8a8}
 ('export CADENCE_CLI_SHOW_STACKS=1' to see stack traces)
 ```
-Oops, Cadence doesn't let to create workflow with the same ID. But there are use cases when it is desired. For example there is a need to reexecute the workflow for whatever reason.
-This is achieved by specifying a special flag _Workflow ID Reuse Policy_. The value of 1 means `AllowDuplicate`:
+
+Oops, Cadence doesn't let us create a workflow with the same ID. But there are use cases when it is desired. For example if there is a need to re-execute the workflow for a particular reason. This is achieved by specifying a special flag _Workflow ID Reuse Policy_. The value of 1 means `AllowDuplicate`:
 ```bash
 > docker run --network=host --rm ubercadence/cli:master --do test-domain workflow start  --workflowidreusepolicy 1 --workflow_id "HelloCadence1" --tasklist HelloWorldTaskList --workflow_type HelloWorld::sayHello --execution_timeout 3600 --input \"Cadence\"
 Started Workflow Id: HelloCadence1, run Id: 37a740e5-838c-4020-aed6-1111b0689c38
@@ -289,13 +294,13 @@ After the second start the workflow list is:
   HelloWorld::sayHello | HelloCadence1                        | 37a740e5-838c-4020-aed6-1111b0689c38 | 21:11:47   | 21:11:47       | 21:11:47
   HelloWorld::sayHello | HelloCadence1                        | 75170c60-6d72-48c6-b509-7c9d9f25a8a8 | 21:04:46   | 21:04:46       | 21:04:46
 ```
-Now it might be clear why every workflow has two IDs: Workflow ID and Run ID. As the Workflow ID can be reused the Run ID uniquely identifies a particular run of a workflow. Run ID is 
-system generated and cannot be controlled by client code.
+It might be clear why every workflow has two IDs: Workflow ID and Run ID. Because the Workflow ID can be reused, the Run ID uniquely identifies a particular run of a workflow. Run ID is system generated and cannot be controlled by client code.
 
-Note that ID Reuse Policy applies only when previous run of a workflow is completed. 
-Under no circumstances Cadence allows more than one instance of open workflow with the same ID. 
+Note that ID Reuse Policy applies only when previous the run of a workflow is completed.
+Under no circumstances does Cadence allow more than one instance of an open workflow with the same ID.
 
 ### CLI Help
+
 You might be asking how to discover that 1 means `AllowDuplicate`. It came from the help command:
 ```bash
 > docker run --network=host --rm ubercadence/cli:master workflow help start
@@ -319,14 +324,15 @@ OPTIONS:
                                                │ │ │ │ ┌───────────── day of the week (0 - 6) (Sunday to Saturday)
                                                │ │ │ │ │
                                                * * * * *
-   --workflowidreusepolicy value, --wrp value  Optional input to configure if the same workflow ID is allow to use for new workflow execution. Available options: 0: AllowDuplicateFailedOnly, 1: AllowDuplicate, 2: RejectDuplicate (default: 0)
-   --input value, -i value                     Optional input for the workflow, in JSON format. If there are multiple parameters, concatenate them and separate by space.
-   --input_file value, --if value              Optional input for the workflow from JSON file. If there are multiple JSON, concatenate them and separate by space or newline. Input from file will be overwrite by input from command line
-   --memo_key value                            Optional key of memo. If there are multiple keys, concatenate them and separate by space
-   --memo value                                Optional info that can be showed when list workflow, in JSON format. If there are multiple JSON, concatenate them and separate by space. The order must be same as memo_key
-   --memo_file value                           Optional info that can be listed in list workflow, from JSON format file. If there are multiple JSON, concatenate them and separate by space or newline. The order must be same as memo_key
+   --workflowidreusepolicy value, --wrp value  Optional input to configure if the same workflow ID is allowed to be used for a new workflow execution. Available options: 0: AllowDuplicateFailedOnly, 1: AllowDuplicate, 2: RejectDuplicate (default: 0)
+   --input value, -i value                     Optional input for the workflow, in JSON format. If there are multiple parameters, concatenate them and separate by a space.
+   --input_file value, --if value              Optional input for the workflow from a JSON file. If there are multiple JSON, concatenate them and separate by a space or newline. Input from the file will be overwritten by input from the command line.
+   --memo_key value                            Optional key of memo. If there are multiple keys, concatenate them and separate by space.
+   --memo value                                Optional info that can be shown in list workflow, in JSON format. If there are multiple JSON, concatenate them and separate by a space. The order must be the same as memo_key.
+   --memo_file value                           Optional info that can be listed in list workflow, from JSON format file. If there are multiple JSON, concatenate them and separate by a space or newline. The order must be same as memo_key.
 ```
 ## Signals
+
 So far our workflow is not very interesting. Let's change it to listen on an external event and update state accordingly.
 ```java
   public interface HelloWorld {
@@ -357,9 +363,8 @@ The workflow interface now has a new method annotated with @SignalMethod. It is 
 every time a new signal of "HelloWorld::updateGreeting" is delivered to a workflow. The workflow interface can have only
 one @WorkflowMethod which is a _main_ function of the workflow and as many signal methods as needed.
 
-The updated workflow implementation demonstrates a few important Cadence concepts. The first is that workflow is stateful and can 
-have fields of any complex type. Another one is `Workflow.await` function that blocks until the function it receives as a parameter evaluates to true.
-The condition is going to be evaluated only on workflow state changes, so it is not a busy wait in traditional sense.   
+The updated workflow implementation demonstrates a few important Cadence concepts. The first is that workflow is stateful and can
+have fields of any complex type. Another is that the `Workflow.await` function that blocks until the function it receives as a parameter evaluates to true. The condition is going to be evaluated only on workflow state changes, so it is not a busy wait in traditional sense.   
 ```bash
 cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow start  --workflow_id "HelloSignal" --tasklist HelloWorldTaskList --workflow_type HelloWorld::sayHello --execution_timeout 3600 --input \"World\"
 Started Workflow Id: HelloSignal, run Id: 6fa204cb-f478-469a-9432-78060b83b6cd
@@ -378,8 +383,8 @@ Program output:
 16:53:56.120 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 1: Hello World!
 16:54:57.901 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 2: Hi World!
 ```
-Try sending the same signal with the same input again. Note that output doesn't change. It happens because await condition
-doesn't unblock when it sees the same value. By a new greeting unblocks it:
+Try sending the same signal with the same input again. Note that the output doesn't change. This happens because the await condition
+doesn't unblock when it sees the same value. But a new greeting unblocks it:
 ```bash
 cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow signal --workflow_id "HelloSignal" --name "HelloWorld::updateGreeting" --input \"Welcome\"
 Signal workflow succeeded.
@@ -390,20 +395,19 @@ Program output:
 16:54:57.901 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 2: Hi World!
 16:56:24.400 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 3: Welcome World!
 ```
-Now shutdown the worker and send the same signal again:
+Now shut down the worker and send the same signal again:
 ```bash
 cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow signal --workflow_id "HelloSignal" --name "HelloWorld::updateGreeting" --input \"Welcome\"
 Signal workflow succeeded.
 ```
-Note that sending signals as well as starting workflows does not need a worker running. The requests are queued inside the Cadence service. 
+Note that sending signals as well as starting workflows does not need a worker running. The requests are queued inside the Cadence service.
 
 Now bring the worker back. Note that it doesn't log anything besides the standard startup messages.
-It happens because it ignores the queued signal that contains the same input as the current value of greeting. 
+This occurs because it ignores the queued signal that contains the same input as the current value of greeting.
 Note that the restart of the worker didn't affect the workflow execution. It is still blocked on the same line of code as before the failure.
-This is the most important feature of Cadence. The workflow code doesn't need to deal with worker failures at all. It state is fully recovered to its current state that includes all the
-local variables and threads.
+This is the most important feature of Cadence. The workflow code doesn't need to deal with worker failures at all. Its state is fully recovered to its current state that includes all the local variables and threads.
 
-Let's look at which line the workflow is blocked:
+Let's look at the line where the workflow is blocked:
 ```bash
 > docker run --network=host --rm ubercadence/cli:master --do test-domain workflow stack --workflow_id "Hello2"
 Query result:
@@ -416,18 +420,20 @@ sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
 sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)"
 ```
 Yes, indeed the workflow is blocked on await. This feature works for any open workflow, greatly simplifying troubleshooting in production.
-Let's complete the workflow by sending a signal with "Bye" greeting:
- 
+Let's complete the workflow by sending a signal with a "Bye" greeting:
+
 ```text
 16:58:22.962 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 4: Bye World!
 ```
-Note that value of count variable was not lost during the restart. 
+Note that the value of the count variable was not lost during the restart.
 
 Also note that while a single worker instance is used for this
-walk through, any real production deployment has multiple worker instances running. So any worker failure or restart does not delay any
-workflow execution as it is just migrated to any other available worker.
+walkthrough, any real production deployment has multiple worker instances running. So any worker failure or restart does not delay any
+workflow execution because it is just migrated to any other available worker.
+
 ## Query
-So far we learned that the workflow code is fault tolerant and can update its state in reaction to external events in form of signals.
+
+So far we have learned that the workflow code is fault tolerant and can update its state in reaction to external events in the form of signals.
 Cadence provides a query feature that supports synchronously returning any information from a workflow to an external caller.
 
 Update the workflow code to:
@@ -472,8 +478,8 @@ Update the workflow code to:
 The new `getCount` method annotated with `@QueryMethod` was added to the workflow interface definition. It is allowed
 to have multiple query methods per workflow interface.
 
-The main restriction on the implementation of the query method is that it is not allowed to modify workflow state in any form. 
-It also is not allowed to block its thread in any way. It is usually just returns a value derived from the fields of the workflow object.
+The main restriction on the implementation of the query method is that it is not allowed to modify workflow state in any form.
+It also is not allowed to block its thread in any way. It usually just returns a value derived from the fields of the workflow object.
 Let's run the updated worker and send a couple signals to it:
 ```bash
 cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow start  --workflow_id "HelloQuery" --tasklist HelloWorldTaskList --workflow_type HelloWorld::sayHello --execution_timeout 3600 --input \"World\"
@@ -489,13 +495,13 @@ The worker output:
 17:36:10.483 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 2: Hi World!
 17:36:16.204 [workflow-root] INFO  c.u.c.samples.hello.GettingStarted - 3: Welcome World!
 ```
-Now let's query the workflow using CLI:
+Now let's query the workflow using the CLI:
 ```bash
 cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow query --workflow_id "HelloQuery" --query_type "HelloWorld::getCount"
 Query result as JSON:
 3
 ```
-One limitation of the query is that it requires a worker process running as it is executing callback code. 
+One limitation of the query is that it requires a worker process running beecause it is executing callback code.
 An interesting feature of the query is that it works for completed workflows as well. Let's complete the workflow by sending "Bye" and query it.
 ```bash
 cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow signal --workflow_id "HelloQuery" --name "HelloWorld::updateGreeting" --input \"Bye\"
@@ -504,27 +510,30 @@ cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain 
 Query result as JSON:
 4
 ```
-Query method can accept parameters. It might be useful if only part of the workflow state should be returned.
+The Query method can accept parameters. This might be useful if only part of the workflow state should be returned.
+
 ## Activities
-Having a fault tolerant code that maintains state, updates it reacting to external events and supports querying is already very useful. 
-But in most practical applications the workflow is expected to act upon the external world. Cadence support such externally facing code in form of activities. 
-An activity is essentially a function that can execute any code like DB updates or service calls. The workflow is not allowed
-directly calling any external APIs, only through activities. The workflow is essentially an orchestrator of activities.
+
+Having fault tolerant code that maintains state, updates it in reaction to external events, and supports querying is already very useful.
+But in most practical applications, the workflow is expected to act upon the external world. Cadence supports such externally-facing code in the form of activities.
+
+An activity is essentially a function that can execute any code like DB updates or service calls. The workflow is not allowed to
+directly call any external APIs; it can do this only through activities. The workflow is essentially an orchestrator of activities.
 Let's change our program to print the greeting from an activity on every change.
 
-First lest's define activities interface and implement it:
+First let's define an activities interface and implement it:
 ```java
   public interface HelloWorldActivities {
     @ActivityMethod(scheduleToCloseTimeoutSeconds = 100)
     void say(String message);
   }
 ```
-@ActivityMethod annotation is not required, but the scheduleToCloseTimeout is required and annotation is a convenient way to specify it.
+The `@ActivityMethod` annotation is not required, but `scheduleToCloseTimeout` is required and annotation is a convenient way to specify it.
 It is allowed to have multiple activities on a single interface.
 
-Activity implementation is just a normal [POJO](https://en.wikipedia.org/wiki/Plain_old_Java_object). 
-The `out` stream is passed as a parameter to the constructor to demonstrate that the 
-activity object can have any dependencies. Example of real application dependencies are database connections and service clients.
+Activity implementation is just a normal [POJO](https://en.wikipedia.org/wiki/Plain_old_Java_object).
+The `out` stream is passed as a parameter to the constructor to demonstrate that the
+activity object can have any dependencies. Examples of real application dependencies are database connections and service clients.
 ```java
   public class HelloWordActivitiesImpl implements HelloWorldActivities {
     private final PrintStream out;
@@ -541,7 +550,7 @@ activity object can have any dependencies. Example of real application dependenc
 ```
 Let's create a separate main method for the activity worker. It is common to have a single worker that hosts both activities and workflows,
 but here we keep them separate to demonstrate how Cadence deals with worker failures.
-To make the activity implementation known to Cadence register it with the worker:
+To make the activity implementation known to Cadence, register it with the worker:
 ```java
 public class GettingStartedActivityWorker {
 
@@ -553,8 +562,7 @@ public class GettingStartedActivityWorker {
   }
 }
 ```
-A single instance of an activity object is registered per activity interface type. It means that the activity implementation should be thread-safe as 
-the activity method can be simultaneously called from multiple threads.
+A single instance of an activity object is registered per activity interface type. This means that the activity implementation should be thread-safe since the activity method can be simultaneously called from multiple threads.
 
 Let's modify the workflow code to invoke the activity instead of logging:
 ```java
@@ -592,7 +600,7 @@ Now run the workflow worker. Do not run the activity worker yet. Then start a ne
 cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow start  --workflow_id "HelloActivityWorker" --tasklist HelloWorldTaskList --workflow_type HelloWorld::sayHello --execution_timeout 3600 --input \"World\"
 Started Workflow Id: HelloActivityWorker, run Id: ff015637-b5af-43e8-b3f6-8b6c7b919b62
 ```
-So workflow is started, but nothing visible happens. It is expected as the activity worker is not running. What are the options to understand the currently running workflow state?
+The workflow is started, but nothing visible happens. This is expected as the activity worker is not running. What are the options to understand the currently running workflow state?
 
 The first option is look at the stack trace:
 ```text
@@ -609,9 +617,9 @@ sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
 sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
 "
 ```
-It clearly shows that the workflow code is blocked on "say" method of a Proxy object that implements the activity stub.
+It shows that the workflow code is blocked on the "say" method of a Proxy object that implements the activity stub.
 You can restart the workflow worker if you want to make sure that restarting it does not change that. It works for activities
-of any duration. It is OK for the workflow code to block on an activity invocation for a month for example.
+of any duration. It is okay for the workflow code to block on an activity invocation for a month for example.
 
 Another way to see what exactly happened in the workflow execution is to look at the workflow execution history:
 ```text
@@ -647,9 +655,9 @@ cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain 
                                 DecisionTaskCompletedEventId:4}
 cadence:
 ```
-The last envent in the workflow history is ActivityTaskScheduled. It is recorded when workflow invoked the activity, but it wasn't picked up by an activity worker yet.
+The last event in the workflow history is `ActivityTaskScheduled`. It is recorded when workflow invoked the activity, but it wasn't picked up by an activity worker yet.
 
-Another useful API is DescribeWorkflowExecution which among other information contains the list of outstanding activities:
+Another useful API is `DescribeWorkflowExecution` which, among other information, contains the list of outstanding activities:
 ```text
 cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain workflow describe  --workflow_id "HelloActivityWorker"
 {
@@ -690,7 +698,7 @@ cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain 
 }
 cadence:
 ```
-Let's start the activity worker. It starts and immediately prints
+Let's start the activity worker. It starts and immediately prints:
 ```text
 1: Hello World!
 ```
@@ -744,11 +752,11 @@ cadence: docker run --network=host --rm ubercadence/cli:master --do test-domain 
                                 Identity:37694@maxim-C02XD0AAJGH6}
 ```
 _ActivityTaskStarted_ event is recorded when the activity task is picked up by an activity worker. The Identity field
-contains the id of the worker (you can set it to whatever value on worker startup).
+contains the ID of the worker (you can set it to any value on worker startup).
 
 _ActivityTaskCompleted_ event is recorded when activity completes. It contains the result of the activity execution.
 
-Let's look at various failure scenarios. Modify activity task timeout to  
+Let's look at various failure scenarios. Modify activity task timeout:
 ```java
   public interface HelloWorldActivities {
     @ActivityMethod(scheduleToCloseTimeoutSeconds = 100)

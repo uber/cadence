@@ -5,9 +5,7 @@ is shared across multiple simultaneous activity invocations. Therefore, the acti
 
 The values passed to activities through invocation parameters or returned through a result value are recorded in the execution history.
 The entire execution history is transferred from the Cadence service to workflow workers when a workflow state needs to recover.
-A large execution history can thus adversely impact the performance of your workflow.
-Therefore, be mindful of the amount of data you transfer via activity invocation parameters or return values.
-Other than that, no additional limitations exist on activity implementations.
+A large execution history can thus adversely impact the performance of your workflow. Therefore, be mindful of the amount of data you transfer via activity invocation parameters or return values. Otherwise, no additional limitations exist on activity implementations.
 
 ```java
 public class FileProcessingActivitiesImpl implements FileProcessingActivities {
@@ -40,9 +38,8 @@ public class FileProcessingActivitiesImpl implements FileProcessingActivities {
 
 ## Accessing Activity Info
 
-The [Activity](https://static.javadoc.io/com.uber.cadence/cadence-client/2.4.1/index.html?com/uber/cadence/activity/Activity.html) 
-class provides static getters to access information about the workflow that invoked it.
-Note that this information is stored in a thread local variable. Therefore, calls to Activity accessors succeed only in the thread that invoked the activity function.
+The [Activity](https://static.javadoc.io/com.uber.cadence/cadence-client/2.4.1/index.html?com/uber/cadence/activity/Activity.html)
+class provides static getters to access information about the workflow that invoked it. Note that this information is stored in a thread local variable. Therefore, calls to Activity accessors succeed only in the thread that invoked the activity function.
 
 ```java
 public class FileProcessingActivitiesImpl implements FileProcessingActivities {
@@ -68,16 +65,15 @@ Sometimes an activity lifecycle goes beyond a synchronous method invocation. For
 and later a reply comes and is picked up by a different worker process. The whole request-reply interaction can be modeled
 as a single Cadence activity.
 
-To indicate that an activity should not be completed upon its method return, call Activity.doNotCompleteOnReturn() from the
-original activity thread.
-Then later, when replies come, complete the activity using [ActivityCompletionClient](https://static.javadoc.io/com.uber.cadence/cadence-client/2.4.1/index.html?com/uber/cadence/client/ActivityCompletionClient.html).
-To correlate activity invocation with completion use either `TaskToken` or workflow and activity IDs.
+To indicate that an activity should not be completed upon its method return, call `Activity.doNotCompleteOnReturn()` from the
+original activity thread. Then later, when replies come, complete the activity using [ActivityCompletionClient](https://static.javadoc.io/com.uber.cadence/cadence-client/2.4.1/index.html?com/uber/cadence/client/ActivityCompletionClient.html).
+To correlate activity invocation with completion, use either `TaskToken` or workflow and activity IDs.
 
 ```java
 public class FileProcessingActivitiesImpl implements FileProcessingActivities {
 
      public String download(String bucketName, String remoteName, String localName) {
-         byte[] taskToken = Activity.getTaskToken(); // Used to correlate reply
+         byte[] taskToken = Activity.getTaskToken(); // Used to correlate reply.
          asyncDownloadFileFromS3(taskToken, bucketName, remoteName, localDirectory + localName);
          Activity.doNotCompleteOnReturn();
          return "ignored"; // Return value is ignored when doNotCompleteOnReturn was called.
@@ -85,7 +81,7 @@ public class FileProcessingActivitiesImpl implements FileProcessingActivities {
      ...
 }
 ```
-When download is complete, the download service potentially calls back from a different process:
+When the download is complete, the download service potentially calls back from a different process:
 ```java
     public <R> void completeActivity(byte[] taskToken, R result) {
         completionClient.complete(taskToken, result);
@@ -96,13 +92,13 @@ When download is complete, the download service potentially calls back from a di
     }
 ```
 
-## Activity Heartbeating
+## Activity Heart Beating
 
-Some activities are long running. To react to their crashes quickly, use a heartbeat mechanism.
-Use the `Activity.heartbeat` function to let the Cadence service know that the activity is still alive. You can piggyback
+Some activities are long running. To react to a crash quickly, use a heartbeat mechanism.
+The `Activity.heartbeat` function lets the Cadence service know that the activity is still alive. You can piggyback
 `details` on an activity heartbeat. If an activity times out, the last value of `details` is included
-in the ActivityTimeoutException delivered to a workflow. Then the workflow can pass the details to
-the next activity invocation. This acts as a periodic checkpointing mechanism of an activity progress.
+in the `ActivityTimeoutException` delivered to a workflow. Then the workflow can pass the details to
+the next activity invocation. This acts as a periodic checkpoint mechanism for the progress of an activity.
 ```java
 public class FileProcessingActivitiesImpl implements FileProcessingActivities {
 

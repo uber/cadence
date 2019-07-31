@@ -9,7 +9,7 @@ guarantee with `workflow.SideEffect`. Under certain failure conditions, `workflo
 end up executing a function more than once.
 
 The only way to fail `SideEffect` is to panic, which causes a decision task failure. After the
-timeout, Cadence reschedules and re-executes the decision task, giving `SideEffect` another chance
+timeout, Cadence reschedules and then re-executes the decision task, giving `SideEffect` another chance
 to succeed. Do not return any data from `SideEffect` other than through its recorded return value.
 
 The following sample demonstrates how to use `SideEffect`:

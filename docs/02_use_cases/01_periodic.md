@@ -1,15 +1,14 @@
 # Periodic Execution (aka Distributed Cron)
 
-Execute some business logic periodically. Frequently referenced as distributed cron. The advantage of Cadence for these scenarios is that it provides
-guarantees of the execution, sophisticated error handling, retry policies and visibility into execution history.
+Periodic execution, frequently referred to as distributed cron, is when you execute business logic periodically. The advantage of Cadence for these scenarios is that it guarantees execution, sophisticated error handling, retry policies, and visibility into execution history.
 
-Another important dimension is scale. Some use cases require periodic execution for large number of entities.
-At Uber there are applications that create periodic workflow per customer.
-Think about 100+ million parallel cron jobs that don't require any separate batch processing framework.
+Another important dimension is scale. Some use cases require periodic execution for a large number of entities.
+At Uber, there are applications that create periodic workflows per customer.
+Imagine 100+ million parallel cron jobs that don't require a separate batch processing framework.
 
-Periodic execution is frequently part of other use cases. For example once a month report generation is a periodic service orchestration. Or a event driven workflow that accumulates loyalty points for a customer may apply those points once a month.
+Periodic execution is often part of other use cases. For example, once a month report generation is a periodic service orchestration. Or an event-driven workflow that accumulates loyalty points for a customer and applies those points once a month.
 
-The couple (from dozens) real life examples of Cadence periodic executions:
+There are many real-world examples of Cadence periodic executions. Such as the following:
 
- * Hexaggregator is a Uber backend service that recalculates various statistics for each [hex](https://eng.uber.com/h3/) in each city once a minute.
- * Monthly Uber for Business report generation
+ * An Uber backend service that recalculates various statistics for each [hex](https://eng.uber.com/h3/) in each city once a minute.
+ * Monthly Uber for Business report generation.
