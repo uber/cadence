@@ -4,7 +4,7 @@ The session framework provides a straightforward interface for scheduling multip
 
 ## Use Cases
 
-- **File Processing**: You may want to implement a workflow that can download a file, process it and then upload the modified version. If these three steps are implemented as three different activities, all of them should be executed by the same worker.
+- **File Processing**: You may want to implement a workflow that can download a file, process it, and then upload the modified version. If these three steps are implemented as three different activities, all of them should be executed by the same worker.
 
 - **Machine Learning Model Training**: Training a machine learning model typically involves three stages: download the data set, optimize the model, and upload the trained parameter. Since the models may consume a large amount of resources (GPU memory for example), the number of models processed on a host needs to be limited.
 
@@ -17,23 +17,23 @@ The most important APIs provided by the session framework are `workflow.CreateSe
 Here's a more detailed description of these two APIs:
 ```go
 type SessionOptions struct {
-  // ExecutionTimeout: required, no default
-  //     Specifies the maximum amount of time the session can run
+  // ExecutionTimeout: required, no default.
+  //     Specifies the maximum amount of time the session can run.
   ExecutionTimeout time.Duration
 
-  // CreationTimeout: required, no default
-  //     Specifies how long session creation can take before returning an error
+  // CreationTimeout: required, no default.
+  //     Specifies how long session creation can take before returning an error.
   CreationTimeout  time.Duration
 }
 
 func CreateSession(ctx Context, sessionOptions *SessionOptions) (Context, error)
 ```
 
-`CreateSession()` takes in workflow.Context, sessionOptions and returns a new context which contains metadata information of the created session (referred to as the **session context** below). When it's called, it will check the task list name specified in the `ActivityOptions` (or in the `StartWorkflowOptions` if the task list name is not specified in the `ActivityOptions`), and create the session on one of the workers which is polling that task list. 
+`CreateSession()` takes in `workflow.Context`, `sessionOptions` and returns a new context which contains metadata information of the created session (referred to as the **session context** below). When it's called, it will check the task list name specified in the `ActivityOptions` (or in the `StartWorkflowOptions` if the task list name is not specified in `ActivityOptions`), and create the session on one of the workers which is polling that task list.
 
-The returned session context should be used to execute all activities belonging to the session. The context will be cancelled if the worker executing this session dies or `CompleteSession()` is called. When using the returned session context to execute activities, a `workflow.ErrSessionFailed` error may be returned if the session framework detects that the worker executing this session has died. The failure of your activities won't affect the state of the session, so you still need to handle the errors returned from your activites and call `CompleteSession()` if necessary.
+The returned session context should be used to execute all activities belonging to the session. The context will be cancelled if the worker executing this session dies or `CompleteSession()` is called. When using the returned session context to execute activities, a `workflow.ErrSessionFailed` error may be returned if the session framework detects that the worker executing this session has died. The failure of your activities won't affect the state of the session, so you still need to handle the errors returned from your activities and call `CompleteSession()` if necessary.
 
-`CreateSession()` will return an error if the context passed in already contains an open session. If all the workers are currently busy and unable to handle new sessions, the framework will keep retrying until the `CreationTimeout` you specified in the `SessionOptions` has passed before returning an error (check the **Concurrent Session Limitation** section for more details).
+`CreateSession()` will return an error if the context passed in already contains an open session. If all the workers are currently busy and unable to handle new sessions, the framework will keep retrying until the `CreationTimeout` you specified in `SessionOptions` has passed before returning an error (check the **Concurrent Session Limitation** section for more details).
 
 ```go
 func CompleteSession(ctx Context)
@@ -93,7 +93,7 @@ type SessionInfo struct {
 func GetSessionInfo(ctx Context) *SessionInfo
 ```
 
-The session context also stores some session metadata, which can be retrieved by the `GetSessionInfo()` API. If the context passed in doesn't contain any session metadata, this API will return a `nil` pointer. 
+The session context also stores some session metadata, which can be retrieved by the `GetSessionInfo()` API. If the context passed in doesn't contain any session metadata, this API will return a `nil` pointer.
 
 ## Concurrent Session Limitation
 
@@ -103,7 +103,7 @@ If a worker hits this limitation, it won't accept any new `CreateSession()` requ
 
 ## Recreate Session
 
-For long-running sessions, you may want to use the ContinueAsNew feature to split the workflow into multiple runs when all activities need to be executed by the same worker. The `RecreateSession()`  API is designed for such a use case.
+For long-running sessions, you may want to use the `ContinueAsNew` feature to split the workflow into multiple runs when all activities need to be executed by the same worker. The `RecreateSession()`  API is designed for such a use case.
 
 ```go
 func RecreateSession(ctx Context, recreateToken []byte, sessionOptions *SessionOptions) (Context, error)
@@ -115,7 +115,7 @@ Its usage is the same as `CreateSession()` except that it also takes in a `recre
 token := workflow.GetSessionInfo(sessionCtx).GetRecreateToken()
 ```
 
-## Q&A
+## Q & A
 
 ### Is there a complete example?
 Yes, the [file processing example](https://github.com/samarabbas/cadence-samples/blob/master/cmd/samples/fileprocessing/workflow.go) in the cadence-sample repo has been updated to use the session framework.

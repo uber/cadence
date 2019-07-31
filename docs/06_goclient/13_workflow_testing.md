@@ -83,11 +83,11 @@ the test environment in a setup method. For testing workflows, we use a `cadence
 
 Next, we implement a `SetupTest` method to setup a new test environment before each test. Doing so
 ensures that each test runs in its own isolated sandbox. We also implement an `AfterTest` function
-where we assert that all mocks we set up were indeed called by invoking `s.env.AssertExpectations(s.T()).
+where we assert that all mocks we set up were indeed called by invoking `s.env.AssertExpectations(s.T())`.
 
 Finally, we create a regular test function recognized by "go test" and pass the struct to `suite.Run`.
 
-## A simple test
+## A Simple Test
 
 The most simple test case we can write is to have the test environment execute the workflow and then
 evaluate the results.
@@ -110,14 +110,14 @@ function.
 > will execute the actual activity code including any calls to outside services.
 
 After executing the workflow in the above example, we assert that the workflow ran through completion
-via the call to `s.env.IsWorkflowComplete()`. We also asser that no errors were returned by asserting
+via the call to `s.env.IsWorkflowComplete()`. We also assert that no errors were returned by asserting
 on the return value of `s.env.GetWorkflowError()`. If our workflow returned a value, we could have
 retrieved that value via a call to `s.env.GetWorkflowResult(&value)` and had additional asserts on that
 value.
 
 ## Activity mocking and overriding
 
-When running unit tests on workflows, we want to test the workflow logic in isolation. Additionially,
+When running unit tests on workflows, we want to test the workflow logic in isolation. Additionally,
 we want to inject activity errors during our test runs. The test framework provides two mechanisms
 that support these scenarios: activity mocking and activity overriding. Both of these mechanisms allow
 you to change the behavior of activities invoked by your workflow without the need to modify the actual
@@ -150,7 +150,7 @@ s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return(
 With the mock set up we can now execute the workflow via the s.env.ExecuteWorkflow(...) method and
 assert that the workflow completed successfully and returned the expected error.
 
-Simply mocking the execution to return a desired value or error is a pretty powerful mechnism to
+Simply mocking the execution to return a desired value or error is a pretty powerful mechanism to
 isolate workflow logic. However, sometimes we want to replace the activity with an alternate implementation
 to support a more complex test scenario. Let's assume we want to validate that the activity gets called
 with the correct parameters.
@@ -175,5 +175,5 @@ function whenever the activity is invoked and pass on the return value from the 
 of the activity invocation. Additionally, the framework will validate that the signature of the “mock”
 function matches the signature of the original activity function.
 
-Since this can be an entire function, there is no limitation as to what we can do in here. In this
-example to assert that the “value” param has the same content to the value param we passed to the workflow.
+Since this can be an entire function, there is no limitation as to what we can do here. In this
+example, we assert that the “value” param has the same content as the value param we passed to the workflow.

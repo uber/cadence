@@ -20,7 +20,7 @@ serializable. The following sample code sets up a query handler that handles the
 `current_state`:
 ```go
 func MyWorkflow(ctx workflow.Context, input string) error {
-  currentState := "started" // this could be any serializable struct
+  currentState := "started" // This could be any serializable struct.
   err := workflow.SetQueryHandler(ctx, "current_state", func() (string, error) {
     return currentState, nil
   })
@@ -28,7 +28,7 @@ func MyWorkflow(ctx workflow.Context, input string) error {
     currentState = "failed to register query handler"
     return err
   }
-  // your normal workflow code begins here, and you update the currentState as the code makes progress.
+  // Your normal workflow code begins here, and you update the currentState as the code makes progress.
   currentState = "waiting timer"
   err = NewTimer(ctx, time.Hour).Get(ctx, nil)
   if err != nil {

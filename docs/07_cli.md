@@ -1,13 +1,13 @@
 # Command Line Interface
 
-The Cadence CLI is a command-line tool you can use to perform various tasks on a Cadence server. It can perform 
-domain operations such as register, update, and describe as well as workflow operations like start 
+The Cadence CLI is a command-line tool you can use to perform various tasks on a Cadence server. It can perform
+domain operations such as register, update, and describe as well as workflow operations like start
 workflow, show workflow history, and signal workflow.
 
 ## Using the CLI
 
 The Cadence CLI can be used directly from the Docker Hub image *ubercadence/cli* or by building the CLI tool
-locally. 
+locally.
 
 Example of using the docker image to describe a domain:
 ```
@@ -15,7 +15,7 @@ docker run --rm ubercadence/cli:master --domain samples-domain domain describe
 ```
 
 To build the CLI tool locally, clone the [Cadence server repo](https://github.com/uber/cadence) and run
-`make bins`. This produces an executable called `cadence`. With a local build, the same command to 
+`make bins`. This produces an executable called `cadence`. With a local build, the same command to
 describe a domain would look like this:
 ```
 ./cadence --domain samples-domain domain describe
@@ -37,9 +37,9 @@ Run `./cadence workflow` for help on workflow operations
 Run `./cadence tasklist` for help on tasklist operations  
 (`./cadence help`, `./cadence help [domain|workflow]` will also print help messages)
 
-**Note:** make sure you have a Cadence server running before using CLI 
+**Note:** make sure you have a Cadence server running before using CLI
 
-### Domain operation examples 
+### Domain operation examples
 - Register a new domain named "samples-domain":  
 ```
 ./cadence --domain samples-domain domain register --global_domain false
@@ -61,16 +61,16 @@ Start a workflow and see its progress. This command doesn't finish until workflo
 
 # view help messages for workflow run
 ./cadence workflow run -h
-``` 
+```
 Brief explanation:  
 To run a workflow, the user must specify the following:
 1. Tasklist name (--tl)
 2. Workflow type (--wt)
 3. Execution start to close timeout in seconds (--et)
-4. Input in JSON format (--i) (optional) 
+4. Input in JSON format (--i) (optional)
 
-This example uses [this cadence-samples workflow](https://github.com/samarabbas/cadence-samples/blob/master/cmd/samples/recipes/helloworld/helloworld_workflow.go) 
-and takes a string as input with the `-i '"cadence"'` parameter. Single quotes (`''`) are used to wrap input as JSON. 
+This example uses [this cadence-samples workflow](https://github.com/samarabbas/cadence-samples/blob/master/cmd/samples/recipes/helloworld/helloworld_workflow.go)
+and takes a string as input with the `-i '"cadence"'` parameter. Single quotes (`''`) are used to wrap input as JSON.
 
 **Note:** You need to start the worker so that the workflow can make progress.  
 (Run `make && ./bin/helloworld -m worker` in cadence-samples to start the worker)
@@ -90,7 +90,7 @@ and takes a string as input with the `-i '"cadence"'` parameter. Single quotes (
 # for a workflow with multiple inputs, separate each json with space/newline like
 ./cadence workflow start --tl helloWorldGroup --wt main.WorkflowWith3Args --et 60 -i '"your_input_string" 123 {"Name":"my-string", "Age":12345}'
 ```
-The workflow `start` command is similar to the `run` command, but immediately returns the workflow_id and 
+The workflow `start` command is similar to the `run` command, but immediately returns the workflow_id and
 run_id after starting the workflow. Use the `show` command to view the workflow's history/progress.  
 
 ##### Reuse the same workflow id when starting/running a workflow
@@ -108,9 +108,9 @@ Use option `--workflowidreusepolicy` or `--wrp` to configure the workflow id reu
 ```
 
 ##### Start a workflow with a memo
-Memos are immutable key/value pairs that can be attached to a workflow run when starting the workflow. These are 
-visible when listing workflows. More information on memos can be found 
-[here]({{ '/docs/>03_key_features#memos' | relative_url }}).
+Memos are immutable key/value pairs that can be attached to a workflow run when starting the workflow. These are
+visible when listing workflows. More information on memos can be found
+[here]({{ '/docs/03_key_features#memos' | relative_url }}).
 ```
 cadence wf start -tl helloWorldGroup -wt main.Workflow -et 60 -i '"cadence"' -memo_key ‘“Service” “Env” “Instance”’ -memo ‘“serverName1” “test” 5’
 ```
@@ -155,7 +155,7 @@ cadence wf start -tl helloWorldGroup -wt main.Workflow -et 60 -i '"cadence"' -me
 # use build-in query type "__stack_trace" which is supported by Cadence client library
 ./cadence workflow query -w <wid> -r <rid> --qt __stack_trace
 # a shortcut to query using __stack_trace is (without --qt flag)
-./cadence workflow stack -w <wid> -r <rid> 
+./cadence workflow stack -w <wid> -r <rid>
 ```
 
 #### Signal, cancel, terminate workflow
@@ -167,7 +167,7 @@ cadence wf start -tl helloWorldGroup -wt main.Workflow -et 60 -i '"cadence"' -me
 ./cadence workflow cancel -w <wid> -r <rid>
 
 # terminate
-./cadence workflow terminate -w <wid> -r <rid> --reason 
+./cadence workflow terminate -w <wid> -r <rid> --reason
 ```
 Terminating a running workflow execution will record a WorkflowExecutionTerminated event as the closing event in the history. No more decision tasks will be scheduled for a terminated workflow execution.  
 Canceling a running workflow execution will record a WorkflowExecutionCancelRequested event in the history, and a new decision task will be scheduled. The workflow has a chance to do some clean up work after cancellation.
@@ -202,7 +202,7 @@ To reset multiple workflows, you can use batch reset command:
 ./cadence workflow reset-batch --input_file <file_of_workflows_to_reset> --reset_type <reset_type> --reason "some_reason"
 ```
 #### Recovery from bad deployment -- auto-reset workflow
-If a bad deployment lets a workflow run into a wrong state, you might want to reset the workflow to the point that the bad deployment started to run. But usually it is not easy to find out all the workflows impacted, and every reset point for each workflow. In this case, auto-reset will automatically reset all the workflows given a bad deployment identifier. 
+If a bad deployment lets a workflow run into a wrong state, you might want to reset the workflow to the point that the bad deployment started to run. But usually it is not easy to find out all the workflows impacted, and every reset point for each workflow. In this case, auto-reset will automatically reset all the workflows given a bad deployment identifier.
 
 Let's get familar with some concepts. Each deployment will have an identifier, we call it "**Binary Checksum**" as it is usually generated by the md5sum of a binary file. For a workflow, each binary checksum will be associated with an **auto-reset point**, which contains a **runID**, an **eventID**, and the **created_time** that binary/deployment made the first decision for the workflow.
 
@@ -223,4 +223,4 @@ Then use this command to tell Cadence to auto-reset all workflows impacted by th
 ./cadence --do <YourDomainName> domain update --add_bad_binary aae748fdc557a3f873adbe1dd066713f  --reason "rollback bad deployment"
 ```
 
-As you add the bad binary checksum to your domain, Cadence will not dispatch any decision tasks to the bad binary. So make sure that you have rolled back to a good deployment(or roll out new bits with bug fixes). Otherwise your workflow can't make any progress after auto-reset. 
+As you add the bad binary checksum to your domain, Cadence will not dispatch any decision tasks to the bad binary. So make sure that you have rolled back to a good deployment(or roll out new bits with bug fixes). Otherwise your workflow can't make any progress after auto-reset.

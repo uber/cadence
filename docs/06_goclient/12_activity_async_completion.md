@@ -1,4 +1,4 @@
-# Async Activity Completion
+# Asynchronous Activity Completion
 
 There are certain scenarios when completing an activity upon completion of its function is not possible
 or desirable. For example, you might have an application that requires user input in order to complete
@@ -46,12 +46,10 @@ client.CompleteActivity(taskToken, nil, err)
 
 Following are the parameters of the `CompleteActivity` function:
 
-* `taskToken`: The value of the binart `TaskToken` field of the `ActivityInfo` struct retrieved inside
+* `taskToken`: The value of the binary `TaskToken` field of the `ActivityInfo` struct retrieved inside
 the activity.
 * `result`: The return value to record for the activity. The type of this value must match the type
 of the return value declared by the activity function.
 * `err`: The error code to return if the activity terminates with an error.
 
 If `error` is not null, the value of the `result` field is ignored.
-
-

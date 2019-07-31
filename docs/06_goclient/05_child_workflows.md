@@ -6,7 +6,7 @@ workflow, similar to the way it does for an activity that it invoked.
 
 ```go
 cwo := workflow.ChildWorkflowOptions{
-        // Do not specify WorkflowID if you want cadence to generate a unique ID for the child execution.
+        // Do not specify WorkflowID if you want Cadence to generate a unique ID for the child execution.
         WorkflowID:                   "BID-SIMPLE-CHILD-WORKFLOW",
         ExecutionStartToCloseTimeout: time.Minute * 30,
 }
@@ -41,8 +41,8 @@ the workflow function.
 The method call returns immediately and returns a `cadence.Future`. This allows you to execute more
 code without having to wait for the scheduled workflow to complete.
 
-When you are ready to process the results of the workflow, call the `Get()` method on the future
-object returned. The parameters to this method is the `ctx` object we passed to the
+When you are ready to process the results of the workflow, call the `Get()` method on the returned future
+object. The parameters to this method is the `ctx` object we passed to the
 `workflow.ExecuteChildWorkflow()` call and an output parameter that will receive the output of the
 workflow. The type of the output parameter must match the type of the return value declared by the
 workflow function. The `Get()` method will block until the workflow completes and results are
