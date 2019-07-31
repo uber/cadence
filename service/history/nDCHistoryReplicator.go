@@ -22,6 +22,7 @@ package history
 
 import (
 	ctx "context"
+	"fmt"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -231,7 +232,10 @@ func (r *nDCHistoryReplicator) applyNonStartEventsPrepareBranch(
 	task nDCReplicationTask,
 ) (int, error) {
 
-	incomingVersionHistory := task.getVersionHistory()
+	incomingVersionHistory, err := task.generateVersionHistory()
+	if err != nil {
+		return 0, err
+	}
 	branchMgr := r.getNewBranchMgr(context, mutableState, task.getLogger())
 	versionHistoryIndex, err := branchMgr.prepareVersionHistory(
 		ctx,
@@ -464,4 +468,18 @@ func (r *nDCHistoryReplicator) notify(
 
 	now = now.Add(-r.shard.GetConfig().StandbyClusterDelay())
 	r.shard.SetCurrentTime(clusterName, now)
+}
+
+func (r *nDCHistoryReplicator) ApplyRawEvents(
+	ctx ctx.Context,
+	request *h.ReplicateRawEventsRequest,
+) error {
+	return fmt.Errorf("ApplyRawEvents not implement")
+}
+
+func (e *nDCHistoryReplicator) SyncActivity(
+	ctx ctx.Context,
+	request *h.SyncActivityRequest,
+) error {
+	return fmt.Errorf("SyncActivity not implement")
 }

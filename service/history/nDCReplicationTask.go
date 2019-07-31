@@ -47,8 +47,8 @@ type (
 		getEvents() []*shared.HistoryEvent
 		getNewEvents() []*shared.HistoryEvent
 		getLogger() log.Logger
-		getVersionHistory() *persistence.VersionHistory
 		getRequest() *h.ReplicateEventsRequest
+		generateVersionHistory() (*persistence.VersionHistory, error)
 		generateNewRunTask(taskStartTime time.Time) (nDCReplicationTask, error)
 	}
 
@@ -85,6 +85,8 @@ var (
 	ErrNoNewRunHistory = &shared.BadRequestError{Message: "no new run history events"}
 	// ErrLastEventIsNotContinueAsNew is returned if the last event is not continue as new
 	ErrLastEventIsNotContinueAsNew = &shared.BadRequestError{Message: "last event is not continue as new"}
+	// ErrVersionHistoryMalformed is returned if version history is incorrect
+	ErrVersionHistoryMalformed = &shared.BadRequestError{Message: "version history is malformed"}
 )
 
 func newNDCReplicationTask(
@@ -114,11 +116,15 @@ func newNDCReplicationTask(
 	historyEvents := history.Events
 	firstEvent := history.Events[0]
 	lastEvent := history.Events[len(history.Events)-1]
-
+	versionHistory := persistence.NewVersionHistory([]byte{}, []*persistence.VersionHistoryItem{})
 	eventTime := int64(0)
 	for _, event := range historyEvents {
 		if event.GetTimestamp() > eventTime {
 			eventTime = event.GetTimestamp()
+		}
+		if err := versionHistory.AddOrUpdateItem(persistence.NewVersionHistoryItem(*event.EventId, *event.Version));
+		err != nil {
+			return nil, ErrVersionHistoryMalformed
 		}
 	}
 
@@ -197,12 +203,19 @@ func (t *nDCReplicationTaskImpl) getLogger() log.Logger {
 	return t.logger
 }
 
-func (t *nDCReplicationTaskImpl) getVersionHistory() *persistence.VersionHistory {
-	panic("implement this")
-}
-
 func (t *nDCReplicationTaskImpl) getRequest() *h.ReplicateEventsRequest {
 	return t.request
+}
+
+func (t *nDCReplicationTaskImpl) generateVersionHistory() (*persistence.VersionHistory, error) {
+	versionHistory := persistence.NewVersionHistory([]byte{}, []*persistence.VersionHistoryItem{})
+	for _, event := range t.historyEvents {
+		if err := versionHistory.AddOrUpdateItem(persistence.NewVersionHistoryItem(*event.EventId, *event.Version));
+			err != nil {
+			return nil, ErrVersionHistoryMalformed
+		}
+	}
+	return versionHistory, nil
 }
 
 func (t *nDCReplicationTaskImpl) generateNewRunTask(

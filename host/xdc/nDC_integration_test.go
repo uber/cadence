@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/host"
 	"go.uber.org/zap"
@@ -144,9 +145,9 @@ func (s *nDCIntegrationTestSuite) TestSimpleWorkflowFailover() {
 
 	historyClient := s.cluster1.GetHistoryClient()
 	wfResp, err := historyClient.DescribeWorkflowExecution(createContext(), &history.DescribeWorkflowExecutionRequest{
-		DomainUUID: descReq.UUID,
+		DomainUUID: resp.DomainInfo.UUID,
 		Request: &shared.DescribeWorkflowExecutionRequest{
-			Domain: descReq.Name,
+			Domain: resp.DomainInfo.Name,
 			Execution: &shared.WorkflowExecution{
 				WorkflowId: common.StringPtr(id),
 				RunId:      common.StringPtr(rid),
@@ -155,4 +156,52 @@ func (s *nDCIntegrationTestSuite) TestSimpleWorkflowFailover() {
 	})
 	s.Nil(err)
 	s.Equal(id, wfResp.WorkflowExecutionInfo.Execution.GetWorkflowId())
+}
+
+
+func (s *nDCIntegrationTestSuite) TestSimpleNDC() {
+	domainName := "test-simple-workflow-ndc-" + common.GenerateRandomString(5)
+	client1 := s.cluster1.GetFrontendClient() // active
+	regReq := &shared.RegisterDomainRequest{
+		Name:                                   common.StringPtr(domainName),
+		IsGlobalDomain:                         common.BoolPtr(true),
+		Clusters:                               clusterReplicationConfig,
+		ActiveClusterName:                      common.StringPtr(clusterName[0]),
+		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+	}
+	err := client1.RegisterDomain(createContext(), regReq)
+	s.NoError(err)
+
+	descReq := &shared.DescribeDomainRequest{
+		Name: common.StringPtr(domainName),
+	}
+	resp, err := client1.DescribeDomain(createContext(), descReq)
+	s.NoError(err)
+	s.NotNil(resp)
+	// Wait for domain cache to pick the change
+	time.Sleep(cache.DomainCacheRefreshInterval)
+
+	historyClient := s.cluster2.GetHistoryClient()
+	wid := uuid.New()
+	rid := uuid.New()
+	version := int64(100)
+	replicationInfo := make(map[string]*shared.ReplicationInfo)
+	err = historyClient.ReplicateEvents(createContext(), &history.ReplicateEventsRequest{
+		SourceCluster: common.StringPtr("active"),
+		DomainUUID: resp.DomainInfo.UUID,
+		WorkflowExecution: &shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(wid),
+			RunId: common.StringPtr(rid),
+		},
+		FirstEventId:,
+		NextEventId:,
+		Version: common.Int64Ptr(version),
+		ReplicationInfo: replicationInfo,
+		History:,
+		ForceBufferEvents: common.BoolPtr(false),
+		EventStoreVersion: common.Int32Ptr(persistence.EventStoreVersionV2),
+		NewRunEventStoreVersion: common.Int32Ptr(persistence.EventStoreVersionV2),
+		ResetWorkflow: common.BoolPtr(false),
+	})
+	s.Nil(err)
 }
