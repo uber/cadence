@@ -468,7 +468,7 @@ Update_History_Loop:
 		var newDecisionTaskScheduledID int64
 		var timeoutDecision bool
 		if createNewDecisionTask {
-			var di *decisionInfo
+			var newDecision *decisionInfo
 			var err error
 			if request.GetForceCreateNewDecisionTask() {
 				// heartbeating decision, timeout the heartbeat based on heartbeat timeout
@@ -480,42 +480,42 @@ Update_History_Loop:
 						return nil, &workflow.InternalServiceError{Message: "Failed to add decision timeout event."}
 					}
 					msBuilder.ClearStickyness()
-					di, err = msBuilder.AddDecisionTaskScheduledEvent()
+					newDecision, err = msBuilder.AddDecisionTaskScheduledEvent()
 				} else {
-					di, err = msBuilder.AddDecisionTaskScheduledEventAsHeartbeat(currentDecision.OriginalScheduledTimestamp)
+					newDecision, err = msBuilder.AddDecisionTaskScheduledEventAsHeartbeat(currentDecision.OriginalScheduledTimestamp)
 				}
 			} else {
-				di, err = msBuilder.AddDecisionTaskScheduledEvent()
+				newDecision, err = msBuilder.AddDecisionTaskScheduledEvent()
 			}
 			if err != nil {
 				return nil, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
 			}
 
-			newDecisionTaskScheduledID = di.ScheduleID
+			newDecisionTaskScheduledID = newDecision.ScheduleID
 			// skip transfer task for decision if request asking to return new decision task
 			if !request.GetReturnNewDecisionTask() {
 				transferTasks = append(transferTasks, &persistence.DecisionTask{
 					DomainID:   domainID,
-					TaskList:   di.TaskList,
-					ScheduleID: di.ScheduleID,
+					TaskList:   newDecision.TaskList,
+					ScheduleID: newDecision.ScheduleID,
 				})
 				if msBuilder.IsStickyTaskListEnabled() {
 					tBuilder := handler.historyEngine.getTimerBuilder(context.getExecution())
-					stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID, di.Attempt,
+					stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(newDecision.ScheduleID, newDecision.Attempt,
 						executionInfo.StickyScheduleToStartTimeout)
 					timerTasks = append(timerTasks, stickyTaskTimeoutTimer)
 				}
 			} else {
 				// start the new decision task if request asked to do so
 				// TODO: replace the poll request
-				_, _, err := msBuilder.AddDecisionTaskStartedEvent(di.ScheduleID, "request-from-RespondDecisionTaskCompleted", &workflow.PollForDecisionTaskRequest{
-					TaskList: &workflow.TaskList{Name: common.StringPtr(di.TaskList)},
+				_, _, err := msBuilder.AddDecisionTaskStartedEvent(newDecision.ScheduleID, "request-from-RespondDecisionTaskCompleted", &workflow.PollForDecisionTaskRequest{
+					TaskList: &workflow.TaskList{Name: common.StringPtr(newDecision.TaskList)},
 					Identity: request.Identity,
 				})
 				if err != nil {
 					return nil, err
 				}
-				timeOutTask := tBuilder.AddStartToCloseDecisionTimoutTask(di.ScheduleID, di.Attempt, di.DecisionTimeout)
+				timeOutTask := tBuilder.AddStartToCloseDecisionTimoutTask(newDecision.ScheduleID, newDecision.Attempt, newDecision.DecisionTimeout)
 				timerTasks = append(timerTasks, timeOutTask)
 			}
 		}
