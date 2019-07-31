@@ -1,3 +1,5 @@
+ARG TARGET=server
+
 # Build cadence binaries
 FROM golang:1.12.7-alpine AS builder
 
@@ -28,16 +30,20 @@ RUN wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSI
     && rm dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz
 
 
-# Final image
-FROM alpine:3.10
+# Alpine base image
+FROM alpine:3.10 AS alpine
 
 RUN apk add --update --no-cache ca-certificates tzdata bash curl
 
 # set up nsswitch.conf for Go's "netgo" implementation
 # https://github.com/gliderlabs/docker-alpine/issues/367#issuecomment-424546457
-RUN [ ! -e /etc/nsswitch.conf ] && echo 'hosts: files dns' > /etc/nsswitch.conf
+RUN test ! -e /etc/nsswitch.conf && echo 'hosts: files dns' > /etc/nsswitch.conf
 
 SHELL ["/bin/bash", "-c"]
+
+
+# Cadence server
+FROM alpine AS cadence-server
 
 ENV CADENCE_HOME /etc/cadence
 RUN mkdir -p /etc/cadence
@@ -60,3 +66,26 @@ ENV SERVICES="history,matching,frontend,worker"
 EXPOSE 7933 7934 7935 7939
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD dockerize -template /etc/cadence/config/config_template.yaml:/etc/cadence/config/docker.yaml cadence-server --root $CADENCE_HOME --env docker start --services=$SERVICES
+
+
+# All-in-one Cadence server
+FROM cadence-server AS cadence-allinone
+
+RUN apk add --update --no-cache ca-certificates py-pip mysql-client
+RUN pip install cqlsh
+
+COPY docker/start.sh /start.sh
+
+CMD /start.sh
+
+
+# Cadence CLI
+FROM alpine AS cadence-cli
+
+COPY --from=builder /go/src/github.com/uber/cadence/cadence /usr/local/bin
+
+ENTRYPOINT ["cadence"]
+
+
+# Final image
+FROM cadence-${TARGET}
