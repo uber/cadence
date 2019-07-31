@@ -1,16 +1,13 @@
 ARG TARGET=server
 
-# Build cadence binaries
+# Build Cadence binaries
 FROM golang:1.12.7-alpine AS builder
 
 RUN apk add --update --no-cache ca-certificates make git curl mercurial bzr
 
-# Install dep
-ENV DEP_VERSION=0.5.4
-RUN curl https://raw.githubusercontent.com/golang/dep/master/install.sh | INSTALL_DIRECTORY=/usr/local/bin DEP_RELEASE_TAG=v${DEP_VERSION} sh
-
 WORKDIR /go/src/github.com/uber/cadence
 
+RUN curl https://raw.githubusercontent.com/golang/dep/master/install.sh | INSTALL_DIRECTORY=/usr/local/bin sh
 COPY Gopkg.* ./
 RUN dep ensure -v -vendor-only
 
