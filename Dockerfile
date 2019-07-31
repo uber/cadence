@@ -50,7 +50,8 @@ COPY --from=builder /go/src/github.com/uber/cadence/cadence-server /usr/local/bi
 COPY --from=builder /go/src/github.com/uber/cadence/schema /etc/cadence/schema
 
 COPY docker/entrypoint.sh /docker-entrypoint.sh
-COPY docker/config /etc/cadence/config
+COPY config/dynamicconfig /etc/cadence/config/dynamicconfig
+COPY docker/config_template.yaml /etc/cadence/config
 
 WORKDIR /etc/cadence
 
@@ -58,4 +59,4 @@ ENV SERVICES="history,matching,frontend,worker"
 
 EXPOSE 7933 7934 7935 7939
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD dockerize -template /etc/cadence/config/template.yaml:/etc/cadence/config/docker.yaml cadence-server --root $CADENCE_HOME --env docker start --services=$SERVICES
+CMD dockerize -template /etc/cadence/config/config_template.yaml:/etc/cadence/config/docker.yaml cadence-server --root $CADENCE_HOME --env docker start --services=$SERVICES
