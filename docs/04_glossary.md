@@ -57,6 +57,10 @@ An append log of events for your application. History is durably persisted
 by the Cadence service, enabling seamless recovery of your application state
 from crashes or failures. It also serves as an audit log for debugging.
 
+### Local Activity
+
+A [local activity](03_concepts/02_activities#local-activities) is an activity that is invoked directly in the same process by a workflow code. It consumes much less resources than a normal activity, but imposes a lot of limitations like low duration and lack of rate limiting.
+
 ### Query
 A synchronous (from the caller's point of view) operation that is used to
 report a workflow state. Note that a query is inherently read only and cannot

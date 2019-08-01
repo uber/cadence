@@ -66,3 +66,16 @@ Here are some use cases for employing multiple activity task lists in a single w
 By default an activity is a function or a method depending on a client side library language. As soon as the function returns, an activity completes. But in some cases an activity implementation is asynchronous. For example it is forwarded to an external system through a message queue. And the reply comes through a different queue.
 
 To support such use cases, Cadence allows activity implementations that do not complete upon activity function completions. A separate API should be used in this case to complete the activity. This API can be called from any process, even in a different programming language, that the original activity worker used.
+
+## Local Activities
+
+Some of the activities are very short lived and do not need the queing semantic, flow control, rate limiting and routing capabilities. For these Cadence supports so called _local activity_ feature. Local activities are executed in the same worker process as the workflow that invoked them. Consider using local activities for funcitons that are:
+
+* no longer than a few seconds
+* do not require global rate limiting
+* do not require routing to specific workers or pools of workers
+* can be implemented in the same binary as the workflow that invokes them
+
+The main benefit of local activities is that they are much more efficient in utilizing Cadence service resources and have much lower latency overhead comparing to the usual activity invocation.
+
+
