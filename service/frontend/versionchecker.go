@@ -24,16 +24,15 @@ import (
 	"context"
 
 	"github.com/hashicorp/go-version"
-	"go.uber.org/yarpc"
-
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"go.uber.org/yarpc"
 )
 
 var versionSupported = map[string]version.Constraints{
-	"uber-go":   mustNewConstraint("<1.2"),
-	"uber-java": mustNewConstraint("<1.2"),
-	"cli":       mustNewConstraint("<1.2"),
+	"uber-go":   mustNewConstraint("<1.3"),
+	"uber-java": mustNewConstraint("<1.3"),
+	"cli":       mustNewConstraint("<1.3"),
 }
 
 type (
