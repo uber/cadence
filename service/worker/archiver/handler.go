@@ -128,7 +128,7 @@ func handleRequest(ctx workflow.Context, logger log.Logger, metricsClient metric
 		RetryPolicy: &cadence.RetryPolicy{
 			InitialInterval:          time.Second,
 			BackoffCoefficient:       2.0,
-			ExpirationInterval:       1 * time.Minute,
+			ExpirationInterval:       5 * time.Minute,
 			NonRetriableErrorReasons: deleteHistoryActivityNonRetryableErrors,
 		},
 	}

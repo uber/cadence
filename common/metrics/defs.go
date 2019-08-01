@@ -1268,13 +1268,12 @@ const (
 	HistoryArchiverArchiveNonRetryableErrorCount
 	HistoryArchiverArchiveTransientErrorCount
 	HistoryArchiverHistoryMutatedCount
-	HistoryArchiverUploadedHistorySize
+	HistoryArchiverTotalUploadSize
 	HistoryArchiverHistorySize
 
 	// The following metrics are only used by internal archiver implemention.
 	// TODO: move them to internal repo once cadence plugin model is in place.
 	HistoryArchiverBlobExistsCount
-	HistoryArchiverUploadedBlobSize
 	HistoryArchiverBlobSize
 	HistoryArchiverRunningDeterministicConstructionCheckCount
 	HistoryArchiverDeterministicConstructionCheckFailedCount
@@ -1551,10 +1550,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistoryArchiverArchiveNonRetryableErrorCount:                  {metricName: "history_archiver_archive_non_retryable_error", metricType: Counter},
 		HistoryArchiverArchiveTransientErrorCount:                     {metricName: "history_archiver_archive_transient_error", metricType: Counter},
 		HistoryArchiverHistoryMutatedCount:                            {metricName: "history_archiver_history_mutated_count", metricType: Counter},
-		HistoryArchiverUploadedHistorySize:                            {metricName: "history_archiver_uploaded_history_size", metricType: Timer},
+		HistoryArchiverTotalUploadSize:                                {metricName: "history_archiver_total_ upload_size", metricType: Timer},
 		HistoryArchiverHistorySize:                                    {metricName: "history_archiver_history_size", metricType: Timer},
 		HistoryArchiverBlobExistsCount:                                {metricName: "history_archiver_blob_exists", metricType: Counter},
-		HistoryArchiverUploadedBlobSize:                               {metricName: "history_archiver_uploaded_blob_size", metricType: Timer},
 		HistoryArchiverBlobSize:                                       {metricName: "history_archiver_blob_size", metricType: Timer},
 		HistoryArchiverRunningDeterministicConstructionCheckCount:     {metricName: "history_archiver_running_deterministic_construction_check", metricType: Counter},
 		HistoryArchiverDeterministicConstructionCheckFailedCount:      {metricName: "history_archiver_deterministic_construction_check_failed", metricType: Counter},
