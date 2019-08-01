@@ -156,7 +156,8 @@ type Config struct {
 	// Decision settings
 	// StickyTTL is to expire a sticky tasklist if no update more than this duration
 	StickyTTL dynamicconfig.DurationPropertyFnWithDomainFilter
-	// DecisionHeartbeatTimeout for decision heartbeat -- RespondDecisionTaskComplete with ForceCreateNewDecisionTask == true
+	// DecisionHeartbeatTimeout is to timeout behavior of: RespondDecisionTaskComplete with ForceCreateNewDecisionTask == true without any decisions
+	// So that decision will be scheduled to another worker(by clear stickyness)
 	DecisionHeartbeatTimeout dynamicconfig.DurationPropertyFnWithDomainFilter
 	// MaxDecisionStartToCloseSeconds is the StartToCloseSeconds for decision
 	MaxDecisionStartToCloseSeconds dynamicconfig.IntPropertyFnWithDomainFilter
