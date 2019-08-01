@@ -52,7 +52,7 @@ type Config struct {
 	EnableVisibilityToKafka         dynamicconfig.BoolPropertyFn
 	EmitShardDiffLog                dynamicconfig.BoolPropertyFn
 	MaxAutoResetPoints              dynamicconfig.IntPropertyFnWithDomainFilter
-	MaxDecisionStartToCloseSeconds  dynamicconfig.IntPropertyFnWithDomainFilter
+	ThrottledLogRPS                 dynamicconfig.IntPropertyFn
 
 	// HistoryCache settings
 	// Change of these configs require shard restart
@@ -135,9 +135,11 @@ type Config struct {
 	// whether or not using eventsV2
 	EnableEventsV2 dynamicconfig.BoolPropertyFnWithDomainFilter
 
+	// Archival settings
 	NumArchiveSystemWorkflows dynamicconfig.IntPropertyFn
 	ArchiveRequestRPS         dynamicconfig.IntPropertyFn
 
+	// Size limit related settings
 	BlobSizeLimitError     dynamicconfig.IntPropertyFnWithDomainFilter
 	BlobSizeLimitWarn      dynamicconfig.IntPropertyFnWithDomainFilter
 	HistorySizeLimitError  dynamicconfig.IntPropertyFnWithDomainFilter
@@ -145,18 +147,19 @@ type Config struct {
 	HistoryCountLimitError dynamicconfig.IntPropertyFnWithDomainFilter
 	HistoryCountLimitWarn  dynamicconfig.IntPropertyFnWithDomainFilter
 
-	ThrottledLogRPS dynamicconfig.IntPropertyFn
-
 	// ValidSearchAttributes is legal indexed keys that can be used in list APIs
 	ValidSearchAttributes             dynamicconfig.MapPropertyFn
 	SearchAttributesNumberOfKeysLimit dynamicconfig.IntPropertyFnWithDomainFilter
 	SearchAttributesSizeOfValueLimit  dynamicconfig.IntPropertyFnWithDomainFilter
 	SearchAttributesTotalSizeLimit    dynamicconfig.IntPropertyFnWithDomainFilter
 
+	// Decision settings
 	// StickyTTL is to expire a sticky tasklist if no update more than this duration
 	StickyTTL dynamicconfig.DurationPropertyFnWithDomainFilter
 	// DecisionHeartbeatTimeout for decision heartbeat -- RespondDecisionTaskComplete with ForceCreateNewDecisionTask == true
 	DecisionHeartbeatTimeout dynamicconfig.DurationPropertyFnWithDomainFilter
+	// MaxDecisionStartToCloseSeconds is the StartToCloseSeconds for decision
+	MaxDecisionStartToCloseSeconds dynamicconfig.IntPropertyFnWithDomainFilter
 }
 
 const (
