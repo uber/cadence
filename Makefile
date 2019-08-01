@@ -181,7 +181,7 @@ cover_integration_ci: cover_integration_profile
 cover_xdc_ci: cover_xdc_profile
 	goveralls -coverprofile=$(BUILD)/cover.out -service=travis-ci || echo -e "\x1b[31mCoveralls failed\x1b[m"; \
 
-lint: go-mod
+lint:
 	@echo Running linter
 	@lintFail=0; for file in $(ALL_SRC); do \
 		golint "$$file"; \
