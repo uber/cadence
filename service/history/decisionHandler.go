@@ -340,9 +340,33 @@ Update_History_Loop:
 		if msBuilder.GetExecutionInfo().AutoResetPoints != nil && maxResetPoints == len(msBuilder.GetExecutionInfo().AutoResetPoints.Points) {
 			handler.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.AutoResetPointsLimitExceededCounter)
 		}
-		completedEvent, err := msBuilder.AddDecisionTaskCompletedEvent(scheduleID, startedID, request, maxResetPoints)
-		if err != nil {
-			return nil, &workflow.InternalServiceError{Message: "Unable to add DecisionTaskCompleted event to history."}
+
+		decisionHeartbeating := request.GetForceCreateNewDecisionTask() && len(request.Decisions) == 0
+		var decisionHeartbeatTimeout bool
+		var completedEvent *workflow.HistoryEvent
+		if decisionHeartbeating {
+			domainName := domainEntry.GetInfo().Name
+			timeout := handler.config.DecisionHeartbeatTimeout(domainName)
+			if len(request.Decisions) == 0 && time.Now().After(time.Unix(0, currentDecision.OriginalScheduledTimestamp).Add(timeout)) {
+				decisionHeartbeatTimeout = true
+				scope := handler.metricsClient.Scope(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.DomainTag(domainName))
+				scope.IncCounter(metrics.DecisionHeartbeatTimeoutCounter)
+				completedEvent, err = msBuilder.AddDecisionTaskTimedOutEvent(currentDecision.ScheduleID, currentDecision.StartedID)
+				if err != nil {
+					return nil, &workflow.InternalServiceError{Message: "Failed to add decision timeout event."}
+				}
+				msBuilder.ClearStickyness()
+			} else {
+				completedEvent, err = msBuilder.AddDecisionTaskCompletedEvent(scheduleID, startedID, request, maxResetPoints)
+				if err != nil {
+					return nil, &workflow.InternalServiceError{Message: "Unable to add DecisionTaskCompleted event to history."}
+				}
+			}
+		} else {
+			completedEvent, err = msBuilder.AddDecisionTaskCompletedEvent(scheduleID, startedID, request, maxResetPoints)
+			if err != nil {
+				return nil, &workflow.InternalServiceError{Message: "Unable to add DecisionTaskCompleted event to history."}
+			}
 		}
 
 		var (
@@ -466,27 +490,11 @@ Update_History_Loop:
 		createNewDecisionTask := !isComplete && (hasUnhandledEvents ||
 			request.GetForceCreateNewDecisionTask() || activityNotStartedCancelled)
 		var newDecisionTaskScheduledID int64
-		var timeoutDecision bool
 		if createNewDecisionTask {
 			var newDecision *decisionInfo
 			var err error
-			if request.GetForceCreateNewDecisionTask() {
-				// heartbeating decision, timeout the heartbeat based on heartbeat timeout if the decision is empty
-				domainName := domainEntry.GetInfo().Name
-				timeout := handler.config.DecisionHeartbeatTimeout(domainName)
-				if len(request.Decisions) == 0 && time.Now().After(time.Unix(0, currentDecision.OriginalScheduledTimestamp).Add(timeout)) {
-					timeoutDecision = true
-					scope := handler.metricsClient.Scope(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.DomainTag(domainName))
-					scope.IncCounter(metrics.DecisionHeartbeatTimeoutCounter)
-					_, err = msBuilder.AddDecisionTaskTimedOutEvent(currentDecision.ScheduleID, currentDecision.StartedID)
-					if err != nil {
-						return nil, &workflow.InternalServiceError{Message: "Failed to add decision timeout event."}
-					}
-					msBuilder.ClearStickyness()
-					newDecision, err = msBuilder.AddDecisionTaskScheduledEvent()
-				} else {
-					newDecision, err = msBuilder.AddDecisionTaskScheduledEventAsHeartbeat(currentDecision.OriginalScheduledTimestamp)
-				}
+			if decisionHeartbeating {
+				newDecision, err = msBuilder.AddDecisionTaskScheduledEventAsHeartbeat(currentDecision.OriginalScheduledTimestamp)
 			} else {
 				newDecision, err = msBuilder.AddDecisionTaskScheduledEvent()
 			}
@@ -599,7 +607,7 @@ Update_History_Loop:
 			return nil, updateErr
 		}
 
-		if timeoutDecision {
+		if decisionHeartbeatTimeout {
 			// at this point, update is successful, but we still return an error to client so that the worker will give up this workflow
 			return nil, &workflow.EntityNotExistsError{
 				Message: fmt.Sprintf("decision heartbeat timeout"),
