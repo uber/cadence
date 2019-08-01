@@ -472,9 +472,12 @@ Update_History_Loop:
 			var err error
 			if request.GetForceCreateNewDecisionTask() {
 				// heartbeating decision, timeout the heartbeat based on heartbeat timeout if the decision is empty
-				timeout := handler.config.DecisionHeartbeatTimeout(domainEntry.GetInfo().Name)
+				domainName := domainEntry.GetInfo().Name
+				timeout := handler.config.DecisionHeartbeatTimeout(domainName)
 				if len(request.Decisions) == 0 && time.Now().After(time.Unix(0, currentDecision.OriginalScheduledTimestamp).Add(timeout)) {
 					timeoutDecision = true
+					scope := handler.metricsClient.Scope(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.DomainTag(domainName))
+					scope.IncCounter(metrics.DecisionHeartbeatTimeoutCounter)
 					_, err = msBuilder.AddDecisionTaskTimedOutEvent(currentDecision.ScheduleID, currentDecision.StartedID)
 					if err != nil {
 						return nil, &workflow.InternalServiceError{Message: "Failed to add decision timeout event."}
