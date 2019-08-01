@@ -472,7 +472,8 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 		decisionScheduleEvent.DecisionTaskScheduledEventAttributes.TaskList.GetName(),
 		decisionScheduleEvent.DecisionTaskScheduledEventAttributes.GetStartToCloseTimeoutSeconds(),
 		decisionScheduleEvent.DecisionTaskScheduledEventAttributes.GetAttempt(),
-		0, 0,
+		0,
+		0,
 	)
 	s.Nil(err)
 	s.NotNil(di)
@@ -522,7 +523,8 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 		newDecisionScheduleEvent.DecisionTaskScheduledEventAttributes.TaskList.GetName(),
 		newDecisionScheduleEvent.DecisionTaskScheduledEventAttributes.GetStartToCloseTimeoutSeconds(),
 		newDecisionScheduleEvent.DecisionTaskScheduledEventAttributes.GetAttempt(),
-		0, 0,
+		0,
+		0,
 	)
 	s.Nil(err)
 	s.NotNil(di)

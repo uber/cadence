@@ -1347,7 +1347,9 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(
 }
 
 // originalScheduledTimestamp is to record the first scheduled decision during decision heartbeat.
-func (e *mutableStateBuilder) AddDecisionTaskScheduledEventAsHeartbeat(originalScheduledTimestamp int64) (*decisionInfo, error) {
+func (e *mutableStateBuilder) AddDecisionTaskScheduledEventAsHeartbeat(
+	originalScheduledTimestamp int64,
+) (*decisionInfo, error) {
 	opTag := tag.WorkflowActionDecisionTaskScheduled
 	if err := e.checkMutability(opTag); err != nil {
 		return nil, err
