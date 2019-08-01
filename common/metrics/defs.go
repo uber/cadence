@@ -1550,7 +1550,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistoryArchiverArchiveNonRetryableErrorCount:                  {metricName: "history_archiver_archive_non_retryable_error", metricType: Counter},
 		HistoryArchiverArchiveTransientErrorCount:                     {metricName: "history_archiver_archive_transient_error", metricType: Counter},
 		HistoryArchiverHistoryMutatedCount:                            {metricName: "history_archiver_history_mutated_count", metricType: Counter},
-		HistoryArchiverTotalUploadSize:                                {metricName: "history_archiver_total_ upload_size", metricType: Timer},
+		HistoryArchiverTotalUploadSize:                                {metricName: "history_archiver_total_upload_size", metricType: Timer},
 		HistoryArchiverHistorySize:                                    {metricName: "history_archiver_history_size", metricType: Timer},
 		HistoryArchiverBlobExistsCount:                                {metricName: "history_archiver_blob_exists", metricType: Counter},
 		HistoryArchiverBlobSize:                                       {metricName: "history_archiver_blob_size", metricType: Timer},
