@@ -487,7 +487,7 @@ const (
 	HistoryThrottledLogRPS
 	// StickyTTL is to expire a sticky tasklist if no update more than this duration
 	StickyTTL
-	// DecisionHeartbeatTimeout for decision heartbeat -- RespondDecisionTaskComplete with ForceCreateNewDecisionTask == true
+	// DecisionHeartbeatTimeout for decision heartbeat
 	DecisionHeartbeatTimeout
 
 	// key for worker
