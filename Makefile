@@ -82,8 +82,9 @@ PKG_TEST_DIRS := $(filter-out $(INTEG_TEST_ROOT)%,$(TEST_DIRS))
 GOCOVERPKG_ARG := -coverpkg="$(PROJECT_ROOT)/common/...,$(PROJECT_ROOT)/service/...,$(PROJECT_ROOT)/client/...,$(PROJECT_ROOT)/tools/..."
 
 yarpc-install:
-	go get 'go.uber.org/thriftrw'
-	go get 'go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc'
+	go mod vendor
+	go get './vendor/go.uber.org/thriftrw'
+	go get './vendor/go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc'
 
 clean_thrift:
 	rm -rf .gen
