@@ -11,8 +11,8 @@ callout_description: Cadence failure-oblivious stateful code platform preserves 
   <div class="feature use-cases">
     <a href="{{ '/docs/02_use_cases' | relative_url }}">
       <div class="icon">
-        <svg class="icon-person-unaccompanied-minor">
-          <use xlink:href="#icon-person-unaccompanied-minor"></use>
+        <svg class="icon-multistop">
+          <use xlink:href="#icon-multistop"></use>
         </svg>
       </div>
     </a>
@@ -25,8 +25,8 @@ callout_description: Cadence failure-oblivious stateful code platform preserves 
   <div class="feature concepts">
     <a href="{{ '/docs/03_concepts' | relative_url }}">
       <div class="icon">
-        <svg class="icon-umbrella">
-          <use xlink:href="#icon-umbrella"></use>
+        <svg class="icon-light-bulb">
+          <use xlink:href="#icon-light-bulb"></use>
         </svg>
       </div>
     </a>
@@ -39,8 +39,8 @@ callout_description: Cadence failure-oblivious stateful code platform preserves 
   <div class="feature open-source">
     <a href="{{ 'docs/01_license' | relative_url }}">
       <div class="icon">
-        <svg class="icon-arrow-divert">
-          <use xlink:href="#icon-arrow-divert"></use>
+        <svg class="icon-globe">
+          <use xlink:href="#icon-globe"></use>
         </svg>
       </div>
     </a>
@@ -53,8 +53,8 @@ callout_description: Cadence failure-oblivious stateful code platform preserves 
   <div class="feature java-client">
     <a href="{{ '/docs/05_javaclient' | relative_url }}">
       <div class="icon">
-        <svg class="icon-stopwatch">
-          <use xlink:href="#icon-stopwatch"></use>
+        <svg class="icon-java-cup">
+          <use xlink:href="#icon-java-cup"></use>
         </svg>
       </div>
     </a>
@@ -67,8 +67,8 @@ callout_description: Cadence failure-oblivious stateful code platform preserves 
   <div class="feature go-client">
     <a href="{{ '/docs/06_goclient' | relative_url }}">
       <div class="icon">
-        <svg class="icon-signal">
-          <use xlink:href="#icon-signal"></use>
+        <svg class="icon-gopher">
+          <use xlink:href="#icon-gopher"></use>
         </svg>
       </div>
     </a>
@@ -81,8 +81,8 @@ callout_description: Cadence failure-oblivious stateful code platform preserves 
   <div class="feature contact-us">
     <a href="{{ '/docs/100_contact_us' | relative_url }}">
       <div class="icon">
-        <svg class="icon-heart">
-          <use xlink:href="#icon-heart"></use>
+        <svg class="icon-person-speech-bubble">
+          <use xlink:href="#icon-person-speech-bubble"></use>
         </svg>
       </div>
     </a>
