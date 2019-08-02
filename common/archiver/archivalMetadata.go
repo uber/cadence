@@ -89,13 +89,18 @@ func NewArchivalMetadata(
 	)
 	if historyConfig.ClusterConfiguredForArchival() {
 		// Only check dynamic config when archival is enabled in static config.
+		// If archival is disabled in static config, there will be no provider section in the static config
+		// and the archiver provider can not create any archiver.
+		// Therefore, even dynamic config says archival is enabled, we should ignore that.
+		// Only when archival is enabled in static config,  should we check if there's any difference between static config and dynamic config.
+
 		// Dynamic archival config is accessed once on cluster startup than never accessed again.
 		// This is done so as to keep archival status and and the initialization of archiver.Provider in sync.
 		// TODO: Once archival pause is implemented archival config can be made truly dynamic.
 		dynamicHistoryStatusString := dc.GetStringProperty(dynamicconfig.HistoryArchivalStatus, historyStatus)()
 		dynamicHistoryStatus, err := getClusterArchivalStatus(dynamicHistoryStatusString)
 		if err != nil {
-			panic(err)
+			dynamicHistoryStatus = ArchivalDisabled
 		}
 		if dynamicHistoryStatus != ArchivalEnabled {
 			// apply status override
@@ -111,33 +116,9 @@ func NewArchivalMetadata(
 		}
 	}
 
-	visibilityConfig := NewArchivalConfig(
-		visibilityStatus,
-		visibilityReadEnabled,
-		domainDefaults.Visibility.Status,
-		domainDefaults.Visibility.URI,
-	)
-	if visibilityConfig.ClusterConfiguredForArchival() {
-		dynamicVisibilityStatusString := dc.GetStringProperty(dynamicconfig.VisibilityArchivalStatus, visibilityStatus)()
-		dynamicVisibilityStatus, err := getClusterArchivalStatus(dynamicVisibilityStatusString)
-		if err != nil {
-			panic(err)
-		}
-		if dynamicVisibilityStatus != ArchivalEnabled {
-			visibilityConfig = NewDisabledArchvialConfig()
-		} else {
-			visibilityConfig = NewArchivalConfig(
-				dynamicVisibilityStatusString,
-				dc.GetBoolProperty(dynamicconfig.EnableReadFromVisibilityArchival, visibilityReadEnabled)(),
-				domainDefaults.Visibility.Status,
-				domainDefaults.Visibility.URI,
-			)
-		}
-	}
-
 	return &archivalMetadata{
 		historyConfig:    historyConfig,
-		visibilityConfig: visibilityConfig,
+		visibilityConfig: NewDisabledArchvialConfig(),
 	}
 }
 
@@ -210,7 +191,9 @@ func (a *archivalConfig) GetDomainDefaultURI() string {
 
 func (a *archivalConfig) isValid() bool {
 	URISet := len(a.domainDefaultURI) != 0
-	return (URISet && a.ClusterConfiguredForArchival()) || (!a.enableRead && a.domainDefaultStatus == shared.ArchivalStatusDisabled && !URISet && !a.ClusterConfiguredForArchival())
+	validEnabled := a.ClusterConfiguredForArchival() && URISet
+	validDisabled := !a.ClusterConfiguredForArchival() && !a.enableRead && a.domainDefaultStatus == shared.ArchivalStatusDisabled && !URISet
+	return validEnabled || validDisabled
 }
 
 func getClusterArchivalStatus(str string) (ArchivalStatus, error) {
