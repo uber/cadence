@@ -77,7 +77,7 @@ An attempt to start a workflow if there is a completed workflow with the same ID
 
 - `AllowDuplicateFailedOnly` means that it is allowed to start a workflow only if a previously executed workflow with the same ID failed.
 - `AllowDuplicate` means that it is allowed to start independently of the previous workflow completion status.
-- `RejectDuplicate` means that it is not allowed start a workflow execution using the same workflow ID at all.
+- `RejectDuplicate` means that it is not allowed to start a workflow execution using the same workflow ID at all.
 
 The default is `AllowDuplicateFailedOnly`.
 
