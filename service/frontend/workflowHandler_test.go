@@ -524,7 +524,6 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Failure_InvalidArchivalURI() {
 	)
 	err := wh.RegisterDomain(context.Background(), req)
 	assert.Error(s.T(), err)
-	assert.Equal(s.T(), errInvalidURI, err)
 }
 
 func (s *workflowHandlerSuite) TestRegisterDomain_Success_EnabledWithNoArchivalURI() {
@@ -766,7 +765,6 @@ func (s *workflowHandlerSuite) TestUpdateDomain_Failure_InvalidArchivalURI() {
 	)
 	_, err := wh.UpdateDomain(context.Background(), updateReq)
 	assert.Error(s.T(), err)
-	assert.Equal(s.T(), errInvalidURI, err)
 }
 
 func (s *workflowHandlerSuite) TestUpdateDomain_Success_ArchivalEnabledToArchivalDisabledWithoutSettingURI() {
