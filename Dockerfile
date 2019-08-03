@@ -13,8 +13,11 @@ WORKDIR /cadence
 # Making sure that dependency is not touched
 ENV GOFLAGS="-mod=readonly"
 
-COPY . .
+# Copy go mod dependencies and build cache
+COPY go.* .
 RUN go mod download
+
+COPY . .
 RUN CGO_ENABLED=0 make copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server
 
 
