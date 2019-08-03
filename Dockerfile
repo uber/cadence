@@ -80,7 +80,7 @@ CMD /start.sh
 # Cadence CLI
 FROM alpine AS cadence-cli
 
-COPY --from=builder /cadence /usr/local/bin
+COPY --from=builder /cadence/cadence /usr/local/bin
 
 ENTRYPOINT ["cadence"]
 
