@@ -71,7 +71,7 @@ To understand the Cadence execution model as well as the recovery mechanism, wat
 
 Workflow ID is assigned by a client when starting a workflow. It is usually a business level ID like customer ID or order ID.
 
-Cadence guarantees that there could be only one workflow (across all workflow types) with a given ID open per domain at any time. An attempt to start a workflow with the same ID is going to fail with `WorkflowExecutionAlreadyStarted` error.
+Cadence guarantees that there could be only one workflow (across all workflow types) with a given ID open per [domain](../04_glossary#domain) at any time. An attempt to start a workflow with the same ID is going to fail with `WorkflowExecutionAlreadyStarted` error.
 
 An attempt to start a workflow if there is a completed workflow with the same ID depends on a `WorkflowIdReusePolicy` option:
 
