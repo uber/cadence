@@ -1265,8 +1265,11 @@ const (
 	SequentialTaskQueueProcessingLatency
 	SequentialTaskTaskProcessingLatency
 
+	HistoryArchiverArchiveNonRetryableErrorCount
+	HistoryArchiverArchiveTransientErrorCount
 	HistoryArchiverHistoryMutatedCount
 	HistoryArchiverTotalUploadSize
+	HistoryArchiverHistorySize
 
 	// The following metrics are only used by internal archiver implemention.
 	// TODO: move them to internal repo once cadence plugin model is in place.
@@ -1278,8 +1281,6 @@ const (
 	HistoryArchiverRunningBlobIntegrityCheckCount
 	HistoryArchiverBlobIntegrityCheckFailedCount
 	HistoryArchiverCouldNotRunBlobIntegrityCheckCount
-	HistoryArchiverUploadNonRetryableErrorCount
-	HistoryArchiverCleanupFailedCount
 
 	MatchingClientForwardedCounter
 	MatchingClientInvalidTaskListName
@@ -1356,6 +1357,7 @@ const (
 	RemoveEngineForShardLatency
 	CompleteDecisionWithStickyEnabledCounter
 	CompleteDecisionWithStickyDisabledCounter
+	DecisionHeartbeatTimeoutCounter
 	HistoryEventNotificationQueueingLatency
 	HistoryEventNotificationFanoutLatency
 	HistoryEventNotificationInFlightMessageGauge
@@ -1546,8 +1548,11 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		SequentialTaskQueueProcessingLatency:                {metricName: "sequentialtask_queue_processing_latency", metricType: Timer},
 		SequentialTaskTaskProcessingLatency:                 {metricName: "sequentialtask_task_processing_latency", metricType: Timer},
 
+		HistoryArchiverArchiveNonRetryableErrorCount:                  {metricName: "history_archiver_archive_non_retryable_error", metricType: Counter},
+		HistoryArchiverArchiveTransientErrorCount:                     {metricName: "history_archiver_archive_transient_error", metricType: Counter},
 		HistoryArchiverHistoryMutatedCount:                            {metricName: "history_archiver_history_mutated_count", metricType: Counter},
 		HistoryArchiverTotalUploadSize:                                {metricName: "history_archiver_total_upload_size", metricType: Timer},
+		HistoryArchiverHistorySize:                                    {metricName: "history_archiver_history_size", metricType: Timer},
 		HistoryArchiverBlobExistsCount:                                {metricName: "history_archiver_blob_exists", metricType: Counter},
 		HistoryArchiverBlobSize:                                       {metricName: "history_archiver_blob_size", metricType: Timer},
 		HistoryArchiverRunningDeterministicConstructionCheckCount:     {metricName: "history_archiver_running_deterministic_construction_check", metricType: Counter},
@@ -1556,8 +1561,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistoryArchiverRunningBlobIntegrityCheckCount:                 {metricName: "history_archiver_running_blob_integrity_check", metricType: Counter},
 		HistoryArchiverBlobIntegrityCheckFailedCount:                  {metricName: "history_archiver_blob_integrity_check_failed", metricType: Counter},
 		HistoryArchiverCouldNotRunBlobIntegrityCheckCount:             {metricName: "history_archiver_could_not_run_blob_integrity_check", metricType: Counter},
-		HistoryArchiverUploadNonRetryableErrorCount:                   {metricName: "history_archiver_upload_non_retryable_error", metricType: Counter},
-		HistoryArchiverCleanupFailedCount:                             {metricName: "history_archiver_cleanup_failed", metricType: Counter},
 		MatchingClientForwardedCounter:                                {metricName: "forwarded", metricType: Counter},
 		MatchingClientInvalidTaskListName:                             {metricName: "invalid_task_list_name", metricType: Counter},
 	},
@@ -1629,6 +1632,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		RemoveEngineForShardLatency:                       {metricName: "remove_engine_for_shard_latency", metricType: Timer},
 		CompleteDecisionWithStickyEnabledCounter:          {metricName: "complete_decision_sticky_enabled_count", metricType: Counter},
 		CompleteDecisionWithStickyDisabledCounter:         {metricName: "complete_decision_sticky_disabled_count", metricType: Counter},
+		DecisionHeartbeatTimeoutCounter:                   {metricName: "decision_heartbeat_timeout_count", metricType: Counter},
 		HistoryEventNotificationQueueingLatency:           {metricName: "history_event_notification_queueing_latency", metricType: Timer},
 		HistoryEventNotificationFanoutLatency:             {metricName: "history_event_notification_fanout_latency", metricType: Timer},
 		HistoryEventNotificationInFlightMessageGauge:      {metricName: "history_event_notification_inflight_message_gauge", metricType: Gauge},
