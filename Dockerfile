@@ -7,6 +7,12 @@ RUN apk add --update --no-cache ca-certificates make git curl mercurial bzr
 
 WORKDIR /cadence
 
+# Making sure that dependency is not touched
+ENV GOFLAGS="-mod=readonly"
+
+# Can be used in case a proxy is necessary
+ARG GOPROXY
+
 COPY . .
 RUN CGO_ENABLED=0 make copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server
 
