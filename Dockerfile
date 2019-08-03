@@ -14,6 +14,7 @@ WORKDIR /cadence
 ENV GOFLAGS="-mod=readonly"
 
 COPY . .
+RUN go mod download
 RUN CGO_ENABLED=0 make copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server
 
 
