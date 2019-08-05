@@ -23,7 +23,7 @@ Cadence service is multitentant. Therefore it is expected that multiple pools of
 
 ## Workflow Worker
 
-Cadence reuses terminology from _workflow automation_ domain. So failure-oblivious stateful code is called workflow.
+Cadence reuses terminology from _workflow automation_ domain. So fault-oblivious stateful code is called workflow.
 
 The Cadence service does not execute workflow code directly. The workflow code is hosted by an external (from the service point of view) _workflow worker_ process. These processes receive _decision tasks_ that contain events that the workflow is expected to handle from the Cadence service, delivers them to the workflow code, and communicates workflow _decisions_ back to the service.
 

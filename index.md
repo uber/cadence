@@ -1,8 +1,8 @@
 ---
 title: Welcome
 layout: marketing
-callout: Failure-Oblivious Stateful Code Platform
-callout_description: Cadence failure-oblivious stateful code platform preserves complete multithreaded application state including thread stacks with local variables across hardware and software failures. It greatly simplifies coding of complex stateful distributed applications. At the same time it is scalable and robust enough to power hundreds of critical use cases at Uber and outside.
+callout: Fault-Oblivious Stateful Code Platform
+callout_description: Cadence fault-oblivious stateful code platform preserves complete multithreaded application state including thread stacks with local variables across hardware and software failures. It greatly simplifies coding of complex stateful distributed applications. At the same time it is scalable and robust enough to power hundreds of critical use cases at Uber and outside.
 ---
 
 <section class="features">
