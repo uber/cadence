@@ -40,10 +40,10 @@ The Go client doesn't use this.
 
 ### Decision
 Any action taken by the workflow durable function is called a decision. For example:
-scheduling an activity, canceling a child workflow, or starting a timer. A [decision task](completion) contains an optional list of decisions. Every decision is recorded in the [event history](#event-history) as an [event](#event)
+scheduling an activity, canceling a child workflow, or starting a timer. A [decision task](#decision-task) contains an optional list of decisions. Every decision is recorded in the [event history](#event-history) as an [event](#event).
 
 ### Decision Task
-Every time a new external event that might affect a workflow state is recorded a decision task that contains it is added to a [decision-task-list] and then picked up by a workflow worker. After the new event is handled, the decision task is completed with a list of [decisions](#decision)
+Every time a new external event that might affect a workflow state is recorded, a decision task that contains it is added to a [decision-task-list](#decision-task-list) and then picked up by a workflow worker. After the new event is handled, the decision task is completed with a list of [decisions](#decision).
 Note that handling of a decision task is usually very fast and is not related to duration
 of operations that the workflow invokes.
 
@@ -112,7 +112,7 @@ a *Workflow* is that its state is preserved by Cadence. Therefore any failure
 of a worker process that hosts the workflow code does not affect the workflow
 execution. The *Workflow* continues as if these failures did not happen. At the
 same time, activities can fail any moment for any reason. Because workflow code
-is fully fault-obliviouss, it is guaranteed to get notifications about activity
+is fully fault-oblivious, it is guaranteed to get notifications about activity
 failures or timeouts and act accordingly. There is no limit on potential workflow
 duration.
 
