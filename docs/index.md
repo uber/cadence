@@ -28,8 +28,9 @@ are supported. An adapter to any other database that provides multi-row single s
 can be added. There are different service deployment models. At Uber, our team operates multitenant clusters
 that are shared by hundreds of applications.
 
-[Watch Maxim's talk](https://youtu.be/llmsBGKOuWI) from the Uber Open Summit for an introduction
-to the Cadence programming model and value proposition.
+Watch Maxim's talk from the Uber Open Summit for an introductionto the Cadence programming model and value proposition.
+
+{% include youtubePlayer.html id="llmsBGKOuWI" %}
 
 The GitHub repo for the Cadence server is [uber/cadence](https://github.com/uber/cadence). The docker
 image for the Cadence server is available on Docker Hub at

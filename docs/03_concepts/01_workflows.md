@@ -65,7 +65,9 @@ Later it can be resurrected on a different or the same worker when the need (in 
 
 The workflow state recovery utilizes event sourcing which puts a few restrictions on how the code is written. The main restriction is that the workflow code must be deterministic which means that it must produce exactly the same result if executed multiple times. This rules out any external API calls from the workflow code as external calls can fail intermittently or change its output any time. That is why all communication with the external world should happen through activities. For the same reason, workflow code must use Cadence APIs to get current time, sleep, and create new threads.
 
-To understand the Cadence execution model as well as the recovery mechanism, watch [this webcast](https://youtu.be/qce_AqCkFys?t=948). The animation covering recovery starts at 15:50.
+To understand the Cadence execution model as well as the recovery mechanism, watch the following webcast. The animation covering recovery starts at 15:50.
+
+{% include youtubePlayer.html id="qce_AqCkFys?t=960" %}
 
 ## ID Uniqueness
 

@@ -10,7 +10,14 @@ An activity can be retried indefinitely according to the provided exponential re
 If for any reason an activity is not completed within the specified timeout, an error is reported to the workflow and the workflow decides how to handle it. There is no limit on potential activity
 duration.
 
-### Activity task
+### Activity Task
+A task that contains an activity invocation information that is delivered to an [activity worker](#activity-worker) through and an  [activity task list](#activity-task-list). An activity worker upon receiving activity task executes a correponding [activity](#activity)
+
+### Activity Task List
+Task list that is used to deliver [activity tasks](#activity-task) to [activity workers](#activity-worker)
+
+### Activity Worker
+An object that is executed in the client application and receives [activity tasks](#activity-task) from an  [activity task list](#activity-task-list) it is subscribed to. Once task is received it invokes a correspondent activity.
 
 ### Archival
 Archival is a feature that automatically moves [histories](#event-history) from persistence to a blobstore after
@@ -33,14 +40,15 @@ The Go client doesn't use this.
 
 ### Decision
 Any action taken by the workflow durable function is called a decision. For example:
-scheduling an activity, canceling a child workflow, or starting a timer.
+scheduling an activity, canceling a child workflow, or starting a timer. A [decision task](completion) contains an optional list of decisions. Every decision is recorded in the [event history](#event-history) as an [event](#event)
 
 ### Decision Task
-
-Every time a new external event that might affect a workflow state is recorded. a decision task
-notifies a workflow worker about it. After the new event is handled, the decision task is completed.
+Every time a new external event that might affect a workflow state is recorded a decision task that contains it is added to a [decision-task-list] and then picked up by a workflow worker. After the new event is handled, the decision task is completed with a list of [decisions](#decision)
 Note that handling of a decision task is usually very fast and is not related to duration
 of operations that the workflow invokes.
+
+### Decision Task List
+Task list that is used to deliver [decision tasks](#decision-task) to [workflow workers](#workflow-worker)
 
 ### Domain
 Cadence is backed by a multitenant service. The unit of isolation is called a **domain**. Each domain acts as a namespace for task list names as well as workflow IDs. For example, when a workflow is started, it is started in a
@@ -84,15 +92,11 @@ There are two types of tasks: an [Activity task](#activity-task) and a [Decision
 while a workflow execution employs multiple decision tasks.
 
 ### Task List
-A queue that is persisted inside a Cadence service. When a workflow requests
-an activity execution, Cadence service creates an activity task and puts it into
-a *Task List*. Then a client-side worker that implements the activity receives
-the task from the *Task List* and invokes an activity implementation. For this
-to work, the *Task List* name that is used to request an activity execution and
-the name used to configure a worker must match.
+Common name for [activity task lists](#activity-task-list) and [decision task lists](#decision-task-list)
 
 ### Task Token
-A unique correlation ID for a Cadence activity.
+A unique correlation ID for a Cadence activity. Activity completion calls take either task token
+or DomainName, WorkflowID, ActivityID arguments.
 
 ### Worker
 Also known as a *worker service*. A service that hosts the workflow and
@@ -101,15 +105,15 @@ those tasks, and communicates task execution results back to the Cadence service
 Worker services are developed, deployed, and operated by Cadence customers.
 
 ### Workflow
-A durable function that orchestrates activities. A *Workflow* has full control over
+A fault-oblivious stateful function that orchestrates activities. A *Workflow* has full control over
 which activities are executed, and in which order. A *Workflow* must not affect
 the external world directly, only through activities. What makes workflow code
 a *Workflow* is that its state is preserved by Cadence. Therefore any failure
 of a worker process that hosts the workflow code does not affect the workflow
 execution. The *Workflow* continues as if these failures did not happen. At the
 same time, activities can fail any moment for any reason. Because workflow code
-is fully fault tolerant, it is guaranteed to get notifications about activity
-failure or timeouts and act accordingly. There is no limit on potential workflow
+is fully fault-obliviouss, it is guaranteed to get notifications about activity
+failures or timeouts and act accordingly. There is no limit on potential workflow
 duration.
 
 ### Workflow Execution
@@ -122,5 +126,9 @@ uniqueness of an ID within a domain. An attempt to start a *Workflow* with a
 duplicate ID results in an **already started** error.
 
 ### Workflow Task
+Synonym of the [Decision Task](#decision-task).
 
-Synonym of [Decision Task](#decision-task).
+### Workflow Worker
+An object that is executed in the client application and receives [decision tasks](#decision-task) from an  [decision task list](#decision-task-list) it is subscribed to. Once task is received it is handled by a correponding workflow.
+
+
