@@ -19,6 +19,7 @@
 // THE SOFTWARE.
 
 include "shared.thrift"
+include "replicator.thrift"
 
 namespace java com.uber.cadence
 
@@ -575,6 +576,15 @@ service WorkflowService {
       4: shared.LimitExceededError limitExceededError,
       5: shared.ServiceBusyError serviceBusyError,
       6: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,
+    )
+
+  replicator.GetReplicationTasksResponse GetReplicationTasks(1: replicator.GetReplicationTasksRequest request)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.LimitExceededError limitExceededError,
+      4: shared.ServiceBusyError serviceBusyError,
+      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,
     )
 
 }

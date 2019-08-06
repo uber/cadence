@@ -22,6 +22,9 @@ package history
 
 import (
 	"context"
+	"fmt"
+	"github.com/uber/cadence/.gen/go/replicator"
+	"sync"
 	"time"
 
 	h "github.com/uber/cadence/.gen/go/history"
@@ -636,6 +639,57 @@ func (c *clientImpl) SyncActivity(
 	}
 	err = c.executeWithRedirect(ctx, client, op)
 	return err
+}
+
+func (c *clientImpl) GetReplicationTasks(
+	ctx context.Context,
+	request *replicator.GetReplicationTasksRequest,
+	opts ...yarpc.CallOption,
+) (*replicator.GetReplicationTasksResponse, error) {
+	requestsByClient := make(map[historyserviceclient.Interface]*replicator.GetReplicationTasksRequest)
+
+	for _, token := range request.Tokens {
+		client, err := c.getClientForShardID(int(token.GetShardID()))
+		if err != nil {
+			return nil, err
+		}
+
+		if _, ok := requestsByClient[client]; !ok {
+			requestsByClient[client] = &replicator.GetReplicationTasksRequest{}
+		}
+
+		req := requestsByClient[client]
+		req.Tokens = append(req.Tokens, token)
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(len(requestsByClient))
+	respChan := make(chan *replicator.GetReplicationTasksResponse, len(requestsByClient))
+	for client, req := range requestsByClient {
+		go func() {
+			ctx, cancel := c.createContext(ctx)
+			defer wg.Done()
+			defer cancel()
+			resp, err := client.GetReplicationTasks(ctx, req, opts...)
+			if err != nil {
+				fmt.Printf("failed to get replication tasks from client:%v", err)
+				return
+			}
+			respChan <- resp
+		}()
+	}
+
+	wg.Wait()
+	close(respChan)
+
+	response := &replicator.GetReplicationTasksResponse{TasksByShard: make(map[int32][]*replicator.ReplicationTask)}
+	for resp := range respChan {
+		for shardID, tasks := range resp.TasksByShard {
+			response.TasksByShard[shardID] = tasks
+		}
+	}
+
+	return response, nil
 }
 
 func (c *clientImpl) createContext(parent context.Context) (context.Context, context.CancelFunc) {

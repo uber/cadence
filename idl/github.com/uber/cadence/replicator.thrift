@@ -102,3 +102,15 @@ struct ReplicationTask {
   60: optional HistoryMetadataTaskAttributes historyMetadataTaskAttributes
 }
 
+struct GetReplicationTasksRequest {
+  10: optional list<ReplicationToken> tokens
+}
+
+struct ReplicationToken {
+  10: optional i32 shardID
+  20: optional i32 taskID
+}
+
+struct GetReplicationTasksResponse {
+  10: optional map<i32, list<ReplicationTask>> tasksByShard
+}

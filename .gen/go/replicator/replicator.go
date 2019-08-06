@@ -662,6 +662,543 @@ func (v *DomainTaskAttributes) IsSetFailoverVersion() bool {
 	return v != nil && v.FailoverVersion != nil
 }
 
+type GetReplicationTasksRequest struct {
+	Tokens []*ReplicationToken `json:"tokens,omitempty"`
+}
+
+type _List_ReplicationToken_ValueList []*ReplicationToken
+
+func (v _List_ReplicationToken_ValueList) ForEach(f func(wire.Value) error) error {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
+		w, err := x.ToWire()
+		if err != nil {
+			return err
+		}
+		err = f(w)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (v _List_ReplicationToken_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_ReplicationToken_ValueList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_List_ReplicationToken_ValueList) Close() {}
+
+// ToWire translates a GetReplicationTasksRequest struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *GetReplicationTasksRequest) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Tokens != nil {
+		w, err = wire.NewValueList(_List_ReplicationToken_ValueList(v.Tokens)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _ReplicationToken_Read(w wire.Value) (*ReplicationToken, error) {
+	var v ReplicationToken
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _List_ReplicationToken_Read(l wire.ValueList) ([]*ReplicationToken, error) {
+	if l.ValueType() != wire.TStruct {
+		return nil, nil
+	}
+
+	o := make([]*ReplicationToken, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
+		i, err := _ReplicationToken_Read(x)
+		if err != nil {
+			return err
+		}
+		o = append(o, i)
+		return nil
+	})
+	l.Close()
+	return o, err
+}
+
+// FromWire deserializes a GetReplicationTasksRequest struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a GetReplicationTasksRequest struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v GetReplicationTasksRequest
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *GetReplicationTasksRequest) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TList {
+				v.Tokens, err = _List_ReplicationToken_Read(field.Value.GetList())
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a GetReplicationTasksRequest
+// struct.
+func (v *GetReplicationTasksRequest) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Tokens != nil {
+		fields[i] = fmt.Sprintf("Tokens: %v", v.Tokens)
+		i++
+	}
+
+	return fmt.Sprintf("GetReplicationTasksRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _List_ReplicationToken_Equals(lhs, rhs []*ReplicationToken) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for i, lv := range lhs {
+		rv := rhs[i]
+		if !lv.Equals(rv) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// Equals returns true if all the fields of this GetReplicationTasksRequest match the
+// provided GetReplicationTasksRequest.
+//
+// This function performs a deep comparison.
+func (v *GetReplicationTasksRequest) Equals(rhs *GetReplicationTasksRequest) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Tokens == nil && rhs.Tokens == nil) || (v.Tokens != nil && rhs.Tokens != nil && _List_ReplicationToken_Equals(v.Tokens, rhs.Tokens))) {
+		return false
+	}
+
+	return true
+}
+
+type _List_ReplicationToken_Zapper []*ReplicationToken
+
+// MarshalLogArray implements zapcore.ArrayMarshaler, enabling
+// fast logging of _List_ReplicationToken_Zapper.
+func (l _List_ReplicationToken_Zapper) MarshalLogArray(enc zapcore.ArrayEncoder) (err error) {
+	for _, v := range l {
+		err = multierr.Append(err, enc.AppendObject(v))
+	}
+	return err
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of GetReplicationTasksRequest.
+func (v *GetReplicationTasksRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Tokens != nil {
+		err = multierr.Append(err, enc.AddArray("tokens", (_List_ReplicationToken_Zapper)(v.Tokens)))
+	}
+	return err
+}
+
+// GetTokens returns the value of Tokens if it is set or its
+// zero value if it is unset.
+func (v *GetReplicationTasksRequest) GetTokens() (o []*ReplicationToken) {
+	if v != nil && v.Tokens != nil {
+		return v.Tokens
+	}
+
+	return
+}
+
+// IsSetTokens returns true if Tokens is not nil.
+func (v *GetReplicationTasksRequest) IsSetTokens() bool {
+	return v != nil && v.Tokens != nil
+}
+
+type GetReplicationTasksResponse struct {
+	TasksByShard map[int32][]*ReplicationTask `json:"tasksByShard,omitempty"`
+}
+
+type _List_ReplicationTask_ValueList []*ReplicationTask
+
+func (v _List_ReplicationTask_ValueList) ForEach(f func(wire.Value) error) error {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
+		w, err := x.ToWire()
+		if err != nil {
+			return err
+		}
+		err = f(w)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (v _List_ReplicationTask_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_ReplicationTask_ValueList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_List_ReplicationTask_ValueList) Close() {}
+
+type _Map_I32_List_ReplicationTask_MapItemList map[int32][]*ReplicationTask
+
+func (m _Map_I32_List_ReplicationTask_MapItemList) ForEach(f func(wire.MapItem) error) error {
+	for k, v := range m {
+		if v == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", k)
+		}
+		kw, err := wire.NewValueI32(k), error(nil)
+		if err != nil {
+			return err
+		}
+
+		vw, err := wire.NewValueList(_List_ReplicationTask_ValueList(v)), error(nil)
+		if err != nil {
+			return err
+		}
+		err = f(wire.MapItem{Key: kw, Value: vw})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m _Map_I32_List_ReplicationTask_MapItemList) Size() int {
+	return len(m)
+}
+
+func (_Map_I32_List_ReplicationTask_MapItemList) KeyType() wire.Type {
+	return wire.TI32
+}
+
+func (_Map_I32_List_ReplicationTask_MapItemList) ValueType() wire.Type {
+	return wire.TList
+}
+
+func (_Map_I32_List_ReplicationTask_MapItemList) Close() {}
+
+// ToWire translates a GetReplicationTasksResponse struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *GetReplicationTasksResponse) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.TasksByShard != nil {
+		w, err = wire.NewValueMap(_Map_I32_List_ReplicationTask_MapItemList(v.TasksByShard)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _ReplicationTask_Read(w wire.Value) (*ReplicationTask, error) {
+	var v ReplicationTask
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _List_ReplicationTask_Read(l wire.ValueList) ([]*ReplicationTask, error) {
+	if l.ValueType() != wire.TStruct {
+		return nil, nil
+	}
+
+	o := make([]*ReplicationTask, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
+		i, err := _ReplicationTask_Read(x)
+		if err != nil {
+			return err
+		}
+		o = append(o, i)
+		return nil
+	})
+	l.Close()
+	return o, err
+}
+
+func _Map_I32_List_ReplicationTask_Read(m wire.MapItemList) (map[int32][]*ReplicationTask, error) {
+	if m.KeyType() != wire.TI32 {
+		return nil, nil
+	}
+
+	if m.ValueType() != wire.TList {
+		return nil, nil
+	}
+
+	o := make(map[int32][]*ReplicationTask, m.Size())
+	err := m.ForEach(func(x wire.MapItem) error {
+		k, err := x.Key.GetI32(), error(nil)
+		if err != nil {
+			return err
+		}
+
+		v, err := _List_ReplicationTask_Read(x.Value.GetList())
+		if err != nil {
+			return err
+		}
+
+		o[k] = v
+		return nil
+	})
+	m.Close()
+	return o, err
+}
+
+// FromWire deserializes a GetReplicationTasksResponse struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a GetReplicationTasksResponse struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v GetReplicationTasksResponse
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *GetReplicationTasksResponse) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TMap {
+				v.TasksByShard, err = _Map_I32_List_ReplicationTask_Read(field.Value.GetMap())
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a GetReplicationTasksResponse
+// struct.
+func (v *GetReplicationTasksResponse) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.TasksByShard != nil {
+		fields[i] = fmt.Sprintf("TasksByShard: %v", v.TasksByShard)
+		i++
+	}
+
+	return fmt.Sprintf("GetReplicationTasksResponse{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _List_ReplicationTask_Equals(lhs, rhs []*ReplicationTask) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for i, lv := range lhs {
+		rv := rhs[i]
+		if !lv.Equals(rv) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func _Map_I32_List_ReplicationTask_Equals(lhs, rhs map[int32][]*ReplicationTask) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for lk, lv := range lhs {
+		rv, ok := rhs[lk]
+		if !ok {
+			return false
+		}
+		if !_List_ReplicationTask_Equals(lv, rv) {
+			return false
+		}
+	}
+	return true
+}
+
+// Equals returns true if all the fields of this GetReplicationTasksResponse match the
+// provided GetReplicationTasksResponse.
+//
+// This function performs a deep comparison.
+func (v *GetReplicationTasksResponse) Equals(rhs *GetReplicationTasksResponse) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.TasksByShard == nil && rhs.TasksByShard == nil) || (v.TasksByShard != nil && rhs.TasksByShard != nil && _Map_I32_List_ReplicationTask_Equals(v.TasksByShard, rhs.TasksByShard))) {
+		return false
+	}
+
+	return true
+}
+
+type _List_ReplicationTask_Zapper []*ReplicationTask
+
+// MarshalLogArray implements zapcore.ArrayMarshaler, enabling
+// fast logging of _List_ReplicationTask_Zapper.
+func (l _List_ReplicationTask_Zapper) MarshalLogArray(enc zapcore.ArrayEncoder) (err error) {
+	for _, v := range l {
+		err = multierr.Append(err, enc.AppendObject(v))
+	}
+	return err
+}
+
+type _Map_I32_List_ReplicationTask_Item_Zapper struct {
+	Key   int32
+	Value []*ReplicationTask
+}
+
+// MarshalLogArray implements zapcore.ArrayMarshaler, enabling
+// fast logging of _Map_I32_List_ReplicationTask_Item_Zapper.
+func (v _Map_I32_List_ReplicationTask_Item_Zapper) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	enc.AddInt32("key", v.Key)
+	err = multierr.Append(err, enc.AddArray("value", (_List_ReplicationTask_Zapper)(v.Value)))
+	return err
+}
+
+type _Map_I32_List_ReplicationTask_Zapper map[int32][]*ReplicationTask
+
+// MarshalLogArray implements zapcore.ArrayMarshaler, enabling
+// fast logging of _Map_I32_List_ReplicationTask_Zapper.
+func (m _Map_I32_List_ReplicationTask_Zapper) MarshalLogArray(enc zapcore.ArrayEncoder) (err error) {
+	for k, v := range m {
+		err = multierr.Append(err, enc.AppendObject(_Map_I32_List_ReplicationTask_Item_Zapper{Key: k, Value: v}))
+	}
+	return err
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of GetReplicationTasksResponse.
+func (v *GetReplicationTasksResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.TasksByShard != nil {
+		err = multierr.Append(err, enc.AddArray("tasksByShard", (_Map_I32_List_ReplicationTask_Zapper)(v.TasksByShard)))
+	}
+	return err
+}
+
+// GetTasksByShard returns the value of TasksByShard if it is set or its
+// zero value if it is unset.
+func (v *GetReplicationTasksResponse) GetTasksByShard() (o map[int32][]*ReplicationTask) {
+	if v != nil && v.TasksByShard != nil {
+		return v.TasksByShard
+	}
+
+	return
+}
+
+// IsSetTasksByShard returns true if TasksByShard is not nil.
+func (v *GetReplicationTasksResponse) IsSetTasksByShard() bool {
+	return v != nil && v.TasksByShard != nil
+}
+
 type HistoryMetadataTaskAttributes struct {
 	TargetClusters []string `json:"targetClusters,omitempty"`
 	DomainId       *string  `json:"domainId,omitempty"`
@@ -2476,6 +3013,188 @@ func (v *ReplicationTaskType) UnmarshalJSON(text []byte) error {
 	}
 }
 
+type ReplicationToken struct {
+	ShardID *int32 `json:"shardID,omitempty"`
+	TaskID  *int32 `json:"taskID,omitempty"`
+}
+
+// ToWire translates a ReplicationToken struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *ReplicationToken) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.ShardID != nil {
+		w, err = wire.NewValueI32(*(v.ShardID)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.TaskID != nil {
+		w, err = wire.NewValueI32(*(v.TaskID)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a ReplicationToken struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a ReplicationToken struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v ReplicationToken
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *ReplicationToken) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TI32 {
+				var x int32
+				x, err = field.Value.GetI32(), error(nil)
+				v.ShardID = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TI32 {
+				var x int32
+				x, err = field.Value.GetI32(), error(nil)
+				v.TaskID = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a ReplicationToken
+// struct.
+func (v *ReplicationToken) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.ShardID != nil {
+		fields[i] = fmt.Sprintf("ShardID: %v", *(v.ShardID))
+		i++
+	}
+	if v.TaskID != nil {
+		fields[i] = fmt.Sprintf("TaskID: %v", *(v.TaskID))
+		i++
+	}
+
+	return fmt.Sprintf("ReplicationToken{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this ReplicationToken match the
+// provided ReplicationToken.
+//
+// This function performs a deep comparison.
+func (v *ReplicationToken) Equals(rhs *ReplicationToken) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_I32_EqualsPtr(v.ShardID, rhs.ShardID) {
+		return false
+	}
+	if !_I32_EqualsPtr(v.TaskID, rhs.TaskID) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of ReplicationToken.
+func (v *ReplicationToken) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.ShardID != nil {
+		enc.AddInt32("shardID", *v.ShardID)
+	}
+	if v.TaskID != nil {
+		enc.AddInt32("taskID", *v.TaskID)
+	}
+	return err
+}
+
+// GetShardID returns the value of ShardID if it is set or its
+// zero value if it is unset.
+func (v *ReplicationToken) GetShardID() (o int32) {
+	if v != nil && v.ShardID != nil {
+		return *v.ShardID
+	}
+
+	return
+}
+
+// IsSetShardID returns true if ShardID is not nil.
+func (v *ReplicationToken) IsSetShardID() bool {
+	return v != nil && v.ShardID != nil
+}
+
+// GetTaskID returns the value of TaskID if it is set or its
+// zero value if it is unset.
+func (v *ReplicationToken) GetTaskID() (o int32) {
+	if v != nil && v.TaskID != nil {
+		return *v.TaskID
+	}
+
+	return
+}
+
+// IsSetTaskID returns true if TaskID is not nil.
+func (v *ReplicationToken) IsSetTaskID() bool {
+	return v != nil && v.TaskID != nil
+}
+
 type SyncActicvityTaskAttributes struct {
 	DomainId           *string `json:"domainId,omitempty"`
 	WorkflowId         *string `json:"workflowId,omitempty"`
@@ -3371,7 +4090,7 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "replicator",
 	Package:  "github.com/uber/cadence/.gen/go/replicator",
 	FilePath: "replicator.thrift",
-	SHA1:     "56bb8db140cdc19594a11ab287979e60aacfff25",
+	SHA1:     "5d9faa4fd37762241539735240078e58e818be8b",
 	Includes: []*thriftreflect.ThriftModule{
 		history.ThriftModule,
 		shared.ThriftModule,
@@ -3379,4 +4098,4 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Raw: rawIDL,
 }
 
-const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.replicator\n\ninclude \"shared.thrift\"\ninclude \"history.thrift\"\n\nenum ReplicationTaskType {\n  Domain\n  History\n  SyncShardStatus\n  SyncActivity\n  HistoryMetadata\n}\n\nenum DomainOperation {\n  Create\n  Update\n}\n\nstruct DomainTaskAttributes {\n  05: optional DomainOperation domainOperation\n  10: optional string id\n  20: optional shared.DomainInfo info\n  30: optional shared.DomainConfiguration config\n  40: optional shared.DomainReplicationConfiguration replicationConfig\n  50: optional i64 (js.type = \"Long\") configVersion\n  60: optional i64 (js.type = \"Long\") failoverVersion\n}\n\nstruct HistoryTaskAttributes {\n  05: optional list<string> targetClusters\n  10: optional string domainId\n  20: optional string workflowId\n  30: optional string runId\n  40: optional i64 (js.type = \"Long\") firstEventId\n  50: optional i64 (js.type = \"Long\") nextEventId\n  60: optional i64 (js.type = \"Long\") version\n  70: optional map<string, shared.ReplicationInfo> replicationInfo\n  80: optional shared.History history\n  90: optional shared.History newRunHistory\n  100: optional i32 eventStoreVersion\n  110: optional i32 newRunEventStoreVersion\n  120: optional bool resetWorkflow\n}\n\nstruct HistoryMetadataTaskAttributes {\n  05: optional list<string> targetClusters\n  10: optional string domainId\n  20: optional string workflowId\n  30: optional string runId\n  40: optional i64 (js.type = \"Long\") firstEventId\n  50: optional i64 (js.type = \"Long\") nextEventId\n}\n\nstruct SyncShardStatusTaskAttributes {\n  10: optional string sourceCluster\n  20: optional i64 (js.type = \"Long\") shardId\n  30: optional i64 (js.type = \"Long\") timestamp\n}\n\nstruct SyncActicvityTaskAttributes {\n  10: optional string domainId\n  20: optional string workflowId\n  30: optional string runId\n  40: optional i64 (js.type = \"Long\") version\n  50: optional i64 (js.type = \"Long\") scheduledId\n  60: optional i64 (js.type = \"Long\") scheduledTime\n  70: optional i64 (js.type = \"Long\") startedId\n  80: optional i64 (js.type = \"Long\") startedTime\n  90: optional i64 (js.type = \"Long\") lastHeartbeatTime\n  100: optional binary details\n  110: optional i32 attempt\n  120: optional string lastFailureReason\n  130: optional string lastWorkerIdentity\n}\n\nstruct ReplicationTask {\n  10: optional ReplicationTaskType taskType\n  20: optional DomainTaskAttributes domainTaskAttributes\n  30: optional HistoryTaskAttributes historyTaskAttributes\n  40: optional SyncShardStatusTaskAttributes syncShardStatusTaskAttributes\n  50: optional SyncActicvityTaskAttributes syncActicvityTaskAttributes\n  60: optional HistoryMetadataTaskAttributes historyMetadataTaskAttributes\n}\n\n"
+const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.replicator\n\ninclude \"shared.thrift\"\ninclude \"history.thrift\"\n\nenum ReplicationTaskType {\n  Domain\n  History\n  SyncShardStatus\n  SyncActivity\n  HistoryMetadata\n}\n\nenum DomainOperation {\n  Create\n  Update\n}\n\nstruct DomainTaskAttributes {\n  05: optional DomainOperation domainOperation\n  10: optional string id\n  20: optional shared.DomainInfo info\n  30: optional shared.DomainConfiguration config\n  40: optional shared.DomainReplicationConfiguration replicationConfig\n  50: optional i64 (js.type = \"Long\") configVersion\n  60: optional i64 (js.type = \"Long\") failoverVersion\n}\n\nstruct HistoryTaskAttributes {\n  05: optional list<string> targetClusters\n  10: optional string domainId\n  20: optional string workflowId\n  30: optional string runId\n  40: optional i64 (js.type = \"Long\") firstEventId\n  50: optional i64 (js.type = \"Long\") nextEventId\n  60: optional i64 (js.type = \"Long\") version\n  70: optional map<string, shared.ReplicationInfo> replicationInfo\n  80: optional shared.History history\n  90: optional shared.History newRunHistory\n  100: optional i32 eventStoreVersion\n  110: optional i32 newRunEventStoreVersion\n  120: optional bool resetWorkflow\n}\n\nstruct HistoryMetadataTaskAttributes {\n  05: optional list<string> targetClusters\n  10: optional string domainId\n  20: optional string workflowId\n  30: optional string runId\n  40: optional i64 (js.type = \"Long\") firstEventId\n  50: optional i64 (js.type = \"Long\") nextEventId\n}\n\nstruct SyncShardStatusTaskAttributes {\n  10: optional string sourceCluster\n  20: optional i64 (js.type = \"Long\") shardId\n  30: optional i64 (js.type = \"Long\") timestamp\n}\n\nstruct SyncActicvityTaskAttributes {\n  10: optional string domainId\n  20: optional string workflowId\n  30: optional string runId\n  40: optional i64 (js.type = \"Long\") version\n  50: optional i64 (js.type = \"Long\") scheduledId\n  60: optional i64 (js.type = \"Long\") scheduledTime\n  70: optional i64 (js.type = \"Long\") startedId\n  80: optional i64 (js.type = \"Long\") startedTime\n  90: optional i64 (js.type = \"Long\") lastHeartbeatTime\n  100: optional binary details\n  110: optional i32 attempt\n  120: optional string lastFailureReason\n  130: optional string lastWorkerIdentity\n}\n\nstruct ReplicationTask {\n  10: optional ReplicationTaskType taskType\n  20: optional DomainTaskAttributes domainTaskAttributes\n  30: optional HistoryTaskAttributes historyTaskAttributes\n  40: optional SyncShardStatusTaskAttributes syncShardStatusTaskAttributes\n  50: optional SyncActicvityTaskAttributes syncActicvityTaskAttributes\n  60: optional HistoryMetadataTaskAttributes historyMetadataTaskAttributes\n}\n\nstruct GetReplicationTasksRequest {\n  10: optional list<ReplicationToken> tokens\n}\n\nstruct ReplicationToken {\n  10: optional i32 shardID\n  20: optional i32 taskID\n}\n\nstruct GetReplicationTasksResponse {\n  10: optional map<i32, list<ReplicationTask>> tasksByShard\n}"

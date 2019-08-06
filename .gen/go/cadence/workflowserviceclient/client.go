@@ -28,6 +28,7 @@ package workflowserviceclient
 import (
 	context "context"
 	cadence "github.com/uber/cadence/.gen/go/cadence"
+	replicator "github.com/uber/cadence/.gen/go/replicator"
 	shared "github.com/uber/cadence/.gen/go/shared"
 	wire "go.uber.org/thriftrw/wire"
 	yarpc "go.uber.org/yarpc"
@@ -67,6 +68,12 @@ type Interface interface {
 		DescribeRequest *shared.DescribeWorkflowExecutionRequest,
 		opts ...yarpc.CallOption,
 	) (*shared.DescribeWorkflowExecutionResponse, error)
+
+	GetReplicationTasks(
+		ctx context.Context,
+		Request *replicator.GetReplicationTasksRequest,
+		opts ...yarpc.CallOption,
+	) (*replicator.GetReplicationTasksResponse, error)
 
 	GetSearchAttributes(
 		ctx context.Context,
@@ -384,6 +391,29 @@ func (c client) DescribeWorkflowExecution(
 	}
 
 	success, err = cadence.WorkflowService_DescribeWorkflowExecution_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) GetReplicationTasks(
+	ctx context.Context,
+	_Request *replicator.GetReplicationTasksRequest,
+	opts ...yarpc.CallOption,
+) (success *replicator.GetReplicationTasksResponse, err error) {
+
+	args := cadence.WorkflowService_GetReplicationTasks_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_GetReplicationTasks_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = cadence.WorkflowService_GetReplicationTasks_Helper.UnwrapResponse(&result)
 	return
 }
 
