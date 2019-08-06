@@ -28,7 +28,6 @@ import (
 	"flag"
 	"fmt"
 	"math"
-	"sort"
 	"strconv"
 	"testing"
 	"time"
@@ -1010,13 +1009,11 @@ func (s *integrationSuite) TestCronWorkflow() {
 	expectedExecutionTime := dweResponse.WorkflowExecutionInfo.GetStartTime() + 3*time.Second.Nanoseconds()
 	s.Equal(expectedExecutionTime, dweResponse.WorkflowExecutionInfo.GetExecutionTime())
 
-	sort.Slice(closedExecutions, func(i, j int) bool {
-		return closedExecutions[i].GetStartTime() < closedExecutions[j].GetStartTime()
-	})
 	lastExecution := closedExecutions[0]
-	for i := 1; i != 4; i++ {
+	for i := 0; i != 4; i++ {
 		executionInfo := closedExecutions[i]
 		// Roundup to compare on the precision of seconds
+		// The backoff between any two executions should be multiplier of the target backoff duration which is 3 in this test
 		s.Equal(int64(0), int64(executionInfo.GetExecutionTime()-lastExecution.GetExecutionTime())/1000000000 % (targetBackoffDuration.Nanoseconds()/1000000000))
 		lastExecution = executionInfo
 	}
@@ -1967,14 +1964,11 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 		time.Sleep(200 * time.Millisecond)
 	}
 	s.NotNil(closedExecutions)
-
-	sort.Slice(closedExecutions, func(i, j int) bool {
-		return closedExecutions[i].GetStartTime() < closedExecutions[j].GetStartTime()
-	})
 	lastExecution := closedExecutions[0]
-	for i := 1; i != 4; i++ {
+	for i := 0; i != 4; i++ {
 		executionInfo := closedExecutions[i]
 		// Round up the time precision to seconds
+		// The backoff between any two executions should be multiplier of the target backoff duration which is 3 in this test
 		s.Equal(int64(0), int64(executionInfo.GetExecutionTime()-lastExecution.GetExecutionTime())/1000000000 % (targetBackoffDuration.Nanoseconds()/1000000000))
 		lastExecution = executionInfo
 	}
