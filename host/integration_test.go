@@ -1014,7 +1014,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 		executionInfo := closedExecutions[i]
 		// Roundup to compare on the precision of seconds
 		// The backoff between any two executions should be multiplier of the target backoff duration which is 3 in this test
-		s.Equal(int64(0), int64(executionInfo.GetExecutionTime()-lastExecution.GetExecutionTime())/1000000000 % (targetBackoffDuration.Nanoseconds()/1000000000))
+		s.Equal(int64(0), int64(executionInfo.GetExecutionTime()-lastExecution.GetExecutionTime())/1000000000%(targetBackoffDuration.Nanoseconds()/1000000000))
 		lastExecution = executionInfo
 	}
 }
@@ -1969,7 +1969,7 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 		executionInfo := closedExecutions[i]
 		// Round up the time precision to seconds
 		// The backoff between any two executions should be multiplier of the target backoff duration which is 3 in this test
-		s.Equal(int64(0), int64(executionInfo.GetExecutionTime()-lastExecution.GetExecutionTime())/1000000000 % (targetBackoffDuration.Nanoseconds()/1000000000))
+		s.Equal(int64(0), int64(executionInfo.GetExecutionTime()-lastExecution.GetExecutionTime())/1000000000%(targetBackoffDuration.Nanoseconds()/1000000000))
 		lastExecution = executionInfo
 	}
 }
