@@ -28,6 +28,7 @@ import (
 	"flag"
 	"fmt"
 	"math"
+	"sort"
 	"strconv"
 	"testing"
 	"time"
@@ -1009,12 +1010,17 @@ func (s *integrationSuite) TestCronWorkflow() {
 	expectedExecutionTime := dweResponse.WorkflowExecutionInfo.GetStartTime() + 3*time.Second.Nanoseconds()
 	s.Equal(expectedExecutionTime, dweResponse.WorkflowExecutionInfo.GetExecutionTime())
 
+	sort.Slice(closedExecutions, func(i, j int) bool {
+		return closedExecutions[i].GetStartTime() < closedExecutions[j].GetStartTime()
+	})
 	lastExecution := closedExecutions[0]
-	for i := 0; i != 4; i++ {
+	for i := 1; i != 4; i++ {
 		executionInfo := closedExecutions[i]
+		// The workflow close time and new workflow start time could have gap, the expectedBackoff should not consider the gap here
+		expectedBackoff := executionInfo.GetExecutionTime()-lastExecution.GetExecutionTime() - (executionInfo.GetStartTime() - lastExecution.GetCloseTime())
 		// Roundup to compare on the precision of seconds
 		// The backoff between any two executions should be multiplier of the target backoff duration which is 3 in this test
-		s.Equal(int64(0), int64(executionInfo.GetExecutionTime()-lastExecution.GetExecutionTime())/1000000000%(targetBackoffDuration.Nanoseconds()/1000000000))
+		s.Equal(int64(0), int64(expectedBackoff)/1000000000%(targetBackoffDuration.Nanoseconds()/1000000000))
 		lastExecution = executionInfo
 	}
 }
@@ -1964,12 +1970,18 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 		time.Sleep(200 * time.Millisecond)
 	}
 	s.NotNil(closedExecutions)
-	lastExecution := closedExecutions[0]
-	for i := 0; i != 4; i++ {
+	sort.Slice(closedExecutions, func(i, j int) bool {
+		return closedExecutions[i].GetStartTime() < closedExecutions[j].GetStartTime()
+	})
+	//The first parent is not the cron workflow, only verify child workflow with cron schedule
+	lastExecution := closedExecutions[1]
+	for i := 2; i != 4; i++ {
 		executionInfo := closedExecutions[i]
+		// The workflow close time and new workflow start time could have gap, the expectedBackoff should not consider the gap here
+		expectedBackoff := executionInfo.GetExecutionTime()-lastExecution.GetExecutionTime() - (executionInfo.GetStartTime() - lastExecution.GetCloseTime())
 		// Round up the time precision to seconds
 		// The backoff between any two executions should be multiplier of the target backoff duration which is 3 in this test
-		s.Equal(int64(0), int64(executionInfo.GetExecutionTime()-lastExecution.GetExecutionTime())/1000000000%(targetBackoffDuration.Nanoseconds()/1000000000))
+		s.Equal(int64(0), int64(expectedBackoff)/1000000000%(targetBackoffDuration.Nanoseconds()/1000000000))
 		lastExecution = executionInfo
 	}
 }
