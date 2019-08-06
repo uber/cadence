@@ -267,6 +267,7 @@ func (e *mutableStateBuilder) Load(
 	e.hasBufferedEventsInDB = len(e.bufferedEvents) > 0
 	e.stateInDB = state.ExecutionInfo.State
 	e.nextEventIDInDB = state.ExecutionInfo.NextEventID
+	e.versionHistories = state.VersionHistories
 }
 
 func (e *mutableStateBuilder) GetEventStoreVersion() int32 {
@@ -3847,15 +3848,15 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 		return nil, nil, err
 	}
 
-	if len(workflowEventsSeq) > 0 {
-		lastEvents := workflowEventsSeq[len(workflowEventsSeq)-1].Events
-		lastEvent := lastEvents[len(lastEvents)-1]
-		if err := e.updateWithLastWriteEvent(
-			lastEvent,
-		); err != nil {
-			return nil, nil, err
-		}
-	}
+	//if len(workflowEventsSeq) > 0 {
+	//	lastEvents := workflowEventsSeq[len(workflowEventsSeq)-1].Events
+	//	lastEvent := lastEvents[len(lastEvents)-1]
+	//	if err := e.updateWithLastWriteEvent(
+	//		lastEvent,
+	//	); err != nil {
+	//		return nil, nil, err
+	//	}
+	//}
 
 	setTaskInfo(e.GetCurrentVersion(), now, e.insertTransferTasks, e.insertTimerTasks)
 
@@ -3921,15 +3922,15 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 		}
 	}
 
-	if len(workflowEventsSeq) > 0 {
-		lastEvents := workflowEventsSeq[len(workflowEventsSeq)-1].Events
-		lastEvent := lastEvents[len(lastEvents)-1]
-		if err := e.updateWithLastWriteEvent(
-			lastEvent,
-		); err != nil {
-			return nil, nil, err
-		}
-	}
+	//if len(workflowEventsSeq) > 0 {
+	//	lastEvents := workflowEventsSeq[len(workflowEventsSeq)-1].Events
+	//	lastEvent := lastEvents[len(lastEvents)-1]
+	//	if err := e.updateWithLastWriteEvent(
+	//		lastEvent,
+	//	); err != nil {
+	//		return nil, nil, err
+	//	}
+	//}
 
 	setTaskInfo(e.GetCurrentVersion(), now, e.insertTransferTasks, e.insertTimerTasks)
 

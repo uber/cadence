@@ -21,6 +21,7 @@ package xdc
 
 import (
 	"flag"
+	"fmt"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -32,12 +33,14 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/xdc"
 	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/host"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -48,9 +51,10 @@ type (
 		// not merely log an error
 		*require.Assertions
 		suite.Suite
-		cluster1 *host.TestCluster
-		cluster2 *host.TestCluster
-		logger   log.Logger
+		cluster1  *host.TestCluster
+		cluster2  *host.TestCluster
+		logger    log.Logger
+		generator xdc.Generator
 	}
 )
 
@@ -85,79 +89,19 @@ func (s *nDCIntegrationTestSuite) SetupSuite() {
 	c, err = host.NewCluster(clusterConfigs[1], s.logger.WithTags(tag.ClusterName(clusterName[1])))
 	s.Require().NoError(err)
 	s.cluster2 = c
+	s.generator = xdc.InitializaEventGenerator()
 }
 
 func (s *nDCIntegrationTestSuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
+	s.generator.Reset()
 }
 
 func (s *nDCIntegrationTestSuite) TearDownSuite() {
 	s.cluster1.TearDownCluster()
 	s.cluster2.TearDownCluster()
 }
-
-func (s *nDCIntegrationTestSuite) TestSimpleWorkflowFailover() {
-	domainName := "test-simple-workflow-failover-" + common.GenerateRandomString(5)
-	client1 := s.cluster1.GetFrontendClient() // active
-	regReq := &shared.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		IsGlobalDomain:                         common.BoolPtr(true),
-		Clusters:                               clusterReplicationConfig,
-		ActiveClusterName:                      common.StringPtr(clusterName[0]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
-	}
-	err := client1.RegisterDomain(createContext(), regReq)
-	s.NoError(err)
-
-	descReq := &shared.DescribeDomainRequest{
-		Name: common.StringPtr(domainName),
-	}
-	resp, err := client1.DescribeDomain(createContext(), descReq)
-	s.NoError(err)
-	s.NotNil(resp)
-	// Wait for domain cache to pick the change
-	time.Sleep(cache.DomainCacheRefreshInterval)
-
-	// start a workflow
-	id := "integration-simple-workflow-failover-test"
-	wt := "integration-simple-workflow-failover-test-type"
-	tl := "integration-simple-workflow-failover-test-tasklist"
-	identity := "worker1"
-	workflowType := &shared.WorkflowType{Name: common.StringPtr(wt)}
-	taskList := &shared.TaskList{Name: common.StringPtr(tl)}
-	startReq := &shared.StartWorkflowExecutionRequest{
-		RequestId:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(domainName),
-		WorkflowId:                          common.StringPtr(id),
-		WorkflowType:                        workflowType,
-		TaskList:                            taskList,
-		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
-	}
-	we, err := client1.StartWorkflowExecution(createContext(), startReq)
-	s.Nil(err)
-	s.NotNil(we.GetRunId())
-	rid := we.GetRunId()
-	s.logger.Info("StartWorkflowExecution \n", tag.WorkflowRunID(we.GetRunId()))
-
-	historyClient := s.cluster1.GetHistoryClient()
-	wfResp, err := historyClient.DescribeWorkflowExecution(createContext(), &history.DescribeWorkflowExecutionRequest{
-		DomainUUID: resp.DomainInfo.UUID,
-		Request: &shared.DescribeWorkflowExecutionRequest{
-			Domain: resp.DomainInfo.Name,
-			Execution: &shared.WorkflowExecution{
-				WorkflowId: common.StringPtr(id),
-				RunId:      common.StringPtr(rid),
-			},
-		},
-	})
-	s.Nil(err)
-	s.Equal(id, wfResp.WorkflowExecutionInfo.Execution.GetWorkflowId())
-}
-
 
 func (s *nDCIntegrationTestSuite) TestSimpleNDC() {
 	domainName := "test-simple-workflow-ndc-" + common.GenerateRandomString(5)
@@ -180,28 +124,60 @@ func (s *nDCIntegrationTestSuite) TestSimpleNDC() {
 	s.NotNil(resp)
 	// Wait for domain cache to pick the change
 	time.Sleep(cache.DomainCacheRefreshInterval)
+	root := &xdc.NDCTestBranch{
+		Batches: make([]xdc.NDCTestBatch, 0),
+	}
+	for s.generator.HasNextVertex() {
+		events := s.generator.GetNextVertices()
+		newBatch := xdc.NDCTestBatch{
+			Events: events,
+		}
+		root.Batches = append(root.Batches, newBatch)
+	}
 
-	historyClient := s.cluster2.GetHistoryClient()
+	identity := "test-event-generator"
 	wid := uuid.New()
 	rid := uuid.New()
+	wt := "event-generator-workflow-type"
+	tl := "event-generator-taskList"
+	domain := *resp.DomainInfo.Name
+	domainID := *resp.DomainInfo.UUID
 	version := int64(100)
+	attributeGenerator := xdc.NewHistoryAttributesGenerator(wid, rid, tl, wt, domainID, domain, identity)
+	historyBatch := attributeGenerator.GenerateHistoryEvents(root.Batches, 1, version)
+
+	historyClient := s.cluster2.GetHistoryClient()
 	replicationInfo := make(map[string]*shared.ReplicationInfo)
-	err = historyClient.ReplicateEvents(createContext(), &history.ReplicateEventsRequest{
-		SourceCluster: common.StringPtr("active"),
-		DomainUUID: resp.DomainInfo.UUID,
-		WorkflowExecution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(wid),
-			RunId: common.StringPtr(rid),
-		},
-		FirstEventId:,
-		NextEventId:,
-		Version: common.Int64Ptr(version),
-		ReplicationInfo: replicationInfo,
-		History:,
-		ForceBufferEvents: common.BoolPtr(false),
-		EventStoreVersion: common.Int32Ptr(persistence.EventStoreVersionV2),
-		NewRunEventStoreVersion: common.Int32Ptr(persistence.EventStoreVersionV2),
-		ResetWorkflow: common.BoolPtr(false),
-	})
-	s.Nil(err)
+	replicationInfo["active"] = &shared.ReplicationInfo{
+		Version:     common.Int64Ptr(version),
+		LastEventId: common.Int64Ptr(0),
+	}
+
+	replicationInfo["standby"] = &shared.ReplicationInfo{
+		Version:     common.Int64Ptr(version),
+		LastEventId: common.Int64Ptr(0),
+	}
+	fmt.Println("OnlyDmain:"+domainID)
+	for idx, batch := range historyBatch {
+		fmt.Println("#######:" + strconv.Itoa(idx))
+		fmt.Println(*batch)
+		fmt.Println("####################")
+		err = historyClient.ReplicateEvents(createContext(), &history.ReplicateEventsRequest{
+			SourceCluster: common.StringPtr("active"),
+			DomainUUID:    resp.DomainInfo.UUID,
+			WorkflowExecution: &shared.WorkflowExecution{
+				WorkflowId: common.StringPtr(wid),
+				RunId:      common.StringPtr(rid),
+			},
+			FirstEventId:            batch.Events[0].EventId,
+			NextEventId:             common.Int64Ptr(*batch.Events[len(batch.Events)-1].EventId + int64(1)),
+			Version:                 common.Int64Ptr(version),
+			History:                 batch,
+			ForceBufferEvents:       common.BoolPtr(false),
+			EventStoreVersion:       common.Int32Ptr(persistence.EventStoreVersionV2),
+			NewRunEventStoreVersion: common.Int32Ptr(persistence.EventStoreVersionV2),
+			ResetWorkflow:           common.BoolPtr(false),
+		})
+		s.Nil(err)
+	}
 }
