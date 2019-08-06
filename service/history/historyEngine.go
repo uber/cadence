@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/.gen/go/replicator"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -69,7 +70,7 @@ type (
 		timerProcessor       timerQueueProcessor
 		taskAllocator        taskAllocator
 		replicator           *historyReplicator
-		replicatorProcessor  queueProcessor
+		replicatorProcessor  replicatorQueueProcessor
 		historyEventNotifier historyEventNotifier
 		tokenSerializer      common.TaskTokenSerializer
 		historyCache         *historyCache
@@ -2335,4 +2336,8 @@ func getWorkflowAlreadyStartedError(errMsg string, createRequestID string, workf
 		StartRequestId: common.StringPtr(fmt.Sprintf("%v", createRequestID)),
 		RunId:          common.StringPtr(fmt.Sprintf("%v", runID)),
 	}
+}
+
+func (e *historyEngineImpl) GetReplicationTasks(ctx ctx.Context, taskID int) ([]*replicator.ReplicationTask, error) {
+	return e.replicatorProcessor.getTasks(taskID)
 }

@@ -23,6 +23,7 @@ package history
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/.gen/go/replicator"
 	"sync"
 
 	"github.com/pborman/uuid"
@@ -89,11 +90,18 @@ var (
 )
 
 // NewHandler creates a thrift handler for the history service
-func NewHandler(sVice service.Service, config *Config, shardManager persistence.ShardManager,
-	metadataMgr persistence.MetadataManager, visibilityMgr persistence.VisibilityManager,
-	historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
-	executionMgrFactory persistence.ExecutionManagerFactory, domainCache cache.DomainCache,
-	publicClient workflowserviceclient.Interface) *Handler {
+func NewHandler(
+	sVice service.Service,
+	config *Config,
+	shardManager persistence.ShardManager,
+	metadataMgr persistence.MetadataManager,
+	visibilityMgr persistence.VisibilityManager,
+	historyMgr persistence.HistoryManager,
+	historyV2Mgr persistence.HistoryV2Manager,
+	executionMgrFactory persistence.ExecutionManagerFactory,
+	domainCache cache.DomainCache,
+	publicClient workflowserviceclient.Interface,
+) *Handler {
 	handler := &Handler{
 		Service:             sVice,
 		config:              config,
@@ -1236,6 +1244,50 @@ func (h *Handler) SyncActivity(ctx context.Context, syncActivityRequest *hist.Sy
 	}
 
 	return nil
+}
+
+func (h *Handler) GetReplicationTasks(
+	ctx context.Context,
+	request *replicator.GetReplicationTasksRequest,
+) (*replicator.GetReplicationTasksResponse, error) {
+
+	var wg sync.WaitGroup
+	wg.Add(len(request.Tokens))
+	result := new(sync.Map)
+
+	for _, token := range request.Tokens {
+		go func(token *replicator.ReplicationToken) {
+			defer wg.Done()
+
+			engine, err := h.controller.getEngineForShard(int(*token.ShardID))
+			if err != nil {
+				h.GetLogger().Warn("history engine not found for shard", tag.Error(err))
+				return
+			}
+
+			tasks, err := engine.GetReplicationTasks(ctx, *token.TaskID)
+			if err != nil {
+				h.GetLogger().Warn("failed to get replication tasks for shard", tag.Error(err))
+				return
+			}
+
+			result.Store(*token.ShardID, tasks)
+		}(token)
+
+	}
+
+	wg.Wait()
+
+	tasksByShard := make(map[int32][]*replicator.ReplicationTask)
+	result.Range(func(key, value interface{}) bool {
+		shardID := key.(int32)
+		tasks := value.([]*replicator.ReplicationTask)
+		tasksByShard[shardID] = tasks
+		return true
+
+	})
+
+	return &replicator.GetReplicationTasksResponse{TasksByShard: tasksByShard}, nil
 }
 
 // convertError is a helper method to convert ShardOwnershipLostError from persistence layer returned by various

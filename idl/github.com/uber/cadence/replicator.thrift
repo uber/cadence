@@ -108,7 +108,7 @@ struct GetReplicationTasksRequest {
 
 struct ReplicationToken {
   10: optional i32 shardID
-  20: optional i32 taskID
+  20: optional i64 taskID
 }
 
 struct GetReplicationTasksResponse {
