@@ -784,7 +784,7 @@ func (e *mutableStateBuilder) GetCronBackoffDuration() time.Duration {
 	workflowStartEvent, found := e.GetStartEvent()
 	if found {
 		firstDecisionTaskBackoff :=
-			time.Duration(workflowStartEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstDecisionTaskBackoffSeconds())*time.Second
+			time.Duration(workflowStartEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstDecisionTaskBackoffSeconds()) * time.Second
 		executionTime.Add(firstDecisionTaskBackoff)
 	}
 	return backoff.GetBackoffForNextSchedule(info.CronSchedule, executionTime, e.timeSource.Now())
