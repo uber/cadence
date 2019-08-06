@@ -778,12 +778,11 @@ func (e *mutableStateBuilder) GetCronBackoffDuration() time.Duration {
 		return backoff.NoBackoff
 	}
 
-	workflowStartEvent, found := e.GetStartEvent()
-	executionTime := e.executionInfo.StartTimestamp
-	if found {
-		firstDecisionTaskBackoffInSeconds := time.Duration(workflowStartEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstDecisionTaskBackoffSeconds()) * time.Second
-		executionTime.Add(firstDecisionTaskBackoffInSeconds)
-	}
+	// This only call when doing ContinueAsNew. At this point, the workflow should have a start event
+	workflowStartEvent, _ := e.GetStartEvent()
+	firstDecisionTaskBackoffInSeconds := time.Duration(workflowStartEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstDecisionTaskBackoffSeconds()) * time.Second
+	// TODO: decide if we can add execution time in execution info.
+	executionTime := e.executionInfo.StartTimestamp.Add(firstDecisionTaskBackoffInSeconds)
 	return backoff.GetBackoffForNextSchedule(info.CronSchedule, executionTime, e.timeSource.Now())
 }
 

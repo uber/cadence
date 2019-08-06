@@ -1017,7 +1017,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 	for i := 1; i != 4; i++ {
 		executionInfo := closedExecutions[i]
 		// The workflow close time and new workflow start time could have gap, the expectedBackoff should not consider the gap here
-		expectedBackoff := executionInfo.GetExecutionTime()-lastExecution.GetExecutionTime() - (executionInfo.GetStartTime() - lastExecution.GetCloseTime())
+		expectedBackoff := executionInfo.GetExecutionTime() - lastExecution.GetExecutionTime() - (executionInfo.GetStartTime() - lastExecution.GetCloseTime())
 		// Roundup to compare on the precision of seconds
 		// The backoff between any two executions should be multiplier of the target backoff duration which is 3 in this test
 		s.Equal(int64(0), int64(expectedBackoff)/1000000000%(targetBackoffDuration.Nanoseconds()/1000000000))
@@ -1978,7 +1978,7 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 	for i := 2; i != 4; i++ {
 		executionInfo := closedExecutions[i]
 		// The workflow close time and new workflow start time could have gap, the expectedBackoff should not consider the gap here
-		expectedBackoff := executionInfo.GetExecutionTime()-lastExecution.GetExecutionTime() - (executionInfo.GetStartTime() - lastExecution.GetCloseTime())
+		expectedBackoff := executionInfo.GetExecutionTime() - lastExecution.GetExecutionTime() - (executionInfo.GetStartTime() - lastExecution.GetCloseTime())
 		// Round up the time precision to seconds
 		// The backoff between any two executions should be multiplier of the target backoff duration which is 3 in this test
 		s.Equal(int64(0), int64(expectedBackoff)/1000000000%(targetBackoffDuration.Nanoseconds()/1000000000))
