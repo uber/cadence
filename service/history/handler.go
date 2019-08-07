@@ -28,7 +28,6 @@ import (
 	"sync"
 
 	"github.com/pborman/uuid"
-	serverclient "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/.gen/go/health"
 	"github.com/uber/cadence/.gen/go/health/metaserver"
 	hist "github.com/uber/cadence/.gen/go/history"
@@ -105,10 +104,9 @@ func NewHandler(
 	executionMgrFactory persistence.ExecutionManagerFactory,
 	domainCache cache.DomainCache,
 	publicClient workflowserviceclient.Interface,
-	remotePeers []serverclient.Interface,
 ) *Handler {
 	var replicationTaskFetchers []*replicationTaskFetcher
-	for _, remotePeer := range remotePeers {
+	for _, remotePeer := range sVice.GetClientBean().GetRemoteFrontendClients() {
 		replicationTaskFetchers = append(replicationTaskFetchers, NewReplicationTaskFetcher(sVice.GetLogger(), remotePeer))
 	}
 
@@ -214,7 +212,7 @@ func (h *Handler) Stop() {
 // CreateEngine is implementation for HistoryEngineFactory used for creating the engine instance for shard
 func (h *Handler) CreateEngine(context ShardContext) Engine {
 	return NewEngineWithShardContext(context, h.visibilityMgr, h.matchingServiceClient, h.historyServiceClient,
-		h.publicClient, h.historyEventNotifier, h.publisher, h.config, h.replicationTaskFetchers)
+		h.publicClient, h.historyEventNotifier, h.publisher, h.config, h.replicationTaskFetchers, h.domainReplicator)
 }
 
 // Health is for health check

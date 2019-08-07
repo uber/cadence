@@ -121,3 +121,18 @@ func (_m *MockClientBean) GetRemoteFrontendClient(_a0 string) frontend.Client {
 
 	return r0
 }
+
+func (_m *MockClientBean) GetRemoteFrontendClients() []frontend.Client {
+	ret := _m.Called()
+
+	var r0 []frontend.Client
+	if rf, ok := ret.Get(0).(func() []frontend.Client); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]frontend.Client)
+		}
+	}
+
+	return r0
+}
