@@ -279,6 +279,8 @@ const (
 	HistoryClientSyncShardStatusScope
 	// HistoryClientSyncActivityScope tracks RPC calls to history service
 	HistoryClientSyncActivityScope
+	// HistoryClientGetReplicationTasksScope tracks RPC calls to history service
+	HistoryClientGetReplicationTasksScope
 	// MatchingClientPollForDecisionTaskScope tracks RPC calls to matching service
 	MatchingClientPollForDecisionTaskScope
 	// MatchingClientPollForActivityTaskScope tracks RPC calls to matching service
@@ -365,6 +367,8 @@ const (
 	FrontendClientCountWorkflowExecutionsScope
 	// FrontendClientGetSearchAttributesScope tracks RPC calls to frontend service
 	FrontendClientGetSearchAttributesScope
+	// FrontendClientGetReplicationTasksScope tracks RPC calls to frontend service
+	FrontendClientGetReplicationTasksScope
 	// AdminClientAddSearchAttributeScope tracks RPC calls to admin service
 	AdminClientAddSearchAttributeScope
 	// AdminClientDescribeHistoryHostScope tracks RPC calls to admin service
@@ -616,6 +620,8 @@ const (
 	FrontendResetWorkflowExecutionScope
 	// FrontendGetSearchAttributesScope is the metric scope for frontend.GetSearchAttributes
 	FrontendGetSearchAttributesScope
+	// FrontendGetReplicationTasksScope is the metric scope for frontend.GetReplicationTasks
+	FrontendGetReplicationTasksScope
 
 	NumFrontendScopes
 )

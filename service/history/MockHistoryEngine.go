@@ -22,6 +22,7 @@ package history
 
 import (
 	"context"
+	"github.com/uber/cadence/.gen/go/replicator"
 
 	"github.com/stretchr/testify/mock"
 	gohistory "github.com/uber/cadence/.gen/go/history"
@@ -514,4 +515,27 @@ func (_m *MockHistoryEngine) NotifyNewReplicationTasks(tasks []persistence.Task)
 // NotifyNewTimerTasks is mock implementation for SyncActivity of HistoryEngine
 func (_m *MockHistoryEngine) NotifyNewTimerTasks(tasks []persistence.Task) {
 	_m.Called(tasks)
+}
+
+// GetReplicationTasks is mock implementation for GetReplicationTasks of HistoryEngine
+func (_m *MockHistoryEngine) GetReplicationTasks(ctx context.Context, taskID int64) ([]*replicator.ReplicationTask, error) {
+	ret := _m.Called(ctx, taskID)
+
+	var r0 []*replicator.ReplicationTask
+	if rf, ok := ret.Get(0).(func(int64) []*replicator.ReplicationTask); ok {
+		r0 = rf(taskID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*replicator.ReplicationTask)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(0).(func(int64) error); ok {
+		r1 = rf(taskID)
+	} else {
+		r1 = ret.Error(0)
+	}
+
+	return r0, r1
 }

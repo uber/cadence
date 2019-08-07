@@ -1246,6 +1246,7 @@ func (h *Handler) SyncActivity(ctx context.Context, syncActivityRequest *hist.Sy
 	return nil
 }
 
+// GetReplicationTasks is called by remote peers to get replicated tasks for cross DC replication
 func (h *Handler) GetReplicationTasks(
 	ctx context.Context,
 	request *replicator.GetReplicationTasksRequest,

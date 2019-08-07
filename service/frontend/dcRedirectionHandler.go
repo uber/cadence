@@ -22,6 +22,7 @@ package frontend
 
 import (
 	"context"
+	"github.com/uber/cadence/.gen/go/replicator"
 	"time"
 
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
@@ -37,6 +38,8 @@ import (
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
 )
+
+var _ workflowserviceserver.Interface = (*DCRedirectionHandlerImpl)(nil)
 
 type (
 	clientBeanProvider func() client.Bean
@@ -1106,6 +1109,13 @@ func (handler *DCRedirectionHandlerImpl) TerminateWorkflowExecution(
 	})
 
 	return err
+}
+
+func (handler *DCRedirectionHandlerImpl) GetReplicationTasks(
+	ctx context.Context,
+	request *replicator.GetReplicationTasksRequest,
+) (*replicator.GetReplicationTasksResponse, error) {
+	return handler.frontendHandler.GetReplicationTasks(ctx, request)
 }
 
 func (handler *DCRedirectionHandlerImpl) beforeCall(

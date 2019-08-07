@@ -22,6 +22,7 @@ package frontend
 
 import (
 	"context"
+	"github.com/uber/cadence/.gen/go/replicator"
 	"time"
 
 	"go.uber.org/yarpc"
@@ -642,4 +643,19 @@ func (c *clientImpl) getRandomClient() (workflowserviceclient.Interface, error) 
 	}
 
 	return client.(workflowserviceclient.Interface), nil
+}
+
+func (c *clientImpl) GetReplicationTasks(
+	ctx context.Context,
+	request *replicator.GetReplicationTasksRequest,
+	opts ...yarpc.CallOption,
+) (*replicator.GetReplicationTasksResponse, error) {
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return client.GetReplicationTasks(ctx, request, opts...)
 }

@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/uber/cadence/.gen/go/replicator"
 	"sync"
 	"time"
 
@@ -3278,4 +3279,28 @@ func (wh *WorkflowHandler) allow(d domainGetter) bool {
 		domain = d.GetDomain()
 	}
 	return wh.rateLimiter.Allow(quotas.Info{Domain: domain})
+}
+
+func (wh *WorkflowHandler) GetReplicationTasks(
+	ctx context.Context,
+	request *replicator.GetReplicationTasksRequest,
+) (resp *replicator.GetReplicationTasksResponse, err error) {
+	defer log.CapturePanic(wh.GetLogger(), &err)
+
+	scope, sw := wh.startRequestProfile(metrics.FrontendGetReplicationTasksScope)
+	defer sw.Stop()
+
+	if err := wh.versionChecker.checkClientVersion(ctx); err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	if request == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
+
+	resp, err = wh.history.GetReplicationTasks(ctx, request)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+	return resp, nil
 }

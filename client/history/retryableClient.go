@@ -22,6 +22,7 @@ package history
 
 import (
 	"context"
+	"github.com/uber/cadence/.gen/go/replicator"
 
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/shared"
@@ -404,4 +405,20 @@ func (c *retryableClient) SyncActivity(
 	}
 
 	return backoff.Retry(op, c.policy, c.isRetryable)
+}
+
+func (c *retryableClient) GetReplicationTasks(
+	ctx context.Context,
+	request *replicator.GetReplicationTasksRequest,
+	opts ...yarpc.CallOption,
+) (*replicator.GetReplicationTasksResponse, error) {
+	var resp *replicator.GetReplicationTasksResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.GetReplicationTasks(ctx, request, opts...)
+		return err
+	}
+
+	err := backoff.Retry(op, c.policy, c.isRetryable)
+	return resp, err
 }

@@ -91,7 +91,7 @@ type (
 
 	replicatorQueueProcessor interface {
 		queueProcessor
-		getTasks(readLevel int) ([]*replicator.ReplicationTask, error)
+		getTasks(readLevel int64) ([]*replicator.ReplicationTask, error)
 	}
 
 	queueAckMgr interface {

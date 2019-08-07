@@ -21,7 +21,6 @@
 namespace java com.uber.cadence.replicator
 
 include "shared.thrift"
-include "history.thrift"
 
 enum ReplicationTaskType {
   Domain

@@ -22,6 +22,7 @@ package frontend
 
 import (
 	"context"
+	"github.com/uber/cadence/.gen/go/replicator"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
@@ -546,6 +547,21 @@ func (c *retryableClient) UpdateDomain(
 	op := func() error {
 		var err error
 		resp, err = c.client.UpdateDomain(ctx, request, opts...)
+		return err
+	}
+	err := backoff.Retry(op, c.policy, c.isRetryable)
+	return resp, err
+}
+
+func (c *retryableClient) GetReplicationTasks(
+	ctx context.Context,
+	request *replicator.GetReplicationTasksRequest,
+	opts ...yarpc.CallOption,
+) (*replicator.GetReplicationTasksResponse, error) {
+	var resp *replicator.GetReplicationTasksResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.GetReplicationTasks(ctx, request, opts...)
 		return err
 	}
 	err := backoff.Retry(op, c.policy, c.isRetryable)
