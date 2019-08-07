@@ -206,6 +206,14 @@ func (t *timerQueueActiveProcessorImpl) getTaskFilter() timerTaskFilter {
 	return t.timerTaskFilter
 }
 
+func (t *timerQueueActiveProcessorImpl) getAckLevel() TimerSequenceID {
+	return t.timerQueueProcessorBase.timerQueueAckMgr.getAckLevel()
+}
+
+func (t *timerQueueActiveProcessorImpl) getReadLevel() TimerSequenceID {
+	return t.timerQueueProcessorBase.timerQueueAckMgr.getReadLevel()
+}
+
 // NotifyNewTimers - Notify the processor about the new active timer events arrival.
 // This should be called each time new timer events arrives, otherwise timers maybe fired unexpected.
 func (t *timerQueueActiveProcessorImpl) notifyNewTimers(
