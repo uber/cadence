@@ -135,9 +135,16 @@ func newTimerQueueAckMgr(
 	return timerQueueAckMgrImpl
 }
 
-func newTimerQueueFailoverAckMgr(shard ShardContext, metricsClient metrics.Client,
-	minLevel time.Time, maxLevel time.Time, timeNow timeNow, updateTimerAckLevel updateTimerAckLevel,
-	timerQueueShutdown timerQueueShutdown, logger log.Logger) *timerQueueAckMgrImpl {
+func newTimerQueueFailoverAckMgr(
+	shard ShardContext,
+	metricsClient metrics.Client,
+	minLevel time.Time,
+	maxLevel time.Time,
+	timeNow timeNow,
+	updateTimerAckLevel updateTimerAckLevel,
+	timerQueueShutdown timerQueueShutdown,
+	logger log.Logger,
+) *timerQueueAckMgrImpl {
 	// failover ack manager will start from the standby cluster's ack level to active cluster's ack level
 	ackLevel := TimerSequenceID{VisibilityTimestamp: minLevel}
 
