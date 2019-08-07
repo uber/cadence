@@ -30,12 +30,12 @@ and
 ```
 bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic standby
 ```
-4. Start Cadence development server for active zone:
+3. Start Cadence development server for active zone:
 ```
 ./cadence-server --zone active start
 ```
 
-5. Start Cadence development server for standby(passive) zone:
+4. Start Cadence development server for standby(passive) zone:
 ```
 ./cadence-server --zone standby start
 ```
