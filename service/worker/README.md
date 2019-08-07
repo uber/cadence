@@ -35,6 +35,11 @@ bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 -
 ./cadence-server --zone active start
 ```
 
+5. Start Cadence development server for standby(passive) zone:
+```
+./cadence-server --zone standby start
+```
+
 
 Cadence cluster is now running with the replicator consuming messages from
 Kafka topic standby.
