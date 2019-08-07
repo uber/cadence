@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/uber/cadence/.gen/go/replicator"
+	replicator2 "github.com/uber/cadence/service/worker/replicator"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -57,29 +58,30 @@ const (
 
 type (
 	historyEngineImpl struct {
-		currentClusterName   string
-		shard                ShardContext
-		timeSource           clock.TimeSource
-		decisionHandler      decisionHandler
-		clusterMetadata      cluster.Metadata
-		historyMgr           persistence.HistoryManager
-		historyV2Mgr         persistence.HistoryV2Manager
-		executionManager     persistence.ExecutionManager
-		visibilityMgr        persistence.VisibilityManager
-		txProcessor          transferQueueProcessor
-		timerProcessor       timerQueueProcessor
-		taskAllocator        taskAllocator
-		replicator           *historyReplicator
-		replicatorProcessor  replicatorQueueProcessor
-		historyEventNotifier historyEventNotifier
-		tokenSerializer      common.TaskTokenSerializer
-		historyCache         *historyCache
-		metricsClient        metrics.Client
-		logger               log.Logger
-		throttledLogger      log.Logger
-		config               *Config
-		archivalClient       warchiver.Client
-		resetor              workflowResetor
+		currentClusterName        string
+		shard                     ShardContext
+		timeSource                clock.TimeSource
+		decisionHandler           decisionHandler
+		clusterMetadata           cluster.Metadata
+		historyMgr                persistence.HistoryManager
+		historyV2Mgr              persistence.HistoryV2Manager
+		executionManager          persistence.ExecutionManager
+		visibilityMgr             persistence.VisibilityManager
+		txProcessor               transferQueueProcessor
+		timerProcessor            timerQueueProcessor
+		taskAllocator             taskAllocator
+		replicator                *historyReplicator
+		replicatorProcessor       replicatorQueueProcessor
+		historyEventNotifier      historyEventNotifier
+		tokenSerializer           common.TaskTokenSerializer
+		historyCache              *historyCache
+		metricsClient             metrics.Client
+		logger                    log.Logger
+		throttledLogger           log.Logger
+		config                    *Config
+		archivalClient            warchiver.Client
+		resetor                   workflowResetor
+		replicationTaskProcessors []*replicationTaskProcessor
 	}
 )
 
@@ -135,6 +137,8 @@ func NewEngineWithShardContext(
 	historyEventNotifier historyEventNotifier,
 	publisher messaging.Producer,
 	config *Config,
+	replicationTaskFetchers []*replicationTaskFetcher,
+	domainReplicator replicator2.DomainReplicator,
 ) Engine {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 
@@ -182,6 +186,14 @@ func NewEngineWithShardContext(
 	}
 	historyEngImpl.resetor = newWorkflowResetor(historyEngImpl)
 	historyEngImpl.decisionHandler = newDecisionHandler(historyEngImpl)
+
+	var replicationTaskProcessors []*replicationTaskProcessor
+	for _, replicationTaskFetcher := range replicationTaskFetchers {
+		replicationTaskProcessor := NewReplicationTaskProcessor(int32(shard.GetShardID()), historyEngImpl, domainReplicator, shard.GetMetricsClient(), logger, replicationTaskFetcher)
+		replicationTaskProcessors = append(replicationTaskProcessors, replicationTaskProcessor)
+	}
+	historyEngImpl.replicationTaskProcessors = replicationTaskProcessors
+
 	shard.SetEngine(historyEngImpl)
 
 	return historyEngImpl
@@ -200,6 +212,10 @@ func (e *historyEngineImpl) Start() {
 	e.timerProcessor.Start()
 	if e.replicatorProcessor != nil {
 		e.replicatorProcessor.Start()
+	}
+
+	for _, replicationTaskProcessor := range e.replicationTaskProcessors {
+		replicationTaskProcessor.Start()
 	}
 }
 

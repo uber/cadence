@@ -23,10 +23,12 @@ package history
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/.gen/go/replicator"
+	r "github.com/uber/cadence/.gen/go/replicator"
+	"github.com/uber/cadence/service/worker/replicator"
 	"sync"
 
 	"github.com/pborman/uuid"
+	serverclient "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/.gen/go/health"
 	"github.com/uber/cadence/.gen/go/health/metaserver"
 	hist "github.com/uber/cadence/.gen/go/history"
@@ -51,25 +53,27 @@ import (
 // Handler - Thrift handler interface for history service
 type (
 	Handler struct {
-		shardManager          persistence.ShardManager
-		metadataMgr           persistence.MetadataManager
-		visibilityMgr         persistence.VisibilityManager
-		historyMgr            persistence.HistoryManager
-		historyV2Mgr          persistence.HistoryV2Manager
-		executionMgrFactory   persistence.ExecutionManagerFactory
-		domainCache           cache.DomainCache
-		historyServiceClient  hc.Client
-		matchingServiceClient matching.Client
-		publicClient          workflowserviceclient.Interface
-		hServiceResolver      membership.ServiceResolver
-		controller            *shardController
-		tokenSerializer       common.TaskTokenSerializer
-		startWG               sync.WaitGroup
-		metricsClient         metrics.Client
-		config                *Config
-		historyEventNotifier  historyEventNotifier
-		publisher             messaging.Producer
-		rateLimiter           quotas.Limiter
+		shardManager            persistence.ShardManager
+		metadataMgr             persistence.MetadataManager
+		visibilityMgr           persistence.VisibilityManager
+		historyMgr              persistence.HistoryManager
+		historyV2Mgr            persistence.HistoryV2Manager
+		executionMgrFactory     persistence.ExecutionManagerFactory
+		domainCache             cache.DomainCache
+		historyServiceClient    hc.Client
+		matchingServiceClient   matching.Client
+		publicClient            workflowserviceclient.Interface
+		hServiceResolver        membership.ServiceResolver
+		controller              *shardController
+		tokenSerializer         common.TaskTokenSerializer
+		startWG                 sync.WaitGroup
+		metricsClient           metrics.Client
+		config                  *Config
+		historyEventNotifier    historyEventNotifier
+		publisher               messaging.Producer
+		rateLimiter             quotas.Limiter
+		replicationTaskFetchers []*replicationTaskFetcher
+		domainReplicator        replicator.DomainReplicator
 		service.Service
 	}
 )
@@ -101,7 +105,15 @@ func NewHandler(
 	executionMgrFactory persistence.ExecutionManagerFactory,
 	domainCache cache.DomainCache,
 	publicClient workflowserviceclient.Interface,
+	remotePeers []serverclient.Interface,
 ) *Handler {
+	var replicationTaskFetchers []*replicationTaskFetcher
+	for _, remotePeer := range remotePeers {
+		replicationTaskFetchers = append(replicationTaskFetchers, NewReplicationTaskFetcher(sVice.GetLogger(), remotePeer))
+	}
+
+	domainReplicator := replicator.NewDomainReplicator(metadataMgr, sVice.GetLogger())
+
 	handler := &Handler{
 		Service:             sVice,
 		config:              config,
@@ -118,7 +130,8 @@ func NewHandler(
 				return float64(config.RPS())
 			},
 		),
-		publicClient: publicClient,
+		publicClient:     publicClient,
+		domainReplicator: domainReplicator,
 	}
 
 	// prevent us from trying to serve requests before shard controller is started and ready
@@ -201,7 +214,7 @@ func (h *Handler) Stop() {
 // CreateEngine is implementation for HistoryEngineFactory used for creating the engine instance for shard
 func (h *Handler) CreateEngine(context ShardContext) Engine {
 	return NewEngineWithShardContext(context, h.visibilityMgr, h.matchingServiceClient, h.historyServiceClient,
-		h.publicClient, h.historyEventNotifier, h.publisher, h.config)
+		h.publicClient, h.historyEventNotifier, h.publisher, h.config, h.replicationTaskFetchers)
 }
 
 // Health is for health check
@@ -1249,15 +1262,15 @@ func (h *Handler) SyncActivity(ctx context.Context, syncActivityRequest *hist.Sy
 // GetReplicationTasks is called by remote peers to get replicated tasks for cross DC replication
 func (h *Handler) GetReplicationTasks(
 	ctx context.Context,
-	request *replicator.GetReplicationTasksRequest,
-) (*replicator.GetReplicationTasksResponse, error) {
+	request *r.GetReplicationTasksRequest,
+) (*r.GetReplicationTasksResponse, error) {
 
 	var wg sync.WaitGroup
 	wg.Add(len(request.Tokens))
 	result := new(sync.Map)
 
 	for _, token := range request.Tokens {
-		go func(token *replicator.ReplicationToken) {
+		go func(token *r.ReplicationToken) {
 			defer wg.Done()
 
 			engine, err := h.controller.getEngineForShard(int(*token.ShardID))
@@ -1279,16 +1292,16 @@ func (h *Handler) GetReplicationTasks(
 
 	wg.Wait()
 
-	tasksByShard := make(map[int32][]*replicator.ReplicationTask)
+	tasksByShard := make(map[int32][]*r.ReplicationTask)
 	result.Range(func(key, value interface{}) bool {
 		shardID := key.(int32)
-		tasks := value.([]*replicator.ReplicationTask)
+		tasks := value.([]*r.ReplicationTask)
 		tasksByShard[shardID] = tasks
 		return true
 
 	})
 
-	return &replicator.GetReplicationTasksResponse{TasksByShard: tasksByShard}, nil
+	return &r.GetReplicationTasksResponse{TasksByShard: tasksByShard}, nil
 }
 
 // convertError is a helper method to convert ShardOwnershipLostError from persistence layer returned by various
