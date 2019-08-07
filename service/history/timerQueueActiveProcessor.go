@@ -48,7 +48,6 @@ type (
 		currentClusterName      string
 		matchingClient          matching.Client
 		timerQueueProcessorBase *timerQueueProcessorBase
-		timerQueueAckMgr        timerQueueAckMgr
 		config                  *Config
 	}
 )
@@ -104,8 +103,7 @@ func newTimerQueueActiveProcessor(
 			shard.GetConfig().TimerProcessorMaxPollRPS,
 			logger,
 		),
-		timerQueueAckMgr: timerQueueAckMgr,
-		config:           shard.GetConfig(),
+		config: shard.GetConfig(),
 	}
 	processor.timerQueueProcessorBase.timerProcessor = processor
 	return processor
@@ -187,7 +185,6 @@ func newTimerQueueFailoverProcessor(
 			shard.GetConfig().TimerProcessorFailoverMaxPollRPS,
 			logger,
 		),
-		timerQueueAckMgr: timerQueueAckMgr,
 	}
 	processor.timerQueueProcessorBase.timerProcessor = processor
 	return updateShardAckLevel, processor

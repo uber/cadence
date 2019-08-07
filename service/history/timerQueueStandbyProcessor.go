@@ -51,7 +51,6 @@ type (
 		clusterName             string
 		timerGate               RemoteTimerGate
 		timerQueueProcessorBase *timerQueueProcessorBase
-		timerQueueAckMgr        timerQueueAckMgr
 		historyRereplicator     xdc.HistoryRereplicator
 	}
 )
@@ -107,7 +106,6 @@ func newTimerQueueStandbyProcessor(
 			shard.GetConfig().TimerProcessorMaxPollRPS,
 			logger,
 		),
-		timerQueueAckMgr:    timerQueueAckMgr,
 		historyRereplicator: historyRereplicator,
 	}
 	processor.timerQueueProcessorBase.timerProcessor = processor
