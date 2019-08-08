@@ -274,13 +274,14 @@ type replicationTaskFetcher struct {
 	done          chan struct{}
 }
 
-func NewReplicationTaskFetcher(logger log.Logger, remotePeer workflowserviceclient.Interface) *replicationTaskFetcher {
+func NewReplicationTaskFetcher(logger log.Logger, sourceCluster string, sourceFrontend workflowserviceclient.Interface) *replicationTaskFetcher {
 	return &replicationTaskFetcher{
-		numFetchers: 1,
-		logger:      logger,
-		remotePeer:  remotePeer,
-		requestChan: make(chan *request),
-		done:        make(chan struct{}),
+		numFetchers:   1,
+		logger:        logger,
+		remotePeer:    sourceFrontend,
+		sourceCluster: sourceCluster,
+		requestChan:   make(chan *request),
+		done:          make(chan struct{}),
 	}
 }
 

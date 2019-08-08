@@ -55,7 +55,7 @@ type (
 		GetFrontendClient() frontend.Client
 		GetRemoteAdminClient(cluster string) admin.Client
 		GetRemoteFrontendClient(cluster string) frontend.Client
-		GetRemoteFrontendClients() []frontend.Client
+		GetRemoteFrontendClients() map[string]frontend.Client
 	}
 
 	// DispatcherProvider provides a diapatcher to a given address
@@ -187,12 +187,8 @@ func (h *clientBeanImpl) GetRemoteFrontendClient(cluster string) frontend.Client
 	return client
 }
 
-func (h *clientBeanImpl) GetRemoteFrontendClients() []frontend.Client {
-	var clients []frontend.Client
-	for _, client := range h.remoteFrontendClients {
-		clients = append(clients, client)
-	}
-	return clients
+func (h *clientBeanImpl) GetRemoteFrontendClients() map[string]frontend.Client {
+	return h.remoteFrontendClients
 }
 
 func (h *clientBeanImpl) lazyInitMatchingClient(domainIDToName DomainIDToNameFunc) (matching.Client, error) {

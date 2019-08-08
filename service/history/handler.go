@@ -106,8 +106,8 @@ func NewHandler(
 	publicClient workflowserviceclient.Interface,
 ) *Handler {
 	var replicationTaskFetchers []*replicationTaskFetcher
-	for _, remotePeer := range sVice.GetClientBean().GetRemoteFrontendClients() {
-		replicationTaskFetchers = append(replicationTaskFetchers, NewReplicationTaskFetcher(sVice.GetLogger(), remotePeer))
+	for sourceCluster, sourceFrontend := range sVice.GetClientBean().GetRemoteFrontendClients() {
+		replicationTaskFetchers = append(replicationTaskFetchers, NewReplicationTaskFetcher(sVice.GetLogger(), sourceCluster, sourceFrontend))
 	}
 
 	domainReplicator := replicator.NewDomainReplicator(metadataMgr, sVice.GetLogger())
