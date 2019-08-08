@@ -24,8 +24,8 @@ package mocks
 
 import (
 	context "context"
-	"github.com/uber/cadence/.gen/go/replicator"
 
+	"github.com/uber/cadence/.gen/go/replicator"
 	mock "github.com/stretchr/testify/mock"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	shared "github.com/uber/cadence/.gen/go/shared"

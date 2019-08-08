@@ -298,14 +298,12 @@ func (f *replicationTaskFetcher) fetchTasks() {
 	timer := time.NewTimer(jitter.JitDuration(timerFireInterval, timerJitter))
 	defer timer.Stop()
 
-	var replicationTokens []*r.ReplicationToken
-	respChansByShard := make(map[int32]chan<- []*r.ReplicationTask)
+	requestByShard := make(map[int32]*request)
 	for {
 		select {
 		case request := <-f.requestChan:
 			fmt.Printf("Fetch task request received token:%v\n", request.token)
-			replicationTokens = append(replicationTokens, request.token)
-			respChansByShard[*request.token.ShardID] = request.resultChan
+			requestByShard[*request.token.ShardID] = request
 
 			// TODO: fetch directly if # tokens > threshold
 
@@ -315,7 +313,12 @@ func (f *replicationTaskFetcher) fetchTasks() {
 			// 	t.Reset(d)
 
 		case <-timer.C:
-			request := &r.GetReplicationTasksRequest{Tokens: replicationTokens}
+			var tokens []*r.ReplicationToken
+			for _, request := range requestByShard {
+				tokens = append(tokens, request.token)
+			}
+
+			request := &r.GetReplicationTasksRequest{Tokens: tokens}
 			response, err := f.remotePeer.GetReplicationTasks(context.Background(), request)
 			if err != nil {
 				f.logger.Error("Failed to get replication tasks", tag.Error(err))
@@ -326,11 +329,11 @@ func (f *replicationTaskFetcher) fetchTasks() {
 			f.logger.Info("Successfully fetched replication tasks.", tag.Counter(len(response.TasksByShard)))
 
 			for shardID, tasks := range response.TasksByShard {
-				respChansByShard[shardID] <- tasks
-				close(respChansByShard[shardID])
-				delete(respChansByShard, shardID)
+				request := requestByShard[shardID]
+				request.resultChan <- tasks
+				close(request.resultChan)
+				delete(requestByShard, shardID)
 			}
-			replicationTokens = replicationTokens[:0]
 
 			timer.Reset(jitter.JitDuration(timerFireInterval, timerJitter))
 		case <-f.done:

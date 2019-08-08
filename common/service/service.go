@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/uber-go/tally"
-	serverclient "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
@@ -78,7 +77,6 @@ type (
 		DispatcherProvider  client.DispatcherProvider
 		DCRedirectionPolicy config.DCRedirectionPolicy
 		PublicClient        workflowserviceclient.Interface
-		RemotePeers         []serverclient.Interface
 		ArchivalMetadata    archiver.ArchivalMetadata
 		ArchiverProvider    provider.ArchiverProvider
 	}
@@ -204,8 +202,6 @@ func (h *serviceImpl) Start() {
 		h.logger.WithTags(tag.Error(err)).Fatal("failed to get host info from membership monitor")
 	}
 	h.hostInfo = hostInfo
-
-	fmt.Printf("h.clusterMetadata %v\n", h.clusterMetadata)
 
 	h.clientBean, err = client.NewClientBean(
 		client.NewRPCClientFactory(h.rpcFactory, h.membershipMonitor, h.metricsClient, h.dynamicCollection, h.numberOfHistoryShards),

@@ -22,15 +22,14 @@ package frontend
 
 import (
 	"context"
-	"github.com/uber/cadence/.gen/go/replicator"
 	"time"
-
-	"go.uber.org/yarpc"
 
 	"github.com/pborman/uuid"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
+	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"go.uber.org/yarpc"
 )
 
 var _ Client = (*clientImpl)(nil)

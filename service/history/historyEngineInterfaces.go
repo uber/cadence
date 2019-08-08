@@ -22,10 +22,10 @@ package history
 
 import (
 	"context"
-	"github.com/uber/cadence/.gen/go/replicator"
 	"time"
 
 	h "github.com/uber/cadence/.gen/go/history"
+	"github.com/uber/cadence/.gen/go/replicator"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"

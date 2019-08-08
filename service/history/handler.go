@@ -23,8 +23,6 @@ package history
 import (
 	"context"
 	"fmt"
-	r "github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/service/worker/replicator"
 	"sync"
 
 	"github.com/pborman/uuid"
@@ -32,6 +30,7 @@ import (
 	"github.com/uber/cadence/.gen/go/health/metaserver"
 	hist "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/history/historyserviceserver"
+	r "github.com/uber/cadence/.gen/go/replicator"
 	gen "github.com/uber/cadence/.gen/go/shared"
 	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
@@ -45,6 +44,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/service/worker/replicator"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc/yarpcerrors"
 )
@@ -1270,6 +1270,7 @@ func (h *Handler) GetReplicationTasks(
 	request *r.GetReplicationTasksRequest,
 ) (*r.GetReplicationTasksResponse, error) {
 
+	fmt.Println("GetReplicationTasks in history service")
 	var wg sync.WaitGroup
 	wg.Add(len(request.Tokens))
 	result := new(sync.Map)
@@ -1303,7 +1304,6 @@ func (h *Handler) GetReplicationTasks(
 		tasks := value.([]*r.ReplicationTask)
 		tasksByShard[shardID] = tasks
 		return true
-
 	})
 
 	return &r.GetReplicationTasksResponse{TasksByShard: tasksByShard}, nil

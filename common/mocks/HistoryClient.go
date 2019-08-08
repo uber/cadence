@@ -22,10 +22,9 @@ package mocks
 
 import (
 	"context"
+
 	"github.com/uber/cadence/.gen/go/replicator"
-
 	"go.uber.org/yarpc"
-
 	"github.com/stretchr/testify/mock"
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/history/historyserviceclient"

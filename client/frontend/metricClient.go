@@ -22,8 +22,8 @@ package frontend
 
 import (
 	"context"
-	"github.com/uber/cadence/.gen/go/replicator"
 
+	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/metrics"
 	"go.uber.org/yarpc"

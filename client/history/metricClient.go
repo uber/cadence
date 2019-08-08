@@ -22,9 +22,9 @@ package history
 
 import (
 	"context"
-	"github.com/uber/cadence/.gen/go/replicator"
 
 	h "github.com/uber/cadence/.gen/go/history"
+	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/metrics"
 	"go.uber.org/yarpc"

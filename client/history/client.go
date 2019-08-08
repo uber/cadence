@@ -23,12 +23,12 @@ package history
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/.gen/go/replicator"
 	"sync"
 	"time"
 
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/history/historyserviceclient"
+	"github.com/uber/cadence/.gen/go/replicator"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"go.uber.org/yarpc"
@@ -672,7 +672,7 @@ func (c *clientImpl) GetReplicationTasks(
 			defer cancel()
 			resp, err := client.GetReplicationTasks(ctx, request, opts...)
 			if err != nil {
-				fmt.Printf("failed to get replication tasks from client:%v", err)
+				fmt.Printf("failed to get replication tasks from client:%v\n", err)
 				return
 			}
 			respChan <- resp
