@@ -22,7 +22,7 @@ Quickstart for localhost development
 
 1. Setup Kafka by following instructions:
 [Kafka Quickstart](https://kafka.apache.org/quickstart)
-2. Create Kafka topic for active and standby clusters if needed. By default the development Kafak should create topics in the flight (with 1 partition). If not, then use the follow command to create topics:
+2. Create Kafka topic for active and standby clusters if needed. By default the development Kafka should create topics in- flight (with 1 partition). If not, then use the follow command to create topics:
 ```
 bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic active
 ```
