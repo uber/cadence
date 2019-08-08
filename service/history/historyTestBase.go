@@ -365,6 +365,25 @@ func (s *TestShardContext) GetAllTimerFailoverLevels() map[string]persistence.Ti
 	return ret
 }
 
+func (s *TestShardContext) GetClusterReplicationLevel(cluster string) int64 {
+	s.RLock()
+	defer s.RUnlock()
+
+	if replicationLevel, ok := s.shardInfo.ClusterReplicationLevel[cluster]; ok {
+		return replicationLevel
+	}
+
+	return -1
+}
+
+func (s *TestShardContext) UpdateClusterReplicationLevel(cluster string, lastTaskID int64) error {
+	s.Lock()
+	defer s.Unlock()
+
+	s.shardInfo.ClusterReplicationLevel[cluster] = lastTaskID
+	return nil
+}
+
 // GetDomainNotificationVersion test implementation
 func (s *TestShardContext) GetDomainNotificationVersion() int64 {
 	s.RLock()

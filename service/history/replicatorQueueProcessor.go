@@ -155,9 +155,19 @@ func (p *replicatorQueueProcessorImpl) toReplicationTask(qTask queueTaskInfo) (*
 
 	switch task.TaskType {
 	case persistence.ReplicationTaskTypeSyncActivity:
-		return p.handleSyncActivityTask(task)
+		task, err := p.handleSyncActivityTask(task)
+		if err != nil {
+			return nil, err
+		}
+		task.SourceTaskId = common.Int64Ptr(qTask.GetTaskID())
+		return task, nil
 	case persistence.ReplicationTaskTypeHistory:
-		return p.handleHistoryReplicationTask(task)
+		task, err := p.handleHistoryReplicationTask(task)
+		if err != nil {
+			return nil, err
+		}
+		task.SourceTaskId = common.Int64Ptr(qTask.GetTaskID())
+		return task, nil
 	default:
 		return nil, errUnknownReplicationTask
 	}

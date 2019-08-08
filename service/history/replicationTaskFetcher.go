@@ -41,6 +41,7 @@ const (
 	dropSyncShardTaskTimeThreshold = 10 * time.Minute
 	replicationTimeout             = 30 * time.Second
 	timerFireInterval              = 5 * time.Second
+	timerRetryInterval             = 1 * time.Second
 	timerJitter                    = 0.15
 )
 
@@ -51,7 +52,7 @@ var (
 
 type (
 	replicationTaskProcessor struct {
-		shardID          int32
+		shard            ShardContext
 		readLevel        int64
 		historyEngine    Engine
 		sourceCluster    string
@@ -63,14 +64,13 @@ type (
 	}
 
 	request struct {
-		shardID    int32
 		token      *r.ReplicationToken
 		resultChan chan<- []*r.ReplicationTask
 	}
 )
 
 func NewReplicationTaskProcessor(
-	shardID int32,
+	shard ShardContext,
 	historyEngine Engine,
 	domainReplicator replicator.DomainReplicator,
 	metricsClient metrics.Client,
@@ -78,7 +78,7 @@ func NewReplicationTaskProcessor(
 	replicationTaskFetcher *replicationTaskFetcher,
 ) *replicationTaskProcessor {
 	return &replicationTaskProcessor{
-		shardID:          shardID,
+		shard:            shard,
 		historyEngine:    historyEngine,
 		sourceCluster:    replicationTaskFetcher.GetSourceCluster(),
 		domainReplicator: domainReplicator,
@@ -90,14 +90,13 @@ func NewReplicationTaskProcessor(
 
 func (p *replicationTaskProcessor) Start() {
 	go func() {
-		// TODO: getReadLevel from historyEngine
+		p.readLevel = p.shard.GetClusterReplicationLevel(p.sourceCluster)
 
 		for {
 			tasksChan := make(chan []*r.ReplicationTask)
 			p.requestChan <- &request{
-				token:      &r.ReplicationToken{ShardID: common.Int32Ptr(p.shardID), TaskID: common.Int64Ptr(p.readLevel)},
+				token:      &r.ReplicationToken{ShardID: common.Int32Ptr(int32(p.shard.GetShardID())), TaskID: common.Int64Ptr(p.readLevel)},
 				resultChan: tasksChan,
-				shardID:    p.shardID,
 			}
 			tasks := <-tasksChan
 
@@ -105,6 +104,12 @@ func (p *replicationTaskProcessor) Start() {
 
 			for _, replicationTask := range tasks {
 				p.processTask(replicationTask)
+				p.readLevel = replicationTask.GetSourceTaskId()
+			}
+
+			err := p.shard.UpdateClusterReplicationLevel(p.sourceCluster, p.readLevel)
+			if err != nil {
+				p.logger.Error("Error updating replication level for shard", tag.Error(err), tag.OperationFailed)
 			}
 		}
 	}()
@@ -272,6 +277,8 @@ type replicationTaskFetcher struct {
 func NewReplicationTaskFetcher(logger log.Logger, remotePeer workflowserviceclient.Interface) *replicationTaskFetcher {
 	return &replicationTaskFetcher{
 		numFetchers: 1,
+		logger:      logger,
+		remotePeer:  remotePeer,
 		requestChan: make(chan *request),
 		done:        make(chan struct{}),
 	}
@@ -294,7 +301,7 @@ func (f *replicationTaskFetcher) fetchTasks() {
 		select {
 		case request := <-f.requestChan:
 			replicationTokens = append(replicationTokens, request.token)
-			respChansByShard[request.shardID] = request.resultChan
+			respChansByShard[*request.token.ShardID] = request.resultChan
 
 			// TODO: fetch directly if # tokens > threshold
 
@@ -308,6 +315,8 @@ func (f *replicationTaskFetcher) fetchTasks() {
 			response, err := f.remotePeer.GetReplicationTasks(context.Background(), request)
 			if err != nil {
 				f.logger.Error("failed to get replication tasks", tag.Error(err))
+				timer.Reset(jitter.JitDuration(timerRetryInterval, timerJitter))
+				continue
 			}
 
 			for shardID, tasks := range response.TasksByShard {
@@ -315,6 +324,7 @@ func (f *replicationTaskFetcher) fetchTasks() {
 				close(respChansByShard[shardID])
 				delete(respChansByShard, shardID)
 			}
+			replicationTokens = replicationTokens[:0]
 
 			timer.Reset(jitter.JitDuration(timerFireInterval, timerJitter))
 		case <-f.done:

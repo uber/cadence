@@ -94,6 +94,7 @@ struct SyncActicvityTaskAttributes {
 
 struct ReplicationTask {
   10: optional ReplicationTaskType taskType
+  11: optional i64 (js.type = "Long") sourceTaskId
   20: optional DomainTaskAttributes domainTaskAttributes
   30: optional HistoryTaskAttributes historyTaskAttributes
   40: optional SyncShardStatusTaskAttributes syncShardStatusTaskAttributes

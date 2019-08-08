@@ -189,7 +189,7 @@ func NewEngineWithShardContext(
 
 	var replicationTaskProcessors []*replicationTaskProcessor
 	for _, replicationTaskFetcher := range replicationTaskFetchers {
-		replicationTaskProcessor := NewReplicationTaskProcessor(int32(shard.GetShardID()), historyEngImpl, domainReplicator, shard.GetMetricsClient(), logger, replicationTaskFetcher)
+		replicationTaskProcessor := NewReplicationTaskProcessor(shard, historyEngImpl, domainReplicator, shard.GetMetricsClient(), logger, replicationTaskFetcher)
 		replicationTaskProcessors = append(replicationTaskProcessors, replicationTaskProcessor)
 	}
 	historyEngImpl.replicationTaskProcessors = replicationTaskProcessors

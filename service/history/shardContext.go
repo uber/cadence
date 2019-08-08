@@ -77,6 +77,9 @@ type (
 		GetReplicatorAckLevel() int64
 		UpdateReplicatorAckLevel(ackLevel int64) error
 
+		GetClusterReplicationLevel(cluster string) int64
+		UpdateClusterReplicationLevel(cluster string, lastTaskID int64) error
+
 		GetTimerAckLevel() time.Time
 		UpdateTimerAckLevel(ackLevel time.Time) error
 		GetTimerClusterAckLevel(cluster string) time.Time
@@ -256,6 +259,28 @@ func (s *shardContextImpl) UpdateReplicatorAckLevel(ackLevel int64) error {
 	s.Lock()
 	defer s.Unlock()
 	s.shardInfo.ReplicationAckLevel = ackLevel
+	s.shardInfo.StolenSinceRenew = 0
+	return s.updateShardInfoLocked()
+}
+
+func (s *shardContextImpl) GetClusterReplicationLevel(cluster string) int64 {
+	s.RLock()
+	defer s.RUnlock()
+
+	// if we can find corresponding replication level
+	if replicationLevel, ok := s.shardInfo.ClusterReplicationLevel[cluster]; ok {
+		return replicationLevel
+	}
+
+	// New cluster always starts from -1
+	return -1
+}
+
+func (s *shardContextImpl) UpdateClusterReplicationLevel(cluster string, lastTaskID int64) error {
+	s.Lock()
+	defer s.Unlock()
+
+	s.shardInfo.ClusterReplicationLevel[cluster] = lastTaskID
 	s.shardInfo.StolenSinceRenew = 0
 	return s.updateShardInfoLocked()
 }
