@@ -21,6 +21,7 @@
 package service
 
 import (
+	"fmt"
 	"math/rand"
 	"os"
 	"sync/atomic"
@@ -203,6 +204,8 @@ func (h *serviceImpl) Start() {
 		h.logger.WithTags(tag.Error(err)).Fatal("failed to get host info from membership monitor")
 	}
 	h.hostInfo = hostInfo
+
+	fmt.Printf("h.clusterMetadata %v\n", h.clusterMetadata)
 
 	h.clientBean, err = client.NewClientBean(
 		client.NewRPCClientFactory(h.rpcFactory, h.membershipMonitor, h.metricsClient, h.dynamicCollection, h.numberOfHistoryShards),

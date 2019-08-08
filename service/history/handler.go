@@ -105,6 +105,7 @@ func NewHandler(
 	domainCache cache.DomainCache,
 	publicClient workflowserviceclient.Interface,
 ) *Handler {
+
 	var replicationTaskFetchers []*replicationTaskFetcher
 	for sourceCluster, sourceFrontend := range sVice.GetClientBean().GetRemoteFrontendClients() {
 		replicationTaskFetchers = append(replicationTaskFetchers, NewReplicationTaskFetcher(sVice.GetLogger(), sourceCluster, sourceFrontend))
@@ -128,8 +129,9 @@ func NewHandler(
 				return float64(config.RPS())
 			},
 		),
-		publicClient:     publicClient,
-		domainReplicator: domainReplicator,
+		publicClient:            publicClient,
+		domainReplicator:        domainReplicator,
+		replicationTaskFetchers: replicationTaskFetchers,
 	}
 
 	// prevent us from trying to serve requests before shard controller is started and ready
@@ -174,13 +176,13 @@ func (h *Handler) Start() error {
 	h.hServiceResolver = hServiceResolver
 
 	// TODO when global domain is enabled, uncomment the line below and remove the line after
-	if h.GetClusterMetadata().IsGlobalDomainEnabled() {
-		var err error
-		h.publisher, err = h.GetMessagingClient().NewProducerWithClusterName(h.GetClusterMetadata().GetCurrentClusterName())
-		if err != nil {
-			h.GetLogger().Fatal("Creating kafka producer failed", tag.Error(err))
-		}
-	}
+	//if h.GetClusterMetadata().IsGlobalDomainEnabled() {
+	//	var err error
+	//	h.publisher, err = h.GetMessagingClient().NewProducerWithClusterName(h.GetClusterMetadata().GetCurrentClusterName())
+	//	if err != nil {
+	//		h.GetLogger().Fatal("Creating kafka producer failed", tag.Error(err))
+	//	}
+	//}
 
 	h.controller = newShardController(h.Service, h.GetHostInfo(), hServiceResolver, h.shardManager, h.historyMgr, h.historyV2Mgr,
 		h.domainCache, h.executionMgrFactory, h, h.config, h.GetLogger(), h.GetMetricsClient())
@@ -189,6 +191,11 @@ func (h *Handler) Start() error {
 	// events notifier must starts before controller
 	h.historyEventNotifier.Start()
 	h.controller.Start()
+
+	for _, fetcher := range h.replicationTaskFetchers {
+		fetcher.Start()
+	}
+
 	h.startWG.Done()
 	return nil
 }

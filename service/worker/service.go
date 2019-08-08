@@ -152,7 +152,7 @@ func (s *Service) Start() {
 			s.ensureSystemDomainExists(pFactory, base.GetClusterMetadata().GetCurrentClusterName())
 		}
 		if replicatorEnabled {
-			s.startReplicator(base, pFactory)
+			//s.startReplicator(base, pFactory)
 		}
 		if archiverEnabled {
 			s.startArchiver(base, pFactory)

@@ -364,11 +364,11 @@ func (s *Service) Start() {
 		log.Fatal("Failed to register archiver bootstrap container", tag.Error(err))
 	}
 
-	handler := NewHandler(base, s.config, shardMgr, metadata, visibility, history, historyV2, pFactory, domainCache, params.PublicClient)
-	handler.RegisterHandler()
-
 	// must start base service first
 	base.Start()
+
+	handler := NewHandler(base, s.config, shardMgr, metadata, visibility, history, historyV2, pFactory, domainCache, params.PublicClient)
+	handler.RegisterHandler()
 	err = handler.Start()
 	if err != nil {
 		log.Fatal("History handler failed to start", tag.Error(err))

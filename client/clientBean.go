@@ -65,6 +65,7 @@ type (
 
 	clientBeanImpl struct {
 		sync.Mutex
+		currentClusterName    string
 		historyClient         history.Client
 		matchingClient        atomic.Value
 		frontendClient        frontend.Client
@@ -140,6 +141,7 @@ func NewClientBean(factory Factory, dispatcherProvider DispatcherProvider, clust
 	}
 
 	return &clientBeanImpl{
+		currentClusterName:    clusterMetadata.GetCurrentClusterName(),
 		factory:               factory,
 		historyClient:         historyClient,
 		frontendClient:        frontendClient,
@@ -188,7 +190,13 @@ func (h *clientBeanImpl) GetRemoteFrontendClient(cluster string) frontend.Client
 }
 
 func (h *clientBeanImpl) GetRemoteFrontendClients() map[string]frontend.Client {
-	return h.remoteFrontendClients
+	result := make(map[string]frontend.Client)
+	for clusterName, client := range h.remoteFrontendClients {
+		if clusterName != h.currentClusterName {
+			result[clusterName] = client
+		}
+	}
+	return result
 }
 
 func (h *clientBeanImpl) lazyInitMatchingClient(domainIDToName DomainIDToNameFunc) (matching.Client, error) {

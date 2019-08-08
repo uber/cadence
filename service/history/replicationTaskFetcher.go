@@ -22,6 +22,7 @@ package history
 
 import (
 	"context"
+	"fmt"
 	"github.com/uber/cadence/common/backoff"
 	"time"
 
@@ -280,7 +281,7 @@ func NewReplicationTaskFetcher(logger log.Logger, sourceCluster string, sourceFr
 		logger:        logger,
 		remotePeer:    sourceFrontend,
 		sourceCluster: sourceCluster,
-		requestChan:   make(chan *request),
+		requestChan:   make(chan *request, 1000),
 		done:          make(chan struct{}),
 	}
 }
@@ -289,6 +290,7 @@ func (f *replicationTaskFetcher) Start() {
 	for i := 0; i < f.numFetchers; i++ {
 		go f.fetchTasks()
 	}
+	fmt.Println("Fetcher started...")
 }
 
 func (f *replicationTaskFetcher) fetchTasks() {
@@ -301,6 +303,7 @@ func (f *replicationTaskFetcher) fetchTasks() {
 	for {
 		select {
 		case request := <-f.requestChan:
+			fmt.Printf("Fetch task request received token:%v\n", request.token)
 			replicationTokens = append(replicationTokens, request.token)
 			respChansByShard[*request.token.ShardID] = request.resultChan
 
@@ -315,10 +318,12 @@ func (f *replicationTaskFetcher) fetchTasks() {
 			request := &r.GetReplicationTasksRequest{Tokens: replicationTokens}
 			response, err := f.remotePeer.GetReplicationTasks(context.Background(), request)
 			if err != nil {
-				f.logger.Error("failed to get replication tasks", tag.Error(err))
+				f.logger.Error("Failed to get replication tasks", tag.Error(err))
 				timer.Reset(jitter.JitDuration(timerRetryInterval, timerJitter))
 				continue
 			}
+
+			f.logger.Info("Successfully fetched replication tasks.", tag.Counter(len(response.TasksByShard)))
 
 			for shardID, tasks := range response.TasksByShard {
 				respChansByShard[shardID] <- tasks
