@@ -91,6 +91,7 @@ func NewReplicationTaskProcessor(
 func (p *replicationTaskProcessor) Start() {
 	go func() {
 		p.readLevel = p.shard.GetClusterReplicationLevel(p.sourceCluster)
+		scope := p.metricsClient.Scope(metrics.ReplicationTaskFetcherScope, metrics.TargetClusterTag(p.sourceCluster))
 
 		for {
 			respChan := make(chan *r.ReplicationTasksInfo)
@@ -115,6 +116,9 @@ func (p *replicationTaskProcessor) Start() {
 			if err != nil {
 				p.logger.Error("Error updating replication level for shard", tag.Error(err), tag.OperationFailed)
 			}
+
+			scope.UpdateGauge(metrics.ReplicationTasksReadLevel, float64(p.readLevel))
+			scope.AddCounter(metrics.ReplicationTasksApplied, int64(len(response.GetReplicationTasks())))
 		}
 	}()
 
@@ -148,11 +152,15 @@ SubmitLoop:
 		}
 
 		if err != nil {
+			p.logger.Info("Failed to apply replication task.", tag.TaskID(replicationTask.GetSourceTaskId()))
 			p.updateFailureMetric(scope, err)
 			if !isTransientRetryableError(err) {
+				p.metricsClient.Scope(metrics.ReplicationTaskFetcherScope, metrics.TargetClusterTag(p.sourceCluster)).IncCounter(metrics.ReplicationTasksFailed)
 				break SubmitLoop
 			}
 		} else {
+			p.logger.Info("Successfully applied replication task.", tag.TaskID(replicationTask.GetSourceTaskId()))
+			p.metricsClient.Scope(metrics.ReplicationTaskFetcherScope, metrics.TargetClusterTag(p.sourceCluster)).IncCounter(metrics.ReplicationTasksApplied)
 			break SubmitLoop
 		}
 	}

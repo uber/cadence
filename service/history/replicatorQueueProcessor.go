@@ -56,8 +56,8 @@ type (
 )
 
 var (
-	errUnknownReplicationTask = errors.New("Unknown replication task")
-	errHistoryNotFoundTask    = errors.New("History not found")
+	errUnknownReplicationTask = errors.New("unknown replication task")
+	errHistoryNotFoundTask    = errors.New("history not found")
 	defaultHistoryPageSize    = 1000
 )
 
@@ -156,18 +156,16 @@ func (p *replicatorQueueProcessorImpl) toReplicationTask(qTask queueTaskInfo) (*
 	switch task.TaskType {
 	case persistence.ReplicationTaskTypeSyncActivity:
 		task, err := p.handleSyncActivityTask(task)
-		if err != nil {
-			return nil, err
+		if task != nil {
+			task.SourceTaskId = common.Int64Ptr(qTask.GetTaskID())
 		}
-		task.SourceTaskId = common.Int64Ptr(qTask.GetTaskID())
-		return task, nil
+		return task, err
 	case persistence.ReplicationTaskTypeHistory:
 		task, err := p.handleHistoryReplicationTask(task)
-		if err != nil {
-			return nil, err
+		if task != nil {
+			task.SourceTaskId = common.Int64Ptr(qTask.GetTaskID())
 		}
-		task.SourceTaskId = common.Int64Ptr(qTask.GetTaskID())
-		return task, nil
+		return task, err
 	default:
 		return nil, errUnknownReplicationTask
 	}

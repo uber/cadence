@@ -800,6 +800,8 @@ const (
 	WorkflowCompletionStatsScope
 	// ArchiverClientScope is scope used by all metrics emitted by archiver.Client
 	ArchiverClientScope
+	// ReplicationTaskFetcherScope is scope used by all metrics emitted by ReplicationTaskFetcher
+	ReplicationTaskFetcherScope
 
 	NumHistoryScopes
 )
@@ -1205,6 +1207,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		SessionCountStatsScope:                                 {operation: "SessionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
 		WorkflowCompletionStatsScope:                           {operation: "CompletionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
 		ArchiverClientScope:                                    {operation: "ArchiverClient"},
+		ReplicationTaskFetcherScope:                            {operation: "ReplicationTaskFetcher"},
 	},
 	// Matching Scope Names
 	Matching: {
@@ -1440,6 +1443,9 @@ const (
 	ArchiverClientSendSignalFailureCount
 	ArchiverClientInlineArchiveAttemptCount
 	ArchiverClientInlineArchiveFailureCount
+	ReplicationTasksReadLevel
+	ReplicationTasksApplied
+	ReplicationTasksFailed
 
 	NumHistoryMetrics
 )
@@ -1715,6 +1721,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ArchiverClientSendSignalFailureCount:              {metricName: "archiver_client_send_signal_error", metricType: Counter},
 		ArchiverClientInlineArchiveAttemptCount:           {metricName: "archiver_client_inline_archive_attempt", metricType: Counter},
 		ArchiverClientInlineArchiveFailureCount:           {metricName: "archiver_client_inline_archive_failure", metricType: Counter},
+		ReplicationTasksReadLevel:                         {metricName: "replication_tasks_read_level", metricType: Gauge},
+		ReplicationTasksApplied:                           {metricName: "replication_tasks_applied", metricType: Counter},
+		ReplicationTasksFailed:                            {metricName: "replication_tasks_failed", metricType: Counter},
 	},
 	Matching: {
 		PollSuccessCounter:            {metricName: "poll_success"},
