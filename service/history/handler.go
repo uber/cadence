@@ -105,12 +105,6 @@ func NewHandler(
 	domainCache cache.DomainCache,
 	publicClient workflowserviceclient.Interface,
 ) *Handler {
-
-	var replicationTaskFetchers []*replicationTaskFetcher
-	for sourceCluster, sourceFrontend := range sVice.GetClientBean().GetRemoteFrontendClients() {
-		replicationTaskFetchers = append(replicationTaskFetchers, NewReplicationTaskFetcher(sVice.GetLogger(), sourceCluster, sourceFrontend))
-	}
-
 	domainReplicator := replicator.NewDomainReplicator(metadataMgr, sVice.GetLogger())
 
 	handler := &Handler{
@@ -129,9 +123,8 @@ func NewHandler(
 				return float64(config.RPS())
 			},
 		),
-		publicClient:            publicClient,
-		domainReplicator:        domainReplicator,
-		replicationTaskFetchers: replicationTaskFetchers,
+		publicClient:     publicClient,
+		domainReplicator: domainReplicator,
 	}
 
 	// prevent us from trying to serve requests before shard controller is started and ready
@@ -184,6 +177,16 @@ func (h *Handler) Start() error {
 	//	}
 	//}
 
+	var replicationTaskFetchers []*replicationTaskFetcher
+	for sourceCluster, sourceFrontend := range h.Service.GetClientBean().GetRemoteFrontendClients() {
+		replicationTaskFetchers = append(replicationTaskFetchers, NewReplicationTaskFetcher(h.GetLogger(), sourceCluster, sourceFrontend))
+	}
+	h.replicationTaskFetchers = replicationTaskFetchers
+
+	for _, fetcher := range h.replicationTaskFetchers {
+		fetcher.Start()
+	}
+
 	h.controller = newShardController(h.Service, h.GetHostInfo(), hServiceResolver, h.shardManager, h.historyMgr, h.historyV2Mgr,
 		h.domainCache, h.executionMgrFactory, h, h.config, h.GetLogger(), h.GetMetricsClient())
 	h.metricsClient = h.GetMetricsClient()
@@ -191,10 +194,6 @@ func (h *Handler) Start() error {
 	// events notifier must starts before controller
 	h.historyEventNotifier.Start()
 	h.controller.Start()
-
-	for _, fetcher := range h.replicationTaskFetchers {
-		fetcher.Start()
-	}
 
 	h.startWG.Done()
 	return nil
@@ -1291,9 +1290,10 @@ func (h *Handler) GetReplicationTasks(
 				return
 			}
 
-			result.Store(*token.ShardID, tasks)
+			if len(tasks) > 0 {
+				result.Store(*token.ShardID, tasks)
+			}
 		}(token)
-
 	}
 
 	wg.Wait()

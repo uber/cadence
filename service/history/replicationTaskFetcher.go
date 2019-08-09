@@ -75,7 +75,6 @@ func NewReplicationTaskProcessor(
 	historyEngine Engine,
 	domainReplicator replicator.DomainReplicator,
 	metricsClient metrics.Client,
-	logger log.Logger,
 	replicationTaskFetcher *replicationTaskFetcher,
 ) *replicationTaskProcessor {
 	return &replicationTaskProcessor{
@@ -84,7 +83,7 @@ func NewReplicationTaskProcessor(
 		sourceCluster:    replicationTaskFetcher.GetSourceCluster(),
 		domainReplicator: domainReplicator,
 		metricsClient:    metricsClient,
-		logger:           logger,
+		logger:           shard.GetLogger(),
 		requestChan:      replicationTaskFetcher.GetRequestChan(),
 	}
 }
@@ -114,6 +113,8 @@ func (p *replicationTaskProcessor) Start() {
 			}
 		}
 	}()
+
+	p.logger.Info("ReplicationTaskProcessor started.")
 }
 
 func (p *replicationTaskProcessor) processTask(replicationTask *r.ReplicationTask) {

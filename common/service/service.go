@@ -21,7 +21,6 @@
 package service
 
 import (
-	"fmt"
 	"math/rand"
 	"os"
 	"sync/atomic"
