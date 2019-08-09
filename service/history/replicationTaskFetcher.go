@@ -65,8 +65,8 @@ type (
 	}
 
 	request struct {
-		token      *r.ReplicationToken
-		resultChan chan<- []*r.ReplicationTask
+		token    *r.ReplicationToken
+		respChan chan<- *r.ReplicationTasksInfo
 	}
 )
 
@@ -93,20 +93,24 @@ func (p *replicationTaskProcessor) Start() {
 		p.readLevel = p.shard.GetClusterReplicationLevel(p.sourceCluster)
 
 		for {
-			tasksChan := make(chan []*r.ReplicationTask)
+			respChan := make(chan *r.ReplicationTasksInfo)
 			p.requestChan <- &request{
-				token:      &r.ReplicationToken{ShardID: common.Int32Ptr(int32(p.shard.GetShardID())), TaskID: common.Int64Ptr(p.readLevel)},
-				resultChan: tasksChan,
+				token:    &r.ReplicationToken{ShardID: common.Int32Ptr(int32(p.shard.GetShardID())), TaskID: common.Int64Ptr(p.readLevel)},
+				respChan: respChan,
 			}
-			tasks := <-tasksChan
+			response := <-respChan
 
-			p.logger.Info("Got replication tasks.")
+			p.logger.Info("Got fetch replication tasks response.",
+				tag.ReadLevel(response.GetReadLevel()),
+				tag.Bool(response.GetHasMore()),
+				tag.Counter(len(response.GetReplicationTasks())),
+			)
 
-			for _, replicationTask := range tasks {
+			for _, replicationTask := range response.ReplicationTasks {
 				p.processTask(replicationTask)
-				p.readLevel = replicationTask.GetSourceTaskId()
 			}
 
+			p.readLevel = response.GetReadLevel()
 			err := p.shard.UpdateClusterReplicationLevel(p.sourceCluster, p.readLevel)
 			if err != nil {
 				p.logger.Error("Error updating replication level for shard", tag.Error(err), tag.OperationFailed)
@@ -331,8 +335,8 @@ func (f *replicationTaskFetcher) fetchTasks() {
 
 			for shardID, tasks := range response.TasksByShard {
 				request := requestByShard[shardID]
-				request.resultChan <- tasks
-				close(request.resultChan)
+				request.respChan <- tasks
+				close(request.respChan)
 				delete(requestByShard, shardID)
 			}
 

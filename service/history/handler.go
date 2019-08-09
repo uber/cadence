@@ -1290,18 +1290,16 @@ func (h *Handler) GetReplicationTasks(
 				return
 			}
 
-			if len(tasks) > 0 {
-				result.Store(*token.ShardID, tasks)
-			}
+			result.Store(*token.ShardID, tasks)
 		}(token)
 	}
 
 	wg.Wait()
 
-	tasksByShard := make(map[int32][]*r.ReplicationTask)
+	tasksByShard := make(map[int32]*r.ReplicationTasksInfo)
 	result.Range(func(key, value interface{}) bool {
 		shardID := key.(int32)
-		tasks := value.([]*r.ReplicationTask)
+		tasks := value.(*r.ReplicationTasksInfo)
 		tasksByShard[shardID] = tasks
 		return true
 	})

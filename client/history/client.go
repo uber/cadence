@@ -683,7 +683,7 @@ func (c *clientImpl) GetReplicationTasks(
 	wg.Wait()
 	close(respChan)
 
-	response := &replicator.GetReplicationTasksResponse{TasksByShard: make(map[int32][]*replicator.ReplicationTask)}
+	response := &replicator.GetReplicationTasksResponse{TasksByShard: make(map[int32]*replicator.ReplicationTasksInfo)}
 	for resp := range respChan {
 		for shardID, tasks := range resp.TasksByShard {
 			response.TasksByShard[shardID] = tasks

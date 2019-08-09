@@ -518,15 +518,15 @@ func (_m *MockHistoryEngine) NotifyNewTimerTasks(tasks []persistence.Task) {
 }
 
 // GetReplicationTasks is mock implementation for GetReplicationTasks of HistoryEngine
-func (_m *MockHistoryEngine) GetReplicationTasks(ctx context.Context, taskID int64) ([]*replicator.ReplicationTask, error) {
+func (_m *MockHistoryEngine) GetReplicationTasks(ctx context.Context, taskID int64) (*replicator.ReplicationTasksInfo, error) {
 	ret := _m.Called(ctx, taskID)
 
-	var r0 []*replicator.ReplicationTask
-	if rf, ok := ret.Get(0).(func(int64) []*replicator.ReplicationTask); ok {
+	var r0 *replicator.ReplicationTasksInfo
+	if rf, ok := ret.Get(0).(func(int64) *replicator.ReplicationTasksInfo); ok {
 		r0 = rf(taskID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*replicator.ReplicationTask)
+			r0 = ret.Get(0).(*replicator.ReplicationTasksInfo)
 		}
 	}
 
