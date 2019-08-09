@@ -41,10 +41,8 @@ Source code:
 
 ```java
 public interface HelloWorkflow {
-
-@WorkflowMethod(executionStartToCloseTimeoutSeconds = 300)
-String getGreeting(String name);
-
+    @WorkflowMethod(executionStartToCloseTimeoutSeconds = 300)
+    String getGreeting(String name);
 }
 ```
 ```java
@@ -60,7 +58,6 @@ public class HelloWorkflowImpl implements HelloWorkflow {
         Workflow.sleep(Duration.ofMinutes(1));
         return "Hello " + name + "!";
     }
-
 }
 ```
 ```java
