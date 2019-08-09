@@ -169,13 +169,13 @@ func (h *Handler) Start() error {
 	h.hServiceResolver = hServiceResolver
 
 	// TODO when global domain is enabled, uncomment the line below and remove the line after
-	//if h.GetClusterMetadata().IsGlobalDomainEnabled() {
-	//	var err error
-	//	h.publisher, err = h.GetMessagingClient().NewProducerWithClusterName(h.GetClusterMetadata().GetCurrentClusterName())
-	//	if err != nil {
-	//		h.GetLogger().Fatal("Creating kafka producer failed", tag.Error(err))
-	//	}
-	//}
+	if h.GetClusterMetadata().IsGlobalDomainEnabled() {
+		var err error
+		h.publisher, err = h.GetMessagingClient().NewProducerWithClusterName(h.GetClusterMetadata().GetCurrentClusterName())
+		if err != nil {
+			h.GetLogger().Fatal("Creating kafka producer failed", tag.Error(err))
+		}
+	}
 
 	var replicationTaskFetchers []*replicationTaskFetcher
 	for sourceCluster, sourceFrontend := range h.Service.GetClientBean().GetRemoteFrontendClients() {
