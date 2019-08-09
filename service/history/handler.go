@@ -1269,7 +1269,6 @@ func (h *Handler) GetReplicationTasks(
 	request *r.GetReplicationTasksRequest,
 ) (*r.GetReplicationTasksResponse, error) {
 
-	fmt.Println("GetReplicationTasks in history service")
 	var wg sync.WaitGroup
 	wg.Add(len(request.Tokens))
 	result := new(sync.Map)

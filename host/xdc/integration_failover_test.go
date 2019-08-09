@@ -390,6 +390,9 @@ func (s *integrationClustersTestSuite) TestSimpleWorkflowFailover() {
 	queryResultString := string(queryResult.Resp.QueryResult)
 	s.Equal("query-result", queryResultString)
 
+	// Wait a while so the events are replicated.
+	time.Sleep(5 * time.Second)
+
 	// call QueryWorkflow in separate goroutinue (because it is blocking). That will generate a query task
 	go queryWorkflowFn(client2, queryType)
 	// process that query task, which should respond via RespondQueryTaskCompleted

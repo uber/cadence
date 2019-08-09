@@ -675,7 +675,6 @@ func (c *clientImpl) GetReplicationTasks(
 				fmt.Printf("failed to get replication tasks from client:%v\n", err)
 				return
 			}
-			fmt.Println("HistoryClient: successfully fetched replication tasks.")
 			respChan <- resp
 		}(client, req)
 	}

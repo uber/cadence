@@ -41,7 +41,7 @@ import (
 const (
 	dropSyncShardTaskTimeThreshold = 10 * time.Minute
 	replicationTimeout             = 30 * time.Second
-	timerFireInterval              = 5 * time.Second
+	timerFireInterval              = 2 * time.Second
 	timerRetryInterval             = 1 * time.Second
 	timerJitter                    = 0.15
 )
@@ -315,7 +315,6 @@ func (f *replicationTaskFetcher) fetchTasks() {
 	for {
 		select {
 		case request := <-f.requestChan:
-			fmt.Printf("Fetch task request received token:%v\n", request.token)
 			requestByShard[*request.token.ShardID] = request
 
 			// TODO: fetch directly if # tokens > threshold
