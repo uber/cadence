@@ -46,6 +46,7 @@ cadence --do sample domain register --gd true --ac active --cl active standby
 ```
 
 6. Failover between zones:
+
 Failover to standby:
 ```
 cadence --do sample domain update --ac standby
