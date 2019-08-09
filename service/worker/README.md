@@ -46,12 +46,14 @@ cadence --do sample domain register --gd true --ac active --cl active standby
 ```
 
 6. Failover between zones:
+Failover to standby:
 ```
 cadence --do sample domain update --ac standby
 ```
-
-Cadence cluster is now running with the replicator consuming messages from
-Kafka topic standby.
+Failback to active:
+```
+cadence --do sample domain update --ac active
+```
 
 Create replication task using CLI
 ---------------------------------
