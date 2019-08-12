@@ -3792,6 +3792,7 @@ func (s *ExecutionManagerSuite) TestCreateGetUpdateGetShard() {
 			cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 		},
 		DomainNotificationVersion: domainNotificationVersion,
+		ClusterReplicationLevel:   map[string]int64{cluster.TestAlternativeClusterName: 12345},
 	}
 	updateRequest := &p.UpdateShardRequest{
 		ShardInfo:       shardInfo,
