@@ -31,4 +31,3 @@ frontend.validSearchAttributes:
       Operator: 1
 system.minRetentionDays:
     - value: 0
-      constraints: {}
