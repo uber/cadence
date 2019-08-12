@@ -22,7 +22,6 @@ package history
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -31,6 +30,8 @@ import (
 	"github.com/uber/cadence/.gen/go/replicator"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"go.uber.org/yarpc"
 )
 
@@ -46,6 +47,7 @@ type clientImpl struct {
 	tokenSerializer common.TaskTokenSerializer
 	timeout         time.Duration
 	clients         common.ClientCache
+	logger          log.Logger
 }
 
 // NewClient creates a new history service TChannel client
@@ -53,12 +55,14 @@ func NewClient(
 	numberOfShards int,
 	timeout time.Duration,
 	clients common.ClientCache,
+	logger log.Logger,
 ) Client {
 	return &clientImpl{
 		numberOfShards:  numberOfShards,
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		timeout:         timeout,
 		clients:         clients,
+		logger:          logger,
 	}
 }
 
@@ -672,7 +676,7 @@ func (c *clientImpl) GetReplicationTasks(
 			defer cancel()
 			resp, err := client.GetReplicationTasks(ctx, request, opts...)
 			if err != nil {
-				fmt.Printf("failed to get replication tasks from client:%v\n", err)
+				c.logger.Warn("Failed to get replication tasks from client", tag.Error(err))
 				return
 			}
 			respChan <- resp
