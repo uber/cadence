@@ -23,7 +23,6 @@ package history
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common/service/config"
 	"sync"
 
 	"github.com/pborman/uuid"
@@ -177,14 +176,21 @@ func (h *Handler) Start() error {
 		}
 	}
 
-	if h.GetClusterMetadata().GetReplicationConsumerConfig().Type == config.ReplicationConsumerTypeRPC {
-		var replicationTaskFetchers []*replicationTaskFetcher
-		for sourceCluster, sourceFrontend := range h.Service.GetClientBean().GetRemoteFrontendClients() {
-			fetcher := newReplicationTaskFetcher(h.GetLogger(), sourceCluster, h.GetClusterMetadata().GetReplicationConsumerConfig().NumFetchers, sourceFrontend)
-			fetcher.Start()
-			replicationTaskFetchers = append(replicationTaskFetchers, fetcher)
+	numFetchers := h.GetClusterMetadata().GetReplicationConsumerConfig().NumFetchers
+	for clusterName, info := range h.Service.GetClusterMetadata().GetAllClusterInfo() {
+		if !info.Enabled {
+			continue
 		}
-		h.replicationTaskFetchers = replicationTaskFetchers
+
+		if clusterName != h.Service.GetClusterMetadata().GetCurrentClusterName() {
+			remoteFrontendClient := h.Service.GetClientBean().GetRemoteFrontendClient(clusterName)
+			fetcher := newReplicationTaskFetcher(h.GetLogger(), clusterName, numFetchers, remoteFrontendClient)
+			h.replicationTaskFetchers = append(h.replicationTaskFetchers, fetcher)
+		}
+	}
+
+	for _, fetchers := range h.replicationTaskFetchers {
+		fetchers.Start()
 	}
 
 	h.controller = newShardController(h.Service, h.GetHostInfo(), hServiceResolver, h.shardManager, h.historyMgr, h.historyV2Mgr,

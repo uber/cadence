@@ -55,7 +55,6 @@ type (
 		GetFrontendClient() frontend.Client
 		GetRemoteAdminClient(cluster string) admin.Client
 		GetRemoteFrontendClient(cluster string) frontend.Client
-		GetRemoteFrontendClients() map[string]frontend.Client
 	}
 
 	// DispatcherProvider provides a diapatcher to a given address
@@ -65,7 +64,6 @@ type (
 
 	clientBeanImpl struct {
 		sync.Mutex
-		currentClusterName    string
 		historyClient         history.Client
 		matchingClient        atomic.Value
 		frontendClient        frontend.Client
@@ -141,7 +139,6 @@ func NewClientBean(factory Factory, dispatcherProvider DispatcherProvider, clust
 	}
 
 	return &clientBeanImpl{
-		currentClusterName:    clusterMetadata.GetCurrentClusterName(),
 		factory:               factory,
 		historyClient:         historyClient,
 		frontendClient:        frontendClient,
@@ -187,16 +184,6 @@ func (h *clientBeanImpl) GetRemoteFrontendClient(cluster string) frontend.Client
 		))
 	}
 	return client
-}
-
-func (h *clientBeanImpl) GetRemoteFrontendClients() map[string]frontend.Client {
-	result := make(map[string]frontend.Client)
-	for clusterName, client := range h.remoteFrontendClients {
-		if clusterName != h.currentClusterName {
-			result[clusterName] = client
-		}
-	}
-	return result
 }
 
 func (h *clientBeanImpl) lazyInitMatchingClient(domainIDToName DomainIDToNameFunc) (matching.Client, error) {

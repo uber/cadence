@@ -25,7 +25,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common/service/config"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -45,6 +44,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/config"
 	warchiver "github.com/uber/cadence/service/worker/archiver"
 	"github.com/uber/cadence/service/worker/replicator"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
