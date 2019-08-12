@@ -15,10 +15,10 @@ That's why Cadence add support for enhanced visibility features on top of Elasti
 # Quick Start
 ## Local Cadence Docker Setup
 1. Increase docker memory to higher 6GB. Docker -> Preference -> advanced -> memory limit
-2. Get docker compose file. Run `<code>curl -O [https://raw.githubusercontent.com/uber/cadence/master/docker/docker-compose-es.yml](https://raw.githubusercontent.com/uber/cadence/master/docker/docker-compose-es.yml)</code>`
-3. Start cadence docker which contains Kafka, Zookeeper and ElasticSearch. Run `<code>docker-compose -f docker-compose-es.yml up</code>`
-4. From docker output log, make sure ES and cadence started correctly. If encounter disk space not enough, try `<code>docker system prune -a --volumes</code>`
-5. Register local domain and start using it. `<code>cadence --do samples-domain d re</code>`
+2. Get docker compose file. Run `curl -O https://raw.githubusercontent.com/uber/cadence/master/docker/docker-compose-es.yml`
+3. Start cadence docker which contains Kafka, Zookeeper and ElasticSearch. Run `docker-compose -f docker-compose-es.yml up`
+4. From docker output log, make sure ES and cadence started correctly. If encounter disk space not enough, try `docker system prune -a --volumes`
+5. Register local domain and start using it. `cadence --do samples-domain d re`
  
 
 ## CLI Search Attributes Support 
@@ -31,7 +31,7 @@ Make sure Cadence CLI version is 0.6.4+
 cadence --do samples-domain wf list -q 'WorkflowType = "main.Workflow" and (WorkflowID = "1645a588-4772-4dab-b276-5f9db108b3a8" or RunID = "be66519b-5f09-40cd-b2e8-20e4106244dc")'
 cadence --do samples-domain wf list -q 'WorkflowType = "main.Workflow" StartTime > "2019-06-07T16:46:34-08:00" and CloseTime = missing'
 ```
-To list only open workflows, add ``CloseTime = missing`` to the end of query.  
+To list only open workflows, add `CloseTime = missing` to the end of query.  
 
 ### start workflow with search attributes 
 
