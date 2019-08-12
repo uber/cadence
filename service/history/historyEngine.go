@@ -25,11 +25,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common/service/config"
 	"time"
 
 	"github.com/pborman/uuid"
 	h "github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/replicator"
+	r "github.com/uber/cadence/.gen/go/replicator"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
@@ -45,7 +46,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	warchiver "github.com/uber/cadence/service/worker/archiver"
-	replicator2 "github.com/uber/cadence/service/worker/replicator"
+	"github.com/uber/cadence/service/worker/replicator"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 )
 
@@ -138,7 +139,7 @@ func NewEngineWithShardContext(
 	publisher messaging.Producer,
 	config *Config,
 	replicationTaskFetchers []*replicationTaskFetcher,
-	domainReplicator replicator2.DomainReplicator,
+	domainReplicator replicator.DomainReplicator,
 ) Engine {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 
@@ -210,9 +211,11 @@ func (e *historyEngineImpl) Start() {
 
 	e.txProcessor.Start()
 	e.timerProcessor.Start()
-	//if e.replicatorProcessor != nil {
-	//	e.replicatorProcessor.Start()
-	//}
+
+	clusterMetadata := e.shard.GetClusterMetadata()
+	if e.replicatorProcessor != nil && clusterMetadata.GetReplicationConsumerConfig().Type != config.ReplicationConsumerTypeRPC {
+		e.replicatorProcessor.Start()
+	}
 
 	for _, replicationTaskProcessor := range e.replicationTaskProcessors {
 		replicationTaskProcessor.Start()
@@ -228,6 +231,10 @@ func (e *historyEngineImpl) Stop() {
 	e.timerProcessor.Stop()
 	if e.replicatorProcessor != nil {
 		e.replicatorProcessor.Stop()
+	}
+
+	for _, replicationTaskProcessor := range e.replicationTaskProcessors {
+		replicationTaskProcessor.Stop()
 	}
 
 	// unset the failover callback
@@ -2354,6 +2361,6 @@ func getWorkflowAlreadyStartedError(errMsg string, createRequestID string, workf
 	}
 }
 
-func (e *historyEngineImpl) GetReplicationTasks(ctx ctx.Context, taskID int64) (*replicator.ReplicationTasksInfo, error) {
+func (e *historyEngineImpl) GetReplicationTasks(ctx ctx.Context, taskID int64) (*r.ReplicationTasksInfo, error) {
 	return e.replicatorProcessor.getTasks(taskID)
 }

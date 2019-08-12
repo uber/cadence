@@ -23,6 +23,7 @@ package history
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common/service/config"
 	"sync"
 
 	"github.com/pborman/uuid"
@@ -168,7 +169,6 @@ func (h *Handler) Start() error {
 	}
 	h.hServiceResolver = hServiceResolver
 
-	// TODO when global domain is enabled, uncomment the line below and remove the line after
 	if h.GetClusterMetadata().IsGlobalDomainEnabled() {
 		var err error
 		h.publisher, err = h.GetMessagingClient().NewProducerWithClusterName(h.GetClusterMetadata().GetCurrentClusterName())
@@ -177,14 +177,14 @@ func (h *Handler) Start() error {
 		}
 	}
 
-	var replicationTaskFetchers []*replicationTaskFetcher
-	for sourceCluster, sourceFrontend := range h.Service.GetClientBean().GetRemoteFrontendClients() {
-		replicationTaskFetchers = append(replicationTaskFetchers, NewReplicationTaskFetcher(h.GetLogger(), sourceCluster, sourceFrontend))
-	}
-	h.replicationTaskFetchers = replicationTaskFetchers
-
-	for _, fetcher := range h.replicationTaskFetchers {
-		fetcher.Start()
+	if h.GetClusterMetadata().GetReplicationConsumerConfig().Type == config.ReplicationConsumerTypeRPC {
+		var replicationTaskFetchers []*replicationTaskFetcher
+		for sourceCluster, sourceFrontend := range h.Service.GetClientBean().GetRemoteFrontendClients() {
+			fetcher := NewReplicationTaskFetcher(h.GetLogger(), sourceCluster, h.GetClusterMetadata().GetReplicationConsumerConfig().NumFetchers, sourceFrontend)
+			fetcher.Start()
+			replicationTaskFetchers = append(replicationTaskFetchers, fetcher)
+		}
+		h.replicationTaskFetchers = replicationTaskFetchers
 	}
 
 	h.controller = newShardController(h.Service, h.GetHostInfo(), hServiceResolver, h.shardManager, h.historyMgr, h.historyV2Mgr,
@@ -201,6 +201,9 @@ func (h *Handler) Start() error {
 
 // Stop stops the handler
 func (h *Handler) Stop() {
+	for _, fetcher := range h.replicationTaskFetchers {
+		fetcher.Stop()
+	}
 	h.domainCache.Stop()
 	h.controller.Stop()
 	h.shardManager.Close()

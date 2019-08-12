@@ -155,13 +155,13 @@ func (p *replicatorQueueProcessorImpl) toReplicationTask(qTask queueTaskInfo) (*
 
 	switch task.TaskType {
 	case persistence.ReplicationTaskTypeSyncActivity:
-		task, err := p.handleSyncActivityTask(task)
+		task, err := p.getSyncActivityTask(task)
 		if task != nil {
 			task.SourceTaskId = common.Int64Ptr(qTask.GetTaskID())
 		}
 		return task, err
 	case persistence.ReplicationTaskTypeHistory:
-		task, err := p.handleHistoryReplicationTask(task)
+		task, err := p.getHistoryReplicationTask(task)
 		if task != nil {
 			task.SourceTaskId = common.Int64Ptr(qTask.GetTaskID())
 		}
@@ -177,7 +177,7 @@ func (p *replicatorQueueProcessorImpl) queueShutdown() error {
 }
 
 func (p *replicatorQueueProcessorImpl) processSyncActivityTask(task *persistence.ReplicationTaskInfo) (retError error) {
-	replicationTask, err := p.handleSyncActivityTask(task)
+	replicationTask, err := p.getSyncActivityTask(task)
 	if err != nil {
 		return err
 	}
@@ -185,7 +185,7 @@ func (p *replicatorQueueProcessorImpl) processSyncActivityTask(task *persistence
 	return p.replicator.Publish(replicationTask)
 }
 
-func (p *replicatorQueueProcessorImpl) handleSyncActivityTask(task *persistence.ReplicationTaskInfo) (replicationTask *replicator.ReplicationTask, retError error) {
+func (p *replicatorQueueProcessorImpl) getSyncActivityTask(task *persistence.ReplicationTaskInfo) (replicationTask *replicator.ReplicationTask, retError error) {
 	domainID := task.DomainID
 	execution := shared.WorkflowExecution{
 		WorkflowId: common.StringPtr(task.WorkflowID),
@@ -270,7 +270,7 @@ func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persi
 	return err
 }
 
-func (p *replicatorQueueProcessorImpl) handleHistoryReplicationTask(
+func (p *replicatorQueueProcessorImpl) getHistoryReplicationTask(
 	task *persistence.ReplicationTaskInfo,
 ) (*replicator.ReplicationTask, error) {
 	domainEntry, err := p.shard.GetDomainCache().GetDomainByID(task.DomainID)

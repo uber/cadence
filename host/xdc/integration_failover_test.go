@@ -368,8 +368,6 @@ func (s *integrationClustersTestSuite) TestSimpleWorkflowFailover() {
 		queryResultCh <- QueryResult{Resp: queryResp, Err: err}
 	}
 
-	fmt.Println("Before query workflow")
-
 	// call QueryWorkflow in separate goroutinue (because it is blocking). That will generate a query task
 	go queryWorkflowFn(client1, queryType)
 	// process that query task, which should respond via RespondQueryTaskCompleted

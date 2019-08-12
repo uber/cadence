@@ -91,6 +91,7 @@ func GetTestClusterMetadata(enableGlobalDomain bool, isMasterCluster bool) Metad
 			masterClusterName,
 			TestCurrentClusterName,
 			TestAllClusterInfo,
+			nil,
 		)
 	}
 
@@ -101,5 +102,6 @@ func GetTestClusterMetadata(enableGlobalDomain bool, isMasterCluster bool) Metad
 		TestCurrentClusterName,
 		TestCurrentClusterName,
 		TestSingleDCClusterInfo,
+		nil,
 	)
 }

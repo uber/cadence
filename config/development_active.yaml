@@ -67,6 +67,9 @@ services:
 
 clusterMetadata:
   enableGlobalDomain: true
+  replicationConsumer:
+    type: rpc
+    numFetchers: 1
   failoverVersionIncrement: 10
   masterClusterName: "active"
   currentClusterName: "active"
