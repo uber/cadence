@@ -51,28 +51,28 @@ callout_description: Cadence fault-oblivious stateful code platform preserves co
   </div>
 
   <div class="feature java-client">
-    <a href="{{ '/docs/05_javaclient' | relative_url }}">
+    <a href="{{ '/docs/06_javaclient' | relative_url }}">
       <div class="icon">
         <svg class="icon-java-cup">
           <use xlink:href="#icon-java-cup"></use>
         </svg>
       </div>
     </a>
-    <a href="{{ '/docs/05_javaclient' | relative_url }}">
+    <a href="{{ '/docs/06_javaclient' | relative_url }}">
       <span class="description">Java Client</span>
     </a>
     <p>Code your business logic in Java</p>
   </div>
 
   <div class="feature go-client">
-    <a href="{{ '/docs/06_goclient' | relative_url }}">
+    <a href="{{ '/docs/07_goclient' | relative_url }}">
       <div class="icon">
         <svg class="icon-gopher">
           <use xlink:href="#icon-gopher"></use>
         </svg>
       </div>
     </a>
-    <a href="{{ '/docs/06_goclient' | relative_url }}">
+    <a href="{{ '/docs/07_goclient' | relative_url }}">
       <span class="description">Go Client</span>
     </a>
     <p>Code your business logic in Go</p>
