@@ -157,11 +157,49 @@ func (s *nDCIntegrationTestSuite) TestSimpleNDC() {
 		Version:     common.Int64Ptr(version),
 		LastEventId: common.Int64Ptr(0),
 	}
-	fmt.Println("OnlyDmain:"+domainID)
+
 	for idx, batch := range historyBatch {
 		fmt.Println("#######:" + strconv.Itoa(idx))
 		fmt.Println(*batch)
 		fmt.Println("####################")
+		var newRunHistory *shared.History = nil
+		// Generate a new run history on continue as new
+		if idx == len(historyBatch)-1 && batch.Events[len(batch.Events)-1].GetWorkflowExecutionContinuedAsNewEventAttributes() != nil {
+			newRunID := uuid.New()
+			newRunHistory = &shared.History{
+				Events: []*shared.HistoryEvent{
+					{
+						EventId:   common.Int64Ptr(1),
+						Timestamp: common.Int64Ptr(time.Now().UnixNano()),
+						EventType: common.EventTypePtr(shared.EventTypeWorkflowExecutionStarted),
+						Version:   common.Int64Ptr(version),
+						TaskId:    common.Int64Ptr(1),
+						WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
+							WorkflowType:         common.WorkflowTypePtr(shared.WorkflowType{Name:common.StringPtr(wt)}),
+							ParentWorkflowDomain: common.StringPtr(domain),
+							ParentWorkflowExecution: &shared.WorkflowExecution{
+								WorkflowId: common.StringPtr(wid),
+								RunId:      common.StringPtr(rid),
+							},
+							ParentInitiatedEventId: common.Int64Ptr(batch.Events[len(batch.Events)-1].GetEventId()),
+							TaskList: common.TaskListPtr(shared.TaskList{
+								Name: common.StringPtr(tl),
+								Kind: common.TaskListKindPtr(shared.TaskListKindNormal),
+							}),
+							ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(10),
+							TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+							ContinuedExecutionRunId:             common.StringPtr(newRunID),
+							Initiator:                           shared.ContinueAsNewInitiatorCronSchedule.Ptr(),
+							OriginalExecutionRunId:              common.StringPtr(rid),
+							Identity:                            common.StringPtr("NDC-test"),
+							FirstExecutionRunId:                 common.StringPtr(rid),
+							Attempt:                             common.Int32Ptr(0),
+							ExpirationTimestamp:                 common.Int64Ptr(time.Now().Add(time.Minute).UnixNano()),
+						},
+					},
+				},
+			}
+		}
 		err = historyClient.ReplicateEvents(createContext(), &history.ReplicateEventsRequest{
 			SourceCluster: common.StringPtr("active"),
 			DomainUUID:    resp.DomainInfo.UUID,
@@ -173,11 +211,40 @@ func (s *nDCIntegrationTestSuite) TestSimpleNDC() {
 			NextEventId:             common.Int64Ptr(*batch.Events[len(batch.Events)-1].EventId + int64(1)),
 			Version:                 common.Int64Ptr(version),
 			History:                 batch,
+			NewRunHistory:           newRunHistory,
 			ForceBufferEvents:       common.BoolPtr(false),
 			EventStoreVersion:       common.Int32Ptr(persistence.EventStoreVersionV2),
 			NewRunEventStoreVersion: common.Int32Ptr(persistence.EventStoreVersionV2),
 			ResetWorkflow:           common.BoolPtr(false),
 		})
 		s.Nil(err)
+	}
+
+	passiveClient := s.cluster2.GetFrontendClient()
+	replicatedHistory, err := passiveClient.GetWorkflowExecutionHistory(createContext(), &shared.GetWorkflowExecutionHistoryRequest{
+		Domain: common.StringPtr(domain),
+		Execution: &shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(wid),
+			RunId:      common.StringPtr(rid),
+		},
+		MaximumPageSize:        common.Int32Ptr(10000),
+		NextPageToken:          nil,
+		WaitForNewEvent:        common.BoolPtr(false),
+		HistoryEventFilterType: shared.HistoryEventFilterTypeAllEvent.Ptr(),
+	})
+
+	s.Nil(err)
+	batchIndex := 0
+	batch := historyBatch[batchIndex].GetEvents()
+	eventIndex := 0
+	for _, event := range replicatedHistory.GetHistory().GetEvents() {
+		if eventIndex >= len(batch) {
+			batchIndex++
+			batch = historyBatch[batchIndex].GetEvents()
+			eventIndex = 0
+		}
+		originEvent := batch[eventIndex]
+		eventIndex++
+		s.Equal(originEvent.GetEventType().String(), event.GetEventType().String())
 	}
 }

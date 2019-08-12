@@ -122,8 +122,7 @@ func newNDCReplicationTask(
 		if event.GetTimestamp() > eventTime {
 			eventTime = event.GetTimestamp()
 		}
-		if err := versionHistory.AddOrUpdateItem(persistence.NewVersionHistoryItem(*event.EventId, *event.Version));
-		err != nil {
+		if err := versionHistory.AddOrUpdateItem(persistence.NewVersionHistoryItem(*event.EventId, *event.Version)); err != nil {
 			return nil, ErrVersionHistoryMalformed
 		}
 	}
@@ -210,8 +209,7 @@ func (t *nDCReplicationTaskImpl) getRequest() *h.ReplicateEventsRequest {
 func (t *nDCReplicationTaskImpl) generateVersionHistory() (*persistence.VersionHistory, error) {
 	versionHistory := persistence.NewVersionHistory([]byte{}, []*persistence.VersionHistoryItem{})
 	for _, event := range t.historyEvents {
-		if err := versionHistory.AddOrUpdateItem(persistence.NewVersionHistoryItem(*event.EventId, *event.Version));
-			err != nil {
+		if err := versionHistory.AddOrUpdateItem(persistence.NewVersionHistoryItem(*event.EventId, *event.Version)); err != nil {
 			return nil, ErrVersionHistoryMalformed
 		}
 	}
