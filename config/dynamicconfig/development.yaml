@@ -30,7 +30,3 @@ frontend.validSearchAttributes:
 system.minRetentionDays:
 - value: 0
   constraints: {}
-system.enableVisibilityToKafka:
-    - value: true
-system.enableReadVisibilityFromES:
-    - value: true
