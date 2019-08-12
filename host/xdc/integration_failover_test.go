@@ -29,7 +29,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"strconv"
