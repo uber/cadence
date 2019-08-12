@@ -2,6 +2,9 @@
     dbname: integration_active
   clustermetadata:
     enableGlobalDomain: true
+    replicationConsumer:
+      type: rpc
+      numFetchers: 1
     failoverVersionIncrement: 10
     masterClusterName: "active"
     currentClusterName: "active"
@@ -54,6 +57,9 @@
     dbname: integration_standby
   clustermetadata:
     enableGlobalDomain: true
+    replicationConsumer:
+      type: rpc
+      numFetchers: 1
     failoverVersionIncrement: 10
     masterClusterName: "active"
     currentClusterName: "standby"
