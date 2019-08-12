@@ -3281,6 +3281,7 @@ func (wh *WorkflowHandler) allow(d domainGetter) bool {
 	return wh.rateLimiter.Allow(quotas.Info{Domain: domain})
 }
 
+// GetReplicationTasks returns new replication tasks since the read level provided in the token.
 func (wh *WorkflowHandler) GetReplicationTasks(
 	ctx context.Context,
 	request *replicator.GetReplicationTasksRequest,

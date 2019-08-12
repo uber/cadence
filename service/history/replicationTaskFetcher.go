@@ -46,7 +46,7 @@ type replicationTaskFetcher struct {
 	done          chan struct{}
 }
 
-func NewReplicationTaskFetcher(logger log.Logger, sourceCluster string, numFetchers int, sourceFrontend workflowserviceclient.Interface) *replicationTaskFetcher {
+func newReplicationTaskFetcher(logger log.Logger, sourceCluster string, numFetchers int, sourceFrontend workflowserviceclient.Interface) *replicationTaskFetcher {
 	return &replicationTaskFetcher{
 		numFetchers:   numFetchers,
 		logger:        logger,

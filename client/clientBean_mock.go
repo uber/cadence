@@ -122,6 +122,7 @@ func (_m *MockClientBean) GetRemoteFrontendClient(_a0 string) frontend.Client {
 	return r0
 }
 
+// GetRemoteFrontendClients provides a mock function with given fields:
 func (_m *MockClientBean) GetRemoteFrontendClients() map[string]frontend.Client {
 	ret := _m.Called()
 

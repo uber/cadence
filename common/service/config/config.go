@@ -255,6 +255,7 @@ type (
 		RPCAddress string `yaml:"rpcAddress"`
 	}
 
+	// ReplicationConsumerConfig contains config for replication consumer
 	ReplicationConsumerConfig struct {
 		// Type determines how we consume replication tasks. It can be either kafka(default) or rpc.
 		Type string `yaml:"type"`

@@ -180,7 +180,7 @@ func (h *Handler) Start() error {
 	if h.GetClusterMetadata().GetReplicationConsumerConfig().Type == config.ReplicationConsumerTypeRPC {
 		var replicationTaskFetchers []*replicationTaskFetcher
 		for sourceCluster, sourceFrontend := range h.Service.GetClientBean().GetRemoteFrontendClients() {
-			fetcher := NewReplicationTaskFetcher(h.GetLogger(), sourceCluster, h.GetClusterMetadata().GetReplicationConsumerConfig().NumFetchers, sourceFrontend)
+			fetcher := newReplicationTaskFetcher(h.GetLogger(), sourceCluster, h.GetClusterMetadata().GetReplicationConsumerConfig().NumFetchers, sourceFrontend)
 			fetcher.Start()
 			replicationTaskFetchers = append(replicationTaskFetchers, fetcher)
 		}
