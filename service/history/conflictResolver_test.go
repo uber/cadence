@@ -64,7 +64,7 @@ type (
 		mockClientBean           *client.MockClientBean
 		mockEventsCache          *MockEventsCache
 		mockTxProcessor          *MockTransferQueueProcessor
-		mockReplicationProcessor *mockQueueProcessor
+		mockReplicationProcessor *mockReplicatorQueueProcessor
 		mockTimerProcessor       *MockTimerQueueProcessor
 
 		conflictResolver *conflictResolverImpl
@@ -120,7 +120,7 @@ func (s *conflictResolverSuite) SetupTest() {
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockTxProcessor = &MockTransferQueueProcessor{}
 	s.mockTxProcessor.On("NotifyNewTask", mock.Anything, mock.Anything).Maybe()
-	s.mockReplicationProcessor = &mockQueueProcessor{}
+	s.mockReplicationProcessor = &mockReplicatorQueueProcessor{}
 	s.mockReplicationProcessor.On("notifyNewTask").Maybe()
 	s.mockTimerProcessor = &MockTimerQueueProcessor{}
 	s.mockTimerProcessor.On("NotifyNewTimers", mock.Anything, mock.Anything).Maybe()
