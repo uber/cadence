@@ -109,6 +109,10 @@ func (m *sqlShardManager) GetShard(request *persistence.GetShardRequest) (*persi
 		}
 	}
 
+	if shardInfo.ClusterReplicationLevel == nil {
+		shardInfo.ClusterReplicationLevel = make(map[string]int64)
+	}
+
 	resp := &persistence.GetShardResponse{ShardInfo: &persistence.ShardInfo{
 		ShardID:                   int(row.ShardID),
 		RangeID:                   row.RangeID,
@@ -121,6 +125,7 @@ func (m *sqlShardManager) GetShard(request *persistence.GetShardRequest) (*persi
 		ClusterTransferAckLevel:   shardInfo.ClusterTransferAckLevel,
 		ClusterTimerAckLevel:      timerAckLevel,
 		DomainNotificationVersion: shardInfo.GetDomainNotificationVersion(),
+		ClusterReplicationLevel:   shardInfo.ClusterReplicationLevel,
 	}}
 
 	return resp, nil
