@@ -374,7 +374,7 @@ func (c *Config) Validate() error {
 	if err := c.Persistence.Validate(); err != nil {
 		return err
 	}
-	return c.Archival.ValidateProvider()
+	return c.Archival.Validate(&c.DomainDefaults.Archival)
 }
 
 // String converts the config object into a string

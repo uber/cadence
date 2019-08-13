@@ -22,24 +22,34 @@ package config
 
 import (
 	"errors"
+
+	"github.com/uber/cadence/common"
 )
 
-const (
-	// ArchivalEnabled is the status for enabling archival
-	ArchivalEnabled = "enabled"
-)
-
-// ValidateProvider validates the provider section of the archival config
-func (a *Archival) ValidateProvider() error {
-	historyArchivalEnabled := a.History.Status == ArchivalEnabled
-	if (historyArchivalEnabled && a.History.Provider == nil) || (!historyArchivalEnabled && a.History.Provider != nil) {
+// Validate validates the archival config
+func (a *Archival) Validate(domainDefaults *ArchivalDomainDefaults) error {
+	if !isArchivalConfigValid(a.History.Status, a.History.EnableRead, domainDefaults.History.Status, domainDefaults.History.URI, a.History.Provider != nil) {
 		return errors.New("Invalid history archival config")
 	}
 
-	visibilityArchivalEnabled := a.Visibility.Status == ArchivalEnabled
-	if (visibilityArchivalEnabled && a.Visibility.Provider == nil) || (!visibilityArchivalEnabled && a.Visibility.Provider != nil) {
+	if !isArchivalConfigValid(a.Visibility.Status, a.Visibility.EnableRead, domainDefaults.Visibility.Status, domainDefaults.Visibility.URI, a.Visibility.Provider != nil) {
 		return errors.New("Invalid visibility archival config")
 	}
 
 	return nil
+}
+
+func isArchivalConfigValid(
+	clusterStatus string,
+	enableRead bool,
+	domainDefaultStatus string,
+	domianDefaultURI string,
+	specifiedProvider bool,
+) bool {
+	archivalEnabled := clusterStatus == common.ArchivalEnabled
+	URISet := len(domianDefaultURI) != 0
+
+	validEnable := archivalEnabled && URISet && specifiedProvider
+	validDisabled := !archivalEnabled && !enableRead && domainDefaultStatus != common.ArchivalEnabled && !URISet && !specifiedProvider
+	return validEnable || validDisabled
 }
