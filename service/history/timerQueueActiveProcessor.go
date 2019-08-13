@@ -432,7 +432,7 @@ ExpireActivityTimers:
 
 		domainEntry, err := t.shard.GetDomainCache().GetDomainByID(msBuilder.GetExecutionInfo().DomainID)
 		if err != nil {
-			return &workflow.InternalServiceError{Message: "Unable to get domain from cache by domainID."}
+			return &workflow.InternalServiceError{Message: "unable to get domain from cache by domainID."}
 		}
 
 		switch timeoutType {
@@ -535,7 +535,7 @@ func (t *timerQueueActiveProcessorImpl) processDecisionTimeout(
 
 	domainEntry, err := t.shard.GetDomainCache().GetDomainByID(msBuilder.GetExecutionInfo().DomainID)
 	if err != nil {
-		return &workflow.InternalServiceError{Message: "Unable to get domain from cache by domainID."}
+		return &workflow.InternalServiceError{Message: "unable to get domain from cache by domainID."}
 	}
 
 	scheduleNewDecision := false
@@ -557,8 +557,8 @@ func (t *timerQueueActiveProcessorImpl) processDecisionTimeout(
 		if di.Attempt == task.ScheduleAttempt && di.StartedID == common.EmptyEventID {
 			_, err := msBuilder.AddDecisionTaskScheduleToStartTimeoutEvent(scheduleID)
 			if err != nil {
-				// Unable to add DecisionTaskTimeout event to history
-				return &workflow.InternalServiceError{Message: "Unable to add DecisionTaskScheduleToStartTimeout event to history."}
+				// unable to add DecisionTaskTimeout event to history
+				return &workflow.InternalServiceError{Message: "unable to add DecisionTaskScheduleToStartTimeout event to history."}
 			}
 
 			// reschedule decision, which will be on its original task list
@@ -655,12 +655,12 @@ func (t *timerQueueActiveProcessorImpl) processActivityRetryTimer(
 	targetDomainID := domainID
 	scheduledEvent, ok := msBuilder.GetActivityScheduledEvent(scheduledID)
 	if !ok {
-		return &workflow.InternalServiceError{Message: "Unable to get activity schedule event."}
+		return &workflow.InternalServiceError{Message: "unable to get activity schedule event."}
 	}
 	if scheduledEvent.ActivityTaskScheduledEventAttributes.Domain != nil {
 		domainEntry, err := t.shard.GetDomainCache().GetDomain(scheduledEvent.ActivityTaskScheduledEventAttributes.GetDomain())
 		if err != nil {
-			return &workflow.InternalServiceError{Message: "Unable to re-schedule activity across domain."}
+			return &workflow.InternalServiceError{Message: "unable to re-schedule activity across domain."}
 		}
 		targetDomainID = domainEntry.GetInfo().ID
 	}
