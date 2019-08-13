@@ -430,10 +430,17 @@ ExpireActivityTimers:
 			}
 		}
 
+		domainEntry, err := t.shard.GetDomainCache().GetDomainByID(msBuilder.GetExecutionInfo().DomainID)
+		if err != nil {
+			return &workflow.InternalServiceError{Message: "Unable to get domain from cache by domainID."}
+		}
+
 		switch timeoutType {
 		case workflow.TimeoutTypeScheduleToClose:
 			{
-				t.metricsClient.IncCounter(metrics.TimerActiveTaskActivityTimeoutScope, metrics.ScheduleToCloseTimeoutCounter)
+				t.metricsClient.Scope(metrics.TimerActiveTaskActivityTimeoutScope).
+					Tagged(metrics.DomainTag(domainEntry.GetInfo().Name)).
+					IncCounter(metrics.ScheduleToCloseTimeoutCounter)
 				if _, err := msBuilder.AddActivityTaskTimedOutEvent(ai.ScheduleID, ai.StartedID, timeoutType, ai.Details); err != nil {
 					return err
 				}
@@ -442,7 +449,9 @@ ExpireActivityTimers:
 
 		case workflow.TimeoutTypeStartToClose:
 			{
-				t.metricsClient.IncCounter(metrics.TimerActiveTaskActivityTimeoutScope, metrics.StartToCloseTimeoutCounter)
+				t.metricsClient.Scope(metrics.TimerActiveTaskActivityTimeoutScope).
+					Tagged(metrics.DomainTag(domainEntry.GetInfo().Name)).
+					IncCounter(metrics.StartToCloseTimeoutCounter)
 				if ai.StartedID != common.EmptyEventID {
 					if _, err := msBuilder.AddActivityTaskTimedOutEvent(ai.ScheduleID, ai.StartedID, timeoutType, ai.Details); err != nil {
 						return err
@@ -453,7 +462,9 @@ ExpireActivityTimers:
 
 		case workflow.TimeoutTypeHeartbeat:
 			{
-				t.metricsClient.IncCounter(metrics.TimerActiveTaskActivityTimeoutScope, metrics.HeartbeatTimeoutCounter)
+				t.metricsClient.Scope(metrics.TimerActiveTaskActivityTimeoutScope).
+					Tagged(metrics.DomainTag(domainEntry.GetInfo().Name)).
+					IncCounter(metrics.HeartbeatTimeoutCounter)
 				if _, err := msBuilder.AddActivityTaskTimedOutEvent(ai.ScheduleID, ai.StartedID, timeoutType, ai.Details); err != nil {
 					return err
 				}
@@ -462,7 +473,9 @@ ExpireActivityTimers:
 
 		case workflow.TimeoutTypeScheduleToStart:
 			{
-				t.metricsClient.IncCounter(metrics.TimerActiveTaskActivityTimeoutScope, metrics.ScheduleToStartTimeoutCounter)
+				t.metricsClient.Scope(metrics.TimerActiveTaskActivityTimeoutScope).
+					Tagged(metrics.DomainTag(domainEntry.GetInfo().Name)).
+					IncCounter(metrics.ScheduleToStartTimeoutCounter)
 				if ai.StartedID == common.EmptyEventID {
 					if _, err := msBuilder.AddActivityTaskTimedOutEvent(ai.ScheduleID, ai.StartedID, timeoutType, ai.Details); err != nil {
 						return err
