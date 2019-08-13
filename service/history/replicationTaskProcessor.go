@@ -28,6 +28,7 @@ import (
 	r "github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -54,6 +55,7 @@ type (
 		domainReplicator replicator.DomainReplicator
 		metricsClient    metrics.Client
 		logger           log.Logger
+		retryPolicy      backoff.RetryPolicy
 
 		requestChan chan<- *request
 		done        chan struct{}
@@ -72,6 +74,10 @@ func newReplicationTaskProcessor(
 	metricsClient metrics.Client,
 	replicationTaskFetcher *replicationTaskFetcher,
 ) *replicationTaskProcessor {
+	retryPolicy := backoff.NewExponentialRetryPolicy(time.Second)
+	retryPolicy.SetBackoffCoefficient(1)
+	retryPolicy.SetMaximumAttempts(5)
+
 	return &replicationTaskProcessor{
 		shard:            shard,
 		historyEngine:    historyEngine,
@@ -79,6 +85,7 @@ func newReplicationTaskProcessor(
 		domainReplicator: domainReplicator,
 		metricsClient:    metricsClient,
 		logger:           shard.GetLogger(),
+		retryPolicy:      retryPolicy,
 		requestChan:      replicationTaskFetcher.GetRequestChan(),
 		done:             make(chan struct{}),
 	}
@@ -131,49 +138,49 @@ func (p *replicationTaskProcessor) Stop() {
 }
 
 func (p *replicationTaskProcessor) processTask(replicationTask *r.ReplicationTask) {
-	var err error
-SubmitLoop:
-	for {
-		var scope int
-		switch replicationTask.GetTaskType() {
-		case r.ReplicationTaskTypeDomain:
-			scope = metrics.DomainReplicationTaskScope
-			err = p.handleDomainReplicationTask(replicationTask)
-		case r.ReplicationTaskTypeSyncShardStatus:
-			scope = metrics.SyncShardTaskScope
-			err = p.handleSyncShardTask(replicationTask)
-		case r.ReplicationTaskTypeSyncActivity:
-			scope = metrics.SyncActivityTaskScope
-			err = p.handleActivityTask(replicationTask)
-		case r.ReplicationTaskTypeHistory:
-			scope = metrics.HistoryReplicationTaskScope
-			err = p.handleHistoryReplicationTask(replicationTask)
-		case r.ReplicationTaskTypeHistoryMetadata:
-			// Without kafka we should not have size limits so we don't necessary need this in the new replication scheme.
-		default:
-			p.logger.Error("Unknown task type.")
-			scope = metrics.ReplicatorScope
-			err = ErrUnknownReplicationTask
-		}
-
-		if err != nil {
-			p.updateFailureMetric(scope, err)
-			if !isTransientRetryableError(err) {
-				p.metricsClient.Scope(metrics.ReplicationTaskFetcherScope, metrics.TargetClusterTag(p.sourceCluster)).IncCounter(metrics.ReplicationTasksFailed)
-				break SubmitLoop
-			}
-		} else {
-			p.logger.Debug("Successfully applied replication task.", tag.TaskID(replicationTask.GetSourceTaskId()))
-			p.metricsClient.Scope(metrics.ReplicationTaskFetcherScope, metrics.TargetClusterTag(p.sourceCluster)).IncCounter(metrics.ReplicationTasksApplied)
-			break SubmitLoop
-		}
-	}
+	err := backoff.Retry(func() error {
+		return p.processTaskOnce(replicationTask)
+	}, p.retryPolicy, isTransientRetryableError)
 
 	if err != nil {
 		// TODO: insert into our own dlq in cadence persistence?
 		// p.nackMsg(msg, err, logger)
-		p.logger.Error("Failed to apply replication task.", tag.TaskID(replicationTask.GetSourceTaskId()))
+		p.logger.Error("Failed to apply replication task after retry.", tag.TaskID(replicationTask.GetSourceTaskId()))
 	}
+}
+
+func (p *replicationTaskProcessor) processTaskOnce(replicationTask *r.ReplicationTask) error {
+	var err error
+	var scope int
+	switch replicationTask.GetTaskType() {
+	case r.ReplicationTaskTypeDomain:
+		scope = metrics.DomainReplicationTaskScope
+		err = p.handleDomainReplicationTask(replicationTask)
+	case r.ReplicationTaskTypeSyncShardStatus:
+		scope = metrics.SyncShardTaskScope
+		err = p.handleSyncShardTask(replicationTask)
+	case r.ReplicationTaskTypeSyncActivity:
+		scope = metrics.SyncActivityTaskScope
+		err = p.handleActivityTask(replicationTask)
+	case r.ReplicationTaskTypeHistory:
+		scope = metrics.HistoryReplicationTaskScope
+		err = p.handleHistoryReplicationTask(replicationTask)
+	case r.ReplicationTaskTypeHistoryMetadata:
+		// Without kafka we should not have size limits so we don't necessary need this in the new replication scheme.
+	default:
+		p.logger.Error("Unknown task type.")
+		scope = metrics.ReplicatorScope
+		err = ErrUnknownReplicationTask
+	}
+
+	if err != nil {
+		p.updateFailureMetric(scope, err)
+	} else {
+		p.logger.Debug("Successfully applied replication task.", tag.TaskID(replicationTask.GetSourceTaskId()))
+		p.metricsClient.Scope(metrics.ReplicationTaskFetcherScope, metrics.TargetClusterTag(p.sourceCluster)).IncCounter(metrics.ReplicationTasksApplied)
+	}
+
+	return err
 }
 
 func isTransientRetryableError(err error) bool {
