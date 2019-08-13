@@ -98,7 +98,7 @@ func (p *replicationTaskProcessor) Start() {
 
 			select {
 			case response := <-respChan:
-				p.logger.Info("Got fetch replication tasks response.",
+				p.logger.Debug("Got fetch replication tasks response.",
 					tag.ReadLevel(response.GetReadLevel()),
 					tag.Bool(response.GetHasMore()),
 					tag.Counter(len(response.GetReplicationTasks())),
@@ -117,7 +117,7 @@ func (p *replicationTaskProcessor) Start() {
 				scope.UpdateGauge(metrics.ReplicationTasksReadLevel, float64(p.readLevel))
 				scope.AddCounter(metrics.ReplicationTasksApplied, int64(len(response.GetReplicationTasks())))
 			case <-p.done:
-				p.logger.Info("Closing replication task processor.", tag.ShardID(p.shard.GetShardID()), tag.ReadLevel(p.readLevel))
+				p.logger.Info("Closing replication task processor.", tag.ReadLevel(p.readLevel))
 				return
 			}
 		}
@@ -157,14 +157,13 @@ SubmitLoop:
 		}
 
 		if err != nil {
-			p.logger.Info("Failed to apply replication task.", tag.TaskID(replicationTask.GetSourceTaskId()))
 			p.updateFailureMetric(scope, err)
 			if !isTransientRetryableError(err) {
 				p.metricsClient.Scope(metrics.ReplicationTaskFetcherScope, metrics.TargetClusterTag(p.sourceCluster)).IncCounter(metrics.ReplicationTasksFailed)
 				break SubmitLoop
 			}
 		} else {
-			p.logger.Info("Successfully applied replication task.", tag.TaskID(replicationTask.GetSourceTaskId()))
+			p.logger.Debug("Successfully applied replication task.", tag.TaskID(replicationTask.GetSourceTaskId()))
 			p.metricsClient.Scope(metrics.ReplicationTaskFetcherScope, metrics.TargetClusterTag(p.sourceCluster)).IncCounter(metrics.ReplicationTasksApplied)
 			break SubmitLoop
 		}
@@ -173,7 +172,7 @@ SubmitLoop:
 	if err != nil {
 		// TODO: insert into our own dlq in cadence persistence?
 		// p.nackMsg(msg, err, logger)
-		p.logger.Error("Failed to apply replication task")
+		p.logger.Error("Failed to apply replication task.", tag.TaskID(replicationTask.GetSourceTaskId()))
 	}
 }
 

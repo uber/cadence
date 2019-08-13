@@ -32,9 +32,10 @@ import (
 )
 
 const (
-	timerFireInterval  = 2 * time.Second
-	timerRetryInterval = 1 * time.Second
-	timerJitter        = 0.15
+	timerFireInterval       = 2 * time.Second
+	timerRetryInterval      = 1 * time.Second
+	timerJitter             = 0.15
+	fetchTaskRequestTimeout = 10 * time.Second
 )
 
 type replicationTaskFetcher struct {
@@ -85,15 +86,17 @@ func (f *replicationTaskFetcher) fetchTasks() {
 				tokens = append(tokens, request.token)
 			}
 
+			ctx, cancel := context.WithTimeout(context.Background(), fetchTaskRequestTimeout)
 			request := &r.GetReplicationTasksRequest{Tokens: tokens}
-			response, err := f.remotePeer.GetReplicationTasks(context.Background(), request)
+			response, err := f.remotePeer.GetReplicationTasks(ctx, request)
+			cancel()
 			if err != nil {
 				f.logger.Error("Failed to get replication tasks", tag.Error(err))
 				timer.Reset(jitter.JitDuration(timerRetryInterval, timerJitter))
 				continue
 			}
 
-			f.logger.Info("Successfully fetched replication tasks.", tag.Counter(len(response.TasksByShard)))
+			f.logger.Debug("Successfully fetched replication tasks.", tag.Counter(len(response.TasksByShard)))
 
 			for shardID, tasks := range response.TasksByShard {
 				request := requestByShard[shardID]
