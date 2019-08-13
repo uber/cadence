@@ -22,6 +22,7 @@ package history
 
 import (
 	"context"
+	"github.com/uber/cadence/common/service/config"
 	"time"
 
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
@@ -32,37 +33,37 @@ import (
 )
 
 const (
-	timerFireInterval       = 2 * time.Second
-	timerRetryInterval      = 1 * time.Second
-	timerJitter             = 0.15
 	fetchTaskRequestTimeout = 10 * time.Second
+	requestChanBufferSize   = 1000
 )
 
-type replicationTaskFetcher struct {
-	sourceCluster string
-	numFetchers   int
-	logger        log.Logger
-	remotePeer    workflowserviceclient.Interface
-	requestChan   chan *request
-	done          chan struct{}
-}
+type (
+	replicationTaskFetcher struct {
+		sourceCluster string
+		config        *config.FetcherConfig
+		logger        log.Logger
+		remotePeer    workflowserviceclient.Interface
+		requestChan   chan *request
+		done          chan struct{}
+	}
+)
 
-func newReplicationTaskFetcher(logger log.Logger, sourceCluster string, numFetchers int, sourceFrontend workflowserviceclient.Interface) *replicationTaskFetcher {
+func newReplicationTaskFetcher(logger log.Logger, sourceCluster string, config *config.FetcherConfig, sourceFrontend workflowserviceclient.Interface) *replicationTaskFetcher {
 	return &replicationTaskFetcher{
-		numFetchers:   numFetchers,
+		config:        config,
 		logger:        logger,
 		remotePeer:    sourceFrontend,
 		sourceCluster: sourceCluster,
-		requestChan:   make(chan *request, 1000),
+		requestChan:   make(chan *request, requestChanBufferSize),
 		done:          make(chan struct{}),
 	}
 }
 
 func (f *replicationTaskFetcher) Start() {
-	for i := 0; i < f.numFetchers; i++ {
+	for i := 0; i < f.config.RpcParallelism; i++ {
 		go f.fetchTasks()
 	}
-	f.logger.Info("Replication task fetcher started.", tag.ClusterName(f.sourceCluster), tag.Counter(f.numFetchers))
+	f.logger.Info("Replication task fetcher started.", tag.ClusterName(f.sourceCluster), tag.Counter(f.config.RpcParallelism))
 }
 
 func (f *replicationTaskFetcher) Stop() {
@@ -72,7 +73,7 @@ func (f *replicationTaskFetcher) Stop() {
 
 func (f *replicationTaskFetcher) fetchTasks() {
 	jitter := backoff.NewJitter()
-	timer := time.NewTimer(jitter.JitDuration(timerFireInterval, timerJitter))
+	timer := time.NewTimer(jitter.JitDuration(time.Duration(f.config.AggregationIntervalSecs)*time.Second, f.config.TimerJitter))
 	defer timer.Stop()
 
 	requestByShard := make(map[int32]*request)
@@ -92,7 +93,7 @@ func (f *replicationTaskFetcher) fetchTasks() {
 			cancel()
 			if err != nil {
 				f.logger.Error("Failed to get replication tasks", tag.Error(err))
-				timer.Reset(jitter.JitDuration(timerRetryInterval, timerJitter))
+				timer.Reset(jitter.JitDuration(time.Duration(f.config.ErrorRetryWaitSecs)*time.Second, f.config.TimerJitter))
 				continue
 			}
 
@@ -105,7 +106,7 @@ func (f *replicationTaskFetcher) fetchTasks() {
 				delete(requestByShard, shardID)
 			}
 
-			timer.Reset(jitter.JitDuration(timerFireInterval, timerJitter))
+			timer.Reset(jitter.JitDuration(time.Duration(f.config.AggregationIntervalSecs)*time.Second, f.config.TimerJitter))
 		case <-f.done:
 			timer.Stop()
 			return

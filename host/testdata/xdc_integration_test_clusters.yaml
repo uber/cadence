@@ -4,7 +4,11 @@
     enableGlobalDomain: true
     replicationConsumer:
       type: rpc
-      numFetchers: 1
+      fetcher:
+        rpcParallelism: 1
+        aggregationIntervalSecs: 2
+        errorRetryWaitSecs: 1
+        timerJitter: 0.15
     failoverVersionIncrement: 10
     masterClusterName: "active"
     currentClusterName: "active"
@@ -59,7 +63,11 @@
     enableGlobalDomain: true
     replicationConsumer:
       type: rpc
-      numFetchers: 1
+      fetcher:
+        rpcParallelism: 1
+        aggregationIntervalSecs: 2
+        errorRetryWaitSecs: 1
+        timerJitter: 0.15
     failoverVersionIncrement: 10
     masterClusterName: "active"
     currentClusterName: "standby"

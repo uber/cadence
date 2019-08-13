@@ -259,8 +259,16 @@ type (
 	ReplicationConsumerConfig struct {
 		// Type determines how we consume replication tasks. It can be either kafka(default) or rpc.
 		Type string `yaml:"type"`
-		// Number of fetchers connecting to the source cluster.
-		NumFetchers int `yaml:"numFetchers"`
+		// FetcherConfig is the config for replication task fetcher.
+		FetcherConfig *FetcherConfig `yaml:"fetcher"`
+	}
+
+	// FetcherConfig is the config for replication task fetcher.
+	FetcherConfig struct {
+		RpcParallelism          int     `yaml:"rpcParallelism"`
+		AggregationIntervalSecs int     `yaml:"aggregationIntervalSecs"`
+		ErrorRetryWaitSecs      int     `yaml:"errorRetryWaitSecs"`
+		TimerJitter             float64 `yaml:"timerJitter"`
 	}
 
 	// DCRedirectionPolicy contains the frontend datacenter redirection policy

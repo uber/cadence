@@ -176,7 +176,7 @@ func (h *Handler) Start() error {
 		}
 	}
 
-	numFetchers := h.GetClusterMetadata().GetReplicationConsumerConfig().NumFetchers
+	fetcherConfig := h.GetClusterMetadata().GetReplicationConsumerConfig().FetcherConfig
 	for clusterName, info := range h.Service.GetClusterMetadata().GetAllClusterInfo() {
 		if !info.Enabled {
 			continue
@@ -184,7 +184,7 @@ func (h *Handler) Start() error {
 
 		if clusterName != h.Service.GetClusterMetadata().GetCurrentClusterName() {
 			remoteFrontendClient := h.Service.GetClientBean().GetRemoteFrontendClient(clusterName)
-			fetcher := newReplicationTaskFetcher(h.GetLogger(), clusterName, numFetchers, remoteFrontendClient)
+			fetcher := newReplicationTaskFetcher(h.GetLogger(), clusterName, fetcherConfig, remoteFrontendClient)
 			h.replicationTaskFetchers = append(h.replicationTaskFetchers, fetcher)
 		}
 	}
