@@ -166,6 +166,7 @@ func (s *nDCIntegrationTestSuite) TestSimpleNDC() {
 		// Generate a new run history on continue as new
 		if idx == len(historyBatch)-1 && batch.Events[len(batch.Events)-1].GetWorkflowExecutionContinuedAsNewEventAttributes() != nil {
 			newRunID := uuid.New()
+			batch.Events[len(batch.Events)-1].WorkflowExecutionContinuedAsNewEventAttributes.NewExecutionRunId = common.StringPtr(newRunID)
 			newRunHistory = &shared.History{
 				Events: []*shared.HistoryEvent{
 					{
@@ -188,7 +189,7 @@ func (s *nDCIntegrationTestSuite) TestSimpleNDC() {
 							}),
 							ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(10),
 							TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
-							ContinuedExecutionRunId:             common.StringPtr(newRunID),
+							ContinuedExecutionRunId:             common.StringPtr(rid),
 							Initiator:                           shared.ContinueAsNewInitiatorCronSchedule.Ptr(),
 							OriginalExecutionRunId:              common.StringPtr(rid),
 							Identity:                            common.StringPtr("NDC-test"),
