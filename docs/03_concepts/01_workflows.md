@@ -2,7 +2,7 @@
 
 ## Overview
 
-Cadence core abstraction is a **fault-oblivious stateful workfow**. The state of the workflow code, including local variables and threads it creates, is immune to process and Cadence service failures.
+Cadence core abstraction is a **fault-oblivious stateful workflow**. The state of the workflow code, including local variables and threads it creates, is immune to process and Cadence service failures.
 This is a very powerful concept as it encapsulates state, processing threads, durable timers and event handlers.
 
 ## Example
