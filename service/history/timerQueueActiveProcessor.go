@@ -533,17 +533,26 @@ func (t *timerQueueActiveProcessorImpl) processDecisionTimeout(
 		return nil
 	}
 
+	domainEntry, err := t.shard.GetDomainCache().GetDomainByID(msBuilder.GetExecutionInfo().DomainID)
+	if err != nil {
+		return &workflow.InternalServiceError{Message: "Unable to get domain from cache by domainID."}
+	}
+
 	scheduleNewDecision := false
 	switch task.TimeoutType {
 	case int(workflow.TimeoutTypeStartToClose):
-		t.metricsClient.IncCounter(metrics.TimerActiveTaskDecisionTimeoutScope, metrics.StartToCloseTimeoutCounter)
+		t.metricsClient.Scope(metrics.TimerActiveTaskDecisionTimeoutScope).
+			Tagged(metrics.DomainTag(domainEntry.GetInfo().Name)).
+			IncCounter(metrics.StartToCloseTimeoutCounter)
 		if di.Attempt == task.ScheduleAttempt {
 			// Add a decision task timeout event.
 			msBuilder.AddDecisionTaskTimedOutEvent(scheduleID, di.StartedID)
 			scheduleNewDecision = true
 		}
 	case int(workflow.TimeoutTypeScheduleToStart):
-		t.metricsClient.IncCounter(metrics.TimerActiveTaskDecisionTimeoutScope, metrics.ScheduleToStartTimeoutCounter)
+		t.metricsClient.Scope(metrics.TimerActiveTaskDecisionTimeoutScope).
+			Tagged(metrics.DomainTag(domainEntry.GetInfo().Name)).
+			IncCounter(metrics.ScheduleToStartTimeoutCounter)
 		// check if scheduled decision still pending and not started yet
 		if di.Attempt == task.ScheduleAttempt && di.StartedID == common.EmptyEventID {
 			_, err := msBuilder.AddDecisionTaskScheduleToStartTimeoutEvent(scheduleID)
