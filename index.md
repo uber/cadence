@@ -1,93 +1,95 @@
 ---
 title: Welcome
 layout: marketing
-callout: Open Source, Scalable, Durable Workflows
-callout_description: Develop resilient long-running business applications with straightforward code
+callout: Fault-Oblivious Stateful Code Platform
+callout_description: Cadence fault-oblivious stateful code platform preserves complete multithreaded application state including thread stacks with local variables across hardware and software failures. It greatly simplifies coding of complex stateful distributed applications. At the same time it is scalable and robust enough to power hundreds of critical use cases at Uber and outside.
 ---
 
 <section class="features">
-  <div class="feature dynamic-execution">
-    <a href="{{ '/docs/02_key_features#dynamic-workflow-execution-graphs' | relative_url }}">
+
+
+  <div class="feature use-cases">
+    <a href="{{ '/docs/02_use_cases' | relative_url }}">
       <div class="icon">
-        <svg class="icon-arrow-divert">
-          <use xlink:href="#icon-arrow-divert"></use>
+        <svg class="icon-multistop">
+          <use xlink:href="#icon-multistop"></use>
         </svg>
       </div>
     </a>
-    <a href="{{ '/docs/02_key_features#dynamic-workflow-execution-graphs' | relative_url }}">
-      <span class="description">Dynamic Workflow Execution Graphs</span>
+    <a href="{{ '/docs/02_use_cases' | relative_url }}">
+      <span class="description">Use Cases</span>
     </a>
-    <p>Determine the workflow execution graphs at runtime based on the data you are processing</p>
+    <p>Dozens of production use cases</p>
   </div>
 
-  <div class="feature child-workflows">
-    <a href="{{ '/docs/03_goclient/05_child_workflows' | relative_url }}">
+  <div class="feature concepts">
+    <a href="{{ '/docs/03_concepts' | relative_url }}">
       <div class="icon">
-        <svg class="icon-person-unaccompanied-minor">
-          <use xlink:href="#icon-person-unaccompanied-minor"></use>
+        <svg class="icon-light-bulb">
+          <use xlink:href="#icon-light-bulb"></use>
         </svg>
       </div>
     </a>
-    <a href="{{ '/docs/03_goclient/05_child_workflows' | relative_url }}">
-      <span class="description">Child Workflows</span>
+    <a href="{{ '/docs/03_concepts' | relative_url }}">
+      <span class="description">Concepts</span>
     </a>
-    <p>Execute other workflows and receive results upon completion</p>
+    <p>Learn core Cadence concepts</p>
   </div>
 
-  <div class="feature timers">
-    <a href="{{ '/docs/02_key_features#durable-timers' | relative_url }}">
+  <div class="feature open-source">
+    <a href="{{ 'docs/01_license' | relative_url }}">
       <div class="icon">
-        <svg class="icon-stopwatch">
-          <use xlink:href="#icon-stopwatch"></use>
+        <svg class="icon-globe">
+          <use xlink:href="#icon-globe"></use>
         </svg>
       </div>
     </a>
-    <a href="{{ '/docs/02_key_features#durable-timers' | relative_url }}">
-      <span class="description">Durable Timers</span>
+    <a href="{{ 'docs/01_license' | relative_url }}">
+      <span class="description">Open Source</span>
     </a>
-    <p>Persisted timers are robust to worker failures</p>
+    <p>Permissive MIT License</p>
   </div>
 
-  <div class="feature signals">
-    <a href="{{ '/docs/03_goclient/08_signals' | relative_url }}">
+  <div class="feature java-client">
+    <a href="{{ '/docs/06_javaclient' | relative_url }}">
       <div class="icon">
-        <svg class="icon-signal">
-          <use xlink:href="#icon-signal"></use>
+        <svg class="icon-java-cup">
+          <use xlink:href="#icon-java-cup"></use>
         </svg>
       </div>
     </a>
-    <a href="{{ '/docs/03_goclient/08_signals' | relative_url }}">
-      <span class="description">Signals</span>
+    <a href="{{ '/docs/06_javaclient' | relative_url }}">
+      <span class="description">Java Client</span>
     </a>
-    <p>Influence workflow execution path by sending data directly using a signal</p>
+    <p>Code your business logic in Java</p>
   </div>
 
-  <div class="feature at-most-once">
-    <a href="{{ '/docs/02_key_features#at-most-once-activity-execution' | relative_url }}">
+  <div class="feature go-client">
+    <a href="{{ '/docs/07_goclient' | relative_url }}">
       <div class="icon">
-        <svg class="icon-umbrella">
-          <use xlink:href="#icon-umbrella"></use>
+        <svg class="icon-gopher">
+          <use xlink:href="#icon-gopher"></use>
         </svg>
       </div>
     </a>
-    <a href="{{ '/docs/02_key_features#at-most-once-activity-execution' | relative_url }}">
-      <span class="description">At-Most-Once Activity Execution</span>
+    <a href="{{ '/docs/07_goclient' | relative_url }}">
+      <span class="description">Go Client</span>
     </a>
-    <p>Activities need not be idempotent</p>
+    <p>Code your business logic in Go</p>
   </div>
 
-  <div class="feature heartbeating">
-    <a href="{{ '/docs/03_goclient/03_activities#heartbeating' | relative_url }}">
+  <div class="feature contact-us">
+    <a href="{{ '/docs/100_contact_us' | relative_url }}">
       <div class="icon">
-        <svg class="icon-heart">
-          <use xlink:href="#icon-heart"></use>
+        <svg class="icon-person-speech-bubble">
+          <use xlink:href="#icon-person-speech-bubble"></use>
         </svg>
       </div>
     </a>
-    <a href="{{ '/docs/03_goclient/03_activities#heartbeating' | relative_url }}">
-      <span class="description">Activity Heartbeating</span>
+    <a href="{{ '/docs/100_contact_us' | relative_url }}">
+      <span class="description">Contact Us</span>
     </a>
-    <p>Detect failures and track progress in long-running activities</p>
+    <p>Contact Cadence developers and community</p>
   </div>
 
 </section>
