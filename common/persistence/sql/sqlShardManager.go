@@ -215,6 +215,7 @@ func shardInfoToShardsRow(s persistence.ShardInfo) (*sqldb.ShardsRow, error) {
 		ClusterTimerAckLevel:      timerAckLevels,
 		DomainNotificationVersion: common.Int64Ptr(s.DomainNotificationVersion),
 		Owner:                     &s.Owner,
+		ClusterReplicationLevel:   s.ClusterReplicationLevel,
 	}
 
 	blob, err := shardInfoToBlob(shardInfo)
