@@ -99,6 +99,7 @@ func NewReplicationTaskProcessor(
 	}
 }
 
+// Start starts the processor
 func (p *ReplicationTaskProcessor) Start() {
 	if !atomic.CompareAndSwapInt32(&p.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
 		return
@@ -108,6 +109,7 @@ func (p *ReplicationTaskProcessor) Start() {
 	p.logger.Info("ReplicationTaskProcessor started.")
 }
 
+// Stop stops the processor
 func (p *ReplicationTaskProcessor) Stop() {
 	if !atomic.CompareAndSwapInt32(&p.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
 		return

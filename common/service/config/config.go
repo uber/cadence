@@ -265,7 +265,7 @@ type (
 
 	// FetcherConfig is the config for replication task fetcher.
 	FetcherConfig struct {
-		RpcParallelism          int     `yaml:"rpcParallelism"`
+		RPCParallelism          int     `yaml:"rpcParallelism"`
 		AggregationIntervalSecs int     `yaml:"aggregationIntervalSecs"`
 		ErrorRetryWaitSecs      int     `yaml:"errorRetryWaitSecs"`
 		TimerJitterCoefficient  float64 `yaml:"timerJitterCoefficient"`

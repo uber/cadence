@@ -94,7 +94,7 @@ func GetTestClusterMetadata(enableGlobalDomain bool, isMasterCluster bool) Metad
 			&config.ReplicationConsumerConfig{
 				Type: config.ReplicationConsumerTypeRPC,
 				FetcherConfig: &config.FetcherConfig{
-					RpcParallelism:          1,
+					RPCParallelism:          1,
 					AggregationIntervalSecs: 2,
 					ErrorRetryWaitSecs:      1,
 					TimerJitterCoefficient:  0.15,

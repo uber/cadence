@@ -84,9 +84,10 @@ func NewReplicationTaskFetchers(
 
 	}
 
-	return &ReplicationTaskFetchers{fetchers: fetchers, status: common.DaemonStatusInitialized, logger:logger}
+	return &ReplicationTaskFetchers{fetchers: fetchers, status: common.DaemonStatusInitialized, logger: logger}
 }
 
+// Start starts the fetchers
 func (f *ReplicationTaskFetchers) Start() {
 	if !atomic.CompareAndSwapInt32(&f.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
 		return
@@ -98,6 +99,7 @@ func (f *ReplicationTaskFetchers) Start() {
 	f.logger.Info("Replication task fetchers started.")
 }
 
+// Stop stops the fetchers
 func (f *ReplicationTaskFetchers) Stop() {
 	if !atomic.CompareAndSwapInt32(&f.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
 		return
@@ -126,17 +128,19 @@ func newReplicationTaskFetcher(logger log.Logger, sourceCluster string, config *
 	}
 }
 
+// Start starts the fetcher
 func (f *ReplicationTaskFetcher) Start() {
 	if !atomic.CompareAndSwapInt32(&f.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
 		return
 	}
 
-	for i := 0; i < f.config.RpcParallelism; i++ {
+	for i := 0; i < f.config.RPCParallelism; i++ {
 		go f.fetchTasks()
 	}
-	f.logger.Info("Replication task fetcher started.", tag.ClusterName(f.sourceCluster), tag.Counter(f.config.RpcParallelism))
+	f.logger.Info("Replication task fetcher started.", tag.ClusterName(f.sourceCluster), tag.Counter(f.config.RPCParallelism))
 }
 
+// Stop stops the fetcher
 func (f *ReplicationTaskFetcher) Stop() {
 	if !atomic.CompareAndSwapInt32(&f.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
 		return
@@ -198,10 +202,12 @@ func (f *ReplicationTaskFetcher) fetchTasks() {
 	}
 }
 
+// GetSourceCluster returns the source cluster for the fetcher
 func (f *ReplicationTaskFetcher) GetSourceCluster() string {
 	return f.sourceCluster
 }
 
+// GetRequestChan returns the request chan for the fetcher
 func (f *ReplicationTaskFetcher) GetRequestChan() chan<- *request {
 	return f.requestChan
 }
