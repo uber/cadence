@@ -129,7 +129,7 @@ func (p *ReplicationTaskProcessor) processorLoop() {
 		p.requestChan <- &request{
 			token: &r.ReplicationToken{
 				ShardID:                common.Int32Ptr(int32(p.shard.GetShardID())),
-				LastRetrivedMessageId:  common.Int64Ptr(p.lastProcessedMessageID),
+				LastRetrivedMessageId:  common.Int64Ptr(p.lastRetrievedMessageID),
 				LastProcessedMessageId: common.Int64Ptr(p.lastProcessedMessageID),
 			},
 			respChan: respChan,
