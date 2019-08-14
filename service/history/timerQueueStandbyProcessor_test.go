@@ -63,7 +63,7 @@ type (
 		mockHistoryRereplicator  *xdc.MockHistoryRereplicator
 		logger                   log.Logger
 		mockTxProcessor          *MockTransferQueueProcessor
-		mockReplicationProcessor *mockQueueProcessor
+		mockReplicationProcessor *MockReplicatorQueueProcessor
 		mockTimerProcessor       *MockTimerQueueProcessor
 
 		domainID                   string
@@ -139,8 +139,8 @@ func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	s.mockTxProcessor = &MockTransferQueueProcessor{}
 	s.mockTxProcessor.On("NotifyNewTask", mock.Anything, mock.Anything).Maybe()
-	s.mockReplicationProcessor = &mockQueueProcessor{}
-	s.mockReplicationProcessor.On("notifyNewTask").Maybe()
+	s.mockReplicationProcessor = &MockReplicatorQueueProcessor{}
+	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()
 	s.mockTimerProcessor = &MockTimerQueueProcessor{}
 	s.mockTimerProcessor.On("NotifyNewTimers", mock.Anything, mock.Anything).Maybe()
 

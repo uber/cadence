@@ -89,7 +89,7 @@ type (
 		notifyNewTask()
 	}
 
-	replicatorQueueProcessor interface {
+	ReplicatorQueueProcessor interface {
 		queueProcessor
 		getTasks(readLevel int64) (*replicator.ReplicationTasksInfo, error)
 	}

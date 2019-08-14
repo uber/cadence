@@ -72,7 +72,7 @@ type (
 		mockArchivalClient       *archiver.ClientMock
 		mockEventsCache          *MockEventsCache
 		mockTxProcessor          *MockTransferQueueProcessor
-		mockReplicationProcessor *mockQueueProcessor
+		mockReplicationProcessor *MockReplicatorQueueProcessor
 		mockTimerProcessor       *MockTimerQueueProcessor
 
 		shardClosedCh chan int
@@ -144,8 +144,8 @@ func (s *engine3Suite) SetupTest() {
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", common.EmptyVersion).Return(cluster.TestCurrentClusterName)
 	s.mockTxProcessor = &MockTransferQueueProcessor{}
 	s.mockTxProcessor.On("NotifyNewTask", mock.Anything, mock.Anything).Maybe()
-	s.mockReplicationProcessor = &mockQueueProcessor{}
-	s.mockReplicationProcessor.On("notifyNewTask").Maybe()
+	s.mockReplicationProcessor = &MockReplicatorQueueProcessor{}
+	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()
 	s.mockTimerProcessor = &MockTimerQueueProcessor{}
 	s.mockTimerProcessor.On("NotifyNewTimers", mock.Anything, mock.Anything).Maybe()
 

@@ -70,7 +70,7 @@ type (
 		mockService              service.Service
 		mockEventsCache          *MockEventsCache
 		mockTxProcessor          *MockTransferQueueProcessor
-		mockReplicationProcessor *mockQueueProcessor
+		mockReplicationProcessor *MockReplicatorQueueProcessor
 		mockTimerProcessor       *MockTimerQueueProcessor
 
 		domainID                  string
@@ -160,8 +160,8 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", common.EmptyVersion).Return(cluster.TestCurrentClusterName)
 	s.mockTxProcessor = &MockTransferQueueProcessor{}
 	s.mockTxProcessor.On("NotifyNewTask", mock.Anything, mock.Anything).Maybe()
-	s.mockReplicationProcessor = &mockQueueProcessor{}
-	s.mockReplicationProcessor.On("notifyNewTask").Maybe()
+	s.mockReplicationProcessor = &MockReplicatorQueueProcessor{}
+	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()
 	s.mockTimerProcessor = &MockTimerQueueProcessor{}
 	s.mockTimerProcessor.On("NotifyNewTimers", mock.Anything, mock.Anything).Maybe()
 	s.mockClusterMetadata.On("IsArchivalEnabled").Return(false)

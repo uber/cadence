@@ -69,7 +69,7 @@ func newReplicatorQueueProcessor(
 	historyMgr persistence.HistoryManager,
 	historyV2Mgr persistence.HistoryV2Manager,
 	logger log.Logger,
-) replicatorQueueProcessor {
+) ReplicatorQueueProcessor {
 
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 

@@ -72,7 +72,7 @@ type (
 		timerProcessor            timerQueueProcessor
 		taskAllocator             taskAllocator
 		replicator                *historyReplicator
-		replicatorProcessor       replicatorQueueProcessor
+		replicatorProcessor       ReplicatorQueueProcessor
 		historyEventNotifier      historyEventNotifier
 		tokenSerializer           common.TaskTokenSerializer
 		historyCache              *historyCache
