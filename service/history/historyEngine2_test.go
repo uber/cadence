@@ -24,10 +24,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/golang/mock/gomock"
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
