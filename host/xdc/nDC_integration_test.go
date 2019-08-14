@@ -21,7 +21,6 @@ package xdc
 
 import (
 	"flag"
-	"fmt"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -40,7 +39,6 @@ import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
-	"strconv"
 	"testing"
 	"time"
 )
@@ -158,49 +156,9 @@ func (s *nDCIntegrationTestSuite) TestSimpleNDC() {
 		LastEventId: common.Int64Ptr(0),
 	}
 
-	for idx, batch := range historyBatch {
-		fmt.Println("#######:" + strconv.Itoa(idx))
-		fmt.Println(*batch)
-		fmt.Println("####################")
-		var newRunHistory *shared.History = nil
+	for _, batch := range historyBatch {
 		// Generate a new run history on continue as new
-		if idx == len(historyBatch)-1 && batch.Events[len(batch.Events)-1].GetWorkflowExecutionContinuedAsNewEventAttributes() != nil {
-			newRunID := uuid.New()
-			batch.Events[len(batch.Events)-1].WorkflowExecutionContinuedAsNewEventAttributes.NewExecutionRunId = common.StringPtr(newRunID)
-			newRunHistory = &shared.History{
-				Events: []*shared.HistoryEvent{
-					{
-						EventId:   common.Int64Ptr(1),
-						Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-						EventType: common.EventTypePtr(shared.EventTypeWorkflowExecutionStarted),
-						Version:   common.Int64Ptr(version),
-						TaskId:    common.Int64Ptr(1),
-						WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
-							WorkflowType:         common.WorkflowTypePtr(shared.WorkflowType{Name:common.StringPtr(wt)}),
-							ParentWorkflowDomain: common.StringPtr(domain),
-							ParentWorkflowExecution: &shared.WorkflowExecution{
-								WorkflowId: common.StringPtr(wid),
-								RunId:      common.StringPtr(rid),
-							},
-							ParentInitiatedEventId: common.Int64Ptr(batch.Events[len(batch.Events)-1].GetEventId()),
-							TaskList: common.TaskListPtr(shared.TaskList{
-								Name: common.StringPtr(tl),
-								Kind: common.TaskListKindPtr(shared.TaskListKindNormal),
-							}),
-							ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(10),
-							TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
-							ContinuedExecutionRunId:             common.StringPtr(rid),
-							Initiator:                           shared.ContinueAsNewInitiatorCronSchedule.Ptr(),
-							OriginalExecutionRunId:              common.StringPtr(rid),
-							Identity:                            common.StringPtr("NDC-test"),
-							FirstExecutionRunId:                 common.StringPtr(rid),
-							Attempt:                             common.Int32Ptr(0),
-							ExpirationTimestamp:                 common.Int64Ptr(time.Now().Add(time.Minute).UnixNano()),
-						},
-					},
-				},
-			}
-		}
+		newRunHistory := generateNewRunHistory(batch.Events[len(batch.Events)-1], version, domain, wid, rid, wt, tl)
 		err = historyClient.ReplicateEvents(createContext(), &history.ReplicateEventsRequest{
 			SourceCluster: common.StringPtr("active"),
 			DomainUUID:    resp.DomainInfo.UUID,
@@ -248,4 +206,46 @@ func (s *nDCIntegrationTestSuite) TestSimpleNDC() {
 		eventIndex++
 		s.Equal(originEvent.GetEventType().String(), event.GetEventType().String())
 	}
+}
+
+func generateNewRunHistory(event *shared.HistoryEvent, version int64, domain, wid, rid, workflowType, taskList string) *shared.History {
+
+	if event.GetWorkflowExecutionContinuedAsNewEventAttributes() != nil {
+		newRunID := uuid.New()
+		event.WorkflowExecutionContinuedAsNewEventAttributes.NewExecutionRunId = common.StringPtr(newRunID)
+		return &shared.History{
+			Events: []*shared.HistoryEvent{
+				{
+					EventId:   common.Int64Ptr(1),
+					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
+					EventType: common.EventTypePtr(shared.EventTypeWorkflowExecutionStarted),
+					Version:   common.Int64Ptr(version),
+					TaskId:    common.Int64Ptr(1),
+					WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
+						WorkflowType:         common.WorkflowTypePtr(shared.WorkflowType{Name:common.StringPtr(workflowType)}),
+						ParentWorkflowDomain: common.StringPtr(domain),
+						ParentWorkflowExecution: &shared.WorkflowExecution{
+							WorkflowId: common.StringPtr(wid),
+							RunId:      common.StringPtr(rid),
+						},
+						ParentInitiatedEventId: common.Int64Ptr(event.GetEventId()),
+						TaskList: common.TaskListPtr(shared.TaskList{
+							Name: common.StringPtr(taskList),
+							Kind: common.TaskListKindPtr(shared.TaskListKindNormal),
+						}),
+						ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(10),
+						TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+						ContinuedExecutionRunId:             common.StringPtr(rid),
+						Initiator:                           shared.ContinueAsNewInitiatorCronSchedule.Ptr(),
+						OriginalExecutionRunId:              common.StringPtr(rid),
+						Identity:                            common.StringPtr("NDC-test"),
+						FirstExecutionRunId:                 common.StringPtr(rid),
+						Attempt:                             common.Int32Ptr(0),
+						ExpirationTimestamp:                 common.Int64Ptr(time.Now().Add(time.Minute).UnixNano()),
+					},
+				},
+			},
+		}
+	}
+	return nil
 }
