@@ -142,6 +142,7 @@ func (s *shardControllerSuite) TestAcquireShardSuccess() {
 							cluster.TestCurrentClusterName:     currentClusterTimerAck,
 							cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 						},
+						ClusterReplicationLevel: map[string]int64{},
 					},
 				}, nil).Once()
 			s.mockShardManager.On("UpdateShard", &persistence.UpdateShardRequest{
@@ -163,6 +164,7 @@ func (s *shardControllerSuite) TestAcquireShardSuccess() {
 					},
 					TransferFailoverLevels: map[string]persistence.TransferFailoverLevel{},
 					TimerFailoverLevels:    map[string]persistence.TimerFailoverLevel{},
+					ClusterReplicationLevel: map[string]int64{},
 				},
 				PreviousRangeID: 5,
 			}).Return(nil).Once()
@@ -232,6 +234,7 @@ func (s *shardControllerSuite) TestAcquireShardRenewSuccess() {
 						cluster.TestCurrentClusterName:     currentClusterTimerAck,
 						cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 					},
+					ClusterReplicationLevel: map[string]int64{},
 				},
 			}, nil).Once()
 		s.mockShardManager.On("UpdateShard", &persistence.UpdateShardRequest{
@@ -253,6 +256,7 @@ func (s *shardControllerSuite) TestAcquireShardRenewSuccess() {
 				},
 				TransferFailoverLevels: map[string]persistence.TransferFailoverLevel{},
 				TimerFailoverLevels:    map[string]persistence.TimerFailoverLevel{},
+				ClusterReplicationLevel: map[string]int64{},
 			},
 			PreviousRangeID: 5,
 		}).Return(nil).Once()
@@ -307,6 +311,7 @@ func (s *shardControllerSuite) TestAcquireShardRenewLookupFailed() {
 						cluster.TestCurrentClusterName:     currentClusterTimerAck,
 						cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 					},
+					ClusterReplicationLevel: map[string]int64{},
 				},
 			}, nil).Once()
 		s.mockShardManager.On("UpdateShard", &persistence.UpdateShardRequest{
@@ -328,6 +333,7 @@ func (s *shardControllerSuite) TestAcquireShardRenewLookupFailed() {
 				},
 				TransferFailoverLevels: map[string]persistence.TransferFailoverLevel{},
 				TimerFailoverLevels:    map[string]persistence.TimerFailoverLevel{},
+				ClusterReplicationLevel: map[string]int64{},
 			},
 			PreviousRangeID: 5,
 		}).Return(nil).Once()
@@ -603,6 +609,7 @@ func (s *shardControllerSuite) setupMocksForAcquireShard(shardID int, mockEngine
 					cluster.TestCurrentClusterName:     currentClusterTimerAck,
 					cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 				},
+				ClusterReplicationLevel: map[string]int64{},
 			},
 		}, nil).Once()
 	s.mockShardManager.On("UpdateShard", &persistence.UpdateShardRequest{
@@ -624,6 +631,7 @@ func (s *shardControllerSuite) setupMocksForAcquireShard(shardID int, mockEngine
 			},
 			TransferFailoverLevels: map[string]persistence.TransferFailoverLevel{},
 			TimerFailoverLevels:    map[string]persistence.TimerFailoverLevel{},
+			ClusterReplicationLevel: map[string]int64{},
 		},
 		PreviousRangeID: currentRangeID,
 	}).Return(nil).Once()

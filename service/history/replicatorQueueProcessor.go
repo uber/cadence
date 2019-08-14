@@ -182,6 +182,10 @@ func (p *replicatorQueueProcessorImpl) processSyncActivityTask(task *persistence
 		return err
 	}
 
+	if replicationTask == nil {
+		return nil
+	}
+
 	return p.replicator.Publish(replicationTask)
 }
 
