@@ -23,6 +23,7 @@ package history
 import (
 	ctx "context"
 	"errors"
+	"github.com/golang/mock/gomock"
 	"reflect"
 	"testing"
 	"time"
@@ -59,6 +60,7 @@ type (
 	historyReplicatorSuite struct {
 		suite.Suite
 		logger                   log.Logger
+		mockCtrl                 *gomock.Controller
 		mockExecutionMgr         *mocks.ExecutionManager
 		mockHistoryMgr           *mocks.HistoryManager
 		mockHistoryV2Mgr         *mocks.HistoryV2Manager
@@ -94,6 +96,7 @@ func (s *historyReplicatorSuite) TearDownSuite() {
 
 func (s *historyReplicatorSuite) SetupTest() {
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
+	s.mockCtrl = gomock.NewController(s.T())
 	s.mockHistoryMgr = &mocks.HistoryManager{}
 	s.mockHistoryV2Mgr = &mocks.HistoryV2Manager{}
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
@@ -161,6 +164,7 @@ func (s *historyReplicatorSuite) SetupTest() {
 
 func (s *historyReplicatorSuite) TearDownTest() {
 	s.historyReplicator = nil
+	s.mockCtrl.Finish()
 	s.mockHistoryMgr.AssertExpectations(s.T())
 	s.mockExecutionMgr.AssertExpectations(s.T())
 	s.mockShardManager.AssertExpectations(s.T())
@@ -171,7 +175,6 @@ func (s *historyReplicatorSuite) TearDownTest() {
 	s.mockClientBean.AssertExpectations(s.T())
 	s.mockWorkflowResetor.AssertExpectations(s.T())
 	s.mockTxProcessor.AssertExpectations(s.T())
-	s.mockReplicationProcessor.AssertExpectations(s.T())
 	s.mockTimerProcessor.AssertExpectations(s.T())
 }
 

@@ -22,6 +22,7 @@ package history
 
 import (
 	"errors"
+	"github.com/golang/mock/gomock"
 	"testing"
 	"time"
 
@@ -55,6 +56,7 @@ type (
 		config           *Config
 		logger           log.Logger
 
+		mockCtrl                 *gomock.Controller
 		mockHistoryEngine        *historyEngineImpl
 		mockMatchingClient       *mocks.MatchingClient
 		mockMetadataMgr          *mocks.MetadataManager
@@ -94,6 +96,7 @@ func (s *timerQueueProcessor2Suite) SetupSuite() {
 
 func (s *timerQueueProcessor2Suite) SetupTest() {
 	shardID := 0
+	s.mockCtrl = gomock.NewController(s.T())
 	s.mockMatchingClient = &mocks.MatchingClient{}
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
 	s.mockShardManager = &mocks.ShardManager{}
@@ -192,6 +195,7 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 }
 
 func (s *timerQueueProcessor2Suite) TearDownTest() {
+	s.mockCtrl.Finish()
 	s.mockShardManager.AssertExpectations(s.T())
 	s.mockMatchingClient.AssertExpectations(s.T())
 	s.mockExecutionMgr.AssertExpectations(s.T())
@@ -202,7 +206,6 @@ func (s *timerQueueProcessor2Suite) TearDownTest() {
 	s.mockClientBean.AssertExpectations(s.T())
 	s.mockEventsCache.AssertExpectations(s.T())
 	s.mockTxProcessor.AssertExpectations(s.T())
-	s.mockReplicationProcessor.AssertExpectations(s.T())
 	s.mockTimerProcessor.AssertExpectations(s.T())
 }
 

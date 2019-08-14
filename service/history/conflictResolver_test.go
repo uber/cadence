@@ -21,6 +21,7 @@
 package history
 
 import (
+	"github.com/golang/mock/gomock"
 	"testing"
 	"time"
 
@@ -49,6 +50,7 @@ type (
 	conflictResolverSuite struct {
 		suite.Suite
 		logger                   log.Logger
+		mockCtrl                 *gomock.Controller
 		mockExecutionMgr         *mocks.ExecutionManager
 		mockHistoryMgr           *mocks.HistoryManager
 		mockHistoryV2Mgr         *mocks.HistoryV2Manager
@@ -85,6 +87,7 @@ func (s *conflictResolverSuite) TearDownSuite() {
 
 func (s *conflictResolverSuite) SetupTest() {
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
+	s.mockCtrl = gomock.NewController(s.T())
 	s.mockHistoryMgr = &mocks.HistoryManager{}
 	s.mockHistoryV2Mgr = &mocks.HistoryV2Manager{}
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
@@ -120,7 +123,7 @@ func (s *conflictResolverSuite) SetupTest() {
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockTxProcessor = &MockTransferQueueProcessor{}
 	s.mockTxProcessor.On("NotifyNewTask", mock.Anything, mock.Anything).Maybe()
-	s.mockReplicationProcessor = &MockReplicatorQueueProcessor{}
+	s.mockReplicationProcessor = NewMockReplicatorQueueProcessor(s.mockCtrl)
 	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()
 	s.mockTimerProcessor = &MockTimerQueueProcessor{}
 	s.mockTimerProcessor.On("NotifyNewTimers", mock.Anything, mock.Anything).Maybe()
@@ -143,6 +146,7 @@ func (s *conflictResolverSuite) SetupTest() {
 }
 
 func (s *conflictResolverSuite) TearDownTest() {
+	s.mockCtrl.Finish()
 	s.mockHistoryMgr.AssertExpectations(s.T())
 	s.mockHistoryV2Mgr.AssertExpectations(s.T())
 	s.mockExecutionMgr.AssertExpectations(s.T())
@@ -153,7 +157,6 @@ func (s *conflictResolverSuite) TearDownTest() {
 	s.mockDomainCache.AssertExpectations(s.T())
 	s.mockEventsCache.AssertExpectations(s.T())
 	s.mockTxProcessor.AssertExpectations(s.T())
-	s.mockReplicationProcessor.AssertExpectations(s.T())
 	s.mockTimerProcessor.AssertExpectations(s.T())
 }
 

@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/golang/mock/gomock"
 	"sync"
 	"testing"
 	"time"
@@ -57,6 +58,7 @@ type (
 		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
 		// not merely log an error
 		*require.Assertions
+		mockCtrl                 *gomock.Controller
 		mockHistoryEngine        *historyEngineImpl
 		mockMatchingClient       *mocks.MatchingClient
 		mockArchivalClient       *archiver.ClientMock
@@ -108,6 +110,7 @@ func (s *engineSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	shardID := 10
+	s.mockCtrl = gomock.NewController(s.T())
 	s.mockMatchingClient = &mocks.MatchingClient{}
 	s.mockArchivalClient = &archiver.ClientMock{}
 	s.mockHistoryClient = &mocks.HistoryClient{}
@@ -198,6 +201,7 @@ func (s *engineSuite) SetupTest() {
 }
 
 func (s *engineSuite) TearDownTest() {
+	s.mockCtrl.Finish()
 	s.mockHistoryEngine.historyEventNotifier.Stop()
 	s.mockMatchingClient.AssertExpectations(s.T())
 	s.mockExecutionMgr.AssertExpectations(s.T())
@@ -209,7 +213,6 @@ func (s *engineSuite) TearDownTest() {
 	s.mockClientBean.AssertExpectations(s.T())
 	s.mockArchivalClient.AssertExpectations(s.T())
 	s.mockTxProcessor.AssertExpectations(s.T())
-	s.mockReplicationProcessor.AssertExpectations(s.T())
 	s.mockTimerProcessor.AssertExpectations(s.T())
 }
 

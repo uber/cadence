@@ -23,6 +23,7 @@ package history
 import (
 	"context"
 	"fmt"
+	"github.com/golang/mock/gomock"
 	"math"
 	"testing"
 	"time"
@@ -58,6 +59,7 @@ type (
 		// not merely log an error
 		*require.Assertions
 		historyEngine            *historyEngineImpl
+		mockCtrl                 *gomock.Controller
 		mockMatchingClient       *mocks.MatchingClient
 		mockHistoryClient        *mocks.HistoryClient
 		mockMetadataMgr          *mocks.MetadataManager
@@ -106,6 +108,7 @@ func (s *resetorSuite) SetupTest() {
 
 	shardID := 10
 	s.shardID = shardID
+	s.mockCtrl = gomock.NewController(s.T())
 	s.mockMatchingClient = &mocks.MatchingClient{}
 	s.mockHistoryClient = &mocks.HistoryClient{}
 	s.mockMetadataMgr = &mocks.MetadataManager{}
@@ -181,6 +184,7 @@ func (s *resetorSuite) SetupTest() {
 }
 
 func (s *resetorSuite) TearDownTest() {
+	s.mockCtrl.Finish()
 	s.mockMatchingClient.AssertExpectations(s.T())
 	s.mockExecutionMgr.AssertExpectations(s.T())
 	s.mockHistoryMgr.AssertExpectations(s.T())
@@ -192,7 +196,6 @@ func (s *resetorSuite) TearDownTest() {
 	s.mockArchivalClient.AssertExpectations(s.T())
 	s.mockEventsCache.AssertExpectations(s.T())
 	s.mockTxProcessor.AssertExpectations(s.T())
-	s.mockReplicationProcessor.AssertExpectations(s.T())
 	s.mockTimerProcessor.AssertExpectations(s.T())
 }
 

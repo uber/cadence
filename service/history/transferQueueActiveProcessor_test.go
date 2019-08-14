@@ -21,6 +21,7 @@
 package history
 
 import (
+	"github.com/golang/mock/gomock"
 	"testing"
 	"time"
 
@@ -52,6 +53,7 @@ type (
 	transferQueueActiveProcessorSuite struct {
 		suite.Suite
 
+		mockCtrl                 *gomock.Controller
 		mockShardManager         *mocks.ShardManager
 		mockHistoryEngine        *historyEngineImpl
 		mockMetadataMgr          *mocks.MetadataManager
@@ -96,6 +98,7 @@ func (s *transferQueueActiveProcessorSuite) TearDownSuite() {
 func (s *transferQueueActiveProcessorSuite) SetupTest() {
 	shardID := 0
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
+	s.mockCtrl = gomock.NewController(s.T())
 	s.mockShardManager = &mocks.ShardManager{}
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
 	s.mockHistoryMgr = &mocks.HistoryManager{}
@@ -183,6 +186,7 @@ func (s *transferQueueActiveProcessorSuite) SetupTest() {
 }
 
 func (s *transferQueueActiveProcessorSuite) TearDownTest() {
+	s.mockCtrl.Finish()
 	s.mockShardManager.AssertExpectations(s.T())
 	s.mockExecutionMgr.AssertExpectations(s.T())
 	s.mockHistoryMgr.AssertExpectations(s.T())
@@ -194,7 +198,6 @@ func (s *transferQueueActiveProcessorSuite) TearDownTest() {
 	s.mockQueueAckMgr.AssertExpectations(s.T())
 	s.mockClientBean.AssertExpectations(s.T())
 	s.mockTxProcessor.AssertExpectations(s.T())
-	s.mockReplicationProcessor.AssertExpectations(s.T())
 	s.mockTimerProcessor.AssertExpectations(s.T())
 }
 
