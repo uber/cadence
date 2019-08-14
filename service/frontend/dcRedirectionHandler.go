@@ -1111,7 +1111,7 @@ func (handler *DCRedirectionHandlerImpl) TerminateWorkflowExecution(
 	return err
 }
 
-// GetReplicationTasks API call
+// GetReplicationMessages API call
 func (handler *DCRedirectionHandlerImpl) GetReplicationMessages(
 	ctx context.Context,
 	request *replicator.GetReplicationMessagesRequest,

@@ -89,6 +89,7 @@ type (
 		notifyNewTask()
 	}
 
+	// ReplicatorQueueProcessor is the interface for replicator queue processor
 	ReplicatorQueueProcessor interface {
 		queueProcessor
 		getTasks(readLevel int64) (*replicator.ReplicationMessages, error)

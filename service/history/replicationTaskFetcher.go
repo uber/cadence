@@ -42,6 +42,7 @@ const (
 )
 
 type (
+	// ReplicationTaskFetcher is responsible for fetching replication messages from remote DC.
 	ReplicationTaskFetcher struct {
 		status        int32
 		sourceCluster string
@@ -111,6 +112,7 @@ func (f *ReplicationTaskFetchers) Stop() {
 	f.logger.Info("Replication task fetchers stopped.")
 }
 
+// GetFetchers returns all the fetchers
 func (f *ReplicationTaskFetchers) GetFetchers() []*ReplicationTaskFetcher {
 	return f.fetchers
 }
