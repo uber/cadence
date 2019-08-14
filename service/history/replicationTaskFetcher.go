@@ -22,7 +22,10 @@ package history
 
 import (
 	"context"
-	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/client"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cluster"
+	"sync/atomic"
 	"time"
 
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
@@ -30,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/service/config"
 )
 
 const (
@@ -39,6 +43,7 @@ const (
 
 type (
 	replicationTaskFetcher struct {
+		status        int32
 		sourceCluster string
 		config        *config.FetcherConfig
 		logger        log.Logger
@@ -46,10 +51,70 @@ type (
 		requestChan   chan *request
 		done          chan struct{}
 	}
+
+	replicationTaskFetchers struct {
+		status   int32
+		logger   log.Logger
+		fetchers []*replicationTaskFetcher
+	}
 )
 
+func newReplicationTaskFetchers(
+	logger log.Logger,
+	consumerConfig *config.ReplicationConsumerConfig,
+	clusterMetadata cluster.Metadata,
+	clientBean client.Bean,
+) *replicationTaskFetchers {
+	var fetchers []*replicationTaskFetcher
+	if consumerConfig.Type == config.ReplicationConsumerTypeRPC {
+		fetcherConfig := consumerConfig.FetcherConfig
+		for clusterName, info := range clusterMetadata.GetAllClusterInfo() {
+			if !info.Enabled {
+				continue
+			}
+
+			if clusterName != clusterMetadata.GetCurrentClusterName() {
+				remoteFrontendClient := clientBean.GetRemoteFrontendClient(clusterName)
+				fetcher := newReplicationTaskFetcher(logger, clusterName, fetcherConfig, remoteFrontendClient)
+				fetchers = append(fetchers, fetcher)
+			}
+		}
+
+	}
+
+	return &replicationTaskFetchers{fetchers: fetchers, status: common.DaemonStatusInitialized}
+}
+
+func (f *replicationTaskFetchers) Start() {
+	if !atomic.CompareAndSwapInt32(&f.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+		return
+	}
+
+	for _, fetcher := range f.fetchers {
+		fetcher.Start()
+	}
+	f.logger.Info("Replication task fetchers started.")
+}
+
+func (f *replicationTaskFetchers) Stop() {
+	if !atomic.CompareAndSwapInt32(&f.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
+		return
+	}
+
+	for _, fetcher := range f.fetchers {
+		fetcher.Stop()
+	}
+	f.logger.Info("Replication task fetchers stopped.")
+}
+
+func (f *replicationTaskFetchers) GetFetchers() []*replicationTaskFetcher {
+	return f.fetchers
+}
+
+// newReplicationTaskFetcher creates a new fetcher.
 func newReplicationTaskFetcher(logger log.Logger, sourceCluster string, config *config.FetcherConfig, sourceFrontend workflowserviceclient.Interface) *replicationTaskFetcher {
 	return &replicationTaskFetcher{
+		status:        common.DaemonStatusInitialized,
 		config:        config,
 		logger:        logger,
 		remotePeer:    sourceFrontend,
@@ -60,6 +125,10 @@ func newReplicationTaskFetcher(logger log.Logger, sourceCluster string, config *
 }
 
 func (f *replicationTaskFetcher) Start() {
+	if !atomic.CompareAndSwapInt32(&f.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+		return
+	}
+
 	for i := 0; i < f.config.RpcParallelism; i++ {
 		go f.fetchTasks()
 	}
@@ -67,6 +136,10 @@ func (f *replicationTaskFetcher) Start() {
 }
 
 func (f *replicationTaskFetcher) Stop() {
+	if !atomic.CompareAndSwapInt32(&f.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
+		return
+	}
+
 	close(f.done)
 	f.logger.Info("Replication task fetcher stopped.", tag.ClusterName(f.sourceCluster))
 }

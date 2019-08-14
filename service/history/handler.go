@@ -23,7 +23,6 @@ package history
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common/service/config"
 	"sync"
 
 	"github.com/pborman/uuid"
@@ -72,7 +71,7 @@ type (
 		historyEventNotifier    historyEventNotifier
 		publisher               messaging.Producer
 		rateLimiter             quotas.Limiter
-		replicationTaskFetchers []*replicationTaskFetcher
+		replicationTaskFetchers *replicationTaskFetchers
 		domainReplicator        replicator.DomainReplicator
 		service.Service
 	}
@@ -177,24 +176,13 @@ func (h *Handler) Start() error {
 		}
 	}
 
-	if h.GetClusterMetadata().GetReplicationConsumerConfig().Type == config.ReplicationConsumerTypeRPC {
-		fetcherConfig := h.GetClusterMetadata().GetReplicationConsumerConfig().FetcherConfig
-		for clusterName, info := range h.Service.GetClusterMetadata().GetAllClusterInfo() {
-			if !info.Enabled {
-				continue
-			}
+	h.replicationTaskFetchers = newReplicationTaskFetchers(
+		h.GetLogger(),
+		h.GetClusterMetadata().GetReplicationConsumerConfig(),
+		h.Service.GetClusterMetadata(),
+		h.Service.GetClientBean())
 
-			if clusterName != h.Service.GetClusterMetadata().GetCurrentClusterName() {
-				remoteFrontendClient := h.Service.GetClientBean().GetRemoteFrontendClient(clusterName)
-				fetcher := newReplicationTaskFetcher(h.GetLogger(), clusterName, fetcherConfig, remoteFrontendClient)
-				h.replicationTaskFetchers = append(h.replicationTaskFetchers, fetcher)
-			}
-		}
-
-		for _, fetchers := range h.replicationTaskFetchers {
-			fetchers.Start()
-		}
-	}
+	h.replicationTaskFetchers.Start()
 
 	h.controller = newShardController(h.Service, h.GetHostInfo(), hServiceResolver, h.shardManager, h.historyMgr, h.historyV2Mgr,
 		h.domainCache, h.executionMgrFactory, h, h.config, h.GetLogger(), h.GetMetricsClient())
@@ -210,9 +198,7 @@ func (h *Handler) Start() error {
 
 // Stop stops the handler
 func (h *Handler) Stop() {
-	for _, fetcher := range h.replicationTaskFetchers {
-		fetcher.Stop()
-	}
+	h.replicationTaskFetchers.Stop()
 	h.domainCache.Stop()
 	h.controller.Stop()
 	h.shardManager.Close()

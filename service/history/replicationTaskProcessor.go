@@ -22,6 +22,7 @@ package history
 
 import (
 	"context"
+	"sync/atomic"
 	"time"
 
 	h "github.com/uber/cadence/.gen/go/history"
@@ -37,8 +38,11 @@ import (
 )
 
 const (
-	dropSyncShardTaskTimeThreshold = 10 * time.Minute
-	replicationTimeout             = 30 * time.Second
+	dropSyncShardTaskTimeThreshold            = 10 * time.Minute
+	replicationTimeout                        = 30 * time.Second
+	taskProcessorErrorRetryWait               = time.Second
+	taskProcessorErrorRetryBackoffCoefficient = 1
+	taskProcessorErrorRetryMaxAttampts        = 5
 )
 
 var (
@@ -48,6 +52,7 @@ var (
 
 type (
 	replicationTaskProcessor struct {
+		status           int32
 		shard            ShardContext
 		readLevel        int64
 		historyEngine    Engine
@@ -74,11 +79,12 @@ func newReplicationTaskProcessor(
 	metricsClient metrics.Client,
 	replicationTaskFetcher *replicationTaskFetcher,
 ) *replicationTaskProcessor {
-	retryPolicy := backoff.NewExponentialRetryPolicy(time.Second)
-	retryPolicy.SetBackoffCoefficient(1)
-	retryPolicy.SetMaximumAttempts(5)
+	retryPolicy := backoff.NewExponentialRetryPolicy(taskProcessorErrorRetryWait)
+	retryPolicy.SetBackoffCoefficient(taskProcessorErrorRetryBackoffCoefficient)
+	retryPolicy.SetMaximumAttempts(taskProcessorErrorRetryMaxAttampts)
 
 	return &replicationTaskProcessor{
+		status:           common.DaemonStatusInitialized,
 		shard:            shard,
 		historyEngine:    historyEngine,
 		sourceCluster:    replicationTaskFetcher.GetSourceCluster(),
@@ -92,49 +98,58 @@ func newReplicationTaskProcessor(
 }
 
 func (p *replicationTaskProcessor) Start() {
-	go func() {
-		p.readLevel = p.shard.GetClusterReplicationLevel(p.sourceCluster)
-		scope := p.metricsClient.Scope(metrics.ReplicationTaskFetcherScope, metrics.TargetClusterTag(p.sourceCluster))
+	if !atomic.CompareAndSwapInt32(&p.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+		return
+	}
 
-		for {
-			respChan := make(chan *r.ReplicationTasksInfo, 1)
-			p.requestChan <- &request{
-				token:    &r.ReplicationToken{ShardID: common.Int32Ptr(int32(p.shard.GetShardID())), TaskID: common.Int64Ptr(p.readLevel)},
-				respChan: respChan,
-			}
-
-			select {
-			case response := <-respChan:
-				p.logger.Debug("Got fetch replication tasks response.",
-					tag.ReadLevel(response.GetReadLevel()),
-					tag.Bool(response.GetHasMore()),
-					tag.Counter(len(response.GetReplicationTasks())),
-				)
-
-				for _, replicationTask := range response.ReplicationTasks {
-					p.processTask(replicationTask)
-				}
-
-				p.readLevel = response.GetReadLevel()
-				err := p.shard.UpdateClusterReplicationLevel(p.sourceCluster, p.readLevel)
-				if err != nil {
-					p.logger.Error("Error updating replication level for shard", tag.Error(err), tag.OperationFailed)
-				}
-
-				scope.UpdateGauge(metrics.ReplicationTasksReadLevel, float64(p.readLevel))
-				scope.AddCounter(metrics.ReplicationTasksApplied, int64(len(response.GetReplicationTasks())))
-			case <-p.done:
-				p.logger.Info("Closing replication task processor.", tag.ReadLevel(p.readLevel))
-				return
-			}
-		}
-	}()
-
+	go p.processorLoop()
 	p.logger.Info("ReplicationTaskProcessor started.")
 }
 
 func (p *replicationTaskProcessor) Stop() {
+	if !atomic.CompareAndSwapInt32(&p.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
+		return
+	}
+
 	close(p.done)
+}
+
+func (p *replicationTaskProcessor) processorLoop() {
+	p.readLevel = p.shard.GetClusterReplicationLevel(p.sourceCluster)
+	scope := p.metricsClient.Scope(metrics.ReplicationTaskFetcherScope, metrics.TargetClusterTag(p.sourceCluster))
+
+	for {
+		respChan := make(chan *r.ReplicationTasksInfo, 1)
+		p.requestChan <- &request{
+			token:    &r.ReplicationToken{ShardID: common.Int32Ptr(int32(p.shard.GetShardID())), TaskID: common.Int64Ptr(p.readLevel)},
+			respChan: respChan,
+		}
+
+		select {
+		case response := <-respChan:
+			p.logger.Debug("Got fetch replication tasks response.",
+				tag.ReadLevel(response.GetReadLevel()),
+				tag.Bool(response.GetHasMore()),
+				tag.Counter(len(response.GetReplicationTasks())),
+			)
+
+			for _, replicationTask := range response.ReplicationTasks {
+				p.processTask(replicationTask)
+			}
+
+			p.readLevel = response.GetReadLevel()
+			err := p.shard.UpdateClusterReplicationLevel(p.sourceCluster, p.readLevel)
+			if err != nil {
+				p.logger.Error("Error updating replication level for shard", tag.Error(err), tag.OperationFailed)
+			}
+
+			scope.UpdateGauge(metrics.ReplicationTasksReadLevel, float64(p.readLevel))
+			scope.AddCounter(metrics.ReplicationTasksApplied, int64(len(response.GetReplicationTasks())))
+		case <-p.done:
+			p.logger.Info("Closing replication task processor.", tag.ReadLevel(p.readLevel))
+			return
+		}
+	}
 }
 
 func (p *replicationTaskProcessor) processTask(replicationTask *r.ReplicationTask) {
