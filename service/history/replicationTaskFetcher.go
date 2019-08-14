@@ -176,8 +176,8 @@ func (f *ReplicationTaskFetcher) fetchTasks() {
 			}
 
 			ctx, cancel := context.WithTimeout(context.Background(), fetchTaskRequestTimeout)
-			request := &r.GetReplicationTasksRequest{Tokens: tokens}
-			response, err := f.remotePeer.GetReplicationTasks(ctx, request)
+			request := &r.GetReplicationMessagesRequest{Tokens: tokens}
+			response, err := f.remotePeer.GetReplicationMessages(ctx, request)
 			cancel()
 			if err != nil {
 				f.logger.Error("Failed to get replication tasks", tag.Error(err))
@@ -185,9 +185,9 @@ func (f *ReplicationTaskFetcher) fetchTasks() {
 				continue
 			}
 
-			f.logger.Debug("Successfully fetched replication tasks.", tag.Counter(len(response.TasksByShard)))
+			f.logger.Debug("Successfully fetched replication tasks.", tag.Counter(len(response.MessagesByShard)))
 
-			for shardID, tasks := range response.TasksByShard {
+			for shardID, tasks := range response.MessagesByShard {
 				request := requestByShard[shardID]
 				request.respChan <- tasks
 				close(request.respChan)

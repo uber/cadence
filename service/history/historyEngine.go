@@ -2361,6 +2361,6 @@ func getWorkflowAlreadyStartedError(errMsg string, createRequestID string, workf
 	}
 }
 
-func (e *historyEngineImpl) GetReplicationTasks(ctx ctx.Context, taskID int64) (*r.ReplicationTasksInfo, error) {
+func (e *historyEngineImpl) GetReplicationMessages(ctx ctx.Context, taskID int64) (*r.ReplicationMessages, error) {
 	return e.replicatorProcessor.getTasks(taskID)
 }

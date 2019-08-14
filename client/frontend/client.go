@@ -644,11 +644,11 @@ func (c *clientImpl) getRandomClient() (workflowserviceclient.Interface, error) 
 	return client.(workflowserviceclient.Interface), nil
 }
 
-func (c *clientImpl) GetReplicationTasks(
+func (c *clientImpl) GetReplicationMessages(
 	ctx context.Context,
-	request *replicator.GetReplicationTasksRequest,
+	request *replicator.GetReplicationMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.GetReplicationTasksResponse, error) {
+) (*replicator.GetReplicationMessagesResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getRandomClient()
 	if err != nil {
@@ -656,5 +656,5 @@ func (c *clientImpl) GetReplicationTasks(
 	}
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
-	return client.GetReplicationTasks(ctx, request, opts...)
+	return client.GetReplicationMessages(ctx, request, opts...)
 }

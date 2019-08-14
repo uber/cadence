@@ -102,23 +102,26 @@ struct ReplicationTask {
   60: optional HistoryMetadataTaskAttributes historyMetadataTaskAttributes
 }
 
-struct GetReplicationTasksRequest {
-  10: optional list<ReplicationToken> tokens
-}
-
 struct ReplicationToken {
   10: optional i32 shardID
-  20: optional i64 taskID
+  // lastRetrivedMessageId is where the next fetch should begin with
+  20: optional i64 (js.type = "Long") lastRetrivedMessageId
+  // lastProcessedMessageId is the last messageId that is processed on the passive side.
+  // This can be different than lastRetrivedMessageId if passive side supports prefetching messages.
+  30: optional i64 (js.type = "Long") lastProcessedMessageId
 }
 
-// TODO: we need a better name
-struct ReplicationTasksInfo {
+struct ReplicationMessages {
   10: optional list<ReplicationTask> replicationTasks
   // This can be different than the last taskId in the above list, because sender can decide to skip tasks (e.g. for completed workflows).
-  20: optional i64 (js.type = "Long") readLevel
+  20: optional i64 (js.type = "Long") lastRetrivedMessageId
   30: optional bool hasMore // Hint for flow control
 }
 
-struct GetReplicationTasksResponse {
-  10: optional map<i32, ReplicationTasksInfo> tasksByShard
+struct GetReplicationMessagesRequest {
+  10: optional list<ReplicationToken> tokens
+}
+
+struct GetReplicationMessagesResponse {
+  10: optional map<i32, ReplicationMessages> messagesByShard
 }

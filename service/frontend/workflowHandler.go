@@ -3281,11 +3281,11 @@ func (wh *WorkflowHandler) allow(d domainGetter) bool {
 	return wh.rateLimiter.Allow(quotas.Info{Domain: domain})
 }
 
-// GetReplicationTasks returns new replication tasks since the read level provided in the token.
-func (wh *WorkflowHandler) GetReplicationTasks(
+// GetReplicationMessages returns new replication tasks since the read level provided in the token.
+func (wh *WorkflowHandler) GetReplicationMessages(
 	ctx context.Context,
-	request *replicator.GetReplicationTasksRequest,
-) (resp *replicator.GetReplicationTasksResponse, err error) {
+	request *replicator.GetReplicationMessagesRequest,
+) (resp *replicator.GetReplicationMessagesResponse, err error) {
 	defer log.CapturePanic(wh.GetLogger(), &err)
 
 	scope, sw := wh.startRequestProfile(metrics.FrontendGetReplicationTasksScope)
@@ -3299,7 +3299,7 @@ func (wh *WorkflowHandler) GetReplicationTasks(
 		return nil, wh.error(errRequestNotSet, scope)
 	}
 
-	resp, err = wh.history.GetReplicationTasks(ctx, request)
+	resp, err = wh.history.GetReplicationMessages(ctx, request)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}

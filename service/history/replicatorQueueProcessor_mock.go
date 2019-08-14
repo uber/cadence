@@ -78,10 +78,10 @@ func (mr *MockReplicatorQueueProcessorMockRecorder) Stop() *gomock.Call {
 }
 
 // getTasks mocks base method
-func (m *MockReplicatorQueueProcessor) getTasks(arg0 int64) (*replicator.ReplicationTasksInfo, error) {
+func (m *MockReplicatorQueueProcessor) getTasks(arg0 int64) (*replicator.ReplicationMessages, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "getTasks", arg0)
-	ret0, _ := ret[0].(*replicator.ReplicationTasksInfo)
+	ret0, _ := ret[0].(*replicator.ReplicationMessages)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

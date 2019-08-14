@@ -547,7 +547,7 @@ func convertLastReplicationInfo(info map[string]*persistence.ReplicationInfo) ma
 	return replicationInfoMap
 }
 
-func (p *replicatorQueueProcessorImpl) getTasks(readLevel int64) (*replicator.ReplicationTasksInfo, error) {
+func (p *replicatorQueueProcessorImpl) getTasks(readLevel int64) (*replicator.ReplicationMessages, error) {
 	taskInfoList, hasMore, err := p.readTasks(readLevel)
 	if err != nil {
 		return nil, err
@@ -566,9 +566,9 @@ func (p *replicatorQueueProcessorImpl) getTasks(readLevel int64) (*replicator.Re
 		}
 	}
 
-	return &replicator.ReplicationTasksInfo{
-		ReplicationTasks: replicationTasks,
-		HasMore:          common.BoolPtr(hasMore),
-		ReadLevel:        common.Int64Ptr(readLevel),
+	return &replicator.ReplicationMessages{
+		ReplicationTasks:      replicationTasks,
+		HasMore:               common.BoolPtr(hasMore),
+		LastRetrivedMessageId: common.Int64Ptr(readLevel),
 	}, nil
 }

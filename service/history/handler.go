@@ -1261,11 +1261,11 @@ func (h *Handler) SyncActivity(ctx context.Context, syncActivityRequest *hist.Sy
 	return nil
 }
 
-// GetReplicationTasks is called by remote peers to get replicated tasks for cross DC replication
-func (h *Handler) GetReplicationTasks(
+// GetReplicationMessages is called by remote peers to get replicated messages for cross DC replication
+func (h *Handler) GetReplicationMessages(
 	ctx context.Context,
-	request *r.GetReplicationTasksRequest,
-) (*r.GetReplicationTasksResponse, error) {
+	request *r.GetReplicationMessagesRequest,
+) (*r.GetReplicationMessagesResponse, error) {
 
 	var wg sync.WaitGroup
 	wg.Add(len(request.Tokens))
@@ -1281,7 +1281,7 @@ func (h *Handler) GetReplicationTasks(
 				return
 			}
 
-			tasks, err := engine.GetReplicationTasks(ctx, token.GetTaskID())
+			tasks, err := engine.GetReplicationMessages(ctx, token.GetLastRetrivedMessageId())
 			if err != nil {
 				h.GetLogger().Warn("failed to get replication tasks for shard", tag.Error(err))
 				return
@@ -1293,15 +1293,15 @@ func (h *Handler) GetReplicationTasks(
 
 	wg.Wait()
 
-	tasksByShard := make(map[int32]*r.ReplicationTasksInfo)
+	messagesByShard := make(map[int32]*r.ReplicationMessages)
 	result.Range(func(key, value interface{}) bool {
 		shardID := key.(int32)
-		tasks := value.(*r.ReplicationTasksInfo)
-		tasksByShard[shardID] = tasks
+		tasks := value.(*r.ReplicationMessages)
+		messagesByShard[shardID] = tasks
 		return true
 	})
 
-	return &r.GetReplicationTasksResponse{TasksByShard: tasksByShard}, nil
+	return &r.GetReplicationMessagesResponse{MessagesByShard: messagesByShard}, nil
 }
 
 // convertError is a helper method to convert ShardOwnershipLostError from persistence layer returned by various

@@ -578,7 +578,7 @@ service WorkflowService {
       6: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,
     )
 
-  replicator.GetReplicationTasksResponse GetReplicationTasks(1: replicator.GetReplicationTasksRequest request)
+  replicator.GetReplicationMessagesResponse GetReplicationMessages(1: replicator.GetReplicationMessagesRequest request)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
@@ -586,5 +586,4 @@ service WorkflowService {
       4: shared.ServiceBusyError serviceBusyError,
       5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,
     )
-
 }

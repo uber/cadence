@@ -692,7 +692,7 @@ service HistoryService {
       3: shared.AccessDeniedError accessDeniedError,
     )
 
-  replicator.GetReplicationTasksResponse GetReplicationTasks(1: replicator.GetReplicationTasksRequest request)
+  replicator.GetReplicationMessagesResponse GetReplicationMessages(1: replicator.GetReplicationMessagesRequest request)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,

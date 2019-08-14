@@ -71,7 +71,7 @@ type (
 		ReplicateRawEvents(ctx context.Context, request *h.ReplicateRawEventsRequest) error
 		SyncShardStatus(ctx context.Context, request *h.SyncShardStatusRequest) error
 		SyncActivity(ctx context.Context, request *h.SyncActivityRequest) error
-		GetReplicationTasks(ctx context.Context, taskID int64) (*replicator.ReplicationTasksInfo, error)
+		GetReplicationMessages(ctx context.Context, taskID int64) (*replicator.ReplicationMessages, error)
 
 		NotifyNewHistoryEvent(event *historyEventNotification)
 		NotifyNewTransferTasks(tasks []persistence.Task)
@@ -91,7 +91,7 @@ type (
 
 	ReplicatorQueueProcessor interface {
 		queueProcessor
-		getTasks(readLevel int64) (*replicator.ReplicationTasksInfo, error)
+		getTasks(readLevel int64) (*replicator.ReplicationMessages, error)
 	}
 
 	queueAckMgr interface {

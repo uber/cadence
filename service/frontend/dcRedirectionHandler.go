@@ -1112,11 +1112,11 @@ func (handler *DCRedirectionHandlerImpl) TerminateWorkflowExecution(
 }
 
 // GetReplicationTasks API call
-func (handler *DCRedirectionHandlerImpl) GetReplicationTasks(
+func (handler *DCRedirectionHandlerImpl) GetReplicationMessages(
 	ctx context.Context,
-	request *replicator.GetReplicationTasksRequest,
-) (*replicator.GetReplicationTasksResponse, error) {
-	return handler.frontendHandler.GetReplicationTasks(ctx, request)
+	request *replicator.GetReplicationMessagesRequest,
+) (*replicator.GetReplicationMessagesResponse, error) {
+	return handler.frontendHandler.GetReplicationMessages(ctx, request)
 }
 
 func (handler *DCRedirectionHandlerImpl) beforeCall(

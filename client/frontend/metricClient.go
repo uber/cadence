@@ -673,15 +673,15 @@ func (c *metricClient) UpdateDomain(
 	return resp, err
 }
 
-func (c *metricClient) GetReplicationTasks(
+func (c *metricClient) GetReplicationMessages(
 	ctx context.Context,
-	request *replicator.GetReplicationTasksRequest,
+	request *replicator.GetReplicationMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.GetReplicationTasksResponse, error) {
+) (*replicator.GetReplicationMessagesResponse, error) {
 	c.metricsClient.IncCounter(metrics.FrontendClientGetReplicationTasksScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.FrontendClientGetReplicationTasksScope, metrics.CadenceClientLatency)
-	resp, err := c.client.GetReplicationTasks(ctx, request, opts...)
+	resp, err := c.client.GetReplicationMessages(ctx, request, opts...)
 	sw.Stop()
 
 	if err != nil {

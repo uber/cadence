@@ -407,15 +407,15 @@ func (c *retryableClient) SyncActivity(
 	return backoff.Retry(op, c.policy, c.isRetryable)
 }
 
-func (c *retryableClient) GetReplicationTasks(
+func (c *retryableClient) GetReplicationMessages(
 	ctx context.Context,
-	request *replicator.GetReplicationTasksRequest,
+	request *replicator.GetReplicationMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.GetReplicationTasksResponse, error) {
-	var resp *replicator.GetReplicationTasksResponse
+) (*replicator.GetReplicationMessagesResponse, error) {
+	var resp *replicator.GetReplicationMessagesResponse
 	op := func() error {
 		var err error
-		resp, err = c.client.GetReplicationTasks(ctx, request, opts...)
+		resp, err = c.client.GetReplicationMessages(ctx, request, opts...)
 		return err
 	}
 

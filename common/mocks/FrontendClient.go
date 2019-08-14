@@ -972,8 +972,8 @@ func (_m *FrontendClient) UpdateDomain(ctx context.Context, UpdateRequest *share
 	return r0, r1
 }
 
-// GetReplicationTasks provides a mock function with given fields: ctx, request, opts
-func (_m *FrontendClient) GetReplicationTasks(ctx context.Context, request *replicator.GetReplicationTasksRequest, opts ...yarpc.CallOption) (*replicator.GetReplicationTasksResponse, error) {
+// GetReplicationMessages provides a mock function with given fields: ctx, request, opts
+func (_m *FrontendClient) GetReplicationMessages(ctx context.Context, request *replicator.GetReplicationMessagesRequest, opts ...yarpc.CallOption) (*replicator.GetReplicationMessagesResponse, error) {
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
@@ -983,17 +983,17 @@ func (_m *FrontendClient) GetReplicationTasks(ctx context.Context, request *repl
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *replicator.GetReplicationTasksResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *replicator.GetReplicationTasksRequest, ...yarpc.CallOption) *replicator.GetReplicationTasksResponse); ok {
+	var r0 *replicator.GetReplicationMessagesResponse
+	if rf, ok := ret.Get(0).(func(context.Context, *replicator.GetReplicationMessagesRequest, ...yarpc.CallOption) *replicator.GetReplicationMessagesResponse); ok {
 		r0 = rf(ctx, request, opts...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*replicator.GetReplicationTasksResponse)
+			r0 = ret.Get(0).(*replicator.GetReplicationMessagesResponse)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *replicator.GetReplicationTasksRequest, ...yarpc.CallOption) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *replicator.GetReplicationMessagesRequest, ...yarpc.CallOption) error); ok {
 		r1 = rf(ctx, request, opts...)
 	} else {
 		r1 = ret.Error(1)

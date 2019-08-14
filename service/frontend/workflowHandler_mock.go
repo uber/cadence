@@ -721,21 +721,21 @@ func (_m *MockWorkflowHandler) UpdateDomain(ctx context.Context, UpdateRequest *
 	return r0, r1
 }
 
-// GetReplicationTasks provides a mock function with given fields: ctx, Request
-func (_m *MockWorkflowHandler) GetReplicationTasks(ctx context.Context, Request *replicator.GetReplicationTasksRequest) (*replicator.GetReplicationTasksResponse, error) {
+// GetReplicationMessages provides a mock function with given fields: ctx, Request
+func (_m *MockWorkflowHandler) GetReplicationMessages(ctx context.Context, Request *replicator.GetReplicationMessagesRequest) (*replicator.GetReplicationMessagesResponse, error) {
 	ret := _m.Called(ctx, Request)
 
-	var r0 *replicator.GetReplicationTasksResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *replicator.GetReplicationTasksRequest) *replicator.GetReplicationTasksResponse); ok {
+	var r0 *replicator.GetReplicationMessagesResponse
+	if rf, ok := ret.Get(0).(func(context.Context, *replicator.GetReplicationMessagesRequest) *replicator.GetReplicationMessagesResponse); ok {
 		r0 = rf(ctx, Request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*replicator.GetReplicationTasksResponse)
+			r0 = ret.Get(0).(*replicator.GetReplicationMessagesResponse)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *replicator.GetReplicationTasksRequest) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *replicator.GetReplicationMessagesRequest) error); ok {
 		r1 = rf(ctx, Request)
 	} else {
 		r1 = ret.Error(1)

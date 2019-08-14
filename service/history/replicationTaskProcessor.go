@@ -53,15 +53,16 @@ var (
 type (
 	// ReplicationTaskProcessor is responsible for processing replication tasks for a shord.
 	ReplicationTaskProcessor struct {
-		status           int32
-		shard            ShardContext
-		readLevel        int64
-		historyEngine    Engine
-		sourceCluster    string
-		domainReplicator replicator.DomainReplicator
-		metricsClient    metrics.Client
-		logger           log.Logger
-		retryPolicy      backoff.RetryPolicy
+		status                 int32
+		shard                  ShardContext
+		lastProcessedMessageID int64
+		lastRetrievedMessageID int64
+		historyEngine          Engine
+		sourceCluster          string
+		domainReplicator       replicator.DomainReplicator
+		metricsClient          metrics.Client
+		logger                 log.Logger
+		retryPolicy            backoff.RetryPolicy
 
 		requestChan chan<- *request
 		done        chan struct{}
@@ -69,7 +70,7 @@ type (
 
 	request struct {
 		token    *r.ReplicationToken
-		respChan chan<- *r.ReplicationTasksInfo
+		respChan chan<- *r.ReplicationMessages
 	}
 )
 
@@ -119,20 +120,25 @@ func (p *ReplicationTaskProcessor) Stop() {
 }
 
 func (p *ReplicationTaskProcessor) processorLoop() {
-	p.readLevel = p.shard.GetClusterReplicationLevel(p.sourceCluster)
+	p.lastProcessedMessageID = p.shard.GetClusterReplicationLevel(p.sourceCluster)
 	scope := p.metricsClient.Scope(metrics.ReplicationTaskFetcherScope, metrics.TargetClusterTag(p.sourceCluster))
 
 	for {
-		respChan := make(chan *r.ReplicationTasksInfo, 1)
+		respChan := make(chan *r.ReplicationMessages, 1)
+		// TODO: when we support prefetching, LastRetrivedMessageId can be different than LastProcessedMessageId
 		p.requestChan <- &request{
-			token:    &r.ReplicationToken{ShardID: common.Int32Ptr(int32(p.shard.GetShardID())), TaskID: common.Int64Ptr(p.readLevel)},
+			token: &r.ReplicationToken{
+				ShardID:                common.Int32Ptr(int32(p.shard.GetShardID())),
+				LastRetrivedMessageId:  common.Int64Ptr(p.lastProcessedMessageID),
+				LastProcessedMessageId: common.Int64Ptr(p.lastProcessedMessageID),
+			},
 			respChan: respChan,
 		}
 
 		select {
 		case response := <-respChan:
-			p.logger.Debug("Got fetch replication tasks response.",
-				tag.ReadLevel(response.GetReadLevel()),
+			p.logger.Debug("Got fetch replication messages response.",
+				tag.ReadLevel(response.GetLastRetrivedMessageId()),
 				tag.Bool(response.GetHasMore()),
 				tag.Counter(len(response.GetReplicationTasks())),
 			)
@@ -141,16 +147,17 @@ func (p *ReplicationTaskProcessor) processorLoop() {
 				p.processTask(replicationTask)
 			}
 
-			p.readLevel = response.GetReadLevel()
-			err := p.shard.UpdateClusterReplicationLevel(p.sourceCluster, p.readLevel)
+			p.lastProcessedMessageID = response.GetLastRetrivedMessageId()
+			p.lastRetrievedMessageID = response.GetLastRetrivedMessageId()
+			err := p.shard.UpdateClusterReplicationLevel(p.sourceCluster, p.lastRetrievedMessageID)
 			if err != nil {
 				p.logger.Error("Error updating replication level for shard", tag.Error(err), tag.OperationFailed)
 			}
 
-			scope.UpdateGauge(metrics.ReplicationTasksReadLevel, float64(p.readLevel))
+			scope.UpdateGauge(metrics.LastRetrievedMessageID, float64(p.lastRetrievedMessageID))
 			scope.AddCounter(metrics.ReplicationTasksApplied, int64(len(response.GetReplicationTasks())))
 		case <-p.done:
-			p.logger.Info("Closing replication task processor.", tag.ReadLevel(p.readLevel))
+			p.logger.Info("Closing replication task processor.", tag.ReadLevel(p.lastRetrievedMessageID))
 			return
 		}
 	}

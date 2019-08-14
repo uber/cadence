@@ -645,12 +645,12 @@ func (c *clientImpl) SyncActivity(
 	return err
 }
 
-func (c *clientImpl) GetReplicationTasks(
+func (c *clientImpl) GetReplicationMessages(
 	ctx context.Context,
-	request *replicator.GetReplicationTasksRequest,
+	request *replicator.GetReplicationMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.GetReplicationTasksResponse, error) {
-	requestsByClient := make(map[historyserviceclient.Interface]*replicator.GetReplicationTasksRequest)
+) (*replicator.GetReplicationMessagesResponse, error) {
+	requestsByClient := make(map[historyserviceclient.Interface]*replicator.GetReplicationMessagesRequest)
 
 	for _, token := range request.Tokens {
 		client, err := c.getClientForShardID(int(token.GetShardID()))
@@ -659,7 +659,7 @@ func (c *clientImpl) GetReplicationTasks(
 		}
 
 		if _, ok := requestsByClient[client]; !ok {
-			requestsByClient[client] = &replicator.GetReplicationTasksRequest{}
+			requestsByClient[client] = &replicator.GetReplicationMessagesRequest{}
 		}
 
 		req := requestsByClient[client]
@@ -668,14 +668,14 @@ func (c *clientImpl) GetReplicationTasks(
 
 	var wg sync.WaitGroup
 	wg.Add(len(requestsByClient))
-	respChan := make(chan *replicator.GetReplicationTasksResponse, len(requestsByClient))
+	respChan := make(chan *replicator.GetReplicationMessagesResponse, len(requestsByClient))
 	for client, req := range requestsByClient {
-		go func(client historyserviceclient.Interface, request *replicator.GetReplicationTasksRequest) {
+		go func(client historyserviceclient.Interface, request *replicator.GetReplicationMessagesRequest) {
 			defer wg.Done()
 
 			ctx, cancel := c.createContext(ctx)
 			defer cancel()
-			resp, err := client.GetReplicationTasks(ctx, request, opts...)
+			resp, err := client.GetReplicationMessages(ctx, request, opts...)
 			if err != nil {
 				c.logger.Warn("Failed to get replication tasks from client", tag.Error(err))
 				return
@@ -687,10 +687,10 @@ func (c *clientImpl) GetReplicationTasks(
 	wg.Wait()
 	close(respChan)
 
-	response := &replicator.GetReplicationTasksResponse{TasksByShard: make(map[int32]*replicator.ReplicationTasksInfo)}
+	response := &replicator.GetReplicationMessagesResponse{MessagesByShard: make(map[int32]*replicator.ReplicationMessages)}
 	for resp := range respChan {
-		for shardID, tasks := range resp.TasksByShard {
-			response.TasksByShard[shardID] = tasks
+		for shardID, tasks := range resp.MessagesByShard {
+			response.MessagesByShard[shardID] = tasks
 		}
 	}
 
