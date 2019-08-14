@@ -5,7 +5,7 @@ steps:
       docker: "*"
     command: "make cover_profile"
     artifact_paths:
-      - ".build/coverage/*.out"
+      - "build/coverage/*.out"
     plugins:
       - docker-compose#v3.0.0:
           run: unit-test
@@ -17,7 +17,7 @@ steps:
       docker: "*"
     command: "make cover_integration_profile"
     artifact_paths:
-      - ".build/coverage/*.out"
+      - "build/coverage/*.out"
     retry:
       automatic:
         limit: 1
@@ -32,7 +32,7 @@ steps:
       docker: "*"
     command: "make cover_integration_profile EVENTSV2=true"
     artifact_paths:
-      - ".build/coverage/*.out"
+      - "build/coverage/*.out"
     retry:
       automatic:
         limit: 1
@@ -47,7 +47,7 @@ steps:
       docker: "*"
     command: "make cover_xdc_profile"
     artifact_paths:
-      - ".build/coverage/*.out"
+      - "build/coverage/*.out"
     retry:
       automatic:
         limit: 1
@@ -62,7 +62,7 @@ steps:
       docker: "*"
     command: "make cover_integration_profile"
     artifact_paths:
-      - ".build/coverage/*.out"
+      - "build/coverage/*.out"
     retry:
       automatic:
         limit: 1
@@ -77,7 +77,7 @@ steps:
       docker: "*"
     command: "make cover_integration_profile EVENTSV2=true"
     artifact_paths:
-      - ".build/coverage/*.out"
+      - "build/coverage/*.out"
     retry:
       automatic:
         limit: 1
@@ -92,7 +92,7 @@ steps:
       docker: "*"
     command: "make cover_xdc_profile"
     artifact_paths:
-      - ".build/coverage/*.out"
+      - "build/coverage/*.out"
     retry:
       automatic:
         limit: 1
