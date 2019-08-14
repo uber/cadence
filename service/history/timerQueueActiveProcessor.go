@@ -838,7 +838,7 @@ func (t *timerQueueActiveProcessorImpl) updateWorkflowExecution(
 func (t *timerQueueActiveProcessorImpl) getMetricScopeWithDomainTag(scope int, domainID string) (metrics.Scope, error) {
 	domainEntry, err := t.shard.GetDomainCache().GetDomainByID(domainID)
 	if err != nil {
-		return nil, &workflow.InternalServiceError{Message: "unable to get domain from cache by domainID."}
+		return nil, err
 	}
 	return t.metricsClient.Scope(metrics.TimerActiveTaskDecisionTimeoutScope).
 		Tagged(metrics.DomainTag(domainEntry.GetInfo().Name)), nil
