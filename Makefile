@@ -76,7 +76,7 @@ TEST_DIRS := $(filter-out $(INTEG_TEST_XDC_ROOT)%, $(sort $(dir $(filter %_test.
 PKG_TEST_DIRS := $(filter-out $(INTEG_TEST_ROOT)%,$(TEST_DIRS))
 
 # Code coverage output files
-COVER_ROOT := $(BUILD)/coverage
+COVER_ROOT                 := $(BUILD)/coverage
 UNIT_COVER_FILE            := $(COVER_ROOT)/unit_cover.out
 INTEG_COVER_FILE           := $(COVER_ROOT)/integ_$(PERSISTENCE_TYPE)$(EV2_TEST)_cover.out
 INTEG_XDC_COVER_FILE       := $(COVER_ROOT)/integ_xdc_$(PERSISTENCE_TYPE)_cover.out
@@ -159,7 +159,7 @@ test_xdc: bins
 cover_profile: clean bins_nothrift
 	@mkdir -p $(BUILD)
 	@mkdir -p $(COVER_ROOT)
-	@echo "mode: atomic" > $(BUILD)/cover.out
+	@echo "mode: atomic" > $(UNIT_COVER_FILE)
 
 	@echo Running package tests:
 	@for dir in $(PKG_TEST_DIRS); do \
@@ -171,7 +171,7 @@ cover_profile: clean bins_nothrift
 cover_integration_profile: clean bins_nothrift
 	@mkdir -p $(BUILD)
 	@mkdir -p $(COVER_ROOT)
-	@echo "mode: atomic" > $(BUILD)/cover.out
+	@echo "mode: atomic" > $(INTEG_COVER_FILE)
 
 	@echo Running integration test with $(PERSISTENCE_TYPE) and eventsV2 $(EVENTSV2)
 	@mkdir -p $(BUILD)/$(INTEG_TEST_DIR)
@@ -181,7 +181,7 @@ cover_integration_profile: clean bins_nothrift
 cover_xdc_profile: clean bins_nothrift
 	@mkdir -p $(BUILD)
 	@mkdir -p $(COVER_ROOT)
-	@echo "mode: atomic" > $(BUILD)/cover.out
+	@echo "mode: atomic" > $(INTEG_XDC_COVER_FILE)
 
 	@echo Running integration test for cross dc with $(PERSISTENCE_TYPE)
 	@mkdir -p $(BUILD)/$(INTEG_TEST_XDC_DIR)
