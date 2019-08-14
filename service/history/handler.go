@@ -1289,19 +1289,19 @@ func (h *Handler) GetReplicationTasks(
 		go func(token *r.ReplicationToken) {
 			defer wg.Done()
 
-			engine, err := h.controller.getEngineForShard(int(*token.ShardID))
+			engine, err := h.controller.getEngineForShard(int(token.GetShardID()))
 			if err != nil {
 				h.GetLogger().Warn("history engine not found for shard", tag.Error(err))
 				return
 			}
 
-			tasks, err := engine.GetReplicationTasks(ctx, *token.TaskID)
+			tasks, err := engine.GetReplicationTasks(ctx, token.GetTaskID())
 			if err != nil {
 				h.GetLogger().Warn("failed to get replication tasks for shard", tag.Error(err))
 				return
 			}
 
-			result.Store(*token.ShardID, tasks)
+			result.Store(token.GetShardID(), tasks)
 		}(token)
 	}
 

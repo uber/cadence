@@ -176,7 +176,7 @@ func (p *replicatorQueueProcessorImpl) queueShutdown() error {
 	return nil
 }
 
-func (p *replicatorQueueProcessorImpl) processSyncActivityTask(task *persistence.ReplicationTaskInfo) (retError error) {
+func (p *replicatorQueueProcessorImpl) processSyncActivityTask(task *persistence.ReplicationTaskInfo) error {
 	replicationTask, err := p.getSyncActivityTask(task)
 	if err != nil {
 		return err
@@ -242,7 +242,7 @@ func (p *replicatorQueueProcessorImpl) getSyncActivityTask(task *persistence.Rep
 		},
 	}
 
-	return
+	return replicationTask, retError
 }
 
 func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persistence.ReplicationTaskInfo) error {

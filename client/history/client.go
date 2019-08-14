@@ -671,8 +671,9 @@ func (c *clientImpl) GetReplicationTasks(
 	respChan := make(chan *replicator.GetReplicationTasksResponse, len(requestsByClient))
 	for client, req := range requestsByClient {
 		go func(client historyserviceclient.Interface, request *replicator.GetReplicationTasksRequest) {
-			ctx, cancel := c.createContext(ctx)
 			defer wg.Done()
+
+			ctx, cancel := c.createContext(ctx)
 			defer cancel()
 			resp, err := client.GetReplicationTasks(ctx, request, opts...)
 			if err != nil {

@@ -268,7 +268,7 @@ type (
 		RpcParallelism          int     `yaml:"rpcParallelism"`
 		AggregationIntervalSecs int     `yaml:"aggregationIntervalSecs"`
 		ErrorRetryWaitSecs      int     `yaml:"errorRetryWaitSecs"`
-		TimerJitter             float64 `yaml:"timerJitter"`
+		TimerJitterCoefficient  float64 `yaml:"timerJitterCoefficient"`
 	}
 
 	// DCRedirectionPolicy contains the frontend datacenter redirection policy
