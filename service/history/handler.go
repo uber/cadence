@@ -71,7 +71,7 @@ type (
 		historyEventNotifier    historyEventNotifier
 		publisher               messaging.Producer
 		rateLimiter             quotas.Limiter
-		replicationTaskFetchers *replicationTaskFetchers
+		replicationTaskFetchers *ReplicationTaskFetchers
 		domainReplicator        replicator.DomainReplicator
 		service.Service
 	}
@@ -176,7 +176,7 @@ func (h *Handler) Start() error {
 		}
 	}
 
-	h.replicationTaskFetchers = newReplicationTaskFetchers(
+	h.replicationTaskFetchers = NewReplicationTaskFetchers(
 		h.GetLogger(),
 		h.GetClusterMetadata().GetReplicationConsumerConfig(),
 		h.Service.GetClusterMetadata(),

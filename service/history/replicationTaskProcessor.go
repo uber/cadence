@@ -51,7 +51,8 @@ var (
 )
 
 type (
-	replicationTaskProcessor struct {
+	// ReplicationTaskProcessor is responsible for processing replication tasks for a shord.
+	ReplicationTaskProcessor struct {
 		status           int32
 		shard            ShardContext
 		readLevel        int64
@@ -72,18 +73,19 @@ type (
 	}
 )
 
-func newReplicationTaskProcessor(
+// NewReplicationTaskProcessor creates a new replication task processor.
+func NewReplicationTaskProcessor(
 	shard ShardContext,
 	historyEngine Engine,
 	domainReplicator replicator.DomainReplicator,
 	metricsClient metrics.Client,
-	replicationTaskFetcher *replicationTaskFetcher,
-) *replicationTaskProcessor {
+	replicationTaskFetcher *ReplicationTaskFetcher,
+) *ReplicationTaskProcessor {
 	retryPolicy := backoff.NewExponentialRetryPolicy(taskProcessorErrorRetryWait)
 	retryPolicy.SetBackoffCoefficient(taskProcessorErrorRetryBackoffCoefficient)
 	retryPolicy.SetMaximumAttempts(taskProcessorErrorRetryMaxAttampts)
 
-	return &replicationTaskProcessor{
+	return &ReplicationTaskProcessor{
 		status:           common.DaemonStatusInitialized,
 		shard:            shard,
 		historyEngine:    historyEngine,
@@ -97,7 +99,7 @@ func newReplicationTaskProcessor(
 	}
 }
 
-func (p *replicationTaskProcessor) Start() {
+func (p *ReplicationTaskProcessor) Start() {
 	if !atomic.CompareAndSwapInt32(&p.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
 		return
 	}
@@ -106,7 +108,7 @@ func (p *replicationTaskProcessor) Start() {
 	p.logger.Info("ReplicationTaskProcessor started.")
 }
 
-func (p *replicationTaskProcessor) Stop() {
+func (p *ReplicationTaskProcessor) Stop() {
 	if !atomic.CompareAndSwapInt32(&p.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
 		return
 	}
@@ -114,7 +116,7 @@ func (p *replicationTaskProcessor) Stop() {
 	close(p.done)
 }
 
-func (p *replicationTaskProcessor) processorLoop() {
+func (p *ReplicationTaskProcessor) processorLoop() {
 	p.readLevel = p.shard.GetClusterReplicationLevel(p.sourceCluster)
 	scope := p.metricsClient.Scope(metrics.ReplicationTaskFetcherScope, metrics.TargetClusterTag(p.sourceCluster))
 
@@ -152,7 +154,7 @@ func (p *replicationTaskProcessor) processorLoop() {
 	}
 }
 
-func (p *replicationTaskProcessor) processTask(replicationTask *r.ReplicationTask) {
+func (p *ReplicationTaskProcessor) processTask(replicationTask *r.ReplicationTask) {
 	err := backoff.Retry(func() error {
 		return p.processTaskOnce(replicationTask)
 	}, p.retryPolicy, isTransientRetryableError)
@@ -164,7 +166,7 @@ func (p *replicationTaskProcessor) processTask(replicationTask *r.ReplicationTas
 	}
 }
 
-func (p *replicationTaskProcessor) processTaskOnce(replicationTask *r.ReplicationTask) error {
+func (p *ReplicationTaskProcessor) processTaskOnce(replicationTask *r.ReplicationTask) error {
 	var err error
 	var scope int
 	switch replicationTask.GetTaskType() {
@@ -207,7 +209,7 @@ func isTransientRetryableError(err error) bool {
 	}
 }
 
-func (p *replicationTaskProcessor) updateFailureMetric(scope int, err error) {
+func (p *ReplicationTaskProcessor) updateFailureMetric(scope int, err error) {
 	// Always update failure counter for all replicator errors
 	p.metricsClient.IncCounter(scope, metrics.ReplicatorFailures)
 
@@ -234,7 +236,7 @@ func (p *replicationTaskProcessor) updateFailureMetric(scope int, err error) {
 	}
 }
 
-func (p *replicationTaskProcessor) handleActivityTask(task *r.ReplicationTask) error {
+func (p *ReplicationTaskProcessor) handleActivityTask(task *r.ReplicationTask) error {
 	attr := task.SyncActicvityTaskAttributes
 	request := &h.SyncActivityRequest{
 		DomainId:           attr.DomainId,
@@ -256,7 +258,7 @@ func (p *replicationTaskProcessor) handleActivityTask(task *r.ReplicationTask) e
 	return p.historyEngine.SyncActivity(ctx, request)
 }
 
-func (p *replicationTaskProcessor) handleHistoryReplicationTask(task *r.ReplicationTask) error {
+func (p *ReplicationTaskProcessor) handleHistoryReplicationTask(task *r.ReplicationTask) error {
 	attr := task.HistoryTaskAttributes
 	request := &h.ReplicateEventsRequest{
 		SourceCluster: common.StringPtr(p.sourceCluster),
@@ -281,7 +283,7 @@ func (p *replicationTaskProcessor) handleHistoryReplicationTask(task *r.Replicat
 	return p.historyEngine.ReplicateEvents(ctx, request)
 }
 
-func (p *replicationTaskProcessor) handleSyncShardTask(task *r.ReplicationTask) error {
+func (p *ReplicationTaskProcessor) handleSyncShardTask(task *r.ReplicationTask) error {
 	attr := task.SyncShardStatusTaskAttributes
 	if time.Now().Sub(time.Unix(0, attr.GetTimestamp())) > dropSyncShardTaskTimeThreshold {
 		return nil
@@ -297,7 +299,7 @@ func (p *replicationTaskProcessor) handleSyncShardTask(task *r.ReplicationTask) 
 	return p.historyEngine.SyncShardStatus(ctx, req)
 }
 
-func (p *replicationTaskProcessor) handleDomainReplicationTask(task *r.ReplicationTask) error {
+func (p *ReplicationTaskProcessor) handleDomainReplicationTask(task *r.ReplicationTask) error {
 	p.metricsClient.IncCounter(metrics.DomainReplicationTaskScope, metrics.ReplicatorMessages)
 	sw := p.metricsClient.StartTimer(metrics.DomainReplicationTaskScope, metrics.ReplicatorLatency)
 	defer sw.Stop()

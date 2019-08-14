@@ -82,7 +82,7 @@ type (
 		config                    *Config
 		archivalClient            warchiver.Client
 		resetor                   workflowResetor
-		replicationTaskProcessors []*replicationTaskProcessor
+		replicationTaskProcessors []*ReplicationTaskProcessor
 	}
 )
 
@@ -138,7 +138,7 @@ func NewEngineWithShardContext(
 	historyEventNotifier historyEventNotifier,
 	publisher messaging.Producer,
 	config *Config,
-	replicationTaskFetchers *replicationTaskFetchers,
+	replicationTaskFetchers *ReplicationTaskFetchers,
 	domainReplicator replicator.DomainReplicator,
 ) Engine {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
@@ -188,9 +188,9 @@ func NewEngineWithShardContext(
 	historyEngImpl.resetor = newWorkflowResetor(historyEngImpl)
 	historyEngImpl.decisionHandler = newDecisionHandler(historyEngImpl)
 
-	var replicationTaskProcessors []*replicationTaskProcessor
+	var replicationTaskProcessors []*ReplicationTaskProcessor
 	for _, replicationTaskFetcher := range replicationTaskFetchers.GetFetchers() {
-		replicationTaskProcessor := newReplicationTaskProcessor(shard, historyEngImpl, domainReplicator, shard.GetMetricsClient(), replicationTaskFetcher)
+		replicationTaskProcessor := NewReplicationTaskProcessor(shard, historyEngImpl, domainReplicator, shard.GetMetricsClient(), replicationTaskFetcher)
 		replicationTaskProcessors = append(replicationTaskProcessors, replicationTaskProcessor)
 	}
 	historyEngImpl.replicationTaskProcessors = replicationTaskProcessors

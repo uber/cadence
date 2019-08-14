@@ -73,7 +73,7 @@ clusterMetadata:
       rpcParallelism: 1
       aggregationIntervalSecs: 2
       errorRetryWaitSecs: 1
-      timerJitter: 0.15
+      timerJitterCoefficient: 0.15
   failoverVersionIncrement: 10
   masterClusterName: "active"
   currentClusterName: "active"
