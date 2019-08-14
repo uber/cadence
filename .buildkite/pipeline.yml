@@ -108,6 +108,9 @@ steps:
       queue: "workers"
       docker: "*"
     command: "scripts/buildkite/gocov.sh"
+    retry:
+      automatic:
+        limit: 2
     plugins:
       - docker-compose#v3.0.0:
           run: coverage-report
