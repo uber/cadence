@@ -150,7 +150,7 @@ func (s *transferQueueActiveProcessorSuite) SetupTest() {
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockClusterMetadata.On("GetAllClusterInfo").Return(cluster.TestAllClusterInfo)
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
-	s.mockTxProcessor = &MockTransferQueueProcessor{}
+	s.mockTxProcessor = NewMockReplicatorQueueProcessor(s.mockCtrl)
 	s.mockTxProcessor.On("NotifyNewTask", mock.Anything, mock.Anything).Maybe()
 	s.mockReplicationProcessor = &MockReplicatorQueueProcessor{}
 	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()

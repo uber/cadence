@@ -22,6 +22,7 @@ package history
 
 import (
 	"fmt"
+	"github.com/golang/mock/gomock"
 	"testing"
 	"time"
 
@@ -51,6 +52,7 @@ type (
 		shardClosedCh  chan int
 		logger         log.Logger
 
+		mockCtrl                 *gomock.Controller
 		mockMetadataMgr          *mocks.MetadataManager
 		mockVisibilityMgr        *mocks.VisibilityManager
 		mockMatchingClient       *mocks.MatchingClient
@@ -81,6 +83,8 @@ func (s *timerQueueProcessorSuite) SetupTest() {
 	s.ShardContext.config.TransferProcessorUpdateAckInterval = dynamicconfig.GetDurationPropertyFn(100 * time.Millisecond)
 	s.ShardContext.config.TimerProcessorUpdateAckInterval = dynamicconfig.GetDurationPropertyFn(100 * time.Millisecond)
 
+	s.mockCtrl = gomock.NewController(s.T())
+
 	s.mockMatchingClient = &mocks.MatchingClient{}
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 
@@ -89,7 +93,7 @@ func (s *timerQueueProcessorSuite) SetupTest() {
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", common.EmptyVersion).Return(cluster.TestCurrentClusterName)
 	s.mockTxProcessor = &MockTransferQueueProcessor{}
 	s.mockTxProcessor.On("NotifyNewTask", mock.Anything, mock.Anything).Maybe()
-	s.mockReplicationProcessor = &MockReplicatorQueueProcessor{}
+	s.mockReplicationProcessor = NewMockReplicatorQueueProcessor(s.mockCtrl)
 	s.mockReplicationProcessor.EXPECT().notifyNewTask().AnyTimes()
 	s.mockTimerProcessor = &MockTimerQueueProcessor{}
 	s.mockTimerProcessor.On("NotifyNewTimers", mock.Anything, mock.Anything).Maybe()
