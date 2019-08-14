@@ -1063,18 +1063,19 @@ func (e *mutableStateBuilder) UpdateDecision(di *decisionInfo) {
 
 // DeleteDecision deletes a decision task.
 func (e *mutableStateBuilder) DeleteDecision() {
-	emptyDecisionInfo := &decisionInfo{
-		Version:                    common.EmptyVersion,
-		ScheduleID:                 common.EmptyEventID,
-		StartedID:                  common.EmptyEventID,
-		RequestID:                  emptyUUID,
-		DecisionTimeout:            0,
-		Attempt:                    0,
-		StartedTimestamp:           0,
-		ScheduledTimestamp:         0,
-		OriginalScheduledTimestamp: 0,
+	resetDecisionInfo := &decisionInfo{
+		Version:            common.EmptyVersion,
+		ScheduleID:         common.EmptyEventID,
+		StartedID:          common.EmptyEventID,
+		RequestID:          emptyUUID,
+		DecisionTimeout:    0,
+		Attempt:            0,
+		StartedTimestamp:   0,
+		ScheduledTimestamp: 0,
+		// Keep the last original scheduled timestamp, so that AddDecisionAsHeartbeat can continue with it.
+		OriginalScheduledTimestamp: e.getDecisionInfo().OriginalScheduledTimestamp,
 	}
-	e.UpdateDecision(emptyDecisionInfo)
+	e.UpdateDecision(resetDecisionInfo)
 }
 
 func (e *mutableStateBuilder) FailDecision(incrementAttempt bool) {
