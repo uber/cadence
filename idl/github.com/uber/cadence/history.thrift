@@ -85,6 +85,7 @@ struct GetMutableStateResponse {
   130: optional binary branchToken
   140: optional map<string, shared.ReplicationInfo> replicationInfo
   150: optional shared.VersionHistories versionHistories
+  //TODO: change these fields to enum when possible
   160: optional i32 workflowState
   170: optional i32 workflowCloseState
 }
@@ -110,6 +111,7 @@ struct PollMutableStateResponse {
   110: optional binary branchToken
   120: optional map<string, shared.ReplicationInfo> replicationInfo
   130: optional shared.VersionHistories versionHistories
+   //TODO: change these fields to enum when possible
   140: optional i32 workflowState
   150: optional i32 workflowCloseState
 }
