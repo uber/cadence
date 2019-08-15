@@ -78,12 +78,15 @@ struct GetMutableStateResponse {
   70: optional string clientLibraryVersion
   80: optional string clientFeatureVersion
   90: optional string clientImpl
+  //TODO: isWorkflowRunning is deprecating. workflowState is going replace this field
   100: optional bool isWorkflowRunning
   110: optional i32 stickyTaskListScheduleToStartTimeout
   120: optional i32 eventStoreVersion
   130: optional binary branchToken
   140: optional map<string, shared.ReplicationInfo> replicationInfo
   150: optional shared.VersionHistories versionHistories
+  160: optional i32 workflowState
+  170: optional i32 workflowCloseState
 }
 
 struct PollMutableStateRequest {
@@ -103,12 +106,12 @@ struct PollMutableStateResponse {
   70: optional string clientLibraryVersion
   80: optional string clientFeatureVersion
   90: optional string clientImpl
-  100: optional bool isWorkflowRunning
-  110: optional i32 stickyTaskListScheduleToStartTimeout
-  120: optional i32 eventStoreVersion
-  130: optional binary branchToken
-  140: optional map<string, shared.ReplicationInfo> replicationInfo
-  150: optional shared.VersionHistories versionHistories
+  100: optional i32 stickyTaskListScheduleToStartTimeout
+  110: optional binary branchToken
+  120: optional map<string, shared.ReplicationInfo> replicationInfo
+  130: optional shared.VersionHistories versionHistories
+  140: optional i32 workflowState
+  150: optional i32 workflowCloseState
 }
 
 struct ResetStickyTaskListRequest {

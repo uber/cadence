@@ -541,12 +541,12 @@ func (e *historyEngineImpl) PollMutableState(
 		ClientLibraryVersion:                 response.ClientLibraryVersion,
 		ClientFeatureVersion:                 response.ClientFeatureVersion,
 		ClientImpl:                           response.ClientImpl,
-		IsWorkflowRunning:                    response.IsWorkflowRunning,
 		StickyTaskListScheduleToStartTimeout: response.StickyTaskListScheduleToStartTimeout,
-		EventStoreVersion:                    response.EventStoreVersion,
 		BranchToken:                          response.BranchToken,
 		ReplicationInfo:                      response.ReplicationInfo,
 		VersionHistories:                     response.VersionHistories,
+		WorkflowState:                        response.WorkflowState,
+		WorkflowCloseState:                   response.WorkflowCloseState,
 	}, nil
 }
 
@@ -648,6 +648,7 @@ func (e *historyEngineImpl) getMutableState(
 
 	executionInfo := msBuilder.GetExecutionInfo()
 	execution.RunId = context.getExecution().RunId
+	workflowState, workflowCloseState := msBuilder.GetWorkflowStateCloseStatus()
 	retResp = &h.GetMutableStateResponse{
 		Execution:                            &execution,
 		WorkflowType:                         &workflow.WorkflowType{Name: common.StringPtr(executionInfo.WorkflowTypeName)},
@@ -663,6 +664,8 @@ func (e *historyEngineImpl) getMutableState(
 		StickyTaskListScheduleToStartTimeout: common.Int32Ptr(executionInfo.StickyScheduleToStartTimeout),
 		EventStoreVersion:                    common.Int32Ptr(msBuilder.GetEventStoreVersion()),
 		BranchToken:                          currentBranchToken,
+		WorkflowState:                        common.Int32Ptr(int32(workflowState)),
+		WorkflowCloseState:                   common.Int32Ptr(int32(workflowCloseState)),
 	}
 	replicationState := msBuilder.GetReplicationState()
 	if replicationState != nil {
