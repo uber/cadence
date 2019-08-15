@@ -86,6 +86,31 @@ struct GetMutableStateResponse {
   150: optional shared.VersionHistories versionHistories
 }
 
+struct PollMutableStateRequest {
+  10: optional string domainUUID
+  20: optional shared.WorkflowExecution execution
+  30: optional i64 (js.type = "Long") expectedNextEventId
+}
+
+struct PollMutableStateResponse {
+  10: optional shared.WorkflowExecution execution
+  20: optional shared.WorkflowType workflowType
+  30: optional i64 (js.type = "Long") NextEventId
+  35: optional i64 (js.type = "Long") PreviousStartedEventId
+  40: optional i64 (js.type = "Long") LastFirstEventId
+  50: optional shared.TaskList taskList
+  60: optional shared.TaskList stickyTaskList
+  70: optional string clientLibraryVersion
+  80: optional string clientFeatureVersion
+  90: optional string clientImpl
+  100: optional bool isWorkflowRunning
+  110: optional i32 stickyTaskListScheduleToStartTimeout
+  120: optional i32 eventStoreVersion
+  130: optional binary branchToken
+  140: optional map<string, shared.ReplicationInfo> replicationInfo
+  150: optional shared.VersionHistories versionHistories
+}
+
 struct ResetStickyTaskListRequest {
   10: optional string domainUUID
   20: optional shared.WorkflowExecution execution
@@ -327,7 +352,7 @@ service HistoryService {
    * It fails with 'EntityNotExistError' if specified workflow execution in unknown to the service.
    * It returns CurrentBranchChangedError if the workflow version branch has changed.
    **/
-   GetMutableStateResponse GetMutableStateWithLongPoll(1: GetMutableStateRequest getRequest)
+   PollMutableStateResponse PollMutableState(1: PollMutableStateRequest getRequest)
      throws (
        1: shared.BadRequestError badRequestError,
        2: shared.InternalServiceError internalServiceError,

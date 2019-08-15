@@ -115,21 +115,21 @@ func (_m *MockHistoryEngine) GetMutableState(ctx context.Context, request *gohis
 	return r0, r1
 }
 
-// GetMutableStateWithLongPoll is mock implementation for GetMutableState of HistoryEngine
-func (_m *MockHistoryEngine) GetMutableStateWithLongPoll(ctx context.Context, request *gohistory.GetMutableStateRequest) (*gohistory.GetMutableStateResponse, error) {
+// PollMutableState is mock implementation for GetMutableState of HistoryEngine
+func (_m *MockHistoryEngine) PollMutableState(ctx context.Context, request *gohistory.PollMutableStateRequest) (*gohistory.PollMutableStateResponse, error) {
 	ret := _m.Called(ctx, request)
 
-	var r0 *gohistory.GetMutableStateResponse
-	if rf, ok := ret.Get(0).(func(*gohistory.GetMutableStateRequest) *gohistory.GetMutableStateResponse); ok {
+	var r0 *gohistory.PollMutableStateResponse
+	if rf, ok := ret.Get(0).(func(*gohistory.PollMutableStateRequest) *gohistory.PollMutableStateResponse); ok {
 		r0 = rf(request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*gohistory.GetMutableStateResponse)
+			r0 = ret.Get(0).(*gohistory.PollMutableStateResponse)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(*gohistory.GetMutableStateRequest) error); ok {
+	if rf, ok := ret.Get(1).(func(*gohistory.PollMutableStateRequest) error); ok {
 		r1 = rf(request)
 	} else {
 		r1 = ret.Error(1)

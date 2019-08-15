@@ -197,37 +197,37 @@ func (mr *_MockClientRecorder) GetMutableState(
 	return mr.mock.ctrl.RecordCall(mr.mock, "GetMutableState", args...)
 }
 
-// GetMutableStateWithLongPoll responds to a GetMutableStateWithLongPoll call based on the mock expectations. This
+// PollMutableState responds to a PollMutableState call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().GetMutableStateWithLongPoll(gomock.Any(), ...).Return(...)
-// 	... := client.GetMutableStateWithLongPoll(...)
-func (m *MockClient) GetMutableStateWithLongPoll(
+// 	client.EXPECT().PollMutableState(gomock.Any(), ...).Return(...)
+// 	... := client.PollMutableState(...)
+func (m *MockClient) PollMutableState(
 	ctx context.Context,
-	_GetRequest *history.GetMutableStateRequest,
+	_GetRequest *history.PollMutableStateRequest,
 	opts ...yarpc.CallOption,
-) (success *history.GetMutableStateResponse, err error) {
+) (success *history.PollMutableStateResponse, err error) {
 
 	args := []interface{}{ctx, _GetRequest}
 	for _, o := range opts {
 		args = append(args, o)
 	}
 	i := 0
-	ret := m.ctrl.Call(m, "GetMutableStateWithLongPoll", args...)
-	success, _ = ret[i].(*history.GetMutableStateResponse)
+	ret := m.ctrl.Call(m, "PollMutableState", args...)
+	success, _ = ret[i].(*history.PollMutableStateResponse)
 	i++
 	err, _ = ret[i].(error)
 	return
 }
 
-func (mr *_MockClientRecorder) GetMutableStateWithLongPoll(
+func (mr *_MockClientRecorder) PollMutableState(
 	ctx interface{},
 	_GetRequest interface{},
 	opts ...interface{},
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _GetRequest}, opts...)
-	return mr.mock.ctrl.RecordCall(mr.mock, "GetMutableStateWithLongPoll", args...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "PollMutableState", args...)
 }
 
 // RecordActivityTaskHeartbeat responds to a RecordActivityTaskHeartbeat call based on the mock expectations. This

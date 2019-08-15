@@ -96,18 +96,18 @@ func (c *metricClient) GetMutableState(
 	return resp, err
 }
 
-func (c *metricClient) GetMutableStateWithLongPoll(
+func (c *metricClient) PollMutableState(
 	context context.Context,
-	request *h.GetMutableStateRequest,
-	opts ...yarpc.CallOption) (*h.GetMutableStateResponse, error) {
-	c.metricsClient.IncCounter(metrics.HistoryClientGetMutableStateWithLongPollScope, metrics.CadenceClientRequests)
+	request *h.PollMutableStateRequest,
+	opts ...yarpc.CallOption) (*h.PollMutableStateResponse, error) {
+	c.metricsClient.IncCounter(metrics.HistoryClientPollMutableStateScope, metrics.CadenceClientRequests)
 
-	sw := c.metricsClient.StartTimer(metrics.HistoryClientGetMutableStateWithLongPollScope, metrics.CadenceClientLatency)
-	resp, err := c.client.GetMutableStateWithLongPoll(context, request, opts...)
+	sw := c.metricsClient.StartTimer(metrics.HistoryClientPollMutableStateScope, metrics.CadenceClientLatency)
+	resp, err := c.client.PollMutableState(context, request, opts...)
 	sw.Stop()
 
 	if err != nil {
-		c.metricsClient.IncCounter(metrics.HistoryClientGetMutableStateWithLongPollScope, metrics.CadenceClientFailures)
+		c.metricsClient.IncCounter(metrics.HistoryClientPollMutableStateScope, metrics.CadenceClientFailures)
 	}
 
 	return resp, err

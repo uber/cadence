@@ -62,11 +62,11 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*history.GetMutableStateResponse, error)
 
-	GetMutableStateWithLongPoll(
+	PollMutableState(
 		ctx context.Context,
-		GetRequest *history.GetMutableStateRequest,
+		GetRequest *history.PollMutableStateRequest,
 		opts ...yarpc.CallOption,
-	) (*history.GetMutableStateResponse, error)
+	) (*history.PollMutableStateResponse, error)
 
 	RecordActivityTaskHeartbeat(
 		ctx context.Context,
@@ -317,13 +317,13 @@ func (c client) GetMutableState(
 	return
 }
 
-func (c client) GetMutableStateWithLongPoll(
+func (c client) PollMutableState(
 	ctx context.Context,
-	_GetRequest *history.GetMutableStateRequest,
+	_GetRequest *history.PollMutableStateRequest,
 	opts ...yarpc.CallOption,
-) (success *history.GetMutableStateResponse, err error) {
+) (success *history.PollMutableStateResponse, err error) {
 
-	args := history.HistoryService_GetMutableStateWithLongPoll_Helper.Args(_GetRequest)
+	args := history.HistoryService_PollMutableState_Helper.Args(_GetRequest)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -331,12 +331,12 @@ func (c client) GetMutableStateWithLongPoll(
 		return
 	}
 
-	var result history.HistoryService_GetMutableStateWithLongPoll_Result
+	var result history.HistoryService_PollMutableState_Result
 	if err = result.FromWire(body); err != nil {
 		return
 	}
 
-	success, err = history.HistoryService_GetMutableStateWithLongPoll_Helper.UnwrapResponse(&result)
+	success, err = history.HistoryService_PollMutableState_Helper.UnwrapResponse(&result)
 	return
 }
 

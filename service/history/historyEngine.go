@@ -517,13 +517,37 @@ func (e *historyEngineImpl) GetMutableState(
 	return e.getMutableStateOrPolling(ctx, request)
 }
 
-// GetMutableStateWithLongPoll retrieves the mutable state of the workflow execution with long polling
-func (e *historyEngineImpl) GetMutableStateWithLongPoll(
+// PollMutableState retrieves the mutable state of the workflow execution with long polling
+func (e *historyEngineImpl) PollMutableState(
 	ctx ctx.Context,
-	request *h.GetMutableStateRequest,
-) (*h.GetMutableStateResponse, error) {
+	request *h.PollMutableStateRequest,
+) (*h.PollMutableStateResponse, error) {
 
-	return e.getMutableStateOrPolling(ctx, request)
+	response, err := e.getMutableStateOrPolling(ctx, &h.GetMutableStateRequest{
+		DomainUUID:          request.DomainUUID,
+		Execution:           request.Execution,
+		ExpectedNextEventId: request.ExpectedNextEventId})
+	if err != nil {
+		return nil, err
+	}
+	return &h.PollMutableStateResponse{
+		Execution:                            response.Execution,
+		WorkflowType:                         response.WorkflowType,
+		NextEventId:                          response.NextEventId,
+		PreviousStartedEventId:               response.PreviousStartedEventId,
+		LastFirstEventId:                     response.LastFirstEventId,
+		TaskList:                             response.TaskList,
+		StickyTaskList:                       response.StickyTaskList,
+		ClientLibraryVersion:                 response.ClientLibraryVersion,
+		ClientFeatureVersion:                 response.ClientFeatureVersion,
+		ClientImpl:                           response.ClientImpl,
+		IsWorkflowRunning:                    response.IsWorkflowRunning,
+		StickyTaskListScheduleToStartTimeout: response.StickyTaskListScheduleToStartTimeout,
+		EventStoreVersion:                    response.EventStoreVersion,
+		BranchToken:                          response.BranchToken,
+		ReplicationInfo:                      response.ReplicationInfo,
+		VersionHistories:                     response.VersionHistories,
+	}, nil
 }
 
 func (e *historyEngineImpl) getMutableStateOrPolling(

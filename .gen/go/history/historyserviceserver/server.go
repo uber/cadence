@@ -56,10 +56,10 @@ type Interface interface {
 		GetRequest *history.GetMutableStateRequest,
 	) (*history.GetMutableStateResponse, error)
 
-	GetMutableStateWithLongPoll(
+	PollMutableState(
 		ctx context.Context,
-		GetRequest *history.GetMutableStateRequest,
-	) (*history.GetMutableStateResponse, error)
+		GetRequest *history.PollMutableStateRequest,
+	) (*history.PollMutableStateResponse, error)
 
 	RecordActivityTaskHeartbeat(
 		ctx context.Context,
@@ -228,13 +228,13 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
-				Name: "GetMutableStateWithLongPoll",
+				Name: "PollMutableState",
 				HandlerSpec: thrift.HandlerSpec{
 
 					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetMutableStateWithLongPoll),
+					Unary: thrift.UnaryHandler(h.PollMutableState),
 				},
-				Signature:    "GetMutableStateWithLongPoll(GetRequest *history.GetMutableStateRequest) (*history.GetMutableStateResponse)",
+				Signature:    "PollMutableState(GetRequest *history.PollMutableStateRequest) (*history.PollMutableStateResponse)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -565,16 +565,16 @@ func (h handler) GetMutableState(ctx context.Context, body wire.Value) (thrift.R
 	return response, err
 }
 
-func (h handler) GetMutableStateWithLongPoll(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args history.HistoryService_GetMutableStateWithLongPoll_Args
+func (h handler) PollMutableState(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_PollMutableState_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, err := h.impl.GetMutableStateWithLongPoll(ctx, args.GetRequest)
+	success, err := h.impl.PollMutableState(ctx, args.GetRequest)
 
 	hadError := err != nil
-	result, err := history.HistoryService_GetMutableStateWithLongPoll_Helper.WrapResponse(success, err)
+	result, err := history.HistoryService_PollMutableState_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {
