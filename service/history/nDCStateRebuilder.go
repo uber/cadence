@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination nDCStateRebuilder_mock.go
+
 package history
 
 import (
@@ -131,6 +133,10 @@ func (r *nDCStateRebuilderImpl) rebuild(
 	if err := rebuildMutableState.SetCurrentBranchToken(nil); err != nil {
 		return nil, 0, err
 	}
+
+	// TODO refresh tasks before return
+	//  this includes UpsertWorkflowSearchAttributesTask
+
 	return rebuildMutableState, r.rebuildHistorySize, nil
 }
 

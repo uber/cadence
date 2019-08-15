@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// +build test
+
 package history
 
 import (
@@ -192,11 +194,6 @@ func (s *nDCConflictResolverSuite) TestRebuild() {
 	).Once()
 	mockRebuildMutableState.On("SetVersionHistories", versionHistories).Return(nil).Once()
 	mockRebuildMutableState.On("SetUpdateCondition", updateCondition).Once()
-	if s.mockShard.config.EnableVisibilityToKafka() {
-		mockRebuildMutableState.On("AddTransferTasks", []persistence.Task{
-			&persistence.UpsertWorkflowSearchAttributesTask{},
-		}).Once()
-	}
 
 	s.mockStateBuilder.EXPECT().rebuild(
 		ctx,

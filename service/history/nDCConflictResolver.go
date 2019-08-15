@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination nDCConflictResolver_mock.go
+
 package history
 
 import (
@@ -28,7 +30,6 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/persistence"
 )
 
 type (
@@ -179,10 +180,6 @@ func (r *nDCConflictResolverImpl) rebuild(
 	}
 	// set the update condition from original mutable state
 	rebuildMutableState.SetUpdateCondition(r.mutableState.GetUpdateCondition())
-	if r.shard.GetConfig().EnableVisibilityToKafka() {
-		// whenever a reset of mutable state is done, we need to sync the workflow search attribute
-		rebuildMutableState.AddTransferTasks(&persistence.UpsertWorkflowSearchAttributesTask{})
-	}
 
 	r.context.clear()
 	r.context.setHistorySize(rebuildHistorySize)

@@ -18,38 +18,46 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination nDCWorkflowResetter_mock.go
+
 package history
 
 import (
 	ctx "context"
 
-	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/cluster"
+	"github.com/pborman/uuid"
+
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 )
 
 type (
+	nDCWorkflowResetterCompleteFn func()
+
 	nDCWorkflowResetter interface {
-		resetMutableState(
+		resetWorkflow(
 			ctx ctx.Context,
 			baseEventID int64,
 			baseVersion int64,
-		) (mutableState, error)
+		) (mutableState, nDCWorkflowResetterCompleteFn, error)
 	}
 
 	nDCWorkflowResetterImpl struct {
-		shard           ShardContext
-		domainCache     cache.DomainCache
-		clusterMetadata cluster.Metadata
-		historyV2Mgr    persistence.HistoryV2Manager
+		shard          ShardContext
+		transactionMgr nDCTransactionMgr
+		historyV2Mgr   persistence.HistoryV2Manager
+		stateRebuilder nDCStateRebuilder
 
-		baseContext      workflowExecutionContext
-		baseMutableState mutableState
-		resetContext     workflowExecutionContext
+		domainID   string
+		workflowID string
+		baseRunID  string
+		newContext workflowExecutionContext
+		newRunID   string
 
-		resetHistorySize int64
-		logger           log.Logger
+		logger log.Logger
 	}
 )
 
@@ -57,54 +65,123 @@ var _ nDCWorkflowResetter = (*nDCWorkflowResetterImpl)(nil)
 
 func newNDCWorkflowResetter(
 	shard ShardContext,
+	transactionMgr nDCTransactionMgr,
 
-	baseContext workflowExecutionContext,
-	baseMutableState mutableState,
-	resetContext workflowExecutionContext,
+	domainID string,
+	workflowID string,
+	baseRunID string,
+	newContext workflowExecutionContext,
+	newRunID string,
 	logger log.Logger,
 ) *nDCWorkflowResetterImpl {
 
 	return &nDCWorkflowResetterImpl{
-		shard:           shard,
-		domainCache:     shard.GetDomainCache(),
-		clusterMetadata: shard.GetService().GetClusterMetadata(),
-		historyV2Mgr:    shard.GetHistoryV2Manager(),
+		shard:          shard,
+		transactionMgr: transactionMgr,
+		historyV2Mgr:   shard.GetHistoryV2Manager(),
+		stateRebuilder: newNDCStateRebuilder(shard, logger),
 
-		baseContext:      baseContext,
-		baseMutableState: baseMutableState,
-		resetContext:     resetContext,
-		resetHistorySize: 0,
-		logger:           logger,
+		domainID:   domainID,
+		workflowID: workflowID,
+		baseRunID:  baseRunID,
+		newContext: newContext,
+		newRunID:   newRunID,
+		logger:     logger,
 	}
 }
 
-func (r *nDCWorkflowResetterImpl) resetMutableState(
+func (r *nDCWorkflowResetterImpl) resetWorkflow(
 	ctx ctx.Context,
 	baseEventID int64,
 	baseVersion int64,
-) (mutableState, error) {
+) (mutableState, nDCWorkflowResetterCompleteFn, error) {
 
-	// baseVersionHistories := r.baseMutableState.GetVersionHistories()
-	// index, err := baseVersionHistories.FindFirstVersionHistoryIndexByItem(
-	// 	persistence.NewVersionHistoryItem(baseEventID, baseVersion),
-	// )
-	// if err != nil {
-	// 	// TODO we should use a new retry error for 3+DC
-	// 	baseExecutionInfo := r.baseMutableState.GetExecutionInfo()
-	// 	return nil, newRetryTaskErrorWithHint(
-	// 		ErrRetryBufferEventsMsg,
-	// 		baseExecutionInfo.DomainID,
-	// 		baseExecutionInfo.WorkflowID,
-	// 		baseExecutionInfo.RunID,
-	// 		r.baseMutableState.GetNextEventID(), // especially here
-	// 	)
-	// }
-	//
-	// baseVersionHistory, err := baseVersionHistories.GetVersionHistory(index)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// baseBranchToken := baseVersionHistory.GetBranchToken()
+	baseWorkflow, err := r.transactionMgr.loadNDCWorkflow(
+		ctx,
+		r.domainID,
+		r.workflowID,
+		r.baseRunID,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
-	panic("implement this")
+	baseVersionHistories := baseWorkflow.getMutableState().GetVersionHistories()
+	index, err := baseVersionHistories.FindFirstVersionHistoryIndexByItem(
+		persistence.NewVersionHistoryItem(baseEventID, baseVersion),
+	)
+	if err != nil {
+		// TODO we should use a new retry error for 3+DC
+		return nil, nil, newRetryTaskErrorWithHint(
+			ErrRetryBufferEventsMsg,
+			r.domainID,
+			r.workflowID,
+			r.baseRunID,
+			baseWorkflow.getMutableState().GetNextEventID(), // especially here
+		)
+	}
+
+	baseVersionHistory, err := baseVersionHistories.GetVersionHistory(index)
+	if err != nil {
+		return nil, nil, err
+	}
+	baseBranchToken := baseVersionHistory.GetBranchToken()
+
+	baseWorkflowIdentifier := definition.NewWorkflowIdentifier(
+		r.domainID,
+		r.workflowID,
+		r.baseRunID,
+	)
+	resetWorkflowIdentifier := definition.NewWorkflowIdentifier(
+		r.domainID,
+		r.workflowID,
+		r.newRunID,
+	)
+
+	requestID := uuid.New()
+	rebuildMutableState, rebuildHistorySize, err := r.stateRebuilder.rebuild(
+		ctx,
+		baseWorkflowIdentifier,
+		baseBranchToken,
+		baseEventID+1,
+		resetWorkflowIdentifier,
+		requestID,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// TODO after the rebuild, create branch and return a defer branch creation finish fn
+
+	// fork a new history branch
+	shardID := r.shard.GetShardID()
+	resp, err := r.historyV2Mgr.ForkHistoryBranch(&persistence.ForkHistoryBranchRequest{
+		ForkBranchToken: baseBranchToken,
+		ForkNodeID:      baseEventID + 1,
+		Info:            historyGarbageCleanupInfo(r.domainID, r.workflowID, r.newRunID),
+		ShardID:         common.IntPtr(shardID),
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	newBranchToken := resp.NewBranchToken
+	completeFn := func() {
+		if errComplete := r.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
+			BranchToken: newBranchToken,
+			Success:     true, // past lessons learnt from Cassandra & gocql tells that we cannot possibly find all timeout errors
+			ShardID:     common.IntPtr(shardID),
+		}); errComplete != nil {
+			r.logger.WithTags(
+				tag.Error(errComplete),
+			).Error("newNDCWorkflowResetter unable to complete creation of new branch.")
+		}
+	}
+	err = rebuildMutableState.SetCurrentBranchToken(newBranchToken)
+	if err != nil {
+		completeFn()
+		return nil, nil, err
+	}
+
+	r.newContext.setHistorySize(rebuildHistorySize)
+	return rebuildMutableState, completeFn, nil
 }
