@@ -44,11 +44,11 @@ type (
 		logger log.Logger,
 	) nDCBranchMgr
 
-	nDCStateRebuilderProvider func(
+	nDCConflictResolverProvider func(
 		context workflowExecutionContext,
 		mutableState mutableState,
 		logger log.Logger,
-	) nDCStateRebuilder
+	) nDCConflictResolver
 
 	nDCHistoryReplicator struct {
 		shard           ShardContext
@@ -61,10 +61,10 @@ type (
 		logger          log.Logger
 		resetor         workflowResetor
 
-		getNewBranchMgr      nDCBranchMgrProvider
-		getNewStateRebuilder nDCStateRebuilderProvider
-		getNewStateBuilder   stateBuilderProvider
-		getNewMutableState   mutableStateProvider
+		getNewBranchMgr        nDCBranchMgrProvider
+		getNewConflictResolver nDCConflictResolverProvider
+		getNewStateBuilder     stateBuilderProvider
+		getNewMutableState     mutableStateProvider
 	}
 )
 
@@ -87,8 +87,8 @@ func newNDCHistoryReplicator(
 		getNewBranchMgr: func(context workflowExecutionContext, mutableState mutableState, logger log.Logger) nDCBranchMgr {
 			return newNDCBranchMgr(shard, context, mutableState, logger)
 		},
-		getNewStateRebuilder: func(context workflowExecutionContext, mutableState mutableState, logger log.Logger) nDCStateRebuilder {
-			return newNDCStateRebuilder(shard, context, mutableState, logger)
+		getNewConflictResolver: func(context workflowExecutionContext, mutableState mutableState, logger log.Logger) nDCConflictResolver {
+			return newNDCConflictResolver(shard, context, mutableState, logger)
 		},
 		getNewStateBuilder: func(msBuilder mutableState, logger log.Logger) stateBuilder {
 			return newStateBuilder(shard, msBuilder, logger)
@@ -291,8 +291,8 @@ func (r *nDCHistoryReplicator) applyNonStartEventsPrepareMutableState(
 ) (mutableState, bool, error) {
 
 	incomingVersion := task.getVersion()
-	stateRebuilder := r.getNewStateRebuilder(context, mutableState, task.getLogger())
-	return stateRebuilder.prepareMutableState(
+	conflictResolver := r.getNewConflictResolver(context, mutableState, task.getLogger())
+	return conflictResolver.prepareMutableState(
 		ctx,
 		branchIndex,
 		incomingVersion,
