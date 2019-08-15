@@ -1686,18 +1686,30 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	// 3. the next event ID
 	// 4. whether the workflow is closed
 	// 5. error if any
-	queryHistory := func(domainUUID string, execution *gen.WorkflowExecution, expectedNextEventID int64) (int32, []byte, string, int64, int64, bool, error) {
-		response, err := wh.history.GetMutableState(ctx, &h.GetMutableStateRequest{
+	queryHistory := func(
+		domainUUID string,
+		execution *gen.WorkflowExecution,
+		expectedNextEventID int64,
+		currentBranchToken []byte,
+	) (int32, []byte, string, int64, int64, bool, error) {
+		response, err := wh.history.PollMutableState(ctx, &h.PollMutableStateRequest{
 			DomainUUID:          common.StringPtr(domainUUID),
 			Execution:           execution,
 			ExpectedNextEventId: common.Int64Ptr(expectedNextEventID),
+			CurrentBranchToken:  currentBranchToken,
 		})
 
 		if err != nil {
 			return 0, nil, "", 0, 0, false, err
 		}
 
-		return response.GetEventStoreVersion(), response.CurrentBranchToken, response.Execution.GetRunId(), response.GetLastFirstEventId(), response.GetNextEventId(), response.GetIsWorkflowRunning(), nil
+		return response.GetEventStoreVersion(),
+			response.CurrentBranchToken,
+			response.Execution.GetRunId(),
+			response.GetLastFirstEventId(),
+			response.GetNextEventId(),
+			response.GetIsWorkflowRunning(),
+			nil
 	}
 
 	isLongPoll := getRequest.GetWaitForNewEvent()
@@ -1728,7 +1740,8 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 			if !isCloseEventOnly {
 				queryNextEventID = token.NextEventID
 			}
-			token.EventStoreVersion, token.BranchToken, _, lastFirstEventID, nextEventID, isWorkflowRunning, err = queryHistory(domainID, execution, queryNextEventID)
+			token.EventStoreVersion, token.BranchToken, _, lastFirstEventID, nextEventID, isWorkflowRunning, err =
+				queryHistory(domainID, execution, queryNextEventID, token.BranchToken)
 			if err != nil {
 				return nil, wh.error(err, scope)
 			}
@@ -1740,7 +1753,8 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		if !isCloseEventOnly {
 			queryNextEventID = common.FirstEventID
 		}
-		token.EventStoreVersion, token.BranchToken, runID, lastFirstEventID, nextEventID, isWorkflowRunning, err = queryHistory(domainID, execution, queryNextEventID)
+		token.EventStoreVersion, token.BranchToken, runID, lastFirstEventID, nextEventID, isWorkflowRunning, err =
+			queryHistory(domainID, execution, queryNextEventID, nil)
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}

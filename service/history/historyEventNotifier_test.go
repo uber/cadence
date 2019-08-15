@@ -21,6 +21,7 @@
 package history
 
 import (
+	"github.com/uber/cadence/common/persistence"
 	"sync"
 	"testing"
 	"time"
@@ -75,11 +76,14 @@ func (s *historyEventNotifierSuite) TestSingleSubscriberWatchingEvents() {
 		WorkflowId: common.StringPtr("workflow ID"),
 		RunId:      common.StringPtr("run ID"),
 	}
-	var lastFirstEventID int64 = 3
-	var previousStartedEventID int64 = 5
-	var nextEventID int64 = 18
+	lastFirstEventID := int64(3)
+	previousStartedEventID := int64(5)
+	nextEventID := int64(18)
+	workflowState := persistence.WorkflowStateCreated
+	workflowCloseState := persistence.WorkflowCloseStatusNone
 	isRunning := true
-	historyEvent := newHistoryEventNotification(domainID, execution, lastFirstEventID, nextEventID, previousStartedEventID, isRunning)
+	branchToken := make([]byte, 0)
+	historyEvent := newHistoryEventNotification(domainID, execution, lastFirstEventID, nextEventID, previousStartedEventID, isRunning, branchToken, workflowState, workflowCloseState)
 	timerChan := time.NewTimer(time.Second * 2).C
 
 	subscriberID, channel, err := s.historyEventNotifier.WatchHistoryEvent(definition.NewWorkflowIdentifier(domainID, execution.GetWorkflowId(), execution.GetRunId()))
@@ -106,11 +110,14 @@ func (s *historyEventNotifierSuite) TestMultipleSubscriberWatchingEvents() {
 		RunId:      common.StringPtr("run ID"),
 	}
 
-	var lastFirstEventID int64 = 3
-	var previousStartedEventID int64 = 5
-	var nextEventID int64 = 18
+	lastFirstEventID := int64(3)
+	previousStartedEventID := int64(5)
+	nextEventID := int64(18)
+	workflowState := persistence.WorkflowStateCreated
+	workflowCloseState := persistence.WorkflowCloseStatusNone
 	isRunning := true
-	historyEvent := newHistoryEventNotification(domainID, execution, lastFirstEventID, nextEventID, previousStartedEventID, isRunning)
+	branchToken := make([]byte, 0)
+	historyEvent := newHistoryEventNotification(domainID, execution, lastFirstEventID, nextEventID, previousStartedEventID, isRunning, branchToken, workflowState, workflowCloseState)
 	timerChan := time.NewTimer(time.Second * 5).C
 
 	subscriberCount := 100

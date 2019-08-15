@@ -622,6 +622,7 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 				response.NextEventId = common.Int64Ptr(event.nextEventID)
 				response.IsWorkflowRunning = common.BoolPtr(event.isWorkflowRunning)
 				response.PreviousStartedEventId = common.Int64Ptr(event.previousStartedEventID)
+				//TODO: wire up workflow state and close state after merge
 				if request.CurrentBranchToken != nil && !bytes.Equal(request.CurrentBranchToken, event.currentBranchToken) {
 					return nil, &workflow.CurrentBranchChangedError{
 						Message:            "Current branch token and request branch token doesn't match.",

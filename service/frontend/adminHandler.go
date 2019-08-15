@@ -296,9 +296,8 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 		}
 
 		response, err := adh.history.GetMutableState(ctx, &h.GetMutableStateRequest{
-			DomainUUID:          common.StringPtr(domainID),
-			Execution:           execution,
-			ExpectedNextEventId: common.Int64Ptr(common.FirstEventID), // common.FirstEventID means no long poll
+			DomainUUID: common.StringPtr(domainID),
+			Execution:  execution,
 		})
 		if err != nil {
 			return nil, err

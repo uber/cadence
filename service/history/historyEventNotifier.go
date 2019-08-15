@@ -68,6 +68,8 @@ func newHistoryEventNotification(
 	previousStartedEventID int64,
 	isWorkflowRunning bool,
 	currentBranchToken []byte,
+	workflowExecutionState int,
+	workflowExecutionCloseState int,
 ) *historyEventNotification {
 
 	return &historyEventNotification{
@@ -76,11 +78,13 @@ func newHistoryEventNotification(
 			workflowExecution.GetWorkflowId(),
 			workflowExecution.GetRunId(),
 		),
-		lastFirstEventID:       lastFirstEventID,
-		nextEventID:            nextEventID,
-		previousStartedEventID: previousStartedEventID,
-		isWorkflowRunning:      isWorkflowRunning,
-		currentBranchToken:     currentBranchToken,
+		lastFirstEventID:            lastFirstEventID,
+		nextEventID:                 nextEventID,
+		previousStartedEventID:      previousStartedEventID,
+		isWorkflowRunning:           isWorkflowRunning,
+		currentBranchToken:          currentBranchToken,
+		workflowExecutionState:      workflowExecutionState,
+		workflowExecutionCloseState: workflowExecutionCloseState,
 	}
 }
 
