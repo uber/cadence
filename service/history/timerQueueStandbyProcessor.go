@@ -373,7 +373,7 @@ func (t *timerQueueStandbyProcessorImpl) processDecisionTimeout(
 	}
 
 	return t.processTimer(timerTask, func(context workflowExecutionContext, msBuilder mutableState) error {
-		di, isPending := msBuilder.GetPendingDecision(timerTask.EventID)
+		di, isPending := msBuilder.GetDecisionInfo(timerTask.EventID)
 
 		if !isPending {
 			return nil
@@ -420,7 +420,7 @@ func (t *timerQueueStandbyProcessorImpl) processWorkflowBackoffTimer(
 
 	return t.processTimer(timerTask, func(context workflowExecutionContext, msBuilder mutableState) error {
 
-		if msBuilder.HasProcessedOrPendingDecisionTask() {
+		if msBuilder.HasProcessedOrPendingDecision() {
 			// if there is one decision already been processed
 			// or has pending decision, meaning workflow has already running
 			return nil

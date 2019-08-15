@@ -50,8 +50,6 @@ const (
 var (
 	// ErrWorkflowFinished indicates trying to mutate mutable state after workflow finished
 	ErrWorkflowFinished = &workflow.InternalServiceError{Message: "invalid mutable state action: mutation after finish"}
-
-	emptyTasks = []persistence.Task{}
 )
 
 type (
@@ -318,7 +316,7 @@ func (e *mutableStateBuilder) FlushBufferedEvents() error {
 	}
 
 	// no decision in-flight, flush all buffered events to committed bucket
-	if !e.HasInFlightDecisionTask() {
+	if !e.HasInFlightDecision() {
 		// flush persisted buffered events
 		if len(e.bufferedEvents) > 0 {
 			reorderFunc(e.bufferedEvents)
@@ -352,7 +350,7 @@ func (e *mutableStateBuilder) FlushBufferedEvents() error {
 	}
 
 	// if decision is not closed yet, and there are new buffered events, then put those to the pending buffer
-	if e.HasInFlightDecisionTask() && len(newBufferedEvents) > 0 {
+	if e.HasInFlightDecision() && len(newBufferedEvents) > 0 {
 		e.updateBufferedEvents = newBufferedEvents
 	}
 
@@ -694,7 +692,7 @@ func (e *mutableStateBuilder) shouldBufferEvent(
 		// do not buffer event if event is directly generated from a corresponding decision
 
 		// sanity check there is no decision on the fly
-		if e.HasInFlightDecisionTask() {
+		if e.HasInFlightDecision() {
 			msg := fmt.Sprintf("history mutable state is processing event: %v while there is decision pending. "+
 				"domainID: %v, workflow ID: %v, run ID: %v.", eventType, e.executionInfo.DomainID, e.executionInfo.WorkflowID, e.executionInfo.RunID)
 			panic(msg)
@@ -871,14 +869,6 @@ func (e *mutableStateBuilder) GetSignalInfo(
 
 	ri, ok := e.pendingSignalInfoIDs[initiatedEventID]
 	return ri, ok
-}
-
-func (e *mutableStateBuilder) GetAllSignalsToSend() map[int64]*persistence.SignalInfo {
-	return e.pendingSignalInfoIDs
-}
-
-func (e *mutableStateBuilder) GetAllRequestCancels() map[int64]*persistence.RequestCancelInfo {
-	return e.pendingRequestCancelInfoIDs
 }
 
 // GetCompletionEvent retrieves the workflow completion event from mutable state
@@ -1115,8 +1105,8 @@ func (e *mutableStateBuilder) getDecisionInfo() *decisionInfo {
 	}
 }
 
-// GetPendingDecision returns details about the in-progress decision task
-func (e *mutableStateBuilder) GetPendingDecision(
+// GetDecisionInfo returns details about the in-progress decision task
+func (e *mutableStateBuilder) GetDecisionInfo(
 	scheduleEventID int64,
 ) (*decisionInfo, bool) {
 
@@ -1139,19 +1129,36 @@ func (e *mutableStateBuilder) GetPendingChildExecutionInfos() map[int64]*persist
 	return e.pendingChildExecutionInfoIDs
 }
 
-func (e *mutableStateBuilder) HasPendingDecisionTask() bool {
+func (e *mutableStateBuilder) GetPendingRequestCancelInfos() map[int64]*persistence.RequestCancelInfo {
+	return e.pendingRequestCancelInfoIDs
+}
+
+func (e *mutableStateBuilder) GetPendingSignalInfos() map[int64]*persistence.SignalInfo {
+	return e.pendingSignalInfoIDs
+}
+
+func (e *mutableStateBuilder) HasProcessedOrPendingDecision() bool {
+	return e.HasPendingDecision() || e.GetPreviousStartedEventID() != common.EmptyEventID
+}
+
+func (e *mutableStateBuilder) HasPendingDecision() bool {
 	return e.executionInfo.DecisionScheduleID != common.EmptyEventID
 }
 
-func (e *mutableStateBuilder) HasProcessedOrPendingDecisionTask() bool {
-	return e.HasPendingDecisionTask() || e.GetPreviousStartedEventID() != common.EmptyEventID
+func (e *mutableStateBuilder) GetPendingDecision() (*decisionInfo, bool) {
+	if e.executionInfo.DecisionScheduleID == common.EmptyEventID {
+		return nil, false
+	}
+
+	di := e.getDecisionInfo()
+	return di, true
 }
 
-func (e *mutableStateBuilder) HasInFlightDecisionTask() bool {
+func (e *mutableStateBuilder) HasInFlightDecision() bool {
 	return e.executionInfo.DecisionStartedID > 0
 }
 
-func (e *mutableStateBuilder) GetInFlightDecisionTask() (*decisionInfo, bool) {
+func (e *mutableStateBuilder) GetInFlightDecision() (*decisionInfo, bool) {
 	if e.executionInfo.DecisionScheduleID == common.EmptyEventID ||
 		e.executionInfo.DecisionStartedID == common.EmptyEventID {
 		return nil, false
@@ -1403,10 +1410,15 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 	}
 
 	// TODO merge active & passive task generation
-	if err := e.taskGenerator.generateWorkflowStartTasks(event); err != nil {
+	if err := e.taskGenerator.generateWorkflowStartTasks(
+		event.GetTimestamp(),
+		event,
+	); err != nil {
 		return nil, err
 	}
-	if err := e.taskGenerator.generateRecordWorkflowStartedTasks(event); err != nil {
+	if err := e.taskGenerator.generateRecordWorkflowStartedTasks(
+		event.GetTimestamp(),
+	); err != nil {
 		return nil, err
 	}
 
@@ -1454,10 +1466,15 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(
 		return nil, err
 	}
 	// TODO merge active & passive task generation
-	if err := e.taskGenerator.generateWorkflowStartTasks(event); err != nil {
+	if err := e.taskGenerator.generateWorkflowStartTasks(
+		event.GetTimestamp(),
+		event,
+	); err != nil {
 		return nil, err
 	}
-	if err := e.taskGenerator.generateRecordWorkflowStartedTasks(event); err != nil {
+	if err := e.taskGenerator.generateRecordWorkflowStartedTasks(
+		event.GetTimestamp(),
+	); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -1562,6 +1579,7 @@ func (e *mutableStateBuilder) AddFirstDecisionTaskScheduled(
 	var err error
 	if decisionBackoffDuration != 0 {
 		if err = e.taskGenerator.generateDelayedDecisionTasks(
+			startEvent.GetTimestamp(),
 			startEvent,
 		); err != nil {
 			return err
@@ -1598,15 +1616,13 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEventAsHeartbeat(
 		return nil, err
 	}
 
-	if e.HasPendingDecisionTask() {
+	if e.HasPendingDecision() {
 		e.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(e.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.WorkflowScheduleID(e.executionInfo.DecisionScheduleID))
 		return nil, e.createInternalServerError(opTag)
 	}
-
-	isFirstDecision := !e.HasProcessedOrPendingDecisionTask()
 
 	// set workflow state to running
 	// since decision is scheduled
@@ -1664,9 +1680,8 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEventAsHeartbeat(
 	// TODO merge active & passive task generation
 	if !bypassTaskGeneration {
 		if err := e.taskGenerator.generateDecisionScheduleTasks(
+			scheduleTime, // schedule time is now
 			scheduleID,
-			scheduleTime,
-			isFirstDecision,
 		); err != nil {
 			return nil, err
 		}
@@ -1676,7 +1691,7 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEventAsHeartbeat(
 }
 
 func (e *mutableStateBuilder) ReplicateTransientDecisionTaskScheduled() (*decisionInfo, error) {
-	if e.HasPendingDecisionTask() || e.GetExecutionInfo().DecisionAttempt == 0 {
+	if e.HasPendingDecision() || e.GetExecutionInfo().DecisionAttempt == 0 {
 		return nil, nil
 	}
 
@@ -1743,7 +1758,7 @@ func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(
 		return nil, nil, err
 	}
 
-	di, ok := e.GetPendingDecision(scheduleEventID)
+	di, ok := e.GetDecisionInfo(scheduleEventID)
 	if !ok || di.StartedID != common.EmptyEventID {
 		e.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(e.GetNextEventID()),
@@ -1776,8 +1791,8 @@ func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(
 	di, err := e.ReplicateDecisionTaskStartedEvent(di, e.GetCurrentVersion(), scheduleID, startedID, requestID, startTime)
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.generateDecisionStartTasks(
+		startTime, // start time is now
 		scheduleID,
-		startTime,
 	); err != nil {
 		return nil, nil, err
 	}
@@ -1796,7 +1811,7 @@ func (e *mutableStateBuilder) ReplicateDecisionTaskStartedEvent(
 	// does not have to deal with transient decision case.
 	var ok bool
 	if di == nil {
-		di, ok = e.GetPendingDecision(scheduleID)
+		di, ok = e.GetDecisionInfo(scheduleID)
 		if !ok {
 			return nil, errors.NewInternalFailureError(fmt.Sprintf("unable to find decision: %v", scheduleID))
 		}
@@ -1917,28 +1932,25 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(
 }
 
 // TODO: we will release the restriction when reset API allow those pending
-func (e *mutableStateBuilder) CheckResettable() (retError error) {
+func (e *mutableStateBuilder) CheckResettable() error {
 	if e.GetEventStoreVersion() != persistence.EventStoreVersionV2 {
-		retError = &workflow.BadRequestError{
+		return &workflow.BadRequestError{
 			Message: fmt.Sprintf("reset API is not supported for V1 history events, runID"),
 		}
-		return
 	}
 	if len(e.GetPendingChildExecutionInfos()) > 0 {
-		retError = &workflow.BadRequestError{
+		return &workflow.BadRequestError{
 			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending child workflow."),
 		}
-		return
 	}
-	if len(e.GetAllRequestCancels()) > 0 {
-		retError = &workflow.BadRequestError{
+	if len(e.GetPendingRequestCancelInfos()) > 0 {
+		return &workflow.BadRequestError{
 			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending request cancel."),
 		}
-		return
 	}
-	if len(e.GetAllSignalsToSend()) > 0 {
-		retError = &workflow.BadRequestError{
-			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending signals to send, pending signal: %+v ", e.GetAllSignalsToSend()),
+	if len(e.GetPendingSignalInfos()) > 0 {
+		return &workflow.BadRequestError{
+			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending signals to send."),
 		}
 	}
 	return nil
@@ -1956,7 +1968,7 @@ func (e *mutableStateBuilder) AddDecisionTaskCompletedEvent(
 		return nil, err
 	}
 
-	di, ok := e.GetPendingDecision(scheduleEventID)
+	di, ok := e.GetDecisionInfo(scheduleEventID)
 	if !ok || di.StartedID != startedEventID {
 		e.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(e.GetNextEventID()),
@@ -2002,7 +2014,7 @@ func (e *mutableStateBuilder) AddDecisionTaskTimedOutEvent(
 		return nil, err
 	}
 
-	dt, ok := e.GetPendingDecision(scheduleEventID)
+	dt, ok := e.GetDecisionInfo(scheduleEventID)
 	if !ok || dt.StartedID != startedEventID {
 		e.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(e.GetNextEventID()),
@@ -2095,7 +2107,7 @@ func (e *mutableStateBuilder) AddDecisionTaskFailedEvent(
 		ForkEventVersion: common.Int64Ptr(forkEventVersion),
 	}
 
-	dt, ok := e.GetPendingDecision(scheduleEventID)
+	dt, ok := e.GetDecisionInfo(scheduleEventID)
 	if !ok || dt.StartedID != startedEventID {
 		e.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(e.GetNextEventID()),
@@ -2161,7 +2173,10 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 
 	ai, err := e.ReplicateActivityTaskScheduledEvent(decisionCompletedEventID, event)
 	// TODO merge active & passive task generation
-	if err := e.taskGenerator.generateActivityTransferTasks(event); err != nil {
+	if err := e.taskGenerator.generateActivityTransferTasks(
+		event.GetTimestamp(),
+		event,
+	); err != nil {
 		return nil, nil, err
 	}
 	return event, ai, err
@@ -2552,7 +2567,7 @@ func (e *mutableStateBuilder) AddCompletedWorkflowEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.generateWorkflowCloseTasks(
-		event,
+		event.GetTimestamp(),
 	); err != nil {
 		return nil, err
 	}
@@ -2588,7 +2603,7 @@ func (e *mutableStateBuilder) AddFailWorkflowEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.generateWorkflowCloseTasks(
-		event,
+		event.GetTimestamp(),
 	); err != nil {
 		return nil, err
 	}
@@ -2621,7 +2636,7 @@ func (e *mutableStateBuilder) AddTimeoutWorkflowEvent() (*workflow.HistoryEvent,
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.generateWorkflowCloseTasks(
-		event,
+		event.GetTimestamp(),
 	); err != nil {
 		return nil, err
 	}
@@ -2696,7 +2711,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionCanceledEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.generateWorkflowCloseTasks(
-		event,
+		event.GetTimestamp(),
 	); err != nil {
 		return nil, err
 	}
@@ -2732,7 +2747,10 @@ func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionInitiated
 		return nil, nil, err
 	}
 	// TODO merge active & passive task generation
-	if err := e.taskGenerator.generateRequestCancelExternalTasks(event); err != nil {
+	if err := e.taskGenerator.generateRequestCancelExternalTasks(
+		event.GetTimestamp(),
+		event,
+	); err != nil {
 		return nil, nil, err
 	}
 	return event, rci, nil
@@ -2854,7 +2872,10 @@ func (e *mutableStateBuilder) AddSignalExternalWorkflowExecutionInitiatedEvent(
 		return nil, nil, err
 	}
 	// TODO merge active & passive task generation
-	if err := e.taskGenerator.generateSignalExternalTasks(event); err != nil {
+	if err := e.taskGenerator.generateSignalExternalTasks(
+		event.GetTimestamp(),
+		event,
+	); err != nil {
 		return nil, nil, err
 	}
 	return event, si, nil
@@ -2896,7 +2917,7 @@ func (e *mutableStateBuilder) AddUpsertWorkflowSearchAttributesEvent(
 	e.ReplicateUpsertWorkflowSearchAttributesEvent(event)
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.generateWorkflowSearchAttrTasks(
-		event,
+		event.GetTimestamp(),
 	); err != nil {
 		return nil, err
 	}
@@ -3203,7 +3224,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionTerminatedEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.generateWorkflowCloseTasks(
-		event,
+		event.GetTimestamp(),
 	); err != nil {
 		return nil, err
 	}
@@ -3328,7 +3349,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.generateWorkflowCloseTasks(
-		continueAsNewEvent,
+		continueAsNewEvent.GetTimestamp(),
 	); err != nil {
 		return nil, nil, err
 	}
@@ -3395,7 +3416,10 @@ func (e *mutableStateBuilder) AddStartChildWorkflowExecutionInitiatedEvent(
 		return nil, nil, err
 	}
 	// TODO merge active & passive task generation
-	if err := e.taskGenerator.generateChildWorkflowTasks(event); err != nil {
+	if err := e.taskGenerator.generateChildWorkflowTasks(
+		event.GetTimestamp(),
+		event,
+	); err != nil {
 		return nil, nil, err
 	}
 	return event, ci, nil
@@ -4258,7 +4282,7 @@ func (e *mutableStateBuilder) closeTransactionHandleDecisionFailover(
 	}
 
 	// Handling mutable state turn from standby to active, while having a decision on the fly
-	di, ok := e.GetInFlightDecisionTask()
+	di, ok := e.GetInFlightDecision()
 	if ok && di.Version < e.GetCurrentVersion() {
 		// we have a decision on the fly with a lower version, fail it
 		if err := failDecision(
@@ -4291,7 +4315,7 @@ func (e *mutableStateBuilder) closeTransactionHandleBufferedEventsLimit(
 	}
 
 	// Handling buffered events size issue
-	if di, ok := e.GetInFlightDecisionTask(); ok {
+	if di, ok := e.GetInFlightDecision(); ok {
 		// we have a decision on the fly with a lower version, fail it
 		if err := failDecision(
 			e,

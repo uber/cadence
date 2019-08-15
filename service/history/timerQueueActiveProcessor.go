@@ -323,7 +323,7 @@ ExpireUserTimers:
 	}
 
 	if updateHistory || updateState {
-		scheduleNewDecision := updateHistory && !msBuilder.HasPendingDecisionTask()
+		scheduleNewDecision := updateHistory && !msBuilder.HasPendingDecision()
 		return t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision)
 	}
 	return nil
@@ -471,7 +471,7 @@ ExpireActivityTimers:
 	if updateHistory || updateState {
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.
-		scheduleNewDecision := updateHistory && !msBuilder.HasPendingDecisionTask()
+		scheduleNewDecision := updateHistory && !msBuilder.HasPendingDecision()
 		return t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision)
 	}
 	return nil
@@ -497,7 +497,7 @@ func (t *timerQueueActiveProcessorImpl) processDecisionTimeout(
 	}
 
 	scheduleID := task.EventID
-	di, found := msBuilder.GetPendingDecision(scheduleID)
+	di, found := msBuilder.GetDecisionInfo(scheduleID)
 	if !found {
 		t.logger.Debug("Potentially duplicate task.", tag.TaskID(task.TaskID), tag.WorkflowScheduleID(scheduleID), tag.TaskType(persistence.TaskTypeDecisionTimeout))
 		return nil
@@ -573,7 +573,7 @@ func (t *timerQueueActiveProcessorImpl) processWorkflowBackoffTimer(
 		return nil
 	}
 
-	if msBuilder.HasProcessedOrPendingDecisionTask() {
+	if msBuilder.HasProcessedOrPendingDecision() {
 		// already has decision task
 		return nil
 	}

@@ -113,7 +113,7 @@ func (handler *decisionHandlerImpl) handleDecisionTaskScheduled(
 				return nil, ErrWorkflowCompleted
 			}
 
-			if msBuilder.HasProcessedOrPendingDecisionTask() {
+			if msBuilder.HasProcessedOrPendingDecision() {
 				return &updateWorkflowAction{
 					noop: true,
 				}, nil
@@ -159,7 +159,7 @@ func (handler *decisionHandlerImpl) handleDecisionTaskStarted(
 				return nil, ErrWorkflowCompleted
 			}
 
-			di, isRunning := msBuilder.GetPendingDecision(scheduleID)
+			di, isRunning := msBuilder.GetDecisionInfo(scheduleID)
 
 			// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 			// some extreme cassandra failure cases.
@@ -238,7 +238,7 @@ func (handler *decisionHandlerImpl) handleDecisionTaskFailed(
 			}
 
 			scheduleID := token.ScheduleID
-			di, isRunning := msBuilder.GetPendingDecision(scheduleID)
+			di, isRunning := msBuilder.GetDecisionInfo(scheduleID)
 			if !isRunning || di.Attempt != token.ScheduleAttempt || di.StartedID == common.EmptyEventID {
 				return &workflow.EntityNotExistsError{Message: "Decision task not found."}
 			}
@@ -306,7 +306,7 @@ Update_History_Loop:
 		}
 
 		scheduleID := token.ScheduleID
-		currentDecision, isRunning := msBuilder.GetPendingDecision(scheduleID)
+		currentDecision, isRunning := msBuilder.GetDecisionInfo(scheduleID)
 
 		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 		// some extreme cassandra failure cases.
@@ -555,7 +555,7 @@ Update_History_Loop:
 
 		resp = &h.RespondDecisionTaskCompletedResponse{}
 		if request.GetReturnNewDecisionTask() && createNewDecisionTask {
-			di, _ := msBuilder.GetPendingDecision(newDecisionTaskScheduledID)
+			di, _ := msBuilder.GetDecisionInfo(newDecisionTaskScheduledID)
 			resp.StartedResponse = handler.createRecordDecisionTaskStartedResponse(domainID, msBuilder, di, request.GetIdentity())
 			// sticky is always enabled when worker request for new decision task from RespondDecisionTaskCompleted
 			resp.StartedResponse.StickyExecutionEnabled = common.BoolPtr(true)
