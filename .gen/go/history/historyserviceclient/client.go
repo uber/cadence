@@ -62,6 +62,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*history.GetMutableStateResponse, error)
 
+	GetMutableStateWithLongPoll(
+		ctx context.Context,
+		GetRequest *history.GetMutableStateRequest,
+		opts ...yarpc.CallOption,
+	) (*history.GetMutableStateResponse, error)
+
 	RecordActivityTaskHeartbeat(
 		ctx context.Context,
 		HeartbeatRequest *history.RecordActivityTaskHeartbeatRequest,
@@ -308,6 +314,29 @@ func (c client) GetMutableState(
 	}
 
 	success, err = history.HistoryService_GetMutableState_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) GetMutableStateWithLongPoll(
+	ctx context.Context,
+	_GetRequest *history.GetMutableStateRequest,
+	opts ...yarpc.CallOption,
+) (success *history.GetMutableStateResponse, err error) {
+
+	args := history.HistoryService_GetMutableStateWithLongPoll_Helper.Args(_GetRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_GetMutableStateWithLongPoll_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = history.HistoryService_GetMutableStateWithLongPoll_Helper.UnwrapResponse(&result)
 	return
 }
 

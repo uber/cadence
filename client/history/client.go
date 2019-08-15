@@ -107,6 +107,30 @@ func (c *clientImpl) GetMutableState(
 	return response, nil
 }
 
+func (c *clientImpl) GetMutableStateWithLongPoll(
+	ctx context.Context,
+	request *h.GetMutableStateRequest,
+	opts ...yarpc.CallOption) (*h.GetMutableStateResponse, error) {
+	client, err := c.getClientForWorkflowID(*request.Execution.WorkflowId)
+	if err != nil {
+		return nil, err
+	}
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	var response *h.GetMutableStateResponse
+	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+		var err error
+		ctx, cancel := c.createContext(ctx)
+		defer cancel()
+		response, err = client.GetMutableStateWithLongPoll(ctx, request, opts...)
+		return err
+	}
+	err = c.executeWithRedirect(ctx, client, op)
+	if err != nil {
+		return nil, err
+	}
+	return response, nil
+}
+
 func (c *clientImpl) DescribeHistoryHost(
 	ctx context.Context,
 	request *workflow.DescribeHistoryHostRequest,

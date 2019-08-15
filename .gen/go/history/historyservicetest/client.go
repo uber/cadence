@@ -197,6 +197,39 @@ func (mr *_MockClientRecorder) GetMutableState(
 	return mr.mock.ctrl.RecordCall(mr.mock, "GetMutableState", args...)
 }
 
+// GetMutableStateWithLongPoll responds to a GetMutableStateWithLongPoll call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().GetMutableStateWithLongPoll(gomock.Any(), ...).Return(...)
+// 	... := client.GetMutableStateWithLongPoll(...)
+func (m *MockClient) GetMutableStateWithLongPoll(
+	ctx context.Context,
+	_GetRequest *history.GetMutableStateRequest,
+	opts ...yarpc.CallOption,
+) (success *history.GetMutableStateResponse, err error) {
+
+	args := []interface{}{ctx, _GetRequest}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "GetMutableStateWithLongPoll", args...)
+	success, _ = ret[i].(*history.GetMutableStateResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) GetMutableStateWithLongPoll(
+	ctx interface{},
+	_GetRequest interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _GetRequest}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "GetMutableStateWithLongPoll", args...)
+}
+
 // RecordActivityTaskHeartbeat responds to a RecordActivityTaskHeartbeat call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.

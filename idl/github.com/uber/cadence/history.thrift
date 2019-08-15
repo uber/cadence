@@ -309,6 +309,7 @@ service HistoryService {
   /**
   * Returns the information from mutable state of workflow execution.
   * It fails with 'EntityNotExistError' if specified workflow execution in unknown to the service.
+  * It returns CurrentBranchChangedError if the workflow version branch has changed.
   **/
   GetMutableStateResponse GetMutableState(1: GetMutableStateRequest getRequest)
     throws (
@@ -318,7 +319,24 @@ service HistoryService {
       4: ShardOwnershipLostError shardOwnershipLostError,
       5: shared.LimitExceededError limitExceededError,
       6: shared.ServiceBusyError serviceBusyError,
+      7: shared.CurrentBranchChangedError currentBranchChangedError,
     )
+
+  /**
+   * Returns the information from mutable state of workflow execution.
+   * It fails with 'EntityNotExistError' if specified workflow execution in unknown to the service.
+   * It returns CurrentBranchChangedError if the workflow version branch has changed.
+   **/
+   GetMutableStateResponse GetMutableStateWithLongPoll(1: GetMutableStateRequest getRequest)
+     throws (
+       1: shared.BadRequestError badRequestError,
+       2: shared.InternalServiceError internalServiceError,
+       3: shared.EntityNotExistsError entityNotExistError,
+       4: ShardOwnershipLostError shardOwnershipLostError,
+       5: shared.LimitExceededError limitExceededError,
+       6: shared.ServiceBusyError serviceBusyError,
+       7: shared.CurrentBranchChangedError currentBranchChangedError,
+     )
 
   /**
   * Reset the sticky tasklist related information in mutable state of a given workflow.

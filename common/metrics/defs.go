@@ -247,6 +247,8 @@ const (
 	HistoryClientRespondActivityTaskCanceledScope
 	// HistoryClientGetMutableStateScope tracks RPC calls to history service
 	HistoryClientGetMutableStateScope
+	// HistoryClientGetMutableStateWithLongPollScope tracks RPC calls to history service
+	HistoryClientGetMutableStateWithLongPollScope
 	// HistoryClientResetStickyTaskListScope tracks RPC calls to history service
 	HistoryClientResetStickyTaskListScope
 	// HistoryClientDescribeWorkflowExecutionScope tracks RPC calls to history service

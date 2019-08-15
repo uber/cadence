@@ -96,6 +96,23 @@ func (c *metricClient) GetMutableState(
 	return resp, err
 }
 
+func (c *metricClient) GetMutableStateWithLongPoll(
+	context context.Context,
+	request *h.GetMutableStateRequest,
+	opts ...yarpc.CallOption) (*h.GetMutableStateResponse, error) {
+	c.metricsClient.IncCounter(metrics.HistoryClientGetMutableStateWithLongPollScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.HistoryClientGetMutableStateWithLongPollScope, metrics.CadenceClientLatency)
+	resp, err := c.client.GetMutableStateWithLongPoll(context, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.HistoryClientGetMutableStateWithLongPollScope, metrics.CadenceClientFailures)
+	}
+
+	return resp, err
+}
+
 func (c *metricClient) ResetStickyTaskList(
 	context context.Context,
 	request *h.ResetStickyTaskListRequest,

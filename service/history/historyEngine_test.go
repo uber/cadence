@@ -374,7 +374,7 @@ func (s *engineSuite) TestGetMutableStateLongPoll() {
 	// long poll, new event happen before long poll timeout
 	go asycWorkflowUpdate(time.Second * 2)
 	start := time.Now()
-	response, err = s.mockHistoryEngine.GetMutableState(ctx, &history.GetMutableStateRequest{
+	response, err = s.mockHistoryEngine.GetMutableStateWithLongPoll(ctx, &history.GetMutableStateRequest{
 		DomainUUID:          common.StringPtr(domainID),
 		Execution:           &execution,
 		ExpectedNextEventId: common.Int64Ptr(4),
