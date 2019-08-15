@@ -1697,7 +1697,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 			return 0, nil, "", 0, 0, false, err
 		}
 
-		return response.GetEventStoreVersion(), response.BranchToken, response.Execution.GetRunId(), response.GetLastFirstEventId(), response.GetNextEventId(), response.GetIsWorkflowRunning(), nil
+		return response.GetEventStoreVersion(), response.CurrentBranchToken, response.Execution.GetRunId(), response.GetLastFirstEventId(), response.GetNextEventId(), response.GetIsWorkflowRunning(), nil
 	}
 
 	isLongPoll := getRequest.GetWaitForNewEvent()

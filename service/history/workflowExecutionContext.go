@@ -609,6 +609,7 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 		c.msBuilder.GetNextEventID(),
 		c.msBuilder.GetPreviousStartedEventID(),
 		c.msBuilder.IsWorkflowExecutionRunning(),
+		c.msBuilder.GetCurrentBranchToken(),
 	))
 
 	// notify current workflow tasks

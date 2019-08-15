@@ -311,7 +311,7 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 		}
 		token = &getHistoryContinuationToken{
 			RunID:             execution.GetRunId(),
-			BranchToken:       response.BranchToken,
+			BranchToken:       response.CurrentBranchToken,
 			FirstEventID:      firstEventID,
 			NextEventID:       nextEventID,
 			PersistenceToken:  nil, // this is the initialized value

@@ -39,6 +39,7 @@ type (
 		previousStartedEventID int64
 		isWorkflowRunning      bool
 		timestamp              time.Time
+		currentBranchToken     []byte
 	}
 
 	// Engine represents an interface for managing workflow execution history.
