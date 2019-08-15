@@ -49,12 +49,12 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithEmptyResult() {
 	}
 
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(20),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(3),
 		Identity:                            common.StringPtr(identity),
@@ -156,12 +156,12 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 	}
 
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(20),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(5),
 		Identity:                            common.StringPtr(identity),
@@ -294,12 +294,12 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeRegularDecisionSta
 	taskList.Name = common.StringPtr(tl)
 
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(3),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 		Identity:                            common.StringPtr(identity),
@@ -369,12 +369,12 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 	taskList.Name = common.StringPtr(tl)
 
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(3),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 		Identity:                            common.StringPtr(identity),
@@ -442,12 +442,12 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 	taskList.Name = common.StringPtr(tl)
 
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(3),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 		Identity:                            common.StringPtr(identity),
@@ -529,12 +529,12 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeTransientDecisionS
 	taskList.Name = common.StringPtr(tl)
 
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(3),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 		Identity:                            common.StringPtr(identity),
@@ -634,12 +634,12 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 	taskList.Name = common.StringPtr(tl)
 
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(3),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 		Identity:                            common.StringPtr(identity),
@@ -735,12 +735,12 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 	taskList.Name = common.StringPtr(tl)
 
 	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(3),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 		Identity:                            common.StringPtr(identity),
