@@ -442,20 +442,20 @@ func (c *workflowExecutionContextImpl) conflictResolveWorkflowExecution(
 		return err
 	}
 
-	currentBranchToken, err := c.msBuilder.GetCurrentBranchToken()
+	currentBranchToken, err := resetMutableState.GetCurrentBranchToken()
 	if err != nil {
 		return err
 	}
 
-	workflowState, workflowCloseState := c.msBuilder.GetWorkflowStateCloseStatus()
+	workflowState, workflowCloseState := resetMutableState.GetWorkflowStateCloseStatus()
 	// Current branch changed and notify the watchers
 	c.engine.NotifyNewHistoryEvent(newHistoryEventNotification(
 		c.domainID,
 		&c.workflowExecution,
-		c.msBuilder.GetLastFirstEventID(),
-		c.msBuilder.GetNextEventID(),
-		c.msBuilder.GetPreviousStartedEventID(),
-		c.msBuilder.IsWorkflowExecutionRunning(),
+		resetMutableState.GetLastFirstEventID(),
+		resetMutableState.GetNextEventID(),
+		resetMutableState.GetPreviousStartedEventID(),
+		resetMutableState.IsWorkflowExecutionRunning(),
 		currentBranchToken,
 		workflowState,
 		workflowCloseState,
