@@ -293,9 +293,9 @@ enum EncodingType {
   ThriftRW,
 }
 
-enum QueryIgnoreState {
-  CLOSED
-  TERMINATED
+enum QueryRejectIf {
+  NOT_OPEN
+  FAILED
 }
 
 struct DataBlob {
@@ -1321,12 +1321,16 @@ struct QueryWorkflowRequest {
   10: optional string domain
   20: optional WorkflowExecution execution
   30: optional WorkflowQuery query
-  40: optional QueryIgnoreState ignoreState
+  40: optional QueryRejectIf queryRejectIf
+}
+
+struct QueryRejected {
+  10: optional WorkflowExecutionCloseStatus closeStatus
 }
 
 struct QueryWorkflowResponse {
   10: optional binary queryResult
-  20: optional bool queryIgnored
+  20: optional QueryRejected queryRejected
 }
 
 struct WorkflowQuery {
