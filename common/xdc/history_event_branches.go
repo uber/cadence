@@ -26,7 +26,7 @@ type (
 		Events []Vertex
 	}
 
-	// branch is a branch of new history events
+	// NDCTestBranch is a branch of new history events
 	NDCTestBranch struct {
 		Next    []*NDCTestBranch
 		Batches []NDCTestBatch

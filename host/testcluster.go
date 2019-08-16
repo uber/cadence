@@ -249,6 +249,7 @@ func (tc *TestCluster) GetAdminClient() AdminClient {
 	return tc.host.GetAdminClient()
 }
 
+// GetHistoryClient returns a history client from the test cluster
 func (tc *TestCluster) GetHistoryClient() HistoryClient {
 	return tc.host.GetHistoryClient()
 }

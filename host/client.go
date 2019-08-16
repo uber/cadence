@@ -38,6 +38,7 @@ type FrontendClient interface {
 	workflowserviceclient.Interface
 }
 
+// HistoryClient is the interface exposed by history service client
 type HistoryClient interface {
 	historyserviceclient.Interface
 }
@@ -52,6 +53,7 @@ func NewFrontendClient(d *yarpc.Dispatcher) FrontendClient {
 	return workflowserviceclient.New(d.ClientConfig(common.FrontendServiceName))
 }
 
+// NewHistoryClient creates a client to cadence history service client
 func NewHistoryClient(d *yarpc.Dispatcher) HistoryClient {
 	return historyserviceclient.New(d.ClientConfig(common.HistoryServiceName))
 }
