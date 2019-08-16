@@ -1451,6 +1451,7 @@ const (
 	LastProcessedMessageID
 	ReplicationTasksApplied
 	ReplicationTasksFailed
+	ReplicationTasksLag
 
 	NumHistoryMetrics
 )
@@ -1731,6 +1732,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		LastProcessedMessageID:                            {metricName: "last_processed_message_id", metricType: Gauge},
 		ReplicationTasksApplied:                           {metricName: "replication_tasks_applied", metricType: Counter},
 		ReplicationTasksFailed:                            {metricName: "replication_tasks_failed", metricType: Counter},
+		ReplicationTasksLag:                               {metricName: "replication_tasks_lag", metricType: Timer},
 	},
 	Matching: {
 		PollSuccessCounter:            {metricName: "poll_success"},

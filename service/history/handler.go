@@ -1266,6 +1266,8 @@ func (h *Handler) GetReplicationMessages(
 	ctx context.Context,
 	request *r.GetReplicationMessagesRequest,
 ) (*r.GetReplicationMessagesResponse, error) {
+	defer log.CapturePanic(h.GetLogger(), nil)
+	h.startWG.Wait()
 
 	var wg sync.WaitGroup
 	wg.Add(len(request.Tokens))
@@ -1277,13 +1279,13 @@ func (h *Handler) GetReplicationMessages(
 
 			engine, err := h.controller.getEngineForShard(int(token.GetShardID()))
 			if err != nil {
-				h.GetLogger().Warn("history engine not found for shard", tag.Error(err))
+				h.GetLogger().Warn("History engine not found for shard", tag.Error(err))
 				return
 			}
 
 			tasks, err := engine.GetReplicationMessages(ctx, token.GetLastRetrivedMessageId())
 			if err != nil {
-				h.GetLogger().Warn("failed to get replication tasks for shard", tag.Error(err))
+				h.GetLogger().Warn("Failed to get replication tasks for shard", tag.Error(err))
 				return
 			}
 

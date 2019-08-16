@@ -155,7 +155,6 @@ func (p *ReplicationTaskProcessor) processorLoop() {
 			}
 
 			scope.UpdateGauge(metrics.LastRetrievedMessageID, float64(p.lastRetrievedMessageID))
-			scope.AddCounter(metrics.ReplicationTasksApplied, int64(len(response.GetReplicationTasks())))
 		case <-p.done:
 			p.logger.Info("Closing replication task processor.", tag.ReadLevel(p.lastRetrievedMessageID))
 			return
