@@ -577,6 +577,18 @@ func (p *replicatorQueueProcessorImpl) getTasks(readLevel int64) (*replicator.Re
 		time.Duration(p.shard.GetTransferMaxReadLevel()-readLevel),
 	)
 
+	p.metricsClient.RecordTimer(
+		metrics.ReplicatorQueueProcessorScope,
+		metrics.ReplicationTasksFetched,
+		time.Duration(len(taskInfoList)),
+	)
+
+	p.metricsClient.RecordTimer(
+		metrics.ReplicatorQueueProcessorScope,
+		metrics.ReplicationTasksReturned,
+		time.Duration(len(replicationTasks)),
+	)
+
 	return &replicator.ReplicationMessages{
 		ReplicationTasks:      replicationTasks,
 		HasMore:               common.BoolPtr(hasMore),

@@ -1269,6 +1269,11 @@ func (h *Handler) GetReplicationMessages(
 	defer log.CapturePanic(h.GetLogger(), nil)
 	h.startWG.Wait()
 
+	scope := metrics.HistoryGetReplicationMessagesScope
+	h.metricsClient.IncCounter(scope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	defer sw.Stop()
+
 	var wg sync.WaitGroup
 	wg.Add(len(request.Tokens))
 	result := new(sync.Map)
