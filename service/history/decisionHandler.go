@@ -182,7 +182,6 @@ func (handler *decisionHandlerImpl) handleDecisionTaskStarted(
 
 			updateAction := &updateWorkflowAction{
 				noop:           false,
-				deleteWorkflow: false,
 				createDecision: false,
 				timerTasks:     nil,
 				transferTasks:  nil,
@@ -244,7 +243,7 @@ func (handler *decisionHandlerImpl) handleDecisionTaskFailed(
 		RunId:      common.StringPtr(token.RunID),
 	}
 
-	return handler.historyEngine.updateWorkflowExecution(ctx, domainID, workflowExecution, false, true,
+	return handler.historyEngine.updateWorkflowExecution(ctx, domainID, workflowExecution, true,
 		func(msBuilder mutableState, tBuilder *timerBuilder) ([]persistence.Task, error) {
 			if !msBuilder.IsWorkflowExecutionRunning() {
 				return nil, ErrWorkflowCompleted
@@ -347,7 +346,7 @@ Update_History_Loop:
 		if decisionHeartbeating {
 			domainName := domainEntry.GetInfo().Name
 			timeout := handler.config.DecisionHeartbeatTimeout(domainName)
-			if currentDecision.OriginalScheduledTimestamp > 0 && time.Now().After(time.Unix(0, currentDecision.OriginalScheduledTimestamp).Add(timeout)) {
+			if currentDecision.OriginalScheduledTimestamp > 0 && handler.timeSource.Now().After(time.Unix(0, currentDecision.OriginalScheduledTimestamp).Add(timeout)) {
 				decisionHeartbeatTimeout = true
 				scope := handler.metricsClient.Scope(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.DomainTag(domainName))
 				scope.IncCounter(metrics.DecisionHeartbeatTimeoutCounter)
@@ -373,7 +372,6 @@ Update_History_Loop:
 			failDecision                bool
 			failCause                   workflow.DecisionTaskFailedCause
 			failMessage                 string
-			isComplete                  bool
 			activityNotStartedCancelled bool
 			transferTasks               []persistence.Task
 			timerTasks                  []persistence.Task
@@ -450,7 +448,6 @@ Update_History_Loop:
 			}
 
 			// failMessage is not used by decisionTaskHandler
-			isComplete = !msBuilder.IsWorkflowExecutionRunning()
 			activityNotStartedCancelled = decisionTaskHandler.activityNotStartedCancelled
 			// continueAsNewTimerTasks is not used by decisionTaskHandler
 
@@ -474,7 +471,6 @@ Update_History_Loop:
 				return nil, err
 			}
 			tBuilder = handler.historyEngine.getTimerBuilder(context.getExecution())
-			isComplete = false
 			hasUnhandledEvents = true
 			continueAsNewBuilder = nil
 		}
@@ -487,8 +483,8 @@ Update_History_Loop:
 		}
 
 		// Schedule another decision task if new events came in during this decision or if request forced to
-		createNewDecisionTask := !isComplete && (hasUnhandledEvents ||
-			request.GetForceCreateNewDecisionTask() || activityNotStartedCancelled)
+		createNewDecisionTask := msBuilder.IsWorkflowExecutionRunning() &&
+			(hasUnhandledEvents || request.GetForceCreateNewDecisionTask() || activityNotStartedCancelled)
 		var newDecisionTaskScheduledID int64
 		if createNewDecisionTask {
 			var newDecision *decisionInfo
@@ -529,18 +525,6 @@ Update_History_Loop:
 				timeOutTask := tBuilder.AddStartToCloseDecisionTimoutTask(newDecision.ScheduleID, newDecision.Attempt, newDecision.DecisionTimeout)
 				timerTasks = append(timerTasks, timeOutTask)
 			}
-		}
-
-		if isComplete {
-			tranT, timerT, err := handler.historyEngine.getWorkflowHistoryCleanupTasks(
-				domainID,
-				workflowExecution.GetWorkflowId(),
-				tBuilder)
-			if err != nil {
-				return nil, err
-			}
-			transferTasks = append(transferTasks, tranT)
-			timerTasks = append(timerTasks, timerT)
 		}
 
 		msBuilder.AddTransferTasks(transferTasks...)

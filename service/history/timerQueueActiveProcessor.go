@@ -332,7 +332,7 @@ ExpireUserTimers:
 
 	// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 	// the history and try the operation again.
-	return t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, false, timerTasks)
+	return t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, timerTasks)
 }
 
 func (t *timerQueueActiveProcessorImpl) processActivityTimeout(
@@ -490,7 +490,7 @@ ExpireActivityTimers:
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.
 		scheduleNewDecision := updateHistory && !msBuilder.HasPendingDecisionTask()
-		return t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, false, timerTasks)
+		return t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, timerTasks)
 	}
 	return nil
 }
@@ -561,7 +561,7 @@ func (t *timerQueueActiveProcessorImpl) processDecisionTimeout(
 	if scheduleNewDecision {
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.
-		return t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, false, nil)
+		return t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, nil)
 	}
 	return nil
 }
@@ -597,7 +597,7 @@ func (t *timerQueueActiveProcessorImpl) processWorkflowBackoffTimer(
 	}
 
 	// schedule first decision task
-	return t.updateWorkflowExecution(context, msBuilder, true, false, nil)
+	return t.updateWorkflowExecution(context, msBuilder, true, nil)
 }
 
 func (t *timerQueueActiveProcessorImpl) processActivityRetryTimer(
@@ -723,7 +723,7 @@ func (t *timerQueueActiveProcessorImpl) processWorkflowTimeout(
 
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.
-		return t.updateWorkflowExecution(context, msBuilder, false, true, nil)
+		return t.updateWorkflowExecution(context, msBuilder, false, nil)
 	}
 
 	// workflow timeout, but a retry or cron is needed, so we do continue as new to retry or cron
@@ -794,10 +794,9 @@ func (t *timerQueueActiveProcessorImpl) updateWorkflowExecution(
 	context workflowExecutionContext,
 	msBuilder mutableState,
 	scheduleNewDecision bool,
-	createDeletionTask bool,
 	timerTasks []persistence.Task,
 ) error {
-	executionInfo := msBuilder.GetExecutionInfo()
+
 	var err error
 	if scheduleNewDecision {
 		// Schedule a new decision.
@@ -807,18 +806,6 @@ func (t *timerQueueActiveProcessorImpl) updateWorkflowExecution(
 		}
 	}
 
-	if createDeletionTask {
-		tBuilder := t.historyService.getTimerBuilder(context.getExecution())
-		transferTask, timerTask, err := t.historyService.getWorkflowHistoryCleanupTasks(
-			executionInfo.DomainID,
-			executionInfo.WorkflowID,
-			tBuilder)
-		if err != nil {
-			return err
-		}
-		msBuilder.AddTransferTasks(transferTask)
-		msBuilder.AddTimerTasks(timerTask)
-	}
 	msBuilder.AddTimerTasks(timerTasks...)
 
 	now := t.shard.GetTimeSource().Now()

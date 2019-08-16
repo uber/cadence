@@ -1038,7 +1038,7 @@ func (r *historyReplicator) terminateWorkflow(
 		RunId:      common.StringPtr(runID),
 	}
 	var currentLastWriteVersion int64
-	err := r.historyEngine.updateWorkflowExecution(ctx, domainID, execution, true, false,
+	err := r.historyEngine.updateWorkflowExecution(ctx, domainID, execution, false,
 		func(msBuilder mutableState, tBuilder *timerBuilder) ([]persistence.Task, error) {
 
 			// compare the current last write version first

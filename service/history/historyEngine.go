@@ -715,7 +715,7 @@ func (e *historyEngineImpl) ResetStickyTaskList(
 		return nil, err
 	}
 
-	err = e.updateWorkflowExecution(ctx, domainID, *resetRequest.Execution, false, false,
+	err = e.updateWorkflowExecution(ctx, domainID, *resetRequest.Execution, false,
 		func(msBuilder mutableState, tBuilder *timerBuilder) ([]persistence.Task, error) {
 			if !msBuilder.IsWorkflowExecutionRunning() {
 				return nil, ErrWorkflowCompleted
@@ -885,7 +885,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 	}
 
 	response := &h.RecordActivityTaskStartedResponse{}
-	err = e.updateWorkflowExecution(ctx, domainID, execution, false, false,
+	err = e.updateWorkflowExecution(ctx, domainID, execution, false,
 		func(msBuilder mutableState, tBuilder *timerBuilder) ([]persistence.Task, error) {
 			if !msBuilder.IsWorkflowExecutionRunning() {
 				return nil, ErrWorkflowCompleted
@@ -1016,7 +1016,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 		RunId:      common.StringPtr(token.RunID),
 	}
 
-	return e.updateWorkflowExecution(ctx, domainID, workflowExecution, false, true,
+	return e.updateWorkflowExecution(ctx, domainID, workflowExecution, true,
 		func(msBuilder mutableState, tBuilder *timerBuilder) ([]persistence.Task, error) {
 			if !msBuilder.IsWorkflowExecutionRunning() {
 				return nil, ErrWorkflowCompleted
@@ -1142,7 +1142,7 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 		RunId:      common.StringPtr(token.RunID),
 	}
 
-	return e.updateWorkflowExecution(ctx, domainID, workflowExecution, false, true,
+	return e.updateWorkflowExecution(ctx, domainID, workflowExecution, true,
 		func(msBuilder mutableState, tBuilder *timerBuilder) ([]persistence.Task, error) {
 			if !msBuilder.IsWorkflowExecutionRunning() {
 				return nil, ErrWorkflowCompleted
@@ -1211,7 +1211,7 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 	}
 
 	var cancelRequested bool
-	err = e.updateWorkflowExecution(ctx, domainID, workflowExecution, false, false,
+	err = e.updateWorkflowExecution(ctx, domainID, workflowExecution, false,
 		func(msBuilder mutableState, tBuilder *timerBuilder) ([]persistence.Task, error) {
 			if !msBuilder.IsWorkflowExecutionRunning() {
 				e.logger.Debug("Heartbeat failed")
@@ -1279,7 +1279,7 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 		RunId:      request.WorkflowExecution.RunId,
 	}
 
-	return e.updateWorkflowExecution(ctx, domainID, execution, false, true,
+	return e.updateWorkflowExecution(ctx, domainID, execution, true,
 		func(msBuilder mutableState, tBuilder *timerBuilder) ([]persistence.Task, error) {
 			if !msBuilder.IsWorkflowExecutionRunning() {
 				return nil, ErrWorkflowCompleted
@@ -1344,7 +1344,6 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 			createDecisionTask = false
 		}
 		postActions := &updateWorkflowAction{
-			deleteWorkflow: false,
 			createDecision: createDecisionTask,
 			timerTasks:     nil,
 		}
@@ -1639,7 +1638,7 @@ func (e *historyEngineImpl) RemoveSignalMutableState(
 		RunId:      request.WorkflowExecution.RunId,
 	}
 
-	return e.updateWorkflowExecution(ctx, domainID, execution, false, false,
+	return e.updateWorkflowExecution(ctx, domainID, execution, false,
 		func(msBuilder mutableState, tBuilder *timerBuilder) ([]persistence.Task, error) {
 			if !msBuilder.IsWorkflowExecutionRunning() {
 				return nil, ErrWorkflowCompleted
@@ -1668,7 +1667,7 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 		RunId:      request.WorkflowExecution.RunId,
 	}
 
-	return e.updateWorkflowExecution(ctx, domainID, execution, true, false,
+	return e.updateWorkflowExecution(ctx, domainID, execution, false,
 		func(msBuilder mutableState, tBuilder *timerBuilder) ([]persistence.Task, error) {
 			if !msBuilder.IsWorkflowExecutionRunning() {
 				return nil, ErrWorkflowCompleted
@@ -1703,7 +1702,7 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(
 		RunId:      completionRequest.WorkflowExecution.RunId,
 	}
 
-	return e.updateWorkflowExecution(ctx, domainID, execution, false, true,
+	return e.updateWorkflowExecution(ctx, domainID, execution, true,
 		func(msBuilder mutableState, tBuilder *timerBuilder) ([]persistence.Task, error) {
 			if !msBuilder.IsWorkflowExecutionRunning() {
 				return nil, ErrWorkflowCompleted
@@ -1887,7 +1886,6 @@ func (e *historyEngineImpl) DeleteExecutionFromVisibility(
 
 type updateWorkflowAction struct {
 	noop           bool
-	deleteWorkflow bool
 	createDecision bool
 	timerTasks     []persistence.Task
 	transferTasks  []persistence.Task
@@ -1932,17 +1930,6 @@ Update_History_Loop:
 		}
 
 		transferTasks, timerTasks := postActions.transferTasks, postActions.timerTasks
-		if postActions.deleteWorkflow {
-			tranT, timerT, err := e.getWorkflowHistoryCleanupTasks(
-				domainID,
-				execution.GetWorkflowId(),
-				tBuilder)
-			if err != nil {
-				return err
-			}
-			transferTasks = append(transferTasks, tranT)
-			timerTasks = append(timerTasks, timerT)
-		}
 
 		if postActions.createDecision {
 			// Create a transfer task to schedule a decision task
@@ -1982,7 +1969,6 @@ func (e *historyEngineImpl) updateWorkflowExecution(
 	ctx ctx.Context,
 	domainID string,
 	execution workflow.WorkflowExecution,
-	createDeletionTask bool,
 	createDecisionTask bool,
 	action func(builder mutableState, tBuilder *timerBuilder) ([]persistence.Task, error),
 ) error {
@@ -1994,7 +1980,6 @@ func (e *historyEngineImpl) updateWorkflowExecution(
 				return nil, err
 			}
 			postActions := &updateWorkflowAction{
-				deleteWorkflow: createDeletionTask,
 				createDecision: createDecisionTask,
 				timerTasks:     timerTasks,
 			}
