@@ -82,7 +82,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TearDownSuite() 
 func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) SetupTest() {
 	logger := loggerimpl.NewNopLogger()
 	dcCollection := dc.NewCollection(dc.NewNopClient(), logger)
-	s.config = NewConfig(dcCollection, numHistoryShards, false)
+	s.config = NewConfig(dcCollection, numHistoryShards)
 	s.metadataMgr = s.TestBase.MetadataProxy
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.mockDomainReplicator = NewDomainReplicator(s.mockProducer, logger)

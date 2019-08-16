@@ -118,3 +118,13 @@ const (
 	// ArchivalPaused is the status for pausing archival
 	ArchivalPaused = "paused"
 )
+
+// enum for dynamic config AdvancedVisibilityWritingMode
+const (
+	// AdvancedVisibilityWritingModeOff means do not write to advanced visibility store
+	AdvancedVisibilityWritingModeOff = 0
+	// AdvancedVisibilityWritingModeOn means only write to advanced visibility store
+	AdvancedVisibilityWritingModeOn = 1
+	// AdvancedVisibilityWritingModeDual means write to both normal visibility and advanced visibility store
+	AdvancedVisibilityWritingModeDual = 2
+)

@@ -1,6 +1,7 @@
 persistence:
   defaultStore: cass-default
   visibilityStore: cass-visibility
+  advancedVisibilityStore: es-visibility
   numHistoryShards: 4
   datastores:
     cass-default:
@@ -13,6 +14,13 @@ persistence:
         hosts: "127.0.0.1"
         keyspace: "cadence_visibility"
         consistency: "One"
+    es-visibility:
+      elasticsearch:
+        url:
+          scheme: "http"
+          host: "127.0.0.1:9200"
+        indices:
+          visibility: cadence-visibility-dev
 
 ringpop:
   name: cadence
@@ -117,14 +125,6 @@ kafka:
     visibility:
       topic: cadence-visibility-dev
       dlq-topic: cadence-visibility-dev-dlq
-
-elasticsearch:
-  enable: false
-  url:
-    scheme: "http"
-    host: "127.0.0.1:9200"
-  indices:
-    visibility: cadence-visibility-dev
 
 publicClient:
   hostPort: "localhost:7933"

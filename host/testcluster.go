@@ -72,7 +72,7 @@ type (
 		MessagingClientConfig *MessagingClientConfig
 		Persistence           persistencetests.TestBaseOptions
 		HistoryConfig         *HistoryConfig
-		ESConfig              elasticsearch.Config
+		ESConfig              *elasticsearch.Config
 		WorkerConfig          *WorkerConfig
 	}
 

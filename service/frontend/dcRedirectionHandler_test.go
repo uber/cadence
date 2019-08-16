@@ -91,7 +91,7 @@ func (s *dcRedirectionHandlerSuite) SetupTest() {
 	s.domainID = "some random domain ID"
 	s.currentClusterName = cluster.TestCurrentClusterName
 	s.alternativeClusterName = cluster.TestAlternativeClusterName
-	s.config = NewConfig(dynamicconfig.NewCollection(dynamicconfig.NewNopClient(), s.logger), 0, false)
+	s.config = NewConfig(dynamicconfig.NewCollection(dynamicconfig.NewNopClient(), s.logger), 0)
 	s.mockMetadataMgr = &mocks.MetadataManager{}
 
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}

@@ -30,3 +30,7 @@ frontend.validSearchAttributes:
 system.minRetentionDays:
 - value: 0
   constraints: {}
+#system.advancedVisibilityWritingMode:
+#    - value: 2
+#system.enableReadVisibilityFromES:
+#    - value: true

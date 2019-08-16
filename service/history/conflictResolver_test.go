@@ -224,7 +224,7 @@ func (s *conflictResolverSuite) TestGetHistory() {
 }
 
 func (s *conflictResolverSuite) TestReset() {
-	s.mockShard.config.EnableVisibilityToKafka = dynamicconfig.GetBoolPropertyFn(true)
+	s.mockShard.config.AdvancedVisibilityWritingMode = dynamicconfig.GetIntPropertyFn(2)
 
 	prevRunID := uuid.New()
 	prevLastWriteVersion := int64(123)
