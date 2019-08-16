@@ -309,12 +309,12 @@ func (adh *AdminHandler) GetWorkflowExecutionRawHistory(
 			nextEventID = response.GetNextEventId()
 		}
 		token = &getHistoryContinuationToken{
-			RunID:             execution.GetRunId(),
-			BranchToken:       response.CurrentBranchToken,
-			FirstEventID:      firstEventID,
-			NextEventID:       nextEventID,
-			PersistenceToken:  nil, // this is the initialized value
-			ReplicationInfo:   response.ReplicationInfo,
+			RunID:            execution.GetRunId(),
+			BranchToken:      response.CurrentBranchToken,
+			FirstEventID:     firstEventID,
+			NextEventID:      nextEventID,
+			PersistenceToken: nil, // this is the initialized value
+			ReplicationInfo:  response.ReplicationInfo,
 		}
 		// calculate event store version based on if branch token exist
 		token.EventStoreVersion = persistence.EventStoreVersionV2
