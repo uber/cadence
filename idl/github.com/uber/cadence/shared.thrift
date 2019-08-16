@@ -293,6 +293,11 @@ enum EncodingType {
   ThriftRW,
 }
 
+enum QueryIgnoreState {
+  CLOSED
+  TERMINATED
+}
+
 struct DataBlob {
   10: optional EncodingType EncodingType
   20: optional binary Data
@@ -1316,10 +1321,12 @@ struct QueryWorkflowRequest {
   10: optional string domain
   20: optional WorkflowExecution execution
   30: optional WorkflowQuery query
+  40: optional QueryIgnoreState ignoreState
 }
 
 struct QueryWorkflowResponse {
   10: optional binary queryResult
+  20: optional bool queryIgnored
 }
 
 struct WorkflowQuery {
