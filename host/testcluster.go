@@ -122,7 +122,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 	var esVisibilityMgr persistence.VisibilityManager
 	if options.WorkerConfig.EnableIndexer {
 		var err error
-		esClient, err = elasticsearch.NewClient(&options.ESConfig)
+		esClient, err = elasticsearch.NewClient(options.ESConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -161,7 +161,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 		Logger:              logger,
 		ClusterNo:           options.ClusterNo,
 		EnableEventsV2:      options.EnableEventsV2,
-		ESConfig:            &options.ESConfig,
+		ESConfig:            options.ESConfig,
 		ESClient:            esClient,
 		ArchiverMetadata:    archiverBase.metadata,
 		ArchiverProvider:    archiverBase.provider,
