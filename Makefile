@@ -29,12 +29,14 @@ INTEG_TEST_ROOT=./host
 INTEG_TEST_DIR=host
 INTEG_TEST_XDC_ROOT=./host/xdc
 INTEG_TEST_XDC_DIR=hostxdc
+EV2_TEST=_ev2
 
 GO_BUILD_LDFLAGS_CMD      := $(abspath ./scripts/go-build-ldflags.sh)
 GO_BUILD_LDFLAGS          := $(shell $(GO_BUILD_LDFLAGS_CMD) LDFLAG)
 
 ifndef EVENTSV2
 override EVENTSV2 = false
+EV2_TEST=
 endif
 
 ifndef PERSISTENCE_TYPE
@@ -73,6 +75,19 @@ TEST_DIRS := $(filter-out $(INTEG_TEST_XDC_ROOT)%, $(sort $(dir $(filter %_test.
 # all tests other than integration test fall into the pkg_test category
 PKG_TEST_DIRS := $(filter-out $(INTEG_TEST_ROOT)%,$(TEST_DIRS))
 
+# Code coverage output files
+COVER_ROOT                 := $(BUILD)/coverage
+UNIT_COVER_FILE            := $(COVER_ROOT)/unit_cover.out
+INTEG_COVER_FILE           := $(COVER_ROOT)/integ_$(PERSISTENCE_TYPE)$(EV2_TEST)_cover.out
+INTEG_XDC_COVER_FILE       := $(COVER_ROOT)/integ_xdc_$(PERSISTENCE_TYPE)_cover.out
+
+INTEG_CASS_COVER_FILE      := $(COVER_ROOT)/integ_cassandra_cover.out
+INTEG_CASS_EV2_COVER_FILE  := $(COVER_ROOT)/integ_cassandra_ev2_cover.out
+INTEG_XDC_CASS_COVER_FILE  := $(COVER_ROOT)/integ_xdc_cassandra_cover.out
+INTEG_SQL_COVER_FILE       := $(COVER_ROOT)/integ_sql_cover.out
+INTEG_SQL_EV2_COVER_FILE   := $(COVER_ROOT)/integ_sql_ev2_cover.out
+INTEG_XDC_SQL_COVER_FILE   := $(COVER_ROOT)/integ_xdc_sql_cover.out
+
 # Need the following option to have integration tests
 # count towards coverage. godoc below:
 # -coverpkg pkg1,pkg2,pkg3
@@ -81,11 +96,8 @@ PKG_TEST_DIRS := $(filter-out $(INTEG_TEST_ROOT)%,$(TEST_DIRS))
 #   Packages are specified as import paths.
 GOCOVERPKG_ARG := -coverpkg="$(PROJECT_ROOT)/common/...,$(PROJECT_ROOT)/service/...,$(PROJECT_ROOT)/client/...,$(PROJECT_ROOT)/tools/..."
 
-dep-ensured:
-	./install-dep.sh
-	dep ensure
-
 yarpc-install:
+	go mod vendor
 	go get './vendor/go.uber.org/thriftrw'
 	go get './vendor/go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc'
 
@@ -97,30 +109,30 @@ thriftc: yarpc-install $(THRIFTRW_GEN_SRC)
 copyright: cmd/tools/copyright/licensegen.go
 	GOOS= GOARCH= go run ./cmd/tools/copyright/licensegen.go --verifyOnly
 
-cadence-cassandra-tool: dep-ensured $(TOOLS_SRC)
+cadence-cassandra-tool: $(TOOLS_SRC)
 	go build -i -o cadence-cassandra-tool cmd/tools/cassandra/main.go
 
-cadence-sql-tool: dep-ensured $(TOOLS_SRC)
+cadence-sql-tool: $(TOOLS_SRC)
 	go build -i -o cadence-sql-tool cmd/tools/sql/main.go
 
-cadence: dep-ensured $(TOOLS_SRC)
+cadence: $(TOOLS_SRC)
 	go build -i -o cadence cmd/tools/cli/main.go
 
-cadence-server: dep-ensured $(ALL_SRC)
+cadence-server: $(ALL_SRC)
 	go build -ldflags '$(GO_BUILD_LDFLAGS)' -i -o cadence-server cmd/server/cadence.go cmd/server/server.go
 
 bins_nothrift: lint copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server
 
 bins: thriftc bins_nothrift
 
-test: dep-ensured bins
+test: bins
 	@rm -f test
 	@rm -f test.log
 	@for dir in $(TEST_DIRS); do \
 		go test -timeout 20m -race -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
 	done;
 
-test_eventsV2: dep-ensured bins
+test_eventsV2: bins
 	@rm -f test_eventsV2
 	@rm -f test_eventsV2.log
 	@echo Running integration test
@@ -128,7 +140,7 @@ test_eventsV2: dep-ensured bins
     		go test -timeout 20m -coverprofile=$@ "$$dir" -v $(TEST_TAG) -eventsV2=true | tee -a test_eventsV2.log; \
     done;
 
-test_eventsV2_xdc: dep-ensured bins
+test_eventsV2_xdc: bins
 	@rm -f test_eventsV2_xdc
 	@rm -f test_eventsV2_xdc.log
 	@echo Running integration test for cross dc:
@@ -137,7 +149,7 @@ test_eventsV2_xdc: dep-ensured bins
 	done;
 
 # need to run xdc tests with race detector off because of ringpop bug causing data race issue
-test_xdc: dep-ensured bins
+test_xdc: bins
 	@rm -f test
 	@rm -f test.log
 	@for dir in $(INTEG_TEST_XDC_ROOT); do \
@@ -146,46 +158,53 @@ test_xdc: dep-ensured bins
 
 cover_profile: clean bins_nothrift
 	@mkdir -p $(BUILD)
-	@echo "mode: atomic" > $(BUILD)/cover.out
+	@mkdir -p $(COVER_ROOT)
+	@echo "mode: atomic" > $(UNIT_COVER_FILE)
 
 	@echo Running package tests:
 	@for dir in $(PKG_TEST_DIRS); do \
 		mkdir -p $(BUILD)/"$$dir"; \
 		go test "$$dir" $(TEST_ARG) -coverprofile=$(BUILD)/"$$dir"/coverage.out || exit 1; \
-		cat $(BUILD)/"$$dir"/coverage.out | grep -v "mode: atomic" >> $(BUILD)/cover.out; \
+		cat $(BUILD)/"$$dir"/coverage.out | grep -v "^mode: \w\+" >> $(UNIT_COVER_FILE); \
 	done;
 
 cover_integration_profile: clean bins_nothrift
 	@mkdir -p $(BUILD)
-	@echo "mode: atomic" > $(BUILD)/cover.out
+	@mkdir -p $(COVER_ROOT)
+	@echo "mode: atomic" > $(INTEG_COVER_FILE)
 
 	@echo Running integration test with $(PERSISTENCE_TYPE) and eventsV2 $(EVENTSV2)
 	@mkdir -p $(BUILD)/$(INTEG_TEST_DIR)
 	@time go test $(INTEG_TEST_ROOT) $(TEST_ARG) $(TEST_TAG) -eventsV2=$(EVENTSV2) -persistenceType=$(PERSISTENCE_TYPE) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_DIR)/coverage.out || exit 1;
-	@cat $(BUILD)/$(INTEG_TEST_DIR)/coverage.out | grep -v "mode: atomic" >> $(BUILD)/cover.out
+	@cat $(BUILD)/$(INTEG_TEST_DIR)/coverage.out | grep -v "^mode: \w\+" >> $(INTEG_COVER_FILE)
 
 cover_xdc_profile: clean bins_nothrift
 	@mkdir -p $(BUILD)
-	@echo "mode: atomic" > $(BUILD)/cover.out
+	@mkdir -p $(COVER_ROOT)
+	@echo "mode: atomic" > $(INTEG_XDC_COVER_FILE)
 
 	@echo Running integration test for cross dc with $(PERSISTENCE_TYPE)
 	@mkdir -p $(BUILD)/$(INTEG_TEST_XDC_DIR)
 	@time go test $(INTEG_TEST_XDC_ROOT) $(TEST_TAG) -persistenceType=$(PERSISTENCE_TYPE) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_XDC_DIR)/coverage.out || exit 1;
-	@cat $(BUILD)/$(INTEG_TEST_XDC_DIR)/coverage.out | grep -v "mode: atomic" >> $(BUILD)/cover.out
+	@cat $(BUILD)/$(INTEG_TEST_XDC_DIR)/coverage.out | grep -v "^mode: \w\+" | grep -v "mode: set" >> $(INTEG_XDC_COVER_FILE)
 
-cover: cover_profile
-	go tool cover -html=$(BUILD)/cover.out;
+$(COVER_ROOT)/cover.out: $(UNIT_COVER_FILE) $(INTEG_CASS_COVER_FILE) $(INTEG_CASS_EV2_COVER_FILE) $(INTEG_XDC_CASS_COVER_FILE) $(INTEG_SQL_COVER_FILE) $(INTEG_SQL_EV2_COVER_FILE) $(INTEG_XDC_SQL_COVER_FILE)
+	@echo "mode: atomic" > $(COVER_ROOT)/cover.out
+	cat $(UNIT_COVER_FILE) | grep -v "^mode: \w\+" | grep -v ".gen" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_CASS_COVER_FILE) | grep -v "^mode: \w\+" | grep -v ".gen" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_CASS_EV2_COVER_FILE) | grep -v "^mode: \w\+" | grep -v ".gen" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_XDC_CASS_COVER_FILE) | grep -v "^mode: \w\+" | grep -v ".gen" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_SQL_COVER_FILE) | grep -v "^mode: \w\+" | grep -v ".gen" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_SQL_EV2_COVER_FILE) | grep -v "^mode: \w\+" | grep -v ".gen" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_XDC_SQL_COVER_FILE) | grep -v "^mode: \w\+" | grep -v ".gen" >> $(COVER_ROOT)/cover.out
 
-cover_ci: cover_profile
-	goveralls -coverprofile=$(BUILD)/cover.out -service=travis-ci || echo -e "\x1b[31mCoveralls failed\x1b[m"; \
+cover: $(COVER_ROOT)/cover.out
+	go tool cover -html=$(COVER_ROOT)/cover.out;
 
-cover_integration_ci: cover_integration_profile
-	goveralls -coverprofile=$(BUILD)/cover.out -service=travis-ci || echo -e "\x1b[31mCoveralls failed\x1b[m"; \
+cover_ci: $(COVER_ROOT)/cover.out
+	goveralls -coverprofile=$(COVER_ROOT)/cover.out -service=buildkite || echo Coveralls failed;
 
-cover_xdc_ci: cover_xdc_profile
-	goveralls -coverprofile=$(BUILD)/cover.out -service=travis-ci || echo -e "\x1b[31mCoveralls failed\x1b[m"; \
-
-lint: dep-ensured
+lint:
 	@echo Running linter
 	@lintFail=0; for file in $(ALL_SRC); do \
 		golint "$$file"; \

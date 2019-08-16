@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,24 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package common
+// +build tools
 
-const (
-	// used for background threads
+package tools
 
-	// DaemonStatusInitialized coroutine pool initialized
-	DaemonStatusInitialized int32 = 0
-	// DaemonStatusStarted coroutine pool started
-	DaemonStatusStarted int32 = 1
-	// DaemonStatusStopped coroutine pool stopped
-	DaemonStatusStopped int32 = 2
-)
-
-type (
-	// Daemon is the base interfaces implemented by
-	// background tasks within Cadence
-	Daemon interface {
-		Start()
-		Stop()
-	}
+// the 2 dependency below are used for yarpc / thriftrw compatible code generation
+import (
+	_ "go.uber.org/thriftrw"
+	_ "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc"
 )
