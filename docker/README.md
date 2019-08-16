@@ -40,9 +40,10 @@ $ docker-compose up
 Replace **YOUR_TAG** and **YOUR_CHECKOUT_BRANCH** in the below command to build:
 ```
 $ cd $GOPATH/src/github.com/uber/cadence
-$ docker build . -t ubercadence/server:YOUR_TAG --build-arg git_branch=YOUR_CHECKOUT_BRANCH	git checkout YOUR_CHECKOUT_BRANCH
+$ git checkout YOUR_CHECKOUT_BRANCH
 $ docker build . -t ubercadence/server:YOUR_TAG --build-arg TARGET=auto-setup
 ```
+
 Replace the tag of **image: ubercadence/server** to **YOUR_TAG** in docker-compose.yml .
 Then stop service and remove all containers using the below commands.
 ```
