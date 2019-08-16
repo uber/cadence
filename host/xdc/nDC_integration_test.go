@@ -49,8 +49,8 @@ type (
 		// not merely log an error
 		*require.Assertions
 		suite.Suite
-		cluster1  *host.TestCluster
-		cluster2  *host.TestCluster
+		active    *host.TestCluster
+		passive   *host.TestCluster
 		logger    log.Logger
 		generator xdc.Generator
 	}
@@ -82,12 +82,12 @@ func (s *nDCIntegrationTestSuite) SetupSuite() {
 
 	c, err := host.NewCluster(clusterConfigs[0], s.logger.WithTags(tag.ClusterName(clusterName[0])))
 	s.Require().NoError(err)
-	s.cluster1 = c
+	s.active = c
 
 	c, err = host.NewCluster(clusterConfigs[1], s.logger.WithTags(tag.ClusterName(clusterName[1])))
 	s.Require().NoError(err)
-	s.cluster2 = c
-	s.generator = xdc.InitializaEventGenerator()
+	s.passive = c
+	s.generator = xdc.InitializeHistoryEventGenerator()
 }
 
 func (s *nDCIntegrationTestSuite) SetupTest() {
@@ -97,13 +97,13 @@ func (s *nDCIntegrationTestSuite) SetupTest() {
 }
 
 func (s *nDCIntegrationTestSuite) TearDownSuite() {
-	s.cluster1.TearDownCluster()
-	s.cluster2.TearDownCluster()
+	s.active.TearDownCluster()
+	s.passive.TearDownCluster()
 }
 
 func (s *nDCIntegrationTestSuite) TestSimpleNDC() {
 	domainName := "test-simple-workflow-ndc-" + common.GenerateRandomString(5)
-	client1 := s.cluster1.GetFrontendClient() // active
+	client1 := s.active.GetFrontendClient() // active
 	regReq := &shared.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),
 		IsGlobalDomain:                         common.BoolPtr(true),
@@ -144,7 +144,7 @@ func (s *nDCIntegrationTestSuite) TestSimpleNDC() {
 	attributeGenerator := xdc.NewHistoryAttributesGenerator(wid, rid, tl, wt, domainID, domain, identity)
 	historyBatch := attributeGenerator.GenerateHistoryEvents(root.Batches, 1, version)
 
-	historyClient := s.cluster2.GetHistoryClient()
+	historyClient := s.passive.GetHistoryClient()
 	replicationInfo := make(map[string]*shared.ReplicationInfo)
 	replicationInfo["active"] = &shared.ReplicationInfo{
 		Version:     common.Int64Ptr(version),
@@ -157,7 +157,7 @@ func (s *nDCIntegrationTestSuite) TestSimpleNDC() {
 	}
 
 	for _, batch := range historyBatch {
-		// Generate a new run history on continue as new
+		// Generate a new run history only when the last event is continue as new
 		newRunHistory := generateNewRunHistory(batch.Events[len(batch.Events)-1], version, domain, wid, rid, wt, tl)
 		err = historyClient.ReplicateEvents(createContext(), &history.ReplicateEventsRequest{
 			SourceCluster: common.StringPtr("active"),
@@ -176,10 +176,11 @@ func (s *nDCIntegrationTestSuite) TestSimpleNDC() {
 			NewRunEventStoreVersion: common.Int32Ptr(persistence.EventStoreVersionV2),
 			ResetWorkflow:           common.BoolPtr(false),
 		})
-		s.Nil(err)
+		s.Nil(err, "Failed to replicate history event")
 	}
 
-	passiveClient := s.cluster2.GetFrontendClient()
+	// get replicated history events from passive side
+	passiveClient := s.passive.GetFrontendClient()
 	replicatedHistory, err := passiveClient.GetWorkflowExecutionHistory(createContext(), &shared.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(domain),
 		Execution: &shared.WorkflowExecution{
@@ -191,8 +192,9 @@ func (s *nDCIntegrationTestSuite) TestSimpleNDC() {
 		WaitForNewEvent:        common.BoolPtr(false),
 		HistoryEventFilterType: shared.HistoryEventFilterTypeAllEvent.Ptr(),
 	})
+	s.Nil(err, "Failed to get history event from passive side")
 
-	s.Nil(err)
+	// compare origin events with replicated events
 	batchIndex := 0
 	batch := historyBatch[batchIndex].GetEvents()
 	eventIndex := 0
@@ -204,15 +206,14 @@ func (s *nDCIntegrationTestSuite) TestSimpleNDC() {
 		}
 		originEvent := batch[eventIndex]
 		eventIndex++
-		s.Equal(originEvent.GetEventType().String(), event.GetEventType().String())
+		s.Equal(originEvent.GetEventType().String(), event.GetEventType().String(), "The replicated event and the origin event are not the same")
 	}
 }
 
 func generateNewRunHistory(event *shared.HistoryEvent, version int64, domain, wid, rid, workflowType, taskList string) *shared.History {
 
 	if event.GetWorkflowExecutionContinuedAsNewEventAttributes() != nil {
-		newRunID := uuid.New()
-		event.WorkflowExecutionContinuedAsNewEventAttributes.NewExecutionRunId = common.StringPtr(newRunID)
+		event.WorkflowExecutionContinuedAsNewEventAttributes.NewExecutionRunId = common.StringPtr(uuid.New())
 		return &shared.History{
 			Events: []*shared.HistoryEvent{
 				{
@@ -222,7 +223,7 @@ func generateNewRunHistory(event *shared.HistoryEvent, version int64, domain, wi
 					Version:   common.Int64Ptr(version),
 					TaskId:    common.Int64Ptr(1),
 					WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
-						WorkflowType:         common.WorkflowTypePtr(shared.WorkflowType{Name:common.StringPtr(workflowType)}),
+						WorkflowType:         common.WorkflowTypePtr(shared.WorkflowType{Name: common.StringPtr(workflowType)}),
 						ParentWorkflowDomain: common.StringPtr(domain),
 						ParentWorkflowExecution: &shared.WorkflowExecution{
 							WorkflowId: common.StringPtr(wid),

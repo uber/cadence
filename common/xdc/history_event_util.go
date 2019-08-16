@@ -694,58 +694,10 @@ func getDefaultHistoryEvent(eventID, version int64) *shared.HistoryEvent {
 	}
 }
 
-type (
-	// NDCTestBatch is the struct for history event batch
-	NDCTestBatch struct {
-		Events []Vertex
-	}
-
-	// branch is a branch of new history events
-	NDCTestBranch struct {
-		Next    []*NDCTestBranch
-		Batches []NDCTestBatch
-	}
-)
-
-func (b *NDCTestBranch) split(resetIdx int) *NDCTestBranch {
-	curr := getBranchToSplit(b, resetIdx)
-	return updateCurrentBranchWithSplit(curr, resetIdx)
-}
-
-func getBranchToSplit(root *NDCTestBranch, resetIdx int) *NDCTestBranch {
-	curr := root
-	for curr.Next != nil {
-		length := len(curr.Batches)
-		if length > resetIdx {
-			break
-		}
-		curr = curr.Next[len(curr.Next)-1]
-		resetIdx -= length
-	}
-	return curr
-}
-
-func updateCurrentBranchWithSplit(curr *NDCTestBranch, resetIdx int) *NDCTestBranch {
-	firstBatches := make([]NDCTestBatch, resetIdx+1)
-	copy(firstBatches, curr.Batches[:resetIdx+1])
-	secondBatches := make([]NDCTestBatch, len(curr.Batches)-resetIdx-1)
-	copy(secondBatches, curr.Batches[resetIdx+1:])
-	splitBranch := &NDCTestBranch{
-		Next:    curr.Next,
-		Batches: secondBatches,
-	}
-	newBranch := &NDCTestBranch{
-		Batches: make([]NDCTestBatch, 0),
-	}
-	curr.Batches = firstBatches
-	curr.Next = []*NDCTestBranch{splitBranch, newBranch}
-	return newBranch
-}
-
-func InitializaEventGenerator() Generator {
+func InitializeHistoryEventGenerator() Generator {
 	generator := NewEventGenerator()
 
-	//Function
+	//Functions
 	notPendingDecisionTask := func() bool {
 		count := 0
 		for _, e := range generator.ListGeneratedVertices() {
@@ -760,7 +712,6 @@ func InitializaEventGenerator() Generator {
 		}
 		return count <= 0
 	}
-
 	containActivityComplete := func() bool {
 		for _, e := range generator.ListGeneratedVertices() {
 			if e.GetName() == shared.EventTypeActivityTaskCompleted.String() {
@@ -769,7 +720,6 @@ func InitializaEventGenerator() Generator {
 		}
 		return false
 	}
-
 	hasPendingTimer := func() bool {
 		count := 0
 		for _, e := range generator.ListGeneratedVertices() {
@@ -783,7 +733,6 @@ func InitializaEventGenerator() Generator {
 		}
 		return count > 0
 	}
-
 	hasPendingActivity := func() bool {
 		count := 0
 		for _, e := range generator.ListGeneratedVertices() {
@@ -799,7 +748,6 @@ func InitializaEventGenerator() Generator {
 		}
 		return count > 0
 	}
-
 	hasPendingStartActivity := func() bool {
 		count := 0
 		for _, e := range generator.ListGeneratedVertices() {
@@ -815,7 +763,6 @@ func InitializaEventGenerator() Generator {
 		}
 		return count > 0
 	}
-
 	canDoBatch := func(history []Vertex) bool {
 		if len(history) == 0 {
 			return true
