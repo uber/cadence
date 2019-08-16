@@ -83,6 +83,11 @@ exception ClientVersionNotSupportedError {
   3: required string supportedVersions
 }
 
+exception CurrentBranchChangedError {
+  10: required string message
+  20: required binary currentBranchToken
+}
+
 enum WorkflowIdReusePolicy {
   /*
    * allow start a workflow execution using the same workflow ID,
@@ -234,6 +239,11 @@ enum ChildPolicy {
 
 enum QueryTaskCompletedType {
   COMPLETED,
+  FAILED,
+}
+
+enum QueryResultType {
+  ANSWERED,
   FAILED,
 }
 
@@ -423,6 +433,8 @@ struct ContinueAsNewWorkflowExecutionDecisionAttributes {
   110: optional binary lastCompletionResult
   120: optional string cronSchedule
   130: optional Header header
+  140: optional Memo memo
+  150: optional SearchAttributes searchAttributes
 }
 
 struct StartChildWorkflowExecutionDecisionAttributes {
@@ -439,6 +451,8 @@ struct StartChildWorkflowExecutionDecisionAttributes {
   110: optional RetryPolicy retryPolicy
   120: optional string cronSchedule
   130: optional Header header
+  140: optional Memo memo
+  150: optional SearchAttributes searchAttributes
 }
 
 struct Decision {
@@ -535,6 +549,8 @@ struct WorkflowExecutionContinuedAsNewEventAttributes {
   110: optional binary failureDetails
   120: optional binary lastCompletionResult
   130: optional Header header
+  140: optional Memo memo
+  150: optional SearchAttributes searchAttributes
 }
 
 struct DecisionTaskScheduledEventAttributes {
@@ -764,6 +780,8 @@ struct StartChildWorkflowExecutionInitiatedEventAttributes {
   120: optional RetryPolicy retryPolicy
   130: optional string cronSchedule
   140: optional Header header
+  150: optional Memo memo
+  160: optional SearchAttributes searchAttributes
 }
 
 struct StartChildWorkflowExecutionFailedEventAttributes {
@@ -1049,6 +1067,7 @@ struct PollForDecisionTaskResponse {
   90: optional TaskList WorkflowExecutionTaskList
   100:  optional i64 (js.type = "Long") scheduledTimestamp
   110:  optional i64 (js.type = "Long") startedTimestamp
+  120:  optional list<WorkflowQuery> queries
 }
 
 struct StickyExecutionAttributes {
@@ -1065,6 +1084,7 @@ struct RespondDecisionTaskCompletedRequest {
   60: optional bool returnNewDecisionTask
   70: optional bool forceCreateNewDecisionTask
   80: optional string binaryChecksum
+  90: optional list<WorkflowQueryResult> queryResults
 }
 
 struct RespondDecisionTaskCompletedResponse {
@@ -1327,6 +1347,13 @@ struct RespondQueryTaskCompletedRequest {
   20: optional QueryTaskCompletedType completedType
   30: optional binary queryResult
   40: optional string errorMessage
+}
+
+struct WorkflowQueryResult {
+  10: optional QueryResultType resultType
+  20: optional binary answer
+  30: optional string errorReason
+  40: optional binary errorDetails
 }
 
 struct DescribeWorkflowExecutionRequest {
