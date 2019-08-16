@@ -528,6 +528,7 @@ func (e *historyEngineImpl) PollMutableState(
 		Execution:           request.Execution,
 		ExpectedNextEventId: request.ExpectedNextEventId,
 		CurrentBranchToken:  request.CurrentBranchToken})
+
 	if err != nil {
 		return nil, err
 	}
@@ -542,12 +543,12 @@ func (e *historyEngineImpl) PollMutableState(
 		ClientLibraryVersion:                 response.ClientLibraryVersion,
 		ClientFeatureVersion:                 response.ClientFeatureVersion,
 		ClientImpl:                           response.ClientImpl,
-		IsWorkflowRunning:                    response.IsWorkflowRunning,
 		StickyTaskListScheduleToStartTimeout: response.StickyTaskListScheduleToStartTimeout,
-		EventStoreVersion:                    response.EventStoreVersion,
 		CurrentBranchToken:                   response.CurrentBranchToken,
 		ReplicationInfo:                      response.ReplicationInfo,
 		VersionHistories:                     response.VersionHistories,
+		WorkflowState:                        response.WorkflowState,
+		WorkflowCloseState:                   response.WorkflowCloseState,
 	}, nil
 }
 
@@ -622,7 +623,8 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 				response.NextEventId = common.Int64Ptr(event.nextEventID)
 				response.IsWorkflowRunning = common.BoolPtr(event.isWorkflowRunning)
 				response.PreviousStartedEventId = common.Int64Ptr(event.previousStartedEventID)
-				//TODO: wire up workflow state and close state after merge
+				response.WorkflowState = common.Int32Ptr(int32(event.workflowExecutionState))
+				response.WorkflowCloseState = common.Int32Ptr(int32(event.workflowExecutionCloseState))
 				if request.CurrentBranchToken != nil && !bytes.Equal(request.CurrentBranchToken, event.currentBranchToken) {
 					return nil, &workflow.CurrentBranchChangedError{
 						Message:            "Current branch token and request branch token doesn't match.",
@@ -668,6 +670,7 @@ func (e *historyEngineImpl) getMutableState(
 
 	executionInfo := msBuilder.GetExecutionInfo()
 	execution.RunId = context.getExecution().RunId
+	workflowState, workflowCloseState := msBuilder.GetWorkflowStateCloseStatus()
 	retResp = &h.GetMutableStateResponse{
 		Execution:                            &execution,
 		WorkflowType:                         &workflow.WorkflowType{Name: common.StringPtr(executionInfo.WorkflowTypeName)},
@@ -683,6 +686,8 @@ func (e *historyEngineImpl) getMutableState(
 		StickyTaskListScheduleToStartTimeout: common.Int32Ptr(executionInfo.StickyScheduleToStartTimeout),
 		EventStoreVersion:                    common.Int32Ptr(msBuilder.GetEventStoreVersion()),
 		CurrentBranchToken:                   currentBranchToken,
+		WorkflowState:                        common.Int32Ptr(int32(workflowState)),
+		WorkflowCloseState:                   common.Int32Ptr(int32(workflowCloseState)),
 	}
 	replicationState := msBuilder.GetReplicationState()
 	if replicationState != nil {
