@@ -1325,6 +1325,8 @@ struct QueryWorkflowResponse {
 struct WorkflowQuery {
   10: optional string queryType
   20: optional binary queryArgs
+  30: optional WorkflowExecutionCloseStatus closeStatus
+  40: optional bool longPoll
 }
 
 struct ResetStickyTaskListRequest {
