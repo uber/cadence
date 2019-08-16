@@ -272,6 +272,11 @@ enum IndexedValueType {
   DATETIME,
 }
 
+enum QueryIgnoreState {
+  CLOSED
+  TERMINATED
+}
+
 struct Header {
     10: optional map<string, binary> fields
 }
@@ -1316,10 +1321,12 @@ struct QueryWorkflowRequest {
   10: optional string domain
   20: optional WorkflowExecution execution
   30: optional WorkflowQuery query
+  40: optional QueryIgnoreState ignoreState
 }
 
 struct QueryWorkflowResponse {
   10: optional binary queryResult
+  20: optional bool queryIgnored
 }
 
 struct WorkflowQuery {
