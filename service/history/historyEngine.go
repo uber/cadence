@@ -2366,5 +2366,12 @@ func (e *historyEngineImpl) GetReplicationMessages(ctx ctx.Context, taskID int64
 	sw := e.metricsClient.StartTimer(scope, metrics.GetReplicationMessagesForShardLatency)
 	defer sw.Stop()
 
-	return e.replicatorProcessor.getTasks(taskID)
+	replicationMessages, err := e.replicatorProcessor.getTasks(taskID)
+	if err != nil {
+		e.logger.Error("Failed to retrieve replication messages.", tag.Error(err))
+		return nil, err
+	}
+
+	e.logger.Debug("Successfully fetched replication messages.", tag.Counter(len(replicationMessages.ReplicationTasks)))
+	return replicationMessages, nil
 }

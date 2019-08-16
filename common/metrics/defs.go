@@ -1740,7 +1740,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ReplicationTasksFailed:                            {metricName: "replication_tasks_failed", metricType: Counter},
 		ReplicationTasksLag:                               {metricName: "replication_tasks_lag", metricType: Timer},
 		ReplicationTasksFetched:                           {metricName: "replication_tasks_fetched", metricType: Timer},
-		ReplicationTasksReturned:                           {metricName: "replication_tasks_returned", metricType: Timer},
+		ReplicationTasksReturned:                          {metricName: "replication_tasks_returned", metricType: Timer},
 		GetReplicationMessagesForShardLatency:             {metricName: "get_replication_messages_for_shard", metricType: Timer},
 	},
 	Matching: {

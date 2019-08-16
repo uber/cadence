@@ -1269,6 +1269,8 @@ func (h *Handler) GetReplicationMessages(
 	defer log.CapturePanic(h.GetLogger(), nil)
 	h.startWG.Wait()
 
+	h.GetLogger().Debug("Received GetReplicationMessages call.")
+
 	scope := metrics.HistoryGetReplicationMessagesScope
 	h.metricsClient.IncCounter(scope, metrics.CadenceRequests)
 	sw := h.metricsClient.StartTimer(scope, metrics.CadenceLatency)
@@ -1307,6 +1309,8 @@ func (h *Handler) GetReplicationMessages(
 		messagesByShard[shardID] = tasks
 		return true
 	})
+
+	h.GetLogger().Debug("GetReplicationMessages succeeded.")
 
 	return &r.GetReplicationMessagesResponse{MessagesByShard: messagesByShard}, nil
 }
