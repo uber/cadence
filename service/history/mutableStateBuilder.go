@@ -1069,6 +1069,11 @@ func (e *mutableStateBuilder) DeleteUserTimer(
 }
 
 func (e *mutableStateBuilder) getDecisionInfo() *decisionInfo {
+
+	taskList := e.executionInfo.TaskList
+	if e.IsStickyTaskListEnabled() {
+		taskList = e.executionInfo.StickyTaskList
+	}
 	return &decisionInfo{
 		Version:                    e.executionInfo.DecisionVersion,
 		ScheduleID:                 e.executionInfo.DecisionScheduleID,
@@ -1078,6 +1083,7 @@ func (e *mutableStateBuilder) getDecisionInfo() *decisionInfo {
 		Attempt:                    e.executionInfo.DecisionAttempt,
 		StartedTimestamp:           e.executionInfo.DecisionStartedTimestamp,
 		ScheduledTimestamp:         e.executionInfo.DecisionScheduledTimestamp,
+		TaskList:                   taskList,
 		OriginalScheduledTimestamp: e.executionInfo.DecisionOriginalScheduledTimestamp,
 	}
 }
@@ -1157,6 +1163,8 @@ func (e *mutableStateBuilder) UpdateDecision(
 	e.executionInfo.DecisionScheduledTimestamp = di.ScheduledTimestamp
 	e.executionInfo.DecisionOriginalScheduledTimestamp = di.OriginalScheduledTimestamp
 
+	// NOTE: do not update tasklist in execution info
+
 	e.logger.Debug(fmt.Sprintf("Decision Updated: {Schedule: %v, Started: %v, ID: %v, Timeout: %v, Attempt: %v, Timestamp: %v}",
 		di.ScheduleID, di.StartedID, di.RequestID, di.DecisionTimeout, di.Attempt, di.StartedTimestamp))
 }
@@ -1172,6 +1180,7 @@ func (e *mutableStateBuilder) DeleteDecision() {
 		Attempt:            0,
 		StartedTimestamp:   0,
 		ScheduledTimestamp: 0,
+		TaskList:           "",
 		// Keep the last original scheduled timestamp, so that AddDecisionAsHeartbeat can continue with it.
 		OriginalScheduledTimestamp: e.getDecisionInfo().OriginalScheduledTimestamp,
 	}
@@ -1192,6 +1201,7 @@ func (e *mutableStateBuilder) FailDecision(
 		RequestID:                  emptyUUID,
 		DecisionTimeout:            0,
 		StartedTimestamp:           0,
+		TaskList:                   "",
 		OriginalScheduledTimestamp: 0,
 	}
 	if incrementAttempt {
@@ -1473,13 +1483,17 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(
 	return nil
 }
 
-func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent() (*decisionInfo, error) {
+func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent(bypassTaskGeneration bool) (*decisionInfo, error) {
 
-	return e.AddDecisionTaskScheduledEventAsHeartbeat(e.timeSource.Now().UnixNano())
+	return e.AddDecisionTaskScheduledEventAsHeartbeat(
+		bypassTaskGeneration,
+		e.timeSource.Now().UnixNano(),
+	)
 }
 
 // originalScheduledTimestamp is to record the first scheduled decision during decision heartbeat.
 func (e *mutableStateBuilder) AddDecisionTaskScheduledEventAsHeartbeat(
+	bypassTaskGeneration bool,
 	originalScheduledTimestamp int64,
 ) (*decisionInfo, error) {
 
@@ -1536,7 +1550,7 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEventAsHeartbeat(
 		scheduleTime = newDecisionEvent.GetTimestamp()
 	}
 
-	return e.ReplicateDecisionTaskScheduledEvent(
+	decision, err := e.ReplicateDecisionTaskScheduledEvent(
 		e.GetCurrentVersion(),
 		scheduleID,
 		taskList,
@@ -1545,6 +1559,18 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEventAsHeartbeat(
 		scheduleTime,
 		originalScheduledTimestamp,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO merge active & passive task generation
+	if !bypassTaskGeneration {
+		if err := e.taskGenerator.generateDecisionTasks(scheduleID); err != nil {
+			return nil, err
+		}
+	}
+
+	return decision, nil
 }
 
 func (e *mutableStateBuilder) ReplicateTransientDecisionTaskScheduled() (*decisionInfo, error) {
@@ -1689,6 +1715,7 @@ func (e *mutableStateBuilder) ReplicateDecisionTaskStartedEvent(
 		Attempt:                    di.Attempt,
 		StartedTimestamp:           timestamp,
 		ScheduledTimestamp:         di.ScheduledTimestamp,
+		TaskList:                   di.TaskList,
 		OriginalScheduledTimestamp: di.OriginalScheduledTimestamp,
 	}
 
@@ -1700,11 +1727,24 @@ func (e *mutableStateBuilder) CreateTransientDecisionEvents(
 	di *decisionInfo,
 	identity string,
 ) (*workflow.HistoryEvent, *workflow.HistoryEvent) {
+
 	tasklist := e.executionInfo.TaskList
-	scheduledEvent := newDecisionTaskScheduledEventWithInfo(di.ScheduleID, di.ScheduledTimestamp, tasklist, di.DecisionTimeout,
-		di.Attempt)
-	startedEvent := newDecisionTaskStartedEventWithInfo(di.StartedID, di.StartedTimestamp, di.ScheduleID, di.RequestID,
-		identity)
+
+	scheduledEvent := newDecisionTaskScheduledEventWithInfo(
+		di.ScheduleID,
+		di.ScheduledTimestamp,
+		tasklist,
+		di.DecisionTimeout,
+		di.Attempt,
+	)
+
+	startedEvent := newDecisionTaskStartedEventWithInfo(
+		di.StartedID,
+		di.StartedTimestamp,
+		di.ScheduleID,
+		di.RequestID,
+		identity,
+	)
 
 	return scheduledEvent, startedEvent
 }
@@ -3140,7 +3180,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 	var di *decisionInfo
 	// First decision for retry will be created by a backoff timer
 	if attributes.GetBackoffStartIntervalInSeconds() == 0 {
-		di, err = newStateBuilder.AddDecisionTaskScheduledEvent()
+		di, err = newStateBuilder.AddDecisionTaskScheduledEvent(false)
 		if err != nil {
 			return nil, nil, &workflow.InternalServiceError{Message: "Failed to add decision started event."}
 		}
@@ -3207,12 +3247,6 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(
 	newStartedTime := time.Unix(0, newStartedEvent.GetTimestamp())
 	newStartAttr := newStartedEvent.WorkflowExecutionStartedEventAttributes
 	if newDecision != nil {
-		newStateBuilder.AddTransferTasks(&persistence.DecisionTask{
-			DomainID:   domainID,
-			TaskList:   newStateBuilder.GetExecutionInfo().TaskList,
-			ScheduleID: newDecision.ScheduleID,
-		})
-
 		if newStateBuilder.GetReplicationState() != nil {
 			newStateBuilder.UpdateReplicationStateLastEventID(newDecision.Version, newDecision.ScheduleID)
 		}

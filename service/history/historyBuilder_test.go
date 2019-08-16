@@ -300,7 +300,7 @@ func (s *historyBuilderSuite) TestHistoryBuilderDecisionScheduledFailures() {
 	s.Equal(common.EmptyEventID, di0.StartedID)
 	s.Equal(common.EmptyEventID, s.getPreviousDecisionStartedEventID())
 
-	_, err := s.msBuilder.AddDecisionTaskScheduledEvent()
+	_, err := s.msBuilder.AddDecisionTaskScheduledEvent(false)
 	s.NotNil(err)
 	s.Equal(int64(3), s.getNextEventID())
 	di1, decisionRunning1 := s.msBuilder.GetPendingDecision(2)
@@ -717,7 +717,7 @@ func (s *historyBuilderSuite) addWorkflowExecutionStartedEvent(we workflow.Workf
 }
 
 func (s *historyBuilderSuite) addDecisionTaskScheduledEvent() *decisionInfo {
-	di, err := s.msBuilder.AddDecisionTaskScheduledEvent()
+	di, err := s.msBuilder.AddDecisionTaskScheduledEvent(false)
 	s.Nil(err)
 	return di
 }

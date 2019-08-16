@@ -5135,7 +5135,7 @@ func addWorkflowExecutionStartedEvent(builder mutableState, workflowExecution wo
 }
 
 func addDecisionTaskScheduledEvent(builder mutableState) *decisionInfo {
-	di, _ := builder.AddDecisionTaskScheduledEvent()
+	di, _ := builder.AddDecisionTaskScheduledEvent(false)
 	return di
 }
 

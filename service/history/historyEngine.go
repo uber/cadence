@@ -371,14 +371,10 @@ func (e *historyEngineImpl) generateFirstDecisionTask(
 		transferTasks = append(transferTasks, &persistence.RecordWorkflowStartedTask{})
 		if cronBackoffSeconds == 0 {
 			// DecisionTask is only created when it is not a Child Workflow and no backoff is needed
-			di, err = msBuilder.AddDecisionTaskScheduledEvent()
+			_, err = msBuilder.AddDecisionTaskScheduledEvent(false)
 			if err != nil {
 				return nil, nil, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
 			}
-
-			transferTasks = append(transferTasks, &persistence.DecisionTask{
-				DomainID: domainID, TaskList: taskListName, ScheduleID: di.ScheduleID,
-			})
 		}
 	}
 	return transferTasks, di, nil
@@ -1449,20 +1445,9 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 			var timerTasks []persistence.Task
 			// Create a transfer task to schedule a decision task
 			if !msBuilder.HasPendingDecisionTask() {
-				di, err := msBuilder.AddDecisionTaskScheduledEvent()
+				_, err := msBuilder.AddDecisionTaskScheduledEvent(false)
 				if err != nil {
 					return nil, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
-				}
-				transferTasks = append(transferTasks, &persistence.DecisionTask{
-					DomainID:   domainID,
-					TaskList:   di.TaskList,
-					ScheduleID: di.ScheduleID,
-				})
-				if msBuilder.IsStickyTaskListEnabled() {
-					tBuilder := e.getTimerBuilder(context.getExecution())
-					stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID, di.Attempt,
-						executionInfo.StickyScheduleToStartTimeout)
-					timerTasks = append(timerTasks, stickyTaskTimeoutTimer)
 				}
 			}
 
@@ -1934,20 +1919,9 @@ Update_History_Loop:
 		if postActions.createDecision {
 			// Create a transfer task to schedule a decision task
 			if !msBuilder.HasPendingDecisionTask() {
-				di, err := msBuilder.AddDecisionTaskScheduledEvent()
+				_, err := msBuilder.AddDecisionTaskScheduledEvent(false)
 				if err != nil {
 					return &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
-				}
-				transferTasks = append(transferTasks, &persistence.DecisionTask{
-					DomainID:   domainID,
-					TaskList:   di.TaskList,
-					ScheduleID: di.ScheduleID,
-				})
-				if msBuilder.IsStickyTaskListEnabled() {
-					tBuilder := e.getTimerBuilder(context.getExecution())
-					stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID, di.Attempt,
-						msBuilder.GetExecutionInfo().StickyScheduleToStartTimeout)
-					timerTasks = append(timerTasks, stickyTaskTimeoutTimer)
 				}
 			}
 		}

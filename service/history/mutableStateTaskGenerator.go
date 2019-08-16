@@ -35,9 +35,10 @@ type (
 	mutableStateTaskGenerator interface {
 		generateWorkflowStartTasks( // TODO
 			event *shared.HistoryEvent,
+			isContinueAsNew bool,
 		) error
 		generateWorkflowCloseTasks() error
-		generateDecisionTasks( // TODO
+		generateDecisionTasks(
 			decisionScheduleID int64,
 		) error
 		generateActivityTransferTasks( // TODO
@@ -100,6 +101,7 @@ func newMutableStateTaskGenerator(
 
 func (r *mutableStateTaskGeneratorImpl) generateWorkflowStartTasks(
 	event *shared.HistoryEvent,
+	isContinueAsNew bool,
 ) error {
 
 	attr := event.WorkflowExecutionStartedEventAttributes
@@ -127,15 +129,22 @@ func (r *mutableStateTaskGeneratorImpl) generateWorkflowStartTasks(
 	// handle delayed decision
 	//
 	// below handles the following cases:
-	// 1. if workflow has no parent && first decision is delayed
-	//  -> see below
-	// 2. if workflow has no parent && first decision is NOT delayed
-	//  -> out side business logic should generate decision and call generateDecisionTasks below
-	// 3. if workflow has parent
-	//  -> 2 phase commit in transfer queue active processor & schedule decision API will handle
+	// if not continue as new
+	//  1. if workflow has no parent && first decision is delayed
+	//   -> see below
+	//  2. if workflow has no parent && first decision is NOT delayed
+	//   -> out side business logic should generate decision and call generateDecisionTasks below
+	//  3. if workflow has parent
+	//   -> 2 phase commit in transfer queue active processor & schedule decision API will handle
 	//
-	// case 1, plz see above
-	if noParentWorkflow && firstDecisionDelayDuration != 0 {
+	// if continue as new
+	//  1. first decision is delayed
+	//   -> see below
+	//  2. first decision is NOT delayed
+	//   -> out side business logic should generate decision and call generateDecisionTasks below
+	//
+	// this handles case 1s above
+	if (noParentWorkflow || isContinueAsNew) && firstDecisionDelayDuration != 0 {
 		firstDecisionDelayType := persistence.WorkflowBackoffTimeoutTypeCron
 		if attr.Initiator != nil {
 			switch attr.GetInitiator() {

@@ -501,11 +501,35 @@ func (_m *mockMutableState) AddDecisionTaskScheduleToStartTimeoutEvent(_a0 int64
 	return r0, r1
 }
 
-func (_m *mockMutableState) AddDecisionTaskScheduledEventAsHeartbeat(_a0 int64) (*decisionInfo, error) {
+// AddDecisionTaskScheduledEventAsHeartbeat provides a mock function with given fields: _a0, _a1
+func (_m *mockMutableState) AddDecisionTaskScheduledEventAsHeartbeat(_a0 bool, _a1 int64) (*decisionInfo, error) {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 *decisionInfo
+	if rf, ok := ret.Get(0).(func(bool, int64) *decisionInfo); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*decisionInfo)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(bool, int64) error); ok {
+		r1 = rf(_a0, _a1)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// AddDecisionTaskScheduledEvent provides a mock function with given fields: _a0
+func (_m *mockMutableState) AddDecisionTaskScheduledEvent(_a0 bool) (*decisionInfo, error) {
 	ret := _m.Called(_a0)
 
 	var r0 *decisionInfo
-	if rf, ok := ret.Get(0).(func(int64) *decisionInfo); ok {
+	if rf, ok := ret.Get(0).(func(bool) *decisionInfo); ok {
 		r0 = rf(_a0)
 	} else {
 		if ret.Get(0) != nil {
@@ -514,31 +538,8 @@ func (_m *mockMutableState) AddDecisionTaskScheduledEventAsHeartbeat(_a0 int64) 
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(int64) error); ok {
+	if rf, ok := ret.Get(1).(func(bool) error); ok {
 		r1 = rf(_a0)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// AddDecisionTaskScheduledEvent provides a mock function with given fields:
-func (_m *mockMutableState) AddDecisionTaskScheduledEvent() (*decisionInfo, error) {
-	ret := _m.Called()
-
-	var r0 *decisionInfo
-	if rf, ok := ret.Get(0).(func() *decisionInfo); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*decisionInfo)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
 	} else {
 		r1 = ret.Error(1)
 	}

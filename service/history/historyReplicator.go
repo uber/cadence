@@ -1397,25 +1397,9 @@ func (r *historyReplicator) persistWorkflowMutation(
 ) error {
 
 	if !msBuilder.HasPendingDecisionTask() {
-		executionInfo := msBuilder.GetExecutionInfo()
-		di, err := msBuilder.AddDecisionTaskScheduledEvent()
+		_, err := msBuilder.AddDecisionTaskScheduledEvent(false)
 		if err != nil {
 			return ErrWorkflowMutationDecision
-		}
-		msBuilder.AddTransferTasks(&persistence.DecisionTask{
-			DomainID:   executionInfo.DomainID,
-			TaskList:   di.TaskList,
-			ScheduleID: di.ScheduleID,
-		})
-
-		if msBuilder.IsStickyTaskListEnabled() {
-			tBuilder := newTimerBuilder(r.logger, r.timeSource)
-			stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(
-				di.ScheduleID,
-				di.Attempt,
-				executionInfo.StickyScheduleToStartTimeout,
-			)
-			msBuilder.AddTimerTasks(stickyTaskTimeoutTimer)
 		}
 	}
 
