@@ -505,7 +505,7 @@ query_loop:
 							continue query_loop
 						}
 
-						if !ms.GetIsWorkflowRunning() {
+						if ms.GetWorkflowCloseState() != persistence.WorkflowCloseStatusNone {
 							return nil, &workflow.QueryFailedError{Message: "workflow closed without making any progress"}
 						}
 

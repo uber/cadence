@@ -4979,7 +4979,7 @@ func (s *engineSuite) TestSignalWorkflowExecution_Failed() {
 		nil,
 	)
 	err = s.mockHistoryEngine.SignalWorkflowExecution(context.Background(), signalRequest)
-	s.EqualError(err, "EntityNotExistsError{Message: Workflow execution already completed.}")
+	s.EqualError(err, "EntityNotExistsError{Message: workflow execution already completed}")
 }
 
 func (s *engineSuite) TestRemoveSignalMutableState() {
