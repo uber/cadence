@@ -361,7 +361,7 @@ func (s *conflictResolverSuite) TestReset() {
 			ExecutionInfo:  &persistence.WorkflowExecutionInfo{},
 			ExecutionStats: &persistence.ExecutionStats{},
 		},
-	}, nil).Maybe() // return empty resoonse since we are not testing the load
+	}, nil).Once() // return empty resoonse since we are not testing the load
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", event1.GetVersion()).Return(sourceCluster)
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(cache.NewLocalDomainCacheEntryForTest(

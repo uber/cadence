@@ -37,7 +37,6 @@ type (
 		lastFirstEventID            int64
 		nextEventID                 int64
 		previousStartedEventID      int64
-		isWorkflowRunning           bool
 		timestamp                   time.Time
 		currentBranchToken          []byte
 		workflowExecutionState      int

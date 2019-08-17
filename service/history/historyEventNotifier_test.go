@@ -21,7 +21,6 @@
 package history
 
 import (
-	"github.com/uber/cadence/common/persistence"
 	"sync"
 	"testing"
 	"time"
@@ -33,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
 )
 
 type (

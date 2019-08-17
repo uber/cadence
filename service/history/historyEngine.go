@@ -569,12 +569,13 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 	if err != nil {
 		return nil, err
 	}
-	// record the current branch token
-	currBranchToken := response.CurrentBranchToken
-	if request.CurrentBranchToken != nil && !bytes.Equal(request.CurrentBranchToken, currBranchToken) {
+	if request.CurrentBranchToken == nil {
+		request.CurrentBranchToken = response.CurrentBranchToken
+	}
+	if !bytes.Equal(request.CurrentBranchToken, response.CurrentBranchToken) {
 		return nil, &workflow.CurrentBranchChangedError{
 			Message:            "current branch token and request branch token doesn't match.",
-			CurrentBranchToken: currBranchToken}
+			CurrentBranchToken: response.CurrentBranchToken}
 	}
 	// set the run id in case query the current running workflow
 	execution.RunId = response.Execution.RunId
@@ -599,14 +600,12 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 			return nil, err
 		}
 		// check again if the current branch token changed
-		if request.CurrentBranchToken != nil && !bytes.Equal(request.CurrentBranchToken, currBranchToken) {
+		if !bytes.Equal(request.CurrentBranchToken, response.CurrentBranchToken) {
 			return nil, &workflow.CurrentBranchChangedError{
 				Message:            "current branch token and request branch token doesn't match.",
-				CurrentBranchToken: currBranchToken}
+				CurrentBranchToken: response.CurrentBranchToken}
 		}
-		if !bytes.Equal(response.CurrentBranchToken, currBranchToken) ||
-			expectedNextEventID < response.GetNextEventId() ||
-			!response.GetIsWorkflowRunning() {
+		if expectedNextEventID < response.GetNextEventId() || !response.GetIsWorkflowRunning() {
 			return response, nil
 		}
 
@@ -621,18 +620,16 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 			case event := <-channel:
 				response.LastFirstEventId = common.Int64Ptr(event.lastFirstEventID)
 				response.NextEventId = common.Int64Ptr(event.nextEventID)
-				response.IsWorkflowRunning = common.BoolPtr(event.isWorkflowRunning)
+				response.IsWorkflowRunning = common.BoolPtr(event.workflowExecutionCloseState == persistence.WorkflowCloseStatusNone)
 				response.PreviousStartedEventId = common.Int64Ptr(event.previousStartedEventID)
 				response.WorkflowState = common.Int32Ptr(int32(event.workflowExecutionState))
 				response.WorkflowCloseState = common.Int32Ptr(int32(event.workflowExecutionCloseState))
-				if request.CurrentBranchToken != nil && !bytes.Equal(request.CurrentBranchToken, event.currentBranchToken) {
+				if !bytes.Equal(request.CurrentBranchToken, event.currentBranchToken) {
 					return nil, &workflow.CurrentBranchChangedError{
 						Message:            "Current branch token and request branch token doesn't match.",
-						CurrentBranchToken: currBranchToken}
+						CurrentBranchToken: event.currentBranchToken}
 				}
-				if !bytes.Equal(event.currentBranchToken, currBranchToken) ||
-					expectedNextEventID < response.GetNextEventId() ||
-					!response.GetIsWorkflowRunning() {
+				if expectedNextEventID < response.GetNextEventId() || !response.GetIsWorkflowRunning() {
 					return response, nil
 				}
 			case <-timer.C:
