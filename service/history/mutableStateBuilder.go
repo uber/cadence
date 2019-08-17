@@ -2049,10 +2049,19 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 	event := e.hBuilder.AddActivityTaskScheduledEvent(decisionCompletedEventID, attributes)
 
 	// Write the event to cache only on active cluster for processing on activity started or retried
-	e.eventsCache.putEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID, e.executionInfo.RunID,
-		event.GetEventId(), event)
+	e.eventsCache.putEvent(
+		e.executionInfo.DomainID,
+		e.executionInfo.WorkflowID,
+		e.executionInfo.RunID,
+		event.GetEventId(),
+		event,
+	)
 
 	ai, err := e.ReplicateActivityTaskScheduledEvent(decisionCompletedEventID, event)
+	// TODO merge active & passive task generation
+	if err := e.taskGenerator.generateActivityTransferTasks(event); err != nil {
+		return nil, nil, err
+	}
 	return event, ai, err
 }
 

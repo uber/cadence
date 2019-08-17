@@ -41,9 +41,8 @@ type (
 		generateDecisionTasks(
 			decisionScheduleID int64,
 		) error
-		generateActivityTransferTasks( // TODO
-			activityScheduleID int64,
-			activityTargetDomain string,
+		generateActivityTransferTasks(
+			event *shared.HistoryEvent,
 		) error
 		generateChildWorkflowTasks( // TODO
 			childWorkflowScheduleID int64,
@@ -244,9 +243,12 @@ func (r *mutableStateTaskGeneratorImpl) generateDecisionTasks(
 }
 
 func (r *mutableStateTaskGeneratorImpl) generateActivityTransferTasks(
-	activityScheduleID int64,
-	activityTargetDomain string,
+	event *shared.HistoryEvent,
 ) error {
+
+	attr := event.ActivityTaskScheduledEventAttributes
+	activityScheduleID := event.GetEventId()
+	activityTargetDomain := attr.GetDomain()
 
 	activityInfo, ok := r.mutableState.GetActivityInfo(activityScheduleID)
 	if !ok {

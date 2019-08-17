@@ -227,14 +227,9 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 		return err
 	}
 
-	scheduleEvent, _, err := handler.mutableState.AddActivityTaskScheduledEvent(handler.decisionTaskCompletedID, attr)
+	_, _, err = handler.mutableState.AddActivityTaskScheduledEvent(handler.decisionTaskCompletedID, attr)
 	switch err.(type) {
 	case nil:
-		handler.transferTasks = append(handler.transferTasks, &persistence.ActivityTask{
-			DomainID:   targetDomainID,
-			TaskList:   attr.TaskList.GetName(),
-			ScheduleID: scheduleEvent.GetEventId(),
-		})
 		return nil
 	case *workflow.BadRequestError:
 		return handler.handlerFailDecision(
