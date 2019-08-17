@@ -62,7 +62,7 @@ type (
 			targetRunID string,
 			targetChildOnly bool,
 		) error
-		generateWorkflowSearchAttrTasks() error // TODO
+		generateWorkflowSearchAttrTasks() error
 
 		// these 2 APIs should only be called when mutable state transaction is being closed
 		generateActivityTimerTasks() error // TODO

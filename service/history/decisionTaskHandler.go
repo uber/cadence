@@ -902,8 +902,6 @@ func (handler *decisionTaskHandlerImpl) handleDecisionUpsertWorkflowSearchAttrib
 		return &workflow.InternalServiceError{Message: "Unable to add UpsertWorkflowSearchAttributesEvent."}
 	}
 
-	handler.transferTasks = append(handler.transferTasks, &persistence.UpsertWorkflowSearchAttributesTask{})
-
 	return nil
 }
 

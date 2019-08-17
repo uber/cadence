@@ -2776,6 +2776,10 @@ func (e *mutableStateBuilder) AddUpsertWorkflowSearchAttributesEvent(
 
 	event := e.hBuilder.AddUpsertWorkflowSearchAttributesEvent(decisionCompletedEventID, request)
 	e.ReplicateUpsertWorkflowSearchAttributesEvent(event)
+	// TODO merge active & passive task generation
+	if err := e.taskGenerator.generateWorkflowSearchAttrTasks(); err != nil {
+		return nil, err
+	}
 	return event, nil
 }
 
