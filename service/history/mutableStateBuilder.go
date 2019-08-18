@@ -2621,6 +2621,10 @@ func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionInitiated
 	if err != nil {
 		return nil, nil, err
 	}
+	// TODO merge active & passive task generation
+	if err := e.taskGenerator.generateRequestCancelExternalTasks(event); err != nil {
+		return nil, nil, err
+	}
 	return event, rci, nil
 }
 
@@ -2737,6 +2741,10 @@ func (e *mutableStateBuilder) AddSignalExternalWorkflowExecutionInitiatedEvent(
 	event := e.hBuilder.AddSignalExternalWorkflowExecutionInitiatedEvent(decisionCompletedEventID, request)
 	si, err := e.ReplicateSignalExternalWorkflowExecutionInitiatedEvent(event, signalRequestID)
 	if err != nil {
+		return nil, nil, err
+	}
+	// TODO merge active & passive task generation
+	if err := e.taskGenerator.generateSignalExternalTasks(event); err != nil {
 		return nil, nil, err
 	}
 	return event, si, nil
@@ -3317,6 +3325,10 @@ func (e *mutableStateBuilder) AddStartChildWorkflowExecutionInitiatedEvent(
 
 	ci, err := e.ReplicateStartChildWorkflowExecutionInitiatedEvent(decisionCompletedEventID, event, createRequestID)
 	if err != nil {
+		return nil, nil, err
+	}
+	// TODO merge active & passive task generation
+	if err := e.taskGenerator.generateChildWorkflowTasks(event); err != nil {
 		return nil, nil, err
 	}
 	return event, ci, nil

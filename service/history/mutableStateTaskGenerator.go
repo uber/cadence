@@ -44,23 +44,14 @@ type (
 		generateActivityTransferTasks(
 			event *shared.HistoryEvent,
 		) error
-		generateChildWorkflowTasks( // TODO
-			childWorkflowScheduleID int64,
-			childWorkflowTargetDomain string,
+		generateChildWorkflowTasks(
+			event *shared.HistoryEvent,
 		) error
-		generateRequestCancelExternalTasks( // TODO
-			scheduleID int64,
-			targetDomainName string,
-			targetWorkflowID string,
-			targetRunID string,
-			targetChildOnly bool,
+		generateRequestCancelExternalTasks(
+			event *shared.HistoryEvent,
 		) error
-		generateSignalExternalTasks( // TODO
-			scheduleID int64,
-			targetDomainName string,
-			targetWorkflowID string,
-			targetRunID string,
-			targetChildOnly bool,
+		generateSignalExternalTasks(
+			event *shared.HistoryEvent,
 		) error
 		generateWorkflowSearchAttrTasks() error
 
@@ -274,33 +265,13 @@ func (r *mutableStateTaskGeneratorImpl) generateActivityTransferTasks(
 	return nil
 }
 
-func (r *mutableStateTaskGeneratorImpl) generateActivityTimerTasks() error {
-
-	// TODO activity timer tasks
-	if timerTask := r.getTimerBuilder().GetActivityTimerTaskIfNeeded(r.mutableState); timerTask != nil {
-		// no need to set the version, since activity timer task
-		// is just a trigger to check all activities
-		r.mutableState.AddTimerTasks(timerTask)
-	}
-
-	return nil
-}
-
-func (r *mutableStateTaskGeneratorImpl) generateUserTimerTasks() error {
-
-	if timerTask := r.getTimerBuilder().GetUserTimerTaskIfNeeded(r.mutableState); timerTask != nil {
-		// no need to set the version, since user timer task
-		// is just a trigger to check all timers
-		r.mutableState.AddTimerTasks(timerTask)
-	}
-
-	return nil
-}
-
 func (r *mutableStateTaskGeneratorImpl) generateChildWorkflowTasks(
-	childWorkflowScheduleID int64,
-	childWorkflowTargetDomain string,
+	event *shared.HistoryEvent,
 ) error {
+
+	attr := event.StartChildWorkflowExecutionInitiatedEventAttributes
+	childWorkflowScheduleID := event.GetEventId()
+	childWorkflowTargetDomain := attr.GetDomain()
 
 	childWorkflowInfo, ok := r.mutableState.GetChildExecutionInfo(childWorkflowScheduleID)
 	if !ok {
@@ -327,12 +298,15 @@ func (r *mutableStateTaskGeneratorImpl) generateChildWorkflowTasks(
 }
 
 func (r *mutableStateTaskGeneratorImpl) generateRequestCancelExternalTasks(
-	scheduleID int64,
-	targetDomainName string,
-	targetWorkflowID string,
-	targetRunID string,
-	targetChildOnly bool,
+	event *shared.HistoryEvent,
 ) error {
+
+	attr := event.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes
+	scheduleID := event.GetEventId()
+	targetDomainName := attr.GetDomain()
+	targetWorkflowID := attr.GetWorkflowExecution().GetWorkflowId()
+	targetRunID := attr.GetWorkflowExecution().GetRunId()
+	targetChildOnly := attr.GetChildWorkflowOnly()
 
 	requestCancelExternalInfo, ok := r.mutableState.GetRequestCancelInfo(scheduleID)
 	if !ok {
@@ -361,12 +335,15 @@ func (r *mutableStateTaskGeneratorImpl) generateRequestCancelExternalTasks(
 }
 
 func (r *mutableStateTaskGeneratorImpl) generateSignalExternalTasks(
-	scheduleID int64,
-	targetDomainName string,
-	targetWorkflowID string,
-	targetRunID string,
-	targetChildOnly bool,
+	event *shared.HistoryEvent,
 ) error {
+
+	attr := event.SignalExternalWorkflowExecutionInitiatedEventAttributes
+	scheduleID := event.GetEventId()
+	targetDomainName := attr.GetDomain()
+	targetWorkflowID := attr.GetWorkflowExecution().GetWorkflowId()
+	targetRunID := attr.GetWorkflowExecution().GetRunId()
+	targetChildOnly := attr.GetChildWorkflowOnly()
 
 	signalExternalInfo, ok := r.mutableState.GetSignalInfo(scheduleID)
 	if !ok {
@@ -402,6 +379,29 @@ func (r *mutableStateTaskGeneratorImpl) generateWorkflowSearchAttrTasks() error 
 		VisibilityTimestamp: r.timeSource.Now(),
 		Version:             currentVersion,
 	})
+	return nil
+}
+
+func (r *mutableStateTaskGeneratorImpl) generateActivityTimerTasks() error {
+
+	// TODO activity timer tasks
+	if timerTask := r.getTimerBuilder().GetActivityTimerTaskIfNeeded(r.mutableState); timerTask != nil {
+		// no need to set the version, since activity timer task
+		// is just a trigger to check all activities
+		r.mutableState.AddTimerTasks(timerTask)
+	}
+
+	return nil
+}
+
+func (r *mutableStateTaskGeneratorImpl) generateUserTimerTasks() error {
+
+	if timerTask := r.getTimerBuilder().GetUserTimerTaskIfNeeded(r.mutableState); timerTask != nil {
+		// no need to set the version, since user timer task
+		// is just a trigger to check all timers
+		r.mutableState.AddTimerTasks(timerTask)
+	}
+
 	return nil
 }
 

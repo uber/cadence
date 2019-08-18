@@ -43,6 +43,9 @@ type (
 		suite.Suite
 		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
 		// not merely log an error
+
+		mockDomainCache *cache.DomainCacheMock
+
 		*require.Assertions
 		domainID        string
 		domainEntry     *cache.DomainCacheEntry
@@ -61,6 +64,7 @@ func TestHistoryBuilderSuite(t *testing.T) {
 
 func (s *historyBuilderSuite) SetupTest() {
 	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
+	s.mockDomainCache = &cache.DomainCacheMock{}
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 	s.domainID = validDomainID
@@ -73,11 +77,14 @@ func (s *historyBuilderSuite) SetupTest() {
 		config:                    NewDynamicConfigForTest(),
 		logger:                    s.logger,
 		timeSource:                clock.NewRealTimeSource(),
+		domainCache:               s.mockDomainCache,
 	}
 	s.mockEventsCache = &MockEventsCache{}
 	s.msBuilder = newMutableStateBuilder(s.mockShard, s.mockEventsCache,
 		s.logger, "")
 	s.builder = newHistoryBuilder(s.msBuilder, s.logger)
+
+	s.mockDomainCache.On("GetDomain", mock.Anything).Return(s.domainEntry, nil).Maybe()
 }
 
 func (s *historyBuilderSuite) TestHistoryBuilderDynamicSuccess() {

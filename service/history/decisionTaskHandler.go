@@ -605,21 +605,10 @@ func (handler *decisionTaskHandlerImpl) handleDecisionRequestCancelExternalWorkf
 	}
 
 	cancelRequestID := uuid.New()
-	wfCancelReqEvent, _, err := handler.mutableState.AddRequestCancelExternalWorkflowExecutionInitiatedEvent(
+	_, _, err := handler.mutableState.AddRequestCancelExternalWorkflowExecutionInitiatedEvent(
 		handler.decisionTaskCompletedID, cancelRequestID, attr,
 	)
-	if err != nil {
-		return &workflow.InternalServiceError{Message: "Unable to add external cancel workflow request."}
-	}
-
-	handler.transferTasks = append(handler.transferTasks, &persistence.CancelExecutionTask{
-		TargetDomainID:          targetDomainID,
-		TargetWorkflowID:        attr.GetWorkflowId(),
-		TargetRunID:             attr.GetRunId(),
-		TargetChildWorkflowOnly: attr.GetChildWorkflowOnly(),
-		InitiatedID:             wfCancelReqEvent.GetEventId(),
-	})
-	return nil
+	return err
 }
 
 func (handler *decisionTaskHandlerImpl) handleDecisionRecordMarker(
@@ -776,18 +765,10 @@ func (handler *decisionTaskHandlerImpl) handleDecisionStartChildWorkflow(
 	}
 
 	requestID := uuid.New()
-	initiatedEvent, _, err := handler.mutableState.AddStartChildWorkflowExecutionInitiatedEvent(
+	_, _, err = handler.mutableState.AddStartChildWorkflowExecutionInitiatedEvent(
 		handler.decisionTaskCompletedID, requestID, attr,
 	)
-	if err != nil {
-		return err
-	}
-	handler.transferTasks = append(handler.transferTasks, &persistence.StartChildExecutionTask{
-		TargetDomainID:   targetDomainID,
-		TargetWorkflowID: attr.GetWorkflowId(),
-		InitiatedID:      initiatedEvent.GetEventId(),
-	})
-	return nil
+	return err
 }
 
 func (handler *decisionTaskHandlerImpl) handleDecisionSignalExternalWorkflow(
@@ -835,21 +816,10 @@ func (handler *decisionTaskHandlerImpl) handleDecisionSignalExternalWorkflow(
 	}
 
 	signalRequestID := uuid.New() // for deduplicate
-	wfSignalReqEvent, _, err := handler.mutableState.AddSignalExternalWorkflowExecutionInitiatedEvent(
+	_, _, err = handler.mutableState.AddSignalExternalWorkflowExecutionInitiatedEvent(
 		handler.decisionTaskCompletedID, signalRequestID, attr,
 	)
-	if err != nil {
-		return &workflow.InternalServiceError{Message: "Unable to add external signal workflow request."}
-	}
-
-	handler.transferTasks = append(handler.transferTasks, &persistence.SignalExecutionTask{
-		TargetDomainID:          targetDomainID,
-		TargetWorkflowID:        attr.Execution.GetWorkflowId(),
-		TargetRunID:             attr.Execution.GetRunId(),
-		TargetChildWorkflowOnly: attr.GetChildWorkflowOnly(),
-		InitiatedID:             wfSignalReqEvent.GetEventId(),
-	})
-	return nil
+	return err
 }
 
 func (handler *decisionTaskHandlerImpl) handleDecisionUpsertWorkflowSearchAttributes(
@@ -898,11 +868,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionUpsertWorkflowSearchAttrib
 	_, err = handler.mutableState.AddUpsertWorkflowSearchAttributesEvent(
 		handler.decisionTaskCompletedID, attr,
 	)
-	if err != nil {
-		return &workflow.InternalServiceError{Message: "Unable to add UpsertWorkflowSearchAttributesEvent."}
-	}
-
-	return nil
+	return err
 }
 
 func convertSearchAttributesToByteArray(fields map[string][]byte) []byte {
