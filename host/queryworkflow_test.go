@@ -30,6 +30,7 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/tag"
+	"go.uber.org/cadence/.gen/go/shared"
 )
 
 func (s *integrationSuite) TestQueryWorkflow_Sticky() {
@@ -449,7 +450,7 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 		Err  error
 	}
 	queryResultCh := make(chan QueryResult)
-	queryWorkflowFn := func(queryType string) {
+	queryWorkflowFn := func(queryType string, rejectCondition *workflow.QueryRejectCondition) {
 		queryResp, err := s.engine.QueryWorkflow(createContext(), &workflow.QueryWorkflowRequest{
 			Domain: common.StringPtr(s.domainName),
 			Execution: &workflow.WorkflowExecution{
@@ -459,12 +460,13 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 			Query: &workflow.WorkflowQuery{
 				QueryType: common.StringPtr(queryType),
 			},
+			QueryRejectCondition: rejectCondition,
 		})
 		queryResultCh <- QueryResult{Resp: queryResp, Err: err}
 	}
 
 	// call QueryWorkflow in separate goroutinue (because it is blocking). That will generate a query task
-	go queryWorkflowFn(queryType)
+	go queryWorkflowFn(queryType, nil)
 	// process that query task, which should respond via RespondQueryTaskCompleted
 	for {
 		// loop until process the query task
@@ -482,7 +484,7 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 	queryResultString := string(queryResult.Resp.QueryResult)
 	s.Equal("query-result", queryResultString)
 
-	go queryWorkflowFn("invalid-query-type")
+	go queryWorkflowFn("invalid-query-type", nil)
 	for {
 		// loop until process the query task
 		isQueryTask, errInner := poller.PollAndProcessDecisionTask(false, false)
@@ -497,6 +499,25 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 	queryFailError, ok := queryResult.Err.(*workflow.QueryFailedError)
 	s.True(ok)
 	s.Equal("unknown-query-type", queryFailError.Message)
+
+	rejectCondition := workflow.QueryRejectConditionNotOpen
+	go queryWorkflowFn(queryType, &rejectCondition)
+	for {
+		// loop until process the query task
+		isQueryTask, errInner := poller.PollAndProcessDecisionTask(false, false)
+		s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
+		s.Nil(errInner)
+		if isQueryTask {
+			break
+		}
+	}
+	queryResult = <-queryResultCh
+	s.Nil(queryResult.Err)
+	s.NotNil(queryResult.Resp)
+	s.Nil(queryResult.Resp.QueryResult)
+	s.NotNil(queryResult.Resp.QueryRejected)
+	s.NotNil(queryResult.Resp.QueryRejected.CloseStatus)
+	s.Equal(shared.WorkflowExecutionCloseStatusCompleted, queryResult.Resp.QueryRejected.CloseStatus)
 }
 
 func (s *integrationSuite) TestQueryWorkflow_BeforeFirstDecision() {
