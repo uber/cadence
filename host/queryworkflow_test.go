@@ -25,6 +25,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"strconv"
+	"time"
 
 	"github.com/pborman/uuid"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -500,24 +501,31 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 	s.True(ok)
 	s.Equal("unknown-query-type", queryFailError.Message)
 
-	rejectCondition := workflow.QueryRejectConditionNotOpen
-	go queryWorkflowFn(queryType, &rejectCondition)
-	for {
-		// loop until process the query task
-		isQueryTask, errInner := poller.PollAndProcessDecisionTask(false, false)
-		s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
-		s.Nil(errInner)
-		if isQueryTask {
-			break
+	for i := 0; i < retryLimit; i++ {
+		rejectCondition := workflow.QueryRejectConditionNotOpen
+		go queryWorkflowFn(queryType, &rejectCondition)
+		for {
+			// loop until process the query task
+			isQueryTask, errInner := poller.PollAndProcessDecisionTask(false, false)
+			s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
+			s.Nil(errInner)
+			if isQueryTask {
+				break
+			}
 		}
+		queryResult = <-queryResultCh
+		if queryResult.Resp.QueryRejected != nil {
+			s.Nil(queryResult.Err)
+			s.NotNil(queryResult.Resp)
+			s.Nil(queryResult.Resp.QueryResult)
+			s.NotNil(queryResult.Resp.QueryRejected)
+			s.NotNil(queryResult.Resp.QueryRejected.CloseStatus)
+			s.Equal(shared.WorkflowExecutionCloseStatusCompleted, queryResult.Resp.QueryRejected.CloseStatus)
+			return
+		}
+		time.Sleep(retryBackoffTime)
 	}
-	queryResult = <-queryResultCh
-	s.Nil(queryResult.Err)
-	s.NotNil(queryResult.Resp)
-	s.Nil(queryResult.Resp.QueryResult)
-	s.NotNil(queryResult.Resp.QueryRejected)
-	s.NotNil(queryResult.Resp.QueryRejected.CloseStatus)
-	s.Equal(shared.WorkflowExecutionCloseStatusCompleted, queryResult.Resp.QueryRejected.CloseStatus)
+	s.Fail("failed to get closed query result within time limit")
 }
 
 func (s *integrationSuite) TestQueryWorkflow_BeforeFirstDecision() {
