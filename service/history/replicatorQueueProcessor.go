@@ -50,6 +50,8 @@ type (
 		options               *QueueProcessorOptions
 		logger                log.Logger
 		retryPolicy           backoff.RetryPolicy
+		// This is the batch size used by pull based RPC replicator.
+		fetchTasksBatchSize int
 		*queueProcessorBase
 		queueAckMgr
 
@@ -111,6 +113,7 @@ func newReplicatorQueueProcessor(
 		options:               options,
 		logger:                logger,
 		retryPolicy:           retryPolicy,
+		fetchTasksBatchSize:   config.ReplicatorProcessorFetchTasksBatchSize(),
 	}
 
 	queueAckMgr := newQueueAckMgr(shard, options, processor, shard.GetReplicatorAckLevel(), logger)
@@ -580,7 +583,7 @@ func convertLastReplicationInfo(info map[string]*persistence.ReplicationInfo) ma
 }
 
 func (p *replicatorQueueProcessorImpl) getTasks(readLevel int64) (*replicator.ReplicationMessages, error) {
-	taskInfoList, hasMore, err := p.readTasksWithBatchSize(readLevel, 20)
+	taskInfoList, hasMore, err := p.readTasksWithBatchSize(readLevel, p.fetchTasksBatchSize)
 	if err != nil {
 		return nil, err
 	}
