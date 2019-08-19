@@ -1039,7 +1039,7 @@ func (r *historyReplicator) terminateWorkflow(
 	}
 	var currentLastWriteVersion int64
 	err := r.historyEngine.updateWorkflowExecution(ctx, domainID, execution, false,
-		func(msBuilder mutableState, tBuilder *timerBuilder) ([]persistence.Task, error) {
+		func(msBuilder mutableState, tBuilder *timerBuilder) error {
 
 			// compare the current last write version first
 			// since this function has assumption that
@@ -1047,7 +1047,7 @@ func (r *historyReplicator) terminateWorkflow(
 			// if assumption is broken (race condition), then retry
 			currentLastWriteVersion = msBuilder.GetLastWriteVersion()
 			if incomingVersion <= currentLastWriteVersion {
-				return nil, newRetryTaskErrorWithHint(
+				return newRetryTaskErrorWithHint(
 					ErrRetryExistingWorkflowMsg,
 					domainID,
 					workflowID,
@@ -1057,7 +1057,7 @@ func (r *historyReplicator) terminateWorkflow(
 			}
 
 			if !msBuilder.IsWorkflowExecutionRunning() {
-				return nil, ErrWorkflowCompleted
+				return ErrWorkflowCompleted
 			}
 
 			// incomingVersion > currentLastWriteVersion
@@ -1066,7 +1066,7 @@ func (r *historyReplicator) terminateWorkflow(
 			// if last write version indicates not from current cluster, need to fetch from remote
 			sourceCluster := r.clusterMetadata.ClusterNameForFailoverVersion(currentLastWriteVersion)
 			if sourceCluster != r.clusterMetadata.GetCurrentClusterName() {
-				return nil, newRetryTaskErrorWithHint(
+				return newRetryTaskErrorWithHint(
 					ErrRetryExistingWorkflowMsg,
 					domainID,
 					workflowID,
@@ -1082,10 +1082,10 @@ func (r *historyReplicator) terminateWorkflow(
 				[]byte(fmt.Sprintf("terminated by version: %v", incomingVersion)),
 				workflowTerminationIdentity,
 			); err != nil {
-				return nil, &workflow.InternalServiceError{Message: "Unable to terminate workflow execution."}
+				return &workflow.InternalServiceError{Message: "Unable to terminate workflow execution."}
 			}
 
-			return nil, nil
+			return nil
 		})
 
 	if err != nil {

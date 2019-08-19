@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
+
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -1312,6 +1313,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 	previousExecutionState mutableState,
 	attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes,
 	firstRunID string,
+	eventStoreVersion int32,
 ) (*workflow.HistoryEvent, error) {
 
 	previousExecutionInfo := previousExecutionState.GetExecutionInfo()
@@ -1393,10 +1395,27 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 	); err != nil {
 		return nil, err
 	}
+
+	if eventStoreVersion == persistence.EventStoreVersionV2 {
+		if err := e.SetHistoryTree(e.GetExecutionInfo().RunID); err != nil {
+			return nil, err
+		}
+	}
+
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.generateWorkflowStartTasks(event); err != nil {
 		return nil, err
 	}
+	if err := e.taskGenerator.generateRecordWorkflowStartedTasks(event); err != nil {
+		return nil, err
+	}
+
+	if err := e.AddFirstDecisionTaskScheduled(
+		event,
+	); err != nil {
+		return nil, err
+	}
+
 	return event, nil
 }
 
@@ -1436,6 +1455,9 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.generateWorkflowStartTasks(event); err != nil {
+		return nil, err
+	}
+	if err := e.taskGenerator.generateRecordWorkflowStartedTasks(event); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -1517,7 +1539,47 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(
 	return nil
 }
 
-func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent(bypassTaskGeneration bool) (*decisionInfo, error) {
+func (e *mutableStateBuilder) AddFirstDecisionTaskScheduled(
+	startEvent *workflow.HistoryEvent,
+) error {
+
+	// handle first decision case, i.e. possible delayed decision
+	//
+	// below handles the following cases:
+	// 1. if not continue as new & if workflow has no parent
+	//   -> schedule decision & schedule delayed decision
+	// 2. if not continue as new & if workflow has parent
+	//   -> this function should not be called during workflow start, but should be called as
+	//      part of schedule decision in 2 phase commit
+	//
+	// if continue as new
+	//  1. whether has parent workflow or not
+	//   -> schedule decision & schedule delayed decision
+	//
+	startAttr := startEvent.WorkflowExecutionStartedEventAttributes
+	decisionBackoffDuration := time.Duration(startAttr.GetFirstDecisionTaskBackoffSeconds()) * time.Second
+
+	var err error
+	if decisionBackoffDuration != 0 {
+		if err = e.taskGenerator.generateDelayedDecisionTasks(
+			startEvent,
+		); err != nil {
+			return err
+		}
+	} else {
+		if _, err = e.AddDecisionTaskScheduledEvent(
+			false,
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent(
+	bypassTaskGeneration bool,
+) (*decisionInfo, error) {
 
 	return e.AddDecisionTaskScheduledEventAsHeartbeat(
 		bypassTaskGeneration,
@@ -1543,6 +1605,8 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEventAsHeartbeat(
 			tag.WorkflowScheduleID(e.executionInfo.DecisionScheduleID))
 		return nil, e.createInternalServerError(opTag)
 	}
+
+	isFirstDecision := !e.HasProcessedOrPendingDecisionTask()
 
 	// set workflow state to running
 	// since decision is scheduled
@@ -1602,6 +1666,7 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEventAsHeartbeat(
 		if err := e.taskGenerator.generateDecisionScheduleTasks(
 			scheduleID,
 			scheduleTime,
+			isFirstDecision,
 		); err != nil {
 			return nil, err
 		}
@@ -1678,13 +1743,11 @@ func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(
 		return nil, nil, err
 	}
 
-	hasPendingDecision := e.HasPendingDecisionTask()
 	di, ok := e.GetPendingDecision(scheduleEventID)
-	if !hasPendingDecision || !ok || di.StartedID != common.EmptyEventID {
+	if !ok || di.StartedID != common.EmptyEventID {
 		e.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(e.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction,
-			tag.Bool(hasPendingDecision),
 			tag.WorkflowScheduleID(scheduleEventID))
 		return nil, nil, e.createInternalServerError(opTag)
 	}
@@ -1893,13 +1956,11 @@ func (e *mutableStateBuilder) AddDecisionTaskCompletedEvent(
 		return nil, err
 	}
 
-	hasPendingDecision := e.HasPendingDecisionTask()
 	di, ok := e.GetPendingDecision(scheduleEventID)
-	if !hasPendingDecision || !ok || di.StartedID != startedEventID {
+	if !ok || di.StartedID != startedEventID {
 		e.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(e.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction,
-			tag.Bool(hasPendingDecision),
 			tag.WorkflowScheduleID(scheduleEventID),
 			tag.WorkflowStartedID(startedEventID))
 
@@ -1941,13 +2002,11 @@ func (e *mutableStateBuilder) AddDecisionTaskTimedOutEvent(
 		return nil, err
 	}
 
-	hasPendingDecision := e.HasPendingDecisionTask()
 	dt, ok := e.GetPendingDecision(scheduleEventID)
-	if !hasPendingDecision || !ok || dt.StartedID != startedEventID {
+	if !ok || dt.StartedID != startedEventID {
 		e.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(e.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction,
-			tag.Bool(hasPendingDecision),
 			tag.WorkflowScheduleID(scheduleEventID),
 			tag.WorkflowStartedID(startedEventID))
 		return nil, e.createInternalServerError(opTag)
@@ -2035,10 +2094,9 @@ func (e *mutableStateBuilder) AddDecisionTaskFailedEvent(
 		NewRunId:         common.StringPtr(newRunID),
 		ForkEventVersion: common.Int64Ptr(forkEventVersion),
 	}
-	hasPendingDecision := e.HasPendingDecisionTask()
 
 	dt, ok := e.GetPendingDecision(scheduleEventID)
-	if !hasPendingDecision || !ok || dt.StartedID != startedEventID {
+	if !ok || dt.StartedID != startedEventID {
 		e.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(e.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction,
@@ -3249,28 +3307,22 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 		newStateBuilder = newMutableStateBuilder(e.shard, e.eventsCache, e.logger, e.domainName)
 	}
 	domainID := domainEntry.GetInfo().ID
-	startedEvent, err := newStateBuilder.addWorkflowExecutionStartedEventForContinueAsNew(domainEntry, parentInfo, newExecution, e, attributes, firstRunID)
-	if err != nil {
+	if _, err = newStateBuilder.addWorkflowExecutionStartedEventForContinueAsNew(
+		domainEntry,
+		parentInfo,
+		newExecution,
+		e,
+		attributes,
+		firstRunID,
+		eventStoreVersion,
+	); err != nil {
 		return nil, nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
-	}
-
-	var di *decisionInfo
-	// First decision for retry will be created by a backoff timer
-	if attributes.GetBackoffStartIntervalInSeconds() == 0 {
-		di, err = newStateBuilder.AddDecisionTaskScheduledEvent(false)
-		if err != nil {
-			return nil, nil, &workflow.InternalServiceError{Message: "Failed to add decision started event."}
-		}
 	}
 
 	if err = e.ReplicateWorkflowExecutionContinuedAsNewEvent(
 		firstEventID,
 		domainID,
 		continueAsNewEvent,
-		startedEvent,
-		di,
-		newStateBuilder,
-		eventStoreVersion,
 	); err != nil {
 		return nil, nil, err
 	}
@@ -3311,10 +3363,6 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(
 	firstEventID int64,
 	domainID string,
 	continueAsNewEvent *workflow.HistoryEvent,
-	newStartedEvent *workflow.HistoryEvent,
-	newDecision *decisionInfo,
-	newStateBuilder mutableState,
-	newEventStoreVersion int32,
 ) error {
 
 	e.executionInfo.State = persistence.WorkflowStateCompleted
@@ -3322,34 +3370,6 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(
 	e.executionInfo.CompletionEventBatchID = firstEventID // Used when completion event needs to be loaded from database
 	e.ClearStickyness()
 	e.writeEventToCache(continueAsNewEvent)
-
-	newStartedTime := time.Unix(0, newStartedEvent.GetTimestamp())
-	newStartAttr := newStartedEvent.WorkflowExecutionStartedEventAttributes
-	if newDecision != nil {
-		if newStateBuilder.GetReplicationState() != nil {
-			newStateBuilder.UpdateReplicationStateLastEventID(newDecision.Version, newDecision.ScheduleID)
-		}
-	} else {
-		backoffTimer := &persistence.WorkflowBackoffTimerTask{
-			VisibilityTimestamp: newStartedTime.Add(time.Second * time.Duration(newStartAttr.GetFirstDecisionTaskBackoffSeconds())),
-		}
-		if newStartAttr.GetInitiator() == workflow.ContinueAsNewInitiatorRetryPolicy {
-			backoffTimer.TimeoutType = persistence.WorkflowBackoffTimeoutTypeRetry
-		} else if newStartAttr.GetInitiator() == workflow.ContinueAsNewInitiatorCronSchedule {
-			backoffTimer.TimeoutType = persistence.WorkflowBackoffTimeoutTypeCron
-		}
-		newStateBuilder.AddTimerTasks(backoffTimer)
-
-		if newStateBuilder.GetReplicationState() != nil {
-			newStateBuilder.UpdateReplicationStateLastEventID(newStartedEvent.GetVersion(), newStartedEvent.GetEventId())
-		}
-	}
-
-	if newEventStoreVersion == persistence.EventStoreVersionV2 {
-		if err := newStateBuilder.SetHistoryTree(newStateBuilder.GetExecutionInfo().RunID); err != nil {
-			return err
-		}
-	}
 
 	return nil
 }

@@ -1318,8 +1318,6 @@ func (t *transferQueueActiveProcessorImpl) updateWorkflowExecution(
 		return err
 	}
 
-	var transferTasks []persistence.Task
-	var timerTasks []persistence.Task
 	if err := action(msBuilder); err != nil {
 		return err
 	}
@@ -1332,10 +1330,6 @@ func (t *transferQueueActiveProcessorImpl) updateWorkflowExecution(
 		}
 	}
 
-	// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict then reload
-	// the history and try the operation again.
-	msBuilder.AddTransferTasks(transferTasks...)
-	msBuilder.AddTimerTasks(timerTasks...)
 	return context.updateWorkflowExecutionAsActive(t.shard.GetTimeSource().Now())
 }
 

@@ -26,7 +26,6 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
@@ -163,6 +162,9 @@ func (b *stateBuilderImpl) applyEvents(
 			}
 
 			b.timerTasks = append(b.timerTasks, b.scheduleWorkflowTimerTask(event, b.msBuilder)...)
+			// TODO this record workflow start task does not seem correct for child workflow (2 phase commit)
+			//  child workflow & not continue as new should generate this task at decision "schedule", i.e.
+			//  1. cron -> first decision timer schedule; 2. not cron -> first decision event
 			b.transferTasks = append(b.transferTasks, b.scheduleWorkflowStartTransferTask())
 			if eventStoreVersion == persistence.EventStoreVersionV2 {
 				err := b.msBuilder.SetHistoryTree(execution.GetRunId())
@@ -547,7 +549,7 @@ func (b *stateBuilderImpl) applyEvents(
 				WorkflowId: execution.WorkflowId,
 				RunId:      common.StringPtr(newRunID),
 			}
-			_, newRunDecisionInfo, _, err := newRunStateBuilder.applyEvents(
+			_, _, _, err = newRunStateBuilder.applyEvents(
 				domainID,
 				uuid.New(),
 				newExecution,
@@ -563,8 +565,11 @@ func (b *stateBuilderImpl) applyEvents(
 			b.newRunTransferTasks = append(b.newRunTransferTasks, newRunStateBuilder.getTransferTasks()...)
 			b.newRunTimerTasks = append(b.newRunTimerTasks, newRunStateBuilder.getTimerTasks()...)
 
-			err = b.msBuilder.ReplicateWorkflowExecutionContinuedAsNewEvent(firstEvent.GetEventId(), domainID, event,
-				newRunStartedEvent, newRunDecisionInfo, newRunMutableStateBuilder, newRunEventStoreVersion)
+			err = b.msBuilder.ReplicateWorkflowExecutionContinuedAsNewEvent(
+				firstEvent.GetEventId(),
+				domainID,
+				event,
+			)
 			if err != nil {
 				return nil, nil, nil, err
 			}
@@ -719,27 +724,24 @@ func (b *stateBuilderImpl) scheduleWorkflowTimerTask(
 ) []persistence.Task {
 	timerTasks := []persistence.Task{}
 	now := time.Unix(0, event.GetTimestamp())
-	timeout := now.Add(time.Duration(msBuilder.GetExecutionInfo().WorkflowTimeout) * time.Second)
-	backoffDuration := backoff.NoBackoff
-	startWorkflowAttribute := event.GetWorkflowExecutionStartedEventAttributes()
-	firstDecisionTaskBackoffSecond := startWorkflowAttribute.GetFirstDecisionTaskBackoffSeconds()
-	if firstDecisionTaskBackoffSecond > 0 {
-		backoffDuration = time.Duration(firstDecisionTaskBackoffSecond) * time.Second
-	}
 
-	if backoffDuration != backoff.NoBackoff {
-		timeout = timeout.Add(backoffDuration)
+	workflowTimeout := now.Add(time.Duration(msBuilder.GetExecutionInfo().WorkflowTimeout) * time.Second)
+
+	startWorkflowAttribute := event.GetWorkflowExecutionStartedEventAttributes()
+	firstDecisionTaskBackoffDuration := time.Duration(startWorkflowAttribute.GetFirstDecisionTaskBackoffSeconds()) * time.Second
+	if firstDecisionTaskBackoffDuration != 0 {
+		workflowTimeout = workflowTimeout.Add(firstDecisionTaskBackoffDuration)
 		timeoutType := persistence.WorkflowBackoffTimeoutTypeRetry
 		if startWorkflowAttribute.GetInitiator().Equals(shared.ContinueAsNewInitiatorCronSchedule) {
 			timeoutType = persistence.WorkflowBackoffTimeoutTypeCron
 		}
 		timerTasks = append(timerTasks, &persistence.WorkflowBackoffTimerTask{
-			VisibilityTimestamp: now.Add(backoffDuration),
+			VisibilityTimestamp: now.Add(firstDecisionTaskBackoffDuration),
 			TimeoutType:         timeoutType,
 		})
 	}
 
-	timerTasks = append(timerTasks, &persistence.WorkflowTimeoutTask{VisibilityTimestamp: timeout})
+	timerTasks = append(timerTasks, &persistence.WorkflowTimeoutTask{VisibilityTimestamp: workflowTimeout})
 	return timerTasks
 }
 

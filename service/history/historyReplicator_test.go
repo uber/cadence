@@ -1193,8 +1193,6 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 
 	msBuilderCurrent.On("AddWorkflowExecutionTerminatedEvent",
 		workflowTerminationReason, mock.Anything, workflowTerminationIdentity).Return(&workflow.HistoryEvent{}, nil)
-	msBuilderCurrent.On("AddTransferTasks", mock.Anything).Once()
-	msBuilderCurrent.On("AddTimerTasks", mock.Anything).Once()
 	contextCurrent.On("updateWorkflowExecutionAsActive", mock.Anything).Return(nil).Once()
 
 	err := s.historyReplicator.ApplyOtherEventsMissingMutableState(ctx.Background(), domainID, workflowID, runID, req, s.logger)
@@ -4121,8 +4119,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 
 	msBuilderCurrent.On("AddWorkflowExecutionTerminatedEvent",
 		workflowTerminationReason, mock.Anything, workflowTerminationIdentity).Return(&workflow.HistoryEvent{}, nil)
-	msBuilderCurrent.On("AddTransferTasks", mock.Anything).Once()
-	msBuilderCurrent.On("AddTimerTasks", mock.Anything).Once()
 	contextCurrent.On("updateWorkflowExecutionAsActive", mock.Anything).Return(nil).Once()
 
 	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, sBuilder, s.logger)
@@ -4254,8 +4250,6 @@ func (s *historyReplicatorSuite) TestConflictResolutionTerminateCurrentRunningIf
 
 	msBuilderCurrent.On("AddWorkflowExecutionTerminatedEvent",
 		workflowTerminationReason, mock.Anything, workflowTerminationIdentity).Return(&workflow.HistoryEvent{}, nil)
-	msBuilderCurrent.On("AddTransferTasks", mock.Anything).Once()
-	msBuilderCurrent.On("AddTimerTasks", mock.Anything).Once()
 	contextCurrent.On("updateWorkflowExecutionAsActive", mock.Anything).Return(nil).Once()
 
 	prevRunID, prevLastWriteVersion, prevState, err := s.historyReplicator.conflictResolutionTerminateCurrentRunningIfNotSelf(ctx.Background(), msBuilderTarget, incomingVersion, incomingTimestamp, s.logger)

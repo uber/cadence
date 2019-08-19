@@ -39,9 +39,16 @@ type (
 		generateWorkflowCloseTasks(
 			event *shared.HistoryEvent,
 		) error
+		generateRecordWorkflowStartedTasks(
+			startEvent *shared.HistoryEvent,
+		) error
+		generateDelayedDecisionTasks(
+			startEvent *shared.HistoryEvent,
+		) error
 		generateDecisionScheduleTasks(
 			decisionScheduleID int64,
 			decisionScheduleTimestamp int64,
+			isFirstDecision bool,
 		) error
 		generateDecisionStartTasks(
 			decisionScheduleID int64,
@@ -108,15 +115,17 @@ func (r *mutableStateTaskGeneratorImpl) generateWorkflowStartTasks(
 	event *shared.HistoryEvent,
 ) error {
 
+	// TODO when refactoring workflow reset functionality,
+	//  the logic below should be changed slightly, i.e. 'now' should not be derived from
+	//  start event, but the reset time
+
 	now := time.Unix(0, event.GetTimestamp())
 
 	attr := event.WorkflowExecutionStartedEventAttributes
 	firstDecisionDelayDuration := time.Duration(attr.GetFirstDecisionTaskBackoffSeconds()) * time.Second
 
 	executionInfo := r.mutableState.GetExecutionInfo()
-
 	startVersion := r.mutableState.GetStartVersion()
-	noParentWorkflow := executionInfo.ParentWorkflowID == ""
 
 	workflowTimeoutDuration := time.Duration(executionInfo.WorkflowTimeout) * time.Second
 	workflowTimeoutDuration = workflowTimeoutDuration + firstDecisionDelayDuration
@@ -129,75 +138,6 @@ func (r *mutableStateTaskGeneratorImpl) generateWorkflowStartTasks(
 		VisibilityTimestamp: workflowTimeoutTimestamp,
 		Version:             startVersion,
 	})
-
-	// handle workflow start (visibility)
-	//
-	// below handles the following cases:
-	// if not continue as new
-	//  1. if workflow has no parent
-	//   -> see below
-	//  2. if workflow has parent
-	//   -> 2 phase commit in transfer queue active processor & schedule decision API will handle
-	//
-	// if continue as new
-	//   -> see below
-	//
-	// this handles case 1s above
-	if noParentWorkflow || attr.Initiator != nil {
-		r.mutableState.AddTransferTasks(&persistence.RecordWorkflowStartedTask{
-			// TaskID is set by shard
-			VisibilityTimestamp: now,
-			Version:             startVersion,
-		})
-	}
-
-	// handle delayed decision
-	//
-	// below handles the following cases:
-	// if not continue as new
-	//  1. if workflow has no parent && first decision is delayed
-	//   -> see below
-	//  2. if workflow has no parent && first decision is NOT delayed
-	//   -> out side business logic should generate decision and call generateDecisionTasks below
-	//  3. if workflow has parent
-	//   -> 2 phase commit in transfer queue active processor & schedule decision API will handle
-	//
-	// if continue as new
-	//  1. first decision is delayed
-	//   -> see below
-	//  2. first decision is NOT delayed
-	//   -> out side business logic should generate decision and call generateDecisionTasks below
-	//
-	// this handles case 1s above
-	if (noParentWorkflow || attr.Initiator != nil) && firstDecisionDelayDuration != 0 {
-		// noParentWorkflow case
-		firstDecisionDelayType := persistence.WorkflowBackoffTimeoutTypeCron
-		// continue as new case
-		if attr.Initiator != nil {
-			switch attr.GetInitiator() {
-			case shared.ContinueAsNewInitiatorRetryPolicy:
-				firstDecisionDelayType = persistence.WorkflowBackoffTimeoutTypeRetry
-			case shared.ContinueAsNewInitiatorCronSchedule:
-				firstDecisionDelayType = persistence.WorkflowBackoffTimeoutTypeCron
-			case shared.ContinueAsNewInitiatorDecider:
-				return &shared.InternalServiceError{
-					Message: "encounter continue as new iterator & first decision delay not 0",
-				}
-			default:
-				return &shared.InternalServiceError{
-					Message: fmt.Sprintf("unknown iterator retry policy: %v", attr.GetInitiator()),
-				}
-			}
-		}
-
-		r.mutableState.AddTimerTasks(&persistence.WorkflowBackoffTimerTask{
-			// TaskID is set by shard
-			VisibilityTimestamp: now.Add(firstDecisionDelayDuration),
-			Version:             startVersion,
-			// TODO EventID seems not used at all
-			TimeoutType: firstDecisionDelayType,
-		})
-	}
 
 	return nil
 }
@@ -238,9 +178,52 @@ func (r *mutableStateTaskGeneratorImpl) generateWorkflowCloseTasks(
 	return nil
 }
 
+func (r *mutableStateTaskGeneratorImpl) generateDelayedDecisionTasks(
+	startEvent *shared.HistoryEvent,
+) error {
+
+	now := time.Unix(0, startEvent.GetTimestamp())
+
+	startVersion := r.mutableState.GetStartVersion()
+	startAttr := startEvent.WorkflowExecutionStartedEventAttributes
+	decisionBackoffDuration := time.Duration(startAttr.GetFirstDecisionTaskBackoffSeconds()) * time.Second
+	executionTimestamp := now.Add(decisionBackoffDuration)
+
+	// noParentWorkflow case
+	firstDecisionDelayType := persistence.WorkflowBackoffTimeoutTypeCron
+	// continue as new case
+	if startAttr.Initiator != nil {
+		switch startAttr.GetInitiator() {
+		case shared.ContinueAsNewInitiatorRetryPolicy:
+			firstDecisionDelayType = persistence.WorkflowBackoffTimeoutTypeRetry
+		case shared.ContinueAsNewInitiatorCronSchedule:
+			firstDecisionDelayType = persistence.WorkflowBackoffTimeoutTypeCron
+		case shared.ContinueAsNewInitiatorDecider:
+			return &shared.InternalServiceError{
+				Message: "encounter continue as new iterator & first decision delay not 0",
+			}
+		default:
+			return &shared.InternalServiceError{
+				Message: fmt.Sprintf("unknown iterator retry policy: %v", startAttr.GetInitiator()),
+			}
+		}
+	}
+
+	r.mutableState.AddTimerTasks(&persistence.WorkflowBackoffTimerTask{
+		// TaskID is set by shard
+		// TODO EventID seems not used at all
+		VisibilityTimestamp: executionTimestamp,
+		TimeoutType:         firstDecisionDelayType,
+		Version:             startVersion,
+	})
+
+	return nil
+}
+
 func (r *mutableStateTaskGeneratorImpl) generateDecisionScheduleTasks(
 	decisionScheduleID int64,
 	decisionScheduleTimestamp int64,
+	isFirstDecision bool,
 ) error {
 
 	now := time.Unix(0, decisionScheduleTimestamp)
@@ -273,6 +256,23 @@ func (r *mutableStateTaskGeneratorImpl) generateDecisionScheduleTasks(
 		timerTask.Version = decision.Version
 		r.mutableState.AddTimerTasks(timerTask)
 	}
+
+	return nil
+}
+
+func (r *mutableStateTaskGeneratorImpl) generateRecordWorkflowStartedTasks(
+	startEvent *shared.HistoryEvent,
+) error {
+
+	now := time.Unix(0, startEvent.GetTimestamp())
+
+	startVersion := r.mutableState.GetStartVersion()
+
+	r.mutableState.AddTransferTasks(&persistence.RecordWorkflowStartedTask{
+		// TaskID is set by shard
+		VisibilityTimestamp: now,
+		Version:             startVersion,
+	})
 
 	return nil
 }
@@ -484,6 +484,7 @@ func (r *mutableStateTaskGeneratorImpl) generateWorkflowSearchAttrTasks(
 		VisibilityTimestamp: now,
 		Version:             currentVersion,
 	})
+
 	return nil
 }
 
@@ -500,6 +501,8 @@ func (r *mutableStateTaskGeneratorImpl) generateWorkflowResetTasks(
 		VisibilityTimestamp: now,
 		Version:             currentVersion,
 	})
+
+	return nil
 }
 
 func (r *mutableStateTaskGeneratorImpl) generateActivityTimerTasks(
@@ -515,6 +518,7 @@ func (r *mutableStateTaskGeneratorImpl) generateActivityTimerTasks(
 		// is just a trigger to check all activities
 		r.mutableState.AddTimerTasks(timerTask)
 	}
+
 	return nil
 }
 
@@ -531,6 +535,7 @@ func (r *mutableStateTaskGeneratorImpl) generateUserTimerTasks(
 		// is just a trigger to check all timers
 		r.mutableState.AddTimerTasks(timerTask)
 	}
+
 	return nil
 }
 
@@ -552,5 +557,6 @@ func (r *mutableStateTaskGeneratorImpl) getTargetDomainID(
 		}
 		targetDomainID = targetDomainEntry.GetInfo().ID
 	}
+
 	return targetDomainID, nil
 }

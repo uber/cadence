@@ -114,21 +114,17 @@ func (handler *decisionHandlerImpl) handleDecisionTaskScheduled(
 			}
 
 			postActions := &updateWorkflowAction{
-				createDecision: true,
-				transferTasks:  []persistence.Task{&persistence.RecordWorkflowStartedTask{}},
+				createDecision: false,
 			}
 
 			startEvent, found := msBuilder.GetStartEvent()
 			if !found {
 				return nil, &workflow.InternalServiceError{Message: "Failed to load start event."}
 			}
-			executionTimestamp := getWorkflowExecutionTimestamp(msBuilder, startEvent)
-			if req.GetIsFirstDecision() && executionTimestamp.After(handler.timeSource.Now()) {
-				postActions.timerTasks = append(postActions.timerTasks, &persistence.WorkflowBackoffTimerTask{
-					VisibilityTimestamp: executionTimestamp,
-					TimeoutType:         persistence.WorkflowBackoffTimeoutTypeCron,
-				})
-				postActions.createDecision = false
+			if err := msBuilder.AddFirstDecisionTaskScheduled(
+				startEvent,
+			); err != nil {
+				return nil, err
 			}
 
 			return postActions, nil
@@ -183,8 +179,6 @@ func (handler *decisionHandlerImpl) handleDecisionTaskStarted(
 			updateAction := &updateWorkflowAction{
 				noop:           false,
 				createDecision: false,
-				timerTasks:     nil,
-				transferTasks:  nil,
 			}
 
 			if di.StartedID != common.EmptyEventID {
@@ -239,20 +233,20 @@ func (handler *decisionHandlerImpl) handleDecisionTaskFailed(
 	}
 
 	return handler.historyEngine.updateWorkflowExecution(ctx, domainID, workflowExecution, true,
-		func(msBuilder mutableState, tBuilder *timerBuilder) ([]persistence.Task, error) {
+		func(msBuilder mutableState, tBuilder *timerBuilder) error {
 			if !msBuilder.IsWorkflowExecutionRunning() {
-				return nil, ErrWorkflowCompleted
+				return ErrWorkflowCompleted
 			}
 
 			scheduleID := token.ScheduleID
 			di, isRunning := msBuilder.GetPendingDecision(scheduleID)
 			if !isRunning || di.Attempt != token.ScheduleAttempt || di.StartedID == common.EmptyEventID {
-				return nil, &workflow.EntityNotExistsError{Message: "Decision task not found."}
+				return &workflow.EntityNotExistsError{Message: "Decision task not found."}
 			}
 
 			_, err := msBuilder.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, request.GetCause(), request.Details,
 				request.GetIdentity(), "", "", "", 0)
-			return nil, err
+			return err
 		})
 }
 
@@ -370,10 +364,8 @@ Update_History_Loop:
 			activityNotStartedCancelled bool
 			continueAsNewBuilder        mutableState
 
-			tBuilder           *timerBuilder
 			hasUnhandledEvents bool
 		)
-		tBuilder = timerBuilderProvider()
 		hasUnhandledEvents = msBuilder.HasBufferedEvents()
 
 		if request.StickyAttributes == nil || request.StickyAttributes.WorkerTaskList == nil {
@@ -446,7 +438,6 @@ Update_History_Loop:
 
 			continueAsNewBuilder = decisionTaskHandler.continueAsNewBuilder
 
-			tBuilder = decisionTaskHandler.timerBuilder
 			hasUnhandledEvents = decisionTaskHandler.hasUnhandledEventsBeforeDecisions
 		}
 
@@ -460,7 +451,6 @@ Update_History_Loop:
 			if err != nil {
 				return nil, err
 			}
-			tBuilder = handler.historyEngine.getTimerBuilder(context.getExecution())
 			hasUnhandledEvents = true
 			continueAsNewBuilder = nil
 		}
@@ -540,21 +530,16 @@ Update_History_Loop:
 					return nil, err
 				}
 
-				_, err := msBuilder.AddWorkflowExecutionTerminatedEvent(
+				if _, err := msBuilder.AddWorkflowExecutionTerminatedEvent(
 					common.FailureReasonTransactionSizeExceedsLimit,
 					[]byte(updateErr.Error()),
 					"cadence-history-server",
-				)
-				if err != nil {
+				); err != nil {
 					return nil, err
 				}
-				transferTask, timerTask, err := handler.historyEngine.getWorkflowHistoryCleanupTasks(domainID, workflowExecution.GetWorkflowId(), tBuilder)
-				if err != nil {
-					return nil, err
-				}
-				msBuilder.AddTransferTasks(transferTask)
-				msBuilder.AddTimerTasks(timerTask)
-				if err := context.updateWorkflowExecutionAsActive(handler.shard.GetTimeSource().Now()); err != nil {
+				if err := context.updateWorkflowExecutionAsActive(
+					handler.shard.GetTimeSource().Now(),
+				); err != nil {
 					return nil, err
 				}
 			}

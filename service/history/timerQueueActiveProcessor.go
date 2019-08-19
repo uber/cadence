@@ -296,8 +296,6 @@ func (t *timerQueueActiveProcessorImpl) processExpiredUserTimer(
 	}
 	tBuilder := t.historyService.getTimerBuilder(context.getExecution())
 
-	var timerTasks []persistence.Task
-
 	updateHistory := false
 	updateState := false
 
@@ -326,7 +324,7 @@ ExpireUserTimers:
 
 	if updateHistory || updateState {
 		scheduleNewDecision := updateHistory && !msBuilder.HasPendingDecisionTask()
-		return t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, timerTasks)
+		return t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision)
 	}
 	return nil
 }
@@ -353,7 +351,6 @@ func (t *timerQueueActiveProcessorImpl) processActivityTimeout(
 	}
 	tBuilder := t.historyService.getTimerBuilder(context.getExecution())
 
-	var timerTasks []persistence.Task
 	updateHistory := false
 	updateState := false
 	ai, running := msBuilder.GetActivityInfo(task.EventID)
@@ -475,7 +472,7 @@ ExpireActivityTimers:
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.
 		scheduleNewDecision := updateHistory && !msBuilder.HasPendingDecisionTask()
-		return t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, timerTasks)
+		return t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision)
 	}
 	return nil
 }
@@ -546,7 +543,7 @@ func (t *timerQueueActiveProcessorImpl) processDecisionTimeout(
 	if scheduleNewDecision {
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.
-		return t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, nil)
+		return t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision)
 	}
 	return nil
 }
@@ -582,7 +579,7 @@ func (t *timerQueueActiveProcessorImpl) processWorkflowBackoffTimer(
 	}
 
 	// schedule first decision task
-	return t.updateWorkflowExecution(context, msBuilder, true, nil)
+	return t.updateWorkflowExecution(context, msBuilder, true)
 }
 
 func (t *timerQueueActiveProcessorImpl) processActivityRetryTimer(
@@ -708,7 +705,7 @@ func (t *timerQueueActiveProcessorImpl) processWorkflowTimeout(
 
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.
-		return t.updateWorkflowExecution(context, msBuilder, false, nil)
+		return t.updateWorkflowExecution(context, msBuilder, false)
 	}
 
 	// workflow timeout, but a retry or cron is needed, so we do continue as new to retry or cron
@@ -731,7 +728,7 @@ func (t *timerQueueActiveProcessorImpl) processWorkflowTimeout(
 		FailureReason:                       common.StringPtr(timeoutReason),
 		CronSchedule:                        common.StringPtr(msBuilder.GetExecutionInfo().CronSchedule),
 	}
-	domainEntry, err := getActiveDomainEntryFromShard(t.shard, &domainID)
+	domainEntry, err := t.shard.GetDomainCache().GetDomainByID(domainID)
 	if err != nil {
 		return err
 	}
@@ -739,24 +736,17 @@ func (t *timerQueueActiveProcessorImpl) processWorkflowTimeout(
 	if t.config.EnableEventsV2(domainEntry.GetInfo().Name) {
 		eventStoreVersion = persistence.EventStoreVersionV2
 	}
-	_, newMutableState, err := msBuilder.AddContinueAsNewEvent(msBuilder.GetNextEventID(), common.EmptyEventID, domainEntry, startAttributes.GetParentWorkflowDomain(), continueAsnewAttributes, eventStoreVersion)
+	_, newMutableState, err := msBuilder.AddContinueAsNewEvent(
+		msBuilder.GetNextEventID(),
+		common.EmptyEventID,
+		domainEntry,
+		startAttributes.GetParentWorkflowDomain(),
+		continueAsnewAttributes,
+		eventStoreVersion,
+	)
 	if err != nil {
 		return err
 	}
-
-	executionInfo := context.getExecution()
-	tBuilder := t.historyService.getTimerBuilder(executionInfo)
-	transferTask, timerTask, err := getWorkflowHistoryCleanupTasksFromShard(
-		t.shard,
-		domainID,
-		executionInfo.GetWorkflowId(),
-		tBuilder)
-	if err != nil {
-		return err
-	}
-
-	msBuilder.AddTransferTasks(transferTask)
-	msBuilder.AddTimerTasks(timerTask)
 
 	newExecutionInfo := newMutableState.GetExecutionInfo()
 	return context.updateWorkflowExecutionWithNewAsActive(
@@ -779,7 +769,6 @@ func (t *timerQueueActiveProcessorImpl) updateWorkflowExecution(
 	context workflowExecutionContext,
 	msBuilder mutableState,
 	scheduleNewDecision bool,
-	timerTasks []persistence.Task,
 ) error {
 
 	var err error
@@ -790,8 +779,6 @@ func (t *timerQueueActiveProcessorImpl) updateWorkflowExecution(
 			return err
 		}
 	}
-
-	msBuilder.AddTimerTasks(timerTasks...)
 
 	now := t.shard.GetTimeSource().Now()
 	err = context.updateWorkflowExecutionAsActive(now)
