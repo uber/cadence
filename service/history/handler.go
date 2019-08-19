@@ -1265,8 +1265,8 @@ func (h *Handler) SyncActivity(ctx context.Context, syncActivityRequest *hist.Sy
 func (h *Handler) GetReplicationMessages(
 	ctx context.Context,
 	request *r.GetReplicationMessagesRequest,
-) (*r.GetReplicationMessagesResponse, error) {
-	defer log.CapturePanic(h.GetLogger(), nil)
+) (resp *r.GetReplicationMessagesResponse, retError error) {
+	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
 
 	h.GetLogger().Debug("Received GetReplicationMessages call.")

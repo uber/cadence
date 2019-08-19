@@ -597,10 +597,7 @@ func (p *replicatorQueueProcessorImpl) getTasks(readLevel int64) (*replicator.Re
 			return err
 		}
 
-		err = backoff.Retry(op, p.retryPolicy, func(e error) bool {
-			return e == persistence.ErrPersistenceLimitExceeded
-		})
-
+		err = backoff.Retry(op, p.retryPolicy, common.IsPersistenceTransientError)
 		if err != nil {
 			p.logger.Debug("Failed to get replication task. Return what we have so far.", tag.Error(err))
 			hasMore = true
