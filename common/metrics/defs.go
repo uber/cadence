@@ -678,6 +678,8 @@ const (
 	HistorySyncActivityScope
 	// HistoryDescribeMutableStateScope tracks HistoryActivity API calls received by service
 	HistoryDescribeMutableStateScope
+	// GetReplicationMessages tracks GetReplicationMessages API calls received by service
+	HistoryGetReplicationMessagesScope
 	// HistoryShardControllerScope is the scope used by shard controller
 	HistoryShardControllerScope
 	// TransferQueueProcessorScope is the scope used by all metric emitted by transfer queue processor
@@ -1150,6 +1152,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistorySyncShardStatusScope:                            {operation: "SyncShardStatus"},
 		HistorySyncActivityScope:                               {operation: "SyncActivity"},
 		HistoryDescribeMutableStateScope:                       {operation: "DescribeMutableState"},
+		HistoryGetReplicationMessagesScope:                     {operation: "GetReplicationMessages"},
 		HistoryShardControllerScope:                            {operation: "ShardController"},
 		TransferQueueProcessorScope:                            {operation: "TransferQueueProcessor"},
 		TransferActiveQueueProcessorScope:                      {operation: "TransferActiveQueueProcessor"},
@@ -1280,6 +1283,10 @@ const (
 	CadenceClientRequests
 	CadenceClientFailures
 	CadenceClientLatency
+
+	CadenceDcRedirectionClientRequests
+	CadenceDcRedirectionClientFailures
+	CadenceDcRedirectionClientLatency
 
 	DomainCachePrepareCallbacksLatency
 	DomainCacheCallbacksLatency
@@ -1451,6 +1458,10 @@ const (
 	LastProcessedMessageID
 	ReplicationTasksApplied
 	ReplicationTasksFailed
+	ReplicationTasksLag
+	ReplicationTasksFetched
+	ReplicationTasksReturned
+	GetReplicationMessagesForShardLatency
 
 	NumHistoryMetrics
 )
@@ -1573,6 +1584,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceClientRequests:                               {metricName: "cadence_client_requests", metricType: Counter},
 		CadenceClientFailures:                               {metricName: "cadence_client_errors", metricType: Counter},
 		CadenceClientLatency:                                {metricName: "cadence_client_latency", metricType: Timer},
+		CadenceDcRedirectionClientRequests:                  {metricName: "cadence_client_requests_redirection", metricType: Counter},
+		CadenceDcRedirectionClientFailures:                  {metricName: "cadence_client_errors_redirection", metricType: Counter},
+		CadenceDcRedirectionClientLatency:                   {metricName: "cadence_client_latency_redirection", metricType: Timer},
 		DomainCachePrepareCallbacksLatency:                  {metricName: "domain_cache_prepare_callbacks_latency", metricType: Timer},
 		DomainCacheCallbacksLatency:                         {metricName: "domain_cache_callbacks_latency", metricType: Timer},
 		HistorySize:                                         {metricName: "history_size", metricType: Timer},
@@ -1731,6 +1745,10 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		LastProcessedMessageID:                            {metricName: "last_processed_message_id", metricType: Gauge},
 		ReplicationTasksApplied:                           {metricName: "replication_tasks_applied", metricType: Counter},
 		ReplicationTasksFailed:                            {metricName: "replication_tasks_failed", metricType: Counter},
+		ReplicationTasksLag:                               {metricName: "replication_tasks_lag", metricType: Timer},
+		ReplicationTasksFetched:                           {metricName: "replication_tasks_fetched", metricType: Timer},
+		ReplicationTasksReturned:                          {metricName: "replication_tasks_returned", metricType: Timer},
+		GetReplicationMessagesForShardLatency:             {metricName: "get_replication_messages_for_shard", metricType: Timer},
 	},
 	Matching: {
 		PollSuccessCounter:            {metricName: "poll_success"},
