@@ -436,7 +436,6 @@ func (s *engineSuite) TestGetMutableStateLongPoll_CurrentBranchChanged() {
 			int64(1),
 			int64(4),
 			int64(1),
-			true,
 			[]byte{1},
 			persistence.WorkflowStateCreated,
 			persistence.WorkflowCloseStatusNone))
