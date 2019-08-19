@@ -1162,19 +1162,24 @@ func (_m *mockMutableState) CopyToPersistence() *persistence.WorkflowMutableStat
 }
 
 // CreateActivityRetryTimer provides a mock function with given fields: _a0, _a1
-func (_m *mockMutableState) CreateActivityRetryTimer(_a0 *persistence.ActivityInfo, _a1 string) persistence.Task {
+func (_m *mockMutableState) RetryActivity(_a0 *persistence.ActivityInfo, _a1 string) (bool, error) {
 	ret := _m.Called(_a0, _a1)
 
-	var r0 persistence.Task
-	if rf, ok := ret.Get(0).(func(*persistence.ActivityInfo, string) persistence.Task); ok {
+	var r0 bool
+	if rf, ok := ret.Get(0).(func(*persistence.ActivityInfo, string) bool); ok {
 		r0 = rf(_a0, _a1)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(persistence.Task)
-		}
+		r0 = ret.Get(0).(bool)
 	}
 
-	return r0
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*persistence.ActivityInfo, string) error); ok {
+		r1 = rf(_a0, _a1)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // CreateNewHistoryEvent provides a mock function with given fields: eventType

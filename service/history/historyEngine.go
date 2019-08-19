@@ -355,29 +355,16 @@ func (e *historyEngineImpl) generateFirstDecisionTask(
 	parentInfo *h.ParentExecutionInfo,
 	taskListName string,
 	cronBackoffSeconds int32,
-) ([]persistence.Task, *decisionInfo, error) {
+) error {
 
-	di := &decisionInfo{
-		TaskList:        taskListName,
-		Version:         common.EmptyVersion,
-		ScheduleID:      common.EmptyEventID,
-		StartedID:       common.EmptyEventID,
-		DecisionTimeout: int32(0),
-	}
-	var transferTasks []persistence.Task
-	var err error
-	if parentInfo == nil {
-		// RecordWorkflowStartedTask is only created when it is not a Child Workflow
-		transferTasks = append(transferTasks, &persistence.RecordWorkflowStartedTask{})
-		if cronBackoffSeconds == 0 {
-			// DecisionTask is only created when it is not a Child Workflow and no backoff is needed
-			_, err = msBuilder.AddDecisionTaskScheduledEvent(false)
-			if err != nil {
-				return nil, nil, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
-			}
+	if parentInfo == nil && cronBackoffSeconds == 0 {
+		// DecisionTask is only created when it is not a Child Workflow and no backoff is needed
+		_, err := msBuilder.AddDecisionTaskScheduledEvent(false)
+		if err != nil {
+			return &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
 		}
 	}
-	return transferTasks, di, nil
+	return nil
 }
 
 // StartWorkflowExecution starts a workflow execution
@@ -436,29 +423,17 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 	taskList := request.TaskList.GetName()
 	cronBackoffSeconds := startRequest.GetFirstDecisionTaskBackoffSeconds()
 	// Generate first decision task event if not child WF and no first decision task backoff
-	transferTasks, _, err := e.generateFirstDecisionTask(domainID, msBuilder, startRequest.ParentExecutionInfo, taskList, cronBackoffSeconds)
-	if err != nil {
+	if err := e.generateFirstDecisionTask(
+		domainID,
+		msBuilder,
+		startRequest.ParentExecutionInfo,
+		taskList,
+		cronBackoffSeconds,
+	); err != nil {
 		return nil, err
 	}
 
-	// Generate first timer task : WF timeout task
-	cronBackoffDuration := time.Duration(cronBackoffSeconds) * time.Second
-	timeoutDuration := time.Duration(*request.ExecutionStartToCloseTimeoutSeconds)*time.Second + cronBackoffDuration
-	timerTasks := []persistence.Task{&persistence.WorkflowTimeoutTask{
-		VisibilityTimestamp: e.shard.GetTimeSource().Now().Add(timeoutDuration),
-	}}
-
-	// Only schedule the backoff timer task if not child WF and there's first decision task backoff
-	if cronBackoffSeconds != 0 && startRequest.ParentExecutionInfo == nil {
-		timerTasks = append(timerTasks, &persistence.WorkflowBackoffTimerTask{
-			VisibilityTimestamp: e.shard.GetTimeSource().Now().Add(cronBackoffDuration),
-			TimeoutType:         persistence.WorkflowBackoffTimeoutTypeCron,
-		})
-	}
-
 	context := newWorkflowExecutionContext(domainID, execution, e.shard, e.executionManager, e.logger)
-	msBuilder.AddTransferTasks(transferTasks...)
-	msBuilder.AddTimerTasks(timerTasks...)
 
 	now := e.timeSource.Now()
 	newWorkflow, newWorkflowEventsSeq, err := msBuilder.CloseTransactionAsSnapshot(
@@ -941,13 +916,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 			response.WorkflowType = msBuilder.GetWorkflowType()
 			response.WorkflowDomain = common.StringPtr(domainName)
 
-			// Start a timer for the activity task.
-			timerTasks := []persistence.Task{}
-			if tt := tBuilder.GetActivityTimerTaskIfNeeded(msBuilder); tt != nil {
-				timerTasks = append(timerTasks, tt)
-			}
-
-			return timerTasks, nil
+			return nil, nil
 		})
 
 	if err != nil {
@@ -1098,11 +1067,11 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 			}
 
 			postActions := &updateWorkflowAction{}
-			retryTask := msBuilder.CreateActivityRetryTimer(ai, req.FailedRequest.GetReason())
-			if retryTask != nil {
-				// need retry
-				postActions.timerTasks = append(postActions.timerTasks, retryTask)
-			} else {
+			ok, err := msBuilder.RetryActivity(ai, req.FailedRequest.GetReason())
+			if err != nil {
+				return nil, err
+			}
+			if !ok {
 				// no more retry, and we want to record the failure event
 				if _, err := msBuilder.AddActivityTaskFailedEvent(scheduleID, ai.StartedID, request); err != nil {
 					// Unable to add ActivityTaskFailed event to history
@@ -1441,8 +1410,6 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 				return nil, &workflow.InternalServiceError{Message: "Unable to signal workflow execution."}
 			}
 
-			var transferTasks []persistence.Task
-			var timerTasks []persistence.Task
 			// Create a transfer task to schedule a decision task
 			if !msBuilder.HasPendingDecisionTask() {
 				_, err := msBuilder.AddDecisionTaskScheduledEvent(false)
@@ -1453,8 +1420,6 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 
 			// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict then reload
 			// the history and try the operation again.
-			msBuilder.AddTransferTasks(transferTasks...)
-			msBuilder.AddTimerTasks(timerTasks...)
 			if err := context.updateWorkflowExecutionAsActive(e.shard.GetTimeSource().Now()); err != nil {
 				if err == ErrConflict {
 					continue Just_Signal_Loop
@@ -1544,22 +1509,17 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 		sRequest.GetIdentity()); err != nil {
 		return nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution signaled event."}
 	}
-	// first decision task
-	var transferTasks []persistence.Task
-	transferTasks, _, err = e.generateFirstDecisionTask(domainID, msBuilder, startRequest.ParentExecutionInfo, taskList, 0)
-	if err != nil {
+	if err = e.generateFirstDecisionTask(
+		domainID,
+		msBuilder,
+		startRequest.ParentExecutionInfo,
+		taskList,
+		0,
+	); err != nil {
 		return nil, err
 	}
 
-	// first timer task
-	duration := time.Duration(*request.ExecutionStartToCloseTimeoutSeconds) * time.Second
-	timerTasks := []persistence.Task{&persistence.WorkflowTimeoutTask{
-		VisibilityTimestamp: e.shard.GetTimeSource().Now().Add(duration),
-	}}
-
 	context = newWorkflowExecutionContext(domainID, execution, e.shard, e.executionManager, e.logger)
-	msBuilder.AddTransferTasks(transferTasks...)
-	msBuilder.AddTimerTasks(timerTasks...)
 
 	now := e.timeSource.Now()
 	newWorkflow, newWorkflowEventsSeq, err := msBuilder.CloseTransactionAsSnapshot(

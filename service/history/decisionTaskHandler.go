@@ -24,6 +24,7 @@ import (
 	"fmt"
 
 	"github.com/pborman/uuid"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -31,7 +32,6 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/persistence"
 )
 
 type (
@@ -48,8 +48,6 @@ type (
 		// internal state
 		hasUnhandledEventsBeforeDecisions bool
 		timerBuilder                      *timerBuilder
-		transferTasks                     []persistence.Task
-		timerTasks                        []persistence.Task
 		failDecision                      bool
 		failDecisionCause                 *workflow.DecisionTaskFailedCause
 		failMessage                       *string
@@ -91,8 +89,6 @@ func newDecisionTaskHandler(
 
 		// internal state
 		hasUnhandledEventsBeforeDecisions: mutableState.HasBufferedEvents(),
-		transferTasks:                     nil,
-		timerTasks:                        nil,
 		failDecision:                      false,
 		failDecisionCause:                 nil,
 		failMessage:                       nil,

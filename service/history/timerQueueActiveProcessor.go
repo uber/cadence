@@ -297,7 +297,9 @@ func (t *timerQueueActiveProcessorImpl) processExpiredUserTimer(
 	tBuilder := t.historyService.getTimerBuilder(context.getExecution())
 
 	var timerTasks []persistence.Task
-	scheduleNewDecision := false
+
+	updateHistory := false
+	updateState := false
 
 ExpireUserTimers:
 	for _, td := range tBuilder.GetUserTimers(msBuilder) {
@@ -312,27 +314,21 @@ ExpireUserTimers:
 			if _, err := msBuilder.AddTimerFiredEvent(ti.StartedID, ti.TimerID); err != nil {
 				return err
 			}
-
-			scheduleNewDecision = !msBuilder.HasPendingDecisionTask()
+			updateHistory = true
 		} else {
 			// See if we have next timer in list to be created.
 			if !td.TaskCreated {
-				nextTask := tBuilder.createNewTask(td)
-				timerTasks = []persistence.Task{nextTask}
-
-				// Update the task ID tracking the corresponding timer task.
-				ti.TaskID = TimerTaskStatusCreated
-				msBuilder.UpdateUserTimer(ti.TimerID, ti)
+				updateState = true
 			}
-
-			// Done!
 			break ExpireUserTimers
 		}
 	}
 
-	// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
-	// the history and try the operation again.
-	return t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, timerTasks)
+	if updateHistory || updateState {
+		scheduleNewDecision := updateHistory && !msBuilder.HasPendingDecisionTask()
+		return t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, timerTasks)
+	}
+	return nil
 }
 
 func (t *timerQueueActiveProcessorImpl) processActivityTimeout(
@@ -387,6 +383,10 @@ ExpireActivityTimers:
 		}
 
 		if isExpired := tBuilder.IsTimerExpired(td, referenceTime); !isExpired {
+			// See if we have next timer in list to be created.
+			if !td.TaskCreated {
+				updateState = true
+			}
 			break ExpireActivityTimers
 		}
 
@@ -411,21 +411,12 @@ ExpireActivityTimers:
 		if timeoutType != workflow.TimeoutTypeScheduleToStart {
 			// ScheduleToStart (queue timeout) is not retriable. Instead of retry, customer should set larger
 			// ScheduleToStart timeout.
-			retryTask := msBuilder.CreateActivityRetryTimer(ai, getTimeoutErrorReason(timeoutType))
-			if retryTask != nil {
-				timerTasks = append(timerTasks, retryTask)
+			ok, err := msBuilder.RetryActivity(ai, getTimeoutErrorReason(timeoutType))
+			if err != nil {
+				return err
+			}
+			if ok {
 				updateState = true
-
-				t.logger.Info("Ignore activity timeout due to retry",
-					tag.WorkflowID(msBuilder.GetExecutionInfo().WorkflowID),
-					tag.WorkflowRunID(msBuilder.GetExecutionInfo().RunID),
-					tag.WorkflowDomainID(msBuilder.GetExecutionInfo().DomainID),
-					tag.WorkflowScheduleID(ai.ScheduleID),
-					tag.Attempt(ai.Attempt),
-					tag.FailoverVersion(ai.Version),
-					tag.TimerTaskStatus(ai.TimerTaskStatus),
-					tag.WorkflowTimeoutType(int64(timeoutType)))
-
 				continue
 			}
 		}
@@ -478,12 +469,6 @@ ExpireActivityTimers:
 				}
 			}
 		}
-	}
-
-	// use a new timer builder, since during the above for loop, the some timer definitions can be invalid
-	if tt := t.historyService.getTimerBuilder(context.getExecution()).GetActivityTimerTaskIfNeeded(msBuilder); tt != nil {
-		updateState = true
-		timerTasks = append(timerTasks, tt)
 	}
 
 	if updateHistory || updateState {

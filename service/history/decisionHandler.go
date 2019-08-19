@@ -207,11 +207,6 @@ func (handler *decisionHandlerImpl) handleDecisionTaskStarted(
 			}
 
 			resp = handler.createRecordDecisionTaskStartedResponse(domainID, msBuilder, di, req.PollRequest.GetIdentity())
-			updateAction.timerTasks = []persistence.Task{tBuilder.AddStartToCloseDecisionTimoutTask(
-				di.ScheduleID,
-				di.Attempt,
-				di.DecisionTimeout,
-			)}
 			return updateAction, nil
 		})
 
@@ -373,8 +368,6 @@ Update_History_Loop:
 			failCause                   workflow.DecisionTaskFailedCause
 			failMessage                 string
 			activityNotStartedCancelled bool
-			transferTasks               []persistence.Task
-			timerTasks                  []persistence.Task
 			continueAsNewBuilder        mutableState
 
 			tBuilder           *timerBuilder
@@ -451,9 +444,6 @@ Update_History_Loop:
 			activityNotStartedCancelled = decisionTaskHandler.activityNotStartedCancelled
 			// continueAsNewTimerTasks is not used by decisionTaskHandler
 
-			transferTasks = append(transferTasks, decisionTaskHandler.transferTasks...)
-			timerTasks = append(timerTasks, decisionTaskHandler.timerTasks...)
-
 			continueAsNewBuilder = decisionTaskHandler.continueAsNewBuilder
 
 			tBuilder = decisionTaskHandler.timerBuilder
@@ -473,13 +463,6 @@ Update_History_Loop:
 			tBuilder = handler.historyEngine.getTimerBuilder(context.getExecution())
 			hasUnhandledEvents = true
 			continueAsNewBuilder = nil
-		}
-
-		if tt := tBuilder.GetUserTimerTaskIfNeeded(msBuilder); tt != nil {
-			timerTasks = append(timerTasks, tt)
-		}
-		if tt := tBuilder.GetActivityTimerTaskIfNeeded(msBuilder); tt != nil {
-			timerTasks = append(timerTasks, tt)
 		}
 
 		// Schedule another decision task if new events came in during this decision or if request forced to
@@ -515,13 +498,8 @@ Update_History_Loop:
 				if err != nil {
 					return nil, err
 				}
-				timeOutTask := tBuilder.AddStartToCloseDecisionTimoutTask(newDecision.ScheduleID, newDecision.Attempt, newDecision.DecisionTimeout)
-				timerTasks = append(timerTasks, timeOutTask)
 			}
 		}
-
-		msBuilder.AddTransferTasks(transferTasks...)
-		msBuilder.AddTimerTasks(timerTasks...)
 
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict then reload
 		// the history and try the operation again.
