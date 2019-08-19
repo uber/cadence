@@ -21,10 +21,13 @@
 package history
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
+	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -237,18 +240,6 @@ func (t *timerQueueTaskProcessor) ackTaskOnce(
 	startTime time.Time,
 	attempt int,
 ) {
-
-	t.timerQueueAckMgr.completeTimerTask(task)
-	if reportMetrics {
-		t.metricsClient.RecordTimer(scope, metrics.TaskAttemptTimer, time.Duration(attempt))
-		t.metricsClient.RecordTimer(scope, metrics.TaskLatency, time.Since(startTime))
-		t.metricsClient.RecordTimer(
-			scope,
-			metrics.TaskQueueLatency,
-			time.Since(task.GetVisibilityTimestamp()),
-		)
-	}
-	atomic.AddUint64(&t.timerFiredCount, 1)
 }
 
 func (t *timerQueueTaskProcessor) initializeLoggerForTask(
