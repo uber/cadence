@@ -638,7 +638,7 @@ func (e *historyEngineImpl) getMutableState(
 	}
 
 	if !msBuilder.IsWorkflowExecutionRunning() {
-		closeStatus := workflow.WorkflowExecutionCloseStatus(executionInfo.CloseStatus)
+		closeStatus := getWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
 		retResp.CloseStatus = &closeStatus
 	}
 
