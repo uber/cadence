@@ -79,14 +79,14 @@ callout_description: Cadence fault-oblivious stateful code platform preserves co
   </div>
 
   <div class="feature contact-us">
-    <a href="{{ '/docs/100_contact_us' | relative_url }}">
+    <a href="{{ '/docs/99_contact_us' | relative_url }}">
       <div class="icon">
         <svg class="icon-person-speech-bubble">
           <use xlink:href="#icon-person-speech-bubble"></use>
         </svg>
       </div>
     </a>
-    <a href="{{ '/docs/100_contact_us' | relative_url }}">
+    <a href="{{ '/docs/99_contact_us' | relative_url }}">
       <span class="description">Contact Us</span>
     </a>
     <p>Contact Cadence developers and community</p>
