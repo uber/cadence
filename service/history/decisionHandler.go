@@ -113,8 +113,10 @@ func (handler *decisionHandlerImpl) handleDecisionTaskScheduled(
 				return nil, ErrWorkflowCompleted
 			}
 
-			postActions := &updateWorkflowAction{
-				createDecision: false,
+			if msBuilder.HasProcessedOrPendingDecisionTask() {
+				return &updateWorkflowAction{
+					noop: true,
+				}, nil
 			}
 
 			startEvent, found := msBuilder.GetStartEvent()
@@ -127,7 +129,7 @@ func (handler *decisionHandlerImpl) handleDecisionTaskScheduled(
 				return nil, err
 			}
 
-			return postActions, nil
+			return &updateWorkflowAction{}, nil
 		})
 }
 

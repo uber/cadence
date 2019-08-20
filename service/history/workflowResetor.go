@@ -589,6 +589,7 @@ func (w *workflowResetorImpl) replayHistoryEvents(
 		if retError != nil {
 			return
 		}
+
 		for _, batch := range readResp.History {
 			history := batch.Events
 			firstEvent := history[0]
