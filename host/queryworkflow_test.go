@@ -25,13 +25,11 @@ import (
 	"encoding/binary"
 	"errors"
 	"strconv"
-	"time"
 
 	"github.com/pborman/uuid"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/tag"
-	"go.uber.org/cadence/.gen/go/shared"
 )
 
 func (s *integrationSuite) TestQueryWorkflow_Sticky() {
