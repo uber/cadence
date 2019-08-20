@@ -59,7 +59,7 @@ type (
 		isStarted              int32
 		isStopped              int32
 		shutdownChan           chan struct{}
-		taskProcessor          *timerQueueTaskProcessor
+		taskProcessor          *taskProcessor
 		activeTimerProcessor   *timerQueueActiveProcessorImpl
 		standbyTimerProcessors map[string]*timerQueueStandbyProcessorImpl
 	}
@@ -75,7 +75,7 @@ func newTimerQueueProcessor(
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 	logger = logger.WithTags(tag.ComponentTimerQueue)
 	taskAllocator := newTaskAllocator(shard)
-	taskProcessor := newTimerQueueTaskProcessor(shard, historyService, logger)
+	taskProcessor := newTaskProcessor(shard, historyService, logger)
 
 	standbyTimerProcessors := make(map[string]*timerQueueStandbyProcessorImpl)
 	for clusterName, info := range shard.GetService().GetClusterMetadata().GetAllClusterInfo() {

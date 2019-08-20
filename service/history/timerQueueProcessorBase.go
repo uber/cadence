@@ -68,7 +68,7 @@ type (
 		timeSource       clock.TimeSource
 		rateLimiter      quotas.Limiter
 		retryPolicy      backoff.RetryPolicy
-		processor        *timerQueueTaskProcessor
+		processor        *taskProcessor
 		lastPollTime     time.Time
 
 		// timer notification
@@ -84,7 +84,7 @@ func newTimerQueueProcessorBase(
 	historyService *historyEngineImpl,
 	timerQueueAckMgr timerQueueAckMgr,
 	timerGate TimerGate,
-	taskProcessor *timerQueueTaskProcessor,
+	taskProcessor *taskProcessor,
 	maxPollRPS dynamicconfig.IntPropertyFn,
 	logger log.Logger,
 ) *timerQueueProcessorBase {

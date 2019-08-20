@@ -79,7 +79,7 @@ type (
 		domainEntry               *cache.DomainCacheEntry
 		clusterName               string
 		timerQueueActiveProcessor *timerQueueActiveProcessorImpl
-		timerQueueTaskProcessor   *timerQueueTaskProcessor
+		taskProcessor   *taskProcessor
 	}
 )
 
@@ -189,13 +189,13 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 	s.mockShard.SetEngine(h)
 	s.mockHistoryEngine = h
 	s.clusterName = cluster.TestCurrentClusterName
-	s.timerQueueTaskProcessor = newTimerQueueTaskProcessor(s.mockShard, h, s.logger)
+	s.taskProcessor = newTaskProcessor(s.mockShard, h, s.logger)
 	s.timerQueueActiveProcessor = newTimerQueueActiveProcessor(
 		s.mockShard,
 		h,
 		s.mockMatchingClient,
 		newTaskAllocator(s.mockShard),
-		s.timerQueueTaskProcessor,
+		s.taskProcessor,
 		s.logger,
 	)
 
@@ -219,13 +219,13 @@ func (s *timerQueueProcessor2Suite) TearDownTest() {
 }
 
 func (s *timerQueueProcessor2Suite) startProcessor() {
-	s.timerQueueTaskProcessor.start()
+	s.taskProcessor.start()
 	s.timerQueueActiveProcessor.Start()
 }
 
 func (s *timerQueueProcessor2Suite) stopProcessor() {
 	s.timerQueueActiveProcessor.Stop()
-	s.timerQueueTaskProcessor.stop()
+	s.taskProcessor.stop()
 }
 
 func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {

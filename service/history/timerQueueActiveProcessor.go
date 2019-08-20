@@ -57,7 +57,7 @@ func newTimerQueueActiveProcessor(
 	historyService *historyEngineImpl,
 	matchingClient matching.Client,
 	taskAllocator taskAllocator,
-	taskProcessor *timerQueueTaskProcessor,
+	taskProcessor *taskProcessor,
 	logger log.Logger,
 ) *timerQueueActiveProcessorImpl {
 
@@ -120,7 +120,7 @@ func newTimerQueueFailoverProcessor(
 	maxLevel time.Time,
 	matchingClient matching.Client,
 	taskAllocator taskAllocator,
-	taskProcessor *timerQueueTaskProcessor,
+	taskProcessor *taskProcessor,
 	logger log.Logger,
 ) (func(ackLevel TimerSequenceID) error, *timerQueueActiveProcessorImpl) {
 

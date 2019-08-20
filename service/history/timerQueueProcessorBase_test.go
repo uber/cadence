@@ -66,8 +66,7 @@ type (
 		notificationChan chan struct{}
 
 		suite.Suite
-		timerQueueProcessor     *timerQueueProcessorBase
-		timerQueueTaskProcessor *timerQueueTaskProcessor
+		timerQueueProcessor *timerQueueProcessorBase
 	}
 )
 
@@ -125,7 +124,6 @@ func (s *timerQueueProcessorBaseSuite) SetupTest() {
 		historyV2Mgr:   s.mockHistoryV2Manager,
 		archivalClient: s.mockArchivalClient,
 	}
-	s.timerQueueTaskProcessor = newTimerQueueTaskProcessor(s.mockShard, h, s.logger)
 
 	s.timerQueueProcessor = newTimerQueueProcessorBase(
 		s.scope,
@@ -133,7 +131,7 @@ func (s *timerQueueProcessorBaseSuite) SetupTest() {
 		h,
 		s.mockQueueAckMgr,
 		NewLocalTimerGate(clock.NewRealTimeSource()),
-		s.timerQueueTaskProcessor,
+		newTaskProcessor(s.mockShard, h, s.logger),
 		dynamicconfig.GetIntPropertyFn(10),
 		s.logger,
 	)

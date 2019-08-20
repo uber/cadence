@@ -41,7 +41,7 @@ type timerTask struct {
 	task      *persistence.TimerTaskInfo
 }
 
-type timerQueueTaskProcessor struct {
+type taskProcessor struct {
 	shard         ShardContext
 	cache         *historyCache
 	shutdownWG    sync.WaitGroup
@@ -60,11 +60,11 @@ type timerQueueTaskProcessor struct {
 	numOfWorker int
 }
 
-func newTimerQueueTaskProcessor(
+func newTaskProcessor(
 	shard ShardContext,
 	historyService *historyEngineImpl,
 	logger log.Logger,
-) *timerQueueTaskProcessor {
+) *taskProcessor {
 
 	log := logger.WithTags(tag.ComponentTimerQueue)
 
@@ -74,7 +74,7 @@ func newTimerQueueTaskProcessor(
 		workerNotificationChans = append(workerNotificationChans, make(chan struct{}, 1))
 	}
 
-	base := &timerQueueTaskProcessor{
+	base := &taskProcessor{
 		shard:                   shard,
 		cache:                   historyService.historyCache,
 		shutdownCh:              make(chan struct{}),
@@ -91,7 +91,7 @@ func newTimerQueueTaskProcessor(
 	return base
 }
 
-func (t *timerQueueTaskProcessor) start() {
+func (t *taskProcessor) start() {
 	for i := 0; i < t.numOfWorker; i++ {
 		t.workerWG.Add(1)
 		notificationChan := t.workerNotificationChans[i]
@@ -100,7 +100,7 @@ func (t *timerQueueTaskProcessor) start() {
 	t.logger.Info("Timer queue task processor started.")
 }
 
-func (t *timerQueueTaskProcessor) stop() {
+func (t *taskProcessor) stop() {
 	close(t.shutdownCh)
 	close(t.tasksCh)
 	if success := common.AwaitWaitGroup(&t.workerWG, time.Minute); !success {
@@ -109,7 +109,7 @@ func (t *timerQueueTaskProcessor) stop() {
 	t.logger.Info("Timer queue task processor shutdown.")
 }
 
-func (t *timerQueueTaskProcessor) taskWorker(
+func (t *taskProcessor) taskWorker(
 	notificationChan chan struct{},
 ) {
 	defer t.workerWG.Done()
@@ -127,7 +127,7 @@ func (t *timerQueueTaskProcessor) taskWorker(
 	}
 }
 
-func (t *timerQueueTaskProcessor) retryTasks() {
+func (t *taskProcessor) retryTasks() {
 	for _, workerNotificationChan := range t.workerNotificationChans {
 		select {
 		case workerNotificationChan <- struct{}{}:
@@ -136,7 +136,7 @@ func (t *timerQueueTaskProcessor) retryTasks() {
 	}
 }
 
-func (t *timerQueueTaskProcessor) addTask(
+func (t *taskProcessor) addTask(
 	task *timerTask,
 ) bool {
 	// We have a timer to fire.
@@ -148,7 +148,7 @@ func (t *timerQueueTaskProcessor) addTask(
 	return false
 }
 
-func (t *timerQueueTaskProcessor) processTaskAndAck(
+func (t *taskProcessor) processTaskAndAck(
 	notificationChan <-chan struct{},
 	task *timerTask,
 ) {
@@ -212,7 +212,7 @@ FilterLoop:
 	}
 }
 
-func (t *timerQueueTaskProcessor) processTaskOnce(
+func (t *taskProcessor) processTaskOnce(
 	notificationChan <-chan struct{},
 	task *timerTask,
 	shouldProcessTask bool,
@@ -234,7 +234,7 @@ func (t *timerQueueTaskProcessor) processTaskOnce(
 	return scope, err
 }
 
-func (t *timerQueueTaskProcessor) handleTaskError(
+func (t *taskProcessor) handleTaskError(
 	scope int,
 	startTime time.Time,
 	notificationChan <-chan struct{},
@@ -283,7 +283,7 @@ func (t *timerQueueTaskProcessor) handleTaskError(
 	return err
 }
 
-func (t *timerQueueTaskProcessor) ackTaskOnce(
+func (t *taskProcessor) ackTaskOnce(
 	task *timerTask,
 	scope int,
 	reportMetrics bool,
@@ -303,7 +303,7 @@ func (t *timerQueueTaskProcessor) ackTaskOnce(
 	}
 }
 
-func (t *timerQueueTaskProcessor) initializeLoggerForTask(
+func (t *taskProcessor) initializeLoggerForTask(
 	task *persistence.TimerTaskInfo,
 ) log.Logger {
 

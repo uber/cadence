@@ -171,7 +171,7 @@ func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 		h,
 		s.clusterName,
 		newTaskAllocator(s.mockShard),
-		newTimerQueueTaskProcessor(s.mockShard, h, s.logger),
+		newTaskProcessor(s.mockShard, h, s.logger),
 		s.mockHistoryRereplicator,
 		s.logger,
 	)
