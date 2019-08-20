@@ -79,7 +79,7 @@ type (
 		domainEntry               *cache.DomainCacheEntry
 		clusterName               string
 		timerQueueActiveProcessor *timerQueueActiveProcessorImpl
-		taskProcessor   *taskProcessor
+		taskProcessor             *taskProcessor
 	}
 )
 
