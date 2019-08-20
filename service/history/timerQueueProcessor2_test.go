@@ -365,7 +365,7 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout() {
 	s.mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything).Return(emptyResponse, nil).Run(func(arguments mock.Arguments) {
 		waitCh <- struct{}{}
 	}).Once() // for lookAheadTask
-	s.timerQueueActiveProcessor.Start()
+	s.startProcessor()
 	<-waitCh
 	<-waitCh
 
@@ -377,7 +377,7 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout() {
 		}})
 
 	<-waitCh
-	s.timerQueueActiveProcessor.Stop()
+	s.stopProcessor()
 }
 
 func (s *timerQueueProcessor2Suite) TestWorkflowTimeout_Cron() {
@@ -449,7 +449,7 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout_Cron() {
 	s.mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything).Return(emptyResponse, nil).Run(func(arguments mock.Arguments) {
 		waitCh <- struct{}{}
 	}).Once() // for lookAheadTask
-	s.timerQueueActiveProcessor.Start()
+	s.startProcessor()
 	<-waitCh
 	<-waitCh
 	s.mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything).Return(timerIndexResponse, nil).Once()
@@ -460,5 +460,5 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout_Cron() {
 		}})
 
 	<-waitCh
-	s.timerQueueActiveProcessor.Stop()
+	s.stopProcessor()
 }

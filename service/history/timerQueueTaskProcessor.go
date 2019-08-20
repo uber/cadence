@@ -87,6 +87,7 @@ func newTimerQueueTaskProcessor(
 		timeSource:              shard.GetTimeSource(),
 		workerNotificationChans: workerNotificationChans,
 		retryPolicy:             common.CreatePersistanceRetryPolicy(),
+		numOfWorker:             numOfWorker,
 	}
 
 	return base
