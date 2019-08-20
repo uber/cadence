@@ -368,6 +368,11 @@ func (t *timerQueueProcessorBase) retryTasks() {
 	t.processor.retryTasks()
 }
 
+func (t *timerQueueProcessorBase) complete(timerTask *persistence.TimerTaskInfo) {
+	t.timerQueueAckMgr.completeTimerTask(timerTask)
+	atomic.AddUint64(&t.timerFiredCount, 1)
+}
+
 func (t *timerQueueProcessorBase) getTimerFiredCount() uint64 {
 	return atomic.LoadUint64(&t.timerFiredCount)
 }

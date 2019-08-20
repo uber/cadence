@@ -229,7 +229,7 @@ func (t *timerQueueActiveProcessorImpl) notifyNewTimers(
 func (t *timerQueueActiveProcessorImpl) complete(
 	timerTask *persistence.TimerTaskInfo,
 ) {
-	t.timerQueueProcessorBase.timerQueueAckMgr.completeTimerTask(timerTask)
+	t.timerQueueProcessorBase.complete(timerTask)
 }
 
 func (t *timerQueueActiveProcessorImpl) process(
