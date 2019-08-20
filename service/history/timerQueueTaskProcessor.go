@@ -42,17 +42,17 @@ type timerTask struct {
 }
 
 type timerQueueTaskProcessor struct {
-	shard           ShardContext
-	cache           *historyCache
-	shutdownWG      sync.WaitGroup
-	shutdownCh      chan struct{}
-	tasksCh         chan *timerTask
-	config          *Config
-	logger          log.Logger
-	metricsClient   metrics.Client
-	timeSource      clock.TimeSource
-	retryPolicy     backoff.RetryPolicy
-	workerWG        sync.WaitGroup
+	shard         ShardContext
+	cache         *historyCache
+	shutdownWG    sync.WaitGroup
+	shutdownCh    chan struct{}
+	tasksCh       chan *timerTask
+	config        *Config
+	logger        log.Logger
+	metricsClient metrics.Client
+	timeSource    clock.TimeSource
+	retryPolicy   backoff.RetryPolicy
+	workerWG      sync.WaitGroup
 
 	// worker coroutines notification
 	workerNotificationChans []chan struct{}
