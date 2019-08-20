@@ -293,7 +293,7 @@ func (t *timerQueueTaskProcessor) ackTaskOnce(
 	attempt int,
 ) {
 
-	//	t.timerQueueAckMgr.completeTimerTask(task)
+	task.processor.complete(task.task)
 	if reportMetrics {
 		t.metricsClient.RecordTimer(scope, metrics.TaskAttemptTimer, time.Duration(attempt))
 		t.metricsClient.RecordTimer(scope, metrics.TaskLatency, time.Since(startTime))

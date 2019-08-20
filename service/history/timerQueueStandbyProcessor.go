@@ -158,6 +158,12 @@ func (t *timerQueueStandbyProcessorImpl) notifyNewTimers(
 	t.timerQueueProcessorBase.notifyNewTimers(timerTasks)
 }
 
+func (t *timerQueueStandbyProcessorImpl) complete(
+	timerTask *persistence.TimerTaskInfo,
+) {
+	t.timerQueueProcessorBase.timerQueueAckMgr.completeTimerTask(timerTask)
+}
+
 func (t *timerQueueStandbyProcessorImpl) process(
 	timerTask *persistence.TimerTaskInfo,
 	shouldProcessTask bool,

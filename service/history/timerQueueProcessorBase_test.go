@@ -173,6 +173,7 @@ func (s *timerQueueProcessorBaseSuite) TestProcessTaskAndAck_DomainErrRetry_Proc
 	s.mockProcessor.On("getTaskFilter").Return(taskFilterErr).Once()
 	s.mockProcessor.On("getTaskFilter").Return(taskFilter).Once()
 	s.mockProcessor.On("process", task, true).Return(s.scope, nil).Once()
+	s.mockProcessor.On("complete", task).Once()
 	s.timerQueueTaskProcessor.processTaskAndAck(
 		s.notificationChan,
 		&timerTask{
@@ -189,6 +190,7 @@ func (s *timerQueueProcessorBaseSuite) TestProcessTaskAndAck_DomainFalse_Process
 	}
 	s.mockProcessor.On("getTaskFilter").Return(taskFilter).Once()
 	s.mockProcessor.On("process", task, false).Return(s.scope, nil).Once()
+	s.mockProcessor.On("complete", task).Once()
 	s.timerQueueTaskProcessor.processTaskAndAck(
 		s.notificationChan,
 		&timerTask{
@@ -205,6 +207,7 @@ func (s *timerQueueProcessorBaseSuite) TestProcessTaskAndAck_DomainTrue_ProcessN
 	}
 	s.mockProcessor.On("getTaskFilter").Return(taskFilter).Once()
 	s.mockProcessor.On("process", task, true).Return(s.scope, nil).Once()
+	s.mockProcessor.On("complete", task).Once()
 	s.timerQueueTaskProcessor.processTaskAndAck(
 		s.notificationChan,
 		&timerTask{
@@ -223,6 +226,7 @@ func (s *timerQueueProcessorBaseSuite) TestProcessTaskAndAck_DomainTrue_ProcessE
 	s.mockProcessor.On("getTaskFilter").Return(taskFilter).Once()
 	s.mockProcessor.On("process", task, true).Return(s.scope, err).Once()
 	s.mockProcessor.On("process", task, true).Return(s.scope, nil).Once()
+	s.mockProcessor.On("complete", task).Once()
 	s.timerQueueTaskProcessor.processTaskAndAck(
 		s.notificationChan,
 		&timerTask{
