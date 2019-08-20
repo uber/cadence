@@ -79,6 +79,7 @@ type (
 		domainEntry               *cache.DomainCacheEntry
 		clusterName               string
 		timerQueueActiveProcessor *timerQueueActiveProcessorImpl
+		timerQueueTaskProcessor   *timerQueueTaskProcessor
 	}
 )
 
@@ -188,7 +189,15 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 	s.mockShard.SetEngine(h)
 	s.mockHistoryEngine = h
 	s.clusterName = cluster.TestCurrentClusterName
-	s.timerQueueActiveProcessor = newTimerQueueActiveProcessor(s.mockShard, h, s.mockMatchingClient, newTaskAllocator(s.mockShard), s.logger)
+	s.timerQueueTaskProcessor = newTimerQueueTaskProcessor(s.mockShard, h, s.logger)
+	s.timerQueueActiveProcessor = newTimerQueueActiveProcessor(
+		s.mockShard,
+		h,
+		s.mockMatchingClient,
+		newTaskAllocator(s.mockShard),
+		s.timerQueueTaskProcessor,
+		s.logger,
+	)
 
 	s.domainID = testDomainActiveID
 	s.domainEntry = cache.NewLocalDomainCacheEntryForTest(&persistence.DomainInfo{ID: s.domainID}, &persistence.DomainConfig{}, "", nil)
@@ -207,6 +216,16 @@ func (s *timerQueueProcessor2Suite) TearDownTest() {
 	s.mockEventsCache.AssertExpectations(s.T())
 	s.mockTxProcessor.AssertExpectations(s.T())
 	s.mockTimerProcessor.AssertExpectations(s.T())
+}
+
+func (s *timerQueueProcessor2Suite) startProcessor() {
+	s.timerQueueTaskProcessor.start()
+	s.timerQueueActiveProcessor.Start()
+}
+
+func (s *timerQueueProcessor2Suite) stopProcessor() {
+	s.timerQueueActiveProcessor.Stop()
+	s.timerQueueTaskProcessor.stop()
 }
 
 func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
@@ -273,7 +292,7 @@ func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 	}).Once()
 
 	// Start timer Processor.
-	s.timerQueueActiveProcessor.Start()
+	s.startProcessor()
 
 	s.timerQueueActiveProcessor.notifyNewTimers(
 		[]persistence.Task{&persistence.DecisionTimeoutTask{
@@ -282,7 +301,7 @@ func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 		}})
 
 	<-waitCh
-	s.timerQueueActiveProcessor.Stop()
+	s.stopProcessor()
 }
 
 func (s *timerQueueProcessor2Suite) TestWorkflowTimeout() {

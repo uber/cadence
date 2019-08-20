@@ -23,9 +23,11 @@ package history
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
@@ -33,57 +35,82 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/quotas"
 )
 
+type timerTask struct {
+	processor timerProcessor
+	task      *persistence.TimerTaskInfo
+}
 
 type timerQueueTaskProcessor struct {
-	scope            int
-	shard            ShardContext
-	historyService   *historyEngineImpl
-	cache            *historyCache
-	executionManager persistence.ExecutionManager
-	status           int32
-	shutdownWG       sync.WaitGroup
-	shutdownCh       chan struct{}
-	tasksCh          chan *persistence.TimerTaskInfo
-	config           *Config
-	logger           log.Logger
-	metricsClient    metrics.Client
-	timerFiredCount  uint64
-	timerProcessor   timerProcessor
-	timerGate        TimerGate
-	timeSource       clock.TimeSource
-	rateLimiter      quotas.Limiter
-	retryPolicy      backoff.RetryPolicy
+	shard           ShardContext
+	cache           *historyCache
+	shutdownWG      sync.WaitGroup
+	shutdownCh      chan struct{}
+	tasksCh         chan *timerTask
+	config          *Config
+	logger          log.Logger
+	metricsClient   metrics.Client
+	timerFiredCount uint64
+	timeSource      clock.TimeSource
+	retryPolicy     backoff.RetryPolicy
+	workerWG        sync.WaitGroup
 
 	// worker coroutines notification
 	workerNotificationChans []chan struct{}
 	// duplicate numOfWorker from config.TimerTaskWorkerCount for dynamic config works correctly
 	numOfWorker int
-
-	lastPollTime time.Time
-
-	// timer notification
-	newTimerCh  chan struct{}
-	newTimeLock sync.Mutex
-	newTime     time.Time
 }
 
-func (t *timerQueueTaskProcessor) start (){
-	var workerWG sync.WaitGroup
+func newTimerQueueTaskProcessor(
+	shard ShardContext,
+	historyService *historyEngineImpl,
+	logger log.Logger,
+) *timerQueueTaskProcessor {
+
+	log := logger.WithTags(tag.ComponentTimerQueue)
+
+	workerNotificationChans := []chan struct{}{}
+	numOfWorker := shard.GetConfig().TimerTaskWorkerCount()
+	for index := 0; index < numOfWorker; index++ {
+		workerNotificationChans = append(workerNotificationChans, make(chan struct{}, 1))
+	}
+
+	base := &timerQueueTaskProcessor{
+		shard:                   shard,
+		cache:                   historyService.historyCache,
+		shutdownCh:              make(chan struct{}),
+		tasksCh:                 make(chan *timerTask, 10*shard.GetConfig().TimerTaskBatchSize()),
+		config:                  shard.GetConfig(),
+		logger:                  log,
+		metricsClient:           historyService.metricsClient,
+		timeSource:              shard.GetTimeSource(),
+		workerNotificationChans: workerNotificationChans,
+		retryPolicy:             common.CreatePersistanceRetryPolicy(),
+	}
+
+	return base
+}
+
+func (t *timerQueueTaskProcessor) start() {
 	for i := 0; i < t.numOfWorker; i++ {
-		workerWG.Add(1)
+		t.workerWG.Add(1)
 		notificationChan := t.workerNotificationChans[i]
-		go t.taskWorker(&workerWG, notificationChan)
+		go t.taskWorker(notificationChan)
+	}
+}
+
+func (t *timerQueueTaskProcessor) stop() {
+	close(t.shutdownCh)
+	if success := common.AwaitWaitGroup(&t.workerWG, time.Minute); !success {
+		t.logger.Warn("Timer queue task processor timedout on shutdown.")
 	}
 }
 
 func (t *timerQueueTaskProcessor) taskWorker(
-	workerWG *sync.WaitGroup,
 	notificationChan chan struct{},
 ) {
-	defer workerWG.Done()
+	defer t.workerWG.Done()
 
 	for {
 		select {
@@ -98,16 +125,28 @@ func (t *timerQueueTaskProcessor) taskWorker(
 	}
 }
 
+func (t *timerQueueTaskProcessor) addTask(
+	task *timerTask,
+) bool {
+	// We have a timer to fire.
+	select {
+	case t.tasksCh <- task:
+	case <-t.shutdownCh:
+		return true
+	}
+	return false
+}
+
 func (t *timerQueueTaskProcessor) processTaskAndAck(
 	notificationChan <-chan struct{},
-	task *persistence.TimerTaskInfo,
+	task *timerTask,
 ) {
 
 	var scope int
 	var shouldProcessTask bool
 	var err error
 	startTime := t.timeSource.Now()
-	logger := t.initializeLoggerForTask(task)
+	logger := t.initializeLoggerForTask(task.task)
 	attempt := 0
 	incAttempt := func() {
 		attempt++
@@ -124,7 +163,7 @@ FilterLoop:
 			// this must return without ack
 			return
 		default:
-			shouldProcessTask, err = t.timerProcessor.getTaskFilter()(task)
+			shouldProcessTask, err = task.processor.getTaskFilter()(task.task)
 			if err == nil {
 				break FilterLoop
 			}
@@ -164,7 +203,7 @@ FilterLoop:
 
 func (t *timerQueueTaskProcessor) processTaskOnce(
 	notificationChan <-chan struct{},
-	task *persistence.TimerTaskInfo,
+	task *timerTask,
 	shouldProcessTask bool,
 	logger log.Logger,
 ) (int, error) {
@@ -175,7 +214,7 @@ func (t *timerQueueTaskProcessor) processTaskOnce(
 	}
 
 	startTime := t.timeSource.Now()
-	scope, err := t.timerProcessor.process(task, shouldProcessTask)
+	scope, err := task.processor.process(task.task, shouldProcessTask)
 	if shouldProcessTask {
 		t.metricsClient.IncCounter(scope, metrics.TaskRequests)
 		t.metricsClient.RecordTimer(scope, metrics.TaskProcessingLatency, time.Since(startTime))
@@ -234,12 +273,24 @@ func (t *timerQueueTaskProcessor) handleTaskError(
 }
 
 func (t *timerQueueTaskProcessor) ackTaskOnce(
-	task *persistence.TimerTaskInfo,
+	task *timerTask,
 	scope int,
 	reportMetrics bool,
 	startTime time.Time,
 	attempt int,
 ) {
+
+	//	t.timerQueueAckMgr.completeTimerTask(task)
+	if reportMetrics {
+		t.metricsClient.RecordTimer(scope, metrics.TaskAttemptTimer, time.Duration(attempt))
+		t.metricsClient.RecordTimer(scope, metrics.TaskLatency, time.Since(startTime))
+		t.metricsClient.RecordTimer(
+			scope,
+			metrics.TaskQueueLatency,
+			time.Since(task.task.GetVisibilityTimestamp()),
+		)
+	}
+	atomic.AddUint64(&t.timerFiredCount, 1)
 }
 
 func (t *timerQueueTaskProcessor) initializeLoggerForTask(
@@ -259,4 +310,3 @@ func (t *timerQueueTaskProcessor) initializeLoggerForTask(
 	logger.Debug(fmt.Sprintf("Processing timer task: %v, type: %v", task.GetTaskID(), task.GetTaskType()))
 	return logger
 }
-
