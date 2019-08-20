@@ -4024,6 +4024,9 @@ func (e *mutableStateBuilder) prepareTransaction(
 
 	// TODO merge active & passive task generation
 	// NOTE: this function must be the last call
+	//  since we only generate at most one activity & user timer,
+	//  regardless of how many activity & user timer created
+	//  so the calculation must be at the very end
 	if err := e.closeTransactionHandleActivityUserTimerTasks(
 		now,
 		transactionPolicy,

@@ -178,10 +178,7 @@ func (handler *decisionHandlerImpl) handleDecisionTaskStarted(
 				return nil, &workflow.EntityNotExistsError{Message: "Decision task not found."}
 			}
 
-			updateAction := &updateWorkflowAction{
-				noop:           false,
-				createDecision: false,
-			}
+			updateAction := &updateWorkflowAction{}
 
 			if di.StartedID != common.EmptyEventID {
 				// If decision is started as part of the current request scope then return a positive response
