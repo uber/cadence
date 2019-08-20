@@ -23,7 +23,6 @@ package history
 import (
 	"fmt"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -51,7 +50,6 @@ type timerQueueTaskProcessor struct {
 	config          *Config
 	logger          log.Logger
 	metricsClient   metrics.Client
-	timerFiredCount uint64
 	timeSource      clock.TimeSource
 	retryPolicy     backoff.RetryPolicy
 	workerWG        sync.WaitGroup
@@ -303,7 +301,6 @@ func (t *timerQueueTaskProcessor) ackTaskOnce(
 			time.Since(task.task.GetVisibilityTimestamp()),
 		)
 	}
-	atomic.AddUint64(&t.timerFiredCount, 1)
 }
 
 func (t *timerQueueTaskProcessor) initializeLoggerForTask(
