@@ -28,7 +28,11 @@ import (
 type (
 	// WatcherSnapshot contains the union of all workflow state subscribers care about.
 	WatcherSnapshot struct {
-		CloseStatus int
+		CloseStatus            int
+		LastFirstEventId       int64
+		NextEventId            int64
+		IsWorkflowRunning      bool
+		PreviousStartedEventId int64
 	}
 
 	// WorkflowWatcher is used to get WatcherSnapshots when workflow updates occur.
@@ -50,6 +54,7 @@ type (
 
 	lockableSubscribers struct {
 		sync.Mutex
+
 		nextSubscriberID int64
 		subscribers      map[int64]chan struct{}
 	}
@@ -94,7 +99,10 @@ func NewWorkflowWatcher() WorkflowWatcher {
 
 // Publish is used to indicate that the workflow has been updated and subscribers should be notified that there is a new snapshot.
 func (w *workflowWatcher) Publish(update *WatcherSnapshot) {
-	w.latestSnapshot.Store(update)
+	if update == nil {
+		return
+	}
+	w.latestSnapshot.Store(w.deepCopySnapshot(update))
 	w.notifyAll()
 }
 
@@ -115,5 +123,15 @@ func (w *workflowWatcher) GetLatestSnapshot() *WatcherSnapshot {
 	if v == nil {
 		return nil
 	}
-	return v.(*WatcherSnapshot)
+	return w.deepCopySnapshot(v.(*WatcherSnapshot))
+}
+
+func (w *workflowWatcher) deepCopySnapshot(snapshot *WatcherSnapshot) *WatcherSnapshot {
+	return &WatcherSnapshot{
+		CloseStatus:            snapshot.CloseStatus,
+		LastFirstEventId:       snapshot.LastFirstEventId,
+		NextEventId:            snapshot.NextEventId,
+		IsWorkflowRunning:      snapshot.IsWorkflowRunning,
+		PreviousStartedEventId: snapshot.PreviousStartedEventId,
+	}
 }

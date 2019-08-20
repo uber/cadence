@@ -38,30 +38,30 @@ func TestWorkflowWatcherSuite(t *testing.T) {
 }
 
 func (s *workflowWatcherSuite) TestWorkflowWatcher_NoSubscribers() {
-	ps := NewWorkflowWatcher()
+	watcher := NewWorkflowWatcher()
 	state := s.newRandomWatcherUpdate()
-	ps.Publish(state)
-	s.assertWatcherUpdateEqual(state, ps.GetLatestSnapshot())
+	watcher.Publish(state)
+	s.assertWatcherUpdateEqual(state, watcher.GetLatestSnapshot())
 }
 
 func (s *workflowWatcherSuite) TestWorkflowWatcher_NilPublishAndAccess() {
-	ps := NewWorkflowWatcher()
-	s.Nil(ps.GetLatestSnapshot())
-	ps.Publish(nil)
-	s.Nil(ps.GetLatestSnapshot())
+	watcher := NewWorkflowWatcher()
+	s.Nil(watcher.GetLatestSnapshot())
+	watcher.Publish(nil)
+	s.Nil(watcher.GetLatestSnapshot())
 }
 
 func (s *workflowWatcherSuite) TestWorkflowWatcher_ZombieUnsubscribe() {
-	ps := NewWorkflowWatcher()
-	ps.Unsubscribe(-1)
+	watcher := NewWorkflowWatcher()
+	watcher.Unsubscribe(-1)
 }
 
 func (s *workflowWatcherSuite) TestWorkflowWatcher_ManySubscribers() {
-	ps := NewWorkflowWatcher()
+	watcher := NewWorkflowWatcher()
 	var ids []int64
 	var chans []<-chan struct{}
 	for i := 0; i < 10; i++ {
-		id, ch := ps.Subscribe()
+		id, ch := watcher.Subscribe()
 		ids = append(ids, id)
 		chans = append(chans, ch)
 	}
@@ -70,21 +70,41 @@ func (s *workflowWatcherSuite) TestWorkflowWatcher_ManySubscribers() {
 		ids = append(ids[:index], ids[index+1:]...)
 		chans = append(chans[:index], chans[index+1:]...)
 	}
-	s.assertChanLengthsEqual(0, chans)
+	s.assertChanLengthsEqual(0, chans...)
 	state1 := s.newRandomWatcherUpdate()
-	ps.Publish(state1)
-	s.assertChanLengthsEqual(1, chans)
-	s.assertWatcherUpdateEqual(state1, ps.GetLatestSnapshot())
+	watcher.Publish(state1)
+	s.assertChanLengthsEqual(1, chans...)
+	s.assertWatcherUpdateEqual(state1, watcher.GetLatestSnapshot())
 	state2 := s.newRandomWatcherUpdate()
-	ps.Publish(state2)
-	s.assertChanLengthsEqual(1, chans)
-	s.assertWatcherUpdateEqual(state2, ps.GetLatestSnapshot())
+	watcher.Publish(state2)
+	s.assertChanLengthsEqual(1, chans...)
+	s.assertWatcherUpdateEqual(state2, watcher.GetLatestSnapshot())
 	for _, ch := range chans {
 		<-ch
 	}
-	s.assertChanLengthsEqual(0, chans)
-	s.assertWatcherUpdateEqual(state2, ps.GetLatestSnapshot())
+	s.assertChanLengthsEqual(0, chans...)
+	s.assertWatcherUpdateEqual(state2, watcher.GetLatestSnapshot())
+}
 
+func (s *workflowWatcherSuite) TestWorkflowWatcher_ModifySnapshot() {
+	watcher := NewWorkflowWatcher()
+	id, ch := watcher.Subscribe()
+	defer watcher.Unsubscribe(id)
+	update := s.newRandomWatcherUpdate()
+	watcher.Publish(update)
+	update.CloseStatus = update.CloseStatus + 1
+	s.assertChanLengthsEqual(1, ch)
+	<-ch
+	s.assertChanLengthsEqual(0, ch)
+	result := watcher.GetLatestSnapshot()
+	s.assertWatcherUpdateEqual(&WatcherSnapshot{
+		CloseStatus: update.CloseStatus - 1,
+	}, result)
+	result.CloseStatus = result.CloseStatus + 10
+	nextResult := watcher.GetLatestSnapshot()
+	s.assertWatcherUpdateEqual(&WatcherSnapshot{
+		CloseStatus: result.CloseStatus - 10,
+	}, nextResult)
 }
 
 func (s *workflowWatcherSuite) newRandomWatcherUpdate() *WatcherSnapshot {
@@ -97,7 +117,7 @@ func (s *workflowWatcherSuite) assertWatcherUpdateEqual(expected, actual *Watche
 	s.Equal(expected.CloseStatus, actual.CloseStatus)
 }
 
-func (s *workflowWatcherSuite) assertChanLengthsEqual(expectedLengths int, chans []<-chan struct{}) {
+func (s *workflowWatcherSuite) assertChanLengthsEqual(expectedLengths int, chans ...<-chan struct{}) {
 	for _, ch := range chans {
 		s.Equal(expectedLengths, len(ch))
 	}

@@ -1681,12 +1681,6 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		return wh.getArchivedHistory(ctx, getRequest, domainID, scope)
 	}
 
-	// this function return the following 5 things,
-	// 1. the workflow run ID
-	// 2. the last first event ID (the event ID of the last batch of events in the history)
-	// 3. the next event ID
-	// 4. whether the workflow is closed
-	// 5. error if any
 	queryHistory := func(domainUUID string, execution *gen.WorkflowExecution, expectedNextEventID int64) (int32, []byte, string, int64, int64, bool, error) {
 		response, err := wh.history.GetMutableState(ctx, &h.GetMutableStateRequest{
 			DomainUUID:          common.StringPtr(domainUUID),

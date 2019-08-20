@@ -37,7 +37,6 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/definition"
 	ce "github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -73,7 +72,6 @@ type (
 		taskAllocator             taskAllocator
 		replicator                *historyReplicator
 		replicatorProcessor       ReplicatorQueueProcessor
-		historyEventNotifier      historyEventNotifier
 		tokenSerializer           common.TaskTokenSerializer
 		historyCache              *historyCache
 		metricsClient             metrics.Client
@@ -135,7 +133,6 @@ func NewEngineWithShardContext(
 	matching matching.Client,
 	historyClient hc.Client,
 	publicClient workflowserviceclient.Interface,
-	historyEventNotifier historyEventNotifier,
 	publisher messaging.Producer,
 	config *Config,
 	replicationTaskFetchers *ReplicationTaskFetchers,
@@ -149,21 +146,20 @@ func NewEngineWithShardContext(
 	historyV2Manager := shard.GetHistoryV2Manager()
 	historyCache := newHistoryCache(shard)
 	historyEngImpl := &historyEngineImpl{
-		currentClusterName:   currentClusterName,
-		shard:                shard,
-		clusterMetadata:      shard.GetClusterMetadata(),
-		timeSource:           shard.GetTimeSource(),
-		historyMgr:           historyManager,
-		historyV2Mgr:         historyV2Manager,
-		executionManager:     executionManager,
-		visibilityMgr:        visibilityMgr,
-		tokenSerializer:      common.NewJSONTaskTokenSerializer(),
-		historyCache:         historyCache,
-		logger:               logger.WithTags(tag.ComponentHistoryEngine),
-		throttledLogger:      shard.GetThrottledLogger().WithTags(tag.ComponentHistoryEngine),
-		metricsClient:        shard.GetMetricsClient(),
-		historyEventNotifier: historyEventNotifier,
-		config:               config,
+		currentClusterName: currentClusterName,
+		shard:              shard,
+		clusterMetadata:    shard.GetClusterMetadata(),
+		timeSource:         shard.GetTimeSource(),
+		historyMgr:         historyManager,
+		historyV2Mgr:       historyV2Manager,
+		executionManager:   executionManager,
+		visibilityMgr:      visibilityMgr,
+		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
+		historyCache:       historyCache,
+		logger:             logger.WithTags(tag.ComponentHistoryEngine),
+		throttledLogger:    shard.GetThrottledLogger().WithTags(tag.ComponentHistoryEngine),
+		metricsClient:      shard.GetMetricsClient(),
+		config:             config,
 		archivalClient: warchiver.NewClient(
 			shard.GetMetricsClient(),
 			logger,
@@ -557,14 +553,15 @@ func (e *historyEngineImpl) GetMutableState(
 		expectedNextEventID = request.GetExpectedNextEventId()
 	}
 
-	// if caller decide to long poll on workflow execution
-	// and the event ID we are looking for is smaller than current next event ID
 	if expectedNextEventID >= response.GetNextEventId() && response.GetIsWorkflowRunning() {
-		subscriberID, channel, err := e.historyEventNotifier.WatchHistoryEvent(definition.NewWorkflowIdentifier(domainID, execution.GetWorkflowId(), execution.GetRunId()))
+		context, release, err := e.historyCache.getOrCreateWorkflowExecution(ctx, domainID, execution)
 		if err != nil {
 			return nil, err
 		}
-		defer e.historyEventNotifier.UnwatchHistoryEvent(definition.NewWorkflowIdentifier(domainID, execution.GetWorkflowId(), execution.GetRunId()), subscriberID)
+		workflowWatcher := context.getWorkflowWatcher()
+		release(nil)
+		id, notificationCh := workflowWatcher.Subscribe()
+		defer workflowWatcher.Unsubscribe(id)
 
 		// check again in case the next event ID is updated
 		response, err = e.getMutableState(ctx, domainID, execution)
@@ -584,11 +581,12 @@ func (e *historyEngineImpl) GetMutableState(
 		defer timer.Stop()
 		for {
 			select {
-			case event := <-channel:
-				response.LastFirstEventId = common.Int64Ptr(event.lastFirstEventID)
-				response.NextEventId = common.Int64Ptr(event.nextEventID)
-				response.IsWorkflowRunning = common.BoolPtr(event.isWorkflowRunning)
-				response.PreviousStartedEventId = common.Int64Ptr(event.previousStartedEventID)
+			case <-notificationCh:
+				watcherSnapshot := workflowWatcher.GetLatestSnapshot()
+				response.LastFirstEventId = common.Int64Ptr(watcherSnapshot.LastFirstEventId)
+				response.NextEventId = common.Int64Ptr(watcherSnapshot.NextEventId)
+				response.IsWorkflowRunning = common.BoolPtr(watcherSnapshot.IsWorkflowRunning)
+				response.PreviousStartedEventId = common.Int64Ptr(watcherSnapshot.PreviousStartedEventId)
 				if expectedNextEventID < response.GetNextEventId() || !response.GetIsWorkflowRunning() {
 					return response, nil
 				}

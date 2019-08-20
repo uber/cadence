@@ -504,19 +504,12 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNew(
 	c.updateCondition = currentWorkflow.ExecutionInfo.NextEventID
 
 	c.watcher.Publish(&WatcherSnapshot{
-		CloseStatus: c.msBuilder.GetExecutionInfo().CloseStatus,
+		CloseStatus:            c.msBuilder.GetExecutionInfo().CloseStatus,
+		LastFirstEventId:       c.msBuilder.GetLastFirstEventID(),
+		NextEventId:            c.msBuilder.GetNextEventID(),
+		IsWorkflowRunning:      c.msBuilder.IsWorkflowExecutionRunning(),
+		PreviousStartedEventId: c.msBuilder.GetPreviousStartedEventID(),
 	})
-
-	// for any change in the workflow, send a event
-	// TODO: @andrewjdawson2016 remove historyEventNotifier once plumbing for MutableStatePubSub is finished
-	c.engine.NotifyNewHistoryEvent(newHistoryEventNotification(
-		c.domainID,
-		&c.workflowExecution,
-		c.msBuilder.GetLastFirstEventID(),
-		c.msBuilder.GetNextEventID(),
-		c.msBuilder.GetPreviousStartedEventID(),
-		c.msBuilder.IsWorkflowExecutionRunning(),
-	))
 
 	// notify current workflow tasks
 	c.notifyTasks(

@@ -68,7 +68,6 @@ type (
 		startWG                 sync.WaitGroup
 		metricsClient           metrics.Client
 		config                  *Config
-		historyEventNotifier    historyEventNotifier
 		publisher               messaging.Producer
 		rateLimiter             quotas.Limiter
 		replicationTaskFetchers *ReplicationTaskFetchers
@@ -187,9 +186,6 @@ func (h *Handler) Start() error {
 	h.controller = newShardController(h.Service, h.GetHostInfo(), hServiceResolver, h.shardManager, h.historyMgr, h.historyV2Mgr,
 		h.domainCache, h.executionMgrFactory, h, h.config, h.GetLogger(), h.GetMetricsClient())
 	h.metricsClient = h.GetMetricsClient()
-	h.historyEventNotifier = newHistoryEventNotifier(h.Service.GetTimeSource(), h.GetMetricsClient(), h.config.GetShardID)
-	// events notifier must starts before controller
-	h.historyEventNotifier.Start()
 	h.controller.Start()
 
 	h.startWG.Done()
@@ -210,7 +206,6 @@ func (h *Handler) Stop() {
 	h.metadataMgr.Close()
 	h.visibilityMgr.Close()
 	h.Service.Stop()
-	h.historyEventNotifier.Stop()
 }
 
 // CreateEngine is implementation for HistoryEngineFactory used for creating the engine instance for shard
