@@ -481,6 +481,7 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 	s.NoError(queryResult.Err)
 	s.NotNil(queryResult.Resp)
 	s.NotNil(queryResult.Resp.QueryResult)
+	s.Nil(queryResult.Resp.QueryRejected)
 	queryResultString := string(queryResult.Resp.QueryResult)
 	s.Equal("query-result", queryResultString)
 
@@ -519,6 +520,7 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 	s.NoError(queryResult.Err)
 	s.NotNil(queryResult.Resp)
 	s.NotNil(queryResult.Resp.QueryResult)
+	s.Nil(queryResult.Resp.QueryRejected)
 	queryResultString = string(queryResult.Resp.QueryResult)
 	s.Equal("query-result", queryResultString)
 
@@ -546,6 +548,7 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 	s.NoError(queryResult.Err)
 	s.NotNil(queryResult.Resp)
 	s.NotNil(queryResult.Resp.QueryResult)
+	s.Nil(queryResult.Resp.QueryRejected)
 	queryResultString = string(queryResult.Resp.QueryResult)
 	s.Equal("query-result", queryResultString)
 }
