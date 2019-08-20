@@ -53,7 +53,7 @@ type (
 	}
 )
 
-// NewDomainReplicator create a new instance odf domain replicator
+// NewDomainReplicator create a new instance of domain replicator
 func NewDomainReplicator(kafka messaging.Producer, logger log.Logger) DomainReplicator {
 	return &domainReplicatorImpl{
 		kafka:  kafka,

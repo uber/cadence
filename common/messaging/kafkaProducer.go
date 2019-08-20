@@ -75,26 +75,6 @@ func (p *kafkaProducer) Publish(msg interface{}) error {
 	return nil
 }
 
-// PublishBatch is used to send messages to other clusters through Kafka topic
-func (p *kafkaProducer) PublishBatch(msgs []interface{}) error {
-	var producerMsgs []*sarama.ProducerMessage
-	for _, msg := range msgs {
-		message, err := p.getProducerMessage(msg)
-		if err != nil {
-			return err
-		}
-		producerMsgs = append(producerMsgs, message)
-	}
-
-	err := p.producer.SendMessages(producerMsgs)
-	if err != nil {
-		p.logger.Warn("Failed to publish batch of messages to kafka", tag.Error(err))
-		return p.convertErr(err)
-	}
-
-	return nil
-}
-
 // Close is used to close Kafka publisher
 func (p *kafkaProducer) Close() error {
 	return p.convertErr(p.producer.Close())
