@@ -98,13 +98,16 @@ func (t *timerQueueTaskProcessor) start() {
 		notificationChan := t.workerNotificationChans[i]
 		go t.taskWorker(notificationChan)
 	}
+	t.logger.Info("Timer queue task processor started.")
 }
 
 func (t *timerQueueTaskProcessor) stop() {
 	close(t.shutdownCh)
+	close(t.tasksCh)
 	if success := common.AwaitWaitGroup(&t.workerWG, time.Minute); !success {
 		t.logger.Warn("Timer queue task processor timedout on shutdown.")
 	}
+	t.logger.Info("Timer queue task processor shutdown.")
 }
 
 func (t *timerQueueTaskProcessor) taskWorker(
