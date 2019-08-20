@@ -22,8 +22,6 @@ package history
 
 import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common/clock"
-	"github.com/uber/cadence/common/log"
 )
 
 func failDecision(
@@ -48,8 +46,6 @@ func failDecision(
 
 func scheduleDecision(
 	mutableState mutableState,
-	timeSource clock.TimeSource,
-	logger log.Logger,
 ) error {
 
 	if mutableState.HasPendingDecisionTask() {

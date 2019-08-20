@@ -774,7 +774,7 @@ func (t *timerQueueActiveProcessorImpl) updateWorkflowExecution(
 	var err error
 	if scheduleNewDecision {
 		// Schedule a new decision.
-		err = scheduleDecision(msBuilder, t.shard.GetTimeSource(), t.logger)
+		err = scheduleDecision(msBuilder)
 		if err != nil {
 			return err
 		}

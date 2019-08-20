@@ -1324,7 +1324,7 @@ func (t *transferQueueActiveProcessorImpl) updateWorkflowExecution(
 
 	if createDecisionTask {
 		// Create a transfer task to schedule a decision task
-		err := scheduleDecision(msBuilder, t.shard.GetTimeSource(), t.logger)
+		err := scheduleDecision(msBuilder)
 		if err != nil {
 			return err
 		}

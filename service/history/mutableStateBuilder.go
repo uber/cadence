@@ -4266,7 +4266,7 @@ func (e *mutableStateBuilder) closeTransactionHandleDecisionFailover(
 			return err
 		}
 
-		err := scheduleDecision(e, e.timeSource, e.logger)
+		err := scheduleDecision(e)
 		if err != nil {
 			return err
 		}
@@ -4298,7 +4298,7 @@ func (e *mutableStateBuilder) closeTransactionHandleBufferedEventsLimit(
 			return err
 		}
 
-		err := scheduleDecision(e, e.timeSource, e.logger)
+		err := scheduleDecision(e)
 		if err != nil {
 			return err
 		}
