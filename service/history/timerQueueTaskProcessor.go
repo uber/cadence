@@ -125,6 +125,15 @@ func (t *timerQueueTaskProcessor) taskWorker(
 	}
 }
 
+func (t *timerQueueTaskProcessor) retryTasks() {
+	for _, workerNotificationChan := range t.workerNotificationChans {
+		select {
+		case workerNotificationChan <- struct{}{}:
+		default:
+		}
+	}
+}
+
 func (t *timerQueueTaskProcessor) addTask(
 	task *timerTask,
 ) bool {

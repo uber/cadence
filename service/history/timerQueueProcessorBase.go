@@ -69,13 +69,7 @@ type (
 		rateLimiter      quotas.Limiter
 		retryPolicy      backoff.RetryPolicy
 		processor        *timerQueueTaskProcessor
-
-		// worker coroutines notification
-		workerNotificationChans []chan struct{}
-		// duplicate numOfWorker from config.TimerTaskWorkerCount for dynamic config works correctly
-		numOfWorker int
-
-		lastPollTime time.Time
+		lastPollTime     time.Time
 
 		// timer notification
 		newTimerCh  chan struct{}
@@ -96,31 +90,23 @@ func newTimerQueueProcessorBase(
 ) *timerQueueProcessorBase {
 
 	log := logger.WithTags(tag.ComponentTimerQueue)
-
-	workerNotificationChans := []chan struct{}{}
-	numOfWorker := shard.GetConfig().TimerTaskWorkerCount()
-	for index := 0; index < numOfWorker; index++ {
-		workerNotificationChans = append(workerNotificationChans, make(chan struct{}, 1))
-	}
-
 	base := &timerQueueProcessorBase{
-		scope:                   scope,
-		shard:                   shard,
-		historyService:          historyService,
-		cache:                   historyService.historyCache,
-		executionManager:        shard.GetExecutionManager(),
-		status:                  common.DaemonStatusInitialized,
-		shutdownCh:              make(chan struct{}),
-		config:                  shard.GetConfig(),
-		logger:                  log,
-		metricsClient:           historyService.metricsClient,
-		timerQueueAckMgr:        timerQueueAckMgr,
-		timerGate:               timerGate,
-		timeSource:              shard.GetTimeSource(),
-		workerNotificationChans: workerNotificationChans,
-		newTimerCh:              make(chan struct{}, 1),
-		lastPollTime:            time.Time{},
-		processor:               taskProcessor,
+		scope:            scope,
+		shard:            shard,
+		historyService:   historyService,
+		cache:            historyService.historyCache,
+		executionManager: shard.GetExecutionManager(),
+		status:           common.DaemonStatusInitialized,
+		shutdownCh:       make(chan struct{}),
+		config:           shard.GetConfig(),
+		logger:           log,
+		metricsClient:    historyService.metricsClient,
+		timerQueueAckMgr: timerQueueAckMgr,
+		timerGate:        timerGate,
+		timeSource:       shard.GetTimeSource(),
+		newTimerCh:       make(chan struct{}, 1),
+		lastPollTime:     time.Time{},
+		processor:        taskProcessor,
 		rateLimiter: quotas.NewDynamicRateLimiter(
 			func() float64 {
 				return float64(maxPollRPS())
@@ -379,12 +365,7 @@ func (t *timerQueueProcessorBase) readAndFanoutTimerTasks() (*persistence.TimerT
 }
 
 func (t *timerQueueProcessorBase) retryTasks() {
-	for _, workerNotificationChan := range t.workerNotificationChans {
-		select {
-		case workerNotificationChan <- struct{}{}:
-		default:
-		}
-	}
+	t.processor.retryTasks()
 }
 
 func (t *timerQueueProcessorBase) getTimerFiredCount() uint64 {
