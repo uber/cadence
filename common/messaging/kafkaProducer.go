@@ -27,7 +27,6 @@ import (
 	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/common/codec"
-	"github.com/uber/cadence/common/codec/gob"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 )
@@ -36,8 +35,7 @@ type (
 	kafkaProducer struct {
 		topic      string
 		producer   sarama.SyncProducer
-		msgEncoder codec.BinaryEncoder
-		gobEncoder *gob.Encoder
+		msgEncoder codec.ThriftEncoder
 		logger     log.Logger
 	}
 )
@@ -50,13 +48,12 @@ func NewKafkaProducer(topic string, producer sarama.SyncProducer, logger log.Log
 		topic:      topic,
 		producer:   producer,
 		msgEncoder: codec.NewThriftRWEncoder(),
-		gobEncoder: gob.NewGobEncoder(),
 		logger:     logger.WithTags(tag.KafkaTopicName(topic)),
 	}
 }
 
 // Publish is used to send messages to other clusters through Kafka topic
-func (p *kafkaProducer) Publish(msg interface{}) error {
+func (p *kafkaProducer) WriteMessage(msg interface{}) error {
 	message, err := p.getProducerMessage(msg)
 	if err != nil {
 		return err

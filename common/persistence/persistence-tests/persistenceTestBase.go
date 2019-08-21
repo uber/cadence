@@ -97,10 +97,14 @@ type (
 	TestTransferTaskIDGenerator struct {
 		seqNum int64
 	}
+
+	TestBinaryEncoder struct {
+	}
 )
 
 const (
 	defaultScheduleToStartTimeout = 111
+	testQueueType                 = -1
 )
 
 // NewTestBaseWithCassandra returns a persistence test base backed by cassandra datastore
@@ -230,16 +234,7 @@ func (s *TestBase) Setup() {
 	err = s.ShardMgr.CreateShard(&p.CreateShardRequest{ShardInfo: s.ShardInfo})
 	s.fatalOnError("CreateShard", err)
 
-	queue, err := factory.NewQueue("test",
-		func(i interface{}) (bytes []byte, e error) {
-			if str, ok := i.(string); ok {
-				return []byte(str), nil
-			}
-			return nil, fmt.Errorf("unsupported type")
-		},
-		func(bytes []byte) (i interface{}, e error) {
-			return string(bytes), nil
-		})
+	queue, err := factory.NewQueue(testQueueType, &TestBinaryEncoder{})
 	s.fatalOnError("CreateQueue", err)
 	s.Queue = queue
 }
@@ -1355,9 +1350,9 @@ func (g *TestTransferTaskIDGenerator) GenerateTransferTaskID() (int64, error) {
 	return atomic.AddInt64(&g.seqNum, 1), nil
 }
 
-// Enqueue is a utility method to append messages in the queue
-func (s *TestBase) Enqueue(message interface{}) error {
-	return s.Queue.Enqueue(message)
+// WriteMessage is a utility method to add messages to the queue
+func (s *TestBase) WriteMessage(message interface{}) error {
+	return s.Queue.WriteMessage(message)
 }
 
 // GetMessages is a utility method to get messages from the queue
@@ -1402,4 +1397,21 @@ func pickRandomEncoding() common.EncodingType {
 		encoding = common.EncodingType("")
 	}
 	return encoding
+}
+
+func (e *TestBinaryEncoder) Encode(object interface{}) ([]byte, error) {
+	if str, ok := object.(string); ok {
+		return []byte(str), nil
+	}
+	return nil, fmt.Errorf("unsupported type")
+}
+
+func (e *TestBinaryEncoder) Decode(payload []byte, val interface{}) error {
+	strPtr, ok := val.(*interface{})
+	if !ok {
+		return fmt.Errorf("unsupported type")
+	}
+
+	*strPtr = string(payload)
+	return nil
 }

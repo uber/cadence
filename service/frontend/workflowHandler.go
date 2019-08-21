@@ -152,7 +152,7 @@ func NewWorkflowHandler(
 	historyMgr persistence.HistoryManager,
 	historyV2Mgr persistence.HistoryV2Manager,
 	visibilityMgr persistence.VisibilityManager,
-	kafkaProducer messaging.Producer,
+	replicationMessageSink messaging.MessageSink,
 	domainCache cache.DomainCache,
 ) *WorkflowHandler {
 	handler := &WorkflowHandler{
@@ -179,7 +179,7 @@ func NewWorkflowHandler(
 			sVice.GetLogger(),
 			metadataMgr,
 			sVice.GetClusterMetadata(),
-			NewDomainReplicator(kafkaProducer, sVice.GetLogger()),
+			NewDomainReplicator(replicationMessageSink, sVice.GetLogger()),
 			sVice.GetArchivalMetadata(),
 			sVice.GetArchiverProvider(),
 		),

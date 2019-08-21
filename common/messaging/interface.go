@@ -55,10 +55,11 @@ type (
 
 	// Producer is the interface used to send replication tasks to other clusters through replicator
 	Producer interface {
-		Publish(message interface{}) error
+		MessageSink
 		Close() error
 	}
 
-	MessageEncoder func(interface{}) ([]byte, error)
-	MessageDecoder func([]byte) (interface{}, error)
+	MessageSink interface {
+		WriteMessage(message interface{}) error
+	}
 )

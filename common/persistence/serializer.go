@@ -70,7 +70,7 @@ type (
 	}
 
 	serializerImpl struct {
-		thriftrwEncoder codec.BinaryEncoder
+		thriftrwEncoder codec.ThriftEncoder
 	}
 )
 

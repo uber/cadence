@@ -123,7 +123,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(request *p.InternalRe
 		request.Memo.GetEncoding(),
 		request.SearchAttributes,
 	)
-	return v.producer.Publish(msg)
+	return v.producer.WriteMessage(msg)
 }
 
 func (v *esVisibilityStore) RecordWorkflowExecutionClosed(request *p.InternalRecordWorkflowExecutionClosedRequest) error {
@@ -143,7 +143,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionClosed(request *p.InternalRec
 		request.Memo.GetEncoding(),
 		request.SearchAttributes,
 	)
-	return v.producer.Publish(msg)
+	return v.producer.WriteMessage(msg)
 }
 
 func (v *esVisibilityStore) UpsertWorkflowExecution(request *p.InternalUpsertWorkflowExecutionRequest) error {
@@ -160,7 +160,7 @@ func (v *esVisibilityStore) UpsertWorkflowExecution(request *p.InternalUpsertWor
 		request.Memo.GetEncoding(),
 		request.SearchAttributes,
 	)
-	return v.producer.Publish(msg)
+	return v.producer.WriteMessage(msg)
 }
 
 func (v *esVisibilityStore) ListOpenWorkflowExecutions(
@@ -378,7 +378,7 @@ func (v *esVisibilityStore) DeleteWorkflowExecution(request *p.VisibilityDeleteW
 		request.RunID,
 		request.TaskID,
 	)
-	return v.producer.Publish(msg)
+	return v.producer.WriteMessage(msg)
 }
 
 func (v *esVisibilityStore) ListWorkflowExecutions(

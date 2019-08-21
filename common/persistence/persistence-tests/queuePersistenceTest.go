@@ -77,7 +77,7 @@ func (s *QueuePersistenceSuite) TestEnqueueMessage() {
 		go func() {
 			defer wg.Done()
 			for message := range messageChan {
-				err := s.Enqueue(message)
+				err := s.WriteMessage(message)
 				s.Nil(err, "Enqueue message failed.")
 			}
 		}()

@@ -55,7 +55,7 @@ type indexProcessor struct {
 	isStopped       int32
 	shutdownWG      sync.WaitGroup
 	shutdownCh      chan struct{}
-	msgEncoder      codec.BinaryEncoder
+	msgEncoder      codec.ThriftEncoder
 }
 
 const (

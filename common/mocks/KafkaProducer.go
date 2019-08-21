@@ -44,8 +44,8 @@ func (_m *KafkaProducer) Close() error {
 	return r0
 }
 
-// Publish provides a mock function with given fields: msg
-func (_m *KafkaProducer) Publish(msg interface{}) error {
+// WriteMessage provides a mock function with given fields: msg
+func (_m *KafkaProducer) WriteMessage(msg interface{}) error {
 	ret := _m.Called(msg)
 
 	var r0 error

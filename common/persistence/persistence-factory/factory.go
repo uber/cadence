@@ -23,8 +23,8 @@ package persistence
 import (
 	"sync"
 
+	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
@@ -55,7 +55,8 @@ type (
 		NewExecutionManager(shardID int) (p.ExecutionManager, error)
 		// NewVisibilityManager returns a new visibility manager
 		NewVisibilityManager() (p.VisibilityManager, error)
-		NewQueue(queueType string, encoder messaging.MessageEncoder, decoder messaging.MessageDecoder) (p.Queue, error)
+		// NewQueue returns a new queue instance for the specified queue type
+		NewQueue(queueType int, encoder codec.BinaryEncoder) (p.Queue, error)
 	}
 	// DataStoreFactory is a low level interface to be implemented by a datastore
 	// Examples of datastores are cassandra, mysql etc
@@ -80,7 +81,7 @@ type (
 		NewExecutionStore(shardID int) (p.ExecutionStore, error)
 		// NewVisibilityStore returns a new visibility store
 		NewVisibilityStore() (p.VisibilityStore, error)
-		NewQueue(queueType string, encoder messaging.MessageEncoder, decoder messaging.MessageDecoder) (p.Queue, error)
+		NewQueue(queueType int, encoder codec.BinaryEncoder) (p.Queue, error)
 	}
 	// Datastore represents a datastore
 	Datastore struct {
@@ -290,9 +291,9 @@ func (f *factoryImpl) NewVisibilityManager() (p.VisibilityManager, error) {
 	return result, nil
 }
 
-func (f *factoryImpl) NewQueue(queueType string, encoder messaging.MessageEncoder, decoder messaging.MessageDecoder) (p.Queue, error) {
+func (f *factoryImpl) NewQueue(queueType int, encoder codec.BinaryEncoder) (p.Queue, error) {
 	ds := f.datastores[storeTypeQueue]
-	result, err := ds.factory.NewQueue(queueType, encoder, decoder)
+	result, err := ds.factory.NewQueue(queueType, encoder)
 	if err != nil {
 		return nil, err
 	}

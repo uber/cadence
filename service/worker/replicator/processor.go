@@ -61,7 +61,7 @@ type (
 		domainReplicator        DomainReplicator
 		historyRereplicator     xdc.HistoryRereplicator
 		historyClient           history.Client
-		msgEncoder              codec.BinaryEncoder
+		msgEncoder              codec.ThriftEncoder
 		timeSource              clock.TimeSource
 		sequentialTaskProcessor task.SequentialTaskProcessor
 	}

@@ -749,12 +749,12 @@ func (p *historyV2RateLimitedPersistenceClient) GetHistoryTree(request *GetHisto
 	return response, err
 }
 
-func (p *queueRateLimitedPersistenceClient) Enqueue(message interface{}) error {
+func (p *queueRateLimitedPersistenceClient) WriteMessage(message interface{}) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 
-	return p.persistence.Enqueue(message)
+	return p.persistence.WriteMessage(message)
 }
 
 func (p *queueRateLimitedPersistenceClient) GetMessages(lastMessageID int, maxCount int) ([]interface{}, error) {

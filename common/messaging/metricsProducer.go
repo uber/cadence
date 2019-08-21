@@ -40,11 +40,11 @@ func NewMetricProducer(producer Producer,
 	}
 }
 
-func (p *metricsProducer) Publish(msg interface{}) error {
+func (p *metricsProducer) WriteMessage(msg interface{}) error {
 	p.metricsClient.IncCounter(metrics.MessagingClientPublishScope, metrics.CadenceClientRequests)
 
 	sw := p.metricsClient.StartTimer(metrics.MessagingClientPublishScope, metrics.CadenceClientLatency)
-	err := p.producer.Publish(msg)
+	err := p.producer.WriteMessage(msg)
 	sw.Stop()
 
 	if err != nil {

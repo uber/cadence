@@ -118,3 +118,7 @@ const (
 	// ArchivalPaused is the status for pausing archival
 	ArchivalPaused = "paused"
 )
+
+const (
+	DomainReplicationQueueType = 1
+)

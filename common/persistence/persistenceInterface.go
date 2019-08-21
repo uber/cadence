@@ -26,6 +26,7 @@ import (
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/messaging"
 )
 
 type (
@@ -143,7 +144,7 @@ type (
 	}
 
 	Queue interface {
-		Enqueue(message interface{}) error
+		messaging.MessageSink
 		GetMessages(lastMessageID int, maxCount int) ([]interface{}, error)
 	}
 

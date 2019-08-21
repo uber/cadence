@@ -1173,11 +1173,11 @@ func (p *historyV2PersistenceClient) updateErrorMetric(scope int, err error) {
 	}
 }
 
-func (p *queuePersistenceClient) Enqueue(message interface{}) error {
+func (p *queuePersistenceClient) WriteMessage(message interface{}) error {
 	p.metricClient.IncCounter(metrics.PersistenceEnqueueMessageScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceEnqueueMessageScope, metrics.PersistenceLatency)
-	err := p.persistence.Enqueue(message)
+	err := p.persistence.WriteMessage(message)
 	sw.Stop()
 
 	if err != nil {
