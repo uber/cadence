@@ -542,7 +542,7 @@ func newAdminElasticSearchCommands() []cli.Command {
 					Usage: "ElasticSearch target index",
 				},
 				cli.StringFlag{
-					Name:  FlagInputFileWithAlias,
+					Name: FlagInputFileWithAlias,
 					Usage: "Input file name. Redirect cadence wf list result (with tale format) to a file and use as delete input. " +
 						"First line should be table header like WORKFLOW TYPE | WORKFLOW ID | RUN ID | ...",
 				},
