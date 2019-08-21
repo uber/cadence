@@ -162,7 +162,8 @@ func (r *conflictResolverImpl) reset(
 	}
 
 	resetMutableStateBuilder.SetUpdateCondition(updateCondition)
-	if r.shard.GetConfig().AdvancedVisibilityWritingMode() != common.AdvancedVisibilityWritingModeOff {
+	if r.shard.GetConfig().AdvancedVisibilityWritingMode() != common.AdvancedVisibilityWritingModeOff ||
+		r.shard.GetConfig().EnableVisibilityToKafka() {
 		// whenever a reset of mutable state is done, we need to sync the workflow search attribute
 		resetMutableStateBuilder.AddTransferTasks(&persistence.UpsertWorkflowSearchAttributesTask{})
 	}

@@ -146,8 +146,11 @@ func (s *server) startService() common.Daemon {
 		log.Fatalf("need to provide an endpoint config for PublicClient")
 	}
 
-	advancedVisMode := dc.GetIntProperty(dynamicconfig.AdvancedVisibilityWritingMode, common.AdvancedVisibilityWritingModeOff)
-	isAdvancedVisEnabled := advancedVisMode() != common.AdvancedVisibilityWritingModeOff
+	advancedVisMode := dc.GetIntProperty(dynamicconfig.AdvancedVisibilityWritingMode, common.AdvancedVisibilityWritingModeOff)()
+	if dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, false)() { // for backward compatible
+		advancedVisMode = common.AdvancedVisibilityWritingModeDual
+	}
+	isAdvancedVisEnabled := advancedVisMode != common.AdvancedVisibilityWritingModeOff
 	if params.ClusterMetadata.IsGlobalDomainEnabled() {
 		params.MessagingClient = messaging.NewKafkaClient(&s.cfg.Kafka, params.MetricsClient, zap.NewNop(), params.Logger, params.MetricScope, true, isAdvancedVisEnabled)
 	} else if isAdvancedVisEnabled {
