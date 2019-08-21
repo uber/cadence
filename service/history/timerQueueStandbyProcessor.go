@@ -45,7 +45,7 @@ type (
 		clusterMetadata         cluster.Metadata
 		historyService          *historyEngineImpl
 		cache                   *historyCache
-		timerTaskFilter         timerTaskFilter
+		timerTaskFilter         queueTaskFilter
 		logger                  log.Logger
 		metricsClient           metrics.Client
 		clusterName             string
@@ -72,7 +72,11 @@ func newTimerQueueStandbyProcessor(
 		return shard.UpdateTimerClusterAckLevel(clusterName, ackLevel.VisibilityTimestamp)
 	}
 	logger = logger.WithTags(tag.ClusterName(clusterName))
-	timerTaskFilter := func(timer *persistence.TimerTaskInfo) (bool, error) {
+	timerTaskFilter := func(qTask queueTaskInfo) (bool, error) {
+		timer, ok := qTask.(*persistence.TimerTaskInfo)
+		if !ok {
+			return false, errUnexpectedQueueTask
+		}
 		return taskAllocator.verifyStandbyTask(clusterName, timer.DomainID, timer)
 	}
 
@@ -137,7 +141,7 @@ func (t *timerQueueStandbyProcessorImpl) retryTasks() {
 	t.timerQueueProcessorBase.retryTasks()
 }
 
-func (t *timerQueueStandbyProcessorImpl) getTaskFilter() timerTaskFilter {
+func (t *timerQueueStandbyProcessorImpl) getTaskFilter() queueTaskFilter {
 	return t.timerTaskFilter
 }
 
@@ -159,15 +163,23 @@ func (t *timerQueueStandbyProcessorImpl) notifyNewTimers(
 }
 
 func (t *timerQueueStandbyProcessorImpl) complete(
-	timerTask *persistence.TimerTaskInfo,
+	qTask queueTaskInfo,
 ) {
+	timerTask, ok := qTask.(*persistence.TimerTaskInfo)
+	if !ok {
+		return
+	}
 	t.timerQueueProcessorBase.complete(timerTask)
 }
 
 func (t *timerQueueStandbyProcessorImpl) process(
-	timerTask *persistence.TimerTaskInfo,
+	qTask queueTaskInfo,
 	shouldProcessTask bool,
 ) (int, error) {
+	timerTask, ok := qTask.(*persistence.TimerTaskInfo)
+	if !ok {
+		return metrics.TimerStandbyQueueProcessorScope, errUnexpectedQueueTask
+	}
 
 	var err error
 	lastAttempt := false
@@ -381,13 +393,13 @@ func (t *timerQueueStandbyProcessorImpl) processDecisionTimeout(
 	}
 
 	return t.processTimer(timerTask, func(context workflowExecutionContext, msBuilder mutableState) error {
-		di, isPending := msBuilder.GetPendingDecision(timerTask.EventID)
+		decision, isPending := msBuilder.GetDecisionInfo(timerTask.EventID)
 
 		if !isPending {
 			return nil
 		}
 
-		ok, err := verifyTaskVersion(t.shard, t.logger, timerTask.DomainID, di.Version, timerTask.Version, timerTask)
+		ok, err := verifyTaskVersion(t.shard, t.logger, timerTask.DomainID, decision.Version, timerTask.Version, timerTask)
 		if err != nil {
 			return err
 		} else if !ok {
@@ -428,7 +440,7 @@ func (t *timerQueueStandbyProcessorImpl) processWorkflowBackoffTimer(
 
 	return t.processTimer(timerTask, func(context workflowExecutionContext, msBuilder mutableState) error {
 
-		if msBuilder.HasProcessedOrPendingDecisionTask() {
+		if msBuilder.HasProcessedOrPendingDecision() {
 			// if there is one decision already been processed
 			// or has pending decision, meaning workflow has already running
 			return nil
