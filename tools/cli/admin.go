@@ -550,6 +550,11 @@ func newAdminElasticSearchCommands() []cli.Command {
 					Usage: "Optional batch size of actions for bulk operations",
 					Value: 1000,
 				},
+				cli.IntFlag{
+					Name:  FlagRPS,
+					Usage: "Optional batch request rate per second",
+					Value: 30,
+				},
 			},
 			Action: func(c *cli.Context) {
 				AdminDelete(c)

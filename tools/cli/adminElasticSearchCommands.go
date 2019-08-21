@@ -25,6 +25,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/tokenbucket"
 	"math"
 	"net/http"
 	"os"
@@ -208,17 +210,9 @@ func AdminDelete(c *cli.Context) {
 	indexName := getRequiredOption(c, FlagIndex)
 	inputFileName := getRequiredOption(c, FlagInputFile)
 	batchSize := c.Int(FlagBatchSize)
+	rps := c.Int(FlagRPS)
+	ratelimiter := tokenbucket.New(rps, clock.NewRealTimeSource())
 
-	bulkRequest := esClient.Bulk()
-	bulkConductFn := func() {
-		_, err := bulkRequest.Do(context.Background())
-		if err != nil {
-			ErrorAndExit("Bulk failed", err)
-		}
-		if bulkRequest.NumberOfActions() != 0 {
-			ErrorAndExit(fmt.Sprintf("Bulk request not done, %d", bulkRequest.NumberOfActions()), err)
-		}
-	}
 	file, err := os.Open(inputFileName)
 	if err != nil {
 		ErrorAndExit("Cannot open input file", nil)
@@ -228,6 +222,22 @@ func AdminDelete(c *cli.Context) {
 
 	scanner.Scan() // skip first line
 	i := 0
+
+	bulkRequest := esClient.Bulk()
+	bulkConductFn := func() {
+		ok, waitTime := ratelimiter.TryConsume(1)
+		if !ok {
+			time.Sleep(waitTime)
+		}
+		_, err := bulkRequest.Do(context.Background())
+		if err != nil {
+			ErrorAndExit(fmt.Sprintf("Bulk failed, current processed row %d", i), err)
+		}
+		if bulkRequest.NumberOfActions() != 0 {
+			ErrorAndExit(fmt.Sprintf("Bulk request not done, current processed row %d", i), err)
+		}
+	}
+
 	for scanner.Scan() {
 		line := strings.Split(scanner.Text(), "|")
 		docID := strings.TrimSpace(line[1]) + esDocIDDelimiter + strings.TrimSpace(line[2])
