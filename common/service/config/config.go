@@ -122,7 +122,7 @@ type (
 		// VisibilityStore is the name of the datastore to be used for visibility records
 		VisibilityStore string `yaml:"visibilityStore" validate:"nonzero"`
 		// AdvancedVisibilityStore is the name of the datastore to be used for visibility records
-		AdvancedVisibilityStore string `yaml:"advancedVisibilityStore" validate:"nonzero"`
+		AdvancedVisibilityStore string `yaml:"advancedVisibilityStore"`
 		// HistoryMaxConns is the desired number of conns to history store. Value specified
 		// here overrides the MaxConns config specified as part of datastore
 		HistoryMaxConns int `yaml:"historyMaxConns"`
