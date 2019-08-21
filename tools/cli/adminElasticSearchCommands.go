@@ -25,6 +25,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"os"
 	"strconv"
@@ -196,6 +197,51 @@ func AdminIndex(c *cli.Context) {
 		if i%batchSize == batchSize-1 {
 			bulkConductFn()
 		}
+	}
+	if bulkRequest.NumberOfActions() != 0 {
+		bulkConductFn()
+	}
+}
+
+func AdminDelete(c *cli.Context) {
+	esClient := getESClient(c)
+	indexName := getRequiredOption(c, FlagIndex)
+	inputFileName := getRequiredOption(c, FlagInputFile)
+	batchSize := c.Int(FlagBatchSize)
+
+	bulkRequest := esClient.Bulk()
+	bulkConductFn := func() {
+		_, err := bulkRequest.Do(context.Background())
+		if err != nil {
+			ErrorAndExit("Bulk failed", err)
+		}
+		if bulkRequest.NumberOfActions() != 0 {
+			ErrorAndExit(fmt.Sprintf("Bulk request not done, %d", bulkRequest.NumberOfActions()), err)
+		}
+	}
+	file, err := os.Open(inputFileName)
+	if err != nil {
+		ErrorAndExit("Cannot open input file", nil)
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+
+	scanner.Scan() // skip first line
+	i := 0
+	for scanner.Scan() {
+		line := strings.Split(scanner.Text(), "|")
+		docID := strings.TrimSpace(line[1]) + esDocIDDelimiter + strings.TrimSpace(line[2])
+		req := elastic.NewBulkDeleteRequest().
+			Index(indexName).
+			Type(esDocType).
+			Id(docID).
+			VersionType(versionTypeExternal).
+			Version(math.MaxInt64)
+		bulkRequest.Add(req)
+		if i%batchSize == batchSize-1 {
+			bulkConductFn()
+		}
+		i++
 	}
 	if bulkRequest.NumberOfActions() != 0 {
 		bulkConductFn()
