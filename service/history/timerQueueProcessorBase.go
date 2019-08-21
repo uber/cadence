@@ -70,6 +70,7 @@ type (
 		retryPolicy      backoff.RetryPolicy
 		processor        *taskProcessor
 		lastPollTime     time.Time
+		taskProcessor    *taskProcessor
 
 		// timer notification
 		newTimerCh  chan struct{}
@@ -84,12 +85,16 @@ func newTimerQueueProcessorBase(
 	historyService *historyEngineImpl,
 	timerQueueAckMgr timerQueueAckMgr,
 	timerGate TimerGate,
-	taskProcessor *taskProcessor,
 	maxPollRPS dynamicconfig.IntPropertyFn,
 	logger log.Logger,
 ) *timerQueueProcessorBase {
 
 	log := logger.WithTags(tag.ComponentTimerQueue)
+	options := taskProcessorOptions{
+		workerCount: shard.GetConfig().TimerTaskWorkerCount(),
+		queueSize:   shard.GetConfig().TimerTaskWorkerCount() * shard.GetConfig().TimerTaskBatchSize(),
+	}
+	taskProcessor := newTaskProcessor(options, shard, historyService.historyCache, logger)
 	base := &timerQueueProcessorBase{
 		scope:            scope,
 		shard:            shard,
@@ -123,6 +128,7 @@ func (t *timerQueueProcessorBase) Start() {
 		return
 	}
 
+	t.taskProcessor.start()
 	t.shutdownWG.Add(1)
 	// notify a initial scan
 	t.notifyNewTimer(time.Time{})
@@ -144,6 +150,7 @@ func (t *timerQueueProcessorBase) Stop() {
 		t.logger.Warn("Timer queue processor timedout on shutdown.")
 	}
 
+	t.taskProcessor.stop()
 	t.logger.Info("Timer queue processor stopped.")
 }
 
