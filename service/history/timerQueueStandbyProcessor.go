@@ -72,7 +72,11 @@ func newTimerQueueStandbyProcessor(
 		return shard.UpdateTimerClusterAckLevel(clusterName, ackLevel.VisibilityTimestamp)
 	}
 	logger = logger.WithTags(tag.ClusterName(clusterName))
-	timerTaskFilter := func(timer *persistence.TimerTaskInfo) (bool, error) {
+	timerTaskFilter := func(qTask queueTaskInfo) (bool, error) {
+		timer, ok := qTask.(*persistence.TimerTaskInfo)
+		if !ok {
+			return false, errUnexpectedQueueTask
+		}
 		return taskAllocator.verifyStandbyTask(clusterName, timer.DomainID, timer)
 	}
 
@@ -159,15 +163,23 @@ func (t *timerQueueStandbyProcessorImpl) notifyNewTimers(
 }
 
 func (t *timerQueueStandbyProcessorImpl) complete(
-	timerTask *persistence.TimerTaskInfo,
+	qTask queueTaskInfo,
 ) {
+	timerTask, ok := qTask.(*persistence.TimerTaskInfo)
+	if !ok {
+		return
+	}
 	t.timerQueueProcessorBase.complete(timerTask)
 }
 
 func (t *timerQueueStandbyProcessorImpl) process(
-	timerTask *persistence.TimerTaskInfo,
+	qTask queueTaskInfo,
 	shouldProcessTask bool,
 ) (int, error) {
+	timerTask, ok := qTask.(*persistence.TimerTaskInfo)
+	if !ok {
+		return metrics.TimerStandbyQueueProcessorScope, errUnexpectedQueueTask
+	}
 
 	var err error
 	lastAttempt := false

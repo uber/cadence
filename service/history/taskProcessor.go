@@ -38,7 +38,7 @@ import (
 
 type timerTask struct {
 	processor timerProcessor
-	task      *persistence.TimerTaskInfo
+	task      queueTaskInfo
 }
 
 type taskProcessor struct {
@@ -304,18 +304,18 @@ func (t *taskProcessor) ackTaskOnce(
 }
 
 func (t *taskProcessor) initializeLoggerForTask(
-	task *persistence.TimerTaskInfo,
+	task queueTaskInfo,
 ) log.Logger {
 
 	logger := t.logger.WithTags(
 		tag.ShardID(t.shard.GetShardID()),
-		tag.WorkflowDomainID(task.DomainID),
-		tag.WorkflowID(task.WorkflowID),
-		tag.WorkflowRunID(task.RunID),
+		//		tag.WorkflowDomainID(task.DomainID),
+		//		tag.WorkflowID(task.WorkflowID),
+		//		tag.WorkflowRunID(task.RunID),
 		tag.TaskID(task.GetTaskID()),
 		tag.FailoverVersion(task.GetVersion()),
 		tag.TaskType(task.GetTaskType()),
-		tag.WorkflowTimeoutType(int64(task.TimeoutType)),
+		//		tag.WorkflowTimeoutType(int64(task.TimeoutType)),
 	)
 	logger.Debug(fmt.Sprintf("Processing timer task: %v, type: %v", task.GetTaskID(), task.GetTaskType()))
 	return logger

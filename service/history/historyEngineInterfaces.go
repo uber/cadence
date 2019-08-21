@@ -140,8 +140,8 @@ type (
 
 	timerProcessor interface {
 		notifyNewTimers(timerTask []persistence.Task)
-		process(task *persistence.TimerTaskInfo, shouldProcessTask bool) (int, error)
-		complete(task *persistence.TimerTaskInfo)
+		process(task queueTaskInfo, shouldProcessTask bool) (int, error)
+		complete(task queueTaskInfo)
 		getTaskFilter() timerTaskFilter
 	}
 

@@ -44,7 +44,7 @@ type (
 	timeNow                 func() time.Time
 	updateTimerAckLevel     func(TimerSequenceID) error
 	timerQueueShutdown      func() error
-	timerTaskFilter         func(timer *persistence.TimerTaskInfo) (bool, error)
+	timerTaskFilter         func(qTask queueTaskInfo) (bool, error)
 	timerQueueProcessorImpl struct {
 		isGlobalDomainEnabled  bool
 		currentClusterName     string
