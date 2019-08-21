@@ -113,12 +113,12 @@ func newTransferQueueActiveProcessor(
 		transferQueueProcessorBase: newTransferQueueProcessorBase(
 			shard,
 			options,
-			 visibilityMgr,
-				matchingClient,
-				 maxReadAckLevel,
-					updateTransferAckLevel,
-					 transferQueueShutdown,
-					  logger,
+			visibilityMgr,
+			matchingClient,
+			maxReadAckLevel,
+			updateTransferAckLevel,
+			transferQueueShutdown,
+			logger,
 		),
 	}
 
