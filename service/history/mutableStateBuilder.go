@@ -1418,13 +1418,13 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.generateWorkflowStartTasks(
-		event.GetTimestamp(),
+		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, err
 	}
 	if err := e.taskGenerator.generateRecordWorkflowStartedTasks(
-		event.GetTimestamp(),
+		e.unixNanoToTime(event.GetTimestamp()),
 	); err != nil {
 		return nil, err
 	}
@@ -1474,13 +1474,13 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.generateWorkflowStartTasks(
-		event.GetTimestamp(),
+		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, err
 	}
 	if err := e.taskGenerator.generateRecordWorkflowStartedTasks(
-		event.GetTimestamp(),
+		e.unixNanoToTime(event.GetTimestamp()),
 	); err != nil {
 		return nil, err
 	}
@@ -1586,7 +1586,7 @@ func (e *mutableStateBuilder) AddFirstDecisionTaskScheduled(
 	var err error
 	if decisionBackoffDuration != 0 {
 		if err = e.taskGenerator.generateDelayedDecisionTasks(
-			startEvent.GetTimestamp(),
+			e.unixNanoToTime(startEvent.GetTimestamp()),
 			startEvent,
 		); err != nil {
 			return err
@@ -1687,7 +1687,7 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEventAsHeartbeat(
 	// TODO merge active & passive task generation
 	if !bypassTaskGeneration {
 		if err := e.taskGenerator.generateDecisionScheduleTasks(
-			scheduleTime, // schedule time is now
+			e.unixNanoToTime(scheduleTime), // schedule time is now
 			scheduleID,
 		); err != nil {
 			return nil, err
@@ -1798,7 +1798,7 @@ func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(
 	decision, err := e.ReplicateDecisionTaskStartedEvent(decision, e.GetCurrentVersion(), scheduleID, startedID, requestID, startTime)
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.generateDecisionStartTasks(
-		startTime, // start time is now
+		e.unixNanoToTime(startTime), // start time is now
 		scheduleID,
 	); err != nil {
 		return nil, nil, err
@@ -2181,7 +2181,7 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 	ai, err := e.ReplicateActivityTaskScheduledEvent(decisionCompletedEventID, event)
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.generateActivityTransferTasks(
-		event.GetTimestamp(),
+		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, nil, err
@@ -2574,7 +2574,7 @@ func (e *mutableStateBuilder) AddCompletedWorkflowEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.generateWorkflowCloseTasks(
-		event.GetTimestamp(),
+		e.unixNanoToTime(event.GetTimestamp()),
 	); err != nil {
 		return nil, err
 	}
@@ -2610,7 +2610,7 @@ func (e *mutableStateBuilder) AddFailWorkflowEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.generateWorkflowCloseTasks(
-		event.GetTimestamp(),
+		e.unixNanoToTime(event.GetTimestamp()),
 	); err != nil {
 		return nil, err
 	}
@@ -2643,7 +2643,7 @@ func (e *mutableStateBuilder) AddTimeoutWorkflowEvent() (*workflow.HistoryEvent,
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.generateWorkflowCloseTasks(
-		event.GetTimestamp(),
+		e.unixNanoToTime(event.GetTimestamp()),
 	); err != nil {
 		return nil, err
 	}
@@ -2718,7 +2718,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionCanceledEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.generateWorkflowCloseTasks(
-		event.GetTimestamp(),
+		e.unixNanoToTime(event.GetTimestamp()),
 	); err != nil {
 		return nil, err
 	}
@@ -2755,7 +2755,7 @@ func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionInitiated
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.generateRequestCancelExternalTasks(
-		event.GetTimestamp(),
+		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, nil, err
@@ -2880,7 +2880,7 @@ func (e *mutableStateBuilder) AddSignalExternalWorkflowExecutionInitiatedEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.generateSignalExternalTasks(
-		event.GetTimestamp(),
+		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, nil, err
@@ -2924,7 +2924,7 @@ func (e *mutableStateBuilder) AddUpsertWorkflowSearchAttributesEvent(
 	e.ReplicateUpsertWorkflowSearchAttributesEvent(event)
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.generateWorkflowSearchAttrTasks(
-		event.GetTimestamp(),
+		e.unixNanoToTime(event.GetTimestamp()),
 	); err != nil {
 		return nil, err
 	}
@@ -3231,7 +3231,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionTerminatedEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.generateWorkflowCloseTasks(
-		event.GetTimestamp(),
+		e.unixNanoToTime(event.GetTimestamp()),
 	); err != nil {
 		return nil, err
 	}
@@ -3356,7 +3356,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.generateWorkflowCloseTasks(
-		continueAsNewEvent.GetTimestamp(),
+		e.unixNanoToTime(continueAsNewEvent.GetTimestamp()),
 	); err != nil {
 		return nil, nil, err
 	}
@@ -3424,7 +3424,7 @@ func (e *mutableStateBuilder) AddStartChildWorkflowExecutionInitiatedEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.generateChildWorkflowTasks(
-		event.GetTimestamp(),
+		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, nil, err
@@ -4002,13 +4002,13 @@ func (e *mutableStateBuilder) closeTransactionHandleActivityUserTimerTasks(
 	}
 
 	if err := e.taskGenerator.generateActivityTimerTasks(
-		now.UnixNano(),
+		e.unixNanoToTime(now.UnixNano()),
 	); err != nil {
 		return err
 	}
 
 	if err := e.taskGenerator.generateUserTimerTasks(
-		now.UnixNano(),
+		e.unixNanoToTime(now.UnixNano()),
 	); err != nil {
 		return err
 	}
@@ -4369,7 +4369,7 @@ func (e *mutableStateBuilder) closeTransactionHandleWorkflowReset(
 		e.GetExecutionInfo().AutoResetPoints,
 	); pt != nil {
 		if err := e.taskGenerator.generateWorkflowResetTasks(
-			now.UnixNano(),
+			e.unixNanoToTime(now.UnixNano()),
 		); err != nil {
 			return err
 		}
@@ -4416,4 +4416,11 @@ func (e *mutableStateBuilder) createCallerError(
 	return &workflow.BadRequestError{
 		Message: fmt.Sprintf(mutableStateInvalidHistoryActionMsgTemplate, actionTag.Field().String),
 	}
+}
+
+func (e *mutableStateBuilder) unixNanoToTime(
+	timestampNanos int64,
+) time.Time {
+
+	return time.Unix(0, timestampNanos)
 }

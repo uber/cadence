@@ -34,59 +34,59 @@ import (
 type (
 	mutableStateTaskGenerator interface {
 		generateWorkflowStartTasks(
-			nowTimestamp int64,
+			now time.Time,
 			event *shared.HistoryEvent,
 		) error
 		generateWorkflowCloseTasks(
-			nowTimestamp int64,
+			now time.Time,
 		) error
 		generateRecordWorkflowStartedTasks(
-			nowTimestamp int64,
+			now time.Time,
 		) error
 		generateDelayedDecisionTasks(
-			nowTimestamp int64,
+			now time.Time,
 			startEvent *shared.HistoryEvent,
 		) error
 		generateDecisionScheduleTasks(
-			nowTimestamp int64,
+			now time.Time,
 			decisionScheduleID int64,
 		) error
 		generateDecisionStartTasks(
-			nowTimestamp int64,
+			now time.Time,
 			decisionScheduleID int64,
 		) error
 		generateActivityTransferTasks(
-			nowTimestamp int64,
+			now time.Time,
 			event *shared.HistoryEvent,
 		) error
 		generateActivityRetryTasks(
 			activityScheduleID int64,
 		) error
 		generateChildWorkflowTasks(
-			nowTimestamp int64,
+			now time.Time,
 			event *shared.HistoryEvent,
 		) error
 		generateRequestCancelExternalTasks(
-			nowTimestamp int64,
+			now time.Time,
 			event *shared.HistoryEvent,
 		) error
 		generateSignalExternalTasks(
-			nowTimestamp int64,
+			now time.Time,
 			event *shared.HistoryEvent,
 		) error
 		generateWorkflowSearchAttrTasks(
-			nowTimestamp int64,
+			now time.Time,
 		) error
 		generateWorkflowResetTasks(
-			nowTimestamp int64,
+			now time.Time,
 		) error
 
 		// these 2 APIs should only be called when mutable state transaction is being closed
 		generateActivityTimerTasks(
-			nowTimestamp int64,
+			now time.Time,
 		) error
 		generateUserTimerTasks(
-			nowTimestamp int64,
+			now time.Time,
 		) error
 	}
 
@@ -117,11 +117,9 @@ func newMutableStateTaskGenerator(
 }
 
 func (r *mutableStateTaskGeneratorImpl) generateWorkflowStartTasks(
-	nowTimestamp int64,
+	now time.Time,
 	event *shared.HistoryEvent,
 ) error {
-
-	now := time.Unix(0, nowTimestamp)
 
 	attr := event.WorkflowExecutionStartedEventAttributes
 	firstDecisionDelayDuration := time.Duration(attr.GetFirstDecisionTaskBackoffSeconds()) * time.Second
@@ -145,10 +143,8 @@ func (r *mutableStateTaskGeneratorImpl) generateWorkflowStartTasks(
 }
 
 func (r *mutableStateTaskGeneratorImpl) generateWorkflowCloseTasks(
-	nowTimestamp int64,
+	now time.Time,
 ) error {
-
-	now := time.Unix(0, nowTimestamp)
 
 	currentVersion := r.mutableState.GetCurrentVersion()
 	executionInfo := r.mutableState.GetExecutionInfo()
@@ -181,11 +177,9 @@ func (r *mutableStateTaskGeneratorImpl) generateWorkflowCloseTasks(
 }
 
 func (r *mutableStateTaskGeneratorImpl) generateDelayedDecisionTasks(
-	nowTimestamp int64,
+	now time.Time,
 	startEvent *shared.HistoryEvent,
 ) error {
-
-	now := time.Unix(0, nowTimestamp)
 
 	startVersion := r.mutableState.GetStartVersion()
 	startAttr := startEvent.WorkflowExecutionStartedEventAttributes
@@ -224,10 +218,8 @@ func (r *mutableStateTaskGeneratorImpl) generateDelayedDecisionTasks(
 }
 
 func (r *mutableStateTaskGeneratorImpl) generateRecordWorkflowStartedTasks(
-	nowTimestamp int64,
+	now time.Time,
 ) error {
-
-	now := time.Unix(0, nowTimestamp)
 
 	startVersion := r.mutableState.GetStartVersion()
 
@@ -241,11 +233,9 @@ func (r *mutableStateTaskGeneratorImpl) generateRecordWorkflowStartedTasks(
 }
 
 func (r *mutableStateTaskGeneratorImpl) generateDecisionScheduleTasks(
-	nowTimestamp int64,
+	now time.Time,
 	decisionScheduleID int64,
 ) error {
-
-	now := time.Unix(0, nowTimestamp)
 
 	executionInfo := r.mutableState.GetExecutionInfo()
 	decision, ok := r.mutableState.GetDecisionInfo(
@@ -280,11 +270,9 @@ func (r *mutableStateTaskGeneratorImpl) generateDecisionScheduleTasks(
 }
 
 func (r *mutableStateTaskGeneratorImpl) generateDecisionStartTasks(
-	nowTimestamp int64,
+	now time.Time,
 	decisionScheduleID int64,
 ) error {
-
-	now := time.Unix(0, nowTimestamp)
 
 	decision, ok := r.mutableState.GetDecisionInfo(
 		decisionScheduleID,
@@ -307,11 +295,9 @@ func (r *mutableStateTaskGeneratorImpl) generateDecisionStartTasks(
 }
 
 func (r *mutableStateTaskGeneratorImpl) generateActivityTransferTasks(
-	nowTimestamp int64,
+	now time.Time,
 	event *shared.HistoryEvent,
 ) error {
-
-	now := time.Unix(0, nowTimestamp)
 
 	attr := event.ActivityTaskScheduledEventAttributes
 	activityScheduleID := event.GetEventId()
@@ -363,11 +349,9 @@ func (r *mutableStateTaskGeneratorImpl) generateActivityRetryTasks(
 }
 
 func (r *mutableStateTaskGeneratorImpl) generateChildWorkflowTasks(
-	nowTimestamp int64,
+	now time.Time,
 	event *shared.HistoryEvent,
 ) error {
-
-	now := time.Unix(0, nowTimestamp)
 
 	attr := event.StartChildWorkflowExecutionInitiatedEventAttributes
 	childWorkflowScheduleID := event.GetEventId()
@@ -398,11 +382,9 @@ func (r *mutableStateTaskGeneratorImpl) generateChildWorkflowTasks(
 }
 
 func (r *mutableStateTaskGeneratorImpl) generateRequestCancelExternalTasks(
-	nowTimestamp int64,
+	now time.Time,
 	event *shared.HistoryEvent,
 ) error {
-
-	now := time.Unix(0, nowTimestamp)
 
 	attr := event.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes
 	scheduleID := event.GetEventId()
@@ -438,11 +420,9 @@ func (r *mutableStateTaskGeneratorImpl) generateRequestCancelExternalTasks(
 }
 
 func (r *mutableStateTaskGeneratorImpl) generateSignalExternalTasks(
-	nowTimestamp int64,
+	now time.Time,
 	event *shared.HistoryEvent,
 ) error {
-
-	now := time.Unix(0, nowTimestamp)
 
 	attr := event.SignalExternalWorkflowExecutionInitiatedEventAttributes
 	scheduleID := event.GetEventId()
@@ -478,10 +458,8 @@ func (r *mutableStateTaskGeneratorImpl) generateSignalExternalTasks(
 }
 
 func (r *mutableStateTaskGeneratorImpl) generateWorkflowSearchAttrTasks(
-	nowTimestamp int64,
+	now time.Time,
 ) error {
-
-	now := time.Unix(0, nowTimestamp)
 
 	currentVersion := r.mutableState.GetCurrentVersion()
 
@@ -495,10 +473,8 @@ func (r *mutableStateTaskGeneratorImpl) generateWorkflowSearchAttrTasks(
 }
 
 func (r *mutableStateTaskGeneratorImpl) generateWorkflowResetTasks(
-	nowTimestamp int64,
+	now time.Time,
 ) error {
-
-	now := time.Unix(0, nowTimestamp)
 
 	currentVersion := r.mutableState.GetCurrentVersion()
 
@@ -512,10 +488,8 @@ func (r *mutableStateTaskGeneratorImpl) generateWorkflowResetTasks(
 }
 
 func (r *mutableStateTaskGeneratorImpl) generateActivityTimerTasks(
-	nowTimestamp int64,
+	now time.Time,
 ) error {
-
-	now := time.Unix(0, nowTimestamp)
 
 	if timerTask := r.getTimerBuilder(now).GetActivityTimerTaskIfNeeded(
 		r.mutableState,
@@ -529,10 +503,8 @@ func (r *mutableStateTaskGeneratorImpl) generateActivityTimerTasks(
 }
 
 func (r *mutableStateTaskGeneratorImpl) generateUserTimerTasks(
-	nowTimestamp int64,
+	now time.Time,
 ) error {
-
-	now := time.Unix(0, nowTimestamp)
 
 	if timerTask := r.getTimerBuilder(now).GetUserTimerTaskIfNeeded(
 		r.mutableState,
