@@ -227,7 +227,7 @@ func (p *queueProcessorBase) processBatch() {
 
 	for _, task := range tasks {
 		if shutdown := p.taskProcessor.addTask(
-			&timerTask{
+			&taskInfo{
 				processor: p.processor,
 				task:      task,
 			},

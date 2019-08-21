@@ -117,7 +117,7 @@ func (s *taskProcessorSuite) TestProcessTaskAndAck_ShutDown() {
 	close(s.taskProcessor.shutdownCh)
 	s.taskProcessor.processTaskAndAck(
 		s.notificationChan,
-		&timerTask{
+		&taskInfo{
 			processor: s.mockProcessor,
 			task:      &persistence.TimerTaskInfo{},
 		},
@@ -138,7 +138,7 @@ func (s *taskProcessorSuite) TestProcessTaskAndAck_DomainErrRetry_ProcessNoErr()
 	s.mockProcessor.On("complete", task).Once()
 	s.taskProcessor.processTaskAndAck(
 		s.notificationChan,
-		&timerTask{
+		&taskInfo{
 			processor: s.mockProcessor,
 			task:      task,
 		},
@@ -155,7 +155,7 @@ func (s *taskProcessorSuite) TestProcessTaskAndAck_DomainFalse_ProcessNoErr() {
 	s.mockProcessor.On("complete", task).Once()
 	s.taskProcessor.processTaskAndAck(
 		s.notificationChan,
-		&timerTask{
+		&taskInfo{
 			processor: s.mockProcessor,
 			task:      task,
 		},
@@ -172,7 +172,7 @@ func (s *taskProcessorSuite) TestProcessTaskAndAck_DomainTrue_ProcessNoErr() {
 	s.mockProcessor.On("complete", task).Once()
 	s.taskProcessor.processTaskAndAck(
 		s.notificationChan,
-		&timerTask{
+		&taskInfo{
 			processor: s.mockProcessor,
 			task:      task,
 		},
@@ -191,7 +191,7 @@ func (s *taskProcessorSuite) TestProcessTaskAndAck_DomainTrue_ProcessErrNoErr() 
 	s.mockProcessor.On("complete", task).Once()
 	s.taskProcessor.processTaskAndAck(
 		s.notificationChan,
-		&timerTask{
+		&taskInfo{
 			processor: s.mockProcessor,
 			task:      task,
 		},

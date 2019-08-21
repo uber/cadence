@@ -42,7 +42,7 @@ type (
 		workerCount int
 	}
 
-	timerTask struct {
+	taskInfo struct {
 		processor taskExecutor
 		task      queueTaskInfo
 	}
@@ -52,7 +52,7 @@ type (
 		cache         *historyCache
 		shutdownWG    sync.WaitGroup
 		shutdownCh    chan struct{}
-		tasksCh       chan *timerTask
+		tasksCh       chan *taskInfo
 		config        *Config
 		logger        log.Logger
 		metricsClient metrics.Client
@@ -85,7 +85,7 @@ func newTaskProcessor(
 		shard:                   shard,
 		cache:                   historyCache,
 		shutdownCh:              make(chan struct{}),
-		tasksCh:                 make(chan *timerTask, options.queueSize),
+		tasksCh:                 make(chan *taskInfo, options.queueSize),
 		config:                  shard.GetConfig(),
 		logger:                  log,
 		metricsClient:           shard.GetMetricsClient(),
@@ -144,7 +144,7 @@ func (t *taskProcessor) retryTasks() {
 }
 
 func (t *taskProcessor) addTask(
-	task *timerTask,
+	task *taskInfo,
 ) bool {
 	// We have a timer to fire.
 	select {
@@ -157,7 +157,7 @@ func (t *taskProcessor) addTask(
 
 func (t *taskProcessor) processTaskAndAck(
 	notificationChan <-chan struct{},
-	task *timerTask,
+	task *taskInfo,
 ) {
 
 	var scope int
@@ -221,7 +221,7 @@ FilterLoop:
 
 func (t *taskProcessor) processTaskOnce(
 	notificationChan <-chan struct{},
-	task *timerTask,
+	task *taskInfo,
 	shouldProcessTask bool,
 	logger log.Logger,
 ) (int, error) {
@@ -291,7 +291,7 @@ func (t *taskProcessor) handleTaskError(
 }
 
 func (t *taskProcessor) ackTaskOnce(
-	task *timerTask,
+	task *taskInfo,
 	scope int,
 	reportMetrics bool,
 	startTime time.Time,
