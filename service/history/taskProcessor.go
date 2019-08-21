@@ -319,32 +319,22 @@ func (t *taskProcessor) initializeLoggerForTask(
 		tag.TaskID(task.GetTaskID()),
 		tag.FailoverVersion(task.GetVersion()),
 		tag.TaskType(task.GetTaskType()),
+		tag.WorkflowDomainID(task.GetDomainID()),
+		tag.WorkflowID(task.GetWorkflowID()),
+		tag.WorkflowRunID(task.GetRunID()),
 	)
 
 	switch task := task.(type) {
 	case *persistence.TimerTaskInfo:
 		logger = logger.WithTags(
-			tag.WorkflowDomainID(task.DomainID),
-			tag.WorkflowID(task.WorkflowID),
-			tag.WorkflowRunID(task.RunID),
 			tag.WorkflowTimeoutType(int64(task.TimeoutType)),
 		)
 		logger.Debug(fmt.Sprintf("Processing timer task: %v, type: %v", task.GetTaskID(), task.GetTaskType()))
 
 	case *persistence.TransferTaskInfo:
-		logger = logger.WithTags(
-			tag.WorkflowID(task.WorkflowID),
-			tag.WorkflowRunID(task.RunID),
-			tag.WorkflowDomainID(task.DomainID),
-		)
 		logger.Debug(fmt.Sprintf("Processing transfer task: %v, type: %v", task.GetTaskID(), task.GetTaskType()))
 
 	case *persistence.ReplicationTaskInfo:
-		logger = logger.WithTags(
-			tag.WorkflowID(task.WorkflowID),
-			tag.WorkflowRunID(task.RunID),
-			tag.WorkflowDomainID(task.DomainID),
-		)
 		logger.Debug(fmt.Sprintf("Processing replication task: %v, type: %v", task.GetTaskID(), task.GetTaskType()))
 	}
 

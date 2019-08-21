@@ -109,6 +109,9 @@ type (
 		GetTaskID() int64
 		GetTaskType() int
 		GetVisibilityTimestamp() time.Time
+		GetWorkflowID() string
+		GetRunID() string
+		GetDomainID() string
 	}
 
 	taskExecutor interface {
