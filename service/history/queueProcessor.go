@@ -89,11 +89,6 @@ func newQueueProcessorBase(
 	logger log.Logger,
 ) *queueProcessorBase {
 
-	//	workerNotificationChans := []chan struct{}{}
-	//	for index := 0; index < options.WorkerCount(); index++ {
-	//		workerNotificationChans = append(workerNotificationChans, make(chan struct{}, 1))
-	//	}
-
 	p := &queueProcessorBase{
 		clusterName: clusterName,
 		shard:       shard,
@@ -157,7 +152,6 @@ func (p *queueProcessorBase) notifyNewTask() {
 
 func (p *queueProcessorBase) processorPump() {
 	defer p.shutdownWG.Done()
-	//	tasksCh := make(chan queueTaskInfo, p.options.BatchSize())
 
 	jitter := backoff.NewJitter()
 	pollTimer := time.NewTimer(jitter.JitDuration(
