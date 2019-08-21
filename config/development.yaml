@@ -1,7 +1,7 @@
 persistence:
   defaultStore: cass-default
   visibilityStore: cass-visibility
-  advancedVisibilityStore: es-visibility
+  advancedVisibilityStore: es-visibility # optional, see https://github.com/uber/cadence/blob/master/docs/visibility-on-elasticsearch.md
   numHistoryShards: 4
   datastores:
     cass-default:
@@ -14,7 +14,7 @@ persistence:
         hosts: "127.0.0.1"
         keyspace: "cadence_visibility"
         consistency: "One"
-    es-visibility:
+    es-visibility: # optional
       elasticsearch:
         url:
           scheme: "http"
