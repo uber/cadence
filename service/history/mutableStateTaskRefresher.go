@@ -99,7 +99,7 @@ func (r *mutableStateTaskRefresherImpl) refreshTasks(nowTimestamp int64) error {
 		return err
 	}
 
-	if err := r.refreshTasksForCancelExternalWorkflow(nowTimestamp); err != nil {
+	if err := r.refreshTasksForRequestCancelExternalWorkflow(nowTimestamp); err != nil {
 		return err
 	}
 
@@ -311,12 +311,12 @@ Loop:
 	return nil
 }
 
-func (r *mutableStateTaskRefresherImpl) refreshTasksForCancelExternalWorkflow(
+func (r *mutableStateTaskRefresherImpl) refreshTasksForRequestCancelExternalWorkflow(
 	nowTimestamp int64,
 ) error {
 
 	executionInfo := r.mutableState.GetExecutionInfo()
-	pendingRequestCancelInfos := r.mutableState.GetPendingRequestCancelInfos()
+	pendingRequestCancelInfos := r.mutableState.GetPendingRequestCancelExternalInfos()
 
 	for _, requestCancelInfo := range pendingRequestCancelInfos {
 		initiateEvent, err := r.eventsCache.getEvent(
@@ -348,7 +348,7 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForSignalExternalWorkflow(
 ) error {
 
 	executionInfo := r.mutableState.GetExecutionInfo()
-	pendingSignalInfos := r.mutableState.GetPendingSignalInfos()
+	pendingSignalInfos := r.mutableState.GetPendingSignalExtrenalInfos()
 
 	for _, signalInfo := range pendingSignalInfos {
 		initiateEvent, err := r.eventsCache.getEvent(

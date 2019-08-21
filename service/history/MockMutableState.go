@@ -1711,7 +1711,7 @@ func (_m *mockMutableState) GetPendingTimerInfos() map[string]*persistence.Timer
 }
 
 // GetPendingRequestCancelInfos provides a mock function with given fields:
-func (_m *mockMutableState) GetPendingRequestCancelInfos() map[int64]*persistence.RequestCancelInfo {
+func (_m *mockMutableState) GetPendingRequestCancelExternalInfos() map[int64]*persistence.RequestCancelInfo {
 	ret := _m.Called()
 
 	var r0 map[int64]*persistence.RequestCancelInfo
@@ -1727,7 +1727,7 @@ func (_m *mockMutableState) GetPendingRequestCancelInfos() map[int64]*persistenc
 }
 
 // GetPendingSignalInfos provides a mock function with given fields:
-func (_m *mockMutableState) GetPendingSignalInfos() map[int64]*persistence.SignalInfo {
+func (_m *mockMutableState) GetPendingSignalExtrenalInfos() map[int64]*persistence.SignalInfo {
 	ret := _m.Called()
 
 	var r0 map[int64]*persistence.SignalInfo

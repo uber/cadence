@@ -136,8 +136,8 @@ type (
 		GetPendingActivityInfos() map[int64]*persistence.ActivityInfo
 		GetPendingTimerInfos() map[string]*persistence.TimerInfo
 		GetPendingChildExecutionInfos() map[int64]*persistence.ChildExecutionInfo
-		GetPendingRequestCancelInfos() map[int64]*persistence.RequestCancelInfo
-		GetPendingSignalInfos() map[int64]*persistence.SignalInfo
+		GetPendingRequestCancelExternalInfos() map[int64]*persistence.RequestCancelInfo
+		GetPendingSignalExtrenalInfos() map[int64]*persistence.SignalInfo
 		GetReplicationState() *persistence.ReplicationState
 		GetRequestCancelInfo(int64) (*persistence.RequestCancelInfo, bool)
 		GetRetryBackoffDuration(errReason string) time.Duration

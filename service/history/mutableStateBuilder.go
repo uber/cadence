@@ -1110,9 +1110,9 @@ func (e *mutableStateBuilder) GetDecisionInfo(
 	scheduleEventID int64,
 ) (*decisionInfo, bool) {
 
-	di := e.getDecisionInfo()
-	if scheduleEventID == di.ScheduleID {
-		return di, true
+	decision := e.getDecisionInfo()
+	if scheduleEventID == decision.ScheduleID {
+		return decision, true
 	}
 	return nil, false
 }
@@ -1129,11 +1129,11 @@ func (e *mutableStateBuilder) GetPendingChildExecutionInfos() map[int64]*persist
 	return e.pendingChildExecutionInfoIDs
 }
 
-func (e *mutableStateBuilder) GetPendingRequestCancelInfos() map[int64]*persistence.RequestCancelInfo {
+func (e *mutableStateBuilder) GetPendingRequestCancelExternalInfos() map[int64]*persistence.RequestCancelInfo {
 	return e.pendingRequestCancelInfoIDs
 }
 
-func (e *mutableStateBuilder) GetPendingSignalInfos() map[int64]*persistence.SignalInfo {
+func (e *mutableStateBuilder) GetPendingSignalExtrenalInfos() map[int64]*persistence.SignalInfo {
 	return e.pendingSignalInfoIDs
 }
 
@@ -1150,8 +1150,8 @@ func (e *mutableStateBuilder) GetPendingDecision() (*decisionInfo, bool) {
 		return nil, false
 	}
 
-	di := e.getDecisionInfo()
-	return di, true
+	decision := e.getDecisionInfo()
+	return decision, true
 }
 
 func (e *mutableStateBuilder) HasInFlightDecision() bool {
@@ -1164,8 +1164,8 @@ func (e *mutableStateBuilder) GetInFlightDecision() (*decisionInfo, bool) {
 		return nil, false
 	}
 
-	di := e.getDecisionInfo()
-	return di, true
+	decision := e.getDecisionInfo()
+	return decision, true
 }
 
 func (e *mutableStateBuilder) HasBufferedEvents() bool {
@@ -1184,23 +1184,30 @@ func (e *mutableStateBuilder) HasBufferedEvents() bool {
 
 // UpdateDecision updates a decision task.
 func (e *mutableStateBuilder) UpdateDecision(
-	di *decisionInfo,
+	decision *decisionInfo,
 ) {
 
-	e.executionInfo.DecisionVersion = di.Version
-	e.executionInfo.DecisionScheduleID = di.ScheduleID
-	e.executionInfo.DecisionStartedID = di.StartedID
-	e.executionInfo.DecisionRequestID = di.RequestID
-	e.executionInfo.DecisionTimeout = di.DecisionTimeout
-	e.executionInfo.DecisionAttempt = di.Attempt
-	e.executionInfo.DecisionStartedTimestamp = di.StartedTimestamp
-	e.executionInfo.DecisionScheduledTimestamp = di.ScheduledTimestamp
-	e.executionInfo.DecisionOriginalScheduledTimestamp = di.OriginalScheduledTimestamp
+	e.executionInfo.DecisionVersion = decision.Version
+	e.executionInfo.DecisionScheduleID = decision.ScheduleID
+	e.executionInfo.DecisionStartedID = decision.StartedID
+	e.executionInfo.DecisionRequestID = decision.RequestID
+	e.executionInfo.DecisionTimeout = decision.DecisionTimeout
+	e.executionInfo.DecisionAttempt = decision.Attempt
+	e.executionInfo.DecisionStartedTimestamp = decision.StartedTimestamp
+	e.executionInfo.DecisionScheduledTimestamp = decision.ScheduledTimestamp
+	e.executionInfo.DecisionOriginalScheduledTimestamp = decision.OriginalScheduledTimestamp
 
 	// NOTE: do not update tasklist in execution info
 
-	e.logger.Debug(fmt.Sprintf("Decision Updated: {Schedule: %v, Started: %v, ID: %v, Timeout: %v, Attempt: %v, Timestamp: %v}",
-		di.ScheduleID, di.StartedID, di.RequestID, di.DecisionTimeout, di.Attempt, di.StartedTimestamp))
+	e.logger.Debug(fmt.Sprintf(
+		"Decision Updated: {Schedule: %v, Started: %v, ID: %v, Timeout: %v, Attempt: %v, Timestamp: %v}",
+		decision.ScheduleID,
+		decision.StartedID,
+		decision.RequestID,
+		decision.DecisionTimeout,
+		decision.Attempt,
+		decision.StartedTimestamp,
+	))
 }
 
 // DeleteDecision deletes a decision task.
@@ -1705,7 +1712,7 @@ func (e *mutableStateBuilder) ReplicateTransientDecisionTaskScheduled() (*decisi
 	// 2. if no failover happen during the life time of this transient decision
 	// then ReplicateDecisionTaskScheduledEvent will overwrite everything
 	// including the decision schedule ID
-	di := &decisionInfo{
+	decision := &decisionInfo{
 		Version:            e.GetCurrentVersion(),
 		ScheduleID:         e.GetNextEventID(),
 		StartedID:          common.EmptyEventID,
@@ -1717,8 +1724,8 @@ func (e *mutableStateBuilder) ReplicateTransientDecisionTaskScheduled() (*decisi
 		StartedTimestamp:   0,
 	}
 
-	e.UpdateDecision(di)
-	return di, nil
+	e.UpdateDecision(decision)
+	return decision, nil
 }
 
 func (e *mutableStateBuilder) ReplicateDecisionTaskScheduledEvent(
@@ -1730,7 +1737,7 @@ func (e *mutableStateBuilder) ReplicateDecisionTaskScheduledEvent(
 	scheduleTimestamp int64,
 	originalScheduledTimestamp int64,
 ) (*decisionInfo, error) {
-	di := &decisionInfo{
+	decision := &decisionInfo{
 		Version:                    version,
 		ScheduleID:                 scheduleID,
 		StartedID:                  common.EmptyEventID,
@@ -1743,8 +1750,8 @@ func (e *mutableStateBuilder) ReplicateDecisionTaskScheduledEvent(
 		OriginalScheduledTimestamp: originalScheduledTimestamp,
 	}
 
-	e.UpdateDecision(di)
-	return di, nil
+	e.UpdateDecision(decision)
+	return decision, nil
 }
 
 func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(
@@ -1758,8 +1765,8 @@ func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(
 		return nil, nil, err
 	}
 
-	di, ok := e.GetDecisionInfo(scheduleEventID)
-	if !ok || di.StartedID != common.EmptyEventID {
+	decision, ok := e.GetDecisionInfo(scheduleEventID)
+	if !ok || decision.StartedID != common.EmptyEventID {
 		e.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(e.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction,
@@ -1768,27 +1775,27 @@ func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(
 	}
 
 	var event *workflow.HistoryEvent
-	scheduleID := di.ScheduleID
+	scheduleID := decision.ScheduleID
 	startedID := scheduleID + 1
 	tasklist := request.TaskList.GetName()
 	startTime := e.timeSource.Now().UnixNano()
 	// First check to see if new events came since transient decision was scheduled
-	if di.Attempt > 0 && di.ScheduleID != e.GetNextEventID() {
+	if decision.Attempt > 0 && decision.ScheduleID != e.GetNextEventID() {
 		// Also create a new DecisionTaskScheduledEvent since new events came in when it was scheduled
-		scheduleEvent := e.hBuilder.AddDecisionTaskScheduledEvent(tasklist, di.DecisionTimeout, 0)
+		scheduleEvent := e.hBuilder.AddDecisionTaskScheduledEvent(tasklist, decision.DecisionTimeout, 0)
 		scheduleID = scheduleEvent.GetEventId()
-		di.Attempt = 0
+		decision.Attempt = 0
 	}
 
 	// Avoid creating new history events when decisions are continuously failing
-	if di.Attempt == 0 {
+	if decision.Attempt == 0 {
 		// Now create DecisionTaskStartedEvent
 		event = e.hBuilder.AddDecisionTaskStartedEvent(scheduleID, requestID, request.GetIdentity())
 		startedID = event.GetEventId()
 		startTime = event.GetTimestamp()
 	}
 
-	di, err := e.ReplicateDecisionTaskStartedEvent(di, e.GetCurrentVersion(), scheduleID, startedID, requestID, startTime)
+	decision, err := e.ReplicateDecisionTaskStartedEvent(decision, e.GetCurrentVersion(), scheduleID, startedID, requestID, startTime)
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.generateDecisionStartTasks(
 		startTime, // start time is now
@@ -1796,11 +1803,11 @@ func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(
 	); err != nil {
 		return nil, nil, err
 	}
-	return event, di, err
+	return event, decision, err
 }
 
 func (e *mutableStateBuilder) ReplicateDecisionTaskStartedEvent(
-	di *decisionInfo,
+	decision *decisionInfo,
 	version int64,
 	scheduleID int64,
 	startedID int64,
@@ -1810,8 +1817,8 @@ func (e *mutableStateBuilder) ReplicateDecisionTaskStartedEvent(
 	// Replicator calls it with a nil decision info, and it is safe to always lookup the decision in this case as it
 	// does not have to deal with transient decision case.
 	var ok bool
-	if di == nil {
-		di, ok = e.GetDecisionInfo(scheduleID)
+	if decision == nil {
+		decision, ok = e.GetDecisionInfo(scheduleID)
 		if !ok {
 			return nil, errors.NewInternalFailureError(fmt.Sprintf("unable to find decision: %v", scheduleID))
 		}
@@ -1823,48 +1830,48 @@ func (e *mutableStateBuilder) ReplicateDecisionTaskStartedEvent(
 		// since we need to treat each individual event batch as one transaction
 		// certain "magic" needs to be done, i.e. setting attempt to 0 so
 		// if first batch is replicated, but not the second one, decision can be correctly timed out
-		di.Attempt = 0
+		decision.Attempt = 0
 	}
 
 	e.executionInfo.State = persistence.WorkflowStateRunning
 	// Update mutable decision state
-	di = &decisionInfo{
+	decision = &decisionInfo{
 		Version:                    version,
 		ScheduleID:                 scheduleID,
 		StartedID:                  startedID,
 		RequestID:                  requestID,
-		DecisionTimeout:            di.DecisionTimeout,
-		Attempt:                    di.Attempt,
+		DecisionTimeout:            decision.DecisionTimeout,
+		Attempt:                    decision.Attempt,
 		StartedTimestamp:           timestamp,
-		ScheduledTimestamp:         di.ScheduledTimestamp,
-		TaskList:                   di.TaskList,
-		OriginalScheduledTimestamp: di.OriginalScheduledTimestamp,
+		ScheduledTimestamp:         decision.ScheduledTimestamp,
+		TaskList:                   decision.TaskList,
+		OriginalScheduledTimestamp: decision.OriginalScheduledTimestamp,
 	}
 
-	e.UpdateDecision(di)
-	return di, nil
+	e.UpdateDecision(decision)
+	return decision, nil
 }
 
 func (e *mutableStateBuilder) CreateTransientDecisionEvents(
-	di *decisionInfo,
+	decision *decisionInfo,
 	identity string,
 ) (*workflow.HistoryEvent, *workflow.HistoryEvent) {
 
 	tasklist := e.executionInfo.TaskList
 
 	scheduledEvent := newDecisionTaskScheduledEventWithInfo(
-		di.ScheduleID,
-		di.ScheduledTimestamp,
+		decision.ScheduleID,
+		decision.ScheduledTimestamp,
 		tasklist,
-		di.DecisionTimeout,
-		di.Attempt,
+		decision.DecisionTimeout,
+		decision.Attempt,
 	)
 
 	startedEvent := newDecisionTaskStartedEventWithInfo(
-		di.StartedID,
-		di.StartedTimestamp,
-		di.ScheduleID,
-		di.RequestID,
+		decision.StartedID,
+		decision.StartedTimestamp,
+		decision.ScheduleID,
+		decision.RequestID,
 		identity,
 	)
 
@@ -1943,12 +1950,12 @@ func (e *mutableStateBuilder) CheckResettable() error {
 			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending child workflow."),
 		}
 	}
-	if len(e.GetPendingRequestCancelInfos()) > 0 {
+	if len(e.GetPendingRequestCancelExternalInfos()) > 0 {
 		return &workflow.BadRequestError{
 			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending request cancel."),
 		}
 	}
-	if len(e.GetPendingSignalInfos()) > 0 {
+	if len(e.GetPendingSignalExtrenalInfos()) > 0 {
 		return &workflow.BadRequestError{
 			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending signals to send."),
 		}
@@ -1968,8 +1975,8 @@ func (e *mutableStateBuilder) AddDecisionTaskCompletedEvent(
 		return nil, err
 	}
 
-	di, ok := e.GetDecisionInfo(scheduleEventID)
-	if !ok || di.StartedID != startedEventID {
+	decision, ok := e.GetDecisionInfo(scheduleEventID)
+	if !ok || decision.StartedID != startedEventID {
 		e.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(e.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction,
@@ -1980,12 +1987,12 @@ func (e *mutableStateBuilder) AddDecisionTaskCompletedEvent(
 	}
 
 	e.beforeAddDecisionTaskCompletedEvent()
-	if di.Attempt > 0 {
+	if decision.Attempt > 0 {
 		// Create corresponding DecisionTaskSchedule and DecisionTaskStarted events for decisions we have been retrying
-		scheduledEvent := e.hBuilder.AddTransientDecisionTaskScheduledEvent(e.executionInfo.TaskList, di.DecisionTimeout,
-			di.Attempt, di.ScheduledTimestamp)
-		startedEvent := e.hBuilder.AddTransientDecisionTaskStartedEvent(scheduledEvent.GetEventId(), di.RequestID,
-			request.GetIdentity(), di.StartedTimestamp)
+		scheduledEvent := e.hBuilder.AddTransientDecisionTaskScheduledEvent(e.executionInfo.TaskList, decision.DecisionTimeout,
+			decision.Attempt, decision.ScheduledTimestamp)
+		startedEvent := e.hBuilder.AddTransientDecisionTaskStartedEvent(scheduledEvent.GetEventId(), decision.RequestID,
+			request.GetIdentity(), decision.StartedTimestamp)
 		startedEventID = startedEvent.GetEventId()
 	}
 	// Now write the completed event
@@ -4282,12 +4289,12 @@ func (e *mutableStateBuilder) closeTransactionHandleDecisionFailover(
 	}
 
 	// Handling mutable state turn from standby to active, while having a decision on the fly
-	di, ok := e.GetInFlightDecision()
-	if ok && di.Version < e.GetCurrentVersion() {
+	decision, ok := e.GetInFlightDecision()
+	if ok && decision.Version < e.GetCurrentVersion() {
 		// we have a decision on the fly with a lower version, fail it
 		if err := failDecision(
 			e,
-			di,
+			decision,
 			workflow.DecisionTaskFailedCauseFailoverCloseDecision,
 		); err != nil {
 			return err
@@ -4315,11 +4322,11 @@ func (e *mutableStateBuilder) closeTransactionHandleBufferedEventsLimit(
 	}
 
 	// Handling buffered events size issue
-	if di, ok := e.GetInFlightDecision(); ok {
+	if decision, ok := e.GetInFlightDecision(); ok {
 		// we have a decision on the fly with a lower version, fail it
 		if err := failDecision(
 			e,
-			di,
+			decision,
 			workflow.DecisionTaskFailedCauseForceCloseDecision,
 		); err != nil {
 			return err
