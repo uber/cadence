@@ -543,7 +543,8 @@ func newAdminElasticSearchCommands() []cli.Command {
 				},
 				cli.StringFlag{
 					Name:  FlagInputFileWithAlias,
-					Usage: "Input file of indexer.Message in json format, separated by newline",
+					Usage: "Input file name. Redirect cadence wf list result (with tale format) to a file and use as delete input. " +
+						"First line should be table header like WORKFLOW TYPE | WORKFLOW ID | RUN ID | ...",
 				},
 				cli.IntFlag{
 					Name:  FlagBatchSizeWithAlias,
