@@ -381,13 +381,13 @@ func (t *timerQueueStandbyProcessorImpl) processDecisionTimeout(
 	}
 
 	return t.processTimer(timerTask, func(context workflowExecutionContext, msBuilder mutableState) error {
-		di, isPending := msBuilder.GetDecisionInfo(timerTask.EventID)
+		decision, isPending := msBuilder.GetDecisionInfo(timerTask.EventID)
 
 		if !isPending {
 			return nil
 		}
 
-		ok, err := verifyTaskVersion(t.shard, t.logger, timerTask.DomainID, di.Version, timerTask.Version, timerTask)
+		ok, err := verifyTaskVersion(t.shard, t.logger, timerTask.DomainID, decision.Version, timerTask.Version, timerTask)
 		if err != nil {
 			return err
 		} else if !ok {

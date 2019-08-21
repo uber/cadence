@@ -1228,13 +1228,13 @@ func (_m *mockMutableState) CreateNewHistoryEventWithTimestamp(eventType shared.
 	return r0
 }
 
-// CreateTransientDecisionEvents provides a mock function with given fields: di, identity
-func (_m *mockMutableState) CreateTransientDecisionEvents(di *decisionInfo, identity string) (*shared.HistoryEvent, *shared.HistoryEvent) {
-	ret := _m.Called(di, identity)
+// CreateTransientDecisionEvents provides a mock function with given fields: _a0, _a1
+func (_m *mockMutableState) CreateTransientDecisionEvents(_a0 *decisionInfo, _a1 string) (*shared.HistoryEvent, *shared.HistoryEvent) {
+	ret := _m.Called(_a0, _a1)
 
 	var r0 *shared.HistoryEvent
 	if rf, ok := ret.Get(0).(func(*decisionInfo, string) *shared.HistoryEvent); ok {
-		r0 = rf(di, identity)
+		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*shared.HistoryEvent)
@@ -1243,7 +1243,7 @@ func (_m *mockMutableState) CreateTransientDecisionEvents(di *decisionInfo, iden
 
 	var r1 *shared.HistoryEvent
 	if rf, ok := ret.Get(1).(func(*decisionInfo, string) *shared.HistoryEvent); ok {
-		r1 = rf(di, identity)
+		r1 = rf(_a0, _a1)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(*shared.HistoryEvent)

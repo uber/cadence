@@ -507,12 +507,12 @@ func (t *timerQueueActiveProcessorImpl) processDecisionTimeout(
 	}
 
 	scheduleID := task.EventID
-	di, found := msBuilder.GetDecisionInfo(scheduleID)
+	decision, found := msBuilder.GetDecisionInfo(scheduleID)
 	if !found {
 		t.logger.Debug("Potentially duplicate task.", tag.TaskID(task.TaskID), tag.WorkflowScheduleID(scheduleID), tag.TaskType(persistence.TaskTypeDecisionTimeout))
 		return nil
 	}
-	ok, err := verifyTaskVersion(t.shard, t.logger, task.DomainID, di.Version, task.Version, task)
+	ok, err := verifyTaskVersion(t.shard, t.logger, task.DomainID, decision.Version, task.Version, task)
 	if err != nil {
 		return err
 	} else if !ok {
@@ -530,15 +530,15 @@ func (t *timerQueueActiveProcessorImpl) processDecisionTimeout(
 	switch task.TimeoutType {
 	case int(workflow.TimeoutTypeStartToClose):
 		metricScopeWithDomainTag.IncCounter(metrics.StartToCloseTimeoutCounter)
-		if di.Attempt == task.ScheduleAttempt {
+		if decision.Attempt == task.ScheduleAttempt {
 			// Add a decision task timeout event.
-			msBuilder.AddDecisionTaskTimedOutEvent(scheduleID, di.StartedID)
+			msBuilder.AddDecisionTaskTimedOutEvent(scheduleID, decision.StartedID)
 			scheduleNewDecision = true
 		}
 	case int(workflow.TimeoutTypeScheduleToStart):
 		metricScopeWithDomainTag.IncCounter(metrics.ScheduleToStartTimeoutCounter)
 		// check if scheduled decision still pending and not started yet
-		if di.Attempt == task.ScheduleAttempt && di.StartedID == common.EmptyEventID {
+		if decision.Attempt == task.ScheduleAttempt && decision.StartedID == common.EmptyEventID {
 			_, err := msBuilder.AddDecisionTaskScheduleToStartTimeoutEvent(scheduleID)
 			if err != nil {
 				// unable to add DecisionTaskTimeout event to history

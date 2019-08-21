@@ -1206,13 +1206,13 @@ func (r *historyReplicator) flushEventsBuffer(
 		return err
 	}
 
-	di, ok := msBuilder.GetInFlightDecision()
+	decision, ok := msBuilder.GetInFlightDecision()
 	if !ok {
 		return ErrCorruptedMutableStateDecision
 	}
 	if _, err = msBuilder.AddDecisionTaskFailedEvent(
-		di.ScheduleID,
-		di.StartedID,
+		decision.ScheduleID,
+		decision.StartedID,
 		workflow.DecisionTaskFailedCauseFailoverCloseDecision,
 		nil, identityHistoryService,
 		"",
