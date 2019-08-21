@@ -41,7 +41,7 @@ type (
 		shard                   ShardContext
 		historyService          *historyEngineImpl
 		cache                   *historyCache
-		timerTaskFilter         timerTaskFilter
+		timerTaskFilter         queueTaskFilter
 		now                     timeNow
 		logger                  log.Logger
 		metricsClient           metrics.Client
@@ -214,7 +214,7 @@ func (t *timerQueueActiveProcessorImpl) getTimerFiredCount() uint64 {
 	return t.timerQueueProcessorBase.getTimerFiredCount()
 }
 
-func (t *timerQueueActiveProcessorImpl) getTaskFilter() timerTaskFilter {
+func (t *timerQueueActiveProcessorImpl) getTaskFilter() queueTaskFilter {
 	return t.timerTaskFilter
 }
 

@@ -36,56 +36,63 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
-type timerTask struct {
-	processor timerProcessor
-	task      queueTaskInfo
-}
+type (
+	taskProcessorOptions struct {
+		queueSize   int
+		workerCount int
+	}
 
-type taskProcessor struct {
-	shard         ShardContext
-	cache         *historyCache
-	shutdownWG    sync.WaitGroup
-	shutdownCh    chan struct{}
-	tasksCh       chan *timerTask
-	config        *Config
-	logger        log.Logger
-	metricsClient metrics.Client
-	timeSource    clock.TimeSource
-	retryPolicy   backoff.RetryPolicy
-	workerWG      sync.WaitGroup
+	timerTask struct {
+		processor taskExecutor
+		task      queueTaskInfo
+	}
 
-	// worker coroutines notification
-	workerNotificationChans []chan struct{}
-	// duplicate numOfWorker from config.TimerTaskWorkerCount for dynamic config works correctly
-	numOfWorker int
-}
+	taskProcessor struct {
+		shard         ShardContext
+		cache         *historyCache
+		shutdownWG    sync.WaitGroup
+		shutdownCh    chan struct{}
+		tasksCh       chan *timerTask
+		config        *Config
+		logger        log.Logger
+		metricsClient metrics.Client
+		timeSource    clock.TimeSource
+		retryPolicy   backoff.RetryPolicy
+		workerWG      sync.WaitGroup
+
+		// worker coroutines notification
+		workerNotificationChans []chan struct{}
+		// duplicate numOfWorker from config.TimerTaskWorkerCount for dynamic config works correctly
+		numOfWorker int
+	}
+)
 
 func newTaskProcessor(
+	options taskProcessorOptions,
 	shard ShardContext,
-	historyService *historyEngineImpl,
+	historyCache *historyCache,
 	logger log.Logger,
 ) *taskProcessor {
 
 	log := logger.WithTags(tag.ComponentTimerQueue)
 
 	workerNotificationChans := []chan struct{}{}
-	numOfWorker := shard.GetConfig().TimerTaskWorkerCount()
-	for index := 0; index < numOfWorker; index++ {
+	for index := 0; index < options.workerCount; index++ {
 		workerNotificationChans = append(workerNotificationChans, make(chan struct{}, 1))
 	}
 
 	base := &taskProcessor{
 		shard:                   shard,
-		cache:                   historyService.historyCache,
+		cache:                   historyCache,
 		shutdownCh:              make(chan struct{}),
-		tasksCh:                 make(chan *timerTask, 10*shard.GetConfig().TimerTaskBatchSize()),
+		tasksCh:                 make(chan *timerTask, options.queueSize),
 		config:                  shard.GetConfig(),
 		logger:                  log,
-		metricsClient:           historyService.metricsClient,
+		metricsClient:           shard.GetMetricsClient(),
 		timeSource:              shard.GetTimeSource(),
 		workerNotificationChans: workerNotificationChans,
 		retryPolicy:             common.CreatePersistanceRetryPolicy(),
-		numOfWorker:             numOfWorker,
+		numOfWorker:             options.workerCount,
 	}
 
 	return base
@@ -309,14 +316,34 @@ func (t *taskProcessor) initializeLoggerForTask(
 
 	logger := t.logger.WithTags(
 		tag.ShardID(t.shard.GetShardID()),
-		//		tag.WorkflowDomainID(task.DomainID),
-		//		tag.WorkflowID(task.WorkflowID),
-		//		tag.WorkflowRunID(task.RunID),
 		tag.TaskID(task.GetTaskID()),
 		tag.FailoverVersion(task.GetVersion()),
-		tag.TaskType(task.GetTaskType()),
-		//		tag.WorkflowTimeoutType(int64(task.TimeoutType)),
-	)
-	logger.Debug(fmt.Sprintf("Processing timer task: %v, type: %v", task.GetTaskID(), task.GetTaskType()))
+		tag.TaskType(task.GetTaskType()))
+
+	switch task := task.(type) {
+	case *persistence.TimerTaskInfo:
+		logger = logger.WithTags(
+			tag.WorkflowDomainID(task.DomainID),
+			tag.WorkflowID(task.WorkflowID),
+			tag.WorkflowRunID(task.RunID),
+			tag.WorkflowTimeoutType(int64(task.TimeoutType)),
+		)
+		logger.Debug(fmt.Sprintf("Processing timer task: %v, type: %v", task.GetTaskID(), task.GetTaskType()))
+
+	case *persistence.TransferTaskInfo:
+		logger = logger.WithTags(
+			tag.WorkflowID(task.WorkflowID),
+			tag.WorkflowRunID(task.RunID),
+			tag.WorkflowDomainID(task.DomainID))
+		logger.Debug("Processing transfer task")
+
+	case *persistence.ReplicationTaskInfo:
+		logger = logger.WithTags(
+			tag.WorkflowID(task.WorkflowID),
+			tag.WorkflowRunID(task.RunID),
+			tag.WorkflowDomainID(task.DomainID))
+		logger.Debug("Processing replication task")
+	}
+
 	return logger
 }

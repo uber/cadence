@@ -45,7 +45,7 @@ type (
 		clusterMetadata         cluster.Metadata
 		historyService          *historyEngineImpl
 		cache                   *historyCache
-		timerTaskFilter         timerTaskFilter
+		timerTaskFilter         queueTaskFilter
 		logger                  log.Logger
 		metricsClient           metrics.Client
 		clusterName             string
@@ -141,7 +141,7 @@ func (t *timerQueueStandbyProcessorImpl) retryTasks() {
 	t.timerQueueProcessorBase.retryTasks()
 }
 
-func (t *timerQueueStandbyProcessorImpl) getTaskFilter() timerTaskFilter {
+func (t *timerQueueStandbyProcessorImpl) getTaskFilter() queueTaskFilter {
 	return t.timerTaskFilter
 }
 

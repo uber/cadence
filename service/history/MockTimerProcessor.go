@@ -64,15 +64,15 @@ func (_m *MockTimerProcessor) complete(timerTask queueTaskInfo) {
 }
 
 // getTaskFilter is mock implementation for process of timerProcessor
-func (_m *MockTimerProcessor) getTaskFilter() timerTaskFilter {
+func (_m *MockTimerProcessor) getTaskFilter() queueTaskFilter {
 	ret := _m.Called()
 
-	var r0 timerTaskFilter
-	if rf, ok := ret.Get(0).(func() timerTaskFilter); ok {
+	var r0 queueTaskFilter
+	if rf, ok := ret.Get(0).(func() queueTaskFilter); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(timerTaskFilter)
+			r0 = ret.Get(0).(queueTaskFilter)
 		}
 	}
 

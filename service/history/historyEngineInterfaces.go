@@ -111,9 +111,14 @@ type (
 		GetVisibilityTimestamp() time.Time
 	}
 
-	processor interface {
+	taskExecutor interface {
 		process(task queueTaskInfo, shouldProcessTask bool) (int, error)
+		complete(task queueTaskInfo)
 		getTaskFilter() queueTaskFilter
+	}
+
+	processor interface {
+		taskExecutor
 		readTasks(readLevel int64) ([]queueTaskInfo, bool, error)
 		updateAckLevel(taskID int64) error
 		queueShutdown() error
@@ -139,10 +144,8 @@ type (
 	}
 
 	timerProcessor interface {
+		taskExecutor
 		notifyNewTimers(timerTask []persistence.Task)
-		process(task queueTaskInfo, shouldProcessTask bool) (int, error)
-		complete(task queueTaskInfo)
-		getTaskFilter() timerTaskFilter
 	}
 
 	timerQueueAckMgr interface {
