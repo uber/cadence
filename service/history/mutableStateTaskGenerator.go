@@ -253,7 +253,7 @@ func (r *mutableStateTaskGeneratorImpl) generateDecisionScheduleTasks(
 	)
 	if !ok {
 		return &shared.InternalServiceError{
-			Message: fmt.Sprintf("impossible case: cannot get pending decision: %v", decisionScheduleID),
+			Message: fmt.Sprintf("it could be a bug, cannot get pending decision: %v", decisionScheduleID),
 		}
 	}
 
@@ -291,7 +291,7 @@ func (r *mutableStateTaskGeneratorImpl) generateDecisionStartTasks(
 	)
 	if !ok {
 		return &shared.InternalServiceError{
-			Message: fmt.Sprintf("impossible case: cannot get pending decision: %v", decisionScheduleID),
+			Message: fmt.Sprintf("it could be a bug, cannot get pending decision: %v", decisionScheduleID),
 		}
 	}
 
@@ -320,7 +320,7 @@ func (r *mutableStateTaskGeneratorImpl) generateActivityTransferTasks(
 	activityInfo, ok := r.mutableState.GetActivityInfo(activityScheduleID)
 	if !ok {
 		return &shared.InternalServiceError{
-			Message: fmt.Sprintf("impossible case: cannot get pending activity: %v", activityScheduleID),
+			Message: fmt.Sprintf("it could be a bug, cannot get pending activity: %v", activityScheduleID),
 		}
 	}
 
@@ -348,7 +348,7 @@ func (r *mutableStateTaskGeneratorImpl) generateActivityRetryTasks(
 	ai, ok := r.mutableState.GetActivityInfo(activityScheduleID)
 	if !ok {
 		return &shared.InternalServiceError{
-			Message: fmt.Sprintf("impossible case: cannot get pending activity: %v", activityScheduleID),
+			Message: fmt.Sprintf("it could be a bug, cannot get pending activity: %v", activityScheduleID),
 		}
 	}
 
@@ -376,7 +376,7 @@ func (r *mutableStateTaskGeneratorImpl) generateChildWorkflowTasks(
 	childWorkflowInfo, ok := r.mutableState.GetChildExecutionInfo(childWorkflowScheduleID)
 	if !ok {
 		return &shared.InternalServiceError{
-			Message: fmt.Sprintf("impossible case: cannot get pending child workflow: %v", childWorkflowScheduleID),
+			Message: fmt.Sprintf("it could be a bug, cannot get pending child workflow: %v", childWorkflowScheduleID),
 		}
 	}
 
@@ -414,7 +414,7 @@ func (r *mutableStateTaskGeneratorImpl) generateRequestCancelExternalTasks(
 	requestCancelExternalInfo, ok := r.mutableState.GetRequestCancelInfo(scheduleID)
 	if !ok {
 		return &shared.InternalServiceError{
-			Message: fmt.Sprintf("impossible case: cannot get pending request cancel external workflow: %v", scheduleID),
+			Message: fmt.Sprintf("it could be a bug, cannot get pending request cancel external workflow: %v", scheduleID),
 		}
 	}
 
@@ -454,7 +454,7 @@ func (r *mutableStateTaskGeneratorImpl) generateSignalExternalTasks(
 	signalExternalInfo, ok := r.mutableState.GetSignalInfo(scheduleID)
 	if !ok {
 		return &shared.InternalServiceError{
-			Message: fmt.Sprintf("impossible case: cannot get pending signal external workflow: %v", scheduleID),
+			Message: fmt.Sprintf("it could be a bug, cannot get pending signal external workflow: %v", scheduleID),
 		}
 	}
 

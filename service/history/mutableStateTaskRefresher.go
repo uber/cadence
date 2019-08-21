@@ -184,7 +184,7 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForDecision(
 
 	decision, ok := r.mutableState.GetPendingDecision()
 	if !ok {
-		return &shared.InternalServiceError{Message: "impossible case: cannot get pending decision"}
+		return &shared.InternalServiceError{Message: "it could be a bug, cannot get pending decision"}
 	}
 
 	// decision already started
