@@ -1,3 +1,23 @@
+// Copyright (c) 2019 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 package cassandra
 
 import (
@@ -10,25 +30,30 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/messaging"
-	"github.com/uber/cadence/common/queue"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
 )
 
 const (
-	templateInsertQueueQuery      = `INSERT INTO queue (queue_type, message_id, message) VALUES(?, ?, ?) IF NOT EXISTS`
+	templateInsertQueueQuery      = `INSERT INTO queue (queue_type, message_id, message_payload) VALUES(?, ?, ?) IF NOT EXISTS`
 	templateGetLastMessageIDQuery = `SELECT message_id FROM queue WHERE queue_type=? ORDER BY message_id DESC LIMIT 1`
+	templateGetMessagesQuery      = `SELECT message_payload ` +
+		`FROM queue ` +
+		`WHERE queue_type = ? ` +
+		`and message_id > ? `
 )
 
 type (
 	cassandraQueue struct {
 		queueType      string
 		messageEncoder messaging.MessageEncoder
+		messageDecoder messaging.MessageDecoder
 		retryPolicy    backoff.RetryPolicy
 		cassandraStore
 	}
 
 	messageIDConflictError struct {
-		lastMessageID int
+		messageID int
 	}
 )
 
@@ -37,7 +62,8 @@ func NewQueue(
 	logger log.Logger,
 	queueType string,
 	messageEncoder messaging.MessageEncoder,
-) (queue.Queue, error) {
+	messageDecoder messaging.MessageDecoder,
+) (persistence.Queue, error) {
 	cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
 	cluster.Keyspace = cfg.Keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
@@ -50,42 +76,44 @@ func NewQueue(
 		return nil, err
 	}
 
-	retryPolicy := backoff.NewExponentialRetryPolicy(50 * time.Millisecond)
-	retryPolicy.SetBackoffCoefficient(1.2)
+	retryPolicy := backoff.NewExponentialRetryPolicy(100 * time.Millisecond)
+	retryPolicy.SetBackoffCoefficient(1.5)
 	retryPolicy.SetMaximumAttempts(5)
 
 	return &cassandraQueue{
 		cassandraStore: cassandraStore{session: session, logger: logger},
 		queueType:      queueType,
 		messageEncoder: messageEncoder,
+		messageDecoder: messageDecoder,
+		retryPolicy:    retryPolicy,
 	}, nil
 }
 
-func (q *cassandraQueue) Publish(message interface{}) error {
+func (q *cassandraQueue) Enqueue(message interface{}) error {
 	encodedMessage, err := q.messageEncoder(message)
 	if err != nil {
 		return err
 	}
 
-	var nextMessageID int
-	err = backoff.Retry(func() error {
-		nextMessageID, err = q.getNextMessageID()
-		return err
-	}, q.retryPolicy, common.IsPersistenceTransientError)
+	err = backoff.Retry(
+		func() error {
+			nextMessageID, err := q.getNextMessageID()
+			if err != nil {
+				return err
+			}
+
+			return q.publish(nextMessageID, encodedMessage)
+		},
+		q.retryPolicy,
+		func(e error) bool {
+			return common.IsPersistenceTransientError(e) || isMessageIDConflictError(e)
+		})
 
 	if err != nil {
-		return fmt.Errorf("failed to get next messageID: %v", err)
+		return fmt.Errorf("failed to publish message: %v", err)
 	}
 
-	return backoff.Retry(func() error {
-		err = q.publish(nextMessageID, encodedMessage)
-		if messageIDConflictError, ok := err.(*messageIDConflictError); ok {
-			nextMessageID = messageIDConflictError.lastMessageID
-		}
-		return err
-	}, q.retryPolicy, func(e error) bool {
-		return common.IsPersistenceTransientError(e) || isMessageIDConflictError(e)
-	})
+	return nil
 }
 
 func (q *cassandraQueue) publish(messageID int, message []byte) error {
@@ -104,7 +132,7 @@ func (q *cassandraQueue) publish(messageID int, message []byte) error {
 	}
 
 	if !applied {
-		return &messageIDConflictError{lastMessageID: previous["message_id"].(int)}
+		return &messageIDConflictError{messageID: previous["message_id"].(int)}
 	}
 
 	return nil
@@ -132,6 +160,42 @@ func (q *cassandraQueue) getNextMessageID() (int, error) {
 	return result["message_id"].(int) + 1, nil
 }
 
+func (q *cassandraQueue) GetMessages(lastMessageID int, maxCount int) ([]interface{}, error) {
+	// Reading replication tasks need to be quorum level consistent, otherwise we could loose task
+	query := q.session.Query(templateGetMessagesQuery,
+		q.queueType,
+		lastMessageID,
+	)
+
+	iter := query.Iter()
+	if iter == nil {
+		return nil, &workflow.InternalServiceError{
+			Message: "GetMessages operation failed. Not able to create query iterator.",
+		}
+	}
+
+	var result []interface{}
+	message := make(map[string]interface{})
+	for iter.MapScan(message) {
+		payload := message["message_payload"].([]byte)
+		decodedMessage, err := q.messageDecoder(payload)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode message: %v", err)
+		}
+
+		result = append(result, decodedMessage)
+		message = make(map[string]interface{})
+	}
+
+	if err := iter.Close(); err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("GetMessages operation failed. Error: %v", err),
+		}
+	}
+
+	return result, nil
+}
+
 func (q *cassandraQueue) Close() error {
 	if q.session != nil {
 		q.session.Close()
@@ -141,7 +205,7 @@ func (q *cassandraQueue) Close() error {
 }
 
 func (e *messageIDConflictError) Error() string {
-	return fmt.Sprintf("message ID %v exists in queue", e.lastMessageID)
+	return fmt.Sprintf("message ID %v exists in queue", e.messageID)
 }
 
 func isMessageIDConflictError(err error) bool {

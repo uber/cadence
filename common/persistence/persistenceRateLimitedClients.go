@@ -75,6 +75,12 @@ type (
 		persistence VisibilityManager
 		logger      log.Logger
 	}
+
+	queueRateLimitedPersistenceClient struct {
+		rateLimiter quotas.Limiter
+		persistence Queue
+		logger      log.Logger
+	}
 )
 
 var _ ShardManager = (*shardRateLimitedPersistenceClient)(nil)
@@ -84,6 +90,7 @@ var _ HistoryManager = (*historyRateLimitedPersistenceClient)(nil)
 var _ HistoryV2Manager = (*historyV2RateLimitedPersistenceClient)(nil)
 var _ MetadataManager = (*metadataRateLimitedPersistenceClient)(nil)
 var _ VisibilityManager = (*visibilityRateLimitedPersistenceClient)(nil)
+var _ Queue = (*queueRateLimitedPersistenceClient)(nil)
 
 // NewShardPersistenceRateLimitedClient creates a client to manage shards
 func NewShardPersistenceRateLimitedClient(persistence ShardManager, rateLimiter quotas.Limiter, logger log.Logger) ShardManager {
@@ -142,6 +149,15 @@ func NewMetadataPersistenceRateLimitedClient(persistence MetadataManager, rateLi
 // NewVisibilityPersistenceRateLimitedClient creates a client to manage visibility
 func NewVisibilityPersistenceRateLimitedClient(persistence VisibilityManager, rateLimiter quotas.Limiter, logger log.Logger) VisibilityManager {
 	return &visibilityRateLimitedPersistenceClient{
+		persistence: persistence,
+		rateLimiter: rateLimiter,
+		logger:      logger,
+	}
+}
+
+// NewQueuePersistenceRateLimitedClient creates a client to manage queue
+func NewQueuePersistenceRateLimitedClient(persistence Queue, rateLimiter quotas.Limiter, logger log.Logger) Queue {
+	return &queueRateLimitedPersistenceClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
 		logger:      logger,
@@ -731,4 +747,20 @@ func (p *historyV2RateLimitedPersistenceClient) GetHistoryTree(request *GetHisto
 	}
 	response, err := p.persistence.GetHistoryTree(request)
 	return response, err
+}
+
+func (p *queueRateLimitedPersistenceClient) Enqueue(message interface{}) error {
+	if ok := p.rateLimiter.Allow(); !ok {
+		return ErrPersistenceLimitExceeded
+	}
+
+	return p.persistence.Enqueue(message)
+}
+
+func (p *queueRateLimitedPersistenceClient) GetMessages(lastMessageID int, maxCount int) ([]interface{}, error) {
+	if ok := p.rateLimiter.Allow(); !ok {
+		return nil, ErrPersistenceLimitExceeded
+	}
+
+	return p.persistence.GetMessages(lastMessageID, maxCount)
 }

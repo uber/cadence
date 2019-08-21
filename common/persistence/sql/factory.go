@@ -21,6 +21,7 @@
 package sql
 
 import (
+	"github.com/uber/cadence/common/messaging"
 	"sync"
 
 	"github.com/uber/cadence/common/log"
@@ -128,6 +129,11 @@ func (f *Factory) NewExecutionStore(shardID int) (p.ExecutionStore, error) {
 // NewVisibilityStore returns a visibility store
 func (f *Factory) NewVisibilityStore() (p.VisibilityStore, error) {
 	return NewSQLVisibilityStore(f.cfg, f.logger)
+}
+
+// NewQueue returns a new queue backed by sql
+func (f *Factory) NewQueue(queueType string, encoder messaging.MessageEncoder, decoder messaging.MessageDecoder) (p.Queue, error) {
+	panic("not implemented")
 }
 
 // Close closes the factory

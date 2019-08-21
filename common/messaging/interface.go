@@ -60,4 +60,5 @@ type (
 	}
 
 	MessageEncoder func(interface{}) ([]byte, error)
+	MessageDecoder func([]byte) (interface{}, error)
 )

@@ -21,6 +21,7 @@
 package persistencetests
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 	"sync/atomic"
@@ -69,6 +70,7 @@ type (
 		MetadataManagerV2     p.MetadataManager
 		MetadataProxy         p.MetadataManager
 		VisibilityMgr         p.VisibilityManager
+		Queue                 p.Queue
 		ShardInfo             *p.ShardInfo
 		TaskIDGenerator       TransferTaskIDGenerator
 		ClusterMetadata       cluster.Metadata
@@ -227,6 +229,19 @@ func (s *TestBase) Setup() {
 	s.TaskIDGenerator = &TestTransferTaskIDGenerator{}
 	err = s.ShardMgr.CreateShard(&p.CreateShardRequest{ShardInfo: s.ShardInfo})
 	s.fatalOnError("CreateShard", err)
+
+	queue, err := factory.NewQueue("test",
+		func(i interface{}) (bytes []byte, e error) {
+			if str, ok := i.(string); ok {
+				return []byte(str), nil
+			}
+			return nil, fmt.Errorf("unsupported type")
+		},
+		func(bytes []byte) (i interface{}, e error) {
+			return string(bytes), nil
+		})
+	s.fatalOnError("CreateQueue", err)
+	s.Queue = queue
 }
 
 func (s *TestBase) fatalOnError(msg string, err error) {
@@ -1338,6 +1353,16 @@ func (s *TestBase) validateTimeRange(t time.Time, expectedDuration time.Duration
 // GenerateTransferTaskID helper
 func (g *TestTransferTaskIDGenerator) GenerateTransferTaskID() (int64, error) {
 	return atomic.AddInt64(&g.seqNum, 1), nil
+}
+
+// Enqueue is a utility method to append messages in the queue
+func (s *TestBase) Enqueue(message interface{}) error {
+	return s.Queue.Enqueue(message)
+}
+
+// GetMessages is a utility method to get messages from the queue
+func (s *TestBase) GetMessages(lastMessageID int, maxCount int) ([]interface{}, error) {
+	return s.Queue.GetMessages(lastMessageID, maxCount)
 }
 
 // GenerateTransferTaskIDs helper
