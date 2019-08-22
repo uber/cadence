@@ -26,7 +26,6 @@ import (
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/messaging"
 )
 
 type (
@@ -144,8 +143,13 @@ type (
 	}
 
 	Queue interface {
-		messaging.MessageSink
-		GetMessages(lastMessageID int, maxCount int) ([]interface{}, error)
+		EnqueueMessage(messagePayload []byte) error
+		GetMessages(lastMessageID int, maxCount int) ([]*QueueMessage, error)
+	}
+
+	QueueMessage struct {
+		ID      int
+		Payload []byte
 	}
 
 	// DataBlob represents a blob for any binary data.

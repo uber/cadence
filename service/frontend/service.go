@@ -24,7 +24,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
@@ -205,15 +204,17 @@ func (s *Service) Start() {
 		log.Fatal("Failed to register archiver bootstrap container", tag.Error(err))
 	}
 
-	var replicationMessageSink messaging.MessageSink
+	var replicationMessageSink messaging.Producer
+	var domainReplicationQueue persistence.DomainReplicationQueue
 	clusterMetadata := base.GetClusterMetadata()
 	if clusterMetadata.IsGlobalDomainEnabled() {
 		consumerConfig := clusterMetadata.GetReplicationConsumerConfig()
 		if consumerConfig != nil && consumerConfig.Type == config.ReplicationConsumerTypeRPC {
-			replicationMessageSink, err = pFactory.NewQueue(common.DomainReplicationQueueType, codec.NewThriftBinaryEncoder())
+			domainReplicationQueue, err = pFactory.NewDomainReplicationQueue()
 			if err != nil {
-				log.Fatal("Failed to create replication message queue", tag.Error(err))
+				log.Fatal("Failed to create domain replication queue", tag.Error(err))
 			}
+			replicationMessageSink = domainReplicationQueue
 		} else {
 			replicationMessageSink, err = base.GetMessagingClient().NewProducerWithClusterName(
 				base.GetClusterMetadata().GetCurrentClusterName())
@@ -225,7 +226,16 @@ func (s *Service) Start() {
 		replicationMessageSink = &mocks.KafkaProducer{}
 	}
 
-	wfHandler := NewWorkflowHandler(base, s.config, metadata, history, historyV2, visibility, replicationMessageSink, domainCache)
+	wfHandler := NewWorkflowHandler(
+		base,
+		s.config,
+		metadata,
+		history,
+		historyV2,
+		visibility,
+		replicationMessageSink,
+		domainReplicationQueue,
+		domainCache)
 	dcRedirectionHandler := NewDCRedirectionHandler(wfHandler, params.DCRedirectionPolicy)
 	dcRedirectionHandler.RegisterHandler()
 

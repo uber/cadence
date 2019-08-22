@@ -28,7 +28,6 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
-	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
@@ -37,7 +36,7 @@ import (
 const (
 	templateEnqueueMessageQuery   = `INSERT INTO queue (queue_type, message_id, message_payload) VALUES(?, ?, ?) IF NOT EXISTS`
 	templateGetLastMessageIDQuery = `SELECT message_id FROM queue WHERE queue_type=? ORDER BY message_id DESC LIMIT 1`
-	templateGetMessagesQuery      = `SELECT message_payload ` +
+	templateGetMessagesQuery      = `SELECT message_id, message_payload ` +
 		`FROM queue ` +
 		`WHERE queue_type = ? ` +
 		`and message_id > ? `
@@ -47,7 +46,6 @@ type (
 	cassandraQueue struct {
 		queueType   int
 		logger      log.Logger
-		encoder     codec.BinaryEncoder
 		retryPolicy backoff.RetryPolicy
 		cassandraStore
 	}
@@ -57,11 +55,10 @@ type (
 	}
 )
 
-func NewQueue(
+func newQueue(
 	cfg config.Cassandra,
 	logger log.Logger,
 	queueType int,
-	encoder codec.BinaryEncoder,
 ) (persistence.Queue, error) {
 	cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
 	cluster.Keyspace = cfg.Keyspace
@@ -83,25 +80,19 @@ func NewQueue(
 		cassandraStore: cassandraStore{session: session, logger: logger},
 		logger:         logger,
 		queueType:      queueType,
-		encoder:        encoder,
 		retryPolicy:    retryPolicy,
 	}, nil
 }
 
-func (q *cassandraQueue) WriteMessage(message interface{}) error {
-	encodedMessage, err := q.encoder.Encode(message)
-	if err != nil {
-		return err
-	}
-
-	err = backoff.Retry(
+func (q *cassandraQueue) EnqueueMessage(messagePayload []byte) error {
+	err := backoff.Retry(
 		func() error {
 			nextMessageID, err := q.getNextMessageID()
 			if err != nil {
 				return err
 			}
 
-			return q.tryEnqueue(nextMessageID, encodedMessage)
+			return q.tryEnqueue(nextMessageID, messagePayload)
 		},
 		q.retryPolicy,
 		func(e error) bool {
@@ -115,8 +106,8 @@ func (q *cassandraQueue) WriteMessage(message interface{}) error {
 	return nil
 }
 
-func (q *cassandraQueue) tryEnqueue(messageID int, message []byte) error {
-	query := q.session.Query(templateEnqueueMessageQuery, q.queueType, messageID, message)
+func (q *cassandraQueue) tryEnqueue(messageID int, messagePayload []byte) error {
+	query := q.session.Query(templateEnqueueMessageQuery, q.queueType, messageID, messagePayload)
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
@@ -159,7 +150,7 @@ func (q *cassandraQueue) getNextMessageID() (int, error) {
 	return result["message_id"].(int) + 1, nil
 }
 
-func (q *cassandraQueue) GetMessages(lastMessageID int, maxCount int) ([]interface{}, error) {
+func (q *cassandraQueue) GetMessages(lastMessageID int, maxCount int) ([]*persistence.QueueMessage, error) {
 	// Reading replication tasks need to be quorum level consistent, otherwise we could loose task
 	query := q.session.Query(templateGetMessagesQuery,
 		q.queueType,
@@ -173,17 +164,12 @@ func (q *cassandraQueue) GetMessages(lastMessageID int, maxCount int) ([]interfa
 		}
 	}
 
-	var result []interface{}
+	var result []*persistence.QueueMessage
 	message := make(map[string]interface{})
 	for iter.MapScan(message) {
 		payload := message["message_payload"].([]byte)
-		var decodedMessage interface{}
-		err := q.encoder.Decode(payload, &decodedMessage)
-		if err != nil {
-			return nil, fmt.Errorf("failed to decode message: %v", err)
-		}
-
-		result = append(result, decodedMessage)
+		id := message["message_id"].(int)
+		result = append(result, &persistence.QueueMessage{ID: id, Payload: payload})
 		message = make(map[string]interface{})
 	}
 

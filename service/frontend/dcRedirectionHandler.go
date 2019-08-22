@@ -1119,6 +1119,14 @@ func (handler *DCRedirectionHandlerImpl) GetReplicationMessages(
 	return handler.frontendHandler.GetReplicationMessages(ctx, request)
 }
 
+// GetDomainReplicationMessages API call
+func (handler *DCRedirectionHandlerImpl) GetDomainReplicationMessages(
+	ctx context.Context,
+	request *replicator.GetDomainReplicationMessagesRequest,
+) (*replicator.GetDomainReplicationMessagesResponse, error) {
+	return handler.frontendHandler.GetDomainReplicationMessages(ctx, request)
+}
+
 func (handler *DCRedirectionHandlerImpl) beforeCall(
 	scope int,
 ) (metrics.Scope, time.Time) {

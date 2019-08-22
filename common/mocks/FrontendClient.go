@@ -1001,3 +1001,33 @@ func (_m *FrontendClient) GetReplicationMessages(ctx context.Context, request *r
 
 	return r0, r1
 }
+
+// GetDomainReplicationMessages provides a mock function with given fields: ctx, request, opts
+func (_m *FrontendClient) GetDomainReplicationMessages(ctx context.Context, request *replicator.GetDomainReplicationMessagesRequest, opts ...yarpc.CallOption) (*replicator.GetDomainReplicationMessagesResponse, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, request)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *replicator.GetDomainReplicationMessagesResponse
+	if rf, ok := ret.Get(0).(func(context.Context, *replicator.GetDomainReplicationMessagesRequest, ...yarpc.CallOption) *replicator.GetDomainReplicationMessagesResponse); ok {
+		r0 = rf(ctx, request, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*replicator.GetDomainReplicationMessagesResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *replicator.GetDomainReplicationMessagesRequest, ...yarpc.CallOption) error); ok {
+		r1 = rf(ctx, request, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}

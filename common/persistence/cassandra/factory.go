@@ -24,7 +24,6 @@ import (
 	"sync"
 
 	"github.com/gocql/gocql"
-	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
@@ -105,8 +104,8 @@ func (f *Factory) NewVisibilityStore() (p.VisibilityStore, error) {
 }
 
 // NewQueue returns a new queue backed by cassandra
-func (f *Factory) NewQueue(queueType int, encoder codec.BinaryEncoder) (p.Queue, error) {
-	return NewQueue(f.cfg, f.logger, queueType, encoder)
+func (f *Factory) NewQueue(queueType int) (p.Queue, error) {
+	return newQueue(f.cfg, f.logger, queueType)
 }
 
 // Close closes the factory

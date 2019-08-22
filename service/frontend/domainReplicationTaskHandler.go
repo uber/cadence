@@ -48,13 +48,13 @@ type (
 	}
 
 	domainReplicatorImpl struct {
-		replicationMessageSink messaging.MessageSink
+		replicationMessageSink messaging.Producer
 		logger                 log.Logger
 	}
 )
 
 // NewDomainReplicator create a new instance of domain replicator
-func NewDomainReplicator(replicationMessageSink messaging.MessageSink, logger log.Logger) DomainReplicator {
+func NewDomainReplicator(replicationMessageSink messaging.Producer, logger log.Logger) DomainReplicator {
 	return &domainReplicatorImpl{
 		replicationMessageSink: replicationMessageSink,
 		logger:                 logger,
@@ -104,7 +104,7 @@ func (domainReplicator *domainReplicatorImpl) HandleTransmissionTask(domainOpera
 		FailoverVersion: common.Int64Ptr(failoverVersion),
 	}
 
-	return domainReplicator.replicationMessageSink.WriteMessage(
+	return domainReplicator.replicationMessageSink.Publish(
 		&replicator.ReplicationTask{
 			TaskType:             &taskType,
 			DomainTaskAttributes: task,

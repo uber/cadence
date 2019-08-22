@@ -24,6 +24,8 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"github.com/uber/cadence/.gen/go/replicator"
+	"github.com/uber/cadence/common"
 	"os"
 	"sync"
 	"testing"
@@ -57,15 +59,21 @@ func (s *QueuePersistenceSuite) TearDownSuite() {
 	s.TearDownWorkflowStore()
 }
 
-func (s *QueuePersistenceSuite) TestEnqueueMessage() {
+func (s *QueuePersistenceSuite) TestDomainReplicationQueue() {
 	numMessages := 100
 	concurrentSenders := 10
 
-	messageChan := make(chan string)
+	messageChan := make(chan interface{})
 
+	taskType := replicator.ReplicationTaskTypeDomain
 	go func() {
 		for i := 0; i < numMessages; i++ {
-			messageChan <- fmt.Sprintf("message-%v", i)
+			messageChan <- &replicator.ReplicationTask{
+				TaskType: &taskType,
+				DomainTaskAttributes: &replicator.DomainTaskAttributes{
+					ID: common.StringPtr(fmt.Sprintf("message-%v", i)),
+				},
+			}
 		}
 		close(messageChan)
 	}()
@@ -77,7 +85,7 @@ func (s *QueuePersistenceSuite) TestEnqueueMessage() {
 		go func() {
 			defer wg.Done()
 			for message := range messageChan {
-				err := s.WriteMessage(message)
+				err := s.Publish(message)
 				s.Nil(err, "Enqueue message failed.")
 			}
 		}()
@@ -85,9 +93,9 @@ func (s *QueuePersistenceSuite) TestEnqueueMessage() {
 
 	wg.Wait()
 
-	result, err := s.GetMessages(-1, numMessages)
+	result, lastRetrievedMessageID, err := s.GetMessages(-1, numMessages)
 	s.Nil(err, "Get messages failed.")
 	s.Len(result, numMessages)
+	s.Equal(numMessages-1, lastRetrievedMessageID)
 
-	fmt.Println(result)
 }

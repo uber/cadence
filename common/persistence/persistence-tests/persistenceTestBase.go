@@ -22,6 +22,7 @@ package persistencetests
 
 import (
 	"fmt"
+	"github.com/uber/cadence/.gen/go/replicator"
 	"math"
 	"math/rand"
 	"sync/atomic"
@@ -60,25 +61,25 @@ type (
 	// TestBase wraps the base setup needed to create workflows over persistence layer.
 	TestBase struct {
 		suite.Suite
-		ShardMgr              p.ShardManager
-		ExecutionMgrFactory   pfactory.Factory
-		ExecutionManager      p.ExecutionManager
-		TaskMgr               p.TaskManager
-		HistoryMgr            p.HistoryManager
-		HistoryV2Mgr          p.HistoryV2Manager
-		MetadataManager       p.MetadataManager
-		MetadataManagerV2     p.MetadataManager
-		MetadataProxy         p.MetadataManager
-		VisibilityMgr         p.VisibilityManager
-		Queue                 p.Queue
-		ShardInfo             *p.ShardInfo
-		TaskIDGenerator       TransferTaskIDGenerator
-		ClusterMetadata       cluster.Metadata
-		ReadLevel             int64
-		ReplicationReadLevel  int64
-		DefaultTestCluster    PersistenceTestCluster
-		VisibilityTestCluster PersistenceTestCluster
-		logger                log.Logger
+		ShardMgr               p.ShardManager
+		ExecutionMgrFactory    pfactory.Factory
+		ExecutionManager       p.ExecutionManager
+		TaskMgr                p.TaskManager
+		HistoryMgr             p.HistoryManager
+		HistoryV2Mgr           p.HistoryV2Manager
+		MetadataManager        p.MetadataManager
+		MetadataManagerV2      p.MetadataManager
+		MetadataProxy          p.MetadataManager
+		VisibilityMgr          p.VisibilityManager
+		DomainReplicationQueue p.DomainReplicationQueue
+		ShardInfo              *p.ShardInfo
+		TaskIDGenerator        TransferTaskIDGenerator
+		ClusterMetadata        cluster.Metadata
+		ReadLevel              int64
+		ReplicationReadLevel   int64
+		DefaultTestCluster     PersistenceTestCluster
+		VisibilityTestCluster  PersistenceTestCluster
+		logger                 log.Logger
 	}
 
 	// PersistenceTestCluster exposes management operations on a database
@@ -234,9 +235,9 @@ func (s *TestBase) Setup() {
 	err = s.ShardMgr.CreateShard(&p.CreateShardRequest{ShardInfo: s.ShardInfo})
 	s.fatalOnError("CreateShard", err)
 
-	queue, err := factory.NewQueue(testQueueType, &TestBinaryEncoder{})
-	s.fatalOnError("CreateQueue", err)
-	s.Queue = queue
+	queue, err := factory.NewDomainReplicationQueue()
+	s.fatalOnError("Create DomainReplicationQueue", err)
+	s.DomainReplicationQueue = queue
 }
 
 func (s *TestBase) fatalOnError(msg string, err error) {
@@ -1350,14 +1351,14 @@ func (g *TestTransferTaskIDGenerator) GenerateTransferTaskID() (int64, error) {
 	return atomic.AddInt64(&g.seqNum, 1), nil
 }
 
-// WriteMessage is a utility method to add messages to the queue
-func (s *TestBase) WriteMessage(message interface{}) error {
-	return s.Queue.WriteMessage(message)
+// Publish is a utility method to add messages to the queue
+func (s *TestBase) Publish(message interface{}) error {
+	return s.DomainReplicationQueue.Publish(message)
 }
 
 // GetMessages is a utility method to get messages from the queue
-func (s *TestBase) GetMessages(lastMessageID int, maxCount int) ([]interface{}, error) {
-	return s.Queue.GetMessages(lastMessageID, maxCount)
+func (s *TestBase) GetMessages(lastMessageID int, maxCount int) ([]*replicator.ReplicationTask, int, error) {
+	return s.DomainReplicationQueue.GetReplicationMessages(lastMessageID, maxCount)
 }
 
 // GenerateTransferTaskIDs helper

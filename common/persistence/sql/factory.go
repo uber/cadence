@@ -23,7 +23,6 @@ package sql
 import (
 	"sync"
 
-	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/storage"
@@ -132,7 +131,7 @@ func (f *Factory) NewVisibilityStore() (p.VisibilityStore, error) {
 }
 
 // NewQueue returns a new queue backed by sql
-func (f *Factory) NewQueue(queueType int, encoder codec.BinaryEncoder) (p.Queue, error) {
+func (f *Factory) NewQueue(queueType int) (p.Queue, error) {
 	panic("not implemented")
 }
 

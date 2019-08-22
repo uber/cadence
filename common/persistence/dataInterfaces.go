@@ -22,6 +22,7 @@ package persistence
 
 import (
 	"fmt"
+	"github.com/uber/cadence/.gen/go/replicator"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -1486,6 +1487,11 @@ type (
 		DeleteDomainByName(request *DeleteDomainByNameRequest) error
 		ListDomains(request *ListDomainsRequest) (*ListDomainsResponse, error)
 		GetMetadata() (*GetMetadataResponse, error)
+	}
+
+	DomainReplicationQueue interface {
+		Publish(message interface{}) error
+		GetReplicationMessages(lastMessageID int, maxCount int) ([]*replicator.ReplicationTask, int, error)
 	}
 )
 

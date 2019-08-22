@@ -28,13 +28,7 @@ import (
 type (
 	// BinaryEncoder represent the encoder which can serialize or deserialize object
 	BinaryEncoder interface {
-		Encode(object interface{}) ([]byte, error)
-		Decode(payload []byte, val interface{}) error
-	}
-
-	// ThriftEncoder represent the encoder which can serialize or deserialize ThriftObject
-	ThriftEncoder interface {
-		Encode(object ThriftObject) ([]byte, error)
+		Encode(obj ThriftObject) ([]byte, error)
 		Decode(payload []byte, val ThriftObject) error
 	}
 

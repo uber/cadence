@@ -35,7 +35,7 @@ type (
 	kafkaProducer struct {
 		topic      string
 		producer   sarama.SyncProducer
-		msgEncoder codec.ThriftEncoder
+		msgEncoder codec.BinaryEncoder
 		logger     log.Logger
 	}
 )
@@ -53,7 +53,7 @@ func NewKafkaProducer(topic string, producer sarama.SyncProducer, logger log.Log
 }
 
 // Publish is used to send messages to other clusters through Kafka topic
-func (p *kafkaProducer) WriteMessage(msg interface{}) error {
+func (p *kafkaProducer) Publish(msg interface{}) error {
 	message, err := p.getProducerMessage(msg)
 	if err != nil {
 		return err

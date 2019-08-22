@@ -39,7 +39,7 @@ type (
 		historySerializer     PayloadSerializer
 		persistence           HistoryV2Store
 		logger                log.Logger
-		thriftEncoder         codec.ThriftEncoder
+		thriftEncoder         codec.BinaryEncoder
 		pagingTokenSerializer *jsonHistoryTokenSerializer
 		transactionSizeLimit  dynamicconfig.IntPropertyFn
 	}

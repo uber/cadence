@@ -34,7 +34,7 @@ type (
 	}
 )
 
-var _ ThriftEncoder = (*ThriftRWEncoder)(nil)
+var _ BinaryEncoder = (*ThriftRWEncoder)(nil)
 
 // NewThriftRWEncoder generate a new ThriftRWEncoder
 func NewThriftRWEncoder() *ThriftRWEncoder {

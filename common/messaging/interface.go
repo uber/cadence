@@ -55,11 +55,11 @@ type (
 
 	// Producer is the interface used to send replication tasks to other clusters through replicator
 	Producer interface {
-		MessageSink
-		Close() error
+		Publish(message interface{}) error
 	}
 
-	MessageSink interface {
-		WriteMessage(message interface{}) error
+	CloseableProducer interface {
+		Producer
+		Close() error
 	}
 )

@@ -23,6 +23,7 @@ package frontend
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -54,6 +55,10 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
+const (
+	getDomainReplicationMessageBatchSize = 100
+)
+
 var _ workflowserviceserver.Interface = (*WorkflowHandler)(nil)
 
 type (
@@ -76,6 +81,7 @@ type (
 		domainHandler             *domainHandlerImpl
 		visibilityQueryValidator  *validator.VisibilityQueryValidator
 		searchAttributesValidator *validator.SearchAttributesValidator
+		domainReplicationQueue    persistence.DomainReplicationQueue
 		service.Service
 	}
 
@@ -152,7 +158,8 @@ func NewWorkflowHandler(
 	historyMgr persistence.HistoryManager,
 	historyV2Mgr persistence.HistoryV2Manager,
 	visibilityMgr persistence.VisibilityManager,
-	replicationMessageSink messaging.MessageSink,
+	replicationMessageSink messaging.Producer,
+	domainReplicationQueue persistence.DomainReplicationQueue,
 	domainCache cache.DomainCache,
 ) *WorkflowHandler {
 	handler := &WorkflowHandler{
@@ -184,8 +191,14 @@ func NewWorkflowHandler(
 			sVice.GetArchiverProvider(),
 		),
 		visibilityQueryValidator: validator.NewQueryValidator(config.ValidSearchAttributes),
-		searchAttributesValidator: validator.NewSearchAttributesValidator(sVice.GetLogger(), config.ValidSearchAttributes,
-			config.SearchAttributesNumberOfKeysLimit, config.SearchAttributesSizeOfValueLimit, config.SearchAttributesTotalSizeLimit),
+		searchAttributesValidator: validator.NewSearchAttributesValidator(
+			sVice.GetLogger(),
+			config.ValidSearchAttributes,
+			config.SearchAttributesNumberOfKeysLimit,
+			config.SearchAttributesSizeOfValueLimit,
+			config.SearchAttributesTotalSizeLimit,
+		),
+		domainReplicationQueue: domainReplicationQueue,
 	}
 	// prevent us from trying to serve requests before handler's Start() is complete
 	handler.startWG.Add(1)
@@ -3303,7 +3316,7 @@ func (wh *WorkflowHandler) GetReplicationMessages(
 ) (resp *replicator.GetReplicationMessagesResponse, err error) {
 	defer log.CapturePanic(wh.GetLogger(), &err)
 
-	scope, sw := wh.startRequestProfile(metrics.FrontendGetReplicationTasksScope)
+	scope, sw := wh.startRequestProfile(metrics.FrontendGetReplicationMessagesScope)
 	defer sw.Stop()
 
 	if err := wh.versionChecker.checkClientVersion(ctx); err != nil {
@@ -3319,4 +3332,45 @@ func (wh *WorkflowHandler) GetReplicationMessages(
 		return nil, wh.error(err, scope)
 	}
 	return resp, nil
+}
+
+// GetReplicationMessages returns new replication tasks since the read level provided in the token.
+func (wh *WorkflowHandler) GetDomainReplicationMessages(
+	ctx context.Context,
+	request *replicator.GetDomainReplicationMessagesRequest,
+) (resp *replicator.GetDomainReplicationMessagesResponse, err error) {
+	defer log.CapturePanic(wh.GetLogger(), &err)
+
+	scope, sw := wh.startRequestProfile(metrics.FrontendGetDomainReplicationMessagesScope)
+	defer sw.Stop()
+
+	if err := wh.versionChecker.checkClientVersion(ctx); err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	if request == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
+
+	if wh.domainReplicationQueue == nil {
+		return nil, wh.error(errors.New("domain replication queue not enabled for cluster"), scope)
+	}
+
+	lastMessageID := -1
+	if request.IsSetLastRetrivedMessageId() {
+		lastMessageID = int(request.GetLastRetrivedMessageId())
+	}
+
+	replicationTasks, lastMessageID, err := wh.domainReplicationQueue.GetReplicationMessages(
+		lastMessageID, getDomainReplicationMessageBatchSize)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	return &replicator.GetDomainReplicationMessagesResponse{
+		Messages: &replicator.ReplicationMessages{
+			ReplicationTasks:      replicationTasks,
+			LastRetrivedMessageId: common.Int64Ptr(int64(lastMessageID)),
+		},
+	}, nil
 }

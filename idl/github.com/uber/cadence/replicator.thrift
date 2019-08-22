@@ -125,3 +125,14 @@ struct GetReplicationMessagesRequest {
 struct GetReplicationMessagesResponse {
   10: optional map<i32, ReplicationMessages> messagesByShard
 }
+
+struct GetDomainReplicationMessagesRequest {
+  // lastRetrivedMessageId is where the next fetch should begin with
+  10: optional i64 (js.type = "Long") lastRetrivedMessageId
+  // lastProcessedMessageId is the last messageId that is processed on the passive side.
+  // This can be different than lastRetrivedMessageId if passive side supports prefetching messages.
+  20: optional i64 (js.type = "Long") lastProcessedMessageId}
+
+struct GetDomainReplicationMessagesResponse {
+  10: optional ReplicationMessages messages
+}
