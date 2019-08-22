@@ -114,7 +114,6 @@ type (
 			baseRunID string,
 			baseRunNextEventID int64,
 		) (retError error)
-		getWorkflowWatcher() WorkflowWatcher
 	}
 )
 
@@ -133,7 +132,6 @@ type (
 		msBuilder       mutableState
 		stats           *persistence.ExecutionStats
 		updateCondition int64
-		watcher         WorkflowWatcher
 	}
 )
 
@@ -170,7 +168,6 @@ func newWorkflowExecutionContext(
 		stats: &persistence.ExecutionStats{
 			HistorySize: 0,
 		},
-		watcher: NewWorkflowWatcher(),
 	}
 }
 
@@ -1005,8 +1002,4 @@ func (c *workflowExecutionContextImpl) resetWorkflowExecution(
 		)
 	}
 	return nil
-}
-
-func (c *workflowExecutionContextImpl) getWorkflowWatcher() WorkflowWatcher {
-	return c.watcher
 }
