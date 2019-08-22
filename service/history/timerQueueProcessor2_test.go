@@ -79,7 +79,6 @@ type (
 		domainEntry               *cache.DomainCacheEntry
 		clusterName               string
 		timerQueueActiveProcessor *timerQueueActiveProcessorImpl
-		taskProcessor             *taskProcessor
 	}
 )
 
@@ -217,13 +216,11 @@ func (s *timerQueueProcessor2Suite) TearDownTest() {
 }
 
 func (s *timerQueueProcessor2Suite) startProcessor() {
-	s.taskProcessor.start()
 	s.timerQueueActiveProcessor.Start()
 }
 
 func (s *timerQueueProcessor2Suite) stopProcessor() {
 	s.timerQueueActiveProcessor.Stop()
-	s.taskProcessor.stop()
 }
 
 func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
