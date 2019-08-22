@@ -410,7 +410,8 @@ func getFlagsForScan() []cli.Flag {
 	return []cli.Flag{
 		cli.IntFlag{
 			Name:  FlagPageSizeWithAlias,
-			Usage: "For tune page size",
+			Value: 2000,
+			Usage: "Page size for each Scan API call",
 		},
 		cli.BoolFlag{
 			Name:  FlagPrintRawTimeWithAlias,
