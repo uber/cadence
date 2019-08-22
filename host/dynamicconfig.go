@@ -69,6 +69,9 @@ func (d *dynamicClient) GetBoolValue(name dynamicconfig.Key, filters map[dynamic
 }
 
 func (d *dynamicClient) GetStringValue(name dynamicconfig.Key, filters map[dynamicconfig.Filter]interface{}, defaultValue string) (string, error) {
+	if val, ok := stringKeys[name]; ok {
+		return val, nil
+	}
 	return d.client.GetStringValue(name, filters, defaultValue)
 }
 
