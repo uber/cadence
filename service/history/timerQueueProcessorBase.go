@@ -68,7 +68,6 @@ type (
 		timeSource       clock.TimeSource
 		rateLimiter      quotas.Limiter
 		retryPolicy      backoff.RetryPolicy
-		processor        *taskProcessor
 		lastPollTime     time.Time
 		taskProcessor    *taskProcessor
 
@@ -111,7 +110,7 @@ func newTimerQueueProcessorBase(
 		timeSource:       shard.GetTimeSource(),
 		newTimerCh:       make(chan struct{}, 1),
 		lastPollTime:     time.Time{},
-		processor:        taskProcessor,
+		taskProcessor:    taskProcessor,
 		rateLimiter: quotas.NewDynamicRateLimiter(
 			func() float64 {
 				return float64(maxPollRPS())
@@ -348,7 +347,7 @@ func (t *timerQueueProcessorBase) readAndFanoutTimerTasks() (*persistence.TimerT
 	}
 
 	for _, task := range timerTasks {
-		if shutdown := t.processor.addTask(
+		if shutdown := t.taskProcessor.addTask(
 			&taskInfo{
 				processor: t.timerProcessor,
 				task:      task,
@@ -372,7 +371,7 @@ func (t *timerQueueProcessorBase) readAndFanoutTimerTasks() (*persistence.TimerT
 }
 
 func (t *timerQueueProcessorBase) retryTasks() {
-	t.processor.retryTasks()
+	t.taskProcessor.retryTasks()
 }
 
 func (t *timerQueueProcessorBase) complete(timerTask *persistence.TimerTaskInfo) {
