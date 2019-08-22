@@ -21,9 +21,9 @@
 package host
 
 import (
+	"github.com/uber/cadence/common"
 	"time"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
@@ -33,7 +33,9 @@ var (
 		dynamicconfig.FrontendRPS:                        3000,
 		dynamicconfig.MatchingNumTasklistWritePartitions: 3,
 		dynamicconfig.MatchingNumTasklistReadPartitions:  3,
-		dynamicconfig.AdvancedVisibilityWritingMode:      common.AdvancedVisibilityWritingModeOff,
+	}
+	stringKeys = map[dynamicconfig.Key]string{
+		dynamicconfig.AdvancedVisibilityWritingMode: common.AdvancedVisibilityWritingModeOff,
 	}
 )
 
@@ -83,8 +85,8 @@ func (d *dynamicClient) GetDurationValue(
 }
 
 func (d *dynamicClient) UpdateValue(name dynamicconfig.Key, value interface{}) error {
-	if name == dynamicconfig.AdvancedVisibilityWritingMode {
-		intKeys[dynamicconfig.AdvancedVisibilityWritingMode] = value.(int)
+	if name == dynamicconfig.AdvancedVisibilityWritingMode { // override for es integration tests
+		stringKeys[dynamicconfig.AdvancedVisibilityWritingMode] = value.(string)
 		return nil
 	}
 	return d.client.UpdateValue(name, value)

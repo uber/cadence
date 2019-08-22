@@ -224,7 +224,7 @@ func (s *conflictResolverSuite) TestGetHistory() {
 }
 
 func (s *conflictResolverSuite) TestReset() {
-	s.mockShard.config.AdvancedVisibilityWritingMode = dynamicconfig.GetIntPropertyFn(common.AdvancedVisibilityWritingModeDual)
+	s.mockShard.config.AdvancedVisibilityWritingMode = dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeDual)
 
 	prevRunID := uuid.New()
 	prevLastWriteVersion := int64(123)

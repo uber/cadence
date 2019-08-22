@@ -116,7 +116,7 @@ func NewConfig(params *service.BootstrapParams) *Config {
 		EnableBatcher:   dc.GetBoolProperty(dynamicconfig.EnableBatcher, false),
 		ThrottledLogRPS: dc.GetIntProperty(dynamicconfig.WorkerThrottledLogRPS, 20),
 	}
-	advancedVisWritingMode := dc.GetIntProperty(dynamicconfig.AdvancedVisibilityWritingMode, common.AdvancedVisibilityWritingModeOff)
+	advancedVisWritingMode := dc.GetStringProperty(dynamicconfig.AdvancedVisibilityWritingMode, common.AdvancedVisibilityWritingModeOff)
 	if advancedVisWritingMode() != common.AdvancedVisibilityWritingModeOff {
 		config.IndexerCfg = &indexer.Config{
 			IndexerConcurrency:       dc.GetIntProperty(dynamicconfig.WorkerIndexerConcurrency, 1000),

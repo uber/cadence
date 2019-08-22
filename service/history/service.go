@@ -50,7 +50,7 @@ type Config struct {
 	VisibilityOpenMaxQPS            dynamicconfig.IntPropertyFnWithDomainFilter
 	VisibilityClosedMaxQPS          dynamicconfig.IntPropertyFnWithDomainFilter
 	EnableVisibilityToKafka         dynamicconfig.BoolPropertyFn
-	AdvancedVisibilityWritingMode   dynamicconfig.IntPropertyFn
+	AdvancedVisibilityWritingMode   dynamicconfig.StringPropertyFn
 	EmitShardDiffLog                dynamicconfig.BoolPropertyFn
 	MaxAutoResetPoints              dynamicconfig.IntPropertyFnWithDomainFilter
 	ThrottledLogRPS                 dynamicconfig.IntPropertyFn
@@ -186,7 +186,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int, storeType strin
 		MaxAutoResetPoints:                                    dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryMaxAutoResetPoints, defaultHistoryMaxAutoResetPoints),
 		MaxDecisionStartToCloseSeconds:                        dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxDecisionStartToCloseSeconds, 240),
 		EnableVisibilityToKafka:                               dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, false), // deprecated, please use AdvancedVisibilityWritingMode
-		AdvancedVisibilityWritingMode:                         dc.GetIntProperty(dynamicconfig.AdvancedVisibilityWritingMode, common.AdvancedVisibilityWritingModeOff),
+		AdvancedVisibilityWritingMode:                         dc.GetStringProperty(dynamicconfig.AdvancedVisibilityWritingMode, common.AdvancedVisibilityWritingModeOff),
 		EmitShardDiffLog:                                      dc.GetBoolProperty(dynamicconfig.EmitShardDiffLog, false),
 		HistoryCacheInitialSize:                               dc.GetIntProperty(dynamicconfig.HistoryCacheInitialSize, 128),
 		HistoryCacheMaxSize:                                   dc.GetIntProperty(dynamicconfig.HistoryCacheMaxSize, 512),
