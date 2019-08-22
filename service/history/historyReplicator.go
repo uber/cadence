@@ -1316,6 +1316,7 @@ func (r *historyReplicator) reapplyEventsToCurrentClosedWorkflow(
 		return &shared.BadRequestError{Message: errStr}
 
 	}
+
 	resetDecisionFinishID := lastDecisionTaskStartEventID + 1
 
 	baseContext := context
