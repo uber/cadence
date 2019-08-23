@@ -691,13 +691,23 @@ service HistoryService {
       3: shared.AccessDeniedError accessDeniedError,
     )
 
-    /**
-    * CloseShardTask returns information status of adding skip transfer task
-    **/
-    shared.CloseShardResponse CloseShardTask(1: shared.CloseShardRequest request)
-      throws (
-        1: shared.BadRequestError badRequestError,
-        2: shared.InternalServiceError internalServiceError,
-        3: shared.AccessDeniedError accessDeniedError,
-      )
+ /**
+ * CloseShardTask returns information status of adding skip transfer task
+ **/
+ shared.CloseShardResponse CloseShardTask(1: shared.CloseShardRequest request)
+    throws (
+    1: shared.BadRequestError badRequestError,
+    2: shared.InternalServiceError internalServiceError,
+    3: shared.AccessDeniedError accessDeniedError,
+    )
+
+  /**
+  * RemoveTask returns information status of adding skip transfer task
+  **/
+  shared.RemoveTaskReponse RemoveTask(1: shared.RemoveTaskRequest request)
+     throws (
+     1: shared.BadRequestError badRequestError,
+     2: shared.InternalServiceError internalServiceError,
+     3: shared.AccessDeniedError accessDeniedError,
+     )
 }

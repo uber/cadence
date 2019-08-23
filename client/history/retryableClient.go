@@ -22,6 +22,7 @@ package history
 
 import (
 	"context"
+	"fmt"
 
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/shared"
@@ -71,6 +72,40 @@ func (c *retryableClient) DescribeHistoryHost(
 	op := func() error {
 		var err error
 		resp, err = c.client.DescribeHistoryHost(ctx, request, opts...)
+		return err
+	}
+
+	err := backoff.Retry(op, c.policy, c.isRetryable)
+	return resp, err
+}
+
+func (c *retryableClient) CloseShardTask(
+	ctx context.Context,
+	request *shared.CloseShardRequest,
+	opts ...yarpc.CallOption) (*shared.CloseShardResponse, error) {
+	fmt.Println("========================= retryableClient:CloseShardTask =================================")
+
+	var resp *shared.CloseShardResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.CloseShardTask(ctx, request, opts...)
+		return err
+	}
+
+	err := backoff.Retry(op, c.policy, c.isRetryable)
+	return resp, err
+}
+
+func (c *retryableClient) RemoveTask(
+	ctx context.Context,
+	request *shared.RemoveTaskRequest,
+	opts ...yarpc.CallOption) (*shared.RemoveTaskReponse, error) {
+	fmt.Println("========================= retryableClient:RemoveTask =================================")
+
+	var resp *shared.RemoveTaskReponse
+	op := func() error {
+		var err error
+		resp, err = c.client.RemoveTask(ctx, request, opts...)
 		return err
 	}
 

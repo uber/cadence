@@ -22,7 +22,6 @@ package mocks
 
 import (
 	"context"
-
 	"github.com/stretchr/testify/mock"
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
@@ -80,6 +79,53 @@ func (_m *AdminClient) DescribeHistoryHost(ctx context.Context, request *shared.
 
 	return r0, r1
 }
+
+// RemoveTask provides a mock function with given fields: ctx, request
+func (_m *AdminClient) RemoveTask(ctx context.Context, request *shared.RemoveTaskRequest, opts ...yarpc.CallOption) (*shared.RemoveTaskReponse, error) {
+	ret := _m.Called(ctx, request)
+
+	var r0 *shared.RemoveTaskReponse
+	if rf, ok := ret.Get(0).(func(context.Context,  *shared.RemoveTaskRequest) *shared.RemoveTaskReponse); ok {
+		r0 = rf(ctx, request)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*shared.RemoveTaskReponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context,  *shared.RemoveTaskRequest) error); ok {
+		r1 = rf(ctx, request)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CloseShardTask provides a mock function with given fields: ctx, request
+func (_m *AdminClient) CloseShardTask(ctx context.Context, request *shared.CloseShardRequest, opts ...yarpc.CallOption) (*shared.CloseShardResponse, error) {
+	ret := _m.Called(ctx, request)
+
+	var r0 *shared.CloseShardResponse
+	if rf, ok := ret.Get(0).(func(context.Context,   *shared.CloseShardRequest) *shared.CloseShardResponse); ok {
+		r0 = rf(ctx, request)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*shared.CloseShardResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context,   *shared.CloseShardRequest) error); ok {
+		r1 = rf(ctx, request)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 
 // DescribeWorkflowExecution provides a mock function with given fields: ctx, request
 func (_m *AdminClient) DescribeWorkflowExecution(ctx context.Context, request *admin.DescribeWorkflowExecutionRequest, opts ...yarpc.CallOption) (*admin.DescribeWorkflowExecutionResponse, error) {

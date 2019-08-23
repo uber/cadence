@@ -65,6 +65,39 @@ func (m *MockClient) EXPECT() *_MockClientRecorder {
 	return m.recorder
 }
 
+// CloseShardTask responds to a CloseShardTask call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().CloseShardTask(gomock.Any(), ...).Return(...)
+// 	... := client.CloseShardTask(...)
+func (m *MockClient) CloseShardTask(
+	ctx context.Context,
+	_Request *shared.CloseShardRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.CloseShardResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "CloseShardTask", args...)
+	success, _ = ret[i].(*shared.CloseShardResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) CloseShardTask(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "CloseShardTask", args...)
+}
+
 // DescribeHistoryHost responds to a DescribeHistoryHost call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
@@ -356,6 +389,39 @@ func (mr *_MockClientRecorder) RemoveSignalMutableState(
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _RemoveRequest}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "RemoveSignalMutableState", args...)
+}
+
+// RemoveTask responds to a RemoveTask call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().RemoveTask(gomock.Any(), ...).Return(...)
+// 	... := client.RemoveTask(...)
+func (m *MockClient) RemoveTask(
+	ctx context.Context,
+	_Request *shared.RemoveTaskRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.RemoveTaskReponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "RemoveTask", args...)
+	success, _ = ret[i].(*shared.RemoveTaskReponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) RemoveTask(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "RemoveTask", args...)
 }
 
 // ReplicateEvents responds to a ReplicateEvents call based on the mock expectations. This

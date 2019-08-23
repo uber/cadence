@@ -362,6 +362,76 @@ func AdminGetShardID(c *cli.Context) {
 	fmt.Printf("ShardID for workflowID: %v is %v \n", wid, shardID)
 }
 
+// AdminRemoveTask describes history host
+func AdminRemoveTask(c *cli.Context) {
+	adminClient := cFactory.ServerAdminClient(c)
+
+	sid := c.Int(FlagShardID)
+	taskID := c.Int64(FlagRemoveTaskID)
+	typeID := c.Int(FlagRemoveTypeID)
+	fmt.Println("adminRemoveTask", sid, taskID, typeID)
+	if !c.IsSet(FlagShardID) {
+		ErrorAndExit("shard_id is needed", nil)
+		return
+	}
+	if !c.IsSet(FlagRemoveTaskID) {
+		ErrorAndExit("task_id is needed", nil)
+		return
+	}
+	if !c.IsSet(FlagRemoveTypeID) {
+		ErrorAndExit("type_id id is needed", nil)
+		return
+	}
+
+	ctx, cancel := newContext(c)
+	defer cancel()
+
+	req := &shared.RemoveTaskRequest{}
+
+	if c.IsSet(FlagShardID) {
+		req.ShardID = common.Int32Ptr(int32(sid))
+	}
+	if c.IsSet(FlagRemoveTaskID) {
+		req.TaskID = common.Int64Ptr(int64(taskID))
+	}
+	if c.IsSet(FlagRemoveTypeID) {
+		req.Type = common.Int32Ptr(int32(typeID))
+	}
+
+	resp, err := adminClient.RemoveTask(ctx, req)
+	if err != nil {
+		ErrorAndExit("Remove task has failed", err)
+	}
+	prettyPrintJSONObject(resp)
+}
+
+// AdminShardManagement describes history host
+func AdminShardManagement(c *cli.Context) {
+	adminClient := cFactory.ServerAdminClient(c)
+
+	sid := c.Int(FlagShardID)
+
+	if !c.IsSet(FlagShardID) {
+		ErrorAndExit("shard id is needed", nil)
+		return
+	}
+
+	ctx, cancel := newContext(c)
+	defer cancel()
+
+	req := &shared.CloseShardRequest{}
+
+	if c.IsSet(FlagShardID) {
+		req.ShardID = common.Int32Ptr(int32(sid))
+	}
+
+	resp, err := adminClient.CloseShardTask(ctx, req)
+	if err != nil {
+		ErrorAndExit("Close shard task has failed", err)
+	}
+	prettyPrintJSONObject(resp)
+}
+
 // AdminDescribeHistoryHost describes history host
 func AdminDescribeHistoryHost(c *cli.Context) {
 	adminClient := cFactory.ServerAdminClient(c)

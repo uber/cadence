@@ -442,6 +442,19 @@ func (p *workflowExecutionPersistenceClient) RangeCompleteTimerTask(request *Ran
 	return err
 }
 
+func (p *workflowExecutionPersistenceClient) DeleteTaskExecution(request *DeleteTaskExecutionRequest) error {
+	p.metricClient.IncCounter(metrics.PersistenceDeleteTaskScope, metrics.PersistenceRequests)
+	sw := p.metricClient.StartTimer(metrics.PersistenceDeleteTaskScope, metrics.PersistenceLatency)
+	err := p.persistence.DeleteTaskExecution(request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceRangeCompleteTimerTaskScope, err)
+	}
+
+	return err
+}
+
 func (p *workflowExecutionPersistenceClient) updateErrorMetric(scope int, err error) {
 	switch err.(type) {
 	case *WorkflowExecutionAlreadyStartedError:

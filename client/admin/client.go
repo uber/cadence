@@ -22,6 +22,7 @@ package admin
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -85,6 +86,40 @@ func (c *clientImpl) DescribeHistoryHost(
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return client.DescribeHistoryHost(ctx, request, opts...)
+}
+
+func (c *clientImpl) RemoveTask(
+	ctx context.Context,
+	request *shared.RemoveTaskRequest,
+	opts ...yarpc.CallOption,
+) (*shared.RemoveTaskReponse, error) {
+
+	fmt.Println("================ admin CloseShardTask got called =================")
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return client.RemoveTask(ctx, request, opts...)
+}
+
+func (c *clientImpl) CloseShardTask(
+	ctx context.Context,
+	request *shared.CloseShardRequest,
+	opts ...yarpc.CallOption,
+) (*shared.CloseShardResponse, error) {
+
+	fmt.Println("================ admin CloseShardTask got called =================")
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return client.CloseShardTask(ctx, request, opts...)
 }
 
 func (c *clientImpl) DescribeWorkflowExecution(

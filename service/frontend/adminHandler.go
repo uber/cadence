@@ -210,6 +210,28 @@ func (adh *AdminHandler) DescribeWorkflowExecution(ctx context.Context, request 
 	}, err
 }
 
+// RemoveTask returns information about the internal states of a history host
+func (adh *AdminHandler) RemoveTask(ctx context.Context, request *gen.RemoveTaskRequest) (resp *gen.RemoveTaskReponse, retError error) {
+	defer log.CapturePanic(adh.GetLogger(), &retError)
+	scope := metrics.AdminRemoveTaskScope
+	if request == nil || (request.ShardID == nil && request.Type == nil && request.TaskID == nil) {
+		return nil, adh.error(errRequestNotSet, scope)
+	}
+	resp, err := adh.history.RemoveTask(ctx, request)
+	return resp, err
+}
+
+// CloseShardTask returns information about the internal states of a history host
+func (adh *AdminHandler) CloseShardTask(ctx context.Context, request *gen.CloseShardRequest) (resp *gen.CloseShardResponse, retError error) {
+	defer log.CapturePanic(adh.GetLogger(), &retError)
+	scope := metrics.AdminCloseShardTaskScope
+	if request == nil || (request.ShardID == nil) {
+		return nil, adh.error(errRequestNotSet, scope)
+	}
+	resp, err := adh.history.CloseShardTask(ctx, request)
+	return resp, err
+}
+
 // DescribeHistoryHost returns information about the internal states of a history host
 func (adh *AdminHandler) DescribeHistoryHost(ctx context.Context, request *gen.DescribeHistoryHostRequest) (resp *gen.DescribeHistoryHostResponse, retError error) {
 	defer log.CapturePanic(adh.GetLogger(), &retError)

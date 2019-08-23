@@ -649,6 +649,44 @@ func (h *Handler) DescribeHistoryHost(ctx context.Context,
 	return resp, nil
 }
 
+// RemoveTask returns information about the internal states of a history host
+func (h *Handler) RemoveTask(ctx context.Context,
+	request *gen.RemoveTaskRequest) (resp *gen.RemoveTaskReponse, retError error) {
+	executionMgr, err := h.executionMgrFactory.NewExecutionManager(int(*request.ShardID))
+	if err != nil {
+		return nil, err
+	}
+	deleteTaskRequest := &persistence.DeleteTaskExecutionRequest{
+		TaskID:  int64(*request.TaskID),
+		Type:    int(*request.Type),
+		ShardID: int(*request.ShardID),
+	}
+	status := "closed OK"
+	err = executionMgr.DeleteTaskExecution(deleteTaskRequest)
+	if err != nil {
+		status = fmt.Sprintf("error while removing task: %v", err)
+	}
+	resp = &gen.RemoveTaskReponse{
+		Status: &status,
+	}
+	return resp, err
+}
+
+// CloseShardTask returns information about the internal states of a history host
+func (h *Handler) CloseShardTask(ctx context.Context,
+	request *gen.CloseShardRequest) (resp *gen.CloseShardResponse, retError error) {
+	err := h.controller.removeEngineForShard(int(*request.ShardID))
+	status := "Engine removed OK"
+	if err != nil {
+		status = fmt.Sprintf("Issue occurred while try to close shard: %v", err)
+	}
+
+	resp = &gen.CloseShardResponse{
+		Status: &status,
+	}
+	return resp, err
+}
+
 // DescribeMutableState - returns the internal analysis of workflow execution state
 func (h *Handler) DescribeMutableState(ctx context.Context,
 	request *hist.DescribeMutableStateRequest) (resp *hist.DescribeMutableStateResponse, retError error) {

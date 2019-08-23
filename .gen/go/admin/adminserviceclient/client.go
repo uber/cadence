@@ -44,6 +44,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) error
 
+	CloseShardTask(
+		ctx context.Context,
+		Request *shared.CloseShardRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.CloseShardResponse, error)
+
 	DescribeHistoryHost(
 		ctx context.Context,
 		Request *shared.DescribeHistoryHostRequest,
@@ -61,6 +67,12 @@ type Interface interface {
 		GetRequest *admin.GetWorkflowExecutionRawHistoryRequest,
 		opts ...yarpc.CallOption,
 	) (*admin.GetWorkflowExecutionRawHistoryResponse, error)
+
+	RemoveTask(
+		ctx context.Context,
+		Request *shared.RemoveTaskRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.RemoveTaskReponse, error)
 }
 
 // New builds a new client for the AdminService service.
@@ -107,6 +119,29 @@ func (c client) AddSearchAttribute(
 	}
 
 	err = admin.AdminService_AddSearchAttribute_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) CloseShardTask(
+	ctx context.Context,
+	_Request *shared.CloseShardRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.CloseShardResponse, err error) {
+
+	args := admin.AdminService_CloseShardTask_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_CloseShardTask_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = admin.AdminService_CloseShardTask_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -176,5 +211,28 @@ func (c client) GetWorkflowExecutionRawHistory(
 	}
 
 	success, err = admin.AdminService_GetWorkflowExecutionRawHistory_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) RemoveTask(
+	ctx context.Context,
+	_Request *shared.RemoveTaskRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.RemoveTaskReponse, err error) {
+
+	args := admin.AdminService_RemoveTask_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_RemoveTask_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = admin.AdminService_RemoveTask_Helper.UnwrapResponse(&result)
 	return
 }

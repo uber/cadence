@@ -830,6 +830,14 @@ type (
 		RunID      string
 	}
 
+	// DeleteTaskExecutionRequest is used to detele a task that corrupted and need to be removed
+	// 	e.g. corrupted history event batch, eventID is not continouous
+	DeleteTaskExecutionRequest struct {
+		TaskID  int64
+		Type    int
+		ShardID int
+	}
+
 	// DeleteCurrentWorkflowExecutionRequest is used to delete the current workflow execution
 	DeleteCurrentWorkflowExecutionRequest struct {
 		DomainID   string
@@ -1399,6 +1407,9 @@ type (
 		GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)
 		CompleteTimerTask(request *CompleteTimerTaskRequest) error
 		RangeCompleteTimerTask(request *RangeCompleteTimerTaskRequest) error
+
+		// Remove Task due to corrupted data
+		DeleteTaskExecution(request *DeleteTaskExecutionRequest) error
 	}
 
 	// ExecutionManagerFactory creates an instance of ExecutionManager for a given shard

@@ -36,6 +36,11 @@ import (
 
 // Interface is the server-side interface for the HistoryService service.
 type Interface interface {
+	CloseShardTask(
+		ctx context.Context,
+		Request *shared.CloseShardRequest,
+	) (*shared.CloseShardResponse, error)
+
 	DescribeHistoryHost(
 		ctx context.Context,
 		Request *shared.DescribeHistoryHostRequest,
@@ -80,6 +85,11 @@ type Interface interface {
 		ctx context.Context,
 		RemoveRequest *history.RemoveSignalMutableStateRequest,
 	) error
+
+	RemoveTask(
+		ctx context.Context,
+		Request *shared.RemoveTaskRequest,
+	) (*shared.RemoveTaskReponse, error)
 
 	ReplicateEvents(
 		ctx context.Context,
@@ -179,6 +189,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		Methods: []thrift.Method{
 
 			thrift.Method{
+				Name: "CloseShardTask",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.CloseShardTask),
+				},
+				Signature:    "CloseShardTask(Request *shared.CloseShardRequest) (*shared.CloseShardResponse)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "DescribeHistoryHost",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -274,6 +295,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.RemoveSignalMutableState),
 				},
 				Signature:    "RemoveSignalMutableState(RemoveRequest *history.RemoveSignalMutableStateRequest)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "RemoveTask",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.RemoveTask),
+				},
+				Signature:    "RemoveTask(Request *shared.RemoveTaskRequest) (*shared.RemoveTaskReponse)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -466,12 +498,31 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 26)
+	procedures := make([]transport.Procedure, 0, 28)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
 
 type handler struct{ impl Interface }
+
+func (h handler) CloseShardTask(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_CloseShardTask_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.CloseShardTask(ctx, args.Request)
+
+	hadError := err != nil
+	result, err := history.HistoryService_CloseShardTask_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
 
 func (h handler) DescribeHistoryHost(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_DescribeHistoryHost_Args
@@ -635,6 +686,25 @@ func (h handler) RemoveSignalMutableState(ctx context.Context, body wire.Value) 
 
 	hadError := err != nil
 	result, err := history.HistoryService_RemoveSignalMutableState_Helper.WrapResponse(err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) RemoveTask(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_RemoveTask_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.RemoveTask(ctx, args.Request)
+
+	hadError := err != nil
+	result, err := history.HistoryService_RemoveTask_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {

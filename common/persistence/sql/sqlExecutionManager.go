@@ -633,6 +633,11 @@ func (m *sqlExecutionManager) resetMutableStateTx(
 	return applyWorkflowSnapshotTxAsReset(tx, shardID, &resetWorkflow)
 }
 
+func (m *sqlExecutionManager) DeleteTaskExecution(request *p.DeleteTaskExecutionRequest) error {
+	//TODO: This needs implement when we use sql for tasks.
+	return nil
+}
+
 func (m *sqlExecutionManager) DeleteWorkflowExecution(
 	request *p.DeleteWorkflowExecutionRequest,
 ) error {

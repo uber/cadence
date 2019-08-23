@@ -22,6 +22,7 @@ package history
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	h "github.com/uber/cadence/.gen/go/history"
@@ -139,6 +140,60 @@ func (c *clientImpl) DescribeHistoryHost(
 		response, err = client.DescribeHistoryHost(ctx, request, opts...)
 		return err
 	}
+	err = c.executeWithRedirect(ctx, client, op)
+	if err != nil {
+		return nil, err
+	}
+	return response, nil
+}
+
+func (c *clientImpl) RemoveTask(
+	ctx context.Context,
+	request *workflow.RemoveTaskRequest,
+	opts ...yarpc.CallOption) (*workflow.RemoveTaskReponse, error) {
+	fmt.Println("========================= clientImpl:RemoveTask =================================")
+	var err error
+	var client historyserviceclient.Interface
+	if request.ShardID != nil {
+		client, err = c.getClientForShardID(int(request.GetShardID()))
+	}
+	var response *workflow.RemoveTaskReponse
+	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+		var err error
+		ctx, cancel := c.createContext(ctx)
+		defer cancel()
+		response, err = client.RemoveTask(ctx, request, opts...)
+		return err
+	}
+
+	err = c.executeWithRedirect(ctx, client, op)
+	if err != nil {
+		return nil, err
+	}
+	return response, nil
+}
+
+func (c *clientImpl) CloseShardTask(
+	ctx context.Context,
+	request *workflow.CloseShardRequest,
+	opts ...yarpc.CallOption) (*workflow.CloseShardResponse, error) {
+	fmt.Println("========================= clientImpl:CloseShardTask =================================")
+
+	var err error
+	var client historyserviceclient.Interface
+	if request.ShardID != nil {
+		client, err = c.getClientForShardID(int(request.GetShardID()))
+	}
+	var response *workflow.CloseShardResponse
+
+	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+		var err error
+		ctx, cancel := c.createContext(ctx)
+		defer cancel()
+		response, err = client.CloseShardTask(ctx, request, opts...)
+		return err
+	}
+
 	err = c.executeWithRedirect(ctx, client, op)
 	if err != nil {
 		return nil, err

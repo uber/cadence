@@ -670,6 +670,12 @@ func (m *executionManagerImpl) SerializeWorkflowSnapshot(
 	}, nil
 }
 
+func (m *executionManagerImpl) DeleteTaskExecution(
+	request *DeleteTaskExecutionRequest,
+) error {
+	return m.persistence.DeleteTaskExecution(request)
+}
+
 func (m *executionManagerImpl) DeleteWorkflowExecution(
 	request *DeleteWorkflowExecutionRequest,
 ) error {

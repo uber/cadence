@@ -22,6 +22,7 @@ package admin
 
 import (
 	"context"
+	"fmt"
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/metrics"
@@ -75,6 +76,44 @@ func (c *metricClient) DescribeHistoryHost(
 
 	if err != nil {
 		c.metricsClient.IncCounter(metrics.AdminClientDescribeHistoryHostScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
+}
+
+func (c *metricClient) RemoveTask(
+	ctx context.Context,
+	request *shared.RemoveTaskRequest,
+	opts ...yarpc.CallOption,
+) (*shared.RemoveTaskReponse, error) {
+
+	fmt.Println("========================= metricClient:RemoveTask =================================")
+	c.metricsClient.IncCounter(metrics.AdminClientCloseShardScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.AdminClientCloseShardScope, metrics.CadenceClientLatency)
+	resp, err := c.client.RemoveTask(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.AdminClientCloseShardScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
+}
+
+func (c *metricClient) CloseShardTask(
+	ctx context.Context,
+	request *shared.CloseShardRequest,
+	opts ...yarpc.CallOption,
+) (*shared.CloseShardResponse, error) {
+
+	fmt.Println("========================= metricClient:CloseShardTask =================================")
+	c.metricsClient.IncCounter(metrics.AdminClientCloseShardScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.AdminClientCloseShardScope, metrics.CadenceClientLatency)
+	resp, err := c.client.CloseShardTask(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.AdminClientCloseShardScope, metrics.CadenceClientFailures)
 	}
 	return resp, err
 }

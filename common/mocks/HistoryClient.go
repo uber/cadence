@@ -22,6 +22,7 @@ package mocks
 
 import (
 	"context"
+	"fmt"
 
 	"go.uber.org/yarpc"
 
@@ -37,6 +38,55 @@ type HistoryClient struct {
 }
 
 var _ historyserviceclient.Interface = (*HistoryClient)(nil)
+
+
+// RemoveTask provides a mock function with given fields: ctx, request
+func (_m *HistoryClient) RemoveTask(ctx context.Context, request *shared.RemoveTaskRequest, opts ...yarpc.CallOption) (*shared.RemoveTaskReponse, error) {
+	fmt.Println("========================= HistoryClient:RemoveTask =================================")
+	ret := _m.Called(ctx, request)
+
+	var r0 *shared.RemoveTaskReponse
+	if rf, ok := ret.Get(0).(func(context.Context, *shared.RemoveTaskRequest) *shared.RemoveTaskReponse); ok {
+		r0 = rf(ctx, request)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*shared.RemoveTaskReponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *shared.RemoveTaskRequest) error); ok {
+		r1 = rf(ctx, request)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CloseShardTask provides a mock function with given fields: ctx, request
+func (_m *HistoryClient) CloseShardTask(ctx context.Context, request *shared.CloseShardRequest, opts ...yarpc.CallOption) (*shared.CloseShardResponse, error) {
+	fmt.Println("========================= HistoryClient:CloseShardTask =================================")
+	ret := _m.Called(ctx, request)
+
+	var r0 *shared.CloseShardResponse
+	if rf, ok := ret.Get(0).(func(context.Context, *shared.CloseShardRequest) *shared.CloseShardResponse); ok {
+		r0 = rf(ctx, request)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*shared.CloseShardResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *shared.CloseShardRequest) error); ok {
+		r1 = rf(ctx, request)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
 
 // DescribeHistoryHost provides a mock function with given fields: ctx, getRequest
 func (_m *HistoryClient) DescribeHistoryHost(ctx context.Context, request *shared.DescribeHistoryHostRequest, opts ...yarpc.CallOption) (*shared.DescribeHistoryHostResponse, error) {

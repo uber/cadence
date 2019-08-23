@@ -38,6 +38,12 @@ import (
 
 // Interface is a client for the HistoryService service.
 type Interface interface {
+	CloseShardTask(
+		ctx context.Context,
+		Request *shared.CloseShardRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.CloseShardResponse, error)
+
 	DescribeHistoryHost(
 		ctx context.Context,
 		Request *shared.DescribeHistoryHostRequest,
@@ -91,6 +97,12 @@ type Interface interface {
 		RemoveRequest *history.RemoveSignalMutableStateRequest,
 		opts ...yarpc.CallOption,
 	) error
+
+	RemoveTask(
+		ctx context.Context,
+		Request *shared.RemoveTaskRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.RemoveTaskReponse, error)
 
 	ReplicateEvents(
 		ctx context.Context,
@@ -217,6 +229,29 @@ func init() {
 
 type client struct {
 	c thrift.Client
+}
+
+func (c client) CloseShardTask(
+	ctx context.Context,
+	_Request *shared.CloseShardRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.CloseShardResponse, err error) {
+
+	args := history.HistoryService_CloseShardTask_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_CloseShardTask_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = history.HistoryService_CloseShardTask_Helper.UnwrapResponse(&result)
+	return
 }
 
 func (c client) DescribeHistoryHost(
@@ -423,6 +458,29 @@ func (c client) RemoveSignalMutableState(
 	}
 
 	err = history.HistoryService_RemoveSignalMutableState_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) RemoveTask(
+	ctx context.Context,
+	_Request *shared.RemoveTaskRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.RemoveTaskReponse, err error) {
+
+	args := history.HistoryService_RemoveTask_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_RemoveTask_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = history.HistoryService_RemoveTask_Helper.UnwrapResponse(&result)
 	return
 }
 
