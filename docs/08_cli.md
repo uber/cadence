@@ -159,6 +159,8 @@ Use **--query** to list workflows with SQL like query:
 ./cadence workflow list --query "WorkflowType='main.SampleParentWorkflow' AND CloseTime = missing "
 ```
 
+This will return all open workflows with workflowType as "main.SampleParentWorkflow".
+
 #### Query workflow execution
 ```
 # use custom query type
