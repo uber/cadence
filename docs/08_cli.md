@@ -188,6 +188,7 @@ Canceling a running workflow execution will record a WorkflowExecutionCancelRequ
 
 #### Signal, cancel, terminate workflows as a batch job
 Batch job is based on List Workflow Query(**--query**). It supports signal, cancel and terminate as batch job type.
+For terminating workflows as batch job, it will terminting the children recursively.
 
 Start a batch job(using signal as batch type):
 ```
