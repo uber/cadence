@@ -153,6 +153,14 @@ cadence wf start -tl helloWorldGroup -wt main.Workflow -et 60 -i '"cadence"' -me
 ./cadence workflow list -m
 ```
 
+Use **--query** to list workflows with SQL like query:
+
+```
+./cadence workflow list --query "WorkflowType='main.SampleParentWorkflow' AND CloseTime = missing "
+```
+
+This will return all open workflows with workflowType as "main.SampleParentWorkflow".
+
 #### Query workflow execution
 ```
 # use custom query type
@@ -177,6 +185,36 @@ cadence wf start -tl helloWorldGroup -wt main.Workflow -et 60 -i '"cadence"' -me
 ```
 Terminating a running workflow execution will record a WorkflowExecutionTerminated event as the closing event in the history. No more decision tasks will be scheduled for a terminated workflow execution.
 Canceling a running workflow execution will record a WorkflowExecutionCancelRequested event in the history, and a new decision task will be scheduled. The workflow has a chance to do some clean up work after cancellation.
+
+#### Signal, cancel, terminate workflows as a batch job
+Batch job is based on List Workflow Query(**--query**). It supports signal, cancel and terminate as batch job type.
+For terminating workflows as batch job, it will terminte the children recursively.
+
+Start a batch job(using signal as batch type):
+```
+cadence --do samples-domain wf batch start --query "WorkflowType='main.SampleParentWorkflow' AND CloseTime=missing" --reason "test" --bt signal --sig testname
+This batch job will be operating on 5 workflows.
+Please confirm[Yes/No]:yes
+{
+  "jobID": "<batch-job-id>",
+  "msg": "batch job is started"
+}
+
+```
+You need to remember the JobID or use List command to get all your batch jobs:
+```
+cadence --do samples-domain wf batch list
+```
+
+Describe the progress of a batch job:
+```
+cadence --do samples-domain wf batch desc -jid <batch-job-id>
+```
+Terminate a batch job:
+```
+cadence --do samples-domain wf batch terminate -jid <batch-job-id>
+```
+Note that the operation performed by a batch will not be rolled back by terminating the batch. However, you can use reset to rollback your workflows.
 
 #### Restart, reset workflow
 The Reset command allows resetting a workflow to a particular point and continue running from there.
