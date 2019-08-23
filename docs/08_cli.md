@@ -188,7 +188,7 @@ Canceling a running workflow execution will record a WorkflowExecutionCancelRequ
 
 #### Signal, cancel, terminate workflows as a batch job
 Batch job is based on List Workflow Query(**--query**). It supports signal, cancel and terminate as batch job type.
-For terminating workflows as batch job, it will terminting the children recursively.
+For terminating workflows as batch job, it will terminte the children recursively.
 
 Start a batch job(using signal as batch type):
 ```
@@ -214,7 +214,7 @@ Terminate a batch job:
 ```
 cadence --do samples-domain wf batch terminate -jid <batch-job-id>
 ```
-Note that the performed operation by a batch will not be rolled back by terminating the batch. However, you can use reset to rollback your workflows.
+Note that the operation performed by a batch will not be rolled back by terminating the batch. However, you can use reset to rollback your workflows.
 
 #### Restart, reset workflow
 The Reset command allows resetting a workflow to a particular point and continue running from there.
