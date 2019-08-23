@@ -35,9 +35,9 @@ import (
 )
 
 const (
-	fetchTaskRequestTimeout                   = 60 * time.Second
+	fetchTaskRequestTimeout                   = 10 * time.Second
 	pollTimerJitterCoefficient                = 0.2
-	pollIntervalSecs                          = 5
+	pollIntervalSecs                          = 1
 	taskProcessorErrorRetryWait               = time.Second
 	taskProcessorErrorRetryBackoffCoefficient = 1
 	taskProcessorErrorRetryMaxAttampts        = 5
