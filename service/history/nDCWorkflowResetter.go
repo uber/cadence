@@ -26,6 +26,7 @@ import (
 	ctx "context"
 
 	"github.com/pborman/uuid"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
@@ -65,7 +66,6 @@ var _ nDCWorkflowResetter = (*nDCWorkflowResetterImpl)(nil)
 func newNDCWorkflowResetter(
 	shard ShardContext,
 	transactionMgr nDCTransactionMgr,
-
 	domainID string,
 	workflowID string,
 	baseRunID string,

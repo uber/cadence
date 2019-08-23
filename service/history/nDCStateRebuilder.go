@@ -64,7 +64,6 @@ var _ nDCStateRebuilder = (*nDCStateRebuilderImpl)(nil)
 
 func newNDCStateRebuilder(
 	shard ShardContext,
-
 	logger log.Logger,
 ) *nDCStateRebuilderImpl {
 

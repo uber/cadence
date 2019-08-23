@@ -58,7 +58,6 @@ var _ nDCBranchMgr = (*nDCBranchMgrImpl)(nil)
 
 func newNDCBranchMgr(
 	shard ShardContext,
-
 	context workflowExecutionContext,
 	mutableState mutableState,
 	logger log.Logger,

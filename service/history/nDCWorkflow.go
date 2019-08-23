@@ -59,7 +59,6 @@ func newNDCWorkflow(
 	ctx ctx.Context,
 	domainCache cache.DomainCache,
 	clusterMetadata cluster.Metadata,
-
 	context workflowExecutionContext,
 	mutableState mutableState,
 	releaseFn releaseWorkflowExecutionFunc,

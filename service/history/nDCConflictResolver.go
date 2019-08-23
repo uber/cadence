@@ -55,7 +55,6 @@ var _ nDCConflictResolver = (*nDCConflictResolverImpl)(nil)
 
 func newNDCConflictResolver(
 	shard ShardContext,
-
 	context workflowExecutionContext,
 	mutableState mutableState,
 	logger log.Logger,
