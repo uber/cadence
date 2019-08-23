@@ -1980,6 +1980,7 @@ func (e *historyEngineImpl) deleteEvents(
 		// This is the only code path that deleting history could cause history corruption(missing first batch).
 		// We will use this warn log to verify this issue: https://github.com/uber/cadence/issues/2441
 		e.logger.Warn("encounter WorkflowExecutionAlreadyStartedError, deleting duplicated history",
+			tag.ShardID(e.shard.GetShardID()),
 			tag.WorkflowDomainID(domainID),
 			tag.WorkflowID(execution.GetWorkflowId()),
 			tag.WorkflowRunID(execution.GetRunId()),
