@@ -46,10 +46,6 @@ type (
 		retryPolicy backoff.RetryPolicy
 		cassandraStore
 	}
-
-	messageIDConflictError struct {
-		messageID int
-	}
 )
 
 func newQueue(
@@ -119,7 +115,7 @@ func (q *cassandraQueue) tryEnqueue(messageID int, messagePayload []byte) error 
 	}
 
 	if !applied {
-		return &messageIDConflictError{messageID: previous["message_id"].(int)}
+		return &persistence.ConditionFailedError{Msg: fmt.Sprintf("message ID %v exists in queue", previous["message_id"])}
 	}
 
 	return nil
@@ -188,11 +184,7 @@ func (q *cassandraQueue) Close() error {
 	return nil
 }
 
-func (e *messageIDConflictError) Error() string {
-	return fmt.Sprintf("message ID %v exists in queue", e.messageID)
-}
-
 func isMessageIDConflictError(err error) bool {
-	_, ok := err.(*messageIDConflictError)
+	_, ok := err.(*persistence.ConditionFailedError)
 	return ok
 }

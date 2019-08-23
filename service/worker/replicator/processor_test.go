@@ -53,7 +53,7 @@ type (
 		config         *Config
 		logger         log.Logger
 		metricsClient  metrics.Client
-		msgEncoder     codec.ThriftEncoder
+		msgEncoder     codec.BinaryEncoder
 
 		mockMsg                     *messageMocks.Message
 		mockDomainReplicator        *MockDomainReplicator

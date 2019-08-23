@@ -22,13 +22,14 @@ package persistencetests
 
 import (
 	"fmt"
+	"os"
+	"sync"
+	"testing"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/common"
-	"os"
-	"sync"
-	"testing"
 )
 
 type (
