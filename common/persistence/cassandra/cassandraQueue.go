@@ -36,10 +36,7 @@ import (
 const (
 	templateEnqueueMessageQuery   = `INSERT INTO queue (queue_type, message_id, message_payload) VALUES(?, ?, ?) IF NOT EXISTS`
 	templateGetLastMessageIDQuery = `SELECT message_id FROM queue WHERE queue_type=? ORDER BY message_id DESC LIMIT 1`
-	templateGetMessagesQuery      = `SELECT message_id, message_payload ` +
-		`FROM queue ` +
-		`WHERE queue_type = ? ` +
-		`and message_id > ? `
+	templateGetMessagesQuery      = `SELECT message_id, message_payload FROM queue WHERE queue_type = ? and message_id > ? LIMIT ?`
 )
 
 type (

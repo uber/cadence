@@ -30,6 +30,7 @@ import (
 
 var _ DomainReplicationQueue = (*domainReplicationQueueImpl)(nil)
 
+// NewDomainReplicationQueue creates a new DomainReplicationQueue instance
 func NewDomainReplicationQueue(queue Queue) DomainReplicationQueue {
 	return &domainReplicationQueueImpl{
 		queue:   queue,
