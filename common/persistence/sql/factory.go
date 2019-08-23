@@ -132,7 +132,12 @@ func (f *Factory) NewVisibilityStore() (p.VisibilityStore, error) {
 
 // NewQueue returns a new queue backed by sql
 func (f *Factory) NewQueue(queueType int) (p.Queue, error) {
-	panic("not implemented")
+	conn, err := f.dbConn.get()
+	if err != nil {
+		return nil, err
+	}
+
+	return newQueue(conn, f.logger, queueType)
 }
 
 // Close closes the factory
