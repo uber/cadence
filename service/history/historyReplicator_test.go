@@ -883,7 +883,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 			Identity:   common.StringPtr(signalIdentity),
 		},
 	}, nil).Once()
-	msBuilderCurrent.On("HasPendingDecisionTask").Return(true)
+	msBuilderCurrent.On("HasPendingDecision").Return(true)
 
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentVersion).Return(cluster.TestCurrentClusterName)
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
@@ -975,7 +975,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 			Identity:   common.StringPtr(signalIdentity),
 		},
 	}, nil).Once()
-	msBuilderCurrent.On("HasPendingDecisionTask").Return(false)
+	msBuilderCurrent.On("HasPendingDecision").Return(false)
 	newDecision := &decisionInfo{
 		Version:    currentVersion,
 		ScheduleID: 1234,
@@ -983,22 +983,11 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 		TaskList:   currentDecisionStickyTasklist,
 		Attempt:    0,
 	}
-	msBuilderCurrent.On("AddDecisionTaskScheduledEvent").Return(newDecision, nil)
-	msBuilderCurrent.On("IsStickyTaskListEnabled").Return(true)
+	msBuilderCurrent.On("AddDecisionTaskScheduledEvent", false).Return(newDecision, nil)
 
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentVersion).Return(cluster.TestCurrentClusterName)
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 
-	msBuilderCurrent.On("AddTransferTasks", []persistence.Task{&persistence.DecisionTask{
-		DomainID:   domainID,
-		TaskList:   currentDecisionStickyTasklist,
-		ScheduleID: newDecision.ScheduleID,
-	}}).Once()
-	msBuilderCurrent.On("AddTimerTasks", []persistence.Task{newTimerBuilder(s.logger, clock.NewEventTimeSource()).AddScheduleToStartDecisionTimoutTask(
-		newDecision.ScheduleID,
-		newDecision.Attempt,
-		currentDecisionStickyTimeout,
-	)}).Once()
 	contextCurrent.On("updateWorkflowExecutionAsActive", mock.Anything).Return(nil).Once()
 
 	err := s.historyReplicator.ApplyOtherEventsMissingMutableState(ctx.Background(), domainID, workflowID, runID, req, s.logger)
@@ -1138,7 +1127,6 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 }
 
 func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_IncomingLargerThanCurrent_CurrentRunning() {
-	domainName := "some random domain name"
 	domainID := validDomainID
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
@@ -1162,23 +1150,6 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", version).Return(sourceClusterName)
 	currentClusterName := cluster.TestCurrentClusterName
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentVersion).Return(currentClusterName)
-
-	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: domainID}).Return(
-		&persistence.GetDomainResponse{
-			Info:   &persistence.DomainInfo{ID: domainID, Name: domainName},
-			Config: &persistence.DomainConfig{Retention: 1},
-			ReplicationConfig: &persistence.DomainReplicationConfig{
-				ActiveClusterName: sourceClusterName,
-				Clusters: []*persistence.ClusterReplicationConfig{
-					{ClusterName: sourceClusterName},
-					{ClusterName: currentClusterName},
-				},
-			},
-			FailoverVersion: version,
-			IsGlobalDomain:  true,
-			TableVersion:    persistence.DomainTableVersionV1,
-		}, nil,
-	).Once()
 
 	contextCurrent := &mockWorkflowExecutionContext{}
 	defer contextCurrent.AssertExpectations(s.T())
@@ -1222,8 +1193,6 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsMissingMutableState_Incomin
 
 	msBuilderCurrent.On("AddWorkflowExecutionTerminatedEvent",
 		workflowTerminationReason, mock.Anything, workflowTerminationIdentity).Return(&workflow.HistoryEvent{}, nil)
-	msBuilderCurrent.On("AddTransferTasks", mock.Anything).Once()
-	msBuilderCurrent.On("AddTimerTasks", mock.Anything).Once()
 	contextCurrent.On("updateWorkflowExecutionAsActive", mock.Anything).Return(nil).Once()
 
 	err := s.historyReplicator.ApplyOtherEventsMissingMutableState(ctx.Background(), domainID, workflowID, runID, req, s.logger)
@@ -1602,7 +1571,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLes
 			Identity:   common.StringPtr(signalIdentity),
 		},
 	}, nil).Once()
-	msBuilderCurrent.On("HasPendingDecisionTask").Return(true)
+	msBuilderCurrent.On("HasPendingDecision").Return(true)
 
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(cluster.TestCurrentClusterName)
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
@@ -1628,9 +1597,6 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLes
 	signalInput := []byte("some random signal input")
 	signalIdentity := "some random signal identity"
 
-	decisionTimeout := int32(100)
-	decisionStickyTimeout := int32(10)
-	decisionTasklist := "some random decision tasklist"
 	decisionStickyTasklist := "some random decision sticky tasklist"
 
 	context := &mockWorkflowExecutionContext{}
@@ -1695,15 +1661,8 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLes
 			Identity:   common.StringPtr(signalIdentity),
 		},
 	}, nil).Once()
-	msBuilderCurrent.On("HasPendingDecisionTask").Return(false)
-	msBuilderCurrent.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{
-		DomainID:                     domainID,
-		RunID:                        runID,
-		TaskList:                     decisionTasklist,
-		StickyTaskList:               decisionStickyTasklist,
-		DecisionTimeout:              decisionTimeout,
-		StickyScheduleToStartTimeout: decisionStickyTimeout,
-	})
+	msBuilderCurrent.On("HasPendingDecision").Return(false)
+
 	newDecision := &decisionInfo{
 		Version:    currentLastWriteVersion,
 		ScheduleID: 1234,
@@ -1711,22 +1670,11 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLes
 		TaskList:   decisionStickyTasklist,
 		Attempt:    0,
 	}
-	msBuilderCurrent.On("AddDecisionTaskScheduledEvent").Return(newDecision, nil)
-	msBuilderCurrent.On("IsStickyTaskListEnabled").Return(true)
+	msBuilderCurrent.On("AddDecisionTaskScheduledEvent", false).Return(newDecision, nil)
 
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(cluster.TestCurrentClusterName)
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 
-	msBuilderCurrent.On("AddTransferTasks", []persistence.Task{&persistence.DecisionTask{
-		DomainID:   domainID,
-		TaskList:   decisionStickyTasklist,
-		ScheduleID: newDecision.ScheduleID,
-	}}).Once()
-	msBuilderCurrent.On("AddTimerTasks", []persistence.Task{newTimerBuilder(s.logger, clock.NewEventTimeSource()).AddScheduleToStartDecisionTimoutTask(
-		newDecision.ScheduleID,
-		newDecision.Attempt,
-		decisionStickyTimeout,
-	)}).Once()
 	contextCurrent.On("updateWorkflowExecutionAsActive", mock.Anything).Return(nil).Once()
 
 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn,
@@ -1803,7 +1751,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLes
 			Identity:   common.StringPtr(signalIdentity),
 		},
 	}, nil).Once()
-	msBuilderIn.On("HasPendingDecisionTask").Return(true)
+	msBuilderIn.On("HasPendingDecision").Return(true)
 
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(cluster.TestCurrentClusterName)
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
@@ -1816,8 +1764,6 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLes
 }
 
 func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLessThanCurrent_WorkflowRunning_EventsReapplication_NoPendingDecision() {
-	domainID := uuid.New()
-	runID := uuid.New()
 	incomingVersion := int64(110)
 	currentLastWriteVersion := int64(123)
 
@@ -1825,9 +1771,6 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLes
 	signalInput := []byte("some random signal input")
 	signalIdentity := "some random signal identity"
 
-	decisionTimeout := int32(100)
-	decisionStickyTimeout := int32(10)
-	decisionTasklist := "some random decision tasklist"
 	decisionStickyTasklist := "some random decision sticky tasklist"
 
 	context := &mockWorkflowExecutionContext{}
@@ -1861,15 +1804,8 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLes
 			Identity:   common.StringPtr(signalIdentity),
 		},
 	}, nil).Once()
-	msBuilderIn.On("HasPendingDecisionTask").Return(false)
-	msBuilderIn.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{
-		DomainID:                     domainID,
-		RunID:                        runID,
-		TaskList:                     decisionTasklist,
-		StickyTaskList:               decisionStickyTasklist,
-		DecisionTimeout:              decisionTimeout,
-		StickyScheduleToStartTimeout: decisionStickyTimeout,
-	})
+	msBuilderIn.On("HasPendingDecision").Return(false)
+
 	newDecision := &decisionInfo{
 		Version:    currentLastWriteVersion,
 		ScheduleID: 1234,
@@ -1877,22 +1813,11 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingLes
 		TaskList:   decisionStickyTasklist,
 		Attempt:    0,
 	}
-	msBuilderIn.On("AddDecisionTaskScheduledEvent").Return(newDecision, nil)
-	msBuilderIn.On("IsStickyTaskListEnabled").Return(true)
+	msBuilderIn.On("AddDecisionTaskScheduledEvent", false).Return(newDecision, nil)
 
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentLastWriteVersion).Return(cluster.TestCurrentClusterName)
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 
-	msBuilderIn.On("AddTransferTasks", []persistence.Task{&persistence.DecisionTask{
-		DomainID:   domainID,
-		TaskList:   decisionStickyTasklist,
-		ScheduleID: newDecision.ScheduleID,
-	}}).Once()
-	msBuilderIn.On("AddTimerTasks", []persistence.Task{newTimerBuilder(s.logger, clock.NewEventTimeSource()).AddScheduleToStartDecisionTimoutTask(
-		newDecision.ScheduleID,
-		newDecision.Attempt,
-		decisionStickyTimeout,
-	)}).Once()
 	context.On("updateWorkflowExecutionAsActive", mock.Anything).Return(nil).Once()
 
 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn,
@@ -2335,11 +2260,11 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 		LastWriteEventID: currentLastEventID,
 	}).Once()
 	msBuilderIn.On("HasBufferedEvents").Return(true).Once()
-	msBuilderIn.On("GetInFlightDecisionTask").Return(pendingDecisionInfo, true)
+	msBuilderIn.On("GetInFlightDecision").Return(pendingDecisionInfo, true)
 	msBuilderIn.On("UpdateReplicationStateVersion", currentLastWriteVersion, true).Once()
 	msBuilderIn.On("AddDecisionTaskFailedEvent", pendingDecisionInfo.ScheduleID, pendingDecisionInfo.StartedID,
 		workflow.DecisionTaskFailedCauseFailoverCloseDecision, ([]byte)(nil), identityHistoryService, "", "", "", int64(0)).Return(&shared.HistoryEvent{}, nil).Once()
-	msBuilderIn.On("HasPendingDecisionTask").Return(false)
+	msBuilderIn.On("HasPendingDecision").Return(false)
 	currentState := persistence.WorkflowStateRunning
 	exeInfo := &persistence.WorkflowExecutionInfo{
 		StartTimestamp:               startTimeStamp,
@@ -2360,18 +2285,8 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 		TaskList:   decisionStickyTasklist,
 		Attempt:    0,
 	}
-	msBuilderIn.On("AddDecisionTaskScheduledEvent").Return(newDecision, nil)
-	msBuilderIn.On("IsStickyTaskListEnabled").Return(true)
-	msBuilderIn.On("AddTransferTasks", []persistence.Task{&persistence.DecisionTask{
-		DomainID:   domainID,
-		TaskList:   decisionStickyTasklist,
-		ScheduleID: newDecision.ScheduleID,
-	}}).Once()
-	msBuilderIn.On("AddTimerTasks", []persistence.Task{newTimerBuilder(s.logger, clock.NewEventTimeSource()).AddScheduleToStartDecisionTimoutTask(
-		newDecision.ScheduleID,
-		newDecision.Attempt,
-		decisionStickyTimeout,
-	)}).Once()
+	msBuilderIn.On("AddDecisionTaskScheduledEvent", false).Return(newDecision, nil)
+
 	context.On("updateWorkflowExecutionAsActive", mock.Anything).Return(nil).Once()
 
 	// after the flush, the pending buffered events are gone, however, the last event ID should increase
@@ -3535,7 +3450,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		},
 	}, nil).Once()
 	msBuilderCurrent.On("UpdateReplicationStateVersion", currentVersion, true).Once()
-	msBuilderCurrent.On("HasPendingDecisionTask").Return(true)
+	msBuilderCurrent.On("HasPendingDecision").Return(true)
 	contextCurrent.On("updateWorkflowExecutionAsActive", mock.Anything).Return(nil).Once()
 
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentVersion).Return(cluster.TestCurrentClusterName)
@@ -3656,9 +3571,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	currentVersion := version + 1
 	currentRunID := uuid.New()
 	currentState := persistence.WorkflowStateRunning
-	currentDecisionTimeout := int32(100)
-	currentDecisionStickyTimeout := int32(10)
-	currentDecisionTasklist := "some random decision tasklist"
 	currentDecisionStickyTasklist := "some random decision sticky tasklist"
 
 	errRet := &persistence.WorkflowExecutionAlreadyStartedError{
@@ -3712,15 +3624,8 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		},
 	}, nil).Once()
 	msBuilderCurrent.On("UpdateReplicationStateVersion", currentVersion, true).Once()
-	msBuilderCurrent.On("HasPendingDecisionTask").Return(false)
-	msBuilderCurrent.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{
-		DomainID:                     domainID,
-		RunID:                        runID,
-		TaskList:                     currentDecisionTasklist,
-		StickyTaskList:               currentDecisionStickyTasklist,
-		DecisionTimeout:              currentDecisionTimeout,
-		StickyScheduleToStartTimeout: currentDecisionStickyTimeout,
-	})
+	msBuilderCurrent.On("HasPendingDecision").Return(false)
+
 	newDecision := &decisionInfo{
 		Version:    currentVersion,
 		ScheduleID: 1234,
@@ -3728,18 +3633,8 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		TaskList:   currentDecisionStickyTasklist,
 		Attempt:    0,
 	}
-	msBuilderCurrent.On("AddDecisionTaskScheduledEvent").Return(newDecision, nil)
-	msBuilderCurrent.On("IsStickyTaskListEnabled").Return(true)
-	msBuilderCurrent.On("AddTransferTasks", []persistence.Task{&persistence.DecisionTask{
-		DomainID:   domainID,
-		TaskList:   currentDecisionStickyTasklist,
-		ScheduleID: newDecision.ScheduleID,
-	}}).Once()
-	msBuilderCurrent.On("AddTimerTasks", []persistence.Task{newTimerBuilder(s.logger, clock.NewEventTimeSource()).AddScheduleToStartDecisionTimoutTask(
-		newDecision.ScheduleID,
-		newDecision.Attempt,
-		currentDecisionStickyTimeout,
-	)}).Once()
+	msBuilderCurrent.On("AddDecisionTaskScheduledEvent", false).Return(newDecision, nil)
+
 	contextCurrent.On("updateWorkflowExecutionAsActive", mock.Anything).Return(nil).Once()
 
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentVersion).Return(cluster.TestCurrentClusterName)
@@ -4224,8 +4119,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 
 	msBuilderCurrent.On("AddWorkflowExecutionTerminatedEvent",
 		workflowTerminationReason, mock.Anything, workflowTerminationIdentity).Return(&workflow.HistoryEvent{}, nil)
-	msBuilderCurrent.On("AddTransferTasks", mock.Anything).Once()
-	msBuilderCurrent.On("AddTimerTasks", mock.Anything).Once()
 	contextCurrent.On("updateWorkflowExecutionAsActive", mock.Anything).Return(nil).Once()
 
 	err := s.historyReplicator.replicateWorkflowStarted(ctx.Background(), context, msBuilder, history, sBuilder, s.logger)
@@ -4305,8 +4198,6 @@ func (s *historyReplicatorSuite) TestConflictResolutionTerminateCurrentRunningIf
 	incomingCluster := cluster.TestAlternativeClusterName
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", incomingVersion).Return(incomingCluster)
 
-	domainVersion := int64(4081)
-	domainName := "some random domain name"
 	domainID := validDomainID
 	workflowID := "some random target workflow ID"
 	targetRunID := uuid.New()
@@ -4321,24 +4212,6 @@ func (s *historyReplicatorSuite) TestConflictResolutionTerminateCurrentRunningIf
 		State:       persistence.WorkflowStateCompleted,
 		CloseStatus: persistence.WorkflowCloseStatusContinuedAsNew,
 	})
-
-	// this mocks are for the terminate current workflow operation
-	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: domainID}).Return(
-		&persistence.GetDomainResponse{
-			Info:   &persistence.DomainInfo{ID: domainID, Name: domainName},
-			Config: &persistence.DomainConfig{Retention: 1},
-			ReplicationConfig: &persistence.DomainReplicationConfig{
-				ActiveClusterName: cluster.TestCurrentClusterName,
-				Clusters: []*persistence.ClusterReplicationConfig{
-					{ClusterName: cluster.TestCurrentClusterName},
-					{ClusterName: cluster.TestAlternativeClusterName},
-				},
-			},
-			FailoverVersion: domainVersion, // this does not matter
-			IsGlobalDomain:  true,
-			TableVersion:    persistence.DomainTableVersionV1,
-		}, nil,
-	).Once()
 
 	currentRunID := uuid.New()
 	contextCurrent := &mockWorkflowExecutionContext{}
@@ -4377,8 +4250,6 @@ func (s *historyReplicatorSuite) TestConflictResolutionTerminateCurrentRunningIf
 
 	msBuilderCurrent.On("AddWorkflowExecutionTerminatedEvent",
 		workflowTerminationReason, mock.Anything, workflowTerminationIdentity).Return(&workflow.HistoryEvent{}, nil)
-	msBuilderCurrent.On("AddTransferTasks", mock.Anything).Once()
-	msBuilderCurrent.On("AddTimerTasks", mock.Anything).Once()
 	contextCurrent.On("updateWorkflowExecutionAsActive", mock.Anything).Return(nil).Once()
 
 	prevRunID, prevLastWriteVersion, prevState, err := s.historyReplicator.conflictResolutionTerminateCurrentRunningIfNotSelf(ctx.Background(), msBuilderTarget, incomingVersion, incomingTimestamp, s.logger)

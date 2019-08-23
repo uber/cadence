@@ -184,7 +184,7 @@ func (w *workflowResetorImpl) validateResetWorkflowAfterReplay(newMutableState m
 	if retError := newMutableState.CheckResettable(); retError != nil {
 		return retError
 	}
-	if !newMutableState.HasInFlightDecisionTask() {
+	if !newMutableState.HasInFlightDecision() {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("can't find the last started decision"),
 		}
@@ -285,9 +285,9 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(
 
 	// failed the in-flight decision(started).
 	// Note that we need to ensure DecisionTaskFailed event is appended right after DecisionTaskStarted event
-	di, _ := newMutableState.GetInFlightDecisionTask()
+	decision, _ := newMutableState.GetInFlightDecision()
 
-	_, err := newMutableState.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, workflow.DecisionTaskFailedCauseResetWorkflow, nil,
+	_, err := newMutableState.AddDecisionTaskFailedEvent(decision.ScheduleID, decision.StartedID, workflow.DecisionTaskFailedCauseResetWorkflow, nil,
 		identityHistoryService, resetReason, baseRunID, newRunID, forkEventVersion)
 	if err != nil {
 		retError = &workflow.InternalServiceError{Message: "Failed to add decision failed event."}
@@ -322,17 +322,18 @@ func (w *workflowResetorImpl) buildNewMutableStateForReset(
 	}
 
 	// we always schedule a new decision after reset
-	di, err = newMutableState.AddDecisionTaskScheduledEvent()
+	decision, err = newMutableState.AddDecisionTaskScheduledEvent(false)
 	if err != nil {
 		retError = &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
 		return
 	}
 
+	// TODO workflow reset logic should use built-in task management
 	newTransferTasks = append(newTransferTasks,
 		&persistence.DecisionTask{
 			DomainID:   domainID,
-			TaskList:   di.TaskList,
-			ScheduleID: di.ScheduleID,
+			TaskList:   decision.TaskList,
+			ScheduleID: decision.ScheduleID,
 		},
 		&persistence.RecordWorkflowStartedTask{},
 	)
@@ -588,6 +589,7 @@ func (w *workflowResetorImpl) replayHistoryEvents(
 		if retError != nil {
 			return
 		}
+
 		for _, batch := range readResp.History {
 			history := batch.Events
 			firstEvent := history[0]
@@ -896,9 +898,9 @@ func (w *workflowResetorImpl) replicateResetEvent(
 	newMsBuilder.ClearStickyness()
 
 	// always enforce the attempt to zero so that we can always schedule a new decision(skip trasientDecision logic)
-	di, _ := newMsBuilder.GetInFlightDecisionTask()
-	di.Attempt = 0
-	newMsBuilder.UpdateDecision(di)
+	decision, _ := newMsBuilder.GetInFlightDecision()
+	decision.Attempt = 0
+	newMsBuilder.UpdateDecision(decision)
 
 	lastEvent = newRunHistory[len(newRunHistory)-1]
 	// replay new history (including decisionTaskScheduled)
@@ -920,11 +922,11 @@ func (w *workflowResetorImpl) replicateResetEvent(
 
 	// schedule new decision
 	decisionScheduledID := newMsBuilder.GetExecutionInfo().DecisionScheduleID
-	di, _ = newMsBuilder.GetPendingDecision(decisionScheduledID)
+	decision, _ = newMsBuilder.GetDecisionInfo(decisionScheduledID)
 	transferTasks = append(transferTasks, &persistence.DecisionTask{
 		DomainID:         domainID,
-		TaskList:         di.TaskList,
-		ScheduleID:       di.ScheduleID,
+		TaskList:         decision.TaskList,
+		ScheduleID:       decision.ScheduleID,
 		RecordVisibility: true,
 	})
 

@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
+
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -176,7 +177,15 @@ func (s *transferQueueActiveProcessorSuite) SetupTest() {
 	s.mockShard.SetEngine(h)
 	s.mockHistoryEngine = h
 	s.mockQueueAckMgr = &MockQueueAckMgr{}
-	s.transferQueueActiveProcessor = newTransferQueueActiveProcessor(s.mockShard, h, s.mockVisibilityMgr, s.mockMatchingClient, s.mockHistoryClient, newTaskAllocator(s.mockShard), s.logger)
+	s.transferQueueActiveProcessor = newTransferQueueActiveProcessor(
+		s.mockShard,
+		h,
+		s.mockVisibilityMgr,
+		s.mockMatchingClient,
+		s.mockHistoryClient,
+		newTaskAllocator(s.mockShard),
+		s.logger,
+	)
 	s.transferQueueActiveProcessor.queueAckMgr = s.mockQueueAckMgr
 	s.transferQueueActiveProcessor.queueProcessorBase.ackMgr = s.mockQueueAckMgr
 
@@ -1174,8 +1183,28 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Succe
 	event = addDecisionTaskCompletedEvent(msBuilder, di.ScheduleID, di.StartedID, nil, "some random identity")
 
 	taskID := int64(59)
+
+	s.mockMetadataMgr.ExpectedCalls = nil
+	parentDomainEntry := &persistence.GetDomainResponse{
+		Info:              &persistence.DomainInfo{Name: domainName},
+		Config:            &persistence.DomainConfig{},
+		ReplicationConfig: &persistence.DomainReplicationConfig{},
+		FailoverVersion:   s.version,
+		TableVersion:      persistence.DomainTableVersionV1,
+	}
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: s.domainID}).Return(parentDomainEntry, nil).Maybe()
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{Name: domainName}).Return(parentDomainEntry, nil).Maybe()
+	childDomainEntry := &persistence.GetDomainResponse{
+		Info:              &persistence.DomainInfo{Name: childDomainName},
+		Config:            &persistence.DomainConfig{},
+		ReplicationConfig: &persistence.DomainReplicationConfig{},
+		TableVersion:      persistence.DomainTableVersionV1,
+	}
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: childDomainID}).Return(childDomainEntry, nil).Maybe()
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{Name: childDomainName}).Return(childDomainEntry, nil).Maybe()
+
 	event, ci := addStartChildWorkflowExecutionInitiatedEvent(msBuilder, event.GetEventId(), uuid.New(),
-		childDomainID, childWorkflowID, childWorkflowType, childTaskListName, nil, 1, 1)
+		childDomainName, childWorkflowID, childWorkflowType, childTaskListName, nil, 1, 1)
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", s.version).Return(s.mockClusterMetadata.GetCurrentClusterName())
 	msBuilder.UpdateReplicationStateLastEventID(s.version, event.GetEventId())
 
@@ -1194,20 +1223,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Succe
 	}
 
 	persistenceMutableState := createMutableState(msBuilder)
-	s.mockMetadataMgr.ExpectedCalls = nil
-	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: s.domainID}).Return(&persistence.GetDomainResponse{
-		Info:              &persistence.DomainInfo{Name: domainName},
-		Config:            &persistence.DomainConfig{},
-		ReplicationConfig: &persistence.DomainReplicationConfig{},
-		FailoverVersion:   s.version,
-		TableVersion:      persistence.DomainTableVersionV1,
-	}, nil).Once()
-	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: childDomainID}).Return(&persistence.GetDomainResponse{
-		Info:              &persistence.DomainInfo{Name: childDomainName},
-		Config:            &persistence.DomainConfig{},
-		ReplicationConfig: &persistence.DomainReplicationConfig{},
-		TableVersion:      persistence.DomainTableVersionV1,
-	}, nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockHistoryClient.On("StartWorkflowExecution", nil, s.createChildWorkflowExecutionRequest(
 		transferTask,
@@ -1270,8 +1285,28 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Failu
 	event = addDecisionTaskCompletedEvent(msBuilder, di.ScheduleID, di.StartedID, nil, "some random identity")
 
 	taskID := int64(59)
+
+	s.mockMetadataMgr.ExpectedCalls = nil
+	parentDomainEntry := &persistence.GetDomainResponse{
+		Info:              &persistence.DomainInfo{Name: domainName},
+		Config:            &persistence.DomainConfig{},
+		ReplicationConfig: &persistence.DomainReplicationConfig{},
+		FailoverVersion:   s.version,
+		TableVersion:      persistence.DomainTableVersionV1,
+	}
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: s.domainID}).Return(parentDomainEntry, nil).Maybe()
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{Name: domainName}).Return(parentDomainEntry, nil).Maybe()
+	childDomainEntry := &persistence.GetDomainResponse{
+		Info:              &persistence.DomainInfo{Name: childDomainName},
+		Config:            &persistence.DomainConfig{},
+		ReplicationConfig: &persistence.DomainReplicationConfig{},
+		TableVersion:      persistence.DomainTableVersionV1,
+	}
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: childDomainID}).Return(childDomainEntry, nil).Maybe()
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{Name: childDomainName}).Return(childDomainEntry, nil).Maybe()
+
 	event, ci := addStartChildWorkflowExecutionInitiatedEvent(msBuilder, event.GetEventId(), uuid.New(),
-		childDomainID, childWorkflowID, childWorkflowType, childTaskListName, nil, 1, 1)
+		childDomainName, childWorkflowID, childWorkflowType, childTaskListName, nil, 1, 1)
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", s.version).Return(s.mockClusterMetadata.GetCurrentClusterName())
 	msBuilder.UpdateReplicationStateLastEventID(s.version, event.GetEventId())
 
@@ -1290,20 +1325,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Failu
 	}
 
 	persistenceMutableState := createMutableState(msBuilder)
-	s.mockMetadataMgr.ExpectedCalls = nil
-	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: s.domainID}).Return(&persistence.GetDomainResponse{
-		Info:              &persistence.DomainInfo{Name: domainName},
-		Config:            &persistence.DomainConfig{},
-		ReplicationConfig: &persistence.DomainReplicationConfig{},
-		FailoverVersion:   s.version,
-		TableVersion:      persistence.DomainTableVersionV1,
-	}, nil).Once()
-	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: childDomainID}).Return(&persistence.GetDomainResponse{
-		Info:              &persistence.DomainInfo{Name: childDomainName},
-		Config:            &persistence.DomainConfig{},
-		ReplicationConfig: &persistence.DomainReplicationConfig{},
-		TableVersion:      persistence.DomainTableVersionV1,
-	}, nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockHistoryClient.On("StartWorkflowExecution", nil, s.createChildWorkflowExecutionRequest(
 		transferTask,
@@ -1359,8 +1380,28 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Succe
 	event = addDecisionTaskCompletedEvent(msBuilder, di.ScheduleID, di.StartedID, nil, "some random identity")
 
 	taskID := int64(59)
+
+	s.mockMetadataMgr.ExpectedCalls = nil
+	parentDomainEntry := &persistence.GetDomainResponse{
+		Info:              &persistence.DomainInfo{Name: domainName},
+		Config:            &persistence.DomainConfig{},
+		ReplicationConfig: &persistence.DomainReplicationConfig{},
+		FailoverVersion:   s.version,
+		TableVersion:      persistence.DomainTableVersionV1,
+	}
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: s.domainID}).Return(parentDomainEntry, nil).Maybe()
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{Name: domainName}).Return(parentDomainEntry, nil).Maybe()
+	childDomainEntry := &persistence.GetDomainResponse{
+		Info:              &persistence.DomainInfo{Name: childDomainName},
+		Config:            &persistence.DomainConfig{},
+		ReplicationConfig: &persistence.DomainReplicationConfig{},
+		TableVersion:      persistence.DomainTableVersionV1,
+	}
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: childDomainID}).Return(childDomainEntry, nil).Maybe()
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{Name: childDomainName}).Return(childDomainEntry, nil).Maybe()
+
 	event, ci := addStartChildWorkflowExecutionInitiatedEvent(msBuilder, event.GetEventId(), uuid.New(),
-		childDomainID, childWorkflowID, childWorkflowType, childTaskListName, nil, 1, 1)
+		childDomainName, childWorkflowID, childWorkflowType, childTaskListName, nil, 1, 1)
 
 	transferTask := &persistence.TransferTaskInfo{
 		Version:          s.version,
@@ -1382,20 +1423,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Succe
 	msBuilder.UpdateReplicationStateLastEventID(s.version, event.GetEventId())
 
 	persistenceMutableState := createMutableState(msBuilder)
-	s.mockMetadataMgr.ExpectedCalls = nil
-	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: s.domainID}).Return(&persistence.GetDomainResponse{
-		Info:              &persistence.DomainInfo{Name: domainName},
-		Config:            &persistence.DomainConfig{},
-		ReplicationConfig: &persistence.DomainReplicationConfig{},
-		FailoverVersion:   s.version,
-		TableVersion:      persistence.DomainTableVersionV1,
-	}, nil).Once()
-	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: childDomainID}).Return(&persistence.GetDomainResponse{
-		Info:              &persistence.DomainInfo{Name: childDomainName},
-		Config:            &persistence.DomainConfig{},
-		ReplicationConfig: &persistence.DomainReplicationConfig{},
-		TableVersion:      persistence.DomainTableVersionV1,
-	}, nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockHistoryClient.On("ScheduleDecisionTask", nil, &history.ScheduleDecisionTaskRequest{
 		DomainUUID: common.StringPtr(childDomainID),
@@ -1411,7 +1438,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Succe
 }
 
 func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Duplication() {
-
 	domainName := "some random domain Name"
 	execution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("some random workflow ID"),
@@ -1451,8 +1477,28 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Dupli
 	event = addDecisionTaskCompletedEvent(msBuilder, di.ScheduleID, di.StartedID, nil, "some random identity")
 
 	taskID := int64(59)
+
+	s.mockMetadataMgr.ExpectedCalls = nil
+	parentDomainEntry := &persistence.GetDomainResponse{
+		Info:              &persistence.DomainInfo{Name: domainName, ID: s.domainID},
+		Config:            &persistence.DomainConfig{},
+		ReplicationConfig: &persistence.DomainReplicationConfig{},
+		FailoverVersion:   s.version,
+		TableVersion:      persistence.DomainTableVersionV1,
+	}
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: s.domainID}).Return(parentDomainEntry, nil).Maybe()
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{Name: domainName}).Return(parentDomainEntry, nil).Maybe()
+	childDomainEntry := &persistence.GetDomainResponse{
+		Info:              &persistence.DomainInfo{Name: childDomainName, ID: childDomainID},
+		Config:            &persistence.DomainConfig{},
+		ReplicationConfig: &persistence.DomainReplicationConfig{},
+		TableVersion:      persistence.DomainTableVersionV1,
+	}
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: childDomainID}).Return(childDomainEntry, nil).Maybe()
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{Name: childDomainName}).Return(childDomainEntry, nil).Maybe()
+
 	event, ci := addStartChildWorkflowExecutionInitiatedEvent(msBuilder, event.GetEventId(), uuid.New(),
-		childDomainID, childExecution.GetWorkflowId(), childWorkflowType, childTaskListName, nil, 1, 1)
+		childDomainName, childExecution.GetWorkflowId(), childWorkflowType, childTaskListName, nil, 1, 1)
 
 	transferTask := &persistence.TransferTaskInfo{
 		Version:          s.version,
@@ -1478,20 +1524,6 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Dupli
 	msBuilder.UpdateReplicationStateLastEventID(s.version, event.GetEventId())
 
 	persistenceMutableState := createMutableState(msBuilder)
-	s.mockMetadataMgr.ExpectedCalls = nil
-	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: s.domainID}).Return(&persistence.GetDomainResponse{
-		Info:              &persistence.DomainInfo{Name: domainName},
-		Config:            &persistence.DomainConfig{},
-		ReplicationConfig: &persistence.DomainReplicationConfig{},
-		FailoverVersion:   s.version,
-		TableVersion:      persistence.DomainTableVersionV1,
-	}, nil).Once()
-	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: childDomainID}).Return(&persistence.GetDomainResponse{
-		Info:              &persistence.DomainInfo{Name: childDomainName},
-		Config:            &persistence.DomainConfig{},
-		ReplicationConfig: &persistence.DomainReplicationConfig{},
-		TableVersion:      persistence.DomainTableVersionV1,
-	}, nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 
 	_, err = s.transferQueueActiveProcessor.process(transferTask, true)

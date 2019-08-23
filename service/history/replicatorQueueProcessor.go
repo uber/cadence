@@ -22,12 +22,12 @@ package history
 
 import (
 	"errors"
-	"github.com/uber/cadence/common/backoff"
 	"time"
 
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -117,7 +117,7 @@ func newReplicatorQueueProcessor(
 	}
 
 	queueAckMgr := newQueueAckMgr(shard, options, processor, shard.GetReplicatorAckLevel(), logger)
-	queueProcessorBase := newQueueProcessorBase(currentClusterName, shard, options, processor, queueAckMgr, logger)
+	queueProcessorBase := newQueueProcessorBase(currentClusterName, shard, options, processor, queueAckMgr, historyCache, logger)
 	processor.queueAckMgr = queueAckMgr
 	processor.queueProcessorBase = queueProcessorBase
 
@@ -126,6 +126,10 @@ func newReplicatorQueueProcessor(
 
 func (p *replicatorQueueProcessorImpl) getTaskFilter() queueTaskFilter {
 	return p.replicationTaskFilter
+}
+
+func (p *replicatorQueueProcessorImpl) complete(qTask queueTaskInfo) {
+	p.queueProcessorBase.complete(qTask)
 }
 
 func (p *replicatorQueueProcessorImpl) process(qTask queueTaskInfo, shouldProcessTask bool) (int, error) {

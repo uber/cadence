@@ -25,6 +25,7 @@ import (
 	"fmt"
 
 	"github.com/pborman/uuid"
+
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/history"
@@ -110,12 +111,19 @@ func newTransferQueueActiveProcessor(
 		cache:              historyService.historyCache,
 		transferTaskFilter: transferTaskFilter,
 		transferQueueProcessorBase: newTransferQueueProcessorBase(
-			shard, options, visibilityMgr, matchingClient, maxReadAckLevel, updateTransferAckLevel, transferQueueShutdown, logger,
+			shard,
+			options,
+			visibilityMgr,
+			matchingClient,
+			maxReadAckLevel,
+			updateTransferAckLevel,
+			transferQueueShutdown,
+			logger,
 		),
 	}
 
 	queueAckMgr := newQueueAckMgr(shard, options, processor, shard.GetTransferClusterAckLevel(currentClusterName), logger)
-	queueProcessorBase := newQueueProcessorBase(currentClusterName, shard, options, processor, queueAckMgr, logger)
+	queueProcessorBase := newQueueProcessorBase(currentClusterName, shard, options, processor, queueAckMgr, historyService.historyCache, logger)
 	processor.queueAckMgr = queueAckMgr
 	processor.queueProcessorBase = queueProcessorBase
 
@@ -200,7 +208,7 @@ func newTransferQueueFailoverProcessor(
 	}
 
 	queueAckMgr := newQueueFailoverAckMgr(shard, options, processor, minLevel, logger)
-	queueProcessorBase := newQueueProcessorBase(currentClusterName, shard, options, processor, queueAckMgr, logger)
+	queueProcessorBase := newQueueProcessorBase(currentClusterName, shard, options, processor, queueAckMgr, historyService.historyCache, logger)
 	processor.queueAckMgr = queueAckMgr
 	processor.queueProcessorBase = queueProcessorBase
 	return updateTransferAckLevel, processor
@@ -212,6 +220,10 @@ func (t *transferQueueActiveProcessorImpl) getTaskFilter() queueTaskFilter {
 
 func (t *transferQueueActiveProcessorImpl) notifyNewTask() {
 	t.queueProcessorBase.notifyNewTask()
+}
+
+func (t *transferQueueActiveProcessorImpl) complete(qTask queueTaskInfo) {
+	t.queueProcessorBase.complete(qTask)
 }
 
 func (t *transferQueueActiveProcessorImpl) process(
@@ -355,12 +367,12 @@ func (t *transferQueueActiveProcessorImpl) processDecisionTask(
 		return nil
 	}
 
-	di, found := msBuilder.GetPendingDecision(task.ScheduleID)
+	decision, found := msBuilder.GetDecisionInfo(task.ScheduleID)
 	if !found {
 		t.logger.Debug("Potentially duplicate task.", tag.TaskID(task.TaskID), tag.WorkflowScheduleID(task.ScheduleID), tag.TaskType(persistence.TransferTaskTypeDecisionTask))
 		return nil
 	}
-	ok, err := verifyTaskVersion(t.shard, t.logger, task.DomainID, di.Version, task.Version, task)
+	ok, err := verifyTaskVersion(t.shard, t.logger, task.DomainID, decision.Version, task.Version, task)
 	if err != nil {
 		return err
 	} else if !ok {
@@ -1317,24 +1329,18 @@ func (t *transferQueueActiveProcessorImpl) updateWorkflowExecution(
 		return err
 	}
 
-	var transferTasks []persistence.Task
-	var timerTasks []persistence.Task
 	if err := action(msBuilder); err != nil {
 		return err
 	}
 
 	if createDecisionTask {
 		// Create a transfer task to schedule a decision task
-		err := scheduleDecision(msBuilder, t.shard.GetTimeSource(), t.logger)
+		err := scheduleDecision(msBuilder)
 		if err != nil {
 			return err
 		}
 	}
 
-	// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict then reload
-	// the history and try the operation again.
-	msBuilder.AddTransferTasks(transferTasks...)
-	msBuilder.AddTimerTasks(timerTasks...)
 	return context.updateWorkflowExecutionAsActive(t.shard.GetTimeSource().Now())
 }
 
