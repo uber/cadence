@@ -459,14 +459,6 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 	if err != nil {
 		if t, ok := err.(*persistence.WorkflowExecutionAlreadyStartedError); ok {
 			if t.StartRequestID == *request.RequestId {
-				// This is the only code path that deleting history could cause history corruption(missing first batch).
-				// We will use this warn log to verify this issue: https://github.com/uber/cadence/issues/2441
-				e.logger.Warn("encounter WorkflowExecutionAlreadyStartedError, deleting duplicated history",
-					tag.WorkflowDomainName(domainEntry.GetInfo().Name),
-					tag.WorkflowDomainID(domainID),
-					tag.WorkflowID(execution.GetWorkflowId()),
-					tag.WorkflowRunID(execution.GetRunId()),
-					tag.Number(int64(eventStoreVersion)))
 				e.deleteEvents(domainID, execution, eventStoreVersion, msBuilder.GetCurrentBranch())
 				return &workflow.StartWorkflowExecutionResponse{
 					RunId: common.StringPtr(t.RunID),
@@ -1983,17 +1975,28 @@ func (e *historyEngineImpl) deleteEvents(
 	branchToken []byte,
 ) {
 
+	var err error
+	defer func() {
+		// This is the only code path that deleting history could cause history corruption(missing first batch).
+		// We will use this warn log to verify this issue: https://github.com/uber/cadence/issues/2441
+		e.logger.Warn("encounter WorkflowExecutionAlreadyStartedError, deleting duplicated history",
+			tag.WorkflowDomainID(domainID),
+			tag.WorkflowID(execution.GetWorkflowId()),
+			tag.WorkflowRunID(execution.GetRunId()),
+			tag.Number(int64(eventStoreVersion)),
+			tag.Error(err))
+	}()
 	// We created the history events but failed to create workflow execution, so cleanup the history which could cause
 	// us to leak history events which are never cleaned up. Cleaning up the events is absolutely safe here as they
 	// are always created for a unique run_id which is not visible beyond this call yet.
 	// TODO: Handle error on deletion of execution history
 	if eventStoreVersion == persistence.EventStoreVersionV2 {
-		e.historyV2Mgr.DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
+		err = e.historyV2Mgr.DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
 			BranchToken: branchToken,
 			ShardID:     common.IntPtr(e.shard.GetShardID()),
 		})
 	} else {
-		e.historyMgr.DeleteWorkflowExecutionHistory(&persistence.DeleteWorkflowExecutionHistoryRequest{
+		err = e.historyMgr.DeleteWorkflowExecutionHistory(&persistence.DeleteWorkflowExecutionHistoryRequest{
 			DomainID:  domainID,
 			Execution: execution,
 		})
