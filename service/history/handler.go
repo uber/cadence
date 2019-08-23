@@ -23,6 +23,7 @@ package history
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common/service/config"
 	"sync"
 
 	"github.com/pborman/uuid"
@@ -169,10 +170,13 @@ func (h *Handler) Start() error {
 	h.hServiceResolver = hServiceResolver
 
 	if h.GetClusterMetadata().IsGlobalDomainEnabled() {
-		var err error
-		h.publisher, err = h.GetMessagingClient().NewProducerWithClusterName(h.GetClusterMetadata().GetCurrentClusterName())
-		if err != nil {
-			h.GetLogger().Fatal("Creating kafka producer failed", tag.Error(err))
+		replicationConsumerConfig := h.GetClusterMetadata().GetReplicationConsumerConfig()
+		if replicationConsumerConfig.Type != config.ReplicationConsumerTypeRPC {
+			var err error
+			h.publisher, err = h.GetMessagingClient().NewProducerWithClusterName(h.GetClusterMetadata().GetCurrentClusterName())
+			if err != nil {
+				h.GetLogger().Fatal("Creating kafka producer failed", tag.Error(err))
+			}
 		}
 	}
 
