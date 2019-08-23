@@ -1493,6 +1493,7 @@ type (
 		GetMetadata() (*GetMetadataResponse, error)
 	}
 
+	// DomainReplicationQueue is used to publish and list domain replication tasks
 	DomainReplicationQueue interface {
 		Publish(message interface{}) error
 		GetReplicationMessages(lastMessageID int, maxCount int) ([]*replicator.ReplicationTask, int, error)

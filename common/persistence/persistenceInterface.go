@@ -142,11 +142,13 @@ type (
 		CountWorkflowExecutions(request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error)
 	}
 
+	// Queue is a store to enqueue and get messages
 	Queue interface {
 		EnqueueMessage(messagePayload []byte) error
 		GetMessages(lastMessageID int, maxCount int) ([]*QueueMessage, error)
 	}
 
+	// QueueMessage is the message that stores in the queue
 	QueueMessage struct {
 		ID      int
 		Payload []byte

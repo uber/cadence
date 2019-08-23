@@ -21,7 +21,6 @@
 package persistencetests
 
 import (
-	"fmt"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"math"
 	"math/rand"
@@ -98,14 +97,10 @@ type (
 	TestTransferTaskIDGenerator struct {
 		seqNum int64
 	}
-
-	TestBinaryEncoder struct {
-	}
 )
 
 const (
 	defaultScheduleToStartTimeout = 111
-	testQueueType                 = -1
 )
 
 // NewTestBaseWithCassandra returns a persistence test base backed by cassandra datastore
@@ -1398,21 +1393,4 @@ func pickRandomEncoding() common.EncodingType {
 		encoding = common.EncodingType("")
 	}
 	return encoding
-}
-
-func (e *TestBinaryEncoder) Encode(object interface{}) ([]byte, error) {
-	if str, ok := object.(string); ok {
-		return []byte(str), nil
-	}
-	return nil, fmt.Errorf("unsupported type")
-}
-
-func (e *TestBinaryEncoder) Decode(payload []byte, val interface{}) error {
-	strPtr, ok := val.(*interface{})
-	if !ok {
-		return fmt.Errorf("unsupported type")
-	}
-
-	*strPtr = string(payload)
-	return nil
 }

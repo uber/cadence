@@ -58,6 +58,7 @@ type (
 		Publish(message interface{}) error
 	}
 
+	// CloseableProducer is a Producer that can be closed
 	CloseableProducer interface {
 		Producer
 		Close() error

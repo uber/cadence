@@ -59,6 +59,7 @@ func (s *QueuePersistenceSuite) TearDownSuite() {
 	s.TearDownWorkflowStore()
 }
 
+// TestDomainReplicationQueue tests domain replication queue operations
 func (s *QueuePersistenceSuite) TestDomainReplicationQueue() {
 	numMessages := 100
 	concurrentSenders := 10

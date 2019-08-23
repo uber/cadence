@@ -3334,7 +3334,7 @@ func (wh *WorkflowHandler) GetReplicationMessages(
 	return resp, nil
 }
 
-// GetReplicationMessages returns new replication tasks since the read level provided in the token.
+// GetDomainReplicationMessages returns new domain replication tasks since last retrieved task ID.
 func (wh *WorkflowHandler) GetDomainReplicationMessages(
 	ctx context.Context,
 	request *replicator.GetDomainReplicationMessagesRequest,
