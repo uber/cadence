@@ -153,7 +153,7 @@ cadence wf start -tl helloWorldGroup -wt main.Workflow -et 60 -i '"cadence"' -me
 ./cadence workflow list -m
 ```
 
-Use **--query** to list workflows by complex query:
+Use **--query** to list workflows with SQL like query:
 
 ```
 ./cadence workflow list --query "WorkflowType='main.SampleParentWorkflow' AND CloseTime = missing "
@@ -185,7 +185,7 @@ Terminating a running workflow execution will record a WorkflowExecutionTerminat
 Canceling a running workflow execution will record a WorkflowExecutionCancelRequested event in the history, and a new decision task will be scheduled. The workflow has a chance to do some clean up work after cancellation.
 
 #### Signal, cancel, terminate workflows as a batch job
-Batch job is based on List Workflow Query(**--query**). It supports signal, cancel and terminate and batch job type.
+Batch job is based on List Workflow Query(**--query**). It supports signal, cancel and terminate as batch job type.
 
 Start a batch job(using signal as batch type):
 ```
@@ -211,7 +211,7 @@ Terminate a batch job:
 ```
 cadence --do samples-domain wf batch terminate -jid <batch-job-id>
 ```
-
+Note that the performed operation by a batch will not be rolled back by terminating the batch. However, you can use reset to rollback your workflows.
 
 #### Restart, reset workflow
 The Reset command allows resetting a workflow to a particular point and continue running from there.
