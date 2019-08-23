@@ -84,9 +84,9 @@ func NewArchivalMetadata(
 	domainDefaults *config.ArchivalDomainDefaults,
 ) ArchivalMetadata {
 	historyConfig := NewArchivalConfig(
-		dc,
 		historyStatus,
-		historyReadEnabled,
+		dc.GetStringProperty(dynamicconfig.HistoryArchivalStatus, historyStatus),
+		dc.GetBoolProperty(dynamicconfig.EnableReadFromHistoryArchival, historyReadEnabled),
 		domainDefaults.History.Status,
 		domainDefaults.History.URI,
 	)
@@ -107,9 +107,9 @@ func (metadata *archivalMetadata) GetVisibilityConfig() ArchivalConfig {
 
 // NewArchivalConfig constructs a new valid ArchivalConfig
 func NewArchivalConfig(
-	dc *dynamicconfig.Collection,
 	staticClusterStatusStr string,
-	enableRead bool,
+	dynamicClusterStatus dynamicconfig.StringPropertyFn,
+	enableRead dynamicconfig.BoolPropertyFn,
 	domainDefaultStatusStr string,
 	domainDefaultURI string,
 ) ArchivalConfig {
@@ -124,8 +124,8 @@ func NewArchivalConfig(
 
 	return &archivalConfig{
 		staticClusterStatus:  staticClusterStatus,
-		dynamicClusterStatus: dc.GetStringProperty(dynamicconfig.HistoryArchivalStatus, staticClusterStatusStr),
-		enableRead:           dc.GetBoolProperty(dynamicconfig.EnableReadFromHistoryArchival, enableRead),
+		dynamicClusterStatus: dynamicClusterStatus,
+		enableRead:           enableRead,
 		domainDefaultStatus:  domainDefaultStatus,
 		domainDefaultURI:     domainDefaultURI,
 	}
@@ -160,7 +160,7 @@ func (a *archivalConfig) GetClusterStatus() ArchivalStatus {
 	dynamicStatusStr := a.dynamicClusterStatus()
 	dynamicStatus, err := getClusterArchivalStatus(dynamicStatusStr)
 	if err != nil {
-		dynamicStatus = a.staticClusterStatus
+		return ArchivalDisabled
 	}
 	return dynamicStatus
 }
