@@ -55,7 +55,7 @@ type (
 		clusterMetadata cluster.Metadata
 		historyV2Mgr    persistence.HistoryV2Manager
 
-		rebuildHistorySize int64
+		rebuiltHistorySize int64
 		logger             log.Logger
 	}
 )
@@ -74,7 +74,7 @@ func newNDCStateRebuilder(
 		clusterMetadata: shard.GetService().GetClusterMetadata(),
 		historyV2Mgr:    shard.GetHistoryV2Manager(),
 
-		rebuildHistorySize: 0,
+		rebuiltHistorySize: 0,
 		logger:             logger,
 	}
 }
@@ -106,7 +106,7 @@ func (r *nDCStateRebuilderImpl) rebuild(
 		return nil, 0, err
 	}
 	firstEventBatch := batch.(*shared.History).Events
-	rebuildMutableState, stateBuilder := r.initializeBuilders(
+	rebuiltMutableState, stateBuilder := r.initializeBuilders(
 		firstEventBatch[0].GetVersion(),
 		domainEntry.GetInfo().Name,
 	)
@@ -125,19 +125,19 @@ func (r *nDCStateRebuilderImpl) rebuild(
 		}
 	}
 
-	if rebuildMutableState.GetNextEventID() != baseNextEventID {
+	if rebuiltMutableState.GetNextEventID() != baseNextEventID {
 		return nil, 0, &shared.InternalServiceError{
 			Message: fmt.Sprintf("nDCStateRebuilder unable to rebuild mutable state to event ID: %v", baseNextEventID),
 		}
 	}
-	if err := rebuildMutableState.SetCurrentBranchToken(nil); err != nil {
+	if err := rebuiltMutableState.SetCurrentBranchToken(nil); err != nil {
 		return nil, 0, err
 	}
 
 	// TODO refresh tasks before return
 	//  this includes UpsertWorkflowSearchAttributesTask
 
-	return rebuildMutableState, r.rebuildHistorySize, nil
+	return rebuiltMutableState, r.rebuiltHistorySize, nil
 }
 
 func (r *nDCStateRebuilderImpl) initializeBuilders(
@@ -214,7 +214,7 @@ func (r *nDCStateRebuilderImpl) getPaginationFn(
 		if err != nil {
 			return nil, nil, err
 		}
-		r.rebuildHistorySize += int64(size)
+		r.rebuiltHistorySize += int64(size)
 
 		var paginateItems []interface{}
 		for _, history := range historyBatches {

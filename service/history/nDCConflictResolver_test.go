@@ -206,9 +206,9 @@ func (s *nDCConflictResolverSuite) TestRebuild() {
 
 	s.mockContext.On("clear").Once()
 	s.mockContext.On("setHistorySize", historySize).Once()
-	rebuildMutableState, err := s.nDCConflictResolver.rebuild(ctx, 1, requestID)
+	rebuiltMutableState, err := s.nDCConflictResolver.rebuild(ctx, 1, requestID)
 	s.NoError(err)
-	s.NotNil(rebuildMutableState)
+	s.NotNil(rebuiltMutableState)
 	s.Equal(1, versionHistories.GetCurrentVersionHistoryIndex())
 }
 
@@ -224,10 +224,10 @@ func (s *nDCConflictResolverSuite) TestPrepareMutableState_NoRebuild() {
 	versionHistories := persistence.NewVersionHistories(versionHistory)
 	s.mockMutableState.On("GetVersionHistories").Return(versionHistories)
 
-	rebuildMutableState, isRebuilt, err := s.nDCConflictResolver.prepareMutableState(ctx.Background(), 0, version)
+	rebuiltMutableState, isRebuilt, err := s.nDCConflictResolver.prepareMutableState(ctx.Background(), 0, version)
 	s.NoError(err)
 	s.False(isRebuilt)
-	s.Equal(s.mockMutableState, rebuildMutableState)
+	s.Equal(s.mockMutableState, rebuiltMutableState)
 }
 
 func (s *nDCConflictResolverSuite) TestPrepareMutableState_Rebuild() {
@@ -302,8 +302,8 @@ func (s *nDCConflictResolverSuite) TestPrepareMutableState_Rebuild() {
 
 	s.mockContext.On("clear").Once()
 	s.mockContext.On("setHistorySize", int64(historySize)).Once()
-	rebuildMutableState, isRebuilt, err := s.nDCConflictResolver.prepareMutableState(ctx, 1, incomingVersion)
+	rebuiltMutableState, isRebuilt, err := s.nDCConflictResolver.prepareMutableState(ctx, 1, incomingVersion)
 	s.NoError(err)
-	s.NotNil(rebuildMutableState)
+	s.NotNil(rebuiltMutableState)
 	s.True(isRebuilt)
 }

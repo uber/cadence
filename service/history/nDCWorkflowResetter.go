@@ -26,7 +26,6 @@ import (
 	ctx "context"
 
 	"github.com/pborman/uuid"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
@@ -139,7 +138,7 @@ func (r *nDCWorkflowResetterImpl) resetWorkflow(
 	)
 
 	requestID := uuid.New()
-	rebuildMutableState, rebuildHistorySize, err := r.stateRebuilder.rebuild(
+	rebuildMutableState, rebuiltHistorySize, err := r.stateRebuilder.rebuild(
 		ctx,
 		baseWorkflowIdentifier,
 		baseBranchToken,
@@ -182,6 +181,6 @@ func (r *nDCWorkflowResetterImpl) resetWorkflow(
 		return nil, nil, err
 	}
 
-	r.newContext.setHistorySize(rebuildHistorySize)
+	r.newContext.setHistorySize(rebuiltHistorySize)
 	return rebuildMutableState, completeFn, nil
 }

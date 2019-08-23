@@ -30,7 +30,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
-
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
@@ -331,7 +330,7 @@ func (s *nDCStateRebuilderSuite) TestRebuild() {
 	), nil)
 
 	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return()
-	rebuildMutableState, rebuildHistorySize, err := s.nDCStateRebuilder.rebuild(
+	rebuildMutableState, rebuiltHistorySize, err := s.nDCStateRebuilder.rebuild(
 		ctx.Background(),
 		definition.NewWorkflowIdentifier(s.domainID, s.workflowID, s.runID),
 		branchToken,
@@ -345,7 +344,7 @@ func (s *nDCStateRebuilderSuite) TestRebuild() {
 	s.Equal(targetDomainID, rebuildExecutionInfo.DomainID)
 	s.Equal(targetWorkflowID, rebuildExecutionInfo.WorkflowID)
 	s.Equal(targetRunID, rebuildExecutionInfo.RunID)
-	s.Equal(int64(historySize1+historySize2), rebuildHistorySize)
+	s.Equal(int64(historySize1+historySize2), rebuiltHistorySize)
 	s.Equal(persistence.NewVersionHistories(
 		persistence.NewVersionHistory(
 			nil,

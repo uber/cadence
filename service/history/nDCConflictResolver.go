@@ -108,11 +108,11 @@ func (r *nDCConflictResolverImpl) prepareMutableState(
 	// task.getVersion() > currentLastItem
 	// incoming replication task, after application, will become the current branch
 	// (because higher version wins), we need to rebuild the mutable state for that
-	rebuildMutableState, err := r.rebuild(ctx, branchIndex, uuid.New())
+	rebuiltMutableState, err := r.rebuild(ctx, branchIndex, uuid.New())
 	if err != nil {
 		return nil, false, err
 	}
-	return rebuildMutableState, true, nil
+	return rebuiltMutableState, true, nil
 }
 
 func (r *nDCConflictResolverImpl) rebuild(
@@ -138,7 +138,7 @@ func (r *nDCConflictResolverImpl) rebuild(
 		executionInfo.RunID,
 	)
 
-	rebuildMutableState, rebuildHistorySize, err := r.stateRebuilder.rebuild(
+	rebuildMutableState, rebuiltHistorySize, err := r.stateRebuilder.rebuild(
 		ctx,
 		workflowIdentifier,
 		replayVersionHistory.GetBranchToken(),
@@ -182,6 +182,6 @@ func (r *nDCConflictResolverImpl) rebuild(
 	rebuildMutableState.SetUpdateCondition(r.mutableState.GetUpdateCondition())
 
 	r.context.clear()
-	r.context.setHistorySize(rebuildHistorySize)
+	r.context.setHistorySize(rebuiltHistorySize)
 	return rebuildMutableState, nil
 }
