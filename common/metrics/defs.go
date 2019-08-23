@@ -941,6 +941,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceCompleteForkBranchScope:                       {operation: "CompleteForkBranch"},
 		PersistenceGetHistoryTreeScope:                           {operation: "GetHistoryTree"},
 		PersistenceEnqueueMessageScope:                           {operation: "EnqueueMessage"},
+		PersistenceGetMessagesScope:                              {operation: "GetMessages"},
 
 		ClusterMetadataArchivalConfigScope: {operation: "ArchivalConfig"},
 

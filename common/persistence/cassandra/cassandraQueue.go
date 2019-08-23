@@ -152,6 +152,7 @@ func (q *cassandraQueue) GetMessages(lastMessageID int, maxCount int) ([]*persis
 	query := q.session.Query(templateGetMessagesQuery,
 		q.queueType,
 		lastMessageID,
+		maxCount,
 	)
 
 	iter := query.Iter()
