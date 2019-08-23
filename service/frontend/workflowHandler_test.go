@@ -140,7 +140,7 @@ func (s *workflowHandlerSuite) getWorkflowHandler(config *Config) *WorkflowHandl
 		s.mockService.GetLogger(),
 	)
 	return NewWorkflowHandler(s.mockService, config, s.mockMetadataMgr, s.mockHistoryMgr,
-		s.mockHistoryV2Mgr, s.mockVisibilityMgr, s.mockProducer, domainCache)
+		s.mockHistoryV2Mgr, s.mockVisibilityMgr, s.mockProducer, nil, domainCache)
 }
 
 func (s *workflowHandlerSuite) getWorkflowHandlerHelper() *WorkflowHandler {
@@ -488,7 +488,7 @@ func (s *workflowHandlerSuite) getWorkflowHandlerWithParams(mService cs.Service,
 	mMetadataManager persistence.MetadataManager) *WorkflowHandler {
 	domainCache := cache.NewDomainCache(mMetadataManager, mService.GetClusterMetadata(), mService.GetMetricsClient(), mService.GetLogger())
 	return NewWorkflowHandler(mService, config, mMetadataManager, s.mockHistoryMgr, s.mockHistoryV2Mgr,
-		s.mockVisibilityMgr, s.mockProducer, domainCache)
+		s.mockVisibilityMgr, s.mockProducer, nil, domainCache)
 }
 
 func (s *workflowHandlerSuite) TestRegisterDomain_Failure_InvalidArchivalURI() {
