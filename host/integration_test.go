@@ -1814,7 +1814,6 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 
 	// decider logic
 	childExecutionStarted := false
-	var parentStartedEvent *workflow.HistoryEvent
 	var terminatedEvent *workflow.HistoryEvent
 	var startChildWorkflowTS time.Time
 	// Parent Decider Logic
@@ -1825,7 +1824,6 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 		if !childExecutionStarted {
 			s.Logger.Info("Starting child execution.")
 			childExecutionStarted = true
-			parentStartedEvent = history.Events[0]
 			startChildWorkflowTS = time.Now()
 			return nil, []*workflow.Decision{{
 				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeStartChildWorkflowExecution),
