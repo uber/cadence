@@ -430,11 +430,10 @@ func ValidateLongPollContextTimeout(
 	logger log.Logger,
 ) error {
 
-	if err := ValidateLongPollContextTimeoutIsSet(ctx, handlerName, logger); err != nil {
+	deadline, err := ValidateLongPollContextTimeoutIsSet(ctx, handlerName, logger)
+	if err != nil {
 		return err
 	}
-
-	deadline, _ := ctx.Deadline()
 	timeout := deadline.Sub(time.Now())
 	if timeout < MinLongPollTimeout {
 		err := ErrContextTimeoutTooShort
@@ -454,16 +453,16 @@ func ValidateLongPollContextTimeoutIsSet(
 	ctx context.Context,
 	handlerName string,
 	logger log.Logger,
-) error {
+) (time.Time, error) {
 
-	_, ok := ctx.Deadline()
+	deadline, ok := ctx.Deadline()
 	if !ok {
 		err := ErrContextTimeoutNotSet
 		logger.Error("Context timeout not set for long poll API.",
 			tag.WorkflowHandlerName(handlerName), tag.Error(err))
-		return err
+		return nil, err
 	}
-	return nil
+	return deadline, nil
 }
 
 // GetSizeOfMapStringToByteArray get size of map[string][]byte
