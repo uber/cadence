@@ -460,7 +460,7 @@ func ValidateLongPollContextTimeoutIsSet(
 		err := ErrContextTimeoutNotSet
 		logger.Error("Context timeout not set for long poll API.",
 			tag.WorkflowHandlerName(handlerName), tag.Error(err))
-		return nil, err
+		return deadline, err
 	}
 	return deadline, nil
 }
