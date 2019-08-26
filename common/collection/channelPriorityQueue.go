@@ -52,12 +52,14 @@ func (c *ChannelPriorityQueue) Add(priority int, item interface{}) {
 // Remove removes an item from the priority queue. This is blocking till an
 // element becomes available in the priority queue
 func (c *ChannelPriorityQueue) Remove() interface{} {
+	// pick from highest priority if exists
 	select {
 	case task := <-c.channels[0]:
 		return task
 	default:
 	}
 
+	// blocking select from all priorities
 	var task interface{}
 	select {
 	case task = <-c.channels[0]:
