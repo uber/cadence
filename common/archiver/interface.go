@@ -109,6 +109,7 @@ type (
 		PageSize          int
 		NextPageToken     []byte
 		WorkflowID        *string
+		RunID             *string
 		WorkflowTypeName  *string
 		CloseStatus       *shared.WorkflowExecutionCloseStatus
 	}
