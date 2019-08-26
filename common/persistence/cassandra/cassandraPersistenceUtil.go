@@ -2047,7 +2047,7 @@ func createChildExecutionInfo(
 		case "workflow_type_name":
 			info.WorkflowTypeName = v.(string)
 		case "parent_close_policy":
-			info.ParentClosePolicy = workflow.ParentClosePolicy(v.(int32))
+			info.ParentClosePolicy = workflow.ParentClosePolicy(v.(int))
 		}
 	}
 	info.InitiatedEvent = p.NewDataBlob(initiatedData, encoding)
