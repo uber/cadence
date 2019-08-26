@@ -1736,8 +1736,6 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 	s.True(childExecutionStarted)
-	s.Equal(workflow.ChildPolicyRequestCancel,
-		parentStartedEvent.WorkflowExecutionStartedEventAttributes.GetChildPolicy())
 
 	// Process ChildExecution Started event and Process Child Execution and complete it
 	_, err = pollerParent.PollAndProcessDecisionTask(false, false)
@@ -1756,7 +1754,6 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 	s.Equal(we.GetRunId(), childStartedEvent.WorkflowExecutionStartedEventAttributes.ParentWorkflowExecution.GetRunId())
 	s.Equal(startedEvent.ChildWorkflowExecutionStartedEventAttributes.GetInitiatedEventId(),
 		childStartedEvent.WorkflowExecutionStartedEventAttributes.GetParentInitiatedEventId())
-	s.Equal(workflow.ChildPolicyRequestCancel, childStartedEvent.WorkflowExecutionStartedEventAttributes.GetChildPolicy())
 	s.Equal(header, startedEvent.ChildWorkflowExecutionStartedEventAttributes.Header)
 	s.Equal(header, childStartedEvent.WorkflowExecutionStartedEventAttributes.Header)
 	s.Equal(memo, childStartedEvent.WorkflowExecutionStartedEventAttributes.GetMemo())
@@ -1894,8 +1891,6 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 	s.True(childExecutionStarted)
-	s.Equal(workflow.ChildPolicyRequestCancel,
-		parentStartedEvent.WorkflowExecutionStartedEventAttributes.GetChildPolicy())
 
 	// Process ChildExecution Started event
 	_, err = pollerParent.PollAndProcessDecisionTask(false, false)
