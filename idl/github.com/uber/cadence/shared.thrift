@@ -781,6 +781,7 @@ struct StartChildWorkflowExecutionInitiatedEventAttributes {
   60:  optional i32 executionStartToCloseTimeoutSeconds
   70:  optional i32 taskStartToCloseTimeoutSeconds
 //  80:  optional ChildPolicy childPolicy -- Removed but reserve the IDL order number
+  81:  optional ParentClosePolicy parentClosePolicy
   90:  optional binary control
   100: optional i64 (js.type = "Long") decisionTaskCompletedEventId
   110: optional WorkflowIdReusePolicy workflowIdReusePolicy

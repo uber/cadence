@@ -2292,12 +2292,12 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateChildExecutions() {
 	updatedInfo.LastProcessedEvent = int64(2)
 	createRequestID := uuid.New()
 	childExecutionInfos := []*p.ChildExecutionInfo{{
-		Version:         1234,
-		InitiatedID:     1,
-		InitiatedEvent:  &gen.HistoryEvent{EventId: int64Ptr(1)},
-		StartedID:       2,
-		StartedEvent:    &gen.HistoryEvent{EventId: int64Ptr(2)},
-		CreateRequestID: createRequestID,
+		Version:           1234,
+		InitiatedID:       1,
+		InitiatedEvent:    &gen.HistoryEvent{EventId: int64Ptr(1)},
+		StartedID:         2,
+		StartedEvent:      &gen.HistoryEvent{EventId: int64Ptr(2)},
+		CreateRequestID:   createRequestID,
 		ParentClosePolicy: gen.ParentClosePolicyTerminate,
 	}}
 	err2 := s.UpsertChildExecutionsState(updatedInfo, updatedStats, int64(3), childExecutionInfos)
