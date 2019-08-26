@@ -1627,7 +1627,6 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 	// decider logic
 	childComplete := false
 	childExecutionStarted := false
-	var parentStartedEvent *workflow.HistoryEvent
 	var startedEvent *workflow.HistoryEvent
 	var completedEvent *workflow.HistoryEvent
 
@@ -1653,7 +1652,6 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 			if !childExecutionStarted {
 				s.Logger.Info("Starting child execution.")
 				childExecutionStarted = true
-				parentStartedEvent = history.Events[0]
 
 				return nil, []*workflow.Decision{{
 					DecisionType: common.DecisionTypePtr(workflow.DecisionTypeStartChildWorkflowExecution),
