@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+
 	"go.uber.org/yarpc/yarpcerrors"
 	"golang.org/x/net/context"
 )
