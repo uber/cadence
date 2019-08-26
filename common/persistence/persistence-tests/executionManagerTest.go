@@ -2298,6 +2298,7 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateChildExecutions() {
 		StartedID:       2,
 		StartedEvent:    &gen.HistoryEvent{EventId: int64Ptr(2)},
 		CreateRequestID: createRequestID,
+		ParentClosePolicy: gen.ParentClosePolicyTerminate,
 	}}
 	err2 := s.UpsertChildExecutionsState(updatedInfo, updatedStats, int64(3), childExecutionInfos)
 	s.NoError(err2)
@@ -2311,6 +2312,7 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateChildExecutions() {
 	s.NotNil(ci)
 	s.Equal(int64(1234), ci.Version)
 	s.Equal(int64(1), ci.InitiatedID)
+	s.Equal(gen.ParentClosePolicyTerminate, ci.ParentClosePolicy)
 	s.Equal(int64(1), *ci.InitiatedEvent.EventId)
 	s.Equal(int64(2), ci.StartedID)
 	s.Equal(int64(2), *ci.StartedEvent.EventId)
