@@ -430,7 +430,7 @@ func ValidateLongPollContextTimeout(
 	logger log.Logger,
 ) error {
 
-	if err := ValidateLongPollContextTimeoutIsSet(ctx, handlerName, logger); err !=nil {
+	if err := ValidateLongPollContextTimeoutIsSet(ctx, handlerName, logger); err != nil {
 		return err
 	}
 
