@@ -108,16 +108,14 @@ func (s *PriorityQueueSuite) TestRandomNumber() {
 	}
 }
 
-const priorities = 2
-
-type task struct {
+type testTask struct {
 	id       string
 	priority int
 }
 
 func BenchmarkConcurrentPriorityQueue(b *testing.B) {
 	queue := NewConcurrentPriorityQueue(func(this interface{}, other interface{}) bool {
-		return this.(*task).priority < other.(*task).priority
+		return this.(*testTask).priority < other.(*testTask).priority
 	})
 
 	for i := 0; i < 100; i++ {
@@ -137,7 +135,7 @@ func remove(queue Queue) interface{} {
 
 func send(queue Queue) {
 	for {
-		t := &task{
+		t := &testTask{
 			id:       "abc",
 			priority: rand.Int() % numPriorities,
 		}
