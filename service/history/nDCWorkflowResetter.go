@@ -24,6 +24,7 @@ package history
 
 import (
 	ctx "context"
+	"time"
 
 	"github.com/pborman/uuid"
 
@@ -40,6 +41,7 @@ type (
 	nDCWorkflowResetter interface {
 		resetWorkflow(
 			ctx ctx.Context,
+			now time.Time,
 			baseEventID int64,
 			baseVersion int64,
 		) (mutableState, nDCWorkflowResetterCompleteFn, error)
@@ -91,6 +93,7 @@ func newNDCWorkflowResetter(
 
 func (r *nDCWorkflowResetterImpl) resetWorkflow(
 	ctx ctx.Context,
+	now time.Time,
 	baseEventID int64,
 	baseVersion int64,
 ) (mutableState, nDCWorkflowResetterCompleteFn, error) {
@@ -140,6 +143,7 @@ func (r *nDCWorkflowResetterImpl) resetWorkflow(
 	requestID := uuid.New()
 	rebuildMutableState, rebuiltHistorySize, err := r.stateRebuilder.rebuild(
 		ctx,
+		now,
 		baseWorkflowIdentifier,
 		baseBranchToken,
 		baseEventID+1,
@@ -149,8 +153,6 @@ func (r *nDCWorkflowResetterImpl) resetWorkflow(
 	if err != nil {
 		return nil, nil, err
 	}
-
-	// TODO after the rebuild, create branch and return a defer branch creation finish fn
 
 	// fork a new history branch
 	shardID := r.shard.GetShardID()

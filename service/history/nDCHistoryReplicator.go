@@ -500,7 +500,7 @@ func (r *nDCHistoryReplicator) applyNonStartEventsMissingMutableState(
 		task.getLogger(),
 	)
 
-	return workflowResetter.resetWorkflow(ctx, baseEventID, baseEventVersion)
+	return workflowResetter.resetWorkflow(ctx, task.getEventTime(), baseEventID, baseEventVersion)
 }
 
 func (r *nDCHistoryReplicator) applyNonStartEventsResetWorkflow(
