@@ -86,7 +86,7 @@ struct GetMutableStateResponse {
   140: optional map<string, shared.ReplicationInfo> replicationInfo
   // TODO: when migrating to gRPC, make this a enum
   // TODO: when migrating to gRPC, unify internal & external representation
-  // NOTE: workflowState & workflowCloseState are the same as persistence representation    
+  // NOTE: workflowState & workflowCloseState are the same as persistence representation
   150: optional i32 workflowState
   160: optional i32 workflowCloseState
 }
