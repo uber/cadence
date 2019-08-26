@@ -1617,7 +1617,6 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 		Header:                              header,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		ChildPolicy:                         common.ChildPolicyPtr(workflow.ChildPolicyRequestCancel),
 		Identity:                            common.StringPtr(identity),
 	}
 
@@ -1666,7 +1665,6 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 						Header:                              header,
 						ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(200),
 						TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
-						ChildPolicy:                         common.ChildPolicyPtr(workflow.ChildPolicyRequestCancel),
 						Control:                             nil,
 						Memo:                                memo,
 						SearchAttributes:                    searchAttr,
@@ -1809,7 +1807,6 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		ChildPolicy:                         common.ChildPolicyPtr(workflow.ChildPolicyRequestCancel),
 		Identity:                            common.StringPtr(identity),
 	}
 
@@ -1842,7 +1839,6 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 					Input:                               nil,
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(200),
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
-					ChildPolicy:                         common.ChildPolicyPtr(workflow.ChildPolicyRequestCancel),
 					Control:                             nil,
 					CronSchedule:                        common.StringPtr(cronSchedule),
 				},
