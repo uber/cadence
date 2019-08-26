@@ -107,3 +107,40 @@ func (s *PriorityQueueSuite) TestRandomNumber() {
 		s.Equal(expected, result)
 	}
 }
+
+const priorities = 2
+
+type task struct {
+	id       string
+	priority int
+}
+
+func BenchmarkConcurrentPriorityQueue(b *testing.B) {
+	queue := NewConcurrentPriorityQueue(func(this interface{}, other interface{}) bool {
+		return this.(*task).priority < other.(*task).priority
+	})
+
+	for i := 0; i < 100; i++ {
+		go send(queue)
+	}
+
+	for n := 0; n < b.N; n++ {
+		remove(queue)
+	}
+}
+
+func remove(queue Queue) interface{} {
+	for queue.IsEmpty() {
+	}
+	return queue.Remove()
+}
+
+func send(queue Queue) {
+	for {
+		t := &task{
+			id:       "abc",
+			priority: rand.Int() % numPriorities,
+		}
+		queue.Add(t)
+	}
+}
