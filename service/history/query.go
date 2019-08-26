@@ -36,8 +36,10 @@ var (
 	// ErrInvalidEvent indicates event cannot be applied to query in state.
 	ErrInvalidEvent = errors.New("event cannot be applied to query in state")
 	// ErrInvalidQueryResult indicates the query result given with event is invalid.
+	// TODO: this is named badly
 	ErrInvalidQueryResult = errors.New("invalid event queryResult, it is only valid to give a queryResult when event is QueryEventRecordResult")
 	// ErrResultAlreadyRecorded indicates query cannot make state transition because result has already been recorded.
+	// TODO: this is also named badly
 	ErrResultAlreadyRecorded = errors.New("result already recorded cannot make state transition")
 )
 
@@ -194,6 +196,7 @@ func (q *query) RecordEvent(event QueryEvent, queryResult *shared.WorkflowQueryR
 		return q.handleComplete(), nil
 	case QueryEventExpire:
 		q.state = QueryStateExpired
+		close(q.termCh)
 		return true, nil
 	default:
 		return false, ErrInvalidEvent
