@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -83,7 +83,7 @@ type (
 	}
 
 	query struct {
-		sync.Mutex
+		sync.RWMutex
 
 		id                            string
 		queryInput                    *shared.WorkflowQuery
@@ -113,9 +113,6 @@ func (q *query) ID() string {
 
 // QueryInput returns the query input.
 func (q *query) QueryInput() *shared.WorkflowQuery {
-	q.Lock()
-	defer q.Unlock()
-
 	return q.queryInput
 }
 
@@ -123,16 +120,16 @@ func (q *query) QueryInput() *shared.WorkflowQuery {
 // This will be nil if a result has not already been recorded for this query.
 // A query having a result does not mean the query is ready to unblock, use TerminationCh to know when query has entered terminal state.
 func (q *query) QueryResult() *shared.WorkflowQueryResult {
-	q.Lock()
-	defer q.Unlock()
+	q.RLock()
+	defer q.RUnlock()
 
 	return q.queryResult
 }
 
 // State returns the state of the query.
 func (q *query) State() QueryState {
-	q.Lock()
-	defer q.Unlock()
+	q.RLock()
+	defer q.RUnlock()
 
 	return q.state
 }
