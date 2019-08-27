@@ -22,10 +22,11 @@ package xdc
 
 import (
 	"fmt"
-	"github.com/pborman/uuid"
-	"github.com/stretchr/testify/suite"
 	"runtime/debug"
 	"testing"
+
+	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/suite"
 )
 
 type (
@@ -61,7 +62,7 @@ func (s *historyEventTestSuit) Test_HistoryEvent_Generator() {
 		Batches: make([]NDCTestBatch, 0),
 	}
 	curr := root
-	//eventRanches := make([][]Vertex, 0, totalBranchNumber)
+	// eventRanches := make([][]Vertex, 0, totalBranchNumber)
 	for currentBranch > 0 {
 		for s.generator.HasNextVertex() {
 			events := s.generator.GetNextVertices()
