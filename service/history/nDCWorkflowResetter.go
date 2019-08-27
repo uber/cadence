@@ -36,15 +36,13 @@ import (
 )
 
 type (
-	nDCWorkflowResetterCompleteFn func()
-
 	nDCWorkflowResetter interface {
 		resetWorkflow(
 			ctx ctx.Context,
 			now time.Time,
 			baseEventID int64,
 			baseVersion int64,
-		) (mutableState, nDCWorkflowResetterCompleteFn, error)
+		) (mutableState, error)
 	}
 
 	nDCWorkflowResetterImpl struct {
@@ -96,7 +94,7 @@ func (r *nDCWorkflowResetterImpl) resetWorkflow(
 	now time.Time,
 	baseEventID int64,
 	baseVersion int64,
-) (mutableState, nDCWorkflowResetterCompleteFn, error) {
+) (mutableState, error) {
 
 	baseWorkflow, err := r.transactionMgr.loadNDCWorkflow(
 		ctx,
@@ -105,7 +103,7 @@ func (r *nDCWorkflowResetterImpl) resetWorkflow(
 		r.baseRunID,
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	baseVersionHistories := baseWorkflow.getMutableState().GetVersionHistories()
@@ -114,7 +112,7 @@ func (r *nDCWorkflowResetterImpl) resetWorkflow(
 	)
 	if err != nil {
 		// TODO we should use a new retry error for 3+DC
-		return nil, nil, newRetryTaskErrorWithHint(
+		return nil, newRetryTaskErrorWithHint(
 			ErrRetryBufferEventsMsg,
 			r.domainID,
 			r.workflowID,
@@ -125,7 +123,7 @@ func (r *nDCWorkflowResetterImpl) resetWorkflow(
 
 	baseVersionHistory, err := baseVersionHistories.GetVersionHistory(index)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	baseBranchToken := baseVersionHistory.GetBranchToken()
 
@@ -151,7 +149,7 @@ func (r *nDCWorkflowResetterImpl) resetWorkflow(
 		requestID,
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// fork a new history branch
@@ -163,10 +161,10 @@ func (r *nDCWorkflowResetterImpl) resetWorkflow(
 		ShardID:         common.IntPtr(shardID),
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	newBranchToken := resp.NewBranchToken
-	completeFn := func() {
+	defer func() {
 		if errComplete := r.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
 			BranchToken: newBranchToken,
 			Success:     true, // past lessons learnt from Cassandra & gocql tells that we cannot possibly find all timeout errors
@@ -176,13 +174,14 @@ func (r *nDCWorkflowResetterImpl) resetWorkflow(
 				tag.Error(errComplete),
 			).Error("newNDCWorkflowResetter unable to complete creation of new branch.")
 		}
-	}
-	err = rebuildMutableState.SetCurrentBranchToken(newBranchToken)
-	if err != nil {
-		completeFn()
-		return nil, nil, err
+	}()
+
+	if err = rebuildMutableState.SetCurrentBranchToken(
+		newBranchToken,
+	); err != nil {
+		return nil, err
 	}
 
 	r.newContext.setHistorySize(rebuiltHistorySize)
-	return rebuildMutableState, completeFn, nil
+	return rebuildMutableState, nil
 }

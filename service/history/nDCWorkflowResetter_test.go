@@ -188,7 +188,7 @@ func (s *nDCWorkflowResetterSuite) TestResetWorkflow() {
 		ShardID:     common.IntPtr(s.mockShard.GetShardID()),
 	}).Return(nil).Times(1)
 
-	rebuiltMutableState, rebuiltCompleteFn, err := s.nDCWorkflowResetter.resetWorkflow(
+	rebuiltMutableState, err := s.nDCWorkflowResetter.resetWorkflow(
 		ctx,
 		now,
 		baseEventID,
@@ -197,6 +197,4 @@ func (s *nDCWorkflowResetterSuite) TestResetWorkflow() {
 	s.NoError(err)
 	s.Equal(mockRebuiltMutableState, rebuiltMutableState)
 	s.Equal(s.newContext.getHistorySize(), rebuiltHistorySize)
-	s.NotNil(rebuiltCompleteFn)
-	rebuiltCompleteFn()
 }
