@@ -68,7 +68,7 @@ type (
 		txProcessor          transferQueueProcessor
 		timerProcessor       timerQueueProcessor
 		taskAllocator        taskAllocator
-		replicator           *nDCHistoryReplicator
+		replicator           *historyReplicator
 		replicatorProcessor  queueProcessor
 		historyEventNotifier historyEventNotifier
 		tokenSerializer      common.TaskTokenSerializer
@@ -176,7 +176,8 @@ func NewEngineWithShardContext(
 	if publisher != nil {
 		replicatorProcessor := newReplicatorQueueProcessor(shard, historyEngImpl.historyCache, publisher, executionManager, historyManager, historyV2Manager, logger)
 		historyEngImpl.replicatorProcessor = replicatorProcessor
-		historyEngImpl.replicator = newNDCHistoryReplicator(shard, historyCache, logger)
+		historyEngImpl.replicator = newHistoryReplicator(shard, clock.NewRealTimeSource(), historyEngImpl, historyCache, shard.GetDomainCache(), historyManager, historyV2Manager,
+			logger)
 	}
 	historyEngImpl.resetor = newWorkflowResetor(historyEngImpl)
 	historyEngImpl.decisionHandler = newDecisionHandler(historyEngImpl)
@@ -1786,7 +1787,6 @@ func (e *historyEngineImpl) ReplicateEvents(
 	return e.replicator.ApplyEvents(ctx, replicateRequest)
 }
 
-//TODO: wire up with ndc replicator
 func (e *historyEngineImpl) ReplicateRawEvents(
 	ctx ctx.Context,
 	replicateRequest *h.ReplicateRawEventsRequest,
@@ -1813,7 +1813,6 @@ func (e *historyEngineImpl) SyncShardStatus(
 	return nil
 }
 
-//TODO: wire up with ndc replicator
 func (e *historyEngineImpl) SyncActivity(
 	ctx ctx.Context,
 	request *h.SyncActivityRequest,

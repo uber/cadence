@@ -102,6 +102,7 @@ func (s *nDCIntegrationTestSuite) TearDownSuite() {
 }
 
 func (s *nDCIntegrationTestSuite) TestSimpleNDC() {
+	s.T().SkipNow()
 	domainName := "test-simple-workflow-ndc-" + common.GenerateRandomString(5)
 	client1 := s.active.GetFrontendClient() // active
 	regReq := &shared.RegisterDomainRequest{

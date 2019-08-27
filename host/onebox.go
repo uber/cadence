@@ -23,7 +23,6 @@ package host
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/.gen/go/history/historyserviceclient"
 	"sync"
 
 	"github.com/pborman/uuid"
@@ -31,6 +30,7 @@ import (
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
+	"github.com/uber/cadence/.gen/go/history/historyserviceclient"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
