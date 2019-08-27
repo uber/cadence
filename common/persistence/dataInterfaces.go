@@ -1345,7 +1345,8 @@ type (
 	}
 
 	// ForkingInProgressBranch is part of GetHistoryTreeResponse
-	ForkingInProgressBranch struct {
+	HistoryBranchDetail struct {
+		TreeID string
 		BranchID string
 		ForkTime time.Time
 		Info     string
@@ -1355,7 +1356,7 @@ type (
 	GetHistoryTreeResponse struct {
 		// all branches of a tree
 		Branches                  []*workflow.HistoryBranch
-		ForkingInProgressBranches []ForkingInProgressBranch
+		ForkingInProgressBranches []HistoryBranchDetail
 	}
 
 	// AppendHistoryEventsResponse is response for AppendHistoryEventsRequest

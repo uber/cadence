@@ -406,7 +406,7 @@ func (h *cassandraHistoryV2Persistence) GetHistoryTree(request *p.GetHistoryTree
 
 	pagingToken := []byte{}
 	branches := make([]*workflow.HistoryBranch, 0)
-	forkingBranches := make([]p.ForkingInProgressBranch, 0)
+	forkingBranches := make([]p.HistoryBranchDetail, 0)
 
 	var iter *gocql.Iter
 	for {
@@ -426,7 +426,8 @@ func (h *cassandraHistoryV2Persistence) GetHistoryTree(request *p.GetHistoryTree
 
 		for iter.Scan(&branchUUID, &ancsResult, &forkingInProgress, &forkTime, &info) {
 			if forkingInProgress {
-				br := p.ForkingInProgressBranch{
+				br := p.HistoryBranchDetail{
+					TreeID: treeID,
 					BranchID: branchUUID.String(),
 					ForkTime: forkTime,
 					Info:     info,
