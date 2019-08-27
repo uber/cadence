@@ -32,7 +32,7 @@ type channelPriorityQueue struct {
 
 // PriorityQueue is an interface for a priority queue
 type PriorityQueue interface {
-	Add(priority int, item interface{}) error
+	Add(priority int, item interface{}) bool
 	Remove() (interface{}, bool)
 	Destroy()
 }
@@ -51,15 +51,16 @@ func NewChannelPriorityQueue(queueSize int) PriorityQueue {
 
 // Add adds an item to a channel in the queue. This is blocking and waits for
 // the queue to get empty if it is full
-func (c *channelPriorityQueue) Add(priority int, item interface{}) error {
+func (c *channelPriorityQueue) Add(priority int, item interface{}) bool {
 	if priority >= numPriorities {
-		return fmt.Errorf("trying to add item with invalid priority %v, queue only supports %v priorities", priority, numPriorities)
+		panic(fmt.Sprintf("trying to add item with invalid priority %v, queue only supports %v priorities", priority, numPriorities))
 	}
 	select {
 	case c.channels[priority] <- item:
 	case <-c.shutdownCh:
+		return true
 	}
-	return nil
+	return false
 }
 
 // Remove removes an item from the priority queue. This is blocking till an
