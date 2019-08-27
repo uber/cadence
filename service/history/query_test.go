@@ -23,10 +23,11 @@
 package history
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber/cadence/.gen/go/shared"
-	"testing"
 )
 
 type QuerySuite struct {
@@ -95,14 +96,14 @@ func (s *QuerySuite) TestCompletedTerminalState() {
 
 	changed, err = query.RecordEvent(QueryEventRebuffer, &shared.WorkflowQueryResult{})
 	s.False(changed)
-	s.Equal(ErrInvalidQueryResult, err)
+	s.Equal(ErrInvalidEvent, err)
 	s.Equal(QueryStateStarted, query.State())
 	s.False(s.chanClosed(query.TerminationCh()))
 	s.Nil(query.QueryResult())
 
 	changed, err = query.RecordEvent(QueryEventRecordResult, nil)
 	s.False(changed)
-	s.Equal(ErrInvalidQueryResult, err)
+	s.Equal(ErrInvalidEvent, err)
 	s.Equal(QueryStateStarted, query.State())
 	s.False(s.chanClosed(query.TerminationCh()))
 	s.Nil(query.QueryResult())
@@ -116,7 +117,14 @@ func (s *QuerySuite) TestCompletedTerminalState() {
 
 	changed, err = query.RecordEvent(QueryEventRebuffer, nil)
 	s.False(changed)
-	s.Equal(ErrInvalidQueryResult, err)
+	s.Equal(ErrResultAlreadyRecorded, err)
+	s.Equal(QueryStateStarted, query.State())
+	s.False(s.chanClosed(query.TerminationCh()))
+	s.NotNil(query.QueryResult())
+
+	changed, err = query.RecordEvent(QueryEventRecordResult, &shared.WorkflowQueryResult{})
+	s.False(changed)
+	s.Equal(ErrResultAlreadyRecorded, err)
 	s.Equal(QueryStateStarted, query.State())
 	s.False(s.chanClosed(query.TerminationCh()))
 	s.NotNil(query.QueryResult())
@@ -124,6 +132,13 @@ func (s *QuerySuite) TestCompletedTerminalState() {
 	changed, err = query.RecordEvent(QueryEventPersistenceConditionSatisfied, nil)
 	s.True(changed)
 	s.NoError(err)
+	s.Equal(QueryStateCompleted, query.State())
+	s.True(s.chanClosed(query.TerminationCh()))
+	s.NotNil(query.QueryResult())
+
+	changed, err = query.RecordEvent(QueryEventPersistenceConditionSatisfied, nil)
+	s.False(changed)
+	s.Equal(ErrAlreadyTerminal, err)
 	s.Equal(QueryStateCompleted, query.State())
 	s.True(s.chanClosed(query.TerminationCh()))
 	s.NotNil(query.QueryResult())

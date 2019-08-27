@@ -35,11 +35,7 @@ var (
 	ErrAlreadyTerminal = errors.New("query has already reached terminal state cannot post any new events")
 	// ErrInvalidEvent indicates event cannot be applied to query in state.
 	ErrInvalidEvent = errors.New("event cannot be applied to query in state")
-	// ErrInvalidQueryResult indicates the query result given with event is invalid.
-	// TODO: this is named badly
-	ErrInvalidQueryResult = errors.New("invalid event queryResult, it is only valid to give a queryResult when event is QueryEventRecordResult")
 	// ErrResultAlreadyRecorded indicates query cannot make state transition because result has already been recorded.
-	// TODO: this is also named badly
 	ErrResultAlreadyRecorded = errors.New("result already recorded cannot make state transition")
 )
 
@@ -160,7 +156,7 @@ func (q *query) RecordEvent(event QueryEvent, queryResult *shared.WorkflowQueryR
 	}
 
 	if event != QueryEventRecordResult && queryResult != nil {
-		return false, ErrInvalidQueryResult
+		return false, ErrInvalidEvent
 	}
 
 	switch event {
@@ -184,7 +180,7 @@ func (q *query) RecordEvent(event QueryEvent, queryResult *shared.WorkflowQueryR
 			return false, ErrInvalidEvent
 		}
 		if queryResult == nil {
-			return false, ErrInvalidQueryResult
+			return false, ErrInvalidEvent
 		}
 		if q.queryResult != nil {
 			return false, ErrResultAlreadyRecorded
