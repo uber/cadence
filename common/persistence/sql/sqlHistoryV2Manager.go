@@ -477,6 +477,10 @@ func (m *sqlHistoryV2Manager) CompleteForkBranch(request *p.InternalCompleteFork
 	})
 }
 
+func (h *sqlHistoryV2Manager) GetAllHistoryTreeBranches(request *p.GetAllHistoryTreeBranchesRequest) (*p.GetAllHistoryTreeBranchesResponse, error) {
+	panic("not implemented yet")
+}
+
 // GetHistoryTree returns all branch information of a tree
 func (m *sqlHistoryV2Manager) GetHistoryTree(request *p.GetHistoryTreeRequest) (*p.GetHistoryTreeResponse, error) {
 	treeID := sqldb.MustParseUUID(request.TreeID)

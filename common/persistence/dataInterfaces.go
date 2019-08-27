@@ -1359,6 +1359,22 @@ type (
 		ForkingInProgressBranches []HistoryBranchDetail
 	}
 
+	// GetAllHistoryTreeBranchesRequest is a request of GetAllHistoryTreeBranches
+	GetAllHistoryTreeBranchesRequest struct {
+		// pagination token
+		NextPageToken []byte
+		// maximum number of branches returned per page
+		PageSize int
+	}
+
+	// GetAllHistoryTreeBranchesResponse is a response to GetAllHistoryTreeBranches
+	GetAllHistoryTreeBranchesResponse struct {
+		// pagination token
+		NextPageToken []byte
+		// all branches of all trees
+		Branches []HistoryBranchDetail
+	}
+
 	// AppendHistoryEventsResponse is response for AppendHistoryEventsRequest
 	// Deprecated: uses V2 API-AppendHistoryNodesRequest
 	AppendHistoryEventsResponse struct {
@@ -1479,6 +1495,8 @@ type (
 		DeleteHistoryBranch(request *DeleteHistoryBranchRequest) error
 		// GetHistoryTree returns all branch information of a tree
 		GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error)
+		// GetAllHistoryTreeBranches returns all branches of all trees
+		GetAllHistoryTreeBranches(request *GetAllHistoryTreeBranchesRequest) (*GetAllHistoryTreeBranchesResponse, error)
 	}
 
 	// MetadataManager is used to manage metadata CRUD for domain entities
