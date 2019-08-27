@@ -48,6 +48,10 @@ func TestChannelPriorityQueue(t *testing.T) {
 	assert.Error(t, err)
 
 	queue.Destroy()
+
+	item, ok = queue.Remove()
+	assert.Nil(t, item)
+	assert.False(t, ok)
 }
 
 func BenchmarkChannelPriorityQueue(b *testing.B) {

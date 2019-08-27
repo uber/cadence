@@ -53,7 +53,7 @@ func NewChannelPriorityQueue(queueSize int) PriorityQueue {
 // the queue to get empty if it is full
 func (c *channelPriorityQueue) Add(priority int, item interface{}) error {
 	if priority >= numPriorities {
-		return fmt.Errorf("trying to add item with invalid priority %v. Queue only supports %v priorities.", priority, numPriorities)
+		return fmt.Errorf("trying to add item with invalid priority %v, queue only supports %v priorities", priority, numPriorities)
 	}
 	select {
 	case c.channels[priority] <- item:
@@ -70,6 +70,7 @@ func (c *channelPriorityQueue) Remove() (interface{}, bool) {
 	case item, ok := <-c.channels[0]:
 		return item, ok
 	case <-c.shutdownCh:
+		return nil, false
 	default:
 	}
 
