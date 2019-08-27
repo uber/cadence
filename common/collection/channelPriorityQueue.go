@@ -20,6 +20,8 @@
 
 package collection
 
+import "fmt"
+
 const numPriorities = 2
 
 // channelPriorityQueue is a priority queue built using channels
@@ -30,7 +32,7 @@ type channelPriorityQueue struct {
 
 // PriorityQueue is an interface for a priority queue
 type PriorityQueue interface {
-	Add(priority int, item interface{})
+	Add(priority int, item interface{}) error
 	Remove() (interface{}, bool)
 	Destroy()
 }
@@ -49,14 +51,15 @@ func NewChannelPriorityQueue(queueSize int) PriorityQueue {
 
 // Add adds an item to a channel in the queue. This is blocking and waits for
 // the queue to get empty if it is full
-func (c *channelPriorityQueue) Add(priority int, item interface{}) {
+func (c *channelPriorityQueue) Add(priority int, item interface{}) error {
 	if priority >= numPriorities {
-		return
+		return fmt.Errorf("trying to add item with invalid priority %v. Queue only supports %v priorities.", priority, numPriorities)
 	}
 	select {
 	case c.channels[priority] <- item:
 	case <-c.shutdownCh:
 	}
+	return nil
 }
 
 // Remove removes an item from the priority queue. This is blocking till an
@@ -64,21 +67,21 @@ func (c *channelPriorityQueue) Add(priority int, item interface{}) {
 func (c *channelPriorityQueue) Remove() (interface{}, bool) {
 	// pick from highest priority if exists
 	select {
-	case task, ok := <-c.channels[0]:
-		return task, ok
+	case item, ok := <-c.channels[0]:
+		return item, ok
 	case <-c.shutdownCh:
 	default:
 	}
 
 	// blocking select from all priorities
-	var task interface{}
+	var item interface{}
 	var ok bool
 	select {
-	case task, ok = <-c.channels[0]:
-	case task, ok = <-c.channels[1]:
+	case item, ok = <-c.channels[0]:
+	case item, ok = <-c.channels[1]:
 	case <-c.shutdownCh:
 	}
-	return task, ok
+	return item, ok
 }
 
 // Destroy - destroys the channel priority queue

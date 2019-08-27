@@ -23,7 +23,32 @@ package collection
 import (
 	"math/rand"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
+
+func TestChannelPriorityQueue(t *testing.T) {
+	queue := NewChannelPriorityQueue(1)
+
+	err := queue.Add(1, 20)
+	assert.NoError(t, err)
+
+	err = queue.Add(0, 10)
+	assert.NoError(t, err)
+
+	item, ok := queue.Remove()
+	assert.Equal(t, 10, item)
+	assert.True(t, ok)
+
+	item, ok = queue.Remove()
+	assert.Equal(t, 20, item)
+	assert.True(t, ok)
+
+	err = queue.Add(2, 20)
+	assert.Error(t, err)
+
+	queue.Destroy()
+}
 
 func BenchmarkChannelPriorityQueue(b *testing.B) {
 	queue := NewChannelPriorityQueue(100)
