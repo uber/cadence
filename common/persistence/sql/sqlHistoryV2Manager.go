@@ -478,6 +478,8 @@ func (m *sqlHistoryV2Manager) CompleteForkBranch(request *p.InternalCompleteFork
 }
 
 func (h *sqlHistoryV2Manager) GetAllHistoryTreeBranches(request *p.GetAllHistoryTreeBranchesRequest) (*p.GetAllHistoryTreeBranchesResponse, error) {
+	//TODO https://github.com/uber/cadence/issues/2458
+	// Implement it when we need
 	panic("not implemented yet")
 }
 
