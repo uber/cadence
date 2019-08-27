@@ -127,8 +127,8 @@ func (s *HistoryV2PersistenceSuite) TestScanAllTrees() {
 	s.Equal(0, len(resp.Branches), "some trees were leaked in other tests")
 
 	trees := map[string]bool{}
-	totalTrees := 12
-	pgSize := 5
+	totalTrees := 1002
+	pgSize := 100
 
 	for i := 0; i < totalTrees; i++ {
 		treeID := uuid.New()
