@@ -427,7 +427,7 @@ func (h *cassandraHistoryV2Persistence) GetHistoryTree(request *p.GetHistoryTree
 		for iter.Scan(&branchUUID, &ancsResult, &forkingInProgress, &forkTime, &info) {
 			if forkingInProgress {
 				br := p.HistoryBranchDetail{
-					TreeID: treeID,
+					TreeID:   treeID,
 					BranchID: branchUUID.String(),
 					ForkTime: forkTime,
 					Info:     info,

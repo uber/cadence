@@ -1346,7 +1346,7 @@ type (
 
 	// ForkingInProgressBranch is part of GetHistoryTreeResponse
 	HistoryBranchDetail struct {
-		TreeID string
+		TreeID   string
 		BranchID string
 		ForkTime time.Time
 		Info     string
