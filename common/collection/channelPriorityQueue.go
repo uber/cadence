@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,55 +22,66 @@ package collection
 
 const numPriorities = 2
 
-// ChannelPriorityQueue is a priority queue built using channels
-type ChannelPriorityQueue struct {
+// channelPriorityQueue is a priority queue built using channels
+type channelPriorityQueue struct {
 	channels   []chan interface{}
 	shutdownCh chan struct{}
 }
 
+// PriorityQueue is an interface for a priority queue
+type PriorityQueue interface {
+	Add(priority int, item interface{})
+	Remove() (interface{}, bool)
+	Destroy()
+}
+
 // NewChannelPriorityQueue returns a ChannelPriorityQueue
-func NewChannelPriorityQueue(queueSize int) *ChannelPriorityQueue {
+func NewChannelPriorityQueue(queueSize int) PriorityQueue {
 	channels := make([]chan interface{}, numPriorities)
 	for i := range channels {
 		channels[i] = make(chan interface{}, queueSize)
 	}
-	return &ChannelPriorityQueue{
+	return &channelPriorityQueue{
 		channels:   channels,
-		shutdownCh: make(chan struct{}, 1),
+		shutdownCh: make(chan struct{}),
 	}
 }
 
 // Add adds an item to a channel in the queue. This is blocking and waits for
 // the queue to get empty if it is full
-func (c *ChannelPriorityQueue) Add(priority int, item interface{}) {
+func (c *channelPriorityQueue) Add(priority int, item interface{}) {
 	if priority >= numPriorities {
 		return
 	}
-	c.channels[priority] <- item
+	select {
+	case c.channels[priority] <- item:
+	case <-c.shutdownCh:
+	}
 }
 
 // Remove removes an item from the priority queue. This is blocking till an
 // element becomes available in the priority queue
-func (c *ChannelPriorityQueue) Remove() interface{} {
+func (c *channelPriorityQueue) Remove() (interface{}, bool) {
 	// pick from highest priority if exists
 	select {
-	case task := <-c.channels[0]:
-		return task
+	case task, ok := <-c.channels[0]:
+		return task, ok
+	case <-c.shutdownCh:
 	default:
 	}
 
 	// blocking select from all priorities
 	var task interface{}
+	var ok bool
 	select {
-	case task = <-c.channels[0]:
-	case task = <-c.channels[1]:
+	case task, ok = <-c.channels[0]:
+	case task, ok = <-c.channels[1]:
+	case <-c.shutdownCh:
 	}
-	return task
+	return task, ok
 }
 
-// Close - destroys the channel priority queue
-func (c *ChannelPriorityQueue) Close() {
-	for _, channel := range c.channels {
-		close(channel)
-	}
+// Destroy - destroys the channel priority queue
+func (c *channelPriorityQueue) Destroy() {
+	close(c.shutdownCh)
 }

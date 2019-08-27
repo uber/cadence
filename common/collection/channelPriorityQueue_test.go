@@ -37,7 +37,7 @@ func BenchmarkChannelPriorityQueue(b *testing.B) {
 	}
 }
 
-func sendChannelQueue(queue *ChannelPriorityQueue) {
+func sendChannelQueue(queue PriorityQueue) {
 	for {
 		priority := rand.Int() % numPriorities
 		queue.Add(priority, struct{}{})

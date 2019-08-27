@@ -22,6 +22,7 @@ package collection
 
 import (
 	"math/rand"
+	"runtime"
 	"sort"
 	"testing"
 
@@ -129,6 +130,7 @@ func BenchmarkConcurrentPriorityQueue(b *testing.B) {
 
 func remove(queue Queue) interface{} {
 	for queue.IsEmpty() {
+		runtime.Gosched()
 	}
 	return queue.Remove()
 }
