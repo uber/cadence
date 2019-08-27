@@ -22,7 +22,7 @@ package batcher
 
 import (
 	"context"
-	
+
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/client"
