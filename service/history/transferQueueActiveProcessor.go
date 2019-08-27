@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -44,6 +45,7 @@ type (
 	transferQueueActiveProcessorImpl struct {
 		currentClusterName string
 		shard              ShardContext
+		domainCache        cache.DomainCache
 		historyService     *historyEngineImpl
 		options            *QueueProcessorOptions
 		historyClient      history.Client
@@ -103,6 +105,7 @@ func newTransferQueueActiveProcessor(
 	processor := &transferQueueActiveProcessorImpl{
 		currentClusterName: currentClusterName,
 		shard:              shard,
+		domainCache:        shard.GetDomainCache(),
 		historyService:     historyService,
 		options:            options,
 		historyClient:      historyClient,
@@ -194,6 +197,7 @@ func newTransferQueueFailoverProcessor(
 	processor := &transferQueueActiveProcessorImpl{
 		currentClusterName: currentClusterName,
 		shard:              shard,
+		domainCache:        shard.GetDomainCache(),
 		historyService:     historyService,
 		options:            options,
 		historyClient:      historyClient,
@@ -540,21 +544,16 @@ func (t *transferQueueActiveProcessorImpl) processCancelExecution(
 		return nil
 	}
 
+	targetDomainEntry, err := t.domainCache.GetDomainByID(targetDomainID)
+	if err != nil {
+		return err
+	}
+	targetDomain := targetDomainEntry.GetInfo().Name
+
 	// handle workflow cancel itself
 	if domainID == targetDomainID && task.WorkflowID == task.TargetWorkflowID {
 		// it does not matter if the run ID is a mismatch
-		cancelRequest := &h.RequestCancelWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(domainID),
-			CancelRequest: &workflow.RequestCancelWorkflowExecutionRequest{
-				Domain: common.StringPtr(targetDomainID),
-				WorkflowExecution: &workflow.WorkflowExecution{
-					WorkflowId: common.StringPtr(task.TargetWorkflowID),
-					RunId:      common.StringPtr(task.TargetRunID),
-				},
-				Identity: common.StringPtr(identityHistoryService),
-			},
-		}
-		err = t.requestCancelFailed(task, context, cancelRequest)
+		err = t.requestCancelExternalExecutionFailed(task, context, targetDomain, task.TargetWorkflowID, task.TargetRunID)
 		if _, ok := err.(*workflow.EntityNotExistsError); ok {
 			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
 			return nil
@@ -565,7 +564,7 @@ func (t *transferQueueActiveProcessorImpl) processCancelExecution(
 	cancelRequest := &h.RequestCancelWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(targetDomainID),
 		CancelRequest: &workflow.RequestCancelWorkflowExecutionRequest{
-			Domain: common.StringPtr(targetDomainID),
+			Domain: common.StringPtr(targetDomain),
 			WorkflowExecution: &workflow.WorkflowExecution{
 				WorkflowId: common.StringPtr(task.TargetWorkflowID),
 				RunId:      common.StringPtr(task.TargetRunID),
@@ -582,42 +581,38 @@ func (t *transferQueueActiveProcessorImpl) processCancelExecution(
 		ChildWorkflowOnly: common.BoolPtr(task.TargetChildWorkflowOnly),
 	}
 
-	op := func() error {
-		return t.historyClient.RequestCancelWorkflowExecution(nil, cancelRequest)
-	}
+	if err = t.requestCancelExternalExecutionWithRetry(cancelRequest); err != nil {
+		t.logger.Debug(fmt.Sprintf("Failed to cancel external workflow execution. Error: %v", err))
 
-	err = backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
-	if err != nil {
-		if _, ok := err.(*workflow.CancellationAlreadyRequestedError); ok {
-			// this could happen if target workflow cancellation is alreay requested
-			// to make workflow cancellation idempotent, we should clear this error.
-			err = nil
-		} else {
-			t.logger.Debug(fmt.Sprintf("Failed to cancel external workflow execution. Error: %v", err))
-			// Check to see if the error is non-transient, in which case add RequestCancelFailed
-			// event and complete transfer task by setting the err = nil
-			if common.IsServiceNonRetryableError(err) {
-				err = t.requestCancelFailed(task, context, cancelRequest)
-				if _, ok := err.(*workflow.EntityNotExistsError); ok {
-					// this could happen if this is a duplicate processing of the task, and the execution has already completed.
-					return nil
-				}
-			}
+		// Check to see if the error is non-transient, in which case add RequestCancelFailed
+		// event and complete transfer task by setting the err = nil
+		if !common.IsServiceNonRetryableError(err) {
+			// for retryable error just return
 			return err
 		}
+		return t.requestCancelExternalExecutionFailed(
+			task,
+			context,
+			targetDomain,
+			task.TargetWorkflowID,
+			task.TargetRunID,
+		)
 	}
 
-	t.logger.Debug(fmt.Sprintf("RequestCancel successfully recorded to external workflow execution.  WorkflowID: %v, RunID: %v",
-		task.TargetWorkflowID, task.TargetRunID))
+	t.logger.Debug(fmt.Sprintf(
+		"RequestCancel successfully recorded to external workflow execution.  WorkflowID: %v, RunID: %v",
+		task.TargetWorkflowID,
+		task.TargetRunID,
+	))
 
 	// Record ExternalWorkflowExecutionCancelRequested in source execution
-	err = t.requestCancelCompleted(task, context, cancelRequest)
-	if _, ok := err.(*workflow.EntityNotExistsError); ok {
-		// this could happen if this is a duplicate processing of the task, and the execution has already completed.
-		return nil
-	}
-
-	return err
+	return t.requestCancelExternalExecutionCompleted(
+		task,
+		context,
+		targetDomain,
+		task.TargetWorkflowID,
+		task.TargetRunID,
+	)
 }
 
 func (t *transferQueueActiveProcessorImpl) processSignalExecution(
@@ -650,7 +645,7 @@ func (t *transferQueueActiveProcessorImpl) processSignalExecution(
 	si, found := msBuilder.GetSignalInfo(initiatedEventID)
 	if !found {
 		// TODO: here we should also RemoveSignalMutableState from target workflow
-		// Otherwise, target SignalRequestID still can leak if shard restart after requestSignalCompleted
+		// Otherwise, target SignalRequestID still can leak if shard restart after signalExternalExecutionCompleted
 		// To do that, probably need to add the SignalRequestID in transfer task.
 		t.logger.Debug("Potentially duplicate task.", tag.TaskID(task.TaskID), tag.WorkflowScheduleID(task.ScheduleID), tag.TaskType(persistence.TransferTaskTypeSignalExecution))
 		return nil
@@ -662,33 +657,29 @@ func (t *transferQueueActiveProcessorImpl) processSignalExecution(
 		return nil
 	}
 
+	targetDomainEntry, err := t.domainCache.GetDomainByID(targetDomainID)
+	if err != nil {
+		return err
+	}
+	targetDomain := targetDomainEntry.GetInfo().Name
+
 	// handle workflow signal itself
 	if domainID == targetDomainID && task.WorkflowID == task.TargetWorkflowID {
 		// it does not matter if the run ID is a mismatch
-		signalRequest := &h.SignalWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(targetDomainID),
-			SignalRequest: &workflow.SignalWorkflowExecutionRequest{
-				Domain: common.StringPtr(targetDomainID),
-				WorkflowExecution: &workflow.WorkflowExecution{
-					WorkflowId: common.StringPtr(task.TargetWorkflowID),
-					RunId:      common.StringPtr(task.TargetRunID),
-				},
-				Identity: common.StringPtr(identityHistoryService),
-				Control:  si.Control,
-			},
-		}
-		err = t.requestSignalFailed(task, context, signalRequest)
-		if _, ok := err.(*workflow.EntityNotExistsError); ok {
-			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
-			return nil
-		}
-		return err
+		return t.signalExternalExecutionFailed(
+			task,
+			context,
+			targetDomain,
+			task.TargetWorkflowID,
+			task.TargetRunID,
+			si.Control,
+		)
 	}
 
 	signalRequest := &h.SignalWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(targetDomainID),
 		SignalRequest: &workflow.SignalWorkflowExecutionRequest{
-			Domain: common.StringPtr(targetDomainID),
+			Domain: common.StringPtr(targetDomain),
 			WorkflowExecution: &workflow.WorkflowExecution{
 				WorkflowId: common.StringPtr(task.TargetWorkflowID),
 				RunId:      common.StringPtr(task.TargetRunID),
@@ -707,30 +698,41 @@ func (t *transferQueueActiveProcessorImpl) processSignalExecution(
 		ChildWorkflowOnly: common.BoolPtr(task.TargetChildWorkflowOnly),
 	}
 
-	err = t.SignalExecutionWithRetry(signalRequest)
-
-	if err != nil {
+	if err = t.signalExternalExecutionWithRetry(signalRequest); err != nil {
 		t.logger.Debug(fmt.Sprintf("Failed to signal external workflow execution. Error: %v", err))
 
 		// Check to see if the error is non-transient, in which case add SignalFailed
 		// event and complete transfer task by setting the err = nil
-		if common.IsServiceNonRetryableError(err) {
-			err = t.requestSignalFailed(task, context, signalRequest)
-			if _, ok := err.(*workflow.EntityNotExistsError); ok {
-				// this could happen if this is a duplicate processing of the task, and the execution has already completed.
-				return nil
-			}
+		if !common.IsServiceNonRetryableError(err) {
+			// for retryable error just return
+			return err
 		}
-		return err
+		return t.signalExternalExecutionFailed(
+			task,
+			context,
+			targetDomain,
+			task.TargetWorkflowID,
+			task.TargetRunID,
+			si.Control,
+		)
 	}
 
-	t.logger.Debug(fmt.Sprintf("Signal successfully recorded to external workflow execution.  WorkflowID: %v, RunID: %v",
-		task.TargetWorkflowID, task.TargetRunID))
+	t.logger.Debug(fmt.Sprintf(
+		"Signal successfully recorded to external workflow execution.  WorkflowID: %v, RunID: %v",
+		task.TargetWorkflowID,
+		task.TargetRunID,
+	))
 
-	err = t.requestSignalCompleted(task, context, signalRequest)
-	if _, ok := err.(*workflow.EntityNotExistsError); ok {
-		// this could happen if this is a duplicate processing of the task, and the execution has already completed.
-		return nil
+	err = t.signalExternalExecutionCompleted(
+		task,
+		context,
+		targetDomain,
+		task.TargetWorkflowID,
+		task.TargetRunID,
+		si.Control,
+	)
+	if err != nil {
+		return err
 	}
 
 	// release the context lock since we no longer need mutable state builder and
@@ -745,10 +747,7 @@ func (t *transferQueueActiveProcessorImpl) processSignalExecution(
 		},
 		RequestId: common.StringPtr(si.SignalRequestID),
 	}
-
-	err = t.historyClient.RemoveSignalMutableState(nil, removeRequest)
-
-	return err
+	return t.historyClient.RemoveSignalMutableState(nil, removeRequest)
 }
 
 func (t *transferQueueActiveProcessorImpl) processStartChildExecution(
@@ -1120,7 +1119,7 @@ func (t *transferQueueActiveProcessorImpl) recordChildExecutionStarted(
 	runID string,
 ) error {
 
-	return t.updateWorkflowExecution(task.DomainID, context, true,
+	return t.updateWorkflowExecution(context, true,
 		func(msBuilder mutableState) error {
 			if !msBuilder.IsWorkflowExecutionRunning() {
 				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
@@ -1154,7 +1153,7 @@ func (t *transferQueueActiveProcessorImpl) recordStartChildExecutionFailed(
 	initiatedAttributes *workflow.StartChildWorkflowExecutionInitiatedEventAttributes,
 ) error {
 
-	return t.updateWorkflowExecution(task.DomainID, context, true,
+	return t.updateWorkflowExecution(context, true,
 		func(msBuilder mutableState) error {
 			if !msBuilder.IsWorkflowExecutionRunning() {
 				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
@@ -1197,13 +1196,15 @@ func (t *transferQueueActiveProcessorImpl) createFirstDecisionTask(
 	return err
 }
 
-func (t *transferQueueActiveProcessorImpl) requestCancelCompleted(
+func (t *transferQueueActiveProcessorImpl) requestCancelExternalExecutionCompleted(
 	task *persistence.TransferTaskInfo,
 	context workflowExecutionContext,
-	request *h.RequestCancelWorkflowExecutionRequest,
+	targetDomain string,
+	targetWorkflowID string,
+	targetRunID string,
 ) error {
 
-	return t.updateWorkflowExecution(task.DomainID, context, true,
+	err := t.updateWorkflowExecution(context, true,
 		func(msBuilder mutableState) error {
 			if !msBuilder.IsWorkflowExecutionRunning() {
 				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
@@ -1217,22 +1218,32 @@ func (t *transferQueueActiveProcessorImpl) requestCancelCompleted(
 
 			_, err := msBuilder.AddExternalWorkflowExecutionCancelRequested(
 				initiatedEventID,
-				request.GetDomainUUID(),
-				request.CancelRequest.WorkflowExecution.GetWorkflowId(),
-				request.CancelRequest.WorkflowExecution.GetRunId(),
+				targetDomain,
+				targetWorkflowID,
+				targetRunID,
 			)
 
 			return err
 		})
+
+	if _, ok := err.(*workflow.EntityNotExistsError); ok {
+		// this could happen if this is a duplicate processing of the task,
+		// or the execution has already completed.
+		return nil
+	}
+	return err
 }
 
-func (t *transferQueueActiveProcessorImpl) requestSignalCompleted(
+func (t *transferQueueActiveProcessorImpl) signalExternalExecutionCompleted(
 	task *persistence.TransferTaskInfo,
 	context workflowExecutionContext,
-	request *h.SignalWorkflowExecutionRequest,
+	targetDomain string,
+	targetWorkflowID string,
+	targetRunID string,
+	control []byte,
 ) error {
 
-	return t.updateWorkflowExecution(task.DomainID, context, true,
+	err := t.updateWorkflowExecution(context, true,
 		func(msBuilder mutableState) error {
 			if !msBuilder.IsWorkflowExecutionRunning() {
 				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
@@ -1246,22 +1257,31 @@ func (t *transferQueueActiveProcessorImpl) requestSignalCompleted(
 
 			_, err := msBuilder.AddExternalWorkflowExecutionSignaled(
 				initiatedEventID,
-				request.GetDomainUUID(),
-				request.SignalRequest.WorkflowExecution.GetWorkflowId(),
-				request.SignalRequest.WorkflowExecution.GetRunId(),
-				request.SignalRequest.Control)
-
+				targetDomain,
+				targetWorkflowID,
+				targetRunID,
+				control,
+			)
 			return err
 		})
+
+	if _, ok := err.(*workflow.EntityNotExistsError); ok {
+		// this could happen if this is a duplicate processing of the task,
+		// or the execution has already completed.
+		return nil
+	}
+	return err
 }
 
-func (t *transferQueueActiveProcessorImpl) requestCancelFailed(
+func (t *transferQueueActiveProcessorImpl) requestCancelExternalExecutionFailed(
 	task *persistence.TransferTaskInfo,
 	context workflowExecutionContext,
-	request *h.RequestCancelWorkflowExecutionRequest,
+	targetDomain string,
+	targetWorkflowID string,
+	targetRunID string,
 ) error {
 
-	return t.updateWorkflowExecution(task.DomainID, context, true,
+	err := t.updateWorkflowExecution(context, true,
 		func(msBuilder mutableState) error {
 			if !msBuilder.IsWorkflowExecutionRunning() {
 				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
@@ -1276,22 +1296,32 @@ func (t *transferQueueActiveProcessorImpl) requestCancelFailed(
 			_, err := msBuilder.AddRequestCancelExternalWorkflowExecutionFailedEvent(
 				common.EmptyEventID,
 				initiatedEventID,
-				request.GetDomainUUID(),
-				request.CancelRequest.WorkflowExecution.GetWorkflowId(),
-				request.CancelRequest.WorkflowExecution.GetRunId(),
+				targetDomain,
+				targetWorkflowID,
+				targetRunID,
 				workflow.CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution)
 
 			return err
 		})
+
+	if _, ok := err.(*workflow.EntityNotExistsError); ok {
+		// this could happen if this is a duplicate processing of the task,
+		// or the execution has already completed.
+		return nil
+	}
+	return err
 }
 
-func (t *transferQueueActiveProcessorImpl) requestSignalFailed(
+func (t *transferQueueActiveProcessorImpl) signalExternalExecutionFailed(
 	task *persistence.TransferTaskInfo,
 	context workflowExecutionContext,
-	request *h.SignalWorkflowExecutionRequest,
+	targetDomain string,
+	targetWorkflowID string,
+	targetRunID string,
+	control []byte,
 ) error {
 
-	return t.updateWorkflowExecution(task.DomainID, context, true,
+	err := t.updateWorkflowExecution(context, true,
 		func(msBuilder mutableState) error {
 			if !msBuilder.IsWorkflowExecutionRunning() {
 				return &workflow.EntityNotExistsError{Message: "Workflow is not running."}
@@ -1306,18 +1336,24 @@ func (t *transferQueueActiveProcessorImpl) requestSignalFailed(
 			_, err := msBuilder.AddSignalExternalWorkflowExecutionFailedEvent(
 				common.EmptyEventID,
 				initiatedEventID,
-				request.GetDomainUUID(),
-				request.SignalRequest.WorkflowExecution.GetWorkflowId(),
-				request.SignalRequest.WorkflowExecution.GetRunId(),
-				request.SignalRequest.Control,
-				workflow.SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution)
-
+				targetDomain,
+				targetWorkflowID,
+				targetRunID,
+				control,
+				workflow.SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution,
+			)
 			return err
 		})
+
+	if _, ok := err.(*workflow.EntityNotExistsError); ok {
+		// this could happen if this is a duplicate processing of the task,
+		// or the execution has already completed.
+		return nil
+	}
+	return err
 }
 
 func (t *transferQueueActiveProcessorImpl) updateWorkflowExecution(
-	domainID string,
 	context workflowExecutionContext,
 	createDecisionTask bool,
 	action func(builder mutableState) error,
@@ -1343,7 +1379,25 @@ func (t *transferQueueActiveProcessorImpl) updateWorkflowExecution(
 	return context.updateWorkflowExecutionAsActive(t.shard.GetTimeSource().Now())
 }
 
-func (t *transferQueueActiveProcessorImpl) SignalExecutionWithRetry(
+func (t *transferQueueActiveProcessorImpl) requestCancelExternalExecutionWithRetry(
+	cancelRequest *h.RequestCancelWorkflowExecutionRequest,
+) error {
+	op := func() error {
+		return t.historyClient.RequestCancelWorkflowExecution(nil, cancelRequest)
+	}
+
+	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+
+	if _, ok := err.(*workflow.CancellationAlreadyRequestedError); ok {
+		// err is CancellationAlreadyRequestedError
+		// this could happen if target workflow cancellation is already requested
+		// mark is as success
+		return nil
+	}
+	return err
+}
+
+func (t *transferQueueActiveProcessorImpl) signalExternalExecutionWithRetry(
 	signalRequest *h.SignalWorkflowExecutionRequest,
 ) error {
 
