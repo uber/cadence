@@ -1128,7 +1128,7 @@ func (p *historyV2PersistenceClient) CompleteForkBranch(request *CompleteForkBra
 
 func (p *historyV2PersistenceClient) GetAllHistoryTreeBranches(request *GetAllHistoryTreeBranchesRequest) (*GetAllHistoryTreeBranchesResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceGetAllHistoryTreeBranchesScope, metrics.PersistenceRequests)
-	sw := p.metricClient.StartTimer(metrics.PersistenceGetHistoryTreeScope, metrics.PersistenceLatency)
+	sw := p.metricClient.StartTimer(metrics.PersistenceGetAllHistoryTreeBranchesScope, metrics.PersistenceLatency)
 	response, err := p.persistence.GetAllHistoryTreeBranches(request)
 	sw.Stop()
 	if err != nil {
