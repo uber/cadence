@@ -2717,8 +2717,7 @@ func (wh *WorkflowHandler) QueryWorkflow(
 	)
 
 	if domainID == "0583739e-44fb-4f17-8fd2-683081342718" && !response.GetIsWorkflowRunning() {
-		// return nil, &gen.BadRequestError{Message: "temporary disable query functionality on closed workflow"}
-		return &gen.QueryWorkflowResponse{}, nil
+		return nil, &gen.EntityNotExistsError{Message: "temporary disable query functionality on closed workflow"}
 	}
 
 	queryRequest.Execution.RunId = response.Execution.RunId
