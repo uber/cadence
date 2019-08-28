@@ -22,9 +22,9 @@ package history
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
-	"fmt"
 
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/history/historyserviceclient"

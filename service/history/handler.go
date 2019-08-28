@@ -698,16 +698,13 @@ func (h *Handler) RemoveTask(ctx context.Context,
 // CloseShardTask returns information about the internal states of a history host
 func (h *Handler) CloseShardTask(ctx context.Context,
 	request *gen.CloseShardRequest) (resp *gen.CloseShardResponse, retError error) {
-	err := h.controller.removeEngineForShard(int(*request.ShardID))
+	h.controller.removeEngineForShard(int(*request.ShardID))
 	status := "Engine removed OK"
-	if err != nil {
-		status = fmt.Sprintf("Issue occurred while try to close shard: %v", err)
-	}
 
 	resp = &gen.CloseShardResponse{
 		Status: &status,
 	}
-	return resp, err
+	return resp, nil
 }
 
 // DescribeMutableState - returns the internal analysis of workflow execution state

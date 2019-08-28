@@ -201,17 +201,13 @@ func (c *shardController) getEngineForShard(shardID int) (Engine, error) {
 	return item.getOrCreateEngine(c.shardClosedCh)
 }
 
-func (c *shardController) removeEngineForShard(shardID int) error {
+func (c *shardController) removeEngineForShard(shardID int) {
 	sw := c.metricsClient.StartTimer(metrics.HistoryShardControllerScope, metrics.RemoveEngineManualIntervention)
 	defer sw.Stop()
-	item, err := c.removeHistoryShardItem(shardID)
-	if err != nil {
-		return err
-	}
+	item, _ := c.removeHistoryShardItem(shardID)
 	if item != nil {
 		item.stopEngine()
 	}
-	return nil
 }
 
 func (c *shardController) getOrCreateHistoryShardItem(shardID int) (*historyShardsItem, error) {

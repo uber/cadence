@@ -611,8 +611,8 @@ func (e *mutableStateBuilder) IsStickyTaskListEnabled() bool {
 	if e.executionInfo.StickyTaskList == "" {
 		return false
 	}
-	maxDu := e.config.StickyTTL(e.domainName)
-	if e.timeSource.Now().After(e.executionInfo.LastUpdatedTimestamp.Add(maxDu)) {
+	ttl := e.config.StickyTTL(e.domainName)
+	if e.timeSource.Now().After(e.executionInfo.LastUpdatedTimestamp.Add(ttl)) {
 		return false
 	}
 	return true
@@ -1186,6 +1186,7 @@ func (e *mutableStateBuilder) HasBufferedEvents() bool {
 func (e *mutableStateBuilder) UpdateDecision(
 	decision *decisionInfo,
 ) {
+
 	e.executionInfo.DecisionVersion = decision.Version
 	e.executionInfo.DecisionScheduleID = decision.ScheduleID
 	e.executionInfo.DecisionStartedID = decision.StartedID
@@ -1677,6 +1678,7 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEventAsHeartbeat(
 		startToCloseTimeoutSeconds,
 		e.executionInfo.DecisionAttempt,
 		scheduleTime,
+		originalScheduledTimestamp,
 	)
 	if err != nil {
 		return nil, err
@@ -1732,7 +1734,8 @@ func (e *mutableStateBuilder) ReplicateDecisionTaskScheduledEvent(
 	taskList string,
 	startToCloseTimeoutSeconds int32,
 	attempt int64,
-	timestamp int64,
+	scheduleTimestamp int64,
+	originalScheduledTimestamp int64,
 ) (*decisionInfo, error) {
 	decision := &decisionInfo{
 		Version:                    version,

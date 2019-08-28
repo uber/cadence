@@ -23,6 +23,7 @@ package history
 import (
 	ctx "context"
 	"fmt"
+	"time"
 
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -307,7 +308,6 @@ Update_History_Loop:
 		scheduleID := token.ScheduleID
 		currentDecision, isRunning := msBuilder.GetDecisionInfo(scheduleID)
 
-
 		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 		// some extreme cassandra failure cases.
 		if !isRunning && scheduleID >= msBuilder.GetNextEventID() {
@@ -317,12 +317,12 @@ Update_History_Loop:
 			continue Update_History_Loop
 		}
 
-		if !msBuilder.IsWorkflowExecutionRunning() || !isRunning || di.Attempt != token.ScheduleAttempt ||
-			di.StartedID == common.EmptyEventID {
+		if !msBuilder.IsWorkflowExecutionRunning() || !isRunning || currentDecision.Attempt != token.ScheduleAttempt ||
+			currentDecision.StartedID == common.EmptyEventID {
 			return nil, &workflow.EntityNotExistsError{Message: "Decision task not found."}
 		}
 
-		startedID := di.StartedID
+		startedID := currentDecision.StartedID
 		maxResetPoints := handler.config.MaxAutoResetPoints(domainEntry.GetInfo().Name)
 		if msBuilder.GetExecutionInfo().AutoResetPoints != nil && maxResetPoints == len(msBuilder.GetExecutionInfo().AutoResetPoints.Points) {
 			handler.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.AutoResetPointsLimitExceededCounter)
@@ -475,13 +475,14 @@ Update_History_Loop:
 			if err != nil {
 				return nil, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
 			}
-			newDecisionTaskScheduledID = di.ScheduleID
+
+			newDecisionTaskScheduledID = newDecision.ScheduleID
 			// skip transfer task for decision if request asking to return new decision task
 			if request.GetReturnNewDecisionTask() {
 				// start the new decision task if request asked to do so
 				// TODO: replace the poll request
-				_, _, err := msBuilder.AddDecisionTaskStartedEvent(di.ScheduleID, "request-from-RespondDecisionTaskCompleted", &workflow.PollForDecisionTaskRequest{
-					TaskList: &workflow.TaskList{Name: common.StringPtr(di.TaskList)},
+				_, _, err := msBuilder.AddDecisionTaskStartedEvent(newDecision.ScheduleID, "request-from-RespondDecisionTaskCompleted", &workflow.PollForDecisionTaskRequest{
+					TaskList: &workflow.TaskList{Name: common.StringPtr(newDecision.TaskList)},
 					Identity: request.Identity,
 				})
 				if err != nil {
@@ -544,6 +545,13 @@ Update_History_Loop:
 			}
 
 			return nil, updateErr
+		}
+
+		if decisionHeartbeatTimeout {
+			// at this point, update is successful, but we still return an error to client so that the worker will give up this workflow
+			return nil, &workflow.EntityNotExistsError{
+				Message: fmt.Sprintf("decision heartbeat timeout"),
+			}
 		}
 
 		resp = &h.RespondDecisionTaskCompletedResponse{}
