@@ -5281,7 +5281,6 @@ func addStartChildWorkflowExecutionInitiatedEvent(builder mutableState, decision
 			Input:                               input,
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionStartToCloseTimeout),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(taskStartToCloseTimeout),
-			ChildPolicy:                         common.ChildPolicyPtr(workflow.ChildPolicyTerminate),
 			Control:                             nil,
 		})
 	return event, cei
@@ -5556,6 +5555,7 @@ func copyChildInfo(sourceInfo *persistence.ChildExecutionInfo) *persistence.Chil
 		CreateRequestID:       sourceInfo.CreateRequestID,
 		DomainName:            sourceInfo.DomainName,
 		WorkflowTypeName:      sourceInfo.WorkflowTypeName,
+		ParentClosePolicy:     sourceInfo.ParentClosePolicy,
 	}
 
 	if sourceInfo.InitiatedEvent != nil {

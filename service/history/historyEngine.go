@@ -459,7 +459,6 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 	if err != nil {
 		if t, ok := err.(*persistence.WorkflowExecutionAlreadyStartedError); ok {
 			if t.StartRequestID == *request.RequestId {
-				e.deleteEvents(domainID, execution, eventStoreVersion, msBuilder.GetCurrentBranch())
 				return &workflow.StartWorkflowExecutionResponse{
 					RunId: common.StringPtr(t.RunID),
 				}, nil
@@ -467,7 +466,6 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 			}
 
 			if msBuilder.GetCurrentVersion() < t.LastWriteVersion {
-				e.deleteEvents(domainID, execution, eventStoreVersion, msBuilder.GetCurrentBranch())
 				return nil, ce.NewDomainNotActiveError(
 					*request.Domain,
 					clusterMetadata.GetCurrentClusterName(),
@@ -488,7 +486,6 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 				execution,
 				startRequest.StartRequest.GetWorkflowIdReusePolicy(),
 			); err != nil {
-				e.deleteEvents(domainID, execution, eventStoreVersion, msBuilder.GetCurrentBranch())
 				return nil, err
 			}
 			err = context.createWorkflowExecution(
@@ -613,11 +610,8 @@ func (e *historyEngineImpl) getMutableState(
 		IsWorkflowRunning:      common.BoolPtr(msBuilder.IsWorkflowExecutionRunning()),
 		EventStoreVersion:      common.Int32Ptr(msBuilder.GetEventStoreVersion()),
 		BranchToken:            msBuilder.GetCurrentBranch(),
-	}
-
-	if executionInfo.CloseStatus != persistence.WorkflowCloseStatusNone {
-		closeStatus := getWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
-		retResp.CloseStatus = &closeStatus
+		WorkflowState:          common.Int32Ptr(int32(executionInfo.State)),
+		WorkflowCloseState:     common.Int32Ptr(int32(executionInfo.CloseStatus)),
 	}
 
 	if msBuilder.IsStickyTaskListEnabled() {
@@ -744,7 +738,6 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 			TaskList:                            &workflow.TaskList{Name: common.StringPtr(executionInfo.TaskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionInfo.WorkflowTimeout),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(executionInfo.DecisionTimeoutValue),
-			ChildPolicy:                         common.ChildPolicyPtr(workflow.ChildPolicyTerminate),
 		},
 		WorkflowExecutionInfo: &workflow.WorkflowExecutionInfo{
 			Execution: &workflow.WorkflowExecution{
@@ -755,6 +748,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 			StartTime:        common.Int64Ptr(executionInfo.StartTimestamp.UnixNano()),
 			HistoryLength:    common.Int64Ptr(msBuilder.GetNextEventID() - common.FirstEventID),
 			AutoResetPoints:  executionInfo.AutoResetPoints,
+			Memo:             &workflow.Memo{Fields: executionInfo.Memo},
 			SearchAttributes: &workflow.SearchAttributes{IndexedFields: executionInfo.SearchAttributes},
 		},
 	}
@@ -778,7 +772,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	}
 	if executionInfo.State == persistence.WorkflowStateCompleted {
 		// for closed workflow
-		closeStatus := getWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
+		closeStatus := persistence.ToThriftWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
 		result.WorkflowExecutionInfo.CloseStatus = &closeStatus
 		completionEvent, ok := msBuilder.GetCompletionEvent()
 		if !ok {
@@ -835,10 +829,11 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	if len(msBuilder.GetPendingChildExecutionInfos()) > 0 {
 		for _, ch := range msBuilder.GetPendingChildExecutionInfos() {
 			p := &workflow.PendingChildExecutionInfo{
-				WorkflowID:      common.StringPtr(ch.StartedWorkflowID),
-				RunID:           common.StringPtr(ch.StartedRunID),
-				WorkflowTypName: common.StringPtr(ch.WorkflowTypeName),
-				InitiatedID:     common.Int64Ptr(ch.InitiatedID),
+				WorkflowID:        common.StringPtr(ch.StartedWorkflowID),
+				RunID:             common.StringPtr(ch.StartedRunID),
+				WorkflowTypName:   common.StringPtr(ch.WorkflowTypeName),
+				InitiatedID:       common.Int64Ptr(ch.InitiatedID),
+				ParentClosePolicy: common.ParentClosePolicyPtr(ch.ParentClosePolicy),
 			}
 			result.PendingChildren = append(result.PendingChildren, p)
 		}
@@ -1563,7 +1558,6 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 	)
 
 	if t, ok := err.(*persistence.WorkflowExecutionAlreadyStartedError); ok {
-		e.deleteEvents(domainID, execution, eventStoreVersion, msBuilder.GetCurrentBranch())
 		if t.StartRequestID == *request.RequestId {
 			return &workflow.StartWorkflowExecutionResponse{
 				RunId: common.StringPtr(t.RunID),
@@ -1965,42 +1959,6 @@ func createDeleteHistoryEventTimerTask(
 	expiryTime := clock.NewRealTimeSource().Now().Add(retention)
 	return &persistence.DeleteHistoryEventTask{
 		VisibilityTimestamp: expiryTime,
-	}
-}
-
-func (e *historyEngineImpl) deleteEvents(
-	domainID string,
-	execution workflow.WorkflowExecution,
-	eventStoreVersion int32,
-	branchToken []byte,
-) {
-
-	var err error
-	defer func() {
-		// This is the only code path that deleting history could cause history corruption(missing first batch).
-		// We will use this warn log to verify this issue: https://github.com/uber/cadence/issues/2441
-		e.logger.Warn("encounter WorkflowExecutionAlreadyStartedError, deleting duplicated history",
-			tag.ShardID(e.shard.GetShardID()),
-			tag.WorkflowDomainID(domainID),
-			tag.WorkflowID(execution.GetWorkflowId()),
-			tag.WorkflowRunID(execution.GetRunId()),
-			tag.Number(int64(eventStoreVersion)),
-			tag.Error(err))
-	}()
-	// We created the history events but failed to create workflow execution, so cleanup the history which could cause
-	// us to leak history events which are never cleaned up. Cleaning up the events is absolutely safe here as they
-	// are always created for a unique run_id which is not visible beyond this call yet.
-	// TODO: Handle error on deletion of execution history
-	if eventStoreVersion == persistence.EventStoreVersionV2 {
-		err = e.historyV2Mgr.DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
-			BranchToken: branchToken,
-			ShardID:     common.IntPtr(e.shard.GetShardID()),
-		})
-	} else {
-		err = e.historyMgr.DeleteWorkflowExecutionHistory(&persistence.DeleteWorkflowExecutionHistoryRequest{
-			DomainID:  domainID,
-			Execution: execution,
-		})
 	}
 }
 
