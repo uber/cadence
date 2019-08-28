@@ -1332,11 +1332,16 @@ func processResets(c *cli.Context, domain string, wes chan shared.WorkflowExecut
 // ResetInBatch resets workflow in batch
 func ResetInBatch(c *cli.Context) {
 	domain := getRequiredGlobalOption(c, FlagDomain)
-	inFileName := getRequiredOption(c, FlagInputFile)
-	excFileName := c.String(FlagExcludeFile)
-	separator := getRequiredOption(c, FlagInputSeparator)
 	reason := getRequiredOption(c, FlagReason)
 	resetType := getRequiredOption(c, FlagResetType)
+
+	inFileName := c.String(FlagInputFile)
+	query := c.String(FlagListQuery)
+	excFileName := c.String(FlagExcludeFile)
+	separator := c.String(FlagInputSeparator)
+	skipOpen := c.Bool(FlagSkipCurrent)
+	parallel := c.Int(FlagParallism)
+
 	extraForResetType, ok := resetTypesMap[resetType]
 	if !ok {
 		ErrorAndExit("Not supported reset type", nil)
@@ -1344,9 +1349,10 @@ func ResetInBatch(c *cli.Context) {
 		getRequiredOption(c, extraForResetType)
 	}
 
-	skipOpen := c.Bool(FlagSkipCurrent)
+	if inFileName == "" && query == ""{
+		ErrorAndExit("Must provide input file or list query to get target workflows to reset", nil)
+	}
 
-	parallel := c.Int(FlagParallism)
 	wg := &sync.WaitGroup{}
 
 	wes := make(chan shared.WorkflowExecution)
@@ -1384,43 +1390,70 @@ func ResetInBatch(c *cli.Context) {
 	}
 	fmt.Println("num of excludes:", len(excludes))
 
-	inFile, err := os.Open(inFileName)
-	if err != nil {
-		ErrorAndExit("Open failed", err)
+	if len(inFileName)>0{
+		inFile, err := os.Open(inFileName)
+		if err != nil {
+			ErrorAndExit("Open failed", err)
+		}
+		defer inFile.Close()
+		scanner := bufio.NewScanner(inFile)
+		idx := 0
+		for scanner.Scan() {
+			idx++
+			line := strings.TrimSpace(scanner.Text())
+			if len(line) == 0 {
+				fmt.Printf("line %v is empty, skipped\n", idx)
+				continue
+			}
+			cols := strings.Split(line, separator)
+			if len(cols) < 1 {
+				ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 1 cols separated by comma, only %v ", idx, len(cols)))
+			}
+			fmt.Printf("Start processing line %v ...\n", idx)
+			wid := strings.TrimSpace(cols[0])
+			rid := ""
+			if len(cols) > 1 {
+				rid = strings.TrimSpace(cols[1])
+			}
+
+			_, ok := excludes[wid]
+			if ok {
+				fmt.Println("skip by exclude file: ", wid, rid)
+				continue
+			}
+
+			wes <- shared.WorkflowExecution{
+				WorkflowId: common.StringPtr(wid),
+				RunId:      common.StringPtr(rid),
+			}
+		}
+	}else{
+		wfClient := getWorkflowClient(c)
+		pageSize := 1000
+		var nextPageToken []byte
+		for{
+			result, nextPageToken := scanWorkflowExecutions(wfClient, pageSize, nextPageToken, query, c)
+			for _, we := range result{
+				wid := we.Execution.GetWorkflowId()
+				rid := we.Execution.GetRunId()
+				_, ok := excludes[wid]
+				if ok {
+					fmt.Println("skip by exclude file: ", wid, rid)
+					continue
+				}
+
+				wes <- shared.WorkflowExecution{
+					WorkflowId: common.StringPtr(wid),
+					RunId:      common.StringPtr(rid),
+				}
+			}
+
+			if nextPageToken == nil{
+				break
+			}
+		}
 	}
-	defer inFile.Close()
-	scanner := bufio.NewScanner(inFile)
-	idx := 0
-	for scanner.Scan() {
-		idx++
-		line := strings.TrimSpace(scanner.Text())
-		if len(line) == 0 {
-			fmt.Printf("line %v is empty, skipped\n", idx)
-			continue
-		}
-		cols := strings.Split(line, separator)
-		if len(cols) < 1 {
-			ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 1 cols separated by comma, only %v ", idx, len(cols)))
-		}
-		fmt.Printf("Start processing line %v ...\n", idx)
-		wid := strings.TrimSpace(cols[0])
-		rid := ""
-		if len(cols) > 1 {
-			rid = strings.TrimSpace(cols[1])
-		}
-
-		_, ok := excludes[wid]
-		if ok {
-			fmt.Println("already processed, skip: ", wid, rid)
-			continue
-		}
-
-		wes <- shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(wid),
-			RunId:      common.StringPtr(rid),
-		}
-	}
-
+	
 	close(done)
 	fmt.Println("wait for all goroutines...")
 	wg.Wait()
