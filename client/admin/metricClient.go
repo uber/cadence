@@ -22,7 +22,6 @@ package admin
 
 import (
 	"context"
-	"fmt"
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/metrics"
@@ -86,7 +85,6 @@ func (c *metricClient) RemoveTask(
 	opts ...yarpc.CallOption,
 ) (*shared.RemoveTaskReponse, error) {
 
-	fmt.Println("========================= metricClient:RemoveTask =================================")
 	c.metricsClient.IncCounter(metrics.AdminClientCloseShardScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientCloseShardScope, metrics.CadenceClientLatency)
@@ -105,7 +103,6 @@ func (c *metricClient) CloseShardTask(
 	opts ...yarpc.CallOption,
 ) (*shared.CloseShardResponse, error) {
 
-	fmt.Println("========================= metricClient:CloseShardTask =================================")
 	c.metricsClient.IncCounter(metrics.AdminClientCloseShardScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientCloseShardScope, metrics.CadenceClientLatency)

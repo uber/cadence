@@ -22,7 +22,6 @@ package admin
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -94,7 +93,6 @@ func (c *clientImpl) RemoveTask(
 	opts ...yarpc.CallOption,
 ) (*shared.RemoveTaskReponse, error) {
 
-	fmt.Println("================ admin CloseShardTask got called =================")
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getRandomClient()
 	if err != nil {
@@ -111,7 +109,6 @@ func (c *clientImpl) CloseShardTask(
 	opts ...yarpc.CallOption,
 ) (*shared.CloseShardResponse, error) {
 
-	fmt.Println("================ admin CloseShardTask got called =================")
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getRandomClient()
 	if err != nil {

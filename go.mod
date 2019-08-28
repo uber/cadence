@@ -81,7 +81,7 @@ require (
 	go.uber.org/dig v1.7.0 // indirect
 	go.uber.org/fx v1.9.0 // indirect
 	go.uber.org/goleak v0.10.0 // indirect
-	go.uber.org/multierr v1.1.0 // indirect
+	go.uber.org/multierr v1.1.0
 	go.uber.org/net/metrics v1.1.0 // indirect
 	go.uber.org/thriftrw v1.20.0
 	go.uber.org/tools v0.0.0-20190618225709-2cfd321de3ee // indirect

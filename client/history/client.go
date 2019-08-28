@@ -22,7 +22,6 @@ package history
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -158,7 +157,6 @@ func (c *clientImpl) RemoveTask(
 	ctx context.Context,
 	request *workflow.RemoveTaskRequest,
 	opts ...yarpc.CallOption) (*workflow.RemoveTaskReponse, error) {
-	fmt.Println("========================= clientImpl:RemoveTask =================================")
 	var err error
 	var client historyserviceclient.Interface
 	if request.ShardID != nil {
@@ -184,7 +182,6 @@ func (c *clientImpl) CloseShardTask(
 	ctx context.Context,
 	request *workflow.CloseShardRequest,
 	opts ...yarpc.CallOption) (*workflow.CloseShardResponse, error) {
-	fmt.Println("========================= clientImpl:CloseShardTask =================================")
 
 	var err error
 	var client historyserviceclient.Interface

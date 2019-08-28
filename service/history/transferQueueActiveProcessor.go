@@ -236,9 +236,6 @@ func (t *transferQueueActiveProcessorImpl) process(
 		return metrics.TransferActiveQueueProcessorScope, errUnexpectedQueueTask
 	}
 
-	fmt.Println("=========in transferQueueActiveProcessorImpl ===========")
-	return metrics.TransferActiveQueueProcessorScope, errUnexpectedQueueTask
-
 	var err error
 	switch task.TaskType {
 	case persistence.TransferTaskTypeActivityTask:
