@@ -1348,7 +1348,7 @@ func ResetInBatch(c *cli.Context) {
 	extraForResetType, ok := resetTypesMap[resetType]
 	if !ok {
 		ErrorAndExit("Not supported reset type", nil)
-	} else {
+	} else if len(extraForResetType) > 0 {
 		getRequiredOption(c, extraForResetType)
 	}
 
