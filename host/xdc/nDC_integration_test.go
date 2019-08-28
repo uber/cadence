@@ -57,11 +57,13 @@ type (
 )
 
 func TestNDCIntegrationTestSuite(t *testing.T) {
+	t.SkipNow()
 	flag.Parse()
 	suite.Run(t, new(nDCIntegrationTestSuite))
 }
 
 func (s *nDCIntegrationTestSuite) SetupSuite() {
+	s.T().SkipNow()
 	zapLogger, err := zap.NewDevelopment()
 	// cannot use s.Nil since it is not initialized
 	s.Require().NoError(err)
