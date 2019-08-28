@@ -93,28 +93,38 @@ func readFile(filepath string) ([]byte, error) {
 	return ioutil.ReadFile(filepath)
 }
 
-func listFilesByPrefix(path string, prefix string) ([]string, error) {
-	if info, err := os.Stat(path); err != nil {
+func listFiles(dirPath string) ([]string, error) {
+	if info, err := os.Stat(dirPath); err != nil {
 		return nil, err
 	} else if !info.IsDir() {
 		return nil, errDirectoryExpected
 	}
 
-	children, err := ioutil.ReadDir(path)
+	f, err := os.Open(dirPath)
 	if err != nil {
 		return nil, err
 	}
-	var files []string
-	for _, c := range children {
-		if c.IsDir() {
-			continue
-		}
-		filename := c.Name()
-		if strings.HasPrefix(filename, prefix) {
-			files = append(files, filename)
+	fileNames, err := f.Readdirnames(-1)
+	f.Close()
+	if err != nil {
+		return nil, err
+	}
+	return fileNames, nil
+}
+
+func listFilesByPrefix(dirPath string, prefix string) ([]string, error) {
+	fileNames, err := listFiles(dirPath)
+	if err != nil {
+		return fileNames, nil
+	}
+
+	var filteredFileNames []string
+	for _, name := range fileNames {
+		if strings.HasPrefix(name, prefix) {
+			filteredFileNames = append(filteredFileNames, name)
 		}
 	}
-	return files, nil
+	return filteredFileNames, nil
 }
 
 func encodeHistoryBatches(historyBatches []*shared.History) ([]byte, error) {
@@ -134,6 +144,19 @@ func decodeHistoryBatches(data []byte) ([]*shared.History, error) {
 	return historyBatches, nil
 }
 
+func encode(v interface{}) ([]byte, error) {
+	return json.Marshal(v)
+}
+
+func decodeVisibilityRecord(data []byte) (*visibilityRecord, error) {
+	record := &visibilityRecord{}
+	err := json.Unmarshal(data, record)
+	if err != nil {
+		return nil, err
+	}
+	return record, nil
+}
+
 func tagLoggerWithArchiveHistoryRequestAndURI(logger log.Logger, request *archiver.ArchiveHistoryRequest, URI string) log.Logger {
 	return logger.WithTags(
 		tag.ShardID(request.ShardID),
@@ -145,6 +168,18 @@ func tagLoggerWithArchiveHistoryRequestAndURI(logger log.Logger, request *archiv
 		tag.ArchivalRequestBranchToken(request.BranchToken),
 		tag.ArchivalRequestNextEventID(request.NextEventID),
 		tag.ArchivalRequestCloseFailoverVersion(request.CloseFailoverVersion),
+		tag.ArchivalURI(URI),
+	)
+}
+
+func tagLoggerWithArchiveVisibilityRequestAndURI(logger log.Logger, request *archiver.ArchiveVisibilityRequest, URI string) log.Logger {
+	return logger.WithTags(
+		tag.ArchivalRequestDomainID(request.DomainID),
+		tag.ArchivalRequestWorkflowID(request.WorkflowID),
+		tag.ArchivalRequestRunID(request.RunID),
+		tag.ArchvialRequestWorkflowType(request.WorkflowTypeName),
+		tag.ArchivalRequestCloseTimestamp(request.CloseTimestamp),
+		tag.ArchivalRequestCloseStatus(request.CloseStatus.String()),
 		tag.ArchivalURI(URI),
 	)
 }
@@ -187,6 +222,14 @@ func constructFilenamePrefix(domainID, workflowID, runID string) string {
 	return strings.Join([]string{domainIDHash, workflowIDHash, runIDHash}, "")
 }
 
+func constructVisibilityFilename(closeTimestamp int64, runID string) string {
+	return fmt.Sprintf("%v_%s.visibility", closeTimestamp, hashRunID(runID))
+}
+
+func hashRunID(runID string) string {
+	return fmt.Sprintf("%v", farm.Fingerprint64([]byte(runID)))
+}
+
 func extractCloseFailoverVersion(filename string) (int64, error) {
 	filenameParts := strings.FieldsFunc(filename, func(r rune) bool {
 		return r == '_' || r == '.'
@@ -218,13 +261,18 @@ func deserializeGetHistoryToken(bytes []byte) (*getHistoryToken, error) {
 	return token, err
 }
 
-func serializeGetHistoryToken(token *getHistoryToken) ([]byte, error) {
+func deserializeQueryVisibilityToken(bytes []byte) (*queryVisibilityToken, error) {
+	token := &queryVisibilityToken{}
+	err := json.Unmarshal(bytes, token)
+	return token, err
+}
+
+func serializeToken(token interface{}) ([]byte, error) {
 	if token == nil {
 		return nil, nil
 	}
 
-	bytes, err := json.Marshal(token)
-	return bytes, err
+	return json.Marshal(token)
 }
 
 func validateArchiveRequest(request *archiver.ArchiveHistoryRequest) error {
@@ -243,6 +291,28 @@ func validateArchiveRequest(request *archiver.ArchiveHistoryRequest) error {
 	return nil
 }
 
+func validateVisibilityArchivalRequest(request *archiver.ArchiveVisibilityRequest) error {
+	if request.DomainID == "" {
+		return errors.New("DomainID is empty")
+	}
+	if request.WorkflowID == "" {
+		return errors.New("WorkflowID is empty")
+	}
+	if request.RunID == "" {
+		return errors.New("RunID is empty")
+	}
+	if request.WorkflowTypeName == "" {
+		return errors.New("WorkflowTypeName is empty")
+	}
+	if request.ExecutionTimestamp == 0 {
+		return errors.New("ExecutionTimestamp is empty")
+	}
+	if request.CloseTimestamp == 0 {
+		return errors.New("CloseTimestamp is empty")
+	}
+	return nil
+}
+
 func validateGetRequest(request *archiver.GetHistoryRequest) error {
 	if request.DomainID == "" {
 		return errors.New("DomainID is empty")
@@ -252,6 +322,16 @@ func validateGetRequest(request *archiver.GetHistoryRequest) error {
 	}
 	if request.RunID == "" {
 		return errors.New("RunID is empty")
+	}
+	if request.PageSize == 0 {
+		return errors.New("PageSize should not be 0")
+	}
+	return nil
+}
+
+func validateQueryRequest(request *archiver.QueryVisibilityRequest) error {
+	if request.DomainID == "" {
+		return errors.New("DomainID is empty")
 	}
 	if request.PageSize == 0 {
 		return errors.New("PageSize should not be 0")

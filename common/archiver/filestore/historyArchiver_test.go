@@ -50,8 +50,8 @@ const (
 	testCloseFailoverVersion = 100
 	testPageSize             = 100
 
-	testFileModeStr = "0700"
-	testDirModeStr  = "0600"
+	testFileModeStr = "0666"
+	testDirModeStr  = "0766"
 )
 
 var (
@@ -305,7 +305,7 @@ func (s *historyArchiverSuite) TestArchive_Success() {
 		historyIterator.EXPECT().HasNext().Return(false),
 	)
 
-	dir, err := ioutil.TempDir("", "TestArchiveSingeRead")
+	dir, err := ioutil.TempDir("", "TestArchiveSingleRead")
 	s.NoError(err)
 	defer os.RemoveAll(dir)
 
@@ -523,7 +523,7 @@ func (s *historyArchiverSuite) TestArchiveAndGet() {
 }
 
 func (s *historyArchiverSuite) newTestHistoryArchiver(historyIterator archiver.HistoryIterator) *historyArchiver {
-	config := &config.FilestoreHistoryArchiver{
+	config := &config.FilestoreArchiver{
 		FileMode: testFileModeStr,
 		DirMode:  testDirModeStr,
 	}

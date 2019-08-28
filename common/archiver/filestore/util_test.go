@@ -426,7 +426,7 @@ func (s *UtilSuite) TestSerializeDeserializeGetHistoryToken() {
 		NextBatchIdx:         20,
 	}
 
-	serializedToken, err := serializeGetHistoryToken(token)
+	serializedToken, err := serializeToken(token)
 	s.Nil(err)
 
 	deserializedToken, err := deserializeGetHistoryToken(serializedToken)

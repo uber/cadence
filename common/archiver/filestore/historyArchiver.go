@@ -84,14 +84,14 @@ type (
 // NewHistoryArchiver creates a new archiver.HistoryArchiver based on filestore
 func NewHistoryArchiver(
 	container *archiver.HistoryBootstrapContainer,
-	config *config.FilestoreHistoryArchiver,
+	config *config.FilestoreArchiver,
 ) (archiver.HistoryArchiver, error) {
 	return newHistoryArchiver(container, config, nil)
 }
 
 func newHistoryArchiver(
 	container *archiver.HistoryBootstrapContainer,
-	config *config.FilestoreHistoryArchiver,
+	config *config.FilestoreArchiver,
 	historyIterator archiver.HistoryIterator,
 ) (*historyArchiver, error) {
 	fileMode, err := strconv.ParseUint(config.FileMode, 0, 32)
@@ -208,7 +208,7 @@ func (h *historyArchiver) Get(
 	if request.NextPageToken != nil {
 		token, err = deserializeGetHistoryToken(request.NextPageToken)
 		if err != nil {
-			return nil, &shared.BadRequestError{Message: archiver.ErrGetHistoryTokenCorrupted.Error()}
+			return nil, &shared.BadRequestError{Message: archiver.ErrNextPageTokenCorrupted.Error()}
 		}
 	} else if request.CloseFailoverVersion != nil {
 		token = &getHistoryToken{
@@ -261,7 +261,7 @@ func (h *historyArchiver) Get(
 
 	if numOfBatches < len(historyBatches) {
 		token.NextBatchIdx += numOfBatches
-		nextToken, err := serializeGetHistoryToken(token)
+		nextToken, err := serializeToken(token)
 		if err != nil {
 			return nil, &shared.InternalServiceError{Message: err.Error()}
 		}
