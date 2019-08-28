@@ -1315,12 +1315,15 @@ func processResets(c *cli.Context, domain string, wes chan shared.WorkflowExecut
 				if err == nil {
 					break
 				}
+				if _, ok := err.(*shared.BadRequestError); ok {
+					break
+				}
 				fmt.Println("failed and retry...: ", wid, rid, err)
 				time.Sleep(time.Millisecond * time.Duration(rand.Intn(2000)))
 			}
 			time.Sleep(time.Millisecond * time.Duration(rand.Intn(1000)))
 			if err != nil {
-				fmt.Println("[ERROR] failed processing: ", wid, rid)
+				fmt.Println("[ERROR] failed processing: ", wid, rid, err.Error())
 			}
 		case <-done:
 			wg.Done()
@@ -1349,7 +1352,7 @@ func ResetInBatch(c *cli.Context) {
 		getRequiredOption(c, extraForResetType)
 	}
 
-	if inFileName == "" && query == ""{
+	if inFileName == "" && query == "" {
 		ErrorAndExit("Must provide input file or list query to get target workflows to reset", nil)
 	}
 
@@ -1390,7 +1393,7 @@ func ResetInBatch(c *cli.Context) {
 	}
 	fmt.Println("num of excludes:", len(excludes))
 
-	if len(inFileName)>0{
+	if len(inFileName) > 0 {
 		inFile, err := os.Open(inFileName)
 		if err != nil {
 			ErrorAndExit("Open failed", err)
@@ -1427,13 +1430,13 @@ func ResetInBatch(c *cli.Context) {
 				RunId:      common.StringPtr(rid),
 			}
 		}
-	}else{
+	} else {
 		wfClient := getWorkflowClient(c)
 		pageSize := 1000
 		var nextPageToken []byte
-		for{
+		for {
 			result, nextPageToken := scanWorkflowExecutions(wfClient, pageSize, nextPageToken, query, c)
-			for _, we := range result{
+			for _, we := range result {
 				wid := we.Execution.GetWorkflowId()
 				rid := we.Execution.GetRunId()
 				_, ok := excludes[wid]
@@ -1448,12 +1451,12 @@ func ResetInBatch(c *cli.Context) {
 				}
 			}
 
-			if nextPageToken == nil{
+			if nextPageToken == nil {
 				break
 			}
 		}
 	}
-	
+
 	close(done)
 	fmt.Println("wait for all goroutines...")
 	wg.Wait()
@@ -1534,7 +1537,7 @@ func doReset(c *cli.Context, domain, wid, rid string, reason, resetType string, 
 }
 
 func getResetEventIDByType(ctx context.Context, c *cli.Context, resetType, domain, wid, rid string, frontendClient workflowserviceclient.Interface) (resetBaseRunID string, decisionFinishID int64, err error) {
-	fmt.Println("switch", resetType)
+	fmt.Println("resetType:", resetType)
 	switch resetType {
 	case "LastDecisionCompleted":
 		resetBaseRunID, decisionFinishID, err = getLastDecisionCompletedID(ctx, domain, wid, rid, frontendClient)
@@ -1620,7 +1623,7 @@ func getBadDecisionCompletedID(ctx context.Context, domain, wid, rid, binChecksu
 	}
 
 	if decisionFinishID == 0 {
-		return "", 0, printErrorAndReturn("Get DecisionFinishID failed", fmt.Errorf("no DecisionFinishID"))
+		return "", 0, printErrorAndReturn("Get DecisionFinishID failed", &shared.BadRequestError{"no DecisionFinishID"})
 	}
 	return
 }

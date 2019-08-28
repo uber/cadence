@@ -255,7 +255,7 @@ func newWorkflowCommands() []cli.Command {
 			},
 		},
 		{
-			Name:  "reset-batch",
+			Name: "reset-batch",
 			Usage: "reset workflow in batch by resetType: " + strings.Join(mapKeysToArray(resetTypesMap), ",") +
 				"batch source is from input file or visibility query.",
 			Flags: []cli.Flag{
@@ -264,7 +264,7 @@ func newWorkflowCommands() []cli.Command {
 					Usage: "Input file to use for resetting, one workflow per line of WorkflowID and RunID. RunID is optional, default to current runID if not specified. ",
 				},
 				cli.StringFlag{
-					Name: FlagListQueryWithAlias,
+					Name:  FlagListQueryWithAlias,
 					Usage: "visibility query to get workflows to reset",
 				},
 				cli.StringFlag{
