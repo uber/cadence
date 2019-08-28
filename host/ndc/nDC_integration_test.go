@@ -17,15 +17,22 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-package xdc
+package ndc
 
 import (
+	"context"
 	"flag"
+	"io/ioutil"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/shared"
+	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
@@ -37,10 +44,6 @@ import (
 	"github.com/uber/cadence/host"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
-	"io/ioutil"
-	"os"
-	"testing"
-	"time"
 )
 
 type (
@@ -56,14 +59,24 @@ type (
 	}
 )
 
+var (
+	clusterName              = []string{"active", "standby"}
+	clusterReplicationConfig = []*workflow.ClusterReplicationConfiguration{
+		{
+			ClusterName: common.StringPtr(clusterName[0]),
+		},
+		{
+			ClusterName: common.StringPtr(clusterName[1]),
+		},
+	}
+)
+
 func TestNDCIntegrationTestSuite(t *testing.T) {
-	t.SkipNow()
 	flag.Parse()
 	suite.Run(t, new(nDCIntegrationTestSuite))
 }
 
 func (s *nDCIntegrationTestSuite) SetupSuite() {
-	s.T().SkipNow()
 	zapLogger, err := zap.NewDevelopment()
 	// cannot use s.Nil since it is not initialized
 	s.Require().NoError(err)
@@ -104,7 +117,6 @@ func (s *nDCIntegrationTestSuite) TearDownSuite() {
 }
 
 func (s *nDCIntegrationTestSuite) TestSimpleNDC() {
-	s.T().SkipNow()
 	domainName := "test-simple-workflow-ndc-" + common.GenerateRandomString(5)
 	client1 := s.active.GetFrontendClient() // active
 	regReq := &shared.RegisterDomainRequest{
@@ -252,4 +264,9 @@ func generateNewRunHistory(event *shared.HistoryEvent, version int64, domain, wi
 		}
 	}
 	return nil
+}
+
+func createContext() context.Context {
+	ctx, _ := context.WithTimeout(context.Background(), 90*time.Second)
+	return ctx
 }
