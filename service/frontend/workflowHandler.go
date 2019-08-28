@@ -2716,6 +2716,10 @@ func (wh *WorkflowHandler) QueryWorkflow(
 		response.GetClientImpl(),
 	)
 
+	if domainID == "0583739e-44fb-4f17-8fd2-683081342718" && !response.GetIsWorkflowRunning() {
+		return nil, &gen.BadRequestError{Message: "temporary disable query functionality on closed workflow"}
+	}
+
 	queryRequest.Execution.RunId = response.Execution.RunId
 	if len(response.StickyTaskList.GetName()) != 0 && clientFeature.SupportStickyQuery() {
 		matchingRequest.TaskList = response.StickyTaskList
