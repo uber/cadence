@@ -1333,7 +1333,7 @@ func processResets(c *cli.Context, domain string, wes chan shared.WorkflowExecut
 func ResetInBatch(c *cli.Context) {
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	inFileName := getRequiredOption(c, FlagInputFile)
-	excFileName := getRequiredOption(c, FlagExcludeFile)
+	excFileName := c.String(FlagExcludeFile)
 	separator := getRequiredOption(c, FlagInputSeparator)
 	reason := getRequiredOption(c, FlagReason)
 	resetType := getRequiredOption(c, FlagResetType)
@@ -1344,9 +1344,6 @@ func ResetInBatch(c *cli.Context) {
 		getRequiredOption(c, extraForResetType)
 	}
 
-	if !c.IsSet(FlagSkipCurrent) {
-		ErrorAndExit("need to specify whether skip on current is open", nil)
-	}
 	skipOpen := c.Bool(FlagSkipCurrent)
 
 	parallel := c.Int(FlagParallism)
