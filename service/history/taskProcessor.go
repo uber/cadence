@@ -30,7 +30,6 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
-	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -53,13 +52,13 @@ type (
 		cache         *historyCache
 		shutdownWG    sync.WaitGroup
 		shutdownCh    chan struct{}
+		tasksCh       chan *taskInfo
 		config        *Config
 		logger        log.Logger
 		metricsClient metrics.Client
 		timeSource    clock.TimeSource
 		retryPolicy   backoff.RetryPolicy
 		workerWG      sync.WaitGroup
-		queue         collection.PriorityQueue
 
 		// worker coroutines notification
 		workerNotificationChans []chan struct{}
@@ -86,7 +85,7 @@ func newTaskProcessor(
 		shard:                   shard,
 		cache:                   historyCache,
 		shutdownCh:              make(chan struct{}),
-		queue:                   collection.NewChannelPriorityQueue(options.queueSize),
+		tasksCh:                 make(chan *taskInfo, options.queueSize),
 		config:                  shard.GetConfig(),
 		logger:                  log,
 		metricsClient:           shard.GetMetricsClient(),
@@ -110,7 +109,7 @@ func (t *taskProcessor) start() {
 
 func (t *taskProcessor) stop() {
 	close(t.shutdownCh)
-	t.queue.Destroy()
+	close(t.tasksCh)
 	if success := common.AwaitWaitGroup(&t.workerWG, time.Minute); !success {
 		t.logger.Warn("Timer queue task processor timedout on shutdown.")
 	}
@@ -123,11 +122,15 @@ func (t *taskProcessor) taskWorker(
 	defer t.workerWG.Done()
 
 	for {
-		item, ok := t.queue.Remove()
-		if !ok {
+		select {
+		case <-t.shutdownCh:
 			return
+		case task, ok := <-t.tasksCh:
+			if !ok {
+				return
+			}
+			t.processTaskAndAck(notificationChan, task)
 		}
-		t.processTaskAndAck(notificationChan, item.(*taskInfo))
 	}
 }
 
@@ -144,7 +147,12 @@ func (t *taskProcessor) addTask(
 	task *taskInfo,
 ) bool {
 	// We have a timer to fire.
-	return t.queue.Add(0, task)
+	select {
+	case t.tasksCh <- task:
+	case <-t.shutdownCh:
+		return true
+	}
+	return false
 }
 
 func (t *taskProcessor) processTaskAndAck(
