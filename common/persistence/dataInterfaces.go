@@ -1344,7 +1344,7 @@ type (
 		BranchToken []byte
 	}
 
-	// HistoryBranchDetail is part of GetHistoryTreeResponse
+	// HistoryBranchDetail contains detailed information of a branch
 	HistoryBranchDetail struct {
 		TreeID   string
 		BranchID string
