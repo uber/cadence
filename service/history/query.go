@@ -38,7 +38,7 @@ var (
 	// ErrResultAlreadyRecorded indicates query cannot make state transition because result has already been recorded.
 	ErrResultAlreadyRecorded = errors.New("result already recorded cannot make state transition")
 	// ErrFailedToInvokeQueryRegistryCallback indicates that notifying query registry of its state transition failed.
-	ErrFailedToInvokeQueryRegistryCallback = errors.New(" notifying query registry of its state transition failed")
+	ErrFailedToInvokeQueryRegistryCallback = errors.New("notifying query registry of state transition failed")
 )
 
 const (
@@ -101,7 +101,7 @@ type (
 )
 
 // newQuery is used to construct a new Query. Query should always be constructed
-// by calling queryRegistry.BufferQuery, queries constructed directly by calling this method
+// by calling QueryRegistry.BufferQuery, queries constructed directly by calling this method
 // will no be accessible through query registry and are therefore not useful.
 func newQuery(
 	queryInput *shared.WorkflowQuery,
