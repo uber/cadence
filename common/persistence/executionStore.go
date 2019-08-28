@@ -60,7 +60,7 @@ func (m *executionManagerImpl) GetShardID() int {
 	return m.persistence.GetShardID()
 }
 
-//The below three APIs are related to serialization/deserialization
+// The below three APIs are related to serialization/deserialization
 func (m *executionManagerImpl) GetWorkflowExecution(
 	request *GetWorkflowExecutionRequest,
 ) (*GetWorkflowExecutionResponse, error) {
@@ -219,6 +219,7 @@ func (m *executionManagerImpl) DeserializeChildExecutionInfos(
 			CreateRequestID:       v.CreateRequestID,
 			DomainName:            v.DomainName,
 			WorkflowTypeName:      v.WorkflowTypeName,
+			ParentClosePolicy:     v.ParentClosePolicy,
 		}
 
 		// Needed for backward compatibility reason.
@@ -346,6 +347,7 @@ func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(
 			StartedRunID:          v.StartedRunID,
 			DomainName:            v.DomainName,
 			WorkflowTypeName:      v.WorkflowTypeName,
+			ParentClosePolicy:     v.ParentClosePolicy,
 		}
 		newInfos = append(newInfos, i)
 	}

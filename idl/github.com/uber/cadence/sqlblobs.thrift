@@ -32,6 +32,7 @@ struct ShardInfo {
   34: optional map<string, i64> clusterTransferAckLevel
   36: optional map<string, i64> clusterTimerAckLevel
   38: optional string owner
+  40: optional map<string, i64> clusterReplicationLevel
 }
 
 struct DomainInfo {
@@ -175,10 +176,12 @@ struct ChildExecutionInfo {
   28: optional string createRequestID
   30: optional string domainName
   32: optional string workflowTypeName
+  35: optional i32 parentClosePolicy
 }
 
 struct SignalInfo {
   10: optional i64 (js.type = "Long") version
+  11: optional i64 (js.type = "Long") initiatedEventBatchID
   12: optional string requestID
   14: optional string name
   16: optional binary input
@@ -187,6 +190,7 @@ struct SignalInfo {
 
 struct RequestCancelInfo {
   10: optional i64 (js.type = "Long") version
+  11: optional i64 (js.type = "Long") initiatedEventBatchID
   12: optional string cancelRequestID
 }
 

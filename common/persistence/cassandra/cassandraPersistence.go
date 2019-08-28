@@ -107,7 +107,8 @@ const (
 		`timer_ack_level: ?, ` +
 		`cluster_transfer_ack_level: ?, ` +
 		`cluster_timer_ack_level: ?, ` +
-		`domain_notification_version: ? ` +
+		`domain_notification_version: ?, ` +
+		`cluster_replication_level: ? ` +
 		`}`
 
 	templateWorkflowExecutionType = `{` +
@@ -281,18 +282,21 @@ const (
 		`create_request_id: ?, ` +
 		`event_data_encoding: ?, ` +
 		`domain_name: ?, ` +
-		`workflow_type_name: ?` +
+		`workflow_type_name: ?, ` +
+		`parent_close_policy: ?` +
 		`}`
 
 	templateRequestCancelInfoType = `{` +
 		`version: ?,` +
 		`initiated_id: ?, ` +
+		`initiated_event_batch_id: ?, ` +
 		`cancel_request_id: ? ` +
 		`}`
 
 	templateSignalInfoType = `{` +
 		`version: ?,` +
 		`initiated_id: ?, ` +
+		`initiated_event_batch_id: ?, ` +
 		`signal_request_id: ?, ` +
 		`signal_name: ?, ` +
 		`input: ?, ` +
@@ -914,6 +918,7 @@ func (d *cassandraPersistence) CreateShard(request *p.CreateShardRequest) error 
 		shardInfo.ClusterTransferAckLevel,
 		shardInfo.ClusterTimerAckLevel,
 		shardInfo.DomainNotificationVersion,
+		shardInfo.ClusterReplicationLevel,
 		shardInfo.RangeID)
 
 	previous := make(map[string]interface{})
@@ -989,6 +994,7 @@ func (d *cassandraPersistence) UpdateShard(request *p.UpdateShardRequest) error 
 		shardInfo.ClusterTransferAckLevel,
 		shardInfo.ClusterTimerAckLevel,
 		shardInfo.DomainNotificationVersion,
+		shardInfo.ClusterReplicationLevel,
 		shardInfo.RangeID,
 		shardInfo.ShardID,
 		rowTypeShard,

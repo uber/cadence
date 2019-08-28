@@ -2287,12 +2287,13 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateChildExecutions() {
 	updatedInfo.LastProcessedEvent = int64(2)
 	createRequestID := uuid.New()
 	childExecutionInfos := []*p.ChildExecutionInfo{{
-		Version:         1234,
-		InitiatedID:     1,
-		InitiatedEvent:  &gen.HistoryEvent{EventId: int64Ptr(1)},
-		StartedID:       2,
-		StartedEvent:    &gen.HistoryEvent{EventId: int64Ptr(2)},
-		CreateRequestID: createRequestID,
+		Version:           1234,
+		InitiatedID:       1,
+		InitiatedEvent:    &gen.HistoryEvent{EventId: int64Ptr(1)},
+		StartedID:         2,
+		StartedEvent:      &gen.HistoryEvent{EventId: int64Ptr(2)},
+		CreateRequestID:   createRequestID,
+		ParentClosePolicy: gen.ParentClosePolicyTerminate,
 	}}
 	err2 := s.UpsertChildExecutionsState(updatedInfo, updatedStats, int64(3), childExecutionInfos)
 	s.NoError(err2)
@@ -2306,6 +2307,7 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateChildExecutions() {
 	s.NotNil(ci)
 	s.Equal(int64(1234), ci.Version)
 	s.Equal(int64(1), ci.InitiatedID)
+	s.Equal(gen.ParentClosePolicyTerminate, ci.ParentClosePolicy)
 	s.Equal(int64(1), *ci.InitiatedEvent.EventId)
 	s.Equal(int64(2), ci.StartedID)
 	s.Equal(int64(2), *ci.StartedEvent.EventId)
@@ -2341,27 +2343,25 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateRequestCancel() {
 	updatedStats := copyExecutionStats(state0.ExecutionStats)
 	updatedInfo.NextEventID = int64(5)
 	updatedInfo.LastProcessedEvent = int64(2)
-	cancelRequestID := uuid.New()
-	requestCancelInfos := []*p.RequestCancelInfo{{
-		Version:         456,
-		InitiatedID:     1,
-		CancelRequestID: cancelRequestID,
-	}}
-	err2 := s.UpsertRequestCancelState(updatedInfo, updatedStats, int64(3), requestCancelInfos)
+	requestCancelInfo := &p.RequestCancelInfo{
+		Version:               456,
+		InitiatedID:           2,
+		InitiatedEventBatchID: 1,
+		CancelRequestID:       uuid.New(),
+	}
+	err2 := s.UpsertRequestCancelState(updatedInfo, updatedStats, int64(3), []*p.RequestCancelInfo{requestCancelInfo})
 	s.NoError(err2)
 
 	state, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.NoError(err1)
 	s.NotNil(state, "expected valid state.")
 	s.Equal(1, len(state.RequestCancelInfos))
-	ri, ok := state.RequestCancelInfos[1]
+	ri, ok := state.RequestCancelInfos[requestCancelInfo.InitiatedID]
 	s.True(ok)
 	s.NotNil(ri)
-	s.Equal(int64(456), ri.Version)
-	s.Equal(int64(1), ri.InitiatedID)
-	s.Equal(cancelRequestID, ri.CancelRequestID)
+	s.Equal(requestCancelInfo, ri)
 
-	err2 = s.DeleteCancelState(updatedInfo, updatedStats, int64(5), int64(1))
+	err2 = s.DeleteCancelState(updatedInfo, updatedStats, int64(5), requestCancelInfo.InitiatedID)
 	s.NoError(err2)
 
 	state, err1 = s.GetWorkflowExecutionInfo(domainID, workflowExecution)
@@ -2392,37 +2392,28 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateSignalInfo() {
 	updatedStats := copyExecutionStats(state0.ExecutionStats)
 	updatedInfo.NextEventID = int64(5)
 	updatedInfo.LastProcessedEvent = int64(2)
-	signalRequestID := uuid.New()
-	signalName := "my signal"
-	input := []byte("test signal input")
-	control := []byte(uuid.New())
-	signalInfos := []*p.SignalInfo{
-		{
-			Version:         123,
-			InitiatedID:     1,
-			SignalRequestID: signalRequestID,
-			SignalName:      signalName,
-			Input:           input,
-			Control:         control,
-		}}
-	err2 := s.UpsertSignalInfoState(updatedInfo, updatedStats, int64(3), signalInfos)
+	signalInfo := &p.SignalInfo{
+		Version:               123,
+		InitiatedID:           2,
+		InitiatedEventBatchID: 1,
+		SignalRequestID:       uuid.New(),
+		SignalName:            "my signal",
+		Input:                 []byte("test signal input"),
+		Control:               []byte(uuid.New()),
+	}
+	err2 := s.UpsertSignalInfoState(updatedInfo, updatedStats, int64(3), []*p.SignalInfo{signalInfo})
 	s.NoError(err2)
 
 	state, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.NoError(err1)
 	s.NotNil(state, "expected valid state.")
 	s.Equal(1, len(state.SignalInfos))
-	ri, ok := state.SignalInfos[1]
+	si, ok := state.SignalInfos[signalInfo.InitiatedID]
 	s.True(ok)
-	s.NotNil(ri)
-	s.Equal(int64(123), ri.Version)
-	s.Equal(int64(1), ri.InitiatedID)
-	s.Equal(signalRequestID, ri.SignalRequestID)
-	s.Equal(signalName, ri.SignalName)
-	s.Equal(input, ri.Input)
-	s.Equal(control, ri.Control)
+	s.NotNil(si)
+	s.Equal(signalInfo, si)
 
-	err2 = s.DeleteSignalState(updatedInfo, updatedStats, int64(5), int64(1))
+	err2 = s.DeleteSignalState(updatedInfo, updatedStats, int64(5), signalInfo.InitiatedID)
 	s.NoError(err2)
 
 	state, err1 = s.GetWorkflowExecutionInfo(domainID, workflowExecution)
@@ -3105,20 +3096,22 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 
 		RequestCancelInfos: map[int64]*p.RequestCancelInfo{
 			19: {
-				Version:         2335,
-				InitiatedID:     19,
-				CancelRequestID: "cancel_requested_id",
+				Version:               2335,
+				InitiatedID:           19,
+				InitiatedEventBatchID: 17,
+				CancelRequestID:       "cancel_requested_id",
 			},
 		},
 
 		SignalInfos: map[int64]*p.SignalInfo{
 			39: {
-				Version:         2336,
-				InitiatedID:     39,
-				SignalRequestID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-				SignalName:      "signalA",
-				Input:           []byte("signal_input_A"),
-				Control:         []byte("signal_control_A"),
+				Version:               2336,
+				InitiatedID:           39,
+				InitiatedEventBatchID: 38,
+				SignalRequestID:       "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+				SignalName:            "signalA",
+				Input:                 []byte("signal_input_A"),
+				Control:               []byte("signal_control_A"),
 			},
 		},
 
@@ -3682,14 +3675,15 @@ func (s *ExecutionManagerSuite) TestCreateGetShardBackfill() {
 	currentClusterTransferAck := int64(21)
 	currentClusterTimerAck := timestampConvertor(time.Now().Add(-10 * time.Second))
 	shardInfo := &p.ShardInfo{
-		ShardID:             shardID,
-		Owner:               "some random owner",
-		RangeID:             rangeID,
-		StolenSinceRenew:    12,
-		UpdatedAt:           timestampConvertor(time.Now()),
-		ReplicationAckLevel: currentReplicationAck,
-		TransferAckLevel:    currentClusterTransferAck,
-		TimerAckLevel:       currentClusterTimerAck,
+		ShardID:                 shardID,
+		Owner:                   "some random owner",
+		RangeID:                 rangeID,
+		StolenSinceRenew:        12,
+		UpdatedAt:               timestampConvertor(time.Now()),
+		ReplicationAckLevel:     currentReplicationAck,
+		TransferAckLevel:        currentClusterTransferAck,
+		TimerAckLevel:           currentClusterTimerAck,
+		ClusterReplicationLevel: map[string]int64{},
 	}
 	createRequest := &p.CreateShardRequest{
 		ShardInfo: shardInfo,
@@ -3744,6 +3738,7 @@ func (s *ExecutionManagerSuite) TestCreateGetUpdateGetShard() {
 			cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 		},
 		DomainNotificationVersion: domainNotificationVersion,
+		ClusterReplicationLevel:   map[string]int64{},
 	}
 	createRequest := &p.CreateShardRequest{
 		ShardInfo: shardInfo,
@@ -3785,6 +3780,7 @@ func (s *ExecutionManagerSuite) TestCreateGetUpdateGetShard() {
 			cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 		},
 		DomainNotificationVersion: domainNotificationVersion,
+		ClusterReplicationLevel:   map[string]int64{cluster.TestAlternativeClusterName: 12345},
 	}
 	updateRequest := &p.UpdateShardRequest{
 		ShardInfo:       shardInfo,

@@ -24,6 +24,7 @@ import (
 	"fmt"
 
 	"github.com/pborman/uuid"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -31,7 +32,6 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/persistence"
 )
 
 type (
@@ -48,8 +48,6 @@ type (
 		// internal state
 		hasUnhandledEventsBeforeDecisions bool
 		timerBuilder                      *timerBuilder
-		transferTasks                     []persistence.Task
-		timerTasks                        []persistence.Task
 		failDecision                      bool
 		failDecisionCause                 *workflow.DecisionTaskFailedCause
 		failMessage                       *string
@@ -66,6 +64,7 @@ type (
 		timerBuilderProvider timerBuilderProvider
 		domainCache          cache.DomainCache
 		metricsClient        metrics.Client
+		config               *Config
 	}
 )
 
@@ -81,6 +80,7 @@ func newDecisionTaskHandler(
 	timerBuilderProvider timerBuilderProvider,
 	domainCache cache.DomainCache,
 	metricsClient metrics.Client,
+	config *Config,
 ) *decisionTaskHandlerImpl {
 
 	return &decisionTaskHandlerImpl{
@@ -91,8 +91,6 @@ func newDecisionTaskHandler(
 
 		// internal state
 		hasUnhandledEventsBeforeDecisions: mutableState.HasBufferedEvents(),
-		transferTasks:                     nil,
-		timerTasks:                        nil,
 		failDecision:                      false,
 		failDecisionCause:                 nil,
 		failMessage:                       nil,
@@ -110,6 +108,7 @@ func newDecisionTaskHandler(
 		timerBuilderProvider: timerBuilderProvider,
 		domainCache:          domainCache,
 		metricsClient:        metricsClient,
+		config:               config,
 	}
 }
 
@@ -227,14 +226,9 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 		return err
 	}
 
-	scheduleEvent, _, err := handler.mutableState.AddActivityTaskScheduledEvent(handler.decisionTaskCompletedID, attr)
+	_, _, err = handler.mutableState.AddActivityTaskScheduledEvent(handler.decisionTaskCompletedID, attr)
 	switch err.(type) {
 	case nil:
-		handler.transferTasks = append(handler.transferTasks, &persistence.ActivityTask{
-			DomainID:   targetDomainID,
-			TaskList:   attr.TaskList.GetName(),
-			ScheduleID: scheduleEvent.GetEventId(),
-		})
 		return nil
 	case *workflow.BadRequestError:
 		return handler.handlerFailDecision(
@@ -610,21 +604,10 @@ func (handler *decisionTaskHandlerImpl) handleDecisionRequestCancelExternalWorkf
 	}
 
 	cancelRequestID := uuid.New()
-	wfCancelReqEvent, _, err := handler.mutableState.AddRequestCancelExternalWorkflowExecutionInitiatedEvent(
+	_, _, err := handler.mutableState.AddRequestCancelExternalWorkflowExecutionInitiatedEvent(
 		handler.decisionTaskCompletedID, cancelRequestID, attr,
 	)
-	if err != nil {
-		return &workflow.InternalServiceError{Message: "Unable to add external cancel workflow request."}
-	}
-
-	handler.transferTasks = append(handler.transferTasks, &persistence.CancelExecutionTask{
-		TargetDomainID:          targetDomainID,
-		TargetWorkflowID:        attr.GetWorkflowId(),
-		TargetRunID:             attr.GetRunId(),
-		TargetChildWorkflowOnly: attr.GetChildWorkflowOnly(),
-		InitiatedID:             wfCancelReqEvent.GetEventId(),
-	})
-	return nil
+	return err
 }
 
 func (handler *decisionTaskHandlerImpl) handleDecisionRecordMarker(
@@ -780,19 +763,20 @@ func (handler *decisionTaskHandlerImpl) handleDecisionStartChildWorkflow(
 		return err
 	}
 
+	if attr.ParentClosePolicy == nil {
+		useTerminate := handler.config.UseTerminateAsDefaultParentClosePolicy(handler.domainEntry.GetInfo().Name)
+		if useTerminate {
+			attr.ParentClosePolicy = common.ParentClosePolicyPtr(workflow.ParentClosePolicyTerminate)
+		} else {
+			attr.ParentClosePolicy = common.ParentClosePolicyPtr(workflow.ParentClosePolicyAbandon)
+		}
+	}
+
 	requestID := uuid.New()
-	initiatedEvent, _, err := handler.mutableState.AddStartChildWorkflowExecutionInitiatedEvent(
+	_, _, err = handler.mutableState.AddStartChildWorkflowExecutionInitiatedEvent(
 		handler.decisionTaskCompletedID, requestID, attr,
 	)
-	if err != nil {
-		return err
-	}
-	handler.transferTasks = append(handler.transferTasks, &persistence.StartChildExecutionTask{
-		TargetDomainID:   targetDomainID,
-		TargetWorkflowID: attr.GetWorkflowId(),
-		InitiatedID:      initiatedEvent.GetEventId(),
-	})
-	return nil
+	return err
 }
 
 func (handler *decisionTaskHandlerImpl) handleDecisionSignalExternalWorkflow(
@@ -840,21 +824,10 @@ func (handler *decisionTaskHandlerImpl) handleDecisionSignalExternalWorkflow(
 	}
 
 	signalRequestID := uuid.New() // for deduplicate
-	wfSignalReqEvent, _, err := handler.mutableState.AddSignalExternalWorkflowExecutionInitiatedEvent(
+	_, _, err = handler.mutableState.AddSignalExternalWorkflowExecutionInitiatedEvent(
 		handler.decisionTaskCompletedID, signalRequestID, attr,
 	)
-	if err != nil {
-		return &workflow.InternalServiceError{Message: "Unable to add external signal workflow request."}
-	}
-
-	handler.transferTasks = append(handler.transferTasks, &persistence.SignalExecutionTask{
-		TargetDomainID:          targetDomainID,
-		TargetWorkflowID:        attr.Execution.GetWorkflowId(),
-		TargetRunID:             attr.Execution.GetRunId(),
-		TargetChildWorkflowOnly: attr.GetChildWorkflowOnly(),
-		InitiatedID:             wfSignalReqEvent.GetEventId(),
-	})
-	return nil
+	return err
 }
 
 func (handler *decisionTaskHandlerImpl) handleDecisionUpsertWorkflowSearchAttributes(
@@ -903,13 +876,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionUpsertWorkflowSearchAttrib
 	_, err = handler.mutableState.AddUpsertWorkflowSearchAttributesEvent(
 		handler.decisionTaskCompletedID, attr,
 	)
-	if err != nil {
-		return &workflow.InternalServiceError{Message: "Unable to add UpsertWorkflowSearchAttributesEvent."}
-	}
-
-	handler.transferTasks = append(handler.transferTasks, &persistence.UpsertWorkflowSearchAttributesTask{})
-
-	return nil
+	return err
 }
 
 func convertSearchAttributesToByteArray(fields map[string][]byte) []byte {

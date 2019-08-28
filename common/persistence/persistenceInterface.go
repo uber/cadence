@@ -122,6 +122,8 @@ type (
 		CompleteForkBranch(request *InternalCompleteForkBranchRequest) error
 		// GetHistoryTree returns all branch information of a tree
 		GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error)
+		// GetAllHistoryTreeBranches returns all branches of all trees
+		GetAllHistoryTreeBranches(request *GetAllHistoryTreeBranchesRequest) (*GetAllHistoryTreeBranchesResponse, error)
 	}
 
 	// VisibilityStore is the store interface for visibility
@@ -293,6 +295,7 @@ type (
 		CreateRequestID       string
 		DomainName            string
 		WorkflowTypeName      string
+		ParentClosePolicy     workflow.ParentClosePolicy
 	}
 
 	// InternalUpdateWorkflowExecutionRequest is used to update a workflow execution for Persistence Interface

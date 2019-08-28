@@ -281,6 +281,8 @@ const (
 	HistoryClientSyncShardStatusScope
 	// HistoryClientSyncActivityScope tracks RPC calls to history service
 	HistoryClientSyncActivityScope
+	// HistoryClientGetReplicationTasksScope tracks RPC calls to history service
+	HistoryClientGetReplicationTasksScope
 	// MatchingClientPollForDecisionTaskScope tracks RPC calls to matching service
 	MatchingClientPollForDecisionTaskScope
 	// MatchingClientPollForActivityTaskScope tracks RPC calls to matching service
@@ -367,6 +369,8 @@ const (
 	FrontendClientCountWorkflowExecutionsScope
 	// FrontendClientGetSearchAttributesScope tracks RPC calls to frontend service
 	FrontendClientGetSearchAttributesScope
+	// FrontendClientGetReplicationTasksScope tracks RPC calls to frontend service
+	FrontendClientGetReplicationTasksScope
 	// AdminClientAddSearchAttributeScope tracks RPC calls to admin service
 	AdminClientAddSearchAttributeScope
 	// AdminClientCloseShardScope tracks RPC calls to admin service
@@ -478,6 +482,8 @@ const (
 	PersistenceCompleteForkBranchScope
 	// PersistenceGetHistoryTreeScope tracks GetHistoryTree calls made by service to persistence layer
 	PersistenceGetHistoryTreeScope
+	// PersistenceGetAllHistoryTreeBranchesScope tracks GetHistoryTree calls made by service to persistence layer
+	PersistenceGetAllHistoryTreeBranchesScope
 
 	// ClusterMetadataArchivalConfigScope tracks ArchivalConfig calls to ClusterMetadata
 	ClusterMetadataArchivalConfigScope
@@ -626,6 +632,8 @@ const (
 	FrontendResetWorkflowExecutionScope
 	// FrontendGetSearchAttributesScope is the metric scope for frontend.GetSearchAttributes
 	FrontendGetSearchAttributesScope
+	// FrontendGetReplicationTasksScope is the metric scope for frontend.GetReplicationTasks
+	FrontendGetReplicationTasksScope
 
 	NumFrontendScopes
 )
@@ -680,6 +688,8 @@ const (
 	HistorySyncActivityScope
 	// HistoryDescribeMutableStateScope tracks HistoryActivity API calls received by service
 	HistoryDescribeMutableStateScope
+	// GetReplicationMessages tracks GetReplicationMessages API calls received by service
+	HistoryGetReplicationMessagesScope
 	// HistoryShardControllerScope is the scope used by shard controller
 	HistoryShardControllerScope
 	// TransferQueueProcessorScope is the scope used by all metric emitted by transfer queue processor
@@ -804,6 +814,8 @@ const (
 	WorkflowCompletionStatsScope
 	// ArchiverClientScope is scope used by all metrics emitted by archiver.Client
 	ArchiverClientScope
+	// ReplicationTaskFetcherScope is scope used by all metrics emitted by ReplicationTaskFetcher
+	ReplicationTaskFetcherScope
 
 	NumHistoryScopes
 )
@@ -931,6 +943,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceDeleteHistoryBranchScope:                      {operation: "DeleteHistoryBranch"},
 		PersistenceCompleteForkBranchScope:                       {operation: "CompleteForkBranch"},
 		PersistenceGetHistoryTreeScope:                           {operation: "GetHistoryTree"},
+		PersistenceGetAllHistoryTreeBranchesScope:                {operation: "GetAllHistoryTreeBranches"},
 
 		ClusterMetadataArchivalConfigScope: {operation: "ArchivalConfig"},
 
@@ -958,6 +971,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryClientReplicateRawEventsScope:                {operation: "HistoryClientReplicateRawEvents", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientSyncShardStatusScope:                   {operation: "HistoryClientSyncShardStatusScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientSyncActivityScope:                      {operation: "HistoryClientSyncActivityScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
+		HistoryClientGetReplicationTasksScope:               {operation: "HistoryClientGetReplicationTasksScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		MatchingClientPollForDecisionTaskScope:              {operation: "MatchingClientPollForDecisionTask", tags: map[string]string{CadenceRoleTagName: MatchingRoleTagValue}},
 		MatchingClientPollForActivityTaskScope:              {operation: "MatchingClientPollForActivityTask", tags: map[string]string{CadenceRoleTagName: MatchingRoleTagValue}},
 		MatchingClientAddActivityTaskScope:                  {operation: "MatchingClientAddActivityTask", tags: map[string]string{CadenceRoleTagName: MatchingRoleTagValue}},
@@ -1001,6 +1015,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendClientScanWorkflowExecutionsScope:           {operation: "FrontendClientScanWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
 		FrontendClientCountWorkflowExecutionsScope:          {operation: "FrontendClientCountWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
 		FrontendClientGetSearchAttributesScope:              {operation: "FrontendClientGetSearchAttributes", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
+		FrontendClientGetReplicationTasksScope:              {operation: "FrontendClientGetReplicationTasksScope", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
 		AdminClientAddSearchAttributeScope:                  {operation: "AdminClientAddSearchAttribute", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientDescribeHistoryHostScope:                 {operation: "AdminClientDescribeHistoryHost", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
 		AdminClientDescribeWorkflowExecutionScope:           {operation: "AdminClientDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: AdminRoleTagValue}},
@@ -1122,6 +1137,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendDescribeTaskListScope:                 {operation: "DescribeTaskList"},
 		FrontendResetStickyTaskListScope:              {operation: "ResetStickyTaskList"},
 		FrontendGetSearchAttributesScope:              {operation: "GetSearchAttributes"},
+		FrontendGetReplicationTasksScope:              {operation: "GetReplicationTasks"},
 	},
 	// History Scope Names
 	History: {
@@ -1151,6 +1167,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistorySyncShardStatusScope:                            {operation: "SyncShardStatus"},
 		HistorySyncActivityScope:                               {operation: "SyncActivity"},
 		HistoryDescribeMutableStateScope:                       {operation: "DescribeMutableState"},
+		HistoryGetReplicationMessagesScope:                     {operation: "GetReplicationMessages"},
 		HistoryShardControllerScope:                            {operation: "ShardController"},
 		TransferQueueProcessorScope:                            {operation: "TransferQueueProcessor"},
 		TransferActiveQueueProcessorScope:                      {operation: "TransferActiveQueueProcessor"},
@@ -1211,6 +1228,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		SessionCountStatsScope:                                 {operation: "SessionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
 		WorkflowCompletionStatsScope:                           {operation: "CompletionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
 		ArchiverClientScope:                                    {operation: "ArchiverClient"},
+		ReplicationTaskFetcherScope:                            {operation: "ReplicationTaskFetcher"},
 	},
 	// Matching Scope Names
 	Matching: {
@@ -1280,6 +1298,10 @@ const (
 	CadenceClientRequests
 	CadenceClientFailures
 	CadenceClientLatency
+
+	CadenceDcRedirectionClientRequests
+	CadenceDcRedirectionClientFailures
+	CadenceDcRedirectionClientLatency
 
 	DomainCachePrepareCallbacksLatency
 	DomainCacheCallbacksLatency
@@ -1447,6 +1469,14 @@ const (
 	ArchiverClientSendSignalFailureCount
 	ArchiverClientInlineArchiveAttemptCount
 	ArchiverClientInlineArchiveFailureCount
+	LastRetrievedMessageID
+	LastProcessedMessageID
+	ReplicationTasksApplied
+	ReplicationTasksFailed
+	ReplicationTasksLag
+	ReplicationTasksFetched
+	ReplicationTasksReturned
+	GetReplicationMessagesForShardLatency
 
 	NumHistoryMetrics
 )
@@ -1569,6 +1599,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceClientRequests:                               {metricName: "cadence_client_requests", metricType: Counter},
 		CadenceClientFailures:                               {metricName: "cadence_client_errors", metricType: Counter},
 		CadenceClientLatency:                                {metricName: "cadence_client_latency", metricType: Timer},
+		CadenceDcRedirectionClientRequests:                  {metricName: "cadence_client_requests_redirection", metricType: Counter},
+		CadenceDcRedirectionClientFailures:                  {metricName: "cadence_client_errors_redirection", metricType: Counter},
+		CadenceDcRedirectionClientLatency:                   {metricName: "cadence_client_latency_redirection", metricType: Timer},
 		DomainCachePrepareCallbacksLatency:                  {metricName: "domain_cache_prepare_callbacks_latency", metricType: Timer},
 		DomainCacheCallbacksLatency:                         {metricName: "domain_cache_callbacks_latency", metricType: Timer},
 		HistorySize:                                         {metricName: "history_size", metricType: Timer},
@@ -1723,6 +1756,14 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ArchiverClientSendSignalFailureCount:              {metricName: "archiver_client_send_signal_error", metricType: Counter},
 		ArchiverClientInlineArchiveAttemptCount:           {metricName: "archiver_client_inline_archive_attempt", metricType: Counter},
 		ArchiverClientInlineArchiveFailureCount:           {metricName: "archiver_client_inline_archive_failure", metricType: Counter},
+		LastRetrievedMessageID:                            {metricName: "last_retrieved_message_id", metricType: Gauge},
+		LastProcessedMessageID:                            {metricName: "last_processed_message_id", metricType: Gauge},
+		ReplicationTasksApplied:                           {metricName: "replication_tasks_applied", metricType: Counter},
+		ReplicationTasksFailed:                            {metricName: "replication_tasks_failed", metricType: Counter},
+		ReplicationTasksLag:                               {metricName: "replication_tasks_lag", metricType: Timer},
+		ReplicationTasksFetched:                           {metricName: "replication_tasks_fetched", metricType: Timer},
+		ReplicationTasksReturned:                          {metricName: "replication_tasks_returned", metricType: Timer},
+		GetReplicationMessagesForShardLatency:             {metricName: "get_replication_messages_for_shard", metricType: Timer},
 	},
 	Matching: {
 		PollSuccessCounter:            {metricName: "poll_success"},

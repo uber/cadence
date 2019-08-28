@@ -203,6 +203,7 @@ type (
 		ClusterTimerAckLevel      map[string]time.Time
 		TransferFailoverLevels    map[string]TransferFailoverLevel // uuid -> TransferFailoverLevel
 		TimerFailoverLevels       map[string]TimerFailoverLevel    // uuid -> TimerFailoverLevel
+		ClusterReplicationLevel   map[string]int64                 // cluster -> last replicated taskID
 		DomainNotificationVersion int64
 	}
 
@@ -480,7 +481,9 @@ type (
 	UpsertWorkflowSearchAttributesTask struct {
 		VisibilityTimestamp time.Time
 		TaskID              int64
-		Version             int64
+		// this version is not used by task processing for validation,
+		// instead, the version is used by elastic search
+		Version int64
 	}
 
 	// StartChildExecutionTask identifies a transfer task for starting child execution
@@ -524,7 +527,7 @@ type (
 	WorkflowBackoffTimerTask struct {
 		VisibilityTimestamp time.Time
 		TaskID              int64
-		EventID             int64
+		EventID             int64 // TODO this attribute is not used?
 		Version             int64
 		TimeoutType         int // 0 for retry, 1 for cron.
 	}
@@ -633,23 +636,26 @@ type (
 		CreateRequestID       string
 		DomainName            string
 		WorkflowTypeName      string
+		ParentClosePolicy     workflow.ParentClosePolicy
 	}
 
 	// RequestCancelInfo has details for pending external workflow cancellations
 	RequestCancelInfo struct {
-		Version         int64
-		InitiatedID     int64
-		CancelRequestID string
+		Version               int64
+		InitiatedEventBatchID int64
+		InitiatedID           int64
+		CancelRequestID       string
 	}
 
 	// SignalInfo has details for pending external workflow signal
 	SignalInfo struct {
-		Version         int64
-		InitiatedID     int64
-		SignalRequestID string
-		SignalName      string
-		Input           []byte
-		Control         []byte
+		Version               int64
+		InitiatedEventBatchID int64
+		InitiatedID           int64
+		SignalRequestID       string
+		SignalName            string
+		Input                 []byte
+		Control               []byte
 	}
 
 	// CreateShardRequest is used to create a shard in executions table
@@ -1346,7 +1352,8 @@ type (
 	}
 
 	// ForkingInProgressBranch is part of GetHistoryTreeResponse
-	ForkingInProgressBranch struct {
+	HistoryBranchDetail struct {
+		TreeID   string
 		BranchID string
 		ForkTime time.Time
 		Info     string
@@ -1356,7 +1363,23 @@ type (
 	GetHistoryTreeResponse struct {
 		// all branches of a tree
 		Branches                  []*workflow.HistoryBranch
-		ForkingInProgressBranches []ForkingInProgressBranch
+		ForkingInProgressBranches []HistoryBranchDetail
+	}
+
+	// GetAllHistoryTreeBranchesRequest is a request of GetAllHistoryTreeBranches
+	GetAllHistoryTreeBranchesRequest struct {
+		// pagination token
+		NextPageToken []byte
+		// maximum number of branches returned per page
+		PageSize int
+	}
+
+	// GetAllHistoryTreeBranchesResponse is a response to GetAllHistoryTreeBranches
+	GetAllHistoryTreeBranchesResponse struct {
+		// pagination token
+		NextPageToken []byte
+		// all branches of all trees
+		Branches []HistoryBranchDetail
 	}
 
 	// AppendHistoryEventsResponse is response for AppendHistoryEventsRequest
@@ -1482,6 +1505,8 @@ type (
 		DeleteHistoryBranch(request *DeleteHistoryBranchRequest) error
 		// GetHistoryTree returns all branch information of a tree
 		GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error)
+		// GetAllHistoryTreeBranches returns all branches of all trees
+		GetAllHistoryTreeBranches(request *GetAllHistoryTreeBranchesRequest) (*GetAllHistoryTreeBranchesResponse, error)
 	}
 
 	// MetadataManager is used to manage metadata CRUD for domain entities
@@ -2186,6 +2211,21 @@ func (t *TransferTaskInfo) GetVisibilityTimestamp() time.Time {
 	return t.VisibilityTimestamp
 }
 
+// GetWorkflowID returns the workflow ID for transfer task
+func (t *TransferTaskInfo) GetWorkflowID() string {
+	return t.WorkflowID
+}
+
+// GetRunID returns the run ID for transfer task
+func (t *TransferTaskInfo) GetRunID() string {
+	return t.RunID
+}
+
+// GetDomainID returns the domain ID for transfer task
+func (t *TransferTaskInfo) GetDomainID() string {
+	return t.DomainID
+}
+
 // String returns string
 func (t *TransferTaskInfo) String() string {
 	return fmt.Sprintf(
@@ -2209,9 +2249,24 @@ func (t *ReplicationTaskInfo) GetTaskType() int {
 	return t.TaskType
 }
 
-// GetVisibilityTimestamp returns the task type for transfer task
+// GetVisibilityTimestamp returns the task type for replication task
 func (t *ReplicationTaskInfo) GetVisibilityTimestamp() time.Time {
 	return time.Time{}
+}
+
+// GetWorkflowID returns the workflow ID for replication task
+func (t *ReplicationTaskInfo) GetWorkflowID() string {
+	return t.WorkflowID
+}
+
+// GetRunID returns the run ID for replication task
+func (t *ReplicationTaskInfo) GetRunID() string {
+	return t.RunID
+}
+
+// GetDomainID returns the domain ID for replication task
+func (t *ReplicationTaskInfo) GetDomainID() string {
+	return t.DomainID
 }
 
 // GetTaskID returns the task ID for timer task
@@ -2232,6 +2287,21 @@ func (t *TimerTaskInfo) GetTaskType() int {
 // GetVisibilityTimestamp returns the task type for timer task
 func (t *TimerTaskInfo) GetVisibilityTimestamp() time.Time {
 	return t.VisibilityTimestamp
+}
+
+// GetWorkflowID returns the workflow ID for timer task
+func (t *TimerTaskInfo) GetWorkflowID() string {
+	return t.WorkflowID
+}
+
+// GetRunID returns the run ID for timer task
+func (t *TimerTaskInfo) GetRunID() string {
+	return t.RunID
+}
+
+// GetDomainID returns the domain ID for timer task
+func (t *TimerTaskInfo) GetDomainID() string {
+	return t.DomainID
 }
 
 // GetTaskType returns the task type for timer task

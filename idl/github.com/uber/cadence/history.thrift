@@ -19,6 +19,7 @@
 // THE SOFTWARE.
 
 include "shared.thrift"
+include "replicator.thrift"
 
 namespace java com.uber.cadence.history
 
@@ -83,6 +84,11 @@ struct GetMutableStateResponse {
   120: optional i32 eventStoreVersion
   130: optional binary branchToken
   140: optional map<string, shared.ReplicationInfo> replicationInfo
+  // TODO: when migrating to gRPC, make this a enum
+  // TODO: when migrating to gRPC, unify internal & external representation
+  // NOTE: workflowState & workflowCloseState are the same as persistence representation
+  150: optional i32 workflowState
+  160: optional i32 workflowCloseState
 }
 
 struct ResetStickyTaskListRequest {
@@ -710,4 +716,12 @@ service HistoryService {
      2: shared.InternalServiceError internalServiceError,
      3: shared.AccessDeniedError accessDeniedError,
      )
+  replicator.GetReplicationMessagesResponse GetReplicationMessages(1: replicator.GetReplicationMessagesRequest request)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.LimitExceededError limitExceededError,
+      4: shared.ServiceBusyError serviceBusyError,
+      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,
+    )
 }
