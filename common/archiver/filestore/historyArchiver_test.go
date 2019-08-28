@@ -324,7 +324,7 @@ func (s *historyArchiverSuite) TestArchive_Success() {
 	err = historyArchiver.Archive(context.Background(), URI, request)
 	s.NoError(err)
 
-	expectedFilename := constructFilename(testDomainID, testWorkflowID, testRunID, testCloseFailoverVersion)
+	expectedFilename := constructHistoryFilename(testDomainID, testWorkflowID, testRunID, testCloseFailoverVersion)
 	s.assertFileExists(path.Join(dir, expectedFilename))
 }
 
@@ -506,7 +506,7 @@ func (s *historyArchiverSuite) TestArchiveAndGet() {
 	err = historyArchiver.Archive(context.Background(), URI, archiveRequest)
 	s.NoError(err)
 
-	expectedFilename := constructFilename(testDomainID, testWorkflowID, testRunID, testCloseFailoverVersion)
+	expectedFilename := constructHistoryFilename(testDomainID, testWorkflowID, testRunID, testCloseFailoverVersion)
 	s.assertFileExists(path.Join(dir, expectedFilename))
 
 	getRequest := &archiver.GetHistoryRequest{
@@ -576,9 +576,9 @@ func (s *historyArchiverSuite) setupHistoryDirectory() {
 }
 
 func (s *historyArchiverSuite) writeHistoryBatchesForGetTest(historyBatches []*shared.History, version int64) {
-	data, err := encodeHistoryBatches(historyBatches)
+	data, err := encode(historyBatches)
 	s.Require().NoError(err)
-	filename := constructFilename(testDomainID, testWorkflowID, testRunID, version)
+	filename := constructHistoryFilename(testDomainID, testWorkflowID, testRunID, version)
 	err = writeFile(path.Join(s.testGetDirectory, filename), data, testFileMode)
 	s.Require().NoError(err)
 }

@@ -89,14 +89,14 @@ func (v *visibilityArchiver) Archive(
 		}
 	}()
 
-	logger := tagLoggerWithArchiveVisibilityRequestAndURI(v.container.Logger, request, URI.String())
+	logger := archiver.TagLoggerWithArchiveVisibilityRequestAndURI(v.container.Logger, request, URI.String())
 
 	if err := v.ValidateURI(URI); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidURI), tag.Error(err))
 		return err
 	}
 
-	if err := validateVisibilityArchivalRequest(request); err != nil {
+	if err := archiver.ValidateVisibilityArchivalRequest(request); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidArchiveRequest), tag.Error(err))
 		return err
 	}
@@ -113,7 +113,8 @@ func (v *visibilityArchiver) Archive(
 		return err
 	}
 
-	// TODO: explain the format of filename
+	// The filename has the format: closeTimestamp_hash(runID).visibility
+	// This format allows the archiver to sort all records without reading the file contents
 	filename := constructVisibilityFilename(request.CloseTimestamp, request.RunID)
 	if err := writeFile(path.Join(dirPath, filename), encodedVisibilityRecord, v.fileMode); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errWriteFile), tag.Error(err))
@@ -179,6 +180,10 @@ func (v *visibilityArchiver) Query(
 			return nil, &shared.InternalServiceError{Message: err.Error()}
 		}
 
+		if record.CloseTimestamp < request.EarliestCloseTime {
+			break
+		}
+
 		if matchQuery(record, request) {
 			response.Executions = append(response.Executions, convertToExecutionInfo(record))
 			if len(response.Executions) == request.PageSize {
@@ -215,6 +220,8 @@ type parsedVisFilename struct {
 	hashedRunID string
 }
 
+// sortAndFilterFiles sort visibility record file names based on close timestamp (desc) and use hashed runID to break ties.
+// if a nextPageToken is give, it only returns filenames that have a smaller close timestamp
 func sortAndFilterFiles(filenames []string, token *queryVisibilityToken) ([]string, error) {
 	var parsedFilenames []*parsedVisFilename
 	for _, name := range filenames {
@@ -245,7 +252,7 @@ func sortAndFilterFiles(filenames []string, token *queryVisibilityToken) ([]stri
 
 	startIdx := 0
 	if token != nil {
-		LastHashedRunID := hashRunID(token.LastRunID)
+		LastHashedRunID := hash(token.LastRunID)
 		startIdx = sort.Search(len(parsedFilenames), func(i int) bool {
 			if parsedFilenames[i].closeTime == token.LastCloseTime {
 				return parsedFilenames[i].hashedRunID < LastHashedRunID

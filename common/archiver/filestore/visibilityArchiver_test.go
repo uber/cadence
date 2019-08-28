@@ -24,7 +24,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -138,7 +137,6 @@ func (s *visibilityArchiverSuite) TestArchive_Fail_NonRetriableErrorOption() {
 
 func (s *visibilityArchiverSuite) TestArchive_Success() {
 	dir, err := ioutil.TempDir("", "TestVisibilityArchive")
-	fmt.Println(dir)
 	s.NoError(err)
 	defer os.RemoveAll(dir)
 

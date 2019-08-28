@@ -123,14 +123,14 @@ func (h *historyArchiver) Archive(
 		}
 	}()
 
-	logger := tagLoggerWithArchiveHistoryRequestAndURI(h.container.Logger, request, URI.String())
+	logger := archiver.TagLoggerWithArchiveHistoryRequestAndURI(h.container.Logger, request, URI.String())
 
 	if err := h.ValidateURI(URI); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidURI), tag.Error(err))
 		return err
 	}
 
-	if err := validateArchiveRequest(request); err != nil {
+	if err := archiver.ValidateHistoryArchiveRequest(request); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonInvalidArchiveRequest), tag.Error(err))
 		return err
 	}
@@ -161,7 +161,7 @@ func (h *historyArchiver) Archive(
 		historyBatches = append(historyBatches, historyBlob.Body...)
 	}
 
-	encodedHistoryBatches, err := encodeHistoryBatches(historyBatches)
+	encodedHistoryBatches, err := encode(historyBatches)
 	if err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errEncodeHistory), tag.Error(err))
 		return err
@@ -173,7 +173,7 @@ func (h *historyArchiver) Archive(
 		return err
 	}
 
-	filename := constructFilename(request.DomainID, request.WorkflowID, request.RunID, request.CloseFailoverVersion)
+	filename := constructHistoryFilename(request.DomainID, request.WorkflowID, request.RunID, request.CloseFailoverVersion)
 	if err := writeFile(path.Join(dirPath, filename), encodedHistoryBatches, h.fileMode); err != nil {
 		logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(errWriteFile), tag.Error(err))
 		return err
@@ -191,7 +191,7 @@ func (h *historyArchiver) Get(
 		return nil, &shared.BadRequestError{Message: archiver.ErrInvalidURI.Error()}
 	}
 
-	if err := validateGetRequest(request); err != nil {
+	if err := archiver.ValidateGetRequest(request); err != nil {
 		return nil, &shared.BadRequestError{Message: archiver.ErrInvalidGetHistoryRequest.Error()}
 	}
 
@@ -226,7 +226,7 @@ func (h *historyArchiver) Get(
 		}
 	}
 
-	filename := constructFilename(request.DomainID, request.WorkflowID, request.RunID, token.CloseFailoverVersion)
+	filename := constructHistoryFilename(request.DomainID, request.WorkflowID, request.RunID, token.CloseFailoverVersion)
 	filepath := path.Join(dirPath, filename)
 	exists, err = fileExists(filepath)
 	if err != nil {
@@ -298,7 +298,7 @@ func getNextHistoryBlob(ctx context.Context, historyIterator archiver.HistoryIte
 }
 
 func getHighestVersion(dirPath string, request *archiver.GetHistoryRequest) (*int64, error) {
-	filenames, err := listFilesByPrefix(dirPath, constructFilenamePrefix(request.DomainID, request.WorkflowID, request.RunID))
+	filenames, err := listFilesByPrefix(dirPath, constructHistoryFilenamePrefix(request.DomainID, request.WorkflowID, request.RunID))
 	if err != nil {
 		return nil, err
 	}
