@@ -1434,8 +1434,9 @@ func ResetInBatch(c *cli.Context) {
 		wfClient := getWorkflowClient(c)
 		pageSize := 1000
 		var nextPageToken []byte
+		var result []*s.WorkflowExecutionInfo
 		for {
-			result, nextPageToken := scanWorkflowExecutions(wfClient, pageSize, nextPageToken, query, c)
+			result, nextPageToken = scanWorkflowExecutions(wfClient, pageSize, nextPageToken, query, c)
 			for _, we := range result {
 				wid := we.Execution.GetWorkflowId()
 				rid := we.Execution.GetRunId()
