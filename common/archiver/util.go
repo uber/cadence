@@ -38,6 +38,7 @@ var (
 	errEmptyCloseTime        = errors.New("CloseTimestamp is empty")
 )
 
+// TagLoggerWithArchiveHistoryRequestAndURI tags logger with fields in the archive history request and the URI
 func TagLoggerWithArchiveHistoryRequestAndURI(logger log.Logger, request *ArchiveHistoryRequest, URI string) log.Logger {
 	return logger.WithTags(
 		tag.ShardID(request.ShardID),
@@ -53,6 +54,7 @@ func TagLoggerWithArchiveHistoryRequestAndURI(logger log.Logger, request *Archiv
 	)
 }
 
+// TagLoggerWithArchiveVisibilityRequestAndURI tags logger with fields in the archive visibility request and the URI
 func TagLoggerWithArchiveVisibilityRequestAndURI(logger log.Logger, request *ArchiveVisibilityRequest, URI string) log.Logger {
 	return logger.WithTags(
 		tag.ArchivalRequestDomainID(request.DomainID),
@@ -65,6 +67,7 @@ func TagLoggerWithArchiveVisibilityRequestAndURI(logger log.Logger, request *Arc
 	)
 }
 
+// ValidateHistoryArchiveRequest validates the archive history request
 func ValidateHistoryArchiveRequest(request *ArchiveHistoryRequest) error {
 	if request.DomainID == "" {
 		return errEmptyDomainID
@@ -81,6 +84,7 @@ func ValidateHistoryArchiveRequest(request *ArchiveHistoryRequest) error {
 	return nil
 }
 
+// ValidateGetRequest validates the get archived history request
 func ValidateGetRequest(request *GetHistoryRequest) error {
 	if request.DomainID == "" {
 		return errEmptyDomainID
@@ -97,6 +101,7 @@ func ValidateGetRequest(request *GetHistoryRequest) error {
 	return nil
 }
 
+// ValidateVisibilityArchivalRequest validates the archive visibility request
 func ValidateVisibilityArchivalRequest(request *ArchiveVisibilityRequest) error {
 	if request.DomainID == "" {
 		return errEmptyDomainID
