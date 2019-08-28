@@ -1344,7 +1344,7 @@ type (
 		BranchToken []byte
 	}
 
-	// ForkingInProgressBranch is part of GetHistoryTreeResponse
+	// HistoryBranchDetail is part of GetHistoryTreeResponse
 	HistoryBranchDetail struct {
 		TreeID   string
 		BranchID string
