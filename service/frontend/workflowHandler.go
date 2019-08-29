@@ -2317,6 +2317,111 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(
 	return resp, nil
 }
 
+// ListArchivedWorkflowExecutions - retrieves archived info for closed workflow executions in a domain
+func (wh *WorkflowHandler) ListArchivedWorkflowExecutions(
+	ctx context.Context,
+	listRequest *gen.ListArchivedWorkflowExecutionsRequest,
+) (resp *gen.ListArchivedWorkflowExecutionsResponse, retError error) {
+	defer log.CapturePanic(wh.GetLogger(), &retError)
+
+	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendClientListArchivedWorkflowExecutionsScope, listRequest)
+	defer sw.Stop()
+
+	if err := wh.versionChecker.checkClientVersion(ctx); err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	if listRequest == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
+
+	if ok := wh.allow(listRequest); !ok {
+		return nil, wh.error(createServiceBusyError(), scope)
+	}
+
+	if listRequest.GetDomain() == "" {
+		return nil, wh.error(errDomainNotSet, scope)
+	}
+
+	if listRequest.CloseTimeFilter == nil {
+		return nil, wh.error(&gen.BadRequestError{Message: "CloseTimeFilter is required"}, scope)
+	}
+
+	if listRequest.CloseTimeFilter.EarliestTime == nil {
+		return nil, wh.error(&gen.BadRequestError{Message: "EarliestTime in CloseTimeFilter is required"}, scope)
+	}
+
+	if listRequest.CloseTimeFilter.LatestTime == nil {
+		return nil, wh.error(&gen.BadRequestError{Message: "LatestTime in CloseTimeFilter is required"}, scope)
+	}
+
+	if listRequest.CloseTimeFilter.GetEarliestTime() > listRequest.CloseTimeFilter.GetLatestTime() {
+		return nil, wh.error(&gen.BadRequestError{Message: "EarliestTime in CloseTimeFilter should not be larger than LatestTime"}, scope)
+	}
+
+	if listRequest.GetMaximumPageSize() <= 0 {
+		listRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize(listRequest.GetDomain())))
+	}
+
+	if wh.isListRequestPageSizeTooLarge(listRequest.GetMaximumPageSize(), listRequest.GetDomain()) {
+		return nil, wh.error(&gen.BadRequestError{
+			Message: fmt.Sprintf("Pagesize is larger than allow %d", wh.config.ESIndexMaxResultWindow())}, scope)
+	}
+
+	if !wh.GetArchivalMetadata().GetVisibilityConfig().ClusterConfiguredForArchival() {
+		return nil, wh.error(&gen.BadRequestError{Message: "Cluster is not configured for visibility archival"}, scope)
+	}
+
+	entry, err := wh.domainCache.GetDomain(listRequest.GetDomain())
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	if entry.GetConfig().VisibilityArchivalStatus != shared.ArchivalStatusEnabled {
+		return nil, wh.error(&gen.BadRequestError{Message: "Domain is not configured for visibility archival"}, scope)
+	}
+
+	URI, err := archiver.NewURI(entry.GetConfig().VisibilityArchivalURI)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	visibilityArchiver, err := wh.GetArchiverProvider().GetVisibilityArchiver(URI.Scheme(), common.FrontendServiceName)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	executionFilter := shared.WorkflowExecutionFilter{}
+	if listRequest.ExecutionFilter != nil {
+		executionFilter = *listRequest.ExecutionFilter
+	}
+	typeFilter := shared.WorkflowTypeFilter{}
+	if listRequest.TypeFilter != nil {
+		typeFilter = *listRequest.TypeFilter
+	}
+	archiverRequest := &archiver.QueryVisibilityRequest{
+		DomainID:          entry.GetInfo().ID,
+		EarliestCloseTime: listRequest.CloseTimeFilter.GetEarliestTime(),
+		LatestCloseTime:   listRequest.CloseTimeFilter.GetLatestTime(),
+		PageSize:          int(listRequest.GetMaximumPageSize()),
+		NextPageToken:     listRequest.NextPageToken,
+		WorkflowID:        executionFilter.WorkflowId,
+		RunID:             executionFilter.RunId,
+		WorkflowTypeName:  typeFilter.Name,
+		CloseStatus:       listRequest.StatusFilter,
+	}
+
+	archiverResponse, err := visibilityArchiver.Query(ctx, URI, archiverRequest)
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	return &gen.ListArchivedWorkflowExecutionsResponse{
+		Executions:    archiverResponse.Executions,
+		NextPageToken: archiverResponse.NextPageToken,
+	}, nil
+}
+
 // ListClosedWorkflowExecutions - retrieves info for closed workflow executions in a domain
 func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 	ctx context.Context,

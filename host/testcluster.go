@@ -200,12 +200,17 @@ func newArchiverBase(enabled bool, logger log.Logger) *ArchiverBase {
 		logger.Fatal("Failed to create temp dir for archiver", tag.Error(err))
 	}
 	cfg := &config.FilestoreArchiver{
-		FileMode: "0700",
-		DirMode:  "0600",
+		FileMode: "0666",
+		DirMode:  "0766",
 	}
-	provider := provider.NewArchiverProvider(&config.HistoryArchiverProvider{
-		Filestore: cfg,
-	}, nil)
+	provider := provider.NewArchiverProvider(
+		&config.HistoryArchiverProvider{
+			Filestore: cfg,
+		},
+		&config.VisibilityArchiverProvider{
+			Filestore: cfg,
+		},
+	)
 	return &ArchiverBase{
 		metadata: archiver.NewArchivalMetadata(dcCollection, "enabled", true, "enabled", true, &config.ArchivalDomainDefaults{
 			History: config.HistoryArchivalDomainDefaults{
