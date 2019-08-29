@@ -146,9 +146,14 @@ func (s *server) startService() common.Daemon {
 		log.Fatalf("need to provide an endpoint config for PublicClient")
 	}
 
-	advancedVisMode := dc.GetStringProperty(dynamicconfig.AdvancedVisibilityWritingMode, common.AdvancedVisibilityWritingModeOff)()
-	if dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, false)() { // for backward compatible
-		advancedVisMode = common.AdvancedVisibilityWritingModeDual
+	defaultAdvancedVisibilityWritingMode := common.AdvancedVisibilityWritingModeOff
+	isAdvancedVisExistedInConfig := len(params.PersistenceConfig.AdvancedVisibilityStore) != 0
+	if isAdvancedVisExistedInConfig {
+		defaultAdvancedVisibilityWritingMode = common.AdvancedVisibilityWritingModeOn
+	}
+	advancedVisMode := dc.GetStringProperty(dynamicconfig.AdvancedVisibilityWritingMode, defaultAdvancedVisibilityWritingMode)()
+	if dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, isAdvancedVisExistedInConfig)() { // for backward compatible
+		advancedVisMode = common.AdvancedVisibilityWritingModeOn
 	}
 	isAdvancedVisEnabled := advancedVisMode != common.AdvancedVisibilityWritingModeOff
 	if params.ClusterMetadata.IsGlobalDomainEnabled() {

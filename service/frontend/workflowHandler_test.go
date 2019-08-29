@@ -1304,7 +1304,7 @@ func (s *workflowHandlerSuite) TestConvertIndexedKeyToThrift() {
 }
 
 func (s *workflowHandlerSuite) newConfig() *Config {
-	return NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger), numHistoryShards)
+	return NewConfig(dc.NewCollection(dc.NewNopClient(), s.logger), numHistoryShards, false)
 }
 
 func updateRequest(
