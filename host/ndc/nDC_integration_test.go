@@ -39,6 +39,7 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/test"
 	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/host"
 	"go.uber.org/zap"
@@ -54,7 +55,7 @@ type (
 		active    *host.TestCluster
 		passive   *host.TestCluster
 		logger    log.Logger
-		generator common.Generator
+		generator test.Generator
 	}
 )
 
@@ -103,7 +104,7 @@ func (s *nDCIntegrationTestSuite) SetupSuite() {
 	c, err = host.NewCluster(clusterConfigs[1], s.logger.WithTags(tag.ClusterName(clusterName[1])))
 	s.Require().NoError(err)
 	s.passive = c
-	s.generator = common.InitializeHistoryEventGenerator()
+	s.generator = test.InitializeHistoryEventGenerator()
 }
 
 func (s *nDCIntegrationTestSuite) SetupTest() {
@@ -141,12 +142,12 @@ func (s *nDCIntegrationTestSuite) TestSimpleNDC() {
 	s.NotNil(resp)
 	// Wait for domain cache to pick the change
 	time.Sleep(cache.DomainCacheRefreshInterval)
-	root := &common.NDCTestBranch{
-		Batches: make([]common.NDCTestBatch, 0),
+	root := &test.NDCTestBranch{
+		Batches: make([]test.NDCTestBatch, 0),
 	}
 	for s.generator.HasNextVertex() {
 		events := s.generator.GetNextVertices()
-		newBatch := common.NDCTestBatch{
+		newBatch := test.NDCTestBatch{
 			Events: events,
 		}
 		root.Batches = append(root.Batches, newBatch)
@@ -160,7 +161,7 @@ func (s *nDCIntegrationTestSuite) TestSimpleNDC() {
 	domain := *resp.DomainInfo.Name
 	domainID := *resp.DomainInfo.UUID
 	version := int64(100)
-	attributeGenerator := common.NewHistoryAttributesGenerator(wid, rid, tl, wt, domainID, domain, identity)
+	attributeGenerator := test.NewHistoryAttributesGenerator(wid, rid, tl, wt, domainID, domain, identity)
 	historyBatch := attributeGenerator.GenerateHistoryEvents(root.Batches, 1, version)
 
 	historyClient := s.passive.GetHistoryClient()
