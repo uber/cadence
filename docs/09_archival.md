@@ -56,6 +56,12 @@ Before uploading history a check is done to see if it has already been uploaded,
 ### Can I specify multiple archival URIs?
 No, each domain can only have one URI for history archival and one URI for visibility archival. Different domains, however, can have different URIs (with different schemes).
 
+### How does archival work with PII?
+No cadence workflow should ever operate on clear text PII. Cadence can be thought
+of as a database and just as one would not store PII in a database PII should not be
+stored in Cadence. This is even more important when archival is enabled because
+these histories can be kept forever. 
+
 ## Planned Future Work
 * Support archival of visibility.
 * Support accessing histories without providing runID.
